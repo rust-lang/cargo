@@ -51,6 +51,7 @@ pub struct CompileOptions<'a> {
     pub no_default_features: bool,
     /// A set of packages to build.
     pub spec: Packages,
+    pub requested: RequestedPackages,
     /// Filter to apply to the root package to select which targets will be
     /// built.
     pub filter: CompileFilter,
@@ -74,6 +75,7 @@ pub struct CompileOptions<'a> {
 }
 
 impl<'a> CompileOptions<'a> {
+    // Used in RLS
     pub fn default(config: &'a Config, mode: CompileMode) -> CompileOptions<'a> {
         CompileOptions {
             config,
@@ -83,6 +85,7 @@ impl<'a> CompileOptions<'a> {
             all_features: false,
             no_default_features: false,
             spec: ops::Packages::Packages(Vec::new()),
+            requested: RequestedPackages::default(),
             mode,
             release: false,
             filter: CompileFilter::Default {
@@ -110,6 +113,29 @@ pub enum CompileMode {
 pub enum MessageFormat {
     Human,
     Json,
+}
+
+#[derive(Default, Debug)]
+pub struct RequestedPackages {
+    specs: Vec<PackageIdSpec>,
+    /// Extra features to build for the root package
+    // invariant: features.len() > 0 => specs.len() == 1
+    features: Vec<String>,
+    /// Flag whether all available features should be built for the root package
+    all_features: bool,
+    /// Flag if the default feature should be built for the root package
+    no_default_features: bool,
+}
+
+impl RequestedPackages {
+    pub fn single(id: &PackageId) -> RequestedPackages {
+        RequestedPackages {
+            specs: vec![PackageIdSpec::from_package_id(id)],
+            features: Vec::new(),
+            all_features: false,
+            no_default_features: false,
+        }
+    }
 }
 
 #[derive(Clone, PartialEq, Eq, Debug)]
@@ -235,6 +261,7 @@ pub fn compile_ws<'a>(
         ref features,
         all_features,
         no_default_features,
+        requested: _,
         release,
         mode,
         message_format,

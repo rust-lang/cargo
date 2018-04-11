@@ -5,7 +5,7 @@ use clap::{self, SubCommand};
 use cargo::CargoResult;
 use cargo::core::Workspace;
 use cargo::ops::{CompileFilter, CompileMode, CompileOptions, MessageFormat, NewOptions, Packages,
-                 VersionControl};
+                 VersionControl, RequestedPackages};
 use cargo::util::paths;
 use cargo::util::important_paths::find_root_manifest_for_wd;
 
@@ -271,6 +271,7 @@ pub trait ArgMatchesExt {
             all_features: self._is_present("all-features"),
             no_default_features: self._is_present("no-default-features"),
             spec,
+            requested: RequestedPackages::default(),
             mode,
             release: self._is_present("release"),
             filter: CompileFilter::new(

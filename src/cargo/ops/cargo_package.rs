@@ -330,6 +330,7 @@ fn run_verify(ws: &Workspace, tar: &FileLock, opts: &PackageOpts) -> CargoResult
     let id = SourceId::for_path(&dst)?;
     let mut src = PathSource::new(&dst, &id, ws.config());
     let new_pkg = src.root_package()?;
+    let requested = ops::RequestedPackages::single(new_pkg.package_id());
     let ws = Workspace::ephemeral(new_pkg, config, None, true)?;
 
     ops::compile_ws(
@@ -343,6 +344,7 @@ fn run_verify(ws: &Workspace, tar: &FileLock, opts: &PackageOpts) -> CargoResult
             no_default_features: false,
             all_features: false,
             spec: ops::Packages::Packages(Vec::new()),
+            requested,
             filter: ops::CompileFilter::Default {
                 required_features_filterable: true,
             },
