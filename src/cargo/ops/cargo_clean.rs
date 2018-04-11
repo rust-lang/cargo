@@ -36,7 +36,6 @@ pub fn clean(ws: &Workspace, opts: &CleanOptions) -> CargoResult<()> {
     let (packages, resolve) = ops::resolve_ws(ws)?;
 
     let profiles = ws.profiles();
-    let host_triple = opts.config.rustc()?.host.clone();
     let mut units = Vec::new();
 
     for spec in opts.spec.iter() {
@@ -91,7 +90,7 @@ pub fn clean(ws: &Workspace, opts: &CleanOptions) -> CargoResult<()> {
         &packages,
         opts.config,
         BuildConfig {
-            host_triple,
+            host_triple: opts.config.rustc()?.host.clone(),
             requested_target: opts.target.clone(),
             release: opts.release,
             jobs: 1,
