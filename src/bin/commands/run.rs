@@ -27,9 +27,9 @@ bin target it will be run. Otherwise `--bin` specifies the bin target to run,
 and `--example` specifies the example target to run. At most one of `--bin` or
 `--example` can be provided.
 
-All of the trailing arguments are passed to the binary to run. If you're passing
-arguments to both Cargo and the binary, the ones after `--` go to the binary,
-the ones before go to Cargo.
+All the arguments following the two dashes (`--`) are passed to the binary to
+run. If you're passing arguments to both Cargo and the binary, the ones after
+`--` go to the binary, the ones before go to Cargo.
 ",
         )
 }
