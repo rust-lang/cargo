@@ -10,7 +10,7 @@ use semver::{Version, VersionReq};
 use tempfile::Builder as TempFileBuilder;
 use toml;
 
-use core::{Dependency, Package, PackageIdSpec, Source, SourceId};
+use core::{Dependency, Edition, Package, PackageIdSpec, Source, SourceId};
 use core::{PackageId, Workspace};
 use ops::{self, CompileFilter, DefaultExecutor};
 use sources::{GitSource, PathSource, SourceConfigMap};
@@ -57,6 +57,7 @@ pub fn install(
     root: Option<&str>,
     krates: Vec<&str>,
     source_id: &SourceId,
+    from_cwd: bool,
     vers: Option<&str>,
     opts: &ops::CompileOptions,
     force: bool,
@@ -70,6 +71,7 @@ pub fn install(
             &map,
             krates.into_iter().next(),
             source_id,
+            from_cwd,
             vers,
             opts,
             force,
@@ -88,6 +90,7 @@ pub fn install(
                 &map,
                 Some(krate),
                 source_id,
+                from_cwd,
                 vers,
                 opts,
                 force,
@@ -149,6 +152,7 @@ fn install_one(
     map: &SourceConfigMap,
     krate: Option<&str>,
     source_id: &SourceId,
+    from_cwd: bool,
     vers: Option<&str>,
     opts: &ops::CompileOptions,
     force: bool,
@@ -228,6 +232,23 @@ fn install_one(
         }
     };
     let pkg = ws.current()?;
+
+    if from_cwd {
+        match pkg.manifest().edition() {
+            Edition::Edition2015 =>
+                config.shell().warn("To build the current package use `cargo build`, to install the current package run `cargo install --path .`")?
+            ,
+            Edition::Edition2018 =>
+                bail!(
+                    "To build the current package use `cargo build`, \
+                     to install the current package run `cargo install --path .`, \
+                     otherwise specify a crate to install from \
+                     crates.io, or use --path or --git to \
+                     specify alternate source"
+                )
+            ,
+        }
+    };
 
     config.shell().status("Installing", pkg)?;
 

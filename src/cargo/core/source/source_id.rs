@@ -36,7 +36,7 @@ struct SourceIdInner {
     name: Option<String>,
 }
 
-/// The possible kinds of code source. Along with a URL, this fully defines the
+/// The possible kinds of code source. Along with SourceIdInner this fully defines the
 /// source
 #[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Ord, Hash)]
 enum Kind {
