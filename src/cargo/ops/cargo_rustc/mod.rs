@@ -9,7 +9,7 @@ use std::sync::Arc;
 use same_file::is_same_file;
 use serde_json;
 
-use core::{Feature, Package, PackageId, Profile, Target};
+use core::{Feature, PackageId, Profile, Target};
 use core::manifest::Lto;
 use core::shell::ColorChoice;
 use util::{self, machine_message, ProcessBuilder};
@@ -101,8 +101,6 @@ pub struct TargetConfig {
     /// Special build options for any necessary input files (filename -> options)
     pub overrides: HashMap<String, BuildOutput>,
 }
-
-pub type PackagesToBuild<'a> = [(&'a Package, Vec<(&'a Target, &'a Profile)>)];
 
 /// A glorified callback for executing calls to rustc. Rather than calling rustc
 /// directly, we'll use an Executor, giving clients an opportunity to intercept

@@ -19,7 +19,7 @@ use super::fingerprint::Fingerprint;
 use super::job_queue::JobQueue;
 use super::layout::Layout;
 use super::links::Links;
-use super::{BuildConfig, Compilation, Executor, Kind, PackagesToBuild};
+use super::{BuildConfig, Compilation, Executor, Kind};
 
 mod unit_dependencies;
 use self::unit_dependencies::build_unit_dependencies;
@@ -158,33 +158,12 @@ impl<'a, 'cfg> Context<'a, 'cfg> {
     // where the compiled libraries are all located.
     pub fn compile(
         mut self,
-        pkg_targets: &'a PackagesToBuild<'a>,
+        units: &[Unit<'a>],
         export_dir: Option<PathBuf>,
         exec: &Arc<Executor>,
     ) -> CargoResult<Compilation<'cfg>> {
-        let units = pkg_targets
-            .iter()
-            .flat_map(|&(pkg, ref targets)| {
-                let default_kind = if self.build_config.requested_target.is_some() {
-                    Kind::Target
-                } else {
-                    Kind::Host
-                };
-                targets.iter().map(move |&(target, profile)| Unit {
-                    pkg,
-                    target,
-                    profile,
-                    kind: if target.for_host() {
-                        Kind::Host
-                    } else {
-                        default_kind
-                    },
-                })
-            })
-            .collect::<Vec<_>>();
-
         let mut queue = JobQueue::new(&self);
-        self.prepare_units(export_dir, &units)?;
+        self.prepare_units(export_dir, units)?;
         self.prepare()?;
         self.build_used_in_plugin_map(&units)?;
         custom_build::build_map(&mut self, &units)?;
