@@ -3,10 +3,9 @@ use std::io::{BufWriter, Write};
 use std::fs::File;
 use std::path::{Path, PathBuf};
 
-use ops::{Context, Unit};
+use super::{fingerprint, Context, Unit};
 use util::{internal, CargoResult};
 use util::paths;
-use ops::cargo_rustc::fingerprint;
 
 fn render_filename<P: AsRef<Path>>(path: P, basedir: Option<&str>) -> CargoResult<String> {
     let path = path.as_ref();
