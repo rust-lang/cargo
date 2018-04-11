@@ -29,7 +29,7 @@ use std::sync::Arc;
 use core::{Package, Source, Target};
 use core::{PackageId, PackageIdSpec, Profile, Profiles, TargetKind, Workspace};
 use core::resolver::{Method, Resolve};
-use ops::{self, BuildOutput, DefaultExecutor, Executor};
+use ops::{self, BuildOutput, Context, DefaultExecutor, Executor};
 use util::config::Config;
 use util::{profile, CargoResult, CargoResultExt};
 
@@ -347,17 +347,15 @@ pub fn compile_ws<'a>(
     }
     let mut ret = {
         let _p = profile::start("compiling");
-        ops::compile_targets(
+        let mut cx = Context::new(
             ws,
-            &package_targets,
-            &packages,
             &resolve_with_overrides,
+            &packages,
             config,
             build_config,
             profiles,
-            export_dir.clone(),
-            &exec,
-        )?
+        )?;
+        ops::compile_targets(cx, &package_targets, export_dir.clone(), &exec)?
     };
 
     ret.to_doc_test = to_builds.into_iter().cloned().collect();
