@@ -259,6 +259,14 @@ pub fn compile_ws<'a>(
         bail!("jobs must be at least 1")
     }
 
+    let mut build_config = scrape_build_config(config, jobs, target)?;
+    build_config.release = release;
+    build_config.test = mode == CompileMode::Test || mode == CompileMode::Bench;
+    build_config.json_messages = message_format == MessageFormat::Json;
+    if let CompileMode::Doc { deps } = mode {
+        build_config.doc_all = deps;
+    }
+
     let profiles = ws.profiles();
 
     let specs = spec.into_package_id_specs(ws)?;
@@ -340,14 +348,6 @@ pub fn compile_ws<'a>(
     }
     let mut ret = {
         let _p = profile::start("compiling");
-        let mut build_config = scrape_build_config(config, jobs, target)?;
-        build_config.release = release;
-        build_config.test = mode == CompileMode::Test || mode == CompileMode::Bench;
-        build_config.json_messages = message_format == MessageFormat::Json;
-        if let CompileMode::Doc { deps } = mode {
-            build_config.doc_all = deps;
-        }
-
         ops::compile_targets(
             ws,
             &package_targets,
