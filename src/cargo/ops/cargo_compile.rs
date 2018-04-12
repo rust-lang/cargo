@@ -29,7 +29,7 @@ use std::sync::Arc;
 use core::{Package, Source, Target};
 use core::{PackageId, PackageIdSpec, Profile, Profiles, TargetKind, Workspace};
 use core::compiler::{BuildConfig, Compilation, Context, DefaultExecutor, Executor};
-use core::compiler::{Kind, TargetConfig, Unit};
+use core::compiler::{Kind, Unit};
 use core::resolver::{Method, Resolve};
 use ops;
 use util::config::Config;
@@ -260,7 +260,7 @@ pub fn compile_ws<'a>(
         bail!("jobs must be at least 1")
     }
 
-    let mut build_config = scrape_build_config(config, jobs, target)?;
+    let mut build_config = BuildConfig::new(config, jobs, &target)?;
     build_config.release = release;
     build_config.test = mode == CompileMode::Test || mode == CompileMode::Bench;
     build_config.json_messages = message_format == MessageFormat::Json;
@@ -832,57 +832,4 @@ fn generate_targets<'a>(
     };
 
     filter_compatible_targets(targets, features)
-}
-
-/// Parse all config files to learn about build configuration. Currently
-/// configured options are:
-///
-/// * build.jobs
-/// * build.target
-/// * target.$target.ar
-/// * target.$target.linker
-/// * target.$target.libfoo.metadata
-fn scrape_build_config(
-    config: &Config,
-    jobs: Option<u32>,
-    target: Option<String>,
-) -> CargoResult<BuildConfig> {
-    if jobs.is_some() && config.jobserver_from_env().is_some() {
-        config.shell().warn(
-            "a `-j` argument was passed to Cargo but Cargo is \
-             also configured with an external jobserver in \
-             its environment, ignoring the `-j` parameter",
-        )?;
-    }
-    let cfg_jobs = match config.get_i64("build.jobs")? {
-        Some(v) => {
-            if v.val <= 0 {
-                bail!(
-                    "build.jobs must be positive, but found {} in {}",
-                    v.val,
-                    v.definition
-                )
-            } else if v.val >= i64::from(u32::max_value()) {
-                bail!(
-                    "build.jobs is too large: found {} in {}",
-                    v.val,
-                    v.definition
-                )
-            } else {
-                Some(v.val as u32)
-            }
-        }
-        None => None,
-    };
-    let jobs = jobs.or(cfg_jobs).unwrap_or(::num_cpus::get() as u32);
-    let cfg_target = config.get_string("build.target")?.map(|s| s.val);
-    let target = target.or(cfg_target);
-    let mut base = BuildConfig::new(&config.rustc()?.host, &target)?;
-    base.jobs = jobs;
-    base.host = TargetConfig::new(config, &base.host_triple)?;
-    base.target = match target.as_ref() {
-        Some(triple) => TargetConfig::new(config, triple)?,
-        None => base.host.clone(),
-    };
-    Ok(base)
 }

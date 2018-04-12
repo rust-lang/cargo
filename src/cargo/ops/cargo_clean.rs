@@ -84,7 +84,7 @@ pub fn clean(ws: &Workspace, opts: &CleanOptions) -> CargoResult<()> {
         }
     }
 
-    let mut build_config = BuildConfig::new(&opts.config.rustc()?.host, &opts.target)?;
+    let mut build_config = BuildConfig::new(config, Some(1), &opts.target)?;
     build_config.release = opts.release;
     let mut cx = Context::new(ws, &resolve, &packages, opts.config, build_config, profiles)?;
     cx.prepare_units(None, &units)?;
