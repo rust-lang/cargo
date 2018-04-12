@@ -37,7 +37,7 @@ run. If you're passing arguments to both Cargo and the binary, the ones after
 pub fn exec(config: &mut Config, args: &ArgMatches) -> CliResult {
     let ws = args.workspace(config)?;
 
-    let mut compile_opts = args.compile_options_for_single_package(config, CompileMode::Build)?;
+    let mut compile_opts = args.compile_options_for_single_package(&ws, CompileMode::Build)?;
     if !args.is_present("example") && !args.is_present("bin") {
         compile_opts.filter = CompileFilter::Default {
             required_features_filterable: false,

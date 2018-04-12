@@ -61,7 +61,7 @@ pub fn exec(config: &mut Config, args: &ArgMatches) -> CliResult {
             return Err(CliError::new(err, 101));
         }
     };
-    let mut compile_opts = args.compile_options_for_single_package(config, mode)?;
+    let mut compile_opts = args.compile_options_for_single_package(&ws, mode)?;
     let target_args = values(args, "args");
     compile_opts.target_rustc_args = if target_args.is_empty() {
         None

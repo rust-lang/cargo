@@ -1,12 +1,13 @@
 use std::collections::HashSet;
 
-use core::{PackageId, PackageIdSpec, PackageSet, Source, SourceId, Workspace};
+use core::{PackageId, PackageSet, Source, SourceId, Workspace};
 use core::registry::PackageRegistry;
 use core::resolver::{self, Method, Resolve};
 use sources::PathSource;
 use ops;
 use util::profile;
 use util::errors::{CargoResult, CargoResultExt};
+use ops::RequestedPackages;
 
 /// Resolve all dependencies for the workspace using the previous
 /// lockfile as a guide if present.
@@ -28,7 +29,7 @@ pub fn resolve_ws_precisely<'a>(
     features: &[String],
     all_features: bool,
     no_default_features: bool,
-    specs: &[PackageIdSpec],
+    requested: &RequestedPackages,
 ) -> CargoResult<(PackageSet<'a>, Resolve)> {
     let features = Method::split_features(features);
     let method = if all_features {
@@ -41,14 +42,14 @@ pub fn resolve_ws_precisely<'a>(
             uses_default_features: !no_default_features,
         }
     };
-    resolve_ws_with_method(ws, source, method, specs)
+    resolve_ws_with_method(ws, source, method, requested)
 }
 
 pub fn resolve_ws_with_method<'a>(
     ws: &Workspace<'a>,
     source: Option<Box<Source + 'a>>,
     method: Method,
-    specs: &[PackageIdSpec],
+    requested: &RequestedPackages,
 ) -> CargoResult<(PackageSet<'a>, Resolve)> {
     let mut registry = PackageRegistry::new(ws.config())?;
     if let Some(source) = source {
@@ -91,7 +92,7 @@ pub fn resolve_ws_with_method<'a>(
         method,
         resolve.as_ref(),
         None,
-        specs,
+        requested,
         add_patches,
         true,
     )?;
@@ -107,13 +108,14 @@ fn resolve_with_registry<'cfg>(
     warn: bool,
 ) -> CargoResult<Resolve> {
     let prev = ops::load_pkg_lockfile(ws)?;
+    let requested = RequestedPackages::whole_workspace(ws);
     let resolve = resolve_with_previous(
         registry,
         ws,
         Method::Everything,
         prev.as_ref(),
         None,
-        &[],
+        &requested,
         true,
         warn,
     )?;
@@ -139,7 +141,7 @@ pub fn resolve_with_previous<'a, 'cfg>(
     method: Method,
     previous: Option<&'a Resolve>,
     to_avoid: Option<&HashSet<&'a PackageId>>,
-    specs: &[PackageIdSpec],
+    requested: &RequestedPackages,
     register_patches: bool,
     warn: bool,
 ) -> CargoResult<Resolve> {
@@ -213,53 +215,22 @@ pub fn resolve_with_previous<'a, 'cfg>(
         registry.lock_patches();
     }
 
-    let mut summaries = Vec::new();
     for member in ws.members() {
         registry.add_sources(&[member.package_id().source_id().clone()])?;
-        let method_to_resolve = match method {
-            // When everything for a workspace we want to be sure to resolve all
-            // members in the workspace, so propagate the `Method::Everything`.
-            Method::Everything => Method::Everything,
-
-            // If we're not resolving everything though then we're constructing the
-            // exact crate graph we're going to build. Here we don't necessarily
-            // want to keep around all workspace crates as they may not all be
-            // built/tested.
-            //
-            // Additionally, the `method` specified represents command line
-            // flags, which really only matters for the current package
-            // (determined by the cwd). If other packages are specified (via
-            // `-p`) then the command line flags like features don't apply to
-            // them.
-            //
-            // As a result, if this `member` is the current member of the
-            // workspace, then we use `method` specified. Otherwise we use a
-            // base method with no features specified but using default features
-            // for any other packages specified with `-p`.
-            Method::Required { dev_deps, .. } => {
-                let base = Method::Required {
-                    dev_deps,
-                    features: &[],
-                    all_features: false,
-                    uses_default_features: true,
-                };
-                let member_id = member.package_id();
-                match ws.current_opt() {
-                    Some(current) if member_id == current.package_id() => method,
-                    _ => {
-                        if specs.iter().any(|spec| spec.matches(member_id)) {
-                            base
-                        } else {
-                            continue;
-                        }
-                    }
-                }
-            }
-        };
-
-        let summary = registry.lock(member.summary().clone());
-        summaries.push((summary, method_to_resolve));
     }
+
+    // An edge case: user invoked something like
+    //
+    //     cargo build --package foo
+    //
+    // where `foo` is *not* a member of the workspace. We want `foo` to end up in resolve
+    // somehow, so let's resolve the whole workspace
+    let take_all = !ws.members().any(|m| requested.contains(m.package_id()));
+    let summaries = ws.members().filter(|m| take_all || requested.contains(m.package_id()))
+        .map(|member| {
+            let summary = registry.lock(member.summary().clone());
+            (summary, method)
+        }).collect::<Vec<_>>();
 
     let root_replace = ws.root_replace();
 

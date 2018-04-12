@@ -1,6 +1,6 @@
 use std::path::Path;
 
-use ops::{self, Packages};
+use ops;
 use util::{self, CargoResult, ProcessError};
 use core::Workspace;
 
@@ -9,21 +9,19 @@ pub fn run(
     options: &ops::CompileOptions,
     args: &[String],
 ) -> CargoResult<Option<ProcessError>> {
-    let config = ws.config();
-
-    let pkg = match options.spec {
-        Packages::All | Packages::Default | Packages::OptOut(_) => {
-            unreachable!("cargo run supports single package only")
-        }
-        Packages::Packages(ref xs) => match xs.len() {
-            0 => ws.current()?,
-            1 => ws.members()
-                .find(|pkg| *pkg.name() == xs[0])
-                .ok_or_else(|| {
-                    format_err!("package `{}` is not a member of the workspace", xs[0])
-                })?,
-            _ => unreachable!("cargo run supports single package only"),
-        },
+    let pkg = {
+        let spec = if options.requested.specs.len() == 1 {
+            &options.requested.specs[0]
+        } else {
+            unreachable!(
+                "cargo run supports single package only, handled at the argument parsing layer"
+            )
+        };
+        ws.members()
+            .find(|pkg| spec.matches(pkg.package_id()))
+            .ok_or_else(|| {
+                format_err!("package `{}` is not a member of the workspace", spec)
+            })?
     };
 
     let bins: Vec<_> = pkg.manifest()
@@ -65,6 +63,7 @@ pub fn run(
     let compile = ops::compile(ws, options)?;
     assert_eq!(compile.binaries.len(), 1);
     let exe = &compile.binaries[0];
+    let config = ws.config();
     let exe = match util::without_prefix(exe, config.cwd()) {
         Some(path) if path.file_name() == Some(path.as_os_str()) => {
             Path::new(".").join(path).to_path_buf()

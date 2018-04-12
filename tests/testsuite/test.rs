@@ -3200,45 +3200,6 @@ fn test_release_ignore_panic() {
 }
 
 #[test]
-fn test_many_with_features() {
-    let p = project("foo")
-        .file(
-            "Cargo.toml",
-            r#"
-            [package]
-            name = "foo"
-            version = "0.0.1"
-            authors = []
-
-            [dependencies]
-            a = { path = "a" }
-
-            [features]
-            foo = []
-
-            [workspace]
-        "#,
-        )
-        .file("src/lib.rs", "")
-        .file(
-            "a/Cargo.toml",
-            r#"
-            [package]
-            name = "a"
-            version = "0.0.1"
-            authors = []
-        "#,
-        )
-        .file("a/src/lib.rs", "")
-        .build();
-
-    assert_that(
-        p.cargo("test -v -p a -p foo --features foo"),
-        execs().with_status(0),
-    );
-}
-
-#[test]
 fn test_all_workspace() {
     let p = project("foo")
         .file(

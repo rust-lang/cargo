@@ -1629,3 +1629,49 @@ fn many_cli_features_comma_and_space_delimited() {
         )),
     );
 }
+
+#[test]
+fn setting_features_for_workspace_member() {
+    let p = project("ws")
+        .file(
+            "Cargo.toml",
+            r#"
+            [project]
+            name = "ws"
+            version = "0.0.1"
+            authors = []
+
+            [workspace]
+            members = ["foo"]
+        "#,
+        )
+        .file("src/lib.rs", "")
+        .file(
+            "foo/Cargo.toml",
+            r#"
+            [package]
+            name = "foo"
+            version = "0.0.1"
+            authors = []
+
+            [features]
+            main = []
+        "#,
+        )
+        .file("foo/src/main.rs", r#"
+            #[cfg(feature = "main")]
+            fn main() {}
+        "#)
+        .build();
+
+    assert_that(
+        p.cargo("build --all --features main"),
+        execs().with_status(101).with_stderr_contains("\
+[ERROR] cannot specify features for more than one package"
+        ),
+    );
+    assert_that(
+        p.cargo("run --package foo --features main"),
+        execs().with_status(0),
+    );
+}

@@ -9,6 +9,7 @@ use core::resolver::Method;
 use ops;
 use util::config::Config;
 use util::CargoResult;
+use ops::RequestedPackages;
 
 pub struct UpdateOptions<'a> {
     pub config: &'a Config,
@@ -19,13 +20,15 @@ pub struct UpdateOptions<'a> {
 
 pub fn generate_lockfile(ws: &Workspace) -> CargoResult<()> {
     let mut registry = PackageRegistry::new(ws.config())?;
+    let requested = RequestedPackages::whole_workspace(ws);
+
     let resolve = ops::resolve_with_previous(
         &mut registry,
         ws,
         Method::Everything,
         None,
         None,
-        &[],
+        &requested,
         true,
         true,
     )?;
@@ -81,14 +84,14 @@ pub fn update_lockfile(ws: &Workspace, opts: &UpdateOptions) -> CargoResult<()> 
         }
         registry.add_sources(&sources)?;
     }
-
+    let requested = RequestedPackages::whole_workspace(ws);
     let resolve = ops::resolve_with_previous(
         &mut registry,
         ws,
         Method::Everything,
         Some(&previous_resolve),
         Some(&to_avoid),
-        &[],
+        &requested,
         true,
         true,
     )?;

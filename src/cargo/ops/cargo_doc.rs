@@ -13,18 +13,17 @@ pub struct DocOptions<'a> {
 }
 
 pub fn doc(ws: &Workspace, options: &DocOptions) -> CargoResult<()> {
-    let specs = options.compile_opts.spec.into_package_id_specs(ws)?;
     let resolve = ops::resolve_ws_precisely(
         ws,
         None,
         &options.compile_opts.features,
         options.compile_opts.all_features,
         options.compile_opts.no_default_features,
-        &specs,
+        &options.compile_opts.requested
     )?;
     let (packages, resolve_with_overrides) = resolve;
 
-    let pkgs = specs
+    let pkgs = options.compile_opts.requested.specs
         .iter()
         .map(|p| {
             let pkgid = p.query(resolve_with_overrides.iter())?;

@@ -3,9 +3,9 @@ use std::fs;
 
 use clap::{self, SubCommand};
 use cargo::CargoResult;
-use cargo::core::Workspace;
-use cargo::ops::{CompileFilter, CompileMode, CompileOptions, MessageFormat, NewOptions, Packages,
-                 VersionControl};
+use cargo::core::{Workspace, Package, PackageIdSpec};
+use cargo::ops::{CompileFilter, CompileMode, CompileOptions, MessageFormat, NewOptions,
+                 VersionControl, RequestedPackages};
 use cargo::util::paths;
 use cargo::util::important_paths::find_root_manifest_for_wd;
 
@@ -241,14 +241,84 @@ pub trait ArgMatchesExt {
 
     fn compile_options<'a>(
         &self,
-        config: &'a Config,
+        ws: &Workspace<'a>,
         mode: CompileMode,
     ) -> CargoResult<CompileOptions<'a>> {
-        let spec = Packages::from_flags(
-            self._is_present("all"),
-            self._values_of("exclude"),
-            self._values_of("package"),
-        )?;
+        self._compile_options(ws.config(), Some(ws), mode)
+    }
+
+    fn compile_options_for_single_package<'a>(
+        &self,
+        ws: &Workspace<'a>,
+        mode: CompileMode,
+    ) -> CargoResult<CompileOptions<'a>> {
+        let compile_opts = self.compile_options(ws, mode)?;
+        if compile_opts.requested.specs.len() != 1 {
+            ws.current()?;
+            unreachable!("More than one package requested => current should be Err")
+        }
+        Ok(compile_opts)
+    }
+
+    fn compile_options_for_install<'a>(
+        &self,
+        config: &'a Config,
+    ) -> CargoResult<CompileOptions<'a>> {
+        self._compile_options(config, None, CompileMode::Build)
+    }
+
+    fn _compile_options<'a>(
+        &self,
+        config: &'a Config,
+        ws: Option<&Workspace<'a>>,
+        mode: CompileMode,
+    ) -> CargoResult<CompileOptions<'a>> {
+
+        let requested = match ws {
+            // Will determine precise set later, see RequestedPackages::set_package
+            None => RequestedPackages::default(),
+            Some(ws) => {
+                let all = self._is_present("all");
+                let exclude = self._values_of("exclude");
+                let package = self._values_of("package");
+                let specs = match (all, exclude.is_empty(), package.is_empty()) {
+                    (_, _, true) =>
+                        (if all { ws.members() } else { ws.default_members() })
+                            .map(Package::package_id)
+                            .map(PackageIdSpec::from_package_id)
+                            .filter(|p| exclude.iter().position(|x| *x == p.name()).is_none())
+                            .collect(),
+                    (false, true, false) => {
+                        package.iter()
+                            .map(|p| PackageIdSpec::parse(p))
+                            .collect::<CargoResult<Vec<_>>>()?
+                    },
+                    (false, false, _) => bail!("--exclude can only be used together with --all"),
+                    (true, _, false) => bail!("--package cannot be used together with --all"),
+                };
+
+                if specs.len() > 1 && self._is_present("features") {
+                    bail!("cannot specify features for more than one package")
+                }
+                if specs.is_empty() {
+                    if ws.is_virtual() {
+                        bail!(
+                            "manifest path `{}` contains no package: The manifest is virtual, \
+                             and the workspace has no members.",
+                             ws.root().display()
+                        )
+                    }
+                    bail!("no packages to compile")
+                }
+
+                RequestedPackages {
+                    specs,
+                    features: self._values_of("features"),
+                    all_features: self._is_present("all-features"),
+                    no_default_features: self._is_present("no-default-features"),
+                }
+            }
+        };
 
         let message_format = match self._value_of("message-format") {
             None => MessageFormat::Human,
@@ -270,7 +340,7 @@ pub trait ArgMatchesExt {
             features: self._values_of("features"),
             all_features: self._is_present("all-features"),
             no_default_features: self._is_present("no-default-features"),
-            spec,
+            requested,
             mode,
             release: self._is_present("release"),
             filter: CompileFilter::new(
@@ -291,16 +361,6 @@ pub trait ArgMatchesExt {
             export_dir: None,
         };
         Ok(opts)
-    }
-
-    fn compile_options_for_single_package<'a>(
-        &self,
-        config: &'a Config,
-        mode: CompileMode,
-    ) -> CargoResult<CompileOptions<'a>> {
-        let mut compile_opts = self.compile_options(config, mode)?;
-        compile_opts.spec = Packages::Packages(self._values_of("package"));
-        Ok(compile_opts)
     }
 
     fn new_options(&self, config: &Config) -> CargoResult<NewOptions> {

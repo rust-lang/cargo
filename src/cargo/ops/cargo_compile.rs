@@ -50,7 +50,7 @@ pub struct CompileOptions<'a> {
     /// Flag if the default feature should be built for the root package
     pub no_default_features: bool,
     /// A set of packages to build.
-    pub spec: Packages,
+    pub requested: RequestedPackages,
     /// Filter to apply to the root package to select which targets will be
     /// built.
     pub filter: CompileFilter,
@@ -74,6 +74,7 @@ pub struct CompileOptions<'a> {
 }
 
 impl<'a> CompileOptions<'a> {
+    // Used in RLS
     pub fn default(config: &'a Config, mode: CompileMode) -> CompileOptions<'a> {
         CompileOptions {
             config,
@@ -82,7 +83,7 @@ impl<'a> CompileOptions<'a> {
             features: Vec::new(),
             all_features: false,
             no_default_features: false,
-            spec: ops::Packages::Packages(Vec::new()),
+            requested: RequestedPackages::default(),
             mode,
             release: false,
             filter: CompileFilter::Default {
@@ -112,61 +113,49 @@ pub enum MessageFormat {
     Json,
 }
 
-#[derive(Clone, PartialEq, Eq, Debug)]
-pub enum Packages {
-    Default,
-    All,
-    OptOut(Vec<String>),
-    Packages(Vec<String>),
+#[derive(Default, Debug)]
+pub struct RequestedPackages {
+    pub specs: Vec<PackageIdSpec>,
+    /// Extra features to build for the root package
+    // invariant: features.len() > 0 => specs.len() == 1
+    pub features: Vec<String>,
+    /// Flag whether all available features should be built for the root package
+    pub all_features: bool,
+    /// Flag if the default feature should be built for the root package
+    pub no_default_features: bool,
 }
 
-impl Packages {
-    pub fn from_flags(all: bool, exclude: Vec<String>, package: Vec<String>) -> CargoResult<Self> {
-        Ok(match (all, exclude.len(), package.len()) {
-            (false, 0, 0) => Packages::Default,
-            (false, 0, _) => Packages::Packages(package),
-            (false, _, _) => bail!("--exclude can only be used together with --all"),
-            (true, 0, _) => Packages::All,
-            (true, _, _) => Packages::OptOut(exclude),
-        })
+impl RequestedPackages {
+    pub fn single(id: &PackageId) -> RequestedPackages {
+        RequestedPackages {
+            specs: vec![PackageIdSpec::from_package_id(id)],
+            features: Vec::new(),
+            all_features: false,
+            no_default_features: false,
+        }
     }
 
-    pub fn into_package_id_specs(&self, ws: &Workspace) -> CargoResult<Vec<PackageIdSpec>> {
-        let specs = match *self {
-            Packages::All => ws.members()
-                .map(Package::package_id)
-                .map(PackageIdSpec::from_package_id)
+    pub fn whole_workspace(ws: &Workspace) -> RequestedPackages {
+        RequestedPackages {
+            specs: ws.members().map(|pkg| PackageIdSpec::from_package_id(pkg.package_id()))
                 .collect(),
-            Packages::OptOut(ref opt_out) => ws.members()
-                .map(Package::package_id)
-                .map(PackageIdSpec::from_package_id)
-                .filter(|p| opt_out.iter().position(|x| *x == p.name()).is_none())
-                .collect(),
-            Packages::Packages(ref packages) if packages.is_empty() => ws.current_opt()
-                .map(Package::package_id)
-                .map(PackageIdSpec::from_package_id)
-                .into_iter()
-                .collect(),
-            Packages::Packages(ref packages) => packages
-                .iter()
-                .map(|p| PackageIdSpec::parse(p))
-                .collect::<CargoResult<Vec<_>>>()?,
-            Packages::Default => ws.default_members()
-                .map(Package::package_id)
-                .map(PackageIdSpec::from_package_id)
-                .collect(),
-        };
-        if specs.is_empty() {
-            if ws.is_virtual() {
-                bail!(
-                    "manifest path `{}` contains no package: The manifest is virtual, \
-                     and the workspace has no members.",
-                    ws.root().display()
-                )
-            }
-            bail!("no packages to compile")
+            features: Vec::new(),
+            all_features: true,
+            no_default_features: false,
         }
-        Ok(specs)
+    }
+
+    pub fn contains(&self, id: &PackageId) -> bool {
+        self.specs.iter().any(|s| s.matches(id))
+    }
+
+    // Normally, we determine the set of requested packages from the current
+    // workspace when parsing cli flags. For `cargo install` however, we don't
+    // have workspace available at that time, so we need this method to set them
+    // later, after we create a temporary workspace.
+    pub fn set_package(&mut self, pkg: &Package) {
+        let id = pkg.package_id();
+        self.specs = vec![PackageIdSpec::from_package_id(id)];
     }
 }
 
@@ -231,10 +220,10 @@ pub fn compile_ws<'a>(
         config,
         jobs,
         ref target,
-        ref spec,
         ref features,
         all_features,
         no_default_features,
+        ref requested,
         release,
         mode,
         message_format,
@@ -270,7 +259,6 @@ pub fn compile_ws<'a>(
 
     let profiles = ws.profiles();
 
-    let specs = spec.into_package_id_specs(ws)?;
     let features = Method::split_features(features);
     let method = Method::Required {
         dev_deps: ws.require_optional_deps() || filter.need_dev_deps(mode),
@@ -278,10 +266,10 @@ pub fn compile_ws<'a>(
         all_features,
         uses_default_features: !no_default_features,
     };
-    let resolve = ops::resolve_ws_with_method(ws, source, method, &specs)?;
+    let resolve = ops::resolve_ws_with_method(ws, source, method, requested)?;
     let (packages, resolve_with_overrides) = resolve;
 
-    let to_builds = specs
+    let to_builds = requested.specs
         .iter()
         .map(|p| {
             let pkgid = p.query(resolve_with_overrides.iter())?;
