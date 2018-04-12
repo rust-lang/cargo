@@ -1042,13 +1042,16 @@ fn installs_from_cwd_with_2018_warnings() {
         .build();
 
     assert_that(
-        cargo_process("install").cwd(p.root()).masquerade_as_nightly_cargo(),
+        cargo_process("install")
+            .cwd(p.root())
+            .masquerade_as_nightly_cargo(),
         execs().with_status(101).with_stderr_contains(
             "error: To build the current package use `cargo build`, \
              to install the current package run `cargo install --path .`, \
              otherwise specify a crate to install from crates.io, \
              or use --path or --git to specify alternate source\
-        "),
+             ",
+        ),
     );
     assert_that(cargo_home(), is_not(has_installed_exe("foo")));
 }

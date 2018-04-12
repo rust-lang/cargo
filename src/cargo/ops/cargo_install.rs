@@ -12,7 +12,8 @@ use toml;
 
 use core::{Dependency, Edition, Package, PackageIdSpec, Source, SourceId};
 use core::{PackageId, Workspace};
-use ops::{self, CompileFilter, DefaultExecutor};
+use core::compiler::DefaultExecutor;
+use ops::{self, CompileFilter};
 use sources::{GitSource, PathSource, SourceConfigMap};
 use util::{internal, Config};
 use util::{FileLock, Filesystem};

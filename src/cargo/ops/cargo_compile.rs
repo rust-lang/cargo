@@ -23,14 +23,15 @@
 //!
 
 use std::collections::{HashMap, HashSet};
-use std::default::Default;
 use std::path::{Path, PathBuf};
 use std::sync::Arc;
 
 use core::{Package, Source, Target};
 use core::{PackageId, PackageIdSpec, Profile, Profiles, TargetKind, Workspace};
+use core::compiler::{BuildConfig, BuildOutput, Compilation, Context, DefaultExecutor, Executor};
+use core::compiler::{Kind, TargetConfig, Unit};
 use core::resolver::{Method, Resolve};
-use ops::{self, BuildOutput, DefaultExecutor, Executor};
+use ops;
 use util::config::Config;
 use util::{profile, CargoResult, CargoResultExt};
 
@@ -194,7 +195,7 @@ pub enum CompileFilter {
 pub fn compile<'a>(
     ws: &Workspace<'a>,
     options: &CompileOptions<'a>,
-) -> CargoResult<ops::Compilation<'a>> {
+) -> CargoResult<Compilation<'a>> {
     compile_with_exec(ws, options, Arc::new(DefaultExecutor))
 }
 
@@ -202,7 +203,7 @@ pub fn compile_with_exec<'a>(
     ws: &Workspace<'a>,
     options: &CompileOptions<'a>,
     exec: Arc<Executor>,
-) -> CargoResult<ops::Compilation<'a>> {
+) -> CargoResult<Compilation<'a>> {
     for member in ws.members() {
         for warning in member.manifest().warnings().iter() {
             if warning.is_critical {
@@ -225,7 +226,7 @@ pub fn compile_ws<'a>(
     source: Option<Box<Source + 'a>>,
     options: &CompileOptions<'a>,
     exec: Arc<Executor>,
-) -> CargoResult<ops::Compilation<'a>> {
+) -> CargoResult<Compilation<'a>> {
     let CompileOptions {
         config,
         jobs,
@@ -257,6 +258,14 @@ pub fn compile_ws<'a>(
 
     if jobs == Some(0) {
         bail!("jobs must be at least 1")
+    }
+
+    let mut build_config = scrape_build_config(config, jobs, target)?;
+    build_config.release = release;
+    build_config.test = mode == CompileMode::Test || mode == CompileMode::Bench;
+    build_config.json_messages = message_format == MessageFormat::Json;
+    if let CompileMode::Doc { deps } = mode {
+        build_config.doc_all = deps;
     }
 
     let profiles = ws.profiles();
@@ -340,25 +349,35 @@ pub fn compile_ws<'a>(
     }
     let mut ret = {
         let _p = profile::start("compiling");
-        let mut build_config = scrape_build_config(config, jobs, target)?;
-        build_config.release = release;
-        build_config.test = mode == CompileMode::Test || mode == CompileMode::Bench;
-        build_config.json_messages = message_format == MessageFormat::Json;
-        if let CompileMode::Doc { deps } = mode {
-            build_config.doc_all = deps;
-        }
-
-        ops::compile_targets(
+        let mut cx = Context::new(
             ws,
-            &package_targets,
-            &packages,
             &resolve_with_overrides,
+            &packages,
             config,
             build_config,
             profiles,
-            export_dir.clone(),
-            &exec,
-        )?
+        )?;
+        let units = package_targets
+            .iter()
+            .flat_map(|&(pkg, ref targets)| {
+                let default_kind = if cx.build_config.requested_target.is_some() {
+                    Kind::Target
+                } else {
+                    Kind::Host
+                };
+                targets.iter().map(move |&(target, profile)| Unit {
+                    pkg,
+                    target,
+                    profile,
+                    kind: if target.for_host() {
+                        Kind::Host
+                    } else {
+                        default_kind
+                    },
+                })
+            })
+            .collect::<Vec<_>>();
+        cx.compile(&units, export_dir.clone(), &exec)?
     };
 
     ret.to_doc_test = to_builds.into_iter().cloned().collect();
@@ -827,7 +846,7 @@ fn scrape_build_config(
     config: &Config,
     jobs: Option<u32>,
     target: Option<String>,
-) -> CargoResult<ops::BuildConfig> {
+) -> CargoResult<BuildConfig> {
     if jobs.is_some() && config.jobserver_from_env().is_some() {
         config.shell().warn(
             "a `-j` argument was passed to Cargo but Cargo is \
@@ -858,12 +877,8 @@ fn scrape_build_config(
     let jobs = jobs.or(cfg_jobs).unwrap_or(::num_cpus::get() as u32);
     let cfg_target = config.get_string("build.target")?.map(|s| s.val);
     let target = target.or(cfg_target);
-    let mut base = ops::BuildConfig {
-        host_triple: config.rustc()?.host.clone(),
-        requested_target: target.clone(),
-        jobs,
-        ..Default::default()
-    };
+    let mut base = BuildConfig::new(&config.rustc()?.host, &target)?;
+    base.jobs = jobs;
     base.host = scrape_target_config(config, &base.host_triple)?;
     base.target = match target.as_ref() {
         Some(triple) => scrape_target_config(config, triple)?,
@@ -872,9 +887,9 @@ fn scrape_build_config(
     Ok(base)
 }
 
-fn scrape_target_config(config: &Config, triple: &str) -> CargoResult<ops::TargetConfig> {
+fn scrape_target_config(config: &Config, triple: &str) -> CargoResult<TargetConfig> {
     let key = format!("target.{}", triple);
-    let mut ret = ops::TargetConfig {
+    let mut ret = TargetConfig {
         ar: config.get_path(&format!("{}.ar", key))?.map(|v| v.val),
         linker: config.get_path(&format!("{}.linker", key))?.map(|v| v.val),
         overrides: HashMap::new(),

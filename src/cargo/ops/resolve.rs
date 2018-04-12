@@ -479,11 +479,16 @@ fn register_previous_locks<'a>(
 
             // Ok if nothing matches, then we poison the source of this
             // dependencies and the previous lock file.
-            debug!("poisoning {} because {} looks like it changed {}",
-                   dep.source_id(),
-                   member.package_id(),
-                   dep.name());
-            for id in resolve.iter().filter(|id| id.source_id() == dep.source_id()) {
+            debug!(
+                "poisoning {} because {} looks like it changed {}",
+                dep.source_id(),
+                member.package_id(),
+                dep.name()
+            );
+            for id in resolve
+                .iter()
+                .filter(|id| id.source_id() == dep.source_id())
+            {
                 add_deps(resolve, id, &mut avoid_locking);
             }
         }

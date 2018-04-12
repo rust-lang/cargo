@@ -244,9 +244,11 @@ impl Context {
         if !reqs.used.is_empty() {
             let pkgid = s.package_id();
 
-            let set = Rc::make_mut(self.resolve_features
-                .entry(pkgid.clone())
-                .or_insert_with(|| Rc::new(HashSet::new())));
+            let set = Rc::make_mut(
+                self.resolve_features
+                    .entry(pkgid.clone())
+                    .or_insert_with(|| Rc::new(HashSet::new())),
+            );
 
             for feature in reqs.used {
                 set.insert(InternedString::new(feature));

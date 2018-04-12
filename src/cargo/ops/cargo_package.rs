@@ -10,11 +10,12 @@ use git2;
 use tar::{Archive, Builder, EntryType, Header};
 
 use core::{Package, Source, SourceId, Workspace};
+use core::compiler::DefaultExecutor;
 use sources::PathSource;
 use util::{self, internal, Config, FileLock};
 use util::paths;
 use util::errors::{CargoResult, CargoResultExt};
-use ops::{self, DefaultExecutor};
+use ops;
 
 pub struct PackageOpts<'cfg> {
     pub config: &'cfg Config,
