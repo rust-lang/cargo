@@ -50,7 +50,6 @@ pub struct CompileOptions<'a> {
     /// Flag if the default feature should be built for the root package
     pub no_default_features: bool,
     /// A set of packages to build.
-    pub spec: Packages,
     pub requested: RequestedPackages,
     /// Filter to apply to the root package to select which targets will be
     /// built.
@@ -84,7 +83,6 @@ impl<'a> CompileOptions<'a> {
             features: Vec::new(),
             all_features: false,
             no_default_features: false,
-            spec: ops::Packages::Packages(Vec::new()),
             requested: RequestedPackages::default(),
             mode,
             release: false,
@@ -161,26 +159,6 @@ impl RequestedPackages {
     }
 }
 
-#[derive(Clone, PartialEq, Eq, Debug)]
-pub enum Packages {
-    Default,
-    All,
-    OptOut(Vec<String>),
-    Packages(Vec<String>),
-}
-
-impl Packages {
-    pub fn from_flags(all: bool, exclude: Vec<String>, package: Vec<String>) -> CargoResult<Self> {
-        Ok(match (all, exclude.len(), package.len()) {
-            (false, 0, 0) => Packages::Default,
-            (false, 0, _) => Packages::Packages(package),
-            (false, _, _) => bail!("--exclude can only be used together with --all"),
-            (true, 0, _) => Packages::All,
-            (true, _, _) => Packages::OptOut(exclude),
-        })
-    }
-}
-
 #[derive(Debug)]
 pub enum FilterRule {
     All,
@@ -242,7 +220,6 @@ pub fn compile_ws<'a>(
         config,
         jobs,
         ref target,
-        spec: _,
         ref features,
         all_features,
         no_default_features,

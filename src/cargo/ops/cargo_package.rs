@@ -343,7 +343,6 @@ fn run_verify(ws: &Workspace, tar: &FileLock, opts: &PackageOpts) -> CargoResult
             features: Vec::new(),
             no_default_features: false,
             all_features: false,
-            spec: ops::Packages::Packages(Vec::new()),
             requested,
             filter: ops::CompileFilter::Default {
                 required_features_filterable: true,

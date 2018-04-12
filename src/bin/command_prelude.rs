@@ -4,7 +4,7 @@ use std::fs;
 use clap::{self, SubCommand};
 use cargo::CargoResult;
 use cargo::core::{Workspace, Package, PackageIdSpec};
-use cargo::ops::{CompileFilter, CompileMode, CompileOptions, MessageFormat, NewOptions, Packages,
+use cargo::ops::{CompileFilter, CompileMode, CompileOptions, MessageFormat, NewOptions,
                  VersionControl, RequestedPackages};
 use cargo::util::paths;
 use cargo::util::important_paths::find_root_manifest_for_wd;
@@ -252,8 +252,11 @@ pub trait ArgMatchesExt {
         ws: &Workspace<'a>,
         mode: CompileMode,
     ) -> CargoResult<CompileOptions<'a>> {
-        let mut compile_opts = self.compile_options(ws, mode)?;
-        compile_opts.spec = Packages::Packages(self._values_of("package"));
+        let compile_opts = self.compile_options(ws, mode)?;
+        if compile_opts.requested.specs.len() != 1 {
+            ws.current()?;
+            unreachable!("More than one package requested => current should be Err")
+        }
         Ok(compile_opts)
     }
 
@@ -317,12 +320,6 @@ pub trait ArgMatchesExt {
             }
         };
 
-        let spec = Packages::from_flags(
-            self._is_present("all"),
-            self._values_of("exclude"),
-            self._values_of("package"),
-        )?;
-
         let message_format = match self._value_of("message-format") {
             None => MessageFormat::Human,
             Some(f) => {
@@ -343,7 +340,6 @@ pub trait ArgMatchesExt {
             features: self._values_of("features"),
             all_features: self._is_present("all-features"),
             no_default_features: self._is_present("no-default-features"),
-            spec,
             requested,
             mode,
             release: self._is_present("release"),
