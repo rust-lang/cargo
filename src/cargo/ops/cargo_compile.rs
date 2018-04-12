@@ -22,13 +22,13 @@
 //!       previously compiled dependency
 //!
 
-use std::collections::{HashMap, HashSet};
+use std::collections::HashSet;
 use std::path::{Path, PathBuf};
 use std::sync::Arc;
 
 use core::{Package, Source, Target};
 use core::{PackageId, PackageIdSpec, Profile, Profiles, TargetKind, Workspace};
-use core::compiler::{BuildConfig, BuildOutput, Compilation, Context, DefaultExecutor, Executor};
+use core::compiler::{BuildConfig, Compilation, Context, DefaultExecutor, Executor};
 use core::compiler::{Kind, TargetConfig, Unit};
 use core::resolver::{Method, Resolve};
 use ops;
@@ -879,88 +879,10 @@ fn scrape_build_config(
     let target = target.or(cfg_target);
     let mut base = BuildConfig::new(&config.rustc()?.host, &target)?;
     base.jobs = jobs;
-    base.host = scrape_target_config(config, &base.host_triple)?;
+    base.host = TargetConfig::new(config, &base.host_triple)?;
     base.target = match target.as_ref() {
-        Some(triple) => scrape_target_config(config, triple)?,
+        Some(triple) => TargetConfig::new(config, triple)?,
         None => base.host.clone(),
     };
     Ok(base)
-}
-
-fn scrape_target_config(config: &Config, triple: &str) -> CargoResult<TargetConfig> {
-    let key = format!("target.{}", triple);
-    let mut ret = TargetConfig {
-        ar: config.get_path(&format!("{}.ar", key))?.map(|v| v.val),
-        linker: config.get_path(&format!("{}.linker", key))?.map(|v| v.val),
-        overrides: HashMap::new(),
-    };
-    let table = match config.get_table(&key)? {
-        Some(table) => table.val,
-        None => return Ok(ret),
-    };
-    for (lib_name, value) in table {
-        match lib_name.as_str() {
-            "ar" | "linker" | "runner" | "rustflags" => continue,
-            _ => {}
-        }
-
-        let mut output = BuildOutput {
-            library_paths: Vec::new(),
-            library_links: Vec::new(),
-            cfgs: Vec::new(),
-            env: Vec::new(),
-            metadata: Vec::new(),
-            rerun_if_changed: Vec::new(),
-            rerun_if_env_changed: Vec::new(),
-            warnings: Vec::new(),
-        };
-        // We require deterministic order of evaluation, so we must sort the pairs by key first.
-        let mut pairs = Vec::new();
-        for (k, value) in value.table(&lib_name)?.0 {
-            pairs.push((k, value));
-        }
-        pairs.sort_by_key(|p| p.0);
-        for (k, value) in pairs {
-            let key = format!("{}.{}", key, k);
-            match &k[..] {
-                "rustc-flags" => {
-                    let (flags, definition) = value.string(k)?;
-                    let whence = format!("in `{}` (in {})", key, definition.display());
-                    let (paths, links) = BuildOutput::parse_rustc_flags(flags, &whence)?;
-                    output.library_paths.extend(paths);
-                    output.library_links.extend(links);
-                }
-                "rustc-link-lib" => {
-                    let list = value.list(k)?;
-                    output
-                        .library_links
-                        .extend(list.iter().map(|v| v.0.clone()));
-                }
-                "rustc-link-search" => {
-                    let list = value.list(k)?;
-                    output
-                        .library_paths
-                        .extend(list.iter().map(|v| PathBuf::from(&v.0)));
-                }
-                "rustc-cfg" => {
-                    let list = value.list(k)?;
-                    output.cfgs.extend(list.iter().map(|v| v.0.clone()));
-                }
-                "rustc-env" => for (name, val) in value.table(k)?.0 {
-                    let val = val.string(name)?.0;
-                    output.env.push((name.clone(), val.to_string()));
-                },
-                "warning" | "rerun-if-changed" | "rerun-if-env-changed" => {
-                    bail!("`{}` is not supported in build script overrides", k);
-                }
-                _ => {
-                    let val = value.string(k)?.0;
-                    output.metadata.push((k.clone(), val.to_string()));
-                }
-            }
-        }
-        ret.overrides.insert(lib_name, output);
-    }
-
-    Ok(ret)
 }
