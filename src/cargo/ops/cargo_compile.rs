@@ -117,14 +117,14 @@ pub enum MessageFormat {
 
 #[derive(Default, Debug)]
 pub struct RequestedPackages {
-    specs: Vec<PackageIdSpec>,
+    pub specs: Vec<PackageIdSpec>,
     /// Extra features to build for the root package
     // invariant: features.len() > 0 => specs.len() == 1
-    features: Vec<String>,
+    pub features: Vec<String>,
     /// Flag whether all available features should be built for the root package
-    all_features: bool,
+    pub all_features: bool,
     /// Flag if the default feature should be built for the root package
-    no_default_features: bool,
+    pub no_default_features: bool,
 }
 
 impl RequestedPackages {

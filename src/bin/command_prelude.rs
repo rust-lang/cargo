@@ -3,7 +3,7 @@ use std::fs;
 
 use clap::{self, SubCommand};
 use cargo::CargoResult;
-use cargo::core::Workspace;
+use cargo::core::{Workspace, Package, PackageIdSpec};
 use cargo::ops::{CompileFilter, CompileMode, CompileOptions, MessageFormat, NewOptions, Packages,
                  VersionControl, RequestedPackages};
 use cargo::util::paths;
@@ -270,6 +270,42 @@ pub trait ArgMatchesExt {
         ws: Option<&Workspace<'a>>,
         mode: CompileMode,
     ) -> CargoResult<CompileOptions<'a>> {
+
+        let requested = match ws {
+            // Will determine precise set later, see RequestedPackages::set_package
+            None => RequestedPackages::default(),
+            Some(ws) => {
+                let all = self._is_present("all");
+                let exclude = self._values_of("exclude");
+                let package = self._values_of("package");
+                let specs = match (all, exclude.is_empty(), package.is_empty()) {
+                    (_, _, true) =>
+                        (if all { ws.members() } else { ws.default_members() })
+                            .map(Package::package_id)
+                            .map(PackageIdSpec::from_package_id)
+                            .filter(|p| exclude.iter().position(|x| *x == p.name()).is_none())
+                            .collect(),
+                    (false, true, false) => {
+                        package.iter()
+                            .map(|p| PackageIdSpec::parse(p))
+                            .collect::<CargoResult<Vec<_>>>()?
+                    },
+                    (false, false, _) => bail!("--exclude can only be used together with --all"),
+                    (true, _, false) => bail!("--package cannot be used together with --all"),
+                };
+
+                if specs.len() > 1 && self._is_present("features") {
+                    bail!("cannot specify features for more than one package")
+                }
+                RequestedPackages {
+                    specs,
+                    features: self._values_of("features"),
+                    all_features: self._is_present("all-features"),
+                    no_default_features: self._is_present("no-default-features"),
+                }
+            }
+        };
+
         let spec = Packages::from_flags(
             self._is_present("all"),
             self._values_of("exclude"),
@@ -297,7 +333,7 @@ pub trait ArgMatchesExt {
             all_features: self._is_present("all-features"),
             no_default_features: self._is_present("no-default-features"),
             spec,
-            requested: RequestedPackages::default(),
+            requested,
             mode,
             release: self._is_present("release"),
             filter: CompileFilter::new(

@@ -1667,7 +1667,7 @@ fn setting_features_for_workspace_member() {
     assert_that(
         p.cargo("build --all --features main"),
         execs().with_status(101).with_stderr_contains("\
-[ERROR] can't specify features for more than one package"
+[ERROR] cannot specify features for more than one package"
         ),
     );
     assert_that(
