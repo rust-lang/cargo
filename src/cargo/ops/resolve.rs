@@ -1,6 +1,6 @@
 use std::collections::HashSet;
 
-use core::{PackageId, PackageIdSpec, PackageSet, Source, SourceId, Workspace};
+use core::{PackageId, PackageSet, Source, SourceId, Workspace};
 use core::registry::PackageRegistry;
 use core::resolver::{self, Method, Resolve};
 use sources::PathSource;
@@ -29,7 +29,6 @@ pub fn resolve_ws_precisely<'a>(
     features: &[String],
     all_features: bool,
     no_default_features: bool,
-    specs: &[PackageIdSpec],
     requested: &RequestedPackages,
 ) -> CargoResult<(PackageSet<'a>, Resolve)> {
     let features = Method::split_features(features);
@@ -43,14 +42,13 @@ pub fn resolve_ws_precisely<'a>(
             uses_default_features: !no_default_features,
         }
     };
-    resolve_ws_with_method(ws, source, method, specs, requested)
+    resolve_ws_with_method(ws, source, method, requested)
 }
 
 pub fn resolve_ws_with_method<'a>(
     ws: &Workspace<'a>,
     source: Option<Box<Source + 'a>>,
     method: Method,
-    specs: &[PackageIdSpec],
     requested: &RequestedPackages,
 ) -> CargoResult<(PackageSet<'a>, Resolve)> {
     let mut registry = PackageRegistry::new(ws.config())?;
@@ -94,7 +92,6 @@ pub fn resolve_ws_with_method<'a>(
         method,
         resolve.as_ref(),
         None,
-        specs,
         requested,
         add_patches,
         true,
@@ -118,7 +115,6 @@ fn resolve_with_registry<'cfg>(
         Method::Everything,
         prev.as_ref(),
         None,
-        &[],
         &requested,
         true,
         warn,
@@ -145,7 +141,6 @@ pub fn resolve_with_previous<'a, 'cfg>(
     method: Method,
     previous: Option<&'a Resolve>,
     to_avoid: Option<&HashSet<&'a PackageId>>,
-    _specs: &[PackageIdSpec],
     requested: &RequestedPackages,
     register_patches: bool,
     warn: bool,

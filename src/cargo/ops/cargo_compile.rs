@@ -179,44 +179,6 @@ impl Packages {
             (true, _, _) => Packages::OptOut(exclude),
         })
     }
-
-    pub fn into_package_id_specs(&self, ws: &Workspace) -> CargoResult<Vec<PackageIdSpec>> {
-        let specs = match *self {
-            Packages::All => ws.members()
-                .map(Package::package_id)
-                .map(PackageIdSpec::from_package_id)
-                .collect(),
-            Packages::OptOut(ref opt_out) => ws.members()
-                .map(Package::package_id)
-                .map(PackageIdSpec::from_package_id)
-                .filter(|p| opt_out.iter().position(|x| *x == p.name()).is_none())
-                .collect(),
-            Packages::Packages(ref packages) if packages.is_empty() => ws.current_opt()
-                .map(Package::package_id)
-                .map(PackageIdSpec::from_package_id)
-                .into_iter()
-                .collect(),
-            Packages::Packages(ref packages) => packages
-                .iter()
-                .map(|p| PackageIdSpec::parse(p))
-                .collect::<CargoResult<Vec<_>>>()?,
-            Packages::Default => ws.default_members()
-                .map(Package::package_id)
-                .map(PackageIdSpec::from_package_id)
-                .collect(),
-        };
-        if specs.is_empty() {
-            if ws.is_virtual() {
-                bail!(
-                    "manifest path `{}` contains no package: The manifest is virtual, \
-                     and the workspace has no members.",
-                    ws.root().display()
-                )
-            }
-            bail!("no packages to compile")
-        }
-        Ok(specs)
-    }
 }
 
 #[derive(Debug)]
@@ -280,7 +242,7 @@ pub fn compile_ws<'a>(
         config,
         jobs,
         ref target,
-        ref spec,
+        spec: _,
         ref features,
         all_features,
         no_default_features,
@@ -320,7 +282,6 @@ pub fn compile_ws<'a>(
 
     let profiles = ws.profiles();
 
-    let specs = spec.into_package_id_specs(ws)?;
     let features = Method::split_features(features);
     let method = Method::Required {
         dev_deps: ws.require_optional_deps() || filter.need_dev_deps(mode),
@@ -328,10 +289,10 @@ pub fn compile_ws<'a>(
         all_features,
         uses_default_features: !no_default_features,
     };
-    let resolve = ops::resolve_ws_with_method(ws, source, method, &specs, requested)?;
+    let resolve = ops::resolve_ws_with_method(ws, source, method, requested)?;
     let (packages, resolve_with_overrides) = resolve;
 
-    let to_builds = specs
+    let to_builds = requested.specs
         .iter()
         .map(|p| {
             let pkgid = p.query(resolve_with_overrides.iter())?;

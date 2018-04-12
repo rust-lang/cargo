@@ -297,6 +297,17 @@ pub trait ArgMatchesExt {
                 if specs.len() > 1 && self._is_present("features") {
                     bail!("cannot specify features for more than one package")
                 }
+                if specs.is_empty() {
+                    if ws.is_virtual() {
+                        bail!(
+                            "manifest path `{}` contains no package: The manifest is virtual, \
+                             and the workspace has no members.",
+                             ws.root().display()
+                        )
+                    }
+                    bail!("no packages to compile")
+                }
+
                 RequestedPackages {
                     specs,
                     features: self._values_of("features"),
