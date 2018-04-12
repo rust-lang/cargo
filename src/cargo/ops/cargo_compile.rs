@@ -147,6 +147,10 @@ impl RequestedPackages {
         }
     }
 
+    pub fn contains(&self, id: &PackageId) -> bool {
+        self.specs.iter().any(|s| s.matches(id))
+    }
+
     // Normally, we determine the set of requested packages from the current
     // workspace when parsing cli flags. For `cargo install` however, we don't
     // have workspace available at that time, so we need this method to set them
@@ -280,7 +284,7 @@ pub fn compile_ws<'a>(
         ref features,
         all_features,
         no_default_features,
-        requested: _,
+        ref requested,
         release,
         mode,
         message_format,
@@ -324,7 +328,7 @@ pub fn compile_ws<'a>(
         all_features,
         uses_default_features: !no_default_features,
     };
-    let resolve = ops::resolve_ws_with_method(ws, source, method, &specs)?;
+    let resolve = ops::resolve_ws_with_method(ws, source, method, &specs, requested)?;
     let (packages, resolve_with_overrides) = resolve;
 
     let to_builds = specs
