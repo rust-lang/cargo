@@ -12,12 +12,13 @@
 
 use std::path::{Path, PathBuf};
 use std::fs::{self, DirEntry};
-use std::collections::HashSet;
+use std::collections::{BTreeMap, HashSet};
 
 use core::{compiler, Edition, Target};
+use core::dependency::Platform;
 use util::errors::CargoResult;
 use super::{LibKind, PathValue, StringOrBool, TomlBenchTarget, TomlBinTarget, TomlExampleTarget,
-            TomlLibTarget, TomlManifest, TomlTarget, TomlTestTarget};
+            TomlLibTarget, TomlManifest, TomlPlatform, TomlTarget, TomlTestTarget};
 
 pub fn targets(
     manifest: &TomlManifest,
@@ -28,22 +29,16 @@ pub fn targets(
     warnings: &mut Vec<String>,
     errors: &mut Vec<String>,
 ) -> CargoResult<Vec<Target>> {
-    let mut targets = Vec::new();
-
-    let has_lib;
-
-    if let Some(target) = clean_lib(
+    let mut targets = clean_lib(
         manifest.lib.as_ref(),
+        manifest.target.as_ref(),
         package_root,
         package_name,
         edition,
-        warnings,
-    )? {
-        targets.push(target);
-        has_lib = true;
-    } else {
-        has_lib = false;
-    }
+        warnings
+    )?;
+
+    let has_lib = !targets.is_empty();
 
     let package = manifest
         .package
@@ -53,6 +48,7 @@ pub fn targets(
 
     targets.extend(clean_bins(
         manifest.bin.as_ref(),
+        manifest.target.as_ref(),
         package_root,
         package_name,
         edition,
@@ -64,6 +60,7 @@ pub fn targets(
 
     targets.extend(clean_examples(
         manifest.example.as_ref(),
+        manifest.target.as_ref(),
         package_root,
         edition,
         package.autoexamples,
@@ -73,6 +70,7 @@ pub fn targets(
 
     targets.extend(clean_tests(
         manifest.test.as_ref(),
+        manifest.target.as_ref(),
         package_root,
         edition,
         package.autotests,
@@ -82,6 +80,7 @@ pub fn targets(
 
     targets.extend(clean_benches(
         manifest.bench.as_ref(),
+        manifest.target.as_ref(),
         package_root,
         edition,
         package.autobenches,
@@ -109,11 +108,12 @@ pub fn targets(
 
 fn clean_lib(
     toml_lib: Option<&TomlLibTarget>,
+    toml_targets: Option<&BTreeMap<String, TomlPlatform>>,
     package_root: &Path,
     package_name: &str,
     edition: Edition,
     warnings: &mut Vec<String>,
-) -> CargoResult<Option<Target>> {
+) -> CargoResult<Vec<Target>> {
     let inferred = inferred_lib(package_root);
     let lib = match toml_lib {
         Some(lib) => {
@@ -135,60 +135,78 @@ fn clean_lib(
         }),
     };
 
-    let lib = match lib {
-        Some(ref lib) => lib,
-        None => return Ok(None),
-    };
+    let libs: CargoResult<Vec<_>> = lib.into_iter()
+        .map(|lib| (None, lib))
+        .chain(toml_targets.iter().flat_map(|ps| {
+            ps.iter()
+                .filter_map(|(cfg, platform)| {
+                    platform.lib.as_ref().cloned().map(|lib| {
+                        (Some(cfg), lib)
+                    })
+                })
+                .collect::<Vec<_>>()
+        }))
+        .map(|(cfg, lib)| {
+            validate_has_name(&lib, "library", "lib")?;
 
-    validate_has_name(lib, "library", "lib")?;
+            let path = match (lib.path.as_ref(), inferred.clone()) {
+                (Some(path), _) => package_root.join(&path.0),
+                (None, Some(path)) => path,
+                (None, None) => {
+                    let legacy_path = package_root.join("src").join(format!("{}.rs", lib.name()));
+                    if edition < Edition::Edition2018 && legacy_path.exists() {
+                        warnings.push(format!(
+                            "path `{}` was erroneously implicitly accepted for library `{}`,\n\
+                             please rename the file to `src/lib.rs` or set lib.path in Cargo.toml",
+                            legacy_path.display(),
+                            lib.name()
+                        ));
+                        legacy_path
+                    } else {
+                        bail!(
+                            "can't find library `{}`, \
+                             rename file to `src/lib.rs` or specify lib.path",
+                            lib.name()
+                        )
+                    }
+                }
+            };
 
-    let path = match (lib.path.as_ref(), inferred) {
-        (Some(path), _) => package_root.join(&path.0),
-        (None, Some(path)) => path,
-        (None, None) => {
-            let legacy_path = package_root.join("src").join(format!("{}.rs", lib.name()));
-            if edition < Edition::Edition2018 && legacy_path.exists() {
-                warnings.push(format!(
-                    "path `{}` was erroneously implicitly accepted for library `{}`,\n\
-                     please rename the file to `src/lib.rs` or set lib.path in Cargo.toml",
-                    legacy_path.display(),
-                    lib.name()
-                ));
-                legacy_path
+            // Per the Macros 1.1 RFC:
+            //
+            // > Initially if a crate is compiled with the proc-macro crate type
+            // > (and possibly others) it will forbid exporting any items in the
+            // > crate other than those functions tagged #[proc_macro_derive] and
+            // > those functions must also be placed at the crate root.
+            //
+            // A plugin requires exporting plugin_registrar so a crate cannot be
+            // both at once.
+            let crate_types = match (lib.crate_types(), lib.plugin, lib.proc_macro()) {
+                (_, Some(true), Some(true)) => bail!("lib.plugin and lib.proc-macro cannot both be true"),
+                (Some(kinds), _, _) => kinds.iter().map(|s| LibKind::from_str(s)).collect(),
+                (None, Some(true), _) => vec![LibKind::Dylib],
+                (None, _, Some(true)) => vec![LibKind::ProcMacro],
+                (None, _, _) => vec![LibKind::Lib],
+            };
+
+            let mut target = Target::lib_target(&lib.name(), crate_types, path);
+            let cfg = if let Some(cfg) = cfg {
+                Some(cfg.parse()?)
             } else {
-                bail!(
-                    "can't find library `{}`, \
-                     rename file to `src/lib.rs` or specify lib.path",
-                    lib.name()
-                )
-            }
-        }
-    };
+                None
+            };
+            configure(&lib, cfg, &mut target);
 
-    // Per the Macros 1.1 RFC:
-    //
-    // > Initially if a crate is compiled with the proc-macro crate type
-    // > (and possibly others) it will forbid exporting any items in the
-    // > crate other than those functions tagged #[proc_macro_derive] and
-    // > those functions must also be placed at the crate root.
-    //
-    // A plugin requires exporting plugin_registrar so a crate cannot be
-    // both at once.
-    let crate_types = match (lib.crate_types(), lib.plugin, lib.proc_macro()) {
-        (_, Some(true), Some(true)) => bail!("lib.plugin and lib.proc-macro cannot both be true"),
-        (Some(kinds), _, _) => kinds.iter().map(|s| LibKind::from_str(s)).collect(),
-        (None, Some(true), _) => vec![LibKind::Dylib],
-        (None, _, Some(true)) => vec![LibKind::ProcMacro],
-        (None, _, _) => vec![LibKind::Lib],
-    };
+            Ok(target)
+        })
+        .collect();
 
-    let mut target = Target::lib_target(&lib.name(), crate_types, path);
-    configure(lib, &mut target);
-    Ok(Some(target))
+    Ok(libs?)
 }
 
 fn clean_bins(
     toml_bins: Option<&Vec<TomlBinTarget>>,
+    toml_targets: Option<&BTreeMap<String, TomlPlatform>>,
     package_root: &Path,
     package_name: &str,
     edition: Edition,
@@ -197,7 +215,16 @@ fn clean_bins(
     errors: &mut Vec<String>,
     has_lib: bool,
 ) -> CargoResult<Vec<Target>> {
-    let inferred = inferred_bins(package_root, package_name);
+    let any_platform_bins = toml_targets.map_or(
+        false,
+        |ps| ps.iter().any(|(_, p)| p.bin.is_some())
+    );
+
+    let inferred = if any_platform_bins {
+        vec![]
+    } else {
+        inferred_bins(package_root, package_name)
+    };
 
     let bins = toml_targets_and_inferred(
         toml_bins,
@@ -211,7 +238,18 @@ fn clean_bins(
         "autobins",
     );
 
-    for bin in &bins {
+    let mut bins: Vec<_> = bins.iter().cloned().map(|b| (None, b)).collect();
+
+    if let Some(toml_targets) = toml_targets {
+        bins.extend(toml_targets.iter().flat_map(|(cfg, platform)| {
+            platform.bin.as_ref().map_or(
+                vec![],
+                |bins| bins.iter().map(|bin| (Some(cfg.clone()), bin.clone())).collect()
+            )
+        }));
+    }
+
+    for &(_, ref bin) in &bins {
         validate_has_name(bin, "binary", "bin")?;
 
         let name = bin.name();
@@ -240,10 +278,10 @@ fn clean_bins(
         }
     }
 
-    validate_unique_names(&bins, "binary")?;
+    validate_unique_names(bins.iter().map(|pair| &pair.1), "binary")?;
 
     let mut result = Vec::new();
-    for bin in &bins {
+    for &(ref cfg, ref bin) in &bins {
         let path = target_path(bin, &inferred, "bin", package_root, edition, &mut |_| {
             if let Some(legacy_path) = legacy_bin_path(package_root, &bin.name(), has_lib) {
                 warnings.push(format!(
@@ -263,7 +301,12 @@ fn clean_bins(
         };
 
         let mut target = Target::bin_target(&bin.name(), path, bin.required_features.clone());
-        configure(bin, &mut target);
+        let cfg = if let Some(cfg) = cfg {
+            Some(cfg.parse()?)
+        } else {
+            None
+        };
+        configure(bin, cfg, &mut target);
         result.push(target);
     }
     return Ok(result);
@@ -290,13 +333,23 @@ fn clean_bins(
 
 fn clean_examples(
     toml_examples: Option<&Vec<TomlExampleTarget>>,
+    toml_platforms: Option<&BTreeMap<String, TomlPlatform>>,
     package_root: &Path,
     edition: Edition,
     autodiscover: Option<bool>,
     warnings: &mut Vec<String>,
     errors: &mut Vec<String>,
 ) -> CargoResult<Vec<Target>> {
-    let inferred = infer_from_directory(&package_root.join("examples"));
+    let any_platform_examples = toml_platforms.map_or(
+        false,
+        |ps| ps.iter().any(|p| p.1.example.is_some())
+    );
+
+    let inferred = if any_platform_examples {
+        vec![]
+    } else {
+        infer_from_directory(&package_root.join("examples"))
+    };
 
     let targets = clean_targets(
         "example",
@@ -311,8 +364,24 @@ fn clean_examples(
         "autoexamples",
     )?;
 
+    let mut targets: Vec<_> = targets.into_iter()
+        .map(|(path, target)| (path, None, target))
+        .collect();
+
+    targets.extend(
+        get_platform_targets(
+            toml_platforms.as_ref().map(|t| *t),
+            |t| t.example.as_ref().map(|t| &t[..]),
+            &inferred,
+            "example",
+            package_root,
+            edition,
+            errors
+        )
+    );
+
     let mut result = Vec::new();
-    for (path, toml) in targets {
+    for (path, cfg, toml) in targets {
         let crate_types = match toml.crate_types() {
             Some(kinds) => kinds.iter().map(|s| LibKind::from_str(s)).collect(),
             None => Vec::new(),
@@ -324,22 +393,83 @@ fn clean_examples(
             path,
             toml.required_features.clone(),
         );
-        configure(&toml, &mut target);
+        let cfg = if let Some(cfg) = cfg {
+            Some(cfg.parse()?)
+        } else {
+            None
+        };
+        configure(&toml, cfg, &mut target);
         result.push(target);
     }
 
     Ok(result)
 }
 
+fn get_platform_targets<F>(
+    toml_platforms: Option<&BTreeMap<String, TomlPlatform>>,
+    get_targets: F,
+    inferred: &[(String, PathBuf)],
+    target_kind: &str,
+    package_root: &Path,
+    edition: Edition,
+    errors: &mut Vec<String>,
+) -> Vec<(PathBuf, Option<String>, TomlTarget)>
+where
+    F: Fn(&TomlPlatform) -> Option<&[TomlTarget]>
+{
+    toml_platforms.iter()
+        .flat_map(|targets| {
+            targets.iter()
+                .flat_map(|(cfg, platform)| {
+                    get_targets(platform)
+                        .iter()
+                        .flat_map(|tests| {
+                            tests.iter()
+                                .filter_map(|test| {
+                                    let path = target_path(
+                                        test,
+                                        inferred,
+                                        target_kind,
+                                        package_root,
+                                        edition,
+                                        &mut |_| None
+                                    );
+                                    match path {
+                                        Ok(path) => Some((path, Some(cfg.clone()), test.clone())),
+                                        Err(e) => {
+                                            errors.push(e);
+                                            None
+                                        }
+                                    }
+                                })
+                                .collect::<Vec<_>>()
+                        })
+                        .collect::<Vec<_>>()
+                })
+                .collect::<Vec<_>>()
+        })
+        .collect()
+}
+
 fn clean_tests(
     toml_tests: Option<&Vec<TomlTestTarget>>,
+    toml_targets: Option<&BTreeMap<String, TomlPlatform>>,
     package_root: &Path,
     edition: Edition,
     autodiscover: Option<bool>,
     warnings: &mut Vec<String>,
     errors: &mut Vec<String>,
 ) -> CargoResult<Vec<Target>> {
-    let inferred = infer_from_directory(&package_root.join("tests"));
+    let any_platform_tests = toml_targets.map_or(
+        false,
+        |ps| ps.iter().any(|p| p.1.test.is_some())
+    );
+
+    let inferred = if any_platform_tests {
+        vec![]
+    } else {
+        infer_from_directory(&package_root.join("tests"))
+    };
 
     let targets = clean_targets(
         "test",
@@ -354,10 +484,31 @@ fn clean_tests(
         "autotests",
     )?;
 
+    let mut targets: Vec<_> = targets.into_iter()
+        .map(|(path, target)| (path, None, target))
+        .collect();
+
+    targets.extend(
+        get_platform_targets(
+            toml_targets.as_ref().map(|t| *t),
+            |t| t.test.as_ref().map(|t| &t[..]),
+            &inferred,
+            "example",
+            package_root,
+            edition,
+            errors
+        )
+    );
+
     let mut result = Vec::new();
-    for (path, toml) in targets {
+    for (path, cfg, toml) in targets {
         let mut target = Target::test_target(&toml.name(), path, toml.required_features.clone());
-        configure(&toml, &mut target);
+        let cfg = if let Some(cfg) = cfg {
+            Some(cfg.parse()?)
+        } else {
+            None
+        };
+        configure(&toml, cfg, &mut target);
         result.push(target);
     }
     Ok(result)
@@ -365,6 +516,7 @@ fn clean_tests(
 
 fn clean_benches(
     toml_benches: Option<&Vec<TomlBenchTarget>>,
+    toml_targets: Option<&BTreeMap<String, TomlPlatform>>,
     package_root: &Path,
     edition: Edition,
     autodiscover: Option<bool>,
@@ -388,9 +540,17 @@ fn clean_benches(
             Some(legacy_path)
         };
 
-        let inferred = infer_from_directory(&package_root.join("benches"));
+        let any_platform_benches = toml_targets.map_or(
+            false,
+            |ps| ps.iter().any(|p| p.1.bench.is_some())
+        );
+        let inferred = if any_platform_benches {
+            vec![]
+        } else {
+            infer_from_directory(&package_root.join("benches"))
+        };
 
-        clean_targets_with_legacy_path(
+        let targets = clean_targets_with_legacy_path(
             "benchmark",
             "bench",
             toml_benches,
@@ -402,15 +562,38 @@ fn clean_benches(
             errors,
             &mut legacy_bench_path,
             "autobenches",
-        )?
+        )?;
+
+        let mut targets: Vec<_> = targets.into_iter()
+            .map(|(path, target)| (path, None, target))
+            .collect();
+
+        targets.extend(
+            get_platform_targets(
+                toml_targets.as_ref().map(|t| *t),
+                |t| t.bench.as_ref().map(|t| &t[..]),
+                &inferred,
+                "bench",
+                package_root,
+                edition,
+                errors
+            )
+        );
+
+        targets
     };
 
     warnings.append(&mut legacy_warnings);
 
     let mut result = Vec::new();
-    for (path, toml) in targets {
+    for (path, cfg, toml) in targets {
         let mut target = Target::bench_target(&toml.name(), path, toml.required_features.clone());
-        configure(&toml, &mut target);
+        let cfg = if let Some(cfg) = cfg {
+            Some(cfg.parse()?)
+        } else {
+            None
+        };
+        configure(&toml, cfg, &mut target);
         result.push(target);
     }
 
@@ -667,9 +850,12 @@ fn validate_has_name(
 }
 
 /// Will check a list of toml targets, and make sure the target names are unique within a vector.
-fn validate_unique_names(targets: &[TomlTarget], target_kind: &str) -> CargoResult<()> {
+fn validate_unique_names<'a, I>(targets: I, target_kind: &str) -> CargoResult<()>
+where
+    I: IntoIterator<Item = &'a TomlTarget>
+{
     let mut seen = HashSet::new();
-    for name in targets.iter().map(|e| e.name()) {
+    for name in targets.into_iter().map(|e| e.name()) {
         if !seen.insert(name.clone()) {
             bail!(
                 "found duplicate {target_kind} name {name}, \
@@ -682,7 +868,7 @@ fn validate_unique_names(targets: &[TomlTarget], target_kind: &str) -> CargoResu
     Ok(())
 }
 
-fn configure(toml: &TomlTarget, target: &mut Target) {
+fn configure(toml: &TomlTarget, cfg: Option<Platform>, target: &mut Target) {
     let t2 = target.clone();
     target
         .set_tested(toml.test.unwrap_or_else(|| t2.tested()))
@@ -694,7 +880,8 @@ fn configure(toml: &TomlTarget, target: &mut Target) {
             (None, None) => t2.for_host(),
             (Some(true), _) | (_, Some(true)) => true,
             (Some(false), _) | (_, Some(false)) => false,
-        });
+        })
+        .set_platform(cfg.or_else(|| t2.platform().cloned()));
 }
 
 fn target_path(

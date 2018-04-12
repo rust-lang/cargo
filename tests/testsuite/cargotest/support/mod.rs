@@ -329,6 +329,10 @@ pub fn main_file(println: &str, deps: &[&str]) -> String {
     buf.to_string()
 }
 
+pub fn bench_file() -> &'static str {
+    ""
+}
+
 trait ErrMsg<T> {
     fn with_err_msg(self, val: String) -> Result<T, String>;
 }

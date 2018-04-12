@@ -141,7 +141,7 @@ impl CargoTestError {
                     TargetKind::Bin => {
                         format!("test failed, to rerun pass '{}--bin {}'", pkg_info, name)
                     }
-                    TargetKind::Lib(_) => format!("test failed, to rerun pass '{}--lib'", pkg_info),
+                    TargetKind::Lib(..) => format!("test failed, to rerun pass '{}--lib'", pkg_info),
                     TargetKind::Test => {
                         format!("test failed, to rerun pass '{}--test {}'", pkg_info, name)
                     }

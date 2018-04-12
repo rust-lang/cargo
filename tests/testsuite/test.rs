@@ -4108,6 +4108,7 @@ fn json_artifact_includes_test_flag() {
             "kind":["lib"],
             "crate_types":["lib"],
             "name":"foo",
+            "platform":null,
             "src_path":"[..]lib.rs"
         },
         "filenames":["[..].rlib"],
@@ -4129,6 +4130,7 @@ fn json_artifact_includes_test_flag() {
             "kind":["lib"],
             "crate_types":["lib"],
             "name":"foo",
+            "platform":null,
             "src_path":"[..]lib.rs"
         },
         "filenames":["[..][/]foo-[..]"],

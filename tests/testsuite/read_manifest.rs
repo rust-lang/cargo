@@ -22,6 +22,7 @@ static MANIFEST_OUTPUT: &'static str = r#"
         "kind":["bin"],
         "crate_types":["bin"],
         "name":"foo",
+        "platform": null,
         "src_path":"[..][/]foo[/]src[/]foo.rs"
     }],
     "features":{},

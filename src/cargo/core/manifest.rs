@@ -11,7 +11,7 @@ use url::Url;
 
 use core::interning::InternedString;
 use core::profiles::Profiles;
-use core::{Dependency, PackageId, PackageIdSpec, SourceId, Summary};
+use core::{Dependency, PackageId, PackageIdSpec, Platform, SourceId, Summary};
 use core::{Edition, Feature, Features, WorkspaceConfig};
 use util::errors::*;
 use util::toml::TomlManifest;
@@ -171,6 +171,10 @@ pub struct Target {
     doctest: bool,
     harness: bool, // whether to use the test harness (--test)
     for_host: bool,
+
+    // This target should only be built for this platform. `None` means *all
+    // platforms*.
+    platform: Option<Platform>,
 }
 
 #[derive(Clone, PartialEq, Eq, Debug)]
@@ -194,6 +198,7 @@ struct SerializedTarget<'a> {
     crate_types: Vec<&'a str>,
     name: &'a str,
     src_path: &'a PathBuf,
+    platform: Option<&'a Platform>,
 }
 
 impl ser::Serialize for Target {
@@ -203,6 +208,7 @@ impl ser::Serialize for Target {
             crate_types: self.rustc_crate_types(),
             name: &self.name,
             src_path: &self.src_path.path,
+            platform: self.platform(),
         }.serialize(s)
     }
 }
@@ -417,6 +423,7 @@ impl Target {
             for_host: false,
             tested: true,
             benched: true,
+            platform: None,
         }
     }
 
@@ -537,6 +544,12 @@ impl Target {
         self.benched
     }
 
+    /// If none, this target must be built for all platforms.
+    /// If some, it must only be built for the specified platform.
+    pub fn platform(&self) -> Option<&Platform> {
+        self.platform.as_ref()
+    }
+
     pub fn doctested(&self) -> bool {
         self.doctest && match self.kind {
             TargetKind::Lib(ref kinds) => kinds
@@ -552,7 +565,7 @@ impl Target {
 
     pub fn is_lib(&self) -> bool {
         match self.kind {
-            TargetKind::Lib(_) => true,
+            TargetKind::Lib(..) => true,
             _ => false,
         }
     }
@@ -657,6 +670,10 @@ impl Target {
     }
     pub fn set_doc(&mut self, doc: bool) -> &mut Target {
         self.doc = doc;
+        self
+    }
+    pub fn set_platform(&mut self, platform: Option<Platform>) -> &mut Target {
+        self.platform = platform;
         self
     }
 }

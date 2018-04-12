@@ -4,7 +4,7 @@ use std::path::{Path, PathBuf};
 use std::str::{self, FromStr};
 
 use core::profiles::Profiles;
-use core::{Dependency, Workspace};
+use core::{Dependency, Target, Workspace};
 use core::{Package, PackageId, PackageSet, Resolve};
 use util::errors::CargoResult;
 use util::{profile, Cfg, CfgExpr, Config, Rustc};
@@ -123,6 +123,18 @@ impl<'a, 'cfg> BuildContext<'a, 'cfg> {
         // If this dependency is only available for certain platforms,
         // make sure we're only enabling it for that platform.
         let platform = match dep.platform() {
+            Some(p) => p,
+            None => return true,
+        };
+        let (name, info) = match kind {
+            Kind::Host => (self.host_triple(), &self.host_info),
+            Kind::Target => (self.target_triple(), &self.target_info),
+        };
+        platform.matches(name, info.cfg())
+    }
+
+    pub fn target_platform_activated(&self, target: &Target, kind: Kind) -> bool {
+        let platform = match target.platform() {
             Some(p) => p,
             None => return true,
         };
