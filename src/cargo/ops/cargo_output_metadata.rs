@@ -4,6 +4,7 @@ use core::resolver::Resolve;
 use core::{Package, PackageId, Workspace};
 use ops::{self, Packages};
 use util::CargoResult;
+use ops::RequestedPackages;
 
 const VERSION: u32 = 1;
 
@@ -46,6 +47,7 @@ fn metadata_no_deps(ws: &Workspace, _opt: &OutputMetadataOptions) -> CargoResult
 
 fn metadata_full(ws: &Workspace, opt: &OutputMetadataOptions) -> CargoResult<ExportInfo> {
     let specs = Packages::All.into_package_id_specs(ws)?;
+    let requested = RequestedPackages::whole_workspace(ws);
     let deps = ops::resolve_ws_precisely(
         ws,
         None,
@@ -53,6 +55,7 @@ fn metadata_full(ws: &Workspace, opt: &OutputMetadataOptions) -> CargoResult<Exp
         opt.all_features,
         opt.no_default_features,
         &specs,
+        &requested,
     )?;
     let (packages, resolve) = deps;
 

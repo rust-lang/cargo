@@ -7,6 +7,7 @@ use sources::PathSource;
 use ops;
 use util::profile;
 use util::errors::{CargoResult, CargoResultExt};
+use ops::RequestedPackages;
 
 /// Resolve all dependencies for the workspace using the previous
 /// lockfile as a guide if present.
@@ -29,6 +30,7 @@ pub fn resolve_ws_precisely<'a>(
     all_features: bool,
     no_default_features: bool,
     specs: &[PackageIdSpec],
+    requested: &RequestedPackages,
 ) -> CargoResult<(PackageSet<'a>, Resolve)> {
     let features = Method::split_features(features);
     let method = if all_features {
@@ -41,7 +43,7 @@ pub fn resolve_ws_precisely<'a>(
             uses_default_features: !no_default_features,
         }
     };
-    resolve_ws_with_method(ws, source, method, specs)
+    resolve_ws_with_method(ws, source, method, specs, requested)
 }
 
 pub fn resolve_ws_with_method<'a>(
@@ -49,6 +51,7 @@ pub fn resolve_ws_with_method<'a>(
     source: Option<Box<Source + 'a>>,
     method: Method,
     specs: &[PackageIdSpec],
+    requested: &RequestedPackages,
 ) -> CargoResult<(PackageSet<'a>, Resolve)> {
     let mut registry = PackageRegistry::new(ws.config())?;
     if let Some(source) = source {
@@ -92,6 +95,7 @@ pub fn resolve_ws_with_method<'a>(
         resolve.as_ref(),
         None,
         specs,
+        requested,
         add_patches,
         true,
     )?;
@@ -107,6 +111,7 @@ fn resolve_with_registry<'cfg>(
     warn: bool,
 ) -> CargoResult<Resolve> {
     let prev = ops::load_pkg_lockfile(ws)?;
+    let requested = RequestedPackages::whole_workspace(ws);
     let resolve = resolve_with_previous(
         registry,
         ws,
@@ -114,6 +119,7 @@ fn resolve_with_registry<'cfg>(
         prev.as_ref(),
         None,
         &[],
+        &requested,
         true,
         warn,
     )?;
@@ -140,6 +146,7 @@ pub fn resolve_with_previous<'a, 'cfg>(
     previous: Option<&'a Resolve>,
     to_avoid: Option<&HashSet<&'a PackageId>>,
     specs: &[PackageIdSpec],
+    _requested: &RequestedPackages,
     register_patches: bool,
     warn: bool,
 ) -> CargoResult<Resolve> {

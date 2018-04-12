@@ -21,6 +21,7 @@ pub fn doc(ws: &Workspace, options: &DocOptions) -> CargoResult<()> {
         options.compile_opts.all_features,
         options.compile_opts.no_default_features,
         &specs,
+        &options.compile_opts.requested
     )?;
     let (packages, resolve_with_overrides) = resolve;
 

@@ -137,6 +137,16 @@ impl RequestedPackages {
         }
     }
 
+    pub fn whole_workspace(ws: &Workspace) -> RequestedPackages {
+        RequestedPackages {
+            specs: ws.members().map(|pkg| PackageIdSpec::from_package_id(pkg.package_id()))
+                .collect(),
+            features: Vec::new(),
+            all_features: true,
+            no_default_features: false,
+        }
+    }
+
     // Normally, we determine the set of requested packages from the current
     // workspace when parsing cli flags. For `cargo install` however, we don't
     // have workspace available at that time, so we need this method to set them
