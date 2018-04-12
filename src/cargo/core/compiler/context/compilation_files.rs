@@ -8,9 +8,7 @@ use std::sync::Arc;
 use lazycell::LazyCell;
 
 use core::{TargetKind, Workspace};
-use ops::cargo_rustc::layout::Layout;
-use ops::cargo_rustc::FileFlavor;
-use ops::{Context, Kind, Unit};
+use super::{Context, FileFlavor, Kind, Layout, Unit};
 use util::{self, CargoResult};
 
 #[derive(Clone, Hash, Eq, PartialEq, Ord, PartialOrd)]

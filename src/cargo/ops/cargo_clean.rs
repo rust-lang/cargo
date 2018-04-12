@@ -1,12 +1,12 @@
-use std::default::Default;
 use std::fs;
 use std::path::Path;
 
 use core::{Profiles, Workspace};
+use core::compiler::{BuildConfig, Context, Kind, Unit};
 use util::Config;
 use util::errors::{CargoResult, CargoResultExt};
 use util::paths;
-use ops::{self, BuildConfig, Context, Kind, Unit};
+use ops;
 
 pub struct CleanOptions<'a> {
     pub config: &'a Config,
@@ -36,7 +36,6 @@ pub fn clean(ws: &Workspace, opts: &CleanOptions) -> CargoResult<()> {
     let (packages, resolve) = ops::resolve_ws(ws)?;
 
     let profiles = ws.profiles();
-    let host_triple = opts.config.rustc()?.host.clone();
     let mut units = Vec::new();
 
     for spec in opts.spec.iter() {
@@ -85,22 +84,10 @@ pub fn clean(ws: &Workspace, opts: &CleanOptions) -> CargoResult<()> {
         }
     }
 
-    let mut cx = Context::new(
-        ws,
-        &resolve,
-        &packages,
-        opts.config,
-        BuildConfig {
-            host_triple,
-            requested_target: opts.target.clone(),
-            release: opts.release,
-            jobs: 1,
-            ..BuildConfig::default()
-        },
-        profiles,
-        None,
-        &units,
-    )?;
+    let mut build_config = BuildConfig::new(&opts.config.rustc()?.host, &opts.target)?;
+    build_config.release = opts.release;
+    let mut cx = Context::new(ws, &resolve, &packages, opts.config, build_config, profiles)?;
+    cx.prepare_units(None, &units)?;
 
     for unit in units.iter() {
         rm_rf(&cx.files().fingerprint_dir(unit), config)?;

@@ -14,11 +14,12 @@ use util::{internal, profile, Cfg, CfgExpr, Config};
 use util::errors::{CargoResult, CargoResultExt};
 
 use super::TargetConfig;
-use super::custom_build::{BuildDeps, BuildScripts, BuildState};
+use super::custom_build::{self, BuildDeps, BuildScripts, BuildState};
 use super::fingerprint::Fingerprint;
+use super::job_queue::JobQueue;
 use super::layout::Layout;
 use super::links::Links;
-use super::{BuildConfig, Compilation, Kind};
+use super::{BuildConfig, Compilation, Executor, Kind};
 
 mod unit_dependencies;
 use self::unit_dependencies::build_unit_dependencies;
@@ -105,20 +106,7 @@ impl<'a, 'cfg> Context<'a, 'cfg> {
         config: &'cfg Config,
         build_config: BuildConfig,
         profiles: &'a Profiles,
-        export_dir: Option<PathBuf>,
-        units: &[Unit<'a>],
     ) -> CargoResult<Context<'a, 'cfg>> {
-        let dest = if build_config.release {
-            "release"
-        } else {
-            "debug"
-        };
-        let host_layout = Layout::new(ws, None, dest)?;
-        let target_layout = match build_config.requested_target.as_ref() {
-            Some(target) => Some(Layout::new(ws, Some(target), dest)?),
-            None => None,
-        };
-
         let incremental_env = match env::var("CARGO_INCREMENTAL") {
             Ok(v) => Some(v == "1"),
             Err(_) => None,
@@ -163,11 +151,170 @@ impl<'a, 'cfg> Context<'a, 'cfg> {
         };
 
         cx.probe_target_info()?;
-        let deps = build_unit_dependencies(units, &cx)?;
-        cx.unit_dependencies = deps;
-        let files = CompilationFiles::new(units, host_layout, target_layout, export_dir, ws, &cx);
-        cx.files = Some(files);
         Ok(cx)
+    }
+
+    // Returns a mapping of the root package plus its immediate dependencies to
+    // where the compiled libraries are all located.
+    pub fn compile(
+        mut self,
+        units: &[Unit<'a>],
+        export_dir: Option<PathBuf>,
+        exec: &Arc<Executor>,
+    ) -> CargoResult<Compilation<'cfg>> {
+        let mut queue = JobQueue::new(&self);
+        self.prepare_units(export_dir, units)?;
+        self.prepare()?;
+        self.build_used_in_plugin_map(&units)?;
+        custom_build::build_map(&mut self, &units)?;
+
+        for unit in units.iter() {
+            // Build up a list of pending jobs, each of which represent
+            // compiling a particular package. No actual work is executed as
+            // part of this, that's all done next as part of the `execute`
+            // function which will run everything in order with proper
+            // parallelism.
+            super::compile(&mut self, &mut queue, unit, exec)?;
+        }
+
+        // Now that we've figured out everything that we're going to do, do it!
+        queue.execute(&mut self)?;
+
+        for unit in units.iter() {
+            for output in self.outputs(unit)?.iter() {
+                if output.flavor == FileFlavor::DebugInfo {
+                    continue;
+                }
+
+                let bindst = match output.hardlink {
+                    Some(ref link_dst) => link_dst,
+                    None => &output.path,
+                };
+
+                if unit.profile.test {
+                    self.compilation.tests.push((
+                        unit.pkg.clone(),
+                        unit.target.kind().clone(),
+                        unit.target.name().to_string(),
+                        output.path.clone(),
+                    ));
+                } else if unit.target.is_bin() || unit.target.is_example() {
+                    self.compilation.binaries.push(bindst.clone());
+                } else if unit.target.is_lib() {
+                    let pkgid = unit.pkg.package_id().clone();
+                    self.compilation
+                        .libraries
+                        .entry(pkgid)
+                        .or_insert_with(HashSet::new)
+                        .insert((unit.target.clone(), output.path.clone()));
+                }
+            }
+
+            for dep in self.dep_targets(unit).iter() {
+                if !unit.target.is_lib() {
+                    continue;
+                }
+
+                if dep.profile.run_custom_build {
+                    let out_dir = self.files().build_script_out_dir(dep).display().to_string();
+                    self.compilation
+                        .extra_env
+                        .entry(dep.pkg.package_id().clone())
+                        .or_insert_with(Vec::new)
+                        .push(("OUT_DIR".to_string(), out_dir));
+                }
+
+                if !dep.target.is_lib() {
+                    continue;
+                }
+                if dep.profile.doc {
+                    continue;
+                }
+
+                let outputs = self.outputs(dep)?;
+                self.compilation
+                    .libraries
+                    .entry(unit.pkg.package_id().clone())
+                    .or_insert_with(HashSet::new)
+                    .extend(
+                        outputs
+                            .iter()
+                            .map(|output| (dep.target.clone(), output.path.clone())),
+                    );
+            }
+
+            let feats = self.resolve.features(unit.pkg.package_id());
+            if !feats.is_empty() {
+                self.compilation
+                    .cfgs
+                    .entry(unit.pkg.package_id().clone())
+                    .or_insert_with(|| {
+                        feats
+                            .iter()
+                            .map(|feat| format!("feature=\"{}\"", feat))
+                            .collect()
+                    });
+            }
+            let rustdocflags = self.rustdocflags_args(unit)?;
+            if !rustdocflags.is_empty() {
+                self.compilation
+                    .rustdocflags
+                    .entry(unit.pkg.package_id().clone())
+                    .or_insert(rustdocflags);
+            }
+
+            super::output_depinfo(&mut self, unit)?;
+        }
+
+        for (&(ref pkg, _), output) in self.build_state.outputs.lock().unwrap().iter() {
+            self.compilation
+                .cfgs
+                .entry(pkg.clone())
+                .or_insert_with(HashSet::new)
+                .extend(output.cfgs.iter().cloned());
+
+            self.compilation
+                .extra_env
+                .entry(pkg.clone())
+                .or_insert_with(Vec::new)
+                .extend(output.env.iter().cloned());
+
+            for dir in output.library_paths.iter() {
+                self.compilation.native_dirs.insert(dir.clone());
+            }
+        }
+        self.compilation.target = self.target_triple().to_string();
+        Ok(self.compilation)
+    }
+
+    pub fn prepare_units(
+        &mut self,
+        export_dir: Option<PathBuf>,
+        units: &[Unit<'a>],
+    ) -> CargoResult<()> {
+        let dest = if self.build_config.release {
+            "release"
+        } else {
+            "debug"
+        };
+        let host_layout = Layout::new(self.ws, None, dest)?;
+        let target_layout = match self.build_config.requested_target.as_ref() {
+            Some(target) => Some(Layout::new(self.ws, Some(target), dest)?),
+            None => None,
+        };
+
+        let deps = build_unit_dependencies(units, &self)?;
+        self.unit_dependencies = deps;
+        let files = CompilationFiles::new(
+            units,
+            host_layout,
+            target_layout,
+            export_dir,
+            self.ws,
+            &self,
+        );
+        self.files = Some(files);
+        Ok(())
     }
 
     /// Prepare this context, ensuring that all filesystem directories are in

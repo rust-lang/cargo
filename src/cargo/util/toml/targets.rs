@@ -14,8 +14,7 @@ use std::path::{Path, PathBuf};
 use std::fs::{self, DirEntry};
 use std::collections::HashSet;
 
-use core::Target;
-use ops::is_bad_artifact_name;
+use core::{compiler, Target};
 use util::errors::CargoResult;
 use super::{LibKind, PathValue, StringOrBool, TomlBenchTarget, TomlBinTarget, TomlExampleTarget,
             TomlLibTarget, TomlManifest, TomlTarget, TomlTestTarget};
@@ -205,7 +204,7 @@ fn clean_bins(
             ));
         }
 
-        if is_bad_artifact_name(&name) {
+        if compiler::is_bad_artifact_name(&name) {
             bail!("the binary target name `{}` is forbidden", name)
         }
     }

@@ -15,11 +15,10 @@
 //! (for example, with and without tests), so we actually build a dependency
 //! graph of `Unit`s, which capture these properties.
 
-use ops::Unit;
+use super::{Context, Kind, Unit};
 use std::collections::HashMap;
 use CargoResult;
 use core::dependency::Kind as DepKind;
-use ops::{Context, Kind};
 use core::Target;
 use core::Profile;
 

@@ -6,7 +6,7 @@ use std::str::{self, FromStr};
 use super::{env_args, Context};
 use util::{CargoResult, CargoResultExt, Cfg, ProcessBuilder};
 use core::TargetKind;
-use ops::Kind;
+use super::Kind;
 
 #[derive(Clone, Default)]
 pub struct TargetInfo {
