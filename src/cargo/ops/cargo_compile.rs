@@ -136,6 +136,15 @@ impl RequestedPackages {
             no_default_features: false,
         }
     }
+
+    // Normally, we determine the set of requested packages from the current
+    // workspace when parsing cli flags. For `cargo install` however, we don't
+    // have workspace available at that time, so we need this method to set them
+    // later, after we create a temporary workspace.
+    pub fn set_package(&mut self, pkg: &Package) {
+        let id = pkg.package_id();
+        self.specs = vec![PackageIdSpec::from_package_id(id)];
+    }
 }
 
 #[derive(Clone, PartialEq, Eq, Debug)]

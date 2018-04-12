@@ -241,7 +241,33 @@ pub trait ArgMatchesExt {
 
     fn compile_options<'a>(
         &self,
+        ws: &Workspace<'a>,
+        mode: CompileMode,
+    ) -> CargoResult<CompileOptions<'a>> {
+        self._compile_options(ws.config(), Some(ws), mode)
+    }
+
+    fn compile_options_for_single_package<'a>(
+        &self,
+        ws: &Workspace<'a>,
+        mode: CompileMode,
+    ) -> CargoResult<CompileOptions<'a>> {
+        let mut compile_opts = self.compile_options(ws, mode)?;
+        compile_opts.spec = Packages::Packages(self._values_of("package"));
+        Ok(compile_opts)
+    }
+
+    fn compile_options_for_install<'a>(
+        &self,
         config: &'a Config,
+    ) -> CargoResult<CompileOptions<'a>> {
+        self._compile_options(config, None, CompileMode::Build)
+    }
+
+    fn _compile_options<'a>(
+        &self,
+        config: &'a Config,
+        ws: Option<&Workspace<'a>>,
         mode: CompileMode,
     ) -> CargoResult<CompileOptions<'a>> {
         let spec = Packages::from_flags(
@@ -292,16 +318,6 @@ pub trait ArgMatchesExt {
             export_dir: None,
         };
         Ok(opts)
-    }
-
-    fn compile_options_for_single_package<'a>(
-        &self,
-        config: &'a Config,
-        mode: CompileMode,
-    ) -> CargoResult<CompileOptions<'a>> {
-        let mut compile_opts = self.compile_options(config, mode)?;
-        compile_opts.spec = Packages::Packages(self._values_of("package"));
-        Ok(compile_opts)
     }
 
     fn new_options(&self, config: &Config) -> CargoResult<NewOptions> {

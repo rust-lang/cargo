@@ -65,7 +65,7 @@ pub fn exec(config: &mut Config, args: &ArgMatches) -> CliResult {
         }
     };
     let mode = CompileMode::Check { test };
-    let compile_opts = args.compile_options(config, mode)?;
+    let compile_opts = args.compile_options(&ws, mode)?;
     ops::compile(&ws, &compile_opts)?;
     Ok(())
 }

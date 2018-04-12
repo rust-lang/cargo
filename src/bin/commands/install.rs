@@ -1,7 +1,7 @@
 use command_prelude::*;
 
 use cargo::core::{GitReference, SourceId};
-use cargo::ops::{self, CompileMode};
+use cargo::ops;
 use cargo::util::ToUrl;
 
 pub fn cli() -> App {
@@ -72,7 +72,7 @@ continuous integration systems.",
 }
 
 pub fn exec(config: &mut Config, args: &ArgMatches) -> CliResult {
-    let mut compile_opts = args.compile_options(config, CompileMode::Build)?;
+    let mut compile_opts = args.compile_options_for_install(config)?;
     compile_opts.release = !args.is_present("debug");
 
     let krates = args.values_of("crate")
@@ -114,7 +114,7 @@ pub fn exec(config: &mut Config, args: &ArgMatches) -> CliResult {
             &source,
             from_cwd,
             version,
-            &compile_opts,
+            &mut compile_opts,
             args.is_present("force"),
         )?;
     }

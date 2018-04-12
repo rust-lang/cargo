@@ -90,7 +90,7 @@ To get the list of all options available for the test binaries use this:
 pub fn exec(config: &mut Config, args: &ArgMatches) -> CliResult {
     let ws = args.workspace(config)?;
 
-    let mut compile_opts = args.compile_options(config, CompileMode::Test)?;
+    let mut compile_opts = args.compile_options(&ws, CompileMode::Test)?;
     let doc = args.is_present("doc");
     if doc {
         compile_opts.mode = ops::CompileMode::Doctest;

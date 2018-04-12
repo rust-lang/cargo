@@ -48,7 +48,7 @@ pub fn exec(config: &mut Config, args: &ArgMatches) -> CliResult {
     let mode = CompileMode::Doc {
         deps: !args.is_present("no-deps"),
     };
-    let compile_opts = args.compile_options(config, mode)?;
+    let compile_opts = args.compile_options(&ws, mode)?;
     let doc_opts = DocOptions {
         open_result: args.is_present("open"),
         compile_opts,

@@ -60,7 +60,7 @@ pub fn install(
     source_id: &SourceId,
     from_cwd: bool,
     vers: Option<&str>,
-    opts: &ops::CompileOptions,
+    opts: &mut ops::CompileOptions,
     force: bool,
 ) -> CargoResult<()> {
     let root = resolve_root(root, opts.config)?;
@@ -155,7 +155,7 @@ fn install_one(
     source_id: &SourceId,
     from_cwd: bool,
     vers: Option<&str>,
-    opts: &ops::CompileOptions,
+    opts: &mut ops::CompileOptions,
     force: bool,
     is_first_install: bool,
 ) -> CargoResult<()> {
@@ -226,6 +226,7 @@ fn install_one(
 
     let ws = Workspace::ephemeral(pkg, config, overidden_target_dir, false)?;
     let pkg = ws.current()?;
+    opts.requested.set_package(pkg);
 
     if from_cwd {
         match pkg.manifest().edition() {
