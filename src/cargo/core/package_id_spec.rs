@@ -141,20 +141,18 @@ impl PackageIdSpec {
         })
     }
 
-    /// Getter for `name` field.
     pub fn name(&self) -> &str {
         &self.name
     }
-    /// Getter for `version` field.
+
     pub fn version(&self) -> Option<&Version> {
         self.version.as_ref()
     }
-    /// Getter for `url` field.
+
     pub fn url(&self) -> Option<&Url> {
         self.url.as_ref()
     }
 
-    /// Setter for `url` field.
     pub fn set_url(&mut self, url: Url) {
         self.url = Some(url);
     }
