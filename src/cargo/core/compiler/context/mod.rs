@@ -346,8 +346,8 @@ impl<'a, 'cfg> Context<'a, 'cfg> {
     fn probe_target_info(&mut self) -> CargoResult<()> {
         let _p = profile::start("Context::probe_target_info");
         debug!("probe_target_info");
-        let host_target_same = match self.requested_target() {
-            Some(s) if s != self.config.rustc()?.host => false,
+        let host_target_same = match self.build_config.requested_target {
+            Some(ref s) if s != &self.config.rustc()?.host => false,
             _ => true,
         };
 
@@ -408,13 +408,11 @@ impl<'a, 'cfg> Context<'a, 'cfg> {
 
     /// Return the target triple which this context is targeting.
     pub fn target_triple(&self) -> &str {
-        self.requested_target()
+        self.build_config
+            .requested_target
+            .as_ref()
+            .map(|s| &s[..])
             .unwrap_or_else(|| self.host_triple())
-    }
-
-    /// Requested (not actual) target for the build
-    pub fn requested_target(&self) -> Option<&str> {
-        self.build_config.requested_target.as_ref().map(|s| &s[..])
     }
 
     /// Return the filenames that the given target for the given profile will
