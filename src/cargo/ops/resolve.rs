@@ -213,7 +213,6 @@ pub fn resolve_with_previous<'a, 'cfg>(
         registry.lock_patches();
     }
 
-
     for member in ws.members() {
         registry.add_sources(&[member.package_id().source_id().clone()])?;
     }
@@ -223,12 +222,18 @@ pub fn resolve_with_previous<'a, 'cfg>(
         let mut members = Vec::new();
         match method {
             Method::Everything => members.extend(ws.members()),
-            Method::Required { features, all_features, uses_default_features, .. } => {
+            Method::Required {
+                features,
+                all_features,
+                uses_default_features,
+                ..
+            } => {
                 if specs.len() > 1 && !features.is_empty() {
                     bail!("cannot specify features for more than one package");
                 }
                 members.extend(
-                    ws.members().filter(|m| specs.iter().any(|spec| spec.matches(m.package_id())))
+                    ws.members()
+                        .filter(|m| specs.iter().any(|spec| spec.matches(m.package_id()))),
                 );
                 // Edge case: running `cargo build -p foo`, where `foo` is not a member
                 // of current workspace. Add all packages from workspace to get `foo`
@@ -292,7 +297,6 @@ pub fn resolve_with_previous<'a, 'cfg>(
             summaries.push((summary, method_to_resolve));
         }
     };
-
 
     let root_replace = ws.root_replace();
 
