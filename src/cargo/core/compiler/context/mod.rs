@@ -283,7 +283,7 @@ impl<'a, 'cfg> Context<'a, 'cfg> {
                 self.compilation.native_dirs.insert(dir.clone());
             }
         }
-        self.compilation.target = self.target_triple().to_string();
+        self.compilation.target = self.build_config.target_triple().to_string();
         Ok(self.compilation)
     }
 
@@ -401,15 +401,6 @@ impl<'a, 'cfg> Context<'a, 'cfg> {
         self.files.as_mut().unwrap()
     }
 
-    /// Return the target triple which this context is targeting.
-    pub fn target_triple(&self) -> &str {
-        self.build_config
-            .requested_target
-            .as_ref()
-            .map(|s| &s[..])
-            .unwrap_or_else(|| &self.build_config.host_triple)
-    }
-
     /// Return the filenames that the given target for the given profile will
     /// generate as a list of 3-tuples (filename, link_dst, linkable)
     ///
@@ -452,7 +443,7 @@ impl<'a, 'cfg> Context<'a, 'cfg> {
         };
         let (name, info) = match kind {
             Kind::Host => (self.build_config.host_triple.as_ref(), &self.host_info),
-            Kind::Target => (self.target_triple(), &self.target_info),
+            Kind::Target => (self.build_config.target_triple(), &self.target_info),
         };
         platform.matches(name, info.cfg())
     }

@@ -128,7 +128,7 @@ fn build_work<'a, 'cfg>(cx: &mut Context<'a, 'cfg>, unit: &Unit<'a>) -> CargoRes
             "TARGET",
             &match unit.kind {
                 Kind::Host => &cx.build_config.host_triple,
-                Kind::Target => cx.target_triple(),
+                Kind::Target => cx.build_config.target_triple(),
             },
         )
         .env("DEBUG", &profile.debuginfo.is_some().to_string())
