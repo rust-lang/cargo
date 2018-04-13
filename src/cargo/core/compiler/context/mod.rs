@@ -351,11 +351,11 @@ impl<'a, 'cfg> Context<'a, 'cfg> {
             _ => true,
         };
 
-        self.host_info = TargetInfo::new(self, Kind::Host)?;
+        self.host_info = TargetInfo::new(self.config, &self.build_config, Kind::Host)?;
         self.target_info = if host_target_same {
             self.host_info.clone()
         } else {
-            TargetInfo::new(self, Kind::Target)?
+            TargetInfo::new(self.config, &self.build_config, Kind::Target)?
         };
         self.compilation.host_dylib_path = self.host_info.sysroot_libdir.clone();
         self.compilation.target_dylib_path = self.target_info.sysroot_libdir.clone();
