@@ -1664,39 +1664,46 @@ fn combining_features_and_package() {
             main = []
         "#,
         )
-        .file("foo/src/main.rs", r#"
+        .file(
+            "foo/src/main.rs",
+            r#"
             #[cfg(feature = "main")]
             fn main() {}
-        "#)
+        "#,
+        )
         .build();
 
     assert_that(
         p.cargo("build -Z package-features --all --features main")
             .masquerade_as_nightly_cargo(),
-        execs().with_status(101).with_stderr_contains("\
-[ERROR] cannot specify features for more than one package"
+        execs().with_status(101).with_stderr_contains(
+            "\
+             [ERROR] cannot specify features for more than one package",
         ),
     );
 
     assert_that(
         p.cargo("build -Z package-features --package dep --features main")
             .masquerade_as_nightly_cargo(),
-        execs().with_status(101).with_stderr_contains("\
-[ERROR] cannot specify features for packages outside of workspace"
+        execs().with_status(101).with_stderr_contains(
+            "\
+             [ERROR] cannot specify features for packages outside of workspace",
         ),
     );
     assert_that(
         p.cargo("build -Z package-features --package dep --all-features")
             .masquerade_as_nightly_cargo(),
-        execs().with_status(101).with_stderr_contains("\
-[ERROR] cannot specify features for packages outside of workspace"
+        execs().with_status(101).with_stderr_contains(
+            "\
+             [ERROR] cannot specify features for packages outside of workspace",
         ),
     );
     assert_that(
         p.cargo("build -Z package-features --package dep --no-default-features")
             .masquerade_as_nightly_cargo(),
-        execs().with_status(101).with_stderr_contains("\
-[ERROR] cannot specify features for packages outside of workspace"
+        execs().with_status(101).with_stderr_contains(
+            "\
+             [ERROR] cannot specify features for packages outside of workspace",
         ),
     );
 

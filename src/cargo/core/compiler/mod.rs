@@ -141,6 +141,12 @@ impl BuildConfig {
             ..Default::default()
         })
     }
+
+    pub fn target_triple(&self) -> &str {
+        self.requested_target
+            .as_ref()
+            .unwrap_or_else(|| &self.host_triple)
+    }
 }
 
 /// Information required to build for a target
@@ -733,7 +739,7 @@ fn rustdoc<'a, 'cfg>(cx: &mut Context<'a, 'cfg>, unit: &Unit<'a>) -> CargoResult
     add_path_args(cx, unit, &mut rustdoc);
 
     if unit.kind != Kind::Host {
-        if let Some(target) = cx.requested_target() {
+        if let Some(ref target) = cx.build_config.requested_target {
             rustdoc.arg("--target").arg(target);
         }
     }
@@ -994,7 +1000,10 @@ fn build_base_args<'a, 'cfg>(
             cmd,
             "--target",
             "",
-            cx.requested_target().map(|s| s.as_ref()),
+            cx.build_config
+                .requested_target
+                .as_ref()
+                .map(|s| s.as_ref()),
         );
     }
 

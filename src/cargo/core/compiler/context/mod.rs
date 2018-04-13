@@ -125,13 +125,31 @@ impl<'a, 'cfg> Context<'a, 'cfg> {
             None => Client::new(build_config.jobs as usize - 1)
                 .chain_err(|| "failed to create jobserver")?,
         };
+
+        let (host_info, target_info) = {
+            let _p = profile::start("Context::probe_target_info");
+            debug!("probe_target_info");
+            let host_target_same = match build_config.requested_target {
+                Some(ref s) if s != &config.rustc()?.host => false,
+                _ => true,
+            };
+
+            let host_info = TargetInfo::new(config, &build_config, Kind::Host)?;
+            let target_info = if host_target_same {
+                host_info.clone()
+            } else {
+                TargetInfo::new(config, &build_config, Kind::Target)?
+            };
+            (host_info, target_info)
+        };
+
         let mut cx = Context {
             ws,
             resolve,
             packages,
             config,
-            target_info: TargetInfo::default(),
-            host_info: TargetInfo::default(),
+            target_info,
+            host_info,
             compilation: Compilation::new(config),
             build_state: Arc::new(BuildState::new(&build_config)),
             build_config,
@@ -150,7 +168,8 @@ impl<'a, 'cfg> Context<'a, 'cfg> {
             files: None,
         };
 
-        cx.probe_target_info()?;
+        cx.compilation.host_dylib_path = cx.host_info.sysroot_libdir.clone();
+        cx.compilation.target_dylib_path = cx.target_info.sysroot_libdir.clone();
         Ok(cx)
     }
 
@@ -283,7 +302,7 @@ impl<'a, 'cfg> Context<'a, 'cfg> {
                 self.compilation.native_dirs.insert(dir.clone());
             }
         }
-        self.compilation.target = self.target_triple().to_string();
+        self.compilation.target = self.build_config.target_triple().to_string();
         Ok(self.compilation)
     }
 
@@ -341,27 +360,6 @@ impl<'a, 'cfg> Context<'a, 'cfg> {
         Ok(())
     }
 
-    /// Ensure that we've collected all target-specific information to compile
-    /// all the units mentioned in `units`.
-    fn probe_target_info(&mut self) -> CargoResult<()> {
-        let _p = profile::start("Context::probe_target_info");
-        debug!("probe_target_info");
-        let host_target_same = match self.requested_target() {
-            Some(s) if s != self.config.rustc()?.host => false,
-            _ => true,
-        };
-
-        self.host_info = TargetInfo::new(self, Kind::Host)?;
-        self.target_info = if host_target_same {
-            self.host_info.clone()
-        } else {
-            TargetInfo::new(self, Kind::Target)?
-        };
-        self.compilation.host_dylib_path = self.host_info.sysroot_libdir.clone();
-        self.compilation.target_dylib_path = self.target_info.sysroot_libdir.clone();
-        Ok(())
-    }
-
     /// Builds up the `used_in_plugin` internal to this context from the list of
     /// top-level units.
     ///
@@ -399,22 +397,6 @@ impl<'a, 'cfg> Context<'a, 'cfg> {
 
     fn files_mut(&mut self) -> &mut CompilationFiles<'a, 'cfg> {
         self.files.as_mut().unwrap()
-    }
-
-    /// Return the host triple for this context
-    pub fn host_triple(&self) -> &str {
-        &self.build_config.host_triple
-    }
-
-    /// Return the target triple which this context is targeting.
-    pub fn target_triple(&self) -> &str {
-        self.requested_target()
-            .unwrap_or_else(|| self.host_triple())
-    }
-
-    /// Requested (not actual) target for the build
-    pub fn requested_target(&self) -> Option<&str> {
-        self.build_config.requested_target.as_ref().map(|s| &s[..])
     }
 
     /// Return the filenames that the given target for the given profile will
@@ -458,8 +440,8 @@ impl<'a, 'cfg> Context<'a, 'cfg> {
             None => return true,
         };
         let (name, info) = match kind {
-            Kind::Host => (self.host_triple(), &self.host_info),
-            Kind::Target => (self.target_triple(), &self.target_info),
+            Kind::Host => (self.build_config.host_triple.as_ref(), &self.host_info),
+            Kind::Target => (self.build_config.target_triple(), &self.target_info),
         };
         platform.matches(name, info.cfg())
     }

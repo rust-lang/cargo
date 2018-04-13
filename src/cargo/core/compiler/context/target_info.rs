@@ -3,12 +3,12 @@ use std::collections::hash_map::{Entry, HashMap};
 use std::path::PathBuf;
 use std::str::{self, FromStr};
 
-use super::{env_args, Context};
-use util::{CargoResult, CargoResultExt, Cfg, ProcessBuilder};
+use super::{env_args, BuildConfig};
+use util::{CargoResult, CargoResultExt, Cfg, Config, ProcessBuilder};
 use core::TargetKind;
 use super::Kind;
 
-#[derive(Clone, Default)]
+#[derive(Clone)]
 pub struct TargetInfo {
     crate_type_process: Option<ProcessBuilder>,
     crate_types: RefCell<HashMap<String, Option<(String, String)>>>,
@@ -51,9 +51,9 @@ impl FileType {
 }
 
 impl TargetInfo {
-    pub fn new(cx: &Context, kind: Kind) -> CargoResult<TargetInfo> {
-        let rustflags = env_args(cx.config, &cx.build_config, None, kind, "RUSTFLAGS")?;
-        let mut process = cx.config.rustc()?.process();
+    pub fn new(config: &Config, build_config: &BuildConfig, kind: Kind) -> CargoResult<TargetInfo> {
+        let rustflags = env_args(config, build_config, None, kind, "RUSTFLAGS")?;
+        let mut process = config.rustc()?.process();
         process
             .arg("-")
             .arg("--crate-name")
@@ -63,7 +63,7 @@ impl TargetInfo {
             .env_remove("RUST_LOG");
 
         if kind == Kind::Target {
-            process.arg("--target").arg(&cx.target_triple());
+            process.arg("--target").arg(&build_config.target_triple());
         }
 
         let crate_type_process = process.clone();
@@ -115,7 +115,7 @@ impl TargetInfo {
             } else {
                 rustlib.push("lib");
                 rustlib.push("rustlib");
-                rustlib.push(cx.target_triple());
+                rustlib.push(build_config.target_triple());
                 rustlib.push("lib");
                 sysroot_libdir = Some(rustlib);
             }
