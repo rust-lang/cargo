@@ -8,7 +8,7 @@ use util::{CargoResult, CargoResultExt, Cfg, Config, ProcessBuilder};
 use core::TargetKind;
 use super::Kind;
 
-#[derive(Clone, Default)]
+#[derive(Clone)]
 pub struct TargetInfo {
     crate_type_process: Option<ProcessBuilder>,
     crate_types: RefCell<HashMap<String, Option<(String, String)>>>,
