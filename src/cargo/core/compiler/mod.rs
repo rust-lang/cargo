@@ -12,7 +12,7 @@ use serde_json;
 use core::{Feature, PackageId, Profile, Target};
 use core::manifest::Lto;
 use core::shell::ColorChoice;
-use util::{self, machine_message, ProcessBuilder};
+use util::{self, machine_message, Config, ProcessBuilder};
 use util::{internal, join_paths, profile};
 use util::paths;
 use util::errors::{CargoResult, CargoResultExt, Internal};
@@ -76,16 +76,68 @@ pub struct BuildConfig {
 }
 
 impl BuildConfig {
-    pub fn new(host_triple: &str, requested_target: &Option<String>) -> CargoResult<BuildConfig> {
-        if let Some(ref s) = *requested_target {
+    /// Parse all config files to learn about build configuration. Currently
+    /// configured options are:
+    ///
+    /// * build.jobs
+    /// * build.target
+    /// * target.$target.ar
+    /// * target.$target.linker
+    /// * target.$target.libfoo.metadata
+    pub fn new(
+        config: &Config,
+        jobs: Option<u32>,
+        requested_target: &Option<String>,
+    ) -> CargoResult<BuildConfig> {
+        if let &Some(ref s) = requested_target {
             if s.trim().is_empty() {
                 bail!("target was empty")
             }
         }
+        let cfg_target = config.get_string("build.target")?.map(|s| s.val);
+        let target = requested_target.clone().or(cfg_target);
+
+        if jobs.is_some() && config.jobserver_from_env().is_some() {
+            config.shell().warn(
+                "a `-j` argument was passed to Cargo but Cargo is \
+                 also configured with an external jobserver in \
+                 its environment, ignoring the `-j` parameter",
+            )?;
+        }
+        let cfg_jobs = match config.get_i64("build.jobs")? {
+            Some(v) => {
+                if v.val <= 0 {
+                    bail!(
+                        "build.jobs must be positive, but found {} in {}",
+                        v.val,
+                        v.definition
+                    )
+                } else if v.val >= i64::from(u32::max_value()) {
+                    bail!(
+                        "build.jobs is too large: found {} in {}",
+                        v.val,
+                        v.definition
+                    )
+                } else {
+                    Some(v.val as u32)
+                }
+            }
+            None => None,
+        };
+        let jobs = jobs.or(cfg_jobs).unwrap_or(::num_cpus::get() as u32);
+
+        let host_triple = config.rustc()?.host.clone();
+        let host_config = TargetConfig::new(config, &host_triple)?;
+        let target_config = match target.as_ref() {
+            Some(triple) => TargetConfig::new(config, triple)?,
+            None => host_config.clone(),
+        };
         Ok(BuildConfig {
-            host_triple: host_triple.to_string(),
-            requested_target: (*requested_target).clone(),
-            jobs: 1,
+            host_triple,
+            requested_target: target,
+            jobs,
+            host: host_config,
+            target: target_config,
             ..Default::default()
         })
     }
@@ -100,6 +152,86 @@ pub struct TargetConfig {
     pub linker: Option<PathBuf>,
     /// Special build options for any necessary input files (filename -> options)
     pub overrides: HashMap<String, BuildOutput>,
+}
+
+impl TargetConfig {
+    pub fn new(config: &Config, triple: &str) -> CargoResult<TargetConfig> {
+        let key = format!("target.{}", triple);
+        let mut ret = TargetConfig {
+            ar: config.get_path(&format!("{}.ar", key))?.map(|v| v.val),
+            linker: config.get_path(&format!("{}.linker", key))?.map(|v| v.val),
+            overrides: HashMap::new(),
+        };
+        let table = match config.get_table(&key)? {
+            Some(table) => table.val,
+            None => return Ok(ret),
+        };
+        for (lib_name, value) in table {
+            match lib_name.as_str() {
+                "ar" | "linker" | "runner" | "rustflags" => continue,
+                _ => {}
+            }
+
+            let mut output = BuildOutput {
+                library_paths: Vec::new(),
+                library_links: Vec::new(),
+                cfgs: Vec::new(),
+                env: Vec::new(),
+                metadata: Vec::new(),
+                rerun_if_changed: Vec::new(),
+                rerun_if_env_changed: Vec::new(),
+                warnings: Vec::new(),
+            };
+            // We require deterministic order of evaluation, so we must sort the pairs by key first.
+            let mut pairs = Vec::new();
+            for (k, value) in value.table(&lib_name)?.0 {
+                pairs.push((k, value));
+            }
+            pairs.sort_by_key(|p| p.0);
+            for (k, value) in pairs {
+                let key = format!("{}.{}", key, k);
+                match &k[..] {
+                    "rustc-flags" => {
+                        let (flags, definition) = value.string(k)?;
+                        let whence = format!("in `{}` (in {})", key, definition.display());
+                        let (paths, links) = BuildOutput::parse_rustc_flags(flags, &whence)?;
+                        output.library_paths.extend(paths);
+                        output.library_links.extend(links);
+                    }
+                    "rustc-link-lib" => {
+                        let list = value.list(k)?;
+                        output
+                            .library_links
+                            .extend(list.iter().map(|v| v.0.clone()));
+                    }
+                    "rustc-link-search" => {
+                        let list = value.list(k)?;
+                        output
+                            .library_paths
+                            .extend(list.iter().map(|v| PathBuf::from(&v.0)));
+                    }
+                    "rustc-cfg" => {
+                        let list = value.list(k)?;
+                        output.cfgs.extend(list.iter().map(|v| v.0.clone()));
+                    }
+                    "rustc-env" => for (name, val) in value.table(k)?.0 {
+                        let val = val.string(name)?.0;
+                        output.env.push((name.clone(), val.to_string()));
+                    },
+                    "warning" | "rerun-if-changed" | "rerun-if-env-changed" => {
+                        bail!("`{}` is not supported in build script overrides", k);
+                    }
+                    _ => {
+                        let val = value.string(k)?.0;
+                        output.metadata.push((k.clone(), val.to_string()));
+                    }
+                }
+            }
+            ret.overrides.insert(lib_name, output);
+        }
+
+        Ok(ret)
+    }
 }
 
 /// A glorified callback for executing calls to rustc. Rather than calling rustc
