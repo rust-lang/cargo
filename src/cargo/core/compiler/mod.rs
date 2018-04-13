@@ -89,6 +89,12 @@ impl BuildConfig {
             ..Default::default()
         })
     }
+
+    pub fn target_triple(&self) -> &str {
+        self.requested_target
+            .as_ref()
+            .unwrap_or_else(|| &self.host_triple)
+    }
 }
 
 /// Information required to build for a target

@@ -63,7 +63,7 @@ impl TargetInfo {
             .env_remove("RUST_LOG");
 
         if kind == Kind::Target {
-            process.arg("--target").arg(&cx.target_triple());
+            process.arg("--target").arg(&cx.build_config.target_triple());
         }
 
         let crate_type_process = process.clone();
@@ -115,7 +115,7 @@ impl TargetInfo {
             } else {
                 rustlib.push("lib");
                 rustlib.push("rustlib");
-                rustlib.push(cx.target_triple());
+                rustlib.push(cx.build_config.target_triple());
                 rustlib.push("lib");
                 sysroot_libdir = Some(rustlib);
             }
