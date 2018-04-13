@@ -264,7 +264,7 @@ impl<'a> JobQueue<'a> {
         }
         let duration = cx.config.creation_time().elapsed();
         let time_elapsed = format!(
-            "{}.{1:.2} secs",
+            "{}.{:02} secs",
             duration.as_secs(),
             duration.subsec_nanos() / 10_000_000
         );
