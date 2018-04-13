@@ -220,9 +220,7 @@ impl Fingerprint {
             match *local {
                 LocalFingerprint::MtimeBased(ref slot, ref path) => {
                     let path = root.join(path);
-                    let meta = fs::metadata(&path)
-                        .chain_err(|| internal(format!("failed to stat `{}`", path.display())))?;
-                    let mtime = FileTime::from_last_modification_time(&meta);
+                    let mtime = paths::mtime(&path)?;
                     *slot.0.lock().unwrap() = Some(mtime);
                 }
                 LocalFingerprint::EnvBased(..) | LocalFingerprint::Precalculated(..) => continue,
@@ -718,22 +716,20 @@ where
     I: IntoIterator,
     I::Item: AsRef<Path>,
 {
-    let meta = match fs::metadata(output) {
-        Ok(meta) => meta,
+    let mtime = match paths::mtime(output) {
+        Ok(mtime) => mtime,
         Err(..) => return None,
     };
-    let mtime = FileTime::from_last_modification_time(&meta);
 
     let any_stale = paths.into_iter().any(|path| {
         let path = path.as_ref();
-        let meta = match fs::metadata(path) {
-            Ok(meta) => meta,
+        let mtime2 = match paths::mtime(path) {
+            Ok(mtime) => mtime,
             Err(..) => {
                 info!("stale: {} -- missing", path.display());
                 return true;
             }
         };
-        let mtime2 = FileTime::from_last_modification_time(&meta);
         if mtime2 > mtime {
             info!("stale: {} -- {} vs {}", path.display(), mtime2, mtime);
             true

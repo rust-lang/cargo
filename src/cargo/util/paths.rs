@@ -5,6 +5,8 @@ use std::io;
 use std::io::prelude::*;
 use std::path::{Component, Path, PathBuf};
 
+use filetime::FileTime;
+
 use util::{internal, CargoResult};
 use util::errors::{CargoError, CargoResultExt, Internal};
 
@@ -127,6 +129,12 @@ pub fn append(path: &Path, contents: &[u8]) -> CargoResult<()> {
     })()
         .chain_err(|| internal(format!("failed to write `{}`", path.display())))?;
     Ok(())
+}
+
+pub fn mtime(path: &Path) -> CargoResult<FileTime> {
+    let meta = fs::metadata(path)
+        .chain_err(|| internal(format!("failed to stat `{}`", path.display())))?;
+    Ok(FileTime::from_last_modification_time(&meta))
 }
 
 #[cfg(unix)]
