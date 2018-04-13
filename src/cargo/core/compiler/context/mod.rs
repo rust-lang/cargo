@@ -401,18 +401,13 @@ impl<'a, 'cfg> Context<'a, 'cfg> {
         self.files.as_mut().unwrap()
     }
 
-    /// Return the host triple for this context
-    pub fn host_triple(&self) -> &str {
-        &self.build_config.host_triple
-    }
-
     /// Return the target triple which this context is targeting.
     pub fn target_triple(&self) -> &str {
         self.build_config
             .requested_target
             .as_ref()
             .map(|s| &s[..])
-            .unwrap_or_else(|| self.host_triple())
+            .unwrap_or_else(|| &self.build_config.host_triple)
     }
 
     /// Return the filenames that the given target for the given profile will
@@ -456,7 +451,7 @@ impl<'a, 'cfg> Context<'a, 'cfg> {
             None => return true,
         };
         let (name, info) = match kind {
-            Kind::Host => (self.host_triple(), &self.host_info),
+            Kind::Host => (self.build_config.host_triple.as_ref(), &self.host_info),
             Kind::Target => (self.target_triple(), &self.target_info),
         };
         platform.matches(name, info.cfg())
