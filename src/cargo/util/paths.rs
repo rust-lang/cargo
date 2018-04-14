@@ -4,6 +4,7 @@ use std::fs::{self, File, OpenOptions};
 use std::io;
 use std::io::prelude::*;
 use std::path::{Component, Path, PathBuf};
+use std::iter;
 
 use filetime::FileTime;
 
@@ -88,8 +89,16 @@ pub fn without_prefix<'a>(long_path: &'a Path, prefix: &'a Path) -> Option<&'a P
 pub fn resolve_executable(exec: &Path) -> CargoResult<PathBuf> {
     if exec.components().count() == 1 {
         let paths = env::var_os("PATH").ok_or(format_err!("no PATH"))?;
-        for path in env::split_paths(&paths) {
+        let candidates = env::split_paths(&paths).flat_map(|path| {
             let candidate = PathBuf::from(path).join(&exec);
+            let with_exe = if env::consts::EXE_EXTENSION == "" {
+                None
+            } else {
+                Some(candidate.with_extension(env::consts::EXE_EXTENSION))
+            };
+            iter::once(candidate).chain(with_exe)
+        });
+        for candidate in candidates {
             if candidate.is_file() {
                 // PATH may have a component like "." in it, so we still need to
                 // canonicalize.
