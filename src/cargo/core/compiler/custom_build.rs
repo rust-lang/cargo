@@ -231,7 +231,7 @@ fn build_work<'a, 'cfg>(cx: &mut Context<'a, 'cfg>, unit: &Unit<'a>) -> CargoRes
     );
     let build_scripts = super::load_build_deps(cx, unit);
     let kind = unit.kind;
-    let json_messages = bcx.build_config.json_messages;
+    let json_messages = bcx.build_config.json_messages();
 
     // Check to see if the build script has already run, and if it has keep
     // track of whether it has told us about some explicit dependencies

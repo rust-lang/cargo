@@ -4,8 +4,8 @@ use std::fs;
 use clap::{self, SubCommand};
 use cargo::CargoResult;
 use cargo::core::Workspace;
-use cargo::ops::{CompileFilter, CompileMode, CompileOptions, MessageFormat, NewOptions, Packages,
-                 VersionControl};
+use cargo::core::compiler::MessageFormat;
+use cargo::ops::{CompileFilter, CompileMode, CompileOptions, NewOptions, Packages, VersionControl};
 use cargo::util::paths;
 use cargo::util::important_paths::find_root_manifest_for_wd;
 

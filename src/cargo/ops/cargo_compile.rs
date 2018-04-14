@@ -27,7 +27,7 @@ use std::path::{Path, PathBuf};
 use std::sync::Arc;
 
 use core::compiler::{BuildConfig, BuildContext, Compilation, Context, DefaultExecutor, Executor};
-use core::compiler::{Kind, Unit};
+use core::compiler::{Kind, MessageFormat, Unit};
 use core::profiles::{ProfileFor, Profiles};
 use core::resolver::{Method, Resolve};
 use core::{Package, Source, Target};
@@ -179,12 +179,6 @@ impl CompileMode {
         ];
         &ALL
     }
-}
-
-#[derive(Clone, Copy, Debug, PartialEq, Eq)]
-pub enum MessageFormat {
-    Human,
-    Json,
 }
 
 #[derive(Clone, PartialEq, Eq, Debug)]
@@ -341,7 +335,7 @@ pub fn compile_ws<'a>(
     let mut build_config = BuildConfig::new(config, jobs, &target, Some(rustc_info_cache))?;
     build_config.release = release;
     build_config.test = mode == CompileMode::Test || mode == CompileMode::Bench;
-    build_config.json_messages = message_format == MessageFormat::Json;
+    build_config.message_format = message_format;
     let default_arch_kind = if build_config.requested_target.is_some() {
         Kind::Target
     } else {

@@ -10,7 +10,7 @@ use git2;
 use tar::{Archive, Builder, EntryType, Header};
 
 use core::{Package, Source, SourceId, Workspace};
-use core::compiler::DefaultExecutor;
+use core::compiler::{DefaultExecutor, MessageFormat};
 use sources::PathSource;
 use util::{self, internal, Config, FileLock};
 use util::paths;
@@ -347,7 +347,7 @@ fn run_verify(ws: &Workspace, tar: &FileLock, opts: &PackageOpts) -> CargoResult
                 required_features_filterable: true,
             },
             release: false,
-            message_format: ops::MessageFormat::Human,
+            message_format: MessageFormat::Human,
             mode: ops::CompileMode::Build,
             target_rustdoc_args: None,
             target_rustc_args: None,

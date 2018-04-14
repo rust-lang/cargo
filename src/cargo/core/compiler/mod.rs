@@ -64,7 +64,7 @@ pub struct BuildConfig {
     /// Whether we are running tests
     pub test: bool,
     /// Whether to print std output in json format (for machine reading)
-    pub json_messages: bool,
+    pub message_format: MessageFormat,
 }
 
 impl BuildConfig {
@@ -132,7 +132,7 @@ impl BuildConfig {
             target: target_config,
             release: false,
             test: false,
-            json_messages: false,
+            message_format: MessageFormat::Human,
         })
     }
 
@@ -152,6 +152,16 @@ impl BuildConfig {
             .map(|s| s.as_str())
             .unwrap_or(self.host_triple())
     }
+
+    pub fn json_messages(&self) -> bool {
+        self.message_format == MessageFormat::Json
+    }
+}
+
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub enum MessageFormat {
+    Human,
+    Json,
 }
 
 /// Information required to build for a target
@@ -382,7 +392,7 @@ fn rustc<'a, 'cfg>(
     let dep_info_loc = fingerprint::dep_info_loc(&mut cx, unit);
 
     rustc.args(&cx.bcx.rustflags_args(unit)?);
-    let json_messages = cx.bcx.build_config.json_messages;
+    let json_messages = cx.bcx.build_config.json_messages();
     let package_id = unit.pkg.package_id().clone();
     let target = unit.target.clone();
 
@@ -569,7 +579,7 @@ fn link_targets<'a, 'cfg>(
         .into_iter()
         .map(|s| s.to_owned())
         .collect();
-    let json_messages = bcx.build_config.json_messages;
+    let json_messages = bcx.build_config.json_messages();
 
     Ok(Work::new(move |_| {
         // If we're a "root crate", e.g. the target of this compilation, then we
@@ -876,7 +886,7 @@ fn build_base_args<'a, 'cfg>(
         ColorChoice::CargoAuto => {}
     }
 
-    if bcx.build_config.json_messages {
+    if bcx.build_config.json_messages() {
         cmd.arg("--error-format").arg("json");
     }
 
