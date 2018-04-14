@@ -23,7 +23,7 @@
 //!
 
 use std::collections::HashSet;
-use std::path::{Path, PathBuf};
+use std::path::PathBuf;
 use std::sync::Arc;
 
 use core::compiler::{BuildConfig, BuildContext, Compilation, Context, DefaultExecutor, Executor};
@@ -34,7 +34,7 @@ use core::{Package, Source, Target};
 use core::{PackageId, PackageIdSpec, TargetKind, Workspace};
 use ops;
 use util::config::Config;
-use util::{lev_distance, profile, CargoResult, CargoResultExt};
+use util::{lev_distance, profile, CargoResult};
 
 /// Contains information about how a package should be compiled.
 #[derive(Debug)]
@@ -228,22 +228,6 @@ pub fn compile_ws<'a>(
         ref target_rustc_args,
         ref export_dir,
     } = *options;
-
-    let target = match target {
-        &Some(ref target) if target.ends_with(".json") => {
-            let path = Path::new(target)
-                .canonicalize()
-                .chain_err(|| format_err!("Target path {:?} is not a valid file", target))?;
-            Some(path.into_os_string()
-                .into_string()
-                .map_err(|_| format_err!("Target path is not valid unicode"))?)
-        }
-        other => other.clone(),
-    };
-
-    if jobs == Some(0) {
-        bail!("jobs must be at least 1")
-    }
 
     let rustc_info_cache = ws.target_dir()
         .join(".rustc_info.json")
