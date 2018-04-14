@@ -130,7 +130,7 @@ impl<'a, 'cfg> Context<'a, 'cfg> {
             let _p = profile::start("Context::probe_target_info");
             debug!("probe_target_info");
             let host_target_same = match build_config.requested_target {
-                Some(ref s) if s != &build_config.host_triple => false,
+                Some(ref s) if s != &build_config.host_triple() => false,
                 _ => true,
             };
 
@@ -302,7 +302,7 @@ impl<'a, 'cfg> Context<'a, 'cfg> {
                 self.compilation.native_dirs.insert(dir.clone());
             }
         }
-        self.compilation.host = self.build_config.host_triple.clone();
+        self.compilation.host = self.build_config.host_triple().to_string();
         self.compilation.target = self.build_config.target_triple().to_string();
         Ok(self.compilation)
     }
@@ -441,7 +441,7 @@ impl<'a, 'cfg> Context<'a, 'cfg> {
             None => return true,
         };
         let (name, info) = match kind {
-            Kind::Host => (self.build_config.host_triple.as_ref(), &self.host_info),
+            Kind::Host => (self.build_config.host_triple(), &self.host_info),
             Kind::Target => (self.build_config.target_triple(), &self.target_info),
         };
         platform.matches(name, info.cfg())
@@ -653,7 +653,8 @@ fn env_args(
     let target = build_config
         .requested_target
         .as_ref()
-        .unwrap_or(&build_config.host_triple);
+        .map(|s| s.as_str())
+        .unwrap_or(build_config.host_triple());
     let key = format!("target.{}.{}", target, name);
     if let Some(args) = config.get_list_or_split_string(&key)? {
         let args = args.val.into_iter();

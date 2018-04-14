@@ -12,7 +12,7 @@ use serde_json;
 use core::{Feature, PackageId, Profile, Target};
 use core::manifest::Lto;
 use core::shell::ColorChoice;
-use util::{self, machine_message, Config, ProcessBuilder, Rustc, Freshness};
+use util::{self, machine_message, Config, Freshness, ProcessBuilder, Rustc};
 use util::{internal, join_paths, profile};
 use util::paths;
 use util::errors::{CargoResult, CargoResultExt, Internal};
@@ -49,13 +49,6 @@ pub enum Kind {
 /// Configuration information for a rustc build.
 pub struct BuildConfig {
     pub rustc: Rustc,
-    /// The host arch triple
-    ///
-    /// e.g. x86_64-unknown-linux-gnu, would be
-    ///  - machine: x86_64
-    ///  - hardware-platform: unknown
-    ///  - operating system: linux-gnu
-    pub host_triple: String,
     /// Build information for the host arch
     pub host: TargetConfig,
     /// The target arch triple, defaults to host arch
@@ -125,15 +118,13 @@ impl BuildConfig {
         };
         let jobs = jobs.or(cfg_jobs).unwrap_or(::num_cpus::get() as u32);
         let rustc = config.new_rustc()?;
-        let host_triple = rustc.host.clone();
-        let host_config = TargetConfig::new(config, &host_triple)?;
+        let host_config = TargetConfig::new(config, &rustc.host)?;
         let target_config = match target.as_ref() {
             Some(triple) => TargetConfig::new(config, triple)?,
             None => host_config.clone(),
         };
         Ok(BuildConfig {
             rustc,
-            host_triple,
             requested_target: target,
             jobs,
             host: host_config,
@@ -145,10 +136,21 @@ impl BuildConfig {
         })
     }
 
+    /// The host arch triple
+    ///
+    /// e.g. x86_64-unknown-linux-gnu, would be
+    ///  - machine: x86_64
+    ///  - hardware-platform: unknown
+    ///  - operating system: linux-gnu
+    pub fn host_triple(&self) -> &str {
+        &self.rustc.host
+    }
+
     pub fn target_triple(&self) -> &str {
         self.requested_target
             .as_ref()
-            .unwrap_or_else(|| &self.host_triple)
+            .map(|s| s.as_str())
+            .unwrap_or(self.host_triple())
     }
 }
 
