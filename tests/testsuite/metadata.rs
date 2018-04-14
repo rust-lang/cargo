@@ -1,6 +1,6 @@
-use hamcrest::assert_that;
 use cargotest::support::registry::Package;
 use cargotest::support::{basic_bin_manifest, basic_lib_manifest, execs, main_file, project};
+use hamcrest::assert_that;
 
 #[test]
 fn cargo_metadata_simple() {
@@ -37,7 +37,8 @@ fn cargo_metadata_simple() {
                     }
                 ],
                 "features": {},
-                "manifest_path": "[..]Cargo.toml"
+                "manifest_path": "[..]Cargo.toml",
+                "metadata": null
             }
         ],
         "workspace_members": ["foo 0.5.0 (path+file:[..]foo)"],
@@ -122,7 +123,8 @@ crate-type = ["lib", "staticlib"]
                     }
                 ],
                 "features": {},
-                "manifest_path": "[..]Cargo.toml"
+                "manifest_path": "[..]Cargo.toml",
+                "metadata": null
             }
         ],
         "workspace_members": ["foo 0.5.0 (path+file:[..]foo)"],
@@ -197,7 +199,8 @@ optional_feat = []
                   "default_feat": [],
                   "optional_feat": []
                 },
-                "manifest_path": "[..]Cargo.toml"
+                "manifest_path": "[..]Cargo.toml",
+                "metadata": null
             }
         ],
         "workspace_members": ["foo 0.5.0 (path+file:[..]foo)"],
@@ -278,7 +281,8 @@ fn cargo_metadata_with_deps_and_version() {
                         "src_path": "[..]lib.rs"
                     }
                 ],
-                "version": "0.0.1"
+                "version": "0.0.1",
+                "metadata": null
             },
             {
                 "dependencies": [
@@ -314,7 +318,8 @@ fn cargo_metadata_with_deps_and_version() {
                         "src_path": "[..]lib.rs"
                     }
                 ],
-                "version": "0.0.1"
+                "version": "0.0.1",
+                "metadata": null
             },
             {
                 "dependencies": [
@@ -350,7 +355,8 @@ fn cargo_metadata_with_deps_and_version() {
                         "src_path": "[..]foo.rs"
                     }
                 ],
-                "version": "0.5.0"
+                "version": "0.5.0",
+                "metadata": null
             }
         ],
         "workspace_members": ["foo 0.5.0 (path+file:[..]foo)"],
@@ -434,7 +440,8 @@ name = "ex"
                     }
                 ],
                 "features": {},
-                "manifest_path": "[..]Cargo.toml"
+                "manifest_path": "[..]Cargo.toml",
+                "metadata": null
             }
         ],
         "workspace_members": [
@@ -507,7 +514,8 @@ crate-type = ["rlib", "dylib"]
                     }
                 ],
                 "features": {},
-                "manifest_path": "[..]Cargo.toml"
+                "manifest_path": "[..]Cargo.toml",
+                "metadata": null
             }
         ],
         "workspace_members": [
@@ -571,7 +579,8 @@ fn workspace_metadata() {
                     }
                 ],
                 "features": {},
-                "manifest_path": "[..]bar[/]Cargo.toml"
+                "manifest_path": "[..]bar[/]Cargo.toml",
+                "metadata": null
             },
             {
                 "name": "baz",
@@ -591,7 +600,8 @@ fn workspace_metadata() {
                     }
                 ],
                 "features": {},
-                "manifest_path": "[..]baz[/]Cargo.toml"
+                "manifest_path": "[..]baz[/]Cargo.toml",
+                "metadata": null
             }
         ],
         "workspace_members": ["baz 0.5.0 (path+file:[..]baz)", "bar 0.5.0 (path+file:[..]bar)"],
@@ -658,7 +668,8 @@ fn workspace_metadata_no_deps() {
                     }
                 ],
                 "features": {},
-                "manifest_path": "[..]bar[/]Cargo.toml"
+                "manifest_path": "[..]bar[/]Cargo.toml",
+                "metadata": null
             },
             {
                 "name": "baz",
@@ -678,7 +689,8 @@ fn workspace_metadata_no_deps() {
                     }
                 ],
                 "features": {},
-                "manifest_path": "[..]baz[/]Cargo.toml"
+                "manifest_path": "[..]baz[/]Cargo.toml",
+                "metadata": null
             }
         ],
         "workspace_members": ["baz 0.5.0 (path+file:[..]baz)", "bar 0.5.0 (path+file:[..]bar)"],
@@ -707,7 +719,7 @@ Caused by:
     )
 }
 
-const MANIFEST_OUTPUT: &'static str = r#"
+const MANIFEST_OUTPUT: &str = r#"
 {
     "packages": [{
         "name":"foo",
@@ -725,7 +737,8 @@ const MANIFEST_OUTPUT: &'static str = r#"
             "src_path":"[..][/]foo[/]src[/]foo.rs"
         }],
         "features":{},
-        "manifest_path":"[..]Cargo.toml"
+        "manifest_path":"[..]Cargo.toml",
+        "metadata": null
     }],
     "workspace_members": [ "foo 0.5.0 (path+file:[..]foo)" ],
     "resolve": null,
@@ -865,5 +878,65 @@ fn multiple_features() {
     assert_that(
         p.cargo("metadata").arg("--features").arg("a b"),
         execs().with_status(0),
+    );
+}
+
+#[test]
+fn package_metadata() {
+    let p = project("foo")
+        .file(
+            "Cargo.toml",
+            r#"
+            [package]
+            name = "foo"
+            version = "0.1.0"
+            authors = []
+
+            [package.metadata.bar]
+            baz = "quux"
+        "#,
+        )
+        .file("src/lib.rs", "")
+        .build();
+
+    assert_that(
+        p.cargo("metadata").arg("--no-deps"),
+        execs().with_json(
+            r#"
+    {
+        "packages": [
+            {
+                "name": "foo",
+                "version": "0.1.0",
+                "id": "foo[..]",
+                "source": null,
+                "dependencies": [],
+                "license": null,
+                "license_file": null,
+                "description": null,
+                "targets": [
+                    {
+                        "kind": [ "lib" ],
+                        "crate_types": [ "lib" ],
+                        "name": "foo",
+                        "src_path": "[..]foo[/]src[/]lib.rs"
+                    }
+                ],
+                "features": {},
+                "manifest_path": "[..]foo[/]Cargo.toml",
+                "metadata": {
+                    "bar": {
+                        "baz": "quux"
+                    }
+                }
+            }
+        ],
+        "workspace_members": ["foo[..]"],
+        "resolve": null,
+        "target_directory": "[..]foo[/]target",
+        "version": 1,
+        "workspace_root": "[..][/]foo"
+    }"#,
+        ),
     );
 }
