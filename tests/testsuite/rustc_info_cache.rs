@@ -1,0 +1,120 @@
+use cargotest::support::{execs, project};
+use cargotest::support::paths::CargoPathExt;
+use hamcrest::assert_that;
+use std::env;
+
+#[test]
+fn rustc_info_cache() {
+    let p = project("foo")
+        .file(
+            "Cargo.toml",
+            r#"
+            [project]
+            name = "foo"
+            version = "0.0.1"
+            authors = []
+        "#,
+        )
+        .file("src/main.rs", r#"fn main() { println!("hello"); }"#)
+        .build();
+
+    let miss = "[..] rustc info cache miss[..]";
+    let hit = "[..] rustc info cache hit[..]";
+
+    assert_that(
+        p.cargo("build").env("RUST_LOG", "cargo::util::rustc=info"),
+        execs()
+            .with_status(0)
+            .with_stderr_contains("[..]failed to read rustc info cache[..]")
+            .with_stderr_contains(miss)
+            .with_stderr_does_not_contain(hit),
+    );
+
+    assert_that(
+        p.cargo("build").env("RUST_LOG", "cargo::util::rustc=info"),
+        execs()
+            .with_status(0)
+            .with_stderr_contains("[..]reusing existing rustc info cache[..]")
+            .with_stderr_contains(hit)
+            .with_stderr_does_not_contain(miss),
+    );
+
+    let other_rustc = {
+        let p = project("compiler")
+            .file(
+                "Cargo.toml",
+                r#"
+            [package]
+            name = "compiler"
+            version = "0.1.0"
+        "#,
+            )
+            .file(
+                "src/main.rs",
+                r#"
+            use std::process::Command;
+            use std::env;
+
+            fn main() {
+                let mut cmd = Command::new("rustc");
+                for arg in env::args_os().skip(1) {
+                    cmd.arg(arg);
+                }
+                std::process::exit(cmd.status().unwrap().code().unwrap());
+            }
+        "#,
+            )
+            .build();
+        assert_that(p.cargo("build"), execs().with_status(0));
+
+        p.root()
+            .join("target/debug/compiler")
+            .with_extension(env::consts::EXE_EXTENSION)
+    };
+
+    assert_that(
+        p.cargo("build")
+            .env("RUST_LOG", "cargo::util::rustc=info")
+            .env("RUSTC", other_rustc.display().to_string()),
+        execs()
+            .with_status(0)
+            .with_stderr_contains("[..]different compiler, creating new rustc info cache[..]")
+            .with_stderr_contains(miss)
+            .with_stderr_does_not_contain(hit),
+    );
+
+    assert_that(
+        p.cargo("build")
+            .env("RUST_LOG", "cargo::util::rustc=info")
+            .env("RUSTC", other_rustc.display().to_string()),
+        execs()
+            .with_status(0)
+            .with_stderr_contains("[..]reusing existing rustc info cache[..]")
+            .with_stderr_contains(hit)
+            .with_stderr_does_not_contain(miss),
+    );
+
+    other_rustc.move_into_the_future();
+
+    assert_that(
+        p.cargo("build")
+            .env("RUST_LOG", "cargo::util::rustc=info")
+            .env("RUSTC", other_rustc.display().to_string()),
+        execs()
+            .with_status(0)
+            .with_stderr_contains("[..]different compiler, creating new rustc info cache[..]")
+            .with_stderr_contains(miss)
+            .with_stderr_does_not_contain(hit),
+    );
+
+    assert_that(
+        p.cargo("build")
+            .env("RUST_LOG", "cargo::util::rustc=info")
+            .env("RUSTC", other_rustc.display().to_string()),
+        execs()
+            .with_status(0)
+            .with_stderr_contains("[..]reusing existing rustc info cache[..]")
+            .with_stderr_contains(hit)
+            .with_stderr_does_not_contain(miss),
+    );
+}

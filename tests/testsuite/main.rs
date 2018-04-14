@@ -78,6 +78,7 @@ mod required_features;
 mod resolve;
 mod run;
 mod rustc;
+mod rustc_info_cache;
 mod rustdocflags;
 mod rustdoc;
 mod rustflags;

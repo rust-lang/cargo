@@ -10,7 +10,7 @@ pub mod support;
 
 pub mod install;
 
-thread_local!(pub static RUSTC: Rustc = Rustc::new(PathBuf::from("rustc"), None).unwrap());
+thread_local!(pub static RUSTC: Rustc = Rustc::new(PathBuf::from("rustc"), None, None).unwrap());
 
 pub fn rustc_host() -> String {
     RUSTC.with(|r| r.host.clone())

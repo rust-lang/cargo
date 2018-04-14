@@ -260,7 +260,8 @@ pub fn compile_ws<'a>(
         bail!("jobs must be at least 1")
     }
 
-    let mut build_config = BuildConfig::new(config, jobs, &target)?;
+    let rustc_info_cache = ws.target_dir().join("rustc_info.json").into_path_unlocked();
+    let mut build_config = BuildConfig::new(config, jobs, &target, Some(rustc_info_cache))?;
     build_config.release = release;
     build_config.test = mode == CompileMode::Test || mode == CompileMode::Bench;
     build_config.json_messages = message_format == MessageFormat::Json;
