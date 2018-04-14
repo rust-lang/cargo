@@ -6,6 +6,7 @@ use std::hash::{Hash, Hasher};
 
 use semver::Version;
 use serde::ser;
+use toml;
 use url::Url;
 
 use core::{Dependency, PackageId, PackageIdSpec, SourceId, Summary};
@@ -30,6 +31,7 @@ pub struct Manifest {
     exclude: Vec<String>,
     include: Vec<String>,
     metadata: ManifestMetadata,
+    custom_metadata: Option<toml::Value>,
     profiles: Profiles,
     publish: Option<Vec<String>>,
     publish_lockfile: bool,
@@ -265,6 +267,7 @@ impl Manifest {
         include: Vec<String>,
         links: Option<String>,
         metadata: ManifestMetadata,
+        custom_metadata: Option<toml::Value>,
         profiles: Profiles,
         publish: Option<Vec<String>>,
         publish_lockfile: bool,
@@ -284,6 +287,7 @@ impl Manifest {
             include,
             links,
             metadata,
+            custom_metadata,
             profiles,
             publish,
             replace,
@@ -408,6 +412,10 @@ impl Manifest {
 
     pub fn edition(&self) -> Edition {
         self.edition
+    }
+
+    pub fn custom_metadata(&self) -> Option<&toml::Value> {
+        self.custom_metadata.as_ref()
     }
 }
 

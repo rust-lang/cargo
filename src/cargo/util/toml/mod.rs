@@ -810,6 +810,7 @@ impl TomlManifest {
         } else {
             Edition::Edition2015
         };
+        let custom_metadata = project.metadata.clone();
         let mut manifest = Manifest::new(
             summary,
             targets,
@@ -817,6 +818,7 @@ impl TomlManifest {
             include,
             project.links.clone(),
             metadata,
+            custom_metadata,
             profiles,
             publish,
             publish_lockfile,
