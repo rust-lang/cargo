@@ -66,6 +66,9 @@ pub struct Config {
     easy: LazyCell<RefCell<Easy>>,
     /// Cache of the `SourceId` for crates.io
     crates_io_source_id: LazyCell<SourceId>,
+    /// If false, don't cache `rustc --version --verbose` invocations
+    cache_rustc_info: bool,
+    /// Creation time of this config, used to output the total build time
     creation_time: Instant,
 }
 
@@ -81,6 +84,11 @@ impl Config {
                 GLOBAL_JOBSERVER = Box::into_raw(Box::new(client));
             }
         });
+
+        let cache_rustc_info = match env::var("CARGO_CACHE_RUSTC_INFO") {
+            Ok(cache) => cache != "0",
+            _ => true,
+        };
 
         Config {
             home_path: Filesystem::new(homedir),
@@ -103,6 +111,7 @@ impl Config {
             cli_flags: CliUnstable::default(),
             easy: LazyCell::new(),
             crates_io_source_id: LazyCell::new(),
+            cache_rustc_info,
             creation_time: Instant::now(),
         }
     }
@@ -162,7 +171,11 @@ impl Config {
         Rustc::new(
             self.get_tool("rustc")?,
             self.maybe_get_tool("rustc_wrapper")?,
-            cache_location,
+            if self.cache_rustc_info {
+                cache_location
+            } else {
+                None
+            },
         )
     }
 
