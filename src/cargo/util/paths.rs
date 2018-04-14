@@ -85,6 +85,24 @@ pub fn without_prefix<'a>(long_path: &'a Path, prefix: &'a Path) -> Option<&'a P
     }
 }
 
+pub fn resolve_executable(exec: &Path) -> CargoResult<PathBuf> {
+    if exec.components().count() == 1 {
+        let paths = env::var_os("PATH").ok_or(format_err!("no PATH"))?;
+        for path in env::split_paths(&paths) {
+            let candidate = PathBuf::from(path).join(&exec);
+            if candidate.is_file() {
+                // PATH may have a component like "." in it, so we still need to
+                // canonicalize.
+                return Ok(candidate.canonicalize()?);
+            }
+        }
+
+        bail!("no executable for `{}` found in PATH", exec.display())
+    } else {
+        Ok(exec.canonicalize()?)
+    }
+}
+
 pub fn read(path: &Path) -> CargoResult<String> {
     match String::from_utf8(read_bytes(path)?) {
         Ok(s) => Ok(s),

@@ -158,10 +158,11 @@ impl Config {
     }
 
     /// Get the path to the `rustc` executable
-    pub fn new_rustc(&self) -> CargoResult<Rustc> {
+    pub fn rustc(&self, cache_location: Option<PathBuf>) -> CargoResult<Rustc> {
         Rustc::new(
             self.get_tool("rustc")?,
             self.maybe_get_tool("rustc_wrapper")?,
+            cache_location,
         )
     }
 
@@ -191,25 +192,7 @@ impl Config {
                         .map(PathBuf::from)
                         .next()
                         .ok_or(format_err!("no argv[0]"))?;
-                    if argv0.components().count() == 1 {
-                        probe_path(argv0)
-                    } else {
-                        Ok(argv0.canonicalize()?)
-                    }
-                }
-
-                fn probe_path(argv0: PathBuf) -> CargoResult<PathBuf> {
-                    let paths = env::var_os("PATH").ok_or(format_err!("no PATH"))?;
-                    for path in env::split_paths(&paths) {
-                        let candidate = PathBuf::from(path).join(&argv0);
-                        if candidate.is_file() {
-                            // PATH may have a component like "." in it, so we still need to
-                            // canonicalize.
-                            return Ok(candidate.canonicalize()?);
-                        }
-                    }
-
-                    bail!("no cargo executable candidate found in PATH")
+                    paths::resolve_executable(&argv0)
                 }
 
                 let exe = from_current_exe()

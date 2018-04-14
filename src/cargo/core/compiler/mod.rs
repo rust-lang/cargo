@@ -80,6 +80,7 @@ impl BuildConfig {
         config: &Config,
         jobs: Option<u32>,
         requested_target: &Option<String>,
+        rustc_info_cache: Option<PathBuf>,
     ) -> CargoResult<BuildConfig> {
         if let &Some(ref s) = requested_target {
             if s.trim().is_empty() {
@@ -117,7 +118,7 @@ impl BuildConfig {
             None => None,
         };
         let jobs = jobs.or(cfg_jobs).unwrap_or(::num_cpus::get() as u32);
-        let rustc = config.new_rustc()?;
+        let rustc = config.rustc(rustc_info_cache)?;
         let host_config = TargetConfig::new(config, &rustc.host)?;
         let target_config = match target.as_ref() {
             Some(triple) => TargetConfig::new(config, triple)?,
