@@ -73,7 +73,7 @@ continuous integration systems.",
 
 pub fn exec(config: &mut Config, args: &ArgMatches) -> CliResult {
     let mut compile_opts = args.compile_options(config, CompileMode::Build)?;
-    compile_opts.release = !args.is_present("debug");
+    compile_opts.build_config.release = !args.is_present("debug");
 
     let krates = args.values_of("crate")
         .unwrap_or_default()
