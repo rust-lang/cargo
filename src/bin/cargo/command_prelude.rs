@@ -5,12 +5,13 @@ use clap::{self, SubCommand};
 use cargo::CargoResult;
 use cargo::core::Workspace;
 use cargo::core::compiler::MessageFormat;
-use cargo::ops::{CompileFilter, CompileMode, CompileOptions, NewOptions, Packages, VersionControl};
+use cargo::ops::{CompileFilter, CompileOptions, NewOptions, Packages, VersionControl};
 use cargo::util::paths;
 use cargo::util::important_paths::find_root_manifest_for_wd;
 
 pub use clap::{AppSettings, Arg, ArgMatches};
 pub use cargo::{CliError, CliResult, Config};
+pub use cargo::ops::CompileMode;
 
 pub type App = clap::App<'static, 'static>;
 
