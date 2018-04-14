@@ -421,7 +421,7 @@ pub fn compile_ws<'a>(
             &resolve_with_overrides,
             &packages,
             config,
-            build_config,
+            &build_config,
             profiles,
             extra_compiler_args,
         )?;

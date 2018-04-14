@@ -86,7 +86,7 @@ pub fn clean(ws: &Workspace, opts: &CleanOptions) -> CargoResult<()> {
         &resolve,
         &packages,
         opts.config,
-        build_config,
+        &build_config,
         profiles,
         None,
     )?;

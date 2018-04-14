@@ -86,7 +86,7 @@ pub struct Context<'a, 'cfg: 'a> {
     pub build_explicit_deps: HashMap<Unit<'a>, BuildDeps>,
     pub fingerprints: HashMap<Unit<'a>, Arc<Fingerprint>>,
     pub compiled: HashSet<Unit<'a>>,
-    pub build_config: BuildConfig,
+    pub build_config: &'a BuildConfig,
     pub build_scripts: HashMap<Unit<'a>, Arc<BuildScripts>>,
     pub links: Links<'a>,
     pub used_in_plugin: HashSet<Unit<'a>>,
@@ -113,7 +113,7 @@ impl<'a, 'cfg> Context<'a, 'cfg> {
         resolve: &'a Resolve,
         packages: &'a PackageSet<'cfg>,
         config: &'cfg Config,
-        build_config: BuildConfig,
+        build_config: &'a BuildConfig,
         profiles: &'a Profiles,
         extra_compiler_args: Option<(Unit<'a>, Vec<String>)>,
     ) -> CargoResult<Context<'a, 'cfg>> {
