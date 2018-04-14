@@ -27,7 +27,7 @@ use std::path::PathBuf;
 use std::sync::Arc;
 
 use core::compiler::{BuildConfig, BuildContext, Compilation, Context, DefaultExecutor, Executor};
-use core::compiler::{CompileMode, Kind, MessageFormat, Unit};
+use core::compiler::{CompileMode, Kind, Unit};
 use core::profiles::{ProfileFor, Profiles};
 use core::resolver::{Method, Resolve};
 use core::{Package, Source, Target};
@@ -40,10 +40,8 @@ use util::{lev_distance, profile, CargoResult};
 #[derive(Debug)]
 pub struct CompileOptions<'a> {
     pub config: &'a Config,
-    /// Number of concurrent jobs to use.
-    pub jobs: Option<u32>,
-    /// The target platform to compile for (example: `i686-unknown-linux-gnu`).
-    pub target: Option<String>,
+    /// Configuration information for a rustc build
+    pub build_config: BuildConfig,
     /// Extra features to build for the root package
     pub features: Vec<String>,
     /// Flag whether all available features should be built for the root package
@@ -55,12 +53,6 @@ pub struct CompileOptions<'a> {
     /// Filter to apply to the root package to select which targets will be
     /// built.
     pub filter: CompileFilter,
-    /// Whether this is a release build or not
-    pub release: bool,
-    /// Mode for this compile.
-    pub mode: CompileMode,
-    /// `--error_format` flag for the compiler.
-    pub message_format: MessageFormat,
     /// Extra arguments to be passed to rustdoc (for main crate and dependencies)
     pub target_rustdoc_args: Option<Vec<String>>,
     /// The specified target will be compiled with all the available arguments,
@@ -75,25 +67,21 @@ pub struct CompileOptions<'a> {
 }
 
 impl<'a> CompileOptions<'a> {
-    pub fn default(config: &'a Config, mode: CompileMode) -> CompileOptions<'a> {
-        CompileOptions {
+    pub fn default(config: &'a Config, mode: CompileMode) -> CargoResult<CompileOptions<'a>> {
+        Ok(CompileOptions {
             config,
-            jobs: None,
-            target: None,
+            build_config: BuildConfig::new(config, None, &None, mode)?,
             features: Vec::new(),
             all_features: false,
             no_default_features: false,
             spec: ops::Packages::Packages(Vec::new()),
-            mode,
-            release: false,
             filter: CompileFilter::Default {
                 required_features_filterable: false,
             },
-            message_format: MessageFormat::Human,
             target_rustdoc_args: None,
             target_rustc_args: None,
             export_dir: None,
-        }
+        })
     }
 }
 
@@ -214,24 +202,17 @@ pub fn compile_ws<'a>(
 ) -> CargoResult<Compilation<'a>> {
     let CompileOptions {
         config,
-        jobs,
-        ref target,
+        ref build_config,
         ref spec,
         ref features,
         all_features,
         no_default_features,
-        release,
-        mode,
-        message_format,
         ref filter,
         ref target_rustdoc_args,
         ref target_rustc_args,
         ref export_dir,
     } = *options;
 
-    let mut build_config = BuildConfig::new(config, jobs, &target, mode)?;
-    build_config.release = release;
-    build_config.message_format = message_format;
     let default_arch_kind = if build_config.requested_target.is_some() {
         Kind::Target
     } else {
@@ -241,7 +222,7 @@ pub fn compile_ws<'a>(
     let specs = spec.into_package_id_specs(ws)?;
     let features = Method::split_features(features);
     let method = Method::Required {
-        dev_deps: ws.require_optional_deps() || filter.need_dev_deps(mode),
+        dev_deps: ws.require_optional_deps() || filter.need_dev_deps(build_config.mode),
         features: &features,
         all_features,
         uses_default_features: !no_default_features,
@@ -288,7 +269,7 @@ pub fn compile_ws<'a>(
         filter,
         default_arch_kind,
         &resolve_with_overrides,
-        &build_config,
+        build_config,
     )?;
 
     if let Some(args) = extra_args {

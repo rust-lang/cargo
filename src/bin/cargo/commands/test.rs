@@ -94,7 +94,7 @@ pub fn exec(config: &mut Config, args: &ArgMatches) -> CliResult {
     let mut compile_opts = args.compile_options(config, CompileMode::Test)?;
     let doc = args.is_present("doc");
     if doc {
-        compile_opts.mode = CompileMode::Doctest;
+        compile_opts.build_config.mode = CompileMode::Doctest;
         compile_opts.filter = ops::CompileFilter::new(
             true,
             Vec::new(),

@@ -2,6 +2,7 @@ use std::path::Path;
 use util::{CargoResult, CargoResultExt, Config};
 
 /// Configuration information for a rustc build.
+#[derive(Debug)]
 pub struct BuildConfig {
     /// The target arch triple, defaults to host arch
     pub requested_target: Option<String>,
