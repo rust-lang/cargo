@@ -1,7 +1,7 @@
 use command_prelude::*;
 
 use cargo::core::Verbosity;
-use cargo::ops::{self, CompileFilter, CompileMode};
+use cargo::ops::{self, CompileFilter};
 
 pub fn cli() -> App {
     subcommand("run")

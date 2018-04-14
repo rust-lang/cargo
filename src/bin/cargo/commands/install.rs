@@ -1,7 +1,7 @@
 use command_prelude::*;
 
 use cargo::core::{GitReference, SourceId};
-use cargo::ops::{self, CompileMode};
+use cargo::ops;
 use cargo::util::ToUrl;
 
 pub fn cli() -> App {

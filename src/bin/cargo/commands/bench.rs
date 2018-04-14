@@ -1,6 +1,6 @@
 use command_prelude::*;
 
-use cargo::ops::{self, CompileMode, TestOptions};
+use cargo::ops::{self, TestOptions};
 
 pub fn cli() -> App {
     subcommand("bench")
