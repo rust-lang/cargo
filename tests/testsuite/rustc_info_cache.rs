@@ -19,7 +19,9 @@ fn rustc_info_cache() {
         .build();
 
     let miss = "[..] rustc info cache miss[..]";
-    let hit = "[..] rustc info cache hit[..]";
+    let hit = "[..]rustc info cache hit[..]";
+    let uncached = "[..]rustc info uncached[..]";
+    let update = "[..]updated rustc info cache[..]";
 
     assert_that(
         p.cargo("build").env("RUST_LOG", "cargo::util::rustc=info"),
@@ -27,7 +29,8 @@ fn rustc_info_cache() {
             .with_status(0)
             .with_stderr_contains("[..]failed to read rustc info cache[..]")
             .with_stderr_contains(miss)
-            .with_stderr_does_not_contain(hit),
+            .with_stderr_does_not_contain(hit)
+            .with_stderr_contains(update),
     );
 
     assert_that(
@@ -36,7 +39,19 @@ fn rustc_info_cache() {
             .with_status(0)
             .with_stderr_contains("[..]reusing existing rustc info cache[..]")
             .with_stderr_contains(hit)
-            .with_stderr_does_not_contain(miss),
+            .with_stderr_does_not_contain(miss)
+            .with_stderr_does_not_contain(update),
+    );
+
+    assert_that(
+        p.cargo("build")
+            .env("RUST_LOG", "cargo::util::rustc=info")
+            .env("CARGO_CACHE_RUSTC_INFO", "0"),
+        execs()
+            .with_status(0)
+            .with_stderr_contains("[..]rustc info cache disabled[..]")
+            .with_stderr_contains(uncached)
+            .with_stderr_does_not_contain(update),
     );
 
     let other_rustc = {
@@ -80,7 +95,8 @@ fn rustc_info_cache() {
             .with_status(0)
             .with_stderr_contains("[..]different compiler, creating new rustc info cache[..]")
             .with_stderr_contains(miss)
-            .with_stderr_does_not_contain(hit),
+            .with_stderr_does_not_contain(hit)
+            .with_stderr_contains(update),
     );
 
     assert_that(
@@ -91,7 +107,8 @@ fn rustc_info_cache() {
             .with_status(0)
             .with_stderr_contains("[..]reusing existing rustc info cache[..]")
             .with_stderr_contains(hit)
-            .with_stderr_does_not_contain(miss),
+            .with_stderr_does_not_contain(miss)
+            .with_stderr_does_not_contain(update),
     );
 
     other_rustc.move_into_the_future();
@@ -104,7 +121,8 @@ fn rustc_info_cache() {
             .with_status(0)
             .with_stderr_contains("[..]different compiler, creating new rustc info cache[..]")
             .with_stderr_contains(miss)
-            .with_stderr_does_not_contain(hit),
+            .with_stderr_does_not_contain(hit)
+            .with_stderr_contains(update),
     );
 
     assert_that(
@@ -115,6 +133,7 @@ fn rustc_info_cache() {
             .with_status(0)
             .with_stderr_contains("[..]reusing existing rustc info cache[..]")
             .with_stderr_contains(hit)
-            .with_stderr_does_not_contain(miss),
+            .with_stderr_does_not_contain(miss)
+            .with_stderr_does_not_contain(update),
     );
 }
