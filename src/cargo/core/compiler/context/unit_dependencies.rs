@@ -15,11 +15,10 @@
 //! (for example, with and without tests), so we actually build a dependency
 //! graph of `Unit`s, which capture these properties.
 
-use super::{BuildContext, Kind, Unit};
+use super::{BuildContext, CompileMode, Kind, Unit};
 use core::dependency::Kind as DepKind;
 use core::profiles::ProfileFor;
 use core::{Package, Target};
-use ops::CompileMode;
 use std::collections::HashMap;
 use CargoResult;
 
@@ -35,7 +34,7 @@ pub fn build_unit_dependencies<'a, 'cfg>(
         // cleared, and avoid building the lib thrice (once with `panic`, once
         // without, once for --test).  In particular, the lib included for
         // doctests and examples are `Build` mode here.
-        let profile_for = if unit.mode.is_any_test() || bcx.build_config.test {
+        let profile_for = if unit.mode.is_any_test() || bcx.build_config.test() {
             ProfileFor::TestDependency
         } else {
             ProfileFor::Any

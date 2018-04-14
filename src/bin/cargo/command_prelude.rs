@@ -11,7 +11,7 @@ use cargo::util::important_paths::find_root_manifest_for_wd;
 
 pub use clap::{AppSettings, Arg, ArgMatches};
 pub use cargo::{CliError, CliResult, Config};
-pub use cargo::ops::CompileMode;
+pub use cargo::core::compiler::CompileMode;
 
 pub type App = clap::App<'static, 'static>;
 

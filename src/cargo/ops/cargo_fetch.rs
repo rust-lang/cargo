@@ -1,4 +1,4 @@
-use core::compiler::{BuildConfig, Kind, TargetInfo};
+use core::compiler::{BuildConfig, CompileMode, Kind, TargetInfo};
 use core::{PackageSet, Resolve, Workspace};
 use ops;
 use std::collections::HashSet;
@@ -19,7 +19,8 @@ pub fn fetch<'a>(
     let (packages, resolve) = ops::resolve_ws(ws)?;
 
     let jobs = Some(1);
-    let build_config = BuildConfig::new(ws.config(), jobs, &options.target, None)?;
+    let build_config =
+        BuildConfig::new(ws.config(), jobs, &options.target, None, CompileMode::Build)?;
     let target_info = TargetInfo::new(ws.config(), &build_config, Kind::Target)?;
     {
         let mut fetched_packages = HashSet::new();

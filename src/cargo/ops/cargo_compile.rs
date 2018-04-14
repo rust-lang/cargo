@@ -27,7 +27,7 @@ use std::path::{Path, PathBuf};
 use std::sync::Arc;
 
 use core::compiler::{BuildConfig, BuildContext, Compilation, Context, DefaultExecutor, Executor};
-use core::compiler::{Kind, MessageFormat, Unit};
+use core::compiler::{CompileMode, Kind, MessageFormat, Unit};
 use core::profiles::{ProfileFor, Profiles};
 use core::resolver::{Method, Resolve};
 use core::{Package, Source, Target};
@@ -94,90 +94,6 @@ impl<'a> CompileOptions<'a> {
             target_rustc_args: None,
             export_dir: None,
         }
-    }
-}
-
-/// The general "mode" of what to do.
-/// This is used for two purposes.  The commands themselves pass this in to
-/// `compile_ws` to tell it the general execution strategy.  This influences
-/// the default targets selected.  The other use is in the `Unit` struct
-/// to indicate what is being done with a specific target.
-#[derive(Clone, Copy, PartialEq, Debug, Eq, Hash)]
-pub enum CompileMode {
-    /// A target being built for a test.
-    Test,
-    /// Building a target with `rustc` (lib or bin).
-    Build,
-    /// Building a target with `rustc` to emit `rmeta` metadata only. If
-    /// `test` is true, then it is also compiled with `--test` to check it like
-    /// a test.
-    Check { test: bool },
-    /// Used to indicate benchmarks should be built.  This is not used in
-    /// `Target` because it is essentially the same as `Test` (indicating
-    /// `--test` should be passed to rustc) and by using `Test` instead it
-    /// allows some de-duping of Units to occur.
-    Bench,
-    /// A target that will be documented with `rustdoc`.
-    /// If `deps` is true, then it will also document all dependencies.
-    Doc { deps: bool },
-    /// A target that will be tested with `rustdoc`.
-    Doctest,
-    /// A marker for Units that represent the execution of a `build.rs`
-    /// script.
-    RunCustomBuild,
-}
-
-impl CompileMode {
-    /// Returns true if the unit is being checked.
-    pub fn is_check(&self) -> bool {
-        match *self {
-            CompileMode::Check { .. } => true,
-            _ => false,
-        }
-    }
-
-    /// Returns true if this is a doc or doctest. Be careful using this.
-    /// Although both run rustdoc, the dependencies for those two modes are
-    /// very different.
-    pub fn is_doc(&self) -> bool {
-        match *self {
-            CompileMode::Doc { .. } | CompileMode::Doctest => true,
-            _ => false,
-        }
-    }
-
-    /// Returns true if this is any type of test (test, benchmark, doctest, or
-    /// check-test).
-    pub fn is_any_test(&self) -> bool {
-        match *self {
-            CompileMode::Test
-            | CompileMode::Bench
-            | CompileMode::Check { test: true }
-            | CompileMode::Doctest => true,
-            _ => false,
-        }
-    }
-
-    /// Returns true if this is the *execution* of a `build.rs` script.
-    pub fn is_run_custom_build(&self) -> bool {
-        *self == CompileMode::RunCustomBuild
-    }
-
-    /// List of all modes (currently used by `cargo clean -p` for computing
-    /// all possible outputs).
-    pub fn all_modes() -> &'static [CompileMode] {
-        static ALL: [CompileMode; 9] = [
-            CompileMode::Test,
-            CompileMode::Build,
-            CompileMode::Check { test: true },
-            CompileMode::Check { test: false },
-            CompileMode::Bench,
-            CompileMode::Doc { deps: true },
-            CompileMode::Doc { deps: false },
-            CompileMode::Doctest,
-            CompileMode::RunCustomBuild,
-        ];
-        &ALL
     }
 }
 
@@ -332,9 +248,8 @@ pub fn compile_ws<'a>(
     let rustc_info_cache = ws.target_dir()
         .join(".rustc_info.json")
         .into_path_unlocked();
-    let mut build_config = BuildConfig::new(config, jobs, &target, Some(rustc_info_cache))?;
+    let mut build_config = BuildConfig::new(config, jobs, &target, Some(rustc_info_cache), mode)?;
     build_config.release = release;
-    build_config.test = mode == CompileMode::Test || mode == CompileMode::Bench;
     build_config.message_format = message_format;
     let default_arch_kind = if build_config.requested_target.is_some() {
         Kind::Target
