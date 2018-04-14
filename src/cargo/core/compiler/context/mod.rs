@@ -130,7 +130,7 @@ impl<'a, 'cfg> Context<'a, 'cfg> {
             let _p = profile::start("Context::probe_target_info");
             debug!("probe_target_info");
             let host_target_same = match build_config.requested_target {
-                Some(ref s) if s != &config.rustc()?.host => false,
+                Some(ref s) if s != &build_config.host_triple => false,
                 _ => true,
             };
 
@@ -150,7 +150,7 @@ impl<'a, 'cfg> Context<'a, 'cfg> {
             config,
             target_info,
             host_info,
-            compilation: Compilation::new(config),
+            compilation: Compilation::new(config, build_config.rustc.process()),
             build_state: Arc::new(BuildState::new(&build_config)),
             build_config,
             fingerprints: HashMap::new(),
@@ -302,6 +302,7 @@ impl<'a, 'cfg> Context<'a, 'cfg> {
                 self.compilation.native_dirs.insert(dir.clone());
             }
         }
+        self.compilation.host = self.build_config.host_triple.clone();
         self.compilation.target = self.build_config.target_triple().to_string();
         Ok(self.compilation)
     }

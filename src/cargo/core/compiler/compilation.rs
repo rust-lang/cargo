@@ -57,15 +57,17 @@ pub struct Compilation<'cfg> {
     /// Flags to pass to rustdoc when invoked from cargo test, per package.
     pub rustdocflags: HashMap<PackageId, Vec<String>>,
 
+    pub host: String,
     pub target: String,
 
     config: &'cfg Config,
+    rustc_process: ProcessBuilder,
 
     target_runner: LazyCell<Option<(PathBuf, Vec<String>)>>,
 }
 
 impl<'cfg> Compilation<'cfg> {
-    pub fn new(config: &'cfg Config) -> Compilation<'cfg> {
+    pub fn new(config: &'cfg Config, rustc_process: ProcessBuilder) -> Compilation<'cfg> {
         Compilation {
             libraries: HashMap::new(),
             native_dirs: BTreeSet::new(), // TODO: deprecated, remove
@@ -81,6 +83,8 @@ impl<'cfg> Compilation<'cfg> {
             cfgs: HashMap::new(),
             rustdocflags: HashMap::new(),
             config,
+            rustc_process,
+            host: String::new(),
             target: String::new(),
             target_runner: LazyCell::new(),
         }
@@ -88,7 +92,7 @@ impl<'cfg> Compilation<'cfg> {
 
     /// See `process`.
     pub fn rustc_process(&self, pkg: &Package) -> CargoResult<ProcessBuilder> {
-        self.fill_env(self.config.rustc()?.process(), pkg, true)
+        self.fill_env(self.rustc_process.clone(), pkg, true)
     }
 
     /// See `process`.

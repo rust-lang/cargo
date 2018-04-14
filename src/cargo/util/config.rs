@@ -158,13 +158,11 @@ impl Config {
     }
 
     /// Get the path to the `rustc` executable
-    pub fn rustc(&self) -> CargoResult<&Rustc> {
-        self.rustc.try_borrow_with(|| {
-            Rustc::new(
-                self.get_tool("rustc")?,
-                self.maybe_get_tool("rustc_wrapper")?,
-            )
-        })
+    pub fn new_rustc(&self) -> CargoResult<Rustc> {
+        Rustc::new(
+            self.get_tool("rustc")?,
+            self.maybe_get_tool("rustc_wrapper")?,
+        )
     }
 
     /// Get the path to the `cargo` executable
