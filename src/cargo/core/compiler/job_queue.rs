@@ -11,12 +11,11 @@ use jobserver::{Acquired, HelperThread};
 use core::profiles::Profile;
 use core::{PackageId, Target};
 use handle_error;
-use ops::CompileMode;
 use util::{internal, profile, CargoResult, CargoResultExt, ProcessBuilder};
 use util::{Config, DependencyQueue, Dirty, Fresh, Freshness};
 
 use super::job::Job;
-use super::{BuildContext, Context, Kind, Unit};
+use super::{BuildContext, CompileMode, Context, Kind, Unit};
 
 /// A management structure of the entire dependency graph to compile.
 ///

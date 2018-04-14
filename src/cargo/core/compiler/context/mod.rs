@@ -8,7 +8,6 @@ use jobserver::Client;
 
 use core::{Package, PackageId, Resolve, Target};
 use core::profiles::Profile;
-use ops::CompileMode;
 use util::errors::{CargoResult, CargoResultExt};
 use util::{internal, profile, Config};
 
@@ -16,7 +15,7 @@ use super::custom_build::{self, BuildDeps, BuildScripts, BuildState};
 use super::fingerprint::Fingerprint;
 use super::job_queue::JobQueue;
 use super::layout::Layout;
-use super::{BuildContext, Compilation, Executor, FileFlavor, Kind};
+use super::{BuildContext, Compilation, CompileMode, Executor, FileFlavor, Kind};
 
 mod unit_dependencies;
 use self::unit_dependencies::build_unit_dependencies;
