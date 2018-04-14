@@ -83,6 +83,7 @@ pub fn publish(ws: &Workspace, opts: &PublishOpts) -> CargoResult<()> {
             verify: opts.verify,
             list: false,
             check_metadata: true,
+            check_dependencies: true,
             allow_dirty: opts.allow_dirty,
             target: opts.target.clone(),
             jobs: opts.jobs,
