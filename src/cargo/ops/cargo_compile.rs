@@ -67,7 +67,7 @@ pub struct CompileOptions<'a> {
 }
 
 impl<'a> CompileOptions<'a> {
-    pub fn default(config: &'a Config, mode: CompileMode) -> CargoResult<CompileOptions<'a>> {
+    pub fn new(config: &'a Config, mode: CompileMode) -> CargoResult<CompileOptions<'a>> {
         Ok(CompileOptions {
             config,
             build_config: BuildConfig::new(config, None, &None, mode)?,
