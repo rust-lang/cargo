@@ -455,7 +455,7 @@ fn calculate<'a, 'cfg>(
         cx.rustflags_args(unit)?
     };
     let fingerprint = Arc::new(Fingerprint {
-        rustc: util::hash_u64(&cx.config.rustc()?.verbose_version),
+        rustc: util::hash_u64(&cx.build_config.rustc.verbose_version),
         target: util::hash_u64(&unit.target),
         profile: util::hash_u64(&(&unit.profile, cx.incremental_args(unit)?)),
         // Note that .0 is hashed here, not .1 which is the cwd. That doesn't

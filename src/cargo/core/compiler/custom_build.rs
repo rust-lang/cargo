@@ -142,7 +142,7 @@ fn build_work<'a, 'cfg>(cx: &mut Context<'a, 'cfg>, unit: &Unit<'a>) -> CargoRes
             },
         )
         .env("HOST", &cx.build_config.host_triple)
-        .env("RUSTC", &cx.config.rustc()?.path)
+        .env("RUSTC", &cx.build_config.rustc.path)
         .env("RUSTDOC", &*cx.config.rustdoc()?)
         .inherit_jobserver(&cx.jobserver);
 

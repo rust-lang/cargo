@@ -12,11 +12,10 @@ use serde_json;
 use core::{Feature, PackageId, Profile, Target};
 use core::manifest::Lto;
 use core::shell::ColorChoice;
-use util::{self, machine_message, Config, ProcessBuilder};
+use util::{self, machine_message, Config, ProcessBuilder, Rustc, Freshness};
 use util::{internal, join_paths, profile};
 use util::paths;
 use util::errors::{CargoResult, CargoResultExt, Internal};
-use util::Freshness;
 
 use self::job::{Job, Work};
 use self::job_queue::JobQueue;
@@ -48,8 +47,8 @@ pub enum Kind {
 }
 
 /// Configuration information for a rustc build.
-#[derive(Default, Clone)]
 pub struct BuildConfig {
+    pub rustc: Rustc,
     /// The host arch triple
     ///
     /// e.g. x86_64-unknown-linux-gnu, would be
@@ -125,20 +124,24 @@ impl BuildConfig {
             None => None,
         };
         let jobs = jobs.or(cfg_jobs).unwrap_or(::num_cpus::get() as u32);
-
-        let host_triple = config.rustc()?.host.clone();
+        let rustc = config.new_rustc()?;
+        let host_triple = rustc.host.clone();
         let host_config = TargetConfig::new(config, &host_triple)?;
         let target_config = match target.as_ref() {
             Some(triple) => TargetConfig::new(config, triple)?,
             None => host_config.clone(),
         };
         Ok(BuildConfig {
+            rustc,
             host_triple,
             requested_target: target,
             jobs,
             host: host_config,
             target: target_config,
-            ..Default::default()
+            release: false,
+            test: false,
+            doc_all: false,
+            json_messages: false,
         })
     }
 

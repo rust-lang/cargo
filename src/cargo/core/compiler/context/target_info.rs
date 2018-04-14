@@ -53,7 +53,7 @@ impl FileType {
 impl TargetInfo {
     pub fn new(config: &Config, build_config: &BuildConfig, kind: Kind) -> CargoResult<TargetInfo> {
         let rustflags = env_args(config, build_config, None, kind, "RUSTFLAGS")?;
-        let mut process = config.rustc()?.process();
+        let mut process = build_config.rustc.process();
         process
             .arg("-")
             .arg("--crate-name")
