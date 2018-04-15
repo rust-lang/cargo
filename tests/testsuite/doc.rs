@@ -1494,3 +1494,32 @@ fn doc_edition() {
             .with_stderr_contains("[RUNNING] `rustdoc [..]-Zunstable-options --edition=2018[..]"),
     );
 }
+
+// Tests an issue where depending on different versions of the same file caused `cargo doc` to
+// fail.
+#[test]
+fn issue_5345() {
+    let foo = project("foo")
+        .file(
+            "Cargo.toml",
+            r#"
+            [package]
+            name = "foo"
+            version = "0.0.1"
+            authors = []
+
+            [target.'cfg(all(windows, target_arch = "x86"))'.dependencies]
+            bar = "0.1"
+
+            [target.'cfg(not(all(windows, target_arch = "x86")))'.dependencies]
+            bar = "0.2"
+        "#,
+        )
+        .file("src/lib.rs", "extern crate bar;")
+        .build();
+    Package::new("bar", "0.1.0").publish();
+    Package::new("bar", "0.2.0").publish();
+
+    assert_that(foo.cargo("build"), execs().with_status(0));
+    assert_that(foo.cargo("doc"), execs().with_status(0));
+}
