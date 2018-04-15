@@ -196,6 +196,7 @@ impl hash::Hash for Package {
     }
 }
 
+#[derive(Debug)]
 pub struct PackageSet<'cfg> {
     packages: HashMap<PackageId, LazyCell<Package>>,
     sources: RefCell<SourceMap<'cfg>>,
