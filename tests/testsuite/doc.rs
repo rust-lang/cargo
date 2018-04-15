@@ -1495,8 +1495,8 @@ fn doc_edition() {
     );
 }
 
-// Tests an issue where depending on different versions of the same file caused `cargo doc` to
-// fail.
+// Tests an issue where depending on different versions of the same crate depending on `cfg`s
+// caused `cargo doc` to fail.
 #[test]
 fn issue_5345() {
     let foo = project("foo")
