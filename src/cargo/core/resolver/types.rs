@@ -343,9 +343,12 @@ where
     }
 
     fn size_hint(&self) -> (usize, Option<usize>) {
+        // rest is a std::ops::Range, which is an ExactSizeIterator.
         self.rest.size_hint()
     }
 }
+
+impl<T: Clone> ExactSizeIterator for RcVecIter<T> {}
 
 pub struct RcList<T> {
     pub head: Option<Rc<(T, RcList<T>)>>,
