@@ -36,7 +36,9 @@ matrix:
         - cargo doc --no-deps
         - (cd src/doc && mdbook build --dest-dir ../../target/doc)
         # Make sure building cargo works with minimum dependency versions.
-        - ./target/debug/cargo update -Z minimal-versions
+        # Use a custom fork of the registry index for now because the main one
+        # is missing "links" entries.
+        - CARGO_REGISTRY_INDEX=https://github.com/klausi/crates.io-index cargo update -Z minimal-versions
         - cargo build
 
   exclude:
