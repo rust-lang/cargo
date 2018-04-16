@@ -35,11 +35,12 @@ impl Rustc {
     pub fn new(
         path: PathBuf,
         wrapper: Option<PathBuf>,
+        rustup_rustc: &Path,
         cache_location: Option<PathBuf>,
     ) -> CargoResult<Rustc> {
         let _p = profile::start("Rustc::new");
 
-        let mut cache = Cache::load(&path, cache_location);
+        let mut cache = Cache::load(&path, rustup_rustc, cache_location);
 
         let mut cmd = util::process(&path);
         cmd.arg("-vV");
@@ -86,6 +87,9 @@ impl Rustc {
 /// hundred milliseconds! Because we need compiler version info even for no-op
 /// builds, we cache it here, based on compiler's mtime and rustup's current
 /// toolchain.
+///
+/// https://github.com/rust-lang/cargo/issues/5315
+/// https://github.com/rust-lang/rust/issues/49761
 #[derive(Debug)]
 struct Cache {
     cache_location: Option<PathBuf>,
@@ -100,8 +104,8 @@ struct CacheData {
 }
 
 impl Cache {
-    fn load(rustc: &Path, cache_location: Option<PathBuf>) -> Cache {
-        match (cache_location, rustc_fingerprint(rustc)) {
+    fn load(rustc: &Path, rustup_rustc: &Path, cache_location: Option<PathBuf>) -> Cache {
+        match (cache_location, rustc_fingerprint(rustc, rustup_rustc)) {
             (Some(cache_location), Ok(rustc_fingerprint)) => {
                 let empty = CacheData {
                     rustc_fingerprint,
@@ -195,7 +199,7 @@ impl Drop for Cache {
     }
 }
 
-fn rustc_fingerprint(path: &Path) -> CargoResult<u64> {
+fn rustc_fingerprint(path: &Path, rustup_rustc: &Path) -> CargoResult<u64> {
     let mut hasher = SipHasher::new_with_keys(0, 0);
 
     let path = paths::resolve_executable(path)?;
@@ -203,8 +207,20 @@ fn rustc_fingerprint(path: &Path) -> CargoResult<u64> {
 
     paths::mtime(&path)?.hash(&mut hasher);
 
-    match (env::var("RUSTUP_HOME"), env::var("RUSTUP_TOOLCHAIN")) {
-        (Ok(rustup_home), Ok(rustup_toolchain)) => {
+    // Rustup can change the effective compiler without touching
+    // the `rustc` binary, so we try to account for this here.
+    // If we see rustup's env vars, we mix them into the fingerprint,
+    // but we also mix in the mtime of the actual compiler (and not
+    // the rustup shim at `~/.cargo/bin/rustup`), because `RUSTUP_TOOLCHAIN`
+    // could be just `stable-x86_64-unknown-linux-gnu`, i.e, it could
+    // not mention the version of Rust at all, which changes after
+    // `rustup update`.
+    //
+    // If we don't see rustup env vars, but it looks like the compiler
+    // is managed by rustup, we conservatively bail out.
+    let maybe_rustup = rustup_rustc == path;
+    match (maybe_rustup, env::var("RUSTUP_HOME"), env::var("RUSTUP_TOOLCHAIN")) {
+        (_, Ok(rustup_home), Ok(rustup_toolchain)) => {
             debug!("adding rustup info to rustc fingerprint");
             rustup_toolchain.hash(&mut hasher);
             rustup_home.hash(&mut hasher);
@@ -214,6 +230,9 @@ fn rustc_fingerprint(path: &Path) -> CargoResult<u64> {
                 .join("bin")
                 .join("rustc");
             paths::mtime(&rustup_rustc)?.hash(&mut hasher);
+        }
+        (true, _, _) => {
+            bail!("probably rustup rustc, but without rustup's env vars")
         }
         _ => (),
     }

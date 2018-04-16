@@ -171,6 +171,7 @@ impl Config {
         Rustc::new(
             self.get_tool("rustc")?,
             self.maybe_get_tool("rustc_wrapper")?,
+            &self.home().join("bin").join("rustc").into_path_unlocked(),
             if self.cache_rustc_info {
                 cache_location
             } else {
