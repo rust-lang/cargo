@@ -18,7 +18,8 @@ static MANIFEST_OUTPUT: &'static str = r#"
         "src_path":"[..][/]foo[/]src[/]foo.rs"
     }],
     "features":{},
-    "manifest_path":"[..]Cargo.toml"
+    "manifest_path":"[..]Cargo.toml",
+    "metadata": null
 }"#;
 
 #[test]
