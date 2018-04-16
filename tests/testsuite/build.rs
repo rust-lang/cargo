@@ -3603,7 +3603,7 @@ fn dotdir_root() {
 }
 
 #[test]
-fn custom_target_dir() {
+fn custom_target_dir_env() {
     let p = project("foo")
         .file(
             "Cargo.toml",
@@ -3667,6 +3667,123 @@ fn custom_target_dir() {
     assert_that(
         &p.root().join("target/debug").join(&exe_name),
         existing_file(),
+    );
+}
+
+#[test]
+fn custom_target_dir_line_parameter() {
+    let p = project("foo")
+        .file(
+            "Cargo.toml",
+            r#"
+            [package]
+            name = "foo"
+            version = "0.0.1"
+            authors = []
+        "#,
+        )
+        .file("src/main.rs", "fn main() {}")
+        .build();
+
+    let exe_name = format!("foo{}", env::consts::EXE_SUFFIX);
+
+    assert_that(
+        p.cargo("build").arg("--target-dir").arg("foo/target"),
+        execs().with_status(0),
+    );
+    assert_that(
+        &p.root().join("foo/target/debug").join(&exe_name),
+        existing_file(),
+    );
+    assert_that(
+        &p.root().join("target/debug").join(&exe_name),
+        is_not(existing_file()),
+    );
+
+    assert_that(p.cargo("build"), execs().with_status(0));
+    assert_that(
+        &p.root().join("foo/target/debug").join(&exe_name),
+        existing_file(),
+    );
+    assert_that(
+        &p.root().join("target/debug").join(&exe_name),
+        existing_file(),
+    );
+
+    fs::create_dir(p.root().join(".cargo")).unwrap();
+    File::create(p.root().join(".cargo/config"))
+        .unwrap()
+        .write_all(
+            br#"
+        [build]
+        target-dir = "foo/target"
+    "#,
+        )
+        .unwrap();
+    assert_that(
+        p.cargo("build").arg("--target-dir").arg("bar/target"),
+        execs().with_status(0),
+    );
+    assert_that(
+        &p.root().join("bar/target/debug").join(&exe_name),
+        existing_file(),
+    );
+    assert_that(
+        &p.root().join("foo/target/debug").join(&exe_name),
+        existing_file(),
+    );
+    assert_that(
+        &p.root().join("target/debug").join(&exe_name),
+        existing_file(),
+    );
+
+    assert_that(
+        p.cargo("build")
+            .arg("--target-dir")
+            .arg("foobar/target")
+            .env("CARGO_TARGET_DIR", "bar/target"),
+        execs().with_status(0),
+    );
+    assert_that(
+        &p.root().join("foobar/target/debug").join(&exe_name),
+        existing_file(),
+    );
+    assert_that(
+        &p.root().join("bar/target/debug").join(&exe_name),
+        existing_file(),
+    );
+    assert_that(
+        &p.root().join("foo/target/debug").join(&exe_name),
+        existing_file(),
+    );
+    assert_that(
+        &p.root().join("target/debug").join(&exe_name),
+        existing_file(),
+    );
+}
+
+#[test]
+fn rustc_no_trans() {
+    if !is_nightly() {
+        return;
+    }
+
+    let p = project("foo")
+        .file(
+            "Cargo.toml",
+            r#"
+            [package]
+            name = "foo"
+            version = "0.0.1"
+            authors = []
+        "#,
+        )
+        .file("src/main.rs", "fn main() {}")
+        .build();
+
+    assert_that(
+        p.cargo("rustc").arg("-v").arg("--").arg("-Zno-trans"),
+        execs().with_status(0),
     );
 }
 

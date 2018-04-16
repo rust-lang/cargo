@@ -70,6 +70,8 @@ pub struct Config {
     cache_rustc_info: bool,
     /// Creation time of this config, used to output the total build time
     creation_time: Instant,
+    /// Target Directory via resolved Cli parameter 
+    cli_target_dir: Option<Filesystem>,
 }
 
 impl Config {
@@ -113,6 +115,7 @@ impl Config {
             crates_io_source_id: LazyCell::new(),
             cache_rustc_info,
             creation_time: Instant::now(),
+            cli_target_dir: None,
         }
     }
 
@@ -240,7 +243,9 @@ impl Config {
     }
 
     pub fn target_dir(&self) -> CargoResult<Option<Filesystem>> {
-        if let Some(dir) = env::var_os("CARGO_TARGET_DIR") {
+        if let Some(ref dir) = self.cli_target_dir {
+            Ok(Some(dir.clone()))
+        } else if let Some(dir) = env::var_os("CARGO_TARGET_DIR") {
             Ok(Some(Filesystem::new(self.cwd.join(dir))))
         } else if let Some(val) = self.get_path("build.target-dir")? {
             let val = self.cwd.join(val.val);
@@ -461,6 +466,7 @@ impl Config {
         color: &Option<String>,
         frozen: bool,
         locked: bool,
+        target_dir: &Option<PathBuf>,
         unstable_flags: &[String],
     ) -> CargoResult<()> {
         let extra_verbose = verbose >= 2;
@@ -494,11 +500,17 @@ impl Config {
             | (None, None, None) => Verbosity::Normal,
         };
 
+        let cli_target_dir = match target_dir.as_ref() {
+            Some(dir) => Some(Filesystem::new(dir.clone())),
+            None => None,
+        };
+
         self.shell().set_verbosity(verbosity);
         self.shell().set_color_choice(color.map(|s| &s[..]))?;
         self.extra_verbose = extra_verbose;
         self.frozen = frozen;
         self.locked = locked;
+        self.cli_target_dir = cli_target_dir;
         self.cli_flags.parse(unstable_flags)?;
 
         Ok(())
