@@ -11,6 +11,7 @@ use ignore::gitignore::GitignoreBuilder;
 use core::{Dependency, Package, PackageId, Registry, Source, SourceId, Summary};
 use ops;
 use util::{self, internal, CargoResult};
+use util::paths;
 use util::Config;
 
 pub struct PathSource<'cfg> {
@@ -529,9 +530,7 @@ impl<'cfg> Source for PathSource<'cfg> {
             // condition where this path was rm'ed - either way,
             // we can ignore the error and treat the path's mtime
             // as 0.
-            let mtime = fs::metadata(&file)
-                .map(|meta| FileTime::from_last_modification_time(&meta))
-                .unwrap_or(FileTime::zero());
+            let mtime = paths::mtime(&file).unwrap_or(FileTime::zero());
             warn!("{} {}", mtime, file.display());
             if mtime > max {
                 max = mtime;

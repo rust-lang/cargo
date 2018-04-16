@@ -12,11 +12,10 @@ use serde_json;
 use core::{Feature, PackageId, Profile, Target};
 use core::manifest::Lto;
 use core::shell::ColorChoice;
-use util::{self, machine_message, Config, ProcessBuilder};
+use util::{self, machine_message, Config, Freshness, ProcessBuilder, Rustc};
 use util::{internal, join_paths, profile};
 use util::paths;
 use util::errors::{CargoResult, CargoResultExt, Internal};
-use util::Freshness;
 
 use self::job::{Job, Work};
 use self::job_queue::JobQueue;
@@ -48,15 +47,8 @@ pub enum Kind {
 }
 
 /// Configuration information for a rustc build.
-#[derive(Default, Clone)]
 pub struct BuildConfig {
-    /// The host arch triple
-    ///
-    /// e.g. x86_64-unknown-linux-gnu, would be
-    ///  - machine: x86_64
-    ///  - hardware-platform: unknown
-    ///  - operating system: linux-gnu
-    pub host_triple: String,
+    pub rustc: Rustc,
     /// Build information for the host arch
     pub host: TargetConfig,
     /// The target arch triple, defaults to host arch
@@ -88,6 +80,7 @@ impl BuildConfig {
         config: &Config,
         jobs: Option<u32>,
         requested_target: &Option<String>,
+        rustc_info_cache: Option<PathBuf>,
     ) -> CargoResult<BuildConfig> {
         if let &Some(ref s) = requested_target {
             if s.trim().is_empty() {
@@ -125,27 +118,40 @@ impl BuildConfig {
             None => None,
         };
         let jobs = jobs.or(cfg_jobs).unwrap_or(::num_cpus::get() as u32);
-
-        let host_triple = config.rustc()?.host.clone();
-        let host_config = TargetConfig::new(config, &host_triple)?;
+        let rustc = config.rustc(rustc_info_cache)?;
+        let host_config = TargetConfig::new(config, &rustc.host)?;
         let target_config = match target.as_ref() {
             Some(triple) => TargetConfig::new(config, triple)?,
             None => host_config.clone(),
         };
         Ok(BuildConfig {
-            host_triple,
+            rustc,
             requested_target: target,
             jobs,
             host: host_config,
             target: target_config,
-            ..Default::default()
+            release: false,
+            test: false,
+            doc_all: false,
+            json_messages: false,
         })
+    }
+
+    /// The host arch triple
+    ///
+    /// e.g. x86_64-unknown-linux-gnu, would be
+    ///  - machine: x86_64
+    ///  - hardware-platform: unknown
+    ///  - operating system: linux-gnu
+    pub fn host_triple(&self) -> &str {
+        &self.rustc.host
     }
 
     pub fn target_triple(&self) -> &str {
         self.requested_target
             .as_ref()
-            .unwrap_or_else(|| &self.host_triple)
+            .map(|s| s.as_str())
+            .unwrap_or(self.host_triple())
     }
 }
 

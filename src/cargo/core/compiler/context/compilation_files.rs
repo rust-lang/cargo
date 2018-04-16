@@ -434,9 +434,7 @@ fn compute_metadata<'a, 'cfg>(
     unit.target.name().hash(&mut hasher);
     unit.target.kind().hash(&mut hasher);
 
-    if let Ok(rustc) = cx.config.rustc() {
-        rustc.verbose_version.hash(&mut hasher);
-    }
+    cx.build_config.rustc.verbose_version.hash(&mut hasher);
 
     // Seed the contents of __CARGO_DEFAULT_LIB_METADATA to the hasher if present.
     // This should be the release channel, to get a different hash for each channel.

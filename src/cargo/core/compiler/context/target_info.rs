@@ -53,7 +53,7 @@ impl FileType {
 impl TargetInfo {
     pub fn new(config: &Config, build_config: &BuildConfig, kind: Kind) -> CargoResult<TargetInfo> {
         let rustflags = env_args(config, build_config, None, kind, "RUSTFLAGS")?;
-        let mut process = config.rustc()?.process();
+        let mut process = build_config.rustc.process();
         process
             .arg("-")
             .arg("--crate-name")
@@ -78,20 +78,19 @@ impl TargetInfo {
         with_cfg.arg("--print=cfg");
 
         let mut has_cfg_and_sysroot = true;
-        let output = with_cfg
-            .exec_with_output()
+        let (output, error) = build_config
+            .rustc
+            .cached_output(&with_cfg)
             .or_else(|_| {
                 has_cfg_and_sysroot = false;
-                process.exec_with_output()
+                build_config.rustc.cached_output(&process)
             })
             .chain_err(|| "failed to run `rustc` to learn about target-specific information")?;
 
-        let error = str::from_utf8(&output.stderr).unwrap();
-        let output = str::from_utf8(&output.stdout).unwrap();
         let mut lines = output.lines();
         let mut map = HashMap::new();
         for crate_type in KNOWN_CRATE_TYPES {
-            let out = parse_crate_type(crate_type, error, &mut lines)?;
+            let out = parse_crate_type(crate_type, &error, &mut lines)?;
             map.insert(crate_type.to_string(), out);
         }
 
