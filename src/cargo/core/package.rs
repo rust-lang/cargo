@@ -41,6 +41,7 @@ struct SerializedPackage<'a> {
     targets: &'a [Target],
     features: &'a FeatureMap,
     manifest_path: &'a str,
+    metadata: Option<&'a toml::Value>,
 }
 
 impl ser::Serialize for Package {
@@ -67,6 +68,7 @@ impl ser::Serialize for Package {
             targets: self.manifest.targets(),
             features: summary.features(),
             manifest_path: &self.manifest_path.display().to_string(),
+            metadata: self.manifest.custom_metadata(),
         }.serialize(s)
     }
 }
