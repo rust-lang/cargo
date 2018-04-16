@@ -317,31 +317,37 @@ fn clean_benches(
     warnings: &mut Vec<String>,
     errors: &mut Vec<String>,
 ) -> CargoResult<Vec<Target>> {
-    let mut legacy_bench_path = |bench: &TomlTarget| {
-        let legacy_path = package_root.join("src").join("bench.rs");
-        if !(bench.name() == "bench" && legacy_path.exists()) {
-            return None;
-        }
-        warnings.push(format!(
-            "path `{}` was erroneously implicitly accepted for benchmark `{}`,\n\
-             please set bench.path in Cargo.toml",
-            legacy_path.display(),
-            bench.name()
-        ));
-        Some(legacy_path)
+    let mut legacy_warnings = vec![];
+
+    let targets = {
+        let mut legacy_bench_path = |bench: &TomlTarget| {
+            let legacy_path = package_root.join("src").join("bench.rs");
+            if !(bench.name() == "bench" && legacy_path.exists()) {
+                return None;
+            }
+            legacy_warnings.push(format!(
+                "path `{}` was erroneously implicitly accepted for benchmark `{}`,\n\
+                 please set bench.path in Cargo.toml",
+                legacy_path.display(),
+                bench.name()
+            ));
+            Some(legacy_path)
+        };
+
+        let inferred = infer_from_directory(&package_root.join("benches"));
+
+        clean_targets_with_legacy_path(
+            "benchmark",
+            "bench",
+            toml_benches,
+            &inferred,
+            package_root,
+            errors,
+            &mut legacy_bench_path,
+        )?
     };
 
-    let inferred = infer_from_directory(&package_root.join("benches"));
-
-    let targets = clean_targets_with_legacy_path(
-        "benchmark",
-        "bench",
-        toml_benches,
-        &inferred,
-        package_root,
-        errors,
-        &mut legacy_bench_path,
-    )?;
+    warnings.append(&mut legacy_warnings);
 
     let mut result = Vec::new();
     for (path, toml) in targets {
