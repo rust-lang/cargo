@@ -8,8 +8,8 @@ use glob::glob;
 use url::Url;
 
 use core::registry::PackageRegistry;
-use core::{EitherManifest, Package, SourceId, VirtualManifest};
 use core::{Dependency, PackageIdSpec, Profile, Profiles};
+use core::{EitherManifest, Package, SourceId, VirtualManifest};
 use ops;
 use sources::PathSource;
 use util::errors::{CargoResult, CargoResultExt};
@@ -775,6 +775,11 @@ impl<'a, 'cfg> Iterator for Members<'a, 'cfg> {
                 None => return None,
             }
         }
+    }
+
+    fn size_hint(&self) -> (usize, Option<usize>) {
+        let (_, upper) = self.iter.size_hint();
+        (0, upper)
     }
 }
 

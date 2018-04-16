@@ -4,8 +4,8 @@ use std::iter::FromIterator;
 
 use url::Url;
 
-use core::{PackageId, Summary};
 use core::PackageIdSpec;
+use core::{PackageId, Summary};
 use util::Graph;
 use util::errors::CargoResult;
 use util::graph::{Edges, Nodes};
@@ -203,7 +203,16 @@ impl<'a> Iterator for Deps<'a> {
             .and_then(|e| e.next())
             .map(|id| self.resolve.replacement(id).unwrap_or(id))
     }
+
+    fn size_hint(&self) -> (usize, Option<usize>) {
+        // Note: Edges is actually a std::collections::hash_set::Iter, which
+        // is an ExactSizeIterator.
+        let len = self.edges.as_ref().map(ExactSizeIterator::len).unwrap_or(0);
+        (len, Some(len))
+    }
 }
+
+impl<'a> ExactSizeIterator for Deps<'a> {}
 
 pub struct DepsNotReplaced<'a> {
     edges: Option<Edges<'a, PackageId>>,
@@ -215,4 +224,13 @@ impl<'a> Iterator for DepsNotReplaced<'a> {
     fn next(&mut self) -> Option<&'a PackageId> {
         self.edges.as_mut().and_then(|e| e.next())
     }
+
+    fn size_hint(&self) -> (usize, Option<usize>) {
+        // Note: Edges is actually a std::collections::hash_set::Iter, which
+        // is an ExactSizeIterator.
+        let len = self.edges.as_ref().map(ExactSizeIterator::len).unwrap_or(0);
+        (len, Some(len))
+    }
 }
+
+impl<'a> ExactSizeIterator for DepsNotReplaced<'a> {}
