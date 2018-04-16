@@ -459,6 +459,10 @@ pub struct TomlProject {
     workspace: Option<String>,
     #[serde(rename = "im-a-teapot")]
     im_a_teapot: Option<bool>,
+    autobins: Option<bool>,
+    autoexamples: Option<bool>,
+    autotests: Option<bool>,
+    autobenches: Option<bool>,
 
     // package metadata
     description: Option<String>,
@@ -653,6 +657,7 @@ impl TomlManifest {
             me,
             package_name,
             package_root,
+            edition,
             &project.build,
             &mut warnings,
             &mut errors,

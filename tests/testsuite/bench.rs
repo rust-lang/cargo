@@ -1,7 +1,7 @@
 use std::str;
 
 use cargo::util::process;
-use cargotest::is_nightly;
+use cargotest::{is_nightly, ChannelChanger};
 use cargotest::support::paths::CargoPathExt;
 use cargotest::support::{basic_bin_manifest, basic_lib_manifest, execs, project};
 use hamcrest::{assert_that, existing_file};
@@ -694,6 +694,83 @@ fn external_bench_implicit() {
             ))
             .with_stdout_contains("test internal_bench ... bench: [..]")
             .with_stdout_contains("test external_bench ... bench: [..]"),
+    );
+}
+
+#[test]
+fn bench_autodiscover_2015() {
+    if !is_nightly() {
+        return;
+    }
+
+    let p = project("foo")
+        .file(
+            "Cargo.toml",
+            r#"
+            cargo-features = ["edition"]
+
+            [project]
+            name = "foo"
+            version = "0.0.1"
+            authors = []
+            rust = "2015"
+
+            [[bench]]
+            name = "bench_magic"
+            required-features = ["magic"]
+        "#,
+        )
+        .file("src/lib.rs", "")
+        .file(
+            "benches/bench_basic.rs",
+            r#"
+            #![feature(test)]
+            #[allow(unused_extern_crates)]
+            extern crate foo;
+            extern crate test;
+
+            #[bench]
+            fn bench_basic(_b: &mut test::Bencher) {}
+        "#,
+        )
+        .file(
+            "benches/bench_magic.rs",
+            r#"
+            #![feature(test)]
+            #[allow(unused_extern_crates)]
+            extern crate foo;
+            extern crate test;
+
+            #[bench]
+            fn bench_magic(_b: &mut test::Bencher) {}
+        "#,
+        )
+        .build();
+
+    assert_that(
+        p.cargo("bench")
+            .arg("bench_basic")
+            .masquerade_as_nightly_cargo(),
+        execs().with_stderr(&format!(
+            "warning: \
+An explicit [[bench]] section is specified in Cargo.toml which currently disables Cargo from \
+automatically inferring other benchmark targets. This inference behavior will change in \
+the Rust 2018 edition and the following files will be included as a benchmark target:
+
+* \"[..]foo[/]benches[/]bench_basic.rs\"
+
+This is likely to break cargo build or cargo test as these files may not be ready to be compiled \
+as a benchmark target today. You can future-proof yourself and disable this warning by \
+adding autobenches = false to your [package] section. You may also move the files to \
+a location where Cargo would not automatically infer them to be a target, such as in subfolders.
+
+For more information on this warning you can consult https://github.com/rust-lang/cargo/issues/5330
+[COMPILING] foo v0.0.1 ({})
+[FINISHED] release [optimized] target(s) in [..]
+[RUNNING] target[/]release[/]deps[/]foo-[..][EXE]
+",
+            p.url()
+        )),
     );
 }
 
