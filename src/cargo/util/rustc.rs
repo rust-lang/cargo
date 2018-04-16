@@ -186,15 +186,15 @@ impl Cache {
 
 impl Drop for Cache {
     fn drop(&mut self) {
-        match (&self.cache_location, self.dirty) {
-            (&Some(ref path), true) => {
-                let json = serde_json::to_string(&self.data).unwrap();
-                match paths::write(path, json.as_bytes()) {
-                    Ok(()) => info!("updated rustc info cache"),
-                    Err(e) => warn!("failed to update rustc info cache: {}", e),
-                }
+        if !self.dirty {
+            return;
+        }
+        if let Some(ref path) = self.cache_location {
+            let json = serde_json::to_string(&self.data).unwrap();
+            match paths::write(path, json.as_bytes()) {
+                Ok(()) => info!("updated rustc info cache"),
+                Err(e) => warn!("failed to update rustc info cache: {}", e),
             }
-            _ => (),
         }
     }
 }
