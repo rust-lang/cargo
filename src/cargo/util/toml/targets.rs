@@ -168,17 +168,11 @@ fn clean_bins(
     has_lib: bool,
 ) -> CargoResult<Vec<Target>> {
     let inferred = inferred_bins(package_root, package_name);
-    let bins = match toml_bins {
-        Some(bins) => bins.clone(),
-        None => inferred
-            .iter()
-            .map(|&(ref name, ref path)| TomlTarget {
-                name: Some(name.clone()),
-                path: Some(PathValue(path.clone())),
-                ..TomlTarget::new()
-            })
-            .collect(),
-    };
+
+    let bins = toml_targets_and_inferred(
+        toml_bins,
+        &inferred,
+    );
 
     for bin in &bins {
         validate_has_name(bin, "binary", "bin")?;
@@ -387,17 +381,10 @@ fn clean_targets_with_legacy_path(
     errors: &mut Vec<String>,
     legacy_path: &mut FnMut(&TomlTarget) -> Option<PathBuf>,
 ) -> CargoResult<Vec<(PathBuf, TomlTarget)>> {
-    let toml_targets = match toml_targets {
-        Some(targets) => targets.clone(),
-        None => inferred
-            .iter()
-            .map(|&(ref name, ref path)| TomlTarget {
-                name: Some(name.clone()),
-                path: Some(PathValue(path.clone())),
-                ..TomlTarget::new()
-            })
-            .collect(),
-    };
+    let toml_targets = toml_targets_and_inferred(
+        toml_targets,
+        inferred,
+    );
 
     for target in &toml_targets {
         validate_has_name(target, target_kind_human, target_kind)?;
@@ -481,6 +468,27 @@ fn infer_subdirectory(entry: &DirEntry) -> Option<(String, PathBuf)> {
 
 fn is_not_dotfile(entry: &DirEntry) -> bool {
     entry.file_name().to_str().map(|s| s.starts_with('.')) == Some(false)
+}
+
+fn toml_targets_and_inferred(
+    toml_targets: Option<&Vec<TomlTarget>>,
+    inferred: &[(String, PathBuf)],
+) -> Vec<TomlTarget> {
+    match toml_targets {
+        None => inferred_to_toml_targets(inferred),
+        Some(targets) => targets.clone(),
+    }
+}
+
+fn inferred_to_toml_targets(inferred: &[(String, PathBuf)]) -> Vec<TomlTarget> {
+    inferred
+        .iter()
+        .map(|&(ref name, ref path)| TomlTarget {
+            name: Some(name.clone()),
+            path: Some(PathValue(path.clone())),
+            ..TomlTarget::new()
+        })
+        .collect()
 }
 
 fn validate_has_name(
