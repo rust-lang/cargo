@@ -8,8 +8,7 @@ use std::iter;
 
 use filetime::FileTime;
 
-use util::{internal, CargoResult};
-use util::errors::{CargoError, CargoResultExt, Internal};
+use util::errors::{CargoError, CargoResult, CargoResultExt, Internal};
 
 pub fn join_paths<T: AsRef<OsStr>>(paths: &[T], env: &str) -> CargoResult<OsString> {
     let err = match env::join_paths(paths.iter()) {
@@ -154,13 +153,13 @@ pub fn append(path: &Path, contents: &[u8]) -> CargoResult<()> {
         f.write_all(contents)?;
         Ok(())
     })()
-        .chain_err(|| internal(format!("failed to write `{}`", path.display())))?;
+        .chain_err(|| format!("failed to write `{}`", path.display()))?;
     Ok(())
 }
 
 pub fn mtime(path: &Path) -> CargoResult<FileTime> {
     let meta =
-        fs::metadata(path).chain_err(|| internal(format!("failed to stat `{}`", path.display())))?;
+        fs::metadata(path).chain_err(|| format!("failed to stat `{}`", path.display()))?;
     Ok(FileTime::from_last_modification_time(&meta))
 }
 
