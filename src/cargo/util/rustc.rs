@@ -219,21 +219,24 @@ fn rustc_fingerprint(path: &Path, rustup_rustc: &Path) -> CargoResult<u64> {
     // If we don't see rustup env vars, but it looks like the compiler
     // is managed by rustup, we conservatively bail out.
     let maybe_rustup = rustup_rustc == path;
-    match (maybe_rustup, env::var("RUSTUP_HOME"), env::var("RUSTUP_TOOLCHAIN")) {
+    match (
+        maybe_rustup,
+        env::var("RUSTUP_HOME"),
+        env::var("RUSTUP_TOOLCHAIN"),
+    ) {
         (_, Ok(rustup_home), Ok(rustup_toolchain)) => {
             debug!("adding rustup info to rustc fingerprint");
             rustup_toolchain.hash(&mut hasher);
             rustup_home.hash(&mut hasher);
-            let rustup_rustc = Path::new(&rustup_home)
+            let real_rustc = Path::new(&rustup_home)
                 .join("toolchains")
                 .join(rustup_toolchain)
                 .join("bin")
-                .join("rustc");
-            paths::mtime(&rustup_rustc)?.hash(&mut hasher);
+                .join("rustc")
+                .with_extension(env::consts::EXE_EXTENSION);
+            paths::mtime(&real_rustc)?.hash(&mut hasher);
         }
-        (true, _, _) => {
-            bail!("probably rustup rustc, but without rustup's env vars")
-        }
+        (true, _, _) => bail!("probably rustup rustc, but without rustup's env vars"),
         _ => (),
     }
 

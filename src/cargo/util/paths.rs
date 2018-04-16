@@ -158,8 +158,7 @@ pub fn append(path: &Path, contents: &[u8]) -> CargoResult<()> {
 }
 
 pub fn mtime(path: &Path) -> CargoResult<FileTime> {
-    let meta =
-        fs::metadata(path).chain_err(|| format!("failed to stat `{}`", path.display()))?;
+    let meta = fs::metadata(path).chain_err(|| format!("failed to stat `{}`", path.display()))?;
     Ok(FileTime::from_last_modification_time(&meta))
 }
 
