@@ -27,6 +27,7 @@ pub fn cli() -> App {
         .arg(opt("profile", "Profile to build the selected target for").value_name("PROFILE"))
         .arg_features()
         .arg_target_triple("Check for the target triple")
+        .arg_target_dir()
         .arg_manifest_path()
         .arg_message_format()
         .after_help(

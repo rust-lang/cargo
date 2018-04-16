@@ -27,6 +27,7 @@ pub fn cli() -> App {
         )
         .arg_release("Build artifacts in release mode, with optimizations")
         .arg_features()
+        .arg_target_dir()
         .arg_manifest_path()
         .arg_message_format()
         .after_help(

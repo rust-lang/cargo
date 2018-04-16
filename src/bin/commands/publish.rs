@@ -16,6 +16,7 @@ pub fn cli() -> App {
             "Allow dirty working directories to be packaged",
         ))
         .arg_target_triple("Build for the target triple")
+        .arg_target_dir()
         .arg_manifest_path()
         .arg_jobs()
         .arg(opt("dry-run", "Perform all checks without uploading"))
