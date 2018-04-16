@@ -205,12 +205,10 @@ impl<'a> Iterator for Deps<'a> {
     }
 
     fn size_hint(&self) -> (usize, Option<usize>) {
-        match self.edges {
-            // Note: Edges is actually a std::collections::hash_set::Iter, which
-            // is an ExactSizeIterator.
-            Some(ref iter) => iter.size_hint(),
-            None => (0, Some(0)),
-        }
+        // Note: Edges is actually a std::collections::hash_set::Iter, which
+        // is an ExactSizeIterator.
+        let len = self.edges.as_ref().map(ExactSizeIterator::len).unwrap_or(0);
+        (len, Some(len))
     }
 }
 
@@ -228,12 +226,10 @@ impl<'a> Iterator for DepsNotReplaced<'a> {
     }
 
     fn size_hint(&self) -> (usize, Option<usize>) {
-        match self.edges {
-            // Note: Edges is actually a std::collections::hash_set::Iter, which
-            // is an ExactSizeIterator.
-            Some(ref iter) => iter.size_hint(),
-            None => (0, Some(0)),
-        }
+        // Note: Edges is actually a std::collections::hash_set::Iter, which
+        // is an ExactSizeIterator.
+        let len = self.edges.as_ref().map(ExactSizeIterator::len).unwrap_or(0);
+        (len, Some(len))
     }
 }
 
