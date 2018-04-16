@@ -4,9 +4,11 @@ use std::fs::{self, File, OpenOptions};
 use std::io;
 use std::io::prelude::*;
 use std::path::{Component, Path, PathBuf};
+use std::iter;
 
-use util::{internal, CargoResult};
-use util::errors::{CargoError, CargoResultExt, Internal};
+use filetime::FileTime;
+
+use util::errors::{CargoError, CargoResult, CargoResultExt, Internal};
 
 pub fn join_paths<T: AsRef<OsStr>>(paths: &[T], env: &str) -> CargoResult<OsString> {
     let err = match env::join_paths(paths.iter()) {
@@ -83,6 +85,32 @@ pub fn without_prefix<'a>(long_path: &'a Path, prefix: &'a Path) -> Option<&'a P
     }
 }
 
+pub fn resolve_executable(exec: &Path) -> CargoResult<PathBuf> {
+    if exec.components().count() == 1 {
+        let paths = env::var_os("PATH").ok_or(format_err!("no PATH"))?;
+        let candidates = env::split_paths(&paths).flat_map(|path| {
+            let candidate = PathBuf::from(path).join(&exec);
+            let with_exe = if env::consts::EXE_EXTENSION == "" {
+                None
+            } else {
+                Some(candidate.with_extension(env::consts::EXE_EXTENSION))
+            };
+            iter::once(candidate).chain(with_exe)
+        });
+        for candidate in candidates {
+            if candidate.is_file() {
+                // PATH may have a component like "." in it, so we still need to
+                // canonicalize.
+                return Ok(candidate.canonicalize()?);
+            }
+        }
+
+        bail!("no executable for `{}` found in PATH", exec.display())
+    } else {
+        Ok(exec.canonicalize()?)
+    }
+}
+
 pub fn read(path: &Path) -> CargoResult<String> {
     match String::from_utf8(read_bytes(path)?) {
         Ok(s) => Ok(s),
@@ -125,8 +153,13 @@ pub fn append(path: &Path, contents: &[u8]) -> CargoResult<()> {
         f.write_all(contents)?;
         Ok(())
     })()
-        .chain_err(|| internal(format!("failed to write `{}`", path.display())))?;
+        .chain_err(|| format!("failed to write `{}`", path.display()))?;
     Ok(())
+}
+
+pub fn mtime(path: &Path) -> CargoResult<FileTime> {
+    let meta = fs::metadata(path).chain_err(|| format!("failed to stat `{}`", path.display()))?;
+    Ok(FileTime::from_last_modification_time(&meta))
 }
 
 #[cfg(unix)]

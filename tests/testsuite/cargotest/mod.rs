@@ -3,14 +3,21 @@ use std::time::Duration;
 
 use cargo::util::Rustc;
 use cargo;
-use std::path::PathBuf;
+use std::path::{Path, PathBuf};
 
 #[macro_use]
 pub mod support;
 
 pub mod install;
 
-thread_local!(pub static RUSTC: Rustc = Rustc::new(PathBuf::from("rustc"), None).unwrap());
+thread_local!(
+pub static RUSTC: Rustc = Rustc::new(
+    PathBuf::from("rustc"),
+    None,
+    Path::new("should be path to rustup rustc, but we don't care in tests"),
+    None,
+).unwrap()
+);
 
 pub fn rustc_host() -> String {
     RUSTC.with(|r| r.host.clone())
