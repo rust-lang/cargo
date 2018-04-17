@@ -671,12 +671,12 @@ pub fn fetch(
         bail!("can't update a git repository in the offline mode")
     }
 
-    // If we're fetching from github, attempt github's special fast path for
+    // If we're fetching from GitHub, attempt GitHub's special fast path for
     // testing if we've already got an up-to-date copy of the repository
     if url.host_str() == Some("github.com") {
         if let Ok(oid) = repo.refname_to_id("refs/remotes/origin/master") {
             let mut handle = config.http()?.borrow_mut();
-            debug!("attempting github fast path for {}", url);
+            debug!("attempting GitHub fast path for {}", url);
             if github_up_to_date(&mut handle, url, &oid) {
                 return Ok(());
             } else {
@@ -821,7 +821,7 @@ fn reinitialize(repo: &mut git2::Repository) -> CargoResult<()> {
 }
 
 /// Updating the index is done pretty regularly so we want it to be as fast as
-/// possible. For registries hosted on github (like the crates.io index) there's
+/// possible. For registries hosted on GitHub (like the crates.io index) there's
 /// a fast path available to use [1] to tell us that there's no updates to be
 /// made.
 ///
@@ -844,7 +844,7 @@ fn github_up_to_date(handle: &mut Easy, url: &Url, oid: &git2::Oid) -> bool {
         })
     }
 
-    // This expects github urls in the form `github.com/user/repo` and nothing
+    // This expects GitHub urls in the form `github.com/user/repo` and nothing
     // else
     let mut pieces = try!(url.path_segments());
     let username = try!(pieces.next());

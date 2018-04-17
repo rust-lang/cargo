@@ -89,7 +89,7 @@ pub fn canonicalize_url(url: &Url) -> CargoResult<Url> {
         url.path_segments_mut().unwrap().pop_if_empty();
     }
 
-    // HACKHACK: For github URL's specifically just lowercase
+    // HACKHACK: For GitHub URL's specifically just lowercase
     // everything.  GitHub treats both the same, but they hash
     // differently, and we're gonna be hashing them. This wants a more
     // general solution, and also we're almost certainly not using the
