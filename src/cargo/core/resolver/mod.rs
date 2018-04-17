@@ -68,7 +68,7 @@ use self::types::{RcVecIter, RegistryQueryer};
 
 pub use self::encode::{EncodableDependency, EncodablePackageId, EncodableResolve};
 pub use self::encode::{Metadata, WorkspaceResolve};
-pub use self::resolve::Resolve;
+pub use self::resolve::{Resolve, Deps, DepsNotReplaced};
 pub use self::types::Method;
 
 mod context;
