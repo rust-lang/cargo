@@ -39,7 +39,6 @@ pub fn doc(ws: &Workspace, options: &DocOptions) -> CargoResult<()> {
 
     let mut lib_names = HashMap::new();
     let mut bin_names = HashMap::new();
-    //println!("{:#?}", pkgs);
     for package in &pkgs {
         for target in package.targets().iter().filter(|t| t.documented()) {
             if target.is_lib() {
@@ -67,7 +66,6 @@ pub fn doc(ws: &Workspace, options: &DocOptions) -> CargoResult<()> {
     }
 
     ops::compile(ws, &options.compile_opts)?;
-    //println!("Made it!");
 
     if options.open_result {
         let name = if pkgs.len() > 1 {

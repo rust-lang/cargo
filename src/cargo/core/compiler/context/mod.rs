@@ -450,6 +450,8 @@ impl<'a, 'cfg> Context<'a, 'cfg> {
         self.unit_dependencies[unit].clone()
     }
 
+    /// Whether a dependency should be compiled for the host or target platform,
+    /// specified by `Kind`.
     fn dep_platform_activated(&self, dep: &Dependency, kind: Kind) -> bool {
         // If this dependency is only available for certain platforms,
         // make sure we're only enabling it for that platform.
