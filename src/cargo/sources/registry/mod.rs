@@ -160,13 +160,11 @@
 
 use std::borrow::Cow;
 use std::collections::BTreeMap;
-use std::fmt;
 use std::fs::File;
 use std::path::{Path, PathBuf};
 
 use flate2::read::GzDecoder;
 use semver::Version;
-use serde::de;
 use tar::Archive;
 
 use core::{Package, PackageId, Registry, Source, SourceId, Summary};
@@ -212,27 +210,15 @@ pub struct RegistryConfig {
     pub api: Option<String>,
 }
 
+#[derive(Deserialize)]
 pub struct RegistryPackage<'a> {
     name: Cow<'a, str>,
     vers: Version,
-    deps: DependencyList,
+    deps: Vec<RegistryDependency<'a>>,
     features: BTreeMap<String, Vec<String>>,
     cksum: String,
     yanked: Option<bool>,
     links: Option<String>,
-}
-
-pub struct RegistryPackageDefault<'a>(pub &'a SourceId);
-
-impl<'de, 'a> de::DeserializeSeed<'de> for RegistryPackageDefault<'a> {
-    type Value = RegistryPackage<'de>;
-
-    fn deserialize<D>(self, deserializer: D) -> Result<Self::Value, D::Error>
-    where
-        D: de::Deserializer<'de>,
-    {
-        deserializer.deserialize_map(self)
-    }
 }
 
 #[derive(Deserialize)]
@@ -247,86 +233,6 @@ enum Field {
     Links,
 }
 
-impl<'a, 'de> de::Visitor<'de> for RegistryPackageDefault<'a> {
-    type Value = RegistryPackage<'de>;
-
-    fn expecting(&self, formatter: &mut fmt::Formatter) -> fmt::Result {
-        write!(formatter, "struct RegistryPackage")
-    }
-
-    fn visit_map<A>(self, mut map: A) -> Result<Self::Value, A::Error>
-    where
-        A: de::MapAccess<'de>,
-    {
-        let mut name = None;
-        let mut vers = None;
-        let mut deps = None;
-        let mut features = None;
-        let mut cksum = None;
-        let mut yanked = None;
-        let mut links = None;
-        while let Some(key) = map.next_key()? {
-            match key {
-                Field::Name => {
-                    if name.is_some() {
-                        return Err(de::Error::duplicate_field("name"));
-                    }
-                    name = Some(map.next_value()?);
-                }
-                Field::Vers => {
-                    if vers.is_some() {
-                        return Err(de::Error::duplicate_field("vers"));
-                    }
-                    vers = Some(map.next_value()?);
-                }
-                Field::Deps => {
-                    if deps.is_some() {
-                        return Err(de::Error::duplicate_field("deps"));
-                    }
-                    deps = Some(map.next_value_seed(DependencyListDefault(self.0))?);
-                }
-                Field::Features => {
-                    if features.is_some() {
-                        return Err(de::Error::duplicate_field("features"));
-                    }
-                    features = Some(map.next_value()?);
-                }
-                Field::Cksum => {
-                    if cksum.is_some() {
-                        return Err(de::Error::duplicate_field("cksum"));
-                    }
-                    cksum = Some(map.next_value()?);
-                }
-                Field::Yanked => {
-                    if yanked.is_some() {
-                        return Err(de::Error::duplicate_field("yanked"));
-                    }
-                    yanked = Some(map.next_value()?);
-                }
-                Field::Links => {
-                    if links.is_some() {
-                        return Err(de::Error::duplicate_field("links"));
-                    }
-                    links = Some(map.next_value()?);
-                }
-            }
-        }
-        Ok(RegistryPackage {
-            name: name.ok_or_else(|| de::Error::missing_field("name"))?,
-            vers: vers.ok_or_else(|| de::Error::missing_field("vers"))?,
-            deps: deps.ok_or_else(|| de::Error::missing_field("deps"))?,
-            features: features.ok_or_else(|| de::Error::missing_field("features"))?,
-            cksum: cksum.ok_or_else(|| de::Error::missing_field("cksum"))?,
-            yanked: yanked.ok_or_else(|| de::Error::missing_field("yanked"))?,
-            links: links.unwrap_or(None),
-        })
-    }
-}
-
-struct DependencyList {
-    inner: Vec<Dependency>,
-}
-
 #[derive(Deserialize)]
 struct RegistryDependency<'a> {
     name: Cow<'a, str>,
@@ -337,6 +243,55 @@ struct RegistryDependency<'a> {
     target: Option<Cow<'a, str>>,
     kind: Option<Cow<'a, str>>,
     registry: Option<String>,
+}
+
+impl<'a> RegistryDependency<'a> {
+    /// Converts an encoded dependency in the registry to a cargo dependency
+    pub fn into_dep(self, default: &SourceId) -> CargoResult<Dependency> {
+        let RegistryDependency {
+            name,
+            req,
+            mut features,
+            optional,
+            default_features,
+            target,
+            kind,
+            registry,
+        } = self;
+
+        let id = if let Some(registry) = registry {
+            SourceId::for_registry(&registry.to_url()?)?
+        } else {
+            default.clone()
+        };
+
+        let mut dep = Dependency::parse_no_deprecated(&name, Some(&req), &id)?;
+        let kind = match kind.as_ref().map(|s| &s[..]).unwrap_or("") {
+            "dev" => Kind::Development,
+            "build" => Kind::Build,
+            _ => Kind::Normal,
+        };
+
+        let platform = match target {
+            Some(target) => Some(target.parse()?),
+            None => None,
+        };
+
+        // Unfortunately older versions of cargo and/or the registry ended up
+        // publishing lots of entries where the features array contained the
+        // empty feature, "", inside. This confuses the resolution process much
+        // later on and these features aren't actually valid, so filter them all
+        // out here.
+        features.retain(|s| !s.is_empty());
+
+        dep.set_optional(optional)
+            .set_default_features(default_features)
+            .set_features(features)
+            .set_platform(platform)
+            .set_kind(kind);
+
+        Ok(dep)
+    }
 }
 
 pub trait RegistryData {
@@ -542,90 +497,4 @@ impl<'cfg> Source for RegistrySource<'cfg> {
     fn fingerprint(&self, pkg: &Package) -> CargoResult<String> {
         Ok(pkg.package_id().version().to_string())
     }
-}
-
-struct DependencyListDefault<'a>(&'a SourceId);
-
-impl<'a, 'de> de::DeserializeSeed<'de> for DependencyListDefault<'a> {
-    type Value = DependencyList;
-    fn deserialize<D>(self, deserializer: D) -> Result<Self::Value, D::Error>
-    where
-        D: de::Deserializer<'de>,
-    {
-        deserializer.deserialize_seq(self)
-    }
-}
-
-impl<'de, 'a> de::Visitor<'de> for DependencyListDefault<'a> {
-    type Value = DependencyList;
-
-    fn expecting(&self, formatter: &mut fmt::Formatter) -> fmt::Result {
-        write!(formatter, "a list of dependencies")
-    }
-
-    fn visit_seq<A>(self, mut seq: A) -> Result<DependencyList, A::Error>
-    where
-        A: de::SeqAccess<'de>,
-    {
-        let mut ret = Vec::new();
-        if let Some(size) = seq.size_hint() {
-            ret.reserve(size);
-        }
-        while let Some(element) = seq.next_element::<RegistryDependency>()? {
-            let dep = parse_registry_dependency(element, &self.0).map_err(de::Error::custom)?;
-            ret.push(dep);
-        }
-
-        Ok(DependencyList { inner: ret })
-    }
-}
-
-/// Converts an encoded dependency in the registry to a cargo dependency
-fn parse_registry_dependency(
-    dep: RegistryDependency,
-    default: &SourceId,
-) -> CargoResult<Dependency> {
-    let RegistryDependency {
-        name,
-        req,
-        mut features,
-        optional,
-        default_features,
-        target,
-        kind,
-        registry,
-    } = dep;
-
-    let id = if let Some(registry) = registry {
-        SourceId::for_registry(&registry.to_url()?)?
-    } else {
-        default.clone()
-    };
-
-    let mut dep = Dependency::parse_no_deprecated(&name, Some(&req), &id)?;
-    let kind = match kind.as_ref().map(|s| &s[..]).unwrap_or("") {
-        "dev" => Kind::Development,
-        "build" => Kind::Build,
-        _ => Kind::Normal,
-    };
-
-    let platform = match target {
-        Some(target) => Some(target.parse()?),
-        None => None,
-    };
-
-    // Unfortunately older versions of cargo and/or the registry ended up
-    // publishing lots of entries where the features array contained the
-    // empty feature, "", inside. This confuses the resolution process much
-    // later on and these features aren't actually valid, so filter them all
-    // out here.
-    features.retain(|s| !s.is_empty());
-
-    dep.set_optional(optional)
-        .set_default_features(default_features)
-        .set_features(features)
-        .set_platform(platform)
-        .set_kind(kind);
-
-    Ok(dep)
 }
