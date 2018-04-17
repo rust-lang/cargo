@@ -209,7 +209,7 @@ fn compute_deps_doc<'a, 'cfg>(
             unit.pkg
                 .dependencies()
                 .iter()
-                .filter(|d| d.name() == dep.name())
+                .filter(|d| d.name() == dep.name() && d.version_req().matches(dep.version()))
                 .any(|dep| match dep.kind() {
                     DepKind::Normal => cx.dep_platform_activated(dep, unit.kind),
                     _ => false,

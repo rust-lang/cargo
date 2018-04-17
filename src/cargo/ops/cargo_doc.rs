@@ -7,11 +7,16 @@ use core::Workspace;
 use ops;
 use util::CargoResult;
 
+/// Strongly typed options for the `cargo doc` command.
+#[derive(Debug)]
 pub struct DocOptions<'a> {
+    /// Whether to attempt to open the browser after compiling the docs
     pub open_result: bool,
+    /// Options to pass through to the compiler
     pub compile_opts: ops::CompileOptions<'a>,
 }
 
+/// Main method for `cargo doc`.
 pub fn doc(ws: &Workspace, options: &DocOptions) -> CargoResult<()> {
     let specs = options.compile_opts.spec.into_package_id_specs(ws)?;
     let resolve = ops::resolve_ws_precisely(

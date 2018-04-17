@@ -1,4 +1,5 @@
 use std::collections::hash_map::{HashMap, IterMut, Values};
+use std::fmt;
 
 use core::{Package, PackageId, Registry};
 use util::CargoResult;
@@ -76,6 +77,14 @@ impl<'a, T: Source + ?Sized + 'a> Source for Box<T> {
 #[derive(Default)]
 pub struct SourceMap<'src> {
     map: HashMap<SourceId, Box<Source + 'src>>,
+}
+
+// impl debug on source requires specialization, if even desirable at all
+impl<'src> fmt::Debug for SourceMap<'src> {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        write!(f, "SourceMap ")?;
+        f.debug_set().entries(self.map.keys()).finish()
+    }
 }
 
 /// A `std::collection::hash_map::Values` for `SourceMap`
