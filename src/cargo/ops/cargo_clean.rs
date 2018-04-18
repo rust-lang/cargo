@@ -50,10 +50,17 @@ pub fn clean(ws: &Workspace, opts: &CleanOptions) -> CargoResult<()> {
             for kind in [Kind::Host, Kind::Target].iter() {
                 for mode in CompileMode::all_modes() {
                     for profile_for in ProfileFor::all_values() {
+                        let profile = profiles.get_profile(
+                            &pkg.name(),
+                            ws.is_member(pkg),
+                            profile_for,
+                            mode,
+                            opts.release,
+                        );
                         units.push(Unit {
                             pkg,
                             target,
-                            profile_for,
+                            profile,
                             kind: *kind,
                             mode,
                         });
