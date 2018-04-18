@@ -16,14 +16,21 @@ fn cargo_metadata_simple() {
     {
         "packages": [
             {
+                "authors": [
+                    "wycats@example.com"
+                ],
+                "categories": [],
                 "name": "foo",
                 "version": "0.5.0",
                 "id": "foo[..]",
+                "keywords": [],
                 "source": null,
                 "dependencies": [],
                 "license": null,
                 "license_file": null,
                 "description": null,
+                "readme": null,
+                "repository": null,
                 "targets": [
                     {
                         "kind": [
@@ -100,9 +107,14 @@ crate-type = ["lib", "staticlib"]
     {
         "packages": [
             {
+                "authors": [],
+                "categories": [],
                 "name": "foo",
+                "readme": null,
+                "repository": null,
                 "version": "0.5.0",
                 "id": "foo[..]",
+                "keywords": [],
                 "source": null,
                 "dependencies": [],
                 "license": null,
@@ -172,9 +184,14 @@ optional_feat = []
     {
         "packages": [
             {
+                "authors": [],
+                "categories": [],
                 "name": "foo",
+                "readme": null,
+                "repository": null,
                 "version": "0.5.0",
                 "id": "foo[..]",
+                "keywords": [],
                 "source": null,
                 "dependencies": [],
                 "license": null,
@@ -260,11 +277,17 @@ fn cargo_metadata_with_deps_and_version() {
     {
         "packages": [
             {
+                "authors": [],
+                "categories": [],
                 "dependencies": [],
+                "description": null,
                 "features": {},
                 "id": "baz 0.0.1 (registry+[..])",
+                "keywords": [],
                 "manifest_path": "[..]Cargo.toml",
                 "name": "baz",
+                "readme": null,
+                "repository": null,
                 "source": "registry+[..]",
                 "license": null,
                 "license_file": null,
@@ -285,6 +308,8 @@ fn cargo_metadata_with_deps_and_version() {
                 "metadata": null
             },
             {
+                "authors": [],
+                "categories": [],
                 "dependencies": [
                     {
                         "features": [],
@@ -300,8 +325,11 @@ fn cargo_metadata_with_deps_and_version() {
                 ],
                 "features": {},
                 "id": "bar 0.0.1 (registry+[..])",
+                "keywords": [],
                 "manifest_path": "[..]Cargo.toml",
                 "name": "bar",
+                "readme": null,
+                "repository": null,
                 "source": "registry+[..]",
                 "license": null,
                 "license_file": null,
@@ -322,6 +350,8 @@ fn cargo_metadata_with_deps_and_version() {
                 "metadata": null
             },
             {
+                "authors": [],
+                "categories": [],
                 "dependencies": [
                     {
                         "features": [],
@@ -337,8 +367,11 @@ fn cargo_metadata_with_deps_and_version() {
                 ],
                 "features": {},
                 "id": "foo 0.5.0 (path+file:[..]foo)",
+                "keywords": [],
                 "manifest_path": "[..]Cargo.toml",
                 "name": "foo",
+                "readme": null,
+                "repository": null,
                 "source": null,
                 "license": "MIT",
                 "license_file": null,
@@ -417,9 +450,14 @@ name = "ex"
     {
         "packages": [
             {
+                "authors": [],
+                "categories": [],
                 "name": "foo",
+                "readme": null,
+                "repository": null,
                 "version": "0.1.0",
                 "id": "foo[..]",
+                "keywords": [],
                 "license": null,
                 "license_file": null,
                 "description": null,
@@ -491,9 +529,14 @@ crate-type = ["rlib", "dylib"]
     {
         "packages": [
             {
+                "authors": [],
+                "categories": [],
                 "name": "foo",
+                "readme": null,
+                "repository": null,
                 "version": "0.1.0",
                 "id": "foo[..]",
+                "keywords": [],
                 "license": null,
                 "license_file": null,
                 "description": null,
@@ -562,9 +605,16 @@ fn workspace_metadata() {
     {
         "packages": [
             {
+                "authors": [
+                    "wycats@example.com"
+                ],
+                "categories": [],
                 "name": "bar",
                 "version": "0.5.0",
                 "id": "bar[..]",
+                "readme": null,
+                "repository": null,
+                "keywords": [],
                 "source": null,
                 "dependencies": [],
                 "license": null,
@@ -583,9 +633,16 @@ fn workspace_metadata() {
                 "metadata": null
             },
             {
+                "authors": [
+                    "wycats@example.com"
+                ],
+                "categories": [],
                 "name": "baz",
+                "readme": null,
+                "repository": null,
                 "version": "0.5.0",
                 "id": "baz[..]",
+                "keywords": [],
                 "source": null,
                 "dependencies": [],
                 "license": null,
@@ -651,9 +708,16 @@ fn workspace_metadata_no_deps() {
     {
         "packages": [
             {
+                "authors": [
+                    "wycats@example.com"
+                ],
+                "categories": [],
                 "name": "bar",
+                "readme": null,
+                "repository": null,
                 "version": "0.5.0",
                 "id": "bar[..]",
+                "keywords": [],
                 "source": null,
                 "dependencies": [],
                 "license": null,
@@ -672,9 +736,16 @@ fn workspace_metadata_no_deps() {
                 "metadata": null
             },
             {
+                "authors": [
+                    "wycats@example.com"
+                ],
+                "categories": [],
                 "name": "baz",
+                "readme": null,
+                "repository": null,
                 "version": "0.5.0",
                 "id": "baz[..]",
+                "keywords": [],
                 "source": null,
                 "dependencies": [],
                 "license": null,
@@ -722,11 +793,16 @@ Caused by:
 const MANIFEST_OUTPUT: &str = r#"
 {
     "packages": [{
+        "authors": [
+            "wycats@example.com"
+        ],
+        "categories": [],
         "name":"foo",
         "version":"0.5.0",
         "id":"foo[..]0.5.0[..](path+file://[..]/foo)",
         "source":null,
         "dependencies":[],
+        "keywords": [],
         "license": null,
         "license_file": null,
         "description": null,
@@ -738,7 +814,9 @@ const MANIFEST_OUTPUT: &str = r#"
         }],
         "features":{},
         "manifest_path":"[..]Cargo.toml",
-        "metadata": null
+        "metadata": null,
+        "readme": null,
+        "repository": null
     }],
     "workspace_members": [ "foo 0.5.0 (path+file:[..]foo)" ],
     "resolve": null,
@@ -890,7 +968,11 @@ fn package_metadata() {
             [package]
             name = "foo"
             version = "0.1.0"
-            authors = []
+            authors = ["wycats@example.com"]
+            categories = ["database"]
+            keywords = ["database"]
+            readme = "README.md"
+            repository = "https://github.com/rust-lang/cargo"
 
             [package.metadata.bar]
             baz = "quux"
@@ -906,9 +988,14 @@ fn package_metadata() {
     {
         "packages": [
             {
+                "authors": ["wycats@example.com"],
+                "categories": ["database"],
                 "name": "foo",
+                "readme": "README.md",
+                "repository": "https://github.com/rust-lang/cargo",
                 "version": "0.1.0",
                 "id": "foo[..]",
+                "keywords": ["database"],
                 "source": null,
                 "dependencies": [],
                 "license": null,

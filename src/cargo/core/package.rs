@@ -42,6 +42,11 @@ struct SerializedPackage<'a> {
     features: &'a FeatureMap,
     manifest_path: &'a str,
     metadata: Option<&'a toml::Value>,
+    authors: &'a [String],
+    categories: &'a [String],
+    keywords: &'a [String],
+    readme: Option<&'a str>,
+    repository: Option<&'a str>
 }
 
 impl ser::Serialize for Package {
@@ -55,6 +60,11 @@ impl ser::Serialize for Package {
         let license = manmeta.license.as_ref().map(String::as_ref);
         let license_file = manmeta.license_file.as_ref().map(String::as_ref);
         let description = manmeta.description.as_ref().map(String::as_ref);
+        let authors = manmeta.authors.as_ref();
+        let categories = manmeta.categories.as_ref();
+        let keywords = manmeta.keywords.as_ref();
+        let readme = manmeta.readme.as_ref().map(String::as_ref);
+        let repository = manmeta.repository.as_ref().map(String::as_ref);
 
         SerializedPackage {
             name: &*package_id.name(),
@@ -69,6 +79,11 @@ impl ser::Serialize for Package {
             features: summary.features(),
             manifest_path: &self.manifest_path.display().to_string(),
             metadata: self.manifest.custom_metadata(),
+            authors,
+            categories,
+            keywords,
+            readme,
+            repository,
         }.serialize(s)
     }
 }
