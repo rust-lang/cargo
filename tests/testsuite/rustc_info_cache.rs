@@ -20,7 +20,6 @@ fn rustc_info_cache() {
 
     let miss = "[..] rustc info cache miss[..]";
     let hit = "[..]rustc info cache hit[..]";
-    let uncached = "[..]rustc info uncached[..]";
     let update = "[..]updated rustc info cache[..]";
 
     assert_that(
@@ -50,7 +49,6 @@ fn rustc_info_cache() {
         execs()
             .with_status(0)
             .with_stderr_contains("[..]rustc info cache disabled[..]")
-            .with_stderr_contains(uncached)
             .with_stderr_does_not_contain(update),
     );
 
