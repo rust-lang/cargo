@@ -154,19 +154,6 @@ impl Cache {
     }
 
     fn cached_output(&mut self, cmd: &ProcessBuilder) -> CargoResult<(String, String)> {
-        let calculate = || {
-            let output = cmd.exec_with_output()?;
-            let stdout = String::from_utf8(output.stdout)
-                .map_err(|_| internal("rustc didn't return utf8 output"))?;
-            let stderr = String::from_utf8(output.stderr)
-                .map_err(|_| internal("rustc didn't return utf8 output"))?;
-            Ok((stdout, stderr))
-        };
-        if self.cache_location.is_none() {
-            info!("rustc info uncached");
-            return calculate();
-        }
-
         let key = process_fingerprint(cmd);
         match self.data.outputs.entry(key) {
             Entry::Occupied(entry) => {
@@ -175,7 +162,12 @@ impl Cache {
             }
             Entry::Vacant(entry) => {
                 info!("rustc info cache miss");
-                let output = calculate()?;
+                let output = cmd.exec_with_output()?;
+                let stdout = String::from_utf8(output.stdout)
+                    .map_err(|_| internal("rustc didn't return utf8 output"))?;
+                let stderr = String::from_utf8(output.stderr)
+                    .map_err(|_| internal("rustc didn't return utf8 output"))?;
+                let output = (stdout, stderr);
                 entry.insert(output.clone());
                 self.dirty = true;
                 Ok(output)

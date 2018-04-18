@@ -445,3 +445,48 @@ fn any_ok() {
         .build();
     assert_that(p.cargo("build").arg("-v"), execs().with_status(0));
 }
+
+// https://github.com/rust-lang/cargo/issues/5313
+#[test]
+#[cfg(all(target_arch = "x86_64", target_os = "linux"))]
+fn cfg_looks_at_rustflags_for_target() {
+    let p = project("foo")
+        .file(
+            "Cargo.toml",
+            r#"
+            [package]
+            name = "a"
+            version = "0.0.1"
+            authors = []
+
+            [target.'cfg(with_b)'.dependencies]
+            b = { path = 'b' }
+        "#,
+        )
+        .file(
+            "src/main.rs",
+            r#"
+            #[cfg(with_b)]
+            extern crate b;
+
+            fn main() { b::foo(); }
+        "#,
+        )
+        .file(
+            "b/Cargo.toml",
+            r#"
+            [package]
+            name = "b"
+            version = "0.0.1"
+            authors = []
+        "#,
+        )
+        .file("b/src/lib.rs", "pub fn foo() {}")
+        .build();
+
+    assert_that(
+        p.cargo("build --target x86_64-unknown-linux-gnu")
+            .env("RUSTFLAGS", "--cfg with_b"),
+        execs().with_status(0),
+    );
+}
