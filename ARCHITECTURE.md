@@ -103,6 +103,9 @@ assert_that(
 );
 ```
 
+Alternatively to build and run a custom version of cargo simply run `cargo build`
+and execute `target/debug/cargo`.
+
 ## Logging
 
 Cargo uses [`env_logger`](https://docs.rs/env_logger/*/env_logger/), so you can set
