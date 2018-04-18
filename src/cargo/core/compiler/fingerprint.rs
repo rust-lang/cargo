@@ -386,7 +386,7 @@ impl ser::Serialize for MtimeSlot {
         self.0
             .lock()
             .unwrap()
-            .map(|ft| (ft.seconds_relative_to_1970(), ft.nanoseconds()))
+            .map(|ft| (ft.unix_seconds(), ft.nanoseconds()))
             .serialize(s)
     }
 }
@@ -396,9 +396,9 @@ impl<'de> de::Deserialize<'de> for MtimeSlot {
     where
         D: de::Deserializer<'de>,
     {
-        let kind: Option<(u64, u32)> = de::Deserialize::deserialize(d)?;
+        let kind: Option<(i64, u32)> = de::Deserialize::deserialize(d)?;
         Ok(MtimeSlot(Mutex::new(kind.map(|(s, n)| {
-            FileTime::from_seconds_since_1970(s, n)
+            FileTime::from_unix_time(s, n)
         }))))
     }
 }

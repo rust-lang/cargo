@@ -69,7 +69,7 @@ pub trait CargoPathExt {
 
     fn move_in_time<F>(&self, travel_amount: F)
     where
-        F: Fn(u64, u32) -> (u64, u32);
+        F: Fn(i64, u32) -> (i64, u32);
 }
 
 impl CargoPathExt for Path {
@@ -102,7 +102,7 @@ impl CargoPathExt for Path {
 
     fn move_in_time<F>(&self, travel_amount: F)
     where
-        F: Fn(u64, u32) -> ((u64, u32)),
+        F: Fn(i64, u32) -> ((i64, u32)),
     {
         if self.is_file() {
             time_travel(self, &travel_amount);
@@ -112,7 +112,7 @@ impl CargoPathExt for Path {
 
         fn recurse<F>(p: &Path, bad: &Path, travel_amount: &F)
         where
-            F: Fn(u64, u32) -> ((u64, u32)),
+            F: Fn(i64, u32) -> ((i64, u32)),
         {
             if p.is_file() {
                 time_travel(p, travel_amount)
@@ -126,14 +126,14 @@ impl CargoPathExt for Path {
 
         fn time_travel<F>(path: &Path, travel_amount: &F)
         where
-            F: Fn(u64, u32) -> ((u64, u32)),
+            F: Fn(i64, u32) -> ((i64, u32)),
         {
             let stat = t!(path.metadata());
 
             let mtime = FileTime::from_last_modification_time(&stat);
 
-            let (sec, nsec) = travel_amount(mtime.seconds_relative_to_1970(), mtime.nanoseconds());
-            let newtime = FileTime::from_seconds_since_1970(sec, nsec);
+            let (sec, nsec) = travel_amount(mtime.unix_seconds(), mtime.nanoseconds());
+            let newtime = FileTime::from_unix_time(sec, nsec);
 
             // Sadly change_file_times has a failure mode where a readonly file
             // cannot have its times changed on windows.
