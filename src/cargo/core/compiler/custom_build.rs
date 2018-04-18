@@ -120,7 +120,6 @@ fn build_work<'a, 'cfg>(cx: &mut Context<'a, 'cfg>, unit: &Unit<'a>) -> CargoRes
     // package's library profile.
     let to_exec = to_exec.into_os_string();
     let mut cmd = cx.compilation.host_process(to_exec, unit.pkg)?;
-    let profile = cx.unit_profile(unit).clone();
     cmd.env("OUT_DIR", &build_output)
         .env("CARGO_MANIFEST_DIR", unit.pkg.root())
         .env("NUM_JOBS", &cx.jobs().to_string())
@@ -131,8 +130,8 @@ fn build_work<'a, 'cfg>(cx: &mut Context<'a, 'cfg>, unit: &Unit<'a>) -> CargoRes
                 Kind::Target => cx.build_config.target_triple(),
             },
         )
-        .env("DEBUG", &profile.debuginfo.is_some().to_string())
-        .env("OPT_LEVEL", &profile.opt_level.to_string())
+        .env("DEBUG", &unit.profile.debuginfo.is_some().to_string())
+        .env("OPT_LEVEL", &unit.profile.opt_level.to_string())
         .env(
             "PROFILE",
             if cx.build_config.release {

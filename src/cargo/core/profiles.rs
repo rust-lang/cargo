@@ -1,9 +1,6 @@
-use std::collections::HashMap;
 use std::{cmp, fmt, hash};
 use ops::CompileMode;
 use util::toml::{StringOrBool, TomlProfile, U32OrBool};
-use core::compiler::Context;
-use core::compiler::Unit;
 use core::interning::InternedString;
 
 /// Collection of all user profiles.
@@ -51,7 +48,7 @@ impl Profiles {
     /// Retrieve the profile for a target.
     /// `is_member` is whether or not this package is a member of the
     /// workspace.
-    fn get_profile(
+    pub fn get_profile(
         &self,
         pkg_name: &str,
         is_member: bool,
@@ -105,58 +102,6 @@ impl Profiles {
             self.dev.profile_for("", true, ProfileFor::Any)
         }
     }
-
-    /// Build a mapping from Unit -> Profile for all the given units and all
-    /// of their dependencies.
-    pub fn build_unit_profiles<'a, 'cfg>(
-        &self,
-        units: &[Unit<'a>],
-        cx: &Context<'a, 'cfg>,
-    ) -> HashMap<Unit<'a>, Profile> {
-        let mut result = HashMap::new();
-        for unit in units.iter() {
-            self.build_unit_profiles_rec(unit, None, cx, &mut result);
-        }
-        result
-    }
-
-    fn build_unit_profiles_rec<'a, 'cfg>(
-        &self,
-        unit: &Unit<'a>,
-        parent: Option<&Unit<'a>>,
-        cx: &Context<'a, 'cfg>,
-        map: &mut HashMap<Unit<'a>, Profile>,
-    ) {
-        if !map.contains_key(unit) {
-            let for_unit = if unit.mode.is_run_custom_build() {
-                // The profile for *running* a custom build script is the
-                // target the script is running for.  This allows
-                // `custom_build::build_work` to set the correct environment
-                // settings.
-                //
-                // In the case of `cargo clean -p`, it creates artificial
-                // units to compute filenames, without a dependency hierarchy,
-                // so we don't have a parent here.  That should be OK, it
-                // only affects the environment variables used to *run*
-                // `build.rs`.
-                parent.unwrap_or(unit)
-            } else {
-                unit
-            };
-            let profile = self.get_profile(
-                &for_unit.pkg.name(),
-                cx.ws.is_member(for_unit.pkg),
-                for_unit.profile_for,
-                for_unit.mode,
-                cx.build_config.release,
-            );
-            map.insert(*unit, profile);
-            let deps = cx.dep_targets(unit);
-            for dep in &deps {
-                self.build_unit_profiles_rec(dep, Some(unit), cx, map);
-            }
-        }
-    }
 }
 
 /// An object used for handling the profile override hierarchy.
@@ -176,7 +121,7 @@ struct ProfileMaker {
 
 impl ProfileMaker {
     fn profile_for(&self, pkg_name: &str, is_member: bool, profile_for: ProfileFor) -> Profile {
-        let mut profile = self.default.clone();
+        let mut profile = self.default;
         if let Some(ref toml) = self.toml {
             merge_profile(&mut profile, toml);
             if profile_for == ProfileFor::CustomBuild {
@@ -205,7 +150,7 @@ fn merge_profile(profile: &mut Profile, toml: &TomlProfile) {
     }
     match toml.lto {
         Some(StringOrBool::Bool(b)) => profile.lto = Lto::Bool(b),
-        Some(StringOrBool::String(ref n)) => profile.lto = Lto::Named(n.clone()),
+        Some(StringOrBool::String(ref n)) => profile.lto = Lto::Named(InternedString::new(n)),
         None => {}
     }
     if toml.codegen_units.is_some() {
@@ -236,7 +181,7 @@ fn merge_profile(profile: &mut Profile, toml: &TomlProfile) {
 
 /// Profile settings used to determine which compiler flags to use for a
 /// target.
-#[derive(Debug, Clone, Eq)]
+#[derive(Debug, Clone, Copy, Eq)]
 pub struct Profile {
     pub name: &'static str,
     pub opt_level: InternedString,
@@ -361,13 +306,13 @@ impl Profile {
 }
 
 /// The link-time-optimization setting.
-#[derive(Clone, PartialEq, Eq, Debug, Hash)]
+#[derive(Clone, Copy, PartialEq, Eq, Debug, Hash)]
 pub enum Lto {
     /// False = no LTO
     /// True = "Fat" LTO
     Bool(bool),
     /// Named LTO settings like "thin".
-    Named(String),
+    Named(InternedString),
 }
 
 /// A flag used in `Unit` to indicate the purpose for the target.

@@ -18,7 +18,7 @@
 use super::{Context, Kind, Unit};
 use core::dependency::Kind as DepKind;
 use core::profiles::ProfileFor;
-use core::Target;
+use core::{Package, Target};
 use ops::CompileMode;
 use std::collections::HashMap;
 use CargoResult;
@@ -29,7 +29,13 @@ pub fn build_unit_dependencies<'a, 'cfg>(
 ) -> CargoResult<HashMap<Unit<'a>, Vec<Unit<'a>>>> {
     let mut deps = HashMap::new();
     for unit in roots.iter() {
-        deps_of(unit, cx, &mut deps, unit.profile_for)?;
+        // Dependencies of tests should not have `panic` set.
+        let profile_for = if unit.mode.is_any_test() {
+            ProfileFor::TestDependency
+        } else {
+            ProfileFor::Any
+        };
+        deps_of(unit, cx, &mut deps, profile_for)?;
     }
 
     Ok(deps)
@@ -108,16 +114,8 @@ fn compute_deps<'a, 'b, 'cfg>(
     }).filter_map(|(id, _)| match cx.get_package(id) {
             Ok(pkg) => pkg.targets().iter().find(|t| t.is_lib()).map(|t| {
                 let mode = check_or_build_mode(&unit.mode, t);
-                Ok((
-                    Unit {
-                        pkg,
-                        target: t,
-                        profile_for,
-                        kind: unit.kind.for_target(t),
-                        mode,
-                    },
-                    profile_for,
-                ))
+                let unit = new_unit(cx, pkg, t, profile_for, unit.kind.for_target(t), mode);
+                Ok((unit, profile_for))
             }),
             Err(e) => Some(Err(e)),
         })
@@ -138,7 +136,7 @@ fn compute_deps<'a, 'b, 'cfg>(
     if unit.target.is_lib() && unit.mode != CompileMode::Doctest {
         return Ok(ret);
     }
-    ret.extend(maybe_lib(unit, profile_for));
+    ret.extend(maybe_lib(cx, unit, profile_for));
 
     Ok(ret)
 }
@@ -167,7 +165,7 @@ fn compute_deps_custom_build<'a, 'cfg>(
         target: not_custom_build,
         // The profile here isn't critical.  We are just using this temp unit
         // for fetching dependencies that might have `links`.
-        profile_for: ProfileFor::Any,
+        profile: unit.profile,
         kind: unit.kind,
         mode: CompileMode::Build,
     };
@@ -180,13 +178,16 @@ fn compute_deps_custom_build<'a, 'cfg>(
             dep_build_script(unit)
         })
         .chain(Some((
-            Unit {
-                pkg: unit.pkg,
-                target: unit.target,
-                profile_for: ProfileFor::CustomBuild,
-                kind: Kind::Host, // build scripts always compiled for the host
-                mode: CompileMode::Build,
-            },
+            new_unit(
+                cx,
+                unit.pkg,
+                unit.target,
+                ProfileFor::CustomBuild,
+                Kind::Host, // build scripts always compiled for the host
+                CompileMode::Build,
+            ),
+            // All dependencies of this unit should use profiles for custom
+            // builds.
             ProfileFor::CustomBuild,
         )))
         .collect())
@@ -220,27 +221,25 @@ fn compute_deps_doc<'a, 'cfg>(
         // rustdoc only needs rmeta files for regular dependencies.
         // However, for plugins/proc-macros, deps should be built like normal.
         let mode = check_or_build_mode(&unit.mode, lib);
-        ret.push((
-            Unit {
-                pkg: dep,
-                target: lib,
-                profile_for: ProfileFor::Any,
-                kind: unit.kind.for_target(lib),
-                mode,
-            },
+        let unit = new_unit(
+            cx,
+            dep,
+            lib,
             ProfileFor::Any,
-        ));
+            unit.kind.for_target(lib),
+            mode,
+        );
+        ret.push((unit, ProfileFor::Any));
         if let CompileMode::Doc { deps: true } = unit.mode {
-            ret.push((
-                Unit {
-                    pkg: dep,
-                    target: lib,
-                    profile_for: ProfileFor::Any,
-                    kind: unit.kind.for_target(lib),
-                    mode: unit.mode,
-                },
+            let unit = new_unit(
+                cx,
+                dep,
+                lib,
                 ProfileFor::Any,
-            ));
+                unit.kind.for_target(lib),
+                unit.mode,
+            );
+            ret.push((unit, ProfileFor::Any));
         }
     }
 
@@ -249,24 +248,20 @@ fn compute_deps_doc<'a, 'cfg>(
 
     // If we document a binary, we need the library available
     if unit.target.is_bin() {
-        ret.extend(maybe_lib(unit, ProfileFor::Any));
+        ret.extend(maybe_lib(cx, unit, ProfileFor::Any));
     }
     Ok(ret)
 }
 
-fn maybe_lib<'a>(unit: &Unit<'a>, profile_for: ProfileFor) -> Option<(Unit<'a>, ProfileFor)> {
+fn maybe_lib<'a>(
+    cx: &Context,
+    unit: &Unit<'a>,
+    profile_for: ProfileFor,
+) -> Option<(Unit<'a>, ProfileFor)> {
     let mode = check_or_build_mode(&unit.mode, unit.target);
     unit.pkg.targets().iter().find(|t| t.linkable()).map(|t| {
-        (
-            Unit {
-                pkg: unit.pkg,
-                target: t,
-                profile_for,
-                kind: unit.kind.for_target(t),
-                mode,
-            },
-            profile_for,
-        )
+        let unit = new_unit(cx, unit.pkg, t, profile_for, unit.kind.for_target(t), mode);
+        (unit, profile_for)
     })
 }
 
@@ -283,16 +278,15 @@ fn dep_build_script<'a>(unit: &Unit<'a>) -> Option<(Unit<'a>, ProfileFor)> {
         .iter()
         .find(|t| t.is_custom_build())
         .map(|t| {
+            // The profile stored in the Unit is the profile for the thing
+            // the custom build script is running for.
+            // TODO: Fix this for different profiles that don't affect the
+            // build.rs environment variables.
             (
                 Unit {
                     pkg: unit.pkg,
                     target: t,
-                    // The profile for *running* the build script will actually be the
-                    // target the build script is running for (so that the environment
-                    // variables get set correctly).  This is overridden in
-                    // `Profiles::build_unit_profiles`, so the exact value here isn't
-                    // critical.
-                    profile_for: ProfileFor::CustomBuild,
+                    profile: unit.profile,
                     kind: unit.kind,
                     mode: CompileMode::RunCustomBuild,
                 },
@@ -316,5 +310,29 @@ fn check_or_build_mode(mode: &CompileMode, target: &Target) -> CompileMode {
             }
         }
         _ => CompileMode::Build,
+    }
+}
+
+fn new_unit<'a>(
+    cx: &Context,
+    pkg: &'a Package,
+    target: &'a Target,
+    profile_for: ProfileFor,
+    kind: Kind,
+    mode: CompileMode,
+) -> Unit<'a> {
+    let profile = cx.profiles.get_profile(
+        &pkg.name(),
+        cx.ws.is_member(pkg),
+        profile_for,
+        mode,
+        cx.build_config.release,
+    );
+    Unit {
+        pkg,
+        target,
+        profile,
+        kind,
+        mode,
     }
 }

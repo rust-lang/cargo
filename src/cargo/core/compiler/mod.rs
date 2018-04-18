@@ -556,7 +556,7 @@ fn link_targets<'a, 'cfg>(
     let export_dir = cx.files().export_dir(unit);
     let package_id = unit.pkg.package_id().clone();
     let target = unit.target.clone();
-    let profile = cx.unit_profile(unit).clone();
+    let profile = unit.profile;
     let unit_mode = unit.mode;
     let features = cx.resolve
         .features_sorted(&package_id)
@@ -850,9 +850,8 @@ fn build_base_args<'a, 'cfg>(
         overflow_checks,
         rpath,
         ref panic,
-        incremental,
         ..
-    } = *cx.unit_profile(unit);
+    } = unit.profile;
     let test = unit.mode.is_any_test();
 
     cmd.arg("--crate-name").arg(&unit.target.crate_name());
@@ -1022,7 +1021,7 @@ fn build_base_args<'a, 'cfg>(
         "linker=",
         cx.linker(unit.kind).map(|s| s.as_ref()),
     );
-    cmd.args(&cx.incremental_args(unit, incremental)?);
+    cmd.args(&cx.incremental_args(unit)?);
 
     Ok(())
 }

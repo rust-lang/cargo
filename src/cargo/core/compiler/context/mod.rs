@@ -9,7 +9,7 @@ use jobserver::Client;
 
 use core::{Package, PackageId, PackageSet, Resolve, Target};
 use core::{Dependency, Workspace};
-use core::profiles::{Profile, ProfileFor, Profiles};
+use core::profiles::{Profile, Profiles};
 use ops::CompileMode;
 use util::{internal, profile, Cfg, CfgExpr, Config};
 use util::errors::{CargoResult, CargoResultExt};
@@ -55,9 +55,9 @@ pub struct Unit<'a> {
     /// to be confused with *target-triple* (or *target architecture* ...), the target arch for a
     /// build.
     pub target: &'a Target,
-    /// This indicates the purpose of the target for profile selection.  See
-    /// `ProfileFor` for more details.
-    pub profile_for: ProfileFor,
+    /// The profile contains information about *how* the build should be run, including debug
+    /// level, etc.
+    pub profile: Profile,
     /// Whether this compilation unit is for the host or target architecture.
     ///
     /// For example, when
@@ -103,7 +103,6 @@ pub struct Context<'a, 'cfg: 'a> {
     incremental_env: Option<bool>,
 
     unit_dependencies: HashMap<Unit<'a>, Vec<Unit<'a>>>,
-    unit_profiles: HashMap<Unit<'a>, Profile>,
     files: Option<CompilationFiles<'a, 'cfg>>,
 }
 
@@ -166,7 +165,6 @@ impl<'a, 'cfg> Context<'a, 'cfg> {
             build_script_overridden: HashSet::new(),
 
             unit_dependencies: HashMap::new(),
-            unit_profiles: HashMap::new(),
             files: None,
             extra_compiler_args,
         };
@@ -328,15 +326,8 @@ impl<'a, 'cfg> Context<'a, 'cfg> {
 
         let deps = build_unit_dependencies(units, self)?;
         self.unit_dependencies = deps;
-        self.unit_profiles = self.profiles.build_unit_profiles(units, self);
-        let files = CompilationFiles::new(
-            units,
-            host_layout,
-            target_layout,
-            export_dir,
-            self.ws,
-            self,
-        );
+        let files =
+            CompilationFiles::new(units, host_layout, target_layout, export_dir, self.ws, self);
         self.files = Some(files);
         Ok(())
     }
@@ -490,11 +481,7 @@ impl<'a, 'cfg> Context<'a, 'cfg> {
         self.build_config.jobs
     }
 
-    pub fn incremental_args(
-        &self,
-        unit: &Unit,
-        profile_incremental: bool,
-    ) -> CargoResult<Vec<String>> {
+    pub fn incremental_args(&self, unit: &Unit) -> CargoResult<Vec<String>> {
         // There's a number of ways to configure incremental compilation right
         // now. In order of descending priority (first is highest priority) we
         // have:
@@ -517,7 +504,7 @@ impl<'a, 'cfg> Context<'a, 'cfg> {
         //   have it enabled by default while release profiles have it disabled
         //   by default.
         let global_cfg = self.config.get_bool("build.incremental")?.map(|c| c.val);
-        let incremental = match (self.incremental_env, global_cfg, profile_incremental) {
+        let incremental = match (self.incremental_env, global_cfg, unit.profile.incremental) {
             (Some(v), _, _) => v,
             (None, Some(false), _) => false,
             (None, _, other) => other,
@@ -570,13 +557,6 @@ impl<'a, 'cfg> Context<'a, 'cfg> {
             Kind::Host => &self.host_info,
             Kind::Target => &self.target_info,
         }
-    }
-
-    /// Returns the profile for a given unit.
-    /// This should not be called until profiles are computed in
-    /// `prepare_units`.
-    pub fn unit_profile(&self, unit: &Unit<'a>) -> &Profile {
-        &self.unit_profiles[unit]
     }
 }
 

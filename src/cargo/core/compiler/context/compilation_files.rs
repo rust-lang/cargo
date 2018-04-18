@@ -425,7 +425,7 @@ fn compute_metadata<'a, 'cfg>(
     // Throw in the profile we're compiling with. This helps caching
     // panic=abort and panic=unwind artifacts, additionally with various
     // settings like debuginfo and whatnot.
-    cx.unit_profile(unit).hash(&mut hasher);
+    unit.profile.hash(&mut hasher);
     unit.mode.hash(&mut hasher);
 
     // Artifacts compiled for the host should have a different metadata

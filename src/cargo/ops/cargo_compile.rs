@@ -28,7 +28,7 @@ use std::sync::Arc;
 
 use core::compiler::{BuildConfig, Compilation, Context, DefaultExecutor, Executor};
 use core::compiler::{Kind, Unit};
-use core::profiles::ProfileFor;
+use core::profiles::{ProfileFor, Profiles};
 use core::resolver::{Method, Resolve};
 use core::{Package, Source, Target};
 use core::{PackageId, PackageIdSpec, TargetKind, Workspace};
@@ -383,11 +383,14 @@ pub fn compile_ws<'a>(
     let mut extra_compiler_args = HashMap::new();
 
     let units = generate_targets(
+        ws,
+        profiles,
         &to_builds,
         filter,
         default_arch_kind,
         mode,
         &resolve_with_overrides,
+        release,
     )?;
 
     if let Some(args) = extra_args {
@@ -552,30 +555,28 @@ impl CompileFilter {
 /// compile. Dependencies for these targets are computed later in
 /// `unit_dependencies`.
 fn generate_targets<'a>(
+    ws: &Workspace,
+    profiles: &Profiles,
     packages: &[&'a Package],
     filter: &CompileFilter,
     default_arch_kind: Kind,
     mode: CompileMode,
     resolve: &Resolve,
+    release: bool,
 ) -> CargoResult<Vec<Unit<'a>>> {
     let mut units = Vec::new();
 
     // Helper for creating a Unit struct.
     let new_unit =
         |pkg: &'a Package, target: &'a Target, mode: CompileMode, profile_for: ProfileFor| {
-            let actual_profile_for = if profile_for != ProfileFor::Any {
-                profile_for
-            } else if mode.is_any_test() {
-                // Force dependencies of this unit to not set `panic`.
-                ProfileFor::TestDependency
-            } else {
-                profile_for
-            };
-            let actual_mode = match mode {
+            let mode = match mode {
                 CompileMode::Test => {
                     if target.is_example() {
                         // Examples are included as regular binaries to verify
                         // that they compile.
+                        // TODO: Broken - Dependencies of examples can be
+                        // built with `panic`, which will cause `rustdoc` to
+                        // fail with linking multiple binaries.
                         CompileMode::Build
                     } else {
                         CompileMode::Test
@@ -593,12 +594,14 @@ fn generate_targets<'a>(
             } else {
                 default_arch_kind
             };
+            let profile =
+                profiles.get_profile(&pkg.name(), ws.is_member(pkg), profile_for, mode, release);
             Unit {
                 pkg,
                 target,
-                profile_for: actual_profile_for,
+                profile,
                 kind,
-                mode: actual_mode,
+                mode,
             }
         };
 
@@ -628,11 +631,10 @@ fn generate_targets<'a>(
                 proposals.extend(default_units);
                 if mode == CompileMode::Test {
                     // Include the lib as it will be required for doctests.
+                    // TODO: Broken - Dependencies won't have ProfileFor::TestDependency.
                     if let Some(t) = pkg.targets().iter().find(|t| t.is_lib() && t.doctested()) {
-                        proposals.push((
-                            new_unit(pkg, t, CompileMode::Build, ProfileFor::TestDependency),
-                            false,
-                        ));
+                        proposals
+                            .push((new_unit(pkg, t, CompileMode::Build, ProfileFor::Any), false));
                     }
                 }
             }

@@ -9,7 +9,7 @@ use crossbeam::{self, Scope};
 use jobserver::{Acquired, HelperThread};
 
 use core::{PackageId, Target};
-use core::profiles::ProfileFor;
+use core::profiles::Profile;
 use ops::CompileMode;
 use util::{Config, DependencyQueue, Dirty, Fresh, Freshness};
 use util::{internal, profile, CargoResult, CargoResultExt, ProcessBuilder};
@@ -48,7 +48,7 @@ struct PendingBuild {
 struct Key<'a> {
     pkg: &'a PackageId,
     target: &'a Target,
-    profile_for: ProfileFor,
+    profile: Profile,
     kind: Kind,
     mode: CompileMode,
 }
@@ -410,7 +410,7 @@ impl<'a> Key<'a> {
         Key {
             pkg: unit.pkg.package_id(),
             target: unit.target,
-            profile_for: unit.profile_for,
+            profile: unit.profile,
             kind: unit.kind,
             mode: unit.mode,
         }
@@ -420,7 +420,7 @@ impl<'a> Key<'a> {
         let unit = Unit {
             pkg: cx.get_package(self.pkg)?,
             target: self.target,
-            profile_for: self.profile_for,
+            profile: self.profile,
             kind: self.kind,
             mode: self.mode,
         };
@@ -444,8 +444,8 @@ impl<'a> fmt::Debug for Key<'a> {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         write!(
             f,
-            "{} => {}/{:?} => {:?}",
-            self.pkg, self.target, self.mode, self.kind
+            "{} => {}/{} => {:?}",
+            self.pkg, self.target, self.profile, self.kind
         )
     }
 }
