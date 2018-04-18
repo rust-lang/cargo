@@ -8,6 +8,7 @@ use cargotest::support::{execs, project, path2url};
 use cargotest::support::registry::Package;
 use hamcrest::{assert_that, existing_dir, existing_file, is_not};
 use cargo::util::ProcessError;
+use glob::glob;
 
 #[test]
 fn simple() {
@@ -162,6 +163,20 @@ fn doc_deps() {
     assert_that(&p.root().join("target/doc"), existing_dir());
     assert_that(&p.root().join("target/doc/foo/index.html"), existing_file());
     assert_that(&p.root().join("target/doc/bar/index.html"), existing_file());
+
+    // Verify that it only emits rmeta for the dependency.
+    assert_eq!(
+        glob(&p.root().join("target/debug/**/*.rlib").to_str().unwrap())
+            .unwrap()
+            .count(),
+        0
+    );
+    assert_eq!(
+        glob(&p.root().join("target/debug/deps/libbar-*.rmeta").to_str().unwrap())
+            .unwrap()
+            .count(),
+        1
+    );
 
     assert_that(
         p.cargo("doc")

@@ -16,11 +16,12 @@
 //! graph of `Unit`s, which capture these properties.
 
 use super::{Context, Kind, Unit};
+use core::dependency::Kind as DepKind;
+use core::profiles::ProfileFor;
+use core::Target;
+use ops::CompileMode;
 use std::collections::HashMap;
 use CargoResult;
-use core::dependency::Kind as DepKind;
-use core::Target;
-use core::Profile;
 
 pub fn build_unit_dependencies<'a, 'cfg>(
     roots: &[Unit<'a>],
@@ -28,7 +29,7 @@ pub fn build_unit_dependencies<'a, 'cfg>(
 ) -> CargoResult<HashMap<Unit<'a>, Vec<Unit<'a>>>> {
     let mut deps = HashMap::new();
     for unit in roots.iter() {
-        deps_of(unit, cx, &mut deps)?;
+        deps_of(unit, cx, &mut deps, unit.profile_for)?;
     }
 
     Ok(deps)
@@ -38,12 +39,14 @@ fn deps_of<'a, 'b, 'cfg>(
     unit: &Unit<'a>,
     cx: &Context<'a, 'cfg>,
     deps: &'b mut HashMap<Unit<'a>, Vec<Unit<'a>>>,
+    profile_for: ProfileFor,
 ) -> CargoResult<&'b [Unit<'a>]> {
     if !deps.contains_key(unit) {
-        let unit_deps = compute_deps(unit, cx, deps)?;
-        deps.insert(*unit, unit_deps.clone());
-        for unit in unit_deps {
-            deps_of(&unit, cx, deps)?;
+        let unit_deps = compute_deps(unit, cx, deps, profile_for)?;
+        let to_insert: Vec<_> = unit_deps.iter().map(|&(unit, _)| unit).collect();
+        deps.insert(*unit, to_insert);
+        for (unit, profile_for) in unit_deps {
+            deps_of(&unit, cx, deps, profile_for)?;
         }
     }
     Ok(deps[unit].as_ref())
@@ -51,68 +54,72 @@ fn deps_of<'a, 'b, 'cfg>(
 
 /// For a package, return all targets which are registered as dependencies
 /// for that package.
+/// This returns a vec of `(Unit, ProfileFor)` pairs.  The `ProfileFor`
+/// is the profile type that should be used for dependencies of the unit.
 fn compute_deps<'a, 'b, 'cfg>(
     unit: &Unit<'a>,
     cx: &Context<'a, 'cfg>,
     deps: &'b mut HashMap<Unit<'a>, Vec<Unit<'a>>>,
-) -> CargoResult<Vec<Unit<'a>>> {
-    if unit.profile.run_custom_build {
+    profile_for: ProfileFor,
+) -> CargoResult<Vec<(Unit<'a>, ProfileFor)>> {
+    if unit.mode.is_run_custom_build() {
         return compute_deps_custom_build(unit, cx, deps);
-    } else if unit.profile.doc && !unit.profile.test {
+    } else if unit.mode.is_doc() && !unit.mode.is_any_test() {
+        // Note: This does not include Doctest.
         return compute_deps_doc(unit, cx);
     }
 
     let id = unit.pkg.package_id();
     let deps = cx.resolve.deps(id);
-    let mut ret = deps
-        .filter(|&(_id, deps)| {
-            assert!(deps.len() > 0);
-            deps.iter().any(|dep| {
-                // If this target is a build command, then we only want build
-                // dependencies, otherwise we want everything *other than* build
-                // dependencies.
-                if unit.target.is_custom_build() != dep.is_build() {
-                    return false;
-                }
+    let mut ret = deps.filter(|&(_id, deps)| {
+        assert!(deps.len() > 0);
+        deps.iter().any(|dep| {
+            // If this target is a build command, then we only want build
+            // dependencies, otherwise we want everything *other than* build
+            // dependencies.
+            if unit.target.is_custom_build() != dep.is_build() {
+                return false;
+            }
 
-                // If this dependency is *not* a transitive dependency, then it
-                // only applies to test/example targets
-                if !dep.is_transitive() && !unit.target.is_test() && !unit.target.is_example()
-                    && !unit.profile.test
-                {
-                    return false;
-                }
+            // If this dependency is *not* a transitive dependency, then it
+            // only applies to test/example targets
+            if !dep.is_transitive() && !unit.target.is_test() && !unit.target.is_example()
+                && !unit.mode.is_any_test()
+            {
+                return false;
+            }
 
-                // If this dependency is only available for certain platforms,
-                // make sure we're only enabling it for that platform.
-                if !cx.dep_platform_activated(dep, unit.kind) {
-                    return false;
-                }
+            // If this dependency is only available for certain platforms,
+            // make sure we're only enabling it for that platform.
+            if !cx.dep_platform_activated(dep, unit.kind) {
+                return false;
+            }
 
-                // If the dependency is optional, then we're only activating it
-                // if the corresponding feature was activated
-                if dep.is_optional() && !cx.resolve.features(id).contains(&*dep.name()) {
-                    return false;
-                }
+            // If the dependency is optional, then we're only activating it
+            // if the corresponding feature was activated
+            if dep.is_optional() && !cx.resolve.features(id).contains(&*dep.name()) {
+                return false;
+            }
 
-                // If we've gotten past all that, then this dependency is
-                // actually used!
-                true
-            })
+            // If we've gotten past all that, then this dependency is
+            // actually used!
+            true
         })
-        .filter_map(|(id, _)| {
-            match cx.get_package(id) {
-                Ok(pkg) => pkg.targets().iter().find(|t| t.is_lib()).map(|t| {
-                    let unit = Unit {
+    }).filter_map(|(id, _)| match cx.get_package(id) {
+            Ok(pkg) => pkg.targets().iter().find(|t| t.is_lib()).map(|t| {
+                let mode = check_or_build_mode(&unit.mode, t);
+                Ok((
+                    Unit {
                         pkg,
                         target: t,
-                        profile: lib_or_check_profile(unit, t, cx),
+                        profile_for,
                         kind: unit.kind.for_target(t),
-                    };
-                    Ok(unit)
-                }),
-                Err(e) => Some(Err(e)),
-            }
+                        mode,
+                    },
+                    profile_for,
+                ))
+            }),
+            Err(e) => Some(Err(e)),
         })
         .collect::<CargoResult<Vec<_>>>()?;
 
@@ -122,40 +129,17 @@ fn compute_deps<'a, 'b, 'cfg>(
     if unit.target.is_custom_build() {
         return Ok(ret);
     }
-    ret.extend(dep_build_script(unit, cx));
+    ret.extend(dep_build_script(unit));
 
     // If this target is a binary, test, example, etc, then it depends on
     // the library of the same package. The call to `resolve.deps` above
     // didn't include `pkg` in the return values, so we need to special case
     // it here and see if we need to push `(pkg, pkg_lib_target)`.
-    if unit.target.is_lib() && !unit.profile.doc {
+    if unit.target.is_lib() && unit.mode != CompileMode::Doctest {
         return Ok(ret);
     }
-    ret.extend(maybe_lib(unit, cx));
+    ret.extend(maybe_lib(unit, profile_for));
 
-    // Integration tests/benchmarks require binaries to be built
-    if unit.profile.test && (unit.target.is_test() || unit.target.is_bench()) {
-        ret.extend(
-            unit.pkg
-                .targets()
-                .iter()
-                .filter(|t| {
-                    let no_required_features = Vec::new();
-
-                    t.is_bin() &&
-                        // Skip binaries with required features that have not been selected.
-                        t.required_features().unwrap_or(&no_required_features).iter().all(|f| {
-                            cx.resolve.features(id).contains(f)
-                        })
-                })
-                .map(|t| Unit {
-                    pkg: unit.pkg,
-                    target: t,
-                    profile: lib_or_check_profile(unit, t, cx),
-                    kind: unit.kind.for_target(t),
-                }),
-        );
-    }
     Ok(ret)
 }
 
@@ -167,10 +151,10 @@ fn compute_deps_custom_build<'a, 'cfg>(
     unit: &Unit<'a>,
     cx: &Context<'a, 'cfg>,
     deps: &mut HashMap<Unit<'a>, Vec<Unit<'a>>>,
-) -> CargoResult<Vec<Unit<'a>>> {
+) -> CargoResult<Vec<(Unit<'a>, ProfileFor)>> {
     // When not overridden, then the dependencies to run a build script are:
     //
-    // 1. Compiling the build script itcx
+    // 1. Compiling the build script itself
     // 2. For each immediate dependency of our package which has a `links`
     //    key, the execution of that build script.
     let not_custom_build = unit.pkg
@@ -179,23 +163,32 @@ fn compute_deps_custom_build<'a, 'cfg>(
         .find(|t| !t.is_custom_build())
         .unwrap();
     let tmp = Unit {
+        pkg: unit.pkg,
         target: not_custom_build,
-        profile: &cx.profiles.dev,
-        ..*unit
+        // The profile here isn't critical.  We are just using this temp unit
+        // for fetching dependencies that might have `links`.
+        profile_for: ProfileFor::Any,
+        kind: unit.kind,
+        mode: CompileMode::Build,
     };
-    let deps = deps_of(&tmp, cx, deps)?;
+    let deps = deps_of(&tmp, cx, deps, ProfileFor::CustomBuild)?;
     Ok(deps.iter()
         .filter_map(|unit| {
             if !unit.target.linkable() || unit.pkg.manifest().links().is_none() {
                 return None;
             }
-            dep_build_script(unit, cx)
+            dep_build_script(unit)
         })
-        .chain(Some(Unit {
-            profile: cx.build_script_profile(unit.pkg.package_id()),
-            kind: Kind::Host, // build scripts always compiled for the host
-            ..*unit
-        }))
+        .chain(Some((
+            Unit {
+                pkg: unit.pkg,
+                target: unit.target,
+                profile_for: ProfileFor::CustomBuild,
+                kind: Kind::Host, // build scripts always compiled for the host
+                mode: CompileMode::Build,
+            },
+            ProfileFor::CustomBuild,
+        )))
         .collect())
 }
 
@@ -203,15 +196,13 @@ fn compute_deps_custom_build<'a, 'cfg>(
 fn compute_deps_doc<'a, 'cfg>(
     unit: &Unit<'a>,
     cx: &Context<'a, 'cfg>,
-) -> CargoResult<Vec<Unit<'a>>> {
+) -> CargoResult<Vec<(Unit<'a>, ProfileFor)>> {
     let deps = cx.resolve
         .deps(unit.pkg.package_id())
         .filter(|&(_id, deps)| {
-            deps.iter().any(|dep| {
-                match dep.kind() {
-                    DepKind::Normal => cx.dep_platform_activated(dep, unit.kind),
-                    _ => false,
-                }
+            deps.iter().any(|dep| match dep.kind() {
+                DepKind::Normal => cx.dep_platform_activated(dep, unit.kind),
+                _ => false,
             })
         })
         .map(|(id, _deps)| cx.get_package(id));
@@ -226,43 +217,57 @@ fn compute_deps_doc<'a, 'cfg>(
             Some(lib) => lib,
             None => continue,
         };
-        ret.push(Unit {
-            pkg: dep,
-            target: lib,
-            profile: lib_or_check_profile(unit, lib, cx),
-            kind: unit.kind.for_target(lib),
-        });
-        if cx.build_config.doc_all {
-            ret.push(Unit {
+        // rustdoc only needs rmeta files for regular dependencies.
+        // However, for plugins/proc-macros, deps should be built like normal.
+        let mode = check_or_build_mode(&unit.mode, lib);
+        ret.push((
+            Unit {
                 pkg: dep,
                 target: lib,
-                profile: &cx.profiles.doc,
+                profile_for: ProfileFor::Any,
                 kind: unit.kind.for_target(lib),
-            });
+                mode,
+            },
+            ProfileFor::Any,
+        ));
+        if let CompileMode::Doc { deps: true } = unit.mode {
+            ret.push((
+                Unit {
+                    pkg: dep,
+                    target: lib,
+                    profile_for: ProfileFor::Any,
+                    kind: unit.kind.for_target(lib),
+                    mode: unit.mode,
+                },
+                ProfileFor::Any,
+            ));
         }
     }
 
     // Be sure to build/run the build script for documented libraries as
-    ret.extend(dep_build_script(unit, cx));
+    ret.extend(dep_build_script(unit));
 
     // If we document a binary, we need the library available
     if unit.target.is_bin() {
-        ret.extend(maybe_lib(unit, cx));
+        ret.extend(maybe_lib(unit, ProfileFor::Any));
     }
     Ok(ret)
 }
 
-fn maybe_lib<'a, 'cfg>(unit: &Unit<'a>, cx: &Context<'a, 'cfg>) -> Option<Unit<'a>> {
-    unit.pkg
-        .targets()
-        .iter()
-        .find(|t| t.linkable())
-        .map(|t| Unit {
-            pkg: unit.pkg,
-            target: t,
-            profile: lib_or_check_profile(unit, t, cx),
-            kind: unit.kind.for_target(t),
-        })
+fn maybe_lib<'a>(unit: &Unit<'a>, profile_for: ProfileFor) -> Option<(Unit<'a>, ProfileFor)> {
+    let mode = check_or_build_mode(&unit.mode, unit.target);
+    unit.pkg.targets().iter().find(|t| t.linkable()).map(|t| {
+        (
+            Unit {
+                pkg: unit.pkg,
+                target: t,
+                profile_for,
+                kind: unit.kind.for_target(t),
+                mode,
+            },
+            profile_for,
+        )
+    })
 }
 
 /// If a build script is scheduled to be run for the package specified by
@@ -272,28 +277,44 @@ fn maybe_lib<'a, 'cfg>(unit: &Unit<'a>, cx: &Context<'a, 'cfg>) -> Option<Unit<'
 /// script itself doesn't have any dependencies, so even in that case a unit
 /// of work is still returned. `None` is only returned if the package has no
 /// build script.
-fn dep_build_script<'a, 'cfg>(unit: &Unit<'a>, cx: &Context<'a, 'cfg>) -> Option<Unit<'a>> {
+fn dep_build_script<'a>(unit: &Unit<'a>) -> Option<(Unit<'a>, ProfileFor)> {
     unit.pkg
         .targets()
         .iter()
         .find(|t| t.is_custom_build())
-        .map(|t| Unit {
-            pkg: unit.pkg,
-            target: t,
-            profile: &cx.profiles.custom_build,
-            kind: unit.kind,
+        .map(|t| {
+            (
+                Unit {
+                    pkg: unit.pkg,
+                    target: t,
+                    // The profile for *running* the build script will actually be the
+                    // target the build script is running for (so that the environment
+                    // variables get set correctly).  This is overridden in
+                    // `Profiles::build_unit_profiles`, so the exact value here isn't
+                    // critical.
+                    profile_for: ProfileFor::CustomBuild,
+                    kind: unit.kind,
+                    mode: CompileMode::RunCustomBuild,
+                },
+                ProfileFor::CustomBuild,
+            )
         })
 }
 
-fn lib_or_check_profile<'a, 'cfg>(
-    unit: &Unit,
-    target: &Target,
-    cx: &Context<'a, 'cfg>,
-) -> &'a Profile {
-    if !target.is_custom_build() && !target.for_host()
-        && (unit.profile.check || (unit.profile.doc && !unit.profile.test))
-    {
-        return &cx.profiles.check;
+/// Choose the correct mode for dependencies.
+fn check_or_build_mode(mode: &CompileMode, target: &Target) -> CompileMode {
+    match *mode {
+        CompileMode::Check { .. } | CompileMode::Doc { .. } => {
+            if target.for_host() {
+                // Plugin and proc-macro targets should be compiled like
+                // normal.
+                CompileMode::Build
+            } else {
+                // Regular dependencies should not be checked with --test.
+                // Regular dependencies of doc targets should emit rmeta only.
+                CompileMode::Check { test: false }
+            }
+        }
+        _ => CompileMode::Build,
     }
-    cx.lib_profile()
 }

@@ -1,7 +1,7 @@
 use serde::ser;
 use serde_json::{self, Value};
 
-use core::{PackageId, Profile, Target};
+use core::{PackageId, Target};
 
 pub trait Message: ser::Serialize {
     fn reason(&self) -> &str;
@@ -30,7 +30,7 @@ impl<'a> Message for FromCompiler<'a> {
 pub struct Artifact<'a> {
     pub package_id: &'a PackageId,
     pub target: &'a Target,
-    pub profile: &'a Profile,
+    pub profile: ArtifactProfile,
     pub features: Vec<String>,
     pub filenames: Vec<String>,
     pub fresh: bool,
@@ -40,6 +40,18 @@ impl<'a> Message for Artifact<'a> {
     fn reason(&self) -> &str {
         "compiler-artifact"
     }
+}
+
+/// This is different from the regular `Profile` to maintain backwards
+/// compatibility (in particular, `test` is no longer in `Profile`, but we
+/// still want it to be included here).
+#[derive(Serialize)]
+pub struct ArtifactProfile {
+    pub opt_level: &'static str,
+    pub debuginfo: Option<u32>,
+    pub debug_assertions: bool,
+    pub overflow_checks: bool,
+    pub test: bool,
 }
 
 #[derive(Serialize)]

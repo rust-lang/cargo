@@ -12,11 +12,12 @@ use serde_ignored;
 use toml;
 use url::Url;
 
-use core::{GitReference, PackageIdSpec, Profiles, SourceId, WorkspaceConfig, WorkspaceRootConfig};
+use core::{GitReference, PackageIdSpec, SourceId, WorkspaceConfig, WorkspaceRootConfig};
 use core::{Dependency, Manifest, PackageId, Summary, Target};
 use core::{Edition, EitherManifest, Feature, Features, VirtualManifest};
 use core::dependency::{Kind, Platform};
-use core::manifest::{LibKind, Lto, ManifestMetadata, Profile};
+use core::manifest::{LibKind, ManifestMetadata};
+use core::profiles::Profiles;
 use sources::CRATES_IO;
 use util::paths;
 use util::{self, Config, ToUrl};
@@ -243,8 +244,29 @@ pub struct TomlProfiles {
     release: Option<TomlProfile>,
 }
 
+impl TomlProfiles {
+    fn validate(&self, features: &Features) -> CargoResult<()> {
+        if let Some(ref test) = self.test {
+            test.validate("test", features)?;
+        }
+        if let Some(ref doc) = self.doc {
+            doc.validate("doc", features)?;
+        }
+        if let Some(ref bench) = self.bench {
+            bench.validate("bench", features)?;
+        }
+        if let Some(ref dev) = self.dev {
+            dev.validate("dev", features)?;
+        }
+        if let Some(ref release) = self.release {
+            release.validate("release", features)?;
+        }
+        Ok(())
+    }
+}
+
 #[derive(Clone, Debug)]
-pub struct TomlOptLevel(String);
+pub struct TomlOptLevel(pub String);
 
 impl<'de> de::Deserialize<'de> for TomlOptLevel {
     fn deserialize<D>(d: D) -> Result<TomlOptLevel, D::Error>
@@ -347,20 +369,65 @@ impl<'de> de::Deserialize<'de> for U32OrBool {
 }
 
 #[derive(Deserialize, Serialize, Clone, Debug, Default)]
+#[serde(rename_all = "kebab-case")]
 pub struct TomlProfile {
-    #[serde(rename = "opt-level")]
-    opt_level: Option<TomlOptLevel>,
-    lto: Option<StringOrBool>,
-    #[serde(rename = "codegen-units")]
-    codegen_units: Option<u32>,
-    debug: Option<U32OrBool>,
-    #[serde(rename = "debug-assertions")]
-    debug_assertions: Option<bool>,
-    rpath: Option<bool>,
-    panic: Option<String>,
-    #[serde(rename = "overflow-checks")]
-    overflow_checks: Option<bool>,
-    incremental: Option<bool>,
+    pub opt_level: Option<TomlOptLevel>,
+    pub lto: Option<StringOrBool>,
+    pub codegen_units: Option<u32>,
+    pub debug: Option<U32OrBool>,
+    pub debug_assertions: Option<bool>,
+    pub rpath: Option<bool>,
+    pub panic: Option<String>,
+    pub overflow_checks: Option<bool>,
+    pub incremental: Option<bool>,
+    pub overrides: Option<BTreeMap<String, TomlProfile>>,
+    #[serde(rename = "build_override")]
+    pub build_override: Option<Box<TomlProfile>>,
+}
+
+impl TomlProfile {
+    fn validate(&self, name: &str, features: &Features) -> CargoResult<()> {
+        if let Some(ref profile) = self.build_override {
+            features.require(Feature::profile_overrides())?;
+            profile.validate_override()?;
+        }
+        if let Some(ref override_map) = self.overrides {
+            features.require(Feature::profile_overrides())?;
+            for profile in override_map.values() {
+                profile.validate_override()?;
+            }
+        }
+
+        match name {
+            "dev" | "release" => {}
+            _ => {
+                if self.overrides.is_some() || self.build_override.is_some() {
+                    bail!(
+                        "Profile overrides may only be specified for `dev`
+                           or `release` profile, not {}.",
+                        name
+                    );
+                }
+            }
+        }
+        Ok(())
+    }
+
+    fn validate_override(&self) -> CargoResult<()> {
+        if self.overrides.is_some() || self.build_override.is_some() {
+            bail!("Profile overrides cannot be nested.");
+        }
+        if self.panic.is_some() {
+            bail!("`panic` may not be specified in a build override.")
+        }
+        if self.lto.is_some() {
+            bail!("`lto` may not be specified in a build override.")
+        }
+        if self.rpath.is_some() {
+            bail!("`rpath` may not be specified in a build override.")
+        }
+        Ok(())
+    }
 }
 
 #[derive(Clone, Debug, Serialize)]
@@ -794,6 +861,9 @@ impl TomlManifest {
                  `[workspace]`, only one can be specified"
             ),
         };
+        if let Some(ref profiles) = me.profile {
+            profiles.validate(&features)?;
+        }
         let profiles = build_profiles(&me.profile);
         let publish = match project.publish {
             Some(VecStringOrBool::VecString(ref vecstring)) => {
@@ -1003,6 +1073,10 @@ impl TomlManifest {
                 }
             }
         }
+    }
+
+    pub fn has_profiles(&self) -> bool {
+        self.profile.is_some()
     }
 }
 
@@ -1279,98 +1353,11 @@ impl fmt::Debug for PathValue {
 
 fn build_profiles(profiles: &Option<TomlProfiles>) -> Profiles {
     let profiles = profiles.as_ref();
-    let mut profiles = Profiles {
-        release: merge(
-            Profile::default_release(),
-            profiles.and_then(|p| p.release.as_ref()),
-        ),
-        dev: merge(
-            Profile::default_dev(),
-            profiles.and_then(|p| p.dev.as_ref()),
-        ),
-        test: merge(
-            Profile::default_test(),
-            profiles.and_then(|p| p.test.as_ref()),
-        ),
-        test_deps: merge(
-            Profile::default_dev(),
-            profiles.and_then(|p| p.dev.as_ref()),
-        ),
-        bench: merge(
-            Profile::default_bench(),
-            profiles.and_then(|p| p.bench.as_ref()),
-        ),
-        bench_deps: merge(
-            Profile::default_release(),
-            profiles.and_then(|p| p.release.as_ref()),
-        ),
-        doc: merge(
-            Profile::default_doc(),
-            profiles.and_then(|p| p.doc.as_ref()),
-        ),
-        custom_build: Profile::default_custom_build(),
-        check: merge(
-            Profile::default_check(),
-            profiles.and_then(|p| p.dev.as_ref()),
-        ),
-        check_test: merge(
-            Profile::default_check_test(),
-            profiles.and_then(|p| p.dev.as_ref()),
-        ),
-        doctest: Profile::default_doctest(),
-    };
-    // The test/bench targets cannot have panic=abort because they'll all get
-    // compiled with --test which requires the unwind runtime currently
-    profiles.test.panic = None;
-    profiles.bench.panic = None;
-    profiles.test_deps.panic = None;
-    profiles.bench_deps.panic = None;
-    return profiles;
-
-    fn merge(profile: Profile, toml: Option<&TomlProfile>) -> Profile {
-        let &TomlProfile {
-            ref opt_level,
-            ref lto,
-            codegen_units,
-            ref debug,
-            debug_assertions,
-            rpath,
-            ref panic,
-            ref overflow_checks,
-            ref incremental,
-        } = match toml {
-            Some(toml) => toml,
-            None => return profile,
-        };
-        let debug = match *debug {
-            Some(U32OrBool::U32(debug)) => Some(Some(debug)),
-            Some(U32OrBool::Bool(true)) => Some(Some(2)),
-            Some(U32OrBool::Bool(false)) => Some(None),
-            None => None,
-        };
-        Profile {
-            opt_level: opt_level
-                .clone()
-                .unwrap_or(TomlOptLevel(profile.opt_level))
-                .0,
-            lto: match *lto {
-                Some(StringOrBool::Bool(b)) => Lto::Bool(b),
-                Some(StringOrBool::String(ref n)) => Lto::Named(n.clone()),
-                None => profile.lto,
-            },
-            codegen_units,
-            rustc_args: None,
-            rustdoc_args: None,
-            debuginfo: debug.unwrap_or(profile.debuginfo),
-            debug_assertions: debug_assertions.unwrap_or(profile.debug_assertions),
-            overflow_checks: overflow_checks.unwrap_or(profile.overflow_checks),
-            rpath: rpath.unwrap_or(profile.rpath),
-            test: profile.test,
-            doc: profile.doc,
-            run_custom_build: profile.run_custom_build,
-            check: profile.check,
-            panic: panic.clone().or(profile.panic),
-            incremental: incremental.unwrap_or(profile.incremental),
-        }
-    }
+    Profiles::new(
+        profiles.and_then(|p| p.dev.clone()),
+        profiles.and_then(|p| p.release.clone()),
+        profiles.and_then(|p| p.test.clone()),
+        profiles.and_then(|p| p.bench.clone()),
+        profiles.and_then(|p| p.doc.clone()),
+    )
 }

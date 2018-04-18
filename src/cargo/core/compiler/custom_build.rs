@@ -102,11 +102,11 @@ pub fn prepare<'a, 'cfg>(
 }
 
 fn build_work<'a, 'cfg>(cx: &mut Context<'a, 'cfg>, unit: &Unit<'a>) -> CargoResult<(Work, Work)> {
-    assert!(unit.profile.run_custom_build);
+    assert!(unit.mode.is_run_custom_build());
     let dependencies = cx.dep_targets(unit);
     let build_script_unit = dependencies
         .iter()
-        .find(|d| !d.profile.run_custom_build && d.target.is_custom_build())
+        .find(|d| !d.mode.is_run_custom_build() && d.target.is_custom_build())
         .expect("running a script not depending on an actual script");
     let script_output = cx.files().build_script_dir(build_script_unit);
     let build_output = cx.files().build_script_out_dir(unit);
@@ -118,9 +118,9 @@ fn build_work<'a, 'cfg>(cx: &mut Context<'a, 'cfg>, unit: &Unit<'a>) -> CargoRes
     // environment variables. Note that the profile-related environment
     // variables are not set with this the build script's profile but rather the
     // package's library profile.
-    let profile = cx.lib_profile();
     let to_exec = to_exec.into_os_string();
     let mut cmd = cx.compilation.host_process(to_exec, unit.pkg)?;
+    let profile = cx.unit_profile(unit).clone();
     cmd.env("OUT_DIR", &build_output)
         .env("CARGO_MANIFEST_DIR", unit.pkg.root())
         .env("NUM_JOBS", &cx.jobs().to_string())
@@ -132,7 +132,7 @@ fn build_work<'a, 'cfg>(cx: &mut Context<'a, 'cfg>, unit: &Unit<'a>) -> CargoRes
             },
         )
         .env("DEBUG", &profile.debuginfo.is_some().to_string())
-        .env("OPT_LEVEL", &profile.opt_level)
+        .env("OPT_LEVEL", &profile.opt_level.to_string())
         .env(
             "PROFILE",
             if cx.build_config.release {
@@ -196,7 +196,7 @@ fn build_work<'a, 'cfg>(cx: &mut Context<'a, 'cfg>, unit: &Unit<'a>) -> CargoRes
         dependencies
             .iter()
             .filter_map(|unit| {
-                if unit.profile.run_custom_build {
+                if unit.mode.is_run_custom_build() {
                     Some((
                         unit.pkg.manifest().links().unwrap().to_string(),
                         unit.pkg.package_id().clone(),

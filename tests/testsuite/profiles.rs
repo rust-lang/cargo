@@ -2,6 +2,7 @@ use std::env;
 
 use cargotest::is_nightly;
 use cargotest::support::{execs, project};
+use cargotest::ChannelChanger;
 use hamcrest::assert_that;
 
 #[test]
@@ -339,4 +340,116 @@ fn profile_in_virtual_manifest_works() {
 [FINISHED] dev [optimized] target(s) in [..]",
         ),
     );
+}
+
+#[test]
+fn dep_override_gated() {
+    let p = project("foo")
+        .file(
+            "Cargo.toml",
+            r#"
+            [package]
+            name = "foo"
+            version = "0.0.1"
+            authors = []
+
+            [profile.dev.build_override]
+            opt-level = 3
+        "#,
+        )
+        .file("src/lib.rs", "")
+        .build();
+
+    assert_that(
+        p.cargo("build").masquerade_as_nightly_cargo(),
+        execs().with_status(101).with_stderr(
+            "\
+error: failed to parse manifest at `[..]`
+
+Caused by:
+  feature `profile-overrides` is required
+
+consider adding `cargo-features = [\"profile-overrides\"]` to the manifest
+",
+        ),
+    );
+
+    let p = project("foo")
+        .file(
+            "Cargo.toml",
+            r#"
+            [package]
+            name = "foo"
+            version = "0.0.1"
+            authors = []
+
+            [profile.dev.overrides."*"]
+            opt-level = 3
+        "#,
+        )
+        .file("src/lib.rs", "")
+        .build();
+
+    assert_that(
+        p.cargo("build").masquerade_as_nightly_cargo(),
+        execs().with_status(101).with_stderr(
+            "\
+error: failed to parse manifest at `[..]`
+
+Caused by:
+  feature `profile-overrides` is required
+
+consider adding `cargo-features = [\"profile-overrides\"]` to the manifest
+",
+        ),
+    );
+}
+
+#[test]
+fn dep_override_basic() {
+    let p = project("foo")
+        .file(
+            "Cargo.toml",
+            r#"
+            cargo-features = ["profile-overrides"]
+
+            [package]
+            name = "foo"
+            version = "0.0.1"
+            authors = []
+
+            [dependencies]
+            bar = {path = "bar"}
+
+            [profile.dev.overrides.bar]
+            opt-level = 3
+        "#,
+        )
+        .file("src/lib.rs", "")
+        .file(
+            "bar/Cargo.toml",
+            r#"
+            [package]
+            name = "bar"
+            version = "0.0.1"
+            authors = []
+        "#,
+        )
+        .file("bar/src/lib.rs", "")
+        .build();
+
+    assert_that(
+        p.cargo("build -v").masquerade_as_nightly_cargo(),
+        execs().with_status(0).with_stderr(
+"[COMPILING] bar v0.0.1 ([..])
+[RUNNING] `rustc --crate-name bar [..] -C opt-level=3 [..]`
+[COMPILING] foo v0.0.1 ([..])
+[RUNNING] `rustc --crate-name foo [..]`
+[FINISHED] dev [unoptimized + debuginfo] target(s) in [..]",
+        )
+        // TODO: does_not_contain does not support patterns!
+        // .with_stderr_does_not_contain("\
+        //     `rustc --crate-name bar[..]-C opt-level=3"),
+    );
+
 }

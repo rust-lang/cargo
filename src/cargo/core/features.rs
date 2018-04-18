@@ -170,6 +170,9 @@ features! {
 
         // Whether a lock file is published with this crate
         [unstable] publish_lockfile: bool,
+
+        // Overriding profiles for dependencies.
+        [unstable] profile_overrides: bool,
     }
 }
 
