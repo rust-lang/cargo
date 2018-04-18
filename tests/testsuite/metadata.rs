@@ -968,7 +968,11 @@ fn package_metadata() {
             [package]
             name = "foo"
             version = "0.1.0"
-            authors = []
+            authors = ["wycats@example.com"]
+            categories = ["database"]
+            keywords = ["database"]
+            readme = "README.md"
+            repository = "https://github.com/rust-lang/cargo"
 
             [package.metadata.bar]
             baz = "quux"
@@ -984,14 +988,14 @@ fn package_metadata() {
     {
         "packages": [
             {
-                "authors": [],
-                "categories": [],
+                "authors": ["wycats@example.com"],
+                "categories": ["database"],
                 "name": "foo",
-                "readme": null,
-                "repository": null,
+                "readme": "README.md",
+                "repository": "https://github.com/rust-lang/cargo",
                 "version": "0.1.0",
                 "id": "foo[..]",
-                "keywords": [],
+                "keywords": ["database"],
                 "source": null,
                 "dependencies": [],
                 "license": null,
