@@ -418,13 +418,13 @@ impl TomlProfile {
             bail!("Profile overrides cannot be nested.");
         }
         if self.panic.is_some() {
-            bail!("`panic` may not be specified in a build override.")
+            bail!("`panic` may not be specified in a profile override.")
         }
         if self.lto.is_some() {
-            bail!("`lto` may not be specified in a build override.")
+            bail!("`lto` may not be specified in a profile override.")
         }
         if self.rpath.is_some() {
-            bail!("`rpath` may not be specified in a build override.")
+            bail!("`rpath` may not be specified in a profile override.")
         }
         Ok(())
     }
