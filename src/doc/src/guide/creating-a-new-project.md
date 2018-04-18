@@ -14,13 +14,11 @@ Let’s check out what Cargo has generated for us:
 
 ```console
 $ cd hello_world
-$ tree .
+$ exa --tree
 .
 ├── Cargo.toml
 └── src
-    └── main.rs
-
-1 directory, 2 files
+   └── main.rs
 ```
 
 Let’s take a closer look at `Cargo.toml`:
