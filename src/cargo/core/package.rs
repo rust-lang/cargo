@@ -46,7 +46,7 @@ struct SerializedPackage<'a> {
     categories: &'a [String],
     keywords: &'a [String],
     readme: Option<&'a str>,
-    repository: Option<&'a str>
+    repository: Option<&'a str>,
 }
 
 impl ser::Serialize for Package {
