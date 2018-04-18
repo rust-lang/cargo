@@ -3,6 +3,7 @@ use std::fs;
 use std::hash::{self, Hasher};
 use std::path::{Path, PathBuf};
 use std::sync::{Arc, Mutex};
+use std::time::Instant;
 
 use filetime::FileTime;
 use serde::ser::{self, Serialize};
@@ -587,7 +588,19 @@ fn build_script_local_fingerprints<'a, 'cfg>(
     let output = deps.build_script_output.clone();
     if deps.rerun_if_changed.is_empty() && deps.rerun_if_env_changed.is_empty() {
         debug!("old local fingerprints deps");
+        let start = Instant::now();
         let s = pkg_fingerprint(cx, unit.pkg)?;
+        let elapsed = start.elapsed();
+        let ms = elapsed.as_secs() * 1000 + (elapsed.subsec_nanos() / 1_000_000) as u64;
+        if ms > 100 {
+            let msg = format!(
+                "checking freshness of build script for `{}` took {}ms, \
+                 consider using `rerun-if-changed`",
+                unit.pkg.name(),
+                ms,
+            );
+            cx.config.shell().warn(&msg)?;
+        }
         return Ok((vec![LocalFingerprint::Precalculated(s)], Some(output)));
     }
 
