@@ -65,7 +65,7 @@ Please report all issues on the github [issue tracker][issues].
 
 ## Contributing
 
-See [CONTRIBUTING.md](CONTRIBUTING.md). You may also find the arhitecture
+See [CONTRIBUTING.md](CONTRIBUTING.md). You may also find the architecture
 documentation useful ([ARCHITECTURE.md](ARCHITECTURE.md)).
 
 ## License
