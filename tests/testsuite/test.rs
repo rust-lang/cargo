@@ -2867,13 +2867,7 @@ fn selective_test_optional_dep() {
     let p = p.build();
 
     assert_that(
-        p.cargo("test")
-            .arg("-v")
-            .arg("--no-run")
-            .arg("--features")
-            .arg("a")
-            .arg("-p")
-            .arg("a"),
+        p.cargo("test -v --no-run --package a"),
         execs().with_status(0).with_stderr(
             "\
 [COMPILING] a v0.0.1 ([..])
@@ -3060,6 +3054,8 @@ fn pass_correct_cfgs_flags_to_rustdoc() {
             version = "0.1.0"
             authors = []
 
+            [workspace]
+
             [features]
             default = ["feature_a/default"]
             nightly = ["feature_a/nightly"]
@@ -3137,10 +3133,7 @@ fn pass_correct_cfgs_flags_to_rustdoc() {
     let p = p.build();
 
     assert_that(
-        p.cargo("test")
-            .arg("--package")
-            .arg("feature_a")
-            .arg("--verbose"),
+        p.cargo("test --package feature_a --verbose"),
         execs().with_status(0).with_stderr_contains(
             "\
 [DOCTEST] feature_a
@@ -3149,7 +3142,7 @@ fn pass_correct_cfgs_flags_to_rustdoc() {
     );
 
     assert_that(
-        p.cargo("test").arg("--verbose"),
+        p.cargo("test --verbose"),
         execs().with_status(0).with_stderr_contains(
             "\
 [DOCTEST] foo
@@ -3197,45 +3190,6 @@ fn test_release_ignore_panic() {
     assert_that(p.cargo("test").arg("-v"), execs().with_status(0));
     println!("bench");
     assert_that(p.cargo("bench").arg("-v"), execs().with_status(0));
-}
-
-#[test]
-fn test_many_with_features() {
-    let p = project("foo")
-        .file(
-            "Cargo.toml",
-            r#"
-            [package]
-            name = "foo"
-            version = "0.0.1"
-            authors = []
-
-            [dependencies]
-            a = { path = "a" }
-
-            [features]
-            foo = []
-
-            [workspace]
-        "#,
-        )
-        .file("src/lib.rs", "")
-        .file(
-            "a/Cargo.toml",
-            r#"
-            [package]
-            name = "a"
-            version = "0.0.1"
-            authors = []
-        "#,
-        )
-        .file("a/src/lib.rs", "")
-        .build();
-
-    assert_that(
-        p.cargo("test -v -p a -p foo --features foo"),
-        execs().with_status(0),
-    );
 }
 
 #[test]
