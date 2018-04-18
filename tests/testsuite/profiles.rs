@@ -343,7 +343,7 @@ fn profile_in_virtual_manifest_works() {
 }
 
 #[test]
-fn dep_override_gated() {
+fn profile_override_gated() {
     let p = project("foo")
         .file(
             "Cargo.toml",
@@ -406,7 +406,7 @@ consider adding `cargo-features = [\"profile-overrides\"]` to the manifest
 }
 
 #[test]
-fn dep_override_basic() {
+fn profile_override_basic() {
     let p = project("foo")
         .file(
             "Cargo.toml",
