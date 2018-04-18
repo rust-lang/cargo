@@ -150,7 +150,8 @@ impl<'cfg> RegistryIndex<'cfg> {
             links,
         } = serde_json::from_str(line)?;
         let pkgid = PackageId::new(&name, &vers, &self.source_id)?;
-        let deps = deps.into_iter().map(|dep| dep.into_dep(&self.source_id))
+        let deps = deps.into_iter()
+            .map(|dep| dep.into_dep(&self.source_id))
             .collect::<CargoResult<Vec<_>>>()?;
         let summary = Summary::new(pkgid, deps, features, links)?;
         let summary = summary.set_checksum(cksum.clone());
