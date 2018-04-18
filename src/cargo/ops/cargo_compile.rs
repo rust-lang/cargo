@@ -22,18 +22,19 @@
 //!       previously compiled dependency
 //!
 
-use std::collections::HashSet;
+use std::collections::{HashMap, HashSet};
 use std::path::{Path, PathBuf};
 use std::sync::Arc;
 
-use core::{Package, Source, Target};
-use core::{PackageId, PackageIdSpec, Profile, Profiles, TargetKind, Workspace};
 use core::compiler::{BuildConfig, Compilation, Context, DefaultExecutor, Executor};
 use core::compiler::{Kind, Unit};
+use core::profiles::ProfileFor;
 use core::resolver::{Method, Resolve};
+use core::{Package, Source, Target};
+use core::{PackageId, PackageIdSpec, TargetKind, Workspace};
 use ops;
 use util::config::Config;
-use util::{profile, CargoResult, CargoResultExt};
+use util::{lev_distance, profile, CargoResult, CargoResultExt};
 
 /// Contains information about how a package should be compiled.
 #[derive(Debug)]
@@ -96,14 +97,84 @@ impl<'a> CompileOptions<'a> {
     }
 }
 
-#[derive(Clone, Copy, PartialEq, Debug)]
+/// The general "mode" of what to do.
+/// This is used for two purposes.  The commands themselves pass this in to
+/// `compile_ws` to tell it the general execution strategy.  This influences
+/// the default targets selected.  The other use is in the `Unit` struct
+/// to indicate what is being done with a specific target.
+#[derive(Clone, Copy, PartialEq, Debug, Eq, Hash)]
 pub enum CompileMode {
+    /// A target being built for a test.
     Test,
+    /// Building a target with `rustc` (lib or bin).
     Build,
+    /// Building a target with `rustc` to emit `rmeta` metadata only. If
+    /// `test` is true, then it is also compiled with `--test` to check it like
+    /// a test.
     Check { test: bool },
+    /// A target being built for a benchmark.
     Bench,
+    /// A target that will be documented with `rustdoc`.
+    /// If `deps` is true, then it will also document all dependencies.
     Doc { deps: bool },
+    /// A target that will be tested with `rustdoc`.
     Doctest,
+    /// A marker for Units that represent the execution of a `build.rs`
+    /// script.
+    RunCustomBuild,
+}
+
+impl CompileMode {
+    /// Returns true if the unit is being checked.
+    pub fn is_check(&self) -> bool {
+        match *self {
+            CompileMode::Check { .. } => true,
+            _ => false,
+        }
+    }
+
+    /// Returns true if this is a doc or doctest. Be careful using this.
+    /// Although both run rustdoc, the dependencies for those two modes are
+    /// very different.
+    pub fn is_doc(&self) -> bool {
+        match *self {
+            CompileMode::Doc { .. } | CompileMode::Doctest => true,
+            _ => false,
+        }
+    }
+
+    /// Returns true if this is any type of test (test, benchmark, doctest, or
+    /// check-test).
+    pub fn is_any_test(&self) -> bool {
+        match *self {
+            CompileMode::Test
+            | CompileMode::Bench
+            | CompileMode::Check { test: true }
+            | CompileMode::Doctest => true,
+            _ => false,
+        }
+    }
+
+    /// Returns true if this is the *execution* of a `build.rs` script.
+    pub fn is_run_custom_build(&self) -> bool {
+        *self == CompileMode::RunCustomBuild
+    }
+
+    /// List of all modes (currently used by `cargo clean -p` for computing
+    /// all possible outputs).
+    pub fn all_modes() -> Vec<CompileMode> {
+        vec![
+            CompileMode::Test,
+            CompileMode::Build,
+            CompileMode::Check { test: true },
+            CompileMode::Check { test: false },
+            CompileMode::Bench,
+            CompileMode::Doc { deps: true },
+            CompileMode::Doc { deps: false },
+            CompileMode::Doctest,
+            CompileMode::RunCustomBuild,
+        ]
+    }
 }
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
@@ -267,13 +338,12 @@ pub fn compile_ws<'a>(
         .into_path_unlocked();
     let mut build_config = BuildConfig::new(config, jobs, &target, Some(rustc_info_cache))?;
     build_config.release = release;
-    build_config.test = mode == CompileMode::Test || mode == CompileMode::Bench;
     build_config.json_messages = message_format == MessageFormat::Json;
-    if let CompileMode::Doc { deps } = mode {
-        build_config.doc_all = deps;
-    }
-
-    let profiles = ws.profiles();
+    let default_arch_kind = if build_config.requested_target.is_some() {
+        Kind::Target
+    } else {
+        Kind::Host
+    };
 
     let specs = spec.into_package_id_specs(ws)?;
     let features = Method::split_features(features);
@@ -296,62 +366,42 @@ pub fn compile_ws<'a>(
         })
         .collect::<CargoResult<Vec<_>>>()?;
 
-    let mut general_targets = Vec::new();
-    let mut package_targets = Vec::new();
-
-    match (target_rustc_args, target_rustdoc_args) {
-        (&Some(..), _) | (_, &Some(..)) if to_builds.len() != 1 => {
-            panic!("`rustc` and `rustdoc` should not accept multiple `-p` flags")
-        }
-        (&Some(ref args), _) => {
-            let all_features =
-                resolve_all_features(&resolve_with_overrides, to_builds[0].package_id());
-            let targets =
-                generate_targets(to_builds[0], profiles, mode, filter, &all_features, release)?;
-            if targets.len() == 1 {
-                let (target, profile) = targets[0];
-                let mut profile = profile.clone();
-                profile.rustc_args = Some(args.to_vec());
-                general_targets.push((target, profile));
-            } else {
-                bail!(
-                    "extra arguments to `rustc` can only be passed to one \
-                     target, consider filtering\nthe package by passing \
-                     e.g. `--lib` or `--bin NAME` to specify a single target"
-                )
-            }
-        }
-        (&None, &Some(ref args)) => {
-            let all_features =
-                resolve_all_features(&resolve_with_overrides, to_builds[0].package_id());
-            let targets =
-                generate_targets(to_builds[0], profiles, mode, filter, &all_features, release)?;
-            if targets.len() == 1 {
-                let (target, profile) = targets[0];
-                let mut profile = profile.clone();
-                profile.rustdoc_args = Some(args.to_vec());
-                general_targets.push((target, profile));
-            } else {
-                bail!(
-                    "extra arguments to `rustdoc` can only be passed to one \
-                     target, consider filtering\nthe package by passing e.g. \
-                     `--lib` or `--bin NAME` to specify a single target"
-                )
-            }
-        }
-        (&None, &None) => for &to_build in to_builds.iter() {
-            let all_features = resolve_all_features(&resolve_with_overrides, to_build.package_id());
-            let targets =
-                generate_targets(to_build, profiles, mode, filter, &all_features, release)?;
-            package_targets.push((to_build, targets));
-        },
+    let (extra_args, extra_args_name) = match (target_rustc_args, target_rustdoc_args) {
+        (&Some(ref args), _) => (Some(args.clone()), "rustc"),
+        (_, &Some(ref args)) => (Some(args.clone()), "rustdoc"),
+        _ => (None, ""),
     };
 
-    for &(target, ref profile) in &general_targets {
-        for &to_build in to_builds.iter() {
-            package_targets.push((to_build, vec![(target, profile)]));
-        }
+    if extra_args.is_some() && to_builds.len() != 1 {
+        panic!(
+            "`{}` should not accept multiple `-p` flags",
+            extra_args_name
+        );
     }
+
+    let profiles = ws.profiles();
+    let mut extra_compiler_args = HashMap::new();
+
+    let units = generate_targets(
+        &to_builds,
+        filter,
+        default_arch_kind,
+        mode,
+        &resolve_with_overrides,
+    )?;
+
+    if let Some(args) = extra_args {
+        if units.len() != 1 {
+            bail!(
+                "extra arguments to `{}` can only be passed to one \
+                 target, consider filtering\nthe package by passing \
+                 e.g. `--lib` or `--bin NAME` to specify a single target",
+                extra_args_name
+            );
+        }
+        extra_compiler_args.insert(units[0], args);
+    }
+
     let mut ret = {
         let _p = profile::start("compiling");
         let mut cx = Context::new(
@@ -361,50 +411,14 @@ pub fn compile_ws<'a>(
             config,
             build_config,
             profiles,
+            extra_compiler_args,
         )?;
-        let units = package_targets
-            .iter()
-            .flat_map(|&(pkg, ref targets)| {
-                let default_kind = if cx.build_config.requested_target.is_some() {
-                    Kind::Target
-                } else {
-                    Kind::Host
-                };
-                targets.iter().map(move |&(target, profile)| Unit {
-                    pkg,
-                    target,
-                    profile,
-                    kind: if target.for_host() {
-                        Kind::Host
-                    } else {
-                        default_kind
-                    },
-                })
-            })
-            .collect::<Vec<_>>();
         cx.compile(&units, export_dir.clone(), &exec)?
     };
 
     ret.to_doc_test = to_builds.into_iter().cloned().collect();
 
     return Ok(ret);
-
-    fn resolve_all_features(
-        resolve_with_overrides: &Resolve,
-        package_id: &PackageId,
-    ) -> HashSet<String> {
-        let mut features = resolve_with_overrides.features(package_id).clone();
-
-        // Include features enabled for use by dependencies so targets can also use them with the
-        // required-features field when deciding whether to be built or skipped.
-        for (dep, _) in resolve_with_overrides.deps(package_id) {
-            for feature in resolve_with_overrides.features(dep) {
-                features.insert(dep.name().to_string() + "/" + feature);
-            }
-        }
-
-        features
-    }
 }
 
 impl FilterRule {
@@ -496,6 +510,7 @@ impl CompileFilter {
                     ..
                 } => examples.is_specific() || tests.is_specific() || benches.is_specific(),
             },
+            CompileMode::RunCustomBuild => panic!("Invalid mode"),
         }
     }
 
@@ -533,307 +548,307 @@ impl CompileFilter {
     }
 }
 
-#[derive(Clone, Copy, Debug)]
-struct BuildProposal<'a> {
-    target: &'a Target,
-    profile: &'a Profile,
-    required: bool,
-}
-
-fn generate_default_targets<'a>(
+/// Generates all the base targets for the packages the user has requested to
+/// compile. Dependencies for these targets are computed later in
+/// `unit_dependencies`.
+fn generate_targets<'a>(
+    packages: &[&'a Package],
+    filter: &CompileFilter,
+    default_arch_kind: Kind,
     mode: CompileMode,
-    targets: &'a [Target],
-    profile: &'a Profile,
-    dep: &'a Profile,
-    required_features_filterable: bool,
-) -> Vec<BuildProposal<'a>> {
-    match mode {
-        CompileMode::Bench => targets
-            .iter()
-            .filter(|t| t.benched())
-            .map(|t| BuildProposal {
-                target: t,
-                profile,
-                required: !required_features_filterable,
-            })
-            .collect::<Vec<_>>(),
-        CompileMode::Test => {
-            let mut base = targets
-                .iter()
-                .filter(|t| t.tested())
-                .map(|t| BuildProposal {
-                    target: t,
-                    profile: if t.is_example() { dep } else { profile },
-                    required: !required_features_filterable,
-                })
-                .collect::<Vec<_>>();
+    resolve: &Resolve,
+) -> CargoResult<Vec<Unit<'a>>> {
+    let mut units = Vec::new();
 
-            // Always compile the library if we're testing everything as
-            // it'll be needed for doctests
-            if let Some(t) = targets.iter().find(|t| t.is_lib()) {
-                if t.doctested() {
-                    base.push(BuildProposal {
-                        target: t,
-                        profile: dep,
-                        required: !required_features_filterable,
-                    });
+    // Helper for creating a Unit struct.
+    let new_unit =
+        |pkg: &'a Package, target: &'a Target, mode: CompileMode, profile_for: ProfileFor| {
+            let actual_profile_for = if profile_for != ProfileFor::Any {
+                profile_for
+            } else if mode.is_any_test() {
+                // Force dependencies of this unit to not set `panic`.
+                ProfileFor::TestDependency
+            } else {
+                profile_for
+            };
+            let actual_mode = match mode {
+                CompileMode::Test => {
+                    if target.is_example() {
+                        // Examples are included as regular binaries to verify
+                        // that they compile.
+                        CompileMode::Build
+                    } else {
+                        CompileMode::Test
+                    }
+                }
+                CompileMode::Build => match *target.kind() {
+                    TargetKind::Test => CompileMode::Test,
+                    TargetKind::Bench => CompileMode::Bench,
+                    _ => CompileMode::Build,
+                },
+                _ => mode,
+            };
+            let kind = if target.for_host() {
+                Kind::Host
+            } else {
+                default_arch_kind
+            };
+            Unit {
+                pkg,
+                target,
+                profile_for: actual_profile_for,
+                kind,
+                mode: actual_mode,
+            }
+        };
+
+    for pkg in packages {
+        let features = resolve_all_features(resolve, pkg.package_id());
+        // Create a list of proposed targets.  The `bool` value indicates
+        // whether or not all required features *must* be present. If false,
+        // and the features are not available, then it will be silently
+        // skipped.  Generally, targets specified by name (`--bin foo`) are
+        // required, all others can be silently skipped if features are
+        // missing.
+        let mut proposals: Vec<(Unit<'a>, bool)> = Vec::new();
+
+        match *filter {
+            CompileFilter::Default {
+                required_features_filterable,
+            } => {
+                let default_units = generate_default_targets(pkg.targets(), mode)
+                    .iter()
+                    .map(|t| {
+                        (
+                            new_unit(pkg, t, mode, ProfileFor::Any),
+                            !required_features_filterable,
+                        )
+                    })
+                    .collect::<Vec<_>>();
+                proposals.extend(default_units);
+                if mode == CompileMode::Test {
+                    // Include the lib as it will be required for doctests.
+                    if let Some(t) = pkg.targets().iter().find(|t| t.is_lib() && t.doctested()) {
+                        proposals.push((
+                            new_unit(pkg, t, CompileMode::Build, ProfileFor::TestDependency),
+                            false,
+                        ));
+                    }
                 }
             }
-            base
+            CompileFilter::Only {
+                all_targets,
+                lib,
+                ref bins,
+                ref examples,
+                ref tests,
+                ref benches,
+            } => {
+                if lib {
+                    if let Some(target) = pkg.targets().iter().find(|t| t.is_lib()) {
+                        proposals.push((new_unit(pkg, target, mode, ProfileFor::Any), false));
+                    } else if !all_targets {
+                        bail!("no library targets found")
+                    }
+                }
+                // If --tests was specified, add all targets that would be
+                // generated by `cargo test`.
+                let test_filter = match *tests {
+                    FilterRule::All => Target::tested,
+                    FilterRule::Just(_) => Target::is_test,
+                };
+                let test_mode = match mode {
+                    CompileMode::Build => CompileMode::Test,
+                    CompileMode::Check { .. } => CompileMode::Check { test: true },
+                    _ => mode,
+                };
+                // If --benches was specified, add all targets that would be
+                // generated by `cargo bench`.
+                let bench_filter = match *benches {
+                    FilterRule::All => Target::benched,
+                    FilterRule::Just(_) => Target::is_bench,
+                };
+                let bench_mode = match mode {
+                    CompileMode::Build => CompileMode::Bench,
+                    CompileMode::Check { .. } => CompileMode::Check { test: true },
+                    _ => mode,
+                };
+
+                proposals.extend(
+                    list_rule_targets(pkg, bins, "bin", Target::is_bin)?
+                        .into_iter()
+                        .map(|(t, required)| (new_unit(pkg, t, mode, ProfileFor::Any), required))
+                        .chain(
+                            list_rule_targets(pkg, examples, "example", Target::is_example)?
+                                .into_iter()
+                                .map(|(t, required)| {
+                                    (new_unit(pkg, t, mode, ProfileFor::Any), required)
+                                }),
+                        )
+                        .chain(
+                            list_rule_targets(pkg, tests, "test", test_filter)?
+                                .into_iter()
+                                .map(|(t, required)| {
+                                    (new_unit(pkg, t, test_mode, ProfileFor::Any), required)
+                                }),
+                        )
+                        .chain(
+                            list_rule_targets(pkg, benches, "bench", bench_filter)?
+                                .into_iter()
+                                .map(|(t, required)| {
+                                    (new_unit(pkg, t, bench_mode, ProfileFor::Any), required)
+                                }),
+                        )
+                        .collect::<Vec<_>>(),
+                );
+            }
         }
+
+        // If any integration tests/benches are being tested, make sure that
+        // binaries are built as well.
+        if !mode.is_check() && proposals.iter().any(|&(ref unit, _)| {
+            unit.mode.is_any_test() && (unit.target.is_test() || unit.target.is_bench())
+        }) {
+            proposals.extend(
+                pkg.targets()
+                    .iter()
+                    .filter(|t| t.is_bin())
+                    .map(|t| (new_unit(pkg, t, CompileMode::Build, ProfileFor::Any), false)),
+            );
+        }
+
+        // Only include targets that are libraries or have all required
+        // features available.
+        for (unit, required) in proposals {
+            let unavailable_features = match unit.target.required_features() {
+                Some(rf) => rf.iter().filter(|f| !features.contains(*f)).collect(),
+                None => Vec::new(),
+            };
+            if unit.target.is_lib() || unavailable_features.is_empty() {
+                units.push(unit);
+            } else if required {
+                let required_features = unit.target.required_features().unwrap();
+                let quoted_required_features: Vec<String> = required_features
+                    .iter()
+                    .map(|s| format!("`{}`", s))
+                    .collect();
+                bail!(
+                    "target `{}` requires the features: {}\n\
+                     Consider enabling them by passing e.g. `--features=\"{}\"`",
+                    unit.target.name(),
+                    quoted_required_features.join(", "),
+                    required_features.join(" ")
+                );
+            }
+            // else, silently skip target.
+        }
+    }
+    Ok(units)
+}
+
+fn resolve_all_features(
+    resolve_with_overrides: &Resolve,
+    package_id: &PackageId,
+) -> HashSet<String> {
+    let mut features = resolve_with_overrides.features(package_id).clone();
+
+    // Include features enabled for use by dependencies so targets can also use them with the
+    // required-features field when deciding whether to be built or skipped.
+    for (dep, _) in resolve_with_overrides.deps(package_id) {
+        for feature in resolve_with_overrides.features(dep) {
+            features.insert(dep.name().to_string() + "/" + feature);
+        }
+    }
+
+    features
+}
+
+/// Given a list of all targets for a package, filters out only the targets
+/// that are automatically included when the user doesn't specify any targets.
+fn generate_default_targets(targets: &[Target], mode: CompileMode) -> Vec<&Target> {
+    match mode {
+        CompileMode::Bench => targets.iter().filter(|t| t.benched()).collect(),
+        CompileMode::Test => targets.iter().filter(|t| t.tested()).collect(),
         CompileMode::Build | CompileMode::Check { .. } => targets
             .iter()
             .filter(|t| t.is_bin() || t.is_lib())
-            .map(|t| BuildProposal {
-                target: t,
-                profile,
-                required: !required_features_filterable,
-            })
             .collect(),
-        CompileMode::Doc { .. } => targets
-            .iter()
-            .filter(|t| {
-                t.documented()
-                    && (!t.is_bin() || !targets.iter().any(|l| l.is_lib() && l.name() == t.name()))
-            })
-            .map(|t| BuildProposal {
-                target: t,
-                profile,
-                required: !required_features_filterable,
-            })
-            .collect(),
-        CompileMode::Doctest => {
-            if let Some(t) = targets.iter().find(|t| t.is_lib()) {
-                if t.doctested() {
-                    return vec![
-                        BuildProposal {
-                            target: t,
-                            profile,
-                            required: !required_features_filterable,
-                        },
-                    ];
-                }
-            }
-
-            Vec::new()
+        CompileMode::Doc { .. } => {
+            // `doc` does lib and bins (bin with same name as lib is skipped).
+            targets
+                .iter()
+                .filter(|t| {
+                    t.documented()
+                        && (!t.is_bin()
+                            || !targets.iter().any(|l| l.is_lib() && l.name() == t.name()))
+                })
+                .collect()
         }
+        CompileMode::Doctest => {
+            // `test --doc``
+            targets
+                .iter()
+                .find(|t| t.is_lib() && t.doctested())
+                .into_iter()
+                .collect()
+        }
+        CompileMode::RunCustomBuild => panic!("Invalid mode"),
     }
 }
 
-/// Given a filter rule and some context, propose a list of targets
-fn propose_indicated_targets<'a>(
+/// Returns a list of targets based on command-line target selection flags.
+/// The return value is a list of `(Target, bool)` pairs.  The `bool` value
+/// indicates whether or not all required features *must* be present.
+fn list_rule_targets<'a>(
     pkg: &'a Package,
     rule: &FilterRule,
-    desc: &'static str,
+    target_desc: &'static str,
     is_expected_kind: fn(&Target) -> bool,
-    profile: &'a Profile,
-) -> CargoResult<Vec<BuildProposal<'a>>> {
+) -> CargoResult<Vec<(&'a Target, bool)>> {
     match *rule {
-        FilterRule::All => {
-            let result = pkg.targets()
+        FilterRule::All => Ok(pkg.targets()
+            .iter()
+            .filter(|t| is_expected_kind(t))
+            .map(|t| (t, false))
+            .collect()),
+        FilterRule::Just(ref names) => names
+            .iter()
+            .map(|name| find_target(pkg, name, target_desc, is_expected_kind))
+            .collect(),
+    }
+}
+
+/// Find the target for a specifically named target.
+fn find_target<'a>(
+    pkg: &'a Package,
+    target_name: &str,
+    target_desc: &'static str,
+    is_expected_kind: fn(&Target) -> bool,
+) -> CargoResult<(&'a Target, bool)> {
+    match pkg.targets()
+        .iter()
+        .find(|t| t.name() == target_name && is_expected_kind(t))
+    {
+        // When a target is specified by name, required features *must* be
+        // available.
+        Some(t) => Ok((t, true)),
+        None => {
+            let suggestion = pkg.targets()
                 .iter()
                 .filter(|t| is_expected_kind(t))
-                .map(|t| BuildProposal {
-                    target: t,
-                    profile,
-                    required: false,
-                });
-            Ok(result.collect())
-        }
-        FilterRule::Just(ref names) => {
-            let mut targets = Vec::new();
-            for name in names {
-                let target = pkg.targets()
-                    .iter()
-                    .find(|t| t.name() == *name && is_expected_kind(t));
-                let t = match target {
-                    Some(t) => t,
-                    None => {
-                        let suggestion = pkg.find_closest_target(name, is_expected_kind);
-                        match suggestion {
-                            Some(s) => {
-                                let suggested_name = s.name();
-                                bail!(
-                                    "no {} target named `{}`\n\nDid you mean `{}`?",
-                                    desc,
-                                    name,
-                                    suggested_name
-                                )
-                            }
-                            None => bail!("no {} target named `{}`", desc, name),
-                        }
-                    }
-                };
-                debug!("found {} `{}`", desc, name);
-                targets.push(BuildProposal {
-                    target: t,
-                    profile,
-                    required: true,
-                });
+                .map(|t| (lev_distance(target_name, t.name()), t))
+                .filter(|&(d, _)| d < 4)
+                .min_by_key(|t| t.0)
+                .map(|t| t.1);
+            match suggestion {
+                Some(s) => bail!(
+                    "no {} target named `{}`\n\nDid you mean `{}`?",
+                    target_desc,
+                    target_name,
+                    s.name()
+                ),
+                None => bail!("no {} target named `{}`", target_desc, target_name),
             }
-            Ok(targets)
         }
     }
-}
-
-/// Collect the targets that are libraries or have all required features available.
-fn filter_compatible_targets<'a>(
-    mut proposals: Vec<BuildProposal<'a>>,
-    features: &HashSet<String>,
-) -> CargoResult<Vec<(&'a Target, &'a Profile)>> {
-    let mut compatible = Vec::with_capacity(proposals.len());
-    for proposal in proposals.drain(..) {
-        let unavailable_features = match proposal.target.required_features() {
-            Some(rf) => rf.iter().filter(|f| !features.contains(*f)).collect(),
-            None => Vec::new(),
-        };
-        if proposal.target.is_lib() || unavailable_features.is_empty() {
-            compatible.push((proposal.target, proposal.profile));
-        } else if proposal.required {
-            let required_features = proposal.target.required_features().unwrap();
-            let quoted_required_features: Vec<String> = required_features
-                .iter()
-                .map(|s| format!("`{}`", s))
-                .collect();
-            bail!(
-                "target `{}` requires the features: {}\n\
-                 Consider enabling them by passing e.g. `--features=\"{}\"`",
-                proposal.target.name(),
-                quoted_required_features.join(", "),
-                required_features.join(" ")
-            );
-        }
-    }
-    Ok(compatible)
-}
-
-/// Given the configuration for a build, this function will generate all
-/// target/profile combinations needed to be built.
-fn generate_targets<'a>(
-    pkg: &'a Package,
-    profiles: &'a Profiles,
-    mode: CompileMode,
-    filter: &CompileFilter,
-    features: &HashSet<String>,
-    release: bool,
-) -> CargoResult<Vec<(&'a Target, &'a Profile)>> {
-    let build = if release {
-        &profiles.release
-    } else {
-        &profiles.dev
-    };
-    let test = if release {
-        &profiles.bench
-    } else {
-        &profiles.test
-    };
-    let profile = match mode {
-        CompileMode::Test => test,
-        CompileMode::Bench => &profiles.bench,
-        CompileMode::Build => build,
-        CompileMode::Check { test: false } => &profiles.check,
-        CompileMode::Check { test: true } => &profiles.check_test,
-        CompileMode::Doc { .. } => &profiles.doc,
-        CompileMode::Doctest => &profiles.doctest,
-    };
-
-    let test_profile = if profile.check {
-        &profiles.check_test
-    } else if mode == CompileMode::Build {
-        test
-    } else {
-        profile
-    };
-
-    let bench_profile = if profile.check {
-        &profiles.check_test
-    } else if mode == CompileMode::Build {
-        &profiles.bench
-    } else {
-        profile
-    };
-
-    let targets = match *filter {
-        CompileFilter::Default {
-            required_features_filterable,
-        } => {
-            let deps = if release {
-                &profiles.bench_deps
-            } else {
-                &profiles.test_deps
-            };
-            generate_default_targets(
-                mode,
-                pkg.targets(),
-                profile,
-                deps,
-                required_features_filterable,
-            )
-        }
-        CompileFilter::Only {
-            all_targets,
-            lib,
-            ref bins,
-            ref examples,
-            ref tests,
-            ref benches,
-        } => {
-            let mut targets = Vec::new();
-
-            if lib {
-                if let Some(t) = pkg.targets().iter().find(|t| t.is_lib()) {
-                    targets.push(BuildProposal {
-                        target: t,
-                        profile,
-                        required: true,
-                    });
-                } else if !all_targets {
-                    bail!("no library targets found")
-                }
-            }
-            targets.append(&mut propose_indicated_targets(
-                pkg,
-                bins,
-                "bin",
-                Target::is_bin,
-                profile,
-            )?);
-            targets.append(&mut propose_indicated_targets(
-                pkg,
-                examples,
-                "example",
-                Target::is_example,
-                profile,
-            )?);
-            // If --tests was specified, add all targets that would be
-            // generated by `cargo test`.
-            let test_filter = match *tests {
-                FilterRule::All => Target::tested,
-                FilterRule::Just(_) => Target::is_test,
-            };
-            targets.append(&mut propose_indicated_targets(
-                pkg,
-                tests,
-                "test",
-                test_filter,
-                test_profile,
-            )?);
-            // If --benches was specified, add all targets that would be
-            // generated by `cargo bench`.
-            let bench_filter = match *benches {
-                FilterRule::All => Target::benched,
-                FilterRule::Just(_) => Target::is_bench,
-            };
-            targets.append(&mut propose_indicated_targets(
-                pkg,
-                benches,
-                "bench",
-                bench_filter,
-                bench_profile,
-            )?);
-            targets
-        }
-    };
-
-    filter_compatible_targets(targets, features)
 }

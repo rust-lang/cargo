@@ -8,8 +8,9 @@ use glob::glob;
 use url::Url;
 
 use core::registry::PackageRegistry;
-use core::{Dependency, PackageIdSpec, Profile, Profiles};
+use core::{Dependency, PackageIdSpec};
 use core::{EitherManifest, Package, SourceId, VirtualManifest};
+use core::profiles::Profiles;
 use ops;
 use sources::PathSource;
 use util::errors::{CargoResult, CargoResultExt};
@@ -305,6 +306,13 @@ impl<'cfg> Workspace<'cfg> {
             ws: self,
             iter: self.default_members.iter(),
         }
+    }
+
+    /// Returns true if the package is a member of the workspace.
+    pub fn is_member(&self, pkg: &Package) -> bool {
+        // TODO: Implement this in a better way.
+        //       Maybe make it part of Package?
+        self.members().any(|p| p == pkg)
     }
 
     pub fn is_ephemeral(&self) -> bool {
@@ -645,24 +653,10 @@ impl<'cfg> Workspace<'cfg> {
         }
 
         if let Some(ref root_manifest) = self.root_manifest {
-            let default_profiles = Profiles {
-                release: Profile::default_release(),
-                dev: Profile::default_dev(),
-                test: Profile::default_test(),
-                test_deps: Profile::default_dev(),
-                bench: Profile::default_bench(),
-                bench_deps: Profile::default_release(),
-                doc: Profile::default_doc(),
-                custom_build: Profile::default_custom_build(),
-                check: Profile::default_check(),
-                check_test: Profile::default_check_test(),
-                doctest: Profile::default_doctest(),
-            };
-
             for pkg in self.members()
                 .filter(|p| p.manifest_path() != root_manifest)
             {
-                if pkg.manifest().profiles() != &default_profiles {
+                if pkg.manifest().original().has_profiles() {
                     let message = &format!(
                         "profiles for the non root package will be ignored, \
                          specify profiles at the workspace root:\n\

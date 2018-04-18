@@ -192,3 +192,38 @@ cargo-features = ["edition"]
 ...
 rust = "2018"
 ```
+
+
+### Profile Overrides
+* Tracking Issue: [rust-lang/rust#48683](https://github.com/rust-lang/rust/issues/48683)
+* RFC: [#2282](https://github.com/rust-lang/rfcs/blob/master/text/2282-profile-dependencies.md)
+
+Profiles can be overridden for specific packages and custom build scripts.
+The general format looks like this:
+
+```toml
+cargo-features = ["profile-overrides"]
+
+[package]
+...
+
+[profile.dev]
+opt-level = 0
+debug = true
+
+# the `image` crate will be compiled with -Copt-level=3
+[profile.dev.overrides.image]
+opt-level = 3
+
+# All dependencies (but not this crate itself) will be compiled
+# with -Copt-level=2 . This includes build dependencies.
+[profile.dev.overrides."*"]
+opt-level = 2
+
+# Build scripts and their dependencies will be compiled with -Copt-level=3
+# By default, build scripts use the same rules as the rest of the profile
+[profile.dev.build_override]
+opt-level = 3
+```
+
+Overrides can only be specified for dev and release profiles.

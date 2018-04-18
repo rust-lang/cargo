@@ -9,9 +9,10 @@ use std::sync::Arc;
 use same_file::is_same_file;
 use serde_json;
 
-use core::{Feature, PackageId, Profile, Target};
-use core::manifest::Lto;
+use core::{Feature, PackageId, Target};
+use core::profiles::{Lto, Profile};
 use core::shell::ColorChoice;
+use ops::CompileMode;
 use util::{self, machine_message, Config, Freshness, ProcessBuilder, Rustc};
 use util::{internal, join_paths, profile};
 use util::paths;
@@ -59,10 +60,6 @@ pub struct BuildConfig {
     pub jobs: u32,
     /// Whether we are building for release
     pub release: bool,
-    /// Whether we are running tests
-    pub test: bool,
-    /// Whether we are building documentation
-    pub doc_all: bool,
     /// Whether to print std output in json format (for machine reading)
     pub json_messages: bool,
 }
@@ -131,8 +128,6 @@ impl BuildConfig {
             host: host_config,
             target: target_config,
             release: false,
-            test: false,
-            doc_all: false,
             json_messages: false,
         })
     }
@@ -304,14 +299,14 @@ fn compile<'a, 'cfg: 'a>(
     fingerprint::prepare_init(cx, unit)?;
     cx.links.validate(cx.resolve, unit)?;
 
-    let (dirty, fresh, freshness) = if unit.profile.run_custom_build {
+    let (dirty, fresh, freshness) = if unit.mode.is_run_custom_build() {
         custom_build::prepare(cx, unit)?
-    } else if unit.profile.doc && unit.profile.test {
+    } else if unit.mode == CompileMode::Doctest {
         // we run these targets later, so this is just a noop for now
         (Work::noop(), Work::noop(), Freshness::Fresh)
     } else {
         let (mut freshness, dirty, fresh) = fingerprint::prepare_target(cx, unit)?;
-        let work = if unit.profile.doc {
+        let work = if unit.mode.is_doc() {
             rustdoc(cx, unit)?
         } else {
             rustc(cx, unit, exec)?
@@ -369,7 +364,7 @@ fn rustc<'a, 'cfg>(
     // If we are a binary and the package also contains a library, then we
     // don't pass the `-l` flags.
     let pass_l_flag = unit.target.is_lib() || !unit.pkg.targets().iter().any(|t| t.is_lib());
-    let do_rename = unit.target.allows_underscores() && !unit.profile.test;
+    let do_rename = unit.target.allows_underscores() && !unit.mode.is_any_test();
     let real_name = unit.target.name().to_string();
     let crate_name = unit.target.crate_name();
 
@@ -561,7 +556,8 @@ fn link_targets<'a, 'cfg>(
     let export_dir = cx.files().export_dir(unit);
     let package_id = unit.pkg.package_id().clone();
     let target = unit.target.clone();
-    let profile = unit.profile.clone();
+    let profile = cx.unit_profile(unit).clone();
+    let unit_mode = unit.mode;
     let features = cx.resolve
         .features_sorted(&package_id)
         .into_iter()
@@ -601,10 +597,18 @@ fn link_targets<'a, 'cfg>(
         }
 
         if json_messages {
+            let art_profile = machine_message::ArtifactProfile {
+                opt_level: profile.opt_level.as_str(),
+                debuginfo: profile.debuginfo,
+                debug_assertions: profile.debug_assertions,
+                overflow_checks: profile.overflow_checks,
+                test: unit_mode.is_any_test(),
+            };
+
             machine_message::emit(&machine_message::Artifact {
                 package_id: &package_id,
                 target: &target,
-                profile: &profile,
+                profile: art_profile,
                 features,
                 filenames: destinations,
                 fresh,
@@ -770,7 +774,7 @@ fn rustdoc<'a, 'cfg>(cx: &mut Context<'a, 'cfg>, unit: &Unit<'a>) -> CargoResult
         rustdoc.arg(format!("--edition={}", &manifest.edition()));
     }
 
-    if let Some(ref args) = unit.profile.rustdoc_args {
+    if let Some(args) = cx.extra_compiler_args.get(unit) {
         rustdoc.args(args);
     }
 
@@ -835,23 +839,21 @@ fn build_base_args<'a, 'cfg>(
     unit: &Unit<'a>,
     crate_types: &[&str],
 ) -> CargoResult<()> {
+    assert!(!unit.mode.is_run_custom_build());
+
     let Profile {
         ref opt_level,
         ref lto,
         codegen_units,
-        ref rustc_args,
         debuginfo,
         debug_assertions,
         overflow_checks,
         rpath,
-        test,
-        doc: _doc,
-        run_custom_build,
         ref panic,
-        check,
+        incremental,
         ..
-    } = *unit.profile;
-    assert!(!run_custom_build);
+    } = *cx.unit_profile(unit);
+    let test = unit.mode.is_any_test();
 
     cmd.arg("--crate-name").arg(&unit.target.crate_name());
 
@@ -877,7 +879,7 @@ fn build_base_args<'a, 'cfg>(
         }
     }
 
-    if check {
+    if unit.mode.is_check() {
         cmd.arg("--emit=dep-info,metadata");
     } else {
         cmd.arg("--emit=dep-info,link");
@@ -889,7 +891,7 @@ fn build_base_args<'a, 'cfg>(
         cmd.arg("-C").arg("prefer-dynamic");
     }
 
-    if opt_level != "0" {
+    if opt_level.as_str() != "0" {
         cmd.arg("-C").arg(&format!("opt-level={}", opt_level));
     }
 
@@ -938,14 +940,14 @@ fn build_base_args<'a, 'cfg>(
         cmd.arg("-C").arg(format!("debuginfo={}", debuginfo));
     }
 
-    if let Some(ref args) = *rustc_args {
+    if let Some(args) = cx.extra_compiler_args.get(unit) {
         cmd.args(args);
     }
 
     // -C overflow-checks is implied by the setting of -C debug-assertions,
     // so we only need to provide -C overflow-checks if it differs from
     // the value of -C debug-assertions we would provide.
-    if opt_level != "0" {
+    if opt_level.as_str() != "0" {
         if debug_assertions {
             cmd.args(&["-C", "debug-assertions=on"]);
             if !overflow_checks {
@@ -1020,7 +1022,7 @@ fn build_base_args<'a, 'cfg>(
         "linker=",
         cx.linker(unit.kind).map(|s| s.as_ref()),
     );
-    cmd.args(&cx.incremental_args(unit)?);
+    cmd.args(&cx.incremental_args(unit, incremental)?);
 
     Ok(())
 }
@@ -1053,11 +1055,11 @@ fn build_deps_args<'a, 'cfg>(
     // error in the future, see PR #4797
     if !dep_targets
         .iter()
-        .any(|u| !u.profile.doc && u.target.linkable())
+        .any(|u| !u.mode.is_doc() && u.target.linkable())
     {
         if let Some(u) = dep_targets
             .iter()
-            .find(|u| !u.profile.doc && u.target.is_lib())
+            .find(|u| !u.mode.is_doc() && u.target.is_lib())
         {
             cx.config.shell().warn(format!(
                 "The package `{}` \
@@ -1072,10 +1074,10 @@ fn build_deps_args<'a, 'cfg>(
     }
 
     for dep in dep_targets {
-        if dep.profile.run_custom_build {
+        if dep.mode.is_run_custom_build() {
             cmd.env("OUT_DIR", &cx.files().build_script_out_dir(&dep));
         }
-        if dep.target.linkable() && !dep.profile.doc {
+        if dep.target.linkable() && !dep.mode.is_doc() {
             link_to(cmd, cx, unit, &dep)?;
         }
     }

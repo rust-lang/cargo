@@ -1,7 +1,7 @@
 pub use self::dependency::Dependency;
 pub use self::features::{CliUnstable, Edition, Feature, Features};
 pub use self::manifest::{EitherManifest, VirtualManifest};
-pub use self::manifest::{LibKind, Manifest, Profile, Profiles, Target, TargetKind};
+pub use self::manifest::{LibKind, Manifest, Target, TargetKind};
 pub use self::package::{Package, PackageSet};
 pub use self::package_id::PackageId;
 pub use self::package_id_spec::PackageIdSpec;
@@ -22,6 +22,7 @@ pub mod summary;
 pub mod shell;
 pub mod registry;
 pub mod compiler;
+pub mod profiles;
 mod interning;
 mod package_id_spec;
 mod workspace;

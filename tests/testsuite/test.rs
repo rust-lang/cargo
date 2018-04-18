@@ -1649,6 +1649,7 @@ fn test_run_implicit_test_target() {
         )
         .build();
 
+    // TODO FIXME: This needs to better verify that examples are not built.
     assert_that(
         prj.cargo("test").arg("--tests"),
         execs()
@@ -1658,8 +1659,7 @@ fn test_run_implicit_test_target() {
 [COMPILING] foo v0.0.1 ({dir})
 [FINISHED] dev [unoptimized + debuginfo] target(s) in [..]
 [RUNNING] target[/]debug[/]deps[/]mybin-[..][EXE]
-[RUNNING] target[/]debug[/]deps[/]mytest-[..][EXE]
-[RUNNING] target[/]debug[/]examples[/]myexm-[..][EXE]",
+[RUNNING] target[/]debug[/]deps[/]mytest-[..][EXE]",
                 dir = prj.url()
             ))
             .with_stdout_contains("test test_in_test ... ok"),
@@ -1742,13 +1742,13 @@ fn test_run_implicit_example_target() {
         )
         .build();
 
+    // TODO FIXME - verify example does NOT get run.
     assert_that(
         prj.cargo("test").arg("--examples"),
         execs().with_status(0).with_stderr(format!(
             "\
 [COMPILING] foo v0.0.1 ({dir})
-[FINISHED] dev [unoptimized + debuginfo] target(s) in [..]
-[RUNNING] target[/]debug[/]examples[/]myexm-[..][EXE]",
+[FINISHED] dev [unoptimized + debuginfo] target(s) in [..]",
             dir = prj.url()
         )),
     );

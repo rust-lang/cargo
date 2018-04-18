@@ -1,5 +1,4 @@
 #![allow(deprecated)]
-
 use std::collections::{HashMap, HashSet};
 use std::env;
 use std::path::{Path, PathBuf};
@@ -8,8 +7,10 @@ use std::sync::Arc;
 
 use jobserver::Client;
 
-use core::{Package, PackageId, PackageSet, Profile, Resolve, Target};
-use core::{Dependency, Profiles, Workspace};
+use core::{Package, PackageId, PackageSet, Resolve, Target};
+use core::{Dependency, Workspace};
+use core::profiles::{Profile, ProfileFor, Profiles};
+use ops::CompileMode;
 use util::{internal, profile, Cfg, CfgExpr, Config};
 use util::errors::{CargoResult, CargoResultExt};
 
@@ -45,7 +46,7 @@ pub use self::target_info::{FileFlavor, TargetInfo};
 /// example, it needs to know the target architecture (OS, chip arch etc.) and it needs to know
 /// whether you want a debug or release build. There is enough information in this struct to figure
 /// all that out.
-#[derive(Clone, Copy, Eq, PartialEq, Hash)]
+#[derive(Clone, Copy, Eq, PartialEq, Hash, Debug)]
 pub struct Unit<'a> {
     /// Information about available targets, which files to include/exclude, etc. Basically stuff in
     /// `Cargo.toml`.
@@ -54,9 +55,9 @@ pub struct Unit<'a> {
     /// to be confused with *target-triple* (or *target architecture* ...), the target arch for a
     /// build.
     pub target: &'a Target,
-    /// The profile contains information about *how* the build should be run, including debug
-    /// level, extra args to pass to rustc, etc.
-    pub profile: &'a Profile,
+    /// This indicates the purpose of the target for profile selection.  See
+    /// `ProfileFor` for more details.
+    pub profile_for: ProfileFor,
     /// Whether this compilation unit is for the host or target architecture.
     ///
     /// For example, when
@@ -64,6 +65,9 @@ pub struct Unit<'a> {
     /// the host architecture so the host rustc can use it (when compiling to the target
     /// architecture).
     pub kind: Kind,
+    /// The "mode" this unit is being compiled for.  See `CompileMode` for
+    /// more details.
+    pub mode: CompileMode,
 }
 
 /// The build context, containing all information about a build task
@@ -87,13 +91,19 @@ pub struct Context<'a, 'cfg: 'a> {
     pub links: Links<'a>,
     pub used_in_plugin: HashSet<Unit<'a>>,
     pub jobserver: Client,
+    pub profiles: &'a Profiles,
+    /// This is a workaround to carry the extra compiler args given on the
+    /// command-line for `cargo rustc` and `cargo rustdoc`.  These commands
+    /// only support one target, but we don't want the args passed to any
+    /// dependencies.
+    pub extra_compiler_args: HashMap<Unit<'a>, Vec<String>>,
 
     target_info: TargetInfo,
     host_info: TargetInfo,
-    profiles: &'a Profiles,
     incremental_env: Option<bool>,
 
     unit_dependencies: HashMap<Unit<'a>, Vec<Unit<'a>>>,
+    unit_profiles: HashMap<Unit<'a>, Profile>,
     files: Option<CompilationFiles<'a, 'cfg>>,
 }
 
@@ -105,6 +115,7 @@ impl<'a, 'cfg> Context<'a, 'cfg> {
         config: &'cfg Config,
         build_config: BuildConfig,
         profiles: &'a Profiles,
+        extra_compiler_args: HashMap<Unit<'a>, Vec<String>>,
     ) -> CargoResult<Context<'a, 'cfg>> {
         let incremental_env = match env::var("CARGO_INCREMENTAL") {
             Ok(v) => Some(v == "1"),
@@ -155,7 +166,9 @@ impl<'a, 'cfg> Context<'a, 'cfg> {
             build_script_overridden: HashSet::new(),
 
             unit_dependencies: HashMap::new(),
+            unit_profiles: HashMap::new(),
             files: None,
+            extra_compiler_args,
         };
 
         cx.compilation.host_dylib_path = cx.host_info.sysroot_libdir.clone();
@@ -174,8 +187,8 @@ impl<'a, 'cfg> Context<'a, 'cfg> {
         let mut queue = JobQueue::new(&self);
         self.prepare_units(export_dir, units)?;
         self.prepare()?;
-        self.build_used_in_plugin_map(&units)?;
-        custom_build::build_map(&mut self, &units)?;
+        self.build_used_in_plugin_map(units)?;
+        custom_build::build_map(&mut self, units)?;
 
         for unit in units.iter() {
             // Build up a list of pending jobs, each of which represent
@@ -200,7 +213,7 @@ impl<'a, 'cfg> Context<'a, 'cfg> {
                     None => &output.path,
                 };
 
-                if unit.profile.test {
+                if unit.mode.is_any_test() && !unit.mode.is_check() {
                     self.compilation.tests.push((
                         unit.pkg.clone(),
                         unit.target.kind().clone(),
@@ -224,7 +237,7 @@ impl<'a, 'cfg> Context<'a, 'cfg> {
                     continue;
                 }
 
-                if dep.profile.run_custom_build {
+                if dep.mode.is_run_custom_build() {
                     let out_dir = self.files().build_script_out_dir(dep).display().to_string();
                     self.compilation
                         .extra_env
@@ -236,7 +249,7 @@ impl<'a, 'cfg> Context<'a, 'cfg> {
                 if !dep.target.is_lib() {
                     continue;
                 }
-                if dep.profile.doc {
+                if dep.mode.is_doc() {
                     continue;
                 }
 
@@ -313,15 +326,16 @@ impl<'a, 'cfg> Context<'a, 'cfg> {
             None => None,
         };
 
-        let deps = build_unit_dependencies(units, &self)?;
+        let deps = build_unit_dependencies(units, self)?;
         self.unit_dependencies = deps;
+        self.unit_profiles = self.profiles.build_unit_profiles(units, self);
         let files = CompilationFiles::new(
             units,
             host_layout,
             target_layout,
             export_dir,
             self.ws,
-            &self,
+            self,
         );
         self.files = Some(files);
         Ok(())
@@ -414,7 +428,7 @@ impl<'a, 'cfg> Context<'a, 'cfg> {
         // dependencies. However, that code itself calls this method and
         // gets a full pre-filtered set of dependencies. This is not super
         // obvious, and clear, but it does work at the moment.
-        if unit.profile.run_custom_build {
+        if unit.target.is_custom_build() {
             let key = (unit.pkg.package_id().clone(), unit.kind);
             if self.build_script_overridden.contains(&key) {
                 return Vec::new();
@@ -476,26 +490,11 @@ impl<'a, 'cfg> Context<'a, 'cfg> {
         self.build_config.jobs
     }
 
-    pub fn lib_profile(&self) -> &'a Profile {
-        let (normal, test) = if self.build_config.release {
-            (&self.profiles.release, &self.profiles.bench_deps)
-        } else {
-            (&self.profiles.dev, &self.profiles.test_deps)
-        };
-        if self.build_config.test {
-            test
-        } else {
-            normal
-        }
-    }
-
-    pub fn build_script_profile(&self, _pkg: &PackageId) -> &'a Profile {
-        // TODO: should build scripts always be built with the same library
-        //       profile? How is this controlled at the CLI layer?
-        self.lib_profile()
-    }
-
-    pub fn incremental_args(&self, unit: &Unit) -> CargoResult<Vec<String>> {
+    pub fn incremental_args(
+        &self,
+        unit: &Unit,
+        profile_incremental: bool,
+    ) -> CargoResult<Vec<String>> {
         // There's a number of ways to configure incremental compilation right
         // now. In order of descending priority (first is highest priority) we
         // have:
@@ -518,7 +517,7 @@ impl<'a, 'cfg> Context<'a, 'cfg> {
         //   have it enabled by default while release profiles have it disabled
         //   by default.
         let global_cfg = self.config.get_bool("build.incremental")?.map(|c| c.val);
-        let incremental = match (self.incremental_env, global_cfg, unit.profile.incremental) {
+        let incremental = match (self.incremental_env, global_cfg, profile_incremental) {
             (Some(v), _, _) => v,
             (None, Some(false), _) => false,
             (None, _, other) => other,
@@ -571,6 +570,13 @@ impl<'a, 'cfg> Context<'a, 'cfg> {
             Kind::Host => &self.host_info,
             Kind::Target => &self.target_info,
         }
+    }
+
+    /// Returns the profile for a given unit.
+    /// This should not be called until profiles are computed in
+    /// `prepare_units`.
+    pub fn unit_profile(&self, unit: &Unit<'a>) -> &Profile {
+        &self.unit_profiles[unit]
     }
 }
 
