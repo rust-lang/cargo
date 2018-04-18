@@ -129,17 +129,8 @@ impl<'a, 'cfg> Context<'a, 'cfg> {
         let (host_info, target_info) = {
             let _p = profile::start("Context::probe_target_info");
             debug!("probe_target_info");
-            let host_target_same = match build_config.requested_target {
-                Some(ref s) if s != &build_config.host_triple() => false,
-                _ => true,
-            };
-
             let host_info = TargetInfo::new(config, &build_config, Kind::Host)?;
-            let target_info = if host_target_same {
-                host_info.clone()
-            } else {
-                TargetInfo::new(config, &build_config, Kind::Target)?
-            };
+            let target_info = TargetInfo::new(config, &build_config, Kind::Target)?;
             (host_info, target_info)
         };
 
