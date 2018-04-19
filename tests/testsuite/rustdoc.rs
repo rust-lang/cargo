@@ -109,7 +109,7 @@ fn rustdoc_foo_with_bar_dependency() {
         foo.cargo("rustdoc").arg("-v").arg("--").arg("--cfg=foo"),
         execs().with_status(0).with_stderr(format!(
             "\
-[COMPILING] bar v0.0.1 ([..])
+[CHECKING] bar v0.0.1 ([..])
 [RUNNING] `rustc [..]bar[/]src[/]lib.rs [..]`
 [DOCUMENTING] foo v0.0.1 ({url})
 [RUNNING] `rustdoc --crate-name foo src[/]lib.rs \

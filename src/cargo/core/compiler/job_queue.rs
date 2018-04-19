@@ -383,7 +383,11 @@ impl<'a> JobQueue<'a> {
                     }
                 } else {
                     self.compiled.insert(key.pkg);
-                    config.shell().status("Compiling", key.pkg)?;
+                    if key.profile.check {
+                        config.shell().status("Checking", key.pkg)?;
+                    } else {
+                        config.shell().status("Compiling", key.pkg)?;
+                    }
                 }
             }
             Fresh if self.counts[key.pkg] == 0 => {
