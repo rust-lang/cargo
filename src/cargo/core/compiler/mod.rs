@@ -777,10 +777,8 @@ fn rustdoc<'a, 'cfg>(cx: &mut Context<'a, 'cfg>, unit: &Unit<'a>) -> CargoResult
         rustdoc.arg(format!("--edition={}", &manifest.edition()));
     }
 
-    if let Some((ref args_unit, ref args)) = cx.extra_compiler_args {
-        if args_unit == unit {
-            rustdoc.args(args);
-        }
+    if let Some(ref args) = cx.extra_args_for(unit) {
+        rustdoc.args(args);
     }
 
     build_deps_args(&mut rustdoc, cx, unit)?;
@@ -944,10 +942,8 @@ fn build_base_args<'a, 'cfg>(
         cmd.arg("-C").arg(format!("debuginfo={}", debuginfo));
     }
 
-    if let Some((ref args_unit, ref args)) = cx.extra_compiler_args {
-        if args_unit == unit {
-            cmd.args(args);
-        }
+    if let Some(ref args) = cx.extra_args_for(unit) {
+        cmd.args(args);
     }
 
     // -C overflow-checks is implied by the setting of -C debug-assertions,

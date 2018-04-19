@@ -427,6 +427,9 @@ fn compute_metadata<'a, 'cfg>(
     // settings like debuginfo and whatnot.
     unit.profile.hash(&mut hasher);
     unit.mode.hash(&mut hasher);
+    if let Some(ref args) = cx.extra_args_for(unit) {
+        args.hash(&mut hasher);
+    }
 
     // Artifacts compiled for the host should have a different metadata
     // piece than those compiled for the target, so make sure we throw in

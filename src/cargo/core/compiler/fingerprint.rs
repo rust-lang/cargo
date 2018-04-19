@@ -102,7 +102,7 @@ pub fn prepare_target<'a, 'cfg>(
         }
     }
 
-    let allow_failure = cx.extra_compiler_args.is_some();
+    let allow_failure = cx.extra_args_for(unit).is_some();
     let target_root = cx.files().target_root().to_path_buf();
     let write_fingerprint = Work::new(move |_| {
         match fingerprint.update_local(&target_root) {
@@ -454,10 +454,16 @@ fn calculate<'a, 'cfg>(
     } else {
         cx.rustflags_args(unit)?
     };
+    let profile_hash = util::hash_u64(&(
+        &unit.profile,
+        unit.mode,
+        cx.extra_args_for(unit),
+        cx.incremental_args(unit)?,
+    ));
     let fingerprint = Arc::new(Fingerprint {
         rustc: util::hash_u64(&cx.build_config.rustc.verbose_version),
         target: util::hash_u64(&unit.target),
-        profile: util::hash_u64(&(&unit.profile, unit.mode, cx.incremental_args(unit)?)),
+        profile: profile_hash,
         // Note that .0 is hashed here, not .1 which is the cwd. That doesn't
         // actually affect the output artifact so there's no need to hash it.
         path: util::hash_u64(&super::path_args(cx, unit).0),

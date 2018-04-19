@@ -97,7 +97,7 @@ pub struct Context<'a, 'cfg: 'a> {
     /// rustc` and `cargo rustdoc`.  These commands only support one target,
     /// but we don't want the args passed to any dependencies, so we include
     /// the `Unit` corresponding to the top-level target.
-    pub extra_compiler_args: Option<(Unit<'a>, Vec<String>)>,
+    extra_compiler_args: Option<(Unit<'a>, Vec<String>)>,
 
     target_info: TargetInfo,
     host_info: TargetInfo,
@@ -558,6 +558,15 @@ impl<'a, 'cfg> Context<'a, 'cfg> {
             Kind::Host => &self.host_info,
             Kind::Target => &self.target_info,
         }
+    }
+
+    pub fn extra_args_for(&self, unit: &Unit<'a>) -> Option<&Vec<String>> {
+        if let Some((ref args_unit, ref args)) = self.extra_compiler_args {
+            if args_unit == unit {
+                return Some(args);
+            }
+        }
+        None
     }
 }
 
