@@ -60,6 +60,8 @@ pub struct BuildConfig {
     pub jobs: u32,
     /// Whether we are building for release
     pub release: bool,
+    /// Whether we are running tests
+    pub test: bool,
     /// Whether to print std output in json format (for machine reading)
     pub json_messages: bool,
 }
@@ -128,6 +130,7 @@ impl BuildConfig {
             host: host_config,
             target: target_config,
             release: false,
+            test: false,
             json_messages: false,
         })
     }

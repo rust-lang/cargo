@@ -29,8 +29,13 @@ pub fn build_unit_dependencies<'a, 'cfg>(
 ) -> CargoResult<HashMap<Unit<'a>, Vec<Unit<'a>>>> {
     let mut deps = HashMap::new();
     for unit in roots.iter() {
-        // Dependencies of tests should not have `panic` set.
-        let profile_for = if unit.mode.is_any_test() {
+        // Dependencies of tests/benches should not have `panic` set.
+        // We check the global test mode to see if we are running in `cargo
+        // test` in which case we ensure all dependencies have `panic`
+        // cleared, and avoid building the lib thrice (once with `panic`, once
+        // without, once for --test).  In particular, the lib included for
+        // doctests and examples are `Build` mode here.
+        let profile_for = if unit.mode.is_any_test() || cx.build_config.test {
             ProfileFor::TestDependency
         } else {
             ProfileFor::Any
@@ -163,13 +168,13 @@ fn compute_deps_custom_build<'a, 'cfg>(
     let tmp = Unit {
         pkg: unit.pkg,
         target: not_custom_build,
-        // The profile here isn't critical.  We are just using this temp unit
-        // for fetching dependencies that might have `links`.
         profile: unit.profile,
         kind: unit.kind,
         mode: CompileMode::Build,
     };
-    let deps = deps_of(&tmp, cx, deps, ProfileFor::CustomBuild)?;
+    // TODO: ProfileFor may need to be TestDependency if the random target we
+    // picked is a test and `panic` is set.  Need it investigate.
+    let deps = deps_of(&tmp, cx, deps, ProfileFor::Any)?;
     Ok(deps.iter()
         .filter_map(|unit| {
             if !unit.target.linkable() || unit.pkg.manifest().links().is_none() {
@@ -221,7 +226,7 @@ fn compute_deps_doc<'a, 'cfg>(
         // rustdoc only needs rmeta files for regular dependencies.
         // However, for plugins/proc-macros, deps should be built like normal.
         let mode = check_or_build_mode(&unit.mode, lib);
-        let unit = new_unit(
+        let lib_unit = new_unit(
             cx,
             dep,
             lib,
@@ -229,9 +234,10 @@ fn compute_deps_doc<'a, 'cfg>(
             unit.kind.for_target(lib),
             mode,
         );
-        ret.push((unit, ProfileFor::Any));
+        ret.push((lib_unit, ProfileFor::Any));
         if let CompileMode::Doc { deps: true } = unit.mode {
-            let unit = new_unit(
+            // Document this lib as well.
+            let doc_unit = new_unit(
                 cx,
                 dep,
                 lib,
@@ -239,7 +245,7 @@ fn compute_deps_doc<'a, 'cfg>(
                 unit.kind.for_target(lib),
                 unit.mode,
             );
-            ret.push((unit, ProfileFor::Any));
+            ret.push((doc_unit, ProfileFor::Any));
         }
     }
 
