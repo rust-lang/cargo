@@ -338,6 +338,7 @@ pub fn compile_ws<'a>(
         .into_path_unlocked();
     let mut build_config = BuildConfig::new(config, jobs, &target, Some(rustc_info_cache))?;
     build_config.release = release;
+    build_config.test = mode == CompileMode::Test;
     build_config.json_messages = message_format == MessageFormat::Json;
     let default_arch_kind = if build_config.requested_target.is_some() {
         Kind::Target
@@ -568,15 +569,34 @@ fn generate_targets<'a>(
 
     // Helper for creating a Unit struct.
     let new_unit =
-        |pkg: &'a Package, target: &'a Target, mode: CompileMode, profile_for: ProfileFor| {
-            let mode = match mode {
+        |pkg: &'a Package, target: &'a Target, target_mode: CompileMode| {
+            let profile_for = if mode == CompileMode::Test {
+                // NOTE: The ProfileFor here is subtle.  If you have a profile
+                // with `panic` set, the `panic` flag is cleared for tests and
+                // their dependencies.  If we left this as an "Any" profile,
+                // then the lib would get compiled three times (once with
+                // panic, once without, and once with --test).
+                //
+                // This would cause a problem for Doc tests, which would fail
+                // because `rustdoc` would attempt to link with both libraries
+                // at the same time. Also, it's probably not important (or
+                // even desirable?) for rustdoc to link with a lib with
+                // `panic` set.
+                //
+                // As a consequence, Examples and Binaries get compiled
+                // without `panic` set.  This probably isn't a bad deal.
+                //
+                // Forcing the lib to be compiled three times during `cargo
+                // test` is probably also not desirable.
+                ProfileFor::TestDependency
+            } else {
+                ProfileFor::Any
+            };
+            let target_mode = match target_mode {
                 CompileMode::Test => {
                     if target.is_example() {
                         // Examples are included as regular binaries to verify
                         // that they compile.
-                        // TODO: Broken - Dependencies of examples can be
-                        // built with `panic`, which will cause `rustdoc` to
-                        // fail with linking multiple binaries.
                         CompileMode::Build
                     } else {
                         CompileMode::Test
@@ -587,21 +607,22 @@ fn generate_targets<'a>(
                     TargetKind::Bench => CompileMode::Bench,
                     _ => CompileMode::Build,
                 },
-                _ => mode,
+                _ => target_mode,
             };
+            // Plugins or proc-macro should be built for the host.
             let kind = if target.for_host() {
                 Kind::Host
             } else {
                 default_arch_kind
             };
             let profile =
-                profiles.get_profile(&pkg.name(), ws.is_member(pkg), profile_for, mode, release);
+                profiles.get_profile(&pkg.name(), ws.is_member(pkg), profile_for, target_mode, release);
             Unit {
                 pkg,
                 target,
                 profile,
                 kind,
-                mode,
+                mode: target_mode,
             }
         };
 
@@ -623,7 +644,7 @@ fn generate_targets<'a>(
                     .iter()
                     .map(|t| {
                         (
-                            new_unit(pkg, t, mode, ProfileFor::Any),
+                            new_unit(pkg, t, mode),
                             !required_features_filterable,
                         )
                     })
@@ -631,10 +652,11 @@ fn generate_targets<'a>(
                 proposals.extend(default_units);
                 if mode == CompileMode::Test {
                     // Include the lib as it will be required for doctests.
-                    // TODO: Broken - Dependencies won't have ProfileFor::TestDependency.
                     if let Some(t) = pkg.targets().iter().find(|t| t.is_lib() && t.doctested()) {
-                        proposals
-                            .push((new_unit(pkg, t, CompileMode::Build, ProfileFor::Any), false));
+                        proposals.push((
+                            new_unit(pkg, t, CompileMode::Build),
+                            false,
+                        ));
                     }
                 }
             }
@@ -648,7 +670,7 @@ fn generate_targets<'a>(
             } => {
                 if lib {
                     if let Some(target) = pkg.targets().iter().find(|t| t.is_lib()) {
-                        proposals.push((new_unit(pkg, target, mode, ProfileFor::Any), false));
+                        proposals.push((new_unit(pkg, target, mode), false));
                     } else if !all_targets {
                         bail!("no library targets found")
                     }
@@ -679,26 +701,26 @@ fn generate_targets<'a>(
                 proposals.extend(
                     list_rule_targets(pkg, bins, "bin", Target::is_bin)?
                         .into_iter()
-                        .map(|(t, required)| (new_unit(pkg, t, mode, ProfileFor::Any), required))
+                        .map(|(t, required)| (new_unit(pkg, t, mode), required))
                         .chain(
                             list_rule_targets(pkg, examples, "example", Target::is_example)?
                                 .into_iter()
                                 .map(|(t, required)| {
-                                    (new_unit(pkg, t, mode, ProfileFor::Any), required)
+                                    (new_unit(pkg, t, mode), required)
                                 }),
                         )
                         .chain(
                             list_rule_targets(pkg, tests, "test", test_filter)?
                                 .into_iter()
                                 .map(|(t, required)| {
-                                    (new_unit(pkg, t, test_mode, ProfileFor::Any), required)
+                                    (new_unit(pkg, t, test_mode), required)
                                 }),
                         )
                         .chain(
                             list_rule_targets(pkg, benches, "bench", bench_filter)?
                                 .into_iter()
                                 .map(|(t, required)| {
-                                    (new_unit(pkg, t, bench_mode, ProfileFor::Any), required)
+                                    (new_unit(pkg, t, bench_mode), required)
                                 }),
                         )
                         .collect::<Vec<_>>(),
@@ -706,7 +728,7 @@ fn generate_targets<'a>(
             }
         }
 
-        // If any integration tests/benches are being tested, make sure that
+        // If any integration tests/benches are being run, make sure that
         // binaries are built as well.
         if !mode.is_check() && proposals.iter().any(|&(ref unit, _)| {
             unit.mode.is_any_test() && (unit.target.is_test() || unit.target.is_bench())
@@ -715,7 +737,7 @@ fn generate_targets<'a>(
                 pkg.targets()
                     .iter()
                     .filter(|t| t.is_bin())
-                    .map(|t| (new_unit(pkg, t, CompileMode::Build, ProfileFor::Any), false)),
+                    .map(|t| (new_unit(pkg, t, CompileMode::Build), false)),
             );
         }
 
