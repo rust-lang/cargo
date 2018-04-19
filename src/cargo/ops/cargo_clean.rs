@@ -1,6 +1,5 @@
 use std::fs;
 use std::path::Path;
-use std::collections::HashMap;
 
 use core::Workspace;
 use core::compiler::{BuildConfig, Context, Kind, Unit};
@@ -53,8 +52,8 @@ pub fn clean(ws: &Workspace, opts: &CleanOptions) -> CargoResult<()> {
                         let profile = profiles.get_profile(
                             &pkg.name(),
                             ws.is_member(pkg),
-                            profile_for,
-                            mode,
+                            *profile_for,
+                            *mode,
                             opts.release,
                         );
                         units.push(Unit {
@@ -62,7 +61,7 @@ pub fn clean(ws: &Workspace, opts: &CleanOptions) -> CargoResult<()> {
                             target,
                             profile,
                             kind: *kind,
-                            mode,
+                            mode: *mode,
                         });
                     }
                 }
@@ -79,7 +78,7 @@ pub fn clean(ws: &Workspace, opts: &CleanOptions) -> CargoResult<()> {
         opts.config,
         build_config,
         profiles,
-        HashMap::new(),
+        None,
     )?;
     cx.prepare_units(None, &units)?;
 

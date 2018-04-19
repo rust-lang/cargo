@@ -381,7 +381,6 @@ pub struct TomlProfile {
     pub overflow_checks: Option<bool>,
     pub incremental: Option<bool>,
     pub overrides: Option<BTreeMap<String, TomlProfile>>,
-    #[serde(rename = "build_override")]
     pub build_override: Option<Box<TomlProfile>>,
 }
 

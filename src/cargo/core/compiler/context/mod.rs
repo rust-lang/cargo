@@ -92,11 +92,12 @@ pub struct Context<'a, 'cfg: 'a> {
     pub used_in_plugin: HashSet<Unit<'a>>,
     pub jobserver: Client,
     pub profiles: &'a Profiles,
-    /// This is a workaround to carry the extra compiler args given on the
-    /// command-line for `cargo rustc` and `cargo rustdoc`.  These commands
-    /// only support one target, but we don't want the args passed to any
-    /// dependencies.
-    pub extra_compiler_args: HashMap<Unit<'a>, Vec<String>>,
+    /// This is a workaround to carry the extra compiler args for either
+    /// `rustc` or `rustdoc` given on the command-line for the commands `cargo
+    /// rustc` and `cargo rustdoc`.  These commands only support one target,
+    /// but we don't want the args passed to any dependencies, so we include
+    /// the `Unit` corresponding to the top-level target.
+    pub extra_compiler_args: Option<(Unit<'a>, Vec<String>)>,
 
     target_info: TargetInfo,
     host_info: TargetInfo,
@@ -114,7 +115,7 @@ impl<'a, 'cfg> Context<'a, 'cfg> {
         config: &'cfg Config,
         build_config: BuildConfig,
         profiles: &'a Profiles,
-        extra_compiler_args: HashMap<Unit<'a>, Vec<String>>,
+        extra_compiler_args: Option<(Unit<'a>, Vec<String>)>,
     ) -> CargoResult<Context<'a, 'cfg>> {
         let incremental_env = match env::var("CARGO_INCREMENTAL") {
             Ok(v) => Some(v == "1"),
