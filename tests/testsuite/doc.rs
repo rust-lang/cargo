@@ -217,7 +217,7 @@ fn doc_no_deps() {
         p.cargo("doc").arg("--no-deps"),
         execs().with_status(0).with_stderr(&format!(
             "\
-[COMPILING] bar v0.0.1 ({dir}/bar)
+[CHECKING] bar v0.0.1 ({dir}/bar)
 [DOCUMENTING] foo v0.0.1 ({dir})
 [FINISHED] dev [unoptimized + debuginfo] target(s) in [..]
 ",
@@ -596,7 +596,7 @@ fn doc_lib_bin_same_name_documents_named_bin_when_requested() {
         p.cargo("doc").arg("--bin").arg("foo"),
         execs().with_status(0).with_stderr(&format!(
             "\
-[COMPILING] foo v0.0.1 ({dir})
+[CHECKING] foo v0.0.1 ({dir})
 [DOCUMENTING] foo v0.0.1 ({dir})
 [FINISHED] dev [unoptimized + debuginfo] target(s) in [..]
 ",
@@ -650,7 +650,7 @@ fn doc_lib_bin_same_name_documents_bins_when_requested() {
         p.cargo("doc").arg("--bins"),
         execs().with_status(0).with_stderr(&format!(
             "\
-[COMPILING] foo v0.0.1 ({dir})
+[CHECKING] foo v0.0.1 ({dir})
 [DOCUMENTING] foo v0.0.1 ({dir})
 [FINISHED] dev [unoptimized + debuginfo] target(s) in [..]
 ",
@@ -1270,7 +1270,7 @@ fn doc_all_workspace() {
         execs()
             .with_status(0)
             .with_stderr_contains("[..] Documenting bar v0.1.0 ([..])")
-            .with_stderr_contains("[..] Compiling bar v0.1.0 ([..])")
+            .with_stderr_contains("[..] Checking bar v0.1.0 ([..])")
             .with_stderr_contains("[..] Documenting foo v0.1.0 ([..])"),
     );
 }
