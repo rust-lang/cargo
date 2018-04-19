@@ -1002,6 +1002,7 @@ fn substitute_macros(input: &str) -> String {
     let macros = [
         ("[RUNNING]", "     Running"),
         ("[COMPILING]", "   Compiling"),
+        ("[CHECKING]", "    Checking"),
         ("[CREATED]", "     Created"),
         ("[FINISHED]", "    Finished"),
         ("[ERROR]", "error:"),
