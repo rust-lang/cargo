@@ -4509,7 +4509,7 @@ fn build_virtual_manifest_one_project() {
         p.cargo("build").arg("-p").arg("foo"),
         execs()
             .with_status(0)
-            .with_stderr_does_not_contain("bar")
+            .with_stderr_does_not_contain("[..]bar[..]")
             .with_stderr_contains("[..] Compiling foo v0.1.0 ([..])")
             .with_stderr(
                 "[..] Compiling [..] v0.1.0 ([..])\n\
