@@ -22,7 +22,7 @@
 //!       previously compiled dependency
 //!
 
-use std::collections::{HashMap, HashSet};
+use std::collections::HashSet;
 use std::path::{Path, PathBuf};
 use std::sync::Arc;
 
@@ -162,8 +162,8 @@ impl CompileMode {
 
     /// List of all modes (currently used by `cargo clean -p` for computing
     /// all possible outputs).
-    pub fn all_modes() -> Vec<CompileMode> {
-        vec![
+    pub fn all_modes() -> &'static [CompileMode] {
+        static ALL: [CompileMode; 9] = [
             CompileMode::Test,
             CompileMode::Build,
             CompileMode::Check { test: true },
@@ -173,7 +173,8 @@ impl CompileMode {
             CompileMode::Doc { deps: false },
             CompileMode::Doctest,
             CompileMode::RunCustomBuild,
-        ]
+        ];
+        &ALL
     }
 }
 
@@ -381,7 +382,7 @@ pub fn compile_ws<'a>(
     }
 
     let profiles = ws.profiles();
-    let mut extra_compiler_args = HashMap::new();
+    let mut extra_compiler_args = None;
 
     let units = generate_targets(
         ws,
@@ -403,7 +404,7 @@ pub fn compile_ws<'a>(
                 extra_args_name
             );
         }
-        extra_compiler_args.insert(units[0], args);
+        extra_compiler_args = Some((units[0], args));
     }
 
     let mut ret = {

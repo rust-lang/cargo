@@ -215,14 +215,14 @@ debug = true
 [profile.dev.overrides.image]
 opt-level = 3
 
-# All dependencies (but not this crate itself) will be compiled
-# with -Copt-level=2 . This includes build dependencies.
+# All dependencies (but not this crate itself or any workspace member)
+# will be compiled with -Copt-level=2 . This includes build dependencies.
 [profile.dev.overrides."*"]
 opt-level = 2
 
 # Build scripts and their dependencies will be compiled with -Copt-level=3
 # By default, build scripts use the same rules as the rest of the profile
-[profile.dev.build_override]
+[profile.dev.build-override]
 opt-level = 3
 ```
 

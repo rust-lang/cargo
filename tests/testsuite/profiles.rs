@@ -353,7 +353,7 @@ fn profile_override_gated() {
             version = "0.0.1"
             authors = []
 
-            [profile.dev.build_override]
+            [profile.dev.build-override]
             opt-level = 3
         "#,
         )

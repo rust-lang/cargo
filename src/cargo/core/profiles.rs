@@ -72,8 +72,6 @@ impl Profiles {
                 // `build_unit_profiles` normally ensures that it selects the
                 // ancestor's profile.  However `cargo clean -p` can hit this
                 // path.
-                // TODO: I think `cargo clean -p xxx` is not cleaning out
-                // the "OUT_DIR" directory.  This is not a new bug.
                 if release {
                     &self.release
                 } else {
@@ -109,7 +107,7 @@ impl Profiles {
 /// The precedence of profiles are (first one wins):
 /// - [profile.dev.overrides.name] - A named package.
 /// - [profile.dev.overrides."*"] - This cannot apply to workspace members.
-/// - [profile.dev.build_override] - This can only apply to `build.rs` scripts
+/// - [profile.dev.build-override] - This can only apply to `build.rs` scripts
 ///   and their dependencies.
 /// - [profile.dev]
 /// - Default (hard-coded) values.
@@ -321,7 +319,7 @@ pub enum ProfileFor {
     /// A general-purpose target.
     Any,
     /// A target for `build.rs` or any of its dependencies.  This enables
-    /// `build_override` profiles for these targets.
+    /// `build-override` profiles for these targets.
     CustomBuild,
     /// A target that is a dependency of a test or benchmark.  Currently this
     /// enforces that the `panic` setting is not set.
@@ -329,11 +327,12 @@ pub enum ProfileFor {
 }
 
 impl ProfileFor {
-    pub fn all_values() -> Vec<ProfileFor> {
-        vec![
+    pub fn all_values() -> &'static [ProfileFor] {
+        static ALL: [ProfileFor; 3] = [
             ProfileFor::Any,
             ProfileFor::CustomBuild,
             ProfileFor::TestDependency,
-        ]
+        ];
+        &ALL
     }
 }

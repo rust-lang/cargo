@@ -102,7 +102,7 @@ pub fn prepare_target<'a, 'cfg>(
         }
     }
 
-    let allow_failure = cx.extra_compiler_args.get(unit).is_some();
+    let allow_failure = cx.extra_compiler_args.is_some();
     let target_root = cx.files().target_root().to_path_buf();
     let write_fingerprint = Work::new(move |_| {
         match fingerprint.update_local(&target_root) {
