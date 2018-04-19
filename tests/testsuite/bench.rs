@@ -267,7 +267,7 @@ fn bench_multiple_targets() {
             .with_status(0)
             .with_stdout_contains("test run1 ... bench: [..]")
             .with_stdout_contains("test run2 ... bench: [..]")
-            .with_stdout_does_not_contain("run3"),
+            .with_stdout_does_not_contain("[..]run3[..]"),
     );
 }
 
