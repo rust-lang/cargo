@@ -292,7 +292,6 @@ pub struct CliUnstable {
     pub no_index_update: bool,
     pub avoid_dev_deps: bool,
     pub minimal_versions: bool,
-    pub package_features: bool,
 }
 
 impl CliUnstable {
@@ -326,7 +325,6 @@ impl CliUnstable {
             "no-index-update" => self.no_index_update = true,
             "avoid-dev-deps" => self.avoid_dev_deps = true,
             "minimal-versions" => self.minimal_versions = true,
-            "package-features" => self.package_features = true,
             _ => bail!("unknown `-Z` flag specified: {}", k),
         }
 

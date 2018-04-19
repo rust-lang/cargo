@@ -155,7 +155,7 @@ impl<'a> RegistryQueryer<'a> {
     }
 }
 
-#[derive(Clone, Copy)]
+#[derive(Clone, Copy, Eq, PartialEq)]
 pub enum Method<'a> {
     Everything, // equivalent to Required { dev_deps: true, all_features: true, .. }
     Required {
