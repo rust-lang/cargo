@@ -743,10 +743,10 @@ fn check_filters() {
             .with_status(0)
             .with_stderr_contains("[..]unused_normal_lib[..]")
             .with_stderr_contains("[..]unused_normal_bin[..]")
-            .with_stderr_does_not_contain("unused_normal_t1")
-            .with_stderr_does_not_contain("unused_normal_ex1")
-            .with_stderr_does_not_contain("unused_normal_b1")
-            .with_stderr_does_not_contain("unused_unit_"),
+            .with_stderr_does_not_contain("[..]unused_normal_t1[..]")
+            .with_stderr_does_not_contain("[..]unused_normal_ex1[..]")
+            .with_stderr_does_not_contain("[..]unused_normal_b1[..]")
+            .with_stderr_does_not_contain("[..]unused_unit_[..]"),
     );
     p.root().join("target").rm_rf();
     assert_that(
@@ -764,8 +764,8 @@ fn check_filters() {
             .with_stderr_contains("[..]unused_unit_t1[..]")
             .with_stderr_contains("[..]unused_normal_ex1[..]")
             .with_stderr_contains("[..]unused_unit_ex1[..]")
-            .with_stderr_does_not_contain("unused_normal_b1")
-            .with_stderr_does_not_contain("unused_unit_b1"),
+            .with_stderr_does_not_contain("[..]unused_normal_b1[..]")
+            .with_stderr_does_not_contain("[..]unused_unit_b1[..]"),
     );
     p.root().join("target").rm_rf();
     assert_that(
@@ -775,12 +775,12 @@ fn check_filters() {
             .with_stderr_contains("[..]unused_normal_lib[..]")
             .with_stderr_contains("[..]unused_normal_bin[..]")
             .with_stderr_contains("[..]unused_unit_t1[..]")
-            .with_stderr_does_not_contain("unused_unit_lib")
-            .with_stderr_does_not_contain("unused_unit_bin")
-            .with_stderr_does_not_contain("unused_normal_ex1")
-            .with_stderr_does_not_contain("unused_normal_b1")
-            .with_stderr_does_not_contain("unused_unit_ex1")
-            .with_stderr_does_not_contain("unused_unit_b1"),
+            .with_stderr_does_not_contain("[..]unused_unit_lib[..]")
+            .with_stderr_does_not_contain("[..]unused_unit_bin[..]")
+            .with_stderr_does_not_contain("[..]unused_normal_ex1[..]")
+            .with_stderr_does_not_contain("[..]unused_normal_b1[..]")
+            .with_stderr_does_not_contain("[..]unused_unit_ex1[..]")
+            .with_stderr_does_not_contain("[..]unused_unit_b1[..]"),
     );
     p.root().join("target").rm_rf();
     assert_that(

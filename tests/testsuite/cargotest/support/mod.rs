@@ -687,9 +687,17 @@ impl Execs {
                 }
             }
             MatchKind::NotPresent => {
-                if !actual.contains(out) {
-                    Ok(())
-                } else {
+                let mut a = actual.lines();
+                let e = out.lines();
+
+                let mut diffs = self.diff_lines(a.clone(), e.clone(), true);
+                while let Some(..) = a.next() {
+                    let a = self.diff_lines(a.clone(), e.clone(), true);
+                    if a.len() < diffs.len() {
+                        diffs = a;
+                    }
+                }
+                if diffs.is_empty() {
                     Err(format!(
                         "expected not to find:\n\
                          {}\n\n\
@@ -697,6 +705,8 @@ impl Execs {
                          {}",
                         out, actual
                     ))
+                } else {
+                    Ok(())
                 }
             }
         }
