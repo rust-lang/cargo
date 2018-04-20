@@ -78,7 +78,10 @@ in `test/` provide templates on how to test Cargo's behavior in a
 sandbox-environment. The internal crate `cargotest` provides a vast amount
 of helpers to minimize boilerplate.
 * Make sure `cargo test` passes. If you do not have the cross-compilers
-installed locally, ignore the cross-compile test failures or disable them by
+installed locally, install them using the instructions returned by
+`cargo test cross_compile::cross_tests` (twice, with `--toolchain nightly`
+added to get the nightly cross target too); alternatively just
+ignore the cross-compile test failures or disable them by
 using `CFG_DISABLE_CROSS_TESTS=1 cargo test`. Note that some tests are enabled
 only on `nightly` toolchain. If you can, test both toolchains.
 * All code changes are expected to comply with the formatting suggested by `rustfmt`.
