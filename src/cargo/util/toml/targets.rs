@@ -595,18 +595,20 @@ fn toml_targets_and_inferred(
                             }
                             warnings.push(format!(
                                 "\
-An explicit [[{section}]] section is specified in Cargo.toml which currently disables Cargo from \
-automatically inferring other {target_kind_human} targets. This inference behavior will change in \
-the Rust 2018 edition and the following files will be included as a {target_kind_human} target:
+An explicit [[{section}]] section is specified in Cargo.toml which currently
+disables Cargo from automatically inferring other {target_kind_human} targets.
+This inference behavior will change in the Rust 2018 edition and the following
+files will be included as a {target_kind_human} target:
 
 {rem_targets_str}
-This is likely to break cargo build or cargo test as these files may not be ready to be compiled \
-as a {target_kind_human} target today. You can future-proof yourself and disable this warning by \
-adding {autodiscover_flag_name} = false to your [package] section. You may also move the files to \
-a location where Cargo would not automatically infer them to be a target, such as in subfolders.
+This is likely to break cargo build or cargo test as these files may not be
+ready to be compiled as a {target_kind_human} target today. You can future-proof yourself
+and disable this warning by adding {autodiscover_flag_name} = false to your [package]
+section. You may also move the files to a location where Cargo would not
+automatically infer them to be a target, such as in subfolders.
 
-For more information on this warning you can consult https://github.com/rust-lang/cargo/issues/5330\
-                            ",
+For more information on this warning you can consult
+https://github.com/rust-lang/cargo/issues/5330",
                                 section = target_kind,
                                 target_kind_human = target_kind_human,
                                 rem_targets_str = rem_targets_str,

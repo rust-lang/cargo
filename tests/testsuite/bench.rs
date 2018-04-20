@@ -753,18 +753,21 @@ fn bench_autodiscover_2015() {
             .masquerade_as_nightly_cargo(),
         execs().with_stderr(&format!(
             "warning: \
-An explicit [[bench]] section is specified in Cargo.toml which currently disables Cargo from \
-automatically inferring other benchmark targets. This inference behavior will change in \
-the Rust 2018 edition and the following files will be included as a benchmark target:
+An explicit [[bench]] section is specified in Cargo.toml which currently
+disables Cargo from automatically inferring other benchmark targets.
+This inference behavior will change in the Rust 2018 edition and the following
+files will be included as a benchmark target:
 
 * [..]bench_basic.rs
 
-This is likely to break cargo build or cargo test as these files may not be ready to be compiled \
-as a benchmark target today. You can future-proof yourself and disable this warning by \
-adding autobenches = false to your [package] section. You may also move the files to \
-a location where Cargo would not automatically infer them to be a target, such as in subfolders.
+This is likely to break cargo build or cargo test as these files may not be
+ready to be compiled as a benchmark target today. You can future-proof yourself
+and disable this warning by adding autobenches = false to your [package]
+section. You may also move the files to a location where Cargo would not
+automatically infer them to be a target, such as in subfolders.
 
-For more information on this warning you can consult https://github.com/rust-lang/cargo/issues/5330
+For more information on this warning you can consult
+https://github.com/rust-lang/cargo/issues/5330
 [COMPILING] foo v0.0.1 ({})
 [FINISHED] release [optimized] target(s) in [..]
 [RUNNING] target[/]release[/]deps[/]foo-[..][EXE]
