@@ -49,13 +49,23 @@ pub fn clean(ws: &Workspace, opts: &CleanOptions) -> CargoResult<()> {
             for kind in [Kind::Host, Kind::Target].iter() {
                 for mode in CompileMode::all_modes() {
                     for profile_for in ProfileFor::all_values() {
-                        let profile = profiles.get_profile(
-                            &pkg.name(),
-                            ws.is_member(pkg),
-                            *profile_for,
-                            *mode,
-                            opts.release,
-                        );
+                        let profile = if mode.is_run_custom_build() {
+                            profiles.get_profile_run_custom_build(&profiles.get_profile(
+                                &pkg.name(),
+                                ws.is_member(pkg),
+                                *profile_for,
+                                CompileMode::Build,
+                                opts.release,
+                            ))
+                        } else {
+                            profiles.get_profile(
+                                &pkg.name(),
+                                ws.is_member(pkg),
+                                *profile_for,
+                                *mode,
+                                opts.release,
+                            )
+                        };
                         units.push(Unit {
                             pkg,
                             target,

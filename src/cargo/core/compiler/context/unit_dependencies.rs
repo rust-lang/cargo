@@ -132,7 +132,7 @@ fn compute_deps<'a, 'b, 'cfg>(
     if unit.target.is_custom_build() {
         return Ok(ret);
     }
-    ret.extend(dep_build_script(unit));
+    ret.extend(dep_build_script(cx, unit));
 
     // If this target is a binary, test, example, etc, then it depends on
     // the library of the same package. The call to `resolve.deps` above
@@ -180,7 +180,7 @@ fn compute_deps_custom_build<'a, 'cfg>(
             if !unit.target.linkable() || unit.pkg.manifest().links().is_none() {
                 return None;
             }
-            dep_build_script(unit)
+            dep_build_script(cx, unit)
         })
         .chain(Some((
             new_unit(
@@ -250,7 +250,7 @@ fn compute_deps_doc<'a, 'cfg>(
     }
 
     // Be sure to build/run the build script for documented libraries as
-    ret.extend(dep_build_script(unit));
+    ret.extend(dep_build_script(cx, unit));
 
     // If we document a binary, we need the library available
     if unit.target.is_bin() {
@@ -278,7 +278,7 @@ fn maybe_lib<'a>(
 /// script itself doesn't have any dependencies, so even in that case a unit
 /// of work is still returned. `None` is only returned if the package has no
 /// build script.
-fn dep_build_script<'a>(unit: &Unit<'a>) -> Option<(Unit<'a>, ProfileFor)> {
+fn dep_build_script<'a>(cx: &Context, unit: &Unit<'a>) -> Option<(Unit<'a>, ProfileFor)> {
     unit.pkg
         .targets()
         .iter()
@@ -286,13 +286,11 @@ fn dep_build_script<'a>(unit: &Unit<'a>) -> Option<(Unit<'a>, ProfileFor)> {
         .map(|t| {
             // The profile stored in the Unit is the profile for the thing
             // the custom build script is running for.
-            // TODO: Fix this for different profiles that don't affect the
-            // build.rs environment variables.
             (
                 Unit {
                     pkg: unit.pkg,
                     target: t,
-                    profile: unit.profile,
+                    profile: cx.profiles.get_profile_run_custom_build(&unit.profile),
                     kind: unit.kind,
                     mode: CompileMode::RunCustomBuild,
                 },
