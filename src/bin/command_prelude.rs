@@ -49,21 +49,21 @@ pub trait AppExt: Sized {
         lib: &'static str,
         bin: &'static str,
         bins: &'static str,
-        examle: &'static str,
-        examles: &'static str,
+        example: &'static str,
+        examples: &'static str,
         test: &'static str,
         tests: &'static str,
         bench: &'static str,
-        benchs: &'static str,
+        benches: &'static str,
         all: &'static str,
     ) -> Self {
         self.arg_targets_lib_bin(lib, bin, bins)
-            ._arg(multi_opt("example", "NAME", examle))
-            ._arg(opt("examples", examles))
+            ._arg(multi_opt("example", "NAME", example))
+            ._arg(opt("examples", examples))
             ._arg(multi_opt("test", "NAME", test))
             ._arg(opt("tests", tests))
             ._arg(multi_opt("bench", "NAME", bench))
-            ._arg(opt("benches", benchs))
+            ._arg(opt("benches", benches))
             ._arg(opt("all-targets", all))
     }
 
