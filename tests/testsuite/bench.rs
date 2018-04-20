@@ -762,7 +762,7 @@ files will be included as a benchmark target:
 
 This is likely to break cargo build or cargo test as these files may not be
 ready to be compiled as a benchmark target today. You can future-proof yourself
-and disable this warning by adding autobenches = false to your [package]
+and disable this warning by adding `autobenches = false` to your [package]
 section. You may also move the files to a location where Cargo would not
 automatically infer them to be a target, such as in subfolders.
 
