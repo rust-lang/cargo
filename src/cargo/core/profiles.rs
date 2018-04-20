@@ -90,6 +90,18 @@ impl Profiles {
         profile
     }
 
+    /// The profile for *running* a `build.rs` script is only used for setting
+    /// a few environment variables.  To ensure proper de-duplication of the
+    /// running `Unit`, this uses a stripped-down profile (so that unrelated
+    /// profile flags don't cause `build.rs` to needlessly run multiple
+    /// times).
+    pub fn get_profile_run_custom_build(&self, for_unit_profile: &Profile) -> Profile {
+        let mut result = Profile::default();
+        result.debuginfo = for_unit_profile.debuginfo;
+        result.opt_level = for_unit_profile.opt_level;
+        result
+    }
+
     /// This returns a generic base profile. This is currently used for the
     /// `[Finished]` line.  It is not entirely accurate, since it doesn't
     /// select for the package that was actually built.

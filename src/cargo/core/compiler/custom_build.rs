@@ -118,6 +118,9 @@ fn build_work<'a, 'cfg>(cx: &mut Context<'a, 'cfg>, unit: &Unit<'a>) -> CargoRes
     // environment variables. Note that the profile-related environment
     // variables are not set with this the build script's profile but rather the
     // package's library profile.
+    // NOTE: If you add any profile flags, be sure to update
+    // `Profiles::get_profile_run_custom_build` so that those flags get
+    // carried over.
     let to_exec = to_exec.into_os_string();
     let mut cmd = cx.compilation.host_process(to_exec, unit.pkg)?;
     cmd.env("OUT_DIR", &build_output)
