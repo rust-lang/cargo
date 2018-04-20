@@ -450,7 +450,7 @@ An explicit [[example]] section is specified in Cargo.toml which currently disab
 automatically inferring other example targets. This inference behavior will change in \
 the Rust 2018 edition and the following files will be included as a example target:
 
-* \"[..]a.rs\"
+* [..]a.rs
 
 This is likely to break cargo build or cargo test as these files may not be ready to be compiled \
 as a example target today. You can future-proof yourself and disable this warning by \

@@ -590,7 +590,7 @@ fn toml_targets_and_inferred(
                             let mut rem_targets_str = String::new();
                             for t in rem_targets.iter() {
                                 if let Some(p) = t.path.clone() {
-                                    rem_targets_str.push_str(&format!("* {:?}\n", p.0))
+                                    rem_targets_str.push_str(&format!("* {}\n", p.0.display()))
                                 }
                             }
                             warnings.push(format!(

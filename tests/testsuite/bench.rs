@@ -757,7 +757,7 @@ An explicit [[bench]] section is specified in Cargo.toml which currently disable
 automatically inferring other benchmark targets. This inference behavior will change in \
 the Rust 2018 edition and the following files will be included as a benchmark target:
 
-* \"[..]bench_basic.rs\"
+* [..]bench_basic.rs
 
 This is likely to break cargo build or cargo test as these files may not be ready to be compiled \
 as a benchmark target today. You can future-proof yourself and disable this warning by \
