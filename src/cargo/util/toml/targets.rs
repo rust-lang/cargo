@@ -603,7 +603,7 @@ files will be included as a {target_kind_human} target:
 {rem_targets_str}
 This is likely to break cargo build or cargo test as these files may not be
 ready to be compiled as a {target_kind_human} target today. You can future-proof yourself
-and disable this warning by adding {autodiscover_flag_name} = false to your [package]
+and disable this warning by adding `{autodiscover_flag_name} = false` to your [package]
 section. You may also move the files to a location where Cargo would not
 automatically infer them to be a target, such as in subfolders.
 
