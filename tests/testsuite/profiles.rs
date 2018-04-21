@@ -421,6 +421,9 @@ fn profile_override_basic() {
             [dependencies]
             bar = {path = "bar"}
 
+            [profile.dev]
+            opt-level = 1
+
             [profile.dev.overrides.bar]
             opt-level = 3
         "#,
@@ -433,15 +436,12 @@ fn profile_override_basic() {
     assert_that(
         p.cargo("build -v").masquerade_as_nightly_cargo(),
         execs().with_status(0).with_stderr(
-"[COMPILING] bar [..]
+            "[COMPILING] bar [..]
 [RUNNING] `rustc --crate-name bar [..] -C opt-level=3 [..]`
 [COMPILING] foo [..]
-[RUNNING] `rustc --crate-name foo [..]`
-[FINISHED] dev [unoptimized + debuginfo] target(s) in [..]",
-        )
-        // TODO: does_not_contain does not support patterns!
-        // .with_stderr_does_not_contain("\
-        //     `rustc --crate-name bar[..]-C opt-level=3"),
+[RUNNING] `rustc --crate-name foo [..] -C opt-level=1 [..]`
+[FINISHED] dev [optimized + debuginfo] target(s) in [..]",
+        ),
     );
 }
 
