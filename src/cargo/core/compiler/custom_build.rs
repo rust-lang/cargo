@@ -144,8 +144,11 @@ fn build_work<'a, 'cfg>(cx: &mut Context<'a, 'cfg>, unit: &Unit<'a>) -> CargoRes
         .env("HOST", &cx.build_config.host_triple())
         .env("RUSTC", &cx.build_config.rustc.path)
         .env("RUSTDOC", &*cx.config.rustdoc()?)
-        .env("LINKER", &cx.build_config.target.linker.as_ref().unwrap_or(&PathBuf::new()))
         .inherit_jobserver(&cx.jobserver);
+
+    if cx.build_config.target.linker.is_some() {
+        cmd.env("RUSTC_LINKER", &cx.build_config.target.linker.as_ref().unwrap());
+    }
 
     if let Some(links) = unit.pkg.manifest().links() {
         cmd.env("CARGO_MANIFEST_LINKS", links);
