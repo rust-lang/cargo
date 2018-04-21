@@ -575,64 +575,68 @@ fn generate_targets<'a>(
     let mut units = Vec::new();
 
     // Helper for creating a Unit struct.
-    let new_unit =
-        |pkg: &'a Package, target: &'a Target, target_mode: CompileMode| {
-            let profile_for = if mode.is_any_test() {
-                // NOTE: The ProfileFor here is subtle.  If you have a profile
-                // with `panic` set, the `panic` flag is cleared for
-                // tests/benchmarks and their dependencies.  If we left this
-                // as an "Any" profile, then the lib would get compiled three
-                // times (once with panic, once without, and once with
-                // --test).
-                //
-                // This would cause a problem for Doc tests, which would fail
-                // because `rustdoc` would attempt to link with both libraries
-                // at the same time. Also, it's probably not important (or
-                // even desirable?) for rustdoc to link with a lib with
-                // `panic` set.
-                //
-                // As a consequence, Examples and Binaries get compiled
-                // without `panic` set.  This probably isn't a bad deal.
-                //
-                // Forcing the lib to be compiled three times during `cargo
-                // test` is probably also not desirable.
-                ProfileFor::TestDependency
-            } else {
-                ProfileFor::Any
-            };
-            let target_mode = match target_mode {
-                CompileMode::Test => {
-                    if target.is_example() {
-                        // Examples are included as regular binaries to verify
-                        // that they compile.
-                        CompileMode::Build
-                    } else {
-                        CompileMode::Test
-                    }
-                }
-                CompileMode::Build => match *target.kind() {
-                    TargetKind::Test => CompileMode::Test,
-                    TargetKind::Bench => CompileMode::Bench,
-                    _ => CompileMode::Build,
-                },
-                _ => target_mode,
-            };
-            // Plugins or proc-macro should be built for the host.
-            let kind = if target.for_host() {
-                Kind::Host
-            } else {
-                default_arch_kind
-            };
-            let profile =
-                profiles.get_profile(&pkg.name(), ws.is_member(pkg), profile_for, target_mode, release);
-            Unit {
-                pkg,
-                target,
-                profile,
-                kind,
-                mode: target_mode,
-            }
+    let new_unit = |pkg: &'a Package, target: &'a Target, target_mode: CompileMode| {
+        let profile_for = if mode.is_any_test() {
+            // NOTE: The ProfileFor here is subtle.  If you have a profile
+            // with `panic` set, the `panic` flag is cleared for
+            // tests/benchmarks and their dependencies.  If we left this
+            // as an "Any" profile, then the lib would get compiled three
+            // times (once with panic, once without, and once with
+            // --test).
+            //
+            // This would cause a problem for Doc tests, which would fail
+            // because `rustdoc` would attempt to link with both libraries
+            // at the same time. Also, it's probably not important (or
+            // even desirable?) for rustdoc to link with a lib with
+            // `panic` set.
+            //
+            // As a consequence, Examples and Binaries get compiled
+            // without `panic` set.  This probably isn't a bad deal.
+            //
+            // Forcing the lib to be compiled three times during `cargo
+            // test` is probably also not desirable.
+            ProfileFor::TestDependency
+        } else {
+            ProfileFor::Any
         };
+        let target_mode = match target_mode {
+            CompileMode::Test => {
+                if target.is_example() {
+                    // Examples are included as regular binaries to verify
+                    // that they compile.
+                    CompileMode::Build
+                } else {
+                    CompileMode::Test
+                }
+            }
+            CompileMode::Build => match *target.kind() {
+                TargetKind::Test => CompileMode::Test,
+                TargetKind::Bench => CompileMode::Bench,
+                _ => CompileMode::Build,
+            },
+            _ => target_mode,
+        };
+        // Plugins or proc-macro should be built for the host.
+        let kind = if target.for_host() {
+            Kind::Host
+        } else {
+            default_arch_kind
+        };
+        let profile = profiles.get_profile(
+            &pkg.name(),
+            ws.is_member(pkg),
+            profile_for,
+            target_mode,
+            release,
+        );
+        Unit {
+            pkg,
+            target,
+            profile,
+            kind,
+            mode: target_mode,
+        }
+    };
 
     for pkg in packages {
         let features = resolve_all_features(resolve, pkg.package_id());
@@ -650,21 +654,13 @@ fn generate_targets<'a>(
             } => {
                 let default_units = generate_default_targets(pkg.targets(), mode)
                     .iter()
-                    .map(|t| {
-                        (
-                            new_unit(pkg, t, mode),
-                            !required_features_filterable,
-                        )
-                    })
+                    .map(|t| (new_unit(pkg, t, mode), !required_features_filterable))
                     .collect::<Vec<_>>();
                 proposals.extend(default_units);
                 if mode == CompileMode::Test {
                     // Include the lib as it will be required for doctests.
                     if let Some(t) = pkg.targets().iter().find(|t| t.is_lib() && t.doctested()) {
-                        proposals.push((
-                            new_unit(pkg, t, CompileMode::Build),
-                            false,
-                        ));
+                        proposals.push((new_unit(pkg, t, CompileMode::Build), false));
                     }
                 }
             }
@@ -713,23 +709,17 @@ fn generate_targets<'a>(
                         .chain(
                             list_rule_targets(pkg, examples, "example", Target::is_example)?
                                 .into_iter()
-                                .map(|(t, required)| {
-                                    (new_unit(pkg, t, mode), required)
-                                }),
+                                .map(|(t, required)| (new_unit(pkg, t, mode), required)),
                         )
                         .chain(
                             list_rule_targets(pkg, tests, "test", test_filter)?
                                 .into_iter()
-                                .map(|(t, required)| {
-                                    (new_unit(pkg, t, test_mode), required)
-                                }),
+                                .map(|(t, required)| (new_unit(pkg, t, test_mode), required)),
                         )
                         .chain(
                             list_rule_targets(pkg, benches, "bench", bench_filter)?
                                 .into_iter()
-                                .map(|(t, required)| {
-                                    (new_unit(pkg, t, bench_mode), required)
-                                }),
+                                .map(|(t, required)| (new_unit(pkg, t, bench_mode), required)),
                         )
                         .collect::<Vec<_>>(),
                 );
@@ -800,7 +790,10 @@ fn resolve_all_features(
 fn generate_default_targets(targets: &[Target], mode: CompileMode) -> Vec<&Target> {
     match mode {
         CompileMode::Bench => targets.iter().filter(|t| t.benched()).collect(),
-        CompileMode::Test => targets.iter().filter(|t| t.tested() || t.is_example()).collect(),
+        CompileMode::Test => targets
+            .iter()
+            .filter(|t| t.tested() || t.is_example())
+            .collect(),
         CompileMode::Build | CompileMode::Check { .. } => targets
             .iter()
             .filter(|t| t.is_bin() || t.is_lib())

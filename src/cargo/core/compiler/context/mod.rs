@@ -7,27 +7,27 @@ use std::sync::Arc;
 
 use jobserver::Client;
 
-use core::{Package, PackageId, PackageSet, Resolve, Target};
-use core::{Dependency, Workspace};
 use core::profiles::{Profile, Profiles};
+use core::{Dependency, Workspace};
+use core::{Package, PackageId, PackageSet, Resolve, Target};
 use ops::CompileMode;
-use util::{internal, profile, Cfg, CfgExpr, Config};
 use util::errors::{CargoResult, CargoResultExt};
+use util::{internal, profile, Cfg, CfgExpr, Config};
 
-use super::TargetConfig;
 use super::custom_build::{self, BuildDeps, BuildScripts, BuildState};
 use super::fingerprint::Fingerprint;
 use super::job_queue::JobQueue;
 use super::layout::Layout;
 use super::links::Links;
+use super::TargetConfig;
 use super::{BuildConfig, Compilation, Executor, Kind};
 
 mod unit_dependencies;
 use self::unit_dependencies::build_unit_dependencies;
 
 mod compilation_files;
-use self::compilation_files::{CompilationFiles, OutputFile};
 pub use self::compilation_files::Metadata;
+use self::compilation_files::{CompilationFiles, OutputFile};
 
 mod target_info;
 pub use self::target_info::{FileFlavor, TargetInfo};

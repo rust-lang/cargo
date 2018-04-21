@@ -6,22 +6,22 @@ use std::rc::Rc;
 use std::str;
 
 use semver::{self, VersionReq};
-use serde::ser;
 use serde::de::{self, Deserialize};
+use serde::ser;
 use serde_ignored;
 use toml;
 use url::Url;
 
-use core::{GitReference, PackageIdSpec, SourceId, WorkspaceConfig, WorkspaceRootConfig};
-use core::{Dependency, Manifest, PackageId, Summary, Target};
-use core::{Edition, EitherManifest, Feature, Features, VirtualManifest};
 use core::dependency::{Kind, Platform};
 use core::manifest::{LibKind, ManifestMetadata};
 use core::profiles::Profiles;
+use core::{Dependency, Manifest, PackageId, Summary, Target};
+use core::{Edition, EitherManifest, Feature, Features, VirtualManifest};
+use core::{GitReference, PackageIdSpec, SourceId, WorkspaceConfig, WorkspaceRootConfig};
 use sources::CRATES_IO;
+use util::errors::{CargoError, CargoResult, CargoResultExt};
 use util::paths;
 use util::{self, Config, ToUrl};
-use util::errors::{CargoError, CargoResult, CargoResultExt};
 
 mod targets;
 use self::targets::targets;

@@ -7,8 +7,8 @@ use std::sync::Arc;
 
 use lazycell::LazyCell;
 
-use core::{TargetKind, Workspace};
 use super::{Context, FileFlavor, Kind, Layout, Unit};
+use core::{TargetKind, Workspace};
 use util::{self, CargoResult};
 
 #[derive(Clone, Hash, Eq, PartialEq, Ord, PartialOrd)]

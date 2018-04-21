@@ -1,12 +1,12 @@
-use std::{cmp, fmt, hash};
 use std::collections::HashSet;
+use std::{cmp, fmt, hash};
 
-use core::Shell;
 use core::interning::InternedString;
+use core::Shell;
 use ops::CompileMode;
-use util::CargoResult;
 use util::lev_distance::lev_distance;
 use util::toml::{StringOrBool, TomlProfile, U32OrBool};
+use util::CargoResult;
 
 /// Collection of all user profiles.
 #[derive(Clone, Debug)]

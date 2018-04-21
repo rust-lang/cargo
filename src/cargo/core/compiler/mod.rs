@@ -9,14 +9,14 @@ use std::sync::Arc;
 use same_file::is_same_file;
 use serde_json;
 
-use core::{Feature, PackageId, Target};
 use core::profiles::{Lto, Profile};
 use core::shell::ColorChoice;
+use core::{Feature, PackageId, Target};
 use ops::CompileMode;
+use util::errors::{CargoResult, CargoResultExt, Internal};
+use util::paths;
 use util::{self, machine_message, Config, Freshness, ProcessBuilder, Rustc};
 use util::{internal, join_paths, profile};
-use util::paths;
-use util::errors::{CargoResult, CargoResultExt, Internal};
 
 use self::job::{Job, Work};
 use self::job_queue::JobQueue;
@@ -631,10 +631,10 @@ fn hardlink_or_copy(src: &Path, dst: &Path) -> CargoResult<()> {
     }
 
     let link_result = if src.is_dir() {
-        #[cfg(unix)]
-        use std::os::unix::fs::symlink;
         #[cfg(target_os = "redox")]
         use std::os::redox::fs::symlink;
+        #[cfg(unix)]
+        use std::os::unix::fs::symlink;
         #[cfg(windows)]
         use std::os::windows::fs::symlink_dir as symlink;
 

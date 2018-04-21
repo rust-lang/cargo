@@ -1,11 +1,11 @@
 use std::collections::{BTreeSet, HashSet};
-use std::io::{BufWriter, Write};
 use std::fs::File;
+use std::io::{BufWriter, Write};
 use std::path::{Path, PathBuf};
 
 use super::{fingerprint, Context, Unit};
-use util::{internal, CargoResult};
 use util::paths;
+use util::{internal, CargoResult};
 
 fn render_filename<P: AsRef<Path>>(path: P, basedir: Option<&str>) -> CargoResult<String> {
     let path = path.as_ref();
