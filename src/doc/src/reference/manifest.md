@@ -727,6 +727,10 @@ proc-macro = false
 harness = true
 ```
 
+The `[package]` also includes the optional `autobins`, `autoexamples`,
+`autotests`, and `autobenches` keys to explicitly opt-in or opt-out of
+auto-discovering specific target kinds.
+
 #### The `required-features` field (optional)
 
 The `required-features` field specifies which features the target needs in order

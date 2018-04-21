@@ -2264,7 +2264,6 @@ fn non_existing_example() {
         "#,
         )
         .file("src/lib.rs", "")
-        .file("examples/ehlo.rs", "")
         .build();
 
     assert_that(
