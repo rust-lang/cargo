@@ -551,3 +551,55 @@ Caused by:
         ),
     );
 }
+
+#[test]
+fn profile_override_bad_settings() {
+    let bad_values = [
+        (
+            "panic = \"abort\"",
+            "`panic` may not be specified in a profile override.",
+        ),
+        (
+            "lto = true",
+            "`lto` may not be specified in a profile override.",
+        ),
+        (
+            "rpath = true",
+            "`rpath` may not be specified in a profile override.",
+        ),
+        ("overrides = {}", "Profile overrides cannot be nested."),
+    ];
+    for &(ref snippet, ref expected) in bad_values.iter() {
+        let p = project("foo")
+            .file(
+                "Cargo.toml",
+                &format!(
+                    r#"
+                cargo-features = ["profile-overrides"]
+
+                [package]
+                name = "foo"
+                version = "0.0.1"
+
+                [dependencies]
+                bar = {{path = "bar"}}
+
+                [profile.dev.overrides.bar]
+                {}
+            "#,
+                    snippet
+                ),
+            )
+            .file("src/lib.rs", "")
+            .file("bar/Cargo.toml", &basic_lib_manifest("bar"))
+            .file("bar/src/lib.rs", "")
+            .build();
+
+        assert_that(
+            p.cargo("build").masquerade_as_nightly_cargo(),
+            execs()
+                .with_status(101)
+                .with_stderr_contains(format!("Caused by:\n  {}", expected)),
+        );
+    }
+}
