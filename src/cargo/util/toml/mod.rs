@@ -407,8 +407,8 @@ impl TomlProfile {
             _ => {
                 if self.overrides.is_some() || self.build_override.is_some() {
                     bail!(
-                        "Profile overrides may only be specified for `dev`
-                           or `release` profile, not {}.",
+                        "Profile overrides may only be specified for \
+                         `dev` or `release` profile, not `{}`.",
                         name
                     );
                 }

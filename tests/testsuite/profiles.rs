@@ -474,13 +474,16 @@ fn profile_override_bad_name() {
 
     assert_that(
         p.cargo("build").masquerade_as_nightly_cargo(),
-        execs().with_status(0).with_stderr_contains("\
+        execs().with_status(0).with_stderr_contains(
+            "\
 [WARNING] package `bart` for profile override not found
 
 Did you mean `bar`?
 [WARNING] package `no-suggestion` for profile override not found
 [COMPILING] [..]
-"));
+",
+        ),
+    );
 }
 
 #[test]
@@ -505,8 +508,46 @@ fn profile_panic_test_bench() {
 
     assert_that(
         p.cargo("build"),
-        execs().with_status(0).with_stderr_contains("\
+        execs().with_status(0).with_stderr_contains(
+            "\
 [WARNING] `panic` setting is ignored for `test` profile
 [WARNING] `panic` setting is ignored for `bench` profile
-"));
+",
+        ),
+    );
+}
+
+#[test]
+fn profile_override_dev_release_only() {
+    let p = project("foo")
+        .file(
+            "Cargo.toml",
+            r#"
+            cargo-features = ["profile-overrides"]
+
+            [package]
+            name = "foo"
+            version = "0.0.1"
+
+            [dependencies]
+            bar = {path = "bar"}
+
+            [profile.test.overrides.bar]
+            opt-level = 3
+        "#,
+        )
+        .file("src/lib.rs", "")
+        .file("bar/Cargo.toml", &basic_lib_manifest("bar"))
+        .file("bar/src/lib.rs", "")
+        .build();
+
+    assert_that(
+        p.cargo("build").masquerade_as_nightly_cargo(),
+        execs().with_status(101).with_stderr_contains(
+            "\
+Caused by:
+  Profile overrides may only be specified for `dev` or `release` profile, not `test`.
+",
+        ),
+    );
 }
