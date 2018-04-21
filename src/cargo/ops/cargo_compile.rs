@@ -382,6 +382,12 @@ pub fn compile_ws<'a>(
     }
 
     let profiles = ws.profiles();
+    let package_names = packages
+        .package_ids()
+        .map(|pid| pid.name().as_str())
+        .collect::<HashSet<_>>();
+    profiles.validate_packages(&mut config.shell(), &package_names)?;
+
     let mut extra_compiler_args = None;
 
     let units = generate_targets(

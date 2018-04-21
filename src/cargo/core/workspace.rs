@@ -310,8 +310,6 @@ impl<'cfg> Workspace<'cfg> {
 
     /// Returns true if the package is a member of the workspace.
     pub fn is_member(&self, pkg: &Package) -> bool {
-        // TODO: Implement this in a better way.
-        //       Maybe make it part of Package?
         self.members().any(|p| p == pkg)
     }
 
