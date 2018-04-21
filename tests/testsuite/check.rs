@@ -747,14 +747,13 @@ fn check_filters() {
             .with_stderr_contains("[..] --crate-name foo src[/]lib.rs [..] --test [..]")
             .with_stderr_contains("[..] --crate-name foo src[/]lib.rs --crate-type lib [..]")
             .with_stderr_contains("[..] --crate-name foo src[/]main.rs [..] --test [..]")
-            // .with_stderr_contains("[..] --crate-name foo src[/]main.rs --crate-type bin [..]")
             .with_stderr_contains("[..]unused_unit_lib[..]")
             .with_stderr_contains("[..]unused_unit_bin[..]")
             .with_stderr_contains("[..]unused_normal_lib[..]")
             .with_stderr_contains("[..]unused_normal_bin[..]")
             .with_stderr_contains("[..]unused_unit_t1[..]")
-            .with_stderr_contains("[..]unused_normal_ex1[..]")
-            .with_stderr_contains("[..]unused_unit_ex1[..]")
+            .with_stderr_does_not_contain("[..]unused_normal_ex1[..]")
+            .with_stderr_does_not_contain("[..]unused_unit_ex1[..]")
             .with_stderr_does_not_contain("[..]unused_normal_b1[..]")
             .with_stderr_does_not_contain("[..]unused_unit_b1[..]"),
             // with_stderr_does_not_contain --crate-type lib
@@ -789,7 +788,7 @@ fn check_filters() {
             .with_stderr_contains("[..]unused_unit_t1[..]")
             .with_stderr_contains("[..]unused_unit_lib[..]")
             .with_stderr_contains("[..]unused_unit_bin[..]")
-            .with_stderr_contains("[..]unused_unit_ex1[..]"),
+            .with_stderr_does_not_contain("[..]unused_unit_ex1[..]"),
     );
 }
 
