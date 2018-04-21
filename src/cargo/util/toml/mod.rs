@@ -459,6 +459,10 @@ pub struct TomlProject {
     workspace: Option<String>,
     #[serde(rename = "im-a-teapot")]
     im_a_teapot: Option<bool>,
+    autobins: Option<bool>,
+    autoexamples: Option<bool>,
+    autotests: Option<bool>,
+    autobenches: Option<bool>,
 
     // package metadata
     description: Option<String>,
@@ -633,6 +637,19 @@ impl TomlManifest {
 
         let pkgid = project.to_package_id(source_id)?;
 
+        let edition = if let Some(ref edition) = project.rust {
+            features
+                .require(Feature::edition())
+                .chain_err(|| "editions are unstable")?;
+            if let Ok(edition) = edition.parse() {
+                edition
+            } else {
+                bail!("the `rust` key must be one of: `2015`, `2018`")
+            }
+        } else {
+            Edition::Edition2015
+        };
+
         // If we have no lib at all, use the inferred lib if available
         // If we have a lib with a path, we're done
         // If we have a lib with no path, use the inferred lib or_else package name
@@ -640,6 +657,7 @@ impl TomlManifest {
             me,
             package_name,
             package_root,
+            edition,
             &project.build,
             &mut warnings,
             &mut errors,
@@ -798,18 +816,6 @@ impl TomlManifest {
             None => false,
         };
 
-        let edition = if let Some(ref edition) = project.rust {
-            features
-                .require(Feature::edition())
-                .chain_err(|| "editiones are unstable")?;
-            if let Ok(edition) = edition.parse() {
-                edition
-            } else {
-                bail!("the `rust` key must be one of: `2015`, `2018`")
-            }
-        } else {
-            Edition::Edition2015
-        };
         let custom_metadata = project.metadata.clone();
         let mut manifest = Manifest::new(
             summary,

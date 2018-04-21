@@ -1,5 +1,6 @@
 use cargo::util::paths::dylib_path_envvar;
-use cargotest::support::{execs, project, path2url};
+use cargotest::{self, ChannelChanger};
+use cargotest::support::{execs, project, Project, path2url};
 use hamcrest::{assert_that, existing_file};
 
 #[test]
@@ -373,6 +374,154 @@ fn run_example() {
 
     assert_that(
         p.cargo("run").arg("--example").arg("a"),
+        execs()
+            .with_status(0)
+            .with_stderr(&format!(
+                "\
+[COMPILING] foo v0.0.1 ({dir})
+[FINISHED] dev [unoptimized + debuginfo] target(s) in [..]
+[RUNNING] `target[/]debug[/]examples[/]a[EXE]`",
+                dir = path2url(p.root())
+            ))
+            .with_stdout("example"),
+    );
+}
+
+fn autodiscover_examples_project(rust_edition: &str, autoexamples: Option<bool>) -> Project {
+    let autoexamples = match autoexamples {
+        None => "".to_string(),
+        Some(bool) => format!("autoexamples = {}", bool),
+    };
+    project("foo")
+        .file(
+            "Cargo.toml",
+            &format!(
+                r#"
+            cargo-features = ["edition"]
+
+            [project]
+            name = "foo"
+            version = "0.0.1"
+            authors = []
+            rust = "{rust_edition}"
+            {autoexamples}
+
+            [features]
+            magic = []
+
+            [[example]]
+            name = "do_magic"
+            required-features = ["magic"]
+        "#,
+                rust_edition = rust_edition,
+                autoexamples = autoexamples
+            ),
+        )
+        .file(
+            "examples/a.rs",
+            r#"
+            fn main() { println!("example"); }
+        "#,
+        )
+        .file(
+            "examples/do_magic.rs",
+            r#"
+            fn main() { println!("magic example"); }
+        "#,
+        )
+        .build()
+}
+
+#[test]
+fn run_example_autodiscover_2015() {
+    if !cargotest::is_nightly() {
+        return;
+    }
+
+    let p = autodiscover_examples_project("2015", None);
+    assert_that(
+        p.cargo("run")
+            .arg("--example")
+            .arg("a")
+            .masquerade_as_nightly_cargo(),
+        execs().with_status(101).with_stderr(
+            "warning: \
+An explicit [[example]] section is specified in Cargo.toml which currently
+disables Cargo from automatically inferring other example targets.
+This inference behavior will change in the Rust 2018 edition and the following
+files will be included as a example target:
+
+* [..]a.rs
+
+This is likely to break cargo build or cargo test as these files may not be
+ready to be compiled as a example target today. You can future-proof yourself
+and disable this warning by adding `autoexamples = false` to your [package]
+section. You may also move the files to a location where Cargo would not
+automatically infer them to be a target, such as in subfolders.
+
+For more information on this warning you can consult
+https://github.com/rust-lang/cargo/issues/5330
+error: no example target named `a`
+",
+        ),
+    );
+}
+
+#[test]
+fn run_example_autodiscover_2015_with_autoexamples_enabled() {
+    if !cargotest::is_nightly() {
+        return;
+    }
+
+    let p = autodiscover_examples_project("2015", Some(true));
+    assert_that(
+        p.cargo("run")
+            .arg("--example")
+            .arg("a")
+            .masquerade_as_nightly_cargo(),
+        execs()
+            .with_status(0)
+            .with_stderr(&format!(
+                "\
+[COMPILING] foo v0.0.1 ({dir})
+[FINISHED] dev [unoptimized + debuginfo] target(s) in [..]
+[RUNNING] `target[/]debug[/]examples[/]a[EXE]`",
+                dir = path2url(p.root())
+            ))
+            .with_stdout("example"),
+    );
+}
+
+#[test]
+fn run_example_autodiscover_2015_with_autoexamples_disabled() {
+    if !cargotest::is_nightly() {
+        return;
+    }
+
+    let p = autodiscover_examples_project("2015", Some(false));
+    assert_that(
+        p.cargo("run")
+            .arg("--example")
+            .arg("a")
+            .masquerade_as_nightly_cargo(),
+        execs()
+            .with_status(101)
+            .with_stderr("error: no example target named `a`\n"),
+    );
+}
+
+#[test]
+fn run_example_autodiscover_2018() {
+    if !cargotest::is_nightly() {
+        return;
+    }
+
+    let p = autodiscover_examples_project("2018", None);
+    assert_that(
+        p.cargo("run")
+            .arg("--example")
+            .arg("a")
+            .masquerade_as_nightly_cargo(),
         execs()
             .with_status(0)
             .with_stderr(&format!(
