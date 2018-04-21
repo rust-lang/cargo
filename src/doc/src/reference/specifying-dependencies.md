@@ -508,7 +508,7 @@ manifest:
 
 ```toml
 [build-dependencies]
-gcc = "0.3"
+cc = "1.0.3"
 ```
 
 The build script **does not** have access to the dependencies listed
