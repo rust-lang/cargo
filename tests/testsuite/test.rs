@@ -1644,12 +1644,10 @@ fn test_run_implicit_test_target() {
         .file("benches/mybench.rs", "#[test] fn test_in_bench() { }")
         .file(
             "examples/myexm.rs",
-            "#[test] fn test_in_exm() { }
-               fn main() { panic!(\"Don't execute me!\"); }",
+            "fn main() { compile_error!(\"Don't build me!\"); }",
         )
         .build();
 
-    // TODO FIXME: This needs to better verify that examples are not built.
     assert_that(
         prj.cargo("test").arg("--tests"),
         execs()
@@ -1691,8 +1689,7 @@ fn test_run_implicit_bench_target() {
         .file("benches/mybench.rs", "#[test] fn test_in_bench() { }")
         .file(
             "examples/myexm.rs",
-            "#[test] fn test_in_exm() { }
-               fn main() { panic!(\"Don't execute me!\"); }",
+            "fn main() { compile_error!(\"Don't build me!\"); }",
         )
         .build();
 
@@ -1737,12 +1734,11 @@ fn test_run_implicit_example_target() {
         .file("benches/mybench.rs", "#[test] fn test_in_bench() { }")
         .file(
             "examples/myexm.rs",
-            "#[test] fn test_in_exm() { }
-               fn main() { panic!(\"Don't execute me!\"); }",
+            r#"#[test] fn test_in_exm() { panic!("Don't even test me."); }
+               fn main() { panic!("Don't execute me!"); }"#,
         )
         .build();
 
-    // TODO FIXME - verify example does NOT get run.
     assert_that(
         prj.cargo("test").arg("--examples"),
         execs().with_status(0).with_stderr(format!(
