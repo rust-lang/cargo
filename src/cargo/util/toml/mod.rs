@@ -245,21 +245,21 @@ pub struct TomlProfiles {
 }
 
 impl TomlProfiles {
-    fn validate(&self, features: &Features) -> CargoResult<()> {
+    fn validate(&self, features: &Features, warnings: &mut Vec<String>) -> CargoResult<()> {
         if let Some(ref test) = self.test {
-            test.validate("test", features)?;
+            test.validate("test", features, warnings)?;
         }
         if let Some(ref doc) = self.doc {
-            doc.validate("doc", features)?;
+            doc.validate("doc", features, warnings)?;
         }
         if let Some(ref bench) = self.bench {
-            bench.validate("bench", features)?;
+            bench.validate("bench", features, warnings)?;
         }
         if let Some(ref dev) = self.dev {
-            dev.validate("dev", features)?;
+            dev.validate("dev", features, warnings)?;
         }
         if let Some(ref release) = self.release {
-            release.validate("release", features)?;
+            release.validate("release", features, warnings)?;
         }
         Ok(())
     }
@@ -385,7 +385,12 @@ pub struct TomlProfile {
 }
 
 impl TomlProfile {
-    fn validate(&self, name: &str, features: &Features) -> CargoResult<()> {
+    fn validate(
+        &self,
+        name: &str,
+        features: &Features,
+        warnings: &mut Vec<String>,
+    ) -> CargoResult<()> {
         if let Some(ref profile) = self.build_override {
             features.require(Feature::profile_overrides())?;
             profile.validate_override()?;
@@ -408,6 +413,15 @@ impl TomlProfile {
                     );
                 }
             }
+        }
+
+        match name {
+            "test" | "bench" => {
+                if self.panic.is_some() {
+                    warnings.push(format!("`panic` setting is ignored for `{}` profile", name))
+                }
+            }
+            _ => {}
         }
         Ok(())
     }
@@ -861,7 +875,7 @@ impl TomlManifest {
             ),
         };
         if let Some(ref profiles) = me.profile {
-            profiles.validate(&features)?;
+            profiles.validate(&features, &mut warnings)?;
         }
         let profiles = build_profiles(&me.profile);
         let publish = match project.publish {

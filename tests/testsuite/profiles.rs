@@ -482,3 +482,31 @@ Did you mean `bar`?
 [COMPILING] [..]
 "));
 }
+
+#[test]
+fn profile_panic_test_bench() {
+    let p = project("foo")
+        .file(
+            "Cargo.toml",
+            r#"
+            [package]
+            name = "foo"
+            version = "0.0.1"
+
+            [profile.test]
+            panic = "abort"
+
+            [profile.bench]
+            panic = "abort"
+        "#,
+        )
+        .file("src/lib.rs", "")
+        .build();
+
+    assert_that(
+        p.cargo("build"),
+        execs().with_status(0).with_stderr_contains("\
+[WARNING] `panic` setting is ignored for `test` profile
+[WARNING] `panic` setting is ignored for `bench` profile
+"));
+}
