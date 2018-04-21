@@ -393,7 +393,7 @@ your `Cargo.toml`:
 
 ```toml
 [build-dependencies]
-gcc = "1.0"
+cc = "1.0"
 ```
 
 The [`cc` crate](https://crates.io/crates/cc) abstracts a range of build
