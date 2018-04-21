@@ -1,7 +1,7 @@
 use std::env;
 
 use cargotest::is_nightly;
-use cargotest::support::{execs, project};
+use cargotest::support::{basic_lib_manifest, execs, project};
 use cargotest::ChannelChanger;
 use hamcrest::assert_that;
 
@@ -426,24 +426,16 @@ fn profile_override_basic() {
         "#,
         )
         .file("src/lib.rs", "")
-        .file(
-            "bar/Cargo.toml",
-            r#"
-            [package]
-            name = "bar"
-            version = "0.0.1"
-            authors = []
-        "#,
-        )
+        .file("bar/Cargo.toml", &basic_lib_manifest("bar"))
         .file("bar/src/lib.rs", "")
         .build();
 
     assert_that(
         p.cargo("build -v").masquerade_as_nightly_cargo(),
         execs().with_status(0).with_stderr(
-"[COMPILING] bar v0.0.1 ([..])
+"[COMPILING] bar [..]
 [RUNNING] `rustc --crate-name bar [..] -C opt-level=3 [..]`
-[COMPILING] foo v0.0.1 ([..])
+[COMPILING] foo [..]
 [RUNNING] `rustc --crate-name foo [..]`
 [FINISHED] dev [unoptimized + debuginfo] target(s) in [..]",
         )
@@ -451,5 +443,42 @@ fn profile_override_basic() {
         // .with_stderr_does_not_contain("\
         //     `rustc --crate-name bar[..]-C opt-level=3"),
     );
+}
 
+#[test]
+fn profile_override_bad_name() {
+    let p = project("foo")
+        .file(
+            "Cargo.toml",
+            r#"
+            cargo-features = ["profile-overrides"]
+
+            [package]
+            name = "foo"
+            version = "0.0.1"
+
+            [dependencies]
+            bar = {path = "bar"}
+
+            [profile.dev.overrides.bart]
+            opt-level = 3
+
+            [profile.dev.overrides.no-suggestion]
+            opt-level = 3
+        "#,
+        )
+        .file("src/lib.rs", "")
+        .file("bar/Cargo.toml", &basic_lib_manifest("bar"))
+        .file("bar/src/lib.rs", "")
+        .build();
+
+    assert_that(
+        p.cargo("build").masquerade_as_nightly_cargo(),
+        execs().with_status(0).with_stderr_contains("\
+[WARNING] package `bart` for profile override not found
+
+Did you mean `bar`?
+[WARNING] package `no-suggestion` for profile override not found
+[COMPILING] [..]
+"));
 }
