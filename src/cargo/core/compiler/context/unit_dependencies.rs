@@ -172,8 +172,6 @@ fn compute_deps_custom_build<'a, 'cfg>(
         kind: unit.kind,
         mode: CompileMode::Build,
     };
-    // TODO: ProfileFor may need to be TestDependency if the random target we
-    // picked is a test and `panic` is set.  Need it investigate.
     let deps = deps_of(&tmp, cx, deps, ProfileFor::Any)?;
     Ok(deps.iter()
         .filter_map(|unit| {
