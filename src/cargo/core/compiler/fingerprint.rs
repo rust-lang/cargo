@@ -5,19 +5,19 @@ use std::path::{Path, PathBuf};
 use std::sync::{Arc, Mutex};
 
 use filetime::FileTime;
-use serde::ser::{self, Serialize};
 use serde::de::{self, Deserialize};
+use serde::ser::{self, Serialize};
 use serde_json;
 
 use core::{Edition, Package, TargetKind};
 use util;
-use util::{internal, profile, Dirty, Fresh, Freshness};
 use util::errors::{CargoResult, CargoResultExt};
 use util::paths;
+use util::{internal, profile, Dirty, Fresh, Freshness};
 
-use super::job::Work;
 use super::context::{Context, FileFlavor, Unit};
 use super::custom_build::BuildDeps;
+use super::job::Work;
 
 /// A tuple result of the `prepare_foo` functions in this module.
 ///
@@ -353,14 +353,7 @@ impl hash::Hash for Fingerprint {
             ..
         } = *self;
         (
-            rustc,
-            features,
-            target,
-            path,
-            profile,
-            local,
-            edition,
-            rustflags,
+            rustc, features, target, path, profile, local, edition, rustflags,
         ).hash(h);
 
         h.write_usize(deps.len());

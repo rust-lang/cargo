@@ -1,16 +1,16 @@
 use std::cell::RefCell;
-use std::collections::BTreeMap;
 use std::collections::hash_map::{Entry, HashMap};
+use std::collections::BTreeMap;
 use std::path::{Path, PathBuf};
 use std::slice;
 
 use glob::glob;
 use url::Url;
 
+use core::profiles::Profiles;
 use core::registry::PackageRegistry;
 use core::{Dependency, PackageIdSpec};
 use core::{EitherManifest, Package, SourceId, VirtualManifest};
-use core::profiles::Profiles;
 use ops;
 use sources::PathSource;
 use util::errors::{CargoResult, CargoResultExt};

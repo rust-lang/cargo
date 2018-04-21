@@ -1,5 +1,5 @@
-use std::collections::HashSet;
 use std::collections::hash_map::HashMap;
+use std::collections::HashSet;
 use std::fmt;
 use std::io;
 use std::mem;
@@ -8,15 +8,15 @@ use std::sync::mpsc::{channel, Receiver, Sender};
 use crossbeam::{self, Scope};
 use jobserver::{Acquired, HelperThread};
 
-use core::{PackageId, Target};
 use core::profiles::Profile;
-use ops::CompileMode;
-use util::{Config, DependencyQueue, Dirty, Fresh, Freshness};
-use util::{internal, profile, CargoResult, CargoResultExt, ProcessBuilder};
+use core::{PackageId, Target};
 use handle_error;
+use ops::CompileMode;
+use util::{internal, profile, CargoResult, CargoResultExt, ProcessBuilder};
+use util::{Config, DependencyQueue, Dirty, Fresh, Freshness};
 
-use super::{Context, Kind, Unit};
 use super::job::Job;
+use super::{Context, Kind, Unit};
 
 /// A management structure of the entire dependency graph to compile.
 ///

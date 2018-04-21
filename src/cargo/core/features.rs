@@ -133,8 +133,12 @@ macro_rules! features {
 }
 
 macro_rules! stab {
-    (stable) => (Status::Stable);
-    (unstable) => (Status::Unstable);
+    (stable) => {
+        Status::Stable
+    };
+    (unstable) => {
+        Status::Unstable
+    };
 }
 
 /// A listing of all features in Cargo

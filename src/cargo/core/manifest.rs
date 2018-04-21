@@ -1,21 +1,21 @@
 use std::collections::{BTreeMap, HashMap};
 use std::fmt;
+use std::hash::{Hash, Hasher};
 use std::path::{Path, PathBuf};
 use std::rc::Rc;
-use std::hash::{Hash, Hasher};
 
 use semver::Version;
 use serde::ser;
 use toml;
 use url::Url;
 
-use core::{Dependency, PackageId, PackageIdSpec, SourceId, Summary};
-use core::profiles::Profiles;
-use core::{Edition, Feature, Features, WorkspaceConfig};
 use core::interning::InternedString;
-use util::Config;
-use util::toml::TomlManifest;
+use core::profiles::Profiles;
+use core::{Dependency, PackageId, PackageIdSpec, SourceId, Summary};
+use core::{Edition, Feature, Features, WorkspaceConfig};
 use util::errors::*;
+use util::toml::TomlManifest;
+use util::Config;
 
 pub enum EitherManifest {
     Real(Manifest),

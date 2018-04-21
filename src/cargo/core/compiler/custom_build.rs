@@ -1,15 +1,15 @@
-use std::collections::{BTreeSet, HashSet};
 use std::collections::hash_map::{Entry, HashMap};
+use std::collections::{BTreeSet, HashSet};
 use std::fs;
 use std::path::{Path, PathBuf};
 use std::str;
 use std::sync::{Arc, Mutex};
 
 use core::PackageId;
-use util::{Cfg, Freshness};
 use util::errors::{CargoResult, CargoResultExt};
-use util::{self, internal, paths, profile};
 use util::machine_message;
+use util::{self, internal, paths, profile};
+use util::{Cfg, Freshness};
 
 use super::job::Work;
 use super::{fingerprint, Context, Kind, Unit};

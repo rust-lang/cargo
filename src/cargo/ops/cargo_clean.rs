@@ -1,13 +1,13 @@
 use std::fs;
 use std::path::Path;
 
-use core::Workspace;
 use core::compiler::{BuildConfig, Context, Kind, Unit};
 use core::profiles::ProfileFor;
-use util::Config;
+use core::Workspace;
+use ops::{self, CompileMode};
 use util::errors::{CargoResult, CargoResultExt};
 use util::paths;
-use ops::{self, CompileMode};
+use util::Config;
 
 pub struct CleanOptions<'a> {
     pub config: &'a Config,
