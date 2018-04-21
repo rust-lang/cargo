@@ -764,7 +764,7 @@ fn filename<'a, 'cfg>(cx: &mut Context<'a, 'cfg>, unit: &Unit<'a>) -> String {
         TargetKind::Bench => "bench",
         TargetKind::CustomBuild => "build-script",
     };
-    let flavor = if unit.mode.is_any_test() && !unit.mode.is_check() {
+    let flavor = if unit.mode.is_any_test() {
         "test-"
     } else if unit.mode.is_doc() {
         "doc-"

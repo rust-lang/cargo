@@ -472,6 +472,7 @@ impl Target {
             kind,
             name: name.to_string(),
             required_features,
+            tested: false,
             benched: false,
             ..Target::with_path(src_path)
         }

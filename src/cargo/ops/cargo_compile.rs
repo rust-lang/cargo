@@ -339,7 +339,7 @@ pub fn compile_ws<'a>(
         .into_path_unlocked();
     let mut build_config = BuildConfig::new(config, jobs, &target, Some(rustc_info_cache))?;
     build_config.release = release;
-    build_config.test = mode == CompileMode::Test;
+    build_config.test = mode == CompileMode::Test || mode == CompileMode::Bench;
     build_config.json_messages = message_format == MessageFormat::Json;
     let default_arch_kind = if build_config.requested_target.is_some() {
         Kind::Target
@@ -571,12 +571,13 @@ fn generate_targets<'a>(
     // Helper for creating a Unit struct.
     let new_unit =
         |pkg: &'a Package, target: &'a Target, target_mode: CompileMode| {
-            let profile_for = if mode == CompileMode::Test {
+            let profile_for = if mode.is_any_test() {
                 // NOTE: The ProfileFor here is subtle.  If you have a profile
-                // with `panic` set, the `panic` flag is cleared for tests and
-                // their dependencies.  If we left this as an "Any" profile,
-                // then the lib would get compiled three times (once with
-                // panic, once without, and once with --test).
+                // with `panic` set, the `panic` flag is cleared for
+                // tests/benchmarks and their dependencies.  If we left this
+                // as an "Any" profile, then the lib would get compiled three
+                // times (once with panic, once without, and once with
+                // --test).
                 //
                 // This would cause a problem for Doc tests, which would fail
                 // because `rustdoc` would attempt to link with both libraries
@@ -793,7 +794,7 @@ fn resolve_all_features(
 fn generate_default_targets(targets: &[Target], mode: CompileMode) -> Vec<&Target> {
     match mode {
         CompileMode::Bench => targets.iter().filter(|t| t.benched()).collect(),
-        CompileMode::Test => targets.iter().filter(|t| t.tested()).collect(),
+        CompileMode::Test => targets.iter().filter(|t| t.tested() || t.is_example()).collect(),
         CompileMode::Build | CompileMode::Check { .. } => targets
             .iter()
             .filter(|t| t.is_bin() || t.is_lib())
