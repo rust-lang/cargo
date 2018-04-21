@@ -71,6 +71,7 @@ mod plugins;
 mod proc_macro;
 mod profiles;
 mod profile_overrides;
+mod profile_targets;
 mod publish;
 mod read_manifest;
 mod registry;
