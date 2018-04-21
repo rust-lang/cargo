@@ -123,6 +123,8 @@ let out_dir = env::var("OUT_DIR").unwrap();
 * `RUSTC`, `RUSTDOC` - the compiler and documentation generator that Cargo has
                        resolved to use, passed to the build script so it might
                        use it as well.
+* `LINKER` - The linker that rust has resolved to use for the current target,
+             passed to the build script so it might use it as well.
 
 [links]: reference/build-scripts.html#the-links-manifest-key
 [profile]: reference/manifest.html#the-profile-sections
