@@ -256,7 +256,13 @@ impl<'a> JobQueue<'a> {
         }
 
         let build_type = if self.is_release { "release" } else { "dev" };
-        // TODO FIXME: We don't know which pkg to display this for!
+        // NOTE: This may be a bit inaccurate, since this may not display the
+        // profile for what was actually built.  Profile overrides can change
+        // these settings, and in some cases different targets are built with
+        // different profiles.  To be accurate, it would need to collect a
+        // list of Units built, and maybe display a list of the different
+        // profiles used.  However, to keep it simple and compatible with old
+        // behavior, we just display what the base profile is.
         let profile = cx.profiles.base_profile(self.is_release);
         let mut opt_type = String::from(if profile.opt_level.as_str() == "0" {
             "unoptimized"
