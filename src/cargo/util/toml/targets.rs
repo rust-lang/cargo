@@ -32,7 +32,13 @@ pub fn targets(
 
     let has_lib;
 
-    if let Some(target) = clean_lib(manifest.lib.as_ref(), package_root, package_name, warnings)? {
+    if let Some(target) = clean_lib(
+        manifest.lib.as_ref(),
+        package_root,
+        package_name,
+        edition,
+        warnings,
+    )? {
         targets.push(target);
         has_lib = true;
     } else {
@@ -105,6 +111,7 @@ fn clean_lib(
     toml_lib: Option<&TomlLibTarget>,
     package_root: &Path,
     package_name: &str,
+    edition: Edition,
     warnings: &mut Vec<String>,
 ) -> CargoResult<Option<Target>> {
     let inferred = inferred_lib(package_root);
@@ -140,7 +147,7 @@ fn clean_lib(
         (None, Some(path)) => path,
         (None, None) => {
             let legacy_path = package_root.join("src").join(format!("{}.rs", lib.name()));
-            if legacy_path.exists() {
+            if edition < Edition::Edition2018 && legacy_path.exists() {
                 warnings.push(format!(
                     "path `{}` was erroneously implicitly accepted for library `{}`,\n\
                      please rename the file to `src/lib.rs` or set lib.path in Cargo.toml",
@@ -237,7 +244,7 @@ fn clean_bins(
 
     let mut result = Vec::new();
     for bin in &bins {
-        let path = target_path(bin, &inferred, "bin", package_root, &mut |_| {
+        let path = target_path(bin, &inferred, "bin", package_root, edition, &mut |_| {
             if let Some(legacy_path) = legacy_bin_path(package_root, &bin.name(), has_lib) {
                 warnings.push(format!(
                     "path `{}` was erroneously implicitly accepted for binary `{}`,\n\
@@ -469,7 +476,7 @@ fn clean_targets_with_legacy_path(
     validate_unique_names(&toml_targets, target_kind)?;
     let mut result = Vec::new();
     for target in toml_targets {
-        let path = target_path(&target, inferred, target_kind, package_root, legacy_path);
+        let path = target_path(&target, inferred, target_kind, package_root, edition, legacy_path);
         let path = match path {
             Ok(path) => path,
             Err(e) => {
@@ -695,6 +702,7 @@ fn target_path(
     inferred: &[(String, PathBuf)],
     target_kind: &str,
     package_root: &Path,
+    edition: Edition,
     legacy_path: &mut FnMut(&TomlTarget) -> Option<PathBuf>,
 ) -> Result<PathBuf, String> {
     if let Some(ref path) = target.path {
@@ -713,8 +721,10 @@ fn target_path(
     match (first, second) {
         (Some(path), None) => Ok(path),
         (None, None) | (Some(_), Some(_)) => {
-            if let Some(path) = legacy_path(target) {
-                return Ok(path);
+            if edition < Edition::Edition2018 {
+                if let Some(path) = legacy_path(target) {
+                    return Ok(path);
+                }
             }
             Err(format!(
                 "can't find `{name}` {target_kind}, specify {target_kind}.path",
