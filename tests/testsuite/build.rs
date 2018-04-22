@@ -47,10 +47,6 @@ fn cargo_fail_with_no_stderr() {
 /// `rustc` getting `-Zincremental` passed to it.
 #[test]
 fn cargo_compile_incremental() {
-    if !is_nightly() {
-        return;
-    }
-
     let p = project("foo")
         .file("Cargo.toml", &basic_bin_manifest("foo"))
         .file("src/foo.rs", &main_file(r#""i am foo""#, &[]))
@@ -77,10 +73,6 @@ fn cargo_compile_incremental() {
 
 #[test]
 fn incremental_profile() {
-    if !is_nightly() {
-        return;
-    }
-
     let p = project("foo")
         .file(
             "Cargo.toml",
@@ -137,10 +129,6 @@ fn incremental_profile() {
 
 #[test]
 fn incremental_config() {
-    if !is_nightly() {
-        return;
-    }
-
     let p = project("foo")
         .file(
             "Cargo.toml",
@@ -3679,31 +3667,6 @@ fn custom_target_dir() {
     assert_that(
         &p.root().join("target/debug").join(&exe_name),
         existing_file(),
-    );
-}
-
-#[test]
-fn rustc_no_trans() {
-    if !is_nightly() {
-        return;
-    }
-
-    let p = project("foo")
-        .file(
-            "Cargo.toml",
-            r#"
-            [package]
-            name = "foo"
-            version = "0.0.1"
-            authors = []
-        "#,
-        )
-        .file("src/main.rs", "fn main() {}")
-        .build();
-
-    assert_that(
-        p.cargo("rustc").arg("-v").arg("--").arg("-Zno-trans"),
-        execs().with_status(0),
     );
 }
 

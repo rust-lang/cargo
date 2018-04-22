@@ -4,10 +4,6 @@ use hamcrest::assert_that;
 
 #[test]
 fn probe_cfg_before_crate_type_discovery() {
-    if !is_nightly() {
-        return;
-    }
-
     let client = project("client")
         .file(
             "Cargo.toml",
@@ -24,8 +20,6 @@ fn probe_cfg_before_crate_type_discovery() {
         .file(
             "src/main.rs",
             r#"
-            #![feature(proc_macro)]
-
             #[macro_use]
             extern crate noop;
 
@@ -52,8 +46,6 @@ fn probe_cfg_before_crate_type_discovery() {
         .file(
             "src/lib.rs",
             r#"
-            #![feature(proc_macro, proc_macro_lib)]
-
             extern crate proc_macro;
             use proc_macro::TokenStream;
 
@@ -70,10 +62,6 @@ fn probe_cfg_before_crate_type_discovery() {
 
 #[test]
 fn noop() {
-    if !is_nightly() {
-        return;
-    }
-
     let client = project("client")
         .file(
             "Cargo.toml",
@@ -90,8 +78,6 @@ fn noop() {
         .file(
             "src/main.rs",
             r#"
-            #![feature(proc_macro)]
-
             #[macro_use]
             extern crate noop;
 
@@ -118,8 +104,6 @@ fn noop() {
         .file(
             "src/lib.rs",
             r#"
-            #![feature(proc_macro, proc_macro_lib)]
-
             extern crate proc_macro;
             use proc_macro::TokenStream;
 
@@ -137,10 +121,6 @@ fn noop() {
 
 #[test]
 fn impl_and_derive() {
-    if !is_nightly() {
-        return;
-    }
-
     let client = project("client")
         .file(
             "Cargo.toml",
@@ -157,8 +137,6 @@ fn impl_and_derive() {
         .file(
             "src/main.rs",
             r#"
-            #![feature(proc_macro)]
-
             #[macro_use]
             extern crate transmogrify;
 
@@ -193,8 +171,6 @@ fn impl_and_derive() {
         .file(
             "src/lib.rs",
             r#"
-            #![feature(proc_macro, proc_macro_lib)]
-
             extern crate proc_macro;
             use proc_macro::TokenStream;
 
@@ -278,9 +254,6 @@ fn plugin_and_proc_macro() {
 
 #[test]
 fn proc_macro_doctest() {
-    if !is_nightly() {
-        return;
-    }
     let foo = project("foo")
         .file(
             "Cargo.toml",
@@ -296,7 +269,6 @@ fn proc_macro_doctest() {
         .file(
             "src/lib.rs",
             r#"
-#![feature(proc_macro, proc_macro_lib)]
 #![crate_type = "proc-macro"]
 
 extern crate proc_macro;
