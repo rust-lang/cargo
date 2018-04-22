@@ -1,4 +1,4 @@
-#![deny(warnings)]
+#![cfg_attr(feature = "nightly", deny(warnings))]
 
 extern crate bufstream;
 extern crate cargo;
