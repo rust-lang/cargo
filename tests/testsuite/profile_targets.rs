@@ -1,3 +1,4 @@
+use cargotest::is_nightly;
 use cargotest::support::{execs, project, Project};
 use hamcrest::assert_that;
 
@@ -491,6 +492,11 @@ foo custom build PROFILE=release DEBUG=false OPT_LEVEL=3
 
 #[test]
 fn profile_selection_check_all_targets() {
+    if !is_nightly() {
+        // This can be removed once 1.27 is stable, see below.
+        return;
+    }
+
     let p = all_target_project();
     // check
     // NOTES:
@@ -538,22 +544,18 @@ foo custom build PROFILE=debug DEBUG=true OPT_LEVEL=0
 [RUNNING] `rustc --crate-name foo src[/]main.rs --crate-type bin --emit=dep-info,metadata -C panic=abort -C codegen-units=1 -C debuginfo=2 [..]
 [FINISHED] dev [unoptimized + debuginfo] [..]
 "));
-    // Check re-run re-checks bins (and tests/benches) because rustc does not
-    // emit rmeta files for bins. See
-    // https://github.com/rust-lang/cargo/issues/3624.
+    // Starting with Rust 1.27, rustc emits `rmeta` files for bins, so
+    // everything should be completely fresh.  Previously, bins were being
+    // rechecked.
+    // See https://github.com/rust-lang/rust/pull/49289 and
+    // https://github.com/rust-lang/cargo/issues/3624
     assert_that(
         p.cargo("check --all-targets -vv"),
         execs().with_status(0).with_stderr_unordered(
             "\
 [FRESH] bar [..]
 [FRESH] bdep [..]
-[CHECKING] foo [..]
-[RUNNING] `rustc --crate-name foo src[/]lib.rs --emit=dep-info,metadata -C codegen-units=1 -C debuginfo=2 --test [..]
-[RUNNING] `rustc --crate-name foo src[/]main.rs --emit=dep-info,metadata -C codegen-units=1 -C debuginfo=2 --test [..]
-[RUNNING] `rustc --crate-name bench1 benches[/]bench1.rs --emit=dep-info,metadata -C codegen-units=1 -C debuginfo=2 --test [..]
-[RUNNING] `rustc --crate-name test1 tests[/]test1.rs --emit=dep-info,metadata -C codegen-units=1 -C debuginfo=2 --test [..]
-[RUNNING] `rustc --crate-name foo src[/]main.rs --crate-type bin --emit=dep-info,metadata -C panic=abort -C codegen-units=1 -C debuginfo=2 [..]
-[RUNNING] `rustc --crate-name ex1 examples[/]ex1.rs --crate-type bin --emit=dep-info,metadata -C panic=abort -C codegen-units=1 -C debuginfo=2 [..]
+[FRESH] foo [..]
 [FINISHED] dev [unoptimized + debuginfo] [..]
 ",
         ),
@@ -562,6 +564,11 @@ foo custom build PROFILE=debug DEBUG=true OPT_LEVEL=0
 
 #[test]
 fn profile_selection_check_all_targets_release() {
+    if !is_nightly() {
+        // See note in profile_selection_check_all_targets.
+        return;
+    }
+
     let p = all_target_project();
     // check --release
     // https://github.com/rust-lang/cargo/issues/5218
@@ -589,22 +596,14 @@ foo custom build PROFILE=release DEBUG=false OPT_LEVEL=3
 [RUNNING] `rustc --crate-name foo src[/]main.rs --crate-type bin --emit=dep-info,metadata -C opt-level=3 -C panic=abort -C codegen-units=2 [..]
 [FINISHED] release [optimized] [..]
 "));
-    // Check re-run re-checks bins (and tests/benches) because rustc does not
-    // emit rmeta files for bins. See
-    // https://github.com/rust-lang/cargo/issues/3624.
+
     assert_that(
         p.cargo("check --all-targets --release -vv"),
         execs().with_status(0).with_stderr_unordered(
             "\
 [FRESH] bar [..]
 [FRESH] bdep [..]
-[CHECKING] foo [..]
-[RUNNING] `rustc --crate-name foo src[/]lib.rs --emit=dep-info,metadata -C opt-level=3 -C codegen-units=2 --test [..]
-[RUNNING] `rustc --crate-name foo src[/]main.rs --emit=dep-info,metadata -C opt-level=3 -C codegen-units=2 --test [..]
-[RUNNING] `rustc --crate-name bench1 benches[/]bench1.rs --emit=dep-info,metadata -C opt-level=3 -C codegen-units=2 --test [..]
-[RUNNING] `rustc --crate-name test1 tests[/]test1.rs --emit=dep-info,metadata -C opt-level=3 -C codegen-units=2 --test [..]
-[RUNNING] `rustc --crate-name foo src[/]main.rs --crate-type bin --emit=dep-info,metadata -C opt-level=3 -C panic=abort -C codegen-units=2 [..]
-[RUNNING] `rustc --crate-name ex1 examples[/]ex1.rs --crate-type bin --emit=dep-info,metadata -C opt-level=3 -C panic=abort -C codegen-units=2 [..]
+[FRESH] foo [..]
 [FINISHED] release [optimized] [..]
 ",
         ),
@@ -613,6 +612,11 @@ foo custom build PROFILE=release DEBUG=false OPT_LEVEL=3
 
 #[test]
 fn profile_selection_check_all_targets_test() {
+    if !is_nightly() {
+        // See note in profile_selection_check_all_targets.
+        return;
+    }
+
     let p = all_target_project();
     // check --profile=test
     // NOTES:
@@ -656,21 +660,14 @@ foo custom build PROFILE=debug DEBUG=true OPT_LEVEL=0
 [RUNNING] `rustc --crate-name ex1 examples[/]ex1.rs --emit=dep-info,metadata -C codegen-units=1 -C debuginfo=2 --test [..]
 [FINISHED] dev [unoptimized + debuginfo] [..]
 "));
-    // Check re-run re-checks bins (and tests/benches) because rustc does not
-    // emit rmeta files for bins. See
-    // https://github.com/rust-lang/cargo/issues/3624.
+
     assert_that(
         p.cargo("check --all-targets --profile=test -vv"),
         execs().with_status(0).with_stderr_unordered(
             "\
 [FRESH] bar [..]
 [FRESH] bdep [..]
-[CHECKING] foo [..]
-[RUNNING] `rustc --crate-name foo src[/]lib.rs --emit=dep-info,metadata -C codegen-units=1 -C debuginfo=2 --test [..]
-[RUNNING] `rustc --crate-name foo src[/]main.rs --emit=dep-info,metadata -C codegen-units=1 -C debuginfo=2 --test [..]
-[RUNNING] `rustc --crate-name bench1 benches[/]bench1.rs --emit=dep-info,metadata -C codegen-units=1 -C debuginfo=2 --test [..]
-[RUNNING] `rustc --crate-name test1 tests[/]test1.rs --emit=dep-info,metadata -C codegen-units=1 -C debuginfo=2 --test [..]
-[RUNNING] `rustc --crate-name ex1 examples[/]ex1.rs --emit=dep-info,metadata -C codegen-units=1 -C debuginfo=2 --test [..]
+[FRESH] foo [..]
 [FINISHED] dev [unoptimized + debuginfo] [..]
 ",
         ),
