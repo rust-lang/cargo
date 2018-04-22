@@ -3,12 +3,12 @@ use std::io::prelude::*;
 use std::str;
 
 use cargo;
-use cargotest::{is_nightly, rustc_host, sleep_ms};
-use cargotest::support::{basic_bin_manifest, basic_lib_manifest, cargo_exe, execs, project};
+use cargo::util::process;
 use cargotest::support::paths::CargoPathExt;
 use cargotest::support::registry::Package;
+use cargotest::support::{basic_bin_manifest, basic_lib_manifest, cargo_exe, execs, project};
+use cargotest::{is_nightly, rustc_host, sleep_ms};
 use hamcrest::{assert_that, existing_file, is_not};
-use cargo::util::process;
 
 #[test]
 fn cargo_test_simple() {
@@ -3973,5 +3973,74 @@ fn test_hint_workspace() {
         execs()
             .with_stderr_contains("[ERROR] test failed, to rerun pass '-p b --lib'")
             .with_status(101),
+    );
+}
+
+#[test]
+fn json_artifact_includes_test_flag() {
+    // Verify that the JSON artifact output includes `test` flag.
+    let p = project("foo")
+        .file(
+            "Cargo.toml",
+            r#"
+            [package]
+            name = "foo"
+            version = "0.0.1"
+            authors = []
+
+            [profile.test]
+            opt-level = 1
+        "#,
+        )
+        .file("src/lib.rs", "")
+        .build();
+
+    assert_that(
+        p.cargo("test -v --message-format=json"),
+        execs().with_status(0).with_json(
+            r#"
+    {
+        "reason":"compiler-artifact",
+        "profile": {
+            "debug_assertions": true,
+            "debuginfo": 2,
+            "opt_level": "0",
+            "overflow_checks": true,
+            "test": false
+        },
+        "features": [],
+        "package_id":"foo 0.0.1 ([..])",
+        "target":{
+            "kind":["lib"],
+            "crate_types":["lib"],
+            "name":"foo",
+            "src_path":"[..]lib.rs"
+        },
+        "filenames":["[..].rlib"],
+        "fresh": false
+    }
+
+    {
+        "reason":"compiler-artifact",
+        "profile": {
+            "debug_assertions": true,
+            "debuginfo": 2,
+            "opt_level": "1",
+            "overflow_checks": true,
+            "test": true
+        },
+        "features": [],
+        "package_id":"foo 0.0.1 ([..])",
+        "target":{
+            "kind":["lib"],
+            "crate_types":["lib"],
+            "name":"foo",
+            "src_path":"[..]lib.rs"
+        },
+        "filenames":["[..][/]foo-[..]"],
+        "fresh": false
+    }
+"#,
+        ),
     );
 }

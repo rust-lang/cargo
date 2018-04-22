@@ -9,26 +9,28 @@ use std::process::Output;
 use std::str;
 use std::usize;
 
-use serde_json::{self, Value};
-use url::Url;
-use hamcrest as ham;
 use cargo::util::ProcessBuilder;
 use cargo::util::ProcessError;
+use hamcrest as ham;
+use serde_json::{self, Value};
+use url::Url;
 
 use cargotest::support::paths::CargoPathExt;
 
 macro_rules! t {
-    ($e:expr) => (match $e {
-        Ok(e) => e,
-        Err(e) => panic!("{} failed with {}", stringify!($e), e),
-    })
+    ($e:expr) => {
+        match $e {
+            Ok(e) => e,
+            Err(e) => panic!("{} failed with {}", stringify!($e), e),
+        }
+    };
 }
 
-pub mod paths;
-pub mod git;
-pub mod registry;
 pub mod cross_compile;
+pub mod git;
+pub mod paths;
 pub mod publish;
+pub mod registry;
 
 /*
  *
@@ -588,7 +590,10 @@ impl Execs {
         if let Some(ref objects) = self.expect_json {
             let stdout = str::from_utf8(&actual.stdout)
                 .map_err(|_| "stdout was not utf8 encoded".to_owned())?;
-            let lines = stdout.lines().collect::<Vec<_>>();
+            let lines = stdout
+                .lines()
+                .filter(|line| line.starts_with("{"))
+                .collect::<Vec<_>>();
             if lines.len() != objects.len() {
                 return Err(format!(
                     "expected {} json lines, got {}, stdout:\n{}",
@@ -744,8 +749,11 @@ impl Execs {
                     };
                 }
                 if a.len() > 0 {
-                    Err(format!("Output included extra lines:\n\
-                        {}\n", a.join("\n")))
+                    Err(format!(
+                        "Output included extra lines:\n\
+                         {}\n",
+                        a.join("\n")
+                    ))
                 } else {
                     Ok(())
                 }
