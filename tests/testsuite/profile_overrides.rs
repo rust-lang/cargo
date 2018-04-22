@@ -232,3 +232,114 @@ fn profile_override_bad_settings() {
         );
     }
 }
+
+#[test]
+fn profile_override_hierarchy() {
+    // Test that the precedence rules are correct for different types.
+    let p = project("foo")
+        .file(
+            "Cargo.toml",
+            r#"
+            cargo-features = ["profile-overrides"]
+
+            [workspace]
+            members = ["m1", "m2", "m3"]
+
+            [profile.dev]
+            codegen-units = 1
+
+            [profile.dev.overrides.m2]
+            codegen-units = 2
+
+            [profile.dev.overrides."*"]
+            codegen-units = 3
+
+            [profile.dev.build-override]
+            codegen-units = 4
+            "#)
+
+        // m1
+        .file("m1/Cargo.toml",
+            r#"
+            [package]
+            name = "m1"
+            version = "0.0.1"
+
+            [dependencies]
+            m2 = { path = "../m2" }
+            dep = { path = "../../dep" }
+            "#)
+        .file("m1/src/lib.rs",
+            r#"
+            extern crate m2;
+            extern crate dep;
+            "#)
+        .file("m1/build.rs",
+            r#"fn main() {}"#)
+
+        // m2
+        .file("m2/Cargo.toml",
+            r#"
+            [package]
+            name = "m2"
+            version = "0.0.1"
+
+            [dependencies]
+            m3 = { path = "../m3" }
+
+            [build-dependencies]
+            m3 = { path = "../m3" }
+            dep = { path = "../../dep" }
+            "#)
+        .file("m2/src/lib.rs",
+            r#"
+            extern crate m3;
+            "#)
+        .file("m2/build.rs",
+            r#"
+            extern crate m3;
+            extern crate dep;
+            fn main() {}
+            "#)
+
+        // m3
+        .file("m3/Cargo.toml", &basic_lib_manifest("m3"))
+        .file("m3/src/lib.rs", "")
+        .build();
+
+    // dep (outside of workspace)
+    let _dep = project("dep")
+        .file("Cargo.toml", &basic_lib_manifest("dep"))
+        .file("src/lib.rs", "")
+        .build();
+
+    // Profiles should be:
+    // m3: 4 (as build.rs dependency)
+    // m3: 1 (as [profile.dev] as workspace member)
+    // dep: 3 (as [profile.dev.overrides."*"] as non-workspace member)
+    // m1 build.rs: 4 (as [profile.dev.build-override])
+    // m2 build.rs: 2 (as [profile.dev.overrides.m2])
+    // m2: 2 (as [profile.dev.overrides.m2])
+    // m1: 1 (as [profile.dev])
+
+    assert_that(
+        p.cargo("build -v").masquerade_as_nightly_cargo(),
+        execs().with_status(0).with_stderr_unordered("\
+[COMPILING] m3 [..]
+[COMPILING] dep [..]
+[RUNNING] `rustc --crate-name m3 m3[/]src[/]lib.rs --crate-type lib --emit=dep-info,link -C codegen-units=4 [..]
+[RUNNING] `rustc --crate-name dep [..]dep[/]src[/]lib.rs --crate-type lib --emit=dep-info,link -C codegen-units=3 [..]
+[RUNNING] `rustc --crate-name m3 m3[/]src[/]lib.rs --crate-type lib --emit=dep-info,link -C codegen-units=1 [..]
+[RUNNING] `rustc --crate-name build_script_build m1[/]build.rs --crate-type bin --emit=dep-info,link -C codegen-units=4 [..]
+[COMPILING] m2 [..]
+[RUNNING] `rustc --crate-name build_script_build m2[/]build.rs --crate-type bin --emit=dep-info,link -C codegen-units=2 [..]
+[RUNNING] `[..][/]m1-[..][/]build-script-build`
+[RUNNING] `[..][/]m2-[..][/]build-script-build`
+[RUNNING] `rustc --crate-name m2 m2[/]src[/]lib.rs --crate-type lib --emit=dep-info,link -C codegen-units=2 [..]
+[COMPILING] m1 [..]
+[RUNNING] `rustc --crate-name m1 m1[/]src[/]lib.rs --crate-type lib --emit=dep-info,link -C codegen-units=1 [..]
+[FINISHED] dev [unoptimized + debuginfo] [..]
+",
+        ),
+    );
+}
