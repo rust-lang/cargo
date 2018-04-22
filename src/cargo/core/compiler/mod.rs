@@ -911,7 +911,7 @@ fn build_base_args<'a, 'cfg>(
     let manifest = unit.pkg.manifest();
 
     if manifest.features().is_enabled(Feature::edition()) {
-        cmd.arg(format!("-Zedition={}", manifest.edition()));
+        cmd.arg(format!("--edition={}", manifest.edition()));
     }
 
     // Disable LTO for host builds as prefer_dynamic and it are mutually
