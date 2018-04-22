@@ -2,7 +2,6 @@ use std::fs::{self, File};
 use std::io::prelude::*;
 
 use cargo::util::process;
-use cargotest;
 use cargotest::sleep_ms;
 use cargotest::support::paths::{self, CargoPathExt};
 use cargotest::support::{execs, main_file, project};
@@ -1284,9 +1283,6 @@ fn workspace_produces_rlib() {
 
 #[test]
 fn thin_lto_works() {
-    if !cargotest::is_nightly() {
-        return;
-    }
     let p = project("foo")
         .file(
             "Cargo.toml",
