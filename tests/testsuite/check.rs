@@ -1,5 +1,4 @@
 use cargotest::install::exe;
-use cargotest::is_nightly;
 use cargotest::support::paths::CargoPathExt;
 use cargotest::support::registry::Package;
 use cargotest::support::{execs, project};
@@ -107,9 +106,6 @@ fn check_fail() {
 
 #[test]
 fn custom_derive() {
-    if !is_nightly() {
-        return;
-    }
     let foo = project("foo")
         .file(
             "Cargo.toml",
@@ -126,8 +122,6 @@ fn custom_derive() {
         .file(
             "src/main.rs",
             r#"
-#![feature(proc_macro)]
-
 #[macro_use]
 extern crate bar;
 
@@ -160,9 +154,6 @@ fn main() {
         .file(
             "src/lib.rs",
             r#"
-#![feature(proc_macro, proc_macro_lib)]
-#![crate_type = "proc-macro"]
-
 extern crate proc_macro;
 
 use proc_macro::TokenStream;
