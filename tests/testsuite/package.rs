@@ -1125,7 +1125,7 @@ fn test_edition() {
                 .with_stderr_contains(format!("\
 [COMPILING] foo v0.0.1 ({url})
 [RUNNING] `rustc --crate-name foo src[/]lib.rs --crate-type lib \
-        --emit=dep-info,link -Zedition=2018 -C debuginfo=2 \
+        --emit=dep-info,link --edition=2018 -C debuginfo=2 \
         -C metadata=[..] \
         --out-dir [..] \
         -L dependency={dir}[/]target[/]debug[/]deps`
@@ -1159,7 +1159,7 @@ fn test_edition_missing() {
                 .with_stderr_contains(format!("\
 [COMPILING] foo v0.0.1 ({url})
 [RUNNING] `rustc --crate-name foo src[/]lib.rs --crate-type lib \
-        --emit=dep-info,link -Zedition=2015 -C debuginfo=2 \
+        --emit=dep-info,link --edition=2015 -C debuginfo=2 \
         -C metadata=[..] \
         --out-dir [..] \
         -L dependency={dir}[/]target[/]debug[/]deps`
