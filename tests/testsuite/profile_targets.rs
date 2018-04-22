@@ -178,11 +178,11 @@ fn profile_selection_build_all_targets() {
     //   lib      dev+panic  build  (a normal lib target)
     //   lib      dev-panic  build  (used by tests/benches)
     //   lib      test       test
-    //   lib      bench      bench
+    //   lib      bench      test(bench)
     //   test     test       test
-    //   bench    bench      bench
+    //   bench    bench      test(bench)
     //   bin      test       test
-    //   bin      bench      bench
+    //   bin      bench      test(bench)
     //   bin      dev        build
     //   example  dev        build
     assert_that(p.cargo("build --all-targets -vv"),
@@ -253,12 +253,10 @@ fn profile_selection_build_all_targets_release() {
     //   ------   -------        ----
     //   lib      release+panic  build  (a normal lib target)
     //   lib      release-panic  build  (used by tests/benches)
-    //   lib      bench          test
-    //   lib      bench          bench
+    //   lib      bench          test   (bench/test de-duped)
     //   test     bench          test
-    //   bench    bench          bench
-    //   bin      bench          test
-    //   bin      bench          bench
+    //   bench    bench          test
+    //   bin      bench          test   (bench/test de-duped)
     //   bin      release        build
     //   example  release        build
     assert_that(p.cargo("build --all-targets --release -vv"),
@@ -275,8 +273,6 @@ foo custom build PROFILE=release DEBUG=false OPT_LEVEL=3
 [RUNNING] `rustc --crate-name foo src[/]lib.rs --crate-type lib --emit=dep-info,link -C opt-level=3 -C panic=abort -C codegen-units=2 [..]`
 [RUNNING] `rustc --crate-name foo src[/]lib.rs --emit=dep-info,link -C opt-level=3 -C codegen-units=4 --test [..]`
 [RUNNING] `rustc --crate-name foo src[/]lib.rs --crate-type lib --emit=dep-info,link -C opt-level=3 -C codegen-units=2 [..]`
-[RUNNING] `rustc --crate-name foo src[/]lib.rs --emit=dep-info,link -C opt-level=3 -C codegen-units=4 --test [..]`
-[RUNNING] `rustc --crate-name foo src[/]main.rs --emit=dep-info,link -C opt-level=3 -C codegen-units=4 --test [..]`
 [RUNNING] `rustc --crate-name test1 tests[/]test1.rs --emit=dep-info,link -C opt-level=3 -C codegen-units=4 --test [..]`
 [RUNNING] `rustc --crate-name bench1 benches[/]bench1.rs --emit=dep-info,link -C opt-level=3 -C codegen-units=4 --test [..]`
 [RUNNING] `rustc --crate-name foo src[/]main.rs --emit=dep-info,link -C opt-level=3 -C codegen-units=4 --test [..]`
@@ -449,9 +445,9 @@ fn profile_selection_bench() {
     //   Target   Profile        Mode
     //   ------   -------        ----
     //   lib      release-panic  build
-    //   lib      bench          bench
-    //   bench    bench          bench
-    //   bin      bench          bench
+    //   lib      bench          test(bench)
+    //   bench    bench          test(bench)
+    //   bin      bench          test(bench)
     //   bin      release-panic  build
     //
     assert_that(p.cargo("bench -vv"), execs().with_status(0).with_stderr_unordered("\

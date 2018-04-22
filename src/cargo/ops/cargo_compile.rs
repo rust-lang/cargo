@@ -112,7 +112,10 @@ pub enum CompileMode {
     /// `test` is true, then it is also compiled with `--test` to check it like
     /// a test.
     Check { test: bool },
-    /// A target being built for a benchmark.
+    /// Used to indicate benchmarks should be built.  This is not used in
+    /// `Target` because it is essentially the same as `Test` (indicating
+    /// `--test` should be passed to rustc) and by using `Test` instead it
+    /// allows some de-duping of Units to occur.
     Bench,
     /// A target that will be documented with `rustdoc`.
     /// If `deps` is true, then it will also document all dependencies.
@@ -629,6 +632,17 @@ fn generate_targets<'a>(
             target_mode,
             release,
         );
+        // Once the profile has been selected for benchmarks, we don't need to
+        // distinguish between benches and tests. Switching the mode allows
+        // de-duplication of units that are essentially identical.  For
+        // example, `cargo build --all-targets --release` creates the units
+        // (lib profile:bench, mode:test) and (lib profile:bench, mode:bench)
+        // and since these are the same, we want them to be de-duped in
+        // `unit_dependencies`.
+        let target_mode = match target_mode {
+            CompileMode::Bench => CompileMode::Test,
+            _ => target_mode,
+        };
         Unit {
             pkg,
             target,
