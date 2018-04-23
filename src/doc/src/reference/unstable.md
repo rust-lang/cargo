@@ -227,3 +227,30 @@ opt-level = 3
 ```
 
 Overrides can only be specified for dev and release profiles.
+
+
+### Namespaced features
+* Original issue: [#1286](https://github.com/rust-lang/cargo/issues/1286)
+
+Currently, it is not possible to have a feature and a dependency with the same
+name in the manifest. If you set `namespaced-features` to `true`, the namespaces
+for features and dependencies are separated. The effect of this is that, in the
+feature requirements, dependencies have to be prefixed with `crate:`. Like this:
+
+```toml
+[project]
+namespaced-features = true
+
+[features]
+bar = ["crate:baz", "foo"]
+foo = []
+
+[dependencies]
+baz = { version = "0.1", optional = true }
+```
+
+To prevent unnecessary boilerplate from having to explicitly declare features
+for each optional dependency, implicit features get created for any optional
+dependencies where a feature of the same name is not defined. However, if
+a feature of the same name as a dependency is defined, that feature must
+include the dependency as a requirement, as `foo = ["crate:foo"]`.
