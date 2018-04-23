@@ -146,8 +146,8 @@ fn build_work<'a, 'cfg>(cx: &mut Context<'a, 'cfg>, unit: &Unit<'a>) -> CargoRes
         .env("RUSTDOC", &*cx.config.rustdoc()?)
         .inherit_jobserver(&cx.jobserver);
 
-    if cx.build_config.target.linker.is_some() {
-        cmd.env("RUSTC_LINKER", &cx.build_config.target.linker.as_ref().unwrap());
+    if let Some(ref linker) = cx.build_config.target.linker {
+        cmd.env("RUSTC_LINKER", linker);
     }
 
     if let Some(links) = unit.pkg.manifest().links() {
