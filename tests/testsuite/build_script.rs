@@ -179,7 +179,7 @@ fn custom_build_env_vars() {
             use std::env;
 
             fn main() {
-                assert_eq!(env::var("RUSTC_LINKER"), "/path/to/linker");
+                assert_eq!(env::var("RUSTC_LINKER").unwrap(), "/path/to/linker");
             }
         "#)
         .file("src/lib.rs", "")
@@ -188,7 +188,7 @@ fn custom_build_env_vars() {
     // no crate type set => linker never called => build succeeds if and
     // only if build.rs succeeds, despite linker binary not existing.
     assert_that(
-        p.cargo("build").arg("--target").arg(&target).arg("-v"),
+        p.cargo("build").arg("--target").arg(&target),
         execs().with_status(0),
     );
 }
