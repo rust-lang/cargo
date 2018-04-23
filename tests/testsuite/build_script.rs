@@ -179,7 +179,7 @@ fn custom_build_env_vars() {
             use std::env;
 
             fn main() {
-                assert_eq!(env::var("RUSTC_LINKER").unwrap(), "/path/to/linker");
+                assert!(env::var("RUSTC_LINKER").unwrap().ends_with("/path/to/linker"));
             }
         "#)
         .file("src/lib.rs", "")
