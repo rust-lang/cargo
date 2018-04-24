@@ -52,6 +52,12 @@ fn deps_of<'a, 'b, 'cfg>(
     deps: &'b mut HashMap<Unit<'a>, Vec<Unit<'a>>>,
     profile_for: ProfileFor,
 ) -> CargoResult<&'b [Unit<'a>]> {
+    // Currently the `deps` map does not include `profile_for`.  This should
+    // be safe for now.  `TestDependency` only exists to clear the `panic`
+    // flag, and you'll never ask for a `unit` with `panic` set as a
+    // `TestDependency`.  `CustomBuild` should also be fine since if the
+    // requested unit's settings are the same as `Any`, `CustomBuild` can't
+    // affect anything else in the hierarchy.
     if !deps.contains_key(unit) {
         let unit_deps = compute_deps(unit, cx, deps, profile_for)?;
         let to_insert: Vec<_> = unit_deps.iter().map(|&(unit, _)| unit).collect();
