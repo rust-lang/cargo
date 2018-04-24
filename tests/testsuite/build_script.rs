@@ -4,7 +4,7 @@ use std::io::prelude::*;
 use std::path::PathBuf;
 
 use cargotest::{rustc_host, sleep_ms};
-use cargotest::support::{execs, project};
+use cargotest::support::{cross_compile, execs, project};
 use cargotest::support::paths::CargoPathExt;
 use cargotest::support::registry::Package;
 use hamcrest::{assert_that, existing_dir, existing_file};
@@ -134,6 +134,8 @@ fn custom_build_env_vars() {
 
                 let rustdoc = env::var("RUSTDOC").unwrap();
                 assert_eq!(rustdoc, "rustdoc");
+
+                assert!(env::var("RUSTC_LINKER").is_err());
             }}
         "#,
         p.root()
@@ -147,6 +149,50 @@ fn custom_build_env_vars() {
 
     assert_that(
         p.cargo("build").arg("--features").arg("bar_feat"),
+        execs().with_status(0),
+    );
+}
+
+
+#[test]
+fn custom_build_env_var_rustc_linker() {
+    if cross_compile::disabled() { return; }
+    let target = cross_compile::alternate();
+    let p = project("foo")
+        .file("Cargo.toml",
+              r#"
+              [project]
+              name = "foo"
+              version = "0.0.1"
+              "#
+        )
+        .file(
+            ".cargo/config",
+            &format!(
+                r#"
+                [target.{}]
+                linker = "/path/to/linker"
+                "#,
+                target
+            )
+        )
+        .file(
+            "build.rs",
+            r#"
+            use std::env;
+
+            fn main() {
+                assert!(env::var("RUSTC_LINKER").unwrap().ends_with("/path/to/linker"));
+            }
+            "#
+        )
+        .file("src/lib.rs", "")
+        .build();
+
+    // no crate type set => linker never called => build succeeds if and
+    // only if build.rs succeeds, despite linker binary not existing.
+    assert_that(
+        p.cargo("build").arg("--target").arg(&target),
         execs().with_status(0),
     );
 }
