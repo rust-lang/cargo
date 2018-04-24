@@ -8,6 +8,7 @@ pub fn cli() -> App {
         .arg_package_spec_simple("Package to clean artifacts for")
         .arg_manifest_path()
         .arg_target_triple("Target triple to clean output for (default all)")
+        .arg_target_dir()
         .arg_release("Whether or not to clean release artifacts")
         .after_help(
             "\

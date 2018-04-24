@@ -362,6 +362,7 @@ fn test_resolving_minimum_version_with_transitive_deps() {
             &None,
             false,
             false,
+            &None,
             &["minimal-versions".to_string()],
         )
         .unwrap();
