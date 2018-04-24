@@ -109,6 +109,10 @@ pub trait AppExt: Sized {
         self._arg(opt("target", target).value_name("TRIPLE"))
     }
 
+    fn arg_target_dir(self) -> Self {
+        self._arg(opt("target-dir", "Directory for all generated artifacts").value_name("DIRECTORY"))
+    }
+
     fn arg_manifest_path(self) -> Self {
         self._arg(opt("manifest-path", "Path to Cargo.toml").value_name("PATH"))
     }

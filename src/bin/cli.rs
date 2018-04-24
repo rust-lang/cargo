@@ -72,6 +72,16 @@ Run with 'cargo -Z [FLAG] [SUBCOMMAND]'"
 }
 
 fn execute_subcommand(config: &mut Config, args: ArgMatches) -> CliResult {
+    let (cmd, subcommand_args) = match args.subcommand() {
+        (cmd, Some(args)) => (cmd, args),
+        _ => {
+            cli().print_help()?;
+            return Ok(());
+        }
+    };
+    
+    let arg_target_dir = &subcommand_args.value_of_path("target-dir", config);
+
     config.configure(
         args.occurrences_of("verbose") as u32,
         if args.is_present("quiet") {
@@ -82,35 +92,28 @@ fn execute_subcommand(config: &mut Config, args: ArgMatches) -> CliResult {
         &args.value_of("color").map(|s| s.to_string()),
         args.is_present("frozen"),
         args.is_present("locked"),
+        arg_target_dir,
         &args.values_of_lossy("unstable-features")
             .unwrap_or_default(),
     )?;
 
-    let (cmd, args) = match args.subcommand() {
-        (cmd, Some(args)) => (cmd, args),
-        _ => {
-            cli().print_help()?;
-            return Ok(());
-        }
-    };
-
     if let Some(exec) = commands::builtin_exec(cmd) {
-        return exec(config, args);
+        return exec(config, subcommand_args);
     }
 
     if let Some(mut alias) = super::aliased_command(config, cmd)? {
         alias.extend(
-            args.values_of("")
-                .unwrap_or_default()
-                .map(|s| s.to_string()),
+            subcommand_args.values_of("")
+                           .unwrap_or_default()
+                           .map(|s| s.to_string()),
         );
-        let args = cli()
+        let subcommand_args = cli()
             .setting(AppSettings::NoBinaryName)
             .get_matches_from_safe(alias)?;
-        return execute_subcommand(config, args);
+        return execute_subcommand(config, subcommand_args);
     }
     let mut ext_args: Vec<&str> = vec![cmd];
-    ext_args.extend(args.values_of("").unwrap_or_default());
+    ext_args.extend(subcommand_args.values_of("").unwrap_or_default());
     super::execute_external_subcommand(config, cmd, &ext_args)
 }
 
