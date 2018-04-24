@@ -3688,7 +3688,7 @@ fn custom_target_dir_line_parameter() {
     let exe_name = format!("foo{}", env::consts::EXE_SUFFIX);
 
     assert_that(
-        p.cargo("build").arg("--target-dir").arg("foo/target"),
+        p.cargo("build --target-dir foo/target"),
         execs().with_status(0),
     );
     assert_that(
@@ -3721,7 +3721,7 @@ fn custom_target_dir_line_parameter() {
         )
         .unwrap();
     assert_that(
-        p.cargo("build").arg("--target-dir").arg("bar/target"),
+        p.cargo("build --target-dir bar/target"),
         execs().with_status(0),
     );
     assert_that(
@@ -3738,9 +3738,7 @@ fn custom_target_dir_line_parameter() {
     );
 
     assert_that(
-        p.cargo("build")
-            .arg("--target-dir")
-            .arg("foobar/target")
+        p.cargo("build --target-dir foobar/target")
             .env("CARGO_TARGET_DIR", "bar/target"),
         execs().with_status(0),
     );
