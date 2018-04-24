@@ -151,8 +151,11 @@ fn custom_build_env_vars() {
         p.cargo("build").arg("--features").arg("bar_feat"),
         execs().with_status(0),
     );
+}
 
-    // Test passing linker from .cargo/config to env var
+
+#[test]
+fn custom_build_env_var_rustc_linker() {
     if cross_compile::disabled() { return; }
     let target = cross_compile::alternate();
     let p = project("foo")
@@ -181,7 +184,8 @@ fn custom_build_env_vars() {
             fn main() {
                 assert!(env::var("RUSTC_LINKER").unwrap().ends_with("/path/to/linker"));
             }
-        "#)
+            "#
+        )
         .file("src/lib.rs", "")
         .build();
 
