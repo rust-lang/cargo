@@ -132,7 +132,7 @@ fn compute_deps<'a, 'b, 'cfg>(
     if unit.target.is_custom_build() {
         return Ok(ret);
     }
-    ret.extend(dep_build_script(cx, unit));
+    ret.extend(dep_build_script(unit, cx));
 
     // If this target is a binary, test, example, etc, then it depends on
     // the library of the same package. The call to `resolve.deps` above
@@ -141,7 +141,7 @@ fn compute_deps<'a, 'b, 'cfg>(
     if unit.target.is_lib() && unit.mode != CompileMode::Doctest {
         return Ok(ret);
     }
-    ret.extend(maybe_lib(cx, unit, profile_for));
+    ret.extend(maybe_lib(unit, cx, profile_for));
 
     Ok(ret)
 }
@@ -178,7 +178,7 @@ fn compute_deps_custom_build<'a, 'cfg>(
             if !unit.target.linkable() || unit.pkg.manifest().links().is_none() {
                 return None;
             }
-            dep_build_script(cx, unit)
+            dep_build_script(unit, cx)
         })
         .chain(Some((
             new_unit(
@@ -248,18 +248,18 @@ fn compute_deps_doc<'a, 'cfg>(
     }
 
     // Be sure to build/run the build script for documented libraries as
-    ret.extend(dep_build_script(cx, unit));
+    ret.extend(dep_build_script(unit, cx));
 
     // If we document a binary, we need the library available
     if unit.target.is_bin() {
-        ret.extend(maybe_lib(cx, unit, ProfileFor::Any));
+        ret.extend(maybe_lib(unit, cx, ProfileFor::Any));
     }
     Ok(ret)
 }
 
 fn maybe_lib<'a>(
-    cx: &Context,
     unit: &Unit<'a>,
+    cx: &Context,
     profile_for: ProfileFor,
 ) -> Option<(Unit<'a>, ProfileFor)> {
     let mode = check_or_build_mode(&unit.mode, unit.target);
@@ -276,7 +276,7 @@ fn maybe_lib<'a>(
 /// script itself doesn't have any dependencies, so even in that case a unit
 /// of work is still returned. `None` is only returned if the package has no
 /// build script.
-fn dep_build_script<'a>(cx: &Context, unit: &Unit<'a>) -> Option<(Unit<'a>, ProfileFor)> {
+fn dep_build_script<'a>(unit: &Unit<'a>, cx: &Context) -> Option<(Unit<'a>, ProfileFor)> {
     unit.pkg
         .targets()
         .iter()
