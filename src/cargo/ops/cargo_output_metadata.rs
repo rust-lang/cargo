@@ -109,7 +109,7 @@ where
         .iter()
         .map(|id| Node {
             id,
-            dependencies: resolve.deps(id).collect(),
+            dependencies: resolve.deps(id).map(|p| p.0).collect(),
             features: resolve.features_sorted(id),
         })
         .collect::<Vec<_>>()
