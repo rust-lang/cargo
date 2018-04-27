@@ -64,22 +64,20 @@ fn compute_deps<'a, 'b, 'cfg>(
 
     let id = unit.pkg.package_id();
     let deps = cx.resolve.deps(id);
-    let mut ret = deps.filter(|dep| {
-        unit.pkg
-            .dependencies()
-            .iter()
-            .filter(|d| d.name() == dep.name() && d.version_req().matches(dep.version()))
-            .any(|d| {
+    let mut ret = deps
+        .filter(|&(_id, deps)| {
+            assert!(deps.len() > 0);
+            deps.iter().any(|dep| {
                 // If this target is a build command, then we only want build
                 // dependencies, otherwise we want everything *other than* build
                 // dependencies.
-                if unit.target.is_custom_build() != d.is_build() {
+                if unit.target.is_custom_build() != dep.is_build() {
                     return false;
                 }
 
                 // If this dependency is *not* a transitive dependency, then it
                 // only applies to test/example targets
-                if !d.is_transitive() && !unit.target.is_test() && !unit.target.is_example()
+                if !dep.is_transitive() && !unit.target.is_test() && !unit.target.is_example()
                     && !unit.profile.test
                 {
                     return false;
@@ -87,13 +85,13 @@ fn compute_deps<'a, 'b, 'cfg>(
 
                 // If this dependency is only available for certain platforms,
                 // make sure we're only enabling it for that platform.
-                if !cx.dep_platform_activated(d, unit.kind) {
+                if !cx.dep_platform_activated(dep, unit.kind) {
                     return false;
                 }
 
                 // If the dependency is optional, then we're only activating it
                 // if the corresponding feature was activated
-                if d.is_optional() && !cx.resolve.features(id).contains(&*d.name()) {
+                if dep.is_optional() && !cx.resolve.features(id).contains(&*dep.name()) {
                     return false;
                 }
 
@@ -101,17 +99,20 @@ fn compute_deps<'a, 'b, 'cfg>(
                 // actually used!
                 true
             })
-    }).filter_map(|id| match cx.get_package(id) {
-            Ok(pkg) => pkg.targets().iter().find(|t| t.is_lib()).map(|t| {
-                let unit = Unit {
-                    pkg,
-                    target: t,
-                    profile: lib_or_check_profile(unit, t, cx),
-                    kind: unit.kind.for_target(t),
-                };
-                Ok(unit)
-            }),
-            Err(e) => Some(Err(e)),
+        })
+        .filter_map(|(id, _)| {
+            match cx.get_package(id) {
+                Ok(pkg) => pkg.targets().iter().find(|t| t.is_lib()).map(|t| {
+                    let unit = Unit {
+                        pkg,
+                        target: t,
+                        profile: lib_or_check_profile(unit, t, cx),
+                        kind: unit.kind.for_target(t),
+                    };
+                    Ok(unit)
+                }),
+                Err(e) => Some(Err(e)),
+            }
         })
         .collect::<CargoResult<Vec<_>>>()?;
 
@@ -205,17 +206,15 @@ fn compute_deps_doc<'a, 'cfg>(
 ) -> CargoResult<Vec<Unit<'a>>> {
     let deps = cx.resolve
         .deps(unit.pkg.package_id())
-        .filter(|dep| {
-            unit.pkg
-                .dependencies()
-                .iter()
-                .filter(|d| d.name() == dep.name() && d.version_req().matches(dep.version()))
-                .any(|dep| match dep.kind() {
+        .filter(|&(_id, deps)| {
+            deps.iter().any(|dep| {
+                match dep.kind() {
                     DepKind::Normal => cx.dep_platform_activated(dep, unit.kind),
                     _ => false,
-                })
+                }
+            })
         })
-        .map(|dep| cx.get_package(dep));
+        .map(|(id, _deps)| cx.get_package(id));
 
     // To document a library, we depend on dependencies actually being
     // built. If we're documenting *all* libraries, then we also depend on

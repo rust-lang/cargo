@@ -4,8 +4,7 @@ use std::iter::FromIterator;
 
 use url::Url;
 
-use core::PackageIdSpec;
-use core::{PackageId, Summary};
+use core::{Dependency, PackageId, PackageIdSpec, Summary};
 use util::Graph;
 use util::errors::CargoResult;
 use util::graph::{Edges, Nodes};
@@ -19,21 +18,50 @@ use super::encode::Metadata;
 /// for each package.
 #[derive(PartialEq)]
 pub struct Resolve {
-    pub graph: Graph<PackageId>,
-    pub replacements: HashMap<PackageId, PackageId>,
-    pub empty_features: HashSet<String>,
-    pub features: HashMap<PackageId, HashSet<String>>,
-    pub checksums: HashMap<PackageId, Option<String>>,
-    pub metadata: Metadata,
-    pub unused_patches: Vec<PackageId>,
+    graph: Graph<PackageId>,
+    dependencies: HashMap<(PackageId, PackageId), Vec<Dependency>>,
+    replacements: HashMap<PackageId, PackageId>,
+    reverse_replacements: HashMap<PackageId, PackageId>,
+    empty_features: HashSet<String>,
+    features: HashMap<PackageId, HashSet<String>>,
+    checksums: HashMap<PackageId, Option<String>>,
+    metadata: Metadata,
+    unused_patches: Vec<PackageId>,
 }
 
 impl Resolve {
+    pub fn new(
+        graph: Graph<PackageId>,
+        dependencies: HashMap<(PackageId, PackageId), Vec<Dependency>>,
+        replacements: HashMap<PackageId, PackageId>,
+        features: HashMap<PackageId, HashSet<String>>,
+        checksums: HashMap<PackageId, Option<String>>,
+        metadata: Metadata,
+        unused_patches: Vec<PackageId>,
+    ) -> Resolve {
+        let reverse_replacements = replacements
+            .iter()
+            .map(|p| (p.1.clone(), p.0.clone()))
+            .collect();
+        Resolve {
+            graph,
+            dependencies,
+            replacements,
+            features,
+            checksums,
+            metadata,
+            unused_patches,
+            empty_features: HashSet::new(),
+            reverse_replacements,
+        }
+    }
+
     /// Resolves one of the paths from the given dependent package up to
     /// the root.
     pub fn path_to_top<'a>(&'a self, pkg: &'a PackageId) -> Vec<&'a PackageId> {
         self.graph.path_to_top(pkg)
     }
+
     pub fn register_used_patches(&mut self, patches: &HashMap<Url, Vec<Summary>>) {
         for summary in patches.values().flat_map(|v| v) {
             if self.iter().any(|id| id == summary.package_id()) {
@@ -141,6 +169,7 @@ unable to verify that `{0}` is the same as when the lockfile was generated
     pub fn deps(&self, pkg: &PackageId) -> Deps {
         Deps {
             edges: self.graph.edges(pkg),
+            id: pkg.clone(),
             resolve: self,
         }
     }
@@ -176,6 +205,35 @@ unable to verify that `{0}` is the same as when the lockfile was generated
     pub fn unused_patches(&self) -> &[PackageId] {
         &self.unused_patches
     }
+
+    pub fn checksums(&self) -> &HashMap<PackageId, Option<String>> {
+        &self.checksums
+    }
+
+    pub fn metadata(&self) -> &Metadata {
+        &self.metadata
+    }
+
+    pub fn dependencies_listed(&self, from: &PackageId, to: &PackageId) -> &[Dependency] {
+        // We've got a dependency on `from` to `to`, but this dependency edge
+        // may be affected by [replace]. If the `to` package is listed as the
+        // target of a replacement (aka the key of a reverse replacement map)
+        // then we try to find our dependency edge through that. If that fails
+        // then we go down below assuming it's not replaced.
+        //
+        // Note that we don't treat `from` as if it's been replaced because
+        // that's where the dependency originates from, and we only replace
+        // targets of dependencies not the originator.
+        if let Some(replace) = self.reverse_replacements.get(to) {
+            if let Some(deps) = self.dependencies.get(&(from.clone(), replace.clone())) {
+                return deps;
+            }
+        }
+        match self.dependencies.get(&(from.clone(), to.clone())) {
+            Some(ret) => ret,
+            None => panic!("no Dependency listed for `{}` => `{}`", from, to),
+        }
+    }
 }
 
 impl fmt::Debug for Resolve {
@@ -191,17 +249,18 @@ impl fmt::Debug for Resolve {
 
 pub struct Deps<'a> {
     edges: Option<Edges<'a, PackageId>>,
+    id: PackageId,
     resolve: &'a Resolve,
 }
 
 impl<'a> Iterator for Deps<'a> {
-    type Item = &'a PackageId;
+    type Item = (&'a PackageId, &'a [Dependency]);
 
-    fn next(&mut self) -> Option<&'a PackageId> {
-        self.edges
-            .as_mut()
-            .and_then(|e| e.next())
-            .map(|id| self.resolve.replacement(id).unwrap_or(id))
+    fn next(&mut self) -> Option<(&'a PackageId, &'a [Dependency])> {
+        let id = self.edges.as_mut()?.next()?;
+        let id_ret = self.resolve.replacement(id).unwrap_or(id);
+        let deps = &self.resolve.dependencies[&(self.id.clone(), id.clone())];
+        Some((id_ret, deps))
     }
 
     fn size_hint(&self) -> (usize, Option<usize>) {
