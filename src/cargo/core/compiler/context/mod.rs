@@ -29,8 +29,7 @@ use self::compilation_files::{CompilationFiles, OutputFile};
 pub use self::compilation_files::Metadata;
 
 mod target_info;
-pub use self::target_info::FileFlavor;
-use self::target_info::TargetInfo;
+pub use self::target_info::{FileFlavor, TargetInfo};
 
 /// All information needed to define a Unit.
 ///
