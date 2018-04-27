@@ -8,7 +8,7 @@ use core::PackageId;
 use util::{ToSemver, ToUrl};
 use util::errors::{CargoResult, CargoResultExt};
 
-/// Some or all of the data required to indentify a package:
+/// Some or all of the data required to identify a package:
 ///
 ///  1. the package name (a `String`, required)
 ///  2. the package version (a `Version`, optional)
