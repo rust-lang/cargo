@@ -1119,13 +1119,13 @@ fn test_edition() {
     assert_that(
         p.cargo("build").arg("-v").masquerade_as_nightly_cargo(),
         execs()
-                // -Zedition is still in flux and we're not passing -Zunstable-options
+                // --edition is still in flux and we're not passing -Zunstable-options
                 // from Cargo so it will probably error. Only partially match the output
                 // until stuff stabilizes
                 .with_stderr_contains(format!("\
 [COMPILING] foo v0.0.1 ({url})
 [RUNNING] `rustc --crate-name foo src[/]lib.rs --crate-type lib \
-        --emit=dep-info,link -Zedition=2018 -C debuginfo=2 \
+        --emit=dep-info,link --edition=2018 -C debuginfo=2 \
         -C metadata=[..] \
         --out-dir [..] \
         -L dependency={dir}[/]target[/]debug[/]deps`
@@ -1153,13 +1153,13 @@ fn test_edition_missing() {
     assert_that(
         p.cargo("build").arg("-v").masquerade_as_nightly_cargo(),
         execs()
-                // -Zedition is still in flux and we're not passing -Zunstable-options
+                // --edition is still in flux and we're not passing -Zunstable-options
                 // from Cargo so it will probably error. Only partially match the output
                 // until stuff stabilizes
                 .with_stderr_contains(format!("\
 [COMPILING] foo v0.0.1 ({url})
 [RUNNING] `rustc --crate-name foo src[/]lib.rs --crate-type lib \
-        --emit=dep-info,link -Zedition=2015 -C debuginfo=2 \
+        --emit=dep-info,link --edition=2015 -C debuginfo=2 \
         -C metadata=[..] \
         --out-dir [..] \
         -L dependency={dir}[/]target[/]debug[/]deps`
