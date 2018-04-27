@@ -5,19 +5,19 @@ use std::path::{Path, PathBuf};
 use std::sync::{Arc, Mutex};
 
 use filetime::FileTime;
-use serde::ser::{self, Serialize};
 use serde::de::{self, Deserialize};
+use serde::ser::{self, Serialize};
 use serde_json;
 
 use core::{Edition, Package, TargetKind};
 use util;
-use util::{internal, profile, Dirty, Fresh, Freshness};
 use util::errors::{CargoResult, CargoResultExt};
 use util::paths;
+use util::{internal, profile, Dirty, Fresh, Freshness};
 
-use super::job::Work;
 use super::context::{Context, FileFlavor, Unit};
 use super::custom_build::BuildDeps;
+use super::job::Work;
 
 /// A tuple result of the `prepare_foo` functions in this module.
 ///
@@ -86,7 +86,7 @@ pub fn prepare_target<'a, 'cfg>(
 
     let root = cx.files().out_dir(unit);
     let mut missing_outputs = false;
-    if unit.profile.doc {
+    if unit.mode.is_doc() {
         missing_outputs = !root.join(unit.target.crate_name())
             .join("index.html")
             .exists();
@@ -102,7 +102,7 @@ pub fn prepare_target<'a, 'cfg>(
         }
     }
 
-    let allow_failure = unit.profile.rustc_args.is_some();
+    let allow_failure = cx.extra_args_for(unit).is_some();
     let target_root = cx.files().target_root().to_path_buf();
     let write_fingerprint = Work::new(move |_| {
         match fingerprint.update_local(&target_root) {
@@ -353,14 +353,7 @@ impl hash::Hash for Fingerprint {
             ..
         } = *self;
         (
-            rustc,
-            features,
-            target,
-            path,
-            profile,
-            local,
-            edition,
-            rustflags,
+            rustc, features, target, path, profile, local, edition, rustflags,
         ).hash(h);
 
         h.write_usize(deps.len());
@@ -449,15 +442,21 @@ fn calculate<'a, 'cfg>(
     };
     let mut deps = deps;
     deps.sort_by(|&(ref a, _), &(ref b, _)| a.cmp(b));
-    let extra_flags = if unit.profile.doc {
+    let extra_flags = if unit.mode.is_doc() {
         cx.rustdocflags_args(unit)?
     } else {
         cx.rustflags_args(unit)?
     };
+    let profile_hash = util::hash_u64(&(
+        &unit.profile,
+        unit.mode,
+        cx.extra_args_for(unit),
+        cx.incremental_args(unit)?,
+    ));
     let fingerprint = Arc::new(Fingerprint {
         rustc: util::hash_u64(&cx.build_config.rustc.verbose_version),
         target: util::hash_u64(&unit.target),
-        profile: util::hash_u64(&(&unit.profile, cx.incremental_args(unit)?)),
+        profile: profile_hash,
         // Note that .0 is hashed here, not .1 which is the cwd. That doesn't
         // actually affect the output artifact so there's no need to hash it.
         path: util::hash_u64(&super::path_args(cx, unit).0),
@@ -478,7 +477,7 @@ fn calculate<'a, 'cfg>(
 // responsibility of the source)
 fn use_dep_info(unit: &Unit) -> bool {
     let path = unit.pkg.summary().source_id().is_path();
-    !unit.profile.doc && path
+    !unit.mode.is_doc() && path
 }
 
 /// Prepare the necessary work for the fingerprint of a build command.
@@ -758,9 +757,9 @@ fn filename<'a, 'cfg>(cx: &mut Context<'a, 'cfg>, unit: &Unit<'a>) -> String {
         TargetKind::Bench => "bench",
         TargetKind::CustomBuild => "build-script",
     };
-    let flavor = if unit.profile.test {
+    let flavor = if unit.mode.is_any_test() {
         "test-"
-    } else if unit.profile.doc {
+    } else if unit.mode.is_doc() {
         "doc-"
     } else {
         ""

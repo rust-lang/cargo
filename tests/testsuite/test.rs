@@ -3,12 +3,12 @@ use std::io::prelude::*;
 use std::str;
 
 use cargo;
-use cargotest::{is_nightly, rustc_host, sleep_ms};
-use cargotest::support::{basic_bin_manifest, basic_lib_manifest, cargo_exe, execs, project};
+use cargo::util::process;
 use cargotest::support::paths::CargoPathExt;
 use cargotest::support::registry::Package;
+use cargotest::support::{basic_bin_manifest, basic_lib_manifest, cargo_exe, execs, project};
+use cargotest::{is_nightly, rustc_host, sleep_ms};
 use hamcrest::{assert_that, existing_file, is_not};
-use cargo::util::process;
 
 #[test]
 fn cargo_test_simple() {
@@ -1644,8 +1644,7 @@ fn test_run_implicit_test_target() {
         .file("benches/mybench.rs", "#[test] fn test_in_bench() { }")
         .file(
             "examples/myexm.rs",
-            "#[test] fn test_in_exm() { }
-               fn main() { panic!(\"Don't execute me!\"); }",
+            "fn main() { compile_error!(\"Don't build me!\"); }",
         )
         .build();
 
@@ -1658,8 +1657,7 @@ fn test_run_implicit_test_target() {
 [COMPILING] foo v0.0.1 ({dir})
 [FINISHED] dev [unoptimized + debuginfo] target(s) in [..]
 [RUNNING] target[/]debug[/]deps[/]mybin-[..][EXE]
-[RUNNING] target[/]debug[/]deps[/]mytest-[..][EXE]
-[RUNNING] target[/]debug[/]examples[/]myexm-[..][EXE]",
+[RUNNING] target[/]debug[/]deps[/]mytest-[..][EXE]",
                 dir = prj.url()
             ))
             .with_stdout_contains("test test_in_test ... ok"),
@@ -1691,8 +1689,7 @@ fn test_run_implicit_bench_target() {
         .file("benches/mybench.rs", "#[test] fn test_in_bench() { }")
         .file(
             "examples/myexm.rs",
-            "#[test] fn test_in_exm() { }
-               fn main() { panic!(\"Don't execute me!\"); }",
+            "fn main() { compile_error!(\"Don't build me!\"); }",
         )
         .build();
 
@@ -1737,8 +1734,8 @@ fn test_run_implicit_example_target() {
         .file("benches/mybench.rs", "#[test] fn test_in_bench() { }")
         .file(
             "examples/myexm.rs",
-            "#[test] fn test_in_exm() { }
-               fn main() { panic!(\"Don't execute me!\"); }",
+            r#"#[test] fn test_in_exm() { panic!("Don't even test me."); }
+               fn main() { panic!("Don't execute me!"); }"#,
         )
         .build();
 
@@ -1747,8 +1744,7 @@ fn test_run_implicit_example_target() {
         execs().with_status(0).with_stderr(format!(
             "\
 [COMPILING] foo v0.0.1 ({dir})
-[FINISHED] dev [unoptimized + debuginfo] target(s) in [..]
-[RUNNING] target[/]debug[/]examples[/]myexm-[..][EXE]",
+[FINISHED] dev [unoptimized + debuginfo] target(s) in [..]",
             dir = prj.url()
         )),
     );
@@ -3977,5 +3973,74 @@ fn test_hint_workspace() {
         execs()
             .with_stderr_contains("[ERROR] test failed, to rerun pass '-p b --lib'")
             .with_status(101),
+    );
+}
+
+#[test]
+fn json_artifact_includes_test_flag() {
+    // Verify that the JSON artifact output includes `test` flag.
+    let p = project("foo")
+        .file(
+            "Cargo.toml",
+            r#"
+            [package]
+            name = "foo"
+            version = "0.0.1"
+            authors = []
+
+            [profile.test]
+            opt-level = 1
+        "#,
+        )
+        .file("src/lib.rs", "")
+        .build();
+
+    assert_that(
+        p.cargo("test -v --message-format=json"),
+        execs().with_status(0).with_json(
+            r#"
+    {
+        "reason":"compiler-artifact",
+        "profile": {
+            "debug_assertions": true,
+            "debuginfo": 2,
+            "opt_level": "0",
+            "overflow_checks": true,
+            "test": false
+        },
+        "features": [],
+        "package_id":"foo 0.0.1 ([..])",
+        "target":{
+            "kind":["lib"],
+            "crate_types":["lib"],
+            "name":"foo",
+            "src_path":"[..]lib.rs"
+        },
+        "filenames":["[..].rlib"],
+        "fresh": false
+    }
+
+    {
+        "reason":"compiler-artifact",
+        "profile": {
+            "debug_assertions": true,
+            "debuginfo": 2,
+            "opt_level": "1",
+            "overflow_checks": true,
+            "test": true
+        },
+        "features": [],
+        "package_id":"foo 0.0.1 ([..])",
+        "target":{
+            "kind":["lib"],
+            "crate_types":["lib"],
+            "name":"foo",
+            "src_path":"[..]lib.rs"
+        },
+        "filenames":["[..][/]foo-[..]"],
+        "fresh": false
+    }
+"#,
+        ),
     );
 }

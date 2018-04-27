@@ -9,26 +9,28 @@ use std::process::Output;
 use std::str;
 use std::usize;
 
-use serde_json::{self, Value};
-use url::Url;
-use hamcrest as ham;
 use cargo::util::ProcessBuilder;
 use cargo::util::ProcessError;
+use hamcrest as ham;
+use serde_json::{self, Value};
+use url::Url;
 
 use cargotest::support::paths::CargoPathExt;
 
 macro_rules! t {
-    ($e:expr) => (match $e {
-        Ok(e) => e,
-        Err(e) => panic!("{} failed with {}", stringify!($e), e),
-    })
+    ($e:expr) => {
+        match $e {
+            Ok(e) => e,
+            Err(e) => panic!("{} failed with {}", stringify!($e), e),
+        }
+    };
 }
 
-pub mod paths;
-pub mod git;
-pub mod registry;
 pub mod cross_compile;
+pub mod git;
+pub mod paths;
 pub mod publish;
+pub mod registry;
 
 /*
  *
@@ -380,6 +382,7 @@ pub struct Execs {
     expect_stdout_contains_n: Vec<(String, usize)>,
     expect_stdout_not_contains: Vec<String>,
     expect_stderr_not_contains: Vec<String>,
+    expect_stderr_unordered: Vec<String>,
     expect_neither_contains: Vec<String>,
     expect_json: Option<Vec<Value>>,
     stream_output: bool,
@@ -433,6 +436,11 @@ impl Execs {
 
     pub fn with_stderr_does_not_contain<S: ToString>(mut self, expected: S) -> Execs {
         self.expect_stderr_not_contains.push(expected.to_string());
+        self
+    }
+
+    pub fn with_stderr_unordered<S: ToString>(mut self, expected: S) -> Execs {
+        self.expect_stderr_unordered.push(expected.to_string());
         self
     }
 
@@ -526,6 +534,15 @@ impl Execs {
                 MatchKind::NotPresent,
             )?;
         }
+        for expect in self.expect_stderr_unordered.iter() {
+            self.match_std(
+                Some(expect),
+                &actual.stderr,
+                "stderr",
+                &actual.stdout,
+                MatchKind::Unordered,
+            )?;
+        }
         for expect in self.expect_neither_contains.iter() {
             self.match_std(
                 Some(expect),
@@ -573,7 +590,10 @@ impl Execs {
         if let Some(ref objects) = self.expect_json {
             let stdout = str::from_utf8(&actual.stdout)
                 .map_err(|_| "stdout was not utf8 encoded".to_owned())?;
-            let lines = stdout.lines().collect::<Vec<_>>();
+            let lines = stdout
+                .lines()
+                .filter(|line| line.starts_with("{"))
+                .collect::<Vec<_>>();
             if lines.len() != objects.len() {
                 return Err(format!(
                     "expected {} json lines, got {}, stdout:\n{}",
@@ -709,6 +729,35 @@ impl Execs {
                     Ok(())
                 }
             }
+            MatchKind::Unordered => {
+                let mut a = actual.lines().collect::<Vec<_>>();
+                let e = out.lines();
+
+                for e_line in e {
+                    match a.iter().position(|a_line| lines_match(e_line, a_line)) {
+                        Some(index) => a.remove(index),
+                        None => {
+                            return Err(format!(
+                                "Did not find expected line:\n\
+                                 {}\n\
+                                 Remaining available output:\n\
+                                 {}\n",
+                                e_line,
+                                a.join("\n")
+                            ))
+                        }
+                    };
+                }
+                if a.len() > 0 {
+                    Err(format!(
+                        "Output included extra lines:\n\
+                         {}\n",
+                        a.join("\n")
+                    ))
+                } else {
+                    Ok(())
+                }
+            }
         }
     }
 
@@ -765,6 +814,7 @@ enum MatchKind {
     Partial,
     PartialN(usize),
     NotPresent,
+    Unordered,
 }
 
 pub fn lines_match(expected: &str, mut actual: &str) -> bool {
@@ -943,6 +993,7 @@ pub fn execs() -> Execs {
         expect_stdout_contains_n: Vec::new(),
         expect_stdout_not_contains: Vec::new(),
         expect_stderr_not_contains: Vec::new(),
+        expect_stderr_unordered: Vec::new(),
         expect_neither_contains: Vec::new(),
         expect_json: None,
         stream_output: false,
