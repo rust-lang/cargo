@@ -269,17 +269,25 @@ impl Context {
         replacements
     }
 
-    pub fn graph(&self) -> Graph<PackageId> {
+    pub fn graph(&self)
+        -> (Graph<PackageId>, HashMap<(PackageId, PackageId), Vec<Dependency>>)
+    {
         let mut graph = Graph::new();
+        let mut deps = HashMap::new();
         let mut cur = &self.resolve_graph;
         while let Some(ref node) = cur.head {
             match node.0 {
-                GraphNode::Add(ref p) => graph.add(p.clone(), &[]),
-                GraphNode::Link(ref a, ref b) => graph.link(a.clone(), b.clone()),
+                GraphNode::Add(ref p) => graph.add(p.clone()),
+                GraphNode::Link(ref a, ref b, ref dep) => {
+                    graph.link(a.clone(), b.clone());
+                    deps.entry((a.clone(), b.clone()))
+                        .or_insert(Vec::new())
+                        .push(dep.clone());
+                }
             }
             cur = &node.1;
         }
-        graph
+        (graph, deps)
     }
 }
 

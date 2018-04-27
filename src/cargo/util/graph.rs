@@ -22,11 +22,10 @@ impl<N: Eq + Hash + Clone> Graph<N> {
         }
     }
 
-    pub fn add(&mut self, node: N, children: &[N]) {
+    pub fn add(&mut self, node: N) {
         self.nodes
             .entry(node)
-            .or_insert_with(HashSet::new)
-            .extend(children.iter().cloned());
+            .or_insert_with(HashSet::new);
     }
 
     pub fn link(&mut self, node: N, child: N) {

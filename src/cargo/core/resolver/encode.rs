@@ -95,7 +95,7 @@ impl EncodableResolve {
             let mut g = Graph::new();
 
             for &(ref id, _) in live_pkgs.values() {
-                g.add(id.clone(), &[]);
+                g.add(id.clone());
             }
 
             for &(ref id, pkg) in live_pkgs.values() {
@@ -177,15 +177,15 @@ impl EncodableResolve {
             unused_patches.push(id);
         }
 
-        Ok(Resolve {
-            graph: g,
-            empty_features: HashSet::new(),
-            features: HashMap::new(),
+        Ok(Resolve::new(
+            g,
+            HashMap::new(),
             replacements,
+            HashMap::new(),
             checksums,
             metadata,
             unused_patches,
-        })
+        ))
     }
 }
 
@@ -347,17 +347,17 @@ impl<'a, 'cfg> ser::Serialize for WorkspaceResolve<'a, 'cfg> {
     where
         S: ser::Serializer,
     {
-        let mut ids: Vec<&PackageId> = self.resolve.graph.iter().collect();
+        let mut ids: Vec<_> = self.resolve.iter().collect();
         ids.sort();
 
         let encodable = ids.iter()
             .filter_map(|&id| Some(encodable_resolve_node(id, self.resolve)))
             .collect::<Vec<_>>();
 
-        let mut metadata = self.resolve.metadata.clone();
+        let mut metadata = self.resolve.metadata().clone();
 
         for id in ids.iter().filter(|id| !id.source_id().is_path()) {
-            let checksum = match self.resolve.checksums[*id] {
+            let checksum = match self.resolve.checksums()[*id] {
                 Some(ref s) => &s[..],
                 None => "<none>",
             };
@@ -398,10 +398,7 @@ fn encodable_resolve_node(id: &PackageId, resolve: &Resolve) -> EncodableDepende
         Some(id) => (Some(encodable_package_id(id)), None),
         None => {
             let mut deps = resolve
-                .graph
-                .edges(id)
-                .into_iter()
-                .flat_map(|a| a)
+                .deps_not_replaced(id)
                 .map(encodable_package_id)
                 .collect::<Vec<_>>();
             deps.sort();

@@ -394,5 +394,5 @@ impl<T> Drop for RcList<T> {
 
 pub enum GraphNode {
     Add(PackageId),
-    Link(PackageId, PackageId),
+    Link(PackageId, PackageId, Dependency),
 }

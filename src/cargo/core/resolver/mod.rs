@@ -58,7 +58,6 @@ use core::{Dependency, PackageId, Registry, Summary};
 use core::PackageIdSpec;
 use core::interning::InternedString;
 use util::config::Config;
-use util::Graph;
 use util::errors::{CargoError, CargoResult};
 use util::profile;
 
@@ -123,25 +122,25 @@ pub fn resolve(
     let mut registry = RegistryQueryer::new(registry, replacements, try_to_use, minimal_versions);
     let cx = activate_deps_loop(cx, &mut registry, summaries, config)?;
 
-    let mut resolve = Resolve {
-        graph: cx.graph(),
-        empty_features: HashSet::new(),
-        checksums: HashMap::new(),
-        metadata: BTreeMap::new(),
-        replacements: cx.resolve_replacements(),
-        features: cx.resolve_features
+    let (graph, deps) = cx.graph();
+
+    let mut cksums = HashMap::new();
+    for summary in cx.activations.values().flat_map(|v| v.iter()) {
+        let cksum = summary.checksum().map(|s| s.to_string());
+        cksums.insert(summary.package_id().clone(), cksum);
+    }
+    let resolve = Resolve::new(
+        graph,
+        deps,
+        cx.resolve_replacements(),
+        cx.resolve_features
             .iter()
             .map(|(k, v)| (k.clone(), v.iter().map(|x| x.to_string()).collect()))
             .collect(),
-        unused_patches: Vec::new(),
-    };
-
-    for summary in cx.activations.values().flat_map(|v| v.iter()) {
-        let cksum = summary.checksum().map(|s| s.to_string());
-        resolve
-            .checksums
-            .insert(summary.package_id().clone(), cksum);
-    }
+        cksums,
+        BTreeMap::new(),
+        Vec::new(),
+    );
 
     check_cycles(&resolve, &cx.activations)?;
     trace!("resolved: {:?}", resolve);
@@ -402,7 +401,13 @@ fn activate_deps_loop(
                 dep.name(),
                 candidate.summary.version()
             );
-            let res = activate(&mut cx, registry, Some(&parent), candidate, &method);
+            let res = activate(
+                &mut cx,
+                registry,
+                Some((&parent, &dep)),
+                candidate,
+                &method,
+            );
 
             let successfully_activated = match res {
                 // Success! We've now activated our `candidate` in our context
@@ -615,14 +620,15 @@ fn activate_deps_loop(
 fn activate(
     cx: &mut Context,
     registry: &mut RegistryQueryer,
-    parent: Option<&Summary>,
+    parent: Option<(&Summary, &Dependency)>,
     candidate: Candidate,
     method: &Method,
 ) -> ActivateResult<Option<(DepsFrame, Duration)>> {
-    if let Some(parent) = parent {
+    if let Some((parent, dep)) = parent {
         cx.resolve_graph.push(GraphNode::Link(
             parent.package_id().clone(),
             candidate.summary.package_id().clone(),
+            dep.clone(),
         ));
     }
 
@@ -654,7 +660,7 @@ fn activate(
     };
 
     let now = Instant::now();
-    let deps = cx.build_deps(registry, parent, &candidate, method)?;
+    let deps = cx.build_deps(registry, parent.map(|p| p.0), &candidate, method)?;
     let frame = DepsFrame {
         parent: candidate,
         just_for_error_messages: false,
@@ -861,11 +867,11 @@ fn activation_error(
     candidates: &[Candidate],
     config: Option<&Config>,
 ) -> CargoError {
-    let graph = cx.graph();
+    let (graph, _) = cx.graph();
     if !candidates.is_empty() {
         let mut msg = format!("failed to select a version for `{}`.", dep.name());
         msg.push_str("\n    ... required by ");
-        msg.push_str(&describe_path(&graph, parent.package_id()));
+        msg.push_str(&describe_path(&graph.path_to_top(parent.package_id())));
 
         msg.push_str("\nversions that meet the requirements `");
         msg.push_str(&dep.version_req().to_string());
@@ -894,7 +900,7 @@ fn activation_error(
                 msg.push_str(link);
                 msg.push_str("` as well:\n");
             }
-            msg.push_str(&describe_path(&graph, p));
+            msg.push_str(&describe_path(&graph.path_to_top(p)));
         }
 
         let (features_errors, other_errors): (Vec<_>, Vec<_>) = other_errors
@@ -925,7 +931,7 @@ fn activation_error(
 
         for &(p, _) in other_errors.iter() {
             msg.push_str("\n\n  previously selected ");
-            msg.push_str(&describe_path(&graph, p));
+            msg.push_str(&describe_path(&graph.path_to_top(p)));
         }
 
         msg.push_str("\n\nfailed to select a version for `");
@@ -976,7 +982,7 @@ fn activation_error(
             versions
         );
         msg.push_str("required by ");
-        msg.push_str(&describe_path(&graph, parent.package_id()));
+        msg.push_str(&describe_path(&graph.path_to_top(parent.package_id())));
 
         // If we have a path dependency with a locked version, then this may
         // indicate that we updated a sub-package and forgot to run `cargo
@@ -997,7 +1003,7 @@ fn activation_error(
             dep.source_id()
         );
         msg.push_str("required by ");
-        msg.push_str(&describe_path(&graph, parent.package_id()));
+        msg.push_str(&describe_path(&graph.path_to_top(parent.package_id())));
 
         msg
     };
@@ -1017,11 +1023,10 @@ fn activation_error(
 }
 
 /// Returns String representation of dependency chain for a particular `pkgid`.
-fn describe_path(graph: &Graph<PackageId>, pkgid: &PackageId) -> String {
+fn describe_path(path: &[&PackageId]) -> String {
     use std::fmt::Write;
-    let dep_path = graph.path_to_top(pkgid);
-    let mut dep_path_desc = format!("package `{}`", dep_path[0]);
-    for dep in dep_path.iter().skip(1) {
+    let mut dep_path_desc = format!("package `{}`", path[0]);
+    for dep in path[1..].iter() {
         write!(dep_path_desc, "\n    ... which is depended on by `{}`", dep).unwrap();
     }
     dep_path_desc
@@ -1056,7 +1061,7 @@ fn check_cycles(resolve: &Resolve, activations: &Activations) -> CargoResult<()>
             bail!(
                 "cyclic package dependency: package `{}` depends on itself. Cycle:\n{}",
                 id,
-                describe_path(&resolve.graph, id)
+                describe_path(&resolve.path_to_top(id))
             );
         }
 

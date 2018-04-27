@@ -1094,23 +1094,30 @@ fn build_deps_args<'a, 'cfg>(
             }
             let mut v = OsString::new();
 
-            // Unfortunately right now Cargo doesn't have a great way to get a
-            // 1:1 mapping of entries in `dependencies()` to the actual crate
-            // we're depending on. Instead we're left to do some guesswork here
-            // to figure out what `Dependency` the `dep` unit corresponds to in
-            // `current` to see if we're renaming it.
-            //
-            // This I believe mostly works out for now, but we'll likely want
-            // to tighten up this in the future.
-            let name = current
-                .pkg
-                .dependencies()
-                .iter()
-                .filter(|d| d.matches_ignoring_source(dep.pkg.package_id()))
-                .filter_map(|d| d.rename())
-                .next();
+            let deps = {
+                let a = current.pkg.package_id();
+                let b = dep.pkg.package_id();
+                if a == b {
+                    &[]
+                } else {
+                    cx.resolve.dependencies_listed(a, b)
+                }
+            };
 
-            v.push(name.unwrap_or(&dep.target.crate_name()));
+            let crate_name = dep.target.crate_name();
+            let mut names = deps.iter()
+                .map(|d| d.rename().unwrap_or(&crate_name));
+            let name = names.next().unwrap_or(&crate_name);
+            for n in names {
+                if n == name {
+                    continue
+                }
+                bail!("multiple dependencies listed for the same crate must \
+                       all have the same name, but the dependency on `{}` \
+                       is listed as having different names", dep.pkg.package_id());
+            }
+
+            v.push(name);
             v.push("=");
             v.push(cx.files().out_dir(dep));
             v.push(&path::MAIN_SEPARATOR.to_string());
