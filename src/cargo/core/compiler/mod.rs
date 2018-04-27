@@ -23,7 +23,7 @@ use self::job_queue::JobQueue;
 use self::output_depinfo::output_depinfo;
 
 pub use self::compilation::Compilation;
-pub use self::context::{Context, FileFlavor, Unit};
+pub use self::context::{Context, FileFlavor, TargetInfo, Unit};
 pub use self::custom_build::{BuildMap, BuildOutput, BuildScripts};
 pub use self::layout::is_bad_artifact_name;
 
