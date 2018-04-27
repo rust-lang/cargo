@@ -173,26 +173,31 @@ impl ProfileMaker {
     }
 
     fn validate_packages(&self, shell: &mut Shell, packages: &HashSet<&str>) -> CargoResult<()> {
-        if let Some(ref toml) = self.toml {
-            if let Some(ref overrides) = toml.overrides {
-                for key in overrides.keys().filter(|k| k.as_str() != "*") {
-                    if !packages.contains(key.as_str()) {
-                        let suggestion = packages
-                            .iter()
-                            .map(|p| (lev_distance(key, p), p))
-                            .filter(|&(d, _)| d < 4)
-                            .min_by_key(|p| p.0)
-                            .map(|p| p.1);
-                        match suggestion {
-                            Some(p) => shell.warn(format!(
-                                "package `{}` for profile override not found\n\nDid you mean `{}`?",
-                                key, p
-                            ))?,
-                            None => shell
-                                .warn(format!("package `{}` for profile override not found", key))?,
-                        };
+        let toml = match self.toml {
+            Some(ref toml) => toml,
+            None => return Ok(()),
+        };
+        let overrides = match toml.overrides {
+            Some(ref overrides) => overrides,
+            None => return Ok(()),
+        };
+        for key in overrides.keys().filter(|k| k.as_str() != "*") {
+            if !packages.contains(key.as_str()) {
+                let suggestion = packages
+                    .iter()
+                    .map(|p| (lev_distance(key, p), p))
+                    .filter(|&(d, _)| d < 4)
+                    .min_by_key(|p| p.0)
+                    .map(|p| p.1);
+                match suggestion {
+                    Some(p) => shell.warn(format!(
+                        "package `{}` for profile override not found\n\nDid you mean `{}`?",
+                        key, p
+                    ))?,
+                    None => {
+                        shell.warn(format!("package `{}` for profile override not found", key))?
                     }
-                }
+                };
             }
         }
         Ok(())
