@@ -268,9 +268,6 @@ fn changing_profiles_caches_targets() {
 
             [profile.dev]
             panic = "abort"
-
-            [profile.test]
-            panic = "unwind"
         "#,
         )
         .file("src/lib.rs", "")

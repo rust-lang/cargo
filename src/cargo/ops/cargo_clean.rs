@@ -1,12 +1,13 @@
 use std::fs;
 use std::path::Path;
 
-use core::{Profiles, Workspace};
 use core::compiler::{BuildConfig, Context, Kind, Unit};
-use util::Config;
+use core::profiles::ProfileFor;
+use core::Workspace;
+use ops::{self, CompileMode};
 use util::errors::{CargoResult, CargoResultExt};
 use util::paths;
-use ops;
+use util::Config;
 
 pub struct CleanOptions<'a> {
     pub config: &'a Config,
@@ -46,39 +47,33 @@ pub fn clean(ws: &Workspace, opts: &CleanOptions) -> CargoResult<()> {
         // Generate all relevant `Unit` targets for this package
         for target in pkg.targets() {
             for kind in [Kind::Host, Kind::Target].iter() {
-                let Profiles {
-                    ref release,
-                    ref dev,
-                    ref test,
-                    ref bench,
-                    ref doc,
-                    ref custom_build,
-                    ref test_deps,
-                    ref bench_deps,
-                    ref check,
-                    ref check_test,
-                    ref doctest,
-                } = *profiles;
-                let profiles = [
-                    release,
-                    dev,
-                    test,
-                    bench,
-                    doc,
-                    custom_build,
-                    test_deps,
-                    bench_deps,
-                    check,
-                    check_test,
-                    doctest,
-                ];
-                for profile in profiles.iter() {
-                    units.push(Unit {
-                        pkg,
-                        target,
-                        profile,
-                        kind: *kind,
-                    });
+                for mode in CompileMode::all_modes() {
+                    for profile_for in ProfileFor::all_values() {
+                        let profile = if mode.is_run_custom_build() {
+                            profiles.get_profile_run_custom_build(&profiles.get_profile(
+                                &pkg.name(),
+                                ws.is_member(pkg),
+                                *profile_for,
+                                CompileMode::Build,
+                                opts.release,
+                            ))
+                        } else {
+                            profiles.get_profile(
+                                &pkg.name(),
+                                ws.is_member(pkg),
+                                *profile_for,
+                                *mode,
+                                opts.release,
+                            )
+                        };
+                        units.push(Unit {
+                            pkg,
+                            target,
+                            profile,
+                            kind: *kind,
+                            mode: *mode,
+                        });
+                    }
                 }
             }
         }
@@ -86,13 +81,21 @@ pub fn clean(ws: &Workspace, opts: &CleanOptions) -> CargoResult<()> {
 
     let mut build_config = BuildConfig::new(config, Some(1), &opts.target, None)?;
     build_config.release = opts.release;
-    let mut cx = Context::new(ws, &resolve, &packages, opts.config, build_config, profiles)?;
+    let mut cx = Context::new(
+        ws,
+        &resolve,
+        &packages,
+        opts.config,
+        build_config,
+        profiles,
+        None,
+    )?;
     cx.prepare_units(None, &units)?;
 
     for unit in units.iter() {
         rm_rf(&cx.files().fingerprint_dir(unit), config)?;
         if unit.target.is_custom_build() {
-            if unit.profile.run_custom_build {
+            if unit.mode.is_run_custom_build() {
                 rm_rf(&cx.files().build_script_out_dir(unit), config)?;
             } else {
                 rm_rf(&cx.files().build_script_dir(unit), config)?;

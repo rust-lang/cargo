@@ -1,4 +1,4 @@
-use cargotest::support::{execs, project};
+use cargotest::support::{basic_lib_manifest, execs, project};
 use hamcrest::assert_that;
 
 const CARGO_RUSTC_ERROR: &'static str =
@@ -593,5 +593,59 @@ fn rustc_with_other_profile() {
     assert_that(
         p.cargo("rustc").arg("--profile").arg("test"),
         execs().with_status(0),
+    );
+}
+
+#[test]
+fn rustc_fingerprint() {
+    // Verify that the fingerprint includes the rustc args.
+    let p = project("foo")
+        .file("Cargo.toml", &basic_lib_manifest("foo"))
+        .file("src/lib.rs", "")
+        .build();
+
+    assert_that(
+        p.cargo("rustc -v -- -C debug-assertions"),
+        execs().with_status(0).with_stderr(
+            "\
+[COMPILING] foo [..]
+[RUNNING] `rustc [..]-C debug-assertions [..]
+[FINISHED] [..]
+",
+        ),
+    );
+
+    assert_that(
+        p.cargo("rustc -v -- -C debug-assertions"),
+        execs().with_status(0).with_stderr(
+            "\
+[FRESH] foo [..]
+[FINISHED] [..]
+",
+        ),
+    );
+
+    assert_that(
+        p.cargo("rustc -v"),
+        execs()
+            .with_status(0)
+            .with_stderr_does_not_contain("-C debug-assertions")
+            .with_stderr(
+                "\
+[COMPILING] foo [..]
+[RUNNING] `rustc [..]
+[FINISHED] [..]
+",
+            ),
+    );
+
+    assert_that(
+        p.cargo("rustc -v"),
+        execs().with_status(0).with_stderr(
+            "\
+[FRESH] foo [..]
+[FINISHED] [..]
+",
+        ),
     );
 }

@@ -1,11 +1,11 @@
 use std::collections::{BTreeSet, HashSet};
-use std::io::{BufWriter, Write};
 use std::fs::File;
+use std::io::{BufWriter, Write};
 use std::path::{Path, PathBuf};
 
 use super::{fingerprint, Context, Unit};
-use util::{internal, CargoResult};
 use util::paths;
+use util::{internal, CargoResult};
 
 fn render_filename<P: AsRef<Path>>(path: P, basedir: Option<&str>) -> CargoResult<String> {
     let path = path.as_ref();
@@ -34,7 +34,7 @@ fn add_deps_for_unit<'a, 'b>(
 
     // units representing the execution of a build script don't actually
     // generate a dep info file, so we just keep on going below
-    if !unit.profile.run_custom_build {
+    if !unit.mode.is_run_custom_build() {
         // Add dependencies from rustc dep-info output (stored in fingerprint directory)
         let dep_info_loc = fingerprint::dep_info_loc(context, unit);
         if let Some(paths) = fingerprint::parse_dep_info(unit.pkg, &dep_info_loc)? {
@@ -43,9 +43,9 @@ fn add_deps_for_unit<'a, 'b>(
             }
         } else {
             debug!(
-                "can't find dep_info for {:?} {:?}",
+                "can't find dep_info for {:?} {}",
                 unit.pkg.package_id(),
-                unit.profile
+                unit.target
             );
             return Err(internal("dep_info missing"));
         }

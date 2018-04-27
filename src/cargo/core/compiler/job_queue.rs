@@ -1,5 +1,5 @@
-use std::collections::HashSet;
 use std::collections::hash_map::HashMap;
+use std::collections::HashSet;
 use std::fmt;
 use std::io;
 use std::mem;
@@ -8,13 +8,15 @@ use std::sync::mpsc::{channel, Receiver, Sender};
 use crossbeam::{self, Scope};
 use jobserver::{Acquired, HelperThread};
 
-use core::{PackageId, Profile, Target};
-use util::{Config, DependencyQueue, Dirty, Fresh, Freshness};
-use util::{internal, profile, CargoResult, CargoResultExt, ProcessBuilder};
+use core::profiles::Profile;
+use core::{PackageId, Target};
 use handle_error;
+use ops::CompileMode;
+use util::{internal, profile, CargoResult, CargoResultExt, ProcessBuilder};
+use util::{Config, DependencyQueue, Dirty, Fresh, Freshness};
 
-use super::{Context, Kind, Unit};
 use super::job::Job;
+use super::{Context, Kind, Unit};
 
 /// A management structure of the entire dependency graph to compile.
 ///
@@ -46,8 +48,9 @@ struct PendingBuild {
 struct Key<'a> {
     pkg: &'a PackageId,
     target: &'a Target,
-    profile: &'a Profile,
+    profile: Profile,
     kind: Kind,
+    mode: CompileMode,
 }
 
 pub struct JobState<'a> {
@@ -231,7 +234,7 @@ impl<'a> JobQueue<'a> {
                         Ok(()) => self.finish(key, cx)?,
                         Err(e) => {
                             let msg = "The following warnings were emitted during compilation:";
-                            self.emit_warnings(Some(msg), key, cx)?;
+                            self.emit_warnings(Some(msg), &key, cx)?;
 
                             if self.active > 0 {
                                 error = Some(format_err!("build failed"));
@@ -253,8 +256,15 @@ impl<'a> JobQueue<'a> {
         }
 
         let build_type = if self.is_release { "release" } else { "dev" };
-        let profile = cx.lib_profile();
-        let mut opt_type = String::from(if profile.opt_level == "0" {
+        // NOTE: This may be a bit inaccurate, since this may not display the
+        // profile for what was actually built.  Profile overrides can change
+        // these settings, and in some cases different targets are built with
+        // different profiles.  To be accurate, it would need to collect a
+        // list of Units built, and maybe display a list of the different
+        // profiles used.  However, to keep it simple and compatible with old
+        // behavior, we just display what the base profile is.
+        let profile = cx.profiles.base_profile(self.is_release);
+        let mut opt_type = String::from(if profile.opt_level.as_str() == "0" {
             "unoptimized"
         } else {
             "optimized"
@@ -316,7 +326,7 @@ impl<'a> JobQueue<'a> {
         Ok(())
     }
 
-    fn emit_warnings(&self, msg: Option<&str>, key: Key<'a>, cx: &mut Context) -> CargoResult<()> {
+    fn emit_warnings(&self, msg: Option<&str>, key: &Key<'a>, cx: &mut Context) -> CargoResult<()> {
         let output = cx.build_state.outputs.lock().unwrap();
         if let Some(output) = output.get(&(key.pkg.clone(), key.kind)) {
             if let Some(msg) = msg {
@@ -339,8 +349,8 @@ impl<'a> JobQueue<'a> {
     }
 
     fn finish(&mut self, key: Key<'a>, cx: &mut Context) -> CargoResult<()> {
-        if key.profile.run_custom_build && cx.show_warnings(key.pkg) {
-            self.emit_warnings(None, key, cx)?;
+        if key.mode.is_run_custom_build() && cx.show_warnings(key.pkg) {
+            self.emit_warnings(None, &key, cx)?;
         }
 
         let state = self.pending.get_mut(&key).unwrap();
@@ -366,8 +376,8 @@ impl<'a> JobQueue<'a> {
         key: &Key<'a>,
         fresh: Freshness,
     ) -> CargoResult<()> {
-        if (self.compiled.contains(key.pkg) && !key.profile.doc)
-            || (self.documented.contains(key.pkg) && key.profile.doc)
+        if (self.compiled.contains(key.pkg) && !key.mode.is_doc())
+            || (self.documented.contains(key.pkg) && key.mode.is_doc())
         {
             return Ok(());
         }
@@ -376,14 +386,15 @@ impl<'a> JobQueue<'a> {
             // Any dirty stage which runs at least one command gets printed as
             // being a compiled package
             Dirty => {
-                if key.profile.doc {
-                    if !key.profile.test {
+                if key.mode.is_doc() {
+                    // Skip Doctest
+                    if !key.mode.is_any_test() {
                         self.documented.insert(key.pkg);
                         config.shell().status("Documenting", key.pkg)?;
                     }
                 } else {
                     self.compiled.insert(key.pkg);
-                    if key.profile.check {
+                    if key.mode.is_check() {
                         config.shell().status("Checking", key.pkg)?;
                     } else {
                         config.shell().status("Compiling", key.pkg)?;
@@ -407,6 +418,7 @@ impl<'a> Key<'a> {
             target: unit.target,
             profile: unit.profile,
             kind: unit.kind,
+            mode: unit.mode,
         }
     }
 
@@ -416,6 +428,7 @@ impl<'a> Key<'a> {
             target: self.target,
             profile: self.profile,
             kind: self.kind,
+            mode: self.mode,
         };
         let targets = cx.dep_targets(&unit);
         Ok(targets

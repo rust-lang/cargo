@@ -1,15 +1,15 @@
-use std::collections::{BTreeSet, HashSet};
 use std::collections::hash_map::{Entry, HashMap};
+use std::collections::{BTreeSet, HashSet};
 use std::fs;
 use std::path::{Path, PathBuf};
 use std::str;
 use std::sync::{Arc, Mutex};
 
 use core::PackageId;
-use util::{Cfg, Freshness};
 use util::errors::{CargoResult, CargoResultExt};
-use util::{self, internal, paths, profile};
 use util::machine_message;
+use util::{self, internal, paths, profile};
+use util::{Cfg, Freshness};
 
 use super::job::Work;
 use super::{fingerprint, Context, Kind, Unit};
@@ -102,11 +102,11 @@ pub fn prepare<'a, 'cfg>(
 }
 
 fn build_work<'a, 'cfg>(cx: &mut Context<'a, 'cfg>, unit: &Unit<'a>) -> CargoResult<(Work, Work)> {
-    assert!(unit.profile.run_custom_build);
+    assert!(unit.mode.is_run_custom_build());
     let dependencies = cx.dep_targets(unit);
     let build_script_unit = dependencies
         .iter()
-        .find(|d| !d.profile.run_custom_build && d.target.is_custom_build())
+        .find(|d| !d.mode.is_run_custom_build() && d.target.is_custom_build())
         .expect("running a script not depending on an actual script");
     let script_output = cx.files().build_script_dir(build_script_unit);
     let build_output = cx.files().build_script_out_dir(unit);
@@ -118,7 +118,9 @@ fn build_work<'a, 'cfg>(cx: &mut Context<'a, 'cfg>, unit: &Unit<'a>) -> CargoRes
     // environment variables. Note that the profile-related environment
     // variables are not set with this the build script's profile but rather the
     // package's library profile.
-    let profile = cx.lib_profile();
+    // NOTE: If you add any profile flags, be sure to update
+    // `Profiles::get_profile_run_custom_build` so that those flags get
+    // carried over.
     let to_exec = to_exec.into_os_string();
     let mut cmd = cx.compilation.host_process(to_exec, unit.pkg)?;
     cmd.env("OUT_DIR", &build_output)
@@ -131,8 +133,8 @@ fn build_work<'a, 'cfg>(cx: &mut Context<'a, 'cfg>, unit: &Unit<'a>) -> CargoRes
                 Kind::Target => cx.build_config.target_triple(),
             },
         )
-        .env("DEBUG", &profile.debuginfo.is_some().to_string())
-        .env("OPT_LEVEL", &profile.opt_level)
+        .env("DEBUG", &unit.profile.debuginfo.is_some().to_string())
+        .env("OPT_LEVEL", &unit.profile.opt_level.to_string())
         .env(
             "PROFILE",
             if cx.build_config.release {
@@ -196,7 +198,7 @@ fn build_work<'a, 'cfg>(cx: &mut Context<'a, 'cfg>, unit: &Unit<'a>) -> CargoRes
         dependencies
             .iter()
             .filter_map(|unit| {
-                if unit.profile.run_custom_build {
+                if unit.mode.is_run_custom_build() {
                     Some((
                         unit.pkg.manifest().links().unwrap().to_string(),
                         unit.pkg.package_id().clone(),
