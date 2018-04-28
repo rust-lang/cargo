@@ -88,8 +88,7 @@ pub fn clean(ws: &Workspace, opts: &CleanOptions) -> CargoResult<()> {
         }
     }
 
-    let mut build_config =
-        BuildConfig::new(config, Some(1), &opts.target, None, CompileMode::Build)?;
+    let mut build_config = BuildConfig::new(config, Some(1), &opts.target, CompileMode::Build)?;
     build_config.release = opts.release;
     let bcx = BuildContext::new(
         ws,

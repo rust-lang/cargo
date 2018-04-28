@@ -146,11 +146,11 @@ fn build_work<'a, 'cfg>(cx: &mut Context<'a, 'cfg>, unit: &Unit<'a>) -> CargoRes
             },
         )
         .env("HOST", &bcx.host_triple())
-        .env("RUSTC", &bcx.build_config.rustc.path)
+        .env("RUSTC", &bcx.rustc.path)
         .env("RUSTDOC", &*bcx.config.rustdoc()?)
         .inherit_jobserver(&cx.jobserver);
 
-    if let Some(ref linker) = bcx.build_config.target.linker {
+    if let Some(ref linker) = bcx.target_config.linker {
         cmd.env("RUSTC_LINKER", linker);
     }
 

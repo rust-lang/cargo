@@ -1,14 +1,15 @@
+use std::collections::HashMap;
 use std::env;
-use std::path::Path;
+use std::path::{Path, PathBuf};
 use std::str::{self, FromStr};
 
 use core::profiles::Profiles;
 use core::{Dependency, Workspace};
 use core::{Package, PackageId, PackageSet, Resolve};
 use util::errors::CargoResult;
-use util::{profile, Cfg, CfgExpr, Config};
+use util::{profile, Cfg, CfgExpr, Config, Rustc};
 
-use super::{BuildConfig, Kind, TargetConfig, Unit};
+use super::{BuildConfig, BuildOutput, Kind, Unit};
 
 mod target_info;
 pub use self::target_info::{FileFlavor, TargetInfo};
@@ -31,6 +32,12 @@ pub struct BuildContext<'a, 'cfg: 'a> {
     pub extra_compiler_args: Option<(Unit<'a>, Vec<String>)>,
     pub packages: &'a PackageSet<'cfg>,
 
+    /// Information about the compiler
+    pub rustc: Rustc,
+    /// Build information for the host arch
+    pub host_config: TargetConfig,
+    /// Build information for the target
+    pub target_config: TargetConfig,
     pub target_info: TargetInfo,
     pub host_info: TargetInfo,
     pub incremental_env: Option<bool>,
@@ -51,11 +58,19 @@ impl<'a, 'cfg> BuildContext<'a, 'cfg> {
             Err(_) => None,
         };
 
+        let rustc = config.rustc(Some(ws))?;
+        let host_config = TargetConfig::new(config, &rustc.host)?;
+        let target_config = match build_config.requested_target.as_ref() {
+            Some(triple) => TargetConfig::new(config, triple)?,
+            None => host_config.clone(),
+        };
         let (host_info, target_info) = {
             let _p = profile::start("BuildContext::probe_target_info");
             debug!("probe_target_info");
-            let host_info = TargetInfo::new(config, &build_config, Kind::Host)?;
-            let target_info = TargetInfo::new(config, &build_config, Kind::Target)?;
+            let host_info =
+                TargetInfo::new(config, &build_config.requested_target, &rustc, Kind::Host)?;
+            let target_info =
+                TargetInfo::new(config, &build_config.requested_target, &rustc, Kind::Target)?;
             (host_info, target_info)
         };
 
@@ -64,7 +79,10 @@ impl<'a, 'cfg> BuildContext<'a, 'cfg> {
             resolve,
             packages,
             config,
+            rustc,
+            target_config,
             target_info,
+            host_config,
             host_info,
             build_config,
             profiles,
@@ -139,19 +157,29 @@ impl<'a, 'cfg> BuildContext<'a, 'cfg> {
         info.cfg().unwrap_or(&[])
     }
 
+    /// The host arch triple
+    ///
+    /// e.g. x86_64-unknown-linux-gnu, would be
+    ///  - machine: x86_64
+    ///  - hardware-platform: unknown
+    ///  - operating system: linux-gnu
     pub fn host_triple(&self) -> &str {
-        self.build_config.host_triple()
+        &self.rustc.host
     }
 
     pub fn target_triple(&self) -> &str {
-        self.build_config.target_triple()
+        self.build_config
+            .requested_target
+            .as_ref()
+            .map(|s| s.as_str())
+            .unwrap_or(self.host_triple())
     }
 
     /// Get the target configuration for a particular host or target
     fn target_config(&self, kind: Kind) -> &TargetConfig {
         match kind {
-            Kind::Host => &self.build_config.host,
-            Kind::Target => &self.build_config.target,
+            Kind::Host => &self.host_config,
+            Kind::Target => &self.target_config,
         }
     }
 
@@ -163,7 +191,8 @@ impl<'a, 'cfg> BuildContext<'a, 'cfg> {
     pub fn rustflags_args(&self, unit: &Unit) -> CargoResult<Vec<String>> {
         env_args(
             self.config,
-            &self.build_config,
+            &self.build_config.requested_target,
+            self.host_triple(),
             self.info(&unit.kind).cfg(),
             unit.kind,
             "RUSTFLAGS",
@@ -173,7 +202,8 @@ impl<'a, 'cfg> BuildContext<'a, 'cfg> {
     pub fn rustdocflags_args(&self, unit: &Unit) -> CargoResult<Vec<String>> {
         env_args(
             self.config,
-            &self.build_config,
+            &self.build_config.requested_target,
+            self.host_triple(),
             self.info(&unit.kind).cfg(),
             unit.kind,
             "RUSTDOCFLAGS",
@@ -201,6 +231,97 @@ impl<'a, 'cfg> BuildContext<'a, 'cfg> {
     }
 }
 
+/// Information required to build for a target
+#[derive(Clone, Default)]
+pub struct TargetConfig {
+    /// The path of archiver (lib builder) for this target.
+    pub ar: Option<PathBuf>,
+    /// The path of the linker for this target.
+    pub linker: Option<PathBuf>,
+    /// Special build options for any necessary input files (filename -> options)
+    pub overrides: HashMap<String, BuildOutput>,
+}
+
+impl TargetConfig {
+    pub fn new(config: &Config, triple: &str) -> CargoResult<TargetConfig> {
+        let key = format!("target.{}", triple);
+        let mut ret = TargetConfig {
+            ar: config.get_path(&format!("{}.ar", key))?.map(|v| v.val),
+            linker: config.get_path(&format!("{}.linker", key))?.map(|v| v.val),
+            overrides: HashMap::new(),
+        };
+        let table = match config.get_table(&key)? {
+            Some(table) => table.val,
+            None => return Ok(ret),
+        };
+        for (lib_name, value) in table {
+            match lib_name.as_str() {
+                "ar" | "linker" | "runner" | "rustflags" => continue,
+                _ => {}
+            }
+
+            let mut output = BuildOutput {
+                library_paths: Vec::new(),
+                library_links: Vec::new(),
+                cfgs: Vec::new(),
+                env: Vec::new(),
+                metadata: Vec::new(),
+                rerun_if_changed: Vec::new(),
+                rerun_if_env_changed: Vec::new(),
+                warnings: Vec::new(),
+            };
+            // We require deterministic order of evaluation, so we must sort the pairs by key first.
+            let mut pairs = Vec::new();
+            for (k, value) in value.table(&lib_name)?.0 {
+                pairs.push((k, value));
+            }
+            pairs.sort_by_key(|p| p.0);
+            for (k, value) in pairs {
+                let key = format!("{}.{}", key, k);
+                match &k[..] {
+                    "rustc-flags" => {
+                        let (flags, definition) = value.string(k)?;
+                        let whence = format!("in `{}` (in {})", key, definition.display());
+                        let (paths, links) = BuildOutput::parse_rustc_flags(flags, &whence)?;
+                        output.library_paths.extend(paths);
+                        output.library_links.extend(links);
+                    }
+                    "rustc-link-lib" => {
+                        let list = value.list(k)?;
+                        output
+                            .library_links
+                            .extend(list.iter().map(|v| v.0.clone()));
+                    }
+                    "rustc-link-search" => {
+                        let list = value.list(k)?;
+                        output
+                            .library_paths
+                            .extend(list.iter().map(|v| PathBuf::from(&v.0)));
+                    }
+                    "rustc-cfg" => {
+                        let list = value.list(k)?;
+                        output.cfgs.extend(list.iter().map(|v| v.0.clone()));
+                    }
+                    "rustc-env" => for (name, val) in value.table(k)?.0 {
+                        let val = val.string(name)?.0;
+                        output.env.push((name.clone(), val.to_string()));
+                    },
+                    "warning" | "rerun-if-changed" | "rerun-if-env-changed" => {
+                        bail!("`{}` is not supported in build script overrides", k);
+                    }
+                    _ => {
+                        let val = value.string(k)?.0;
+                        output.metadata.push((k.clone(), val.to_string()));
+                    }
+                }
+            }
+            ret.overrides.insert(lib_name, output);
+        }
+
+        Ok(ret)
+    }
+}
+
 /// Acquire extra flags to pass to the compiler from various locations.
 ///
 /// The locations are:
@@ -220,7 +341,8 @@ impl<'a, 'cfg> BuildContext<'a, 'cfg> {
 /// scripts, ...), even if it is the same as the target.
 fn env_args(
     config: &Config,
-    build_config: &BuildConfig,
+    requested_target: &Option<String>,
+    host_triple: &str,
     target_cfg: Option<&[Cfg]>,
     kind: Kind,
     name: &str,
@@ -244,7 +366,7 @@ fn env_args(
     // This means that, e.g. even if the specified --target is the
     // same as the host, build scripts in plugins won't get
     // RUSTFLAGS.
-    let compiling_with_target = build_config.requested_target.is_some();
+    let compiling_with_target = requested_target.is_some();
     let is_target_kind = kind == Kind::Target;
 
     if compiling_with_target && !is_target_kind {
@@ -269,11 +391,10 @@ fn env_args(
         .flat_map(|c| c.to_lowercase())
         .collect::<String>();
     // Then the target.*.rustflags value...
-    let target = build_config
-        .requested_target
+    let target = requested_target
         .as_ref()
         .map(|s| s.as_str())
-        .unwrap_or(build_config.host_triple());
+        .unwrap_or(host_triple);
     let key = format!("target.{}.{}", target, name);
     if let Some(args) = config.get_list_or_split_string(&key)? {
         let args = args.val.into_iter();
