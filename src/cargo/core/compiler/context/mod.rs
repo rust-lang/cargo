@@ -71,43 +71,29 @@ pub struct Unit<'a> {
 }
 
 /// The build context, containing all information about a build task
-pub struct Context<'a, 'cfg: 'a> {
+pub struct BuildContext<'a, 'cfg: 'a> {
     /// The workspace the build is for
     pub ws: &'a Workspace<'cfg>,
     /// The cargo configuration
     pub config: &'cfg Config,
     /// The dependency graph for our build
     pub resolve: &'a Resolve,
-    /// Information on the compilation output
-    pub compilation: Compilation<'cfg>,
-    pub packages: &'a PackageSet<'cfg>,
-    pub build_state: Arc<BuildState>,
-    pub build_script_overridden: HashSet<(PackageId, Kind)>,
-    pub build_explicit_deps: HashMap<Unit<'a>, BuildDeps>,
-    pub fingerprints: HashMap<Unit<'a>, Arc<Fingerprint>>,
-    pub compiled: HashSet<Unit<'a>>,
-    pub build_config: &'a BuildConfig,
-    pub build_scripts: HashMap<Unit<'a>, Arc<BuildScripts>>,
-    pub links: Links<'a>,
-    pub used_in_plugin: HashSet<Unit<'a>>,
-    pub jobserver: Client,
     pub profiles: &'a Profiles,
+    pub build_config: &'a BuildConfig,
     /// This is a workaround to carry the extra compiler args for either
     /// `rustc` or `rustdoc` given on the command-line for the commands `cargo
     /// rustc` and `cargo rustdoc`.  These commands only support one target,
     /// but we don't want the args passed to any dependencies, so we include
     /// the `Unit` corresponding to the top-level target.
     extra_compiler_args: Option<(Unit<'a>, Vec<String>)>,
+    pub packages: &'a PackageSet<'cfg>,
 
     target_info: TargetInfo,
     host_info: TargetInfo,
     incremental_env: Option<bool>,
-
-    unit_dependencies: HashMap<Unit<'a>, Vec<Unit<'a>>>,
-    files: Option<CompilationFiles<'a, 'cfg>>,
 }
 
-impl<'a, 'cfg> Context<'a, 'cfg> {
+impl<'a, 'cfg> BuildContext<'a, 'cfg> {
     pub fn new(
         ws: &'a Workspace<'cfg>,
         resolve: &'a Resolve,
@@ -116,317 +102,32 @@ impl<'a, 'cfg> Context<'a, 'cfg> {
         build_config: &'a BuildConfig,
         profiles: &'a Profiles,
         extra_compiler_args: Option<(Unit<'a>, Vec<String>)>,
-    ) -> CargoResult<Context<'a, 'cfg>> {
+    ) -> CargoResult<BuildContext<'a, 'cfg>> {
         let incremental_env = match env::var("CARGO_INCREMENTAL") {
             Ok(v) => Some(v == "1"),
             Err(_) => None,
         };
 
-        // Load up the jobserver that we'll use to manage our parallelism. This
-        // is the same as the GNU make implementation of a jobserver, and
-        // intentionally so! It's hoped that we can interact with GNU make and
-        // all share the same jobserver.
-        //
-        // Note that if we don't have a jobserver in our environment then we
-        // create our own, and we create it with `n-1` tokens because one token
-        // is ourself, a running process.
-        let jobserver = match config.jobserver_from_env() {
-            Some(c) => c.clone(),
-            None => Client::new(build_config.jobs as usize - 1)
-                .chain_err(|| "failed to create jobserver")?,
-        };
-
         let (host_info, target_info) = {
-            let _p = profile::start("Context::probe_target_info");
+            let _p = profile::start("BuildContext::probe_target_info");
             debug!("probe_target_info");
             let host_info = TargetInfo::new(config, &build_config, Kind::Host)?;
             let target_info = TargetInfo::new(config, &build_config, Kind::Target)?;
             (host_info, target_info)
         };
 
-        let mut cx = Context {
+        Ok(BuildContext {
             ws,
             resolve,
             packages,
             config,
             target_info,
             host_info,
-            compilation: Compilation::new(config, build_config.rustc.process()),
-            build_state: Arc::new(BuildState::new(&build_config)),
             build_config,
-            fingerprints: HashMap::new(),
             profiles,
-            compiled: HashSet::new(),
-            build_scripts: HashMap::new(),
-            build_explicit_deps: HashMap::new(),
-            links: Links::new(),
-            used_in_plugin: HashSet::new(),
             incremental_env,
-            jobserver,
-            build_script_overridden: HashSet::new(),
-
-            unit_dependencies: HashMap::new(),
-            files: None,
             extra_compiler_args,
-        };
-
-        cx.compilation.host_dylib_path = cx.host_info.sysroot_libdir.clone();
-        cx.compilation.target_dylib_path = cx.target_info.sysroot_libdir.clone();
-        Ok(cx)
-    }
-
-    // Returns a mapping of the root package plus its immediate dependencies to
-    // where the compiled libraries are all located.
-    pub fn compile(
-        mut self,
-        units: &[Unit<'a>],
-        export_dir: Option<PathBuf>,
-        exec: &Arc<Executor>,
-    ) -> CargoResult<Compilation<'cfg>> {
-        let mut queue = JobQueue::new(&self);
-        self.prepare_units(export_dir, units)?;
-        self.prepare()?;
-        self.build_used_in_plugin_map(units)?;
-        custom_build::build_map(&mut self, units)?;
-
-        for unit in units.iter() {
-            // Build up a list of pending jobs, each of which represent
-            // compiling a particular package. No actual work is executed as
-            // part of this, that's all done next as part of the `execute`
-            // function which will run everything in order with proper
-            // parallelism.
-            super::compile(&mut self, &mut queue, unit, exec)?;
-        }
-
-        // Now that we've figured out everything that we're going to do, do it!
-        queue.execute(&mut self)?;
-
-        for unit in units.iter() {
-            for output in self.outputs(unit)?.iter() {
-                if output.flavor == FileFlavor::DebugInfo {
-                    continue;
-                }
-
-                let bindst = match output.hardlink {
-                    Some(ref link_dst) => link_dst,
-                    None => &output.path,
-                };
-
-                if unit.mode.is_any_test() && !unit.mode.is_check() {
-                    self.compilation.tests.push((
-                        unit.pkg.clone(),
-                        unit.target.kind().clone(),
-                        unit.target.name().to_string(),
-                        output.path.clone(),
-                    ));
-                } else if unit.target.is_bin() || unit.target.is_example() {
-                    self.compilation.binaries.push(bindst.clone());
-                } else if unit.target.is_lib() {
-                    let pkgid = unit.pkg.package_id().clone();
-                    self.compilation
-                        .libraries
-                        .entry(pkgid)
-                        .or_insert_with(HashSet::new)
-                        .insert((unit.target.clone(), output.path.clone()));
-                }
-            }
-
-            for dep in self.dep_targets(unit).iter() {
-                if !unit.target.is_lib() {
-                    continue;
-                }
-
-                if dep.mode.is_run_custom_build() {
-                    let out_dir = self.files().build_script_out_dir(dep).display().to_string();
-                    self.compilation
-                        .extra_env
-                        .entry(dep.pkg.package_id().clone())
-                        .or_insert_with(Vec::new)
-                        .push(("OUT_DIR".to_string(), out_dir));
-                }
-
-                if !dep.target.is_lib() {
-                    continue;
-                }
-                if dep.mode.is_doc() {
-                    continue;
-                }
-
-                let outputs = self.outputs(dep)?;
-                self.compilation
-                    .libraries
-                    .entry(unit.pkg.package_id().clone())
-                    .or_insert_with(HashSet::new)
-                    .extend(
-                        outputs
-                            .iter()
-                            .map(|output| (dep.target.clone(), output.path.clone())),
-                    );
-            }
-
-            let feats = self.resolve.features(unit.pkg.package_id());
-            if !feats.is_empty() {
-                self.compilation
-                    .cfgs
-                    .entry(unit.pkg.package_id().clone())
-                    .or_insert_with(|| {
-                        feats
-                            .iter()
-                            .map(|feat| format!("feature=\"{}\"", feat))
-                            .collect()
-                    });
-            }
-            let rustdocflags = self.rustdocflags_args(unit)?;
-            if !rustdocflags.is_empty() {
-                self.compilation
-                    .rustdocflags
-                    .entry(unit.pkg.package_id().clone())
-                    .or_insert(rustdocflags);
-            }
-
-            super::output_depinfo(&mut self, unit)?;
-        }
-
-        for (&(ref pkg, _), output) in self.build_state.outputs.lock().unwrap().iter() {
-            self.compilation
-                .cfgs
-                .entry(pkg.clone())
-                .or_insert_with(HashSet::new)
-                .extend(output.cfgs.iter().cloned());
-
-            self.compilation
-                .extra_env
-                .entry(pkg.clone())
-                .or_insert_with(Vec::new)
-                .extend(output.env.iter().cloned());
-
-            for dir in output.library_paths.iter() {
-                self.compilation.native_dirs.insert(dir.clone());
-            }
-        }
-        self.compilation.host = self.build_config.host_triple().to_string();
-        self.compilation.target = self.build_config.target_triple().to_string();
-        Ok(self.compilation)
-    }
-
-    pub fn prepare_units(
-        &mut self,
-        export_dir: Option<PathBuf>,
-        units: &[Unit<'a>],
-    ) -> CargoResult<()> {
-        let dest = if self.build_config.release {
-            "release"
-        } else {
-            "debug"
-        };
-        let host_layout = Layout::new(self.ws, None, dest)?;
-        let target_layout = match self.build_config.requested_target.as_ref() {
-            Some(target) => Some(Layout::new(self.ws, Some(target), dest)?),
-            None => None,
-        };
-
-        let deps = build_unit_dependencies(units, self)?;
-        self.unit_dependencies = deps;
-        let files =
-            CompilationFiles::new(units, host_layout, target_layout, export_dir, self.ws, self);
-        self.files = Some(files);
-        Ok(())
-    }
-
-    /// Prepare this context, ensuring that all filesystem directories are in
-    /// place.
-    pub fn prepare(&mut self) -> CargoResult<()> {
-        let _p = profile::start("preparing layout");
-
-        self.files_mut()
-            .host
-            .prepare()
-            .chain_err(|| internal("couldn't prepare build directories"))?;
-        if let Some(ref mut target) = self.files.as_mut().unwrap().target {
-            target
-                .prepare()
-                .chain_err(|| internal("couldn't prepare build directories"))?;
-        }
-
-        self.compilation.host_deps_output = self.files_mut().host.deps().to_path_buf();
-
-        let files = self.files.as_ref().unwrap();
-        let layout = files.target.as_ref().unwrap_or(&files.host);
-        self.compilation.root_output = layout.dest().to_path_buf();
-        self.compilation.deps_output = layout.deps().to_path_buf();
-        Ok(())
-    }
-
-    /// Builds up the `used_in_plugin` internal to this context from the list of
-    /// top-level units.
-    ///
-    /// This will recursively walk `units` and all of their dependencies to
-    /// determine which crate are going to be used in plugins or not.
-    pub fn build_used_in_plugin_map(&mut self, units: &[Unit<'a>]) -> CargoResult<()> {
-        let mut visited = HashSet::new();
-        for unit in units {
-            self.walk_used_in_plugin_map(unit, unit.target.for_host(), &mut visited)?;
-        }
-        Ok(())
-    }
-
-    fn walk_used_in_plugin_map(
-        &mut self,
-        unit: &Unit<'a>,
-        is_plugin: bool,
-        visited: &mut HashSet<(Unit<'a>, bool)>,
-    ) -> CargoResult<()> {
-        if !visited.insert((*unit, is_plugin)) {
-            return Ok(());
-        }
-        if is_plugin {
-            self.used_in_plugin.insert(*unit);
-        }
-        for unit in self.dep_targets(unit) {
-            self.walk_used_in_plugin_map(&unit, is_plugin || unit.target.for_host(), visited)?;
-        }
-        Ok(())
-    }
-
-    pub fn files(&self) -> &CompilationFiles<'a, 'cfg> {
-        self.files.as_ref().unwrap()
-    }
-
-    fn files_mut(&mut self) -> &mut CompilationFiles<'a, 'cfg> {
-        self.files.as_mut().unwrap()
-    }
-
-    /// Return the filenames that the given target for the given profile will
-    /// generate as a list of 3-tuples (filename, link_dst, linkable)
-    ///
-    ///  - filename: filename rustc compiles to. (Often has metadata suffix).
-    ///  - link_dst: Optional file to link/copy the result to (without metadata suffix)
-    ///  - linkable: Whether possible to link against file (eg it's a library)
-    pub fn outputs(&mut self, unit: &Unit<'a>) -> CargoResult<Arc<Vec<OutputFile>>> {
-        self.files.as_ref().unwrap().outputs(unit, self)
-    }
-
-    /// For a package, return all targets which are registered as dependencies
-    /// for that package.
-    // TODO: this ideally should be `-> &[Unit<'a>]`
-    pub fn dep_targets(&self, unit: &Unit<'a>) -> Vec<Unit<'a>> {
-        // If this build script's execution has been overridden then we don't
-        // actually depend on anything, we've reached the end of the dependency
-        // chain as we've got all the info we're gonna get.
-        //
-        // Note there's a subtlety about this piece of code! The
-        // `build_script_overridden` map here is populated in
-        // `custom_build::build_map` which you need to call before inspecting
-        // dependencies. However, that code itself calls this method and
-        // gets a full pre-filtered set of dependencies. This is not super
-        // obvious, and clear, but it does work at the moment.
-        if unit.target.is_custom_build() {
-            let key = (unit.pkg.package_id().clone(), unit.kind);
-            if self.build_script_overridden.contains(&key) {
-                return Vec::new();
-            }
-        }
-        self.unit_dependencies[unit].clone()
+        })
     }
 
     pub fn extern_crate_name(&self, unit: &Unit<'a>, dep: &Unit<'a>) -> CargoResult<String> {
@@ -508,53 +209,6 @@ impl<'a, 'cfg> Context<'a, 'cfg> {
         self.build_config.jobs
     }
 
-    pub fn incremental_args(&self, unit: &Unit) -> CargoResult<Vec<String>> {
-        // There's a number of ways to configure incremental compilation right
-        // now. In order of descending priority (first is highest priority) we
-        // have:
-        //
-        // * `CARGO_INCREMENTAL` - this is blanket used unconditionally to turn
-        //   on/off incremental compilation for any cargo subcommand. We'll
-        //   respect this if set.
-        // * `build.incremental` - in `.cargo/config` this blanket key can
-        //   globally for a system configure whether incremental compilation is
-        //   enabled. Note that setting this to `true` will not actually affect
-        //   all builds though. For example a `true` value doesn't enable
-        //   release incremental builds, only dev incremental builds. This can
-        //   be useful to globally disable incremental compilation like
-        //   `CARGO_INCREMENTAL`.
-        // * `profile.dev.incremental` - in `Cargo.toml` specific profiles can
-        //   be configured to enable/disable incremental compilation. This can
-        //   be primarily used to disable incremental when buggy for a project.
-        // * Finally, each profile has a default for whether it will enable
-        //   incremental compilation or not. Primarily development profiles
-        //   have it enabled by default while release profiles have it disabled
-        //   by default.
-        let global_cfg = self.config.get_bool("build.incremental")?.map(|c| c.val);
-        let incremental = match (self.incremental_env, global_cfg, unit.profile.incremental) {
-            (Some(v), _, _) => v,
-            (None, Some(false), _) => false,
-            (None, _, other) => other,
-        };
-
-        if !incremental {
-            return Ok(Vec::new());
-        }
-
-        // Only enable incremental compilation for sources the user can
-        // modify (aka path sources). For things that change infrequently,
-        // non-incremental builds yield better performance in the compiler
-        // itself (aka crates.io / git dependencies)
-        //
-        // (see also https://github.com/rust-lang/cargo/issues/3972)
-        if !unit.pkg.package_id().source_id().is_path() {
-            return Ok(Vec::new());
-        }
-
-        let dir = self.files().layout(unit.kind).incremental().display();
-        Ok(vec!["-C".to_string(), format!("incremental={}", dir)])
-    }
-
     pub fn rustflags_args(&self, unit: &Unit) -> CargoResult<Vec<String>> {
         env_args(
             self.config,
@@ -593,6 +247,374 @@ impl<'a, 'cfg> Context<'a, 'cfg> {
             }
         }
         None
+    }
+}
+
+pub struct Context<'a, 'cfg: 'a> {
+    pub bcx: &'a BuildContext<'a, 'cfg>,
+    pub compilation: Compilation<'cfg>,
+    pub build_state: Arc<BuildState>,
+    pub build_script_overridden: HashSet<(PackageId, Kind)>,
+    pub build_explicit_deps: HashMap<Unit<'a>, BuildDeps>,
+    pub fingerprints: HashMap<Unit<'a>, Arc<Fingerprint>>,
+    pub compiled: HashSet<Unit<'a>>,
+    pub build_scripts: HashMap<Unit<'a>, Arc<BuildScripts>>,
+    pub links: Links<'a>,
+    pub used_in_plugin: HashSet<Unit<'a>>,
+    pub jobserver: Client,
+    unit_dependencies: HashMap<Unit<'a>, Vec<Unit<'a>>>,
+    files: Option<CompilationFiles<'a, 'cfg>>,
+}
+
+impl<'a, 'cfg> Context<'a, 'cfg> {
+    pub fn new(config: &'cfg Config, bcx: &'a BuildContext<'a, 'cfg>) -> CargoResult<Self> {
+        // Load up the jobserver that we'll use to manage our parallelism. This
+        // is the same as the GNU make implementation of a jobserver, and
+        // intentionally so! It's hoped that we can interact with GNU make and
+        // all share the same jobserver.
+        //
+        // Note that if we don't have a jobserver in our environment then we
+        // create our own, and we create it with `n-1` tokens because one token
+        // is ourself, a running process.
+        let jobserver = match config.jobserver_from_env() {
+            Some(c) => c.clone(),
+            None => Client::new(bcx.build_config.jobs as usize - 1)
+                .chain_err(|| "failed to create jobserver")?,
+        };
+
+        let mut compilation = Compilation::new(config, bcx.build_config.rustc.process());
+        compilation.host_dylib_path = bcx.host_info.sysroot_libdir.clone();
+        compilation.target_dylib_path = bcx.target_info.sysroot_libdir.clone();
+        Ok(Self {
+            bcx,
+            compilation,
+            build_state: Arc::new(BuildState::new(&bcx.build_config)),
+            fingerprints: HashMap::new(),
+            compiled: HashSet::new(),
+            build_scripts: HashMap::new(),
+            build_explicit_deps: HashMap::new(),
+            links: Links::new(),
+            used_in_plugin: HashSet::new(),
+            jobserver,
+            build_script_overridden: HashSet::new(),
+
+            unit_dependencies: HashMap::new(),
+            files: None,
+        })
+    }
+
+    // Returns a mapping of the root package plus its immediate dependencies to
+    // where the compiled libraries are all located.
+    pub fn compile(
+        mut self,
+        units: &[Unit<'a>],
+        export_dir: Option<PathBuf>,
+        exec: &Arc<Executor>,
+    ) -> CargoResult<Compilation<'cfg>> {
+        let mut queue = JobQueue::new(self.bcx);
+        self.prepare_units(export_dir, units)?;
+        self.prepare()?;
+        self.build_used_in_plugin_map(units)?;
+        custom_build::build_map(&mut self, units)?;
+
+        for unit in units.iter() {
+            // Build up a list of pending jobs, each of which represent
+            // compiling a particular package. No actual work is executed as
+            // part of this, that's all done next as part of the `execute`
+            // function which will run everything in order with proper
+            // parallelism.
+            super::compile(&mut self, &mut queue, unit, exec)?;
+        }
+
+        // Now that we've figured out everything that we're going to do, do it!
+        queue.execute(&mut self)?;
+
+        for unit in units.iter() {
+            for output in self.outputs(unit)?.iter() {
+                if output.flavor == FileFlavor::DebugInfo {
+                    continue;
+                }
+
+                let bindst = match output.hardlink {
+                    Some(ref link_dst) => link_dst,
+                    None => &output.path,
+                };
+
+                if unit.mode.is_any_test() && !unit.mode.is_check() {
+                    self.compilation.tests.push((
+                        unit.pkg.clone(),
+                        unit.target.kind().clone(),
+                        unit.target.name().to_string(),
+                        output.path.clone(),
+                    ));
+                } else if unit.target.is_bin() || unit.target.is_example() {
+                    self.compilation.binaries.push(bindst.clone());
+                } else if unit.target.is_lib() {
+                    let pkgid = unit.pkg.package_id().clone();
+                    self.compilation
+                        .libraries
+                        .entry(pkgid)
+                        .or_insert_with(HashSet::new)
+                        .insert((unit.target.clone(), output.path.clone()));
+                }
+            }
+
+            for dep in self.dep_targets(unit).iter() {
+                if !unit.target.is_lib() {
+                    continue;
+                }
+
+                if dep.mode.is_run_custom_build() {
+                    let out_dir = self.files().build_script_out_dir(dep).display().to_string();
+                    self.compilation
+                        .extra_env
+                        .entry(dep.pkg.package_id().clone())
+                        .or_insert_with(Vec::new)
+                        .push(("OUT_DIR".to_string(), out_dir));
+                }
+
+                if !dep.target.is_lib() {
+                    continue;
+                }
+                if dep.mode.is_doc() {
+                    continue;
+                }
+
+                let outputs = self.outputs(dep)?;
+                self.compilation
+                    .libraries
+                    .entry(unit.pkg.package_id().clone())
+                    .or_insert_with(HashSet::new)
+                    .extend(
+                        outputs
+                            .iter()
+                            .map(|output| (dep.target.clone(), output.path.clone())),
+                    );
+            }
+
+            let feats = self.bcx.resolve.features(unit.pkg.package_id());
+            if !feats.is_empty() {
+                self.compilation
+                    .cfgs
+                    .entry(unit.pkg.package_id().clone())
+                    .or_insert_with(|| {
+                        feats
+                            .iter()
+                            .map(|feat| format!("feature=\"{}\"", feat))
+                            .collect()
+                    });
+            }
+            let rustdocflags = self.bcx.rustdocflags_args(unit)?;
+            if !rustdocflags.is_empty() {
+                self.compilation
+                    .rustdocflags
+                    .entry(unit.pkg.package_id().clone())
+                    .or_insert(rustdocflags);
+            }
+
+            super::output_depinfo(&mut self, unit)?;
+        }
+
+        for (&(ref pkg, _), output) in self.build_state.outputs.lock().unwrap().iter() {
+            self.compilation
+                .cfgs
+                .entry(pkg.clone())
+                .or_insert_with(HashSet::new)
+                .extend(output.cfgs.iter().cloned());
+
+            self.compilation
+                .extra_env
+                .entry(pkg.clone())
+                .or_insert_with(Vec::new)
+                .extend(output.env.iter().cloned());
+
+            for dir in output.library_paths.iter() {
+                self.compilation.native_dirs.insert(dir.clone());
+            }
+        }
+        self.compilation.host = self.bcx.build_config.host_triple().to_string();
+        self.compilation.target = self.bcx.build_config.target_triple().to_string();
+        Ok(self.compilation)
+    }
+
+    pub fn prepare_units(
+        &mut self,
+        export_dir: Option<PathBuf>,
+        units: &[Unit<'a>],
+    ) -> CargoResult<()> {
+        let dest = if self.bcx.build_config.release {
+            "release"
+        } else {
+            "debug"
+        };
+        let host_layout = Layout::new(self.bcx.ws, None, dest)?;
+        let target_layout = match self.bcx.build_config.requested_target.as_ref() {
+            Some(target) => Some(Layout::new(self.bcx.ws, Some(target), dest)?),
+            None => None,
+        };
+
+        let deps = build_unit_dependencies(units, self.bcx)?;
+        self.unit_dependencies = deps;
+        let files = CompilationFiles::new(
+            units,
+            host_layout,
+            target_layout,
+            export_dir,
+            self.bcx.ws,
+            self,
+        );
+        self.files = Some(files);
+        Ok(())
+    }
+
+    /// Prepare this context, ensuring that all filesystem directories are in
+    /// place.
+    pub fn prepare(&mut self) -> CargoResult<()> {
+        let _p = profile::start("preparing layout");
+
+        self.files_mut()
+            .host
+            .prepare()
+            .chain_err(|| internal("couldn't prepare build directories"))?;
+        if let Some(ref mut target) = self.files.as_mut().unwrap().target {
+            target
+                .prepare()
+                .chain_err(|| internal("couldn't prepare build directories"))?;
+        }
+
+        self.compilation.host_deps_output = self.files_mut().host.deps().to_path_buf();
+
+        let files = self.files.as_ref().unwrap();
+        let layout = files.target.as_ref().unwrap_or(&files.host);
+        self.compilation.root_output = layout.dest().to_path_buf();
+        self.compilation.deps_output = layout.deps().to_path_buf();
+        Ok(())
+    }
+
+    /// Builds up the `used_in_plugin` internal to this context from the list of
+    /// top-level units.
+    ///
+    /// This will recursively walk `units` and all of their dependencies to
+    /// determine which crate are going to be used in plugins or not.
+    pub fn build_used_in_plugin_map(&mut self, units: &[Unit<'a>]) -> CargoResult<()> {
+        let mut visited = HashSet::new();
+        for unit in units {
+            self.walk_used_in_plugin_map(unit, unit.target.for_host(), &mut visited)?;
+        }
+        Ok(())
+    }
+
+    fn walk_used_in_plugin_map(
+        &mut self,
+        unit: &Unit<'a>,
+        is_plugin: bool,
+        visited: &mut HashSet<(Unit<'a>, bool)>,
+    ) -> CargoResult<()> {
+        if !visited.insert((*unit, is_plugin)) {
+            return Ok(());
+        }
+        if is_plugin {
+            self.used_in_plugin.insert(*unit);
+        }
+        for unit in self.dep_targets(unit) {
+            self.walk_used_in_plugin_map(&unit, is_plugin || unit.target.for_host(), visited)?;
+        }
+        Ok(())
+    }
+
+    pub fn files(&self) -> &CompilationFiles<'a, 'cfg> {
+        self.files.as_ref().unwrap()
+    }
+
+    fn files_mut(&mut self) -> &mut CompilationFiles<'a, 'cfg> {
+        self.files.as_mut().unwrap()
+    }
+
+    /// Return the filenames that the given target for the given profile will
+    /// generate as a list of 3-tuples (filename, link_dst, linkable)
+    ///
+    ///  - filename: filename rustc compiles to. (Often has metadata suffix).
+    ///  - link_dst: Optional file to link/copy the result to (without metadata suffix)
+    ///  - linkable: Whether possible to link against file (eg it's a library)
+    pub fn outputs(&mut self, unit: &Unit<'a>) -> CargoResult<Arc<Vec<OutputFile>>> {
+        self.files.as_ref().unwrap().outputs(unit, self.bcx)
+    }
+
+    /// For a package, return all targets which are registered as dependencies
+    /// for that package.
+    // TODO: this ideally should be `-> &[Unit<'a>]`
+    pub fn dep_targets(&self, unit: &Unit<'a>) -> Vec<Unit<'a>> {
+        // If this build script's execution has been overridden then we don't
+        // actually depend on anything, we've reached the end of the dependency
+        // chain as we've got all the info we're gonna get.
+        //
+        // Note there's a subtlety about this piece of code! The
+        // `build_script_overridden` map here is populated in
+        // `custom_build::build_map` which you need to call before inspecting
+        // dependencies. However, that code itself calls this method and
+        // gets a full pre-filtered set of dependencies. This is not super
+        // obvious, and clear, but it does work at the moment.
+        if unit.target.is_custom_build() {
+            let key = (unit.pkg.package_id().clone(), unit.kind);
+            if self.build_script_overridden.contains(&key) {
+                return Vec::new();
+            }
+        }
+        self.unit_dependencies[unit].clone()
+    }
+
+    pub fn incremental_args(&self, unit: &Unit) -> CargoResult<Vec<String>> {
+        // There's a number of ways to configure incremental compilation right
+        // now. In order of descending priority (first is highest priority) we
+        // have:
+        //
+        // * `CARGO_INCREMENTAL` - this is blanket used unconditionally to turn
+        //   on/off incremental compilation for any cargo subcommand. We'll
+        //   respect this if set.
+        // * `build.incremental` - in `.cargo/config` this blanket key can
+        //   globally for a system configure whether incremental compilation is
+        //   enabled. Note that setting this to `true` will not actually affect
+        //   all builds though. For example a `true` value doesn't enable
+        //   release incremental builds, only dev incremental builds. This can
+        //   be useful to globally disable incremental compilation like
+        //   `CARGO_INCREMENTAL`.
+        // * `profile.dev.incremental` - in `Cargo.toml` specific profiles can
+        //   be configured to enable/disable incremental compilation. This can
+        //   be primarily used to disable incremental when buggy for a project.
+        // * Finally, each profile has a default for whether it will enable
+        //   incremental compilation or not. Primarily development profiles
+        //   have it enabled by default while release profiles have it disabled
+        //   by default.
+        let global_cfg = self.bcx
+            .config
+            .get_bool("build.incremental")?
+            .map(|c| c.val);
+        let incremental = match (
+            self.bcx.incremental_env,
+            global_cfg,
+            unit.profile.incremental,
+        ) {
+            (Some(v), _, _) => v,
+            (None, Some(false), _) => false,
+            (None, _, other) => other,
+        };
+
+        if !incremental {
+            return Ok(Vec::new());
+        }
+
+        // Only enable incremental compilation for sources the user can
+        // modify (aka path sources). For things that change infrequently,
+        // non-incremental builds yield better performance in the compiler
+        // itself (aka crates.io / git dependencies)
+        //
+        // (see also https://github.com/rust-lang/cargo/issues/3972)
+        if !unit.pkg.package_id().source_id().is_path() {
+            return Ok(Vec::new());
+        }
+
+        let dir = self.files().layout(unit.kind).incremental().display();
+        Ok(vec!["-C".to_string(), format!("incremental={}", dir)])
     }
 }
 

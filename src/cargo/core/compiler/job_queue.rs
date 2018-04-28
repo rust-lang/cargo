@@ -16,7 +16,7 @@ use util::{internal, profile, CargoResult, CargoResultExt, ProcessBuilder};
 use util::{Config, DependencyQueue, Dirty, Fresh, Freshness};
 
 use super::job::Job;
-use super::{Context, Kind, Unit};
+use super::{BuildContext, Context, Kind, Unit};
 
 /// A management structure of the entire dependency graph to compile.
 ///
@@ -80,7 +80,7 @@ impl<'a> JobState<'a> {
 }
 
 impl<'a> JobQueue<'a> {
-    pub fn new<'cfg>(cx: &Context<'a, 'cfg>) -> JobQueue<'a> {
+    pub fn new<'cfg>(bcx: &BuildContext<'a, 'cfg>) -> JobQueue<'a> {
         let (tx, rx) = channel();
         JobQueue {
             queue: DependencyQueue::new(),
@@ -91,7 +91,7 @@ impl<'a> JobQueue<'a> {
             compiled: HashSet::new(),
             documented: HashSet::new(),
             counts: HashMap::new(),
-            is_release: cx.build_config.release,
+            is_release: bcx.build_config.release,
         }
     }
 
@@ -193,7 +193,7 @@ impl<'a> JobQueue<'a> {
             // we're able to perform some parallel work.
             while error.is_none() && self.active < tokens.len() + 1 && !queue.is_empty() {
                 let (key, job, fresh) = queue.remove(0);
-                self.run(key, fresh, job, cx.config, scope)?;
+                self.run(key, fresh, job, cx.bcx.config, scope)?;
             }
 
             // If after all that we're not actually running anything then we're
@@ -211,16 +211,19 @@ impl<'a> JobQueue<'a> {
 
             match self.rx.recv().unwrap() {
                 Message::Run(cmd) => {
-                    cx.config.shell().verbose(|c| c.status("Running", &cmd))?;
+                    cx.bcx
+                        .config
+                        .shell()
+                        .verbose(|c| c.status("Running", &cmd))?;
                 }
                 Message::Stdout(out) => {
-                    if cx.config.extra_verbose() {
+                    if cx.bcx.config.extra_verbose() {
                         println!("{}", out);
                     }
                 }
                 Message::Stderr(err) => {
-                    if cx.config.extra_verbose() {
-                        writeln!(cx.config.shell().err(), "{}", err)?;
+                    if cx.bcx.config.extra_verbose() {
+                        writeln!(cx.bcx.config.shell().err(), "{}", err)?;
                     }
                 }
                 Message::Finish(key, result) => {
@@ -238,8 +241,8 @@ impl<'a> JobQueue<'a> {
 
                             if self.active > 0 {
                                 error = Some(format_err!("build failed"));
-                                handle_error(e, &mut *cx.config.shell());
-                                cx.config.shell().warn(
+                                handle_error(e, &mut *cx.bcx.config.shell());
+                                cx.bcx.config.shell().warn(
                                     "build failed, waiting for other \
                                      jobs to finish...",
                                 )?;
@@ -263,7 +266,7 @@ impl<'a> JobQueue<'a> {
         // list of Units built, and maybe display a list of the different
         // profiles used.  However, to keep it simple and compatible with old
         // behavior, we just display what the base profile is.
-        let profile = cx.profiles.base_profile(self.is_release);
+        let profile = cx.bcx.profiles.base_profile(self.is_release);
         let mut opt_type = String::from(if profile.opt_level.as_str() == "0" {
             "unoptimized"
         } else {
@@ -272,7 +275,7 @@ impl<'a> JobQueue<'a> {
         if profile.debuginfo.is_some() {
             opt_type += " + debuginfo";
         }
-        let duration = cx.config.creation_time().elapsed();
+        let duration = cx.bcx.config.creation_time().elapsed();
         let time_elapsed = format!(
             "{}.{:02} secs",
             duration.as_secs(),
@@ -283,7 +286,7 @@ impl<'a> JobQueue<'a> {
                 "{} [{}] target(s) in {}",
                 build_type, opt_type, time_elapsed
             );
-            cx.config.shell().status("Finished", message)?;
+            cx.bcx.config.shell().status("Finished", message)?;
             Ok(())
         } else if let Some(e) = error {
             Err(e)
@@ -328,20 +331,21 @@ impl<'a> JobQueue<'a> {
 
     fn emit_warnings(&self, msg: Option<&str>, key: &Key<'a>, cx: &mut Context) -> CargoResult<()> {
         let output = cx.build_state.outputs.lock().unwrap();
+        let bcx = &mut cx.bcx;
         if let Some(output) = output.get(&(key.pkg.clone(), key.kind)) {
             if let Some(msg) = msg {
                 if !output.warnings.is_empty() {
-                    writeln!(cx.config.shell().err(), "{}\n", msg)?;
+                    writeln!(bcx.config.shell().err(), "{}\n", msg)?;
                 }
             }
 
             for warning in output.warnings.iter() {
-                cx.config.shell().warn(warning)?;
+                bcx.config.shell().warn(warning)?;
             }
 
             if !output.warnings.is_empty() && msg.is_some() {
                 // Output an empty line.
-                writeln!(cx.config.shell().err(), "")?;
+                writeln!(bcx.config.shell().err(), "")?;
             }
         }
 
@@ -349,7 +353,7 @@ impl<'a> JobQueue<'a> {
     }
 
     fn finish(&mut self, key: Key<'a>, cx: &mut Context) -> CargoResult<()> {
-        if key.mode.is_run_custom_build() && cx.show_warnings(key.pkg) {
+        if key.mode.is_run_custom_build() && cx.bcx.show_warnings(key.pkg) {
             self.emit_warnings(None, &key, cx)?;
         }
 
@@ -424,7 +428,7 @@ impl<'a> Key<'a> {
 
     fn dependencies<'cfg>(&self, cx: &Context<'a, 'cfg>) -> CargoResult<Vec<Key<'a>>> {
         let unit = Unit {
-            pkg: cx.get_package(self.pkg)?,
+            pkg: cx.bcx.get_package(self.pkg)?,
             target: self.target,
             profile: self.profile,
             kind: self.kind,
