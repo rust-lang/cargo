@@ -150,7 +150,7 @@ pub struct Fingerprint {
     profile: u64,
     path: u64,
     #[serde(serialize_with = "serialize_deps", deserialize_with = "deserialize_deps")]
-    deps: Vec<(String, Arc<Fingerprint>)>,
+    deps: Vec<(String, String, Arc<Fingerprint>)>,
     local: Vec<LocalFingerprint>,
     #[serde(skip_serializing, skip_deserializing)]
     memoized_hash: Mutex<Option<u64>>,
@@ -158,25 +158,26 @@ pub struct Fingerprint {
     edition: Edition,
 }
 
-fn serialize_deps<S>(deps: &[(String, Arc<Fingerprint>)], ser: S) -> Result<S::Ok, S::Error>
+fn serialize_deps<S>(deps: &[(String, String, Arc<Fingerprint>)], ser: S) -> Result<S::Ok, S::Error>
 where
     S: ser::Serializer,
 {
     deps.iter()
-        .map(|&(ref a, ref b)| (a, b.hash()))
+        .map(|&(ref a, ref b, ref c)| (a, b, c.hash()))
         .collect::<Vec<_>>()
         .serialize(ser)
 }
 
-fn deserialize_deps<'de, D>(d: D) -> Result<Vec<(String, Arc<Fingerprint>)>, D::Error>
+fn deserialize_deps<'de, D>(d: D) -> Result<Vec<(String, String, Arc<Fingerprint>)>, D::Error>
 where
     D: de::Deserializer<'de>,
 {
-    let decoded = <Vec<(String, u64)>>::deserialize(d)?;
+    let decoded = <Vec<(String, String, u64)>>::deserialize(d)?;
     Ok(decoded
         .into_iter()
-        .map(|(name, hash)| {
+        .map(|(pkg_id, name, hash)| {
             (
+                pkg_id,
                 name,
                 Arc::new(Fingerprint {
                     rustc: 0,
@@ -330,7 +331,7 @@ impl Fingerprint {
             bail!("number of dependencies has changed")
         }
         for (a, b) in self.deps.iter().zip(old.deps.iter()) {
-            if a.1.hash() != b.1.hash() {
+            if a.1 != b.1 || a.2.hash() != b.2.hash() {
                 bail!("new ({}) != old ({})", a.0, b.0)
             }
         }
@@ -357,7 +358,8 @@ impl hash::Hash for Fingerprint {
         ).hash(h);
 
         h.write_usize(deps.len());
-        for &(ref name, ref fingerprint) in deps {
+        for &(ref pkg_id, ref name, ref fingerprint) in deps {
+            pkg_id.hash(h);
             name.hash(h);
             // use memoized dep hashes to avoid exponential blowup
             h.write_u64(Fingerprint::hash(fingerprint));
@@ -426,8 +428,11 @@ fn calculate<'a, 'cfg>(
     let deps = cx.dep_targets(unit);
     let deps = deps.iter()
         .filter(|u| !u.target.is_custom_build() && !u.target.is_bin())
-        .map(|unit| {
-            calculate(cx, unit).map(|fingerprint| (unit.pkg.package_id().to_string(), fingerprint))
+        .map(|dep| {
+            calculate(cx, dep).and_then(|fingerprint| {
+                let name = cx.extern_crate_name(unit, dep)?;
+                Ok((dep.pkg.package_id().to_string(), name, fingerprint))
+            })
         })
         .collect::<CargoResult<Vec<_>>>()?;
 
@@ -441,7 +446,7 @@ fn calculate<'a, 'cfg>(
         LocalFingerprint::Precalculated(fingerprint)
     };
     let mut deps = deps;
-    deps.sort_by(|&(ref a, _), &(ref b, _)| a.cmp(b));
+    deps.sort_by(|&(ref a, _, _), &(ref b, _, _)| a.cmp(b));
     let extra_flags = if unit.mode.is_doc() {
         cx.rustdocflags_args(unit)?
     } else {

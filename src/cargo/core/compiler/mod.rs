@@ -1097,30 +1097,7 @@ fn build_deps_args<'a, 'cfg>(
                 continue;
             }
             let mut v = OsString::new();
-
-            let deps = {
-                let a = current.pkg.package_id();
-                let b = dep.pkg.package_id();
-                if a == b {
-                    &[]
-                } else {
-                    cx.resolve.dependencies_listed(a, b)
-                }
-            };
-
-            let crate_name = dep.target.crate_name();
-            let mut names = deps.iter()
-                .map(|d| d.rename().unwrap_or(&crate_name));
-            let name = names.next().unwrap_or(&crate_name);
-            for n in names {
-                if n == name {
-                    continue
-                }
-                bail!("multiple dependencies listed for the same crate must \
-                       all have the same name, but the dependency on `{}` \
-                       is listed as having different names", dep.pkg.package_id());
-            }
-
+            let name = cx.extern_crate_name(current, dep)?;
             v.push(name);
             v.push("=");
             v.push(cx.files().out_dir(dep));
