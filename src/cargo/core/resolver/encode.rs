@@ -179,7 +179,6 @@ impl EncodableResolve {
 
         Ok(Resolve::new(
             g,
-            HashMap::new(),
             replacements,
             HashMap::new(),
             checksums,

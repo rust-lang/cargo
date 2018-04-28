@@ -1,10 +1,9 @@
 use std::fmt;
 use std::hash::Hash;
-use std::collections::hash_set::{HashSet, Iter};
-use std::collections::hash_map::{HashMap, Keys};
+use std::collections::hash_map::{HashMap, Iter, Keys};
 
-pub struct Graph<N> {
-    nodes: HashMap<N, HashSet<N>>,
+pub struct Graph<N, E> {
+    nodes: HashMap<N, HashMap<N, E>>,
 }
 
 enum Mark {
@@ -12,35 +11,34 @@ enum Mark {
     Done,
 }
 
-pub type Nodes<'a, N> = Keys<'a, N, HashSet<N>>;
-pub type Edges<'a, N> = Iter<'a, N>;
+pub type Nodes<'a, N, E> = Keys<'a, N, HashMap<N, E>>;
+pub type Edges<'a, N, E> = Iter<'a, N, E>;
 
-impl<N: Eq + Hash + Clone> Graph<N> {
-    pub fn new() -> Graph<N> {
+impl<N: Eq + Hash + Clone, E: Default> Graph<N, E> {
+    pub fn new() -> Graph<N, E> {
         Graph {
             nodes: HashMap::new(),
         }
     }
 
     pub fn add(&mut self, node: N) {
+        self.nodes.entry(node).or_insert_with(HashMap::new);
+    }
+
+    pub fn link(&mut self, node: N, child: N) -> &mut E {
         self.nodes
             .entry(node)
-            .or_insert_with(HashSet::new);
+            .or_insert_with(HashMap::new)
+            .entry(child)
+            .or_insert_with(Default::default)
     }
 
-    pub fn link(&mut self, node: N, child: N) {
-        self.nodes
-            .entry(node)
-            .or_insert_with(HashSet::new)
-            .insert(child);
+    pub fn edge(&self, from: &N, to: &N) -> Option<&E> {
+        self.nodes.get(from)?.get(to)
     }
 
-    pub fn get_nodes(&self) -> &HashMap<N, HashSet<N>> {
-        &self.nodes
-    }
-
-    pub fn edges(&self, node: &N) -> Option<Edges<N>> {
-        self.nodes.get(node).map(|set| set.iter())
+    pub fn edges(&self, from: &N) -> Option<Edges<N, E>> {
+        self.nodes.get(from).map(|set| set.iter())
     }
 
     pub fn sort(&self) -> Option<Vec<N>> {
@@ -61,7 +59,7 @@ impl<N: Eq + Hash + Clone> Graph<N> {
 
         marks.insert(node.clone(), Mark::InProgress);
 
-        for child in &self.nodes[node] {
+        for child in self.nodes[node].keys() {
             self.visit(child, dst, marks);
         }
 
@@ -69,7 +67,7 @@ impl<N: Eq + Hash + Clone> Graph<N> {
         marks.insert(node.clone(), Mark::Done);
     }
 
-    pub fn iter(&self) -> Nodes<N> {
+    pub fn iter(&self) -> Nodes<N, E> {
         self.nodes.keys()
     }
 
@@ -81,12 +79,12 @@ impl<N: Eq + Hash + Clone> Graph<N> {
         // it's used for!
         let mut result = vec![pkg];
         let first_pkg_depending_on = |pkg: &N, res: &[&N]| {
-            self.get_nodes()
+            self.nodes
                 .iter()
-                .filter(|&(_node, adjacent)| adjacent.contains(pkg))
+                .filter(|&(_node, adjacent)| adjacent.contains_key(pkg))
                 // Note that we can have "cycles" introduced through dev-dependency
                 // edges, so make sure we don't loop infinitely.
-                .filter(|&(_node, _)| !res.contains(&_node))
+                .filter(|&(node, _)| !res.contains(&node))
                 .next()
                 .map(|p| p.0)
         };
@@ -98,20 +96,20 @@ impl<N: Eq + Hash + Clone> Graph<N> {
     }
 }
 
-impl<N: Eq + Hash + Clone> Default for Graph<N> {
-    fn default() -> Graph<N> {
+impl<N: Eq + Hash + Clone, E: Default> Default for Graph<N, E> {
+    fn default() -> Graph<N, E> {
         Graph::new()
     }
 }
 
-impl<N: fmt::Display + Eq + Hash> fmt::Debug for Graph<N> {
+impl<N: fmt::Display + Eq + Hash, E> fmt::Debug for Graph<N, E> {
     fn fmt(&self, fmt: &mut fmt::Formatter) -> fmt::Result {
         writeln!(fmt, "Graph {{")?;
 
         for (n, e) in &self.nodes {
             writeln!(fmt, "  - {}", n)?;
 
-            for n in e.iter() {
+            for n in e.keys() {
                 writeln!(fmt, "    - {}", n)?;
             }
         }
@@ -122,15 +120,15 @@ impl<N: fmt::Display + Eq + Hash> fmt::Debug for Graph<N> {
     }
 }
 
-impl<N: Eq + Hash> PartialEq for Graph<N> {
-    fn eq(&self, other: &Graph<N>) -> bool {
+impl<N: Eq + Hash, E: Eq> PartialEq for Graph<N, E> {
+    fn eq(&self, other: &Graph<N, E>) -> bool {
         self.nodes.eq(&other.nodes)
     }
 }
-impl<N: Eq + Hash> Eq for Graph<N> {}
+impl<N: Eq + Hash, E: Eq> Eq for Graph<N, E> {}
 
-impl<N: Eq + Hash + Clone> Clone for Graph<N> {
-    fn clone(&self) -> Graph<N> {
+impl<N: Eq + Hash + Clone, E: Clone> Clone for Graph<N, E> {
+    fn clone(&self) -> Graph<N, E> {
         Graph {
             nodes: self.nodes.clone(),
         }
