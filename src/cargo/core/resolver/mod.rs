@@ -122,16 +122,13 @@ pub fn resolve(
     let mut registry = RegistryQueryer::new(registry, replacements, try_to_use, minimal_versions);
     let cx = activate_deps_loop(cx, &mut registry, summaries, config)?;
 
-    let (graph, deps) = cx.graph();
-
     let mut cksums = HashMap::new();
     for summary in cx.activations.values().flat_map(|v| v.iter()) {
         let cksum = summary.checksum().map(|s| s.to_string());
         cksums.insert(summary.package_id().clone(), cksum);
     }
     let resolve = Resolve::new(
-        graph,
-        deps,
+        cx.graph(),
         cx.resolve_replacements(),
         cx.resolve_features
             .iter()
@@ -867,7 +864,7 @@ fn activation_error(
     candidates: &[Candidate],
     config: Option<&Config>,
 ) -> CargoError {
-    let (graph, _) = cx.graph();
+    let graph = cx.graph();
     if !candidates.is_empty() {
         let mut msg = format!("failed to select a version for `{}`.", dep.name());
         msg.push_str("\n    ... required by ");
