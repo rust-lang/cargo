@@ -98,13 +98,27 @@ fn simple_bin() {
 fn both_lib_and_bin() {
     assert_that(
         cargo_process("new")
-            .arg("--lib")
             .arg("--bin")
-            .arg("foo")
+            .arg("--lib")
+            .arg("fooboth")
             .env("USER", "foo"),
         execs()
-            .with_status(101)
-            .with_stderr("[ERROR] can't specify both lib and binary outputs"),
+            .with_status(0)
+            .with_stderr("[CREATED] library with a binary (application) `fooboth` project"),
+    );
+
+    assert_that(&paths::root().join("fooboth"), existing_dir());
+    assert_that(&paths::root().join("fooboth/Cargo.toml"), existing_file());
+    assert_that(&paths::root().join("fooboth/src/main.rs"), existing_file());
+    assert_that(&paths::root().join("fooboth/src/lib.rs"), existing_file());
+
+    assert_that(
+        cargo_process("build").cwd(&paths::root().join("fooboth")),
+        execs().with_status(0),
+    );
+    assert_that(
+        &paths::root().join(&format!("fooboth/target/debug/fooboth{}", env::consts::EXE_SUFFIX)),
+        existing_file(),
     );
 }
 
