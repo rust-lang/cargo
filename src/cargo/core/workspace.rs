@@ -118,7 +118,6 @@ pub struct WorkspaceRootConfig {
 
 /// An iterator over the member packages of a workspace, returned by
 /// `Workspace::members`
-#[derive(Clone)]
 pub struct Members<'a, 'cfg: 'a> {
     ws: &'a Workspace<'cfg>,
     iter: slice::Iter<'a, PathBuf>,
