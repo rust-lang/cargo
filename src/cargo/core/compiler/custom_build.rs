@@ -12,7 +12,7 @@ use util::{self, internal, paths, profile};
 use util::{Cfg, Freshness};
 
 use super::job::Work;
-use super::{fingerprint, Context, Kind, Unit};
+use super::{fingerprint, Context, Kind, TargetConfig, Unit};
 
 /// Contains the parsed output of a custom build script.
 #[derive(Clone, Debug, Hash)]
@@ -364,10 +364,10 @@ fn build_work<'a, 'cfg>(cx: &mut Context<'a, 'cfg>, unit: &Unit<'a>) -> CargoRes
 }
 
 impl BuildState {
-    pub fn new(config: &super::BuildConfig) -> BuildState {
+    pub fn new(host_config: &TargetConfig, target_config: &TargetConfig) -> BuildState {
         let mut overrides = HashMap::new();
-        let i1 = config.host.overrides.iter().map(|p| (p, Kind::Host));
-        let i2 = config.target.overrides.iter().map(|p| (p, Kind::Target));
+        let i1 = host_config.overrides.iter().map(|p| (p, Kind::Host));
+        let i2 = target_config.overrides.iter().map(|p| (p, Kind::Target));
         for ((name, output), kind) in i1.chain(i2) {
             overrides.insert((name.clone(), kind), output.clone());
         }
