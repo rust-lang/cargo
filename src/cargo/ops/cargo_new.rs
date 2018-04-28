@@ -419,6 +419,7 @@ fn mk(config: &Config, opts: &MkOptions) -> CargoResult<()> {
     let name = opts.name;
     let cfg = global_config(config)?;
     let has_bin = opts.source_files.iter().any(|f| f.bin);
+    let has_lib = opts.source_files.iter().any(|f| !f.bin);
     // Please ensure that ignore and hgignore are in sync.
     let ignore = [
         "/target\n",
@@ -556,12 +557,24 @@ authors = [{}]
             fs::create_dir_all(src_dir)?;
         }
 
+        let file_content_tmp;
         let default_file_content: &[u8] = if i.bin {
-            b"\
+            if has_lib {
+                file_content_tmp = format!("\
+extern crate {};
+
+fn main() {{
+    println!(\"Hello, world!\");
+}}
+", name);
+                file_content_tmp.as_bytes()
+            } else {
+                b"\
 fn main() {
     println!(\"Hello, world!\");
 }
 "
+            }
         } else {
             b"\
 #[cfg(test)]
