@@ -15,7 +15,7 @@ use util::errors::{CargoResult, CargoResultExt};
 use util::paths;
 use util::{internal, profile, Dirty, Fresh, Freshness};
 
-use super::context::{BuildContext, Context, FileFlavor, Unit};
+use super::{Context, BuildContext, FileFlavor, Unit};
 use super::custom_build::BuildDeps;
 use super::job::Work;
 
