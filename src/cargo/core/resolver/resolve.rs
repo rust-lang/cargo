@@ -18,8 +18,7 @@ use super::encode::Metadata;
 /// for each package.
 #[derive(PartialEq)]
 pub struct Resolve {
-    graph: Graph<PackageId>,
-    dependencies: HashMap<(PackageId, PackageId), Vec<Dependency>>,
+    graph: Graph<PackageId, Vec<Dependency>>,
     replacements: HashMap<PackageId, PackageId>,
     reverse_replacements: HashMap<PackageId, PackageId>,
     empty_features: HashSet<String>,
@@ -31,8 +30,7 @@ pub struct Resolve {
 
 impl Resolve {
     pub fn new(
-        graph: Graph<PackageId>,
-        dependencies: HashMap<(PackageId, PackageId), Vec<Dependency>>,
+        graph: Graph<PackageId, Vec<Dependency>>,
         replacements: HashMap<PackageId, PackageId>,
         features: HashMap<PackageId, HashSet<String>>,
         checksums: HashMap<PackageId, Option<String>>,
@@ -45,7 +43,6 @@ impl Resolve {
             .collect();
         Resolve {
             graph,
-            dependencies,
             replacements,
             features,
             checksums,
@@ -162,14 +159,13 @@ unable to verify that `{0}` is the same as when the lockfile was generated
         Ok(())
     }
 
-    pub fn iter(&self) -> Nodes<PackageId> {
+    pub fn iter(&self) -> Nodes<PackageId, Vec<Dependency>> {
         self.graph.iter()
     }
 
     pub fn deps(&self, pkg: &PackageId) -> Deps {
         Deps {
             edges: self.graph.edges(pkg),
-            id: pkg.clone(),
             resolve: self,
         }
     }
@@ -225,11 +221,11 @@ unable to verify that `{0}` is the same as when the lockfile was generated
         // that's where the dependency originates from, and we only replace
         // targets of dependencies not the originator.
         if let Some(replace) = self.reverse_replacements.get(to) {
-            if let Some(deps) = self.dependencies.get(&(from.clone(), replace.clone())) {
+            if let Some(deps) = self.graph.edge(from, replace) {
                 return deps;
             }
         }
-        match self.dependencies.get(&(from.clone(), to.clone())) {
+        match self.graph.edge(from, to) {
             Some(ret) => ret,
             None => panic!("no Dependency listed for `{}` => `{}`", from, to),
         }
@@ -248,8 +244,7 @@ impl fmt::Debug for Resolve {
 }
 
 pub struct Deps<'a> {
-    edges: Option<Edges<'a, PackageId>>,
-    id: PackageId,
+    edges: Option<Edges<'a, PackageId, Vec<Dependency>>>,
     resolve: &'a Resolve,
 }
 
@@ -257,9 +252,8 @@ impl<'a> Iterator for Deps<'a> {
     type Item = (&'a PackageId, &'a [Dependency]);
 
     fn next(&mut self) -> Option<(&'a PackageId, &'a [Dependency])> {
-        let id = self.edges.as_mut()?.next()?;
+        let (id, deps) = self.edges.as_mut()?.next()?;
         let id_ret = self.resolve.replacement(id).unwrap_or(id);
-        let deps = &self.resolve.dependencies[&(self.id.clone(), id.clone())];
         Some((id_ret, deps))
     }
 
@@ -274,14 +268,14 @@ impl<'a> Iterator for Deps<'a> {
 impl<'a> ExactSizeIterator for Deps<'a> {}
 
 pub struct DepsNotReplaced<'a> {
-    edges: Option<Edges<'a, PackageId>>,
+    edges: Option<Edges<'a, PackageId, Vec<Dependency>>>,
 }
 
 impl<'a> Iterator for DepsNotReplaced<'a> {
     type Item = &'a PackageId;
 
     fn next(&mut self) -> Option<&'a PackageId> {
-        self.edges.as_mut().and_then(|e| e.next())
+        Some(self.edges.as_mut()?.next()?.0)
     }
 
     fn size_hint(&self) -> (usize, Option<usize>) {
