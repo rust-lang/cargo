@@ -429,6 +429,32 @@ impl<'a, 'cfg> Context<'a, 'cfg> {
         self.unit_dependencies[unit].clone()
     }
 
+    pub fn extern_crate_name(&self, unit: &Unit<'a>, dep: &Unit<'a>) -> CargoResult<String> {
+        let deps = {
+            let a = unit.pkg.package_id();
+            let b = dep.pkg.package_id();
+            if a == b {
+                &[]
+            } else {
+                self.resolve.dependencies_listed(a, b)
+            }
+        };
+
+        let crate_name = dep.target.crate_name();
+        let mut names = deps.iter()
+            .map(|d| d.rename().unwrap_or(&crate_name));
+        let name = names.next().unwrap_or(&crate_name);
+        for n in names {
+            if n == name {
+                continue
+            }
+            bail!("multiple dependencies listed for the same crate must \
+                   all have the same name, but the dependency on `{}` \
+                   is listed as having different names", dep.pkg.package_id());
+        }
+        Ok(name.to_string())
+    }
+
     /// Whether a dependency should be compiled for the host or target platform,
     /// specified by `Kind`.
     fn dep_platform_activated(&self, dep: &Dependency, kind: Kind) -> bool {
