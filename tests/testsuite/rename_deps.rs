@@ -315,3 +315,51 @@ name, but the dependency on `foo v0.1.0` is listed as having different names
 ")
     );
 }
+
+#[test]
+fn rename_affects_fingerprint() {
+    Package::new("foo", "0.1.0").publish();
+
+    let p = project("foo")
+        .file(
+            "Cargo.toml",
+            r#"
+                cargo-features = ["rename-dependency"]
+
+                [package]
+                name = "test"
+                version = "0.1.0"
+                authors = []
+
+                [dependencies]
+                foo = { version = "0.1", package = "foo" }
+            "#,
+        )
+        .file("src/lib.rs", "extern crate foo;")
+        .build();
+
+    assert_that(
+        p.cargo("build -v").masquerade_as_nightly_cargo(),
+        execs().with_status(0),
+    );
+
+    p.change_file(
+        "Cargo.toml",
+        r#"
+                cargo-features = ["rename-dependency"]
+
+                [package]
+                name = "test"
+                version = "0.1.0"
+                authors = []
+
+                [dependencies]
+                bar = { version = "0.1", package = "foo" }
+        "#,
+    );
+
+    assert_that(
+        p.cargo("build -v").masquerade_as_nightly_cargo(),
+        execs().with_status(101),
+    );
+}
