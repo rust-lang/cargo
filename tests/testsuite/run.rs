@@ -965,26 +965,24 @@ fn dashes_are_forwarded() {
             name = "foo"
             version = "0.0.1"
             authors = []
-
-            [[bin]]
-            name = "bar"
         "#,
         )
         .file(
-            "src/main.rs",
+            "src/bin/bar.rs",
             r#"
             fn main() {
                 let s: Vec<String> = std::env::args().collect();
-                assert_eq!(s[1], "a");
-                assert_eq!(s[2], "--");
-                assert_eq!(s[3], "b");
+                assert_eq!(s[1], "--");
+                assert_eq!(s[2], "a");
+                assert_eq!(s[3], "--");
+                assert_eq!(s[4], "b");
             }
         "#,
         )
         .build();
 
     assert_that(
-        p.cargo("run").arg("--").arg("a").arg("--").arg("b"),
+        p.cargo("run -- -- a -- b"),
         execs().with_status(0),
     );
 }
