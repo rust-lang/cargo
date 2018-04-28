@@ -84,7 +84,7 @@ impl<'cfg> Compilation<'cfg> {
             cfgs: HashMap::new(),
             rustdocflags: HashMap::new(),
             config: bcx.config,
-            rustc_process: bcx.build_config.rustc.process(),
+            rustc_process: bcx.rustc.process(),
             host: bcx.host_triple().to_string(),
             target: bcx.target_triple().to_string(),
             target_runner: LazyCell::new(),

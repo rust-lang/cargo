@@ -229,7 +229,7 @@ pub fn compile_ws<'a>(
         ref export_dir,
     } = *options;
 
-    let mut build_config = BuildConfig::new(config, jobs, &target, Some(ws), mode)?;
+    let mut build_config = BuildConfig::new(config, jobs, &target, mode)?;
     build_config.release = release;
     build_config.message_format = message_format;
     let default_arch_kind = if build_config.requested_target.is_some() {
