@@ -24,7 +24,7 @@ use self::job_queue::JobQueue;
 use self::output_depinfo::output_depinfo;
 
 pub use self::compilation::Compilation;
-pub use self::context::{Context, FileFlavor, TargetInfo, Unit};
+pub use self::context::{BuildContext, Context, FileFlavor, TargetInfo, Unit};
 pub use self::custom_build::{BuildMap, BuildOutput, BuildScripts};
 pub use self::layout::is_bad_artifact_name;
 
@@ -292,6 +292,7 @@ fn compile<'a, 'cfg: 'a>(
     unit: &Unit<'a>,
     exec: &Arc<Executor>,
 ) -> CargoResult<()> {
+    let bcx = cx.bcx;
     if !cx.compiled.insert(*unit) {
         return Ok(());
     }
@@ -300,7 +301,7 @@ fn compile<'a, 'cfg: 'a>(
     // we've got everything constructed.
     let p = profile::start(format!("preparing: {}/{}", unit.pkg, unit.target.name()));
     fingerprint::prepare_init(cx, unit)?;
-    cx.links.validate(cx.resolve, unit)?;
+    cx.links.validate(bcx.resolve, unit)?;
 
     let (dirty, fresh, freshness) = if unit.mode.is_run_custom_build() {
         custom_build::prepare(cx, unit)?
@@ -336,7 +337,7 @@ fn compile<'a, 'cfg: 'a>(
 }
 
 fn rustc<'a, 'cfg>(
-    cx: &mut Context<'a, 'cfg>,
+    mut cx: &mut Context<'a, 'cfg>,
     unit: &Unit<'a>,
     exec: &Arc<Executor>,
 ) -> CargoResult<Work> {
@@ -346,7 +347,7 @@ fn rustc<'a, 'cfg>(
 
     // If this is an upstream dep we don't want warnings from, turn off all
     // lints.
-    if !cx.show_warnings(unit.pkg.package_id()) {
+    if !cx.bcx.show_warnings(unit.pkg.package_id()) {
         rustc.arg("--cap-lints").arg("allow");
 
     // If this is an upstream dep but we *do* want warnings, make sure that they
@@ -377,10 +378,10 @@ fn rustc<'a, 'cfg>(
     } else {
         root.join(&cx.files().file_stem(unit))
     }.with_extension("d");
-    let dep_info_loc = fingerprint::dep_info_loc(cx, unit);
+    let dep_info_loc = fingerprint::dep_info_loc(&mut cx, unit);
 
-    rustc.args(&cx.rustflags_args(unit)?);
-    let json_messages = cx.build_config.json_messages;
+    rustc.args(&cx.bcx.rustflags_args(unit)?);
+    let json_messages = cx.bcx.build_config.json_messages;
     let package_id = unit.pkg.package_id().clone();
     let target = unit.target.clone();
 
@@ -391,7 +392,7 @@ fn rustc<'a, 'cfg>(
     let pkg_root = unit.pkg.root().to_path_buf();
     let cwd = rustc
         .get_cwd()
-        .unwrap_or_else(|| cx.config.cwd())
+        .unwrap_or_else(|| cx.bcx.config.cwd())
         .to_path_buf();
 
     return Ok(Work::new(move |state| {
@@ -555,18 +556,19 @@ fn link_targets<'a, 'cfg>(
     unit: &Unit<'a>,
     fresh: bool,
 ) -> CargoResult<Work> {
+    let bcx = cx.bcx;
     let outputs = cx.outputs(unit)?;
     let export_dir = cx.files().export_dir(unit);
     let package_id = unit.pkg.package_id().clone();
     let target = unit.target.clone();
     let profile = unit.profile;
     let unit_mode = unit.mode;
-    let features = cx.resolve
+    let features = bcx.resolve
         .features_sorted(&package_id)
         .into_iter()
         .map(|s| s.to_owned())
         .collect();
-    let json_messages = cx.build_config.json_messages;
+    let json_messages = bcx.build_config.json_messages;
 
     Ok(Work::new(move |_| {
         // If we're a "root crate", e.g. the target of this compilation, then we
@@ -746,13 +748,14 @@ fn prepare_rustc<'a, 'cfg>(
 }
 
 fn rustdoc<'a, 'cfg>(cx: &mut Context<'a, 'cfg>, unit: &Unit<'a>) -> CargoResult<Work> {
+    let bcx = cx.bcx;
     let mut rustdoc = cx.compilation.rustdoc_process(unit.pkg)?;
     rustdoc.inherit_jobserver(&cx.jobserver);
     rustdoc.arg("--crate-name").arg(&unit.target.crate_name());
-    add_path_args(cx, unit, &mut rustdoc);
+    add_path_args(&cx.bcx, unit, &mut rustdoc);
 
     if unit.kind != Kind::Host {
-        if let Some(ref target) = cx.build_config.requested_target {
+        if let Some(ref target) = bcx.build_config.requested_target {
             rustdoc.arg("--target").arg(target);
         }
     }
@@ -766,7 +769,7 @@ fn rustdoc<'a, 'cfg>(cx: &mut Context<'a, 'cfg>, unit: &Unit<'a>) -> CargoResult
 
     rustdoc.arg("-o").arg(doc_dir);
 
-    for feat in cx.resolve.features_sorted(unit.pkg.package_id()) {
+    for feat in bcx.resolve.features_sorted(unit.pkg.package_id()) {
         rustdoc.arg("--cfg").arg(&format!("feature=\"{}\"", feat));
     }
 
@@ -777,13 +780,13 @@ fn rustdoc<'a, 'cfg>(cx: &mut Context<'a, 'cfg>, unit: &Unit<'a>) -> CargoResult
         rustdoc.arg(format!("--edition={}", &manifest.edition()));
     }
 
-    if let Some(ref args) = cx.extra_args_for(unit) {
+    if let Some(ref args) = bcx.extra_args_for(unit) {
         rustdoc.args(args);
     }
 
     build_deps_args(&mut rustdoc, cx, unit)?;
 
-    rustdoc.args(&cx.rustdocflags_args(unit)?);
+    rustdoc.args(&bcx.rustdocflags_args(unit)?);
 
     let name = unit.pkg.name().to_string();
     let build_state = cx.build_state.clone();
@@ -820,8 +823,8 @@ fn rustdoc<'a, 'cfg>(cx: &mut Context<'a, 'cfg>, unit: &Unit<'a>) -> CargoResult
 //
 // The first returned value here is the argument to pass to rustc, and the
 // second is the cwd that rustc should operate in.
-fn path_args(cx: &Context, unit: &Unit) -> (PathBuf, PathBuf) {
-    let ws_root = cx.ws.root();
+fn path_args(bcx: &BuildContext, unit: &Unit) -> (PathBuf, PathBuf) {
+    let ws_root = bcx.ws.root();
     let src = unit.target.src_path();
     assert!(src.is_absolute());
     match src.strip_prefix(ws_root) {
@@ -830,8 +833,8 @@ fn path_args(cx: &Context, unit: &Unit) -> (PathBuf, PathBuf) {
     }
 }
 
-fn add_path_args(cx: &Context, unit: &Unit, cmd: &mut ProcessBuilder) {
-    let (arg, cwd) = path_args(cx, unit);
+fn add_path_args(bcx: &BuildContext, unit: &Unit, cmd: &mut ProcessBuilder) {
+    let (arg, cwd) = path_args(bcx, unit);
     cmd.arg(arg);
     cmd.cwd(cwd);
 }
@@ -844,6 +847,7 @@ fn build_base_args<'a, 'cfg>(
 ) -> CargoResult<()> {
     assert!(!unit.mode.is_run_custom_build());
 
+    let bcx = cx.bcx;
     let Profile {
         ref opt_level,
         ref lto,
@@ -859,9 +863,9 @@ fn build_base_args<'a, 'cfg>(
 
     cmd.arg("--crate-name").arg(&unit.target.crate_name());
 
-    add_path_args(cx, unit, cmd);
+    add_path_args(&cx.bcx, unit, cmd);
 
-    match cx.config.shell().color_choice() {
+    match bcx.config.shell().color_choice() {
         ColorChoice::Always => {
             cmd.arg("--color").arg("always");
         }
@@ -871,7 +875,7 @@ fn build_base_args<'a, 'cfg>(
         ColorChoice::CargoAuto => {}
     }
 
-    if cx.build_config.json_messages {
+    if bcx.build_config.json_messages {
         cmd.arg("--error-format").arg("json");
     }
 
@@ -888,7 +892,7 @@ fn build_base_args<'a, 'cfg>(
     }
 
     let prefer_dynamic = (unit.target.for_host() && !unit.target.is_custom_build())
-        || (crate_types.contains(&"dylib") && cx.ws.members().any(|p| p != unit.pkg));
+        || (crate_types.contains(&"dylib") && bcx.ws.members().any(|p| p != unit.pkg));
     if prefer_dynamic {
         cmd.arg("-C").arg("prefer-dynamic");
     }
@@ -942,7 +946,7 @@ fn build_base_args<'a, 'cfg>(
         cmd.arg("-C").arg(format!("debuginfo={}", debuginfo));
     }
 
-    if let Some(ref args) = cx.extra_args_for(unit) {
+    if let Some(ref args) = bcx.extra_args_for(unit) {
         cmd.args(args);
     }
 
@@ -976,7 +980,7 @@ fn build_base_args<'a, 'cfg>(
     // We ideally want deterministic invocations of rustc to ensure that
     // rustc-caching strategies like sccache are able to cache more, so sort the
     // feature list here.
-    for feat in cx.resolve.features_sorted(unit.pkg.package_id()) {
+    for feat in bcx.resolve.features_sorted(unit.pkg.package_id()) {
         cmd.arg("--cfg").arg(&format!("feature=\"{}\"", feat));
     }
 
@@ -1010,19 +1014,19 @@ fn build_base_args<'a, 'cfg>(
             cmd,
             "--target",
             "",
-            cx.build_config
+            bcx.build_config
                 .requested_target
                 .as_ref()
                 .map(|s| s.as_ref()),
         );
     }
 
-    opt(cmd, "-C", "ar=", cx.ar(unit.kind).map(|s| s.as_ref()));
+    opt(cmd, "-C", "ar=", bcx.ar(unit.kind).map(|s| s.as_ref()));
     opt(
         cmd,
         "-C",
         "linker=",
-        cx.linker(unit.kind).map(|s| s.as_ref()),
+        bcx.linker(unit.kind).map(|s| s.as_ref()),
     );
     cmd.args(&cx.incremental_args(unit)?);
 
@@ -1034,6 +1038,7 @@ fn build_deps_args<'a, 'cfg>(
     cx: &mut Context<'a, 'cfg>,
     unit: &Unit<'a>,
 ) -> CargoResult<()> {
+    let bcx = cx.bcx;
     cmd.arg("-L").arg(&{
         let mut deps = OsString::from("dependency=");
         deps.push(cx.files().deps_dir(unit));
@@ -1063,7 +1068,7 @@ fn build_deps_args<'a, 'cfg>(
             .iter()
             .find(|u| !u.mode.is_doc() && u.target.is_lib())
         {
-            cx.config.shell().warn(format!(
+            bcx.config.shell().warn(format!(
                 "The package `{}` \
                  provides no linkable target. The compiler might raise an error while compiling \
                  `{}`. Consider adding 'dylib' or 'rlib' to key `crate-type` in `{}`'s \
@@ -1092,12 +1097,13 @@ fn build_deps_args<'a, 'cfg>(
         current: &Unit<'a>,
         dep: &Unit<'a>,
     ) -> CargoResult<()> {
+        let bcx = cx.bcx;
         for output in cx.outputs(dep)?.iter() {
             if output.flavor != FileFlavor::Linkable {
                 continue;
             }
             let mut v = OsString::new();
-            let name = cx.extern_crate_name(current, dep)?;
+            let name = bcx.extern_crate_name(current, dep)?;
             v.push(name);
             v.push("=");
             v.push(cx.files().out_dir(dep));

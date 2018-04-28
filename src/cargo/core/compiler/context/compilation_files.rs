@@ -7,7 +7,7 @@ use std::sync::Arc;
 
 use lazycell::LazyCell;
 
-use super::{Context, FileFlavor, Kind, Layout, Unit};
+use super::{BuildContext, Context, FileFlavor, Kind, Layout, Unit};
 use core::{TargetKind, Workspace};
 use util::{self, CargoResult};
 
@@ -172,10 +172,10 @@ impl<'a, 'cfg: 'a> CompilationFiles<'a, 'cfg> {
     pub(super) fn outputs(
         &self,
         unit: &Unit<'a>,
-        cx: &Context<'a, 'cfg>,
+        bcx: &BuildContext<'a, 'cfg>,
     ) -> CargoResult<Arc<Vec<OutputFile>>> {
         self.outputs[unit]
-            .try_borrow_with(|| self.calc_outputs(unit, cx))
+            .try_borrow_with(|| self.calc_outputs(unit, bcx))
             .map(Arc::clone)
     }
 
@@ -230,15 +230,15 @@ impl<'a, 'cfg: 'a> CompilationFiles<'a, 'cfg> {
     fn calc_outputs(
         &self,
         unit: &Unit<'a>,
-        cx: &Context<'a, 'cfg>,
+        bcx: &BuildContext<'a, 'cfg>,
     ) -> CargoResult<Arc<Vec<OutputFile>>> {
         let out_dir = self.out_dir(unit);
         let file_stem = self.file_stem(unit);
         let link_stem = self.link_stem(unit);
         let info = if unit.target.for_host() {
-            &cx.host_info
+            &bcx.host_info
         } else {
-            &cx.target_info
+            &bcx.target_info
         };
 
         let mut ret = Vec::new();
@@ -268,7 +268,7 @@ impl<'a, 'cfg: 'a> CompilationFiles<'a, 'cfg> {
                         crate_type,
                         flavor,
                         unit.target.kind(),
-                        cx.build_config.target_triple(),
+                        bcx.build_config.target_triple(),
                     )?;
 
                     match file_types {
@@ -324,14 +324,14 @@ impl<'a, 'cfg: 'a> CompilationFiles<'a, 'cfg> {
                      does not support these crate types",
                     unsupported.join(", "),
                     unit.pkg,
-                    cx.build_config.target_triple()
+                    bcx.build_config.target_triple()
                 )
             }
             bail!(
                 "cannot compile `{}` as the target `{}` does not \
                  support any of the output crate types",
                 unit.pkg,
-                cx.build_config.target_triple()
+                bcx.build_config.target_triple()
             );
         }
         info!("Target filenames: {:?}", ret);
@@ -380,10 +380,11 @@ fn compute_metadata<'a, 'cfg>(
     // This environment variable should not be relied on! It's
     // just here for rustbuild. We need a more principled method
     // doing this eventually.
+    let bcx = &cx.bcx;
     let __cargo_default_lib_metadata = env::var("__CARGO_DEFAULT_LIB_METADATA");
     if !(unit.mode.is_any_test() || unit.mode.is_check())
         && (unit.target.is_dylib() || unit.target.is_cdylib()
-            || (unit.target.is_bin() && cx.build_config.target_triple().starts_with("wasm32-")))
+            || (unit.target.is_bin() && bcx.build_config.target_triple().starts_with("wasm32-")))
         && unit.pkg.package_id().source_id().is_path()
         && __cargo_default_lib_metadata.is_err()
     {
@@ -396,7 +397,7 @@ fn compute_metadata<'a, 'cfg>(
     // to pull crates from anywhere w/o worrying about conflicts
     unit.pkg
         .package_id()
-        .stable_hash(cx.ws.root())
+        .stable_hash(bcx.ws.root())
         .hash(&mut hasher);
 
     // Add package properties which map to environment variables
@@ -408,7 +409,7 @@ fn compute_metadata<'a, 'cfg>(
 
     // Also mix in enabled features to our metadata. This'll ensure that
     // when changing feature sets each lib is separately cached.
-    cx.resolve
+    bcx.resolve
         .features_sorted(unit.pkg.package_id())
         .hash(&mut hasher);
 
@@ -427,7 +428,7 @@ fn compute_metadata<'a, 'cfg>(
     // settings like debuginfo and whatnot.
     unit.profile.hash(&mut hasher);
     unit.mode.hash(&mut hasher);
-    if let Some(ref args) = cx.extra_args_for(unit) {
+    if let Some(ref args) = bcx.extra_args_for(unit) {
         args.hash(&mut hasher);
     }
 
@@ -441,7 +442,7 @@ fn compute_metadata<'a, 'cfg>(
     unit.target.name().hash(&mut hasher);
     unit.target.kind().hash(&mut hasher);
 
-    cx.build_config.rustc.verbose_version.hash(&mut hasher);
+    bcx.build_config.rustc.verbose_version.hash(&mut hasher);
 
     // Seed the contents of __CARGO_DEFAULT_LIB_METADATA to the hasher if present.
     // This should be the release channel, to get a different hash for each channel.

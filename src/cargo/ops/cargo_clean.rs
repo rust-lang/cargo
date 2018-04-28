@@ -1,7 +1,7 @@
 use std::fs;
 use std::path::Path;
 
-use core::compiler::{BuildConfig, Context, Kind, Unit};
+use core::compiler::{BuildConfig, BuildContext, Context, Kind, Unit};
 use core::profiles::ProfileFor;
 use core::Workspace;
 use ops::{self, CompileMode};
@@ -81,7 +81,7 @@ pub fn clean(ws: &Workspace, opts: &CleanOptions) -> CargoResult<()> {
 
     let mut build_config = BuildConfig::new(config, Some(1), &opts.target, None)?;
     build_config.release = opts.release;
-    let mut cx = Context::new(
+    let bcx = BuildContext::new(
         ws,
         &resolve,
         &packages,
@@ -90,6 +90,7 @@ pub fn clean(ws: &Workspace, opts: &CleanOptions) -> CargoResult<()> {
         profiles,
         None,
     )?;
+    let mut cx = Context::new(config, &bcx)?;
     cx.prepare_units(None, &units)?;
 
     for unit in units.iter() {
