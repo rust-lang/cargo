@@ -23,11 +23,13 @@ use self::job_queue::JobQueue;
 
 use self::output_depinfo::output_depinfo;
 
+pub use self::build_context::{BuildContext, FileFlavor, TargetInfo};
 pub use self::compilation::Compilation;
-pub use self::context::{BuildContext, Context, FileFlavor, TargetInfo, Unit};
+pub use self::context::{Context, Unit};
 pub use self::custom_build::{BuildMap, BuildOutput, BuildScripts};
 pub use self::layout::is_bad_artifact_name;
 
+mod build_context;
 mod compilation;
 mod context;
 mod custom_build;
