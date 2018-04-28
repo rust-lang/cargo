@@ -217,43 +217,86 @@ pub fn resolve_with_previous<'a, 'cfg>(
         registry.add_sources(&[member.package_id().source_id().clone()])?;
     }
 
-    let method = match method {
-        Method::Everything => Method::Everything,
-        Method::Required {
-            features,
-            all_features,
-            uses_default_features,
-            ..
-        } => {
-            if specs.len() > 1 && !features.is_empty() {
-                bail!("cannot specify features for more than one package");
-            }
-            let members_requested = ws.members()
-                .filter(|m| specs.iter().any(|spec| spec.matches(m.package_id())))
-                .count();
-            if members_requested == 0 {
-                // Edge case: running `cargo build -p foo`, where `foo` is not a member
-                // of current workspace. Resolve whole workspace to get `foo` into the
-                // resolution graph.
-                if !(features.is_empty() && !all_features && uses_default_features) {
-                    bail!("cannot specify features for packages outside of workspace");
+    let mut summaries = Vec::new();
+    if ws.config().cli_unstable().package_features {
+        let mut members = Vec::new();
+        match method {
+            Method::Everything => members.extend(ws.members()),
+            Method::Required {
+                features,
+                all_features,
+                uses_default_features,
+                ..
+            } => {
+                if specs.len() > 1 && !features.is_empty() {
+                    bail!("cannot specify features for more than one package");
                 }
-                Method::Everything
-            } else {
-                method
+                members.extend(
+                    ws.members()
+                        .filter(|m| specs.iter().any(|spec| spec.matches(m.package_id()))),
+                );
+                // Edge case: running `cargo build -p foo`, where `foo` is not a member
+                // of current workspace. Add all packages from workspace to get `foo`
+                // into the resolution graph.
+                if members.is_empty() {
+                    if !(features.is_empty() && !all_features && uses_default_features) {
+                        bail!("cannot specify features for packages outside of workspace");
+                    }
+                    members.extend(ws.members());
+                }
             }
         }
-    };
-
-    let summaries = ws.members()
-        .filter(|m| {
-            method == Method::Everything || specs.iter().any(|spec| spec.matches(m.package_id()))
-        })
-        .map(|member| {
+        for member in members {
             let summary = registry.lock(member.summary().clone());
-            (summary, method)
-        })
-        .collect::<Vec<_>>();
+            summaries.push((summary, method))
+        }
+    } else {
+        for member in ws.members() {
+            let method_to_resolve = match method {
+                // When everything for a workspace we want to be sure to resolve all
+                // members in the workspace, so propagate the `Method::Everything`.
+                Method::Everything => Method::Everything,
+
+                // If we're not resolving everything though then we're constructing the
+                // exact crate graph we're going to build. Here we don't necessarily
+                // want to keep around all workspace crates as they may not all be
+                // built/tested.
+                //
+                // Additionally, the `method` specified represents command line
+                // flags, which really only matters for the current package
+                // (determined by the cwd). If other packages are specified (via
+                // `-p`) then the command line flags like features don't apply to
+                // them.
+                //
+                // As a result, if this `member` is the current member of the
+                // workspace, then we use `method` specified. Otherwise we use a
+                // base method with no features specified but using default features
+                // for any other packages specified with `-p`.
+                Method::Required { dev_deps, .. } => {
+                    let base = Method::Required {
+                        dev_deps,
+                        features: &[],
+                        all_features: false,
+                        uses_default_features: true,
+                    };
+                    let member_id = member.package_id();
+                    match ws.current_opt() {
+                        Some(current) if member_id == current.package_id() => method,
+                        _ => {
+                            if specs.iter().any(|spec| spec.matches(member_id)) {
+                                base
+                            } else {
+                                continue;
+                            }
+                        }
+                    }
+                }
+            };
+
+            let summary = registry.lock(member.summary().clone());
+            summaries.push((summary, method_to_resolve));
+        }
+    };
 
     let root_replace = ws.root_replace();
 

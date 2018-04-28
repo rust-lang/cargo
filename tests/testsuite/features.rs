@@ -1674,42 +1674,46 @@ fn combining_features_and_package() {
         .build();
 
     assert_that(
-        p.cargo("build --all --features main")
-            .masquerade_as_nightly_cargo(),
-        execs()
-            .with_status(101)
-            .with_stderr_contains("[ERROR] cannot specify features for more than one package"),
-    );
-
-    assert_that(
-        p.cargo("build --package dep --features main")
+        p.cargo("build -Z package-features --all --features main")
             .masquerade_as_nightly_cargo(),
         execs().with_status(101).with_stderr_contains(
-            "[ERROR] cannot specify features for packages outside of workspace",
-        ),
-    );
-    assert_that(
-        p.cargo("build --package dep --all-features")
-            .masquerade_as_nightly_cargo(),
-        execs().with_status(101).with_stderr_contains(
-            "[ERROR] cannot specify features for packages outside of workspace",
-        ),
-    );
-    assert_that(
-        p.cargo("build --package dep --no-default-features")
-            .masquerade_as_nightly_cargo(),
-        execs().with_status(101).with_stderr_contains(
-            "[ERROR] cannot specify features for packages outside of workspace",
+            "\
+             [ERROR] cannot specify features for more than one package",
         ),
     );
 
     assert_that(
-        p.cargo("build --all --all-features")
+        p.cargo("build -Z package-features --package dep --features main")
+            .masquerade_as_nightly_cargo(),
+        execs().with_status(101).with_stderr_contains(
+            "\
+             [ERROR] cannot specify features for packages outside of workspace",
+        ),
+    );
+    assert_that(
+        p.cargo("build -Z package-features --package dep --all-features")
+            .masquerade_as_nightly_cargo(),
+        execs().with_status(101).with_stderr_contains(
+            "\
+             [ERROR] cannot specify features for packages outside of workspace",
+        ),
+    );
+    assert_that(
+        p.cargo("build -Z package-features --package dep --no-default-features")
+            .masquerade_as_nightly_cargo(),
+        execs().with_status(101).with_stderr_contains(
+            "\
+             [ERROR] cannot specify features for packages outside of workspace",
+        ),
+    );
+
+    assert_that(
+        p.cargo("build -Z package-features --all --all-features")
             .masquerade_as_nightly_cargo(),
         execs().with_status(0),
     );
     assert_that(
-        p.cargo("run --package foo --features main")
+        p.cargo("run -Z package-features --package foo --features main")
             .masquerade_as_nightly_cargo(),
         execs().with_status(0),
     );
