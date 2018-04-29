@@ -1,5 +1,4 @@
 use cargotest::install::exe;
-use cargotest::is_nightly;
 use cargotest::support::paths::CargoPathExt;
 use cargotest::support::registry::Package;
 use cargotest::support::{execs, project};
@@ -107,9 +106,6 @@ fn check_fail() {
 
 #[test]
 fn custom_derive() {
-    if !is_nightly() {
-        return;
-    }
     let foo = project("foo")
         .file(
             "Cargo.toml",
@@ -126,8 +122,6 @@ fn custom_derive() {
         .file(
             "src/main.rs",
             r#"
-#![feature(proc_macro)]
-
 #[macro_use]
 extern crate bar;
 
@@ -160,9 +154,6 @@ fn main() {
         .file(
             "src/lib.rs",
             r#"
-#![feature(proc_macro, proc_macro_lib)]
-#![crate_type = "proc-macro"]
-
 extern crate proc_macro;
 
 use proc_macro::TokenStream;
@@ -756,16 +747,16 @@ fn check_filters() {
             .with_stderr_contains("[..] --crate-name foo src[/]lib.rs [..] --test [..]")
             .with_stderr_contains("[..] --crate-name foo src[/]lib.rs --crate-type lib [..]")
             .with_stderr_contains("[..] --crate-name foo src[/]main.rs [..] --test [..]")
-            .with_stderr_contains("[..] --crate-name foo src[/]main.rs --crate-type bin [..]")
             .with_stderr_contains("[..]unused_unit_lib[..]")
             .with_stderr_contains("[..]unused_unit_bin[..]")
             .with_stderr_contains("[..]unused_normal_lib[..]")
             .with_stderr_contains("[..]unused_normal_bin[..]")
             .with_stderr_contains("[..]unused_unit_t1[..]")
-            .with_stderr_contains("[..]unused_normal_ex1[..]")
-            .with_stderr_contains("[..]unused_unit_ex1[..]")
+            .with_stderr_does_not_contain("[..]unused_normal_ex1[..]")
+            .with_stderr_does_not_contain("[..]unused_unit_ex1[..]")
             .with_stderr_does_not_contain("[..]unused_normal_b1[..]")
-            .with_stderr_does_not_contain("[..]unused_unit_b1[..]"),
+            .with_stderr_does_not_contain("[..]unused_unit_b1[..]")
+            .with_stderr_does_not_contain("[..]--crate-type bin[..]"),
     );
     p.root().join("target").rm_rf();
     assert_that(
@@ -773,9 +764,9 @@ fn check_filters() {
         execs()
             .with_status(0)
             .with_stderr_contains("[..]unused_normal_lib[..]")
-            .with_stderr_contains("[..]unused_normal_bin[..]")
             .with_stderr_contains("[..]unused_unit_t1[..]")
             .with_stderr_does_not_contain("[..]unused_unit_lib[..]")
+            .with_stderr_does_not_contain("[..]unused_normal_bin[..]")
             .with_stderr_does_not_contain("[..]unused_unit_bin[..]")
             .with_stderr_does_not_contain("[..]unused_normal_ex1[..]")
             .with_stderr_does_not_contain("[..]unused_normal_b1[..]")
@@ -796,7 +787,7 @@ fn check_filters() {
             .with_stderr_contains("[..]unused_unit_t1[..]")
             .with_stderr_contains("[..]unused_unit_lib[..]")
             .with_stderr_contains("[..]unused_unit_bin[..]")
-            .with_stderr_contains("[..]unused_unit_ex1[..]"),
+            .with_stderr_does_not_contain("[..]unused_unit_ex1[..]"),
     );
 }
 

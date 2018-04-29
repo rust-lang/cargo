@@ -123,12 +123,18 @@ let out_dir = env::var("OUT_DIR").unwrap();
 * `RUSTC`, `RUSTDOC` - the compiler and documentation generator that Cargo has
                        resolved to use, passed to the build script so it might
                        use it as well.
+* `RUSTC_LINKER` - The path to the linker binary that Cargo has resolved to use
+                   for the current target, if specified. The linker can be
+                   changed by editing `.cargo/config`; see the documentation
+                   about [cargo configuration][cargo-config] for more
+                   information.
 
 [links]: reference/build-scripts.html#the-links-manifest-key
 [profile]: reference/manifest.html#the-profile-sections
 [configuration]: https://doc.rust-lang.org/reference/attributes.html#conditional-compilation
 [clang]: http://clang.llvm.org/docs/CrossCompilation.html#target-triple
 [jobserver]: https://www.gnu.org/software/make/manual/html_node/Job-Slots.html
+[cargo-config]: reference/config.html
 
 ### Environment variables Cargo sets for 3rd party subcommands
 

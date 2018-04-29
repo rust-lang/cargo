@@ -1,14 +1,15 @@
 use std::cell::RefCell;
-use std::collections::BTreeMap;
 use std::collections::hash_map::{Entry, HashMap};
+use std::collections::BTreeMap;
 use std::path::{Path, PathBuf};
 use std::slice;
 
 use glob::glob;
 use url::Url;
 
+use core::profiles::Profiles;
 use core::registry::PackageRegistry;
-use core::{Dependency, PackageIdSpec, Profile, Profiles};
+use core::{Dependency, PackageIdSpec};
 use core::{EitherManifest, Package, SourceId, VirtualManifest};
 use ops;
 use sources::PathSource;
@@ -117,7 +118,6 @@ pub struct WorkspaceRootConfig {
 
 /// An iterator over the member packages of a workspace, returned by
 /// `Workspace::members`
-#[derive(Clone)]
 pub struct Members<'a, 'cfg: 'a> {
     ws: &'a Workspace<'cfg>,
     iter: slice::Iter<'a, PathBuf>,
@@ -131,7 +131,7 @@ impl<'cfg> Workspace<'cfg> {
     /// root and all member packages. It will then validate the workspace
     /// before returning it, so `Ok` is only returned for valid workspaces.
     pub fn new(manifest_path: &Path, config: &'cfg Config) -> CargoResult<Workspace<'cfg>> {
-        let target_dir = config.target_dir()?;
+        let target_dir = config.target_dir();
 
         let mut ws = Workspace {
             config,
@@ -191,7 +191,7 @@ impl<'cfg> Workspace<'cfg> {
             ws.target_dir = if let Some(dir) = target_dir {
                 Some(dir)
             } else {
-                ws.config.target_dir()?
+                ws.config.target_dir()
             };
             ws.members.push(ws.current_manifest.clone());
             ws.default_members.push(ws.current_manifest.clone());
@@ -305,6 +305,11 @@ impl<'cfg> Workspace<'cfg> {
             ws: self,
             iter: self.default_members.iter(),
         }
+    }
+
+    /// Returns true if the package is a member of the workspace.
+    pub fn is_member(&self, pkg: &Package) -> bool {
+        self.members().any(|p| p == pkg)
     }
 
     pub fn is_ephemeral(&self) -> bool {
@@ -645,24 +650,10 @@ impl<'cfg> Workspace<'cfg> {
         }
 
         if let Some(ref root_manifest) = self.root_manifest {
-            let default_profiles = Profiles {
-                release: Profile::default_release(),
-                dev: Profile::default_dev(),
-                test: Profile::default_test(),
-                test_deps: Profile::default_dev(),
-                bench: Profile::default_bench(),
-                bench_deps: Profile::default_release(),
-                doc: Profile::default_doc(),
-                custom_build: Profile::default_custom_build(),
-                check: Profile::default_check(),
-                check_test: Profile::default_check_test(),
-                doctest: Profile::default_doctest(),
-            };
-
             for pkg in self.members()
                 .filter(|p| p.manifest_path() != root_manifest)
             {
-                if pkg.manifest().profiles() != &default_profiles {
+                if pkg.manifest().original().has_profiles() {
                     let message = &format!(
                         "profiles for the non root package will be ignored, \
                          specify profiles at the workspace root:\n\

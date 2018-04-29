@@ -7,8 +7,8 @@ use std::sync::Arc;
 
 use lazycell::LazyCell;
 
-use core::{TargetKind, Workspace};
 use super::{Context, FileFlavor, Kind, Layout, Unit};
+use core::{TargetKind, Workspace};
 use util::{self, CargoResult};
 
 #[derive(Clone, Hash, Eq, PartialEq, Ord, PartialOrd)]
@@ -97,7 +97,7 @@ impl<'a, 'cfg: 'a> CompilationFiles<'a, 'cfg> {
     /// Returns the appropriate output directory for the specified package and
     /// target.
     pub fn out_dir(&self, unit: &Unit<'a>) -> PathBuf {
-        if unit.profile.doc {
+        if unit.mode.is_doc() {
             self.layout(unit.kind).root().parent().unwrap().join("doc")
         } else if unit.target.is_custom_build() {
             self.build_script_dir(unit)
@@ -148,7 +148,7 @@ impl<'a, 'cfg: 'a> CompilationFiles<'a, 'cfg> {
     /// Returns the appropriate directory layout for either a plugin or not.
     pub fn build_script_dir(&self, unit: &Unit<'a>) -> PathBuf {
         assert!(unit.target.is_custom_build());
-        assert!(!unit.profile.run_custom_build);
+        assert!(!unit.mode.is_run_custom_build());
         let dir = self.pkg_dir(unit);
         self.layout(Kind::Host).build().join(dir)
     }
@@ -156,7 +156,7 @@ impl<'a, 'cfg: 'a> CompilationFiles<'a, 'cfg> {
     /// Returns the appropriate directory layout for either a plugin or not.
     pub fn build_script_out_dir(&self, unit: &Unit<'a>) -> PathBuf {
         assert!(unit.target.is_custom_build());
-        assert!(unit.profile.run_custom_build);
+        assert!(unit.mode.is_run_custom_build());
         let dir = self.pkg_dir(unit);
         self.layout(unit.kind).build().join(dir).join("out")
     }
@@ -211,7 +211,7 @@ impl<'a, 'cfg: 'a> CompilationFiles<'a, 'cfg> {
             } else {
                 Some((
                     out_dir.parent().unwrap().to_owned(),
-                    if unit.profile.test {
+                    if unit.mode.is_any_test() {
                         file_stem
                     } else {
                         bin_stem
@@ -244,7 +244,10 @@ impl<'a, 'cfg: 'a> CompilationFiles<'a, 'cfg> {
         let mut ret = Vec::new();
         let mut unsupported = Vec::new();
         {
-            if unit.profile.check {
+            if unit.mode.is_check() {
+                // This is not quite correct for non-lib targets.  rustc
+                // currently does not emit rmeta files, so there is nothing to
+                // check for!  See #3624.
                 let path = out_dir.join(format!("lib{}.rmeta", file_stem));
                 let hardlink = link_stem
                     .clone()
@@ -296,7 +299,7 @@ impl<'a, 'cfg: 'a> CompilationFiles<'a, 'cfg> {
                     | TargetKind::Test => {
                         add("bin", FileFlavor::Normal)?;
                     }
-                    TargetKind::Lib(..) | TargetKind::ExampleLib(..) if unit.profile.test => {
+                    TargetKind::Lib(..) | TargetKind::ExampleLib(..) if unit.mode.is_any_test() => {
                         add("bin", FileFlavor::Normal)?;
                     }
                     TargetKind::ExampleLib(ref kinds) | TargetKind::Lib(ref kinds) => {
@@ -378,7 +381,7 @@ fn compute_metadata<'a, 'cfg>(
     // just here for rustbuild. We need a more principled method
     // doing this eventually.
     let __cargo_default_lib_metadata = env::var("__CARGO_DEFAULT_LIB_METADATA");
-    if !(unit.profile.test || unit.profile.check)
+    if !(unit.mode.is_any_test() || unit.mode.is_check())
         && (unit.target.is_dylib() || unit.target.is_cdylib()
             || (unit.target.is_bin() && cx.build_config.target_triple().starts_with("wasm32-")))
         && unit.pkg.package_id().source_id().is_path()
@@ -423,6 +426,10 @@ fn compute_metadata<'a, 'cfg>(
     // panic=abort and panic=unwind artifacts, additionally with various
     // settings like debuginfo and whatnot.
     unit.profile.hash(&mut hasher);
+    unit.mode.hash(&mut hasher);
+    if let Some(ref args) = cx.extra_args_for(unit) {
+        args.hash(&mut hasher);
+    }
 
     // Artifacts compiled for the host should have a different metadata
     // piece than those compiled for the target, so make sure we throw in

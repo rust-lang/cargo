@@ -578,7 +578,6 @@ When `default-members` is not specified, the default is the root manifest
 if it is a package, or every member manifest (as if `--all` were specified
 on the command-line) for virtual workspaces.
 
-#TODO: move this to a more appropriate place
 ### The project layout
 
 If your project is an executable, name the main source file `src/main.rs`. If it
@@ -727,6 +726,10 @@ proc-macro = false
 # built manages the test runner itself.
 harness = true
 ```
+
+The `[package]` also includes the optional `autobins`, `autoexamples`,
+`autotests`, and `autobenches` keys to explicitly opt-in or opt-out of
+auto-discovering specific target kinds.
 
 #### The `required-features` field (optional)
 

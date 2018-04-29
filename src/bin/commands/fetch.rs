@@ -1,11 +1,13 @@
 use command_prelude::*;
 
 use cargo::ops;
+use cargo::ops::FetchOptions;
 
 pub fn cli() -> App {
     subcommand("fetch")
         .about("Fetch dependencies of a package from the network")
         .arg_manifest_path()
+        .arg_target_triple("Fetch dependencies for the target triple")
         .after_help(
             "\
 If a lockfile is available, this command will ensure that all of the git
@@ -22,6 +24,11 @@ all updated.
 
 pub fn exec(config: &mut Config, args: &ArgMatches) -> CliResult {
     let ws = args.workspace(config)?;
-    ops::fetch(&ws)?;
+
+    let opts = FetchOptions {
+        config,
+        target: args.target(),
+    };
+    ops::fetch(&ws, &opts)?;
     Ok(())
 }

@@ -133,8 +133,12 @@ macro_rules! features {
 }
 
 macro_rules! stab {
-    (stable) => (Status::Stable);
-    (unstable) => (Status::Unstable);
+    (stable) => {
+        Status::Stable
+    };
+    (unstable) => {
+        Status::Unstable
+    };
 }
 
 /// A listing of all features in Cargo
@@ -170,6 +174,9 @@ features! {
 
         // Whether a lock file is published with this crate
         [unstable] publish_lockfile: bool,
+
+        // Overriding profiles for dependencies.
+        [unstable] profile_overrides: bool,
     }
 }
 
@@ -292,6 +299,7 @@ pub struct CliUnstable {
     pub no_index_update: bool,
     pub avoid_dev_deps: bool,
     pub minimal_versions: bool,
+    pub package_features: bool,
 }
 
 impl CliUnstable {
@@ -325,6 +333,7 @@ impl CliUnstable {
             "no-index-update" => self.no_index_update = true,
             "avoid-dev-deps" => self.avoid_dev_deps = true,
             "minimal-versions" => self.minimal_versions = true,
+            "package-features" => self.package_features = true,
             _ => bail!("unknown `-Z` flag specified: {}", k),
         }
 

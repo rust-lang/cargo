@@ -47,10 +47,6 @@ fn cargo_fail_with_no_stderr() {
 /// `rustc` getting `-Zincremental` passed to it.
 #[test]
 fn cargo_compile_incremental() {
-    if !is_nightly() {
-        return;
-    }
-
     let p = project("foo")
         .file("Cargo.toml", &basic_bin_manifest("foo"))
         .file("src/foo.rs", &main_file(r#""i am foo""#, &[]))
@@ -77,10 +73,6 @@ fn cargo_compile_incremental() {
 
 #[test]
 fn incremental_profile() {
-    if !is_nightly() {
-        return;
-    }
-
     let p = project("foo")
         .file(
             "Cargo.toml",
@@ -137,10 +129,6 @@ fn incremental_profile() {
 
 #[test]
 fn incremental_config() {
-    if !is_nightly() {
-        return;
-    }
-
     let p = project("foo")
         .file(
             "Cargo.toml",
@@ -2264,7 +2252,6 @@ fn non_existing_example() {
         "#,
         )
         .file("src/lib.rs", "")
-        .file("examples/ehlo.rs", "")
         .build();
 
     assert_that(
@@ -3616,7 +3603,7 @@ fn dotdir_root() {
 }
 
 #[test]
-fn custom_target_dir() {
+fn custom_target_dir_env() {
     let p = project("foo")
         .file(
             "Cargo.toml",
@@ -3668,6 +3655,96 @@ fn custom_target_dir() {
     assert_that(
         p.cargo("build").env("CARGO_TARGET_DIR", "bar/target"),
         execs().with_status(0),
+    );
+    assert_that(
+        &p.root().join("bar/target/debug").join(&exe_name),
+        existing_file(),
+    );
+    assert_that(
+        &p.root().join("foo/target/debug").join(&exe_name),
+        existing_file(),
+    );
+    assert_that(
+        &p.root().join("target/debug").join(&exe_name),
+        existing_file(),
+    );
+}
+
+#[test]
+fn custom_target_dir_line_parameter() {
+    let p = project("foo")
+        .file(
+            "Cargo.toml",
+            r#"
+            [package]
+            name = "foo"
+            version = "0.0.1"
+            authors = []
+        "#,
+        )
+        .file("src/main.rs", "fn main() {}")
+        .build();
+
+    let exe_name = format!("foo{}", env::consts::EXE_SUFFIX);
+
+    assert_that(
+        p.cargo("build --target-dir foo/target"),
+        execs().with_status(0),
+    );
+    assert_that(
+        &p.root().join("foo/target/debug").join(&exe_name),
+        existing_file(),
+    );
+    assert_that(
+        &p.root().join("target/debug").join(&exe_name),
+        is_not(existing_file()),
+    );
+
+    assert_that(p.cargo("build"), execs().with_status(0));
+    assert_that(
+        &p.root().join("foo/target/debug").join(&exe_name),
+        existing_file(),
+    );
+    assert_that(
+        &p.root().join("target/debug").join(&exe_name),
+        existing_file(),
+    );
+
+    fs::create_dir(p.root().join(".cargo")).unwrap();
+    File::create(p.root().join(".cargo/config"))
+        .unwrap()
+        .write_all(
+            br#"
+        [build]
+        target-dir = "foo/target"
+    "#,
+        )
+        .unwrap();
+    assert_that(
+        p.cargo("build --target-dir bar/target"),
+        execs().with_status(0),
+    );
+    assert_that(
+        &p.root().join("bar/target/debug").join(&exe_name),
+        existing_file(),
+    );
+    assert_that(
+        &p.root().join("foo/target/debug").join(&exe_name),
+        existing_file(),
+    );
+    assert_that(
+        &p.root().join("target/debug").join(&exe_name),
+        existing_file(),
+    );
+
+    assert_that(
+        p.cargo("build --target-dir foobar/target")
+            .env("CARGO_TARGET_DIR", "bar/target"),
+        execs().with_status(0),
+    );
+    assert_that(
+        &p.root().join("foobar/target/debug").join(&exe_name),
+        existing_file(),
     );
     assert_that(
         &p.root().join("bar/target/debug").join(&exe_name),

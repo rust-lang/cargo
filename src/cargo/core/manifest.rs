@@ -1,20 +1,21 @@
 use std::collections::{BTreeMap, HashMap};
 use std::fmt;
+use std::hash::{Hash, Hasher};
 use std::path::{Path, PathBuf};
 use std::rc::Rc;
-use std::hash::{Hash, Hasher};
 
 use semver::Version;
 use serde::ser;
 use toml;
 use url::Url;
 
+use core::interning::InternedString;
+use core::profiles::Profiles;
 use core::{Dependency, PackageId, PackageIdSpec, SourceId, Summary};
 use core::{Edition, Feature, Features, WorkspaceConfig};
-use core::interning::InternedString;
-use util::Config;
-use util::toml::TomlManifest;
 use util::errors::*;
+use util::toml::TomlManifest;
+use util::Config;
 
 pub enum EitherManifest {
     Real(Manifest),
@@ -150,59 +151,6 @@ impl ser::Serialize for TargetKind {
             Bench => vec!["bench"],
         }.serialize(s)
     }
-}
-
-// Note that most of the fields here are skipped when serializing because we
-// don't want to export them just yet (becomes a public API of Cargo). Others
-// though are definitely needed!
-#[derive(Clone, PartialEq, Eq, Debug, Hash, Serialize)]
-pub struct Profile {
-    pub opt_level: String,
-    #[serde(skip_serializing)]
-    pub lto: Lto,
-    #[serde(skip_serializing)]
-    pub codegen_units: Option<u32>, // None = use rustc default
-    #[serde(skip_serializing)]
-    pub rustc_args: Option<Vec<String>>,
-    #[serde(skip_serializing)]
-    pub rustdoc_args: Option<Vec<String>>,
-    pub debuginfo: Option<u32>,
-    pub debug_assertions: bool,
-    pub overflow_checks: bool,
-    #[serde(skip_serializing)]
-    pub rpath: bool,
-    pub test: bool,
-    #[serde(skip_serializing)]
-    pub doc: bool,
-    #[serde(skip_serializing)]
-    pub run_custom_build: bool,
-    #[serde(skip_serializing)]
-    pub check: bool,
-    #[serde(skip_serializing)]
-    pub panic: Option<String>,
-    #[serde(skip_serializing)]
-    pub incremental: bool,
-}
-
-#[derive(Clone, PartialEq, Eq, Debug, Hash)]
-pub enum Lto {
-    Bool(bool),
-    Named(String),
-}
-
-#[derive(Default, Clone, Debug, PartialEq, Eq)]
-pub struct Profiles {
-    pub release: Profile,
-    pub dev: Profile,
-    pub test: Profile,
-    pub test_deps: Profile,
-    pub bench: Profile,
-    pub bench_deps: Profile,
-    pub doc: Profile,
-    pub custom_build: Profile,
-    pub check: Profile,
-    pub check_test: Profile,
-    pub doctest: Profile,
 }
 
 /// Information about a binary, a library, an example, etc. that is part of the
@@ -524,6 +472,7 @@ impl Target {
             kind,
             name: name.to_string(),
             required_features,
+            tested: false,
             benched: false,
             ..Target::with_path(src_path)
         }
@@ -723,115 +672,6 @@ impl fmt::Display for Target {
                 write!(f, "Target(example: {})", self.name)
             }
             TargetKind::CustomBuild => write!(f, "Target(script)"),
-        }
-    }
-}
-
-impl Profile {
-    pub fn default_dev() -> Profile {
-        Profile {
-            debuginfo: Some(2),
-            debug_assertions: true,
-            overflow_checks: true,
-            incremental: true,
-            ..Profile::default()
-        }
-    }
-
-    pub fn default_release() -> Profile {
-        Profile {
-            opt_level: "3".to_string(),
-            debuginfo: None,
-            ..Profile::default()
-        }
-    }
-
-    pub fn default_test() -> Profile {
-        Profile {
-            test: true,
-            ..Profile::default_dev()
-        }
-    }
-
-    pub fn default_bench() -> Profile {
-        Profile {
-            test: true,
-            ..Profile::default_release()
-        }
-    }
-
-    pub fn default_doc() -> Profile {
-        Profile {
-            doc: true,
-            ..Profile::default_dev()
-        }
-    }
-
-    pub fn default_custom_build() -> Profile {
-        Profile {
-            run_custom_build: true,
-            ..Profile::default_dev()
-        }
-    }
-
-    pub fn default_check() -> Profile {
-        Profile {
-            check: true,
-            ..Profile::default_dev()
-        }
-    }
-
-    pub fn default_check_test() -> Profile {
-        Profile {
-            check: true,
-            test: true,
-            ..Profile::default_dev()
-        }
-    }
-
-    pub fn default_doctest() -> Profile {
-        Profile {
-            doc: true,
-            test: true,
-            ..Profile::default_dev()
-        }
-    }
-}
-
-impl Default for Profile {
-    fn default() -> Profile {
-        Profile {
-            opt_level: "0".to_string(),
-            lto: Lto::Bool(false),
-            codegen_units: None,
-            rustc_args: None,
-            rustdoc_args: None,
-            debuginfo: None,
-            debug_assertions: false,
-            overflow_checks: false,
-            rpath: false,
-            test: false,
-            doc: false,
-            run_custom_build: false,
-            check: false,
-            panic: None,
-            incremental: false,
-        }
-    }
-}
-
-impl fmt::Display for Profile {
-    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        if self.test {
-            write!(f, "Profile(test)")
-        } else if self.doc {
-            write!(f, "Profile(doc)")
-        } else if self.run_custom_build {
-            write!(f, "Profile(run)")
-        } else if self.check {
-            write!(f, "Profile(check)")
-        } else {
-            write!(f, "Profile(build)")
         }
     }
 }

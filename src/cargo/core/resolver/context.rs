@@ -269,13 +269,15 @@ impl Context {
         replacements
     }
 
-    pub fn graph(&self) -> Graph<PackageId> {
-        let mut graph = Graph::new();
+    pub fn graph(&self) -> Graph<PackageId, Vec<Dependency>> {
+        let mut graph: Graph<PackageId, Vec<Dependency>> = Graph::new();
         let mut cur = &self.resolve_graph;
         while let Some(ref node) = cur.head {
             match node.0 {
-                GraphNode::Add(ref p) => graph.add(p.clone(), &[]),
-                GraphNode::Link(ref a, ref b) => graph.link(a.clone(), b.clone()),
+                GraphNode::Add(ref p) => graph.add(p.clone()),
+                GraphNode::Link(ref a, ref b, ref dep) => {
+                    graph.link(a.clone(), b.clone()).push(dep.clone());
+                }
             }
             cur = &node.1;
         }

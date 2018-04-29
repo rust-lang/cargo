@@ -155,7 +155,7 @@ impl<'a> RegistryQueryer<'a> {
     }
 }
 
-#[derive(Clone, Copy, Eq, PartialEq)]
+#[derive(Clone, Copy)]
 pub enum Method<'a> {
     Everything, // equivalent to Required { dev_deps: true, all_features: true, .. }
     Required {
@@ -394,5 +394,5 @@ impl<T> Drop for RcList<T> {
 
 pub enum GraphNode {
     Add(PackageId),
-    Link(PackageId, PackageId),
+    Link(PackageId, PackageId, Dependency),
 }
