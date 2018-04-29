@@ -37,7 +37,6 @@ mod fingerprint;
 mod job;
 mod job_queue;
 mod layout;
-mod links;
 mod output_depinfo;
 
 /// Whether an object is for the host arch, or the target arch.
