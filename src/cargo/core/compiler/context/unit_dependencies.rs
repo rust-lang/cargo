@@ -26,8 +26,8 @@ use CargoResult;
 pub fn build_unit_dependencies<'a, 'cfg>(
     roots: &[Unit<'a>],
     bcx: &BuildContext<'a, 'cfg>,
-) -> CargoResult<HashMap<Unit<'a>, Vec<Unit<'a>>>> {
-    let mut deps = HashMap::new();
+    mut deps: &mut HashMap<Unit<'a>, Vec<Unit<'a>>>,
+) -> CargoResult<()> {
     for unit in roots.iter() {
         // Dependencies of tests/benches should not have `panic` set.
         // We check the global test mode to see if we are running in `cargo
@@ -43,7 +43,7 @@ pub fn build_unit_dependencies<'a, 'cfg>(
         deps_of(unit, bcx, &mut deps, profile_for)?;
     }
 
-    Ok(deps)
+    Ok(())
 }
 
 fn deps_of<'a, 'b, 'cfg>(
