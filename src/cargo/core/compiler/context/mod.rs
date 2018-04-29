@@ -266,8 +266,7 @@ impl<'a, 'cfg> Context<'a, 'cfg> {
             None => None,
         };
 
-        let deps = build_unit_dependencies(units, self.bcx)?;
-        self.unit_dependencies = deps;
+        build_unit_dependencies(units, self.bcx, &mut self.unit_dependencies)?;
         let files = CompilationFiles::new(
             units,
             host_layout,
