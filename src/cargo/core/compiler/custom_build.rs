@@ -4,6 +4,7 @@ use std::fs;
 use std::path::{Path, PathBuf};
 use std::str;
 use std::sync::{Arc, Mutex};
+use std::time::SystemTime;
 
 use core::PackageId;
 use util::errors::{CargoResult, CargoResultExt};
@@ -79,6 +80,7 @@ pub struct BuildDeps {
 pub fn prepare<'a, 'cfg>(
     cx: &mut Context<'a, 'cfg>,
     unit: &Unit<'a>,
+    build_start_time: SystemTime,
 ) -> CargoResult<(Work, Work, Freshness)> {
     let _p = profile::start(format!(
         "build script prepare: {}/{}",
@@ -96,7 +98,7 @@ pub fn prepare<'a, 'cfg>(
 
     // Now that we've prep'd our work, build the work needed to manage the
     // fingerprint and then start returning that upwards.
-    let (freshness, dirty, fresh) = fingerprint::prepare_build_cmd(cx, unit)?;
+    let (freshness, dirty, fresh) = fingerprint::prepare_build_cmd(cx, unit, build_start_time)?;
 
     Ok((work_dirty.then(dirty), work_fresh.then(fresh), freshness))
 }
