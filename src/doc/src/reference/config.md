@@ -133,9 +133,11 @@ example the `build.jobs` key can also be defined by `CARGO_BUILD_JOBS`.
 
 Environment variables will take precedent over TOML configuration, and currently
 only integer, boolean, and string keys are supported to be defined by
-environment variables.
+environment variables. This means that [source replacement][source], which is expressed by
+tables, cannot be configured through environment variables.
 
 In addition to the system above, Cargo recognizes a few other specific
 [environment variables][env].
 
 [env]: reference/environment-variables.html
+[source]: (reference/source-replacement.html)
