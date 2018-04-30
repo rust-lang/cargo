@@ -3,6 +3,7 @@ use std::fs;
 use std::hash::{self, Hasher};
 use std::path::{Path, PathBuf};
 use std::sync::{Arc, Mutex};
+use std::time::SystemTime;
 
 use filetime::FileTime;
 use serde::de::{self, Deserialize};
@@ -50,6 +51,7 @@ pub type Preparation = (Freshness, Work, Work);
 pub fn prepare_target<'a, 'cfg>(
     cx: &mut Context<'a, 'cfg>,
     unit: &Unit<'a>,
+    build_start_time: SystemTime,
 ) -> CargoResult<Preparation> {
     let _p = profile::start(format!(
         "fingerprint: {} / {}",
@@ -61,7 +63,7 @@ pub fn prepare_target<'a, 'cfg>(
 
     debug!("fingerprint at: {}", loc.display());
 
-    let fingerprint = calculate(cx, unit)?;
+    let fingerprint = calculate(cx, unit, build_start_time)?;
     let compare = compare_old_fingerprint(&loc, &*fingerprint);
     log_compare(unit, &compare);
 
@@ -199,16 +201,21 @@ where
 #[derive(Serialize, Deserialize, Hash)]
 enum LocalFingerprint {
     Precalculated(String),
-    MtimeBased(MtimeSlot, PathBuf),
+    MtimeBased(MtimeSlot, PathBuf, SystemTime),
     EnvBased(String, Option<String>),
 }
 
 impl LocalFingerprint {
-    fn mtime(root: &Path, mtime: Option<FileTime>, path: &Path) -> LocalFingerprint {
+    fn mtime(
+        root: &Path,
+        mtime: Option<FileTime>,
+        path: &Path,
+        build_start_time: SystemTime,
+    ) -> LocalFingerprint {
         let mtime = MtimeSlot(Mutex::new(mtime));
         assert!(path.is_absolute());
         let path = path.strip_prefix(root).unwrap_or(path);
-        LocalFingerprint::MtimeBased(mtime, path.to_path_buf())
+        LocalFingerprint::MtimeBased(mtime, path.to_path_buf(), build_start_time)
     }
 }
 
@@ -219,10 +226,21 @@ impl Fingerprint {
         let mut hash_busted = false;
         for local in self.local.iter() {
             match *local {
-                LocalFingerprint::MtimeBased(ref slot, ref path) => {
+                LocalFingerprint::MtimeBased(ref slot, ref path, build_start_time) => {
                     let path = root.join(path);
                     let mtime = paths::mtime(&path)?;
-                    *slot.0.lock().unwrap() = Some(mtime);
+                    let time = FileTime::from_system_time(build_start_time);
+                    let mtime_str = match *slot.0.lock().unwrap() {
+                        None => "<none>".to_string(),
+                        Some(ft) => format!("{}", ft),
+                    };
+                    debug!("updating fingerprint at {}, from {} to {} (rather than mtime {})",
+                        path.display(),
+                        mtime_str,
+                        time,
+                        mtime,
+                    );
+                    *slot.0.lock().unwrap() = Some(time);
                 }
                 LocalFingerprint::EnvBased(..) | LocalFingerprint::Precalculated(..) => continue,
             }
@@ -284,26 +302,37 @@ impl Fingerprint {
                     }
                 }
                 (
-                    &LocalFingerprint::MtimeBased(ref on_disk_mtime, ref ap),
-                    &LocalFingerprint::MtimeBased(ref previously_built_mtime, ref bp),
+                    &LocalFingerprint::MtimeBased(ref on_disk_mtime, ref ap, _),
+                    &LocalFingerprint::MtimeBased(ref previously_built_mtime, ref bp, _),
                 ) => {
-                    let on_disk_mtime = on_disk_mtime.0.lock().unwrap();
-                    let previously_built_mtime = previously_built_mtime.0.lock().unwrap();
+                    let on_disk_mtime = *on_disk_mtime.0.lock().unwrap();
+                    let previously_built_mtime = *previously_built_mtime.0.lock().unwrap();
 
-                    let should_rebuild = match (*on_disk_mtime, *previously_built_mtime) {
+                    let should_rebuild = match (on_disk_mtime, previously_built_mtime) {
                         (None, None) => false,
                         (Some(_), None) | (None, Some(_)) => true,
                         (Some(on_disk), Some(previously_built)) => on_disk > previously_built,
                     };
 
                     if should_rebuild {
+                        let mtime1 = match previously_built_mtime {
+                            None => "<none>".to_string(),
+                            Some(ft) => format!("{}", ft),
+                        };
+                        let mtime2 = match on_disk_mtime {
+                            None => "<none>".to_string(),
+                            Some(ft) => format!("{}", ft),
+                        };
+                        let paths_are = if ap == bp {
+                            format!("path: {}", ap.display())
+                        } else {
+                            format!("paths are {} and {}", ap.display(), bp.display())
+                        };
                         bail!(
-                            "mtime based components have changed: previously {:?} now {:?}, \
-                             paths are {:?} and {:?}",
-                            *previously_built_mtime,
-                            *on_disk_mtime,
-                            ap,
-                            bp
+                            "mtime based components have changed: previously {} now {}, {}",
+                            mtime1,
+                            mtime2,
+                            paths_are,
                         )
                     }
                 }
@@ -413,6 +442,7 @@ impl<'de> de::Deserialize<'de> for MtimeSlot {
 fn calculate<'a, 'cfg>(
     cx: &mut Context<'a, 'cfg>,
     unit: &Unit<'a>,
+    build_start_time: SystemTime,
 ) -> CargoResult<Arc<Fingerprint>> {
     if let Some(s) = cx.fingerprints.get(unit) {
         return Ok(Arc::clone(s));
@@ -429,7 +459,7 @@ fn calculate<'a, 'cfg>(
     let deps = deps.iter()
         .filter(|u| !u.target.is_custom_build() && !u.target.is_bin())
         .map(|dep| {
-            calculate(cx, dep).and_then(|fingerprint| {
+            calculate(cx, dep, build_start_time).and_then(|fingerprint| {
                 let name = cx.extern_crate_name(unit, dep)?;
                 Ok((dep.pkg.package_id().to_string(), name, fingerprint))
             })
@@ -440,7 +470,7 @@ fn calculate<'a, 'cfg>(
     let local = if use_dep_info(unit) {
         let dep_info = dep_info_loc(cx, unit);
         let mtime = dep_info_mtime_if_fresh(unit.pkg, &dep_info)?;
-        LocalFingerprint::mtime(cx.files().target_root(), mtime, &dep_info)
+        LocalFingerprint::mtime(cx.files().target_root(), mtime, &dep_info, build_start_time)
     } else {
         let fingerprint = pkg_fingerprint(cx, unit.pkg)?;
         LocalFingerprint::Precalculated(fingerprint)
@@ -505,6 +535,7 @@ fn use_dep_info(unit: &Unit) -> bool {
 pub fn prepare_build_cmd<'a, 'cfg>(
     cx: &mut Context<'a, 'cfg>,
     unit: &Unit<'a>,
+    build_start_time: SystemTime,
 ) -> CargoResult<Preparation> {
     let _p = profile::start(format!("fingerprint build cmd: {}", unit.pkg.package_id()));
     let new = cx.files().fingerprint_dir(unit);
@@ -512,7 +543,7 @@ pub fn prepare_build_cmd<'a, 'cfg>(
 
     debug!("fingerprint at: {}", loc.display());
 
-    let (local, output_path) = build_script_local_fingerprints(cx, unit)?;
+    let (local, output_path) = build_script_local_fingerprints(cx, unit, build_start_time)?;
     let mut fingerprint = Fingerprint {
         rustc: 0,
         target: 0,
@@ -548,7 +579,8 @@ pub fn prepare_build_cmd<'a, 'cfg>(
             let outputs = &outputs[&key];
             if !outputs.rerun_if_changed.is_empty() || !outputs.rerun_if_env_changed.is_empty() {
                 let deps = BuildDeps::new(&output_path, Some(outputs));
-                fingerprint.local = local_fingerprints_deps(&deps, &target_root, &pkg_root);
+                fingerprint.local =
+                    local_fingerprints_deps(&deps, &target_root, &pkg_root, build_start_time);
                 fingerprint.update_local(&target_root)?;
             }
         }
@@ -565,6 +597,7 @@ pub fn prepare_build_cmd<'a, 'cfg>(
 fn build_script_local_fingerprints<'a, 'cfg>(
     cx: &mut Context<'a, 'cfg>,
     unit: &Unit<'a>,
+    build_start_time: SystemTime,
 ) -> CargoResult<(Vec<LocalFingerprint>, Option<PathBuf>)> {
     let state = cx.build_state.outputs.lock().unwrap();
     // First up, if this build script is entirely overridden, then we just
@@ -599,7 +632,12 @@ fn build_script_local_fingerprints<'a, 'cfg>(
     // dependencies as well as env vars listed as dependencies. Process them all
     // here.
     Ok((
-        local_fingerprints_deps(deps, cx.files().target_root(), unit.pkg.root()),
+        local_fingerprints_deps(
+            deps,
+            cx.files().target_root(),
+            unit.pkg.root(),
+            build_start_time,
+        ),
         Some(output),
     ))
 }
@@ -608,6 +646,7 @@ fn local_fingerprints_deps(
     deps: &BuildDeps,
     target_root: &Path,
     pkg_root: &Path,
+    build_start_time: SystemTime,
 ) -> Vec<LocalFingerprint> {
     debug!("new local fingerprints deps");
     let mut local = Vec::new();
@@ -615,7 +654,12 @@ fn local_fingerprints_deps(
         let output = &deps.build_script_output;
         let deps = deps.rerun_if_changed.iter().map(|p| pkg_root.join(p));
         let mtime = mtime_if_fresh(output, deps);
-        local.push(LocalFingerprint::mtime(target_root, mtime, output));
+        local.push(LocalFingerprint::mtime(
+            target_root,
+            mtime,
+            output,
+            build_start_time,
+        ));
     }
 
     for var in deps.rerun_if_env_changed.iter() {

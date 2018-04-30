@@ -5,6 +5,7 @@ use std::fs;
 use std::io::{self, Write};
 use std::path::{self, Path, PathBuf};
 use std::sync::Arc;
+use std::time::SystemTime;
 
 use same_file::is_same_file;
 use serde_json;
@@ -302,13 +303,16 @@ fn compile<'a, 'cfg: 'a>(
     fingerprint::prepare_init(cx, unit)?;
     cx.links.validate(cx.resolve, unit)?;
 
+    let build_start_time = SystemTime::now();
+
     let (dirty, fresh, freshness) = if unit.mode.is_run_custom_build() {
-        custom_build::prepare(cx, unit)?
+        custom_build::prepare(cx, unit, build_start_time)?
     } else if unit.mode == CompileMode::Doctest {
         // we run these targets later, so this is just a noop for now
         (Work::noop(), Work::noop(), Freshness::Fresh)
     } else {
-        let (mut freshness, dirty, fresh) = fingerprint::prepare_target(cx, unit)?;
+        let (mut freshness, dirty, fresh) =
+            fingerprint::prepare_target(cx, unit, build_start_time)?;
         let work = if unit.mode.is_doc() {
             rustdoc(cx, unit)?
         } else {
