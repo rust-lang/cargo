@@ -839,6 +839,9 @@ impl TomlManifest {
 
         let exclude = project.exclude.clone().unwrap_or_default();
         let include = project.include.clone().unwrap_or_default();
+        if project.namespaced_features.is_some() {
+            features.require(Feature::namespaced_features())?;
+        }
 
         let summary = Summary::new(
             pkgid,
