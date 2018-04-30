@@ -1721,6 +1721,8 @@ fn namespaced_invalid_feature() {
         .file(
             "Cargo.toml",
             r#"
+            cargo-features = ["namespaced-features"]
+
             [project]
             name = "foo"
             version = "0.0.1"
@@ -1735,7 +1737,7 @@ fn namespaced_invalid_feature() {
         .build();
 
     assert_that(
-        p.cargo("build"),
+        p.cargo("build").masquerade_as_nightly_cargo(),
         execs().with_status(101).with_stderr(
             "\
 [ERROR] failed to parse manifest at `[..]`
@@ -1753,6 +1755,8 @@ fn namespaced_invalid_dependency() {
         .file(
             "Cargo.toml",
             r#"
+            cargo-features = ["namespaced-features"]
+
             [project]
             name = "foo"
             version = "0.0.1"
@@ -1767,7 +1771,7 @@ fn namespaced_invalid_dependency() {
         .build();
 
     assert_that(
-        p.cargo("build"),
+        p.cargo("build").masquerade_as_nightly_cargo(),
         execs().with_status(101).with_stderr(
             "\
 [ERROR] failed to parse manifest at `[..]`
@@ -1785,6 +1789,8 @@ fn namespaced_non_optional_dependency() {
         .file(
             "Cargo.toml",
             r#"
+            cargo-features = ["namespaced-features"]
+
             [project]
             name = "foo"
             version = "0.0.1"
@@ -1802,7 +1808,7 @@ fn namespaced_non_optional_dependency() {
         .build();
 
     assert_that(
-        p.cargo("build"),
+        p.cargo("build").masquerade_as_nightly_cargo(),
         execs().with_status(101).with_stderr(
             "\
 [ERROR] failed to parse manifest at `[..]`
@@ -1821,6 +1827,8 @@ fn namespaced_implicit_feature() {
         .file(
             "Cargo.toml",
             r#"
+            cargo-features = ["namespaced-features"]
+
             [project]
             name = "foo"
             version = "0.0.1"
@@ -1837,7 +1845,10 @@ fn namespaced_implicit_feature() {
         .file("src/main.rs", "fn main() {}")
         .build();
 
-    assert_that(p.cargo("build"), execs().with_status(0));
+    assert_that(
+        p.cargo("build").masquerade_as_nightly_cargo(),
+        execs().with_status(0),
+    );
 }
 
 #[test]
@@ -1846,6 +1857,8 @@ fn namespaced_shadowed_dep() {
         .file(
             "Cargo.toml",
             r#"
+            cargo-features = ["namespaced-features"]
+
             [project]
             name = "foo"
             version = "0.0.1"
@@ -1863,7 +1876,7 @@ fn namespaced_shadowed_dep() {
         .build();
 
     assert_that(
-        p.cargo("build"),
+        p.cargo("build").masquerade_as_nightly_cargo(),
         execs().with_status(101).with_stderr(
             "\
 [ERROR] failed to parse manifest at `[..]`
@@ -1882,6 +1895,8 @@ fn namespaced_shadowed_non_optional() {
         .file(
             "Cargo.toml",
             r#"
+            cargo-features = ["namespaced-features"]
+
             [project]
             name = "foo"
             version = "0.0.1"
@@ -1899,7 +1914,7 @@ fn namespaced_shadowed_non_optional() {
         .build();
 
     assert_that(
-        p.cargo("build"),
+        p.cargo("build").masquerade_as_nightly_cargo(),
         execs().with_status(101).with_stderr(
             "\
 [ERROR] failed to parse manifest at `[..]`
@@ -1919,6 +1934,8 @@ fn namespaced_implicit_non_optional() {
         .file(
             "Cargo.toml",
             r#"
+            cargo-features = ["namespaced-features"]
+
             [project]
             name = "foo"
             version = "0.0.1"
@@ -1936,7 +1953,7 @@ fn namespaced_implicit_non_optional() {
         .build();
 
     assert_that(
-        p.cargo("build"),
+        p.cargo("build").masquerade_as_nightly_cargo(),
         execs().with_status(101).with_stderr(
             "\
 [ERROR] failed to parse manifest at `[..]`
@@ -1955,6 +1972,8 @@ fn namespaced_same_name() {
         .file(
             "Cargo.toml",
             r#"
+            cargo-features = ["namespaced-features"]
+
             [project]
             name = "foo"
             version = "0.0.1"
@@ -1971,5 +1990,8 @@ fn namespaced_same_name() {
         .file("src/main.rs", "fn main() {}")
         .build();
 
-    assert_that(p.cargo("build"), execs().with_status(0));
+    assert_that(
+        p.cargo("build").masquerade_as_nightly_cargo(),
+        execs().with_status(0),
+    );
 }
