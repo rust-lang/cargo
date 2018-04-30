@@ -543,6 +543,8 @@ pub struct TomlProject {
     autoexamples: Option<bool>,
     autotests: Option<bool>,
     autobenches: Option<bool>,
+    #[serde(rename = "namespaced-features")]
+    namespaced_features: Option<bool>,
 
     // package metadata
     description: Option<String>,
@@ -837,12 +839,16 @@ impl TomlManifest {
 
         let exclude = project.exclude.clone().unwrap_or_default();
         let include = project.include.clone().unwrap_or_default();
+        if project.namespaced_features.is_some() {
+            features.require(Feature::namespaced_features())?;
+        }
 
         let summary = Summary::new(
             pkgid,
             deps,
             me.features.clone().unwrap_or_else(BTreeMap::new),
             project.links.clone(),
+            project.namespaced_features.unwrap_or(false),
         )?;
         let metadata = ManifestMetadata {
             description: project.description.clone(),
