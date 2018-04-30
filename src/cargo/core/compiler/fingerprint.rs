@@ -105,8 +105,9 @@ pub fn prepare_target<'a, 'cfg>(
     }
 
     let allow_failure = cx.extra_args_for(unit).is_some();
+    let target_root = cx.files().target_root().to_path_buf();
     let write_fingerprint = Work::new(move |_| {
-        match fingerprint.update_local() {
+        match fingerprint.update_local(&target_root) {
             Ok(()) => {}
             Err(..) if allow_failure => return Ok(()),
             Err(e) => return Err(e),
@@ -221,12 +222,25 @@ impl LocalFingerprint {
 struct MtimeSlot(Mutex<Option<FileTime>>);
 
 impl Fingerprint {
-    fn update_local(&self) -> CargoResult<()> {
+    fn update_local(&self, root: &Path) -> CargoResult<()> {
         let mut hash_busted = false;
         for local in self.local.iter() {
             match *local {
-                LocalFingerprint::MtimeBased(ref slot, _, build_start_time) => {
-                    *slot.0.lock().unwrap() = Some(FileTime::from_system_time(build_start_time));
+                LocalFingerprint::MtimeBased(ref slot, ref path, build_start_time) => {
+                    let path = root.join(path);
+                    let mtime = paths::mtime(&path)?;
+                    let time = FileTime::from_system_time(build_start_time);
+                    let mtime_str = match *slot.0.lock().unwrap() {
+                        None => "<none>".to_string(),
+                        Some(ft) => format!("{}", ft),
+                    };
+                    debug!("updating fingerprint at {}, from {} to {} (rather than mtime {})",
+                        path.display(),
+                        mtime_str,
+                        time,
+                        mtime,
+                    );
+                    *slot.0.lock().unwrap() = Some(time);
                 }
                 LocalFingerprint::EnvBased(..) | LocalFingerprint::Precalculated(..) => continue,
             }
@@ -291,23 +305,34 @@ impl Fingerprint {
                     &LocalFingerprint::MtimeBased(ref on_disk_mtime, ref ap, _),
                     &LocalFingerprint::MtimeBased(ref previously_built_mtime, ref bp, _),
                 ) => {
-                    let on_disk_mtime = on_disk_mtime.0.lock().unwrap();
-                    let previously_built_mtime = previously_built_mtime.0.lock().unwrap();
+                    let on_disk_mtime = *on_disk_mtime.0.lock().unwrap();
+                    let previously_built_mtime = *previously_built_mtime.0.lock().unwrap();
 
-                    let should_rebuild = match (*on_disk_mtime, *previously_built_mtime) {
+                    let should_rebuild = match (on_disk_mtime, previously_built_mtime) {
                         (None, None) => false,
                         (Some(_), None) | (None, Some(_)) => true,
                         (Some(on_disk), Some(previously_built)) => on_disk > previously_built,
                     };
 
                     if should_rebuild {
+                        let mtime1 = match previously_built_mtime {
+                            None => "<none>".to_string(),
+                            Some(ft) => format!("{}", ft),
+                        };
+                        let mtime2 = match on_disk_mtime {
+                            None => "<none>".to_string(),
+                            Some(ft) => format!("{}", ft),
+                        };
+                        let paths_are = if ap == bp {
+                            format!("path: {}", ap.display())
+                        } else {
+                            format!("paths are {} and {}", ap.display(), bp.display())
+                        };
                         bail!(
-                            "mtime based components have changed: previously {:?} now {:?}, \
-                             paths are {:?} and {:?}",
-                            *previously_built_mtime,
-                            *on_disk_mtime,
-                            ap,
-                            bp
+                            "mtime based components have changed: previously {} now {}, {}",
+                            mtime1,
+                            mtime2,
+                            paths_are,
                         )
                     }
                 }
@@ -556,7 +581,7 @@ pub fn prepare_build_cmd<'a, 'cfg>(
                 let deps = BuildDeps::new(&output_path, Some(outputs));
                 fingerprint.local =
                     local_fingerprints_deps(&deps, &target_root, &pkg_root, build_start_time);
-                fingerprint.update_local()?;
+                fingerprint.update_local(&target_root)?;
             }
         }
         write_fingerprint(&loc, &fingerprint)
