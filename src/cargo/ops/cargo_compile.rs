@@ -217,11 +217,9 @@ impl Packages {
                 .map(PackageIdSpec::from_package_id)
                 .filter(|p| opt_out.iter().position(|x| *x == p.name()).is_none())
                 .collect(),
-            Packages::Packages(ref packages) if packages.is_empty() => ws.current_opt()
-                .map(Package::package_id)
-                .map(PackageIdSpec::from_package_id)
-                .into_iter()
-                .collect(),
+            Packages::Packages(ref packages) if packages.is_empty() => {
+                vec![PackageIdSpec::from_package_id(ws.current()?.package_id())]
+            }
             Packages::Packages(ref packages) => packages
                 .iter()
                 .map(|p| PackageIdSpec::parse(p))
