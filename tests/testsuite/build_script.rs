@@ -1703,6 +1703,37 @@ fn profile_and_opt_level_set_correctly() {
 }
 
 #[test]
+fn profile_debug_0() {
+    let p = project("foo")
+        .file(
+            "Cargo.toml",
+            r#"
+            [package]
+            name = "foo"
+            version = "0.0.1"
+
+            [profile.dev]
+            debug = 0
+        "#,
+        )
+        .file("src/lib.rs", "")
+        .file(
+            "build.rs",
+            r#"
+              use std::env;
+
+              fn main() {
+                  assert_eq!(env::var("OPT_LEVEL").unwrap(), "0");
+                  assert_eq!(env::var("PROFILE").unwrap(), "debug");
+                  assert_eq!(env::var("DEBUG").unwrap(), "false");
+              }
+        "#,
+        )
+        .build();
+    assert_that(p.cargo("build"), execs().with_status(0));
+}
+
+#[test]
 fn build_script_with_lto() {
     let build = project("builder")
         .file(
