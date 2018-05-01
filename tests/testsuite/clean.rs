@@ -162,6 +162,46 @@ fn clean_release() {
 }
 
 #[test]
+fn clean_doc() {
+    let p = project("foo")
+        .file(
+            "Cargo.toml",
+            r#"
+            [package]
+            name = "foo"
+            version = "0.0.1"
+            authors = []
+
+            [dependencies]
+            a = { path = "a" }
+        "#,
+        )
+        .file("src/main.rs", "fn main() {}")
+        .file(
+            "a/Cargo.toml",
+            r#"
+            [package]
+            name = "a"
+            version = "0.0.1"
+            authors = []
+        "#,
+        )
+        .file("a/src/lib.rs", "")
+        .build();
+
+    assert_that(p.cargo("doc"), execs().with_status(0));
+
+    let doc_path = &p.build_dir().join("doc");
+
+    assert_that(doc_path, existing_dir());
+
+    assert_that(p.cargo("clean").arg("--doc"), execs().with_status(0));
+
+    assert_that(doc_path, is_not(existing_dir()));
+    assert_that(p.build_dir(), existing_dir());
+}
+
+#[test]
 fn build_script() {
     let p = project("foo")
         .file(

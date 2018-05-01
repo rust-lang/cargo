@@ -10,6 +10,7 @@ pub fn cli() -> App {
         .arg_target_triple("Target triple to clean output for (default all)")
         .arg_target_dir()
         .arg_release("Whether or not to clean release artifacts")
+        .arg_doc("Whether or not to clean just the documentation directory")
         .after_help(
             "\
 If the --package argument is given, then SPEC is a package id specification
@@ -27,6 +28,7 @@ pub fn exec(config: &mut Config, args: &ArgMatches) -> CliResult {
         spec: values(args, "package"),
         target: args.target(),
         release: args.is_present("release"),
+        doc: args.is_present("doc"),
     };
     ops::clean(&ws, &opts)?;
     Ok(())
