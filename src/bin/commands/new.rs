@@ -11,10 +11,16 @@ pub fn cli() -> App {
 
 pub fn exec(config: &mut Config, args: &ArgMatches) -> CliResult {
     let opts = args.new_options(config)?;
+
     ops::new(&opts, config)?;
     let path = args.value_of("path").unwrap();
+    let project_name = if let Some(name) = args.value_of("name") {
+        name
+    } else {
+        path
+    };
     config
         .shell()
-        .status("Created", format!("{} `{}` project", opts.kind, path))?;
+        .status("Created", format!("{} `{}` project", opts.kind, project_name))?;
     Ok(())
 }
