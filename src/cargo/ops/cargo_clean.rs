@@ -17,12 +17,21 @@ pub struct CleanOptions<'a> {
     pub target: Option<String>,
     /// Whether to clean the release directory
     pub release: bool,
+    /// Whether to just clean the doc directory
+    pub doc: bool,
 }
 
 /// Cleans the project from build artifacts.
 pub fn clean(ws: &Workspace, opts: &CleanOptions) -> CargoResult<()> {
     let target_dir = ws.target_dir();
     let config = ws.config();
+
+    // If the doc option is set, we just want to delete the doc directory.
+    if opts.doc {
+        let target_dir = target_dir.join("doc");
+        let target_dir = target_dir.into_path_unlocked();
+        return rm_rf(&target_dir, config);
+    }
 
     // If we have a spec, then we need to delete some packages, otherwise, just
     // remove the whole target directory and be done with it!
