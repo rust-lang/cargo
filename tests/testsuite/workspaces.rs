@@ -3,7 +3,7 @@ use std::fs::{self, File};
 use std::io::{Read, Write};
 
 use cargotest::sleep_ms;
-use cargotest::support::{execs, git, project};
+use cargotest::support::{basic_lib_manifest, execs, git, project};
 use cargotest::support::registry::Package;
 use hamcrest::{assert_that, existing_dir, existing_file, is_not};
 
@@ -2337,4 +2337,34 @@ fn relative_rustc() {
 
     let file = format!("./foo{}", env::consts::EXE_SUFFIX);
     assert_that(p.cargo("build").env("RUSTC", &file), execs().with_status(0));
+}
+
+
+#[test]
+fn ws_rustc_err() {
+    let p = project("ws")
+        .file(
+            "Cargo.toml",
+            r#"
+            [workspace]
+            members = ["a"]
+        "#,
+        )
+        .file("a/Cargo.toml", &basic_lib_manifest("a"))
+        .file("a/src/lib.rs", "")
+        .build();
+
+    assert_that(
+        p.cargo("rustc"),
+        execs()
+            .with_status(101)
+            .with_stderr("[ERROR] [..]against an actual package[..]"),
+    );
+
+    assert_that(
+        p.cargo("rustdoc"),
+        execs()
+            .with_status(101)
+            .with_stderr("[ERROR] [..]against an actual package[..]"),
+    );
 }
