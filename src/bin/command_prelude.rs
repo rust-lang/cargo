@@ -105,6 +105,10 @@ pub trait AppExt: Sized {
         self._arg(opt("release", release))
     }
 
+    fn arg_doc(self, doc: &'static str) -> Self {
+        self._arg(opt("doc", doc))
+    }
+
     fn arg_target_triple(self, target: &'static str) -> Self {
         self._arg(opt("target", target).value_name("TRIPLE"))
     }
