@@ -398,44 +398,8 @@ fn indent(size: u32, s: &str) -> String {
 /// This function is as stupid as possible. Make sure you call for the replacemnts in one file in
 /// reverse order to not mess up the lines for replacements further down the road.
 fn apply_suggestion(suggestion: &Replacement) -> Result<(), ProgramError> {
-    use std::cmp::max;
-
-    let file_content = try!(read_file_to_string(&suggestion.snippet.file_name));
-    let mut new_content = String::new();
-
-    // Add the lines before the section we want to replace
-    new_content.push_str(&file_content.lines()
-        .take(max(suggestion.snippet.line_range.start.line - 1, 0) as usize)
-        .collect::<Vec<_>>()
-        .join("\n"));
-    new_content.push_str("\n");
-
-    // Parts of line before replacement
-    new_content.push_str(&file_content.lines()
-        .nth(suggestion.snippet.line_range.start.line - 1)
-        .unwrap_or("")
-        .chars()
-        .take(suggestion.snippet.line_range.start.column - 1)
-        .collect::<String>());
-
-    // Insert new content! Finally!
-    new_content.push_str(&suggestion.replacement);
-
-    // Parts of line after replacement
-    new_content.push_str(&file_content.lines()
-        .nth(suggestion.snippet.line_range.end.line - 1)
-        .unwrap_or("")
-        .chars()
-        .skip(suggestion.snippet.line_range.end.column - 1)
-        .collect::<String>());
-
-    // Add the lines after the section we want to replace
-    new_content.push_str("\n");
-    new_content.push_str(&file_content.lines()
-        .skip(suggestion.snippet.line_range.end.line as usize)
-        .collect::<Vec<_>>()
-        .join("\n"));
-    new_content.push_str("\n");
+    let mut file_content = try!(read_file_to_string(&suggestion.snippet.file_name));
+    let new_content = rustfix::apply_suggestion(&mut file_content, suggestion);
 
     let mut file = try!(File::create(&suggestion.snippet.file_name));
     let new_content = new_content.as_bytes();
