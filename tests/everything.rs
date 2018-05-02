@@ -18,7 +18,7 @@ use rustfix::{Replacement, apply_suggestions};
 fn compile(file: &Path) -> Result<Output, Box<Error>> {
     let tmp = TempDir::new("rustfix-tests")?;
     let better_call_clippy = cmd!(
-        "clippy-driver", "rustc", file,
+        "rustc", file,
         "--error-format=pretty-json", "-Zunstable-options", "--emit=metadata",
         "--crate-name=rustfix_test",
         "--out-dir", tmp.path()
