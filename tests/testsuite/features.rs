@@ -335,7 +335,7 @@ warning: Package `foo v0.0.1 ([..])` does not have feature `bar`. It has a requi
 that name, but only optional dependencies can be used as features. [..]
    Compiling bar v0.0.1 ([..])
    Compiling foo v0.0.1 ([..])
-    Finished dev [unoptimized + debuginfo] target(s) in [..] secs
+    Finished dev [unoptimized + debuginfo] target(s) in [..]s
 "));
 }
 
@@ -388,7 +388,7 @@ that name, but only optional dependencies can be used as features. [..]
    Compiling baz v0.0.1 ([..])
    Compiling bar v0.0.1 ([..])
    Compiling foo v0.0.1 ([..])
-    Finished dev [unoptimized + debuginfo] target(s) in [..] secs
+    Finished dev [unoptimized + debuginfo] target(s) in [..]s
 "));
 }
 
