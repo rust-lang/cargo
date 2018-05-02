@@ -340,15 +340,18 @@ fn activate_deps_loop(
                         backtracked = true;
                         Ok((candidate, has_another))
                     }
-                    None => Err(activation_error(
-                        &cx,
-                        registry.registry,
-                        &parent,
-                        &dep,
-                        &conflicting_activations,
-                        &candidates,
-                        config,
-                    )),
+                    None => {
+                        debug!("no candidates found");
+                        Err(activation_error(
+                            &cx,
+                            registry.registry,
+                            &parent,
+                            &dep,
+                            &conflicting_activations,
+                            &candidates,
+                            config,
+                        ))
+                    }
                 }
             })?;
 

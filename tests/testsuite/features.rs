@@ -1999,3 +1999,35 @@ fn namespaced_same_name() {
         execs().with_status(0),
     );
 }
+
+#[test]
+fn only_dep_is_optional() {
+    Package::new("bar", "0.1.0").publish();
+
+    let p = project("foo")
+        .file(
+            "Cargo.toml",
+            r#"
+                [project]
+                name = "foo"
+                version = "0.0.1"
+                authors = []
+
+                [features]
+                foo = ['bar']
+
+                [dependencies]
+                bar = { version = "0.1", optional = true }
+
+                [dev-dependencies]
+                bar = "0.1"
+            "#,
+        )
+        .file("src/main.rs", "fn main() {}")
+        .build();
+
+    assert_that(
+        p.cargo("build"),
+        execs().with_status(0),
+    );
+}
