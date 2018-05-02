@@ -140,10 +140,12 @@ fn build_feature_map(
     namespaced: bool,
 ) -> CargoResult<FeatureMap> {
     use self::FeatureValue::*;
-    let dep_map: HashMap<_, _> = dependencies
-        .iter()
-        .map(|d| (d.name().as_str(), d))
-        .collect();
+    let mut dep_map = HashMap::new();
+    for dep in dependencies.iter() {
+        dep_map.entry(dep.name().as_str())
+            .or_insert(Vec::new())
+            .push(dep);
+    }
 
     let mut map = BTreeMap::new();
     for (feature, list) in features.iter() {
@@ -159,7 +161,7 @@ fn build_feature_map(
         let mut dependency_found = if namespaced {
             match dep_map.get(feature.as_str()) {
                 Some(ref dep_data) => {
-                    if !dep_data.is_optional() {
+                    if !dep_data.iter().any(|d| d.is_optional()) {
                         bail!(
                             "Feature `{}` includes the dependency of the same name, but this is \
                              left implicit in the features included by this feature.\n\
@@ -196,7 +198,9 @@ fn build_feature_map(
                     }
                 }
             };
-            let is_optional_dep = dep_data.map_or(false, |d| d.is_optional());
+            let is_optional_dep = dep_data.iter()
+                .flat_map(|d| d.iter())
+                .any(|d| d.is_optional());
             if let FeatureValue::Crate(ref dep_name) = val {
                 // If we have a dependency value, check if this is the dependency named
                 // the same as the feature that we were looking for.
