@@ -3,6 +3,7 @@ extern crate serde_derive;
 extern crate serde_json;
 
 use std::collections::HashSet;
+use std::error::Error;
 
 pub mod diagnostics;
 use diagnostics::{Diagnostic, DiagnosticSpan};
@@ -164,4 +165,60 @@ pub fn collect_suggestions<S: ::std::hash::BuildHasher>(diagnostic: &Diagnostic,
             solutions,
         })
     }
+}
+
+pub fn apply_suggestion(file_content: &mut String, suggestion: &Replacement) -> String {
+    use std::cmp::max;
+
+    let mut new_content = String::new();
+
+    // Add the lines before the section we want to replace
+    new_content.push_str(&file_content.lines()
+        .take(max(suggestion.snippet.line_range.start.line - 1, 0) as usize)
+        .collect::<Vec<_>>()
+        .join("\n"));
+    new_content.push_str("\n");
+
+    // Parts of line before replacement
+    new_content.push_str(&file_content.lines()
+        .nth(suggestion.snippet.line_range.start.line - 1)
+        .unwrap_or("")
+        .chars()
+        .take(suggestion.snippet.line_range.start.column - 1)
+        .collect::<String>());
+
+    // Insert new content! Finally!
+    new_content.push_str(&suggestion.replacement);
+
+    // Parts of line after replacement
+    new_content.push_str(&file_content.lines()
+        .nth(suggestion.snippet.line_range.end.line - 1)
+        .unwrap_or("")
+        .chars()
+        .skip(suggestion.snippet.line_range.end.column - 1)
+        .collect::<String>());
+
+    // Add the lines after the section we want to replace
+    new_content.push_str("\n");
+    new_content.push_str(&file_content.lines()
+        .skip(suggestion.snippet.line_range.end.line as usize)
+        .collect::<Vec<_>>()
+        .join("\n"));
+    new_content.push_str("\n");
+
+    new_content
+}
+
+pub fn apply_suggestions(code: &str, suggestions: &[Suggestion]) -> String {
+    let mut fixed = code.to_string();
+
+    for sug in suggestions.iter().rev() {
+        for sol in &sug.solutions {
+            for r in &sol.replacements {
+                fixed = apply_suggestion(&mut fixed, r);
+            }
+        }
+    }
+
+    fixed
 }
