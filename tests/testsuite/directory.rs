@@ -170,7 +170,7 @@ fn simple_install() {
             "  Installing bar v0.1.0
    Compiling foo v0.1.0
    Compiling bar v0.1.0
-    Finished release [optimized] target(s) in [..] secs
+    Finished release [optimized] target(s) in [..]s
   Installing [..]bar[..]
 warning: be sure to add `[..]` to your PATH to be able to run the installed binaries
 ",
@@ -288,7 +288,7 @@ fn install_without_feature_dep() {
             "  Installing bar v0.1.0
    Compiling foo v0.1.0
    Compiling bar v0.1.0
-    Finished release [optimized] target(s) in [..] secs
+    Finished release [optimized] target(s) in [..]s
   Installing [..]bar[..]
 warning: be sure to add `[..]` to your PATH to be able to run the installed binaries
 ",
