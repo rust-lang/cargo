@@ -175,7 +175,7 @@ impl<'cfg> Compilation<'cfg> {
         // When adding new environment variables depending on
         // crate properties which might require rebuild upon change
         // consider adding the corresponding properties to the hash
-        // in Context::target_metadata()
+        // in BuildContext::target_metadata()
         cmd.env("CARGO_MANIFEST_DIR", pkg.root())
             .env("CARGO_PKG_VERSION_MAJOR", &pkg.version().major.to_string())
             .env("CARGO_PKG_VERSION_MINOR", &pkg.version().minor.to_string())

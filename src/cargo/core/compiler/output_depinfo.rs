@@ -69,12 +69,13 @@ fn add_deps_for_unit<'a, 'b>(
     Ok(())
 }
 
-pub fn output_depinfo<'a, 'b>(context: &mut Context<'a, 'b>, unit: &Unit<'a>) -> CargoResult<()> {
+pub fn output_depinfo<'a, 'b>(cx: &mut Context<'a, 'b>, unit: &Unit<'a>) -> CargoResult<()> {
+    let bcx = cx.bcx;
     let mut deps = BTreeSet::new();
     let mut visited = HashSet::new();
-    let success = add_deps_for_unit(&mut deps, context, unit, &mut visited).is_ok();
+    let success = add_deps_for_unit(&mut deps, cx, unit, &mut visited).is_ok();
     let basedir_string;
-    let basedir = match context.config.get_path("build.dep-info-basedir")? {
+    let basedir = match bcx.config.get_path("build.dep-info-basedir")? {
         Some(value) => {
             basedir_string = value
                 .val
@@ -90,7 +91,7 @@ pub fn output_depinfo<'a, 'b>(context: &mut Context<'a, 'b>, unit: &Unit<'a>) ->
         .map(|f| render_filename(f, basedir))
         .collect::<CargoResult<Vec<_>>>()?;
 
-    for output in context.outputs(unit)?.iter() {
+    for output in cx.outputs(unit)?.iter() {
         if let Some(ref link_dst) = output.hardlink {
             let output_path = link_dst.with_extension("d");
             if success {

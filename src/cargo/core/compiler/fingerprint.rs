@@ -15,7 +15,7 @@ use util::errors::{CargoResult, CargoResultExt};
 use util::paths;
 use util::{internal, profile, Dirty, Fresh, Freshness};
 
-use super::context::{Context, FileFlavor, Unit};
+use super::{Context, BuildContext, FileFlavor, Unit};
 use super::custom_build::BuildDeps;
 use super::job::Work;
 
@@ -56,6 +56,7 @@ pub fn prepare_target<'a, 'cfg>(
         unit.pkg.package_id(),
         unit.target.name()
     ));
+    let bcx = cx.bcx;
     let new = cx.files().fingerprint_dir(unit);
     let loc = new.join(&filename(cx, unit));
 
@@ -77,7 +78,7 @@ pub fn prepare_target<'a, 'cfg>(
     // changed then an error is issued.
     if compare.is_err() {
         let source_id = unit.pkg.package_id().source_id();
-        let sources = cx.packages.sources();
+        let sources = bcx.packages.sources();
         let source = sources
             .get(source_id)
             .ok_or_else(|| internal("missing package source"))?;
@@ -102,7 +103,7 @@ pub fn prepare_target<'a, 'cfg>(
         }
     }
 
-    let allow_failure = cx.extra_args_for(unit).is_some();
+    let allow_failure = bcx.extra_args_for(unit).is_some();
     let target_root = cx.files().target_root().to_path_buf();
     let write_fingerprint = Work::new(move |_| {
         match fingerprint.update_local(&target_root) {
@@ -414,6 +415,7 @@ fn calculate<'a, 'cfg>(
     cx: &mut Context<'a, 'cfg>,
     unit: &Unit<'a>,
 ) -> CargoResult<Arc<Fingerprint>> {
+    let bcx = cx.bcx;
     if let Some(s) = cx.fingerprints.get(unit) {
         return Ok(Arc::clone(s));
     }
@@ -430,7 +432,7 @@ fn calculate<'a, 'cfg>(
         .filter(|u| !u.target.is_custom_build() && !u.target.is_bin())
         .map(|dep| {
             calculate(cx, dep).and_then(|fingerprint| {
-                let name = cx.extern_crate_name(unit, dep)?;
+                let name = cx.bcx.extern_crate_name(unit, dep)?;
                 Ok((dep.pkg.package_id().to_string(), name, fingerprint))
             })
         })
@@ -442,30 +444,30 @@ fn calculate<'a, 'cfg>(
         let mtime = dep_info_mtime_if_fresh(unit.pkg, &dep_info)?;
         LocalFingerprint::mtime(cx.files().target_root(), mtime, &dep_info)
     } else {
-        let fingerprint = pkg_fingerprint(cx, unit.pkg)?;
+        let fingerprint = pkg_fingerprint(&cx.bcx, unit.pkg)?;
         LocalFingerprint::Precalculated(fingerprint)
     };
     let mut deps = deps;
     deps.sort_by(|&(ref a, _, _), &(ref b, _, _)| a.cmp(b));
     let extra_flags = if unit.mode.is_doc() {
-        cx.rustdocflags_args(unit)?
+        bcx.rustdocflags_args(unit)?
     } else {
-        cx.rustflags_args(unit)?
+        bcx.rustflags_args(unit)?
     };
     let profile_hash = util::hash_u64(&(
         &unit.profile,
         unit.mode,
-        cx.extra_args_for(unit),
+        bcx.extra_args_for(unit),
         cx.incremental_args(unit)?,
     ));
     let fingerprint = Arc::new(Fingerprint {
-        rustc: util::hash_u64(&cx.build_config.rustc.verbose_version),
+        rustc: util::hash_u64(&bcx.build_config.rustc.verbose_version),
         target: util::hash_u64(&unit.target),
         profile: profile_hash,
         // Note that .0 is hashed here, not .1 which is the cwd. That doesn't
         // actually affect the output artifact so there's no need to hash it.
-        path: util::hash_u64(&super::path_args(cx, unit).0),
-        features: format!("{:?}", cx.resolve.features_sorted(unit.pkg.package_id())),
+        path: util::hash_u64(&super::path_args(&cx.bcx, unit).0),
+        features: format!("{:?}", bcx.resolve.features_sorted(unit.pkg.package_id())),
         deps,
         local: vec![local],
         memoized_hash: Mutex::new(None),
@@ -591,7 +593,7 @@ fn build_script_local_fingerprints<'a, 'cfg>(
     let output = deps.build_script_output.clone();
     if deps.rerun_if_changed.is_empty() && deps.rerun_if_env_changed.is_empty() {
         debug!("old local fingerprints deps");
-        let s = pkg_fingerprint(cx, unit.pkg)?;
+        let s = pkg_fingerprint(&cx.bcx, unit.pkg)?;
         return Ok((vec![LocalFingerprint::Precalculated(s)], Some(output)));
     }
 
@@ -705,9 +707,9 @@ fn dep_info_mtime_if_fresh(pkg: &Package, dep_info: &Path) -> CargoResult<Option
     }
 }
 
-fn pkg_fingerprint(cx: &Context, pkg: &Package) -> CargoResult<String> {
+fn pkg_fingerprint(bcx: &BuildContext, pkg: &Package) -> CargoResult<String> {
     let source_id = pkg.package_id().source_id();
-    let sources = cx.packages.sources();
+    let sources = bcx.packages.sources();
 
     let source = sources
         .get(source_id)
