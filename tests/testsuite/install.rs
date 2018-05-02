@@ -113,17 +113,20 @@ error: some crates failed to install
 
 #[test]
 fn pick_max_version() {
-    pkg("foo", "0.0.1");
-    pkg("foo", "0.0.2");
+    pkg("foo", "0.1.0");
+    pkg("foo", "0.2.0");
+    pkg("foo", "0.2.1");
+    pkg("foo", "0.2.1-pre.1");
+    pkg("foo", "0.3.0-pre.2");
 
     assert_that(
         cargo_process("install").arg("foo"),
         execs().with_status(0).with_stderr(&format!(
             "\
 [UPDATING] registry `[..]`
-[DOWNLOADING] foo v0.0.2 (registry [..])
-[INSTALLING] foo v0.0.2
-[COMPILING] foo v0.0.2
+[DOWNLOADING] foo v0.2.1 (registry [..])
+[INSTALLING] foo v0.2.1
+[COMPILING] foo v0.2.1
 [FINISHED] release [optimized] target(s) in [..]
 [INSTALLING] {home}[..]bin[..]foo[..]
 warning: be sure to add `[..]` to your PATH to be able to run the installed binaries
