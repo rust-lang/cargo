@@ -18,6 +18,9 @@ use super::encode::Metadata;
 /// for each package.
 #[derive(PartialEq)]
 pub struct Resolve {
+    /// A graph, whose vertices are packages and edges are dependency specifications
+    /// from Cargo.toml. We need a `Vec` here because the same package
+    /// might be present in both `[dependencies]` and `[build-dependencies]`.
     graph: Graph<PackageId, Vec<Dependency>>,
     replacements: HashMap<PackageId, PackageId>,
     reverse_replacements: HashMap<PackageId, PackageId>,
