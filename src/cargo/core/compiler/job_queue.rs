@@ -275,12 +275,30 @@ impl<'a> JobQueue<'a> {
         if profile.debuginfo.is_some() {
             opt_type += " + debuginfo";
         }
-        let duration = cx.bcx.config.creation_time().elapsed();
-        let time_elapsed = format!(
-            "{}.{:02} secs",
-            duration.as_secs(),
-            duration.subsec_nanos() / 10_000_000
-        );
+
+        let time_elapsed = {
+            use std::fmt::Write;
+
+            let duration = cx.bcx.config.creation_time().elapsed();
+            let mut s = String::new();
+            let secs = duration.as_secs();
+
+            if secs >= 60 {
+                // We can safely unwrap, as writing to a `String` never errors
+                write!(s, "{}m ", secs / 60).unwrap();
+            };
+
+            // We can safely unwrap, as writing to a `String` never errors
+            write!(
+                s,
+                "{}.{:02}s",
+                secs % 60,
+                duration.subsec_nanos() / 10_000_000
+            ).unwrap();
+
+            s
+        };
+
         if self.queue.is_empty() {
             let message = format!(
                 "{} [{}] target(s) in {}",

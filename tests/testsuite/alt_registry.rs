@@ -65,7 +65,7 @@ fn depend_on_alt_registry() {
 [DOWNLOADING] bar v0.0.1 (registry `file://[..]`)
 [COMPILING] bar v0.0.1 (registry `file://[..]`)
 [COMPILING] foo v0.0.1 ({dir})
-[FINISHED] dev [unoptimized + debuginfo] target(s) in [..] secs
+[FINISHED] dev [unoptimized + debuginfo] target(s) in [..]s
 ",
             dir = p.url(),
             reg = registry::alt_registry()
@@ -84,7 +84,7 @@ fn depend_on_alt_registry() {
             "\
 [COMPILING] bar v0.0.1 (registry `file://[..]`)
 [COMPILING] foo v0.0.1 ({dir})
-[FINISHED] dev [unoptimized + debuginfo] target(s) in [..] secs
+[FINISHED] dev [unoptimized + debuginfo] target(s) in [..]s
 ",
             dir = p.url()
         )),
@@ -128,7 +128,7 @@ fn depend_on_alt_registry_depends_on_same_registry_no_index() {
 [COMPILING] baz v0.0.1 (registry `file://[..]`)
 [COMPILING] bar v0.0.1 (registry `file://[..]`)
 [COMPILING] foo v0.0.1 ({dir})
-[FINISHED] dev [unoptimized + debuginfo] target(s) in [..] secs
+[FINISHED] dev [unoptimized + debuginfo] target(s) in [..]s
 ",
             dir = p.url(),
             reg = registry::alt_registry()
@@ -173,7 +173,7 @@ fn depend_on_alt_registry_depends_on_same_registry() {
 [COMPILING] baz v0.0.1 (registry `file://[..]`)
 [COMPILING] bar v0.0.1 (registry `file://[..]`)
 [COMPILING] foo v0.0.1 ({dir})
-[FINISHED] dev [unoptimized + debuginfo] target(s) in [..] secs
+[FINISHED] dev [unoptimized + debuginfo] target(s) in [..]s
 ",
             dir = p.url(),
             reg = registry::alt_registry()
@@ -219,7 +219,7 @@ fn depend_on_alt_registry_depends_on_crates_io() {
 [COMPILING] baz v0.0.1 (registry `file://[..]`)
 [COMPILING] bar v0.0.1 (registry `file://[..]`)
 [COMPILING] foo v0.0.1 ({dir})
-[FINISHED] dev [unoptimized + debuginfo] target(s) in [..] secs
+[FINISHED] dev [unoptimized + debuginfo] target(s) in [..]s
 ",
             dir = p.url(),
             alt_reg = registry::alt_registry(),
@@ -267,7 +267,7 @@ fn registry_and_path_dep_works() {
             "\
 [COMPILING] bar v0.0.1 ({dir}/bar)
 [COMPILING] foo v0.0.1 ({dir})
-[FINISHED] dev [unoptimized + debuginfo] target(s) in [..] secs
+[FINISHED] dev [unoptimized + debuginfo] target(s) in [..]s
 ",
             dir = p.url()
         )),
@@ -420,7 +420,7 @@ fn alt_registry_and_crates_io_deps() {
             .with_stderr_contains("[COMPILING] crates_io_dep v0.0.1")
             .with_stderr_contains(&format!("[COMPILING] foo v0.0.1 ({})", p.url()))
             .with_stderr_contains(
-                "[FINISHED] dev [unoptimized + debuginfo] target(s) in [..] secs",
+                "[FINISHED] dev [unoptimized + debuginfo] target(s) in [..]s",
             ),
     )
 }
