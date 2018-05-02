@@ -475,7 +475,11 @@ where
                 None => None,
             };
             let vers = vers.as_ref().map(|s| &**s);
-            let dep = Dependency::parse_no_deprecated(name, vers, source.source_id())?;
+            let dep = Dependency::parse_no_deprecated(
+                name,
+                Some(vers.unwrap_or("*")),
+                source.source_id(),
+            )?;
             let deps = source.query_vec(&dep)?;
             match deps.iter().map(|p| p.package_id()).max() {
                 Some(pkgid) => {

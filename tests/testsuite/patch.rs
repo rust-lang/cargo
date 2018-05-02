@@ -1109,3 +1109,52 @@ fn patch_depends_on_another_patch() {
         execs().with_status(0).with_stderr("[FINISHED] [..]"),
     );
 }
+
+#[test]
+fn replace_prerelease() {
+    Package::new("bar", "1.1.0-pre.1").publish();
+    let p = project("foo")
+        .file(
+            "Cargo.toml",
+            r#"
+            [workspace]
+            members = ["foo"]
+
+            [patch.crates-io]
+            bar = { path = "./bar" }
+        "#,
+        )
+        .file(
+            "foo/Cargo.toml",
+            r#"
+            [project]
+            name = "foo"
+            version = "0.5.0"
+            authors = []
+
+            [dependencies]
+            bar = "1.1.0-pre.1"
+        "#,
+        )
+        .file(
+            "foo/src/main.rs",
+            "
+            extern crate bar;
+            fn main() { bar::bar() }
+        ",
+        )
+        .file(
+            "bar/Cargo.toml",
+            r#"
+            [project]
+            name = "bar"
+            version = "1.1.0-pre.1"
+            authors = []
+            [workspace]
+        "#,
+        )
+        .file("bar/src/lib.rs", "pub fn bar() {}")
+        .build();
+
+    assert_that(p.cargo("build"), execs().with_status(0));
+}
