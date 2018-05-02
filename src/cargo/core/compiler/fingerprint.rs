@@ -459,6 +459,7 @@ fn calculate<'a, 'cfg>(
         unit.mode,
         bcx.extra_args_for(unit),
         cx.incremental_args(unit)?,
+        cx.used_in_plugin.contains(unit), // used when passing panic=abort
     ));
     let fingerprint = Arc::new(Fingerprint {
         rustc: util::hash_u64(&bcx.build_config.rustc.verbose_version),

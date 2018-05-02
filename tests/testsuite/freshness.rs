@@ -1119,3 +1119,48 @@ fn path_dev_dep_registry_updates() {
         execs().with_status(0).with_stderr("[FINISHED] [..]"),
     );
 }
+
+#[test]
+fn change_panic_mode() {
+    let p = project("p")
+        .file(
+            "Cargo.toml",
+            r#"
+                [workspace]
+                members = ['foo', 'bar']
+                [profile.dev]
+                panic = 'abort'
+            "#,
+        )
+        .file("src/lib.rs", "")
+        .file(
+            "foo/Cargo.toml",
+            r#"
+                [package]
+                name = "foo"
+                version = "0.1.1"
+                authors = []
+            "#,
+        )
+        .file("foo/src/lib.rs", "")
+        .file(
+            "bar/Cargo.toml",
+            r#"
+                [package]
+                name = "bar"
+                version = "0.1.1"
+                authors = []
+
+                [lib]
+                proc-macro = true
+
+                [dependencies]
+                foo = { path = '../foo' }
+            "#,
+        )
+        .file("bar/src/lib.rs", "extern crate foo;")
+        .build();
+
+    assert_that(p.cargo("build -p foo"), execs().with_status(0));
+    assert_that(p.cargo("build -p bar"), execs().with_status(0));
+}
