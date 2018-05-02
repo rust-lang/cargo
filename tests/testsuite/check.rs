@@ -845,7 +845,10 @@ fn check_artifacts() {
         p.cargo("check").arg("--test").arg("t1"),
         execs().with_status(0),
     );
-    assert_that(&p.root().join("target/debug/libfoo.rmeta"), existing_file());
+    assert_that(
+        &p.root().join("target/debug/libfoo.rmeta"),
+        is_not(existing_file()),
+    );
     assert_that(
         &p.root().join("target/debug/libfoo.rlib"),
         is_not(existing_file()),
@@ -866,7 +869,10 @@ fn check_artifacts() {
         p.cargo("check").arg("--example").arg("ex1"),
         execs().with_status(0),
     );
-    assert_that(&p.root().join("target/debug/libfoo.rmeta"), existing_file());
+    assert_that(
+        &p.root().join("target/debug/libfoo.rmeta"),
+        is_not(existing_file()),
+    );
     assert_that(
         &p.root().join("target/debug/libfoo.rlib"),
         is_not(existing_file()),
@@ -881,7 +887,10 @@ fn check_artifacts() {
         p.cargo("check").arg("--bench").arg("b1"),
         execs().with_status(0),
     );
-    assert_that(&p.root().join("target/debug/libfoo.rmeta"), existing_file());
+    assert_that(
+        &p.root().join("target/debug/libfoo.rmeta"),
+        is_not(existing_file()),
+    );
     assert_that(
         &p.root().join("target/debug/libfoo.rlib"),
         is_not(existing_file()),
