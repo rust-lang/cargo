@@ -4,9 +4,9 @@ use std::io::prelude::*;
 use cargo::util::process;
 use cargotest::sleep_ms;
 use cargotest::support::paths::{self, CargoPathExt};
-use cargotest::support::{execs, main_file, project};
 use cargotest::support::registry::Package;
-use hamcrest::{assert_that, existing_file};
+use cargotest::support::{execs, main_file, project};
+use hamcrest::{assert_that, existing_file, is_not};
 
 #[test]
 #[cfg(not(windows))] // I have no idea why this is failing spuriously on
@@ -1278,7 +1278,10 @@ fn workspace_produces_rlib() {
     assert_that(p.cargo("build"), execs().with_status(0));
 
     assert_that(&p.root().join("target/debug/libtop.rlib"), existing_file());
-    assert_that(&p.root().join("target/debug/libfoo.rlib"), existing_file());
+    assert_that(
+        &p.root().join("target/debug/libfoo.rlib"),
+        is_not(existing_file()),
+    );
 }
 
 #[test]
