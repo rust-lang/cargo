@@ -103,6 +103,7 @@ pub fn prepare<'a, 'cfg>(
 
 fn build_work<'a, 'cfg>(cx: &mut Context<'a, 'cfg>, unit: &Unit<'a>) -> CargoResult<(Work, Work)> {
     assert!(unit.mode.is_run_custom_build());
+    let bcx = &cx.bcx;
     let dependencies = cx.dep_targets(unit);
     let build_script_unit = dependencies
         .iter()
@@ -126,30 +127,30 @@ fn build_work<'a, 'cfg>(cx: &mut Context<'a, 'cfg>, unit: &Unit<'a>) -> CargoRes
     let debug = unit.profile.debuginfo.unwrap_or(0) != 0;
     cmd.env("OUT_DIR", &build_output)
         .env("CARGO_MANIFEST_DIR", unit.pkg.root())
-        .env("NUM_JOBS", &cx.jobs().to_string())
+        .env("NUM_JOBS", &bcx.jobs().to_string())
         .env(
             "TARGET",
             &match unit.kind {
-                Kind::Host => &cx.build_config.host_triple(),
-                Kind::Target => cx.build_config.target_triple(),
+                Kind::Host => &bcx.build_config.host_triple(),
+                Kind::Target => bcx.build_config.target_triple(),
             },
         )
         .env("DEBUG", debug.to_string())
         .env("OPT_LEVEL", &unit.profile.opt_level.to_string())
         .env(
             "PROFILE",
-            if cx.build_config.release {
+            if bcx.build_config.release {
                 "release"
             } else {
                 "debug"
             },
         )
-        .env("HOST", &cx.build_config.host_triple())
-        .env("RUSTC", &cx.build_config.rustc.path)
-        .env("RUSTDOC", &*cx.config.rustdoc()?)
+        .env("HOST", &bcx.build_config.host_triple())
+        .env("RUSTC", &bcx.build_config.rustc.path)
+        .env("RUSTDOC", &*bcx.config.rustdoc()?)
         .inherit_jobserver(&cx.jobserver);
 
-    if let Some(ref linker) = cx.build_config.target.linker {
+    if let Some(ref linker) = bcx.build_config.target.linker {
         cmd.env("RUSTC_LINKER", linker);
     }
 
@@ -159,12 +160,12 @@ fn build_work<'a, 'cfg>(cx: &mut Context<'a, 'cfg>, unit: &Unit<'a>) -> CargoRes
 
     // Be sure to pass along all enabled features for this package, this is the
     // last piece of statically known information that we have.
-    for feat in cx.resolve.features(unit.pkg.package_id()).iter() {
+    for feat in bcx.resolve.features(unit.pkg.package_id()).iter() {
         cmd.env(&format!("CARGO_FEATURE_{}", super::envify(feat)), "1");
     }
 
     let mut cfg_map = HashMap::new();
-    for cfg in cx.cfg(unit.kind) {
+    for cfg in bcx.cfg(unit.kind) {
         match *cfg {
             Cfg::Name(ref n) => {
                 cfg_map.insert(n.clone(), None);
@@ -230,7 +231,7 @@ fn build_work<'a, 'cfg>(cx: &mut Context<'a, 'cfg>, unit: &Unit<'a>) -> CargoRes
     );
     let build_scripts = super::load_build_deps(cx, unit);
     let kind = unit.kind;
-    let json_messages = cx.build_config.json_messages;
+    let json_messages = bcx.build_config.json_messages;
 
     // Check to see if the build script has already run, and if it has keep
     // track of whether it has told us about some explicit dependencies

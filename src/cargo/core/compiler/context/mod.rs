@@ -1,26 +1,22 @@
 #![allow(deprecated)]
 use std::collections::{HashMap, HashSet};
-use std::env;
-use std::path::{Path, PathBuf};
-use std::str::{self, FromStr};
+use std::fmt::Write;
+use std::path::PathBuf;
 use std::sync::Arc;
 
 use jobserver::Client;
 
-use core::profiles::{Profile, Profiles};
-use core::{Dependency, Workspace};
-use core::{Package, PackageId, PackageSet, Resolve, Target};
+use core::{Package, PackageId, Resolve, Target};
+use core::profiles::Profile;
 use ops::CompileMode;
 use util::errors::{CargoResult, CargoResultExt};
-use util::{internal, profile, Cfg, CfgExpr, Config};
+use util::{internal, profile, Config};
 
 use super::custom_build::{self, BuildDeps, BuildScripts, BuildState};
 use super::fingerprint::Fingerprint;
 use super::job_queue::JobQueue;
 use super::layout::Layout;
-use super::links::Links;
-use super::TargetConfig;
-use super::{BuildConfig, Compilation, Executor, Kind};
+use super::{BuildContext, Compilation, Executor, FileFlavor, Kind};
 
 mod unit_dependencies;
 use self::unit_dependencies::build_unit_dependencies;
@@ -28,9 +24,6 @@ use self::unit_dependencies::build_unit_dependencies;
 mod compilation_files;
 pub use self::compilation_files::Metadata;
 use self::compilation_files::{CompilationFiles, OutputFile};
-
-mod target_info;
-pub use self::target_info::{FileFlavor, TargetInfo};
 
 /// All information needed to define a Unit.
 ///
@@ -70,58 +63,24 @@ pub struct Unit<'a> {
     pub mode: CompileMode,
 }
 
-/// The build context, containing all information about a build task
 pub struct Context<'a, 'cfg: 'a> {
-    /// The workspace the build is for
-    pub ws: &'a Workspace<'cfg>,
-    /// The cargo configuration
-    pub config: &'cfg Config,
-    /// The dependency graph for our build
-    pub resolve: &'a Resolve,
-    /// Information on the compilation output
+    pub bcx: &'a BuildContext<'a, 'cfg>,
     pub compilation: Compilation<'cfg>,
-    pub packages: &'a PackageSet<'cfg>,
     pub build_state: Arc<BuildState>,
     pub build_script_overridden: HashSet<(PackageId, Kind)>,
     pub build_explicit_deps: HashMap<Unit<'a>, BuildDeps>,
     pub fingerprints: HashMap<Unit<'a>, Arc<Fingerprint>>,
     pub compiled: HashSet<Unit<'a>>,
-    pub build_config: BuildConfig,
     pub build_scripts: HashMap<Unit<'a>, Arc<BuildScripts>>,
     pub links: Links<'a>,
     pub used_in_plugin: HashSet<Unit<'a>>,
     pub jobserver: Client,
-    pub profiles: &'a Profiles,
-    /// This is a workaround to carry the extra compiler args for either
-    /// `rustc` or `rustdoc` given on the command-line for the commands `cargo
-    /// rustc` and `cargo rustdoc`.  These commands only support one target,
-    /// but we don't want the args passed to any dependencies, so we include
-    /// the `Unit` corresponding to the top-level target.
-    extra_compiler_args: Option<(Unit<'a>, Vec<String>)>,
-
-    target_info: TargetInfo,
-    host_info: TargetInfo,
-    incremental_env: Option<bool>,
-
     unit_dependencies: HashMap<Unit<'a>, Vec<Unit<'a>>>,
     files: Option<CompilationFiles<'a, 'cfg>>,
 }
 
 impl<'a, 'cfg> Context<'a, 'cfg> {
-    pub fn new(
-        ws: &'a Workspace<'cfg>,
-        resolve: &'a Resolve,
-        packages: &'a PackageSet<'cfg>,
-        config: &'cfg Config,
-        build_config: BuildConfig,
-        profiles: &'a Profiles,
-        extra_compiler_args: Option<(Unit<'a>, Vec<String>)>,
-    ) -> CargoResult<Context<'a, 'cfg>> {
-        let incremental_env = match env::var("CARGO_INCREMENTAL") {
-            Ok(v) => Some(v == "1"),
-            Err(_) => None,
-        };
-
+    pub fn new(config: &'cfg Config, bcx: &'a BuildContext<'a, 'cfg>) -> CargoResult<Self> {
         // Load up the jobserver that we'll use to manage our parallelism. This
         // is the same as the GNU make implementation of a jobserver, and
         // intentionally so! It's hoped that we can interact with GNU make and
@@ -132,47 +91,29 @@ impl<'a, 'cfg> Context<'a, 'cfg> {
         // is ourself, a running process.
         let jobserver = match config.jobserver_from_env() {
             Some(c) => c.clone(),
-            None => Client::new(build_config.jobs as usize - 1)
+            None => Client::new(bcx.build_config.jobs as usize - 1)
                 .chain_err(|| "failed to create jobserver")?,
         };
 
-        let (host_info, target_info) = {
-            let _p = profile::start("Context::probe_target_info");
-            debug!("probe_target_info");
-            let host_info = TargetInfo::new(config, &build_config, Kind::Host)?;
-            let target_info = TargetInfo::new(config, &build_config, Kind::Target)?;
-            (host_info, target_info)
-        };
-
-        let mut cx = Context {
-            ws,
-            resolve,
-            packages,
-            config,
-            target_info,
-            host_info,
-            compilation: Compilation::new(config, build_config.rustc.process()),
-            build_state: Arc::new(BuildState::new(&build_config)),
-            build_config,
+        let mut compilation = Compilation::new(config, bcx.build_config.rustc.process());
+        compilation.host_dylib_path = bcx.host_info.sysroot_libdir.clone();
+        compilation.target_dylib_path = bcx.target_info.sysroot_libdir.clone();
+        Ok(Self {
+            bcx,
+            compilation,
+            build_state: Arc::new(BuildState::new(&bcx.build_config)),
             fingerprints: HashMap::new(),
-            profiles,
             compiled: HashSet::new(),
             build_scripts: HashMap::new(),
             build_explicit_deps: HashMap::new(),
             links: Links::new(),
             used_in_plugin: HashSet::new(),
-            incremental_env,
             jobserver,
             build_script_overridden: HashSet::new(),
 
             unit_dependencies: HashMap::new(),
             files: None,
-            extra_compiler_args,
-        };
-
-        cx.compilation.host_dylib_path = cx.host_info.sysroot_libdir.clone();
-        cx.compilation.target_dylib_path = cx.target_info.sysroot_libdir.clone();
-        Ok(cx)
+        })
     }
 
     // Returns a mapping of the root package plus its immediate dependencies to
@@ -183,7 +124,7 @@ impl<'a, 'cfg> Context<'a, 'cfg> {
         export_dir: Option<PathBuf>,
         exec: &Arc<Executor>,
     ) -> CargoResult<Compilation<'cfg>> {
-        let mut queue = JobQueue::new(&self);
+        let mut queue = JobQueue::new(self.bcx);
         self.prepare_units(export_dir, units)?;
         self.prepare()?;
         self.build_used_in_plugin_map(units)?;
@@ -264,7 +205,7 @@ impl<'a, 'cfg> Context<'a, 'cfg> {
                     );
             }
 
-            let feats = self.resolve.features(unit.pkg.package_id());
+            let feats = self.bcx.resolve.features(unit.pkg.package_id());
             if !feats.is_empty() {
                 self.compilation
                     .cfgs
@@ -276,7 +217,7 @@ impl<'a, 'cfg> Context<'a, 'cfg> {
                             .collect()
                     });
             }
-            let rustdocflags = self.rustdocflags_args(unit)?;
+            let rustdocflags = self.bcx.rustdocflags_args(unit)?;
             if !rustdocflags.is_empty() {
                 self.compilation
                     .rustdocflags
@@ -304,8 +245,8 @@ impl<'a, 'cfg> Context<'a, 'cfg> {
                 self.compilation.native_dirs.insert(dir.clone());
             }
         }
-        self.compilation.host = self.build_config.host_triple().to_string();
-        self.compilation.target = self.build_config.target_triple().to_string();
+        self.compilation.host = self.bcx.build_config.host_triple().to_string();
+        self.compilation.target = self.bcx.build_config.target_triple().to_string();
         Ok(self.compilation)
     }
 
@@ -314,21 +255,26 @@ impl<'a, 'cfg> Context<'a, 'cfg> {
         export_dir: Option<PathBuf>,
         units: &[Unit<'a>],
     ) -> CargoResult<()> {
-        let dest = if self.build_config.release {
+        let dest = if self.bcx.build_config.release {
             "release"
         } else {
             "debug"
         };
-        let host_layout = Layout::new(self.ws, None, dest)?;
-        let target_layout = match self.build_config.requested_target.as_ref() {
-            Some(target) => Some(Layout::new(self.ws, Some(target), dest)?),
+        let host_layout = Layout::new(self.bcx.ws, None, dest)?;
+        let target_layout = match self.bcx.build_config.requested_target.as_ref() {
+            Some(target) => Some(Layout::new(self.bcx.ws, Some(target), dest)?),
             None => None,
         };
 
-        let deps = build_unit_dependencies(units, self)?;
-        self.unit_dependencies = deps;
-        let files =
-            CompilationFiles::new(units, host_layout, target_layout, export_dir, self.ws, self);
+        build_unit_dependencies(units, self.bcx, &mut self.unit_dependencies)?;
+        let files = CompilationFiles::new(
+            units,
+            host_layout,
+            target_layout,
+            export_dir,
+            self.bcx.ws,
+            self,
+        );
         self.files = Some(files);
         Ok(())
     }
@@ -403,7 +349,7 @@ impl<'a, 'cfg> Context<'a, 'cfg> {
     ///  - link_dst: Optional file to link/copy the result to (without metadata suffix)
     ///  - linkable: Whether possible to link against file (eg it's a library)
     pub fn outputs(&mut self, unit: &Unit<'a>) -> CargoResult<Arc<Vec<OutputFile>>> {
-        self.files.as_ref().unwrap().outputs(unit, self)
+        self.files.as_ref().unwrap().outputs(unit, self.bcx)
     }
 
     /// For a package, return all targets which are registered as dependencies
@@ -429,85 +375,6 @@ impl<'a, 'cfg> Context<'a, 'cfg> {
         self.unit_dependencies[unit].clone()
     }
 
-    pub fn extern_crate_name(&self, unit: &Unit<'a>, dep: &Unit<'a>) -> CargoResult<String> {
-        let deps = {
-            let a = unit.pkg.package_id();
-            let b = dep.pkg.package_id();
-            if a == b {
-                &[]
-            } else {
-                self.resolve.dependencies_listed(a, b)
-            }
-        };
-
-        let crate_name = dep.target.crate_name();
-        let mut names = deps.iter()
-            .map(|d| d.rename().unwrap_or(&crate_name));
-        let name = names.next().unwrap_or(&crate_name);
-        for n in names {
-            if n == name {
-                continue
-            }
-            bail!("multiple dependencies listed for the same crate must \
-                   all have the same name, but the dependency on `{}` \
-                   is listed as having different names", dep.pkg.package_id());
-        }
-        Ok(name.to_string())
-    }
-
-    /// Whether a dependency should be compiled for the host or target platform,
-    /// specified by `Kind`.
-    fn dep_platform_activated(&self, dep: &Dependency, kind: Kind) -> bool {
-        // If this dependency is only available for certain platforms,
-        // make sure we're only enabling it for that platform.
-        let platform = match dep.platform() {
-            Some(p) => p,
-            None => return true,
-        };
-        let (name, info) = match kind {
-            Kind::Host => (self.build_config.host_triple(), &self.host_info),
-            Kind::Target => (self.build_config.target_triple(), &self.target_info),
-        };
-        platform.matches(name, info.cfg())
-    }
-
-    /// Gets a package for the given package id.
-    pub fn get_package(&self, id: &PackageId) -> CargoResult<&'a Package> {
-        self.packages.get(id)
-    }
-
-    /// Get the user-specified linker for a particular host or target
-    pub fn linker(&self, kind: Kind) -> Option<&Path> {
-        self.target_config(kind).linker.as_ref().map(|s| s.as_ref())
-    }
-
-    /// Get the user-specified `ar` program for a particular host or target
-    pub fn ar(&self, kind: Kind) -> Option<&Path> {
-        self.target_config(kind).ar.as_ref().map(|s| s.as_ref())
-    }
-
-    /// Get the list of cfg printed out from the compiler for the specified kind
-    pub fn cfg(&self, kind: Kind) -> &[Cfg] {
-        let info = match kind {
-            Kind::Host => &self.host_info,
-            Kind::Target => &self.target_info,
-        };
-        info.cfg().unwrap_or(&[])
-    }
-
-    /// Get the target configuration for a particular host or target
-    fn target_config(&self, kind: Kind) -> &TargetConfig {
-        match kind {
-            Kind::Host => &self.build_config.host,
-            Kind::Target => &self.build_config.target,
-        }
-    }
-
-    /// Number of jobs specified for this build
-    pub fn jobs(&self) -> u32 {
-        self.build_config.jobs
-    }
-
     pub fn incremental_args(&self, unit: &Unit) -> CargoResult<Vec<String>> {
         // There's a number of ways to configure incremental compilation right
         // now. In order of descending priority (first is highest priority) we
@@ -530,8 +397,15 @@ impl<'a, 'cfg> Context<'a, 'cfg> {
         //   incremental compilation or not. Primarily development profiles
         //   have it enabled by default while release profiles have it disabled
         //   by default.
-        let global_cfg = self.config.get_bool("build.incremental")?.map(|c| c.val);
-        let incremental = match (self.incremental_env, global_cfg, unit.profile.incremental) {
+        let global_cfg = self.bcx
+            .config
+            .get_bool("build.incremental")?
+            .map(|c| c.val);
+        let incremental = match (
+            self.bcx.incremental_env,
+            global_cfg,
+            unit.profile.incremental,
+        ) {
             (Some(v), _, _) => v,
             (None, Some(false), _) => false,
             (None, _, other) => other,
@@ -554,173 +428,70 @@ impl<'a, 'cfg> Context<'a, 'cfg> {
         let dir = self.files().layout(unit.kind).incremental().display();
         Ok(vec!["-C".to_string(), format!("incremental={}", dir)])
     }
-
-    pub fn rustflags_args(&self, unit: &Unit) -> CargoResult<Vec<String>> {
-        env_args(
-            self.config,
-            &self.build_config,
-            self.info(&unit.kind).cfg(),
-            unit.kind,
-            "RUSTFLAGS",
-        )
-    }
-
-    pub fn rustdocflags_args(&self, unit: &Unit) -> CargoResult<Vec<String>> {
-        env_args(
-            self.config,
-            &self.build_config,
-            self.info(&unit.kind).cfg(),
-            unit.kind,
-            "RUSTDOCFLAGS",
-        )
-    }
-
-    pub fn show_warnings(&self, pkg: &PackageId) -> bool {
-        pkg.source_id().is_path() || self.config.extra_verbose()
-    }
-
-    fn info(&self, kind: &Kind) -> &TargetInfo {
-        match *kind {
-            Kind::Host => &self.host_info,
-            Kind::Target => &self.target_info,
-        }
-    }
-
-    pub fn extra_args_for(&self, unit: &Unit<'a>) -> Option<&Vec<String>> {
-        if let Some((ref args_unit, ref args)) = self.extra_compiler_args {
-            if args_unit == unit {
-                return Some(args);
-            }
-        }
-        None
-    }
 }
 
-/// Acquire extra flags to pass to the compiler from various locations.
-///
-/// The locations are:
-///
-///  - the `RUSTFLAGS` environment variable
-///
-/// then if this was not found
-///
-///  - `target.*.rustflags` from the manifest (Cargo.toml)
-///  - `target.cfg(..).rustflags` from the manifest
-///
-/// then if neither of these were found
-///
-///  - `build.rustflags` from the manifest
-///
-/// Note that if a `target` is specified, no args will be passed to host code (plugins, build
-/// scripts, ...), even if it is the same as the target.
-fn env_args(
-    config: &Config,
-    build_config: &BuildConfig,
-    target_cfg: Option<&[Cfg]>,
-    kind: Kind,
-    name: &str,
-) -> CargoResult<Vec<String>> {
-    // We *want* to apply RUSTFLAGS only to builds for the
-    // requested target architecture, and not to things like build
-    // scripts and plugins, which may be for an entirely different
-    // architecture. Cargo's present architecture makes it quite
-    // hard to only apply flags to things that are not build
-    // scripts and plugins though, so we do something more hacky
-    // instead to avoid applying the same RUSTFLAGS to multiple targets
-    // arches:
-    //
-    // 1) If --target is not specified we just apply RUSTFLAGS to
-    // all builds; they are all going to have the same target.
-    //
-    // 2) If --target *is* specified then we only apply RUSTFLAGS
-    // to compilation units with the Target kind, which indicates
-    // it was chosen by the --target flag.
-    //
-    // This means that, e.g. even if the specified --target is the
-    // same as the host, build scripts in plugins won't get
-    // RUSTFLAGS.
-    let compiling_with_target = build_config.requested_target.is_some();
-    let is_target_kind = kind == Kind::Target;
+#[derive(Default)]
+pub struct Links<'a> {
+    validated: HashSet<&'a PackageId>,
+    links: HashMap<String, &'a PackageId>,
+}
 
-    if compiling_with_target && !is_target_kind {
-        // This is probably a build script or plugin and we're
-        // compiling with --target. In this scenario there are
-        // no rustflags we can apply.
-        return Ok(Vec::new());
-    }
-
-    // First try RUSTFLAGS from the environment
-    if let Ok(a) = env::var(name) {
-        let args = a.split(' ')
-            .map(str::trim)
-            .filter(|s| !s.is_empty())
-            .map(str::to_string);
-        return Ok(args.collect());
-    }
-
-    let mut rustflags = Vec::new();
-
-    let name = name.chars()
-        .flat_map(|c| c.to_lowercase())
-        .collect::<String>();
-    // Then the target.*.rustflags value...
-    let target = build_config
-        .requested_target
-        .as_ref()
-        .map(|s| s.as_str())
-        .unwrap_or(build_config.host_triple());
-    let key = format!("target.{}.{}", target, name);
-    if let Some(args) = config.get_list_or_split_string(&key)? {
-        let args = args.val.into_iter();
-        rustflags.extend(args);
-    }
-    // ...including target.'cfg(...)'.rustflags
-    if let Some(target_cfg) = target_cfg {
-        if let Some(table) = config.get_table("target")? {
-            let cfgs = table.val.keys().filter_map(|t| {
-                if t.starts_with("cfg(") && t.ends_with(')') {
-                    let cfg = &t[4..t.len() - 1];
-                    CfgExpr::from_str(cfg).ok().and_then(|c| {
-                        if c.matches(target_cfg) {
-                            Some(t)
-                        } else {
-                            None
-                        }
-                    })
-                } else {
-                    None
-                }
-            });
-
-            // Note that we may have multiple matching `[target]` sections and
-            // because we're passing flags to the compiler this can affect
-            // cargo's caching and whether it rebuilds. Ensure a deterministic
-            // ordering through sorting for now. We may perhaps one day wish to
-            // ensure a deterministic ordering via the order keys were defined
-            // in files perhaps.
-            let mut cfgs = cfgs.collect::<Vec<_>>();
-            cfgs.sort();
-
-            for n in cfgs {
-                let key = format!("target.{}.{}", n, name);
-                if let Some(args) = config.get_list_or_split_string(&key)? {
-                    let args = args.val.into_iter();
-                    rustflags.extend(args);
-                }
-            }
+impl<'a> Links<'a> {
+    pub fn new() -> Links<'a> {
+        Links {
+            validated: HashSet::new(),
+            links: HashMap::new(),
         }
     }
 
-    if !rustflags.is_empty() {
-        return Ok(rustflags);
-    }
+    pub fn validate(&mut self, resolve: &Resolve, unit: &Unit<'a>) -> CargoResult<()> {
+        if !self.validated.insert(unit.pkg.package_id()) {
+            return Ok(());
+        }
+        let lib = match unit.pkg.manifest().links() {
+            Some(lib) => lib,
+            None => return Ok(()),
+        };
+        if let Some(prev) = self.links.get(lib) {
+            let pkg = unit.pkg.package_id();
 
-    // Then the build.rustflags value
-    let key = format!("build.{}", name);
-    if let Some(args) = config.get_list_or_split_string(&key)? {
-        let args = args.val.into_iter();
-        return Ok(args.collect());
-    }
+            let describe_path = |pkgid: &PackageId| -> String {
+                let dep_path = resolve.path_to_top(pkgid);
+                let mut dep_path_desc = format!("package `{}`", dep_path[0]);
+                for dep in dep_path.iter().skip(1) {
+                    write!(dep_path_desc, "\n    ... which is depended on by `{}`", dep).unwrap();
+                }
+                dep_path_desc
+            };
 
-    Ok(Vec::new())
+            bail!(
+                "multiple packages link to native library `{}`, \
+                 but a native library can be linked only once\n\
+                 \n\
+                 {}\nlinks to native library `{}`\n\
+                 \n\
+                 {}\nalso links to native library `{}`",
+                lib,
+                describe_path(prev),
+                lib,
+                describe_path(pkg),
+                lib
+            )
+        }
+        if !unit.pkg
+            .manifest()
+            .targets()
+            .iter()
+            .any(|t| t.is_custom_build())
+        {
+            bail!(
+                "package `{}` specifies that it links to `{}` but does not \
+                 have a custom build script",
+                unit.pkg.package_id(),
+                lib
+            )
+        }
+        self.links.insert(lib.to_string(), unit.pkg.package_id());
+        Ok(())
+    }
 }

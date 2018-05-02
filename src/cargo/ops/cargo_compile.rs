@@ -26,7 +26,7 @@ use std::collections::HashSet;
 use std::path::{Path, PathBuf};
 use std::sync::Arc;
 
-use core::compiler::{BuildConfig, Compilation, Context, DefaultExecutor, Executor};
+use core::compiler::{BuildConfig, BuildContext, Compilation, Context, DefaultExecutor, Executor};
 use core::compiler::{Kind, Unit};
 use core::profiles::{ProfileFor, Profiles};
 use core::resolver::{Method, Resolve};
@@ -416,15 +416,16 @@ pub fn compile_ws<'a>(
 
     let mut ret = {
         let _p = profile::start("compiling");
-        let mut cx = Context::new(
+        let bcx = BuildContext::new(
             ws,
             &resolve_with_overrides,
             &packages,
             config,
-            build_config,
+            &build_config,
             profiles,
             extra_compiler_args,
         )?;
+        let mut cx = Context::new(config, &bcx)?;
         cx.compile(&units, export_dir.clone(), &exec)?
     };
 
