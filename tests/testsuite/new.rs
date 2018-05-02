@@ -545,3 +545,18 @@ fn explicit_invalid_name_not_suggested() {
         ),
     );
 }
+
+#[test]
+fn explicit_project_name() {
+    assert_that(
+        cargo_process("new")
+            .arg("--lib")
+            .arg("foo")
+            .arg("--name")
+            .arg("bar")
+            .env("USER", "foo"),
+        execs()
+            .with_status(0)
+            .with_stderr("[CREATED] library `bar` project"),
+    );
+}
