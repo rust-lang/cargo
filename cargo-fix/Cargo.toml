@@ -3,7 +3,6 @@ name = "cargo-fix"
 version = "0.2.0"
 authors = ["Pascal Hertleif <killercup@gmail.com>"]
 license = "Apache-2.0/MIT"
-name = "rustfix"
 description = "Automatically apply the suggestions made by rustc"
 repository = "https://github.com/killercup/rustfix"
 documentation = "https://docs.rs/rustfix"
