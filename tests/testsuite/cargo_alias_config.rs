@@ -84,8 +84,7 @@ fn alias_config() {
                 "\
 [COMPILING] foo v0.5.0 [..]
 [RUNNING] `rustc --crate-name foo [..]",
-            )
-            .stream(),
+            ),
     );
 }
 

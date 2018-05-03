@@ -61,7 +61,7 @@ fn bad2() {
         p.cargo("publish").arg("-v"),
         execs().with_status(101).with_stderr(
             "\
-[ERROR] Couldn't load Cargo configuration
+[ERROR] could not load Cargo configuration
 
 Caused by:
   failed to load TOML configuration from `[..]config`
@@ -164,10 +164,7 @@ fn bad5() {
             .cwd(&p.root().join("foo")),
         execs().with_status(101).with_stderr(
             "\
-[ERROR] Failed to create project `foo` at `[..]`
-
-Caused by:
-  Couldn't load Cargo configuration
+[ERROR] could not load Cargo configuration
 
 Caused by:
   failed to merge configuration at `[..]`
@@ -284,7 +281,7 @@ fn invalid_global_config() {
         p.cargo("build").arg("-v"),
         execs().with_status(101).with_stderr(
             "\
-[ERROR] Couldn't load Cargo configuration
+[ERROR] could not load Cargo configuration
 
 Caused by:
   could not parse TOML configuration in `[..]`
