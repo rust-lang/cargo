@@ -23,8 +23,8 @@ fn alias_incorrect_config_type() {
     assert_that(
         p.cargo("b-cargo-test").arg("-v"),
         execs().with_status(101).with_stderr_contains(
-            "[ERROR] invalid configuration \
-for key `alias.b-cargo-test`
+            "\
+[ERROR] invalid configuration for key `alias.b-cargo-test`
 expected a list, but found a integer for [..]",
         ),
     );
@@ -77,9 +77,42 @@ fn alias_config() {
         .build();
 
     assert_that(
-        p.cargo("b-cargo-test").arg("-v"),
+        p.cargo("b-cargo-test -v"),
+        execs()
+            .with_status(0)
+            .with_stderr_contains(
+                "\
+[COMPILING] foo v0.5.0 [..]
+[RUNNING] `rustc --crate-name foo [..]",
+            ),
+    );
+}
+
+#[test]
+fn recursive_alias() {
+    let p = project("foo")
+        .file("Cargo.toml", &basic_bin_manifest("foo"))
+        .file(
+            "src/main.rs",
+            r#"
+            fn main() {
+        }"#,
+        )
+        .file(
+            ".cargo/config",
+            r#"
+            [alias]
+            b-cargo-test = "build"
+            a-cargo-test = ["b-cargo-test", "-v"]
+        "#,
+        )
+        .build();
+
+    assert_that(
+        p.cargo("a-cargo-test"),
         execs().with_status(0).with_stderr_contains(
-            "[COMPILING] foo v0.5.0 [..]
+            "\
+[COMPILING] foo v0.5.0 [..]
 [RUNNING] `rustc --crate-name foo [..]",
         ),
     );
@@ -164,6 +197,7 @@ fn cant_shadow_builtin() {
         p.cargo("build"),
         execs().with_status(0).with_stderr(
             "\
+[WARNING] alias `build` is ignored, because it is shadowed by a built in command
 [COMPILING] foo v0.5.0 ([..])
 [FINISHED] dev [unoptimized + debuginfo] target(s) in [..]
 ",

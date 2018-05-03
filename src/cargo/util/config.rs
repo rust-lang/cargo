@@ -557,7 +557,7 @@ impl Config {
             cfg.merge(value)
                 .chain_err(|| format!("failed to merge configuration at `{}`", path.display()))?;
             Ok(())
-        }).chain_err(|| "Couldn't load Cargo configuration")?;
+        }).chain_err(|| "could not load Cargo configuration")?;
 
         self.load_credentials(&mut cfg)?;
         match cfg {
