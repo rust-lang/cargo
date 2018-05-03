@@ -403,7 +403,7 @@ fn autodiscover_examples_project(rust_edition: &str, autoexamples: Option<bool>)
             name = "foo"
             version = "0.0.1"
             authors = []
-            rust = "{rust_edition}"
+            edition = "{rust_edition}"
             {autoexamples}
 
             [features]
