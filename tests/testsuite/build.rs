@@ -2913,7 +2913,7 @@ fn bad_cargo_config() {
         foo.cargo("build").arg("-v"),
         execs().with_status(101).with_stderr(
             "\
-[ERROR] Couldn't load Cargo configuration
+[ERROR] could not load Cargo configuration
 
 Caused by:
   could not parse TOML configuration in `[..]`
