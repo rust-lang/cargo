@@ -7,6 +7,7 @@ use lazycell::LazyCell;
 
 use core::{Package, PackageId, Target, TargetKind};
 use util::{self, join_paths, process, CargoResult, Config, ProcessBuilder};
+use super::BuildContext;
 
 /// A structure returning the result of a compilation.
 pub struct Compilation<'cfg> {
@@ -67,25 +68,25 @@ pub struct Compilation<'cfg> {
 }
 
 impl<'cfg> Compilation<'cfg> {
-    pub fn new(config: &'cfg Config, rustc_process: ProcessBuilder) -> Compilation<'cfg> {
+    pub fn new<'a>(bcx: &BuildContext<'a, 'cfg>) -> Compilation<'cfg> {
         Compilation {
             libraries: HashMap::new(),
             native_dirs: BTreeSet::new(), // TODO: deprecated, remove
             root_output: PathBuf::from("/"),
             deps_output: PathBuf::from("/"),
             host_deps_output: PathBuf::from("/"),
-            host_dylib_path: None,
-            target_dylib_path: None,
+            host_dylib_path: bcx.host_info.sysroot_libdir.clone(),
+            target_dylib_path: bcx.target_info.sysroot_libdir.clone(),
             tests: Vec::new(),
             binaries: Vec::new(),
             extra_env: HashMap::new(),
             to_doc_test: Vec::new(),
             cfgs: HashMap::new(),
             rustdocflags: HashMap::new(),
-            config,
-            rustc_process,
-            host: String::new(),
-            target: String::new(),
+            config: bcx.config,
+            rustc_process: bcx.build_config.rustc.process(),
+            host: bcx.build_config.host_triple().to_string(),
+            target: bcx.build_config.target_triple().to_string(),
             target_runner: LazyCell::new(),
         }
     }

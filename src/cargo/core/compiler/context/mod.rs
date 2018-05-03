@@ -94,12 +94,9 @@ impl<'a, 'cfg> Context<'a, 'cfg> {
                 .chain_err(|| "failed to create jobserver")?,
         };
 
-        let mut compilation = Compilation::new(config, bcx.build_config.rustc.process());
-        compilation.host_dylib_path = bcx.host_info.sysroot_libdir.clone();
-        compilation.target_dylib_path = bcx.target_info.sysroot_libdir.clone();
         Ok(Self {
             bcx,
-            compilation,
+            compilation: Compilation::new(bcx),
             build_state: Arc::new(BuildState::new(
                 &bcx.build_config.host,
                 &bcx.build_config.target,
@@ -247,8 +244,6 @@ impl<'a, 'cfg> Context<'a, 'cfg> {
                 self.compilation.native_dirs.insert(dir.clone());
             }
         }
-        self.compilation.host = self.bcx.build_config.host_triple().to_string();
-        self.compilation.target = self.bcx.build_config.target_triple().to_string();
         Ok(self.compilation)
     }
 
