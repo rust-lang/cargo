@@ -62,6 +62,15 @@ impl<'cfg> PathSource<'cfg> {
         self.packages.push(pkg);
     }
 
+    fn query(&mut self, dep: &Dependency, f: &mut FnMut(Summary)) -> CargoResult<()> {
+        for s in self.packages.iter().map(|p| p.summary()) {
+            if dep.matches(s) {
+                f(s.clone())
+            }
+        }
+        Ok(())
+    }
+
     pub fn root_package(&mut self) -> CargoResult<Package> {
         trace!("root_package; source={:?}", self);
 
@@ -477,12 +486,7 @@ impl<'cfg> Debug for PathSource<'cfg> {
 
 impl<'cfg> Registry for PathSource<'cfg> {
     fn query(&mut self, dep: &Dependency, f: &mut FnMut(Summary)) -> CargoResult<()> {
-        for s in self.packages.iter().map(|p| p.summary()) {
-            if dep.matches(s) {
-                f(s.clone())
-            }
-        }
-        Ok(())
+        self.query(dep, f)
     }
 }
 
@@ -497,6 +501,10 @@ impl<'cfg> Source for PathSource<'cfg> {
 
     fn requires_precise(&self) -> bool {
         false
+    }
+
+    fn query(&mut self, dep: &Dependency, f: &mut FnMut(Summary)) -> CargoResult<()> {
+        self.query(dep, f)
     }
 
     fn update(&mut self) -> CargoResult<()> {
