@@ -486,8 +486,7 @@ impl<'a> Links<'a> {
                     write!(
                         dep_path_desc,
                         "\n    ... selected to fulfill the requirement \
-                         `{} = \"{}\"` from package `{}`",
-                        req.name(),
+                         \"{}\" from package `{}`",
                         req.version_req(),
                         dep
                     ).unwrap();

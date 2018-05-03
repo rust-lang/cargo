@@ -1028,8 +1028,7 @@ fn describe_path(
         let req = req.first().unwrap();
         write!(
             dep_path_desc,
-            "\n    ... selected to fulfill the requirement `{} = \"{}\"` from package `{}`",
-            req.name(),
+            "\n    ... selected to fulfill the requirement \"{}\" from package `{}`",
             req.version_req(),
             dep
         ).unwrap();
