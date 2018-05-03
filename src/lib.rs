@@ -3,7 +3,6 @@ extern crate serde_derive;
 extern crate serde_json;
 
 use std::collections::HashSet;
-use std::error::Error;
 
 pub mod diagnostics;
 use diagnostics::{Diagnostic, DiagnosticSpan};

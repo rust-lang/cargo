@@ -55,7 +55,14 @@ const ALIASES: &[(&str, &[&str])] = &[
 ];
 
 fn try_main() -> Result<(), ProgramError> {
-    let matches = App::new("rustfix")
+    // Quickfix to be usable as rustfix as well as cargo-fix
+    let args = if ::std::env::args_os().nth(1).map(|x| &x == "fix").unwrap_or(false) {
+        ::std::env::args_os().skip(1)
+    } else {
+        ::std::env::args_os().skip(0)
+    };
+
+    let matches = App::new("cargo-fix")
         .about("Automatically apply suggestions made by rustc")
         .version(crate_version!())
         .arg(Arg::with_name("clippy")
@@ -72,7 +79,7 @@ fn try_main() -> Result<(), ProgramError> {
             .long("file")
             .takes_value(true)
             .help("Load errors from the given JSON file (produced by `cargo build --message-format=json`)"))
-        .get_matches();
+        .get_matches_from(args);
 
     let mut extra_args = Vec::new();
 
