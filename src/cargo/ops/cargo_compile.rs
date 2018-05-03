@@ -229,10 +229,7 @@ pub fn compile_ws<'a>(
         ref export_dir,
     } = *options;
 
-    let rustc_info_cache = ws.target_dir()
-        .join(".rustc_info.json")
-        .into_path_unlocked();
-    let mut build_config = BuildConfig::new(config, jobs, &target, Some(rustc_info_cache), mode)?;
+    let mut build_config = BuildConfig::new(config, jobs, &target, Some(ws), mode)?;
     build_config.release = release;
     build_config.message_format = message_format;
     let default_arch_kind = if build_config.requested_target.is_some() {
