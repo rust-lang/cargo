@@ -242,8 +242,17 @@ impl Config {
         &self.cwd
     }
 
-    pub fn target_dir(&self) -> Option<Filesystem> {
-        self.target_dir.clone()
+    pub fn target_dir(&self) -> CargoResult<Option<Filesystem>> {
+        if let Some(ref dir) = self.target_dir {
+            Ok(Some(dir.clone()))
+        } else if let Some(dir) = env::var_os("CARGO_TARGET_DIR") {
+            Ok(Some(Filesystem::new(self.cwd.join(dir))))
+        } else if let Some(val) = self.get_path("build.target-dir")? {
+            let val = self.cwd.join(val.val);
+            Ok(Some(Filesystem::new(val)))
+        } else {
+            Ok(None)
+        }
     }
 
     fn get(&self, key: &str) -> CargoResult<Option<ConfigValue>> {
@@ -491,15 +500,9 @@ impl Config {
             | (None, None, None) => Verbosity::Normal,
         };
 
-        let target_dir = if let Some(dir) = target_dir.as_ref() {
-            Some(Filesystem::new(self.cwd.join(dir)))
-        } else if let Some(dir) = env::var_os("CARGO_TARGET_DIR") {
-            Some(Filesystem::new(self.cwd.join(dir)))
-        } else if let Ok(Some(val)) = self.get_path("build.target-dir") {
-            let val = self.cwd.join(val.val);
-            Some(Filesystem::new(val))
-        } else {
-            None
+        let cli_target_dir = match target_dir.as_ref() {
+            Some(dir) => Some(Filesystem::new(dir.clone())),
+            None => None,
         };
 
         self.shell().set_verbosity(verbosity);
@@ -507,7 +510,7 @@ impl Config {
         self.extra_verbose = extra_verbose;
         self.frozen = frozen;
         self.locked = locked;
-        self.target_dir = target_dir;
+        self.target_dir = cli_target_dir;
         self.cli_flags.parse(unstable_flags)?;
 
         Ok(())
