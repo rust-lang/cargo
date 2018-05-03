@@ -352,6 +352,27 @@ impl<'cfg> RegistrySource<'cfg> {
         }
     }
 
+    fn query(&mut self, dep: &Dependency, f: &mut FnMut(Summary)) -> CargoResult<()> {
+        // If this is a precise dependency, then it came from a lockfile and in
+        // theory the registry is known to contain this version. If, however, we
+        // come back with no summaries, then our registry may need to be
+        // updated, so we fall back to performing a lazy update.
+        if dep.source_id().precise().is_some() && !self.updated {
+            let mut called = false;
+            self.index.query(dep, &mut *self.ops, &mut |s| {
+                called = true;
+                f(s);
+            })?;
+            if called {
+                return Ok(());
+            } else {
+                self.do_update()?;
+            }
+        }
+
+        self.index.query(dep, &mut *self.ops, f)
+    }
+
     /// Decode the configuration stored within the registry.
     ///
     /// This requires that the index has been at least checked out.
@@ -422,24 +443,7 @@ impl<'cfg> RegistrySource<'cfg> {
 
 impl<'cfg> Registry for RegistrySource<'cfg> {
     fn query(&mut self, dep: &Dependency, f: &mut FnMut(Summary)) -> CargoResult<()> {
-        // If this is a precise dependency, then it came from a lockfile and in
-        // theory the registry is known to contain this version. If, however, we
-        // come back with no summaries, then our registry may need to be
-        // updated, so we fall back to performing a lazy update.
-        if dep.source_id().precise().is_some() && !self.updated {
-            let mut called = false;
-            self.index.query(dep, &mut *self.ops, &mut |s| {
-                called = true;
-                f(s);
-            })?;
-            if called {
-                return Ok(());
-            } else {
-                self.do_update()?;
-            }
-        }
-
-        self.index.query(dep, &mut *self.ops, f)
+        self.query(dep, f)
     }
 }
 
@@ -454,6 +458,10 @@ impl<'cfg> Source for RegistrySource<'cfg> {
 
     fn requires_precise(&self) -> bool {
         false
+    }
+
+    fn query(&mut self, dep: &Dependency, f: &mut FnMut(Summary)) -> CargoResult<()> {
+        self.query(dep, f)
     }
 
     fn update(&mut self) -> CargoResult<()> {

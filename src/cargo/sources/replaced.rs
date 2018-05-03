@@ -19,9 +19,7 @@ impl<'cfg> ReplacedSource<'cfg> {
             inner: src,
         }
     }
-}
 
-impl<'cfg> Registry for ReplacedSource<'cfg> {
     fn query(&mut self, dep: &Dependency, f: &mut FnMut(Summary)) -> CargoResult<()> {
         let (replace_with, to_replace) = (&self.replace_with, &self.to_replace);
         let dep = dep.clone().map_source(to_replace, replace_with);
@@ -36,6 +34,12 @@ impl<'cfg> Registry for ReplacedSource<'cfg> {
     }
 }
 
+impl<'cfg> Registry for ReplacedSource<'cfg> {
+    fn query(&mut self, dep: &Dependency, f: &mut FnMut(Summary)) -> CargoResult<()> {
+        self.query(dep, f)
+    }
+}
+
 impl<'cfg> Source for ReplacedSource<'cfg> {
     fn source_id(&self) -> &SourceId {
         &self.to_replace
@@ -47,6 +51,10 @@ impl<'cfg> Source for ReplacedSource<'cfg> {
 
     fn requires_precise(&self) -> bool {
         self.inner.requires_precise()
+    }
+
+    fn query(&mut self, dep: &Dependency, f: &mut FnMut(Summary)) -> CargoResult<()> {
+        self.query(dep, f)
     }
 
     fn update(&mut self) -> CargoResult<()> {

@@ -52,6 +52,13 @@ impl<'cfg> GitSource<'cfg> {
         self.remote.url()
     }
 
+    fn query(&mut self, dep: &Dependency, f: &mut FnMut(Summary)) -> CargoResult<()> {
+        let src = self.path_source
+            .as_mut()
+            .expect("BUG: update() must be called before query()");
+        Source::query(src, dep, f)
+    }
+
     pub fn read_packages(&mut self) -> CargoResult<Vec<Package>> {
         if self.path_source.is_none() {
             self.update()?;
@@ -126,10 +133,7 @@ impl<'cfg> Debug for GitSource<'cfg> {
 
 impl<'cfg> Registry for GitSource<'cfg> {
     fn query(&mut self, dep: &Dependency, f: &mut FnMut(Summary)) -> CargoResult<()> {
-        let src = self.path_source
-            .as_mut()
-            .expect("BUG: update() must be called before query()");
-        src.query(dep, f)
+        self.query(dep, f)
     }
 }
 
@@ -144,6 +148,10 @@ impl<'cfg> Source for GitSource<'cfg> {
 
     fn requires_precise(&self) -> bool {
         true
+    }
+
+    fn query(&mut self, dep: &Dependency, f: &mut FnMut(Summary)) -> CargoResult<()> {
+        self.query(dep, f)
     }
 
     fn update(&mut self) -> CargoResult<()> {
