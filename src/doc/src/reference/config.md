@@ -140,4 +140,4 @@ In addition to the system above, Cargo recognizes a few other specific
 [environment variables][env].
 
 [env]: reference/environment-variables.html
-[source]: (reference/source-replacement.html)
+[source]: reference/source-replacement.html
