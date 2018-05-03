@@ -213,7 +213,7 @@ fn install_one(
     let mut needs_cleanup = false;
     let overidden_target_dir = if source_id.is_path() {
         None
-    } else if let Some(dir) = config.target_dir() {
+    } else if let Some(dir) = config.target_dir()? {
         Some(dir)
     } else if let Ok(td) = TempFileBuilder::new().prefix("cargo-install").tempdir() {
         let p = td.path().to_owned();
