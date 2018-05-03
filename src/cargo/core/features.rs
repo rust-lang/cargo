@@ -49,6 +49,8 @@ use std::env;
 use std::fmt;
 use std::str::FromStr;
 
+use failure::Error;
+
 use util::errors::CargoResult;
 
 /// The edition of the compiler (RFC 2052)
@@ -69,12 +71,15 @@ impl fmt::Display for Edition {
     }
 }
 impl FromStr for Edition {
-    type Err = ();
-    fn from_str(s: &str) -> Result<Self, ()> {
+    type Err = Error;
+    fn from_str(s: &str) -> Result<Self, Error> {
         match s {
             "2015" => Ok(Edition::Edition2015),
             "2018" => Ok(Edition::Edition2018),
-            _ => Err(()),
+            s => {
+                bail!("supported edition values are `2015` or `2018`, but `{}` \
+                       is unknown", s)
+            }
         }
     }
 }

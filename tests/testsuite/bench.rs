@@ -713,7 +713,7 @@ fn bench_autodiscover_2015() {
             name = "foo"
             version = "0.0.1"
             authors = []
-            rust = "2015"
+            edition = "2015"
 
             [[bench]]
             name = "bench_magic"

@@ -1110,7 +1110,7 @@ fn test_edition() {
             name = "foo"
             version = "0.0.1"
             authors = []
-            rust = "2018"
+            edition = "2018"
         "#,
         )
         .file("src/lib.rs", r#" "#)
@@ -1178,7 +1178,7 @@ fn test_edition_malformed() {
             name = "foo"
             version = "0.0.1"
             authors = []
-            rust = "chicken"
+            edition = "chicken"
         "#,
         )
         .file("src/lib.rs", r#" "#)
@@ -1191,7 +1191,10 @@ fn test_edition_malformed() {
 error: failed to parse manifest at `[..]`
 
 Caused by:
-  the `rust` key must be one of: `2015`, `2018`
+  failed to parse the `edition` key
+
+Caused by:
+  supported edition values are `2015` or `2018`, but `chicken` is unknown
 "
         )),
     );
@@ -1207,7 +1210,7 @@ fn test_edition_nightly() {
             name = "foo"
             version = "0.0.1"
             authors = []
-            rust = "2015"
+            edition = "2015"
         "#,
         )
         .file("src/lib.rs", r#" "#)

@@ -181,16 +181,16 @@ cargo +nightly build --out-dir=out -Z unstable-options
 * Tracking Issue: [rust-lang/rust#44581](https://github.com/rust-lang/rust/issues/44581)
 * RFC: [#2052](https://github.com/rust-lang/rfcs/blob/master/text/2052-epochs.md)
 
-You can opt in to a specific Rust Edition for your package with the `rust` key
-in `Cargo.toml`.  If you don't specify the edition, it will default to 2015.
-You need to include the appropriate `cargo-features`:
+You can opt in to a specific Rust Edition for your package with the `edition`
+key in `Cargo.toml`.  If you don't specify the edition, it will default to
+2015.  You need to include the appropriate `cargo-features`:
 
 ```toml
 cargo-features = ["edition"]
 
 [package]
 ...
-rust = "2018"
+edition = "2018"
 ```
 
 
