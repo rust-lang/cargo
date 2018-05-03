@@ -480,9 +480,17 @@ impl<'a> Links<'a> {
 
             let describe_path = |pkgid: &PackageId| -> String {
                 let dep_path = resolve.path_to_top(pkgid);
-                let mut dep_path_desc = format!("package `{}`", dep_path[0]);
-                for dep in dep_path.iter().skip(1) {
-                    write!(dep_path_desc, "\n    ... which is depended on by `{}`", dep).unwrap();
+                let mut dep_path_desc = format!("package `{}`", pkgid);
+                for &(dep, req) in dep_path.iter() {
+                    let req = req.first().unwrap();
+                    write!(
+                        dep_path_desc,
+                        "\n    ... selected to fulfill the requirement \
+                         `{} = \"{}\"` from package `{}`",
+                        req.name(),
+                        req.version_req(),
+                        dep
+                    ).unwrap();
                 }
                 dep_path_desc
             };
