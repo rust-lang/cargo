@@ -268,7 +268,7 @@ impl<'a, 'cfg: 'a> CompilationFiles<'a, 'cfg> {
                         crate_type,
                         flavor,
                         unit.target.kind(),
-                        bcx.build_config.target_triple(),
+                        bcx.target_triple(),
                     )?;
 
                     match file_types {
@@ -324,14 +324,14 @@ impl<'a, 'cfg: 'a> CompilationFiles<'a, 'cfg> {
                      does not support these crate types",
                     unsupported.join(", "),
                     unit.pkg,
-                    bcx.build_config.target_triple()
+                    bcx.target_triple()
                 )
             }
             bail!(
                 "cannot compile `{}` as the target `{}` does not \
                  support any of the output crate types",
                 unit.pkg,
-                bcx.build_config.target_triple()
+                bcx.target_triple()
             );
         }
         info!("Target filenames: {:?}", ret);
@@ -384,7 +384,7 @@ fn compute_metadata<'a, 'cfg>(
     let __cargo_default_lib_metadata = env::var("__CARGO_DEFAULT_LIB_METADATA");
     if !(unit.mode.is_any_test() || unit.mode.is_check())
         && (unit.target.is_dylib() || unit.target.is_cdylib()
-            || (unit.target.is_bin() && bcx.build_config.target_triple().starts_with("wasm32-")))
+            || (unit.target.is_bin() && bcx.target_triple().starts_with("wasm32-")))
         && unit.pkg.package_id().source_id().is_path()
         && __cargo_default_lib_metadata.is_err()
     {

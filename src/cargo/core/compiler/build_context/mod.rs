@@ -109,8 +109,8 @@ impl<'a, 'cfg> BuildContext<'a, 'cfg> {
             None => return true,
         };
         let (name, info) = match kind {
-            Kind::Host => (self.build_config.host_triple(), &self.host_info),
-            Kind::Target => (self.build_config.target_triple(), &self.target_info),
+            Kind::Host => (self.host_triple(), &self.host_info),
+            Kind::Target => (self.target_triple(), &self.target_info),
         };
         platform.matches(name, info.cfg())
     }
@@ -137,6 +137,14 @@ impl<'a, 'cfg> BuildContext<'a, 'cfg> {
             Kind::Target => &self.target_info,
         };
         info.cfg().unwrap_or(&[])
+    }
+
+    pub fn host_triple(&self) -> &str {
+        self.build_config.host_triple()
+    }
+
+    pub fn target_triple(&self) -> &str {
+        self.build_config.target_triple()
     }
 
     /// Get the target configuration for a particular host or target
