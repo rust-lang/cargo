@@ -419,9 +419,7 @@ fn alt_registry_and_crates_io_deps() {
             .with_stderr_contains("[COMPILING] alt_reg_dep v0.1.0 (registry `file://[..]`)")
             .with_stderr_contains("[COMPILING] crates_io_dep v0.0.1")
             .with_stderr_contains(&format!("[COMPILING] foo v0.0.1 ({})", p.url()))
-            .with_stderr_contains(
-                "[FINISHED] dev [unoptimized + debuginfo] target(s) in [..]s",
-            ),
+            .with_stderr_contains("[FINISHED] dev [unoptimized + debuginfo] target(s) in [..]s"),
     )
 }
 

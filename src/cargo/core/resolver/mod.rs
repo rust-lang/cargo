@@ -401,13 +401,7 @@ fn activate_deps_loop(
                 dep.name(),
                 candidate.summary.version()
             );
-            let res = activate(
-                &mut cx,
-                registry,
-                Some((&parent, &dep)),
-                candidate,
-                &method,
-            );
+            let res = activate(&mut cx, registry, Some((&parent, &dep)), candidate, &method);
 
             let successfully_activated = match res {
                 // Success! We've now activated our `candidate` in our context

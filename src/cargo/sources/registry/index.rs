@@ -118,7 +118,7 @@ impl<'cfg> RegistryIndex<'cfg> {
                     Err(e) => {
                         info!("failed to parse `{}` registry package: {}", name, e);
                         trace!("line: {}", line);
-                        return None
+                        return None;
                     }
                 };
                 if online || load.is_crate_downloaded(summary.package_id()) {

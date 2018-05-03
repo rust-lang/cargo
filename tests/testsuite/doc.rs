@@ -172,7 +172,10 @@ fn doc_deps() {
         0
     );
     assert_eq!(
-        glob(&p.root().join("target/debug/deps/libbar-*.rmeta").to_str().unwrap())
+        glob(&p.root()
+            .join("target/debug/deps/libbar-*.rmeta")
+            .to_str()
+            .unwrap())
             .unwrap()
             .count(),
         1

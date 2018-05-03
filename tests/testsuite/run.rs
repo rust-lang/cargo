@@ -1013,10 +1013,7 @@ fn dashes_are_forwarded() {
         )
         .build();
 
-    assert_that(
-        p.cargo("run -- -- a -- b"),
-        execs().with_status(0),
-    );
+    assert_that(p.cargo("run -- -- a -- b"), execs().with_status(0));
 }
 
 #[test]

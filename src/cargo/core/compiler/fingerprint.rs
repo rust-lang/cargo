@@ -15,7 +15,7 @@ use util::errors::{CargoResult, CargoResultExt};
 use util::paths;
 use util::{internal, profile, Dirty, Fresh, Freshness};
 
-use super::{Context, BuildContext, FileFlavor, Unit};
+use super::{BuildContext, Context, FileFlavor, Unit};
 use super::custom_build::BuildDeps;
 use super::job::Work;
 
@@ -355,7 +355,14 @@ impl hash::Hash for Fingerprint {
             ..
         } = *self;
         (
-            rustc, features, target, path, profile, local, edition, rustflags,
+            rustc,
+            features,
+            target,
+            path,
+            profile,
+            local,
+            edition,
+            rustflags,
         ).hash(h);
 
         h.write_usize(deps.len());
