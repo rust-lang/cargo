@@ -97,10 +97,7 @@ pub(super) fn activation_error(
     if !candidates.is_empty() {
         let mut msg = format!("failed to select a version for `{}`.", dep.package_name());
         msg.push_str("\n    ... required by ");
-        msg.push_str(&describe_path(
-            parent.package_id(),
-            &graph.path_to_top(&parent.package_id()),
-        ));
+        msg.push_str(&describe_path(&graph, parent.package_id()));
 
         msg.push_str("\nversions that meet the requirements `");
         msg.push_str(&dep.version_req().to_string());
@@ -131,7 +128,7 @@ pub(super) fn activation_error(
                 msg.push_str(link);
                 msg.push_str("` as well:\n");
             }
-            msg.push_str(&describe_path(p, &graph.path_to_top(&p)));
+            msg.push_str(&describe_path(&graph, p));
         }
 
         let (features_errors, other_errors): (Vec<_>, Vec<_>) = other_errors
@@ -162,7 +159,7 @@ pub(super) fn activation_error(
 
         for &(&p, _) in other_errors.iter() {
             msg.push_str("\n\n  previously selected ");
-            msg.push_str(&describe_path(p, &graph.path_to_top(&p)));
+            msg.push_str(&describe_path(&graph, p));
         }
 
         msg.push_str("\n\nfailed to select a version for `");
@@ -212,10 +209,7 @@ pub(super) fn activation_error(
             registry.describe_source(dep.source_id()),
         );
         msg.push_str("required by ");
-        msg.push_str(&describe_path(
-            parent.package_id(),
-            &graph.path_to_top(&parent.package_id()),
-        ));
+        msg.push_str(&describe_path(&graph, parent.package_id()));
 
         // If we have a path dependency with a locked version, then this may
         // indicate that we updated a sub-package and forgot to run `cargo
@@ -269,10 +263,7 @@ pub(super) fn activation_error(
             msg.push_str("\n");
         }
         msg.push_str("required by ");
-        msg.push_str(&describe_path(
-            parent.package_id(),
-            &graph.path_to_top(&parent.package_id()),
-        ));
+        msg.push_str(&describe_path(&graph, parent.package_id()));
 
         msg
     };
@@ -292,8 +283,12 @@ pub(super) fn activation_error(
 }
 
 /// Returns String representation of dependency chain for a particular `pkgid`.
-pub(super) fn describe_path(this: PackageId, path: &[(&PackageId, &Vec<Dependency>)]) -> String {
+pub(super) fn describe_path(
+    graph: &::util::graph::Graph<PackageId, Vec<Dependency>>,
+    this: PackageId,
+) -> String {
     use std::fmt::Write;
+    let path = &graph.path_to_top(&this);
     let mut dep_path_desc = format!("package `{}`", this);
     for &(dep, req) in path.iter() {
         let req = req.first().unwrap();
