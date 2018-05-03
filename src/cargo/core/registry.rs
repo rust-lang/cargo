@@ -21,27 +21,11 @@ pub trait Registry {
         self.query(dep, &mut |s| ret.push(s))?;
         Ok(ret)
     }
-
-    /// Returns whether or not this registry will return summaries with
-    /// checksums listed.
-    fn supports_checksums(&self) -> bool;
-
-    /// Returns whether or not this registry will return summaries with
-    /// the `precise` field in the source id listed.
-    fn requires_precise(&self) -> bool;
 }
 
 impl<'a, T: ?Sized + Registry + 'a> Registry for Box<T> {
     fn query(&mut self, dep: &Dependency, f: &mut FnMut(Summary)) -> CargoResult<()> {
         (**self).query(dep, f)
-    }
-
-    fn supports_checksums(&self) -> bool {
-        (**self).supports_checksums()
-    }
-
-    fn requires_precise(&self) -> bool {
-        (**self).requires_precise()
     }
 }
 
@@ -535,14 +519,6 @@ impl<'cfg> Registry for PackageRegistry<'cfg> {
         f(self.lock(override_summary));
         Ok(())
     }
-
-    fn supports_checksums(&self) -> bool {
-        false
-    }
-
-    fn requires_precise(&self) -> bool {
-        false
-    }
 }
 
 fn lock(locked: &LockedMap, patches: &HashMap<Url, Vec<PackageId>>, summary: Summary) -> Summary {
@@ -702,14 +678,6 @@ pub mod test {
                 }
                 Ok(())
             }
-        }
-
-        fn supports_checksums(&self) -> bool {
-            false
-        }
-
-        fn requires_precise(&self) -> bool {
-            false
         }
     }
 }

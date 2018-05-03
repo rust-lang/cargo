@@ -14,6 +14,14 @@ pub trait Source: Registry {
     /// Returns the `SourceId` corresponding to this source
     fn source_id(&self) -> &SourceId;
 
+    /// Returns whether or not this registry will return summaries with
+    /// checksums listed.
+    fn supports_checksums(&self) -> bool;
+
+    /// Returns whether or not this registry will return summaries with
+    /// the `precise` field in the source id listed.
+    fn requires_precise(&self) -> bool;
+
     /// The update method performs any network operations required to
     /// get the entire list of all names, versions and dependencies of
     /// packages managed by the Source.
@@ -50,6 +58,16 @@ impl<'a, T: Source + ?Sized + 'a> Source for Box<T> {
     /// Forwards to `Source::source_id`
     fn source_id(&self) -> &SourceId {
         (**self).source_id()
+    }
+
+    /// Forwards to `Source::supports_checksums`
+    fn supports_checksums(&self) -> bool {
+        (**self).supports_checksums()
+    }
+
+    /// Forwards to `Source::requires_precise`
+    fn requires_precise(&self) -> bool {
+        (**self).requires_precise()
     }
 
     /// Forwards to `Source::update`

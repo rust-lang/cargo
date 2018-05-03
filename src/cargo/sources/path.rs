@@ -484,6 +484,12 @@ impl<'cfg> Registry for PathSource<'cfg> {
         }
         Ok(())
     }
+}
+
+impl<'cfg> Source for PathSource<'cfg> {
+    fn source_id(&self) -> &SourceId {
+        &self.source_id
+    }
 
     fn supports_checksums(&self) -> bool {
         false
@@ -491,12 +497,6 @@ impl<'cfg> Registry for PathSource<'cfg> {
 
     fn requires_precise(&self) -> bool {
         false
-    }
-}
-
-impl<'cfg> Source for PathSource<'cfg> {
-    fn source_id(&self) -> &SourceId {
-        &self.source_id
     }
 
     fn update(&mut self) -> CargoResult<()> {

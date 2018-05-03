@@ -34,6 +34,12 @@ impl<'cfg> Registry for ReplacedSource<'cfg> {
             .chain_err(|| format!("failed to query replaced source {}", self.to_replace))?;
         Ok(())
     }
+}
+
+impl<'cfg> Source for ReplacedSource<'cfg> {
+    fn source_id(&self) -> &SourceId {
+        &self.to_replace
+    }
 
     fn supports_checksums(&self) -> bool {
         self.inner.supports_checksums()
@@ -41,12 +47,6 @@ impl<'cfg> Registry for ReplacedSource<'cfg> {
 
     fn requires_precise(&self) -> bool {
         self.inner.requires_precise()
-    }
-}
-
-impl<'cfg> Source for ReplacedSource<'cfg> {
-    fn source_id(&self) -> &SourceId {
-        &self.to_replace
     }
 
     fn update(&mut self) -> CargoResult<()> {

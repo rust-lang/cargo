@@ -53,6 +53,12 @@ impl<'cfg> Registry for DirectorySource<'cfg> {
         }
         Ok(())
     }
+}
+
+impl<'cfg> Source for DirectorySource<'cfg> {
+    fn source_id(&self) -> &SourceId {
+        &self.source_id
+    }
 
     fn supports_checksums(&self) -> bool {
         true
@@ -60,12 +66,6 @@ impl<'cfg> Registry for DirectorySource<'cfg> {
 
     fn requires_precise(&self) -> bool {
         true
-    }
-}
-
-impl<'cfg> Source for DirectorySource<'cfg> {
-    fn source_id(&self) -> &SourceId {
-        &self.source_id
     }
 
     fn update(&mut self) -> CargoResult<()> {
