@@ -131,8 +131,8 @@ fn build_work<'a, 'cfg>(cx: &mut Context<'a, 'cfg>, unit: &Unit<'a>) -> CargoRes
         .env(
             "TARGET",
             &match unit.kind {
-                Kind::Host => &bcx.build_config.host_triple(),
-                Kind::Target => bcx.build_config.target_triple(),
+                Kind::Host => &bcx.host_triple(),
+                Kind::Target => bcx.target_triple(),
             },
         )
         .env("DEBUG", debug.to_string())
@@ -145,7 +145,7 @@ fn build_work<'a, 'cfg>(cx: &mut Context<'a, 'cfg>, unit: &Unit<'a>) -> CargoRes
                 "debug"
             },
         )
-        .env("HOST", &bcx.build_config.host_triple())
+        .env("HOST", &bcx.host_triple())
         .env("RUSTC", &bcx.build_config.rustc.path)
         .env("RUSTDOC", &*bcx.config.rustdoc()?)
         .inherit_jobserver(&cx.jobserver);
