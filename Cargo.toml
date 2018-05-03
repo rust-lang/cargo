@@ -9,7 +9,7 @@ description = "Automatically apply the suggestions made by rustc"
 repository = "https://github.com/killercup/rustfix"
 documentation = "https://docs.rs/rustfix"
 readme = "README.md"
-version = "0.1.0"
+version = "0.2.0"
 exclude = [
     "etc/*",
     "examples/*",
@@ -17,8 +17,6 @@ exclude = [
 ]
 
 [dependencies]
-clap = "2.9.2"
-colored = "1.2.0"
 quick-error = "1.2.1"
 serde = "1.0"
 serde_json = "1.0"
@@ -30,3 +28,11 @@ env_logger = "0.5.0-rc.1"
 log = "0.4.1"
 pretty_assertions = "0.4.1"
 tempdir = "0.3.5"
+
+[workspace]
+members = [
+    "cargo-fix",
+]
+
+[patch.crates-io]
+rustfix = { path = "." }
