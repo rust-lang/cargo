@@ -56,8 +56,8 @@ impl Resolve {
 
     /// Resolves one of the paths from the given dependent package up to
     /// the root.
-    pub fn path_to_top<'a>(&'a self, pkg: &'a PackageId) -> Vec<&'a PackageId> {
-        self.graph.path_to_top(pkg)
+    pub fn path_to_top(&self, pkg: PackageId) -> Vec<(&PackageId, &Vec<Dependency>)> {
+        self.graph.path_to_top(&pkg)
     }
 
     pub fn register_used_patches(&mut self, patches: &HashMap<Url, Vec<Summary>>) {
