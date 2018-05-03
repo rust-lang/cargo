@@ -603,7 +603,7 @@ fn generate_targets<'a>(
         };
         let target_mode = match target_mode {
             CompileMode::Test => {
-                if target.is_example() {
+                if target.is_example() && !filter.is_specific() && !target.tested() {
                     // Examples are included as regular binaries to verify
                     // that they compile.
                     CompileMode::Build
