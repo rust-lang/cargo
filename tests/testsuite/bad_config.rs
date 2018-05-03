@@ -284,10 +284,7 @@ fn invalid_global_config() {
         p.cargo("build").arg("-v"),
         execs().with_status(101).with_stderr(
             "\
-error: failed to parse manifest at `[..]`
-
-Caused by:
-  Couldn't load Cargo configuration
+[ERROR] Couldn't load Cargo configuration
 
 Caused by:
   could not parse TOML configuration in `[..]`
