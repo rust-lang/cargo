@@ -1496,7 +1496,7 @@ fn doc_edition() {
             name = "foo"
             version = "0.0.1"
             authors = []
-            rust = "2018"
+            edition = "2018"
         "#,
         )
         .file("src/lib.rs", "")

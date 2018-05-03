@@ -1038,7 +1038,7 @@ fn installs_from_cwd_with_2018_warnings() {
             name = "foo"
             version = "0.1.0"
             authors = []
-            rust = "2018"
+            edition = "2018"
         "#,
         )
         .file("src/main.rs", "fn main() {}")

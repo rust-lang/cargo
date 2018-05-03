@@ -558,7 +558,7 @@ pub struct TomlProject {
     license_file: Option<String>,
     repository: Option<String>,
     metadata: Option<toml::Value>,
-    rust: Option<String>,
+    edition: Option<String>,
 }
 
 #[derive(Debug, Deserialize, Serialize)]
@@ -719,15 +719,12 @@ impl TomlManifest {
 
         let pkgid = project.to_package_id(source_id)?;
 
-        let edition = if let Some(ref edition) = project.rust {
+        let edition = if let Some(ref edition) = project.edition {
             features
                 .require(Feature::edition())
                 .chain_err(|| "editions are unstable")?;
-            if let Ok(edition) = edition.parse() {
-                edition
-            } else {
-                bail!("the `rust` key must be one of: `2015`, `2018`")
-            }
+            edition.parse()
+                .chain_err(|| "failed to parse the `edition` key")?
         } else {
             Edition::Edition2015
         };
