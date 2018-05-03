@@ -131,6 +131,12 @@ impl<'cfg> Registry for GitSource<'cfg> {
             .expect("BUG: update() must be called before query()");
         src.query(dep, f)
     }
+}
+
+impl<'cfg> Source for GitSource<'cfg> {
+    fn source_id(&self) -> &SourceId {
+        &self.source_id
+    }
 
     fn supports_checksums(&self) -> bool {
         false
@@ -138,12 +144,6 @@ impl<'cfg> Registry for GitSource<'cfg> {
 
     fn requires_precise(&self) -> bool {
         true
-    }
-}
-
-impl<'cfg> Source for GitSource<'cfg> {
-    fn source_id(&self) -> &SourceId {
-        &self.source_id
     }
 
     fn update(&mut self) -> CargoResult<()> {

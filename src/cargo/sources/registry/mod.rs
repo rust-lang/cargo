@@ -441,6 +441,12 @@ impl<'cfg> Registry for RegistrySource<'cfg> {
 
         self.index.query(dep, &mut *self.ops, f)
     }
+}
+
+impl<'cfg> Source for RegistrySource<'cfg> {
+    fn source_id(&self) -> &SourceId {
+        &self.source_id
+    }
 
     fn supports_checksums(&self) -> bool {
         true
@@ -448,12 +454,6 @@ impl<'cfg> Registry for RegistrySource<'cfg> {
 
     fn requires_precise(&self) -> bool {
         false
-    }
-}
-
-impl<'cfg> Source for RegistrySource<'cfg> {
-    fn source_id(&self) -> &SourceId {
-        &self.source_id
     }
 
     fn update(&mut self) -> CargoResult<()> {
