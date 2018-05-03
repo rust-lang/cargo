@@ -580,7 +580,7 @@ impl Links {
             let pkg = unit.pkg.package_id();
 
             let describe_path = |pkgid: PackageId| -> String {
-                let dep_path = resolve.path_to_top(pkgid);
+                let dep_path = resolve.graph().path_to_top(&pkgid);
                 let mut dep_path_desc = format!("package `{}`", pkgid);
                 for &(dep, req) in dep_path.iter() {
                     let req = req.first().unwrap();

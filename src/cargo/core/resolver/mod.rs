@@ -848,7 +848,7 @@ fn check_cycles(resolve: &Resolve, activations: &Activations) -> CargoResult<()>
             failure::bail!(
                 "cyclic package dependency: package `{}` depends on itself. Cycle:\n{}",
                 id,
-                errors::describe_path(id, &resolve.path_to_top(id))
+                errors::describe_path(&resolve.graph(), id)
             );
         }
 
