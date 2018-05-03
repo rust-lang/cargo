@@ -1721,8 +1721,15 @@ fn test_run_implicit_example_target() {
             authors = []
 
             [[bin]]
-            name="mybin"
-            path="src/mybin.rs"
+            name = "mybin"
+            path = "src/mybin.rs"
+
+            [[example]]
+            name = "myexm1"
+
+            [[example]]
+            name = "myexm2"
+            test = true
         "#,
         )
         .file(
@@ -1733,20 +1740,61 @@ fn test_run_implicit_example_target() {
         .file("tests/mytest.rs", "#[test] fn test_in_test() { }")
         .file("benches/mybench.rs", "#[test] fn test_in_bench() { }")
         .file(
-            "examples/myexm.rs",
-            r#"#[test] fn test_in_exm() { panic!("Don't even test me."); }
-               fn main() { panic!("Don't execute me!"); }"#,
+            "examples/myexm1.rs",
+            "#[test] fn test_in_exm() { }
+               fn main() { panic!(\"Don't execute me!\"); }",
+        )
+        .file(
+            "examples/myexm2.rs",
+            "#[test] fn test_in_exm() { }
+               fn main() { panic!(\"Don't execute me!\"); }",
         )
         .build();
 
+    // Compiles myexm1 as normal, but does not run it.
     assert_that(
-        prj.cargo("test").arg("--examples"),
-        execs().with_status(0).with_stderr(format!(
-            "\
-[COMPILING] foo v0.0.1 ({dir})
-[FINISHED] dev [unoptimized + debuginfo] target(s) in [..]",
-            dir = prj.url()
-        )),
+        prj.cargo("test -v"),
+        execs()
+            .with_status(0)
+            .with_stderr_contains("[RUNNING] `rustc [..]myexm1.rs --crate-type bin[..]")
+            .with_stderr_contains("[RUNNING] `rustc [..]myexm2.rs [..]--test[..]")
+            .with_stderr_does_not_contain("[RUNNING] [..]myexm1-[..]")
+            .with_stderr_contains("[RUNNING] [..]target[/]debug[/]examples[/]myexm2-[..]"),
+    );
+
+    // Only tests myexm2.
+    assert_that(
+        prj.cargo("test --tests"),
+        execs()
+            .with_status(0)
+            .with_stderr_does_not_contain("[RUNNING] [..]myexm1-[..]")
+            .with_stderr_contains("[RUNNING] [..]target[/]debug[/]examples[/]myexm2-[..]"),
+    );
+
+    // Tests all examples.
+    assert_that(
+        prj.cargo("test --examples"),
+        execs()
+            .with_status(0)
+            .with_stderr_contains("[RUNNING] [..]target[/]debug[/]examples[/]myexm1-[..]")
+            .with_stderr_contains("[RUNNING] [..]target[/]debug[/]examples[/]myexm2-[..]"),
+    );
+
+    // Test an example, even without `test` set.
+    assert_that(
+        prj.cargo("test --example myexm1"),
+        execs()
+            .with_status(0)
+            .with_stderr_contains("[RUNNING] [..]target[/]debug[/]examples[/]myexm1-[..]"),
+    );
+
+    // Tests all examples.
+    assert_that(
+        prj.cargo("test --all-targets"),
+        execs()
+            .with_status(0)
+            .with_stderr_contains("[RUNNING] [..]target[/]debug[/]examples[/]myexm1-[..]")
+            .with_stderr_contains("[RUNNING] [..]target[/]debug[/]examples[/]myexm2-[..]"),
     );
 }
 
