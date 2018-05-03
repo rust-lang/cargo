@@ -68,7 +68,41 @@ Run with 'cargo -Z [FLAG] [SUBCOMMAND]'"
         return Ok(());
     }
 
+    let args = expand_aliases(config, args)?;
+
     execute_subcommand(config, args)
+}
+
+fn expand_aliases(
+    config: &mut Config,
+    args: ArgMatches<'static>,
+) -> Result<ArgMatches<'static>, CliError> {
+    if let (cmd, Some(args)) = args.subcommand() {
+        match (
+            commands::builtin_exec(cmd),
+            super::aliased_command(config, cmd)?,
+        ) {
+            (None, Some(mut alias)) => {
+                alias.extend(
+                    args.values_of("")
+                        .unwrap_or_default()
+                        .map(|s| s.to_string()),
+                );
+                let args = cli()
+                    .setting(AppSettings::NoBinaryName)
+                    .get_matches_from_safe(alias)?;
+                return expand_aliases(config, args);
+            }
+            (Some(_), Some(_)) => {
+                config.shell().warn(format!(
+                    "alias `{}` is ignored, because it is shadowed by a built in command",
+                    cmd
+                ))?;
+            }
+            (_, None) => {}
+        }
+    };
+    Ok(args)
 }
 
 fn execute_subcommand(config: &mut Config, args: ArgMatches) -> CliResult {
@@ -79,7 +113,7 @@ fn execute_subcommand(config: &mut Config, args: ArgMatches) -> CliResult {
             return Ok(());
         }
     };
-    
+
     let arg_target_dir = &subcommand_args.value_of_path("target-dir", config);
 
     config.configure(
@@ -101,17 +135,6 @@ fn execute_subcommand(config: &mut Config, args: ArgMatches) -> CliResult {
         return exec(config, subcommand_args);
     }
 
-    if let Some(mut alias) = super::aliased_command(config, cmd)? {
-        alias.extend(
-            subcommand_args.values_of("")
-                           .unwrap_or_default()
-                           .map(|s| s.to_string()),
-        );
-        let subcommand_args = cli()
-            .setting(AppSettings::NoBinaryName)
-            .get_matches_from_safe(alias)?;
-        return execute_subcommand(config, subcommand_args);
-    }
     let mut ext_args: Vec<&str> = vec![cmd];
     ext_args.extend(subcommand_args.values_of("").unwrap_or_default());
     super::execute_external_subcommand(config, cmd, &ext_args)
