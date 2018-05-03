@@ -3742,6 +3742,9 @@ fn rename_with_link_search_path() {
             name = "bar"
             version = "0.5.0"
             authors = []
+
+            [profile.dev]
+            debug = false
         "#,
         )
         .file(
