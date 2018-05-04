@@ -141,7 +141,7 @@ impl<'cfg> Source for GitSource<'cfg> {
         let src = self.path_source
             .as_mut()
             .expect("BUG: update() must be called before query()");
-        Source::query(src, dep, f)
+        src.query(dep, f)
     }
 
     fn update(&mut self) -> CargoResult<()> {
