@@ -6,7 +6,8 @@ The goal of this tool is to read and apply the suggestions made by rustc (and th
 
 [clippy]: https://github.com/Manishearth/rust-clippy
 
-[![Build Status](https://travis-ci.org/killercup/rustfix.svg?branch=master)](https://travis-ci.org/killercup/rustfix)
+[![Build Status](https://travis-ci.org/rust-lang-nursery/rustfix.svg?branch=master)](https://travis-ci.org/rust-lang-nursery/rustfix)
+[![Build status](https://ci.appveyor.com/api/projects/status/g8ljreo9ryu3s6ee/branch/master?svg=true)](https://ci.appveyor.com/project/rust-lang-libs/rustfix/branch/master)
 
 ## Current state
 

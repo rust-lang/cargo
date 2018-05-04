@@ -1,18 +1,8 @@
 language: rust
 rust:
-- nightly
-- stable
+  - nightly
 script:
-- cargo build
-- if [ $TRAVIS_RUST_VERSION == nightly ]; then cargo test -- --nocapture ; fi
-branches:
-  only:
-    # This is where pull requests from "bors r+" are built.
-    - staging
-    # This is where pull requests from "bors try" are built.
-    - trying
-    # Uncomment this to enable building pull requests.
-    - master
+  - cargo test --all
 notifications:
-    email:
-      on_success: never
+  email:
+    on_success: never
