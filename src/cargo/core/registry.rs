@@ -23,12 +23,6 @@ pub trait Registry {
     }
 }
 
-impl<'a, T: ?Sized + Registry + 'a> Registry for Box<T> {
-    fn query(&mut self, dep: &Dependency, f: &mut FnMut(Summary)) -> CargoResult<()> {
-        (**self).query(dep, f)
-    }
-}
-
 /// This structure represents a registry of known packages. It internally
 /// contains a number of `Box<Source>` instances which are used to load a
 /// `Package` from.
