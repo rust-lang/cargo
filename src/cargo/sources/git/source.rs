@@ -125,8 +125,11 @@ impl<'cfg> Debug for GitSource<'cfg> {
 }
 
 impl<'cfg> Source for GitSource<'cfg> {
-    fn source_id(&self) -> &SourceId {
-        &self.source_id
+    fn query(&mut self, dep: &Dependency, f: &mut FnMut(Summary)) -> CargoResult<()> {
+        let src = self.path_source
+            .as_mut()
+            .expect("BUG: update() must be called before query()");
+        src.query(dep, f)
     }
 
     fn supports_checksums(&self) -> bool {
@@ -137,11 +140,8 @@ impl<'cfg> Source for GitSource<'cfg> {
         true
     }
 
-    fn query(&mut self, dep: &Dependency, f: &mut FnMut(Summary)) -> CargoResult<()> {
-        let src = self.path_source
-            .as_mut()
-            .expect("BUG: update() must be called before query()");
-        src.query(dep, f)
+    fn source_id(&self) -> &SourceId {
+        &self.source_id
     }
 
     fn update(&mut self) -> CargoResult<()> {

@@ -421,18 +421,6 @@ impl<'cfg> RegistrySource<'cfg> {
 }
 
 impl<'cfg> Source for RegistrySource<'cfg> {
-    fn source_id(&self) -> &SourceId {
-        &self.source_id
-    }
-
-    fn supports_checksums(&self) -> bool {
-        true
-    }
-
-    fn requires_precise(&self) -> bool {
-        false
-    }
-
     fn query(&mut self, dep: &Dependency, f: &mut FnMut(Summary)) -> CargoResult<()> {
         // If this is a precise dependency, then it came from a lockfile and in
         // theory the registry is known to contain this version. If, however, we
@@ -452,6 +440,18 @@ impl<'cfg> Source for RegistrySource<'cfg> {
         }
 
         self.index.query(dep, &mut *self.ops, f)
+    }
+
+    fn supports_checksums(&self) -> bool {
+        true
+    }
+
+    fn requires_precise(&self) -> bool {
+        false
+    }
+
+    fn source_id(&self) -> &SourceId {
+        &self.source_id
     }
 
     fn update(&mut self) -> CargoResult<()> {

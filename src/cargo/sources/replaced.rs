@@ -22,18 +22,6 @@ impl<'cfg> ReplacedSource<'cfg> {
 }
 
 impl<'cfg> Source for ReplacedSource<'cfg> {
-    fn source_id(&self) -> &SourceId {
-        &self.to_replace
-    }
-
-    fn supports_checksums(&self) -> bool {
-        self.inner.supports_checksums()
-    }
-
-    fn requires_precise(&self) -> bool {
-        self.inner.requires_precise()
-    }
-
     fn query(&mut self, dep: &Dependency, f: &mut FnMut(Summary)) -> CargoResult<()> {
         let (replace_with, to_replace) = (&self.replace_with, &self.to_replace);
         let dep = dep.clone().map_source(to_replace, replace_with);
@@ -45,6 +33,18 @@ impl<'cfg> Source for ReplacedSource<'cfg> {
             )
             .chain_err(|| format!("failed to query replaced source {}", self.to_replace))?;
         Ok(())
+    }
+
+    fn supports_checksums(&self) -> bool {
+        self.inner.supports_checksums()
+    }
+
+    fn requires_precise(&self) -> bool {
+        self.inner.requires_precise()
+    }
+
+    fn source_id(&self) -> &SourceId {
+        &self.to_replace
     }
 
     fn update(&mut self) -> CargoResult<()> {
