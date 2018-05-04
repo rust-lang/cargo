@@ -229,7 +229,7 @@ pub fn apply_suggestions(code: &str, suggestions: &[Suggestion]) -> Result<Strin
             for r in &sol.replacements {
                 fixed.replace_range(
                     r.snippet.range.start,
-                    r.snippet.range.end - 1,
+                    r.snippet.range.end.saturating_sub(1),
                     r.replacement.as_bytes(),
                 )?;
             }
