@@ -36,12 +36,6 @@ fn resolve_with_config(
             }
             Ok(())
         }
-        fn supports_checksums(&self) -> bool {
-            false
-        }
-        fn requires_precise(&self) -> bool {
-            false
-        }
     }
     let mut registry = MyRegistry(registry);
     let summary = Summary::new(pkg.clone(), deps, BTreeMap::new(), None, false).unwrap();

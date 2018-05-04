@@ -21,28 +21,6 @@ pub trait Registry {
         self.query(dep, &mut |s| ret.push(s))?;
         Ok(ret)
     }
-
-    /// Returns whether or not this registry will return summaries with
-    /// checksums listed.
-    fn supports_checksums(&self) -> bool;
-
-    /// Returns whether or not this registry will return summaries with
-    /// the `precise` field in the source id listed.
-    fn requires_precise(&self) -> bool;
-}
-
-impl<'a, T: ?Sized + Registry + 'a> Registry for Box<T> {
-    fn query(&mut self, dep: &Dependency, f: &mut FnMut(Summary)) -> CargoResult<()> {
-        (**self).query(dep, f)
-    }
-
-    fn supports_checksums(&self) -> bool {
-        (**self).supports_checksums()
-    }
-
-    fn requires_precise(&self) -> bool {
-        (**self).requires_precise()
-    }
 }
 
 /// This structure represents a registry of known packages. It internally
@@ -535,14 +513,6 @@ impl<'cfg> Registry for PackageRegistry<'cfg> {
         f(self.lock(override_summary));
         Ok(())
     }
-
-    fn supports_checksums(&self) -> bool {
-        false
-    }
-
-    fn requires_precise(&self) -> bool {
-        false
-    }
 }
 
 fn lock(locked: &LockedMap, patches: &HashMap<Url, Vec<PackageId>>, summary: Summary) -> Summary {
@@ -634,82 +604,4 @@ fn lock(locked: &LockedMap, patches: &HashMap<Url, Vec<PackageId>>, summary: Sum
         trace!("\tnope, unlocked");
         dep
     })
-}
-
-#[cfg(test)]
-pub mod test {
-    use core::{Dependency, Registry, Summary};
-    use util::CargoResult;
-
-    pub struct RegistryBuilder {
-        summaries: Vec<Summary>,
-        overrides: Vec<Summary>,
-    }
-
-    impl RegistryBuilder {
-        pub fn new() -> RegistryBuilder {
-            RegistryBuilder {
-                summaries: vec![],
-                overrides: vec![],
-            }
-        }
-
-        pub fn summary(mut self, summary: Summary) -> RegistryBuilder {
-            self.summaries.push(summary);
-            self
-        }
-
-        pub fn summaries(mut self, summaries: Vec<Summary>) -> RegistryBuilder {
-            self.summaries.extend(summaries.into_iter());
-            self
-        }
-
-        pub fn add_override(mut self, summary: Summary) -> RegistryBuilder {
-            self.overrides.push(summary);
-            self
-        }
-
-        pub fn overrides(mut self, summaries: Vec<Summary>) -> RegistryBuilder {
-            self.overrides.extend(summaries.into_iter());
-            self
-        }
-
-        fn query_overrides(&self, dep: &Dependency) -> Vec<Summary> {
-            self.overrides
-                .iter()
-                .filter(|s| s.name() == dep.name())
-                .map(|s| s.clone())
-                .collect()
-        }
-    }
-
-    impl Registry for RegistryBuilder {
-        fn query(&mut self, dep: &Dependency, f: &mut FnMut(Summary)) -> CargoResult<()> {
-            debug!("querying; dep={:?}", dep);
-
-            let overrides = self.query_overrides(dep);
-
-            if overrides.is_empty() {
-                for s in self.summaries.iter() {
-                    if dep.matches(s) {
-                        f(s.clone());
-                    }
-                }
-                Ok(())
-            } else {
-                for s in overrides {
-                    f(s);
-                }
-                Ok(())
-            }
-        }
-
-        fn supports_checksums(&self) -> bool {
-            false
-        }
-
-        fn requires_precise(&self) -> bool {
-            false
-        }
-    }
 }

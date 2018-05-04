@@ -8,7 +8,7 @@ use glob::Pattern;
 use ignore::Match;
 use ignore::gitignore::GitignoreBuilder;
 
-use core::{Dependency, Package, PackageId, Registry, Source, SourceId, Summary};
+use core::{Dependency, Package, PackageId, Source, SourceId, Summary};
 use ops;
 use util::{self, internal, CargoResult};
 use util::paths;
@@ -475,7 +475,7 @@ impl<'cfg> Debug for PathSource<'cfg> {
     }
 }
 
-impl<'cfg> Registry for PathSource<'cfg> {
+impl<'cfg> Source for PathSource<'cfg> {
     fn query(&mut self, dep: &Dependency, f: &mut FnMut(Summary)) -> CargoResult<()> {
         for s in self.packages.iter().map(|p| p.summary()) {
             if dep.matches(s) {
@@ -492,9 +492,7 @@ impl<'cfg> Registry for PathSource<'cfg> {
     fn requires_precise(&self) -> bool {
         false
     }
-}
 
-impl<'cfg> Source for PathSource<'cfg> {
     fn source_id(&self) -> &SourceId {
         &self.source_id
     }

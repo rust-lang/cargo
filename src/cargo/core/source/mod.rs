@@ -1,7 +1,7 @@
 use std::collections::hash_map::{HashMap, IterMut, Values};
 use std::fmt;
 
-use core::{Package, PackageId, Registry};
+use core::{Dependency, Package, PackageId, Summary};
 use util::CargoResult;
 
 mod source_id;
@@ -10,9 +10,26 @@ pub use self::source_id::{GitReference, SourceId};
 
 /// A Source finds and downloads remote packages based on names and
 /// versions.
-pub trait Source: Registry {
+pub trait Source {
     /// Returns the `SourceId` corresponding to this source
     fn source_id(&self) -> &SourceId;
+
+    /// Returns whether or not this source will return summaries with
+    /// checksums listed.
+    fn supports_checksums(&self) -> bool;
+
+    /// Returns whether or not this source will return summaries with
+    /// the `precise` field in the source id listed.
+    fn requires_precise(&self) -> bool;
+
+    /// Attempt to find the packages that match a dependency request.
+    fn query(&mut self, dep: &Dependency, f: &mut FnMut(Summary)) -> CargoResult<()>;
+
+    fn query_vec(&mut self, dep: &Dependency) -> CargoResult<Vec<Summary>> {
+        let mut ret = Vec::new();
+        self.query(dep, &mut |s| ret.push(s))?;
+        Ok(ret)
+    }
 
     /// The update method performs any network operations required to
     /// get the entire list of all names, versions and dependencies of
@@ -47,6 +64,21 @@ pub trait Source: Registry {
 }
 
 impl<'a, T: Source + ?Sized + 'a> Source for Box<T> {
+    /// Forwards to `Source::supports_checksums`
+    fn supports_checksums(&self) -> bool {
+        (**self).supports_checksums()
+    }
+
+    /// Forwards to `Source::requires_precise`
+    fn requires_precise(&self) -> bool {
+        (**self).requires_precise()
+    }
+
+    /// Forwards to `Source::query`
+    fn query(&mut self, dep: &Dependency, f: &mut FnMut(Summary)) -> CargoResult<()> {
+        (**self).query(dep, f)
+    }
+
     /// Forwards to `Source::source_id`
     fn source_id(&self) -> &SourceId {
         (**self).source_id()
