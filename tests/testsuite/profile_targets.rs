@@ -146,6 +146,9 @@ foo custom build PROFILE=release DEBUG=false OPT_LEVEL=3
     );
 }
 
+// Temporarily disable this test until --all-targets is fixed when using
+// `panic`. See https://github.com/rust-lang/cargo/issues/5444
+#[ignore]
 #[test]
 fn profile_selection_build_all_targets() {
     let p = all_target_project();
@@ -223,6 +226,9 @@ foo custom build PROFILE=debug DEBUG=true OPT_LEVEL=0
     );
 }
 
+// Temporarily disable this test until --all-targets is fixed when using
+// `panic`. See https://github.com/rust-lang/cargo/issues/5444
+#[ignore]
 #[test]
 fn profile_selection_build_all_targets_release() {
     let p = all_target_project();
