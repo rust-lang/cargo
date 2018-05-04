@@ -3,6 +3,7 @@ rust:
   - nightly
 script:
   - cargo test --all
+  - cargo test --all -- --ignored
 notifications:
   email:
     on_success: never

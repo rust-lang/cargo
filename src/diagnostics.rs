@@ -1,5 +1,5 @@
 //! Rustc Diagnostic JSON Output
-//! 
+//!
 //! The following data types are copied from [rust-lang/rust](https://github.com/rust-lang/rust/blob/de78655bca47cac8e783dbb563e7e5c25c1fae40/src/libsyntax/json.rs)
 
 #[derive(Deserialize, Debug)]
@@ -21,8 +21,8 @@ pub struct Diagnostic {
 #[derive(Deserialize, Debug)]
 pub struct DiagnosticSpan {
     pub file_name: String,
-    byte_start: u32,
-    byte_end: u32,
+    pub byte_start: u32,
+    pub byte_end: u32,
     /// 1-based.
     pub line_start: usize,
     pub line_end: usize,

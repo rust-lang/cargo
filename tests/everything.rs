@@ -15,7 +15,7 @@ use std::collections::HashSet;
 use std::process::Output;
 use tempdir::TempDir;
 
-use rustfix::{Replacement, apply_suggestions};
+use rustfix::apply_suggestions;
 
 fn compile(file: &Path) -> Result<Output, Box<Error>> {
     let tmp = TempDir::new("rustfix-tests")?;
@@ -23,6 +23,7 @@ fn compile(file: &Path) -> Result<Output, Box<Error>> {
         "rustc", file,
         "--error-format=pretty-json", "-Zunstable-options", "--emit=metadata",
         "--crate-name=rustfix_test",
+        "-Zsuggestion-applicability",
         "--out-dir", tmp.path()
     );
     let res = better_call_clippy
@@ -101,7 +102,7 @@ fn test_rustfix_with_file<P: AsRef<Path>>(file: P) -> Result<(), Box<Error>> {
         "got unexpected suggestions from clippy",
     );
 
-    let fixed = apply_suggestions(&code, &suggestions);
+    let fixed = apply_suggestions(&code, &suggestions)?;
 
     if std::env::var("RUSTFIX_TEST_RECORD_FIXED_RUST").is_ok() {
         use std::io::Write;
@@ -110,7 +111,7 @@ fn test_rustfix_with_file<P: AsRef<Path>>(file: P) -> Result<(), Box<Error>> {
     }
 
     let expected_fixed = read_file(&fixed_file)?;
-    assert_eq!(fixed.trim(), expected_fixed.trim(), "file doesn't look fixed");
+    assert_eq!(fixed.trim(), expected_fixed.trim(), "file {} doesn't look fixed", file.display());
 
     compiles_without_errors(&fixed_file)?;
 
