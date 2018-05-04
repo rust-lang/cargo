@@ -149,11 +149,15 @@ fn rustfix_crate(rustc: &Path, filename: &str) -> Result<(), Error> {
         // we would do with multiple locations.
         let (file_name, range) = match suggestion.snippets.get(0) {
             Some(s) => (s.file_name.clone(), s.line_range),
-            None => continue,
+            None => {
+                trace!("rejecting as it has no snippets {:?}", suggestion);
+                continue
+            }
         };
         if !suggestion.snippets.iter().all(|s| {
             s.file_name == file_name && s.line_range == range
         }) {
+            trace!("rejecting as it spans mutliple files {:?}", suggestion);
             continue
         }
 
@@ -171,6 +175,8 @@ fn rustfix_crate(rustc: &Path, filename: &str) -> Result<(), Error> {
             warn!("failed to read `{}`: {}", file, e);
             continue
         }
+        debug!("applying {} fixes to {}", suggestions.len(), file);
+
         let new_code = rustfix::apply_suggestions(&code, &suggestions);
         File::create(&file)
             .and_then(|mut f| f.write_all(new_code.as_bytes()))
