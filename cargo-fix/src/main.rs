@@ -105,6 +105,11 @@ fn cargo_fix_rustc() -> Result<(), Error> {
 }
 
 fn rustfix_crate(rustc: &Path, filename: &str) -> Result<(), Error> {
+    // If not empty, filter by these lints
+    //
+    // TODO: Implement a way to specify this
+    let only = HashSet::new();
+
     // First up we want to make sure that each crate is only checked by one
     // process at a time. If two invocations concurrently check a crate then
     // it's likely to corrupt it.
@@ -125,7 +130,6 @@ fn rustfix_crate(rustc: &Path, filename: &str) -> Result<(), Error> {
     // there are compiler errors.
     let stderr = str::from_utf8(&output.stderr)
         .map_err(|_| format_err!("failed to parse rustc stderr as utf-8"))?;
-    let only = HashSet::new();
     let suggestions = stderr.lines()
         .filter(|x| !x.is_empty())
 
