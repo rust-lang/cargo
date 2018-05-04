@@ -3833,3 +3833,68 @@ fn rename_with_link_search_path() {
         ),
     );
 }
+
+#[test]
+fn optional_build_script_dep() {
+    let p = project("foo")
+        .file(
+            "Cargo.toml",
+            r#"
+                [project]
+                name = "foo"
+                version = "0.5.0"
+                authors = []
+
+                [dependencies]
+                bar = { path = "bar", optional = true }
+
+                [build-dependencies]
+                bar = { path = "bar", optional = true }
+            "#,
+        )
+        .file("build.rs", r#"
+            #[cfg(feature = "bar")]
+            extern crate bar;
+
+            fn main() {
+                #[cfg(feature = "bar")] {
+                    println!("cargo:rustc-env=FOO={}", bar::bar());
+                    return
+                }
+                println!("cargo:rustc-env=FOO=0");
+            }
+        "#)
+        .file(
+            "src/main.rs",
+            r#"
+                #[cfg(feature = "bar")]
+                extern crate bar;
+
+                fn main() {
+                    println!("{}", env!("FOO"));
+                }
+            "#,
+        )
+        .file(
+            "bar/Cargo.toml",
+            r#"
+                [project]
+                name = "bar"
+                version = "0.5.0"
+                authors = []
+            "#,
+        )
+        .file(
+            "bar/src/lib.rs",
+            r#"
+                pub fn bar() -> u32 { 1 }
+            "#,
+        );
+    let p = p.build();
+
+    assert_that(p.cargo("run"), execs().with_status(0).with_stdout("0\n"));
+    assert_that(
+        p.cargo("run --features bar"),
+        execs().with_status(0).with_stdout("1\n"),
+    );
+}
