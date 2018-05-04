@@ -3,6 +3,7 @@ use std::fs::{self, File};
 use std::io::prelude::*;
 use std::path::PathBuf;
 
+use cargo::util::paths::remove_dir_all;
 use cargotest::{rustc_host, sleep_ms};
 use cargotest::support::{cross_compile, execs, project};
 use cargotest::support::paths::CargoPathExt;
@@ -3809,7 +3810,8 @@ fn rename_with_link_search_path() {
         &root.join("foo.dll.lib"),
         p2.root().join("foo.dll.lib"),
     ));
-    fs::remove_dir_all(p.root()).unwrap();
+    remove_dir_all(p.root())
+        .unwrap();
 
     // Everything should work the first time
     assert_that(p2.cargo("run"), execs().with_status(0));
