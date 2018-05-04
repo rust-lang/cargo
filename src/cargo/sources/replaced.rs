@@ -1,4 +1,4 @@
-use core::{Dependency, Package, PackageId, Registry, Source, SourceId, Summary};
+use core::{Dependency, Package, PackageId, Source, SourceId, Summary};
 use util::errors::{CargoResult, CargoResultExt};
 
 pub struct ReplacedSource<'cfg> {
@@ -31,12 +31,6 @@ impl<'cfg> ReplacedSource<'cfg> {
             )
             .chain_err(|| format!("failed to query replaced source {}", self.to_replace))?;
         Ok(())
-    }
-}
-
-impl<'cfg> Registry for ReplacedSource<'cfg> {
-    fn query(&mut self, dep: &Dependency, f: &mut FnMut(Summary)) -> CargoResult<()> {
-        self.query(dep, f)
     }
 }
 

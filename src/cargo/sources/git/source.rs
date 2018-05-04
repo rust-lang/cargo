@@ -4,7 +4,7 @@ use url::Url;
 
 use core::source::{Source, SourceId};
 use core::GitReference;
-use core::{Dependency, Package, PackageId, Registry, Summary};
+use core::{Dependency, Package, PackageId, Summary};
 use util::Config;
 use util::errors::CargoResult;
 use util::hex::short_hash;
@@ -128,12 +128,6 @@ impl<'cfg> Debug for GitSource<'cfg> {
             Some(s) => write!(f, " ({})", s),
             None => Ok(()),
         }
-    }
-}
-
-impl<'cfg> Registry for GitSource<'cfg> {
-    fn query(&mut self, dep: &Dependency, f: &mut FnMut(Summary)) -> CargoResult<()> {
-        self.query(dep, f)
     }
 }
 
