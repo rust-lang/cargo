@@ -187,18 +187,23 @@ impl Context {
         } else {
             vec![]
         };
-        let mut reqs = build_requirements(s, method, &values)?;
+        let reqs = build_requirements(s, method, &values)?;
         let mut ret = Vec::new();
+        let mut used_features = HashSet::new();
+        let default_dep = (false, Vec::new());
 
         // Next, collect all actually enabled dependencies and their features.
         for dep in deps {
-            // Skip optional dependencies, but not those enabled through a feature
+            // Skip optional dependencies, but not those enabled through a
+            // feature
             if dep.is_optional() && !reqs.deps.contains_key(&*dep.name()) {
                 continue;
             }
-            // So we want this dependency.  Move the features we want from `feature_deps`
-            // to `ret`.
-            let base = reqs.deps.remove(&*dep.name()).unwrap_or((false, vec![]));
+            // So we want this dependency. Move the features we want from
+            // `feature_deps` to `ret` and register ourselves as using this
+            // name.
+            let base = reqs.deps.get(&*dep.name()).unwrap_or(&default_dep);
+            used_features.insert(dep.name().as_str());
             if !dep.is_optional() && base.0 {
                 self.warnings.push(format!(
                     "Package `{}` does not have feature `{}`. It has a required dependency \
@@ -209,7 +214,7 @@ impl Context {
                     dep.name()
                 ));
             }
-            let mut base = base.1;
+            let mut base = base.1.clone();
             base.extend(dep.features().iter());
             for feature in base.iter() {
                 if feature.contains('/') {
@@ -221,12 +226,16 @@ impl Context {
             ret.push((dep.clone(), base));
         }
 
-        // Any remaining entries in feature_deps are bugs in that the package does not actually
-        // have those dependencies.  We classified them as dependencies in the first place
-        // because there is no such feature, either.
-        if !reqs.deps.is_empty() {
-            let unknown = reqs.deps.keys().map(|s| &s[..]).collect::<Vec<&str>>();
-            let features = unknown.join(", ");
+        // Any entries in `reqs.dep` which weren't used are bugs in that the
+        // package does not actually have those dependencies. We classified
+        // them as dependencies in the first place because there is no such
+        // feature, either.
+        let remaining = reqs.deps.keys()
+            .cloned()
+            .filter(|s| !used_features.contains(s))
+            .collect::<Vec<_>>();
+        if !remaining.is_empty() {
+            let features = remaining.join(", ");
             return Err(match parent {
                 None => format_err!(
                     "Package `{}` does not have these features: `{}`",
