@@ -8,11 +8,17 @@ repository = "https://github.com/killercup/rustfix"
 documentation = "https://docs.rs/rustfix"
 readme = "README.md"
 
+[[bin]]
+name = "cargo-fix"
+test = false
+
 [dependencies]
-clap = "2.9.2"
-colored = "1.2.0"
-quick-error = "1.2.1"
-serde = "1.0"
-serde_json = "1.0"
-serde_derive = "1.0"
-rustfix = "0.2.0"
+failure = "0.1"
+rustfix = { path = "..", version = "0.2" }
+serde_json = "1"
+log = "0.4"
+env_logger = { version = "0.5", default-features = false }
+
+[dev-dependencies]
+difference = "2"
+url = "1"
