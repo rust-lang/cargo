@@ -87,3 +87,16 @@ fn tricky_ampersand() {
         .stderr(stderr)
         .run();
 }
+
+#[test]
+fn preserve_line_endings() {
+    let p = project()
+        .file("src/lib.rs", "\
+            fn add(a: &u32) -> u32 { a + 1 }\r\n\
+            pub fn foo() -> u32 { add(1) }\r\n\
+        ")
+        .build();
+
+    p.expect_cmd("cargo fix").run();
+    assert!(p.read("src/lib.rs").contains("\r\n"));
+}

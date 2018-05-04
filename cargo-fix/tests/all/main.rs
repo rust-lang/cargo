@@ -2,8 +2,8 @@ extern crate difference;
 extern crate url;
 
 use std::env;
-use std::fs;
-use std::io::Write;
+use std::fs::{self, File};
+use std::io::{Read, Write};
 use std::path::{Path, PathBuf};
 use std::process::Command;
 use std::str;
@@ -83,6 +83,15 @@ impl Project {
             ran: false,
             cwd: None,
         }
+    }
+
+    fn read(&self, path: &str) -> String {
+        let mut ret = String::new();
+        File::open(self.root.join(path))
+            .unwrap()
+            .read_to_string(&mut ret)
+            .unwrap();
+        return ret
     }
 }
 
