@@ -36,15 +36,6 @@ impl<'cfg> DirectorySource<'cfg> {
             packages: HashMap::new(),
         }
     }
-
-    fn query(&mut self, dep: &Dependency, f: &mut FnMut(Summary)) -> CargoResult<()> {
-        let packages = self.packages.values().map(|p| &p.0);
-        let matches = packages.filter(|pkg| dep.matches(pkg.summary()));
-        for summary in matches.map(|pkg| pkg.summary().clone()) {
-            f(summary);
-        }
-        Ok(())
-    }
 }
 
 impl<'cfg> Debug for DirectorySource<'cfg> {
@@ -67,7 +58,12 @@ impl<'cfg> Source for DirectorySource<'cfg> {
     }
 
     fn query(&mut self, dep: &Dependency, f: &mut FnMut(Summary)) -> CargoResult<()> {
-        self.query(dep, f)
+        let packages = self.packages.values().map(|p| &p.0);
+        let matches = packages.filter(|pkg| dep.matches(pkg.summary()));
+        for summary in matches.map(|pkg| pkg.summary().clone()) {
+            f(summary);
+        }
+        Ok(())
     }
 
     fn update(&mut self) -> CargoResult<()> {

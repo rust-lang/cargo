@@ -19,19 +19,6 @@ impl<'cfg> ReplacedSource<'cfg> {
             inner: src,
         }
     }
-
-    fn query(&mut self, dep: &Dependency, f: &mut FnMut(Summary)) -> CargoResult<()> {
-        let (replace_with, to_replace) = (&self.replace_with, &self.to_replace);
-        let dep = dep.clone().map_source(to_replace, replace_with);
-
-        self.inner
-            .query(
-                &dep,
-                &mut |summary| f(summary.map_source(replace_with, to_replace)),
-            )
-            .chain_err(|| format!("failed to query replaced source {}", self.to_replace))?;
-        Ok(())
-    }
 }
 
 impl<'cfg> Source for ReplacedSource<'cfg> {
@@ -48,7 +35,16 @@ impl<'cfg> Source for ReplacedSource<'cfg> {
     }
 
     fn query(&mut self, dep: &Dependency, f: &mut FnMut(Summary)) -> CargoResult<()> {
-        self.query(dep, f)
+        let (replace_with, to_replace) = (&self.replace_with, &self.to_replace);
+        let dep = dep.clone().map_source(to_replace, replace_with);
+
+        self.inner
+            .query(
+                &dep,
+                &mut |summary| f(summary.map_source(replace_with, to_replace)),
+            )
+            .chain_err(|| format!("failed to query replaced source {}", self.to_replace))?;
+        Ok(())
     }
 
     fn update(&mut self) -> CargoResult<()> {
