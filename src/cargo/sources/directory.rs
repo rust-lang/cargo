@@ -8,7 +8,7 @@ use hex;
 
 use serde_json;
 
-use core::{Dependency, Package, PackageId, Registry, Source, SourceId, Summary};
+use core::{Dependency, Package, PackageId, Source, SourceId, Summary};
 use sources::PathSource;
 use util::{Config, Sha256};
 use util::errors::{CargoResult, CargoResultExt};
@@ -50,12 +50,6 @@ impl<'cfg> DirectorySource<'cfg> {
 impl<'cfg> Debug for DirectorySource<'cfg> {
     fn fmt(&self, f: &mut Formatter) -> fmt::Result {
         write!(f, "DirectorySource {{ root: {:?} }}", self.root)
-    }
-}
-
-impl<'cfg> Registry for DirectorySource<'cfg> {
-    fn query(&mut self, dep: &Dependency, f: &mut FnMut(Summary)) -> CargoResult<()> {
-        self.query(dep, f)
     }
 }
 

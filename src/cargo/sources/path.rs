@@ -8,7 +8,7 @@ use glob::Pattern;
 use ignore::Match;
 use ignore::gitignore::GitignoreBuilder;
 
-use core::{Dependency, Package, PackageId, Registry, Source, SourceId, Summary};
+use core::{Dependency, Package, PackageId, Source, SourceId, Summary};
 use ops;
 use util::{self, internal, CargoResult};
 use util::paths;
@@ -481,12 +481,6 @@ impl<'cfg> PathSource<'cfg> {
 impl<'cfg> Debug for PathSource<'cfg> {
     fn fmt(&self, f: &mut Formatter) -> fmt::Result {
         write!(f, "the paths source")
-    }
-}
-
-impl<'cfg> Registry for PathSource<'cfg> {
-    fn query(&mut self, dep: &Dependency, f: &mut FnMut(Summary)) -> CargoResult<()> {
-        self.query(dep, f)
     }
 }
 

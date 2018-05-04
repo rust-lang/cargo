@@ -167,7 +167,7 @@ use flate2::read::GzDecoder;
 use semver::Version;
 use tar::Archive;
 
-use core::{Package, PackageId, Registry, Source, SourceId, Summary};
+use core::{Package, PackageId, Source, SourceId, Summary};
 use core::dependency::{Dependency, Kind};
 use sources::PathSource;
 use util::{internal, CargoResult, Config, FileLock, Filesystem};
@@ -438,12 +438,6 @@ impl<'cfg> RegistrySource<'cfg> {
         self.index =
             index::RegistryIndex::new(&self.source_id, path, self.config, self.index_locked);
         Ok(())
-    }
-}
-
-impl<'cfg> Registry for RegistrySource<'cfg> {
-    fn query(&mut self, dep: &Dependency, f: &mut FnMut(Summary)) -> CargoResult<()> {
-        self.query(dep, f)
     }
 }
 
