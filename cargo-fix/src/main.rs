@@ -1,418 +1,187 @@
 #[macro_use]
-extern crate serde_derive;
+extern crate failure;
+extern crate rustfix;
 extern crate serde_json;
 #[macro_use]
-extern crate quick_error;
-#[macro_use]
-extern crate clap;
-extern crate colored;
+extern crate log;
 
-extern crate rustfix;
-
+use std::collections::{HashSet, HashMap};
+use std::env;
 use std::fs::File;
 use std::io::{Read, Write};
-use std::error::Error;
-use std::process::Command;
-use std::collections::HashSet;
+use std::process::{self, Command, ExitStatus};
+use std::str;
+use std::path::Path;
 
-use colored::Colorize;
-use clap::{Arg, App};
-
-use std::str::FromStr;
-
-use rustfix::{Suggestion, Replacement};
 use rustfix::diagnostics::Diagnostic;
+use failure::{Error, ResultExt};
 
-const USER_OPTIONS: &str = "What do you want to do? \
-    [0-9] | [r]eplace | [s]kip | save and [q]uit | [a]bort (without saving)";
+mod lock;
 
 fn main() {
-    let program = try_main();
-    match program {
-        Ok(_) => std::process::exit(0),
-        Err(ProgramError::UserAbort) => {
-            writeln!(std::io::stdout(), "{}", ProgramError::UserAbort).unwrap();
-            std::process::exit(0);
-        }
-        Err(error) => {
-            writeln!(std::io::stderr(), "An error occured: {}", error).unwrap();
-            writeln!(std::io::stderr(), "{:?}", error).unwrap();
-            if let Some(cause) = error.cause() {
-                writeln!(std::io::stderr(), "Cause: {:?}", cause).unwrap();
-            }
-            std::process::exit(1);
-        }
-    }
-}
-
-macro_rules! flush {
-    () => (try!(std::io::stdout().flush());)
-}
-
-/// A list of `--only` aliases
-const ALIASES: &[(&str, &[&str])] = &[
-    ("use", &["E0412"]),
-];
-
-fn try_main() -> Result<(), ProgramError> {
-    // Quickfix to be usable as rustfix as well as cargo-fix
-    let args = if ::std::env::args_os().nth(1).map(|x| &x == "fix").unwrap_or(false) {
-        ::std::env::args_os().skip(1)
+    let result = if env::var("__CARGO_FIX_NOW_RUSTC").is_ok() {
+        cargo_fix_rustc()
     } else {
-        ::std::env::args_os().skip(0)
+        cargo_fix()
     };
-
-    let matches = App::new("cargo-fix")
-        .about("Automatically apply suggestions made by rustc")
-        .version(crate_version!())
-        .arg(Arg::with_name("clippy")
-            .long("clippy")
-            .help("Use `cargo clippy` for suggestions"))
-        .arg(Arg::with_name("yolo")
-            .long("yolo")
-            .help("Automatically apply all unambiguous suggestions"))
-        .arg(Arg::with_name("only")
-            .long("only")
-            .help("Only show errors or lints with the specific id(s) (comma separated)")
-            .use_delimiter(true))
-        .arg(Arg::with_name("file")
-            .long("file")
-            .takes_value(true)
-            .help("Load errors from the given JSON file (produced by `cargo build --message-format=json`)"))
-        .get_matches_from(args);
-
-    let mut extra_args = Vec::new();
-
-    if !matches.is_present("clippy") {
-        extra_args.push("-Aclippy");
-    }
-
-    let mode = if matches.is_present("yolo") {
-        AutofixMode::Yolo
-    } else {
-        AutofixMode::None
+    let err = match result {
+        Ok(()) => return,
+        Err(e) => e,
     };
+    eprintln!("error: {}", err);
+    for cause in err.causes().skip(1) {
+        eprintln!("\tcaused by: {}", cause);
+    }
+    process::exit(102);
+}
 
-    let mut only: HashSet<String> = matches
-        .values_of("only")
-        .map_or(HashSet::new(), |values| {
-            values.map(ToString::to_string).collect()
-        });
+fn cargo_fix() -> Result<(), Error> {
+    // Spin up our lock server which our subprocesses will use to synchronize
+    // fixes.
+    let _lockserver = lock::Server::new()?.start()?;
 
-    for alias in ALIASES {
-        if only.remove(alias.0) {
-            for alias in alias.1 {
-                only.insert(alias.to_string());
-            }
+    let cargo = env::var_os("CARGO").unwrap_or("cargo".into());
+    let mut cmd = Command::new(&cargo);
+    // TODO: shouldn't hardcode `check` here, we want to allow things like
+    // `cargo fix bench` or something like that
+    //
+    // TODO: somehow we need to force `check` to actually do something here, if
+    // `cargo check` was previously run it won't actually do anything again.
+    cmd.arg("check");
+    cmd.args(env::args().skip(2)); // skip `cmd-fix fix`
+
+    // Override the rustc compiler as ourselves. That way whenever rustc would
+    // run we run instead and have an opportunity to inject fixes.
+    let me = env::current_exe()
+        .with_context(|_| "failed to learn about path to current exe")?;
+    cmd.env("RUSTC", &me)
+        .env("__CARGO_FIX_NOW_RUSTC", "1");
+    if let Some(rustc) = env::var_os("RUSTC") {
+        cmd.env("RUSTC_ORIGINAL", rustc);
+    }
+
+    // An now execute all of Cargo! This'll fix everything along the way.
+    //
+    // TODO: we probably want to do something fancy here like collect results
+    // from the client processes and print out a summary of what happened.
+    let status = cmd.status()
+        .with_context(|e| {
+            format!("failed to execute `{}`: {}", cargo.to_string_lossy(), e)
+        })?;
+    exit_with(status);
+}
+
+fn cargo_fix_rustc() -> Result<(), Error> {
+    // Try to figure out what we're compiling by looking for a rust-like file
+    // that exists.
+    let filename = env::args()
+        .skip(1)
+        .filter(|s| s.ends_with(".rs"))
+        .filter(|s| Path::new(s).exists())
+        .next();
+
+    let rustc = env::var_os("RUSTC_ORIGINAL").unwrap_or("rustc".into());
+
+    // Our goal is to fix only the crates that the end user is interested in.
+    // That's very likely to only mean the crates in the workspace the user is
+    // working on, not random crates.io crates.
+    //
+    // To that end we only actually try to fix things if it looks like we're
+    // compiling a Rust file and it *doesn't* have an absolute filename. That's
+    // not the best heuristic but matches what Cargo does today at least.
+    if let Some(path) = filename {
+        if !Path::new(&path).is_absolute() {
+            rustfix_crate(rustc.as_ref(), &path)?;
         }
     }
 
-    // Get JSON output from rustc...
-    let json = if let Some(file) = matches.value_of("file") {
-        let mut f = File::open(file)?;
-        let mut j = "".into();
-        f.read_to_string(&mut j)?;
-        j
-    } else {
-        get_json(&extra_args, matches.is_present("clippy"))?
-    };
+    // TODO: if we executed rustfix above and the previous rustc invocation was
+    // successful and this `status()` is not, then we should revert all fixes
+    // we applied, present a scary warning, and then move on.
+    let mut cmd = Command::new(&rustc);
+    cmd.args(env::args().skip(1));
+    exit_with(cmd.status().with_context(|_| "failed to spawn rustc")?);
 
-    let suggestions: Vec<Suggestion> = json.lines()
-        .filter(not_empty)
-        // Convert JSON string (and eat parsing errors)
-        .flat_map(|line| serde_json::from_str::<CargoMessage>(line))
-        // One diagnostic line might have multiple suggestions
-        .filter_map(|cargo_msg| rustfix::collect_suggestions(&cargo_msg.message, &only))
-        .collect();
-
-    try!(handle_suggestions(suggestions, mode));
-
-    Ok(())
 }
 
-#[derive(Deserialize)]
-struct CargoMessage {
-    message: Diagnostic,
-}
+fn rustfix_crate(rustc: &Path, filename: &str) -> Result<(), Error> {
+    // First up we want to make sure that each crate is only checked by one
+    // process at a time. If two invocations concurrently check a crate then
+    // it's likely to corrupt it.
+    //
+    // Currently we do this by assigning the name on our lock to the first
+    // argument that looks like a Rust file.
+    let _lock = lock::Client::lock(filename)?;
 
-fn get_json(extra_args: &[&str], clippy: bool) -> Result<String, ProgramError> {
-    let build_cmd = if clippy {
-        "clippy"
-    } else {
-        "rustc"
-    };
-    let output = try!(Command::new("cargo")
-        .args(&[build_cmd, "--message-format", "json"])
-        .arg("--")
-        .args(extra_args)
-        .output());
+    let mut cmd = Command::new(&rustc);
+    cmd.args(env::args().skip(1));
+    cmd.arg("--error-format=json");
+    let context = format!("failed to execute `{}`", rustc.to_string_lossy());
+    let output = cmd.output().context(context.clone())?;
 
-    Ok(String::from_utf8(output.stdout)?)
-}
+    // Sift through the output of the compiler to look for JSON messages
+    // indicating fixes that we can apply. Note that we *do not* look at the
+    // exit status here, that's intentional! We want to apply fixes even if
+    // there are compiler errors.
+    let stderr = str::from_utf8(&output.stderr)
+        .map_err(|_| format_err!("failed to parse rustc stderr as utf-8"))?;
+    let only = HashSet::new();
+    let suggestions = stderr.lines()
+        .filter(|x| !x.is_empty())
 
-#[derive(PartialEq, Eq, Debug, Clone, Copy)]
-enum AutofixMode {
-    /// Do not apply any fixes automatically
-    None,
-    // /// Only apply suggestions of a whitelist of lints
-    // Whitelist,
-    // /// Check the confidence flag supplied by rustc
-    // Confidence,
-    /// Automatically apply all unambiguous suggestions
-    Yolo,
-}
+        // Parse each line of stderr ignoring errors as they may not all be json
+        .filter_map(|line| serde_json::from_str::<Diagnostic>(line).ok())
 
-fn prelude(suggestion: &Replacement) {
-    let snippet = &suggestion.snippet;
-    if snippet.text.1.is_empty() {
-        // Check whether this suggestion wants to be inserted before or after another line
-        let wants_to_be_on_own_line = suggestion.replacement.ends_with('\n')
-                                   || suggestion.replacement.starts_with('\n');
-        if wants_to_be_on_own_line {
-            println!("{}", "Insert line:".yellow().bold());
-        } else {
-            println!("{}", "At:".yellow().bold());
-            println!(
-                "{lead}{text}{tail}",
-                lead = indent(4, &snippet.text.0),
-                text = "v".red(),
-                tail = snippet.text.2,
-            );
-            println!("{}\n", indent(snippet.text.0.len() as u32, "^").red());
-            println!("{}\n", "insert:".yellow().bold());
+        // From each diagnostic try to extract suggestions from rustc
+        .filter_map(|diag| rustfix::collect_suggestions(&diag, &only));
+
+    // Collect suggestions by file so we can apply them one at a time later.
+    let mut file_map = HashMap::new();
+    for suggestion in suggestions {
+        // Make sure we've got a file associated with this suggestion and all
+        // snippets point to the same location. Right now it's not clear what
+        // we would do with multiple locations.
+        let (file_name, range) = match suggestion.snippets.get(0) {
+            Some(s) => (s.file_name.clone(), s.line_range),
+            None => continue,
+        };
+        if !suggestion.snippets.iter().all(|s| {
+            s.file_name == file_name && s.line_range == range
+        }) {
+            continue
         }
-    } else {
-        println!("{}\n", "Replace:".yellow().bold());
-        println!(
-            "{lead}{text}{tail}\n\n\
-            {with}\n",
-            with = "with:".yellow().bold(),
-            lead = indent(4, &snippet.text.0),
-            text = snippet.text.1.red(),
-            tail = snippet.text.2,
-        );
-    }
-}
 
-fn handle_suggestions(
-    suggestions: Vec<Suggestion>,
-    mode: AutofixMode,
-) -> Result<(), ProgramError> {
-    let mut accepted_suggestions: Vec<Replacement> = vec![];
-
-    if suggestions.is_empty() {
-        println!("I don't have any suggestions for you right now. Check back later!");
-        return Ok(());
+        file_map.entry(file_name)
+            .or_insert_with(Vec::new)
+            .push(suggestion);
     }
 
-    'suggestions: for suggestion in suggestions {
-        print!("\n\n{info}: {message}\n",
-            info = "Info".green().bold(),
-            message = split_at_lint_name(&suggestion.message));
-        for snippet in suggestion.snippets {
-            print!("{arrow} {file}:{range}\n",
-                arrow = "  -->".blue().bold(),
-                file = snippet.file_name,
-                range = snippet.line_range);
+    for (file, suggestions) in file_map {
+        // Attempt to read the source code for this file. If this fails then
+        // that'd be pretty surprising, so log a message and otherwise keep
+        // going.
+        let mut code = String::new();
+        if let Err(e) = File::open(&file).and_then(|mut f| f.read_to_string(&mut code)) {
+            warn!("failed to read `{}`: {}", file, e);
+            continue
         }
-
-        let mut i = 0;
-        for solution in &suggestion.solutions {
-            println!("\n{}", solution.message);
-
-            // check whether we can squash all suggestions into a list
-            if solution.replacements.len() > 1 {
-                let first = solution.replacements[0].clone();
-                let all_suggestions_replace_the_same_span = solution
-                    .replacements
-                    .iter()
-                    .all(|s| first.snippet.file_name == s.snippet.file_name
-                         && first.snippet.line_range == s.snippet.line_range);
-                if all_suggestions_replace_the_same_span {
-                    prelude(&first);
-                    for suggestion in &solution.replacements {
-                        println!("[{}]: {}", i, suggestion.replacement.trim());
-                        i += 1;
-                    }
-                    continue;
-                }
-            }
-            for suggestion in &solution.replacements {
-                print!("[{}]: ", i);
-                prelude(suggestion);
-                println!("{}", indent(4, &suggestion.replacement));
-                i += 1;
-            }
-        }
-        println!();
-
-        if mode == AutofixMode::Yolo && suggestion.solutions.len() == 1 && suggestion.solutions[0].replacements.len() == 1 {
-            let mut solutions = suggestion.solutions;
-            let mut replacements = solutions.remove(0).replacements;
-            accepted_suggestions.push(replacements.remove(0));
-            println!("automatically applying suggestion (--yolo)");
-            continue 'suggestions;
-        }
-
-        'userinput: loop {
-            print!("{arrow} {user_options}\n\
-                {prompt} ",
-                arrow = "==>".green().bold(),
-                prompt = "  >".green().bold(),
-                user_options = USER_OPTIONS.green());
-
-            flush!();
-            let mut input = String::new();
-            try!(std::io::stdin().read_line(&mut input));
-
-            match input.trim() {
-                "s" => {
-                    println!("Skipped.");
-                    continue 'suggestions;
-                }
-                "q" => {
-                    println!("Thanks for playing!");
-                    break 'suggestions;
-                }
-                "a" => {
-                    return Err(ProgramError::UserAbort);
-                }
-                "r" => {
-                    if suggestion.solutions.len() == 1 && suggestion.solutions[0].replacements.len() == 1 {
-                        let mut solutions = suggestion.solutions;
-                        accepted_suggestions.push(solutions.remove(0).replacements.remove(0));
-                        println!("Suggestion accepted. I'll remember that and apply it later.");
-                        continue 'suggestions;
-                    } else {
-                        println!("{error}: multiple suggestions apply, please pick a number",
-                            error = "Error".red().bold());
-                    }
-                }
-                s => {
-                    if let Ok(i) = usize::from_str(s) {
-                        let replacement = suggestion.solutions
-                            .iter()
-                            .flat_map(|sol| sol.replacements.iter())
-                            .nth(i);
-                        if let Some(replacement) = replacement {
-                            accepted_suggestions.push(replacement.clone());
-                            println!("Suggestion accepted. I'll remember that and apply it later.");
-                            continue 'suggestions;
-                        } else {
-                            println!("{error}: {i} is not a valid suggestion index",
-                                error = "Error".red().bold(),
-                                i = i);
-                        }
-                    } else {
-                        println!("{error}: I didn't quite get that. {user_options}",
-                                    error = "Error".red().bold(),
-                                    user_options = USER_OPTIONS);
-                        continue 'userinput;
-                    }
-                }
-            }
-        }
-    }
-
-    if !accepted_suggestions.is_empty() {
-        println!("Good work. Let me just apply these {} changes!",
-                 accepted_suggestions.len());
-
-        for suggestion in accepted_suggestions.iter().rev() {
-            try!(apply_suggestion(suggestion));
-
-            print!(".");
-            flush!();
-        }
-
-        println!("\nDone.");
+        let new_code = rustfix::apply_suggestions(&code, &suggestions);
+        File::create(&file)
+            .and_then(|mut f| f.write_all(new_code.as_bytes()))
+            .with_context(|_| format!("failed to write file `{}`", file))?;
     }
 
     Ok(())
 }
 
-quick_error! {
-    /// All possible errors in programm lifecycle
-    #[derive(Debug)]
-    pub enum ProgramError {
-        UserAbort {
-            display("Let's get outta here!")
-        }
-        /// Missing File
-        NoFile {
-            display("No input file given")
-        }
-        SubcommandError(subcommand: String, output: String) {
-            display("Error executing subcommand `{}`", subcommand)
-            description(output)
-        }
-        /// Error while dealing with file or stdin/stdout
-        Io(err: std::io::Error) {
-            from()
-            cause(err)
-            display("I/O error")
-            description(err.description())
-        }
-        Utf8Error(err: std::string::FromUtf8Error) {
-            from()
-            display("Error reading input as UTF-8")
-        }
-        /// Error with deserialization
-        Serde(err: serde_json::Error) {
-            from()
-            cause(err)
-            display("Serde JSON error")
-            description(err.description())
+fn exit_with(status: ExitStatus) -> ! {
+    #[cfg(unix)]
+    {
+        use std::os::unix::prelude::*;
+        if let Some(signal) = status.signal() {
+            eprintln!("child failed with signal `{}`", signal);
+            process::exit(2);
         }
     }
-}
-
-// Helpers
-// -------
-
-fn read_file_to_string(file_name: &str) -> Result<String, std::io::Error> {
-    let mut file = try!(File::open(file_name));
-    let mut buffer = String::new();
-    try!(file.read_to_string(&mut buffer));
-    Ok(buffer)
-}
-
-fn not_empty(s: &&str) -> bool {
-    !s.trim().is_empty()
-}
-
-fn split_at_lint_name(s: &str) -> String {
-    s.split(", #[")
-        .collect::<Vec<_>>()
-        .join("\n      #[") // Length of whitespace == length of "Info: "
-}
-
-fn indent(size: u32, s: &str) -> String {
-    let whitespace: String = std::iter::repeat(' ').take(size as usize).collect();
-
-    s.lines()
-        .map(|l| format!("{}{}", whitespace, l))
-        .collect::<Vec<_>>()
-        .join("\n")
-}
-
-/// Apply suggestion to a file
-///
-/// Please beware of ugly hacks below! Originally, I wanted to replace byte ranges, but sadly the
-/// ranges rustc's JSON output gives me do not correspond to the parts of the file they are meant
-/// to correspond to. So, for now, let's just replace lines!
-///
-/// This function is as stupid as possible. Make sure you call for the replacemnts in one file in
-/// reverse order to not mess up the lines for replacements further down the road.
-fn apply_suggestion(suggestion: &Replacement) -> Result<(), ProgramError> {
-    let mut file_content = try!(read_file_to_string(&suggestion.snippet.file_name));
-    let new_content = rustfix::apply_suggestion(&mut file_content, suggestion);
-
-    let mut file = try!(File::create(&suggestion.snippet.file_name));
-    let new_content = new_content.as_bytes();
-
-    try!(file.set_len(new_content.len() as u64));
-    try!(file.write_all(new_content));
-
-    Ok(())
+    process::exit(status.code().unwrap_or(3));
 }
