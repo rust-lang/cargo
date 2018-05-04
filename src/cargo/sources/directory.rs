@@ -8,7 +8,7 @@ use hex;
 
 use serde_json;
 
-use core::{Dependency, Package, PackageId, Registry, Source, SourceId, Summary};
+use core::{Dependency, Package, PackageId, Source, SourceId, Summary};
 use sources::PathSource;
 use util::{Config, Sha256};
 use util::errors::{CargoResult, CargoResultExt};
@@ -44,7 +44,7 @@ impl<'cfg> Debug for DirectorySource<'cfg> {
     }
 }
 
-impl<'cfg> Registry for DirectorySource<'cfg> {
+impl<'cfg> Source for DirectorySource<'cfg> {
     fn query(&mut self, dep: &Dependency, f: &mut FnMut(Summary)) -> CargoResult<()> {
         let packages = self.packages.values().map(|p| &p.0);
         let matches = packages.filter(|pkg| dep.matches(pkg.summary()));
@@ -61,9 +61,7 @@ impl<'cfg> Registry for DirectorySource<'cfg> {
     fn requires_precise(&self) -> bool {
         true
     }
-}
 
-impl<'cfg> Source for DirectorySource<'cfg> {
     fn source_id(&self) -> &SourceId {
         &self.source_id
     }

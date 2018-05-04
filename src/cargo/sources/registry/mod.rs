@@ -167,7 +167,7 @@ use flate2::read::GzDecoder;
 use semver::Version;
 use tar::Archive;
 
-use core::{Package, PackageId, Registry, Source, SourceId, Summary};
+use core::{Package, PackageId, Source, SourceId, Summary};
 use core::dependency::{Dependency, Kind};
 use sources::PathSource;
 use util::{internal, CargoResult, Config, FileLock, Filesystem};
@@ -420,7 +420,7 @@ impl<'cfg> RegistrySource<'cfg> {
     }
 }
 
-impl<'cfg> Registry for RegistrySource<'cfg> {
+impl<'cfg> Source for RegistrySource<'cfg> {
     fn query(&mut self, dep: &Dependency, f: &mut FnMut(Summary)) -> CargoResult<()> {
         // If this is a precise dependency, then it came from a lockfile and in
         // theory the registry is known to contain this version. If, however, we
@@ -449,9 +449,7 @@ impl<'cfg> Registry for RegistrySource<'cfg> {
     fn requires_precise(&self) -> bool {
         false
     }
-}
 
-impl<'cfg> Source for RegistrySource<'cfg> {
     fn source_id(&self) -> &SourceId {
         &self.source_id
     }

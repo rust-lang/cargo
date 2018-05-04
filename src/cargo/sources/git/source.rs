@@ -4,7 +4,7 @@ use url::Url;
 
 use core::source::{Source, SourceId};
 use core::GitReference;
-use core::{Dependency, Package, PackageId, Registry, Summary};
+use core::{Dependency, Package, PackageId, Summary};
 use util::Config;
 use util::errors::CargoResult;
 use util::hex::short_hash;
@@ -124,7 +124,7 @@ impl<'cfg> Debug for GitSource<'cfg> {
     }
 }
 
-impl<'cfg> Registry for GitSource<'cfg> {
+impl<'cfg> Source for GitSource<'cfg> {
     fn query(&mut self, dep: &Dependency, f: &mut FnMut(Summary)) -> CargoResult<()> {
         let src = self.path_source
             .as_mut()
@@ -139,9 +139,7 @@ impl<'cfg> Registry for GitSource<'cfg> {
     fn requires_precise(&self) -> bool {
         true
     }
-}
 
-impl<'cfg> Source for GitSource<'cfg> {
     fn source_id(&self) -> &SourceId {
         &self.source_id
     }
