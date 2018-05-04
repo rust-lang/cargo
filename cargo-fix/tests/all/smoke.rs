@@ -10,7 +10,7 @@ fn no_changes_necessary() {
 [CHECKING] foo v0.1.0 (CWD)
 [FINISHED] dev [unoptimized + debuginfo]
 ";
-    p.expect_cmd("cargo fix")
+    p.expect_cmd("cargo-fix fix")
         .stdout("")
         .stderr(stderr)
         .run();
@@ -34,7 +34,7 @@ fn fixes_missing_ampersand() {
 [CHECKING] foo v0.1.0 (CWD)
 [FINISHED] dev [unoptimized + debuginfo]
 ";
-    p.expect_cmd("cargo fix")
+    p.expect_cmd("cargo-fix fix")
         .stdout("")
         .stderr(stderr)
         .run();
@@ -58,7 +58,7 @@ fn fixes_two_missing_ampersands() {
 [CHECKING] foo v0.1.0 (CWD)
 [FINISHED] dev [unoptimized + debuginfo]
 ";
-    p.expect_cmd("cargo fix")
+    p.expect_cmd("cargo-fix fix")
         .stdout("")
         .stderr(stderr)
         .run();
@@ -82,7 +82,7 @@ fn tricky_ampersand() {
 [CHECKING] foo v0.1.0 (CWD)
 [FINISHED] dev [unoptimized + debuginfo]
 ";
-    p.expect_cmd("cargo fix")
+    p.expect_cmd("cargo-fix fix")
         .stdout("")
         .stderr(stderr)
         .run();
@@ -97,7 +97,7 @@ fn preserve_line_endings() {
         ")
         .build();
 
-    p.expect_cmd("cargo fix").run();
+    p.expect_cmd("cargo-fix fix").run();
     assert!(p.read("src/lib.rs").contains("\r\n"));
 }
 
@@ -123,7 +123,7 @@ error: Could not compile `foo`.
 To learn more, run the command again with --verbose.
 ";
 
-    p.expect_cmd("cargo fix")
+    p.expect_cmd("cargo-fix fix")
         .stderr(stderr)
         .status(101)
         .run();

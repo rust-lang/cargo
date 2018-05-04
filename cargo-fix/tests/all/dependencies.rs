@@ -51,7 +51,7 @@ fn fix_path_deps() {
 [CHECKING] foo v0.1.0 (CWD)
 [FINISHED] dev [unoptimized + debuginfo]
 ";
-    p.expect_cmd("cargo fix")
+    p.expect_cmd("cargo-fix fix")
         .stdout("")
         .stderr(stderr)
         .run();
@@ -93,7 +93,7 @@ fn do_not_fix_non_relevant_deps() {
         "#)
         .build();
 
-    p.expect_cmd("cargo fix")
+    p.expect_cmd("cargo-fix fix")
         .cwd("foo")
         .status(101)
         .run();
