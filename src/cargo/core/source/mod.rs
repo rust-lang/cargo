@@ -64,11 +64,6 @@ pub trait Source {
 }
 
 impl<'a, T: Source + ?Sized + 'a> Source for Box<T> {
-    /// Forwards to `Source::source_id`
-    fn source_id(&self) -> &SourceId {
-        (**self).source_id()
-    }
-
     /// Forwards to `Source::supports_checksums`
     fn supports_checksums(&self) -> bool {
         (**self).supports_checksums()
@@ -82,6 +77,11 @@ impl<'a, T: Source + ?Sized + 'a> Source for Box<T> {
     /// Forwards to `Source::query`
     fn query(&mut self, dep: &Dependency, f: &mut FnMut(Summary)) -> CargoResult<()> {
         (**self).query(dep, f)
+    }
+
+    /// Forwards to `Source::source_id`
+    fn source_id(&self) -> &SourceId {
+        (**self).source_id()
     }
 
     /// Forwards to `Source::update`

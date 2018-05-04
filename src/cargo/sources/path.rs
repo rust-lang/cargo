@@ -476,8 +476,13 @@ impl<'cfg> Debug for PathSource<'cfg> {
 }
 
 impl<'cfg> Source for PathSource<'cfg> {
-    fn source_id(&self) -> &SourceId {
-        &self.source_id
+    fn query(&mut self, dep: &Dependency, f: &mut FnMut(Summary)) -> CargoResult<()> {
+        for s in self.packages.iter().map(|p| p.summary()) {
+            if dep.matches(s) {
+                f(s.clone())
+            }
+        }
+        Ok(())
     }
 
     fn supports_checksums(&self) -> bool {
@@ -488,13 +493,8 @@ impl<'cfg> Source for PathSource<'cfg> {
         false
     }
 
-    fn query(&mut self, dep: &Dependency, f: &mut FnMut(Summary)) -> CargoResult<()> {
-        for s in self.packages.iter().map(|p| p.summary()) {
-            if dep.matches(s) {
-                f(s.clone())
-            }
-        }
-        Ok(())
+    fn source_id(&self) -> &SourceId {
+        &self.source_id
     }
 
     fn update(&mut self) -> CargoResult<()> {

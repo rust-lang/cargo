@@ -45,8 +45,13 @@ impl<'cfg> Debug for DirectorySource<'cfg> {
 }
 
 impl<'cfg> Source for DirectorySource<'cfg> {
-    fn source_id(&self) -> &SourceId {
-        &self.source_id
+    fn query(&mut self, dep: &Dependency, f: &mut FnMut(Summary)) -> CargoResult<()> {
+        let packages = self.packages.values().map(|p| &p.0);
+        let matches = packages.filter(|pkg| dep.matches(pkg.summary()));
+        for summary in matches.map(|pkg| pkg.summary().clone()) {
+            f(summary);
+        }
+        Ok(())
     }
 
     fn supports_checksums(&self) -> bool {
@@ -57,13 +62,8 @@ impl<'cfg> Source for DirectorySource<'cfg> {
         true
     }
 
-    fn query(&mut self, dep: &Dependency, f: &mut FnMut(Summary)) -> CargoResult<()> {
-        let packages = self.packages.values().map(|p| &p.0);
-        let matches = packages.filter(|pkg| dep.matches(pkg.summary()));
-        for summary in matches.map(|pkg| pkg.summary().clone()) {
-            f(summary);
-        }
-        Ok(())
+    fn source_id(&self) -> &SourceId {
+        &self.source_id
     }
 
     fn update(&mut self) -> CargoResult<()> {
