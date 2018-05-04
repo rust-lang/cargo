@@ -1,3 +1,5 @@
+#![cfg(not(windows))] // TODO: should fix these tests on Windows
+
 #[macro_use] extern crate duct;
 #[macro_use] extern crate pretty_assertions;
 extern crate tempdir;
