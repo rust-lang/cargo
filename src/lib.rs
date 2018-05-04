@@ -1,8 +1,11 @@
 #[macro_use]
 extern crate serde_derive;
 extern crate serde_json;
+#[macro_use]
 extern crate failure;
-extern crate replace_rs as replace;
+#[cfg(test)]
+#[macro_use]
+extern crate proptest;
 
 use std::collections::HashSet;
 use std::ops::Range;
@@ -11,6 +14,7 @@ use failure::Error;
 
 pub mod diagnostics;
 use diagnostics::{Diagnostic, DiagnosticSpan};
+mod replace;
 
 pub fn get_suggestions_from_json<S: ::std::hash::BuildHasher>(
     input: &str,
