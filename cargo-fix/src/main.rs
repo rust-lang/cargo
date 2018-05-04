@@ -53,7 +53,7 @@ fn cargo_fix() -> Result<(), Error> {
     // Override the rustc compiler as ourselves. That way whenever rustc would
     // run we run instead and have an opportunity to inject fixes.
     let me = env::current_exe()
-        .with_context(|_| "failed to learn about path to current exe")?;
+        .context("failed to learn about path to current exe")?;
     cmd.env("RUSTC", &me)
         .env("__CARGO_FIX_NOW_RUSTC", "1");
     if let Some(rustc) = env::var_os("RUSTC") {
@@ -100,8 +100,7 @@ fn cargo_fix_rustc() -> Result<(), Error> {
     // we applied, present a scary warning, and then move on.
     let mut cmd = Command::new(&rustc);
     cmd.args(env::args().skip(1));
-    exit_with(cmd.status().with_context(|_| "failed to spawn rustc")?);
-
+    exit_with(cmd.status().context("failed to spawn rustc")?);
 }
 
 fn rustfix_crate(rustc: &Path, filename: &str) -> Result<(), Error> {
@@ -121,15 +120,16 @@ fn rustfix_crate(rustc: &Path, filename: &str) -> Result<(), Error> {
     let mut cmd = Command::new(&rustc);
     cmd.args(env::args().skip(1));
     cmd.arg("--error-format=json");
-    let context = format!("failed to execute `{}`", rustc.to_string_lossy());
-    let output = cmd.output().context(context.clone())?;
+    let output = cmd.output()
+        .with_context(|_| format!("failed to execute `{}`", rustc.display()))?;
 
     // Sift through the output of the compiler to look for JSON messages
     // indicating fixes that we can apply. Note that we *do not* look at the
     // exit status here, that's intentional! We want to apply fixes even if
     // there are compiler errors.
     let stderr = str::from_utf8(&output.stderr)
-        .map_err(|_| format_err!("failed to parse rustc stderr as utf-8"))?;
+        .context("failed to parse rustc stderr as utf-8")?;
+
     let suggestions = stderr.lines()
         .filter(|x| !x.is_empty())
 
