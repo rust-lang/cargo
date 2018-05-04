@@ -4,6 +4,7 @@ extern crate rustfix;
 extern crate serde_json;
 #[macro_use]
 extern crate log;
+extern crate env_logger;
 
 use std::collections::{HashSet, HashMap};
 use std::env;
@@ -19,6 +20,7 @@ use failure::{Error, ResultExt};
 mod lock;
 
 fn main() {
+    env_logger::init();
     let result = if env::var("__CARGO_FIX_NOW_RUSTC").is_ok() {
         cargo_fix_rustc()
     } else {
