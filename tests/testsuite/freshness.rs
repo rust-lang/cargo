@@ -502,9 +502,6 @@ fn changing_bin_features_caches_targets() {
 
             [features]
             foo = []
-
-            [profile.dev]
-            debug = false
         "#,
         )
         .file(
@@ -526,7 +523,7 @@ fn changing_bin_features_caches_targets() {
             .with_stderr(
                 "\
 [..]Compiling foo v0.0.1 ([..])
-[FINISHED] dev [unoptimized] target(s) in [..]
+[FINISHED] dev [unoptimized + debuginfo] target(s) in [..]
 [RUNNING] `target[/]debug[/]foo[EXE]`
 ",
             ),
@@ -540,7 +537,7 @@ fn changing_bin_features_caches_targets() {
             .with_stderr(
                 "\
 [..]Compiling foo v0.0.1 ([..])
-[FINISHED] dev [unoptimized] target(s) in [..]
+[FINISHED] dev [unoptimized + debuginfo] target(s) in [..]
 [RUNNING] `target[/]debug[/]foo[EXE]`
 ",
             ),
@@ -555,7 +552,7 @@ fn changing_bin_features_caches_targets() {
             .with_stdout("feature off")
             .with_stderr(
                 "\
-[FINISHED] dev [unoptimized] target(s) in [..]
+[FINISHED] dev [unoptimized + debuginfo] target(s) in [..]
 [RUNNING] `target[/]debug[/]foo[EXE]`
 ",
             ),
@@ -568,7 +565,7 @@ fn changing_bin_features_caches_targets() {
             .with_stdout("feature on")
             .with_stderr(
                 "\
-[FINISHED] dev [unoptimized] target(s) in [..]
+[FINISHED] dev [unoptimized + debuginfo] target(s) in [..]
 [RUNNING] `target[/]debug[/]foo[EXE]`
 ",
             ),
