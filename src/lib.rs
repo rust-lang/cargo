@@ -1,8 +1,13 @@
 #[macro_use]
 extern crate serde_derive;
 extern crate serde_json;
+extern crate failure;
+extern crate replace_rs as replace;
 
 use std::collections::HashSet;
+use std::ops::Range;
+
+use failure::Error;
 
 pub mod diagnostics;
 use diagnostics::{Diagnostic, DiagnosticSpan};
@@ -61,6 +66,7 @@ pub struct Solution {
 pub struct Snippet {
     pub file_name: String,
     pub line_range: LineRange,
+    pub range: Range<usize>,
     /// leading surrounding text, text to replace, trailing surrounding text
     ///
     /// This split is useful for higlighting the part that gets replaced
@@ -109,6 +115,7 @@ fn parse_snippet(span: &DiagnosticSpan) -> Snippet {
                 column: span.column_end,
             },
         },
+        range: (span.byte_start as usize)..(span.byte_end as usize),
         text: (lead, body, tail),
     }
 }
@@ -208,16 +215,22 @@ pub fn apply_suggestion(file_content: &mut String, suggestion: &Replacement) -> 
     new_content
 }
 
-pub fn apply_suggestions(code: &str, suggestions: &[Suggestion]) -> String {
-    let mut fixed = code.to_string();
+pub fn apply_suggestions(code: &str, suggestions: &[Suggestion]) -> Result<String, Error> {
+    use replace::Data;
+
+    let mut fixed = Data::new(code.as_bytes());
 
     for sug in suggestions.iter().rev() {
         for sol in &sug.solutions {
             for r in &sol.replacements {
-                fixed = apply_suggestion(&mut fixed, r);
+                fixed.replace_range(
+                    r.snippet.range.start,
+                    r.snippet.range.end - 1,
+                    r.replacement.as_bytes(),
+                )?;
             }
         }
     }
 
-    fixed
+    Ok(String::from_utf8(fixed.to_vec())?)
 }
