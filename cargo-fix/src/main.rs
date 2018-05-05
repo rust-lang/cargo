@@ -91,21 +91,49 @@ fn cargo_fix_rustc() -> Result<(), Error> {
     // To that end we only actually try to fix things if it looks like we're
     // compiling a Rust file and it *doesn't* have an absolute filename. That's
     // not the best heuristic but matches what Cargo does today at least.
+    let mut files_to_restore = HashMap::new();
     if let Some(path) = filename {
         if !Path::new(&path).is_absolute() {
-            rustfix_crate(rustc.as_ref(), &path)?;
+            files_to_restore = rustfix_crate(rustc.as_ref(), &path)?;
         }
     }
 
-    // TODO: if we executed rustfix above and the previous rustc invocation was
-    // successful and this `status()` is not, then we should revert all fixes
-    // we applied, present a scary warning, and then move on.
+    // Ok now we have our final goal of testing out the changes that we applied.
+    // If these changes went awry and actually started to cause the crate to
+    // *stop* compiling then we want to back them out and continue to print
+    // warnings to the user.
+    //
+    // If we didn't actually make any changes then we can immediately exec the
+    // new rustc, and otherwise we capture the output to hide it in the scenario
+    // that we have to back it all out.
     let mut cmd = Command::new(&rustc);
     cmd.args(env::args().skip(1));
+    if files_to_restore.len() > 0 {
+        let output = cmd.output().context("failed to spawn rustc")?;
+
+        // If we succeeded then we'll want to commit to the changes we made, if
+        // any. If stderr is empty then there's no need for the final exec at
+        // the end, we just bail out here.
+        if output.status.success() && output.stderr.len() == 0 {
+            return Ok(())
+        }
+
+        // Otherwise if our rustc just failed then that means that we broke the
+        // user's code with our changes. Back out everything and fall through
+        // below to recompile again.
+        if !output.status.success() {
+            for (k, v) in files_to_restore {
+                File::create(&k)
+                    .and_then(|mut f| f.write_all(v.as_bytes()))
+                    .with_context(|_| format!("failed to write file `{}`", k))?;
+            }
+        }
+    }
+
     exit_with(cmd.status().context("failed to spawn rustc")?);
 }
 
-fn rustfix_crate(rustc: &Path, filename: &str) -> Result<(), Error> {
+fn rustfix_crate(rustc: &Path, filename: &str) -> Result<HashMap<String, String>, Error> {
     // If not empty, filter by these lints
     //
     // TODO: Implement a way to specify this
@@ -131,7 +159,7 @@ fn rustfix_crate(rustc: &Path, filename: &str) -> Result<(), Error> {
     // Instead, punt upwards which will reexec rustc over the original code,
     // displaying pretty versions of the diagnostics we just read out.
     if !output.status.success() {
-        return Ok(())
+        return Ok(HashMap::new())
     }
 
     // Sift through the output of the compiler to look for JSON messages
@@ -173,6 +201,7 @@ fn rustfix_crate(rustc: &Path, filename: &str) -> Result<(), Error> {
             .push(suggestion);
     }
 
+    let mut old_files = HashMap::new();
     for (file, suggestions) in file_map {
         // Attempt to read the source code for this file. If this fails then
         // that'd be pretty surprising, so log a message and otherwise keep
@@ -188,9 +217,10 @@ fn rustfix_crate(rustc: &Path, filename: &str) -> Result<(), Error> {
         File::create(&file)
             .and_then(|mut f| f.write_all(new_code.as_bytes()))
             .with_context(|_| format!("failed to write file `{}`", file))?;
+        old_files.insert(file, code);
     }
 
-    Ok(())
+    Ok(old_files)
 }
 
 fn exit_with(status: ExitStatus) -> ! {

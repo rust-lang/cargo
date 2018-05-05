@@ -9,6 +9,7 @@ use std::process::Command;
 use std::str;
 use std::sync::atomic::*;
 use std::time::Instant;
+use std::ffi::{OsStr, OsString};
 
 use difference::{Changeset, Difference};
 use url::Url;
@@ -75,6 +76,7 @@ impl Project {
         ExpectCmd {
             project: self,
             cmd: cmd,
+            env: Vec::new(),
             stdout: None,
             stdout_contains: Vec::new(),
             stderr: None,
@@ -99,6 +101,7 @@ struct ExpectCmd<'a> {
     ran: bool,
     project: &'a Project,
     cmd: &'a str,
+    env: Vec<(OsString, OsString)>,
     stdout: Option<String>,
     stdout_contains: Vec<String>,
     stderr: Option<String>,
@@ -115,6 +118,11 @@ impl<'a> ExpectCmd<'a> {
 
     fn cwd<P: AsRef<Path>>(&mut self, path: P) -> &mut Self {
         self.cwd = Some(self.project.root.join(path));
+        self
+    }
+
+    fn env<K: AsRef<OsStr>, V: AsRef<OsStr>>(&mut self, k: K, v: V) -> &mut Self {
+        self.env.push((k.as_ref().to_owned(), v.as_ref().to_owned()));
         self
     }
 
@@ -141,6 +149,10 @@ impl<'a> ExpectCmd<'a> {
         match self.cwd {
             Some(ref p) => { cmd.current_dir(p); }
             None => { cmd.current_dir(&self.project.root); }
+        }
+
+        for &(ref k, ref v) in self.env.iter() {
+            cmd.env(k, v);
         }
 
         let mut me = env::current_exe().unwrap();
