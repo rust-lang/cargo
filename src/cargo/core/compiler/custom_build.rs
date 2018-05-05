@@ -12,7 +12,7 @@ use util::{self, internal, paths, profile};
 use util::{Cfg, Freshness};
 
 use super::job::Work;
-use super::{fingerprint, Context, Kind, Unit};
+use super::{fingerprint, Context, Kind, TargetConfig, Unit};
 
 /// Contains the parsed output of a custom build script.
 #[derive(Clone, Debug, Hash)]
@@ -131,8 +131,8 @@ fn build_work<'a, 'cfg>(cx: &mut Context<'a, 'cfg>, unit: &Unit<'a>) -> CargoRes
         .env(
             "TARGET",
             &match unit.kind {
-                Kind::Host => &bcx.build_config.host_triple(),
-                Kind::Target => bcx.build_config.target_triple(),
+                Kind::Host => &bcx.host_triple(),
+                Kind::Target => bcx.target_triple(),
             },
         )
         .env("DEBUG", debug.to_string())
@@ -145,12 +145,12 @@ fn build_work<'a, 'cfg>(cx: &mut Context<'a, 'cfg>, unit: &Unit<'a>) -> CargoRes
                 "debug"
             },
         )
-        .env("HOST", &bcx.build_config.host_triple())
-        .env("RUSTC", &bcx.build_config.rustc.path)
+        .env("HOST", &bcx.host_triple())
+        .env("RUSTC", &bcx.rustc.path)
         .env("RUSTDOC", &*bcx.config.rustdoc()?)
         .inherit_jobserver(&cx.jobserver);
 
-    if let Some(ref linker) = bcx.build_config.target.linker {
+    if let Some(ref linker) = bcx.target_config.linker {
         cmd.env("RUSTC_LINKER", linker);
     }
 
@@ -231,7 +231,7 @@ fn build_work<'a, 'cfg>(cx: &mut Context<'a, 'cfg>, unit: &Unit<'a>) -> CargoRes
     );
     let build_scripts = super::load_build_deps(cx, unit);
     let kind = unit.kind;
-    let json_messages = bcx.build_config.json_messages;
+    let json_messages = bcx.build_config.json_messages();
 
     // Check to see if the build script has already run, and if it has keep
     // track of whether it has told us about some explicit dependencies
@@ -364,10 +364,10 @@ fn build_work<'a, 'cfg>(cx: &mut Context<'a, 'cfg>, unit: &Unit<'a>) -> CargoRes
 }
 
 impl BuildState {
-    pub fn new(config: &super::BuildConfig) -> BuildState {
+    pub fn new(host_config: &TargetConfig, target_config: &TargetConfig) -> BuildState {
         let mut overrides = HashMap::new();
-        let i1 = config.host.overrides.iter().map(|p| (p, Kind::Host));
-        let i2 = config.target.overrides.iter().map(|p| (p, Kind::Target));
+        let i1 = host_config.overrides.iter().map(|p| (p, Kind::Host));
+        let i2 = target_config.overrides.iter().map(|p| (p, Kind::Target));
         for ((name, output), kind) in i1.chain(i2) {
             overrides.insert((name.clone(), kind), output.clone());
         }

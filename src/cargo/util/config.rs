@@ -20,7 +20,7 @@ use toml;
 use lazycell::LazyCell;
 
 use core::shell::Verbosity;
-use core::{CliUnstable, Shell, SourceId};
+use core::{CliUnstable, Shell, SourceId, Workspace};
 use ops;
 use url::Url;
 use util::ToUrl;
@@ -170,7 +170,12 @@ impl Config {
     }
 
     /// Get the path to the `rustc` executable
-    pub fn rustc(&self, cache_location: Option<PathBuf>) -> CargoResult<Rustc> {
+    pub fn rustc(&self, ws: Option<&Workspace>) -> CargoResult<Rustc> {
+        let cache_location = ws.map(|ws| {
+            ws.target_dir()
+                .join(".rustc_info.json")
+                .into_path_unlocked()
+        });
         Rustc::new(
             self.get_tool("rustc")?,
             self.maybe_get_tool("rustc_wrapper")?,

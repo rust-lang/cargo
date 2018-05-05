@@ -8,7 +8,6 @@ use jobserver::Client;
 
 use core::{Package, PackageId, Resolve, Target};
 use core::profiles::Profile;
-use ops::CompileMode;
 use util::errors::{CargoResult, CargoResultExt};
 use util::{internal, profile, Config};
 
@@ -16,7 +15,7 @@ use super::custom_build::{self, BuildDeps, BuildScripts, BuildState};
 use super::fingerprint::Fingerprint;
 use super::job_queue::JobQueue;
 use super::layout::Layout;
-use super::{BuildContext, Compilation, Executor, FileFlavor, Kind};
+use super::{BuildContext, Compilation, CompileMode, Executor, FileFlavor, Kind};
 
 mod unit_dependencies;
 use self::unit_dependencies::build_unit_dependencies;
@@ -95,13 +94,10 @@ impl<'a, 'cfg> Context<'a, 'cfg> {
                 .chain_err(|| "failed to create jobserver")?,
         };
 
-        let mut compilation = Compilation::new(config, bcx.build_config.rustc.process());
-        compilation.host_dylib_path = bcx.host_info.sysroot_libdir.clone();
-        compilation.target_dylib_path = bcx.target_info.sysroot_libdir.clone();
         Ok(Self {
             bcx,
-            compilation,
-            build_state: Arc::new(BuildState::new(&bcx.build_config)),
+            compilation: Compilation::new(bcx),
+            build_state: Arc::new(BuildState::new(&bcx.host_config, &bcx.target_config)),
             fingerprints: HashMap::new(),
             compiled: HashSet::new(),
             build_scripts: HashMap::new(),
@@ -245,8 +241,6 @@ impl<'a, 'cfg> Context<'a, 'cfg> {
                 self.compilation.native_dirs.insert(dir.clone());
             }
         }
-        self.compilation.host = self.bcx.build_config.host_triple().to_string();
-        self.compilation.target = self.bcx.build_config.target_triple().to_string();
         Ok(self.compilation)
     }
 

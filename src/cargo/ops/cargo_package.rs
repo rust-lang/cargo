@@ -10,7 +10,7 @@ use git2;
 use tar::{Archive, Builder, EntryType, Header};
 
 use core::{Package, Source, SourceId, Workspace};
-use core::compiler::DefaultExecutor;
+use core::compiler::{BuildConfig, CompileMode, DefaultExecutor};
 use sources::PathSource;
 use util::{self, internal, Config, FileLock};
 use util::paths;
@@ -337,8 +337,7 @@ fn run_verify(ws: &Workspace, tar: &FileLock, opts: &PackageOpts) -> CargoResult
         None,
         &ops::CompileOptions {
             config,
-            jobs: opts.jobs,
-            target: opts.target.clone(),
+            build_config: BuildConfig::new(config, opts.jobs, &opts.target, CompileMode::Build)?,
             features: Vec::new(),
             no_default_features: false,
             all_features: false,
@@ -346,9 +345,6 @@ fn run_verify(ws: &Workspace, tar: &FileLock, opts: &PackageOpts) -> CargoResult
             filter: ops::CompileFilter::Default {
                 required_features_filterable: true,
             },
-            release: false,
-            message_format: ops::MessageFormat::Human,
-            mode: ops::CompileMode::Build,
             target_rustdoc_args: None,
             target_rustc_args: None,
             export_dir: None,

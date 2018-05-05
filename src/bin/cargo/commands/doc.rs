@@ -1,6 +1,6 @@
 use command_prelude::*;
 
-use cargo::ops::{self, CompileMode, DocOptions};
+use cargo::ops::{self, DocOptions};
 
 pub fn cli() -> App {
     subcommand("doc")
