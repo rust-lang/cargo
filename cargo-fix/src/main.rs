@@ -1,3 +1,4 @@
+extern crate clap;
 #[macro_use]
 extern crate failure;
 extern crate rustfix;
@@ -17,6 +18,7 @@ use std::path::Path;
 use rustfix::diagnostics::Diagnostic;
 use failure::{Error, ResultExt};
 
+mod cli;
 mod lock;
 
 fn main() {
@@ -24,7 +26,7 @@ fn main() {
     let result = if env::var("__CARGO_FIX_NOW_RUSTC").is_ok() {
         cargo_fix_rustc()
     } else {
-        cargo_fix()
+        cli::run()
     };
     let err = match result {
         Ok(()) => return,
@@ -35,42 +37,6 @@ fn main() {
         eprintln!("\tcaused by: {}", cause);
     }
     process::exit(102);
-}
-
-fn cargo_fix() -> Result<(), Error> {
-    // Spin up our lock server which our subprocesses will use to synchronize
-    // fixes.
-    let _lockserver = lock::Server::new()?.start()?;
-
-    let cargo = env::var_os("CARGO").unwrap_or("cargo".into());
-    let mut cmd = Command::new(&cargo);
-    // TODO: shouldn't hardcode `check` here, we want to allow things like
-    // `cargo fix bench` or something like that
-    //
-    // TODO: somehow we need to force `check` to actually do something here, if
-    // `cargo check` was previously run it won't actually do anything again.
-    cmd.arg("check");
-    cmd.args(env::args().skip(2)); // skip `cmd-fix fix`
-
-    // Override the rustc compiler as ourselves. That way whenever rustc would
-    // run we run instead and have an opportunity to inject fixes.
-    let me = env::current_exe()
-        .context("failed to learn about path to current exe")?;
-    cmd.env("RUSTC", &me)
-        .env("__CARGO_FIX_NOW_RUSTC", "1");
-    if let Some(rustc) = env::var_os("RUSTC") {
-        cmd.env("RUSTC_ORIGINAL", rustc);
-    }
-
-    // An now execute all of Cargo! This'll fix everything along the way.
-    //
-    // TODO: we probably want to do something fancy here like collect results
-    // from the client processes and print out a summary of what happened.
-    let status = cmd.status()
-        .with_context(|e| {
-            format!("failed to execute `{}`: {}", cargo.to_string_lossy(), e)
-        })?;
-    exit_with(status);
 }
 
 fn cargo_fix_rustc() -> Result<(), Error> {
@@ -163,7 +129,7 @@ fn rustfix_crate(rustc: &Path, filename: &str) -> Result<HashMap<String, String>
     //
     // TODO: this should be configurable by the CLI to sometimes proceed to
     // attempt to fix broken code.
-    if !output.status.success() {
+    if !output.status.success() && env::var_os("__CARGO_FIX_BROKEN_CODE").is_none() {
         return Ok(HashMap::new())
     }
 
