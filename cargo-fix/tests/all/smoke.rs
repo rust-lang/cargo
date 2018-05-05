@@ -143,3 +143,36 @@ fn fix_deny_warnings_but_not_others() {
     assert!(!p.read("src/lib.rs").contains("let mut x = 3;"));
     assert!(p.read("src/lib.rs").contains("fn bar() {}"));
 }
+
+#[test]
+fn fix_two_files() {
+    let p = project()
+        .file(
+            "src/lib.rs",
+            "
+                pub mod bar;
+
+                pub fn foo() -> u32 {
+                    let mut x = 3;
+                    x
+                }
+            ",
+        )
+        .file(
+            "src/bar.rs",
+            "
+                pub fn foo() -> u32 {
+                    let mut x = 3;
+                    x
+                }
+            ",
+        )
+        .build();
+
+    p.expect_cmd("cargo-fix fix")
+        .stderr_contains("[FIXING] src/bar.rs (1 fix)")
+        .stderr_contains("[FIXING] src/lib.rs (1 fix)")
+        .run();
+    assert!(!p.read("src/lib.rs").contains("let mut x = 3;"));
+    assert!(!p.read("src/bar.rs").contains("let mut x = 3;"));
+}
