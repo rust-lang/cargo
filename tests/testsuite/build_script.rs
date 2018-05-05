@@ -2,6 +2,9 @@ use std::env;
 use std::fs::{self, File};
 use std::io::prelude::*;
 use std::path::PathBuf;
+use std::io;
+use std::thread;
+use std::time::Duration;
 
 use cargo::util::paths::remove_dir_all;
 use cargotest::{rustc_host, sleep_ms};
@@ -3821,7 +3824,28 @@ fn rename_with_link_search_path() {
     let mut new = p2.root();
     new.pop();
     new.push("bar2");
-    fs::rename(p2.root(), &new).unwrap();
+
+    // For whatever reason on Windows right after we execute a binary it's very
+    // unlikely that we're able to successfully delete or rename that binary.
+    // It's not really clear why this is the case or if it's a bug in Cargo
+    // holding a handle open too long. In an effort to reduce the flakiness of
+    // this test though we throw this in a loop
+    //
+    // For some more information see #5481 and rust-lang/rust#48775
+    let mut i = 0;
+    loop {
+        let error = match fs::rename(p2.root(), &new) {
+            Ok(()) => break,
+            Err(e) => e,
+        };
+        i += 1;
+        if !cfg!(windows) || error.kind() != io::ErrorKind::PermissionDenied || i > 10 {
+            panic!("failed to rename: {}", error);
+        }
+        println!("assuming {} is spurious, waiting to try again", error);
+        thread::sleep(Duration::from_millis(100));
+    }
+
     assert_that(
         p2.cargo("run").cwd(&new),
         execs().with_status(0).with_stderr(
