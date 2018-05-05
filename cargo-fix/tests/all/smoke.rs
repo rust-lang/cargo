@@ -92,3 +92,17 @@ fn preserve_line_endings() {
     p.expect_cmd("cargo-fix fix").run();
     assert!(p.read("src/lib.rs").contains("\r\n"));
 }
+
+#[test]
+fn fix_deny_warnings() {
+    let p = project()
+        .file("src/lib.rs", "\
+            #![deny(warnings)]
+            fn add(a: &u32) -> u32 { a + 1 }\r\n\
+            pub fn foo() -> u32 { let mut x = 3; add(&x) }\r\n\
+        ")
+        .build();
+
+    p.expect_cmd("cargo-fix fix").run();
+    assert!(p.read("src/lib.rs").contains("\r\n"));
+}

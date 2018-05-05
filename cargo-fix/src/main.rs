@@ -149,7 +149,8 @@ fn rustfix_crate(rustc: &Path, filename: &str) -> Result<HashMap<String, String>
 
     let mut cmd = Command::new(&rustc);
     cmd.args(env::args().skip(1));
-    cmd.arg("--error-format=json");
+    cmd.arg("--error-format=json")
+        .arg("--cap-lints=warn");
     let output = cmd.output()
         .with_context(|_| format!("failed to execute `{}`", rustc.display()))?;
 
