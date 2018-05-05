@@ -160,7 +160,7 @@ impl<'a, 'cfg> Context<'a, 'cfg> {
                         unit.target.name().to_string(),
                         output.path.clone(),
                     ));
-                } else if unit.target.is_bin() || unit.target.is_example() {
+                } else if unit.target.is_bin() || unit.target.is_bin_example() {
                     self.compilation.binaries.push(bindst.clone());
                 } else if unit.target.is_lib() {
                     let pkgid = unit.pkg.package_id().clone();
