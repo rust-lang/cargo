@@ -329,7 +329,7 @@ fn new_unit<'a>(
     mode: CompileMode,
 ) -> Unit<'a> {
     let profile = bcx.profiles.get_profile(
-        &pkg.name(),
+        &pkg.package_id(),
         bcx.ws.is_member(pkg),
         profile_for,
         mode,
