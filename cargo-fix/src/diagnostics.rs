@@ -74,7 +74,9 @@ impl Server {
             let mut client = BufReader::new(client);
             match serde_json::from_reader(client) {
                 Ok(message) => on_message(message),
-                Err(e) => { warn!("invalid diagnostics message: {}", e); }
+                Err(e) => {
+                    warn!("invalid diagnostics message: {}", e);
+                }
             }
         }
     }

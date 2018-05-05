@@ -14,13 +14,11 @@ fn do_not_fix_broken_builds() {
                 pub fn foo2() {
                     let _x: u32 = "a";
                 }
-            "#
+            "#,
         )
         .build();
 
-    p.expect_cmd("cargo-fix fix")
-        .status(101)
-        .run();
+    p.expect_cmd("cargo-fix fix").status(101).run();
     assert!(p.read("src/lib.rs").contains("let mut x = 3;"));
 }
 
@@ -34,13 +32,11 @@ fn fix_broken_if_requested() {
                 pub fn bar() {
                     foo(1);
                 }
-            "#
+            "#,
         )
         .build();
 
-    p.expect_cmd("cargo-fix fix --broken-code")
-        .status(0)
-        .run();
+    p.expect_cmd("cargo-fix fix --broken-code").status(0).run();
 }
 
 #[test]
@@ -53,7 +49,7 @@ fn broken_fixes_backed_out() {
                 name = 'foo'
                 version = '0.1.0'
                 [workspace]
-            "#
+            "#,
         )
         .file(
             "foo/src/main.rs",
@@ -83,7 +79,7 @@ fn broken_fixes_backed_out() {
                         .expect("failed to run rustc");
                     process::exit(status.code().unwrap_or(2));
                 }
-            "#
+            "#,
         )
         .file(
             "bar/Cargo.toml",
@@ -92,7 +88,7 @@ fn broken_fixes_backed_out() {
                 name = 'bar'
                 version = '0.1.0'
                 [workspace]
-            "#
+            "#,
         )
         .file("bar/build.rs", "fn main() {}")
         .file(
@@ -102,14 +98,12 @@ fn broken_fixes_backed_out() {
                     let mut x = 3;
                     drop(x);
                 }
-            "#
+            "#,
         )
         .build();
 
     // Build our rustc shim
-    p.expect_cmd("cargo build")
-        .cwd("foo")
-        .run();
+    p.expect_cmd("cargo build").cwd("foo").run();
 
     // Attempt to fix code, but our shim will always fail the second compile
     p.expect_cmd("cargo-fix fix")

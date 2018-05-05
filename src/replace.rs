@@ -32,11 +32,13 @@ impl Data {
     pub fn new(data: &[u8]) -> Self {
         Data {
             original: data.into(),
-            parts: vec![Span {
-                data: State::Initial,
-                start: 0,
-                end: data.len(),
-            }],
+            parts: vec![
+                Span {
+                    data: State::Initial,
+                    start: 0,
+                    end: data.len(),
+                },
+            ],
         }
     }
 

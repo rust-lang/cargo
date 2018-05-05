@@ -1,17 +1,17 @@
+extern crate atty;
 extern crate clap;
+extern crate env_logger;
 #[macro_use]
 extern crate failure;
-extern crate rustfix;
-extern crate serde_json;
-#[macro_use]
-extern crate serde_derive;
 #[macro_use]
 extern crate log;
-extern crate env_logger;
-extern crate atty;
+extern crate rustfix;
+#[macro_use]
+extern crate serde_derive;
+extern crate serde_json;
 extern crate termcolor;
 
-use std::collections::{HashSet, HashMap};
+use std::collections::{HashMap, HashSet};
 use std::env;
 use std::fs::File;
 use std::io::{Read, Write};
@@ -91,7 +91,7 @@ fn cargo_fix_rustc() -> Result<(), Error> {
         // any. If stderr is empty then there's no need for the final exec at
         // the end, we just bail out here.
         if output.status.success() && output.stderr.len() == 0 {
-            return Ok(())
+            return Ok(());
         }
 
         // Otherwise if our rustc just failed then that means that we broke the
@@ -125,8 +125,7 @@ fn rustfix_crate(rustc: &Path, filename: &str) -> Result<HashMap<String, String>
 
     let mut cmd = Command::new(&rustc);
     cmd.args(env::args().skip(1));
-    cmd.arg("--error-format=json")
-        .arg("--cap-lints=warn");
+    cmd.arg("--error-format=json").arg("--cap-lints=warn");
     let output = cmd.output()
         .with_context(|_| format!("failed to execute `{}`", rustc.display()))?;
 
@@ -139,14 +138,17 @@ fn rustfix_crate(rustc: &Path, filename: &str) -> Result<HashMap<String, String>
     // TODO: this should be configurable by the CLI to sometimes proceed to
     // attempt to fix broken code.
     if !output.status.success() && env::var_os("__CARGO_FIX_BROKEN_CODE").is_none() {
-        debug!("rustfixing `{:?}` failed, rustc exited with {:?}", filename, output.status.code());
-        return Ok(HashMap::new())
+        debug!(
+            "rustfixing `{:?}` failed, rustc exited with {:?}",
+            filename,
+            output.status.code()
+        );
+        return Ok(HashMap::new());
     }
 
     // Sift through the output of the compiler to look for JSON messages
     // indicating fixes that we can apply.
-    let stderr = str::from_utf8(&output.stderr)
-        .context("failed to parse rustc stderr as utf-8")?;
+    let stderr = str::from_utf8(&output.stderr).context("failed to parse rustc stderr as utf-8")?;
 
     let suggestions = stderr.lines()
         .filter(|x| !x.is_empty())
@@ -168,23 +170,29 @@ fn rustfix_crate(rustc: &Path, filename: &str) -> Result<HashMap<String, String>
             Some(s) => (s.file_name.clone(), s.line_range),
             None => {
                 trace!("rejecting as it has no snippets {:?}", suggestion);
-                continue
+                continue;
             }
         };
-        if !suggestion.snippets.iter().all(|s| {
-            s.file_name == file_name && s.line_range == range
-        }) {
+        if !suggestion
+            .snippets
+            .iter()
+            .all(|s| s.file_name == file_name && s.line_range == range)
+        {
             trace!("rejecting as it spans mutliple files {:?}", suggestion);
-            continue
+            continue;
         }
 
-        file_map.entry(file_name)
+        file_map
+            .entry(file_name)
             .or_insert_with(Vec::new)
             .push(suggestion);
         num_suggestion += 1;
     }
 
-    debug!("collected {} suggestions for `{}`", num_suggestion, filename);
+    debug!(
+        "collected {} suggestions for `{}`",
+        num_suggestion, filename
+    );
 
     let mut old_files = HashMap::with_capacity(file_map.len());
     for (file, suggestions) in file_map {
@@ -194,7 +202,7 @@ fn rustfix_crate(rustc: &Path, filename: &str) -> Result<HashMap<String, String>
         let mut code = String::new();
         if let Err(e) = File::open(&file).and_then(|mut f| f.read_to_string(&mut code)) {
             warn!("failed to read `{}`: {}", file, e);
-            continue
+            continue;
         }
         let num_suggestions = suggestions.len();
         debug!("applying {} fixes to {}", num_suggestions, file);

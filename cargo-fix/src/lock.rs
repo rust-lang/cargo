@@ -13,8 +13,8 @@
 
 use std::collections::HashMap;
 use std::env;
-use std::io::{BufReader, BufRead, Read, Write};
-use std::net::{TcpStream, SocketAddr, TcpListener};
+use std::io::{BufRead, BufReader, Read, Write};
+use std::net::{SocketAddr, TcpListener, TcpStream};
 use std::sync::{Arc, Mutex};
 use std::sync::atomic::{AtomicBool, Ordering};
 use std::thread::{self, JoinHandle};
@@ -70,7 +70,7 @@ impl Server {
     fn run(mut self) {
         while let Ok((client, _)) = self.listener.accept() {
             if self.done.load(Ordering::SeqCst) {
-                break
+                break;
             }
 
             // Learn the name of our connected client to figure out if it needs
@@ -78,7 +78,7 @@ impl Server {
             let mut client = BufReader::new(client);
             let mut name = String::new();
             if client.read_line(&mut name).is_err() {
-                continue
+                continue;
             }
             let client = client.into_inner();
 
@@ -89,7 +89,7 @@ impl Server {
                 let mut state = t.lock.lock().unwrap();
                 if state.0 {
                     state.1.push(client);
-                    continue
+                    continue;
                 }
                 drop(t.thread.take().unwrap().join());
             }
@@ -102,7 +102,7 @@ impl Server {
                         let mut state = lock2.lock().unwrap();
                         if state.1.len() == 0 {
                             state.0 = false;
-                            break
+                            break;
                         } else {
                             state.1.remove(0)
                         }
@@ -110,17 +110,20 @@ impl Server {
                     // Inform this client that it now has the lock and wait for
                     // it to disconnect by waiting for EOF.
                     if client.write_all(&[1]).is_err() {
-                        continue
+                        continue;
                     }
                     let mut dst = Vec::new();
                     drop(client.read_to_end(&mut dst));
                 }
             });
 
-            self.threads.insert(name, ServerClient {
-                thread: Some(thread),
-                lock,
-            });
+            self.threads.insert(
+                name,
+                ServerClient {
+                    thread: Some(thread),
+                    lock,
+                },
+            );
         }
     }
 }
@@ -140,7 +143,7 @@ impl Drop for StartedServer {
         self.done.store(true, Ordering::SeqCst);
         // Ignore errors here as this is largely best-effort
         if TcpStream::connect(&self.addr).is_err() {
-            return
+            return;
         }
         drop(self.thread.take().unwrap().join());
     }
@@ -150,13 +153,15 @@ impl Client {
     pub fn lock(name: &str) -> Result<Client, Error> {
         let addr = env::var("__CARGO_FIX_SERVER")
             .map_err(|_| format_err!("locking strategy misconfigured"))?;
-        let mut client = TcpStream::connect(&addr)
-            .with_context(|_| "failed to connect to parent lock server")?;
-        client.write_all(name.as_bytes())
+        let mut client =
+            TcpStream::connect(&addr).with_context(|_| "failed to connect to parent lock server")?;
+        client
+            .write_all(name.as_bytes())
             .and_then(|_| client.write_all(b"\n"))
             .with_context(|_| "failed to write to lock server")?;
         let mut buf = [0];
-        client.read_exact(&mut buf)
+        client
+            .read_exact(&mut buf)
             .with_context(|_| "failed to acquire lock")?;
         Ok(Client { _socket: client })
     }

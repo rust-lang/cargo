@@ -1,12 +1,15 @@
 #![cfg(not(windows))] // TODO: should fix these tests on Windows
 
-#[macro_use] extern crate duct;
-#[macro_use] extern crate pretty_assertions;
-extern crate tempdir;
-#[macro_use] extern crate log;
+#[macro_use]
+extern crate duct;
 extern crate env_logger;
-extern crate serde_json;
+#[macro_use]
+extern crate log;
+#[macro_use]
+extern crate pretty_assertions;
 extern crate rustfix;
+extern crate serde_json;
+extern crate tempdir;
 
 use std::fs;
 use std::error::Error;
@@ -20,11 +23,15 @@ use rustfix::apply_suggestions;
 fn compile(file: &Path) -> Result<Output, Box<Error>> {
     let tmp = TempDir::new("rustfix-tests")?;
     let better_call_clippy = cmd!(
-        "rustc", file,
-        "--error-format=pretty-json", "-Zunstable-options", "--emit=metadata",
+        "rustc",
+        file,
+        "--error-format=pretty-json",
+        "-Zunstable-options",
+        "--emit=metadata",
         "--crate-name=rustfix_test",
         "-Zsuggestion-applicability",
-        "--out-dir", tmp.path()
+        "--out-dir",
+        tmp.path()
     );
     let res = better_call_clippy
         .env("CLIPPY_DISABLE_DOCS_LINKS", "true")
@@ -46,7 +53,7 @@ fn compile_and_get_json_errors(file: &Path) -> Result<String, Box<Error>> {
         _ => Err(Box::new(Error::new(
             ErrorKind::Other,
             format!("failed with status {:?}: {}", res.status.code(), stderr),
-        )))
+        ))),
     }
 }
 
@@ -57,7 +64,11 @@ fn compiles_without_errors(file: &Path) -> Result<(), Box<Error>> {
     match res.status.code() {
         Some(0) => Ok(()),
         _ => {
-            info!("file {:?} failed to compile:\n{}", file, String::from_utf8(res.stderr)?);
+            info!(
+                "file {:?} failed to compile:\n{}",
+                file,
+                String::from_utf8(res.stderr)?
+            );
             Err(Box::new(Error::new(
                 ErrorKind::Other,
                 format!(
@@ -86,7 +97,8 @@ fn test_rustfix_with_file<P: AsRef<Path>>(file: P) -> Result<(), Box<Error>> {
     debug!("next up: {:?}", file);
     let code = read_file(file)?;
     let errors = compile_and_get_json_errors(file)?;
-    let suggestions = rustfix::get_suggestions_from_json(&errors, &HashSet::new()).expect("could not load suggestions");
+    let suggestions = rustfix::get_suggestions_from_json(&errors, &HashSet::new())
+        .expect("could not load suggestions");
 
     if std::env::var("RUSTFIX_TEST_RECORD_JSON").is_ok() {
         use std::io::Write;
@@ -95,10 +107,10 @@ fn test_rustfix_with_file<P: AsRef<Path>>(file: P) -> Result<(), Box<Error>> {
     }
 
     let expected_json = read_file(&json_file)?;
-    let expected_suggestions = rustfix::get_suggestions_from_json(&expected_json, &HashSet::new()).expect("could not load expected suggesitons");
+    let expected_suggestions = rustfix::get_suggestions_from_json(&expected_json, &HashSet::new())
+        .expect("could not load expected suggesitons");
     assert_eq!(
-        expected_suggestions,
-        suggestions,
+        expected_suggestions, suggestions,
         "got unexpected suggestions from clippy",
     );
 
@@ -111,7 +123,12 @@ fn test_rustfix_with_file<P: AsRef<Path>>(file: P) -> Result<(), Box<Error>> {
     }
 
     let expected_fixed = read_file(&fixed_file)?;
-    assert_eq!(fixed.trim(), expected_fixed.trim(), "file {} doesn't look fixed", file.display());
+    assert_eq!(
+        fixed.trim(),
+        expected_fixed.trim(),
+        "file {} doesn't look fixed",
+        file.display()
+    );
 
     compiles_without_errors(&fixed_file)?;
 

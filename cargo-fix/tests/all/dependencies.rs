@@ -14,30 +14,36 @@ fn fix_path_deps() {
                 bar = { path = 'bar' }
 
                 [workspace]
-            "#
+            "#,
         )
-        .file("src/lib.rs", r#"
-            extern crate bar;
+        .file(
+            "src/lib.rs",
+            r#"
+                extern crate bar;
 
-            pub fn foo() -> u32 {
-                let mut x = 3;
-                x
-            }
-        "#)
+                pub fn foo() -> u32 {
+                    let mut x = 3;
+                    x
+                }
+            "#,
+            )
         .file(
             "bar/Cargo.toml",
             r#"
                 [package]
                 name = "bar"
                 version = "0.1.0"
-            "#
+            "#,
         )
-        .file("bar/src/lib.rs", r#"
-            pub fn foo() -> u32 {
-                let mut x = 3;
-                x
-            }
-        "#)
+        .file(
+            "bar/src/lib.rs",
+            r#"
+                pub fn foo() -> u32 {
+                    let mut x = 3;
+                    x
+                }
+            "#,
+        )
         .build();
 
     let stderr = "\
@@ -67,7 +73,7 @@ fn do_not_fix_non_relevant_deps() {
                 bar = { path = '../bar' }
 
                 [workspace]
-            "#
+            "#,
         )
         .file("foo/src/lib.rs", "")
         .file(
@@ -76,19 +82,19 @@ fn do_not_fix_non_relevant_deps() {
                 [package]
                 name = "bar"
                 version = "0.1.0"
-            "#
+            "#,
         )
-        .file("bar/src/lib.rs", r#"
-            pub fn foo() -> u32 {
-                let mut x = 3;
-                x
-            }
-        "#)
+        .file(
+            "bar/src/lib.rs",
+            r#"
+                pub fn foo() -> u32 {
+                    let mut x = 3;
+                    x
+                }
+            "#,
+        )
         .build();
 
-    p.expect_cmd("cargo-fix fix")
-        .cwd("foo")
-        .status(0)
-        .run();
+    p.expect_cmd("cargo-fix fix").cwd("foo").status(0).run();
     assert!(p.read("bar/src/lib.rs").contains("mut"));
 }

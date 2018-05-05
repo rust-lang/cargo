@@ -1,11 +1,11 @@
 #[macro_use]
-extern crate serde_derive;
-extern crate serde_json;
-#[macro_use]
 extern crate failure;
 #[cfg(test)]
 #[macro_use]
 extern crate proptest;
+#[macro_use]
+extern crate serde_derive;
+extern crate serde_json;
 
 use std::collections::HashSet;
 use std::ops::Range;
@@ -85,13 +85,17 @@ pub struct Replacement {
 
 fn parse_snippet(span: &DiagnosticSpan) -> Snippet {
     // unindent the snippet
-    let indent = span.text.iter().map(|line| {
-        let indent = line.text
-            .chars()
-            .take_while(|&c| char::is_whitespace(c))
-            .count();
-        std::cmp::min(indent, line.highlight_start)
-    }).min().expect("text to replace is empty");
+    let indent = span.text
+        .iter()
+        .map(|line| {
+            let indent = line.text
+                .chars()
+                .take_while(|&c| char::is_whitespace(c))
+                .count();
+            std::cmp::min(indent, line.highlight_start)
+        })
+        .min()
+        .expect("text to replace is empty");
     let start = span.text[0].highlight_start - 1;
     let end = span.text[0].highlight_end - 1;
     let lead = span.text[0].text[indent..start].to_string();
@@ -125,13 +129,18 @@ fn parse_snippet(span: &DiagnosticSpan) -> Snippet {
 }
 
 fn collect_span(span: &DiagnosticSpan) -> Option<Replacement> {
-    span.suggested_replacement.clone().map(|replacement| Replacement {
-        snippet: parse_snippet(span),
-        replacement,
-    })
+    span.suggested_replacement
+        .clone()
+        .map(|replacement| Replacement {
+            snippet: parse_snippet(span),
+            replacement,
+        })
 }
 
-pub fn collect_suggestions<S: ::std::hash::BuildHasher>(diagnostic: &Diagnostic, only: &HashSet<String, S>) -> Option<Suggestion> {
+pub fn collect_suggestions<S: ::std::hash::BuildHasher>(
+    diagnostic: &Diagnostic,
+    only: &HashSet<String, S>,
+) -> Option<Suggestion> {
     if !only.is_empty() {
         if let Some(ref code) = diagnostic.code {
             if !only.contains(&code.code) {
@@ -144,27 +153,27 @@ pub fn collect_suggestions<S: ::std::hash::BuildHasher>(diagnostic: &Diagnostic,
         }
     }
 
-    let snippets = diagnostic.spans
+    let snippets = diagnostic
+        .spans
         .iter()
         .map(|span| parse_snippet(span))
         .collect();
 
-    let solutions: Vec<_> = diagnostic.children
+    let solutions: Vec<_> = diagnostic
+        .children
         .iter()
         .filter_map(|child| {
-        let replacements: Vec<_> = child.spans
-            .iter()
-            .filter_map(collect_span)
-            .collect();
-        if replacements.is_empty() {
-            None
-        } else {
-            Some(Solution {
-                message: child.message.clone(),
-                replacements,
-            })
-        }
-    }).collect();
+            let replacements: Vec<_> = child.spans.iter().filter_map(collect_span).collect();
+            if replacements.is_empty() {
+                None
+            } else {
+                Some(Solution {
+                    message: child.message.clone(),
+                    replacements,
+                })
+            }
+        })
+        .collect();
 
     if solutions.is_empty() {
         None

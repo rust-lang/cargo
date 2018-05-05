@@ -2,9 +2,7 @@ use super::project;
 
 #[test]
 fn no_changes_necessary() {
-    let p = project()
-        .file("src/lib.rs", "")
-        .build();
+    let p = project().file("src/lib.rs", "").build();
 
     let stderr = "\
 [CHECKING] foo v0.1.0 (CWD)
@@ -19,12 +17,15 @@ fn no_changes_necessary() {
 #[test]
 fn fixes_extra_mut() {
     let p = project()
-        .file("src/lib.rs", r#"
-            pub fn foo() -> u32 {
-                let mut x = 3;
-                x
-            }
-        "#)
+        .file(
+            "src/lib.rs",
+            r#"
+                pub fn foo() -> u32 {
+                    let mut x = 3;
+                    x
+                }
+            "#,
+        )
         .build();
 
     let stderr = "\
@@ -41,13 +42,16 @@ fn fixes_extra_mut() {
 #[test]
 fn fixes_two_missing_ampersands() {
     let p = project()
-        .file("src/lib.rs", r#"
-            pub fn foo() -> u32 {
-                let mut x = 3;
-                let mut y = 3;
-                x + y
-            }
-        "#)
+        .file(
+            "src/lib.rs",
+            r#"
+                pub fn foo() -> u32 {
+                    let mut x = 3;
+                    let mut y = 3;
+                    x + y
+                }
+            "#,
+        )
         .build();
 
     let stderr = "\
@@ -64,12 +68,15 @@ fn fixes_two_missing_ampersands() {
 #[test]
 fn tricky() {
     let p = project()
-        .file("src/lib.rs", r#"
-            pub fn foo() -> u32 {
-                let mut x = 3; let mut y = 3;
-                x + y
-            }
-        "#)
+        .file(
+            "src/lib.rs",
+            r#"
+                pub fn foo() -> u32 {
+                    let mut x = 3; let mut y = 3;
+                    x + y
+                }
+            "#,
+        )
         .build();
 
     let stderr = "\
@@ -86,10 +93,13 @@ fn tricky() {
 #[test]
 fn preserve_line_endings() {
     let p = project()
-        .file("src/lib.rs", "\
-            fn add(a: &u32) -> u32 { a + 1 }\r\n\
-            pub fn foo() -> u32 { let mut x = 3; add(&x) }\r\n\
-        ")
+        .file(
+            "src/lib.rs",
+            "\
+                 fn add(a: &u32) -> u32 { a + 1 }\r\n\
+                 pub fn foo() -> u32 { let mut x = 3; add(&x) }\r\n\
+             ",
+        )
         .build();
 
     p.expect_cmd("cargo-fix fix").run();
@@ -99,10 +109,13 @@ fn preserve_line_endings() {
 #[test]
 fn fix_deny_warnings() {
     let p = project()
-        .file("src/lib.rs", "\
-            #![deny(warnings)]
-            pub fn foo() { let mut x = 3; drop(x); }
-        ")
+        .file(
+            "src/lib.rs",
+            "\
+                #![deny(warnings)]
+                pub fn foo() { let mut x = 3; drop(x); }
+            ",
+        )
         .build();
 
     p.expect_cmd("cargo-fix fix").run();
@@ -111,16 +124,19 @@ fn fix_deny_warnings() {
 #[test]
 fn fix_deny_warnings_but_not_others() {
     let p = project()
-        .file("src/lib.rs", "
-            #![deny(warnings)]
+        .file(
+            "src/lib.rs",
+            "
+                #![deny(warnings)]
 
-            pub fn foo() -> u32 {
-                let mut x = 3;
-                x
-            }
+                pub fn foo() -> u32 {
+                    let mut x = 3;
+                    x
+                }
 
-            fn bar() {}
-        ")
+                fn bar() {}
+            ",
+        )
         .build();
 
     p.expect_cmd("cargo-fix fix").run();

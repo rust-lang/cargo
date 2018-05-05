@@ -26,9 +26,7 @@ struct Project {
 }
 
 fn project() -> ProjectBuilder {
-    ProjectBuilder {
-        files: Vec::new(),
-    }
+    ProjectBuilder { files: Vec::new() }
 }
 
 fn root() -> PathBuf {
@@ -40,7 +38,7 @@ fn root() -> PathBuf {
     me.pop(); // chop off `debug` / `release`
     me.push("generated-tests");
     me.push(&format!("test{}", idx));
-    return me
+    return me;
 }
 
 impl ProjectBuilder {
@@ -58,14 +56,18 @@ impl ProjectBuilder {
 
                 [workspace]
             "#;
-            self.files.push(("Cargo.toml".to_string(), manifest.to_string()));
+            self.files
+                .push(("Cargo.toml".to_string(), manifest.to_string()));
         }
         let root = root();
         drop(fs::remove_dir_all(&root));
         for &(ref file, ref contents) in self.files.iter() {
             let dst = root.join(file);
             fs::create_dir_all(dst.parent().unwrap()).unwrap();
-            fs::File::create(&dst).unwrap().write_all(contents.as_ref()).unwrap();
+            fs::File::create(&dst)
+                .unwrap()
+                .write_all(contents.as_ref())
+                .unwrap();
         }
         Project { root }
     }
@@ -93,7 +95,7 @@ impl Project {
             .unwrap()
             .read_to_string(&mut ret)
             .unwrap();
-        return ret
+        return ret;
     }
 }
 
@@ -122,7 +124,8 @@ impl<'a> ExpectCmd<'a> {
     }
 
     fn env<K: AsRef<OsStr>, V: AsRef<OsStr>>(&mut self, k: K, v: V) -> &mut Self {
-        self.env.push((k.as_ref().to_owned(), v.as_ref().to_owned()));
+        self.env
+            .push((k.as_ref().to_owned(), v.as_ref().to_owned()));
         self
     }
 
@@ -147,8 +150,12 @@ impl<'a> ExpectCmd<'a> {
         let mut cmd = Command::new(parts.next().unwrap());
         cmd.args(parts);
         match self.cwd {
-            Some(ref p) => { cmd.current_dir(p); }
-            None => { cmd.current_dir(&self.project.root); }
+            Some(ref p) => {
+                cmd.current_dir(p);
+            }
+            None => {
+                cmd.current_dir(&self.project.root);
+            }
         }
 
         for &(ref k, ref v) in self.env.iter() {
@@ -161,9 +168,7 @@ impl<'a> ExpectCmd<'a> {
 
         let mut new_path = Vec::new();
         new_path.push(me);
-        new_path.extend(
-            env::split_paths(&env::var_os("PATH").unwrap_or(Default::default())),
-        );
+        new_path.extend(env::split_paths(&env::var_os("PATH").unwrap_or(Default::default())));
         cmd.env("PATH", env::join_paths(&new_path).unwrap());
 
         println!("\n···················································");
@@ -174,7 +179,11 @@ impl<'a> ExpectCmd<'a> {
             Err(err) => panic!("failed to spawn: {}", err),
         };
         let dur = start.elapsed();
-        println!("dur: {}.{:03}ms", dur.as_secs(), dur.subsec_nanos() / 1_000_000);
+        println!(
+            "dur: {}.{:03}ms",
+            dur.as_secs(),
+            dur.subsec_nanos() / 1_000_000
+        );
         println!("exit: {}", output.status);
         if output.stdout.len() > 0 {
             println!("stdout ---\n{}", String::from_utf8_lossy(&output.stdout));
@@ -206,38 +215,37 @@ impl<'a> ExpectCmd<'a> {
         for s in contains {
             let s = self.clean(s);
             if actual.contains(&s) {
-                continue
+                continue;
             }
-            println!("\nfailed to find contents within output stream\n\
-                      expected to find\n  {}\n\nwithin:\n\n{}\n\n",
-                     s,
-                     actual);
+            println!(
+                "\nfailed to find contents within output stream\n\
+                 expected to find\n  {}\n\nwithin:\n\n{}\n\n",
+                s, actual
+            );
             panic!("test failed");
         }
     }
 
     fn clean(&self, s: &str) -> String {
         let url = Url::from_file_path(&self.project.root).unwrap();
-        let s = s
-            .replace("[CHECKING]",  "    Checking")
-            .replace("[FINISHED]",  "    Finished")
+        let s = s.replace("[CHECKING]", "    Checking")
+            .replace("[FINISHED]", "    Finished")
             .replace("[COMPILING]", "   Compiling")
-            .replace("[FIXING]",    "      Fixing")
+            .replace("[FIXING]", "      Fixing")
             .replace(&url.to_string(), "CWD")
             .replace(&self.project.root.display().to_string(), "CWD")
             .replace("\\", "/");
-        let lines = s.lines()
-            .map(|s| {
-                let i = match s.find("target(s) in") {
-                    Some(i) => i,
-                    None => return s.to_string(),
-                };
-                if s.trim().starts_with("Finished") {
-                    s[..i].to_string()
-                } else {
-                    s.to_string()
-                }
-            });
+        let lines = s.lines().map(|s| {
+            let i = match s.find("target(s) in") {
+                Some(i) => i,
+                None => return s.to_string(),
+            };
+            if s.trim().starts_with("Finished") {
+                s[..i].to_string()
+            } else {
+                s.to_string()
+            }
+        });
         let mut ret = String::new();
         for (i, line) in lines.enumerate() {
             if i != 0 {

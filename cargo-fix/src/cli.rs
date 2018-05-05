@@ -2,7 +2,7 @@ use std::env;
 use std::process::Command;
 
 use failure::{Error, ResultExt};
-use clap::{Arg, App, SubCommand, AppSettings};
+use clap::{App, AppSettings, Arg, SubCommand};
 use atty;
 
 use lock;
@@ -22,8 +22,8 @@ pub fn run() -> Result<(), Error> {
                 .arg(
                     Arg::with_name("broken-code")
                         .long("broken-code")
-                        .help("Fix code even if it already has compiler errors")
-                )
+                        .help("Fix code even if it already has compiler errors"),
+                ),
         )
         .get_matches();
     let matches = match matches.subcommand() {
@@ -41,8 +41,9 @@ pub fn run() -> Result<(), Error> {
 
     // Spin up our diagnostics server which our subprocesses will use to send
     // use their dignostics messages in an ordered way.
-    let _lockserver = diagnostics::Server::new()?
-        .start(|m| { let _ = log_message(&m); })?;
+    let _lockserver = diagnostics::Server::new()?.start(|m| {
+        let _ = log_message(&m);
+    })?;
 
     let cargo = env::var_os("CARGO").unwrap_or("cargo".into());
     let mut cmd = Command::new(&cargo);
@@ -58,10 +59,8 @@ pub fn run() -> Result<(), Error> {
 
     // Override the rustc compiler as ourselves. That way whenever rustc would
     // run we run instead and have an opportunity to inject fixes.
-    let me = env::current_exe()
-        .context("failed to learn about path to current exe")?;
-    cmd.env("RUSTC", &me)
-        .env("__CARGO_FIX_NOW_RUSTC", "1");
+    let me = env::current_exe().context("failed to learn about path to current exe")?;
+    cmd.env("RUSTC", &me).env("__CARGO_FIX_NOW_RUSTC", "1");
     if let Some(rustc) = env::var_os("RUSTC") {
         cmd.env("RUSTC_ORIGINAL", rustc);
     }
@@ -71,22 +70,24 @@ pub fn run() -> Result<(), Error> {
     // TODO: we probably want to do something fancy here like collect results
     // from the client processes and print out a summary of what happened.
     let status = cmd.status()
-        .with_context(|e| {
-            format!("failed to execute `{}`: {}", cargo.to_string_lossy(), e)
-        })?;
+        .with_context(|e| format!("failed to execute `{}`: {}", cargo.to_string_lossy(), e))?;
     exit_with(status);
 }
-
 
 fn log_message(msg: &diagnostics::Message) -> Result<(), Error> {
     use diagnostics::Message::*;
 
     match msg {
         Fixing { file, fixes } => {
-            log_for_human("Fixing", &format!("{name} ({n} {fixes})",
-                name = file, n = fixes,
-                fixes = if *fixes > 1 { "fixes" } else { "fix" },
-            ))?;
+            log_for_human(
+                "Fixing",
+                &format!(
+                    "{name} ({n} {fixes})",
+                    name = file,
+                    n = fixes,
+                    fixes = if *fixes > 1 { "fixes" } else { "fix" },
+                ),
+            )?;
         }
     }
 
