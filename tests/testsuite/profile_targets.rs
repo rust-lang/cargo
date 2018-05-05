@@ -32,8 +32,6 @@ fn all_target_project() -> Project {
             codegen-units = 3
             [profile.bench]
             codegen-units = 4
-            [profile.doc]
-            codegen-units = 5
         "#,
         )
         .file("src/lib.rs", "extern crate bar;")

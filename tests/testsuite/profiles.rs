@@ -371,3 +371,28 @@ fn profile_panic_test_bench() {
         ),
     );
 }
+
+#[test]
+fn profile_doc_deprecated() {
+    let p = project("foo")
+        .file(
+            "Cargo.toml",
+            r#"
+            [package]
+            name = "foo"
+            version = "0.0.1"
+
+            [profile.doc]
+            opt-level = 0
+        "#,
+        )
+        .file("src/lib.rs", "")
+        .build();
+
+    assert_that(
+        p.cargo("build"),
+        execs()
+            .with_status(0)
+            .with_stderr_contains("[WARNING] profile `doc` is deprecated and has no effect"),
+    );
+}
