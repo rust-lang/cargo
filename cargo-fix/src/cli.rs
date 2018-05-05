@@ -107,7 +107,7 @@ fn log_for_human(kind: &str, msg: &str) -> Result<(), Error> {
     let mut stream = StandardStream::stderr(color_choice);
     stream.reset()?;
 
-    stream.set_color(ColorSpec::new().set_bold(true).set_fg(Some(Color::Green)))?;
+    stream.set_color(ColorSpec::new().set_bold(true).set_fg(Some(Color::Cyan)))?;
     // Justify to 12 chars just like cargo
     write!(&mut stream, "{:>12}", kind)?;
     stream.reset()?;
