@@ -294,7 +294,7 @@ project’s profiles are actually read. All dependencies’ profiles will be
 overridden. This is done so the top-level project has control over how its
 dependencies are compiled.
 
-There are five currently supported profile names, all of which have the same
+There are four currently supported profile names, all of which have the same
 configuration available to them. Listed below is the configuration available,
 along with the defaults for each profile.
 
@@ -357,18 +357,6 @@ codegen-units = 16
 panic = 'unwind'
 incremental = false
 overflow-checks = false
-
-# The documentation profile, used for `cargo doc`.
-[profile.doc]
-opt-level = 0
-debug = 2
-rpath = false
-lto = false
-debug-assertions = true
-codegen-units = 16
-panic = 'unwind'
-incremental = true
-overflow-checks = true
 ```
 
 ### The `[features]` section
