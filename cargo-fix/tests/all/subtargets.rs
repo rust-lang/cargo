@@ -4,28 +4,23 @@ use super::project;
 fn fixes_missing_ampersand() {
     let p = project()
         .file("src/main.rs", r#"
-            fn add(a: &u32) -> u32 { a + 1 }
-            fn main() { add(1); }
+            fn main() { let mut x = 3; drop(x); }
         "#)
         .file("src/lib.rs", r#"
-            fn add(a: &u32) -> u32 { a + 1 }
-            pub fn foo() -> u32 { add(1) }
+            pub fn foo() { let mut x = 3; drop(x); }
 
             #[test]
-            pub fn foo2() { add(1); }
+            pub fn foo2() { let mut x = 3; drop(x); }
         "#)
         .file("tests/a.rs", r#"
-            fn add(a: &u32) -> u32 { a + 1 }
             #[test]
-            pub fn foo() { add(1); }
+            pub fn foo() { let mut x = 3; drop(x); }
         "#)
         .file("examples/foo.rs", r#"
-            fn add(a: &u32) -> u32 { a + 1 }
-            fn main() { add(1); }
+            fn main() { let mut x = 3; drop(x); }
         "#)
         .file("build.rs", r#"
-            fn add(a: &u32) -> u32 { a + 1 }
-            fn main() { add(1); }
+            fn main() { let mut x = 3; drop(x); }
         "#)
         .build();
 
@@ -55,10 +50,8 @@ fn fix_features() {
             "#
         )
         .file("src/lib.rs", r#"
-            fn add(a: &u32) -> u32 { a + 1 }
-
             #[cfg(feature = "bar")]
-            pub fn foo() -> u32 { add(1) }
+            pub fn foo() -> u32 { let mut x = 3; x }
         "#)
         .build();
 

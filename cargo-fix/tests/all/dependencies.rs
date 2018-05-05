@@ -19,12 +19,9 @@ fn fix_path_deps() {
         .file("src/lib.rs", r#"
             extern crate bar;
 
-            fn add(a: &u32) -> u32 {
-                a + 1
-            }
-
             pub fn foo() -> u32 {
-                add(1) + add(1)
+                let mut x = 3;
+                x
             }
         "#)
         .file(
@@ -36,12 +33,9 @@ fn fix_path_deps() {
             "#
         )
         .file("bar/src/lib.rs", r#"
-            fn add(a: &u32) -> u32 {
-                a + 1
-            }
-
             pub fn foo() -> u32 {
-                add(1) + add(1)
+                let mut x = 3;
+                x
             }
         "#)
         .build();
@@ -83,18 +77,16 @@ fn do_not_fix_non_relevant_deps() {
             "#
         )
         .file("bar/src/lib.rs", r#"
-            fn add(a: &u32) -> u32 {
-                a + 1
-            }
-
             pub fn foo() -> u32 {
-                add(1) + add(1)
+                let mut x = 3;
+                x
             }
         "#)
         .build();
 
     p.expect_cmd("cargo-fix fix")
         .cwd("foo")
-        .status(101)
+        .status(0)
         .run();
+    assert!(p.read("bar/src/lib.rs").contains("mut"));
 }

@@ -17,15 +17,12 @@ fn no_changes_necessary() {
 }
 
 #[test]
-fn fixes_missing_ampersand() {
+fn fixes_extra_mut() {
     let p = project()
         .file("src/lib.rs", r#"
-            fn add(a: &u32) -> u32 {
-                a + 1
-            }
-
             pub fn foo() -> u32 {
-                add(1)
+                let mut x = 3;
+                x
             }
         "#)
         .build();
@@ -44,12 +41,10 @@ fn fixes_missing_ampersand() {
 fn fixes_two_missing_ampersands() {
     let p = project()
         .file("src/lib.rs", r#"
-            fn add(a: &u32) -> u32 {
-                a + 1
-            }
-
             pub fn foo() -> u32 {
-                add(1) + add(1)
+                let mut x = 3;
+                let mut y = 3;
+                x + y
             }
         "#)
         .build();
@@ -65,15 +60,12 @@ fn fixes_two_missing_ampersands() {
 }
 
 #[test]
-fn tricky_ampersand() {
+fn tricky() {
     let p = project()
         .file("src/lib.rs", r#"
-            fn add(a: &u32) -> u32 {
-                a + 1
-            }
-
             pub fn foo() -> u32 {
-                add(1) + add(1)
+                let mut x = 3; let mut y = 3;
+                x + y
             }
         "#)
         .build();
@@ -93,7 +85,7 @@ fn preserve_line_endings() {
     let p = project()
         .file("src/lib.rs", "\
             fn add(a: &u32) -> u32 { a + 1 }\r\n\
-            pub fn foo() -> u32 { add(1) }\r\n\
+            pub fn foo() -> u32 { let mut x = 3; add(&x) }\r\n\
         ")
         .build();
 
@@ -102,29 +94,33 @@ fn preserve_line_endings() {
 }
 
 #[test]
-fn multiple_suggestions_for_the_same_thing() {
+fn fix_deny_warnings() {
     let p = project()
         .file("src/lib.rs", "\
-            fn main() {
-                let xs = vec![String::from(\"foo\")];
-                // error: no diplay in scope, and there are two options
-                // (std::path::Display and std::fmt::Display)
-                let d: &Display = &xs;
-                println!(\"{}\", d);
-            }
+            #![deny(warnings)]
+            pub fn foo() { let mut x = 3; drop(x); }
         ")
         .build();
 
-    let stderr = "\
-[CHECKING] foo v0.1.0 (CWD)
-error: Cannot replace slice of data that was already replaced
-error: Could not compile `foo`.
+    p.expect_cmd("cargo-fix fix").run();
+}
 
-To learn more, run the command again with --verbose.
-";
+#[test]
+fn fix_deny_warnings_but_not_others() {
+    let p = project()
+        .file("src/lib.rs", "
+            #![deny(warnings)]
 
-    p.expect_cmd("cargo-fix fix")
-        .stderr(stderr)
-        .status(101)
-        .run();
+            pub fn foo() -> u32 {
+                let mut x = 3;
+                x
+            }
+
+            fn bar() {}
+        ")
+        .build();
+
+    p.expect_cmd("cargo-fix fix").run();
+    assert!(!p.read("src/lib.rs").contains("let mut x = 3;"));
+    assert!(p.read("src/lib.rs").contains("fn bar() {}"));
 }
