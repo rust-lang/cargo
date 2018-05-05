@@ -11,8 +11,6 @@ use util::hex::short_hash;
 use sources::PathSource;
 use sources::git::utils::{GitRemote, GitRevision};
 
-/* TODO: Refactor GitSource to delegate to a PathSource
- */
 pub struct GitSource<'cfg> {
     remote: GitRemote,
     reference: GitReference,
