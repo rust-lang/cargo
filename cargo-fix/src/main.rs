@@ -22,6 +22,8 @@ use std::path::Path;
 use rustfix::diagnostics::Diagnostic;
 use failure::{Error, ResultExt};
 
+use diagnostics::Message;
+
 mod cli;
 mod lock;
 mod diagnostics;
@@ -65,11 +67,11 @@ fn cargo_fix_rustc() -> Result<(), Error> {
     // To that end we only actually try to fix things if it looks like we're
     // compiling a Rust file and it *doesn't* have an absolute filename. That's
     // not the best heuristic but matches what Cargo does today at least.
-    let mut files_to_restore = HashMap::new();
+    let mut fixes = FixedCrate::default();
     if let Some(path) = filename {
         if !Path::new(&path).is_absolute() {
             trace!("start rustfixing {:?}", path);
-            files_to_restore = rustfix_crate(rustc.as_ref(), &path)?;
+            fixes = rustfix_crate(rustc.as_ref(), &path)?;
         }
     }
 
@@ -84,8 +86,14 @@ fn cargo_fix_rustc() -> Result<(), Error> {
     let mut cmd = Command::new(&rustc);
     cmd.args(env::args().skip(1));
     cmd.arg("--cap-lints=warn");
-    if files_to_restore.len() > 0 {
+    if fixes.original_files.len() > 0 {
         let output = cmd.output().context("failed to spawn rustc")?;
+
+        if output.status.success() {
+            for message in fixes.messages.drain(..) {
+                message.post()?;
+            }
+        }
 
         // If we succeeded then we'll want to commit to the changes we made, if
         // any. If stderr is empty then there's no need for the final exec at
@@ -98,7 +106,7 @@ fn cargo_fix_rustc() -> Result<(), Error> {
         // user's code with our changes. Back out everything and fall through
         // below to recompile again.
         if !output.status.success() {
-            for (k, v) in files_to_restore {
+            for (k, v) in fixes.original_files {
                 File::create(&k)
                     .and_then(|mut f| f.write_all(v.as_bytes()))
                     .with_context(|_| format!("failed to write file `{}`", k))?;
@@ -109,7 +117,13 @@ fn cargo_fix_rustc() -> Result<(), Error> {
     exit_with(cmd.status().context("failed to spawn rustc")?);
 }
 
-fn rustfix_crate(rustc: &Path, filename: &str) -> Result<HashMap<String, String>, Error> {
+#[derive(Default)]
+struct FixedCrate {
+    messages: Vec<Message>,
+    original_files: HashMap<String, String>,
+}
+
+fn rustfix_crate(rustc: &Path, filename: &str) -> Result<FixedCrate, Error> {
     // If not empty, filter by these lints
     //
     // TODO: Implement a way to specify this
@@ -143,7 +157,7 @@ fn rustfix_crate(rustc: &Path, filename: &str) -> Result<HashMap<String, String>
             filename,
             output.status.code()
         );
-        return Ok(HashMap::new());
+        return Ok(Default::default())
     }
 
     // Sift through the output of the compiler to look for JSON messages
@@ -194,7 +208,8 @@ fn rustfix_crate(rustc: &Path, filename: &str) -> Result<HashMap<String, String>
         num_suggestion, filename
     );
 
-    let mut old_files = HashMap::with_capacity(file_map.len());
+    let mut original_files = HashMap::with_capacity(file_map.len());
+    let mut messages = Vec::new();
     for (file, suggestions) in file_map {
         // Attempt to read the source code for this file. If this fails then
         // that'd be pretty surprising, so log a message and otherwise keep
@@ -207,16 +222,19 @@ fn rustfix_crate(rustc: &Path, filename: &str) -> Result<HashMap<String, String>
         let num_suggestions = suggestions.len();
         debug!("applying {} fixes to {}", num_suggestions, file);
 
-        diagnostics::Message::fixing(&file, num_suggestion).post()?;
+        messages.push(Message::fixing(&file, num_suggestions));
 
         let new_code = rustfix::apply_suggestions(&code, &suggestions)?;
         File::create(&file)
             .and_then(|mut f| f.write_all(new_code.as_bytes()))
             .with_context(|_| format!("failed to write file `{}`", file))?;
-        old_files.insert(file, code);
+        original_files.insert(file, code);
     }
 
-    Ok(old_files)
+    Ok(FixedCrate {
+        messages,
+        original_files,
+    })
 }
 
 fn exit_with(status: ExitStatus) -> ! {

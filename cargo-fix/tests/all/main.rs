@@ -83,6 +83,7 @@ impl Project {
             stdout_contains: Vec::new(),
             stderr: None,
             stderr_contains: Vec::new(),
+            stderr_not_contains: Vec::new(),
             status: 0,
             ran: false,
             cwd: None,
@@ -108,6 +109,7 @@ struct ExpectCmd<'a> {
     stdout_contains: Vec<String>,
     stderr: Option<String>,
     stderr_contains: Vec<String>,
+    stderr_not_contains: Vec<String>,
     status: i32,
     cwd: Option<PathBuf>,
 }
@@ -141,6 +143,11 @@ impl<'a> ExpectCmd<'a> {
 
     fn stderr_contains(&mut self, s: &str) -> &mut Self {
         self.stderr_contains.push(s.to_string());
+        self
+    }
+
+    fn stderr_not_contains(&mut self, s: &str) -> &mut Self {
+        self.stderr_not_contains.push(s.to_string());
         self
     }
 
@@ -199,11 +206,22 @@ impl<'a> ExpectCmd<'a> {
         if code != self.status {
             panic!("expected exit code `{}` got `{}`", self.status, code);
         }
-        self.match_std(&output.stdout, &self.stdout, &self.stdout_contains);
-        self.match_std(&output.stderr, &self.stderr, &self.stderr_contains);
+        self.match_std(&output.stdout, &self.stdout, &self.stdout_contains, &[]);
+        self.match_std(
+            &output.stderr,
+            &self.stderr,
+            &self.stderr_contains,
+            &self.stderr_not_contains,
+        );
     }
 
-    fn match_std(&self, actual: &[u8], expected: &Option<String>, contains: &[String]) {
+    fn match_std(
+        &self,
+        actual: &[u8],
+        expected: &Option<String>,
+        contains: &[String],
+        not_contains: &[String],
+    ) {
         let actual = match str::from_utf8(actual) {
             Ok(s) => s,
             Err(_) => panic!("std wasn't utf8"),
@@ -222,6 +240,14 @@ impl<'a> ExpectCmd<'a> {
                  expected to find\n  {}\n\nwithin:\n\n{}\n\n",
                 s, actual
             );
+            panic!("test failed");
+        }
+        for s in not_contains {
+            let s = self.clean(s);
+            if !actual.contains(&s) {
+                continue;
+            }
+            println!("expected to not find `{}`", s);
             panic!("test failed");
         }
     }
