@@ -29,6 +29,7 @@ fn fixes_extra_mut() {
 
     let stderr = "\
 [CHECKING] foo v0.1.0 (CWD)
+[FIXING] src/lib.rs (1 fix)
 [FINISHED] dev [unoptimized + debuginfo]
 ";
     p.expect_cmd("cargo-fix fix")
@@ -51,6 +52,7 @@ fn fixes_two_missing_ampersands() {
 
     let stderr = "\
 [CHECKING] foo v0.1.0 (CWD)
+[FIXING] src/lib.rs (2 fixes)
 [FINISHED] dev [unoptimized + debuginfo]
 ";
     p.expect_cmd("cargo-fix fix")
@@ -72,6 +74,7 @@ fn tricky() {
 
     let stderr = "\
 [CHECKING] foo v0.1.0 (CWD)
+[FIXING] src/lib.rs (2 fixes)
 [FINISHED] dev [unoptimized + debuginfo]
 ";
     p.expect_cmd("cargo-fix fix")

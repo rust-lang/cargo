@@ -42,7 +42,9 @@ fn fix_path_deps() {
 
     let stderr = "\
 [CHECKING] bar v0.1.0 (CWD/bar)
+[FIXING] bar/src/lib.rs (1 fix)
 [CHECKING] foo v0.1.0 (CWD)
+[FIXING] src/lib.rs (1 fix)
 [FINISHED] dev [unoptimized + debuginfo]
 ";
     p.expect_cmd("cargo-fix fix")
