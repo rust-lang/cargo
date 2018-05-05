@@ -204,7 +204,11 @@ impl Context {
             // name.
             let base = reqs.deps.get(&*dep.name()).unwrap_or(&default_dep);
             used_features.insert(dep.name().as_str());
-            if !dep.is_optional() && base.0 {
+            let always_required = !dep.is_optional()
+                && !s.dependencies()
+                    .iter()
+                    .any(|d| d.is_optional() && d.name() == dep.name());
+            if always_required && base.0 {
                 self.warnings.push(format!(
                     "Package `{}` does not have feature `{}`. It has a required dependency \
                      with that name, but only optional dependencies can be used as features. \
