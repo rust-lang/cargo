@@ -25,6 +25,25 @@ fn do_not_fix_broken_builds() {
 }
 
 #[test]
+fn fix_broken_if_requested() {
+    let p = project()
+        .file(
+            "src/lib.rs",
+            r#"
+                fn foo(a: &u32) -> u32 { a + 1 }
+                pub fn bar() {
+                    foo(1);
+                }
+            "#
+        )
+        .build();
+
+    p.expect_cmd("cargo-fix fix --broken-code")
+        .status(0)
+        .run();
+}
+
+#[test]
 fn broken_fixes_backed_out() {
     let p = project()
         .file(
