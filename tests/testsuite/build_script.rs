@@ -3897,3 +3897,84 @@ fn optional_build_script_dep() {
         execs().with_status(0).with_stdout("1\n"),
     );
 }
+
+
+#[test]
+fn optional_build_dep_and_required_normal_dep() {
+    let p = project("foo")
+        .file(
+            "Cargo.toml",
+            r#"
+            [package]
+            name = "foo"
+            version = "0.1.0"
+            authors = []
+
+            [dependencies]
+            bar = { path = "./bar", optional = true }
+
+            [build-dependencies]
+            bar = { path = "./bar" }
+            "#,
+        )
+        .file(
+            "build.rs",
+            r#"
+            extern crate bar;
+            fn main() { bar::bar(); }
+        "#,
+        )
+        .file(
+            "src/main.rs",
+            r#"
+                #[cfg(feature = "bar")]
+                extern crate bar;
+
+                fn main() {
+                    #[cfg(feature = "bar")] {
+                        println!("{}", bar::bar());
+                    }
+                    #[cfg(not(feature = "bar"))] {
+                        println!("0");
+                    }
+                }
+            "#,
+        )
+        .file(
+            "bar/Cargo.toml",
+            r#"
+                [project]
+                name = "bar"
+                version = "0.5.0"
+                authors = []
+            "#,
+        )
+        .file(
+            "bar/src/lib.rs",
+            r#"
+                pub fn bar() -> u32 { 1 }
+            "#,
+        );
+    let p = p.build();
+
+    assert_that(
+        p.cargo("run"),
+        execs().with_status(0).with_stdout("0").with_stderr(
+            "\
+[COMPILING] bar v0.5.0 ([..])
+[COMPILING] foo v0.1.0 ([..])
+[FINISHED] dev [unoptimized + debuginfo] target(s) in [..]
+[RUNNING] `[..]foo[EXE]`",
+        ),
+    );
+
+    assert_that(
+        p.cargo("run --all-features"),
+        execs().with_status(0).with_stdout("1").with_stderr(
+            "\
+[COMPILING] foo v0.1.0 ([..])
+[FINISHED] dev [unoptimized + debuginfo] target(s) in [..]
+[RUNNING] `[..]foo[EXE]`",
+        ),
+    );
+}
