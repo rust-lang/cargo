@@ -267,6 +267,7 @@ fn diff(expected: &str, actual: &str) {
     }
 }
 
+mod broken_build;
 mod dependencies;
 mod smoke;
 mod subtargets;

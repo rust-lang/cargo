@@ -125,10 +125,17 @@ fn rustfix_crate(rustc: &Path, filename: &str) -> Result<(), Error> {
     let output = cmd.output()
         .with_context(|_| format!("failed to execute `{}`", rustc.display()))?;
 
+    // If rustc didn't succeed for whatever reasons then we're very likely to be
+    // looking at otherwise broken code. Let's not make things accidentally
+    // worse by applying fixes where a bug could cause *more* broken code.
+    // Instead, punt upwards which will reexec rustc over the original code,
+    // displaying pretty versions of the diagnostics we just read out.
+    if !output.status.success() {
+        return Ok(())
+    }
+
     // Sift through the output of the compiler to look for JSON messages
-    // indicating fixes that we can apply. Note that we *do not* look at the
-    // exit status here, that's intentional! We want to apply fixes even if
-    // there are compiler errors.
+    // indicating fixes that we can apply.
     let stderr = str::from_utf8(&output.stderr)
         .context("failed to parse rustc stderr as utf-8")?;
 
