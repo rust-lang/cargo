@@ -182,7 +182,7 @@ fn rustfix_crate(rustc: &Path, filename: &str) -> Result<HashMap<String, String>
         .filter_map(|diag| rustfix::collect_suggestions(&diag, &only));
 
     // Collect suggestions by file so we can apply them one at a time later.
-    let mut file_map = HashMap::with_capacity(suggestions.len());
+    let mut file_map = HashMap::new();
     for suggestion in suggestions {
         // Make sure we've got a file associated with this suggestion and all
         // snippets point to the same location. Right now it's not clear what
