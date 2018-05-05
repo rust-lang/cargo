@@ -546,8 +546,11 @@ fn generate_targets<'a>(
                 proposals.extend(default_units);
                 if build_config.mode == CompileMode::Test {
                     // Include the lib as it will be required for doctests.
-                    if let Some(t) = pkg.targets().iter().find(|t| t.is_lib() && t.doctested()) {
-                        proposals.push((new_unit(pkg, t, CompileMode::Build), false));
+                    match pkg.lib_target() {
+                        Some(t) if t.doctested() => {
+                            proposals.push((new_unit(pkg, t, CompileMode::Build), false));
+                        }
+                        _ => {}
                     }
                 }
             }
@@ -560,7 +563,7 @@ fn generate_targets<'a>(
                 ref benches,
             } => {
                 if lib {
-                    if let Some(target) = pkg.targets().iter().find(|t| t.is_lib()) {
+                    if let Some(target) = pkg.lib_target() {
                         proposals.push((new_unit(pkg, target, build_config.mode), false));
                     } else if !all_targets {
                         bail!("no library targets found")

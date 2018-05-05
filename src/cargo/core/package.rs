@@ -129,6 +129,10 @@ impl Package {
     pub fn targets(&self) -> &[Target] {
         self.manifest.targets()
     }
+    /// Get the library target for the package
+    pub fn lib_target(&self) -> Option<&Target> {
+        self.targets().iter().find(|t| t.is_lib())
+    }
     /// Get the current package version
     pub fn version(&self) -> &Version {
         self.package_id().version()
