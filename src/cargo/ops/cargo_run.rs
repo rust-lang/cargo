@@ -26,7 +26,7 @@ pub fn run(
         },
     };
 
-let bins: Vec<_> = pkg.manifest()
+    let bins: Vec<_> = pkg.manifest()
         .targets()
         .iter()
         .filter(|a| {
@@ -48,12 +48,12 @@ let bins: Vec<_> = pkg.manifest()
     }
 
     if bins.len() == 1 {
-        let bin = bins.first().unwrap();
-        match *bin.1 {
-            TargetKind::ExampleLib(..) => { 
+        let &(name, kind) = bins.first().unwrap();
+        match kind {
+            &TargetKind::ExampleLib(..) => { 
                 bail!(
-                    "example target `{}` is a library and cannot be executed.",
-                    bin.0
+                    "example target `{}` is a library and cannot be executed",
+                    name
                 ) 
             },
             _ => { }
@@ -62,9 +62,7 @@ let bins: Vec<_> = pkg.manifest()
 
     if bins.len() > 1 {
         if !options.filter.is_specific() {
-
-            let names : Vec<&str> = bins.into_iter().map(|bin| bin.0).collect();
-
+            let names: Vec<&str> = bins.into_iter().map(|bin| bin.0).collect();
             bail!(
                 "`cargo run` requires that a project only have one \
                  executable; use the `--bin` option to specify which one \

@@ -415,7 +415,7 @@ fn run_library_example() {
         p.cargo("run").arg("--example").arg("bar"),
         execs()
             .with_status(101)
-            .with_stderr("[ERROR] example target `bar` is a library and cannot be executed."),
+            .with_stderr("[ERROR] example target `bar` is a library and cannot be executed"),
     );
 }
 
