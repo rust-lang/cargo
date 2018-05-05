@@ -108,6 +108,7 @@ fn cargo_fix_rustc() -> Result<(), Error> {
     // that we have to back it all out.
     let mut cmd = Command::new(&rustc);
     cmd.args(env::args().skip(1));
+    cmd.arg("--cap-lints=warn");
     if files_to_restore.len() > 0 {
         let output = cmd.output().context("failed to spawn rustc")?;
 
@@ -159,6 +160,9 @@ fn rustfix_crate(rustc: &Path, filename: &str) -> Result<HashMap<String, String>
     // worse by applying fixes where a bug could cause *more* broken code.
     // Instead, punt upwards which will reexec rustc over the original code,
     // displaying pretty versions of the diagnostics we just read out.
+    //
+    // TODO: this should be configurable by the CLI to sometimes proceed to
+    // attempt to fix broken code.
     if !output.status.success() {
         return Ok(HashMap::new())
     }
@@ -178,7 +182,7 @@ fn rustfix_crate(rustc: &Path, filename: &str) -> Result<HashMap<String, String>
         .filter_map(|diag| rustfix::collect_suggestions(&diag, &only));
 
     // Collect suggestions by file so we can apply them one at a time later.
-    let mut file_map = HashMap::new();
+    let mut file_map = HashMap::with_capacity(suggestions.len());
     for suggestion in suggestions {
         // Make sure we've got a file associated with this suggestion and all
         // snippets point to the same location. Right now it's not clear what
@@ -202,7 +206,7 @@ fn rustfix_crate(rustc: &Path, filename: &str) -> Result<HashMap<String, String>
             .push(suggestion);
     }
 
-    let mut old_files = HashMap::new();
+    let mut old_files = HashMap::with_capacity(file_map.len());
     for (file, suggestions) in file_map {
         // Attempt to read the source code for this file. If this fails then
         // that'd be pretty surprising, so log a message and otherwise keep

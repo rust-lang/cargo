@@ -41,11 +41,14 @@ fn broken_fixes_backed_out() {
             r#"
                 use std::env;
                 use std::process::{self, Command};
-                use std::path::PathBuf;
+                use std::path::{Path, PathBuf};
                 use std::fs;
 
                 fn main() {
-                    if env::args().any(|x| x == "src/lib.rs") {
+                    let is_lib_rs = env::args_os()
+                        .map(PathBuf::from)
+                        .any(|l| l == Path::new("src/lib.rs"));
+                    if is_lib_rs {
                         let path = PathBuf::from(env::var_os("OUT_DIR").unwrap());
                         let path = path.join("foo");
                         if path.exists() {
