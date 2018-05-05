@@ -123,7 +123,6 @@ impl<'a, 'cfg> Context<'a, 'cfg> {
         let mut queue = JobQueue::new(self.bcx);
         self.prepare_units(export_dir, units)?;
         self.prepare()?;
-        self.build_used_in_plugin_map(units)?;
         custom_build::build_map(&mut self, units)?;
 
         for unit in units.iter() {
@@ -261,6 +260,7 @@ impl<'a, 'cfg> Context<'a, 'cfg> {
         };
 
         build_unit_dependencies(units, self.bcx, &mut self.unit_dependencies)?;
+        self.build_used_in_plugin_map(units)?;
         let files = CompilationFiles::new(
             units,
             host_layout,
@@ -302,7 +302,7 @@ impl<'a, 'cfg> Context<'a, 'cfg> {
     ///
     /// This will recursively walk `units` and all of their dependencies to
     /// determine which crate are going to be used in plugins or not.
-    pub fn build_used_in_plugin_map(&mut self, units: &[Unit<'a>]) -> CargoResult<()> {
+    fn build_used_in_plugin_map(&mut self, units: &[Unit<'a>]) -> CargoResult<()> {
         let mut visited = HashSet::new();
         for unit in units {
             self.walk_used_in_plugin_map(unit, unit.target.for_host(), &mut visited)?;
