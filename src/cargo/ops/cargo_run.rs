@@ -2,7 +2,7 @@ use std::path::Path;
 
 use ops::{self, Packages};
 use util::{self, CargoResult, ProcessError};
-use core::Workspace;
+use core::{TargetKind, Workspace};
 
 pub fn run(
     ws: &Workspace,
@@ -36,7 +36,7 @@ pub fn run(
                 options.filter.target_run(a)
             }
         })
-        .map(|bin| bin.name())
+        .map(|bin| (bin.name(), bin.kind()))
         .collect();
 
     if bins.is_empty() {
@@ -46,13 +46,29 @@ pub fn run(
             // this will be verified in cargo_compile
         }
     }
+
+    if bins.len() == 1 {
+        let &(name, kind) = bins.first().unwrap();
+        match kind {
+            &TargetKind::ExampleLib(..) => { 
+                bail!(
+                    "example target `{}` is a library and cannot be executed",
+                    name
+                ) 
+            },
+            _ => { }
+        };
+    }
+
     if bins.len() > 1 {
         if !options.filter.is_specific() {
+            let names: Vec<&str> = bins.into_iter().map(|bin| bin.0).collect();
             bail!(
                 "`cargo run` requires that a project only have one \
                  executable; use the `--bin` option to specify which one \
-                 to run\navailable binaries: {}",
-                bins.join(", ")
+                 to run\navailable binaries: {}", 
+                 names.join(", ")
+                
             )
         } else {
             bail!(

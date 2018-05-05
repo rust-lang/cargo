@@ -387,6 +387,38 @@ fn run_example() {
     );
 }
 
+#[test]
+fn run_library_example() {
+    let p = project("foo")
+        .file(
+            "Cargo.toml",
+            r#"
+            [package]
+            name = "foo"
+            version = "0.0.1"
+            authors = []
+            [[example]]
+            name = "bar"
+            crate_type = ["lib"]
+        "#,
+        )
+        .file("src/lib.rs", "")
+        .file(
+            "examples/bar.rs",
+            r#"
+            fn foo() {}
+        "#,
+        )
+        .build();
+
+    assert_that(
+        p.cargo("run").arg("--example").arg("bar"),
+        execs()
+            .with_status(101)
+            .with_stderr("[ERROR] example target `bar` is a library and cannot be executed"),
+    );
+}
+
 fn autodiscover_examples_project(rust_edition: &str, autoexamples: Option<bool>) -> Project {
     let autoexamples = match autoexamples {
         None => "".to_string(),
