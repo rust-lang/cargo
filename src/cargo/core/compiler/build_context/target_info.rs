@@ -3,8 +3,8 @@ use std::collections::hash_map::{Entry, HashMap};
 use std::path::PathBuf;
 use std::str::{self, FromStr};
 
-use super::{env_args, BuildConfig};
-use util::{CargoResult, CargoResultExt, Cfg, Config, ProcessBuilder};
+use super::env_args;
+use util::{CargoResult, CargoResultExt, Cfg, Config, ProcessBuilder, Rustc};
 use core::TargetKind;
 use super::Kind;
 
@@ -51,9 +51,21 @@ impl FileType {
 }
 
 impl TargetInfo {
-    pub fn new(config: &Config, build_config: &BuildConfig, kind: Kind) -> CargoResult<TargetInfo> {
-        let rustflags = env_args(config, build_config, None, kind, "RUSTFLAGS")?;
-        let mut process = build_config.rustc.process();
+    pub fn new(
+        config: &Config,
+        requested_target: &Option<String>,
+        rustc: &Rustc,
+        kind: Kind,
+    ) -> CargoResult<TargetInfo> {
+        let rustflags = env_args(
+            config,
+            requested_target,
+            &rustc.host,
+            None,
+            kind,
+            "RUSTFLAGS",
+        )?;
+        let mut process = rustc.process();
         process
             .arg("-")
             .arg("--crate-name")
@@ -62,8 +74,12 @@ impl TargetInfo {
             .args(&rustflags)
             .env_remove("RUST_LOG");
 
+        let target_triple = requested_target
+            .as_ref()
+            .map(|s| s.as_str())
+            .unwrap_or(&rustc.host);
         if kind == Kind::Target {
-            process.arg("--target").arg(&build_config.target_triple());
+            process.arg("--target").arg(target_triple);
         }
 
         let crate_type_process = process.clone();
@@ -78,12 +94,11 @@ impl TargetInfo {
         with_cfg.arg("--print=cfg");
 
         let mut has_cfg_and_sysroot = true;
-        let (output, error) = build_config
-            .rustc
+        let (output, error) = rustc
             .cached_output(&with_cfg)
             .or_else(|_| {
                 has_cfg_and_sysroot = false;
-                build_config.rustc.cached_output(&process)
+                rustc.cached_output(&process)
             })
             .chain_err(|| "failed to run `rustc` to learn about target-specific information")?;
 
@@ -114,7 +129,7 @@ impl TargetInfo {
             } else {
                 rustlib.push("lib");
                 rustlib.push("rustlib");
-                rustlib.push(build_config.target_triple());
+                rustlib.push(target_triple);
                 rustlib.push("lib");
                 sysroot_libdir = Some(rustlib);
             }

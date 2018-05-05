@@ -91,7 +91,7 @@ pub fn doc(ws: &Workspace, options: &DocOptions) -> CargoResult<()> {
         // nothing we can do about it and otherwise if it's getting overwritten
         // then that's also ok!
         let mut target_dir = ws.target_dir();
-        if let Some(ref triple) = options.compile_opts.target {
+        if let Some(ref triple) = options.compile_opts.build_config.requested_target {
             target_dir.push(Path::new(triple).file_stem().unwrap());
         }
         let path = target_dir.join("doc").join(&name).join("index.html");

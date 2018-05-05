@@ -1,4 +1,4 @@
-use core::compiler::{BuildConfig, Kind, TargetInfo};
+use core::compiler::{BuildConfig, CompileMode, Kind, TargetInfo};
 use core::{PackageSet, Resolve, Workspace};
 use ops;
 use std::collections::HashSet;
@@ -19,13 +19,14 @@ pub fn fetch<'a>(
     let (packages, resolve) = ops::resolve_ws(ws)?;
 
     let jobs = Some(1);
-    let build_config = BuildConfig::new(ws.config(), jobs, &options.target, None)?;
-    let target_info = TargetInfo::new(ws.config(), &build_config, Kind::Target)?;
+    let config = ws.config();
+    let build_config = BuildConfig::new(config, jobs, &options.target, CompileMode::Build)?;
+    let rustc = config.rustc(Some(ws))?;
+    let target_info =
+        TargetInfo::new(config, &build_config.requested_target, &rustc, Kind::Target)?;
     {
         let mut fetched_packages = HashSet::new();
-        let mut deps_to_fetch = ws.members()
-            .map(|p| p.package_id())
-            .collect::<Vec<_>>();
+        let mut deps_to_fetch = ws.members().map(|p| p.package_id()).collect::<Vec<_>>();
 
         while let Some(id) = deps_to_fetch.pop() {
             if !fetched_packages.insert(id) {

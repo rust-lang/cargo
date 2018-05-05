@@ -4,13 +4,14 @@ use std::fs;
 use clap::{self, SubCommand};
 use cargo::CargoResult;
 use cargo::core::Workspace;
-use cargo::ops::{CompileFilter, CompileMode, CompileOptions, MessageFormat, NewOptions, Packages,
-                 VersionControl};
+use cargo::core::compiler::{BuildConfig, MessageFormat};
+use cargo::ops::{CompileFilter, CompileOptions, NewOptions, Packages, VersionControl};
 use cargo::util::paths;
 use cargo::util::important_paths::find_root_manifest_for_wd;
 
 pub use clap::{AppSettings, Arg, ArgMatches};
 pub use cargo::{CliError, CliResult, Config};
+pub use cargo::core::compiler::CompileMode;
 
 pub type App = clap::App<'static, 'static>;
 
@@ -271,16 +272,17 @@ pub trait ArgMatchesExt {
             }
         };
 
+        let mut build_config = BuildConfig::new(config, self.jobs()?, &self.target(), mode)?;
+        build_config.message_format = message_format;
+        build_config.release = self._is_present("release");
+
         let opts = CompileOptions {
             config,
-            jobs: self.jobs()?,
-            target: self.target(),
+            build_config,
             features: self._values_of("features"),
             all_features: self._is_present("all-features"),
             no_default_features: self._is_present("no-default-features"),
             spec,
-            mode,
-            release: self._is_present("release"),
             filter: CompileFilter::new(
                 self._is_present("lib"),
                 self._values_of("bin"),
@@ -293,7 +295,6 @@ pub trait ArgMatchesExt {
                 self._is_present("benches"),
                 self._is_present("all-targets"),
             ),
-            message_format,
             target_rustdoc_args: None,
             target_rustc_args: None,
             export_dir: None,

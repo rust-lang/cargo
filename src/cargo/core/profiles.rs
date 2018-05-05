@@ -1,9 +1,9 @@
 use std::collections::HashSet;
 use std::{cmp, fmt, hash};
 
+use core::compiler::CompileMode;
 use core::interning::InternedString;
 use core::Shell;
-use ops::CompileMode;
 use util::lev_distance::lev_distance;
 use util::toml::{StringOrBool, TomlProfile, U32OrBool};
 use util::CargoResult;

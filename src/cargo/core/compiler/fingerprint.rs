@@ -462,7 +462,7 @@ fn calculate<'a, 'cfg>(
         cx.used_in_plugin.contains(unit), // used when passing panic=abort
     ));
     let fingerprint = Arc::new(Fingerprint {
-        rustc: util::hash_u64(&bcx.build_config.rustc.verbose_version),
+        rustc: util::hash_u64(&bcx.rustc.verbose_version),
         target: util::hash_u64(&unit.target),
         profile: profile_hash,
         // Note that .0 is hashed here, not .1 which is the cwd. That doesn't
