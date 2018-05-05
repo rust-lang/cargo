@@ -21,6 +21,8 @@ env_logger = { version = "0.5", default-features = false }
 clap = "2.31"
 termcolor = "0.3.6"
 atty = "0.2.10"
+serde_derive = "1.0.45"
+serde = "1.0.45"
 
 [dev-dependencies]
 difference = "2"

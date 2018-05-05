@@ -4,6 +4,8 @@ extern crate failure;
 extern crate rustfix;
 extern crate serde_json;
 #[macro_use]
+extern crate serde_derive;
+#[macro_use]
 extern crate log;
 extern crate env_logger;
 extern crate atty;
@@ -22,6 +24,7 @@ use failure::{Error, ResultExt};
 
 mod cli;
 mod lock;
+mod diagnostics;
 
 fn main() {
     env_logger::init();
@@ -195,10 +198,8 @@ fn rustfix_crate(rustc: &Path, filename: &str) -> Result<HashMap<String, String>
         }
         let num_suggestions = suggestions.len();
         debug!("applying {} fixes to {}", num_suggestions, file);
-        log_for_human("Fixing", &format!("{name} ({n} {fixes})",
-            name = file, n = num_suggestions,
-            fixes = if num_suggestions > 1 { "fixes" } else { "fix" },
-        ))?;
+
+        diagnostics::Message::fixing(&file, num_suggestion).post()?;
 
         let new_code = rustfix::apply_suggestions(&code, &suggestions)?;
         File::create(&file)
@@ -208,30 +209,6 @@ fn rustfix_crate(rustc: &Path, filename: &str) -> Result<HashMap<String, String>
     }
 
     Ok(old_files)
-}
-
-fn log_for_human(kind: &str, msg: &str) -> Result<(), Error> {
-    use std::io::Write;
-    use termcolor::{Color, ColorChoice, ColorSpec, StandardStream, WriteColor};
-
-    // Adapted from cargo, cf. <https://github.com/rust-lang/cargo/blob/5986492773e6de61cced57f457da3700607f4a3a/src/cargo/core/shell.rs#L291>
-    let color_choice = if atty::is(atty::Stream::Stderr) {
-        ColorChoice::Auto
-    } else {
-        ColorChoice::Never
-    };
-    let mut stream = StandardStream::stderr(color_choice);
-    stream.reset()?;
-
-    stream.set_color(ColorSpec::new().set_bold(true).set_fg(Some(Color::Green)))?;
-    // Justify to 12 chars just like cargo
-    write!(&mut stream, "{:>12}", kind)?;
-    stream.reset()?;
-
-    write!(&mut stream, " {}\n", msg)?;
-    stream.flush()?;
-
-    Ok(())
 }
 
 fn exit_with(status: ExitStatus) -> ! {

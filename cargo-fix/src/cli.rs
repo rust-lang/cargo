@@ -3,8 +3,10 @@ use std::process::Command;
 
 use failure::{Error, ResultExt};
 use clap::{Arg, App, SubCommand, AppSettings};
+use atty;
 
-use lock::Server;
+use lock;
+use diagnostics;
 use super::exit_with;
 
 pub fn run() -> Result<(), Error> {
@@ -35,7 +37,12 @@ pub fn run() -> Result<(), Error> {
 
     // Spin up our lock server which our subprocesses will use to synchronize
     // fixes.
-    let _lockserver = Server::new()?.start()?;
+    let _lockserver = lock::Server::new()?.start()?;
+
+    // Spin up our diagnostics server which our subprocesses will use to send
+    // use their dignostics messages in an ordered way.
+    let _lockserver = diagnostics::Server::new()?
+        .start(|m| { let _ = log_message(&m); })?;
 
     let cargo = env::var_os("CARGO").unwrap_or("cargo".into());
     let mut cmd = Command::new(&cargo);
@@ -68,4 +75,44 @@ pub fn run() -> Result<(), Error> {
             format!("failed to execute `{}`: {}", cargo.to_string_lossy(), e)
         })?;
     exit_with(status);
+}
+
+
+fn log_message(msg: &diagnostics::Message) -> Result<(), Error> {
+    use diagnostics::Message::*;
+
+    match msg {
+        Fixing { file, fixes } => {
+            log_for_human("Fixing", &format!("{name} ({n} {fixes})",
+                name = file, n = fixes,
+                fixes = if *fixes > 1 { "fixes" } else { "fix" },
+            ))?;
+        }
+    }
+
+    Ok(())
+}
+
+fn log_for_human(kind: &str, msg: &str) -> Result<(), Error> {
+    use std::io::Write;
+    use termcolor::{Color, ColorChoice, ColorSpec, StandardStream, WriteColor};
+
+    // Adapted from cargo, cf. <https://github.com/rust-lang/cargo/blob/5986492773e6de61cced57f457da3700607f4a3a/src/cargo/core/shell.rs#L291>
+    let color_choice = if atty::is(atty::Stream::Stderr) {
+        ColorChoice::Auto
+    } else {
+        ColorChoice::Never
+    };
+    let mut stream = StandardStream::stderr(color_choice);
+    stream.reset()?;
+
+    stream.set_color(ColorSpec::new().set_bold(true).set_fg(Some(Color::Green)))?;
+    // Justify to 12 chars just like cargo
+    write!(&mut stream, "{:>12}", kind)?;
+    stream.reset()?;
+
+    write!(&mut stream, " {}\n", msg)?;
+    stream.flush()?;
+
+    Ok(())
 }
