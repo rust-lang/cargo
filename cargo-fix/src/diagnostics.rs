@@ -2,8 +2,8 @@
 //! cross-platform way.
 
 use std::env;
-use std::io::BufReader;
-use std::net::{SocketAddr, TcpListener, TcpStream};
+use std::io::{BufReader, Write, Read};
+use std::net::{Shutdown, SocketAddr, TcpListener, TcpStream};
 use std::thread::{self, JoinHandle};
 
 use failure::{Error, ResultExt};
@@ -29,8 +29,16 @@ impl Message {
         let mut client =
             TcpStream::connect(&addr).context("failed to connect to parent diagnostics target")?;
 
-        serde_json::to_writer(&mut client, &self)
+        let s = serde_json::to_string(self)
+            .context("failed to serialize message")?;
+        client.write_all(s.as_bytes())
             .context("failed to write message to diagnostics target")?;
+        client.shutdown(Shutdown::Write)
+            .context("failed to shutdown")?;
+
+        let mut tmp = Vec::new();
+        client.read_to_end(&mut tmp)
+            .context("failed to receive a disconnect")?;
 
         Ok(())
     }

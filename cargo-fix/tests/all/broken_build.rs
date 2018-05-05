@@ -110,6 +110,7 @@ fn broken_fixes_backed_out() {
         .cwd("bar")
         .env("RUSTC", p.root.join("foo/target/debug/foo"))
         .stderr_contains("oh no")
+        .stderr_not_contains("[FIXING]")
         .status(101)
         .run();
 
