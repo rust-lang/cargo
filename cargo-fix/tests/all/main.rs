@@ -218,9 +218,11 @@ impl<'a> ExpectCmd<'a> {
 
     fn clean(&self, s: &str) -> String {
         let url = Url::from_file_path(&self.project.root).unwrap();
-        let s = s.replace("[CHECKING]", "    Checking")
-            .replace("[FINISHED]", "    Finished")
+        let s = s
+            .replace("[CHECKING]",  "    Checking")
+            .replace("[FINISHED]",  "    Finished")
             .replace("[COMPILING]", "   Compiling")
+            .replace("[FIXING]",    "      Fixing")
             .replace(&url.to_string(), "CWD")
             .replace(&self.project.root.display().to_string(), "CWD")
             .replace("\\", "/");
