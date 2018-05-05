@@ -24,8 +24,10 @@ mod lock;
 fn main() {
     env_logger::init();
     let result = if env::var("__CARGO_FIX_NOW_RUSTC").is_ok() {
+        debug!("invoking cargo-fix as rustc wrapper");
         cargo_fix_rustc()
     } else {
+        debug!("invoking cargo-fix as cargo subcommand");
         cli::run()
     };
     let err = match result {
@@ -48,6 +50,7 @@ fn cargo_fix_rustc() -> Result<(), Error> {
         .filter(|s| Path::new(s).exists())
         .next();
 
+    trace!("cargo-fix as rustc got file {:?}", filename);
     let rustc = env::var_os("RUSTC_ORIGINAL").unwrap_or("rustc".into());
 
     // Our goal is to fix only the crates that the end user is interested in.
@@ -60,6 +63,7 @@ fn cargo_fix_rustc() -> Result<(), Error> {
     let mut files_to_restore = HashMap::new();
     if let Some(path) = filename {
         if !Path::new(&path).is_absolute() {
+            trace!("start rustfixing {:?}", path);
             files_to_restore = rustfix_crate(rustc.as_ref(), &path)?;
         }
     }
@@ -130,6 +134,7 @@ fn rustfix_crate(rustc: &Path, filename: &str) -> Result<HashMap<String, String>
     // TODO: this should be configurable by the CLI to sometimes proceed to
     // attempt to fix broken code.
     if !output.status.success() && env::var_os("__CARGO_FIX_BROKEN_CODE").is_none() {
+        debug!("rustfixing `{:?}` failed, rustc exited with {:?}", filename, output.status.code());
         return Ok(HashMap::new())
     }
 
@@ -149,6 +154,7 @@ fn rustfix_crate(rustc: &Path, filename: &str) -> Result<HashMap<String, String>
 
     // Collect suggestions by file so we can apply them one at a time later.
     let mut file_map = HashMap::new();
+    let mut num_suggestion = 0;
     for suggestion in suggestions {
         // Make sure we've got a file associated with this suggestion and all
         // snippets point to the same location. Right now it's not clear what
@@ -170,7 +176,10 @@ fn rustfix_crate(rustc: &Path, filename: &str) -> Result<HashMap<String, String>
         file_map.entry(file_name)
             .or_insert_with(Vec::new)
             .push(suggestion);
+        num_suggestion += 1;
     }
+
+    debug!("collected {} suggestions for `{}`", num_suggestion, filename);
 
     let mut old_files = HashMap::with_capacity(file_map.len());
     for (file, suggestions) in file_map {
