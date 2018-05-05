@@ -1,7 +1,6 @@
-use serde::ser::{self, Serialize};
-
 use core::resolver::Resolve;
-use core::{Package, PackageId, Workspace};
+use core::{Package, PackageId, PackageSet, Workspace};
+use core::dependency;
 use ops::{self, Packages};
 use util::CargoResult;
 
@@ -56,18 +55,19 @@ fn metadata_full(ws: &Workspace, opt: &OutputMetadataOptions) -> CargoResult<Exp
     )?;
     let (packages, resolve) = deps;
 
+    let resolve = MetadataResolve::new(
+        &packages,
+        &resolve,
+        ws.current_opt().map(|pkg| pkg.package_id().clone()),
+    );
     let packages = packages
         .package_ids()
         .map(|i| packages.get(i).map(|p| p.clone()))
         .collect::<CargoResult<Vec<_>>>()?;
-
     Ok(ExportInfo {
         packages,
         workspace_members: ws.members().map(|pkg| pkg.package_id().clone()).collect(),
-        resolve: Some(MetadataResolve {
-            resolve,
-            root: ws.current_opt().map(|pkg| pkg.package_id().clone()),
-        }),
+        resolve: Some(resolve),
         target_directory: ws.target_dir().display().to_string(),
         version: VERSION,
         workspace_root: ws.root().display().to_string(),
@@ -76,42 +76,91 @@ fn metadata_full(ws: &Workspace, opt: &OutputMetadataOptions) -> CargoResult<Exp
 
 #[derive(Serialize)]
 pub struct ExportInfo {
+    /// All packages for this project, with dependencies.
     packages: Vec<Package>,
+    /// Packages which are direct members of the current project.
     workspace_members: Vec<PackageId>,
+    /// A graph of the dependencies between packages.
     resolve: Option<MetadataResolve>,
+    /// The directory where intermediate build artifacts will be stored.
     target_directory: String,
+    /// Version of this JSON format
     version: u32,
+    /// Path to the directory with the project.
     workspace_root: String,
 }
 
-/// Newtype wrapper to provide a custom `Serialize` implementation.
-/// The one from lockfile does not fit because it uses a non-standard
-/// format for `PackageId`s
+// The serialization format is different from lockfile, because
+// here we use different format for `PackageId`s, and give more
+// information about dependencies.
 #[derive(Serialize)]
 struct MetadataResolve {
-    #[serde(rename = "nodes", serialize_with = "serialize_resolve")]
-    resolve: Resolve,
+    /// Dependencies for each package from `ExportInfo::package`.
+    nodes: Vec<Node>,
+    /// Deprecated, use `ExportInfo::workspace_members`.
     root: Option<PackageId>,
 }
 
-fn serialize_resolve<S>(resolve: &Resolve, s: S) -> Result<S::Ok, S::Error>
-where
-    S: ser::Serializer,
-{
-    #[derive(Serialize)]
-    struct Node<'a> {
-        id: &'a PackageId,
-        dependencies: Vec<&'a PackageId>,
-        features: Vec<&'a str>,
-    }
+/// Describes dependencies of a single package.
+#[derive(Serialize)]
+struct Node {
+    /// The id of the package.
+    id: PackageId,
+    /// Deprecated, use `deps` field.
+    dependencies: Vec<PackageId>,
+    /// Dependencies of this package.
+    deps: Vec<Dependency>,
+    /// Features, enabled for this package.
+    features: Vec<String>,
+}
 
-    resolve
-        .iter()
-        .map(|id| Node {
-            id,
-            dependencies: resolve.deps(id).map(|p| p.0).collect(),
-            features: resolve.features_sorted(id),
-        })
-        .collect::<Vec<_>>()
-        .serialize(s)
+/// Describes a single dependency.
+#[derive(Serialize)]
+struct Dependency {
+    /// The id of the dependency.
+    id: PackageId,
+    /// The name used for `extern crate` declaration of this dependency.
+    name: String,
+    /// Is this normal, dev or build dependency
+    kind: dependency::Kind,
+}
+
+impl MetadataResolve {
+    pub fn new(
+        packages: &PackageSet,
+        resolve: &Resolve,
+        root: Option<PackageId>,
+    ) -> MetadataResolve {
+        let nodes = resolve
+            .iter()
+            .map(|pkg| {
+                Node {
+                    id: pkg.clone(),
+                    dependencies: resolve.deps(pkg).map(|(dep, _)| dep.clone()).collect(),
+                    deps: resolve
+                        .deps(pkg)
+                        .flat_map(|(id, deps)| {
+                            let dep_name = packages.get(id).unwrap()
+                                .lib_target().unwrap()
+                                .crate_name();
+                            deps.iter().map(|dep| {
+                                Dependency {
+                                    id: id.clone(),
+                                    name: dep.rename().unwrap_or(&dep_name)
+                                        .to_owned(),
+                                    kind: dep.kind(),
+                                }
+                            }).collect::<Vec<_>>().into_iter()
+                        })
+                        .collect(),
+                    features: resolve
+                        .features_sorted(pkg)
+                        .into_iter()
+                        .map(|s| s.to_string())
+                        .collect(),
+                }
+            })
+            .collect();
+        MetadataResolve { nodes, root }
+    }
 }
