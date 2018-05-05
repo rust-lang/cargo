@@ -207,7 +207,7 @@ fn rustfix_crate(rustc: &Path, filename: &str) -> Result<HashMap<String, String>
         let num_suggestions = suggestions.len();
         debug!("applying {} fixes to {}", num_suggestions, file);
 
-        diagnostics::Message::fixing(&file, num_suggestion).post()?;
+        diagnostics::Message::fixing(&file, num_suggestions).post()?;
 
         let new_code = rustfix::apply_suggestions(&code, &suggestions)?;
         File::create(&file)
