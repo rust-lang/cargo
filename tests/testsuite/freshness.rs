@@ -1164,3 +1164,71 @@ fn change_panic_mode() {
     assert_that(p.cargo("build -p foo"), execs().with_status(0));
     assert_that(p.cargo("build -p bar"), execs().with_status(0));
 }
+
+#[test]
+fn dont_rebuild_based_on_plugins() {
+    let p = project("p")
+        .file(
+            "Cargo.toml",
+            r#"
+                [package]
+                name = "foo"
+                version = "0.1.1"
+
+                [workspace]
+                members = ['bar']
+
+                [dependencies]
+                proc-macro-thing = { path = 'proc-macro-thing' }
+            "#,
+        )
+        .file("src/lib.rs", "")
+        .file(
+            "proc-macro-thing/Cargo.toml",
+            r#"
+                [package]
+                name = "proc-macro-thing"
+                version = "0.1.1"
+
+                [lib]
+                proc-macro = true
+
+                [dependencies]
+                baz = { path = '../baz' }
+            "#,
+        )
+        .file("proc-macro-thing/src/lib.rs", "")
+        .file(
+            "bar/Cargo.toml",
+            r#"
+                [package]
+                name = "bar"
+                version = "0.1.1"
+
+                [dependencies]
+                baz = { path = '../baz' }
+            "#,
+        )
+        .file("bar/src/main.rs", "fn main() {}")
+        .file(
+            "baz/Cargo.toml",
+            r#"
+                [package]
+                name = "baz"
+                version = "0.1.1"
+            "#,
+        )
+        .file("baz/src/lib.rs", "")
+        .build();
+
+    assert_that(p.cargo("build"), execs().with_status(0));
+    assert_that(p.cargo("build -p bar"), execs().with_status(0));
+    assert_that(
+        p.cargo("build"),
+        execs().with_status(0).with_stderr("[FINISHED] [..]\n"),
+    );
+    assert_that(
+        p.cargo("build -p bar"),
+        execs().with_status(0).with_stderr("[FINISHED] [..]\n"),
+    );
+}
