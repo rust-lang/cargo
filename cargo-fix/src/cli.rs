@@ -102,6 +102,16 @@ fn log_message(msg: &Message, stream: &mut StandardStream) -> Result<(), Error> 
                 stream,
             )?;
         }
+        ReplaceFailed { ref file, ref message } => {
+            stream.set_color(ColorSpec::new().set_bold(true).set_fg(Some(Color::Yellow)))?;
+            write!(stream, "warning")?;
+            stream.reset()?;
+            stream.set_color(ColorSpec::new().set_bold(true))?;
+            write!(stream, ": error applying suggestions to `{}`\n", file)?;
+            stream.reset()?;
+            write!(stream, "The full error message was:\n\n> {}\n\n", message)?;
+            stream.write(PLEASE_REPORT_THIS_BUG.as_bytes())?;
+        }
         FixFailed { ref files, ref krate } => {
             stream.set_color(ColorSpec::new().set_bold(true).set_fg(Some(Color::Yellow)))?;
             write!(stream, "warning")?;
