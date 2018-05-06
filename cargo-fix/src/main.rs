@@ -229,11 +229,19 @@ fn rustfix_crate(rustc: &Path, filename: &str) -> Result<FixedCrate, Error> {
 
         messages.push(Message::fixing(&file, num_suggestions));
 
-        let new_code = rustfix::apply_suggestions(&code, &suggestions)?;
-        File::create(&file)
-            .and_then(|mut f| f.write_all(new_code.as_bytes()))
-            .with_context(|_| format!("failed to write file `{}`", file))?;
-        original_files.insert(file, code);
+        match rustfix::apply_suggestions(&code, &suggestions) {
+            Err(e) => {
+                diagnostics::Message::ReplaceFailed { file: file, message: e.to_string() }.post()?;
+                // TODO: Add flag to decide if we want to continue or bail out
+                continue;
+            }
+            Ok(new_code) => {
+                File::create(&file)
+                    .and_then(|mut f| f.write_all(new_code.as_bytes()))
+                    .with_context(|_| format!("failed to write file `{}`", file))?;
+                original_files.insert(file, code);
+            }
+        }
     }
 
     Ok(FixedCrate {

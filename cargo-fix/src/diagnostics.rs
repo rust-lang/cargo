@@ -17,6 +17,7 @@ static DIAGNOSICS_SERVER_VAR: &str = "__CARGO_FIX_DIAGNOSTICS_SERVER";
 pub enum Message {
     Fixing { file: String, fixes: usize },
     FixFailed { files: Vec<String>, krate: Option<String> },
+    ReplaceFailed { file: String, message: String },
 }
 
 impl Message {
