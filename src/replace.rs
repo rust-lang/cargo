@@ -89,8 +89,23 @@ impl Data {
                 .iter()
                 .position(|p| p.start <= from && p.end >= up_to_and_including)
                 .ok_or_else(|| {
+                    use log::Level::Debug;
+                    if log_enabled!(Debug) {
+                        let slices = self.parts
+                            .iter()
+                            .map(|p| (p.start, p.end, match p.data {
+                                State::Initial => "initial",
+                                State::Replaced(..) => "replaced",
+                            }))
+                            .collect::<Vec<_>>();
+                        debug!("no single slice covering {}...{}, current slices: {:?}",
+                            from, up_to_and_including, slices,
+                        );
+                    }
+
                     format_err!(
-                        "Could not find data slice that covers range {}..{}",
+                        "Could not replace range {}...{} in file \
+                        -- maybe parts of it were already replaced?",
                         from,
                         up_to_and_including
                     )
