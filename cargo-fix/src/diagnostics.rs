@@ -6,14 +6,17 @@ use std::io::{BufReader, Write, Read};
 use std::net::{Shutdown, SocketAddr, TcpListener, TcpStream};
 use std::thread::{self, JoinHandle};
 
+use atty;
 use failure::{Error, ResultExt};
 use serde_json;
+use termcolor::{ColorChoice, StandardStream};
 
 static DIAGNOSICS_SERVER_VAR: &str = "__CARGO_FIX_DIAGNOSTICS_SERVER";
 
 #[derive(Deserialize, Serialize)]
 pub enum Message {
     Fixing { file: String, fixes: usize },
+    FixFailed { files: Vec<String>, krate: Option<String> },
 }
 
 impl Message {
@@ -62,10 +65,9 @@ impl Server {
         Ok(Server { listener })
     }
 
-    pub fn start<F: Fn(Message) + Send + 'static>(
-        self,
-        on_message: F,
-    ) -> Result<StartedServer, Error> {
+    pub fn start<F>(self, on_message: F) -> Result<StartedServer, Error>
+        where F: Fn(Message, &mut StandardStream) + Send + 'static,
+    {
         let _addr = self.listener.local_addr()?;
         let thread = thread::spawn(move || {
             self.run(on_message);
@@ -77,11 +79,19 @@ impl Server {
         })
     }
 
-    fn run<F: Fn(Message)>(self, on_message: F) {
+    fn run<F>(self, on_message: F)
+        where F: Fn(Message, &mut StandardStream)
+    {
+        let color_choice = if atty::is(atty::Stream::Stderr) {
+            ColorChoice::Auto
+        } else {
+            ColorChoice::Never
+        };
+        let mut stream = StandardStream::stderr(color_choice);
         while let Ok((client, _)) = self.listener.accept() {
             let mut client = BufReader::new(client);
             match serde_json::from_reader(client) {
-                Ok(message) => on_message(message),
+                Ok(message) => on_message(message, &mut stream),
                 Err(e) => {
                     warn!("invalid diagnostics message: {}", e);
                 }
