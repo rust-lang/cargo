@@ -232,6 +232,7 @@ fn everything() {
 }
 
 #[test]
+#[ignore = "Requires custom rustc build"]
 fn edition() {
     let _ = env_logger::try_init();
     assert_fixtures("./tests/edition", fixmode::EDITION);
