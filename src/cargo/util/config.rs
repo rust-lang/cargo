@@ -1380,7 +1380,7 @@ impl ConfigValue {
         }
     }
 
-    fn into_toml(self) -> toml::Value {
+    pub fn into_toml(self) -> toml::Value {
         match self {
             CV::Boolean(s, _) => toml::Value::Boolean(s),
             CV::String(s, _) => toml::Value::String(s),
@@ -1396,9 +1396,6 @@ impl ConfigValue {
 
     fn merge(&mut self, from: ConfigValue) -> CargoResult<()> {
         match (self, from) {
-            (&mut CV::String(..), CV::String(..))
-            | (&mut CV::Integer(..), CV::Integer(..))
-            | (&mut CV::Boolean(..), CV::Boolean(..)) => {}
             (&mut CV::List(ref mut old, _), CV::List(ref mut new, _)) => {
                 let new = mem::replace(new, Vec::new());
                 old.extend(new.into_iter());
@@ -1428,13 +1425,17 @@ impl ConfigValue {
                     };
                 }
             }
-            (expected, found) => {
+            (expected @ &mut CV::List(_, _), found)
+            | (expected @ &mut CV::Table(_, _), found)
+            | (expected, found @ CV::List(_, _))
+            | (expected, found @ CV::Table(_, _)) => {
                 return Err(internal(format!(
                     "expected {}, but found {}",
                     expected.desc(),
                     found.desc()
                 )))
             }
+            _ => {}
         }
 
         Ok(())

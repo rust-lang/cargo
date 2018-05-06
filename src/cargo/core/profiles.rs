@@ -1,12 +1,13 @@
-use std::collections::HashSet;
+use std::collections::{HashMap, HashSet};
+use std::sync::atomic;
 use std::{cmp, fmt, hash};
 
 use core::compiler::CompileMode;
 use core::interning::InternedString;
-use core::{PackageId, PackageIdSpec, PackageSet, Shell};
+use core::{Features, PackageId, PackageIdSpec, PackageSet, Shell};
 use util::lev_distance::lev_distance;
-use util::toml::{ProfilePackageSpec, StringOrBool, TomlProfile, U32OrBool};
-use util::CargoResult;
+use util::toml::{ProfilePackageSpec, StringOrBool, TomlProfile, TomlProfiles, U32OrBool};
+use util::{CargoResult, Config, ConfigValue};
 
 /// Collection of all user profiles.
 #[derive(Clone, Debug)]
@@ -20,34 +21,43 @@ pub struct Profiles {
 
 impl Profiles {
     pub fn new(
-        dev: Option<TomlProfile>,
-        release: Option<TomlProfile>,
-        test: Option<TomlProfile>,
-        bench: Option<TomlProfile>,
-        doc: Option<TomlProfile>,
-    ) -> Profiles {
-        Profiles {
+        profiles: Option<&TomlProfiles>,
+        config: &Config,
+        features: &Features,
+        warnings: &mut Vec<String>,
+    ) -> CargoResult<Profiles> {
+        if let Some(profiles) = profiles {
+            profiles.validate(features, warnings)?;
+        }
+        Profiles::validate_config(config, warnings)?;
+
+        Ok(Profiles {
             dev: ProfileMaker {
                 default: Profile::default_dev(),
-                toml: dev,
+                toml: profiles.and_then(|p| p.dev.clone()),
+                config: TomlProfile::from_config(config, "dev", warnings)?,
             },
             release: ProfileMaker {
                 default: Profile::default_release(),
-                toml: release,
+                toml: profiles.and_then(|p| p.release.clone()),
+                config: TomlProfile::from_config(config, "release", warnings)?,
             },
             test: ProfileMaker {
                 default: Profile::default_test(),
-                toml: test,
+                toml: profiles.and_then(|p| p.test.clone()),
+                config: None,
             },
             bench: ProfileMaker {
                 default: Profile::default_bench(),
-                toml: bench,
+                toml: profiles.and_then(|p| p.bench.clone()),
+                config: None,
             },
             doc: ProfileMaker {
                 default: Profile::default_doc(),
-                toml: doc,
+                toml: profiles.and_then(|p| p.doc.clone()),
+                config: None,
             },
-        }
+        })
     }
 
     /// Retrieve the profile for a target.
@@ -86,7 +96,7 @@ impl Profiles {
             CompileMode::Bench => &self.bench,
             CompileMode::Doc { .. } => &self.doc,
         };
-        let mut profile = maker.profile_for(Some(pkg_id), is_member, profile_for);
+        let mut profile = maker.get_profile(Some(pkg_id), is_member, profile_for);
         // `panic` should not be set for tests/benches, or any of their
         // dependencies.
         if profile_for == ProfileFor::TestDependency || mode.is_any_test() {
@@ -112,9 +122,9 @@ impl Profiles {
     /// select for the package that was actually built.
     pub fn base_profile(&self, release: bool) -> Profile {
         if release {
-            self.release.profile_for(None, true, ProfileFor::Any)
+            self.release.get_profile(None, true, ProfileFor::Any)
         } else {
-            self.dev.profile_for(None, true, ProfileFor::Any)
+            self.dev.get_profile(None, true, ProfileFor::Any)
         }
     }
 
@@ -127,11 +137,77 @@ impl Profiles {
         self.doc.validate_packages(shell, packages)?;
         Ok(())
     }
+
+    fn validate_config(config: &Config, warnings: &mut Vec<String>) -> CargoResult<()> {
+        static VALIDATE_ONCE: atomic::AtomicBool = atomic::ATOMIC_BOOL_INIT;
+
+        if VALIDATE_ONCE.swap(true, atomic::Ordering::SeqCst) {
+            return Ok(());
+        }
+
+        // cv: Value<HashMap<String, CV>>
+        if let Some(cv) = config.get_table("profile")? {
+            // Warn if config profiles without CLI option.
+            if !config.cli_unstable().config_profile {
+                warnings.push(format!(
+                    "profile in config `{}` requires `-Z config-profile` command-line option",
+                    cv.definition
+                ));
+                // Ignore the rest.
+                return Ok(());
+            }
+            // Warn about unsupported profile names.
+            for (key, profile_cv) in cv.val.iter() {
+                if key != "dev" && key != "release" {
+                    warnings.push(format!(
+                        "profile `{}` in config `{}` is not supported",
+                        key,
+                        profile_cv.definition_path().display()
+                    ));
+                }
+            }
+            // Warn about incorrect key names.
+            for profile_cv in cv.val.values() {
+                if let ConfigValue::Table(ref profile, _) = *profile_cv {
+                    validate_profile_keys(profile, warnings);
+                    if let Some(&ConfigValue::Table(ref bo_profile, _)) =
+                        profile.get("build-override")
+                    {
+                        validate_profile_keys(bo_profile, warnings);
+                    }
+                    if let Some(&ConfigValue::Table(ref os, _)) = profile.get("overrides") {
+                        for o_profile_cv in os.values() {
+                            if let ConfigValue::Table(ref o_profile, _) = *o_profile_cv {
+                                validate_profile_keys(o_profile, warnings);
+                            }
+                        }
+                    }
+                }
+            }
+        }
+        return Ok(());
+
+        fn validate_profile_keys(
+            profile: &HashMap<String, ConfigValue>,
+            warnings: &mut Vec<String>,
+        ) {
+            for (key, value_cv) in profile.iter() {
+                if !TOML_PROFILE_KEYS.iter().any(|k| k == key) {
+                    warnings.push(format!(
+                        "unused profile key `{}` in config `{}`",
+                        key,
+                        value_cv.definition_path().display()
+                    ));
+                }
+            }
+        }
+    }
 }
 
 /// An object used for handling the profile override hierarchy.
 ///
 /// The precedence of profiles are (first one wins):
+/// - Profiles in .cargo/config files (using same order as below).
 /// - [profile.dev.overrides.name] - A named package.
 /// - [profile.dev.overrides."*"] - This cannot apply to workspace members.
 /// - [profile.dev.build-override] - This can only apply to `build.rs` scripts
@@ -140,12 +216,16 @@ impl Profiles {
 /// - Default (hard-coded) values.
 #[derive(Debug, Clone)]
 struct ProfileMaker {
+    /// The starting, hard-coded defaults for the profile.
     default: Profile,
+    /// The profile from the `Cargo.toml` manifest.
     toml: Option<TomlProfile>,
+    /// Profile loaded from `.cargo/config` files.
+    config: Option<TomlProfile>,
 }
 
 impl ProfileMaker {
-    fn profile_for(
+    fn get_profile(
         &self,
         pkg_id: Option<&PackageId>,
         is_member: bool,
@@ -153,47 +233,28 @@ impl ProfileMaker {
     ) -> Profile {
         let mut profile = self.default;
         if let Some(ref toml) = self.toml {
-            merge_profile(&mut profile, toml);
-            if profile_for == ProfileFor::CustomBuild {
-                if let Some(ref build_override) = toml.build_override {
-                    merge_profile(&mut profile, build_override);
-                }
-            }
-            if let Some(ref overrides) = toml.overrides {
-                if !is_member {
-                    if let Some(all) = overrides.get(&ProfilePackageSpec::All) {
-                        merge_profile(&mut profile, all);
-                    }
-                }
-                if let Some(pkg_id) = pkg_id {
-                    let mut matches = overrides.iter().filter_map(
-                        |(key, spec_profile)| match key {
-                            &ProfilePackageSpec::All => None,
-                            &ProfilePackageSpec::Spec(ref s) => if s.matches(pkg_id) {
-                                Some(spec_profile)
-                            } else {
-                                None
-                            },
-                        },
-                    );
-                    if let Some(spec_profile) = matches.next() {
-                        merge_profile(&mut profile, spec_profile);
-                        // `validate_packages` should ensure that there are
-                        // no additional matches.
-                        assert!(
-                            matches.next().is_none(),
-                            "package `{}` matched multiple profile overrides",
-                            pkg_id
-                        );
-                    }
-                }
-            }
+            merge_toml(pkg_id, is_member, profile_for, &mut profile, toml);
+        }
+        if let Some(ref toml) = self.config {
+            merge_toml(pkg_id, is_member, profile_for, &mut profile, toml);
         }
         profile
     }
 
     fn validate_packages(&self, shell: &mut Shell, packages: &PackageSet) -> CargoResult<()> {
-        let toml = match self.toml {
+        self.validate_packages_toml(shell, packages, &self.toml, true)?;
+        self.validate_packages_toml(shell, packages, &self.config, false)?;
+        Ok(())
+    }
+
+    fn validate_packages_toml(
+        &self,
+        shell: &mut Shell,
+        packages: &PackageSet,
+        toml: &Option<TomlProfile>,
+        warn_unmatched: bool,
+    ) -> CargoResult<()> {
+        let toml = match *toml {
             Some(ref toml) => toml,
             None => return Ok(()),
         };
@@ -206,9 +267,9 @@ impl ProfileMaker {
         for pkg_id in packages.package_ids() {
             let matches: Vec<&PackageIdSpec> = overrides
                 .keys()
-                .filter_map(|key| match key {
-                    &ProfilePackageSpec::All => None,
-                    &ProfilePackageSpec::Spec(ref spec) => if spec.matches(pkg_id) {
+                .filter_map(|key| match *key {
+                    ProfilePackageSpec::All => None,
+                    ProfilePackageSpec::Spec(ref spec) => if spec.matches(pkg_id) {
                         Some(spec)
                     } else {
                         None
@@ -237,9 +298,12 @@ impl ProfileMaker {
             }
         }
 
+        if !warn_unmatched {
+            return Ok(());
+        }
         // Verify every override matches at least one package.
         let missing_specs = overrides.keys().filter_map(|key| {
-            if let &ProfilePackageSpec::Spec(ref spec) = key {
+            if let ProfilePackageSpec::Spec(ref spec) = *key {
                 if !found.contains(spec) {
                     return Some(spec);
                 }
@@ -258,7 +322,7 @@ impl ProfileMaker {
                     }
                 })
                 .collect();
-            if name_matches.len() == 0 {
+            if name_matches.is_empty() {
                 let suggestion = packages
                     .package_ids()
                     .map(|p| (lev_distance(spec.name(), &p.name()), p.name()))
@@ -286,6 +350,50 @@ impl ProfileMaker {
             }
         }
         Ok(())
+    }
+}
+
+fn merge_toml(
+    pkg_id: Option<&PackageId>,
+    is_member: bool,
+    profile_for: ProfileFor,
+    profile: &mut Profile,
+    toml: &TomlProfile,
+) {
+    merge_profile(profile, toml);
+    if profile_for == ProfileFor::CustomBuild {
+        if let Some(ref build_override) = toml.build_override {
+            merge_profile(profile, build_override);
+        }
+    }
+    if let Some(ref overrides) = toml.overrides {
+        if !is_member {
+            if let Some(all) = overrides.get(&ProfilePackageSpec::All) {
+                merge_profile(profile, all);
+            }
+        }
+        if let Some(pkg_id) = pkg_id {
+            let mut matches = overrides
+                .iter()
+                .filter_map(|(key, spec_profile)| match *key {
+                    ProfilePackageSpec::All => None,
+                    ProfilePackageSpec::Spec(ref s) => if s.matches(pkg_id) {
+                        Some(spec_profile)
+                    } else {
+                        None
+                    },
+                });
+            if let Some(spec_profile) = matches.next() {
+                merge_profile(profile, spec_profile);
+                // `validate_packages` should ensure that there are
+                // no additional matches.
+                assert!(
+                    matches.next().is_none(),
+                    "package `{}` matched multiple profile overrides",
+                    pkg_id
+                );
+            }
+        }
     }
 }
 
@@ -340,6 +448,20 @@ pub struct Profile {
     pub incremental: bool,
     pub panic: Option<InternedString>,
 }
+
+const TOML_PROFILE_KEYS: [&str; 11] = [
+    "opt-level",
+    "lto",
+    "codegen-units",
+    "debug",
+    "debug-assertions",
+    "rpath",
+    "panic",
+    "overflow-checks",
+    "incremental",
+    "overrides",
+    "build-override",
+];
 
 impl Default for Profile {
     fn default() -> Profile {
