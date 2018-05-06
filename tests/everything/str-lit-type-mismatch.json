@@ -7,7 +7,7 @@
   "level": "error",
   "spans": [
     {
-      "file_name": "./tests/fixtures/str-lit-type-mismatch.rs",
+      "file_name": "./tests/everything/str-lit-type-mismatch.rs",
       "byte_start": 499,
       "byte_end": 504,
       "line_start": 13,
@@ -42,7 +42,7 @@
       "level": "help",
       "spans": [
         {
-          "file_name": "./tests/fixtures/str-lit-type-mismatch.rs",
+          "file_name": "./tests/everything/str-lit-type-mismatch.rs",
           "byte_start": 499,
           "byte_end": 504,
           "line_start": 13,
@@ -66,7 +66,7 @@
       "rendered": null
     }
   ],
-  "rendered": "error[E0308]: mismatched types\n  --> ./tests/fixtures/str-lit-type-mismatch.rs:13:20\n   |\n13 |     let x: &[u8] = \"foo\"; //~ ERROR mismatched types\n   |                    ^^^^^\n   |                    |\n   |                    expected slice, found str\n   |                    help: consider adding a leading `b`: `b\"foo\"`\n   |\n   = note: expected type `&[u8]`\n              found type `&'static str`\n\nIf you want more information on this error, try using \"rustc --explain E0308\"\n"
+  "rendered": "error[E0308]: mismatched types\n  --> ./tests/everything/str-lit-type-mismatch.rs:13:20\n   |\n13 |     let x: &[u8] = \"foo\"; //~ ERROR mismatched types\n   |                    ^^^^^\n   |                    |\n   |                    expected slice, found str\n   |                    help: consider adding a leading `b`: `b\"foo\"`\n   |\n   = note: expected type `&[u8]`\n              found type `&'static str`\n\nIf you want more information on this error, try using \"rustc --explain E0308\"\n"
 }
 {
   "message": "mismatched types",
@@ -77,7 +77,7 @@
   "level": "error",
   "spans": [
     {
-      "file_name": "./tests/fixtures/str-lit-type-mismatch.rs",
+      "file_name": "./tests/everything/str-lit-type-mismatch.rs",
       "byte_start": 555,
       "byte_end": 561,
       "line_start": 14,
@@ -112,7 +112,7 @@
       "level": "help",
       "spans": [
         {
-          "file_name": "./tests/fixtures/str-lit-type-mismatch.rs",
+          "file_name": "./tests/everything/str-lit-type-mismatch.rs",
           "byte_start": 555,
           "byte_end": 561,
           "line_start": 14,
@@ -136,7 +136,7 @@
       "rendered": null
     }
   ],
-  "rendered": "error[E0308]: mismatched types\n  --> ./tests/fixtures/str-lit-type-mismatch.rs:14:23\n   |\n14 |     let y: &[u8; 4] = \"baaa\"; //~ ERROR mismatched types\n   |                       ^^^^^^\n   |                       |\n   |                       expected array of 4 elements, found str\n   |                       help: consider adding a leading `b`: `b\"baaa\"`\n   |\n   = note: expected type `&[u8; 4]`\n              found type `&'static str`\n\nIf you want more information on this error, try using \"rustc --explain E0308\"\n"
+  "rendered": "error[E0308]: mismatched types\n  --> ./tests/everything/str-lit-type-mismatch.rs:14:23\n   |\n14 |     let y: &[u8; 4] = \"baaa\"; //~ ERROR mismatched types\n   |                       ^^^^^^\n   |                       |\n   |                       expected array of 4 elements, found str\n   |                       help: consider adding a leading `b`: `b\"baaa\"`\n   |\n   = note: expected type `&[u8; 4]`\n              found type `&'static str`\n\nIf you want more information on this error, try using \"rustc --explain E0308\"\n"
 }
 {
   "message": "mismatched types",
@@ -147,7 +147,7 @@
   "level": "error",
   "spans": [
     {
-      "file_name": "./tests/fixtures/str-lit-type-mismatch.rs",
+      "file_name": "./tests/everything/str-lit-type-mismatch.rs",
       "byte_start": 608,
       "byte_end": 614,
       "line_start": 15,
@@ -182,7 +182,7 @@
       "level": "help",
       "spans": [
         {
-          "file_name": "./tests/fixtures/str-lit-type-mismatch.rs",
+          "file_name": "./tests/everything/str-lit-type-mismatch.rs",
           "byte_start": 608,
           "byte_end": 614,
           "line_start": 15,
@@ -206,7 +206,7 @@
       "rendered": null
     }
   ],
-  "rendered": "error[E0308]: mismatched types\n  --> ./tests/fixtures/str-lit-type-mismatch.rs:15:19\n   |\n15 |     let z: &str = b\"foo\"; //~ ERROR mismatched types\n   |                   ^^^^^^\n   |                   |\n   |                   expected str, found array of 3 elements\n   |                   help: consider removing the leading `b`: `\"foo\"`\n   |\n   = note: expected type `&str`\n              found type `&'static [u8; 3]`\n\nIf you want more information on this error, try using \"rustc --explain E0308\"\n"
+  "rendered": "error[E0308]: mismatched types\n  --> ./tests/everything/str-lit-type-mismatch.rs:15:19\n   |\n15 |     let z: &str = b\"foo\"; //~ ERROR mismatched types\n   |                   ^^^^^^\n   |                   |\n   |                   expected str, found array of 3 elements\n   |                   help: consider removing the leading `b`: `\"foo\"`\n   |\n   = note: expected type `&str`\n              found type `&'static [u8; 3]`\n\nIf you want more information on this error, try using \"rustc --explain E0308\"\n"
 }
 {
   "message": "aborting due to 3 previous errors",

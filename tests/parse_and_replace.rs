@@ -11,7 +11,7 @@ extern crate rustfix;
 extern crate serde_json;
 extern crate tempdir;
 
-use std::fs;
+use std::{env, fs};
 use std::error::Error;
 use std::path::{Path, PathBuf};
 use std::collections::HashSet;
@@ -135,8 +135,8 @@ fn test_rustfix_with_file<P: AsRef<Path>>(file: P) -> Result<(), Box<Error>> {
     Ok(())
 }
 
-fn get_fixture_files() -> Result<Vec<PathBuf>, Box<Error>> {
-    Ok(fs::read_dir("./tests/fixtures")?
+fn get_fixture_files(p: &str) -> Result<Vec<PathBuf>, Box<Error>> {
+    Ok(fs::read_dir(&p)?
         .into_iter()
         .map(|e| e.unwrap().path())
         .filter(|p| p.is_file())
@@ -147,12 +147,17 @@ fn get_fixture_files() -> Result<Vec<PathBuf>, Box<Error>> {
         .collect())
 }
 
-#[test]
-fn fixtures() {
-    let _ = env_logger::try_init();
-
-    for file in &get_fixture_files().unwrap() {
+fn assert_fixtures(dir: &str, mode: &str) {
+    for file in &get_fixture_files(&dir).unwrap() {
+        env::set_var("RUSTFIX_MODE", mode);
         test_rustfix_with_file(file).unwrap();
+        env::remove_var("RUSTFIX_MODE")
         info!("passed: {:?}", file);
     }
+}
+
+#[test]
+fn everything() {
+    let _ = env_logger::try_init();
+    assert_fixtures("./tests/everything", "yolo");
 }
