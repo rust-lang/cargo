@@ -77,8 +77,8 @@ pub fn run() -> Result<(), Error> {
 fn log_message(msg: &diagnostics::Message) -> Result<(), Error> {
     use diagnostics::Message::*;
 
-    match msg {
-        Fixing { file, fixes } => {
+    match *msg {
+        Fixing { ref file, ref fixes } => {
             log_for_human(
                 "Fixing",
                 &format!(
