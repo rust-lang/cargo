@@ -2,9 +2,9 @@ use std::fs::{self, File};
 use std::io::prelude::*;
 
 use cargotest::sleep_ms;
-use cargotest::support::{execs, project, path2url};
 use cargotest::support::paths::CargoPathExt;
 use cargotest::support::registry::Package;
+use cargotest::support::{execs, path2url, project};
 use hamcrest::{assert_that, existing_file};
 
 #[test]
@@ -515,60 +515,71 @@ fn changing_bin_features_caches_targets() {
         )
         .build();
 
+    // Windows has a problem with replacing a binary that was just executed.
+    // Unlinking it will succeed, but then attempting to immediately replace
+    // it will sometimes fail with "Already Exists".
+    // See https://github.com/rust-lang/cargo/issues/5481
+    let foo_proc = |name: &str| {
+        let src = p.bin("foo");
+        let dst = p.bin(name);
+        fs::copy(&src, &dst).expect("Failed to copy foo");
+        p.process(dst)
+    };
+
     assert_that(
-        p.cargo("run"),
-        execs()
-            .with_status(0)
-            .with_stdout("feature off")
-            .with_stderr(
-                "\
-[..]Compiling foo v0.0.1 ([..])
+        p.cargo("build"),
+        execs().with_status(0).with_stderr(
+            "\
+[COMPILING] foo v0.0.1 ([..])
 [FINISHED] dev [unoptimized + debuginfo] target(s) in [..]
-[RUNNING] `target[/]debug[/]foo[EXE]`
 ",
-            ),
+        ),
+    );
+    assert_that(
+        foo_proc("off1"),
+        execs().with_status(0).with_stdout("feature off"),
     );
 
     assert_that(
-        p.cargo("run").arg("--features").arg("foo"),
-        execs()
-            .with_status(0)
-            .with_stdout("feature on")
-            .with_stderr(
-                "\
-[..]Compiling foo v0.0.1 ([..])
+        p.cargo("build").arg("--features").arg("foo"),
+        execs().with_status(0).with_stderr(
+            "\
+[COMPILING] foo v0.0.1 ([..])
 [FINISHED] dev [unoptimized + debuginfo] target(s) in [..]
-[RUNNING] `target[/]debug[/]foo[EXE]`
 ",
-            ),
+        ),
+    );
+    assert_that(
+        foo_proc("on1"),
+        execs().with_status(0).with_stdout("feature on"),
     );
 
     /* Targets should be cached from the first build */
 
     assert_that(
-        p.cargo("run"),
-        execs()
-            .with_status(0)
-            .with_stdout("feature off")
-            .with_stderr(
-                "\
+        p.cargo("build"),
+        execs().with_status(0).with_stderr(
+            "\
 [FINISHED] dev [unoptimized + debuginfo] target(s) in [..]
-[RUNNING] `target[/]debug[/]foo[EXE]`
 ",
-            ),
+        ),
+    );
+    assert_that(
+        foo_proc("off2"),
+        execs().with_status(0).with_stdout("feature off"),
     );
 
     assert_that(
-        p.cargo("run").arg("--features").arg("foo"),
-        execs()
-            .with_status(0)
-            .with_stdout("feature on")
-            .with_stderr(
-                "\
+        p.cargo("build").arg("--features").arg("foo"),
+        execs().with_status(0).with_stderr(
+            "\
 [FINISHED] dev [unoptimized + debuginfo] target(s) in [..]
-[RUNNING] `target[/]debug[/]foo[EXE]`
 ",
-            ),
+        ),
+    );
+    assert_that(
+        foo_proc("on2"),
+        execs().with_status(0).with_stdout("feature on"),
     );
 }
 
