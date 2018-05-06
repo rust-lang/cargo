@@ -53,11 +53,12 @@ fn broken_fixes_backed_out() {
         )
         .file(
             "foo/src/main.rs",
-            r#"
+            r##"
                 use std::env;
-                use std::process::{self, Command};
-                use std::path::{Path, PathBuf};
                 use std::fs;
+                use std::io::Write;
+                use std::path::{Path, PathBuf};
+                use std::process::{self, Command};
 
                 fn main() {
                     let is_lib_rs = env::args_os()
@@ -67,7 +68,10 @@ fn broken_fixes_backed_out() {
                         let path = PathBuf::from(env::var_os("OUT_DIR").unwrap());
                         let path = path.join("foo");
                         if path.exists() {
-                            panic!("failing the second compilation, oh no!");
+                            fs::File::create("src/lib.rs")
+                                .unwrap()
+                                .write_all(b"not rust code")
+                                .unwrap();
                         } else {
                             fs::File::create(&path).unwrap();
                         }
@@ -79,7 +83,7 @@ fn broken_fixes_backed_out() {
                         .expect("failed to run rustc");
                     process::exit(status.code().unwrap_or(2));
                 }
-            "#,
+            "##,
         )
         .file(
             "bar/Cargo.toml",
@@ -109,11 +113,26 @@ fn broken_fixes_backed_out() {
     p.expect_cmd("cargo-fix fix")
         .cwd("bar")
         .env("RUSTC", p.root.join("foo/target/debug/foo"))
-        .stderr_contains("oh no")
+        .stderr_contains("not rust code")
+        .stderr_contains(
+            "\
+                warning: failed to automatically apply fixes suggested by rustc \
+                to crate `bar`\n\
+                \n\
+                after fixes were automatically applied the compiler reported \
+                errors within these files:\n\
+                \n  \
+                * src/lib.rs\n\
+                \n\
+                This likely indicates a bug in either rustc or rustfix itself,\n\
+                and we would appreciate a bug report! You're likely to see \n\
+                a number of compiler warnings after this message which rustfix\n\
+                attempted to fix but failed. If you could gist the full output\n\
+                of this command to https://github.com/rust-lang-nursery/rustfix/issues\n\
+                we'd be very appreciative!\
+            "
+        )
         .stderr_not_contains("[FIXING]")
         .status(101)
         .run();
-
-    // Make sure the fix which should have been applied was backed out
-    assert!(p.read("bar/src/lib.rs").contains("let mut x = 3;"));
 }

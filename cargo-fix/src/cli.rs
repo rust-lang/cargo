@@ -1,12 +1,13 @@
 use std::env;
 use std::process::Command;
+use std::io::Write;
 
-use failure::{Error, ResultExt};
 use clap::{App, AppSettings, Arg, SubCommand};
-use atty;
+use failure::{Error, ResultExt};
+use termcolor::{Color, ColorSpec, StandardStream, WriteColor};
 
 use lock;
-use diagnostics;
+use diagnostics::{Message, Server};
 use super::exit_with;
 
 pub fn run() -> Result<(), Error> {
@@ -41,8 +42,10 @@ pub fn run() -> Result<(), Error> {
 
     // Spin up our diagnostics server which our subprocesses will use to send
     // use their dignostics messages in an ordered way.
-    let _lockserver = diagnostics::Server::new()?.start(|m| {
-        let _ = log_message(&m);
+    let _lockserver = Server::new()?.start(|m, stream| {
+        if let Err(e) = log_message(&m, stream) {
+            warn!("failed to log message: {}", e);
+        }
     })?;
 
     let cargo = env::var_os("CARGO").unwrap_or("cargo".into());
@@ -74,7 +77,7 @@ pub fn run() -> Result<(), Error> {
     exit_with(status);
 }
 
-fn log_message(msg: &diagnostics::Message) -> Result<(), Error> {
+fn log_message(msg: &Message, stream: &mut StandardStream) -> Result<(), Error> {
     use diagnostics::Message::*;
 
     match *msg {
@@ -87,33 +90,60 @@ fn log_message(msg: &diagnostics::Message) -> Result<(), Error> {
                     n = fixes,
                     fixes = if *fixes > 1 { "fixes" } else { "fix" },
                 ),
+                stream,
+            )?;
+        }
+        FixFailed { ref files, ref krate } => {
+            stream.set_color(ColorSpec::new().set_bold(true).set_fg(Some(Color::Yellow)))?;
+            write!(stream, "warning")?;
+            stream.reset()?;
+            stream.set_color(ColorSpec::new().set_bold(true))?;
+            write!(stream, ": ")?;
+            if let Some(ref krate) = *krate {
+                write!(
+                    stream,
+                    "failed to automatically apply fixes suggested by rustc \
+                     to crate `{}`\n",
+                    krate,
+                )?;
+            } else {
+                write!(stream, "failed to automatically apply fixes suggested by rustc\n")?;
+            }
+            if files.len() > 0 {
+                write!(
+                    stream,
+                    "\nafter fixes were automatically applied the compiler \
+                     reported errors within these files:\n\n"
+                )?;
+                for file in files {
+                    write!(stream, "  * {}\n", file)?;
+                }
+                write!(stream, "\n")?;
+
+            }
+            write!(
+                stream,
+                "This likely indicates a bug in either rustc or rustfix itself,\n\
+                 and we would appreciate a bug report! You're likely to see \n\
+                 a number of compiler warnings after this message which rustfix\n\
+                 attempted to fix but failed. If you could gist the full output\n\
+                 of this command to https://github.com/rust-lang-nursery/rustfix/issues\n\
+                 we'd be very appreciative!\n\n\
+                "
             )?;
         }
     }
 
+    stream.reset()?;
+    stream.flush()?;
     Ok(())
 }
 
-fn log_for_human(kind: &str, msg: &str) -> Result<(), Error> {
-    use std::io::Write;
-    use termcolor::{Color, ColorChoice, ColorSpec, StandardStream, WriteColor};
-
-    // Adapted from cargo, cf. <https://github.com/rust-lang/cargo/blob/5986492773e6de61cced57f457da3700607f4a3a/src/cargo/core/shell.rs#L291>
-    let color_choice = if atty::is(atty::Stream::Stderr) {
-        ColorChoice::Auto
-    } else {
-        ColorChoice::Never
-    };
-    let mut stream = StandardStream::stderr(color_choice);
-    stream.reset()?;
-
+fn log_for_human(kind: &str, msg: &str, stream: &mut StandardStream) -> Result<(), Error> {
     stream.set_color(ColorSpec::new().set_bold(true).set_fg(Some(Color::Cyan)))?;
     // Justify to 12 chars just like cargo
-    write!(&mut stream, "{:>12}", kind)?;
+    write!(stream, "{:>12}", kind)?;
     stream.reset()?;
-
-    write!(&mut stream, " {}\n", msg)?;
-    stream.flush()?;
-
+    write!(stream, " {}\n", msg)?;
     Ok(())
 }

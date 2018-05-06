@@ -11,7 +11,7 @@ extern crate serde_derive;
 extern crate serde_json;
 extern crate termcolor;
 
-use std::collections::{HashMap, HashSet};
+use std::collections::{HashMap, HashSet, BTreeSet};
 use std::env;
 use std::fs::File;
 use std::io::{Read, Write};
@@ -86,6 +86,7 @@ fn cargo_fix_rustc() -> Result<(), Error> {
     let mut cmd = Command::new(&rustc);
     cmd.args(env::args().skip(1));
     cmd.arg("--cap-lints=warn");
+    cmd.arg("--error-format=json");
     if fixes.original_files.len() > 0 {
         let output = cmd.output().context("failed to spawn rustc")?;
 
@@ -111,9 +112,13 @@ fn cargo_fix_rustc() -> Result<(), Error> {
                     .and_then(|mut f| f.write_all(v.as_bytes()))
                     .with_context(|_| format!("failed to write file `{}`", k))?;
             }
+            log_failed_fix(&output.stderr)?;
         }
     }
 
+    let mut cmd = Command::new(&rustc);
+    cmd.args(env::args().skip(1));
+    cmd.arg("--cap-lints=warn");
     exit_with(cmd.status().context("failed to spawn rustc")?);
 }
 
@@ -247,4 +252,37 @@ fn exit_with(status: ExitStatus) -> ! {
         }
     }
     process::exit(status.code().unwrap_or(3));
+}
+
+fn log_failed_fix(stderr: &[u8]) -> Result<(), Error> {
+    let stderr = str::from_utf8(stderr)
+        .context("failed to parse rustc stderr as utf-8")?;
+
+    let diagnostics = stderr.lines()
+        .filter(|x| !x.is_empty())
+        .filter_map(|line| serde_json::from_str::<Diagnostic>(line).ok());
+    let mut files = BTreeSet::new();
+    for diagnostic in diagnostics {
+        for span in diagnostic.spans.into_iter() {
+            files.insert(span.file_name);
+        }
+    }
+    let mut krate = None;
+    let mut prev_dash_dash_krate_name = false;
+    for arg in env::args() {
+        if prev_dash_dash_krate_name {
+            krate = Some(arg.clone());
+        }
+
+        if arg == "--crate-name" {
+            prev_dash_dash_krate_name = true;
+        } else {
+            prev_dash_dash_krate_name = false;
+        }
+    }
+
+    let files = files.into_iter().collect();
+    Message::FixFailed { files, krate }.post()?;
+
+    Ok(())
 }
