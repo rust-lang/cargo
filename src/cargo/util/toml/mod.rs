@@ -5,6 +5,7 @@ use std::path::{Path, PathBuf};
 use std::rc::Rc;
 use std::str;
 
+use failure::Error;
 use semver::{self, VersionReq};
 use serde::de::{self, Deserialize};
 use serde::ser;
@@ -21,7 +22,7 @@ use core::{GitReference, PackageIdSpec, SourceId, WorkspaceConfig, WorkspaceRoot
 use sources::CRATES_IO;
 use util::errors::{CargoError, CargoResult, CargoResultExt};
 use util::paths;
-use util::{self, Config, ToUrl};
+use util::{self, Config, ConfigValue, ToUrl};
 
 mod targets;
 use self::targets::targets;
@@ -237,29 +238,29 @@ pub struct TomlManifest {
 
 #[derive(Deserialize, Serialize, Clone, Debug, Default)]
 pub struct TomlProfiles {
-    test: Option<TomlProfile>,
-    doc: Option<TomlProfile>,
-    bench: Option<TomlProfile>,
-    dev: Option<TomlProfile>,
-    release: Option<TomlProfile>,
+    pub test: Option<TomlProfile>,
+    pub doc: Option<TomlProfile>,
+    pub bench: Option<TomlProfile>,
+    pub dev: Option<TomlProfile>,
+    pub release: Option<TomlProfile>,
 }
 
 impl TomlProfiles {
-    fn validate(&self, features: &Features, warnings: &mut Vec<String>) -> CargoResult<()> {
+    pub fn validate(&self, features: &Features, warnings: &mut Vec<String>) -> CargoResult<()> {
         if let Some(ref test) = self.test {
-            test.validate("test", features, warnings)?;
+            test.validate("test", Some(features), warnings)?;
         }
         if let Some(ref doc) = self.doc {
-            doc.validate("doc", features, warnings)?;
+            doc.validate("doc", Some(features), warnings)?;
         }
         if let Some(ref bench) = self.bench {
-            bench.validate("bench", features, warnings)?;
+            bench.validate("bench", Some(features), warnings)?;
         }
         if let Some(ref dev) = self.dev {
-            dev.validate("dev", features, warnings)?;
+            dev.validate("dev", Some(features), warnings)?;
         }
         if let Some(ref release) = self.release {
-            release.validate("release", features, warnings)?;
+            release.validate("release", Some(features), warnings)?;
         }
         Ok(())
     }
@@ -419,18 +420,71 @@ impl<'de> de::Deserialize<'de> for ProfilePackageSpec {
 }
 
 impl TomlProfile {
-    fn validate(
+    pub fn from_config(
+        config: &Config,
+        name: &str,
+        warnings: &mut Vec<String>,
+    ) -> CargoResult<Option<TomlProfile>> {
+        if !config.cli_unstable().config_profile {
+            return Ok(None);
+        }
+        if let Some(util::config::Value { val, .. }) =
+            config.get_table(&format!("profile.{}", name))?
+        {
+            let cv = ConfigValue::Table(val.clone(), PathBuf::new());
+            let toml = cv.into_toml();
+            let profile: TomlProfile =
+                Deserialize::deserialize(toml).chain_err(|| error_path(&val))?;
+            profile
+                .validate(name, None, warnings)
+                .chain_err(|| error_path(&val))?;
+            return Ok(Some(profile));
+        }
+        return Ok(None);
+
+        fn error_path(table: &HashMap<String, ConfigValue>) -> Error {
+            let mut paths = HashSet::new();
+            error_path_rec(table, &mut paths);
+            if paths.len() == 1 {
+                format_err!(
+                    "error in config profile `{}`",
+                    paths.into_iter().next().unwrap()
+                )
+            } else {
+                let mut ps = paths.into_iter().collect::<Vec<_>>();
+                ps.sort(); // to help with testing
+                format_err!(
+                    "error in config profile, possible locations: {}",
+                    ps.join(", ")
+                )
+            }
+        }
+        fn error_path_rec(table: &HashMap<String, ConfigValue>, paths: &mut HashSet<String>) {
+            for cv in table.values() {
+                paths.insert(cv.definition_path().display().to_string());
+                if let &ConfigValue::Table(ref t, _) = cv {
+                    error_path_rec(t, paths);
+                }
+            }
+        }
+    }
+
+    pub fn validate(
         &self,
         name: &str,
-        features: &Features,
+        features: Option<&Features>,
         warnings: &mut Vec<String>,
     ) -> CargoResult<()> {
         if let Some(ref profile) = self.build_override {
-            features.require(Feature::profile_overrides())?;
+            if let Some(features) = features {
+                features.require(Feature::profile_overrides())?;
+            }
             profile.validate_override()?;
         }
         if let Some(ref override_map) = self.overrides {
-            features.require(Feature::profile_overrides())?;
+            if let Some(features) = features {
+                features.require(Feature::profile_overrides())?;
+            }
             for profile in override_map.values() {
                 profile.validate_override()?;
             }
@@ -760,7 +814,8 @@ impl TomlManifest {
             features
                 .require(Feature::edition())
                 .chain_err(|| "editions are unstable")?;
-            edition.parse()
+            edition
+                .parse()
                 .chain_err(|| "failed to parse the `edition` key")?
         } else {
             Edition::Edition2015
@@ -914,10 +969,7 @@ impl TomlManifest {
                  `[workspace]`, only one can be specified"
             ),
         };
-        if let Some(ref profiles) = me.profile {
-            profiles.validate(&features, &mut warnings)?;
-        }
-        let profiles = build_profiles(&me.profile);
+        let profiles = Profiles::new(me.profile.as_ref(), config, &features, &mut warnings)?;
         let publish = match project.publish {
             Some(VecStringOrBool::VecString(ref vecstring)) => {
                 features
@@ -1027,7 +1079,7 @@ impl TomlManifest {
             };
             (me.replace(&mut cx)?, me.patch(&mut cx)?)
         };
-        let profiles = build_profiles(&me.profile);
+        let profiles = Profiles::new(me.profile.as_ref(), config, &features, &mut warnings)?;
         let workspace_config = match me.workspace {
             Some(ref config) => WorkspaceConfig::Root(WorkspaceRootConfig::new(
                 &root,
@@ -1402,15 +1454,4 @@ impl fmt::Debug for PathValue {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         self.0.fmt(f)
     }
-}
-
-fn build_profiles(profiles: &Option<TomlProfiles>) -> Profiles {
-    let profiles = profiles.as_ref();
-    Profiles::new(
-        profiles.and_then(|p| p.dev.clone()),
-        profiles.and_then(|p| p.release.clone()),
-        profiles.and_then(|p| p.test.clone()),
-        profiles.and_then(|p| p.bench.clone()),
-        profiles.and_then(|p| p.doc.clone()),
-    )
 }

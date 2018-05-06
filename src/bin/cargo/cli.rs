@@ -21,6 +21,7 @@ Available unstable (nightly-only) flags:
     -Z no-index-update  -- Do not update the registry, avoids a network request for benchmarking
     -Z offline          -- Offline mode that does not perform network requests
     -Z unstable-options -- Allow the usage of unstable options such as --registry
+    -Z config-profile   -- Read profiles from .cargo/config files
 
 Run with 'cargo -Z [FLAG] [SUBCOMMAND]'"
         );
