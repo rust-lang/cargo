@@ -380,8 +380,42 @@ pub struct TomlProfile {
     pub panic: Option<String>,
     pub overflow_checks: Option<bool>,
     pub incremental: Option<bool>,
-    pub overrides: Option<BTreeMap<String, TomlProfile>>,
+    pub overrides: Option<BTreeMap<ProfilePackageSpec, TomlProfile>>,
     pub build_override: Option<Box<TomlProfile>>,
+}
+
+#[derive(Clone, Debug, PartialEq, Eq, Ord, PartialOrd, Hash)]
+pub enum ProfilePackageSpec {
+    Spec(PackageIdSpec),
+    All,
+}
+
+impl ser::Serialize for ProfilePackageSpec {
+    fn serialize<S>(&self, s: S) -> Result<S::Ok, S::Error>
+    where
+        S: ser::Serializer,
+    {
+        match *self {
+            ProfilePackageSpec::Spec(ref spec) => spec.serialize(s),
+            ProfilePackageSpec::All => "*".serialize(s),
+        }
+    }
+}
+
+impl<'de> de::Deserialize<'de> for ProfilePackageSpec {
+    fn deserialize<D>(d: D) -> Result<ProfilePackageSpec, D::Error>
+    where
+        D: de::Deserializer<'de>,
+    {
+        let string = String::deserialize(d)?;
+        if string == "*" {
+            Ok(ProfilePackageSpec::All)
+        } else {
+            PackageIdSpec::parse(&string)
+                .map_err(de::Error::custom)
+                .map(|s| ProfilePackageSpec::Spec(s))
+        }
+    }
 }
 
 impl TomlProfile {

@@ -3,9 +3,9 @@ use std::{cmp, fmt, hash};
 
 use core::compiler::CompileMode;
 use core::interning::InternedString;
-use core::Shell;
+use core::{PackageId, PackageIdSpec, PackageSet, Shell};
 use util::lev_distance::lev_distance;
-use util::toml::{StringOrBool, TomlProfile, U32OrBool};
+use util::toml::{ProfilePackageSpec, StringOrBool, TomlProfile, U32OrBool};
 use util::CargoResult;
 
 /// Collection of all user profiles.
@@ -55,7 +55,7 @@ impl Profiles {
     /// workspace.
     pub fn get_profile(
         &self,
-        pkg_name: &str,
+        pkg_id: &PackageId,
         is_member: bool,
         profile_for: ProfileFor,
         mode: CompileMode,
@@ -86,7 +86,7 @@ impl Profiles {
             CompileMode::Bench => &self.bench,
             CompileMode::Doc { .. } => &self.doc,
         };
-        let mut profile = maker.profile_for(pkg_name, is_member, profile_for);
+        let mut profile = maker.profile_for(Some(pkg_id), is_member, profile_for);
         // `panic` should not be set for tests/benches, or any of their
         // dependencies.
         if profile_for == ProfileFor::TestDependency || mode.is_any_test() {
@@ -112,18 +112,14 @@ impl Profiles {
     /// select for the package that was actually built.
     pub fn base_profile(&self, release: bool) -> Profile {
         if release {
-            self.release.profile_for("", true, ProfileFor::Any)
+            self.release.profile_for(None, true, ProfileFor::Any)
         } else {
-            self.dev.profile_for("", true, ProfileFor::Any)
+            self.dev.profile_for(None, true, ProfileFor::Any)
         }
     }
 
     /// Used to check for overrides for non-existing packages.
-    pub fn validate_packages(
-        &self,
-        shell: &mut Shell,
-        packages: &HashSet<&str>,
-    ) -> CargoResult<()> {
+    pub fn validate_packages(&self, shell: &mut Shell, packages: &PackageSet) -> CargoResult<()> {
         self.dev.validate_packages(shell, packages)?;
         self.release.validate_packages(shell, packages)?;
         self.test.validate_packages(shell, packages)?;
@@ -149,7 +145,12 @@ struct ProfileMaker {
 }
 
 impl ProfileMaker {
-    fn profile_for(&self, pkg_name: &str, is_member: bool, profile_for: ProfileFor) -> Profile {
+    fn profile_for(
+        &self,
+        pkg_id: Option<&PackageId>,
+        is_member: bool,
+        profile_for: ProfileFor,
+    ) -> Profile {
         let mut profile = self.default;
         if let Some(ref toml) = self.toml {
             merge_profile(&mut profile, toml);
@@ -160,19 +161,38 @@ impl ProfileMaker {
             }
             if let Some(ref overrides) = toml.overrides {
                 if !is_member {
-                    if let Some(star) = overrides.get("*") {
-                        merge_profile(&mut profile, star);
+                    if let Some(all) = overrides.get(&ProfilePackageSpec::All) {
+                        merge_profile(&mut profile, all);
                     }
                 }
-                if let Some(byname) = overrides.get(pkg_name) {
-                    merge_profile(&mut profile, byname);
+                if let Some(pkg_id) = pkg_id {
+                    let mut matches = overrides.iter().filter_map(
+                        |(key, spec_profile)| match key {
+                            &ProfilePackageSpec::All => None,
+                            &ProfilePackageSpec::Spec(ref s) => if s.matches(pkg_id) {
+                                Some(spec_profile)
+                            } else {
+                                None
+                            },
+                        },
+                    );
+                    if let Some(spec_profile) = matches.next() {
+                        merge_profile(&mut profile, spec_profile);
+                        // `validate_packages` should ensure that there are
+                        // no additional matches.
+                        assert!(
+                            matches.next().is_none(),
+                            "package `{}` matched multiple profile overrides",
+                            pkg_id
+                        );
+                    }
                 }
             }
         }
         profile
     }
 
-    fn validate_packages(&self, shell: &mut Shell, packages: &HashSet<&str>) -> CargoResult<()> {
+    fn validate_packages(&self, shell: &mut Shell, packages: &PackageSet) -> CargoResult<()> {
         let toml = match self.toml {
             Some(ref toml) => toml,
             None => return Ok(()),
@@ -181,23 +201,88 @@ impl ProfileMaker {
             Some(ref overrides) => overrides,
             None => return Ok(()),
         };
-        for key in overrides.keys().filter(|k| k.as_str() != "*") {
-            if !packages.contains(key.as_str()) {
+        // Verify that a package doesn't match multiple spec overrides.
+        let mut found = HashSet::new();
+        for pkg_id in packages.package_ids() {
+            let matches: Vec<&PackageIdSpec> = overrides
+                .keys()
+                .filter_map(|key| match key {
+                    &ProfilePackageSpec::All => None,
+                    &ProfilePackageSpec::Spec(ref spec) => if spec.matches(pkg_id) {
+                        Some(spec)
+                    } else {
+                        None
+                    },
+                })
+                .collect();
+            match matches.len() {
+                0 => {}
+                1 => {
+                    found.insert(matches[0].clone());
+                }
+                _ => {
+                    let specs = matches
+                        .iter()
+                        .map(|spec| spec.to_string())
+                        .collect::<Vec<_>>()
+                        .join(", ");
+                    bail!(
+                        "multiple profile overrides in profile `{}` match package `{}`\n\
+                         found profile override specs: {}",
+                        self.default.name,
+                        pkg_id,
+                        specs
+                    );
+                }
+            }
+        }
+
+        // Verify every override matches at least one package.
+        let missing_specs = overrides.keys().filter_map(|key| {
+            if let &ProfilePackageSpec::Spec(ref spec) = key {
+                if !found.contains(spec) {
+                    return Some(spec);
+                }
+            }
+            None
+        });
+        for spec in missing_specs {
+            // See if there is an exact name match.
+            let name_matches: Vec<String> = packages
+                .package_ids()
+                .filter_map(|pkg_id| {
+                    if pkg_id.name().as_str() == spec.name() {
+                        Some(pkg_id.to_string())
+                    } else {
+                        None
+                    }
+                })
+                .collect();
+            if name_matches.len() == 0 {
                 let suggestion = packages
-                    .iter()
-                    .map(|p| (lev_distance(key, p), p))
+                    .package_ids()
+                    .map(|p| (lev_distance(spec.name(), &p.name()), p.name()))
                     .filter(|&(d, _)| d < 4)
                     .min_by_key(|p| p.0)
                     .map(|p| p.1);
                 match suggestion {
                     Some(p) => shell.warn(format!(
-                        "package `{}` for profile override not found\n\nDid you mean `{}`?",
-                        key, p
+                        "profile override spec `{}` did not match any packages\n\n\
+                         Did you mean `{}`?",
+                        spec, p
                     ))?,
-                    None => {
-                        shell.warn(format!("package `{}` for profile override not found", key))?
-                    }
-                };
+                    None => shell.warn(format!(
+                        "profile override spec `{}` did not match any packages",
+                        spec
+                    ))?,
+                }
+            } else {
+                shell.warn(format!(
+                    "version or URL in profile override spec `{}` does not \
+                     match any of the packages: {}",
+                    spec,
+                    name_matches.join(", ")
+                ))?;
             }
         }
         Ok(())

@@ -60,7 +60,7 @@ pub fn clean(ws: &Workspace, opts: &CleanOptions) -> CargoResult<()> {
                     for profile_for in ProfileFor::all_values() {
                         let profile = if mode.is_run_custom_build() {
                             profiles.get_profile_run_custom_build(&profiles.get_profile(
-                                &pkg.name(),
+                                pkg.package_id(),
                                 ws.is_member(pkg),
                                 *profile_for,
                                 CompileMode::Build,
@@ -68,7 +68,7 @@ pub fn clean(ws: &Workspace, opts: &CleanOptions) -> CargoResult<()> {
                             ))
                         } else {
                             profiles.get_profile(
-                                &pkg.name(),
+                                pkg.package_id(),
                                 ws.is_member(pkg),
                                 *profile_for,
                                 *mode,

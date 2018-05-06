@@ -106,7 +106,7 @@ fn profile_override_basic() {
 }
 
 #[test]
-fn profile_override_bad_name() {
+fn profile_override_warnings() {
     let p = project("foo")
         .file(
             "Cargo.toml",
@@ -125,6 +125,9 @@ fn profile_override_bad_name() {
 
             [profile.dev.overrides.no-suggestion]
             opt-level = 3
+
+            [profile.dev.overrides."bar:1.2.3"]
+            opt-level = 3
         "#,
         )
         .file("src/lib.rs", "")
@@ -136,10 +139,11 @@ fn profile_override_bad_name() {
         p.cargo("build").masquerade_as_nightly_cargo(),
         execs().with_status(0).with_stderr_contains(
             "\
-[WARNING] package `bart` for profile override not found
+[WARNING] version or URL in profile override spec `bar:1.2.3` does not match any of the packages: bar v0.5.0 ([..])
+[WARNING] profile override spec `bart` did not match any packages
 
 Did you mean `bar`?
-[WARNING] package `no-suggestion` for profile override not found
+[WARNING] profile override spec `no-suggestion` did not match any packages
 [COMPILING] [..]
 ",
         ),
@@ -341,5 +345,129 @@ fn profile_override_hierarchy() {
 [FINISHED] dev [unoptimized + debuginfo] [..]
 ",
         ),
+    );
+}
+
+#[test]
+fn profile_override_spec_multiple() {
+    let p = project("foo")
+        .file(
+            "Cargo.toml",
+            r#"
+            cargo-features = ["profile-overrides"]
+
+            [package]
+            name = "foo"
+            version = "0.0.1"
+
+            [dependencies]
+            bar = { path = "bar" }
+
+            [profile.dev.overrides.bar]
+            opt-level = 3
+
+            [profile.dev.overrides."bar:0.5.0"]
+            opt-level = 3
+            "#,
+        )
+        .file("src/lib.rs", "")
+        .file("bar/Cargo.toml", &basic_lib_manifest("bar"))
+        .file("bar/src/lib.rs", "")
+        .build();
+
+    assert_that(
+        p.cargo("build -v").masquerade_as_nightly_cargo(),
+        execs().with_status(101).with_stderr_contains(
+            "\
+[ERROR] multiple profile overrides in profile `dev` match package `bar v0.5.0 ([..])`
+found profile override specs: bar, bar:0.5.0",
+        ),
+    );
+}
+
+#[test]
+fn profile_override_spec() {
+    let p = project("foo")
+        .file(
+            "Cargo.toml",
+            r#"
+            cargo-features = ["profile-overrides"]
+
+            [workspace]
+            members = ["m1", "m2"]
+
+            [profile.dev.overrides."dep:1.0.0"]
+            codegen-units = 1
+
+            [profile.dev.overrides."dep:2.0.0"]
+            codegen-units = 2
+            "#)
+
+        // m1
+        .file("m1/Cargo.toml",
+            r#"
+            [package]
+            name = "m1"
+            version = "0.0.1"
+
+            [dependencies]
+            dep = { path = "../../dep1" }
+            "#)
+        .file("m1/src/lib.rs",
+            r#"
+            extern crate dep;
+            "#)
+
+        // m2
+        .file("m2/Cargo.toml",
+            r#"
+            [package]
+            name = "m2"
+            version = "0.0.1"
+
+            [dependencies]
+            dep = {path = "../../dep2" }
+            "#)
+        .file("m2/src/lib.rs",
+            r#"
+            extern crate dep;
+            "#)
+
+        .build();
+
+    project("dep1")
+        .file(
+            "Cargo.toml",
+            r#"
+            [package]
+            name = "dep"
+            version = "1.0.0"
+        "#,
+        )
+        .file("src/lib.rs", "")
+        .build();
+
+    project("dep2")
+        .file(
+            "Cargo.toml",
+            r#"
+            [package]
+            name = "dep"
+            version = "2.0.0"
+        "#,
+        )
+        .file("src/lib.rs", "")
+        .build();
+
+    assert_that(
+        p.cargo("build -v").masquerade_as_nightly_cargo(),
+        execs()
+            .with_status(0)
+            .with_stderr_contains(
+                "[RUNNING] `rustc [..]dep1[/]src[/]lib.rs [..] -C codegen-units=1 [..]",
+            )
+            .with_stderr_contains(
+                "[RUNNING] `rustc [..]dep2[/]src[/]lib.rs [..] -C codegen-units=2 [..]",
+            ),
     );
 }
