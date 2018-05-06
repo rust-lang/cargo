@@ -10,6 +10,15 @@ use lock;
 use diagnostics::{Message, Server};
 use super::exit_with;
 
+static PLEASE_REPORT_THIS_BUG: &str = "\
+    This likely indicates a bug in either rustc or rustfix itself,\n\
+    and we would appreciate a bug report! You're likely to see \n\
+    a number of compiler warnings after this message which rustfix\n\
+    attempted to fix but failed. If you could open an issue at\n\
+    https://github.com/rust-lang-nursery/rustfix/issues\n\
+    quoting the full output of this command we'd be very appreciative!\n\n\
+";
+
 pub fn run() -> Result<(), Error> {
     let matches = App::new("Cargo Fix")
         .bin_name("cargo")
@@ -121,16 +130,7 @@ fn log_message(msg: &Message, stream: &mut StandardStream) -> Result<(), Error> 
                 write!(stream, "\n")?;
 
             }
-            write!(
-                stream,
-                "This likely indicates a bug in either rustc or rustfix itself,\n\
-                 and we would appreciate a bug report! You're likely to see \n\
-                 a number of compiler warnings after this message which rustfix\n\
-                 attempted to fix but failed. If you could gist the full output\n\
-                 of this command to https://github.com/rust-lang-nursery/rustfix/issues\n\
-                 we'd be very appreciative!\n\n\
-                "
-            )?;
+            stream.write(PLEASE_REPORT_THIS_BUG.as_bytes())?;
         }
     }
 

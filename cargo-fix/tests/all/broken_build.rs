@@ -127,9 +127,9 @@ fn broken_fixes_backed_out() {
                 This likely indicates a bug in either rustc or rustfix itself,\n\
                 and we would appreciate a bug report! You're likely to see \n\
                 a number of compiler warnings after this message which rustfix\n\
-                attempted to fix but failed. If you could gist the full output\n\
-                of this command to https://github.com/rust-lang-nursery/rustfix/issues\n\
-                we'd be very appreciative!\
+                attempted to fix but failed. If you could open an issue at\n\
+                https://github.com/rust-lang-nursery/rustfix/issues\n\
+                quoting the full output of this command we'd be very appreciative!\n\n\
             "
         )
         .stderr_not_contains("[FIXING]")
