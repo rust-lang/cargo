@@ -254,11 +254,7 @@ pub fn compile_ws<'a>(
     }
 
     let profiles = ws.profiles();
-    let package_names = packages
-        .package_ids()
-        .map(|pid| pid.name().as_str())
-        .collect::<HashSet<_>>();
-    profiles.validate_packages(&mut config.shell(), &package_names)?;
+    profiles.validate_packages(&mut config.shell(), &packages)?;
 
     let mut extra_compiler_args = None;
 
@@ -494,7 +490,7 @@ fn generate_targets<'a>(
             default_arch_kind
         };
         let profile = profiles.get_profile(
-            &pkg.name(),
+            pkg.package_id(),
             ws.is_member(pkg),
             profile_for,
             target_mode,

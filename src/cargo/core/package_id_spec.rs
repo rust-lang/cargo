@@ -2,6 +2,7 @@ use std::collections::HashMap;
 use std::fmt;
 
 use semver::Version;
+use serde::{de, ser};
 use url::Url;
 
 use core::PackageId;
@@ -17,7 +18,7 @@ use util::errors::{CargoResult, CargoResultExt};
 /// If any of the optional fields are omitted, then the package id may be ambiguous, there may be
 /// more than one package/version/url combo that will match. However, often just the name is
 /// sufficient to uniquely define a package id.
-#[derive(Clone, PartialEq, Eq, Debug)]
+#[derive(Clone, PartialEq, Eq, Debug, Hash, Ord, PartialOrd)]
 pub struct PackageIdSpec {
     name: String,
     version: Option<Version>,
@@ -250,6 +251,25 @@ impl fmt::Display for PackageIdSpec {
             write!(f, "{}{}", if printed_name { ":" } else { "#" }, v)?;
         }
         Ok(())
+    }
+}
+
+impl ser::Serialize for PackageIdSpec {
+    fn serialize<S>(&self, s: S) -> Result<S::Ok, S::Error>
+    where
+        S: ser::Serializer,
+    {
+        self.to_string().serialize(s)
+    }
+}
+
+impl<'de> de::Deserialize<'de> for PackageIdSpec {
+    fn deserialize<D>(d: D) -> Result<PackageIdSpec, D::Error>
+    where
+        D: de::Deserializer<'de>,
+    {
+        let string = String::deserialize(d)?;
+        PackageIdSpec::parse(&string).map_err(de::Error::custom)
     }
 }
 
