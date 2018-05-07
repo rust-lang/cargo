@@ -104,7 +104,9 @@ assert_that(
 ```
 
 Alternatively to build and run a custom version of cargo simply run `cargo build`
-and execute `target/debug/cargo`.
+and execute `target/debug/cargo`. Note that `+nightly`/`+stable` (and variants),
+being [rustup](https://rustup.rs/) features, won't work when executing the locally
+built cargo binary directory.
 
 Because the test suite has `#![deny(warnings)]` at times you might find it
 convenient to override this with `RUSTFLAGS`, for example
