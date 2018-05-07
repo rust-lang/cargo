@@ -9,8 +9,8 @@ pub fn cli() -> App {
         .arg(Arg::with_name("args").multiple(true))
         .arg(opt(
             "open",
-            "Opens the docs in a browser after the operation",
-        ))
+            "Opens the docs in a browser after the operation. Optionally with a MODULE to open.",
+        ).min_values(0).value_name("MODULE"))
         .arg_package("Package to document")
         .arg_jobs()
         .arg_targets_all(
@@ -58,7 +58,15 @@ pub fn exec(config: &mut Config, args: &ArgMatches) -> CliResult {
         Some(target_args)
     };
     let doc_opts = DocOptions {
-        open_result: args.is_present("open"),
+        open_result: args.value_of("open")
+            .or_else(|| {
+                if args.is_present("open") {
+                    Some("")
+                } else {
+                    None
+                }
+            })
+            .map(|s| s.to_string()),
         compile_opts,
     };
     ops::doc(&ws, &doc_opts)?;
