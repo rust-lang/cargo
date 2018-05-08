@@ -38,6 +38,7 @@ mod cargo_command;
 mod cfg;
 mod check;
 mod clean;
+mod clone;
 mod concurrent;
 mod config;
 mod corrupt_git;

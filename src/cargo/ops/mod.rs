@@ -1,9 +1,10 @@
 pub use self::cargo_clean::{clean, CleanOptions};
+pub use self::cargo_clone::{clone, CloneOptions};
 pub use self::cargo_compile::{compile, compile_with_exec, compile_ws, CompileOptions};
 pub use self::cargo_compile::{CompileFilter, FilterRule, Packages};
 pub use self::cargo_read_manifest::{read_package, read_packages};
 pub use self::cargo_run::run;
-pub use self::cargo_install::{install, install_list, uninstall};
+pub use self::cargo_install::{install, install_list, uninstall, select_pkg};
 pub use self::cargo_new::{init, new, NewOptions, VersionControl};
 pub use self::cargo_doc::{doc, DocOptions};
 pub use self::cargo_generate_lockfile::generate_lockfile;
@@ -23,6 +24,7 @@ pub use self::resolve::{resolve_with_previous, resolve_ws, resolve_ws_precisely,
 pub use self::cargo_output_metadata::{output_metadata, ExportInfo, OutputMetadataOptions};
 
 mod cargo_clean;
+mod cargo_clone;
 mod cargo_compile;
 mod cargo_doc;
 mod cargo_fetch;

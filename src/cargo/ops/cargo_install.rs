@@ -405,7 +405,7 @@ fn install_one(
     Ok(())
 }
 
-fn select_pkg<'a, T>(
+pub fn select_pkg<'a, T>(
     mut source: T,
     name: Option<&str>,
     vers: Option<&str>,
