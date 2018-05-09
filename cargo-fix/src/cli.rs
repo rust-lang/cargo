@@ -37,7 +37,7 @@ pub fn run() -> Result<(), Error> {
                 .arg(
                     Arg::with_name("edition")
                         .long("prepare-for")
-                        .help("Fix warnigns in preparation of an edition upgrade")
+                        .help("Fix warnings in preparation of an edition upgrade")
                         .takes_value(true)
                         .possible_values(&["2018"]),
                 ),
