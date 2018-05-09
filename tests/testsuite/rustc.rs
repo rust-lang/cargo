@@ -1,4 +1,4 @@
-use cargotest::support::{basic_lib_manifest, execs, project};
+use cargotest::support::{basic_bin_manifest, basic_lib_manifest, execs, project};
 use hamcrest::assert_that;
 
 const CARGO_RUSTC_ERROR: &'static str =
@@ -647,5 +647,42 @@ fn rustc_fingerprint() {
 [FINISHED] [..]
 ",
         ),
+    );
+}
+
+#[test]
+fn rustc_test_with_implicit_bin() {
+    let p = project("foo")
+        .file("Cargo.toml", &basic_bin_manifest("foo"))
+        .file(
+            "src/main.rs",
+            r#"
+            #[cfg(foo)]
+            fn f() { compile_fail!("Foo shouldn't be set."); }
+            fn main() {}
+        "#,
+        )
+        .file(
+            "tests/test1.rs",
+            r#"
+            #[cfg(not(foo))]
+            fn f() { compile_fail!("Foo should be set."); } "#,
+        )
+        .build();
+
+    assert_that(
+        p.cargo("rustc --test test1 -v -- --cfg foo"),
+        execs()
+            .with_status(0)
+            .with_stderr_contains(
+                "\
+[RUNNING] `rustc --crate-name test1 tests[/]test1.rs [..] --cfg foo [..]
+",
+            )
+            .with_stderr_contains(
+                "\
+[RUNNING] `rustc --crate-name foo src[/]main.rs [..]
+",
+            ),
     );
 }
