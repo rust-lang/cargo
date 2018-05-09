@@ -14,7 +14,6 @@ fn prepare_for_2018() {
             r#"
                 #![allow(unused)]
                 #![feature(crate_in_paths)]
-                #![warn(absolute_path_starting_with_module)]
 
                 mod foo {
                     pub const FOO: &str = "fooo";

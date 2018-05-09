@@ -88,9 +88,9 @@ pub fn run() -> Result<(), Error> {
     info!("edition upgrade? {:?}", matches.value_of("edition"));
     if let Some("2018") = matches.value_of("edition") {
         info!("edition upgrade!");
-        let mut rustc_flags = env::var_os("RUSTC_FLAGS").unwrap_or_else(|| "".into());
-        rustc_flags.push("-A warnings -W rust_2018_breakage");
-        cmd.env("RUSTC_FLAGS", &rustc_flags);
+        let mut rustc_flags = env::var_os("RUSTFLAGS").unwrap_or_else(|| "".into());
+        rustc_flags.push("-W rust-2018-breakage -A unused -A nonstandard-style -A bad-style");
+        cmd.env("RUSTFLAGS", &rustc_flags);
     }
 
     // An now execute all of Cargo! This'll fix everything along the way.
