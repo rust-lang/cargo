@@ -12,7 +12,6 @@ fn prepare_for_2018() {
         .file(
             "src/lib.rs",
             r#"
-                #![allow(unused)]
                 #![feature(crate_in_paths)]
 
                 mod foo {
