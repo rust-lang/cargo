@@ -3,23 +3,14 @@ use serde::{Serialize, Serializer};
 use std::fmt;
 use std::sync::RwLock;
 use std::collections::HashSet;
-use std::slice;
 use std::str;
-use std::mem;
 use std::ptr;
 use std::cmp::Ordering;
 use std::ops::Deref;
 use std::hash::{Hash, Hasher};
 
 pub fn leak(s: String) -> &'static str {
-    let boxed = s.into_boxed_str();
-    let ptr = boxed.as_ptr();
-    let len = boxed.len();
-    mem::forget(boxed);
-    unsafe {
-        let slice = slice::from_raw_parts(ptr, len);
-        str::from_utf8_unchecked(slice)
-    }
+    Box::leak(s.into_boxed_str())
 }
 
 lazy_static! {
