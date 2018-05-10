@@ -206,13 +206,10 @@ impl DepsFrame {
             .unwrap_or(0)
     }
 
-    pub fn flatten<'s>(&'s self) -> Box<Iterator<Item = (&PackageId, Dependency)> + 's> {
-        // TODO: with impl Trait the Box can be removed
-        Box::new(
-            self.remaining_siblings
-                .clone()
-                .map(move |(_, (d, _, _))| (self.parent.package_id(), d)),
-        )
+    pub fn flatten<'s>(&'s self) -> impl Iterator<Item=(&PackageId, Dependency)> + 's {
+        self.remaining_siblings
+            .clone()
+            .map(move |(_, (d, _, _))| (self.parent.package_id(), d))
     }
 }
 
