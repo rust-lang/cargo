@@ -148,6 +148,46 @@ fn compute_deps<'a, 'b, 'cfg>(
     }
     ret.extend(maybe_lib(unit, bcx, profile_for));
 
+    // If any integration tests/benches are being run, make sure that
+    // binaries are built as well.
+    if !unit.mode.is_check() && unit.mode.is_any_test()
+        && (unit.target.is_test() || unit.target.is_bench())
+    {
+        ret.extend(
+            unit.pkg
+                .targets()
+                .iter()
+                .filter(|t| {
+                    let no_required_features = Vec::new();
+
+                    t.is_bin() &&
+                        // Skip binaries with required features that have not been selected.
+                        t.required_features().unwrap_or(&no_required_features).iter().all(|f| {
+                            bcx.resolve.features(id).contains(f)
+                        })
+                })
+                .map(|t| {
+                    (
+                        // TODO: Should not be using profile_for here. Should
+                        // instead use ProfileFor::Any so that bins are built
+                        // with panic, but this aggravates
+                        // https://github.com/rust-lang/cargo/issues/5444
+                        // Switching it will fix
+                        // https://github.com/rust-lang/cargo/issues/5435
+                        new_unit(
+                            bcx,
+                            unit.pkg,
+                            t,
+                            profile_for,
+                            unit.kind.for_target(t),
+                            CompileMode::Build,
+                        ),
+                        profile_for,
+                    )
+                }),
+        );
+    }
+
     Ok(ret)
 }
 
