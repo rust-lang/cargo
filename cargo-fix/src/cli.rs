@@ -33,6 +33,13 @@ pub fn run() -> Result<(), Error> {
                     Arg::with_name("broken-code")
                         .long("broken-code")
                         .help("Fix code even if it already has compiler errors"),
+                )
+                .arg(
+                    Arg::with_name("edition")
+                        .long("prepare-for")
+                        .help("Fix warnings in preparation of an edition upgrade")
+                        .takes_value(true)
+                        .possible_values(&["2018"]),
                 ),
         )
         .get_matches();
@@ -75,6 +82,15 @@ pub fn run() -> Result<(), Error> {
     cmd.env("RUSTC", &me).env("__CARGO_FIX_NOW_RUSTC", "1");
     if let Some(rustc) = env::var_os("RUSTC") {
         cmd.env("RUSTC_ORIGINAL", rustc);
+    }
+
+    // Trigger edition-upgrade mode. Currently only supports the 2018 edition.
+    info!("edition upgrade? {:?}", matches.value_of("edition"));
+    if let Some("2018") = matches.value_of("edition") {
+        info!("edition upgrade!");
+        let mut rustc_flags = env::var_os("RUSTFLAGS").unwrap_or_else(|| "".into());
+        rustc_flags.push("-W rust-2018-breakage");
+        cmd.env("RUSTFLAGS", &rustc_flags);
     }
 
     // An now execute all of Cargo! This'll fix everything along the way.
