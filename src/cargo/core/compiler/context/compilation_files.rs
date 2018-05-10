@@ -25,7 +25,11 @@ pub struct CompilationFiles<'a, 'cfg: 'a> {
     pub(super) host: Layout,
     /// The target directory layout for the target (if different from then host)
     pub(super) target: Option<Layout>,
-    export_dir: Option<(PathBuf, Vec<Unit<'a>>)>,
+    /// Additional directory to include a copy of the outputs.
+    export_dir: Option<PathBuf>,
+    /// The root targets requested by the user on the command line (does not
+    /// include dependencies).
+    roots: Vec<Unit<'a>>,
     ws: &'a Workspace<'cfg>,
     metas: HashMap<Unit<'a>, Option<Metadata>>,
     /// For each Unit, a list all files produced.
@@ -65,7 +69,8 @@ impl<'a, 'cfg: 'a> CompilationFiles<'a, 'cfg> {
             ws,
             host,
             target,
-            export_dir: export_dir.map(|dir| (dir, roots.to_vec())),
+            export_dir,
+            roots: roots.to_vec(),
             metas,
             outputs,
         }
@@ -108,13 +113,8 @@ impl<'a, 'cfg: 'a> CompilationFiles<'a, 'cfg> {
         }
     }
 
-    pub fn export_dir(&self, unit: &Unit<'a>) -> Option<PathBuf> {
-        let &(ref dir, ref roots) = self.export_dir.as_ref()?;
-        if roots.contains(unit) {
-            Some(dir.clone())
-        } else {
-            None
-        }
+    pub fn export_dir(&self) -> Option<PathBuf> {
+        self.export_dir.clone()
     }
 
     pub fn pkg_dir(&self, unit: &Unit<'a>) -> String {
@@ -206,9 +206,7 @@ impl<'a, 'cfg: 'a> CompilationFiles<'a, 'cfg> {
         // we don't want to link it up.
         if out_dir.ends_with("deps") {
             // Don't lift up library dependencies
-            if self.ws.members().find(|&p| p == unit.pkg).is_none() && !unit.target.is_bin() {
-                None
-            } else {
+            if unit.target.is_bin() || self.roots.contains(unit) {
                 Some((
                     out_dir.parent().unwrap().to_owned(),
                     if unit.mode.is_any_test() {
@@ -217,6 +215,8 @@ impl<'a, 'cfg: 'a> CompilationFiles<'a, 'cfg> {
                         bin_stem
                     },
                 ))
+            } else {
+                None
             }
         } else if bin_stem == file_stem {
             None

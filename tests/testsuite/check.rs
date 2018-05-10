@@ -1,4 +1,5 @@
 use cargotest::install::exe;
+use cargotest::is_nightly;
 use cargotest::support::paths::CargoPathExt;
 use cargotest::support::registry::Package;
 use cargotest::support::{execs, project};
@@ -830,7 +831,12 @@ fn check_artifacts() {
         p.cargo("check").arg("--bin").arg("foo"),
         execs().with_status(0),
     );
-    assert_that(&p.root().join("target/debug/libfoo.rmeta"), existing_file());
+    if is_nightly() {
+        // The nightly check can be removed once 1.27 is stable.
+        // Bins now generate `rmeta` files.
+        // See: https://github.com/rust-lang/rust/pull/49289
+        assert_that(&p.root().join("target/debug/libfoo.rmeta"), existing_file());
+    }
     assert_that(
         &p.root().join("target/debug/libfoo.rlib"),
         is_not(existing_file()),
@@ -845,7 +851,10 @@ fn check_artifacts() {
         p.cargo("check").arg("--test").arg("t1"),
         execs().with_status(0),
     );
-    assert_that(&p.root().join("target/debug/libfoo.rmeta"), existing_file());
+    assert_that(
+        &p.root().join("target/debug/libfoo.rmeta"),
+        is_not(existing_file()),
+    );
     assert_that(
         &p.root().join("target/debug/libfoo.rlib"),
         is_not(existing_file()),
@@ -866,7 +875,10 @@ fn check_artifacts() {
         p.cargo("check").arg("--example").arg("ex1"),
         execs().with_status(0),
     );
-    assert_that(&p.root().join("target/debug/libfoo.rmeta"), existing_file());
+    assert_that(
+        &p.root().join("target/debug/libfoo.rmeta"),
+        is_not(existing_file()),
+    );
     assert_that(
         &p.root().join("target/debug/libfoo.rlib"),
         is_not(existing_file()),
@@ -881,7 +893,10 @@ fn check_artifacts() {
         p.cargo("check").arg("--bench").arg("b1"),
         execs().with_status(0),
     );
-    assert_that(&p.root().join("target/debug/libfoo.rmeta"), existing_file());
+    assert_that(
+        &p.root().join("target/debug/libfoo.rmeta"),
+        is_not(existing_file()),
+    );
     assert_that(
         &p.root().join("target/debug/libfoo.rlib"),
         is_not(existing_file()),
