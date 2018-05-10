@@ -168,21 +168,15 @@ fn compute_deps<'a, 'b, 'cfg>(
                 })
                 .map(|t| {
                     (
-                        // TODO: Should not be using profile_for here. Should
-                        // instead use ProfileFor::Any so that bins are built
-                        // with panic, but this aggravates
-                        // https://github.com/rust-lang/cargo/issues/5444
-                        // Switching it will fix
-                        // https://github.com/rust-lang/cargo/issues/5435
                         new_unit(
                             bcx,
                             unit.pkg,
                             t,
-                            profile_for,
+                            ProfileFor::Any,
                             unit.kind.for_target(t),
                             CompileMode::Build,
                         ),
-                        profile_for,
+                        ProfileFor::Any,
                     )
                 }),
         );

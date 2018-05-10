@@ -144,9 +144,6 @@ foo custom build PROFILE=release DEBUG=false OPT_LEVEL=3
     );
 }
 
-// Temporarily disable this test until --all-targets is fixed when using
-// `panic`. See https://github.com/rust-lang/cargo/issues/5444
-#[ignore]
 #[test]
 fn profile_selection_build_all_targets() {
     let p = all_target_project();
@@ -224,9 +221,6 @@ foo custom build PROFILE=debug DEBUG=true OPT_LEVEL=0
     );
 }
 
-// Temporarily disable this test until --all-targets is fixed when using
-// `panic`. See https://github.com/rust-lang/cargo/issues/5444
-#[ignore]
 #[test]
 fn profile_selection_build_all_targets_release() {
     let p = all_target_project();
@@ -315,12 +309,13 @@ fn profile_selection_test() {
     // - foo target list is:
     //   Target   Profile        Mode
     //   ------   -------        ----
-    //   lib      dev-panic      build
+    //   lib      dev-panic      build (for tests)
+    //   lib      dev            build (for bins)
     //   lib      test           test
     //   test     test           test
     //   example  dev-panic      build
     //   bin      test           test
-    //   bin      dev-panic      build
+    //   bin      dev            build
     //
     assert_that(p.cargo("test -vv"), execs().with_status(0).with_stderr_unordered("\
 [COMPILING] bar [..]
@@ -332,16 +327,17 @@ fn profile_selection_test() {
 [RUNNING] `rustc --crate-name build_script_build build.rs --crate-type bin --emit=dep-info,link -C codegen-units=1 -C debuginfo=2 [..]
 [RUNNING] `[..][/]target[/]debug[/]build[/]foo-[..][/]build-script-build`
 foo custom build PROFILE=debug DEBUG=true OPT_LEVEL=0
+[RUNNING] `rustc --crate-name foo src[/]lib.rs --crate-type lib --emit=dep-info,link -C panic=abort -C codegen-units=1 -C debuginfo=2 [..]
 [RUNNING] `rustc --crate-name foo src[/]lib.rs --crate-type lib --emit=dep-info,link -C codegen-units=1 -C debuginfo=2 [..]
 [RUNNING] `rustc --crate-name foo src[/]lib.rs --emit=dep-info,link -C codegen-units=3 -C debuginfo=2 --test [..]
 [RUNNING] `rustc --crate-name test1 tests[/]test1.rs --emit=dep-info,link -C codegen-units=3 -C debuginfo=2 --test [..]
 [RUNNING] `rustc --crate-name ex1 examples[/]ex1.rs --crate-type bin --emit=dep-info,link -C codegen-units=1 -C debuginfo=2 [..]
 [RUNNING] `rustc --crate-name foo src[/]main.rs --emit=dep-info,link -C codegen-units=3 -C debuginfo=2 --test [..]
-[RUNNING] `rustc --crate-name foo src[/]main.rs --crate-type bin --emit=dep-info,link -C codegen-units=1 -C debuginfo=2 [..]
+[RUNNING] `rustc --crate-name foo src[/]main.rs --crate-type bin --emit=dep-info,link -C panic=abort -C codegen-units=1 -C debuginfo=2 [..]
 [FINISHED] dev [unoptimized + debuginfo] [..]
-[RUNNING] `[..]foo[..]`
-[RUNNING] `[..]foo[..]`
-[RUNNING] `[..]test1[..]`
+[RUNNING] `[..][/]deps[/]foo-[..]`
+[RUNNING] `[..][/]deps[/]foo-[..]`
+[RUNNING] `[..][/]deps[/]test1-[..]`
 [DOCTEST] foo
 [RUNNING] `rustdoc --test [..]
 "));
@@ -353,9 +349,9 @@ foo custom build PROFILE=debug DEBUG=true OPT_LEVEL=0
 [FRESH] bdep [..]
 [FRESH] foo [..]
 [FINISHED] dev [unoptimized + debuginfo] [..]
-[RUNNING] `[..]foo[..]`
-[RUNNING] `[..]foo[..]`
-[RUNNING] `[..]test1[..]`
+[RUNNING] `[..][/]deps[/]foo-[..]`
+[RUNNING] `[..][/]deps[/]foo-[..]`
+[RUNNING] `[..][/]deps[/]test1-[..]`
 [DOCTEST] foo
 [RUNNING] `rustdoc --test [..]
 ",
@@ -381,12 +377,13 @@ fn profile_selection_test_release() {
     // - foo target list is:
     //   Target   Profile        Mode
     //   ------   -------        ----
-    //   lib      release-panic  build
+    //   lib      release-panic  build  (for tests)
+    //   lib      release        build  (for bins)
     //   lib      bench          test
     //   test     bench          test
     //   example  release-panic  build
     //   bin      bench          test
-    //   bin      release-panic  build
+    //   bin      release        build
     //
     assert_that(p.cargo("test --release -vv"), execs().with_status(0).with_stderr_unordered("\
 [COMPILING] bar [..]
@@ -398,16 +395,17 @@ fn profile_selection_test_release() {
 [RUNNING] `rustc --crate-name build_script_build build.rs --crate-type bin --emit=dep-info,link -C opt-level=3 -C codegen-units=2 [..]
 [RUNNING] `[..][/]target[/]release[/]build[/]foo-[..][/]build-script-build`
 foo custom build PROFILE=release DEBUG=false OPT_LEVEL=3
+[RUNNING] `rustc --crate-name foo src[/]lib.rs --crate-type lib --emit=dep-info,link -C opt-level=3 -C panic=abort -C codegen-units=2 [..]
 [RUNNING] `rustc --crate-name foo src[/]lib.rs --crate-type lib --emit=dep-info,link -C opt-level=3 -C codegen-units=2 [..]
 [RUNNING] `rustc --crate-name foo src[/]lib.rs --emit=dep-info,link -C opt-level=3 -C codegen-units=4 --test [..]
 [RUNNING] `rustc --crate-name test1 tests[/]test1.rs --emit=dep-info,link -C opt-level=3 -C codegen-units=4 --test [..]
 [RUNNING] `rustc --crate-name foo src[/]main.rs --emit=dep-info,link -C opt-level=3 -C codegen-units=4 --test [..]
 [RUNNING] `rustc --crate-name ex1 examples[/]ex1.rs --crate-type bin --emit=dep-info,link -C opt-level=3 -C codegen-units=2 [..]
-[RUNNING] `rustc --crate-name foo src[/]main.rs --crate-type bin --emit=dep-info,link -C opt-level=3 -C codegen-units=2 [..]
+[RUNNING] `rustc --crate-name foo src[/]main.rs --crate-type bin --emit=dep-info,link -C opt-level=3 -C panic=abort -C codegen-units=2 [..]
 [FINISHED] release [optimized] [..]
-[RUNNING] `[..]foo[..]`
-[RUNNING] `[..]foo[..]`
-[RUNNING] `[..]test1[..]`
+[RUNNING] `[..][/]deps[/]foo-[..]`
+[RUNNING] `[..][/]deps[/]foo-[..]`
+[RUNNING] `[..][/]deps[/]test1-[..]`
 [DOCTEST] foo
 [RUNNING] `rustdoc --test [..]`
 "));
@@ -419,9 +417,9 @@ foo custom build PROFILE=release DEBUG=false OPT_LEVEL=3
 [FRESH] bdep [..]
 [FRESH] foo [..]
 [FINISHED] release [optimized] [..]
-[RUNNING] `[..]foo[..]`
-[RUNNING] `[..]foo[..]`
-[RUNNING] `[..]test1[..]`
+[RUNNING] `[..][/]deps[/]foo-[..]`
+[RUNNING] `[..][/]deps[/]foo-[..]`
+[RUNNING] `[..][/]deps[/]test1-[..]`
 [DOCTEST] foo
 [RUNNING] `rustdoc --test [..]
 ",
@@ -448,11 +446,12 @@ fn profile_selection_bench() {
     // - foo target list is:
     //   Target   Profile        Mode
     //   ------   -------        ----
-    //   lib      release-panic  build
+    //   lib      release-panic  build (for benches)
+    //   lib      release        build (for bins)
     //   lib      bench          test(bench)
     //   bench    bench          test(bench)
     //   bin      bench          test(bench)
-    //   bin      release-panic  build
+    //   bin      release        build
     //
     assert_that(p.cargo("bench -vv"), execs().with_status(0).with_stderr_unordered("\
 [COMPILING] bar [..]
@@ -464,15 +463,16 @@ fn profile_selection_bench() {
 [RUNNING] `rustc --crate-name build_script_build build.rs --crate-type bin --emit=dep-info,link -C opt-level=3 -C codegen-units=2 [..]
 [RUNNING] `[..]target[/]release[/]build[/]foo-[..][/]build-script-build`
 foo custom build PROFILE=release DEBUG=false OPT_LEVEL=3
+[RUNNING] `rustc --crate-name foo src[/]lib.rs --crate-type lib --emit=dep-info,link -C opt-level=3 -C panic=abort -C codegen-units=2 [..]
 [RUNNING] `rustc --crate-name foo src[/]lib.rs --crate-type lib --emit=dep-info,link -C opt-level=3 -C codegen-units=2 [..]
 [RUNNING] `rustc --crate-name foo src[/]lib.rs --emit=dep-info,link -C opt-level=3 -C codegen-units=4 --test [..]
 [RUNNING] `rustc --crate-name bench1 benches[/]bench1.rs --emit=dep-info,link -C opt-level=3 -C codegen-units=4 --test [..]
 [RUNNING] `rustc --crate-name foo src[/]main.rs --emit=dep-info,link -C opt-level=3 -C codegen-units=4 --test [..]
-[RUNNING] `rustc --crate-name foo src[/]main.rs --crate-type bin --emit=dep-info,link -C opt-level=3 -C codegen-units=2 [..]
+[RUNNING] `rustc --crate-name foo src[/]main.rs --crate-type bin --emit=dep-info,link -C opt-level=3 -C panic=abort -C codegen-units=2 [..]
 [FINISHED] release [optimized] [..]
-[RUNNING] `[..]foo[..] --bench`
-[RUNNING] `[..]foo[..] --bench`
-[RUNNING] `[..]bench1[..] --bench`
+[RUNNING] `[..][/]deps[/]foo-[..] --bench`
+[RUNNING] `[..][/]deps[/]foo-[..] --bench`
+[RUNNING] `[..][/]deps[/]bench1-[..] --bench`
 "));
     assert_that(
         p.cargo("bench -vv"),
@@ -482,9 +482,9 @@ foo custom build PROFILE=release DEBUG=false OPT_LEVEL=3
 [FRESH] bdep [..]
 [FRESH] foo [..]
 [FINISHED] release [optimized] [..]
-[RUNNING] `[..]foo[..] --bench`
-[RUNNING] `[..]foo[..] --bench`
-[RUNNING] `[..]bench1[..] --bench`
+[RUNNING] `[..][/]deps[/]foo-[..] --bench`
+[RUNNING] `[..][/]deps[/]foo-[..] --bench`
+[RUNNING] `[..][/]deps[/]bench1-[..] --bench`
 ",
         ),
     );
