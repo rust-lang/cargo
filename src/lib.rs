@@ -24,8 +24,6 @@
 extern crate scopeguard;
 #[cfg(windows)]
 extern crate winapi;
-#[cfg(windows)]
-extern crate userenv;
 
 #[cfg(windows)]
 use winapi::shared::minwindef::DWORD;
@@ -68,7 +66,7 @@ pub fn home_dir() -> Option<PathBuf> {
 #[cfg(windows)]
 fn home_dir_() -> Option<PathBuf> {
     use std::ptr;
-    use userenv::GetUserProfileDirectoryW;
+    use winapi::um::userenv::GetUserProfileDirectoryW;
     use winapi::shared::winerror::ERROR_INSUFFICIENT_BUFFER;
     use winapi::um::errhandlingapi::GetLastError;
     use winapi::um::handleapi::CloseHandle;
