@@ -94,11 +94,15 @@ pub fn prepare<'a, 'cfg>(
         build_work(cx, unit)?
     };
 
-    // Now that we've prep'd our work, build the work needed to manage the
-    // fingerprint and then start returning that upwards.
-    let (freshness, dirty, fresh) = fingerprint::prepare_build_cmd(cx, unit)?;
+    if cx.bcx.build_config.build_plan {
+        Ok((work_dirty, work_fresh, Freshness::Dirty))
+    } else {
+        // Now that we've prep'd our work, build the work needed to manage the
+        // fingerprint and then start returning that upwards.
+        let (freshness, dirty, fresh) = fingerprint::prepare_build_cmd(cx, unit)?;
 
-    Ok((work_dirty.then(dirty), work_fresh.then(fresh), freshness))
+        Ok((work_dirty.then(dirty), work_fresh.then(fresh), freshness))
+    }
 }
 
 fn build_work<'a, 'cfg>(cx: &mut Context<'a, 'cfg>, unit: &Unit<'a>) -> CargoResult<(Work, Work)> {
@@ -111,6 +115,8 @@ fn build_work<'a, 'cfg>(cx: &mut Context<'a, 'cfg>, unit: &Unit<'a>) -> CargoRes
         .expect("running a script not depending on an actual script");
     let script_output = cx.files().build_script_dir(build_script_unit);
     let build_output = cx.files().build_script_out_dir(unit);
+    let build_plan = bcx.build_config.build_plan;
+    let invocation_name = unit.buildkey();
 
     // Building the command to execute
     let to_exec = script_output.join(unit.target.name());
@@ -269,7 +275,7 @@ fn build_work<'a, 'cfg>(cx: &mut Context<'a, 'cfg>, unit: &Unit<'a>) -> CargoRes
         // along to this custom build command. We're also careful to augment our
         // dynamic library search path in case the build script depended on any
         // native dynamic libraries.
-        {
+        if !build_plan {
             let build_state = build_state.outputs.lock().unwrap();
             for (name, id) in lib_deps {
                 let key = (id.clone(), kind);
@@ -294,54 +300,57 @@ fn build_work<'a, 'cfg>(cx: &mut Context<'a, 'cfg>, unit: &Unit<'a>) -> CargoRes
         }
 
         // And now finally, run the build command itself!
-        state.running(&cmd);
-        let output = cmd.exec_with_streaming(
-            &mut |out_line| {
-                state.stdout(out_line);
-                Ok(())
-            },
-            &mut |err_line| {
-                state.stderr(err_line);
-                Ok(())
-            },
-            true,
-        ).map_err(|e| {
-            format_err!(
-                "failed to run custom build command for `{}`\n{}",
-                pkg_name,
-                e
-            )
-        })?;
+        if build_plan {
+            state.build_plan(invocation_name, cmd.clone(), Arc::new(Vec::new()));
+        } else {
+            state.running(&cmd);
+            let output = cmd.exec_with_streaming(
+                &mut |out_line| {
+                    state.stdout(out_line);
+                    Ok(())
+                },
+                &mut |err_line| {
+                    state.stderr(err_line);
+                    Ok(())
+                },
+                true,
+            ).map_err(|e| {
+                format_err!(
+                    "failed to run custom build command for `{}`\n{}",
+                    pkg_name,
+                    e
+                )
+            })?;
 
-        // After the build command has finished running, we need to be sure to
-        // remember all of its output so we can later discover precisely what it
-        // was, even if we don't run the build command again (due to freshness).
-        //
-        // This is also the location where we provide feedback into the build
-        // state informing what variables were discovered via our script as
-        // well.
-        paths::write(&output_file, &output.stdout)?;
-        paths::write(&err_file, &output.stderr)?;
-        paths::write(&root_output_file, util::path2bytes(&root_output)?)?;
-        let parsed_output =
-            BuildOutput::parse(&output.stdout, &pkg_name, &root_output, &root_output)?;
+            // After the build command has finished running, we need to be sure to
+            // remember all of its output so we can later discover precisely what it
+            // was, even if we don't run the build command again (due to freshness).
+            //
+            // This is also the location where we provide feedback into the build
+            // state informing what variables were discovered via our script as
+            // well.
+            paths::write(&output_file, &output.stdout)?;
+            paths::write(&err_file, &output.stderr)?;
+            paths::write(&root_output_file, util::path2bytes(&root_output)?)?;
+            let parsed_output =
+                BuildOutput::parse(&output.stdout, &pkg_name, &root_output, &root_output)?;
 
-        if json_messages {
-            let library_paths = parsed_output
-                .library_paths
-                .iter()
-                .map(|l| l.display().to_string())
-                .collect::<Vec<_>>();
-            machine_message::emit(&machine_message::BuildScript {
-                package_id: &id,
-                linked_libs: &parsed_output.library_links,
-                linked_paths: &library_paths,
-                cfgs: &parsed_output.cfgs,
-                env: &parsed_output.env,
-            });
+            if json_messages {
+                let library_paths = parsed_output
+                    .library_paths
+                    .iter()
+                    .map(|l| l.display().to_string())
+                    .collect::<Vec<_>>();
+                machine_message::emit(&machine_message::BuildScript {
+                    package_id: &id,
+                    linked_libs: &parsed_output.library_links,
+                    linked_paths: &library_paths,
+                    cfgs: &parsed_output.cfgs,
+                    env: &parsed_output.env,
+                });
+            }
+            build_state.insert(id, kind, parsed_output);
         }
-
-        build_state.insert(id, kind, parsed_output);
         Ok(())
     });
 
