@@ -73,19 +73,20 @@ impl Invocation {
         self.program = cmd.get_program()
             .to_str()
             .ok_or_else(|| format_err!("unicode program string required"))?
-            .to_string()
-            .clone();
+            .to_string();
         self.cwd = Some(cmd.get_cwd().unwrap().to_path_buf());
         for arg in cmd.get_args().iter() {
             self.args.push(
                 arg.to_str()
                     .ok_or_else(|| format_err!("unicode argument string required"))?
-                    .to_string()
-                    .clone(),
+                    .to_string(),
             );
         }
-        for var in cmd.get_envs().keys() {
-            let value = cmd.get_env(var).unwrap_or_default();
+        for (var, value) in cmd.get_envs() {
+            let value = match value {
+                Some(s) => s,
+                None => continue,
+            };
             self.env.insert(
                 var.clone(),
                 value
