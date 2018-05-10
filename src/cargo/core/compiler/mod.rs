@@ -16,6 +16,7 @@ use util::paths;
 use util::{self, machine_message, Freshness, ProcessBuilder};
 use util::{internal, join_paths, profile};
 
+use self::build_plan::BuildPlan;
 use self::job::{Job, Work};
 use self::job_queue::JobQueue;
 
@@ -30,6 +31,7 @@ pub use self::layout::is_bad_artifact_name;
 
 mod build_config;
 mod build_context;
+mod build_plan;
 mod compilation;
 mod context;
 mod custom_build;
@@ -42,7 +44,7 @@ mod output_depinfo;
 /// Whether an object is for the host arch, or the target arch.
 ///
 /// These will be the same unless cross-compiling.
-#[derive(PartialEq, Eq, Hash, Debug, Clone, Copy, PartialOrd, Ord)]
+#[derive(PartialEq, Eq, Hash, Debug, Clone, Copy, PartialOrd, Ord, Serialize)]
 pub enum Kind {
     Host,
     Target,
@@ -93,10 +95,12 @@ impl Executor for DefaultExecutor {}
 fn compile<'a, 'cfg: 'a>(
     cx: &mut Context<'a, 'cfg>,
     jobs: &mut JobQueue<'a>,
+    plan: &mut BuildPlan,
     unit: &Unit<'a>,
     exec: &Arc<Executor>,
 ) -> CargoResult<()> {
     let bcx = cx.bcx;
+    let build_plan = bcx.build_config.build_plan;
     if !cx.compiled.insert(*unit) {
         return Ok(());
     }
@@ -112,6 +116,12 @@ fn compile<'a, 'cfg: 'a>(
     } else if unit.mode == CompileMode::Doctest {
         // we run these targets later, so this is just a noop for now
         (Work::noop(), Work::noop(), Freshness::Fresh)
+    } else if build_plan {
+        (
+            rustc(cx, unit, &exec.clone())?,
+            Work::noop(),
+            Freshness::Dirty,
+        )
     } else {
         let (mut freshness, dirty, fresh) = fingerprint::prepare_target(cx, unit)?;
         let work = if unit.mode.is_doc() {
@@ -134,7 +144,10 @@ fn compile<'a, 'cfg: 'a>(
 
     // Be sure to compile all dependencies of this target as well.
     for unit in cx.dep_targets(unit).iter() {
-        compile(cx, jobs, unit, exec)?;
+        compile(cx, jobs, plan, unit, exec)?;
+    }
+    if build_plan {
+        plan.add(cx, unit)?;
     }
 
     Ok(())
@@ -146,8 +159,10 @@ fn rustc<'a, 'cfg>(
     exec: &Arc<Executor>,
 ) -> CargoResult<Work> {
     let mut rustc = prepare_rustc(cx, &unit.target.rustc_crate_types(), unit)?;
+    let build_plan = cx.bcx.build_config.build_plan;
 
     let name = unit.pkg.name().to_string();
+    let buildkey = unit.buildkey();
 
     // If this is an upstream dep we don't want warnings from, turn off all
     // lints.
@@ -209,14 +224,16 @@ fn rustc<'a, 'cfg>(
         // previous build scripts, we include them in the rustc invocation.
         if let Some(build_deps) = build_deps {
             let build_state = build_state.outputs.lock().unwrap();
-            add_native_deps(
-                &mut rustc,
-                &build_state,
-                &build_deps,
-                pass_l_flag,
-                &current_id,
-            )?;
-            add_plugin_deps(&mut rustc, &build_state, &build_deps, &root_output)?;
+            if !build_plan {
+                add_native_deps(
+                    &mut rustc,
+                    &build_state,
+                    &build_deps,
+                    pass_l_flag,
+                    &current_id,
+                )?;
+                add_plugin_deps(&mut rustc, &build_state, &build_deps, &root_output)?;
+            }
             add_custom_env(&mut rustc, &build_state, &current_id, kind)?;
         }
 
@@ -268,6 +285,8 @@ fn rustc<'a, 'cfg>(
                     Ok(())
                 },
             ).chain_err(|| format!("Could not compile `{}`.", name))?;
+        } else if build_plan {
+            state.build_plan(buildkey, rustc.clone(), outputs.clone());
         } else {
             exec.exec(rustc, &package_id, &target)
                 .map_err(Internal::new)

@@ -3,26 +3,28 @@ use std::collections::{HashMap, HashSet};
 use std::fmt::Write;
 use std::path::PathBuf;
 use std::sync::Arc;
+use std::cmp::Ordering;
 
 use jobserver::Client;
 
 use core::{Package, PackageId, Resolve, Target};
 use core::profiles::Profile;
 use util::errors::{CargoResult, CargoResultExt};
-use util::{internal, profile, Config};
+use util::{internal, profile, Config, short_hash};
 
 use super::custom_build::{self, BuildDeps, BuildScripts, BuildState};
 use super::fingerprint::Fingerprint;
 use super::job_queue::JobQueue;
 use super::layout::Layout;
 use super::{BuildContext, Compilation, CompileMode, Executor, FileFlavor, Kind};
+use super::build_plan::BuildPlan;
 
 mod unit_dependencies;
 use self::unit_dependencies::build_unit_dependencies;
 
 mod compilation_files;
-pub use self::compilation_files::Metadata;
-use self::compilation_files::{CompilationFiles, OutputFile};
+pub use self::compilation_files::{Metadata, OutputFile};
+use self::compilation_files::CompilationFiles;
 
 /// All information needed to define a Unit.
 ///
@@ -60,6 +62,24 @@ pub struct Unit<'a> {
     /// The "mode" this unit is being compiled for.  See `CompileMode` for
     /// more details.
     pub mode: CompileMode,
+}
+
+impl<'a> Unit<'a> {
+    pub fn buildkey(&self) -> String {
+        format!("{}-{}", self.pkg.name(), short_hash(self))
+	}
+}
+
+impl<'a> Ord for Unit<'a> {
+    fn cmp(&self, other: &Unit) -> Ordering {
+        self.buildkey().cmp(&other.buildkey())
+    }
+}
+
+impl<'a> PartialOrd for Unit<'a> {
+    fn partial_cmp(&self, other: &Unit) -> Option<Ordering> {
+        Some(self.cmp(other))
+    }
 }
 
 pub struct Context<'a, 'cfg: 'a> {
@@ -121,6 +141,8 @@ impl<'a, 'cfg> Context<'a, 'cfg> {
         exec: &Arc<Executor>,
     ) -> CargoResult<Compilation<'cfg>> {
         let mut queue = JobQueue::new(self.bcx);
+        let mut plan = BuildPlan::new();
+        let build_plan = self.bcx.build_config.build_plan;
         self.prepare_units(export_dir, units)?;
         self.prepare()?;
         custom_build::build_map(&mut self, units)?;
@@ -131,11 +153,16 @@ impl<'a, 'cfg> Context<'a, 'cfg> {
             // part of this, that's all done next as part of the `execute`
             // function which will run everything in order with proper
             // parallelism.
-            super::compile(&mut self, &mut queue, unit, exec)?;
+            super::compile(&mut self, &mut queue, &mut plan, unit, exec)?;
         }
 
         // Now that we've figured out everything that we're going to do, do it!
-        queue.execute(&mut self)?;
+        queue.execute(&mut self, &mut plan)?;
+
+        if build_plan {
+            plan.set_inputs(self.bcx.inputs()?);
+            plan.output_plan();
+        }
 
         for unit in units.iter() {
             for output in self.outputs(unit)?.iter() {
@@ -366,7 +393,9 @@ impl<'a, 'cfg> Context<'a, 'cfg> {
                 return Vec::new();
             }
         }
-        self.unit_dependencies[unit].clone()
+        let mut deps = self.unit_dependencies[unit].clone();
+        deps.sort();
+        deps
     }
 
     pub fn incremental_args(&self, unit: &Unit) -> CargoResult<Vec<String>> {
