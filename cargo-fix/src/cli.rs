@@ -89,7 +89,7 @@ pub fn run() -> Result<(), Error> {
     if let Some("2018") = matches.value_of("edition") {
         info!("edition upgrade!");
         let mut rustc_flags = env::var_os("RUSTFLAGS").unwrap_or_else(|| "".into());
-        rustc_flags.push("-W rust-2018-breakage -A unused -A nonstandard-style -A bad-style");
+        rustc_flags.push("-W rust-2018-breakage");
         cmd.env("RUSTFLAGS", &rustc_flags);
     }
 

@@ -12,7 +12,8 @@ fn prepare_for_2018() {
         .file(
             "src/lib.rs",
             r#"
-                #![feature(rust_2018_preview )]
+                #![allow(unused)]
+                #![feature(rust_2018_preview)]
 
                 mod foo {
                     pub const FOO: &str = "fooo";
