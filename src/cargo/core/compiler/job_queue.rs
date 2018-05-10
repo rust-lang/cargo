@@ -282,7 +282,7 @@ impl<'a> JobQueue<'a> {
             if secs >= 60 {
                 format!("{}m {:02}s", secs / 60, secs % 60)
             } else {
-                format!("{}.{:02}s", secs % 60, duration.subsec_nanos() / 10_000_000)
+                format!("{}.{:02}s", secs, duration.subsec_nanos() / 10_000_000)
             }
         };
 
