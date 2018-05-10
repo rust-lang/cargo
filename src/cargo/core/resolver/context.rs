@@ -170,24 +170,7 @@ impl Context {
         let deps = s.dependencies();
         let deps = deps.iter().filter(|d| d.is_transitive() || dev_deps);
 
-        // Requested features stored in the Method are stored as string references, but we want to
-        // transform them into FeatureValues here. In order to pass the borrow checker with
-        // storage of the FeatureValues that outlives the Requirements object, we do the
-        // transformation here, and pass the FeatureValues to build_requirements().
-        let values = if let Method::Required {
-            all_features: false,
-            features: requested,
-            ..
-        } = *method
-        {
-            requested
-                .iter()
-                .map(|&f| FeatureValue::new(f, s))
-                .collect::<Vec<FeatureValue>>()
-        } else {
-            vec![]
-        };
-        let reqs = build_requirements(s, method, &values)?;
+        let reqs = build_requirements(s, method)?;
         let mut ret = Vec::new();
         let mut used_features = HashSet::new();
         let default_dep = (false, Vec::new());
@@ -303,13 +286,10 @@ impl Context {
 /// dependency features in a Requirements object, returning it to the resolver.
 fn build_requirements<'a, 'b: 'a>(
     s: &'a Summary,
-    method: &'b Method,
-    requested: &'a [FeatureValue],
+    method: &'b Method
 ) -> CargoResult<Requirements<'a>> {
     let mut reqs = Requirements::new(s);
-    for fv in requested.iter() {
-        reqs.require_value(fv)?;
-    }
+
     match *method {
         Method::Everything
         | Method::Required {
@@ -322,7 +302,15 @@ fn build_requirements<'a, 'b: 'a>(
                 reqs.require_dependency(dep.name().as_str());
             }
         }
-        _ => {} // Explicitly requested features are handled through `requested`
+        Method::Required {
+            all_features: false,
+            features: requested,
+            ..
+        } => {
+            for &f in requested.iter() {
+                reqs.require_value(&FeatureValue::new(f, s))?;
+            }
+        }
     }
     match *method {
         Method::Everything
@@ -413,12 +401,12 @@ impl<'r> Requirements<'r> {
         Ok(())
     }
 
-    fn require_value(&mut self, fv: &'r FeatureValue) -> CargoResult<()> {
-        match *fv {
-            FeatureValue::Feature(ref feat) => self.require_feature(feat),
-            FeatureValue::Crate(ref dep) => Ok(self.require_dependency(dep)),
-            FeatureValue::CrateFeature(ref dep, dep_feat) => {
-                Ok(self.require_crate_feature(dep, dep_feat))
+    fn require_value<'f>(&mut self, fv: &'f FeatureValue) -> CargoResult<()> {
+        match fv {
+            FeatureValue::Feature(feat) => self.require_feature(feat.as_str()),
+            FeatureValue::Crate(dep) => Ok(self.require_dependency(dep.as_str())),
+            FeatureValue::CrateFeature(dep, dep_feat) => {
+                Ok(self.require_crate_feature(dep.as_str(), *dep_feat))
             }
         }
     }
