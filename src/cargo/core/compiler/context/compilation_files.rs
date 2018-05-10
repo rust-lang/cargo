@@ -113,12 +113,8 @@ impl<'a, 'cfg: 'a> CompilationFiles<'a, 'cfg> {
         }
     }
 
-    pub fn export_dir(&self, unit: &Unit<'a>) -> Option<PathBuf> {
-        if self.roots.contains(unit) {
-            self.export_dir.clone()
-        } else {
-            None
-        }
+    pub fn export_dir(&self) -> Option<PathBuf> {
+        self.export_dir.clone()
     }
 
     pub fn pkg_dir(&self, unit: &Unit<'a>) -> String {

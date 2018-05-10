@@ -362,7 +362,7 @@ fn link_targets<'a, 'cfg>(
 ) -> CargoResult<Work> {
     let bcx = cx.bcx;
     let outputs = cx.outputs(unit)?;
-    let export_dir = cx.files().export_dir(unit);
+    let export_dir = cx.files().export_dir();
     let package_id = unit.pkg.package_id().clone();
     let target = unit.target.clone();
     let profile = unit.profile;
