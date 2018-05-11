@@ -358,8 +358,12 @@ pub fn needs_custom_http_transport(config: &Config) -> CargoResult<bool> {
     let timeout = http_timeout(config)?;
     let cainfo = config.get_path("http.cainfo")?;
     let check_revoke = config.get_bool("http.check-revoke")?;
+    let user_agent = config.get_string("http.user-agent")?;
 
-    Ok(proxy_exists || timeout.is_some() || cainfo.is_some() || check_revoke.is_some())
+    Ok(
+        proxy_exists || timeout.is_some() || cainfo.is_some() || check_revoke.is_some()
+            || user_agent.is_some(),
+    )
 }
 
 /// Configure a libcurl http handle with the defaults options for Cargo
@@ -371,7 +375,6 @@ pub fn configure_http_handle(config: &Config, handle: &mut Easy) -> CargoResult<
     handle.connect_timeout(Duration::new(30, 0))?;
     handle.low_speed_limit(10 /* bytes per second */)?;
     handle.low_speed_time(Duration::new(30, 0))?;
-    handle.useragent(&version().to_string())?;
     if let Some(proxy) = http_proxy(config)? {
         handle.proxy(&proxy)?;
     }
@@ -384,6 +387,11 @@ pub fn configure_http_handle(config: &Config, handle: &mut Easy) -> CargoResult<
     if let Some(timeout) = http_timeout(config)? {
         handle.connect_timeout(Duration::new(timeout as u64, 0))?;
         handle.low_speed_time(Duration::new(timeout as u64, 0))?;
+    }
+    if let Some(user_agent) = config.get_string("http.user-agent")? {
+        handle.useragent(&user_agent.val)?;
+    } else {
+        handle.useragent(&version().to_string())?;
     }
     Ok(())
 }
