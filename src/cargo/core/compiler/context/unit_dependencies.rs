@@ -307,8 +307,8 @@ fn maybe_lib<'a>(
     bcx: &BuildContext,
     profile_for: ProfileFor,
 ) -> Option<(Unit<'a>, ProfileFor)> {
-    let mode = check_or_build_mode(&unit.mode, unit.target);
     unit.pkg.targets().iter().find(|t| t.linkable()).map(|t| {
+        let mode = check_or_build_mode(&unit.mode, t);
         let unit = new_unit(bcx, unit.pkg, t, profile_for, unit.kind.for_target(t), mode);
         (unit, profile_for)
     })
