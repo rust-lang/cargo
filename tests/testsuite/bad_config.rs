@@ -182,6 +182,43 @@ Caused by:
 }
 
 #[test]
+fn bad6() {
+    let p = project("foo")
+        .file(
+            "Cargo.toml",
+            r#"
+            [package]
+            name = "foo"
+            version = "0.0.0"
+            authors = []
+        "#,
+        )
+        .file("src/lib.rs", "")
+        .file(
+            ".cargo/config",
+            r#"
+            [http]
+              user-agent = true
+        "#,
+        )
+        .build();
+    Package::new("foo", "1.0.0").publish();
+
+    assert_that(
+        p.cargo("publish").arg("-v"),
+        execs().with_status(101).with_stderr(
+            "\
+error: failed to update registry [..]
+
+Caused by:
+  invalid configuration for key `http.user-agent`
+expected a string, but found a boolean for `http.user-agent` in [..]config
+",
+        ),
+    );
+}
+
+#[test]
 fn bad_cargo_config_jobs() {
     let p = project("foo")
         .file(
