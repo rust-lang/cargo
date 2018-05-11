@@ -897,3 +897,49 @@ fn check_artifacts() {
         0
     );
 }
+
+#[test]
+fn proc_macro() {
+    let p = project("foo")
+        .file(
+            "Cargo.toml",
+            r#"
+                [package]
+                name = "demo"
+                version = "0.0.1"
+
+                [lib]
+                proc-macro = true
+            "#,
+        )
+        .file(
+            "src/lib.rs",
+            r#"
+                extern crate proc_macro;
+
+                use proc_macro::TokenStream;
+
+                #[proc_macro_derive(Foo)]
+                pub fn demo(_input: TokenStream) -> TokenStream {
+                    "".parse().unwrap()
+                }
+            "#,
+        )
+        .file(
+            "src/main.rs",
+            r#"
+                #[macro_use]
+                extern crate demo;
+
+                #[derive(Foo)]
+                struct A;
+
+                fn main() {}
+            "#,
+        )
+        .build();
+    assert_that(
+        p.cargo("check").arg("-v").env("RUST_LOG", "cargo=trace"),
+        execs().with_status(0),
+    );
+}
