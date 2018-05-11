@@ -323,7 +323,7 @@ fn build_feature_map(
 ///
 /// * Another feature
 /// * An optional dependency
-/// * A feature in a depedency
+/// * A feature in a dependency
 ///
 /// The selection between these 3 things happens as part of the construction of the FeatureValue.
 #[derive(Clone, Debug)]

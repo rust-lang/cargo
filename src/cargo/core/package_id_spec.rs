@@ -158,7 +158,7 @@ impl PackageIdSpec {
         self.url = Some(url);
     }
 
-    /// Checkes whether the given `PackageId` matches the `PackageIdSpec`.
+    /// Checks whether the given `PackageId` matches the `PackageIdSpec`.
     pub fn matches(&self, package_id: &PackageId) -> bool {
         if self.name() != &*package_id.name() {
             return false;

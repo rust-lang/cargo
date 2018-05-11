@@ -15,7 +15,7 @@ pub struct RegistryQueryer<'a> {
     cache: HashMap<Dependency, Rc<Vec<Candidate>>>,
     // If set the list of dependency candidates will be sorted by minimal
     // versions first. That allows `cargo update -Z minimal-versions` which will
-    // specify minimum depedency versions to be used.
+    // specify minimum dependency versions to be used.
     minimal_versions: bool,
 }
 
@@ -283,7 +283,7 @@ pub enum ConflictReason {
 
     /// A dependency listed features that weren't actually available on the
     /// candidate. For example we tried to activate feature `foo` but the
-    /// candidiate we're activating didn't actually have the feature `foo`.
+    /// candidate we're activating didn't actually have the feature `foo`.
     MissingFeatures(String),
 }
 
