@@ -642,7 +642,7 @@ fn rustdoc<'a, 'cfg>(cx: &mut Context<'a, 'cfg>, unit: &Unit<'a>) -> CargoResult
 // if you literally move the whole project wholesale to a new directory. As a
 // result we mostly don't factor in `cwd` to this calculation. Instead we try to
 // track the workspace as much as possible and we update the current directory
-// of rustc/rustdoc where approrpriate.
+// of rustc/rustdoc where appropriate.
 //
 // The first returned value here is the argument to pass to rustc, and the
 // second is the cwd that rustc should operate in.
