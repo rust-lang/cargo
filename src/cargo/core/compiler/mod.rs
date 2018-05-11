@@ -392,6 +392,7 @@ fn link_targets<'a, 'cfg>(
         .map(|s| s.to_owned())
         .collect();
     let json_messages = bcx.build_config.json_messages();
+    let executable = cx.get_executable(unit)?;
 
     Ok(Work::new(move |_| {
         // If we're a "root crate", e.g. the target of this compilation, then we
@@ -439,6 +440,7 @@ fn link_targets<'a, 'cfg>(
                 profile: art_profile,
                 features,
                 filenames: destinations,
+                executable,
                 fresh,
             });
         }

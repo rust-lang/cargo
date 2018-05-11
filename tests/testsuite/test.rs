@@ -4102,6 +4102,7 @@ fn json_artifact_includes_test_flag() {
             "overflow_checks": true,
             "test": false
         },
+        "executable": null,
         "features": [],
         "package_id":"foo 0.0.1 ([..])",
         "target":{
@@ -4123,6 +4124,7 @@ fn json_artifact_includes_test_flag() {
             "overflow_checks": true,
             "test": true
         },
+        "executable": "[..][/]foo-[..]",
         "features": [],
         "package_id":"foo 0.0.1 ([..])",
         "target":{
@@ -4133,6 +4135,114 @@ fn json_artifact_includes_test_flag() {
         },
         "filenames":["[..][/]foo-[..]"],
         "fresh": false
+    }
+"#,
+        ),
+    );
+}
+
+#[test]
+fn json_artifact_includes_executable_for_library_tests() {
+    let p = project("foo")
+        .file(
+            "Cargo.toml",
+            r#"
+            [package]
+            name = "foo"
+            version = "0.0.1"
+            authors = []
+        "#,
+        )
+        .file("src/main.rs", "fn main() { }")
+        .file(
+            "src/lib.rs", 
+            r#"
+            #[test]
+            fn lib_test() { }
+            "#,
+        )
+        .build();
+
+    assert_that(
+        p.cargo("test --lib -v --no-run --message-format=json"),
+        execs().with_status(0).with_json(
+            r#"
+    {
+        "executable": "[..]foo[/]target[/]debug[/]foo-[..][EXE]",
+        "features": [],
+        "filenames": "{...}",
+        "fresh": false,
+        "package_id": "foo 0.0.1 ([..])",
+        "profile": "{...}",
+        "reason": "compiler-artifact",
+        "target": {
+            "crate_types": [ "lib" ],
+            "kind": [ "lib" ],
+            "name": "foo",
+            "src_path": "[..]foo[/]src[/]lib.rs"
+        }
+    }
+"#,
+        ),
+    );
+}
+
+#[test]
+fn json_artifact_includes_executable_for_integration_tests() {
+    let p = project("foo")
+        .file(
+            "Cargo.toml",
+            r#"
+            [package]
+            name = "foo"
+            version = "0.0.1"
+            authors = []
+        "#,
+        )
+        .file("src/main.rs", "fn main() { }")
+        .file(
+            "tests/integration_test.rs", 
+            r#"
+            #[test]
+            fn integration_test() { }
+            "#,
+        )
+        .build();
+
+    assert_that(
+        p.cargo("test -v --no-run --message-format=json --test integration_test"),
+        execs().with_status(0).with_json(
+            r#"
+    {
+        "executable": "[..]foo[/]target[/]debug[/]foo[EXE]",
+        "features": [],
+        "filenames": "{...}",
+        "fresh": false,
+        "package_id": "foo 0.0.1 ([..])",
+        "profile": "{...}",
+        "reason": "compiler-artifact",
+        "target": {
+            "crate_types": [ "bin" ],
+            "kind": [ "bin" ],
+            "name": "foo",
+            "src_path": "[..]main.rs"
+        }
+    }
+
+    {
+        "executable": "[..]integration_test-[..][EXE]",
+        "features": [],
+        "filenames": "{...}",
+        "fresh": false,
+        "package_id": "foo 0.0.1 ([..])",
+        "profile": "{...}",
+        "reason": "compiler-artifact",
+        "target": {
+            "crate_types": [ "bin" ],
+            "kind": [ "test" ],
+            "name": "integration_test",
+            "src_path": "[..]integration_test.rs"
+        }
     }
 "#,
         ),
