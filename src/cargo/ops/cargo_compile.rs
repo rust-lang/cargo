@@ -170,7 +170,7 @@ pub fn compile<'a>(
     compile_with_exec(ws, options, Arc::new(DefaultExecutor))
 }
 
-/// Like `compile` but allows specifing a custom `Executor` that will be able to intercept build
+/// Like `compile` but allows specifying a custom `Executor` that will be able to intercept build
 /// calls and add custom logic. `compile` uses `DefaultExecutor` which just passes calls through.
 pub fn compile_with_exec<'a>(
     ws: &Workspace<'a>,
