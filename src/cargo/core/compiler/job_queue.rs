@@ -275,7 +275,6 @@ impl<'a> JobQueue<'a> {
             }
         }
 
-        let build_type = if self.is_release { "release" } else { "dev" };
         // NOTE: This may be a bit inaccurate, since this may not display the
         // profile for what was actually built.  Profile overrides can change
         // these settings, and in some cases different targets are built with
@@ -284,6 +283,7 @@ impl<'a> JobQueue<'a> {
         // profiles used.  However, to keep it simple and compatible with old
         // behavior, we just display what the base profile is.
         let profile = cx.bcx.profiles.base_profile(self.is_release);
+        let build_type = profile.name;
         let mut opt_type = String::from(if profile.opt_level.as_str() == "0" {
             "unoptimized"
         } else {
