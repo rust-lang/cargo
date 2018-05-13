@@ -6,10 +6,10 @@ authors = [
 license = "Apache-2.0/MIT"
 name = "rustfix"
 description = "Automatically apply the suggestions made by rustc"
-repository = "https://github.com/killercup/rustfix"
+repository = "https://github.com/rust-lang-nursery/rustfix"
 documentation = "https://docs.rs/rustfix"
 readme = "README.md"
-version = "0.2.0"
+version = "0.3.0"
 exclude = [
     "etc/*",
     "examples/*",

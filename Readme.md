@@ -16,6 +16,12 @@ The magic of rustfix is entirely dependent on the diagnostics implement in the R
 
 [clippy]: https://github.com/rust-lang-nursery/rust-clippy
 
+## Installation
+
+To use the rustfix libary, add it to your `Cargo.toml`.
+
+To get the tool to automatically fix warnings in, run `cargo install cargo-fix`. This will give you `cargo fix`.
+
 ## License
 
 Licensed under either of
