@@ -1,5 +1,9 @@
 ## Source Replacement
 
+This document is about replacing the crate index. You can read about overriding
+dependencies in the [overriding dependencies][overriding] section of this
+documentation.
+
 Cargo supports the ability to **replace one source with another** to express
 strategies along the lines of mirrors or vendoring dependencies. Configuration
 is currently done through the [`.cargo/config` configuration][config] mechanism,
@@ -56,6 +60,7 @@ dependencies through the usage of [the `[replace]` key][replace-section], and
 private registry support is planned for a future version of Cargo.
 
 [replace-section]: reference/manifest.html#the-replace-section
+[overriding]: reference/specifying-dependencies.html#overriding-dependencies
 
 ### Configuration
 
