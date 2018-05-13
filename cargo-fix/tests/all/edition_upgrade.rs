@@ -131,7 +131,7 @@ fn upgrade_extern_crate() {
         .file(
             "src/lib.rs",
             r#"
-                #![warn(rust_2018_migration)]
+                #![warn(rust_2018_idioms)]
 
                 extern crate bar;
 

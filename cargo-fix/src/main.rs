@@ -197,7 +197,7 @@ fn rustfix_crate(rustc: &Path, filename: &str) -> Result<FixedCrate, Error> {
             .iter()
             .all(|s| s.file_name == file_name && s.line_range == range)
         {
-            trace!("rejecting as it spans mutliple files {:?}", suggestion);
+            trace!("rejecting as it spans multiple files {:?}", suggestion);
             continue;
         }
 
