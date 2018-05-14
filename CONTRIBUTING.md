@@ -147,6 +147,11 @@ adding labels to triage issues:
 * Magenta, **B**-prefixed labels identify bugs which are **blockers**.
 
 * Light purple, **C**-prefixed labels represent the **category** of an issue.
+  In particular, **C-feature-request** marks *proposals* for new features. If
+  an issue is **C-feature-request**, but is not **Feature accepted** or **I-nominated**,
+  then it was not thoroughly discussed, and might need some additional design
+  or perhaps should be implemented as an external subcommand first. Ping
+  @rust-lang/cargo if you want to send a PR for such issue.
 
 * Dark purple, **Command**-prefixed labels mean the issue has to do with a
   specific cargo command.
