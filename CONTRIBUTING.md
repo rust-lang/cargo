@@ -39,6 +39,15 @@ necessary to use it exactly:
 All three components are important: what you did, what you expected, what
 happened instead. Please use https://gist.github.com/ if your examples run long.
 
+
+## Feature requests
+
+Cargo follows the general Rust model of evolution. All major features go through
+RFC process. Before writing an RFC or opening an issue, consider posting to the
+[internals][irlo] to get preliminary feedback. Implementing a feature as a
+[custom subcommand][commands] could also be a great way to demonstrate the
+demand for the functionality and to deliver a working solution faster.
+
 ## Working on issues
 
 If you're looking for somewhere to start, check out the [E-easy][E-Easy] and
@@ -188,3 +197,5 @@ adding labels to triage issues:
 [Code of Conduct]: https://www.rust-lang.org/conduct.html
 [IRC]: https://kiwiirc.com/client/irc.mozilla.org/cargo
 [`cargotest/mod.rs`]: https://github.com/rust-lang/cargo/blob/master/tests/testsuite/cargotest/mod.rs
+[irlo]: https://internals.rust-lang.org/
+[subcommands]: https://doc.rust-lang.org/cargo/reference/external-tools.html#custom-subcommands
