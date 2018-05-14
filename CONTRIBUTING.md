@@ -43,10 +43,11 @@ happened instead. Please use https://gist.github.com/ if your examples run long.
 ## Feature requests
 
 Cargo follows the general Rust model of evolution. All major features go through
-RFC process. Before writing an RFC or opening an issue, consider posting to the
-[internals][irlo] to get preliminary feedback. Implementing a feature as a
-[custom subcommand][commands] could also be a great way to demonstrate the
-demand for the functionality and to deliver a working solution faster.
+an RFC process. Therefore, before opening a feature request issue create a
+Pre-RFC thread on the [internals][irlo] forum to get preliminary feedback.
+Implementing a feature as a [custom subcommand][subcommands] is encouraged as it
+helps demonstrate the demand for the functionality and is a great way to deliver
+a working solution faster as it can iterate outside of cargo's release cadence.
 
 ## Working on issues
 
