@@ -106,7 +106,10 @@ assert_that(
 Alternatively to build and run a custom version of cargo simply run `cargo build`
 and execute `target/debug/cargo`. Note that `+nightly`/`+stable` (and variants),
 being [rustup](https://rustup.rs/) features, won't work when executing the locally
-built cargo binary directly.
+built cargo binary directly, you have to instead build with `cargo +nightly build`
+and run with `rustup run` (e.g `rustup run nightly
+<path-to-cargo>/target/debug/cargo <args>..`) (or set the `RUSTC` env var to point
+to nightly rustc).
 
 Because the test suite has `#![deny(warnings)]` at times you might find it
 convenient to override this with `RUSTFLAGS`, for example
