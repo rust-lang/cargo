@@ -7,7 +7,7 @@ The goal of this tool is to read and apply the suggestions made by rustc.
 
 ## Current status
 
-Currently, rustfix is split into to crates:
+Currently, rustfix is split into two crates:
 
 - `rustfix`, a library for consuming and applying suggestions in the format that `rustc` outputs
 - and `cargo-fix`, a binary that works as cargo subcommand and that end users will use to fix their code.
