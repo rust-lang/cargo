@@ -1508,6 +1508,13 @@ fn doc_edition() {
             .with_status(0)
             .with_stderr_contains("[RUNNING] `rustdoc [..]-Zunstable-options --edition=2018[..]"),
     );
+
+    assert_that(
+        p.cargo("test -v").masquerade_as_nightly_cargo(),
+        execs()
+            .with_status(0)
+            .with_stderr_contains("[RUNNING] `rustdoc [..]-Zunstable-options --edition=2018[..]")
+    );
 }
 
 // Tests an issue where depending on different versions of the same crate depending on `cfg`s
