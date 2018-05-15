@@ -27,6 +27,7 @@ use diagnostics::Message;
 mod cli;
 mod diagnostics;
 mod lock;
+mod vcs;
 
 fn main() {
     env_logger::init();

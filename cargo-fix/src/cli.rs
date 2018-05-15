@@ -9,6 +9,7 @@ use termcolor::{Color, ColorSpec, StandardStream, WriteColor};
 use super::exit_with;
 use diagnostics::{Message, Server};
 use lock;
+use vcs::VersionControl;
 
 static PLEASE_REPORT_THIS_BUG: &str =
     "\
@@ -41,6 +42,11 @@ pub fn run() -> Result<(), Error> {
                         .help("Fix warnings in preparation of an edition upgrade")
                         .takes_value(true)
                         .possible_values(&["2018"]),
+                )
+                .arg(
+                    Arg::with_name("allow-no-vcs")
+                        .long("allow-no-vcs")
+                        .help("Fix code even if a vcs was not detected"),
                 ),
         )
         .get_matches();
@@ -51,6 +57,11 @@ pub fn run() -> Result<(), Error> {
 
     if matches.is_present("broken-code") {
         env::set_var("__CARGO_FIX_BROKEN_CODE", "1");
+    }
+
+    let version_control = VersionControl::new();
+    if !version_control.is_present() && !matches.is_present("allow-no-vcs") {
+        bail!("no vcs found, aborting. overwrite this behavior with --allow-no-vcs");
     }
 
     // Spin up our lock server which our subprocesses will use to synchronize
