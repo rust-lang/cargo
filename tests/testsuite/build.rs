@@ -3761,31 +3761,6 @@ fn custom_target_dir_line_parameter() {
 }
 
 #[test]
-fn rustc_no_trans() {
-    if !is_nightly() {
-        return;
-    }
-
-    let p = project("foo")
-        .file(
-            "Cargo.toml",
-            r#"
-            [package]
-            name = "foo"
-            version = "0.0.1"
-            authors = []
-        "#,
-        )
-        .file("src/main.rs", "fn main() {}")
-        .build();
-
-    assert_that(
-        p.cargo("rustc").arg("-v").arg("--").arg("-Zno-trans"),
-        execs().with_status(0),
-    );
-}
-
-#[test]
 fn build_multiple_packages() {
     let p = project("foo")
         .file(
