@@ -10,7 +10,7 @@ use serde_json;
 
 use core::profiles::{Lto, Profile};
 use core::shell::ColorChoice;
-use core::{Feature, PackageId, Target};
+use core::{PackageId, Target};
 use util::errors::{CargoResult, CargoResultExt, Internal};
 use util::paths;
 use util::{self, machine_message, Freshness, ProcessBuilder};
@@ -596,13 +596,6 @@ fn rustdoc<'a, 'cfg>(cx: &mut Context<'a, 'cfg>, unit: &Unit<'a>) -> CargoResult
         rustdoc.arg("--cfg").arg(&format!("feature=\"{}\"", feat));
     }
 
-    let manifest = unit.pkg.manifest();
-
-    if manifest.features().is_enabled(Feature::edition()) {
-        rustdoc.arg("-Zunstable-options");
-        rustdoc.arg(format!("--edition={}", &manifest.edition()));
-    }
-
     if let Some(ref args) = bcx.extra_args_for(unit) {
         rustdoc.args(args);
     }
@@ -738,11 +731,6 @@ fn build_base_args<'a, 'cfg>(
         if !cx.used_in_plugin.contains(unit) {
             cmd.arg("-C").arg(format!("panic={}", panic));
         }
-    }
-    let manifest = unit.pkg.manifest();
-
-    if manifest.features().is_enabled(Feature::edition()) {
-        cmd.arg(format!("--edition={}", manifest.edition()));
     }
 
     // Disable LTO for host builds as prefer_dynamic and it are mutually
