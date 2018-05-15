@@ -1,5 +1,6 @@
 use failure::{err_msg, Error, ResultExt};
 use std::env;
+use std::process::Command;
 
 pub enum VersionControl {
     Git,
@@ -29,6 +30,29 @@ impl VersionControl {
             VersionControl::None => false,
             _ => true,
         }
+    }
+
+    pub fn is_dirty(&self) -> Result<bool, Error> {
+        let (program, args) = match *self {
+            VersionControl::Git => ("git", "status --short"),
+            VersionControl::Hg => ("hg", "status"),
+            VersionControl::Pijul => ("pijul", "status"),
+            VersionControl::Fossil => ("fossil", "changes"),
+            VersionControl::None => return Ok(false),
+        };
+
+        let output = Command::new(program)
+            .args(args.split_whitespace())
+            .output()?
+            .stdout;
+
+        let changes = String::from_utf8_lossy(&output);
+        let trimmed = changes.trim();
+        if !trimmed.is_empty() {
+            println!("{}", trimmed);
+        }
+
+        Ok(!trimmed.is_empty())
     }
 }
 

@@ -1,6 +1,6 @@
 use std::env;
 use std::io::Write;
-use std::process::Command;
+use std::process::{self, Command};
 
 use clap::{App, AppSettings, Arg, SubCommand};
 use failure::{Error, ResultExt};
@@ -47,6 +47,11 @@ pub fn run() -> Result<(), Error> {
                     Arg::with_name("allow-no-vcs")
                         .long("allow-no-vcs")
                         .help("Fix code even if a vcs was not detected"),
+                )
+                .arg(
+                    Arg::with_name("allow-dirty")
+                        .long("allow-dirty")
+                        .help("Fix code even if the working directory is dirty"),
                 ),
         )
         .get_matches();
@@ -61,7 +66,13 @@ pub fn run() -> Result<(), Error> {
 
     let version_control = VersionControl::new();
     if !version_control.is_present() && !matches.is_present("allow-no-vcs") {
-        bail!("no vcs found, aborting. overwrite this behavior with --allow-no-vcs");
+        eprintln!("no vcs found, aborting. overwrite this behavior with --allow-no-vcs");
+        process::exit(1);
+    }
+
+    if version_control.is_present() && version_control.is_dirty()? && !matches.is_present("allow-dirty") {
+        eprintln!("working directory is dirty, aborting. overwrite this behavior with --allow-dirty");
+        process::exit(1);
     }
 
     // Spin up our lock server which our subprocesses will use to synchronize
