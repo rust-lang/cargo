@@ -23,7 +23,7 @@ fn cargo_build_plan_simple() {
         "invocations": [
             {
                 "args": "{...}",
-                "cwd": "[..][/]target[/]cit[/][..][/]foo",
+                "cwd": "[..][/]cit[/][..][/]foo",
                 "deps": [],
                 "env": "{...}",
                 "kind": "Host",
@@ -93,7 +93,7 @@ fn cargo_build_plan_single_dep() {
         "invocations": [
             {
                 "args": "{...}",
-                "cwd": "[..][/]target[/]cit[/][..][/]foo",
+                "cwd": "[..][/]cit[/][..][/]foo",
                 "deps": [],
                 "env": "{...}",
                 "kind": "Host",
@@ -108,7 +108,7 @@ fn cargo_build_plan_single_dep() {
             },
             {
                 "args": "{...}",
-                "cwd": "[..][/]target[/]cit[/][..][/]foo",
+                "cwd": "[..][/]cit[/][..][/]foo",
                 "deps": [0],
                 "env": "{...}",
                 "kind": "Host",
@@ -160,7 +160,7 @@ fn cargo_build_plan_build_script() {
         "invocations": [
             {
                 "args": "{...}",
-                "cwd": "[..][/]target[/]cit[/][..][/]foo",
+                "cwd": "[..][/]cit[/][..][/]foo",
                 "deps": [],
                 "env": "{...}",
                 "kind": "Host",
@@ -175,7 +175,7 @@ fn cargo_build_plan_build_script() {
             },
             {
                 "args": "{...}",
-                "cwd": "[..][/]target[/]cit[/][..][/]foo",
+                "cwd": "[..][/]cit[/][..][/]foo",
                 "deps": [0],
                 "env": "{...}",
                 "kind": "Host",
@@ -188,7 +188,7 @@ fn cargo_build_plan_build_script() {
             },
             {
                 "args": "{...}",
-                "cwd": "[..][/]target[/]cit[/][..][/]foo",
+                "cwd": "[..][/]cit[/][..][/]foo",
                 "deps": [1],
                 "env": "{...}",
                 "kind": "Host",
