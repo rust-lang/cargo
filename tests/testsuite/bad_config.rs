@@ -109,8 +109,7 @@ fn bad3() {
 error: failed to update registry [..]
 
 Caused by:
-  invalid configuration for key `http.proxy`
-expected a string, but found a boolean for `http.proxy` in [..]config
+  error in [..]config: `http.proxy` expected a string, but found a boolean
 ",
         ),
     );
@@ -134,8 +133,7 @@ fn bad4() {
 [ERROR] Failed to create project `foo` at `[..]`
 
 Caused by:
-  invalid configuration for key `cargo-new.name`
-expected a string, but found a boolean for `cargo-new.name` in [..]config
+  error in [..]config: `cargo-new.name` expected a string, but found a boolean
 ",
         ),
     );
@@ -211,8 +209,7 @@ fn bad6() {
 error: failed to update registry [..]
 
 Caused by:
-  invalid configuration for key `http.user-agent`
-expected a string, but found a boolean for `http.user-agent` in [..]config
+  error in [..]config: `http.user-agent` expected a string, but found a boolean
 ",
         ),
     );
@@ -243,7 +240,9 @@ fn bad_cargo_config_jobs() {
         p.cargo("build").arg("-v"),
         execs()
             .with_status(101)
-            .with_stderr("[ERROR] build.jobs must be positive, but found -1 in [..]"),
+            .with_stderr("\
+[ERROR] error in [..].cargo[/]config: `build.jobs` must be positive, found -1
+"),
     );
 }
 

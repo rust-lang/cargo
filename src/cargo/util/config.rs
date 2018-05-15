@@ -1,34 +1,38 @@
+use std;
 use std::cell::{RefCell, RefMut};
-use std::collections::HashSet;
 use std::collections::hash_map::Entry::{Occupied, Vacant};
 use std::collections::hash_map::HashMap;
+use std::collections::HashSet;
 use std::env;
 use std::fmt;
 use std::fs::{self, File};
-use std::io::SeekFrom;
 use std::io::prelude::*;
+use std::io::SeekFrom;
 use std::mem;
 use std::path::{Path, PathBuf};
 use std::str::FromStr;
 use std::sync::{Once, ONCE_INIT};
 use std::time::Instant;
+use std::vec;
 
 use curl::easy::Easy;
+use failure;
 use jobserver;
-use serde::{Serialize, Serializer};
-use toml;
 use lazycell::LazyCell;
+use num_traits;
+use serde::{de, de::IntoDeserializer, Serialize, Serializer};
+use toml;
 
 use core::shell::Verbosity;
 use core::{CliUnstable, Shell, SourceId, Workspace};
 use ops;
 use url::Url;
-use util::ToUrl;
-use util::Rustc;
-use util::errors::{internal, CargoError, CargoResult, CargoResultExt};
+use util::errors::{internal, CargoResult, CargoResultExt};
 use util::paths;
 use util::toml as cargo_toml;
 use util::Filesystem;
+use util::Rustc;
+use util::ToUrl;
 
 use self::ConfigValue as CV;
 
@@ -38,7 +42,7 @@ use self::ConfigValue as CV;
 /// This struct implements `Default`: all fields can be inferred.
 #[derive(Debug)]
 pub struct Config {
-    /// The location of the users's 'home' directory. OS-dependent.
+    /// The location of the user's 'home' directory. OS-dependent.
     home_path: Filesystem,
     /// Information about how to write messages to the shell
     shell: RefCell<Shell>,
@@ -72,6 +76,8 @@ pub struct Config {
     creation_time: Instant,
     /// Target Directory via resolved Cli parameter
     target_dir: Option<Filesystem>,
+    /// Environment variables, separated to assist testing.
+    env: HashMap<String, String>,
 }
 
 impl Config {
@@ -87,8 +93,18 @@ impl Config {
             }
         });
 
-        let cache_rustc_info = match env::var("CARGO_CACHE_RUSTC_INFO") {
-            Ok(cache) => cache != "0",
+        let env: HashMap<_, _> = env::vars_os()
+            .filter_map(|(k, v)| {
+                // Ignore any key/values that are not valid Unicode.
+                match (k.into_string(), v.into_string()) {
+                    (Ok(k), Ok(v)) => Some((k, v)),
+                    _ => None,
+                }
+            })
+            .collect();
+
+        let cache_rustc_info = match env.get("CARGO_CACHE_RUSTC_INFO".into()) {
+            Some(cache) => cache != "0",
             _ => true,
         };
 
@@ -116,6 +132,7 @@ impl Config {
             cache_rustc_info,
             creation_time: Instant::now(),
             target_dir: None,
+            env,
         }
     }
 
@@ -179,7 +196,8 @@ impl Config {
         Rustc::new(
             self.get_tool("rustc")?,
             self.maybe_get_tool("rustc_wrapper")?,
-            &self.home()
+            &self
+                .home()
                 .join("bin")
                 .join("rustc")
                 .into_path_unlocked()
@@ -229,10 +247,12 @@ impl Config {
             .map(AsRef::as_ref)
     }
 
+    // TODO: Why is this `pub`?
     pub fn values(&self) -> CargoResult<&HashMap<String, ConfigValue>> {
         self.values.try_borrow_with(|| self.load_values())
     }
 
+    // Note: This is used by RLS, not Cargo.
     pub fn set_values(&self, values: HashMap<String, ConfigValue>) -> CargoResult<()> {
         if self.values.borrow().is_some() {
             bail!("config values already found")
@@ -260,7 +280,7 @@ impl Config {
         }
     }
 
-    fn get(&self, key: &str) -> CargoResult<Option<ConfigValue>> {
+    fn get_cv(&self, key: &str) -> CargoResult<Option<ConfigValue>> {
         let vals = self.values()?;
         let mut parts = key.split('.').enumerate();
         let mut val = match vals.get(parts.next().unwrap().1) {
@@ -294,49 +314,91 @@ impl Config {
         Ok(Some(val.clone()))
     }
 
-    fn get_env<V: FromStr>(&self, key: &str) -> CargoResult<Option<Value<V>>>
+    // Helper primarily for testing.
+    pub fn set_env(&mut self, env: HashMap<String, String>) {
+        self.env = env;
+    }
+
+    fn get_env<T>(&self, key: &ConfigKey) -> Result<Option<Value<T>>, ConfigError>
     where
-        CargoError: From<V::Err>,
+        T: FromStr,
+        <T as FromStr>::Err: fmt::Display,
     {
-        let key = key.replace(".", "_")
-            .replace("-", "_")
-            .chars()
-            .flat_map(|c| c.to_uppercase())
-            .collect::<String>();
-        match env::var(&format!("CARGO_{}", key)) {
-            Ok(value) => Ok(Some(Value {
-                val: value.parse()?,
-                definition: Definition::Environment,
-            })),
-            Err(..) => Ok(None),
+        let key = key.to_env();
+        match self.env.get(&key) {
+            Some(value) => {
+                let definition = Definition::Environment(key);
+                Ok(Some(Value {
+                    val: value
+                        .parse()
+                        .map_err(|e| ConfigError::new(format!("{}", e), definition.clone()))?,
+                    definition,
+                }))
+            }
+            None => Ok(None),
         }
     }
 
-    pub fn get_string(&self, key: &str) -> CargoResult<Option<Value<String>>> {
-        if let Some(v) = self.get_env(key)? {
-            return Ok(Some(v));
+    fn has_key(&self, key: &ConfigKey) -> bool {
+        let env_key = key.to_env();
+        if self.env.get(&env_key).is_some() {
+            return true;
         }
-        match self.get(key)? {
-            Some(CV::String(i, path)) => Ok(Some(Value {
-                val: i,
-                definition: Definition::Path(path),
-            })),
-            Some(val) => self.expected("string", key, val),
-            None => Ok(None),
+        let env_pattern = format!("{}_", env_key);
+        if self.env.keys().any(|k| k.starts_with(&env_pattern)) {
+            return true;
+        }
+        if let Ok(o_cv) = self.get_cv(&key.to_config()) {
+            if o_cv.is_some() {
+                return true;
+            }
+        }
+        false
+    }
+
+    pub fn get_string(&self, key: &str) -> CargoResult<Option<Value<String>>> {
+        self.get_string_priv(&ConfigKey::from_str(key))
+            .map_err(|e| e.into())
+    }
+
+    fn get_string_priv(&self, key: &ConfigKey) -> Result<Option<Value<String>>, ConfigError> {
+        match self.get_env(key)? {
+            Some(v) => Ok(Some(v)),
+            None => {
+                let config_key = key.to_config();
+                let o_cv = self.get_cv(&config_key)?;
+                match o_cv {
+                    Some(CV::String(s, path)) => Ok(Some(Value {
+                        val: s,
+                        definition: Definition::Path(path),
+                    })),
+                    Some(cv) => Err(ConfigError::expected(&config_key, "a string", &cv)),
+                    None => Ok(None),
+                }
+            }
         }
     }
 
     pub fn get_bool(&self, key: &str) -> CargoResult<Option<Value<bool>>> {
-        if let Some(v) = self.get_env(key)? {
-            return Ok(Some(v));
-        }
-        match self.get(key)? {
-            Some(CV::Boolean(b, path)) => Ok(Some(Value {
-                val: b,
-                definition: Definition::Path(path),
-            })),
-            Some(val) => self.expected("bool", key, val),
-            None => Ok(None),
+        self.get_bool_priv(&ConfigKey::from_str(key))
+            .map_err(|e| e.into())
+    }
+
+    fn get_bool_priv(&self, key: &ConfigKey) -> Result<Option<Value<bool>>, ConfigError> {
+        match self.get_env(key)? {
+            Some(v) => Ok(Some(v)),
+            None => {
+                let config_key = key.to_config();
+                let o_cv = self.get_cv(&config_key)?;
+                match o_cv {
+                    Some(CV::Boolean(b, path)) => Ok(Some(Value {
+                        val: b,
+                        definition: Definition::Path(path),
+                    })),
+                    Some(cv) => Err(ConfigError::expected(&config_key, "true/false", &cv)),
+                    None => Ok(None),
+                }
+            }
         }
     }
 
@@ -379,8 +441,10 @@ impl Config {
         Ok(None)
     }
 
+    // NOTE: This does *not* support environment variables.  Use `get` instead
+    // if you want that.
     pub fn get_list(&self, key: &str) -> CargoResult<Option<Value<Vec<(String, PathBuf)>>>> {
-        match self.get(key)? {
+        match self.get_cv(key)? {
             Some(CV::List(i, path)) => Ok(Some(Value {
                 val: i,
                 definition: Definition::Path(path),
@@ -391,18 +455,14 @@ impl Config {
     }
 
     pub fn get_list_or_split_string(&self, key: &str) -> CargoResult<Option<Value<Vec<String>>>> {
-        match self.get_env::<String>(key) {
-            Ok(Some(value)) => {
-                return Ok(Some(Value {
-                    val: value.val.split(' ').map(str::to_string).collect(),
-                    definition: value.definition,
-                }))
-            }
-            Err(err) => return Err(err),
-            Ok(None) => (),
+        if let Some(value) = self.get_env::<String>(&ConfigKey::from_str(key))? {
+            return Ok(Some(Value {
+                val: value.val.split(' ').map(str::to_string).collect(),
+                definition: value.definition,
+            }));
         }
 
-        match self.get(key)? {
+        match self.get_cv(key)? {
             Some(CV::List(i, path)) => Ok(Some(Value {
                 val: i.into_iter().map(|(s, _)| s).collect(),
                 definition: Definition::Path(path),
@@ -417,7 +477,7 @@ impl Config {
     }
 
     pub fn get_table(&self, key: &str) -> CargoResult<Option<Value<HashMap<String, CV>>>> {
-        match self.get(key)? {
+        match self.get_cv(key)? {
             Some(CV::Table(i, path)) => Ok(Some(Value {
                 val: i,
                 definition: Definition::Path(path),
@@ -427,38 +487,67 @@ impl Config {
         }
     }
 
+    // Recommend use `get` if you want a specific type, such as an unsigned value.
+    // Example:  config.get::<Option<u32>>("some.key")?
     pub fn get_i64(&self, key: &str) -> CargoResult<Option<Value<i64>>> {
-        if let Some(v) = self.get_env(key)? {
-            return Ok(Some(v));
-        }
-        match self.get(key)? {
-            Some(CV::Integer(i, path)) => Ok(Some(Value {
-                val: i,
-                definition: Definition::Path(path),
+        self.get_integer(&ConfigKey::from_str(key))
+            .map_err(|e| e.into())
+    }
+
+    fn get_integer<T>(&self, key: &ConfigKey) -> Result<Option<Value<T>>, ConfigError>
+    where
+        T: FromStr + num_traits::NumCast + num_traits::Bounded + num_traits::Zero + fmt::Display,
+        <T as FromStr>::Err: fmt::Display,
+    {
+        let config_key = key.to_config();
+        let v = match self.get_env::<i64>(key)? {
+            Some(v) => v,
+            None => match self.get_cv(&config_key)? {
+                Some(CV::Integer(i, path)) => Value {
+                    val: i,
+                    definition: Definition::Path(path),
+                },
+                Some(cv) => return Err(ConfigError::expected(&config_key, "an integer", &cv)),
+                None => return Ok(None),
+            },
+        };
+        // Attempt to cast to the correct type, otherwise return a helpful
+        // error message.
+        match num_traits::cast(v.val) {
+            Some(casted_v) => Ok(Some(Value {
+                val: casted_v,
+                definition: v.definition,
             })),
-            Some(val) => self.expected("integer", key, val),
-            None => Ok(None),
+            None => {
+                if T::min_value().is_zero() && v.val < 0 {
+                    Err(ConfigError::new(
+                        format!("`{}` must be positive, found {}", config_key, v.val),
+                        v.definition,
+                    ))
+                } else {
+                    Err(ConfigError::new(
+                        format!(
+                            "`{}` is too large (min/max {}/{}), found {}",
+                            config_key,
+                            T::min_value(),
+                            T::max_value(),
+                            v.val
+                        ),
+                        v.definition,
+                    ))
+                }
+            }
         }
     }
 
     pub fn net_retry(&self) -> CargoResult<i64> {
-        match self.get_i64("net.retry")? {
-            Some(v) => {
-                let value = v.val;
-                if value < 0 {
-                    bail!(
-                        "net.retry must be positive, but found {} in {}",
-                        v.val,
-                        v.definition
-                    )
-                } else {
-                    Ok(value)
-                }
-            }
+        match self.get::<Option<u32>>("net.retry")? {
+            Some(v) => Ok(v as i64),
             None => Ok(2),
         }
     }
 
+    // TODO: why is this pub?
     pub fn expected<T>(&self, ty: &str, key: &str, val: CV) -> CargoResult<T> {
         val.expected(ty, key)
             .map_err(|e| format_err!("invalid configuration for key `{}`\n{}", key, e))
@@ -541,6 +630,7 @@ impl Config {
         !self.frozen && !self.locked
     }
 
+    // TODO: this was pub for RLS but may not be needed anymore?
     /// Loads configuration from the filesystem
     pub fn load_values(&self) -> CargoResult<HashMap<String, ConfigValue>> {
         let mut cfg = CV::Table(HashMap::new(), PathBuf::from("."));
@@ -645,7 +735,8 @@ impl Config {
     /// Look for a path for `tool` in an environment variable or config path, but return `None`
     /// if it's not present.
     fn maybe_get_tool(&self, tool: &str) -> CargoResult<Option<PathBuf>> {
-        let var = tool.chars()
+        let var = tool
+            .chars()
             .flat_map(|c| c.to_uppercase())
             .collect::<String>();
         if let Some(tool_path) = env::var_os(&var) {
@@ -681,7 +772,8 @@ impl Config {
     }
 
     pub fn http(&self) -> CargoResult<&RefCell<Easy>> {
-        let http = self.easy
+        let http = self
+            .easy
             .try_borrow_with(|| ops::http_handle(self).map(RefCell::new))?;
         {
             let mut http = http.borrow_mut();
@@ -701,14 +793,538 @@ impl Config {
     pub fn creation_time(&self) -> Instant {
         self.creation_time
     }
+
+    // Retrieve a config variable.
+    //
+    // This supports most serde `Deserialize` types.  Examples:
+    //     let v: Option<u32> = config.get("some.nested.key")?;
+    //     let v: Option<MyStruct> = config.get("some.key")?;
+    //     let v: Option<HashMap<String, MyStruct>> = config.get("foo")?;
+    pub fn get<'de, T: de::Deserialize<'de>>(&self, key: &str) -> CargoResult<T> {
+        let d = Deserializer {
+            config: self,
+            key: ConfigKey::from_str(key),
+        };
+        T::deserialize(d).map_err(|e| e.into())
+    }
 }
 
-#[derive(Eq, PartialEq, Clone, Copy)]
-pub enum Location {
-    Project,
-    Global,
+/// A segment of a config key.
+///
+/// Config keys are split on dots for regular keys, or underscores for
+/// environment keys.
+#[derive(Debug, Clone, Eq, PartialEq, Hash)]
+enum ConfigKeyPart {
+    /// Case-insensitive part (checks uppercase in environment keys).
+    Part(String),
+    /// Case-sensitive part (environment keys must match exactly).
+    CasePart(String),
 }
 
+impl ConfigKeyPart {
+    fn to_env(&self) -> String {
+        match self {
+            ConfigKeyPart::Part(s) => s.replace("-", "_").to_uppercase(),
+            ConfigKeyPart::CasePart(s) => s.clone(),
+        }
+    }
+
+    fn to_config(&self) -> String {
+        match self {
+            ConfigKeyPart::Part(s) => s.clone(),
+            ConfigKeyPart::CasePart(s) => s.clone(),
+        }
+    }
+}
+
+/// Key for a configuration variable.
+#[derive(Debug, Clone)]
+struct ConfigKey(Vec<ConfigKeyPart>);
+
+impl ConfigKey {
+    fn from_str(key: &str) -> ConfigKey {
+        ConfigKey(
+            key.split('.')
+                .map(|p| ConfigKeyPart::Part(p.to_string()))
+                .collect(),
+        )
+    }
+
+    fn join(&self, next: ConfigKeyPart) -> ConfigKey {
+        let mut res = self.clone();
+        res.0.push(next);
+        res
+    }
+
+    fn to_env(&self) -> String {
+        format!(
+            "CARGO_{}",
+            self.0
+                .iter()
+                .map(|p| p.to_env())
+                .collect::<Vec<_>>()
+                .join("_")
+        )
+    }
+
+    fn to_config(&self) -> String {
+        self.0
+            .iter()
+            .map(|p| p.to_config())
+            .collect::<Vec<_>>()
+            .join(".")
+    }
+
+    fn last(&self) -> &ConfigKeyPart {
+        self.0.last().unwrap()
+    }
+}
+
+impl fmt::Display for ConfigKey {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        self.to_config().fmt(f)
+    }
+}
+
+/// Internal error for serde errors.
+#[derive(Debug)]
+pub struct ConfigError {
+    message: String,
+    definition: Option<Definition>,
+}
+
+impl ConfigError {
+    fn new(message: String, definition: Definition) -> ConfigError {
+        ConfigError {
+            message,
+            definition: Some(definition),
+        }
+    }
+
+    fn expected(key: &str, expected: &str, found: &ConfigValue) -> ConfigError {
+        ConfigError {
+            message: format!(
+                "`{}` expected {}, but found a {}",
+                key,
+                expected,
+                found.desc()
+            ),
+            definition: Some(Definition::Path(found.definition_path().to_path_buf())),
+        }
+    }
+
+    fn missing(key: String) -> ConfigError {
+        ConfigError {
+            message: format!("missing config key `{}`", key),
+            definition: None,
+        }
+    }
+
+    fn with_key_context(self, key: String, definition: Definition) -> ConfigError {
+        ConfigError {
+            message: format!("could not load config key `{}`: {}", key, self),
+            definition: Some(definition),
+        }
+    }
+}
+
+impl std::error::Error for ConfigError {
+    fn description(&self) -> &str {
+        self.message.as_str()
+    }
+}
+
+impl fmt::Display for ConfigError {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        if let Some(ref definition) = self.definition {
+            write!(f, "error in {}: {}", definition, self.message)
+        } else {
+            self.message.fmt(f)
+        }
+    }
+}
+
+impl de::Error for ConfigError {
+    fn custom<T: fmt::Display>(msg: T) -> Self {
+        ConfigError {
+            message: msg.to_string(),
+            definition: None,
+        }
+    }
+}
+
+// TODO: AFAIK, you cannot override Fail::cause (due to specialization), so we
+// have no way to bubble up the underlying error.  For now, it just formats
+// the underlying cause as a string.
+impl From<failure::Error> for ConfigError {
+    fn from(e: failure::Error) -> Self {
+        let message = e
+            .causes()
+            .map(|e| e.to_string())
+            .collect::<Vec<_>>()
+            .join("\nCaused by:\n  ");
+        ConfigError {
+            message,
+            definition: None,
+        }
+    }
+}
+
+/// Serde deserializer used to convert config values to a target type using
+/// `Config::get`.
+pub struct Deserializer<'config> {
+    config: &'config Config,
+    key: ConfigKey,
+}
+
+macro_rules! deserialize_method {
+    ($method:ident, $visit:ident, $getter:ident) => {
+        fn $method<V>(self, visitor: V) -> Result<V::Value, Self::Error>
+        where
+            V: de::Visitor<'de>,
+        {
+            let v = self.config.$getter(&self.key)?.ok_or_else(||
+                ConfigError::missing(self.key.to_config()))?;
+            let Value{val, definition} = v;
+            let res: Result<V::Value, ConfigError> = visitor.$visit(val);
+            res.map_err(|e| e.with_key_context(self.key.to_config(), definition))
+        }
+    }
+}
+
+impl<'de, 'config> de::Deserializer<'de> for Deserializer<'config> {
+    type Error = ConfigError;
+
+    fn deserialize_any<V>(self, visitor: V) -> Result<V::Value, Self::Error>
+    where
+        V: de::Visitor<'de>,
+    {
+        // Future note: If you ever need to deserialize a non-self describing
+        // map type, this should implement a starts_with check (similar to how
+        // ConfigMapAccess does).
+        if let Some(v) = self.config.env.get(&self.key.to_env()) {
+            let res: Result<V::Value, ConfigError> = if v == "true" || v == "false" {
+                visitor.visit_bool(v.parse().unwrap())
+            } else if let Ok(v) = v.parse::<i64>() {
+                visitor.visit_i64(v)
+            } else if v.starts_with("[") && v.ends_with("]") {
+                visitor.visit_seq(ConfigSeqAccess::new(self.config, self.key.clone())?)
+            } else {
+                visitor.visit_string(v.clone())
+            };
+            return res.map_err(|e| {
+                e.with_key_context(
+                    self.key.to_config(),
+                    Definition::Environment(self.key.to_env()),
+                )
+            });
+        }
+
+        let o_cv = self.config.get_cv(&self.key.to_config())?;
+        if let Some(cv) = o_cv {
+            let res: (Result<V::Value, ConfigError>, PathBuf) = match cv {
+                CV::Integer(i, path) => (visitor.visit_i64(i), path),
+                CV::String(s, path) => (visitor.visit_string(s), path),
+                CV::List(_, path) => (
+                    visitor.visit_seq(ConfigSeqAccess::new(self.config, self.key.clone())?),
+                    path,
+                ),
+                CV::Table(_, path) => (
+                    visitor.visit_map(ConfigMapAccess::new_map(self.config, self.key.clone())?),
+                    path,
+                ),
+                CV::Boolean(b, path) => (visitor.visit_bool(b), path),
+            };
+            let (res, path) = res;
+            return res
+                .map_err(|e| e.with_key_context(self.key.to_config(), Definition::Path(path)));
+        }
+        Err(ConfigError::missing(self.key.to_config()))
+    }
+
+    deserialize_method!(deserialize_bool, visit_bool, get_bool_priv);
+    deserialize_method!(deserialize_i8, visit_i8, get_integer);
+    deserialize_method!(deserialize_i16, visit_i16, get_integer);
+    deserialize_method!(deserialize_i32, visit_i32, get_integer);
+    deserialize_method!(deserialize_i64, visit_i64, get_integer);
+    deserialize_method!(deserialize_u8, visit_u8, get_integer);
+    deserialize_method!(deserialize_u16, visit_u16, get_integer);
+    deserialize_method!(deserialize_u32, visit_u32, get_integer);
+    deserialize_method!(deserialize_u64, visit_u64, get_integer);
+    deserialize_method!(deserialize_string, visit_string, get_string_priv);
+
+    fn deserialize_option<V>(self, visitor: V) -> Result<V::Value, Self::Error>
+    where
+        V: de::Visitor<'de>,
+    {
+        if self.config.has_key(&self.key) {
+            visitor.visit_some(self)
+        } else {
+            // Treat missing values as None.
+            visitor.visit_none()
+        }
+    }
+
+    fn deserialize_struct<V>(
+        self,
+        _name: &'static str,
+        fields: &'static [&'static str],
+        visitor: V,
+    ) -> Result<V::Value, Self::Error>
+    where
+        V: de::Visitor<'de>,
+    {
+        visitor.visit_map(ConfigMapAccess::new_struct(self.config, self.key, fields)?)
+    }
+
+    fn deserialize_map<V>(self, visitor: V) -> Result<V::Value, Self::Error>
+    where
+        V: de::Visitor<'de>,
+    {
+        visitor.visit_map(ConfigMapAccess::new_map(self.config, self.key)?)
+    }
+
+    fn deserialize_seq<V>(self, visitor: V) -> Result<V::Value, Self::Error>
+    where
+        V: de::Visitor<'de>,
+    {
+        visitor.visit_seq(ConfigSeqAccess::new(self.config, self.key)?)
+    }
+
+    fn deserialize_tuple<V>(self, _len: usize, visitor: V) -> Result<V::Value, Self::Error>
+    where
+        V: de::Visitor<'de>,
+    {
+        visitor.visit_seq(ConfigSeqAccess::new(self.config, self.key)?)
+    }
+
+    fn deserialize_tuple_struct<V>(
+        self,
+        _name: &'static str,
+        _len: usize,
+        visitor: V,
+    ) -> Result<V::Value, Self::Error>
+    where
+        V: de::Visitor<'de>,
+    {
+        visitor.visit_seq(ConfigSeqAccess::new(self.config, self.key)?)
+    }
+
+    fn deserialize_newtype_struct<V>(
+        self,
+        name: &'static str,
+        visitor: V,
+    ) -> Result<V::Value, Self::Error>
+    where
+        V: de::Visitor<'de>,
+    {
+        if name == "ConfigRelativePath" {
+            match self.config.get_string_priv(&self.key)? {
+                Some(v) => {
+                    let path = v
+                        .definition
+                        .root(self.config)
+                        .join(v.val)
+                        .display()
+                        .to_string();
+                    visitor.visit_newtype_struct(path.into_deserializer())
+                }
+                None => Err(ConfigError::missing(self.key.to_config())),
+            }
+        } else {
+            visitor.visit_newtype_struct(self)
+        }
+    }
+
+    // These aren't really supported, yet.
+    forward_to_deserialize_any! {
+        f32 f64 char str bytes
+        byte_buf unit unit_struct
+        enum identifier ignored_any
+    }
+}
+
+struct ConfigMapAccess<'config> {
+    config: &'config Config,
+    key: ConfigKey,
+    set_iter: <HashSet<ConfigKeyPart> as IntoIterator>::IntoIter,
+    next: Option<ConfigKeyPart>,
+}
+
+impl<'config> ConfigMapAccess<'config> {
+    fn new_map(
+        config: &'config Config,
+        key: ConfigKey,
+    ) -> Result<ConfigMapAccess<'config>, ConfigError> {
+        let mut set = HashSet::new();
+        if let Some(mut v) = config.get_table(&key.to_config())? {
+            // v: Value<HashMap<String, CV>>
+            for (key, _value) in v.val.drain() {
+                set.insert(ConfigKeyPart::CasePart(key));
+            }
+        }
+        // CARGO_PROFILE_DEV_OVERRIDES_
+        let env_pattern = format!("{}_", key.to_env());
+        for env_key in config.env.keys() {
+            if env_key.starts_with(&env_pattern) {
+                // CARGO_PROFILE_DEV_OVERRIDES_bar_OPT_LEVEL = 3
+                let rest = &env_key[env_pattern.len()..];
+                // rest = bar_OPT_LEVEL
+                let part = rest.splitn(2, "_").next().unwrap();
+                // part = "bar"
+                set.insert(ConfigKeyPart::CasePart(part.to_string()));
+            }
+        }
+        Ok(ConfigMapAccess {
+            config,
+            key,
+            set_iter: set.into_iter(),
+            next: None,
+        })
+    }
+
+    fn new_struct(
+        config: &'config Config,
+        key: ConfigKey,
+        fields: &'static [&'static str],
+    ) -> Result<ConfigMapAccess<'config>, ConfigError> {
+        let mut set = HashSet::new();
+        for field in fields {
+            set.insert(ConfigKeyPart::Part(field.to_string()));
+        }
+        if let Some(mut v) = config.get_table(&key.to_config())? {
+            for (t_key, value) in v.val.drain() {
+                let part = ConfigKeyPart::Part(t_key);
+                if !set.contains(&part) {
+                    config.shell().warn(format!(
+                        "unused key `{}` in config file `{}`",
+                        key.join(part).to_config(),
+                        value.definition_path().display()
+                    ))?;
+                }
+            }
+        }
+        Ok(ConfigMapAccess {
+            config,
+            key,
+            set_iter: set.into_iter(),
+            next: None,
+        })
+    }
+}
+
+impl<'de, 'config> de::MapAccess<'de> for ConfigMapAccess<'config> {
+    type Error = ConfigError;
+
+    fn next_key_seed<K>(&mut self, seed: K) -> Result<Option<K::Value>, Self::Error>
+    where
+        K: de::DeserializeSeed<'de>,
+    {
+        match self.set_iter.next() {
+            Some(key) => {
+                let de_key = key.to_config();
+                self.next = Some(key);
+                seed.deserialize(de_key.into_deserializer()).map(Some)
+            }
+            None => Ok(None),
+        }
+    }
+
+    fn next_value_seed<V>(&mut self, seed: V) -> Result<V::Value, Self::Error>
+    where
+        V: de::DeserializeSeed<'de>,
+    {
+        // TODO: Is it safe to assume next_value_seed is always called
+        // (exactly once) after next_key_seed?
+        let next_key = self.next.take().expect("next field missing");
+        let next_key = self.key.join(next_key);
+        seed.deserialize(Deserializer {
+            config: self.config,
+            key: next_key,
+        })
+    }
+}
+
+struct ConfigSeqAccess {
+    list_iter: vec::IntoIter<(String, Definition)>,
+}
+
+impl ConfigSeqAccess {
+    fn new(config: &Config, key: ConfigKey) -> Result<ConfigSeqAccess, ConfigError> {
+        let mut res = Vec::new();
+        if let Some(v) = config.get_list(&key.to_config())? {
+            for (s, path) in v.val {
+                res.push((s, Definition::Path(path)));
+            }
+        }
+
+        // Parse an environment string as a TOML array.
+        let env_key = key.to_env();
+        let def = Definition::Environment(env_key.clone());
+        if let Some(v) = config.env.get(&env_key) {
+            if !(v.starts_with("[") && v.ends_with("]")) {
+                return Err(ConfigError::new(
+                    format!("should have TOML list syntax, found `{}`", v),
+                    def.clone(),
+                ));
+            }
+            let temp_key = key.last().to_env();
+            let toml_s = format!("{}={}", temp_key, v);
+            let toml_v: toml::Value = toml::de::from_str(&toml_s).map_err(|e| {
+                ConfigError::new(format!("could not parse TOML list: {}", e), def.clone())
+            })?;
+            let values = toml_v
+                .as_table()
+                .unwrap()
+                .get(&temp_key)
+                .unwrap()
+                .as_array()
+                .expect("env var was not array");
+            for value in values {
+                // TODO: support other types
+                let s = value.as_str().ok_or_else(|| {
+                    ConfigError::new(
+                        format!("expected string, found {}", value.type_str()),
+                        def.clone(),
+                    )
+                })?;
+                res.push((s.to_string(), def.clone()));
+            }
+        }
+        Ok(ConfigSeqAccess {
+            list_iter: res.into_iter(),
+        })
+    }
+}
+
+impl<'de> de::SeqAccess<'de> for ConfigSeqAccess {
+    type Error = ConfigError;
+
+    fn next_element_seed<T>(&mut self, seed: T) -> Result<Option<T::Value>, Self::Error>
+    where
+        T: de::DeserializeSeed<'de>,
+    {
+        match self.list_iter.next() {
+            // TODO: Add def to err?
+            Some((value, _def)) => seed.deserialize(value.into_deserializer()).map(Some),
+            None => Ok(None),
+        }
+    }
+}
+
+/// Use with the `get` API to fetch a string that will be converted to a
+/// `PathBuf`.  Relative paths are converted to absolute paths based on the
+/// location of the config file.
+#[derive(Debug, Eq, PartialEq, Clone, Deserialize)]
+pub struct ConfigRelativePath(PathBuf);
+
+impl ConfigRelativePath {
+    pub fn path(self) -> PathBuf {
+        self.0
+    }
+}
+
+// TODO: Why does this derive Deserialize?  It is unused.
 #[derive(Eq, PartialEq, Clone, Deserialize)]
 pub enum ConfigValue {
     Integer(i64, PathBuf),
@@ -723,9 +1339,10 @@ pub struct Value<T> {
     pub definition: Definition,
 }
 
+#[derive(Clone, Debug)]
 pub enum Definition {
     Path(PathBuf),
-    Environment,
+    Environment(String),
 }
 
 impl fmt::Debug for ConfigValue {
@@ -749,6 +1366,7 @@ impl fmt::Debug for ConfigValue {
     }
 }
 
+// TODO: Why is this here?  It is unused.
 impl Serialize for ConfigValue {
     fn serialize<S: Serializer>(&self, s: S) -> Result<S::Ok, S::Error> {
         match *self {
@@ -926,7 +1544,7 @@ impl Definition {
     pub fn root<'a>(&'a self, config: &'a Config) -> &'a Path {
         match *self {
             Definition::Path(ref p) => p.parent().unwrap().parent().unwrap(),
-            Definition::Environment => config.cwd(),
+            Definition::Environment(_) => config.cwd(),
         }
     }
 }
@@ -935,7 +1553,7 @@ impl fmt::Display for Definition {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         match *self {
             Definition::Path(ref p) => p.display().fmt(f),
-            Definition::Environment => "the environment".fmt(f),
+            Definition::Environment(ref key) => write!(f, "environment variable `{}`", key),
         }
     }
 }
