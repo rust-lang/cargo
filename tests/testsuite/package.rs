@@ -1122,14 +1122,10 @@ fn test_edition() {
                 // --edition is still in flux and we're not passing -Zunstable-options
                 // from Cargo so it will probably error. Only partially match the output
                 // until stuff stabilizes
-                .with_stderr_contains(format!("\
-[COMPILING] foo v0.0.1 ({url})
-[RUNNING] `rustc --crate-name foo src[/]lib.rs --crate-type lib \
-        --emit=dep-info,link --edition=2018 -C debuginfo=2 \
-        -C metadata=[..] \
-        --out-dir [..] \
-        -L dependency={dir}[/]target[/]debug[/]deps`
-", dir = p.root().display(), url = p.url())),
+                .with_stderr_contains("\
+[COMPILING] foo v0.0.1 ([..])
+[RUNNING] `rustc [..]--edition=2018 [..]
+"),
     );
 }
 
@@ -1156,14 +1152,10 @@ fn test_edition_missing() {
                 // --edition is still in flux and we're not passing -Zunstable-options
                 // from Cargo so it will probably error. Only partially match the output
                 // until stuff stabilizes
-                .with_stderr_contains(format!("\
-[COMPILING] foo v0.0.1 ({url})
-[RUNNING] `rustc --crate-name foo src[/]lib.rs --crate-type lib \
-        --emit=dep-info,link --edition=2015 -C debuginfo=2 \
-        -C metadata=[..] \
-        --out-dir [..] \
-        -L dependency={dir}[/]target[/]debug[/]deps`
-", dir = p.root().display(), url = p.url())),
+                .with_stderr_contains("\
+[COMPILING] foo v0.0.1 ([..])
+[RUNNING] `rustc [..]--edition=2015 [..]
+"),
     );
 }
 
