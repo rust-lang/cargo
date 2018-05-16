@@ -26,7 +26,7 @@ fn fix_path_deps() {
                     x
                 }
             "#,
-            )
+        )
         .file(
             "bar/Cargo.toml",
             r#"

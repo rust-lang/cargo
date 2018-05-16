@@ -11,11 +11,11 @@ extern crate tempdir;
 extern crate failure;
 extern crate difference;
 
-use std::ffi::OsString;
-use std::{env, fs};
-use std::path::{Path, PathBuf};
 use std::collections::HashSet;
+use std::ffi::OsString;
+use std::path::{Path, PathBuf};
 use std::process::Output;
+use std::{env, fs};
 
 use failure::{Error, ResultExt};
 use tempdir::TempDir;
@@ -71,7 +71,11 @@ fn compile_and_get_json_errors(file: &Path, mode: &str) -> Result<String, Error>
 
     match res.status.code() {
         Some(0) | Some(1) | Some(101) => Ok(stderr),
-        _ => Err(format_err!("failed with status {:?}: {}", res.status.code(), stderr)),
+        _ => Err(format_err!(
+            "failed with status {:?}: {}",
+            res.status.code(),
+            stderr
+        )),
     }
 }
 
@@ -104,8 +108,8 @@ fn read_file(path: &Path) -> Result<String, Error> {
 }
 
 fn diff(expected: &str, actual: &str) -> String {
-    use std::fmt::Write;
     use difference::{Changeset, Difference};
+    use std::fmt::Write;
 
     let mut res = String::new();
     let changeset = Changeset::new(expected.trim(), actual.trim(), "\n");
@@ -118,7 +122,10 @@ fn diff(expected: &str, actual: &str) -> String {
             Difference::Rem(rem) => ("-", rem),
         };
         if !different {
-            write!(&mut res, "differences found (+ == actual, - == expected):\n");
+            write!(
+                &mut res,
+                "differences found (+ == actual, - == expected):\n"
+            );
             different = true;
         }
         for diff in diff.lines() {
@@ -138,8 +145,7 @@ fn test_rustfix_with_file<P: AsRef<Path>>(file: P, mode: &str) -> Result<(), Err
     let fixed_file = file.with_extension("fixed.rs");
 
     debug!("next up: {:?}", file);
-    let code = read_file(file)
-        .context(format!("could not read {}", file.display()))?;
+    let code = read_file(file).context(format!("could not read {}", file.display()))?;
     let errors = compile_and_get_json_errors(file, mode)
         .context(format!("could compile {}", file.display()))?;
     let suggestions = rustfix::get_suggestions_from_json(&errors, &HashSet::new())
@@ -147,21 +153,28 @@ fn test_rustfix_with_file<P: AsRef<Path>>(file: P, mode: &str) -> Result<(), Err
 
     if std::env::var(settings::RECORD_JSON).is_ok() {
         use std::io::Write;
-        let mut recorded_json = fs::File::create(&file.with_extension("recorded.json"))
-            .context(format!("could not create recorded.json for {}", file.display()))?;
+        let mut recorded_json = fs::File::create(&file.with_extension("recorded.json")).context(
+            format!("could not create recorded.json for {}", file.display()),
+        )?;
         recorded_json.write_all(errors.as_bytes())?;
     }
 
     if std::env::var(settings::CHECK_JSON).is_ok() {
-        let expected_json = read_file(&json_file)
-            .context(format!("could not load json fixtures for {}", file.display()))?;;
-        let expected_suggestions = rustfix::get_suggestions_from_json(&expected_json, &HashSet::new())
-            .context("could not load expected suggesitons")?;
+        let expected_json = read_file(&json_file).context(format!(
+            "could not load json fixtures for {}",
+            file.display()
+        ))?;
+        let expected_suggestions =
+            rustfix::get_suggestions_from_json(&expected_json, &HashSet::new())
+                .context("could not load expected suggesitons")?;
 
         ensure!(
             expected_suggestions == suggestions,
             "got unexpected suggestions from clippy:\n{}",
-            diff(&format!("{:?}", expected_suggestions), &format!("{:?}", suggestions))
+            diff(
+                &format!("{:?}", expected_suggestions),
+                &format!("{:?}", suggestions)
+            )
         );
     }
 
@@ -174,11 +187,13 @@ fn test_rustfix_with_file<P: AsRef<Path>>(file: P, mode: &str) -> Result<(), Err
         recorded_rust.write_all(fixed.as_bytes())?;
     }
 
-    let expected_fixed = read_file(&fixed_file)
-        .context(format!("could read fixed file for {}", file.display()))?;
+    let expected_fixed =
+        read_file(&fixed_file).context(format!("could read fixed file for {}", file.display()))?;
     ensure!(
         fixed.trim() == expected_fixed.trim(),
-        "file {} doesn't look fixed:\n{}", file.display(), diff(fixed.trim(), expected_fixed.trim())
+        "file {} doesn't look fixed:\n{}",
+        file.display(),
+        diff(fixed.trim(), expected_fixed.trim())
     );
 
     compiles_without_errors(&fixed_file, mode)?;
@@ -219,8 +234,9 @@ fn assert_fixtures(dir: &str, mode: &str) {
     if failures > 0 {
         panic!(
             "{} out of {} fixture asserts failed\n\
-            (run with `env RUST_LOG=parse_and_replace=info` to get more details)",
-            failures, files.len(),
+             (run with `env RUST_LOG=parse_and_replace=info` to get more details)",
+            failures,
+            files.len(),
         );
     }
 }

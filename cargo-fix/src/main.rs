@@ -11,22 +11,22 @@ extern crate serde_derive;
 extern crate serde_json;
 extern crate termcolor;
 
-use std::collections::{HashMap, HashSet, BTreeSet};
+use std::collections::{BTreeSet, HashMap, HashSet};
 use std::env;
 use std::fs::File;
 use std::io::{Read, Write};
+use std::path::Path;
 use std::process::{self, Command, ExitStatus};
 use std::str;
-use std::path::Path;
 
-use rustfix::diagnostics::Diagnostic;
 use failure::{Error, ResultExt};
+use rustfix::diagnostics::Diagnostic;
 
 use diagnostics::Message;
 
 mod cli;
-mod lock;
 mod diagnostics;
+mod lock;
 
 fn main() {
     env_logger::init();
@@ -162,7 +162,7 @@ fn rustfix_crate(rustc: &Path, filename: &str) -> Result<FixedCrate, Error> {
             filename,
             output.status.code()
         );
-        return Ok(Default::default())
+        return Ok(Default::default());
     }
 
     // Sift through the output of the compiler to look for JSON messages
@@ -231,7 +231,10 @@ fn rustfix_crate(rustc: &Path, filename: &str) -> Result<FixedCrate, Error> {
 
         match rustfix::apply_suggestions(&code, &suggestions) {
             Err(e) => {
-                diagnostics::Message::ReplaceFailed { file: file, message: e.to_string() }.post()?;
+                diagnostics::Message::ReplaceFailed {
+                    file: file,
+                    message: e.to_string(),
+                }.post()?;
                 // TODO: Add flag to decide if we want to continue or bail out
                 continue;
             }
@@ -263,10 +266,10 @@ fn exit_with(status: ExitStatus) -> ! {
 }
 
 fn log_failed_fix(stderr: &[u8]) -> Result<(), Error> {
-    let stderr = str::from_utf8(stderr)
-        .context("failed to parse rustc stderr as utf-8")?;
+    let stderr = str::from_utf8(stderr).context("failed to parse rustc stderr as utf-8")?;
 
-    let diagnostics = stderr.lines()
+    let diagnostics = stderr
+        .lines()
         .filter(|x| !x.is_empty())
         .filter_map(|line| serde_json::from_str::<Diagnostic>(line).ok());
     let mut files = BTreeSet::new();

@@ -2,8 +2,8 @@
 //! replacement of parts of its content, with the ability to prevent changing
 //! the same parts multiple times.
 
-use std::rc::Rc;
 use failure::Error;
+use std::rc::Rc;
 
 #[derive(Debug, Clone, PartialEq, Eq)]
 enum State {
@@ -93,19 +93,26 @@ impl Data {
                     if log_enabled!(Debug) {
                         let slices = self.parts
                             .iter()
-                            .map(|p| (p.start, p.end, match p.data {
-                                State::Initial => "initial",
-                                State::Replaced(..) => "replaced",
-                            }))
+                            .map(|p| {
+                                (
+                                    p.start,
+                                    p.end,
+                                    match p.data {
+                                        State::Initial => "initial",
+                                        State::Replaced(..) => "replaced",
+                                    },
+                                )
+                            })
                             .collect::<Vec<_>>();
-                        debug!("no single slice covering {}...{}, current slices: {:?}",
+                        debug!(
+                            "no single slice covering {}...{}, current slices: {:?}",
                             from, up_to_and_including, slices,
                         );
                     }
 
                     format_err!(
                         "Could not replace range {}...{} in file \
-                        -- maybe parts of it were already replaced?",
+                         -- maybe parts of it were already replaced?",
                         from,
                         up_to_and_including
                     )
