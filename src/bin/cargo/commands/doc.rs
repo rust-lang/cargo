@@ -15,6 +15,7 @@ pub fn cli() -> App {
             "Exclude packages from the build",
         )
         .arg(opt("no-deps", "Don't build documentation for dependencies"))
+        .arg(opt("document-private-items", "Document private items"))
         .arg_jobs()
         .arg_targets_lib_bin(
             "Document only this package's library",
@@ -49,7 +50,12 @@ pub fn exec(config: &mut Config, args: &ArgMatches) -> CliResult {
     let mode = CompileMode::Doc {
         deps: !args.is_present("no-deps"),
     };
-    let compile_opts = args.compile_options(config, mode)?;
+    let mut compile_opts = args.compile_options(config, mode)?;
+    compile_opts.target_rustdoc_args = if args.is_present("document-private-items") {
+        Some(vec!["--document-private-items".to_string()])
+    } else {
+        None
+    };
     let doc_opts = DocOptions {
         open_result: args.is_present("open"),
         compile_opts,
