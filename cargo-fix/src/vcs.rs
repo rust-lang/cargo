@@ -49,7 +49,7 @@ impl VersionControl {
         let changes = String::from_utf8_lossy(&output);
         let trimmed = changes.trim();
         if !trimmed.is_empty() {
-            println!("{}", trimmed);
+            eprintln!("{}", trimmed);
         }
 
         Ok(!trimmed.is_empty())

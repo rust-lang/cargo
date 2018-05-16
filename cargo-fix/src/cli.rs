@@ -66,12 +66,16 @@ pub fn run() -> Result<(), Error> {
 
     let version_control = VersionControl::new();
     if !version_control.is_present() && !matches.is_present("allow-no-vcs") {
-        eprintln!("no vcs found, aborting. overwrite this behavior with --allow-no-vcs");
+        eprintln!("no VCS found, aborting. overwrite this behavior with --allow-no-vcs");
         process::exit(1);
     }
 
-    if version_control.is_present() && version_control.is_dirty()? && !matches.is_present("allow-dirty") {
-        eprintln!("working directory is dirty, aborting. overwrite this behavior with --allow-dirty");
+    if version_control.is_present() && version_control.is_dirty()?
+        && !matches.is_present("allow-dirty")
+    {
+        eprintln!(
+            "working directory is dirty, aborting. overwrite this behavior with --allow-dirty"
+        );
         process::exit(1);
     }
 

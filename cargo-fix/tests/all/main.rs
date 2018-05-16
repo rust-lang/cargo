@@ -19,6 +19,7 @@ thread_local!(static IDX: usize = CNT.fetch_add(1, Ordering::SeqCst));
 
 struct ProjectBuilder {
     files: Vec<(String, String)>,
+    root: PathBuf,
 }
 
 struct Project {
@@ -26,7 +27,10 @@ struct Project {
 }
 
 fn project() -> ProjectBuilder {
-    ProjectBuilder { files: Vec::new() }
+    ProjectBuilder {
+        files: Vec::new(),
+        root: root(),
+    }
 }
 
 fn root() -> PathBuf {
@@ -42,12 +46,20 @@ fn root() -> PathBuf {
 }
 
 impl ProjectBuilder {
-    fn file(&mut self, name: &str, contents: &str) -> &mut ProjectBuilder {
+    fn file(mut self, name: &str, contents: &str) -> ProjectBuilder {
         self.files.push((name.to_string(), contents.to_string()));
         self
     }
 
-    fn build(&mut self) -> Project {
+    fn use_temp_dir(mut self) -> ProjectBuilder {
+        let mut temp_dir = env::temp_dir();
+        temp_dir.push(&format!("rustfix-generated-test{}", IDX.with(|x| *x)));
+
+        self.root = temp_dir;
+        self
+    }
+
+    fn build(mut self) -> Project {
         if !self.files.iter().any(|f| f.0.ends_with("Cargo.toml")) {
             let manifest = r#"
                 [package]
@@ -59,17 +71,16 @@ impl ProjectBuilder {
             self.files
                 .push(("Cargo.toml".to_string(), manifest.to_string()));
         }
-        let root = root();
-        drop(fs::remove_dir_all(&root));
+        drop(fs::remove_dir_all(&self.root));
         for &(ref file, ref contents) in self.files.iter() {
-            let dst = root.join(file);
+            let dst = self.root.join(file);
             fs::create_dir_all(dst.parent().unwrap()).unwrap();
             fs::File::create(&dst)
                 .unwrap()
                 .write_all(contents.as_ref())
                 .unwrap();
         }
-        Project { root }
+        Project { root: self.root }
     }
 }
 
@@ -97,6 +108,13 @@ impl Project {
             .read_to_string(&mut ret)
             .unwrap();
         return ret;
+    }
+}
+
+impl Drop for Project {
+    fn drop(&mut self) {
+        drop(fs::remove_dir_all(&self.root));
+        drop(fs::remove_dir(&self.root));
     }
 }
 
@@ -321,4 +339,5 @@ mod dependencies;
 mod edition_upgrade;
 mod smoke;
 mod subtargets;
+mod vcs;
 mod warnings;
