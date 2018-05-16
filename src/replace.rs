@@ -201,6 +201,17 @@ mod tests {
     }
 
     #[test]
+    fn replace_multiple_lines_with_insert_only() {
+        let mut d = Data::new(b"foo!");
+
+        d.replace_range(3, 2, b"bar").unwrap();
+        assert_eq!("foobar!", str(&d.to_vec()));
+
+        d.replace_range(0, 2, b"baz").unwrap();
+        assert_eq!("bazbar!", str(&d.to_vec()));
+    }
+
+    #[test]
     #[should_panic(expected = "Cannot replace slice of data that was already replaced")]
     fn replace_overlapping_stuff_errs() {
         let mut d = Data::new(b"foo bar baz");
