@@ -9,6 +9,7 @@ use std::rc::Rc;
 enum State {
     Initial,
     Replaced(Rc<[u8]>),
+    Inserted(Rc<[u8]>),
 }
 
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -36,7 +37,7 @@ impl Data {
                 Span {
                     data: State::Initial,
                     start: 0,
-                    end: data.len(),
+                    end: data.len() - 1,
                 },
             ],
         }
@@ -46,8 +47,8 @@ impl Data {
     pub fn to_vec(&self) -> Vec<u8> {
         self.parts.iter().fold(Vec::new(), |mut acc, d| {
             match d.data {
-                State::Initial => acc.extend_from_slice(&self.original[d.start..d.end]),
-                State::Replaced(ref d) => acc.extend_from_slice(&d),
+                State::Initial => acc.extend_from_slice(&self.original[d.start..=d.end]),
+                State::Replaced(ref d) | State::Inserted(ref d) => acc.extend_from_slice(&d),
             };
             acc
         })
@@ -69,7 +70,7 @@ impl Data {
             self.original.len()
         );
 
-        // let insert_only = from > up_to_and_including;
+        let insert_only = from > up_to_and_including;
 
         // Since we error out when replacing an already replaced chunk of data,
         // we can take some shortcuts here. For example, there can be no
@@ -81,9 +82,19 @@ impl Data {
         // the whole chunk. As an optimization and without loss of generality we
         // don't add empty parts.
         let new_parts = {
+            let is_inserted = |state| {
+                if let &State::Inserted(..) = state {
+                    true
+                } else {
+                    false
+                }
+            };
+
             let index_of_part_to_split = self.parts
                 .iter()
-                .position(|p| p.start <= from && p.end >= up_to_and_including)
+                .position(|p| {
+                    !is_inserted(&p.data) && p.start <= from && p.end >= up_to_and_including
+                })
                 .ok_or_else(|| {
                     use log::Level::Debug;
                     if log_enabled!(Debug) {
@@ -96,6 +107,7 @@ impl Data {
                                     match p.data {
                                         State::Initial => "initial",
                                         State::Replaced(..) => "replaced",
+                                        State::Inserted(..) => "inserted",
                                     },
                                 )
                             })
@@ -131,7 +143,8 @@ impl Data {
             if from > part_to_split.start {
                 new_parts.push(Span {
                     start: part_to_split.start,
-                    end: from,
+                    // end: if insert_only { from - 1 } else { from },
+                    end: from - 1,
                     data: State::Initial,
                 });
             }
@@ -140,7 +153,11 @@ impl Data {
             new_parts.push(Span {
                 start: from,
                 end: up_to_and_including,
-                data: State::Replaced(data.into()),
+                data: if insert_only {
+                    State::Inserted(data.into())
+                } else {
+                    State::Replaced(data.into())
+                },
             });
 
             // Keep initial data on right side of part
@@ -196,7 +213,7 @@ mod tests {
         d.replace_range(6, 10, b"lol").unwrap();
         assert_eq!("lorem\nlol\ndolor", str(&d.to_vec()));
 
-        d.replace_range(12, 17, b"lol").unwrap();
+        d.replace_range(12, 16, b"lol").unwrap();
         assert_eq!("lorem\nlol\nlol", str(&d.to_vec()));
     }
 
@@ -209,6 +226,9 @@ mod tests {
 
         d.replace_range(0, 2, b"baz").unwrap();
         assert_eq!("bazbar!", str(&d.to_vec()));
+
+        d.replace_range(3, 3, b"?").unwrap();
+        assert_eq!("bazbar?", str(&d.to_vec()));
     }
 
     #[test]
