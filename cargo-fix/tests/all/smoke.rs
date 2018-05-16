@@ -96,8 +96,8 @@ fn preserve_line_endings() {
         .file(
             "src/lib.rs",
             "\
-                 fn add(a: &u32) -> u32 { a + 1 }\r\n\
-                 pub fn foo() -> u32 { let mut x = 3; add(&x) }\r\n\
+             fn add(a: &u32) -> u32 { a + 1 }\r\n\
+             pub fn foo() -> u32 { let mut x = 3; add(&x) }\r\n\
              ",
         )
         .build();

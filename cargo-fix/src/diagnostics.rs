@@ -2,7 +2,7 @@
 //! cross-platform way.
 
 use std::env;
-use std::io::{BufReader, Write, Read};
+use std::io::{BufReader, Read, Write};
 use std::net::{Shutdown, SocketAddr, TcpListener, TcpStream};
 use std::thread::{self, JoinHandle};
 
@@ -15,9 +15,18 @@ static DIAGNOSICS_SERVER_VAR: &str = "__CARGO_FIX_DIAGNOSTICS_SERVER";
 
 #[derive(Deserialize, Serialize)]
 pub enum Message {
-    Fixing { file: String, fixes: usize },
-    FixFailed { files: Vec<String>, krate: Option<String> },
-    ReplaceFailed { file: String, message: String },
+    Fixing {
+        file: String,
+        fixes: usize,
+    },
+    FixFailed {
+        files: Vec<String>,
+        krate: Option<String>,
+    },
+    ReplaceFailed {
+        file: String,
+        message: String,
+    },
 }
 
 impl Message {
@@ -33,15 +42,17 @@ impl Message {
         let mut client =
             TcpStream::connect(&addr).context("failed to connect to parent diagnostics target")?;
 
-        let s = serde_json::to_string(self)
-            .context("failed to serialize message")?;
-        client.write_all(s.as_bytes())
+        let s = serde_json::to_string(self).context("failed to serialize message")?;
+        client
+            .write_all(s.as_bytes())
             .context("failed to write message to diagnostics target")?;
-        client.shutdown(Shutdown::Write)
+        client
+            .shutdown(Shutdown::Write)
             .context("failed to shutdown")?;
 
         let mut tmp = Vec::new();
-        client.read_to_end(&mut tmp)
+        client
+            .read_to_end(&mut tmp)
             .context("failed to receive a disconnect")?;
 
         Ok(())
@@ -67,7 +78,8 @@ impl Server {
     }
 
     pub fn start<F>(self, on_message: F) -> Result<StartedServer, Error>
-        where F: Fn(Message, &mut StandardStream) + Send + 'static,
+    where
+        F: Fn(Message, &mut StandardStream) + Send + 'static,
     {
         let _addr = self.listener.local_addr()?;
         let thread = thread::spawn(move || {
@@ -81,7 +93,8 @@ impl Server {
     }
 
     fn run<F>(self, on_message: F)
-        where F: Fn(Message, &mut StandardStream)
+    where
+        F: Fn(Message, &mut StandardStream),
     {
         let color_choice = if atty::is(atty::Stream::Stderr) {
             ColorChoice::Auto

@@ -2,6 +2,7 @@ extern crate difference;
 extern crate url;
 
 use std::env;
+use std::ffi::{OsStr, OsString};
 use std::fs::{self, File};
 use std::io::{Read, Write};
 use std::path::{Path, PathBuf};
@@ -9,7 +10,6 @@ use std::process::Command;
 use std::str;
 use std::sync::atomic::*;
 use std::time::Instant;
-use std::ffi::{OsStr, OsString};
 
 use difference::{Changeset, Difference};
 use url::Url;

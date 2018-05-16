@@ -116,21 +116,21 @@ fn broken_fixes_backed_out() {
         .stderr_contains("not rust code")
         .stderr_contains(
             "\
-                warning: failed to automatically apply fixes suggested by rustc \
-                to crate `bar`\n\
-                \n\
-                after fixes were automatically applied the compiler reported \
-                errors within these files:\n\
-                \n  \
-                * src/lib.rs\n\
-                \n\
-                This likely indicates a bug in either rustc or rustfix itself,\n\
-                and we would appreciate a bug report! You're likely to see \n\
-                a number of compiler warnings after this message which rustfix\n\
-                attempted to fix but failed. If you could open an issue at\n\
-                https://github.com/rust-lang-nursery/rustfix/issues\n\
-                quoting the full output of this command we'd be very appreciative!\n\n\
-            "
+             warning: failed to automatically apply fixes suggested by rustc \
+             to crate `bar`\n\
+             \n\
+             after fixes were automatically applied the compiler reported \
+             errors within these files:\n\
+             \n  \
+             * src/lib.rs\n\
+             \n\
+             This likely indicates a bug in either rustc or rustfix itself,\n\
+             and we would appreciate a bug report! You're likely to see \n\
+             a number of compiler warnings after this message which rustfix\n\
+             attempted to fix but failed. If you could open an issue at\n\
+             https://github.com/rust-lang-nursery/rustfix/issues\n\
+             quoting the full output of this command we'd be very appreciative!\n\n\
+             ",
         )
         .stderr_not_contains("[FIXING]")
         .status(101)

@@ -1,23 +1,24 @@
 use std::env;
-use std::process::Command;
 use std::io::Write;
+use std::process::Command;
 
 use clap::{App, AppSettings, Arg, SubCommand};
 use failure::{Error, ResultExt};
 use termcolor::{Color, ColorSpec, StandardStream, WriteColor};
 
-use lock;
-use diagnostics::{Message, Server};
 use super::exit_with;
+use diagnostics::{Message, Server};
+use lock;
 
-static PLEASE_REPORT_THIS_BUG: &str = "\
-    This likely indicates a bug in either rustc or rustfix itself,\n\
-    and we would appreciate a bug report! You're likely to see \n\
-    a number of compiler warnings after this message which rustfix\n\
-    attempted to fix but failed. If you could open an issue at\n\
-    https://github.com/rust-lang-nursery/rustfix/issues\n\
-    quoting the full output of this command we'd be very appreciative!\n\n\
-";
+static PLEASE_REPORT_THIS_BUG: &str =
+    "\
+     This likely indicates a bug in either rustc or rustfix itself,\n\
+     and we would appreciate a bug report! You're likely to see \n\
+     a number of compiler warnings after this message which rustfix\n\
+     attempted to fix but failed. If you could open an issue at\n\
+     https://github.com/rust-lang-nursery/rustfix/issues\n\
+     quoting the full output of this command we'd be very appreciative!\n\n\
+     ";
 
 pub fn run() -> Result<(), Error> {
     let matches = App::new("Cargo Fix")
@@ -106,7 +107,10 @@ fn log_message(msg: &Message, stream: &mut StandardStream) -> Result<(), Error> 
     use diagnostics::Message::*;
 
     match *msg {
-        Fixing { ref file, ref fixes } => {
+        Fixing {
+            ref file,
+            ref fixes,
+        } => {
             log_for_human(
                 "Fixing",
                 &format!(
@@ -118,7 +122,10 @@ fn log_message(msg: &Message, stream: &mut StandardStream) -> Result<(), Error> 
                 stream,
             )?;
         }
-        ReplaceFailed { ref file, ref message } => {
+        ReplaceFailed {
+            ref file,
+            ref message,
+        } => {
             stream.set_color(ColorSpec::new().set_bold(true).set_fg(Some(Color::Yellow)))?;
             write!(stream, "warning")?;
             stream.reset()?;
@@ -128,7 +135,10 @@ fn log_message(msg: &Message, stream: &mut StandardStream) -> Result<(), Error> 
             write!(stream, "The full error message was:\n\n> {}\n\n", message)?;
             stream.write(PLEASE_REPORT_THIS_BUG.as_bytes())?;
         }
-        FixFailed { ref files, ref krate } => {
+        FixFailed {
+            ref files,
+            ref krate,
+        } => {
             stream.set_color(ColorSpec::new().set_bold(true).set_fg(Some(Color::Yellow)))?;
             write!(stream, "warning")?;
             stream.reset()?;
@@ -142,7 +152,10 @@ fn log_message(msg: &Message, stream: &mut StandardStream) -> Result<(), Error> 
                     krate,
                 )?;
             } else {
-                write!(stream, "failed to automatically apply fixes suggested by rustc\n")?;
+                write!(
+                    stream,
+                    "failed to automatically apply fixes suggested by rustc\n"
+                )?;
             }
             if files.len() > 0 {
                 write!(
@@ -154,7 +167,6 @@ fn log_message(msg: &Message, stream: &mut StandardStream) -> Result<(), Error> 
                     write!(stream, "  * {}\n", file)?;
                 }
                 write!(stream, "\n")?;
-
             }
             stream.write(PLEASE_REPORT_THIS_BUG.as_bytes())?;
         }

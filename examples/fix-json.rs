@@ -1,8 +1,8 @@
 extern crate failure;
 extern crate rustfix;
 
-use std::{env, fs, process, collections::HashSet};
 use failure::Error;
+use std::{env, fs, process, collections::HashSet};
 
 fn main() -> Result<(), Error> {
     let args: Vec<String> = env::args().collect();
