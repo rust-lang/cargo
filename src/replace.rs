@@ -62,18 +62,14 @@ impl Data {
         data: &[u8],
     ) -> Result<(), Error> {
         ensure!(
-            from <= up_to_and_including,
-            "Invalid range {}...{}, start is larger than end",
-            from,
-            up_to_and_including
-        );
-        ensure!(
             up_to_and_including <= self.original.len(),
             "Invalid range {}...{} given, original data is only {} byte long",
             from,
             up_to_and_including,
             self.original.len()
         );
+
+        // let insert_only = from > up_to_and_including;
 
         // Since we error out when replacing an already replaced chunk of data,
         // we can take some shortcuts here. For example, there can be no
