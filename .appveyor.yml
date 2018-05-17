@@ -8,6 +8,7 @@ install:
   - set PATH=%PATH%;C:\Users\appveyor\.cargo\bin
   - rustc -V
   - cargo -V
+  - del rustup-init.exe
 
 build: false
 
