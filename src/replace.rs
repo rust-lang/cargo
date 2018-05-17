@@ -62,6 +62,15 @@ impl Data {
         up_to_and_including: usize,
         data: &[u8],
     ) -> Result<(), Error> {
+        let exclusive_end = up_to_and_including + 1;
+
+        ensure!(
+            from <= exclusive_end,
+            "Invalid range {}...{}, start is larger than end",
+            from,
+            up_to_and_including
+        );
+
         ensure!(
             up_to_and_including <= self.original.len(),
             "Invalid range {}...{} given, original data is only {} byte long",
@@ -70,7 +79,7 @@ impl Data {
             self.original.len()
         );
 
-        let insert_only = from > up_to_and_including;
+        let insert_only = from == exclusive_end;
 
         // Since we error out when replacing an already replaced chunk of data,
         // we can take some shortcuts here. For example, there can be no
@@ -143,7 +152,6 @@ impl Data {
             if from > part_to_split.start {
                 new_parts.push(Span {
                     start: part_to_split.start,
-                    // end: if insert_only { from - 1 } else { from },
                     end: from - 1,
                     data: State::Initial,
                 });
@@ -229,6 +237,14 @@ mod tests {
 
         d.replace_range(3, 3, b"?").unwrap();
         assert_eq!("bazbar?", str(&d.to_vec()));
+    }
+
+    #[test]
+    fn replace_invalid_range() {
+        let mut d = Data::new(b"foo!");
+
+        assert!(d.replace_range(2, 0, b"bar").is_err());
+        assert!(d.replace_range(0, 2, b"bar").is_ok());
     }
 
     #[test]
