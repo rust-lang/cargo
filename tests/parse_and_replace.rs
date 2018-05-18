@@ -13,9 +13,9 @@ extern crate difference;
 
 use std::collections::HashSet;
 use std::ffi::OsString;
+use std::fs;
 use std::path::{Path, PathBuf};
 use std::process::Output;
-use std::fs;
 
 use failure::{Error, ResultExt};
 use tempdir::TempDir;
@@ -54,6 +54,7 @@ fn compile(file: &Path, mode: &str) -> Result<Output, Error> {
 
     let res = duct::cmd("rustc", &args)
         .env("CLIPPY_DISABLE_DOCS_LINKS", "true")
+        .env_remove("RUST_LOG")
         .stdout_capture()
         .stderr_capture()
         .unchecked()
