@@ -4,10 +4,10 @@ use std::process::{self, Command};
 
 use clap::{App, AppSettings, Arg, SubCommand};
 use failure::{Error, ResultExt};
-use termcolor::{Color, ColorSpec, StandardStream, WriteColor};
+use termcolor::{ColorSpec, StandardStream, WriteColor};
 
 use super::exit_with;
-use diagnostics::{Message, Server};
+use diagnostics::{self, log_for_human, output_stream, write_warning, Message};
 use lock;
 use vcs::VersionControl;
 
@@ -152,11 +152,9 @@ fn log_message(msg: &Message, stream: &mut StandardStream) -> Result<(), Error> 
             ref file,
             ref message,
         } => {
-            stream.set_color(ColorSpec::new().set_bold(true).set_fg(Some(Color::Yellow)))?;
-            write!(stream, "warning")?;
-            stream.reset()?;
+            write_warning(stream)?;
             stream.set_color(ColorSpec::new().set_bold(true))?;
-            write!(stream, ": error applying suggestions to `{}`\n", file)?;
+            write!(stream, "error applying suggestions to `{}`\n", file)?;
             stream.reset()?;
             write!(stream, "The full error message was:\n\n> {}\n\n", message)?;
             stream.write(PLEASE_REPORT_THIS_BUG.as_bytes())?;
@@ -165,11 +163,8 @@ fn log_message(msg: &Message, stream: &mut StandardStream) -> Result<(), Error> 
             ref files,
             ref krate,
         } => {
-            stream.set_color(ColorSpec::new().set_bold(true).set_fg(Some(Color::Yellow)))?;
-            write!(stream, "warning")?;
-            stream.reset()?;
+            write_warning(stream)?;
             stream.set_color(ColorSpec::new().set_bold(true))?;
-            write!(stream, ": ")?;
             if let Some(ref krate) = *krate {
                 write!(
                     stream,
@@ -200,14 +195,5 @@ fn log_message(msg: &Message, stream: &mut StandardStream) -> Result<(), Error> 
 
     stream.reset()?;
     stream.flush()?;
-    Ok(())
-}
-
-fn log_for_human(kind: &str, msg: &str, stream: &mut StandardStream) -> Result<(), Error> {
-    stream.set_color(ColorSpec::new().set_bold(true).set_fg(Some(Color::Cyan)))?;
-    // Justify to 12 chars just like cargo
-    write!(stream, "{:>12}", kind)?;
-    stream.reset()?;
-    write!(stream, " {}\n", msg)?;
     Ok(())
 }
