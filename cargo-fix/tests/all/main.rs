@@ -95,6 +95,7 @@ impl Project {
             stderr: None,
             stderr_contains: Vec::new(),
             stderr_not_contains: Vec::new(),
+            check_vcs: false,
             status: 0,
             ran: false,
             cwd: None,
@@ -128,6 +129,7 @@ struct ExpectCmd<'a> {
     stderr: Option<String>,
     stderr_contains: Vec<String>,
     stderr_not_contains: Vec<String>,
+    check_vcs: bool,
     status: i32,
     cwd: Option<PathBuf>,
 }
@@ -169,6 +171,11 @@ impl<'a> ExpectCmd<'a> {
         self
     }
 
+    fn check_vcs(&mut self, b: bool) -> &mut Self {
+        self.check_vcs = b;
+        self
+    }
+
     fn run(&mut self) {
         self.ran = true;
         let mut parts = self.cmd.split_whitespace();
@@ -195,6 +202,10 @@ impl<'a> ExpectCmd<'a> {
         new_path.push(me);
         new_path.extend(env::split_paths(&env::var_os("PATH").unwrap_or(Default::default())));
         cmd.env("PATH", env::join_paths(&new_path).unwrap());
+
+        if !self.check_vcs {
+            cmd.env("__CARGO_FIX_IGNORE_VCS", "true");
+        }
 
         println!("\n···················································");
         println!("running {:?}", cmd);
