@@ -166,13 +166,13 @@ pub fn collect_suggestions<S: ::std::hash::BuildHasher>(
         .iter()
         .filter_map(|child| {
             let replacements: Vec<_> = child.spans.iter().filter_map(collect_span).collect();
-            if replacements.is_empty() {
-                None
-            } else {
+            if replacements.len() == 1 {
                 Some(Solution {
                     message: child.message.clone(),
                     replacements,
                 })
+            } else {
+                None
             }
         })
         .collect();
