@@ -46,7 +46,7 @@ pub fn run() -> Result<(), Error> {
                 .arg(
                     Arg::with_name("allow-no-vcs")
                         .long("allow-no-vcs")
-                        .help("Fix code even if a vcs was not detected"),
+                        .help("Fix code even if a VCS was not detected"),
                 )
                 .arg(
                     Arg::with_name("allow-dirty")
@@ -57,7 +57,7 @@ pub fn run() -> Result<(), Error> {
         .get_matches();
     let matches = match matches.subcommand() {
         ("fix", Some(matches)) => matches,
-        _ => bail!("unknown cli arguments passed"),
+        _ => bail!("unknown CLI arguments passed"),
     };
 
     if matches.is_present("broken-code") {
