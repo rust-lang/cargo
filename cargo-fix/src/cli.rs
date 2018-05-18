@@ -1,6 +1,6 @@
 use std::env;
 use std::io::Write;
-use std::process::{self, Command};
+use std::process::Command;
 
 use clap::{App, AppSettings, Arg, SubCommand};
 use failure::{Error, ResultExt};
@@ -55,6 +55,7 @@ pub fn run() -> Result<(), Error> {
                 ),
         )
         .get_matches();
+
     let matches = match matches.subcommand() {
         ("fix", Some(matches)) => matches,
         _ => bail!("unknown CLI arguments passed"),
@@ -64,28 +65,15 @@ pub fn run() -> Result<(), Error> {
         env::set_var("__CARGO_FIX_BROKEN_CODE", "1");
     }
 
-    let version_control = VersionControl::new();
-    if !version_control.is_present() && !matches.is_present("allow-no-vcs") {
-        eprintln!("no VCS found, aborting. overwrite this behavior with --allow-no-vcs");
-        process::exit(1);
-    }
-
-    if version_control.is_present() && version_control.is_dirty()?
-        && !matches.is_present("allow-dirty")
-    {
-        eprintln!(
-            "working directory is dirty, aborting. overwrite this behavior with --allow-dirty"
-        );
-        process::exit(1);
-    }
+    check_version_control(matches)?;
 
     // Spin up our lock server which our subprocesses will use to synchronize
     // fixes.
-    let _lockserver = lock::Server::new()?.start()?;
+    let _lock_server = lock::Server::new()?.start()?;
 
     // Spin up our diagnostics server which our subprocesses will use to send
     // use their dignostics messages in an ordered way.
-    let _lockserver = Server::new()?.start(|m, stream| {
+    let _diagnostics_server = diagnostics::Server::new()?.start(|m, stream| {
         if let Err(e) = log_message(&m, stream) {
             warn!("failed to log message: {}", e);
         }
@@ -124,9 +112,52 @@ pub fn run() -> Result<(), Error> {
     //
     // TODO: we probably want to do something fancy here like collect results
     // from the client processes and print out a summary of what happened.
-    let status = cmd.status()
+    let status = cmd
+        .status()
         .with_context(|e| format!("failed to execute `{}`: {}", cargo.to_string_lossy(), e))?;
     exit_with(status);
+}
+
+fn check_version_control(matches: &::clap::ArgMatches) -> Result<(), Error> {
+    // Useful for tests
+    if env::var("__CARGO_FIX_IGNORE_VCS").is_ok() {
+        return Ok(());
+    }
+
+    let version_control = VersionControl::new();
+    match (version_control.is_present(), version_control.is_dirty()?) {
+        (true, None) => {} // clean and versioned slate
+        (false, _) => {
+            let stream = &mut output_stream();
+
+            write_warning(stream)?;
+            stream.set_color(ColorSpec::new().set_bold(true))?;
+            writeln!(stream, "Could not detect a version control system")?;
+            stream.reset()?;
+            writeln!(stream, "You should consider using a VCS so you can easily see and revert rustfix' changes.")?;
+
+            if !matches.is_present("allow-no-vcs") {
+                bail!("No VCS found, aborting. Overwrite this behavior with `--allow-no-vcs`.");
+            }
+        }
+        (true, Some(output)) => {
+            let stream = &mut output_stream();
+
+            write_warning(stream)?;
+            stream.set_color(ColorSpec::new().set_bold(true))?;
+            writeln!(stream, "Working directory dirty")?;
+            stream.reset()?;
+            writeln!(stream, "Make sure your working directory is clean so you can easily revert rustfix' changes.")?;
+
+            stream.write_all(&output)?;
+
+            if !matches.is_present("allow-dirty") {
+                bail!("Aborting because of dirty working directory. Overwrite this behavior with `--allow-dirty`.");
+            }
+        }
+    }
+
+    Ok(())
 }
 
 fn log_message(msg: &Message, stream: &mut StandardStream) -> Result<(), Error> {

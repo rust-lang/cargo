@@ -32,13 +32,20 @@ impl VersionControl {
         }
     }
 
-    pub fn is_dirty(&self) -> Result<bool, Error> {
+    /// Check if working tree is dirty
+    ///
+    /// # Returns
+    ///
+    /// - `Err(error)`: anything went wrong
+    /// - `Ok(None)`: No changes
+    /// - `Ok(bytes)`: Changes (bytes are VCS's output)
+    pub fn is_dirty(&self) -> Result<Option<Vec<u8>>, Error> {
         let (program, args) = match *self {
             VersionControl::Git => ("git", "status --short"),
             VersionControl::Hg => ("hg", "status"),
             VersionControl::Pijul => ("pijul", "status"),
             VersionControl::Fossil => ("fossil", "changes"),
-            VersionControl::None => return Ok(false),
+            VersionControl::None => return Ok(None),
         };
 
         let output = Command::new(program)
@@ -46,13 +53,11 @@ impl VersionControl {
             .output()?
             .stdout;
 
-        let changes = String::from_utf8_lossy(&output);
-        let trimmed = changes.trim();
-        if !trimmed.is_empty() {
-            eprintln!("{}", trimmed);
+        if output.is_empty() {
+            Ok(None)
+        } else {
+            Ok(Some(output))
         }
-
-        Ok(!trimmed.is_empty())
     }
 }
 
