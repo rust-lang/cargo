@@ -203,6 +203,9 @@ impl<'a> ExpectCmd<'a> {
         new_path.extend(env::split_paths(&env::var_os("PATH").unwrap_or(Default::default())));
         cmd.env("PATH", env::join_paths(&new_path).unwrap());
 
+        // Don't output log stuff in tests, because it breaks our std{err,out} assertions
+        cmd.env("RUST_LOG", "warn");
+
         if !self.check_vcs {
             cmd.env("__CARGO_FIX_IGNORE_VCS", "true");
         }
