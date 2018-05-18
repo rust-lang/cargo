@@ -4,11 +4,12 @@ use std::process::Command;
 
 use clap::{App, AppSettings, Arg, SubCommand};
 use failure::{Error, ResultExt};
-use termcolor::{Color, ColorSpec, StandardStream, WriteColor};
+use termcolor::{ColorSpec, StandardStream, WriteColor};
 
 use super::exit_with;
-use diagnostics::{Message, Server};
+use diagnostics::{self, log_for_human, output_stream, write_warning, Message};
 use lock;
+use vcs::VersionControl;
 
 static PLEASE_REPORT_THIS_BUG: &str =
     "\
@@ -41,25 +42,38 @@ pub fn run() -> Result<(), Error> {
                         .help("Fix warnings in preparation of an edition upgrade")
                         .takes_value(true)
                         .possible_values(&["2018"]),
+                )
+                .arg(
+                    Arg::with_name("allow-no-vcs")
+                        .long("allow-no-vcs")
+                        .help("Fix code even if a VCS was not detected"),
+                )
+                .arg(
+                    Arg::with_name("allow-dirty")
+                        .long("allow-dirty")
+                        .help("Fix code even if the working directory is dirty"),
                 ),
         )
         .get_matches();
+
     let matches = match matches.subcommand() {
         ("fix", Some(matches)) => matches,
-        _ => bail!("unknown cli arguments passed"),
+        _ => bail!("unknown CLI arguments passed"),
     };
 
     if matches.is_present("broken-code") {
         env::set_var("__CARGO_FIX_BROKEN_CODE", "1");
     }
 
+    check_version_control(matches)?;
+
     // Spin up our lock server which our subprocesses will use to synchronize
     // fixes.
-    let _lockserver = lock::Server::new()?.start()?;
+    let _lock_server = lock::Server::new()?.start()?;
 
     // Spin up our diagnostics server which our subprocesses will use to send
     // use their dignostics messages in an ordered way.
-    let _lockserver = Server::new()?.start(|m, stream| {
+    let _diagnostics_server = diagnostics::Server::new()?.start(|m, stream| {
         if let Err(e) = log_message(&m, stream) {
             warn!("failed to log message: {}", e);
         }
@@ -98,9 +112,52 @@ pub fn run() -> Result<(), Error> {
     //
     // TODO: we probably want to do something fancy here like collect results
     // from the client processes and print out a summary of what happened.
-    let status = cmd.status()
+    let status = cmd
+        .status()
         .with_context(|e| format!("failed to execute `{}`: {}", cargo.to_string_lossy(), e))?;
     exit_with(status);
+}
+
+fn check_version_control(matches: &::clap::ArgMatches) -> Result<(), Error> {
+    // Useful for tests
+    if env::var("__CARGO_FIX_IGNORE_VCS").is_ok() {
+        return Ok(());
+    }
+
+    let version_control = VersionControl::new();
+    match (version_control.is_present(), version_control.is_dirty()?) {
+        (true, None) => {} // clean and versioned slate
+        (false, _) => {
+            let stream = &mut output_stream();
+
+            write_warning(stream)?;
+            stream.set_color(ColorSpec::new().set_bold(true))?;
+            writeln!(stream, "Could not detect a version control system")?;
+            stream.reset()?;
+            writeln!(stream, "You should consider using a VCS so you can easily see and revert rustfix' changes.")?;
+
+            if !matches.is_present("allow-no-vcs") {
+                bail!("No VCS found, aborting. Overwrite this behavior with `--allow-no-vcs`.");
+            }
+        }
+        (true, Some(output)) => {
+            let stream = &mut output_stream();
+
+            write_warning(stream)?;
+            stream.set_color(ColorSpec::new().set_bold(true))?;
+            writeln!(stream, "Working directory dirty")?;
+            stream.reset()?;
+            writeln!(stream, "Make sure your working directory is clean so you can easily revert rustfix' changes.")?;
+
+            stream.write_all(&output)?;
+
+            if !matches.is_present("allow-dirty") {
+                bail!("Aborting because of dirty working directory. Overwrite this behavior with `--allow-dirty`.");
+            }
+        }
+    }
+
+    Ok(())
 }
 
 fn log_message(msg: &Message, stream: &mut StandardStream) -> Result<(), Error> {
@@ -126,11 +183,9 @@ fn log_message(msg: &Message, stream: &mut StandardStream) -> Result<(), Error> 
             ref file,
             ref message,
         } => {
-            stream.set_color(ColorSpec::new().set_bold(true).set_fg(Some(Color::Yellow)))?;
-            write!(stream, "warning")?;
-            stream.reset()?;
+            write_warning(stream)?;
             stream.set_color(ColorSpec::new().set_bold(true))?;
-            write!(stream, ": error applying suggestions to `{}`\n", file)?;
+            write!(stream, "error applying suggestions to `{}`\n", file)?;
             stream.reset()?;
             write!(stream, "The full error message was:\n\n> {}\n\n", message)?;
             stream.write(PLEASE_REPORT_THIS_BUG.as_bytes())?;
@@ -139,11 +194,8 @@ fn log_message(msg: &Message, stream: &mut StandardStream) -> Result<(), Error> 
             ref files,
             ref krate,
         } => {
-            stream.set_color(ColorSpec::new().set_bold(true).set_fg(Some(Color::Yellow)))?;
-            write!(stream, "warning")?;
-            stream.reset()?;
+            write_warning(stream)?;
             stream.set_color(ColorSpec::new().set_bold(true))?;
-            write!(stream, ": ")?;
             if let Some(ref krate) = *krate {
                 write!(
                     stream,
@@ -174,14 +226,5 @@ fn log_message(msg: &Message, stream: &mut StandardStream) -> Result<(), Error> 
 
     stream.reset()?;
     stream.flush()?;
-    Ok(())
-}
-
-fn log_for_human(kind: &str, msg: &str, stream: &mut StandardStream) -> Result<(), Error> {
-    stream.set_color(ColorSpec::new().set_bold(true).set_fg(Some(Color::Cyan)))?;
-    // Justify to 12 chars just like cargo
-    write!(stream, "{:>12}", kind)?;
-    stream.reset()?;
-    write!(stream, " {}\n", msg)?;
     Ok(())
 }

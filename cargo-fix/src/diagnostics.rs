@@ -9,7 +9,7 @@ use std::thread::{self, JoinHandle};
 use atty;
 use failure::{Error, ResultExt};
 use serde_json;
-use termcolor::{ColorChoice, StandardStream};
+use termcolor::{Color, ColorChoice, ColorSpec, StandardStream, WriteColor};
 
 static DIAGNOSICS_SERVER_VAR: &str = "__CARGO_FIX_DIAGNOSTICS_SERVER";
 
@@ -96,12 +96,7 @@ impl Server {
     where
         F: Fn(Message, &mut StandardStream),
     {
-        let color_choice = if atty::is(atty::Stream::Stderr) {
-            ColorChoice::Auto
-        } else {
-            ColorChoice::Never
-        };
-        let mut stream = StandardStream::stderr(color_choice);
+        let mut stream = output_stream();
         while let Ok((client, _)) = self.listener.accept() {
             let mut client = BufReader::new(client);
             match serde_json::from_reader(client) {
@@ -118,4 +113,31 @@ impl Drop for StartedServer {
     fn drop(&mut self) {
         drop(self.thread.take().unwrap().join());
     }
+}
+
+pub fn output_stream() -> StandardStream {
+    let color_choice = if atty::is(atty::Stream::Stderr) {
+        ColorChoice::Auto
+    } else {
+        ColorChoice::Never
+    };
+    StandardStream::stderr(color_choice)
+}
+
+pub fn write_warning(stream: &mut StandardStream) -> Result<(), Error> {
+    stream.set_color(ColorSpec::new().set_bold(true).set_fg(Some(Color::Yellow)))?;
+    write!(stream, "warning")?;
+    stream.reset()?;
+    stream.set_color(ColorSpec::new().set_bold(true))?;
+    write!(stream, ": ")?;
+    Ok(())
+}
+
+pub fn log_for_human(kind: &str, msg: &str, stream: &mut StandardStream) -> Result<(), Error> {
+    stream.set_color(ColorSpec::new().set_bold(true).set_fg(Some(Color::Cyan)))?;
+    // Justify to 12 chars just like cargo
+    write!(stream, "{:>12}", kind)?;
+    stream.reset()?;
+    write!(stream, " {}\n", msg)?;
+    Ok(())
 }
