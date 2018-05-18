@@ -12,6 +12,16 @@ enum State {
     Inserted(Rc<[u8]>),
 }
 
+impl State {
+    fn is_inserted(&self) -> bool {
+        if let &State::Inserted(..) = self {
+            true
+        } else {
+            false
+        }
+    }
+}
+
 #[derive(Debug, Clone, PartialEq, Eq)]
 struct Span {
     /// Start of this span in parent data
@@ -37,7 +47,7 @@ impl Data {
                 Span {
                     data: State::Initial,
                     start: 0,
-                    end: data.len() - 1,
+                    end: data.len().saturating_sub(1),
                 },
             ],
         }
@@ -45,6 +55,10 @@ impl Data {
 
     /// Render this data as a vector of bytes
     pub fn to_vec(&self) -> Vec<u8> {
+        if self.original.is_empty() {
+            return Vec::new();
+        }
+
         self.parts.iter().fold(Vec::new(), |mut acc, d| {
             match d.data {
                 State::Initial => acc.extend_from_slice(&self.original[d.start..=d.end]),
@@ -91,18 +105,10 @@ impl Data {
         // the whole chunk. As an optimization and without loss of generality we
         // don't add empty parts.
         let new_parts = {
-            let is_inserted = |state| {
-                if let &State::Inserted(..) = state {
-                    true
-                } else {
-                    false
-                }
-            };
-
             let index_of_part_to_split = self.parts
                 .iter()
                 .position(|p| {
-                    !is_inserted(&p.data) && p.start <= from && p.end >= up_to_and_including
+                    !p.data.is_inserted() && p.start <= from && p.end >= up_to_and_including
                 })
                 .ok_or_else(|| {
                     use log::Level::Debug;
@@ -152,7 +158,7 @@ impl Data {
             if from > part_to_split.start {
                 new_parts.push(Span {
                     start: part_to_split.start,
-                    end: from - 1,
+                    end: from.saturating_sub(1),
                     data: State::Initial,
                 });
             }
@@ -245,6 +251,12 @@ mod tests {
 
         assert!(d.replace_range(2, 0, b"bar").is_err());
         assert!(d.replace_range(0, 2, b"bar").is_ok());
+    }
+
+    #[test]
+    fn empty_to_vec_roundtrip() {
+        let s = "";
+        assert_eq!(s.as_bytes(), Data::new(s.as_bytes()).to_vec().as_slice());
     }
 
     #[test]
