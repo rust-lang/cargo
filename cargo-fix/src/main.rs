@@ -21,8 +21,9 @@ use std::str;
 
 use failure::{Error, ResultExt};
 use rustfix::diagnostics::Diagnostic;
+use termcolor::{ColorSpec, WriteColor, Color};
 
-use diagnostics::Message;
+use diagnostics::{Message, output_stream};
 
 mod cli;
 mod diagnostics;
@@ -42,7 +43,14 @@ fn main() {
         Ok(()) => return,
         Err(e) => e,
     };
-    eprintln!("error: {}", err);
+
+    let stream = &mut output_stream();
+    let _ = stream.set_color(ColorSpec::new().set_bold(true).set_fg(Some(Color::Red)));
+    write!(stream, "error").unwrap();
+    let _ = stream.reset();
+    let _ = stream.set_color(ColorSpec::new().set_bold(true));
+    writeln!(stream, ": {}", err).unwrap();
+
     for cause in err.causes().skip(1) {
         eprintln!("\tcaused by: {}", cause);
     }
