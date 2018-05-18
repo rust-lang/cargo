@@ -15,7 +15,7 @@ use std::collections::HashSet;
 use std::ffi::OsString;
 use std::path::{Path, PathBuf};
 use std::process::Output;
-use std::{env, fs};
+use std::fs;
 
 use failure::{Error, ResultExt};
 use tempdir::TempDir;
@@ -32,9 +32,6 @@ mod settings {
     pub const CHECK_JSON: &str = "RUSTFIX_TEST_CHECK_JSON";
     pub const RECORD_JSON: &str = "RUSTFIX_TEST_RECORD_JSON";
     pub const RECORD_FIXED_RUST: &str = "RUSTFIX_TEST_RECORD_FIXED_RUST";
-
-    // set automatically
-    pub const MODE: &str = "RUSTFIX_MODE";
 }
 
 fn compile(file: &Path, mode: &str) -> Result<Output, Error> {
@@ -125,15 +122,15 @@ fn diff(expected: &str, actual: &str) -> String {
             write!(
                 &mut res,
                 "differences found (+ == actual, - == expected):\n"
-            );
+            ).unwrap();
             different = true;
         }
         for diff in diff.lines() {
-            writeln!(&mut res, "{} {}", prefix, diff);
+            writeln!(&mut res, "{} {}", prefix, diff).unwrap();
         }
     }
     if different {
-        write!(&mut res, "");
+        write!(&mut res, "").unwrap();
     }
 
     res
