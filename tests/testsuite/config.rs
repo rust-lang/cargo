@@ -45,7 +45,8 @@ fn write_config(config: &str) {
 }
 
 fn new_config(env: &[(&str, &str)]) -> Config {
-    let shell = Shell::new();
+    let output = Box::new(fs::File::create(paths::root().join("shell.out")).unwrap());
+    let shell = Shell::from_write(output);
     let cwd = paths::root();
     let homedir = paths::home();
     let env = env
@@ -108,15 +109,27 @@ unused = 456
     struct S {
         f1: Option<i64>,
     }
-    // TODO: This currently does not verify the stderr output (not sure how).
-    // This prints the following:
-    // warning: unused key `S.unused` in config file `[..][/].cargo[/]config`
+    // This prints a warning (verified below).
     let s: S = config.get("S").unwrap();
     assert_eq!(s, S { f1: None });
     // This does not print anything, we cannot easily/reliably warn for
     // environment variables.
     let s: S = config.get("S2").unwrap();
     assert_eq!(s, S { f1: None });
+
+    // Verify the warnings.
+    drop(config); // Paranoid about flushing the file.
+    let path = paths::root().join("shell.out");
+    let output = fs::read_to_string(path).unwrap();
+    let expected = "\
+warning: unused key `S.unused` in config file `[..][/].cargo[/]config`
+";
+    if !lines_match(expected, &output) {
+        panic!(
+            "Did not find expected:\n{}\nActual error:\n{}\n",
+            expected, output
+        );
+    }
 }
 
 #[test]
