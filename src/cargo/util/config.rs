@@ -508,13 +508,6 @@ impl Config {
         }
     }
 
-    pub fn net_retry(&self) -> CargoResult<i64> {
-        match self.get::<Option<u32>>("net.retry")? {
-            Some(v) => Ok(v as i64),
-            None => Ok(2),
-        }
-    }
-
     // TODO: why is this pub?
     pub fn expected<T>(&self, ty: &str, key: &str, val: CV) -> CargoResult<T> {
         val.expected(ty, key)

@@ -48,7 +48,7 @@ pub fn with_retry<T, F>(config: &Config, mut callback: F) -> CargoResult<T>
 where
     F: FnMut() -> CargoResult<T>,
 {
-    let mut remaining = config.net_retry()?;
+    let mut remaining = config.get::<Option<u32>>("net.retry")?.unwrap_or(2);
     loop {
         match callback() {
             Ok(ret) => return Ok(ret),
