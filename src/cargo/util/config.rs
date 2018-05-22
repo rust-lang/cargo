@@ -246,7 +246,6 @@ impl Config {
             .map(AsRef::as_ref)
     }
 
-    // TODO: Why is this `pub`?
     pub fn values(&self) -> CargoResult<&HashMap<String, ConfigValue>> {
         self.values.try_borrow_with(|| self.load_values())
     }
@@ -508,8 +507,7 @@ impl Config {
         }
     }
 
-    // TODO: why is this pub?
-    pub fn expected<T>(&self, ty: &str, key: &str, val: CV) -> CargoResult<T> {
+    fn expected<T>(&self, ty: &str, key: &str, val: CV) -> CargoResult<T> {
         val.expected(ty, key)
             .map_err(|e| format_err!("invalid configuration for key `{}`\n{}", key, e))
     }
@@ -591,7 +589,6 @@ impl Config {
         !self.frozen && !self.locked
     }
 
-    // TODO: this was pub for RLS but may not be needed anymore?
     /// Loads configuration from the filesystem
     pub fn load_values(&self) -> CargoResult<HashMap<String, ConfigValue>> {
         let mut cfg = CV::Table(HashMap::new(), PathBuf::from("."));
@@ -1195,8 +1192,6 @@ impl<'de, 'config> de::MapAccess<'de> for ConfigMapAccess<'config> {
     where
         V: de::DeserializeSeed<'de>,
     {
-        // TODO: Is it safe to assume next_value_seed is always called
-        // (exactly once) after next_key_seed?
         let next_key = self.next.take().expect("next field missing");
         let next_key = self.key.join(next_key);
         seed.deserialize(Deserializer {
@@ -1490,7 +1485,7 @@ impl ConfigValue {
         }
     }
 
-    pub fn expected<T>(&self, wanted: &str, key: &str) -> CargoResult<T> {
+    fn expected<T>(&self, wanted: &str, key: &str) -> CargoResult<T> {
         bail!(
             "expected a {}, but found a {} for `{}` in {}",
             wanted,
