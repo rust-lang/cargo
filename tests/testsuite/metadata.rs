@@ -1248,3 +1248,35 @@ fn package_metadata() {
         ),
     );
 }
+
+#[test]
+fn bin_lib() {
+    let p = project("foo")
+        .file(
+            "foo/Cargo.toml",
+            r#"
+                [package]
+                name = "foo"
+                version = "0.1.0"
+            "#,
+        )
+        .file("foo/src/main.rs", "")
+        .file(
+            "bar/Cargo.toml",
+            r#"
+                [package]
+                name = "bar"
+                version = "0.1.0"
+
+                [dependencies]
+                foo = { path = "../foo" }
+            "#,
+        )
+        .file("bar/src/lib.rs", "")
+        .build();
+
+    assert_that(
+        p.cargo("metadata").cwd(p.root().join("bar")),
+        execs().with_status(0),
+    );
+}
