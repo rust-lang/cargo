@@ -19,7 +19,6 @@ use curl::easy::Easy;
 use failure;
 use jobserver;
 use lazycell::LazyCell;
-use num_traits;
 use serde::{de, de::IntoDeserializer, Serialize, Serializer};
 use toml;
 
@@ -494,49 +493,18 @@ impl Config {
             .map_err(|e| e.into())
     }
 
-    fn get_integer<T>(&self, key: &ConfigKey) -> Result<Option<Value<T>>, ConfigError>
-    where
-        T: FromStr + num_traits::NumCast + num_traits::Bounded + num_traits::Zero + fmt::Display,
-        <T as FromStr>::Err: fmt::Display,
-    {
+    fn get_integer(&self, key: &ConfigKey) -> Result<Option<Value<i64>>, ConfigError> {
         let config_key = key.to_config();
-        let v = match self.get_env::<i64>(key)? {
-            Some(v) => v,
+        match self.get_env::<i64>(key)? {
+            Some(v) => Ok(Some(v)),
             None => match self.get_cv(&config_key)? {
-                Some(CV::Integer(i, path)) => Value {
+                Some(CV::Integer(i, path)) => Ok(Some(Value {
                     val: i,
                     definition: Definition::Path(path),
-                },
+                })),
                 Some(cv) => return Err(ConfigError::expected(&config_key, "an integer", &cv)),
                 None => return Ok(None),
             },
-        };
-        // Attempt to cast to the correct type, otherwise return a helpful
-        // error message.
-        match num_traits::cast(v.val) {
-            Some(casted_v) => Ok(Some(Value {
-                val: casted_v,
-                definition: v.definition,
-            })),
-            None => {
-                if T::min_value().is_zero() && v.val < 0 {
-                    Err(ConfigError::new(
-                        format!("`{}` must be positive, found {}", config_key, v.val),
-                        v.definition,
-                    ))
-                } else {
-                    Err(ConfigError::new(
-                        format!(
-                            "`{}` is too large (min/max {}/{}), found {}",
-                            config_key,
-                            T::min_value(),
-                            T::max_value(),
-                            v.val
-                        ),
-                        v.definition,
-                    ))
-                }
-            }
         }
     }
 
@@ -1043,14 +1011,14 @@ impl<'de, 'config> de::Deserializer<'de> for Deserializer<'config> {
     }
 
     deserialize_method!(deserialize_bool, visit_bool, get_bool_priv);
-    deserialize_method!(deserialize_i8, visit_i8, get_integer);
-    deserialize_method!(deserialize_i16, visit_i16, get_integer);
-    deserialize_method!(deserialize_i32, visit_i32, get_integer);
+    deserialize_method!(deserialize_i8, visit_i64, get_integer);
+    deserialize_method!(deserialize_i16, visit_i64, get_integer);
+    deserialize_method!(deserialize_i32, visit_i64, get_integer);
     deserialize_method!(deserialize_i64, visit_i64, get_integer);
-    deserialize_method!(deserialize_u8, visit_u8, get_integer);
-    deserialize_method!(deserialize_u16, visit_u16, get_integer);
-    deserialize_method!(deserialize_u32, visit_u32, get_integer);
-    deserialize_method!(deserialize_u64, visit_u64, get_integer);
+    deserialize_method!(deserialize_u8, visit_i64, get_integer);
+    deserialize_method!(deserialize_u16, visit_i64, get_integer);
+    deserialize_method!(deserialize_u32, visit_i64, get_integer);
+    deserialize_method!(deserialize_u64, visit_i64, get_integer);
     deserialize_method!(deserialize_string, visit_string, get_string_priv);
 
     fn deserialize_option<V>(self, visitor: V) -> Result<V::Value, Self::Error>

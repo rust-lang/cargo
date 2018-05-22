@@ -361,7 +361,8 @@ big = 123456789
     );
     assert_error(
         config.get::<u8>("S.big").unwrap_err(),
-        "error in [..][/].cargo[/]config: `S.big` is too large (min/max 0/255), found 123456789",
+        "error in [..].cargo[/]config: could not load config key `S.big`: \
+         invalid value: integer `123456789`, expected u8",
     );
 
     // Environment variable type errors.
@@ -372,7 +373,8 @@ big = 123456789
     assert_error(
         config.get::<i8>("e.big").unwrap_err(),
         "error in environment variable `CARGO_E_BIG`: \
-         `e.big` is too large (min/max -128/127), found 123456789",
+         could not load config key `e.big`: \
+         invalid value: integer `123456789`, expected i8",
     );
 
     #[derive(Debug, Deserialize)]
@@ -618,5 +620,52 @@ abs = '{}'
             .unwrap()
             .path(),
         paths::root().join("a/b")
+    );
+}
+
+#[test]
+fn config_get_integers() {
+    write_config(
+        "\
+npos = 123456789
+nneg = -123456789
+i64max = 9223372036854775807
+",
+    );
+
+    let config = new_config(&[
+        ("CARGO_EPOS", "123456789"),
+        ("CARGO_ENEG", "-1"),
+        ("CARGO_EI64MAX", "9223372036854775807"),
+    ]);
+
+    assert_eq!(config.get::<u64>("i64max").unwrap(), 9223372036854775807);
+    assert_eq!(config.get::<i64>("i64max").unwrap(), 9223372036854775807);
+    assert_eq!(config.get::<u64>("ei64max").unwrap(), 9223372036854775807);
+    assert_eq!(config.get::<i64>("ei64max").unwrap(), 9223372036854775807);
+
+    assert_error(
+        config.get::<u32>("nneg").unwrap_err(),
+        "error in [..].cargo[/]config: \
+         could not load config key `nneg`: \
+         invalid value: integer `-123456789`, expected u32",
+    );
+    assert_error(
+        config.get::<u32>("eneg").unwrap_err(),
+        "error in environment variable `CARGO_ENEG`: \
+         could not load config key `eneg`: \
+         invalid value: integer `-1`, expected u32",
+    );
+    assert_error(
+        config.get::<i8>("npos").unwrap_err(),
+        "error in [..].cargo[/]config: \
+         could not load config key `npos`: \
+         invalid value: integer `123456789`, expected i8",
+    );
+    assert_error(
+        config.get::<i8>("epos").unwrap_err(),
+        "error in environment variable `CARGO_EPOS`: \
+         could not load config key `epos`: \
+         invalid value: integer `123456789`, expected i8",
     );
 }

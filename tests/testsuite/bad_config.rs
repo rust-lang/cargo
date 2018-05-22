@@ -241,7 +241,9 @@ fn bad_cargo_config_jobs() {
         execs()
             .with_status(101)
             .with_stderr("\
-[ERROR] error in [..].cargo[/]config: `build.jobs` must be positive, found -1
+[ERROR] error in [..].cargo[/]config: \
+could not load config key `build.jobs`: \
+invalid value: integer `-1`, expected u32
 "),
     );
 }

@@ -30,7 +30,6 @@ extern crate libgit2_sys;
 #[macro_use]
 extern crate log;
 extern crate num_cpus;
-extern crate num_traits;
 extern crate same_file;
 extern crate semver;
 #[macro_use]
