@@ -4,7 +4,7 @@ use std::fmt;
 use cargo::util::{Cfg, CfgExpr};
 use cargotest::rustc_host;
 use cargotest::support::registry::Package;
-use cargotest::support::{execs, project};
+use cargotest::support::{bench_file, execs, main_file, project};
 use hamcrest::assert_that;
 
 macro_rules! c {
@@ -488,5 +488,245 @@ fn cfg_looks_at_rustflags_for_target() {
         p.cargo("build --target x86_64-unknown-linux-gnu")
             .env("RUSTFLAGS", "--cfg with_b"),
         execs().with_status(0),
+    );
+}
+
+#[test]
+fn target_cfg_bin() {
+    let p = project("target_cfg_bin")
+        .file(
+            "Cargo.toml",
+            r#"
+            [package]
+            name = "bar"
+            version = "0.1.0"
+            authors = []
+
+            [[target.'cfg(target_pointer_width = "1")'.bin]]
+            name = "never"
+            path = "src/never.rs"
+
+            [[target.'cfg(not(target_pointer_width = "1"))'.bin]]
+            name = "always"
+            path = "src/always.rs"
+        "#,
+        )
+        .file("src/main.rs", &main_file("\"main\"", &[]))
+        .file("src/never.rs", &main_file("\"never\"", &[]))
+        .file("src/always.rs", &main_file("\"always\"", &[]))
+        .build();
+
+    assert_that(
+        p.cargo("build").arg("-v"),
+        execs().with_status(0)
+            .with_stderr_contains("\
+                [RUNNING] `rustc --crate-name always src[/]always.rs [..]")
+            .with_stderr_does_not_contain("\
+                [RUNNING] `rustc --crate-name never src[/]never.rs [..]"),
+    );
+}
+
+#[test]
+fn target_cfg_lib() {
+    let p = project("target_cfg_lib")
+        .file(
+            "Cargo.toml",
+            r#"
+            [package]
+            name = "bar"
+            version = "0.1.0"
+            authors = []
+
+            [target.'cfg(target_pointer_width = "1")'.lib]
+            name = "never"
+            path = "src/never.rs"
+
+            [target.'cfg(not(target_pointer_width = "1"))'.lib]
+            name = "always"
+            path = "src/always.rs"
+        "#,
+        )
+        .file("src/never.rs", "pub fn never() {{}}")
+        .file("src/always.rs", "pub fn always() {{}}")
+        .build();
+
+    assert_that(
+        p.cargo("build").arg("-v"),
+        execs().with_status(0)
+            .with_stderr_contains("\
+                [RUNNING] `rustc --crate-name always src[/]always.rs [..]")
+            .with_stderr_does_not_contain("\
+                [RUNNING] `rustc --crate-name never src[/]never.rs [..]"),
+    );
+}
+
+#[test]
+fn target_cfg_example() {
+    let p = project("target_cfg_example")
+        .file(
+            "Cargo.toml",
+            r#"
+            [package]
+            name = "bar"
+            version = "0.1.0"
+            authors = []
+
+            [[target.'cfg(target_pointer_width = "1")'.example]]
+            name = "never"
+            path = "examples/never.rs"
+
+            [[target.'cfg(not(target_pointer_width = "1"))'.example]]
+            name = "always"
+            path = "examples/always.rs"
+        "#,
+        )
+        .file("src/main.rs", &main_file("\"main\"", &[]))
+        .file("examples/never.rs", &main_file("\"never\"", &[]))
+        .file("examples/always.rs", &main_file("\"always\"", &[]))
+        .build();
+
+    assert_that(
+        p.cargo("build").arg("--examples").arg("-v"),
+        execs().with_status(0)
+            .with_stderr_contains("\
+                [RUNNING] `rustc --crate-name always examples[/]always.rs [..]")
+            .with_stderr_does_not_contain("\
+                [RUNNING] `rustc --crate-name never examples[/]never.rs [..]"),
+    );
+}
+
+#[test]
+fn target_cfg_bench() {
+    let p = project("target_cfg_bench")
+        .file(
+            "Cargo.toml",
+            r#"
+            [package]
+            name = "bar"
+            version = "0.1.0"
+            authors = []
+
+            [[target.'cfg(target_pointer_width = "1")'.bench]]
+            name = "never"
+            path = "benches/never.rs"
+
+            [[target.'cfg(not(target_pointer_width = "1"))'.bench]]
+            name = "always"
+            path = "benches/always.rs"
+        "#,
+        )
+        .file("src/main.rs", &main_file("\"main\"", &[]))
+        .file("benches/never.rs", bench_file())
+        .file("benches/always.rs", bench_file())
+        .build();
+
+    assert_that(
+        p.cargo("bench").arg("-v"),
+        execs().with_status(0)
+            .with_stderr_contains("\
+                [RUNNING] `rustc --crate-name always benches[/]always.rs [..]")
+            .with_stderr_does_not_contain("\
+                [RUNNING] `rustc --crate-name never benches[/]never.rs [..]"),
+    );
+}
+
+#[test]
+fn target_cfg_test() {
+    let p = project("target_cfg_test")
+        .file(
+            "Cargo.toml",
+            r#"
+            [package]
+            name = "bar"
+            version = "0.1.0"
+            authors = []
+
+            [[target.'cfg(target_pointer_width = "1")'.test]]
+            name = "never"
+            path = "tests/never.rs"
+
+            [[target.'cfg(not(target_pointer_width = "1"))'.test]]
+            name = "always"
+            path = "tests/always.rs"
+        "#,
+        )
+        .file("src/main.rs", &main_file("\"main\"", &[]))
+        .file("tests/never.rs", "")
+        .file("tests/always.rs", "")
+        .build();
+
+    assert_that(
+        p.cargo("test").arg("-v"),
+        execs().with_status(0)
+            .with_stderr_contains("\
+                [RUNNING] `rustc --crate-name always tests[/]always.rs [..]")
+            .with_stderr_does_not_contain("\
+                [RUNNING] `rustc --crate-name never tests[/]never.rs [..]"),
+    );
+}
+
+#[test]
+fn target_cfg_test_multiple() {
+    let p = project("target_cfg_test_multiple")
+        .file(
+            "Cargo.toml",
+            r#"
+            [package]
+            name = "bar"
+            version = "0.1.0"
+            authors = []
+
+            [[target.'cfg(not(target_pointer_width = "1"))'.test]]
+            name = "always1"
+            path = "tests/always.rs"
+
+            [[target.'cfg(not(target_pointer_width = "2"))'.test]]
+            name = "always2"
+            path = "tests/always.rs"
+        "#,
+        )
+        .file("src/main.rs", &main_file("\"main\"", &[]))
+        .file("tests/always.rs", "")
+        .build();
+
+    assert_that(
+        p.cargo("test").arg("-v"),
+        execs().with_status(0)
+            .with_stderr_contains("\
+                [RUNNING] `rustc --crate-name always1 tests[/]always.rs [..]")
+            .with_stderr_contains("\
+                [RUNNING] `rustc --crate-name always2 tests[/]always.rs [..]"),
+    );
+}
+
+#[test]
+fn target_cfg_only_one_lib() {
+    let p = project("target_cfg_only_one_lib")
+        .file(
+            "Cargo.toml",
+            r#"
+            [package]
+            name = "bar"
+            version = "0.1.0"
+            authors = []
+
+            [target.'cfg(not(target_pointer_width = "1"))'.lib]
+            name = "lib1"
+            path = "src/lib1.rs"
+
+            [target.'cfg(not(target_pointer_width = "2"))'.lib]
+            name = "lib2"
+            path = "src/lib2.rs"
+        "#,
+        )
+        .file("src/lib1.rs", "pub fn hi() {{}}")
+        .file("src/lib2.rs", "pub fn hi() {{}}")
+        .build();
+
+    assert_that(
+        p.cargo("build").arg("-v"),
+        execs().with_status(101)
+            .with_stderr_contains("\
+                [..] Can only have one [lib] [..]"),
     );
 }

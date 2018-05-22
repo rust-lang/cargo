@@ -4009,6 +4009,7 @@ fn compiler_json_error_format() {
             "kind":["lib"],
             "crate_types":["lib"],
             "name":"bar",
+            "platform":null,
             "src_path":"[..]lib.rs"
         },
         "message":"{...}"
@@ -4029,6 +4030,7 @@ fn compiler_json_error_format() {
             "kind":["lib"],
             "crate_types":["lib"],
             "name":"bar",
+            "platform":null,
             "src_path":"[..]lib.rs"
         },
         "filenames":["[..].rlib"],
@@ -4042,6 +4044,7 @@ fn compiler_json_error_format() {
             "kind":["bin"],
             "crate_types":["bin"],
             "name":"foo",
+            "platform":null,
             "src_path":"[..]main.rs"
         },
         "message":"{...}"
@@ -4054,6 +4057,7 @@ fn compiler_json_error_format() {
             "kind":["bin"],
             "crate_types":["bin"],
             "name":"foo",
+            "platform":null,
             "src_path":"[..]main.rs"
         },
         "profile": {
@@ -4095,6 +4099,7 @@ fn compiler_json_error_format() {
             "kind":["lib"],
             "crate_types":["lib"],
             "name":"bar",
+            "platform":null,
             "src_path":"[..]lib.rs"
         },
         "filenames":["[..].rlib"],
@@ -4108,6 +4113,7 @@ fn compiler_json_error_format() {
             "kind":["bin"],
             "crate_types":["bin"],
             "name":"foo",
+            "platform":null,
             "src_path":"[..]main.rs"
         },
         "profile": {
@@ -4167,6 +4173,7 @@ fn message_format_json_forward_stderr() {
             "kind":["bin"],
             "crate_types":["bin"],
             "name":"foo",
+            "platform":null,
             "src_path":"[..]"
         },
         "message":"{...}"
@@ -4179,6 +4186,7 @@ fn message_format_json_forward_stderr() {
             "kind":["bin"],
             "crate_types":["bin"],
             "name":"foo",
+            "platform":null,
             "src_path":"[..]"
         },
         "profile":{

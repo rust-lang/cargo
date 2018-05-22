@@ -679,6 +679,11 @@ impl TomlManifest {
                                         .or_else(|| v.build_dependencies2.as_ref()),
                                 )?,
                                 build_dependencies2: None,
+                                lib: v.lib.clone(),
+                                bin: v.bin.clone(),
+                                bench: v.bench.clone(),
+                                test: v.test.clone(),
+                                example: v.example.clone(),
                             },
                         ))
                     })
@@ -1373,6 +1378,12 @@ struct TomlPlatform {
     dev_dependencies: Option<BTreeMap<String, TomlDependency>>,
     #[serde(rename = "dev_dependencies")]
     dev_dependencies2: Option<BTreeMap<String, TomlDependency>>,
+
+    lib: Option<TomlLibTarget>,
+    bin: Option<Vec<TomlBinTarget>>,
+    example: Option<Vec<TomlExampleTarget>>,
+    test: Option<Vec<TomlTestTarget>>,
+    bench: Option<Vec<TomlBenchTarget>>,
 }
 
 impl TomlTarget {

@@ -22,7 +22,7 @@
 //!       previously compiled dependency
 //!
 
-use std::collections::HashSet;
+use std::collections::{HashMap, HashSet};
 use std::path::PathBuf;
 use std::sync::Arc;
 
@@ -256,8 +256,6 @@ pub fn compile_ws<'a>(
     let profiles = ws.profiles();
     profiles.validate_packages(&mut config.shell(), &packages)?;
 
-    let mut extra_compiler_args = None;
-
     let units = generate_targets(
         ws,
         profiles,
@@ -267,6 +265,8 @@ pub fn compile_ws<'a>(
         &resolve_with_overrides,
         build_config,
     )?;
+
+    let mut extra_compiler_args = None;
 
     if let Some(args) = extra_args {
         if units.len() != 1 {
@@ -281,7 +281,6 @@ pub fn compile_ws<'a>(
     }
 
     let mut ret = {
-        let _p = profile::start("compiling");
         let bcx = BuildContext::new(
             ws,
             &resolve_with_overrides,
@@ -292,6 +291,57 @@ pub fn compile_ws<'a>(
             extra_compiler_args,
         )?;
         let mut cx = Context::new(config, &bcx)?;
+
+        // Filter to just the units whose target is activated.
+        let units = units
+            .into_iter()
+            .filter(|u| {
+                let kind = if u.target.for_host() {
+                    Kind::Host
+                } else {
+                    Kind::Target
+                };
+
+                cx.bcx.target_platform_activated(&u.target, kind)
+            })
+            .collect::<Vec<_>>();
+
+        // Ensure that there is only one [lib] activated per crate.
+        {
+            let mut pkg_libs: HashMap<(&PackageId, &str), Vec<&Unit>> = Default::default();
+
+            for unit in &units {
+                if let TargetKind::Lib(_) = *unit.target.kind() {
+                    let pkgid = unit.pkg.package_id();
+                    pkg_libs
+                        .entry((pkgid, &unit.profile.name))
+                        .or_insert(vec![])
+                        .push(unit);
+                }
+            }
+
+            for ((pkg, profile), libs) in pkg_libs {
+                if libs.len() > 1 {
+                    let mut msg = format!(
+                        "Can only have one [lib] per crate and profile pair! \
+                         For crate {} and profile {}, found ",
+                        pkg,
+                        profile
+                    );
+
+                    for (i, u) in libs.into_iter().enumerate() {
+                        if i > 0 {
+                            msg.push_str(", ");
+                        }
+                        msg.push_str(&format!("{}", u.target));
+                    }
+
+                    bail!(msg);
+                }
+            }
+        }
+
+        let _p = profile::start("compiling");
         cx.compile(&units, export_dir.clone(), &exec)?
     };
 
