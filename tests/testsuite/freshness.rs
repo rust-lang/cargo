@@ -522,7 +522,7 @@ fn changing_bin_features_caches_targets() {
     let foo_proc = |name: &str| {
         let src = p.bin("foo");
         let dst = p.bin(name);
-        fs::copy(&src, &dst).expect("Failed to copy foo");
+        fs::hard_link(&src, &dst).expect("Failed to link foo");
         p.process(dst)
     };
 
