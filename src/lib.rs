@@ -183,7 +183,7 @@ pub fn collect_suggestions<S: ::std::hash::BuildHasher>(
                     match (filter, &span.suggestion_applicability) {
                         (MachineApplicableOnly, Some(MachineApplicable)) => true,
                         (MachineApplicableOnly, _) => false,
-                        (_, _) => true,
+                        (Everything, _) => true,
                     }
                 })
                 .filter_map(collect_span)

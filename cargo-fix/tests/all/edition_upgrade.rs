@@ -72,7 +72,6 @@ fn local_paths() {
 [FINISHED] dev [unoptimized + debuginfo]
 ";
     p.expect_cmd("cargo-fix fix --prepare-for 2018")
-        .env("__CARGO_FIX_YOLO", "true")
         .stdout("")
         .stderr(stderr)
         .run();
@@ -105,7 +104,6 @@ fn local_paths_no_fix() {
 [FINISHED] dev [unoptimized + debuginfo]
 ";
     p.expect_cmd("cargo-fix fix --prepare-for 2018")
-        .env("__CARGO_FIX_YOLO", "true")
         .stdout("")
         .stderr(stderr)
         .run();
