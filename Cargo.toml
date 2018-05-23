@@ -59,7 +59,7 @@ clap = "2.31.2"
 num-traits = "0.2" # enable the default feature
 
 [target.'cfg(target_os = "macos")'.dependencies]
-core-foundation = { version = "0.5.1", features = ["mac_os_10_7_support"] }
+core-foundation = { version = "0.6.0", features = ["mac_os_10_7_support"] }
 
 [target.'cfg(windows)'.dependencies]
 miow = "0.3"
