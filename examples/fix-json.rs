@@ -15,7 +15,11 @@ fn main() -> Result<(), Error> {
     };
 
     let suggestions = fs::read_to_string(&suggestions_file)?;
-    let suggestions = rustfix::get_suggestions_from_json(&suggestions, &HashSet::new())?;
+    let suggestions = rustfix::get_suggestions_from_json(
+        &suggestions,
+        &HashSet::new(),
+        rustfix::Filter::Everything,
+    )?;
 
     let source = fs::read_to_string(&source_file)?;
 

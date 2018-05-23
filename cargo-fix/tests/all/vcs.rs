@@ -71,5 +71,8 @@ fn does_not_warn_about_clean_working_directory() {
         .run();
     p.expect_cmd("git config user.name RustFix").run();
     p.expect_cmd("git commit -m Initial-commit").run();
-    p.expect_cmd("cargo-fix fix").check_vcs(true).status(0).run();
+    p.expect_cmd("cargo-fix fix")
+        .check_vcs(true)
+        .status(0)
+        .run();
 }

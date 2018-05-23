@@ -112,8 +112,7 @@ pub fn run() -> Result<(), Error> {
     //
     // TODO: we probably want to do something fancy here like collect results
     // from the client processes and print out a summary of what happened.
-    let status = cmd
-        .status()
+    let status = cmd.status()
         .with_context(|e| format!("failed to execute `{}`: {}", cargo.to_string_lossy(), e))?;
     exit_with(status);
 }

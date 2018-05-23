@@ -21,9 +21,9 @@ use std::str;
 
 use failure::{Error, ResultExt};
 use rustfix::diagnostics::Diagnostic;
-use termcolor::{ColorSpec, WriteColor, Color};
+use termcolor::{Color, ColorSpec, WriteColor};
 
-use diagnostics::{Message, output_stream};
+use diagnostics::{output_stream, Message};
 
 mod cli;
 mod diagnostics;
@@ -174,6 +174,10 @@ fn rustfix_crate(rustc: &Path, filename: &str) -> Result<FixedCrate, Error> {
         return Ok(Default::default());
     }
 
+    let fix_mode = env::var_os("__CARGO_FIX_YOLO")
+        .map(|_| rustfix::Filter::Everything)
+        .unwrap_or(rustfix::Filter::MachineApplicableOnly);
+
     // Sift through the output of the compiler to look for JSON messages
     // indicating fixes that we can apply.
     let stderr = str::from_utf8(&output.stderr).context("failed to parse rustc stderr as utf-8")?;
@@ -185,7 +189,7 @@ fn rustfix_crate(rustc: &Path, filename: &str) -> Result<FixedCrate, Error> {
         .filter_map(|line| serde_json::from_str::<Diagnostic>(line).ok())
 
         // From each diagnostic try to extract suggestions from rustc
-        .filter_map(|diag| rustfix::collect_suggestions(&diag, &only));
+        .filter_map(|diag| rustfix::collect_suggestions(&diag, &only, fix_mode));
 
     // Collect suggestions by file so we can apply them one at a time later.
     let mut file_map = HashMap::new();

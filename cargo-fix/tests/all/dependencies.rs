@@ -54,6 +54,7 @@ fn fix_path_deps() {
 [FINISHED] dev [unoptimized + debuginfo]
 ";
     p.expect_cmd("cargo-fix fix")
+        .env("__CARGO_FIX_YOLO", "true")
         .stdout("")
         .stderr(stderr)
         .run();
