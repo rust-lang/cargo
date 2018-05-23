@@ -55,6 +55,15 @@ fn new_config(env: &[(&str, &str)]) -> Config {
         .collect();
     let mut config = Config::new(shell, cwd, homedir);
     config.set_env(env);
+    config.configure(
+        0,
+        None,
+        &None,
+        false,
+        false,
+        &None,
+        &["advanced-env".into()],
+    ).unwrap();
     config
 }
 

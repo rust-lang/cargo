@@ -965,7 +965,10 @@ impl<'de, 'config> de::Deserializer<'de> for Deserializer<'config> {
                 visitor.visit_bool(v.parse().unwrap())
             } else if let Ok(v) = v.parse::<i64>() {
                 visitor.visit_i64(v)
-            } else if v.starts_with("[") && v.ends_with("]") {
+            } else if self.config.cli_unstable().advanced_env
+                && v.starts_with("[")
+                && v.ends_with("]")
+            {
                 visitor.visit_seq(ConfigSeqAccess::new(self.config, self.key.clone())?)
             } else {
                 visitor.visit_string(v.clone())
@@ -1121,16 +1124,18 @@ impl<'config> ConfigMapAccess<'config> {
                 set.insert(ConfigKeyPart::CasePart(key));
             }
         }
-        // CARGO_PROFILE_DEV_OVERRIDES_
-        let env_pattern = format!("{}_", key.to_env());
-        for env_key in config.env.keys() {
-            if env_key.starts_with(&env_pattern) {
-                // CARGO_PROFILE_DEV_OVERRIDES_bar_OPT_LEVEL = 3
-                let rest = &env_key[env_pattern.len()..];
-                // rest = bar_OPT_LEVEL
-                let part = rest.splitn(2, "_").next().unwrap();
-                // part = "bar"
-                set.insert(ConfigKeyPart::CasePart(part.to_string()));
+        if config.cli_unstable().advanced_env {
+            // CARGO_PROFILE_DEV_OVERRIDES_
+            let env_pattern = format!("{}_", key.to_env());
+            for env_key in config.env.keys() {
+                if env_key.starts_with(&env_pattern) {
+                    // CARGO_PROFILE_DEV_OVERRIDES_bar_OPT_LEVEL = 3
+                    let rest = &env_key[env_pattern.len()..];
+                    // rest = bar_OPT_LEVEL
+                    let part = rest.splitn(2, "_").next().unwrap();
+                    // part = "bar"
+                    set.insert(ConfigKeyPart::CasePart(part.to_string()));
+                }
             }
         }
         Ok(ConfigMapAccess {
@@ -1214,37 +1219,39 @@ impl ConfigSeqAccess {
             }
         }
 
-        // Parse an environment string as a TOML array.
-        let env_key = key.to_env();
-        let def = Definition::Environment(env_key.clone());
-        if let Some(v) = config.env.get(&env_key) {
-            if !(v.starts_with("[") && v.ends_with("]")) {
-                return Err(ConfigError::new(
-                    format!("should have TOML list syntax, found `{}`", v),
-                    def.clone(),
-                ));
-            }
-            let temp_key = key.last().to_env();
-            let toml_s = format!("{}={}", temp_key, v);
-            let toml_v: toml::Value = toml::de::from_str(&toml_s).map_err(|e| {
-                ConfigError::new(format!("could not parse TOML list: {}", e), def.clone())
-            })?;
-            let values = toml_v
-                .as_table()
-                .unwrap()
-                .get(&temp_key)
-                .unwrap()
-                .as_array()
-                .expect("env var was not array");
-            for value in values {
-                // TODO: support other types
-                let s = value.as_str().ok_or_else(|| {
-                    ConfigError::new(
-                        format!("expected string, found {}", value.type_str()),
+        if config.cli_unstable().advanced_env {
+            // Parse an environment string as a TOML array.
+            let env_key = key.to_env();
+            let def = Definition::Environment(env_key.clone());
+            if let Some(v) = config.env.get(&env_key) {
+                if !(v.starts_with("[") && v.ends_with("]")) {
+                    return Err(ConfigError::new(
+                        format!("should have TOML list syntax, found `{}`", v),
                         def.clone(),
-                    )
+                    ));
+                }
+                let temp_key = key.last().to_env();
+                let toml_s = format!("{}={}", temp_key, v);
+                let toml_v: toml::Value = toml::de::from_str(&toml_s).map_err(|e| {
+                    ConfigError::new(format!("could not parse TOML list: {}", e), def.clone())
                 })?;
-                res.push((s.to_string(), def.clone()));
+                let values = toml_v
+                    .as_table()
+                    .unwrap()
+                    .get(&temp_key)
+                    .unwrap()
+                    .as_array()
+                    .expect("env var was not array");
+                for value in values {
+                    // TODO: support other types
+                    let s = value.as_str().ok_or_else(|| {
+                        ConfigError::new(
+                            format!("expected string, found {}", value.type_str()),
+                            def.clone(),
+                        )
+                    })?;
+                    res.push((s.to_string(), def.clone()));
+                }
             }
         }
         Ok(ConfigSeqAccess {
