@@ -40,7 +40,7 @@ fn fixes_missing_ampersand() {
         .build();
 
     p.expect_cmd("cargo fix -- --all-targets")
-        .env("__CARGO_FIX_YOLO", "true")
+        .fix_everything()
         .stdout("")
         .stderr_contains("[COMPILING] foo v0.1.0 (CWD)")
         .stderr_contains("[FIXING] build.rs (1 fix)")

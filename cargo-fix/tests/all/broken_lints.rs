@@ -19,7 +19,7 @@
 //         .build();
 
 //     p.expect_cmd("cargo-fix fix")
-//         .env("__CARGO_FIX_YOLO", "true")
+//         .fix_everything()
 //         .stderr_contains(r"warning: error applying suggestions to `src/lib.rs`")
 //         .stderr_contains("The full error message was:")
 //         .stderr_contains("> Could not replace range 56...60 in file -- maybe parts of it were already replaced?")

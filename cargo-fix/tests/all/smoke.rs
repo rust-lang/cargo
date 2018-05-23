@@ -34,7 +34,7 @@ fn fixes_extra_mut() {
 [FINISHED] dev [unoptimized + debuginfo]
 ";
     p.expect_cmd("cargo-fix fix")
-        .env("__CARGO_FIX_YOLO", "true")
+        .fix_everything()
         .stdout("")
         .stderr(stderr)
         .run();
@@ -61,7 +61,7 @@ fn fixes_two_missing_ampersands() {
 [FINISHED] dev [unoptimized + debuginfo]
 ";
     p.expect_cmd("cargo-fix fix")
-        .env("__CARGO_FIX_YOLO", "true")
+        .fix_everything()
         .stdout("")
         .stderr(stderr)
         .run();
@@ -87,7 +87,7 @@ fn tricky() {
 [FINISHED] dev [unoptimized + debuginfo]
 ";
     p.expect_cmd("cargo-fix fix")
-        .env("__CARGO_FIX_YOLO", "true")
+        .fix_everything()
         .stdout("")
         .stderr(stderr)
         .run();
@@ -106,7 +106,7 @@ fn preserve_line_endings() {
         .build();
 
     p.expect_cmd("cargo-fix fix")
-        .env("__CARGO_FIX_YOLO", "true")
+        .fix_everything()
         .run();
     assert!(p.read("src/lib.rs").contains("\r\n"));
 }
@@ -124,7 +124,7 @@ fn fix_deny_warnings() {
         .build();
 
     p.expect_cmd("cargo-fix fix")
-        .env("__CARGO_FIX_YOLO", "true")
+        .fix_everything()
         .run();
 }
 
@@ -147,7 +147,7 @@ fn fix_deny_warnings_but_not_others() {
         .build();
 
     p.expect_cmd("cargo-fix fix")
-        .env("__CARGO_FIX_YOLO", "true")
+        .fix_everything()
         .run();
     assert!(!p.read("src/lib.rs").contains("let mut x = 3;"));
     assert!(p.read("src/lib.rs").contains("fn bar() {}"));
@@ -179,7 +179,7 @@ fn fix_two_files() {
         .build();
 
     p.expect_cmd("cargo-fix fix")
-        .env("__CARGO_FIX_YOLO", "true")
+        .fix_everything()
         .stderr_contains("[FIXING] src/bar.rs (1 fix)")
         .stderr_contains("[FIXING] src/lib.rs (1 fix)")
         .run();
