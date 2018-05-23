@@ -18,14 +18,21 @@ pub mod diagnostics;
 use diagnostics::{Diagnostic, DiagnosticSpan};
 mod replace;
 
+#[derive(Debug, Clone, Copy)]
+pub enum Filter {
+    MachineApplicableOnly,
+    Everything,
+}
+
 pub fn get_suggestions_from_json<S: ::std::hash::BuildHasher>(
     input: &str,
     only: &HashSet<String, S>,
+    filter: Filter,
 ) -> serde_json::error::Result<Vec<Suggestion>> {
     let mut result = Vec::new();
     for cargo_msg in serde_json::Deserializer::from_str(input).into_iter::<Diagnostic>() {
         // One diagnostic line might have multiple suggestions
-        result.extend(collect_suggestions(&cargo_msg?, only));
+        result.extend(collect_suggestions(&cargo_msg?, only, filter));
     }
     Ok(result)
 }
@@ -142,6 +149,7 @@ fn collect_span(span: &DiagnosticSpan) -> Option<Replacement> {
 pub fn collect_suggestions<S: ::std::hash::BuildHasher>(
     diagnostic: &Diagnostic,
     only: &HashSet<String, S>,
+    filter: Filter,
 ) -> Option<Suggestion> {
     if !only.is_empty() {
         if let Some(ref code) = diagnostic.code {
@@ -165,7 +173,21 @@ pub fn collect_suggestions<S: ::std::hash::BuildHasher>(
         .children
         .iter()
         .filter_map(|child| {
-            let replacements: Vec<_> = child.spans.iter().filter_map(collect_span).collect();
+            let replacements: Vec<_> = child
+                .spans
+                .iter()
+                .filter(|span| {
+                    use Filter::*;
+                    use diagnostics::Applicability::*;
+
+                    match (filter, &span.suggestion_applicability) {
+                        (MachineApplicableOnly, Some(MachineApplicable)) => true,
+                        (MachineApplicableOnly, _) => false,
+                        (Everything, _) => true,
+                    }
+                })
+                .filter_map(collect_span)
+                .collect();
             if replacements.len() == 1 {
                 Some(Solution {
                     message: child.message.clone(),

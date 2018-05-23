@@ -41,8 +41,17 @@ pub struct DiagnosticSpan {
     /// load the fully rendered version from the parent `Diagnostic`,
     /// however.
     pub suggested_replacement: Option<String>,
+    pub suggestion_applicability: Option<Applicability>,
     /// Macro invocations that created the code at this span, if any.
     expansion: Option<Box<DiagnosticSpanMacroExpansion>>,
+}
+
+#[derive(Copy, Clone, Debug, PartialEq, Deserialize)]
+pub enum Applicability {
+    MachineApplicable,
+    HasPlaceholders,
+    MaybeIncorrect,
+    Unspecified,
 }
 
 #[derive(Deserialize, Debug)]

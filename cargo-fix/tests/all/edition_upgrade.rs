@@ -161,6 +161,7 @@ fn upgrade_extern_crate() {
 [FINISHED] dev [unoptimized + debuginfo]
 ";
     p.expect_cmd("cargo-fix fix")
+        .fix_everything()
         .stdout("")
         .stderr(stderr)
         .run();

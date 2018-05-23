@@ -151,6 +151,11 @@ impl<'a> ExpectCmd<'a> {
         self
     }
 
+    fn fix_everything(&mut self) -> &mut Self {
+        self.env("__CARGO_FIX_YOLO", "true");
+        self
+    }
+
     fn stdout(&mut self, s: &str) -> &mut Self {
         self.stdout = Some(s.to_string());
         self

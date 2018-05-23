@@ -36,7 +36,10 @@ fn fix_broken_if_requested() {
         )
         .build();
 
-    p.expect_cmd("cargo-fix fix --broken-code").status(0).run();
+    p.expect_cmd("cargo-fix fix --broken-code")
+        .fix_everything()
+        .status(0)
+        .run();
 }
 
 #[test]
@@ -111,6 +114,7 @@ fn broken_fixes_backed_out() {
 
     // Attempt to fix code, but our shim will always fail the second compile
     p.expect_cmd("cargo-fix fix")
+        .fix_everything()
         .cwd("bar")
         .env("RUSTC", p.root.join("foo/target/debug/foo"))
         .stderr_contains("not rust code")

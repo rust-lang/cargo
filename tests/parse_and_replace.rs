@@ -43,7 +43,6 @@ fn compile(file: &Path, mode: &str) -> Result<Output, Error> {
         "-Zunstable-options".into(),
         "--emit=metadata".into(),
         "--crate-name=rustfix_test".into(),
-        "-Zsuggestion-applicability".into(),
         "--out-dir".into(),
         tmp.path().into(),
     ];
@@ -142,12 +141,19 @@ fn test_rustfix_with_file<P: AsRef<Path>>(file: P, mode: &str) -> Result<(), Err
     let json_file = file.with_extension("json");
     let fixed_file = file.with_extension("fixed.rs");
 
+    let filter_suggestions = if mode == fixmode::EVERYTHING {
+        rustfix::Filter::Everything
+    } else {
+        rustfix::Filter::MachineApplicableOnly
+    };
+
     debug!("next up: {:?}", file);
     let code = read_file(file).context(format!("could not read {}", file.display()))?;
     let errors = compile_and_get_json_errors(file, mode)
         .context(format!("could compile {}", file.display()))?;
-    let suggestions = rustfix::get_suggestions_from_json(&errors, &HashSet::new())
-        .context("could not load suggestions")?;
+    let suggestions =
+        rustfix::get_suggestions_from_json(&errors, &HashSet::new(), filter_suggestions)
+            .context("could not load suggestions")?;
 
     if std::env::var(settings::RECORD_JSON).is_ok() {
         use std::io::Write;
@@ -163,7 +169,7 @@ fn test_rustfix_with_file<P: AsRef<Path>>(file: P, mode: &str) -> Result<(), Err
             file.display()
         ))?;
         let expected_suggestions =
-            rustfix::get_suggestions_from_json(&expected_json, &HashSet::new())
+            rustfix::get_suggestions_from_json(&expected_json, &HashSet::new(), filter_suggestions)
                 .context("could not load expected suggesitons")?;
 
         ensure!(
