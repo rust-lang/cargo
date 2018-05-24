@@ -2031,3 +2031,42 @@ fn only_dep_is_optional() {
         execs().with_status(0),
     );
 }
+
+#[test]
+fn all_features_all_crates() {
+    Package::new("bar", "0.1.0").publish();
+
+    let p = project("foo")
+        .file(
+            "Cargo.toml",
+            r#"
+                [project]
+                name = "foo"
+                version = "0.0.1"
+                authors = []
+
+                [workspace]
+                members = ['bar']
+            "#,
+        )
+        .file("src/main.rs", "fn main() {}")
+        .file(
+            "bar/Cargo.toml",
+            r#"
+                [project]
+                name = "bar"
+                version = "0.0.1"
+                authors = []
+
+                [features]
+                foo = []
+            "#,
+        )
+        .file("bar/src/main.rs", "#[cfg(feature = \"foo\")] fn main() {}")
+        .build();
+
+    assert_that(
+        p.cargo("build --all-features --all"),
+        execs().with_status(0),
+    );
+}
