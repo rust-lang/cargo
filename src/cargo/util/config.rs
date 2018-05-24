@@ -847,21 +847,21 @@ impl fmt::Display for ConfigKey {
 /// Internal error for serde errors.
 #[derive(Debug)]
 pub struct ConfigError {
-    message: String,
+    error: failure::Error,
     definition: Option<Definition>,
 }
 
 impl ConfigError {
     fn new(message: String, definition: Definition) -> ConfigError {
         ConfigError {
-            message,
+            error: failure::err_msg(message),
             definition: Some(definition),
         }
     }
 
     fn expected(key: &str, expected: &str, found: &ConfigValue) -> ConfigError {
         ConfigError {
-            message: format!(
+            error: format_err!(
                 "`{}` expected {}, but found a {}",
                 key,
                 expected,
@@ -873,31 +873,42 @@ impl ConfigError {
 
     fn missing(key: String) -> ConfigError {
         ConfigError {
-            message: format!("missing config key `{}`", key),
+            error: format_err!("missing config key `{}`", key),
             definition: None,
         }
     }
 
     fn with_key_context(self, key: String, definition: Definition) -> ConfigError {
         ConfigError {
-            message: format!("could not load config key `{}`: {}", key, self),
+            error: format_err!("could not load config key `{}`: {}", key, self),
             definition: Some(definition),
         }
     }
 }
 
 impl std::error::Error for ConfigError {
+    // This can be removed once 1.27 is stable.
     fn description(&self) -> &str {
-        self.message.as_str()
+        "An error has occurred."
     }
 }
 
+// Future Note: Currently we cannot override Fail::cause (due to
+// specialization) so we have no way to return the underlying causes. In the
+// future, once this limitation is lifted, this should instead implement
+// `cause` and avoid doing the cause formatting here.
 impl fmt::Display for ConfigError {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        let message = self
+            .error
+            .causes()
+            .map(|e| e.to_string())
+            .collect::<Vec<_>>()
+            .join("\nCaused by:\n  ");
         if let Some(ref definition) = self.definition {
-            write!(f, "error in {}: {}", definition, self.message)
+            write!(f, "error in {}: {}", definition, message)
         } else {
-            self.message.fmt(f)
+            message.fmt(f)
         }
     }
 }
@@ -905,24 +916,16 @@ impl fmt::Display for ConfigError {
 impl de::Error for ConfigError {
     fn custom<T: fmt::Display>(msg: T) -> Self {
         ConfigError {
-            message: msg.to_string(),
+            error: failure::err_msg(msg.to_string()),
             definition: None,
         }
     }
 }
 
-// TODO: AFAIK, you cannot override Fail::cause (due to specialization), so we
-// have no way to bubble up the underlying error.  For now, it just formats
-// the underlying cause as a string.
 impl From<failure::Error> for ConfigError {
-    fn from(e: failure::Error) -> Self {
-        let message = e
-            .causes()
-            .map(|e| e.to_string())
-            .collect::<Vec<_>>()
-            .join("\nCaused by:\n  ");
+    fn from(error: failure::Error) -> Self {
         ConfigError {
-            message,
+            error,
             definition: None,
         }
     }
