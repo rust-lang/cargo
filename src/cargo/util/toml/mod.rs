@@ -38,24 +38,85 @@ pub fn read_manifest(
     );
     let contents = paths::read(path)?;
 
-    let ret = do_read_manifest(&contents, path, source_id, config)
+    let patch = {
+        let patch_path = path.parent().unwrap().join("Cargo.patch");
+        if patch_path.is_file() {
+            let contents = paths::read(&patch_path)?;
+            Some(read_manifest_patch(&contents, &patch_path, config)
+                .chain_err(|| format!("failed to parse manifest patch at `{}`", patch_path.display()))?)
+        } else {
+            None
+        }
+    };
+
+    let ret = do_read_manifest(&contents, patch,path, source_id, config)
         .chain_err(|| format!("failed to parse manifest at `{}`", path.display()))?;
     Ok(ret)
 }
 
+fn read_manifest_patch(
+    contents: &str,
+    manifest_patch_file: &Path,
+    config: &Config,
+) -> CargoResult<toml::Value> {
+    let toml = {
+        let pretty_filename =
+            util::without_prefix(manifest_patch_file, config.cwd()).unwrap_or(manifest_patch_file);
+        parse(contents, pretty_filename, config)?
+    };
+    Ok(toml)
+}
+
+fn patch_value(toml: &mut toml::Value, patch: toml::Value) {
+    use std::collections::btree_map::Entry;
+
+    if let toml::Value::Table(ref mut a) = toml {
+        if let toml::Value::Table(mut b) = patch {
+            for (k, v) in b {
+                match a.entry(k) {
+                    Entry::Occupied(mut e) => {
+                        patch_value(e.get_mut(), v);
+                    },
+                    Entry::Vacant(mut e) => {
+                        e.insert(v);
+                    },
+                }
+            }
+            return;
+        }
+    } else if let toml::Value::Array(ref mut a) = toml {
+        if let toml::Value::Array(mut b) = patch {
+            let mut iter_b = b.into_iter();
+            for (va, vb) in a.iter_mut().zip(&mut iter_b) {
+                patch_value(va, vb);
+            }
+            while let Some(b) = iter_b.next() {
+                a.push(b);
+            }
+            return;
+        }
+    }
+    *toml = patch;
+}
+
 fn do_read_manifest(
     contents: &str,
+    patch: Option<toml::Value>,
     manifest_file: &Path,
     source_id: &SourceId,
     config: &Config,
 ) -> CargoResult<(EitherManifest, Vec<PathBuf>)> {
     let package_root = manifest_file.parent().unwrap();
 
-    let toml = {
+    let mut toml = {
         let pretty_filename =
             util::without_prefix(manifest_file, config.cwd()).unwrap_or(manifest_file);
         parse(contents, pretty_filename, config)?
     };
+
+    if let Some(t) = patch {
+        patch_value(&mut toml, t)
+    }
 
     let mut unused = BTreeSet::new();
     let manifest: TomlManifest = serde_ignored::deserialize(toml, |path| {

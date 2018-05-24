@@ -75,6 +75,7 @@ mod profile_overrides;
 mod profile_targets;
 mod publish;
 mod read_manifest;
+mod read_patched_manifest;
 mod registry;
 mod rename_deps;
 mod required_features;
