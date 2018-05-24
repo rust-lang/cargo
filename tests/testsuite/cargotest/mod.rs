@@ -1,3 +1,88 @@
+/*
+# Introduction To `cargotest`
+
+Cargo has a wide variety of integration tests that execute the `cargo` binary
+and verify its behavior.  The `cargotest` module contains many helpers to make
+this process easy.
+
+The general form of a test involves creating a "project", running cargo, and
+checking the result.  Projects are created with the `ProjectBuilder` where you
+specify some files to create.  The general form looks like this:
+
+```
+let p = project("foo")
+    .file("Cargo.toml", &basic_bin_manifest("foo"))
+    .file("src/main.rs", r#"fn main() { println!("hi!"); }"#)
+    .build();
+```
+
+To run cargo, call the `cargo` method and use the `hamcrest` matchers to check
+the output.
+
+```
+assert_that(
+    p.cargo("run --bin foo"),
+    execs()
+        .with_status(0)
+        .with_stderr(
+            "\
+[COMPILING] foo [..]
+[FINISHED] [..]
+[RUNNING] `target[/]debug[/]foo`
+",
+        )
+        .with_stdout("hi!"),
+);
+```
+
+The project creates a mini sandbox under the "cargo integration test"
+directory with each test getting a separate directory such as
+`/path/to/cargo/target/cit/t123/`.  Each project appears as a separate
+directory.  There is also an empty `home` directory created that will be used
+as a home directory instead of your normal home directory.
+
+See `cargotest::support::lines_match` for an explanation of the string pattern
+matching.
+
+See the `hamcrest` module for other matchers like
+`is_not(existing_file(path))`.  This is not the actual hamcrest library, but
+instead a lightweight subset of matchers that are used in cargo tests.
+
+Browse the `pub` functions in the `cargotest` module for a variety of other
+helpful utilities.
+
+## Testing Nightly Features
+
+If you are testing a Cargo feature that only works on "nightly" cargo, then
+you need to call `masquerade_as_nightly_cargo` on the process builder like
+this:
+
+```
+p.cargo("build").masquerade_as_nightly_cargo()
+```
+
+If you are testing a feature that only works on *nightly rustc* (such as
+benchmarks), then you should exit the test if it is not running with nightly
+rust, like this:
+
+```
+if !is_nightly() {
+    return;
+}
+```
+
+## Platform-specific Notes
+
+When checking output, be sure to use `[/]` when checking paths to
+automatically support backslashes on Windows.
+
+Be careful when executing binaries on Windows.  You should not rename, delete,
+or overwrite a binary immediately after running it.  Under some conditions
+Windows will fail with errors like "directory not empty" or "failed to remove"
+or "access is denied".
+
+*/
+
 use std::ffi::OsStr;
 use std::time::Duration;
 
@@ -19,6 +104,7 @@ pub static RUSTC: Rustc = Rustc::new(
 ).unwrap()
 );
 
+/// The rustc host such as `x86_64-unknown-linux-gnu`.
 pub fn rustc_host() -> String {
     RUSTC.with(|r| r.host.clone())
 }

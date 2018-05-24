@@ -22,8 +22,8 @@ and unexpected behavior.
 its users' security, please do not open a public issue on GitHub. Instead,
 we ask you to refer to Rust's [security policy].**
 
-Opening an issue is as easy as following [this link][new-issues] and filling out 
-the fields. Here's a template that you can use to file an issue, though it's not 
+Opening an issue is as easy as following [this link][new-issues] and filling out
+the fields. Here's a template that you can use to file an issue, though it's not
 necessary to use it exactly:
 
     <short summary of the problem>
@@ -41,7 +41,7 @@ happened instead. Please use https://gist.github.com/ if your examples run long.
 
 ## Working on issues
 
-If you're looking for somewhere to start, check out the [E-easy][E-Easy] and 
+If you're looking for somewhere to start, check out the [E-easy][E-Easy] and
 [E-mentor][E-mentor] tags.
 
 Feel free to ask for guidelines on how to tackle a problem on [IRC] or open a
@@ -76,7 +76,8 @@ working on.
 * Include tests that cover all non-trivial code. The existing tests
 in `test/` provide templates on how to test Cargo's behavior in a
 sandbox-environment. The internal crate `cargotest` provides a vast amount
-of helpers to minimize boilerplate.
+of helpers to minimize boilerplate.  See [`cargotest/mod.rs`] for an
+introduction to writing tests.
 * Make sure `cargo test` passes. If you do not have the cross-compilers
 installed locally, install them using the instructions returned by
 `cargo test cross_compile::cross_tests` (twice, with `--toolchain nightly`
@@ -181,3 +182,4 @@ adding labels to triage issues:
 [I-nominated]: https://github.com/rust-lang/cargo/labels/I-nominated
 [Code of Conduct]: https://www.rust-lang.org/conduct.html
 [IRC]: https://kiwiirc.com/client/irc.mozilla.org/cargo
+[`cargotest/mod.rs`]: https://github.com/rust-lang/cargo/blob/master/tests/testsuite/cargotest/mod.rs
