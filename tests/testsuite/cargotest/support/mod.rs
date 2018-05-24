@@ -109,10 +109,12 @@ pub struct ProjectBuilder {
 }
 
 impl ProjectBuilder {
+    /// Root of the project, ex: `/path/to/cargo/target/cit/t0/foo`
     pub fn root(&self) -> PathBuf {
         self.root.root()
     }
 
+    /// Project's debug dir, ex: `/path/to/cargo/target/cit/t0/foo/target/debug`
     pub fn target_debug_dir(&self) -> PathBuf {
         self.root.target_debug_dir()
     }
@@ -126,6 +128,7 @@ impl ProjectBuilder {
         }
     }
 
+    /// Add a file to the project.
     pub fn file<B: AsRef<Path>>(mut self, path: B, body: &str) -> Self {
         self._file(path.as_ref(), body);
         self
@@ -136,6 +139,7 @@ impl ProjectBuilder {
             .push(FileBuilder::new(self.root.root.join(path), body));
     }
 
+    /// Add a symlink to the project.
     pub fn symlink<T: AsRef<Path>>(mut self, dst: T, src: T) -> Self {
         self.symlinks.push(SymlinkBuilder::new(
             self.root.root.join(dst),
@@ -144,6 +148,7 @@ impl ProjectBuilder {
         self
     }
 
+    /// Create the project.
     pub fn build(self) -> Project {
         // First, clean the directory if it already exists
         self.rm_root();
@@ -175,22 +180,29 @@ impl ProjectBuilder {
 }
 
 impl Project {
+    /// Root of the project, ex: `/path/to/cargo/target/cit/t0/foo`
     pub fn root(&self) -> PathBuf {
         self.root.clone()
     }
 
+    /// Project's target dir, ex: `/path/to/cargo/target/cit/t0/foo/target`
     pub fn build_dir(&self) -> PathBuf {
         self.root.join("target")
     }
 
+    /// Project's debug dir, ex: `/path/to/cargo/target/cit/t0/foo/target/debug`
     pub fn target_debug_dir(&self) -> PathBuf {
         self.build_dir().join("debug")
     }
 
+    /// File url for root, ex: `file:///path/to/cargo/target/cit/t0/foo`
     pub fn url(&self) -> Url {
         path2url(self.root())
     }
 
+    /// Path to an example built as a library.
+    /// `kind` should be one of: "lib", "rlib", "staticlib", "dylib", "proc-macro"
+    /// ex: `/path/to/cargo/target/cit/t0/foo/target/debug/examples/libex.rlib`
     pub fn example_lib(&self, name: &str, kind: &str) -> PathBuf {
         let prefix = Project::get_lib_prefix(kind);
 
@@ -203,18 +215,24 @@ impl Project {
             .join(&lib_file_name)
     }
 
+    /// Path to a debug binary.
+    /// ex: `/path/to/cargo/target/cit/t0/foo/target/debug/foo`
     pub fn bin(&self, b: &str) -> PathBuf {
         self.build_dir()
             .join("debug")
             .join(&format!("{}{}", b, env::consts::EXE_SUFFIX))
     }
 
+    /// Path to a release binary.
+    /// ex: `/path/to/cargo/target/cit/t0/foo/target/release/foo`
     pub fn release_bin(&self, b: &str) -> PathBuf {
         self.build_dir()
             .join("release")
             .join(&format!("{}{}", b, env::consts::EXE_SUFFIX))
     }
 
+    /// Path to a debug binary for a specific target triple.
+    /// ex: `/path/to/cargo/target/cit/t0/foo/target/i686-apple-darwin/debug/foo`
     pub fn target_bin(&self, target: &str, b: &str) -> PathBuf {
         self.build_dir().join(target).join("debug").join(&format!(
             "{}{}",
@@ -223,16 +241,27 @@ impl Project {
         ))
     }
 
+    /// Change the contents of an existing file.
     pub fn change_file(&self, path: &str, body: &str) {
         FileBuilder::new(self.root.join(path), body).mk()
     }
 
+    /// Create a `ProcessBuilder` to run a program in the project.
+    /// Example:
+    ///         assert_that(
+    ///             p.process(&p.bin("foo")),
+    ///             execs().with_status(0).with_stdout("bar\n"),
+    ///         );
     pub fn process<T: AsRef<OsStr>>(&self, program: T) -> ProcessBuilder {
         let mut p = ::cargotest::process(program);
         p.cwd(self.root());
         return p;
     }
 
+    /// Create a `ProcessBuilder` to run cargo.
+    /// Arguments can be separated by spaces.
+    /// Example:
+    ///     assert_that(p.cargo("build --bin foo"), execs().with_status(0));
     pub fn cargo(&self, cmd: &str) -> ProcessBuilder {
         let mut p = self.process(&cargo_exe());
         for arg in cmd.split_whitespace() {
@@ -244,6 +273,7 @@ impl Project {
         return p;
     }
 
+    /// Returns the contents of `Cargo.lock`.
     pub fn read_lockfile(&self) -> String {
         let mut buffer = String::new();
         fs::File::open(self.root().join("Cargo.lock"))
@@ -253,6 +283,7 @@ impl Project {
         buffer
     }
 
+    /// Modifies `Cargo.toml` to remove all commented lines.
     pub fn uncomment_root_manifest(&self) {
         let mut contents = String::new();
         fs::File::open(self.root().join("Cargo.toml"))
@@ -389,11 +420,15 @@ pub struct Execs {
 }
 
 impl Execs {
+    /// Verify that stdout is equal to the given lines.
+    /// See `lines_match` for supported patterns.
     pub fn with_stdout<S: ToString>(mut self, expected: S) -> Execs {
         self.expect_stdout = Some(expected.to_string());
         self
     }
 
+    /// Verify that stderr is equal to the given lines.
+    /// See `lines_match` for supported patterns.
     pub fn with_stderr<S: ToString>(mut self, expected: S) -> Execs {
         self._with_stderr(&expected);
         self
@@ -403,47 +438,102 @@ impl Execs {
         self.expect_stderr = Some(expected.to_string());
     }
 
+    /// Verify the exit code from the process.
     pub fn with_status(mut self, expected: i32) -> Execs {
         self.expect_exit_code = Some(expected);
         self
     }
 
+    /// Verify that stdout contains the given contiguous lines somewhere in
+    /// its output.
+    /// See `lines_match` for supported patterns.
     pub fn with_stdout_contains<S: ToString>(mut self, expected: S) -> Execs {
         self.expect_stdout_contains.push(expected.to_string());
         self
     }
 
+    /// Verify that stderr contains the given contiguous lines somewhere in
+    /// its output.
+    /// See `lines_match` for supported patterns.
     pub fn with_stderr_contains<S: ToString>(mut self, expected: S) -> Execs {
         self.expect_stderr_contains.push(expected.to_string());
         self
     }
 
+    /// Verify that either stdout or stderr contains the given contiguous
+    /// lines somewhere in its output.
+    /// See `lines_match` for supported patterns.
     pub fn with_either_contains<S: ToString>(mut self, expected: S) -> Execs {
         self.expect_either_contains.push(expected.to_string());
         self
     }
 
+    /// Verify that stdout contains the given contiguous lines somewhere in
+    /// its output, and should be repeated `number` times.
+    /// See `lines_match` for supported patterns.
     pub fn with_stdout_contains_n<S: ToString>(mut self, expected: S, number: usize) -> Execs {
         self.expect_stdout_contains_n
             .push((expected.to_string(), number));
         self
     }
 
+    /// Verify that stdout does not contain the given contiguous lines.
+    /// See `lines_match` for supported patterns.
+    /// See note on `with_stderr_does_not_contain`.
     pub fn with_stdout_does_not_contain<S: ToString>(mut self, expected: S) -> Execs {
         self.expect_stdout_not_contains.push(expected.to_string());
         self
     }
 
+    /// Verify that stderr does not contain the given contiguous lines.
+    /// See `lines_match` for supported patterns.
+    ///
+    /// Care should be taken when using this method because there is a
+    /// limitless number of possible things that *won't* appear.  A typo means
+    /// your test will pass without verifying the correct behavior. If
+    /// possible, write the test first so that it fails, and then implement
+    /// your fix/feature to make it pass.
     pub fn with_stderr_does_not_contain<S: ToString>(mut self, expected: S) -> Execs {
         self.expect_stderr_not_contains.push(expected.to_string());
         self
     }
 
+    /// Verify that all of the stderr output is equal to the given lines,
+    /// ignoring the order of the lines.
+    /// See `lines_match` for supported patterns.
+    /// This is useful when checking the output of `cargo build -v` since
+    /// the order of the output is not always deterministic.
+    /// Recommend use `with_stderr_contains` instead unless you really want to
+    /// check *every* line of output.
+    ///
+    /// Be careful when using patterns such as `[..]`, because you may end up
+    /// with multiple lines that might match, and this is not smart enough to
+    /// do anything like longest-match.  For example, avoid something like:
+    ///     [RUNNING] `rustc [..]
+    ///     [RUNNING] `rustc --crate-name foo [..]
+    /// This will randomly fail if the other crate name is `bar`, and the
+    /// order changes.
     pub fn with_stderr_unordered<S: ToString>(mut self, expected: S) -> Execs {
         self.expect_stderr_unordered.push(expected.to_string());
         self
     }
 
+    /// Verify the JSON output matches the given JSON.
+    /// Typically used when testing cargo commands that emit JSON.
+    /// Each separate JSON object should be separated by a blank line.
+    /// Example:
+    ///     assert_that(
+    ///         p.cargo("metadata"),
+    ///         execs().with_json(r#"
+    ///             {"example": "abc"}
+    ///
+    ///             {"example": "def"}
+    ///         "#)
+    ///      );
+    /// Objects should match in the order given.
+    /// The order of arrays is ignored.
+    /// Strings support patterns described in `lines_match`.
+    /// Use `{...}` to match any object.
     pub fn with_json(mut self, expected: &str) -> Execs {
         self.expect_json = Some(
             expected
@@ -455,7 +545,8 @@ impl Execs {
     }
 
     /// Forward subordinate process stdout/stderr to the terminal.
-    /// Useful for prtintf debugging of the tests.
+    /// Useful for printf debugging of the tests.
+    /// CAUTION: CI will fail if you leave this in your test!
     #[allow(unused)]
     pub fn stream(mut self) -> Execs {
         self.stream_output = true;
@@ -817,6 +908,16 @@ enum MatchKind {
     Unordered,
 }
 
+/// Compare a line with an expected pattern.
+/// - Use `[..]` as a wildcard to match 0 or more characters on the same line
+///   (similar to `.*` in a regex).
+/// - Use `[/]` for path separators to automatically support backslash on
+///   Windows.
+/// - Use `[EXE]` to optionally add `.exe` on Windows (empty string on other
+///   platforms).
+/// - There is a wide range of macros (such as `[COMPILING]` or `[WARNING]`)
+///   to match cargo's "status" output and allows you to ignore the alignment.
+///   See `substitute_macros` for a complete list of macros.
 pub fn lines_match(expected: &str, mut actual: &str) -> bool {
     let expected = substitute_macros(expected);
     for (i, part) in expected.split("[..]").enumerate() {
