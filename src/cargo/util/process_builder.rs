@@ -113,7 +113,7 @@ impl ProcessBuilder {
             .and_then(|s| s)
     }
 
-    /// Get all environment variables explicitally set or unset for the process (not inherited
+    /// Get all environment variables explicitly set or unset for the process (not inherited
     /// vars).
     pub fn get_envs(&self) -> &HashMap<String, Option<OsString>> {
         &self.env
