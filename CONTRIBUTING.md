@@ -39,6 +39,16 @@ necessary to use it exactly:
 All three components are important: what you did, what you expected, what
 happened instead. Please use https://gist.github.com/ if your examples run long.
 
+
+## Feature requests
+
+Cargo follows the general Rust model of evolution. All major features go through
+an RFC process. Therefore, before opening a feature request issue create a
+Pre-RFC thread on the [internals][irlo] forum to get preliminary feedback.
+Implementing a feature as a [custom subcommand][subcommands] is encouraged as it
+helps demonstrate the demand for the functionality and is a great way to deliver
+a working solution faster as it can iterate outside of cargo's release cadence.
+
 ## Working on issues
 
 If you're looking for somewhere to start, check out the [E-easy][E-Easy] and
@@ -147,6 +157,11 @@ adding labels to triage issues:
 * Magenta, **B**-prefixed labels identify bugs which are **blockers**.
 
 * Light purple, **C**-prefixed labels represent the **category** of an issue.
+  In particular, **C-feature-request** marks *proposals* for new features. If
+  an issue is **C-feature-request**, but is not **Feature accepted** or **I-nominated**,
+  then it was not thoroughly discussed, and might need some additional design
+  or perhaps should be implemented as an external subcommand first. Ping
+  @rust-lang/cargo if you want to send a PR for such issue.
 
 * Dark purple, **Command**-prefixed labels mean the issue has to do with a
   specific cargo command.
@@ -183,3 +198,5 @@ adding labels to triage issues:
 [Code of Conduct]: https://www.rust-lang.org/conduct.html
 [IRC]: https://kiwiirc.com/client/irc.mozilla.org/cargo
 [`cargotest/mod.rs`]: https://github.com/rust-lang/cargo/blob/master/tests/testsuite/cargotest/mod.rs
+[irlo]: https://internals.rust-lang.org/
+[subcommands]: https://doc.rust-lang.org/cargo/reference/external-tools.html#custom-subcommands
