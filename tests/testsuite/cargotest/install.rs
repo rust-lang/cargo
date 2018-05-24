@@ -11,6 +11,10 @@ pub fn cargo_home() -> PathBuf {
     paths::home().join(".cargo")
 }
 
+/// A `Matcher` used by `cargo install` tests to check if an executable binary
+/// has been installed.  Example usage:
+///
+///     assert_that(cargo_home(), has_installed_exe("foo"));
 pub struct InstalledExe(pub &'static str);
 
 pub fn exe(name: &str) -> String {
