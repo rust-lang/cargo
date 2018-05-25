@@ -3,12 +3,13 @@ use std::fs::{self, File, OpenOptions};
 use std::io::prelude::*;
 
 use cargo::util::ProcessBuilder;
-use cargotest::ChannelChanger;
 use cargotest::install::{cargo_home, has_installed_exe};
 use cargotest::support::git;
 use cargotest::support::paths;
 use cargotest::support::registry::Package;
 use cargotest::support::{execs, project};
+use cargotest::ChannelChanger;
+use git2;
 use hamcrest::{assert_that, existing_dir, is_not};
 
 fn cargo_process(s: &str) -> ProcessBuilder {
@@ -1531,5 +1532,52 @@ fn install_empty_argument() {
         execs().with_status(1).with_stderr_contains(
             "[ERROR] The argument '<crate>...' requires a value but none was supplied",
         ),
+    );
+}
+
+#[test]
+fn git_repo_replace() {
+    let p = git::repo(&paths::root().join("foo"))
+        .file(
+            "Cargo.toml",
+            r#"
+            [package]
+            name = "foo"
+            version = "0.1.0"
+            authors = []
+        "#,
+        )
+        .file("src/main.rs", "fn main() {}")
+        .build();
+    let repo = git2::Repository::open(&p.root()).unwrap();
+    let old_rev = repo.revparse_single("HEAD").unwrap().id();
+    assert_that(
+        cargo_process("install")
+            .arg("--git")
+            .arg(p.url().to_string()),
+        execs().with_status(0),
+    );
+    git::commit(&repo);
+    let new_rev = repo.revparse_single("HEAD").unwrap().id();
+    let mut path = paths::home();
+    path.push(".cargo/.crates.toml");
+
+    assert_ne!(old_rev, new_rev);
+    assert!(
+        fs::read_to_string(path.clone())
+            .unwrap()
+            .contains(&format!("{}", old_rev))
+    );
+    assert_that(
+        cargo_process("install")
+            .arg("--force")
+            .arg("--git")
+            .arg(p.url().to_string()),
+        execs().with_status(0),
+    );
+    assert!(
+        fs::read_to_string(path)
+            .unwrap()
+            .contains(&format!("{}", new_rev))
     );
 }

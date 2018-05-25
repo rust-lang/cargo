@@ -356,6 +356,11 @@ fn install_one(
                 set.remove(bin);
             }
         }
+        // Failsafe to force replacing metadata for git packages
+        // https://github.com/rust-lang/cargo/issues/4582
+        if let Some(set) = list.v1.remove(&pkg.package_id().clone()) {
+            list.v1.insert(pkg.package_id().clone(), set);
+        }
         list.v1
             .entry(pkg.package_id().clone())
             .or_insert_with(BTreeSet::new)
