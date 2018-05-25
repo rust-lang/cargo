@@ -301,7 +301,7 @@ test test_hello ... FAILED
 failures:
 
 ---- test_hello stdout ----
-<tab>thread 'test_hello' panicked at 'assertion failed:[..]",
+[..]thread 'test_hello' panicked at 'assertion failed:[..]",
             )
             .with_stdout_contains("[..]`(left == right)`[..]")
             .with_stdout_contains("[..]left: `\"hello\"`,[..]")
@@ -367,7 +367,7 @@ test test_hello ... FAILED
 failures:
 
 ---- test_hello stdout ----
-<tab>thread 'test_hello' panicked at 'assertion failed: false', \
+[..]thread 'test_hello' panicked at 'assertion failed: false', \
       tests[/]footest.rs:4[..]
 ",
             )
@@ -413,7 +413,7 @@ test test_hello ... FAILED
 failures:
 
 ---- test_hello stdout ----
-<tab>thread 'test_hello' panicked at 'assertion failed: false', \
+[..]thread 'test_hello' panicked at 'assertion failed: false', \
       src[/]lib.rs:4[..]
 ",
             )

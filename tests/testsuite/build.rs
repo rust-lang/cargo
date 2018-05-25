@@ -3761,6 +3761,7 @@ fn custom_target_dir_line_parameter() {
 }
 
 #[test]
+#[ignore]
 fn rustc_no_trans() {
     if !is_nightly() {
         return;
