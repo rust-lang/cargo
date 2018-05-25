@@ -59,7 +59,7 @@ fn metadata_full(ws: &Workspace, opt: &OutputMetadataOptions) -> CargoResult<Exp
         &packages,
         &resolve,
         ws.current_opt().map(|pkg| pkg.package_id().clone()),
-    );
+    )?;
     let packages = packages
         .package_ids()
         .map(|i| packages.get(i).map(|p| p.clone()))
@@ -130,37 +130,34 @@ impl MetadataResolve {
         packages: &PackageSet,
         resolve: &Resolve,
         root: Option<PackageId>,
-    ) -> MetadataResolve {
-        let nodes = resolve
-            .iter()
-            .map(|pkg| {
-                Node {
-                    id: pkg.clone(),
-                    dependencies: resolve.deps(pkg).map(|(dep, _)| dep.clone()).collect(),
-                    deps: resolve
-                        .deps(pkg)
-                        .flat_map(|(id, deps)| {
-                            let dep_name = packages.get(id).unwrap()
-                                .lib_target().unwrap()
-                                .crate_name();
-                            deps.iter().map(|dep| {
-                                Dependency {
-                                    id: id.clone(),
-                                    name: dep.rename().unwrap_or(&dep_name)
-                                        .to_owned(),
-                                    kind: dep.kind(),
-                                }
-                            }).collect::<Vec<_>>().into_iter()
-                        })
-                        .collect(),
-                    features: resolve
-                        .features_sorted(pkg)
-                        .into_iter()
-                        .map(|s| s.to_string())
-                        .collect(),
-                }
-            })
-            .collect();
-        MetadataResolve { nodes, root }
+    ) -> CargoResult<MetadataResolve> {
+        let mut nodes = Vec::new();
+        for pkg in resolve.iter() {
+            let mut deps = Vec::new();
+            for (id, resolve_deps) in resolve.deps(pkg) {
+                let dep_name = match packages.get(id)?.lib_target() {
+                    Some(t) => t.crate_name(),
+                    None => continue,
+                };
+                deps.extend(resolve_deps.iter().map(move |dep| {
+                    Dependency {
+                        id: id.clone(),
+                        name: dep.rename().unwrap_or(&dep_name).to_owned(),
+                        kind: dep.kind(),
+                    }
+                }));
+            }
+            nodes.push(Node {
+                id: pkg.clone(),
+                dependencies: resolve.deps(pkg).map(|(dep, _)| dep.clone()).collect(),
+                deps,
+                features: resolve
+                    .features_sorted(pkg)
+                    .into_iter()
+                    .map(|s| s.to_string())
+                    .collect(),
+            });
+        }
+        Ok(MetadataResolve { nodes, root })
     }
 }
