@@ -29,6 +29,10 @@ impl<'cfg> LocalRegistry<'cfg> {
 }
 
 impl<'cfg> RegistryData for LocalRegistry<'cfg> {
+    fn prepare(&self) -> CargoResult<()> {
+        Ok(())
+    }
+
     fn index_path(&self) -> &Filesystem {
         &self.index_path
     }
