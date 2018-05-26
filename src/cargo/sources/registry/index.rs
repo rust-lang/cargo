@@ -75,6 +75,12 @@ impl<'cfg> RegistryIndex<'cfg> {
         name: &str,
         load: &mut RegistryData,
     ) -> CargoResult<Vec<(Summary, bool)>> {
+        // Prepare the `RegistryData` which will lazily initialize internal data
+        // structures. Note that this is also importantly needed to initialize
+        // to avoid deadlocks where we acquire a lock below but the `load`
+        // function inside *also* wants to acquire a lock. See an instance of
+        // this on #5551.
+        load.prepare()?;
         let (root, _lock) = if self.locked {
             let lock = self.path
                 .open_ro(Path::new(INDEX_LOCK), self.config, "the registry index");

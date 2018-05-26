@@ -2,6 +2,7 @@ use std::fs::{self, File};
 use std::io::prelude::*;
 use std::path::PathBuf;
 
+use cargo::util::paths::remove_dir_all;
 use cargotest::cargo_process;
 use cargotest::support::git;
 use cargotest::support::paths::{self, CargoPathExt};
@@ -1798,5 +1799,50 @@ Caused by:
   [..] contains a file at \"foo-0.1.0/src/lib.rs\" which isn't under \"foo-0.2.0\"
 ",
         ),
+    );
+}
+
+#[test]
+fn git_init_templatedir_missing() {
+    Package::new("foo", "0.2.0").dep("bar", "*").publish();
+    Package::new("bar", "0.2.0").publish();
+
+    let p = project("foo")
+        .file(
+            "Cargo.toml",
+            r#"
+                [project]
+                name = "fo"
+                version = "0.5.0"
+                authors = []
+
+                [dependencies]
+                foo = "0.2"
+            "#,
+        )
+        .file("src/main.rs", "fn main() {}")
+        .build();
+
+    assert_that(
+        p.cargo("build"),
+        execs().with_status(0)
+    );
+
+    remove_dir_all(paths::home().join(".cargo/registry")).unwrap();
+    File::create(paths::home().join(".gitconfig"))
+        .unwrap()
+        .write_all(br#"
+            [init]
+            templatedir = nowhere
+        "#)
+        .unwrap();
+
+    assert_that(
+        p.cargo("build"),
+        execs().with_status(0)
+    );
+    assert_that(
+        p.cargo("build"),
+        execs().with_status(0)
     );
 }

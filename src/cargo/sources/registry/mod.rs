@@ -295,6 +295,7 @@ impl<'a> RegistryDependency<'a> {
 }
 
 pub trait RegistryData {
+    fn prepare(&self) -> CargoResult<()>;
     fn index_path(&self) -> &Filesystem;
     fn load(
         &self,
@@ -427,6 +428,7 @@ impl<'cfg> Source for RegistrySource<'cfg> {
         // come back with no summaries, then our registry may need to be
         // updated, so we fall back to performing a lazy update.
         if dep.source_id().precise().is_some() && !self.updated {
+            debug!("attempting query without update");
             let mut called = false;
             self.index.query(dep, &mut *self.ops, &mut |s| {
                 called = true;
@@ -435,6 +437,7 @@ impl<'cfg> Source for RegistrySource<'cfg> {
             if called {
                 return Ok(());
             } else {
+                debug!("falling back to an update");
                 self.do_update()?;
             }
         }
@@ -464,6 +467,8 @@ impl<'cfg> Source for RegistrySource<'cfg> {
         // --precise` request
         if self.source_id.precise() != Some("locked") {
             self.do_update()?;
+        } else {
+            debug!("skipping update due to locked registry");
         }
         Ok(())
     }

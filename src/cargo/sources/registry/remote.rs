@@ -48,10 +48,12 @@ impl<'cfg> RemoteRegistry<'cfg> {
 
             // Fast path without a lock
             if let Ok(repo) = git2::Repository::open(&path) {
+                trace!("opened a repo without a lock");
                 return Ok(repo);
             }
 
             // Ok, now we need to lock and try the whole thing over again.
+            trace!("acquiring registry index lock");
             let lock =
                 self.index_path
                     .open_rw(Path::new(INDEX_LOCK), self.config, "the registry index")?;
@@ -71,7 +73,15 @@ impl<'cfg> RemoteRegistry<'cfg> {
                     // like enough time has passed or if we change the directory
                     // that the folder is located in, such as by changing the
                     // hash at the end of the directory.
-                    Ok(git2::Repository::init(&path)?)
+                    //
+                    // Note that in the meantime we also skip `init.templatedir`
+                    // as it can be misconfigured sometimes or otherwise add
+                    // things that we don't want.
+                    let mut opts = git2::RepositoryInitOptions::new();
+                    opts.external_template(false);
+                    Ok(git2::Repository::init_opts(&path, &opts).chain_err(|| {
+                        "failed to initialized index git repository"
+                    })?)
                 }
             }
         })
@@ -115,6 +125,11 @@ impl<'cfg> RemoteRegistry<'cfg> {
 }
 
 impl<'cfg> RegistryData for RemoteRegistry<'cfg> {
+    fn prepare(&self) -> CargoResult<()> {
+        self.repo()?; // create intermediate dirs and initialize the repo
+        Ok(())
+    }
+
     fn index_path(&self) -> &Filesystem {
         &self.index_path
     }
@@ -140,7 +155,8 @@ impl<'cfg> RegistryData for RemoteRegistry<'cfg> {
     }
 
     fn config(&mut self) -> CargoResult<Option<RegistryConfig>> {
-        self.repo()?; // create intermediate dirs and initialize the repo
+        debug!("loading config");
+        self.prepare()?;
         let _lock =
             self.index_path
                 .open_ro(Path::new(INDEX_LOCK), self.config, "the registry index")?;
@@ -149,6 +165,7 @@ impl<'cfg> RegistryData for RemoteRegistry<'cfg> {
             config = Some(serde_json::from_slice(json)?);
             Ok(())
         })?;
+        trace!("config loaded");
         Ok(config)
     }
 
@@ -160,6 +177,8 @@ impl<'cfg> RegistryData for RemoteRegistry<'cfg> {
             return Ok(());
         }
 
+        debug!("updating the index");
+
         // Ensure that we'll actually be able to acquire an HTTP handle later on
         // once we start trying to download crates. This will weed out any
         // problems with `.cargo/config` configuration related to HTTP.
@@ -168,7 +187,7 @@ impl<'cfg> RegistryData for RemoteRegistry<'cfg> {
         // hit the index, which may not actually read this configuration.
         self.config.http()?;
 
-        self.repo()?;
+        self.prepare()?;
         self.head.set(None);
         *self.tree.borrow_mut() = None;
         let _lock =
