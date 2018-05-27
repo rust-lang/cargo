@@ -122,7 +122,7 @@ fn compute_deps<'a, 'b, 'cfg>(
             true
         })
     }).filter_map(|(id, _)| match bcx.get_package(id) {
-            Ok(pkg) => pkg.lib_target().map(|t| {
+            Ok(pkg) => pkg.targets().iter().find(|t| t.is_lib()).map(|t| {
                 let mode = check_or_build_mode(&unit.mode, t);
                 let unit = new_unit(bcx, pkg, t, profile_for, unit.kind.for_target(t), mode);
                 Ok((unit, profile_for))
@@ -256,7 +256,7 @@ fn compute_deps_doc<'a, 'cfg>(
     let mut ret = Vec::new();
     for dep in deps {
         let dep = dep?;
-        let lib = match dep.lib_target() {
+        let lib = match dep.targets().iter().find(|t| t.is_lib()) {
             Some(lib) => lib,
             None => continue,
         };
