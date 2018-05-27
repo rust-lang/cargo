@@ -254,3 +254,16 @@ for each optional dependency, implicit features get created for any optional
 dependencies where a feature of the same name is not defined. However, if
 a feature of the same name as a dependency is defined, that feature must
 include the dependency as a requirement, as `foo = ["crate:foo"]`.
+
+
+### Build-plan
+* Tracking Issue: [rust-lang/cargo#5579](https://github.com/rust-lang/cargo/issues/5579)
+
+The `--build-plan` argument for the `build` command will output JSON with
+information about which commands would be run without actually executing
+anything. This can be useful when integrating with another build tool.
+Example:
+
+```
+cargo +nightly build --build-plan -Z unstable-options
+```
