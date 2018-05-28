@@ -330,7 +330,7 @@ fn run_verify(ws: &Workspace, tar: &FileLock, opts: &PackageOpts) -> CargoResult
     let id = SourceId::for_path(&dst)?;
     let mut src = PathSource::new(&dst, &id, ws.config());
     let new_pkg = src.root_package()?;
-    let pkg_fingerprint = src.fingerprint(&new_pkg)?;
+    let pkg_fingerprint = src.last_modified_file(&new_pkg)?;
     let ws = Workspace::ephemeral(new_pkg, config, None, true)?;
 
     ops::compile_ws(
@@ -354,11 +354,14 @@ fn run_verify(ws: &Workspace, tar: &FileLock, opts: &PackageOpts) -> CargoResult
     )?;
 
     // Check that build.rs didn't modify any files in the src directory.
-    let ws_fingerprint = src.fingerprint(ws.current()?)?;
+    let ws_fingerprint = src.last_modified_file(ws.current()?)?;
     if pkg_fingerprint != ws_fingerprint {
+        let (_, path) = ws_fingerprint;
         bail!(
             "Source directory was modified by build.rs during cargo publish. \
-             Build scripts should not modify anything outside of OUT_DIR."
+             Build scripts should not modify anything outside of OUT_DIR. \
+             Modified file: {}",
+             path.display()
         )
     }
 
