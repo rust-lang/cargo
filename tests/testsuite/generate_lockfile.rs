@@ -1,8 +1,8 @@
 use std::fs::{self, File};
 use std::io::prelude::*;
 
-use cargotest::support::{execs, project};
 use cargotest::support::registry::Package;
+use cargotest::support::{execs, project, ProjectBuilder, paths};
 use cargotest::ChannelChanger;
 use hamcrest::{assert_that, existing_file, is_not};
 
@@ -249,4 +249,60 @@ fn cargo_update_generate_lockfile() {
     assert_that(&lockfile, is_not(existing_file()));
     assert_that(p.cargo("update"), execs().with_status(0).with_stdout(""));
     assert_that(&lockfile, existing_file());
+}
+
+#[test]
+fn duplicate_entries_in_lockfile() {
+    let _a = ProjectBuilder::new("a", paths::root().join("a"))
+        .file(
+            "Cargo.toml",
+            r#"
+            [package]
+            name = "a"
+            authors = []
+            version = "0.0.1"
+
+            [dependencies]
+            common = {path="common"}
+            "#,
+        )
+        .file("src/lib.rs", "")
+        .build();
+
+    let common_toml = r#"
+        [package]
+        name = "common"
+        authors = []
+        version = "0.0.1"
+        "#;
+
+    let _common_in_a = ProjectBuilder::new("common", paths::root().join("a/common"))
+        .file("Cargo.toml", common_toml)
+        .file("src/lib.rs", "")
+        .build();
+
+    let b = ProjectBuilder::new("common", paths::root().join("b"))
+        .file(
+            "Cargo.toml",
+            r#"
+            [package]
+            name = "b"
+            authors = []
+            version = "0.0.1"
+
+            [dependencies]
+            common = {path="common"}
+            a = {path="../a"}
+            "#,
+        )
+        .file("src/lib.rs", "")
+        .build();
+
+    let _common_in_b = ProjectBuilder::new("common", paths::root().join("b/common"))
+        .file("Cargo.toml", common_toml)
+        .file("src/lib.rs", "")
+        .build();
+
+    // should fail due to a duplicate package `common` in the lockfile
+    assert_that(b.cargo("build"), execs().with_status(101));
 }
