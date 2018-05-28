@@ -1446,8 +1446,7 @@ fn do_not_package_if_src_was_modified() {
     );
 
     assert_that(
-        p.cargo("package")
-        .arg("--no-verify"),
+        p.cargo("package --no-verify"),
         execs().with_status(0),
     );
 }
