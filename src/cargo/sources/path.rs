@@ -467,6 +467,29 @@ impl<'cfg> PathSource<'cfg> {
         }
         Ok(())
     }
+
+    pub fn last_modified_file(&self, pkg: &Package) -> CargoResult<(FileTime, PathBuf)> {
+        if !self.updated {
+            return Err(internal("BUG: source was not updated"));
+        }
+
+        let mut max = FileTime::zero();
+        let mut max_path = PathBuf::new();
+        for file in self.list_files(pkg)? {
+            // An fs::stat error here is either because path is a
+            // broken symlink, a permissions error, or a race
+            // condition where this path was rm'ed - either way,
+            // we can ignore the error and treat the path's mtime
+            // as 0.
+            let mtime = paths::mtime(&file).unwrap_or(FileTime::zero());
+            if mtime > max {
+                max = mtime;
+                max_path = file;
+            }
+        }
+        trace!("last modified file {}: {}", self.path.display(), max);
+        Ok((max, max_path))
+    }
 }
 
 impl<'cfg> Debug for PathSource<'cfg> {
@@ -516,26 +539,7 @@ impl<'cfg> Source for PathSource<'cfg> {
     }
 
     fn fingerprint(&self, pkg: &Package) -> CargoResult<String> {
-        if !self.updated {
-            return Err(internal("BUG: source was not updated"));
-        }
-
-        let mut max = FileTime::zero();
-        let mut max_path = PathBuf::from("");
-        for file in self.list_files(pkg)? {
-            // An fs::stat error here is either because path is a
-            // broken symlink, a permissions error, or a race
-            // condition where this path was rm'ed - either way,
-            // we can ignore the error and treat the path's mtime
-            // as 0.
-            let mtime = paths::mtime(&file).unwrap_or(FileTime::zero());
-            warn!("{} {}", mtime, file.display());
-            if mtime > max {
-                max = mtime;
-                max_path = file;
-            }
-        }
-        trace!("fingerprint {}: {}", self.path.display(), max);
+        let (max, max_path) = self.last_modified_file(pkg)?;
         Ok(format!("{} ({})", max, max_path.display()))
     }
 }
