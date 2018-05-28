@@ -286,6 +286,7 @@ impl<'cfg> PackageRegistry<'cfg> {
 
     fn load(&mut self, source_id: &SourceId, kind: Kind) -> CargoResult<()> {
         (|| {
+            debug!("loading source {}", source_id);
             let source = self.source_config.load(source_id)?;
             assert_eq!(source.source_id(), source_id);
 
