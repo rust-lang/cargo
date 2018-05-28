@@ -18,8 +18,8 @@ pub use self::registry::{modify_owners, yank, OwnersOptions, PublishOpts};
 pub use self::registry::configure_http_handle;
 pub use self::cargo_fetch::{fetch, FetchOptions};
 pub use self::cargo_pkgid::pkgid;
-pub use self::resolve::{resolve_with_previous, resolve_ws, resolve_ws_precisely,
-                        resolve_ws_with_method};
+pub use self::resolve::{add_overrides, get_resolved_packages, resolve_with_previous, resolve_ws,
+                        resolve_ws_precisely, resolve_ws_with_method};
 pub use self::cargo_output_metadata::{output_metadata, ExportInfo, OutputMetadataOptions};
 
 mod cargo_clean;
