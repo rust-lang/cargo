@@ -872,3 +872,36 @@ fn block_publish_no_registry() {
         ),
     );
 }
+
+#[test]
+fn do_not_publish_if_src_was_modified() {
+    publish::setup();
+
+    let p = project("foo")
+        .file("Cargo.toml", r#"
+            [project]
+            name = "foo"
+            version = "0.0.1"
+            authors = []
+        "#)
+        .file("src/main.rs", r#"
+            fn main() { println!("hello"); }
+        "#)
+        .file("build.rs", r#"
+            use std::fs::File;
+            use std::io::Write;
+
+            fn main() {
+                let mut file = File::create("src/generated.txt").expect("failed to create file");
+                file.write_all(b"Hello, world of generated files.").expect("failed to write");
+            }
+        "#)
+        .build();
+
+    assert_that(
+        p.cargo("publish")
+            .arg("--index")
+            .arg(publish::registry().to_string()),
+        execs().with_status(101),
+    );
+}
