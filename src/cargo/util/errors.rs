@@ -28,8 +28,11 @@ where
         D: fmt::Display + Send + Sync + 'static,
     {
         self.map_err(|failure| {
+            let err = failure.into();
             let context = f();
-            failure.into().context(context)
+            trace!("error: {}", err);
+            trace!("\tcontext: {}", context);
+            err.context(context)
         })
     }
 }
