@@ -1509,7 +1509,7 @@ fn doc_workspace_open_different_library_and_package_names() {
         execs()
             .with_status(0)
             .with_stderr_contains("[..] Documenting foo v0.1.0 ([..])")
-            .with_stderr_contains("[..] Opening [..]/foo/target/doc/foolib/index.html")
+            .with_stderr_contains("[..] Opening [..][/]foo[/]target[/]doc[/]foolib[/]index.html")
     );
 }
 
