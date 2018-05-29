@@ -65,7 +65,7 @@ use self::context::{Activations, Context};
 use self::types::{ActivateError, ActivateResult, Candidate, ConflictReason, DepsFrame, GraphNode};
 use self::types::{RcVecIter, RegistryQueryer};
 
-pub use self::encode::{EncodableDependency, EncodablePackageId, EncodableResolve};
+pub use self::encode::{EncodableDependency, EncodablePackageId, EncodableResolve, encodable_package_id};
 pub use self::encode::{Metadata, WorkspaceResolve};
 pub use self::resolve::{Deps, DepsNotReplaced, Resolve};
 pub use self::types::Method;
