@@ -360,8 +360,9 @@ fn run_verify(ws: &Workspace, tar: &FileLock, opts: &PackageOpts) -> CargoResult
         bail!(
             "Source directory was modified by build.rs during cargo publish. \
              Build scripts should not modify anything outside of OUT_DIR. \
-             Modified file: {}",
-             path.display()
+             Modified file: {}\n\n\
+             To proceed despite this, pass the `--no-verify` flag.",
+            path.display()
         )
     }
 

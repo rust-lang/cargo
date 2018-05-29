@@ -1442,7 +1442,17 @@ fn do_not_package_if_src_was_modified() {
 
     assert_that(
         p.cargo("package"),
-        execs().with_status(101),
+        execs().with_status(101)
+               .with_stderr_contains(
+                   "\
+error: failed to verify package tarball
+
+Caused by:
+  Source directory was modified by build.rs during cargo publish. \
+Build scripts should not modify anything outside of OUT_DIR. Modified file: [..]src/generated.txt
+
+To proceed despite this, pass the `--no-verify` flag.",
+               ),
     );
 
     assert_that(
