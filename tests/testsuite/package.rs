@@ -1449,7 +1449,7 @@ error: failed to verify package tarball
 
 Caused by:
   Source directory was modified by build.rs during cargo publish. \
-Build scripts should not modify anything outside of OUT_DIR. Modified file: [..]src/generated.txt
+Build scripts should not modify anything outside of OUT_DIR. Modified file: [..]src[/]generated.txt
 
 To proceed despite this, pass the `--no-verify` flag.",
                ),
