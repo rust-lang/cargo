@@ -1481,6 +1481,7 @@ fn doc_workspace_open_help_message() {
 }
 
 #[test]
+#[cfg(not(any(target_os = "windows", target_os = "macos")))]
 fn doc_workspace_open_different_library_and_package_names() {
     let p = project("foo")
         .file(
@@ -1513,6 +1514,7 @@ fn doc_workspace_open_different_library_and_package_names() {
 }
 
 #[test]
+#[cfg(not(any(target_os = "windows", target_os = "macos")))]
 fn doc_workspace_open_binary() {
     let p = project("foo")
         .file(
@@ -1546,6 +1548,7 @@ fn doc_workspace_open_binary() {
 }
 
 #[test]
+#[cfg(not(any(target_os = "windows", target_os = "macos")))]
 fn doc_workspace_open_binary_and_library() {
     let p = project("foo")
         .file(
