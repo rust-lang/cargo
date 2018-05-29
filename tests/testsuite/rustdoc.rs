@@ -20,7 +20,7 @@ fn rustdoc_simple() {
         p.cargo("rustdoc").arg("-v"),
         execs().with_status(0).with_stderr(format!(
             "\
-[GENERATING] [..]/foo/target/doc/foo/index.html
+[GENERATING] [..][/]foo[/]target[/]doc[/]foo[/]index.html
 [DOCUMENTING] foo v0.0.1 ({url})
 [RUNNING] `rustdoc --crate-name foo src[/]lib.rs \
         -o {dir}[/]target[/]doc \
@@ -52,7 +52,7 @@ fn rustdoc_args() {
         p.cargo("rustdoc").arg("-v").arg("--").arg("--cfg=foo"),
         execs().with_status(0).with_stderr(format!(
             "\
-[GENERATING] [..]/foo/target/doc/foo/index.html
+[GENERATING] [..][/]foo[/]target[/]doc[/]foo[/]index.html
 [DOCUMENTING] foo v0.0.1 ({url})
 [RUNNING] `rustdoc --crate-name foo src[/]lib.rs \
         -o {dir}[/]target[/]doc \
@@ -111,7 +111,7 @@ fn rustdoc_foo_with_bar_dependency() {
         foo.cargo("rustdoc").arg("-v").arg("--").arg("--cfg=foo"),
         execs().with_status(0).with_stderr(format!(
             "\
-[GENERATING] [..]/foo/target/doc/foo/index.html
+[GENERATING] [..][/]foo[/]target[/]doc[/]foo[/]index.html
 [CHECKING] bar v0.0.1 ([..])
 [RUNNING] `rustc [..]bar[/]src[/]lib.rs [..]`
 [DOCUMENTING] foo v0.0.1 ({url})
@@ -180,7 +180,7 @@ fn rustdoc_only_bar_dependency() {
             .arg("--cfg=foo"),
         execs().with_status(0).with_stderr(format!(
             "\
-[GENERATING] [..]/foo/target/doc/bar/index.html
+[GENERATING] [..][/]foo[/]target[/]doc[/]bar[/]index.html
 [DOCUMENTING] bar v0.0.1 ([..])
 [RUNNING] `rustdoc --crate-name bar [..]bar[/]src[/]lib.rs \
         -o {dir}[/]target[/]doc \
@@ -218,8 +218,8 @@ fn rustdoc_same_name_documents_lib() {
         p.cargo("rustdoc").arg("-v").arg("--").arg("--cfg=foo"),
         execs().with_status(0).with_stderr(format!(
             "\
-[GENERATING] [..]/foo/target/doc/foo/index.html
-[GENERATING] [..]/foo/target/doc/foo/index.html
+[GENERATING] [..][/]foo[/]target[/]doc[/]foo[/]index.html
+[GENERATING] [..][/]foo[/]target[/]doc[/]foo[/]index.html
 [DOCUMENTING] foo v0.0.1 ([..])
 [RUNNING] `rustdoc --crate-name foo src[/]lib.rs \
         -o {dir}[/]target[/]doc \
@@ -277,7 +277,7 @@ fn rustdoc_target() {
     assert_that(
         p.cargo("rustdoc --verbose --target x86_64-unknown-linux-gnu"),
         execs().with_status(0).with_stderr("\
-[GENERATING] [..]/foo/target/[..]/doc/a/index.html
+[GENERATING] [..][/]foo[/]target[/][..][/]doc[/]a[/]index.html
 [DOCUMENTING] a v0.0.1 ([..])
 [RUNNING] `rustdoc --crate-name a src[/]lib.rs \
     --target x86_64-unknown-linux-gnu \
