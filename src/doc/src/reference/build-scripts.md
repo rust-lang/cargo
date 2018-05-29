@@ -272,6 +272,11 @@ There’s a couple of points of note here:
   output files should be located. It can use the process’ current working
   directory to find where the input files should be located, but in this case we
   don’t have any input files.
+* In general, build scripts should not modify any files outside of `OUT_DIR`.
+  It may seem fine on the first blush, but it does cause problems when you use
+  such crate as a dependency, because there's an *implicit* invariant that
+  sources in `.cargo/registry` should be immutable. `cargo` won't allow such
+  scripts when packaging.
 * This script is relatively simple as it just writes out a small generated file.
   One could imagine that other more fanciful operations could take place such as
   generating a Rust module from a C header file or another language definition,
