@@ -1505,7 +1505,7 @@ fn doc_workspace_open_different_library_and_package_names() {
 
     // The order in which bar is compiled or documented is not deterministic
     assert_that(
-        p.cargo("doc").arg("--open").env("BROWSER", "echo"),
+        p.cargo("doc --open").env("BROWSER", "echo"),
         execs()
             .with_status(0)
             .with_stderr_contains("[..] Documenting foo v0.1.0 ([..])")
