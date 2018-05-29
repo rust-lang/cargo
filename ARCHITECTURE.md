@@ -8,9 +8,9 @@ interested in the inner workings of Cargo.
 ## Subcommands
 
 Cargo is organized as a set of `clap` subcommands. All subcommands live in
-`src/bin/commands` directory. `src/bin/cargo.rs` is the entry point.
+`src/bin/cargo/commands` directory. `src/bin/cargo/main.rs` is the entry point.
 
-A typical subcommand, such as `src/bin/commands/build.rs`, parses command line
+A typical subcommand, such as `src/bin/cargo/commands/build.rs`, parses command line
 options, reads the configuration files, discovers the Cargo project in
 the current directory and delegates the actual implementation to one
 of the functions in `src/cargo/ops/mod.rs`. This short file is a good
