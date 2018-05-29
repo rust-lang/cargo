@@ -30,19 +30,20 @@ pub fn load_pkg_lockfile(ws: &Workspace) -> CargoResult<Option<Resolve>> {
     Ok(resolve)
 }
 
-fn duplicate_pkg_names(resolve: &Resolve) -> Vec<&'static str> {
+fn duplicate_pkgs(resolve: &Resolve) -> Vec<&'static str> {
     let mut unique_names = HashSet::new();
     let mut result = HashSet::new();
     for pkg_id in resolve.iter() {
-        if !unique_names.insert(pkg_id.name()) {
+        let mut encodable_pkd_id = resolver::encodable_package_id(pkg_id);
+        if !unique_names.insert(encodable_pkd_id) {
             result.insert(pkg_id.name().as_str());
         }
     }
     result.into_iter().collect()
 }
 
-fn check_duplicate_pkg_names(resolve: &Resolve) -> Result<(), Internal> {
-    let names = duplicate_pkg_names(resolve);
+fn check_duplicate_pkgs(resolve: &Resolve) -> Result<(), Internal> {
+    let names = duplicate_pkgs(resolve);
     if names.is_empty() {
         Ok(())
     } else {
@@ -63,7 +64,7 @@ pub fn write_pkg_lockfile(ws: &Workspace, resolve: &Resolve) -> CargoResult<()> 
         Ok(s)
     });
 
-    check_duplicate_pkg_names(resolve).chain_err(|| format!("failed to generate lock file"))?;
+    check_duplicate_pkgs(resolve).chain_err(|| format!("failed to generate lock file"))?;
 
     let toml = toml::Value::try_from(WorkspaceResolve { ws, resolve }).unwrap();
 
