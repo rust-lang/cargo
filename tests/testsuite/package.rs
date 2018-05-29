@@ -1416,3 +1416,47 @@ fn lock_file_and_workspace() {
         fname.ends_with("Cargo.lock")
     }));
 }
+
+#[test]
+fn do_not_package_if_src_was_modified() {
+    let p = project("foo")
+        .file("Cargo.toml", r#"
+            [project]
+            name = "foo"
+            version = "0.0.1"
+            authors = []
+        "#)
+        .file("src/main.rs", r#"
+            fn main() { println!("hello"); }
+        "#)
+        .file("build.rs", r#"
+            use std::fs::File;
+            use std::io::Write;
+
+            fn main() {
+                let mut file = File::create("src/generated.txt").expect("failed to create file");
+                file.write_all(b"Hello, world of generated files.").expect("failed to write");
+            }
+        "#)
+        .build();
+
+    assert_that(
+        p.cargo("package"),
+        execs().with_status(101)
+               .with_stderr_contains(
+                   "\
+error: failed to verify package tarball
+
+Caused by:
+  Source directory was modified by build.rs during cargo publish. \
+Build scripts should not modify anything outside of OUT_DIR. Modified file: [..]src[/]generated.txt
+
+To proceed despite this, pass the `--no-verify` flag.",
+               ),
+    );
+
+    assert_that(
+        p.cargo("package --no-verify"),
+        execs().with_status(0),
+    );
+}
