@@ -102,9 +102,10 @@ fn rerun() {
     );
     assert_that(
         p.cargo("doc").env("RUSTDOCFLAGS", "--cfg=bar"),
-        execs().with_status(0).with_stderr(
+        execs().stream().with_status(0).with_stderr(
             "\
 [DOCUMENTING] foo v0.0.1 ([..])
+[GENERATING] [..]/foo/target/doc/foo/index.html
 [FINISHED] dev [unoptimized + debuginfo] target(s) in [..]
 ",
         ),

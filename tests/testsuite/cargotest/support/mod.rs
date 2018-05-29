@@ -1174,6 +1174,7 @@ fn substitute_macros(input: &str) -> String {
         ("[REPLACING]", "   Replacing"),
         ("[UNPACKING]", "   Unpacking"),
         ("[SUMMARY]", "     Summary"),
+        ("[GENERATING]", "  Generating"),
         ("[EXE]", if cfg!(windows) { ".exe" } else { "" }),
         ("[/]", if cfg!(windows) { "\\" } else { "/" }),
     ];

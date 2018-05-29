@@ -689,6 +689,8 @@ fn profile_selection_doc() {
     //
     //   `*` = wants panic, but it is cleared when args are built.
     assert_that(p.cargo("doc -vv"), execs().with_status(0).with_stderr_unordered("\
+[GENERATING] [..]/foo/target/doc/foo/index.html
+[GENERATING] [..]/foo/target/doc/foo/index.html
 [COMPILING] bar [..]
 [DOCUMENTING] bar [..]
 [RUNNING] `rustc --crate-name bar bar[/]src[/]lib.rs --crate-type lib --emit=dep-info,link -C codegen-units=1 -C debuginfo=2 [..]
