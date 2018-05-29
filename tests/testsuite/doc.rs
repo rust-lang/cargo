@@ -1503,7 +1503,75 @@ fn doc_workspace_open_different_library_and_package_names() {
         .file("foo/src/lib.rs", "")
         .build();
 
-    // The order in which bar is compiled or documented is not deterministic
+    assert_that(
+        p.cargo("doc --open").env("BROWSER", "echo"),
+        execs()
+            .with_status(0)
+            .with_stderr_contains("[..] Documenting foo v0.1.0 ([..])")
+            .with_stderr_contains("[..] Opening [..][/]foo[/]target[/]doc[/]foolib[/]index.html")
+    );
+}
+
+#[test]
+fn doc_workspace_open_binary() {
+    let p = project("foo")
+        .file(
+            "Cargo.toml",
+            r#"
+            [workspace]
+            members = ["foo"]
+        "#,
+        )
+        .file(
+            "foo/Cargo.toml",
+            r#"
+            [package]
+            name = "foo"
+            version = "0.1.0"
+            [[bin]]
+            name = "foobin"
+            path = "src/main.rs"
+        "#,
+        )
+        .file("foo/src/main.rs", "")
+        .build();
+
+    assert_that(
+        p.cargo("doc --open").env("BROWSER", "echo"),
+        execs()
+            .with_status(0)
+            .with_stderr_contains("[..] Documenting foo v0.1.0 ([..])")
+            .with_stderr_contains("[..] Opening [..][/]foo[/]target[/]doc[/]foobin[/]index.html")
+    );
+}
+
+#[test]
+fn doc_workspace_open_binary_and_library() {
+    let p = project("foo")
+        .file(
+            "Cargo.toml",
+            r#"
+            [workspace]
+            members = ["foo"]
+        "#,
+        )
+        .file(
+            "foo/Cargo.toml",
+            r#"
+            [package]
+            name = "foo"
+            version = "0.1.0"
+            [lib]
+            name = "foolib"
+            [[bin]]
+            name = "foobin"
+            path = "src/main.rs"
+        "#,
+        )
+        .file("foo/src/lib.rs", "")
+        .file("foo/src/main.rs", "")
+        .build();
+
     assert_that(
         p.cargo("doc --open").env("BROWSER", "echo"),
         execs()
