@@ -1481,6 +1481,39 @@ fn doc_workspace_open_help_message() {
 }
 
 #[test]
+fn doc_workspace_open_different_library_and_package_names() {
+    let p = project("foo")
+        .file(
+            "Cargo.toml",
+            r#"
+            [workspace]
+            members = ["foo"]
+        "#,
+        )
+        .file(
+            "foo/Cargo.toml",
+            r#"
+            [package]
+            name = "foo"
+            version = "0.1.0"
+            [lib]
+            name = "foolib"
+        "#,
+        )
+        .file("foo/src/lib.rs", "")
+        .build();
+
+    // The order in which bar is compiled or documented is not deterministic
+    assert_that(
+        p.cargo("doc").arg("--open").env("BROWSER", "echo"),
+        execs()
+            .with_status(0)
+            .with_stderr_contains("[..] Documenting foo v0.1.0 ([..])")
+            .with_stderr_contains("[..] Opening [..]/foo/target/doc/foolib/index.html")
+    );
+}
+
+#[test]
 fn doc_edition() {
     if !cargotest::is_nightly() {
         // Stable rustdoc won't have the edition option.  Remove this once it
