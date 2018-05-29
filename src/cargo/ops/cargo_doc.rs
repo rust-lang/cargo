@@ -78,8 +78,6 @@ pub fn doc(ws: &Workspace, options: &DocOptions) -> CargoResult<()> {
                     .collect::<Vec<_>>()
                     .join("\n  ")
             );
-        } else if pkgs.len() == 1 {
-            pkgs[0].name().replace("-", "_")
         } else {
             match lib_names.keys().chain(bin_names.keys()).nth(0) {
                 Some(s) => s.to_string(),
