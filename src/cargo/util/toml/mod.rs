@@ -265,7 +265,7 @@ impl TomlProfiles {
     }
 }
 
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, Eq, PartialEq)]
 pub struct TomlOptLevel(pub String);
 
 impl<'de> de::Deserialize<'de> for TomlOptLevel {
@@ -305,7 +305,7 @@ impl<'de> de::Deserialize<'de> for TomlOptLevel {
             }
         }
 
-        d.deserialize_u32(Visitor)
+        d.deserialize_any(Visitor)
     }
 }
 
@@ -321,7 +321,7 @@ impl ser::Serialize for TomlOptLevel {
     }
 }
 
-#[derive(Clone, Debug, Serialize)]
+#[derive(Clone, Debug, Serialize, Eq, PartialEq)]
 #[serde(untagged)]
 pub enum U32OrBool {
     U32(u32),
@@ -368,7 +368,7 @@ impl<'de> de::Deserialize<'de> for U32OrBool {
     }
 }
 
-#[derive(Deserialize, Serialize, Clone, Debug, Default)]
+#[derive(Deserialize, Serialize, Clone, Debug, Default, Eq, PartialEq)]
 #[serde(rename_all = "kebab-case")]
 pub struct TomlProfile {
     pub opt_level: Option<TomlOptLevel>,
@@ -480,7 +480,7 @@ impl TomlProfile {
     }
 }
 
-#[derive(Clone, Debug, Serialize)]
+#[derive(Clone, Debug, Serialize, Eq, PartialEq)]
 #[serde(untagged)]
 pub enum StringOrBool {
     String(String),

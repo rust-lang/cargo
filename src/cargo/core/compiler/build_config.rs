@@ -62,26 +62,7 @@ impl BuildConfig {
                  its environment, ignoring the `-j` parameter",
             )?;
         }
-        let cfg_jobs = match config.get_i64("build.jobs")? {
-            Some(v) => {
-                if v.val <= 0 {
-                    bail!(
-                        "build.jobs must be positive, but found {} in {}",
-                        v.val,
-                        v.definition
-                    )
-                } else if v.val >= i64::from(u32::max_value()) {
-                    bail!(
-                        "build.jobs is too large: found {} in {}",
-                        v.val,
-                        v.definition
-                    )
-                } else {
-                    Some(v.val as u32)
-                }
-            }
-            None => None,
-        };
+        let cfg_jobs: Option<u32> = config.get("build.jobs")?;
         let jobs = jobs.or(cfg_jobs).unwrap_or(::num_cpus::get() as u32);
         Ok(BuildConfig {
             requested_target: target,
