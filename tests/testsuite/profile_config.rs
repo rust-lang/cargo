@@ -18,18 +18,30 @@ fn profile_config_gated() {
 
     assert_that(
         p.cargo("build -v"),
-        execs().with_status(0).with_stderr_contains(
-            "\
-[WARNING] profile in config `[..]foo[/].cargo[/]config` requires `-Z config-profile` command-line option
+        execs()
+            .with_status(0)
+            .with_stderr_contains(
+                "\
+[WARNING] profiles in config files require `-Z config-profile` command-line option
 ",
-        ).with_stderr_contains("[..]-C debuginfo=2[..]"),
+            )
+            .with_stderr_contains("[..]-C debuginfo=2[..]"),
     );
 }
 
 #[test]
 fn profile_config_validate_warnings() {
     let p = project("foo")
-        .file("Cargo.toml", &basic_lib_manifest("foo"))
+        .file(
+            "Cargo.toml",
+            r#"
+            cargo-features = ["profile-overrides"]
+
+            [package]
+            name = "foo"
+            version = "0.0.1"
+            "#,
+        )
         .file("src/lib.rs", "")
         .file(
             ".cargo/config",
@@ -53,34 +65,24 @@ fn profile_config_validate_warnings() {
         .build();
 
     assert_that(
-        p.cargo("build -v -Z config-profile")
+        p.cargo("build -Z config-profile")
             .masquerade_as_nightly_cargo(),
-        execs()
-            .with_status(0)
-            .with_stderr_contains(
-                "\
-[WARNING] profile `test` in config `[..]foo[/].cargo[/]config` is not supported
+        execs().with_status(0).with_stderr_unordered(
+            "\
+[WARNING] unused key `profile.asdf` in config file `[..].cargo[/]config`
+[WARNING] unused key `profile.test` in config file `[..].cargo[/]config`
+[WARNING] unused key `profile.dev.bad-key` in config file `[..].cargo[/]config`
+[WARNING] unused key `profile.dev.overrides.bar.bad-key-bar` in config file `[..].cargo[/]config`
+[WARNING] unused key `profile.dev.build-override.bad-key-bo` in config file `[..].cargo[/]config`
+[COMPILING] foo [..]
+[FINISHED] [..]
 ",
-            )
-            .with_stderr_contains(
-                "\
-[WARNING] profile `asdf` in config `[..]foo[/].cargo[/]config` is not supported
-",
-            )
-            .with_stderr_contains(
-                "\
-[WARNING] unused profile key `bad-key` in config `[..]foo[/].cargo[/]config`
-[WARNING] unused profile key `bad-key-bo` in config `[..]foo[/].cargo[/]config`
-[WARNING] unused profile key `bad-key-bar` in config `[..]foo[/].cargo[/]config`
-",
-            ),
+        ),
     );
 }
 
 #[test]
 fn profile_config_error_paths() {
-    // Due to how it's implemented, we are uncertain where a merged error
-    // comes from.
     let p = project("foo")
         .file("Cargo.toml", &basic_lib_manifest("foo"))
         .file("src/lib.rs", "")
@@ -108,10 +110,7 @@ fn profile_config_error_paths() {
 [ERROR] failed to parse manifest at `[..]foo[/]Cargo.toml`
 
 Caused by:
-  error in config profile, possible locations: [..]foo[/].cargo[/]config, [..]home[/].cargo[/]config
-
-Caused by:
-  invalid type: string \"foo\", expected a boolean for key `rpath`
+  error in [..].cargo[/]config: `profile.dev.rpath` expected true/false, but found a string
 ",
         ),
     );
@@ -120,7 +119,16 @@ Caused by:
 #[test]
 fn profile_config_validate_errors() {
     let p = project("foo")
-        .file("Cargo.toml", &basic_lib_manifest("foo"))
+        .file(
+            "Cargo.toml",
+            r#"
+            cargo-features = ["profile-overrides"]
+
+            [package]
+            name = "foo"
+            version = "0.0.1"
+            "#,
+        )
         .file("src/lib.rs", "")
         .file(
             ".cargo/config",
@@ -139,7 +147,7 @@ fn profile_config_validate_errors() {
 [ERROR] failed to parse manifest at `[..]foo[/]Cargo.toml`
 
 Caused by:
-  error in config profile `[..]foo[/].cargo[/]config`
+  config profile `profile.dev` is not valid
 
 Caused by:
   `panic` may not be specified in a profile override.
@@ -170,10 +178,7 @@ fn profile_config_syntax_errors() {
 [ERROR] failed to parse manifest at [..]
 
 Caused by:
-  error in config profile `[..]foo[/].cargo[/]config`
-
-Caused by:
-  invalid type: string \"foo\", expected u32 for key `codegen-units`
+  error in [..].cargo[/]config: `profile.dev.codegen-units` expected an integer, but found a string
 ",
         ),
     );
@@ -206,7 +211,16 @@ fn profile_config_override_spec_multiple() {
         "#,
         )
         .file("src/lib.rs", "")
-        .file("bar/Cargo.toml", &basic_lib_manifest("bar"))
+        .file(
+            "bar/Cargo.toml",
+            r#"
+            cargo-features = ["profile-overrides"]
+
+            [package]
+            name = "bar"
+            version = "0.5.0"
+        "#,
+        )
         .file("bar/src/lib.rs", "")
         .build();
 
@@ -290,7 +304,16 @@ fn profile_config_override_precedence() {
         "#,
         )
         .file("src/lib.rs", "")
-        .file("bar/Cargo.toml", &basic_lib_manifest("bar"))
+        .file(
+            "bar/Cargo.toml",
+            r#"
+            cargo-features = ["profile-overrides"]
+
+            [package]
+            name = "bar"
+            version = "0.0.1"
+            "#,
+        )
         .file("bar/src/lib.rs", "")
         .file(
             ".cargo/config",
@@ -318,7 +341,16 @@ fn profile_config_override_precedence() {
 #[test]
 fn profile_config_no_warn_unknown_override() {
     let p = project("foo")
-        .file("Cargo.toml", &basic_lib_manifest("foo"))
+        .file(
+            "Cargo.toml",
+            r#"
+            cargo-features = ["profile-overrides"]
+
+            [package]
+            name = "foo"
+            version = "0.0.1"
+            "#,
+        )
         .file("src/lib.rs", "")
         .file(
             ".cargo/config",
