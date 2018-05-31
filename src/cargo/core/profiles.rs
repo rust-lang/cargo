@@ -1,13 +1,13 @@
-use std::collections::{HashMap, HashSet};
-use std::sync::atomic;
+use std::collections::HashSet;
 use std::{cmp, fmt, hash};
 
 use core::compiler::CompileMode;
 use core::interning::InternedString;
 use core::{Features, PackageId, PackageIdSpec, PackageSet, Shell};
+use util::errors::CargoResultExt;
 use util::lev_distance::lev_distance;
 use util::toml::{ProfilePackageSpec, StringOrBool, TomlProfile, TomlProfiles, U32OrBool};
-use util::{CargoResult, Config, ConfigValue};
+use util::{CargoResult, Config};
 
 /// Collection of all user profiles.
 #[derive(Clone, Debug)]
@@ -29,18 +29,20 @@ impl Profiles {
         if let Some(profiles) = profiles {
             profiles.validate(features, warnings)?;
         }
-        Profiles::validate_config(config, warnings)?;
+
+        let config_profiles = config.profiles()?;
+        config_profiles.validate(features, warnings)?;
 
         Ok(Profiles {
             dev: ProfileMaker {
                 default: Profile::default_dev(),
                 toml: profiles.and_then(|p| p.dev.clone()),
-                config: TomlProfile::from_config(config, "dev", warnings)?,
+                config: config_profiles.dev.clone(),
             },
             release: ProfileMaker {
                 default: Profile::default_release(),
                 toml: profiles.and_then(|p| p.release.clone()),
-                config: TomlProfile::from_config(config, "release", warnings)?,
+                config: config_profiles.release.clone(),
             },
             test: ProfileMaker {
                 default: Profile::default_test(),
@@ -136,71 +138,6 @@ impl Profiles {
         self.bench.validate_packages(shell, packages)?;
         self.doc.validate_packages(shell, packages)?;
         Ok(())
-    }
-
-    fn validate_config(config: &Config, warnings: &mut Vec<String>) -> CargoResult<()> {
-        static VALIDATE_ONCE: atomic::AtomicBool = atomic::ATOMIC_BOOL_INIT;
-
-        if VALIDATE_ONCE.swap(true, atomic::Ordering::SeqCst) {
-            return Ok(());
-        }
-
-        // cv: Value<HashMap<String, CV>>
-        if let Some(cv) = config.get_table("profile")? {
-            // Warn if config profiles without CLI option.
-            if !config.cli_unstable().config_profile {
-                warnings.push(format!(
-                    "profile in config `{}` requires `-Z config-profile` command-line option",
-                    cv.definition
-                ));
-                // Ignore the rest.
-                return Ok(());
-            }
-            // Warn about unsupported profile names.
-            for (key, profile_cv) in cv.val.iter() {
-                if key != "dev" && key != "release" {
-                    warnings.push(format!(
-                        "profile `{}` in config `{}` is not supported",
-                        key,
-                        profile_cv.definition_path().display()
-                    ));
-                }
-            }
-            // Warn about incorrect key names.
-            for profile_cv in cv.val.values() {
-                if let ConfigValue::Table(ref profile, _) = *profile_cv {
-                    validate_profile_keys(profile, warnings);
-                    if let Some(&ConfigValue::Table(ref bo_profile, _)) =
-                        profile.get("build-override")
-                    {
-                        validate_profile_keys(bo_profile, warnings);
-                    }
-                    if let Some(&ConfigValue::Table(ref os, _)) = profile.get("overrides") {
-                        for o_profile_cv in os.values() {
-                            if let ConfigValue::Table(ref o_profile, _) = *o_profile_cv {
-                                validate_profile_keys(o_profile, warnings);
-                            }
-                        }
-                    }
-                }
-            }
-        }
-        return Ok(());
-
-        fn validate_profile_keys(
-            profile: &HashMap<String, ConfigValue>,
-            warnings: &mut Vec<String>,
-        ) {
-            for (key, value_cv) in profile.iter() {
-                if !TOML_PROFILE_KEYS.iter().any(|k| k == key) {
-                    warnings.push(format!(
-                        "unused profile key `{}` in config `{}`",
-                        key,
-                        value_cv.definition_path().display()
-                    ));
-                }
-            }
-        }
     }
 }
 
@@ -449,20 +386,6 @@ pub struct Profile {
     pub panic: Option<InternedString>,
 }
 
-const TOML_PROFILE_KEYS: [&str; 11] = [
-    "opt-level",
-    "lto",
-    "codegen-units",
-    "debug",
-    "debug-assertions",
-    "rpath",
-    "panic",
-    "overflow-checks",
-    "incremental",
-    "overrides",
-    "build-override",
-];
-
 impl Default for Profile {
     fn default() -> Profile {
         Profile {
@@ -603,5 +526,28 @@ impl ProfileFor {
             ProfileFor::TestDependency,
         ];
         &ALL
+    }
+}
+
+/// Profiles loaded from .cargo/config files.
+#[derive(Clone, Debug, Deserialize, Default)]
+pub struct ConfigProfiles {
+    dev: Option<TomlProfile>,
+    release: Option<TomlProfile>,
+}
+
+impl ConfigProfiles {
+    pub fn validate(&self, features: &Features, warnings: &mut Vec<String>) -> CargoResult<()> {
+        if let Some(ref profile) = self.dev {
+            profile
+                .validate("dev", features, warnings)
+                .chain_err(|| format_err!("config profile `profile.dev` is not valid"))?;
+        }
+        if let Some(ref profile) = self.release {
+            profile
+                .validate("release", features, warnings)
+                .chain_err(|| format_err!("config profile `profile.release` is not valid"))?;
+        }
+        Ok(())
     }
 }

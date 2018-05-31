@@ -22,6 +22,7 @@ use lazycell::LazyCell;
 use serde::{de, de::IntoDeserializer, Serialize, Serializer};
 use toml;
 
+use core::profiles::ConfigProfiles;
 use core::shell::Verbosity;
 use core::{CliUnstable, Shell, SourceId, Workspace};
 use ops;
@@ -77,6 +78,8 @@ pub struct Config {
     target_dir: Option<Filesystem>,
     /// Environment variables, separated to assist testing.
     env: HashMap<String, String>,
+    /// Profiles loaded from config.
+    profiles: LazyCell<ConfigProfiles>,
 }
 
 impl Config {
@@ -132,6 +135,7 @@ impl Config {
             creation_time: Instant::now(),
             target_dir: None,
             env,
+            profiles: LazyCell::new(),
         }
     }
 
@@ -244,6 +248,25 @@ impl Config {
                 Ok(exe)
             })
             .map(AsRef::as_ref)
+    }
+
+    pub fn profiles(&self) -> CargoResult<&ConfigProfiles> {
+        self.profiles.try_borrow_with(|| {
+            let ocp = self.get::<Option<ConfigProfiles>>("profile")?;
+            if let Some(config_profiles) = ocp {
+                // Warn if config profiles without CLI option.
+                if !self.cli_unstable().config_profile {
+                    self.shell().warn(
+                        "profiles in config files require `-Z config-profile` \
+                         command-line option",
+                    )?;
+                    return Ok(ConfigProfiles::default());
+                }
+                Ok(config_profiles)
+            } else {
+                Ok(ConfigProfiles::default())
+            }
+        })
     }
 
     pub fn values(&self) -> CargoResult<&HashMap<String, ConfigValue>> {
@@ -1380,7 +1403,7 @@ impl ConfigValue {
         }
     }
 
-    pub fn into_toml(self) -> toml::Value {
+    fn into_toml(self) -> toml::Value {
         match self {
             CV::Boolean(s, _) => toml::Value::Boolean(s),
             CV::String(s, _) => toml::Value::String(s),
@@ -1425,6 +1448,7 @@ impl ConfigValue {
                     };
                 }
             }
+            // Allow switching types except for tables or arrays.
             (expected @ &mut CV::List(_, _), found)
             | (expected @ &mut CV::Table(_, _), found)
             | (expected, found @ CV::List(_, _))
