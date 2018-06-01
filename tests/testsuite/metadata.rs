@@ -1027,3 +1027,90 @@ fn package_metadata() {
         ),
     );
 }
+
+#[test]
+fn cargo_metadata_path_to_cargo_toml_project() {
+    let p = project("foo")
+        .file(
+            "Cargo.toml",
+            r#"
+            [workspace]
+            members = ["bar"]
+        "#,
+        )
+        .file("bar/Cargo.toml", &basic_lib_manifest("bar"))
+        .file("bar/src/lib.rs", "")
+        .build();
+
+    assert_that(
+    p.cargo("package")
+        .arg("--manifest-path")
+        .arg(p.root().join("bar/Cargo.toml"))
+        .cwd(p.root().parent().unwrap()),
+        execs().with_status(0)
+        );
+
+    assert_that(
+        p.cargo("metadata")
+            .arg("--manifest-path")
+            .arg(p.root().join("target/package/bar-0.5.0/Cargo.toml")),
+        execs().with_status(0).with_json(
+        r#"
+        {
+            "packages": [
+            {
+                "authors": [
+                    "wycats@example.com"
+                ],
+                "categories": [],
+                "dependencies": [],
+                "description": null,
+                "features": {},
+                "id": "bar 0.5.0 ([..])",
+                "keywords": [],
+                "license": null,
+                "license_file": null,
+                "manifest_path": "[..]Cargo.toml",
+                "metadata": null,
+                "name": "bar",
+                "readme": null,
+                "repository": null,
+                "source": null,
+                "targets": [
+                {
+                    "crate_types": [
+                        "lib"
+                    ],
+                    "kind": [
+                        "lib"
+                    ],
+                    "name": "bar",
+                    "src_path": "[..]src[/]lib.rs"
+                }
+                ],
+                "version": "0.5.0"
+            }
+            ],
+            "resolve": {
+                "nodes": [
+                {
+                    "dependencies": [],
+                    "features": [],
+                    "id": "bar 0.5.0 ([..])"
+                }
+                ],
+                "root": "bar 0.5.0 (path+file:[..])"
+            },
+            "target_directory": "[..]",
+            "version": 1,
+            "workspace_members": [
+                "bar 0.5.0 (path+file:[..])"
+            ],
+            "workspace_root": "[..]"
+        }
+"#
+),
+    );
+}
+
+

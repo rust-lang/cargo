@@ -28,7 +28,7 @@ pub struct Workspace<'cfg> {
     config: &'cfg Config,
 
     // This path is a path to where the current cargo subcommand was invoked
-    // from. That is, this is the `--manifest-path` argument to Cargo, and
+    // from. That is the `--manifest-path` argument to Cargo, and
     // points to the "main crate" that we're going to worry about.
     current_manifest: PathBuf,
 
@@ -363,6 +363,10 @@ impl<'cfg> Workspace<'cfg> {
         }
 
         for path in paths::ancestors(manifest_path).skip(2) {
+            if path.ends_with("target/package") {
+                break;
+            }
+
             let ances_manifest_path = path.join("Cargo.toml");
             debug!("find_root - trying {}", ances_manifest_path.display());
             if ances_manifest_path.exists() {
