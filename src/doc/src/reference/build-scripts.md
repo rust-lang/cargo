@@ -509,15 +509,15 @@ this space.
 
 ### `*-sys` Packages
 
-To alleviate linking to system libraries, Cargo has a *convention* of package
-naming and functionality. Any package named `foo-sys` will provide two major
+To alleviate linking to system libraries, crates.io has a *convention* of package
+naming and functionality. Any package named `foo-sys` should provide two major
 pieces of functionality:
 
-* The library crate will link to the native library `libfoo`. This will often
+* The library crate should link to the native library `libfoo`. This will often
   probe the current system for `libfoo` before resorting to building from
   source.
-* The library crate will provide **declarations** for functions in `libfoo`,
-  but it does **not** provide bindings or higher-level abstractions.
+* The library crate should provide **declarations** for functions in `libfoo`,
+  but **not** bindings or higher-level abstractions.
 
 The set of `*-sys` packages provides a common set of dependencies for linking
 to native libraries. There are a number of benefits earned from having this
