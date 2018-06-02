@@ -309,6 +309,7 @@ pub struct CliUnstable {
     pub minimal_versions: bool,
     pub package_features: bool,
     pub advanced_env: bool,
+    pub config_profile: bool,
 }
 
 impl CliUnstable {
@@ -344,6 +345,7 @@ impl CliUnstable {
             "minimal-versions" => self.minimal_versions = true,
             "package-features" => self.package_features = true,
             "advanced-env" => self.advanced_env = true,
+            "config-profile" => self.config_profile = true,
             _ => bail!("unknown `-Z` flag specified: {}", k),
         }
 
