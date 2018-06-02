@@ -229,6 +229,26 @@ opt-level = 3
 Overrides can only be specified for dev and release profiles.
 
 
+### Config Profiles
+* Tracking Issue: [rust-lang/rust#48683](https://github.com/rust-lang/rust/issues/48683)
+* RFC: [#2282](https://github.com/rust-lang/rfcs/blob/master/text/2282-profile-dependencies.md)
+
+Profiles can be specified in `.cargo/config` files.  The `-Z config-profile`
+command-line flag is required to use this feature.  The format is the same as
+in a `Cargo.toml` manifest.  If found in multiple config files, settings will
+be merged using the regular [config hierarchy](reference/config.html#hierarchical-structure).
+Config settings take precedence over manifest settings.
+
+```toml
+[profile.dev]
+opt-level = 3
+```
+
+```
+cargo +nightly build -Z config-profile
+```
+
+
 ### Namespaced features
 * Original issue: [#1286](https://github.com/rust-lang/cargo/issues/1286)
 
