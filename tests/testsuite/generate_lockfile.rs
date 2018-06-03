@@ -2,7 +2,7 @@ use std::fs::{self, File};
 use std::io::prelude::*;
 
 use cargotest::support::registry::Package;
-use cargotest::support::{execs, project, ProjectBuilder, paths};
+use cargotest::support::{execs, paths, project, ProjectBuilder};
 use cargotest::ChannelChanger;
 use hamcrest::{assert_that, existing_file, is_not};
 
@@ -304,5 +304,11 @@ fn duplicate_entries_in_lockfile() {
         .build();
 
     // should fail due to a duplicate package `common` in the lockfile
-    assert_that(b.cargo("build"), execs().with_status(101));
+    assert_that(
+        b.cargo("build"),
+        execs().with_status(101).with_stderr_contains(
+            "[..]dependencies contain duplicate package(s) in the \
+             same namespace from the same source: common",
+        ),
+    );
 }
