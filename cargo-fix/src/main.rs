@@ -50,6 +50,7 @@ fn main() {
     let _ = stream.reset();
     let _ = stream.set_color(ColorSpec::new().set_bold(true));
     writeln!(stream, ": {}", err).unwrap();
+    let _ = stream.reset();
 
     for cause in err.causes().skip(1) {
         eprintln!("\tcaused by: {}", cause);
