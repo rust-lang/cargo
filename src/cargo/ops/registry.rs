@@ -43,12 +43,6 @@ pub struct PublishOpts<'cfg> {
 pub fn publish(ws: &Workspace, opts: &PublishOpts) -> CargoResult<()> {
     let pkg = ws.current()?;
 
-    // Allow publishing if a registry has been provided, or if there are no nightly
-    // features enabled.
-    if opts.registry.is_none() && !pkg.manifest().features().activated().is_empty() {
-        bail!("cannot publish crates which activate nightly-only cargo features to crates.io")
-    }
-
     if let Some(ref allowed_registries) = *pkg.publish() {
         if !match opts.registry {
             Some(ref registry) => allowed_registries.contains(registry),
