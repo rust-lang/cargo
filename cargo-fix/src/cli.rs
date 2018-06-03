@@ -133,7 +133,7 @@ fn check_version_control(matches: &::clap::ArgMatches) -> Result<(), Error> {
             stream.set_color(ColorSpec::new().set_bold(true))?;
             writeln!(stream, "Could not detect a version control system")?;
             stream.reset()?;
-            writeln!(stream, "You should consider using a VCS so you can easily see and revert rustfix' changes.")?;
+            writeln!(stream, "You should consider using a VCS so you can easily see and revert rustfix's changes.")?;
 
             if !matches.is_present("allow-no-vcs") {
                 bail!("No VCS found, aborting. Overwrite this behavior with `--allow-no-vcs`.");
@@ -146,7 +146,7 @@ fn check_version_control(matches: &::clap::ArgMatches) -> Result<(), Error> {
             stream.set_color(ColorSpec::new().set_bold(true))?;
             writeln!(stream, "Working directory dirty")?;
             stream.reset()?;
-            writeln!(stream, "Make sure your working directory is clean so you can easily revert rustfix' changes.")?;
+            writeln!(stream, "Make sure your working directory is clean so you can easily revert rustfix's changes.")?;
 
             stream.write_all(&output)?;
 
