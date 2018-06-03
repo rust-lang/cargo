@@ -2,6 +2,7 @@ use command_prelude::*;
 
 pub fn builtin() -> Vec<App> {
     vec![
+        add::cli(),
         bench::cli(),
         build::cli(),
         check::cli(),
@@ -37,6 +38,7 @@ pub fn builtin() -> Vec<App> {
 
 pub fn builtin_exec(cmd: &str) -> Option<fn(&mut Config, &ArgMatches) -> CliResult> {
     let f = match cmd {
+        "add" => add::exec,
         "bench" => bench::exec,
         "build" => build::exec,
         "check" => check::exec,
@@ -72,6 +74,7 @@ pub fn builtin_exec(cmd: &str) -> Option<fn(&mut Config, &ArgMatches) -> CliResu
     Some(f)
 }
 
+pub mod add;
 pub mod bench;
 pub mod build;
 pub mod check;
