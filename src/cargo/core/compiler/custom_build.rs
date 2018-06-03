@@ -365,6 +365,22 @@ fn build_work<'a, 'cfg>(cx: &mut Context<'a, 'cfg>, unit: &Unit<'a>) -> CargoRes
                 BuildOutput::parse_file(&output_file, &pkg_name, &prev_root_output, &root_output)?
             }
         };
+
+        if json_messages {
+            let library_paths = output
+                .library_paths
+                .iter()
+                .map(|l| l.display().to_string())
+                .collect::<Vec<_>>();
+            machine_message::emit(&machine_message::BuildScript {
+                package_id: &id,
+                linked_libs: &output.library_links,
+                linked_paths: &library_paths,
+                cfgs: &output.cfgs,
+                env: &output.env,
+            });
+        }
+
         build_state.insert(id, kind, output);
         Ok(())
     });
