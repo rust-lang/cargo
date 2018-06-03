@@ -65,7 +65,7 @@ use self::context::{Activations, Context};
 use self::types::{ActivateError, ActivateResult, Candidate, ConflictReason, DepsFrame, GraphNode};
 use self::types::{RcVecIter, RegistryQueryer};
 
-pub use self::encode::{EncodableDependency, EncodablePackageId, EncodableResolve, encodable_package_id};
+pub use self::encode::{EncodableDependency, EncodablePackageId, EncodableResolve};
 pub use self::encode::{Metadata, WorkspaceResolve};
 pub use self::resolve::{Deps, DepsNotReplaced, Resolve};
 pub use self::types::Method;
@@ -140,6 +140,7 @@ pub fn resolve(
     );
 
     check_cycles(&resolve, &cx.activations)?;
+    check_duplicate_pkgs(&resolve)?;
     trace!("resolved: {:?}", resolve);
 
     // If we have a shell, emit warnings about required deps used as feature.
@@ -1096,5 +1097,30 @@ fn check_cycles(resolve: &Resolve, activations: &Activations) -> CargoResult<()>
         // Ok, we're done, no longer visiting our node any more
         visited.remove(id);
         Ok(())
+    }
+}
+
+fn get_duplicate_pkgs(resolve: &Resolve) -> Vec<&'static str> {
+    let mut unique_pkg_ids = HashSet::new();
+    let mut result = HashSet::new();
+    for pkg_id in resolve.iter() {
+        let mut encodable_pkd_id = encode::encodable_package_id(pkg_id);
+        if !unique_pkg_ids.insert(encodable_pkd_id) {
+            result.insert(pkg_id.name().as_str());
+        }
+    }
+    result.into_iter().collect()
+}
+
+fn check_duplicate_pkgs(resolve: &Resolve) -> CargoResult<()> {
+    let names = get_duplicate_pkgs(resolve);
+    if names.is_empty() {
+        Ok(())
+    } else {
+        bail!(
+            "dependencies contain duplicate package(s) in the \
+             same namespace from the same source: {}",
+            names.join(", ")
+        )
     }
 }

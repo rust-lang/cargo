@@ -1,13 +1,12 @@
-use std::collections::HashSet;
 use std::io::prelude::*;
 
 use toml;
 
-use core::resolver::WorkspaceResolve;
 use core::{resolver, Resolve, Workspace};
-use util::errors::{CargoResult, CargoResultExt, Internal};
-use util::toml as cargo_toml;
+use core::resolver::WorkspaceResolve;
 use util::Filesystem;
+use util::errors::{CargoResult, CargoResultExt};
+use util::toml as cargo_toml;
 
 pub fn load_pkg_lockfile(ws: &Workspace) -> CargoResult<Option<Resolve>> {
     if !ws.root().join("Cargo.lock").exists() {
@@ -26,32 +25,9 @@ pub fn load_pkg_lockfile(ws: &Workspace) -> CargoResult<Option<Resolve>> {
             let resolve: toml::Value = cargo_toml::parse(&s, f.path(), ws.config())?;
             let v: resolver::EncodableResolve = resolve.try_into()?;
             Ok(Some(v.into_resolve(ws)?))
-        })().chain_err(|| format!("failed to parse lock file at: {}", f.path().display()))?;
+        })()
+            .chain_err(|| format!("failed to parse lock file at: {}", f.path().display()))?;
     Ok(resolve)
-}
-
-fn duplicate_pkgs(resolve: &Resolve) -> Vec<&'static str> {
-    let mut unique_names = HashSet::new();
-    let mut result = HashSet::new();
-    for pkg_id in resolve.iter() {
-        let mut encodable_pkd_id = resolver::encodable_package_id(pkg_id);
-        if !unique_names.insert(encodable_pkd_id) {
-            result.insert(pkg_id.name().as_str());
-        }
-    }
-    result.into_iter().collect()
-}
-
-fn check_duplicate_pkgs(resolve: &Resolve) -> Result<(), Internal> {
-    let names = duplicate_pkgs(resolve);
-    if names.is_empty() {
-        Ok(())
-    } else {
-        Err(Internal::new(format_err!(
-            "dependencies contain duplicate package(s): {}",
-            names.join(", ")
-        )))
-    }
 }
 
 pub fn write_pkg_lockfile(ws: &Workspace, resolve: &Resolve) -> CargoResult<()> {
@@ -63,8 +39,6 @@ pub fn write_pkg_lockfile(ws: &Workspace, resolve: &Resolve) -> CargoResult<()> 
         f.read_to_string(&mut s)?;
         Ok(s)
     });
-
-    check_duplicate_pkgs(resolve).chain_err(|| format!("failed to generate lock file"))?;
 
     let toml = toml::Value::try_from(WorkspaceResolve { ws, resolve }).unwrap();
 
