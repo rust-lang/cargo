@@ -307,8 +307,9 @@ fn duplicate_entries_in_lockfile() {
     assert_that(
         b.cargo("build"),
         execs().with_status(101).with_stderr_contains(
-            "[..]dependencies contain duplicate package(s) in the \
-             same namespace from the same source: common",
+            "[..]package collision in the lockfile: packages common [..] and \
+             common [..] are different, but only one can be written to \
+             lockfile unambigiously",
         ),
     );
 }
