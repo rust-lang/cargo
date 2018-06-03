@@ -414,7 +414,7 @@ fn encodable_resolve_node(id: &PackageId, resolve: &Resolve) -> EncodableDepende
     }
 }
 
-fn encodable_package_id(id: &PackageId) -> EncodablePackageId {
+pub fn encodable_package_id(id: &PackageId) -> EncodablePackageId {
     EncodablePackageId {
         name: id.name().to_string(),
         version: id.version().to_string(),
