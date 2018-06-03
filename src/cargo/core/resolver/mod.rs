@@ -140,7 +140,7 @@ pub fn resolve(
     );
 
     check_cycles(&resolve, &cx.activations)?;
-    check_duplicate_pkgs(&resolve)?;
+    check_duplicate_pkgs_in_lockfile(&resolve)?;
     trace!("resolved: {:?}", resolve);
 
     // If we have a shell, emit warnings about required deps used as feature.
@@ -1100,27 +1100,23 @@ fn check_cycles(resolve: &Resolve, activations: &Activations) -> CargoResult<()>
     }
 }
 
-fn get_duplicate_pkgs(resolve: &Resolve) -> Vec<&'static str> {
-    let mut unique_pkg_ids = HashSet::new();
-    let mut result = HashSet::new();
+/// Checks that packages are unique when written to lockfile.
+///
+/// When writing package id's to lockfile, we apply lossy encoding. In
+/// particular, we don't store paths of path dependencies. That means that
+/// *different* packages may collide in the lockfile, hence this check.
+fn check_duplicate_pkgs_in_lockfile(resolve: &Resolve) -> CargoResult<()> {
+    let mut unique_pkg_ids = HashMap::new();
     for pkg_id in resolve.iter() {
-        let mut encodable_pkd_id = encode::encodable_package_id(pkg_id);
-        if !unique_pkg_ids.insert(encodable_pkd_id) {
-            result.insert(pkg_id.name().as_str());
+        let encodable_pkd_id = encode::encodable_package_id(pkg_id);
+        if let Some(prev_pkg_id) = unique_pkg_ids.insert(encodable_pkd_id, pkg_id) {
+            bail!(
+                "package collision in the lockfile: packages {} and {} are different, \
+                 but only one can be written to lockfile unambigiously",
+                prev_pkg_id,
+                pkg_id
+            )
         }
     }
-    result.into_iter().collect()
-}
-
-fn check_duplicate_pkgs(resolve: &Resolve) -> CargoResult<()> {
-    let names = get_duplicate_pkgs(resolve);
-    if names.is_empty() {
-        Ok(())
-    } else {
-        bail!(
-            "dependencies contain duplicate package(s) in the \
-             same namespace from the same source: {}",
-            names.join(", ")
-        )
-    }
+    Ok(())
 }
