@@ -46,8 +46,6 @@ pub struct Config {
     home_path: Filesystem,
     /// Information about how to write messages to the shell
     shell: RefCell<Shell>,
-    /// Information on how to invoke the compiler (rustc)
-    rustc: LazyCell<Rustc>,
     /// A collection of configuration options
     values: LazyCell<HashMap<String, ConfigValue>>,
     /// The current working directory of cargo
@@ -113,7 +111,6 @@ impl Config {
         Config {
             home_path: Filesystem::new(homedir),
             shell: RefCell::new(shell),
-            rustc: LazyCell::new(),
             cwd,
             values: LazyCell::new(),
             cargo_exe: LazyCell::new(),
