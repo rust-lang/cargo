@@ -105,6 +105,22 @@ pub fn prepare<'a, 'cfg>(
     }
 }
 
+fn emit_build_output(output: &BuildOutput, id: &PackageId) {
+    let library_paths = output
+        .library_paths
+        .iter()
+        .map(|l| l.display().to_string())
+        .collect::<Vec<_>>();
+
+    machine_message::emit(&machine_message::BuildScript {
+        package_id: id,
+        linked_libs: &output.library_links,
+        linked_paths: &library_paths,
+        cfgs: &output.cfgs,
+        env: &output.env,
+    });
+}
+
 fn build_work<'a, 'cfg>(cx: &mut Context<'a, 'cfg>, unit: &Unit<'a>) -> CargoResult<(Work, Work)> {
     assert!(unit.mode.is_run_custom_build());
     let bcx = &cx.bcx;
@@ -336,18 +352,7 @@ fn build_work<'a, 'cfg>(cx: &mut Context<'a, 'cfg>, unit: &Unit<'a>) -> CargoRes
                 BuildOutput::parse(&output.stdout, &pkg_name, &root_output, &root_output)?;
 
             if json_messages {
-                let library_paths = parsed_output
-                    .library_paths
-                    .iter()
-                    .map(|l| l.display().to_string())
-                    .collect::<Vec<_>>();
-                machine_message::emit(&machine_message::BuildScript {
-                    package_id: &id,
-                    linked_libs: &parsed_output.library_links,
-                    linked_paths: &library_paths,
-                    cfgs: &parsed_output.cfgs,
-                    env: &parsed_output.env,
-                });
+                emit_build_output(&parsed_output, &id);
             }
             build_state.insert(id, kind, parsed_output);
         }
@@ -365,6 +370,11 @@ fn build_work<'a, 'cfg>(cx: &mut Context<'a, 'cfg>, unit: &Unit<'a>) -> CargoRes
                 BuildOutput::parse_file(&output_file, &pkg_name, &prev_root_output, &root_output)?
             }
         };
+
+        if json_messages {
+            emit_build_output(&output, &id);
+        }
+
         build_state.insert(id, kind, output);
         Ok(())
     });
