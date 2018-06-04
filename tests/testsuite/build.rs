@@ -3981,6 +3981,7 @@ fn compiler_json_error_format() {
             path = "bar"
         "#,
         )
+        .file("build.rs", "fn main() { println!(\"cargo:rustc-cfg=xyz\") }")
         .file("src/main.rs", "fn main() { let unused = 92; }")
         .file(
             "bar/Cargo.toml",
@@ -4036,6 +4037,36 @@ fn compiler_json_error_format() {
     }
 
     {
+        "reason":"compiler-artifact",
+        "package_id":"foo 0.5.0 ([..])",
+        "target":{
+            "kind":["custom-build"],
+            "crate_types":["bin"],
+            "name":"build-script-build",
+            "src_path":"[..]build.rs"
+        },
+        "profile": {
+            "debug_assertions": true,
+            "debuginfo": 2,
+            "opt_level": "0",
+            "overflow_checks": true,
+            "test": false
+        },
+        "features": [],
+        "filenames": "{...}",
+        "fresh": false
+    }
+
+    {
+        "reason":"build-script-executed",
+        "package_id":"foo 0.5.0 ([..])",
+        "linked_libs":[],
+        "linked_paths":[],
+        "env":[],
+        "cfgs":["xyz"]
+    }
+
+    {
         "reason":"compiler-message",
         "package_id":"foo 0.5.0 ([..])",
         "target":{
@@ -4082,6 +4113,27 @@ fn compiler_json_error_format() {
             r#"
     {
         "reason":"compiler-artifact",
+        "package_id":"foo 0.5.0 ([..])",
+        "target":{
+            "kind":["custom-build"],
+            "crate_types":["bin"],
+            "name":"build-script-build",
+            "src_path":"[..]build.rs"
+        },
+        "profile": {
+            "debug_assertions": true,
+            "debuginfo": 2,
+            "opt_level": "0",
+            "overflow_checks": true,
+            "test": false
+        },
+        "features": [],
+        "filenames": "{...}",
+        "fresh": true
+    }
+
+    {
+        "reason":"compiler-artifact",
         "profile": {
             "debug_assertions": true,
             "debuginfo": 2,
@@ -4099,6 +4151,15 @@ fn compiler_json_error_format() {
         },
         "filenames":["[..].rlib"],
         "fresh": true
+    }
+
+    {
+        "reason":"build-script-executed",
+        "package_id":"foo 0.5.0 ([..])",
+        "linked_libs":[],
+        "linked_paths":[],
+        "env":[],
+        "cfgs":["xyz"]
     }
 
     {
