@@ -3976,7 +3976,6 @@ fn compiler_json_error_format() {
             name = "foo"
             version = "0.5.0"
             authors = ["wycats@example.com"]
-            build = "build.rs"
 
             [dependencies.bar]
             path = "bar"
