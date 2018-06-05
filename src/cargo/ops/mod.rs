@@ -1,3 +1,4 @@
+pub use self::cargo_add::{add};
 pub use self::cargo_clean::{clean, CleanOptions};
 pub use self::cargo_compile::{compile, compile_with_exec, compile_ws, CompileOptions};
 pub use self::cargo_compile::{CompileFilter, FilterRule, Packages};
@@ -23,6 +24,7 @@ pub use self::resolve::{add_overrides, get_resolved_packages, resolve_with_previ
 pub use self::cargo_output_metadata::{output_metadata, ExportInfo, OutputMetadataOptions};
 pub use self::fix::{fix, FixOptions, fix_maybe_exec_rustc};
 
+mod cargo_add;
 mod cargo_clean;
 mod cargo_compile;
 mod cargo_doc;
