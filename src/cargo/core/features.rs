@@ -354,12 +354,18 @@ impl CliUnstable {
 }
 
 fn channel() -> String {
-    env::var("__CARGO_TEST_CHANNEL_OVERRIDE_DO_NOT_USE_THIS").unwrap_or_else(|_| {
-        ::version()
-            .cfg_info
-            .map(|c| c.release_channel)
-            .unwrap_or_else(|| String::from("dev"))
-    })
+    if let Ok(staging) = env::var("RUSTC_BOOTSTRAP") {
+        if staging == "1" {
+            return "dev".to_string();
+        }
+    }
+    if let Ok(override_channel) = env::var("__CARGO_TEST_CHANNEL_OVERRIDE_DO_NOT_USE_THIS") {
+        return override_channel;
+    }
+    ::version()
+        .cfg_info
+        .map(|c| c.release_channel)
+        .unwrap_or_else(|| String::from("dev"))
 }
 
 fn nightly_features_allowed() -> bool {
