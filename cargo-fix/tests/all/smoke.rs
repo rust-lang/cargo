@@ -105,9 +105,7 @@ fn preserve_line_endings() {
         )
         .build();
 
-    p.expect_cmd("cargo-fix fix")
-        .fix_everything()
-        .run();
+    p.expect_cmd("cargo-fix fix").fix_everything().run();
     assert!(p.read("src/lib.rs").contains("\r\n"));
 }
 
@@ -123,9 +121,7 @@ fn fix_deny_warnings() {
         )
         .build();
 
-    p.expect_cmd("cargo-fix fix")
-        .fix_everything()
-        .run();
+    p.expect_cmd("cargo-fix fix").fix_everything().run();
 }
 
 #[test]
@@ -146,9 +142,7 @@ fn fix_deny_warnings_but_not_others() {
         )
         .build();
 
-    p.expect_cmd("cargo-fix fix")
-        .fix_everything()
-        .run();
+    p.expect_cmd("cargo-fix fix").fix_everything().run();
     assert!(!p.read("src/lib.rs").contains("let mut x = 3;"));
     assert!(p.read("src/lib.rs").contains("fn bar() {}"));
 }

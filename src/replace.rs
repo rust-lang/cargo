@@ -14,7 +14,7 @@ enum State {
 
 impl State {
     fn is_inserted(&self) -> bool {
-        if let &State::Inserted(..) = self {
+        if let State::Inserted(..) = *self {
             true
         } else {
             false
@@ -26,7 +26,7 @@ impl State {
 struct Span {
     /// Start of this span in parent data
     start: usize,
-    /// up to end inculding
+    /// up to end including
     end: usize,
     data: State,
 }
