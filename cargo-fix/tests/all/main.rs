@@ -356,6 +356,7 @@ mod broken_build;
 mod broken_lints;
 mod dependencies;
 mod edition_upgrade;
+mod rust_flags;
 mod smoke;
 mod subtargets;
 mod vcs;

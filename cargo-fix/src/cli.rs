@@ -104,7 +104,7 @@ pub fn run() -> Result<(), Error> {
     if let Some("2018") = matches.value_of("edition") {
         info!("edition upgrade!");
         let mut rustc_flags = env::var_os("RUSTFLAGS").unwrap_or_else(|| "".into());
-        rustc_flags.push("-W rust-2018-compatibility");
+        rustc_flags.push(" -W rust-2018-compatibility");
         cmd.env("RUSTFLAGS", &rustc_flags);
     }
 
