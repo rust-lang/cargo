@@ -1,5 +1,5 @@
 use cargotest::ChannelChanger;
-use cargotest::support::{execs, project};
+use cargotest::support::{execs, project, publish};
 use hamcrest::assert_that;
 
 #[test]
@@ -303,7 +303,9 @@ fn z_flags_rejected() {
 }
 
 #[test]
-fn publish_rejected() {
+fn publish_allowed() {
+    publish::setup();
+
     let p = project("foo")
         .file(
             "Cargo.toml",
@@ -319,9 +321,10 @@ fn publish_rejected() {
         .file("src/lib.rs", "")
         .build();
     assert_that(
-        p.cargo("publish").masquerade_as_nightly_cargo(),
-        execs().with_status(101).with_stderr(
-            "error: cannot publish crates which activate nightly-only cargo features to crates.io",
-        ),
+        p.cargo("publish")
+            .arg("--index")
+            .arg(publish::registry().to_string())
+            .masquerade_as_nightly_cargo(),
+        execs().with_status(0),
     );
 }
