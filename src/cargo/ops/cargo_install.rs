@@ -480,9 +480,16 @@ where
                 None => None,
             };
             let vers = vers.as_ref().map(|s| &**s);
+            let vers_spec = if vers.is_none() && source.source_id().is_registry() {
+                // Avoid pre-release versions from crate.io
+                // unless explicitly asked for
+                Some("*")
+            } else {
+                vers
+            };
             let dep = Dependency::parse_no_deprecated(
                 name,
-                Some(vers.unwrap_or("*")),
+                vers_spec,
                 source.source_id(),
             )?;
             let deps = source.query_vec(&dep)?;

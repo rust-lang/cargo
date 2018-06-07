@@ -139,6 +139,31 @@ warning: be sure to add `[..]` to your PATH to be able to run the installed bina
 }
 
 #[test]
+fn installs_beta_version_by_explicit_name_from_git() {
+    let p = git::repo(&paths::root().join("foo"))
+        .file(
+            "Cargo.toml",
+            r#"
+            [package]
+            name = "foo"
+            version = "0.3.0-beta.1"
+            authors = []
+        "#,
+        )
+        .file("src/main.rs", "fn main() {}")
+        .build();
+
+    assert_that(
+        cargo_process("install")
+            .arg("--git")
+            .arg(p.url().to_string())
+            .arg("foo"),
+        execs().with_status(0),
+    );
+    assert_that(cargo_home(), has_installed_exe("foo"));
+}
+
+#[test]
 fn missing() {
     pkg("foo", "0.0.1");
     assert_that(
