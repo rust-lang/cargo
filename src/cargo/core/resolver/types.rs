@@ -279,7 +279,7 @@ pub enum ConflictReason {
     /// The `links` key is being violated. For example one crate in the
     /// dependency graph has `links = "foo"` but this crate also had that, and
     /// we're only allowed one per dependency graph.
-    Links(String),
+    Links(InternedString),
 
     /// A dependency listed features that weren't actually available on the
     /// candidate. For example we tried to activate feature `foo` but the
