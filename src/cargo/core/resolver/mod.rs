@@ -295,7 +295,7 @@ fn activate_deps_loop(
         loop {
             let next = remaining_candidates.next(&mut conflicting_activations, &cx, &dep);
 
-            let (candidate, has_another) = next.or_else(|_| {
+            let (candidate, has_another) = next.ok_or(()).or_else(|_| {
                 // If we get here then our `remaining_candidates` was just
                 // exhausted, so `dep` failed to activate.
                 //
@@ -723,7 +723,7 @@ impl RemainingCandidates {
         conflicting_prev_active: &mut HashMap<PackageId, ConflictReason>,
         cx: &Context,
         dep: &Dependency,
-    ) -> Result<(Candidate, bool), ()> {
+    ) -> Option<(Candidate, bool)> {
         let prev_active = cx.prev_active(dep);
 
         for (_, b) in self.remaining.by_ref() {
@@ -768,7 +768,7 @@ impl RemainingCandidates {
             // get returned later, and if we replaced something then that was
             // actually the candidate to try first so we return that.
             if let Some(r) = mem::replace(&mut self.has_another, Some(b)) {
-                return Ok((r, true));
+                return Some((r, true));
             }
         }
 
@@ -778,7 +778,6 @@ impl RemainingCandidates {
         self.has_another
             .take()
             .map(|r| (r, false))
-            .ok_or_else(|| ())
     }
 }
 
@@ -822,8 +821,8 @@ fn find_candidate(
             .remaining_candidates
             .next(&mut frame.conflicting_activations, &frame.context_backup, &frame.dep);
         let (candidate, has_another) = match next {
-            Ok(pair) => pair,
-            Err(_) => continue,
+            Some(pair) => pair,
+            None => continue,
         };
         // When we're calling this method we know that `parent` failed to
         // activate. That means that some dependency failed to get resolved for
