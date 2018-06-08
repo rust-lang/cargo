@@ -14,6 +14,7 @@ use core::{PackageId, Target};
 use handle_error;
 use util::{internal, profile, CargoResult, CargoResultExt, ProcessBuilder};
 use util::{Config, DependencyQueue, Dirty, Fresh, Freshness};
+use util::Progress;
 
 use super::job::Job;
 use super::{BuildContext, BuildPlan, CompileMode, Context, Kind, Unit};
@@ -28,7 +29,7 @@ pub struct JobQueue<'a> {
     queue: DependencyQueue<Key<'a>, Vec<(Job, Freshness)>>,
     tx: Sender<Message<'a>>,
     rx: Receiver<Message<'a>>,
-    active: usize,
+    active: HashSet<Key<'a>>,
     pending: HashMap<Key<'a>, PendingBuild>,
     compiled: HashSet<&'a PackageId>,
     documented: HashSet<&'a PackageId>,
@@ -98,7 +99,7 @@ impl<'a> JobQueue<'a> {
             queue: DependencyQueue::new(),
             tx,
             rx,
-            active: 0,
+            active: HashSet::new(),
             pending: HashMap::new(),
             compiled: HashSet::new(),
             documented: HashSet::new(),
@@ -180,6 +181,8 @@ impl<'a> JobQueue<'a> {
         // successful and otherwise wait for pending work to finish if it failed
         // and then immediately return.
         let mut error = None;
+        let mut progress = Progress::new("Building", cx.bcx.config);
+        let queue_len = self.queue.len();
         loop {
             // Dequeue as much work as we can, learning about everything
             // possible that can run. Note that this is also the point where we
@@ -196,7 +199,7 @@ impl<'a> JobQueue<'a> {
                 );
                 for (job, f) in jobs {
                     queue.push((key, job, f.combine(fresh)));
-                    if self.active + queue.len() > 0 {
+                    if !self.active.is_empty() || !queue.is_empty() {
                         jobserver_helper.request_token();
                     }
                 }
@@ -205,14 +208,14 @@ impl<'a> JobQueue<'a> {
             // Now that we've learned of all possible work that we can execute
             // try to spawn it so long as we've got a jobserver token which says
             // we're able to perform some parallel work.
-            while error.is_none() && self.active < tokens.len() + 1 && !queue.is_empty() {
+            while error.is_none() && self.active.len() < tokens.len() + 1 && !queue.is_empty() {
                 let (key, job, fresh) = queue.remove(0);
                 self.run(key, fresh, job, cx.bcx.config, scope, build_plan)?;
             }
 
             // If after all that we're not actually running anything then we're
             // done!
-            if self.active == 0 {
+            if self.active.is_empty() {
                 break;
             }
 
@@ -221,9 +224,19 @@ impl<'a> JobQueue<'a> {
             // jobserver interface is architected we may acquire a token that we
             // don't actually use, and if this happens just relinquish it back
             // to the jobserver itself.
-            tokens.truncate(self.active - 1);
+            tokens.truncate(self.active.len() - 1);
 
-            match self.rx.recv().unwrap() {
+            let count = queue_len - self.queue.len();
+            let mut active_names = self.active.iter().map(|key| match key.mode {
+                CompileMode::Doc { .. } => format!("{}(doc)", key.pkg.name()),
+                _ => key.pkg.name().to_string(),
+            }).collect::<Vec<_>>();
+            active_names.sort_unstable();
+            drop(progress.tick_now(count, queue_len, format!(": {}", active_names.join(", "))));
+            let event = self.rx.recv().unwrap();
+            progress.clear();
+
+            match event {
                 Message::Run(cmd) => {
                     cx.bcx
                         .config
@@ -245,8 +258,9 @@ impl<'a> JobQueue<'a> {
                 }
                 Message::Finish(key, result) => {
                     info!("end: {:?}", key);
-                    self.active -= 1;
-                    if self.active > 0 {
+
+                    self.active.remove(&key);
+                    if !self.active.is_empty() {
                         assert!(!tokens.is_empty());
                         drop(tokens.pop());
                     }
@@ -256,7 +270,7 @@ impl<'a> JobQueue<'a> {
                             let msg = "The following warnings were emitted during compilation:";
                             self.emit_warnings(Some(msg), &key, cx)?;
 
-                            if self.active > 0 {
+                            if !self.active.is_empty() {
                                 error = Some(format_err!("build failed"));
                                 handle_error(e, &mut *cx.bcx.config.shell());
                                 cx.bcx.config.shell().warn(
@@ -274,6 +288,7 @@ impl<'a> JobQueue<'a> {
                 }
             }
         }
+        drop(progress);
 
         let build_type = if self.is_release { "release" } else { "dev" };
         // NOTE: This may be a bit inaccurate, since this may not display the
@@ -334,7 +349,7 @@ impl<'a> JobQueue<'a> {
     ) -> CargoResult<()> {
         info!("start: {:?}", key);
 
-        self.active += 1;
+        self.active.insert(key);
         *self.counts.get_mut(key.pkg).unwrap() -= 1;
 
         let my_tx = self.tx.clone();

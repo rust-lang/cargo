@@ -1,6 +1,5 @@
 use std::cmp;
 use std::env;
-use std::iter;
 use std::time::{Duration, Instant};
 
 use core::shell::Verbosity;
@@ -12,6 +11,7 @@ pub struct Progress<'cfg> {
 
 struct State<'cfg> {
     config: &'cfg Config,
+    max_width: usize,
     width: usize,
     first: bool,
     last_update: Instant,
@@ -33,6 +33,7 @@ impl<'cfg> Progress<'cfg> {
         Progress {
             state: cfg.shell().err_width().map(|n| State {
                 config: cfg,
+                max_width: n,
                 width: cmp::min(n, 80),
                 first: true,
                 last_update: Instant::now(),
@@ -44,14 +45,27 @@ impl<'cfg> Progress<'cfg> {
 
     pub fn tick(&mut self, cur: usize, max: usize) -> CargoResult<()> {
         match self.state {
-            Some(ref mut s) => s.tick(cur, max),
+            Some(ref mut s) => s.tick(cur, max, String::new(), true),
+            None => Ok(()),
+        }
+    }
+
+    pub fn clear(&mut self) {
+        if let Some(ref mut s) = self.state {
+            clear(s.max_width, s.config);
+        }
+    }
+
+    pub fn tick_now(&mut self, cur: usize, max: usize, msg: String) -> CargoResult<()> {
+        match self.state {
+            Some(ref mut s) => s.tick(cur, max, msg, false),
             None => Ok(()),
         }
     }
 }
 
 impl<'cfg> State<'cfg> {
-    fn tick(&mut self, cur: usize, max: usize) -> CargoResult<()> {
+    fn tick(&mut self, cur: usize, max: usize, msg: String, throttle: bool) -> CargoResult<()> {
         if self.done {
             return Ok(());
         }
@@ -68,19 +82,21 @@ impl<'cfg> State<'cfg> {
         // 2. If we've drawn something, then we rate limit ourselves to only
         //    draw to the console every so often. Currently there's a 100ms
         //    delay between updates.
-        if self.first {
-            let delay = Duration::from_millis(500);
-            if self.last_update.elapsed() < delay {
-                return Ok(());
+        if throttle {
+            if self.first {
+                let delay = Duration::from_millis(500);
+                if self.last_update.elapsed() < delay {
+                    return Ok(());
+                }
+                self.first = false;
+            } else {
+                let interval = Duration::from_millis(100);
+                if self.last_update.elapsed() < interval {
+                    return Ok(());
+                }
             }
-            self.first = false;
-        } else {
-            let interval = Duration::from_millis(100);
-            if self.last_update.elapsed() < interval {
-                return Ok(());
-            }
+            self.last_update = Instant::now();
         }
-        self.last_update = Instant::now();
 
         // Render the percentage at the far right and then figure how long the
         // progress bar is
@@ -116,6 +132,14 @@ impl<'cfg> State<'cfg> {
         string.push_str("]");
         string.push_str(&stats);
 
+        let avail_msg_len = self.max_width - self.width;
+        if avail_msg_len >= msg.len() + 3 {
+            string.push_str(&msg);
+        } else if avail_msg_len >= 4 {
+            string.push_str(&msg[..(avail_msg_len - 3)]);
+            string.push_str("...");
+        }
+
         // Write out a pretty header, then the progress bar itself, and then
         // return back to the beginning of the line for the next print.
         self.config.shell().status_header(&self.name)?;
@@ -125,12 +149,12 @@ impl<'cfg> State<'cfg> {
 }
 
 fn clear(width: usize, config: &Config) {
-    let blank = iter::repeat(" ").take(width).collect::<String>();
+    let blank = " ".repeat(width);
     drop(write!(config.shell().err(), "{}\r", blank));
 }
 
 impl<'cfg> Drop for State<'cfg> {
     fn drop(&mut self) {
-        clear(self.width, self.config);
+        clear(self.max_width, self.config);
     }
 }
