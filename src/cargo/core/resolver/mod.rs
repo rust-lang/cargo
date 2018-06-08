@@ -293,9 +293,9 @@ fn activate_deps_loop(
         let mut backtracked = false;
 
         loop {
-            let next = remaining_candidates.next(&cx, &dep);
+            let next = remaining_candidates.next(&mut conflicting_activations, &cx, &dep);
 
-            let (candidate, has_another) = next.or_else(|conflicting| {
+            let (candidate, has_another) = next.or_else(|_| {
                 // If we get here then our `remaining_candidates` was just
                 // exhausted, so `dep` failed to activate.
                 //
@@ -303,10 +303,6 @@ fn activate_deps_loop(
                 // different candidate to activate. If we can't find any
                 // candidates whatsoever then it's time to bail entirely.
                 trace!("{}[{}]>{} -- no candidates", parent.name(), cur, dep.name());
-
-                // Add all the reasons to our frame's list of conflicting
-                // activations, as we may use this to start backtracking later.
-                conflicting_activations.extend(conflicting);
 
                 // Use our list of `conflicting_activations` to add to our
                 // global list of past conflicting activations, effectively
@@ -522,8 +518,6 @@ fn activate_deps_loop(
                     // we'll want to present an error message for sure.
                     let activate_for_error_message = has_past_conflicting_dep && !has_another && {
                         just_here_for_the_error_messages || {
-                            conflicting_activations
-                                .extend(remaining_candidates.conflicting_prev_active.clone());
                             find_candidate(
                                 &mut backtrack_stack.clone(),
                                 &parent,
@@ -692,13 +686,10 @@ struct BacktrackFrame {
 /// is defined within a `Context`.
 ///
 /// Candidates passed to `new` may not be returned from `next` as they could be
-/// filtered out, and if iteration stops a map of all packages which caused
-/// filtered out candidates to be filtered out will be returned.
+/// filtered out, and as they are filtered the causes will be added to `conflicting_prev_active`.
 #[derive(Clone)]
 struct RemainingCandidates {
     remaining: RcVecIter<Candidate>,
-    // note: change to RcList or something if clone is to expensive
-    conflicting_prev_active: HashMap<PackageId, ConflictReason>,
     // This is a inlined peekable generator
     has_another: Option<Candidate>,
 }
@@ -707,7 +698,6 @@ impl RemainingCandidates {
     fn new(candidates: &Rc<Vec<Candidate>>) -> RemainingCandidates {
         RemainingCandidates {
             remaining: RcVecIter::new(Rc::clone(candidates)),
-            conflicting_prev_active: HashMap::new(),
             has_another: None,
         }
     }
@@ -730,9 +720,10 @@ impl RemainingCandidates {
     /// original list for the reason listed.
     fn next(
         &mut self,
+        conflicting_prev_active: &mut HashMap<PackageId, ConflictReason>,
         cx: &Context,
         dep: &Dependency,
-    ) -> Result<(Candidate, bool), HashMap<PackageId, ConflictReason>> {
+    ) -> Result<(Candidate, bool), ()> {
         let prev_active = cx.prev_active(dep);
 
         for (_, b) in self.remaining.by_ref() {
@@ -743,7 +734,7 @@ impl RemainingCandidates {
             if let Some(link) = b.summary.links() {
                 if let Some(a) = cx.links.get(&link) {
                     if a != b.summary.package_id() {
-                        self.conflicting_prev_active
+                        conflicting_prev_active
                             .entry(a.clone())
                             .or_insert_with(|| ConflictReason::Links(link.to_string()));
                         continue;
@@ -764,7 +755,7 @@ impl RemainingCandidates {
                 .find(|a| compatible(a.version(), b.summary.version()))
             {
                 if *a != b.summary {
-                    self.conflicting_prev_active
+                    conflicting_prev_active
                         .entry(a.package_id().clone())
                         .or_insert(ConflictReason::Semver);
                     continue;
@@ -783,15 +774,11 @@ impl RemainingCandidates {
 
         // Alright we've entirely exhausted our list of candidates. If we've got
         // something stashed away return that here (also indicating that there's
-        // nothing else). If nothing is stashed away we return the list of all
-        // conflicting activations, if any.
-        //
-        // TODO: can the `conflicting_prev_active` clone be avoided here? should
-        //       panic if this is called twice and an error is already returned
+        // nothing else).
         self.has_another
             .take()
             .map(|r| (r, false))
-            .ok_or_else(|| self.conflicting_prev_active.clone())
+            .ok_or_else(|| ())
     }
 }
 
@@ -833,7 +820,7 @@ fn find_candidate(
     while let Some(mut frame) = backtrack_stack.pop() {
         let next = frame
             .remaining_candidates
-            .next(&frame.context_backup, &frame.dep);
+            .next(&mut frame.conflicting_activations, &frame.context_backup, &frame.dep);
         let (candidate, has_another) = match next {
             Ok(pair) => pair,
             Err(_) => continue,
