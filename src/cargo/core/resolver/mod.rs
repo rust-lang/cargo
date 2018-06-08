@@ -54,9 +54,9 @@ use std::time::{Duration, Instant};
 
 use semver;
 
-use core::{Dependency, PackageId, Registry, Summary};
-use core::PackageIdSpec;
 use core::interning::InternedString;
+use core::PackageIdSpec;
+use core::{Dependency, PackageId, Registry, Summary};
 use util::config::Config;
 use util::errors::{CargoError, CargoResult};
 use util::profile;
@@ -70,9 +70,9 @@ pub use self::encode::{Metadata, WorkspaceResolve};
 pub use self::resolve::{Deps, DepsNotReplaced, Resolve};
 pub use self::types::Method;
 
+mod conflict_cache;
 mod context;
 mod encode;
-mod conflict_cache;
 mod resolve;
 mod types;
 
@@ -398,13 +398,7 @@ fn activate_deps_loop(
                 dep.name(),
                 candidate.summary.version()
             );
-            let res = activate(
-                &mut cx,
-                registry,
-                Some((&parent, &dep)),
-                candidate,
-                &method,
-            );
+            let res = activate(&mut cx, registry, Some((&parent, &dep)), candidate, &method);
 
             let successfully_activated = match res {
                 // Success! We've now activated our `candidate` in our context
@@ -775,9 +769,7 @@ impl RemainingCandidates {
         // Alright we've entirely exhausted our list of candidates. If we've got
         // something stashed away return that here (also indicating that there's
         // nothing else).
-        self.has_another
-            .take()
-            .map(|r| (r, false))
+        self.has_another.take().map(|r| (r, false))
     }
 }
 
@@ -817,9 +809,11 @@ fn find_candidate(
     conflicting_activations: &HashMap<PackageId, ConflictReason>,
 ) -> Option<(Candidate, bool, BacktrackFrame)> {
     while let Some(mut frame) = backtrack_stack.pop() {
-        let next = frame
-            .remaining_candidates
-            .next(&mut frame.conflicting_activations, &frame.context_backup, &frame.dep);
+        let next = frame.remaining_candidates.next(
+            &mut frame.conflicting_activations,
+            &frame.context_backup,
+            &frame.dep,
+        );
         let (candidate, has_another) = match next {
             Some(pair) => pair,
             None => continue,
