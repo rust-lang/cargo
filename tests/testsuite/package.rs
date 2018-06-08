@@ -1130,6 +1130,36 @@ fn test_edition() {
 }
 
 #[test]
+fn test_edition_integral() {
+    let p = project("foo")
+        .file(
+            "Cargo.toml",
+            r#"
+            cargo-features = ["edition"]
+            [package]
+            name = "foo"
+            version = "0.0.1"
+            authors = []
+            edition = 2018
+        "#,
+        )
+        .file("src/lib.rs", r#" "#)
+        .build();
+
+    assert_that(
+        p.cargo("build").arg("-v").masquerade_as_nightly_cargo(),
+        execs()
+                // --edition is still in flux and we're not passing -Zunstable-options
+                // from Cargo so it will probably error. Only partially match the output
+                // until stuff stabilizes
+                .with_stderr_contains("\
+[COMPILING] foo v0.0.1 ([..])
+[RUNNING] `rustc [..]--edition=2018 [..]
+"),
+    );
+}
+
+#[test]
 fn test_edition_missing() {
     // no edition = 2015
     let p = project("foo")

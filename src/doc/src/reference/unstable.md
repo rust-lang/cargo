@@ -190,7 +190,7 @@ cargo-features = ["edition"]
 
 [package]
 ...
-edition = "2018"
+edition = 2018
 ```
 
 
