@@ -508,13 +508,6 @@ impl<'de> de::Deserialize<'de> for StringOrU32 {
                 Ok(StringOrU32::U32(u as u32))
             }
 
-            fn visit_u64<E>(self, u: u64) -> Result<Self::Value, E>
-            where
-                E: de::Error,
-            {
-                Ok(StringOrU32::U32(u as u32))
-            }
-
             fn visit_str<E>(self, s: &str) -> Result<Self::Value, E>
             where
                 E: de::Error,
