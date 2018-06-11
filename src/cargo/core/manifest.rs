@@ -44,6 +44,7 @@ pub struct Manifest {
     edition: Edition,
     im_a_teapot: Option<bool>,
     default_run: Option<String>,
+    metabuild: Option<Vec<String>>,
 }
 
 /// When parsing `Cargo.toml`, some warnings should silenced
@@ -321,6 +322,7 @@ impl Manifest {
         im_a_teapot: Option<bool>,
         default_run: Option<String>,
         original: Rc<TomlManifest>,
+        metabuild: Option<Vec<String>>,
     ) -> Manifest {
         Manifest {
             summary,
@@ -342,6 +344,7 @@ impl Manifest {
             im_a_teapot,
             default_run,
             publish_lockfile,
+            metabuild,
         }
     }
 
@@ -463,6 +466,10 @@ impl Manifest {
 
     pub fn default_run(&self) -> Option<&str> {
         self.default_run.as_ref().map(|s| &s[..])
+    }
+
+    pub fn metabuild(&self) -> Option<&Vec<String>> {
+        self.metabuild.as_ref()
     }
 }
 
@@ -734,7 +741,10 @@ impl Target {
         self.kind == TargetKind::Bench
     }
     pub fn is_custom_build(&self) -> bool {
-        self.kind == TargetKind::CustomBuild
+        match self.kind {
+            TargetKind::CustomBuild => true,
+            _ => false,
+        }
     }
 
     /// Returns the arguments suitable for `--crate-type` to pass to rustc.

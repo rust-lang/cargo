@@ -189,6 +189,9 @@ features! {
 
         // "default-run" manifest option,
         [unstable] default_run: bool,
+
+        // Declarative build scripts.
+        [unstable] metabuild: bool,
     }
 }
 
