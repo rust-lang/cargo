@@ -582,7 +582,7 @@ fn rustdoc<'a, 'cfg>(cx: &mut Context<'a, 'cfg>, unit: &Unit<'a>) -> CargoResult
     let mut rustdoc = cx.compilation.rustdoc_process(unit.pkg, unit.target)?;
     rustdoc.inherit_jobserver(&cx.jobserver);
     rustdoc.arg("--crate-name").arg(&unit.target.crate_name());
-    add_path_args(bcx, unit, &mut rustdoc);
+    add_path_args(cx, unit, &mut rustdoc);
     add_cap_lints(bcx, unit, &mut rustdoc);
     add_color(bcx, &mut rustdoc);
 
@@ -666,18 +666,23 @@ fn rustdoc<'a, 'cfg>(cx: &mut Context<'a, 'cfg>, unit: &Unit<'a>) -> CargoResult
 //
 // The first returned value here is the argument to pass to rustc, and the
 // second is the cwd that rustc should operate in.
-fn path_args(bcx: &BuildContext, unit: &Unit) -> (PathBuf, PathBuf) {
-    let ws_root = bcx.ws.root();
-    let src = unit.target.src_path();
+fn path_args<'a, 'cfg>(cx: &Context<'a, 'cfg>, unit: &Unit) -> (PathBuf, PathBuf) {
+    let ws_root = cx.bcx.ws.root();
+    // TODO: this is a hack
+    let src = if unit.target.is_custom_build() && unit.pkg.manifest().metabuild().is_some() {
+        cx.files().metabuild_path(unit)
+    } else {
+        unit.target.src_path().to_path_buf()
+    };
     assert!(src.is_absolute());
-    match src.strip_prefix(ws_root) {
-        Ok(path) => (path.to_path_buf(), ws_root.to_path_buf()),
-        Err(_) => (src.to_path_buf(), unit.pkg.root().to_path_buf()),
+    if let Ok(path) = src.strip_prefix(ws_root) {
+        return (path.to_path_buf(), ws_root.to_path_buf());
     }
+    (src, unit.pkg.root().to_path_buf())
 }
 
-fn add_path_args(bcx: &BuildContext, unit: &Unit, cmd: &mut ProcessBuilder) {
-    let (arg, cwd) = path_args(bcx, unit);
+fn add_path_args<'a, 'cfg>(cx: &Context<'a, 'cfg>, unit: &Unit, cmd: &mut ProcessBuilder) {
+    let (arg, cwd) = path_args(cx, unit);
     cmd.arg(arg);
     cmd.cwd(cwd);
 }
@@ -736,7 +741,7 @@ fn build_base_args<'a, 'cfg>(
 
     cmd.arg("--crate-name").arg(&unit.target.crate_name());
 
-    add_path_args(bcx, unit, cmd);
+    add_path_args(cx, unit, cmd);
     add_color(bcx, cmd);
     add_error_format(bcx, cmd);
 

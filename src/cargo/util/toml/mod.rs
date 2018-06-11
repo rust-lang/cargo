@@ -488,6 +488,44 @@ impl TomlProfile {
 }
 
 #[derive(Clone, Debug, Serialize, Eq, PartialEq)]
+pub struct StringOrVec(Vec<String>);
+
+impl<'de> de::Deserialize<'de> for StringOrVec {
+    fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
+    where
+        D: de::Deserializer<'de>,
+    {
+        struct Visitor;
+
+        impl<'de> de::Visitor<'de> for Visitor {
+            type Value = StringOrVec;
+
+            fn expecting(&self, formatter: &mut fmt::Formatter) -> fmt::Result {
+                formatter.write_str("string or list of strings")
+            }
+
+            fn visit_str<E>(self, s: &str) -> Result<Self::Value, E>
+            where
+                E: de::Error,
+            {
+                Ok(StringOrVec(vec![s.to_string()]))
+            }
+
+            fn visit_seq<V>(self, v: V) -> Result<Self::Value, V::Error>
+            where
+                V: de::SeqAccess<'de>,
+            {
+                let seq = de::value::SeqAccessDeserializer::new(v);
+                Vec::deserialize(seq).map(StringOrVec)
+
+            }
+        }
+
+        deserializer.deserialize_any(Visitor)
+    }
+}
+
+#[derive(Clone, Debug, Serialize, Eq, PartialEq)]
 #[serde(untagged)]
 pub enum StringOrBool {
     String(String),
@@ -581,6 +619,7 @@ pub struct TomlProject {
     version: semver::Version,
     authors: Option<Vec<String>>,
     build: Option<StringOrBool>,
+    metabuild: Option<StringOrVec>,
     links: Option<String>,
     exclude: Option<Vec<String>>,
     include: Option<Vec<String>>,
@@ -784,6 +823,10 @@ impl TomlManifest {
             Edition::Edition2015
         };
 
+        if project.metabuild.is_some() {
+            features.require(Feature::metabuild())?;
+        }
+
         // If we have no lib at all, use the inferred lib if available
         // If we have a lib with a path, we're done
         // If we have a lib with no path, use the inferred lib or_else package name
@@ -794,6 +837,7 @@ impl TomlManifest {
             package_root,
             edition,
             &project.build,
+            &project.metabuild,
             &mut warnings,
             &mut errors,
         )?;
@@ -984,6 +1028,7 @@ impl TomlManifest {
             project.im_a_teapot,
             project.default_run.clone(),
             Rc::clone(me),
+            project.metabuild.clone().map(|sov| sov.0),
         );
         if project.license_file.is_some() && project.license.is_some() {
             manifest.warnings_mut().add_warning(

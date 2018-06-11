@@ -134,6 +134,10 @@ fn build_work<'a, 'cfg>(cx: &mut Context<'a, 'cfg>, unit: &Unit<'a>) -> CargoRes
     let build_plan = bcx.build_config.build_plan;
     let invocation_name = unit.buildkey();
 
+    if let Some(deps) = unit.pkg.manifest().metabuild() {
+        prepare_metabuild(cx, build_script_unit, deps)?;
+    }
+
     // Building the command to execute
     let to_exec = script_output.join(unit.target.name());
 
@@ -532,6 +536,44 @@ impl BuildOutput {
     }
 }
 
+fn prepare_metabuild<'a, 'cfg>(
+    cx: &Context<'a, 'cfg>,
+    unit: &Unit<'a>,
+    deps: &[String],
+) -> CargoResult<()> {
+    let mut output = Vec::new();
+    let available_deps = cx.dep_targets(unit);
+    // Filter out optional dependencies, and look up the actual lib name.
+    let meta_deps: Vec<_> = deps
+        .iter()
+        .filter_map(|name| {
+            available_deps
+                .iter()
+                .find(|u| u.pkg.name().as_str() == name.as_str())
+                .map(|dep| dep.target.crate_name())
+        })
+        .collect();
+    for dep in &meta_deps {
+        output.push(format!("extern crate {};\n", dep));
+    }
+    output.push("fn main() {\n".to_string());
+    for dep in &meta_deps {
+        output.push(format!("    {}::metabuild();\n", dep));
+    }
+    output.push("}".to_string());
+    let output = output.join("");
+    let path = cx.files().metabuild_path(unit);
+    let changed = if let Ok(orig) = fs::read_to_string(&path) {
+        orig != output
+    } else {
+        true
+    };
+    if changed {
+        fs::write(&path, output)?;
+    }
+    Ok(())
+}
+
 impl BuildDeps {
     pub fn new(output_file: &Path, output: Option<&BuildOutput>) -> BuildDeps {
         BuildDeps {
@@ -580,7 +622,8 @@ pub fn build_map<'b, 'cfg>(cx: &mut Context<'b, 'cfg>, units: &[Unit<'b>]) -> Ca
         }
 
         {
-            let key = unit.pkg
+            let key = unit
+                .pkg
                 .manifest()
                 .links()
                 .map(|l| (l.to_string(), unit.kind));
