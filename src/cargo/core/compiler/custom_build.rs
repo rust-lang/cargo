@@ -560,17 +560,10 @@ fn prepare_metabuild<'a, 'cfg>(
     for dep in &meta_deps {
         output.push(format!("    {}::metabuild();\n", dep));
     }
-    output.push("}".to_string());
+    output.push("}\n".to_string());
     let output = output.join("");
     let path = cx.files().metabuild_path(unit);
-    let changed = if let Ok(orig) = fs::read_to_string(&path) {
-        orig != output
-    } else {
-        true
-    };
-    if changed {
-        fs::write(&path, output)?;
-    }
+    paths::write_if_changed(path, &output)?;
     Ok(())
 }
 
@@ -622,8 +615,7 @@ pub fn build_map<'b, 'cfg>(cx: &mut Context<'b, 'cfg>, units: &[Unit<'b>]) -> Ca
         }
 
         {
-            let key = unit
-                .pkg
+            let key = unit.pkg
                 .manifest()
                 .links()
                 .map(|l| (l.to_string(), unit.kind));
