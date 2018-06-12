@@ -741,10 +741,7 @@ impl Target {
         self.kind == TargetKind::Bench
     }
     pub fn is_custom_build(&self) -> bool {
-        match self.kind {
-            TargetKind::CustomBuild => true,
-            _ => false,
-        }
+        self.kind == TargetKind::CustomBuild
     }
 
     /// Returns the arguments suitable for `--crate-type` to pass to rustc.
