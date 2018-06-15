@@ -595,16 +595,16 @@ may be composed of single files or directories with a `main.rs` file.
     main.rs
 ▾ examples/      # (optional) examples
   *.rs
-▾ */             # (optional) directories containing multi-file examples
-  main.rs
+  ▾ */           # (optional) directories containing multi-file examples
+    main.rs
 ▾ tests/         # (optional) integration tests
   *.rs
-▾ */             # (optional) directories containing multi-file tests
-  main.rs
+  ▾ */           # (optional) directories containing multi-file tests
+    main.rs
 ▾ benches/       # (optional) benchmarks
   *.rs
-▾ */             # (optional) directories containing multi-file benchmarks
-  main.rs
+  ▾ */           # (optional) directories containing multi-file benchmarks
+    main.rs
 ```
 
 To structure your code after you've created the files and folders for your
