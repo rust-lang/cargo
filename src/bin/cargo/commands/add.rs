@@ -8,11 +8,31 @@ pub fn cli() -> App {
     subcommand("add")
         .about("Add a new dependency")
         .arg(Arg::with_name("crate").empty_values(false))
+        .arg(
+            opt("version", "Specify a version to install from crates.io")
+                .alias("vers")
+                .value_name("VERSION"),
+        )
+        .arg(opt("git", "Git URL to add the specified crate from").value_name("URL"))
+        .arg(opt("branch", "Branch to use when add from git").value_name("BRANCH"))
+        .arg(opt("tag", "Tag to use when add from git").value_name("TAG"))
+        .arg(opt("rev", "Specific commit to use when adding from git").value_name("SHA"))
+        .arg(opt("path", "Filesystem path to local crate to add").value_name("PATH"))
+        .after_help(
+            "\
+This command allows you to add a dependency to a Cargo.toml manifest file. If <crate> is a github
+or gitlab repository URL, or a local path, `cargo add` will try to automatically get the crate name
+and set the appropriate `--git` or `--path` value.
+
+Please note that Cargo treats versions like \"1.2.3\" as \"^1.2.3\" (and that \"^1.2.3\" is specified
+as \">=1.2.3 and <2.0.0\"). By default, `cargo add` will use this format, as it is the one that the
+crates.io registry suggests. One goal of `cargo add` is to prevent you from using wildcard
+dependencies (version set to \"*\").",
+        )
 }
 
 pub fn exec(config: &mut Config, args: &ArgMatches) -> CliResult {
-    let mut compile_opts = args.compile_options(config, CompileMode::Build)?;
-    compile_opts.build_config.release = !args.is_present("debug");
+    let ws = args.workspace(config)?;
 
     println!("cargo add subcommand executed");
 
@@ -20,8 +40,6 @@ pub fn exec(config: &mut Config, args: &ArgMatches) -> CliResult {
         .unwrap_or_default();
 
     println!("crate {:?}", krate);
-
-    let mut from_cwd = false;
 
     let source = if let Some(url) = args.value_of("git") {
         let url = url.to_url()?;
@@ -37,24 +55,17 @@ pub fn exec(config: &mut Config, args: &ArgMatches) -> CliResult {
         SourceId::for_git(&url, gitref)?
     } else if let Some(path) = args.value_of_path("path", config) {
         SourceId::for_path(&path)?
-    } else if krate.is_empty() {
-        from_cwd = true;
-        SourceId::for_path(config.cwd())?
     } else {
         SourceId::crates_io(config)?
     };
 
     let version = args.value_of("version");
-    let root = args.value_of("root");
 
     ops::add(
-            root,
+            &ws,
             krate,
             &source,
-            from_cwd,
             version,
-            &compile_opts,
-            args.is_present("force"),
         )?;
 
     Ok(())
