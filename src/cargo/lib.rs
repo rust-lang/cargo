@@ -58,6 +58,7 @@ extern crate tar;
 extern crate tempfile;
 extern crate termcolor;
 extern crate toml;
+extern crate toml_edit;
 extern crate unicode_width;
 extern crate url;
 

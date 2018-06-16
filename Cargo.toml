@@ -53,6 +53,7 @@ tar = { version = "0.4.15", default-features = false }
 tempfile = "3.0"
 termcolor = "1.0"
 toml = "0.4.2"
+toml_edit = "0.1.1"
 url = "1.1"
 clap = "2.31.2"
 unicode-width = "0.1.5"

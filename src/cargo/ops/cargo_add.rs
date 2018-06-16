@@ -1,14 +1,13 @@
 
-use core::{PackageId, SourceId, Workspace};
+use core::{SourceId, Workspace};
 
 use util::errors::{CargoResult};
 
 pub fn add(
-    ws: &Workspace,
-    krate: &str,
-    source_id: &SourceId,
-    vers: Option<&str>,
+    _ws: &Workspace,
+    _krate: &str,
+    _source_id: &SourceId,
+    _vers: Option<&str>,
 ) -> CargoResult<()> {
-
     Ok(())
 }

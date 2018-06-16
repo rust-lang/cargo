@@ -9,7 +9,7 @@ pub fn cli() -> App {
         .about("Add a new dependency")
         .arg(Arg::with_name("crate").empty_values(false))
         .arg(
-            opt("version", "Specify a version to install from crates.io")
+            opt("version", "Specify a version to add from crates.io")
                 .alias("vers")
                 .value_name("VERSION"),
         )

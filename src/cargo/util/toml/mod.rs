@@ -10,6 +10,7 @@ use serde::de::{self, Deserialize};
 use serde::ser;
 use serde_ignored;
 use toml;
+use toml_edit;
 use url::Url;
 
 use core::dependency::{Kind, Platform};
@@ -22,6 +23,10 @@ use sources::CRATES_IO;
 use util::errors::{CargoError, CargoResult, CargoResultExt};
 use util::paths;
 use util::{self, Config, ToUrl};
+
+// mod err;
+mod dependency;
+mod manifest;
 
 mod targets;
 use self::targets::targets;
