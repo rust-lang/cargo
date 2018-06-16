@@ -1,4 +1,4 @@
-use std::collections::{BTreeMap, HashSet, HashMap};
+use std::collections::{BTreeMap, HashSet};
 
 use termcolor::Color::{self, Cyan, Green, Red};
 
@@ -97,46 +97,26 @@ pub fn update_lockfile(ws: &Workspace, opts: &UpdateOptions) -> CargoResult<()> 
     let print_change = |status: &str, msg: String, color: Color| {
         opts.config.shell().status_with_color(status, msg, color)
     };
-    let diff = compare_dependency_graphs(&previous_resolve, &resolve);
-    for (removed, added) in diff.removed_and_added {
-        if removed.len() == 1 && added.len() == 1 {
-            let msg = format_package_for_update(removed[0], added[0]);
-            print_change("Updating", msg, Green)?;
-        } else {
-            for package in removed.iter() {
-                print_change("Removing", format!("{}", package), Red)?;
-            }
-            for package in added.iter() {
-                print_change("Adding", format!("{}", package), Cyan)?;
-            }
+
+    let diffs = compare_dependency_graphs(&previous_resolve, &resolve);
+
+    for diff in diffs {
+        for ((old, new), _) in diff.updated {
+            let msg = format_package_for_update(old, new);
+            print_change("Updating", format!("{}", msg), Green)?;
         }
-    }
 
-    for (package, dependents) in diff.partly_added {
-        let dependents = format_dependents(&dependents);
-        print_change("Adding", format!("{} to {}", package, dependents), Cyan)?;
-    }
+        for (package, _) in diff.removed {
+            print_change("Removing", format!("{}", package), Red)?;
+        }
 
-    for ((old, new), dependents) in diff.partly_updated {
-        let dependents = format_dependents(&dependents);
-        let msg = format_package_for_update(old, new);
-        print_change("Updating", format!("{} in {}", msg, dependents), Green)?;
-    }
-
-    for (package, dependents) in diff.partly_removed {
-        let dependents = format_dependents(&dependents);
-        print_change("Removing", format!("{} from {}", package, dependents), Red)?;
+        for (package, _) in diff.added {
+            print_change("Adding", format!("{}", package), Cyan)?;
+        }
     }
 
     ops::write_pkg_lockfile(ws, &resolve)?;
     return Ok(());
-
-    fn format_dependents(packages: &[&PackageId]) -> String {
-        packages.iter()
-            .map(|p| format!("{} v{}", p.name(), p.version()))
-            .collect::<Vec<_>>()
-            .join(", ")
-    }
 
     fn format_package_for_update(removed: &PackageId, added: &PackageId) -> String {
         if removed.source_id().is_git() {
@@ -165,150 +145,131 @@ pub fn update_lockfile(ws: &Workspace, opts: &UpdateOptions) -> CargoResult<()> 
         }
     }
 
+    fn equal_packages(a: &PackageId, b: &PackageId) -> bool {
+        if a.source_id().is_registry() && b.source_id().is_registry() {
+            a.version() == b.version()
+        } else {
+            a.source_id().precise() == b.source_id().precise()
+        }
+    }
+    
     struct DependencyGraphDiff<'a> {
-        /// completely new, updated and removed dependencies
-        removed_and_added: Vec<(Vec<&'a PackageId>, Vec<&'a PackageId>)>,
-        /// dependencies that are not new, but some crates were not using them before
-        partly_added: BTreeMap<&'a PackageId, Vec<&'a PackageId>>,
-        /// dependencies that are updated, but there are still some crates using old versions
-        partly_updated: BTreeMap<(&'a PackageId, &'a PackageId), Vec<&'a PackageId>>,
-        /// dependencies that are no longer used by some packages
-        partly_removed: BTreeMap<&'a PackageId, Vec<&'a PackageId>>,
+        /// dependencies that are not new
+        added: BTreeMap<&'a PackageId, Vec<&'a PackageId>>,
+        /// dependencies that are updated
+        updated: BTreeMap<(&'a PackageId, &'a PackageId), Vec<&'a PackageId>>,
+        /// dependencies that are no longer used
+        removed: BTreeMap<&'a PackageId, Vec<&'a PackageId>>,
     }
 
     fn compare_dependency_graphs<'a>(
         previous_resolve: &'a Resolve,
         resolve: &'a Resolve,
-    ) -> DependencyGraphDiff<'a> {
+    ) -> Vec<DependencyGraphDiff<'a>> {
         fn key(dep: &PackageId) -> (&str, &SourceId) {
             (dep.name().as_str(), dep.source_id())
         }
 
-        // Removes all package ids in `b` from `a`. Note that this is somewhat
-        // more complicated because the equality for source ids does not take
-        // precise versions into account (e.g. git shas), but we want to take
-        // that into account here.
-        fn vec_subtract<'a>(a: &[&'a PackageId], b: &[&'a PackageId]) -> Vec<&'a PackageId> {
-            a.iter()
-                .filter(|a| {
-                    // If this package id is not found in `b`, then it's definitely
-                    // in the subtracted set
-                    let i = match b.binary_search(a) {
-                        Ok(i) => i,
-                        Err(..) => return true,
-                    };
-
-                    // If we've found `a` in `b`, then we iterate over all instances
-                    // (we know `b` is sorted) and see if they all have different
-                    // precise versions. If so, then `a` isn't actually in `b` so
-                    // we'll let it through.
-                    //
-                    // Note that we only check this for non-registry sources,
-                    // however, as registries contain enough version information in
-                    // the package id to disambiguate
-                    if a.source_id().is_registry() {
-                        return false;
-                    }
-                    b[i..]
-                        .iter()
-                        .take_while(|b| a == b)
-                        .all(|b| a.source_id().precise() != b.source_id().precise())
-                })
-                .cloned()
-                .collect()
-        }
-
         // Map (package name, package source) to (removed versions, added versions).
         let mut changes = BTreeMap::new();
-        let mut versions = BTreeMap::new();
-        let mut old_key_to_dep = HashMap::new();
-        let mut key_to_dep = HashMap::new();
-        let empty = (Vec::new(), Vec::new());
         for dep in previous_resolve.iter() {
-            let entry = key(dep);
-            old_key_to_dep.insert(entry, dep);
-            changes
-                .entry(entry)
-                .or_insert_with(|| empty.clone())
-                .0
-                .push(dep);
             for (id, _) in previous_resolve.deps(dep) {
-                versions
+                changes 
                     .entry(key(id))
                     .or_insert_with(BTreeMap::new)
-                    .entry(entry)
+                    .entry(dep)
                     .or_insert_with(|| (None, None))
                     .0 = Some(id);
             }
         }
         for dep in resolve.iter() {
-            let entry = key(dep);
-            key_to_dep.insert(entry, dep);
-            changes
-                .entry(entry)
-                .or_insert_with(|| empty.clone())
-                .1
-                .push(dep);
-
             for (id, _) in resolve.deps(dep) {
-                versions
+                changes 
                     .entry(key(id))
                     .or_insert_with(BTreeMap::new)
-                    .entry(entry)
+                    .entry(dep)
                     .or_insert_with(|| (None, None))
                     .1 = Some(id);
             }
         }
 
-        for v in changes.values_mut() {
-            let (ref mut old, ref mut new) = *v;
-            old.sort();
-            new.sort();
-            let removed = vec_subtract(old, new);
-            let added = vec_subtract(new, old);
-            *old = removed;
-            *new = added;
-        }
         debug!("{:#?}", changes);
 
-        let mut partly_added = BTreeMap::new();
-        let mut partly_updated = BTreeMap::new();
-        let mut partly_removed = BTreeMap::new();
+        let mut diffs = Vec::new();
 
-        {
-            let dependents_iter = changes.iter()
-                .filter(|(_, v)| v.0.len() == 0 && v.1.len() == 0)
-                .filter_map(|(k, _)| versions.get(k));
+        for (_, dependents) in changes {
+            let mut added = BTreeMap::new();
+            let mut updated = BTreeMap::new();
+            let mut removed = BTreeMap::new();
+            let mut unchanged = HashSet::new();
 
-            for dependents in dependents_iter {
-                for (dependent, versions) in dependents {
-                    match versions {
-                        (None, Some(new)) => {
-                            partly_added.entry(*new)
-                                .or_insert_with(Vec::new)
-                                .push(key_to_dep[dependent]);
-                        },
-                        (Some(old), Some(new)) if old != new => {
-                            partly_updated.entry((*old, *new))
-                                .or_insert_with(Vec::new)
-                                .push(key_to_dep[dependent]);
-                        },
-                        (Some(old), None) => {
-                            partly_removed.entry(*old)
-                                .or_insert_with(Vec::new)
-                                .push(old_key_to_dep[dependent]);
-                        },
-                        _ => (),
-                    }
+            for (dependent, versions) in dependents {
+                match versions {
+                    (None, Some(new)) => {
+                        added.entry(new)
+                            .or_insert_with(Vec::new)
+                            .push(dependent);
+                    },
+                    (Some(old), Some(new)) if !equal_packages(old, new) => {
+                        updated.entry((old, new))
+                            .or_insert_with(Vec::new)
+                            .push(dependent);
+                    },
+                    (Some(old), None) => {
+                        removed.entry(old)
+                            .or_insert_with(Vec::new)
+                            .push(dependent);
+                    },
+                    (Some(_), Some(new)) => {
+                        unchanged.insert(new);
+                    },
+                    _ => (),
                 }
             }
+
+            // if it is still one of our dependencies,
+            // there is no reason to print the message
+            for dep in unchanged {
+                added.remove(dep);
+                removed.remove(dep);
+            }
+
+            // if it is removed or added, but also updated,
+            // there is no reason to print the message
+            for ((old, new), _) in updated.iter() {
+                added.remove(new);
+                removed.remove(old);
+            }
+
+            // handle cases when crate and it's dependency has been updated at the same time
+            // e.g.
+            //
+            // foo 0.1.0
+            //   -> bar 0.1.0
+            //
+            // foo 0.1.1
+            //   -> bar 0.1.1
+            if removed.len() == 1 && added.len() == 1 {
+                for ((old, _), (new, dependents)) in removed.iter().zip(added.iter()) {
+                    if !equal_packages(old, new) {
+                        updated.entry((*old, *new))
+                            .or_insert_with(Vec::new)
+                            .extend(dependents);
+                    }
+                }
+                added.clear();
+                removed.clear();
+            }
+
+            let diff = DependencyGraphDiff {
+                added,
+                updated,
+                removed,
+            };
+
+            diffs.push(diff);
         }
 
-        DependencyGraphDiff {
-            removed_and_added: changes.into_iter().map(|(_, v)| v).collect(),
-            partly_added,
-            partly_updated,
-            partly_removed,
-        }
+        diffs
     }
 }
