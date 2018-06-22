@@ -18,7 +18,7 @@ The magic of rustfix is entirely dependent on the diagnostics implement in the R
 
 ## Installation
 
-To use the rustfix libary, add it to your `Cargo.toml`.
+To use the rustfix library, add it to your `Cargo.toml`.
 
 To get the tool to automatically fix warnings in, run `cargo install cargo-fix`. This will give you `cargo fix`.
 
