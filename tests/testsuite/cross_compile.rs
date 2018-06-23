@@ -227,7 +227,7 @@ fn plugin_deps() {
         .file(
             "src/lib.rs",
             r#"
-            #![feature(plugin_registrar, quote, rustc_private)]
+            #![feature(plugin_registrar, rustc_private)]
 
             extern crate rustc_plugin;
             extern crate syntax;
@@ -334,7 +334,7 @@ fn plugin_to_the_max() {
         .file(
             "src/lib.rs",
             r#"
-            #![feature(plugin_registrar, quote, rustc_private)]
+            #![feature(plugin_registrar, rustc_private)]
 
             extern crate rustc_plugin;
             extern crate syntax;
