@@ -3996,13 +3996,32 @@ fn compiler_json_error_format() {
         .file("bar/src/lib.rs", r#"fn dead() {}"#)
         .build();
 
+    // Using jobs=1 to ensure that the order of messages is consistent.
     assert_that(
-        p.cargo("build")
-            .arg("-v")
-            .arg("--message-format")
-            .arg("json"),
+        p.cargo("build -v --message-format=json --jobs=1"),
         execs().with_status(0).with_json(
             r#"
+    {
+        "reason":"compiler-artifact",
+        "package_id":"foo 0.5.0 ([..])",
+        "target":{
+            "kind":["custom-build"],
+            "crate_types":["bin"],
+            "name":"build-script-build",
+            "src_path":"[..]build.rs"
+        },
+        "profile": {
+            "debug_assertions": true,
+            "debuginfo": 2,
+            "opt_level": "0",
+            "overflow_checks": true,
+            "test": false
+        },
+        "features": [],
+        "filenames": "{...}",
+        "fresh": false
+    }
+
     {
         "reason":"compiler-message",
         "package_id":"bar 0.5.0 ([..])",
@@ -4033,27 +4052,6 @@ fn compiler_json_error_format() {
             "src_path":"[..]lib.rs"
         },
         "filenames":["[..].rlib"],
-        "fresh": false
-    }
-
-    {
-        "reason":"compiler-artifact",
-        "package_id":"foo 0.5.0 ([..])",
-        "target":{
-            "kind":["custom-build"],
-            "crate_types":["bin"],
-            "name":"build-script-build",
-            "src_path":"[..]build.rs"
-        },
-        "profile": {
-            "debug_assertions": true,
-            "debuginfo": 2,
-            "opt_level": "0",
-            "overflow_checks": true,
-            "test": false
-        },
-        "features": [],
-        "filenames": "{...}",
         "fresh": false
     }
 
@@ -4105,10 +4103,7 @@ fn compiler_json_error_format() {
     // With fresh build, we should repeat the artifacts,
     // but omit compiler warnings.
     assert_that(
-        p.cargo("build")
-            .arg("-v")
-            .arg("--message-format")
-            .arg("json"),
+        p.cargo("build -v --message-format=json --jobs=1"),
         execs().with_status(0).with_json(
             r#"
     {
