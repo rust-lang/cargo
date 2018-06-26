@@ -175,7 +175,7 @@ impl<'a, 'cfg> Context<'a, 'cfg> {
                     None => &output.path,
                 };
 
-                if unit.mode.is_any_test() && !unit.mode.is_check() {
+                if unit.mode == CompileMode::Test {
                     self.compilation.tests.push((
                         unit.pkg.clone(),
                         unit.target.kind().clone(),
@@ -225,6 +225,25 @@ impl<'a, 'cfg> Context<'a, 'cfg> {
                             .iter()
                             .map(|output| (dep.target.clone(), output.path.clone())),
                     );
+            }
+
+            if unit.mode == CompileMode::Doctest {
+                let mut doctest_deps = Vec::new();
+                for dep in self.dep_targets(unit) {
+                    if dep.target.is_lib() && dep.mode == CompileMode::Build {
+                        let outputs = self.outputs(&dep)?;
+                        doctest_deps.extend(
+                            outputs
+                                .iter()
+                                .map(|output| (dep.target.clone(), output.path.clone())),
+                        );
+                    }
+                }
+                self.compilation.to_doc_test.push((
+                    unit.pkg.clone(),
+                    unit.target.clone(),
+                    doctest_deps,
+                ));
             }
 
             let feats = self.bcx.resolve.features(unit.pkg.package_id());

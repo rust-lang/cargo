@@ -50,7 +50,9 @@ pub struct Compilation<'cfg> {
     /// be passed to future invocations of programs.
     pub extra_env: HashMap<PackageId, Vec<(String, String)>>,
 
-    pub to_doc_test: Vec<Package>,
+    /// Libraries to test with rustdoc.
+    /// The third value is the list of dependencies.
+    pub to_doc_test: Vec<(Package, Target, Vec<(Target, PathBuf)>)>,
 
     /// Features per package enabled during this compilation.
     pub cfgs: HashMap<PackageId, HashSet<String>>,
