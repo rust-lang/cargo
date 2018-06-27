@@ -3,8 +3,8 @@ use std::collections::{HashMap, HashSet};
 use std::ops::Range;
 use std::rc::Rc;
 
-use core::{Dependency, PackageId, PackageIdSpec, Registry, Summary};
 use core::interning::InternedString;
+use core::{Dependency, PackageId, PackageIdSpec, Registry, Summary};
 use util::{CargoError, CargoResult};
 
 pub struct RegistryQueryer<'a> {
@@ -200,13 +200,12 @@ impl DepsFrame {
     /// candidates in that entry.
     fn min_candidates(&self) -> usize {
         self.remaining_siblings
-            .clone()
-            .next()
+            .peek()
             .map(|(_, (_, candidates, _))| candidates.len())
             .unwrap_or(0)
     }
 
-    pub fn flatten<'s>(&'s self) -> impl Iterator<Item=(&PackageId, Dependency)> + 's {
+    pub fn flatten<'s>(&'s self) -> impl Iterator<Item = (&PackageId, Dependency)> + 's {
         self.remaining_siblings
             .clone()
             .map(move |(_, (d, _, _))| (self.parent.package_id(), d))
@@ -315,6 +314,13 @@ impl<T> RcVecIter<T> {
             vec,
         }
     }
+
+    fn peek(&self) -> Option<(usize, &T)> {
+        self.rest
+            .clone()
+            .next()
+            .and_then(|i| self.vec.get(i).map(|val| (i, &*val)))
+    }
 }
 
 // Not derived to avoid `T: Clone`
@@ -333,7 +339,7 @@ where
 {
     type Item = (usize, T);
 
-    fn next(&mut self) -> Option<(usize, T)> {
+    fn next(&mut self) -> Option<Self::Item> {
         self.rest
             .next()
             .and_then(|i| self.vec.get(i).map(|val| (i, val.clone())))
