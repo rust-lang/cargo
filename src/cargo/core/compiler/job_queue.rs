@@ -410,6 +410,8 @@ impl<'a> JobQueue<'a> {
     ) -> CargoResult<()> {
         if (self.compiled.contains(key.pkg) && !key.mode.is_doc())
             || (self.documented.contains(key.pkg) && key.mode.is_doc())
+            // Skip doctest, it is a dummy entry that is always fresh.
+            || key.mode == CompileMode::Doctest
         {
             return Ok(());
         }
@@ -419,11 +421,8 @@ impl<'a> JobQueue<'a> {
             // being a compiled package
             Dirty => {
                 if key.mode.is_doc() {
-                    // Skip Doctest
-                    if !key.mode.is_any_test() {
-                        self.documented.insert(key.pkg);
-                        config.shell().status("Documenting", key.pkg)?;
-                    }
+                    self.documented.insert(key.pkg);
+                    config.shell().status("Documenting", key.pkg)?;
                 } else {
                     self.compiled.insert(key.pkg);
                     if key.mode.is_check() {
