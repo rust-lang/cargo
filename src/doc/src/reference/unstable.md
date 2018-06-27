@@ -66,6 +66,7 @@ publish = ["my-registry"]
 ### rename-dependency
 * Original Issue: [#1311](https://github.com/rust-lang/cargo/issues/1311)
 * PR: [#4953](https://github.com/rust-lang/cargo/pull/4953)
+* Tracking Issue: [#5653](https://github.com/rust-lang/cargo/issues/5653)
 
 The rename-dependency feature allows you to import a dependency
 with a different name from the source.  This can be useful in a few scenarios:
@@ -102,6 +103,7 @@ extern crate baz;  // git repository
 ### publish-lockfile
 * Original Issue: [#2263](https://github.com/rust-lang/cargo/issues/2263)
 * PR: [#5093](https://github.com/rust-lang/cargo/pull/5093)
+* Tracking Issue: [#5654](https://github.com/rust-lang/cargo/issues/5654)
 
 When creating a `.crate` file for distribution, Cargo has historically
 not included the `Cargo.lock` file.  This can cause problems with
@@ -121,6 +123,7 @@ publish-lockfile = true
 
 ### Offline Mode
 * Original Issue: [#4686](https://github.com/rust-lang/cargo/issues/4686)
+* Tracking Issue: [#5655](https://github.com/rust-lang/cargo/issues/5655)
 
 The `-Z offline` flag prevents Cargo from attempting to access the network for
 any reason.  Typically Cargo will stop with an error if it wants to access the
@@ -150,6 +153,7 @@ generated if dev-dependencies are skipped.
 
 ### minimal-versions
 * Original Issue: [#4100](https://github.com/rust-lang/cargo/issues/4100)
+* Tracking Issue: [#5657](https://github.com/rust-lang/cargo/issues/5657)
 
 When a `Cargo.lock` file is generated, the `-Z minimal-versions` flag will
 resolve the dependencies to the minimum semver version that will satisfy the
@@ -251,6 +255,7 @@ cargo +nightly build -Z config-profile
 
 ### Namespaced features
 * Original issue: [#1286](https://github.com/rust-lang/cargo/issues/1286)
+* Tracking Issue: [rust-lang/cargo#5565](https://github.com/rust-lang/cargo/issues/5565)
 
 Currently, it is not possible to have a feature and a dependency with the same
 name in the manifest. If you set `namespaced-features` to `true`, the namespaces
