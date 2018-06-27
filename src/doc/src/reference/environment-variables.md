@@ -32,7 +32,7 @@ system:
   compilation to be enabled for the current compilation, and when set to 0 it
   will force disabling it. If this env var isn't present then cargo's defaults
   will otherwise be used.
-* `CARGO_CACHE_RUSTC_INFO` — If this is set to 0 then Cargo will not try to cache 
+* `CARGO_CACHE_RUSTC_INFO` — If this is set to 0 then Cargo will not try to cache
   compiler version information.
 
 Note that Cargo will also read environment variables for `.cargo/config`
@@ -130,7 +130,6 @@ let out_dir = env::var("OUT_DIR").unwrap();
                    information.
 
 [links]: reference/build-scripts.html#the-links-manifest-key
-[profile]: reference/manifest.html#the-profile-sections
 [configuration]: https://doc.rust-lang.org/reference/attributes.html#conditional-compilation
 [clang]: http://clang.llvm.org/docs/CrossCompilation.html#target-triple
 [jobserver]: https://www.gnu.org/software/make/manual/html_node/Job-Slots.html

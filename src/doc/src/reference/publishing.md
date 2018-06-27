@@ -186,8 +186,7 @@ The most likely cause of this is simply that you last logged in before this
 feature was added. We originally requested *no* permissions from GitHub when
 authenticating users, because we didn’t actually ever use the user’s token for
 anything other than logging them in. However to query team membership on your
-behalf, we now require
-[the `read:org` scope](https://developer.github.com/v3/oauth/#scopes).
+behalf, we now require [the `read:org` scope][oauth-scopes].
 
 You are free to deny us this scope, and everything that worked before teams
 were introduced will keep working. However you will never be able to add a team
@@ -220,3 +219,4 @@ the “Grant Access” button next to its name:
 ![Authentication Access Control](images/auth-level-acl.png)
 
 [crates.io]: https://crates.io/
+[oauth-scopes]: https://developer.github.com/apps/building-oauth-apps/understanding-scopes-for-oauth-apps/
