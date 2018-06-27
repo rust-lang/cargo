@@ -199,19 +199,11 @@ fn compute_deps_custom_build<'a, 'cfg>(
     // 1. Compiling the build script itself
     // 2. For each immediate dependency of our package which has a `links`
     //    key, the execution of that build script.
-    let not_custom_build = unit.pkg
-        .targets()
+    let deps = deps
         .iter()
-        .find(|t| !t.is_custom_build())
-        .unwrap();
-    let tmp = Unit {
-        pkg: unit.pkg,
-        target: not_custom_build,
-        profile: unit.profile,
-        kind: unit.kind,
-        mode: CompileMode::Build,
-    };
-    let deps = deps_of(&tmp, bcx, deps, ProfileFor::Any)?;
+        .find(|(key, _deps)| key.pkg == unit.pkg && !key.target.is_custom_build())
+        .expect("can't find package deps")
+        .1;
     Ok(deps.iter()
         .filter_map(|unit| {
             if !unit.target.linkable() || unit.pkg.manifest().links().is_none() {
