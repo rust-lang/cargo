@@ -1,7 +1,7 @@
 use serde::{Serialize, Serializer};
 
 use std::fmt;
-use std::sync::RwLock;
+use std::sync::Mutex;
 use std::collections::HashSet;
 use std::str;
 use std::ptr;
@@ -14,8 +14,8 @@ pub fn leak(s: String) -> &'static str {
 }
 
 lazy_static! {
-    static ref STRING_CACHE: RwLock<HashSet<&'static str>> =
-        RwLock::new(HashSet::new());
+    static ref STRING_CACHE: Mutex<HashSet<&'static str>> =
+        Mutex::new(HashSet::new());
 }
 
 #[derive(Clone, Copy)]
@@ -33,7 +33,7 @@ impl Eq for InternedString {}
 
 impl InternedString {
     pub fn new(str: &str) -> InternedString {
-        let mut cache = STRING_CACHE.write().unwrap();
+        let mut cache = STRING_CACHE.lock().unwrap();
         let s = cache.get(str).map(|&s| s).unwrap_or_else(|| {
             let s = leak(str.to_string());
             cache.insert(s);
