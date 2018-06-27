@@ -1,5 +1,6 @@
 #![allow(deprecated)]
 use std::collections::{HashMap, HashSet};
+use std::ffi::OsStr;
 use std::fmt::Write;
 use std::path::PathBuf;
 use std::sync::Arc;
@@ -8,6 +9,7 @@ use std::cmp::Ordering;
 use jobserver::Client;
 
 use core::{Package, PackageId, Resolve, Target};
+use core::compiler::compilation;
 use core::profiles::Profile;
 use util::errors::{CargoResult, CargoResultExt};
 use util::{internal, profile, Config, short_hash};
@@ -228,6 +230,16 @@ impl<'a, 'cfg> Context<'a, 'cfg> {
             }
 
             if unit.mode == CompileMode::Doctest {
+                // Note that we can *only* doctest rlib outputs here.  A
+                // staticlib output cannot be linked by the compiler (it just
+                // doesn't do that). A dylib output, however, can be linked by
+                // the compiler, but will always fail. Currently all dylibs are
+                // built as "static dylibs" where the standard library is
+                // statically linked into the dylib. The doc tests fail,
+                // however, for now as they try to link the standard library
+                // dynamically as well, causing problems. As a result we only
+                // pass `--extern` for rlib deps and skip out on all other
+                // artifacts.
                 let mut doctest_deps = Vec::new();
                 for dep in self.dep_targets(unit) {
                     if dep.target.is_lib() && dep.mode == CompileMode::Build {
@@ -235,15 +247,19 @@ impl<'a, 'cfg> Context<'a, 'cfg> {
                         doctest_deps.extend(
                             outputs
                                 .iter()
+                                .filter(|output| {
+                                    output.path.extension() == Some(OsStr::new("rlib"))
+                                        || dep.target.for_host()
+                                })
                                 .map(|output| (dep.target.clone(), output.path.clone())),
                         );
                     }
                 }
-                self.compilation.to_doc_test.push((
-                    unit.pkg.clone(),
-                    unit.target.clone(),
-                    doctest_deps,
-                ));
+                self.compilation.to_doc_test.push(compilation::Doctest {
+                    package: unit.pkg.clone(),
+                    target: unit.target.clone(),
+                    deps: doctest_deps,
+                });
             }
 
             let feats = self.bcx.resolve.features(unit.pkg.package_id());
