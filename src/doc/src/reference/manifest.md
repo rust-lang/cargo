@@ -244,9 +244,9 @@ is-it-maintained-issue-resolution = { repository = "..." }
 # Is it maintained percentage of open issues: `repository` is required.
 is-it-maintained-open-issues = { repository = "..." }
 
-# Maintenance: `status` is required Available options are `actively-developed`,
-# `passively-maintained`, `as-is`, `none`, `experimental`, `looking-for-maintainer`
-# and `deprecated`.
+# Maintenance: `status` is required. Available options are `actively-developed`,
+# `passively-maintained`, `as-is`, `experimental`, `looking-for-maintainer`,
+# `deprecated`, and the default `none`, which displays no badge on crates.io.
 maintenance = { status = "..." }
 ```
 
