@@ -1,7 +1,7 @@
-use std::ffi::{OsStr, OsString};
+use std::ffi::OsString;
 
 use ops;
-use core::compiler::Compilation;
+use core::compiler::{Compilation, Doctest};
 use util::{self, CargoTestError, ProcessError, Test};
 use util::errors::CargoResult;
 use core::Workspace;
@@ -154,7 +154,12 @@ fn run_doc_tests(
         return Ok((Test::Doc, errors));
     }
 
-    for (package, target, deps) in &compilation.to_doc_test {
+    for doctest_info in &compilation.to_doc_test {
+        let Doctest {
+            package,
+            target,
+            deps,
+        } = doctest_info;
         config.shell().status("Doc-tests", target.name())?;
         let mut p = compilation.rustdoc_process(package)?;
         p.arg("--test")
@@ -189,19 +194,6 @@ fn run_doc_tests(
         }
 
         for &(ref target, ref lib) in deps.iter() {
-            // Note that we can *only* doctest rlib outputs here.  A
-            // staticlib output cannot be linked by the compiler (it just
-            // doesn't do that). A dylib output, however, can be linked by
-            // the compiler, but will always fail. Currently all dylibs are
-            // built as "static dylibs" where the standard library is
-            // statically linked into the dylib. The doc tests fail,
-            // however, for now as they try to link the standard library
-            // dynamically as well, causing problems. As a result we only
-            // pass `--extern` for rlib deps and skip out on all other
-            // artifacts.
-            if lib.extension() != Some(OsStr::new("rlib")) && !target.for_host() {
-                continue;
-            }
             let mut arg = OsString::from(target.crate_name());
             arg.push("=");
             arg.push(lib);
