@@ -14,7 +14,7 @@ use core::{PackageId, Target};
 use handle_error;
 use util::{internal, profile, CargoResult, CargoResultExt, ProcessBuilder};
 use util::{Config, DependencyQueue, Dirty, Fresh, Freshness};
-use util::Progress;
+use util::{Progress, ProgressStyle};
 
 use super::job::Job;
 use super::{BuildContext, BuildPlan, CompileMode, Context, Kind, Unit};
@@ -29,7 +29,7 @@ pub struct JobQueue<'a> {
     queue: DependencyQueue<Key<'a>, Vec<(Job, Freshness)>>,
     tx: Sender<Message<'a>>,
     rx: Receiver<Message<'a>>,
-    active: HashSet<Key<'a>>,
+    active: Vec<Key<'a>>,
     pending: HashMap<Key<'a>, PendingBuild>,
     compiled: HashSet<&'a PackageId>,
     documented: HashSet<&'a PackageId>,
@@ -99,7 +99,7 @@ impl<'a> JobQueue<'a> {
             queue: DependencyQueue::new(),
             tx,
             rx,
-            active: HashSet::new(),
+            active: Vec::new(),
             pending: HashMap::new(),
             compiled: HashSet::new(),
             documented: HashSet::new(),
@@ -181,7 +181,7 @@ impl<'a> JobQueue<'a> {
         // successful and otherwise wait for pending work to finish if it failed
         // and then immediately return.
         let mut error = None;
-        let mut progress = Progress::new("Building", cx.bcx.config);
+        let mut progress = Progress::with_style("Building", ProgressStyle::Ratio, cx.bcx.config);
         let queue_len = self.queue.len();
         loop {
             // Dequeue as much work as we can, learning about everything
@@ -227,11 +227,10 @@ impl<'a> JobQueue<'a> {
             tokens.truncate(self.active.len() - 1);
 
             let count = queue_len - self.queue.len();
-            let mut active_names = self.active.iter().map(|key| match key.mode {
+            let active_names = self.active.iter().map(|key| match key.mode {
                 CompileMode::Doc { .. } => format!("{}(doc)", key.pkg.name()),
                 _ => key.pkg.name().to_string(),
             }).collect::<Vec<_>>();
-            active_names.sort_unstable();
             drop(progress.tick_now(count, queue_len, format!(": {}", active_names.join(", "))));
             let event = self.rx.recv().unwrap();
             progress.clear();
@@ -259,7 +258,10 @@ impl<'a> JobQueue<'a> {
                 Message::Finish(key, result) => {
                     info!("end: {:?}", key);
 
-                    self.active.remove(&key);
+                    // self.active.remove_item(&key); // <- switch to this when stabilized.
+                    if let Some(pos) = self.active.iter().position(|k| *k == key) {
+                        self.active.remove(pos);
+                    }
                     if !self.active.is_empty() {
                         assert!(!tokens.is_empty());
                         drop(tokens.pop());
@@ -349,7 +351,7 @@ impl<'a> JobQueue<'a> {
     ) -> CargoResult<()> {
         info!("start: {:?}", key);
 
-        self.active.insert(key);
+        self.active.push(key);
         *self.counts.get_mut(key.pkg).unwrap() -= 1;
 
         let my_tx = self.tx.clone();
