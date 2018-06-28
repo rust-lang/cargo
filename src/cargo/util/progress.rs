@@ -9,8 +9,14 @@ pub struct Progress<'cfg> {
     state: Option<State<'cfg>>,
 }
 
+pub enum ProgressStyle {
+    Percentage,
+    Ratio,
+}
+
 struct State<'cfg> {
     config: &'cfg Config,
+    style: ProgressStyle,
     max_width: usize,
     width: usize,
     first: bool,
@@ -20,7 +26,7 @@ struct State<'cfg> {
 }
 
 impl<'cfg> Progress<'cfg> {
-    pub fn new(name: &str, cfg: &'cfg Config) -> Progress<'cfg> {
+    pub fn with_style(name: &str, style: ProgressStyle, cfg: &'cfg Config) -> Progress<'cfg> {
         // report no progress when -q (for quiet) or TERM=dumb are set
         let dumb = match env::var("TERM") {
             Ok(term) => term == "dumb",
@@ -33,6 +39,7 @@ impl<'cfg> Progress<'cfg> {
         Progress {
             state: cfg.shell().err_width().map(|n| State {
                 config: cfg,
+                style,
                 max_width: n,
                 width: cmp::min(n, 80),
                 first: true,
@@ -41,6 +48,10 @@ impl<'cfg> Progress<'cfg> {
                 done: false,
             }),
         }
+    }
+
+    pub fn new(name: &str, cfg: &'cfg Config) -> Progress<'cfg> {
+        Self::with_style(name, ProgressStyle::Percentage, cfg)
     }
 
     pub fn tick(&mut self, cur: usize, max: usize) -> CargoResult<()> {
@@ -102,7 +113,10 @@ impl<'cfg> State<'cfg> {
         // progress bar is
         let pct = (cur as f64) / (max as f64);
         let pct = if !pct.is_finite() { 0.0 } else { pct };
-        let stats = format!(" {:6.02}%", pct * 100.0);
+        let stats = match self.style {
+            ProgressStyle::Percentage => format!(" {:6.02}%", pct * 100.0),
+            ProgressStyle::Ratio => format!(" {}/{}", cur, max),
+        };
         let extra_len = stats.len() + 2 /* [ and ] */ + 15 /* status header */;
         let display_width = match self.width.checked_sub(extra_len) {
             Some(n) => n,
