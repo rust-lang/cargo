@@ -96,9 +96,10 @@ pub fn prepare_target<'a, 'cfg>(
             if output.flavor == FileFlavor::DebugInfo {
                 continue;
             }
-            missing_outputs |= !output.path.exists();
-            if let Some(ref link_dst) = output.hardlink {
-                missing_outputs |= !link_dst.exists();
+            if !output.path.exists() {
+                info!("missing output path {:?}", output.path);
+                missing_outputs = true;
+                break
             }
         }
     }
