@@ -32,6 +32,7 @@ pub fn cli() -> App {
             "Install only the specified example",
             "Install all examples",
         )
+        .arg_target_triple("Build for the target triple")
         .arg(opt("root", "Directory to install packages into").value_name("DIR"))
         .after_help(
             "\
@@ -74,9 +75,6 @@ continuous integration systems.",
 pub fn exec(config: &mut Config, args: &ArgMatches) -> CliResult {
     let mut compile_opts = args.compile_options(config, CompileMode::Build)?;
     compile_opts.build_config.release = !args.is_present("debug");
-    // We override target architecture to host architecture since it may be
-    // set to some other architecture in .cargo/config.
-    compile_opts.build_config.requested_target = None;
 
     let krates = args.values_of("crate")
         .unwrap_or_default()

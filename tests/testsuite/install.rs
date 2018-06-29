@@ -4,6 +4,7 @@ use std::io::prelude::*;
 
 use cargo::util::ProcessBuilder;
 use cargotest::install::{cargo_home, has_installed_exe};
+use cargotest::support::cross_compile;
 use cargotest::support::git;
 use cargotest::support::paths;
 use cargotest::support::registry::Package;
@@ -1335,6 +1336,40 @@ fn dev_dependencies_lock_file_untouched() {
 }
 
 #[test]
+fn install_target_native() {
+    pkg("foo", "0.1.0");
+
+    assert_that(
+        cargo_process("install")
+            .arg("foo")
+            .arg("--target")
+            .arg(cargotest::rustc_host()),
+        execs()
+            .with_status(0),
+    );
+    assert_that(cargo_home(), has_installed_exe("foo"));
+}
+
+#[test]
+fn install_target_foreign() {
+    if cross_compile::disabled() {
+        return;
+    }
+
+    pkg("foo", "0.1.0");
+
+    assert_that(
+        cargo_process("install")
+            .arg("foo")
+            .arg("--target")
+            .arg(cross_compile::alternate()),
+        execs()
+            .with_status(0),
+    );
+    assert_that(cargo_home(), has_installed_exe("foo"));
+}
+
+#[test]
 fn vers_precise() {
     pkg("foo", "0.1.1");
     pkg("foo", "0.1.2");
@@ -1606,35 +1641,3 @@ fn git_repo_replace() {
             .contains(&format!("{}", new_rev))
     );
 }
-
-#[test]
-fn install_with_non_existent_target() {
-    pkg("bar", "0.0.1");
-
-    let p = project("foo")
-        .file(
-            "Cargo.toml",
-            r#"
-            [package]
-            name = "foo"
-            version = "0.1.0"
-            authors = []
-        "#,
-        )
-        .file(
-            ".cargo/config",
-            r#"
-            [build]
-            target = "non-existing-target"
-        "#,
-        )
-        .file("src/main.rs", "fn main() {}")
-        .build();
-
-    assert_that(
-        cargo_process("install").arg("bar").cwd(p.root()),
-        execs().with_status(0),
-    );
-    assert_that(cargo_home(), has_installed_exe("bar"));
-}
-
