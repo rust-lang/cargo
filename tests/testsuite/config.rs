@@ -1,4 +1,4 @@
-use cargo::core::Shell;
+use cargo::core::{Shell, enable_nightly_features};
 use cargo::util::config::{self, Config};
 use cargo::util::toml::{self, VecStringOrBool as VSOB};
 use cargo::CargoError;
@@ -45,6 +45,7 @@ fn write_config(config: &str) {
 }
 
 fn new_config(env: &[(&str, &str)]) -> Config {
+    enable_nightly_features(); // -Z advanced-env
     let output = Box::new(fs::File::create(paths::root().join("shell.out")).unwrap());
     let shell = Shell::from_write(output);
     let cwd = paths::root();
