@@ -32,6 +32,7 @@ pub fn cli() -> App {
             "Install only the specified example",
             "Install all examples",
         )
+        .arg_target_triple("Build for the target triple")
         .arg(opt("root", "Directory to install packages into").value_name("DIR"))
         .after_help(
             "\
