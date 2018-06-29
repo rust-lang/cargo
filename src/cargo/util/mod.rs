@@ -17,7 +17,7 @@ pub use self::to_semver::ToSemver;
 pub use self::to_url::ToUrl;
 pub use self::vcs::{FossilRepo, GitRepo, HgRepo, PijulRepo};
 pub use self::read2::read2;
-pub use self::progress::Progress;
+pub use self::progress::{Progress, ProgressStyle};
 
 pub mod config;
 pub mod errors;
