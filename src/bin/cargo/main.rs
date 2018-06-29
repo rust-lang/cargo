@@ -25,6 +25,7 @@ mod commands;
 
 fn main() {
     env_logger::init();
+    cargo::core::maybe_allow_nightly_features();
 
     let mut config = match Config::default() {
         Ok(cfg) => cfg,
