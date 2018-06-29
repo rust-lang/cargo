@@ -44,6 +44,7 @@ extern crate tar;
 extern crate tempfile;
 extern crate termcolor;
 extern crate toml;
+extern crate unicode_width;
 extern crate url;
 
 use std::fmt;

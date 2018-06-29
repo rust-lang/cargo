@@ -182,7 +182,7 @@ impl<'a> JobQueue<'a> {
         // and then immediately return.
         let mut error = None;
         let mut progress = Progress::with_style("Building", ProgressStyle::Ratio, cx.bcx.config);
-        let queue_len = self.queue.len();
+        let total = self.queue.len();
         loop {
             // Dequeue as much work as we can, learning about everything
             // possible that can run. Note that this is also the point where we
@@ -226,12 +226,12 @@ impl<'a> JobQueue<'a> {
             // to the jobserver itself.
             tokens.truncate(self.active.len() - 1);
 
-            let count = queue_len - self.queue.len();
+            let count = total - self.queue.len();
             let active_names = self.active.iter().map(|key| match key.mode {
                 CompileMode::Doc { .. } => format!("{}(doc)", key.pkg.name()),
                 _ => key.pkg.name().to_string(),
             }).collect::<Vec<_>>();
-            drop(progress.tick_now(count, queue_len, format!(": {}", active_names.join(", "))));
+            drop(progress.tick_now(count, total, &format!(": {}", active_names.join(", "))));
             let event = self.rx.recv().unwrap();
             progress.clear();
 
@@ -259,9 +259,12 @@ impl<'a> JobQueue<'a> {
                     info!("end: {:?}", key);
 
                     // self.active.remove_item(&key); // <- switch to this when stabilized.
-                    if let Some(pos) = self.active.iter().position(|k| *k == key) {
-                        self.active.remove(pos);
-                    }
+                    let pos = self
+                        .active
+                        .iter()
+                        .position(|k| *k == key)
+                        .expect("an unrecorded package has finished compiling");
+                    self.active.remove(pos);
                     if !self.active.is_empty() {
                         assert!(!tokens.is_empty());
                         drop(tokens.pop());
