@@ -4,7 +4,7 @@ use hamcrest::{assert_that, contains, is_not};
 
 use cargo::core::source::{GitReference, SourceId};
 use cargo::core::dependency::Kind::{self, Development};
-use cargo::core::{Dependency, PackageId, Registry, Summary};
+use cargo::core::{Dependency, PackageId, Registry, Summary, enable_nightly_features};
 use cargo::util::{CargoResult, Config, ToUrl};
 use cargo::core::resolver::{self, Method};
 
@@ -342,6 +342,7 @@ fn test_resolving_maximum_version_with_transitive_deps() {
 
 #[test]
 fn test_resolving_minimum_version_with_transitive_deps() {
+    enable_nightly_features(); // -Z minimal-versions
     // When the minimal-versions config option is specified then the lowest
     // possible version of a package should be selected. "util 1.0.0" can't be
     // selected because of the requirements of "bar", so the minimum version
