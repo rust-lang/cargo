@@ -522,7 +522,7 @@ fn changing_bin_features_caches_targets() {
     let foo_proc = |name: &str| {
         let src = p.bin("foo");
         let dst = p.bin(name);
-        fs::hard_link(&src, &dst).expect("Failed to link foo");
+        fs::rename(&src, &dst).expect("Failed to rename foo");
         p.process(dst)
     };
 
