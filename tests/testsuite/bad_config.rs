@@ -365,7 +365,7 @@ fn duplicate_packages_in_cargo_lock() {
         .build();
 
     assert_that(
-        p.cargo("build").arg("--verbose"),
+        p.cargo("build"),
         execs().with_status(101).with_stderr(
             "\
 [ERROR] failed to parse lock file at: [..]
@@ -453,7 +453,7 @@ fn bad_dependency_in_lockfile() {
         .build();
 
     assert_that(
-        p.cargo("build").arg("--verbose"),
+        p.cargo("build"),
         execs().with_status(101).with_stderr(
             "\
 [ERROR] failed to parse lock file at: [..]
