@@ -54,10 +54,10 @@ impl EncodableResolve {
                 };
 
                 if !all_pkgs.insert(enc_id.clone()) {
-                    return Err(internal(format!(
+                    bail!(
                         "package `{}` is specified twice in the lockfile",
                         pkg.name
-                    )));
+                    );
                 }
                 let id = match pkg.source.as_ref().or_else(|| path_deps.get(&pkg.name)) {
                     // We failed to find a local package in the workspace.
@@ -82,11 +82,11 @@ impl EncodableResolve {
                     // no longer a member of the workspace.
                     Ok(None)
                 } else {
-                    Err(internal(format!(
+                    bail!(
                         "package `{}` is specified as a dependency, \
                          but is missing from the package list",
                         enc_id
-                    )))
+                    );
                 },
             }
         };
