@@ -46,7 +46,7 @@ fn search(dir: &Path) -> CargoResult<PathBuf> {
         Ok(manifest)
     } else {
         dir.parent()
-            .ok_or_else(|| ErrorKind::MissingManifest.into())
+            .ok_or_else(|| format_err!("Unable to find Cargo.toml"))
             .and_then(|dir| search(dir))
     }
 }
@@ -101,7 +101,7 @@ fn print_upgrade_if_necessary(
     } else if old_dep.is_table_like() {
         let version = old_dep["version"].clone();
         if version.is_none() {
-            return Err("Missing version field".into());
+            Err(format_err!("Missing version field"))?;
         }
         version
     } else {
@@ -171,7 +171,7 @@ impl Manifest {
                 if value.is_table_like() {
                     descend(value, &path[1..])
                 } else {
-                    Err(ErrorKind::NonExistentTable(segment.clone()).into())
+                    Err(format_err!("The table `{}` could not be found.", segment.clone()).into())
                 }
             } else {
                 Ok(input)
@@ -226,9 +226,10 @@ impl Manifest {
     pub fn write_to_file(&self, file: &mut File) -> CargoResult<()> {
         if self.data["package"].is_none() && self.data["project"].is_none() {
             if !self.data["workspace"].is_none() {
-                Err(ErrorKind::UnexpectedRootManifest)?;
+                Err(format_err!("Found virtual manifest, but this command requires running against an \
+                         actual package in this workspace."))?;
             } else {
-                Err(ErrorKind::InvalidManifest)?;
+                Err(format_err!("Cargo.toml missing expected `package` or `project` fields"))?;
             }
         }
 
@@ -304,12 +305,12 @@ impl Manifest {
     /// ```
     pub fn remove_from_table(&mut self, table: &str, name: &str) -> CargoResult<()> {
         if !self.data[table].is_table_like() {
-            Err(ErrorKind::NonExistentTable(table.into()))?;
+            Err(format_err!("The table `{}` could not be found.", table))?;
         } else {
             {
                 let dep = &mut self.data[table][name];
                 if dep.is_none() {
-                    Err(ErrorKind::NonExistentDependency(name.into(), table.into()))?;
+                    Err(format_err!("The dependency `{}` could not be found in `{}`.", name.into(), table.into()))?;
                 }
                 // remove the dependency
                 *dep = toml_edit::Item::None;
