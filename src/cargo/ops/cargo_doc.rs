@@ -5,13 +5,14 @@ use std::process::Command;
 
 use core::Workspace;
 use ops;
+use util::normalize_path;
 use util::CargoResult;
 
 /// Strongly typed options for the `cargo doc` command.
 #[derive(Debug)]
 pub struct DocOptions<'a> {
     /// Whether to attempt to open the browser after compiling the docs
-    pub open_result: bool,
+    pub open_result: Option<String>,
     /// Options to pass through to the compiler
     pub compile_opts: ops::CompileOptions<'a>,
 }
@@ -67,7 +68,7 @@ pub fn doc(ws: &Workspace, options: &DocOptions) -> CargoResult<()> {
 
     ops::compile(ws, &options.compile_opts)?;
 
-    if options.open_result {
+    if let Some(ref module) = options.open_result {
         let name = if pkgs.len() > 1 {
             bail!(
                 "Passing multiple packages and `open` is not supported.\n\
@@ -92,8 +93,62 @@ pub fn doc(ws: &Workspace, options: &DocOptions) -> CargoResult<()> {
         if let Some(ref triple) = options.compile_opts.build_config.requested_target {
             target_dir.push(Path::new(triple).file_stem().unwrap());
         }
-        let path = target_dir.join("doc").join(&name).join("index.html");
-        let path = path.into_path_unlocked();
+
+        target_dir = target_dir.join("doc").join(&name);
+        let default_path = target_dir.join("index.html").into_path_unlocked();
+
+        let path = if module.is_empty() {
+            default_path
+        } else {
+            // A module path was provided so we try to convert it to a filesystem path
+            let doc_root = target_dir.clone();
+            let mut module_path = target_dir;
+            let module_parts: Vec<&str> = module.split("::").collect();
+
+            for part in module_parts.iter() {
+                module_path = module_path.join(part);
+            }
+
+            let mut module_path = module_path.into_path_unlocked();
+
+            // If the last segment of the module path ia a directory we use the index.html inside
+            // otherwise we assume that it is a type and use the .t.html redirect page to avoid
+            // trying all possible types
+            module_path = if module_path.is_dir() {
+                module_path.join("index.html")
+            } else {
+                let last_part = module_parts.last().unwrap();
+                module_path.set_file_name(format!("{}.t.html", last_part));
+                module_path
+            };
+
+            let mut shell = options.compile_opts.config.shell();
+            if !module_path.exists() {
+                shell.warn(format!(
+                    "{} does not exist fallback to default path.",
+                    module_path.display()
+                ))?;
+
+                default_path
+            } else {
+                // Resolve any possible path traversal operations to check if the generated path
+                // is still within the doc directory
+                module_path = normalize_path(&module_path);
+                let doc_root = normalize_path(&doc_root.into_path_unlocked());
+
+                if !module_path.starts_with(doc_root) {
+                    shell.warn(format!(
+                        "{} is outside of the doc directory fallback to default path.",
+                        module_path.display()
+                    ))?;
+
+                    default_path
+                } else {
+                    module_path
+                }
+            }
+        };
+
         if fs::metadata(&path).is_ok() {
             let mut shell = options.compile_opts.config.shell();
             shell.status("Opening", path.display())?;

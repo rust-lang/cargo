@@ -7,8 +7,8 @@ pub fn cli() -> App {
         .about("Build a package's documentation")
         .arg(opt(
             "open",
-            "Opens the docs in a browser after the operation",
-        ))
+            "Opens the docs in a browser after the operation. Optionally with a MODULE to open.",
+        ).min_values(0).value_name("MODULE"))
         .arg_package_spec(
             "Package to document",
             "Document all packages in the workspace",
@@ -51,7 +51,15 @@ pub fn exec(config: &mut Config, args: &ArgMatches) -> CliResult {
     };
     let compile_opts = args.compile_options(config, mode)?;
     let doc_opts = DocOptions {
-        open_result: args.is_present("open"),
+        open_result: args.value_of("open")
+            .or_else(|| {
+                if args.is_present("open") {
+                    Some("")
+                } else {
+                    None
+                }
+            })
+            .map(|s| s.to_string()),
         compile_opts,
     };
     ops::doc(&ws, &doc_opts)?;
