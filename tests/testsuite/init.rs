@@ -61,17 +61,28 @@ fn simple_bin() {
 }
 
 #[test]
-fn both_lib_and_bin() {
-    let td = tempfile::Builder::new().prefix("cargo").tempdir().unwrap();
+fn lib_and_bin() {
+    let path = paths::root().join("foo");
+    fs::create_dir(&path).unwrap();
     assert_that(
         cargo_process("init")
             .arg("--lib")
             .arg("--bin")
-            .cwd(td.path())
-            .env("USER", "foo"),
+            .env("USER", "foo")
+            .cwd(&path),
         execs()
-            .with_status(101)
-            .with_stderr("[ERROR] can't specify both lib and binary outputs"),
+            .with_status(0)
+            .with_stderr("[CREATED] library with a binary (application) project"),
+    );
+
+    assert_that(&paths::root().join("foo/Cargo.toml"), existing_file());
+    assert_that(&paths::root().join("foo/src/main.rs"), existing_file());
+    assert_that(&paths::root().join("foo/src/lib.rs"), existing_file());
+
+    assert_that(cargo_process("build").cwd(&path), execs().with_status(0));
+    assert_that(
+        &paths::root().join(&format!("foo/target/debug/foo{}", env::consts::EXE_SUFFIX)),
+        existing_file(),
     );
 }
 

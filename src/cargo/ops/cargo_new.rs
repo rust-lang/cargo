@@ -33,22 +33,24 @@ pub struct NewOptions {
 }
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
-pub enum NewProjectKind {
-    Bin,
-    Lib,
+
+pub struct NewProjectKind {
+    bin: bool,
+    lib: bool,
 }
 
 impl NewProjectKind {
     fn is_bin(&self) -> bool {
-        *self == NewProjectKind::Bin
+        self.bin
     }
 }
 
 impl fmt::Display for NewProjectKind {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        match *self {
-            NewProjectKind::Bin => "binary (application)",
-            NewProjectKind::Lib => "library",
+        match (self.bin, self.lib) {
+            (true, false) => "binary (application)",
+            (false, true) => "library",
+            _ => "library with a binary (application)",
         }.fmt(f)
     }
 }
@@ -64,7 +66,6 @@ struct MkOptions<'a> {
     path: &'a Path,
     name: &'a str,
     source_files: Vec<SourceFileInformation>,
-    bin: bool,
 }
 
 impl NewOptions {
@@ -76,10 +77,9 @@ impl NewOptions {
         name: Option<String>,
     ) -> CargoResult<NewOptions> {
         let kind = match (bin, lib) {
-            (true, true) => bail!("can't specify both lib and binary outputs"),
-            (false, true) => NewProjectKind::Lib,
             // default to bin
-            (_, false) => NewProjectKind::Bin,
+            (false, false) => NewProjectKind { bin: true, lib: false },
+            (bin, lib) => NewProjectKind { bin, lib },
         };
 
         let opts = NewOptions {
@@ -286,20 +286,23 @@ cannot automatically generate Cargo.toml as the main target would be ambiguous",
     Ok(())
 }
 
-fn plan_new_source_file(bin: bool, project_name: String) -> SourceFileInformation {
-    if bin {
-        SourceFileInformation {
+fn plan_new_source_files(kind: NewProjectKind, project_name: &str) -> Vec<SourceFileInformation> {
+    let mut files = Vec::new();
+    if kind.bin {
+        files.push(SourceFileInformation {
             relative_path: "src/main.rs".to_string(),
-            target_name: project_name,
+            target_name: project_name.to_owned(),
             bin: true,
-        }
-    } else {
-        SourceFileInformation {
-            relative_path: "src/lib.rs".to_string(),
-            target_name: project_name,
-            bin: false,
-        }
+        })
     }
+    if kind.lib {
+        files.push(SourceFileInformation {
+            relative_path: "src/lib.rs".to_string(),
+            target_name: project_name.to_owned(),
+            bin: false,
+        })
+    }
+    files
 }
 
 pub fn new(opts: &NewOptions, config: &Config) -> CargoResult<()> {
@@ -319,8 +322,7 @@ pub fn new(opts: &NewOptions, config: &Config) -> CargoResult<()> {
         version_control: opts.version_control,
         path,
         name,
-        source_files: vec![plan_new_source_file(opts.kind.is_bin(), name.to_string())],
-        bin: opts.kind.is_bin(),
+        source_files: plan_new_source_files(opts.kind, name),
     };
 
     mk(config, &mkopts).chain_err(|| {
@@ -348,7 +350,7 @@ pub fn init(opts: &NewOptions, config: &Config) -> CargoResult<()> {
     detect_source_paths_and_types(path, name, &mut src_paths_types)?;
 
     if src_paths_types.is_empty() {
-        src_paths_types.push(plan_new_source_file(opts.kind.is_bin(), name.to_string()));
+        src_paths_types.extend(plan_new_source_files(opts.kind, name));
     } else {
         // --bin option may be ignored if lib.rs or src/lib.rs present
         // Maybe when doing `cargo init --bin` inside a library project stub,
@@ -395,7 +397,6 @@ pub fn init(opts: &NewOptions, config: &Config) -> CargoResult<()> {
         version_control,
         path,
         name,
-        bin: src_paths_types.iter().any(|x| x.bin),
         source_files: src_paths_types,
     };
 
@@ -417,11 +418,13 @@ fn mk(config: &Config, opts: &MkOptions) -> CargoResult<()> {
     let path = opts.path;
     let name = opts.name;
     let cfg = global_config(config)?;
+    let has_bin = opts.source_files.iter().any(|f| f.bin);
+    let has_lib = opts.source_files.iter().any(|f| !f.bin);
     // Please ensure that ignore and hgignore are in sync.
     let ignore = [
         "/target\n",
         "**/*.rs.bk\n",
-        if !opts.bin { "Cargo.lock\n" } else { "" },
+        if !has_bin { "Cargo.lock\n" } else { "" },
     ].concat();
     // Mercurial glob ignores can't be rooted, so just sticking a 'syntax: glob' at the top of the
     // file will exclude too much. Instead, use regexp-based ignores. See 'hg help ignore' for
@@ -429,7 +432,7 @@ fn mk(config: &Config, opts: &MkOptions) -> CargoResult<()> {
     let hgignore = [
         "^target/\n",
         "glob:*.rs.bk\n",
-        if !opts.bin { "glob:Cargo.lock\n" } else { "" },
+        if !has_bin { "glob:Cargo.lock\n" } else { "" },
     ].concat();
 
     let vcs = opts.version_control.unwrap_or_else(|| {
@@ -554,12 +557,24 @@ authors = [{}]
             fs::create_dir_all(src_dir)?;
         }
 
+        let file_content_tmp;
         let default_file_content: &[u8] = if i.bin {
-            b"\
+            if has_lib {
+                file_content_tmp = format!("\
+extern crate {};
+
+fn main() {{
+    println!(\"Hello, world!\");
+}}
+", name);
+                file_content_tmp.as_bytes()
+            } else {
+                b"\
 fn main() {
     println!(\"Hello, world!\");
 }
 "
+            }
         } else {
             b"\
 #[cfg(test)]
