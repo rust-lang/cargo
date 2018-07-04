@@ -30,7 +30,16 @@ pub struct ProcessBuilder {
 
 impl fmt::Display for ProcessBuilder {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        write!(f, "`{}", self.program.to_string_lossy())?;
+        write!(f, "`")?;
+
+        #[cfg(unix)]
+        for (key, val) in self.env.iter() {
+            if let Some(val) = val {
+                write!(f, "{}={} ", key, escape(val.to_string_lossy()))?;
+            }
+        }
+
+        write!(f, "{}", self.program.to_string_lossy())?;
 
         for arg in &self.args {
             write!(f, " {}", escape(arg.to_string_lossy()))?;
