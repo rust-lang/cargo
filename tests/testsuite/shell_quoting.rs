@@ -6,7 +6,7 @@ use cargotest::support::{
     execs,
     project,
 };
-use hamcrest::assert_that
+use hamcrest::assert_that;
 
 #[test]
 fn features_are_quoted() {
@@ -32,12 +32,11 @@ fn features_are_quoted() {
         execs()
             .with_status(101)
             .with_stderr_contains(
-                r#"\
-[CHECKING] foo [..]
-[RUNNING] `rustc [..] --cfg 'feature="default"' --cfg 'feature="some_feature"' [..]`
-[ERROR] [..]
-process didn't exit successfully: `rustc [..] --cfg 'feature="default"' --cfg 'feature="some_feature"' [..]`
-"#
+                r#"[RUNNING] `rustc [..] --cfg 'feature="default"' --cfg 'feature="some_feature"' [..]`"#
+            ).with_stderr_contains(
+                r#"
+Caused by:
+  process didn't exit successfully: [..] --cfg 'feature="default"' --cfg 'feature="some_feature"' [..]"#
             )
     );
 }
