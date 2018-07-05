@@ -224,7 +224,14 @@ fn install_one(
         Some(Filesystem::new(config.cwd().join("target-install")))
     };
 
-    let ws = Workspace::ephemeral(pkg, config, overidden_target_dir, false)?;
+    let ws = match overidden_target_dir {
+        Some(dir) => Workspace::ephemeral(pkg, config, Some(dir), false)?,
+        None => {
+            let mut ws = Workspace::new(pkg.manifest_path(), config)?;
+            ws.set_require_optional_deps(false);
+            ws
+        }
+    };
     let pkg = ws.current()?;
 
     if from_cwd {
