@@ -3044,6 +3044,7 @@ fn panic_abort_with_build_scripts() {
             "src/lib.rs",
             "#[allow(unused_extern_crates)] extern crate a;",
         )
+        .file("build.rs","fn main() {}")
         .file(
             "a/Cargo.toml",
             r#"
@@ -3077,6 +3078,11 @@ fn panic_abort_with_build_scripts() {
     assert_that(
         p.cargo("build").arg("-v").arg("--release"),
         execs().with_status(0),
+    );
+
+    assert_that(
+        p.cargo("test --release"),
+        execs().with_status(0)
     );
 }
 

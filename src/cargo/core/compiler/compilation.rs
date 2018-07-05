@@ -9,10 +9,21 @@ use core::{Feature, Package, PackageId, Target, TargetKind};
 use util::{self, join_paths, process, CargoResult, Config, ProcessBuilder};
 use super::BuildContext;
 
+pub struct Doctest {
+    /// The package being doctested.
+    pub package: Package,
+    /// The target being tested (currently always the package's lib).
+    pub target: Target,
+    /// Extern dependencies needed by `rustdoc`. The path is the location of
+    /// the compiled lib.
+    pub deps: Vec<(Target, PathBuf)>,
+}
+
 /// A structure returning the result of a compilation.
 pub struct Compilation<'cfg> {
     /// A mapping from a package to the list of libraries that need to be
     /// linked when working with that package.
+    // TODO: deprecated, remove
     pub libraries: HashMap<PackageId, HashSet<(Target, PathBuf)>>,
 
     /// An array of all tests created during this compilation.
@@ -50,7 +61,8 @@ pub struct Compilation<'cfg> {
     /// be passed to future invocations of programs.
     pub extra_env: HashMap<PackageId, Vec<(String, String)>>,
 
-    pub to_doc_test: Vec<Package>,
+    /// Libraries to test with rustdoc.
+    pub to_doc_test: Vec<Doctest>,
 
     /// Features per package enabled during this compilation.
     pub cfgs: HashMap<PackageId, HashSet<String>>,
