@@ -68,9 +68,11 @@ miow = "0.3"
 [target.'cfg(windows)'.dependencies.winapi]
 version = "0.3"
 features = [
+  "basetsd",
   "handleapi",
   "jobapi",
   "jobapi2",
+  "memoryapi",
   "minwindef",
   "ntdef",
   "ntstatus",
