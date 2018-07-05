@@ -3,11 +3,11 @@
 To start a new project with Cargo, use `cargo new`:
 
 ```console
-$ cargo new hello_world --bin
+$ cargo new hello_world
 ```
 
-We’re passing `--bin` because we’re making a binary program: if we
-were making a library, we’d pass `--lib`.
+Cargo defaults to `--bin` to make a binary program. To make a library, we'd
+pass `--lib`.
 
 Let’s check out what Cargo has generated for us:
 
