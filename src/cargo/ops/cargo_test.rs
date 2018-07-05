@@ -1,7 +1,7 @@
-use std::ffi::{OsStr, OsString};
+use std::ffi::OsString;
 
 use ops;
-use core::compiler::Compilation;
+use core::compiler::{Compilation, Doctest};
 use util::{self, CargoTestError, ProcessError, Test};
 use util::errors::CargoResult;
 use core::Workspace;
@@ -154,86 +154,64 @@ fn run_doc_tests(
         return Ok((Test::Doc, errors));
     }
 
-    let libs = compilation.to_doc_test.iter().map(|package| {
-        (
+    for doctest_info in &compilation.to_doc_test {
+        let Doctest {
             package,
-            package
-                .targets()
-                .iter()
-                .filter(|t| t.doctested())
-                .map(|t| (t.src_path(), t.name(), t.crate_name())),
-        )
-    });
+            target,
+            deps,
+        } = doctest_info;
+        config.shell().status("Doc-tests", target.name())?;
+        let mut p = compilation.rustdoc_process(package)?;
+        p.arg("--test")
+            .arg(target.src_path())
+            .arg("--crate-name")
+            .arg(&target.crate_name());
 
-    for (package, tests) in libs {
-        for (lib, name, crate_name) in tests {
-            config.shell().status("Doc-tests", name)?;
-            let mut p = compilation.rustdoc_process(package)?;
-            p.arg("--test")
-                .arg(lib)
-                .arg("--crate-name")
-                .arg(&crate_name);
+        for &rust_dep in &[&compilation.deps_output] {
+            let mut arg = OsString::from("dependency=");
+            arg.push(rust_dep);
+            p.arg("-L").arg(arg);
+        }
 
-            for &rust_dep in &[&compilation.deps_output] {
-                let mut arg = OsString::from("dependency=");
-                arg.push(rust_dep);
-                p.arg("-L").arg(arg);
+        for native_dep in compilation.native_dirs.iter() {
+            p.arg("-L").arg(native_dep);
+        }
+
+        for &host_rust_dep in &[&compilation.host_deps_output] {
+            let mut arg = OsString::from("dependency=");
+            arg.push(host_rust_dep);
+            p.arg("-L").arg(arg);
+        }
+
+        for arg in test_args {
+            p.arg("--test-args").arg(arg);
+        }
+
+        if let Some(cfgs) = compilation.cfgs.get(package.package_id()) {
+            for cfg in cfgs.iter() {
+                p.arg("--cfg").arg(cfg);
             }
+        }
 
-            for native_dep in compilation.native_dirs.iter() {
-                p.arg("-L").arg(native_dep);
-            }
+        for &(ref target, ref lib) in deps.iter() {
+            let mut arg = OsString::from(target.crate_name());
+            arg.push("=");
+            arg.push(lib);
+            p.arg("--extern").arg(&arg);
+        }
 
-            for &host_rust_dep in &[&compilation.host_deps_output] {
-                let mut arg = OsString::from("dependency=");
-                arg.push(host_rust_dep);
-                p.arg("-L").arg(arg);
-            }
+        if let Some(flags) = compilation.rustdocflags.get(package.package_id()) {
+            p.args(flags);
+        }
 
-            for arg in test_args {
-                p.arg("--test-args").arg(arg);
-            }
-
-            if let Some(cfgs) = compilation.cfgs.get(package.package_id()) {
-                for cfg in cfgs.iter() {
-                    p.arg("--cfg").arg(cfg);
-                }
-            }
-
-            let libs = &compilation.libraries[package.package_id()];
-            for &(ref target, ref lib) in libs.iter() {
-                // Note that we can *only* doctest rlib outputs here.  A
-                // staticlib output cannot be linked by the compiler (it just
-                // doesn't do that). A dylib output, however, can be linked by
-                // the compiler, but will always fail. Currently all dylibs are
-                // built as "static dylibs" where the standard library is
-                // statically linked into the dylib. The doc tests fail,
-                // however, for now as they try to link the standard library
-                // dynamically as well, causing problems. As a result we only
-                // pass `--extern` for rlib deps and skip out on all other
-                // artifacts.
-                if lib.extension() != Some(OsStr::new("rlib")) && !target.for_host() {
-                    continue;
-                }
-                let mut arg = OsString::from(target.crate_name());
-                arg.push("=");
-                arg.push(lib);
-                p.arg("--extern").arg(&arg);
-            }
-
-            if let Some(flags) = compilation.rustdocflags.get(package.package_id()) {
-                p.args(flags);
-            }
-
-            config
-                .shell()
-                .verbose(|shell| shell.status("Running", p.to_string()))?;
-            if let Err(e) = p.exec() {
-                let e = e.downcast::<ProcessError>()?;
-                errors.push(e);
-                if !options.no_fail_fast {
-                    return Ok((Test::Doc, errors));
-                }
+        config
+            .shell()
+            .verbose(|shell| shell.status("Running", p.to_string()))?;
+        if let Err(e) = p.exec() {
+            let e = e.downcast::<ProcessError>()?;
+            errors.push(e);
+            if !options.no_fail_fast {
+                return Ok((Test::Doc, errors));
             }
         }
     }

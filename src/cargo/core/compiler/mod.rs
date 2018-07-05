@@ -24,7 +24,7 @@ use self::output_depinfo::output_depinfo;
 
 pub use self::build_context::{BuildContext, FileFlavor, TargetConfig, TargetInfo};
 pub use self::build_config::{BuildConfig, CompileMode, MessageFormat};
-pub use self::compilation::Compilation;
+pub use self::compilation::{Compilation, Doctest};
 pub use self::context::{Context, Unit};
 pub use self::custom_build::{BuildMap, BuildOutput, BuildScripts};
 pub use self::layout::is_bad_artifact_name;
