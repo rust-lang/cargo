@@ -280,7 +280,7 @@ pub fn compile_ws<'a>(
         extra_compiler_args = Some((units[0], args));
     }
 
-    let mut ret = {
+    let ret = {
         let _p = profile::start("compiling");
         let bcx = BuildContext::new(
             ws,
@@ -294,8 +294,6 @@ pub fn compile_ws<'a>(
         let mut cx = Context::new(config, &bcx)?;
         cx.compile(&units, export_dir.clone(), &exec)?
     };
-
-    ret.to_doc_test = to_builds.into_iter().cloned().collect();
 
     return Ok(ret);
 }
@@ -541,9 +539,9 @@ fn generate_targets<'a>(
                     .collect::<Vec<_>>();
                 proposals.extend(default_units);
                 if build_config.mode == CompileMode::Test {
-                    // Include the lib as it will be required for doctests.
+                    // Include doctest for lib.
                     if let Some(t) = pkg.targets().iter().find(|t| t.is_lib() && t.doctested()) {
-                        proposals.push((new_unit(pkg, t, CompileMode::Build), false));
+                        proposals.push((new_unit(pkg, t, CompileMode::Doctest), false));
                     }
                 }
             }
@@ -681,15 +679,7 @@ fn generate_default_targets(targets: &[Target], mode: CompileMode) -> Vec<&Targe
                 })
                 .collect()
         }
-        CompileMode::Doctest => {
-            // `test --doc``
-            targets
-                .iter()
-                .find(|t| t.is_lib() && t.doctested())
-                .into_iter()
-                .collect()
-        }
-        CompileMode::RunCustomBuild => panic!("Invalid mode"),
+        CompileMode::Doctest | CompileMode::RunCustomBuild => panic!("Invalid mode {:?}", mode),
     }
 }
 

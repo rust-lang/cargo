@@ -453,11 +453,15 @@ impl<'a> JobQueue<'a> {
                     }
                 }
             }
-            Fresh if self.counts[key.pkg] == 0 => {
-                self.compiled.insert(key.pkg);
-                config.shell().verbose(|c| c.status("Fresh", key.pkg))?;
+            Fresh => {
+                // If doctest is last, only print "Fresh" if nothing has been printed.
+                if self.counts[key.pkg] == 0
+                    && !(key.mode == CompileMode::Doctest && self.compiled.contains(key.pkg))
+                {
+                    self.compiled.insert(key.pkg);
+                    config.shell().verbose(|c| c.status("Fresh", key.pkg))?;
+                }
             }
-            Fresh => {}
         }
         Ok(())
     }
