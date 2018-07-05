@@ -1641,3 +1641,47 @@ fn git_repo_replace() {
             .contains(&format!("{}", new_rev))
     );
 }
+
+#[test]
+fn workspace_uses_workspace_target_dir() {
+    let p = project("foo")
+        .file(
+            "Cargo.toml",
+            r#"
+                [package]
+                name = "foo"
+                version = "0.1.0"
+                authors = []
+
+                [workspace]
+
+                [dependencies]
+                bar = { path = 'bar' }
+            "#,
+        )
+        .file("src/main.rs", "fn main() {}")
+        .file(
+            "bar/Cargo.toml",
+            r#"
+                [package]
+                name = "bar"
+                version = "0.1.0"
+                authors = []
+            "#,
+        )
+        .file("bar/src/main.rs", "fn main() {}")
+        .build();
+
+    assert_that(p.cargo("build").cwd(p.root().join("bar")).arg("--release"),
+                execs().with_status(0));
+    assert_that(
+        cargo_process("install").arg("--path").arg(p.root().join("bar")),
+        execs().with_status(0).with_stderr(
+            "[INSTALLING] [..]
+[FINISHED] release [optimized] target(s) in [..]
+[INSTALLING] [..]
+warning: be sure to add `[..]` to your PATH to be able to run the installed binaries
+",
+        ),
+    );
+}
