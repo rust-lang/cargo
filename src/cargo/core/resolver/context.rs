@@ -89,7 +89,7 @@ impl Context {
             Some(prev) => {
                 features
                     .iter()
-                    .all(|f| prev.contains(&InternedString::new(f)))
+                    .all(|f| prev.contains(f))
                     && (!use_default || prev.contains(&InternedString::new("default"))
                         || !has_default_feature)
             }
@@ -247,7 +247,7 @@ impl Context {
             );
 
             for feature in reqs.used {
-                set.insert(InternedString::new(feature));
+                set.insert(feature);
             }
         }
 
@@ -296,10 +296,10 @@ fn build_requirements<'a, 'b: 'a>(
             all_features: true, ..
         } => {
             for key in s.features().keys() {
-                reqs.require_feature(key)?;
+                reqs.require_feature(InternedString::new(&key))?;
             }
             for dep in s.dependencies().iter().filter(|d| d.is_optional()) {
-                reqs.require_dependency(dep.name().as_str());
+                reqs.require_dependency(dep.name());
             }
         }
         Method::Required {
@@ -319,7 +319,7 @@ fn build_requirements<'a, 'b: 'a>(
             ..
         } => {
             if s.features().get("default").is_some() {
-                reqs.require_feature("default")?;
+                reqs.require_feature(InternedString::new("default"))?;
             }
         }
         Method::Required {
@@ -341,8 +341,8 @@ struct Requirements<'a> {
     // The used features set is the set of features which this local package had
     // enabled, which is later used when compiling to instruct the code what
     // features were enabled.
-    used: HashSet<&'a str>,
-    visited: HashSet<&'a str>,
+    used: HashSet<InternedString>,
+    visited: HashSet<InternedString>,
 }
 
 impl<'r> Requirements<'r> {
@@ -355,16 +355,16 @@ impl<'r> Requirements<'r> {
         }
     }
 
-    fn require_crate_feature(&mut self, package: &'r str, feat: InternedString) {
+    fn require_crate_feature(&mut self, package: InternedString, feat: InternedString) {
         self.used.insert(package);
         self.deps
-            .entry(package)
+            .entry(package.as_str())
             .or_insert((false, Vec::new()))
             .1
             .push(feat);
     }
 
-    fn seen(&mut self, feat: &'r str) -> bool {
+    fn seen(&mut self, feat: InternedString) -> bool {
         if self.visited.insert(feat) {
             self.used.insert(feat);
             false
@@ -373,20 +373,20 @@ impl<'r> Requirements<'r> {
         }
     }
 
-    fn require_dependency(&mut self, pkg: &'r str) {
+    fn require_dependency(&mut self, pkg: InternedString) {
         if self.seen(pkg) {
             return;
         }
-        self.deps.entry(pkg).or_insert((false, Vec::new())).0 = true;
+        self.deps.entry(pkg.as_str()).or_insert((false, Vec::new())).0 = true;
     }
 
-    fn require_feature(&mut self, feat: &'r str) -> CargoResult<()> {
+    fn require_feature(&mut self, feat: InternedString) -> CargoResult<()> {
         if feat.is_empty() || self.seen(feat) {
             return Ok(());
         }
         for fv in self.summary
             .features()
-            .get(feat)
+            .get(feat.as_str())
             .expect("must be a valid feature")
         {
             match *fv {
@@ -403,10 +403,10 @@ impl<'r> Requirements<'r> {
 
     fn require_value<'f>(&mut self, fv: &'f FeatureValue) -> CargoResult<()> {
         match fv {
-            FeatureValue::Feature(feat) => self.require_feature(feat.as_str()),
-            FeatureValue::Crate(dep) => Ok(self.require_dependency(dep.as_str())),
+            FeatureValue::Feature(feat) => self.require_feature(*feat),
+            FeatureValue::Crate(dep) => Ok(self.require_dependency(*dep)),
             FeatureValue::CrateFeature(dep, dep_feat) => {
-                Ok(self.require_crate_feature(dep.as_str(), *dep_feat))
+                Ok(self.require_crate_feature(*dep, *dep_feat))
             }
         }
     }
