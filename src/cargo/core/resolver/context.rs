@@ -84,7 +84,7 @@ impl Context {
             } => (features, uses_default_features),
         };
 
-        let has_default_feature = summary.features().contains_key("default");
+        let has_default_feature = summary.features().contains_key(&InternedString::new("default"));
         Ok(match self.resolve_features.get(id) {
             Some(prev) => {
                 features
@@ -318,7 +318,7 @@ fn build_requirements<'a, 'b: 'a>(
             uses_default_features: true,
             ..
         } => {
-            if s.features().get("default").is_some() {
+            if s.features().get(&InternedString::new("default")).is_some() {
                 reqs.require_feature(InternedString::new("default"))?;
             }
         }
@@ -386,7 +386,7 @@ impl<'r> Requirements<'r> {
         }
         for fv in self.summary
             .features()
-            .get(feat.as_str())
+            .get(&feat)
             .expect("must be a valid feature")
         {
             match *fv {

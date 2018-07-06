@@ -187,7 +187,7 @@ fn build_feature_map(
         for dep in list {
             let val = FeatureValue::build(
                 InternedString::new(dep),
-                |fs| features.contains_key(fs),
+                |fs| features.contains_key(fs.as_str()),
                 namespaced,
             );
 
@@ -222,7 +222,7 @@ fn build_feature_map(
                 // we don't have to do so here.
                 (&Feature(feat), _, true) => {
                     if namespaced && !features.contains_key(&*feat) {
-                        map.insert(feat.to_string(), vec![FeatureValue::Crate(feat)]);
+                        map.insert(feat, vec![FeatureValue::Crate(feat)]);
                     }
                 }
                 // If features are namespaced and the value is not defined as a feature
@@ -316,7 +316,7 @@ fn build_feature_map(
             )
         }
 
-        map.insert(feature.clone(), values);
+        map.insert(InternedString::new(&feature), values);
     }
     Ok(map)
 }
@@ -338,7 +338,7 @@ pub enum FeatureValue {
 impl FeatureValue {
     fn build<T>(feature: InternedString, is_feature: T, namespaced: bool) -> FeatureValue
     where
-        T: Fn(&str) -> bool,
+        T: Fn(InternedString) -> bool,
     {
         match (feature.find('/'), namespaced) {
             (Some(pos), _) => {
@@ -350,7 +350,7 @@ impl FeatureValue {
                 FeatureValue::Crate(InternedString::new(&feature[6..]))
             }
             (None, true) => FeatureValue::Feature(feature),
-            (None, false) if is_feature(&feature) => FeatureValue::Feature(feature),
+            (None, false) if is_feature(feature) => FeatureValue::Feature(feature),
             (None, false) => FeatureValue::Crate(feature),
         }
     }
@@ -358,7 +358,7 @@ impl FeatureValue {
     pub fn new(feature: InternedString, s: &Summary) -> FeatureValue {
         Self::build(
             feature,
-            |fs| s.features().contains_key(fs),
+            |fs| s.features().contains_key(&fs),
             s.namespaced_features(),
         )
     }
@@ -393,4 +393,4 @@ impl Serialize for FeatureValue {
     }
 }
 
-pub type FeatureMap = BTreeMap<String, Vec<FeatureValue>>;
+pub type FeatureMap = BTreeMap<InternedString, Vec<FeatureValue>>;
