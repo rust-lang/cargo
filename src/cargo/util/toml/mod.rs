@@ -1304,7 +1304,7 @@ impl DetailedTomlDependency {
             Some(id) => Dependency::parse(pkg_name, version, &new_source_id, id, cx.config)?,
             None => Dependency::parse_no_deprecated(name, version, &new_source_id)?,
         };
-        dep.set_features(self.features.iter().flat_map(|x| x).map(|x| x.as_str()))
+        dep.set_features(self.features.iter().flat_map(|x| x))
             .set_default_features(
                 self.default_features
                     .or(self.default_features2)
