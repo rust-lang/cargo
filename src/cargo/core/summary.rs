@@ -33,7 +33,7 @@ impl Summary {
     pub fn new(
         pkg_id: PackageId,
         dependencies: Vec<Dependency>,
-        features: BTreeMap<String, Vec<String>>,
+        features: BTreeMap<String, Vec<&str>>,
         links: Option<&str>,
         namespaced_features: bool,
     ) -> CargoResult<Summary> {
@@ -135,14 +135,15 @@ impl PartialEq for Summary {
 // Checks features for errors, bailing out a CargoResult:Err if invalid,
 // and creates FeatureValues for each feature.
 fn build_feature_map(
-    features: BTreeMap<String, Vec<String>>,
+    features: BTreeMap<String, Vec<&str>>,
     dependencies: &[Dependency],
     namespaced: bool,
 ) -> CargoResult<FeatureMap> {
     use self::FeatureValue::*;
     let mut dep_map = HashMap::new();
     for dep in dependencies.iter() {
-        dep_map.entry(dep.name().as_str())
+        dep_map
+            .entry(dep.name().as_str())
             .or_insert(Vec::new())
             .push(dep);
     }
@@ -198,7 +199,8 @@ fn build_feature_map(
                     }
                 }
             };
-            let is_optional_dep = dep_data.iter()
+            let is_optional_dep = dep_data
+                .iter()
                 .flat_map(|d| d.iter())
                 .any(|d| d.is_optional());
             if let FeatureValue::Crate(ref dep_name) = val {
