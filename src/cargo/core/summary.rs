@@ -33,7 +33,7 @@ impl Summary {
     pub fn new(
         pkg_id: PackageId,
         dependencies: Vec<Dependency>,
-        features: BTreeMap<String, Vec<&str>>,
+        features: BTreeMap<&str, Vec<&str>>,
         links: Option<&str>,
         namespaced_features: bool,
     ) -> CargoResult<Summary> {
@@ -135,7 +135,7 @@ impl PartialEq for Summary {
 // Checks features for errors, bailing out a CargoResult:Err if invalid,
 // and creates FeatureValues for each feature.
 fn build_feature_map(
-    features: BTreeMap<String, Vec<&str>>,
+    features: BTreeMap<&str, Vec<&str>>,
     dependencies: &[Dependency],
     namespaced: bool,
 ) -> CargoResult<FeatureMap> {
@@ -149,7 +149,7 @@ fn build_feature_map(
     }
 
     let mut map = BTreeMap::new();
-    for (feature, list) in features.iter() {
+    for (&feature, list) in features.iter() {
         // If namespaced features is active and the key is the same as that of an
         // optional dependency, that dependency must be included in the values.
         // Thus, if a `feature` is found that has the same name as a dependency, we
@@ -160,7 +160,7 @@ fn build_feature_map(
         // as the name of an optional dependency. If so, it gets set to true during
         // iteration over the list if the dependency is found in the list.
         let mut dependency_found = if namespaced {
-            match dep_map.get(feature.as_str()) {
+            match dep_map.get(feature) {
                 Some(ref dep_data) => {
                     if !dep_data.iter().any(|d| d.is_optional()) {
                         bail!(

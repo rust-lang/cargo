@@ -214,7 +214,7 @@ pub struct RegistryPackage<'a> {
     name: &'a str,
     vers: Version,
     deps: Vec<RegistryDependency<'a>>,
-    features: BTreeMap<String, Vec<&'a str>>,
+    features: BTreeMap<&'a str, Vec<&'a str>>,
     cksum: String,
     yanked: Option<bool>,
     links: Option<&'a str>,

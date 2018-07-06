@@ -889,7 +889,7 @@ impl TomlManifest {
                 .as_ref()
                 .map(|x| {
                     x.iter()
-                        .map(|(k, v)| (k.clone(), v.iter().map(|s| s.as_str()).collect()))
+                        .map(|(k, v)| (k.as_str(), v.iter().map(|s| s.as_str()).collect()))
                         .collect()
                 })
                 .unwrap_or_else(BTreeMap::new),
