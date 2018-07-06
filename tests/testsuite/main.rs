@@ -87,6 +87,7 @@ mod rustdocflags;
 mod rustdoc;
 mod rustflags;
 mod search;
+mod shell_quoting;
 mod small_fd_limits;
 mod test;
 mod tool_paths;
