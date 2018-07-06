@@ -2,13 +2,13 @@ use std::collections::HashMap;
 use std::path::Path;
 use std::str;
 
-use serde_json;
 use semver::Version;
+use serde_json;
 
 use core::dependency::Dependency;
 use core::{PackageId, SourceId, Summary};
-use sources::registry::{RegistryPackage, INDEX_LOCK};
 use sources::registry::RegistryData;
+use sources::registry::{RegistryPackage, INDEX_LOCK};
 use util::{internal, CargoResult, Config, Filesystem};
 
 pub struct RegistryIndex<'cfg> {
@@ -82,7 +82,8 @@ impl<'cfg> RegistryIndex<'cfg> {
         // this on #5551.
         load.prepare()?;
         let (root, _lock) = if self.locked {
-            let lock = self.path
+            let lock = self
+                .path
                 .open_ro(Path::new(INDEX_LOCK), self.config, "the registry index");
             match lock {
                 Ok(lock) => (lock.path().parent().unwrap().to_path_buf(), Some(lock)),
@@ -92,7 +93,8 @@ impl<'cfg> RegistryIndex<'cfg> {
             (self.path.clone().into_path_unlocked(), None)
         };
 
-        let fs_name = name.chars()
+        let fs_name = name
+            .chars()
             .flat_map(|c| c.to_lowercase())
             .collect::<String>();
 
@@ -124,7 +126,7 @@ impl<'cfg> RegistryIndex<'cfg> {
                     Err(e) => {
                         info!("failed to parse `{}` registry package: {}", name, e);
                         trace!("line: {}", line);
-                        return None
+                        return None;
                     }
                 };
                 if online || load.is_crate_downloaded(summary.package_id()) {
@@ -163,7 +165,8 @@ impl<'cfg> RegistryIndex<'cfg> {
         } = serde_json::from_str(line)?;
         let pkgid = PackageId::new(&name, &vers, &self.source_id)?;
         let name = pkgid.name();
-        let deps = deps.into_iter()
+        let deps = deps
+            .into_iter()
             .map(|dep| dep.into_dep(&self.source_id))
             .collect::<CargoResult<Vec<_>>>()?;
         let summary = Summary::new(pkgid, deps, features, links, false)?;
@@ -196,7 +199,8 @@ impl<'cfg> RegistryIndex<'cfg> {
         let summaries = summaries.filter(|s| match source_id.precise() {
             Some(p) if p.starts_with(&*dep.name()) && p[dep.name().len()..].starts_with('=') => {
                 let mut vers = p[dep.name().len() + 1..].splitn(2, "->");
-                if dep.version_req()
+                if dep
+                    .version_req()
                     .matches(&Version::parse(vers.next().unwrap()).unwrap())
                 {
                     vers.next().unwrap() == s.version().to_string()
