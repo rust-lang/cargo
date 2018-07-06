@@ -882,7 +882,7 @@ impl TomlManifest {
             pkgid,
             deps,
             me.features.clone().unwrap_or_else(BTreeMap::new),
-            project.links.clone(),
+            project.links.as_ref().map(|x| x.as_str()),
             project.namespaced_features.unwrap_or(false),
         )?;
         let metadata = ManifestMetadata {
@@ -1292,7 +1292,7 @@ impl DetailedTomlDependency {
             Some(id) => Dependency::parse(pkg_name, version, &new_source_id, id, cx.config)?,
             None => Dependency::parse_no_deprecated(name, version, &new_source_id)?,
         };
-        dep.set_features(self.features.clone().unwrap_or_default())
+        dep.set_features(self.features.iter().flat_map(|x| x).map(|x| x.as_str()))
             .set_default_features(
                 self.default_features
                     .or(self.default_features2)
