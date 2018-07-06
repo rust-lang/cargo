@@ -250,7 +250,7 @@ impl Dependency {
     }
 
     /// Sets the list of features requested for the package.
-    pub fn set_features<'a>(&mut self, features: impl IntoIterator<Item=impl AsRef<str>>) -> &mut Dependency {
+    pub fn set_features(&mut self, features: impl IntoIterator<Item=impl AsRef<str>>) -> &mut Dependency {
         Rc::make_mut(&mut self.inner).features =
             features.into_iter().map(|s| InternedString::new(s.as_ref())).collect();
         self
