@@ -14,8 +14,8 @@ use util::{internal, CargoResult, Config, Filesystem};
 pub struct RegistryIndex<'cfg> {
     source_id: SourceId,
     path: Filesystem,
-    cache: HashMap<String, Vec<(Summary, bool)>>,
-    hashes: HashMap<String, HashMap<Version, String>>, // (name, vers) => cksum
+    cache: HashMap<&'static str, Vec<(Summary, bool)>>,
+    hashes: HashMap<&'static str, HashMap<Version, String>>, // (name, vers) => cksum
     config: &'cfg Config,
     locked: bool,
 }
@@ -39,7 +39,7 @@ impl<'cfg> RegistryIndex<'cfg> {
 
     /// Return the hash listed for a specified PackageId.
     pub fn hash(&mut self, pkg: &PackageId, load: &mut RegistryData) -> CargoResult<String> {
-        let name = &*pkg.name();
+        let name = pkg.name().as_str();
         let version = pkg.version();
         if let Some(s) = self.hashes.get(name).and_then(|v| v.get(version)) {
             return Ok(s.clone());
@@ -59,14 +59,14 @@ impl<'cfg> RegistryIndex<'cfg> {
     /// specified.
     pub fn summaries(
         &mut self,
-        name: &str,
+        name: &'static str,
         load: &mut RegistryData,
     ) -> CargoResult<&Vec<(Summary, bool)>> {
         if self.cache.contains_key(name) {
             return Ok(&self.cache[name]);
         }
         let summaries = self.load_summaries(name, load)?;
-        self.cache.insert(name.to_string(), summaries);
+        self.cache.insert(name, summaries);
         Ok(&self.cache[name])
     }
 
@@ -162,19 +162,16 @@ impl<'cfg> RegistryIndex<'cfg> {
             links,
         } = serde_json::from_str(line)?;
         let pkgid = PackageId::new(&name, &vers, &self.source_id)?;
+        let name = pkgid.name();
         let deps = deps.into_iter()
             .map(|dep| dep.into_dep(&self.source_id))
             .collect::<CargoResult<Vec<_>>>()?;
         let summary = Summary::new(pkgid, deps, features, links, false)?;
         let summary = summary.set_checksum(cksum.clone());
-        if self.hashes.contains_key(&name[..]) {
-            self.hashes.get_mut(&name[..]).unwrap().insert(vers, cksum);
-        } else {
-            self.hashes
-                .entry(name.into_owned())
-                .or_insert_with(HashMap::new)
-                .insert(vers, cksum);
-        }
+        self.hashes
+            .entry(name.as_str())
+            .or_insert_with(HashMap::new)
+            .insert(vers, cksum);
         Ok((summary, yanked.unwrap_or(false)))
     }
 
@@ -185,7 +182,7 @@ impl<'cfg> RegistryIndex<'cfg> {
         f: &mut FnMut(Summary),
     ) -> CargoResult<()> {
         let source_id = self.source_id.clone();
-        let summaries = self.summaries(&*dep.name(), load)?;
+        let summaries = self.summaries(dep.name().as_str(), load)?;
         let summaries = summaries
             .iter()
             .filter(|&&(_, yanked)| dep.source_id().precise().is_some() || !yanked)

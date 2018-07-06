@@ -158,7 +158,6 @@
 //!         ...
 //! ```
 
-use std::borrow::Cow;
 use std::collections::BTreeMap;
 use std::fs::File;
 use std::path::{Path, PathBuf};
@@ -212,13 +211,13 @@ pub struct RegistryConfig {
 
 #[derive(Deserialize)]
 pub struct RegistryPackage<'a> {
-    name: Cow<'a, str>,
+    name: &'a str,
     vers: Version,
     deps: Vec<RegistryDependency<'a>>,
     features: BTreeMap<String, Vec<String>>,
     cksum: String,
     yanked: Option<bool>,
-    links: Option<String>,
+    links: Option<&'a str>,
 }
 
 #[derive(Deserialize)]
@@ -235,14 +234,14 @@ enum Field {
 
 #[derive(Deserialize)]
 struct RegistryDependency<'a> {
-    name: Cow<'a, str>,
-    req: Cow<'a, str>,
-    features: Vec<String>,
+    name: &'a str,
+    req: &'a str,
+    features: Vec<&'a str>,
     optional: bool,
     default_features: bool,
-    target: Option<Cow<'a, str>>,
-    kind: Option<Cow<'a, str>>,
-    registry: Option<String>,
+    target: Option<&'a str>,
+    kind: Option<&'a str>,
+    registry: Option<&'a str>,
 }
 
 impl<'a> RegistryDependency<'a> {
@@ -486,7 +485,7 @@ impl<'cfg> Source for RegistrySource<'cfg> {
         // differ due to historical Cargo bugs. To paper over these we trash the
         // *summary* loaded from the Cargo.toml we just downloaded with the one
         // we loaded from the index.
-        let summaries = self.index.summaries(&*package.name(), &mut *self.ops)?;
+        let summaries = self.index.summaries(package.name().as_str(), &mut *self.ops)?;
         let summary = summaries
             .iter()
             .map(|s| &s.0)

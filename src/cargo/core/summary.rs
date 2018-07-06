@@ -34,7 +34,7 @@ impl Summary {
         pkg_id: PackageId,
         dependencies: Vec<Dependency>,
         features: BTreeMap<String, Vec<String>>,
-        links: Option<String>,
+        links: Option<&str>,
         namespaced_features: bool,
     ) -> CargoResult<Summary> {
         for dep in dependencies.iter() {
