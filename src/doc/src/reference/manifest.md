@@ -303,6 +303,7 @@ along with the defaults for each profile.
 [profile.dev]
 opt-level = 0      # controls the `--opt-level` the compiler builds with.
                    # 0-1 is good for debugging. 2 is well-optimized. Max is 3.
+                   # 's' attempts to reduce size, 'z' reduces size even more.
 debug = true       # include debug information (debug symbols). Equivalent to
                    # `-C debuginfo=2` compiler flag.
 rpath = false      # controls whether compiler should set loader paths.
