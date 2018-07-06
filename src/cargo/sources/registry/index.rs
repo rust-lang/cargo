@@ -99,51 +99,73 @@ impl<'cfg> RegistryIndex<'cfg> {
             .collect::<String>();
 
         // see module comment for why this is structured the way it is
-        let path = match fs_name.len() {
+        let raw_path = match fs_name.len() {
             1 => format!("1/{}", fs_name),
             2 => format!("2/{}", fs_name),
             3 => format!("3/{}/{}", &fs_name[..1], fs_name),
             _ => format!("{}/{}/{}", &fs_name[0..2], &fs_name[2..4], fs_name),
         };
+        let num_hyphen_underscore = raw_path.chars()
+            .filter(|&c| c == '_' || c == '-')
+            .count();
         let mut ret = Vec::new();
-        let mut hit_closure = false;
-        let err = load.load(&root, Path::new(&path), &mut |contents| {
-            hit_closure = true;
-            let contents = str::from_utf8(contents)
-                .map_err(|_| format_err!("registry index file was not valid utf-8"))?;
-            ret.reserve(contents.lines().count());
-            let lines = contents.lines().map(|s| s.trim()).filter(|l| !l.is_empty());
-
-            let online = !self.config.cli_unstable().offline;
-            // Attempt forwards-compatibility on the index by ignoring
-            // everything that we ourselves don't understand, that should
-            // allow future cargo implementations to break the
-            // interpretation of each line here and older cargo will simply
-            // ignore the new lines.
-            ret.extend(lines.filter_map(|line| {
-                let (summary, locked) = match self.parse_registry_package(line) {
-                    Ok(p) => p,
-                    Err(e) => {
-                        info!("failed to parse `{}` registry package: {}", name, e);
-                        trace!("line: {}", line);
-                        return None;
-                    }
-                };
-                if online || load.is_crate_downloaded(summary.package_id()) {
-                    Some((summary, locked))
+        // Crates.io treats hyphen and underscores as interchangeable
+        // but, the index and old cargo do not. So the index must store uncanonicalized version
+        // of the name so old cargos can find it.
+        // This loop tries all possible combinations of
+        // hyphen and underscores to find the uncanonicalized one.
+        for hyphen_combination_num in 0u16..(1 << num_hyphen_underscore) {
+            let path = raw_path.chars()
+                .scan(0u32, |s, c| if c == '_' || c == '-' {
+                    let out = Some(if (hyphen_combination_num & (1u16 << *s)) > 0 { '_' } else { '-' });
+                    *s += 1;
+                    out
                 } else {
-                    None
-                }
-            }));
+                    Some(c)
+                })
+                .collect::<String>();
+            let mut hit_closure = false;
+            let err = load.load(&root, Path::new(&path), &mut |contents| {
+                hit_closure = true;
+                let contents = str::from_utf8(contents)
+                    .map_err(|_| format_err!("registry index file was not valid utf-8"))?;
+                ret.reserve(contents.lines().count());
+                let lines = contents.lines().map(|s| s.trim()).filter(|l| !l.is_empty());
 
-            Ok(())
-        });
+                let online = !self.config.cli_unstable().offline;
+                // Attempt forwards-compatibility on the index by ignoring
+                // everything that we ourselves don't understand, that should
+                // allow future cargo implementations to break the
+                // interpretation of each line here and older cargo will simply
+                // ignore the new lines.
+                ret.extend(lines.filter_map(|line| {
+                    let (summary, locked) = match self.parse_registry_package(line) {
+                        Ok(p) => p,
+                        Err(e) => {
+                            info!("failed to parse `{}` registry package: {}", name, e);
+                            trace!("line: {}", line);
+                            return None;
+                        }
+                    };
+                    if online || load.is_crate_downloaded(summary.package_id()) {
+                        Some((summary, locked))
+                    } else {
+                        None
+                    }
+                }));
 
-        // We ignore lookup failures as those are just crates which don't exist
-        // or we haven't updated the registry yet. If we actually ran the
-        // closure though then we care about those errors.
-        if hit_closure {
-            err?;
+                Ok(())
+            });
+
+            // We ignore lookup failures as those are just crates which don't exist
+            // or we haven't updated the registry yet. If we actually ran the
+            // closure though then we care about those errors.
+            if hit_closure {
+                err?;
+                // Crates.io ensures that there is only one hyphen and underscore equivalent
+                // result in the index so return when we find it.
+                return Ok(ret);
+            }
         }
 
         Ok(ret)
