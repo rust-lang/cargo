@@ -28,7 +28,8 @@ fn features_are_quoted() {
         .build();
 
     assert_that(
-        p.cargo("check -v"),
+        p.cargo("check -v")
+            .env("MSYSTEM", "1"),
         execs()
             .with_status(101)
             .with_stderr_contains(
