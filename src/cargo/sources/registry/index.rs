@@ -115,13 +115,20 @@ impl<'cfg> RegistryIndex<'cfg> {
         // This loop tries all possible combinations of
         // hyphen and underscores to find the uncanonicalized one.
         for hyphen_combination_num in 0u16..(1 << num_hyphen_underscore) {
-            let path = raw_path.chars()
-                .scan(0u32, |s, c| if c == '_' || c == '-' {
-                    let out = Some(if (hyphen_combination_num & (1u16 << *s)) > 0 { '_' } else { '-' });
-                    *s += 1;
-                    out
-                } else {
-                    Some(c)
+            let path = raw_path
+                .chars()
+                .scan(0u32, |s, c| {
+                    if c == '_' || c == '-' {
+                        let out = Some(if (hyphen_combination_num & (1u16 << *s)) > 0 {
+                            '_'
+                        } else {
+                            '-'
+                        });
+                        *s += 1;
+                        out
+                    } else {
+                        Some(c)
+                    }
                 })
                 .collect::<String>();
             let mut hit_closure = false;
