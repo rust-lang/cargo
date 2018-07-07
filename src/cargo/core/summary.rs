@@ -1,4 +1,6 @@
+use std::borrow::Borrow;
 use std::collections::{BTreeMap, HashMap};
+use std::fmt::Display;
 use std::mem;
 use std::rc::Rc;
 
@@ -30,13 +32,14 @@ struct Inner {
 }
 
 impl Summary {
-    pub fn new(
+    pub fn new<K>(
         pkg_id: PackageId,
         dependencies: Vec<Dependency>,
-        features: BTreeMap<&str, Vec<&str>>,
-        links: Option<&str>,
+        features: BTreeMap<K, Vec<impl AsRef<str>>>,
+        links: Option<impl AsRef<str>>,
         namespaced_features: bool,
-    ) -> CargoResult<Summary> {
+    ) -> CargoResult<Summary>
+    where K: Borrow<str> + Ord + Display {
         for dep in dependencies.iter() {
             if !namespaced_features && features.get(&*dep.name()).is_some() {
                 bail!(
@@ -59,7 +62,7 @@ impl Summary {
                 dependencies,
                 features: feature_map,
                 checksum: None,
-                links: links.map(|l| InternedString::new(&l)),
+                links: links.map(|l| InternedString::new(l.as_ref())),
                 namespaced_features,
             }),
         })
@@ -134,11 +137,12 @@ impl PartialEq for Summary {
 
 // Checks features for errors, bailing out a CargoResult:Err if invalid,
 // and creates FeatureValues for each feature.
-fn build_feature_map(
-    features: BTreeMap<&str, Vec<&str>>,
+fn build_feature_map<K>(
+    features: BTreeMap<K, Vec<impl AsRef<str>>>,
     dependencies: &[Dependency],
     namespaced: bool,
-) -> CargoResult<FeatureMap> {
+) -> CargoResult<FeatureMap>
+where K: Borrow<str> + Ord + Display {
     use self::FeatureValue::*;
     let mut dep_map = HashMap::new();
     for dep in dependencies.iter() {
@@ -149,7 +153,7 @@ fn build_feature_map(
     }
 
     let mut map = BTreeMap::new();
-    for (&feature, list) in features.iter() {
+    for (feature, list) in features.iter() {
         // If namespaced features is active and the key is the same as that of an
         // optional dependency, that dependency must be included in the values.
         // Thus, if a `feature` is found that has the same name as a dependency, we
@@ -160,7 +164,7 @@ fn build_feature_map(
         // as the name of an optional dependency. If so, it gets set to true during
         // iteration over the list if the dependency is found in the list.
         let mut dependency_found = if namespaced {
-            match dep_map.get(feature) {
+            match dep_map.get(feature.borrow()) {
                 Some(ref dep_data) => {
                     if !dep_data.iter().any(|d| d.is_optional()) {
                         bail!(
@@ -186,7 +190,7 @@ fn build_feature_map(
         let mut values = vec![];
         for dep in list {
             let val = FeatureValue::build(
-                InternedString::new(dep),
+                InternedString::new(dep.as_ref()),
                 |fs| features.contains_key(fs.as_str()),
                 namespaced,
             );
@@ -206,7 +210,7 @@ fn build_feature_map(
             if let FeatureValue::Crate(ref dep_name) = val {
                 // If we have a dependency value, check if this is the dependency named
                 // the same as the feature that we were looking for.
-                if !dependency_found && feature == dep_name.as_str() {
+                if !dependency_found && feature.borrow() == dep_name.as_str() {
                     dependency_found = true;
                 }
             }
@@ -316,7 +320,7 @@ fn build_feature_map(
             )
         }
 
-        map.insert(InternedString::new(&feature), values);
+        map.insert(InternedString::new(feature.borrow()), values);
     }
     Ok(map)
 }

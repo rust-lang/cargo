@@ -158,12 +158,15 @@
 //!         ...
 //! ```
 
+use std::borrow::Cow;
 use std::collections::BTreeMap;
 use std::fs::File;
 use std::path::{Path, PathBuf};
 
 use flate2::read::GzDecoder;
 use semver::Version;
+#[cfg(test)]
+use serde_json;
 use tar::Archive;
 
 use core::dependency::{Dependency, Kind};
@@ -211,13 +214,43 @@ pub struct RegistryConfig {
 
 #[derive(Deserialize)]
 pub struct RegistryPackage<'a> {
-    name: &'a str,
+    name: Cow<'a, str>,
     vers: Version,
     deps: Vec<RegistryDependency<'a>>,
-    features: BTreeMap<&'a str, Vec<&'a str>>,
+    features: BTreeMap<Cow<'a, str>, Vec<Cow<'a, str>>>,
     cksum: String,
     yanked: Option<bool>,
-    links: Option<&'a str>,
+    links: Option<Cow<'a, str>>,
+}
+
+#[test]
+fn escaped_cher_in_json() {
+    let _: RegistryPackage = serde_json::from_str(
+        r#"{"name":"a","vers":"0.0.1","deps":[],"cksum":"bae3","features":{}}"#
+    ).unwrap();
+    let _: RegistryPackage = serde_json::from_str(
+        r#"{"name":"a","vers":"0.0.1","deps":[],"cksum":"bae3","features":{"test":["k","q"]},"links":"a-sys"}"#
+    ).unwrap();
+
+    // Now we add escaped cher all the places they can go
+    // these are not valid, but it should error later than json parsing
+    let _: RegistryPackage = serde_json::from_str(r#"{
+        "name":"This name has a escaped cher in it \n\t\" ",
+        "vers":"0.0.1",
+        "deps":[{
+            "name": " \n\t\" ",
+            "req": " \n\t\" ",
+            "features": [" \n\t\" "],
+            "optional": true,
+            "default_features": true,
+            "target": " \n\t\" ",
+            "kind": " \n\t\" ",
+            "registry": " \n\t\" "
+        }],
+        "cksum":"bae3",
+        "features":{"test \n\t\" ":["k \n\t\" ","q \n\t\" "]},
+        "links":" \n\t\" "}"#
+    ).unwrap();
 }
 
 #[derive(Deserialize)]
@@ -234,14 +267,14 @@ enum Field {
 
 #[derive(Deserialize)]
 struct RegistryDependency<'a> {
-    name: &'a str,
-    req: &'a str,
-    features: Vec<&'a str>,
+    name: Cow<'a, str>,
+    req: Cow<'a, str>,
+    features: Vec<Cow<'a, str>>,
     optional: bool,
     default_features: bool,
-    target: Option<&'a str>,
-    kind: Option<&'a str>,
-    registry: Option<&'a str>,
+    target: Option<Cow<'a, str>>,
+    kind: Option<Cow<'a, str>>,
+    registry: Option<Cow<'a, str>>,
 }
 
 impl<'a> RegistryDependency<'a> {
