@@ -105,21 +105,22 @@ impl<'cfg> RegistryIndex<'cfg> {
             3 => format!("3/{}/{}", &fs_name[..1], fs_name),
             _ => format!("{}/{}/{}", &fs_name[0..2], &fs_name[2..4], fs_name),
         };
-        let num_hyphen_underscore = raw_path.chars()
-            .filter(|&c| c == '_' || c == '-')
-            .count();
+        let num_hyphen_underscore = ::std::cmp::min(
+            raw_path.chars().filter(|&c| c == '_' || c == '-').count(),
+            10,
+        ) as u16;
         let mut ret = Vec::new();
         // Crates.io treats hyphen and underscores as interchangeable
         // but, the index and old cargo do not. So the index must store uncanonicalized version
         // of the name so old cargos can find it.
-        // This loop tries all possible combinations of
+        // This loop tries all possible combinations of switching
         // hyphen and underscores to find the uncanonicalized one.
         for hyphen_combination_num in 0u16..(1 << num_hyphen_underscore) {
             let path = raw_path
                 .chars()
-                .scan(0u32, |s, c| {
-                    if c == '_' || c == '-' {
-                        let out = Some(if (hyphen_combination_num & (1u16 << *s)) > 0 {
+                .scan(0u16, |s, c| {
+                    if (c == '_' || c == '-') && *s <= num_hyphen_underscore {
+                        let out = Some(if (c == '_') ^ ((hyphen_combination_num & (1u16 << *s)) > 0) {
                             '_'
                         } else {
                             '-'
