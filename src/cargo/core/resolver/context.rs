@@ -179,14 +179,14 @@ impl Context {
         for dep in deps {
             // Skip optional dependencies, but not those enabled through a
             // feature
-            if dep.is_optional() && !reqs.deps.contains_key(&*dep.name()) {
+            if dep.is_optional() && !reqs.deps.contains_key(&dep.name()) {
                 continue;
             }
             // So we want this dependency. Move the features we want from
             // `feature_deps` to `ret` and register ourselves as using this
             // name.
-            let base = reqs.deps.get(&*dep.name()).unwrap_or(&default_dep);
-            used_features.insert(dep.name().as_str());
+            let base = reqs.deps.get(&dep.name()).unwrap_or(&default_dep);
+            used_features.insert(dep.name());
             let always_required = !dep.is_optional()
                 && !s.dependencies()
                     .iter()
@@ -218,8 +218,8 @@ impl Context {
         // them as dependencies in the first place because there is no such
         // feature, either.
         let remaining = reqs.deps.keys()
-            .cloned()
             .filter(|s| !used_features.contains(s))
+            .map(|s| s.as_str())
             .collect::<Vec<_>>();
         if !remaining.is_empty() {
             let features = remaining.join(", ");
@@ -337,7 +337,7 @@ struct Requirements<'a> {
     // specified set of features enabled. The boolean indicates whether this
     // package was specifically requested (rather than just requesting features
     // *within* this package).
-    deps: HashMap<&'a str, (bool, Vec<InternedString>)>,
+    deps: HashMap<InternedString, (bool, Vec<InternedString>)>,
     // The used features set is the set of features which this local package had
     // enabled, which is later used when compiling to instruct the code what
     // features were enabled.
@@ -358,7 +358,7 @@ impl<'r> Requirements<'r> {
     fn require_crate_feature(&mut self, package: InternedString, feat: InternedString) {
         self.used.insert(package);
         self.deps
-            .entry(package.as_str())
+            .entry(package)
             .or_insert((false, Vec::new()))
             .1
             .push(feat);
@@ -377,7 +377,7 @@ impl<'r> Requirements<'r> {
         if self.seen(pkg) {
             return;
         }
-        self.deps.entry(pkg.as_str()).or_insert((false, Vec::new())).0 = true;
+        self.deps.entry(pkg).or_insert((false, Vec::new())).0 = true;
     }
 
     fn require_feature(&mut self, feat: InternedString) -> CargoResult<()> {
