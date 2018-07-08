@@ -55,7 +55,8 @@ impl Context {
     /// Returns true if this summary with the given method is already activated.
     pub fn flag_activated(&mut self, summary: &Summary, method: &Method) -> CargoResult<bool> {
         let id = summary.package_id();
-        let prev = self.activations
+        let prev = self
+            .activations
             .entry((id.name(), id.source_id().clone()))
             .or_insert_with(|| Rc::new(Vec::new()));
         if !prev.iter().any(|c| c == summary) {
@@ -84,14 +85,11 @@ impl Context {
             } => (features, uses_default_features),
         };
 
-        let has_default_feature = summary.features().contains_key(&InternedString::new("default"));
+        let has_default_feature = summary.features().contains_key("default");
         Ok(match self.resolve_features.get(id) {
             Some(prev) => {
-                features
-                    .iter()
-                    .all(|f| prev.contains(f))
-                    && (!use_default || prev.contains(&InternedString::new("default"))
-                        || !has_default_feature)
+                features.iter().all(|f| prev.contains(f))
+                    && (!use_default || prev.contains("default") || !has_default_feature)
             }
             None => features.is_empty() && (!use_default || !has_default_feature),
         })
@@ -111,7 +109,8 @@ impl Context {
 
         // Next, transform all dependencies into a list of possible candidates
         // which can satisfy that dependency.
-        let mut deps = deps.into_iter()
+        let mut deps = deps
+            .into_iter()
             .map(|(dep, features)| {
                 let candidates = registry.query(&dep)?;
                 Ok((dep, candidates, Rc::new(features)))
@@ -188,7 +187,8 @@ impl Context {
             let base = reqs.deps.get(&dep.name()).unwrap_or(&default_dep);
             used_features.insert(dep.name());
             let always_required = !dep.is_optional()
-                && !s.dependencies()
+                && !s
+                    .dependencies()
                     .iter()
                     .any(|d| d.is_optional() && d.name() == dep.name());
             if always_required && base.0 {
@@ -217,8 +217,10 @@ impl Context {
         // package does not actually have those dependencies. We classified
         // them as dependencies in the first place because there is no such
         // feature, either.
-        let remaining = reqs.deps.keys()
-            .filter(|s| !used_features.contains(s))
+        let remaining = reqs
+            .deps
+            .keys()
+            .filter(|&s| !used_features.contains(s))
             .map(|s| s.as_str())
             .collect::<Vec<_>>();
         if !remaining.is_empty() {
@@ -286,7 +288,7 @@ impl Context {
 /// dependency features in a Requirements object, returning it to the resolver.
 fn build_requirements<'a, 'b: 'a>(
     s: &'a Summary,
-    method: &'b Method
+    method: &'b Method,
 ) -> CargoResult<Requirements<'a>> {
     let mut reqs = Requirements::new(s);
 
@@ -318,7 +320,7 @@ fn build_requirements<'a, 'b: 'a>(
             uses_default_features: true,
             ..
         } => {
-            if s.features().get(&InternedString::new("default")).is_some() {
+            if s.features().contains_key("default") {
                 reqs.require_feature(InternedString::new("default"))?;
             }
         }
@@ -384,7 +386,8 @@ impl<'r> Requirements<'r> {
         if feat.is_empty() || self.seen(feat) {
             return Ok(());
         }
-        for fv in self.summary
+        for fv in self
+            .summary
             .features()
             .get(&feat)
             .expect("must be a valid feature")
