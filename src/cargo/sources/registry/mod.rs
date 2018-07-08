@@ -165,15 +165,17 @@ use std::path::{Path, PathBuf};
 
 use flate2::read::GzDecoder;
 use semver::Version;
+#[cfg(test)]
+use serde_json;
 use tar::Archive;
 
-use core::{Package, PackageId, Source, SourceId, Summary};
 use core::dependency::{Dependency, Kind};
+use core::{Package, PackageId, Source, SourceId, Summary};
 use sources::PathSource;
-use util::{internal, CargoResult, Config, FileLock, Filesystem};
 use util::errors::CargoResultExt;
 use util::hex;
 use util::to_url::ToUrl;
+use util::{internal, CargoResult, Config, FileLock, Filesystem};
 
 const INDEX_LOCK: &str = ".cargo-index-lock";
 pub const CRATES_IO: &str = "https://github.com/rust-lang/crates.io-index";
@@ -215,10 +217,40 @@ pub struct RegistryPackage<'a> {
     name: Cow<'a, str>,
     vers: Version,
     deps: Vec<RegistryDependency<'a>>,
-    features: BTreeMap<String, Vec<String>>,
+    features: BTreeMap<Cow<'a, str>, Vec<Cow<'a, str>>>,
     cksum: String,
     yanked: Option<bool>,
-    links: Option<String>,
+    links: Option<Cow<'a, str>>,
+}
+
+#[test]
+fn escaped_cher_in_json() {
+    let _: RegistryPackage = serde_json::from_str(
+        r#"{"name":"a","vers":"0.0.1","deps":[],"cksum":"bae3","features":{}}"#
+    ).unwrap();
+    let _: RegistryPackage = serde_json::from_str(
+        r#"{"name":"a","vers":"0.0.1","deps":[],"cksum":"bae3","features":{"test":["k","q"]},"links":"a-sys"}"#
+    ).unwrap();
+
+    // Now we add escaped cher all the places they can go
+    // these are not valid, but it should error later than json parsing
+    let _: RegistryPackage = serde_json::from_str(r#"{
+        "name":"This name has a escaped cher in it \n\t\" ",
+        "vers":"0.0.1",
+        "deps":[{
+            "name": " \n\t\" ",
+            "req": " \n\t\" ",
+            "features": [" \n\t\" "],
+            "optional": true,
+            "default_features": true,
+            "target": " \n\t\" ",
+            "kind": " \n\t\" ",
+            "registry": " \n\t\" "
+        }],
+        "cksum":"bae3",
+        "features":{"test \n\t\" ":["k \n\t\" ","q \n\t\" "]},
+        "links":" \n\t\" "}"#
+    ).unwrap();
 }
 
 #[derive(Deserialize)]
@@ -237,12 +269,12 @@ enum Field {
 struct RegistryDependency<'a> {
     name: Cow<'a, str>,
     req: Cow<'a, str>,
-    features: Vec<String>,
+    features: Vec<Cow<'a, str>>,
     optional: bool,
     default_features: bool,
     target: Option<Cow<'a, str>>,
     kind: Option<Cow<'a, str>>,
-    registry: Option<String>,
+    registry: Option<Cow<'a, str>>,
 }
 
 impl<'a> RegistryDependency<'a> {
@@ -313,8 +345,8 @@ pub trait RegistryData {
 }
 
 mod index;
-mod remote;
 mod local;
+mod remote;
 
 fn short_name(id: &SourceId) -> String {
     let hash = hex::short_hash(id);
@@ -365,7 +397,8 @@ impl<'cfg> RegistrySource<'cfg> {
     ///
     /// No action is taken if the source looks like it's already unpacked.
     fn unpack_package(&self, pkg: &PackageId, tarball: &FileLock) -> CargoResult<PathBuf> {
-        let dst = self.src_path
+        let dst = self
+            .src_path
             .join(&format!("{}-{}", pkg.name(), pkg.version()));
         dst.create_dir()?;
         // Note that we've already got the `tarball` locked above, and that
@@ -476,7 +509,8 @@ impl<'cfg> Source for RegistrySource<'cfg> {
     fn download(&mut self, package: &PackageId) -> CargoResult<Package> {
         let hash = self.index.hash(package, &mut *self.ops)?;
         let path = self.ops.download(package, &hash)?;
-        let path = self.unpack_package(package, &path)
+        let path = self
+            .unpack_package(package, &path)
             .chain_err(|| internal(format!("failed to unpack package `{}`", package)))?;
         let mut src = PathSource::new(&path, &self.source_id, self.config);
         src.update()?;
@@ -486,7 +520,9 @@ impl<'cfg> Source for RegistrySource<'cfg> {
         // differ due to historical Cargo bugs. To paper over these we trash the
         // *summary* loaded from the Cargo.toml we just downloaded with the one
         // we loaded from the index.
-        let summaries = self.index.summaries(&*package.name(), &mut *self.ops)?;
+        let summaries = self
+            .index
+            .summaries(package.name().as_str(), &mut *self.ops)?;
         let summary = summaries
             .iter()
             .map(|s| &s.0)

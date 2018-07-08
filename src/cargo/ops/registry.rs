@@ -214,7 +214,7 @@ fn transmit(
         .iter()
         .map(|(feat, values)| {
             (
-                feat.clone(),
+                feat.to_string(),
                 values.iter().map(|fv| fv.to_string(&summary)).collect(),
             )
         })

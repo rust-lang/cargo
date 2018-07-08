@@ -38,7 +38,7 @@ fn resolve_with_config(
         }
     }
     let mut registry = MyRegistry(registry);
-    let summary = Summary::new(pkg.clone(), deps, BTreeMap::new(), None, false).unwrap();
+    let summary = Summary::new(pkg.clone(), deps, BTreeMap::<String, Vec<String>>::new(), None::<String>, false).unwrap();
     let method = Method::Everything;
     let resolve = resolver::resolve(
         &[(summary, method)],
@@ -98,15 +98,15 @@ macro_rules! pkg {
     ($pkgid:expr => [$($deps:expr),+]) => ({
         let d: Vec<Dependency> = vec![$($deps.to_dep()),+];
         let pkgid = $pkgid.to_pkgid();
-        let link = if pkgid.name().ends_with("-sys") {Some(pkgid.name().to_string())} else {None};
+        let link = if pkgid.name().ends_with("-sys") {Some(pkgid.name().as_str())} else {None};
 
-        Summary::new(pkgid, d, BTreeMap::new(), link, false).unwrap()
+        Summary::new(pkgid, d, BTreeMap::<String, Vec<String>>::new(), link, false).unwrap()
     });
 
     ($pkgid:expr) => ({
         let pkgid = $pkgid.to_pkgid();
-        let link = if pkgid.name().ends_with("-sys") {Some(pkgid.name().to_string())} else {None};
-        Summary::new(pkgid, Vec::new(), BTreeMap::new(), link, false).unwrap()
+        let link = if pkgid.name().ends_with("-sys") {Some(pkgid.name().as_str())} else {None};
+        Summary::new(pkgid, Vec::new(), BTreeMap::<String, Vec<String>>::new(), link, false).unwrap()
     })
 }
 
@@ -117,11 +117,11 @@ fn registry_loc() -> SourceId {
 
 fn pkg(name: &str) -> Summary {
     let link = if name.ends_with("-sys") {
-        Some(name.to_string())
+        Some(name)
     } else {
         None
     };
-    Summary::new(pkg_id(name), Vec::new(), BTreeMap::new(), link, false).unwrap()
+    Summary::new(pkg_id(name), Vec::new(), BTreeMap::<String, Vec<String>>::new(), link, false).unwrap()
 }
 
 fn pkg_id(name: &str) -> PackageId {
@@ -138,14 +138,14 @@ fn pkg_id_loc(name: &str, loc: &str) -> PackageId {
 
 fn pkg_loc(name: &str, loc: &str) -> Summary {
     let link = if name.ends_with("-sys") {
-        Some(name.to_string())
+        Some(name)
     } else {
         None
     };
     Summary::new(
         pkg_id_loc(name, loc),
         Vec::new(),
-        BTreeMap::new(),
+        BTreeMap::<String, Vec<String>>::new(),
         link,
         false,
     ).unwrap()
@@ -465,7 +465,7 @@ fn resolving_backtrack() {
 fn resolving_backtrack_features() {
     // test for cargo/issues/4347
     let mut bad = dep("bar");
-    bad.set_features(vec!["bad".to_string()]);
+    bad.set_features(vec!["bad"]);
 
     let reg = registry(vec![
         pkg!(("foo", "1.0.2") => [bad]),
