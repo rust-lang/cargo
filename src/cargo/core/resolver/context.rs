@@ -55,7 +55,8 @@ impl Context {
     /// Returns true if this summary with the given method is already activated.
     pub fn flag_activated(&mut self, summary: &Summary, method: &Method) -> CargoResult<bool> {
         let id = summary.package_id();
-        let prev = self.activations
+        let prev = self
+            .activations
             .entry((id.name(), id.source_id().clone()))
             .or_insert_with(|| Rc::new(Vec::new()));
         if !prev.iter().any(|c| c == summary) {
@@ -87,11 +88,8 @@ impl Context {
         let has_default_feature = summary.features().contains_key("default");
         Ok(match self.resolve_features.get(id) {
             Some(prev) => {
-                features
-                    .iter()
-                    .all(|f| prev.contains(&InternedString::new(f)))
-                    && (!use_default || prev.contains(&InternedString::new("default"))
-                        || !has_default_feature)
+                features.iter().all(|f| prev.contains(f))
+                    && (!use_default || prev.contains("default") || !has_default_feature)
             }
             None => features.is_empty() && (!use_default || !has_default_feature),
         })
@@ -111,7 +109,8 @@ impl Context {
 
         // Next, transform all dependencies into a list of possible candidates
         // which can satisfy that dependency.
-        let mut deps = deps.into_iter()
+        let mut deps = deps
+            .into_iter()
             .map(|(dep, features)| {
                 let candidates = registry.query(&dep)?;
                 Ok((dep, candidates, Rc::new(features)))
@@ -179,16 +178,17 @@ impl Context {
         for dep in deps {
             // Skip optional dependencies, but not those enabled through a
             // feature
-            if dep.is_optional() && !reqs.deps.contains_key(&*dep.name()) {
+            if dep.is_optional() && !reqs.deps.contains_key(&dep.name()) {
                 continue;
             }
             // So we want this dependency. Move the features we want from
             // `feature_deps` to `ret` and register ourselves as using this
             // name.
-            let base = reqs.deps.get(&*dep.name()).unwrap_or(&default_dep);
-            used_features.insert(dep.name().as_str());
+            let base = reqs.deps.get(&dep.name()).unwrap_or(&default_dep);
+            used_features.insert(dep.name());
             let always_required = !dep.is_optional()
-                && !s.dependencies()
+                && !s
+                    .dependencies()
                     .iter()
                     .any(|d| d.is_optional() && d.name() == dep.name());
             if always_required && base.0 {
@@ -217,9 +217,11 @@ impl Context {
         // package does not actually have those dependencies. We classified
         // them as dependencies in the first place because there is no such
         // feature, either.
-        let remaining = reqs.deps.keys()
-            .cloned()
-            .filter(|s| !used_features.contains(s))
+        let remaining = reqs
+            .deps
+            .keys()
+            .filter(|&s| !used_features.contains(s))
+            .map(|s| s.as_str())
             .collect::<Vec<_>>();
         if !remaining.is_empty() {
             let features = remaining.join(", ");
@@ -247,7 +249,7 @@ impl Context {
             );
 
             for feature in reqs.used {
-                set.insert(InternedString::new(feature));
+                set.insert(feature);
             }
         }
 
@@ -286,7 +288,7 @@ impl Context {
 /// dependency features in a Requirements object, returning it to the resolver.
 fn build_requirements<'a, 'b: 'a>(
     s: &'a Summary,
-    method: &'b Method
+    method: &'b Method,
 ) -> CargoResult<Requirements<'a>> {
     let mut reqs = Requirements::new(s);
 
@@ -296,10 +298,10 @@ fn build_requirements<'a, 'b: 'a>(
             all_features: true, ..
         } => {
             for key in s.features().keys() {
-                reqs.require_feature(key)?;
+                reqs.require_feature(InternedString::new(&key))?;
             }
             for dep in s.dependencies().iter().filter(|d| d.is_optional()) {
-                reqs.require_dependency(dep.name().as_str());
+                reqs.require_dependency(dep.name());
             }
         }
         Method::Required {
@@ -318,8 +320,8 @@ fn build_requirements<'a, 'b: 'a>(
             uses_default_features: true,
             ..
         } => {
-            if s.features().get("default").is_some() {
-                reqs.require_feature("default")?;
+            if s.features().contains_key("default") {
+                reqs.require_feature(InternedString::new("default"))?;
             }
         }
         Method::Required {
@@ -337,12 +339,12 @@ struct Requirements<'a> {
     // specified set of features enabled. The boolean indicates whether this
     // package was specifically requested (rather than just requesting features
     // *within* this package).
-    deps: HashMap<&'a str, (bool, Vec<InternedString>)>,
+    deps: HashMap<InternedString, (bool, Vec<InternedString>)>,
     // The used features set is the set of features which this local package had
     // enabled, which is later used when compiling to instruct the code what
     // features were enabled.
-    used: HashSet<&'a str>,
-    visited: HashSet<&'a str>,
+    used: HashSet<InternedString>,
+    visited: HashSet<InternedString>,
 }
 
 impl<'r> Requirements<'r> {
@@ -355,7 +357,7 @@ impl<'r> Requirements<'r> {
         }
     }
 
-    fn require_crate_feature(&mut self, package: &'r str, feat: InternedString) {
+    fn require_crate_feature(&mut self, package: InternedString, feat: InternedString) {
         self.used.insert(package);
         self.deps
             .entry(package)
@@ -364,7 +366,7 @@ impl<'r> Requirements<'r> {
             .push(feat);
     }
 
-    fn seen(&mut self, feat: &'r str) -> bool {
+    fn seen(&mut self, feat: InternedString) -> bool {
         if self.visited.insert(feat) {
             self.used.insert(feat);
             false
@@ -373,20 +375,21 @@ impl<'r> Requirements<'r> {
         }
     }
 
-    fn require_dependency(&mut self, pkg: &'r str) {
+    fn require_dependency(&mut self, pkg: InternedString) {
         if self.seen(pkg) {
             return;
         }
         self.deps.entry(pkg).or_insert((false, Vec::new())).0 = true;
     }
 
-    fn require_feature(&mut self, feat: &'r str) -> CargoResult<()> {
+    fn require_feature(&mut self, feat: InternedString) -> CargoResult<()> {
         if feat.is_empty() || self.seen(feat) {
             return Ok(());
         }
-        for fv in self.summary
+        for fv in self
+            .summary
             .features()
-            .get(feat)
+            .get(&feat)
             .expect("must be a valid feature")
         {
             match *fv {
@@ -403,10 +406,10 @@ impl<'r> Requirements<'r> {
 
     fn require_value<'f>(&mut self, fv: &'f FeatureValue) -> CargoResult<()> {
         match fv {
-            FeatureValue::Feature(feat) => self.require_feature(feat.as_str()),
-            FeatureValue::Crate(dep) => Ok(self.require_dependency(dep.as_str())),
+            FeatureValue::Feature(feat) => self.require_feature(*feat),
+            FeatureValue::Crate(dep) => Ok(self.require_dependency(*dep)),
             FeatureValue::CrateFeature(dep, dep_feat) => {
-                Ok(self.require_crate_feature(dep.as_str(), *dep_feat))
+                Ok(self.require_crate_feature(*dep, *dep_feat))
             }
         }
     }

@@ -626,7 +626,8 @@ struct Context<'a, 'b> {
 
 impl TomlManifest {
     pub fn prepare_for_publish(&self, config: &Config) -> CargoResult<TomlManifest> {
-        let mut package = self.package
+        let mut package = self
+            .package
             .as_ref()
             .or_else(|| self.project.as_ref())
             .unwrap()
@@ -703,7 +704,8 @@ impl TomlManifest {
                 Some(deps) => deps,
                 None => return Ok(None),
             };
-            let deps = deps.iter()
+            let deps = deps
+                .iter()
                 .map(|(k, v)| Ok((k.clone(), map_dependency(config, v)?)))
                 .collect::<CargoResult<BTreeMap<_, _>>>()?;
             Ok(Some(deps))
@@ -828,11 +830,13 @@ impl TomlManifest {
 
             // Collect the deps
             process_dependencies(&mut cx, me.dependencies.as_ref(), None)?;
-            let dev_deps = me.dev_dependencies
+            let dev_deps = me
+                .dev_dependencies
                 .as_ref()
                 .or_else(|| me.dev_dependencies2.as_ref());
             process_dependencies(&mut cx, dev_deps, Some(Kind::Development))?;
-            let build_deps = me.build_dependencies
+            let build_deps = me
+                .build_dependencies
                 .as_ref()
                 .or_else(|| me.build_dependencies2.as_ref());
             process_dependencies(&mut cx, build_deps, Some(Kind::Build))?;
@@ -881,8 +885,15 @@ impl TomlManifest {
         let summary = Summary::new(
             pkgid,
             deps,
-            me.features.clone().unwrap_or_else(BTreeMap::new),
-            project.links.clone(),
+            me.features
+                .as_ref()
+                .map(|x| {
+                    x.iter()
+                        .map(|(k, v)| (k.as_str(), v.iter().collect()))
+                        .collect()
+                })
+                .unwrap_or_else(BTreeMap::new),
+            project.links.as_ref().map(|x| x.as_str()),
             project.namespaced_features.unwrap_or(false),
         )?;
         let metadata = ManifestMetadata {
@@ -1247,7 +1258,8 @@ impl DetailedTomlDependency {
                     cx.warnings.push(msg)
                 }
 
-                let reference = self.branch
+                let reference = self
+                    .branch
                     .clone()
                     .map(GitReference::Branch)
                     .or_else(|| self.tag.clone().map(GitReference::Tag))
@@ -1292,7 +1304,7 @@ impl DetailedTomlDependency {
             Some(id) => Dependency::parse(pkg_name, version, &new_source_id, id, cx.config)?,
             None => Dependency::parse_no_deprecated(name, version, &new_source_id)?,
         };
-        dep.set_features(self.features.clone().unwrap_or_default())
+        dep.set_features(self.features.iter().flat_map(|x| x))
             .set_default_features(
                 self.default_features
                     .or(self.default_features2)

@@ -2,20 +2,20 @@ use std::collections::HashMap;
 use std::path::Path;
 use std::str;
 
-use serde_json;
 use semver::Version;
+use serde_json;
 
 use core::dependency::Dependency;
 use core::{PackageId, SourceId, Summary};
-use sources::registry::{RegistryPackage, INDEX_LOCK};
 use sources::registry::RegistryData;
+use sources::registry::{RegistryPackage, INDEX_LOCK};
 use util::{internal, CargoResult, Config, Filesystem};
 
 pub struct RegistryIndex<'cfg> {
     source_id: SourceId,
     path: Filesystem,
-    cache: HashMap<String, Vec<(Summary, bool)>>,
-    hashes: HashMap<String, HashMap<Version, String>>, // (name, vers) => cksum
+    cache: HashMap<&'static str, Vec<(Summary, bool)>>,
+    hashes: HashMap<&'static str, HashMap<Version, String>>, // (name, vers) => cksum
     config: &'cfg Config,
     locked: bool,
 }
@@ -39,7 +39,7 @@ impl<'cfg> RegistryIndex<'cfg> {
 
     /// Return the hash listed for a specified PackageId.
     pub fn hash(&mut self, pkg: &PackageId, load: &mut RegistryData) -> CargoResult<String> {
-        let name = &*pkg.name();
+        let name = pkg.name().as_str();
         let version = pkg.version();
         if let Some(s) = self.hashes.get(name).and_then(|v| v.get(version)) {
             return Ok(s.clone());
@@ -59,14 +59,14 @@ impl<'cfg> RegistryIndex<'cfg> {
     /// specified.
     pub fn summaries(
         &mut self,
-        name: &str,
+        name: &'static str,
         load: &mut RegistryData,
     ) -> CargoResult<&Vec<(Summary, bool)>> {
         if self.cache.contains_key(name) {
             return Ok(&self.cache[name]);
         }
         let summaries = self.load_summaries(name, load)?;
-        self.cache.insert(name.to_string(), summaries);
+        self.cache.insert(name, summaries);
         Ok(&self.cache[name])
     }
 
@@ -82,7 +82,8 @@ impl<'cfg> RegistryIndex<'cfg> {
         // this on #5551.
         load.prepare()?;
         let (root, _lock) = if self.locked {
-            let lock = self.path
+            let lock = self
+                .path
                 .open_ro(Path::new(INDEX_LOCK), self.config, "the registry index");
             match lock {
                 Ok(lock) => (lock.path().parent().unwrap().to_path_buf(), Some(lock)),
@@ -92,7 +93,8 @@ impl<'cfg> RegistryIndex<'cfg> {
             (self.path.clone().into_path_unlocked(), None)
         };
 
-        let fs_name = name.chars()
+        let fs_name = name
+            .chars()
             .flat_map(|c| c.to_lowercase())
             .collect::<String>();
 
@@ -124,7 +126,7 @@ impl<'cfg> RegistryIndex<'cfg> {
                     Err(e) => {
                         info!("failed to parse `{}` registry package: {}", name, e);
                         trace!("line: {}", line);
-                        return None
+                        return None;
                     }
                 };
                 if online || load.is_crate_downloaded(summary.package_id()) {
@@ -162,19 +164,17 @@ impl<'cfg> RegistryIndex<'cfg> {
             links,
         } = serde_json::from_str(line)?;
         let pkgid = PackageId::new(&name, &vers, &self.source_id)?;
-        let deps = deps.into_iter()
+        let name = pkgid.name();
+        let deps = deps
+            .into_iter()
             .map(|dep| dep.into_dep(&self.source_id))
             .collect::<CargoResult<Vec<_>>>()?;
         let summary = Summary::new(pkgid, deps, features, links, false)?;
         let summary = summary.set_checksum(cksum.clone());
-        if self.hashes.contains_key(&name[..]) {
-            self.hashes.get_mut(&name[..]).unwrap().insert(vers, cksum);
-        } else {
-            self.hashes
-                .entry(name.into_owned())
-                .or_insert_with(HashMap::new)
-                .insert(vers, cksum);
-        }
+        self.hashes
+            .entry(name.as_str())
+            .or_insert_with(HashMap::new)
+            .insert(vers, cksum);
         Ok((summary, yanked.unwrap_or(false)))
     }
 
@@ -185,7 +185,7 @@ impl<'cfg> RegistryIndex<'cfg> {
         f: &mut FnMut(Summary),
     ) -> CargoResult<()> {
         let source_id = self.source_id.clone();
-        let summaries = self.summaries(&*dep.name(), load)?;
+        let summaries = self.summaries(dep.name().as_str(), load)?;
         let summaries = summaries
             .iter()
             .filter(|&&(_, yanked)| dep.source_id().precise().is_some() || !yanked)
@@ -199,7 +199,8 @@ impl<'cfg> RegistryIndex<'cfg> {
         let summaries = summaries.filter(|s| match source_id.precise() {
             Some(p) if p.starts_with(&*dep.name()) && p[dep.name().len()..].starts_with('=') => {
                 let mut vers = p[dep.name().len() + 1..].splitn(2, "->");
-                if dep.version_req()
+                if dep
+                    .version_req()
                     .matches(&Version::parse(vers.next().unwrap()).unwrap())
                 {
                     vers.next().unwrap() == s.version().to_string()
