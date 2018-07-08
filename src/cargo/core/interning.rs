@@ -1,21 +1,21 @@
 use serde::{Serialize, Serializer};
 
-use std::fmt;
-use std::sync::Mutex;
-use std::collections::HashSet;
-use std::str;
-use std::ptr;
+use std::borrow::Borrow;
 use std::cmp::Ordering;
-use std::ops::Deref;
+use std::collections::HashSet;
+use std::fmt;
 use std::hash::{Hash, Hasher};
+use std::ops::Deref;
+use std::ptr;
+use std::str;
+use std::sync::Mutex;
 
 pub fn leak(s: String) -> &'static str {
     Box::leak(s.into_boxed_str())
 }
 
 lazy_static! {
-    static ref STRING_CACHE: Mutex<HashSet<&'static str>> =
-        Mutex::new(HashSet::new());
+    static ref STRING_CACHE: Mutex<HashSet<&'static str>> = Mutex::new(HashSet::new());
 }
 
 #[derive(Clone, Copy)]
@@ -62,6 +62,14 @@ impl Hash for InternedString {
     // stability across Cargo invocations.
     fn hash<H: Hasher>(&self, state: &mut H) {
         self.as_str().hash(state);
+    }
+}
+
+impl Borrow<str> for InternedString {
+    // if we implement Hash as `identity(self).hash(state)`,
+    // then this will nead to be removed.
+    fn borrow(&self) -> &str {
+        self.as_str()
     }
 }
 
