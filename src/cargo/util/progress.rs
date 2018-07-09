@@ -58,6 +58,10 @@ impl<'cfg> Progress<'cfg> {
         }
     }
 
+    pub fn disable(&mut self) {
+        self.state = None;
+    }
+
     pub fn new(name: &str, cfg: &'cfg Config) -> Progress<'cfg> {
         Self::with_style(name, ProgressStyle::Percentage, cfg)
     }
