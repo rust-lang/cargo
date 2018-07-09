@@ -142,6 +142,74 @@ required by package `foo v0.0.1 ([..])`
 }
 
 #[test]
+fn wrong_case() {
+    Package::new("init", "0.0.1").publish();
+
+    let p = project("foo")
+        .file(
+            "Cargo.toml",
+            r#"
+            [project]
+            name = "foo"
+            version = "0.0.1"
+            authors = []
+
+            [dependencies]
+            Init = ">= 0.0.0"
+        "#,
+        )
+        .file("src/main.rs", "fn main() {}")
+        .build();
+
+    // TODO: #5678 to make this work or fleas give better error message
+    assert_that(
+        p.cargo("build"),
+        execs().with_status(101).with_stderr(
+            "\
+[UPDATING] registry [..]
+error: no matching package named `Init` found
+location searched: registry [..]
+required by package `foo v0.0.1 ([..])`
+",
+        ),
+    );
+}
+
+#[test]
+fn mis_hyphenated() {
+    Package::new("mis-hyphenated", "0.0.1").publish();
+
+    let p = project("foo")
+        .file(
+            "Cargo.toml",
+            r#"
+            [project]
+            name = "foo"
+            version = "0.0.1"
+            authors = []
+
+            [dependencies]
+            mis_hyphenated = ">= 0.0.0"
+        "#,
+        )
+        .file("src/main.rs", "fn main() {}")
+        .build();
+
+    // TODO: #2775 to make this work or fleas give better error message
+    assert_that(
+        p.cargo("build"),
+        execs().with_status(101).with_stderr(
+            "\
+[UPDATING] registry [..]
+error: no matching package named `mis_hyphenated` found
+location searched: registry [..]
+required by package `foo v0.0.1 ([..])`
+",
+        ),
+    );
+}
+
+#[test]
 fn wrong_version() {
     let p = project("foo")
         .file(
