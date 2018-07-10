@@ -161,7 +161,7 @@ fn wrong_case() {
         .file("src/main.rs", "fn main() {}")
         .build();
 
-    // TODO: #5678 to make this work or fleas give better error message
+    // TODO: #5678 to make this work or at least give better error message
     assert_that(
         p.cargo("build"),
         execs().with_status(101).with_stderr(
@@ -195,7 +195,7 @@ fn mis_hyphenated() {
         .file("src/main.rs", "fn main() {}")
         .build();
 
-    // TODO: #2775 to make this work or fleas give better error message
+    // TODO: #2775 to make this work or at least give better error message
     assert_that(
         p.cargo("build"),
         execs().with_status(101).with_stderr(
