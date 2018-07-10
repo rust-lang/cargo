@@ -441,6 +441,46 @@ fn resolving_incompat_versions() {
 }
 
 #[test]
+fn resolving_wrong_case_from_registry() {
+    // In the future we may #5678 allow this to happen.
+    // For back compatibility reasons, we probably won't.
+    // But we may want to future prove ourselves by understanding it.
+    // This test documents the current behavior.
+    let reg = registry(vec![
+        pkg!(("foo", "1.0.0")),
+        pkg!("bar" => ["Foo"]),
+    ]);
+
+    assert!(
+        resolve(
+            &pkg_id("root"),
+            vec![dep("bar")],
+            &reg
+        ).is_err()
+    );
+}
+
+#[test]
+fn resolving_mis_hyphenated_from_registry() {
+    // In the future we may #2775 allow this to happen.
+    // For back compatibility reasons, we probably won't.
+    // But we may want to future prove ourselves by understanding it.
+    // This test documents the current behavior.
+    let reg = registry(vec![
+        pkg!(("fo-o", "1.0.0")),
+        pkg!("bar" => ["fo_o"]),
+    ]);
+
+    assert!(
+        resolve(
+            &pkg_id("root"),
+            vec![dep("bar")],
+            &reg
+        ).is_err()
+    );
+}
+
+#[test]
 fn resolving_backtrack() {
     let reg = registry(vec![
         pkg!(("foo", "1.0.2") => [dep("bar")]),
