@@ -40,9 +40,26 @@ pub fn exec(config: &mut Config, args: &ArgMatches) -> CliResult {
 
     let mut compile_opts = args.compile_options_for_single_package(config, CompileMode::Build)?;
     if !args.is_present("example") && !args.is_present("bin") {
-        compile_opts.filter = CompileFilter::Default {
-            required_features_filterable: false,
-        };
+        if let Some(default_run) = compile_opts.get_package(&ws)?
+            .and_then(|pkg| pkg.manifest().default_run())
+        {
+            compile_opts.filter = CompileFilter::new(
+                false,
+                vec![default_run.to_owned()],
+                false,
+                vec![],
+                false,
+                vec![],
+                false,
+                vec![],
+                false,
+                false,
+            );
+        } else {
+            compile_opts.filter = CompileFilter::Default {
+                required_features_filterable: false,
+            };
+        }
     };
     match ops::run(&ws, &compile_opts, &values(args, "args"))? {
         None => Ok(()),

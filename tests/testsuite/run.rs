@@ -276,9 +276,8 @@ fn too_many_bins() {
     assert_that(
         p.cargo("run"),
         execs().with_status(101).with_stderr(
-            "[ERROR] `cargo run` requires that a project only \
-             have one executable; use the `--bin` option \
-             to specify which one to run\navailable binaries: [..]\n",
+            "[ERROR] `cargo run` could not determine which binary to run; set `default-run` \
+             in the manifest or use the `--bin` option to specify\navailable binaries: a, b\n",
         ),
     );
 }
@@ -342,6 +341,69 @@ fn specify_name() {
 [RUNNING] `target[/]debug[/]b[EXE]`",
             )
             .with_stdout("hello b.rs"),
+    );
+}
+
+#[test]
+fn specify_default_run() {
+    let p = project("foo")
+        .file(
+            "Cargo.toml",
+            r#"
+            [project]
+            name = "foo"
+            version = "0.0.1"
+            authors = []
+            default-run = "a"
+        "#,
+        )
+        .file("src/lib.rs", "")
+        .file("src/bin/a.rs", r#"fn main() { println!("hello A"); }"#)
+        .file("src/bin/b.rs", r#"fn main() { println!("hello B"); }"#)
+        .build();
+
+    assert_that(
+        p.cargo("run"),
+        execs()
+            .with_status(0)
+            .with_stdout("hello A"),
+    );
+    assert_that(
+        p.cargo("run").arg("--bin").arg("a"),
+        execs()
+            .with_status(0)
+            .with_stdout("hello A"),
+    );
+    assert_that(
+        p.cargo("run").arg("--bin").arg("b"),
+        execs()
+            .with_status(0)
+            .with_stdout("hello B"),
+    );
+}
+
+#[test]
+fn bogus_default_run() {
+    let p = project("foo")
+        .file(
+            "Cargo.toml",
+            r#"
+            [project]
+            name = "foo"
+            version = "0.0.1"
+            authors = []
+            default-run = "b"
+        "#,
+        )
+        .file("src/lib.rs", "")
+        .file("src/bin/a.rs", r#"fn main() { println!("hello A"); }"#)
+        .build();
+
+    assert_that(
+        p.cargo("run"),
+        execs().with_status(101).with_stderr(
+            "error: no bin target named `b`\n\nDid you mean [..]?",
+        ),
     );
 }
 
