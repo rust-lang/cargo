@@ -120,8 +120,8 @@ recompiled for all users of the library.
 
 If a library ends up being used transitively by several dependencies, it’s
 likely that just a single copy of the library is desired (based on semver
-compatibility). If all libraries were to check in their `Cargo.lock`, then
-multiple copies of the library would be used, and perhaps even a version
+compatibility). If Cargo used all of the dependencies' `Cargo.lock` files,
+then multiple copies of the library could be used, and perhaps even a version
 conflict.
 
 In other words, libraries specify semver requirements for their dependencies but
