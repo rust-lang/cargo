@@ -60,6 +60,9 @@ pub use util::errors::Internal;
 
 pub const CARGO_ENV: &str = "CARGO";
 
+#[macro_use]
+mod macros;
+
 pub mod core;
 pub mod ops;
 pub mod sources;
