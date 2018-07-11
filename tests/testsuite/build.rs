@@ -1020,6 +1020,7 @@ fn cargo_compile_with_dep_name_mismatch() {
         execs().with_status(101).with_stderr(&format!(
             r#"error: no matching package named `notquitebar` found
 location searched: {proj_dir}/bar
+did you mean: bar
 required by package `foo v0.0.1 ({proj_dir})`
 "#,
             proj_dir = p.url()
