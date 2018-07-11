@@ -508,6 +508,13 @@ impl<'cfg> Source for PathSource<'cfg> {
         Ok(())
     }
 
+    fn fuzzy_query(&mut self, _dep: &Dependency, f: &mut FnMut(Summary)) -> CargoResult<()> {
+        for s in self.packages.iter().map(|p| p.summary()) {
+            f(s.clone())
+        }
+        Ok(())
+    }
+
     fn supports_checksums(&self) -> bool {
         false
     }

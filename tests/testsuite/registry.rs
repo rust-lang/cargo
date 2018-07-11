@@ -161,7 +161,7 @@ fn wrong_case() {
         .file("src/main.rs", "fn main() {}")
         .build();
 
-    // TODO: #5678 to make this work or at least give better error message
+    // #5678 to make this work
     assert_that(
         p.cargo("build"),
         execs().with_status(101).with_stderr(
@@ -169,6 +169,7 @@ fn wrong_case() {
 [UPDATING] registry [..]
 error: no matching package named `Init` found
 location searched: registry [..]
+did you mean: init
 required by package `foo v0.0.1 ([..])`
 ",
         ),
@@ -195,7 +196,7 @@ fn mis_hyphenated() {
         .file("src/main.rs", "fn main() {}")
         .build();
 
-    // TODO: #2775 to make this work or at least give better error message
+    // #2775 to make this work
     assert_that(
         p.cargo("build"),
         execs().with_status(101).with_stderr(
@@ -203,6 +204,7 @@ fn mis_hyphenated() {
 [UPDATING] registry [..]
 error: no matching package named `mis_hyphenated` found
 location searched: registry [..]
+did you mean: mis-hyphenated
 required by package `foo v0.0.1 ([..])`
 ",
         ),

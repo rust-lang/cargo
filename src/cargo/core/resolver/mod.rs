@@ -922,17 +922,16 @@ fn activation_error(
         return format_err!("{}", msg);
     }
 
-    // Once we're all the way down here, we're definitely lost in the
-    // weeds! We didn't actually find any candidates, so we need to
+    // We didn't actually find any candidates, so we need to
     // give an error message that nothing was found.
     //
-    // Note that we re-query the registry with a new dependency that
-    // allows any version so we can give some nicer error reporting
-    // which indicates a few versions that were actually found.
+    // Maybe the user mistyped the ver_req? Like `dep="2"` when `dep=".2"`
+    // was meant. So we re-query the registry with `deb="*"` so we can
+    // list a few versions that were actually found.
     let all_req = semver::VersionReq::parse("*").unwrap();
     let mut new_dep = dep.clone();
     new_dep.set_version_req(all_req);
-    let mut candidates = match registry.query_vec(&new_dep) {
+    let mut candidates = match registry.query_vec(&new_dep, false) {
         Ok(candidates) => candidates,
         Err(e) => return e,
     };
@@ -977,12 +976,25 @@ fn activation_error(
 
         msg
     } else {
+        // Maybe the user mistyped the name? Like `dep-thing` when `Dep_Thing`
+        // was meant. So we try asking the registry for a `fuzzy` search for suggestions.
+        let mut candidates = Vec::new();
+        if let Err(e) = registry.query(&new_dep, &mut |s| candidates.push(s.name()), true) {
+            return e
+        };
+        candidates.sort_unstable();
+        candidates.dedup();
         let mut msg = format!(
             "no matching package named `{}` found\n\
              location searched: {}\n",
             dep.name(),
             dep.source_id()
         );
+        if !candidates.is_empty() {
+            msg.push_str("did you mean: ");
+            msg.push_str(&candidates.join(" or "));
+            msg.push_str("\n");
+        }
         msg.push_str("required by ");
         msg.push_str(&describe_path(&graph.path_to_top(parent.package_id())));
 

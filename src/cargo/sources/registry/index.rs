@@ -208,7 +208,7 @@ impl<'cfg> RegistryIndex<'cfg> {
         Ok((summary, yanked.unwrap_or(false)))
     }
 
-    pub fn query(
+    pub fn query_inner(
         &mut self,
         dep: &Dependency,
         load: &mut RegistryData,
@@ -242,9 +242,7 @@ impl<'cfg> RegistryIndex<'cfg> {
         });
 
         for summary in summaries {
-            if dep.matches(&summary) {
-                f(summary);
-            }
+            f(summary);
         }
         Ok(())
     }

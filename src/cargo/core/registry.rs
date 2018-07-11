@@ -14,11 +14,11 @@ use sources::config::SourceConfigMap;
 /// See also `core::Source`.
 pub trait Registry {
     /// Attempt to find the packages that match a dependency request.
-    fn query(&mut self, dep: &Dependency, f: &mut FnMut(Summary)) -> CargoResult<()>;
+    fn query(&mut self, dep: &Dependency, f: &mut FnMut(Summary), fuzzy: bool) -> CargoResult<()>;
 
-    fn query_vec(&mut self, dep: &Dependency) -> CargoResult<Vec<Summary>> {
+    fn query_vec(&mut self, dep: &Dependency, fuzzy: bool) -> CargoResult<Vec<Summary>> {
         let mut ret = Vec::new();
-        self.query(dep, &mut |s| ret.push(s))?;
+        self.query(dep, &mut |s| ret.push(s), fuzzy)?;
         Ok(ret)
     }
 }
@@ -395,7 +395,7 @@ http://doc.crates.io/specifying-dependencies.html#overriding-dependencies
 }
 
 impl<'cfg> Registry for PackageRegistry<'cfg> {
-    fn query(&mut self, dep: &Dependency, f: &mut FnMut(Summary)) -> CargoResult<()> {
+    fn query(&mut self, dep: &Dependency, f: &mut FnMut(Summary), fuzzy: bool) -> CargoResult<()> {
         assert!(self.patches_locked);
         let (override_summary, n, to_warn) = {
             // Look for an override and get ready to query the real source.
@@ -476,7 +476,7 @@ impl<'cfg> Registry for PackageRegistry<'cfg> {
                         // already selected, then we skip this `summary`.
                         let locked = &self.locked;
                         let all_patches = &self.patches_available;
-                        return source.query(dep, &mut |summary| {
+                        let callback = &mut |summary: Summary| {
                             for patch in patches.iter() {
                                 let patch = patch.package_id().version();
                                 if summary.package_id().version() == patch {
@@ -484,7 +484,12 @@ impl<'cfg> Registry for PackageRegistry<'cfg> {
                                 }
                             }
                             f(lock(locked, all_patches, summary))
-                        });
+                        };
+                        return if fuzzy {
+                            source.fuzzy_query(dep, callback)
+                        } else {
+                            source.query(dep, callback)
+                        };
                     }
 
                     // If we have an override summary then we query the source
@@ -496,10 +501,17 @@ impl<'cfg> Registry for PackageRegistry<'cfg> {
                         }
                         let mut n = 0;
                         let mut to_warn = None;
-                        source.query(dep, &mut |summary| {
-                            n += 1;
-                            to_warn = Some(summary);
-                        })?;
+                        {
+                            let callback = &mut |summary| {
+                                n += 1;
+                                to_warn = Some(summary);
+                            };
+                            if fuzzy {
+                                source.fuzzy_query(dep, callback)?;
+                            } else {
+                                source.query(dep, callback)?;
+                            }
+                        }
                         (override_summary, n, to_warn)
                     }
                 }

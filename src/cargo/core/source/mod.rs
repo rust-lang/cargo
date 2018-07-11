@@ -25,6 +25,12 @@ pub trait Source {
     /// Attempt to find the packages that match a dependency request.
     fn query(&mut self, dep: &Dependency, f: &mut FnMut(Summary)) -> CargoResult<()>;
 
+    /// Attempt to find the packages that are close to a dependency request.
+    /// Each source gets to define what `close` means for it.
+    /// path/git sources may return all dependencies that are at that uri.
+    /// where as an Index source may return dependencies that have the same canonicalization.
+    fn fuzzy_query(&mut self, dep: &Dependency, f: &mut FnMut(Summary)) -> CargoResult<()>;
+
     fn query_vec(&mut self, dep: &Dependency) -> CargoResult<Vec<Summary>> {
         let mut ret = Vec::new();
         self.query(dep, &mut |s| ret.push(s))?;
@@ -77,6 +83,11 @@ impl<'a, T: Source + ?Sized + 'a> Source for Box<T> {
     /// Forwards to `Source::query`
     fn query(&mut self, dep: &Dependency, f: &mut FnMut(Summary)) -> CargoResult<()> {
         (**self).query(dep, f)
+    }
+
+    /// Forwards to `Source::query`
+    fn fuzzy_query(&mut self, dep: &Dependency, f: &mut FnMut(Summary)) -> CargoResult<()> {
+        (**self).fuzzy_query(dep, f)
     }
 
     /// Forwards to `Source::source_id`
