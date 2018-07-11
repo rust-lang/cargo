@@ -83,6 +83,24 @@ impl<'a> CompileOptions<'a> {
             export_dir: None,
         })
     }
+
+    // Returns the unique specified package, or None
+    pub fn get_package<'b>(&self, ws: &'b Workspace) -> CargoResult<Option<&'b Package>> {
+        Ok(match self.spec {
+            Packages::All | Packages::Default | Packages::OptOut(_) => {
+                None
+            }
+            Packages::Packages(ref xs) => match xs.len() {
+                0 => Some(ws.current()?),
+                1 => Some(ws.members()
+                    .find(|pkg| *pkg.name() == xs[0])
+                    .ok_or_else(|| {
+                        format_err!("package `{}` is not a member of the workspace", xs[0])
+                    })?),
+                _ => None,
+            },
+        })
+    }
 }
 
 #[derive(Clone, PartialEq, Eq, Debug)]
