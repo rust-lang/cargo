@@ -115,7 +115,7 @@ appropriate `cargo-features`:
 ```toml
 cargo-features = ["publish-lockfile"]
 
-[project]
+[package]
 ...
 publish-lockfile = true
 ```
@@ -263,7 +263,7 @@ for features and dependencies are separated. The effect of this is that, in the
 feature requirements, dependencies have to be prefixed with `crate:`. Like this:
 
 ```toml
-[project]
+[package]
 namespaced-features = true
 
 [features]
