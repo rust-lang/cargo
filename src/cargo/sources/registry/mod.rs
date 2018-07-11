@@ -463,9 +463,11 @@ impl<'cfg> Source for RegistrySource<'cfg> {
         if dep.source_id().precise().is_some() && !self.updated {
             debug!("attempting query without update");
             let mut called = false;
-            self.index.query(dep, &mut *self.ops, &mut |s| {
-                called = true;
-                f(s);
+            self.index.query_inner(dep, &mut *self.ops, &mut |s| {
+                if dep.matches(&s) {
+                    called = true;
+                    f(s);
+                }
             })?;
             if called {
                 return Ok(());
@@ -475,7 +477,15 @@ impl<'cfg> Source for RegistrySource<'cfg> {
             }
         }
 
-        self.index.query(dep, &mut *self.ops, f)
+        self.index.query_inner(dep, &mut *self.ops, &mut |s| {
+            if dep.matches(&s) {
+                f(s);
+            }
+        })
+    }
+
+    fn fuzzy_query(&mut self, dep: &Dependency, f: &mut FnMut(Summary)) -> CargoResult<()> {
+        self.index.query_inner(dep, &mut *self.ops, f)
     }
 
     fn supports_checksums(&self) -> bool {

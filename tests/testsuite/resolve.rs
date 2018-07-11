@@ -28,9 +28,9 @@ fn resolve_with_config(
 ) -> CargoResult<Vec<PackageId>> {
     struct MyRegistry<'a>(&'a [Summary]);
     impl<'a> Registry for MyRegistry<'a> {
-        fn query(&mut self, dep: &Dependency, f: &mut FnMut(Summary)) -> CargoResult<()> {
+        fn query(&mut self, dep: &Dependency, f: &mut FnMut(Summary), fuzzy: bool) -> CargoResult<()> {
             for summary in self.0.iter() {
-                if dep.matches(summary) {
+                if fuzzy || dep.matches(summary) {
                     f(summary.clone());
                 }
             }

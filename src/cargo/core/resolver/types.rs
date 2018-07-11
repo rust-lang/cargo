@@ -52,7 +52,7 @@ impl<'a> RegistryQueryer<'a> {
                 summary: s,
                 replace: None,
             });
-        })?;
+        }, false)?;
         for candidate in ret.iter_mut() {
             let summary = &candidate.summary;
 
@@ -66,7 +66,7 @@ impl<'a> RegistryQueryer<'a> {
             };
             debug!("found an override for {} {}", dep.name(), dep.version_req());
 
-            let mut summaries = self.registry.query_vec(dep)?.into_iter();
+            let mut summaries = self.registry.query_vec(dep, false)?.into_iter();
             let s = summaries.next().ok_or_else(|| {
                 format_err!(
                     "no matching package for override `{}` found\n\
