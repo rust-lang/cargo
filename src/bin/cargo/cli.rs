@@ -9,7 +9,19 @@ use super::commands;
 use command_prelude::*;
 
 pub fn main(config: &mut Config) -> CliResult {
-    let args = cli().get_matches_safe()?;
+    let args = match cli().get_matches_safe() {
+        Ok(args) => args,
+        Err(e) => {
+            if e.kind == clap::ErrorKind::UnrecognizedSubcommand {
+                // An unrecognized subcommand might be an external subcommand.
+                let cmd = &e.info.as_ref().unwrap()[0].to_owned();
+                return super::execute_external_subcommand(config, cmd, &[cmd, "--help"])
+                    .map_err(|_| e.into());
+            } else {
+                return Err(e)?;
+            }
+        }
+    };
 
     if args.value_of("unstable-features") == Some("help") {
         println!(
