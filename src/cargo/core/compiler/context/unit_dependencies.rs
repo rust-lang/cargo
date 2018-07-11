@@ -15,7 +15,7 @@
 //! (for example, with and without tests), so we actually build a dependency
 //! graph of `Unit`s, which capture these properties.
 
-use std::collections::HashMap;
+use std::collections::{HashMap, HashSet};
 
 use CargoResult;
 use core::dependency::Kind as DepKind;
@@ -26,8 +26,10 @@ use super::{BuildContext, CompileMode, Kind, Unit};
 pub fn build_unit_dependencies<'a, 'cfg>(
     roots: &[Unit<'a>],
     bcx: &BuildContext<'a, 'cfg>,
-    mut deps: &mut HashMap<Unit<'a>, Vec<Unit<'a>>>,
+    deps: &mut HashMap<Unit<'a>, Vec<Unit<'a>>>,
 ) -> CargoResult<()> {
+    assert!(deps.len() == 0, "can only build unit deps once");
+
     for unit in roots.iter() {
         // Dependencies of tests/benches should not have `panic` set.
         // We check the global test mode to see if we are running in `cargo
@@ -40,19 +42,21 @@ pub fn build_unit_dependencies<'a, 'cfg>(
         } else {
             ProfileFor::Any
         };
-        deps_of(unit, bcx, &mut deps, profile_for)?;
+        deps_of(unit, bcx, deps, profile_for)?;
     }
     trace!("ALL UNIT DEPENDENCIES {:#?}", deps);
+
+    connect_run_custom_build_deps(bcx, deps);
 
     Ok(())
 }
 
-fn deps_of<'a, 'b, 'cfg>(
+fn deps_of<'a, 'cfg>(
     unit: &Unit<'a>,
     bcx: &BuildContext<'a, 'cfg>,
-    deps: &'b mut HashMap<Unit<'a>, Vec<Unit<'a>>>,
+    deps: &mut HashMap<Unit<'a>, Vec<Unit<'a>>>,
     profile_for: ProfileFor,
-) -> CargoResult<&'b [Unit<'a>]> {
+) -> CargoResult<()> {
     // Currently the `deps` map does not include `profile_for`.  This should
     // be safe for now.  `TestDependency` only exists to clear the `panic`
     // flag, and you'll never ask for a `unit` with `panic` set as a
@@ -60,14 +64,14 @@ fn deps_of<'a, 'b, 'cfg>(
     // requested unit's settings are the same as `Any`, `CustomBuild` can't
     // affect anything else in the hierarchy.
     if !deps.contains_key(unit) {
-        let unit_deps = compute_deps(unit, bcx, deps, profile_for)?;
+        let unit_deps = compute_deps(unit, bcx, profile_for)?;
         let to_insert: Vec<_> = unit_deps.iter().map(|&(unit, _)| unit).collect();
         deps.insert(*unit, to_insert);
         for (unit, profile_for) in unit_deps {
             deps_of(&unit, bcx, deps, profile_for)?;
         }
     }
-    Ok(deps[unit].as_ref())
+    Ok(())
 }
 
 /// For a package, return all targets which are registered as dependencies
@@ -77,11 +81,10 @@ fn deps_of<'a, 'b, 'cfg>(
 fn compute_deps<'a, 'b, 'cfg>(
     unit: &Unit<'a>,
     bcx: &BuildContext<'a, 'cfg>,
-    deps: &'b mut HashMap<Unit<'a>, Vec<Unit<'a>>>,
     profile_for: ProfileFor,
 ) -> CargoResult<Vec<(Unit<'a>, ProfileFor)>> {
     if unit.mode.is_run_custom_build() {
-        return compute_deps_custom_build(unit, bcx, deps);
+        return compute_deps_custom_build(unit, bcx);
     } else if unit.mode.is_doc() && !unit.mode.is_any_test() {
         // Note: This does not include Doctest.
         return compute_deps_doc(unit, bcx);
@@ -194,39 +197,27 @@ fn compute_deps<'a, 'b, 'cfg>(
 fn compute_deps_custom_build<'a, 'cfg>(
     unit: &Unit<'a>,
     bcx: &BuildContext<'a, 'cfg>,
-    deps: &mut HashMap<Unit<'a>, Vec<Unit<'a>>>,
 ) -> CargoResult<Vec<(Unit<'a>, ProfileFor)>> {
     // When not overridden, then the dependencies to run a build script are:
     //
     // 1. Compiling the build script itself
     // 2. For each immediate dependency of our package which has a `links`
     //    key, the execution of that build script.
-    let deps = deps
-        .iter()
-        .find(|(key, _deps)| key.pkg == unit.pkg && !key.target.is_custom_build())
-        .expect("can't find package deps")
-        .1;
-    Ok(deps.iter()
-        .filter_map(|unit| {
-            if !unit.target.linkable() || unit.pkg.manifest().links().is_none() {
-                return None;
-            }
-            dep_build_script(unit, bcx)
-        })
-        .chain(Some((
-            new_unit(
-                bcx,
-                unit.pkg,
-                unit.target,
-                ProfileFor::CustomBuild,
-                Kind::Host, // build scripts always compiled for the host
-                CompileMode::Build,
-            ),
-            // All dependencies of this unit should use profiles for custom
-            // builds.
-            ProfileFor::CustomBuild,
-        )))
-        .collect())
+    //
+    // We don't have a great way of handling (2) here right now so this is
+    // deferred until after the graph of all unit dependencies has been
+    // constructed.
+    let unit = new_unit(
+        bcx,
+        unit.pkg,
+        unit.target,
+        ProfileFor::CustomBuild,
+        Kind::Host, // build scripts always compiled for the host
+        CompileMode::Build,
+    );
+    // All dependencies of this unit should use profiles for custom
+    // builds.
+    Ok(vec![(unit, ProfileFor::CustomBuild)])
 }
 
 /// Returns the dependencies necessary to document a package
@@ -369,5 +360,76 @@ fn new_unit<'a>(
         profile,
         kind,
         mode,
+    }
+}
+
+/// Fill in missing dependencies for units of the `RunCustomBuild`
+///
+/// As mentioned above in `compute_deps_custom_build` each build script
+/// execution has two dependencies. The first is compiling the build script
+/// itself (already added) and the second is that all crates the package of the
+/// build script depends on with `links` keys, their build script execution. (a
+/// bit confusing eh?)
+///
+/// Here we take the entire `deps` map and add more dependencies from execution
+/// of one build script to execution of another build script.
+fn connect_run_custom_build_deps<'a>(
+    bcx: &BuildContext,
+    deps: &mut HashMap<Unit<'a>, Vec<Unit<'a>>>,
+) {
+    let mut new_deps = Vec::new();
+
+    {
+        // First up build a reverse dependency map. This is a mapping of all
+        // `RunCustomBuild` known steps to the unit which depends on them. For
+        // example a library might depend on a build script, so this map will
+        // have the build script as the key and the library would be in the
+        // value's set.
+        let mut reverse_deps = HashMap::new();
+        for (unit, deps) in deps.iter() {
+            for dep in deps {
+                if dep.mode == CompileMode::RunCustomBuild {
+                    reverse_deps.entry(dep)
+                        .or_insert(HashSet::new())
+                        .insert(unit);
+                }
+            }
+        }
+
+        // And next we take a look at all build scripts executions listed in the
+        // dependency map. Our job here is to take everything that depends on
+        // this build script (from our reverse map above) and look at the other
+        // package dependencies of these parents.
+        //
+        // If we depend on a linkable target and the build script mentions
+        // `links`, then we depend on that package's build script! Here we use
+        // `dep_build_script` to manufacture an appropriate build script unit to
+        // depend on.
+        for unit in deps.keys().filter(|k| k.mode == CompileMode::RunCustomBuild) {
+            let reverse_deps = match reverse_deps.get(unit) {
+                Some(set) => set,
+                None => continue,
+            };
+
+            let to_add = reverse_deps
+                .iter()
+                .flat_map(|reverse_dep| deps[reverse_dep].iter())
+                .filter(|other| {
+                    other.pkg != unit.pkg &&
+                        other.target.linkable() &&
+                        other.pkg.manifest().links().is_some()
+                })
+                .filter_map(|other| dep_build_script(other, bcx).map(|p| p.0))
+                .collect::<HashSet<_>>();
+
+            if !to_add.is_empty() {
+                new_deps.push((*unit, to_add));
+            }
+        }
+    }
+
+    // And finally, add in all the missing dependencies!
+    for (unit, new_deps) in new_deps {
+        deps.get_mut(&unit).unwrap().extend(new_deps);
     }
 }
