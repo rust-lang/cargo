@@ -3080,9 +3080,11 @@ fn panic_abort_with_build_scripts() {
         execs().with_status(0),
     );
 
+    p.root().join("target").rm_rf();
+
     assert_that(
-        p.cargo("test --release"),
-        execs().with_status(0)
+        p.cargo("test --release -v"),
+        execs().with_status(0).with_stderr_does_not_contain("[..]panic[..]"),
     );
 }
 
