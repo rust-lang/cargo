@@ -765,18 +765,19 @@ fn override_self() {
 
     let p = project("foo");
     let root = p.root().clone();
-    let p = p.file(
-        ".cargo/config",
-        &format!(
-            r#"
-            paths = ['{}']
-        "#,
-            root.display()
-        ),
-    ).file(
-            "Cargo.toml",
+    let p =
+        p.file(
+            ".cargo/config",
             &format!(
                 r#"
+            paths = ['{}']
+        "#,
+                root.display()
+            ),
+        ).file(
+                "Cargo.toml",
+                &format!(
+                    r#"
             [package]
 
             name = "foo"
@@ -787,12 +788,12 @@ fn override_self() {
             path = '{}'
 
         "#,
-                bar.root().display()
-            ),
-        )
-        .file("src/lib.rs", "")
-        .file("src/main.rs", "fn main() {}")
-        .build();
+                    bar.root().display()
+                ),
+            )
+            .file("src/lib.rs", "")
+            .file("src/main.rs", "fn main() {}")
+            .build();
 
     assert_that(p.cargo("build"), execs().with_status(0));
 }
@@ -1175,6 +1176,75 @@ Caused by:
 ",
         ),
     );
+}
+
+#[test]
+fn cargo_update_downgrade_dependencies() {
+    // https://github.com/rust-lang/cargo/issues/5529
+
+    Package::new("x", "1.0.3").publish();
+    Package::new("x", "1.0.2").publish();
+    Package::new("x", "1.0.1").publish();
+    Package::new("x", "1.0.0").publish();
+    Package::new("x", "0.9.1").publish();
+    Package::new("x", "0.9.0").publish();
+
+    let p = project("foo")
+        .file(
+            "Cargo.toml",
+            r#"
+            [workspace]
+            members = ["a", "b", "c"]
+        "#,
+        )
+        .file("a/src/lib.rs", "")
+        .file(
+            "a/Cargo.toml",
+            r#"
+            [package]
+            name = "a"
+            version = "0.1.0"
+
+            [dependencies]
+            x="0.9"
+        "#,
+        )
+        .file("b/src/lib.rs", "")
+        .file(
+            "b/Cargo.toml",
+            r#"
+            [package]
+            name = "b"
+            version = "0.1.0"
+
+            [dependencies]
+            x=">= 0.9, < 2.0"
+        "#,
+        )
+        .file("c/src/lib.rs", "")
+        .file(
+            "c/Cargo.toml",
+            r#"
+            [package]
+            name = "c"
+            version = "0.1.0"
+
+            [dependencies]
+            x="1.0"
+        "#,
+        )
+        .build();
+
+    // Generate a lock file
+    assert_that(p.cargo("generate-lockfile"), execs().with_status(0));
+
+    let good_lock = fs::read_to_string(&p.root().join("Cargo.lock")).unwrap();
+
+    assert_that(p.cargo("update -p c"), execs().with_status(0));
+
+    let new_lock = fs::read_to_string(&p.root().join("Cargo.lock")).unwrap();
+
+    assert_eq!(good_lock, new_lock);
 }
 
 #[test]
