@@ -292,3 +292,19 @@ Example:
 ```
 cargo +nightly build --build-plan -Z unstable-options
 ```
+
+### Compile progress
+* Tracking Issue: [rust-lang/cargo#2536](https://github.com/rust-lang/cargo/issues/2536)
+
+The `-Z compile-progress` flag enables a progress bar while compiling.
+
+```console
+$ cargo +nightly build -Z compile-progress
+   Compiling libc v0.2.41
+   Compiling void v1.0.2
+   Compiling lazy_static v1.0.1
+   Compiling regex v1.0.0
+   Compiling ucd-util v0.1.1
+   Compiling utf8-ranges v1.0.0
+    Building [=======>                                                  ] 2/14: libc, regex, uc...
+```
