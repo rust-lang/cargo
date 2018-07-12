@@ -20,7 +20,7 @@ use core::{Edition, EitherManifest, Feature, Features, VirtualManifest};
 use core::{GitReference, PackageIdSpec, SourceId, WorkspaceConfig, WorkspaceRootConfig};
 use sources::CRATES_IO;
 use util::errors::{CargoError, CargoResult, CargoResultExt};
-use util::paths;
+use util::{paths, lev_distance::lev_distance};
 use util::{self, Config, ToUrl};
 
 mod targets;
@@ -69,7 +69,11 @@ fn do_read_manifest(
         let (mut manifest, paths) =
             TomlManifest::to_real_manifest(&manifest, source_id, package_root, config)?;
         for key in unused {
-            manifest.add_warning(format!("unused manifest key: {}", key));
+            if lev_distance("patch", &key[..]) < 4 {
+                manifest.add_warning(format!("unrecognized manifest key: `{}`\n\n\tDid you mean `patch`?\n", key));
+            } else {
+                manifest.add_warning(format!("unused manifest key: {}", key));
+            }
         }
         if !manifest.targets().iter().any(|t| !t.is_custom_build()) {
             bail!(
@@ -87,6 +91,7 @@ fn do_read_manifest(
 
     fn stringify(dst: &mut String, path: &serde_ignored::Path) {
         use serde_ignored::Path;
+
 
         match *path {
             Path::Root => {}
