@@ -59,6 +59,7 @@ mod git;
 mod init;
 mod install;
 mod jobserver;
+mod lints;
 mod local_registry;
 mod lockfile_compat;
 mod login;
