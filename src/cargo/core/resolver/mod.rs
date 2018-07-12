@@ -59,6 +59,7 @@ use core::PackageIdSpec;
 use core::{Dependency, PackageId, Registry, Summary};
 use util::config::Config;
 use util::errors::{CargoError, CargoResult};
+use util::lev_distance::lev_distance;
 use util::profile;
 
 use self::context::{Activations, Context};
@@ -982,8 +983,6 @@ fn activation_error(
         if let Err(e) = registry.query(&new_dep, &mut |s| candidates.push(s.name()), true) {
             return e
         };
-        candidates.sort_unstable();
-        candidates.dedup();
         let mut msg = format!(
             "no matching package named `{}` found\n\
              location searched: {}\n",
@@ -991,8 +990,21 @@ fn activation_error(
             dep.source_id()
         );
         if !candidates.is_empty() {
+            candidates.sort_unstable();
+            candidates.dedup();
+            candidates.sort_by_key(|o| lev_distance(&*new_dep.name(), &*o));
+            let mut names = candidates
+                .iter()
+                .take(3)
+                .map(|c| c.to_string())
+                .collect::<Vec<_>>();
+
+            if candidates.len() > 3 {
+                names.push("...".into());
+            }
+
             msg.push_str("did you mean: ");
-            msg.push_str(&candidates.join(" or "));
+            msg.push_str(&names.join(", "));
             msg.push_str("\n");
         }
         msg.push_str("required by ");
