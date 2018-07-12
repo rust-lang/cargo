@@ -190,12 +190,13 @@ impl<'a> JobQueue<'a> {
         //       bar we'll need to probably capture the stderr of rustc and
         //       capture compiler error messages, but that also means
         //       reproducing rustc's styling of error messages which is
-        //       currently a pretty big task. This is issue #5695. Note that
-        //       when reenabling it'd also probably be good to fix #5697 while
-        //       we're at it.
+        //       currently a pretty big task. This is issue #5695.
         let mut error = None;
         let mut progress = Progress::with_style("Building", ProgressStyle::Ratio, cx.bcx.config);
-        progress.disable();
+        let mut progress_maybe_changed = true; // avoid flickering due to build script
+        if !cx.bcx.config.cli_unstable().compile_progress {
+            progress.disable();
+        }
         let total = self.queue.len();
         loop {
             // Dequeue as much work as we can, learning about everything
@@ -240,14 +241,23 @@ impl<'a> JobQueue<'a> {
             // to the jobserver itself.
             tokens.truncate(self.active.len() - 1);
 
-            let count = total - self.queue.len();
-            let active_names = self.active.iter().map(|key| match key.mode {
-                CompileMode::Doc { .. } => format!("{}(doc)", key.pkg.name()),
-                _ => key.pkg.name().to_string(),
-            }).collect::<Vec<_>>();
-            drop(progress.tick_now(count, total, &format!(": {}", active_names.join(", "))));
+            if progress_maybe_changed {
+                let count = total - self.queue.len();
+                let active_names = self.active.iter().map(|key| match key.mode {
+                    CompileMode::Doc { .. } => format!("{}(doc)", key.pkg.name()),
+                    _ => key.pkg.name().to_string(),
+                }).collect::<Vec<_>>();
+                drop(progress.tick_now(count, total, &format!(": {}", active_names.join(", "))));
+            }
             let event = self.rx.recv().unwrap();
-            progress.clear();
+
+            progress_maybe_changed = match event {
+                Message::Stdout(_) | Message::Stderr(_) => cx.bcx.config.extra_verbose(),
+                _ => true,
+            };
+            if progress_maybe_changed {
+                progress.clear();
+            }
 
             match event {
                 Message::Run(cmd) => {
