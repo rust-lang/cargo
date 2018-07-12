@@ -36,6 +36,7 @@ fn simple() {
         p.cargo("doc"),
         execs().with_status(0).with_stderr(&format!(
             "\
+[GENERATING] [..][/]foo[/]target[/]doc[/]foo[/]index.html
 [..] foo v0.0.1 ({dir})
 [..] foo v0.0.1 ({dir})
 [FINISHED] dev [unoptimized + debuginfo] target(s) in [..]
@@ -98,6 +99,7 @@ fn doc_twice() {
         p.cargo("doc"),
         execs().with_status(0).with_stderr(&format!(
             "\
+[GENERATING] [..][/]foo[/]target[/]doc[/]foo[/]index.html
 [DOCUMENTING] foo v0.0.1 ({dir})
 [FINISHED] dev [unoptimized + debuginfo] target(s) in [..]
 ",
@@ -151,6 +153,7 @@ fn doc_deps() {
         p.cargo("doc"),
         execs().with_status(0).with_stderr(&format!(
             "\
+[GENERATING] [..][/]foo[/]target[/]doc[/]foo[/]index.html
 [..] bar v0.0.1 ({dir}/bar)
 [..] bar v0.0.1 ({dir}/bar)
 [DOCUMENTING] foo v0.0.1 ({dir})
@@ -232,6 +235,7 @@ fn doc_no_deps() {
         p.cargo("doc").arg("--no-deps"),
         execs().with_status(0).with_stderr(&format!(
             "\
+[GENERATING] [..][/]foo[/]target[/]doc[/]foo[/]index.html
 [CHECKING] bar v0.0.1 ({dir}/bar)
 [DOCUMENTING] foo v0.0.1 ({dir})
 [FINISHED] dev [unoptimized + debuginfo] target(s) in [..]
@@ -505,6 +509,8 @@ fn doc_lib_bin_same_name_documents_lib() {
         p.cargo("doc"),
         execs().with_status(0).with_stderr(&format!(
             "\
+[GENERATING] [..][/]foo[/]target[/]doc[/]foo[/]index.html
+[GENERATING] [..][/]foo[/]target[/]doc[/]foo[/]index.html
 [DOCUMENTING] foo v0.0.1 ({dir})
 [FINISHED] dev [unoptimized + debuginfo] target(s) in [..]
 ",
@@ -558,6 +564,8 @@ fn doc_lib_bin_same_name_documents_lib_when_requested() {
         p.cargo("doc").arg("--lib"),
         execs().with_status(0).with_stderr(&format!(
             "\
+[GENERATING] [..][/]foo[/]target[/]doc[/]foo[/]index.html
+[GENERATING] [..][/]foo[/]target[/]doc[/]foo[/]index.html
 [DOCUMENTING] foo v0.0.1 ({dir})
 [FINISHED] dev [unoptimized + debuginfo] target(s) in [..]
 ",
@@ -611,6 +619,8 @@ fn doc_lib_bin_same_name_documents_named_bin_when_requested() {
         p.cargo("doc").arg("--bin").arg("foo"),
         execs().with_status(0).with_stderr(&format!(
             "\
+[GENERATING] [..][/]foo[/]target[/]doc[/]foo[/]index.html
+[GENERATING] [..][/]foo[/]target[/]doc[/]foo[/]index.html
 [CHECKING] foo v0.0.1 ({dir})
 [DOCUMENTING] foo v0.0.1 ({dir})
 [FINISHED] dev [unoptimized + debuginfo] target(s) in [..]
@@ -665,6 +675,8 @@ fn doc_lib_bin_same_name_documents_bins_when_requested() {
         p.cargo("doc").arg("--bins"),
         execs().with_status(0).with_stderr(&format!(
             "\
+[GENERATING] [..][/]foo[/]target[/]doc[/]foo[/]index.html
+[GENERATING] [..][/]foo[/]target[/]doc[/]foo[/]index.html
 [CHECKING] foo v0.0.1 ({dir})
 [DOCUMENTING] foo v0.0.1 ({dir})
 [FINISHED] dev [unoptimized + debuginfo] target(s) in [..]
@@ -729,6 +741,7 @@ fn doc_dash_p() {
         p.cargo("doc").arg("-p").arg("a"),
         execs().with_status(0).with_stderr(
             "\
+[GENERATING] [..][/]foo[/]target[/]doc[/]a[/]index.html
 [..] b v0.0.1 (file://[..])
 [..] b v0.0.1 (file://[..])
 [DOCUMENTING] a v0.0.1 (file://[..])
@@ -1001,6 +1014,7 @@ fn doc_release() {
         p.cargo("doc").arg("--release").arg("-v"),
         execs().with_status(0).with_stderr(
             "\
+[GENERATING] [..][/]foo[/]target[/]doc[/]foo[/]index.html
 [DOCUMENTING] foo v0.0.1 ([..])
 [RUNNING] `rustdoc [..] src[/]lib.rs [..]`
 [FINISHED] release [optimized] target(s) in [..]

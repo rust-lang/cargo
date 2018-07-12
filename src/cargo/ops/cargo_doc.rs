@@ -1,5 +1,6 @@
 use std::collections::HashMap;
 use std::fs;
+use std::iter::FromIterator;
 use std::path::Path;
 use std::process::Command;
 
@@ -65,6 +66,23 @@ pub fn doc(ws: &Workspace, options: &DocOptions) -> CargoResult<()> {
         }
     }
 
+    // Don't bother locking here as if this is getting deleted there's
+    // nothing we can do about it and otherwise if it's getting overwritten
+    // then that's also ok!
+    let mut target_dir = ws.clone().target_dir().clone();
+    if let Some(ref triple) = options.compile_opts.build_config.requested_target {
+        target_dir.push(Path::new(triple).file_stem().unwrap());
+    }
+
+    let unit_names = Vec::from_iter(lib_names.keys().chain(bin_names.keys()));
+    for unit_name in &unit_names {
+        let path = target_dir.join("doc").join(&unit_name).join("index.html");
+        // Duplicating shell here and not declaring it outside the loop to avoid
+        // a BorrowMutError
+        let mut shell = options.compile_opts.config.shell();
+        shell.status("Generating", path.display())?;
+    }
+
     ops::compile(ws, &options.compile_opts)?;
 
     if options.open_result {
@@ -79,19 +97,9 @@ pub fn doc(ws: &Workspace, options: &DocOptions) -> CargoResult<()> {
                     .join("\n  ")
             );
         } else {
-            match lib_names.keys().chain(bin_names.keys()).nth(0) {
-                Some(s) => s.to_string(),
-                None => return Ok(()),
-            }
+            unit_names[0].to_string()
         };
 
-        // Don't bother locking here as if this is getting deleted there's
-        // nothing we can do about it and otherwise if it's getting overwritten
-        // then that's also ok!
-        let mut target_dir = ws.target_dir();
-        if let Some(ref triple) = options.compile_opts.build_config.requested_target {
-            target_dir.push(Path::new(triple).file_stem().unwrap());
-        }
         let path = target_dir.join("doc").join(&name).join("index.html");
         let path = path.into_path_unlocked();
         if fs::metadata(&path).is_ok() {
