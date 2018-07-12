@@ -195,7 +195,9 @@ impl<'a> JobQueue<'a> {
         //       we're at it.
         let mut error = None;
         let mut progress = Progress::with_style("Building", ProgressStyle::Ratio, cx.bcx.config);
-        progress.disable();
+        if !cx.bcx.config.cli_unstable().compile_progress {
+            progress.disable();
+        }
         let total = self.queue.len();
         loop {
             // Dequeue as much work as we can, learning about everything
