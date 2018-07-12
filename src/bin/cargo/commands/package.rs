@@ -20,6 +20,10 @@ pub fn cli() -> App {
             "Ignore warnings about a lack of human-usable metadata",
         ))
         .arg(opt(
+            "non-standard-requirements",
+            "Ignore warnings about non-standard requirements",
+        ))
+        .arg(opt(
             "allow-dirty",
             "Allow dirty working directories to be packaged",
         ))
@@ -38,6 +42,7 @@ pub fn exec(config: &mut Config, args: &ArgMatches) -> CliResult {
             verify: !args.is_present("no-verify"),
             list: args.is_present("list"),
             check_metadata: !args.is_present("no-metadata"),
+            check_dependencies: !args.is_present("non-standard-requirements"),
             allow_dirty: args.is_present("allow-dirty"),
             target: args.target(),
             jobs: args.jobs()?,

@@ -21,6 +21,7 @@ pub struct PackageOpts<'cfg> {
     pub config: &'cfg Config,
     pub list: bool,
     pub check_metadata: bool,
+    pub check_dependencies: bool,
     pub allow_dirty: bool,
     pub verify: bool,
     pub jobs: Option<u32>,
@@ -38,6 +39,10 @@ pub fn package(ws: &Workspace, opts: &PackageOpts) -> CargoResult<Option<FileLoc
 
     if opts.check_metadata {
         check_metadata(pkg, config)?;
+    }
+
+    if opts.check_dependencies {
+        check_dependencies(pkg, config)?;
     }
 
     verify_dependencies(pkg)?;
@@ -147,6 +152,20 @@ fn verify_dependencies(pkg: &Package) -> CargoResult<()> {
                  a version.",
                 dep.name()
             )
+        }
+    }
+    Ok(())
+}
+
+fn check_dependencies(pkg: &Package, config: &Config) -> CargoResult<()> {
+    for dep in pkg.dependencies() {
+        if !dep.version_req().is_plain_semver() {
+            let msg = format!{
+                 "all dependencies should have a semver-open version manifest.\n\
+                 dependency `{}`'s version manifest is non-semver-open.",
+                 dep.name()
+            };
+            config.shell().warn(&msg)?
         }
     }
     Ok(())

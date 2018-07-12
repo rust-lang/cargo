@@ -282,6 +282,48 @@ See http://doc.crates.io/manifest.html#package-metadata for more info.
 }
 
 #[test]
+fn package_dependencies_check() {
+    let p = project("foo")
+        .file(
+            "Cargo.toml",
+            r#"
+            [project]
+            name = "foo"
+            version = "0.0.1"
+            authors = []
+            license = "MIT"
+            description = "foo"
+
+            [dependencies]
+            bar = "=0.1.0"
+        "#,
+        )
+        .file("src/main.rs", "fn main() {}")
+        .file(
+            "bar/Cargo.toml",
+            r#"
+            [package]
+            name = "bar"
+            version = "0.1.0"
+            authors = []
+        "#,
+        )
+        .file("bar/src/lib.rs", "")
+        .build();
+
+    assert_that(
+        p.cargo("package"),
+        execs().with_status(101).with_stderr(
+            "\
+warning: all dependencies should have a semver-open version manifest.
+See http://doc.crates.io/manifest.html#package-metadata for more info.
+dependency `bar`'s version manifest is non-semver-open.
+",
+        ),
+    );
+}
+
+#[test]
 fn path_dependency_no_version() {
     let p = project("foo")
         .file(
