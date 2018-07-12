@@ -556,13 +556,6 @@ fn lock(locked: &LockedMap, patches: &HashMap<Url, Vec<PackageId>>, summary: Sum
         //    requirement has changed. In this case we must discard the
         //    locked version because the dependency needs to be
         //    re-resolved.
-        //
-        // 3. We don't have a lock entry for this dependency, in which
-        //    case it was likely an optional dependency which wasn't
-        //    included previously so we just pass it through anyway.
-        //
-        // Cases 1/2 are handled by `matches_id` and case 3 is handled by
-        // falling through to the logic below.
         if let Some(&(_, ref locked_deps)) = pair {
             let locked = locked_deps.iter().find(|id| dep.matches_id(id));
             if let Some(locked) = locked {
@@ -571,20 +564,6 @@ fn lock(locked: &LockedMap, patches: &HashMap<Url, Vec<PackageId>>, summary: Sum
                 dep.lock_to(locked);
                 return dep;
             }
-        }
-
-        // If this dependency did not have a locked version, then we query
-        // all known locked packages to see if they match this dependency.
-        // If anything does then we lock it to that and move on.
-        let v = locked
-            .get(dep.source_id())
-            .and_then(|map| map.get(&*dep.name()))
-            .and_then(|vec| vec.iter().find(|&&(ref id, _)| dep.matches_id(id)));
-        if let Some(&(ref id, _)) = v {
-            trace!("\tsecond hit on {}", id);
-            let mut dep = dep.clone();
-            dep.lock_to(id);
-            return dep;
         }
 
         // Finally we check to see if any registered patches correspond to
