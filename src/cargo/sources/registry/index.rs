@@ -11,6 +11,61 @@ use sources::registry::RegistryData;
 use sources::registry::{RegistryPackage, INDEX_LOCK};
 use util::{internal, CargoResult, Config, Filesystem};
 
+/// Crates.io treats hyphen and underscores as interchangeable
+/// but, the index and old cargo do not. So the index must store uncanonicalized version
+/// of the name so old cargos can find it.
+/// This loop tries all possible combinations of switching
+/// hyphen and underscores to find the uncanonicalized one.
+/// As all stored inputs have the correct spelling, we start with the spelling as provided.
+struct UncanonicalizedIter<'s> {
+    input: &'s str,
+    num_hyphen_underscore: u32,
+    hyphen_combination_num: u16,
+}
+
+impl<'s> UncanonicalizedIter<'s> {
+    fn new(input: &'s str) -> Self {
+        let num_hyphen_underscore = input.chars().filter(|&c| c == '_' || c == '-').count() as u32;
+        UncanonicalizedIter {
+            input,
+            num_hyphen_underscore,
+            hyphen_combination_num: 0,
+        }
+    }
+}
+
+impl<'s> Iterator for UncanonicalizedIter<'s> {
+    type Item = String;
+
+    fn next(&mut self) -> Option<Self::Item> {
+        if self.hyphen_combination_num > 0 && self.hyphen_combination_num.trailing_zeros() >= self.num_hyphen_underscore {
+            return None;
+        }
+
+        let ret = Some(self.input
+            .chars()
+            .scan(0u16, |s, c| {
+                // the check against 15 here's to prevent
+                // shift overflow on inputs with more then 15 hyphens
+                if (c == '_' || c == '-') && *s <= 15 {
+                    let switch = (self.hyphen_combination_num & (1u16 << *s)) > 0;
+                    let out = if (c == '_') ^ switch {
+                        '_'
+                    } else {
+                        '-'
+                    };
+                    *s += 1;
+                    Some(out)
+                } else {
+                    Some(c)
+                }
+            })
+            .collect());
+        self.hyphen_combination_num += 1;
+        ret
+    }
+}
+
 pub struct RegistryIndex<'cfg> {
     source_id: SourceId,
     path: Filesystem,
@@ -105,33 +160,8 @@ impl<'cfg> RegistryIndex<'cfg> {
             3 => format!("3/{}/{}", &fs_name[..1], fs_name),
             _ => format!("{}/{}/{}", &fs_name[0..2], &fs_name[2..4], fs_name),
         };
-        let num_hyphen_underscore = ::std::cmp::min(
-            raw_path.chars().filter(|&c| c == '_' || c == '-').count(),
-            10,
-        ) as u16;
         let mut ret = Vec::new();
-        // Crates.io treats hyphen and underscores as interchangeable
-        // but, the index and old cargo do not. So the index must store uncanonicalized version
-        // of the name so old cargos can find it.
-        // This loop tries all possible combinations of switching
-        // hyphen and underscores to find the uncanonicalized one.
-        for hyphen_combination_num in 0u16..(1 << num_hyphen_underscore) {
-            let path = raw_path
-                .chars()
-                .scan(0u16, |s, c| {
-                    if (c == '_' || c == '-') && *s <= num_hyphen_underscore {
-                        let out = Some(if (c == '_') ^ ((hyphen_combination_num & (1u16 << *s)) > 0) {
-                            '_'
-                        } else {
-                            '-'
-                        });
-                        *s += 1;
-                        out
-                    } else {
-                        Some(c)
-                    }
-                })
-                .collect::<String>();
+         for path in UncanonicalizedIter::new(&raw_path).take(1024) {
             let mut hit_closure = false;
             let err = load.load(&root, Path::new(&path), &mut |contents| {
                 hit_closure = true;
