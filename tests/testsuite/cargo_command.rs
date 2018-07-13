@@ -323,6 +323,29 @@ fn cargo_help() {
 }
 
 #[test]
+fn cargo_help_external_subcommand() {
+    Package::new("cargo-fake-help", "1.0.0")
+        .file(
+            "src/main.rs",
+            r#"
+            fn main() {
+                if ::std::env::args().nth(2) == Some(String::from("--help")) {
+                    println!("fancy help output");
+                }
+            }"#,
+            )
+            .publish();
+    assert_that(
+        cargo_process().args(&["install", "cargo-fake-help"]),
+        execs().with_status(0),
+    );
+    assert_that(
+        cargo_process().args(&["help", "fake-help"]),
+        execs().with_status(0).with_stdout("fancy help output\n")
+    );
+}
+
+#[test]
 fn explain() {
     assert_that(
         cargo_process().arg("--explain").arg("E0001"),
