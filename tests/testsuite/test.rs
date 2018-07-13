@@ -4138,3 +4138,28 @@ fn json_artifact_includes_test_flag() {
         ),
     );
 }
+
+#[test]
+fn test_build_script_links() {
+    let p = project("foo")
+        .file(
+            "Cargo.toml",
+            r#"
+                [package]
+                name = "foo"
+                version = "0.0.1"
+                links = 'something'
+
+                [lib]
+                test = false
+            "#,
+        )
+        .file("build.rs", "fn main() {}")
+        .file("src/lib.rs", "")
+        .build();
+
+    assert_that(
+        p.cargo("test --no-run"),
+        execs().with_status(0),
+    );
+}
