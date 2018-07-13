@@ -66,6 +66,30 @@ impl<'s> Iterator for UncanonicalizedIter<'s> {
     }
 }
 
+#[test]
+fn no_hyphen() {
+    assert_eq!(
+        UncanonicalizedIter::new("test").collect::<Vec<_>>(),
+        vec!["test".to_string()]
+    )
+}
+
+#[test]
+fn two_hyphen() {
+    assert_eq!(
+        UncanonicalizedIter::new("te-_st").collect::<Vec<_>>(),
+        vec!["te-_st".to_string(), "te__st".to_string(), "te--st".to_string(), "te_-st".to_string()]
+    )
+}
+
+#[test]
+fn overflow_hyphen() {
+    assert_eq!(
+        UncanonicalizedIter::new("te-_-_-_-_-_-_-_-_-st").take(100).count(),
+        100
+    )
+}
+
 pub struct RegistryIndex<'cfg> {
     source_id: SourceId,
     path: Filesystem,
