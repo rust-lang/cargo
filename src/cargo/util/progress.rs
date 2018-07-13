@@ -28,7 +28,7 @@ struct State<'cfg> {
 struct Format {
     style: ProgressStyle,
     max_width: usize,
-    width: usize,
+    max_print: usize,
 }
 
 impl<'cfg> Progress<'cfg> {
@@ -48,7 +48,7 @@ impl<'cfg> Progress<'cfg> {
                 format: Format {
                     style,
                     max_width: n,
-                    width: cmp::min(n, 80),
+                    max_print: 80,
                 },
                 first: true,
                 last_update: Instant::now(),
@@ -75,7 +75,7 @@ impl<'cfg> Progress<'cfg> {
 
     pub fn clear(&mut self) {
         if let Some(ref mut s) = self.state {
-            clear(s.format.max_width, s.config);
+            s.clear();
         }
     }
 
@@ -127,11 +127,24 @@ impl<'cfg> State<'cfg> {
 
         // Write out a pretty header, then the progress bar itself, and then
         // return back to the beginning of the line for the next print.
+        self.try_update_max_width();
         if let Some(string) = self.format.progress_status(cur, max, msg) {
             self.config.shell().status_header(&self.name)?;
             write!(self.config.shell().err(), "{}\r", string)?;
         }
         Ok(())
+    }
+
+    fn clear(&mut self) {
+        self.try_update_max_width();
+        let blank = " ".repeat(self.format.max_width);
+        drop(write!(self.config.shell().err(), "{}\r", blank));
+    }
+
+    fn try_update_max_width(&mut self) {
+        if let Some(n) = self.config.shell().err_width() {
+            self.format.max_width = n;
+        }
     }
 }
 
@@ -146,7 +159,7 @@ impl Format {
             ProgressStyle::Ratio => format!(" {}/{}", cur, max),
         };
         let extra_len = stats.len() + 2 /* [ and ] */ + 15 /* status header */;
-        let display_width = match self.width.checked_sub(extra_len) {
+        let display_width = match self.width().checked_sub(extra_len) {
             Some(n) => n,
             None => return None,
         };
@@ -175,7 +188,7 @@ impl Format {
         string.push_str("]");
         string.push_str(&stats);
 
-        let mut avail_msg_len = self.max_width - self.width;
+        let mut avail_msg_len = self.max_width - self.width();
         let mut ellipsis_pos = 0;
         if avail_msg_len > 3 {
             for c in msg.chars() {
@@ -196,16 +209,15 @@ impl Format {
 
         Some(string)
     }
-}
 
-fn clear(width: usize, config: &Config) {
-    let blank = " ".repeat(width);
-    drop(write!(config.shell().err(), "{}\r", blank));
+    fn width(&self) -> usize {
+        cmp::min(self.max_width, self.max_print)
+    }
 }
 
 impl<'cfg> Drop for State<'cfg> {
     fn drop(&mut self) {
-        clear(self.format.max_width, self.config);
+        self.clear();
     }
 }
 
@@ -213,7 +225,7 @@ impl<'cfg> Drop for State<'cfg> {
 fn test_progress_status() {
     let format = Format {
         style: ProgressStyle::Ratio,
-        width: 40,
+        max_print: 40,
         max_width: 60,
     };
     assert_eq!(
@@ -281,7 +293,7 @@ fn test_progress_status() {
 fn test_progress_status_percentage() {
     let format = Format {
         style: ProgressStyle::Percentage,
-        width: 40,
+        max_print: 40,
         max_width: 60,
     };
     assert_eq!(
@@ -306,7 +318,7 @@ fn test_progress_status_percentage() {
 fn test_progress_status_too_short() {
     let format = Format {
         style: ProgressStyle::Percentage,
-        width: 25,
+        max_print: 25,
         max_width: 25,
     };
     assert_eq!(
@@ -316,7 +328,7 @@ fn test_progress_status_too_short() {
 
     let format = Format {
         style: ProgressStyle::Percentage,
-        width: 24,
+        max_print: 24,
         max_width: 24,
     };
     assert_eq!(
