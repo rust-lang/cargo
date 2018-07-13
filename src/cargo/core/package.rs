@@ -19,7 +19,7 @@ use util::errors::{CargoResult, CargoResultExt};
 ///
 /// A package is a `Cargo.toml` file plus all the files that are part of it.
 // TODO: Is manifest_path a relic?
-#[derive(Clone, Debug)]
+#[derive(Clone)]
 pub struct Package {
     /// The package's manifest
     manifest: Manifest,
@@ -196,6 +196,15 @@ impl Package {
 impl fmt::Display for Package {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         write!(f, "{}", self.summary().package_id())
+    }
+}
+
+impl fmt::Debug for Package {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        f.debug_struct("Package")
+            .field("id", self.summary().package_id())
+            .field("..", &"..")
+            .finish()
     }
 }
 

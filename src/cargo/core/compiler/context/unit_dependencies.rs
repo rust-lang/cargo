@@ -15,12 +15,13 @@
 //! (for example, with and without tests), so we actually build a dependency
 //! graph of `Unit`s, which capture these properties.
 
-use super::{BuildContext, CompileMode, Kind, Unit};
+use std::collections::HashMap;
+
+use CargoResult;
 use core::dependency::Kind as DepKind;
 use core::profiles::ProfileFor;
 use core::{Package, Target};
-use std::collections::HashMap;
-use CargoResult;
+use super::{BuildContext, CompileMode, Kind, Unit};
 
 pub fn build_unit_dependencies<'a, 'cfg>(
     roots: &[Unit<'a>],
@@ -41,6 +42,7 @@ pub fn build_unit_dependencies<'a, 'cfg>(
         };
         deps_of(unit, bcx, &mut deps, profile_for)?;
     }
+    trace!("ALL UNIT DEPENDENCIES {:#?}", deps);
 
     Ok(())
 }
