@@ -91,13 +91,24 @@ the `.d` files alongside the artifacts.
 Cargo is designed to be extensible with new subcommands without having to modify
 Cargo itself. This is achieved by translating a cargo invocation of the form
 cargo `(?<command>[^ ]+)` into an invocation of an external tool
-`cargo-${command}` that then needs to be present in one of the user's `$PATH`
-directories.
+`cargo-${command}`. The external tool must be present in one of the user's
+`$PATH` directories.
 
-Custom subcommand may use `CARGO` environment variable to call back to
+When Cargo invokes a custom subcommand, the first argument to the subcommand
+will be the filename of the custom subcommand, as usual. The second argument
+will be the subcommand name itself. For example, the second argument would be
+`${command}` when invoking `cargo-${command}`. Any additional arguments on the
+command line will be forwarded unchanged.
+
+Cargo can also display the help output of a custom subcommand with `cargo help
+${command}`. Cargo assumes that the subcommand will print a help message if its
+third argument is `--help`. So, `cargo help ${command}` would invoke
+`cargo-${command} ${command} --help`.
+
+Custom subcommands may use the `CARGO` environment variable to call back to
 Cargo. Alternatively, it can link to `cargo` crate as a library, but this
 approach has drawbacks:
 
-* Cargo as a library is unstable, API changes without deprecation,
+* Cargo as a library is unstable: the  API may change without deprecation
 
-* versions of Cargo library and Cargo binary may be different.
+* versions of the linked Cargo library may be different from the Cargo binary
