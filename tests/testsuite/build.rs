@@ -4043,6 +4043,7 @@ fn compiler_json_error_format() {
             "overflow_checks": true,
             "test": false
         },
+        "executable": null,
         "features": [],
         "package_id":"bar 0.5.0 ([..])",
         "target":{
@@ -4092,6 +4093,7 @@ fn compiler_json_error_format() {
             "overflow_checks": true,
             "test": false
         },
+        "executable": "[..]foo[/]target[/]debug[/]foo[EXE]",
         "features": [],
         "filenames": "{...}",
         "fresh": false
@@ -4122,20 +4124,7 @@ fn compiler_json_error_format() {
             "overflow_checks": true,
             "test": false
         },
-        "features": [],
-        "filenames": "{...}",
-        "fresh": true
-    }
-
-    {
-        "reason":"compiler-artifact",
-        "profile": {
-            "debug_assertions": true,
-            "debuginfo": 2,
-            "opt_level": "0",
-            "overflow_checks": true,
-            "test": false
-        },
+        "executable": null,
         "features": [],
         "package_id":"bar 0.5.0 ([..])",
         "target":{
@@ -4173,6 +4162,7 @@ fn compiler_json_error_format() {
             "overflow_checks": true,
             "test": false
         },
+        "executable": "[..]foo[/]target[/]debug[/]foo[EXE]",
         "features": [],
         "filenames": "{...}",
         "fresh": true
@@ -4244,6 +4234,7 @@ fn message_format_json_forward_stderr() {
             "overflow_checks": false,
             "test":false
         },
+        "executable": "{...}",
         "features":[],
         "filenames": "{...}",
         "fresh": false

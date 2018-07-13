@@ -1917,3 +1917,84 @@ fn bench_virtual_manifest_all_implied() {
             .with_stdout_contains("test bench_foo ... bench: [..]"),
     );
 }
+
+#[test]
+fn json_artifact_includes_executable_for_benchmark() {
+    let p = project("foo")
+        .file(
+            "Cargo.toml",
+            r#"
+            [package]
+            name = "foo"
+            version = "0.0.1"
+            authors = []
+        "#,
+        )
+        .file("src/main.rs", "fn main() { }")
+        .file(
+            "benches/benchmark.rs",
+            r#"
+            #![feature(test)]
+            extern crate test;
+            use test::Bencher;
+            #[bench]
+            fn bench_foo(_: &mut Bencher) -> () { () }
+        "#,
+        )
+        .build();
+
+    assert_that(
+        p.cargo("bench --no-run --message-format=json"),
+        execs().with_status(0).with_json(
+            r#"
+    {
+        "executable": "[..]foo[/]target[/]release[/]foo[EXE]",
+        "features": [],
+        "filenames": "{...}",
+        "fresh": false,
+        "package_id": "foo 0.0.1 ([..])",
+        "profile": "{...}",
+        "reason": "compiler-artifact",
+        "target": {
+            "crate_types": [ "bin" ],
+            "kind": [ "bin" ],
+            "name": "foo",
+            "src_path": "[..]main.rs"
+        }
+    }
+
+    {
+        "executable": "[..]foo-[..][EXE]",
+        "features": [],
+        "filenames": [ "[..]foo-[..][EXE]", "[..]" ],
+        "fresh": false,
+        "package_id": "foo 0.0.1 ([..])",
+        "profile": "{...}",
+        "reason": "compiler-artifact",
+        "target": {
+            "crate_types": [ "bin" ],
+            "kind": [ "bin" ],
+            "name": "foo",
+            "src_path": "[..]main.rs"
+        }
+    }
+
+    {
+        "executable": "[..]benchmark-[..][EXE]",
+        "features": [],
+        "filenames": [ "[..]benchmark-[..][EXE]" ],
+        "fresh": false,
+        "package_id": "foo 0.0.1 ([..])",
+        "profile": "{...}",
+        "reason": "compiler-artifact",
+        "target": {
+            "crate_types": [ "bin" ],
+            "kind": [ "bench" ],
+            "name": "benchmark",
+            "src_path": "[..]benchmark.rs"
+        }
+    }
+"#,
+        ),
+    );
+}

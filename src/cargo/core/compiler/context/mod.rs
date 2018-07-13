@@ -167,17 +167,12 @@ impl<'a, 'cfg> Context<'a, 'cfg> {
         }
 
         for unit in units.iter() {
+
             for output in self.outputs(unit)?.iter() {
                 if output.flavor == FileFlavor::DebugInfo {
                     continue;
                 }
-
-                let bindst = match output.hardlink {
-                    Some(ref link_dst) => link_dst,
-                    None => &output.path,
-                };
-
-                if unit.mode == CompileMode::Test {
+                if unit.mode.is_any_test() && !unit.mode.is_check() {
                     self.compilation.tests.push((
                         unit.pkg.clone(),
                         unit.target.kind().clone(),
@@ -185,7 +180,8 @@ impl<'a, 'cfg> Context<'a, 'cfg> {
                         output.path.clone(),
                     ));
                 } else if unit.target.is_bin() || unit.target.is_bin_example() {
-                    self.compilation.binaries.push(bindst.clone());
+                    let bindist = output.bindist();
+                    self.compilation.binaries.push(bindist.clone());
                 } else if unit.target.is_lib() {
                     let pkgid = unit.pkg.package_id().clone();
                     self.compilation
@@ -303,6 +299,24 @@ impl<'a, 'cfg> Context<'a, 'cfg> {
             }
         }
         Ok(self.compilation)
+    }
+
+    /// Returns the executable for the specified unit (if any).
+    pub fn get_executable(&mut self, unit: &Unit<'a>) -> CargoResult<Option<PathBuf>> {
+        for output in self.outputs(unit)?.iter() {
+            if output.flavor == FileFlavor::DebugInfo {
+                continue;
+            }
+
+            let is_binary = unit.target.is_bin() || unit.target.is_bin_example();
+            let is_test = unit.mode.is_any_test() && !unit.mode.is_check();
+
+            if is_binary || is_test {
+                let bindist = output.bindist();
+                return Ok(Option::Some(bindist.clone()));
+            }
+        }
+        return Ok(None);
     }
 
     pub fn prepare_units(
