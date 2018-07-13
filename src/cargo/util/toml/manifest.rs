@@ -145,6 +145,7 @@ impl Manifest {
                 .write(true)
                 .open(path)
                 .chain_err(|| "Failed to find Cargo.toml")
+                .map_err(CargoError::from)
         })
     }
 
@@ -155,7 +156,9 @@ impl Manifest {
         file.read_to_string(&mut data)
             .chain_err(|| "Failed to read manifest contents")?;
 
-        data.parse().chain_err(|| "Unable to parse Cargo.toml")
+        data.parse()
+            .chain_err(|| "Unable to parse Cargo.toml")
+            .map_err(CargoError::from)
     }
 
     /// Get the specified table from the manifest.
@@ -239,9 +242,12 @@ impl Manifest {
         // We need to truncate the file, otherwise the new contents
         // will be mixed up with the old ones.
         file.set_len(new_contents_bytes.len() as u64)
-            .chain_err(|| "Failed to truncate Cargo.toml")?;
+            .chain_err(|| "Failed to truncate Cargo.toml")
+            .map_err(CargoError::from)?;
         file.write_all(new_contents_bytes)
             .chain_err(|| "Failed to write updated Cargo.toml")
+            .map_err(CargoError::from)?;
+        Ok(())
     }
 
     /// Add entry to a Cargo.toml.
@@ -310,7 +316,7 @@ impl Manifest {
             {
                 let dep = &mut self.data[table][name];
                 if dep.is_none() {
-                    Err(format_err!("The dependency `{}` could not be found in `{}`.", name.into(), table.into()))?;
+                    Err(format_err!("The dependency `{}` could not be found in `{}`.", name, table))?;
                 }
                 // remove the dependency
                 *dep = toml_edit::Item::None;
@@ -400,6 +406,7 @@ impl LocalManifest {
         let mut file = self.get_file()?;
         self.write_to_file(&mut file)
             .chain_err(|| "Failed to write new manifest contents")
+            .map_err(CargoError::from)
     }
 }
 
