@@ -86,7 +86,7 @@ pub struct ManifestMetadata {
     pub links: Option<String>,
 }
 
-#[derive(Debug, Clone, PartialEq, Eq, Hash, PartialOrd, Ord)]
+#[derive(Clone, PartialEq, Eq, Hash, PartialOrd, Ord)]
 pub enum LibKind {
     Lib,
     Rlib,
@@ -125,7 +125,13 @@ impl LibKind {
     }
 }
 
-#[derive(Debug, Clone, Hash, PartialEq, Eq, PartialOrd, Ord)]
+impl fmt::Debug for LibKind {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        self.crate_type().fmt(f)
+    }
+}
+
+#[derive(Clone, Hash, PartialEq, Eq, PartialOrd, Ord)]
 pub enum TargetKind {
     Lib(Vec<LibKind>),
     Bin,
@@ -153,9 +159,23 @@ impl ser::Serialize for TargetKind {
     }
 }
 
+impl fmt::Debug for TargetKind {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        use self::TargetKind::*;
+        match *self {
+            Lib(ref kinds) => kinds.fmt(f),
+            Bin => "bin".fmt(f),
+            ExampleBin | ExampleLib(_) => "example".fmt(f),
+            Test => "test".fmt(f),
+            CustomBuild => "custom-build".fmt(f),
+            Bench => "bench".fmt(f),
+        }
+    }
+}
+
 /// Information about a binary, a library, an example, etc. that is part of the
 /// package.
-#[derive(Clone, Hash, PartialEq, Eq, Debug)]
+#[derive(Clone, Hash, PartialEq, Eq)]
 pub struct Target {
     kind: TargetKind,
     name: String,
@@ -173,7 +193,7 @@ pub struct Target {
     for_host: bool,
 }
 
-#[derive(Clone, PartialEq, Eq, Debug)]
+#[derive(Clone, PartialEq, Eq)]
 struct NonHashedPathBuf {
     path: PathBuf,
 }
@@ -181,6 +201,12 @@ struct NonHashedPathBuf {
 impl Hash for NonHashedPathBuf {
     fn hash<H: Hasher>(&self, _: &mut H) {
         // ...
+    }
+}
+
+impl fmt::Debug for NonHashedPathBuf {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        self.path.fmt(f)
     }
 }
 
@@ -204,6 +230,48 @@ impl ser::Serialize for Target {
             name: &self.name,
             src_path: &self.src_path.path,
         }.serialize(s)
+    }
+}
+
+compact_debug! {
+    impl fmt::Debug for Target {
+        fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+            let (default, default_name) = {
+                let src = self.src_path().to_path_buf();
+                match &self.kind {
+                    TargetKind::Lib(kinds) => {
+                        (
+                            Target::lib_target(&self.name, kinds.clone(), src.clone()),
+                            format!("lib_target({:?}, {:?}, {:?})",
+                                    self.name, kinds, src),
+                        )
+                    }
+                    TargetKind::CustomBuild => {
+                        (
+                            Target::custom_build_target(&self.name, src.clone()),
+                            format!("custom_build_target({:?}, {:?})",
+                                    self.name, src),
+                        )
+                    }
+                    _ => (
+                        Target::with_path(src.clone()),
+                        format!("with_path({:?})", src),
+                    ),
+                }
+            };
+            [debug_the_fields(
+                kind
+                name
+                src_path
+                required_features
+                tested
+                benched
+                doc
+                doctest
+                harness
+                for_host
+            )]
+        }
     }
 }
 

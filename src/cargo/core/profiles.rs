@@ -371,7 +371,7 @@ fn merge_profile(profile: &mut Profile, toml: &TomlProfile) {
 
 /// Profile settings used to determine which compiler flags to use for a
 /// target.
-#[derive(Debug, Clone, Copy, Eq)]
+#[derive(Clone, Copy, Eq)]
 pub struct Profile {
     pub name: &'static str,
     pub opt_level: InternedString,
@@ -399,6 +399,33 @@ impl Default for Profile {
             rpath: false,
             incremental: false,
             panic: None,
+        }
+    }
+}
+
+compact_debug! {
+    impl fmt::Debug for Profile {
+        fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+            let (default, default_name) = match self.name {
+                "dev" => (Profile::default_dev(), "default_dev()"),
+                "release" => (Profile::default_release(), "default_release()"),
+                "test" => (Profile::default_test(), "default_test()"),
+                "bench" => (Profile::default_bench(), "default_bench()"),
+                "doc" => (Profile::default_doc(), "default_doc()"),
+                _ => (Profile::default(), "default()"),
+            };
+            [debug_the_fields(
+                name
+                opt_level
+                lto
+                codegen_units
+                debuginfo
+                debug_assertions
+                overflow_checks
+                rpath
+                incremental
+                panic
+            )]
         }
     }
 }
