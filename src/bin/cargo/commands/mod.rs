@@ -8,6 +8,7 @@ pub fn builtin() -> Vec<App> {
         clean::cli(),
         doc::cli(),
         fetch::cli(),
+        fix::cli(),
         generate_lockfile::cli(),
         git_checkout::cli(),
         init::cli(),
@@ -42,6 +43,7 @@ pub fn builtin_exec(cmd: &str) -> Option<fn(&mut Config, &ArgMatches) -> CliResu
         "clean" => clean::exec,
         "doc" => doc::exec,
         "fetch" => fetch::exec,
+        "fix" => fix::exec,
         "generate-lockfile" => generate_lockfile::exec,
         "git-checkout" => git_checkout::exec,
         "init" => init::exec,
@@ -76,6 +78,7 @@ pub mod check;
 pub mod clean;
 pub mod doc;
 pub mod fetch;
+pub mod fix;
 pub mod generate_lockfile;
 pub mod git_checkout;
 pub mod init;
