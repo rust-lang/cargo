@@ -177,20 +177,7 @@ pub fn compile_with_exec<'a>(
     options: &CompileOptions<'a>,
     exec: Arc<Executor>,
 ) -> CargoResult<Compilation<'a>> {
-    for member in ws.members() {
-        for warning in member.manifest().warnings().iter() {
-            if warning.is_critical {
-                let err = format_err!("{}", warning.message);
-                let cx = format_err!(
-                    "failed to parse manifest at `{}`",
-                    member.manifest_path().display()
-                );
-                return Err(err.context(cx).into());
-            } else {
-                options.config.shell().warn(&warning.message)?
-            }
-        }
-    }
+    ws.emit_warnings()?;
     compile_ws(ws, None, options, exec)
 }
 

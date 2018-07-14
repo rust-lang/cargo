@@ -13,7 +13,7 @@ use toml;
 use url::Url;
 
 use core::dependency::{Kind, Platform};
-use core::manifest::{LibKind, ManifestMetadata};
+use core::manifest::{LibKind, ManifestMetadata, Warnings};
 use core::profiles::Profiles;
 use core::{Dependency, Manifest, PackageId, Summary, Target};
 use core::{Edition, EitherManifest, Feature, Features, VirtualManifest};
@@ -63,14 +63,17 @@ fn do_read_manifest(
         stringify(&mut key, &path);
         unused.insert(key);
     })?;
+    let add_unused = |warnings: &mut Warnings| {
+        for key in unused {
+            warnings.add_warning(format!("unused manifest key: {}", key));
+        }
+    };
 
     let manifest = Rc::new(manifest);
     return if manifest.project.is_some() || manifest.package.is_some() {
         let (mut manifest, paths) =
             TomlManifest::to_real_manifest(&manifest, source_id, package_root, config)?;
-        for key in unused {
-            manifest.add_warning(format!("unused manifest key: {}", key));
-        }
+        add_unused(manifest.warnings_mut());
         if !manifest.targets().iter().any(|t| !t.is_custom_build()) {
             bail!(
                 "no targets specified in the manifest\n  \
@@ -80,8 +83,9 @@ fn do_read_manifest(
         }
         Ok((EitherManifest::Real(manifest), paths))
     } else {
-        let (m, paths) =
+        let (mut m, paths) =
             TomlManifest::to_virtual_manifest(&manifest, source_id, package_root, config)?;
+        add_unused(m.warnings_mut());
         Ok((EitherManifest::Virtual(m), paths))
     };
 
@@ -969,17 +973,17 @@ impl TomlManifest {
             Rc::clone(me),
         );
         if project.license_file.is_some() && project.license.is_some() {
-            manifest.add_warning(
+            manifest.warnings_mut().add_warning(
                 "only one of `license` or \
                  `license-file` is necessary"
                     .to_string(),
             );
         }
         for warning in warnings {
-            manifest.add_warning(warning);
+            manifest.warnings_mut().add_warning(warning);
         }
         for error in errors {
-            manifest.add_critical_warning(error);
+            manifest.warnings_mut().add_critical_warning(error);
         }
 
         manifest.feature_gate()?;

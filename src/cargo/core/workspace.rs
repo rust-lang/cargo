@@ -723,6 +723,28 @@ impl<'cfg> Workspace<'cfg> {
             registry.add_preloaded(Box::new(src));
         }
     }
+
+    pub fn emit_warnings(&self) -> CargoResult<()> {
+        for (path, maybe_pkg) in &self.packages.packages {
+            let warnings = match maybe_pkg {
+                MaybePackage::Package(pkg) => pkg.manifest().warnings().warnings(),
+                MaybePackage::Virtual(vm) => vm.warnings().warnings(),
+            };
+            for warning in warnings {
+                if warning.is_critical {
+                    let err = format_err!("{}", warning.message);
+                    let cx = format_err!(
+                        "failed to parse manifest at `{}`",
+                        path.display()
+                    );
+                    return Err(err.context(cx).into());
+                } else {
+                    self.config.shell().warn(&warning.message)?
+                }
+            }
+        }
+        Ok(())
+    }
 }
 
 impl<'cfg> Packages<'cfg> {
