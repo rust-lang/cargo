@@ -617,6 +617,32 @@ fn generate_targets<'a>(
                 None => Vec::new(),
             };
             if unit.target.is_lib() || unavailable_features.is_empty() {
+                // Even if --lib or similar was passed, skip it if the configuration tells us
+                // otherwise
+                match unit.mode {
+                    CompileMode::Test | CompileMode::Bench => {
+                        let is_tested = unit.target.tested() || unit.target.benched();
+                        if unit.target.is_test() && (unit.target.tested() || unit.target.benched()) {
+                            // fall through
+                        } else if unit.target.is_bench() && unit.target.benched() {
+                            // fall through
+                        } else if (unit.target.is_lib() || unit.target.is_bin()) && is_tested {
+                            // fall through
+                        } else if unit.target.is_example() {
+                            // fall through
+                        } else {
+                            continue;
+                        }
+                    }
+                    CompileMode::Doctest { .. } | CompileMode::Doc { .. } => {
+                        if unit.target.documented() || unit.target.doctested() {
+                            // fall through
+                        } else {
+                            continue;
+                        }
+                    },
+                    _ => {}
+                }
                 units.push(unit);
             } else if required {
                 let required_features = unit.target.required_features().unwrap();

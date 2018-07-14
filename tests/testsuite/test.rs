@@ -4163,3 +4163,59 @@ fn test_build_script_links() {
         execs().with_status(0),
     );
 }
+
+#[test]
+fn test_argument_does_not_override_config() {
+    let p = project("foo")
+        .file(
+            "Cargo.toml",
+            r#"
+            [package]
+            name = "foo"
+            version = "0.0.1"
+            authors = []
+
+            [lib]
+            name = "foo"
+            test = false
+            bench = false
+            doctest = false
+
+            [[test]]
+            name = "footests"
+            path = "./src/tests/lib.rs"
+        "#,
+        )
+        .file(
+            "src/lib.rs",
+            "
+            pub fn foo() {}
+        ",
+        )
+        .file(
+            "src/tests/lib.rs",
+            "
+            extern crate foo;
+
+            #[test]
+            fn test() { foo::foo() }
+        ",
+        )
+        .build();
+
+    assert_that(p.cargo("build").arg("--lib"), execs().with_status(0));
+    assert_that(
+        p.cargo("test").arg("--lib").arg("--verbose").arg("--tests"),
+        execs()
+            .with_status(0)
+            .with_stderr(&format!(
+                "\
+[COMPILING] foo v0.0.1 ({dir})
+[RUNNING] `rustc --crate-name footests [..]`
+[FINISHED] dev [unoptimized + debuginfo] target(s) in [..]
+[RUNNING] `[..]target[/]debug[/]deps[/]footests-[..][EXE]`",
+                dir = p.url()
+            ))
+            .with_stdout_contains("test test ... ok"),
+    );
+}

@@ -240,13 +240,24 @@ fn custom_runner() {
     );
 
     assert_that(
+        p.cargo("run").args(&["--release", "--", "--param"]),
+        execs().with_stderr_contains(&format!(
+            "\
+[COMPILING] foo v0.0.1 ({url})
+[FINISHED] release [optimized] target(s) in [..]
+[RUNNING] `nonexistent-runner -r target[/]release[/]foo[EXE] --param`
+",
+            url = p.url()
+        )),
+    );
+
+    assert_that(
         p.cargo("bench")
             .args(&["--bench", "bench", "--verbose", "--", "--param"]),
         execs().with_stderr_contains(&format!(
             "\
 [COMPILING] foo v0.0.1 ({url})
-[RUNNING] `rustc [..]`
-[RUNNING] `rustc [..]`
+[RUNNING] `rustc [..] benches/bench.rs [..]`
 [FINISHED] release [optimized] target(s) in [..]
 [RUNNING] `nonexistent-runner -r [..][/]target[/]release[/]deps[/]bench-[..][EXE] --param --bench`
 ",
