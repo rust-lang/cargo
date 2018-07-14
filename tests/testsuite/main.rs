@@ -51,6 +51,7 @@ mod directory;
 mod doc;
 mod features;
 mod fetch;
+mod fix;
 mod freshness;
 mod generate_lockfile;
 mod git;

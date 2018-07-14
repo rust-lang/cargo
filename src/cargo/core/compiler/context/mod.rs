@@ -118,7 +118,7 @@ impl<'a, 'cfg> Context<'a, 'cfg> {
 
         Ok(Self {
             bcx,
-            compilation: Compilation::new(bcx),
+            compilation: Compilation::new(bcx)?,
             build_state: Arc::new(BuildState::new(&bcx.host_config, &bcx.target_config)),
             fingerprints: HashMap::new(),
             compiled: HashSet::new(),

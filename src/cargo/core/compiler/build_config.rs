@@ -1,5 +1,7 @@
 use std::path::Path;
-use util::{CargoResult, CargoResultExt, Config};
+use std::cell::RefCell;
+
+use util::{CargoResult, CargoResultExt, Config, RustfixDiagnosticServer};
 
 /// Configuration information for a rustc build.
 #[derive(Debug)]
@@ -16,6 +18,13 @@ pub struct BuildConfig {
     pub message_format: MessageFormat,
     /// Output a build plan to stdout instead of actually compiling.
     pub build_plan: bool,
+    /// Use Cargo itself as the wrapper around rustc, only used for `cargo fix`
+    pub cargo_as_rustc_wrapper: bool,
+    /// Extra env vars to inject into rustc commands
+    pub extra_rustc_env: Vec<(String, String)>,
+    /// Extra args to inject into rustc commands
+    pub extra_rustc_args: Vec<String>,
+    pub rustfix_diagnostic_server: RefCell<Option<RustfixDiagnosticServer>>,
 }
 
 impl BuildConfig {
@@ -71,6 +80,10 @@ impl BuildConfig {
             mode,
             message_format: MessageFormat::Human,
             build_plan: false,
+            cargo_as_rustc_wrapper: false,
+            extra_rustc_env: Vec::new(),
+            extra_rustc_args: Vec::new(),
+            rustfix_diagnostic_server: RefCell::new(None),
         })
     }
 

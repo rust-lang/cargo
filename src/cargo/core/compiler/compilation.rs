@@ -1,4 +1,5 @@
 use std::collections::{BTreeSet, HashMap, HashSet};
+use std::env;
 use std::ffi::OsStr;
 use std::path::PathBuf;
 
@@ -80,8 +81,24 @@ pub struct Compilation<'cfg> {
 }
 
 impl<'cfg> Compilation<'cfg> {
-    pub fn new<'a>(bcx: &BuildContext<'a, 'cfg>) -> Compilation<'cfg> {
-        Compilation {
+    pub fn new<'a>(bcx: &BuildContext<'a, 'cfg>) -> CargoResult<Compilation<'cfg>> {
+        let mut rustc = bcx.rustc.process();
+        for (k, v) in bcx.build_config.extra_rustc_env.iter() {
+            rustc.env(k, v);
+        }
+        for arg in bcx.build_config.extra_rustc_args.iter() {
+            rustc.arg(arg);
+        }
+        if bcx.build_config.cargo_as_rustc_wrapper {
+            let prog = rustc.get_program().to_owned();
+            rustc.env("RUSTC", prog);
+            rustc.program(env::current_exe()?);
+        }
+        let srv = bcx.build_config.rustfix_diagnostic_server.borrow();
+        if let Some(server) = &*srv {
+            server.configure(&mut rustc);
+        }
+        Ok(Compilation {
             libraries: HashMap::new(),
             native_dirs: BTreeSet::new(), // TODO: deprecated, remove
             root_output: PathBuf::from("/"),
@@ -96,11 +113,11 @@ impl<'cfg> Compilation<'cfg> {
             cfgs: HashMap::new(),
             rustdocflags: HashMap::new(),
             config: bcx.config,
-            rustc_process: bcx.rustc.process(),
+            rustc_process: rustc,
             host: bcx.host_triple().to_string(),
             target: bcx.target_triple().to_string(),
             target_runner: LazyCell::new(),
-        }
+        })
     }
 
     /// See `process`.
