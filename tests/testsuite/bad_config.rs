@@ -899,6 +899,39 @@ warning: unused manifest key: lib.build
 }
 
 #[test]
+fn unused_keys_in_virtual_manifest() {
+    let p = project("foo")
+        .file(
+            "Cargo.toml",
+            r#"
+            [workspace]
+            members = ["bar"]
+            bulid = "foo"
+        "#,
+        )
+        .file(
+            "bar/Cargo.toml",
+            r#"
+            [project]
+            version = "0.0.1"
+            name = "bar"
+        "#,
+        )
+        .file("bar/src/lib.rs", r"")
+        .build();
+    assert_that(
+        p.cargo("build --all"),
+        execs().with_status(0).with_stderr(
+            "\
+warning: unused manifest key: workspace.bulid
+[COMPILING] bar [..]
+[FINISHED] dev [unoptimized + debuginfo] target(s) in [..]
+",
+        ),
+    );
+}
+
+#[test]
 fn empty_dependencies() {
     let p = project("empty_deps")
         .file(
