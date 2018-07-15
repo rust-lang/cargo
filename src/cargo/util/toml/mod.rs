@@ -1021,13 +1021,20 @@ impl TomlManifest {
         };
 
         let lints = me.lints.as_ref().map(|ref ls| {
-            let mut lints = Lints { warn: vec![], allow: vec![], deny: vec![] };
+            let mut lints = Lints {
+                warn: vec![],
+                allow: vec![],
+                deny: vec![],
+            };
             for (lint_name, lint_state) in ls.iter() {
                 match lint_state.as_ref() {
                     "warn" => lints.warn.push(lint_name.to_string()),
                     "allow" => lints.allow.push(lint_name.to_string()),
                     "deny" => lints.deny.push(lint_name.to_string()),
-                    _ => continue, // TODO error here?
+                    _ => warnings.push(format!(
+                        "invalid lint state for `{}` (expected `warn`, `allow` or `deny`)",
+                        lint_name
+                    )),
                 }
             }
             lints
