@@ -621,19 +621,8 @@ fn no_deadlock_with_git_dependencies() {
         });
     }
 
-    //TODO: use `Receiver::recv_timeout` once it is stable.
-    let recv_timeout = |chan: &::std::sync::mpsc::Receiver<_>| {
-        for _ in 0..3000 {
-            if let Ok(x) = chan.try_recv() {
-                return x;
-            }
-            thread::sleep(Duration::from_millis(10));
-        }
-        chan.try_recv().expect("Deadlock!")
-    };
-
     for _ in 0..n_concurrent_builds {
-        let result = recv_timeout(&rx);
+        let result = rx.recv_timeout(Duration::from_secs(30)).expect("Deadlock!");
         assert_that(result, execs().with_status(0))
     }
 }
