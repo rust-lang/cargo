@@ -1545,3 +1545,22 @@ fn issue_5345() {
     assert_that(foo.cargo("build"), execs().with_status(0));
     assert_that(foo.cargo("doc"), execs().with_status(0));
 }
+
+#[test]
+fn doc_private_items() {
+    let foo = project("foo")
+        .file(
+            "Cargo.toml",
+            r#"
+            [package]
+            name = "foo"
+            version = "0.0.1"
+           "#,
+        )
+        .file("src/lib.rs", "fn private_item() {}")
+        .build();
+    assert_that(foo.cargo("doc").arg("--document-private-items"), execs().with_status(0));
+
+    assert_that(&foo.root().join("target/doc"), existing_dir());
+    assert_that(&foo.root().join("target/doc/foo/index.html"), existing_file());
+}
