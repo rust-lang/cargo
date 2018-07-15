@@ -1310,8 +1310,7 @@ impl ConfigRelativePath {
     }
 }
 
-// TODO: Why does this derive Deserialize?  It is unused.
-#[derive(Eq, PartialEq, Clone, Deserialize)]
+#[derive(Eq, PartialEq, Clone)]
 pub enum ConfigValue {
     Integer(i64, PathBuf),
     String(String, PathBuf),
