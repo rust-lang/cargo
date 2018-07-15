@@ -11,7 +11,6 @@ pub struct RegistryQueryer<'a> {
     pub registry: &'a mut (Registry + 'a),
     replacements: &'a [(PackageIdSpec, Dependency)],
     try_to_use: &'a HashSet<&'a PackageId>,
-    // TODO: with nll the Rc can be removed
     cache: HashMap<Dependency, Rc<Vec<Candidate>>>,
     // If set the list of dependency candidates will be sorted by minimal
     // versions first. That allows `cargo update -Z minimal-versions` which will
