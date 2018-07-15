@@ -19,7 +19,7 @@ use curl::easy::Easy;
 use failure;
 use jobserver;
 use lazycell::LazyCell;
-use serde::{de, de::IntoDeserializer, Serialize, Serializer};
+use serde::{de, de::IntoDeserializer};
 use toml;
 
 use core::profiles::ConfigProfiles;
@@ -1347,22 +1347,6 @@ impl fmt::Debug for ConfigValue {
                 write!(f, "] (from {})", path.display())
             }
             CV::Table(ref table, _) => write!(f, "{:?}", table),
-        }
-    }
-}
-
-// TODO: Why is this here?  It is unused.
-impl Serialize for ConfigValue {
-    fn serialize<S: Serializer>(&self, s: S) -> Result<S::Ok, S::Error> {
-        match *self {
-            CV::String(ref string, _) => string.serialize(s),
-            CV::List(ref list, _) => {
-                let list: Vec<&String> = list.iter().map(|s| &s.0).collect();
-                list.serialize(s)
-            }
-            CV::Table(ref table, _) => table.serialize(s),
-            CV::Boolean(b, _) => b.serialize(s),
-            CV::Integer(i, _) => i.serialize(s),
         }
     }
 }
