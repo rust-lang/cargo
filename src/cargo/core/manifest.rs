@@ -28,7 +28,7 @@ pub struct Manifest {
     summary: Summary,
     targets: Vec<Target>,
     links: Option<String>,
-    warnings: Vec<DelayedWarning>,
+    warnings: Warnings,
     exclude: Vec<String>,
     include: Vec<String>,
     metadata: ManifestMetadata,
@@ -55,11 +55,15 @@ pub struct DelayedWarning {
 }
 
 #[derive(Clone, Debug)]
+pub struct Warnings(Vec<DelayedWarning>);
+
+#[derive(Clone, Debug)]
 pub struct VirtualManifest {
     replace: Vec<(PackageIdSpec, Dependency)>,
     patch: HashMap<Url, Vec<Dependency>>,
     workspace: WorkspaceConfig,
     profiles: Profiles,
+    warnings: Warnings,
 }
 
 /// General metadata about a package which is just blindly uploaded to the
@@ -298,7 +302,7 @@ impl Manifest {
         Manifest {
             summary,
             targets,
-            warnings: Vec::new(),
+            warnings: Warnings::new(),
             exclude,
             include,
             links,
@@ -344,7 +348,10 @@ impl Manifest {
     pub fn version(&self) -> &Version {
         self.package_id().version()
     }
-    pub fn warnings(&self) -> &[DelayedWarning] {
+    pub fn warnings_mut(&mut self) -> &mut Warnings {
+        &mut self.warnings
+    }
+    pub fn warnings(&self) -> &Warnings {
         &self.warnings
     }
     pub fn profiles(&self) -> &Profiles {
@@ -375,20 +382,6 @@ impl Manifest {
 
     pub fn features(&self) -> &Features {
         &self.features
-    }
-
-    pub fn add_warning(&mut self, s: String) {
-        self.warnings.push(DelayedWarning {
-            message: s,
-            is_critical: false,
-        })
-    }
-
-    pub fn add_critical_warning(&mut self, s: String) {
-        self.warnings.push(DelayedWarning {
-            message: s,
-            is_critical: true,
-        })
     }
 
     pub fn set_summary(&mut self, summary: Summary) {
@@ -447,6 +440,7 @@ impl VirtualManifest {
             patch,
             workspace,
             profiles,
+            warnings: Warnings::new(),
         }
     }
 
@@ -464,6 +458,14 @@ impl VirtualManifest {
 
     pub fn profiles(&self) -> &Profiles {
         &self.profiles
+    }
+
+    pub fn warnings_mut(&mut self) -> &mut Warnings {
+        &mut self.warnings
+    }
+
+    pub fn warnings(&self) -> &Warnings {
+        &self.warnings
     }
 }
 
@@ -741,5 +743,29 @@ impl fmt::Display for Target {
             }
             TargetKind::CustomBuild => write!(f, "Target(script)"),
         }
+    }
+}
+
+impl Warnings {
+    fn new() -> Warnings {
+        Warnings(Vec::new())
+    }
+
+    pub fn add_warning(&mut self, s: String) {
+        self.0.push(DelayedWarning {
+            message: s,
+            is_critical: false,
+        })
+    }
+
+    pub fn add_critical_warning(&mut self, s: String) {
+        self.0.push(DelayedWarning {
+            message: s,
+            is_critical: true,
+        })
+    }
+
+    pub fn warnings(&self) -> &[DelayedWarning] {
+        &self.0
     }
 }
