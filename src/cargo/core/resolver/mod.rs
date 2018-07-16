@@ -852,7 +852,7 @@ fn activation_error(
     if !candidates.is_empty() {
         let mut msg = format!("failed to select a version for `{}`.", dep.name());
         msg.push_str("\n    ... required by ");
-        msg.push_str(&describe_path(&graph.path_to_top(parent.package_id())));
+        msg.push_str(&describe_path(&graph, parent.package_id()));
 
         msg.push_str("\nversions that meet the requirements `");
         msg.push_str(&dep.version_req().to_string());
@@ -881,7 +881,7 @@ fn activation_error(
                 msg.push_str(link);
                 msg.push_str("` as well:\n");
             }
-            msg.push_str(&describe_path(&graph.path_to_top(p)));
+            msg.push_str(&describe_path(&graph, p));
         }
 
         let (features_errors, other_errors): (Vec<_>, Vec<_>) = other_errors
@@ -912,7 +912,7 @@ fn activation_error(
 
         for &(p, _) in other_errors.iter() {
             msg.push_str("\n\n  previously selected ");
-            msg.push_str(&describe_path(&graph.path_to_top(p)));
+            msg.push_str(&describe_path(&graph, p));
         }
 
         msg.push_str("\n\nfailed to select a version for `");
@@ -963,7 +963,7 @@ fn activation_error(
             versions
         );
         msg.push_str("required by ");
-        msg.push_str(&describe_path(&graph.path_to_top(parent.package_id())));
+        msg.push_str(&describe_path(&graph, parent.package_id()));
 
         // If we have a path dependency with a locked version, then this may
         // indicate that we updated a sub-package and forgot to run `cargo
@@ -984,7 +984,7 @@ fn activation_error(
             dep.source_id()
         );
         msg.push_str("required by ");
-        msg.push_str(&describe_path(&graph.path_to_top(parent.package_id())));
+        msg.push_str(&describe_path(&graph, parent.package_id()));
 
         msg
     };
@@ -1004,11 +1004,21 @@ fn activation_error(
 }
 
 /// Returns String representation of dependency chain for a particular `pkgid`.
-fn describe_path(path: &[&PackageId]) -> String {
+fn describe_path(
+    graph: &::util::graph::Graph<PackageId, Vec<Dependency>>,
+    this: &PackageId,
+) -> String {
     use std::fmt::Write;
-    let mut dep_path_desc = format!("package `{}`", path[0]);
-    for dep in path[1..].iter() {
-        write!(dep_path_desc, "\n    ... which is depended on by `{}`", dep).unwrap();
+    let path: &[(&PackageId, &Vec<Dependency>)] = &graph.path_to_top(this);
+    let mut dep_path_desc = format!("package `{}`", this);
+    for &(dep, req) in path.iter() {
+        let req = req.first().unwrap();
+        write!(
+            dep_path_desc,
+            "\n    ... selected to fulfill the requirement \"{}\" from package `{}`",
+            req.version_req(),
+            dep
+        ).unwrap();
     }
     dep_path_desc
 }
@@ -1042,7 +1052,7 @@ fn check_cycles(resolve: &Resolve, activations: &Activations) -> CargoResult<()>
             bail!(
                 "cyclic package dependency: package `{}` depends on itself. Cycle:\n{}",
                 id,
-                describe_path(&resolve.path_to_top(id))
+                describe_path(&resolve.graph(), id)
             );
         }
 

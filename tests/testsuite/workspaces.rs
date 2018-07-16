@@ -2339,7 +2339,6 @@ fn relative_rustc() {
     assert_that(p.cargo("build").env("RUSTC", &file), execs().with_status(0));
 }
 
-
 #[test]
 fn ws_rustc_err() {
     let p = project("ws")

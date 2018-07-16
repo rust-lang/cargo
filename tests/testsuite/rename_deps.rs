@@ -177,7 +177,8 @@ fn lots_of_names() {
     let p = project("foo")
         .file(
             "Cargo.toml",
-            &format!(r#"
+            &format!(
+                r#"
                 cargo-features = ["alternative-registries", "rename-dependency"]
 
                 [package]
@@ -192,7 +193,8 @@ fn lots_of_names() {
                 foo3 = {{ git = '{}', package = "foo" }}
                 foo4 = {{ path = "foo", package = "foo" }}
             "#,
-            g.url())
+                g.url()
+            ),
         )
         .file(
             "src/lib.rs",
@@ -301,18 +303,19 @@ fn rename_twice() {
                 foo = { version = "0.1" }
             "#,
         )
-        .file("src/lib.rs", "",)
+        .file("src/lib.rs", "")
         .build();
 
     assert_that(
         p.cargo("build -v").masquerade_as_nightly_cargo(),
-        execs().with_status(101)
-            .with_stderr("\
+        execs().with_status(101).with_stderr(
+            "\
 [UPDATING] registry `[..]`
 [DOWNLOADING] foo v0.1.0 (registry [..])
 error: multiple dependencies listed for the same crate must all have the same \
 name, but the dependency on `foo v0.1.0` is listed as having different names
-")
+",
+        ),
     );
 }
 

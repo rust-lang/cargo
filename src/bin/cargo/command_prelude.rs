@@ -115,7 +115,9 @@ pub trait AppExt: Sized {
     }
 
     fn arg_target_dir(self) -> Self {
-        self._arg(opt("target-dir", "Directory for all generated artifacts").value_name("DIRECTORY"))
+        self._arg(
+            opt("target-dir", "Directory for all generated artifacts").value_name("DIRECTORY"),
+        )
     }
 
     fn arg_manifest_path(self) -> Self {

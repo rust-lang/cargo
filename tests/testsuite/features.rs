@@ -2026,10 +2026,7 @@ fn only_dep_is_optional() {
         .file("src/main.rs", "fn main() {}")
         .build();
 
-    assert_that(
-        p.cargo("build"),
-        execs().with_status(0),
-    );
+    assert_that(p.cargo("build"), execs().with_status(0));
 }
 
 #[test]

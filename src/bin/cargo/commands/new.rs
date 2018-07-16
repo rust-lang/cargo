@@ -19,8 +19,9 @@ pub fn exec(config: &mut Config, args: &ArgMatches) -> CliResult {
     } else {
         path
     };
-    config
-        .shell()
-        .status("Created", format!("{} `{}` project", opts.kind, project_name))?;
+    config.shell().status(
+        "Created",
+        format!("{} `{}` project", opts.kind, project_name),
+    )?;
     Ok(())
 }

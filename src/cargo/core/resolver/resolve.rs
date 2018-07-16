@@ -56,12 +56,6 @@ impl Resolve {
         }
     }
 
-    /// Resolves one of the paths from the given dependent package up to
-    /// the root.
-    pub fn path_to_top<'a>(&'a self, pkg: &'a PackageId) -> Vec<&'a PackageId> {
-        self.graph.path_to_top(pkg)
-    }
-
     pub fn register_used_patches(&mut self, patches: &HashMap<Url, Vec<Summary>>) {
         for summary in patches.values().flat_map(|v| v) {
             if self.iter().any(|id| id == summary.package_id()) {
@@ -185,6 +179,10 @@ unable to verify that `{0}` is the same as when the lockfile was generated
 
     pub fn replacements(&self) -> &HashMap<PackageId, PackageId> {
         &self.replacements
+    }
+
+    pub fn graph(&self) -> &Graph<PackageId, Vec<Dependency>> {
+        &self.graph
     }
 
     pub fn features(&self, pkg: &PackageId) -> &HashSet<String> {

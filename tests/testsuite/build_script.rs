@@ -157,18 +157,20 @@ fn custom_build_env_vars() {
     );
 }
 
-
 #[test]
 fn custom_build_env_var_rustc_linker() {
-    if cross_compile::disabled() { return; }
+    if cross_compile::disabled() {
+        return;
+    }
     let target = cross_compile::alternate();
     let p = project("foo")
-        .file("Cargo.toml",
-              r#"
+        .file(
+            "Cargo.toml",
+            r#"
               [project]
               name = "foo"
               version = "0.0.1"
-              "#
+              "#,
         )
         .file(
             ".cargo/config",
@@ -178,7 +180,7 @@ fn custom_build_env_var_rustc_linker() {
                 linker = "/path/to/linker"
                 "#,
                 target
-            )
+            ),
         )
         .file(
             "build.rs",
@@ -188,7 +190,7 @@ fn custom_build_env_var_rustc_linker() {
             fn main() {
                 assert!(env::var("RUSTC_LINKER").unwrap().ends_with("/path/to/linker"));
             }
-            "#
+            "#,
         )
         .file("src/lib.rs", "")
         .build();
@@ -426,7 +428,7 @@ fn links_duplicates_deep_dependency() {
                        .with_stderr("\
 error: failed to select a version for `a-sys`.
     ... required by package `a v0.5.0 ([..])`
-    ... which is depended on by `foo v0.5.0 ([..])`
+    ... selected to fulfill the requirement \"*\" from package `foo v0.5.0 ([..])`
 versions that meet the requirements `*` are: 0.5.0
 
 the package `a-sys` links to the native library `a`, but it conflicts with a previous package which links to `a` as well:
