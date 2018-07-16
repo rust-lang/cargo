@@ -239,7 +239,7 @@ fn process_fingerprint(cmd: &ProcessBuilder) -> u64 {
     let mut hasher = SipHasher::new_with_keys(0, 0);
     cmd.get_args().hash(&mut hasher);
     let mut env = cmd.get_envs().iter().collect::<Vec<_>>();
-    env.sort();
+    env.sort_unstable();
     env.hash(&mut hasher);
     hasher.finish()
 }

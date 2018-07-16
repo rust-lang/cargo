@@ -538,7 +538,7 @@ where
             return Ok((pkg.clone(), Box::new(source)));
 
             fn multi_err(kind: &str, mut pkgs: Vec<&Package>) -> String {
-                pkgs.sort_by(|a, b| a.name().cmp(&b.name()));
+                pkgs.sort_unstable_by_key(|a| a.name());
                 format!(
                     "multiple packages with {} found: {}",
                     kind,
