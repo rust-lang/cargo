@@ -280,7 +280,7 @@ fn check_dir_contents(
 
     let actual = list_dir(out_dir);
     let mut expected = expected.iter().map(|s| s.to_string()).collect::<Vec<_>>();
-    expected.sort();
+    expected.sort_unstable();
     assert_eq!(actual, expected);
 }
 
@@ -290,6 +290,6 @@ fn list_dir(dir: &Path) -> Vec<String> {
         let entry = entry.unwrap();
         res.push(entry.file_name().into_string().unwrap());
     }
-    res.sort();
+    res.sort_unstable();
     res
 }

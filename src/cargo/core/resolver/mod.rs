@@ -1021,7 +1021,8 @@ fn check_cycles(resolve: &Resolve, activations: &Activations) -> CargoResult<()>
         .collect();
 
     // Sort packages to produce user friendly deterministic errors.
-    let all_packages = resolve.iter().collect::<BinaryHeap<_>>().into_sorted_vec();
+    let mut all_packages: Vec<_> = resolve.iter().collect();
+    all_packages.sort_unstable();
     let mut checked = HashSet::new();
     for pkg in all_packages {
         if !checked.contains(pkg) {
