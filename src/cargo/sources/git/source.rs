@@ -130,6 +130,13 @@ impl<'cfg> Source for GitSource<'cfg> {
         src.query(dep, f)
     }
 
+    fn fuzzy_query(&mut self, dep: &Dependency, f: &mut FnMut(Summary)) -> CargoResult<()> {
+        let src = self.path_source
+            .as_mut()
+            .expect("BUG: update() must be called before query()");
+        src.fuzzy_query(dep, f)
+    }
+
     fn supports_checksums(&self) -> bool {
         false
     }

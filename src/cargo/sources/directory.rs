@@ -54,6 +54,14 @@ impl<'cfg> Source for DirectorySource<'cfg> {
         Ok(())
     }
 
+    fn fuzzy_query(&mut self, _dep: &Dependency, f: &mut FnMut(Summary)) -> CargoResult<()> {
+        let packages = self.packages.values().map(|p| &p.0);
+        for summary in packages.map(|pkg| pkg.summary().clone()) {
+            f(summary);
+        }
+        Ok(())
+    }
+
     fn supports_checksums(&self) -> bool {
         true
     }

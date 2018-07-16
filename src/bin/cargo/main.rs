@@ -113,12 +113,11 @@ fn find_closest(config: &Config, cmd: &str) -> Option<String> {
     let cmds = list_commands(config);
     // Only consider candidates with a lev_distance of 3 or less so we don't
     // suggest out-of-the-blue options.
-    let mut filtered = cmds.iter()
-        .map(|&(ref c, _)| (lev_distance(c, cmd), c))
+    cmds.into_iter()
+        .map(|(c, _)| (lev_distance(&c, cmd), c))
         .filter(|&(d, _)| d < 4)
-        .collect::<Vec<_>>();
-    filtered.sort_by(|a, b| a.0.cmp(&b.0));
-    filtered.get(0).map(|slot| slot.1.clone())
+        .min_by_key(|a| a.0)
+        .map(|slot| slot.1)
 }
 
 fn execute_external_subcommand(config: &Config, cmd: &str, args: &[&str]) -> CliResult {
