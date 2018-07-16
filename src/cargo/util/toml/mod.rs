@@ -586,6 +586,8 @@ pub struct TomlProject {
     autobenches: Option<bool>,
     #[serde(rename = "namespaced-features")]
     namespaced_features: Option<bool>,
+    #[serde(rename = "default-run")]
+    default_run: Option<String>,
 
     // package metadata
     description: Option<String>,
@@ -970,6 +972,7 @@ impl TomlManifest {
             features,
             edition,
             project.im_a_teapot,
+            project.default_run.clone(),
             Rc::clone(me),
         );
         if project.license_file.is_some() && project.license.is_some() {
