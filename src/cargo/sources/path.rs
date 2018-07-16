@@ -447,10 +447,9 @@ impl<'cfg> PathSource<'cfg> {
         // TODO: Drop collect and sort after transition period and dropping warning tests.
         // See <https://github.com/rust-lang/cargo/issues/4268>
         // and <https://github.com/rust-lang/cargo/pull/4270>
-        let mut entries: Vec<fs::DirEntry> = fs::read_dir(path)?.map(|e| e.unwrap()).collect();
-        entries.sort_by(|a, b| a.path().as_os_str().cmp(b.path().as_os_str()));
-        for entry in entries {
-            let path = entry.path();
+        let mut entries: Vec<PathBuf> = fs::read_dir(path)?.map(|e| e.unwrap().path()).collect();
+        entries.sort_unstable_by(|a, b| a.as_os_str().cmp(b.as_os_str()));
+        for path in entries {
             let name = path.file_name().and_then(|s| s.to_str());
             // Skip dotfile directories
             if name.map(|s| s.starts_with('.')) == Some(true) {
