@@ -275,9 +275,10 @@ fn too_many_bins() {
 
     assert_that(
         p.cargo("run"),
+        // Using [..] here because the order is not stable
         execs().with_status(101).with_stderr(
             "[ERROR] `cargo run` could not determine which binary to run; set `default-run` \
-             in the manifest or use the `--bin` option to specify\navailable binaries: a, b\n",
+             in the manifest or use the `--bin` option to specify\navailable binaries: [..]\n",
         ),
     );
 }
