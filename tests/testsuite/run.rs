@@ -275,6 +275,7 @@ fn too_many_bins() {
 
     assert_that(
         p.cargo("run"),
+        // Using [..] here because the order is not stable
         execs().with_status(101).with_stderr(
             "[ERROR] `cargo run` requires that a project only \
              have one executable; use the `--bin` option \
@@ -342,6 +343,124 @@ fn specify_name() {
 [RUNNING] `target[/]debug[/]b[EXE]`",
             )
             .with_stdout("hello b.rs"),
+    );
+}
+
+#[test]
+fn specify_default_run() {
+    let p = project("foo")
+        .file(
+            "Cargo.toml",
+            r#"
+            cargo-features = ["default-run"]
+
+            [project]
+            name = "foo"
+            version = "0.0.1"
+            authors = []
+            default-run = "a"
+        "#,
+        )
+        .file("src/lib.rs", "")
+        .file("src/bin/a.rs", r#"fn main() { println!("hello A"); }"#)
+        .file("src/bin/b.rs", r#"fn main() { println!("hello B"); }"#)
+        .build();
+
+    assert_that(
+        p.cargo("run").masquerade_as_nightly_cargo(),
+        execs()
+            .with_status(0)
+            .with_stdout("hello A"),
+    );
+    assert_that(
+        p.cargo("run").masquerade_as_nightly_cargo().arg("--bin").arg("a"),
+        execs()
+            .with_status(0)
+            .with_stdout("hello A"),
+    );
+    assert_that(
+        p.cargo("run").masquerade_as_nightly_cargo().arg("--bin").arg("b"),
+        execs()
+            .with_status(0)
+            .with_stdout("hello B"),
+    );
+}
+
+#[test]
+fn bogus_default_run() {
+    let p = project("foo")
+        .file(
+            "Cargo.toml",
+            r#"
+            cargo-features = ["default-run"]
+
+            [project]
+            name = "foo"
+            version = "0.0.1"
+            authors = []
+            default-run = "b"
+        "#,
+        )
+        .file("src/lib.rs", "")
+        .file("src/bin/a.rs", r#"fn main() { println!("hello A"); }"#)
+        .build();
+
+    assert_that(
+        p.cargo("run").masquerade_as_nightly_cargo(),
+        execs().with_status(101).with_stderr(
+            "error: no bin target named `b`\n\nDid you mean [..]?",
+        ),
+    );
+}
+
+#[test]
+fn default_run_unstable() {
+    let p = project("foo")
+        .file(
+            "Cargo.toml",
+            r#"
+            [project]
+            name = "foo"
+            version = "0.0.1"
+            authors = []
+            default-run = "a"
+        "#,
+        )
+        .file("src/bin/a.rs", r#"fn main() { println!("hello A"); }"#)
+        .build();
+
+    assert_that(
+        p.cargo("run"),
+        execs().with_status(101).with_stderr(
+r#"error: failed to parse manifest at [..]
+
+Caused by:
+  the `default-run` manifest key is unstable
+
+Caused by:
+  feature `default-run` is required
+
+this Cargo does not support nightly features, but if you
+switch to nightly channel you can add
+`cargo-features = ["default-run"]` to enable this feature
+"#,
+        ),
+    );
+
+    assert_that(
+        p.cargo("run").masquerade_as_nightly_cargo(),
+        execs().with_status(101).with_stderr(
+r#"error: failed to parse manifest at [..]
+
+Caused by:
+  the `default-run` manifest key is unstable
+
+Caused by:
+  feature `default-run` is required
+
+consider adding `cargo-features = ["default-run"]` to the manifest
+"#,
+        ),
     );
 }
 

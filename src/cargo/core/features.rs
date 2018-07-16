@@ -186,6 +186,9 @@ features! {
 
         // Separating the namespaces for features and dependencies
         [unstable] namespaced_features: bool,
+
+        // "default-run" manifest option,
+        [unstable] default_run: bool,
     }
 }
 

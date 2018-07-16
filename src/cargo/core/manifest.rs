@@ -43,6 +43,7 @@ pub struct Manifest {
     features: Features,
     edition: Edition,
     im_a_teapot: Option<bool>,
+    default_run: Option<String>,
 }
 
 /// When parsing `Cargo.toml`, some warnings should silenced
@@ -297,6 +298,7 @@ impl Manifest {
         features: Features,
         edition: Edition,
         im_a_teapot: Option<bool>,
+        default_run: Option<String>,
         original: Rc<TomlManifest>,
     ) -> Manifest {
         Manifest {
@@ -317,6 +319,7 @@ impl Manifest {
             edition,
             original,
             im_a_teapot,
+            default_run,
             publish_lockfile,
         }
     }
@@ -407,6 +410,16 @@ impl Manifest {
                 })?;
         }
 
+        if self.default_run.is_some() {
+            self.features
+                .require(Feature::default_run())
+                .chain_err(|| {
+                    format_err!(
+                        "the `default-run` manifest key is unstable"
+                    )
+                })?;
+        }
+
         Ok(())
     }
 
@@ -425,6 +438,10 @@ impl Manifest {
 
     pub fn custom_metadata(&self) -> Option<&toml::Value> {
         self.custom_metadata.as_ref()
+    }
+
+    pub fn default_run(&self) -> Option<&str> {
+        self.default_run.as_ref().map(|s| &s[..])
     }
 }
 
