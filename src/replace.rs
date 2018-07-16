@@ -142,6 +142,23 @@ impl Data {
                 })?;
 
             let part_to_split = &self.parts[index_of_part_to_split];
+
+            // If this replacement matches exactly the part that we would
+            // otherwise split then we ignore this for now. This means that you
+            // can replace the exact same range with the exact same content
+            // multiple times and we'll process and allow it.
+            //
+            // This is currently done to alleviate issues like
+            // rust-lang/rust#51211 although this clause likely wants to be
+            // removed if that's fixed deeper in the compiler.
+            if part_to_split.start == from && part_to_split.end == up_to_and_including {
+                if let State::Replaced(ref replacement) = part_to_split.data {
+                    if &**replacement == data {
+                        return Ok(())
+                    }
+                }
+            }
+
             ensure!(
                 part_to_split.data == State::Initial,
                 "Cannot replace slice of data that was already replaced"
@@ -267,7 +284,7 @@ mod tests {
         d.replace_range(4, 6, b"lol").unwrap();
         assert_eq!("foo lol baz", str(&d.to_vec()));
 
-        d.replace_range(4, 6, b"lol").unwrap();
+        d.replace_range(4, 6, b"lol2").unwrap();
     }
 
     #[test]
@@ -275,6 +292,14 @@ mod tests {
     fn broken_replacements() {
         let mut d = Data::new(b"foo");
         d.replace_range(4, 7, b"lol").unwrap();
+    }
+
+    #[test]
+    fn replace_same_twice() {
+        let mut d = Data::new(b"foo");
+        d.replace_range(0, 0, b"b").unwrap();
+        d.replace_range(0, 0, b"b").unwrap();
+        assert_eq!("boo", str(&d.to_vec()));
     }
 
     proptest! {
