@@ -308,3 +308,15 @@ $ cargo +nightly build -Z compile-progress
    Compiling utf8-ranges v1.0.0
     Building [=======>                                                  ] 2/14: libc, regex, uc...
 ```
+
+### default-run
+* Original issue: [#2200](https://github.com/rust-lang/cargo/issues/2200)
+
+The `default-run` option in the `[project]` section of the manifest can be used
+to specify a default binary picked by `cargo run`. For example, when there is
+both `src/bin/a.rs` and `src/bin/b.rs`:
+
+```toml
+[project]
+default-run = "a"
+```
