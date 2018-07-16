@@ -350,6 +350,8 @@ fn specify_default_run() {
         .file(
             "Cargo.toml",
             r#"
+            cargo-features = ["default-run"]
+
             [project]
             name = "foo"
             version = "0.0.1"
@@ -363,19 +365,19 @@ fn specify_default_run() {
         .build();
 
     assert_that(
-        p.cargo("run"),
+        p.cargo("run").masquerade_as_nightly_cargo(),
         execs()
             .with_status(0)
             .with_stdout("hello A"),
     );
     assert_that(
-        p.cargo("run").arg("--bin").arg("a"),
+        p.cargo("run").masquerade_as_nightly_cargo().arg("--bin").arg("a"),
         execs()
             .with_status(0)
             .with_stdout("hello A"),
     );
     assert_that(
-        p.cargo("run").arg("--bin").arg("b"),
+        p.cargo("run").masquerade_as_nightly_cargo().arg("--bin").arg("b"),
         execs()
             .with_status(0)
             .with_stdout("hello B"),
@@ -388,6 +390,8 @@ fn bogus_default_run() {
         .file(
             "Cargo.toml",
             r#"
+            cargo-features = ["default-run"]
+
             [project]
             name = "foo"
             version = "0.0.1"
@@ -400,9 +404,60 @@ fn bogus_default_run() {
         .build();
 
     assert_that(
-        p.cargo("run"),
+        p.cargo("run").masquerade_as_nightly_cargo(),
         execs().with_status(101).with_stderr(
             "error: no bin target named `b`\n\nDid you mean [..]?",
+        ),
+    );
+}
+
+#[test]
+fn default_run_unstable() {
+    let p = project("foo")
+        .file(
+            "Cargo.toml",
+            r#"
+            [project]
+            name = "foo"
+            version = "0.0.1"
+            authors = []
+            default-run = "a"
+        "#,
+        )
+        .file("src/bin/a.rs", r#"fn main() { println!("hello A"); }"#)
+        .build();
+
+    assert_that(
+        p.cargo("run"),
+        execs().with_status(101).with_stderr(
+r#"error: failed to parse manifest at [..]
+
+Caused by:
+  the `default-run` manifest key is unstable
+
+Caused by:
+  feature `default-run` is required
+
+this Cargo does not support nightly features, but if you
+switch to nightly channel you can add
+`cargo-features = ["default-run"]` to enable this feature
+"#,
+        ),
+    );
+
+    assert_that(
+        p.cargo("run").masquerade_as_nightly_cargo(),
+        execs().with_status(101).with_stderr(
+r#"error: failed to parse manifest at [..]
+
+Caused by:
+  the `default-run` manifest key is unstable
+
+Caused by:
+  feature `default-run` is required
+
+consider adding `cargo-features = ["default-run"]` to the manifest
+"#,
         ),
     );
 }
