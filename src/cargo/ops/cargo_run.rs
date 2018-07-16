@@ -32,8 +32,7 @@ pub fn run(
     if bins.is_empty() {
         if !options.filter.is_specific() {
             bail!("a bin target must be available for `cargo run`")
-        }
-        else {
+        } else {
             // this will be verified in cargo_compile
         }
     }
@@ -55,10 +54,10 @@ pub fn run(
         if !options.filter.is_specific() {
             let names: Vec<&str> = bins.into_iter().map(|bin| bin.0).collect();
             bail!(
-                "`cargo run` could not determine which binary to run; set `default-run` \
-                 in the manifest or use the `--bin` option to specify\navailable binaries: {}",
+                "`cargo run` requires that a project only have one \
+                 executable; use the `--bin` option to specify which one \
+                 to run\navailable binaries: {}",
                  names.join(", ")
-                
             )
         } else {
             bail!(

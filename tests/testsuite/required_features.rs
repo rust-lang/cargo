@@ -1347,8 +1347,9 @@ fn run_default_multiple_required_features() {
     assert_that(
         p.cargo("run"),
         execs().with_status(101).with_stderr(
-            "error: `cargo run` could not determine which binary to run; set `default-run` \
-             in the manifest or use the `--bin` option to specify\navailable binaries: foo1, foo2",
+            "\
+             error: `cargo run` requires that a project only have one executable; \
+             use the `--bin` option to specify which one to run\navailable binaries: foo1, foo2",
         ),
     );
 }
