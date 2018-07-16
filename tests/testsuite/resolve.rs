@@ -28,9 +28,9 @@ fn resolve_with_config(
 ) -> CargoResult<Vec<PackageId>> {
     struct MyRegistry<'a>(&'a [Summary]);
     impl<'a> Registry for MyRegistry<'a> {
-        fn query(&mut self, dep: &Dependency, f: &mut FnMut(Summary)) -> CargoResult<()> {
+        fn query(&mut self, dep: &Dependency, f: &mut FnMut(Summary), fuzzy: bool) -> CargoResult<()> {
             for summary in self.0.iter() {
-                if dep.matches(summary) {
+                if fuzzy || dep.matches(summary) {
                     f(summary.clone());
                 }
             }
@@ -435,6 +435,46 @@ fn resolving_incompat_versions() {
         resolve(
             &pkg_id("root"),
             vec![dep_req("foo", "=1.0.1"), dep("bar")],
+            &reg
+        ).is_err()
+    );
+}
+
+#[test]
+fn resolving_wrong_case_from_registry() {
+    // In the future we may #5678 allow this to happen.
+    // For back compatibility reasons, we probably won't.
+    // But we may want to future prove ourselves by understanding it.
+    // This test documents the current behavior.
+    let reg = registry(vec![
+        pkg!(("foo", "1.0.0")),
+        pkg!("bar" => ["Foo"]),
+    ]);
+
+    assert!(
+        resolve(
+            &pkg_id("root"),
+            vec![dep("bar")],
+            &reg
+        ).is_err()
+    );
+}
+
+#[test]
+fn resolving_mis_hyphenated_from_registry() {
+    // In the future we may #2775 allow this to happen.
+    // For back compatibility reasons, we probably won't.
+    // But we may want to future prove ourselves by understanding it.
+    // This test documents the current behavior.
+    let reg = registry(vec![
+        pkg!(("fo-o", "1.0.0")),
+        pkg!("bar" => ["fo_o"]),
+    ]);
+
+    assert!(
+        resolve(
+            &pkg_id("root"),
+            vec![dep("bar")],
             &reg
         ).is_err()
     );
