@@ -32,6 +32,3 @@ proptest = "0.7.0"
 difference = "2.0.0"
 
 [workspace]
-members = [
-    "cargo-fix",
-]
