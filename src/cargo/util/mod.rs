@@ -18,6 +18,8 @@ pub use self::to_url::ToUrl;
 pub use self::vcs::{FossilRepo, GitRepo, HgRepo, PijulRepo};
 pub use self::read2::read2;
 pub use self::progress::{Progress, ProgressStyle};
+pub use self::lockserver::{LockServer, LockServerStarted, LockServerClient};
+pub use self::diagnostic_server::RustfixDiagnosticServer;
 
 pub mod config;
 pub mod errors;
@@ -42,3 +44,5 @@ mod vcs;
 mod flock;
 mod read2;
 mod progress;
+mod lockserver;
+pub mod diagnostic_server;

@@ -15,6 +15,7 @@ use handle_error;
 use util::{internal, profile, CargoResult, CargoResultExt, ProcessBuilder};
 use util::{Config, DependencyQueue, Dirty, Fresh, Freshness};
 use util::{Progress, ProgressStyle};
+use util::diagnostic_server;
 
 use super::job::Job;
 use super::{BuildContext, BuildPlan, CompileMode, Context, Kind, Unit};
@@ -64,6 +65,7 @@ enum Message<'a> {
     BuildPlanMsg(String, ProcessBuilder, Arc<Vec<OutputFile>>),
     Stdout(String),
     Stderr(String),
+    FixDiagnostic(diagnostic_server::Message),
     Token(io::Result<Acquired>),
     Finish(Key<'a>, CargoResult<()>),
 }
@@ -134,9 +136,9 @@ impl<'a> JobQueue<'a> {
         self.queue.queue_finished();
 
         // We need to give a handle to the send half of our message queue to the
-        // jobserver helper thread. Unfortunately though we need the handle to be
-        // `'static` as that's typically what's required when spawning a
-        // thread!
+        // jobserver and (optionally) diagnostic helper thread. Unfortunately
+        // though we need the handle to be `'static` as that's typically what's
+        // required when spawning a thread!
         //
         // To work around this we transmute the `Sender` to a static lifetime.
         // we're only sending "longer living" messages and we should also
@@ -148,12 +150,20 @@ impl<'a> JobQueue<'a> {
         // practice.
         let tx = self.tx.clone();
         let tx = unsafe { mem::transmute::<Sender<Message<'a>>, Sender<Message<'static>>>(tx) };
+        let tx2 = tx.clone();
         let helper = cx.jobserver
             .clone()
             .into_helper_thread(move |token| {
                 drop(tx.send(Message::Token(token)));
             })
             .chain_err(|| "failed to create helper thread for jobserver management")?;
+        let _diagnostic_server = cx.bcx.build_config
+            .rustfix_diagnostic_server
+            .borrow_mut()
+            .take()
+            .map(move |srv| {
+                srv.start(move |msg| drop(tx2.send(Message::FixDiagnostic(msg))))
+            });
 
         crossbeam::scope(|scope| self.drain_the_queue(cx, plan, scope, &helper))
     }
@@ -278,6 +288,9 @@ impl<'a> JobQueue<'a> {
                     if cx.bcx.config.extra_verbose() {
                         writeln!(cx.bcx.config.shell().err(), "{}", err)?;
                     }
+                }
+                Message::FixDiagnostic(msg) => {
+                    msg.print_to(cx.bcx.config)?;
                 }
                 Message::Finish(key, result) => {
                     info!("end: {:?}", key);

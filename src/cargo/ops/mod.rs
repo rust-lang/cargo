@@ -21,6 +21,7 @@ pub use self::cargo_pkgid::pkgid;
 pub use self::resolve::{add_overrides, get_resolved_packages, resolve_with_previous, resolve_ws,
                         resolve_ws_precisely, resolve_ws_with_method};
 pub use self::cargo_output_metadata::{output_metadata, ExportInfo, OutputMetadataOptions};
+pub use self::fix::{fix, FixOptions, fix_maybe_exec_rustc};
 
 mod cargo_clean;
 mod cargo_compile;
@@ -38,3 +39,4 @@ mod cargo_test;
 mod lockfile;
 mod registry;
 mod resolve;
+mod fix;

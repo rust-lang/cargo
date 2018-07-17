@@ -35,10 +35,14 @@ fn main() {
         }
     };
 
-    let result = {
-        init_git_transports(&mut config);
-        let _token = cargo::util::job::setup();
-        cli::main(&mut config)
+    let result = match cargo::ops::fix_maybe_exec_rustc() {
+        Ok(true) => Ok(()),
+        Ok(false) => {
+            init_git_transports(&mut config);
+            let _token = cargo::util::job::setup();
+            cli::main(&mut config)
+        }
+        Err(e) => Err(CliError::from(e)),
     };
 
     match result {
