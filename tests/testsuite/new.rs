@@ -496,6 +496,36 @@ fn subpackage_no_git() {
 }
 
 #[test]
+fn subpackage_git_with_gitignore() {
+    assert_that(
+        cargo_process("new").arg("foo").env("USER", "foo"),
+        execs().with_status(0),
+    );
+
+    let gitignore = paths::root().join("foo").join(".gitignore");
+    fs::write(gitignore, b"components").unwrap();
+
+    let subpackage = paths::root().join("foo").join("components");
+    fs::create_dir(&subpackage).unwrap();
+    assert_that(
+        cargo_process("new")
+            .arg("foo/components/subcomponent")
+            .env("USER", "foo"),
+        execs().with_status(0),
+    );
+
+    assert_that(
+        &paths::root().join("foo").join("components").join("subcomponent").join(".git"),
+        existing_dir(),
+    );
+    assert_that(
+        &paths::root().join("foo").join("components").join("subcomponent").join(".gitignore"),
+        existing_file(),
+    );
+
+}
+
+#[test]
 fn subpackage_git_with_vcs_arg() {
     assert_that(
         cargo_process("new").arg("foo").env("USER", "foo"),

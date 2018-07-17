@@ -826,7 +826,7 @@ fn does_not_warn_about_clean_working_directory() {
 fn does_not_warn_about_dirty_ignored_files() {
     let p = project()
         .file("src/lib.rs", "pub fn foo() {}")
-        .file(".gitignore", "foo\n")
+        .file(".gitignore", "bar\n")
         .build();
 
     let repo = git2::Repository::init(&p.root()).unwrap();
@@ -836,7 +836,7 @@ fn does_not_warn_about_dirty_ignored_files() {
     drop(cfg);
     git::add(&repo);
     git::commit(&repo);
-    File::create(p.root().join("foo")).unwrap();
+    File::create(p.root().join("bar")).unwrap();
 
     assert_that(
         p.cargo("fix"),
