@@ -535,7 +535,7 @@ Caused by:
 #[test]
 fn cargo_compile_without_manifest() {
     let tmpdir = tempfile::Builder::new().prefix("cargo").tempdir().unwrap();
-    let p = ProjectBuilder::new("foo", tmpdir.path().to_path_buf()).build();
+    let p = ProjectBuilder::new(tmpdir.path().to_path_buf()).build();
 
     assert_that(
         p.cargo("build"),
@@ -3587,7 +3587,7 @@ fn ignore_dotdirs() {
 
 #[test]
 fn dotdir_root() {
-    let p = ProjectBuilder::new("foo", root().join(".foo"))
+    let p = ProjectBuilder::new(root().join(".foo"))
         .file(
             "Cargo.toml",
             r#"

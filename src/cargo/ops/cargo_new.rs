@@ -409,7 +409,7 @@ pub fn init(opts: &NewOptions, config: &Config) -> CargoResult<()> {
     Ok(())
 }
 
-fn existing_vcs_repo(path: &Path, cwd: &Path) -> bool {
+pub fn existing_vcs_repo(path: &Path, cwd: &Path) -> bool {
     GitRepo::discover(path, cwd).is_ok() || HgRepo::discover(path, cwd).is_ok()
 }
 

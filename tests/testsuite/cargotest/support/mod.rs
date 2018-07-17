@@ -14,6 +14,7 @@ use cargo::util::ProcessError;
 use hamcrest as ham;
 use serde_json::{self, Value};
 use url::Url;
+use tempfile::TempDir;
 
 use cargotest::support::paths::CargoPathExt;
 
@@ -94,15 +95,13 @@ impl SymlinkBuilder {
     }
 }
 
-#[derive(PartialEq, Clone)]
-pub struct Project {
-    root: PathBuf,
+pub enum Project {
+    Rooted(PathBuf),
+    Temp(TempDir),
 }
 
 #[must_use]
-#[derive(PartialEq, Clone)]
 pub struct ProjectBuilder {
-    name: String,
     root: Project,
     files: Vec<FileBuilder>,
     symlinks: Vec<SymlinkBuilder>,
@@ -119,10 +118,9 @@ impl ProjectBuilder {
         self.root.target_debug_dir()
     }
 
-    pub fn new(name: &str, root: PathBuf) -> ProjectBuilder {
+    pub fn new(root: PathBuf) -> ProjectBuilder {
         ProjectBuilder {
-            name: name.to_string(),
-            root: Project { root },
+            root: Project::Rooted(root),
             files: vec![],
             symlinks: vec![],
         }
@@ -136,15 +134,20 @@ impl ProjectBuilder {
 
     fn _file(&mut self, path: &Path, body: &str) {
         self.files
-            .push(FileBuilder::new(self.root.root.join(path), body));
+            .push(FileBuilder::new(self.root.root().join(path), body));
     }
 
     /// Add a symlink to the project.
     pub fn symlink<T: AsRef<Path>>(mut self, dst: T, src: T) -> Self {
         self.symlinks.push(SymlinkBuilder::new(
-            self.root.root.join(dst),
-            self.root.root.join(src),
+            self.root.root().join(dst),
+            self.root.root().join(src),
         ));
+        self
+    }
+
+    pub fn use_temp_dir(mut self) -> Self {
+        self.root = Project::Temp(TempDir::new().unwrap());
         self
     }
 
@@ -154,7 +157,7 @@ impl ProjectBuilder {
         self.rm_root();
 
         // Create the empty directory
-        self.root.root.mkdir_p();
+        self.root.root().mkdir_p();
 
         for file in self.files.iter() {
             file.mk();
@@ -165,7 +168,6 @@ impl ProjectBuilder {
         }
 
         let ProjectBuilder {
-            name: _,
             root,
             files: _,
             symlinks: _,
@@ -175,19 +177,22 @@ impl ProjectBuilder {
     }
 
     fn rm_root(&self) {
-        self.root.root.rm_rf()
+        self.root.root().rm_rf()
     }
 }
 
 impl Project {
     /// Root of the project, ex: `/path/to/cargo/target/cit/t0/foo`
     pub fn root(&self) -> PathBuf {
-        self.root.clone()
+        match self {
+            Project::Rooted(p) => p.clone(),
+            Project::Temp(t) => t.path().to_path_buf(),
+        }
     }
 
     /// Project's target dir, ex: `/path/to/cargo/target/cit/t0/foo/target`
     pub fn build_dir(&self) -> PathBuf {
-        self.root.join("target")
+        self.root().join("target")
     }
 
     /// Project's debug dir, ex: `/path/to/cargo/target/cit/t0/foo/target/debug`
@@ -243,7 +248,7 @@ impl Project {
 
     /// Change the contents of an existing file.
     pub fn change_file(&self, path: &str, body: &str) {
-        FileBuilder::new(self.root.join(path), body).mk()
+        FileBuilder::new(self.root().join(path), body).mk()
     }
 
     /// Create a `ProcessBuilder` to run a program in the project.
@@ -275,8 +280,13 @@ impl Project {
 
     /// Returns the contents of `Cargo.lock`.
     pub fn read_lockfile(&self) -> String {
+        self.read_file("Cargo.lock")
+    }
+
+    /// Returns the contents of a path in the project root
+    pub fn read_file(&self, path: &str) -> String {
         let mut buffer = String::new();
-        fs::File::open(self.root().join("Cargo.lock"))
+        fs::File::open(self.root().join(path))
             .unwrap()
             .read_to_string(&mut buffer)
             .unwrap();
@@ -336,12 +346,12 @@ impl Project {
 
 // Generates a project layout
 pub fn project(name: &str) -> ProjectBuilder {
-    ProjectBuilder::new(name, paths::root().join(name))
+    ProjectBuilder::new(paths::root().join(name))
 }
 
 // Generates a project layout inside our fake home dir
 pub fn project_in_home(name: &str) -> ProjectBuilder {
-    ProjectBuilder::new(name, paths::home().join(name))
+    ProjectBuilder::new(paths::home().join(name))
 }
 
 // === Helpers ===
@@ -1174,6 +1184,7 @@ fn substitute_macros(input: &str) -> String {
         ("[REPLACING]", "   Replacing"),
         ("[UNPACKING]", "   Unpacking"),
         ("[SUMMARY]", "     Summary"),
+        ("[FIXING]", "      Fixing"),
         ("[EXE]", if cfg!(windows) { ".exe" } else { "" }),
         ("[/]", if cfg!(windows) { "\\" } else { "/" }),
     ];

@@ -253,7 +253,7 @@ fn cargo_update_generate_lockfile() {
 
 #[test]
 fn duplicate_entries_in_lockfile() {
-    let _a = ProjectBuilder::new("a", paths::root().join("a"))
+    let _a = ProjectBuilder::new(paths::root().join("a"))
         .file(
             "Cargo.toml",
             r#"
@@ -276,12 +276,12 @@ fn duplicate_entries_in_lockfile() {
         version = "0.0.1"
         "#;
 
-    let _common_in_a = ProjectBuilder::new("common", paths::root().join("a/common"))
+    let _common_in_a = ProjectBuilder::new(paths::root().join("a/common"))
         .file("Cargo.toml", common_toml)
         .file("src/lib.rs", "")
         .build();
 
-    let b = ProjectBuilder::new("common", paths::root().join("b"))
+    let b = ProjectBuilder::new(paths::root().join("b"))
         .file(
             "Cargo.toml",
             r#"
@@ -298,7 +298,7 @@ fn duplicate_entries_in_lockfile() {
         .file("src/lib.rs", "")
         .build();
 
-    let _common_in_b = ProjectBuilder::new("common", paths::root().join("b/common"))
+    let _common_in_b = ProjectBuilder::new(paths::root().join("b/common"))
         .file("Cargo.toml", common_toml)
         .file("src/lib.rs", "")
         .build();
