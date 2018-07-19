@@ -231,6 +231,14 @@ impl Shell {
             ShellOut::Write(_) => ColorChoice::Never,
         }
     }
+
+    /// Whether the shell supports color.
+    pub fn supports_color(&self) -> bool {
+        match &self.err {
+            ShellOut::Write(_) => false,
+            ShellOut::Stream { stream, .. } => stream.supports_color(),
+        }
+    }
 }
 
 impl Default for Shell {
