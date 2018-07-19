@@ -580,6 +580,7 @@ fn rustdoc<'a, 'cfg>(cx: &mut Context<'a, 'cfg>, unit: &Unit<'a>) -> CargoResult
     rustdoc.arg("--crate-name").arg(&unit.target.crate_name());
     add_path_args(bcx, unit, &mut rustdoc);
     add_cap_lints(bcx, unit, &mut rustdoc);
+    add_color(bcx, &mut rustdoc);
 
     if unit.kind != Kind::Host {
         if let Some(ref target) = bcx.build_config.requested_target {
@@ -672,6 +673,15 @@ fn add_cap_lints(bcx: &BuildContext, unit: &Unit, cmd: &mut ProcessBuilder) {
     }
 }
 
+fn add_color(bcx: &BuildContext, cmd: &mut ProcessBuilder) {
+    let capture_output = bcx.config.cli_unstable().compile_progress;
+    let shell = bcx.config.shell();
+    if capture_output || shell.color_choice() != ColorChoice::CargoAuto {
+        let color = if shell.supports_color() { "always" } else { "never" };
+        cmd.args(&["--color", color]);
+    }
+}
+
 fn build_base_args<'a, 'cfg>(
     cx: &mut Context<'a, 'cfg>,
     cmd: &mut ProcessBuilder,
@@ -696,17 +706,8 @@ fn build_base_args<'a, 'cfg>(
 
     cmd.arg("--crate-name").arg(&unit.target.crate_name());
 
-    add_path_args(&cx.bcx, unit, cmd);
-
-    match bcx.config.shell().color_choice() {
-        ColorChoice::Always => {
-            cmd.arg("--color").arg("always");
-        }
-        ColorChoice::Never => {
-            cmd.arg("--color").arg("never");
-        }
-        ColorChoice::CargoAuto => {}
-    }
+    add_path_args(bcx, unit, cmd);
+    add_color(bcx, cmd);
 
     if bcx.build_config.json_messages() {
         cmd.arg("--error-format").arg("json");
