@@ -126,6 +126,12 @@ impl ProjectBuilder {
         }
     }
 
+    #[allow(dead_code)]
+    pub fn at<P: AsRef<Path>>(mut self, path: P) -> Self {
+        self.root = Project::Rooted(paths::root().join(path));
+        self
+    }
+
     /// Add a file to the project.
     pub fn file<B: AsRef<Path>>(mut self, path: B, body: &str) -> Self {
         self._file(path.as_ref(), body);
