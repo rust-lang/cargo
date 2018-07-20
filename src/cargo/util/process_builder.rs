@@ -159,7 +159,7 @@ impl ProcessBuilder {
 
         let mut command = self.build_command();
         let error = command.exec();
-        Err(CargoError::from(error)
+        Err(::util::CargoError::from(error)
             .context(process_error(
                 &format!("could not execute process {}", self),
                 None,
