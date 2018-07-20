@@ -950,3 +950,94 @@ For more information try --help
         .with_stderr(stderr)
         .run();
 }
+
+#[test]
+fn shows_warnings_on_second_run_without_changes() {
+    let p = project()
+        .file(
+            "src/lib.rs",
+            r#"
+                use std::default::Default;
+
+                pub fn foo() {
+                }
+            "#,
+        )
+        .build();
+
+    p.cargo("fix --allow-no-vcs")
+        .with_stderr_contains("[..]warning: unused import[..]")
+        .run();
+
+    p.cargo("fix --allow-no-vcs")
+        .with_stderr_contains("[..]warning: unused import[..]")
+        .run();
+}
+
+#[test]
+fn shows_warnings_on_second_run_without_changes_on_multiple_targets() {
+    let p = project()
+        .file(
+            "src/lib.rs",
+            r#"
+                use std::default::Default;
+
+                pub fn a() -> u32 { 3 }
+            "#,
+        )
+        .file(
+            "src/main.rs",
+            r#"
+                use std::default::Default;
+                fn main() { println!("3"); }
+            "#,
+        )
+        .file(
+            "tests/foo.rs",
+            r#"
+                use std::default::Default;
+                #[test]
+                fn foo_test() {
+                    println!("3");
+                }
+            "#,
+        )
+        .file(
+            "tests/bar.rs",
+            r#"
+                use std::default::Default;
+
+                #[test]
+                fn foo_test() {
+                    println!("3");
+                }
+            "#,
+        )
+        .file(
+            "examples/fooxample.rs",
+            r#"
+                use std::default::Default;
+
+                fn main() {
+                    println!("3");
+                }
+            "#,
+        )
+        .build();
+
+    p.cargo("fix --allow-no-vcs --all-targets")
+        .with_stderr_contains(" --> examples/fooxample.rs:2:21")
+        .with_stderr_contains(" --> src/lib.rs:2:21")
+        .with_stderr_contains(" --> src/main.rs:2:21")
+        .with_stderr_contains(" --> tests/bar.rs:2:21")
+        .with_stderr_contains(" --> tests/foo.rs:2:21")
+        .run();
+
+    p.cargo("fix --allow-no-vcs --all-targets")
+        .with_stderr_contains(" --> examples/fooxample.rs:2:21")
+        .with_stderr_contains(" --> src/lib.rs:2:21")
+        .with_stderr_contains(" --> src/main.rs:2:21")
+        .with_stderr_contains(" --> tests/bar.rs:2:21")
+        .with_stderr_contains(" --> tests/foo.rs:2:21")
+        .run();
+}

@@ -48,6 +48,8 @@ pub fn fix(ws: &Workspace, opts: &mut FixOptions) -> CargoResult<()> {
     ));
     let _started = lock_server.start()?;
 
+    opts.compile_opts.build_config.force_rebuild = true;
+
     if opts.broken_code {
         let key = BROKEN_CODE_ENV.to_string();
         opts.compile_opts.build_config.extra_rustc_env.push((key, "1".to_string()));
