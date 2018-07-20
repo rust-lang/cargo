@@ -11,7 +11,7 @@ fn plugin_to_the_max() {
         return;
     }
 
-    let foo = project("foo")
+    let foo = project()
         .file(
             "Cargo.toml",
             r#"
@@ -47,7 +47,7 @@ fn plugin_to_the_max() {
         "#,
         )
         .build();
-    let _bar = project("bar")
+    let _bar = project().at("bar")
         .file(
             "Cargo.toml",
             r#"
@@ -81,7 +81,7 @@ fn plugin_to_the_max() {
         "#,
         )
         .build();
-    let _baz = project("baz")
+    let _baz = project().at("baz")
         .file(
             "Cargo.toml",
             r#"
@@ -108,7 +108,7 @@ fn plugin_with_dynamic_native_dependency() {
         return;
     }
 
-    let workspace = project("ws")
+    let workspace = project().at("ws")
         .file(
             "Cargo.toml",
             r#"
@@ -118,7 +118,7 @@ fn plugin_with_dynamic_native_dependency() {
         )
         .build();
 
-    let build = project("ws/builder")
+    let build = project().at("ws/builder")
         .file(
             "Cargo.toml",
             r#"
@@ -141,7 +141,7 @@ fn plugin_with_dynamic_native_dependency() {
         )
         .build();
 
-    let foo = project("ws/foo")
+    let foo = project().at("ws/foo")
         .file(
             "Cargo.toml",
             r#"
@@ -229,7 +229,7 @@ fn plugin_with_dynamic_native_dependency() {
 
 #[test]
 fn plugin_integration() {
-    let p = project("foo")
+    let p = project()
         .file(
             "Cargo.toml",
             r#"
@@ -255,7 +255,7 @@ fn plugin_integration() {
 
 #[test]
 fn doctest_a_plugin() {
-    let p = project("foo")
+    let p = project()
         .file(
             "Cargo.toml",
             r#"
@@ -304,7 +304,7 @@ fn doctest_a_plugin() {
 fn native_plugin_dependency_with_custom_ar_linker() {
     let target = rustc_host();
 
-    let _foo = project("foo")
+    let _foo = project()
         .file(
             "Cargo.toml",
             r#"
@@ -320,7 +320,7 @@ fn native_plugin_dependency_with_custom_ar_linker() {
         .file("src/lib.rs", "")
         .build();
 
-    let bar = project("bar")
+    let bar = project().at("bar")
         .file(
             "Cargo.toml",
             r#"
@@ -365,7 +365,7 @@ fn panic_abort_plugins() {
         return;
     }
 
-    let p = project("bar")
+    let p = project().at("bar")
         .file(
             "Cargo.toml",
             r#"
@@ -412,7 +412,7 @@ fn shared_panic_abort_plugins() {
         return;
     }
 
-    let p = project("top")
+    let p = project().at("top")
         .file(
             "Cargo.toml",
             r#"

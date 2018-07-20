@@ -6,7 +6,7 @@ use hamcrest::{assert_that, existing_dir, existing_file, is_not};
 
 #[test]
 fn cargo_clean_simple() {
-    let p = project("foo")
+    let p = project()
         .file("Cargo.toml", &basic_bin_manifest("foo"))
         .file("src/foo.rs", &main_file(r#""i am foo""#, &[]))
         .build();
@@ -20,7 +20,7 @@ fn cargo_clean_simple() {
 
 #[test]
 fn different_dir() {
-    let p = project("foo")
+    let p = project()
         .file("Cargo.toml", &basic_bin_manifest("foo"))
         .file("src/foo.rs", &main_file(r#""i am foo""#, &[]))
         .file("src/bar/a.rs", "")
@@ -38,7 +38,7 @@ fn different_dir() {
 
 #[test]
 fn clean_multiple_packages() {
-    let p = project("foo")
+    let p = project()
         .file(
             "Cargo.toml",
             r#"
@@ -109,7 +109,7 @@ fn clean_multiple_packages() {
 
 #[test]
 fn clean_release() {
-    let p = project("foo")
+    let p = project()
         .file(
             "Cargo.toml",
             r#"
@@ -163,7 +163,7 @@ fn clean_release() {
 
 #[test]
 fn clean_doc() {
-    let p = project("foo")
+    let p = project()
         .file(
             "Cargo.toml",
             r#"
@@ -203,7 +203,7 @@ fn clean_doc() {
 
 #[test]
 fn build_script() {
-    let p = project("foo")
+    let p = project()
         .file(
             "Cargo.toml",
             r#"
@@ -269,7 +269,7 @@ fn clean_git() {
             .file("src/lib.rs", "")
     }).unwrap();
 
-    let p = project("foo")
+    let p = project()
         .file(
             "Cargo.toml",
             &format!(
@@ -298,7 +298,7 @@ fn clean_git() {
 
 #[test]
 fn registry() {
-    let p = project("foo")
+    let p = project()
         .file(
             "Cargo.toml",
             r#"
@@ -326,7 +326,7 @@ fn registry() {
 
 #[test]
 fn clean_verbose() {
-    let p = project("foo")
+    let p = project()
         .file(
             "Cargo.toml",
             r#"

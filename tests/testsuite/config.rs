@@ -9,7 +9,7 @@ use std::fs;
 
 #[test]
 fn read_env_vars_for_config() {
-    let p = project("foo")
+    let p = project()
         .file(
             "Cargo.toml",
             r#"

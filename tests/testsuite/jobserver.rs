@@ -7,7 +7,7 @@ use hamcrest::assert_that;
 
 #[test]
 fn jobserver_exists() {
-    let p = project("foo")
+    let p = project()
         .file(
             "Cargo.toml",
             r#"
@@ -73,7 +73,7 @@ fn makes_jobserver_used() {
         return;
     }
 
-    let p = project("foo")
+    let p = project()
         .file(
             "Cargo.toml",
             r#"
@@ -187,7 +187,7 @@ fn jobserver_and_j() {
         return;
     }
 
-    let p = project("foo")
+    let p = project()
         .file(
             "Cargo.toml",
             r#"

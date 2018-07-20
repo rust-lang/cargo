@@ -20,7 +20,7 @@ fn registry() -> Url {
 
 #[test]
 fn simple() {
-    let p = project("foo")
+    let p = project()
         .file(
             "Cargo.toml",
             r#"
@@ -71,7 +71,7 @@ fn simple() {
 
 #[test]
 fn deps() {
-    let p = project("foo")
+    let p = project()
         .file(
             "Cargo.toml",
             r#"
@@ -112,7 +112,7 @@ fn deps() {
 fn nonexistent() {
     Package::new("init", "0.0.1").publish();
 
-    let p = project("foo")
+    let p = project()
         .file(
             "Cargo.toml",
             r#"
@@ -145,7 +145,7 @@ required by package `foo v0.0.1 ([..])`
 fn wrong_case() {
     Package::new("init", "0.0.1").publish();
 
-    let p = project("foo")
+    let p = project()
         .file(
             "Cargo.toml",
             r#"
@@ -180,7 +180,7 @@ required by package `foo v0.0.1 ([..])`
 fn mis_hyphenated() {
     Package::new("mis-hyphenated", "0.0.1").publish();
 
-    let p = project("foo")
+    let p = project()
         .file(
             "Cargo.toml",
             r#"
@@ -213,7 +213,7 @@ required by package `foo v0.0.1 ([..])`
 
 #[test]
 fn wrong_version() {
-    let p = project("foo")
+    let p = project()
         .file(
             "Cargo.toml",
             r#"
@@ -262,7 +262,7 @@ required by package `foo v0.0.1 ([..])`
 
 #[test]
 fn bad_cksum() {
-    let p = project("foo")
+    let p = project()
         .file(
             "Cargo.toml",
             r#"
@@ -304,7 +304,7 @@ Caused by:
 fn update_registry() {
     Package::new("init", "0.0.1").publish();
 
-    let p = project("foo")
+    let p = project()
         .file(
             "Cargo.toml",
             r#"
@@ -353,7 +353,7 @@ required by package `foo v0.0.1 ([..])`
 fn package_with_path_deps() {
     Package::new("init", "0.0.1").publish();
 
-    let p = project("foo")
+    let p = project()
         .file(
             "Cargo.toml",
             r#"
@@ -418,7 +418,7 @@ required by package `foo v0.0.1 ([..])`
 
 #[test]
 fn lockfile_locks() {
-    let p = project("foo")
+    let p = project()
         .file(
             "Cargo.toml",
             r#"
@@ -458,7 +458,7 @@ fn lockfile_locks() {
 
 #[test]
 fn lockfile_locks_transitively() {
-    let p = project("foo")
+    let p = project()
         .file(
             "Cargo.toml",
             r#"
@@ -502,7 +502,7 @@ fn lockfile_locks_transitively() {
 
 #[test]
 fn yanks_are_not_used() {
-    let p = project("foo")
+    let p = project()
         .file(
             "Cargo.toml",
             r#"
@@ -545,7 +545,7 @@ fn yanks_are_not_used() {
 
 #[test]
 fn relying_on_a_yank_is_bad() {
-    let p = project("foo")
+    let p = project()
         .file(
             "Cargo.toml",
             r#"
@@ -580,7 +580,7 @@ required by package `bar v0.0.1`
 
 #[test]
 fn yanks_in_lockfiles_are_ok() {
-    let p = project("foo")
+    let p = project()
         .file(
             "Cargo.toml",
             r#"
@@ -620,7 +620,7 @@ required by package `foo v0.0.1 ([..])`
 
 #[test]
 fn update_with_lockfile_if_packages_missing() {
-    let p = project("foo")
+    let p = project()
         .file(
             "Cargo.toml",
             r#"
@@ -655,7 +655,7 @@ fn update_with_lockfile_if_packages_missing() {
 
 #[test]
 fn update_lockfile() {
-    let p = project("foo")
+    let p = project()
         .file(
             "Cargo.toml",
             r#"
@@ -763,7 +763,7 @@ fn update_lockfile() {
 #[test]
 fn update_offline() {
     use cargotest::ChannelChanger;
-    let p = project("foo")
+    let p = project()
         .file(
             "Cargo.toml",
             r#"
@@ -790,7 +790,7 @@ fn update_offline() {
 
 #[test]
 fn dev_dependency_not_used() {
-    let p = project("foo")
+    let p = project()
         .file(
             "Cargo.toml",
             r#"
@@ -856,7 +856,7 @@ fn login_with_differently_sized_token() {
 #[test]
 fn bad_license_file() {
     Package::new("foo", "1.0.0").publish();
-    let p = project("all")
+    let p = project().at("all")
         .file(
             "Cargo.toml",
             r#"
@@ -889,7 +889,7 @@ fn bad_license_file() {
 
 #[test]
 fn updating_a_dep() {
-    let p = project("foo")
+    let p = project()
         .file(
             "Cargo.toml",
             r#"
@@ -982,7 +982,7 @@ fn git_and_registry_dep() {
         )
         .file("src/lib.rs", "")
         .build();
-    let p = project("foo")
+    let p = project()
         .file(
             "Cargo.toml",
             &format!(
@@ -1032,7 +1032,7 @@ fn git_and_registry_dep() {
 fn update_publish_then_update() {
     // First generate a Cargo.lock and a clone of the registry index at the
     // "head" of the current registry.
-    let p = project("foo")
+    let p = project()
         .file(
             "Cargo.toml",
             r#"
@@ -1059,7 +1059,7 @@ fn update_publish_then_update() {
 
     // Generate a Cargo.lock with the newer version, and then move the old copy
     // of the registry back into place.
-    let p2 = project("foo2")
+    let p2 = project().at("foo2")
         .file(
             "Cargo.toml",
             r#"
@@ -1102,7 +1102,7 @@ fn update_publish_then_update() {
 
 #[test]
 fn fetch_downloads() {
-    let p = project("foo")
+    let p = project()
         .file(
             "Cargo.toml",
             r#"
@@ -1133,7 +1133,7 @@ fn fetch_downloads() {
 
 #[test]
 fn update_transitive_dependency() {
-    let p = project("foo")
+    let p = project()
         .file(
             "Cargo.toml",
             r#"
@@ -1182,7 +1182,7 @@ fn update_transitive_dependency() {
 
 #[test]
 fn update_backtracking_ok() {
-    let p = project("foo")
+    let p = project()
         .file(
             "Cargo.toml",
             r#"
@@ -1232,7 +1232,7 @@ fn update_backtracking_ok() {
 
 #[test]
 fn update_multiple_packages() {
-    let p = project("foo")
+    let p = project()
         .file(
             "Cargo.toml",
             r#"
@@ -1297,7 +1297,7 @@ fn update_multiple_packages() {
 
 #[test]
 fn bundled_crate_in_registry() {
-    let p = project("foo")
+    let p = project()
         .file(
             "Cargo.toml",
             r#"
@@ -1347,7 +1347,7 @@ fn bundled_crate_in_registry() {
 
 #[test]
 fn update_same_prefix_oh_my_how_was_this_a_bug() {
-    let p = project("foo")
+    let p = project()
         .file(
             "Cargo.toml",
             r#"
@@ -1377,7 +1377,7 @@ fn update_same_prefix_oh_my_how_was_this_a_bug() {
 
 #[test]
 fn use_semver() {
-    let p = project("foo")
+    let p = project()
         .file(
             "Cargo.toml",
             r#"
@@ -1400,7 +1400,7 @@ fn use_semver() {
 
 #[test]
 fn only_download_relevant() {
-    let p = project("foo")
+    let p = project()
         .file(
             "Cargo.toml",
             r#"
@@ -1440,7 +1440,7 @@ fn only_download_relevant() {
 
 #[test]
 fn resolve_and_backtracking() {
-    let p = project("foo")
+    let p = project()
         .file(
             "Cargo.toml",
             r#"
@@ -1466,7 +1466,7 @@ fn resolve_and_backtracking() {
 
 #[test]
 fn upstream_warnings_on_extra_verbose() {
-    let p = project("foo")
+    let p = project()
         .file(
             "Cargo.toml",
             r#"
@@ -1496,7 +1496,7 @@ fn upstream_warnings_on_extra_verbose() {
 
 #[test]
 fn disallow_network() {
-    let p = project("foo")
+    let p = project()
         .file(
             "Cargo.toml",
             r#"
@@ -1530,7 +1530,7 @@ Caused by:
 
 #[test]
 fn add_dep_dont_update_registry() {
-    let p = project("foo")
+    let p = project()
         .file(
             "Cargo.toml",
             r#"
@@ -1589,7 +1589,7 @@ fn add_dep_dont_update_registry() {
 
 #[test]
 fn bump_version_dont_update_registry() {
-    let p = project("foo")
+    let p = project()
         .file(
             "Cargo.toml",
             r#"
@@ -1647,7 +1647,7 @@ fn bump_version_dont_update_registry() {
 
 #[test]
 fn old_version_req() {
-    let p = project("foo")
+    let p = project()
         .file(
             "Cargo.toml",
             r#"
@@ -1701,7 +1701,7 @@ this warning.
 
 #[test]
 fn old_version_req_upstream() {
-    let p = project("foo")
+    let p = project()
         .file(
             "Cargo.toml",
             r#"
@@ -1778,7 +1778,7 @@ fn toml_lies_but_index_is_truth() {
         .file("src/lib.rs", "extern crate foo;")
         .publish();
 
-    let p = project("foo")
+    let p = project()
         .file(
             "Cargo.toml",
             r#"
@@ -1810,7 +1810,7 @@ fn vv_prints_warnings() {
         )
         .publish();
 
-    let p = project("foo")
+    let p = project()
         .file(
             "Cargo.toml",
             r#"
@@ -1835,7 +1835,7 @@ fn bad_and_or_malicious_packages_rejected() {
         .extra_file("foo-0.1.0/src/lib.rs", "")
         .publish();
 
-    let p = project("foo")
+    let p = project()
         .file(
             "Cargo.toml",
             r#"
@@ -1877,7 +1877,7 @@ fn git_init_templatedir_missing() {
     Package::new("foo", "0.2.0").dep("bar", "*").publish();
     Package::new("bar", "0.2.0").publish();
 
-    let p = project("foo")
+    let p = project()
         .file(
             "Cargo.toml",
             r#"

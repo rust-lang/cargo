@@ -4,7 +4,7 @@ use hamcrest::assert_that;
 
 #[test]
 fn profile_config_gated() {
-    let p = project("foo")
+    let p = project()
         .file("Cargo.toml", &basic_lib_manifest("foo"))
         .file("src/lib.rs", "")
         .file(
@@ -31,7 +31,7 @@ fn profile_config_gated() {
 
 #[test]
 fn profile_config_validate_warnings() {
-    let p = project("foo")
+    let p = project()
         .file(
             "Cargo.toml",
             r#"
@@ -83,7 +83,7 @@ fn profile_config_validate_warnings() {
 
 #[test]
 fn profile_config_error_paths() {
-    let p = project("foo")
+    let p = project()
         .file("Cargo.toml", &basic_lib_manifest("foo"))
         .file("src/lib.rs", "")
         .file(
@@ -118,7 +118,7 @@ Caused by:
 
 #[test]
 fn profile_config_validate_errors() {
-    let p = project("foo")
+    let p = project()
         .file(
             "Cargo.toml",
             r#"
@@ -158,7 +158,7 @@ Caused by:
 
 #[test]
 fn profile_config_syntax_errors() {
-    let p = project("foo")
+    let p = project()
         .file("Cargo.toml", &basic_lib_manifest("foo"))
         .file("src/lib.rs", "")
         .file(
@@ -186,7 +186,7 @@ Caused by:
 
 #[test]
 fn profile_config_override_spec_multiple() {
-    let p = project("foo")
+    let p = project()
         .file(
             "Cargo.toml",
             r#"
@@ -240,7 +240,7 @@ found profile override specs: bar, bar:0.5.0",
 #[test]
 fn profile_config_all_options() {
     // Ensure all profile options are supported.
-    let p = project("foo")
+    let p = project()
         .file("Cargo.toml", &basic_lib_manifest("foo"))
         .file("src/lib.rs", "")
         .file(
@@ -283,7 +283,7 @@ fn profile_config_all_options() {
 #[test]
 fn profile_config_override_precedence() {
     // Config values take precedence over manifest values.
-    let p = project("foo")
+    let p = project()
         .file(
             "Cargo.toml",
             r#"
@@ -340,7 +340,7 @@ fn profile_config_override_precedence() {
 
 #[test]
 fn profile_config_no_warn_unknown_override() {
-    let p = project("foo")
+    let p = project()
         .file(
             "Cargo.toml",
             r#"
@@ -372,7 +372,7 @@ fn profile_config_no_warn_unknown_override() {
 
 #[test]
 fn profile_config_mixed_types() {
-    let p = project("foo")
+    let p = project()
         .file("Cargo.toml", &basic_lib_manifest("foo"))
         .file("src/lib.rs", "")
         .file(

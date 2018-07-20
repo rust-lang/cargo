@@ -7,7 +7,7 @@ use std::io::Write;
 
 #[test]
 fn is_feature_gated() {
-    let p = project("foo")
+    let p = project()
         .file(
             "Cargo.toml",
             r#"
@@ -36,7 +36,7 @@ fn is_feature_gated() {
 
 #[test]
 fn depend_on_alt_registry() {
-    let p = project("foo")
+    let p = project()
         .file(
             "Cargo.toml",
             r#"
@@ -93,7 +93,7 @@ fn depend_on_alt_registry() {
 
 #[test]
 fn depend_on_alt_registry_depends_on_same_registry_no_index() {
-    let p = project("foo")
+    let p = project()
         .file(
             "Cargo.toml",
             r#"
@@ -138,7 +138,7 @@ fn depend_on_alt_registry_depends_on_same_registry_no_index() {
 
 #[test]
 fn depend_on_alt_registry_depends_on_same_registry() {
-    let p = project("foo")
+    let p = project()
         .file(
             "Cargo.toml",
             r#"
@@ -183,7 +183,7 @@ fn depend_on_alt_registry_depends_on_same_registry() {
 
 #[test]
 fn depend_on_alt_registry_depends_on_crates_io() {
-    let p = project("foo")
+    let p = project()
         .file(
             "Cargo.toml",
             r#"
@@ -232,7 +232,7 @@ fn depend_on_alt_registry_depends_on_crates_io() {
 fn registry_and_path_dep_works() {
     registry::init();
 
-    let p = project("foo")
+    let p = project()
         .file(
             "Cargo.toml",
             r#"
@@ -278,7 +278,7 @@ fn registry_and_path_dep_works() {
 fn registry_incompatible_with_git() {
     registry::init();
 
-    let p = project("foo")
+    let p = project()
         .file(
             "Cargo.toml",
             r#"
@@ -304,7 +304,7 @@ fn registry_incompatible_with_git() {
 
 #[test]
 fn cannot_publish_to_crates_io_with_registry_dependency() {
-    let p = project("foo")
+    let p = project()
         .file(
             "Cargo.toml",
             r#"
@@ -334,7 +334,7 @@ fn cannot_publish_to_crates_io_with_registry_dependency() {
 
 #[test]
 fn publish_with_registry_dependency() {
-    let p = project("foo")
+    let p = project()
         .file(
             "Cargo.toml",
             r#"
@@ -378,7 +378,7 @@ fn publish_with_registry_dependency() {
 
 #[test]
 fn alt_registry_and_crates_io_deps() {
-    let p = project("foo")
+    let p = project()
         .file(
             "Cargo.toml",
             r#"
@@ -427,7 +427,7 @@ fn alt_registry_and_crates_io_deps() {
 
 #[test]
 fn block_publish_due_to_no_token() {
-    let p = project("foo")
+    let p = project()
         .file(
             "Cargo.toml",
             r#"
@@ -458,7 +458,7 @@ fn block_publish_due_to_no_token() {
 
 #[test]
 fn publish_to_alt_registry() {
-    let p = project("foo")
+    let p = project()
         .file(
             "Cargo.toml",
             r#"
@@ -503,7 +503,7 @@ fn publish_to_alt_registry() {
 
 #[test]
 fn publish_with_crates_io_dep() {
-    let p = project("foo")
+    let p = project()
         .file(
             "Cargo.toml",
             r#"
@@ -562,7 +562,7 @@ fn credentials_in_url_forbidden() {
         )
         .unwrap();
 
-    let p = project("foo")
+    let p = project()
         .file(
             "Cargo.toml",
             r#"

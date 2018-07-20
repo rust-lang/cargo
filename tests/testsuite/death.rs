@@ -56,7 +56,7 @@ fn ctrl_c_kills_everyone() {
     let listener = TcpListener::bind("127.0.0.1:0").unwrap();
     let addr = listener.local_addr().unwrap();
 
-    let p = project("foo")
+    let p = project()
         .file(
             "Cargo.toml",
             r#"

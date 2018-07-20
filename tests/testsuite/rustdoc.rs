@@ -3,7 +3,7 @@ use hamcrest::assert_that;
 
 #[test]
 fn rustdoc_simple() {
-    let p = project("foo")
+    let p = project()
         .file(
             "Cargo.toml",
             r#"
@@ -34,7 +34,7 @@ fn rustdoc_simple() {
 
 #[test]
 fn rustdoc_args() {
-    let p = project("foo")
+    let p = project()
         .file(
             "Cargo.toml",
             r#"
@@ -66,7 +66,7 @@ fn rustdoc_args() {
 
 #[test]
 fn rustdoc_foo_with_bar_dependency() {
-    let foo = project("foo")
+    let foo = project()
         .file(
             "Cargo.toml",
             r#"
@@ -87,7 +87,7 @@ fn rustdoc_foo_with_bar_dependency() {
         "#,
         )
         .build();
-    let _bar = project("bar")
+    let _bar = project().at("bar")
         .file(
             "Cargo.toml",
             r#"
@@ -127,7 +127,7 @@ fn rustdoc_foo_with_bar_dependency() {
 
 #[test]
 fn rustdoc_only_bar_dependency() {
-    let foo = project("foo")
+    let foo = project()
         .file(
             "Cargo.toml",
             r#"
@@ -150,7 +150,7 @@ fn rustdoc_only_bar_dependency() {
         "#,
         )
         .build();
-    let _bar = project("bar")
+    let _bar = project().at("bar")
         .file(
             "Cargo.toml",
             r#"
@@ -191,7 +191,7 @@ fn rustdoc_only_bar_dependency() {
 
 #[test]
 fn rustdoc_same_name_documents_lib() {
-    let p = project("foo")
+    let p = project()
         .file(
             "Cargo.toml",
             r#"
@@ -228,7 +228,7 @@ fn rustdoc_same_name_documents_lib() {
 
 #[test]
 fn features() {
-    let p = project("foo")
+    let p = project()
         .file(
             "Cargo.toml",
             r#"
@@ -255,7 +255,7 @@ fn features() {
 #[test]
 #[cfg(all(target_arch = "x86_64", target_os = "linux"))]
 fn rustdoc_target() {
-    let p = project("foo")
+    let p = project()
         .file(
             "Cargo.toml",
             r#"

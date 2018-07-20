@@ -8,7 +8,7 @@ use hamcrest::{assert_that, existing_file, is_not};
 
 #[test]
 fn adding_and_removing_packages() {
-    let p = project("foo")
+    let p = project()
         .file(
             "Cargo.toml",
             r#"
@@ -94,7 +94,7 @@ fn adding_and_removing_packages() {
 fn no_index_update() {
     Package::new("serde", "1.0.0").publish();
 
-    let p = project("foo")
+    let p = project()
         .file(
             "Cargo.toml",
             r#"
@@ -125,7 +125,7 @@ fn no_index_update() {
 
 #[test]
 fn preserve_metadata() {
-    let p = project("foo")
+    let p = project()
         .file(
             "Cargo.toml",
             r#"
@@ -176,7 +176,7 @@ foo = "bar"
 
 #[test]
 fn preserve_line_endings_issue_2076() {
-    let p = project("foo")
+    let p = project()
         .file(
             "Cargo.toml",
             r#"
@@ -226,7 +226,7 @@ fn preserve_line_endings_issue_2076() {
 
 #[test]
 fn cargo_update_generate_lockfile() {
-    let p = project("foo")
+    let p = project()
         .file(
             "Cargo.toml",
             r#"

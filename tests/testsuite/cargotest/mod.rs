@@ -10,7 +10,7 @@ checking the result.  Projects are created with the `ProjectBuilder` where you
 specify some files to create.  The general form looks like this:
 
 ```
-let p = project("foo")
+let p = project()
     .file("Cargo.toml", &basic_bin_manifest("foo"))
     .file("src/main.rs", r#"fn main() { println!("hi!"); }"#)
     .build();

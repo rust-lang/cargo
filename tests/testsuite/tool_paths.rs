@@ -6,7 +6,7 @@ use hamcrest::assert_that;
 fn pathless_tools() {
     let target = rustc_host();
 
-    let foo = project("foo")
+    let foo = project()
         .file(
             "Cargo.toml",
             r#"
@@ -60,7 +60,7 @@ fn absolute_tools() {
         (r#"/bogus/nonexistent-ar"#, r#"/bogus/nonexistent-linker"#)
     };
 
-    let foo = project("foo")
+    let foo = project()
         .file(
             "Cargo.toml",
             r#"
@@ -126,7 +126,7 @@ fn relative_tools() {
 
     // Funky directory structure to test that relative tool paths are made absolute
     // by reference to the `.cargo/..` directory and not to (for example) the CWD.
-    let origin = project("origin")
+    let origin = project().at("origin")
         .file(
             "foo/Cargo.toml",
             r#"
@@ -189,7 +189,7 @@ fn relative_tools() {
 fn custom_runner() {
     let target = rustc_host();
 
-    let p = project("foo")
+    let p = project()
         .file(
             "Cargo.toml",
             r#"

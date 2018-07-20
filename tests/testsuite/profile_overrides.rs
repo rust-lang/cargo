@@ -4,7 +4,7 @@ use hamcrest::assert_that;
 
 #[test]
 fn profile_override_gated() {
-    let p = project("foo")
+    let p = project()
         .file(
             "Cargo.toml",
             r#"
@@ -34,7 +34,7 @@ consider adding `cargo-features = [\"profile-overrides\"]` to the manifest
         ),
     );
 
-    let p = project("foo")
+    let p = project()
         .file(
             "Cargo.toml",
             r#"
@@ -67,7 +67,7 @@ consider adding `cargo-features = [\"profile-overrides\"]` to the manifest
 
 #[test]
 fn profile_override_basic() {
-    let p = project("foo")
+    let p = project()
         .file(
             "Cargo.toml",
             r#"
@@ -107,7 +107,7 @@ fn profile_override_basic() {
 
 #[test]
 fn profile_override_warnings() {
-    let p = project("foo")
+    let p = project()
         .file(
             "Cargo.toml",
             r#"
@@ -152,7 +152,7 @@ Did you mean `bar`?
 
 #[test]
 fn profile_override_dev_release_only() {
-    let p = project("foo")
+    let p = project()
         .file(
             "Cargo.toml",
             r#"
@@ -203,7 +203,7 @@ fn profile_override_bad_settings() {
         ("overrides = {}", "Profile overrides cannot be nested."),
     ];
     for &(ref snippet, ref expected) in bad_values.iter() {
-        let p = project("foo")
+        let p = project()
             .file(
                 "Cargo.toml",
                 &format!(
@@ -240,7 +240,7 @@ fn profile_override_bad_settings() {
 #[test]
 fn profile_override_hierarchy() {
     // Test that the precedence rules are correct for different types.
-    let p = project("foo")
+    let p = project()
         .file(
             "Cargo.toml",
             r#"
@@ -312,7 +312,7 @@ fn profile_override_hierarchy() {
         .build();
 
     // dep (outside of workspace)
-    let _dep = project("dep")
+    let _dep = project().at("dep")
         .file("Cargo.toml", &basic_lib_manifest("dep"))
         .file("src/lib.rs", "")
         .build();
@@ -350,7 +350,7 @@ fn profile_override_hierarchy() {
 
 #[test]
 fn profile_override_spec_multiple() {
-    let p = project("foo")
+    let p = project()
         .file(
             "Cargo.toml",
             r#"
@@ -387,7 +387,7 @@ found profile override specs: bar, bar:0.5.0",
 
 #[test]
 fn profile_override_spec() {
-    let p = project("foo")
+    let p = project()
         .file(
             "Cargo.toml",
             r#"
@@ -435,7 +435,7 @@ fn profile_override_spec() {
 
         .build();
 
-    project("dep1")
+    project().at("dep1")
         .file(
             "Cargo.toml",
             r#"
@@ -447,7 +447,7 @@ fn profile_override_spec() {
         .file("src/lib.rs", "")
         .build();
 
-    project("dep2")
+    project().at("dep2")
         .file(
             "Cargo.toml",
             r#"

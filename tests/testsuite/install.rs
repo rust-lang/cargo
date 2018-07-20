@@ -274,7 +274,7 @@ fn install_location_precedence() {
 
 #[test]
 fn install_path() {
-    let p = project("foo")
+    let p = project()
         .file(
             "Cargo.toml",
             r#"
@@ -392,7 +392,7 @@ fn multiple_crates_select() {
 
 #[test]
 fn multiple_crates_auto_binaries() {
-    let p = project("foo")
+    let p = project()
         .file(
             "Cargo.toml",
             r#"
@@ -427,7 +427,7 @@ fn multiple_crates_auto_binaries() {
 
 #[test]
 fn multiple_crates_auto_examples() {
-    let p = project("foo")
+    let p = project()
         .file(
             "Cargo.toml",
             r#"
@@ -473,7 +473,7 @@ fn multiple_crates_auto_examples() {
 
 #[test]
 fn no_binaries_or_examples() {
-    let p = project("foo")
+    let p = project()
         .file(
             "Cargo.toml",
             r#"
@@ -509,7 +509,7 @@ fn no_binaries_or_examples() {
 
 #[test]
 fn no_binaries() {
-    let p = project("foo")
+    let p = project()
         .file(
             "Cargo.toml",
             r#"
@@ -539,7 +539,7 @@ fn no_binaries() {
 
 #[test]
 fn examples() {
-    let p = project("foo")
+    let p = project()
         .file(
             "Cargo.toml",
             r#"
@@ -565,7 +565,7 @@ fn examples() {
 
 #[test]
 fn install_twice() {
-    let p = project("foo")
+    let p = project()
         .file(
             "Cargo.toml",
             r#"
@@ -598,7 +598,7 @@ Add --force to overwrite
 
 #[test]
 fn install_force() {
-    let p = project("foo")
+    let p = project()
         .file(
             "Cargo.toml",
             r#"
@@ -616,7 +616,7 @@ fn install_force() {
         execs().with_status(0),
     );
 
-    let p = project("foo2")
+    let p = project().at("foo2")
         .file(
             "Cargo.toml",
             r#"
@@ -659,7 +659,7 @@ foo v0.2.0 ([..]):
 
 #[test]
 fn install_force_partial_overlap() {
-    let p = project("foo")
+    let p = project()
         .file(
             "Cargo.toml",
             r#"
@@ -678,7 +678,7 @@ fn install_force_partial_overlap() {
         execs().with_status(0),
     );
 
-    let p = project("foo2")
+    let p = project().at("foo2")
         .file(
             "Cargo.toml",
             r#"
@@ -726,7 +726,7 @@ foo v0.2.0 ([..]):
 
 #[test]
 fn install_force_bin() {
-    let p = project("foo")
+    let p = project()
         .file(
             "Cargo.toml",
             r#"
@@ -745,7 +745,7 @@ fn install_force_bin() {
         execs().with_status(0),
     );
 
-    let p = project("foo2")
+    let p = project().at("foo2")
         .file(
             "Cargo.toml",
             r#"
@@ -793,7 +793,7 @@ foo v0.2.0 ([..]):
 
 #[test]
 fn compile_failure() {
-    let p = project("foo")
+    let p = project()
         .file(
             "Cargo.toml",
             r#"
@@ -953,7 +953,7 @@ fn uninstall_bin_does_not_exist() {
 
 #[test]
 fn uninstall_piecemeal() {
-    let p = project("foo")
+    let p = project()
         .file(
             "Cargo.toml",
             r#"
@@ -1024,7 +1024,7 @@ fn subcommand_works_out_of_the_box() {
 
 #[test]
 fn installs_from_cwd_by_default() {
-    let p = project("foo")
+    let p = project()
         .file(
             "Cargo.toml",
             r#"
@@ -1055,7 +1055,7 @@ fn installs_from_cwd_with_2018_warnings() {
         // is stabilized.
         return;
     }
-    let p = project("foo")
+    let p = project()
         .file(
             "Cargo.toml",
             r#"
@@ -1088,7 +1088,7 @@ fn installs_from_cwd_with_2018_warnings() {
 
 #[test]
 fn do_not_rebuilds_on_local_install() {
-    let p = project("foo")
+    let p = project()
         .file(
             "Cargo.toml",
             r#"
@@ -1197,7 +1197,7 @@ fn git_with_lockfile() {
 
 #[test]
 fn q_silences_warnings() {
-    let p = project("foo")
+    let p = project()
         .file(
             "Cargo.toml",
             r#"
@@ -1240,7 +1240,7 @@ fn readonly_dir() {
 #[test]
 fn use_path_workspace() {
     Package::new("foo", "1.0.0").publish();
-    let p = project("foo")
+    let p = project()
         .file(
             "Cargo.toml",
             r#"
@@ -1279,7 +1279,7 @@ fn use_path_workspace() {
 #[test]
 fn dev_dependencies_no_check() {
     Package::new("foo", "1.0.0").publish();
-    let p = project("foo")
+    let p = project()
         .file(
             "Cargo.toml",
             r#"
@@ -1302,7 +1302,7 @@ fn dev_dependencies_no_check() {
 #[test]
 fn dev_dependencies_lock_file_untouched() {
     Package::new("foo", "1.0.0").publish();
-    let p = project("foo")
+    let p = project()
         .file(
             "Cargo.toml",
             r#"
@@ -1644,7 +1644,7 @@ fn git_repo_replace() {
 
 #[test]
 fn workspace_uses_workspace_target_dir() {
-    let p = project("foo")
+    let p = project()
         .file(
             "Cargo.toml",
             r#"

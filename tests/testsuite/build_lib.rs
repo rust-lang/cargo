@@ -21,7 +21,7 @@ fn verbose_output_for_lib(p: &Project) -> String {
 
 #[test]
 fn build_lib_only() {
-    let p = project("foo")
+    let p = project()
         .file(
             "Cargo.toml",
             r#"
@@ -51,7 +51,7 @@ fn build_lib_only() {
 
 #[test]
 fn build_with_no_lib() {
-    let p = project("foo")
+    let p = project()
         .file("Cargo.toml", &basic_bin_manifest("foo"))
         .file(
             "src/main.rs",
@@ -71,7 +71,7 @@ fn build_with_no_lib() {
 
 #[test]
 fn build_with_relative_cargo_home_path() {
-    let p = project("foo")
+    let p = project()
         .file(
             "Cargo.toml",
             r#"

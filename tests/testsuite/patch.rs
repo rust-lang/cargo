@@ -24,7 +24,7 @@ fn replace() {
         .dep("foo", "0.1.0")
         .publish();
 
-    let p = project("bar")
+    let p = project().at("bar")
         .file(
             "Cargo.toml",
             r#"
@@ -93,7 +93,7 @@ fn replace() {
 fn nonexistent() {
     Package::new("baz", "0.1.0").publish();
 
-    let p = project("bar")
+    let p = project().at("bar")
         .file(
             "Cargo.toml",
             r#"
@@ -167,7 +167,7 @@ fn patch_git() {
         .file("src/lib.rs", "")
         .build();
 
-    let p = project("bar")
+    let p = project().at("bar")
         .file(
             "Cargo.toml",
             &format!(
@@ -246,7 +246,7 @@ fn patch_to_git() {
 
     Package::new("foo", "0.1.0").publish();
 
-    let p = project("bar")
+    let p = project().at("bar")
         .file(
             "Cargo.toml",
             &format!(
@@ -298,7 +298,7 @@ fn patch_to_git() {
 fn unused() {
     Package::new("foo", "0.1.0").publish();
 
-    let p = project("bar")
+    let p = project().at("bar")
         .file(
             "Cargo.toml",
             r#"
@@ -381,7 +381,7 @@ fn unused_git() {
         .file("src/lib.rs", "")
         .build();
 
-    let p = project("bar")
+    let p = project().at("bar")
         .file(
             "Cargo.toml",
             &format!(
@@ -426,7 +426,7 @@ fn unused_git() {
 fn add_patch() {
     Package::new("foo", "0.1.0").publish();
 
-    let p = project("bar")
+    let p = project().at("bar")
         .file(
             "Cargo.toml",
             r#"
@@ -504,7 +504,7 @@ fn add_patch() {
 fn add_ignored_patch() {
     Package::new("foo", "0.1.0").publish();
 
-    let p = project("bar")
+    let p = project().at("bar")
         .file(
             "Cargo.toml",
             r#"
@@ -578,7 +578,7 @@ fn add_ignored_patch() {
 fn new_minor() {
     Package::new("foo", "0.1.0").publish();
 
-    let p = project("bar")
+    let p = project().at("bar")
         .file(
             "Cargo.toml",
             r#"
@@ -624,7 +624,7 @@ fn new_minor() {
 fn transitive_new_minor() {
     Package::new("foo", "0.1.0").publish();
 
-    let p = project("bar")
+    let p = project().at("bar")
         .file(
             "Cargo.toml",
             r#"
@@ -684,7 +684,7 @@ fn transitive_new_minor() {
 fn new_major() {
     Package::new("foo", "0.1.0").publish();
 
-    let p = project("bar")
+    let p = project().at("bar")
         .file(
             "Cargo.toml",
             r#"
@@ -763,7 +763,7 @@ fn new_major() {
 fn transitive_new_major() {
     Package::new("foo", "0.1.0").publish();
 
-    let p = project("bar")
+    let p = project().at("bar")
         .file(
             "Cargo.toml",
             r#"
@@ -824,7 +824,7 @@ fn remove_patch() {
     Package::new("foo", "0.1.0").publish();
     Package::new("bar", "0.1.0").publish();
 
-    let p = project("bar")
+    let p = project().at("bar")
         .file(
             "Cargo.toml",
             r#"
@@ -915,7 +915,7 @@ fn remove_patch() {
 fn non_crates_io() {
     Package::new("foo", "0.1.0").publish();
 
-    let p = project("bar")
+    let p = project().at("bar")
         .file(
             "Cargo.toml",
             r#"
@@ -958,7 +958,7 @@ Caused by:
 fn replace_with_crates_io() {
     Package::new("foo", "0.1.0").publish();
 
-    let p = project("bar")
+    let p = project().at("bar")
         .file(
             "Cargo.toml",
             r#"
@@ -1003,7 +1003,7 @@ Caused by:
 fn patch_in_virtual() {
     Package::new("foo", "0.1.0").publish();
 
-    let p = project("bar")
+    let p = project().at("bar")
         .file(
             "Cargo.toml",
             r#"
@@ -1057,7 +1057,7 @@ fn patch_depends_on_another_patch() {
         .file("src/lib.rs", "broken code")
         .publish();
 
-    let p = project("p")
+    let p = project().at("p")
         .file(
             "Cargo.toml",
             r#"
@@ -1113,7 +1113,7 @@ fn patch_depends_on_another_patch() {
 #[test]
 fn replace_prerelease() {
     Package::new("bar", "1.1.0-pre.1").publish();
-    let p = project("foo")
+    let p = project()
         .file(
             "Cargo.toml",
             r#"

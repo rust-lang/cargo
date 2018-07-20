@@ -21,7 +21,7 @@ fn override_simple() {
         .file("src/lib.rs", "pub fn foo() {}")
         .build();
 
-    let p = project("local")
+    let p = project().at("local")
         .file(
             "Cargo.toml",
             &format!(
@@ -67,7 +67,7 @@ fn override_simple() {
 
 #[test]
 fn missing_version() {
-    let p = project("local")
+    let p = project().at("local")
         .file(
             "Cargo.toml",
             r#"
@@ -101,7 +101,7 @@ Caused by:
 
 #[test]
 fn invalid_semver_version() {
-    let p = project("local")
+    let p = project().at("local")
         .file(
             "Cargo.toml",
             r#"
@@ -138,7 +138,7 @@ fn different_version() {
     Package::new("foo", "0.2.0").publish();
     Package::new("foo", "0.1.0").publish();
 
-    let p = project("local")
+    let p = project().at("local")
         .file(
             "Cargo.toml",
             r#"
@@ -191,7 +191,7 @@ fn transitive() {
         .file("src/lib.rs", "pub fn foo() {}")
         .build();
 
-    let p = project("local")
+    let p = project().at("local")
         .file(
             "Cargo.toml",
             &format!(
@@ -248,7 +248,7 @@ fn persists_across_rebuilds() {
         .file("src/lib.rs", "pub fn foo() {}")
         .build();
 
-    let p = project("local")
+    let p = project().at("local")
         .file(
             "Cargo.toml",
             &format!(
@@ -298,7 +298,7 @@ fn persists_across_rebuilds() {
 fn replace_registry_with_path() {
     Package::new("foo", "0.1.0").publish();
 
-    let _ = project("foo")
+    let _ = project()
         .file(
             "Cargo.toml",
             r#"
@@ -311,7 +311,7 @@ fn replace_registry_with_path() {
         .file("src/lib.rs", "pub fn foo() {}")
         .build();
 
-    let p = project("local")
+    let p = project().at("local")
         .file(
             "Cargo.toml",
             r#"
@@ -381,7 +381,7 @@ fn use_a_spec_to_select() {
         .file("src/lib.rs", "pub fn foo3() {}")
         .build();
 
-    let p = project("local")
+    let p = project().at("local")
         .file(
             "Cargo.toml",
             &format!(
@@ -454,7 +454,7 @@ fn override_adds_some_deps() {
         .file("src/lib.rs", "")
         .build();
 
-    let p = project("local")
+    let p = project().at("local")
         .file(
             "Cargo.toml",
             &format!(
@@ -542,7 +542,7 @@ fn locked_means_locked_yes_no_seriously_i_mean_locked() {
         .file("src/lib.rs", "")
         .build();
 
-    let p = project("local")
+    let p = project().at("local")
         .file(
             "Cargo.toml",
             &format!(
@@ -588,7 +588,7 @@ fn override_wrong_name() {
         .file("src/lib.rs", "")
         .build();
 
-    let p = project("local")
+    let p = project().at("local")
         .file(
             "Cargo.toml",
             &format!(
@@ -632,7 +632,7 @@ fn override_with_nothing() {
         .file("src/lib.rs", "")
         .build();
 
-    let p = project("local")
+    let p = project().at("local")
         .file(
             "Cargo.toml",
             &format!(
@@ -674,7 +674,7 @@ Caused by:
 
 #[test]
 fn override_wrong_version() {
-    let p = project("local")
+    let p = project().at("local")
         .file(
             "Cargo.toml",
             r#"
@@ -720,7 +720,7 @@ fn multiple_specs() {
         .file("src/lib.rs", "pub fn foo() {}")
         .build();
 
-    let p = project("local")
+    let p = project().at("local")
         .file(
             "Cargo.toml",
             &format!(
@@ -779,7 +779,7 @@ fn test_override_dep() {
         .file("src/lib.rs", "pub fn foo() {}")
         .build();
 
-    let p = project("local")
+    let p = project().at("local")
         .file(
             "Cargo.toml",
             &format!(
@@ -831,7 +831,7 @@ fn update() {
         .file("src/lib.rs", "pub fn foo() {}")
         .build();
 
-    let p = project("local")
+    let p = project().at("local")
         .file(
             "Cargo.toml",
             &format!(
@@ -901,7 +901,7 @@ fn no_override_self() {
         )
         .build();
 
-    let p = project("local")
+    let p = project().at("local")
         .file(
             "Cargo.toml",
             &format!(
@@ -937,7 +937,7 @@ fn broken_path_override_warns() {
     Package::new("foo", "0.1.0").publish();
     Package::new("foo", "0.2.0").publish();
 
-    let p = project("local")
+    let p = project().at("local")
         .file(
             "Cargo.toml",
             r#"
@@ -1027,7 +1027,7 @@ fn override_an_override() {
         .file("src/lib.rs", "pub fn serde08() {}")
         .publish();
 
-    let p = project("local")
+    let p = project().at("local")
         .file(
             "Cargo.toml",
             r#"
@@ -1169,7 +1169,7 @@ fn overriding_nonexistent_no_spurious() {
         .file("bar/src/lib.rs", "pub fn foo() {}")
         .build();
 
-    let p = project("local")
+    let p = project().at("local")
         .file(
             "Cargo.toml",
             &format!(
@@ -1212,7 +1212,7 @@ fn no_warnings_when_replace_is_used_in_another_workspace_member() {
     Package::new("foo", "0.1.0").publish();
     Package::new("bar", "0.1.0").publish();
 
-    let p = project("ws")
+    let p = project().at("ws")
         .file(
             "Cargo.toml",
             r#"
@@ -1280,7 +1280,7 @@ fn override_to_path_dep() {
     Package::new("foo", "0.1.0").dep("bar", "0.1").publish();
     Package::new("bar", "0.1.0").publish();
 
-    let p = project("local")
+    let p = project().at("local")
         .file(
             "Cargo.toml",
             r#"
@@ -1333,7 +1333,7 @@ fn replace_to_path_dep() {
     Package::new("foo", "0.1.0").dep("bar", "0.1").publish();
     Package::new("bar", "0.1.0").publish();
 
-    let p = project("local")
+    let p = project().at("local")
         .file(
             "Cargo.toml",
             r#"
@@ -1391,7 +1391,7 @@ fn replace_to_path_dep() {
 fn paths_ok_with_optional() {
     Package::new("bar", "0.1.0").publish();
 
-    let p = project("local")
+    let p = project().at("local")
         .file(
             "Cargo.toml",
             r#"
@@ -1455,7 +1455,7 @@ fn paths_ok_with_optional() {
 fn paths_add_optional_bad() {
     Package::new("bar", "0.1.0").publish();
 
-    let p = project("local")
+    let p = project().at("local")
         .file(
             "Cargo.toml",
             r#"
@@ -1517,7 +1517,7 @@ fn override_with_default_feature() {
     Package::new("another", "0.1.1").dep("bar", "0.1").publish();
     Package::new("bar", "0.1.0").publish();
 
-    let p = project("local")
+    let p = project().at("local")
         .file(
             "Cargo.toml",
             r#"
@@ -1586,7 +1586,7 @@ fn override_with_default_feature() {
 fn override_plus_dep() {
     Package::new("bar", "0.1.0").publish();
 
-    let p = project("foo")
+    let p = project()
         .file(
             "Cargo.toml",
             r#"

@@ -71,7 +71,7 @@ fn http_auth_offered() {
         );
     });
 
-    let script = project("script")
+    let script = project().at("script")
         .file(
             "Cargo.toml",
             r#"
@@ -101,7 +101,7 @@ fn http_auth_offered() {
         .set_str("credential.helper", &script.display().to_string())
         .unwrap();
 
-    let p = project("foo")
+    let p = project()
         .file(
             "Cargo.toml",
             &format!(
@@ -167,7 +167,7 @@ fn https_something_happens() {
         drop(conn.read(&mut [0; 16]));
     });
 
-    let p = project("foo")
+    let p = project()
         .file(
             "Cargo.toml",
             &format!(
@@ -231,7 +231,7 @@ fn ssh_something_happens() {
         drop(server.accept().unwrap());
     });
 
-    let p = project("foo")
+    let p = project()
         .file(
             "Cargo.toml",
             &format!(

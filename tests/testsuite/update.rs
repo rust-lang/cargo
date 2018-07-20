@@ -8,7 +8,7 @@ use hamcrest::assert_that;
 #[test]
 fn minor_update_two_places() {
     Package::new("log", "0.1.0").publish();
-    let p = project("foo")
+    let p = project()
         .file(
             "Cargo.toml",
             r#"
@@ -64,7 +64,7 @@ fn transitive_minor_update() {
     Package::new("log", "0.1.0").publish();
     Package::new("serde", "0.1.0").dep("log", "0.1").publish();
 
-    let p = project("foo")
+    let p = project()
         .file(
             "Cargo.toml",
             r#"
@@ -124,7 +124,7 @@ fn conservative() {
     Package::new("log", "0.1.0").publish();
     Package::new("serde", "0.1.0").dep("log", "0.1").publish();
 
-    let p = project("foo")
+    let p = project()
         .file(
             "Cargo.toml",
             r#"
@@ -174,7 +174,7 @@ fn conservative() {
 #[test]
 fn update_via_new_dep() {
     Package::new("log", "0.1.0").publish();
-    let p = project("foo")
+    let p = project()
         .file(
             "Cargo.toml",
             r#"
@@ -217,7 +217,7 @@ fn update_via_new_dep() {
 #[test]
 fn update_via_new_member() {
     Package::new("log", "0.1.0").publish();
-    let p = project("foo")
+    let p = project()
         .file(
             "Cargo.toml",
             r#"
@@ -259,7 +259,7 @@ fn update_via_new_member() {
 #[test]
 fn add_dep_deep_new_requirement() {
     Package::new("log", "0.1.0").publish();
-    let p = project("foo")
+    let p = project()
         .file(
             "Cargo.toml",
             r#"
@@ -289,7 +289,7 @@ fn add_dep_deep_new_requirement() {
 fn everything_real_deep() {
     Package::new("log", "0.1.0").publish();
     Package::new("foo", "0.1.0").dep("log", "0.1").publish();
-    let p = project("foo")
+    let p = project()
         .file(
             "Cargo.toml",
             r#"
@@ -317,7 +317,7 @@ fn everything_real_deep() {
 
 #[test]
 fn change_package_version() {
-    let p = project("foo")
+    let p = project()
         .file(
             "Cargo.toml",
             r#"
@@ -365,7 +365,7 @@ fn update_precise() {
     Package::new("serde", "0.1.0").publish();
     Package::new("serde", "0.2.1").publish();
 
-    let p = project("foo")
+    let p = project()
         .file(
             "Cargo.toml",
             r#"

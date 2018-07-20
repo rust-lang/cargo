@@ -39,7 +39,7 @@ struct Checksum {
 impl VendorPackage {
     fn new(name: &str) -> VendorPackage {
         VendorPackage {
-            p: Some(project(&format!("index/{}", name))),
+            p: Some(project().at(&format!("index/{}", name))),
             cksum: Checksum {
                 package: Some(String::new()),
                 files: HashMap::new(),
@@ -85,7 +85,7 @@ fn simple() {
         .file("src/lib.rs", "pub fn foo() {}")
         .build();
 
-    let p = project("bar")
+    let p = project().at("bar")
         .file(
             "Cargo.toml",
             r#"
@@ -301,9 +301,9 @@ warning: be sure to add `[..]` to your PATH to be able to run the installed bina
 fn not_there() {
     setup();
 
-    let _ = project("index").build();
+    let _ = project().at("index").build();
 
-    let p = project("bar")
+    let p = project().at("bar")
         .file(
             "Cargo.toml",
             r#"
@@ -372,7 +372,7 @@ fn multiple() {
         .file(".cargo-checksum", "")
         .build();
 
-    let p = project("bar")
+    let p = project().at("bar")
         .file(
             "Cargo.toml",
             r#"
@@ -411,7 +411,7 @@ fn multiple() {
 
 #[test]
 fn crates_io_then_directory() {
-    let p = project("bar")
+    let p = project().at("bar")
         .file(
             "Cargo.toml",
             r#"
@@ -483,7 +483,7 @@ fn crates_io_then_directory() {
 
 #[test]
 fn crates_io_then_bad_checksum() {
-    let p = project("bar")
+    let p = project().at("bar")
         .file(
             "Cargo.toml",
             r#"
@@ -556,7 +556,7 @@ fn bad_file_checksum() {
     let mut f = t!(File::create(paths::root().join("index/foo/src/lib.rs")));
     t!(f.write_all(b"fn foo() -> u32 { 0 }"));
 
-    let p = project("bar")
+    let p = project().at("bar")
         .file(
             "Cargo.toml",
             r#"
@@ -606,7 +606,7 @@ fn only_dot_files_ok() {
         .build();
     VendorPackage::new("bar").file(".foo", "").build();
 
-    let p = project("bar")
+    let p = project().at("bar")
         .file(
             "Cargo.toml",
             r#"
@@ -646,7 +646,7 @@ fn random_files_ok() {
         .file("../test", "")
         .build();
 
-    let p = project("bar")
+    let p = project().at("bar")
         .file(
             "Cargo.toml",
             r#"
@@ -693,7 +693,7 @@ fn git_lock_file_doesnt_change() {
         .disable_checksum()
         .build();
 
-    let p = project("bar")
+    let p = project().at("bar")
         .file(
             "Cargo.toml",
             &format!(
@@ -765,7 +765,7 @@ fn git_override_requires_lockfile() {
         .disable_checksum()
         .build();
 
-    let p = project("bar")
+    let p = project().at("bar")
         .file(
             "Cargo.toml",
             r#"

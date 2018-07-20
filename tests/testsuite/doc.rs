@@ -12,7 +12,7 @@ use glob::glob;
 
 #[test]
 fn simple() {
-    let p = project("foo")
+    let p = project()
         .file(
             "Cargo.toml",
             r#"
@@ -49,7 +49,7 @@ fn simple() {
 
 #[test]
 fn doc_no_libs() {
-    let p = project("foo")
+    let p = project()
         .file(
             "Cargo.toml",
             r#"
@@ -76,7 +76,7 @@ fn doc_no_libs() {
 
 #[test]
 fn doc_twice() {
-    let p = project("foo")
+    let p = project()
         .file(
             "Cargo.toml",
             r#"
@@ -110,7 +110,7 @@ fn doc_twice() {
 
 #[test]
 fn doc_deps() {
-    let p = project("foo")
+    let p = project()
         .file(
             "Cargo.toml",
             r#"
@@ -191,7 +191,7 @@ fn doc_deps() {
 
 #[test]
 fn doc_no_deps() {
-    let p = project("foo")
+    let p = project()
         .file(
             "Cargo.toml",
             r#"
@@ -250,7 +250,7 @@ fn doc_no_deps() {
 
 #[test]
 fn doc_only_bin() {
-    let p = project("foo")
+    let p = project()
         .file(
             "Cargo.toml",
             r#"
@@ -296,7 +296,7 @@ fn doc_only_bin() {
 
 #[test]
 fn doc_multiple_targets_same_name_lib() {
-    let p = project("foo")
+    let p = project()
         .file(
             "Cargo.toml",
             r#"
@@ -340,7 +340,7 @@ fn doc_multiple_targets_same_name_lib() {
 
 #[test]
 fn doc_multiple_targets_same_name() {
-    let p = project("foo")
+    let p = project()
         .file(
             "Cargo.toml",
             r#"
@@ -390,7 +390,7 @@ fn doc_multiple_targets_same_name() {
 
 #[test]
 fn doc_multiple_targets_same_name_bin() {
-    let p = project("foo")
+    let p = project()
         .file(
             "Cargo.toml",
             r#"
@@ -434,7 +434,7 @@ fn doc_multiple_targets_same_name_bin() {
 
 #[test]
 fn doc_multiple_targets_same_name_undoced() {
-    let p = project("foo")
+    let p = project()
         .file(
             "Cargo.toml",
             r#"
@@ -472,7 +472,7 @@ fn doc_multiple_targets_same_name_undoced() {
 
 #[test]
 fn doc_lib_bin_same_name_documents_lib() {
-    let p = project("foo")
+    let p = project()
         .file(
             "Cargo.toml",
             r#"
@@ -525,7 +525,7 @@ fn doc_lib_bin_same_name_documents_lib() {
 
 #[test]
 fn doc_lib_bin_same_name_documents_lib_when_requested() {
-    let p = project("foo")
+    let p = project()
         .file(
             "Cargo.toml",
             r#"
@@ -578,7 +578,7 @@ fn doc_lib_bin_same_name_documents_lib_when_requested() {
 
 #[test]
 fn doc_lib_bin_same_name_documents_named_bin_when_requested() {
-    let p = project("foo")
+    let p = project()
         .file(
             "Cargo.toml",
             r#"
@@ -632,7 +632,7 @@ fn doc_lib_bin_same_name_documents_named_bin_when_requested() {
 
 #[test]
 fn doc_lib_bin_same_name_documents_bins_when_requested() {
-    let p = project("foo")
+    let p = project()
         .file(
             "Cargo.toml",
             r#"
@@ -686,7 +686,7 @@ fn doc_lib_bin_same_name_documents_bins_when_requested() {
 
 #[test]
 fn doc_dash_p() {
-    let p = project("foo")
+    let p = project()
         .file(
             "Cargo.toml",
             r#"
@@ -740,7 +740,7 @@ fn doc_dash_p() {
 
 #[test]
 fn doc_same_name() {
-    let p = project("foo")
+    let p = project()
         .file(
             "Cargo.toml",
             r#"
@@ -763,7 +763,7 @@ fn doc_same_name() {
 fn doc_target() {
     const TARGET: &'static str = "arm-unknown-linux-gnueabihf";
 
-    let p = project("foo")
+    let p = project()
         .file(
             "Cargo.toml",
             r#"
@@ -803,7 +803,7 @@ fn doc_target() {
 
 #[test]
 fn target_specific_not_documented() {
-    let p = project("foo")
+    let p = project()
         .file(
             "Cargo.toml",
             r#"
@@ -834,7 +834,7 @@ fn target_specific_not_documented() {
 
 #[test]
 fn output_not_captured() {
-    let p = project("foo")
+    let p = project()
         .file(
             "Cargo.toml",
             r#"
@@ -889,7 +889,7 @@ fn output_not_captured() {
 
 #[test]
 fn target_specific_documented() {
-    let p = project("foo")
+    let p = project()
         .file(
             "Cargo.toml",
             &format!(
@@ -939,7 +939,7 @@ fn target_specific_documented() {
 
 #[test]
 fn no_document_build_deps() {
-    let p = project("foo")
+    let p = project()
         .file(
             "Cargo.toml",
             r#"
@@ -983,7 +983,7 @@ fn no_document_build_deps() {
 
 #[test]
 fn doc_release() {
-    let p = project("foo")
+    let p = project()
         .file(
             "Cargo.toml",
             r#"
@@ -1011,7 +1011,7 @@ fn doc_release() {
 
 #[test]
 fn doc_multiple_deps() {
-    let p = project("foo")
+    let p = project()
         .file(
             "Cargo.toml",
             r#"
@@ -1083,7 +1083,7 @@ fn doc_multiple_deps() {
 
 #[test]
 fn features() {
-    let p = project("foo")
+    let p = project()
         .file(
             "Cargo.toml",
             r#"
@@ -1151,7 +1151,7 @@ fn features() {
 
 #[test]
 fn rerun_when_dir_removed() {
-    let p = project("foo")
+    let p = project()
         .file(
             "Cargo.toml",
             r#"
@@ -1181,7 +1181,7 @@ fn rerun_when_dir_removed() {
 
 #[test]
 fn document_only_lib() {
-    let p = project("foo")
+    let p = project()
         .file(
             "Cargo.toml",
             r#"
@@ -1218,7 +1218,7 @@ fn plugins_no_use_target() {
     if !cargotest::is_nightly() {
         return;
     }
-    let p = project("foo")
+    let p = project()
         .file(
             "Cargo.toml",
             r#"
@@ -1243,7 +1243,7 @@ fn plugins_no_use_target() {
 
 #[test]
 fn doc_all_workspace() {
-    let p = project("foo")
+    let p = project()
         .file(
             "Cargo.toml",
             r#"
@@ -1292,7 +1292,7 @@ fn doc_all_workspace() {
 
 #[test]
 fn doc_all_virtual_manifest() {
-    let p = project("workspace")
+    let p = project().at("workspace")
         .file(
             "Cargo.toml",
             r#"
@@ -1342,7 +1342,7 @@ fn doc_all_virtual_manifest() {
 
 #[test]
 fn doc_virtual_manifest_all_implied() {
-    let p = project("workspace")
+    let p = project().at("workspace")
         .file(
             "Cargo.toml",
             r#"
@@ -1392,7 +1392,7 @@ fn doc_virtual_manifest_all_implied() {
 
 #[test]
 fn doc_all_member_dependency_same_name() {
-    let p = project("workspace")
+    let p = project().at("workspace")
         .file(
             "Cargo.toml",
             r#"
@@ -1432,7 +1432,7 @@ fn doc_all_member_dependency_same_name() {
 
 #[test]
 fn doc_workspace_open_help_message() {
-    let p = project("foo")
+    let p = project()
         .file(
             "Cargo.toml",
             r#"
@@ -1483,7 +1483,7 @@ fn doc_workspace_open_help_message() {
 #[test]
 #[cfg(not(any(target_os = "windows", target_os = "macos")))]
 fn doc_workspace_open_different_library_and_package_names() {
-    let p = project("foo")
+    let p = project()
         .file(
             "Cargo.toml",
             r#"
@@ -1516,7 +1516,7 @@ fn doc_workspace_open_different_library_and_package_names() {
 #[test]
 #[cfg(not(any(target_os = "windows", target_os = "macos")))]
 fn doc_workspace_open_binary() {
-    let p = project("foo")
+    let p = project()
         .file(
             "Cargo.toml",
             r#"
@@ -1550,7 +1550,7 @@ fn doc_workspace_open_binary() {
 #[test]
 #[cfg(not(any(target_os = "windows", target_os = "macos")))]
 fn doc_workspace_open_binary_and_library() {
-    let p = project("foo")
+    let p = project()
         .file(
             "Cargo.toml",
             r#"
@@ -1591,7 +1591,7 @@ fn doc_edition() {
         // is stabilized.
         return;
     }
-    let p = project("foo")
+    let p = project()
         .file(
             "Cargo.toml",
             r#"
@@ -1625,7 +1625,7 @@ fn doc_edition() {
 // caused `cargo doc` to fail.
 #[test]
 fn issue_5345() {
-    let foo = project("foo")
+    let foo = project()
         .file(
             "Cargo.toml",
             r#"
@@ -1652,7 +1652,7 @@ fn issue_5345() {
 
 #[test]
 fn doc_private_items() {
-    let foo = project("foo")
+    let foo = project()
         .file(
             "Cargo.toml",
             r#"
