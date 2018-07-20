@@ -2,7 +2,7 @@ use std::path::Path;
 
 use ops;
 use util::{self, CargoResult, ProcessError};
-use core::{TargetKind, Workspace};
+use core::{TargetKind, Workspace, nightly_features_allowed};
 
 pub fn run(
     ws: &Workspace,
@@ -53,12 +53,22 @@ pub fn run(
     if bins.len() > 1 {
         if !options.filter.is_specific() {
             let names: Vec<&str> = bins.into_iter().map(|bin| bin.0).collect();
-            bail!(
-                "`cargo run` requires that a project only have one \
-                 executable; use the `--bin` option to specify which one \
-                 to run\navailable binaries: {}",
-                 names.join(", ")
-            )
+            if nightly_features_allowed() {
+                bail!(
+                    "`cargo run` could not determine which binary to run. \
+                    Use the `--bin` option to specify a binary, \
+                    or (on nightly) the `default-run` manifest key.\n\
+                    available binaries: {}",
+                    names.join(", ")
+                )
+            } else {
+                bail!(
+                    "`cargo run` requires that a project only have one \
+                    executable; use the `--bin` option to specify which one \
+                    to run\navailable binaries: {}",
+                    names.join(", ")
+                )
+            }
         } else {
             bail!(
                 "`cargo run` can run at most one executable, but \
