@@ -406,11 +406,12 @@ impl<'r> Requirements<'r> {
 
     fn require_value<'f>(&mut self, fv: &'f FeatureValue) -> CargoResult<()> {
         match fv {
-            FeatureValue::Feature(feat) => self.require_feature(*feat),
-            FeatureValue::Crate(dep) => Ok(self.require_dependency(*dep)),
+            FeatureValue::Feature(feat) => self.require_feature(*feat)?,
+            FeatureValue::Crate(dep) => self.require_dependency(*dep),
             FeatureValue::CrateFeature(dep, dep_feat) => {
-                Ok(self.require_crate_feature(*dep, *dep_feat))
+                self.require_crate_feature(*dep, *dep_feat)
             }
-        }
+        };
+        Ok(())
     }
 }

@@ -111,7 +111,7 @@ pub fn output_depinfo<'a, 'b>(cx: &mut Context<'a, 'b>, unit: &Unit<'a>) -> Carg
                 for dep in &deps {
                     write!(outfile, " {}", dep)?;
                 }
-                writeln!(outfile, "")?;
+                writeln!(outfile)?;
 
             // dep-info generation failed, so delete output file. This will
             // usually cause the build system to always rerun the build

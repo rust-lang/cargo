@@ -47,7 +47,7 @@ impl Drop for Profiler {
         });
         let duration = start.elapsed();
         let duration_ms =
-            duration.as_secs() * 1000 + u64::from(duration.subsec_nanos() / 1_000_000);
+            duration.as_secs() * 1000 + u64::from(duration.subsec_millis());
 
         let msg = (
             stack_len,

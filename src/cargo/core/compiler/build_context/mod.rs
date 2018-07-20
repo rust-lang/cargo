@@ -172,7 +172,7 @@ impl<'a, 'cfg> BuildContext<'a, 'cfg> {
             .requested_target
             .as_ref()
             .map(|s| s.as_str())
-            .unwrap_or(self.host_triple())
+            .unwrap_or_else(|| self.host_triple())
     }
 
     /// Get the target configuration for a particular host or target
@@ -193,7 +193,7 @@ impl<'a, 'cfg> BuildContext<'a, 'cfg> {
             self.config,
             &self.build_config.requested_target,
             self.host_triple(),
-            self.info(&unit.kind).cfg(),
+            self.info(unit.kind).cfg(),
             unit.kind,
             "RUSTFLAGS",
         )
@@ -204,7 +204,7 @@ impl<'a, 'cfg> BuildContext<'a, 'cfg> {
             self.config,
             &self.build_config.requested_target,
             self.host_triple(),
-            self.info(&unit.kind).cfg(),
+            self.info(unit.kind).cfg(),
             unit.kind,
             "RUSTDOCFLAGS",
         )
@@ -214,8 +214,8 @@ impl<'a, 'cfg> BuildContext<'a, 'cfg> {
         pkg.source_id().is_path() || self.config.extra_verbose()
     }
 
-    fn info(&self, kind: &Kind) -> &TargetInfo {
-        match *kind {
+    fn info(&self, kind: Kind) -> &TargetInfo {
+        match kind {
             Kind::Host => &self.host_info,
             Kind::Target => &self.target_info,
         }

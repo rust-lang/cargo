@@ -8,7 +8,7 @@ use std::process::{Command, Output, Stdio};
 use jobserver::Client;
 use shell_escape::escape;
 
-use util::{process_error, CargoError, CargoResult, CargoResultExt, read2};
+use util::{process_error, CargoResult, CargoResultExt, read2};
 
 /// A builder object for an external process, similar to `std::process::Command`.
 #[derive(Clone, Debug)]
@@ -280,7 +280,7 @@ impl ProcessBuilder {
                     Some(&output.status),
                     to_print,
                 );
-                return Err(CargoError::from(e).context(cx).into());
+                return Err(e.context(cx).into());
             }
         }
 

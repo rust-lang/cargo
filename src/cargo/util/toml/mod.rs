@@ -417,7 +417,7 @@ impl<'de> de::Deserialize<'de> for ProfilePackageSpec {
         } else {
             PackageIdSpec::parse(&string)
                 .map_err(de::Error::custom)
-                .map(|s| ProfilePackageSpec::Spec(s))
+                .map(ProfilePackageSpec::Spec)
         }
     }
 }
@@ -869,7 +869,7 @@ impl TomlManifest {
         {
             let mut names_sources = BTreeMap::new();
             for dep in &deps {
-                let name = dep.rename().unwrap_or(dep.name().as_str());
+                let name = dep.rename().unwrap_or_else(|| dep.name().as_str());
                 let prev = names_sources.insert(name.to_string(), dep.source_id());
                 if prev.is_some() && prev != Some(dep.source_id()) {
                     bail!(
@@ -1131,13 +1131,13 @@ impl TomlManifest {
         let build_rs = package_root.join("build.rs");
         match *build {
             Some(StringOrBool::Bool(false)) => None, // explicitly no build script
-            Some(StringOrBool::Bool(true)) => Some(build_rs.into()),
+            Some(StringOrBool::Bool(true)) => Some(build_rs),
             Some(StringOrBool::String(ref s)) => Some(PathBuf::from(s)),
             None => {
                 match fs::metadata(&build_rs) {
                     // If there is a build.rs file next to the Cargo.toml, assume it is
                     // a build script
-                    Ok(ref e) if e.is_file() => Some(build_rs.into()),
+                    Ok(ref e) if e.is_file() => Some(build_rs),
                     Ok(_) | Err(_) => None,
                 }
             }

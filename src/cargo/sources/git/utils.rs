@@ -189,7 +189,7 @@ impl GitDatabase {
         Ok(checkout)
     }
 
-    pub fn to_short_id(&self, revision: GitRevision) -> CargoResult<GitShortID> {
+    pub fn to_short_id(&self, revision: &GitRevision) -> CargoResult<GitShortID> {
         let obj = self.repo.find_object(revision.0, None)?;
         Ok(GitShortID(obj.short_id()?))
     }

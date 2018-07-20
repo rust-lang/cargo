@@ -21,3 +21,9 @@ impl Sha256 {
         ret
     }
 }
+
+impl Default for Sha256 {
+    fn default() -> Self {
+        Self::new()
+    }
+}

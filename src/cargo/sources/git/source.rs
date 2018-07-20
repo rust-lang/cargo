@@ -188,7 +188,7 @@ impl<'cfg> Source for GitSource<'cfg> {
         // Don’t use the full hash,
         // to contribute less to reaching the path length limit on Windows:
         // https://github.com/servo/servo/pull/14397
-        let short_id = db.to_short_id(actual_rev.clone()).unwrap();
+        let short_id = db.to_short_id(&actual_rev).unwrap();
 
         let checkout_path = lock.parent()
             .join("checkouts")

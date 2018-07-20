@@ -84,8 +84,7 @@ impl<N: Eq + Hash + Clone, E: Default> Graph<N, E> {
                 .filter(|&(_node, adjacent)| adjacent.contains_key(pkg))
                 // Note that we can have "cycles" introduced through dev-dependency
                 // edges, so make sure we don't loop infinitely.
-                .filter(|&(node, _)| !res.contains(&node))
-                .next()
+                .find(|&(node, _)| !res.contains(&node))
                 .map(|p| p.0)
         };
         while let Some(p) = first_pkg_depending_on(pkg, &result) {
