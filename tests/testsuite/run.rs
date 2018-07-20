@@ -282,6 +282,17 @@ fn too_many_bins() {
              to specify which one to run\navailable binaries: [..]\n",
         ),
     );
+
+    assert_that(
+        p.cargo("run").masquerade_as_nightly_cargo(),
+        // Using [..] here because the order is not stable
+        execs().with_status(101).with_stderr(
+            "[ERROR] `cargo run` could not determine which binary to run. \
+             Use the `--bin` option to specify a binary, or (on \
+             nightly) the `default-run` manifest key.\
+             \navailable binaries: [..]\n",
+        ),
+    );
 }
 
 #[test]
