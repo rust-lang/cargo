@@ -20,7 +20,7 @@ fn find_index() -> PathBuf {
 fn run_test(path_env: Option<&OsStr>) {
     const N: usize = 50;
 
-    let foo = project("foo")
+    let foo = project()
         .file(
             "Cargo.toml",
             r#"

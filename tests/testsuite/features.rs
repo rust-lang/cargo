@@ -9,7 +9,7 @@ use cargotest::support::registry::Package;
 
 #[test]
 fn invalid1() {
-    let p = project("foo")
+    let p = project()
         .file(
             "Cargo.toml",
             r#"
@@ -40,7 +40,7 @@ Caused by:
 
 #[test]
 fn invalid2() {
-    let p = project("foo")
+    let p = project()
         .file(
             "Cargo.toml",
             r#"
@@ -74,7 +74,7 @@ Caused by:
 
 #[test]
 fn invalid3() {
-    let p = project("foo")
+    let p = project()
         .file(
             "Cargo.toml",
             r#"
@@ -109,7 +109,7 @@ Consider adding `optional = true` to the dependency
 
 #[test]
 fn invalid4() {
-    let p = project("foo")
+    let p = project()
         .file(
             "Cargo.toml",
             r#"
@@ -171,7 +171,7 @@ failed to select a version for `bar` which could resolve this conflict",
 
 #[test]
 fn invalid5() {
-    let p = project("foo")
+    let p = project()
         .file(
             "Cargo.toml",
             r#"
@@ -203,7 +203,7 @@ Caused by:
 
 #[test]
 fn invalid6() {
-    let p = project("foo")
+    let p = project()
         .file(
             "Cargo.toml",
             r#"
@@ -234,7 +234,7 @@ Caused by:
 
 #[test]
 fn invalid7() {
-    let p = project("foo")
+    let p = project()
         .file(
             "Cargo.toml",
             r#"
@@ -266,7 +266,7 @@ Caused by:
 
 #[test]
 fn invalid8() {
-    let p = project("foo")
+    let p = project()
         .file(
             "Cargo.toml",
             r#"
@@ -303,7 +303,7 @@ fn invalid8() {
 
 #[test]
 fn invalid9() {
-    let p = project("foo")
+    let p = project()
         .file(
             "Cargo.toml",
             r#"
@@ -341,7 +341,7 @@ that name, but only optional dependencies can be used as features. [..]
 
 #[test]
 fn invalid10() {
-    let p = project("foo")
+    let p = project()
         .file(
             "Cargo.toml",
             r#"
@@ -394,7 +394,7 @@ that name, but only optional dependencies can be used as features. [..]
 
 #[test]
 fn no_transitive_dep_feature_requirement() {
-    let p = project("foo")
+    let p = project()
         .file(
             "Cargo.toml",
             r#"
@@ -466,7 +466,7 @@ fn no_transitive_dep_feature_requirement() {
 
 #[test]
 fn no_feature_doesnt_build() {
-    let p = project("foo")
+    let p = project()
         .file(
             "Cargo.toml",
             r#"
@@ -537,7 +537,7 @@ fn no_feature_doesnt_build() {
 
 #[test]
 fn default_feature_pulled_in() {
-    let p = project("foo")
+    let p = project()
         .file(
             "Cargo.toml",
             r#"
@@ -611,7 +611,7 @@ fn default_feature_pulled_in() {
 
 #[test]
 fn cyclic_feature() {
-    let p = project("foo")
+    let p = project()
         .file(
             "Cargo.toml",
             r#"
@@ -637,7 +637,7 @@ fn cyclic_feature() {
 
 #[test]
 fn cyclic_feature2() {
-    let p = project("foo")
+    let p = project()
         .file(
             "Cargo.toml",
             r#"
@@ -659,7 +659,7 @@ fn cyclic_feature2() {
 
 #[test]
 fn groups_on_groups_on_groups() {
-    let p = project("foo")
+    let p = project()
         .file(
             "Cargo.toml",
             r#"
@@ -735,7 +735,7 @@ fn groups_on_groups_on_groups() {
 
 #[test]
 fn many_cli_features() {
-    let p = project("foo")
+    let p = project()
         .file(
             "Cargo.toml",
             r#"
@@ -801,7 +801,7 @@ fn many_cli_features() {
 
 #[test]
 fn union_features() {
-    let p = project("foo")
+    let p = project()
         .file(
             "Cargo.toml",
             r#"
@@ -886,7 +886,7 @@ fn union_features() {
 
 #[test]
 fn many_features_no_rebuilds() {
-    let p = project("foo")
+    let p = project()
         .file(
             "Cargo.toml",
             r#"
@@ -946,7 +946,7 @@ fn many_features_no_rebuilds() {
 // Tests that all cmd lines work with `--features ""`
 #[test]
 fn empty_features() {
-    let p = project("foo")
+    let p = project()
         .file(
             "Cargo.toml",
             r#"
@@ -968,7 +968,7 @@ fn empty_features() {
 // Tests that all cmd lines work with `--features ""`
 #[test]
 fn transitive_features() {
-    let p = project("foo")
+    let p = project()
         .file(
             "Cargo.toml",
             r#"
@@ -1020,7 +1020,7 @@ fn transitive_features() {
 
 #[test]
 fn everything_in_the_lockfile() {
-    let p = project("foo")
+    let p = project()
         .file(
             "Cargo.toml",
             r#"
@@ -1105,7 +1105,7 @@ fn everything_in_the_lockfile() {
 
 #[test]
 fn no_rebuild_when_frobbing_default_feature() {
-    let p = project("foo")
+    let p = project()
         .file(
             "Cargo.toml",
             r#"
@@ -1156,7 +1156,7 @@ fn no_rebuild_when_frobbing_default_feature() {
 
 #[test]
 fn unions_work_with_no_default_features() {
-    let p = project("foo")
+    let p = project()
         .file(
             "Cargo.toml",
             r#"
@@ -1219,7 +1219,7 @@ fn unions_work_with_no_default_features() {
 
 #[test]
 fn optional_and_dev_dep() {
-    let p = project("foo")
+    let p = project()
         .file(
             "Cargo.toml",
             r#"
@@ -1260,7 +1260,7 @@ fn optional_and_dev_dep() {
 
 #[test]
 fn activating_feature_activates_dep() {
-    let p = project("foo")
+    let p = project()
         .file(
             "Cargo.toml",
             r#"
@@ -1314,7 +1314,7 @@ fn activating_feature_activates_dep() {
 
 #[test]
 fn dep_feature_in_cmd_line() {
-    let p = project("foo")
+    let p = project()
         .file(
             "Cargo.toml",
             r#"
@@ -1412,7 +1412,7 @@ fn dep_feature_in_cmd_line() {
 
 #[test]
 fn all_features_flag_enables_all_features() {
-    let p = project("foo")
+    let p = project()
         .file(
             "Cargo.toml",
             r#"
@@ -1468,7 +1468,7 @@ fn all_features_flag_enables_all_features() {
 
 #[test]
 fn many_cli_features_comma_delimited() {
-    let p = project("foo")
+    let p = project()
         .file(
             "Cargo.toml",
             r#"
@@ -1534,7 +1534,7 @@ fn many_cli_features_comma_delimited() {
 
 #[test]
 fn many_cli_features_comma_and_space_delimited() {
-    let p = project("foo")
+    let p = project()
         .file(
             "Cargo.toml",
             r#"
@@ -1636,7 +1636,7 @@ fn many_cli_features_comma_and_space_delimited() {
 fn combining_features_and_package() {
     Package::new("dep", "1.0.0").publish();
 
-    let p = project("ws")
+    let p = project().at("ws")
         .file(
             "Cargo.toml",
             r#"
@@ -1721,7 +1721,7 @@ fn combining_features_and_package() {
 
 #[test]
 fn namespaced_invalid_feature() {
-    let p = project("foo")
+    let p = project()
         .file(
             "Cargo.toml",
             r#"
@@ -1755,7 +1755,7 @@ Caused by:
 
 #[test]
 fn namespaced_invalid_dependency() {
-    let p = project("foo")
+    let p = project()
         .file(
             "Cargo.toml",
             r#"
@@ -1789,7 +1789,7 @@ Caused by:
 
 #[test]
 fn namespaced_non_optional_dependency() {
-    let p = project("foo")
+    let p = project()
         .file(
             "Cargo.toml",
             r#"
@@ -1827,7 +1827,7 @@ Consider adding `optional = true` to the dependency
 
 #[test]
 fn namespaced_implicit_feature() {
-    let p = project("foo")
+    let p = project()
         .file(
             "Cargo.toml",
             r#"
@@ -1857,7 +1857,7 @@ fn namespaced_implicit_feature() {
 
 #[test]
 fn namespaced_shadowed_dep() {
-    let p = project("foo")
+    let p = project()
         .file(
             "Cargo.toml",
             r#"
@@ -1895,7 +1895,7 @@ Consider adding `crate:baz` to this feature's requirements.
 
 #[test]
 fn namespaced_shadowed_non_optional() {
-    let p = project("foo")
+    let p = project()
         .file(
             "Cargo.toml",
             r#"
@@ -1934,7 +1934,7 @@ Consider adding `crate:baz` to this feature's requirements and marking the depen
 
 #[test]
 fn namespaced_implicit_non_optional() {
-    let p = project("foo")
+    let p = project()
         .file(
             "Cargo.toml",
             r#"
@@ -1972,7 +1972,7 @@ A non-optional dependency of the same name is defined; consider adding `optional
 
 #[test]
 fn namespaced_same_name() {
-    let p = project("foo")
+    let p = project()
         .file(
             "Cargo.toml",
             r#"
@@ -2004,7 +2004,7 @@ fn namespaced_same_name() {
 fn only_dep_is_optional() {
     Package::new("bar", "0.1.0").publish();
 
-    let p = project("foo")
+    let p = project()
         .file(
             "Cargo.toml",
             r#"
@@ -2036,7 +2036,7 @@ fn only_dep_is_optional() {
 fn all_features_all_crates() {
     Package::new("bar", "0.1.0").publish();
 
-    let p = project("foo")
+    let p = project()
         .file(
             "Cargo.toml",
             r#"

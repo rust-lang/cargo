@@ -126,7 +126,6 @@ impl ProjectBuilder {
         }
     }
 
-    #[allow(dead_code)]
     pub fn at<P: AsRef<Path>>(mut self, path: P) -> Self {
         self.root = Project::Rooted(paths::root().join(path));
         self
@@ -351,8 +350,8 @@ impl Project {
 }
 
 // Generates a project layout
-pub fn project(name: &str) -> ProjectBuilder {
-    ProjectBuilder::new(paths::root().join(name))
+pub fn project() -> ProjectBuilder {
+    ProjectBuilder::new(paths::root().join("foo"))
 }
 
 // Generates a project layout inside our fake home dir

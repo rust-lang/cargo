@@ -10,7 +10,7 @@ use hamcrest::assert_that;
 
 #[test]
 fn features_are_quoted() {
-    let p = project("foo")
+    let p = project()
         .file(
             "Cargo.toml",
             r#"

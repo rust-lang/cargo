@@ -80,7 +80,7 @@ pub fn new<F>(name: &str, callback: F) -> Result<Project, ProcessError>
 where
     F: FnOnce(ProjectBuilder) -> ProjectBuilder,
 {
-    let mut git_project = project(name);
+    let mut git_project = project().at(name);
     git_project = callback(git_project);
     let git_project = git_project.build();
 

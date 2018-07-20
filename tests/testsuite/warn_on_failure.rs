@@ -37,7 +37,7 @@ fn make_lib(lib_src: &str) {
 }
 
 fn make_upstream(main_src: &str) -> Project {
-    project("bar")
+    project().at("bar")
         .file(
             "Cargo.toml",
             r#"

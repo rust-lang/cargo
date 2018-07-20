@@ -23,7 +23,7 @@ fn pkg(name: &str, vers: &str) {
 
 #[test]
 fn multiple_installs() {
-    let p = project("foo")
+    let p = project()
         .file(
             "a/Cargo.toml",
             r#"
@@ -102,7 +102,7 @@ fn concurrent_installs() {
 
 #[test]
 fn one_install_should_be_bad() {
-    let p = project("foo")
+    let p = project()
         .file(
             "a/Cargo.toml",
             r#"
@@ -168,7 +168,7 @@ fn multiple_registry_fetches() {
     }
     pkg.publish();
 
-    let p = project("foo")
+    let p = project()
         .file(
             "a/Cargo.toml",
             r#"
@@ -254,7 +254,7 @@ fn git_same_repo_different_tags() {
     git::commit(&repo);
     git::tag(&repo, "tag2");
 
-    let p = project("foo")
+    let p = project()
         .file(
             "a/Cargo.toml",
             &format!(
@@ -333,7 +333,7 @@ fn git_same_branch_different_revs() {
             .file("src/lib.rs", "pub fn f1() {}")
     }).unwrap();
 
-    let p = project("foo")
+    let p = project()
         .file(
             "a/Cargo.toml",
             &format!(
@@ -411,7 +411,7 @@ fn git_same_branch_different_revs() {
 
 #[test]
 fn same_project() {
-    let p = project("foo")
+    let p = project()
         .file(
             "Cargo.toml",
             r#"
@@ -447,7 +447,7 @@ fn same_project() {
 #[test]
 #[cfg_attr(target_os = "windows", ignore)]
 fn killing_cargo_releases_the_lock() {
-    let p = project("foo")
+    let p = project()
         .file(
             "Cargo.toml",
             r#"
@@ -508,7 +508,7 @@ fn killing_cargo_releases_the_lock() {
 
 #[test]
 fn debug_release_ok() {
-    let p = project("foo")
+    let p = project()
         .file(
             "Cargo.toml",
             r#"
@@ -584,7 +584,7 @@ fn no_deadlock_with_git_dependencies() {
             .file("src/lib.rs", "")
     }).unwrap();
 
-    let p = project("foo")
+    let p = project()
         .file(
             "Cargo.toml",
             &format!(

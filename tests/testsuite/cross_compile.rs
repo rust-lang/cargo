@@ -9,7 +9,7 @@ fn simple_cross() {
         return;
     }
 
-    let p = project("foo")
+    let p = project()
         .file(
             "Cargo.toml",
             r#"
@@ -64,7 +64,7 @@ fn simple_cross_config() {
         return;
     }
 
-    let p = project("foo")
+    let p = project()
         .file(
             ".cargo/config",
             &format!(
@@ -126,7 +126,7 @@ fn simple_deps() {
         return;
     }
 
-    let p = project("foo")
+    let p = project()
         .file(
             "Cargo.toml",
             r#"
@@ -147,7 +147,7 @@ fn simple_deps() {
         "#,
         )
         .build();
-    let _p2 = project("bar")
+    let _p2 = project().at("bar")
         .file(
             "Cargo.toml",
             r#"
@@ -182,7 +182,7 @@ fn plugin_deps() {
         return;
     }
 
-    let foo = project("foo")
+    let foo = project()
         .file(
             "Cargo.toml",
             r#"
@@ -210,7 +210,7 @@ fn plugin_deps() {
         "#,
         )
         .build();
-    let _bar = project("bar")
+    let _bar = project().at("bar")
         .file(
             "Cargo.toml",
             r#"
@@ -251,7 +251,7 @@ fn plugin_deps() {
         "#,
         )
         .build();
-    let _baz = project("baz")
+    let _baz = project().at("baz")
         .file(
             "Cargo.toml",
             r#"
@@ -286,7 +286,7 @@ fn plugin_to_the_max() {
         return;
     }
 
-    let foo = project("foo")
+    let foo = project()
         .file(
             "Cargo.toml",
             r#"
@@ -314,7 +314,7 @@ fn plugin_to_the_max() {
         "#,
         )
         .build();
-    let _bar = project("bar")
+    let _bar = project().at("bar")
         .file(
             "Cargo.toml",
             r#"
@@ -362,7 +362,7 @@ fn plugin_to_the_max() {
         "#,
         )
         .build();
-    let _baz = project("baz")
+    let _baz = project().at("baz")
         .file(
             "Cargo.toml",
             r#"
@@ -400,7 +400,7 @@ fn linker_and_ar() {
     }
 
     let target = cross_compile::alternate();
-    let p = project("foo")
+    let p = project()
         .file(
             ".cargo/config",
             &format!(
@@ -457,7 +457,7 @@ fn plugin_with_extra_dylib_dep() {
         return;
     }
 
-    let foo = project("foo")
+    let foo = project()
         .file(
             "Cargo.toml",
             r#"
@@ -480,7 +480,7 @@ fn plugin_with_extra_dylib_dep() {
         "#,
         )
         .build();
-    let _bar = project("bar")
+    let _bar = project().at("bar")
         .file(
             "Cargo.toml",
             r#"
@@ -514,7 +514,7 @@ fn plugin_with_extra_dylib_dep() {
         "#,
         )
         .build();
-    let _baz = project("baz")
+    let _baz = project().at("baz")
         .file(
             "Cargo.toml",
             r#"
@@ -544,7 +544,7 @@ fn cross_tests() {
         return;
     }
 
-    let p = project("foo")
+    let p = project()
         .file(
             "Cargo.toml",
             r#"
@@ -610,7 +610,7 @@ fn no_cross_doctests() {
         return;
     }
 
-    let p = project("foo")
+    let p = project()
         .file(
             "Cargo.toml",
             r#"
@@ -685,7 +685,7 @@ fn simple_cargo_run() {
         return;
     }
 
-    let p = project("foo")
+    let p = project()
         .file(
             "Cargo.toml",
             r#"
@@ -723,7 +723,7 @@ fn cross_with_a_build_script() {
     }
 
     let target = cross_compile::alternate();
-    let p = project("foo")
+    let p = project()
         .file(
             "Cargo.toml",
             r#"
@@ -787,7 +787,7 @@ fn build_script_needed_for_host_and_target() {
 
     let target = cross_compile::alternate();
     let host = rustc_host();
-    let p = project("foo")
+    let p = project()
         .file(
             "Cargo.toml",
             r#"
@@ -916,7 +916,7 @@ fn build_deps_for_the_right_arch() {
         return;
     }
 
-    let p = project("foo")
+    let p = project()
         .file(
             "Cargo.toml",
             r#"
@@ -975,7 +975,7 @@ fn build_script_only_host() {
         return;
     }
 
-    let p = project("foo")
+    let p = project()
         .file(
             "Cargo.toml",
             r#"
@@ -1033,7 +1033,7 @@ fn plugin_build_script_right_arch() {
     if cross_compile::disabled() {
         return;
     }
-    let p = project("foo")
+    let p = project()
         .file(
             "Cargo.toml",
             r#"
@@ -1077,7 +1077,7 @@ fn build_script_with_platform_specific_dependencies() {
 
     let target = cross_compile::alternate();
     let host = rustc_host();
-    let p = project("foo")
+    let p = project()
         .file(
             "Cargo.toml",
             r#"
@@ -1162,7 +1162,7 @@ fn platform_specific_dependencies_do_not_leak() {
 
     let target = cross_compile::alternate();
     let host = rustc_host();
-    let p = project("foo")
+    let p = project()
         .file(
             "Cargo.toml",
             r#"
@@ -1225,7 +1225,7 @@ fn platform_specific_variables_reflected_in_build_scripts() {
 
     let target = cross_compile::alternate();
     let host = rustc_host();
-    let p = project("foo")
+    let p = project()
         .file(
             "Cargo.toml",
             &format!(
@@ -1324,7 +1324,7 @@ fn cross_test_dylib() {
 
     let target = cross_compile::alternate();
 
-    let p = project("foo")
+    let p = project()
         .file(
             "Cargo.toml",
             r#"

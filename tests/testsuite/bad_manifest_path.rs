@@ -2,7 +2,7 @@ use cargotest::support::{basic_bin_manifest, execs, main_file, project};
 use hamcrest::assert_that;
 
 fn assert_not_a_cargo_toml(command: &str, manifest_path_argument: &str) {
-    let p = project("foo")
+    let p = project()
         .file("Cargo.toml", &basic_bin_manifest("foo"))
         .file("src/foo.rs", &main_file(r#""i am foo""#, &[]))
         .build();
@@ -20,7 +20,7 @@ fn assert_not_a_cargo_toml(command: &str, manifest_path_argument: &str) {
 }
 
 fn assert_cargo_toml_doesnt_exist(command: &str, manifest_path_argument: &str) {
-    let p = project("foo").build();
+    let p = project().build();
     let expected_path = manifest_path_argument
         .split('/')
         .collect::<Vec<_>>()
@@ -320,7 +320,7 @@ fn update_dir_to_nonexistent_cargo_toml() {
 
 #[test]
 fn verify_project_dir_containing_cargo_toml() {
-    let p = project("foo")
+    let p = project()
         .file("Cargo.toml", &basic_bin_manifest("foo"))
         .file("src/foo.rs", &main_file(r#""i am foo""#, &[]))
         .build();
@@ -339,7 +339,7 @@ fn verify_project_dir_containing_cargo_toml() {
 
 #[test]
 fn verify_project_dir_plus_file() {
-    let p = project("foo")
+    let p = project()
         .file("Cargo.toml", &basic_bin_manifest("foo"))
         .file("src/foo.rs", &main_file(r#""i am foo""#, &[]))
         .build();
@@ -358,7 +358,7 @@ fn verify_project_dir_plus_file() {
 
 #[test]
 fn verify_project_dir_plus_path() {
-    let p = project("foo")
+    let p = project()
         .file("Cargo.toml", &basic_bin_manifest("foo"))
         .file("src/foo.rs", &main_file(r#""i am foo""#, &[]))
         .build();
@@ -377,7 +377,7 @@ fn verify_project_dir_plus_path() {
 
 #[test]
 fn verify_project_dir_to_nonexistent_cargo_toml() {
-    let p = project("foo").build();
+    let p = project().build();
     assert_that(
         p.cargo("verify-project")
             .arg("--manifest-path")

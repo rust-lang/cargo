@@ -7,7 +7,7 @@ fn custom_target_minimal() {
     if !is_nightly() {
         return;
     }
-    let p = project("foo")
+    let p = project()
         .file(
             "Cargo.toml",
             r#"
@@ -79,7 +79,7 @@ fn custom_target_dependency() {
     if !is_nightly() {
         return;
     }
-    let p = project("foo")
+    let p = project()
         .file(
             "Cargo.toml",
             r#"

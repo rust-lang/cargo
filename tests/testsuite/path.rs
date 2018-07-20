@@ -12,7 +12,7 @@ use hamcrest::{assert_that, existing_file, is_not};
 #[cfg(not(windows))] // I have no idea why this is failing spuriously on
                      // Windows, for more info see #3466.
 fn cargo_compile_with_nested_deps_shorthand() {
-    let p = project("foo")
+    let p = project()
         .file(
             "Cargo.toml",
             r#"
@@ -134,7 +134,7 @@ fn cargo_compile_with_nested_deps_shorthand() {
 
 #[test]
 fn cargo_compile_with_root_dev_deps() {
-    let p = project("foo")
+    let p = project()
         .file(
             "Cargo.toml",
             r#"
@@ -155,7 +155,7 @@ fn cargo_compile_with_root_dev_deps() {
         )
         .file("src/main.rs", &main_file(r#""{}", bar::gimme()"#, &["bar"]))
         .build();
-    let _p2 = project("bar")
+    let _p2 = project().at("bar")
         .file(
             "Cargo.toml",
             r#"
@@ -181,7 +181,7 @@ fn cargo_compile_with_root_dev_deps() {
 
 #[test]
 fn cargo_compile_with_root_dev_deps_with_testing() {
-    let p = project("foo")
+    let p = project()
         .file(
             "Cargo.toml",
             r#"
@@ -202,7 +202,7 @@ fn cargo_compile_with_root_dev_deps_with_testing() {
         )
         .file("src/main.rs", &main_file(r#""{}", bar::gimme()"#, &["bar"]))
         .build();
-    let _p2 = project("bar")
+    let _p2 = project().at("bar")
         .file(
             "Cargo.toml",
             r#"
@@ -239,7 +239,7 @@ fn cargo_compile_with_root_dev_deps_with_testing() {
 
 #[test]
 fn cargo_compile_with_transitive_dev_deps() {
-    let p = project("foo")
+    let p = project()
         .file(
             "Cargo.toml",
             r#"
@@ -303,7 +303,7 @@ fn cargo_compile_with_transitive_dev_deps() {
 
 #[test]
 fn no_rebuild_dependency() {
-    let p = project("foo")
+    let p = project()
         .file(
             "Cargo.toml",
             r#"
@@ -379,7 +379,7 @@ fn no_rebuild_dependency() {
 
 #[test]
 fn deep_dependencies_trigger_rebuild() {
-    let p = project("foo")
+    let p = project()
         .file(
             "Cargo.toml",
             r#"
@@ -510,7 +510,7 @@ fn deep_dependencies_trigger_rebuild() {
 
 #[test]
 fn no_rebuild_two_deps() {
-    let p = project("foo")
+    let p = project()
         .file(
             "Cargo.toml",
             r#"
@@ -594,7 +594,7 @@ fn no_rebuild_two_deps() {
 
 #[test]
 fn nested_deps_recompile() {
-    let p = project("foo")
+    let p = project()
         .file(
             "Cargo.toml",
             r#"
@@ -665,7 +665,7 @@ fn nested_deps_recompile() {
 
 #[test]
 fn error_message_for_missing_manifest() {
-    let p = project("foo")
+    let p = project()
         .file(
             "Cargo.toml",
             r#"
@@ -705,7 +705,7 @@ Caused by:
 
 #[test]
 fn override_relative() {
-    let bar = project("bar")
+    let bar = project().at("bar")
         .file(
             "Cargo.toml",
             r#"
@@ -725,7 +725,7 @@ fn override_relative() {
         .write_all(br#"paths = ["bar"]"#)
         .unwrap();
 
-    let p = project("foo")
+    let p = project()
         .file(
             "Cargo.toml",
             &format!(
@@ -749,7 +749,7 @@ fn override_relative() {
 
 #[test]
 fn override_self() {
-    let bar = project("bar")
+    let bar = project().at("bar")
         .file(
             "Cargo.toml",
             r#"
@@ -763,7 +763,7 @@ fn override_self() {
         .file("src/lib.rs", "")
         .build();
 
-    let p = project("foo");
+    let p = project();
     let root = p.root().clone();
     let p = p.file(
         ".cargo/config",
@@ -799,7 +799,7 @@ fn override_self() {
 
 #[test]
 fn override_path_dep() {
-    let bar = project("bar")
+    let bar = project().at("bar")
         .file(
             "p1/Cargo.toml",
             r#"
@@ -825,7 +825,7 @@ fn override_path_dep() {
         .file("p2/src/lib.rs", "")
         .build();
 
-    let p = project("foo")
+    let p = project()
         .file(
             ".cargo/config",
             &format!(
@@ -861,7 +861,7 @@ fn override_path_dep() {
 
 #[test]
 fn path_dep_build_cmd() {
-    let p = project("foo")
+    let p = project()
         .file(
             "Cargo.toml",
             r#"
@@ -952,7 +952,7 @@ fn path_dep_build_cmd() {
 
 #[test]
 fn dev_deps_no_rebuild_lib() {
-    let p = project("foo")
+    let p = project()
         .file(
             "Cargo.toml",
             r#"
@@ -1016,7 +1016,7 @@ fn dev_deps_no_rebuild_lib() {
 
 #[test]
 fn custom_target_no_rebuild() {
-    let p = project("foo")
+    let p = project()
         .file(
             "Cargo.toml",
             r#"
@@ -1084,7 +1084,7 @@ fn custom_target_no_rebuild() {
 
 #[test]
 fn override_and_depend() {
-    let p = project("foo")
+    let p = project()
         .file(
             "a/a1/Cargo.toml",
             r#"
@@ -1142,7 +1142,7 @@ fn override_and_depend() {
 
 #[test]
 fn missing_path_dependency() {
-    let p = project("foo")
+    let p = project()
         .file(
             "Cargo.toml",
             r#"
@@ -1181,7 +1181,7 @@ Caused by:
 fn invalid_path_dep_in_workspace_with_lockfile() {
     Package::new("bar", "1.0.0").publish();
 
-    let p = project("foo")
+    let p = project()
         .file(
             "Cargo.toml",
             r#"
@@ -1248,7 +1248,7 @@ required by package `foo v0.5.0 ([..])`
 
 #[test]
 fn workspace_produces_rlib() {
-    let p = project("foo")
+    let p = project()
         .file(
             "Cargo.toml",
             r#"
@@ -1287,7 +1287,7 @@ fn workspace_produces_rlib() {
 
 #[test]
 fn thin_lto_works() {
-    let p = project("foo")
+    let p = project()
         .file(
             "Cargo.toml",
             r#"

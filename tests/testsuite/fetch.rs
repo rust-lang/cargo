@@ -5,7 +5,7 @@ use hamcrest::assert_that;
 
 #[test]
 fn no_deps() {
-    let p = project("foo")
+    let p = project()
         .file(
             "Cargo.toml",
             r#"
@@ -55,7 +55,7 @@ fn fetch_all_platform_dependencies_when_no_target_is_given() {
 
     let target = cross_compile::alternate();
     let host = rustc_host();
-    let p = project("foo")
+    let p = project()
         .file(
             "Cargo.toml",
             &format!(
@@ -115,7 +115,7 @@ fn fetch_platform_specific_dependencies() {
 
     let target = cross_compile::alternate();
     let host = rustc_host();
-    let p = project("foo")
+    let p = project()
         .file(
             "Cargo.toml",
             &format!(

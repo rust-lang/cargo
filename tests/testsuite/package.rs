@@ -13,7 +13,7 @@ use tar::Archive;
 
 #[test]
 fn simple() {
-    let p = project("foo")
+    let p = project()
         .file("Cargo.toml", r#"
             [project]
             name = "foo"
@@ -78,7 +78,7 @@ src[/]main.rs
 
 #[test]
 fn metadata_warning() {
-    let p = project("all")
+    let p = project().at("all")
         .file(
             "Cargo.toml",
             r#"
@@ -111,7 +111,7 @@ See http://doc.crates.io/manifest.html#package-metadata for more info.
         )),
     );
 
-    let p = project("one")
+    let p = project().at("one")
         .file(
             "Cargo.toml",
             r#"
@@ -144,7 +144,7 @@ See http://doc.crates.io/manifest.html#package-metadata for more info.
         )),
     );
 
-    let p = project("all")
+    let p = project().at("all")
         .file(
             "Cargo.toml",
             r#"
@@ -247,7 +247,7 @@ See http://doc.crates.io/manifest.html#package-metadata for more info.
 
 #[test]
 fn package_verification() {
-    let p = project("all")
+    let p = project().at("all")
         .file(
             "Cargo.toml",
             r#"
@@ -283,7 +283,7 @@ See http://doc.crates.io/manifest.html#package-metadata for more info.
 
 #[test]
 fn path_dependency_no_version() {
-    let p = project("foo")
+    let p = project()
         .file(
             "Cargo.toml",
             r#"
@@ -326,7 +326,7 @@ dependency `bar` does not specify a version.
 
 #[test]
 fn exclude() {
-    let p = project("foo")
+    let p = project()
         .file("Cargo.toml", r#"
             [project]
             name = "foo"
@@ -466,7 +466,7 @@ src[/]main.rs
 
 #[test]
 fn include() {
-    let p = project("foo")
+    let p = project()
         .file("Cargo.toml", r#"
             [project]
             name = "foo"
@@ -499,7 +499,7 @@ See http://doc.crates.io/manifest.html#package-metadata for more info.
 
 #[test]
 fn package_lib_with_bin() {
-    let p = project("foo")
+    let p = project()
         .file(
             "Cargo.toml",
             r#"
@@ -623,7 +623,7 @@ fn ignore_nested() {
     let main_rs = r#"
             fn main() { println!("hello"); }
         "#;
-    let p = project("nested")
+    let p = project().at("nested")
         .file("Cargo.toml", cargo_toml)
         .file("src/main.rs", main_rs)
         // If a project happens to contain a copy of itself, we should
@@ -682,7 +682,7 @@ src[..]main.rs
 #[cfg(unix)] // windows doesn't allow these characters in filenames
 #[test]
 fn package_weird_characters() {
-    let p = project("foo")
+    let p = project()
         .file(
             "Cargo.toml",
             r#"
@@ -719,7 +719,7 @@ Caused by:
 
 #[test]
 fn repackage_on_source_change() {
-    let p = project("foo")
+    let p = project()
         .file(
             "Cargo.toml",
             r#"
@@ -795,7 +795,7 @@ See [..]
 fn broken_symlink() {
     use std::os::unix::fs;
 
-    let p = project("foo")
+    let p = project()
         .file(
             "Cargo.toml",
             r#"
@@ -837,7 +837,7 @@ Caused by:
 
 #[test]
 fn do_not_package_if_repository_is_dirty() {
-    let p = project("foo").build();
+    let p = project().build();
 
     // Create a Git repository containing a minimal Rust project.
     let _ = git::repo(&paths::root().join("foo"))
@@ -894,7 +894,7 @@ fn generated_manifest() {
     Package::new("def", "1.0.0").alternative(true).publish();
     Package::new("ghi", "1.0.0").publish();
 
-    let p = project("foo")
+    let p = project()
         .file(
             "Cargo.toml",
             r#"
@@ -1001,7 +1001,7 @@ version = "1.0"
 
 #[test]
 fn ignore_workspace_specifier() {
-    let p = project("foo")
+    let p = project()
         .file(
             "Cargo.toml",
             r#"
@@ -1076,7 +1076,7 @@ authors = []
 fn package_two_kinds_of_deps() {
     Package::new("other", "1.0.0").publish();
     Package::new("other1", "1.0.0").publish();
-    let p = project("foo")
+    let p = project()
         .file(
             "Cargo.toml",
             r#"
@@ -1101,7 +1101,7 @@ fn package_two_kinds_of_deps() {
 
 #[test]
 fn test_edition() {
-    let p = project("foo")
+    let p = project()
         .file(
             "Cargo.toml",
             r#"
@@ -1132,7 +1132,7 @@ fn test_edition() {
 #[test]
 fn test_edition_missing() {
     // no edition = 2015
-    let p = project("foo")
+    let p = project()
         .file(
             "Cargo.toml",
             r#"
@@ -1161,7 +1161,7 @@ fn test_edition_missing() {
 
 #[test]
 fn test_edition_malformed() {
-    let p = project("foo")
+    let p = project()
         .file(
             "Cargo.toml",
             r#"
@@ -1194,7 +1194,7 @@ Caused by:
 
 #[test]
 fn test_edition_nightly() {
-    let p = project("foo")
+    let p = project()
         .file(
             "Cargo.toml",
             r#"
@@ -1228,7 +1228,7 @@ consider adding `cargo-features = [\"edition\"]` to the manifest
 
 #[test]
 fn package_lockfile() {
-    let p = project("foo")
+    let p = project()
         .file(
             "Cargo.toml",
             r#"
@@ -1300,7 +1300,7 @@ src[/]main.rs
 
 #[test]
 fn package_lockfile_git_repo() {
-    let p = project("foo").build();
+    let p = project().build();
 
     // Create a Git repository containing a minimal Rust project.
     let _ = git::repo(&paths::root().join("foo"))
@@ -1336,7 +1336,7 @@ src/main.rs
 
 #[test]
 fn no_lock_file_with_library() {
-    let p = project("foo")
+    let p = project()
         .file(
             "Cargo.toml",
             r#"
@@ -1373,7 +1373,7 @@ fn no_lock_file_with_library() {
 
 #[test]
 fn lock_file_and_workspace() {
-    let p = project("foo")
+    let p = project()
         .file(
             "Cargo.toml",
             r#"
@@ -1419,7 +1419,7 @@ fn lock_file_and_workspace() {
 
 #[test]
 fn do_not_package_if_src_was_modified() {
-    let p = project("foo")
+    let p = project()
         .file("Cargo.toml", r#"
             [project]
             name = "foo"

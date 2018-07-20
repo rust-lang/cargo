@@ -6,7 +6,7 @@ use hamcrest::assert_that;
 
 #[test]
 fn profile_overrides() {
-    let p = project("foo")
+    let p = project()
         .file(
             "Cargo.toml",
             r#"
@@ -47,7 +47,7 @@ fn profile_overrides() {
 
 #[test]
 fn opt_level_override_0() {
-    let p = project("foo")
+    let p = project()
         .file(
             "Cargo.toml",
             r#"
@@ -84,7 +84,7 @@ fn opt_level_override_0() {
 
 #[test]
 fn debug_override_1() {
-    let p = project("foo")
+    let p = project()
         .file(
             "Cargo.toml",
             r#"
@@ -119,7 +119,7 @@ fn debug_override_1() {
 }
 
 fn check_opt_level_override(profile_level: &str, rustc_level: &str) {
-    let p = project("foo")
+    let p = project()
         .file(
             "Cargo.toml",
             &format!(
@@ -179,7 +179,7 @@ fn opt_level_overrides() {
 
 #[test]
 fn top_level_overrides_deps() {
-    let p = project("foo")
+    let p = project()
         .file(
             "Cargo.toml",
             r#"
@@ -255,7 +255,7 @@ fn top_level_overrides_deps() {
 
 #[test]
 fn profile_in_non_root_manifest_triggers_a_warning() {
-    let p = project("foo")
+    let p = project()
         .file(
             "Cargo.toml",
             r#"
@@ -304,7 +304,7 @@ workspace: [..]
 
 #[test]
 fn profile_in_virtual_manifest_works() {
-    let p = project("foo")
+    let p = project()
         .file(
             "Cargo.toml",
             r#"
@@ -343,7 +343,7 @@ fn profile_in_virtual_manifest_works() {
 
 #[test]
 fn profile_panic_test_bench() {
-    let p = project("foo")
+    let p = project()
         .file(
             "Cargo.toml",
             r#"
@@ -374,7 +374,7 @@ fn profile_panic_test_bench() {
 
 #[test]
 fn profile_doc_deprecated() {
-    let p = project("foo")
+    let p = project()
         .file(
             "Cargo.toml",
             r#"

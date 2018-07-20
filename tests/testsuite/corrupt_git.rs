@@ -8,7 +8,7 @@ use hamcrest::assert_that;
 
 #[test]
 fn deleting_database_files() {
-    let project = project("foo");
+    let project = project();
     let git_project = git::new("bar", |project| {
         project
             .file(
@@ -80,7 +80,7 @@ fn deleting_database_files() {
 
 #[test]
 fn deleting_checkout_files() {
-    let project = project("foo");
+    let project = project();
     let git_project = git::new("bar", |project| {
         project
             .file(
