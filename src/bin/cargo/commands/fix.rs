@@ -68,7 +68,7 @@ pub fn cli() -> App {
         )
         .after_help(
             "\
-This Cargo subcommmand will automatically take rustc's suggestions from
+This Cargo subcommand will automatically take rustc's suggestions from
 diagnostics like warnings and apply them to your source code. This is intended
 to help automate tasks that rustc itself already knows how to tell you to fix!
 The `cargo fix` subcommand is also being developed for the Rust 2018 edition
