@@ -105,7 +105,7 @@ impl LockServer {
                 loop {
                     let mut client = {
                         let mut state = lock2.lock().unwrap();
-                        if state.1.len() == 0 {
+                        if state.1.is_empty() {
                             state.0 = false;
                             break;
                         } else {

@@ -3,6 +3,14 @@
 // But if someone runs it they should know that
 // @alexcrichton disagree with clippy on some style things
 #![cfg_attr(feature = "cargo-clippy", allow(explicit_iter_loop))]
+#![cfg_attr(feature = "cargo-clippy", allow(explicit_into_iter_loop))]
+// alsow we use closures as a alternative to try catch blocks
+#![cfg_attr(feature = "cargo-clippy", allow(redundant_closure_call))]
+
+// we have lots of arguments, cleaning this up would be a large project
+#![cfg_attr(feature = "cargo-clippy", allow(too_many_arguments))]
+// we have some complicated functions, cleaning this up would be a large project
+#![cfg_attr(feature = "cargo-clippy", allow(cyclomatic_complexity))]
 
 extern crate atty;
 extern crate clap;
@@ -156,15 +164,15 @@ pub fn exit_with_error(err: CliError, shell: &mut Shell) -> ! {
     std::process::exit(exit_code)
 }
 
-pub fn handle_error(err: CargoError, shell: &mut Shell) {
-    debug!("handle_error; err={:?}", &err);
+pub fn handle_error(err: &CargoError, shell: &mut Shell) {
+    debug!("handle_error; err={:?}", err);
 
-    let _ignored_result = shell.error(&err);
-    handle_cause(&err, shell);
+    let _ignored_result = shell.error(err);
+    handle_cause(err, shell);
 }
 
 fn handle_cause(cargo_err: &Error, shell: &mut Shell) -> bool {
-    fn print(error: String, shell: &mut Shell) {
+    fn print(error: &str, shell: &mut Shell) {
         drop(writeln!(shell.err(), "\nCaused by:"));
         drop(writeln!(shell.err(), "  {}", error));
     }
@@ -175,7 +183,7 @@ fn handle_cause(cargo_err: &Error, shell: &mut Shell) -> bool {
         // The first error has already been printed to the shell
         // Print all remaining errors
         for err in cargo_err.causes().skip(1) {
-            print(err.to_string(), shell);
+            print(&err.to_string(), shell);
         }
     } else {
         // The first error has already been printed to the shell
@@ -185,7 +193,7 @@ fn handle_cause(cargo_err: &Error, shell: &mut Shell) -> bool {
                 return false;
             }
 
-            print(err.to_string(), shell);
+            print(&err.to_string(), shell);
         }
     }
 

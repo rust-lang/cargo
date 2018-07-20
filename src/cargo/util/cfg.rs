@@ -126,11 +126,11 @@ impl<'a> Parser<'a> {
             Some(&Ok(Token::Ident(op @ "all"))) | Some(&Ok(Token::Ident(op @ "any"))) => {
                 self.t.next();
                 let mut e = Vec::new();
-                self.eat(Token::LeftParen)?;
-                while !self.try(Token::RightParen) {
+                self.eat(&Token::LeftParen)?;
+                while !self.try(&Token::RightParen) {
                     e.push(self.expr()?);
-                    if !self.try(Token::Comma) {
-                        self.eat(Token::RightParen)?;
+                    if !self.try(&Token::Comma) {
+                        self.eat(&Token::RightParen)?;
                         break;
                     }
                 }
@@ -142,9 +142,9 @@ impl<'a> Parser<'a> {
             }
             Some(&Ok(Token::Ident("not"))) => {
                 self.t.next();
-                self.eat(Token::LeftParen)?;
+                self.eat(&Token::LeftParen)?;
                 let e = self.expr()?;
-                self.eat(Token::RightParen)?;
+                self.eat(&Token::RightParen)?;
                 Ok(CfgExpr::Not(Box::new(e)))
             }
             Some(&Ok(..)) => self.cfg().map(CfgExpr::Value),
@@ -159,7 +159,7 @@ impl<'a> Parser<'a> {
     fn cfg(&mut self) -> CargoResult<Cfg> {
         match self.t.next() {
             Some(Ok(Token::Ident(name))) => {
-                let e = if self.try(Token::Equals) {
+                let e = if self.try(&Token::Equals) {
                     let val = match self.t.next() {
                         Some(Ok(Token::String(s))) => s,
                         Some(Ok(t)) => bail!("expected a string, found {}", t.classify()),
@@ -178,18 +178,18 @@ impl<'a> Parser<'a> {
         }
     }
 
-    fn try(&mut self, token: Token<'a>) -> bool {
+    fn try(&mut self, token: &Token<'a>) -> bool {
         match self.t.peek() {
-            Some(&Ok(ref t)) if token == *t => {}
+            Some(&Ok(ref t)) if token == t => {}
             _ => return false,
         }
         self.t.next();
         true
     }
 
-    fn eat(&mut self, token: Token<'a>) -> CargoResult<()> {
+    fn eat(&mut self, token: &Token<'a>) -> CargoResult<()> {
         match self.t.next() {
-            Some(Ok(ref t)) if token == *t => Ok(()),
+            Some(Ok(ref t)) if token == t => Ok(()),
             Some(Ok(t)) => bail!("expected {}, found {}", token.classify(), t.classify()),
             Some(Err(e)) => Err(e),
             None => bail!("expected {}, but cfg expr ended", token.classify()),

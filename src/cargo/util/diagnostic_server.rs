@@ -101,16 +101,16 @@ impl Message {
                         "failed to automatically apply fixes suggested by rustc"
                     )?;
                 }
-                if files.len() > 0 {
-                    write!(
+                if !files.is_empty() {
+                    writeln!(
                         config.shell().err(),
                         "\nafter fixes were automatically applied the compiler \
-                         reported errors within these files:\n\n"
+                         reported errors within these files:\n"
                     )?;
                     for file in files {
-                        write!(config.shell().err(), "  * {}\n", file)?;
+                        writeln!(config.shell().err(), "  * {}", file)?;
                     }
-                    write!(config.shell().err(), "\n")?;
+                    writeln!(config.shell().err())?;
                 }
                 write!(config.shell().err(), "{}", PLEASE_REPORT_THIS_BUG)?;
                 Ok(())

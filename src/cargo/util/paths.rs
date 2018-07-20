@@ -87,9 +87,9 @@ pub fn without_prefix<'a>(long_path: &'a Path, prefix: &'a Path) -> Option<&'a P
 
 pub fn resolve_executable(exec: &Path) -> CargoResult<PathBuf> {
     if exec.components().count() == 1 {
-        let paths = env::var_os("PATH").ok_or(format_err!("no PATH"))?;
+        let paths = env::var_os("PATH").ok_or_else(|| format_err!("no PATH"))?;
         let candidates = env::split_paths(&paths).flat_map(|path| {
-            let candidate = PathBuf::from(path).join(&exec);
+            let candidate = path.join(&exec);
             let with_exe = if env::consts::EXE_EXTENSION == "" {
                 None
             } else {

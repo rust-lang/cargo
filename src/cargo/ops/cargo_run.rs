@@ -39,15 +39,12 @@ pub fn run(
 
     if bins.len() == 1 {
         let &(name, kind) = bins.first().unwrap();
-        match kind {
-            &TargetKind::ExampleLib(..) => { 
-                bail!(
+        if let TargetKind::ExampleLib(..) = kind {
+            bail!(
                     "example target `{}` is a library and cannot be executed",
                     name
-                ) 
-            },
-            _ => { }
-        };
+                )
+        }
     }
 
     if bins.len() > 1 {

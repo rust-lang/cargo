@@ -134,8 +134,8 @@ pub enum CompileMode {
 
 impl CompileMode {
     /// Returns true if the unit is being checked.
-    pub fn is_check(&self) -> bool {
-        match *self {
+    pub fn is_check(self) -> bool {
+        match self {
             CompileMode::Check { .. } => true,
             _ => false,
         }
@@ -144,8 +144,8 @@ impl CompileMode {
     /// Returns true if this is a doc or doctest. Be careful using this.
     /// Although both run rustdoc, the dependencies for those two modes are
     /// very different.
-    pub fn is_doc(&self) -> bool {
-        match *self {
+    pub fn is_doc(self) -> bool {
+        match self {
             CompileMode::Doc { .. } | CompileMode::Doctest => true,
             _ => false,
         }
@@ -153,8 +153,8 @@ impl CompileMode {
 
     /// Returns true if this is any type of test (test, benchmark, doctest, or
     /// check-test).
-    pub fn is_any_test(&self) -> bool {
-        match *self {
+    pub fn is_any_test(self) -> bool {
+        match self {
             CompileMode::Test
             | CompileMode::Bench
             | CompileMode::Check { test: true }
@@ -164,8 +164,8 @@ impl CompileMode {
     }
 
     /// Returns true if this is the *execution* of a `build.rs` script.
-    pub fn is_run_custom_build(&self) -> bool {
-        *self == CompileMode::RunCustomBuild
+    pub fn is_run_custom_build(self) -> bool {
+        self == CompileMode::RunCustomBuild
     }
 
     /// List of all modes (currently used by `cargo clean -p` for computing
