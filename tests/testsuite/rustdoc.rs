@@ -255,7 +255,7 @@ fn features() {
 #[test]
 #[cfg(all(target_arch = "x86_64", target_os = "linux"))]
 fn rustdoc_target() {
-    let p = project("foo")
+    let p = project()
         .file(
             "Cargo.toml",
             r#"

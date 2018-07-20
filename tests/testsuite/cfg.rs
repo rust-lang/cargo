@@ -450,7 +450,7 @@ fn any_ok() {
 #[test]
 #[cfg(all(target_arch = "x86_64", target_os = "linux"))]
 fn cfg_looks_at_rustflags_for_target() {
-    let p = project("foo")
+    let p = project()
         .file(
             "Cargo.toml",
             r#"
