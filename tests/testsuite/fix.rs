@@ -1068,3 +1068,36 @@ fn does_not_warn_about_dirty_ignored_files() {
         execs().with_status(0),
     );
 }
+
+#[test]
+fn shows_warnings_one_second_run_without_changes() {
+    let p = project("foo")
+        .file(
+            "Cargo.toml",
+            r#"
+                [package]
+                name = "foo"
+                version = "0.1.0"
+            "#,
+        )
+        .file(
+            "src/lib.rs",
+            r#"
+                use std::default::Default;
+
+                pub fn foo() {
+                }
+            "#,
+        )
+        .build();
+
+    assert_that(
+        p.cargo("fix --allow-no-vcs"),
+        execs().with_status(0).with_stderr_contains("[..]warning: unused import[..]"),
+    );
+
+    assert_that(
+        p.cargo("fix --allow-no-vcs"),
+        execs().with_status(0).with_stderr_contains("[..]warning: unused import[..]"),
+    );
+}
