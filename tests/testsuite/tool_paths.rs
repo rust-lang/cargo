@@ -126,20 +126,20 @@ fn relative_tools() {
 
     // Funky directory structure to test that relative tool paths are made absolute
     // by reference to the `.cargo/..` directory and not to (for example) the CWD.
-    let origin = project().at("origin")
+    let p = project()
         .file(
-            "foo/Cargo.toml",
+            "bar/Cargo.toml",
             r#"
             [package]
-            name = "foo"
+            name = "bar"
             version = "0.0.1"
             authors = []
 
             [lib]
-            name = "foo"
+            name = "bar"
         "#,
         )
-        .file("foo/src/lib.rs", "")
+        .file("bar/src/lib.rs", "")
         .file(
             ".cargo/config",
             &format!(
@@ -155,9 +155,9 @@ fn relative_tools() {
         )
         .build();
 
-    let foo_path = origin.root().join("foo");
+    let foo_path = p.root().join("bar");
     let foo_url = path2url(foo_path.clone());
-    let prefix = origin.root().into_os_string().into_string().unwrap();
+    let prefix = p.root().into_os_string().into_string().unwrap();
     let output = if cfg!(windows) {
         (
             format!(r#"{}\.\nonexistent-ar"#, prefix),
@@ -171,10 +171,10 @@ fn relative_tools() {
     };
 
     assert_that(
-        origin.cargo("build").cwd(foo_path).arg("--verbose"),
+        p.cargo("build").cwd(foo_path).arg("--verbose"),
         execs().with_stderr(&format!(
             "\
-[COMPILING] foo v0.0.1 ({url})
+[COMPILING] bar v0.0.1 ({url})
 [RUNNING] `rustc [..] -C ar={ar} -C linker={linker} [..]`
 [FINISHED] dev [unoptimized + debuginfo] target(s) in [..]
 ",

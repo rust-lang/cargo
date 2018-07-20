@@ -62,7 +62,7 @@ fn path() -> Vec<PathBuf> {
 
 #[test]
 fn list_command_looks_at_path() {
-    let proj = project().at("list-non-overlapping").build();
+    let proj = project().build();
     let proj = fake_file(
         proj,
         Path::new("path-test"),
@@ -88,7 +88,7 @@ fn list_command_looks_at_path() {
 #[cfg(unix)]
 #[test]
 fn list_command_resolves_symlinks() {
-    let proj = project().at("list-non-overlapping").build();
+    let proj = project().build();
     let proj = fake_file(
         proj,
         Path::new("path-test"),

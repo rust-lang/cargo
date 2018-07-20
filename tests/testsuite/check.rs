@@ -550,26 +550,12 @@ fn check_all() {
 
 #[test]
 fn check_virtual_all_implied() {
-    let p = project().at("workspace")
+    let p = project()
         .file(
             "Cargo.toml",
             r#"
             [workspace]
-            members = ["foo", "bar"]
-        "#,
-        )
-        .file(
-            "foo/Cargo.toml",
-            r#"
-            [project]
-            name = "foo"
-            version = "0.1.0"
-        "#,
-        )
-        .file(
-            "foo/src/lib.rs",
-            r#"
-            pub fn foo() {}
+            members = ["bar", "baz"]
         "#,
         )
         .file(
@@ -586,14 +572,28 @@ fn check_virtual_all_implied() {
             pub fn bar() {}
         "#,
         )
+        .file(
+            "baz/Cargo.toml",
+            r#"
+            [project]
+            name = "baz"
+            version = "0.1.0"
+        "#,
+        )
+        .file(
+            "baz/src/lib.rs",
+            r#"
+            pub fn baz() {}
+        "#,
+        )
         .build();
 
     assert_that(
         p.cargo("check").arg("-v"),
         execs()
             .with_status(0)
-            .with_stderr_contains("[..] --crate-name foo foo[/]src[/]lib.rs [..]")
-            .with_stderr_contains("[..] --crate-name bar bar[/]src[/]lib.rs [..]"),
+            .with_stderr_contains("[..] --crate-name bar bar[/]src[/]lib.rs [..]")
+            .with_stderr_contains("[..] --crate-name baz baz[/]src[/]lib.rs [..]"),
     );
 }
 

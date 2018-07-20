@@ -93,13 +93,13 @@ fn cargo_compile_simple_git_dep() {
 
 #[test]
 fn cargo_compile_forbird_git_httpsrepo_offline() {
-    let p = project().at("need_remote_repo")
+    let p = project()
         .file(
             "Cargo.toml",
             r#"
 
             [project]
-            name = "need_remote_repo"
+            name = "foo"
             version = "0.5.0"
             authors = ["chabapok@example.com"]
 
@@ -202,7 +202,7 @@ fn cargo_compile_offline_with_cached_git_dep() {
         assert_that(prj.cargo("build"), execs().with_status(0));
     }
 
-    let project = project()
+    let p = project()
         .file(
             "Cargo.toml",
             &format!(
@@ -223,11 +223,11 @@ fn cargo_compile_offline_with_cached_git_dep() {
         )
         .build();
 
-    let root = project.root();
+    let root = p.root();
     let git_root = git_project.root();
 
     assert_that(
-        project
+        p
             .cargo("build")
             .masquerade_as_nightly_cargo()
             .arg("-Zoffline"),
@@ -241,15 +241,15 @@ fn cargo_compile_offline_with_cached_git_dep() {
         )),
     );
 
-    assert_that(&project.bin("foo"), existing_file());
+    assert_that(&p.bin("foo"), existing_file());
 
     assert_that(
-        process(&project.bin("foo")),
+        process(&p.bin("foo")),
         execs().with_stdout("hello from cached git repo rev2\n"),
     );
 
     drop(
-        File::create(&project.root().join("Cargo.toml"))
+        File::create(&p.root().join("Cargo.toml"))
             .unwrap()
             .write_all(&format!(
                 r#"
@@ -267,13 +267,13 @@ fn cargo_compile_offline_with_cached_git_dep() {
             .unwrap(),
     );
 
-    let _out = project
+    let _out = p
         .cargo("build")
         .masquerade_as_nightly_cargo()
         .arg("-Zoffline")
         .exec_with_output();
     assert_that(
-        process(&project.bin("foo")),
+        process(&p.bin("foo")),
         execs().with_stdout("hello from cached git repo rev1\n"),
     );
 }
@@ -511,14 +511,14 @@ fn cargo_compile_with_nested_paths() {
             )
     }).unwrap();
 
-    let p = project().at("parent")
+    let p = project()
         .file(
             "Cargo.toml",
             &format!(
                 r#"
             [project]
 
-            name = "parent"
+            name = "foo"
             version = "0.5.0"
             authors = ["wycats@example.com"]
 
@@ -529,23 +529,23 @@ fn cargo_compile_with_nested_paths() {
 
             [[bin]]
 
-            name = "parent"
+            name = "foo"
         "#,
                 git_project.url()
             ),
         )
         .file(
-            "src/parent.rs",
+            "src/foo.rs",
             &main_file(r#""{}", dep1::hello()"#, &["dep1"]),
         )
         .build();
 
     p.cargo("build").exec_with_output().unwrap();
 
-    assert_that(&p.bin("parent"), existing_file());
+    assert_that(&p.bin("foo"), existing_file());
 
     assert_that(
-        process(&p.bin("parent")),
+        process(&p.bin("foo")),
         execs().with_stdout("hello world\n"),
     );
 }
@@ -584,14 +584,14 @@ fn cargo_compile_with_malformed_nested_paths() {
             )
     }).unwrap();
 
-    let p = project().at("parent")
+    let p = project()
         .file(
             "Cargo.toml",
             &format!(
                 r#"
             [project]
 
-            name = "parent"
+            name = "foo"
             version = "0.5.0"
             authors = ["wycats@example.com"]
 
@@ -602,23 +602,23 @@ fn cargo_compile_with_malformed_nested_paths() {
 
             [[bin]]
 
-            name = "parent"
+            name = "foo"
         "#,
                 git_project.url()
             ),
         )
         .file(
-            "src/parent.rs",
+            "src/foo.rs",
             &main_file(r#""{}", dep1::hello()"#, &["dep1"]),
         )
         .build();
 
     p.cargo("build").exec_with_output().unwrap();
 
-    assert_that(&p.bin("parent"), existing_file());
+    assert_that(&p.bin("foo"), existing_file());
 
     assert_that(
-        process(&p.bin("parent")),
+        process(&p.bin("foo")),
         execs().with_stdout("hello world\n"),
     );
 }
@@ -673,14 +673,14 @@ fn cargo_compile_with_meta_package() {
             )
     }).unwrap();
 
-    let p = project().at("parent")
+    let p = project()
         .file(
             "Cargo.toml",
             &format!(
                 r#"
             [project]
 
-            name = "parent"
+            name = "foo"
             version = "0.5.0"
             authors = ["wycats@example.com"]
 
@@ -696,14 +696,14 @@ fn cargo_compile_with_meta_package() {
 
             [[bin]]
 
-            name = "parent"
+            name = "foo"
         "#,
                 git_project.url(),
                 git_project.url()
             ),
         )
         .file(
-            "src/parent.rs",
+            "src/foo.rs",
             &main_file(
                 r#""{} {}", dep1::hello(), dep2::hello()"#,
                 &["dep1", "dep2"],
@@ -713,10 +713,10 @@ fn cargo_compile_with_meta_package() {
 
     p.cargo("build").exec_with_output().unwrap();
 
-    assert_that(&p.bin("parent"), existing_file());
+    assert_that(&p.bin("foo"), existing_file());
 
     assert_that(
-        process(&p.bin("parent")),
+        process(&p.bin("foo")),
         execs().with_stdout("this is dep1 this is dep2\n"),
     );
 }
@@ -725,7 +725,7 @@ fn cargo_compile_with_meta_package() {
 fn cargo_compile_with_short_ssh_git() {
     let url = "git@github.com:a/dep";
 
-    let project = project().at("project")
+    let p = project()
         .file(
             "Cargo.toml",
             &format!(
@@ -754,7 +754,7 @@ fn cargo_compile_with_short_ssh_git() {
         .build();
 
     assert_that(
-        project.cargo("build"),
+        p.cargo("build"),
         execs().with_stdout("").with_stderr(&format!(
             "\
 [ERROR] failed to parse manifest at `[..]`
@@ -2047,13 +2047,13 @@ fn fetch_downloads() {
             .file("src/lib.rs", "pub fn bar() -> i32 { 1 }")
     }).unwrap();
 
-    let p = project().at("p1")
+    let p = project()
         .file(
             "Cargo.toml",
             &format!(
                 r#"
             [project]
-            name = "p1"
+            name = "foo"
             version = "0.5.0"
             authors = []
             [dependencies.bar]
@@ -2125,68 +2125,68 @@ fn warnings_in_git_dep() {
 
 #[test]
 fn update_ambiguous() {
-    let foo1 = git::new("foo1", |project| {
+    let bar1 = git::new("bar1", |project| {
         project
             .file(
                 "Cargo.toml",
                 r#"
             [package]
-            name = "foo"
+            name = "bar"
             version = "0.5.0"
             authors = ["wycats@example.com"]
         "#,
             )
             .file("src/lib.rs", "")
     }).unwrap();
-    let foo2 = git::new("foo2", |project| {
+    let bar2 = git::new("bar2", |project| {
         project
             .file(
                 "Cargo.toml",
                 r#"
             [package]
-            name = "foo"
+            name = "bar"
             version = "0.6.0"
             authors = ["wycats@example.com"]
         "#,
             )
             .file("src/lib.rs", "")
     }).unwrap();
-    let bar = git::new("bar", |project| {
+    let baz = git::new("baz", |project| {
         project
             .file(
                 "Cargo.toml",
                 &format!(
                     r#"
             [package]
-            name = "bar"
+            name = "baz"
             version = "0.5.0"
             authors = ["wycats@example.com"]
 
-            [dependencies.foo]
+            [dependencies.bar]
             git = '{}'
         "#,
-                    foo2.url()
+                    bar2.url()
                 ),
             )
             .file("src/lib.rs", "")
     }).unwrap();
 
-    let p = project().at("project")
+    let p = project()
         .file(
             "Cargo.toml",
             &format!(
                 r#"
             [project]
-            name = "project"
+            name = "foo"
             version = "0.5.0"
             authors = []
-            [dependencies.foo]
-            git = '{}'
             [dependencies.bar]
             git = '{}'
+            [dependencies.baz]
+            git = '{}'
         "#,
-                foo1.url(),
-                bar.url()
+                bar1.url(),
+                baz.url()
             ),
         )
         .file("src/main.rs", "fn main() {}")
@@ -2194,15 +2194,15 @@ fn update_ambiguous() {
 
     assert_that(p.cargo("generate-lockfile"), execs().with_status(0));
     assert_that(
-        p.cargo("update").arg("-p").arg("foo"),
+        p.cargo("update").arg("-p").arg("bar"),
         execs().with_status(101).with_stderr(
             "\
-[ERROR] There are multiple `foo` packages in your project, and the specification `foo` \
+[ERROR] There are multiple `bar` packages in your project, and the specification `bar` \
 is ambiguous.
 Please re-run this command with `-p <spec>` where `<spec>` is one of the \
 following:
-  foo:0.[..].0
-  foo:0.[..].0
+  bar:0.[..].0
+  bar:0.[..].0
 ",
         ),
     );
@@ -2210,13 +2210,13 @@ following:
 
 #[test]
 fn update_one_dep_in_repo_with_many_deps() {
-    let foo = git::new("foo", |project| {
+    let bar = git::new("bar", |project| {
         project
             .file(
                 "Cargo.toml",
                 r#"
             [package]
-            name = "foo"
+            name = "bar"
             version = "0.5.0"
             authors = ["wycats@example.com"]
         "#,
@@ -2234,22 +2234,22 @@ fn update_one_dep_in_repo_with_many_deps() {
             .file("a/src/lib.rs", "")
     }).unwrap();
 
-    let p = project().at("project")
+    let p = project()
         .file(
             "Cargo.toml",
             &format!(
                 r#"
             [project]
-            name = "project"
+            name = "foo"
             version = "0.5.0"
             authors = []
-            [dependencies.foo]
+            [dependencies.bar]
             git = '{}'
             [dependencies.a]
             git = '{}'
         "#,
-                foo.url(),
-                foo.url()
+                bar.url(),
+                bar.url()
             ),
         )
         .file("src/main.rs", "fn main() {}")
@@ -2257,10 +2257,10 @@ fn update_one_dep_in_repo_with_many_deps() {
 
     assert_that(p.cargo("generate-lockfile"), execs().with_status(0));
     assert_that(
-        p.cargo("update").arg("-p").arg("foo"),
+        p.cargo("update").arg("-p").arg("bar"),
         execs()
             .with_status(0)
-            .with_stderr(&format!("[UPDATING] git repository `{}`", foo.url())),
+            .with_stderr(&format!("[UPDATING] git repository `{}`", bar.url())),
     );
 }
 
@@ -2318,13 +2318,13 @@ fn switch_deps_does_not_update_transitive() {
             .file("src/lib.rs", "")
     }).unwrap();
 
-    let p = project().at("project")
+    let p = project()
         .file(
             "Cargo.toml",
             &format!(
                 r#"
             [project]
-            name = "project"
+            name = "foo"
             version = "0.5.0"
             authors = []
             [dependencies.dep]
@@ -2344,7 +2344,7 @@ fn switch_deps_does_not_update_transitive() {
 [UPDATING] git repository `{}`
 [COMPILING] transitive [..]
 [COMPILING] dep [..]
-[COMPILING] project [..]
+[COMPILING] foo [..]
 [FINISHED] dev [unoptimized + debuginfo] target(s) in [..]
 ",
             dep1.url(),
@@ -2360,7 +2360,7 @@ fn switch_deps_does_not_update_transitive() {
             format!(
                 r#"
             [project]
-            name = "project"
+            name = "foo"
             version = "0.5.0"
             authors = []
             [dependencies.dep]
@@ -2377,7 +2377,7 @@ fn switch_deps_does_not_update_transitive() {
             "\
 [UPDATING] git repository `{}`
 [COMPILING] dep [..]
-[COMPILING] project [..]
+[COMPILING] foo [..]
 [FINISHED] dev [unoptimized + debuginfo] target(s) in [..]
 ",
             dep2.url()
@@ -2414,13 +2414,13 @@ fn update_one_source_updates_all_packages_in_that_git_source() {
             .file("a/src/lib.rs", "")
     }).unwrap();
 
-    let p = project().at("project")
+    let p = project()
         .file(
             "Cargo.toml",
             &format!(
                 r#"
             [project]
-            name = "project"
+            name = "foo"
             version = "0.5.0"
             authors = []
             [dependencies.dep]
@@ -2495,12 +2495,12 @@ fn switch_sources() {
             .file("src/lib.rs", "")
     }).unwrap();
 
-    let p = project().at("project")
+    let p = project()
         .file(
             "Cargo.toml",
             r#"
             [project]
-            name = "project"
+            name = "foo"
             version = "0.5.0"
             authors = []
             [dependencies.b]
@@ -2532,7 +2532,7 @@ fn switch_sources() {
 [UPDATING] git repository `file://[..]a1`
 [COMPILING] a v0.5.0 ([..]a1#[..]
 [COMPILING] b v0.5.0 ([..])
-[COMPILING] project v0.5.0 ([..])
+[COMPILING] foo v0.5.0 ([..])
 [FINISHED] dev [unoptimized + debuginfo] target(s) in [..]
 ",
         ),
@@ -2562,7 +2562,7 @@ fn switch_sources() {
 [UPDATING] git repository `file://[..]a2`
 [COMPILING] a v0.5.1 ([..]a2#[..]
 [COMPILING] b v0.5.0 ([..])
-[COMPILING] project v0.5.0 ([..])
+[COMPILING] foo v0.5.0 ([..])
 [FINISHED] dev [unoptimized + debuginfo] target(s) in [..]
 ",
         ),

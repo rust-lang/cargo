@@ -2189,13 +2189,13 @@ fn dont_recurse_out_of_cargo_home() {
             "#,
             )
     }).unwrap();
-    let p = project().at("lib")
+    let p = project()
         .file(
             "Cargo.toml",
             &format!(
                 r#"
             [package]
-            name = "lib"
+            name = "foo"
             version = "0.1.0"
 
             [dependencies.dep]
@@ -2252,12 +2252,12 @@ fn include_and_exclude() {
 
 #[test]
 fn cargo_home_at_root_works() {
-    let p = project().at("lib")
+    let p = project()
         .file(
             "Cargo.toml",
             r#"
             [package]
-            name = "lib"
+            name = "foo"
             version = "0.1.0"
 
             [workspace]
@@ -2285,7 +2285,7 @@ fn cargo_home_at_root_works() {
 
 #[test]
 fn relative_rustc() {
-    let p = project().at("the_exe")
+    let p = project()
         .file(
             "Cargo.toml",
             r#"
@@ -2342,7 +2342,7 @@ fn relative_rustc() {
 
 #[test]
 fn ws_rustc_err() {
-    let p = project().at("ws")
+    let p = project()
         .file(
             "Cargo.toml",
             r#"

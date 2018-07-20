@@ -1292,26 +1292,12 @@ fn doc_all_workspace() {
 
 #[test]
 fn doc_all_virtual_manifest() {
-    let p = project().at("workspace")
+    let p = project()
         .file(
             "Cargo.toml",
             r#"
             [workspace]
-            members = ["foo", "bar"]
-        "#,
-        )
-        .file(
-            "foo/Cargo.toml",
-            r#"
-            [project]
-            name = "foo"
-            version = "0.1.0"
-        "#,
-        )
-        .file(
-            "foo/src/lib.rs",
-            r#"
-            pub fn foo() {}
+            members = ["bar", "baz"]
         "#,
         )
         .file(
@@ -1328,40 +1314,40 @@ fn doc_all_virtual_manifest() {
             pub fn bar() {}
         "#,
         )
+        .file(
+            "baz/Cargo.toml",
+            r#"
+            [project]
+            name = "baz"
+            version = "0.1.0"
+        "#,
+        )
+        .file(
+            "baz/src/lib.rs",
+            r#"
+            pub fn baz() {}
+        "#,
+        )
         .build();
 
-    // The order in which foo and bar are documented is not guaranteed
+    // The order in which bar and baz are documented is not guaranteed
     assert_that(
         p.cargo("doc").arg("--all"),
         execs()
             .with_status(0)
-            .with_stderr_contains("[..] Documenting bar v0.1.0 ([..])")
-            .with_stderr_contains("[..] Documenting foo v0.1.0 ([..])"),
+            .with_stderr_contains("[..] Documenting baz v0.1.0 ([..])")
+            .with_stderr_contains("[..] Documenting bar v0.1.0 ([..])"),
     );
 }
 
 #[test]
 fn doc_virtual_manifest_all_implied() {
-    let p = project().at("workspace")
+    let p = project()
         .file(
             "Cargo.toml",
             r#"
             [workspace]
-            members = ["foo", "bar"]
-        "#,
-        )
-        .file(
-            "foo/Cargo.toml",
-            r#"
-            [project]
-            name = "foo"
-            version = "0.1.0"
-        "#,
-        )
-        .file(
-            "foo/src/lib.rs",
-            r#"
-            pub fn foo() {}
+            members = ["bar", "baz"]
         "#,
         )
         .file(
@@ -1378,55 +1364,69 @@ fn doc_virtual_manifest_all_implied() {
             pub fn bar() {}
         "#,
         )
+        .file(
+            "baz/Cargo.toml",
+            r#"
+            [project]
+            name = "baz"
+            version = "0.1.0"
+        "#,
+        )
+        .file(
+            "baz/src/lib.rs",
+            r#"
+            pub fn baz() {}
+        "#,
+        )
         .build();
 
-    // The order in which foo and bar are documented is not guaranteed
+    // The order in which bar and baz are documented is not guaranteed
     assert_that(
         p.cargo("doc"),
         execs()
             .with_status(0)
-            .with_stderr_contains("[..] Documenting bar v0.1.0 ([..])")
-            .with_stderr_contains("[..] Documenting foo v0.1.0 ([..])"),
+            .with_stderr_contains("[..] Documenting baz v0.1.0 ([..])")
+            .with_stderr_contains("[..] Documenting bar v0.1.0 ([..])"),
     );
 }
 
 #[test]
 fn doc_all_member_dependency_same_name() {
-    let p = project().at("workspace")
+    let p = project()
         .file(
             "Cargo.toml",
             r#"
             [workspace]
-            members = ["a"]
+            members = ["bar"]
         "#,
         )
         .file(
-            "a/Cargo.toml",
+            "bar/Cargo.toml",
             r#"
             [project]
-            name = "a"
+            name = "bar"
             version = "0.1.0"
 
             [dependencies]
-            a = "0.1.0"
+            bar = "0.1.0"
         "#,
         )
         .file(
-            "a/src/lib.rs",
+            "bar/src/lib.rs",
             r#"
-            pub fn a() {}
+            pub fn bar() {}
         "#,
         )
         .build();
 
-    Package::new("a", "0.1.0").publish();
+    Package::new("bar", "0.1.0").publish();
 
     assert_that(
         p.cargo("doc").arg("--all"),
         execs()
             .with_status(0)
             .with_stderr_contains("[..] Updating registry `[..]`")
-            .with_stderr_contains("[..] Documenting a v0.1.0 ([..])"),
+            .with_stderr_contains("[..] Documenting bar v0.1.0 ([..])"),
     );
 }
 

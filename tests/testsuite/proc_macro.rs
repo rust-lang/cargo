@@ -4,12 +4,12 @@ use hamcrest::assert_that;
 
 #[test]
 fn probe_cfg_before_crate_type_discovery() {
-    let client = project().at("client")
+    let p = project()
         .file(
             "Cargo.toml",
             r#"
             [package]
-            name = "client"
+            name = "foo"
             version = "0.0.1"
             authors = []
 
@@ -57,17 +57,17 @@ fn probe_cfg_before_crate_type_discovery() {
         )
         .build();
 
-    assert_that(client.cargo("build"), execs().with_status(0));
+    assert_that(p.cargo("build"), execs().with_status(0));
 }
 
 #[test]
 fn noop() {
-    let client = project().at("client")
+    let p = project()
         .file(
             "Cargo.toml",
             r#"
             [package]
-            name = "client"
+            name = "foo"
             version = "0.0.1"
             authors = []
 
@@ -115,18 +115,18 @@ fn noop() {
         )
         .build();
 
-    assert_that(client.cargo("build"), execs().with_status(0));
-    assert_that(client.cargo("build"), execs().with_status(0));
+    assert_that(p.cargo("build"), execs().with_status(0));
+    assert_that(p.cargo("build"), execs().with_status(0));
 }
 
 #[test]
 fn impl_and_derive() {
-    let client = project().at("client")
+    let p = project()
         .file(
             "Cargo.toml",
             r#"
             [package]
-            name = "client"
+            name = "foo"
             version = "0.0.1"
             authors = []
 
@@ -195,9 +195,9 @@ fn impl_and_derive() {
         )
         .build();
 
-    assert_that(client.cargo("build"), execs().with_status(0));
+    assert_that(p.cargo("build"), execs().with_status(0));
     assert_that(
-        client.cargo("run"),
+        p.cargo("run"),
         execs().with_status(0).with_stdout("X { success: true }"),
     );
 }
@@ -208,12 +208,12 @@ fn plugin_and_proc_macro() {
         return;
     }
 
-    let questionable = project().at("questionable")
+    let p = project()
         .file(
             "Cargo.toml",
             r#"
             [package]
-            name = "questionable"
+            name = "foo"
             version = "0.0.1"
             authors = []
 
@@ -247,7 +247,7 @@ fn plugin_and_proc_macro() {
 
     let msg = "  lib.plugin and lib.proc-macro cannot both be true";
     assert_that(
-        questionable.cargo("build"),
+        p.cargo("build"),
         execs().with_status(101).with_stderr_contains(msg),
     );
 }
