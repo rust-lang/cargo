@@ -22,6 +22,11 @@ To use the rustfix library, add it to your `Cargo.toml`.
 
 To get the tool to automatically fix warnings in, run `cargo install cargo-fix`. This will give you `cargo fix`.
 
+## Using `cargo fix` to transition to Rust 2018
+
+Instructions on how to use this tool to transition a crate to Rust 2018 can be
+found [in the Rust Edition Guide.](https://rust-lang-nursery.github.io/edition-guide/editions/transitioning.html)
+
 ## License
 
 Licensed under either of
