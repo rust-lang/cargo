@@ -19,3 +19,5 @@ build: false
 
 test_script:
   - cargo test
+  - cargo generate-lockfile -Z minimal-versions
+  - cargo test
