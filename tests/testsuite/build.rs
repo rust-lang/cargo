@@ -15,7 +15,7 @@ use tempfile;
 
 #[test]
 fn cargo_compile_simple() {
-    let p = project("foo")
+    let p = project()
         .file("Cargo.toml", &basic_bin_manifest("foo"))
         .file("src/foo.rs", &main_file(r#""i am foo""#, &[]))
         .build();
@@ -31,7 +31,7 @@ fn cargo_compile_simple() {
 
 #[test]
 fn cargo_fail_with_no_stderr() {
-    let p = project("foo")
+    let p = project()
         .file("Cargo.toml", &basic_bin_manifest("foo"))
         .file("src/foo.rs", &String::from("refusal"))
         .build();
@@ -47,7 +47,7 @@ fn cargo_fail_with_no_stderr() {
 /// `rustc` getting `-Zincremental` passed to it.
 #[test]
 fn cargo_compile_incremental() {
-    let p = project("foo")
+    let p = project()
         .file("Cargo.toml", &basic_bin_manifest("foo"))
         .file("src/foo.rs", &main_file(r#""i am foo""#, &[]))
         .build();
@@ -73,7 +73,7 @@ fn cargo_compile_incremental() {
 
 #[test]
 fn incremental_profile() {
-    let p = project("foo")
+    let p = project()
         .file(
             "Cargo.toml",
             r#"
@@ -129,7 +129,7 @@ fn incremental_profile() {
 
 #[test]
 fn incremental_config() {
-    let p = project("foo")
+    let p = project()
         .file(
             "Cargo.toml",
             r#"
@@ -166,7 +166,7 @@ fn incremental_config() {
 
 #[test]
 fn cargo_compile_with_workspace_excluded() {
-    let p = project("foo")
+    let p = project()
         .file(
             "Cargo.toml",
             r#"
@@ -190,7 +190,7 @@ fn cargo_compile_with_workspace_excluded() {
 
 #[test]
 fn cargo_compile_manifest_path() {
-    let p = project("foo")
+    let p = project()
         .file("Cargo.toml", &basic_bin_manifest("foo"))
         .file("src/foo.rs", &main_file(r#""i am foo""#, &[]))
         .build();
@@ -207,7 +207,7 @@ fn cargo_compile_manifest_path() {
 
 #[test]
 fn cargo_compile_with_invalid_manifest() {
-    let p = project("foo").file("Cargo.toml", "").build();
+    let p = project().file("Cargo.toml", "").build();
 
     assert_that(
         p.cargo("build"),
@@ -224,7 +224,7 @@ Caused by:
 
 #[test]
 fn cargo_compile_with_invalid_manifest2() {
-    let p = project("foo")
+    let p = project()
         .file(
             "Cargo.toml",
             r"
@@ -252,7 +252,7 @@ Caused by:
 
 #[test]
 fn cargo_compile_with_invalid_manifest3() {
-    let p = project("foo")
+    let p = project()
         .file(
             "Cargo.toml",
             r#"
@@ -285,7 +285,7 @@ Caused by:
 
 #[test]
 fn cargo_compile_duplicate_build_targets() {
-    let p = project("foo")
+    let p = project()
         .file(
             "Cargo.toml",
             r#"
@@ -325,7 +325,7 @@ warning: file found to be present in multiple build targets: [..]main.rs
 
 #[test]
 fn cargo_compile_with_invalid_version() {
-    let p = project("foo")
+    let p = project()
         .file(
             "Cargo.toml",
             r#"
@@ -352,7 +352,7 @@ Caused by:
 
 #[test]
 fn cargo_compile_with_invalid_package_name() {
-    let p = project("foo")
+    let p = project()
         .file(
             "Cargo.toml",
             r#"
@@ -379,7 +379,7 @@ Caused by:
 
 #[test]
 fn cargo_compile_with_invalid_bin_target_name() {
-    let p = project("foo")
+    let p = project()
         .file(
             "Cargo.toml",
             r#"
@@ -409,7 +409,7 @@ Caused by:
 
 #[test]
 fn cargo_compile_with_forbidden_bin_target_name() {
-    let p = project("foo")
+    let p = project()
         .file(
             "Cargo.toml",
             r#"
@@ -439,7 +439,7 @@ Caused by:
 
 #[test]
 fn cargo_compile_with_bin_and_crate_type() {
-    let p = project("foo")
+    let p = project()
         .file(
             "Cargo.toml",
             r#"
@@ -472,7 +472,7 @@ Caused by:
 
 #[test]
 fn cargo_compile_with_bin_and_proc() {
-    let p = project("foo")
+    let p = project()
         .file(
             "Cargo.toml",
             r#"
@@ -504,7 +504,7 @@ Caused by:
 
 #[test]
 fn cargo_compile_with_invalid_lib_target_name() {
-    let p = project("foo")
+    let p = project()
         .file(
             "Cargo.toml",
             r#"
@@ -547,7 +547,7 @@ fn cargo_compile_without_manifest() {
 
 #[test]
 fn cargo_compile_with_invalid_code() {
-    let p = project("foo")
+    let p = project()
         .file("Cargo.toml", &basic_bin_manifest("foo"))
         .file("src/foo.rs", "invalid rust code!")
         .build();
@@ -566,7 +566,7 @@ To learn more, run the command again with --verbose.\n",
 
 #[test]
 fn cargo_compile_with_invalid_code_in_deps() {
-    let p = project("foo")
+    let p = project()
         .file(
             "Cargo.toml",
             r#"
@@ -583,11 +583,11 @@ fn cargo_compile_with_invalid_code_in_deps() {
         )
         .file("src/main.rs", "invalid rust code!")
         .build();
-    let _bar = project("bar")
+    let _bar = project().at("bar")
         .file("Cargo.toml", &basic_bin_manifest("bar"))
         .file("src/lib.rs", "invalid rust code!")
         .build();
-    let _baz = project("baz")
+    let _baz = project().at("baz")
         .file("Cargo.toml", &basic_bin_manifest("baz"))
         .file("src/lib.rs", "invalid rust code!")
         .build();
@@ -596,7 +596,7 @@ fn cargo_compile_with_invalid_code_in_deps() {
 
 #[test]
 fn cargo_compile_with_warnings_in_the_root_package() {
-    let p = project("foo")
+    let p = project()
         .file("Cargo.toml", &basic_bin_manifest("foo"))
         .file("src/foo.rs", "fn main() {} fn dead() {}")
         .build();
@@ -611,7 +611,7 @@ fn cargo_compile_with_warnings_in_the_root_package() {
 
 #[test]
 fn cargo_compile_with_warnings_in_a_dep_package() {
-    let p = project("foo")
+    let p = project()
         .file(
             "Cargo.toml",
             r#"
@@ -673,7 +673,7 @@ fn cargo_compile_with_warnings_in_a_dep_package() {
 
 #[test]
 fn cargo_compile_with_nested_deps_inferred() {
-    let p = project("foo")
+    let p = project()
         .file(
             "Cargo.toml",
             r#"
@@ -748,7 +748,7 @@ fn cargo_compile_with_nested_deps_inferred() {
 
 #[test]
 fn cargo_compile_with_nested_deps_correct_bin() {
-    let p = project("foo")
+    let p = project()
         .file(
             "Cargo.toml",
             r#"
@@ -823,7 +823,7 @@ fn cargo_compile_with_nested_deps_correct_bin() {
 
 #[test]
 fn cargo_compile_with_nested_deps_shorthand() {
-    let p = project("foo")
+    let p = project()
         .file(
             "Cargo.toml",
             r#"
@@ -903,7 +903,7 @@ fn cargo_compile_with_nested_deps_shorthand() {
 
 #[test]
 fn cargo_compile_with_nested_deps_longhand() {
-    let p = project("foo")
+    let p = project()
         .file(
             "Cargo.toml",
             r#"
@@ -991,7 +991,7 @@ fn cargo_compile_with_nested_deps_longhand() {
 // because of a name mismatch.
 #[test]
 fn cargo_compile_with_dep_name_mismatch() {
-    let p = project("foo")
+    let p = project()
         .file(
             "Cargo.toml",
             r#"
@@ -1029,7 +1029,7 @@ required by package `foo v0.0.1 ({proj_dir})`
 
 #[test]
 fn cargo_compile_with_filename() {
-    let p = project("foo")
+    let p = project()
         .file(
             "Cargo.toml",
             r#"
@@ -1092,7 +1092,7 @@ Did you mean `a`?",
 
 #[test]
 fn cargo_compile_path_with_offline() {
-    let p = project("foo")
+    let p = project()
         .file(
             "Cargo.toml",
             r#"
@@ -1142,7 +1142,7 @@ fn cargo_compile_with_downloaded_dependency_with_offline() {
 
     {
         // make package downloaded
-        let p = project("foo")
+        let p = project()
             .file(
                 "Cargo.toml",
                 r#"
@@ -1159,7 +1159,7 @@ fn cargo_compile_with_downloaded_dependency_with_offline() {
         assert_that(p.cargo("build"), execs().with_status(0));
     }
 
-    let p2 = project("bar")
+    let p2 = project().at("bar")
         .file(
             "Cargo.toml",
             r#"
@@ -1189,7 +1189,7 @@ fn cargo_compile_with_downloaded_dependency_with_offline() {
 
 #[test]
 fn cargo_compile_offline_not_try_update() {
-    let p = project("bar")
+    let p = project().at("bar")
         .file(
             "Cargo.toml",
             r#"
@@ -1255,7 +1255,7 @@ fn compile_offline_without_maxvers_cached() {
 
     {
         // make package cached
-        let p = project("foo")
+        let p = project()
             .file(
                 "Cargo.toml",
                 r#"
@@ -1272,7 +1272,7 @@ fn compile_offline_without_maxvers_cached() {
         assert_that(p.cargo("build"), execs().with_status(0));
     }
 
-    let p2 = project("foo")
+    let p2 = project()
         .file(
             "Cargo.toml",
             r#"
@@ -1325,7 +1325,7 @@ fn incompatible_dependencies() {
     Package::new("baz", "0.1.1").dep("bad", ">=1.0.1").publish();
     Package::new("baz", "0.1.0").dep("bad", ">=1.0.1").publish();
 
-    let p = project("transitive_load_test")
+    let p = project().at("transitive_load_test")
         .file(
             "Cargo.toml",
             r#"
@@ -1371,7 +1371,7 @@ fn incompatible_dependencies_with_multi_semver() {
     Package::new("bar", "0.1.0").dep("bad", "=1.0.0").publish();
     Package::new("baz", "0.1.0").dep("bad", ">=2.0.1").publish();
 
-    let p = project("transitive_load_test")
+    let p = project().at("transitive_load_test")
         .file(
             "Cargo.toml",
             r#"
@@ -1426,7 +1426,7 @@ fn compile_offline_while_transitive_dep_not_cached() {
 
     Package::new("foo", "0.1.0").dep("bar", "1.0.0").publish();
 
-    let p = project("transitive_load_test")
+    let p = project().at("transitive_load_test")
         .file(
             "Cargo.toml",
             r#"
@@ -1466,7 +1466,7 @@ without the offline flag.",
 
 #[test]
 fn compile_path_dep_then_change_version() {
-    let p = project("foo")
+    let p = project()
         .file(
             "Cargo.toml",
             r#"
@@ -1511,7 +1511,7 @@ fn compile_path_dep_then_change_version() {
 
 #[test]
 fn ignores_carriage_return_in_lockfile() {
-    let p = project("foo")
+    let p = project()
         .file(
             "Cargo.toml",
             r#"
@@ -1550,7 +1550,7 @@ fn ignores_carriage_return_in_lockfile() {
 fn cargo_default_env_metadata_env_var() {
     // Ensure that path dep + dylib + env_var get metadata
     // (even though path_dep + dylib should not)
-    let p = project("foo")
+    let p = project()
         .file(
             "Cargo.toml",
             r#"
@@ -1644,7 +1644,7 @@ fn cargo_default_env_metadata_env_var() {
 
 #[test]
 fn crate_env_vars() {
-    let p = project("foo")
+    let p = project()
         .file(
             "Cargo.toml",
             r#"
@@ -1719,7 +1719,7 @@ fn crate_env_vars() {
 
 #[test]
 fn crate_authors_env_vars() {
-    let p = project("foo")
+    let p = project()
         .file(
             "Cargo.toml",
             r#"
@@ -1784,7 +1784,7 @@ fn setenv_for_removing_empty_component(mut p: ProcessBuilder) -> ProcessBuilder 
 // Regression test for #4277
 #[test]
 fn crate_library_path_env_var() {
-    let p = project("foo")
+    let p = project()
         .file(
             "Cargo.toml",
             r#"
@@ -1818,7 +1818,7 @@ fn crate_library_path_env_var() {
 // Regression test for #4277
 #[test]
 fn build_with_fake_libc_not_loading() {
-    let p = project("foo")
+    let p = project()
         .file(
             "Cargo.toml",
             r#"
@@ -1847,7 +1847,7 @@ fn build_with_fake_libc_not_loading() {
 // this is testing that src/<pkg-name>.rs still works (for now)
 #[test]
 fn many_crate_types_old_style_lib_location() {
-    let p = project("foo")
+    let p = project()
         .file(
             "Cargo.toml",
             r#"
@@ -1886,7 +1886,7 @@ please rename the file to `src/lib.rs` or set lib.path in Cargo.toml",
 
 #[test]
 fn many_crate_types_correct() {
-    let p = project("foo")
+    let p = project()
         .file(
             "Cargo.toml",
             r#"
@@ -1918,7 +1918,7 @@ fn many_crate_types_correct() {
 
 #[test]
 fn self_dependency() {
-    let p = project("foo")
+    let p = project()
         .file(
             "Cargo.toml",
             r#"
@@ -1956,7 +1956,7 @@ fn ignore_broken_symlinks() {
         return;
     }
 
-    let p = project("foo")
+    let p = project()
         .file("Cargo.toml", &basic_bin_manifest("foo"))
         .file("src/foo.rs", &main_file(r#""i am foo""#, &[]))
         .symlink("Notafile", "bar")
@@ -1973,7 +1973,7 @@ fn ignore_broken_symlinks() {
 
 #[test]
 fn missing_lib_and_bin() {
-    let p = project("foo")
+    let p = project()
         .file(
             "Cargo.toml",
             r#"
@@ -2005,7 +2005,7 @@ fn lto_build() {
         return;
     }
 
-    let p = project("foo")
+    let p = project()
         .file(
             "Cargo.toml",
             r#"
@@ -2043,7 +2043,7 @@ fn lto_build() {
 
 #[test]
 fn verbose_build() {
-    let p = project("foo")
+    let p = project()
         .file(
             "Cargo.toml",
             r#"
@@ -2076,7 +2076,7 @@ fn verbose_build() {
 
 #[test]
 fn verbose_release_build() {
-    let p = project("foo")
+    let p = project()
         .file(
             "Cargo.toml",
             r#"
@@ -2110,7 +2110,7 @@ fn verbose_release_build() {
 
 #[test]
 fn verbose_release_build_deps() {
-    let p = project("foo")
+    let p = project()
         .file(
             "Cargo.toml",
             r#"
@@ -2175,7 +2175,7 @@ fn verbose_release_build_deps() {
 
 #[test]
 fn explicit_examples() {
-    let p = project("world")
+    let p = project().at("world")
         .file(
             "Cargo.toml",
             r#"
@@ -2234,7 +2234,7 @@ fn explicit_examples() {
 
 #[test]
 fn non_existing_example() {
-    let p = project("world")
+    let p = project().at("world")
         .file(
             "Cargo.toml",
             r#"
@@ -2268,7 +2268,7 @@ Caused by:
 
 #[test]
 fn non_existing_binary() {
-    let p = project("world")
+    let p = project().at("world")
         .file(
             "Cargo.toml",
             r#"
@@ -2299,7 +2299,7 @@ Caused by:
 
 #[test]
 fn legacy_binary_paths_warinigs() {
-    let p = project("world")
+    let p = project().at("world")
         .file(
             "Cargo.toml",
             r#"
@@ -2325,7 +2325,7 @@ please set bin.path in Cargo.toml",
         ),
     );
 
-    let p = project("world")
+    let p = project().at("world")
         .file(
             "Cargo.toml",
             r#"
@@ -2351,7 +2351,7 @@ please set bin.path in Cargo.toml",
         ),
     );
 
-    let p = project("world")
+    let p = project().at("world")
         .file(
             "Cargo.toml",
             r#"
@@ -2379,7 +2379,7 @@ please set bin.path in Cargo.toml",
 
 #[test]
 fn implicit_examples() {
-    let p = project("world")
+    let p = project().at("world")
         .file(
             "Cargo.toml",
             r#"
@@ -2430,7 +2430,7 @@ fn implicit_examples() {
 
 #[test]
 fn standard_build_no_ndebug() {
-    let p = project("world")
+    let p = project().at("world")
         .file("Cargo.toml", &basic_bin_manifest("foo"))
         .file(
             "src/foo.rs",
@@ -2455,7 +2455,7 @@ fn standard_build_no_ndebug() {
 
 #[test]
 fn release_build_ndebug() {
-    let p = project("world")
+    let p = project().at("world")
         .file("Cargo.toml", &basic_bin_manifest("foo"))
         .file(
             "src/foo.rs",
@@ -2480,7 +2480,7 @@ fn release_build_ndebug() {
 
 #[test]
 fn inferred_main_bin() {
-    let p = project("world")
+    let p = project().at("world")
         .file(
             "Cargo.toml",
             r#"
@@ -2504,7 +2504,7 @@ fn inferred_main_bin() {
 
 #[test]
 fn deletion_causes_failure() {
-    let p = project("foo")
+    let p = project()
         .file(
             "Cargo.toml",
             r#"
@@ -2551,7 +2551,7 @@ fn deletion_causes_failure() {
 
 #[test]
 fn bad_cargo_toml_in_target_dir() {
-    let p = project("world")
+    let p = project().at("world")
         .file(
             "Cargo.toml",
             r#"
@@ -2576,7 +2576,7 @@ fn bad_cargo_toml_in_target_dir() {
 
 #[test]
 fn lib_with_standard_name() {
-    let p = project("foo")
+    let p = project()
         .file(
             "Cargo.toml",
             r#"
@@ -2615,7 +2615,7 @@ fn lib_with_standard_name() {
 
 #[test]
 fn simple_staticlib() {
-    let p = project("foo")
+    let p = project()
         .file(
             "Cargo.toml",
             r#"
@@ -2641,7 +2641,7 @@ fn simple_staticlib() {
 
 #[test]
 fn staticlib_rlib_and_bin() {
-    let p = project("foo")
+    let p = project()
         .file(
             "Cargo.toml",
             r#"
@@ -2672,7 +2672,7 @@ fn staticlib_rlib_and_bin() {
 
 #[test]
 fn opt_out_of_bin() {
-    let p = project("foo")
+    let p = project()
         .file(
             "Cargo.toml",
             r#"
@@ -2692,7 +2692,7 @@ fn opt_out_of_bin() {
 
 #[test]
 fn single_lib() {
-    let p = project("foo")
+    let p = project()
         .file(
             "Cargo.toml",
             r#"
@@ -2713,7 +2713,7 @@ fn single_lib() {
 
 #[test]
 fn freshness_ignores_excluded() {
-    let foo = project("foo")
+    let foo = project()
         .file(
             "Cargo.toml",
             r#"
@@ -2753,7 +2753,7 @@ fn freshness_ignores_excluded() {
 
 #[test]
 fn rebuild_preserves_out_dir() {
-    let foo = project("foo")
+    let foo = project()
         .file(
             "Cargo.toml",
             r#"
@@ -2811,7 +2811,7 @@ fn rebuild_preserves_out_dir() {
 
 #[test]
 fn dep_no_libs() {
-    let foo = project("foo")
+    let foo = project()
         .file(
             "Cargo.toml",
             r#"
@@ -2841,7 +2841,7 @@ fn dep_no_libs() {
 
 #[test]
 fn recompile_space_in_name() {
-    let foo = project("foo")
+    let foo = project()
         .file(
             "Cargo.toml",
             r#"
@@ -2866,7 +2866,7 @@ fn recompile_space_in_name() {
 #[test]
 fn ignore_bad_directories() {
     use std::os::unix::prelude::*;
-    let foo = project("foo")
+    let foo = project()
         .file(
             "Cargo.toml",
             r#"
@@ -2891,7 +2891,7 @@ fn ignore_bad_directories() {
 
 #[test]
 fn bad_cargo_config() {
-    let foo = project("foo")
+    let foo = project()
         .file(
             "Cargo.toml",
             r#"
@@ -2931,7 +2931,7 @@ Caused by:
 #[test]
 fn cargo_platform_specific_dependency() {
     let host = rustc_host();
-    let p = project("foo")
+    let p = project()
         .file(
             "Cargo.toml",
             &format!(
@@ -3014,7 +3014,7 @@ fn cargo_platform_specific_dependency() {
 
 #[test]
 fn bad_platform_specific_dependency() {
-    let p = project("foo")
+    let p = project()
         .file(
             "Cargo.toml",
             r#"
@@ -3056,7 +3056,7 @@ fn bad_platform_specific_dependency() {
 
 #[test]
 fn cargo_platform_specific_dependency_wrong_platform() {
-    let p = project("foo")
+    let p = project()
         .file(
             "Cargo.toml",
             r#"
@@ -3110,7 +3110,7 @@ fn cargo_platform_specific_dependency_wrong_platform() {
 
 #[test]
 fn example_as_lib() {
-    let p = project("foo")
+    let p = project()
         .file(
             "Cargo.toml",
             r#"
@@ -3134,7 +3134,7 @@ fn example_as_lib() {
 
 #[test]
 fn example_as_rlib() {
-    let p = project("foo")
+    let p = project()
         .file(
             "Cargo.toml",
             r#"
@@ -3158,7 +3158,7 @@ fn example_as_rlib() {
 
 #[test]
 fn example_as_dylib() {
-    let p = project("foo")
+    let p = project()
         .file(
             "Cargo.toml",
             r#"
@@ -3186,7 +3186,7 @@ fn example_as_proc_macro() {
         return;
     }
 
-    let p = project("foo")
+    let p = project()
         .file(
             "Cargo.toml",
             r#"
@@ -3210,7 +3210,7 @@ fn example_as_proc_macro() {
 
 #[test]
 fn example_bin_same_name() {
-    let p = project("foo")
+    let p = project()
         .file(
             "Cargo.toml",
             r#"
@@ -3247,7 +3247,7 @@ fn example_bin_same_name() {
 
 #[test]
 fn compile_then_delete() {
-    let p = project("foo")
+    let p = project()
         .file(
             "Cargo.toml",
             r#"
@@ -3272,7 +3272,7 @@ fn compile_then_delete() {
 
 #[test]
 fn transitive_dependencies_not_available() {
-    let p = project("foo")
+    let p = project()
         .file(
             "Cargo.toml",
             r#"
@@ -3324,7 +3324,7 @@ fn transitive_dependencies_not_available() {
 
 #[test]
 fn cyclic_deps_rejected() {
-    let p = project("foo")
+    let p = project()
         .file(
             "Cargo.toml",
             r#"
@@ -3363,7 +3363,7 @@ package `a v0.0.1 ([..]a)`
 
 #[test]
 fn predictable_filenames() {
-    let p = project("foo")
+    let p = project()
         .file(
             "Cargo.toml",
             r#"
@@ -3391,7 +3391,7 @@ fn predictable_filenames() {
 
 #[test]
 fn dashes_to_underscores() {
-    let p = project("foo")
+    let p = project()
         .file(
             "Cargo.toml",
             r#"
@@ -3411,7 +3411,7 @@ fn dashes_to_underscores() {
 
 #[test]
 fn dashes_in_crate_name_bad() {
-    let p = project("foo")
+    let p = project()
         .file(
             "Cargo.toml",
             r#"
@@ -3433,7 +3433,7 @@ fn dashes_in_crate_name_bad() {
 
 #[test]
 fn rustc_env_var() {
-    let p = project("foo")
+    let p = project()
         .file(
             "Cargo.toml",
             r#"
@@ -3464,7 +3464,7 @@ Caused by:
 
 #[test]
 fn filtering() {
-    let p = project("foo")
+    let p = project()
         .file(
             "Cargo.toml",
             r#"
@@ -3496,7 +3496,7 @@ fn filtering() {
 
 #[test]
 fn filtering_implicit_bins() {
-    let p = project("foo")
+    let p = project()
         .file(
             "Cargo.toml",
             r#"
@@ -3522,7 +3522,7 @@ fn filtering_implicit_bins() {
 
 #[test]
 fn filtering_implicit_examples() {
-    let p = project("foo")
+    let p = project()
         .file(
             "Cargo.toml",
             r#"
@@ -3548,7 +3548,7 @@ fn filtering_implicit_examples() {
 
 #[test]
 fn ignore_dotfile() {
-    let p = project("foo")
+    let p = project()
         .file(
             "Cargo.toml",
             r#"
@@ -3567,7 +3567,7 @@ fn ignore_dotfile() {
 
 #[test]
 fn ignore_dotdirs() {
-    let p = project("foo")
+    let p = project()
         .file(
             "Cargo.toml",
             r#"
@@ -3604,7 +3604,7 @@ fn dotdir_root() {
 
 #[test]
 fn custom_target_dir_env() {
-    let p = project("foo")
+    let p = project()
         .file(
             "Cargo.toml",
             r#"
@@ -3672,7 +3672,7 @@ fn custom_target_dir_env() {
 
 #[test]
 fn custom_target_dir_line_parameter() {
-    let p = project("foo")
+    let p = project()
         .file(
             "Cargo.toml",
             r#"
@@ -3762,7 +3762,7 @@ fn custom_target_dir_line_parameter() {
 
 #[test]
 fn build_multiple_packages() {
-    let p = project("foo")
+    let p = project()
         .file(
             "Cargo.toml",
             r#"
@@ -3835,7 +3835,7 @@ fn build_multiple_packages() {
 
 #[test]
 fn invalid_spec() {
-    let p = project("foo")
+    let p = project()
         .file(
             "Cargo.toml",
             r#"
@@ -3889,7 +3889,7 @@ fn invalid_spec() {
 
 #[test]
 fn manifest_with_bom_is_ok() {
-    let p = project("foo")
+    let p = project()
         .file(
             "Cargo.toml",
             "\u{FEFF}
@@ -3906,7 +3906,7 @@ fn manifest_with_bom_is_ok() {
 
 #[test]
 fn panic_abort_compiles_with_panic_abort() {
-    let p = project("foo")
+    let p = project()
         .file(
             "Cargo.toml",
             r#"
@@ -3931,7 +3931,7 @@ fn panic_abort_compiles_with_panic_abort() {
 
 #[test]
 fn explicit_color_config_is_propagated_to_rustc() {
-    let p = project("foo")
+    let p = project()
         .file(
             "Cargo.toml",
             r#"
@@ -3967,7 +3967,7 @@ fn explicit_color_config_is_propagated_to_rustc() {
 
 #[test]
 fn compiler_json_error_format() {
-    let p = project("foo")
+    let p = project()
         .file(
             "Cargo.toml",
             r#"
@@ -4184,7 +4184,7 @@ fn compiler_json_error_format() {
 
 #[test]
 fn wrong_message_format_option() {
-    let p = project("foo")
+    let p = project()
         .file("Cargo.toml", &basic_bin_manifest("foo"))
         .file("src/main.rs", "fn main() {}")
         .build();
@@ -4202,7 +4202,7 @@ error: 'XML' isn't a valid value for '--message-format <FMT>'
 
 #[test]
 fn message_format_json_forward_stderr() {
-    let p = project("foo")
+    let p = project()
         .file("Cargo.toml", &basic_bin_manifest("foo"))
         .file("src/main.rs", "fn main() { let unused = 0; }")
         .build();
@@ -4255,7 +4255,7 @@ fn message_format_json_forward_stderr() {
 
 #[test]
 fn no_warn_about_package_metadata() {
-    let p = project("foo")
+    let p = project()
         .file(
             "Cargo.toml",
             r#"
@@ -4286,7 +4286,7 @@ fn no_warn_about_package_metadata() {
 
 #[test]
 fn cargo_build_empty_target() {
-    let p = project("foo")
+    let p = project()
         .file("Cargo.toml", &basic_bin_manifest("foo"))
         .file("src/main.rs", "fn main() {}")
         .build();
@@ -4301,7 +4301,7 @@ fn cargo_build_empty_target() {
 
 #[test]
 fn build_all_workspace() {
-    let p = project("foo")
+    let p = project()
         .file(
             "Cargo.toml",
             r#"
@@ -4349,7 +4349,7 @@ fn build_all_workspace() {
 
 #[test]
 fn build_all_exclude() {
-    let p = project("foo")
+    let p = project()
         .file(
             "Cargo.toml",
             r#"
@@ -4411,7 +4411,7 @@ fn build_all_exclude() {
 
 #[test]
 fn build_all_workspace_implicit_examples() {
-    let p = project("foo")
+    let p = project()
         .file(
             "Cargo.toml",
             r#"
@@ -4465,7 +4465,7 @@ fn build_all_workspace_implicit_examples() {
 
 #[test]
 fn build_all_virtual_manifest() {
-    let p = project("workspace")
+    let p = project().at("workspace")
         .file(
             "Cargo.toml",
             r#"
@@ -4520,7 +4520,7 @@ fn build_all_virtual_manifest() {
 
 #[test]
 fn build_virtual_manifest_all_implied() {
-    let p = project("workspace")
+    let p = project().at("workspace")
         .file(
             "Cargo.toml",
             r#"
@@ -4575,7 +4575,7 @@ fn build_virtual_manifest_all_implied() {
 
 #[test]
 fn build_virtual_manifest_one_project() {
-    let p = project("workspace")
+    let p = project().at("workspace")
         .file(
             "Cargo.toml",
             r#"
@@ -4628,7 +4628,7 @@ fn build_virtual_manifest_one_project() {
 
 #[test]
 fn build_all_virtual_manifest_implicit_examples() {
-    let p = project("foo")
+    let p = project()
         .file(
             "Cargo.toml",
             r#"
@@ -4689,7 +4689,7 @@ fn build_all_virtual_manifest_implicit_examples() {
 
 #[test]
 fn build_all_member_dependency_same_name() {
-    let p = project("workspace")
+    let p = project().at("workspace")
         .file(
             "Cargo.toml",
             r#"
@@ -4732,7 +4732,7 @@ fn build_all_member_dependency_same_name() {
 
 #[test]
 fn run_proper_binary() {
-    let p = project("foo")
+    let p = project()
         .file(
             "Cargo.toml",
             r#"
@@ -4772,7 +4772,7 @@ fn run_proper_binary() {
 
 #[test]
 fn run_proper_binary_main_rs() {
-    let p = project("foo")
+    let p = project()
         .file(
             "Cargo.toml",
             r#"
@@ -4802,7 +4802,7 @@ fn run_proper_binary_main_rs() {
 
 #[test]
 fn run_proper_alias_binary_from_src() {
-    let p = project("foo")
+    let p = project()
         .file(
             "Cargo.toml",
             r#"
@@ -4847,7 +4847,7 @@ fn run_proper_alias_binary_from_src() {
 
 #[test]
 fn run_proper_alias_binary_main_rs() {
-    let p = project("foo")
+    let p = project()
         .file(
             "Cargo.toml",
             r#"
@@ -4884,7 +4884,7 @@ fn run_proper_alias_binary_main_rs() {
 
 #[test]
 fn run_proper_binary_main_rs_as_foo() {
-    let p = project("foo")
+    let p = project()
         .file(
             "Cargo.toml",
             r#"
@@ -4926,7 +4926,7 @@ fn rustc_wrapper() {
         return;
     }
 
-    let p = project("foo")
+    let p = project()
         .file("Cargo.toml", &basic_bin_manifest("foo"))
         .file("src/foo.rs", &main_file(r#""i am foo""#, &[]))
         .build();
@@ -4943,7 +4943,7 @@ fn rustc_wrapper() {
 
 #[test]
 fn cdylib_not_lifted() {
-    let p = project("foo")
+    let p = project()
         .file(
             "Cargo.toml",
             r#"
@@ -4980,7 +4980,7 @@ fn cdylib_not_lifted() {
 
 #[test]
 fn cdylib_final_outputs() {
-    let p = project("foo")
+    let p = project()
         .file(
             "Cargo.toml",
             r#"
@@ -5016,7 +5016,7 @@ fn cdylib_final_outputs() {
 fn deterministic_cfg_flags() {
     // This bug is non-deterministic
 
-    let p = project("foo")
+    let p = project()
         .file(
             "Cargo.toml",
             r#"
@@ -5072,7 +5072,7 @@ fn deterministic_cfg_flags() {
 
 #[test]
 fn explicit_bins_without_paths() {
-    let p = project("foo")
+    let p = project()
         .file(
             "Cargo.toml",
             r#"
@@ -5098,7 +5098,7 @@ fn explicit_bins_without_paths() {
 
 #[test]
 fn no_bin_in_src_with_lib() {
-    let p = project("foo")
+    let p = project()
         .file(
             "Cargo.toml",
             r#"
@@ -5129,7 +5129,7 @@ Caused by:
 
 #[test]
 fn inferred_bins() {
-    let p = project("foo")
+    let p = project()
         .file(
             "Cargo.toml",
             r#"
@@ -5153,7 +5153,7 @@ fn inferred_bins() {
 #[test]
 fn inferred_bins_duplicate_name() {
     // this should fail, because we have two binaries with the same name
-    let p = project("bar")
+    let p = project().at("bar")
         .file(
             "Cargo.toml",
             r#"
@@ -5178,7 +5178,7 @@ fn inferred_bins_duplicate_name() {
 
 #[test]
 fn inferred_bin_path() {
-    let p = project("foo")
+    let p = project()
         .file(
             "Cargo.toml",
             r#"
@@ -5201,7 +5201,7 @@ fn inferred_bin_path() {
 
 #[test]
 fn inferred_examples() {
-    let p = project("foo")
+    let p = project()
         .file(
             "Cargo.toml",
             r#"
@@ -5223,7 +5223,7 @@ fn inferred_examples() {
 
 #[test]
 fn inferred_tests() {
-    let p = project("foo")
+    let p = project()
         .file(
             "Cargo.toml",
             r#"
@@ -5246,7 +5246,7 @@ fn inferred_tests() {
 
 #[test]
 fn inferred_benchmarks() {
-    let p = project("foo")
+    let p = project()
         .file(
             "Cargo.toml",
             r#"
@@ -5271,7 +5271,7 @@ fn inferred_benchmarks() {
 fn same_metadata_different_directory() {
     // A top-level crate built in two different workspaces should have the
     // same metadata hash.
-    let p = project("foo1")
+    let p = project().at("foo1")
         .file("Cargo.toml", &basic_bin_manifest("foo"))
         .file("src/foo.rs", &main_file(r#""i am foo""#, &[]))
         .build();
@@ -5283,7 +5283,7 @@ fn same_metadata_different_directory() {
         .find(|arg| arg.starts_with("metadata="))
         .unwrap();
 
-    let p = project("foo2")
+    let p = project().at("foo2")
         .file("Cargo.toml", &basic_bin_manifest("foo"))
         .file("src/foo.rs", &main_file(r#""i am foo""#, &[]))
         .build();
@@ -5313,7 +5313,7 @@ fn building_a_dependent_crate_witout_bin_should_fail() {
         .file("src/lib.rs", "")
         .publish();
 
-    let p = project("foo")
+    let p = project()
         .file(
             "Cargo.toml",
             r#"
@@ -5341,7 +5341,7 @@ fn uplift_dsym_of_bin_on_mac() {
     if !cfg!(any(target_os = "macos", target_os = "ios")) {
         return;
     }
-    let p = project("foo")
+    let p = project()
         .file(
             "Cargo.toml",
             r#"
@@ -5381,7 +5381,7 @@ fn uplift_pdb_of_bin_on_windows() {
     if !cfg!(all(target_os = "windows", target_env = "msvc")) {
         return;
     }
-    let p = project("foo")
+    let p = project()
         .file(
             "Cargo.toml",
             r#"
@@ -5413,7 +5413,7 @@ fn uplift_pdb_of_bin_on_windows() {
 // targets based on filters (assuming --profile is not specified).
 #[test]
 fn build_filter_infer_profile() {
-    let p = project("foo")
+    let p = project()
         .file(
             "Cargo.toml",
             r#"
@@ -5491,7 +5491,7 @@ fn build_filter_infer_profile() {
 
 #[test]
 fn targets_selected_default() {
-    let p = project("foo")
+    let p = project()
         .file(
             "Cargo.toml",
             r#"
@@ -5523,7 +5523,7 @@ fn targets_selected_default() {
 
 #[test]
 fn targets_selected_all() {
-    let p = project("foo")
+    let p = project()
         .file(
             "Cargo.toml",
             r#"
@@ -5555,7 +5555,7 @@ fn targets_selected_all() {
 
 #[test]
 fn all_targets_no_lib() {
-    let p = project("foo")
+    let p = project()
         .file(
             "Cargo.toml",
             r#"
@@ -5588,7 +5588,7 @@ fn all_targets_no_lib() {
 #[test]
 fn no_linkable_target() {
     // Issue 3169. This is currently not an error as per discussion in PR #4797
-    let p = project("foo")
+    let p = project()
         .file(
             "Cargo.toml",
             r#"
@@ -5627,7 +5627,7 @@ fn no_linkable_target() {
 #[test]
 fn avoid_dev_deps() {
     Package::new("foo", "1.0.0").publish();
-    let p = project("foo")
+    let p = project()
         .file(
             "Cargo.toml",
             r#"
@@ -5654,7 +5654,7 @@ fn avoid_dev_deps() {
 
 #[test]
 fn invalid_jobs() {
-    let p = project("foo")
+    let p = project()
         .file("Cargo.toml", &basic_bin_manifest("foo"))
         .file("src/foo.rs", &main_file(r#""i am foo""#, &[]))
         .build();

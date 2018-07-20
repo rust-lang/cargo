@@ -8,7 +8,7 @@ use hamcrest::assert_that;
 fn all_target_project() -> Project {
     // This abuses the `codegen-units` setting so that we can verify exactly
     // which profile is used for each compiler invocation.
-    project("foo")
+    project()
         .file(
             "Cargo.toml",
             r#"

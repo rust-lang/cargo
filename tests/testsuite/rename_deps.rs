@@ -7,7 +7,7 @@ use hamcrest::assert_that;
 
 #[test]
 fn gated() {
-    let p = project("foo")
+    let p = project()
         .file(
             "Cargo.toml",
             r#"
@@ -37,7 +37,7 @@ consider adding `cargo-features = [\"rename-dependency\"]` to the manifest
         ),
     );
 
-    let p = project("bar")
+    let p = project().at("bar")
         .file(
             "Cargo.toml",
             r#"
@@ -73,7 +73,7 @@ fn rename_dependency() {
     Package::new("bar", "0.1.0").publish();
     Package::new("bar", "0.2.0").publish();
 
-    let p = project("foo")
+    let p = project()
         .file(
             "Cargo.toml",
             r#"
@@ -106,7 +106,7 @@ fn rename_dependency() {
 
 #[test]
 fn rename_with_different_names() {
-    let p = project("foo")
+    let p = project()
         .file(
             "Cargo.toml",
             r#"
@@ -174,7 +174,7 @@ fn lots_of_names() {
         .file("src/lib.rs", "pub fn foo3() {}")
         .build();
 
-    let p = project("foo")
+    let p = project()
         .file(
             "Cargo.toml",
             &format!(r#"
@@ -234,7 +234,7 @@ fn lots_of_names() {
 fn rename_and_patch() {
     Package::new("foo", "0.1.0").publish();
 
-    let p = project("foo")
+    let p = project()
         .file(
             "Cargo.toml",
             r#"
@@ -284,7 +284,7 @@ fn rename_and_patch() {
 fn rename_twice() {
     Package::new("foo", "0.1.0").publish();
 
-    let p = project("foo")
+    let p = project()
         .file(
             "Cargo.toml",
             r#"
@@ -320,7 +320,7 @@ name, but the dependency on `foo v0.1.0` is listed as having different names
 fn rename_affects_fingerprint() {
     Package::new("foo", "0.1.0").publish();
 
-    let p = project("foo")
+    let p = project()
         .file(
             "Cargo.toml",
             r#"

@@ -4,7 +4,7 @@ use hamcrest::assert_that;
 
 #[test]
 fn probe_cfg_before_crate_type_discovery() {
-    let client = project("client")
+    let client = project().at("client")
         .file(
             "Cargo.toml",
             r#"
@@ -30,7 +30,7 @@ fn probe_cfg_before_crate_type_discovery() {
         "#,
         )
         .build();
-    let _noop = project("noop")
+    let _noop = project().at("noop")
         .file(
             "Cargo.toml",
             r#"
@@ -62,7 +62,7 @@ fn probe_cfg_before_crate_type_discovery() {
 
 #[test]
 fn noop() {
-    let client = project("client")
+    let client = project().at("client")
         .file(
             "Cargo.toml",
             r#"
@@ -88,7 +88,7 @@ fn noop() {
         "#,
         )
         .build();
-    let _noop = project("noop")
+    let _noop = project().at("noop")
         .file(
             "Cargo.toml",
             r#"
@@ -121,7 +121,7 @@ fn noop() {
 
 #[test]
 fn impl_and_derive() {
-    let client = project("client")
+    let client = project().at("client")
         .file(
             "Cargo.toml",
             r#"
@@ -155,7 +155,7 @@ fn impl_and_derive() {
         "#,
         )
         .build();
-    let _transmogrify = project("transmogrify")
+    let _transmogrify = project().at("transmogrify")
         .file(
             "Cargo.toml",
             r#"
@@ -208,7 +208,7 @@ fn plugin_and_proc_macro() {
         return;
     }
 
-    let questionable = project("questionable")
+    let questionable = project().at("questionable")
         .file(
             "Cargo.toml",
             r#"
@@ -254,7 +254,7 @@ fn plugin_and_proc_macro() {
 
 #[test]
 fn proc_macro_doctest() {
-    let foo = project("foo")
+    let foo = project()
         .file(
             "Cargo.toml",
             r#"

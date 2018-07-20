@@ -15,7 +15,7 @@ use hamcrest::{assert_that, existing_dir, existing_file};
 
 #[test]
 fn custom_build_script_failed() {
-    let p = project("foo")
+    let p = project()
         .file(
             "Cargo.toml",
             r#"
@@ -58,7 +58,7 @@ process didn't exit successfully: `[..][/]build-script-build` (exit code: 101)",
 
 #[test]
 fn custom_build_env_vars() {
-    let p = project("foo")
+    let p = project()
         .file(
             "Cargo.toml",
             r#"
@@ -162,7 +162,7 @@ fn custom_build_env_vars() {
 fn custom_build_env_var_rustc_linker() {
     if cross_compile::disabled() { return; }
     let target = cross_compile::alternate();
-    let p = project("foo")
+    let p = project()
         .file("Cargo.toml",
               r#"
               [project]
@@ -203,7 +203,7 @@ fn custom_build_env_var_rustc_linker() {
 
 #[test]
 fn custom_build_script_wrong_rustc_flags() {
-    let p = project("foo")
+    let p = project()
         .file(
             "Cargo.toml",
             r#"
@@ -245,7 +245,7 @@ fn custom_build_script_wrong_rustc_flags() {
 /*
 #[test]
 fn custom_build_script_rustc_flags() {
-    let p = project("foo")
+    let p = project()
         .file("Cargo.toml", r#"
             [project]
 
@@ -297,7 +297,7 @@ url = p.url(),
 
 #[test]
 fn links_no_build_cmd() {
-    let p = project("foo")
+    let p = project()
         .file(
             "Cargo.toml",
             r#"
@@ -325,7 +325,7 @@ not have a custom build script
 #[test]
 fn links_duplicates() {
     // this tests that the links_duplicates are caught at resolver time
-    let p = project("foo")
+    let p = project()
         .file(
             "Cargo.toml",
             r#"
@@ -374,7 +374,7 @@ failed to select a version for `a-sys` which could resolve this conflict
 #[test]
 fn links_duplicates_deep_dependency() {
     // this tests that the links_duplicates are caught at resolver time
-    let p = project("foo")
+    let p = project()
         .file(
             "Cargo.toml",
             r#"
@@ -440,7 +440,7 @@ failed to select a version for `a-sys` which could resolve this conflict
 fn overrides_and_links() {
     let target = rustc_host();
 
-    let p = project("foo")
+    let p = project()
         .file(
             "Cargo.toml",
             r#"
@@ -514,7 +514,7 @@ fn overrides_and_links() {
 fn unused_overrides() {
     let target = rustc_host();
 
-    let p = project("foo")
+    let p = project()
         .file(
             "Cargo.toml",
             r#"
@@ -546,7 +546,7 @@ fn unused_overrides() {
 
 #[test]
 fn links_passes_env_vars() {
-    let p = project("foo")
+    let p = project()
         .file(
             "Cargo.toml",
             r#"
@@ -603,7 +603,7 @@ fn links_passes_env_vars() {
 
 #[test]
 fn only_rerun_build_script() {
-    let p = project("foo")
+    let p = project()
         .file(
             "Cargo.toml",
             r#"
@@ -644,7 +644,7 @@ fn only_rerun_build_script() {
 
 #[test]
 fn rebuild_continues_to_pass_env_vars() {
-    let a = project("a")
+    let a = project().at("a")
         .file(
             "Cargo.toml",
             r#"
@@ -671,7 +671,7 @@ fn rebuild_continues_to_pass_env_vars() {
         .build();
     a.root().move_into_the_past();
 
-    let p = project("foo")
+    let p = project()
         .file(
             "Cargo.toml",
             &format!(
@@ -712,7 +712,7 @@ fn rebuild_continues_to_pass_env_vars() {
 
 #[test]
 fn testing_and_such() {
-    let p = project("foo")
+    let p = project()
         .file(
             "Cargo.toml",
             r#"
@@ -790,7 +790,7 @@ fn testing_and_such() {
 #[test]
 fn propagation_of_l_flags() {
     let target = rustc_host();
-    let p = project("foo")
+    let p = project()
         .file(
             "Cargo.toml",
             r#"
@@ -866,7 +866,7 @@ fn propagation_of_l_flags() {
 #[test]
 fn propagation_of_l_flags_new() {
     let target = rustc_host();
-    let p = project("foo")
+    let p = project()
         .file(
             "Cargo.toml",
             r#"
@@ -941,7 +941,7 @@ fn propagation_of_l_flags_new() {
 
 #[test]
 fn build_deps_simple() {
-    let p = project("foo")
+    let p = project()
         .file(
             "Cargo.toml",
             r#"
@@ -994,7 +994,7 @@ fn build_deps_simple() {
 #[test]
 fn build_deps_not_for_normal() {
     let target = rustc_host();
-    let p = project("foo")
+    let p = project()
         .file(
             "Cargo.toml",
             r#"
@@ -1049,7 +1049,7 @@ Caused by:
 
 #[test]
 fn build_cmd_with_a_build_cmd() {
-    let p = project("foo")
+    let p = project()
         .file(
             "Cargo.toml",
             r#"
@@ -1136,7 +1136,7 @@ fn build_cmd_with_a_build_cmd() {
 
 #[test]
 fn out_dir_is_preserved() {
-    let p = project("foo")
+    let p = project()
         .file(
             "Cargo.toml",
             r#"
@@ -1193,7 +1193,7 @@ fn out_dir_is_preserved() {
 
 #[test]
 fn output_separate_lines() {
-    let p = project("foo")
+    let p = project()
         .file(
             "Cargo.toml",
             r#"
@@ -1231,7 +1231,7 @@ fn output_separate_lines() {
 
 #[test]
 fn output_separate_lines_new() {
-    let p = project("foo")
+    let p = project()
         .file(
             "Cargo.toml",
             r#"
@@ -1270,7 +1270,7 @@ fn output_separate_lines_new() {
 #[cfg(not(windows))] // FIXME(#867)
 #[test]
 fn code_generation() {
-    let p = project("foo")
+    let p = project()
         .file(
             "Cargo.toml",
             r#"
@@ -1330,7 +1330,7 @@ fn code_generation() {
 
 #[test]
 fn release_with_build_script() {
-    let p = project("foo")
+    let p = project()
         .file(
             "Cargo.toml",
             r#"
@@ -1358,7 +1358,7 @@ fn release_with_build_script() {
 
 #[test]
 fn build_script_only() {
-    let p = project("foo")
+    let p = project()
         .file(
             "Cargo.toml",
             r#"
@@ -1386,7 +1386,7 @@ Caused by:
 
 #[test]
 fn shared_dep_with_a_build_script() {
-    let p = project("foo")
+    let p = project()
         .file(
             "Cargo.toml",
             r#"
@@ -1436,7 +1436,7 @@ fn shared_dep_with_a_build_script() {
 
 #[test]
 fn transitive_dep_host() {
-    let p = project("foo")
+    let p = project()
         .file(
             "Cargo.toml",
             r#"
@@ -1488,7 +1488,7 @@ fn transitive_dep_host() {
 
 #[test]
 fn test_a_lib_with_a_build_command() {
-    let p = project("foo")
+    let p = project()
         .file(
             "Cargo.toml",
             r#"
@@ -1534,7 +1534,7 @@ fn test_a_lib_with_a_build_command() {
 
 #[test]
 fn test_dev_dep_build_script() {
-    let p = project("foo")
+    let p = project()
         .file(
             "Cargo.toml",
             r#"
@@ -1567,7 +1567,7 @@ fn test_dev_dep_build_script() {
 
 #[test]
 fn build_script_with_dynamic_native_dependency() {
-    let _workspace = project("ws")
+    let _workspace = project().at("ws")
         .file(
             "Cargo.toml",
             r#"
@@ -1577,7 +1577,7 @@ fn build_script_with_dynamic_native_dependency() {
         )
         .build();
 
-    let build = project("ws/builder")
+    let build = project().at("ws/builder")
         .file(
             "Cargo.toml",
             r#"
@@ -1601,7 +1601,7 @@ fn build_script_with_dynamic_native_dependency() {
         )
         .build();
 
-    let foo = project("ws/foo")
+    let foo = project().at("ws/foo")
         .file(
             "Cargo.toml",
             r#"
@@ -1678,7 +1678,7 @@ fn build_script_with_dynamic_native_dependency() {
 
 #[test]
 fn profile_and_opt_level_set_correctly() {
-    let build = project("builder")
+    let build = project().at("builder")
         .file(
             "Cargo.toml",
             r#"
@@ -1708,7 +1708,7 @@ fn profile_and_opt_level_set_correctly() {
 
 #[test]
 fn profile_debug_0() {
-    let p = project("foo")
+    let p = project()
         .file(
             "Cargo.toml",
             r#"
@@ -1739,7 +1739,7 @@ fn profile_debug_0() {
 
 #[test]
 fn build_script_with_lto() {
-    let build = project("builder")
+    let build = project().at("builder")
         .file(
             "Cargo.toml",
             r#"
@@ -1767,7 +1767,7 @@ fn build_script_with_lto() {
 
 #[test]
 fn test_duplicate_deps() {
-    let p = project("foo")
+    let p = project()
         .file(
             "Cargo.toml",
             r#"
@@ -1815,7 +1815,7 @@ fn test_duplicate_deps() {
 
 #[test]
 fn cfg_feedback() {
-    let build = project("builder")
+    let build = project().at("builder")
         .file(
             "Cargo.toml",
             r#"
@@ -1849,7 +1849,7 @@ fn cfg_feedback() {
 fn cfg_override() {
     let target = rustc_host();
 
-    let p = project("foo")
+    let p = project()
         .file(
             "Cargo.toml",
             r#"
@@ -1886,7 +1886,7 @@ fn cfg_override() {
 
 #[test]
 fn cfg_test() {
-    let p = project("foo")
+    let p = project()
         .file(
             "Cargo.toml",
             r#"
@@ -1962,7 +1962,7 @@ fn cfg_test() {
 
 #[test]
 fn cfg_doc() {
-    let p = project("foo")
+    let p = project()
         .file(
             "Cargo.toml",
             r#"
@@ -2031,7 +2031,7 @@ fn cfg_doc() {
 
 #[test]
 fn cfg_override_test() {
-    let p = project("foo")
+    let p = project()
         .file(
             "Cargo.toml",
             r#"
@@ -2109,7 +2109,7 @@ fn cfg_override_test() {
 
 #[test]
 fn cfg_override_doc() {
-    let p = project("foo")
+    let p = project()
         .file(
             "Cargo.toml",
             r#"
@@ -2178,7 +2178,7 @@ fn cfg_override_doc() {
 
 #[test]
 fn env_build() {
-    let p = project("foo")
+    let p = project()
         .file(
             "Cargo.toml",
             r#"
@@ -2216,7 +2216,7 @@ fn env_build() {
 
 #[test]
 fn env_test() {
-    let p = project("foo")
+    let p = project()
         .file(
             "Cargo.toml",
             r#"
@@ -2278,7 +2278,7 @@ fn env_test() {
 
 #[test]
 fn env_doc() {
-    let p = project("foo")
+    let p = project()
         .file(
             "Cargo.toml",
             r#"
@@ -2310,7 +2310,7 @@ fn env_doc() {
 
 #[test]
 fn flags_go_into_tests() {
-    let p = project("foo")
+    let p = project()
         .file(
             "Cargo.toml",
             r#"
@@ -2397,7 +2397,7 @@ fn flags_go_into_tests() {
 
 #[test]
 fn diamond_passes_args_only_once() {
-    let p = project("foo")
+    let p = project()
         .file(
             "Cargo.toml",
             r#"
@@ -2482,7 +2482,7 @@ fn diamond_passes_args_only_once() {
 #[test]
 fn adding_an_override_invalidates() {
     let target = rustc_host();
-    let p = project("foo")
+    let p = project()
         .file(
             "Cargo.toml",
             r#"
@@ -2547,7 +2547,7 @@ fn adding_an_override_invalidates() {
 #[test]
 fn changing_an_override_invalidates() {
     let target = rustc_host();
-    let p = project("foo")
+    let p = project()
         .file(
             "Cargo.toml",
             r#"
@@ -2613,7 +2613,7 @@ fn changing_an_override_invalidates() {
 fn fresh_builds_possible_with_link_libs() {
     // The bug is non-deterministic. Sometimes you can get a fresh build
     let target = rustc_host();
-    let p = project("foo")
+    let p = project()
         .file(
             "Cargo.toml",
             r#"
@@ -2669,7 +2669,7 @@ fn fresh_builds_possible_with_link_libs() {
 fn fresh_builds_possible_with_multiple_metadata_overrides() {
     // The bug is non-deterministic. Sometimes you can get a fresh build
     let target = rustc_host();
-    let p = project("foo")
+    let p = project()
         .file(
             "Cargo.toml",
             r#"
@@ -2725,7 +2725,7 @@ fn fresh_builds_possible_with_multiple_metadata_overrides() {
 
 #[test]
 fn rebuild_only_on_explicit_paths() {
-    let p = project("a")
+    let p = project().at("a")
         .file(
             "Cargo.toml",
             r#"
@@ -2841,7 +2841,7 @@ fn rebuild_only_on_explicit_paths() {
 
 #[test]
 fn doctest_receives_build_link_args() {
-    let p = project("foo")
+    let p = project()
         .file(
             "Cargo.toml",
             r#"
@@ -2886,7 +2886,7 @@ fn doctest_receives_build_link_args() {
 
 #[test]
 fn please_respect_the_dag() {
-    let p = project("foo")
+    let p = project()
         .file(
             "Cargo.toml",
             r#"
@@ -2941,7 +2941,7 @@ fn please_respect_the_dag() {
 
 #[test]
 fn non_utf8_output() {
-    let p = project("foo")
+    let p = project()
         .file(
             "Cargo.toml",
             r#"
@@ -2984,7 +2984,7 @@ fn non_utf8_output() {
 
 #[test]
 fn custom_target_dir() {
-    let p = project("foo")
+    let p = project()
         .file(
             "Cargo.toml",
             r#"
@@ -3024,7 +3024,7 @@ fn custom_target_dir() {
 
 #[test]
 fn panic_abort_with_build_scripts() {
-    let p = project("foo")
+    let p = project()
         .file(
             "Cargo.toml",
             r#"
@@ -3090,7 +3090,7 @@ fn panic_abort_with_build_scripts() {
 
 #[test]
 fn warnings_emitted() {
-    let p = project("foo")
+    let p = project()
         .file(
             "Cargo.toml",
             r#"
@@ -3154,7 +3154,7 @@ fn warnings_hidden_for_upstream() {
         .file("src/lib.rs", "")
         .publish();
 
-    let p = project("foo")
+    let p = project()
         .file(
             "Cargo.toml",
             r#"
@@ -3213,7 +3213,7 @@ fn warnings_printed_on_vv() {
         .file("src/lib.rs", "")
         .publish();
 
-    let p = project("foo")
+    let p = project()
         .file(
             "Cargo.toml",
             r#"
@@ -3251,7 +3251,7 @@ warning: bar
 
 #[test]
 fn output_shows_on_vv() {
-    let p = project("foo")
+    let p = project()
         .file(
             "Cargo.toml",
             r#"
@@ -3295,7 +3295,7 @@ stderr
 fn links_with_dots() {
     let target = rustc_host();
 
-    let p = project("foo")
+    let p = project()
         .file(
             "Cargo.toml",
             r#"
@@ -3338,7 +3338,7 @@ fn links_with_dots() {
 
 #[test]
 fn rustc_and_rustdoc_set_correctly() {
-    let p = project("builder")
+    let p = project().at("builder")
         .file(
             "Cargo.toml",
             r#"
@@ -3367,7 +3367,7 @@ fn rustc_and_rustdoc_set_correctly() {
 
 #[test]
 fn cfg_env_vars_available() {
-    let p = project("builder")
+    let p = project().at("builder")
         .file(
             "Cargo.toml",
             r#"
@@ -3400,7 +3400,7 @@ fn cfg_env_vars_available() {
 
 #[test]
 fn switch_features_rerun() {
-    let p = project("builder")
+    let p = project().at("builder")
         .file(
             "Cargo.toml",
             r#"
@@ -3461,7 +3461,7 @@ fn switch_features_rerun() {
 
 #[test]
 fn assume_build_script_when_build_rs_present() {
-    let p = project("builder")
+    let p = project().at("builder")
         .file(
             "Cargo.toml",
             r#"
@@ -3496,7 +3496,7 @@ fn assume_build_script_when_build_rs_present() {
 
 #[test]
 fn if_build_set_to_false_dont_treat_build_rs_as_build_script() {
-    let p = project("builder")
+    let p = project().at("builder")
         .file(
             "Cargo.toml",
             r#"
@@ -3620,7 +3620,7 @@ fn deterministic_rustc_dependency_flags() {
         .file("src/lib.rs", "")
         .publish();
 
-    let p = project("foo")
+    let p = project()
         .file(
             "Cargo.toml",
             r#"
@@ -3658,7 +3658,7 @@ fn deterministic_rustc_dependency_flags() {
 #[test]
 fn links_duplicates_with_cycle() {
     // this tests that the links_duplicates are caught at resolver time
-    let p = project("foo")
+    let p = project()
         .file(
             "Cargo.toml",
             r#"
@@ -3722,7 +3722,7 @@ failed to select a version for `a` which could resolve this conflict
 
 #[test]
 fn rename_with_link_search_path() {
-    let p = project("foo")
+    let p = project()
         .file(
             "Cargo.toml",
             r#"
@@ -3746,7 +3746,7 @@ fn rename_with_link_search_path() {
 
     assert_that(p.cargo("build"), execs().with_status(0));
 
-    let p2 = project("bar")
+    let p2 = project().at("bar")
         .file(
             "Cargo.toml",
             r#"
@@ -3867,7 +3867,7 @@ fn rename_with_link_search_path() {
 
 #[test]
 fn optional_build_script_dep() {
-    let p = project("foo")
+    let p = project()
         .file(
             "Cargo.toml",
             r#"
@@ -3933,7 +3933,7 @@ fn optional_build_script_dep() {
 
 #[test]
 fn optional_build_dep_and_required_normal_dep() {
-    let p = project("foo")
+    let p = project()
         .file(
             "Cargo.toml",
             r#"

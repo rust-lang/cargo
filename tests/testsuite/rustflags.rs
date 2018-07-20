@@ -7,7 +7,7 @@ use hamcrest::assert_that;
 
 #[test]
 fn env_rustflags_normal_source() {
-    let p = project("foo")
+    let p = project()
         .file(
             "Cargo.toml",
             r#"
@@ -59,7 +59,7 @@ fn env_rustflags_build_script() {
     // RUSTFLAGS should be passed to rustc for build scripts
     // when --target is not specified.
     // In this test if --cfg foo is passed the build will fail.
-    let p = project("foo")
+    let p = project()
         .file(
             "Cargo.toml",
             r#"
@@ -91,7 +91,7 @@ fn env_rustflags_build_script_dep() {
     // RUSTFLAGS should be passed to rustc for build scripts
     // when --target is not specified.
     // In this test if --cfg foo is not passed the build will fail.
-    let foo = project("foo")
+    let foo = project()
         .file(
             "Cargo.toml",
             r#"
@@ -112,7 +112,7 @@ fn env_rustflags_build_script_dep() {
         "#,
         )
         .build();
-    let _bar = project("bar")
+    let _bar = project().at("bar")
         .file(
             "Cargo.toml",
             r#"
@@ -142,7 +142,7 @@ fn env_rustflags_plugin() {
     // RUSTFLAGS should be passed to rustc for plugins
     // when --target is not specified.
     // In this test if --cfg foo is not passed the build will fail.
-    let p = project("foo")
+    let p = project()
         .file(
             "Cargo.toml",
             r#"
@@ -176,7 +176,7 @@ fn env_rustflags_plugin_dep() {
     // RUSTFLAGS should be passed to rustc for plugins
     // when --target is not specified.
     // In this test if --cfg foo is not passed the build will fail.
-    let foo = project("foo")
+    let foo = project()
         .file(
             "Cargo.toml",
             r#"
@@ -199,7 +199,7 @@ fn env_rustflags_plugin_dep() {
         "#,
         )
         .build();
-    let _bar = project("bar")
+    let _bar = project().at("bar")
         .file(
             "Cargo.toml",
             r#"
@@ -229,7 +229,7 @@ fn env_rustflags_plugin_dep() {
 
 #[test]
 fn env_rustflags_normal_source_with_target() {
-    let p = project("foo")
+    let p = project()
         .file(
             "Cargo.toml",
             r#"
@@ -299,7 +299,7 @@ fn env_rustflags_build_script_with_target() {
     // RUSTFLAGS should not be passed to rustc for build scripts
     // when --target is specified.
     // In this test if --cfg foo is passed the build will fail.
-    let p = project("foo")
+    let p = project()
         .file(
             "Cargo.toml",
             r#"
@@ -335,7 +335,7 @@ fn env_rustflags_build_script_dep_with_target() {
     // RUSTFLAGS should not be passed to rustc for build scripts
     // when --target is specified.
     // In this test if --cfg foo is passed the build will fail.
-    let foo = project("foo")
+    let foo = project()
         .file(
             "Cargo.toml",
             r#"
@@ -356,7 +356,7 @@ fn env_rustflags_build_script_dep_with_target() {
         "#,
         )
         .build();
-    let _bar = project("bar")
+    let _bar = project().at("bar")
         .file(
             "Cargo.toml",
             r#"
@@ -390,7 +390,7 @@ fn env_rustflags_plugin_with_target() {
     // RUSTFLAGS should not be passed to rustc for plugins
     // when --target is specified.
     // In this test if --cfg foo is passed the build will fail.
-    let p = project("foo")
+    let p = project()
         .file(
             "Cargo.toml",
             r#"
@@ -428,7 +428,7 @@ fn env_rustflags_plugin_dep_with_target() {
     // RUSTFLAGS should not be passed to rustc for plugins
     // when --target is specified.
     // In this test if --cfg foo is passed the build will fail.
-    let foo = project("foo")
+    let foo = project()
         .file(
             "Cargo.toml",
             r#"
@@ -451,7 +451,7 @@ fn env_rustflags_plugin_dep_with_target() {
         "#,
         )
         .build();
-    let _bar = project("bar")
+    let _bar = project().at("bar")
         .file(
             "Cargo.toml",
             r#"
@@ -485,7 +485,7 @@ fn env_rustflags_plugin_dep_with_target() {
 
 #[test]
 fn env_rustflags_recompile() {
-    let p = project("foo")
+    let p = project()
         .file(
             "Cargo.toml",
             r#"
@@ -507,7 +507,7 @@ fn env_rustflags_recompile() {
 
 #[test]
 fn env_rustflags_recompile2() {
-    let p = project("foo")
+    let p = project()
         .file(
             "Cargo.toml",
             r#"
@@ -532,7 +532,7 @@ fn env_rustflags_recompile2() {
 
 #[test]
 fn env_rustflags_no_recompile() {
-    let p = project("foo")
+    let p = project()
         .file(
             "Cargo.toml",
             r#"
@@ -556,7 +556,7 @@ fn env_rustflags_no_recompile() {
 
 #[test]
 fn build_rustflags_normal_source() {
-    let p = project("foo")
+    let p = project()
         .file(
             "Cargo.toml",
             r#"
@@ -600,7 +600,7 @@ fn build_rustflags_build_script() {
     // RUSTFLAGS should be passed to rustc for build scripts
     // when --target is not specified.
     // In this test if --cfg foo is passed the build will fail.
-    let p = project("foo")
+    let p = project()
         .file(
             "Cargo.toml",
             r#"
@@ -636,7 +636,7 @@ fn build_rustflags_build_script_dep() {
     // RUSTFLAGS should be passed to rustc for build scripts
     // when --target is not specified.
     // In this test if --cfg foo is not passed the build will fail.
-    let foo = project("foo")
+    let foo = project()
         .file(
             "Cargo.toml",
             r#"
@@ -664,7 +664,7 @@ fn build_rustflags_build_script_dep() {
             "#,
         )
         .build();
-    let _bar = project("bar")
+    let _bar = project().at("bar")
         .file(
             "Cargo.toml",
             r#"
@@ -691,7 +691,7 @@ fn build_rustflags_plugin() {
     // RUSTFLAGS should be passed to rustc for plugins
     // when --target is not specified.
     // In this test if --cfg foo is not passed the build will fail.
-    let p = project("foo")
+    let p = project()
         .file(
             "Cargo.toml",
             r#"
@@ -729,7 +729,7 @@ fn build_rustflags_plugin_dep() {
     // RUSTFLAGS should be passed to rustc for plugins
     // when --target is not specified.
     // In this test if --cfg foo is not passed the build will fail.
-    let foo = project("foo")
+    let foo = project()
         .file(
             "Cargo.toml",
             r#"
@@ -759,7 +759,7 @@ fn build_rustflags_plugin_dep() {
             "#,
         )
         .build();
-    let _bar = project("bar")
+    let _bar = project().at("bar")
         .file(
             "Cargo.toml",
             r#"
@@ -786,7 +786,7 @@ fn build_rustflags_plugin_dep() {
 
 #[test]
 fn build_rustflags_normal_source_with_target() {
-    let p = project("foo")
+    let p = project()
         .file(
             "Cargo.toml",
             r#"
@@ -848,7 +848,7 @@ fn build_rustflags_build_script_with_target() {
     // RUSTFLAGS should not be passed to rustc for build scripts
     // when --target is specified.
     // In this test if --cfg foo is passed the build will fail.
-    let p = project("foo")
+    let p = project()
         .file(
             "Cargo.toml",
             r#"
@@ -888,7 +888,7 @@ fn build_rustflags_build_script_dep_with_target() {
     // RUSTFLAGS should not be passed to rustc for build scripts
     // when --target is specified.
     // In this test if --cfg foo is passed the build will fail.
-    let foo = project("foo")
+    let foo = project()
         .file(
             "Cargo.toml",
             r#"
@@ -916,7 +916,7 @@ fn build_rustflags_build_script_dep_with_target() {
             "#,
         )
         .build();
-    let _bar = project("bar")
+    let _bar = project().at("bar")
         .file(
             "Cargo.toml",
             r#"
@@ -947,7 +947,7 @@ fn build_rustflags_plugin_with_target() {
     // RUSTFLAGS should not be passed to rustc for plugins
     // when --target is specified.
     // In this test if --cfg foo is passed the build will fail.
-    let p = project("foo")
+    let p = project()
         .file(
             "Cargo.toml",
             r#"
@@ -989,7 +989,7 @@ fn build_rustflags_plugin_dep_with_target() {
     // RUSTFLAGS should not be passed to rustc for plugins
     // when --target is specified.
     // In this test if --cfg foo is passed the build will fail.
-    let foo = project("foo")
+    let foo = project()
         .file(
             "Cargo.toml",
             r#"
@@ -1019,7 +1019,7 @@ fn build_rustflags_plugin_dep_with_target() {
             "#,
         )
         .build();
-    let _bar = project("bar")
+    let _bar = project().at("bar")
         .file(
             "Cargo.toml",
             r#"
@@ -1050,7 +1050,7 @@ fn build_rustflags_plugin_dep_with_target() {
 
 #[test]
 fn build_rustflags_recompile() {
-    let p = project("foo")
+    let p = project()
         .file(
             "Cargo.toml",
             r#"
@@ -1079,7 +1079,7 @@ fn build_rustflags_recompile() {
 
 #[test]
 fn build_rustflags_recompile2() {
-    let p = project("foo")
+    let p = project()
         .file(
             "Cargo.toml",
             r#"
@@ -1111,7 +1111,7 @@ fn build_rustflags_recompile2() {
 
 #[test]
 fn build_rustflags_no_recompile() {
-    let p = project("foo")
+    let p = project()
         .file(
             "Cargo.toml",
             r#"
@@ -1175,7 +1175,7 @@ fn build_rustflags_with_home_config() {
 
 #[test]
 fn target_rustflags_normal_source() {
-    let p = project("foo")
+    let p = project()
         .file(
             "Cargo.toml",
             r#"
@@ -1220,7 +1220,7 @@ fn target_rustflags_normal_source() {
 // target.{}.rustflags takes precedence over build.rustflags
 #[test]
 fn target_rustflags_precedence() {
-    let p = project("foo")
+    let p = project()
         .file(
             "Cargo.toml",
             r#"
@@ -1257,7 +1257,7 @@ fn target_rustflags_precedence() {
 
 #[test]
 fn cfg_rustflags_normal_source() {
-    let p = project("foo")
+    let p = project()
         .file(
             "Cargo.toml",
             r#"
@@ -1349,7 +1349,7 @@ fn cfg_rustflags_normal_source() {
 // target.'cfg(...)'.rustflags takes precedence over build.rustflags
 #[test]
 fn cfg_rustflags_precedence() {
-    let p = project("foo")
+    let p = project()
         .file(
             "Cargo.toml",
             r#"
@@ -1443,7 +1443,7 @@ fn cfg_rustflags_precedence() {
 
 #[test]
 fn target_rustflags_string_and_array_form1() {
-    let p1 = project("foo")
+    let p1 = project()
         .file(
             "Cargo.toml",
             r#"
@@ -1473,7 +1473,7 @@ fn target_rustflags_string_and_array_form1() {
         ),
     );
 
-    let p2 = project("foo")
+    let p2 = project()
         .file(
             "Cargo.toml",
             r#"
@@ -1506,7 +1506,7 @@ fn target_rustflags_string_and_array_form1() {
 
 #[test]
 fn target_rustflags_string_and_array_form2() {
-    let p1 = project("foo")
+    let p1 = project()
         .file(
             "Cargo.toml",
             r#"
@@ -1539,7 +1539,7 @@ fn target_rustflags_string_and_array_form2() {
         ),
     );
 
-    let p2 = project("foo")
+    let p2 = project()
         .file(
             "Cargo.toml",
             r#"
@@ -1575,7 +1575,7 @@ fn target_rustflags_string_and_array_form2() {
 
 #[test]
 fn two_matching_in_config() {
-    let p1 = project("foo")
+    let p1 = project()
         .file(
             "Cargo.toml",
             r#"

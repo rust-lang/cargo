@@ -3,7 +3,7 @@ use hamcrest::assert_that;
 
 #[test]
 fn parses_env() {
-    let p = project("foo")
+    let p = project()
         .file(
             "Cargo.toml",
             r#"
@@ -26,7 +26,7 @@ fn parses_env() {
 
 #[test]
 fn parses_config() {
-    let p = project("foo")
+    let p = project()
         .file(
             "Cargo.toml",
             r#"
@@ -56,7 +56,7 @@ fn parses_config() {
 
 #[test]
 fn bad_flags() {
-    let p = project("foo")
+    let p = project()
         .file(
             "Cargo.toml",
             r#"
@@ -77,7 +77,7 @@ fn bad_flags() {
 
 #[test]
 fn rerun() {
-    let p = project("foo")
+    let p = project()
         .file(
             "Cargo.toml",
             r#"
@@ -113,7 +113,7 @@ fn rerun() {
 
 #[test]
 fn rustdocflags_passed_to_rustdoc_through_cargo_test() {
-    let p = project("foo")
+    let p = project()
         .file(
             "Cargo.toml",
             r#"
@@ -142,7 +142,7 @@ fn rustdocflags_passed_to_rustdoc_through_cargo_test() {
 
 #[test]
 fn rustdocflags_passed_to_rustdoc_through_cargo_test_only_once() {
-    let p = project("foo")
+    let p = project()
         .file(
             "Cargo.toml",
             r#"

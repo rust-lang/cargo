@@ -4,7 +4,7 @@ use hamcrest::assert_that;
 
 #[test]
 fn bad1() {
-    let p = project("foo")
+    let p = project()
         .file(
             "Cargo.toml",
             r#"
@@ -38,7 +38,7 @@ but found string in [..]config
 
 #[test]
 fn bad2() {
-    let p = project("foo")
+    let p = project()
         .file(
             "Cargo.toml",
             r#"
@@ -81,7 +81,7 @@ Caused by:
 
 #[test]
 fn bad3() {
-    let p = project("foo")
+    let p = project()
         .file(
             "Cargo.toml",
             r#"
@@ -117,7 +117,7 @@ Caused by:
 
 #[test]
 fn bad4() {
-    let p = project("foo")
+    let p = project()
         .file(
             ".cargo/config",
             r#"
@@ -141,7 +141,7 @@ Caused by:
 
 #[test]
 fn bad6() {
-    let p = project("foo")
+    let p = project()
         .file(
             "Cargo.toml",
             r#"
@@ -177,7 +177,7 @@ Caused by:
 
 #[test]
 fn bad_cargo_config_jobs() {
-    let p = project("foo")
+    let p = project()
         .file(
             "Cargo.toml",
             r#"
@@ -210,7 +210,7 @@ invalid value: integer `-1`, expected u32
 
 #[test]
 fn default_cargo_config_jobs() {
-    let p = project("foo")
+    let p = project()
         .file(
             "Cargo.toml",
             r#"
@@ -234,7 +234,7 @@ fn default_cargo_config_jobs() {
 
 #[test]
 fn good_cargo_config_jobs() {
-    let p = project("foo")
+    let p = project()
         .file(
             "Cargo.toml",
             r#"
@@ -258,7 +258,7 @@ fn good_cargo_config_jobs() {
 
 #[test]
 fn invalid_global_config() {
-    let p = project("foo")
+    let p = project()
         .file(
             "Cargo.toml",
             r#"
@@ -296,7 +296,7 @@ Caused by:
 
 #[test]
 fn bad_cargo_lock() {
-    let p = project("foo")
+    let p = project()
         .file(
             "Cargo.toml",
             r#"
@@ -327,7 +327,7 @@ Caused by:
 fn duplicate_packages_in_cargo_lock() {
     Package::new("foo", "0.1.0").publish();
 
-    let p = project("bar")
+    let p = project().at("bar")
         .file(
             "Cargo.toml",
             r#"
@@ -381,7 +381,7 @@ Caused by:
 fn bad_source_in_cargo_lock() {
     Package::new("foo", "0.1.0").publish();
 
-    let p = project("bar")
+    let p = project().at("bar")
         .file(
             "Cargo.toml",
             r#"
@@ -428,7 +428,7 @@ Caused by:
 
 #[test]
 fn bad_dependency_in_lockfile() {
-    let p = project("foo")
+    let p = project()
         .file(
             "Cargo.toml",
             r#"
@@ -467,7 +467,7 @@ Caused by:
 
 #[test]
 fn bad_git_dependency() {
-    let p = project("foo")
+    let p = project()
         .file(
             "Cargo.toml",
             r#"
@@ -505,7 +505,7 @@ Caused by:
 
 #[test]
 fn bad_crate_type() {
-    let p = project("foo")
+    let p = project()
         .file(
             "Cargo.toml",
             r#"
@@ -531,7 +531,7 @@ fn bad_crate_type() {
 
 #[test]
 fn malformed_override() {
-    let p = project("foo")
+    let p = project()
         .file(
             "Cargo.toml",
             r#"
@@ -567,7 +567,7 @@ Caused by:
 
 #[test]
 fn duplicate_binary_names() {
-    let p = project("foo")
+    let p = project()
         .file(
             "Cargo.toml",
             r#"
@@ -604,7 +604,7 @@ Caused by:
 
 #[test]
 fn duplicate_example_names() {
-    let p = project("foo")
+    let p = project()
         .file(
             "Cargo.toml",
             r#"
@@ -641,7 +641,7 @@ Caused by:
 
 #[test]
 fn duplicate_bench_names() {
-    let p = project("foo")
+    let p = project()
         .file(
             "Cargo.toml",
             r#"
@@ -678,7 +678,7 @@ Caused by:
 
 #[test]
 fn duplicate_deps() {
-    let p = project("foo")
+    let p = project()
         .file(
             "shim-bar/Cargo.toml",
             r#"
@@ -743,7 +743,7 @@ have a single canonical source path irrespective of build target.
 
 #[test]
 fn duplicate_deps_diff_sources() {
-    let p = project("foo")
+    let p = project()
         .file(
             "shim-bar/Cargo.toml",
             r#"
@@ -808,7 +808,7 @@ have a single canonical source path irrespective of build target.
 
 #[test]
 fn unused_keys() {
-    let p = project("foo")
+    let p = project()
         .file(
             "Cargo.toml",
             r#"
@@ -835,7 +835,7 @@ warning: unused manifest key: target.foo.bar
         ),
     );
 
-    let p = project("foo")
+    let p = project()
         .file(
             "Cargo.toml",
             r#"
@@ -865,7 +865,7 @@ warning: unused manifest key: project.bulid
         ),
     );
 
-    let p = project("bar")
+    let p = project().at("bar")
         .file(
             "Cargo.toml",
             r#"
@@ -900,7 +900,7 @@ warning: unused manifest key: lib.build
 
 #[test]
 fn unused_keys_in_virtual_manifest() {
-    let p = project("foo")
+    let p = project()
         .file(
             "Cargo.toml",
             r#"
@@ -933,7 +933,7 @@ warning: unused manifest key: workspace.bulid
 
 #[test]
 fn empty_dependencies() {
-    let p = project("empty_deps")
+    let p = project().at("empty_deps")
         .file(
             "Cargo.toml",
             r#"
@@ -964,7 +964,7 @@ to use. This will be considered an error in future versions
 
 #[test]
 fn invalid_toml_historically_allowed_is_warned() {
-    let p = project("empty_deps")
+    let p = project().at("empty_deps")
         .file(
             "Cargo.toml",
             r#"
@@ -1003,7 +1003,7 @@ in the future.
 
 #[test]
 fn ambiguous_git_reference() {
-    let p = project("foo")
+    let p = project()
         .file(
             "Cargo.toml",
             r#"
@@ -1035,7 +1035,7 @@ This will be considered an error in future versions
 
 #[test]
 fn bad_source_config1() {
-    let p = project("foo")
+    let p = project()
         .file(
             "Cargo.toml",
             r#"
@@ -1064,7 +1064,7 @@ fn bad_source_config1() {
 
 #[test]
 fn bad_source_config2() {
-    let p = project("foo")
+    let p = project()
         .file(
             "Cargo.toml",
             r#"
@@ -1107,7 +1107,7 @@ Caused by:
 
 #[test]
 fn bad_source_config3() {
-    let p = project("foo")
+    let p = project()
         .file(
             "Cargo.toml",
             r#"
@@ -1149,7 +1149,7 @@ Caused by:
 
 #[test]
 fn bad_source_config4() {
-    let p = project("foo")
+    let p = project()
         .file(
             "Cargo.toml",
             r#"
@@ -1196,7 +1196,7 @@ Caused by:
 
 #[test]
 fn bad_source_config5() {
-    let p = project("foo")
+    let p = project()
         .file(
             "Cargo.toml",
             r#"
@@ -1238,7 +1238,7 @@ Caused by:
 
 #[test]
 fn both_git_and_path_specified() {
-    let foo = project("foo")
+    let foo = project()
         .file(
             "Cargo.toml",
             r#"
@@ -1269,7 +1269,7 @@ This will be considered an error in future versions
 
 #[test]
 fn bad_source_config6() {
-    let p = project("foo")
+    let p = project()
         .file(
             "Cargo.toml",
             r#"
@@ -1303,7 +1303,7 @@ fn bad_source_config6() {
 
 #[test]
 fn ignored_git_revision() {
-    let foo = project("foo")
+    let foo = project()
         .file(
             "Cargo.toml",
             r#"
@@ -1332,7 +1332,7 @@ fn ignored_git_revision() {
 
 #[test]
 fn bad_source_config7() {
-    let p = project("foo")
+    let p = project()
         .file(
             "Cargo.toml",
             r#"
@@ -1368,7 +1368,7 @@ fn bad_source_config7() {
 
 #[test]
 fn bad_dependency() {
-    let p = project("foo")
+    let p = project()
         .file(
             "Cargo.toml",
             r#"
@@ -1399,7 +1399,7 @@ Caused by:
 
 #[test]
 fn bad_debuginfo() {
-    let p = project("foo")
+    let p = project()
         .file(
             "Cargo.toml",
             r#"
@@ -1430,7 +1430,7 @@ Caused by:
 
 #[test]
 fn bad_opt_level() {
-    let p = project("foo")
+    let p = project()
         .file(
             "Cargo.toml",
             r#"

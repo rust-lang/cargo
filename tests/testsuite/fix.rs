@@ -6,7 +6,7 @@ use hamcrest::assert_that;
 
 #[test]
 fn do_not_fix_broken_builds() {
-    let p = project("foo")
+    let p = project()
         .file(
             "Cargo.toml",
             r#"
@@ -40,7 +40,7 @@ fn do_not_fix_broken_builds() {
 
 #[test]
 fn fix_broken_if_requested() {
-    let p = project("foo")
+    let p = project()
         .file(
             "Cargo.toml",
             r#"
@@ -69,7 +69,7 @@ fn fix_broken_if_requested() {
 
 #[test]
 fn broken_fixes_backed_out() {
-    let p = project("foo")
+    let p = project()
         .file(
             "foo/Cargo.toml",
             r#"
@@ -171,7 +171,7 @@ fn broken_fixes_backed_out() {
 
 #[test]
 fn fix_path_deps() {
-    let p = project("foo")
+    let p = project()
         .file(
             "Cargo.toml",
             r#"
@@ -233,7 +233,7 @@ fn fix_path_deps() {
 
 #[test]
 fn do_not_fix_non_relevant_deps() {
-    let p = project("foo")
+    let p = project()
         .file(
             "foo/Cargo.toml",
             r#"
@@ -282,7 +282,7 @@ fn prepare_for_2018() {
     if !is_nightly() {
         return
     }
-    let p = project("foo")
+    let p = project()
         .file(
             "Cargo.toml",
             r#"
@@ -332,7 +332,7 @@ fn local_paths() {
     if !is_nightly() {
         return
     }
-    let p = project("foo")
+    let p = project()
         .file(
             "Cargo.toml",
             r#"
@@ -379,7 +379,7 @@ fn local_paths_no_fix() {
     if !is_nightly() {
         return
     }
-    let p = project("foo")
+    let p = project()
         .file(
             "Cargo.toml",
             r#"
@@ -419,7 +419,7 @@ fn upgrade_extern_crate() {
     if !is_nightly() {
         return
     }
-    let p = project("foo")
+    let p = project()
         .file(
             "Cargo.toml",
             r#"
@@ -482,7 +482,7 @@ fn specify_rustflags() {
     if !is_nightly() {
         return
     }
-    let p = project("foo")
+    let p = project()
         .file(
             "Cargo.toml",
             r#"
@@ -522,7 +522,7 @@ fn specify_rustflags() {
 
 #[test]
 fn no_changes_necessary() {
-    let p = project("foo")
+    let p = project()
         .file(
             "Cargo.toml",
             r#"
@@ -546,7 +546,7 @@ fn no_changes_necessary() {
 
 #[test]
 fn fixes_extra_mut() {
-    let p = project("foo")
+    let p = project()
         .file(
             "Cargo.toml",
             r#"
@@ -580,7 +580,7 @@ fn fixes_extra_mut() {
 
 #[test]
 fn fixes_two_missing_ampersands() {
-    let p = project("foo")
+    let p = project()
         .file(
             "Cargo.toml",
             r#"
@@ -615,7 +615,7 @@ fn fixes_two_missing_ampersands() {
 
 #[test]
 fn tricky() {
-    let p = project("foo")
+    let p = project()
         .file(
             "Cargo.toml",
             r#"
@@ -649,7 +649,7 @@ fn tricky() {
 
 #[test]
 fn preserve_line_endings() {
-    let p = project("foo")
+    let p = project()
         .file(
             "Cargo.toml",
             r#"
@@ -677,7 +677,7 @@ fn preserve_line_endings() {
 
 #[test]
 fn fix_deny_warnings() {
-    let p = project("foo")
+    let p = project()
         .file(
             "Cargo.toml",
             r#"
@@ -704,7 +704,7 @@ fn fix_deny_warnings() {
 
 #[test]
 fn fix_deny_warnings_but_not_others() {
-    let p = project("foo")
+    let p = project()
         .file(
             "Cargo.toml",
             r#"
@@ -739,7 +739,7 @@ fn fix_deny_warnings_but_not_others() {
 
 #[test]
 fn fix_two_files() {
-    let p = project("foo")
+    let p = project()
         .file(
             "Cargo.toml",
             r#"
@@ -785,7 +785,7 @@ fn fix_two_files() {
 
 #[test]
 fn fixes_missing_ampersand() {
-    let p = project("foo")
+    let p = project()
         .file(
             "Cargo.toml",
             r#"
@@ -853,7 +853,7 @@ fn fixes_missing_ampersand() {
 
 #[test]
 fn fix_features() {
-    let p = project("foo")
+    let p = project()
         .file(
             "Cargo.toml",
             r#"
@@ -884,7 +884,7 @@ fn fix_features() {
 
 #[test]
 fn shows_warnings() {
-    let p = project("foo")
+    let p = project()
         .file(
             "Cargo.toml",
             r#"
@@ -912,7 +912,7 @@ fn shows_warnings() {
 
 #[test]
 fn warns_if_no_vcs_detected() {
-    let p = project("foo")
+    let p = project()
         .use_temp_dir()
         .file(
             "Cargo.toml",
@@ -948,7 +948,7 @@ destructive changes; if you'd like to suppress this error pass `--allow-no-vcs`\
 
 #[test]
 fn warns_about_dirty_working_directory() {
-    let p = project("foo")
+    let p = project()
         .file(
             "Cargo.toml",
             r#"
@@ -992,7 +992,7 @@ these files:
 
 #[test]
 fn does_not_warn_about_clean_working_directory() {
-    let p = project("foo")
+    let p = project()
         .file(
             "Cargo.toml",
             r#"

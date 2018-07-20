@@ -43,7 +43,7 @@ version = "0.1.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 "#;
 
-    let p = project("bar")
+    let p = project().at("bar")
         .file(
             "Cargo.toml",
             r#"
@@ -93,7 +93,7 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
         cksum,
     );
 
-    let p = project("bar")
+    let p = project().at("bar")
         .file(
             "Cargo.toml",
             r#"
@@ -124,7 +124,7 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 fn totally_wild_checksums_works() {
     Package::new("foo", "0.1.0").publish();
 
-    let p = project("bar")
+    let p = project().at("bar")
         .file(
             "Cargo.toml",
             r#"
@@ -189,7 +189,7 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 fn wrong_checksum_is_an_error() {
     Package::new("foo", "0.1.0").publish();
 
-    let p = project("bar")
+    let p = project().at("bar")
         .file(
             "Cargo.toml",
             r#"
@@ -252,7 +252,7 @@ unable to verify that `foo v0.1.0` is the same as when the lockfile was generate
 fn unlisted_checksum_is_bad_if_we_calculate() {
     Package::new("foo", "0.1.0").publish();
 
-    let p = project("bar")
+    let p = project().at("bar")
         .file(
             "Cargo.toml",
             r#"
@@ -324,7 +324,7 @@ fn listed_checksum_bad_if_we_cannot_compute() {
         ).file("src/lib.rs", "")
     }).unwrap();
 
-    let p = project("bar")
+    let p = project().at("bar")
         .file(
             "Cargo.toml",
             &format!(
@@ -391,7 +391,7 @@ unable to verify that `foo v0.1.0 ([..])` is the same as when the lockfile was g
 fn current_lockfile_format() {
     Package::new("foo", "0.1.0").publish();
 
-    let p = project("bar")
+    let p = project().at("bar")
         .file(
             "Cargo.toml",
             r#"
@@ -451,7 +451,7 @@ version = "0.1.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 "#;
 
-    let p = project("bar")
+    let p = project().at("bar")
         .file(
             "Cargo.toml",
             r#"
@@ -479,7 +479,7 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 fn locked_correct_error() {
     Package::new("foo", "0.1.0").publish();
 
-    let p = project("bar")
+    let p = project().at("bar")
         .file(
             "Cargo.toml",
             r#"

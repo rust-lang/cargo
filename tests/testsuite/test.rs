@@ -12,7 +12,7 @@ use hamcrest::{assert_that, existing_file, is_not};
 
 #[test]
 fn cargo_test_simple() {
-    let p = project("foo")
+    let p = project()
         .file("Cargo.toml", &basic_bin_manifest("foo"))
         .file(
             "src/main.rs",
@@ -57,7 +57,7 @@ fn cargo_test_simple() {
 
 #[test]
 fn cargo_test_release() {
-    let p = project("foo")
+    let p = project()
         .file(
             "Cargo.toml",
             r#"
@@ -130,7 +130,7 @@ fn cargo_test_overflow_checks() {
     if !is_nightly() {
         return;
     }
-    let p = project("foo")
+    let p = project()
         .file(
             "Cargo.toml",
             r#"
@@ -170,7 +170,7 @@ fn cargo_test_overflow_checks() {
 
 #[test]
 fn cargo_test_verbose() {
-    let p = project("foo")
+    let p = project()
         .file("Cargo.toml", &basic_bin_manifest("foo"))
         .file(
             "src/main.rs",
@@ -199,7 +199,7 @@ fn cargo_test_verbose() {
 
 #[test]
 fn many_similar_names() {
-    let p = project("foo")
+    let p = project()
         .file(
             "Cargo.toml",
             r#"
@@ -254,7 +254,7 @@ fn many_similar_names() {
 
 #[test]
 fn cargo_test_failing_test_in_bin() {
-    let p = project("foo")
+    let p = project()
         .file("Cargo.toml", &basic_bin_manifest("foo"))
         .file(
             "src/main.rs",
@@ -319,7 +319,7 @@ failures:
 
 #[test]
 fn cargo_test_failing_test_in_test() {
-    let p = project("foo")
+    let p = project()
         .file("Cargo.toml", &basic_bin_manifest("foo"))
         .file(
             "src/main.rs",
@@ -383,7 +383,7 @@ failures:
 
 #[test]
 fn cargo_test_failing_test_in_lib() {
-    let p = project("foo")
+    let p = project()
         .file("Cargo.toml", &basic_lib_manifest("foo"))
         .file(
             "src/lib.rs",
@@ -429,7 +429,7 @@ failures:
 
 #[test]
 fn test_with_lib_dep() {
-    let p = project("foo")
+    let p = project()
         .file(
             "Cargo.toml",
             r#"
@@ -493,7 +493,7 @@ fn test_with_lib_dep() {
 
 #[test]
 fn test_with_deep_lib_dep() {
-    let p = project("bar")
+    let p = project().at("bar")
         .file(
             "Cargo.toml",
             r#"
@@ -523,7 +523,7 @@ fn test_with_deep_lib_dep() {
         ",
         )
         .build();
-    let _p2 = project("foo")
+    let _p2 = project()
         .file(
             "Cargo.toml",
             r#"
@@ -564,7 +564,7 @@ fn test_with_deep_lib_dep() {
 
 #[test]
 fn external_test_explicit() {
-    let p = project("foo")
+    let p = project()
         .file(
             "Cargo.toml",
             r#"
@@ -619,7 +619,7 @@ fn external_test_explicit() {
 
 #[test]
 fn external_test_named_test() {
-    let p = project("foo")
+    let p = project()
         .file(
             "Cargo.toml",
             r#"
@@ -647,7 +647,7 @@ fn external_test_named_test() {
 
 #[test]
 fn external_test_implicit() {
-    let p = project("foo")
+    let p = project()
         .file(
             "Cargo.toml",
             r#"
@@ -698,7 +698,7 @@ fn external_test_implicit() {
 
 #[test]
 fn dont_run_examples() {
-    let p = project("foo")
+    let p = project()
         .file(
             "Cargo.toml",
             r#"
@@ -725,7 +725,7 @@ fn dont_run_examples() {
 
 #[test]
 fn pass_through_command_line() {
-    let p = project("foo")
+    let p = project()
         .file(
             "Cargo.toml",
             r#"
@@ -779,7 +779,7 @@ fn pass_through_command_line() {
 // tests in an rlib
 #[test]
 fn cargo_test_twice() {
-    let p = project("test_twice")
+    let p = project().at("test_twice")
         .file("Cargo.toml", &basic_lib_manifest("test_twice"))
         .file(
             "src/test_twice.rs",
@@ -801,7 +801,7 @@ fn cargo_test_twice() {
 
 #[test]
 fn lib_bin_same_name() {
-    let p = project("foo")
+    let p = project()
         .file(
             "Cargo.toml",
             r#"
@@ -854,7 +854,7 @@ fn lib_bin_same_name() {
 
 #[test]
 fn lib_with_standard_name() {
-    let p = project("foo")
+    let p = project()
         .file(
             "Cargo.toml",
             r#"
@@ -908,7 +908,7 @@ fn lib_with_standard_name() {
 
 #[test]
 fn lib_with_standard_name2() {
-    let p = project("foo")
+    let p = project()
         .file(
             "Cargo.toml",
             r#"
@@ -959,7 +959,7 @@ fn lib_with_standard_name2() {
 
 #[test]
 fn lib_without_name() {
-    let p = project("foo")
+    let p = project()
         .file(
             "Cargo.toml",
             r#"
@@ -1009,7 +1009,7 @@ fn lib_without_name() {
 
 #[test]
 fn bin_without_name() {
-    let p = project("foo")
+    let p = project()
         .file(
             "Cargo.toml",
             r#"
@@ -1059,7 +1059,7 @@ Caused by:
 
 #[test]
 fn bench_without_name() {
-    let p = project("foo")
+    let p = project()
         .file(
             "Cargo.toml",
             r#"
@@ -1120,7 +1120,7 @@ Caused by:
 
 #[test]
 fn test_without_name() {
-    let p = project("foo")
+    let p = project()
         .file(
             "Cargo.toml",
             r#"
@@ -1180,7 +1180,7 @@ Caused by:
 
 #[test]
 fn example_without_name() {
-    let p = project("foo")
+    let p = project()
         .file(
             "Cargo.toml",
             r#"
@@ -1240,7 +1240,7 @@ Caused by:
 
 #[test]
 fn bin_there_for_integration() {
-    let p = project("foo")
+    let p = project()
         .file(
             "Cargo.toml",
             r#"
@@ -1286,7 +1286,7 @@ fn bin_there_for_integration() {
 
 #[test]
 fn test_dylib() {
-    let p = project("foo")
+    let p = project()
         .file(
             "Cargo.toml",
             r#"
@@ -1377,7 +1377,7 @@ fn test_dylib() {
 
 #[test]
 fn test_twice_with_build_cmd() {
-    let p = project("foo")
+    let p = project()
         .file(
             "Cargo.toml",
             r#"
@@ -1431,7 +1431,7 @@ fn test_twice_with_build_cmd() {
 
 #[test]
 fn test_then_build() {
-    let p = project("foo")
+    let p = project()
         .file(
             "Cargo.toml",
             r#"
@@ -1471,7 +1471,7 @@ fn test_then_build() {
 
 #[test]
 fn test_no_run() {
-    let p = project("foo")
+    let p = project()
         .file(
             "Cargo.toml",
             r#"
@@ -1504,7 +1504,7 @@ fn test_no_run() {
 
 #[test]
 fn test_run_specific_bin_target() {
-    let prj = project("foo")
+    let prj = project()
         .file(
             "Cargo.toml",
             r#"
@@ -1543,7 +1543,7 @@ fn test_run_specific_bin_target() {
 
 #[test]
 fn test_run_implicit_bin_target() {
-    let prj = project("foo")
+    let prj = project()
         .file(
             "Cargo.toml",
             r#"
@@ -1588,7 +1588,7 @@ fn test_run_implicit_bin_target() {
 
 #[test]
 fn test_run_specific_test_target() {
-    let prj = project("foo")
+    let prj = project()
         .file(
             "Cargo.toml",
             r#"
@@ -1621,7 +1621,7 @@ fn test_run_specific_test_target() {
 
 #[test]
 fn test_run_implicit_test_target() {
-    let prj = project("foo")
+    let prj = project()
         .file(
             "Cargo.toml",
             r#"
@@ -1666,7 +1666,7 @@ fn test_run_implicit_test_target() {
 
 #[test]
 fn test_run_implicit_bench_target() {
-    let prj = project("foo")
+    let prj = project()
         .file(
             "Cargo.toml",
             r#"
@@ -1711,7 +1711,7 @@ fn test_run_implicit_bench_target() {
 
 #[test]
 fn test_run_implicit_example_target() {
-    let prj = project("foo")
+    let prj = project()
         .file(
             "Cargo.toml",
             r#"
@@ -1800,7 +1800,7 @@ fn test_run_implicit_example_target() {
 
 #[test]
 fn test_no_harness() {
-    let p = project("foo")
+    let p = project()
         .file(
             "Cargo.toml",
             r#"
@@ -1838,7 +1838,7 @@ fn test_no_harness() {
 
 #[test]
 fn selective_testing() {
-    let p = project("foo")
+    let p = project()
         .file(
             "Cargo.toml",
             r#"
@@ -1946,7 +1946,7 @@ fn selective_testing() {
 
 #[test]
 fn almost_cyclic_but_not_quite() {
-    let p = project("a")
+    let p = project().at("a")
         .file(
             "Cargo.toml",
             r#"
@@ -2005,7 +2005,7 @@ fn almost_cyclic_but_not_quite() {
 
 #[test]
 fn build_then_selective_test() {
-    let p = project("a")
+    let p = project().at("a")
         .file(
             "Cargo.toml",
             r#"
@@ -2051,7 +2051,7 @@ fn build_then_selective_test() {
 
 #[test]
 fn example_dev_dep() {
-    let p = project("foo")
+    let p = project()
         .file(
             "Cargo.toml",
             r#"
@@ -2117,7 +2117,7 @@ fn example_dev_dep() {
 
 #[test]
 fn selective_testing_with_docs() {
-    let p = project("foo")
+    let p = project()
         .file(
             "Cargo.toml",
             r#"
@@ -2173,7 +2173,7 @@ fn selective_testing_with_docs() {
 
 #[test]
 fn example_bin_same_name() {
-    let p = project("foo")
+    let p = project()
         .file(
             "Cargo.toml",
             r#"
@@ -2225,7 +2225,7 @@ fn example_bin_same_name() {
 
 #[test]
 fn test_with_example_twice() {
-    let p = project("foo")
+    let p = project()
         .file(
             "Cargo.toml",
             r#"
@@ -2249,7 +2249,7 @@ fn test_with_example_twice() {
 
 #[test]
 fn example_with_dev_dep() {
-    let p = project("foo")
+    let p = project()
         .file(
             "Cargo.toml",
             r#"
@@ -2301,7 +2301,7 @@ fn example_with_dev_dep() {
 
 #[test]
 fn bin_is_preserved() {
-    let p = project("foo")
+    let p = project()
         .file(
             "Cargo.toml",
             r#"
@@ -2325,7 +2325,7 @@ fn bin_is_preserved() {
 
 #[test]
 fn bad_example() {
-    let p = project("foo")
+    let p = project()
         .file(
             "Cargo.toml",
             r#"
@@ -2354,7 +2354,7 @@ fn bad_example() {
 
 #[test]
 fn doctest_feature() {
-    let p = project("foo")
+    let p = project()
         .file(
             "Cargo.toml",
             r#"
@@ -2396,7 +2396,7 @@ fn doctest_feature() {
 
 #[test]
 fn dashes_to_underscores() {
-    let p = project("foo")
+    let p = project()
         .file(
             "Cargo.toml",
             r#"
@@ -2422,7 +2422,7 @@ fn dashes_to_underscores() {
 
 #[test]
 fn doctest_dev_dep() {
-    let p = project("foo")
+    let p = project()
         .file(
             "Cargo.toml",
             r#"
@@ -2461,7 +2461,7 @@ fn doctest_dev_dep() {
 
 #[test]
 fn filter_no_doc_tests() {
-    let p = project("foo")
+    let p = project()
         .file(
             "Cargo.toml",
             r#"
@@ -2499,7 +2499,7 @@ fn filter_no_doc_tests() {
 
 #[test]
 fn dylib_doctest() {
-    let p = project("foo")
+    let p = project()
         .file(
             "Cargo.toml",
             r#"
@@ -2542,7 +2542,7 @@ fn dylib_doctest() {
 #[test]
 fn dylib_doctest2() {
     // can't doctest dylibs as they're statically linked together
-    let p = project("foo")
+    let p = project()
         .file(
             "Cargo.toml",
             r#"
@@ -2573,7 +2573,7 @@ fn dylib_doctest2() {
 
 #[test]
 fn cyclic_dev_dep_doc_test() {
-    let p = project("foo")
+    let p = project()
         .file(
             "Cargo.toml",
             r#"
@@ -2633,7 +2633,7 @@ fn cyclic_dev_dep_doc_test() {
 
 #[test]
 fn dev_dep_with_build_script() {
-    let p = project("foo")
+    let p = project()
         .file(
             "Cargo.toml",
             r#"
@@ -2666,7 +2666,7 @@ fn dev_dep_with_build_script() {
 
 #[test]
 fn no_fail_fast() {
-    let p = project("foo")
+    let p = project()
         .file(
             "Cargo.toml",
             r#"
@@ -2747,7 +2747,7 @@ fn no_fail_fast() {
 
 #[test]
 fn test_multiple_packages() {
-    let p = project("foo")
+    let p = project()
         .file(
             "Cargo.toml",
             r#"
@@ -2809,7 +2809,7 @@ fn test_multiple_packages() {
 
 #[test]
 fn bin_does_not_rebuild_tests() {
-    let p = project("foo")
+    let p = project()
         .file(
             "Cargo.toml",
             r#"
@@ -2847,7 +2847,7 @@ fn bin_does_not_rebuild_tests() {
 
 #[test]
 fn selective_test_wonky_profile() {
-    let p = project("foo")
+    let p = project()
         .file(
             "Cargo.toml",
             r#"
@@ -2884,7 +2884,7 @@ fn selective_test_wonky_profile() {
 
 #[test]
 fn selective_test_optional_dep() {
-    let p = project("foo")
+    let p = project()
         .file(
             "Cargo.toml",
             r#"
@@ -2931,7 +2931,7 @@ fn selective_test_optional_dep() {
 
 #[test]
 fn only_test_docs() {
-    let p = project("foo")
+    let p = project()
         .file(
             "Cargo.toml",
             r#"
@@ -2976,7 +2976,7 @@ fn only_test_docs() {
 
 #[test]
 fn test_panic_abort_with_dep() {
-    let p = project("foo")
+    let p = project()
         .file(
             "Cargo.toml",
             r#"
@@ -3017,7 +3017,7 @@ fn test_panic_abort_with_dep() {
 
 #[test]
 fn cfg_test_even_with_no_harness() {
-    let p = project("foo")
+    let p = project()
         .file(
             "Cargo.toml",
             r#"
@@ -3056,7 +3056,7 @@ fn cfg_test_even_with_no_harness() {
 
 #[test]
 fn panic_abort_multiple() {
-    let p = project("foo")
+    let p = project()
         .file(
             "Cargo.toml",
             r#"
@@ -3095,7 +3095,7 @@ fn panic_abort_multiple() {
 
 #[test]
 fn pass_correct_cfgs_flags_to_rustdoc() {
-    let p = project("foo")
+    let p = project()
         .file(
             "Cargo.toml",
             r#"
@@ -3204,7 +3204,7 @@ fn pass_correct_cfgs_flags_to_rustdoc() {
 
 #[test]
 fn test_release_ignore_panic() {
-    let p = project("foo")
+    let p = project()
         .file(
             "Cargo.toml",
             r#"
@@ -3245,7 +3245,7 @@ fn test_release_ignore_panic() {
 
 #[test]
 fn test_many_with_features() {
-    let p = project("foo")
+    let p = project()
         .file(
             "Cargo.toml",
             r#"
@@ -3284,7 +3284,7 @@ fn test_many_with_features() {
 
 #[test]
 fn test_all_workspace() {
-    let p = project("foo")
+    let p = project()
         .file(
             "Cargo.toml",
             r#"
@@ -3333,7 +3333,7 @@ fn test_all_workspace() {
 
 #[test]
 fn test_all_exclude() {
-    let p = project("foo")
+    let p = project()
         .file(
             "Cargo.toml",
             r#"
@@ -3396,7 +3396,7 @@ test bar ... ok",
 
 #[test]
 fn test_all_virtual_manifest() {
-    let p = project("workspace")
+    let p = project().at("workspace")
         .file(
             "Cargo.toml",
             r#"
@@ -3447,7 +3447,7 @@ fn test_all_virtual_manifest() {
 
 #[test]
 fn test_virtual_manifest_all_implied() {
-    let p = project("workspace")
+    let p = project().at("workspace")
         .file(
             "Cargo.toml",
             r#"
@@ -3498,7 +3498,7 @@ fn test_virtual_manifest_all_implied() {
 
 #[test]
 fn test_all_member_dependency_same_name() {
-    let p = project("workspace")
+    let p = project().at("workspace")
         .file(
             "Cargo.toml",
             r#"
@@ -3536,7 +3536,7 @@ fn test_all_member_dependency_same_name() {
 
 #[test]
 fn doctest_only_with_dev_dep() {
-    let p = project("workspace")
+    let p = project().at("workspace")
         .file(
             "Cargo.toml",
             r#"
@@ -3583,7 +3583,7 @@ fn doctest_only_with_dev_dep() {
 
 #[test]
 fn test_many_targets() {
-    let p = project("foo")
+    let p = project()
         .file(
             "Cargo.toml",
             r#"
@@ -3681,7 +3681,7 @@ fn test_many_targets() {
 
 #[test]
 fn doctest_and_registry() {
-    let p = project("workspace")
+    let p = project().at("workspace")
         .file(
             "Cargo.toml",
             r#"
@@ -3751,7 +3751,7 @@ fn cargo_test_env() {
         cargo::CARGO_ENV
     );
 
-    let p = project("env_test")
+    let p = project().at("env_test")
         .file("Cargo.toml", &basic_lib_manifest("env_test"))
         .file("src/lib.rs", &src)
         .build();
@@ -3772,7 +3772,7 @@ test env_test ... ok
 
 #[test]
 fn test_order() {
-    let p = project("foo")
+    let p = project()
         .file(
             "Cargo.toml",
             r#"
@@ -3828,7 +3828,7 @@ test result: ok. [..]
 
 #[test]
 fn cyclic_dev() {
-    let p = project("foo")
+    let p = project()
         .file(
             "Cargo.toml",
             r#"
@@ -3879,7 +3879,7 @@ fn publish_a_crate_without_tests() {
 
         .publish();
 
-    let p = project("foo")
+    let p = project()
         .file(
             "Cargo.toml",
             r#"
@@ -3903,7 +3903,7 @@ fn publish_a_crate_without_tests() {
 
 #[test]
 fn find_dependency_of_proc_macro_dependency_with_target() {
-    let workspace = project("workspace")
+    let workspace = project().at("workspace")
         .file(
             "Cargo.toml",
             r#"
@@ -3979,7 +3979,7 @@ fn find_dependency_of_proc_macro_dependency_with_target() {
 
 #[test]
 fn test_hint_not_masked_by_doctest() {
-    let p = project("foo")
+    let p = project()
         .file(
             "Cargo.toml",
             r#"
@@ -4022,7 +4022,7 @@ fn test_hint_not_masked_by_doctest() {
 
 #[test]
 fn test_hint_workspace() {
-    let workspace = project("workspace")
+    let workspace = project().at("workspace")
         .file(
             "Cargo.toml",
             r#"
@@ -4073,7 +4073,7 @@ fn test_hint_workspace() {
 #[test]
 fn json_artifact_includes_test_flag() {
     // Verify that the JSON artifact output includes `test` flag.
-    let p = project("foo")
+    let p = project()
         .file(
             "Cargo.toml",
             r#"
@@ -4141,7 +4141,7 @@ fn json_artifact_includes_test_flag() {
 
 #[test]
 fn test_build_script_links() {
-    let p = project("foo")
+    let p = project()
         .file(
             "Cargo.toml",
             r#"

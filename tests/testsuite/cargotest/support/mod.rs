@@ -126,6 +126,11 @@ impl ProjectBuilder {
         }
     }
 
+    pub fn at<P: AsRef<Path>>(mut self, path: P) -> Self {
+        self.root = Project::Rooted(paths::root().join(path));
+        self
+    }
+
     /// Add a file to the project.
     pub fn file<B: AsRef<Path>>(mut self, path: B, body: &str) -> Self {
         self._file(path.as_ref(), body);
@@ -345,8 +350,8 @@ impl Project {
 }
 
 // Generates a project layout
-pub fn project(name: &str) -> ProjectBuilder {
-    ProjectBuilder::new(paths::root().join(name))
+pub fn project() -> ProjectBuilder {
+    ProjectBuilder::new(paths::root().join("foo"))
 }
 
 // Generates a project layout inside our fake home dir

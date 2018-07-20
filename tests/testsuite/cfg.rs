@@ -143,7 +143,7 @@ fn cfg_matches() {
 
 #[test]
 fn cfg_easy() {
-    let p = project("foo")
+    let p = project()
         .file(
             "Cargo.toml",
             r#"
@@ -176,7 +176,7 @@ fn cfg_easy() {
 #[test]
 fn dont_include() {
     let other_family = if cfg!(unix) { "windows" } else { "unix" };
-    let p = project("foo")
+    let p = project()
         .file(
             "Cargo.toml",
             &format!(
@@ -223,7 +223,7 @@ fn works_through_the_registry() {
         .target_dep("foo", "0.1.0", "cfg(windows)")
         .publish();
 
-    let p = project("a")
+    let p = project().at("a")
         .file(
             "Cargo.toml",
             r#"
@@ -265,7 +265,7 @@ fn ignore_version_from_other_platform() {
     Package::new("foo", "0.1.0").publish();
     Package::new("foo", "0.2.0").publish();
 
-    let p = project("a")
+    let p = project().at("a")
         .file(
             "Cargo.toml",
             &format!(
@@ -306,7 +306,7 @@ fn ignore_version_from_other_platform() {
 
 #[test]
 fn bad_target_spec() {
-    let p = project("a")
+    let p = project().at("a")
         .file(
             "Cargo.toml",
             r#"
@@ -340,7 +340,7 @@ Caused by:
 
 #[test]
 fn bad_target_spec2() {
-    let p = project("a")
+    let p = project().at("a")
         .file(
             "Cargo.toml",
             r#"
@@ -374,7 +374,7 @@ Caused by:
 
 #[test]
 fn multiple_match_ok() {
-    let p = project("foo")
+    let p = project()
         .file(
             "Cargo.toml",
             &format!(
@@ -418,7 +418,7 @@ fn multiple_match_ok() {
 
 #[test]
 fn any_ok() {
-    let p = project("foo")
+    let p = project()
         .file(
             "Cargo.toml",
             r#"
@@ -450,7 +450,7 @@ fn any_ok() {
 #[test]
 #[cfg(all(target_arch = "x86_64", target_os = "linux"))]
 fn cfg_looks_at_rustflags_for_target() {
-    let p = project("foo")
+    let p = project()
         .file(
             "Cargo.toml",
             r#"

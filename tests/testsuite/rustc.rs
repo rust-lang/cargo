@@ -7,7 +7,7 @@ the package by passing e.g. `--lib` or `--bin NAME` to specify a single target";
 
 #[test]
 fn build_lib_for_foo() {
-    let p = project("foo")
+    let p = project()
         .file(
             "Cargo.toml",
             r#"
@@ -46,7 +46,7 @@ fn build_lib_for_foo() {
 
 #[test]
 fn lib() {
-    let p = project("foo")
+    let p = project()
         .file(
             "Cargo.toml",
             r#"
@@ -91,7 +91,7 @@ fn lib() {
 
 #[test]
 fn build_main_and_allow_unstable_options() {
-    let p = project("foo")
+    let p = project()
         .file(
             "Cargo.toml",
             r#"
@@ -139,7 +139,7 @@ fn build_main_and_allow_unstable_options() {
 
 #[test]
 fn fails_when_trying_to_build_main_and_lib_with_args() {
-    let p = project("foo")
+    let p = project()
         .file(
             "Cargo.toml",
             r#"
@@ -170,7 +170,7 @@ fn fails_when_trying_to_build_main_and_lib_with_args() {
 
 #[test]
 fn build_with_args_to_one_of_multiple_binaries() {
-    let p = project("foo")
+    let p = project()
         .file(
             "Cargo.toml",
             r#"
@@ -220,7 +220,7 @@ fn build_with_args_to_one_of_multiple_binaries() {
 
 #[test]
 fn fails_with_args_to_all_binaries() {
-    let p = project("foo")
+    let p = project()
         .file(
             "Cargo.toml",
             r#"
@@ -263,7 +263,7 @@ fn fails_with_args_to_all_binaries() {
 
 #[test]
 fn build_with_args_to_one_of_multiple_tests() {
-    let p = project("foo")
+    let p = project()
         .file(
             "Cargo.toml",
             r#"
@@ -298,7 +298,7 @@ fn build_with_args_to_one_of_multiple_tests() {
 
 #[test]
 fn build_foo_with_bar_dependency() {
-    let foo = project("foo")
+    let foo = project()
         .file(
             "Cargo.toml",
             r#"
@@ -321,7 +321,7 @@ fn build_foo_with_bar_dependency() {
         "#,
         )
         .build();
-    let _bar = project("bar")
+    let _bar = project().at("bar")
         .file(
             "Cargo.toml",
             r#"
@@ -360,7 +360,7 @@ fn build_foo_with_bar_dependency() {
 
 #[test]
 fn build_only_bar_dependency() {
-    let foo = project("foo")
+    let foo = project()
         .file(
             "Cargo.toml",
             r#"
@@ -383,7 +383,7 @@ fn build_only_bar_dependency() {
         "#,
         )
         .build();
-    let _bar = project("bar")
+    let _bar = project().at("bar")
         .file(
             "Cargo.toml",
             r#"
@@ -415,7 +415,7 @@ fn build_only_bar_dependency() {
 
 #[test]
 fn targets_selected_default() {
-    let p = project("foo")
+    let p = project()
         .file(
             "Cargo.toml",
             r#"
@@ -447,7 +447,7 @@ fn targets_selected_default() {
 
 #[test]
 fn targets_selected_all() {
-    let p = project("foo")
+    let p = project()
         .file(
             "Cargo.toml",
             r#"
@@ -479,7 +479,7 @@ fn targets_selected_all() {
 
 #[test]
 fn fail_with_multiple_packages() {
-    let foo = project("foo")
+    let foo = project()
         .file(
             "Cargo.toml",
             r#"
@@ -503,7 +503,7 @@ fn fail_with_multiple_packages() {
         )
         .build();
 
-    let _bar = project("bar")
+    let _bar = project().at("bar")
         .file(
             "Cargo.toml",
             r#"
@@ -523,7 +523,7 @@ fn fail_with_multiple_packages() {
         )
         .build();
 
-    let _baz = project("baz")
+    let _baz = project().at("baz")
         .file(
             "Cargo.toml",
             r#"
@@ -556,7 +556,7 @@ error: The argument '--package <SPEC>' was provided more than once, \
 
 #[test]
 fn rustc_with_other_profile() {
-    let p = project("foo")
+    let p = project()
         .file(
             "Cargo.toml",
             r#"
@@ -599,7 +599,7 @@ fn rustc_with_other_profile() {
 #[test]
 fn rustc_fingerprint() {
     // Verify that the fingerprint includes the rustc args.
-    let p = project("foo")
+    let p = project()
         .file("Cargo.toml", &basic_lib_manifest("foo"))
         .file("src/lib.rs", "")
         .build();
@@ -652,7 +652,7 @@ fn rustc_fingerprint() {
 
 #[test]
 fn rustc_test_with_implicit_bin() {
-    let p = project("foo")
+    let p = project()
         .file("Cargo.toml", &basic_bin_manifest("foo"))
         .file(
             "src/main.rs",

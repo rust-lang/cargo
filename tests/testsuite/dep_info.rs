@@ -4,7 +4,7 @@ use hamcrest::{assert_that, existing_file};
 
 #[test]
 fn build_dep_info() {
-    let p = project("foo")
+    let p = project()
         .file("Cargo.toml", &basic_bin_manifest("foo"))
         .file("src/foo.rs", &main_file(r#""i am foo""#, &[]))
         .build();
@@ -18,7 +18,7 @@ fn build_dep_info() {
 
 #[test]
 fn build_dep_info_lib() {
-    let p = project("foo")
+    let p = project()
         .file(
             "Cargo.toml",
             r#"
@@ -46,7 +46,7 @@ fn build_dep_info_lib() {
 
 #[test]
 fn build_dep_info_rlib() {
-    let p = project("foo")
+    let p = project()
         .file(
             "Cargo.toml",
             r#"
@@ -73,7 +73,7 @@ fn build_dep_info_rlib() {
 
 #[test]
 fn build_dep_info_dylib() {
-    let p = project("foo")
+    let p = project()
         .file(
             "Cargo.toml",
             r#"
@@ -100,7 +100,7 @@ fn build_dep_info_dylib() {
 
 #[test]
 fn no_rewrite_if_no_change() {
-    let p = project("foo")
+    let p = project()
         .file(
             "Cargo.toml",
             r#"

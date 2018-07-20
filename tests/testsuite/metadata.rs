@@ -4,7 +4,7 @@ use hamcrest::assert_that;
 
 #[test]
 fn cargo_metadata_simple() {
-    let p = project("foo")
+    let p = project()
         .file("src/foo.rs", "")
         .file("Cargo.toml", &basic_bin_manifest("foo"))
         .build();
@@ -69,7 +69,7 @@ fn cargo_metadata_simple() {
 
 #[test]
 fn cargo_metadata_warns_on_implicit_version() {
-    let p = project("foo")
+    let p = project()
         .file("src/foo.rs", "")
         .file("Cargo.toml", &basic_bin_manifest("foo"))
         .build();
@@ -85,7 +85,7 @@ fn cargo_metadata_warns_on_implicit_version() {
 
 #[test]
 fn library_with_several_crate_types() {
-    let p = project("foo")
+    let p = project()
         .file("src/lib.rs", "")
         .file(
             "Cargo.toml",
@@ -160,7 +160,7 @@ crate-type = ["lib", "staticlib"]
 
 #[test]
 fn library_with_features() {
-    let p = project("foo")
+    let p = project()
         .file("src/lib.rs", "")
         .file(
             "Cargo.toml",
@@ -244,7 +244,7 @@ optional_feat = []
 
 #[test]
 fn cargo_metadata_with_deps_and_version() {
-    let p = project("foo")
+    let p = project()
         .file("src/foo.rs", "")
         .file(
             "Cargo.toml",
@@ -427,7 +427,7 @@ fn cargo_metadata_with_deps_and_version() {
 
 #[test]
 fn example() {
-    let p = project("foo")
+    let p = project()
         .file("src/lib.rs", "")
         .file("examples/ex.rs", "")
         .file(
@@ -505,7 +505,7 @@ name = "ex"
 
 #[test]
 fn example_lib() {
-    let p = project("foo")
+    let p = project()
         .file("src/lib.rs", "")
         .file("examples/ex.rs", "")
         .file(
@@ -584,7 +584,7 @@ crate-type = ["rlib", "dylib"]
 
 #[test]
 fn workspace_metadata() {
-    let p = project("foo")
+    let p = project()
         .file(
             "Cargo.toml",
             r#"
@@ -687,7 +687,7 @@ fn workspace_metadata() {
 
 #[test]
 fn workspace_metadata_no_deps() {
-    let p = project("foo")
+    let p = project()
         .file(
             "Cargo.toml",
             r#"
@@ -776,7 +776,7 @@ fn workspace_metadata_no_deps() {
 
 #[test]
 fn cargo_metadata_with_invalid_manifest() {
-    let p = project("foo").file("Cargo.toml", "").build();
+    let p = project().file("Cargo.toml", "").build();
 
     assert_that(
         p.cargo("metadata").arg("--format-version").arg("1"),
@@ -827,7 +827,7 @@ const MANIFEST_OUTPUT: &str = r#"
 
 #[test]
 fn cargo_metadata_no_deps_path_to_cargo_toml_relative() {
-    let p = project("foo")
+    let p = project()
         .file("Cargo.toml", &basic_bin_manifest("foo"))
         .file("src/foo.rs", &main_file(r#""i am foo""#, &[]))
         .build();
@@ -844,7 +844,7 @@ fn cargo_metadata_no_deps_path_to_cargo_toml_relative() {
 
 #[test]
 fn cargo_metadata_no_deps_path_to_cargo_toml_absolute() {
-    let p = project("foo")
+    let p = project()
         .file("Cargo.toml", &basic_bin_manifest("foo"))
         .file("src/foo.rs", &main_file(r#""i am foo""#, &[]))
         .build();
@@ -861,7 +861,7 @@ fn cargo_metadata_no_deps_path_to_cargo_toml_absolute() {
 
 #[test]
 fn cargo_metadata_no_deps_path_to_cargo_toml_parent_relative() {
-    let p = project("foo")
+    let p = project()
         .file("Cargo.toml", &basic_bin_manifest("foo"))
         .file("src/foo.rs", &main_file(r#""i am foo""#, &[]))
         .build();
@@ -881,7 +881,7 @@ fn cargo_metadata_no_deps_path_to_cargo_toml_parent_relative() {
 
 #[test]
 fn cargo_metadata_no_deps_path_to_cargo_toml_parent_absolute() {
-    let p = project("foo")
+    let p = project()
         .file("Cargo.toml", &basic_bin_manifest("foo"))
         .file("src/foo.rs", &main_file(r#""i am foo""#, &[]))
         .build();
@@ -901,7 +901,7 @@ fn cargo_metadata_no_deps_path_to_cargo_toml_parent_absolute() {
 
 #[test]
 fn cargo_metadata_no_deps_cwd() {
-    let p = project("foo")
+    let p = project()
         .file("Cargo.toml", &basic_bin_manifest("foo"))
         .file("src/foo.rs", &main_file(r#""i am foo""#, &[]))
         .build();
@@ -914,7 +914,7 @@ fn cargo_metadata_no_deps_cwd() {
 
 #[test]
 fn cargo_metadata_bad_version() {
-    let p = project("foo")
+    let p = project()
         .file("Cargo.toml", &basic_bin_manifest("foo"))
         .file("src/foo.rs", &main_file(r#""i am foo""#, &[]))
         .build();
@@ -936,7 +936,7 @@ error: '2' isn't a valid value for '--format-version <VERSION>'
 
 #[test]
 fn multiple_features() {
-    let p = project("foo")
+    let p = project()
         .file(
             "Cargo.toml",
             r#"
@@ -961,7 +961,7 @@ fn multiple_features() {
 
 #[test]
 fn package_metadata() {
-    let p = project("foo")
+    let p = project()
         .file(
             "Cargo.toml",
             r#"
@@ -1030,7 +1030,7 @@ fn package_metadata() {
 
 #[test]
 fn cargo_metadata_path_to_cargo_toml_project() {
-    let p = project("foo")
+    let p = project()
         .file(
             "Cargo.toml",
             r#"
