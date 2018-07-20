@@ -1678,12 +1678,12 @@ fn build_script_with_dynamic_native_dependency() {
 
 #[test]
 fn profile_and_opt_level_set_correctly() {
-    let build = project().at("builder")
+    let p = project()
         .file(
             "Cargo.toml",
             r#"
             [package]
-            name = "builder"
+            name = "foo"
             version = "0.0.1"
             authors = []
             build = "build.rs"
@@ -1703,7 +1703,7 @@ fn profile_and_opt_level_set_correctly() {
         "#,
         )
         .build();
-    assert_that(build.cargo("bench"), execs().with_status(0));
+    assert_that(p.cargo("bench"), execs().with_status(0));
 }
 
 #[test]
@@ -1739,12 +1739,12 @@ fn profile_debug_0() {
 
 #[test]
 fn build_script_with_lto() {
-    let build = project().at("builder")
+    let p = project()
         .file(
             "Cargo.toml",
             r#"
             [package]
-            name = "builder"
+            name = "foo"
             version = "0.0.1"
             authors = []
             build = "build.rs"
@@ -1762,7 +1762,7 @@ fn build_script_with_lto() {
         "#,
         )
         .build();
-    assert_that(build.cargo("build"), execs().with_status(0));
+    assert_that(p.cargo("build"), execs().with_status(0));
 }
 
 #[test]
@@ -1815,12 +1815,12 @@ fn test_duplicate_deps() {
 
 #[test]
 fn cfg_feedback() {
-    let build = project().at("builder")
+    let p = project()
         .file(
             "Cargo.toml",
             r#"
             [package]
-            name = "builder"
+            name = "foo"
             version = "0.0.1"
             authors = []
             build = "build.rs"
@@ -1842,7 +1842,7 @@ fn cfg_feedback() {
         "#,
         )
         .build();
-    assert_that(build.cargo("build").arg("-v"), execs().with_status(0));
+    assert_that(p.cargo("build").arg("-v"), execs().with_status(0));
 }
 
 #[test]
@@ -2725,12 +2725,12 @@ fn fresh_builds_possible_with_multiple_metadata_overrides() {
 
 #[test]
 fn rebuild_only_on_explicit_paths() {
-    let p = project().at("a")
+    let p = project()
         .file(
             "Cargo.toml",
             r#"
             [project]
-            name = "a"
+            name = "foo"
             version = "0.5.0"
             authors = []
             build = "build.rs"
@@ -2756,7 +2756,7 @@ fn rebuild_only_on_explicit_paths() {
         p.cargo("build").arg("-v"),
         execs().with_status(0).with_stderr(
             "\
-[COMPILING] a v0.5.0 ([..])
+[COMPILING] foo v0.5.0 ([..])
 [RUNNING] `[..][/]build-script-build`
 [RUNNING] `rustc [..] src[/]lib.rs [..]`
 [FINISHED] dev [unoptimized + debuginfo] target(s) in [..]
@@ -2774,7 +2774,7 @@ fn rebuild_only_on_explicit_paths() {
         p.cargo("build").arg("-v"),
         execs().with_status(0).with_stderr(
             "\
-[COMPILING] a v0.5.0 ([..])
+[COMPILING] foo v0.5.0 ([..])
 [RUNNING] `[..][/]build-script-build`
 [RUNNING] `rustc [..] src[/]lib.rs [..]`
 [FINISHED] dev [unoptimized + debuginfo] target(s) in [..]
@@ -2787,7 +2787,7 @@ fn rebuild_only_on_explicit_paths() {
         p.cargo("build").arg("-v"),
         execs().with_status(0).with_stderr(
             "\
-[FRESH] a v0.5.0 ([..])
+[FRESH] foo v0.5.0 ([..])
 [FINISHED] dev [unoptimized + debuginfo] target(s) in [..]
 ",
         ),
@@ -2802,7 +2802,7 @@ fn rebuild_only_on_explicit_paths() {
         p.cargo("build").arg("-v"),
         execs().with_status(0).with_stderr(
             "\
-[FRESH] a v0.5.0 ([..])
+[FRESH] foo v0.5.0 ([..])
 [FINISHED] dev [unoptimized + debuginfo] target(s) in [..]
 ",
         ),
@@ -2815,7 +2815,7 @@ fn rebuild_only_on_explicit_paths() {
         p.cargo("build").arg("-v"),
         execs().with_status(0).with_stderr(
             "\
-[COMPILING] a v0.5.0 ([..])
+[COMPILING] foo v0.5.0 ([..])
 [RUNNING] `[..][/]build-script-build`
 [RUNNING] `rustc [..] src[/]lib.rs [..]`
 [FINISHED] dev [unoptimized + debuginfo] target(s) in [..]
@@ -2830,7 +2830,7 @@ fn rebuild_only_on_explicit_paths() {
         p.cargo("build").arg("-v"),
         execs().with_status(0).with_stderr(
             "\
-[COMPILING] a v0.5.0 ([..])
+[COMPILING] foo v0.5.0 ([..])
 [RUNNING] `[..][/]build-script-build`
 [RUNNING] `rustc [..] src[/]lib.rs [..]`
 [FINISHED] dev [unoptimized + debuginfo] target(s) in [..]
@@ -3338,12 +3338,12 @@ fn links_with_dots() {
 
 #[test]
 fn rustc_and_rustdoc_set_correctly() {
-    let p = project().at("builder")
+    let p = project()
         .file(
             "Cargo.toml",
             r#"
             [package]
-            name = "builder"
+            name = "foo"
             version = "0.0.1"
             authors = []
             build = "build.rs"
@@ -3367,12 +3367,12 @@ fn rustc_and_rustdoc_set_correctly() {
 
 #[test]
 fn cfg_env_vars_available() {
-    let p = project().at("builder")
+    let p = project()
         .file(
             "Cargo.toml",
             r#"
             [package]
-            name = "builder"
+            name = "foo"
             version = "0.0.1"
             authors = []
             build = "build.rs"
@@ -3400,12 +3400,12 @@ fn cfg_env_vars_available() {
 
 #[test]
 fn switch_features_rerun() {
-    let p = project().at("builder")
+    let p = project()
         .file(
             "Cargo.toml",
             r#"
             [package]
-            name = "builder"
+            name = "foo"
             version = "0.0.1"
             authors = []
             build = "build.rs"
@@ -3461,12 +3461,12 @@ fn switch_features_rerun() {
 
 #[test]
 fn assume_build_script_when_build_rs_present() {
-    let p = project().at("builder")
+    let p = project()
         .file(
             "Cargo.toml",
             r#"
             [package]
-            name = "builder"
+            name = "foo"
             version = "0.0.1"
             authors = []
         "#,
@@ -3496,12 +3496,12 @@ fn assume_build_script_when_build_rs_present() {
 
 #[test]
 fn if_build_set_to_false_dont_treat_build_rs_as_build_script() {
-    let p = project().at("builder")
+    let p = project()
         .file(
             "Cargo.toml",
             r#"
             [package]
-            name = "builder"
+            name = "foo"
             version = "0.0.1"
             authors = []
             build = false

@@ -72,20 +72,7 @@ impl VendorPackage {
 fn simple() {
     setup();
 
-    VendorPackage::new("foo")
-        .file(
-            "Cargo.toml",
-            r#"
-            [package]
-            name = "foo"
-            version = "0.1.0"
-            authors = []
-        "#,
-        )
-        .file("src/lib.rs", "pub fn foo() {}")
-        .build();
-
-    let p = project().at("bar")
+    VendorPackage::new("bar")
         .file(
             "Cargo.toml",
             r#"
@@ -93,18 +80,31 @@ fn simple() {
             name = "bar"
             version = "0.1.0"
             authors = []
+        "#,
+        )
+        .file("src/lib.rs", "pub fn bar() {}")
+        .build();
+
+    let p = project()
+        .file(
+            "Cargo.toml",
+            r#"
+            [package]
+            name = "foo"
+            version = "0.1.0"
+            authors = []
 
             [dependencies]
-            foo = "0.1.0"
+            bar = "0.1.0"
         "#,
         )
         .file(
             "src/lib.rs",
             r#"
-            extern crate foo;
+            extern crate bar;
 
-            pub fn bar() {
-                foo::foo();
+            pub fn foo() {
+                bar::bar();
             }
         "#,
         )
@@ -114,8 +114,8 @@ fn simple() {
         p.cargo("build"),
         execs().with_status(0).with_stderr(
             "\
-[COMPILING] foo v0.1.0
-[COMPILING] bar v0.1.0 ([..]bar)
+[COMPILING] bar v0.1.0
+[COMPILING] foo v0.1.0 ([..]foo)
 [FINISHED] [..]
 ",
         ),
@@ -303,26 +303,26 @@ fn not_there() {
 
     let _ = project().at("index").build();
 
-    let p = project().at("bar")
+    let p = project()
         .file(
             "Cargo.toml",
             r#"
             [package]
-            name = "bar"
+            name = "foo"
             version = "0.1.0"
             authors = []
 
             [dependencies]
-            foo = "0.1.0"
+            bar = "0.1.0"
         "#,
         )
         .file(
             "src/lib.rs",
             r#"
-            extern crate foo;
+            extern crate bar;
 
-            pub fn bar() {
-                foo::foo();
+            pub fn foo() {
+                bar::bar();
             }
         "#,
         )
@@ -332,9 +332,9 @@ fn not_there() {
         p.cargo("build"),
         execs().with_status(101).with_stderr(
             "\
-error: no matching package named `foo` found
+error: no matching package named `bar` found
 location searched: [..]
-required by package `bar v0.1.0 ([..])`
+required by package `foo v0.1.0 ([..])`
 ",
         ),
     );
@@ -344,35 +344,7 @@ required by package `bar v0.1.0 ([..])`
 fn multiple() {
     setup();
 
-    VendorPackage::new("foo-0.1.0")
-        .file(
-            "Cargo.toml",
-            r#"
-            [package]
-            name = "foo"
-            version = "0.1.0"
-            authors = []
-        "#,
-        )
-        .file("src/lib.rs", "pub fn foo() {}")
-        .file(".cargo-checksum", "")
-        .build();
-
-    VendorPackage::new("foo-0.2.0")
-        .file(
-            "Cargo.toml",
-            r#"
-            [package]
-            name = "foo"
-            version = "0.2.0"
-            authors = []
-        "#,
-        )
-        .file("src/lib.rs", "pub fn foo() {}")
-        .file(".cargo-checksum", "")
-        .build();
-
-    let p = project().at("bar")
+    VendorPackage::new("bar-0.1.0")
         .file(
             "Cargo.toml",
             r#"
@@ -380,18 +352,46 @@ fn multiple() {
             name = "bar"
             version = "0.1.0"
             authors = []
+        "#,
+        )
+        .file("src/lib.rs", "pub fn bar() {}")
+        .file(".cargo-checksum", "")
+        .build();
+
+    VendorPackage::new("bar-0.2.0")
+        .file(
+            "Cargo.toml",
+            r#"
+            [package]
+            name = "bar"
+            version = "0.2.0"
+            authors = []
+        "#,
+        )
+        .file("src/lib.rs", "pub fn bar() {}")
+        .file(".cargo-checksum", "")
+        .build();
+
+    let p = project()
+        .file(
+            "Cargo.toml",
+            r#"
+            [package]
+            name = "foo"
+            version = "0.1.0"
+            authors = []
 
             [dependencies]
-            foo = "0.1.0"
+            bar = "0.1.0"
         "#,
         )
         .file(
             "src/lib.rs",
             r#"
-            extern crate foo;
+            extern crate bar;
 
-            pub fn bar() {
-                foo::foo();
+            pub fn foo() {
+                bar::bar();
             }
         "#,
         )
@@ -401,8 +401,8 @@ fn multiple() {
         p.cargo("build"),
         execs().with_status(0).with_stderr(
             "\
-[COMPILING] foo v0.1.0
-[COMPILING] bar v0.1.0 ([..]bar)
+[COMPILING] bar v0.1.0
+[COMPILING] foo v0.1.0 ([..]foo)
 [FINISHED] [..]
 ",
         ),
@@ -411,33 +411,33 @@ fn multiple() {
 
 #[test]
 fn crates_io_then_directory() {
-    let p = project().at("bar")
+    let p = project()
         .file(
             "Cargo.toml",
             r#"
             [package]
-            name = "bar"
+            name = "foo"
             version = "0.1.0"
             authors = []
 
             [dependencies]
-            foo = "0.1.0"
+            bar = "0.1.0"
         "#,
         )
         .file(
             "src/lib.rs",
             r#"
-            extern crate foo;
+            extern crate bar;
 
-            pub fn bar() {
-                foo::foo();
+            pub fn foo() {
+                bar::bar();
             }
         "#,
         )
         .build();
 
-    let cksum = Package::new("foo", "0.1.0")
-        .file("src/lib.rs", "pub fn foo() -> u32 { 0 }")
+    let cksum = Package::new("bar", "0.1.0")
+        .file("src/lib.rs", "pub fn bar() -> u32 { 0 }")
         .publish();
 
     assert_that(
@@ -445,9 +445,9 @@ fn crates_io_then_directory() {
         execs().with_status(0).with_stderr(
             "\
 [UPDATING] registry `[..]`
-[DOWNLOADING] foo v0.1.0 ([..])
-[COMPILING] foo v0.1.0
-[COMPILING] bar v0.1.0 ([..]bar)
+[DOWNLOADING] bar v0.1.0 ([..])
+[COMPILING] bar v0.1.0
+[COMPILING] foo v0.1.0 ([..]foo)
 [FINISHED] [..]
 ",
         ),
@@ -455,17 +455,17 @@ fn crates_io_then_directory() {
 
     setup();
 
-    let mut v = VendorPackage::new("foo");
+    let mut v = VendorPackage::new("bar");
     v.file(
         "Cargo.toml",
         r#"
         [package]
-        name = "foo"
+        name = "bar"
         version = "0.1.0"
         authors = []
     "#,
     );
-    v.file("src/lib.rs", "pub fn foo() -> u32 { 1 }");
+    v.file("src/lib.rs", "pub fn bar() -> u32 { 1 }");
     v.cksum.package = Some(cksum);
     v.build();
 
@@ -473,8 +473,8 @@ fn crates_io_then_directory() {
         p.cargo("build"),
         execs().with_status(0).with_stderr(
             "\
-[COMPILING] foo v0.1.0
-[COMPILING] bar v0.1.0 ([..]bar)
+[COMPILING] bar v0.1.0
+[COMPILING] foo v0.1.0 ([..]foo)
 [FINISHED] [..]
 ",
         ),
@@ -483,33 +483,33 @@ fn crates_io_then_directory() {
 
 #[test]
 fn crates_io_then_bad_checksum() {
-    let p = project().at("bar")
-        .file(
-            "Cargo.toml",
-            r#"
-            [package]
-            name = "bar"
-            version = "0.1.0"
-            authors = []
-
-            [dependencies]
-            foo = "0.1.0"
-        "#,
-        )
-        .file("src/lib.rs", "")
-        .build();
-
-    Package::new("foo", "0.1.0").publish();
-
-    assert_that(p.cargo("build"), execs().with_status(0));
-    setup();
-
-    VendorPackage::new("foo")
+    let p = project()
         .file(
             "Cargo.toml",
             r#"
             [package]
             name = "foo"
+            version = "0.1.0"
+            authors = []
+
+            [dependencies]
+            bar = "0.1.0"
+        "#,
+        )
+        .file("src/lib.rs", "")
+        .build();
+
+    Package::new("bar", "0.1.0").publish();
+
+    assert_that(p.cargo("build"), execs().with_status(0));
+    setup();
+
+    VendorPackage::new("bar")
+        .file(
+            "Cargo.toml",
+            r#"
+            [package]
+            name = "bar"
             version = "0.1.0"
             authors = []
         "#,
@@ -521,7 +521,7 @@ fn crates_io_then_bad_checksum() {
         p.cargo("build"),
         execs().with_status(101).with_stderr(
             "\
-error: checksum for `foo v0.1.0` changed between lock files
+error: checksum for `bar v0.1.0` changed between lock files
 
 this could be indicative of a few possible errors:
 
@@ -529,7 +529,7 @@ this could be indicative of a few possible errors:
     * a replacement source in use (e.g. a mirror) returned a different checksum
     * the source itself may be corrupt in one way or another
 
-unable to verify that `foo v0.1.0` is the same as when the lockfile was generated
+unable to verify that `bar v0.1.0` is the same as when the lockfile was generated
 
 ",
         ),
@@ -540,23 +540,7 @@ unable to verify that `foo v0.1.0` is the same as when the lockfile was generate
 fn bad_file_checksum() {
     setup();
 
-    VendorPackage::new("foo")
-        .file(
-            "Cargo.toml",
-            r#"
-            [package]
-            name = "foo"
-            version = "0.1.0"
-            authors = []
-        "#,
-        )
-        .file("src/lib.rs", "")
-        .build();
-
-    let mut f = t!(File::create(paths::root().join("index/foo/src/lib.rs")));
-    t!(f.write_all(b"fn foo() -> u32 { 0 }"));
-
-    let p = project().at("bar")
+    VendorPackage::new("bar")
         .file(
             "Cargo.toml",
             r#"
@@ -564,9 +548,25 @@ fn bad_file_checksum() {
             name = "bar"
             version = "0.1.0"
             authors = []
+        "#,
+        )
+        .file("src/lib.rs", "")
+        .build();
+
+    let mut f = t!(File::create(paths::root().join("index/bar/src/lib.rs")));
+    t!(f.write_all(b"fn bar() -> u32 { 0 }"));
+
+    let p = project()
+        .file(
+            "Cargo.toml",
+            r#"
+            [package]
+            name = "foo"
+            version = "0.1.0"
+            authors = []
 
             [dependencies]
-            foo = "0.1.0"
+            bar = "0.1.0"
         "#,
         )
         .file("src/lib.rs", "")
@@ -592,21 +592,7 @@ the source
 fn only_dot_files_ok() {
     setup();
 
-    VendorPackage::new("foo")
-        .file(
-            "Cargo.toml",
-            r#"
-            [package]
-            name = "foo"
-            version = "0.1.0"
-            authors = []
-        "#,
-        )
-        .file("src/lib.rs", "")
-        .build();
-    VendorPackage::new("bar").file(".foo", "").build();
-
-    let p = project().at("bar")
+    VendorPackage::new("bar")
         .file(
             "Cargo.toml",
             r#"
@@ -614,9 +600,23 @@ fn only_dot_files_ok() {
             name = "bar"
             version = "0.1.0"
             authors = []
+        "#,
+        )
+        .file("src/lib.rs", "")
+        .build();
+    VendorPackage::new("foo").file(".bar", "").build();
+
+    let p = project()
+        .file(
+            "Cargo.toml",
+            r#"
+            [package]
+            name = "foo"
+            version = "0.1.0"
+            authors = []
 
             [dependencies]
-            foo = "0.1.0"
+            bar = "0.1.0"
         "#,
         )
         .file("src/lib.rs", "")
@@ -629,24 +629,7 @@ fn only_dot_files_ok() {
 fn random_files_ok() {
     setup();
 
-    VendorPackage::new("foo")
-        .file(
-            "Cargo.toml",
-            r#"
-            [package]
-            name = "foo"
-            version = "0.1.0"
-            authors = []
-        "#,
-        )
-        .file("src/lib.rs", "")
-        .build();
     VendorPackage::new("bar")
-        .file("foo", "")
-        .file("../test", "")
-        .build();
-
-    let p = project().at("bar")
         .file(
             "Cargo.toml",
             r#"
@@ -654,9 +637,26 @@ fn random_files_ok() {
             name = "bar"
             version = "0.1.0"
             authors = []
+        "#,
+        )
+        .file("src/lib.rs", "")
+        .build();
+    VendorPackage::new("foo")
+        .file("bar", "")
+        .file("../test", "")
+        .build();
+
+    let p = project()
+        .file(
+            "Cargo.toml",
+            r#"
+            [package]
+            name = "foo"
+            version = "0.1.0"
+            authors = []
 
             [dependencies]
-            foo = "0.1.0"
+            bar = "0.1.0"
         "#,
         )
         .file("src/lib.rs", "")
@@ -693,7 +693,7 @@ fn git_lock_file_doesnt_change() {
         .disable_checksum()
         .build();
 
-    let p = project().at("bar")
+    let p = project()
         .file(
             "Cargo.toml",
             &format!(
@@ -765,7 +765,7 @@ fn git_override_requires_lockfile() {
         .disable_checksum()
         .build();
 
-    let p = project().at("bar")
+    let p = project()
         .file(
             "Cargo.toml",
             r#"
