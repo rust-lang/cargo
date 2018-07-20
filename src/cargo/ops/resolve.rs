@@ -160,12 +160,12 @@ pub fn resolve_with_previous<'a, 'cfg>(
         );
     }
 
-    let keep = &(|p: &&'a PackageId| {
+    let keep = |p: &&'a PackageId| {
         !to_avoid_sources.contains(&p.source_id()) && match to_avoid {
             Some(set) => !set.contains(p),
             None => true,
         }
-    });
+    };
 
     // In the case where a previous instance of resolve is available, we
     // want to lock as many packages as possible to the previous version
@@ -173,7 +173,7 @@ pub fn resolve_with_previous<'a, 'cfg>(
     let mut try_to_use = HashSet::new();
     if let Some(r) = previous {
         trace!("previous: {:?}", r);
-        register_previous_locks(ws, registry, r, keep);
+        register_previous_locks(ws, registry, r, &keep);
 
         // Everything in the previous lock file we want to keep is prioritized
         // in dependency selection if it comes up, aka we want to have
@@ -535,7 +535,7 @@ fn register_previous_locks<'a>(
     // function let's put it to action. Take a look at the previous lockfile,
     // filter everything by this callback, and then shove everything else into
     // the registry as a locked dependency.
-    let keep = &(|id: &&'a PackageId| keep(id) && !avoid_locking.contains(id));
+    let keep = |id: &&'a PackageId| keep(id) && !avoid_locking.contains(id);
 
     for node in resolve.iter().filter(keep) {
         let deps = resolve
