@@ -1947,7 +1947,7 @@ fn glob_syntax() {
 /*FIXME: This fails because of how workspace.exclude and workspace.members are working.
 #[test]
 fn glob_syntax_2() {
-    let p = project("foo")
+    let p = project()
         .file("Cargo.toml", r#"
             [project]
             name = "foo"
@@ -2218,7 +2218,7 @@ fn dont_recurse_out_of_cargo_home() {
 /*FIXME: This fails because of how workspace.exclude and workspace.members are working.
 #[test]
 fn include_and_exclude() {
-    let p = project("foo")
+    let p = project()
         .file("Cargo.toml", r#"
             [workspace]
             members = ["foo"]

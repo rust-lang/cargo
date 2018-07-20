@@ -245,7 +245,7 @@ fn custom_build_script_wrong_rustc_flags() {
 /*
 #[test]
 fn custom_build_script_rustc_flags() {
-    let p = project("foo")
+    let p = project()
         .file("Cargo.toml", r#"
             [project]
 
