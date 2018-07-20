@@ -18,6 +18,7 @@ clone_depth: 1
 build: false
 
 test_script:
-  - cargo test
   - cargo generate-lockfile -Z minimal-versions
+  - cargo check --tests
+  - cargo generate-lockfile
   - cargo test

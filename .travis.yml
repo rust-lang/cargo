@@ -32,10 +32,12 @@ matrix:
       install:
         - mdbook --help || cargo install mdbook --force
       script:
+        - cargo +nightly generate-lockfile -Z minimal-versions
+        - cargo check --tests
+        - cargo +nightly generate-lockfile
         - cargo test
         - cargo doc --no-deps
         - (cd src/doc && mdbook build --dest-dir ../../target/doc)
-        - cargo +nightly generate-lockfile -Z minimal-versions && cargo test
 
   exclude:
     - rust: stable
