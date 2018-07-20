@@ -12,7 +12,6 @@ use core::TargetKind;
 use super::{Context, Kind, Unit};
 use super::context::OutputFile;
 use util::{internal, CargoResult, ProcessBuilder};
-use std::sync::Arc;
 use std::path::PathBuf;
 use serde_json;
 use semver;
@@ -123,7 +122,7 @@ impl BuildPlan {
         &mut self,
         invocation_name: &str,
         cmd: &ProcessBuilder,
-        outputs: &Arc<Vec<OutputFile>>,
+        outputs: &[OutputFile],
     ) -> CargoResult<()> {
         let id = self.invocation_map[invocation_name];
         let invocation = self.plan
