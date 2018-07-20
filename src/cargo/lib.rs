@@ -4,7 +4,7 @@
 // @alexcrichton disagree with clippy on some style things
 #![cfg_attr(feature = "cargo-clippy", allow(explicit_iter_loop))]
 #![cfg_attr(feature = "cargo-clippy", allow(explicit_into_iter_loop))]
-// alsow we use closures as a alternative to try catch blocks
+// also we use closures as an alternative to try catch blocks
 #![cfg_attr(feature = "cargo-clippy", allow(redundant_closure_call))]
 
 // we have lots of arguments, cleaning this up would be a large project
