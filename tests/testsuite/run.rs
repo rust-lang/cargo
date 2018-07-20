@@ -5,7 +5,7 @@ use hamcrest::{assert_that, existing_file};
 
 #[test]
 fn simple() {
-    let p = project("foo")
+    let p = project()
         .file(
             "Cargo.toml",
             r#"
@@ -41,7 +41,7 @@ fn simple() {
 
 #[test]
 fn simple_quiet() {
-    let p = project("foo")
+    let p = project()
         .file(
             "Cargo.toml",
             r#"
@@ -72,7 +72,7 @@ fn simple_quiet() {
 
 #[test]
 fn simple_quiet_and_verbose() {
-    let p = project("foo")
+    let p = project()
         .file(
             "Cargo.toml",
             r#"
@@ -100,7 +100,7 @@ fn simple_quiet_and_verbose() {
 
 #[test]
 fn quiet_and_verbose_config() {
-    let p = project("foo")
+    let p = project()
         .file(
             "Cargo.toml",
             r#"
@@ -130,7 +130,7 @@ fn quiet_and_verbose_config() {
 
 #[test]
 fn simple_with_args() {
-    let p = project("foo")
+    let p = project()
         .file(
             "Cargo.toml",
             r#"
@@ -159,7 +159,7 @@ fn simple_with_args() {
 
 #[test]
 fn exit_code() {
-    let p = project("foo")
+    let p = project()
         .file(
             "Cargo.toml",
             r#"
@@ -194,7 +194,7 @@ fn exit_code() {
 
 #[test]
 fn exit_code_verbose() {
-    let p = project("foo")
+    let p = project()
         .file(
             "Cargo.toml",
             r#"
@@ -234,7 +234,7 @@ fn exit_code_verbose() {
 
 #[test]
 fn no_main_file() {
-    let p = project("foo")
+    let p = project()
         .file(
             "Cargo.toml",
             r#"
@@ -258,7 +258,7 @@ fn no_main_file() {
 
 #[test]
 fn too_many_bins() {
-    let p = project("foo")
+    let p = project()
         .file(
             "Cargo.toml",
             r#"
@@ -286,7 +286,7 @@ fn too_many_bins() {
 
 #[test]
 fn specify_name() {
-    let p = project("foo")
+    let p = project()
         .file(
             "Cargo.toml",
             r#"
@@ -348,7 +348,7 @@ fn specify_name() {
 
 #[test]
 fn specify_default_run() {
-    let p = project("foo")
+    let p = project()
         .file(
             "Cargo.toml",
             r#"
@@ -388,7 +388,7 @@ fn specify_default_run() {
 
 #[test]
 fn bogus_default_run() {
-    let p = project("foo")
+    let p = project()
         .file(
             "Cargo.toml",
             r#"
@@ -415,7 +415,7 @@ fn bogus_default_run() {
 
 #[test]
 fn default_run_unstable() {
-    let p = project("foo")
+    let p = project()
         .file(
             "Cargo.toml",
             r#"
@@ -466,7 +466,7 @@ consider adding `cargo-features = ["default-run"]` to the manifest
 
 #[test]
 fn run_example() {
-    let p = project("foo")
+    let p = project()
         .file(
             "Cargo.toml",
             r#"
@@ -508,7 +508,7 @@ fn run_example() {
 
 #[test]
 fn run_library_example() {
-    let p = project("foo")
+    let p = project()
         .file(
             "Cargo.toml",
             r#"
@@ -543,7 +543,7 @@ fn autodiscover_examples_project(rust_edition: &str, autoexamples: Option<bool>)
         None => "".to_string(),
         Some(bool) => format!("autoexamples = {}", bool),
     };
-    project("foo")
+    project()
         .file(
             "Cargo.toml",
             &format!(
@@ -688,7 +688,7 @@ fn run_example_autodiscover_2018() {
 
 #[test]
 fn run_bins() {
-    let p = project("foo")
+    let p = project()
         .file(
             "Cargo.toml",
             r#"
@@ -723,7 +723,7 @@ fn run_bins() {
 
 #[test]
 fn run_with_filename() {
-    let p = project("foo")
+    let p = project()
         .file(
             "Cargo.toml",
             r#"
@@ -786,7 +786,7 @@ Did you mean `a`?",
 
 #[test]
 fn either_name_or_example() {
-    let p = project("foo")
+    let p = project()
         .file(
             "Cargo.toml",
             r#"
@@ -826,7 +826,7 @@ fn either_name_or_example() {
 
 #[test]
 fn one_bin_multiple_examples() {
-    let p = project("foo")
+    let p = project()
         .file(
             "Cargo.toml",
             r#"
@@ -874,7 +874,7 @@ fn one_bin_multiple_examples() {
 
 #[test]
 fn example_with_release_flag() {
-    let p = project("foo")
+    let p = project()
         .file(
             "Cargo.toml",
             r#"
@@ -1004,7 +1004,7 @@ slow2",
 
 #[test]
 fn run_dylib_dep() {
-    let p = project("foo")
+    let p = project()
         .file(
             "Cargo.toml",
             r#"
@@ -1048,7 +1048,7 @@ fn run_dylib_dep() {
 
 #[test]
 fn release_works() {
-    let p = project("foo")
+    let p = project()
         .file(
             "Cargo.toml",
             r#"
@@ -1082,7 +1082,7 @@ fn release_works() {
 
 #[test]
 fn run_bin_different_name() {
-    let p = project("foo")
+    let p = project()
         .file(
             "Cargo.toml",
             r#"
@@ -1108,7 +1108,7 @@ fn run_bin_different_name() {
 
 #[test]
 fn dashes_are_forwarded() {
-    let p = project("foo")
+    let p = project()
         .file(
             "Cargo.toml",
             r#"
@@ -1140,7 +1140,7 @@ fn dashes_are_forwarded() {
 
 #[test]
 fn run_from_executable_folder() {
-    let p = project("foo")
+    let p = project()
         .file(
             "Cargo.toml",
             r#"
@@ -1176,7 +1176,7 @@ fn run_from_executable_folder() {
 
 #[test]
 fn run_with_library_paths() {
-    let p = project("foo");
+    let p = project();
 
     // Only link search directories within the target output directory are
     // propagated through to dylib_path_envvar() (see #3366).
@@ -1231,7 +1231,7 @@ fn run_with_library_paths() {
 
 #[test]
 fn library_paths_sorted_alphabetically() {
-    let p = project("foo");
+    let p = project();
 
     let mut dir1 = p.target_debug_dir();
     dir1.push("zzzzzzz");
@@ -1289,7 +1289,7 @@ fn library_paths_sorted_alphabetically() {
 
 #[test]
 fn fail_no_extra_verbose() {
-    let p = project("foo")
+    let p = project()
         .file(
             "Cargo.toml",
             r#"
@@ -1317,7 +1317,7 @@ fn fail_no_extra_verbose() {
 
 #[test]
 fn run_multiple_packages() {
-    let p = project("foo")
+    let p = project()
         .file(
             "foo/Cargo.toml",
             r#"
@@ -1410,7 +1410,7 @@ fn run_multiple_packages() {
 
 #[test]
 fn explicit_bin_with_args() {
-    let p = project("foo")
+    let p = project()
         .file(
             "Cargo.toml",
             r#"

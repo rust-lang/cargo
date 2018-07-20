@@ -395,7 +395,7 @@ fn minimal_version_cli() {
     Package::new("dep", "1.0.0").publish();
     Package::new("dep", "1.1.0").publish();
 
-    let p = project("foo")
+    let p = project()
         .file(
             "Cargo.toml",
             r#"

@@ -4,7 +4,7 @@ use hamcrest::assert_that;
 
 #[test]
 fn simple() {
-    let p = project("foo").build();
+    let p = project().build();
 
     assert_that(
         p.cargo("version"),
@@ -24,13 +24,13 @@ fn simple() {
 #[test]
 #[cfg_attr(target_os = "windows", ignore)]
 fn version_works_without_rustc() {
-    let p = project("foo").build();
+    let p = project().build();
     assert_that(p.cargo("version").env("PATH", ""), execs().with_status(0));
 }
 
 #[test]
 fn version_works_with_bad_config() {
-    let p = project("foo")
+    let p = project()
         .file(".cargo/config", "this is not toml")
         .build();
     assert_that(p.cargo("version"), execs().with_status(0));
@@ -38,7 +38,7 @@ fn version_works_with_bad_config() {
 
 #[test]
 fn version_works_with_bad_target_dir() {
-    let p = project("foo")
+    let p = project()
         .file(
             ".cargo/config",
             r#"

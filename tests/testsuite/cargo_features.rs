@@ -4,7 +4,7 @@ use hamcrest::assert_that;
 
 #[test]
 fn feature_required() {
-    let p = project("foo")
+    let p = project()
         .file(
             "Cargo.toml",
             r#"
@@ -56,7 +56,7 @@ switch to nightly channel you can add
 
 #[test]
 fn unknown_feature() {
-    let p = project("foo")
+    let p = project()
         .file(
             "Cargo.toml",
             r#"
@@ -85,7 +85,7 @@ Caused by:
 
 #[test]
 fn stable_feature_warns() {
-    let p = project("foo")
+    let p = project()
         .file(
             "Cargo.toml",
             r#"
@@ -114,7 +114,7 @@ necessary to be listed in the manifest
 
 #[test]
 fn nightly_feature_requires_nightly() {
-    let p = project("foo")
+    let p = project()
         .file(
             "Cargo.toml",
             r#"
@@ -155,7 +155,7 @@ Caused by:
 
 #[test]
 fn nightly_feature_requires_nightly_in_dep() {
-    let p = project("foo")
+    let p = project()
         .file(
             "Cargo.toml",
             r#"
@@ -216,7 +216,7 @@ Caused by:
 
 #[test]
 fn cant_publish() {
-    let p = project("foo")
+    let p = project()
         .file(
             "Cargo.toml",
             r#"
@@ -257,7 +257,7 @@ Caused by:
 
 #[test]
 fn z_flags_rejected() {
-    let p = project("foo")
+    let p = project()
         .file(
             "Cargo.toml",
             r#"
@@ -306,7 +306,7 @@ fn z_flags_rejected() {
 fn publish_allowed() {
     publish::setup();
 
-    let p = project("foo")
+    let p = project()
         .file(
             "Cargo.toml",
             r#"

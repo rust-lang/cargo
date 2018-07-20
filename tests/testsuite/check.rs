@@ -15,7 +15,7 @@ authors = []
 
 #[test]
 fn check_success() {
-    let foo = project("foo")
+    let foo = project()
         .file(
             "Cargo.toml",
             r#"
@@ -38,7 +38,7 @@ fn check_success() {
         "#,
         )
         .build();
-    let _bar = project("bar")
+    let _bar = project().at("bar")
         .file(
             "Cargo.toml",
             r#"
@@ -61,7 +61,7 @@ fn check_success() {
 
 #[test]
 fn check_fail() {
-    let foo = project("foo")
+    let foo = project()
         .file(
             "Cargo.toml",
             r#"
@@ -84,7 +84,7 @@ fn check_fail() {
         "#,
         )
         .build();
-    let _bar = project("bar")
+    let _bar = project().at("bar")
         .file(
             "Cargo.toml",
             r#"
@@ -107,7 +107,7 @@ fn check_fail() {
 
 #[test]
 fn custom_derive() {
-    let foo = project("foo")
+    let foo = project()
         .file(
             "Cargo.toml",
             r#"
@@ -140,7 +140,7 @@ fn main() {
 "#,
         )
         .build();
-    let _bar = project("bar")
+    let _bar = project().at("bar")
         .file(
             "Cargo.toml",
             r#"
@@ -172,7 +172,7 @@ pub fn derive(_input: TokenStream) -> TokenStream {
 
 #[test]
 fn check_build() {
-    let foo = project("foo")
+    let foo = project()
         .file(
             "Cargo.toml",
             r#"
@@ -196,7 +196,7 @@ fn check_build() {
         )
         .build();
 
-    let _bar = project("bar")
+    let _bar = project().at("bar")
         .file(
             "Cargo.toml",
             r#"
@@ -220,7 +220,7 @@ fn check_build() {
 
 #[test]
 fn build_check() {
-    let foo = project("foo")
+    let foo = project()
         .file(
             "Cargo.toml",
             r#"
@@ -244,7 +244,7 @@ fn build_check() {
         )
         .build();
 
-    let _bar = project("bar")
+    let _bar = project().at("bar")
         .file(
             "Cargo.toml",
             r#"
@@ -270,7 +270,7 @@ fn build_check() {
 // not built.
 #[test]
 fn issue_3418() {
-    let foo = project("foo")
+    let foo = project()
         .file(
             "Cargo.toml",
             r#"
@@ -298,7 +298,7 @@ fn issue_3418() {
 // checked, but in this case with a proc macro too.
 #[test]
 fn issue_3419() {
-    let p = project("foo")
+    let p = project()
         .file(
             "Cargo.toml",
             r#"
@@ -359,7 +359,7 @@ fn issue_3419() {
 // Check on a dylib should have a different metadata hash than build.
 #[test]
 fn dylib_check_preserves_build_cache() {
-    let p = project("foo")
+    let p = project()
         .file(
             "Cargo.toml",
             r#"
@@ -400,7 +400,7 @@ fn dylib_check_preserves_build_cache() {
 // test `cargo rustc --profile check`
 #[test]
 fn rustc_check() {
-    let foo = project("foo")
+    let foo = project()
         .file(
             "Cargo.toml",
             r#"
@@ -423,7 +423,7 @@ fn rustc_check() {
         "#,
         )
         .build();
-    let _bar = project("bar")
+    let _bar = project().at("bar")
         .file(
             "Cargo.toml",
             r#"
@@ -453,7 +453,7 @@ fn rustc_check() {
 
 #[test]
 fn rustc_check_err() {
-    let foo = project("foo")
+    let foo = project()
         .file(
             "Cargo.toml",
             r#"
@@ -476,7 +476,7 @@ fn rustc_check_err() {
         "#,
         )
         .build();
-    let _bar = project("bar")
+    let _bar = project().at("bar")
         .file(
             "Cargo.toml",
             r#"
@@ -506,7 +506,7 @@ fn rustc_check_err() {
 
 #[test]
 fn check_all() {
-    let p = project("foo")
+    let p = project()
         .file(
             "Cargo.toml",
             r#"
@@ -550,7 +550,7 @@ fn check_all() {
 
 #[test]
 fn check_virtual_all_implied() {
-    let p = project("workspace")
+    let p = project().at("workspace")
         .file(
             "Cargo.toml",
             r#"
@@ -599,7 +599,7 @@ fn check_virtual_all_implied() {
 
 #[test]
 fn targets_selected_default() {
-    let foo = project("foo")
+    let foo = project()
         .file("Cargo.toml", SIMPLE_MANIFEST)
         .file("src/main.rs", "fn main() {}")
         .file("src/lib.rs", "pub fn smth() {}")
@@ -622,7 +622,7 @@ fn targets_selected_default() {
 
 #[test]
 fn targets_selected_all() {
-    let foo = project("foo")
+    let foo = project()
         .file("Cargo.toml", SIMPLE_MANIFEST)
         .file("src/main.rs", "fn main() {}")
         .file("src/lib.rs", "pub fn smth() {}")
@@ -645,7 +645,7 @@ fn targets_selected_all() {
 
 #[test]
 fn check_unit_test_profile() {
-    let foo = project("foo")
+    let foo = project()
         .file("Cargo.toml", SIMPLE_MANIFEST)
         .file(
             "src/lib.rs",
@@ -673,7 +673,7 @@ fn check_unit_test_profile() {
 // Verify what is checked with various command-line filters.
 #[test]
 fn check_filters() {
-    let p = project("foo")
+    let p = project()
         .file("Cargo.toml", SIMPLE_MANIFEST)
         .file(
             "src/lib.rs",
@@ -795,7 +795,7 @@ fn check_filters() {
 #[test]
 fn check_artifacts() {
     // Verify which artifacts are created when running check (#4059).
-    let p = project("foo")
+    let p = project()
         .file("Cargo.toml", SIMPLE_MANIFEST)
         .file("src/lib.rs", "")
         .file("src/main.rs", "fn main() {}")
@@ -915,7 +915,7 @@ fn check_artifacts() {
 
 #[test]
 fn proc_macro() {
-    let p = project("foo")
+    let p = project()
         .file(
             "Cargo.toml",
             r#"

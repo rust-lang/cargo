@@ -5,7 +5,7 @@ use std::env;
 
 #[test]
 fn rustc_info_cache() {
-    let p = project("foo")
+    let p = project()
         .file(
             "Cargo.toml",
             r#"
@@ -53,7 +53,7 @@ fn rustc_info_cache() {
     );
 
     let other_rustc = {
-        let p = project("compiler")
+        let p = project().at("compiler")
             .file(
                 "Cargo.toml",
                 r#"

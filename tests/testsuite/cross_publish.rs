@@ -13,7 +13,7 @@ fn simple_cross_package() {
         return;
     }
 
-    let p = project("foo")
+    let p = project()
         .file(
             "Cargo.toml",
             r#"
@@ -86,7 +86,7 @@ fn publish_with_target() {
 
     publish::setup();
 
-    let p = project("foo")
+    let p = project()
         .file(
             "Cargo.toml",
             r#"

@@ -9,7 +9,7 @@ use cargotest::support::{execs, project};
 
 #[test]
 fn binary_with_debug() {
-    let p = project("foo")
+    let p = project()
         .file(
             "Cargo.toml",
             r#"
@@ -37,7 +37,7 @@ fn binary_with_debug() {
 
 #[test]
 fn static_library_with_debug() {
-    let p = project("foo")
+    let p = project()
         .file(
             "Cargo.toml",
             r#"
@@ -74,7 +74,7 @@ fn static_library_with_debug() {
 
 #[test]
 fn dynamic_library_with_debug() {
-    let p = project("foo")
+    let p = project()
         .file(
             "Cargo.toml",
             r#"
@@ -111,7 +111,7 @@ fn dynamic_library_with_debug() {
 
 #[test]
 fn rlib_with_debug() {
-    let p = project("foo")
+    let p = project()
         .file(
             "Cargo.toml",
             r#"
@@ -147,7 +147,7 @@ fn rlib_with_debug() {
 
 #[test]
 fn include_only_the_binary_from_the_current_package() {
-    let p = project("foo")
+    let p = project()
         .file(
             "Cargo.toml",
             r#"
@@ -200,7 +200,7 @@ fn include_only_the_binary_from_the_current_package() {
 
 #[test]
 fn out_dir_is_a_file() {
-    let p = project("foo")
+    let p = project()
         .file(
             "Cargo.toml",
             r#"
@@ -225,7 +225,7 @@ fn out_dir_is_a_file() {
 
 #[test]
 fn replaces_artifacts() {
-    let p = project("foo")
+    let p = project()
         .file(
             "Cargo.toml",
             r#"

@@ -9,7 +9,7 @@ use hamcrest::{assert_that, existing_dir, existing_file, is_not};
 
 #[test]
 fn simple_explicit() {
-    let p = project("foo")
+    let p = project()
         .file(
             "Cargo.toml",
             r#"
@@ -53,7 +53,7 @@ fn simple_explicit() {
 
 #[test]
 fn simple_explicit_default_members() {
-    let p = project("foo")
+    let p = project()
         .file(
             "Cargo.toml",
             r#"
@@ -88,7 +88,7 @@ fn simple_explicit_default_members() {
 
 #[test]
 fn inferred_root() {
-    let p = project("foo")
+    let p = project()
         .file(
             "Cargo.toml",
             r#"
@@ -131,7 +131,7 @@ fn inferred_root() {
 
 #[test]
 fn inferred_path_dep() {
-    let p = project("foo")
+    let p = project()
         .file(
             "Cargo.toml",
             r#"
@@ -177,7 +177,7 @@ fn inferred_path_dep() {
 
 #[test]
 fn transitive_path_dep() {
-    let p = project("foo")
+    let p = project()
         .file(
             "Cargo.toml",
             r#"
@@ -248,7 +248,7 @@ fn transitive_path_dep() {
 
 #[test]
 fn parent_pointer_works() {
-    let p = project("foo")
+    let p = project()
         .file(
             "foo/Cargo.toml",
             r#"
@@ -292,7 +292,7 @@ fn parent_pointer_works() {
 
 #[test]
 fn same_names_in_workspace() {
-    let p = project("foo")
+    let p = project()
         .file(
             "Cargo.toml",
             r#"
@@ -333,7 +333,7 @@ error: two packages named `foo` in this workspace:
 
 #[test]
 fn parent_doesnt_point_to_child() {
-    let p = project("foo")
+    let p = project()
         .file(
             "Cargo.toml",
             r#"
@@ -374,7 +374,7 @@ this may be fixable [..]
 
 #[test]
 fn invalid_parent_pointer() {
-    let p = project("foo")
+    let p = project()
         .file(
             "Cargo.toml",
             r#"
@@ -403,7 +403,7 @@ Caused by:
 
 #[test]
 fn invalid_members() {
-    let p = project("foo")
+    let p = project()
         .file(
             "Cargo.toml",
             r#"
@@ -434,7 +434,7 @@ Caused by:
 
 #[test]
 fn bare_workspace_ok() {
-    let p = project("foo")
+    let p = project()
         .file(
             "Cargo.toml",
             r#"
@@ -454,7 +454,7 @@ fn bare_workspace_ok() {
 
 #[test]
 fn two_roots() {
-    let p = project("foo")
+    let p = project()
         .file(
             "Cargo.toml",
             r#"
@@ -497,7 +497,7 @@ error: multiple workspace roots found in the same workspace:
 
 #[test]
 fn workspace_isnt_root() {
-    let p = project("foo")
+    let p = project()
         .file(
             "Cargo.toml",
             r#"
@@ -531,7 +531,7 @@ fn workspace_isnt_root() {
 
 #[test]
 fn dangling_member() {
-    let p = project("foo")
+    let p = project()
         .file(
             "Cargo.toml",
             r#"
@@ -583,7 +583,7 @@ actual: [..]
 
 #[test]
 fn cycle() {
-    let p = project("foo")
+    let p = project()
         .file(
             "Cargo.toml",
             r#"
@@ -613,7 +613,7 @@ fn cycle() {
 
 #[test]
 fn share_dependencies() {
-    let p = project("foo")
+    let p = project()
         .file(
             "Cargo.toml",
             r#"
@@ -664,7 +664,7 @@ fn share_dependencies() {
 
 #[test]
 fn fetch_fetches_all() {
-    let p = project("foo")
+    let p = project()
         .file(
             "Cargo.toml",
             r#"
@@ -708,7 +708,7 @@ fn fetch_fetches_all() {
 
 #[test]
 fn lock_works_for_everyone() {
-    let p = project("foo")
+    let p = project()
         .file(
             "Cargo.toml",
             r#"
@@ -780,7 +780,7 @@ fn lock_works_for_everyone() {
 
 #[test]
 fn virtual_works() {
-    let p = project("foo")
+    let p = project()
         .file(
             "Cargo.toml",
             r#"
@@ -810,7 +810,7 @@ fn virtual_works() {
 
 #[test]
 fn explicit_package_argument_works_with_virtual_manifest() {
-    let p = project("foo")
+    let p = project()
         .file(
             "Cargo.toml",
             r#"
@@ -840,7 +840,7 @@ fn explicit_package_argument_works_with_virtual_manifest() {
 
 #[test]
 fn virtual_misconfigure() {
-    let p = project("foo")
+    let p = project()
         .file(
             "Cargo.toml",
             r#"
@@ -875,7 +875,7 @@ manifest located at: [..]
 
 #[test]
 fn virtual_build_all_implied() {
-    let p = project("foo")
+    let p = project()
         .file(
             "Cargo.toml",
             r#"
@@ -899,7 +899,7 @@ fn virtual_build_all_implied() {
 
 #[test]
 fn virtual_default_members() {
-    let p = project("foo")
+    let p = project()
         .file(
             "Cargo.toml",
             r#"
@@ -936,7 +936,7 @@ fn virtual_default_members() {
 
 #[test]
 fn virtual_default_member_is_not_a_member() {
-    let p = project("foo")
+    let p = project()
         .file(
             "Cargo.toml",
             r#"
@@ -969,7 +969,7 @@ but is not a member.
 
 #[test]
 fn virtual_build_no_members() {
-    let p = project("foo").file(
+    let p = project().file(
         "Cargo.toml",
         r#"
             [workspace]
@@ -989,7 +989,7 @@ and the workspace has no members.
 
 #[test]
 fn include_virtual() {
-    let p = project("foo")
+    let p = project()
         .file(
             "Cargo.toml",
             r#"
@@ -1023,7 +1023,7 @@ error: multiple workspace roots found in the same workspace:
 
 #[test]
 fn members_include_path_deps() {
-    let p = project("foo")
+    let p = project()
         .file(
             "Cargo.toml",
             r#"
@@ -1097,7 +1097,7 @@ fn members_include_path_deps() {
 
 #[test]
 fn new_warns_you_this_will_not_work() {
-    let p = project("foo")
+    let p = project()
         .file(
             "Cargo.toml",
             r#"
@@ -1133,7 +1133,7 @@ root: [..]
 
 #[test]
 fn lock_doesnt_change_depending_on_crate() {
-    let p = project("foo")
+    let p = project()
         .file(
             "Cargo.toml",
             r#"
@@ -1186,7 +1186,7 @@ fn lock_doesnt_change_depending_on_crate() {
 
 #[test]
 fn rebuild_please() {
-    let p = project("foo")
+    let p = project()
         .file(
             "Cargo.toml",
             r#"
@@ -1276,7 +1276,7 @@ fn workspace_in_git() {
             )
             .file("foo/src/lib.rs", "")
     }).unwrap();
-    let p = project("foo")
+    let p = project()
         .file(
             "Cargo.toml",
             &format!(
@@ -1304,7 +1304,7 @@ fn workspace_in_git() {
 
 #[test]
 fn lockfile_can_specify_nonexistant_members() {
-    let p = project("foo")
+    let p = project()
         .file(
             "Cargo.toml",
             r#"
@@ -1345,7 +1345,7 @@ fn lockfile_can_specify_nonexistant_members() {
 
 #[test]
 fn you_cannot_generate_lockfile_for_empty_workspaces() {
-    let p = project("foo")
+    let p = project()
         .file(
             "Cargo.toml",
             r#"
@@ -1374,7 +1374,7 @@ fn you_cannot_generate_lockfile_for_empty_workspaces() {
 
 #[test]
 fn workspace_with_transitive_dev_deps() {
-    let p = project("foo")
+    let p = project()
         .file(
             "Cargo.toml",
             r#"
@@ -1433,7 +1433,7 @@ fn workspace_with_transitive_dev_deps() {
 
 #[test]
 fn error_if_parent_cargo_toml_is_invalid() {
-    let p = project("foo")
+    let p = project()
         .file("Cargo.toml", "Totally not a TOML file")
         .file(
             "bar/Cargo.toml",
@@ -1457,7 +1457,7 @@ fn error_if_parent_cargo_toml_is_invalid() {
 
 #[test]
 fn relative_path_for_member_works() {
-    let p = project("foo")
+    let p = project()
         .file(
             "foo/Cargo.toml",
             r#"
@@ -1496,7 +1496,7 @@ fn relative_path_for_member_works() {
 
 #[test]
 fn relative_path_for_root_works() {
-    let p = project("foo")
+    let p = project()
         .file(
             "Cargo.toml",
             r#"
@@ -1543,7 +1543,7 @@ fn relative_path_for_root_works() {
 
 #[test]
 fn path_dep_outside_workspace_is_not_member() {
-    let p = project("foo")
+    let p = project()
         .file(
             "ws/Cargo.toml",
             r#"
@@ -1579,7 +1579,7 @@ fn path_dep_outside_workspace_is_not_member() {
 
 #[test]
 fn test_in_and_out_of_workspace() {
-    let p = project("foo")
+    let p = project()
         .file(
             "ws/Cargo.toml",
             r#"
@@ -1652,7 +1652,7 @@ fn test_in_and_out_of_workspace() {
 
 #[test]
 fn test_path_dependency_under_member() {
-    let p = project("foo")
+    let p = project()
         .file(
             "ws/Cargo.toml",
             r#"
@@ -1725,7 +1725,7 @@ fn test_path_dependency_under_member() {
 
 #[test]
 fn excluded_simple() {
-    let p = project("foo")
+    let p = project()
         .file(
             "Cargo.toml",
             r#"
@@ -1762,7 +1762,7 @@ fn excluded_simple() {
 
 #[test]
 fn exclude_members_preferred() {
-    let p = project("foo")
+    let p = project()
         .file(
             "Cargo.toml",
             r#"
@@ -1815,7 +1815,7 @@ fn exclude_members_preferred() {
 
 #[test]
 fn exclude_but_also_depend() {
-    let p = project("foo")
+    let p = project()
         .file(
             "Cargo.toml",
             r#"
@@ -1870,7 +1870,7 @@ fn exclude_but_also_depend() {
 
 #[test]
 fn glob_syntax() {
-    let p = project("foo")
+    let p = project()
         .file("Cargo.toml", r#"
             [project]
             name = "foo"
@@ -2012,7 +2012,7 @@ fn glob_syntax_2() {
 
 #[test]
 fn glob_syntax_invalid_members() {
-    let p = project("foo")
+    let p = project()
         .file("Cargo.toml", r#"
             [project]
             name = "foo"
@@ -2049,7 +2049,7 @@ Caused by:
 /// a single cargo build at the top level will be enough.
 #[test]
 fn dep_used_with_separate_features() {
-    let p = project("foo")
+    let p = project()
         .file(
             "Cargo.toml",
             r#"
@@ -2189,7 +2189,7 @@ fn dont_recurse_out_of_cargo_home() {
             "#,
             )
     }).unwrap();
-    let p = project("lib")
+    let p = project().at("lib")
         .file(
             "Cargo.toml",
             &format!(
@@ -2252,7 +2252,7 @@ fn include_and_exclude() {
 
 #[test]
 fn cargo_home_at_root_works() {
-    let p = project("lib")
+    let p = project().at("lib")
         .file(
             "Cargo.toml",
             r#"
@@ -2285,7 +2285,7 @@ fn cargo_home_at_root_works() {
 
 #[test]
 fn relative_rustc() {
-    let p = project("the_exe")
+    let p = project().at("the_exe")
         .file(
             "Cargo.toml",
             r#"
@@ -2318,7 +2318,7 @@ fn relative_rustc() {
 
     Package::new("a", "0.1.0").publish();
 
-    let p = project("lib")
+    let p = project().at("lib")
         .file(
             "Cargo.toml",
             r#"
@@ -2342,7 +2342,7 @@ fn relative_rustc() {
 
 #[test]
 fn ws_rustc_err() {
-    let p = project("ws")
+    let p = project().at("ws")
         .file(
             "Cargo.toml",
             r#"

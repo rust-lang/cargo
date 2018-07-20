@@ -9,7 +9,7 @@ use hamcrest::{assert_that, existing_file};
 
 #[test]
 fn modifying_and_moving() {
-    let p = project("foo")
+    let p = project()
         .file(
             "Cargo.toml",
             r#"
@@ -64,7 +64,7 @@ fn modifying_and_moving() {
 
 #[test]
 fn modify_only_some_files() {
-    let p = project("foo")
+    let p = project()
         .file(
             "Cargo.toml",
             r#"
@@ -131,7 +131,7 @@ fn modify_only_some_files() {
 
 #[test]
 fn rebuild_sub_package_then_while_package() {
-    let p = project("foo")
+    let p = project()
         .file(
             "Cargo.toml",
             r#"
@@ -200,7 +200,7 @@ fn rebuild_sub_package_then_while_package() {
 
 #[test]
 fn changing_lib_features_caches_targets() {
-    let p = project("foo")
+    let p = project()
         .file(
             "Cargo.toml",
             r#"
@@ -257,7 +257,7 @@ fn changing_lib_features_caches_targets() {
 
 #[test]
 fn changing_profiles_caches_targets() {
-    let p = project("foo")
+    let p = project()
         .file(
             "Cargo.toml",
             r#"
@@ -319,7 +319,7 @@ fn changing_profiles_caches_targets() {
 #[test]
 fn changing_bin_paths_common_target_features_caches_targets() {
     // Make sure dep_cache crate is built once per feature
-    let p = project("foo")
+    let p = project()
         .file(
             ".cargo/config",
             r#"
@@ -491,7 +491,7 @@ fn changing_bin_paths_common_target_features_caches_targets() {
 
 #[test]
 fn changing_bin_features_caches_targets() {
-    let p = project("foo")
+    let p = project()
         .file(
             "Cargo.toml",
             r#"
@@ -585,7 +585,7 @@ fn changing_bin_features_caches_targets() {
 
 #[test]
 fn rebuild_tests_if_lib_changes() {
-    let p = project("foo")
+    let p = project()
         .file(
             "Cargo.toml",
             r#"
@@ -618,7 +618,7 @@ fn rebuild_tests_if_lib_changes() {
 
 #[test]
 fn no_rebuild_transitive_target_deps() {
-    let p = project("foo")
+    let p = project()
         .file(
             "Cargo.toml",
             r#"
@@ -689,7 +689,7 @@ fn no_rebuild_transitive_target_deps() {
 
 #[test]
 fn rerun_if_changed_in_dep() {
-    let p = project("foo")
+    let p = project()
         .file(
             "Cargo.toml",
             r#"
@@ -730,7 +730,7 @@ fn rerun_if_changed_in_dep() {
 
 #[test]
 fn same_build_dir_cached_packages() {
-    let p = project("foo")
+    let p = project()
         .file(
             "a1/Cargo.toml",
             r#"
@@ -825,7 +825,7 @@ fn same_build_dir_cached_packages() {
 
 #[test]
 fn no_rebuild_if_build_artifacts_move_backwards_in_time() {
-    let p = project("backwards_in_time")
+    let p = project().at("backwards_in_time")
         .file(
             "Cargo.toml",
             r#"
@@ -866,7 +866,7 @@ fn no_rebuild_if_build_artifacts_move_backwards_in_time() {
 
 #[test]
 fn rebuild_if_build_artifacts_move_forward_in_time() {
-    let p = project("forwards_in_time")
+    let p = project().at("forwards_in_time")
         .file(
             "Cargo.toml",
             r#"
@@ -910,7 +910,7 @@ fn rebuild_if_build_artifacts_move_forward_in_time() {
 
 #[test]
 fn rebuild_if_environment_changes() {
-    let p = project("env_change")
+    let p = project().at("env_change")
         .file(
             "Cargo.toml",
             r#"
@@ -977,7 +977,7 @@ fn rebuild_if_environment_changes() {
 
 #[test]
 fn no_rebuild_when_rename_dir() {
-    let p = project("foo")
+    let p = project()
         .file(
             "Cargo.toml",
             r#"
@@ -1023,7 +1023,7 @@ fn unused_optional_dep() {
     Package::new("registry2", "0.1.0").publish();
     Package::new("registry3", "0.1.0").publish();
 
-    let p = project("p")
+    let p = project().at("p")
         .file(
             "Cargo.toml",
             r#"
@@ -1079,7 +1079,7 @@ fn path_dev_dep_registry_updates() {
     Package::new("registry1", "0.1.0").publish();
     Package::new("registry2", "0.1.0").publish();
 
-    let p = project("p")
+    let p = project().at("p")
         .file(
             "Cargo.toml",
             r#"
@@ -1133,7 +1133,7 @@ fn path_dev_dep_registry_updates() {
 
 #[test]
 fn change_panic_mode() {
-    let p = project("p")
+    let p = project().at("p")
         .file(
             "Cargo.toml",
             r#"
@@ -1178,7 +1178,7 @@ fn change_panic_mode() {
 
 #[test]
 fn dont_rebuild_based_on_plugins() {
-    let p = project("p")
+    let p = project().at("p")
         .file(
             "Cargo.toml",
             r#"
@@ -1246,7 +1246,7 @@ fn dont_rebuild_based_on_plugins() {
 
 #[test]
 fn reuse_workspace_lib() {
-    let p = project("p")
+    let p = project().at("p")
         .file(
             "Cargo.toml",
             r#"

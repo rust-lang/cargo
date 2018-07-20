@@ -14,7 +14,7 @@ use tar::Archive;
 fn simple() {
     publish::setup();
 
-    let p = project("foo")
+    let p = project()
         .file(
             "Cargo.toml",
             r#"
@@ -94,7 +94,7 @@ fn old_token_location() {
         )
         .unwrap();
 
-    let p = project("foo")
+    let p = project()
         .file(
             "Cargo.toml",
             r#"
@@ -163,7 +163,7 @@ See [..]
 fn simple_with_host() {
     publish::setup();
 
-    let p = project("foo")
+    let p = project()
         .file(
             "Cargo.toml",
             r#"
@@ -241,7 +241,7 @@ See [..]
 fn simple_with_index_and_host() {
     publish::setup();
 
-    let p = project("foo")
+    let p = project()
         .file(
             "Cargo.toml",
             r#"
@@ -319,7 +319,7 @@ See [..]
 fn git_deps() {
     publish::setup();
 
-    let p = project("foo")
+    let p = project()
         .file(
             "Cargo.toml",
             r#"
@@ -360,7 +360,7 @@ repository and specify it with a path and version\n\
 fn path_dependency_no_version() {
     publish::setup();
 
-    let p = project("foo")
+    let p = project()
         .file(
             "Cargo.toml",
             r#"
@@ -406,7 +406,7 @@ dependency `bar` does not specify a version
 fn unpublishable_crate() {
     publish::setup();
 
-    let p = project("foo")
+    let p = project()
         .file(
             "Cargo.toml",
             r#"
@@ -438,7 +438,7 @@ fn unpublishable_crate() {
 #[test]
 fn dont_publish_dirty() {
     publish::setup();
-    let p = project("foo").file("bar", "").build();
+    let p = project().file("bar", "").build();
 
     let _ = repo(&paths::root().join("foo"))
         .file(
@@ -480,7 +480,7 @@ to proceed despite this, pass the `--allow-dirty` flag
 fn publish_clean() {
     publish::setup();
 
-    let p = project("foo").build();
+    let p = project().build();
 
     let _ = repo(&paths::root().join("foo"))
         .file(
@@ -512,7 +512,7 @@ fn publish_clean() {
 fn publish_in_sub_repo() {
     publish::setup();
 
-    let p = project("foo").file("baz", "").build();
+    let p = project().file("baz", "").build();
 
     let _ = repo(&paths::root().join("foo"))
         .file(
@@ -545,7 +545,7 @@ fn publish_in_sub_repo() {
 fn publish_when_ignored() {
     publish::setup();
 
-    let p = project("foo").file("baz", "").build();
+    let p = project().file("baz", "").build();
 
     let _ = repo(&paths::root().join("foo"))
         .file(
@@ -578,7 +578,7 @@ fn publish_when_ignored() {
 fn ignore_when_crate_ignored() {
     publish::setup();
 
-    let p = project("foo").file("bar/baz", "").build();
+    let p = project().file("bar/baz", "").build();
 
     let _ = repo(&paths::root().join("foo"))
         .file(".gitignore", "bar")
@@ -610,7 +610,7 @@ fn ignore_when_crate_ignored() {
 fn new_crate_rejected() {
     publish::setup();
 
-    let p = project("foo").file("baz", "").build();
+    let p = project().file("baz", "").build();
 
     let _ = repo(&paths::root().join("foo"))
         .nocommit_file(
@@ -640,7 +640,7 @@ fn new_crate_rejected() {
 fn dry_run() {
     publish::setup();
 
-    let p = project("foo")
+    let p = project()
         .file(
             "Cargo.toml",
             r#"
@@ -684,7 +684,7 @@ See [..]
 fn block_publish_feature_not_enabled() {
     publish::setup();
 
-    let p = project("foo")
+    let p = project()
         .file(
             "Cargo.toml",
             r#"
@@ -728,7 +728,7 @@ consider adding `cargo-features = [\"alternative-registries\"]` to the manifest
 fn registry_not_in_publish_list() {
     publish::setup();
 
-    let p = project("foo")
+    let p = project()
         .file(
             "Cargo.toml",
             r#"
@@ -767,7 +767,7 @@ fn registry_not_in_publish_list() {
 fn publish_empty_list() {
     publish::setup();
 
-    let p = project("foo")
+    let p = project()
         .file(
             "Cargo.toml",
             r#"
@@ -804,7 +804,7 @@ fn publish_empty_list() {
 fn publish_allowed_registry() {
     publish::setup();
 
-    let p = project("foo").build();
+    let p = project().build();
 
     let _ = repo(&paths::root().join("foo"))
         .file(
@@ -840,7 +840,7 @@ fn publish_allowed_registry() {
 fn block_publish_no_registry() {
     publish::setup();
 
-    let p = project("foo")
+    let p = project()
         .file(
             "Cargo.toml",
             r#"

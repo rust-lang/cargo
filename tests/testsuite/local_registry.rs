@@ -29,7 +29,7 @@ fn simple() {
         .file("src/lib.rs", "pub fn foo() {}")
         .publish();
 
-    let p = project("bar")
+    let p = project().at("bar")
         .file(
             "Cargo.toml",
             r#"
@@ -81,7 +81,7 @@ fn multiple_versions() {
         .file("src/lib.rs", "pub fn foo() {}")
         .publish();
 
-    let p = project("bar")
+    let p = project().at("bar")
         .file(
             "Cargo.toml",
             r#"
@@ -143,7 +143,7 @@ fn multiple_names() {
         .file("src/lib.rs", "pub fn bar() {}")
         .publish();
 
-    let p = project("local")
+    let p = project().at("local")
         .file(
             "Cargo.toml",
             r#"
@@ -199,7 +199,7 @@ fn interdependent() {
         .file("src/lib.rs", "extern crate foo; pub fn bar() {}")
         .publish();
 
-    let p = project("local")
+    let p = project().at("local")
         .file(
             "Cargo.toml",
             r#"
@@ -277,7 +277,7 @@ fn path_dep_rewritten() {
         .file("foo/src/lib.rs", "pub fn foo() {}")
         .publish();
 
-    let p = project("local")
+    let p = project().at("local")
         .file(
             "Cargo.toml",
             r#"
@@ -323,7 +323,7 @@ fn path_dep_rewritten() {
 #[test]
 fn invalid_dir_bad() {
     setup();
-    let p = project("local")
+    let p = project().at("local")
         .file(
             "Cargo.toml",
             r#"
@@ -379,7 +379,7 @@ fn different_directory_replacing_the_registry_is_bad() {
     let config_tmp = paths::root().join(".cargo-old");
     t!(fs::rename(&config, &config_tmp));
 
-    let p = project("local")
+    let p = project().at("local")
         .file(
             "Cargo.toml",
             r#"
@@ -447,7 +447,7 @@ fn crates_io_registry_url_is_optional() {
         .file("src/lib.rs", "pub fn foo() {}")
         .publish();
 
-    let p = project("bar")
+    let p = project().at("bar")
         .file(
             "Cargo.toml",
             r#"

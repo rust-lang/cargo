@@ -12,7 +12,7 @@ fn cargo_bench_simple() {
         return;
     }
 
-    let p = project("foo")
+    let p = project()
         .file("Cargo.toml", &basic_bin_manifest("foo"))
         .file(
             "src/main.rs",
@@ -61,7 +61,7 @@ fn bench_bench_implicit() {
         return;
     }
 
-    let p = project("foo")
+    let p = project()
         .file(
             "Cargo.toml",
             r#"
@@ -119,7 +119,7 @@ fn bench_bin_implicit() {
         return;
     }
 
-    let p = project("foo")
+    let p = project()
         .file(
             "Cargo.toml",
             r#"
@@ -176,7 +176,7 @@ fn bench_tarname() {
         return;
     }
 
-    let p = project("foo")
+    let p = project()
         .file(
             "Cargo.toml",
             r#"
@@ -224,7 +224,7 @@ fn bench_multiple_targets() {
         return;
     }
 
-    let p = project("foo")
+    let p = project()
         .file(
             "Cargo.toml",
             r#"
@@ -277,7 +277,7 @@ fn cargo_bench_verbose() {
         return;
     }
 
-    let p = project("foo")
+    let p = project()
         .file("Cargo.toml", &basic_bin_manifest("foo"))
         .file(
             "src/main.rs",
@@ -312,7 +312,7 @@ fn many_similar_names() {
         return;
     }
 
-    let p = project("foo")
+    let p = project()
         .file(
             "Cargo.toml",
             r#"
@@ -380,7 +380,7 @@ fn cargo_bench_failing_test() {
         return;
     }
 
-    let p = project("foo")
+    let p = project()
         .file("Cargo.toml", &basic_bin_manifest("foo"))
         .file(
             "src/main.rs",
@@ -436,7 +436,7 @@ fn bench_with_lib_dep() {
         return;
     }
 
-    let p = project("foo")
+    let p = project()
         .file(
             "Cargo.toml",
             r#"
@@ -507,7 +507,7 @@ fn bench_with_deep_lib_dep() {
         return;
     }
 
-    let p = project("bar")
+    let p = project().at("bar")
         .file(
             "Cargo.toml",
             r#"
@@ -535,7 +535,7 @@ fn bench_with_deep_lib_dep() {
         ",
         )
         .build();
-    let _p2 = project("foo")
+    let _p2 = project()
         .file(
             "Cargo.toml",
             r#"
@@ -582,7 +582,7 @@ fn external_bench_explicit() {
         return;
     }
 
-    let p = project("foo")
+    let p = project()
         .file(
             "Cargo.toml",
             r#"
@@ -644,7 +644,7 @@ fn external_bench_implicit() {
         return;
     }
 
-    let p = project("foo")
+    let p = project()
         .file(
             "Cargo.toml",
             r#"
@@ -703,7 +703,7 @@ fn bench_autodiscover_2015() {
         return;
     }
 
-    let p = project("foo")
+    let p = project()
         .file(
             "Cargo.toml",
             r#"
@@ -783,7 +783,7 @@ fn dont_run_examples() {
         return;
     }
 
-    let p = project("foo")
+    let p = project()
         .file(
             "Cargo.toml",
             r#"
@@ -810,7 +810,7 @@ fn pass_through_command_line() {
         return;
     }
 
-    let p = project("foo")
+    let p = project()
         .file(
             "Cargo.toml",
             r#"
@@ -867,7 +867,7 @@ fn cargo_bench_twice() {
         return;
     }
 
-    let p = project("test_twice")
+    let p = project().at("test_twice")
         .file("Cargo.toml", &basic_lib_manifest("test_twice"))
         .file(
             "src/test_twice.rs",
@@ -896,7 +896,7 @@ fn lib_bin_same_name() {
         return;
     }
 
-    let p = project("foo")
+    let p = project()
         .file(
             "Cargo.toml",
             r#"
@@ -956,7 +956,7 @@ fn lib_with_standard_name() {
         return;
     }
 
-    let p = project("foo")
+    let p = project()
         .file(
             "Cargo.toml",
             r#"
@@ -1018,7 +1018,7 @@ fn lib_with_standard_name2() {
         return;
     }
 
-    let p = project("foo")
+    let p = project()
         .file(
             "Cargo.toml",
             r#"
@@ -1077,7 +1077,7 @@ fn bench_dylib() {
         return;
     }
 
-    let p = project("foo")
+    let p = project()
         .file(
             "Cargo.toml",
             r#"
@@ -1184,7 +1184,7 @@ fn bench_twice_with_build_cmd() {
         return;
     }
 
-    let p = project("foo")
+    let p = project()
         .file(
             "Cargo.toml",
             r#"
@@ -1240,7 +1240,7 @@ fn bench_with_examples() {
         return;
     }
 
-    let p = project("testbench")
+    let p = project().at("testbench")
         .file(
             "Cargo.toml",
             r#"
@@ -1332,7 +1332,7 @@ fn test_a_bench() {
         return;
     }
 
-    let p = project("foo")
+    let p = project()
         .file(
             "Cargo.toml",
             r#"
@@ -1381,7 +1381,7 @@ fn test_bench_no_run() {
         return;
     }
 
-    let p = project("foo")
+    let p = project()
         .file(
             "Cargo.toml",
             r#"
@@ -1424,7 +1424,7 @@ fn test_bench_no_fail_fast() {
         return;
     }
 
-    let p = project("foo")
+    let p = project()
         .file("Cargo.toml", &basic_bin_manifest("foo"))
         .file(
             "src/foo.rs",
@@ -1473,7 +1473,7 @@ fn test_bench_multiple_packages() {
         return;
     }
 
-    let p = project("foo")
+    let p = project()
         .file(
             "Cargo.toml",
             r#"
@@ -1492,7 +1492,7 @@ fn test_bench_multiple_packages() {
         .file("src/lib.rs", "")
         .build();
 
-    let _bar = project("bar")
+    let _bar = project().at("bar")
         .file(
             "Cargo.toml",
             r#"
@@ -1521,7 +1521,7 @@ fn test_bench_multiple_packages() {
         )
         .build();
 
-    let _baz = project("baz")
+    let _baz = project().at("baz")
         .file(
             "Cargo.toml",
             r#"
@@ -1567,7 +1567,7 @@ fn bench_all_workspace() {
         return;
     }
 
-    let p = project("foo")
+    let p = project()
         .file(
             "Cargo.toml",
             r#"
@@ -1644,7 +1644,7 @@ fn bench_all_exclude() {
         return;
     }
 
-    let p = project("foo")
+    let p = project()
         .file(
             "Cargo.toml",
             r#"
@@ -1718,7 +1718,7 @@ fn bench_all_virtual_manifest() {
         return;
     }
 
-    let p = project("workspace")
+    let p = project().at("workspace")
         .file(
             "Cargo.toml",
             r#"
@@ -1799,7 +1799,7 @@ fn legacy_bench_name() {
         return;
     }
 
-    let p = project("foo")
+    let p = project()
         .file(
             "Cargo.toml",
             r#"
@@ -1847,7 +1847,7 @@ fn bench_virtual_manifest_all_implied() {
         return;
     }
 
-    let p = project("workspace")
+    let p = project().at("workspace")
         .file(
             "Cargo.toml",
             r#"

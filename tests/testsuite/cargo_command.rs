@@ -62,7 +62,7 @@ fn path() -> Vec<PathBuf> {
 
 #[test]
 fn list_command_looks_at_path() {
-    let proj = project("list-non-overlapping").build();
+    let proj = project().at("list-non-overlapping").build();
     let proj = fake_file(
         proj,
         Path::new("path-test"),
@@ -88,7 +88,7 @@ fn list_command_looks_at_path() {
 #[cfg(unix)]
 #[test]
 fn list_command_resolves_symlinks() {
-    let proj = project("list-non-overlapping").build();
+    let proj = project().at("list-non-overlapping").build();
     let proj = fake_file(
         proj,
         Path::new("path-test"),
@@ -236,7 +236,7 @@ fn cargo_subcommand_env() {
         cargo::CARGO_ENV
     );
 
-    let p = project("cargo-envtest")
+    let p = project().at("cargo-envtest")
         .file("Cargo.toml", &basic_bin_manifest("cargo-envtest"))
         .file("src/main.rs", &src)
         .build();
@@ -260,7 +260,7 @@ fn cargo_subcommand_env() {
 
 #[test]
 fn cargo_subcommand_args() {
-    let p = project("cargo-foo")
+    let p = project().at("cargo-foo")
         .file(
             "Cargo.toml",
             r#"

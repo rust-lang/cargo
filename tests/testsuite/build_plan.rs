@@ -4,7 +4,7 @@ use hamcrest::{assert_that, existing_file, is_not};
 
 #[test]
 fn cargo_build_plan_simple() {
-    let p = project("foo")
+    let p = project()
         .file("Cargo.toml", &basic_bin_manifest("foo"))
         .file("src/foo.rs", &main_file(r#""i am foo""#, &[]))
         .build();
@@ -44,7 +44,7 @@ fn cargo_build_plan_simple() {
 
 #[test]
 fn cargo_build_plan_single_dep() {
-    let p = project("foo")
+    let p = project()
         .file(
             "Cargo.toml",
             r#"
@@ -130,7 +130,7 @@ fn cargo_build_plan_single_dep() {
 
 #[test]
 fn cargo_build_plan_build_script() {
-    let p = project("foo")
+    let p = project()
         .file(
             "Cargo.toml",
             r#"

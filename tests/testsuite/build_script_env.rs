@@ -6,7 +6,7 @@ use hamcrest::assert_that;
 
 #[test]
 fn rerun_if_env_changes() {
-    let p = project("foo")
+    let p = project()
         .file(
             "Cargo.toml",
             r#"
@@ -76,7 +76,7 @@ fn rerun_if_env_changes() {
 
 #[test]
 fn rerun_if_env_or_file_changes() {
-    let p = project("foo")
+    let p = project()
         .file(
             "Cargo.toml",
             r#"

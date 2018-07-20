@@ -16,7 +16,7 @@ use hamcrest::{assert_that, existing_file};
 
 #[test]
 fn cargo_compile_simple_git_dep() {
-    let project = project("foo");
+    let project = project();
     let git_project = git::new("dep1", |project| {
         project
             .file(
@@ -93,7 +93,7 @@ fn cargo_compile_simple_git_dep() {
 
 #[test]
 fn cargo_compile_forbird_git_httpsrepo_offline() {
-    let p = project("need_remote_repo")
+    let p = project().at("need_remote_repo")
         .file(
             "Cargo.toml",
             r#"
@@ -162,7 +162,7 @@ fn cargo_compile_offline_with_cached_git_dep() {
 
     {
         // cache to registry rev1 and rev2
-        let prj = project("cache_git_dep")
+        let prj = project().at("cache_git_dep")
             .file(
                 "Cargo.toml",
                 &format!(
@@ -202,7 +202,7 @@ fn cargo_compile_offline_with_cached_git_dep() {
         assert_that(prj.cargo("build"), execs().with_status(0));
     }
 
-    let project = project("foo")
+    let project = project()
         .file(
             "Cargo.toml",
             &format!(
@@ -280,7 +280,7 @@ fn cargo_compile_offline_with_cached_git_dep() {
 
 #[test]
 fn cargo_compile_git_dep_branch() {
-    let project = project("foo");
+    let project = project();
     let git_project = git::new("dep1", |project| {
         project
             .file(
@@ -365,7 +365,7 @@ fn cargo_compile_git_dep_branch() {
 
 #[test]
 fn cargo_compile_git_dep_tag() {
-    let project = project("foo");
+    let project = project();
     let git_project = git::new("dep1", |project| {
         project
             .file(
@@ -511,7 +511,7 @@ fn cargo_compile_with_nested_paths() {
             )
     }).unwrap();
 
-    let p = project("parent")
+    let p = project().at("parent")
         .file(
             "Cargo.toml",
             &format!(
@@ -584,7 +584,7 @@ fn cargo_compile_with_malformed_nested_paths() {
             )
     }).unwrap();
 
-    let p = project("parent")
+    let p = project().at("parent")
         .file(
             "Cargo.toml",
             &format!(
@@ -673,7 +673,7 @@ fn cargo_compile_with_meta_package() {
             )
     }).unwrap();
 
-    let p = project("parent")
+    let p = project().at("parent")
         .file(
             "Cargo.toml",
             &format!(
@@ -725,7 +725,7 @@ fn cargo_compile_with_meta_package() {
 fn cargo_compile_with_short_ssh_git() {
     let url = "git@github.com:a/dep";
 
-    let project = project("project")
+    let project = project().at("project")
         .file(
             "Cargo.toml",
             &format!(
@@ -798,7 +798,7 @@ fn two_revs_same_deps() {
     git::add(&repo);
     let rev2 = git::commit(&repo);
 
-    let foo = project("foo")
+    let foo = project()
         .file(
             "Cargo.toml",
             &format!(
@@ -833,7 +833,7 @@ fn two_revs_same_deps() {
         )
         .build();
 
-    let _baz = project("baz")
+    let _baz = project().at("baz")
         .file(
             "Cargo.toml",
             &format!(
@@ -890,7 +890,7 @@ fn recompilation() {
             )
     }).unwrap();
 
-    let p = project("foo")
+    let p = project()
         .file(
             "Cargo.toml",
             &format!(
@@ -1026,7 +1026,7 @@ fn update_with_shared_deps() {
             )
     }).unwrap();
 
-    let p = project("foo")
+    let p = project()
         .file(
             "Cargo.toml",
             r#"
@@ -1197,7 +1197,7 @@ Caused by:
 
 #[test]
 fn dep_with_submodule() {
-    let project = project("foo");
+    let project = project();
     let git_project = git::new("dep1", |project| {
         project.file(
             "Cargo.toml",
@@ -1260,7 +1260,7 @@ fn dep_with_submodule() {
 
 #[test]
 fn dep_with_bad_submodule() {
-    let project = project("foo");
+    let project = project();
     let git_project = git::new("dep1", |project| {
         project.file(
             "Cargo.toml",
@@ -1348,7 +1348,7 @@ Caused by:
 
 #[test]
 fn two_deps_only_update_one() {
-    let project = project("foo");
+    let project = project();
     let git1 = git::new("dep1", |project| {
         project
             .file(
@@ -1453,7 +1453,7 @@ fn stale_cached_version() {
 
     // Update the git database in the cache with the current state of the git
     // repo
-    let foo = project("foo")
+    let foo = project()
         .file(
             "Cargo.toml",
             &format!(
@@ -1542,7 +1542,7 @@ fn stale_cached_version() {
 
 #[test]
 fn dep_with_changed_submodule() {
-    let project = project("foo");
+    let project = project();
     let git_project = git::new("dep1", |project| {
         project.file(
             "Cargo.toml",
@@ -1687,7 +1687,7 @@ fn dev_deps_with_testing() {
             )
     }).unwrap();
 
-    let p = project("foo")
+    let p = project()
         .file(
             "Cargo.toml",
             &format!(
@@ -1824,7 +1824,7 @@ fn git_name_not_always_needed() {
     let _ = cfg.remove("user.name");
     let _ = cfg.remove("user.email");
 
-    let p = project("foo")
+    let p = project()
         .file(
             "Cargo.toml",
             &format!(
@@ -1876,7 +1876,7 @@ fn git_repo_changing_no_rebuild() {
     }).unwrap();
 
     // Lock p1 to the first rev in the git repo
-    let p1 = project("p1")
+    let p1 = project().at("p1")
         .file(
             "Cargo.toml",
             &format!(
@@ -1923,7 +1923,7 @@ fn git_repo_changing_no_rebuild() {
     git::commit(&repo);
 
     // Lock p2 to the second rev
-    let p2 = project("p2")
+    let p2 = project().at("p2")
         .file(
             "Cargo.toml",
             &format!(
@@ -2047,7 +2047,7 @@ fn fetch_downloads() {
             .file("src/lib.rs", "pub fn bar() -> i32 { 1 }")
     }).unwrap();
 
-    let p = project("p1")
+    let p = project().at("p1")
         .file(
             "Cargo.toml",
             &format!(
@@ -2091,7 +2091,7 @@ fn warnings_in_git_dep() {
             .file("src/lib.rs", "fn unused() {}")
     }).unwrap();
 
-    let p = project("foo")
+    let p = project()
         .file(
             "Cargo.toml",
             &format!(
@@ -2171,7 +2171,7 @@ fn update_ambiguous() {
             .file("src/lib.rs", "")
     }).unwrap();
 
-    let p = project("project")
+    let p = project().at("project")
         .file(
             "Cargo.toml",
             &format!(
@@ -2234,7 +2234,7 @@ fn update_one_dep_in_repo_with_many_deps() {
             .file("a/src/lib.rs", "")
     }).unwrap();
 
-    let p = project("project")
+    let p = project().at("project")
         .file(
             "Cargo.toml",
             &format!(
@@ -2318,7 +2318,7 @@ fn switch_deps_does_not_update_transitive() {
             .file("src/lib.rs", "")
     }).unwrap();
 
-    let p = project("project")
+    let p = project().at("project")
         .file(
             "Cargo.toml",
             &format!(
@@ -2414,7 +2414,7 @@ fn update_one_source_updates_all_packages_in_that_git_source() {
             .file("a/src/lib.rs", "")
     }).unwrap();
 
-    let p = project("project")
+    let p = project().at("project")
         .file(
             "Cargo.toml",
             &format!(
@@ -2495,7 +2495,7 @@ fn switch_sources() {
             .file("src/lib.rs", "")
     }).unwrap();
 
-    let p = project("project")
+    let p = project().at("project")
         .file(
             "Cargo.toml",
             r#"
@@ -2571,7 +2571,7 @@ fn switch_sources() {
 
 #[test]
 fn dont_require_submodules_are_checked_out() {
-    let p = project("foo").build();
+    let p = project().build();
     let git1 = git::new("dep1", |p| {
         p.file(
             "Cargo.toml",
@@ -2635,7 +2635,7 @@ fn doctest_same_name() {
         ).file("src/lib.rs", "extern crate a; pub fn a1() {}")
     }).unwrap();
 
-    let p = project("foo")
+    let p = project()
         .file(
             "Cargo.toml",
             &format!(
@@ -2682,7 +2682,7 @@ fn lints_are_suppressed() {
         )
     }).unwrap();
 
-    let p = project("foo")
+    let p = project()
         .file(
             "Cargo.toml",
             &format!(
@@ -2734,7 +2734,7 @@ fn denied_lints_are_allowed() {
         )
     }).unwrap();
 
-    let p = project("foo")
+    let p = project()
         .file(
             "Cargo.toml",
             &format!(
@@ -2780,7 +2780,7 @@ fn add_a_git_dep() {
         ).file("src/lib.rs", "")
     }).unwrap();
 
-    let p = project("foo")
+    let p = project()
         .file(
             "Cargo.toml",
             &format!(
@@ -2868,7 +2868,7 @@ fn two_at_rev_instead_of_tag() {
         false,
     ).unwrap();
 
-    let p = project("foo")
+    let p = project()
         .file(
             "Cargo.toml",
             &format!(
@@ -3034,7 +3034,7 @@ fn include_overrides_gitignore() {
 
 #[test]
 fn invalid_git_dependency_manifest() {
-    let project = project("foo");
+    let project = project();
     let git_project = git::new("dep1", |project| {
         project
             .file(
@@ -3114,7 +3114,7 @@ fn invalid_git_dependency_manifest() {
 
 #[test]
 fn failed_submodule_checkout() {
-    let project = project("foo");
+    let project = project();
     let git_project = git::new("dep1", |project| {
         project.file(
             "Cargo.toml",
