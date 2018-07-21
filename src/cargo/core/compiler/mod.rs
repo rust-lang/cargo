@@ -164,16 +164,7 @@ fn rustc<'a, 'cfg>(
     let name = unit.pkg.name().to_string();
     let buildkey = unit.buildkey();
 
-    // If this is an upstream dep we don't want warnings from, turn off all
-    // lints.
-    if !cx.bcx.show_warnings(unit.pkg.package_id()) {
-        rustc.arg("--cap-lints").arg("allow");
-
-    // If this is an upstream dep but we *do* want warnings, make sure that they
-    // don't fail compilation.
-    } else if !unit.pkg.package_id().source_id().is_path() {
-        rustc.arg("--cap-lints").arg("warn");
-    }
+    add_cap_lints(cx.bcx, unit, &mut rustc);
 
     let outputs = cx.outputs(unit)?;
     let root = cx.files().out_dir(unit);
@@ -575,7 +566,8 @@ fn rustdoc<'a, 'cfg>(cx: &mut Context<'a, 'cfg>, unit: &Unit<'a>) -> CargoResult
     let mut rustdoc = cx.compilation.rustdoc_process(unit.pkg)?;
     rustdoc.inherit_jobserver(&cx.jobserver);
     rustdoc.arg("--crate-name").arg(&unit.target.crate_name());
-    add_path_args(&cx.bcx, unit, &mut rustdoc);
+    add_path_args(bcx, unit, &mut rustdoc);
+    add_cap_lints(bcx, unit, &mut rustdoc);
 
     if unit.kind != Kind::Host {
         if let Some(ref target) = bcx.build_config.requested_target {
@@ -653,6 +645,19 @@ fn add_path_args(bcx: &BuildContext, unit: &Unit, cmd: &mut ProcessBuilder) {
     let (arg, cwd) = path_args(bcx, unit);
     cmd.arg(arg);
     cmd.cwd(cwd);
+}
+
+fn add_cap_lints(bcx: &BuildContext, unit: &Unit, cmd: &mut ProcessBuilder) {
+    // If this is an upstream dep we don't want warnings from, turn off all
+    // lints.
+    if !bcx.show_warnings(unit.pkg.package_id()) {
+        cmd.arg("--cap-lints").arg("allow");
+
+    // If this is an upstream dep but we *do* want warnings, make sure that they
+    // don't fail compilation.
+    } else if !unit.pkg.package_id().source_id().is_path() {
+        cmd.arg("--cap-lints").arg("warn");
+    }
 }
 
 fn build_base_args<'a, 'cfg>(
