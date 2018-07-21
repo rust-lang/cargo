@@ -3,8 +3,9 @@ use std::str;
 use std::fs::{self, File};
 use std::io::Read;
 
-use cargotest::{rustc_host, ChannelChanger};
-use cargotest::support::{execs, project, path2url};
+use cargotest::{is_nightly, rustc_host, ChannelChanger};
+use cargotest::support::{basic_lib_manifest, execs, git, project, path2url};
+use cargotest::support::paths::CargoPathExt;
 use cargotest::support::registry::Package;
 use hamcrest::{assert_that, existing_dir, existing_file, is_not};
 use cargo::util::ProcessError;
@@ -1392,6 +1393,10 @@ fn doc_virtual_manifest_all_implied() {
 
 #[test]
 fn doc_all_member_dependency_same_name() {
+    if !is_nightly() {
+        // This can be removed once 1.29 is stable (rustdoc --cap-lints).
+        return;
+    }
     let p = project()
         .file(
             "Cargo.toml",
@@ -1625,6 +1630,10 @@ fn doc_edition() {
 // caused `cargo doc` to fail.
 #[test]
 fn issue_5345() {
+    if !is_nightly() {
+        // This can be removed once 1.29 is stable (rustdoc --cap-lints).
+        return;
+    }
     let foo = project()
         .file(
             "Cargo.toml",
@@ -1667,4 +1676,67 @@ fn doc_private_items() {
 
     assert_that(&foo.root().join("target/doc"), existing_dir());
     assert_that(&foo.root().join("target/doc/foo/private/index.html"), existing_file());
+}
+
+#[test]
+fn doc_cap_lints() {
+    if !is_nightly() {
+        // This can be removed once 1.29 is stable (rustdoc --cap-lints).
+        return;
+    }
+    let a = git::new("a", |p| {
+        p.file("Cargo.toml", &basic_lib_manifest("a")).file(
+            "src/lib.rs",
+            "
+            #![deny(intra_doc_link_resolution_failure)]
+
+            /// [bad_link]
+            pub fn foo() {}
+        ",
+        )
+    }).unwrap();
+
+    let p = project()
+        .file(
+            "Cargo.toml",
+            &format!(
+                r#"
+            [package]
+            name = "foo"
+            version = "0.0.1"
+            authors = []
+
+            [dependencies]
+            a = {{ git = '{}' }}
+        "#,
+                a.url()
+            ),
+        )
+        .file("src/lib.rs", "")
+        .build();
+
+    assert_that(
+        p.cargo("doc"),
+        execs().with_status(0).with_stderr_unordered(
+            "\
+[UPDATING] git repository `[..]`
+[DOCUMENTING] a v0.5.0 ([..])
+[CHECKING] a v0.5.0 ([..])
+[DOCUMENTING] foo v0.0.1 ([..])
+[FINISHED] dev [..]
+",
+        ),
+    );
+
+    p.root().join("target").rm_rf();
+
+    assert_that(
+        p.cargo("doc -vv"),
+        execs().with_status(0).with_stderr_contains(
+            "\
+[WARNING] `[bad_link]` cannot be resolved, ignoring it...
+",
+        ),
+    );
+
 }
