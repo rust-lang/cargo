@@ -7,11 +7,11 @@ use std::thread;
 use std::time::Duration;
 
 use cargo::util::paths::remove_dir_all;
-use cargotest::{rustc_host, sleep_ms};
-use cargotest::support::{cross_compile, execs, project};
-use cargotest::support::paths::CargoPathExt;
-use cargotest::support::registry::Package;
-use hamcrest::{assert_that, existing_dir, existing_file};
+use support::{rustc_host, sleep_ms};
+use support::{cross_compile, execs, project};
+use support::paths::CargoPathExt;
+use support::registry::Package;
+use support::hamcrest::{assert_that, existing_dir, existing_file};
 
 #[test]
 fn custom_build_script_failed() {

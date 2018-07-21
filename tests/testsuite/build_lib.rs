@@ -1,5 +1,5 @@
-use cargotest::support::{basic_bin_manifest, execs, project, Project};
-use hamcrest::assert_that;
+use support::{basic_bin_manifest, execs, project, Project};
+use support::hamcrest::assert_that;
 
 fn verbose_output_for_lib(p: &Project) -> String {
     format!(

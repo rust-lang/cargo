@@ -2,8 +2,8 @@ use std::net::TcpListener;
 use std::thread;
 use std::process::Command;
 
-use cargotest::support::{cargo_exe, execs, project};
-use hamcrest::assert_that;
+use support::{cargo_exe, execs, project};
+use support::hamcrest::assert_that;
 
 #[test]
 fn jobserver_exists() {

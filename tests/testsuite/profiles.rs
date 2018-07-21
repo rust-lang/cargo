@@ -1,8 +1,8 @@
 use std::env;
 
-use cargotest::is_nightly;
-use cargotest::support::{execs, project};
-use hamcrest::assert_that;
+use support::is_nightly;
+use support::{execs, project};
+use support::hamcrest::assert_that;
 
 #[test]
 fn profile_overrides() {

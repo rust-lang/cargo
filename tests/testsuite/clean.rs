@@ -1,8 +1,8 @@
 use std::env;
 
-use cargotest::support::{basic_bin_manifest, execs, git, main_file, project};
-use cargotest::support::registry::Package;
-use hamcrest::{assert_that, existing_dir, existing_file, is_not};
+use support::{basic_bin_manifest, execs, git, main_file, project};
+use support::registry::Package;
+use support::hamcrest::{assert_that, existing_dir, existing_file, is_not};
 
 #[test]
 fn cargo_clean_simple() {

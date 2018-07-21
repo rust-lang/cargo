@@ -2,12 +2,12 @@ use std::io::prelude::*;
 use std::fs::{self, File};
 use std::io::SeekFrom;
 
-use cargotest::ChannelChanger;
-use cargotest::support::git::repo;
-use cargotest::support::paths;
-use cargotest::support::{execs, project, publish};
+use support::ChannelChanger;
+use support::git::repo;
+use support::paths;
+use support::{execs, project, publish};
 use flate2::read::GzDecoder;
-use hamcrest::assert_that;
+use support::hamcrest::assert_that;
 use tar::Archive;
 
 #[test]

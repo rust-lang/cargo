@@ -2,9 +2,9 @@ use std::fs;
 use std::path::{Path, PathBuf};
 
 use cargo::util::paths as cargopaths;
-use cargotest::support::paths;
-use cargotest::support::{execs, git, project};
-use hamcrest::assert_that;
+use support::paths;
+use support::{execs, git, project};
+use support::hamcrest::assert_that;
 
 #[test]
 fn deleting_database_files() {

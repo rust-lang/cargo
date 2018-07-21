@@ -1,8 +1,8 @@
-use cargotest::support::git;
-use cargotest::support::paths;
-use cargotest::support::registry::Package;
-use cargotest::support::{execs, project};
-use hamcrest::assert_that;
+use support::git;
+use support::paths;
+use support::registry::Package;
+use support::{execs, project};
+use support::hamcrest::assert_that;
 
 #[test]
 fn override_simple() {

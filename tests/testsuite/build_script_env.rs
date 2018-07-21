@@ -1,8 +1,8 @@
 use std::fs::File;
 
-use cargotest::sleep_ms;
-use cargotest::support::{execs, project};
-use hamcrest::assert_that;
+use support::sleep_ms;
+use support::{execs, project};
+use support::hamcrest::assert_that;
 
 #[test]
 fn rerun_if_env_changes() {

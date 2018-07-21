@@ -1,5 +1,5 @@
-use cargotest::support::{basic_bin_manifest, execs, main_file, project};
-use hamcrest::assert_that;
+use support::{basic_bin_manifest, execs, main_file, project};
+use support::hamcrest::assert_that;
 
 fn verify_project_success_output() -> String {
     r#"{"success":"true"}"#.into()

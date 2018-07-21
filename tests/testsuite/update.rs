@@ -1,9 +1,9 @@
 use std::fs::File;
 use std::io::prelude::*;
 
-use cargotest::support::{execs, project};
-use cargotest::support::registry::Package;
-use hamcrest::assert_that;
+use support::{execs, project};
+use support::registry::Package;
+use support::hamcrest::assert_that;
 
 #[test]
 fn minor_update_two_places() {

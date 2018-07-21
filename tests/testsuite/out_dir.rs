@@ -2,10 +2,10 @@ use std::path::Path;
 use std::fs::{self, File};
 use std::env;
 
-use hamcrest::assert_that;
+use support::hamcrest::assert_that;
 
-use cargotest::{process, sleep_ms, ChannelChanger};
-use cargotest::support::{execs, project};
+use support::{process, sleep_ms, ChannelChanger};
+use support::{execs, project};
 
 #[test]
 fn binary_with_debug() {

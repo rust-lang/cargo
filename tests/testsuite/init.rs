@@ -1,15 +1,15 @@
-use cargotest;
+use support;
 use std::fs::{self, File};
 use std::io::prelude::*;
 use std::env;
 
 use cargo::util::ProcessBuilder;
-use cargotest::support::{cargo_exe, execs, paths};
-use hamcrest::{assert_that, existing_dir, existing_file, is_not};
+use support::{cargo_exe, execs, paths};
+use support::hamcrest::{assert_that, existing_dir, existing_file, is_not};
 use tempfile;
 
 fn cargo_process(s: &str) -> ProcessBuilder {
-    let mut p = cargotest::process(&cargo_exe());
+    let mut p = support::process(&cargo_exe());
     p.arg(s).cwd(&paths::root()).env("HOME", &paths::home());
     p
 }

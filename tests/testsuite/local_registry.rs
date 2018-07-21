@@ -1,10 +1,10 @@
 use std::fs::{self, File};
 use std::io::prelude::*;
 
-use cargotest::support::paths::{self, CargoPathExt};
-use cargotest::support::registry::Package;
-use cargotest::support::{execs, project};
-use hamcrest::assert_that;
+use support::paths::{self, CargoPathExt};
+use support::registry::Package;
+use support::{execs, project};
+use support::hamcrest::assert_that;
 
 fn setup() {
     let root = paths::root();

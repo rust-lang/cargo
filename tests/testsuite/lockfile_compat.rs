@@ -1,7 +1,7 @@
-use cargotest::support::git;
-use cargotest::support::registry::Package;
-use cargotest::support::{execs, lines_match, project};
-use hamcrest::assert_that;
+use support::git;
+use support::registry::Package;
+use support::{execs, lines_match, project};
+use support::hamcrest::assert_that;
 
 #[test]
 fn oldest_lockfile_still_works() {
