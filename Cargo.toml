@@ -34,7 +34,7 @@ hex = "0.3"
 home = "0.3"
 ignore = "0.4"
 lazy_static = "1.0.0"
-jobserver = "0.1.9"
+jobserver = "0.1.11"
 lazycell = "1.0"
 libc = "0.2"
 log = "0.4"
@@ -66,7 +66,8 @@ num-traits = "0.2" # enable the default feature
 core-foundation = { version = "0.6.0", features = ["mac_os_10_7_support"] }
 
 [target.'cfg(windows)'.dependencies]
-miow = "0.3"
+miow = "0.3.1"
+cmake = "0.1.24" # git2 with min-dep on windows
 
 [target.'cfg(windows)'.dependencies.winapi]
 version = "0.3"
