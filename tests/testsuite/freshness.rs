@@ -825,12 +825,12 @@ fn same_build_dir_cached_packages() {
 
 #[test]
 fn no_rebuild_if_build_artifacts_move_backwards_in_time() {
-    let p = project().at("backwards_in_time")
+    let p = project()
         .file(
             "Cargo.toml",
             r#"
             [package]
-            name = "backwards_in_time"
+            name = "foo"
             version = "0.0.1"
             authors = []
 
@@ -866,12 +866,12 @@ fn no_rebuild_if_build_artifacts_move_backwards_in_time() {
 
 #[test]
 fn rebuild_if_build_artifacts_move_forward_in_time() {
-    let p = project().at("forwards_in_time")
+    let p = project()
         .file(
             "Cargo.toml",
             r#"
             [package]
-            name = "forwards_in_time"
+            name = "foo"
             version = "0.0.1"
             authors = []
 
@@ -901,7 +901,7 @@ fn rebuild_if_build_artifacts_move_forward_in_time() {
         execs().with_status(0).with_stdout("").with_stderr(
             "\
 [COMPILING] a v0.0.1 ([..])
-[COMPILING] forwards_in_time v0.0.1 ([..])
+[COMPILING] foo v0.0.1 ([..])
 [FINISHED] [..]
 ",
         ),
@@ -910,12 +910,12 @@ fn rebuild_if_build_artifacts_move_forward_in_time() {
 
 #[test]
 fn rebuild_if_environment_changes() {
-    let p = project().at("env_change")
+    let p = project()
         .file(
             "Cargo.toml",
             r#"
             [package]
-            name = "env_change"
+            name = "foo"
             description = "old desc"
             version = "0.0.1"
             authors = []
@@ -938,9 +938,9 @@ fn rebuild_if_environment_changes() {
             .with_stdout("old desc")
             .with_stderr(&format!(
                 "\
-[COMPILING] env_change v0.0.1 ({dir})
+[COMPILING] foo v0.0.1 ({dir})
 [FINISHED] dev [unoptimized + debuginfo] target(s) in [..]
-[RUNNING] `target[/]debug[/]env_change[EXE]`
+[RUNNING] `target[/]debug[/]foo[EXE]`
 ",
                 dir = p.url()
             )),
@@ -951,7 +951,7 @@ fn rebuild_if_environment_changes() {
         .write_all(
             br#"
         [package]
-        name = "env_change"
+        name = "foo"
         description = "new desc"
         version = "0.0.1"
         authors = []
@@ -966,9 +966,9 @@ fn rebuild_if_environment_changes() {
             .with_stdout("new desc")
             .with_stderr(&format!(
                 "\
-[COMPILING] env_change v0.0.1 ({dir})
+[COMPILING] foo v0.0.1 ({dir})
 [FINISHED] dev [unoptimized + debuginfo] target(s) in [..]
-[RUNNING] `target[/]debug[/]env_change[EXE]`
+[RUNNING] `target[/]debug[/]foo[EXE]`
 ",
                 dir = p.url()
             )),
@@ -1023,7 +1023,7 @@ fn unused_optional_dep() {
     Package::new("registry2", "0.1.0").publish();
     Package::new("registry3", "0.1.0").publish();
 
-    let p = project().at("p")
+    let p = project()
         .file(
             "Cargo.toml",
             r#"
@@ -1033,25 +1033,12 @@ fn unused_optional_dep() {
                 version = "0.1.0"
 
                 [dependencies]
-                foo = { path = "foo" }
                 bar = { path = "bar" }
+                baz = { path = "baz" }
                 registry1 = "*"
             "#,
         )
         .file("src/lib.rs", "")
-        .file(
-            "foo/Cargo.toml",
-            r#"
-                [package]
-                name = "foo"
-                version = "0.1.1"
-                authors = []
-
-                [dev-dependencies]
-                registry2 = "*"
-            "#,
-        )
-        .file("foo/src/lib.rs", "")
         .file(
             "bar/Cargo.toml",
             r#"
@@ -1060,11 +1047,24 @@ fn unused_optional_dep() {
                 version = "0.1.1"
                 authors = []
 
+                [dev-dependencies]
+                registry2 = "*"
+            "#,
+        )
+        .file("bar/src/lib.rs", "")
+        .file(
+            "baz/Cargo.toml",
+            r#"
+                [package]
+                name = "baz"
+                version = "0.1.1"
+                authors = []
+
                 [dependencies]
                 registry3 = { version = "*", optional = true }
             "#,
         )
-        .file("bar/src/lib.rs", "")
+        .file("baz/src/lib.rs", "")
         .build();
 
     assert_that(p.cargo("build"), execs().with_status(0));
@@ -1079,7 +1079,7 @@ fn path_dev_dep_registry_updates() {
     Package::new("registry1", "0.1.0").publish();
     Package::new("registry2", "0.1.0").publish();
 
-    let p = project().at("p")
+    let p = project()
         .file(
             "Cargo.toml",
             r#"
@@ -1089,26 +1089,10 @@ fn path_dev_dep_registry_updates() {
                 version = "0.1.0"
 
                 [dependencies]
-                foo = { path = "foo" }
+                bar = { path = "bar" }
             "#,
         )
         .file("src/lib.rs", "")
-        .file(
-            "foo/Cargo.toml",
-            r#"
-                [package]
-                name = "foo"
-                version = "0.1.1"
-                authors = []
-
-                [dependencies]
-                registry1 = "*"
-
-                [dev-dependencies]
-                bar = { path = "../bar"}
-            "#,
-        )
-        .file("foo/src/lib.rs", "")
         .file(
             "bar/Cargo.toml",
             r#"
@@ -1118,10 +1102,26 @@ fn path_dev_dep_registry_updates() {
                 authors = []
 
                 [dependencies]
-                registry2 = "*"
+                registry1 = "*"
+
+                [dev-dependencies]
+                baz = { path = "../baz"}
             "#,
         )
         .file("bar/src/lib.rs", "")
+        .file(
+            "baz/Cargo.toml",
+            r#"
+                [package]
+                name = "baz"
+                version = "0.1.1"
+                authors = []
+
+                [dependencies]
+                registry2 = "*"
+            "#,
+        )
+        .file("baz/src/lib.rs", "")
         .build();
 
     assert_that(p.cargo("build"), execs().with_status(0));
@@ -1133,27 +1133,17 @@ fn path_dev_dep_registry_updates() {
 
 #[test]
 fn change_panic_mode() {
-    let p = project().at("p")
+    let p = project()
         .file(
             "Cargo.toml",
             r#"
                 [workspace]
-                members = ['foo', 'bar']
+                members = ['bar', 'baz']
                 [profile.dev]
                 panic = 'abort'
             "#,
         )
         .file("src/lib.rs", "")
-        .file(
-            "foo/Cargo.toml",
-            r#"
-                [package]
-                name = "foo"
-                version = "0.1.1"
-                authors = []
-            "#,
-        )
-        .file("foo/src/lib.rs", "")
         .file(
             "bar/Cargo.toml",
             r#"
@@ -1161,33 +1151,43 @@ fn change_panic_mode() {
                 name = "bar"
                 version = "0.1.1"
                 authors = []
+            "#,
+        )
+        .file("bar/src/lib.rs", "")
+        .file(
+            "baz/Cargo.toml",
+            r#"
+                [package]
+                name = "baz"
+                version = "0.1.1"
+                authors = []
 
                 [lib]
                 proc-macro = true
 
                 [dependencies]
-                foo = { path = '../foo' }
+                bar = { path = '../bar' }
             "#,
         )
-        .file("bar/src/lib.rs", "extern crate foo;")
+        .file("baz/src/lib.rs", "extern crate bar;")
         .build();
 
-    assert_that(p.cargo("build -p foo"), execs().with_status(0));
     assert_that(p.cargo("build -p bar"), execs().with_status(0));
+    assert_that(p.cargo("build -p baz"), execs().with_status(0));
 }
 
 #[test]
 fn dont_rebuild_based_on_plugins() {
-    let p = project().at("p")
+    let p = project()
         .file(
             "Cargo.toml",
             r#"
                 [package]
-                name = "foo"
+                name = "bar"
                 version = "0.1.1"
 
                 [workspace]
-                members = ['bar']
+                members = ['baz']
 
                 [dependencies]
                 proc-macro-thing = { path = 'proc-macro-thing' }
@@ -1205,35 +1205,35 @@ fn dont_rebuild_based_on_plugins() {
                 proc-macro = true
 
                 [dependencies]
-                baz = { path = '../baz' }
+                qux = { path = '../qux' }
             "#,
         )
         .file("proc-macro-thing/src/lib.rs", "")
-        .file(
-            "bar/Cargo.toml",
-            r#"
-                [package]
-                name = "bar"
-                version = "0.1.1"
-
-                [dependencies]
-                baz = { path = '../baz' }
-            "#,
-        )
-        .file("bar/src/main.rs", "fn main() {}")
         .file(
             "baz/Cargo.toml",
             r#"
                 [package]
                 name = "baz"
                 version = "0.1.1"
+
+                [dependencies]
+                qux = { path = '../qux' }
             "#,
         )
-        .file("baz/src/lib.rs", "")
+        .file("baz/src/main.rs", "fn main() {}")
+        .file(
+            "qux/Cargo.toml",
+            r#"
+                [package]
+                name = "qux"
+                version = "0.1.1"
+            "#,
+        )
+        .file("qux/src/lib.rs", "")
         .build();
 
     assert_that(p.cargo("build"), execs().with_status(0));
-    assert_that(p.cargo("build -p bar"), execs().with_status(0));
+    assert_that(p.cargo("build -p baz"), execs().with_status(0));
     assert_that(
         p.cargo("build"),
         execs().with_status(0).with_stderr("[FINISHED] [..]\n"),
@@ -1246,37 +1246,37 @@ fn dont_rebuild_based_on_plugins() {
 
 #[test]
 fn reuse_workspace_lib() {
-    let p = project().at("p")
+    let p = project()
         .file(
             "Cargo.toml",
             r#"
                 [package]
-                name = "foo"
+                name = "bar"
                 version = "0.1.1"
 
                 [workspace]
 
                 [dependencies]
-                bar = { path = 'bar' }
+                baz = { path = 'baz' }
             "#,
         )
         .file("src/lib.rs", "")
         .file(
-            "bar/Cargo.toml",
+            "baz/Cargo.toml",
             r#"
                 [package]
-                name = "bar"
+                name = "baz"
                 version = "0.1.1"
             "#,
         )
-        .file("bar/src/lib.rs", "")
+        .file("baz/src/lib.rs", "")
         .build();
 
     assert_that(p.cargo("build"), execs().with_status(0));
     assert_that(
-        p.cargo("test -p bar -v --no-run"),
+        p.cargo("test -p baz -v --no-run"),
         execs().with_status(0).with_stderr("\
-[COMPILING] bar v0.1.1 ([..])
+[COMPILING] baz v0.1.1 ([..])
 [RUNNING] `rustc[..] --test [..]`
 [FINISHED] [..]
 "));

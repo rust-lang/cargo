@@ -217,18 +217,18 @@ fn dont_include() {
 
 #[test]
 fn works_through_the_registry() {
-    Package::new("foo", "0.1.0").publish();
+    Package::new("baz", "0.1.0").publish();
     Package::new("bar", "0.1.0")
-        .target_dep("foo", "0.1.0", "cfg(unix)")
-        .target_dep("foo", "0.1.0", "cfg(windows)")
+        .target_dep("baz", "0.1.0", "cfg(unix)")
+        .target_dep("baz", "0.1.0", "cfg(windows)")
         .publish();
 
-    let p = project().at("a")
+    let p = project()
         .file(
             "Cargo.toml",
             r#"
             [package]
-            name = "a"
+            name = "foo"
             version = "0.0.1"
             authors = []
 
@@ -249,9 +249,9 @@ fn works_through_the_registry() {
 [UPDATING] registry [..]
 [DOWNLOADING] [..]
 [DOWNLOADING] [..]
-[COMPILING] foo v0.1.0
+[COMPILING] baz v0.1.0
 [COMPILING] bar v0.1.0
-[COMPILING] a v0.0.1 ([..])
+[COMPILING] foo v0.0.1 ([..])
 [FINISHED] dev [unoptimized + debuginfo] target(s) in [..]
 ",
         ),
@@ -262,31 +262,31 @@ fn works_through_the_registry() {
 fn ignore_version_from_other_platform() {
     let this_family = if cfg!(unix) { "unix" } else { "windows" };
     let other_family = if cfg!(unix) { "windows" } else { "unix" };
-    Package::new("foo", "0.1.0").publish();
-    Package::new("foo", "0.2.0").publish();
+    Package::new("bar", "0.1.0").publish();
+    Package::new("bar", "0.2.0").publish();
 
-    let p = project().at("a")
+    let p = project()
         .file(
             "Cargo.toml",
             &format!(
                 r#"
             [package]
-            name = "a"
+            name = "foo"
             version = "0.0.1"
             authors = []
 
             [target.'cfg({})'.dependencies]
-            foo = "0.1.0"
+            bar = "0.1.0"
 
             [target.'cfg({})'.dependencies]
-            foo = "0.2.0"
+            bar = "0.2.0"
         "#,
                 this_family, other_family
             ),
         )
         .file(
             "src/lib.rs",
-            "#[allow(unused_extern_crates)] extern crate foo;",
+            "#[allow(unused_extern_crates)] extern crate bar;",
         )
         .build();
 
@@ -296,8 +296,8 @@ fn ignore_version_from_other_platform() {
             "\
 [UPDATING] registry [..]
 [DOWNLOADING] [..]
-[COMPILING] foo v0.1.0
-[COMPILING] a v0.0.1 ([..])
+[COMPILING] bar v0.1.0
+[COMPILING] foo v0.0.1 ([..])
 [FINISHED] dev [unoptimized + debuginfo] target(s) in [..]
 ",
         ),
@@ -306,12 +306,12 @@ fn ignore_version_from_other_platform() {
 
 #[test]
 fn bad_target_spec() {
-    let p = project().at("a")
+    let p = project()
         .file(
             "Cargo.toml",
             r#"
             [package]
-            name = "a"
+            name = "foo"
             version = "0.0.1"
             authors = []
 
@@ -340,17 +340,17 @@ Caused by:
 
 #[test]
 fn bad_target_spec2() {
-    let p = project().at("a")
+    let p = project()
         .file(
             "Cargo.toml",
             r#"
             [package]
-            name = "a"
+            name = "foo"
             version = "0.0.1"
             authors = []
 
-            [target.'cfg(foo =)'.dependencies]
-            bar = "0.1.0"
+            [target.'cfg(bar =)'.dependencies]
+            baz = "0.1.0"
         "#,
         )
         .file("src/lib.rs", "")
@@ -363,7 +363,7 @@ fn bad_target_spec2() {
 [ERROR] failed to parse manifest at `[..]`
 
 Caused by:
-  failed to parse `foo =` as a cfg expression
+  failed to parse `bar =` as a cfg expression
 
 Caused by:
   expected a string, found nothing

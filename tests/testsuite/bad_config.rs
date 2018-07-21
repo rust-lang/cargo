@@ -325,19 +325,19 @@ Caused by:
 
 #[test]
 fn duplicate_packages_in_cargo_lock() {
-    Package::new("foo", "0.1.0").publish();
+    Package::new("bar", "0.1.0").publish();
 
-    let p = project().at("bar")
+    let p = project()
         .file(
             "Cargo.toml",
             r#"
             [project]
-            name = "bar"
+            name = "foo"
             version = "0.0.1"
             authors = []
 
             [dependencies]
-            foo = "0.1.0"
+            bar = "0.1.0"
         "#,
         )
         .file("src/lib.rs", "")
@@ -345,19 +345,19 @@ fn duplicate_packages_in_cargo_lock() {
             "Cargo.lock",
             r#"
             [[package]]
-            name = "bar"
+            name = "foo"
             version = "0.0.1"
             dependencies = [
-             "foo 0.1.0 (registry+https://github.com/rust-lang/crates.io-index)",
+             "bar 0.1.0 (registry+https://github.com/rust-lang/crates.io-index)",
             ]
 
             [[package]]
-            name = "foo"
+            name = "bar"
             version = "0.1.0"
             source = "registry+https://github.com/rust-lang/crates.io-index"
 
             [[package]]
-            name = "foo"
+            name = "bar"
             version = "0.1.0"
             source = "registry+https://github.com/rust-lang/crates.io-index"
         "#,
@@ -371,7 +371,7 @@ fn duplicate_packages_in_cargo_lock() {
 [ERROR] failed to parse lock file at: [..]
 
 Caused by:
-  package `foo` is specified twice in the lockfile
+  package `bar` is specified twice in the lockfile
 ",
         ),
     );
@@ -379,19 +379,19 @@ Caused by:
 
 #[test]
 fn bad_source_in_cargo_lock() {
-    Package::new("foo", "0.1.0").publish();
+    Package::new("bar", "0.1.0").publish();
 
-    let p = project().at("bar")
+    let p = project()
         .file(
             "Cargo.toml",
             r#"
             [project]
-            name = "bar"
+            name = "foo"
             version = "0.0.1"
             authors = []
 
             [dependencies]
-            foo = "0.1.0"
+            bar = "0.1.0"
         "#,
         )
         .file("src/lib.rs", "")
@@ -399,14 +399,14 @@ fn bad_source_in_cargo_lock() {
             "Cargo.lock",
             r#"
             [[package]]
-            name = "bar"
+            name = "foo"
             version = "0.0.1"
             dependencies = [
-             "foo 0.1.0 (registry+https://github.com/rust-lang/crates.io-index)",
+             "bar 0.1.0 (registry+https://github.com/rust-lang/crates.io-index)",
             ]
 
             [[package]]
-            name = "foo"
+            name = "bar"
             version = "0.1.0"
             source = "You shall not parse"
         "#,
@@ -933,29 +933,29 @@ warning: unused manifest key: workspace.bulid
 
 #[test]
 fn empty_dependencies() {
-    let p = project().at("empty_deps")
+    let p = project()
         .file(
             "Cargo.toml",
             r#"
             [package]
-            name = "empty_deps"
+            name = "foo"
             version = "0.0.0"
             authors = []
 
             [dependencies]
-            foo = {}
+            bar = {}
         "#,
         )
         .file("src/main.rs", "fn main() {}")
         .build();
 
-    Package::new("foo", "0.0.1").publish();
+    Package::new("bar", "0.0.1").publish();
 
     assert_that(
         p.cargo("build"),
         execs().with_status(0).with_stderr_contains(
             "\
-warning: dependency (foo) specified without providing a local path, Git repository, or version \
+warning: dependency (bar) specified without providing a local path, Git repository, or version \
 to use. This will be considered an error in future versions
 ",
         ),
@@ -964,12 +964,12 @@ to use. This will be considered an error in future versions
 
 #[test]
 fn invalid_toml_historically_allowed_is_warned() {
-    let p = project().at("empty_deps")
+    let p = project()
         .file(
             "Cargo.toml",
             r#"
             [package]
-            name = "empty_deps"
+            name = "foo"
             version = "0.0.0"
             authors = []
         "#,
@@ -977,7 +977,7 @@ fn invalid_toml_historically_allowed_is_warned() {
         .file(
             ".cargo/config",
             r#"
-            [foo] bar = 2
+            [bar] baz = 2
         "#,
         )
         .file("src/main.rs", "fn main() {}")
@@ -994,7 +994,7 @@ The TOML spec requires newlines after table definitions (e.g. `[a] b = 1` is
 invalid), but this file has a table header which does not have a newline after
 it. A newline needs to be added and this warning will soon become a hard error
 in the future.
-[COMPILING] empty_deps v0.0.0 ([..])
+[COMPILING] foo v0.0.0 ([..])
 [FINISHED] dev [unoptimized + debuginfo] target(s) in [..]
 ",
         ),
