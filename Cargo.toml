@@ -29,6 +29,8 @@ flate2 = "1.0"
 fs2 = "0.4"
 git2 = "0.7.2"
 git2-curl = "0.8.1"
+libgit2-sys = "0.7.5" # required only for minimal-versions. brought in by git2 and git2-curl.
+libssh2-sys = "0.2.8" # required only for minimal-versions. brought in by libgit2-sys.
 glob = "0.2.11"
 hex = "0.3"
 home = "0.3"
@@ -54,9 +56,6 @@ toml = "0.4.2"
 url = "1.1"
 clap = "2.31.2"
 unicode-width = "0.1.5"
-libssh2-sys = "0.2.8"
-libgit2-sys = "0.7.5"
-gcc = "0.3.23"
 
 # Not actually needed right now but required to make sure that rls/cargo build
 # with the same set of features in rust-lang/rust
@@ -67,7 +66,10 @@ core-foundation = { version = "0.6.0", features = ["mac_os_10_7_support"] }
 
 [target.'cfg(windows)'.dependencies]
 miow = "0.3.1"
-cmake = "0.1.24" # git2 with min-dep on windows
+
+[target.'cfg(windows)'.dev-dependencies]
+gcc = "0.3.23" # required only for minimal-versions on windows. brought in by flate2 and others.
+cmake = "0.1.24" # required only for minimal-versions on windows. brought in as build-dependencie on libgit2-sys.
 
 [target.'cfg(windows)'.dependencies.winapi]
 version = "0.3"
