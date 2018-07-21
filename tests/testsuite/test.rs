@@ -493,37 +493,7 @@ fn test_with_lib_dep() {
 
 #[test]
 fn test_with_deep_lib_dep() {
-    let p = project().at("bar")
-        .file(
-            "Cargo.toml",
-            r#"
-            [package]
-            name = "bar"
-            version = "0.0.1"
-            authors = []
-
-            [dependencies.foo]
-            path = "../foo"
-        "#,
-        )
-        .file(
-            "src/lib.rs",
-            "
-            #[cfg(test)]
-            extern crate foo;
-            /// ```
-            /// bar::bar();
-            /// ```
-            pub fn bar() {}
-
-            #[test]
-            fn bar_test() {
-                foo::foo();
-            }
-        ",
-        )
-        .build();
-    let _p2 = project()
+    let p = project()
         .file(
             "Cargo.toml",
             r#"
@@ -531,12 +501,42 @@ fn test_with_deep_lib_dep() {
             name = "foo"
             version = "0.0.1"
             authors = []
+
+            [dependencies.bar]
+            path = "../bar"
         "#,
         )
         .file(
             "src/lib.rs",
             "
+            #[cfg(test)]
+            extern crate bar;
+            /// ```
+            /// foo::foo();
+            /// ```
             pub fn foo() {}
+
+            #[test]
+            fn bar_test() {
+                bar::bar();
+            }
+        ",
+        )
+        .build();
+    let _p2 = project().at("bar")
+        .file(
+            "Cargo.toml",
+            r#"
+            [package]
+            name = "bar"
+            version = "0.0.1"
+            authors = []
+        "#,
+        )
+        .file(
+            "src/lib.rs",
+            "
+            pub fn bar() {}
 
             #[test]
             fn foo_test() {}
@@ -550,11 +550,11 @@ fn test_with_deep_lib_dep() {
             .with_status(0)
             .with_stderr(&format!(
                 "\
-[COMPILING] foo v0.0.1 ([..])
-[COMPILING] bar v0.0.1 ({dir})
+[COMPILING] bar v0.0.1 ([..])
+[COMPILING] foo v0.0.1 ({dir})
 [FINISHED] dev [unoptimized + debuginfo] target(s) in [..]
 [RUNNING] target[..]
-[DOCTEST] bar",
+[DOCTEST] foo",
                 dir = p.url()
             ))
             .with_stdout_contains("test bar_test ... ok")
@@ -779,10 +779,10 @@ fn pass_through_command_line() {
 // tests in an rlib
 #[test]
 fn cargo_test_twice() {
-    let p = project().at("test_twice")
-        .file("Cargo.toml", &basic_lib_manifest("test_twice"))
+    let p = project()
+        .file("Cargo.toml", &basic_lib_manifest("foo"))
         .file(
-            "src/test_twice.rs",
+            "src/foo.rs",
             r#"
             #![crate_type = "rlib"]
 
@@ -1946,12 +1946,12 @@ fn selective_testing() {
 
 #[test]
 fn almost_cyclic_but_not_quite() {
-    let p = project().at("a")
+    let p = project()
         .file(
             "Cargo.toml",
             r#"
             [package]
-            name = "a"
+            name = "foo"
             version = "0.0.1"
             authors = []
 
@@ -1976,7 +1976,7 @@ fn almost_cyclic_but_not_quite() {
             version = "0.0.1"
             authors = []
 
-            [dependencies.a]
+            [dependencies.foo]
             path = ".."
         "#,
         )
@@ -1984,7 +1984,7 @@ fn almost_cyclic_but_not_quite() {
             "b/src/lib.rs",
             r#"
             #[allow(unused_extern_crates)]
-            extern crate a;
+            extern crate foo;
         "#,
         )
         .file(
@@ -2005,12 +2005,12 @@ fn almost_cyclic_but_not_quite() {
 
 #[test]
 fn build_then_selective_test() {
-    let p = project().at("a")
+    let p = project()
         .file(
             "Cargo.toml",
             r#"
             [package]
-            name = "a"
+            name = "foo"
             version = "0.0.1"
             authors = []
 
@@ -2028,7 +2028,7 @@ fn build_then_selective_test() {
             #[allow(unused_extern_crates)]
             extern crate b;
             #[allow(unused_extern_crates)]
-            extern crate a;
+            extern crate foo;
             fn main() {}
         "#,
         )
@@ -3396,7 +3396,7 @@ test bar ... ok",
 
 #[test]
 fn test_all_virtual_manifest() {
-    let p = project().at("workspace")
+    let p = project()
         .file(
             "Cargo.toml",
             r#"
@@ -3447,7 +3447,7 @@ fn test_all_virtual_manifest() {
 
 #[test]
 fn test_virtual_manifest_all_implied() {
-    let p = project().at("workspace")
+    let p = project()
         .file(
             "Cargo.toml",
             r#"
@@ -3498,7 +3498,7 @@ fn test_virtual_manifest_all_implied() {
 
 #[test]
 fn test_all_member_dependency_same_name() {
-    let p = project().at("workspace")
+    let p = project()
         .file(
             "Cargo.toml",
             r#"
@@ -3536,7 +3536,7 @@ fn test_all_member_dependency_same_name() {
 
 #[test]
 fn doctest_only_with_dev_dep() {
-    let p = project().at("workspace")
+    let p = project()
         .file(
             "Cargo.toml",
             r#"
@@ -3681,7 +3681,7 @@ fn test_many_targets() {
 
 #[test]
 fn doctest_and_registry() {
-    let p = project().at("workspace")
+    let p = project()
         .file(
             "Cargo.toml",
             r#"
@@ -3751,8 +3751,8 @@ fn cargo_test_env() {
         cargo::CARGO_ENV
     );
 
-    let p = project().at("env_test")
-        .file("Cargo.toml", &basic_lib_manifest("env_test"))
+    let p = project()
+        .file("Cargo.toml", &basic_lib_manifest("foo"))
         .file("src/lib.rs", &src)
         .build();
 
@@ -3903,7 +3903,7 @@ fn publish_a_crate_without_tests() {
 
 #[test]
 fn find_dependency_of_proc_macro_dependency_with_target() {
-    let workspace = project().at("workspace")
+    let p = project()
         .file(
             "Cargo.toml",
             r#"
@@ -3945,13 +3945,13 @@ fn find_dependency_of_proc_macro_dependency_with_target() {
             proc-macro = true
 
             [dependencies]
-            bar = "^0.1"
+            baz = "^0.1"
         "#,
         )
         .file(
             "proc_macro_dep/src/lib.rs",
             r#"
-            extern crate bar;
+            extern crate baz;
             extern crate proc_macro;
             use proc_macro::TokenStream;
 
@@ -3962,13 +3962,13 @@ fn find_dependency_of_proc_macro_dependency_with_target() {
         "#,
         )
         .build();
-    Package::new("foo", "0.1.0").publish();
-    Package::new("bar", "0.1.0")
-        .dep("foo", "0.1")
-        .file("src/lib.rs", "extern crate foo;")
+    Package::new("bar", "0.1.0").publish();
+    Package::new("baz", "0.1.0")
+        .dep("bar", "0.1")
+        .file("src/lib.rs", "extern crate bar;")
         .publish();
     assert_that(
-        workspace
+        p
             .cargo("test")
             .arg("--all")
             .arg("--target")
@@ -4022,7 +4022,7 @@ fn test_hint_not_masked_by_doctest() {
 
 #[test]
 fn test_hint_workspace() {
-    let workspace = project().at("workspace")
+    let p = project()
         .file(
             "Cargo.toml",
             r#"
@@ -4063,7 +4063,7 @@ fn test_hint_workspace() {
         .build();
 
     assert_that(
-        workspace.cargo("test"),
+        p.cargo("test"),
         execs()
             .with_stderr_contains("[ERROR] test failed, to rerun pass '-p b --lib'")
             .with_status(101),

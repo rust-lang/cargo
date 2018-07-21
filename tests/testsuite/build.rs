@@ -1318,25 +1318,25 @@ fn incompatible_dependencies() {
     Package::new("bad", "1.0.0").publish();
     Package::new("bad", "1.0.1").publish();
     Package::new("bad", "1.0.2").publish();
-    Package::new("foo", "0.1.0").dep("bad", "0.1.0").publish();
-    Package::new("bar", "0.1.1").dep("bad", "=1.0.0").publish();
-    Package::new("bar", "0.1.0").dep("bad", "=1.0.0").publish();
-    Package::new("baz", "0.1.2").dep("bad", ">=1.0.1").publish();
-    Package::new("baz", "0.1.1").dep("bad", ">=1.0.1").publish();
-    Package::new("baz", "0.1.0").dep("bad", ">=1.0.1").publish();
+    Package::new("bar", "0.1.0").dep("bad", "0.1.0").publish();
+    Package::new("baz", "0.1.1").dep("bad", "=1.0.0").publish();
+    Package::new("baz", "0.1.0").dep("bad", "=1.0.0").publish();
+    Package::new("qux", "0.1.2").dep("bad", ">=1.0.1").publish();
+    Package::new("qux", "0.1.1").dep("bad", ">=1.0.1").publish();
+    Package::new("qux", "0.1.0").dep("bad", ">=1.0.1").publish();
 
-    let p = project().at("transitive_load_test")
+    let p = project()
         .file(
             "Cargo.toml",
             r#"
             [project]
-            name = "incompatible_dependencies"
+            name = "foo"
             version = "0.0.1"
 
             [dependencies]
-            foo = "0.1.0"
             bar = "0.1.0"
             baz = "0.1.0"
+            qux = "0.1.0"
         "#,
         )
         .file("src/main.rs", "fn main(){}")
@@ -1347,15 +1347,15 @@ fn incompatible_dependencies() {
         execs().with_status(101).with_stderr_contains(
             "\
 error: failed to select a version for `bad`.
-    ... required by package `baz v0.1.0`
-    ... which is depended on by `incompatible_dependencies v0.0.1 ([..])`
+    ... required by package `qux v0.1.0`
+    ... which is depended on by `foo v0.0.1 ([..])`
 versions that meet the requirements `>= 1.0.1` are: 1.0.2, 1.0.1
 
 all possible versions conflict with previously selected packages.
 
   previously selected package `bad v1.0.0`
-    ... which is depended on by `bar v0.1.0`
-    ... which is depended on by `incompatible_dependencies v0.0.1 ([..])`
+    ... which is depended on by `baz v0.1.0`
+    ... which is depended on by `foo v0.0.1 ([..])`
 
 failed to select a version for `bad` which could resolve this conflict",
         ),
@@ -1371,12 +1371,12 @@ fn incompatible_dependencies_with_multi_semver() {
     Package::new("bar", "0.1.0").dep("bad", "=1.0.0").publish();
     Package::new("baz", "0.1.0").dep("bad", ">=2.0.1").publish();
 
-    let p = project().at("transitive_load_test")
+    let p = project()
         .file(
             "Cargo.toml",
             r#"
             [project]
-            name = "incompatible_dependencies"
+            name = "foo"
             version = "0.0.1"
 
             [dependencies]
@@ -1393,18 +1393,18 @@ fn incompatible_dependencies_with_multi_semver() {
         execs().with_status(101).with_stderr_contains(
             "\
 error: failed to select a version for `bad`.
-    ... required by package `incompatible_dependencies v0.0.1 ([..])`
+    ... required by package `foo v0.0.1 ([..])`
 versions that meet the requirements `>= 1.0.1, <= 2.0.0` are: 2.0.0, 1.0.1
 
 all possible versions conflict with previously selected packages.
 
   previously selected package `bad v2.0.1`
     ... which is depended on by `baz v0.1.0`
-    ... which is depended on by `incompatible_dependencies v0.0.1 ([..])`
+    ... which is depended on by `foo v0.0.1 ([..])`
 
   previously selected package `bad v1.0.0`
     ... which is depended on by `bar v0.1.0`
-    ... which is depended on by `incompatible_dependencies v0.0.1 ([..])`
+    ... which is depended on by `foo v0.0.1 ([..])`
 
 failed to select a version for `bad` which could resolve this conflict",
         ),
@@ -1413,38 +1413,38 @@ failed to select a version for `bad` which could resolve this conflict",
 
 #[test]
 fn compile_offline_while_transitive_dep_not_cached() {
-    let bar = Package::new("bar", "1.0.0");
-    let bar_path = bar.archive_dst();
-    bar.publish();
+    let baz = Package::new("baz", "1.0.0");
+    let baz_path = baz.archive_dst();
+    baz.publish();
 
     let mut content = Vec::new();
 
-    let mut file = File::open(bar_path.clone()).ok().unwrap();
+    let mut file = File::open(baz_path.clone()).ok().unwrap();
     let _ok = file.read_to_end(&mut content).ok().unwrap();
     drop(file);
-    drop(File::create(bar_path.clone()).ok().unwrap());
+    drop(File::create(baz_path.clone()).ok().unwrap());
 
-    Package::new("foo", "0.1.0").dep("bar", "1.0.0").publish();
+    Package::new("bar", "0.1.0").dep("baz", "1.0.0").publish();
 
-    let p = project().at("transitive_load_test")
+    let p = project()
         .file(
             "Cargo.toml",
             r#"
             [project]
-            name = "transitive_load_test"
+            name = "foo"
             version = "0.0.1"
 
             [dependencies]
-            foo = "0.1.0"
+            bar = "0.1.0"
         "#,
         )
         .file("src/main.rs", "fn main(){}")
         .build();
 
-    // simulate download foo, but fail to download bar
+    // simulate download bar, but fail to download baz
     let _out = p.cargo("build").exec_with_output();
 
-    drop(File::create(bar_path).ok().unwrap().write_all(&content));
+    drop(File::create(baz_path).ok().unwrap().write_all(&content));
 
     assert_that(
         p.cargo("build")
@@ -1452,10 +1452,10 @@ fn compile_offline_while_transitive_dep_not_cached() {
             .arg("-Zoffline"),
         execs().with_status(101).with_stderr(
             "\
-error: no matching package named `bar` found
+error: no matching package named `baz` found
 location searched: registry `[..]`
-required by package `foo v0.1.0`
-    ... which is depended on by `transitive_load_test v0.0.1 ([..]/transitive_load_test)`
+required by package `bar v0.1.0`
+    ... which is depended on by `foo v0.0.1 ([..]/foo)`
 As a reminder, you're using offline mode (-Z offline) \
 which can sometimes cause surprising resolution failures, \
 if this error is too confusing you may with to retry \
@@ -2175,17 +2175,17 @@ fn verbose_release_build_deps() {
 
 #[test]
 fn explicit_examples() {
-    let p = project().at("world")
+    let p = project()
         .file(
             "Cargo.toml",
             r#"
             [package]
-            name = "world"
+            name = "foo"
             version = "1.0.0"
             authors = []
 
             [lib]
-            name = "world"
+            name = "foo"
             path = "src/lib.rs"
 
             [[example]]
@@ -2208,15 +2208,15 @@ fn explicit_examples() {
         .file(
             "examples/ex-hello.rs",
             r#"
-            extern crate world;
-            fn main() { println!("{}, {}!", world::get_hello(), world::get_world()); }
+            extern crate foo;
+            fn main() { println!("{}, {}!", foo::get_hello(), foo::get_world()); }
         "#,
         )
         .file(
             "examples/ex-goodbye.rs",
             r#"
-            extern crate world;
-            fn main() { println!("{}, {}!", world::get_goodbye(), world::get_world()); }
+            extern crate foo;
+            fn main() { println!("{}, {}!", foo::get_goodbye(), foo::get_world()); }
         "#,
         )
         .build();
@@ -2234,17 +2234,17 @@ fn explicit_examples() {
 
 #[test]
 fn non_existing_example() {
-    let p = project().at("world")
+    let p = project()
         .file(
             "Cargo.toml",
             r#"
             [package]
-            name = "world"
+            name = "foo"
             version = "1.0.0"
             authors = []
 
             [lib]
-            name = "world"
+            name = "foo"
             path = "src/lib.rs"
 
             [[example]]
@@ -2268,12 +2268,12 @@ Caused by:
 
 #[test]
 fn non_existing_binary() {
-    let p = project().at("world")
+    let p = project()
         .file(
             "Cargo.toml",
             r#"
             [package]
-            name = "world"
+            name = "foo"
             version = "1.0.0"
             authors = []
 
@@ -2299,7 +2299,7 @@ Caused by:
 
 #[test]
 fn legacy_binary_paths_warinigs() {
-    let p = project().at("world")
+    let p = project()
         .file(
             "Cargo.toml",
             r#"
@@ -2325,7 +2325,7 @@ please set bin.path in Cargo.toml",
         ),
     );
 
-    let p = project().at("world")
+    let p = project()
         .file(
             "Cargo.toml",
             r#"
@@ -2351,7 +2351,7 @@ please set bin.path in Cargo.toml",
         ),
     );
 
-    let p = project().at("world")
+    let p = project()
         .file(
             "Cargo.toml",
             r#"
@@ -2379,12 +2379,12 @@ please set bin.path in Cargo.toml",
 
 #[test]
 fn implicit_examples() {
-    let p = project().at("world")
+    let p = project()
         .file(
             "Cargo.toml",
             r#"
             [package]
-            name = "world"
+            name = "foo"
             version = "1.0.0"
             authors = []
         "#,
@@ -2400,18 +2400,18 @@ fn implicit_examples() {
         .file(
             "examples/hello.rs",
             r#"
-            extern crate world;
+            extern crate foo;
             fn main() {
-                println!("{}, {}!", world::get_hello(), world::get_world());
+                println!("{}, {}!", foo::get_hello(), foo::get_world());
             }
         "#,
         )
         .file(
             "examples/goodbye.rs",
             r#"
-            extern crate world;
+            extern crate foo;
             fn main() {
-                println!("{}, {}!", world::get_goodbye(), world::get_world());
+                println!("{}, {}!", foo::get_goodbye(), foo::get_world());
             }
         "#,
         )
@@ -2430,7 +2430,7 @@ fn implicit_examples() {
 
 #[test]
 fn standard_build_no_ndebug() {
-    let p = project().at("world")
+    let p = project()
         .file("Cargo.toml", &basic_bin_manifest("foo"))
         .file(
             "src/foo.rs",
@@ -2455,7 +2455,7 @@ fn standard_build_no_ndebug() {
 
 #[test]
 fn release_build_ndebug() {
-    let p = project().at("world")
+    let p = project()
         .file("Cargo.toml", &basic_bin_manifest("foo"))
         .file(
             "src/foo.rs",
@@ -2480,7 +2480,7 @@ fn release_build_ndebug() {
 
 #[test]
 fn inferred_main_bin() {
-    let p = project().at("world")
+    let p = project()
         .file(
             "Cargo.toml",
             r#"
@@ -2551,7 +2551,7 @@ fn deletion_causes_failure() {
 
 #[test]
 fn bad_cargo_toml_in_target_dir() {
-    let p = project().at("world")
+    let p = project()
         .file(
             "Cargo.toml",
             r#"
@@ -4465,26 +4465,12 @@ fn build_all_workspace_implicit_examples() {
 
 #[test]
 fn build_all_virtual_manifest() {
-    let p = project().at("workspace")
+    let p = project()
         .file(
             "Cargo.toml",
             r#"
             [workspace]
-            members = ["foo", "bar"]
-        "#,
-        )
-        .file(
-            "foo/Cargo.toml",
-            r#"
-            [project]
-            name = "foo"
-            version = "0.1.0"
-        "#,
-        )
-        .file(
-            "foo/src/lib.rs",
-            r#"
-            pub fn foo() {}
+            members = ["bar", "baz"]
         "#,
         )
         .file(
@@ -4501,15 +4487,29 @@ fn build_all_virtual_manifest() {
             pub fn bar() {}
         "#,
         )
+        .file(
+            "baz/Cargo.toml",
+            r#"
+            [project]
+            name = "baz"
+            version = "0.1.0"
+        "#,
+        )
+        .file(
+            "baz/src/lib.rs",
+            r#"
+            pub fn baz() {}
+        "#,
+        )
         .build();
 
-    // The order in which foo and bar are built is not guaranteed
+    // The order in which bar and baz are built is not guaranteed
     assert_that(
         p.cargo("build").arg("--all"),
         execs()
             .with_status(0)
+            .with_stderr_contains("[..] Compiling baz v0.1.0 ([..])")
             .with_stderr_contains("[..] Compiling bar v0.1.0 ([..])")
-            .with_stderr_contains("[..] Compiling foo v0.1.0 ([..])")
             .with_stderr(
                 "[..] Compiling [..] v0.1.0 ([..])\n\
                  [..] Compiling [..] v0.1.0 ([..])\n\
@@ -4520,26 +4520,12 @@ fn build_all_virtual_manifest() {
 
 #[test]
 fn build_virtual_manifest_all_implied() {
-    let p = project().at("workspace")
+    let p = project()
         .file(
             "Cargo.toml",
             r#"
             [workspace]
-            members = ["foo", "bar"]
-        "#,
-        )
-        .file(
-            "foo/Cargo.toml",
-            r#"
-            [project]
-            name = "foo"
-            version = "0.1.0"
-        "#,
-        )
-        .file(
-            "foo/src/lib.rs",
-            r#"
-            pub fn foo() {}
+            members = ["bar", "baz"]
         "#,
         )
         .file(
@@ -4556,15 +4542,29 @@ fn build_virtual_manifest_all_implied() {
             pub fn bar() {}
         "#,
         )
+        .file(
+            "baz/Cargo.toml",
+            r#"
+            [project]
+            name = "baz"
+            version = "0.1.0"
+        "#,
+        )
+        .file(
+            "baz/src/lib.rs",
+            r#"
+            pub fn baz() {}
+        "#,
+        )
         .build();
 
-    // The order in which foo and bar are built is not guaranteed
+    // The order in which bar and baz are built is not guaranteed
     assert_that(
         p.cargo("build"),
         execs()
             .with_status(0)
+            .with_stderr_contains("[..] Compiling baz v0.1.0 ([..])")
             .with_stderr_contains("[..] Compiling bar v0.1.0 ([..])")
-            .with_stderr_contains("[..] Compiling foo v0.1.0 ([..])")
             .with_stderr(
                 "[..] Compiling [..] v0.1.0 ([..])\n\
                  [..] Compiling [..] v0.1.0 ([..])\n\
@@ -4575,26 +4575,12 @@ fn build_virtual_manifest_all_implied() {
 
 #[test]
 fn build_virtual_manifest_one_project() {
-    let p = project().at("workspace")
+    let p = project()
         .file(
             "Cargo.toml",
             r#"
             [workspace]
-            members = ["foo", "bar"]
-        "#,
-        )
-        .file(
-            "foo/Cargo.toml",
-            r#"
-            [project]
-            name = "foo"
-            version = "0.1.0"
-        "#,
-        )
-        .file(
-            "foo/src/lib.rs",
-            r#"
-            pub fn foo() {}
+            members = ["bar", "baz"]
         "#,
         )
         .file(
@@ -4611,14 +4597,28 @@ fn build_virtual_manifest_one_project() {
             pub fn bar() {}
         "#,
         )
+        .file(
+            "baz/Cargo.toml",
+            r#"
+            [project]
+            name = "baz"
+            version = "0.1.0"
+        "#,
+        )
+        .file(
+            "baz/src/lib.rs",
+            r#"
+            pub fn baz() {}
+        "#,
+        )
         .build();
 
     assert_that(
-        p.cargo("build").arg("-p").arg("foo"),
+        p.cargo("build").arg("-p").arg("bar"),
         execs()
             .with_status(0)
-            .with_stderr_does_not_contain("[..]bar[..]")
-            .with_stderr_contains("[..] Compiling foo v0.1.0 ([..])")
+            .with_stderr_does_not_contain("[..]baz[..]")
+            .with_stderr_contains("[..] Compiling bar v0.1.0 ([..])")
             .with_stderr(
                 "[..] Compiling [..] v0.1.0 ([..])\n\
                  [..] Finished dev [unoptimized + debuginfo] target(s) in [..]\n",
@@ -4633,22 +4633,9 @@ fn build_all_virtual_manifest_implicit_examples() {
             "Cargo.toml",
             r#"
             [workspace]
-            members = ["foo", "bar"]
+            members = ["bar", "baz"]
         "#,
         )
-        .file(
-            "foo/Cargo.toml",
-            r#"
-            [project]
-            name = "foo"
-            version = "0.1.0"
-        "#,
-        )
-        .file("foo/src/lib.rs", "")
-        .file("foo/src/bin/a.rs", "fn main() {}")
-        .file("foo/src/bin/b.rs", "fn main() {}")
-        .file("foo/examples/c.rs", "fn main() {}")
-        .file("foo/examples/d.rs", "fn main() {}")
         .file(
             "bar/Cargo.toml",
             r#"
@@ -4658,19 +4645,32 @@ fn build_all_virtual_manifest_implicit_examples() {
         "#,
         )
         .file("bar/src/lib.rs", "")
-        .file("bar/src/bin/e.rs", "fn main() {}")
-        .file("bar/src/bin/f.rs", "fn main() {}")
-        .file("bar/examples/g.rs", "fn main() {}")
-        .file("bar/examples/h.rs", "fn main() {}")
+        .file("bar/src/bin/a.rs", "fn main() {}")
+        .file("bar/src/bin/b.rs", "fn main() {}")
+        .file("bar/examples/c.rs", "fn main() {}")
+        .file("bar/examples/d.rs", "fn main() {}")
+        .file(
+            "baz/Cargo.toml",
+            r#"
+            [project]
+            name = "baz"
+            version = "0.1.0"
+        "#,
+        )
+        .file("baz/src/lib.rs", "")
+        .file("baz/src/bin/e.rs", "fn main() {}")
+        .file("baz/src/bin/f.rs", "fn main() {}")
+        .file("baz/examples/g.rs", "fn main() {}")
+        .file("baz/examples/h.rs", "fn main() {}")
         .build();
 
-    // The order in which foo and bar are built is not guaranteed
+    // The order in which bar and baz are built is not guaranteed
     assert_that(
         p.cargo("build").arg("--all").arg("--examples"),
         execs()
             .with_status(0)
+            .with_stderr_contains("[..] Compiling baz v0.1.0 ([..])")
             .with_stderr_contains("[..] Compiling bar v0.1.0 ([..])")
-            .with_stderr_contains("[..] Compiling foo v0.1.0 ([..])")
             .with_stderr(
                 "[..] Compiling [..] v0.1.0 ([..])\n\
                  [..] Compiling [..] v0.1.0 ([..])\n\
@@ -4689,7 +4689,7 @@ fn build_all_virtual_manifest_implicit_examples() {
 
 #[test]
 fn build_all_member_dependency_same_name() {
-    let p = project().at("workspace")
+    let p = project()
         .file(
             "Cargo.toml",
             r#"
@@ -5153,25 +5153,25 @@ fn inferred_bins() {
 #[test]
 fn inferred_bins_duplicate_name() {
     // this should fail, because we have two binaries with the same name
-    let p = project().at("bar")
+    let p = project()
         .file(
             "Cargo.toml",
             r#"
             [package]
-            name = "bar"
+            name = "foo"
             version = "0.1.0"
             authors = []
         "#,
         )
         .file("src/main.rs", "fn main() {}")
-        .file("src/bin/foo.rs", "fn main() {}")
-        .file("src/bin/foo/main.rs", "fn main() {}")
+        .file("src/bin/bar.rs", "fn main() {}")
+        .file("src/bin/bar/main.rs", "fn main() {}")
         .build();
 
     assert_that(
         p.cargo("build"),
         execs().with_status(101).with_stderr_contains(
-            "[..]found duplicate binary name foo, but all binary targets must have a unique name[..]",
+            "[..]found duplicate binary name bar, but all binary targets must have a unique name[..]",
         ),
     );
 }

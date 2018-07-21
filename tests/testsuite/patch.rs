@@ -10,61 +10,61 @@ use hamcrest::assert_that;
 
 #[test]
 fn replace() {
-    Package::new("foo", "0.1.0").publish();
-    Package::new("deep-foo", "0.1.0")
+    Package::new("bar", "0.1.0").publish();
+    Package::new("baz", "0.1.0")
         .file(
             "src/lib.rs",
             r#"
-            extern crate foo;
-            pub fn deep() {
-                foo::foo();
+            extern crate bar;
+            pub fn baz() {
+                bar::bar();
             }
         "#,
         )
-        .dep("foo", "0.1.0")
+        .dep("bar", "0.1.0")
         .publish();
 
-    let p = project().at("bar")
+    let p = project()
         .file(
             "Cargo.toml",
             r#"
             [package]
-            name = "bar"
+            name = "foo"
             version = "0.0.1"
             authors = []
 
             [dependencies]
-            foo = "0.1.0"
-            deep-foo = "0.1.0"
+            bar = "0.1.0"
+            baz = "0.1.0"
 
             [patch.crates-io]
-            foo = { path = "foo" }
+            bar = { path = "bar" }
         "#,
         )
         .file(
             "src/lib.rs",
             "
-            extern crate foo;
-            extern crate deep_foo;
+            extern crate bar;
+            extern crate baz;
             pub fn bar() {
-                foo::foo();
-                deep_foo::deep();
+                bar::bar();
+                baz::baz();
             }
         ",
         )
         .file(
-            "foo/Cargo.toml",
+            "bar/Cargo.toml",
             r#"
             [package]
-            name = "foo"
+            name = "bar"
             version = "0.1.0"
             authors = []
         "#,
         )
         .file(
-            "foo/src/lib.rs",
+            "bar/src/lib.rs",
             r#"
-            pub fn foo() {}
+            pub fn bar() {}
         "#,
         )
         .build();
@@ -74,17 +74,17 @@ fn replace() {
         execs().with_status(0).with_stderr(
             "\
 [UPDATING] registry `file://[..]`
-[DOWNLOADING] deep-foo v0.1.0 ([..])
-[COMPILING] foo v0.1.0 (file://[..])
-[COMPILING] deep-foo v0.1.0
-[COMPILING] bar v0.0.1 (file://[..])
+[DOWNLOADING] baz v0.1.0 ([..])
+[COMPILING] bar v0.1.0 (file://[..])
+[COMPILING] baz v0.1.0
+[COMPILING] foo v0.0.1 (file://[..])
 [FINISHED] dev [unoptimized + debuginfo] target(s) in [..]
 ",
         ),
     );
 
     assert_that(
-        p.cargo("build"), //.env("RUST_LOG", "trace"),
+        p.cargo("build"),
         execs().with_status(0).with_stderr("[FINISHED] [..]"),
     );
 }
@@ -93,44 +93,44 @@ fn replace() {
 fn nonexistent() {
     Package::new("baz", "0.1.0").publish();
 
-    let p = project().at("bar")
+    let p = project()
         .file(
             "Cargo.toml",
             r#"
             [package]
-            name = "bar"
+            name = "foo"
             version = "0.0.1"
             authors = []
 
             [dependencies]
-            foo = "0.1.0"
+            bar = "0.1.0"
 
             [patch.crates-io]
-            foo = { path = "foo" }
+            bar = { path = "bar" }
         "#,
         )
         .file(
             "src/lib.rs",
             "
-            extern crate foo;
-            pub fn bar() {
-                foo::foo();
+            extern crate bar;
+            pub fn foo() {
+                bar::bar();
             }
         ",
         )
         .file(
-            "foo/Cargo.toml",
+            "bar/Cargo.toml",
             r#"
             [package]
-            name = "foo"
+            name = "bar"
             version = "0.1.0"
             authors = []
         "#,
         )
         .file(
-            "foo/src/lib.rs",
+            "bar/src/lib.rs",
             r#"
-            pub fn foo() {}
+            pub fn bar() {}
         "#,
         )
         .build();
@@ -140,8 +140,8 @@ fn nonexistent() {
         execs().with_status(0).with_stderr(
             "\
 [UPDATING] registry `file://[..]`
-[COMPILING] foo v0.1.0 (file://[..])
-[COMPILING] bar v0.0.1 (file://[..])
+[COMPILING] bar v0.1.0 (file://[..])
+[COMPILING] foo v0.0.1 (file://[..])
 [FINISHED] dev [unoptimized + debuginfo] target(s) in [..]
 ",
         ),
@@ -154,12 +154,12 @@ fn nonexistent() {
 
 #[test]
 fn patch_git() {
-    let foo = git::repo(&paths::root().join("override"))
+    let bar = git::repo(&paths::root().join("override"))
         .file(
             "Cargo.toml",
             r#"
             [package]
-            name = "foo"
+            name = "bar"
             version = "0.1.0"
             authors = []
         "#,
@@ -167,47 +167,47 @@ fn patch_git() {
         .file("src/lib.rs", "")
         .build();
 
-    let p = project().at("bar")
+    let p = project()
         .file(
             "Cargo.toml",
             &format!(
                 r#"
             [package]
-            name = "bar"
+            name = "foo"
             version = "0.0.1"
             authors = []
 
             [dependencies]
-            foo = {{ git = '{}' }}
+            bar = {{ git = '{}' }}
 
             [patch.'{0}']
-            foo = {{ path = "foo" }}
+            bar = {{ path = "bar" }}
         "#,
-                foo.url()
+                bar.url()
             ),
         )
         .file(
             "src/lib.rs",
             "
-            extern crate foo;
-            pub fn bar() {
-                foo::foo();
+            extern crate bar;
+            pub fn foo() {
+                bar::bar();
             }
         ",
         )
         .file(
-            "foo/Cargo.toml",
+            "bar/Cargo.toml",
             r#"
             [package]
-            name = "foo"
+            name = "bar"
             version = "0.1.0"
             authors = []
         "#,
         )
         .file(
-            "foo/src/lib.rs",
+            "bar/src/lib.rs",
             r#"
-            pub fn foo() {}
+            pub fn bar() {}
         "#,
         )
         .build();
@@ -217,8 +217,8 @@ fn patch_git() {
         execs().with_status(0).with_stderr(
             "\
 [UPDATING] git repository `file://[..]`
-[COMPILING] foo v0.1.0 (file://[..])
-[COMPILING] bar v0.0.1 (file://[..])
+[COMPILING] bar v0.1.0 (file://[..])
+[COMPILING] foo v0.0.1 (file://[..])
 [FINISHED] dev [unoptimized + debuginfo] target(s) in [..]
 ",
         ),
@@ -231,59 +231,59 @@ fn patch_git() {
 
 #[test]
 fn patch_to_git() {
-    let foo = git::repo(&paths::root().join("override"))
+    let bar = git::repo(&paths::root().join("override"))
         .file(
             "Cargo.toml",
             r#"
             [package]
-            name = "foo"
+            name = "bar"
             version = "0.1.0"
             authors = []
         "#,
         )
-        .file("src/lib.rs", "pub fn foo() {}")
+        .file("src/lib.rs", "pub fn bar() {}")
         .build();
 
-    Package::new("foo", "0.1.0").publish();
+    Package::new("bar", "0.1.0").publish();
 
-    let p = project().at("bar")
+    let p = project()
         .file(
             "Cargo.toml",
             &format!(
                 r#"
             [package]
-            name = "bar"
+            name = "foo"
             version = "0.0.1"
             authors = []
 
             [dependencies]
-            foo = "0.1"
+            bar = "0.1"
 
             [patch.crates-io]
-            foo = {{ git = '{}' }}
+            bar = {{ git = '{}' }}
         "#,
-                foo.url()
+                bar.url()
             ),
         )
         .file(
             "src/lib.rs",
             "
-            extern crate foo;
-            pub fn bar() {
-                foo::foo();
+            extern crate bar;
+            pub fn foo() {
+                bar::bar();
             }
         ",
         )
         .build();
 
     assert_that(
-        p.cargo("build"), //.env("RUST_LOG", "cargo=trace"),
+        p.cargo("build"),
         execs().with_status(0).with_stderr(
             "\
 [UPDATING] git repository `file://[..]`
 [UPDATING] registry `file://[..]`
-[COMPILING] foo v0.1.0 (file://[..])
-[COMPILING] bar v0.0.1 (file://[..])
+[COMPILING] bar v0.1.0 (file://[..])
+[COMPILING] foo v0.0.1 (file://[..])
 [FINISHED] dev [unoptimized + debuginfo] target(s) in [..]
 ",
         ),
@@ -296,36 +296,36 @@ fn patch_to_git() {
 
 #[test]
 fn unused() {
-    Package::new("foo", "0.1.0").publish();
+    Package::new("bar", "0.1.0").publish();
 
-    let p = project().at("bar")
+    let p = project()
         .file(
             "Cargo.toml",
             r#"
             [package]
-            name = "bar"
+            name = "foo"
             version = "0.0.1"
             authors = []
 
             [dependencies]
-            foo = "0.1.0"
+            bar = "0.1.0"
 
             [patch.crates-io]
-            foo = { path = "foo" }
+            bar = { path = "bar" }
         "#,
         )
         .file("src/lib.rs", "")
         .file(
-            "foo/Cargo.toml",
+            "bar/Cargo.toml",
             r#"
             [package]
-            name = "foo"
+            name = "bar"
             version = "0.2.0"
             authors = []
         "#,
         )
         .file(
-            "foo/src/lib.rs",
+            "bar/src/lib.rs",
             r#"
             not rust code
         "#,
@@ -337,9 +337,9 @@ fn unused() {
         execs().with_status(0).with_stderr(
             "\
 [UPDATING] registry `file://[..]`
-[DOWNLOADING] foo v0.1.0 [..]
-[COMPILING] foo v0.1.0
-[COMPILING] bar v0.0.1 (file://[..])
+[DOWNLOADING] bar v0.1.0 [..]
+[COMPILING] bar v0.1.0
+[COMPILING] foo v0.0.1 (file://[..])
 [FINISHED] dev [unoptimized + debuginfo] target(s) in [..]
 ",
         ),
@@ -357,7 +357,7 @@ fn unused() {
         .unwrap();
     let toml: toml::Value = toml::from_str(&lock).unwrap();
     assert_eq!(toml["patch"]["unused"].as_array().unwrap().len(), 1);
-    assert_eq!(toml["patch"]["unused"][0]["name"].as_str(), Some("foo"));
+    assert_eq!(toml["patch"]["unused"][0]["name"].as_str(), Some("bar"));
     assert_eq!(
         toml["patch"]["unused"][0]["version"].as_str(),
         Some("0.2.0")
@@ -366,14 +366,14 @@ fn unused() {
 
 #[test]
 fn unused_git() {
-    Package::new("foo", "0.1.0").publish();
+    Package::new("bar", "0.1.0").publish();
 
     let foo = git::repo(&paths::root().join("override"))
         .file(
             "Cargo.toml",
             r#"
             [package]
-            name = "foo"
+            name = "bar"
             version = "0.2.0"
             authors = []
         "#,
@@ -381,21 +381,21 @@ fn unused_git() {
         .file("src/lib.rs", "")
         .build();
 
-    let p = project().at("bar")
+    let p = project()
         .file(
             "Cargo.toml",
             &format!(
                 r#"
             [package]
-            name = "bar"
+            name = "foo"
             version = "0.0.1"
             authors = []
 
             [dependencies]
-            foo = "0.1"
+            bar = "0.1"
 
             [patch.crates-io]
-            foo = {{ git = '{}' }}
+            bar = {{ git = '{}' }}
         "#,
                 foo.url()
             ),
@@ -409,9 +409,9 @@ fn unused_git() {
             "\
 [UPDATING] git repository `file://[..]`
 [UPDATING] registry `file://[..]`
-[DOWNLOADING] foo v0.1.0 [..]
-[COMPILING] foo v0.1.0
-[COMPILING] bar v0.0.1 (file://[..])
+[DOWNLOADING] bar v0.1.0 [..]
+[COMPILING] bar v0.1.0
+[COMPILING] foo v0.0.1 (file://[..])
 [FINISHED] dev [unoptimized + debuginfo] target(s) in [..]
 ",
         ),
@@ -424,32 +424,32 @@ fn unused_git() {
 
 #[test]
 fn add_patch() {
-    Package::new("foo", "0.1.0").publish();
+    Package::new("bar", "0.1.0").publish();
 
-    let p = project().at("bar")
+    let p = project()
         .file(
             "Cargo.toml",
             r#"
             [package]
-            name = "bar"
+            name = "foo"
             version = "0.0.1"
             authors = []
 
             [dependencies]
-            foo = "0.1.0"
+            bar = "0.1.0"
         "#,
         )
         .file("src/lib.rs", "")
         .file(
-            "foo/Cargo.toml",
+            "bar/Cargo.toml",
             r#"
             [package]
-            name = "foo"
+            name = "bar"
             version = "0.1.0"
             authors = []
         "#,
         )
-        .file("foo/src/lib.rs", r#""#)
+        .file("bar/src/lib.rs", r#""#)
         .build();
 
     assert_that(
@@ -457,9 +457,9 @@ fn add_patch() {
         execs().with_status(0).with_stderr(
             "\
 [UPDATING] registry `file://[..]`
-[DOWNLOADING] foo v0.1.0 [..]
-[COMPILING] foo v0.1.0
-[COMPILING] bar v0.0.1 (file://[..])
+[DOWNLOADING] bar v0.1.0 [..]
+[COMPILING] bar v0.1.0
+[COMPILING] foo v0.0.1 (file://[..])
 [FINISHED] dev [unoptimized + debuginfo] target(s) in [..]
 ",
         ),
@@ -472,15 +472,15 @@ fn add_patch() {
     t!(t!(File::create(p.root().join("Cargo.toml"))).write_all(
         br#"
             [package]
-            name = "bar"
+            name = "foo"
             version = "0.0.1"
             authors = []
 
             [dependencies]
-            foo = "0.1.0"
+            bar = "0.1.0"
 
             [patch.crates-io]
-            foo = { path = 'foo' }
+            bar = { path = 'bar' }
     "#
     ));
 
@@ -488,8 +488,8 @@ fn add_patch() {
         p.cargo("build"),
         execs().with_status(0).with_stderr(
             "\
-[COMPILING] foo v0.1.0 (file://[..])
-[COMPILING] bar v0.0.1 (file://[..])
+[COMPILING] bar v0.1.0 (file://[..])
+[COMPILING] foo v0.0.1 (file://[..])
 [FINISHED] dev [unoptimized + debuginfo] target(s) in [..]
 ",
         ),
@@ -502,32 +502,32 @@ fn add_patch() {
 
 #[test]
 fn add_ignored_patch() {
-    Package::new("foo", "0.1.0").publish();
+    Package::new("bar", "0.1.0").publish();
 
-    let p = project().at("bar")
+    let p = project()
         .file(
             "Cargo.toml",
             r#"
             [package]
-            name = "bar"
+            name = "foo"
             version = "0.0.1"
             authors = []
 
             [dependencies]
-            foo = "0.1.0"
+            bar = "0.1.0"
         "#,
         )
         .file("src/lib.rs", "")
         .file(
-            "foo/Cargo.toml",
+            "bar/Cargo.toml",
             r#"
             [package]
-            name = "foo"
+            name = "bar"
             version = "0.1.1"
             authors = []
         "#,
         )
-        .file("foo/src/lib.rs", r#""#)
+        .file("bar/src/lib.rs", r#""#)
         .build();
 
     assert_that(
@@ -535,9 +535,9 @@ fn add_ignored_patch() {
         execs().with_status(0).with_stderr(
             "\
 [UPDATING] registry `file://[..]`
-[DOWNLOADING] foo v0.1.0 [..]
-[COMPILING] foo v0.1.0
-[COMPILING] bar v0.0.1 (file://[..])
+[DOWNLOADING] bar v0.1.0 [..]
+[COMPILING] bar v0.1.0
+[COMPILING] foo v0.0.1 (file://[..])
 [FINISHED] dev [unoptimized + debuginfo] target(s) in [..]
 ",
         ),
@@ -550,15 +550,15 @@ fn add_ignored_patch() {
     t!(t!(File::create(p.root().join("Cargo.toml"))).write_all(
         br#"
             [package]
-            name = "bar"
+            name = "foo"
             version = "0.0.1"
             authors = []
 
             [dependencies]
-            foo = "0.1.0"
+            bar = "0.1.0"
 
             [patch.crates-io]
-            foo = { path = 'foo' }
+            bar = { path = 'bar' }
     "#
     ));
 
@@ -576,35 +576,35 @@ fn add_ignored_patch() {
 
 #[test]
 fn new_minor() {
-    Package::new("foo", "0.1.0").publish();
+    Package::new("bar", "0.1.0").publish();
 
-    let p = project().at("bar")
+    let p = project()
         .file(
             "Cargo.toml",
             r#"
             [package]
-            name = "bar"
+            name = "foo"
             version = "0.0.1"
             authors = []
 
             [dependencies]
-            foo = "0.1.0"
+            bar = "0.1.0"
 
             [patch.crates-io]
-            foo = { path = 'foo' }
+            bar = { path = 'bar' }
         "#,
         )
         .file("src/lib.rs", "")
         .file(
-            "foo/Cargo.toml",
+            "bar/Cargo.toml",
             r#"
             [package]
-            name = "foo"
+            name = "bar"
             version = "0.1.1"
             authors = []
         "#,
         )
-        .file("foo/src/lib.rs", r#""#)
+        .file("bar/src/lib.rs", r#""#)
         .build();
 
     assert_that(
@@ -612,8 +612,8 @@ fn new_minor() {
         execs().with_status(0).with_stderr(
             "\
 [UPDATING] registry `file://[..]`
-[COMPILING] foo v0.1.1 [..]
-[COMPILING] bar v0.0.1 (file://[..])
+[COMPILING] bar v0.1.1 [..]
+[COMPILING] foo v0.0.1 (file://[..])
 [FINISHED] dev [unoptimized + debuginfo] target(s) in [..]
 ",
         ),
@@ -622,48 +622,48 @@ fn new_minor() {
 
 #[test]
 fn transitive_new_minor() {
-    Package::new("foo", "0.1.0").publish();
+    Package::new("baz", "0.1.0").publish();
 
-    let p = project().at("bar")
+    let p = project()
         .file(
             "Cargo.toml",
             r#"
             [package]
-            name = "bar"
+            name = "foo"
             version = "0.0.1"
             authors = []
 
             [dependencies]
-            subdir = { path = 'subdir' }
+            bar = { path = 'bar' }
 
             [patch.crates-io]
-            foo = { path = 'foo' }
+            baz = { path = 'baz' }
         "#,
         )
         .file("src/lib.rs", "")
         .file(
-            "subdir/Cargo.toml",
+            "bar/Cargo.toml",
             r#"
             [package]
-            name = "subdir"
+            name = "bar"
             version = "0.1.0"
             authors = []
 
             [dependencies]
-            foo = '0.1.0'
+            baz = '0.1.0'
         "#,
         )
-        .file("subdir/src/lib.rs", r#""#)
+        .file("bar/src/lib.rs", r#""#)
         .file(
-            "foo/Cargo.toml",
+            "baz/Cargo.toml",
             r#"
             [package]
-            name = "foo"
+            name = "baz"
             version = "0.1.1"
             authors = []
         "#,
         )
-        .file("foo/src/lib.rs", r#""#)
+        .file("baz/src/lib.rs", r#""#)
         .build();
 
     assert_that(
@@ -671,9 +671,9 @@ fn transitive_new_minor() {
         execs().with_status(0).with_stderr(
             "\
 [UPDATING] registry `file://[..]`
-[COMPILING] foo v0.1.1 [..]
-[COMPILING] subdir v0.1.0 [..]
-[COMPILING] bar v0.0.1 (file://[..])
+[COMPILING] baz v0.1.1 [..]
+[COMPILING] bar v0.1.0 [..]
+[COMPILING] foo v0.0.1 (file://[..])
 [FINISHED] dev [unoptimized + debuginfo] target(s) in [..]
 ",
         ),
@@ -682,35 +682,35 @@ fn transitive_new_minor() {
 
 #[test]
 fn new_major() {
-    Package::new("foo", "0.1.0").publish();
+    Package::new("bar", "0.1.0").publish();
 
-    let p = project().at("bar")
+    let p = project()
         .file(
             "Cargo.toml",
             r#"
             [package]
-            name = "bar"
+            name = "foo"
             version = "0.0.1"
             authors = []
 
             [dependencies]
-            foo = "0.2.0"
+            bar = "0.2.0"
 
             [patch.crates-io]
-            foo = { path = 'foo' }
+            bar = { path = 'bar' }
         "#,
         )
         .file("src/lib.rs", "")
         .file(
-            "foo/Cargo.toml",
+            "bar/Cargo.toml",
             r#"
             [package]
-            name = "foo"
+            name = "bar"
             version = "0.2.0"
             authors = []
         "#,
         )
-        .file("foo/src/lib.rs", r#""#)
+        .file("bar/src/lib.rs", r#""#)
         .build();
 
     assert_that(
@@ -718,14 +718,14 @@ fn new_major() {
         execs().with_status(0).with_stderr(
             "\
 [UPDATING] registry `file://[..]`
-[COMPILING] foo v0.2.0 [..]
-[COMPILING] bar v0.0.1 (file://[..])
+[COMPILING] bar v0.2.0 [..]
+[COMPILING] foo v0.0.1 (file://[..])
 [FINISHED] dev [unoptimized + debuginfo] target(s) in [..]
 ",
         ),
     );
 
-    Package::new("foo", "0.2.0").publish();
+    Package::new("bar", "0.2.0").publish();
     assert_that(p.cargo("update"), execs().with_status(0));
     assert_that(
         p.cargo("build"),
@@ -737,12 +737,12 @@ fn new_major() {
     t!(t!(File::create(p.root().join("Cargo.toml"))).write_all(
         br#"
             [package]
-            name = "bar"
+            name = "foo"
             version = "0.0.1"
             authors = []
 
             [dependencies]
-            foo = "0.2.0"
+            bar = "0.2.0"
     "#
     ));
     assert_that(
@@ -750,9 +750,9 @@ fn new_major() {
         execs().with_status(0).with_stderr(
             "\
 [UPDATING] registry `file://[..]`
-[DOWNLOADING] foo v0.2.0 [..]
-[COMPILING] foo v0.2.0
-[COMPILING] bar v0.0.1 (file://[..])
+[DOWNLOADING] bar v0.2.0 [..]
+[COMPILING] bar v0.2.0
+[COMPILING] foo v0.0.1 (file://[..])
 [FINISHED] dev [unoptimized + debuginfo] target(s) in [..]
 ",
         ),
@@ -761,48 +761,48 @@ fn new_major() {
 
 #[test]
 fn transitive_new_major() {
-    Package::new("foo", "0.1.0").publish();
+    Package::new("baz", "0.1.0").publish();
 
-    let p = project().at("bar")
+    let p = project()
         .file(
             "Cargo.toml",
             r#"
             [package]
-            name = "bar"
+            name = "foo"
             version = "0.0.1"
             authors = []
 
             [dependencies]
-            subdir = { path = 'subdir' }
+            bar = { path = 'bar' }
 
             [patch.crates-io]
-            foo = { path = 'foo' }
+            baz = { path = 'baz' }
         "#,
         )
         .file("src/lib.rs", "")
         .file(
-            "subdir/Cargo.toml",
+            "bar/Cargo.toml",
             r#"
             [package]
-            name = "subdir"
+            name = "bar"
             version = "0.1.0"
             authors = []
 
             [dependencies]
-            foo = '0.2.0'
+            baz = '0.2.0'
         "#,
         )
-        .file("subdir/src/lib.rs", r#""#)
+        .file("bar/src/lib.rs", r#""#)
         .file(
-            "foo/Cargo.toml",
+            "baz/Cargo.toml",
             r#"
             [package]
-            name = "foo"
+            name = "baz"
             version = "0.2.0"
             authors = []
         "#,
         )
-        .file("foo/src/lib.rs", r#""#)
+        .file("baz/src/lib.rs", r#""#)
         .build();
 
     assert_that(
@@ -810,9 +810,9 @@ fn transitive_new_major() {
         execs().with_status(0).with_stderr(
             "\
 [UPDATING] registry `file://[..]`
-[COMPILING] foo v0.2.0 [..]
-[COMPILING] subdir v0.1.0 [..]
-[COMPILING] bar v0.0.1 (file://[..])
+[COMPILING] baz v0.2.0 [..]
+[COMPILING] bar v0.1.0 [..]
+[COMPILING] foo v0.0.1 (file://[..])
 [FINISHED] dev [unoptimized + debuginfo] target(s) in [..]
 ",
         ),
@@ -824,17 +824,17 @@ fn remove_patch() {
     Package::new("foo", "0.1.0").publish();
     Package::new("bar", "0.1.0").publish();
 
-    let p = project().at("bar")
+    let p = project()
         .file(
             "Cargo.toml",
             r#"
             [package]
-            name = "bar"
+            name = "foo"
             version = "0.0.1"
             authors = []
 
             [dependencies]
-            foo = "0.1"
+            bar = "0.1"
 
             [patch.crates-io]
             foo = { path = 'foo' }
@@ -842,16 +842,6 @@ fn remove_patch() {
         "#,
         )
         .file("src/lib.rs", "")
-        .file(
-            "foo/Cargo.toml",
-            r#"
-            [package]
-            name = "foo"
-            version = "0.1.0"
-            authors = []
-        "#,
-        )
-        .file("foo/src/lib.rs", r#""#)
         .file(
             "bar/Cargo.toml",
             r#"
@@ -862,9 +852,19 @@ fn remove_patch() {
         "#,
         )
         .file("bar/src/lib.rs", r#""#)
+        .file(
+            "foo/Cargo.toml",
+            r#"
+            [package]
+            name = "foo"
+            version = "0.1.0"
+            authors = []
+        "#,
+        )
+        .file("foo/src/lib.rs", r#""#)
         .build();
 
-    // Generate a lock file where `bar` is unused
+    // Generate a lock file where `foo` is unused
     assert_that(p.cargo("build"), execs().with_status(0));
     let mut lock_file1 = String::new();
     File::open(p.root().join("Cargo.lock"))
@@ -872,21 +872,21 @@ fn remove_patch() {
         .read_to_string(&mut lock_file1)
         .unwrap();
 
-    // Remove `bar` and generate a new lock file form the old one
+    // Remove `foo` and generate a new lock file form the old one
     File::create(p.root().join("Cargo.toml"))
         .unwrap()
         .write_all(
             r#"
         [package]
-        name = "bar"
+        name = "foo"
         version = "0.0.1"
         authors = []
 
         [dependencies]
-        foo = "0.1"
+        bar = "0.1"
 
         [patch.crates-io]
-        foo = { path = 'foo' }
+        bar = { path = 'bar' }
     "#.as_bytes(),
         )
         .unwrap();
@@ -906,39 +906,39 @@ fn remove_patch() {
         .read_to_string(&mut lock_file3)
         .unwrap();
 
-    assert!(lock_file1.contains("bar"));
+    assert!(lock_file1.contains("foo"));
     assert_eq!(lock_file2, lock_file3);
     assert_ne!(lock_file1, lock_file2);
 }
 
 #[test]
 fn non_crates_io() {
-    Package::new("foo", "0.1.0").publish();
+    Package::new("bar", "0.1.0").publish();
 
-    let p = project().at("bar")
+    let p = project()
         .file(
             "Cargo.toml",
             r#"
             [package]
-            name = "bar"
+            name = "foo"
             version = "0.0.1"
             authors = []
 
             [patch.some-other-source]
-            foo = { path = 'foo' }
+            bar = { path = 'bar' }
         "#,
         )
         .file("src/lib.rs", "")
         .file(
-            "foo/Cargo.toml",
+            "bar/Cargo.toml",
             r#"
             [package]
-            name = "foo"
+            name = "bar"
             version = "0.1.0"
             authors = []
         "#,
         )
-        .file("foo/src/lib.rs", r#""#)
+        .file("bar/src/lib.rs", r#""#)
         .build();
 
     assert_that(
@@ -956,32 +956,32 @@ Caused by:
 
 #[test]
 fn replace_with_crates_io() {
-    Package::new("foo", "0.1.0").publish();
+    Package::new("bar", "0.1.0").publish();
 
-    let p = project().at("bar")
+    let p = project()
         .file(
             "Cargo.toml",
             r#"
             [package]
-            name = "bar"
+            name = "foo"
             version = "0.0.1"
             authors = []
 
             [patch.crates-io]
-            foo = "0.1"
+            bar = "0.1"
         "#,
         )
         .file("src/lib.rs", "")
         .file(
-            "foo/Cargo.toml",
+            "bar/Cargo.toml",
             r#"
             [package]
-            name = "foo"
+            name = "bar"
             version = "0.1.0"
             authors = []
         "#,
         )
-        .file("foo/src/lib.rs", r#""#)
+        .file("bar/src/lib.rs", r#""#)
         .build();
 
     assert_that(
@@ -992,7 +992,7 @@ fn replace_with_crates_io() {
 error: failed to resolve patches for `[..]`
 
 Caused by:
-  patch for `foo` in `[..]` points to the same source, but patches must point \
+  patch for `bar` in `[..]` points to the same source, but patches must point \
   to different sources
 ",
         ),
@@ -1001,29 +1001,19 @@ Caused by:
 
 #[test]
 fn patch_in_virtual() {
-    Package::new("foo", "0.1.0").publish();
+    Package::new("bar", "0.1.0").publish();
 
-    let p = project().at("bar")
+    let p = project()
         .file(
             "Cargo.toml",
             r#"
             [workspace]
-            members = ["bar"]
+            members = ["foo"]
 
             [patch.crates-io]
-            foo = { path = "foo" }
+            bar = { path = "bar" }
         "#,
         )
-        .file(
-            "foo/Cargo.toml",
-            r#"
-            [package]
-            name = "foo"
-            version = "0.1.0"
-            authors = []
-        "#,
-        )
-        .file("foo/src/lib.rs", r#""#)
         .file(
             "bar/Cargo.toml",
             r#"
@@ -1031,12 +1021,22 @@ fn patch_in_virtual() {
             name = "bar"
             version = "0.1.0"
             authors = []
-
-            [dependencies]
-            foo = "0.1"
         "#,
         )
         .file("bar/src/lib.rs", r#""#)
+        .file(
+            "foo/Cargo.toml",
+            r#"
+            [package]
+            name = "foo"
+            version = "0.1.0"
+            authors = []
+
+            [dependencies]
+            bar = "0.1"
+        "#,
+        )
+        .file("foo/src/lib.rs", r#""#)
         .build();
 
     assert_that(p.cargo("build"), execs().with_status(0));
@@ -1048,44 +1048,34 @@ fn patch_in_virtual() {
 
 #[test]
 fn patch_depends_on_another_patch() {
-    Package::new("foo", "0.1.0")
-        .file("src/lib.rs", "broken code")
-        .publish();
-
     Package::new("bar", "0.1.0")
-        .dep("foo", "0.1")
         .file("src/lib.rs", "broken code")
         .publish();
 
-    let p = project().at("p")
+    Package::new("baz", "0.1.0")
+        .dep("bar", "0.1")
+        .file("src/lib.rs", "broken code")
+        .publish();
+
+    let p = project()
         .file(
             "Cargo.toml",
             r#"
             [package]
-            name = "p"
+            name = "foo"
             authors = []
             version = "0.1.0"
 
             [dependencies]
-            foo = "0.1"
             bar = "0.1"
+            baz = "0.1"
 
             [patch.crates-io]
-            foo = { path = "foo" }
             bar = { path = "bar" }
+            baz = { path = "baz" }
         "#,
         )
         .file("src/lib.rs", "")
-        .file(
-            "foo/Cargo.toml",
-            r#"
-            [package]
-            name = "foo"
-            version = "0.1.1"
-            authors = []
-        "#,
-        )
-        .file("foo/src/lib.rs", r#""#)
         .file(
             "bar/Cargo.toml",
             r#"
@@ -1093,12 +1083,22 @@ fn patch_depends_on_another_patch() {
             name = "bar"
             version = "0.1.1"
             authors = []
-
-            [dependencies]
-            foo = "0.1"
         "#,
         )
         .file("bar/src/lib.rs", r#""#)
+        .file(
+            "baz/Cargo.toml",
+            r#"
+            [package]
+            name = "baz"
+            version = "0.1.1"
+            authors = []
+
+            [dependencies]
+            bar = "0.1"
+        "#,
+        )
+        .file("baz/src/lib.rs", r#""#)
         .build();
 
     assert_that(p.cargo("build"), execs().with_status(0));
@@ -1112,48 +1112,48 @@ fn patch_depends_on_another_patch() {
 
 #[test]
 fn replace_prerelease() {
-    Package::new("bar", "1.1.0-pre.1").publish();
+    Package::new("baz", "1.1.0-pre.1").publish();
     let p = project()
         .file(
             "Cargo.toml",
             r#"
             [workspace]
-            members = ["foo"]
+            members = ["bar"]
 
             [patch.crates-io]
-            bar = { path = "./bar" }
+            baz = { path = "./baz" }
         "#,
-        )
-        .file(
-            "foo/Cargo.toml",
-            r#"
-            [project]
-            name = "foo"
-            version = "0.5.0"
-            authors = []
-
-            [dependencies]
-            bar = "1.1.0-pre.1"
-        "#,
-        )
-        .file(
-            "foo/src/main.rs",
-            "
-            extern crate bar;
-            fn main() { bar::bar() }
-        ",
         )
         .file(
             "bar/Cargo.toml",
             r#"
             [project]
             name = "bar"
+            version = "0.5.0"
+            authors = []
+
+            [dependencies]
+            baz = "1.1.0-pre.1"
+        "#,
+        )
+        .file(
+            "bar/src/main.rs",
+            "
+            extern crate baz;
+            fn main() { baz::baz() }
+        ",
+        )
+        .file(
+            "baz/Cargo.toml",
+            r#"
+            [project]
+            name = "baz"
             version = "1.1.0-pre.1"
             authors = []
             [workspace]
         "#,
         )
-        .file("bar/src/lib.rs", "pub fn bar() {}")
+        .file("baz/src/lib.rs", "pub fn baz() {}")
         .build();
 
     assert_that(p.cargo("build"), execs().with_status(0));

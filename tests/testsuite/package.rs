@@ -78,7 +78,7 @@ src[/]main.rs
 
 #[test]
 fn metadata_warning() {
-    let p = project().at("all")
+    let p = project()
         .file(
             "Cargo.toml",
             r#"
@@ -111,7 +111,7 @@ See http://doc.crates.io/manifest.html#package-metadata for more info.
         )),
     );
 
-    let p = project().at("one")
+    let p = project()
         .file(
             "Cargo.toml",
             r#"
@@ -144,7 +144,7 @@ See http://doc.crates.io/manifest.html#package-metadata for more info.
         )),
     );
 
-    let p = project().at("all")
+    let p = project()
         .file(
             "Cargo.toml",
             r#"
@@ -247,7 +247,7 @@ See http://doc.crates.io/manifest.html#package-metadata for more info.
 
 #[test]
 fn package_verification() {
-    let p = project().at("all")
+    let p = project()
         .file(
             "Cargo.toml",
             r#"
@@ -614,22 +614,22 @@ src/main.rs
 fn ignore_nested() {
     let cargo_toml = r#"
             [project]
-            name = "nested"
+            name = "foo"
             version = "0.0.1"
             authors = []
             license = "MIT"
-            description = "nested"
+            description = "foo"
         "#;
     let main_rs = r#"
             fn main() { println!("hello"); }
         "#;
-    let p = project().at("nested")
+    let p = project()
         .file("Cargo.toml", cargo_toml)
         .file("src/main.rs", main_rs)
         // If a project happens to contain a copy of itself, we should
         // ignore it.
-        .file("a_dir/nested/Cargo.toml", cargo_toml)
-        .file("a_dir/nested/src/main.rs", main_rs)
+        .file("a_dir/foo/Cargo.toml", cargo_toml)
+        .file("a_dir/foo/src/main.rs", main_rs)
         .build();
 
     assert_that(
@@ -638,16 +638,16 @@ fn ignore_nested() {
             "\
 [WARNING] manifest has no documentation[..]
 See http://doc.crates.io/manifest.html#package-metadata for more info.
-[PACKAGING] nested v0.0.1 ({dir})
-[VERIFYING] nested v0.0.1 ({dir})
-[COMPILING] nested v0.0.1 ({dir}[..])
+[PACKAGING] foo v0.0.1 ({dir})
+[VERIFYING] foo v0.0.1 ({dir})
+[COMPILING] foo v0.0.1 ({dir}[..])
 [FINISHED] dev [unoptimized + debuginfo] target(s) in [..]
 ",
             dir = p.url()
         )),
     );
     assert_that(
-        &p.root().join("target/package/nested-0.0.1.crate"),
+        &p.root().join("target/package/foo-0.0.1.crate"),
         existing_file(),
     );
     assert_that(
@@ -661,7 +661,7 @@ src[..]main.rs
     );
     assert_that(p.cargo("package"), execs().with_status(0).with_stdout(""));
 
-    let f = File::open(&p.root().join("target/package/nested-0.0.1.crate")).unwrap();
+    let f = File::open(&p.root().join("target/package/foo-0.0.1.crate")).unwrap();
     let mut rdr = GzDecoder::new(f);
     let mut contents = Vec::new();
     rdr.read_to_end(&mut contents).unwrap();
@@ -671,8 +671,8 @@ src[..]main.rs
         let fname = f.header().path_bytes();
         let fname = &*fname;
         assert!(
-            fname == b"nested-0.0.1/Cargo.toml" || fname == b"nested-0.0.1/Cargo.toml.orig"
-                || fname == b"nested-0.0.1/src/main.rs",
+            fname == b"foo-0.0.1/Cargo.toml" || fname == b"foo-0.0.1/Cargo.toml.orig"
+                || fname == b"foo-0.0.1/src/main.rs",
             "unexpected filename: {:?}",
             f.header().path()
         )

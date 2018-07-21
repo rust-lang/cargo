@@ -856,7 +856,7 @@ fn login_with_differently_sized_token() {
 #[test]
 fn bad_license_file() {
     Package::new("foo", "1.0.0").publish();
-    let p = project().at("all")
+    let p = project()
         .file(
             "Cargo.toml",
             r#"

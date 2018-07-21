@@ -1636,17 +1636,17 @@ fn many_cli_features_comma_and_space_delimited() {
 fn combining_features_and_package() {
     Package::new("dep", "1.0.0").publish();
 
-    let p = project().at("ws")
+    let p = project()
         .file(
             "Cargo.toml",
             r#"
             [project]
-            name = "ws"
+            name = "foo"
             version = "0.0.1"
             authors = []
 
             [workspace]
-            members = ["foo"]
+            members = ["bar"]
 
             [dependencies]
             dep = "1"
@@ -1654,10 +1654,10 @@ fn combining_features_and_package() {
         )
         .file("src/lib.rs", "")
         .file(
-            "foo/Cargo.toml",
+            "bar/Cargo.toml",
             r#"
             [package]
-            name = "foo"
+            name = "bar"
             version = "0.0.1"
             authors = []
             [features]
@@ -1665,7 +1665,7 @@ fn combining_features_and_package() {
         "#,
         )
         .file(
-            "foo/src/main.rs",
+            "bar/src/main.rs",
             r#"
             #[cfg(feature = "main")]
             fn main() {}
@@ -1713,7 +1713,7 @@ fn combining_features_and_package() {
         execs().with_status(0),
     );
     assert_that(
-        p.cargo("run -Z package-features --package foo --features main")
+        p.cargo("run -Z package-features --package bar --features main")
             .masquerade_as_nightly_cargo(),
         execs().with_status(0),
     );

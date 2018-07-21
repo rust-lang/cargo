@@ -365,12 +365,12 @@ fn panic_abort_plugins() {
         return;
     }
 
-    let p = project().at("bar")
+    let p = project()
         .file(
             "Cargo.toml",
             r#"
             [package]
-            name = "bar"
+            name = "foo"
             version = "0.0.1"
             authors = []
 
@@ -378,15 +378,15 @@ fn panic_abort_plugins() {
             panic = 'abort'
 
             [dependencies]
-            foo = { path = "foo" }
+            bar = { path = "bar" }
         "#,
         )
         .file("src/lib.rs", "")
         .file(
-            "foo/Cargo.toml",
+            "bar/Cargo.toml",
             r#"
             [package]
-            name = "foo"
+            name = "bar"
             version = "0.0.1"
             authors = []
 
@@ -395,7 +395,7 @@ fn panic_abort_plugins() {
         "#,
         )
         .file(
-            "foo/src/lib.rs",
+            "bar/src/lib.rs",
             r#"
             #![feature(rustc_private)]
             extern crate syntax;
@@ -412,12 +412,12 @@ fn shared_panic_abort_plugins() {
         return;
     }
 
-    let p = project().at("top")
+    let p = project()
         .file(
             "Cargo.toml",
             r#"
             [package]
-            name = "top"
+            name = "foo"
             version = "0.0.1"
             authors = []
 
@@ -425,38 +425,15 @@ fn shared_panic_abort_plugins() {
             panic = 'abort'
 
             [dependencies]
-            foo = { path = "foo" }
             bar = { path = "bar" }
+            baz = { path = "baz" }
         "#,
         )
         .file(
             "src/lib.rs",
             "
-            extern crate bar;
+            extern crate baz;
         ",
-        )
-        .file(
-            "foo/Cargo.toml",
-            r#"
-            [package]
-            name = "foo"
-            version = "0.0.1"
-            authors = []
-
-            [lib]
-            plugin = true
-
-            [dependencies]
-            bar = { path = "../bar" }
-        "#,
-        )
-        .file(
-            "foo/src/lib.rs",
-            r#"
-            #![feature(rustc_private)]
-            extern crate syntax;
-            extern crate bar;
-        "#,
         )
         .file(
             "bar/Cargo.toml",
@@ -465,9 +442,32 @@ fn shared_panic_abort_plugins() {
             name = "bar"
             version = "0.0.1"
             authors = []
+
+            [lib]
+            plugin = true
+
+            [dependencies]
+            baz = { path = "../baz" }
         "#,
         )
-        .file("bar/src/lib.rs", "")
+        .file(
+            "bar/src/lib.rs",
+            r#"
+            #![feature(rustc_private)]
+            extern crate syntax;
+            extern crate baz;
+        "#,
+        )
+        .file(
+            "baz/Cargo.toml",
+            r#"
+            [package]
+            name = "baz"
+            version = "0.0.1"
+            authors = []
+        "#,
+        )
+        .file("baz/src/lib.rs", "")
         .build();
 
     assert_that(p.cargo("build"), execs().with_status(0));
