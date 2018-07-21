@@ -392,7 +392,7 @@ thread_local!(
 /// - this is an `#[test]` that called `enable_nightly_features`
 /// - this is a integration test that uses `ProcessBuilder`
 ///       that called `masquerade_as_nightly_cargo`
-fn nightly_features_allowed() -> bool {
+pub fn nightly_features_allowed() -> bool {
     if ENABLE_NIGHTLY_FEATURES.with(|c| c.get()) {
         return true
     }
