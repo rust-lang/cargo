@@ -1,6 +1,6 @@
-use cargotest::support::{basic_lib_manifest, execs, paths, project};
-use cargotest::ChannelChanger;
-use hamcrest::assert_that;
+use support::{basic_lib_manifest, execs, paths, project};
+use support::ChannelChanger;
+use support::hamcrest::assert_that;
 
 #[test]
 fn profile_config_gated() {

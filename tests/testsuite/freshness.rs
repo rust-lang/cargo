@@ -1,11 +1,11 @@
 use std::fs::{self, File};
 use std::io::prelude::*;
 
-use cargotest::sleep_ms;
-use cargotest::support::paths::CargoPathExt;
-use cargotest::support::registry::Package;
-use cargotest::support::{execs, path2url, project};
-use hamcrest::{assert_that, existing_file};
+use support::sleep_ms;
+use support::paths::CargoPathExt;
+use support::registry::Package;
+use support::{execs, path2url, project};
+use support::hamcrest::{assert_that, existing_file};
 
 #[test]
 fn modifying_and_moving() {

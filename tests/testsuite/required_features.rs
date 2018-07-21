@@ -1,7 +1,7 @@
-use cargotest::is_nightly;
-use cargotest::install::{cargo_home, has_installed_exe};
-use cargotest::support::{execs, project};
-use hamcrest::{assert_that, existing_file, is_not};
+use support::is_nightly;
+use support::install::{cargo_home, has_installed_exe};
+use support::{execs, project};
+use support::hamcrest::{assert_that, existing_file, is_not};
 
 #[test]
 fn build_bin_default_features() {

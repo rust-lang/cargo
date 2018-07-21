@@ -2,13 +2,13 @@ use std::io::prelude::*;
 use std::fs::{self, File};
 
 use toml;
-use cargotest::{cargo_process, ChannelChanger};
-use cargotest::support::execs;
-use cargotest::support::registry::registry;
-use cargotest::install::cargo_home;
+use support::{cargo_process, ChannelChanger};
+use support::execs;
+use support::registry::registry;
+use support::install::cargo_home;
 use cargo::util::config::Config;
 use cargo::core::Shell;
-use hamcrest::{assert_that, existing_file, is_not};
+use support::hamcrest::{assert_that, existing_file, is_not};
 
 const TOKEN: &str = "test-token";
 const ORIGINAL_TOKEN: &str = "api-token";

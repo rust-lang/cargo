@@ -5,11 +5,11 @@ use std::path::{Path, PathBuf};
 use std::str;
 
 use cargo;
-use cargotest::cargo_process;
-use cargotest::support::paths::{self, CargoPathExt};
-use cargotest::support::registry::Package;
-use cargotest::support::{basic_bin_manifest, cargo_exe, execs, project, Project};
-use hamcrest::{assert_that, existing_file};
+use support::cargo_process;
+use support::paths::{self, CargoPathExt};
+use support::registry::Package;
+use support::{basic_bin_manifest, cargo_exe, execs, project, Project};
+use support::hamcrest::{assert_that, existing_file};
 
 #[cfg_attr(windows, allow(dead_code))]
 enum FakeKind<'a> {

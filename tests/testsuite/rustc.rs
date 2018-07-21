@@ -1,5 +1,5 @@
-use cargotest::support::{basic_bin_manifest, basic_lib_manifest, execs, project};
-use hamcrest::assert_that;
+use support::{basic_bin_manifest, basic_lib_manifest, execs, project};
+use support::hamcrest::assert_that;
 
 const CARGO_RUSTC_ERROR: &'static str =
     "[ERROR] extra arguments to `rustc` can only be passed to one target, consider filtering

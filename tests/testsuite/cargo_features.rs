@@ -1,6 +1,6 @@
-use cargotest::ChannelChanger;
-use cargotest::support::{execs, project, publish};
-use hamcrest::assert_that;
+use support::ChannelChanger;
+use support::{execs, project, publish};
+use support::hamcrest::assert_that;
 
 #[test]
 fn feature_required() {

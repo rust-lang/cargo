@@ -3,12 +3,12 @@ use std::io::prelude::*;
 use std::path::PathBuf;
 
 use cargo::util::paths::remove_dir_all;
-use cargotest::cargo_process;
-use cargotest::support::git;
-use cargotest::support::paths::{self, CargoPathExt};
-use cargotest::support::registry::{self, Package};
-use cargotest::support::{execs, project};
-use hamcrest::assert_that;
+use support::cargo_process;
+use support::git;
+use support::paths::{self, CargoPathExt};
+use support::registry::{self, Package};
+use support::{execs, project};
+use support::hamcrest::assert_that;
 use url::Url;
 
 fn registry_path() -> PathBuf {
@@ -762,7 +762,7 @@ fn update_lockfile() {
 
 #[test]
 fn update_offline() {
-    use cargotest::ChannelChanger;
+    use support::ChannelChanger;
     let p = project()
         .file(
             "Cargo.toml",

@@ -3,11 +3,11 @@ use std::io::prelude::*;
 use std::path::PathBuf;
 
 use cargo::util::ProcessBuilder;
-use cargotest;
-use cargotest::support::execs;
-use cargotest::support::git::repo;
-use cargotest::support::paths;
-use hamcrest::assert_that;
+use support;
+use support::execs;
+use support::git::repo;
+use support::paths;
+use support::hamcrest::assert_that;
 use url::Url;
 
 fn registry_path() -> PathBuf {
@@ -43,7 +43,7 @@ fn setup() {
 }
 
 fn cargo_process(s: &str) -> ProcessBuilder {
-    let mut b = cargotest::cargo_process();
+    let mut b = support::cargo_process();
     b.arg(s);
     b
 }

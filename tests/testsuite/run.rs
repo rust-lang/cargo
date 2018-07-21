@@ -1,7 +1,7 @@
 use cargo::util::paths::dylib_path_envvar;
-use cargotest::{self, ChannelChanger};
-use cargotest::support::{execs, project, Project, path2url};
-use hamcrest::{assert_that, existing_file};
+use support::{self, ChannelChanger};
+use support::{execs, project, Project, path2url};
+use support::hamcrest::{assert_that, existing_file};
 
 #[test]
 fn simple() {
@@ -596,7 +596,7 @@ fn autodiscover_examples_project(rust_edition: &str, autoexamples: Option<bool>)
 
 #[test]
 fn run_example_autodiscover_2015() {
-    if !cargotest::is_nightly() {
+    if !support::is_nightly() {
         return;
     }
 
@@ -631,7 +631,7 @@ error: no example target named `a`
 
 #[test]
 fn run_example_autodiscover_2015_with_autoexamples_enabled() {
-    if !cargotest::is_nightly() {
+    if !support::is_nightly() {
         return;
     }
 
@@ -656,7 +656,7 @@ fn run_example_autodiscover_2015_with_autoexamples_enabled() {
 
 #[test]
 fn run_example_autodiscover_2015_with_autoexamples_disabled() {
-    if !cargotest::is_nightly() {
+    if !support::is_nightly() {
         return;
     }
 
@@ -674,7 +674,7 @@ fn run_example_autodiscover_2015_with_autoexamples_disabled() {
 
 #[test]
 fn run_example_autodiscover_2018() {
-    if !cargotest::is_nightly() {
+    if !support::is_nightly() {
         return;
     }
 

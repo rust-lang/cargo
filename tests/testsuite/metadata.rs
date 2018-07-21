@@ -1,6 +1,6 @@
-use cargotest::support::registry::Package;
-use cargotest::support::{basic_bin_manifest, basic_lib_manifest, execs, main_file, project};
-use hamcrest::assert_that;
+use support::registry::Package;
+use support::{basic_bin_manifest, basic_lib_manifest, execs, main_file, project};
+use support::hamcrest::assert_that;
 
 #[test]
 fn cargo_metadata_simple() {

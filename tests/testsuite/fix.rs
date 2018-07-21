@@ -1,8 +1,8 @@
-use cargotest::support::git;
-use cargotest::support::{execs, project};
-use cargotest::{is_nightly, ChannelChanger};
+use support::git;
+use support::{execs, project};
+use support::{is_nightly, ChannelChanger};
 use git2;
-use hamcrest::assert_that;
+use support::hamcrest::assert_that;
 
 #[test]
 fn do_not_fix_broken_builds() {

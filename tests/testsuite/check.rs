@@ -1,10 +1,10 @@
-use cargotest::install::exe;
-use cargotest::is_nightly;
-use cargotest::support::paths::CargoPathExt;
-use cargotest::support::registry::Package;
-use cargotest::support::{execs, project};
+use support::install::exe;
+use support::is_nightly;
+use support::paths::CargoPathExt;
+use support::registry::Package;
+use support::{execs, project};
 use glob::glob;
-use hamcrest::{assert_that, existing_file, is_not};
+use support::hamcrest::{assert_that, existing_file, is_not};
 
 const SIMPLE_MANIFEST: &str = r#"
 [package]

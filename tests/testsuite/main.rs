@@ -20,8 +20,7 @@ extern crate url;
 extern crate winapi;
 
 #[macro_use]
-mod cargotest;
-mod hamcrest;
+mod support;
 
 mod alt_registry;
 mod bad_config;

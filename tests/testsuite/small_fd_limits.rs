@@ -4,11 +4,11 @@ use std::path::PathBuf;
 use std::process::Command;
 
 use git2;
-use cargotest::support::{execs, project};
-use cargotest::support::registry::Package;
-use cargotest::support::paths;
-use cargotest::support::git;
-use hamcrest::assert_that;
+use support::{execs, project};
+use support::registry::Package;
+use support::paths;
+use support::git;
+use support::hamcrest::assert_that;
 
 use url::Url;
 

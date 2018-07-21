@@ -1,7 +1,7 @@
-use cargotest::ChannelChanger;
-use cargotest::support::registry::{self, alt_api_path, Package};
-use cargotest::support::{execs, paths, project};
-use hamcrest::assert_that;
+use support::ChannelChanger;
+use support::registry::{self, alt_api_path, Package};
+use support::{execs, paths, project};
+use support::hamcrest::assert_that;
 use std::fs::File;
 use std::io::Write;
 

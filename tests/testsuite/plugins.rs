@@ -1,9 +1,9 @@
 use std::fs;
 use std::env;
 
-use cargotest::{is_nightly, rustc_host};
-use cargotest::support::{execs, project};
-use hamcrest::assert_that;
+use support::{is_nightly, rustc_host};
+use support::{execs, project};
+use support::hamcrest::assert_that;
 
 #[test]
 fn plugin_to_the_max() {

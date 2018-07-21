@@ -2,8 +2,8 @@ use cargo::core::{Shell, enable_nightly_features};
 use cargo::util::config::{self, Config};
 use cargo::util::toml::{self, VecStringOrBool as VSOB};
 use cargo::CargoError;
-use cargotest::support::{execs, lines_match, paths, project};
-use hamcrest::assert_that;
+use support::{execs, lines_match, paths, project};
+use support::hamcrest::assert_that;
 use std::collections;
 use std::fs;
 

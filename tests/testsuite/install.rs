@@ -1,20 +1,20 @@
-use cargotest;
+use support;
 use std::fs::{self, File, OpenOptions};
 use std::io::prelude::*;
 
 use cargo::util::ProcessBuilder;
-use cargotest::install::{cargo_home, has_installed_exe};
-use cargotest::support::cross_compile;
-use cargotest::support::git;
-use cargotest::support::paths;
-use cargotest::support::registry::Package;
-use cargotest::support::{execs, project};
-use cargotest::ChannelChanger;
+use support::install::{cargo_home, has_installed_exe};
+use support::cross_compile;
+use support::git;
+use support::paths;
+use support::registry::Package;
+use support::{execs, project};
+use support::ChannelChanger;
 use git2;
-use hamcrest::{assert_that, existing_dir, is_not};
+use support::hamcrest::{assert_that, existing_dir, is_not};
 
 fn cargo_process(s: &str) -> ProcessBuilder {
-    let mut p = cargotest::cargo_process();
+    let mut p = support::cargo_process();
     p.arg(s);
     p
 }
@@ -1050,7 +1050,7 @@ warning: To build the current package use `cargo build`, to install the current 
 
 #[test]
 fn installs_from_cwd_with_2018_warnings() {
-    if !cargotest::is_nightly() {
+    if !support::is_nightly() {
         // Stable rust won't have the edition option.  Remove this once it
         // is stabilized.
         return;
@@ -1343,7 +1343,7 @@ fn install_target_native() {
         cargo_process("install")
             .arg("foo")
             .arg("--target")
-            .arg(cargotest::rustc_host()),
+            .arg(support::rustc_host()),
         execs()
             .with_status(0),
     );
