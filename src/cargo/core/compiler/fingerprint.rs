@@ -86,23 +86,25 @@ pub fn prepare_target<'a, 'cfg>(
     }
 
     let root = cx.files().out_dir(unit);
-    let mut missing_outputs = false;
-    if unit.mode.is_doc() {
-        missing_outputs = !root.join(unit.target.crate_name())
-            .join("index.html")
-            .exists();
-    } else {
-        for output in cx.outputs(unit)?.iter() {
-            if output.flavor == FileFlavor::DebugInfo {
-                continue;
-            }
-            if !output.path.exists() {
-                info!("missing output path {:?}", output.path);
-                missing_outputs = true;
-                break
+    let missing_outputs = {
+        if unit.mode.is_doc() {
+            !root.join(unit.target.crate_name())
+                .join("index.html")
+                .exists()
+        } else {
+            match cx.outputs(unit)?
+                .iter()
+                .filter(|output| output.flavor != FileFlavor::DebugInfo)
+                .find(|output| !output.path.exists())
+            {
+                None => false,
+                Some(output) => {
+                    info!("missing output path {:?}", output.path);
+                    true
+                }
             }
         }
-    }
+    };
 
     let allow_failure = bcx.extra_args_for(unit).is_some();
     let target_root = cx.files().target_root().to_path_buf();
