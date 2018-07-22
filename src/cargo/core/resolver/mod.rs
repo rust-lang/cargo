@@ -106,6 +106,7 @@ mod types;
 ///
 /// * `print_warnings` - whether or not to print backwards-compatibility
 ///   warnings and such
+#[cfg_attr(feature = "cargo-clippy", allow(implicit_hasher))] // exempted
 pub fn resolve(
     summaries: &[(Summary, Method)],
     replacements: &[(PackageIdSpec, Dependency)],
