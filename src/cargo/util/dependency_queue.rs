@@ -50,8 +50,8 @@ pub enum Freshness {
 }
 
 impl Freshness {
-    pub fn combine(&self, other: Freshness) -> Freshness {
-        match *self {
+    pub fn combine(self, other: Freshness) -> Freshness {
+        match self {
             Fresh => other,
             Dirty => Dirty,
         }
@@ -80,7 +80,7 @@ impl<K: Hash + Eq + Clone, V> DependencyQueue<K, V> {
     ///
     /// It is assumed that any dependencies of this package will eventually also
     /// be added to the dependency queue.
-    pub fn queue(&mut self, fresh: Freshness, key: K, value: V, dependencies: &[K]) -> &mut V {
+    pub fn queue(&mut self, fresh: Freshness, key: &K, value: V, dependencies: &[K]) -> &mut V {
         let slot = match self.dep_map.entry(key.clone()) {
             Occupied(v) => return &mut v.into_mut().1,
             Vacant(v) => v,
@@ -207,11 +207,11 @@ mod test {
     fn deep_first() {
         let mut q = DependencyQueue::new();
 
-        q.queue(Freshness::Fresh, 1, (), &[]);
-        q.queue(Freshness::Fresh, 2, (), &[1]);
-        q.queue(Freshness::Fresh, 3, (), &[]);
-        q.queue(Freshness::Fresh, 4, (), &[2, 3]);
-        q.queue(Freshness::Fresh, 5, (), &[4, 3]);
+        q.queue(Freshness::Fresh, &1, (), &[]);
+        q.queue(Freshness::Fresh, &2, (), &[1]);
+        q.queue(Freshness::Fresh, &3, (), &[]);
+        q.queue(Freshness::Fresh, &4, (), &[2, 3]);
+        q.queue(Freshness::Fresh, &5, (), &[4, 3]);
         q.queue_finished();
 
         assert_eq!(q.dequeue(), Some((Freshness::Fresh, 1, ())));

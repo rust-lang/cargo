@@ -62,7 +62,7 @@ where
                 remaining -= 1;
             }
             //todo impl from
-            Err(e) => return Err(e.into()),
+            Err(e) => return Err(e),
         }
     }
 }

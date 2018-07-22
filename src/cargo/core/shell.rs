@@ -260,7 +260,7 @@ impl ShellOut {
                 }
                 stream.reset()?;
                 match message {
-                    Some(message) => write!(stream, " {}\n", message)?,
+                    Some(message) => writeln!(stream, " {}", message)?,
                     None => write!(stream, " ")?,
                 }
             }
@@ -271,7 +271,7 @@ impl ShellOut {
                     write!(w, "{}", status)?;
                 }
                 match message {
-                    Some(message) => write!(w, " {}\n", message)?,
+                    Some(message) => writeln!(w, " {}", message)?,
                     None => write!(w, " ")?,
                 }
             }
@@ -290,8 +290,8 @@ impl ShellOut {
 
 impl ColorChoice {
     /// Convert our color choice to termcolor's version
-    fn to_termcolor_color_choice(&self) -> termcolor::ColorChoice {
-        match *self {
+    fn to_termcolor_color_choice(self) -> termcolor::ColorChoice {
+        match self {
             ColorChoice::Always => termcolor::ColorChoice::Always,
             ColorChoice::Never => termcolor::ColorChoice::Never,
             ColorChoice::CargoAuto => {

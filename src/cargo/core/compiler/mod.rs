@@ -934,11 +934,11 @@ fn envify(s: &str) -> String {
 }
 
 impl Kind {
-    fn for_target(&self, target: &Target) -> Kind {
+    fn for_target(self, target: &Target) -> Kind {
         // Once we start compiling for the `Host` kind we continue doing so, but
         // if we are a `Target` kind and then we start compiling for a target
         // that needs to be on the host we lift ourselves up to `Host`
-        match *self {
+        match self {
             Kind::Host => Kind::Host,
             Kind::Target if target.for_host() => Kind::Host,
             Kind::Target => Kind::Target,

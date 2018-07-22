@@ -103,7 +103,7 @@ impl Config {
             })
             .collect();
 
-        let cache_rustc_info = match env.get("CARGO_CACHE_RUSTC_INFO".into()) {
+        let cache_rustc_info = match env.get("CARGO_CACHE_RUSTC_INFO") {
             Some(cache) => cache != "0",
             _ => true,
         };
@@ -235,7 +235,7 @@ impl Config {
                     let argv0 = env::args_os()
                         .map(PathBuf::from)
                         .next()
-                        .ok_or(format_err!("no argv[0]"))?;
+                        .ok_or_else(||format_err!("no argv[0]"))?;
                     paths::resolve_executable(&argv0)
                 }
 
@@ -467,7 +467,7 @@ impl Config {
                 val: i,
                 definition: Definition::Path(path),
             })),
-            Some(val) => self.expected("list", key, val),
+            Some(val) => self.expected("list", key, &val),
             None => Ok(None),
         }
     }
@@ -489,7 +489,7 @@ impl Config {
                 val: i.split(' ').map(str::to_string).collect(),
                 definition: Definition::Path(path),
             })),
-            Some(val) => self.expected("list or string", key, val),
+            Some(val) => self.expected("list or string", key, &val),
             None => Ok(None),
         }
     }
@@ -500,7 +500,7 @@ impl Config {
                 val: i,
                 definition: Definition::Path(path),
             })),
-            Some(val) => self.expected("table", key, val),
+            Some(val) => self.expected("table", key, &val),
             None => Ok(None),
         }
     }
@@ -521,13 +521,13 @@ impl Config {
                     val: i,
                     definition: Definition::Path(path),
                 })),
-                Some(cv) => return Err(ConfigError::expected(&config_key, "an integer", &cv)),
-                None => return Ok(None),
+                Some(cv) => Err(ConfigError::expected(&config_key, "an integer", &cv)),
+                None => Ok(None),
             },
         }
     }
 
-    fn expected<T>(&self, ty: &str, key: &str, val: CV) -> CargoResult<T> {
+    fn expected<T>(&self, ty: &str, key: &str, val: &CV) -> CargoResult<T> {
         val.expected(ty, key)
             .map_err(|e| format_err!("invalid configuration for key `{}`\n{}", key, e))
     }
@@ -659,7 +659,7 @@ impl Config {
     fn load_credentials(&self, cfg: &mut ConfigValue) -> CargoResult<()> {
         let home_path = self.home_path.clone().into_path_unlocked();
         let credentials = home_path.join("credentials");
-        if !fs::metadata(&credentials).is_ok() {
+        if fs::metadata(&credentials).is_err() {
             return Ok(());
         }
 
@@ -719,7 +719,7 @@ impl Config {
             .collect::<String>();
         if let Some(tool_path) = env::var_os(&var) {
             let maybe_relative = match tool_path.to_str() {
-                Some(s) => s.contains("/") || s.contains("\\"),
+                Some(s) => s.contains('/') || s.contains('\\'),
                 None => false,
             };
             let path = if maybe_relative {
@@ -891,14 +891,14 @@ impl ConfigError {
         }
     }
 
-    fn missing(key: String) -> ConfigError {
+    fn missing(key: &str) -> ConfigError {
         ConfigError {
             error: format_err!("missing config key `{}`", key),
             definition: None,
         }
     }
 
-    fn with_key_context(self, key: String, definition: Definition) -> ConfigError {
+    fn with_key_context(self, key: &str, definition: Definition) -> ConfigError {
         ConfigError {
             error: format_err!("could not load config key `{}`: {}", key, self),
             definition: Some(definition),
@@ -965,10 +965,10 @@ macro_rules! deserialize_method {
             V: de::Visitor<'de>,
         {
             let v = self.config.$getter(&self.key)?.ok_or_else(||
-                ConfigError::missing(self.key.to_config()))?;
+                ConfigError::missing(&self.key.to_config()))?;
             let Value{val, definition} = v;
             let res: Result<V::Value, ConfigError> = visitor.$visit(val);
-            res.map_err(|e| e.with_key_context(self.key.to_config(), definition))
+            res.map_err(|e| e.with_key_context(&self.key.to_config(), definition))
         }
     }
 }
@@ -989,16 +989,16 @@ impl<'de, 'config> de::Deserializer<'de> for Deserializer<'config> {
             } else if let Ok(v) = v.parse::<i64>() {
                 visitor.visit_i64(v)
             } else if self.config.cli_unstable().advanced_env
-                && v.starts_with("[")
-                && v.ends_with("]")
+                && v.starts_with('[')
+                && v.ends_with(']')
             {
-                visitor.visit_seq(ConfigSeqAccess::new(self.config, self.key.clone())?)
+                visitor.visit_seq(ConfigSeqAccess::new(self.config, &self.key)?)
             } else {
                 visitor.visit_string(v.clone())
             };
             return res.map_err(|e| {
                 e.with_key_context(
-                    self.key.to_config(),
+                    &self.key.to_config(),
                     Definition::Environment(self.key.to_env()),
                 )
             });
@@ -1010,7 +1010,7 @@ impl<'de, 'config> de::Deserializer<'de> for Deserializer<'config> {
                 CV::Integer(i, path) => (visitor.visit_i64(i), path),
                 CV::String(s, path) => (visitor.visit_string(s), path),
                 CV::List(_, path) => (
-                    visitor.visit_seq(ConfigSeqAccess::new(self.config, self.key.clone())?),
+                    visitor.visit_seq(ConfigSeqAccess::new(self.config, &self.key)?),
                     path,
                 ),
                 CV::Table(_, path) => (
@@ -1021,9 +1021,9 @@ impl<'de, 'config> de::Deserializer<'de> for Deserializer<'config> {
             };
             let (res, path) = res;
             return res
-                .map_err(|e| e.with_key_context(self.key.to_config(), Definition::Path(path)));
+                .map_err(|e| e.with_key_context(&self.key.to_config(), Definition::Path(path)));
         }
-        Err(ConfigError::missing(self.key.to_config()))
+        Err(ConfigError::missing(&self.key.to_config()))
     }
 
     deserialize_method!(deserialize_bool, visit_bool, get_bool_priv);
@@ -1072,14 +1072,14 @@ impl<'de, 'config> de::Deserializer<'de> for Deserializer<'config> {
     where
         V: de::Visitor<'de>,
     {
-        visitor.visit_seq(ConfigSeqAccess::new(self.config, self.key)?)
+        visitor.visit_seq(ConfigSeqAccess::new(self.config, &self.key)?)
     }
 
     fn deserialize_tuple<V>(self, _len: usize, visitor: V) -> Result<V::Value, Self::Error>
     where
         V: de::Visitor<'de>,
     {
-        visitor.visit_seq(ConfigSeqAccess::new(self.config, self.key)?)
+        visitor.visit_seq(ConfigSeqAccess::new(self.config, &self.key)?)
     }
 
     fn deserialize_tuple_struct<V>(
@@ -1091,7 +1091,7 @@ impl<'de, 'config> de::Deserializer<'de> for Deserializer<'config> {
     where
         V: de::Visitor<'de>,
     {
-        visitor.visit_seq(ConfigSeqAccess::new(self.config, self.key)?)
+        visitor.visit_seq(ConfigSeqAccess::new(self.config, &self.key)?)
     }
 
     fn deserialize_newtype_struct<V>(
@@ -1113,7 +1113,7 @@ impl<'de, 'config> de::Deserializer<'de> for Deserializer<'config> {
                         .to_string();
                     visitor.visit_newtype_struct(path.into_deserializer())
                 }
-                None => Err(ConfigError::missing(self.key.to_config())),
+                None => Err(ConfigError::missing(&self.key.to_config())),
             }
         } else {
             visitor.visit_newtype_struct(self)
@@ -1155,7 +1155,7 @@ impl<'config> ConfigMapAccess<'config> {
                     // CARGO_PROFILE_DEV_OVERRIDES_bar_OPT_LEVEL = 3
                     let rest = &env_key[env_pattern.len()..];
                     // rest = bar_OPT_LEVEL
-                    let part = rest.splitn(2, "_").next().unwrap();
+                    let part = rest.splitn(2, '_').next().unwrap();
                     // part = "bar"
                     set.insert(ConfigKeyPart::CasePart(part.to_string()));
                 }
@@ -1234,7 +1234,7 @@ struct ConfigSeqAccess {
 }
 
 impl ConfigSeqAccess {
-    fn new(config: &Config, key: ConfigKey) -> Result<ConfigSeqAccess, ConfigError> {
+    fn new(config: &Config, key: &ConfigKey) -> Result<ConfigSeqAccess, ConfigError> {
         let mut res = Vec::new();
         if let Some(v) = config.get_list(&key.to_config())? {
             for (s, path) in v.val {
@@ -1247,7 +1247,7 @@ impl ConfigSeqAccess {
             let env_key = key.to_env();
             let def = Definition::Environment(env_key.clone());
             if let Some(v) = config.env.get(&env_key) {
-                if !(v.starts_with("[") && v.ends_with("]")) {
+                if !(v.starts_with('[') && v.ends_with(']')) {
                     return Err(ConfigError::new(
                         format!("should have TOML list syntax, found `{}`", v),
                         def.clone(),
