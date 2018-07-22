@@ -1,3 +1,6 @@
+// we have lots of arguments, cleaning this up would be a large project
+#![cfg_attr(feature = "cargo-clippy", allow(too_many_arguments))]
+
 extern crate cargo;
 extern crate clap;
 extern crate env_logger;
