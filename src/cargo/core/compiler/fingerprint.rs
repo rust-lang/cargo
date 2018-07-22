@@ -125,6 +125,8 @@ pub fn prepare_target<'a, 'cfg>(
     ))
 }
 
+type DepFingerprint = (String, String, Arc<Fingerprint>);
+
 /// A fingerprint can be considered to be a "short string" representing the
 /// state of a world for a package.
 ///
@@ -154,7 +156,7 @@ pub struct Fingerprint {
     profile: u64,
     path: u64,
     #[serde(serialize_with = "serialize_deps", deserialize_with = "deserialize_deps")]
-    deps: Vec<(String, String, Arc<Fingerprint>)>,
+    deps: Vec<DepFingerprint>,
     local: Vec<LocalFingerprint>,
     #[serde(skip_serializing, skip_deserializing)]
     memoized_hash: Mutex<Option<u64>>,
@@ -162,7 +164,7 @@ pub struct Fingerprint {
     edition: Edition,
 }
 
-fn serialize_deps<S>(deps: &[(String, String, Arc<Fingerprint>)], ser: S) -> Result<S::Ok, S::Error>
+fn serialize_deps<S>(deps: &[DepFingerprint], ser: S) -> Result<S::Ok, S::Error>
 where
     S: ser::Serializer,
 {
@@ -172,7 +174,7 @@ where
         .serialize(ser)
 }
 
-fn deserialize_deps<'de, D>(d: D) -> Result<Vec<(String, String, Arc<Fingerprint>)>, D::Error>
+fn deserialize_deps<'de, D>(d: D) -> Result<Vec<DepFingerprint>, D::Error>
 where
     D: de::Deserializer<'de>,
 {
