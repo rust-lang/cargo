@@ -11,7 +11,6 @@ specify some files to create.  The general form looks like this:
 
 ```
 let p = project()
-    .file("Cargo.toml", &basic_bin_manifest("foo"))
     .file("src/main.rs", r#"fn main() { println!("hi!"); }"#)
     .build();
 ```
@@ -118,6 +117,13 @@ pub mod hamcrest;
 pub mod paths;
 pub mod publish;
 pub mod registry;
+
+const BASIC_MANIFEST: &str = r#"
+[package]
+name = "foo"
+version = "0.0.1"
+authors = []
+"#;
 
 /*
  *
@@ -243,12 +249,17 @@ impl ProjectBuilder {
     }
 
     /// Create the project.
-    pub fn build(self) -> Project {
+    pub fn build(mut self) -> Project {
         // First, clean the directory if it already exists
         self.rm_root();
 
         // Create the empty directory
         self.root.root().mkdir_p();
+
+        let manifest_path = self.root.root().join("Cargo.toml");
+        if self.files.iter().all(|fb| fb.path != manifest_path) {
+            self._file(Path::new("Cargo.toml"), BASIC_MANIFEST)
+        }
 
         for file in self.files.iter() {
             file.mk();
