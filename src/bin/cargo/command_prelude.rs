@@ -347,7 +347,7 @@ pub trait ArgMatchesExt {
                     return Err(format_err!(
                         "registry option is an unstable feature and \
                          requires -Zunstable-options to use."
-                    ).into());
+                    ));
                 }
                 Ok(Some(registry.to_string()))
             }
