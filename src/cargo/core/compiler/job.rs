@@ -19,6 +19,7 @@ trait FnBox<A, R> {
 }
 
 impl<A, R, F: FnOnce(A) -> R> FnBox<A, R> for F {
+    #[cfg_attr(feature = "cargo-clippy", allow(boxed_local))] // The use of Box is intentional here
     fn call_box(self: Box<F>, a: A) -> R {
         (*self)(a)
     }
