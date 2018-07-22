@@ -17,6 +17,7 @@ use util::errors::*;
 use util::toml::TomlManifest;
 use util::Config;
 
+#[cfg_attr(feature = "cargo-clippy", allow(large_enum_variant))] // exempted
 pub enum EitherManifest {
     Real(Manifest),
     Virtual(VirtualManifest),
