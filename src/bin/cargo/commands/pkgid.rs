@@ -34,7 +34,7 @@ Example Package IDs
 
 pub fn exec(config: &mut Config, args: &ArgMatches) -> CliResult {
     let ws = args.workspace(config)?;
-    let spec = args.value_of("spec").or(args.value_of("package"));
+    let spec = args.value_of("spec").or_else(|| args.value_of("package"));
     let spec = ops::pkgid(&ws, spec)?;
     println!("{}", spec);
     Ok(())
