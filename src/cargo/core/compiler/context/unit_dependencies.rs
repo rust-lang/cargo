@@ -28,7 +28,7 @@ pub fn build_unit_dependencies<'a, 'cfg>(
     bcx: &BuildContext<'a, 'cfg>,
     deps: &mut HashMap<Unit<'a>, Vec<Unit<'a>>>,
 ) -> CargoResult<()> {
-    assert!(deps.len() == 0, "can only build unit deps once");
+    assert!(deps.is_empty(), "can only build unit deps once");
 
     for unit in roots.iter() {
         // Dependencies of tests/benches should not have `panic` set.
@@ -78,7 +78,7 @@ fn deps_of<'a, 'cfg>(
 /// for that package.
 /// This returns a vec of `(Unit, ProfileFor)` pairs.  The `ProfileFor`
 /// is the profile type that should be used for dependencies of the unit.
-fn compute_deps<'a, 'b, 'cfg>(
+fn compute_deps<'a, 'cfg>(
     unit: &Unit<'a>,
     bcx: &BuildContext<'a, 'cfg>,
     profile_for: ProfileFor,
@@ -93,7 +93,7 @@ fn compute_deps<'a, 'b, 'cfg>(
     let id = unit.pkg.package_id();
     let deps = bcx.resolve.deps(id);
     let mut ret = deps.filter(|&(_id, deps)| {
-        assert!(deps.len() > 0);
+        assert!(!deps.is_empty());
         deps.iter().any(|dep| {
             // If this target is a build command, then we only want build
             // dependencies, otherwise we want everything *other than* build
@@ -128,7 +128,7 @@ fn compute_deps<'a, 'b, 'cfg>(
         })
     }).filter_map(|(id, _)| match bcx.get_package(id) {
             Ok(pkg) => pkg.targets().iter().find(|t| t.is_lib()).map(|t| {
-                let mode = check_or_build_mode(&unit.mode, t);
+                let mode = check_or_build_mode(unit.mode, t);
                 let unit = new_unit(bcx, pkg, t, profile_for, unit.kind.for_target(t), mode);
                 Ok((unit, profile_for))
             }),
@@ -247,7 +247,7 @@ fn compute_deps_doc<'a, 'cfg>(
         };
         // rustdoc only needs rmeta files for regular dependencies.
         // However, for plugins/proc-macros, deps should be built like normal.
-        let mode = check_or_build_mode(&unit.mode, lib);
+        let mode = check_or_build_mode(unit.mode, lib);
         let lib_unit = new_unit(
             bcx,
             dep,
@@ -287,7 +287,7 @@ fn maybe_lib<'a>(
     profile_for: ProfileFor,
 ) -> Option<(Unit<'a>, ProfileFor)> {
     unit.pkg.targets().iter().find(|t| t.linkable()).map(|t| {
-        let mode = check_or_build_mode(&unit.mode, t);
+        let mode = check_or_build_mode(unit.mode, t);
         let unit = new_unit(bcx, unit.pkg, t, profile_for, unit.kind.for_target(t), mode);
         (unit, profile_for)
     })
@@ -322,8 +322,8 @@ fn dep_build_script<'a>(unit: &Unit<'a>, bcx: &BuildContext) -> Option<(Unit<'a>
 }
 
 /// Choose the correct mode for dependencies.
-fn check_or_build_mode(mode: &CompileMode, target: &Target) -> CompileMode {
-    match *mode {
+fn check_or_build_mode(mode: CompileMode, target: &Target) -> CompileMode {
+    match mode {
         CompileMode::Check { .. } | CompileMode::Doc { .. } => {
             if target.for_host() {
                 // Plugin and proc-macro targets should be compiled like
@@ -390,7 +390,7 @@ fn connect_run_custom_build_deps<'a>(
             for dep in deps {
                 if dep.mode == CompileMode::RunCustomBuild {
                     reverse_deps.entry(dep)
-                        .or_insert(HashSet::new())
+                        .or_insert_with(HashSet::new)
                         .insert(unit);
                 }
             }

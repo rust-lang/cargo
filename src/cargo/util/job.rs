@@ -48,6 +48,7 @@ mod imp {
     use std::io;
     use std::mem;
     use std::os::windows::prelude::*;
+    use std::ptr;
 
     use self::winapi::shared::basetsd::*;
     use self::winapi::shared::minwindef::*;
@@ -84,7 +85,7 @@ mod imp {
         // use job objects, so we instead just ignore errors and assume that
         // we're otherwise part of someone else's job object in this case.
 
-        let job = CreateJobObjectW(0 as *mut _, 0 as *const _);
+        let job = CreateJobObjectW(ptr::null_mut(), ptr::null());
         if job.is_null() {
             return None;
         }
@@ -167,7 +168,7 @@ mod imp {
                 JobObjectBasicProcessIdList,
                 &mut jobs as *mut _ as LPVOID,
                 mem::size_of_val(&jobs) as DWORD,
-                0 as *mut _,
+                ptr::null_mut(),
             );
             if r == 0 {
                 info!("failed to query job object: {}", last_err());
@@ -176,7 +177,7 @@ mod imp {
 
             let mut killed = false;
             let list = &jobs.list[..jobs.header.NumberOfProcessIdsInList as usize];
-            assert!(list.len() > 0);
+            assert!(!list.is_empty());
             info!("found {} remaining processes", list.len() - 1);
 
             let list = list.iter()

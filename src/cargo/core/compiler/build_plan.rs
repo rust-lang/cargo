@@ -12,7 +12,6 @@ use core::TargetKind;
 use super::{Context, Kind, Unit};
 use super::context::OutputFile;
 use util::{internal, CargoResult, ProcessBuilder};
-use std::sync::Arc;
 use std::path::PathBuf;
 use serde_json;
 use semver;
@@ -52,7 +51,7 @@ impl Invocation {
             package_version: id.version().clone(),
             kind: unit.kind,
             target_kind: unit.target.kind().clone(),
-            deps: deps,
+            deps,
             outputs: Vec::new(),
             links: BTreeMap::new(),
             program: String::new(),
@@ -69,7 +68,7 @@ impl Invocation {
         }
     }
 
-    pub fn update_cmd(&mut self, cmd: ProcessBuilder) -> CargoResult<()> {
+    pub fn update_cmd(&mut self, cmd: &ProcessBuilder) -> CargoResult<()> {
         self.program = cmd.get_program()
             .to_str()
             .ok_or_else(|| format_err!("unicode program string required"))?
@@ -121,11 +120,11 @@ impl BuildPlan {
 
     pub fn update(
         &mut self,
-        invocation_name: String,
-        cmd: ProcessBuilder,
-        outputs: Arc<Vec<OutputFile>>,
+        invocation_name: &str,
+        cmd: &ProcessBuilder,
+        outputs: &[OutputFile],
     ) -> CargoResult<()> {
-        let id = self.invocation_map[&invocation_name];
+        let id = self.invocation_map[invocation_name];
         let invocation = self.plan
             .invocations
             .get_mut(id)

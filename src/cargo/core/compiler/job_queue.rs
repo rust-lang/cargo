@@ -120,7 +120,7 @@ impl<'a> JobQueue<'a> {
         let key = Key::new(unit);
         let deps = key.dependencies(cx)?;
         self.queue
-            .queue(Fresh, key, Vec::new(), &deps)
+            .queue(Fresh, &key, Vec::new(), &deps)
             .push((job, fresh));
         *self.counts.entry(key.pkg).or_insert(0) += 1;
         Ok(())
@@ -277,7 +277,7 @@ impl<'a> JobQueue<'a> {
                         .verbose(|c| c.status("Running", &cmd))?;
                 }
                 Message::BuildPlanMsg(module_name, cmd, filenames) => {
-                    plan.update(module_name, cmd, filenames)?;
+                    plan.update(&module_name, &cmd, &filenames)?;
                 }
                 Message::Stdout(out) => {
                     if cx.bcx.config.extra_verbose() {
@@ -314,7 +314,7 @@ impl<'a> JobQueue<'a> {
 
                             if !self.active.is_empty() {
                                 error = Some(format_err!("build failed"));
-                                handle_error(e, &mut *cx.bcx.config.shell());
+                                handle_error(&e, &mut *cx.bcx.config.shell());
                                 cx.bcx.config.shell().warn(
                                     "build failed, waiting for other \
                                      jobs to finish...",
@@ -430,7 +430,7 @@ impl<'a> JobQueue<'a> {
 
             if !output.warnings.is_empty() && msg.is_some() {
                 // Output an empty line.
-                writeln!(bcx.config.shell().err(), "")?;
+                writeln!(bcx.config.shell().err())?;
             }
         }
 

@@ -99,7 +99,7 @@ pub fn install(
             ) {
                 Ok(()) => succeeded.push(krate),
                 Err(e) => {
-                    ::handle_error(e, &mut opts.config.shell());
+                    ::handle_error(&e, &mut opts.config.shell());
                     failed.push(krate)
                 }
             }
@@ -726,7 +726,7 @@ pub fn uninstall(
             match uninstall_one(&root, spec, bins, config) {
                 Ok(()) => succeeded.push(spec),
                 Err(e) => {
-                    ::handle_error(e, &mut config.shell());
+                    ::handle_error(&e, &mut config.shell());
                     failed.push(spec)
                 }
             }

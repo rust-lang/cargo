@@ -733,7 +733,7 @@ impl RemainingCandidates {
                     if a != b.summary.package_id() {
                         conflicting_prev_active
                             .entry(a.clone())
-                            .or_insert(ConflictReason::Links(link));
+                            .or_insert_with(|| ConflictReason::Links(link));
                         continue;
                     }
                 }

@@ -139,7 +139,7 @@ impl<'cfg> PathSource<'cfg> {
             .collect::<Result<Vec<_>, _>>()?;
 
         let glob_should_package = |relative_path: &Path| -> bool {
-            fn glob_match(patterns: &Vec<Pattern>, relative_path: &Path) -> bool {
+            fn glob_match(patterns: &[Pattern], relative_path: &Path) -> bool {
                 patterns
                     .iter()
                     .any(|pattern| pattern.matches_path(relative_path))
@@ -277,7 +277,7 @@ impl<'cfg> PathSource<'cfg> {
                     };
                     let path = util::without_prefix(root, cur).unwrap().join("Cargo.toml");
                     if index.get_path(&path, 0).is_some() {
-                        return Some(self.list_files_git(pkg, repo, filter));
+                        return Some(self.list_files_git(pkg, &repo, filter));
                     }
                 }
             }
@@ -296,7 +296,7 @@ impl<'cfg> PathSource<'cfg> {
     fn list_files_git(
         &self,
         pkg: &Package,
-        repo: git2::Repository,
+        repo: &git2::Repository,
         filter: &mut FnMut(&Path) -> CargoResult<bool>,
     ) -> CargoResult<Vec<PathBuf>> {
         warn!("list_files_git {}", pkg.package_id());
@@ -380,7 +380,7 @@ impl<'cfg> PathSource<'cfg> {
                 let rel = rel.replace(r"\", "/");
                 match repo.find_submodule(&rel).and_then(|s| s.open()) {
                     Ok(repo) => {
-                        let files = self.list_files_git(pkg, repo, filter)?;
+                        let files = self.list_files_git(pkg, &repo, filter)?;
                         ret.extend(files.into_iter());
                     }
                     Err(..) => {
@@ -480,7 +480,7 @@ impl<'cfg> PathSource<'cfg> {
             // condition where this path was rm'ed - either way,
             // we can ignore the error and treat the path's mtime
             // as 0.
-            let mtime = paths::mtime(&file).unwrap_or(FileTime::zero());
+            let mtime = paths::mtime(&file).unwrap_or_else(|_| FileTime::zero());
             if mtime > max {
                 max = mtime;
                 max_path = file;

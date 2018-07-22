@@ -300,7 +300,7 @@ pub fn compile_ws<'a>(
         cx.compile(&units, export_dir.clone(), &exec)?
     };
 
-    return Ok(ret);
+    Ok(ret)
 }
 
 impl FilterRule {

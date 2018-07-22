@@ -133,20 +133,20 @@ impl Registry {
 
     pub fn add_owners(&mut self, krate: &str, owners: &[&str]) -> Result<String> {
         let body = serde_json::to_string(&OwnersReq { users: owners })?;
-        let body = self.put(format!("/crates/{}/owners", krate), body.as_bytes())?;
+        let body = self.put(&format!("/crates/{}/owners", krate), body.as_bytes())?;
         assert!(serde_json::from_str::<OwnerResponse>(&body)?.ok);
         Ok(serde_json::from_str::<OwnerResponse>(&body)?.msg)
     }
 
     pub fn remove_owners(&mut self, krate: &str, owners: &[&str]) -> Result<()> {
         let body = serde_json::to_string(&OwnersReq { users: owners })?;
-        let body = self.delete(format!("/crates/{}/owners", krate), Some(body.as_bytes()))?;
+        let body = self.delete(&format!("/crates/{}/owners", krate), Some(body.as_bytes()))?;
         assert!(serde_json::from_str::<OwnerResponse>(&body)?.ok);
         Ok(())
     }
 
     pub fn list_owners(&mut self, krate: &str) -> Result<Vec<User>> {
-        let body = self.get(format!("/crates/{}/owners", krate))?;
+        let body = self.get(&format!("/crates/{}/owners", krate))?;
         Ok(serde_json::from_str::<Users>(&body)?.users)
     }
 
@@ -228,7 +228,7 @@ impl Registry {
     pub fn search(&mut self, query: &str, limit: u32) -> Result<(Vec<Crate>, u32)> {
         let formatted_query = percent_encode(query.as_bytes(), QUERY_ENCODE_SET);
         let body = self.req(
-            format!("/crates?q={}&per_page={}", formatted_query, limit),
+            &format!("/crates?q={}&per_page={}", formatted_query, limit),
             None,
             Auth::Unauthorized,
         )?;
@@ -238,33 +238,33 @@ impl Registry {
     }
 
     pub fn yank(&mut self, krate: &str, version: &str) -> Result<()> {
-        let body = self.delete(format!("/crates/{}/{}/yank", krate, version), None)?;
+        let body = self.delete(&format!("/crates/{}/{}/yank", krate, version), None)?;
         assert!(serde_json::from_str::<R>(&body)?.ok);
         Ok(())
     }
 
     pub fn unyank(&mut self, krate: &str, version: &str) -> Result<()> {
-        let body = self.put(format!("/crates/{}/{}/unyank", krate, version), &[])?;
+        let body = self.put(&format!("/crates/{}/{}/unyank", krate, version), &[])?;
         assert!(serde_json::from_str::<R>(&body)?.ok);
         Ok(())
     }
 
-    fn put(&mut self, path: String, b: &[u8]) -> Result<String> {
+    fn put(&mut self, path: &str, b: &[u8]) -> Result<String> {
         self.handle.put(true)?;
         self.req(path, Some(b), Auth::Authorized)
     }
 
-    fn get(&mut self, path: String) -> Result<String> {
+    fn get(&mut self, path: &str) -> Result<String> {
         self.handle.get(true)?;
         self.req(path, None, Auth::Authorized)
     }
 
-    fn delete(&mut self, path: String, b: Option<&[u8]>) -> Result<String> {
+    fn delete(&mut self, path: &str, b: Option<&[u8]>) -> Result<String> {
         self.handle.custom_request("DELETE")?;
         self.req(path, b, Auth::Authorized)
     }
 
-    fn req(&mut self, path: String, body: Option<&[u8]>, authorized: Auth) -> Result<String> {
+    fn req(&mut self, path: &str, body: Option<&[u8]>, authorized: Auth) -> Result<String> {
         self.handle.url(&format!("{}/api/v1{}", self.host, path))?;
         let mut headers = List::new();
         headers.append("Accept: application/json")?;

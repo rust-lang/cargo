@@ -88,7 +88,7 @@ fn check_version_control(opts: &FixOptions) -> CargoResult<()> {
         }
     }
 
-    if dirty_files.len() == 0 {
+    if dirty_files.is_empty() {
         return Ok(())
     }
 
@@ -119,8 +119,7 @@ pub fn fix_maybe_exec_rustc() -> CargoResult<bool> {
     let filename = env::args()
         .skip(1)
         .filter(|s| s.ends_with(".rs"))
-        .filter(|s| Path::new(s).exists())
-        .next();
+        .find(|s| Path::new(s).exists());
 
     trace!("cargo-fix as rustc got file {:?}", filename);
     let rustc = env::var_os("RUSTC").expect("failed to find RUSTC env var");
@@ -152,7 +151,7 @@ pub fn fix_maybe_exec_rustc() -> CargoResult<bool> {
     cmd.args(env::args().skip(1));
     cmd.arg("--cap-lints=warn");
     cmd.arg("--error-format=json");
-    if fixes.original_files.len() > 0 {
+    if !fixes.original_files.is_empty() {
         let output = cmd.output().context("failed to spawn rustc")?;
 
         if output.status.success() {
@@ -164,7 +163,7 @@ pub fn fix_maybe_exec_rustc() -> CargoResult<bool> {
         // If we succeeded then we'll want to commit to the changes we made, if
         // any. If stderr is empty then there's no need for the final exec at
         // the end, we just bail out here.
-        if output.status.success() && output.stderr.len() == 0 {
+        if output.status.success() && output.stderr.is_empty() {
             return Ok(true);
         }
 
@@ -304,7 +303,7 @@ fn rustfix_crate(lock_addr: &str, rustc: &Path, filename: &str)
         match rustfix::apply_suggestions(&code, &suggestions) {
             Err(e) => {
                 Message::ReplaceFailed {
-                    file: file,
+                    file,
                     message: e.to_string(),
                 }.post()?;
                 // TODO: Add flag to decide if we want to continue or bail out

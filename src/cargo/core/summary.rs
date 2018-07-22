@@ -148,7 +148,7 @@ where K: Borrow<str> + Ord + Display {
     for dep in dependencies.iter() {
         dep_map
             .entry(dep.name().as_str())
-            .or_insert(Vec::new())
+            .or_insert_with(Vec::new)
             .push(dep);
     }
 
