@@ -134,19 +134,19 @@ impl Layout {
 
         // For compatibility with 10.7 a string is used instead of global kCFURLIsExcludedFromBackupKey
         let is_excluded_key: Result<string::CFString, _> = "NSURLIsExcludedFromBackupKey".parse();
-        match (url::CFURL::from_path(path, false), is_excluded_key) {
-            (Some(path), Ok(is_excluded_key)) => unsafe {
+        let path = url::CFURL::from_path(path, false);
+        if let (Some(path), Ok(is_excluded_key)) = (path, is_excluded_key) {
+            unsafe {
                 url::CFURLSetResourcePropertyForKey(
                     path.as_concrete_TypeRef(),
                     is_excluded_key.as_concrete_TypeRef(),
                     number::kCFBooleanTrue as *const _,
                     ptr::null_mut(),
                 );
-            },
-            // Errors are ignored, since it's an optional feature and failure
-            // doesn't prevent Cargo from working
-            _ => {}
+            }
         }
+        // Errors are ignored, since it's an optional feature and failure
+        // doesn't prevent Cargo from working
     }
 
     /// Make sure all directories stored in the Layout exist on the filesystem.
