@@ -206,6 +206,7 @@ struct NonHashedPathBuf {
     path: PathBuf,
 }
 
+#[cfg_attr(feature = "cargo-clippy", allow(derive_hash_xor_eq))] // current intentional incoherence
 impl Hash for NonHashedPathBuf {
     fn hash<H: Hasher>(&self, _: &mut H) {
         // ...
