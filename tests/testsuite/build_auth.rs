@@ -6,9 +6,9 @@ use std::thread;
 
 use git2;
 use bufstream::BufStream;
-use cargotest::support::paths;
-use cargotest::support::{execs, project};
-use hamcrest::assert_that;
+use support::paths;
+use support::{execs, project};
+use support::hamcrest::assert_that;
 
 // Test that HTTP auth is offered from `credential.helper`
 #[test]

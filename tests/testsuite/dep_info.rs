@@ -1,6 +1,6 @@
-use cargotest::support::{basic_bin_manifest, execs, main_file, project};
+use support::{basic_bin_manifest, execs, main_file, project};
 use filetime::FileTime;
-use hamcrest::{assert_that, existing_file};
+use support::hamcrest::{assert_that, existing_file};
 
 #[test]
 fn build_dep_info() {

@@ -1,7 +1,7 @@
-use cargotest::rustc_host;
-use cargotest::support::registry::Package;
-use cargotest::support::{cross_compile, execs, project};
-use hamcrest::assert_that;
+use support::rustc_host;
+use support::registry::Package;
+use support::{cross_compile, execs, project};
+use support::hamcrest::assert_that;
 
 #[test]
 fn no_deps() {

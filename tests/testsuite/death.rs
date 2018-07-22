@@ -5,7 +5,7 @@ use std::process::{Child, Stdio};
 use std::thread;
 use std::time::Duration;
 
-use cargotest::support::project;
+use support::project;
 
 #[cfg(unix)]
 fn enabled() -> bool {

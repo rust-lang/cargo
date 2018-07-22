@@ -1,6 +1,6 @@
-use cargotest::support::{execs, project, Project};
-use cargotest::support::registry::Package;
-use hamcrest::assert_that;
+use support::{execs, project, Project};
+use support::registry::Package;
+use support::hamcrest::assert_that;
 
 static WARNING1: &'static str = "Hello! I'm a warning. :)";
 static WARNING2: &'static str = "And one more!";

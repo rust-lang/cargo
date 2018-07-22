@@ -1,6 +1,6 @@
 use cargo;
-use cargotest::support::{execs, project};
-use hamcrest::assert_that;
+use support::{execs, project};
+use support::hamcrest::assert_that;
 
 #[test]
 fn simple() {

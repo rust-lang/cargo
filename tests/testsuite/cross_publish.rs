@@ -2,8 +2,8 @@ use std::fs::File;
 use std::path::PathBuf;
 use std::io::prelude::*;
 
-use cargotest::support::{cross_compile, execs, project, publish};
-use hamcrest::{assert_that, contains};
+use support::{cross_compile, execs, project, publish};
+use support::hamcrest::{assert_that, contains};
 use flate2::read::GzDecoder;
 use tar::Archive;
 

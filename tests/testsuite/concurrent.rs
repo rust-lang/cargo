@@ -8,12 +8,12 @@ use std::sync::mpsc::channel;
 use std::time::Duration;
 
 use git2;
-use cargotest;
-use cargotest::install::{cargo_home, has_installed_exe};
-use cargotest::support::git;
-use cargotest::support::registry::Package;
-use cargotest::support::{execs, project};
-use hamcrest::{assert_that, existing_file};
+use support;
+use support::install::{cargo_home, has_installed_exe};
+use support::git;
+use support::registry::Package;
+use support::{execs, project};
+use support::hamcrest::{assert_that, existing_file};
 
 fn pkg(name: &str, vers: &str) {
     Package::new(name, vers)
@@ -72,11 +72,11 @@ fn concurrent_installs() {
     pkg("foo", "0.0.1");
     pkg("bar", "0.0.1");
 
-    let mut a = cargotest::cargo_process()
+    let mut a = support::cargo_process()
         .arg("install")
         .arg("foo")
         .build_command();
-    let mut b = cargotest::cargo_process()
+    let mut b = support::cargo_process()
         .arg("install")
         .arg("bar")
         .build_command();

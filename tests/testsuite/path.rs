@@ -2,11 +2,11 @@ use std::fs::{self, File};
 use std::io::prelude::*;
 
 use cargo::util::process;
-use cargotest::sleep_ms;
-use cargotest::support::paths::{self, CargoPathExt};
-use cargotest::support::registry::Package;
-use cargotest::support::{execs, main_file, project};
-use hamcrest::{assert_that, existing_file, is_not};
+use support::sleep_ms;
+use support::paths::{self, CargoPathExt};
+use support::registry::Package;
+use support::{execs, main_file, project};
+use support::hamcrest::{assert_that, existing_file, is_not};
 
 #[test]
 #[cfg(not(windows))] // I have no idea why this is failing spuriously on

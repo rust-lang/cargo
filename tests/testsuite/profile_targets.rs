@@ -1,6 +1,6 @@
-use cargotest::is_nightly;
-use cargotest::support::{execs, project, Project};
-use hamcrest::assert_that;
+use support::is_nightly;
+use support::{execs, project, Project};
+use support::hamcrest::assert_that;
 
 // These tests try to exercise exactly which profiles are selected for every
 // target.

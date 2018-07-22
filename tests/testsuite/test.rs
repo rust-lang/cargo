@@ -4,11 +4,11 @@ use std::str;
 
 use cargo;
 use cargo::util::process;
-use cargotest::support::paths::CargoPathExt;
-use cargotest::support::registry::Package;
-use cargotest::support::{basic_bin_manifest, basic_lib_manifest, cargo_exe, execs, project};
-use cargotest::{is_nightly, rustc_host, sleep_ms};
-use hamcrest::{assert_that, existing_file, is_not};
+use support::paths::CargoPathExt;
+use support::registry::Package;
+use support::{basic_bin_manifest, basic_lib_manifest, cargo_exe, execs, project};
+use support::{is_nightly, rustc_host, sleep_ms};
+use support::hamcrest::{assert_that, existing_file, is_not};
 
 #[test]
 fn cargo_test_simple() {

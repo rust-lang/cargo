@@ -1,11 +1,11 @@
 use std::fs::File;
 use std::io::prelude::*;
 
-use cargotest::support::paths::CargoPathExt;
-use cargotest::support::{execs, project};
-use cargotest::ChannelChanger;
-use hamcrest::assert_that;
-use cargotest::support::registry::Package;
+use support::paths::CargoPathExt;
+use support::{execs, project};
+use support::ChannelChanger;
+use support::hamcrest::assert_that;
+use support::registry::Package;
 
 #[test]
 fn invalid1() {

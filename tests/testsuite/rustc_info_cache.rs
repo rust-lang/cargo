@@ -1,6 +1,6 @@
-use cargotest::support::{execs, project};
-use cargotest::support::paths::CargoPathExt;
-use hamcrest::assert_that;
+use support::{execs, project};
+use support::paths::CargoPathExt;
+use support::hamcrest::assert_that;
 use std::env;
 
 #[test]

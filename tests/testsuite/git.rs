@@ -8,11 +8,11 @@ use std::sync::atomic::{AtomicBool, Ordering};
 use std::thread;
 
 use cargo::util::process;
-use cargotest::sleep_ms;
-use cargotest::support::paths::{self, CargoPathExt};
-use cargotest::support::{execs, git, main_file, project, path2url};
-use cargotest::ChannelChanger;
-use hamcrest::{assert_that, existing_file};
+use support::sleep_ms;
+use support::paths::{self, CargoPathExt};
+use support::{execs, git, main_file, project, path2url};
+use support::ChannelChanger;
+use support::hamcrest::{assert_that, existing_file};
 
 #[test]
 fn cargo_compile_simple_git_dep() {

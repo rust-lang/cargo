@@ -1,10 +1,10 @@
 use std::fs::{self, File};
 use std::io::prelude::*;
 
-use cargotest::support::registry::Package;
-use cargotest::support::{execs, paths, project, ProjectBuilder};
-use cargotest::ChannelChanger;
-use hamcrest::{assert_that, existing_file, is_not};
+use support::registry::Package;
+use support::{execs, paths, project, ProjectBuilder};
+use support::ChannelChanger;
+use support::hamcrest::{assert_that, existing_file, is_not};
 
 #[test]
 fn adding_and_removing_packages() {

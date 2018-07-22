@@ -1,9 +1,9 @@
 use std::io::Write;
 use std::fs::{self, File};
 
-use cargotest::rustc_host;
-use cargotest::support::{execs, paths, project, project_in_home};
-use hamcrest::assert_that;
+use support::rustc_host;
+use support::{execs, paths, project, project_in_home};
+use support::hamcrest::assert_that;
 
 #[test]
 fn env_rustflags_normal_source() {
