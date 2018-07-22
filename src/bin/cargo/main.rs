@@ -129,6 +129,7 @@ fn find_closest(config: &Config, cmd: &str) -> Option<String> {
 
 fn execute_external_subcommand(config: &Config, cmd: &str, args: &[&str]) -> CliResult {
     let command_exe = format!("cargo-{}{}", cmd, env::consts::EXE_SUFFIX);
+    #[cfg_attr(feature = "cargo-clippy", allow(redundant_closure))] // false positive
     let path = search_directories(config)
         .iter()
         .map(|dir| dir.join(&command_exe))
