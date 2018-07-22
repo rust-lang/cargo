@@ -4,7 +4,7 @@ use std::io::prelude::*;
 use std::path::{Path, PathBuf};
 
 use git2;
-use cargotest::{cargo_process, process, ChannelChanger};
+use cargotest::{cargo_process, process, sleep_ms, ChannelChanger};
 use cargotest::support::{cargo_exe, execs, git, paths, project, registry, path2url};
 use cargotest::support::registry::Package;
 use flate2::read::GzDecoder;
@@ -1439,6 +1439,13 @@ fn do_not_package_if_src_was_modified() {
             }
         "#)
         .build();
+
+    if cfg!(target_os = "macos") {
+        // MacOS has 1s resolution filesystem.
+        // If src/main.rs is created within 1s of src/generated.txt, then it
+        // won't trigger the modification check.
+        sleep_ms(1000);
+    }
 
     assert_that(
         p.cargo("package"),
