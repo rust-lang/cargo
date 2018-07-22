@@ -7,8 +7,6 @@
 // also we use closures as an alternative to try catch blocks
 #![cfg_attr(feature = "cargo-clippy", allow(redundant_closure_call))]
 
-// we have lots of arguments, cleaning this up would be a large project
-#![cfg_attr(feature = "cargo-clippy", allow(too_many_arguments))]
 // we have some complicated functions, cleaning this up would be a large project
 #![cfg_attr(feature = "cargo-clippy", allow(cyclomatic_complexity))]
 
