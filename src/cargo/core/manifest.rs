@@ -102,16 +102,6 @@ pub enum LibKind {
 }
 
 impl LibKind {
-    pub fn from_str(string: &str) -> LibKind {
-        match string {
-            "lib" => LibKind::Lib,
-            "rlib" => LibKind::Rlib,
-            "dylib" => LibKind::Dylib,
-            "proc-macro" => LibKind::ProcMacro,
-            s => LibKind::Other(s.to_string()),
-        }
-    }
-
     /// Returns the argument suitable for `--crate-type` to pass to rustc.
     pub fn crate_type(&self) -> &str {
         match *self {
@@ -134,6 +124,18 @@ impl LibKind {
 impl fmt::Debug for LibKind {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         self.crate_type().fmt(f)
+    }
+}
+
+impl<'a> From<&'a String> for LibKind {
+    fn from(string: &'a String) -> Self {
+        match string.as_ref() {
+            "lib" => LibKind::Lib,
+            "rlib" => LibKind::Rlib,
+            "dylib" => LibKind::Dylib,
+            "proc-macro" => LibKind::ProcMacro,
+            s => LibKind::Other(s.to_string()),
+        }
     }
 }
 
