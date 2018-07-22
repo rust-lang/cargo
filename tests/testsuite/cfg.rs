@@ -2,10 +2,10 @@ use std::str::FromStr;
 use std::fmt;
 
 use cargo::util::{Cfg, CfgExpr};
-use cargotest::rustc_host;
-use cargotest::support::registry::Package;
-use cargotest::support::{execs, project};
-use hamcrest::assert_that;
+use support::rustc_host;
+use support::registry::Package;
+use support::{execs, project};
+use support::hamcrest::assert_that;
 
 macro_rules! c {
     ($a:ident) => (

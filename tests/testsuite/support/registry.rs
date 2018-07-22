@@ -11,8 +11,8 @@ use hex;
 use tar::{Builder, Header};
 use url::Url;
 
-use cargotest::support::paths;
-use cargotest::support::git::repo;
+use support::paths;
+use support::git::repo;
 
 pub fn registry_path() -> PathBuf {
     paths::root().join("registry")

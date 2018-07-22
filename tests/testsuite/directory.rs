@@ -4,12 +4,12 @@ use std::fs::{self, File};
 use std::io::prelude::*;
 use std::str;
 
-use cargotest::cargo_process;
-use cargotest::support::git;
-use cargotest::support::paths;
-use cargotest::support::registry::{cksum, Package};
-use cargotest::support::{execs, project, ProjectBuilder};
-use hamcrest::assert_that;
+use support::cargo_process;
+use support::git;
+use support::paths;
+use support::registry::{cksum, Package};
+use support::{execs, project, ProjectBuilder};
+use support::hamcrest::assert_that;
 
 fn setup() {
     let root = paths::root();

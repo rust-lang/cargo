@@ -4,11 +4,11 @@ use std::io::prelude::*;
 use std::path::{Path, PathBuf};
 
 use git2;
-use cargotest::{cargo_process, process, sleep_ms, ChannelChanger};
-use cargotest::support::{cargo_exe, execs, git, paths, project, registry, path2url};
-use cargotest::support::registry::Package;
+use support::{cargo_process, process, sleep_ms, ChannelChanger};
+use support::{cargo_exe, execs, git, paths, project, registry, path2url};
+use support::registry::Package;
 use flate2::read::GzDecoder;
-use hamcrest::{assert_that, contains, existing_file};
+use support::hamcrest::{assert_that, contains, existing_file};
 use tar::Archive;
 
 #[test]

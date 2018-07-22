@@ -2,10 +2,10 @@ use std::env;
 use std::fs::{self, File};
 use std::io::{Read, Write};
 
-use cargotest::sleep_ms;
-use cargotest::support::{basic_lib_manifest, execs, git, project};
-use cargotest::support::registry::Package;
-use hamcrest::{assert_that, existing_dir, existing_file, is_not};
+use support::sleep_ms;
+use support::{basic_lib_manifest, execs, git, project};
+use support::registry::Package;
+use support::hamcrest::{assert_that, existing_dir, existing_file, is_not};
 
 #[test]
 fn simple_explicit() {

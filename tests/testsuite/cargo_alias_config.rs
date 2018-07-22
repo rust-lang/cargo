@@ -1,5 +1,5 @@
-use cargotest::support::{basic_bin_manifest, execs, project};
-use hamcrest::assert_that;
+use support::{basic_bin_manifest, execs, project};
+use support::hamcrest::assert_that;
 
 #[test]
 fn alias_incorrect_config_type() {

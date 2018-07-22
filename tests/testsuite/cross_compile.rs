@@ -1,7 +1,7 @@
 use cargo::util::process;
-use cargotest::{is_nightly, rustc_host};
-use cargotest::support::{basic_bin_manifest, cross_compile, execs, project};
-use hamcrest::{assert_that, existing_file};
+use support::{is_nightly, rustc_host};
+use support::{basic_bin_manifest, cross_compile, execs, project};
+use support::hamcrest::{assert_that, existing_file};
 
 #[test]
 fn simple_cross() {

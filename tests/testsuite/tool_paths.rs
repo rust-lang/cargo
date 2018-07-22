@@ -1,6 +1,6 @@
-use cargotest::rustc_host;
-use cargotest::support::{execs, project, path2url};
-use hamcrest::assert_that;
+use support::rustc_host;
+use support::{execs, project, path2url};
+use support::hamcrest::assert_that;
 
 #[test]
 fn pathless_tools() {

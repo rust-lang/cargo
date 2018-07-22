@@ -4,13 +4,13 @@ use std::io::prelude::*;
 
 use cargo::util::paths::dylib_path_envvar;
 use cargo::util::{process, ProcessBuilder};
-use cargotest::{is_nightly, rustc_host, sleep_ms};
-use cargotest::support::paths::{root, CargoPathExt};
-use cargotest::support::ProjectBuilder;
-use cargotest::support::{basic_bin_manifest, execs, main_file, project};
-use cargotest::support::registry::Package;
-use cargotest::ChannelChanger;
-use hamcrest::{assert_that, existing_dir, existing_file, is_not};
+use support::{is_nightly, rustc_host, sleep_ms};
+use support::paths::{root, CargoPathExt};
+use support::ProjectBuilder;
+use support::{basic_bin_manifest, execs, main_file, project};
+use support::registry::Package;
+use support::ChannelChanger;
+use support::hamcrest::{assert_that, existing_dir, existing_file, is_not};
 use tempfile;
 
 #[test]

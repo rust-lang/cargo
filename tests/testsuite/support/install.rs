@@ -1,9 +1,9 @@
 use std::fmt;
 use std::path::{Path, PathBuf};
 
-use hamcrest::{existing_file, MatchResult, Matcher};
+use support::hamcrest::{existing_file, MatchResult, Matcher};
 
-use cargotest::support::paths;
+use support::paths;
 
 pub use self::InstalledExe as has_installed_exe;
 

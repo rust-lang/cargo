@@ -1,10 +1,10 @@
 use std::str;
 
 use cargo::util::process;
-use cargotest::{is_nightly, ChannelChanger};
-use cargotest::support::paths::CargoPathExt;
-use cargotest::support::{basic_bin_manifest, basic_lib_manifest, execs, project};
-use hamcrest::{assert_that, existing_file};
+use support::{is_nightly, ChannelChanger};
+use support::paths::CargoPathExt;
+use support::{basic_bin_manifest, basic_lib_manifest, execs, project};
+use support::hamcrest::{assert_that, existing_file};
 
 #[test]
 fn cargo_bench_simple() {

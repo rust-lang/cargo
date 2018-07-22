@@ -1,6 +1,6 @@
 use std::collections::{BTreeMap, HashSet};
 
-use hamcrest::{assert_that, contains, is_not};
+use support::hamcrest::{assert_that, contains, is_not};
 
 use cargo::core::source::{GitReference, SourceId};
 use cargo::core::dependency::Kind::{self, Development};
@@ -8,9 +8,9 @@ use cargo::core::{Dependency, PackageId, Registry, Summary, enable_nightly_featu
 use cargo::util::{CargoResult, Config, ToUrl};
 use cargo::core::resolver::{self, Method};
 
-use cargotest::ChannelChanger;
-use cargotest::support::{execs, project};
-use cargotest::support::registry::Package;
+use support::ChannelChanger;
+use support::{execs, project};
+use support::registry::Package;
 
 fn resolve(
     pkg: &PackageId,

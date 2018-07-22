@@ -1,6 +1,6 @@
-use cargotest::ChannelChanger;
-use cargotest::support::{basic_bin_manifest, execs, main_file, project};
-use hamcrest::{assert_that, existing_file, is_not};
+use support::ChannelChanger;
+use support::{basic_bin_manifest, execs, main_file, project};
+use support::hamcrest::{assert_that, existing_file, is_not};
 
 #[test]
 fn cargo_build_plan_simple() {

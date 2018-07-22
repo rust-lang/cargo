@@ -1,13 +1,13 @@
-use cargotest;
+use support;
 use std::str;
 use std::fs::{self, File};
 use std::io::Read;
 
-use cargotest::{is_nightly, rustc_host, ChannelChanger};
-use cargotest::support::{basic_lib_manifest, execs, git, project, path2url};
-use cargotest::support::paths::CargoPathExt;
-use cargotest::support::registry::Package;
-use hamcrest::{assert_that, existing_dir, existing_file, is_not};
+use support::{is_nightly, rustc_host, ChannelChanger};
+use support::{basic_lib_manifest, execs, git, project, path2url};
+use support::paths::CargoPathExt;
+use support::registry::Package;
+use support::hamcrest::{assert_that, existing_dir, existing_file, is_not};
 use cargo::util::ProcessError;
 use glob::glob;
 
@@ -1216,7 +1216,7 @@ fn document_only_lib() {
 
 #[test]
 fn plugins_no_use_target() {
-    if !cargotest::is_nightly() {
+    if !support::is_nightly() {
         return;
     }
     let p = project()
@@ -1591,7 +1591,7 @@ fn doc_workspace_open_binary_and_library() {
 
 #[test]
 fn doc_edition() {
-    if !cargotest::is_nightly() {
+    if !support::is_nightly() {
         // Stable rustdoc won't have the edition option.  Remove this once it
         // is stabilized.
         return;
