@@ -18,16 +18,13 @@ pub fn cli() -> App {
         .arg(opt("index", "Registry index to modify owners for").value_name("INDEX"))
         .arg(opt("token", "API token to use when authenticating").value_name("TOKEN"))
         .arg(opt("registry", "Registry to use").value_name("REGISTRY"))
-        .after_help(
-            "\
-    This command will modify the owners for a package
-    on the specified registry(or
-    default).Note that owners of a package can upload new versions, yank old
-    versions.Explicitly named owners can also modify the set of owners, so take
-    caution!
+        .after_help("\
+This command will modify the owners for a crate on the specified registry (or
+default). Owners of a crate can upload new versions and yank old versions.
+Explicitly named owners can also modify the set of owners, so take care!
 
-        See http://doc.crates.io/crates-io.html#cargo-owner for detailed documentation
-        and troubleshooting.",
+    See https://doc.rust-lang.org/cargo/reference/publishing.html#cargo-owner
+    for detailed documentation and troubleshooting.",
         )
 }
 
