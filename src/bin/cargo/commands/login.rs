@@ -38,7 +38,7 @@ pub fn exec(config: &mut Config, args: &ArgMatches) -> CliResult {
                     let config = src.config()?.unwrap();
                     args.value_of("host")
                         .map(|s| s.to_string())
-                        .unwrap_or(config.api.unwrap())
+                        .unwrap_or_else(|| config.api.unwrap())
                 }
             };
             println!("please visit {}me and paste the API Token below", host);

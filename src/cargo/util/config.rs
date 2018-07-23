@@ -337,7 +337,7 @@ impl Config {
         self.env = env;
     }
 
-    fn get_env<T>(&self, key: &ConfigKey) -> Result<Option<Value<T>>, ConfigError>
+    fn get_env<T>(&self, key: &ConfigKey) -> Result<OptValue<T>, ConfigError>
     where
         T: FromStr,
         <T as FromStr>::Err: fmt::Display,
@@ -374,12 +374,12 @@ impl Config {
         false
     }
 
-    pub fn get_string(&self, key: &str) -> CargoResult<Option<Value<String>>> {
+    pub fn get_string(&self, key: &str) -> CargoResult<OptValue<String>> {
         self.get_string_priv(&ConfigKey::from_str(key))
             .map_err(|e| e.into())
     }
 
-    fn get_string_priv(&self, key: &ConfigKey) -> Result<Option<Value<String>>, ConfigError> {
+    fn get_string_priv(&self, key: &ConfigKey) -> Result<OptValue<String>, ConfigError> {
         match self.get_env(key)? {
             Some(v) => Ok(Some(v)),
             None => {
@@ -397,12 +397,12 @@ impl Config {
         }
     }
 
-    pub fn get_bool(&self, key: &str) -> CargoResult<Option<Value<bool>>> {
+    pub fn get_bool(&self, key: &str) -> CargoResult<OptValue<bool>> {
         self.get_bool_priv(&ConfigKey::from_str(key))
             .map_err(|e| e.into())
     }
 
-    fn get_bool_priv(&self, key: &ConfigKey) -> Result<Option<Value<bool>>, ConfigError> {
+    fn get_bool_priv(&self, key: &ConfigKey) -> Result<OptValue<bool>, ConfigError> {
         match self.get_env(key)? {
             Some(v) => Ok(Some(v)),
             None => {
@@ -430,7 +430,7 @@ impl Config {
         }
     }
 
-    pub fn get_path(&self, key: &str) -> CargoResult<Option<Value<PathBuf>>> {
+    pub fn get_path(&self, key: &str) -> CargoResult<OptValue<PathBuf>> {
         if let Some(val) = self.get_string(key)? {
             Ok(Some(Value {
                 val: self.string_to_path(val.val, &val.definition),
@@ -444,7 +444,7 @@ impl Config {
     pub fn get_path_and_args(
         &self,
         key: &str,
-    ) -> CargoResult<Option<Value<(PathBuf, Vec<String>)>>> {
+    ) -> CargoResult<OptValue<(PathBuf, Vec<String>)>> {
         if let Some(mut val) = self.get_list_or_split_string(key)? {
             if !val.val.is_empty() {
                 return Ok(Some(Value {
@@ -461,7 +461,7 @@ impl Config {
 
     // NOTE: This does *not* support environment variables.  Use `get` instead
     // if you want that.
-    pub fn get_list(&self, key: &str) -> CargoResult<Option<Value<Vec<(String, PathBuf)>>>> {
+    pub fn get_list(&self, key: &str) -> CargoResult<OptValue<Vec<(String, PathBuf)>>> {
         match self.get_cv(key)? {
             Some(CV::List(i, path)) => Ok(Some(Value {
                 val: i,
@@ -472,7 +472,7 @@ impl Config {
         }
     }
 
-    pub fn get_list_or_split_string(&self, key: &str) -> CargoResult<Option<Value<Vec<String>>>> {
+    pub fn get_list_or_split_string(&self, key: &str) -> CargoResult<OptValue<Vec<String>>> {
         if let Some(value) = self.get_env::<String>(&ConfigKey::from_str(key))? {
             return Ok(Some(Value {
                 val: value.val.split(' ').map(str::to_string).collect(),
@@ -494,7 +494,7 @@ impl Config {
         }
     }
 
-    pub fn get_table(&self, key: &str) -> CargoResult<Option<Value<HashMap<String, CV>>>> {
+    pub fn get_table(&self, key: &str) -> CargoResult<OptValue<HashMap<String, CV>>> {
         match self.get_cv(key)? {
             Some(CV::Table(i, path)) => Ok(Some(Value {
                 val: i,
@@ -507,12 +507,12 @@ impl Config {
 
     // Recommend use `get` if you want a specific type, such as an unsigned value.
     // Example:  config.get::<Option<u32>>("some.key")?
-    pub fn get_i64(&self, key: &str) -> CargoResult<Option<Value<i64>>> {
+    pub fn get_i64(&self, key: &str) -> CargoResult<OptValue<i64>> {
         self.get_integer(&ConfigKey::from_str(key))
             .map_err(|e| e.into())
     }
 
-    fn get_integer(&self, key: &ConfigKey) -> Result<Option<Value<i64>>, ConfigError> {
+    fn get_integer(&self, key: &ConfigKey) -> Result<OptValue<i64>, ConfigError> {
         let config_key = key.to_config();
         match self.get_env::<i64>(key)? {
             Some(v) => Ok(Some(v)),
@@ -1323,6 +1323,8 @@ pub struct Value<T> {
     pub val: T,
     pub definition: Definition,
 }
+
+pub type OptValue<T> = Option<Value<T>>;
 
 #[derive(Clone, Debug)]
 pub enum Definition {

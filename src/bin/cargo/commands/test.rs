@@ -127,11 +127,11 @@ pub fn exec(config: &mut Config, args: &ArgMatches) -> CliResult {
     );
 
     let err = ops::run_tests(&ws, &ops, &test_args)?;
-    return match err {
+    match err {
         None => Ok(()),
         Some(err) => Err(match err.exit.as_ref().and_then(|e| e.code()) {
             Some(i) => CliError::new(format_err!("{}", err.hint(&ws)), i),
             None => CliError::new(err.into(), 101),
         }),
-    };
+    }
 }

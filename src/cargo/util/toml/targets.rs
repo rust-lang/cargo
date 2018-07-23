@@ -176,7 +176,7 @@ fn clean_lib(
     // both at once.
     let crate_types = match (lib.crate_types(), lib.plugin, lib.proc_macro()) {
         (_, Some(true), Some(true)) => bail!("lib.plugin and lib.proc-macro cannot both be true"),
-        (Some(kinds), _, _) => kinds.iter().map(|s| LibKind::from_str(s)).collect(),
+        (Some(kinds), _, _) => kinds.iter().map(|s| s.into()).collect(),
         (None, Some(true), _) => vec![LibKind::Dylib],
         (None, _, Some(true)) => vec![LibKind::ProcMacro],
         (None, _, _) => vec![LibKind::Lib],
@@ -314,7 +314,7 @@ fn clean_examples(
     let mut result = Vec::new();
     for (path, toml) in targets {
         let crate_types = match toml.crate_types() {
-            Some(kinds) => kinds.iter().map(|s| LibKind::from_str(s)).collect(),
+            Some(kinds) => kinds.iter().map(|s| s.into()).collect(),
             None => Vec::new(),
         };
 

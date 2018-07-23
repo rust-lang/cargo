@@ -55,7 +55,7 @@ impl Summary {
                 )
             }
         }
-        let feature_map = build_feature_map(features, &dependencies, namespaced_features)?;
+        let feature_map = build_feature_map(&features, &dependencies, namespaced_features)?;
         Ok(Summary {
             inner: Rc::new(Inner {
                 package_id: pkg_id,
@@ -138,7 +138,7 @@ impl PartialEq for Summary {
 // Checks features for errors, bailing out a CargoResult:Err if invalid,
 // and creates FeatureValues for each feature.
 fn build_feature_map<K>(
-    features: BTreeMap<K, Vec<impl AsRef<str>>>,
+    features: &BTreeMap<K, Vec<impl AsRef<str>>>,
     dependencies: &[Dependency],
     namespaced: bool,
 ) -> CargoResult<FeatureMap>
