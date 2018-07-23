@@ -87,7 +87,8 @@ struct Packages<'cfg> {
 }
 
 #[derive(Debug)]
-#[cfg_attr(feature = "cargo-clippy", allow(large_enum_variant))] // exempted
+// While unfortunate, resolving the size difference with Box would be a large project
+#[cfg_attr(feature = "cargo-clippy", allow(large_enum_variant))]
 enum MaybePackage {
     Package(Package),
     Virtual(VirtualManifest),
