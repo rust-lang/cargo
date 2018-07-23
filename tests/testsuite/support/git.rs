@@ -74,6 +74,10 @@ impl Repository {
     pub fn url(&self) -> Url {
         path2url(self.0.workdir().unwrap().to_path_buf())
     }
+
+    pub fn revparse_head(&self) -> String {
+        self.0.revparse_single("HEAD").expect("revparse HEAD").id().to_string()
+    }
 }
 
 pub fn new<F>(name: &str, callback: F) -> Result<Project, ProcessError>
