@@ -19,7 +19,8 @@ trait FnBox<A, R> {
 }
 
 impl<A, R, F: FnOnce(A) -> R> FnBox<A, R> for F {
-    #[cfg_attr(feature = "cargo-clippy", allow(boxed_local))] // The use of Box is intentional here
+    // False positive: https://github.com/rust-lang-nursery/rust-clippy/issues/1123
+    #[cfg_attr(feature = "cargo-clippy", allow(boxed_local))]
     fn call_box(self: Box<F>, a: A) -> R {
         (*self)(a)
     }
