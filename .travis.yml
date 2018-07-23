@@ -29,12 +29,16 @@ matrix:
     - env: TARGET=x86_64-unknown-linux-gnu
            ALT=i686-unknown-linux-gnu
       rust: nightly
+      script:
+        - cargo generate-lockfile -Z minimal-versions
+        - cargo check --tests
+
+    - env: TARGET=x86_64-unknown-linux-gnu
+           ALT=i686-unknown-linux-gnu
+      rust: nightly
       install:
         - mdbook --help || cargo install mdbook --force
       script:
-        - cargo +nightly generate-lockfile -Z minimal-versions
-        - cargo check --tests
-        - cargo +nightly generate-lockfile
         - cargo test
         - cargo doc --no-deps
         - (cd src/doc && mdbook build --dest-dir ../../target/doc)
