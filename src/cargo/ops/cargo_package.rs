@@ -1,7 +1,7 @@
 use std::fs::{self, File};
 use std::io::SeekFrom;
 use std::io::prelude::*;
-use std::path::{self, Path};
+use std::path::{self, Path, PathBuf};
 use std::sync::Arc;
 
 use flate2::read::GzDecoder;
@@ -28,6 +28,8 @@ pub struct PackageOpts<'cfg> {
     pub registry: Option<String>,
 }
 
+static VCS_INFO_FILE: &'static str = ".cargo_vcs_info.json";
+
 pub fn package(ws: &Workspace, opts: &PackageOpts) -> CargoResult<Option<FileLock>> {
     ops::resolve_ws(ws)?;
     let pkg = ws.current()?;
@@ -42,6 +44,31 @@ pub fn package(ws: &Workspace, opts: &PackageOpts) -> CargoResult<Option<FileLoc
 
     verify_dependencies(pkg)?;
 
+    // Check (git) repository state, getting the current commit hash if not
+    // dirty. This will `bail!` if dirty, unless allow_dirty.
+    let sha1_hash = check_repo_state(pkg, &src, opts.allow_dirty)?;
+
+    // Write out VCS info file for package, if we have a sha1 hash
+    let vcs_info = if let Some(hsh) = sha1_hash {
+        let mut ifile = ws.target_dir().open_rw(
+            VCS_INFO_FILE,
+            config,
+            "(git) VCS info"
+        )?;
+        ifile.file().set_len(0)?;
+        // Manual JSON format is safe given sha1 hash is hex encoded.
+        writeln!(ifile, r#"{{"git_head_revision_sha1":"{}"}}"#, hsh)?;
+        ifile.flush()?;
+        ifile.file().sync_all()?;
+        Some(ifile)
+    } else {
+        None
+    };
+
+    // Make sure a VCS info file is not included in source, regardless of if
+    // we produced the file above, and in particular if we did not.
+    check_vcs_file_collision(pkg, &src)?;
+
     if opts.list {
         let root = pkg.root();
         let mut list: Vec<_> = src.list_files(pkg)?
@@ -51,15 +78,14 @@ pub fn package(ws: &Workspace, opts: &PackageOpts) -> CargoResult<Option<FileLoc
         if include_lockfile(pkg) {
             list.push("Cargo.lock".into());
         }
+        if let Some(ref fl) = vcs_info {
+            list.push(fl.path().file_name().unwrap().into());
+        }
         list.sort_unstable();
         for file in list.iter() {
             println!("{}", file.display());
         }
         return Ok(None);
-    }
-
-    if !opts.allow_dirty {
-        check_not_dirty(pkg, &src)?;
     }
 
     let filename = format!("{}-{}.crate", pkg.name(), pkg.version());
@@ -77,7 +103,8 @@ pub fn package(ws: &Workspace, opts: &PackageOpts) -> CargoResult<Option<FileLoc
         .shell()
         .status("Packaging", pkg.package_id().to_string())?;
     dst.file().set_len(0)?;
-    tar(ws, &src, dst.file(), &filename)
+    let vcs_path = vcs_info.as_ref().map(|f| f.path());
+    tar(ws, &src, vcs_path, dst.file(), &filename)
         .chain_err(|| format_err!("failed to prepare local package for uploading"))?;
     if opts.verify {
         dst.seek(SeekFrom::Start(0))?;
@@ -152,7 +179,15 @@ fn verify_dependencies(pkg: &Package) -> CargoResult<()> {
     Ok(())
 }
 
-fn check_not_dirty(p: &Package, src: &PathSource) -> CargoResult<()> {
+// Check if the package source is in a *git* DVCS repository. If *git*, and
+// the source is *dirty* (e.g. has uncommited changes) and not `allow_dirty`
+// then `bail!` with an with an informative message. Otherwise return the sha1
+// hash of the current *HEAD* commit, or `None` if *dirty*.
+fn check_repo_state(
+    p: &Package,
+    src: &PathSource,
+    allow_dirty: bool
+) -> CargoResult<Option<String>> {
     if let Ok(repo) = git2::Repository::discover(p.root()) {
         if let Some(workdir) = repo.workdir() {
             debug!(
@@ -164,7 +199,7 @@ fn check_not_dirty(p: &Package, src: &PathSource) -> CargoResult<()> {
             if let Ok(status) = repo.status_file(path) {
                 if (status & git2::Status::IGNORED).is_empty() {
                     debug!("Cargo.toml found in repo, checking if dirty");
-                    return git(p, src, &repo);
+                    return git(p, src, &repo, allow_dirty);
                 }
             }
         }
@@ -172,9 +207,14 @@ fn check_not_dirty(p: &Package, src: &PathSource) -> CargoResult<()> {
 
     // No VCS recognized, we don't know if the directory is dirty or not, so we
     // have to assume that it's clean.
-    return Ok(());
+    return Ok(None);
 
-    fn git(p: &Package, src: &PathSource, repo: &git2::Repository) -> CargoResult<()> {
+    fn git(
+        p: &Package,
+        src: &PathSource,
+        repo: &git2::Repository,
+        allow_dirty: bool
+    ) -> CargoResult<Option<String>> {
         let workdir = repo.workdir().unwrap();
         let dirty = src.list_files(p)?
             .iter()
@@ -194,20 +234,47 @@ fn check_not_dirty(p: &Package, src: &PathSource) -> CargoResult<()> {
             })
             .collect::<Vec<_>>();
         if dirty.is_empty() {
-            Ok(())
+            let rev_obj = repo.revparse_single("HEAD")?;
+            Ok(Some(rev_obj.id().to_string()))
         } else {
-            bail!(
-                "{} files in the working directory contain changes that were \
-                 not yet committed into git:\n\n{}\n\n\
-                 to proceed despite this, pass the `--allow-dirty` flag",
-                dirty.len(),
-                dirty.join("\n")
-            )
+            if !allow_dirty {
+                bail!(
+                    "{} files in the working directory contain changes that were \
+                     not yet committed into git:\n\n{}\n\n\
+                     to proceed despite this, pass the `--allow-dirty` flag",
+                    dirty.len(),
+                    dirty.join("\n")
+                )
+            }
+            Ok(None)
         }
     }
 }
 
-fn tar(ws: &Workspace, src: &PathSource, dst: &File, filename: &str) -> CargoResult<()> {
+// Check for and `bail!` if a source file matches ROOT/VCS_INFO_FILE, since
+// this is now a cargo reserved file name, and we don't want to allow
+// forgery.
+fn check_vcs_file_collision(pkg: &Package, src: &PathSource) -> CargoResult<()> {
+    let root = pkg.root();
+    let vcs_info_path = Path::new(VCS_INFO_FILE);
+    let sfiles = src.list_files(pkg)?;
+    let collision = sfiles.iter().find(|&p| {
+        util::without_prefix(&p, root).unwrap() == vcs_info_path
+    });
+    if collision.is_some() {
+        bail!("Invalid inclusion of reserved file name \
+               {} in package source", VCS_INFO_FILE);
+    }
+    Ok(())
+}
+
+fn tar(
+    ws: &Workspace,
+    src: &PathSource,
+    vcs_info_path: Option<&Path>,
+    dst: &File,
+    filename: &str
+) -> CargoResult<()> {
     // Prepare the encoder and its header
     let filename = Path::new(filename);
     let encoder = GzBuilder::new()
@@ -285,6 +352,37 @@ fn tar(ws: &Workspace, src: &PathSource, dst: &File, filename: &str) -> CargoRes
             ar.append(&header, &mut file)
                 .chain_err(|| internal(format!("could not archive source file `{}`", relative)))?;
         }
+    }
+
+    if let Some(src_path) = vcs_info_path {
+        check_filename(src_path)?;
+        let filename: PathBuf = src_path.file_name().unwrap().into();
+        let fnd = filename.display();
+        config
+            .shell()
+            .verbose(|shell| shell.status("Archiving", &fnd))?;
+        let path = format!(
+            "{}-{}{}{}",
+            pkg.name(),
+            pkg.version(),
+            path::MAIN_SEPARATOR,
+            fnd
+        );
+        let mut header = Header::new_ustar();
+        header.set_path(&path).chain_err(|| {
+            format!("failed to add to archive: `{}`", fnd)
+        })?;
+        let mut file_in = File::open(src_path).chain_err(|| {
+            format!("failed to open for archiving: `{}`", fnd)
+        })?;
+        let metadata = file_in.metadata().chain_err(|| {
+            format!("could not learn metadata for: `{}`", fnd)
+        })?;
+        header.set_metadata(&metadata);
+        header.set_cksum();
+        ar.append(&header, &mut file_in).chain_err(|| {
+            internal(format!("could not archive source file `{}`", fnd))
+        })?;
     }
 
     if include_lockfile(pkg) {
