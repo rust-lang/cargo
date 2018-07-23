@@ -26,11 +26,17 @@ matrix:
            ALT=i686-unknown-linux-gnu
       rust: beta
 
+    # Minimum Rust supported channel. We enable these to make sure we
+    # continue to work on the advertised minimum Rust version.
+    # However cargo only supports the latest stable so this will get
+    # increased every 6 weeks or so when the first PR to use a new feature.
     - env: TARGET=x86_64-unknown-linux-gnu
            ALT=i686-unknown-linux-gnu
-      rust: nightly
+      rust: 1.27.2
       script:
-        - cargo generate-lockfile -Z minimal-versions
+        - rustup toolchain install nightly
+        - cargo +nightly generate-lockfile -Z minimal-versions
+        - cargo -V
         - cargo check --tests
 
     - env: TARGET=x86_64-unknown-linux-gnu
