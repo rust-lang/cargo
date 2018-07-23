@@ -78,7 +78,9 @@ fn check_version_control(opts: &FixOptions) -> CargoResult<()> {
 
     let mut dirty_files = Vec::new();
     if let Ok(repo) = git2::Repository::discover(config.cwd()) {
-        for status in repo.statuses(None)?.iter() {
+        let mut opts = git2::StatusOptions::new();
+        opts.include_ignored(false);
+        for status in repo.statuses(Some(&mut opts))?.iter() {
             if status.status() != git2::Status::CURRENT {
                 if let Some(path) = status.path() {
                     dirty_files.push(path.to_string());

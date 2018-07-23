@@ -1,7 +1,10 @@
+use std::fs::File;
+
+use git2;
+
 use support::git;
 use support::{execs, project};
 use support::{is_nightly, ChannelChanger};
-use git2;
 use support::hamcrest::assert_that;
 
 #[test]
@@ -966,7 +969,14 @@ fn warns_about_dirty_working_directory() {
         )
         .build();
 
-    git2::Repository::init(&p.root()).unwrap();
+    let repo = git2::Repository::init(&p.root()).unwrap();
+    let mut cfg = t!(repo.config());
+    t!(cfg.set_str("user.email", "foo@bar.com"));
+    t!(cfg.set_str("user.name", "Foo Bar"));
+    drop(cfg);
+    git::add(&repo);
+    git::commit(&repo);
+    File::create(p.root().join("src/lib.rs")).unwrap();
 
     assert_that(
         p.cargo("fix"),
@@ -978,7 +988,6 @@ fix` can potentially perform destructive changes; if you'd like to \
 suppress this error pass `--allow-dirty`, or commit the changes to \
 these files:
 
-  * Cargo.toml
   * src/lib.rs
 
 
@@ -1017,6 +1026,42 @@ fn does_not_warn_about_clean_working_directory() {
     drop(cfg);
     git::add(&repo);
     git::commit(&repo);
+
+    assert_that(
+        p.cargo("fix"),
+        execs().with_status(0),
+    );
+}
+
+#[test]
+fn does_not_warn_about_dirty_ignored_files() {
+    let p = project()
+        .file(
+            "Cargo.toml",
+            r#"
+                [package]
+                name = "foo"
+                version = "0.1.0"
+            "#,
+        )
+        .file(
+            "src/lib.rs",
+            r#"
+                pub fn foo() {
+                }
+            "#,
+        )
+        .file(".gitignore", "foo\n")
+        .build();
+
+    let repo = git2::Repository::init(&p.root()).unwrap();
+    let mut cfg = t!(repo.config());
+    t!(cfg.set_str("user.email", "foo@bar.com"));
+    t!(cfg.set_str("user.name", "Foo Bar"));
+    drop(cfg);
+    git::add(&repo);
+    git::commit(&repo);
+    File::create(p.root().join("foo")).unwrap();
 
     assert_that(
         p.cargo("fix"),
