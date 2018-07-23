@@ -133,7 +133,8 @@ fn resolve_with_registry<'cfg>(
 ///
 /// The previous resolve normally comes from a lockfile. This function does not
 /// read or write lockfiles from the filesystem.
-#[cfg_attr(feature = "cargo-clippy", allow(implicit_hasher))] // exempted
+// While unfortunate, generalising this over different hashers would be a large project
+#[cfg_attr(feature = "cargo-clippy", allow(implicit_hasher))]
 pub fn resolve_with_previous<'a, 'cfg>(
     registry: &mut PackageRegistry<'cfg>,
     ws: &Workspace<'cfg>,
