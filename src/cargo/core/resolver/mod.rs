@@ -106,6 +106,8 @@ mod types;
 ///
 /// * `print_warnings` - whether or not to print backwards-compatibility
 ///   warnings and such
+// While unfortunate, generalising this over different hashers would be a large project
+#[cfg_attr(feature = "cargo-clippy", allow(implicit_hasher))]
 pub fn resolve(
     summaries: &[(Summary, Method)],
     replacements: &[(PackageIdSpec, Dependency)],

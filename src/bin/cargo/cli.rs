@@ -84,7 +84,7 @@ Run with 'cargo -Z [FLAG] [SUBCOMMAND]'"
 
     let args = expand_aliases(config, args)?;
 
-    execute_subcommand(config, args)
+    execute_subcommand(config, &args)
 }
 
 fn expand_aliases(
@@ -119,7 +119,7 @@ fn expand_aliases(
     Ok(args)
 }
 
-fn execute_subcommand(config: &mut Config, args: ArgMatches) -> CliResult {
+fn execute_subcommand(config: &mut Config, args: &ArgMatches) -> CliResult {
     let (cmd, subcommand_args) = match args.subcommand() {
         (cmd, Some(args)) => (cmd, args),
         _ => {
@@ -155,7 +155,7 @@ fn execute_subcommand(config: &mut Config, args: ArgMatches) -> CliResult {
 }
 
 fn cli() -> App {
-    let app = App::new("cargo")
+    App::new("cargo")
         .settings(&[
             AppSettings::UnifiedHelpMessage,
             AppSettings::DeriveDisplayOrder,
@@ -223,6 +223,5 @@ See 'cargo help <command>' for more information on a specific command.\n",
                 .number_of_values(1)
                 .global(true),
         )
-        .subcommands(commands::builtin());
-    app
+        .subcommands(commands::builtin())
 }

@@ -86,23 +86,25 @@ pub fn prepare_target<'a, 'cfg>(
     }
 
     let root = cx.files().out_dir(unit);
-    let mut missing_outputs = false;
-    if unit.mode.is_doc() {
-        missing_outputs = !root.join(unit.target.crate_name())
-            .join("index.html")
-            .exists();
-    } else {
-        for output in cx.outputs(unit)?.iter() {
-            if output.flavor == FileFlavor::DebugInfo {
-                continue;
-            }
-            if !output.path.exists() {
-                info!("missing output path {:?}", output.path);
-                missing_outputs = true;
-                break
+    let missing_outputs = {
+        if unit.mode.is_doc() {
+            !root.join(unit.target.crate_name())
+                .join("index.html")
+                .exists()
+        } else {
+            match cx.outputs(unit)?
+                .iter()
+                .filter(|output| output.flavor != FileFlavor::DebugInfo)
+                .find(|output| !output.path.exists())
+            {
+                None => false,
+                Some(output) => {
+                    info!("missing output path {:?}", output.path);
+                    true
+                }
             }
         }
-    }
+    };
 
     let allow_failure = bcx.extra_args_for(unit).is_some();
     let target_root = cx.files().target_root().to_path_buf();
@@ -122,6 +124,12 @@ pub fn prepare_target<'a, 'cfg>(
         Work::noop(),
     ))
 }
+
+/// A compilation unit dependency has a fingerprint that is comprised of:
+/// * its package id
+/// * its extern crate name
+/// * its calculated fingerprint for the dependency
+type DepFingerprint = (String, String, Arc<Fingerprint>);
 
 /// A fingerprint can be considered to be a "short string" representing the
 /// state of a world for a package.
@@ -152,7 +160,7 @@ pub struct Fingerprint {
     profile: u64,
     path: u64,
     #[serde(serialize_with = "serialize_deps", deserialize_with = "deserialize_deps")]
-    deps: Vec<(String, String, Arc<Fingerprint>)>,
+    deps: Vec<DepFingerprint>,
     local: Vec<LocalFingerprint>,
     #[serde(skip_serializing, skip_deserializing)]
     memoized_hash: Mutex<Option<u64>>,
@@ -160,7 +168,7 @@ pub struct Fingerprint {
     edition: Edition,
 }
 
-fn serialize_deps<S>(deps: &[(String, String, Arc<Fingerprint>)], ser: S) -> Result<S::Ok, S::Error>
+fn serialize_deps<S>(deps: &[DepFingerprint], ser: S) -> Result<S::Ok, S::Error>
 where
     S: ser::Serializer,
 {
@@ -170,7 +178,7 @@ where
         .serialize(ser)
 }
 
-fn deserialize_deps<'de, D>(d: D) -> Result<Vec<(String, String, Arc<Fingerprint>)>, D::Error>
+fn deserialize_deps<'de, D>(d: D) -> Result<Vec<DepFingerprint>, D::Error>
 where
     D: de::Deserializer<'de>,
 {

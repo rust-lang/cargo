@@ -1,3 +1,6 @@
+// we have lots of arguments, cleaning this up would be a large project
+#![cfg_attr(feature = "cargo-clippy", allow(too_many_arguments))]
+
 extern crate cargo;
 extern crate clap;
 extern crate env_logger;
@@ -38,7 +41,7 @@ fn main() {
     let result = match cargo::ops::fix_maybe_exec_rustc() {
         Ok(true) => Ok(()),
         Ok(false) => {
-            init_git_transports(&mut config);
+            init_git_transports(&config);
             let _token = cargo::util::job::setup();
             cli::main(&mut config)
         }
@@ -126,6 +129,7 @@ fn find_closest(config: &Config, cmd: &str) -> Option<String> {
 
 fn execute_external_subcommand(config: &Config, cmd: &str, args: &[&str]) -> CliResult {
     let command_exe = format!("cargo-{}{}", cmd, env::consts::EXE_SUFFIX);
+    #[cfg_attr(feature = "cargo-clippy", allow(redundant_closure))] // false positive
     let path = search_directories(config)
         .iter()
         .map(|dir| dir.join(&command_exe))

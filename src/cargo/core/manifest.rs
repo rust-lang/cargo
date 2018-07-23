@@ -17,6 +17,8 @@ use util::errors::*;
 use util::toml::TomlManifest;
 use util::Config;
 
+// While unfortunate, resolving the size difference with Box would be a large project
+#[cfg_attr(feature = "cargo-clippy", allow(large_enum_variant))]
 pub enum EitherManifest {
     Real(Manifest),
     Virtual(VirtualManifest),
@@ -101,16 +103,6 @@ pub enum LibKind {
 }
 
 impl LibKind {
-    pub fn from_str(string: &str) -> LibKind {
-        match string {
-            "lib" => LibKind::Lib,
-            "rlib" => LibKind::Rlib,
-            "dylib" => LibKind::Dylib,
-            "proc-macro" => LibKind::ProcMacro,
-            s => LibKind::Other(s.to_string()),
-        }
-    }
-
     /// Returns the argument suitable for `--crate-type` to pass to rustc.
     pub fn crate_type(&self) -> &str {
         match *self {
@@ -133,6 +125,18 @@ impl LibKind {
 impl fmt::Debug for LibKind {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         self.crate_type().fmt(f)
+    }
+}
+
+impl<'a> From<&'a String> for LibKind {
+    fn from(string: &'a String) -> Self {
+        match string.as_ref() {
+            "lib" => LibKind::Lib,
+            "rlib" => LibKind::Rlib,
+            "dylib" => LibKind::Dylib,
+            "proc-macro" => LibKind::ProcMacro,
+            s => LibKind::Other(s.to_string()),
+        }
     }
 }
 
@@ -203,6 +207,7 @@ struct NonHashedPathBuf {
     path: PathBuf,
 }
 
+#[cfg_attr(feature = "cargo-clippy", allow(derive_hash_xor_eq))] // current intentional incoherence
 impl Hash for NonHashedPathBuf {
     fn hash<H: Hasher>(&self, _: &mut H) {
         // ...
