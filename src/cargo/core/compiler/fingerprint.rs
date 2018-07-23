@@ -125,6 +125,10 @@ pub fn prepare_target<'a, 'cfg>(
     ))
 }
 
+/// A compilation unit dependency has a fingerprint that is comprised of:
+/// * its package id
+/// * its extern crate name
+/// * its calculated fingerprint for the dependency
 type DepFingerprint = (String, String, Arc<Fingerprint>);
 
 /// A fingerprint can be considered to be a "short string" representing the
