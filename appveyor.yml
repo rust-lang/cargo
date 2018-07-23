@@ -3,6 +3,10 @@ environment:
   - TARGET: x86_64-pc-windows-msvc
     OTHER_TARGET: i686-pc-windows-msvc
     MAKE_TARGETS: test-unit-x86_64-pc-windows-msvc
+  - TARGET: x86_64-pc-windows-msvc
+    OTHER_TARGET: i686-pc-windows-msvc
+    MAKE_TARGETS: test-unit-x86_64-pc-windows-msvc
+    MINIMAL_VERSIONS: true
 
 install:
   - appveyor-retry appveyor DownloadFile https://win.rustup.rs/ -FileName rustup-init.exe
@@ -18,7 +22,5 @@ clone_depth: 1
 build: false
 
 test_script:
-  - cargo generate-lockfile -Z minimal-versions
-  - cargo check --tests
-  - cargo generate-lockfile
-  - cargo test
+  - if defined MINIMAL_VERSIONS cargo generate-lockfile -Z minimal-versions && cargo check --tests
+  - if NOT defined MINIMAL_VERSIONS cargo test
