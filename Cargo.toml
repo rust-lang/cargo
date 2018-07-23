@@ -69,7 +69,7 @@ miow = "0.3.1"
 
 [target.'cfg(windows)'.dev-dependencies]
 gcc = "0.3.23" # required only for minimal-versions on windows. brought in by flate2 and others.
-cmake = "0.1.24" # required only for minimal-versions on windows. brought in as build-dependencie on libgit2-sys.
+cmake = "0.1.24" # required only for minimal-versions on windows. brought in as build-dependency on libgit2-sys.
 
 [target.'cfg(windows)'.dependencies.winapi]
 version = "0.3"
