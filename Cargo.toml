@@ -21,16 +21,14 @@ atty = "0.2"
 crates-io = { path = "src/crates-io", version = "0.18" }
 crossbeam = "0.3"
 crypto-hash = "0.3.1"
-curl = "0.4.12"
+curl = "0.4.13"
 env_logger = "0.5.4"
 failure = "0.1.1"
 filetime = "0.2"
 flate2 = "1.0"
 fs2 = "0.4"
-git2 = "0.7.2"
+git2 = "0.7.3"
 git2-curl = "0.8.1"
-libgit2-sys = "0.7.5" # required only for minimal-versions. brought in by git2 and git2-curl.
-libssh2-sys = "0.2.8" # required only for minimal-versions. brought in by libgit2-sys.
 glob = "0.2.11"
 hex = "0.3"
 home = "0.3"
@@ -40,6 +38,7 @@ jobserver = "0.1.11"
 lazycell = "1.0"
 libc = "0.2"
 log = "0.4"
+libgit2-sys = "0.7.5"
 num_cpus = "1.0"
 rustfix = "0.4"
 same-file = "1"
@@ -66,10 +65,6 @@ core-foundation = { version = "0.6.0", features = ["mac_os_10_7_support"] }
 
 [target.'cfg(windows)'.dependencies]
 miow = "0.3.1"
-
-[target.'cfg(windows)'.dev-dependencies]
-gcc = "0.3.23" # required only for minimal-versions on windows. brought in by flate2 and others.
-cmake = "0.1.24" # required only for minimal-versions on windows. brought in as build-dependency on libgit2-sys.
 
 [target.'cfg(windows)'.dependencies.winapi]
 version = "0.3"
