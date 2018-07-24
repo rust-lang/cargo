@@ -7,7 +7,7 @@ use cargo::util::{process, ProcessBuilder};
 use support::{is_nightly, rustc_host, sleep_ms};
 use support::paths::{root, CargoPathExt};
 use support::ProjectBuilder;
-use support::{BASIC_MANIFEST, basic_bin_manifest, execs, main_file, project};
+use support::{basic_manifest, basic_bin_manifest, execs, main_file, project};
 use support::registry::Package;
 use support::ChannelChanger;
 use support::hamcrest::{assert_that, existing_dir, existing_file, is_not};
@@ -2414,7 +2414,7 @@ fn deletion_causes_failure() {
         .build();
 
     assert_that(p.cargo("build"), execs().with_status(0));
-    p.change_file("Cargo.toml", BASIC_MANIFEST);
+    p.change_file("Cargo.toml", basic_manifest("foo", "0.0.1"));
     assert_that(p.cargo("build"), execs().with_status(101));
 }
 
