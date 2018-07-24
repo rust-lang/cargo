@@ -24,6 +24,7 @@ fn pkg(name: &str, vers: &str) {
 #[test]
 fn multiple_installs() {
     let p = project()
+        .no_manifest()
         .file(
             "a/Cargo.toml",
             r#"
@@ -103,6 +104,7 @@ fn concurrent_installs() {
 #[test]
 fn one_install_should_be_bad() {
     let p = project()
+        .no_manifest()
         .file(
             "a/Cargo.toml",
             r#"
@@ -169,6 +171,7 @@ fn multiple_registry_fetches() {
     pkg.publish();
 
     let p = project()
+        .no_manifest()
         .file(
             "a/Cargo.toml",
             r#"
@@ -255,6 +258,7 @@ fn git_same_repo_different_tags() {
     git::tag(&repo, "tag2");
 
     let p = project()
+        .no_manifest()
         .file(
             "a/Cargo.toml",
             &format!(
@@ -334,6 +338,7 @@ fn git_same_branch_different_revs() {
     }).unwrap();
 
     let p = project()
+        .no_manifest()
         .file(
             "a/Cargo.toml",
             &format!(

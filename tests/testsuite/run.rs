@@ -1329,6 +1329,7 @@ fn fail_no_extra_verbose() {
 #[test]
 fn run_multiple_packages() {
     let p = project()
+        .no_manifest()
         .file(
             "foo/Cargo.toml",
             r#"

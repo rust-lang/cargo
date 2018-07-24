@@ -60,6 +60,11 @@ impl VendorPackage {
         self
     }
 
+    fn no_manifest(mut self) -> Self {
+        self.p = self.p.map(|pb| pb.no_manifest());
+        self
+    }
+
     fn build(&mut self) {
         let p = self.p.take().unwrap();
         let json = serde_json::to_string(&self.cksum).unwrap();
@@ -604,7 +609,7 @@ fn only_dot_files_ok() {
         )
         .file("src/lib.rs", "")
         .build();
-    VendorPackage::new("foo").file(".bar", "").build();
+    VendorPackage::new("foo").no_manifest().file(".bar", "").build();
 
     let p = project()
         .file(
@@ -642,6 +647,7 @@ fn random_files_ok() {
         .file("src/lib.rs", "")
         .build();
     VendorPackage::new("foo")
+        .no_manifest()
         .file("bar", "")
         .file("../test", "")
         .build();

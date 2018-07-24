@@ -237,6 +237,7 @@ fn fix_path_deps() {
 #[test]
 fn do_not_fix_non_relevant_deps() {
     let p = project()
+        .no_manifest()
         .file(
             "foo/Cargo.toml",
             r#"
