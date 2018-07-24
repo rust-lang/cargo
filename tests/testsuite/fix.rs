@@ -1070,7 +1070,7 @@ fn does_not_warn_about_dirty_ignored_files() {
 }
 
 #[test]
-fn shows_warnings_one_second_run_without_changes() {
+fn shows_warnings_on_second_run_without_changes() {
     let p = project("foo")
         .file(
             "Cargo.toml",

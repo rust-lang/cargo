@@ -101,6 +101,7 @@ fn compile<'a, 'cfg: 'a>(
 ) -> CargoResult<()> {
     let bcx = cx.bcx;
     let build_plan = bcx.build_config.build_plan;
+    let force_rebuild = bcx.build_config.force_rebuild;
     if !cx.compiled.insert(*unit) {
         return Ok(());
     }
@@ -124,6 +125,7 @@ fn compile<'a, 'cfg: 'a>(
         )
     } else {
         let (mut freshness, dirty, fresh) = fingerprint::prepare_target(cx, unit)?;
+
         let work = if unit.mode.is_doc() {
             rustdoc(cx, unit)?
         } else {
@@ -133,7 +135,7 @@ fn compile<'a, 'cfg: 'a>(
         let dirty = work.then(link_targets(cx, unit, false)?).then(dirty);
         let fresh = link_targets(cx, unit, true)?.then(fresh);
 
-        if exec.force_rebuild(unit) {
+        if exec.force_rebuild(unit) || force_rebuild {
             freshness = Freshness::Dirty;
         }
 
