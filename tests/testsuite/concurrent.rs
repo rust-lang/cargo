@@ -24,6 +24,7 @@ fn pkg(name: &str, vers: &str) {
 #[test]
 fn multiple_installs() {
     let p = project()
+        .no_manifest()
         .file(
             "a/Cargo.toml",
             r#"
@@ -103,6 +104,7 @@ fn concurrent_installs() {
 #[test]
 fn one_install_should_be_bad() {
     let p = project()
+        .no_manifest()
         .file(
             "a/Cargo.toml",
             r#"
@@ -169,6 +171,7 @@ fn multiple_registry_fetches() {
     pkg.publish();
 
     let p = project()
+        .no_manifest()
         .file(
             "a/Cargo.toml",
             r#"
@@ -255,6 +258,7 @@ fn git_same_repo_different_tags() {
     git::tag(&repo, "tag2");
 
     let p = project()
+        .no_manifest()
         .file(
             "a/Cargo.toml",
             &format!(
@@ -334,6 +338,7 @@ fn git_same_branch_different_revs() {
     }).unwrap();
 
     let p = project()
+        .no_manifest()
         .file(
             "a/Cargo.toml",
             &format!(
@@ -412,15 +417,6 @@ fn git_same_branch_different_revs() {
 #[test]
 fn same_project() {
     let p = project()
-        .file(
-            "Cargo.toml",
-            r#"
-            [package]
-            name = "foo"
-            authors = []
-            version = "0.0.0"
-        "#,
-        )
         .file("src/main.rs", "fn main() {}")
         .file("src/lib.rs", "");
     let p = p.build();
@@ -509,15 +505,6 @@ fn killing_cargo_releases_the_lock() {
 #[test]
 fn debug_release_ok() {
     let p = project()
-        .file(
-            "Cargo.toml",
-            r#"
-            [package]
-            name = "foo"
-            authors = []
-            version = "0.0.0"
-        "#,
-        )
         .file("src/main.rs", "fn main() {}");
     let p = p.build();
 
@@ -538,7 +525,7 @@ fn debug_release_ok() {
         a,
         execs().with_status(0).with_stderr(
             "\
-[COMPILING] foo v0.0.0 [..]
+[COMPILING] foo v0.0.1 [..]
 [FINISHED] dev [unoptimized + debuginfo] target(s) in [..]
 ",
         ),
@@ -547,7 +534,7 @@ fn debug_release_ok() {
         b,
         execs().with_status(0).with_stderr(
             "\
-[COMPILING] foo v0.0.0 [..]
+[COMPILING] foo v0.0.1 [..]
 [FINISHED] release [optimized] target(s) in [..]
 ",
         ),

@@ -275,15 +275,6 @@ fn install_location_precedence() {
 #[test]
 fn install_path() {
     let p = project()
-        .file(
-            "Cargo.toml",
-            r#"
-            [package]
-            name = "foo"
-            version = "0.1.0"
-            authors = []
-        "#,
-        )
         .file("src/main.rs", "fn main() {}")
         .build();
 
@@ -299,8 +290,8 @@ fn install_path() {
             .cwd(p.root()),
         execs().with_status(101).with_stderr(
             "\
-[INSTALLING] foo v0.1.0 [..]
-[ERROR] binary `foo[..]` already exists in destination as part of `foo v0.1.0 [..]`
+[INSTALLING] foo v0.0.1 [..]
+[ERROR] binary `foo[..]` already exists in destination as part of `foo v0.0.1 [..]`
 Add --force to overwrite
 ",
         ),
@@ -510,15 +501,6 @@ fn no_binaries_or_examples() {
 #[test]
 fn no_binaries() {
     let p = project()
-        .file(
-            "Cargo.toml",
-            r#"
-            [package]
-            name = "foo"
-            version = "0.1.0"
-            authors = []
-        "#,
-        )
         .file("src/lib.rs", "")
         .file("examples/foo.rs", "fn main() {}")
         .build();
@@ -540,15 +522,6 @@ fn no_binaries() {
 #[test]
 fn examples() {
     let p = project()
-        .file(
-            "Cargo.toml",
-            r#"
-            [package]
-            name = "foo"
-            version = "0.1.0"
-            authors = []
-        "#,
-        )
         .file("src/lib.rs", "")
         .file("examples/foo.rs", "extern crate foo; fn main() {}")
         .build();
@@ -566,15 +539,6 @@ fn examples() {
 #[test]
 fn install_twice() {
     let p = project()
-        .file(
-            "Cargo.toml",
-            r#"
-            [package]
-            name = "foo"
-            version = "0.1.0"
-            authors = []
-        "#,
-        )
         .file("src/bin/foo-bin1.rs", "fn main() {}")
         .file("src/bin/foo-bin2.rs", "fn main() {}")
         .build();
@@ -587,9 +551,9 @@ fn install_twice() {
         cargo_process("install").arg("--path").arg(p.root()),
         execs().with_status(101).with_stderr(
             "\
-[INSTALLING] foo v0.1.0 [..]
-[ERROR] binary `foo-bin1[..]` already exists in destination as part of `foo v0.1.0 ([..])`
-binary `foo-bin2[..]` already exists in destination as part of `foo v0.1.0 ([..])`
+[INSTALLING] foo v0.0.1 [..]
+[ERROR] binary `foo-bin1[..]` already exists in destination as part of `foo v0.0.1 ([..])`
+binary `foo-bin2[..]` already exists in destination as part of `foo v0.0.1 ([..])`
 Add --force to overwrite
 ",
         ),
@@ -599,15 +563,6 @@ Add --force to overwrite
 #[test]
 fn install_force() {
     let p = project()
-        .file(
-            "Cargo.toml",
-            r#"
-            [package]
-            name = "foo"
-            version = "0.1.0"
-            authors = []
-        "#,
-        )
         .file("src/main.rs", "fn main() {}")
         .build();
 
@@ -660,15 +615,6 @@ foo v0.2.0 ([..]):
 #[test]
 fn install_force_partial_overlap() {
     let p = project()
-        .file(
-            "Cargo.toml",
-            r#"
-            [package]
-            name = "foo"
-            version = "0.1.0"
-            authors = []
-        "#,
-        )
         .file("src/bin/foo-bin1.rs", "fn main() {}")
         .file("src/bin/foo-bin2.rs", "fn main() {}")
         .build();
@@ -714,7 +660,7 @@ warning: be sure to add `[..]` to your PATH to be able to run the installed bina
         cargo_process("install").arg("--list"),
         execs().with_status(0).with_stdout(
             "\
-foo v0.1.0 ([..]):
+foo v0.0.1 ([..]):
     foo-bin1[..]
 foo v0.2.0 ([..]):
     foo-bin2[..]
@@ -727,15 +673,6 @@ foo v0.2.0 ([..]):
 #[test]
 fn install_force_bin() {
     let p = project()
-        .file(
-            "Cargo.toml",
-            r#"
-            [package]
-            name = "foo"
-            version = "0.1.0"
-            authors = []
-        "#,
-        )
         .file("src/bin/foo-bin1.rs", "fn main() {}")
         .file("src/bin/foo-bin2.rs", "fn main() {}")
         .build();
@@ -782,7 +719,7 @@ warning: be sure to add `[..]` to your PATH to be able to run the installed bina
         cargo_process("install").arg("--list"),
         execs().with_status(0).with_stdout(
             "\
-foo v0.1.0 ([..]):
+foo v0.0.1 ([..]):
     foo-bin1[..]
 foo v0.2.0 ([..]):
     foo-bin2[..]
@@ -794,15 +731,6 @@ foo v0.2.0 ([..]):
 #[test]
 fn compile_failure() {
     let p = project()
-        .file(
-            "Cargo.toml",
-            r#"
-            [package]
-            name = "foo"
-            version = "0.1.0"
-            authors = []
-        "#,
-        )
         .file("src/main.rs", "")
         .build();
 
@@ -810,7 +738,7 @@ fn compile_failure() {
         cargo_process("install").arg("--path").arg(p.root()),
         execs().with_status(101).with_stderr_contains(
             "\
-[ERROR] failed to compile `foo v0.1.0 ([..])`, intermediate artifacts can be \
+[ERROR] failed to compile `foo v0.0.1 ([..])`, intermediate artifacts can be \
     found at `[..]target`
 
 Caused by:
@@ -954,15 +882,6 @@ fn uninstall_bin_does_not_exist() {
 #[test]
 fn uninstall_piecemeal() {
     let p = project()
-        .file(
-            "Cargo.toml",
-            r#"
-            [package]
-            name = "foo"
-            version = "0.1.0"
-            authors = []
-        "#,
-        )
         .file("src/bin/foo.rs", "fn main() {}")
         .file("src/bin/bar.rs", "fn main() {}")
         .build();
@@ -1025,15 +944,6 @@ fn subcommand_works_out_of_the_box() {
 #[test]
 fn installs_from_cwd_by_default() {
     let p = project()
-        .file(
-            "Cargo.toml",
-            r#"
-            [package]
-            name = "foo"
-            version = "0.1.0"
-            authors = []
-        "#,
-        )
         .file("src/main.rs", "fn main() {}")
         .build();
 
@@ -1089,15 +999,6 @@ fn installs_from_cwd_with_2018_warnings() {
 #[test]
 fn do_not_rebuilds_on_local_install() {
     let p = project()
-        .file(
-            "Cargo.toml",
-            r#"
-            [package]
-            name = "foo"
-            version = "0.1.0"
-            authors = []
-        "#,
-        )
         .file("src/main.rs", "fn main() {}")
         .build();
 
@@ -1198,15 +1099,6 @@ fn git_with_lockfile() {
 #[test]
 fn q_silences_warnings() {
     let p = project()
-        .file(
-            "Cargo.toml",
-            r#"
-            [package]
-            name = "foo"
-            version = "0.1.0"
-            authors = []
-        "#,
-        )
         .file("src/main.rs", "fn main() {}")
         .build();
 
@@ -1480,10 +1372,10 @@ fn custom_target_dir_for_git_source() {
         .file(
             "Cargo.toml",
             r#"
-            [package]
-            name = "foo"
-            version = "0.1.0"
-            authors = []
+                [package]
+                name = "foo"
+                version = "0.1.0"
+                authors = []
         "#,
         )
         .file("src/main.rs", "fn main() {}")

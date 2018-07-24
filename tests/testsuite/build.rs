@@ -7,7 +7,7 @@ use cargo::util::{process, ProcessBuilder};
 use support::{is_nightly, rustc_host, sleep_ms};
 use support::paths::{root, CargoPathExt};
 use support::ProjectBuilder;
-use support::{basic_bin_manifest, execs, main_file, project};
+use support::{BASIC_MANIFEST, basic_bin_manifest, execs, main_file, project};
 use support::registry::Package;
 use support::ChannelChanger;
 use support::hamcrest::{assert_that, existing_dir, existing_file, is_not};
@@ -130,15 +130,6 @@ fn incremental_profile() {
 #[test]
 fn incremental_config() {
     let p = project()
-        .file(
-            "Cargo.toml",
-            r#"
-            [package]
-            name = "foo"
-            version = "0.1.0"
-            authors = []
-        "#,
-        )
         .file("src/main.rs", "fn main() {}")
         .file(
             ".cargo/config",
@@ -167,15 +158,6 @@ fn incremental_config() {
 #[test]
 fn cargo_compile_with_workspace_excluded() {
     let p = project()
-        .file(
-            "Cargo.toml",
-            r#"
-            [package]
-            name = "foo"
-            version = "0.1.0"
-            authors = []
-        "#,
-        )
         .file("src/main.rs", "fn main() {}")
         .build();
 
@@ -253,15 +235,6 @@ Caused by:
 #[test]
 fn cargo_compile_with_invalid_manifest3() {
     let p = project()
-        .file(
-            "Cargo.toml",
-            r#"
-            [package]
-            name = "foo"
-            version = "0.0.1"
-            authors = []
-        "#,
-        )
         .file("src/Cargo.toml", "a = bar")
         .build();
 
@@ -535,7 +508,7 @@ Caused by:
 #[test]
 fn cargo_compile_without_manifest() {
     let tmpdir = tempfile::Builder::new().prefix("cargo").tempdir().unwrap();
-    let p = ProjectBuilder::new(tmpdir.path().to_path_buf()).build();
+    let p = ProjectBuilder::new(tmpdir.path().to_path_buf()).no_manifest().build();
 
     assert_that(
         p.cargo("build"),
@@ -1030,15 +1003,6 @@ required by package `foo v0.0.1 ({proj_dir})`
 #[test]
 fn cargo_compile_with_filename() {
     let p = project()
-        .file(
-            "Cargo.toml",
-            r#"
-            [project]
-            name = "foo"
-            version = "0.0.1"
-            authors = []
-        "#,
-        )
         .file("src/lib.rs", "")
         .file(
             "src/bin/a.rs",
@@ -1513,15 +1477,6 @@ fn compile_path_dep_then_change_version() {
 fn ignores_carriage_return_in_lockfile() {
     let p = project()
         .file(
-            "Cargo.toml",
-            r#"
-            [package]
-            name = "foo"
-            authors = []
-            version = "0.0.1"
-        "#,
-        )
-        .file(
             "src/main.rs",
             r#"
             mod a; fn main() {}
@@ -1786,15 +1741,6 @@ fn setenv_for_removing_empty_component(mut p: ProcessBuilder) -> ProcessBuilder 
 fn crate_library_path_env_var() {
     let p = project()
         .file(
-            "Cargo.toml",
-            r#"
-            [project]
-            name = "foo"
-            version = "0.0.1"
-            authors = []
-        "#,
-        )
-        .file(
             "src/main.rs",
             &format!(
                 r##"
@@ -1819,15 +1765,6 @@ fn crate_library_path_env_var() {
 #[test]
 fn build_with_fake_libc_not_loading() {
     let p = project()
-        .file(
-            "Cargo.toml",
-            r#"
-            [package]
-            name = "foo"
-            version = "0.0.1"
-            authors = []
-        "#,
-        )
         .file(
             "src/main.rs",
             r#"
@@ -1973,18 +1910,7 @@ fn ignore_broken_symlinks() {
 
 #[test]
 fn missing_lib_and_bin() {
-    let p = project()
-        .file(
-            "Cargo.toml",
-            r#"
-            [package]
-
-            name = "test"
-            version = "0.0.0"
-            authors = []
-        "#,
-        )
-        .build();
+    let p = project().build();
     assert_that(
         p.cargo("build"),
         execs().with_status(101).with_stderr(
@@ -2044,24 +1970,14 @@ fn lto_build() {
 #[test]
 fn verbose_build() {
     let p = project()
-        .file(
-            "Cargo.toml",
-            r#"
-            [package]
-
-            name = "test"
-            version = "0.0.0"
-            authors = []
-        "#,
-        )
         .file("src/lib.rs", "")
         .build();
     assert_that(
         p.cargo("build").arg("-v"),
         execs().with_status(0).with_stderr(&format!(
             "\
-[COMPILING] test v0.0.0 ({url})
-[RUNNING] `rustc --crate-name test src[/]lib.rs --crate-type lib \
+[COMPILING] foo v0.0.1 ({url})
+[RUNNING] `rustc --crate-name foo src[/]lib.rs --crate-type lib \
         --emit=dep-info,link -C debuginfo=2 \
         -C metadata=[..] \
         --out-dir [..] \
@@ -2077,24 +1993,14 @@ fn verbose_build() {
 #[test]
 fn verbose_release_build() {
     let p = project()
-        .file(
-            "Cargo.toml",
-            r#"
-            [package]
-
-            name = "test"
-            version = "0.0.0"
-            authors = []
-        "#,
-        )
         .file("src/lib.rs", "")
         .build();
     assert_that(
         p.cargo("build").arg("-v").arg("--release"),
         execs().with_status(0).with_stderr(&format!(
             "\
-[COMPILING] test v0.0.0 ({url})
-[RUNNING] `rustc --crate-name test src[/]lib.rs --crate-type lib \
+[COMPILING] foo v0.0.1 ({url})
+[RUNNING] `rustc --crate-name foo src[/]lib.rs --crate-type lib \
         --emit=dep-info,link \
         -C opt-level=3 \
         -C metadata=[..] \
@@ -2269,18 +2175,7 @@ Caused by:
 #[test]
 fn non_existing_binary() {
     let p = project()
-        .file(
-            "Cargo.toml",
-            r#"
-            [package]
-            name = "foo"
-            version = "1.0.0"
-            authors = []
-
-            [[bin]]
-            name = "hello"
-        "#,
-        )
+        .file("Cargo.toml", &basic_bin_manifest("foo"))
         .file("src/lib.rs", "")
         .file("src/bin/ehlo.rs", "")
         .build();
@@ -2292,13 +2187,13 @@ fn non_existing_binary() {
 [ERROR] failed to parse manifest at `[..]`
 
 Caused by:
-  can't find `hello` bin, specify bin.path",
+  can't find `foo` bin, specify bin.path",
         ),
     );
 }
 
 #[test]
-fn legacy_binary_paths_warinigs() {
+fn legacy_binary_paths_warnings() {
     let p = project()
         .file(
             "Cargo.toml",
@@ -2380,15 +2275,6 @@ please set bin.path in Cargo.toml",
 #[test]
 fn implicit_examples() {
     let p = project()
-        .file(
-            "Cargo.toml",
-            r#"
-            [package]
-            name = "foo"
-            version = "1.0.0"
-            authors = []
-        "#,
-        )
         .file(
             "src/lib.rs",
             r#"
@@ -2482,15 +2368,6 @@ fn release_build_ndebug() {
 fn inferred_main_bin() {
     let p = project()
         .file(
-            "Cargo.toml",
-            r#"
-            [project]
-            name = "foo"
-            version = "0.0.1"
-            authors = []
-        "#,
-        )
-        .file(
             "src/main.rs",
             r#"
             fn main() {}
@@ -2537,15 +2414,7 @@ fn deletion_causes_failure() {
         .build();
 
     assert_that(p.cargo("build"), execs().with_status(0));
-    p.change_file(
-        "Cargo.toml",
-        r#"
-        [package]
-        name = "foo"
-        version = "0.0.1"
-        authors = []
-    "#,
-    );
+    p.change_file("Cargo.toml", BASIC_MANIFEST);
     assert_that(p.cargo("build"), execs().with_status(101));
 }
 

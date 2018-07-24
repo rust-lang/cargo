@@ -11,14 +11,6 @@ use support::hamcrest::assert_that;
 fn do_not_fix_broken_builds() {
     let p = project()
         .file(
-            "Cargo.toml",
-            r#"
-                [package]
-                name = 'foo'
-                version = '0.1.0'
-            "#
-        )
-        .file(
             "src/lib.rs",
             r#"
                 pub fn foo() {
@@ -44,14 +36,6 @@ fn do_not_fix_broken_builds() {
 #[test]
 fn fix_broken_if_requested() {
     let p = project()
-        .file(
-            "Cargo.toml",
-            r#"
-                [package]
-                name = 'foo'
-                version = '0.1.0'
-            "#
-        )
         .file(
             "src/lib.rs",
             r#"
@@ -237,6 +221,7 @@ fn fix_path_deps() {
 #[test]
 fn do_not_fix_non_relevant_deps() {
     let p = project()
+        .no_manifest()
         .file(
             "foo/Cargo.toml",
             r#"
@@ -287,14 +272,6 @@ fn prepare_for_2018() {
     }
     let p = project()
         .file(
-            "Cargo.toml",
-            r#"
-                [package]
-                name = 'foo'
-                version = '0.1.0'
-            "#
-        )
-        .file(
             "src/lib.rs",
             r#"
                 #![allow(unused)]
@@ -316,7 +293,7 @@ fn prepare_for_2018() {
         .build();
 
     let stderr = "\
-[CHECKING] foo v0.1.0 ([..])
+[CHECKING] foo v0.0.1 ([..])
 [FIXING] src[/]lib.rs (2 fixes)
 [FINISHED] [..]
 ";
@@ -337,14 +314,6 @@ fn local_paths() {
     }
     let p = project()
         .file(
-            "Cargo.toml",
-            r#"
-                [package]
-                name = 'foo'
-                version = '0.1.0'
-            "#
-        )
-        .file(
             "src/lib.rs",
             r#"
                 #![feature(rust_2018_preview)]
@@ -363,7 +332,7 @@ fn local_paths() {
         .build();
 
     let stderr = "\
-[CHECKING] foo v0.1.0 ([..])
+[CHECKING] foo v0.0.1 ([..])
 [FIXING] src[/]lib.rs (1 fix)
 [FINISHED] [..]
 ";
@@ -384,14 +353,6 @@ fn local_paths_no_fix() {
     }
     let p = project()
         .file(
-            "Cargo.toml",
-            r#"
-                [package]
-                name = 'foo'
-                version = '0.1.0'
-            "#
-        )
-        .file(
             "src/lib.rs",
             r#"
                 use test::foo;
@@ -408,7 +369,7 @@ fn local_paths_no_fix() {
         .build();
 
     let stderr = "\
-[CHECKING] foo v0.1.0 ([..])
+[CHECKING] foo v0.0.1 ([..])
 [FINISHED] [..]
 ";
     assert_that(
@@ -487,14 +448,6 @@ fn specify_rustflags() {
     }
     let p = project()
         .file(
-            "Cargo.toml",
-            r#"
-                [package]
-                name = 'foo'
-                version = '0.1.0'
-            "#
-        )
-        .file(
             "src/lib.rs",
             r#"
                 #![allow(unused)]
@@ -512,7 +465,7 @@ fn specify_rustflags() {
         .build();
 
     let stderr = "\
-[CHECKING] foo v0.1.0 ([..])
+[CHECKING] foo v0.0.1 ([..])
 [FIXING] src[/]lib.rs (1 fix)
 [FINISHED] [..]
 ";
@@ -526,19 +479,11 @@ fn specify_rustflags() {
 #[test]
 fn no_changes_necessary() {
     let p = project()
-        .file(
-            "Cargo.toml",
-            r#"
-                [package]
-                name = 'foo'
-                version = '0.1.0'
-            "#
-        )
         .file("src/lib.rs", "")
         .build();
 
     let stderr = "\
-[CHECKING] foo v0.1.0 ([..])
+[CHECKING] foo v0.0.1 ([..])
 [FINISHED] [..]
 ";
     assert_that(
@@ -551,14 +496,6 @@ fn no_changes_necessary() {
 fn fixes_extra_mut() {
     let p = project()
         .file(
-            "Cargo.toml",
-            r#"
-                [package]
-                name = 'foo'
-                version = '0.1.0'
-            "#
-        )
-        .file(
             "src/lib.rs",
             r#"
                 pub fn foo() -> u32 {
@@ -570,7 +507,7 @@ fn fixes_extra_mut() {
         .build();
 
     let stderr = "\
-[CHECKING] foo v0.1.0 ([..])
+[CHECKING] foo v0.0.1 ([..])
 [FIXING] src[/]lib.rs (1 fix)
 [FINISHED] [..]
 ";
@@ -585,14 +522,6 @@ fn fixes_extra_mut() {
 fn fixes_two_missing_ampersands() {
     let p = project()
         .file(
-            "Cargo.toml",
-            r#"
-                [package]
-                name = 'foo'
-                version = '0.1.0'
-            "#
-        )
-        .file(
             "src/lib.rs",
             r#"
                 pub fn foo() -> u32 {
@@ -605,7 +534,7 @@ fn fixes_two_missing_ampersands() {
         .build();
 
     let stderr = "\
-[CHECKING] foo v0.1.0 ([..])
+[CHECKING] foo v0.0.1 ([..])
 [FIXING] src[/]lib.rs (2 fixes)
 [FINISHED] [..]
 ";
@@ -620,14 +549,6 @@ fn fixes_two_missing_ampersands() {
 fn tricky() {
     let p = project()
         .file(
-            "Cargo.toml",
-            r#"
-                [package]
-                name = 'foo'
-                version = '0.1.0'
-            "#
-        )
-        .file(
             "src/lib.rs",
             r#"
                 pub fn foo() -> u32 {
@@ -639,7 +560,7 @@ fn tricky() {
         .build();
 
     let stderr = "\
-[CHECKING] foo v0.1.0 ([..])
+[CHECKING] foo v0.0.1 ([..])
 [FIXING] src[/]lib.rs (2 fixes)
 [FINISHED] [..]
 ";
@@ -653,14 +574,6 @@ fn tricky() {
 #[test]
 fn preserve_line_endings() {
     let p = project()
-        .file(
-            "Cargo.toml",
-            r#"
-                [package]
-                name = 'foo'
-                version = '0.1.0'
-            "#
-        )
         .file(
             "src/lib.rs",
             "\
@@ -682,14 +595,6 @@ fn preserve_line_endings() {
 fn fix_deny_warnings() {
     let p = project()
         .file(
-            "Cargo.toml",
-            r#"
-                [package]
-                name = 'foo'
-                version = '0.1.0'
-            "#
-        )
-        .file(
             "src/lib.rs",
             "\
                 #![deny(warnings)]
@@ -708,14 +613,6 @@ fn fix_deny_warnings() {
 #[test]
 fn fix_deny_warnings_but_not_others() {
     let p = project()
-        .file(
-            "Cargo.toml",
-            r#"
-                [package]
-                name = 'foo'
-                version = '0.1.0'
-            "#
-        )
         .file(
             "src/lib.rs",
             "
@@ -743,14 +640,6 @@ fn fix_deny_warnings_but_not_others() {
 #[test]
 fn fix_two_files() {
     let p = project()
-        .file(
-            "Cargo.toml",
-            r#"
-                [package]
-                name = 'foo'
-                version = '0.1.0'
-            "#
-        )
         .file(
             "src/lib.rs",
             "
@@ -789,14 +678,6 @@ fn fix_two_files() {
 #[test]
 fn fixes_missing_ampersand() {
     let p = project()
-        .file(
-            "Cargo.toml",
-            r#"
-                [package]
-                name = 'foo'
-                version = '0.1.0'
-            "#
-        )
         .file(
             "src/main.rs",
             "fn main() { let mut x = 3; drop(x); }",
@@ -837,7 +718,7 @@ fn fixes_missing_ampersand() {
         execs()
             .with_status(0)
             .with_stdout("")
-            .with_stderr_contains("[COMPILING] foo v0.1.0 ([..])")
+            .with_stderr_contains("[COMPILING] foo v0.0.1 ([..])")
             .with_stderr_contains("[FIXING] build.rs (1 fix)")
             // Don't assert number of fixes for this one, as we don't know if we're
             // fixing it once or twice! We run this all concurrently, and if we
@@ -889,14 +770,6 @@ fn fix_features() {
 fn shows_warnings() {
     let p = project()
         .file(
-            "Cargo.toml",
-            r#"
-                [package]
-                name = "foo"
-                version = "0.1.0"
-            "#,
-        )
-        .file(
             "src/lib.rs",
             r#"
                 use std::default::Default;
@@ -917,14 +790,6 @@ fn shows_warnings() {
 fn warns_if_no_vcs_detected() {
     let p = project()
         .use_temp_dir()
-        .file(
-            "Cargo.toml",
-            r#"
-                [package]
-                name = "foo"
-                version = "0.1.0"
-            "#,
-        )
         .file(
             "src/lib.rs",
             r#"
@@ -952,14 +817,6 @@ destructive changes; if you'd like to suppress this error pass `--allow-no-vcs`\
 #[test]
 fn warns_about_dirty_working_directory() {
     let p = project()
-        .file(
-            "Cargo.toml",
-            r#"
-                [package]
-                name = "foo"
-                version = "0.1.0"
-            "#,
-        )
         .file(
             "src/lib.rs",
             r#"
@@ -1003,14 +860,6 @@ these files:
 fn does_not_warn_about_clean_working_directory() {
     let p = project()
         .file(
-            "Cargo.toml",
-            r#"
-                [package]
-                name = "foo"
-                version = "0.1.0"
-            "#,
-        )
-        .file(
             "src/lib.rs",
             r#"
                 pub fn foo() {
@@ -1036,14 +885,6 @@ fn does_not_warn_about_clean_working_directory() {
 #[test]
 fn does_not_warn_about_dirty_ignored_files() {
     let p = project()
-        .file(
-            "Cargo.toml",
-            r#"
-                [package]
-                name = "foo"
-                version = "0.1.0"
-            "#,
-        )
         .file(
             "src/lib.rs",
             r#"

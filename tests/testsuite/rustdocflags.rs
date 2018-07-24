@@ -4,15 +4,6 @@ use support::hamcrest::assert_that;
 #[test]
 fn parses_env() {
     let p = project()
-        .file(
-            "Cargo.toml",
-            r#"
-            [package]
-            name = "foo"
-            version = "0.0.1"
-            authors = []
-        "#,
-        )
         .file("src/lib.rs", "")
         .build();
 
@@ -27,15 +18,6 @@ fn parses_env() {
 #[test]
 fn parses_config() {
     let p = project()
-        .file(
-            "Cargo.toml",
-            r#"
-            [package]
-            name = "foo"
-            version = "0.0.1"
-            authors = []
-        "#,
-        )
         .file("src/lib.rs", "")
         .file(
             ".cargo/config",
@@ -57,15 +39,6 @@ fn parses_config() {
 #[test]
 fn bad_flags() {
     let p = project()
-        .file(
-            "Cargo.toml",
-            r#"
-            [package]
-            name = "foo"
-            version = "0.0.1"
-            authors = []
-        "#,
-        )
         .file("src/lib.rs", "")
         .build();
 
@@ -78,15 +51,6 @@ fn bad_flags() {
 #[test]
 fn rerun() {
     let p = project()
-        .file(
-            "Cargo.toml",
-            r#"
-            [package]
-            name = "foo"
-            version = "0.0.1"
-            authors = []
-        "#,
-        )
         .file("src/lib.rs", "")
         .build();
 
@@ -115,14 +79,6 @@ fn rerun() {
 fn rustdocflags_passed_to_rustdoc_through_cargo_test() {
     let p = project()
         .file(
-            "Cargo.toml",
-            r#"
-            [package]
-            name = "foo"
-            version = "0.0.1"
-        "#,
-        )
-        .file(
             "src/lib.rs",
             r#"
             //! ```
@@ -143,14 +99,6 @@ fn rustdocflags_passed_to_rustdoc_through_cargo_test() {
 #[test]
 fn rustdocflags_passed_to_rustdoc_through_cargo_test_only_once() {
     let p = project()
-        .file(
-            "Cargo.toml",
-            r#"
-            [package]
-            name = "foo"
-            version = "0.0.1"
-        "#,
-        )
         .file("src/lib.rs", "")
         .build();
 

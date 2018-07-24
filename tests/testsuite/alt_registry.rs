@@ -428,15 +428,6 @@ fn alt_registry_and_crates_io_deps() {
 #[test]
 fn block_publish_due_to_no_token() {
     let p = project()
-        .file(
-            "Cargo.toml",
-            r#"
-            [project]
-            name = "foo"
-            version = "0.0.1"
-            authors = []
-        "#,
-        )
         .file("src/main.rs", "fn main() {}")
         .build();
 

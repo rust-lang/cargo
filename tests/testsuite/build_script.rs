@@ -163,13 +163,6 @@ fn custom_build_env_var_rustc_linker() {
     if cross_compile::disabled() { return; }
     let target = cross_compile::alternate();
     let p = project()
-        .file("Cargo.toml",
-              r#"
-              [project]
-              name = "foo"
-              version = "0.0.1"
-              "#
-        )
         .file(
             ".cargo/config",
             &format!(
@@ -3462,15 +3455,6 @@ fn switch_features_rerun() {
 #[test]
 fn assume_build_script_when_build_rs_present() {
     let p = project()
-        .file(
-            "Cargo.toml",
-            r#"
-            [package]
-            name = "foo"
-            version = "0.0.1"
-            authors = []
-        "#,
-        )
         .file(
             "src/main.rs",
             r#"
