@@ -1118,60 +1118,68 @@ fn shows_warnings_on_second_run_without_changes_on_multiple_targets() {
         .file(
             "src/lib.rs",
             r#"
-                pub fn a() -> u32 { let mut x = 3; x }
+                use std::default::Default;
+
+                pub fn a() -> u32 { 3 }
             "#,
         )
         .file(
             "src/main.rs",
             r#"
-                fn main() { let mut x = 3; println!("{}", x); }
+                use std::default::Default;
+                fn main() { println!("3"); }
             "#,
         )
         .file(
             "tests/foo.rs",
             r#"
+                use std::default::Default;
                 #[test]
                 fn foo_test() {
-                    let mut x = 3; println!("{}", x);
+                    println!("3");
                 }
             "#,
         )
         .file(
             "tests/bar.rs",
             r#"
+                use std::default::Default;
+
                 #[test]
                 fn foo_test() {
-                    let mut x = 3; println!("{}", x);
+                    println!("3");
                 }
             "#,
         )
         .file(
             "examples/fooxample.rs",
             r#"
+                use std::default::Default;
+
                 fn main() {
-                    let mut x = 3; println!("{}", x);
+                    println!("3");
                 }
             "#,
         )
         .build();
 
     assert_that(
-        p.cargo("fix --allow-no-vcs --all-targets").env("__CARGO_FIX_YOLO", "1"),
+        p.cargo("fix --allow-no-vcs --all-targets"),
         execs().with_status(0)
-            .with_stderr_contains("[FIXING] src[/]lib.rs (1 fix)")
-            .with_stderr_contains("[FIXING] src[/]main.rs (1 fix)")
-            .with_stderr_contains("[FIXING] tests[/]foo.rs (1 fix)")
-            .with_stderr_contains("[FIXING] tests[/]bar.rs (1 fix)")
-            .with_stderr_contains("[FIXING] examples[/]fooxample.rs (1 fix)"),
+            .with_stderr_contains(" --> examples/fooxample.rs:2:21")
+            .with_stderr_contains(" --> src/lib.rs:2:21")
+            .with_stderr_contains(" --> src/main.rs:2:21")
+            .with_stderr_contains(" --> tests/bar.rs:2:21")
+            .with_stderr_contains(" --> tests/foo.rs:2:21"),
     );
 
     assert_that(
-        p.cargo("fix --allow-no-vcs --all-targets").env("__CARGO_FIX_YOLO", "1"),
+        p.cargo("fix --allow-no-vcs --all-targets"),
         execs().with_status(0)
-            .with_stderr_contains("[FIXING] src[/]lib.rs (1 fix)")
-            .with_stderr_contains("[FIXING] src[/]main.rs (1 fix)")
-            .with_stderr_contains("[FIXING] tests[/]foo.rs (1 fix)")
-            .with_stderr_contains("[FIXING] tests[/]bar.rs (1 fix)")
-            .with_stderr_contains("[FIXING] examples[/]fooxample.rs (1 fix)"),
+            .with_stderr_contains(" --> examples/fooxample.rs:2:21")
+            .with_stderr_contains(" --> src/lib.rs:2:21")
+            .with_stderr_contains(" --> src/main.rs:2:21")
+            .with_stderr_contains(" --> tests/bar.rs:2:21")
+            .with_stderr_contains(" --> tests/foo.rs:2:21"),
     );
 }
