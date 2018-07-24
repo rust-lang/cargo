@@ -1,8 +1,8 @@
-use std::{cmp, env};
 use std::collections::BTreeMap;
 use std::fs::{self, File};
 use std::iter::repeat;
 use std::time::Duration;
+use std::{cmp, env};
 
 use curl::easy::{Easy, SslOpt};
 use git2;
@@ -10,18 +10,18 @@ use registry::{NewCrate, NewCrateDependency, Registry};
 
 use url::percent_encoding::{percent_encode, QUERY_ENCODE_SET};
 
-use version;
-use core::source::Source;
-use core::{Package, SourceId, Workspace};
 use core::dependency::Kind;
 use core::manifest::ManifestMetadata;
+use core::source::Source;
+use core::{Package, SourceId, Workspace};
 use ops;
-use sources::RegistrySource;
+use sources::{RegistrySource, SourceConfigMap};
 use util::config::{self, Config};
-use util::paths;
-use util::ToUrl;
 use util::errors::{CargoResult, CargoResultExt};
 use util::important_paths::find_root_manifest_for_wd;
+use util::paths;
+use util::ToUrl;
+use version;
 
 pub struct RegistryConfig {
     pub index: Option<String>,
@@ -311,11 +311,7 @@ pub fn registry(
         index: index_config,
     } = registry_configuration(config, registry.clone())?;
     let token = token.or(token_config);
-    let sid = match (index_config, index, registry) {
-        (_, _, Some(registry)) => SourceId::alt_registry(config, &registry)?,
-        (Some(index), _, _) | (None, Some(index), _) => SourceId::for_registry(&index.to_url()?)?,
-        (None, None, _) => SourceId::crates_io(config)?,
-    };
+    let sid = get_source_id(config, index_config.or(index), registry)?;
     let api_host = {
         let mut src = RegistrySource::remote(&sid, config);
         src.update()
@@ -354,10 +350,11 @@ pub fn needs_custom_http_transport(config: &Config) -> CargoResult<bool> {
     let check_revoke = config.get_bool("http.check-revoke")?;
     let user_agent = config.get_string("http.user-agent")?;
 
-    Ok(
-        proxy_exists || timeout.is_some() || cainfo.is_some() || check_revoke.is_some()
-            || user_agent.is_some(),
-    )
+    Ok(proxy_exists
+        || timeout.is_some()
+        || cainfo.is_some()
+        || check_revoke.is_some()
+        || user_agent.is_some())
 }
 
 /// Configure a libcurl http handle with the defaults options for Cargo
@@ -553,6 +550,22 @@ pub fn yank(
     Ok(())
 }
 
+fn get_source_id(
+    config: &Config,
+    index: Option<String>,
+    reg: Option<String>,
+) -> CargoResult<SourceId> {
+    match (reg, index) {
+        (Some(r), _) => SourceId::alt_registry(config, &r),
+        (_, Some(i)) => SourceId::for_registry(&i.to_url()?),
+        _ => {
+            let map = SourceConfigMap::new(config)?;
+            let src = map.load(&SourceId::crates_io(config)?)?;
+            Ok(src.replaced_source_id().clone())
+        }
+    }
+}
+
 pub fn search(
     query: &str,
     config: &Config,
@@ -572,7 +585,22 @@ pub fn search(
         prefix
     }
 
-    let (mut registry, _) = registry(config, None, index, reg)?;
+    let sid = get_source_id(config, index, reg)?;
+
+    let mut regsrc = RegistrySource::remote(&sid, config);
+    let cfg = match regsrc.config() {
+        Ok(c) => c,
+        Err(_) => {
+            regsrc
+                .update()
+                .chain_err(|| format!("failed to update {}", &sid))?;
+            regsrc.config()?
+        }
+    };
+
+    let api_host = cfg.unwrap().api.unwrap();
+    let handle = http_handle(config)?;
+    let mut registry = Registry::new_handle(api_host, None, handle);
     let (crates, total_crates) = registry
         .search(query, limit)
         .chain_err(|| "failed to retrieve search results from the registry")?;
