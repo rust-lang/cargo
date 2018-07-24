@@ -612,15 +612,6 @@ fn no_cross_doctests() {
 
     let p = project()
         .file(
-            "Cargo.toml",
-            r#"
-            [project]
-            name = "foo"
-            authors = []
-            version = "0.0.0"
-        "#,
-        )
-        .file(
             "src/lib.rs",
             r#"
             //! ```
@@ -633,7 +624,7 @@ fn no_cross_doctests() {
 
     let host_output = format!(
         "\
-[COMPILING] foo v0.0.0 ({foo})
+[COMPILING] foo v0.0.1 ({foo})
 [FINISHED] dev [unoptimized + debuginfo] target(s) in [..]
 [RUNNING] target[/]debug[/]deps[/]foo-[..][EXE]
 [DOCTEST] foo
@@ -653,7 +644,7 @@ fn no_cross_doctests() {
         p.cargo("test").arg("--target").arg(&target),
         execs().with_status(0).with_stderr(&format!(
             "\
-[COMPILING] foo v0.0.0 ({foo})
+[COMPILING] foo v0.0.1 ({foo})
 [FINISHED] dev [unoptimized + debuginfo] target(s) in [..]
 [RUNNING] target[/]{triple}[/]debug[/]deps[/]foo-[..][EXE]
 [DOCTEST] foo
@@ -669,7 +660,7 @@ fn no_cross_doctests() {
         p.cargo("test").arg("--target").arg(&target),
         execs().with_status(0).with_stderr(&format!(
             "\
-[COMPILING] foo v0.0.0 ({foo})
+[COMPILING] foo v0.0.1 ({foo})
 [FINISHED] dev [unoptimized + debuginfo] target(s) in [..]
 [RUNNING] target[/]{triple}[/]debug[/]deps[/]foo-[..][EXE]
 ",
@@ -686,15 +677,6 @@ fn simple_cargo_run() {
     }
 
     let p = project()
-        .file(
-            "Cargo.toml",
-            r#"
-            [package]
-            name = "foo"
-            version = "0.0.0"
-            authors = []
-        "#,
-        )
         .file(
             "src/main.rs",
             &format!(

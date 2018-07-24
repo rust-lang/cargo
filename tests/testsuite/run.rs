@@ -7,15 +7,6 @@ use support::hamcrest::{assert_that, existing_file};
 fn simple() {
     let p = project()
         .file(
-            "Cargo.toml",
-            r#"
-            [project]
-            name = "foo"
-            version = "0.0.1"
-            authors = []
-        "#,
-        )
-        .file(
             "src/main.rs",
             r#"
             fn main() { println!("hello"); }
@@ -43,15 +34,6 @@ fn simple() {
 fn simple_quiet() {
     let p = project()
         .file(
-            "Cargo.toml",
-            r#"
-            [project]
-            name = "foo"
-            version = "0.0.1"
-            authors = []
-        "#,
-        )
-        .file(
             "src/main.rs",
             r#"
             fn main() { println!("hello"); }
@@ -74,15 +56,6 @@ fn simple_quiet() {
 fn simple_quiet_and_verbose() {
     let p = project()
         .file(
-            "Cargo.toml",
-            r#"
-            [project]
-            name = "foo"
-            version = "0.0.1"
-            authors = []
-        "#,
-        )
-        .file(
             "src/main.rs",
             r#"
             fn main() { println!("hello"); }
@@ -101,15 +74,6 @@ fn simple_quiet_and_verbose() {
 #[test]
 fn quiet_and_verbose_config() {
     let p = project()
-        .file(
-            "Cargo.toml",
-            r#"
-            [project]
-            name = "foo"
-            version = "0.0.1"
-            authors = []
-        "#,
-        )
         .file(
             ".cargo/config",
             r#"
@@ -132,15 +96,6 @@ fn quiet_and_verbose_config() {
 fn simple_with_args() {
     let p = project()
         .file(
-            "Cargo.toml",
-            r#"
-            [project]
-            name = "foo"
-            version = "0.0.1"
-            authors = []
-        "#,
-        )
-        .file(
             "src/main.rs",
             r#"
             fn main() {
@@ -160,15 +115,6 @@ fn simple_with_args() {
 #[test]
 fn exit_code() {
     let p = project()
-        .file(
-            "Cargo.toml",
-            r#"
-            [project]
-            name = "foo"
-            version = "0.0.1"
-            authors = []
-        "#,
-        )
         .file(
             "src/main.rs",
             r#"
@@ -195,15 +141,6 @@ fn exit_code() {
 #[test]
 fn exit_code_verbose() {
     let p = project()
-        .file(
-            "Cargo.toml",
-            r#"
-            [project]
-            name = "foo"
-            version = "0.0.1"
-            authors = []
-        "#,
-        )
         .file(
             "src/main.rs",
             r#"
@@ -235,15 +172,6 @@ fn exit_code_verbose() {
 #[test]
 fn no_main_file() {
     let p = project()
-        .file(
-            "Cargo.toml",
-            r#"
-            [project]
-            name = "foo"
-            version = "0.0.1"
-            authors = []
-        "#,
-        )
         .file("src/lib.rs", "")
         .build();
 
@@ -259,15 +187,6 @@ fn no_main_file() {
 #[test]
 fn too_many_bins() {
     let p = project()
-        .file(
-            "Cargo.toml",
-            r#"
-            [project]
-            name = "foo"
-            version = "0.0.1"
-            authors = []
-        "#,
-        )
         .file("src/lib.rs", "")
         .file("src/bin/a.rs", "")
         .file("src/bin/b.rs", "")
@@ -298,15 +217,6 @@ fn too_many_bins() {
 #[test]
 fn specify_name() {
     let p = project()
-        .file(
-            "Cargo.toml",
-            r#"
-            [project]
-            name = "foo"
-            version = "0.0.1"
-            authors = []
-        "#,
-        )
         .file("src/lib.rs", "")
         .file(
             "src/bin/a.rs",
@@ -478,15 +388,6 @@ consider adding `cargo-features = ["default-run"]` to the manifest
 #[test]
 fn run_example() {
     let p = project()
-        .file(
-            "Cargo.toml",
-            r#"
-            [project]
-            name = "foo"
-            version = "0.0.1"
-            authors = []
-        "#,
-        )
         .file("src/lib.rs", "")
         .file(
             "examples/a.rs",
@@ -700,15 +601,6 @@ fn run_example_autodiscover_2018() {
 #[test]
 fn run_bins() {
     let p = project()
-        .file(
-            "Cargo.toml",
-            r#"
-            [project]
-            name = "foo"
-            version = "0.0.1"
-            authors = []
-        "#,
-        )
         .file("src/lib.rs", "")
         .file(
             "examples/a.rs",
@@ -735,15 +627,6 @@ fn run_bins() {
 #[test]
 fn run_with_filename() {
     let p = project()
-        .file(
-            "Cargo.toml",
-            r#"
-            [project]
-            name = "foo"
-            version = "0.0.1"
-            authors = []
-        "#,
-        )
         .file("src/lib.rs", "")
         .file(
             "src/bin/a.rs",
@@ -799,15 +682,6 @@ Did you mean `a`?",
 fn either_name_or_example() {
     let p = project()
         .file(
-            "Cargo.toml",
-            r#"
-            [project]
-            name = "foo"
-            version = "0.0.1"
-            authors = []
-        "#,
-        )
-        .file(
             "src/bin/a.rs",
             r#"
             fn main() { println!("hello a.rs"); }
@@ -838,15 +712,6 @@ fn either_name_or_example() {
 #[test]
 fn one_bin_multiple_examples() {
     let p = project()
-        .file(
-            "Cargo.toml",
-            r#"
-            [project]
-            name = "foo"
-            version = "0.0.1"
-            authors = []
-        "#,
-        )
         .file("src/lib.rs", "")
         .file(
             "src/bin/main.rs",
@@ -1061,15 +926,6 @@ fn run_dylib_dep() {
 fn release_works() {
     let p = project()
         .file(
-            "Cargo.toml",
-            r#"
-            [project]
-            name = "foo"
-            version = "0.0.1"
-            authors = []
-        "#,
-        )
-        .file(
             "src/main.rs",
             r#"
             fn main() { if cfg!(debug_assertions) { panic!() } }
@@ -1121,15 +977,6 @@ fn run_bin_different_name() {
 fn dashes_are_forwarded() {
     let p = project()
         .file(
-            "Cargo.toml",
-            r#"
-            [project]
-            name = "foo"
-            version = "0.0.1"
-            authors = []
-        "#,
-        )
-        .file(
             "src/bin/bar.rs",
             r#"
             fn main() {
@@ -1152,15 +999,6 @@ fn dashes_are_forwarded() {
 #[test]
 fn run_from_executable_folder() {
     let p = project()
-        .file(
-            "Cargo.toml",
-            r#"
-            [project]
-            name = "foo"
-            version = "0.0.1"
-            authors = []
-        "#,
-        )
         .file(
             "src/main.rs",
             r#"
@@ -1302,15 +1140,6 @@ fn library_paths_sorted_alphabetically() {
 fn fail_no_extra_verbose() {
     let p = project()
         .file(
-            "Cargo.toml",
-            r#"
-            [project]
-            name = "foo"
-            version = "0.0.1"
-            authors = []
-        "#,
-        )
-        .file(
             "src/main.rs",
             r#"
             fn main() {
@@ -1423,15 +1252,6 @@ fn run_multiple_packages() {
 #[test]
 fn explicit_bin_with_args() {
     let p = project()
-        .file(
-            "Cargo.toml",
-            r#"
-            [project]
-            name = "foo"
-            version = "0.0.1"
-            authors = []
-        "#,
-        )
         .file(
             "src/main.rs",
             r#"

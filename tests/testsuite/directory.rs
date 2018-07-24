@@ -132,15 +132,6 @@ fn simple_install() {
     setup();
 
     VendorPackage::new("foo")
-        .file(
-            "Cargo.toml",
-            r#"
-            [package]
-            name = "foo"
-            version = "0.1.0"
-            authors = []
-        "#,
-        )
         .file("src/lib.rs", "pub fn foo() {}")
         .build();
 
@@ -154,7 +145,7 @@ fn simple_install() {
             authors = []
 
             [dependencies]
-            foo = "0.1.0"
+            foo = "0.0.1"
         "#,
         )
         .file(
@@ -173,7 +164,7 @@ fn simple_install() {
         cargo_process().arg("install").arg("bar"),
         execs().with_status(0).with_stderr(
             "  Installing bar v0.1.0
-   Compiling foo v0.1.0
+   Compiling foo v0.0.1
    Compiling bar v0.1.0
     Finished release [optimized] target(s) in [..]s
   Installing [..]bar[..]
@@ -188,15 +179,6 @@ fn simple_install_fail() {
     setup();
 
     VendorPackage::new("foo")
-        .file(
-            "Cargo.toml",
-            r#"
-            [package]
-            name = "foo"
-            version = "0.1.0"
-            authors = []
-        "#,
-        )
         .file("src/lib.rs", "pub fn foo() {}")
         .build();
 

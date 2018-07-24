@@ -1,5 +1,5 @@
 use support::rustc_host;
-use support::{execs, project, path2url};
+use support::{basic_lib_manifest, execs, project, path2url};
 use support::hamcrest::assert_that;
 
 #[test]
@@ -7,18 +7,7 @@ fn pathless_tools() {
     let target = rustc_host();
 
     let foo = project()
-        .file(
-            "Cargo.toml",
-            r#"
-            [package]
-            name = "foo"
-            version = "0.0.1"
-            authors = []
-
-            [lib]
-            name = "foo"
-        "#,
-        )
+        .file("Cargo.toml", &basic_lib_manifest("foo"))
         .file("src/lib.rs", "")
         .file(
             ".cargo/config",
@@ -37,7 +26,7 @@ fn pathless_tools() {
         foo.cargo("build").arg("--verbose"),
         execs().with_stderr(&format!(
             "\
-[COMPILING] foo v0.0.1 ({url})
+[COMPILING] foo v0.5.0 ({url})
 [RUNNING] `rustc [..] -C ar=nonexistent-ar -C linker=nonexistent-linker [..]`
 [FINISHED] dev [unoptimized + debuginfo] target(s) in [..]
 ",
@@ -61,18 +50,7 @@ fn absolute_tools() {
     };
 
     let foo = project()
-        .file(
-            "Cargo.toml",
-            r#"
-            [package]
-            name = "foo"
-            version = "0.0.1"
-            authors = []
-
-            [lib]
-            name = "foo"
-        "#,
-        )
+        .file("Cargo.toml", &basic_lib_manifest("foo"))
         .file("src/lib.rs", "")
         .file(
             ".cargo/config",
@@ -102,7 +80,7 @@ fn absolute_tools() {
         foo.cargo("build").arg("--verbose"),
         execs().with_stderr(&format!(
             "\
-[COMPILING] foo v0.0.1 ({url})
+[COMPILING] foo v0.5.0 ({url})
 [RUNNING] `rustc [..] -C ar={ar} -C linker={linker} [..]`
 [FINISHED] dev [unoptimized + debuginfo] target(s) in [..]
 ",
@@ -191,14 +169,6 @@ fn custom_runner() {
     let target = rustc_host();
 
     let p = project()
-        .file(
-            "Cargo.toml",
-            r#"
-            [package]
-            name = "foo"
-            version = "0.0.1"
-        "#,
-        )
         .file("src/main.rs", "fn main() {}")
         .file("tests/test.rs", "")
         .file("benches/bench.rs", "")

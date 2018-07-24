@@ -9,16 +9,6 @@ fn custom_target_minimal() {
     }
     let p = project()
         .file(
-            "Cargo.toml",
-            r#"
-            [package]
-
-            name = "foo"
-            version = "0.0.1"
-            authors = ["author@example.com"]
-        "#,
-        )
-        .file(
             "src/lib.rs",
             r#"
             #![feature(no_core)]

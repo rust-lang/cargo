@@ -118,7 +118,7 @@ pub mod paths;
 pub mod publish;
 pub mod registry;
 
-const BASIC_MANIFEST: &str = r#"
+pub const BASIC_MANIFEST: &str = r#"
 [package]
 name = "foo"
 version = "0.0.1"

@@ -11,15 +11,6 @@ use support::hamcrest::{assert_that, existing_file};
 fn modifying_and_moving() {
     let p = project()
         .file(
-            "Cargo.toml",
-            r#"
-            [package]
-            name = "foo"
-            authors = []
-            version = "0.0.1"
-        "#,
-        )
-        .file(
             "src/main.rs",
             r#"
             mod a; fn main() {}
@@ -65,15 +56,6 @@ fn modifying_and_moving() {
 #[test]
 fn modify_only_some_files() {
     let p = project()
-        .file(
-            "Cargo.toml",
-            r#"
-            [package]
-            name = "foo"
-            authors = []
-            version = "0.0.1"
-        "#,
-        )
         .file("src/lib.rs", "mod a;")
         .file("src/a.rs", "")
         .file(
@@ -587,15 +569,6 @@ fn changing_bin_features_caches_targets() {
 #[test]
 fn rebuild_tests_if_lib_changes() {
     let p = project()
-        .file(
-            "Cargo.toml",
-            r#"
-            [package]
-            name = "foo"
-            version = "0.0.1"
-            authors = []
-        "#,
-        )
         .file("src/lib.rs", "pub fn foo() {}")
         .file(
             "tests/foo.rs",

@@ -4,15 +4,6 @@ use support::hamcrest::assert_that;
 #[test]
 fn rustdoc_simple() {
     let p = project()
-        .file(
-            "Cargo.toml",
-            r#"
-            [package]
-            name = "foo"
-            version = "0.0.1"
-            authors = []
-        "#,
-        )
         .file("src/lib.rs", r#" "#)
         .build();
 
@@ -35,15 +26,6 @@ fn rustdoc_simple() {
 #[test]
 fn rustdoc_args() {
     let p = project()
-        .file(
-            "Cargo.toml",
-            r#"
-            [package]
-            name = "foo"
-            version = "0.0.1"
-            authors = []
-        "#,
-        )
         .file("src/lib.rs", r#" "#)
         .build();
 
@@ -193,15 +175,6 @@ fn rustdoc_only_bar_dependency() {
 fn rustdoc_same_name_documents_lib() {
     let p = project()
         .file(
-            "Cargo.toml",
-            r#"
-            [package]
-            name = "foo"
-            version = "0.0.1"
-            authors = []
-        "#,
-        )
-        .file(
             "src/main.rs",
             r#"
             fn main() {}
@@ -256,23 +229,14 @@ fn features() {
 #[cfg(all(target_arch = "x86_64", target_os = "linux"))]
 fn rustdoc_target() {
     let p = project()
-        .file(
-            "Cargo.toml",
-            r#"
-            [package]
-            name = "a"
-            version = "0.0.1"
-            authors = []
-        "#,
-        )
         .file("src/lib.rs", "")
         .build();
 
     assert_that(
         p.cargo("rustdoc --verbose --target x86_64-unknown-linux-gnu"),
         execs().with_status(0).with_stderr("\
-[DOCUMENTING] a v0.0.1 ([..])
-[RUNNING] `rustdoc --crate-name a src[/]lib.rs \
+[DOCUMENTING] foo v0.0.1 ([..])
+[RUNNING] `rustdoc --crate-name foo src[/]lib.rs \
     --target x86_64-unknown-linux-gnu \
     -o [..]foo[/]target[/]x86_64-unknown-linux-gnu[/]doc \
     -L dependency=[..]foo[/]target[/]x86_64-unknown-linux-gnu[/]debug[/]deps \

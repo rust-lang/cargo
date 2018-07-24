@@ -10,7 +10,7 @@ use std::thread;
 use cargo::util::process;
 use support::sleep_ms;
 use support::paths::{self, CargoPathExt};
-use support::{execs, git, main_file, project, path2url};
+use support::{basic_lib_manifest, execs, git, main_file, project, path2url};
 use support::ChannelChanger;
 use support::hamcrest::{assert_that, existing_file};
 
@@ -869,19 +869,7 @@ fn two_revs_same_deps() {
 fn recompilation() {
     let git_project = git::new("bar", |project| {
         project
-            .file(
-                "Cargo.toml",
-                r#"
-                [project]
-
-                name = "bar"
-                version = "0.5.0"
-                authors = ["carlhuda@example.com"]
-
-                [lib]
-                name = "bar"
-            "#,
-            )
+            .file("Cargo.toml", &basic_lib_manifest("bar"))
             .file(
                 "src/bar.rs",
                 r#"
@@ -1005,19 +993,7 @@ fn recompilation() {
 fn update_with_shared_deps() {
     let git_project = git::new("bar", |project| {
         project
-            .file(
-                "Cargo.toml",
-                r#"
-                [project]
-
-                name = "bar"
-                version = "0.5.0"
-                authors = ["carlhuda@example.com"]
-
-                [lib]
-                name = "bar"
-            "#,
-            )
+            .file("Cargo.toml", &basic_lib_manifest("bar"))
             .file(
                 "src/bar.rs",
                 r#"

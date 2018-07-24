@@ -9,15 +9,6 @@ the package by passing e.g. `--lib` or `--bin NAME` to specify a single target";
 fn build_lib_for_foo() {
     let p = project()
         .file(
-            "Cargo.toml",
-            r#"
-            [package]
-            name = "foo"
-            version = "0.0.1"
-            authors = []
-        "#,
-        )
-        .file(
             "src/main.rs",
             r#"
             fn main() {}
@@ -47,15 +38,6 @@ fn build_lib_for_foo() {
 #[test]
 fn lib() {
     let p = project()
-        .file(
-            "Cargo.toml",
-            r#"
-            [package]
-            name = "foo"
-            version = "0.0.1"
-            authors = []
-        "#,
-        )
         .file(
             "src/main.rs",
             r#"
@@ -92,15 +74,6 @@ fn lib() {
 #[test]
 fn build_main_and_allow_unstable_options() {
     let p = project()
-        .file(
-            "Cargo.toml",
-            r#"
-            [package]
-            name = "foo"
-            version = "0.0.1"
-            authors = []
-        "#,
-        )
         .file(
             "src/main.rs",
             r#"
@@ -141,15 +114,6 @@ fn build_main_and_allow_unstable_options() {
 fn fails_when_trying_to_build_main_and_lib_with_args() {
     let p = project()
         .file(
-            "Cargo.toml",
-            r#"
-            [package]
-            name = "foo"
-            version = "0.0.1"
-            authors = []
-        "#,
-        )
-        .file(
             "src/main.rs",
             r#"
             fn main() {}
@@ -171,15 +135,6 @@ fn fails_when_trying_to_build_main_and_lib_with_args() {
 #[test]
 fn build_with_args_to_one_of_multiple_binaries() {
     let p = project()
-        .file(
-            "Cargo.toml",
-            r#"
-            [package]
-            name = "foo"
-            version = "0.0.1"
-            authors = []
-        "#,
-        )
         .file(
             "src/bin/foo.rs",
             r#"
@@ -222,15 +177,6 @@ fn build_with_args_to_one_of_multiple_binaries() {
 fn fails_with_args_to_all_binaries() {
     let p = project()
         .file(
-            "Cargo.toml",
-            r#"
-            [package]
-            name = "foo"
-            version = "0.0.1"
-            authors = []
-        "#,
-        )
-        .file(
             "src/bin/foo.rs",
             r#"
             fn main() {}
@@ -264,15 +210,6 @@ fn fails_with_args_to_all_binaries() {
 #[test]
 fn build_with_args_to_one_of_multiple_tests() {
     let p = project()
-        .file(
-            "Cargo.toml",
-            r#"
-            [package]
-            name = "foo"
-            version = "0.0.1"
-            authors = []
-        "#,
-        )
         .file("tests/foo.rs", r#" "#)
         .file("tests/bar.rs", r#" "#)
         .file("tests/baz.rs", r#" "#)
@@ -416,15 +353,6 @@ fn build_only_bar_dependency() {
 #[test]
 fn targets_selected_default() {
     let p = project()
-        .file(
-            "Cargo.toml",
-            r#"
-            [package]
-            name = "foo"
-            version = "0.1.0"
-            authors = []
-        "#,
-        )
         .file("src/main.rs", "fn main() {}")
         .build();
     assert_that(
@@ -448,15 +376,6 @@ fn targets_selected_default() {
 #[test]
 fn targets_selected_all() {
     let p = project()
-        .file(
-            "Cargo.toml",
-            r#"
-            [package]
-            name = "foo"
-            version = "0.1.0"
-            authors = []
-        "#,
-        )
         .file("src/main.rs", "fn main() {}")
         .build();
     assert_that(
