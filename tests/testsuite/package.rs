@@ -222,6 +222,7 @@ See http://doc.crates.io/manifest.html#package-metadata for more info.
 [PACKAGING] foo v0.0.1 ([..])
 [ARCHIVING] [..]
 [ARCHIVING] [..]
+[ARCHIVING] [..]
 ",
         ),
     );
@@ -238,6 +239,7 @@ See http://doc.crates.io/manifest.html#package-metadata for more info.
 [WARNING] manifest has no description[..]
 See http://doc.crates.io/manifest.html#package-metadata for more info.
 [PACKAGING] a v0.0.1 ([..])
+[ARCHIVING] [..]
 [ARCHIVING] [..]
 [ARCHIVING] [..]
 ",
@@ -397,7 +399,6 @@ fn exclude() {
             "\
 [WARNING] manifest has no description[..]
 See http://doc.crates.io/manifest.html#package-metadata for more info.
-[PACKAGING] foo v0.0.1 ([..])
 [WARNING] [..] file `dir_root_1[/]some_dir[/]file` WILL be excluded [..]
 See [..]
 [WARNING] [..] file `dir_root_2[/]some_dir[/]file` WILL be excluded [..]
@@ -410,6 +411,7 @@ See [..]
 See [..]
 [WARNING] [..] file `some_dir[/]file_deep_1` WILL be excluded [..]
 See [..]
+[PACKAGING] foo v0.0.1 ([..])
 [ARCHIVING] [..]
 [ARCHIVING] [..]
 [ARCHIVING] [..]
@@ -600,7 +602,7 @@ fn no_duplicates_from_modified_tracked_files() {
     cargo.cwd(p.root());
     assert_that(cargo.clone().arg("build"), execs().with_status(0));
     assert_that(
-        cargo.arg("package").arg("--list"),
+        cargo.arg("package").arg("--list").arg("--allow-dirty"),
         execs().with_status(0).with_stdout(
             "\
 Cargo.toml
@@ -1326,6 +1328,7 @@ fn package_lockfile_git_repo() {
         p.cargo("package").arg("-l").masquerade_as_nightly_cargo(),
         execs().with_status(0).with_stdout(
             "\
+.cargo_vcs_info.json
 Cargo.lock
 Cargo.toml
 src/main.rs
