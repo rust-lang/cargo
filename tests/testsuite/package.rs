@@ -241,6 +241,42 @@ See http://doc.crates.io/manifest.html#package-metadata for more info.
 }
 
 #[test]
+fn vcs_file_collision() {
+    let p = project().build();
+    let _ = git::repo(&paths::root().join("foo"))
+        .file(
+            "Cargo.toml",
+            r#"
+            [project]
+            name = "foo"
+            description = "foo"
+            version = "0.0.1"
+            authors = []
+            license = "MIT"
+            documentation = "foo"
+            homepage = "foo"
+            repository = "foo"
+            exclude = ["*.no-existe"]
+        "#)
+        .file(
+            "src/main.rs",
+            r#"
+            fn main() {}
+        "#)
+        .file(".cargo_vcs_info.json", "foo")
+        .build();
+    assert_that(
+        p.cargo("package").arg("--no-verify"),
+        execs().with_status(101).with_stderr(&format!(
+            "\
+[ERROR] Invalid inclusion of reserved file name .cargo_vcs_info.json \
+in package source
+",
+        )),
+    );
+}
+
+#[test]
 fn path_dependency_no_version() {
     let p = project()
         .file(
