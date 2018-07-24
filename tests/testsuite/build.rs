@@ -535,7 +535,7 @@ Caused by:
 #[test]
 fn cargo_compile_without_manifest() {
     let tmpdir = tempfile::Builder::new().prefix("cargo").tempdir().unwrap();
-    let p = ProjectBuilder::new(tmpdir.path().to_path_buf()).build();
+    let p = ProjectBuilder::new(tmpdir.path().to_path_buf()).no_manifest().build();
 
     assert_that(
         p.cargo("build"),
