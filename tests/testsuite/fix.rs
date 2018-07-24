@@ -1101,3 +1101,77 @@ fn shows_warnings_on_second_run_without_changes() {
         execs().with_status(0).with_stderr_contains("[..]warning: unused import[..]"),
     );
 }
+
+#[test]
+fn shows_warnings_on_second_run_without_changes_on_multiple_targets() {
+    let p = project("foo")
+        .file(
+            "Cargo.toml",
+            r#"
+                [package]
+                name = "foo"
+                version = "0.1.0"
+
+                [workspace]
+            "#,
+        )
+        .file(
+            "src/lib.rs",
+            r#"
+                pub fn a() -> u32 { let mut x = 3; x }
+            "#,
+        )
+        .file(
+            "src/main.rs",
+            r#"
+                fn main() { let mut x = 3; println!("{}", x); }
+            "#,
+        )
+        .file(
+            "tests/foo.rs",
+            r#"
+                #[test]
+                fn foo_test() {
+                    let mut x = 3; println!("{}", x);
+                }
+            "#,
+        )
+        .file(
+            "tests/bar.rs",
+            r#"
+                #[test]
+                fn foo_test() {
+                    let mut x = 3; println!("{}", x);
+                }
+            "#,
+        )
+        .file(
+            "examples/fooxample.rs",
+            r#"
+                fn main() {
+                    let mut x = 3; println!("{}", x);
+                }
+            "#,
+        )
+        .build();
+
+    assert_that(
+        p.cargo("fix --allow-no-vcs --all-targets").env("__CARGO_FIX_YOLO", "1"),
+        execs().with_status(0)
+            .with_stderr_contains("[FIXING] src[/]lib.rs (1 fix)")
+            .with_stderr_contains("[FIXING] src[/]main.rs (1 fix)")
+            .with_stderr_contains("[FIXING] tests[/]foo.rs (1 fix)")
+            .with_stderr_contains("[FIXING] tests[/]bar.rs (1 fix)")
+            .with_stderr_contains("[FIXING] examples[/]fooxample.rs (1 fix)"),
+    );
+
+    assert_that(
+        p.cargo("fix --allow-no-vcs --all-targets").env("__CARGO_FIX_YOLO", "1"),
+        execs().with_status(0)
+            .with_stderr_contains("[FIXING] src[/]lib.rs (1 fix)")
+            .with_stderr_contains("[FIXING] src[/]main.rs (1 fix)")
+            .with_stderr_contains("[FIXING] tests[/]foo.rs (1 fix)")
+            .with_stderr_contains("[FIXING] tests[/]bar.rs (1 fix)")
+            .with_stderr_contains("[FIXING] examples[/]fooxample.rs (1 fix)"),
+    );
+}
