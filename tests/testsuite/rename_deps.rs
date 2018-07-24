@@ -2,7 +2,7 @@ use support::ChannelChanger;
 use support::git;
 use support::paths;
 use support::registry::Package;
-use support::{execs, project};
+use support::{basic_manifest, execs, project};
 use support::hamcrest::assert_that;
 
 #[test]
@@ -162,15 +162,7 @@ fn lots_of_names() {
         .publish();
 
     let g = git::repo(&paths::root().join("another"))
-        .file(
-            "Cargo.toml",
-            r#"
-                [package]
-                name = "foo"
-                version = "0.1.0"
-                authors = []
-            "#,
-        )
+        .file("Cargo.toml", &basic_manifest("foo", "0.1.0"))
         .file("src/lib.rs", "pub fn foo3() {}")
         .build();
 
@@ -212,15 +204,7 @@ fn lots_of_names() {
                 }
             ",
         )
-        .file(
-            "foo/Cargo.toml",
-            r#"
-                [project]
-                name = "foo"
-                version = "0.1.0"
-                authors = []
-            "#,
-        )
+        .file("foo/Cargo.toml", &basic_manifest("foo", "0.1.0"))
         .file("foo/src/lib.rs", "pub fn foo4() {}")
         .build();
 
@@ -262,15 +246,7 @@ fn rename_and_patch() {
                 }
             ",
         )
-        .file(
-            "foo/Cargo.toml",
-            r#"
-                [project]
-                name = "foo"
-                version = "0.1.0"
-                authors = []
-            "#,
-        )
+        .file("foo/Cargo.toml", &basic_manifest("foo", "0.1.0"))
         .file("foo/src/lib.rs", "pub fn foo() {}")
         .build();
 

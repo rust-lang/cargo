@@ -2,7 +2,7 @@ use support::install::exe;
 use support::is_nightly;
 use support::paths::CargoPathExt;
 use support::registry::Package;
-use support::{execs, project};
+use support::{basic_manifest, execs, project};
 use glob::glob;
 use support::hamcrest::{assert_that, existing_file, is_not};
 
@@ -32,15 +32,7 @@ fn check_success() {
         )
         .build();
     let _bar = project().at("bar")
-        .file(
-            "Cargo.toml",
-            r#"
-            [package]
-            name = "bar"
-            version = "0.1.0"
-            authors = []
-        "#,
-        )
+        .file("Cargo.toml", &basic_manifest("bar", "0.1.0"))
         .file(
             "src/lib.rs",
             r#"
@@ -78,15 +70,7 @@ fn check_fail() {
         )
         .build();
     let _bar = project().at("bar")
-        .file(
-            "Cargo.toml",
-            r#"
-            [package]
-            name = "bar"
-            version = "0.1.0"
-            authors = []
-        "#,
-        )
+        .file("Cargo.toml", &basic_manifest("bar", "0.1.0"))
         .file(
             "src/lib.rs",
             r#"
@@ -190,15 +174,7 @@ fn check_build() {
         .build();
 
     let _bar = project().at("bar")
-        .file(
-            "Cargo.toml",
-            r#"
-            [package]
-            name = "bar"
-            version = "0.1.0"
-            authors = []
-        "#,
-        )
+        .file("Cargo.toml", &basic_manifest("bar", "0.1.0"))
         .file(
             "src/lib.rs",
             r#"
@@ -238,15 +214,7 @@ fn build_check() {
         .build();
 
     let _bar = project().at("bar")
-        .file(
-            "Cargo.toml",
-            r#"
-            [package]
-            name = "bar"
-            version = "0.1.0"
-            authors = []
-        "#,
-        )
+        .file("Cargo.toml", &basic_manifest("bar", "0.1.0"))
         .file(
             "src/lib.rs",
             r#"
@@ -406,15 +374,7 @@ fn rustc_check() {
         )
         .build();
     let _bar = project().at("bar")
-        .file(
-            "Cargo.toml",
-            r#"
-            [package]
-            name = "bar"
-            version = "0.1.0"
-            authors = []
-        "#,
-        )
+        .file("Cargo.toml", &basic_manifest("bar", "0.1.0"))
         .file(
             "src/lib.rs",
             r#"
@@ -459,15 +419,7 @@ fn rustc_check_err() {
         )
         .build();
     let _bar = project().at("bar")
-        .file(
-            "Cargo.toml",
-            r#"
-            [package]
-            name = "bar"
-            version = "0.1.0"
-            authors = []
-        "#,
-        )
+        .file("Cargo.toml", &basic_manifest("bar", "0.1.0"))
         .file(
             "src/lib.rs",
             r#"
@@ -506,15 +458,7 @@ fn check_all() {
         .file("examples/a.rs", "fn main() {}")
         .file("tests/a.rs", "")
         .file("src/lib.rs", "")
-        .file(
-            "b/Cargo.toml",
-            r#"
-            [package]
-            name = "b"
-            version = "0.0.1"
-            authors = []
-        "#,
-        )
+        .file("b/Cargo.toml", &basic_manifest("b", "0.0.1"))
         .file("b/src/main.rs", "fn main() {}")
         .file("b/src/lib.rs", "")
         .build();
@@ -540,28 +484,14 @@ fn check_virtual_all_implied() {
             members = ["bar", "baz"]
         "#,
         )
-        .file(
-            "bar/Cargo.toml",
-            r#"
-            [project]
-            name = "bar"
-            version = "0.1.0"
-        "#,
-        )
+        .file("bar/Cargo.toml", &basic_manifest("bar", "0.1.0"))
         .file(
             "bar/src/lib.rs",
             r#"
             pub fn bar() {}
         "#,
         )
-        .file(
-            "baz/Cargo.toml",
-            r#"
-            [project]
-            name = "baz"
-            version = "0.1.0"
-        "#,
-        )
+        .file("baz/Cargo.toml", &basic_manifest("baz", "0.1.0"))
         .file(
             "baz/src/lib.rs",
             r#"

@@ -1,4 +1,4 @@
-use support::{basic_lib_manifest, execs, project};
+use support::{basic_manifest, basic_lib_manifest, execs, project};
 use support::ChannelChanger;
 use support::hamcrest::assert_that;
 
@@ -436,26 +436,12 @@ fn profile_override_spec() {
         .build();
 
     project().at("dep1")
-        .file(
-            "Cargo.toml",
-            r#"
-            [package]
-            name = "dep"
-            version = "1.0.0"
-        "#,
-        )
+        .file("Cargo.toml", &basic_manifest("dep", "1.0.0"))
         .file("src/lib.rs", "")
         .build();
 
     project().at("dep2")
-        .file(
-            "Cargo.toml",
-            r#"
-            [package]
-            name = "dep"
-            version = "2.0.0"
-        "#,
-        )
+        .file("Cargo.toml", &basic_manifest("dep", "2.0.0"))
         .file("src/lib.rs", "")
         .build();
 

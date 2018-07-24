@@ -1,4 +1,4 @@
-use support::{execs, project};
+use support::{basic_manifest, execs, project};
 use support::registry::Package;
 use support::hamcrest::assert_that;
 
@@ -598,30 +598,14 @@ Caused by:
 #[test]
 fn duplicate_deps() {
     let p = project()
-        .file(
-            "shim-bar/Cargo.toml",
-            r#"
-           [package]
-           name = "bar"
-           version = "0.0.1"
-           authors = []
-        "#,
-        )
+        .file("shim-bar/Cargo.toml", &basic_manifest("bar", "0.0.1"))
         .file(
             "shim-bar/src/lib.rs",
             r#"
                 pub fn a() {}
         "#,
         )
-        .file(
-            "linux-bar/Cargo.toml",
-            r#"
-           [package]
-           name = "bar"
-           version = "0.0.1"
-           authors = []
-        "#,
-        )
+        .file("linux-bar/Cargo.toml", &basic_manifest("bar", "0.0.1"))
         .file(
             "linux-bar/src/lib.rs",
             r#"
@@ -663,30 +647,14 @@ have a single canonical source path irrespective of build target.
 #[test]
 fn duplicate_deps_diff_sources() {
     let p = project()
-        .file(
-            "shim-bar/Cargo.toml",
-            r#"
-           [package]
-           name = "bar"
-           version = "0.0.1"
-           authors = []
-        "#,
-        )
+        .file("shim-bar/Cargo.toml", &basic_manifest("bar", "0.0.1"))
         .file(
             "shim-bar/src/lib.rs",
             r#"
                 pub fn a() {}
         "#,
         )
-        .file(
-            "linux-bar/Cargo.toml",
-            r#"
-           [package]
-           name = "bar"
-           version = "0.0.1"
-           authors = []
-        "#,
-        )
+        .file("linux-bar/Cargo.toml", &basic_manifest("bar", "0.0.1"))
         .file(
             "linux-bar/src/lib.rs",
             r#"
@@ -828,14 +796,7 @@ fn unused_keys_in_virtual_manifest() {
             bulid = "foo"
         "#,
         )
-        .file(
-            "bar/Cargo.toml",
-            r#"
-            [project]
-            version = "0.0.1"
-            name = "bar"
-        "#,
-        )
+        .file("bar/Cargo.toml", &basic_manifest("bar", "0.0.1"))
         .file("bar/src/lib.rs", r"")
         .build();
     assert_that(

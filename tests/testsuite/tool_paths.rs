@@ -106,18 +106,7 @@ fn relative_tools() {
     // by reference to the `.cargo/..` directory and not to (for example) the CWD.
     let p = project()
         .no_manifest()
-        .file(
-            "bar/Cargo.toml",
-            r#"
-            [package]
-            name = "bar"
-            version = "0.0.1"
-            authors = []
-
-            [lib]
-            name = "bar"
-        "#,
-        )
+        .file("bar/Cargo.toml", &basic_lib_manifest("bar"))
         .file("bar/src/lib.rs", "")
         .file(
             ".cargo/config",
@@ -153,7 +142,7 @@ fn relative_tools() {
         p.cargo("build").cwd(foo_path).arg("--verbose"),
         execs().with_stderr(&format!(
             "\
-[COMPILING] bar v0.0.1 ({url})
+[COMPILING] bar v0.5.0 ({url})
 [RUNNING] `rustc [..] -C ar={ar} -C linker={linker} [..]`
 [FINISHED] dev [unoptimized + debuginfo] target(s) in [..]
 ",

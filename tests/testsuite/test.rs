@@ -6,7 +6,7 @@ use cargo;
 use cargo::util::process;
 use support::paths::CargoPathExt;
 use support::registry::Package;
-use support::{basic_bin_manifest, basic_lib_manifest, cargo_exe, execs, project};
+use support::{basic_manifest, basic_bin_manifest, basic_lib_manifest, cargo_exe, execs, project};
 use support::{is_nightly, rustc_host, sleep_ms};
 use support::hamcrest::{assert_that, existing_file, is_not};
 
@@ -89,15 +89,7 @@ fn cargo_test_release() {
             fn test() { foo::foo(); }
         "#,
         )
-        .file(
-            "bar/Cargo.toml",
-            r#"
-            [package]
-            name = "bar"
-            version = "0.0.1"
-            authors = []
-        "#,
-        )
+        .file("bar/Cargo.toml", &basic_manifest("bar", "0.0.1"))
         .file("bar/src/lib.rs", "pub fn bar() {}")
         .build();
 
@@ -515,15 +507,7 @@ fn test_with_deep_lib_dep() {
         )
         .build();
     let _p2 = project().at("bar")
-        .file(
-            "Cargo.toml",
-            r#"
-            [package]
-            name = "bar"
-            version = "0.0.1"
-            authors = []
-        "#,
-        )
+        .file("Cargo.toml", &basic_manifest("bar", "0.0.1"))
         .file(
             "src/lib.rs",
             "
@@ -819,15 +803,7 @@ fn lib_bin_same_name() {
 #[test]
 fn lib_with_standard_name() {
     let p = project()
-        .file(
-            "Cargo.toml",
-            r#"
-            [package]
-            name = "syntax"
-            version = "0.0.1"
-            authors = []
-        "#,
-        )
+        .file("Cargo.toml", &basic_manifest("syntax", "0.0.1"))
         .file(
             "src/lib.rs",
             "
@@ -1915,15 +1891,7 @@ fn almost_cyclic_but_not_quite() {
             extern crate foo;
         "#,
         )
-        .file(
-            "c/Cargo.toml",
-            r#"
-            [package]
-            name = "c"
-            version = "0.0.1"
-            authors = []
-        "#,
-        )
+        .file("c/Cargo.toml", &basic_manifest("c", "0.0.1"))
         .file("c/src/lib.rs", "")
         .build();
 
@@ -1960,15 +1928,7 @@ fn build_then_selective_test() {
             fn main() {}
         "#,
         )
-        .file(
-            "b/Cargo.toml",
-            r#"
-            [package]
-            name = "b"
-            version = "0.0.1"
-            authors = []
-        "#,
-        )
+        .file("b/Cargo.toml", &basic_manifest("b", "0.0.1"))
         .file("b/src/lib.rs", "")
         .build();
 
@@ -2004,15 +1964,7 @@ fn example_dev_dep() {
             fn main() { }
         "#,
         )
-        .file(
-            "bar/Cargo.toml",
-            r#"
-            [package]
-            name = "bar"
-            version = "0.0.1"
-            authors = []
-        "#,
-        )
+        .file("bar/Cargo.toml", &basic_manifest("bar", "0.0.1"))
         .file(
             "bar/src/lib.rs",
             r#"
@@ -2182,15 +2134,7 @@ fn example_with_dev_dep() {
             "examples/ex.rs",
             "#[allow(unused_extern_crates)] extern crate a; fn main() {}",
         )
-        .file(
-            "a/Cargo.toml",
-            r#"
-            [package]
-            name = "a"
-            version = "0.0.1"
-            authors = []
-        "#,
-        )
+        .file("a/Cargo.toml", &basic_manifest("a", "0.0.1"))
         .file("a/src/lib.rs", "")
         .build();
 
@@ -2289,15 +2233,7 @@ fn doctest_feature() {
 #[test]
 fn dashes_to_underscores() {
     let p = project()
-        .file(
-            "Cargo.toml",
-            r#"
-            [package]
-            name = "foo-bar"
-            version = "0.0.1"
-            authors = []
-        "#,
-        )
+        .file("Cargo.toml", &basic_manifest("foo-bar", "0.0.1"))
         .file(
             "src/lib.rs",
             r#"
@@ -2336,15 +2272,7 @@ fn doctest_dev_dep() {
             pub fn foo() {}
         "#,
         )
-        .file(
-            "b/Cargo.toml",
-            r#"
-            [package]
-            name = "b"
-            version = "0.0.1"
-            authors = []
-        "#,
-        )
+        .file("b/Cargo.toml", &basic_manifest("b", "0.0.1"))
         .file("b/src/lib.rs", "")
         .build();
 
@@ -2729,15 +2657,7 @@ fn selective_test_wonky_profile() {
         "#,
         )
         .file("src/lib.rs", "")
-        .file(
-            "a/Cargo.toml",
-            r#"
-            [package]
-            name = "a"
-            version = "0.0.1"
-            authors = []
-        "#,
-        )
+        .file("a/Cargo.toml", &basic_manifest("a", "0.0.1"))
         .file("a/src/lib.rs", "");
     let p = p.build();
 
@@ -2763,15 +2683,7 @@ fn selective_test_optional_dep() {
         "#,
         )
         .file("src/lib.rs", "")
-        .file(
-            "a/Cargo.toml",
-            r#"
-            [package]
-            name = "a"
-            version = "0.0.1"
-            authors = []
-        "#,
-        )
+        .file("a/Cargo.toml", &basic_manifest("a", "0.0.1"))
         .file("a/src/lib.rs", "");
     let p = p.build();
 
@@ -2857,15 +2769,7 @@ fn test_panic_abort_with_dep() {
             fn foo() {}
         "#,
         )
-        .file(
-            "bar/Cargo.toml",
-            r#"
-            [package]
-            name = "bar"
-            version = "0.0.1"
-            authors = []
-        "#,
-        )
+        .file("bar/Cargo.toml", &basic_manifest("bar", "0.0.1"))
         .file("bar/src/lib.rs", "")
         .build();
     assert_that(p.cargo("test").arg("-v"), execs().with_status(0));
@@ -2932,15 +2836,7 @@ fn panic_abort_multiple() {
             "src/lib.rs",
             "#[allow(unused_extern_crates)] extern crate a;",
         )
-        .file(
-            "a/Cargo.toml",
-            r#"
-            [package]
-            name = "a"
-            version = "0.0.1"
-            authors = []
-        "#,
-        )
+        .file("a/Cargo.toml", &basic_manifest("a", "0.0.1"))
         .file("a/src/lib.rs", "")
         .build();
     assert_that(
@@ -3014,25 +2910,9 @@ fn pass_correct_cfgs_flags_to_rustdoc() {
             }
         "#,
         )
-        .file(
-            "libs/mock_serde_derive/Cargo.toml",
-            r#"
-            [package]
-            name = "mock_serde_derive"
-            version = "0.1.0"
-            authors = []
-        "#,
-        )
+        .file("libs/mock_serde_derive/Cargo.toml", &basic_manifest("mock_serde_derive", "0.1.0"))
         .file("libs/mock_serde_derive/src/lib.rs", "")
-        .file(
-            "libs/mock_serde_codegen/Cargo.toml",
-            r#"
-                [package]
-                name = "mock_serde_codegen"
-                version = "0.1.0"
-                authors = []
-            "#,
-        )
+        .file("libs/mock_serde_codegen/Cargo.toml", &basic_manifest("mock_serde_codegen", "0.1.0"))
         .file("libs/mock_serde_codegen/src/lib.rs", "");
     let p = p.build();
 
@@ -3082,15 +2962,7 @@ fn test_release_ignore_panic() {
             "src/lib.rs",
             "#[allow(unused_extern_crates)] extern crate a;",
         )
-        .file(
-            "a/Cargo.toml",
-            r#"
-            [package]
-            name = "a"
-            version = "0.0.1"
-            authors = []
-        "#,
-        )
+        .file("a/Cargo.toml", &basic_manifest("a", "0.0.1"))
         .file("a/src/lib.rs", "");
     let p = p.build();
     println!("test");
@@ -3120,15 +2992,7 @@ fn test_many_with_features() {
         "#,
         )
         .file("src/lib.rs", "")
-        .file(
-            "a/Cargo.toml",
-            r#"
-            [package]
-            name = "a"
-            version = "0.0.1"
-            authors = []
-        "#,
-        )
+        .file("a/Cargo.toml", &basic_manifest("a", "0.0.1"))
         .file("a/src/lib.rs", "")
         .build();
 
@@ -3161,14 +3025,7 @@ fn test_all_workspace() {
             fn foo_test() {}
         "#,
         )
-        .file(
-            "bar/Cargo.toml",
-            r#"
-            [project]
-            name = "bar"
-            version = "0.1.0"
-        "#,
-        )
+        .file("bar/Cargo.toml", &basic_manifest("bar", "0.1.0"))
         .file(
             "bar/src/lib.rs",
             r#"
@@ -3207,14 +3064,7 @@ fn test_all_exclude() {
             fn main() {}
         "#,
         )
-        .file(
-            "bar/Cargo.toml",
-            r#"
-            [project]
-            name = "bar"
-            version = "0.1.0"
-        "#,
-        )
+        .file("bar/Cargo.toml", &basic_manifest("bar", "0.1.0"))
         .file(
             "bar/src/lib.rs",
             r#"
@@ -3222,14 +3072,7 @@ fn test_all_exclude() {
             pub fn bar() {}
         "#,
         )
-        .file(
-            "baz/Cargo.toml",
-            r#"
-            [project]
-            name = "baz"
-            version = "0.1.0"
-        "#,
-        )
+        .file("baz/Cargo.toml", &basic_manifest("baz", "0.1.0"))
         .file(
             "baz/src/lib.rs",
             r#"
@@ -3260,14 +3103,7 @@ fn test_all_virtual_manifest() {
             members = ["a", "b"]
         "#,
         )
-        .file(
-            "a/Cargo.toml",
-            r#"
-            [project]
-            name = "a"
-            version = "0.1.0"
-        "#,
-        )
+        .file("a/Cargo.toml", &basic_manifest("a", "0.1.0"))
         .file(
             "a/src/lib.rs",
             r#"
@@ -3275,14 +3111,7 @@ fn test_all_virtual_manifest() {
             fn a() {}
         "#,
         )
-        .file(
-            "b/Cargo.toml",
-            r#"
-            [project]
-            name = "b"
-            version = "0.1.0"
-        "#,
-        )
+        .file("b/Cargo.toml", &basic_manifest("b", "0.1.0"))
         .file(
             "b/src/lib.rs",
             r#"
@@ -3311,14 +3140,7 @@ fn test_virtual_manifest_all_implied() {
             members = ["a", "b"]
         "#,
         )
-        .file(
-            "a/Cargo.toml",
-            r#"
-            [project]
-            name = "a"
-            version = "0.1.0"
-        "#,
-        )
+        .file("a/Cargo.toml", &basic_manifest("a", "0.1.0"))
         .file(
             "a/src/lib.rs",
             r#"
@@ -3326,14 +3148,7 @@ fn test_virtual_manifest_all_implied() {
             fn a() {}
         "#,
         )
-        .file(
-            "b/Cargo.toml",
-            r#"
-            [project]
-            name = "b"
-            version = "0.1.0"
-        "#,
-        )
+        .file("b/Cargo.toml", &basic_manifest("b", "0.1.0"))
         .file(
             "b/src/lib.rs",
             r#"
@@ -3415,14 +3230,7 @@ fn doctest_only_with_dev_dep() {
             pub fn a() {}
         "#,
         )
-        .file(
-            "b/Cargo.toml",
-            r#"
-            [project]
-            name = "b"
-            version = "0.1.0"
-        "#,
-        )
+        .file("b/Cargo.toml", &basic_manifest("b", "0.1.0"))
         .file(
             "b/src/lib.rs",
             r#"
@@ -3545,14 +3353,7 @@ fn doctest_and_registry() {
         "#,
         )
         .file("src/lib.rs", "")
-        .file(
-            "b/Cargo.toml",
-            r#"
-            [project]
-            name = "b"
-            version = "0.1.0"
-        "#,
-        )
+        .file("b/Cargo.toml", &basic_manifest("b", "0.1.0"))
         .file(
             "b/src/lib.rs",
             "
@@ -3862,14 +3663,7 @@ fn test_hint_workspace() {
             members = ["a", "b"]
         "#,
         )
-        .file(
-            "a/Cargo.toml",
-            r#"
-            [project]
-            name = "a"
-            version = "0.1.0"
-        "#,
-        )
+        .file("a/Cargo.toml", &basic_manifest("a", "0.1.0"))
         .file(
             "a/src/lib.rs",
             r#"
@@ -3877,14 +3671,7 @@ fn test_hint_workspace() {
             fn t1() {}
         "#,
         )
-        .file(
-            "b/Cargo.toml",
-            r#"
-            [project]
-            name = "b"
-            version = "0.1.0"
-        "#,
-        )
+        .file("b/Cargo.toml", &basic_manifest("b", "0.1.0"))
         .file(
             "b/src/lib.rs",
             r#"

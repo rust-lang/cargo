@@ -1,6 +1,6 @@
 use support::git;
 use support::registry::Package;
-use support::{execs, lines_match, project};
+use support::{basic_manifest, execs, lines_match, project};
 use support::hamcrest::assert_that;
 
 #[test]
@@ -313,15 +313,8 @@ this could be indicative of a few possible situations:
 #[test]
 fn listed_checksum_bad_if_we_cannot_compute() {
     let git = git::new("bar", |p| {
-        p.file(
-            "Cargo.toml",
-            r#"
-            [project]
-            name = "bar"
-            version = "0.1.0"
-            authors = []
-        "#,
-        ).file("src/lib.rs", "")
+        p.file("Cargo.toml", &basic_manifest("bar", "0.1.0"))
+         .file("src/lib.rs", "")
     }).unwrap();
 
     let p = project()

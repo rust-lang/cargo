@@ -124,15 +124,7 @@ fn invalid4() {
         "#,
         )
         .file("src/main.rs", "")
-        .file(
-            "bar/Cargo.toml",
-            r#"
-            [project]
-            name = "bar"
-            version = "0.0.1"
-            authors = []
-        "#,
-        )
+        .file("bar/Cargo.toml", &basic_manifest("bar", "0.0.1"))
         .file("bar/src/lib.rs", "")
         .build();
 
@@ -151,7 +143,7 @@ failed to select a version for `bar` which could resolve this conflict",
         ),
     );
 
-    p.change_file("Cargo.toml", basic_manifest("foo", "0.0.1"));
+    p.change_file("Cargo.toml", &basic_manifest("foo", "0.0.1"));
 
     assert_that(
         p.cargo("build").arg("--features").arg("test"),
@@ -273,15 +265,7 @@ fn invalid8() {
         "#,
         )
         .file("src/main.rs", "")
-        .file(
-            "bar/Cargo.toml",
-            r#"
-            [package]
-            name = "bar"
-            version = "0.0.1"
-            authors = []
-        "#,
-        )
+        .file("bar/Cargo.toml", &basic_manifest("bar", "0.0.1"))
         .file("bar/src/lib.rs", "")
         .build();
 
@@ -309,15 +293,7 @@ fn invalid9() {
         "#,
         )
         .file("src/main.rs", "fn main() {}")
-        .file(
-            "bar/Cargo.toml",
-            r#"
-            [package]
-            name = "bar"
-            version = "0.0.1"
-            authors = []
-        "#,
-        )
+        .file("bar/Cargo.toml", &basic_manifest("bar", "0.0.1"))
         .file("bar/src/lib.rs", "")
         .build();
 
@@ -361,15 +337,7 @@ fn invalid10() {
         "#,
         )
         .file("bar/src/lib.rs", "")
-        .file(
-            "bar/baz/Cargo.toml",
-            r#"
-            [package]
-            name = "baz"
-            version = "0.0.1"
-            authors = []
-        "#,
-        )
+        .file("bar/baz/Cargo.toml", &basic_manifest("baz", "0.0.1"))
         .file("bar/baz/src/lib.rs", "")
         .build();
 
@@ -483,15 +451,7 @@ fn no_feature_doesnt_build() {
             fn main() {}
         "#,
         )
-        .file(
-            "bar/Cargo.toml",
-            r#"
-            [package]
-            name = "bar"
-            version = "0.0.1"
-            authors = []
-        "#,
-        )
+        .file("bar/Cargo.toml", &basic_manifest("bar", "0.0.1"))
         .file("bar/src/lib.rs", "pub fn bar() {}")
         .build();
 
@@ -557,15 +517,7 @@ fn default_feature_pulled_in() {
             fn main() {}
         "#,
         )
-        .file(
-            "bar/Cargo.toml",
-            r#"
-            [package]
-            name = "bar"
-            version = "0.0.1"
-            authors = []
-        "#,
-        )
+        .file("bar/Cargo.toml", &basic_manifest("bar", "0.0.1"))
         .file("bar/src/lib.rs", "pub fn bar() {}")
         .build();
 
@@ -689,25 +641,9 @@ fn groups_on_groups_on_groups() {
             fn main() {}
         "#,
         )
-        .file(
-            "bar/Cargo.toml",
-            r#"
-            [package]
-            name = "bar"
-            version = "0.0.1"
-            authors = []
-        "#,
-        )
+        .file("bar/Cargo.toml", &basic_manifest("bar", "0.0.1"))
         .file("bar/src/lib.rs", "pub fn bar() {}")
-        .file(
-            "baz/Cargo.toml",
-            r#"
-            [package]
-            name = "baz"
-            version = "0.0.1"
-            authors = []
-        "#,
-        )
+        .file("baz/Cargo.toml", &basic_manifest("baz", "0.0.1"))
         .file("baz/src/lib.rs", "pub fn baz() {}")
         .build();
 
@@ -755,25 +691,9 @@ fn many_cli_features() {
             fn main() {}
         "#,
         )
-        .file(
-            "bar/Cargo.toml",
-            r#"
-            [package]
-            name = "bar"
-            version = "0.0.1"
-            authors = []
-        "#,
-        )
+        .file("bar/Cargo.toml", &basic_manifest("bar", "0.0.1"))
         .file("bar/src/lib.rs", "pub fn bar() {}")
-        .file(
-            "baz/Cargo.toml",
-            r#"
-            [package]
-            name = "baz"
-            version = "0.0.1"
-            authors = []
-        "#,
-        )
+        .file("baz/Cargo.toml", &basic_manifest("baz", "0.0.1"))
         .file("baz/src/lib.rs", "pub fn baz() {}")
         .build();
 
@@ -1040,15 +960,7 @@ fn everything_in_the_lockfile() {
         "#,
         )
         .file("d1/src/lib.rs", "")
-        .file(
-            "d2/Cargo.toml",
-            r#"
-            [package]
-            name = "d2"
-            version = "0.0.2"
-            authors = []
-        "#,
-        )
+        .file("d2/Cargo.toml", &basic_manifest("d2", "0.0.2"))
         .file("d2/src/lib.rs", "")
         .file(
             "d3/Cargo.toml",
@@ -1218,15 +1130,7 @@ fn optional_and_dev_dep() {
         "#,
         )
         .file("src/lib.rs", "")
-        .file(
-            "foo/Cargo.toml",
-            r#"
-            [package]
-            name = "foo"
-            version = "0.1.0"
-            authors = []
-        "#,
-        )
+        .file("foo/Cargo.toml", &basic_manifest("foo", "0.1.0"))
         .file("foo/src/lib.rs", "")
         .build();
 
@@ -1431,15 +1335,7 @@ fn all_features_flag_enables_all_features() {
             }
         "#,
         )
-        .file(
-            "baz/Cargo.toml",
-            r#"
-            [package]
-            name = "baz"
-            version = "0.0.1"
-            authors = []
-        "#,
-        )
+        .file("baz/Cargo.toml", &basic_manifest("baz", "0.0.1"))
         .file("baz/src/lib.rs", "pub fn baz() {}")
         .build();
 
@@ -1479,25 +1375,9 @@ fn many_cli_features_comma_delimited() {
             fn main() {}
         "#,
         )
-        .file(
-            "bar/Cargo.toml",
-            r#"
-            [package]
-            name = "bar"
-            version = "0.0.1"
-            authors = []
-        "#,
-        )
+        .file("bar/Cargo.toml", &basic_manifest("bar", "0.0.1"))
         .file("bar/src/lib.rs", "pub fn bar() {}")
-        .file(
-            "baz/Cargo.toml",
-            r#"
-            [package]
-            name = "baz"
-            version = "0.0.1"
-            authors = []
-        "#,
-        )
+        .file("baz/Cargo.toml", &basic_manifest("baz", "0.0.1"))
         .file("baz/src/lib.rs", "pub fn baz() {}")
         .build();
 
@@ -1557,45 +1437,13 @@ fn many_cli_features_comma_and_space_delimited() {
             fn main() {}
         "#,
         )
-        .file(
-            "bar/Cargo.toml",
-            r#"
-            [package]
-            name = "bar"
-            version = "0.0.1"
-            authors = []
-        "#,
-        )
+        .file("bar/Cargo.toml", &basic_manifest("bar", "0.0.1"))
         .file("bar/src/lib.rs", "pub fn bar() {}")
-        .file(
-            "baz/Cargo.toml",
-            r#"
-            [package]
-            name = "baz"
-            version = "0.0.1"
-            authors = []
-        "#,
-        )
+        .file("baz/Cargo.toml", &basic_manifest("baz", "0.0.1"))
         .file("baz/src/lib.rs", "pub fn baz() {}")
-        .file(
-            "bam/Cargo.toml",
-            r#"
-            [package]
-            name = "bam"
-            version = "0.0.1"
-            authors = []
-        "#,
-        )
+        .file("bam/Cargo.toml", &basic_manifest("bam", "0.0.1"))
         .file("bam/src/lib.rs", "pub fn bam() {}")
-        .file(
-            "bap/Cargo.toml",
-            r#"
-            [package]
-            name = "bap"
-            version = "0.0.1"
-            authors = []
-        "#,
-        )
+        .file("bap/Cargo.toml", &basic_manifest("bap", "0.0.1"))
         .file("bap/src/lib.rs", "pub fn bap() {}")
         .build();
 

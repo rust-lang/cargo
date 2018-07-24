@@ -7,7 +7,7 @@ use support::cargo_process;
 use support::git;
 use support::paths::{self, CargoPathExt};
 use support::registry::{self, Package};
-use support::{execs, project};
+use support::{basic_manifest, execs, project};
 use support::hamcrest::assert_that;
 use url::Url;
 
@@ -371,15 +371,7 @@ fn package_with_path_deps() {
         "#,
         )
         .file("src/main.rs", "fn main() {}")
-        .file(
-            "notyet/Cargo.toml",
-            r#"
-            [package]
-            name = "notyet"
-            version = "0.0.1"
-            authors = []
-        "#,
-        )
+        .file("notyet/Cargo.toml", &basic_manifest("notyet", "0.0.1"))
         .file("notyet/src/lib.rs", "")
         .build();
 
@@ -1330,15 +1322,7 @@ fn bundled_crate_in_registry() {
         "#,
         )
         .file("src/lib.rs", "")
-        .file(
-            "bar/Cargo.toml",
-            r#"
-            [package]
-            name = "bar"
-            version = "0.1.0"
-            authors = []
-        "#,
-        )
+        .file("bar/Cargo.toml", &basic_manifest("bar", "0.1.0"))
         .file("bar/src/lib.rs", "")
         .publish();
 

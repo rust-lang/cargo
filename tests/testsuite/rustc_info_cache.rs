@@ -1,4 +1,4 @@
-use support::{execs, project};
+use support::{basic_manifest, execs, project};
 use support::paths::CargoPathExt;
 use support::hamcrest::assert_that;
 use std::env;
@@ -45,14 +45,7 @@ fn rustc_info_cache() {
 
     let other_rustc = {
         let p = project().at("compiler")
-            .file(
-                "Cargo.toml",
-                r#"
-            [package]
-            name = "compiler"
-            version = "0.1.0"
-        "#,
-            )
+            .file("Cargo.toml", &basic_manifest("compiler", "0.1.0"))
             .file(
                 "src/main.rs",
                 r#"

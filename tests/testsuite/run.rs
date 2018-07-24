@@ -1,6 +1,6 @@
 use cargo::util::paths::dylib_path_envvar;
 use support::{self, ChannelChanger};
-use support::{execs, project, Project, path2url};
+use support::{basic_bin_manifest, basic_lib_manifest, execs, project, Project, path2url};
 use support::hamcrest::{assert_that, existing_file};
 
 #[test]
@@ -779,18 +779,7 @@ fn example_with_release_flag() {
             }
         "#,
         )
-        .file(
-            "bar/Cargo.toml",
-            r#"
-            [project]
-            name = "bar"
-            version = "0.0.1"
-            authors = []
-
-            [lib]
-            name = "bar"
-        "#,
-        )
+        .file("bar/Cargo.toml", &basic_lib_manifest("bar"))
         .file(
             "bar/src/bar.rs",
             r#"
@@ -815,7 +804,7 @@ fn example_with_release_flag() {
             .with_status(0)
             .with_stderr(&format!(
                 "\
-[COMPILING] bar v0.0.1 ({url}/bar)
+[COMPILING] bar v0.5.0 ({url}/bar)
 [RUNNING] `rustc --crate-name bar bar[/]src[/]bar.rs --crate-type lib \
         --emit=dep-info,link \
         -C opt-level=3 \
@@ -849,7 +838,7 @@ fast2",
             .with_status(0)
             .with_stderr(&format!(
                 "\
-[COMPILING] bar v0.0.1 ({url}/bar)
+[COMPILING] bar v0.5.0 ({url}/bar)
 [RUNNING] `rustc --crate-name bar bar[/]src[/]bar.rs --crate-type lib \
         --emit=dep-info,link \
         -C debuginfo=2 \
@@ -1179,42 +1168,12 @@ fn run_multiple_packages() {
         "#,
         )
         .file("foo/src/foo.rs", "fn main() { println!(\"foo\"); }")
-        .file(
-            "foo/d1/Cargo.toml",
-            r#"
-            [package]
-            name = "d1"
-            version = "0.0.1"
-            authors = []
-
-            [[bin]]
-            name = "d1"
-        "#,
-        )
+        .file("foo/d1/Cargo.toml", &basic_bin_manifest("d1"))
         .file("foo/d1/src/lib.rs", "")
         .file("foo/d1/src/main.rs", "fn main() { println!(\"d1\"); }")
-        .file(
-            "foo/d2/Cargo.toml",
-            r#"
-            [package]
-            name = "d2"
-            version = "0.0.1"
-            authors = []
-
-            [[bin]]
-            name = "d2"
-        "#,
-        )
+        .file("foo/d2/Cargo.toml", &basic_bin_manifest("d2"))
         .file("foo/d2/src/main.rs", "fn main() { println!(\"d2\"); }")
-        .file(
-            "d3/Cargo.toml",
-            r#"
-            [package]
-            name = "d3"
-            version = "0.0.1"
-            authors = []
-        "#,
-        )
+        .file("d3/Cargo.toml", &basic_bin_manifest("d3"))
         .file("d3/src/main.rs", "fn main() { println!(\"d2\"); }")
         .build();
 

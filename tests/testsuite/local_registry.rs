@@ -3,7 +3,7 @@ use std::io::prelude::*;
 
 use support::paths::{self, CargoPathExt};
 use support::registry::Package;
-use support::{execs, project};
+use support::{basic_manifest, execs, project};
 use support::hamcrest::assert_that;
 
 fn setup() {
@@ -265,15 +265,7 @@ fn path_dep_rewritten() {
             "#,
         )
         .file("src/lib.rs", "extern crate bar; pub fn baz() {}")
-        .file(
-            "bar/Cargo.toml",
-            r#"
-                [project]
-                name = "bar"
-                version = "0.0.1"
-                authors = []
-            "#,
-        )
+        .file("bar/Cargo.toml", &basic_manifest("bar", "0.0.1"))
         .file("bar/src/lib.rs", "pub fn bar() {}")
         .publish();
 

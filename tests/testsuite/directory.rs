@@ -8,7 +8,7 @@ use support::cargo_process;
 use support::git;
 use support::paths;
 use support::registry::{cksum, Package};
-use support::{execs, project, ProjectBuilder};
+use support::{basic_manifest, execs, project, ProjectBuilder};
 use support::hamcrest::assert_that;
 
 fn setup() {
@@ -78,15 +78,7 @@ fn simple() {
     setup();
 
     VendorPackage::new("bar")
-        .file(
-            "Cargo.toml",
-            r#"
-            [package]
-            name = "bar"
-            version = "0.1.0"
-            authors = []
-        "#,
-        )
+        .file("Cargo.toml", &basic_manifest("bar", "0.1.0"))
         .file("src/lib.rs", "pub fn bar() {}")
         .build();
 
@@ -229,15 +221,6 @@ fn install_without_feature_dep() {
     setup();
 
     VendorPackage::new("foo")
-        .file(
-            "Cargo.toml",
-            r#"
-            [package]
-            name = "foo"
-            version = "0.1.0"
-            authors = []
-        "#,
-        )
         .file("src/lib.rs", "pub fn foo() {}")
         .build();
 
@@ -251,7 +234,7 @@ fn install_without_feature_dep() {
             authors = []
 
             [dependencies]
-            foo = "0.1.0"
+            foo = "0.0.1"
             baz = { version = "9.8.7", optional = true }
 
             [features]
@@ -274,7 +257,7 @@ fn install_without_feature_dep() {
         cargo_process().arg("install").arg("bar"),
         execs().with_status(0).with_stderr(
             "  Installing bar v0.1.0
-   Compiling foo v0.1.0
+   Compiling foo v0.0.1
    Compiling bar v0.1.0
     Finished release [optimized] target(s) in [..]s
   Installing [..]bar[..]
@@ -332,29 +315,13 @@ fn multiple() {
     setup();
 
     VendorPackage::new("bar-0.1.0")
-        .file(
-            "Cargo.toml",
-            r#"
-            [package]
-            name = "bar"
-            version = "0.1.0"
-            authors = []
-        "#,
-        )
+        .file("Cargo.toml", &basic_manifest("bar", "0.1.0"))
         .file("src/lib.rs", "pub fn bar() {}")
         .file(".cargo-checksum", "")
         .build();
 
     VendorPackage::new("bar-0.2.0")
-        .file(
-            "Cargo.toml",
-            r#"
-            [package]
-            name = "bar"
-            version = "0.2.0"
-            authors = []
-        "#,
-        )
+        .file("Cargo.toml", &basic_manifest("bar", "0.2.0"))
         .file("src/lib.rs", "pub fn bar() {}")
         .file(".cargo-checksum", "")
         .build();
@@ -443,15 +410,7 @@ fn crates_io_then_directory() {
     setup();
 
     let mut v = VendorPackage::new("bar");
-    v.file(
-        "Cargo.toml",
-        r#"
-        [package]
-        name = "bar"
-        version = "0.1.0"
-        authors = []
-    "#,
-    );
+    v.file("Cargo.toml", &basic_manifest("bar", "0.1.0"));
     v.file("src/lib.rs", "pub fn bar() -> u32 { 1 }");
     v.cksum.package = Some(cksum);
     v.build();
@@ -492,15 +451,7 @@ fn crates_io_then_bad_checksum() {
     setup();
 
     VendorPackage::new("bar")
-        .file(
-            "Cargo.toml",
-            r#"
-            [package]
-            name = "bar"
-            version = "0.1.0"
-            authors = []
-        "#,
-        )
+        .file("Cargo.toml", &basic_manifest("bar", "0.1.0"))
         .file("src/lib.rs", "")
         .build();
 
@@ -528,15 +479,7 @@ fn bad_file_checksum() {
     setup();
 
     VendorPackage::new("bar")
-        .file(
-            "Cargo.toml",
-            r#"
-            [package]
-            name = "bar"
-            version = "0.1.0"
-            authors = []
-        "#,
-        )
+        .file("Cargo.toml", &basic_manifest("bar", "0.1.0"))
         .file("src/lib.rs", "")
         .build();
 
@@ -580,15 +523,7 @@ fn only_dot_files_ok() {
     setup();
 
     VendorPackage::new("bar")
-        .file(
-            "Cargo.toml",
-            r#"
-            [package]
-            name = "bar"
-            version = "0.1.0"
-            authors = []
-        "#,
-        )
+        .file("Cargo.toml", &basic_manifest("bar", "0.1.0"))
         .file("src/lib.rs", "")
         .build();
     VendorPackage::new("foo").no_manifest().file(".bar", "").build();
@@ -617,15 +552,7 @@ fn random_files_ok() {
     setup();
 
     VendorPackage::new("bar")
-        .file(
-            "Cargo.toml",
-            r#"
-            [package]
-            name = "bar"
-            version = "0.1.0"
-            authors = []
-        "#,
-        )
+        .file("Cargo.toml", &basic_manifest("bar", "0.1.0"))
         .file("src/lib.rs", "")
         .build();
     VendorPackage::new("foo")
@@ -656,27 +583,12 @@ fn random_files_ok() {
 #[test]
 fn git_lock_file_doesnt_change() {
     let git = git::new("git", |p| {
-        p.file(
-            "Cargo.toml",
-            r#"
-            [project]
-            name = "git"
-            version = "0.5.0"
-            authors = []
-        "#,
-        ).file("src/lib.rs", "")
+        p.file("Cargo.toml", &basic_manifest("git", "0.5.0"))
+        .file("src/lib.rs", "")
     }).unwrap();
 
     VendorPackage::new("git")
-        .file(
-            "Cargo.toml",
-            r#"
-            [package]
-            name = "git"
-            version = "0.5.0"
-            authors = []
-        "#,
-        )
+        .file("Cargo.toml", &basic_manifest("git", "0.5.0"))
         .file("src/lib.rs", "")
         .disable_checksum()
         .build();
@@ -740,15 +652,7 @@ fn git_lock_file_doesnt_change() {
 #[test]
 fn git_override_requires_lockfile() {
     VendorPackage::new("git")
-        .file(
-            "Cargo.toml",
-            r#"
-            [package]
-            name = "git"
-            version = "0.5.0"
-            authors = []
-        "#,
-        )
+        .file("Cargo.toml", &basic_manifest("git", "0.5.0"))
         .file("src/lib.rs", "")
         .disable_checksum()
         .build();
