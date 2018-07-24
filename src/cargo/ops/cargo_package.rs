@@ -44,9 +44,12 @@ pub fn package(ws: &Workspace, opts: &PackageOpts) -> CargoResult<Option<FileLoc
 
     verify_dependencies(pkg)?;
 
+    // `list_files` outputs warnings as a side effect, so only do it once.
+    let src_files = src.list_files(pkg)?;
+
     // Check (git) repository state, getting the current commit hash if not
     // dirty. This will `bail!` if dirty, unless allow_dirty.
-    let sha1_hash = check_repo_state(pkg, &src, opts.allow_dirty)?;
+    let sha1_hash = check_repo_state(pkg, &src_files, opts.allow_dirty)?;
 
     // Write out VCS info file for package, if we have a sha1 hash
     let vcs_info = if let Some(hsh) = sha1_hash {
@@ -67,7 +70,7 @@ pub fn package(ws: &Workspace, opts: &PackageOpts) -> CargoResult<Option<FileLoc
 
     // Make sure a VCS info file is not included in source, regardless of if
     // we produced the file above, and in particular if we did not.
-    check_vcs_file_collision(pkg, &src)?;
+    check_vcs_file_collision(pkg, &src_files)?;
 
     if opts.list {
         let root = pkg.root();
@@ -104,7 +107,7 @@ pub fn package(ws: &Workspace, opts: &PackageOpts) -> CargoResult<Option<FileLoc
         .status("Packaging", pkg.package_id().to_string())?;
     dst.file().set_len(0)?;
     let vcs_path = vcs_info.as_ref().map(|f| f.path());
-    tar(ws, &src, vcs_path, dst.file(), &filename)
+    tar(ws, &src_files, vcs_path, dst.file(), &filename)
         .chain_err(|| format_err!("failed to prepare local package for uploading"))?;
     if opts.verify {
         dst.seek(SeekFrom::Start(0))?;
@@ -185,7 +188,7 @@ fn verify_dependencies(pkg: &Package) -> CargoResult<()> {
 // hash of the current *HEAD* commit, or `None` if *dirty*.
 fn check_repo_state(
     p: &Package,
-    src: &PathSource,
+    src_files: &[PathBuf],
     allow_dirty: bool
 ) -> CargoResult<Option<String>> {
     if let Ok(repo) = git2::Repository::discover(p.root()) {
@@ -199,7 +202,7 @@ fn check_repo_state(
             if let Ok(status) = repo.status_file(path) {
                 if (status & git2::Status::IGNORED).is_empty() {
                     debug!("Cargo.toml found in repo, checking if dirty");
-                    return git(p, src, &repo, allow_dirty);
+                    return git(p, src_files, &repo, allow_dirty);
                 }
             }
         }
@@ -211,12 +214,12 @@ fn check_repo_state(
 
     fn git(
         p: &Package,
-        src: &PathSource,
+        src_files: &[PathBuf],
         repo: &git2::Repository,
         allow_dirty: bool
     ) -> CargoResult<Option<String>> {
         let workdir = repo.workdir().unwrap();
-        let dirty = src.list_files(p)?
+        let dirty = src_files
             .iter()
             .filter(|file| {
                 let relative = file.strip_prefix(workdir).unwrap();
@@ -254,11 +257,10 @@ fn check_repo_state(
 // Check for and `bail!` if a source file matches ROOT/VCS_INFO_FILE, since
 // this is now a cargo reserved file name, and we don't want to allow
 // forgery.
-fn check_vcs_file_collision(pkg: &Package, src: &PathSource) -> CargoResult<()> {
+fn check_vcs_file_collision(pkg: &Package, src_files: &[PathBuf]) -> CargoResult<()> {
     let root = pkg.root();
     let vcs_info_path = Path::new(VCS_INFO_FILE);
-    let sfiles = src.list_files(pkg)?;
-    let collision = sfiles.iter().find(|&p| {
+    let collision = src_files.iter().find(|&p| {
         util::without_prefix(&p, root).unwrap() == vcs_info_path
     });
     if collision.is_some() {
@@ -270,7 +272,7 @@ fn check_vcs_file_collision(pkg: &Package, src: &PathSource) -> CargoResult<()> 
 
 fn tar(
     ws: &Workspace,
-    src: &PathSource,
+    src_files: &[PathBuf],
     vcs_info_path: Option<&Path>,
     dst: &File,
     filename: &str
@@ -286,7 +288,7 @@ fn tar(
     let pkg = ws.current()?;
     let config = ws.config();
     let root = pkg.root();
-    for file in src.list_files(pkg)?.iter() {
+    for file in src_files.iter() {
         let relative = util::without_prefix(file, root).unwrap();
         check_filename(relative)?;
         let relative = relative.to_str().ok_or_else(|| {
