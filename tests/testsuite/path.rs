@@ -1085,6 +1085,7 @@ fn custom_target_no_rebuild() {
 #[test]
 fn override_and_depend() {
     let p = project()
+        .no_manifest()
         .file(
             "a/a1/Cargo.toml",
             r#"

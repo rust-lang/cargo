@@ -512,7 +512,7 @@ fn publish_clean() {
 fn publish_in_sub_repo() {
     publish::setup();
 
-    let p = project().file("baz", "").build();
+    let p = project().no_manifest().file("baz", "").build();
 
     let _ = repo(&paths::root().join("foo"))
         .file(
@@ -578,7 +578,7 @@ fn publish_when_ignored() {
 fn ignore_when_crate_ignored() {
     publish::setup();
 
-    let p = project().file("bar/baz", "").build();
+    let p = project().no_manifest().file("bar/baz", "").build();
 
     let _ = repo(&paths::root().join("foo"))
         .file(".gitignore", "bar")

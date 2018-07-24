@@ -320,6 +320,7 @@ fn changing_profiles_caches_targets() {
 fn changing_bin_paths_common_target_features_caches_targets() {
     // Make sure dep_cache crate is built once per feature
     let p = project()
+        .no_manifest()
         .file(
             ".cargo/config",
             r#"
@@ -731,6 +732,7 @@ fn rerun_if_changed_in_dep() {
 #[test]
 fn same_build_dir_cached_packages() {
     let p = project()
+        .no_manifest()
         .file(
             "a1/Cargo.toml",
             r#"

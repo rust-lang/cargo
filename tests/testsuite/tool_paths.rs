@@ -127,6 +127,7 @@ fn relative_tools() {
     // Funky directory structure to test that relative tool paths are made absolute
     // by reference to the `.cargo/..` directory and not to (for example) the CWD.
     let p = project()
+        .no_manifest()
         .file(
             "bar/Cargo.toml",
             r#"
