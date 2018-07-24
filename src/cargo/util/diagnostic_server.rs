@@ -83,7 +83,7 @@ impl Message {
                 config.shell().warn(&msg)?;
                 write!(
                     config.shell().err(),
-                    "The full error message was:\n\n> {}",
+                    "The full error message was:\n\n> {}\n\n",
                     message,
                 )?;
                 write!(config.shell().err(), "{}", PLEASE_REPORT_THIS_BUG)?;
