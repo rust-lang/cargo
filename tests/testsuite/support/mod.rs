@@ -258,7 +258,7 @@ impl ProjectBuilder {
 
         let manifest_path = self.root.root().join("Cargo.toml");
         if !self.no_manifest && self.files.iter().all(|fb| fb.path != manifest_path) {
-            self._file(Path::new("Cargo.toml"), basic_manifest("foo", "0.0.1"))
+            self._file(Path::new("Cargo.toml"), &basic_manifest("foo", "0.0.1"))
         }
 
         for file in self.files.iter() {

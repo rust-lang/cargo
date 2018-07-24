@@ -5,7 +5,7 @@ use toml;
 use support::git;
 use support::paths;
 use support::registry::Package;
-use support::{execs, project};
+use support::{basic_manifest, execs, project};
 use support::hamcrest::assert_that;
 
 #[test]
@@ -52,15 +52,7 @@ fn replace() {
             }
         ",
         )
-        .file(
-            "bar/Cargo.toml",
-            r#"
-            [package]
-            name = "bar"
-            version = "0.1.0"
-            authors = []
-        "#,
-        )
+        .file("bar/Cargo.toml", &basic_manifest("bar", "0.1.0"))
         .file(
             "bar/src/lib.rs",
             r#"
@@ -118,15 +110,7 @@ fn nonexistent() {
             }
         ",
         )
-        .file(
-            "bar/Cargo.toml",
-            r#"
-            [package]
-            name = "bar"
-            version = "0.1.0"
-            authors = []
-        "#,
-        )
+        .file("bar/Cargo.toml", &basic_manifest("bar", "0.1.0"))
         .file(
             "bar/src/lib.rs",
             r#"
@@ -155,15 +139,7 @@ fn nonexistent() {
 #[test]
 fn patch_git() {
     let bar = git::repo(&paths::root().join("override"))
-        .file(
-            "Cargo.toml",
-            r#"
-            [package]
-            name = "bar"
-            version = "0.1.0"
-            authors = []
-        "#,
-        )
+        .file("Cargo.toml", &basic_manifest("bar", "0.1.0"))
         .file("src/lib.rs", "")
         .build();
 
@@ -195,15 +171,7 @@ fn patch_git() {
             }
         ",
         )
-        .file(
-            "bar/Cargo.toml",
-            r#"
-            [package]
-            name = "bar"
-            version = "0.1.0"
-            authors = []
-        "#,
-        )
+        .file("bar/Cargo.toml", &basic_manifest("bar", "0.1.0"))
         .file(
             "bar/src/lib.rs",
             r#"
@@ -232,15 +200,7 @@ fn patch_git() {
 #[test]
 fn patch_to_git() {
     let bar = git::repo(&paths::root().join("override"))
-        .file(
-            "Cargo.toml",
-            r#"
-            [package]
-            name = "bar"
-            version = "0.1.0"
-            authors = []
-        "#,
-        )
+        .file("Cargo.toml", &basic_manifest("bar", "0.1.0"))
         .file("src/lib.rs", "pub fn bar() {}")
         .build();
 
@@ -315,15 +275,7 @@ fn unused() {
         "#,
         )
         .file("src/lib.rs", "")
-        .file(
-            "bar/Cargo.toml",
-            r#"
-            [package]
-            name = "bar"
-            version = "0.2.0"
-            authors = []
-        "#,
-        )
+        .file("bar/Cargo.toml", &basic_manifest("bar", "0.2.0"))
         .file(
             "bar/src/lib.rs",
             r#"
@@ -369,15 +321,7 @@ fn unused_git() {
     Package::new("bar", "0.1.0").publish();
 
     let foo = git::repo(&paths::root().join("override"))
-        .file(
-            "Cargo.toml",
-            r#"
-            [package]
-            name = "bar"
-            version = "0.2.0"
-            authors = []
-        "#,
-        )
+        .file("Cargo.toml", &basic_manifest("bar", "0.2.0"))
         .file("src/lib.rs", "")
         .build();
 
@@ -440,15 +384,7 @@ fn add_patch() {
         "#,
         )
         .file("src/lib.rs", "")
-        .file(
-            "bar/Cargo.toml",
-            r#"
-            [package]
-            name = "bar"
-            version = "0.1.0"
-            authors = []
-        "#,
-        )
+        .file("bar/Cargo.toml", &basic_manifest("bar", "0.1.0"))
         .file("bar/src/lib.rs", r#""#)
         .build();
 
@@ -518,15 +454,7 @@ fn add_ignored_patch() {
         "#,
         )
         .file("src/lib.rs", "")
-        .file(
-            "bar/Cargo.toml",
-            r#"
-            [package]
-            name = "bar"
-            version = "0.1.1"
-            authors = []
-        "#,
-        )
+        .file("bar/Cargo.toml", &basic_manifest("bar", "0.1.1"))
         .file("bar/src/lib.rs", r#""#)
         .build();
 
@@ -595,15 +523,7 @@ fn new_minor() {
         "#,
         )
         .file("src/lib.rs", "")
-        .file(
-            "bar/Cargo.toml",
-            r#"
-            [package]
-            name = "bar"
-            version = "0.1.1"
-            authors = []
-        "#,
-        )
+        .file("bar/Cargo.toml", &basic_manifest("bar", "0.1.1"))
         .file("bar/src/lib.rs", r#""#)
         .build();
 
@@ -654,15 +574,7 @@ fn transitive_new_minor() {
         "#,
         )
         .file("bar/src/lib.rs", r#""#)
-        .file(
-            "baz/Cargo.toml",
-            r#"
-            [package]
-            name = "baz"
-            version = "0.1.1"
-            authors = []
-        "#,
-        )
+        .file("baz/Cargo.toml", &basic_manifest("baz", "0.1.1"))
         .file("baz/src/lib.rs", r#""#)
         .build();
 
@@ -701,15 +613,7 @@ fn new_major() {
         "#,
         )
         .file("src/lib.rs", "")
-        .file(
-            "bar/Cargo.toml",
-            r#"
-            [package]
-            name = "bar"
-            version = "0.2.0"
-            authors = []
-        "#,
-        )
+        .file("bar/Cargo.toml", &basic_manifest("bar", "0.2.0"))
         .file("bar/src/lib.rs", r#""#)
         .build();
 
@@ -793,15 +697,7 @@ fn transitive_new_major() {
         "#,
         )
         .file("bar/src/lib.rs", r#""#)
-        .file(
-            "baz/Cargo.toml",
-            r#"
-            [package]
-            name = "baz"
-            version = "0.2.0"
-            authors = []
-        "#,
-        )
+        .file("baz/Cargo.toml", &basic_manifest("baz", "0.2.0"))
         .file("baz/src/lib.rs", r#""#)
         .build();
 
@@ -842,25 +738,9 @@ fn remove_patch() {
         "#,
         )
         .file("src/lib.rs", "")
-        .file(
-            "bar/Cargo.toml",
-            r#"
-            [package]
-            name = "bar"
-            version = "0.1.0"
-            authors = []
-        "#,
-        )
+        .file("bar/Cargo.toml", &basic_manifest("bar", "0.1.0"))
         .file("bar/src/lib.rs", r#""#)
-        .file(
-            "foo/Cargo.toml",
-            r#"
-            [package]
-            name = "foo"
-            version = "0.1.0"
-            authors = []
-        "#,
-        )
+        .file("foo/Cargo.toml", &basic_manifest("foo", "0.1.0"))
         .file("foo/src/lib.rs", r#""#)
         .build();
 
@@ -929,15 +809,7 @@ fn non_crates_io() {
         "#,
         )
         .file("src/lib.rs", "")
-        .file(
-            "bar/Cargo.toml",
-            r#"
-            [package]
-            name = "bar"
-            version = "0.1.0"
-            authors = []
-        "#,
-        )
+        .file("bar/Cargo.toml", &basic_manifest("bar", "0.1.0"))
         .file("bar/src/lib.rs", r#""#)
         .build();
 
@@ -972,15 +844,7 @@ fn replace_with_crates_io() {
         "#,
         )
         .file("src/lib.rs", "")
-        .file(
-            "bar/Cargo.toml",
-            r#"
-            [package]
-            name = "bar"
-            version = "0.1.0"
-            authors = []
-        "#,
-        )
+        .file("bar/Cargo.toml", &basic_manifest("bar", "0.1.0"))
         .file("bar/src/lib.rs", r#""#)
         .build();
 
@@ -1014,15 +878,7 @@ fn patch_in_virtual() {
             bar = { path = "bar" }
         "#,
         )
-        .file(
-            "bar/Cargo.toml",
-            r#"
-            [package]
-            name = "bar"
-            version = "0.1.0"
-            authors = []
-        "#,
-        )
+        .file("bar/Cargo.toml", &basic_manifest("bar", "0.1.0"))
         .file("bar/src/lib.rs", r#""#)
         .file(
             "foo/Cargo.toml",
@@ -1076,15 +932,7 @@ fn patch_depends_on_another_patch() {
         "#,
         )
         .file("src/lib.rs", "")
-        .file(
-            "bar/Cargo.toml",
-            r#"
-            [package]
-            name = "bar"
-            version = "0.1.1"
-            authors = []
-        "#,
-        )
+        .file("bar/Cargo.toml", &basic_manifest("bar", "0.1.1"))
         .file("bar/src/lib.rs", r#""#)
         .file(
             "baz/Cargo.toml",

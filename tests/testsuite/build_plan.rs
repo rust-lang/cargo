@@ -1,5 +1,5 @@
 use support::ChannelChanger;
-use support::{basic_bin_manifest, execs, main_file, project};
+use support::{basic_manifest, basic_bin_manifest, execs, main_file, project};
 use support::hamcrest::{assert_that, existing_file, is_not};
 
 #[test]
@@ -67,15 +67,7 @@ fn cargo_build_plan_single_dep() {
             fn test() { foo(); }
         "#,
         )
-        .file(
-            "bar/Cargo.toml",
-            r#"
-            [package]
-            name = "bar"
-            version = "0.0.1"
-            authors = []
-        "#,
-        )
+        .file("bar/Cargo.toml", &basic_manifest("bar", "0.0.1"))
         .file("bar/src/lib.rs", "pub fn bar() {}")
         .build();
     assert_that(

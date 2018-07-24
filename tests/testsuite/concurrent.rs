@@ -12,7 +12,7 @@ use support;
 use support::install::{cargo_home, has_installed_exe};
 use support::git;
 use support::registry::Package;
-use support::{execs, project};
+use support::{basic_manifest, execs, project};
 use support::hamcrest::{assert_that, existing_file};
 
 fn pkg(name: &str, vers: &str) {
@@ -25,25 +25,9 @@ fn pkg(name: &str, vers: &str) {
 fn multiple_installs() {
     let p = project()
         .no_manifest()
-        .file(
-            "a/Cargo.toml",
-            r#"
-            [package]
-            name = "foo"
-            authors = []
-            version = "0.0.0"
-        "#,
-        )
+        .file("a/Cargo.toml", &basic_manifest("foo", "0.0.0"))
         .file("a/src/main.rs", "fn main() {}")
-        .file(
-            "b/Cargo.toml",
-            r#"
-            [package]
-            name = "bar"
-            authors = []
-            version = "0.0.0"
-        "#,
-        )
+        .file("b/Cargo.toml", &basic_manifest("bar", "0.0.0"))
         .file("b/src/main.rs", "fn main() {}");
     let p = p.build();
 
@@ -105,25 +89,9 @@ fn concurrent_installs() {
 fn one_install_should_be_bad() {
     let p = project()
         .no_manifest()
-        .file(
-            "a/Cargo.toml",
-            r#"
-            [package]
-            name = "foo"
-            authors = []
-            version = "0.0.0"
-        "#,
-        )
+        .file("a/Cargo.toml", &basic_manifest("foo", "0.0.0"))
         .file("a/src/main.rs", "fn main() {}")
-        .file(
-            "b/Cargo.toml",
-            r#"
-            [package]
-            name = "foo"
-            authors = []
-            version = "0.0.0"
-        "#,
-        )
+        .file("b/Cargo.toml", &basic_manifest("foo", "0.0.0"))
         .file("b/src/main.rs", "fn main() {}");
     let p = p.build();
 
@@ -234,15 +202,7 @@ fn multiple_registry_fetches() {
 fn git_same_repo_different_tags() {
     let a = git::new("dep", |project| {
         project
-            .file(
-                "Cargo.toml",
-                r#"
-            [project]
-            name = "dep"
-            version = "0.5.0"
-            authors = []
-        "#,
-            )
+            .file("Cargo.toml", &basic_manifest("dep", "0.5.0"))
             .file("src/lib.rs", "pub fn tag1() {}")
     }).unwrap();
 
@@ -325,15 +285,7 @@ fn git_same_repo_different_tags() {
 fn git_same_branch_different_revs() {
     let a = git::new("dep", |project| {
         project
-            .file(
-                "Cargo.toml",
-                r#"
-            [project]
-            name = "dep"
-            version = "0.5.0"
-            authors = []
-        "#,
-            )
+            .file("Cargo.toml", &basic_manifest("dep", "0.5.0"))
             .file("src/lib.rs", "pub fn f1() {}")
     }).unwrap();
 
@@ -545,29 +497,13 @@ fn debug_release_ok() {
 fn no_deadlock_with_git_dependencies() {
     let dep1 = git::new("dep1", |project| {
         project
-            .file(
-                "Cargo.toml",
-                r#"
-            [project]
-            name = "dep1"
-            version = "0.5.0"
-            authors = []
-        "#,
-            )
+            .file("Cargo.toml", &basic_manifest("dep1", "0.5.0"))
             .file("src/lib.rs", "")
     }).unwrap();
 
     let dep2 = git::new("dep2", |project| {
         project
-            .file(
-                "Cargo.toml",
-                r#"
-            [project]
-            name = "dep2"
-            version = "0.5.0"
-            authors = []
-        "#,
-            )
+            .file("Cargo.toml", &basic_manifest("dep2", "0.5.0"))
             .file("src/lib.rs", "")
     }).unwrap();
 

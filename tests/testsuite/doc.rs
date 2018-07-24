@@ -4,7 +4,7 @@ use std::fs::{self, File};
 use std::io::Read;
 
 use support::{is_nightly, rustc_host, ChannelChanger};
-use support::{basic_lib_manifest, execs, git, project, path2url};
+use support::{basic_manifest, basic_lib_manifest, execs, git, project, path2url};
 use support::paths::CargoPathExt;
 use support::registry::Package;
 use support::hamcrest::{assert_that, existing_dir, existing_file, is_not};
@@ -122,15 +122,7 @@ fn doc_deps() {
             pub fn foo() {}
         "#,
         )
-        .file(
-            "bar/Cargo.toml",
-            r#"
-            [package]
-            name = "bar"
-            version = "0.0.1"
-            authors = []
-        "#,
-        )
+        .file("bar/Cargo.toml", &basic_manifest("bar", "0.0.1"))
         .file(
             "bar/src/lib.rs",
             r#"
@@ -203,15 +195,7 @@ fn doc_no_deps() {
             pub fn foo() {}
         "#,
         )
-        .file(
-            "bar/Cargo.toml",
-            r#"
-            [package]
-            name = "bar"
-            version = "0.0.1"
-            authors = []
-        "#,
-        )
+        .file("bar/Cargo.toml", &basic_manifest("bar", "0.0.1"))
         .file(
             "bar/src/lib.rs",
             r#"
@@ -262,15 +246,7 @@ fn doc_only_bin() {
             pub fn foo() {}
         "#,
         )
-        .file(
-            "bar/Cargo.toml",
-            r#"
-            [package]
-            name = "bar"
-            version = "0.0.1"
-            authors = []
-        "#,
-        )
+        .file("bar/Cargo.toml", &basic_manifest("bar", "0.0.1"))
         .file(
             "bar/src/lib.rs",
             r#"
@@ -296,8 +272,7 @@ fn doc_multiple_targets_same_name_lib() {
             members = ["foo", "bar"]
         "#,
         )
-        .file(
-            "foo/Cargo.toml",
+        .file("foo/Cargo.toml",
             r#"
             [package]
             name = "foo"
@@ -669,15 +644,7 @@ fn doc_dash_p() {
         "#,
         )
         .file("a/src/lib.rs", "extern crate b;")
-        .file(
-            "b/Cargo.toml",
-            r#"
-            [package]
-            name = "b"
-            version = "0.0.1"
-            authors = []
-        "#,
-        )
+        .file("b/Cargo.toml", &basic_manifest("b", "0.0.1"))
         .file("b/src/lib.rs", "")
         .build();
 
@@ -755,15 +722,7 @@ fn target_specific_not_documented() {
         "#,
         )
         .file("src/lib.rs", "")
-        .file(
-            "a/Cargo.toml",
-            r#"
-            [package]
-            name = "a"
-            version = "0.0.1"
-            authors = []
-        "#,
-        )
+        .file("a/Cargo.toml", &basic_manifest("a", "0.0.1"))
         .file("a/src/lib.rs", "not rust")
         .build();
 
@@ -786,15 +745,7 @@ fn output_not_captured() {
         "#,
         )
         .file("src/lib.rs", "")
-        .file(
-            "a/Cargo.toml",
-            r#"
-            [package]
-            name = "a"
-            version = "0.0.1"
-            authors = []
-        "#,
-        )
+        .file("a/Cargo.toml", &basic_manifest("a", "0.0.1"))
         .file(
             "a/src/lib.rs",
             "
@@ -854,15 +805,7 @@ fn target_specific_documented() {
             pub fn foo() {}
         ",
         )
-        .file(
-            "a/Cargo.toml",
-            r#"
-            [package]
-            name = "a"
-            version = "0.0.1"
-            authors = []
-        "#,
-        )
+        .file("a/Cargo.toml", &basic_manifest("a", "0.0.1"))
         .file(
             "a/src/lib.rs",
             "
@@ -896,15 +839,7 @@ fn no_document_build_deps() {
             pub fn foo() {}
         ",
         )
-        .file(
-            "a/Cargo.toml",
-            r#"
-            [package]
-            name = "a"
-            version = "0.0.1"
-            authors = []
-        "#,
-        )
+        .file("a/Cargo.toml", &basic_manifest("a", "0.0.1"))
         .file(
             "a/src/lib.rs",
             "
@@ -963,30 +898,14 @@ fn doc_multiple_deps() {
             pub fn foo() {}
         "#,
         )
-        .file(
-            "bar/Cargo.toml",
-            r#"
-            [package]
-            name = "bar"
-            version = "0.0.1"
-            authors = []
-        "#,
-        )
+        .file("bar/Cargo.toml", &basic_manifest("bar", "0.0.1"))
         .file(
             "bar/src/lib.rs",
             r#"
             pub fn bar() {}
         "#,
         )
-        .file(
-            "baz/Cargo.toml",
-            r#"
-            [package]
-            name = "baz"
-            version = "0.0.1"
-            authors = []
-        "#,
-        )
+        .file("baz/Cargo.toml", &basic_manifest("baz", "0.0.1"))
         .file(
             "baz/src/lib.rs",
             r#"
@@ -1174,14 +1093,7 @@ fn doc_all_workspace() {
             fn main() {}
         "#,
         )
-        .file(
-            "bar/Cargo.toml",
-            r#"
-            [project]
-            name = "bar"
-            version = "0.1.0"
-        "#,
-        )
+        .file("bar/Cargo.toml", &basic_manifest("bar", "0.1.0"))
         .file(
             "bar/src/lib.rs",
             r#"
@@ -1211,28 +1123,14 @@ fn doc_all_virtual_manifest() {
             members = ["bar", "baz"]
         "#,
         )
-        .file(
-            "bar/Cargo.toml",
-            r#"
-            [project]
-            name = "bar"
-            version = "0.1.0"
-        "#,
-        )
+        .file("bar/Cargo.toml", &basic_manifest("bar", "0.1.0"))
         .file(
             "bar/src/lib.rs",
             r#"
             pub fn bar() {}
         "#,
         )
-        .file(
-            "baz/Cargo.toml",
-            r#"
-            [project]
-            name = "baz"
-            version = "0.1.0"
-        "#,
-        )
+        .file("baz/Cargo.toml", &basic_manifest("baz", "0.1.0"))
         .file(
             "baz/src/lib.rs",
             r#"
@@ -1261,28 +1159,14 @@ fn doc_virtual_manifest_all_implied() {
             members = ["bar", "baz"]
         "#,
         )
-        .file(
-            "bar/Cargo.toml",
-            r#"
-            [project]
-            name = "bar"
-            version = "0.1.0"
-        "#,
-        )
+        .file("bar/Cargo.toml", &basic_manifest("bar", "0.1.0"))
         .file(
             "bar/src/lib.rs",
             r#"
             pub fn bar() {}
         "#,
         )
-        .file(
-            "baz/Cargo.toml",
-            r#"
-            [project]
-            name = "baz"
-            version = "0.1.0"
-        "#,
-        )
+        .file("baz/Cargo.toml", &basic_manifest("baz", "0.1.0"))
         .file(
             "baz/src/lib.rs",
             r#"
@@ -1355,23 +1239,9 @@ fn doc_workspace_open_help_message() {
             members = ["foo", "bar"]
         "#,
         )
-        .file(
-            "foo/Cargo.toml",
-            r#"
-            [package]
-            name = "foo"
-            version = "0.1.0"
-        "#,
-        )
+        .file("foo/Cargo.toml", &basic_manifest("foo", "0.1.0"))
         .file("foo/src/lib.rs", "")
-        .file(
-            "bar/Cargo.toml",
-            r#"
-            [package]
-            name = "bar"
-            version = "0.1.0"
-        "#,
-        )
+        .file("bar/Cargo.toml", &basic_manifest("bar", "0.1.0"))
         .file("bar/src/lib.rs", "")
         .build();
 

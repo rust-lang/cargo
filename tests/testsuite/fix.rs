@@ -3,7 +3,7 @@ use std::fs::File;
 use git2;
 
 use support::git;
-use support::{execs, project};
+use support::{basic_manifest, execs, project};
 use support::{is_nightly, ChannelChanger};
 use support::hamcrest::assert_that;
 
@@ -183,14 +183,7 @@ fn fix_path_deps() {
                 }
             "#,
         )
-        .file(
-            "bar/Cargo.toml",
-            r#"
-                [package]
-                name = "bar"
-                version = "0.1.0"
-            "#,
-        )
+        .file("bar/Cargo.toml", &basic_manifest("bar", "0.1.0"))
         .file(
             "bar/src/lib.rs",
             r#"
@@ -236,14 +229,7 @@ fn do_not_fix_non_relevant_deps() {
             "#,
         )
         .file("foo/src/lib.rs", "")
-        .file(
-            "bar/Cargo.toml",
-            r#"
-                [package]
-                name = "bar"
-                version = "0.1.0"
-            "#,
-        )
+        .file("bar/Cargo.toml", &basic_manifest("bar", "0.1.0"))
         .file(
             "bar/src/lib.rs",
             r#"
@@ -414,14 +400,7 @@ fn upgrade_extern_crate() {
                 }
             "#,
         )
-        .file(
-            "bar/Cargo.toml",
-            r#"
-                [package]
-                name = "bar"
-                version = "0.1.0"
-            "#,
-        )
+        .file("bar/Cargo.toml", &basic_manifest("bar", "0.1.0"))
         .file("bar/src/lib.rs", "pub fn bar() {}")
         .build();
 

@@ -4,7 +4,7 @@ use std::io::prelude::*;
 use support::sleep_ms;
 use support::paths::CargoPathExt;
 use support::registry::Package;
-use support::{execs, path2url, project};
+use support::{basic_manifest, execs, path2url, project};
 use support::hamcrest::{assert_that, existing_file};
 
 #[test]
@@ -141,15 +141,7 @@ fn rebuild_sub_package_then_while_package() {
         "#,
         )
         .file("a/src/lib.rs", "extern crate b;")
-        .file(
-            "b/Cargo.toml",
-            r#"
-            [package]
-            name = "b"
-            authors = []
-            version = "0.0.1"
-        "#,
-        )
+        .file("b/Cargo.toml", &basic_manifest("b", "0.0.1"))
         .file("b/src/lib.rs", "")
         .build();
 
@@ -635,15 +627,7 @@ fn no_rebuild_transitive_target_deps() {
         "#,
         )
         .file("b/src/lib.rs", "")
-        .file(
-            "c/Cargo.toml",
-            r#"
-            [package]
-            name = "c"
-            version = "0.0.1"
-            authors = []
-        "#,
-        )
+        .file("c/Cargo.toml", &basic_manifest("c", "0.0.1"))
         .file("c/src/lib.rs", "")
         .build();
 
@@ -754,15 +738,7 @@ fn same_build_dir_cached_packages() {
         "#,
         )
         .file("c/src/lib.rs", "")
-        .file(
-            "d/Cargo.toml",
-            r#"
-            [package]
-            name = "d"
-            version = "0.0.1"
-            authors = []
-        "#,
-        )
+        .file("d/Cargo.toml", &basic_manifest("d", "0.0.1"))
         .file("d/src/lib.rs", "")
         .file(
             ".cargo/config",
@@ -814,15 +790,7 @@ fn no_rebuild_if_build_artifacts_move_backwards_in_time() {
         "#,
         )
         .file("src/lib.rs", "")
-        .file(
-            "a/Cargo.toml",
-            r#"
-            [package]
-            name = "a"
-            version = "0.0.1"
-            authors = []
-        "#,
-        )
+        .file("a/Cargo.toml", &basic_manifest("a", "0.0.1"))
         .file("a/src/lib.rs", "")
         .build();
 
@@ -855,15 +823,7 @@ fn rebuild_if_build_artifacts_move_forward_in_time() {
         "#,
         )
         .file("src/lib.rs", "")
-        .file(
-            "a/Cargo.toml",
-            r#"
-            [package]
-            name = "a"
-            version = "0.0.1"
-            authors = []
-        "#,
-        )
+        .file("a/Cargo.toml", &basic_manifest("a", "0.0.1"))
         .file("a/src/lib.rs", "")
         .build();
 
@@ -966,15 +926,7 @@ fn no_rebuild_when_rename_dir() {
         "#,
         )
         .file("src/lib.rs", "")
-        .file(
-            "foo/Cargo.toml",
-            r#"
-            [package]
-            name = "foo"
-            version = "0.0.1"
-            authors = []
-        "#,
-        )
+        .file("foo/Cargo.toml", &basic_manifest("foo", "0.0.1"))
         .file("foo/src/lib.rs", "")
         .build();
 
@@ -1119,15 +1071,7 @@ fn change_panic_mode() {
             "#,
         )
         .file("src/lib.rs", "")
-        .file(
-            "bar/Cargo.toml",
-            r#"
-                [package]
-                name = "bar"
-                version = "0.1.1"
-                authors = []
-            "#,
-        )
+        .file("bar/Cargo.toml", &basic_manifest("bar", "0.1.1"))
         .file("bar/src/lib.rs", "")
         .file(
             "baz/Cargo.toml",
@@ -1196,14 +1140,7 @@ fn dont_rebuild_based_on_plugins() {
             "#,
         )
         .file("baz/src/main.rs", "fn main() {}")
-        .file(
-            "qux/Cargo.toml",
-            r#"
-                [package]
-                name = "qux"
-                version = "0.1.1"
-            "#,
-        )
+        .file("qux/Cargo.toml", &basic_manifest("qux", "0.1.1"))
         .file("qux/src/lib.rs", "")
         .build();
 
@@ -1236,14 +1173,7 @@ fn reuse_workspace_lib() {
             "#,
         )
         .file("src/lib.rs", "")
-        .file(
-            "baz/Cargo.toml",
-            r#"
-                [package]
-                name = "baz"
-                version = "0.1.1"
-            "#,
-        )
+        .file("baz/Cargo.toml", &basic_manifest("baz", "0.1.1"))
         .file("baz/src/lib.rs", "")
         .build();
 

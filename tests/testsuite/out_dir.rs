@@ -5,7 +5,7 @@ use std::env;
 use support::hamcrest::assert_that;
 
 use support::{process, sleep_ms, ChannelChanger};
-use support::{execs, project};
+use support::{basic_manifest, execs, project};
 
 #[test]
 fn binary_with_debug() {
@@ -164,15 +164,7 @@ fn include_only_the_binary_from_the_current_package() {
             }
         "#,
         )
-        .file(
-            "utils/Cargo.toml",
-            r#"
-            [project]
-            name = "utils"
-            version = "0.0.1"
-            authors = []
-        "#,
-        )
+        .file("utils/Cargo.toml", &basic_manifest("utils", "0.0.1"))
         .file("utils/src/lib.rs", "")
         .build();
 

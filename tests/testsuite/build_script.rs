@@ -8,7 +8,7 @@ use std::time::Duration;
 
 use cargo::util::paths::remove_dir_all;
 use support::{rustc_host, sleep_ms};
-use support::{cross_compile, execs, project};
+use support::{basic_manifest, cross_compile, execs, project};
 use support::paths::CargoPathExt;
 use support::registry::Package;
 use support::hamcrest::{assert_that, existing_dir, existing_file};
@@ -956,15 +956,7 @@ fn build_deps_simple() {
             fn main() {}
         ",
         )
-        .file(
-            "a/Cargo.toml",
-            r#"
-            [project]
-            name = "a"
-            version = "0.5.0"
-            authors = []
-        "#,
-        )
+        .file("a/Cargo.toml", &basic_manifest("a", "0.5.0"))
         .file("a/src/lib.rs", "")
         .build();
 
@@ -1012,15 +1004,7 @@ fn build_deps_not_for_normal() {
             fn main() {}
         ",
         )
-        .file(
-            "a/Cargo.toml",
-            r#"
-            [project]
-            name = "aaaaa"
-            version = "0.5.0"
-            authors = []
-        "#,
-        )
+        .file("a/Cargo.toml", &basic_manifest("aaaaa", "0.5.0"))
         .file("a/src/lib.rs", "")
         .build();
 
@@ -1083,15 +1067,7 @@ fn build_cmd_with_a_build_cmd() {
             "a/build.rs",
             "#[allow(unused_extern_crates)] extern crate b; fn main() {}",
         )
-        .file(
-            "b/Cargo.toml",
-            r#"
-            [project]
-            name = "b"
-            version = "0.5.0"
-            authors = []
-        "#,
-        )
+        .file("b/Cargo.toml", &basic_manifest("b", "0.5.0"))
         .file("b/src/lib.rs", "")
         .build();
 
@@ -1791,15 +1767,7 @@ fn test_duplicate_deps() {
             fn main() { bar::do_nothing() }
         "#,
         )
-        .file(
-            "bar/Cargo.toml",
-            r#"
-            [project]
-            name = "bar"
-            version = "0.1.0"
-            authors = []
-        "#,
-        )
+        .file("bar/Cargo.toml", &basic_manifest("bar", "0.1.0"))
         .file("bar/src/lib.rs", "pub fn do_nothing() {}")
         .build();
 
@@ -3731,15 +3699,7 @@ fn rename_with_link_search_path() {
     assert_that(p.cargo("build"), execs().with_status(0));
 
     let p2 = project().at("bar")
-        .file(
-            "Cargo.toml",
-            r#"
-            [project]
-            name = "bar"
-            version = "0.5.0"
-            authors = []
-        "#,
-        )
+        .file("Cargo.toml", &basic_manifest("bar", "0.5.0"))
         .file(
             "build.rs",
             r#"
@@ -3890,15 +3850,7 @@ fn optional_build_script_dep() {
                 }
             "#,
         )
-        .file(
-            "bar/Cargo.toml",
-            r#"
-                [project]
-                name = "bar"
-                version = "0.5.0"
-                authors = []
-            "#,
-        )
+        .file("bar/Cargo.toml", &basic_manifest("bar", "0.5.0"))
         .file(
             "bar/src/lib.rs",
             r#"
@@ -3956,15 +3908,7 @@ fn optional_build_dep_and_required_normal_dep() {
                 }
             "#,
         )
-        .file(
-            "bar/Cargo.toml",
-            r#"
-                [project]
-                name = "bar"
-                version = "0.5.0"
-                authors = []
-            "#,
-        )
+        .file("bar/Cargo.toml", &basic_manifest("bar", "0.5.0"))
         .file(
             "bar/src/lib.rs",
             r#"

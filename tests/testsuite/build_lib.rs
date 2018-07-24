@@ -1,4 +1,4 @@
-use support::{basic_bin_manifest, execs, project, Project};
+use support::{basic_manifest, basic_bin_manifest, execs, project, Project};
 use support::hamcrest::assert_that;
 
 fn verbose_output_for_lib(p: &Project) -> String {
@@ -83,16 +83,7 @@ fn build_with_relative_cargo_home_path() {
         "#,
         )
         .file("src/test_dependency/src/lib.rs", r#" "#)
-        .file(
-            "src/test_dependency/Cargo.toml",
-            r#"
-            [package]
-
-            name = "test-dependency"
-            version = "0.0.1"
-            authors = ["wycats@example.com"]
-        "#,
-        )
+        .file("src/test_dependency/Cargo.toml", &basic_manifest("test-dependency", "0.0.1"))
         .build();
 
     assert_that(

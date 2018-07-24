@@ -8,7 +8,7 @@ use support::cross_compile;
 use support::git;
 use support::paths;
 use support::registry::Package;
-use support::{execs, project};
+use support::{basic_manifest, execs, project};
 use support::ChannelChanger;
 use git2;
 use support::hamcrest::{assert_that, existing_dir, is_not};
@@ -142,15 +142,7 @@ warning: be sure to add `[..]` to your PATH to be able to run the installed bina
 #[test]
 fn installs_beta_version_by_explicit_name_from_git() {
     let p = git::repo(&paths::root().join("foo"))
-        .file(
-            "Cargo.toml",
-            r#"
-            [package]
-            name = "foo"
-            version = "0.3.0-beta.1"
-            authors = []
-        "#,
-        )
+        .file("Cargo.toml", &basic_manifest("foo", "0.3.0-beta.1"))
         .file("src/main.rs", "fn main() {}")
         .build();
 
@@ -301,25 +293,9 @@ Add --force to overwrite
 #[test]
 fn multiple_crates_error() {
     let p = git::repo(&paths::root().join("foo"))
-        .file(
-            "Cargo.toml",
-            r#"
-            [package]
-            name = "foo"
-            version = "0.1.0"
-            authors = []
-        "#,
-        )
+        .file("Cargo.toml", &basic_manifest("foo", "0.1.0"))
         .file("src/main.rs", "fn main() {}")
-        .file(
-            "a/Cargo.toml",
-            r#"
-            [package]
-            name = "bar"
-            version = "0.1.0"
-            authors = []
-        "#,
-        )
+        .file("a/Cargo.toml", &basic_manifest("bar", "0.1.0"))
         .file("a/src/main.rs", "fn main() {}")
         .build();
 
@@ -339,25 +315,9 @@ fn multiple_crates_error() {
 #[test]
 fn multiple_crates_select() {
     let p = git::repo(&paths::root().join("foo"))
-        .file(
-            "Cargo.toml",
-            r#"
-            [package]
-            name = "foo"
-            version = "0.1.0"
-            authors = []
-        "#,
-        )
+        .file("Cargo.toml", &basic_manifest("foo", "0.1.0"))
         .file("src/main.rs", "fn main() {}")
-        .file(
-            "a/Cargo.toml",
-            r#"
-            [package]
-            name = "bar"
-            version = "0.1.0"
-            authors = []
-        "#,
-        )
+        .file("a/Cargo.toml", &basic_manifest("bar", "0.1.0"))
         .file("a/src/main.rs", "fn main() {}")
         .build();
 
@@ -397,15 +357,7 @@ fn multiple_crates_auto_binaries() {
         "#,
         )
         .file("src/main.rs", "extern crate bar; fn main() {}")
-        .file(
-            "a/Cargo.toml",
-            r#"
-            [package]
-            name = "bar"
-            version = "0.1.0"
-            authors = []
-        "#,
-        )
+        .file("a/Cargo.toml", &basic_manifest("bar", "0.1.0"))
         .file("a/src/lib.rs", "")
         .build();
 
@@ -440,15 +392,7 @@ fn multiple_crates_auto_examples() {
             fn main() {}
         ",
         )
-        .file(
-            "a/Cargo.toml",
-            r#"
-            [package]
-            name = "bar"
-            version = "0.1.0"
-            authors = []
-        "#,
-        )
+        .file("a/Cargo.toml", &basic_manifest("bar", "0.1.0"))
         .file("a/src/lib.rs", "")
         .build();
 
@@ -478,15 +422,7 @@ fn no_binaries_or_examples() {
         "#,
         )
         .file("src/lib.rs", "")
-        .file(
-            "a/Cargo.toml",
-            r#"
-            [package]
-            name = "bar"
-            version = "0.1.0"
-            authors = []
-        "#,
-        )
+        .file("a/Cargo.toml", &basic_manifest("bar", "0.1.0"))
         .file("a/src/lib.rs", "")
         .build();
 
@@ -572,15 +508,7 @@ fn install_force() {
     );
 
     let p = project().at("foo2")
-        .file(
-            "Cargo.toml",
-            r#"
-            [package]
-            name = "foo"
-            version = "0.2.0"
-            authors = []
-        "#,
-        )
+        .file("Cargo.toml", &basic_manifest("foo", "0.2.0"))
         .file("src/main.rs", "fn main() {}")
         .build();
 
@@ -625,15 +553,7 @@ fn install_force_partial_overlap() {
     );
 
     let p = project().at("foo2")
-        .file(
-            "Cargo.toml",
-            r#"
-            [package]
-            name = "foo"
-            version = "0.2.0"
-            authors = []
-        "#,
-        )
+        .file("Cargo.toml", &basic_manifest("foo", "0.2.0"))
         .file("src/bin/foo-bin2.rs", "fn main() {}")
         .file("src/bin/foo-bin3.rs", "fn main() {}")
         .build();
@@ -683,15 +603,7 @@ fn install_force_bin() {
     );
 
     let p = project().at("foo2")
-        .file(
-            "Cargo.toml",
-            r#"
-            [package]
-            name = "foo"
-            version = "0.2.0"
-            authors = []
-        "#,
-        )
+        .file("Cargo.toml", &basic_manifest("foo", "0.2.0"))
         .file("src/bin/foo-bin1.rs", "fn main() {}")
         .file("src/bin/foo-bin2.rs", "fn main() {}")
         .build();
@@ -753,15 +665,7 @@ To learn more, run the command again with --verbose.
 #[test]
 fn git_repo() {
     let p = git::repo(&paths::root().join("foo"))
-        .file(
-            "Cargo.toml",
-            r#"
-            [package]
-            name = "foo"
-            version = "0.1.0"
-            authors = []
-        "#,
-        )
+        .file("Cargo.toml", &basic_manifest("foo", "0.1.0"))
         .file("src/main.rs", "fn main() {}")
         .build();
 
@@ -1063,15 +967,7 @@ fn git_with_lockfile() {
         "#,
         )
         .file("src/main.rs", "fn main() {}")
-        .file(
-            "bar/Cargo.toml",
-            r#"
-            [package]
-            name = "bar"
-            version = "0.1.0"
-            authors = []
-        "#,
-        )
+        .file("bar/Cargo.toml", &basic_manifest("bar", "0.1.0"))
         .file("bar/src/lib.rs", "fn main() {}")
         .file(
             "Cargo.lock",
@@ -1208,15 +1104,7 @@ fn dev_dependencies_lock_file_untouched() {
         "#,
         )
         .file("src/main.rs", "fn main() {}")
-        .file(
-            "a/Cargo.toml",
-            r#"
-            [package]
-            name = "bar"
-            version = "0.1.0"
-            authors = []
-        "#,
-        )
+        .file("a/Cargo.toml", &basic_manifest("bar", "0.1.0"))
         .file("a/src/lib.rs", "")
         .build();
 
@@ -1369,15 +1257,7 @@ error: some packages failed to uninstall
 #[test]
 fn custom_target_dir_for_git_source() {
     let p = git::repo(&paths::root().join("foo"))
-        .file(
-            "Cargo.toml",
-            r#"
-                [package]
-                name = "foo"
-                version = "0.1.0"
-                authors = []
-        "#,
-        )
+        .file("Cargo.toml", &basic_manifest("foo", "0.1.0"))
         .file("src/main.rs", "fn main() {}")
         .build();
 
@@ -1490,15 +1370,7 @@ fn install_empty_argument() {
 #[test]
 fn git_repo_replace() {
     let p = git::repo(&paths::root().join("foo"))
-        .file(
-            "Cargo.toml",
-            r#"
-            [package]
-            name = "foo"
-            version = "0.1.0"
-            authors = []
-        "#,
-        )
+        .file("Cargo.toml", &basic_manifest("foo", "0.1.0"))
         .file("src/main.rs", "fn main() {}")
         .build();
     let repo = git2::Repository::open(&p.root()).unwrap();
@@ -1552,15 +1424,7 @@ fn workspace_uses_workspace_target_dir() {
             "#,
         )
         .file("src/main.rs", "fn main() {}")
-        .file(
-            "bar/Cargo.toml",
-            r#"
-                [package]
-                name = "bar"
-                version = "0.1.0"
-                authors = []
-            "#,
-        )
+        .file("bar/Cargo.toml", &basic_manifest("bar", "0.1.0"))
         .file("bar/src/main.rs", "fn main() {}")
         .build();
 
