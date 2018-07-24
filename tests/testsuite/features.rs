@@ -2,7 +2,7 @@ use std::fs::File;
 use std::io::prelude::*;
 
 use support::paths::CargoPathExt;
-use support::{BASIC_MANIFEST, execs, project};
+use support::{basic_manifest, execs, project};
 use support::ChannelChanger;
 use support::hamcrest::assert_that;
 use support::registry::Package;
@@ -151,7 +151,7 @@ failed to select a version for `bar` which could resolve this conflict",
         ),
     );
 
-    p.change_file("Cargo.toml", BASIC_MANIFEST);
+    p.change_file("Cargo.toml", basic_manifest("foo", "0.0.1"));
 
     assert_that(
         p.cargo("build").arg("--features").arg("test"),
