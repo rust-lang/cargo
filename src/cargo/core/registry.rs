@@ -573,18 +573,22 @@ fn lock(locked: &LockedMap, patches: &HashMap<Url, Vec<PackageId>>, summary: Sum
             }
         }
 
-        // If this dependency did not have a locked version, then we query
+        // Querying a git dependency has the side effect of pulling changes.
+        // So even the conservative re-resolution may be to aggressive.
+        // If this git dependency did not have a locked version, then we query
         // all known locked packages to see if they match this dependency.
         // If anything does then we lock it to that and move on.
-        let v = locked
-            .get(dep.source_id())
-            .and_then(|map| map.get(&*dep.name()))
-            .and_then(|vec| vec.iter().find(|&&(ref id, _)| dep.matches_id(id)));
-        if let Some(&(ref id, _)) = v {
-            trace!("\tsecond hit on {}", id);
-            let mut dep = dep.clone();
-            dep.lock_to(id);
-            return dep;
+        if dep.source_id().git_reference().is_some() {
+            let v = locked
+                .get(dep.source_id())
+                .and_then(|map| map.get(&*dep.name()))
+                .and_then(|vec| vec.iter().find(|&&(ref id, _)| dep.matches_id(id)));
+            if let Some(&(ref id, _)) = v {
+                trace!("\tsecond hit on {}", id);
+                let mut dep = dep.clone();
+                dep.lock_to(id);
+                return dep;
+            }
         }
 
         // Finally we check to see if any registered patches correspond to
