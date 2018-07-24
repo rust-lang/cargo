@@ -1071,7 +1071,7 @@ fn does_not_warn_about_dirty_ignored_files() {
 
 #[test]
 fn shows_warnings_on_second_run_without_changes() {
-    let p = project("foo")
+    let p = project()
         .file(
             "Cargo.toml",
             r#"
@@ -1104,7 +1104,7 @@ fn shows_warnings_on_second_run_without_changes() {
 
 #[test]
 fn shows_warnings_on_second_run_without_changes_on_multiple_targets() {
-    let p = project("foo")
+    let p = project()
         .file(
             "Cargo.toml",
             r#"
