@@ -9,15 +9,6 @@ use support::hamcrest::assert_that;
 fn jobserver_exists() {
     let p = project()
         .file(
-            "Cargo.toml",
-            r#"
-            [package]
-            name = "foo"
-            version = "0.0.1"
-            authors = []
-        "#,
-        )
-        .file(
             "build.rs",
             r#"
             use std::env;
@@ -188,15 +179,6 @@ fn jobserver_and_j() {
     }
 
     let p = project()
-        .file(
-            "Cargo.toml",
-            r#"
-            [package]
-            name = "foo"
-            version = "0.0.1"
-            authors = []
-        "#,
-        )
         .file("src/lib.rs", "")
         .file(
             "Makefile",

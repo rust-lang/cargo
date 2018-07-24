@@ -63,15 +63,6 @@ fn bench_bench_implicit() {
 
     let p = project()
         .file(
-            "Cargo.toml",
-            r#"
-            [package]
-            name = "foo"
-            version = "0.0.1"
-            authors = []
-        "#,
-        )
-        .file(
             "src/main.rs",
             r#"
             #![cfg_attr(test, feature(test))]
@@ -121,15 +112,6 @@ fn bench_bin_implicit() {
 
     let p = project()
         .file(
-            "Cargo.toml",
-            r#"
-            [package]
-            name = "foo"
-            version = "0.0.1"
-            authors = []
-        "#,
-        )
-        .file(
             "src/main.rs",
             r#"
             #![feature(test)]
@@ -178,15 +160,6 @@ fn bench_tarname() {
 
     let p = project()
         .file(
-            "Cargo.toml",
-            r#"
-            [package]
-            name = "foo"
-            version = "0.0.1"
-            authors = []
-        "#,
-        )
-        .file(
             "benches/bin1.rs",
             r#"
             #![feature(test)]
@@ -225,15 +198,6 @@ fn bench_multiple_targets() {
     }
 
     let p = project()
-        .file(
-            "Cargo.toml",
-            r#"
-            [package]
-            name = "foo"
-            version = "0.0.1"
-            authors = []
-        "#,
-        )
         .file(
             "benches/bin1.rs",
             r#"
@@ -313,15 +277,6 @@ fn many_similar_names() {
     }
 
     let p = project()
-        .file(
-            "Cargo.toml",
-            r#"
-            [package]
-            name = "foo"
-            version = "0.0.1"
-            authors = []
-        "#,
-        )
         .file(
             "src/lib.rs",
             "
@@ -537,15 +492,6 @@ fn bench_with_deep_lib_dep() {
         .build();
     let _p2 = project()
         .file(
-            "Cargo.toml",
-            r#"
-            [package]
-            name = "foo"
-            version = "0.0.1"
-            authors = []
-        "#,
-        )
-        .file(
             "src/lib.rs",
             "
             #![cfg_attr(test, feature(test))]
@@ -645,15 +591,6 @@ fn external_bench_implicit() {
     }
 
     let p = project()
-        .file(
-            "Cargo.toml",
-            r#"
-            [project]
-            name = "foo"
-            version = "0.0.1"
-            authors = []
-        "#,
-        )
         .file(
             "src/lib.rs",
             r#"
@@ -784,15 +721,6 @@ fn dont_run_examples() {
     }
 
     let p = project()
-        .file(
-            "Cargo.toml",
-            r#"
-            [project]
-            name = "foo"
-            version = "0.0.1"
-            authors = []
-        "#,
-        )
         .file("src/lib.rs", r"")
         .file(
             "examples/dont-run-me-i-will-fail.rs",
@@ -811,15 +739,6 @@ fn pass_through_command_line() {
     }
 
     let p = project()
-        .file(
-            "Cargo.toml",
-            r#"
-            [package]
-            name = "foo"
-            version = "0.0.1"
-            authors = []
-        "#,
-        )
         .file(
             "src/lib.rs",
             "
@@ -1382,15 +1301,6 @@ fn test_bench_no_run() {
     }
 
     let p = project()
-        .file(
-            "Cargo.toml",
-            r#"
-            [project]
-            name = "foo"
-            authors = []
-            version = "0.1.0"
-        "#,
-        )
         .file("src/lib.rs", "")
         .file(
             "benches/bbaz.rs",
@@ -1411,7 +1321,7 @@ fn test_bench_no_run() {
         p.cargo("bench").arg("--no-run"),
         execs().with_status(0).with_stderr(
             "\
-[COMPILING] foo v0.1.0 ([..])
+[COMPILING] foo v0.0.1 ([..])
 [FINISHED] release [optimized] target(s) in [..]
 ",
         ),

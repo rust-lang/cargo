@@ -60,6 +60,11 @@ impl VendorPackage {
         self
     }
 
+    fn no_manifest(mut self) -> Self {
+        self.p = self.p.map(|pb| pb.no_manifest());
+        self
+    }
+
     fn build(&mut self) {
         let p = self.p.take().unwrap();
         let json = serde_json::to_string(&self.cksum).unwrap();
@@ -127,15 +132,6 @@ fn simple_install() {
     setup();
 
     VendorPackage::new("foo")
-        .file(
-            "Cargo.toml",
-            r#"
-            [package]
-            name = "foo"
-            version = "0.1.0"
-            authors = []
-        "#,
-        )
         .file("src/lib.rs", "pub fn foo() {}")
         .build();
 
@@ -149,7 +145,7 @@ fn simple_install() {
             authors = []
 
             [dependencies]
-            foo = "0.1.0"
+            foo = "0.0.1"
         "#,
         )
         .file(
@@ -168,7 +164,7 @@ fn simple_install() {
         cargo_process().arg("install").arg("bar"),
         execs().with_status(0).with_stderr(
             "  Installing bar v0.1.0
-   Compiling foo v0.1.0
+   Compiling foo v0.0.1
    Compiling bar v0.1.0
     Finished release [optimized] target(s) in [..]s
   Installing [..]bar[..]
@@ -183,15 +179,6 @@ fn simple_install_fail() {
     setup();
 
     VendorPackage::new("foo")
-        .file(
-            "Cargo.toml",
-            r#"
-            [package]
-            name = "foo"
-            version = "0.1.0"
-            authors = []
-        "#,
-        )
         .file("src/lib.rs", "pub fn foo() {}")
         .build();
 
@@ -604,7 +591,7 @@ fn only_dot_files_ok() {
         )
         .file("src/lib.rs", "")
         .build();
-    VendorPackage::new("foo").file(".bar", "").build();
+    VendorPackage::new("foo").no_manifest().file(".bar", "").build();
 
     let p = project()
         .file(
@@ -642,6 +629,7 @@ fn random_files_ok() {
         .file("src/lib.rs", "")
         .build();
     VendorPackage::new("foo")
+        .no_manifest()
         .file("bar", "")
         .file("../test", "")
         .build();

@@ -2,7 +2,7 @@ use std::fs::File;
 use std::io::prelude::*;
 
 use support::paths::CargoPathExt;
-use support::{execs, project};
+use support::{BASIC_MANIFEST, execs, project};
 use support::ChannelChanger;
 use support::hamcrest::assert_that;
 use support::registry::Package;
@@ -151,15 +151,7 @@ failed to select a version for `bar` which could resolve this conflict",
         ),
     );
 
-    p.change_file(
-        "Cargo.toml",
-        r#"
-        [project]
-        name = "foo"
-        version = "0.0.1"
-        authors = []
-    "#,
-    );
+    p.change_file("Cargo.toml", BASIC_MANIFEST);
 
     assert_that(
         p.cargo("build").arg("--features").arg("test"),
@@ -947,15 +939,6 @@ fn many_features_no_rebuilds() {
 #[test]
 fn empty_features() {
     let p = project()
-        .file(
-            "Cargo.toml",
-            r#"
-            [project]
-            name = "foo"
-            version = "0.0.1"
-            authors = []
-        "#,
-        )
         .file("src/main.rs", "fn main() {}")
         .build();
 

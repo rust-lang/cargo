@@ -7,15 +7,6 @@ use support::hamcrest::assert_that;
 fn no_deps() {
     let p = project()
         .file(
-            "Cargo.toml",
-            r#"
-            [package]
-            name = "foo"
-            authors = []
-            version = "0.0.1"
-        "#,
-        )
-        .file(
             "src/main.rs",
             r#"
             mod a; fn main() {}

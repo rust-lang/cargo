@@ -79,15 +79,6 @@ fn doc_no_libs() {
 fn doc_twice() {
     let p = project()
         .file(
-            "Cargo.toml",
-            r#"
-            [package]
-            name = "foo"
-            version = "0.0.1"
-            authors = []
-        "#,
-        )
-        .file(
             "src/lib.rs",
             r#"
             pub fn foo() {}
@@ -475,15 +466,6 @@ fn doc_multiple_targets_same_name_undoced() {
 fn doc_lib_bin_same_name_documents_lib() {
     let p = project()
         .file(
-            "Cargo.toml",
-            r#"
-            [package]
-            name = "foo"
-            version = "0.0.1"
-            authors = []
-        "#,
-        )
-        .file(
             "src/main.rs",
             r#"
             //! Binary documentation
@@ -527,15 +509,6 @@ fn doc_lib_bin_same_name_documents_lib() {
 #[test]
 fn doc_lib_bin_same_name_documents_lib_when_requested() {
     let p = project()
-        .file(
-            "Cargo.toml",
-            r#"
-            [package]
-            name = "foo"
-            version = "0.0.1"
-            authors = []
-        "#,
-        )
         .file(
             "src/main.rs",
             r#"
@@ -581,15 +554,6 @@ fn doc_lib_bin_same_name_documents_lib_when_requested() {
 fn doc_lib_bin_same_name_documents_named_bin_when_requested() {
     let p = project()
         .file(
-            "Cargo.toml",
-            r#"
-            [package]
-            name = "foo"
-            version = "0.0.1"
-            authors = []
-        "#,
-        )
-        .file(
             "src/main.rs",
             r#"
             //! Binary documentation
@@ -634,15 +598,6 @@ fn doc_lib_bin_same_name_documents_named_bin_when_requested() {
 #[test]
 fn doc_lib_bin_same_name_documents_bins_when_requested() {
     let p = project()
-        .file(
-            "Cargo.toml",
-            r#"
-            [package]
-            name = "foo"
-            version = "0.0.1"
-            authors = []
-        "#,
-        )
         .file(
             "src/main.rs",
             r#"
@@ -742,15 +697,6 @@ fn doc_dash_p() {
 #[test]
 fn doc_same_name() {
     let p = project()
-        .file(
-            "Cargo.toml",
-            r#"
-            [package]
-            name = "foo"
-            version = "0.0.1"
-            authors = []
-        "#,
-        )
         .file("src/lib.rs", "")
         .file("src/bin/main.rs", "fn main() {}")
         .file("examples/main.rs", "fn main() {}")
@@ -765,15 +711,6 @@ fn doc_target() {
     const TARGET: &'static str = "arm-unknown-linux-gnueabihf";
 
     let p = project()
-        .file(
-            "Cargo.toml",
-            r#"
-            [package]
-            name = "foo"
-            version = "0.0.1"
-            authors = []
-        "#,
-        )
         .file(
             "src/lib.rs",
             r#"
@@ -985,15 +922,6 @@ fn no_document_build_deps() {
 #[test]
 fn doc_release() {
     let p = project()
-        .file(
-            "Cargo.toml",
-            r#"
-            [package]
-            name = "foo"
-            version = "0.0.1"
-            authors = []
-        "#,
-        )
         .file("src/lib.rs", "")
         .build();
 
@@ -1154,15 +1082,6 @@ fn features() {
 fn rerun_when_dir_removed() {
     let p = project()
         .file(
-            "Cargo.toml",
-            r#"
-            [package]
-            name = "foo"
-            version = "0.0.1"
-            authors = []
-        "#,
-        )
-        .file(
             "src/lib.rs",
             r#"
             /// dox
@@ -1183,15 +1102,6 @@ fn rerun_when_dir_removed() {
 #[test]
 fn document_only_lib() {
     let p = project()
-        .file(
-            "Cargo.toml",
-            r#"
-            [package]
-            name = "foo"
-            version = "0.0.1"
-            authors = []
-        "#,
-        )
         .file(
             "src/lib.rs",
             r#"
@@ -1662,14 +1572,6 @@ fn issue_5345() {
 #[test]
 fn doc_private_items() {
     let foo = project()
-        .file(
-            "Cargo.toml",
-            r#"
-            [package]
-            name = "foo"
-            version = "0.0.1"
-           "#,
-        )
         .file("src/lib.rs", "mod private { fn private_item() {} }")
         .build();
     assert_that(foo.cargo("doc").arg("--document-private-items"), execs().with_status(0));

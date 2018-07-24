@@ -1544,6 +1544,7 @@ fn relative_path_for_root_works() {
 #[test]
 fn path_dep_outside_workspace_is_not_member() {
     let p = project()
+        .no_manifest()
         .file(
             "ws/Cargo.toml",
             r#"
@@ -1580,6 +1581,7 @@ fn path_dep_outside_workspace_is_not_member() {
 #[test]
 fn test_in_and_out_of_workspace() {
     let p = project()
+        .no_manifest()
         .file(
             "ws/Cargo.toml",
             r#"
@@ -2286,14 +2288,6 @@ fn cargo_home_at_root_works() {
 #[test]
 fn relative_rustc() {
     let p = project()
-        .file(
-            "Cargo.toml",
-            r#"
-            [package]
-            name = "foo"
-            version = "0.1.0"
-        "#,
-        )
         .file(
             "src/main.rs",
             r#"

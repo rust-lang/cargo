@@ -80,15 +80,6 @@ src[/]main.rs
 fn metadata_warning() {
     let p = project()
         .file(
-            "Cargo.toml",
-            r#"
-            [project]
-            name = "foo"
-            version = "0.0.1"
-            authors = []
-        "#,
-        )
-        .file(
             "src/main.rs",
             r#"
             fn main() {}
@@ -248,15 +239,6 @@ See http://doc.crates.io/manifest.html#package-metadata for more info.
 #[test]
 fn package_verification() {
     let p = project()
-        .file(
-            "Cargo.toml",
-            r#"
-            [project]
-            name = "foo"
-            version = "0.0.1"
-            authors = []
-        "#,
-        )
         .file(
             "src/main.rs",
             r#"
@@ -501,15 +483,6 @@ See http://doc.crates.io/manifest.html#package-metadata for more info.
 fn package_lib_with_bin() {
     let p = project()
         .file(
-            "Cargo.toml",
-            r#"
-            [project]
-            name = "foo"
-            version = "0.0.1"
-            authors = []
-        "#,
-        )
-        .file(
             "src/main.rs",
             r#"
             extern crate foo;
@@ -540,7 +513,7 @@ fn package_git_submodule() {
             )
             .file("src/lib.rs", "pub fn foo() {}")
     }).unwrap();
-    let library = git::new("bar", |library| library.file("Makefile", "all:")).unwrap();
+    let library = git::new("bar", |library| library.no_manifest().file("Makefile", "all:")).unwrap();
 
     let repository = git2::Repository::open(&project.root()).unwrap();
     let url = path2url(library.root()).to_string();
@@ -684,15 +657,6 @@ src[..]main.rs
 fn package_weird_characters() {
     let p = project()
         .file(
-            "Cargo.toml",
-            r#"
-            [project]
-            name = "foo"
-            version = "0.0.1"
-            authors = []
-        "#,
-        )
-        .file(
             "src/main.rs",
             r#"
             fn main() { println!("hello"); }
@@ -720,15 +684,6 @@ Caused by:
 #[test]
 fn repackage_on_source_change() {
     let p = project()
-        .file(
-            "Cargo.toml",
-            r#"
-            [project]
-            name = "foo"
-            version = "0.0.1"
-            authors = []
-        "#,
-        )
         .file(
             "src/main.rs",
             r#"
@@ -1420,12 +1375,6 @@ fn lock_file_and_workspace() {
 #[test]
 fn do_not_package_if_src_was_modified() {
     let p = project()
-        .file("Cargo.toml", r#"
-            [project]
-            name = "foo"
-            version = "0.0.1"
-            authors = []
-        "#)
         .file("src/main.rs", r#"
             fn main() { println!("hello"); }
         "#)

@@ -6,13 +6,6 @@ use support::{execs, project};
 use glob::glob;
 use support::hamcrest::{assert_that, existing_file, is_not};
 
-const SIMPLE_MANIFEST: &str = r#"
-[package]
-name = "foo"
-version = "0.0.1"
-authors = []
-"#;
-
 #[test]
 fn check_success() {
     let foo = project()
@@ -271,17 +264,6 @@ fn build_check() {
 #[test]
 fn issue_3418() {
     let foo = project()
-        .file(
-            "Cargo.toml",
-            r#"
-            [package]
-            name = "foo"
-            version = "0.1.0"
-            authors = []
-
-            [dependencies]
-        "#,
-        )
         .file("src/lib.rs", "")
         .file("src/main.rs", "fn main() {}")
         .build();
@@ -600,7 +582,6 @@ fn check_virtual_all_implied() {
 #[test]
 fn targets_selected_default() {
     let foo = project()
-        .file("Cargo.toml", SIMPLE_MANIFEST)
         .file("src/main.rs", "fn main() {}")
         .file("src/lib.rs", "pub fn smth() {}")
         .file("examples/example1.rs", "fn main() {}")
@@ -623,7 +604,6 @@ fn targets_selected_default() {
 #[test]
 fn targets_selected_all() {
     let foo = project()
-        .file("Cargo.toml", SIMPLE_MANIFEST)
         .file("src/main.rs", "fn main() {}")
         .file("src/lib.rs", "pub fn smth() {}")
         .file("examples/example1.rs", "fn main() {}")
@@ -646,7 +626,6 @@ fn targets_selected_all() {
 #[test]
 fn check_unit_test_profile() {
     let foo = project()
-        .file("Cargo.toml", SIMPLE_MANIFEST)
         .file(
             "src/lib.rs",
             r#"
@@ -674,7 +653,6 @@ fn check_unit_test_profile() {
 #[test]
 fn check_filters() {
     let p = project()
-        .file("Cargo.toml", SIMPLE_MANIFEST)
         .file(
             "src/lib.rs",
             r#"
@@ -796,7 +774,6 @@ fn check_filters() {
 fn check_artifacts() {
     // Verify which artifacts are created when running check (#4059).
     let p = project()
-        .file("Cargo.toml", SIMPLE_MANIFEST)
         .file("src/lib.rs", "")
         .file("src/main.rs", "fn main() {}")
         .file("tests/t1.rs", "")
