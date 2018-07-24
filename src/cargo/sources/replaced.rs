@@ -60,6 +60,10 @@ impl<'cfg> Source for ReplacedSource<'cfg> {
         &self.to_replace
     }
 
+    fn replaced_source_id(&self) -> &SourceId {
+        &self.replace_with
+    }
+
     fn update(&mut self) -> CargoResult<()> {
         self.inner
             .update()

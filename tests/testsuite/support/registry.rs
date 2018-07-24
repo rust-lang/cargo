@@ -20,6 +20,9 @@ pub fn registry_path() -> PathBuf {
 pub fn registry() -> Url {
     Url::from_file_path(&*registry_path()).ok().unwrap()
 }
+pub fn api_path() -> PathBuf {
+    paths::root().join("api")
+}
 pub fn dl_path() -> PathBuf {
     paths::root().join("dl")
 }
@@ -77,7 +80,7 @@ pub fn init() {
         format!(
             r#"
         [registry]
-            token = "api-token"
+        token = "api-token"
 
         [source.crates-io]
         registry = 'https://wut'

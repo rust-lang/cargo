@@ -14,6 +14,11 @@ pub trait Source {
     /// Returns the `SourceId` corresponding to this source
     fn source_id(&self) -> &SourceId;
 
+    /// Returns the replaced `SourceId` corresponding to this source
+    fn replaced_source_id(&self) -> &SourceId {
+        self.source_id()
+    }
+
     /// Returns whether or not this source will return summaries with
     /// checksums listed.
     fn supports_checksums(&self) -> bool;
@@ -93,6 +98,11 @@ impl<'a, T: Source + ?Sized + 'a> Source for Box<T> {
     /// Forwards to `Source::source_id`
     fn source_id(&self) -> &SourceId {
         (**self).source_id()
+    }
+
+    /// Forwards to `Source::replaced_source_id`
+    fn replaced_source_id(&self) -> &SourceId {
+        (**self).replaced_source_id()
     }
 
     /// Forwards to `Source::update`
