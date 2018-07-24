@@ -57,8 +57,6 @@ pub fn fix(ws: &Workspace, opts: &mut FixOptions) -> CargoResult<()> {
     *opts.compile_opts.build_config.rustfix_diagnostic_server.borrow_mut() =
         Some(RustfixDiagnosticServer::new()?);
 
-    touch_entrypoints(ws, &opts.compile_opts)?;
-
     ops::compile(ws, &opts.compile_opts)?;
     Ok(())
 }
@@ -110,67 +108,6 @@ fn check_version_control(opts: &FixOptions) -> CargoResult<()> {
            \n\
            {}\n\
           ", files_list);
-}
-
-fn touch_entrypoints<'a>(
-    ws: &Workspace<'a>,
-    options: &CompileOptions<'a>,
-) -> CargoResult<()> {
-    // Begin cargo cult from `ops::cargo_compile::compile_ws`
-    use core::resolver::Method;
-    use core::compiler::Kind;
-
-    let specs = options.spec.into_package_id_specs(ws)?;
-    let features = Method::split_features(&options.features);
-    let method = Method::Required {
-        dev_deps: ws.require_optional_deps() || options.filter.need_dev_deps(options.build_config.mode),
-        features: &features,
-        all_features: options.all_features,
-        uses_default_features: !options.no_default_features,
-    };
-    let resolve = ops::resolve_ws_with_method(ws, None, method, &specs)?;
-    let (packages, resolve_with_overrides) = resolve;
-    let to_builds = specs
-        .iter()
-        .map(|p| {
-            let pkgid = p.query(resolve_with_overrides.iter())?;
-            let p = packages.get(pkgid)?;
-            p.manifest().print_teapot(ws.config());
-            Ok(p)
-        })
-        .collect::<CargoResult<Vec<_>>>()?;
-
-    let default_arch_kind = if options.build_config.requested_target.is_some() {
-        Kind::Target
-    } else {
-        Kind::Host
-    };
-    let units = ops::generate_targets(
-        ws,
-        ws.profiles(),
-        &to_builds,
-        &options.filter,
-        default_arch_kind,
-        &resolve_with_overrides,
-        &options.build_config,
-    )?;
-    // End cargo cult from `ops::cargo_compile::compile_ws`
-
-    let entrypoints = units.iter().map(|u| u.target.src_path());
-    for file_path in entrypoints {
-        if file_path.is_file() {
-            use std::time::SystemTime;
-            use filetime::{FileTime, set_file_times};
-
-            let time = FileTime::from_system_time(SystemTime::now());
-            set_file_times(file_path, time, time)?;
-            info!("`touch`ed file `{}`", file_path.display());
-        } else {
-            info!("Couldn't `touch` file `{}`: {}", file_path.display(), "Not a file");
-        }
-    }
-
-    Ok(())
 }
 
 pub fn fix_maybe_exec_rustc() -> CargoResult<bool> {
