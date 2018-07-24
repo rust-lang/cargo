@@ -2,20 +2,12 @@ use std::io::Write;
 use std::fs::{self, File};
 
 use support::rustc_host;
-use support::{execs, paths, project, project_in_home};
+use support::{basic_lib_manifest, execs, paths, project, project_in_home};
 use support::hamcrest::assert_that;
 
 #[test]
 fn env_rustflags_normal_source() {
     let p = project()
-        .file(
-            "Cargo.toml",
-            r#"
-            [package]
-            name = "foo"
-            version = "0.0.1"
-        "#,
-        )
         .file("src/lib.rs", "")
         .file("src/bin/a.rs", "fn main() {}")
         .file("examples/b.rs", "fn main() {}")
@@ -200,17 +192,7 @@ fn env_rustflags_plugin_dep() {
         )
         .build();
     let _bar = project().at("bar")
-        .file(
-            "Cargo.toml",
-            r#"
-            [package]
-            name = "bar"
-            version = "0.0.1"
-
-            [lib]
-            name = "bar"
-        "#,
-        )
+        .file("Cargo.toml", &basic_lib_manifest("bar"))
         .file(
             "src/lib.rs",
             r#"
@@ -230,14 +212,6 @@ fn env_rustflags_plugin_dep() {
 #[test]
 fn env_rustflags_normal_source_with_target() {
     let p = project()
-        .file(
-            "Cargo.toml",
-            r#"
-            [package]
-            name = "foo"
-            version = "0.0.1"
-        "#,
-        )
         .file("src/lib.rs", "")
         .file("src/bin/a.rs", "fn main() {}")
         .file("examples/b.rs", "fn main() {}")
@@ -452,17 +426,7 @@ fn env_rustflags_plugin_dep_with_target() {
         )
         .build();
     let _bar = project().at("bar")
-        .file(
-            "Cargo.toml",
-            r#"
-            [package]
-            name = "bar"
-            version = "0.0.1"
-
-            [lib]
-            name = "bar"
-        "#,
-        )
+        .file("Cargo.toml", &basic_lib_manifest("bar"))
         .file(
             "src/lib.rs",
             r#"
@@ -486,14 +450,6 @@ fn env_rustflags_plugin_dep_with_target() {
 #[test]
 fn env_rustflags_recompile() {
     let p = project()
-        .file(
-            "Cargo.toml",
-            r#"
-            [package]
-            name = "foo"
-            version = "0.0.1"
-        "#,
-        )
         .file("src/lib.rs", "")
         .build();
 
@@ -508,14 +464,6 @@ fn env_rustflags_recompile() {
 #[test]
 fn env_rustflags_recompile2() {
     let p = project()
-        .file(
-            "Cargo.toml",
-            r#"
-            [package]
-            name = "foo"
-            version = "0.0.1"
-        "#,
-        )
         .file("src/lib.rs", "")
         .build();
 
@@ -533,14 +481,6 @@ fn env_rustflags_recompile2() {
 #[test]
 fn env_rustflags_no_recompile() {
     let p = project()
-        .file(
-            "Cargo.toml",
-            r#"
-            [package]
-            name = "foo"
-            version = "0.0.1"
-        "#,
-        )
         .file("src/lib.rs", "")
         .build();
 
@@ -557,14 +497,6 @@ fn env_rustflags_no_recompile() {
 #[test]
 fn build_rustflags_normal_source() {
     let p = project()
-        .file(
-            "Cargo.toml",
-            r#"
-            [package]
-            name = "foo"
-            version = "0.0.1"
-        "#,
-        )
         .file("src/lib.rs", "")
         .file("src/bin/a.rs", "fn main() {}")
         .file("examples/b.rs", "fn main() {}")
@@ -760,17 +692,7 @@ fn build_rustflags_plugin_dep() {
         )
         .build();
     let _bar = project().at("bar")
-        .file(
-            "Cargo.toml",
-            r#"
-            [package]
-            name = "bar"
-            version = "0.0.1"
-
-            [lib]
-            name = "bar"
-        "#,
-        )
+        .file("Cargo.toml", &basic_lib_manifest("bar"))
         .file(
             "src/lib.rs",
             r#"
@@ -787,14 +709,6 @@ fn build_rustflags_plugin_dep() {
 #[test]
 fn build_rustflags_normal_source_with_target() {
     let p = project()
-        .file(
-            "Cargo.toml",
-            r#"
-            [package]
-            name = "foo"
-            version = "0.0.1"
-        "#,
-        )
         .file("src/lib.rs", "")
         .file("src/bin/a.rs", "fn main() {}")
         .file("examples/b.rs", "fn main() {}")
@@ -1020,17 +934,7 @@ fn build_rustflags_plugin_dep_with_target() {
         )
         .build();
     let _bar = project().at("bar")
-        .file(
-            "Cargo.toml",
-            r#"
-            [package]
-            name = "bar"
-            version = "0.0.1"
-
-            [lib]
-            name = "bar"
-        "#,
-        )
+        .file("Cargo.toml", &basic_lib_manifest("bar"))
         .file(
             "src/lib.rs",
             r#"
@@ -1051,14 +955,6 @@ fn build_rustflags_plugin_dep_with_target() {
 #[test]
 fn build_rustflags_recompile() {
     let p = project()
-        .file(
-            "Cargo.toml",
-            r#"
-            [package]
-            name = "foo"
-            version = "0.0.1"
-        "#,
-        )
         .file("src/lib.rs", "")
         .build();
 
@@ -1080,14 +976,6 @@ fn build_rustflags_recompile() {
 #[test]
 fn build_rustflags_recompile2() {
     let p = project()
-        .file(
-            "Cargo.toml",
-            r#"
-            [package]
-            name = "foo"
-            version = "0.0.1"
-        "#,
-        )
         .file("src/lib.rs", "")
         .build();
 
@@ -1112,14 +1000,6 @@ fn build_rustflags_recompile2() {
 #[test]
 fn build_rustflags_no_recompile() {
     let p = project()
-        .file(
-            "Cargo.toml",
-            r#"
-            [package]
-            name = "foo"
-            version = "0.0.1"
-        "#,
-        )
         .file("src/lib.rs", "")
         .file(
             ".cargo/config",
@@ -1159,14 +1039,6 @@ fn build_rustflags_with_home_config() {
     // And we need the project to be inside the home directory
     // so the walking process finds the home project twice.
     let p = project_in_home("foo")
-        .file(
-            "Cargo.toml",
-            r#"
-            [package]
-            name = "foo"
-            version = "0.0.1"
-        "#,
-        )
         .file("src/lib.rs", "")
         .build();
 
@@ -1176,14 +1048,6 @@ fn build_rustflags_with_home_config() {
 #[test]
 fn target_rustflags_normal_source() {
     let p = project()
-        .file(
-            "Cargo.toml",
-            r#"
-            [package]
-            name = "foo"
-            version = "0.0.1"
-        "#,
-        )
         .file("src/lib.rs", "")
         .file("src/bin/a.rs", "fn main() {}")
         .file("examples/b.rs", "fn main() {}")
@@ -1221,14 +1085,6 @@ fn target_rustflags_normal_source() {
 #[test]
 fn target_rustflags_precedence() {
     let p = project()
-        .file(
-            "Cargo.toml",
-            r#"
-            [package]
-            name = "foo"
-            version = "0.0.1"
-        "#,
-        )
         .file("src/lib.rs", "")
         .file(
             ".cargo/config",
@@ -1258,14 +1114,6 @@ fn target_rustflags_precedence() {
 #[test]
 fn cfg_rustflags_normal_source() {
     let p = project()
-        .file(
-            "Cargo.toml",
-            r#"
-            [package]
-            name = "foo"
-            version = "0.0.1"
-        "#,
-        )
         .file("src/lib.rs", "pub fn t() {}")
         .file("src/bin/a.rs", "fn main() {}")
         .file("examples/b.rs", "fn main() {}")
@@ -1350,14 +1198,6 @@ fn cfg_rustflags_normal_source() {
 #[test]
 fn cfg_rustflags_precedence() {
     let p = project()
-        .file(
-            "Cargo.toml",
-            r#"
-            [package]
-            name = "foo"
-            version = "0.0.1"
-        "#,
-        )
         .file("src/lib.rs", "pub fn t() {}")
         .file("src/bin/a.rs", "fn main() {}")
         .file("examples/b.rs", "fn main() {}")
@@ -1444,14 +1284,6 @@ fn cfg_rustflags_precedence() {
 #[test]
 fn target_rustflags_string_and_array_form1() {
     let p1 = project()
-        .file(
-            "Cargo.toml",
-            r#"
-            [package]
-            name = "foo"
-            version = "0.0.1"
-        "#,
-        )
         .file("src/lib.rs", "")
         .file(
             ".cargo/config",
@@ -1474,14 +1306,6 @@ fn target_rustflags_string_and_array_form1() {
     );
 
     let p2 = project()
-        .file(
-            "Cargo.toml",
-            r#"
-            [package]
-            name = "foo"
-            version = "0.0.1"
-        "#,
-        )
         .file("src/lib.rs", "")
         .file(
             ".cargo/config",
@@ -1508,14 +1332,6 @@ fn target_rustflags_string_and_array_form1() {
 fn target_rustflags_string_and_array_form2() {
     let p1 = project()
         .file(
-            "Cargo.toml",
-            r#"
-            [package]
-            name = "foo"
-            version = "0.0.1"
-        "#,
-        )
-        .file(
             ".cargo/config",
             &format!(
                 r#"
@@ -1540,14 +1356,6 @@ fn target_rustflags_string_and_array_form2() {
     );
 
     let p2 = project()
-        .file(
-            "Cargo.toml",
-            r#"
-            [package]
-            name = "foo"
-            version = "0.0.1"
-        "#,
-        )
         .file(
             ".cargo/config",
             &format!(
@@ -1576,14 +1384,6 @@ fn target_rustflags_string_and_array_form2() {
 #[test]
 fn two_matching_in_config() {
     let p1 = project()
-        .file(
-            "Cargo.toml",
-            r#"
-            [package]
-            name = "foo"
-            version = "0.0.1"
-        "#,
-        )
         .file(
             ".cargo/config",
             r#"

@@ -2289,14 +2289,6 @@ fn cargo_home_at_root_works() {
 fn relative_rustc() {
     let p = project()
         .file(
-            "Cargo.toml",
-            r#"
-            [package]
-            name = "foo"
-            version = "0.1.0"
-        "#,
-        )
-        .file(
             "src/main.rs",
             r#"
             use std::process::Command;

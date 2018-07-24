@@ -23,16 +23,6 @@ fn verbose_output_for_lib(p: &Project) -> String {
 fn build_lib_only() {
     let p = project()
         .file(
-            "Cargo.toml",
-            r#"
-            [package]
-
-            name = "foo"
-            version = "0.0.1"
-            authors = ["wycats@example.com"]
-        "#,
-        )
-        .file(
             "src/main.rs",
             r#"
             fn main() {}

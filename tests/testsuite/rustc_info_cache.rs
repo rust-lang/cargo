@@ -6,15 +6,6 @@ use std::env;
 #[test]
 fn rustc_info_cache() {
     let p = project()
-        .file(
-            "Cargo.toml",
-            r#"
-            [project]
-            name = "foo"
-            version = "0.0.1"
-            authors = []
-        "#,
-        )
         .file("src/main.rs", r#"fn main() { println!("hello"); }"#)
         .build();
 

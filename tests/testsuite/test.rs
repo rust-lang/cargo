@@ -201,15 +201,6 @@ fn cargo_test_verbose() {
 fn many_similar_names() {
     let p = project()
         .file(
-            "Cargo.toml",
-            r#"
-            [package]
-            name = "foo"
-            version = "0.0.1"
-            authors = []
-        "#,
-        )
-        .file(
             "src/lib.rs",
             "
             pub fn foo() {}
@@ -649,15 +640,6 @@ fn external_test_named_test() {
 fn external_test_implicit() {
     let p = project()
         .file(
-            "Cargo.toml",
-            r#"
-            [project]
-            name = "foo"
-            version = "0.0.1"
-            authors = []
-        "#,
-        )
-        .file(
             "src/lib.rs",
             r#"
             pub fn get_hello() -> &'static str { "Hello" }
@@ -700,15 +682,6 @@ fn external_test_implicit() {
 fn dont_run_examples() {
     let p = project()
         .file(
-            "Cargo.toml",
-            r#"
-            [project]
-            name = "foo"
-            version = "0.0.1"
-            authors = []
-        "#,
-        )
-        .file(
             "src/lib.rs",
             r#"
         "#,
@@ -726,15 +699,6 @@ fn dont_run_examples() {
 #[test]
 fn pass_through_command_line() {
     let p = project()
-        .file(
-            "Cargo.toml",
-            r#"
-            [package]
-            name = "foo"
-            version = "0.0.1"
-            authors = []
-        "#,
-        )
         .file(
             "src/lib.rs",
             "
@@ -1242,15 +1206,6 @@ Caused by:
 fn bin_there_for_integration() {
     let p = project()
         .file(
-            "Cargo.toml",
-            r#"
-            [package]
-            name = "foo"
-            version = "0.0.1"
-            authors = []
-        "#,
-        )
-        .file(
             "src/main.rs",
             "
             fn main() { std::process::exit(101); }
@@ -1433,15 +1388,6 @@ fn test_twice_with_build_cmd() {
 fn test_then_build() {
     let p = project()
         .file(
-            "Cargo.toml",
-            r#"
-            [package]
-            name = "foo"
-            version = "0.0.1"
-            authors = []
-        "#,
-        )
-        .file(
             "src/lib.rs",
             "
             #[test]
@@ -1472,15 +1418,6 @@ fn test_then_build() {
 #[test]
 fn test_no_run() {
     let p = project()
-        .file(
-            "Cargo.toml",
-            r#"
-            [package]
-            name = "foo"
-            version = "0.0.1"
-            authors = []
-        "#,
-        )
         .file(
             "src/lib.rs",
             "
@@ -1589,15 +1526,6 @@ fn test_run_implicit_bin_target() {
 #[test]
 fn test_run_specific_test_target() {
     let prj = project()
-        .file(
-            "Cargo.toml",
-            r#"
-            [package]
-            name = "foo"
-            version = "0.0.1"
-            authors = []
-        "#,
-        )
         .file("src/bin/a.rs", "fn main() { }")
         .file("src/bin/b.rs", "#[test] fn test_b() { } fn main() { }")
         .file("tests/a.rs", "#[test] fn test_a() { }")
@@ -2174,15 +2102,6 @@ fn selective_testing_with_docs() {
 #[test]
 fn example_bin_same_name() {
     let p = project()
-        .file(
-            "Cargo.toml",
-            r#"
-            [package]
-            name = "foo"
-            version = "0.0.1"
-            authors = []
-        "#,
-        )
         .file("src/bin/foo.rs", r#"fn main() { println!("bin"); }"#)
         .file("examples/foo.rs", r#"fn main() { println!("example"); }"#)
         .build();
@@ -2226,15 +2145,6 @@ fn example_bin_same_name() {
 #[test]
 fn test_with_example_twice() {
     let p = project()
-        .file(
-            "Cargo.toml",
-            r#"
-            [package]
-            name = "foo"
-            version = "0.0.1"
-            authors = []
-        "#,
-        )
         .file("src/bin/foo.rs", r#"fn main() { println!("bin"); }"#)
         .file("examples/foo.rs", r#"fn main() { println!("example"); }"#)
         .build();
@@ -2302,15 +2212,6 @@ fn example_with_dev_dep() {
 #[test]
 fn bin_is_preserved() {
     let p = project()
-        .file(
-            "Cargo.toml",
-            r#"
-            [package]
-            name = "foo"
-            version = "0.0.1"
-            authors = []
-        "#,
-        )
         .file("src/lib.rs", "")
         .file("src/main.rs", "fn main() {}")
         .build();
@@ -2326,15 +2227,6 @@ fn bin_is_preserved() {
 #[test]
 fn bad_example() {
     let p = project()
-        .file(
-            "Cargo.toml",
-            r#"
-            [package]
-            name = "foo"
-            version = "0.0.1"
-            authors = []
-        "#,
-        )
         .file("src/lib.rs", "");
     let p = p.build();
 
@@ -2462,15 +2354,6 @@ fn doctest_dev_dep() {
 #[test]
 fn filter_no_doc_tests() {
     let p = project()
-        .file(
-            "Cargo.toml",
-            r#"
-            [package]
-            name = "foo"
-            version = "0.0.1"
-            authors = []
-        "#,
-        )
         .file(
             "src/lib.rs",
             r#"
@@ -2668,15 +2551,6 @@ fn dev_dep_with_build_script() {
 fn no_fail_fast() {
     let p = project()
         .file(
-            "Cargo.toml",
-            r#"
-            [package]
-            name = "foo"
-            version = "0.0.1"
-            authors = []
-        "#,
-        )
-        .file(
             "src/lib.rs",
             r#"
         pub fn add_one(x: i32) -> i32{
@@ -2810,15 +2684,6 @@ fn test_multiple_packages() {
 #[test]
 fn bin_does_not_rebuild_tests() {
     let p = project()
-        .file(
-            "Cargo.toml",
-            r#"
-            [package]
-            name = "foo"
-            version = "0.0.1"
-            authors = []
-        "#,
-        )
         .file("src/lib.rs", "")
         .file("src/main.rs", "fn main() {}")
         .file("tests/foo.rs", "");
@@ -2932,15 +2797,6 @@ fn selective_test_optional_dep() {
 #[test]
 fn only_test_docs() {
     let p = project()
-        .file(
-            "Cargo.toml",
-            r#"
-            [package]
-            name = "foo"
-            version = "0.0.1"
-            authors = []
-        "#,
-        )
         .file(
             "src/lib.rs",
             r#"
@@ -3585,14 +3441,6 @@ fn doctest_only_with_dev_dep() {
 fn test_many_targets() {
     let p = project()
         .file(
-            "Cargo.toml",
-            r#"
-            [project]
-            name = "foo"
-            version = "0.1.0"
-        "#,
-        )
-        .file(
             "src/bin/a.rs",
             r#"
             fn main() {}
@@ -3773,14 +3621,6 @@ test env_test ... ok
 #[test]
 fn test_order() {
     let p = project()
-        .file(
-            "Cargo.toml",
-            r#"
-            [project]
-            name = "foo"
-            version = "0.1.0"
-        "#,
-        )
         .file(
             "src/lib.rs",
             r#"
@@ -3980,14 +3820,6 @@ fn find_dependency_of_proc_macro_dependency_with_target() {
 #[test]
 fn test_hint_not_masked_by_doctest() {
     let p = project()
-        .file(
-            "Cargo.toml",
-            r#"
-            [package]
-            name = "foo"
-            version = "0.0.1"
-        "#,
-        )
         .file(
             "src/lib.rs",
             r#"

@@ -9,15 +9,6 @@ use support::hamcrest::{assert_that, existing_file, is_not};
 #[test]
 fn adding_and_removing_packages() {
     let p = project()
-        .file(
-            "Cargo.toml",
-            r#"
-            [package]
-            name = "foo"
-            authors = []
-            version = "0.0.1"
-        "#,
-        )
         .file("src/main.rs", "fn main() {}")
         .file(
             "bar/Cargo.toml",
@@ -126,15 +117,6 @@ fn no_index_update() {
 #[test]
 fn preserve_metadata() {
     let p = project()
-        .file(
-            "Cargo.toml",
-            r#"
-            [package]
-            name = "foo"
-            authors = []
-            version = "0.0.1"
-        "#,
-        )
         .file("src/main.rs", "fn main() {}")
         .file(
             "bar/Cargo.toml",
@@ -177,15 +159,6 @@ foo = "bar"
 #[test]
 fn preserve_line_endings_issue_2076() {
     let p = project()
-        .file(
-            "Cargo.toml",
-            r#"
-            [package]
-            name = "foo"
-            authors = []
-            version = "0.0.1"
-        "#,
-        )
         .file("src/main.rs", "fn main() {}")
         .file(
             "bar/Cargo.toml",
@@ -227,15 +200,6 @@ fn preserve_line_endings_issue_2076() {
 #[test]
 fn cargo_update_generate_lockfile() {
     let p = project()
-        .file(
-            "Cargo.toml",
-            r#"
-            [package]
-            name = "foo"
-            authors = []
-            version = "0.0.1"
-        "#,
-        )
         .file("src/main.rs", "fn main() {}")
         .build();
 
