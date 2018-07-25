@@ -67,16 +67,7 @@ fn setup() {
 
     // Init a new registry
     let _ = repo(&registry_path())
-        .file(
-            "config.json",
-            &format!(
-                r#"{{
-            "dl": "{0}",
-            "api": "{0}"
-        }}"#,
-                api()
-            ),
-        )
+        .file("config.json", &format!(r#"{{"dl":"{0}","api":"{0}"}}"#, api()))
         .build();
 
     let base = api_path().join("api/v1/crates");

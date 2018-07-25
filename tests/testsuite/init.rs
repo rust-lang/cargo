@@ -167,26 +167,14 @@ fn confused_by_multiple_lib_files() {
 
     File::create(&sourcefile_path1)
         .unwrap()
-        .write_all(
-            br#"
-        fn qqq () {
-            println!("Hello, world 2!");
-        }
-    "#,
-        )
+        .write_all(br#"fn qqq () { println!("Hello, world 2!"); }"#)
         .unwrap();
 
     let sourcefile_path2 = path.join("lib.rs");
 
     File::create(&sourcefile_path2)
         .unwrap()
-        .write_all(
-            br#"
-        fn qqq () {
-            println!("Hello, world 3!");
-        }
-    "#,
-        )
+        .write_all(br#" fn qqq () { println!("Hello, world 3!"); }"#)
         .unwrap();
 
     assert_that(
@@ -215,26 +203,14 @@ fn multibin_project_name_clash() {
 
     File::create(&sourcefile_path1)
         .unwrap()
-        .write_all(
-            br#"
-        fn main () {
-            println!("Hello, world 2!");
-        }
-    "#,
-        )
+        .write_all(br#"fn main () { println!("Hello, world 2!"); }"#)
         .unwrap();
 
     let sourcefile_path2 = path.join("main.rs");
 
     File::create(&sourcefile_path2)
         .unwrap()
-        .write_all(
-            br#"
-        fn main () {
-            println!("Hello, world 3!");
-        }
-    "#,
-        )
+        .write_all(br#"fn main () { println!("Hello, world 3!"); }"#)
         .unwrap();
 
     assert_that(

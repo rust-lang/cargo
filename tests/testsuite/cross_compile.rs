@@ -139,13 +139,7 @@ fn simple_deps() {
             path = "../bar"
         "#,
         )
-        .file(
-            "src/main.rs",
-            r#"
-            extern crate bar;
-            fn main() { bar::bar(); }
-        "#,
-        )
+        .file("src/main.rs", "extern crate bar; fn main() { bar::bar(); }")
         .build();
     let _p2 = project().at("bar")
         .file("Cargo.toml", &basic_manifest("bar", "0.0.1"))
@@ -787,12 +781,7 @@ fn build_script_needed_for_host_and_target() {
             build = 'build.rs'
         "#,
         )
-        .file(
-            "d1/src/lib.rs",
-            "
-            pub fn d1() {}
-        ",
-        )
+        .file("d1/src/lib.rs", "pub fn d1() {}")
         .file(
             "d1/build.rs",
             r#"
@@ -889,12 +878,7 @@ fn build_deps_for_the_right_arch() {
         )
         .file("src/main.rs", "extern crate d2; fn main() {}")
         .file("d1/Cargo.toml",  &basic_manifest("d1", "0.0.0"))
-        .file(
-            "d1/src/lib.rs",
-            "
-            pub fn d1() {}
-        ",
-        )
+        .file("d1/src/lib.rs", "pub fn d1() {}")
         .file(
             "d2/Cargo.toml",
             r#"
@@ -951,12 +935,7 @@ fn build_script_only_host() {
             build = "build.rs"
         "#,
         )
-        .file(
-            "d1/src/lib.rs",
-            "
-            pub fn d1() {}
-        ",
-        )
+        .file("d1/src/lib.rs", "pub fn d1() {}")
         .file(
             "d1/build.rs",
             r#"
@@ -1065,13 +1044,7 @@ fn build_script_with_platform_specific_dependencies() {
                 host
             ),
         )
-        .file(
-            "d1/src/lib.rs",
-            "
-            #[allow(unused_extern_crates)]
-            extern crate d2;
-        ",
-        )
+        .file("d1/src/lib.rs", "#[allow(unused_extern_crates)] extern crate d2;")
         .file("d2/Cargo.toml",  &basic_manifest("d2", "0.0.0"))
         .file("d2/src/lib.rs", "")
         .build();
@@ -1216,12 +1189,7 @@ fn platform_specific_variables_reflected_in_build_scripts() {
             build = "build.rs"
         "#,
         )
-        .file(
-            "d1/build.rs",
-            r#"
-            fn main() { println!("cargo:val=1") }
-        "#,
-        )
+        .file("d1/build.rs", r#"fn main() { println!("cargo:val=1") }"#)
         .file("d1/src/lib.rs", "")
         .file(
             "d2/Cargo.toml",
@@ -1234,12 +1202,7 @@ fn platform_specific_variables_reflected_in_build_scripts() {
             build = "build.rs"
         "#,
         )
-        .file(
-            "d2/build.rs",
-            r#"
-            fn main() { println!("cargo:val=1") }
-        "#,
-        )
+        .file("d2/build.rs", r#"fn main() { println!("cargo:val=1") }"#)
         .file("d2/src/lib.rs", "")
         .build();
 

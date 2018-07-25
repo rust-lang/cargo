@@ -25,12 +25,7 @@ fn simple() {
         "#,
         )
         .file("build.rs", "fn main() {}")
-        .file(
-            "src/lib.rs",
-            r#"
-            pub fn foo() {}
-        "#,
-        )
+        .file("src/lib.rs", "pub fn foo() {}")
         .build();
 
     assert_that(
@@ -64,12 +59,7 @@ fn doc_no_libs() {
             doc = false
         "#,
         )
-        .file(
-            "src/main.rs",
-            r#"
-            bad code
-        "#,
-        )
+        .file("src/main.rs", "bad code")
         .build();
 
     assert_that(p.cargo("doc"), execs().with_status(0));
@@ -78,12 +68,7 @@ fn doc_no_libs() {
 #[test]
 fn doc_twice() {
     let p = project()
-        .file(
-            "src/lib.rs",
-            r#"
-            pub fn foo() {}
-        "#,
-        )
+        .file("src/lib.rs", "pub fn foo() {}")
         .build();
 
     assert_that(
@@ -115,20 +100,9 @@ fn doc_deps() {
             path = "bar"
         "#,
         )
-        .file(
-            "src/lib.rs",
-            r#"
-            extern crate bar;
-            pub fn foo() {}
-        "#,
-        )
+        .file("src/lib.rs", "extern crate bar; pub fn foo() {}")
         .file("bar/Cargo.toml", &basic_manifest("bar", "0.0.1"))
-        .file(
-            "bar/src/lib.rs",
-            r#"
-            pub fn bar() {}
-        "#,
-        )
+        .file("bar/src/lib.rs", "pub fn bar() {}")
         .build();
 
     assert_that(
@@ -188,20 +162,9 @@ fn doc_no_deps() {
             path = "bar"
         "#,
         )
-        .file(
-            "src/lib.rs",
-            r#"
-            extern crate bar;
-            pub fn foo() {}
-        "#,
-        )
+        .file("src/lib.rs", "extern crate bar; pub fn foo() {}")
         .file("bar/Cargo.toml", &basic_manifest("bar", "0.0.1"))
-        .file(
-            "bar/src/lib.rs",
-            r#"
-            pub fn bar() {}
-        "#,
-        )
+        .file("bar/src/lib.rs", "pub fn bar() {}")
         .build();
 
     assert_that(
@@ -239,20 +202,9 @@ fn doc_only_bin() {
             path = "bar"
         "#,
         )
-        .file(
-            "src/main.rs",
-            r#"
-            extern crate bar;
-            pub fn foo() {}
-        "#,
-        )
+        .file("src/main.rs", "extern crate bar; pub fn foo() {}")
         .file("bar/Cargo.toml", &basic_manifest("bar", "0.0.1"))
-        .file(
-            "bar/src/lib.rs",
-            r#"
-            pub fn bar() {}
-        "#,
-        )
+        .file("bar/src/lib.rs", "pub fn bar() {}")
         .build();
 
     assert_that(p.cargo("doc").arg("-v"), execs().with_status(0));
@@ -833,12 +785,7 @@ fn no_document_build_deps() {
             a = { path = "a" }
         "#,
         )
-        .file(
-            "src/lib.rs",
-            "
-            pub fn foo() {}
-        ",
-        )
+        .file("src/lib.rs", "pub fn foo() {}")
         .file("a/Cargo.toml", &basic_manifest("a", "0.0.1"))
         .file(
             "a/src/lib.rs",
@@ -891,27 +838,11 @@ fn doc_multiple_deps() {
             path = "baz"
         "#,
         )
-        .file(
-            "src/lib.rs",
-            r#"
-            extern crate bar;
-            pub fn foo() {}
-        "#,
-        )
+        .file("src/lib.rs", "extern crate bar; pub fn foo() {}")
         .file("bar/Cargo.toml", &basic_manifest("bar", "0.0.1"))
-        .file(
-            "bar/src/lib.rs",
-            r#"
-            pub fn bar() {}
-        "#,
-        )
+        .file("bar/src/lib.rs", "pub fn bar() {}")
         .file("baz/Cargo.toml", &basic_manifest("baz", "0.0.1"))
-        .file(
-            "baz/src/lib.rs",
-            r#"
-            pub fn baz() {}
-        "#,
-        )
+        .file("baz/src/lib.rs", "pub fn baz() {}")
         .build();
 
     assert_that(
@@ -947,13 +878,7 @@ fn features() {
             foo = ["bar/bar"]
         "#,
         )
-        .file(
-            "src/lib.rs",
-            r#"
-            #[cfg(feature = "foo")]
-            pub fn foo() {}
-        "#,
-        )
+        .file("src/lib.rs", r#"#[cfg(feature = "foo")] pub fn foo() {}"#)
         .file(
             "bar/Cargo.toml",
             r#"
@@ -974,13 +899,7 @@ fn features() {
             }
         "#,
         )
-        .file(
-            "bar/src/lib.rs",
-            r#"
-            #[cfg(feature = "bar")]
-            pub fn bar() {}
-        "#,
-        )
+        .file("bar/src/lib.rs", r#"#[cfg(feature = "bar")] pub fn bar() {}"#)
         .build();
     assert_that(
         p.cargo("doc").arg("--features").arg("foo"),
@@ -1087,19 +1006,9 @@ fn doc_all_workspace() {
             [workspace]
         "#,
         )
-        .file(
-            "src/main.rs",
-            r#"
-            fn main() {}
-        "#,
-        )
+        .file("src/main.rs", "fn main() {}")
         .file("bar/Cargo.toml", &basic_manifest("bar", "0.1.0"))
-        .file(
-            "bar/src/lib.rs",
-            r#"
-            pub fn bar() {}
-        "#,
-        )
+        .file("bar/src/lib.rs", "pub fn bar() {}")
         .build();
 
     // The order in which bar is compiled or documented is not deterministic
@@ -1124,19 +1033,9 @@ fn doc_all_virtual_manifest() {
         "#,
         )
         .file("bar/Cargo.toml", &basic_manifest("bar", "0.1.0"))
-        .file(
-            "bar/src/lib.rs",
-            r#"
-            pub fn bar() {}
-        "#,
-        )
+        .file("bar/src/lib.rs", "pub fn bar() {}")
         .file("baz/Cargo.toml", &basic_manifest("baz", "0.1.0"))
-        .file(
-            "baz/src/lib.rs",
-            r#"
-            pub fn baz() {}
-        "#,
-        )
+        .file("baz/src/lib.rs", "pub fn baz() {}")
         .build();
 
     // The order in which bar and baz are documented is not guaranteed
@@ -1160,19 +1059,9 @@ fn doc_virtual_manifest_all_implied() {
         "#,
         )
         .file("bar/Cargo.toml", &basic_manifest("bar", "0.1.0"))
-        .file(
-            "bar/src/lib.rs",
-            r#"
-            pub fn bar() {}
-        "#,
-        )
+        .file("bar/src/lib.rs", "pub fn bar() {}")
         .file("baz/Cargo.toml", &basic_manifest("baz", "0.1.0"))
-        .file(
-            "baz/src/lib.rs",
-            r#"
-            pub fn baz() {}
-        "#,
-        )
+        .file("baz/src/lib.rs", "pub fn baz() {}")
         .build();
 
     // The order in which bar and baz are documented is not guaranteed
@@ -1210,12 +1099,7 @@ fn doc_all_member_dependency_same_name() {
             bar = "0.1.0"
         "#,
         )
-        .file(
-            "bar/src/lib.rs",
-            r#"
-            pub fn bar() {}
-        "#,
-        )
+        .file("bar/src/lib.rs", "pub fn bar() {}")
         .build();
 
     Package::new("bar", "0.1.0").publish();
