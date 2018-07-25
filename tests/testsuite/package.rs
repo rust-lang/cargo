@@ -615,11 +615,7 @@ fn repackage_on_source_change() {
         )
     });
 
-    file.write_all(
-        br#"
-        fn main() { println!("foo"); }
-    "#,
-    ).unwrap();
+    file.write_all(br#"fn main() { println!("foo"); }"#).unwrap();
     std::mem::drop(file);
 
     let mut pro = process(&cargo_exe());

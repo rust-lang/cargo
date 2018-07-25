@@ -138,24 +138,14 @@ fn rebuild_sub_package_then_while_package() {
 
     File::create(&p.root().join("b/src/lib.rs"))
         .unwrap()
-        .write_all(
-            br#"
-        pub fn b() {}
-    "#,
-        )
+        .write_all(br#"pub fn b() {}"#)
         .unwrap();
 
     assert_that(p.cargo("build").arg("-pb"), execs().with_status(0));
 
     File::create(&p.root().join("src/lib.rs"))
         .unwrap()
-        .write_all(
-            br#"
-        extern crate a;
-        extern crate b;
-        pub fn toplevel() {}
-    "#,
-        )
+        .write_all(br#"extern crate a; extern crate b; pub fn toplevel() {}"#)
         .unwrap();
 
     assert_that(p.cargo("build"), execs().with_status(0));

@@ -381,11 +381,7 @@ fn deep_dependencies_trigger_rebuild() {
     sleep_ms(1000);
     File::create(&p.root().join("baz/src/baz.rs"))
         .unwrap()
-        .write_all(
-            br#"
-        pub fn baz() { println!("hello!"); }
-    "#,
-        )
+        .write_all(br#"pub fn baz() { println!("hello!"); }"#)
         .unwrap();
     assert_that(
         p.cargo("build"),
@@ -520,11 +516,7 @@ fn nested_deps_recompile() {
 
     File::create(&p.root().join("src/main.rs"))
         .unwrap()
-        .write_all(
-            br#"
-        fn main() {}
-    "#,
-        )
+        .write_all(br#"fn main() {}"#)
         .unwrap();
 
     // This shouldn't recompile `bar`
