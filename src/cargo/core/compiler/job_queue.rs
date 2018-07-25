@@ -6,8 +6,8 @@ use std::mem;
 use std::sync::mpsc::{channel, Receiver, Sender};
 use std::sync::Arc;
 
-use crossbeam;
-use crossbeam::thread::Scope;
+use crossbeam_utils;
+use crossbeam_utils::scoped::Scope;
 use jobserver::{Acquired, HelperThread};
 
 use core::profiles::Profile;
@@ -166,7 +166,7 @@ impl<'a> JobQueue<'a> {
                 srv.start(move |msg| drop(tx2.send(Message::FixDiagnostic(msg))))
             });
 
-        crossbeam::scope(|scope| self.drain_the_queue(cx, plan, scope, &helper))
+        crossbeam_utils::scoped::scope(|scope| self.drain_the_queue(cx, plan, scope, &helper))
     }
 
     fn drain_the_queue(

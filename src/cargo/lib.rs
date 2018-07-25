@@ -15,7 +15,7 @@ extern crate clap;
 #[cfg(target_os = "macos")]
 extern crate core_foundation;
 extern crate crates_io as registry;
-extern crate crossbeam;
+extern crate crossbeam_utils;
 extern crate curl;
 #[macro_use]
 extern crate failure;
