@@ -22,16 +22,7 @@ fn cargo_process(s: &str) -> ProcessBuilder {
 fn pkg(name: &str, vers: &str) {
     Package::new(name, vers)
         .file("src/lib.rs", "")
-        .file(
-            "src/main.rs",
-            &format!(
-                "
-            extern crate {};
-            fn main() {{}}
-        ",
-                name
-            ),
-        )
+        .file("src/main.rs", &format!("extern crate {}; fn main() {{}}", name))
         .publish();
 }
 
@@ -822,14 +813,7 @@ fn uninstall_piecemeal() {
 #[test]
 fn subcommand_works_out_of_the_box() {
     Package::new("cargo-foo", "1.0.0")
-        .file(
-            "src/main.rs",
-            r#"
-            fn main() {
-                println!("bar");
-            }
-        "#,
-        )
+        .file("src/main.rs", r#"fn main() { println!("bar"); }"#)
         .publish();
     assert_that(
         cargo_process("install").arg("cargo-foo"),
@@ -926,14 +910,7 @@ warning: be sure to add `[..]` to your PATH to be able to run the installed bina
 #[test]
 fn reports_unsuccessful_subcommand_result() {
     Package::new("cargo-fail", "1.0.0")
-        .file(
-            "src/main.rs",
-            r#"
-            fn main() {
-                panic!();
-            }
-        "#,
-        )
+        .file("src/main.rs", "fn main() { panic!(); }")
         .publish();
     assert_that(
         cargo_process("install").arg("cargo-fail"),
@@ -1292,14 +1269,7 @@ fn install_respects_lock_file() {
     Package::new("foo", "0.1.0")
         .dep("bar", "0.1")
         .file("src/lib.rs", "")
-        .file(
-            "src/main.rs",
-            "
-            extern crate foo;
-            extern crate bar;
-            fn main() {}
-        ",
-        )
+        .file("src/main.rs", "extern crate foo; extern crate bar; fn main() {}")
         .file(
             "Cargo.lock",
             r#"
@@ -1328,14 +1298,7 @@ fn lock_file_path_deps_ok() {
     Package::new("foo", "0.1.0")
         .dep("bar", "0.1")
         .file("src/lib.rs", "")
-        .file(
-            "src/main.rs",
-            "
-            extern crate foo;
-            extern crate bar;
-            fn main() {}
-        ",
-        )
+        .file("src/main.rs", "extern crate foo; extern crate bar; fn main() {}")
         .file(
             "Cargo.lock",
             r#"

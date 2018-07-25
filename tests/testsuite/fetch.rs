@@ -6,12 +6,7 @@ use support::hamcrest::assert_that;
 #[test]
 fn no_deps() {
     let p = project()
-        .file(
-            "src/main.rs",
-            r#"
-            mod a; fn main() {}
-        "#,
-        )
+        .file("src/main.rs", "mod a; fn main() {}")
         .file("src/a.rs", "")
         .build();
 

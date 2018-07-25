@@ -1423,10 +1423,7 @@ fn test_in_and_out_of_workspace() {
             members = [ "../bar" ]
         "#,
         )
-        .file(
-            "ws/src/lib.rs",
-            r"extern crate foo; pub fn f() { foo::f() }",
-        )
+        .file("ws/src/lib.rs", r"extern crate foo; pub fn f() { foo::f() }")
         .file(
             "foo/Cargo.toml",
             r#"
@@ -1439,10 +1436,7 @@ fn test_in_and_out_of_workspace() {
             bar = { path = "../bar" }
         "#,
         )
-        .file(
-            "foo/src/lib.rs",
-            "extern crate bar; pub fn f() { bar::f() }",
-        )
+        .file("foo/src/lib.rs", "extern crate bar; pub fn f() { bar::f() }")
         .file(
             "bar/Cargo.toml",
             r#"
@@ -1495,10 +1489,7 @@ fn test_path_dependency_under_member() {
             [workspace]
         "#,
         )
-        .file(
-            "ws/src/lib.rs",
-            r"extern crate foo; pub fn f() { foo::f() }",
-        )
+        .file("ws/src/lib.rs", r"extern crate foo; pub fn f() { foo::f() }")
         .file(
             "foo/Cargo.toml",
             r#"
@@ -1512,10 +1503,7 @@ fn test_path_dependency_under_member() {
             bar = { path = "./bar" }
         "#,
         )
-        .file(
-            "foo/src/lib.rs",
-            "extern crate bar; pub fn f() { bar::f() }",
-        )
+        .file("foo/src/lib.rs", "extern crate bar; pub fn f() { bar::f() }")
         .file("foo/bar/Cargo.toml", &basic_manifest("bar", "0.1.0"))
         .file("foo/bar/src/lib.rs", "pub fn f() { }");
     let p = p.build();

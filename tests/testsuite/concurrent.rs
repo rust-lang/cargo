@@ -234,10 +234,7 @@ fn git_same_repo_different_tags() {
                 a.url()
             ),
         )
-        .file(
-            "a/src/main.rs",
-            "extern crate dep; fn main() { dep::tag1(); }",
-        )
+        .file("a/src/main.rs", "extern crate dep; fn main() { dep::tag1(); }")
         .file(
             "b/Cargo.toml",
             &format!(
@@ -253,10 +250,7 @@ fn git_same_repo_different_tags() {
                 a.url()
             ),
         )
-        .file(
-            "b/src/main.rs",
-            "extern crate dep; fn main() { dep::tag2(); }",
-        );
+        .file("b/src/main.rs", "extern crate dep; fn main() { dep::tag2(); }");
     let p = p.build();
 
     let mut a = p.cargo("build")
@@ -306,10 +300,7 @@ fn git_same_branch_different_revs() {
                 a.url()
             ),
         )
-        .file(
-            "a/src/main.rs",
-            "extern crate dep; fn main() { dep::f1(); }",
-        )
+        .file("a/src/main.rs", "extern crate dep; fn main() { dep::f1(); }")
         .file(
             "b/Cargo.toml",
             &format!(
@@ -325,10 +316,7 @@ fn git_same_branch_different_revs() {
                 a.url()
             ),
         )
-        .file(
-            "b/src/main.rs",
-            "extern crate dep; fn main() { dep::f2(); }",
-        );
+        .file("b/src/main.rs", "extern crate dep; fn main() { dep::f2(); }");
     let p = p.build();
 
     // Generate a Cargo.lock pointing at the current rev, then clear out the

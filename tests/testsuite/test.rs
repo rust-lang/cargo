@@ -304,21 +304,8 @@ failures:
 fn cargo_test_failing_test_in_test() {
     let p = project()
         .file("Cargo.toml", &basic_bin_manifest("foo"))
-        .file(
-            "src/main.rs",
-            r#"
-            pub fn main() {
-                println!("hello");
-            }"#,
-        )
-        .file(
-            "tests/footest.rs",
-            r#"
-            #[test]
-            fn test_hello() {
-                assert!(false)
-            }"#,
-        )
+        .file("src/main.rs", r#"pub fn main() { println!("hello"); }"#)
+        .file("tests/footest.rs", "#[test] fn test_hello() { assert!(false) }")
         .build();
 
     assert_that(p.cargo("build"), execs().with_status(0));
@@ -351,7 +338,7 @@ failures:
 
 ---- test_hello stdout ----
 [..]thread 'test_hello' panicked at 'assertion failed: false', \
-      tests[/]footest.rs:4[..]
+      tests[/]footest.rs:1[..]
 ",
             )
             .with_stdout_contains(
@@ -368,14 +355,7 @@ failures:
 fn cargo_test_failing_test_in_lib() {
     let p = project()
         .file("Cargo.toml", &basic_lib_manifest("foo"))
-        .file(
-            "src/lib.rs",
-            r#"
-            #[test]
-            fn test_hello() {
-                assert!(false)
-            }"#,
-        )
+        .file("src/lib.rs", "#[test] fn test_hello() { assert!(false) }")
         .build();
 
     assert_that(
@@ -397,7 +377,7 @@ failures:
 
 ---- test_hello stdout ----
 [..]thread 'test_hello' panicked at 'assertion failed: false', \
-      src[/]lib.rs:4[..]
+      src[/]lib.rs:1[..]
 ",
             )
             .with_stdout_contains(
@@ -508,15 +488,7 @@ fn test_with_deep_lib_dep() {
         .build();
     let _p2 = project().at("bar")
         .file("Cargo.toml", &basic_manifest("bar", "0.0.1"))
-        .file(
-            "src/lib.rs",
-            "
-            pub fn bar() {}
-
-            #[test]
-            fn foo_test() {}
-        ",
-        )
+        .file("src/lib.rs", "pub fn bar() {} #[test] fn foo_test() {}")
         .build();
 
     assert_that(
@@ -608,13 +580,7 @@ fn external_test_named_test() {
         "#,
         )
         .file("src/lib.rs", "")
-        .file(
-            "tests/test.rs",
-            r#"
-            #[test]
-            fn foo() { }
-        "#,
-        )
+        .file("tests/test.rs", "#[test] fn foo() {}")
         .build();
 
     assert_that(p.cargo("test"), execs().with_status(0))
@@ -665,11 +631,7 @@ fn external_test_implicit() {
 #[test]
 fn dont_run_examples() {
     let p = project()
-        .file(
-            "src/lib.rs",
-            r#"
-        "#,
-        )
+        .file("src/lib.rs", "")
         .file(
             "examples/dont-run-me-i-will-fail.rs",
             r#"
@@ -764,12 +726,7 @@ fn lib_bin_same_name() {
             name = "foo"
         "#,
         )
-        .file(
-            "src/lib.rs",
-            "
-            #[test] fn lib_test() {}
-        ",
-        )
+        .file("src/lib.rs", "#[test] fn lib_test() {}")
         .file(
             "src/main.rs",
             "
@@ -863,12 +820,7 @@ fn lib_with_standard_name2() {
             doctest = false
         "#,
         )
-        .file(
-            "src/lib.rs",
-            "
-            pub fn foo() {}
-        ",
-        )
+        .file("src/lib.rs", "pub fn foo() {}")
         .file(
             "src/main.rs",
             "
@@ -913,12 +865,7 @@ fn lib_without_name() {
             doctest = false
         "#,
         )
-        .file(
-            "src/lib.rs",
-            "
-            pub fn foo() {}
-        ",
-        )
+        .file("src/lib.rs", "pub fn foo() {}")
         .file(
             "src/main.rs",
             "
@@ -966,12 +913,7 @@ fn bin_without_name() {
             path = "src/main.rs"
         "#,
         )
-        .file(
-            "src/lib.rs",
-            "
-            pub fn foo() {}
-        ",
-        )
+        .file("src/lib.rs", "pub fn foo() {}")
         .file(
             "src/main.rs",
             "
@@ -1016,12 +958,7 @@ fn bench_without_name() {
             path = "src/bench.rs"
         "#,
         )
-        .file(
-            "src/lib.rs",
-            "
-            pub fn foo() {}
-        ",
-        )
+        .file("src/lib.rs", "pub fn foo() {}")
         .file(
             "src/main.rs",
             "
@@ -1137,12 +1074,7 @@ fn example_without_name() {
             path = "examples/example.rs"
         "#,
         )
-        .file(
-            "src/lib.rs",
-            "
-            pub fn foo() {}
-        ",
-        )
+        .file("src/lib.rs", "pub fn foo() {}")
         .file(
             "src/main.rs",
             "
@@ -1267,12 +1199,7 @@ fn test_dylib() {
             crate_type = ["dylib"]
         "#,
         )
-        .file(
-            "bar/src/lib.rs",
-            "
-             pub fn baz() {}
-        ",
-        )
+        .file("bar/src/lib.rs", "pub fn baz() {}")
         .build();
 
     assert_that(
@@ -1320,13 +1247,7 @@ fn test_twice_with_build_cmd() {
         "#,
         )
         .file("build.rs", "fn main() {}")
-        .file(
-            "src/lib.rs",
-            "
-            #[test]
-            fn foo() {}
-        ",
-        )
+        .file("src/lib.rs", "#[test] fn foo() {}")
         .build();
 
     assert_that(
@@ -1363,13 +1284,7 @@ fn test_twice_with_build_cmd() {
 #[test]
 fn test_then_build() {
     let p = project()
-        .file(
-            "src/lib.rs",
-            "
-            #[test]
-            fn foo() {}
-        ",
-        )
+        .file("src/lib.rs", "#[test] fn foo() {}")
         .build();
 
     assert_that(
@@ -1394,13 +1309,7 @@ fn test_then_build() {
 #[test]
 fn test_no_run() {
     let p = project()
-        .file(
-            "src/lib.rs",
-            "
-            #[test]
-            fn foo() { panic!() }
-        ",
-        )
+        .file("src/lib.rs", "#[test] fn foo() { panic!() }")
         .build();
 
     assert_that(
@@ -1914,10 +1823,7 @@ fn build_then_selective_test() {
             path = "b"
         "#,
         )
-        .file(
-            "src/lib.rs",
-            "#[allow(unused_extern_crates)] extern crate b;",
-        )
+        .file("src/lib.rs", "#[allow(unused_extern_crates)] extern crate b;")
         .file(
             "src/main.rs",
             r#"
@@ -1952,18 +1858,8 @@ fn example_dev_dep() {
             path = "bar"
         "#,
         )
-        .file(
-            "src/lib.rs",
-            r#"
-        "#,
-        )
-        .file(
-            "examples/e1.rs",
-            r#"
-            extern crate bar;
-            fn main() { }
-        "#,
-        )
+        .file("src/lib.rs", "")
+        .file("examples/e1.rs", "extern crate bar; fn main() {}")
         .file("bar/Cargo.toml", &basic_manifest("bar", "0.0.1"))
         .file(
             "bar/src/lib.rs",
@@ -2791,15 +2687,7 @@ fn cfg_test_even_with_no_harness() {
             doctest = false
         "#,
         )
-        .file(
-            "src/lib.rs",
-            r#"
-            #[cfg(test)]
-            fn main() {
-                println!("hello!");
-            }
-        "#,
-        )
+        .file("src/lib.rs", r#"#[cfg(test)] fn main() { println!("hello!"); }"#)
         .build();
     assert_that(
         p.cargo("test").arg("-v"),
@@ -3018,21 +2906,9 @@ fn test_all_workspace() {
             [workspace]
         "#,
         )
-        .file(
-            "src/main.rs",
-            r#"
-            #[test]
-            fn foo_test() {}
-        "#,
-        )
+        .file("src/main.rs", "#[test] fn foo_test() {}")
         .file("bar/Cargo.toml", &basic_manifest("bar", "0.1.0"))
-        .file(
-            "bar/src/lib.rs",
-            r#"
-            #[test]
-            fn bar_test() {}
-        "#,
-        )
+        .file("bar/src/lib.rs", "#[test] fn bar_test() {}")
         .build();
 
     assert_that(
@@ -3058,30 +2934,11 @@ fn test_all_exclude() {
             members = ["bar", "baz"]
         "#,
         )
-        .file(
-            "src/main.rs",
-            r#"
-            fn main() {}
-        "#,
-        )
+        .file("src/main.rs", "fn main() {}")
         .file("bar/Cargo.toml", &basic_manifest("bar", "0.1.0"))
-        .file(
-            "bar/src/lib.rs",
-            r#"
-            #[test]
-            pub fn bar() {}
-        "#,
-        )
+        .file("bar/src/lib.rs", "#[test] pub fn bar() {}")
         .file("baz/Cargo.toml", &basic_manifest("baz", "0.1.0"))
-        .file(
-            "baz/src/lib.rs",
-            r#"
-            #[test]
-            pub fn baz() {
-                assert!(false);
-            }
-        "#,
-        )
+        .file("baz/src/lib.rs", "#[test] pub fn baz() { assert!(false); }")
         .build();
 
     assert_that(
@@ -3104,21 +2961,9 @@ fn test_all_virtual_manifest() {
         "#,
         )
         .file("a/Cargo.toml", &basic_manifest("a", "0.1.0"))
-        .file(
-            "a/src/lib.rs",
-            r#"
-            #[test]
-            fn a() {}
-        "#,
-        )
+        .file("a/src/lib.rs", "#[test] fn a() {}")
         .file("b/Cargo.toml", &basic_manifest("b", "0.1.0"))
-        .file(
-            "b/src/lib.rs",
-            r#"
-            #[test]
-            fn b() {}
-        "#,
-        )
+        .file("b/src/lib.rs", "#[test] fn b() {}")
         .build();
 
     assert_that(
@@ -3141,21 +2986,9 @@ fn test_virtual_manifest_all_implied() {
         "#,
         )
         .file("a/Cargo.toml", &basic_manifest("a", "0.1.0"))
-        .file(
-            "a/src/lib.rs",
-            r#"
-            #[test]
-            fn a() {}
-        "#,
-        )
+        .file("a/src/lib.rs", "#[test] fn a() {}")
         .file("b/Cargo.toml", &basic_manifest("b", "0.1.0"))
-        .file(
-            "b/src/lib.rs",
-            r#"
-            #[test]
-            fn b() {}
-        "#,
-        )
+        .file("b/src/lib.rs", "#[test] fn b() {}")
         .build();
 
     assert_that(
@@ -3188,13 +3021,7 @@ fn test_all_member_dependency_same_name() {
             a = "0.1.0"
         "#,
         )
-        .file(
-            "a/src/lib.rs",
-            r#"
-            #[test]
-            fn a() {}
-        "#,
-        )
+        .file("a/src/lib.rs", "#[test] fn a() {}")
         .build();
 
     Package::new("a", "0.1.0").publish();
@@ -3231,12 +3058,7 @@ fn doctest_only_with_dev_dep() {
         "#,
         )
         .file("b/Cargo.toml", &basic_manifest("b", "0.1.0"))
-        .file(
-            "b/src/lib.rs",
-            r#"
-            pub fn b() {}
-        "#,
-        )
+        .file("b/src/lib.rs", "pub fn b() {}")
         .build();
 
     assert_that(
@@ -3283,30 +3105,10 @@ fn test_many_targets() {
             #[test] fn example_b() {}
         "#,
         )
-        .file(
-            "examples/c.rs",
-            r#"
-            #[test] fn example_c() { panic!(); }
-        "#,
-        )
-        .file(
-            "tests/a.rs",
-            r#"
-            #[test] fn test_a() {}
-        "#,
-        )
-        .file(
-            "tests/b.rs",
-            r#"
-            #[test] fn test_b() {}
-        "#,
-        )
-        .file(
-            "tests/c.rs",
-            r#"
-            does not compile
-        "#,
-        )
+        .file("examples/c.rs", "#[test] fn example_c() { panic!(); }")
+        .file("tests/a.rs", "#[test] fn test_a() {}")
+        .file("tests/b.rs", "#[test] fn test_b() {}")
+        .file("tests/c.rs", "does not compile")
         .build();
 
     assert_that(
@@ -3422,24 +3224,9 @@ test env_test ... ok
 #[test]
 fn test_order() {
     let p = project()
-        .file(
-            "src/lib.rs",
-            r#"
-            #[test] fn test_lib() {}
-        "#,
-        )
-        .file(
-            "tests/a.rs",
-            r#"
-            #[test] fn test_a() {}
-        "#,
-        )
-        .file(
-            "tests/z.rs",
-            r#"
-            #[test] fn test_z() {}
-        "#,
-        )
+        .file("src/lib.rs", "#[test] fn test_lib() {}")
+        .file("tests/a.rs", "#[test] fn test_a() {}")
+        .file("tests/z.rs", "#[test] fn test_z() {}")
         .build();
 
     assert_that(
@@ -3481,18 +3268,8 @@ fn cyclic_dev() {
             foo = { path = "." }
         "#,
         )
-        .file(
-            "src/lib.rs",
-            r#"
-            #[test] fn test_lib() {}
-        "#,
-        )
-        .file(
-            "tests/foo.rs",
-            r#"
-            extern crate foo;
-        "#,
-        )
+        .file("src/lib.rs", "#[test] fn test_lib() {}")
+        .file("tests/foo.rs", "extern crate foo;")
         .build();
 
     assert_that(p.cargo("test").arg("--all"), execs().with_status(0));
@@ -3664,21 +3441,9 @@ fn test_hint_workspace() {
         "#,
         )
         .file("a/Cargo.toml", &basic_manifest("a", "0.1.0"))
-        .file(
-            "a/src/lib.rs",
-            r#"
-            #[test]
-            fn t1() {}
-        "#,
-        )
+        .file("a/src/lib.rs", "#[test] fn t1() {}")
         .file("b/Cargo.toml", &basic_manifest("b", "0.1.0"))
-        .file(
-            "b/src/lib.rs",
-            r#"
-            #[test]
-            fn t1() {assert!(false)}
-        "#,
-        )
+        .file("b/src/lib.rs", "#[test] fn t1() {assert!(false)}")
         .build();
 
     assert_that(

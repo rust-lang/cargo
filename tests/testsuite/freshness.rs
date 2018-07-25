@@ -10,12 +10,7 @@ use support::hamcrest::{assert_that, existing_file};
 #[test]
 fn modifying_and_moving() {
     let p = project()
-        .file(
-            "src/main.rs",
-            r#"
-            mod a; fn main() {}
-        "#,
-        )
+        .file("src/main.rs", "mod a; fn main() {}")
         .file("src/a.rs", "")
         .build();
 
@@ -58,13 +53,7 @@ fn modify_only_some_files() {
     let p = project()
         .file("src/lib.rs", "mod a;")
         .file("src/a.rs", "")
-        .file(
-            "src/main.rs",
-            r#"
-            mod b;
-            fn main() {}
-        "#,
-        )
+        .file("src/main.rs", "mod b; fn main() {}")
         .file("src/b.rs", "")
         .file("tests/test.rs", "")
         .build();

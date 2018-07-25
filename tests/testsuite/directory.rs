@@ -95,16 +95,7 @@ fn simple() {
             bar = "0.1.0"
         "#,
         )
-        .file(
-            "src/lib.rs",
-            r#"
-            extern crate bar;
-
-            pub fn foo() {
-                bar::bar();
-            }
-        "#,
-        )
+        .file("src/lib.rs", "extern crate bar; pub fn foo() { bar::bar(); }")
         .build();
 
     assert_that(
@@ -140,16 +131,7 @@ fn simple_install() {
             foo = "0.0.1"
         "#,
         )
-        .file(
-            "src/main.rs",
-            r#"
-            extern crate foo;
-
-            pub fn main() {
-                foo::foo();
-            }
-        "#,
-        )
+        .file("src/main.rs", "extern crate foo; pub fn main() { foo::foo(); }")
         .build();
 
     assert_that(
@@ -188,16 +170,7 @@ fn simple_install_fail() {
             baz = "9.8.7"
         "#,
         )
-        .file(
-            "src/main.rs",
-            r#"
-            extern crate foo;
-
-            pub fn main() {
-                foo::foo();
-            }
-        "#,
-        )
+        .file("src/main.rs", "extern crate foo; pub fn main() { foo::foo(); }")
         .build();
 
     assert_that(
@@ -241,16 +214,7 @@ fn install_without_feature_dep() {
             wantbaz = ["baz"]
         "#,
         )
-        .file(
-            "src/main.rs",
-            r#"
-            extern crate foo;
-
-            pub fn main() {
-                foo::foo();
-            }
-        "#,
-        )
+        .file("src/main.rs", "extern crate foo; pub fn main() { foo::foo(); }")
         .build();
 
     assert_that(
@@ -286,16 +250,7 @@ fn not_there() {
             bar = "0.1.0"
         "#,
         )
-        .file(
-            "src/lib.rs",
-            r#"
-            extern crate bar;
-
-            pub fn foo() {
-                bar::bar();
-            }
-        "#,
-        )
+        .file("src/lib.rs", "extern crate bar; pub fn foo() { bar::bar(); }")
         .build();
 
     assert_that(
@@ -339,16 +294,7 @@ fn multiple() {
             bar = "0.1.0"
         "#,
         )
-        .file(
-            "src/lib.rs",
-            r#"
-            extern crate bar;
-
-            pub fn foo() {
-                bar::bar();
-            }
-        "#,
-        )
+        .file("src/lib.rs", "extern crate bar; pub fn foo() { bar::bar(); }")
         .build();
 
     assert_that(
@@ -378,16 +324,7 @@ fn crates_io_then_directory() {
             bar = "0.1.0"
         "#,
         )
-        .file(
-            "src/lib.rs",
-            r#"
-            extern crate bar;
-
-            pub fn foo() {
-                bar::bar();
-            }
-        "#,
-        )
+        .file("src/lib.rs", "extern crate bar; pub fn foo() { bar::bar(); }")
         .build();
 
     let cksum = Package::new("bar", "0.1.0")

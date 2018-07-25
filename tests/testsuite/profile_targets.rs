@@ -35,14 +35,8 @@ fn all_target_project() -> Project {
         "#,
         )
         .file("src/lib.rs", "extern crate bar;")
-        .file("src/main.rs", r#"
-            extern crate foo;
-            fn main() {}
-        "#)
-        .file("examples/ex1.rs", r#"
-            extern crate foo;
-            fn main() {}
-        "#)
+        .file("src/main.rs", "extern crate foo; fn main() {}")
+        .file("examples/ex1.rs", "extern crate foo; fn main() {}")
         .file("tests/test1.rs", "extern crate foo;")
         .file("benches/bench1.rs", "extern crate foo;")
         .file("build.rs", r#"

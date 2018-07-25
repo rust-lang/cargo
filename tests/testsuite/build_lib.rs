@@ -22,12 +22,7 @@ fn verbose_output_for_lib(p: &Project) -> String {
 #[test]
 fn build_lib_only() {
     let p = project()
-        .file(
-            "src/main.rs",
-            r#"
-            fn main() {}
-        "#,
-        )
+        .file("src/main.rs", "fn main() {}")
         .file("src/lib.rs", r#" "#)
         .build();
 
@@ -43,12 +38,7 @@ fn build_lib_only() {
 fn build_with_no_lib() {
     let p = project()
         .file("Cargo.toml", &basic_bin_manifest("foo"))
-        .file(
-            "src/main.rs",
-            r#"
-            fn main() {}
-        "#,
-        )
+        .file("src/main.rs", "fn main() {}")
         .build();
 
     assert_that(
@@ -76,12 +66,7 @@ fn build_with_relative_cargo_home_path() {
             "test-dependency" = { path = "src/test_dependency" }
         "#,
         )
-        .file(
-            "src/main.rs",
-            r#"
-            fn main() {}
-        "#,
-        )
+        .file("src/main.rs", "fn main() {}")
         .file("src/test_dependency/src/lib.rs", r#" "#)
         .file("src/test_dependency/Cargo.toml", &basic_manifest("test-dependency", "0.0.1"))
         .build();

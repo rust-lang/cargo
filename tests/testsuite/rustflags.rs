@@ -97,12 +97,7 @@ fn env_rustflags_build_script_dep() {
         "#,
         )
         .file("src/lib.rs", "")
-        .file(
-            "build.rs",
-            r#"
-            fn main() { }
-        "#,
-        )
+        .file("build.rs", "fn main() {}")
         .build();
     let _bar = project().at("bar")
         .file("Cargo.toml", &basic_manifest("bar", "0.0.1"))
@@ -177,12 +172,7 @@ fn env_rustflags_plugin_dep() {
             path = "../bar"
         "#,
         )
-        .file(
-            "src/lib.rs",
-            r#"
-            fn foo() { }
-        "#,
-        )
+        .file("src/lib.rs", "fn foo() {}")
         .build();
     let _bar = project().at("bar")
         .file("Cargo.toml", &basic_lib_manifest("bar"))
@@ -316,12 +306,7 @@ fn env_rustflags_build_script_dep_with_target() {
         "#,
         )
         .file("src/lib.rs", "")
-        .file(
-            "build.rs",
-            r#"
-            fn main() { }
-        "#,
-        )
+        .file("build.rs", "fn main() {}")
         .build();
     let _bar = project().at("bar")
         .file("Cargo.toml", &basic_manifest("bar", "0.0.1"))
@@ -404,12 +389,7 @@ fn env_rustflags_plugin_dep_with_target() {
             path = "../bar"
         "#,
         )
-        .file(
-            "src/lib.rs",
-            r#"
-            fn foo() { }
-        "#,
-        )
+        .file("src/lib.rs", "fn foo() {}")
         .build();
     let _bar = project().at("bar")
         .file("Cargo.toml", &basic_lib_manifest("bar"))
@@ -568,12 +548,7 @@ fn build_rustflags_build_script_dep() {
         "#,
         )
         .file("src/lib.rs", "")
-        .file(
-            "build.rs",
-            r#"
-            fn main() { }
-        "#,
-        )
+        .file("build.rs", "fn main() {}")
         .file(
             ".cargo/config",
             r#"
@@ -656,12 +631,7 @@ fn build_rustflags_plugin_dep() {
             path = "../bar"
         "#,
         )
-        .file(
-            "src/lib.rs",
-            r#"
-            fn foo() { }
-        "#,
-        )
+        .file("src/lib.rs", "fn foo() {}")
         .file(
             ".cargo/config",
             r#"
@@ -795,12 +765,7 @@ fn build_rustflags_build_script_dep_with_target() {
         "#,
         )
         .file("src/lib.rs", "")
-        .file(
-            "build.rs",
-            r#"
-            fn main() { }
-        "#,
-        )
+        .file("build.rs", "fn main() {}")
         .file(
             ".cargo/config",
             r#"
@@ -891,12 +856,7 @@ fn build_rustflags_plugin_dep_with_target() {
             path = "../bar"
         "#,
         )
-        .file(
-            "src/lib.rs",
-            r#"
-            fn foo() { }
-        "#,
-        )
+        .file("src/lib.rs", "fn foo() {}")
         .file(
             ".cargo/config",
             r#"

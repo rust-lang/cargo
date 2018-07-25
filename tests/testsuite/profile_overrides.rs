@@ -273,13 +273,8 @@ fn profile_override_hierarchy() {
             m2 = { path = "../m2" }
             dep = { path = "../../dep" }
             "#)
-        .file("m1/src/lib.rs",
-            r#"
-            extern crate m2;
-            extern crate dep;
-            "#)
-        .file("m1/build.rs",
-            r#"fn main() {}"#)
+        .file("m1/src/lib.rs", "extern crate m2; extern crate dep;")
+        .file("m1/build.rs", "fn main() {}")
 
         // m2
         .file("m2/Cargo.toml",
@@ -295,16 +290,8 @@ fn profile_override_hierarchy() {
             m3 = { path = "../m3" }
             dep = { path = "../../dep" }
             "#)
-        .file("m2/src/lib.rs",
-            r#"
-            extern crate m3;
-            "#)
-        .file("m2/build.rs",
-            r#"
-            extern crate m3;
-            extern crate dep;
-            fn main() {}
-            "#)
+        .file("m2/src/lib.rs", "extern crate m3;")
+        .file("m2/build.rs", "extern crate m3; extern crate dep; fn main() {}")
 
         // m3
         .file("m3/Cargo.toml", &basic_lib_manifest("m3"))
@@ -413,10 +400,7 @@ fn profile_override_spec() {
             [dependencies]
             dep = { path = "../../dep1" }
             "#)
-        .file("m1/src/lib.rs",
-            r#"
-            extern crate dep;
-            "#)
+        .file("m1/src/lib.rs", "extern crate dep;")
 
         // m2
         .file("m2/Cargo.toml",
@@ -428,10 +412,7 @@ fn profile_override_spec() {
             [dependencies]
             dep = {path = "../../dep2" }
             "#)
-        .file("m2/src/lib.rs",
-            r#"
-            extern crate dep;
-            "#)
+        .file("m2/src/lib.rs", "extern crate dep;")
 
         .build();
 

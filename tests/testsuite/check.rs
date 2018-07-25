@@ -21,24 +21,11 @@ fn check_success() {
             path = "../bar"
         "#,
         )
-        .file(
-            "src/main.rs",
-            r#"
-            extern crate bar;
-            fn main() {
-                ::bar::baz();
-            }
-        "#,
-        )
+        .file("src/main.rs", "extern crate bar; fn main() { ::bar::baz(); }")
         .build();
     let _bar = project().at("bar")
         .file("Cargo.toml", &basic_manifest("bar", "0.1.0"))
-        .file(
-            "src/lib.rs",
-            r#"
-            pub fn baz() {}
-        "#,
-        )
+        .file("src/lib.rs", "pub fn baz() {}")
         .build();
 
     assert_that(foo.cargo("check"), execs().with_status(0));
@@ -59,24 +46,11 @@ fn check_fail() {
             path = "../bar"
         "#,
         )
-        .file(
-            "src/main.rs",
-            r#"
-            extern crate bar;
-            fn main() {
-                ::bar::baz(42);
-            }
-        "#,
-        )
+        .file("src/main.rs", "extern crate bar; fn main() { ::bar::baz(42); }")
         .build();
     let _bar = project().at("bar")
         .file("Cargo.toml", &basic_manifest("bar", "0.1.0"))
-        .file(
-            "src/lib.rs",
-            r#"
-            pub fn baz() {}
-        "#,
-        )
+        .file("src/lib.rs", "pub fn baz() {}")
         .build();
 
     assert_that(foo.cargo("check"), execs().with_status(101));
@@ -162,25 +136,12 @@ fn check_build() {
             path = "../bar"
         "#,
         )
-        .file(
-            "src/main.rs",
-            r#"
-            extern crate bar;
-            fn main() {
-                ::bar::baz();
-            }
-        "#,
-        )
+        .file("src/main.rs", "extern crate bar; fn main() { ::bar::baz(); }")
         .build();
 
     let _bar = project().at("bar")
         .file("Cargo.toml", &basic_manifest("bar", "0.1.0"))
-        .file(
-            "src/lib.rs",
-            r#"
-            pub fn baz() {}
-        "#,
-        )
+        .file("src/lib.rs", "pub fn baz() {}")
         .build();
 
     assert_that(foo.cargo("check"), execs().with_status(0));
@@ -202,25 +163,12 @@ fn build_check() {
             path = "../bar"
         "#,
         )
-        .file(
-            "src/main.rs",
-            r#"
-            extern crate bar;
-            fn main() {
-                ::bar::baz();
-            }
-        "#,
-        )
+        .file("src/main.rs", "extern crate bar; fn main() { ::bar::baz(); }")
         .build();
 
     let _bar = project().at("bar")
         .file("Cargo.toml", &basic_manifest("bar", "0.1.0"))
-        .file(
-            "src/lib.rs",
-            r#"
-            pub fn baz() {}
-        "#,
-        )
+        .file("src/lib.rs", "pub fn baz() {}")
         .build();
 
     assert_that(foo.cargo("build"), execs().with_status(0));
@@ -363,24 +311,11 @@ fn rustc_check() {
             path = "../bar"
         "#,
         )
-        .file(
-            "src/main.rs",
-            r#"
-            extern crate bar;
-            fn main() {
-                ::bar::baz();
-            }
-        "#,
-        )
+        .file("src/main.rs", "extern crate bar; fn main() { ::bar::baz(); }")
         .build();
     let _bar = project().at("bar")
         .file("Cargo.toml", &basic_manifest("bar", "0.1.0"))
-        .file(
-            "src/lib.rs",
-            r#"
-            pub fn baz() {}
-        "#,
-        )
+        .file("src/lib.rs", "pub fn baz() {}")
         .build();
 
     assert_that(
@@ -408,24 +343,11 @@ fn rustc_check_err() {
             path = "../bar"
         "#,
         )
-        .file(
-            "src/main.rs",
-            r#"
-            extern crate bar;
-            fn main() {
-                ::bar::qux();
-            }
-        "#,
-        )
+        .file("src/main.rs", "extern crate bar; fn main() { ::bar::qux(); }")
         .build();
     let _bar = project().at("bar")
         .file("Cargo.toml", &basic_manifest("bar", "0.1.0"))
-        .file(
-            "src/lib.rs",
-            r#"
-            pub fn baz() {}
-        "#,
-        )
+        .file("src/lib.rs", "pub fn baz() {}")
         .build();
 
     assert_that(
@@ -485,19 +407,9 @@ fn check_virtual_all_implied() {
         "#,
         )
         .file("bar/Cargo.toml", &basic_manifest("bar", "0.1.0"))
-        .file(
-            "bar/src/lib.rs",
-            r#"
-            pub fn bar() {}
-        "#,
-        )
+        .file("bar/src/lib.rs", "pub fn bar() {}")
         .file("baz/Cargo.toml", &basic_manifest("baz", "0.1.0"))
-        .file(
-            "baz/src/lib.rs",
-            r#"
-            pub fn baz() {}
-        "#,
-        )
+        .file("baz/src/lib.rs", "pub fn baz() {}")
         .build();
 
     assert_that(

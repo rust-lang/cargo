@@ -599,19 +599,9 @@ Caused by:
 fn duplicate_deps() {
     let p = project()
         .file("shim-bar/Cargo.toml", &basic_manifest("bar", "0.0.1"))
-        .file(
-            "shim-bar/src/lib.rs",
-            r#"
-                pub fn a() {}
-        "#,
-        )
+        .file("shim-bar/src/lib.rs", "pub fn a() {}")
         .file("linux-bar/Cargo.toml", &basic_manifest("bar", "0.0.1"))
-        .file(
-            "linux-bar/src/lib.rs",
-            r#"
-                pub fn a() {}
-        "#,
-        )
+        .file("linux-bar/src/lib.rs", "pub fn a() {}")
         .file(
             "Cargo.toml",
             r#"
@@ -648,19 +638,9 @@ have a single canonical source path irrespective of build target.
 fn duplicate_deps_diff_sources() {
     let p = project()
         .file("shim-bar/Cargo.toml", &basic_manifest("bar", "0.0.1"))
-        .file(
-            "shim-bar/src/lib.rs",
-            r#"
-                pub fn a() {}
-        "#,
-        )
+        .file("shim-bar/src/lib.rs", "pub fn a() {}")
         .file("linux-bar/Cargo.toml", &basic_manifest("bar", "0.0.1"))
-        .file(
-            "linux-bar/src/lib.rs",
-            r#"
-                pub fn a() {}
-        "#,
-        )
+        .file("linux-bar/src/lib.rs", "pub fn a() {}")
         .file(
             "Cargo.toml",
             r#"
@@ -734,12 +714,7 @@ warning: unused manifest key: target.foo.bar
             bulid = "foo"
         "#,
         )
-        .file(
-            "src/lib.rs",
-            r#"
-            pub fn foo() {}
-        "#,
-        )
+        .file("src/lib.rs", "pub fn foo() {}")
         .build();
     assert_that(
         p.cargo("build"),
@@ -766,12 +741,7 @@ warning: unused manifest key: project.bulid
             build = "foo"
         "#,
         )
-        .file(
-            "src/lib.rs",
-            r#"
-            pub fn foo() {}
-        "#,
-        )
+        .file("src/lib.rs", "pub fn foo() {}")
         .build();
     assert_that(
         p.cargo("build"),
@@ -845,12 +815,7 @@ to use. This will be considered an error in future versions
 #[test]
 fn invalid_toml_historically_allowed_is_warned() {
     let p = project()
-        .file(
-            ".cargo/config",
-            r#"
-            [bar] baz = 2
-        "#,
-        )
+        .file(".cargo/config", "[bar] baz = 2")
         .file("src/main.rs", "fn main() {}")
         .build();
 
@@ -908,12 +873,7 @@ This will be considered an error in future versions
 fn bad_source_config1() {
     let p = project()
         .file("src/lib.rs", "")
-        .file(
-            ".cargo/config",
-            r#"
-            [source.foo]
-        "#,
-        )
+        .file(".cargo/config", "[source.foo]")
         .build();
 
     assert_that(

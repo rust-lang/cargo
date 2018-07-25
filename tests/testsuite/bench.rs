@@ -724,9 +724,7 @@ fn dont_run_examples() {
         .file("src/lib.rs", r"")
         .file(
             "examples/dont-run-me-i-will-fail.rs",
-            r#"
-            fn main() { panic!("Examples should not be run by 'cargo test'"); }
-        "#,
+            r#"fn main() { panic!("Examples should not be run by 'cargo test'"); }"#,
         )
         .build();
     assert_that(p.cargo("bench"), execs().with_status(0));
@@ -944,12 +942,7 @@ fn lib_with_standard_name2() {
             doctest = false
         "#,
         )
-        .file(
-            "src/lib.rs",
-            "
-            pub fn foo() {}
-        ",
-        )
+        .file("src/lib.rs", "pub fn foo() {}")
         .file(
             "src/main.rs",
             "
@@ -1043,12 +1036,7 @@ fn bench_dylib() {
             crate_type = ["dylib"]
         "#,
         )
-        .file(
-            "bar/src/lib.rs",
-            "
-             pub fn baz() {}
-        ",
-        )
+        .file("bar/src/lib.rs", "pub fn baz() {}")
         .build();
 
     assert_that(
@@ -1263,13 +1251,7 @@ fn test_a_bench() {
         "#,
         )
         .file("src/lib.rs", "")
-        .file(
-            "benches/b.rs",
-            r#"
-            #[test]
-            fn foo() {}
-        "#,
-        )
+        .file("benches/b.rs", "#[test] fn foo() {}")
         .build();
 
     assert_that(
@@ -1483,12 +1465,7 @@ fn bench_all_workspace() {
             [workspace]
         "#,
         )
-        .file(
-            "src/main.rs",
-            r#"
-            fn main() {}
-        "#,
-        )
+        .file("src/main.rs", "fn main() {}")
         .file(
             "benches/foo.rs",
             r#"
@@ -1502,12 +1479,7 @@ fn bench_all_workspace() {
         "#,
         )
         .file("bar/Cargo.toml", &basic_manifest("bar", "0.1.0"))
-        .file(
-            "bar/src/lib.rs",
-            r#"
-            pub fn bar() {}
-        "#,
-        )
+        .file("bar/src/lib.rs", "pub fn bar() {}")
         .file(
             "bar/benches/bar.rs",
             r#"
@@ -1551,12 +1523,7 @@ fn bench_all_exclude() {
             members = ["bar", "baz"]
         "#,
         )
-        .file(
-            "src/main.rs",
-            r#"
-            fn main() {}
-        "#,
-        )
+        .file("src/main.rs", "fn main() {}")
         .file("bar/Cargo.toml", &basic_manifest("bar", "0.1.0"))
         .file(
             "bar/src/lib.rs",
@@ -1572,15 +1539,7 @@ fn bench_all_exclude() {
         "#,
         )
         .file("baz/Cargo.toml", &basic_manifest("baz", "0.1.0"))
-        .file(
-            "baz/src/lib.rs",
-            r#"
-            #[test]
-            pub fn baz() {
-                break_the_build();
-            }
-        "#,
-        )
+        .file("baz/src/lib.rs", "#[test] pub fn baz() { break_the_build(); }")
         .build();
 
     assert_that(
@@ -1608,12 +1567,7 @@ fn bench_all_virtual_manifest() {
         "#,
         )
         .file("bar/Cargo.toml", &basic_manifest("bar", "0.1.0"))
-        .file(
-            "bar/src/lib.rs",
-            r#"
-            pub fn bar() {}
-        "#,
-        )
+        .file("bar/src/lib.rs", "pub fn bar() {}")
         .file(
             "bar/benches/bar.rs",
             r#"
@@ -1627,12 +1581,7 @@ fn bench_all_virtual_manifest() {
         "#,
         )
         .file("baz/Cargo.toml", &basic_manifest("baz", "0.1.0"))
-        .file(
-            "baz/src/lib.rs",
-            r#"
-            pub fn baz() {}
-        "#,
-        )
+        .file("baz/src/lib.rs", "pub fn baz() {}")
         .file(
             "baz/benches/baz.rs",
             r#"
@@ -1678,12 +1627,7 @@ fn legacy_bench_name() {
             name = "bench"
         "#,
         )
-        .file(
-            "src/lib.rs",
-            r#"
-            pub fn foo() {}
-        "#,
-        )
+        .file("src/lib.rs", "pub fn foo() {}")
         .file(
             "src/bench.rs",
             r#"
@@ -1723,12 +1667,7 @@ fn bench_virtual_manifest_all_implied() {
         "#,
         )
         .file("bar/Cargo.toml", &basic_manifest("bar", "0.1.0"))
-        .file(
-            "bar/src/lib.rs",
-            r#"
-            pub fn foo() {}
-        "#,
-        )
+        .file("bar/src/lib.rs", "pub fn foo() {}")
         .file(
             "bar/benches/bar.rs",
             r#"
@@ -1740,12 +1679,7 @@ fn bench_virtual_manifest_all_implied() {
         "#,
         )
         .file("baz/Cargo.toml", &basic_manifest("baz", "0.1.0"))
-        .file(
-            "baz/src/lib.rs",
-            r#"
-            pub fn baz() {}
-        "#,
-        )
+        .file("baz/src/lib.rs", "pub fn baz() {}")
         .file(
             "baz/benches/baz.rs",
             r#"

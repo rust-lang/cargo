@@ -48,10 +48,7 @@ fn cargo_compile_simple_git_dep() {
                 git_project.url()
             ),
         )
-        .file(
-            "src/main.rs",
-            &main_file(r#""{}", dep1::hello()"#, &["dep1"]),
-        )
+        .file("src/main.rs", &main_file(r#""{}", dep1::hello()"#, &["dep1"]))
         .build();
 
     let root = project.root();
@@ -297,10 +294,7 @@ fn cargo_compile_git_dep_branch() {
                 git_project.url()
             ),
         )
-        .file(
-            "src/main.rs",
-            &main_file(r#""{}", dep1::hello()"#, &["dep1"]),
-        )
+        .file("src/main.rs", &main_file(r#""{}", dep1::hello()"#, &["dep1"]))
         .build();
 
     let root = project.root();
@@ -373,10 +367,7 @@ fn cargo_compile_git_dep_tag() {
                 git_project.url()
             ),
         )
-        .file(
-            "src/main.rs",
-            &main_file(r#""{}", dep1::hello()"#, &["dep1"]),
-        )
+        .file("src/main.rs", &main_file(r#""{}", dep1::hello()"#, &["dep1"]))
         .build();
 
     let root = project.root();
@@ -472,10 +463,7 @@ fn cargo_compile_with_nested_paths() {
                 git_project.url()
             ),
         )
-        .file(
-            "src/foo.rs",
-            &main_file(r#""{}", dep1::hello()"#, &["dep1"]),
-        )
+        .file("src/foo.rs", &main_file(r#""{}", dep1::hello()"#, &["dep1"]))
         .build();
 
     p.cargo("build").exec_with_output().unwrap();
@@ -501,12 +489,7 @@ fn cargo_compile_with_malformed_nested_paths() {
                 }
             "#,
             )
-            .file(
-                "vendor/dep2/Cargo.toml",
-                r#"
-                !INVALID!
-            "#,
-            )
+            .file("vendor/dep2/Cargo.toml", "!INVALID!")
     }).unwrap();
 
     let p = project()
@@ -532,10 +515,7 @@ fn cargo_compile_with_malformed_nested_paths() {
                 git_project.url()
             ),
         )
-        .file(
-            "src/foo.rs",
-            &main_file(r#""{}", dep1::hello()"#, &["dep1"]),
-        )
+        .file("src/foo.rs", &main_file(r#""{}", dep1::hello()"#, &["dep1"]))
         .build();
 
     p.cargo("build").exec_with_output().unwrap();
@@ -646,10 +626,7 @@ fn cargo_compile_with_short_ssh_git() {
                 url
             ),
         )
-        .file(
-            "src/foo.rs",
-            &main_file(r#""{}", dep1::hello()"#, &["dep1"]),
-        )
+        .file("src/foo.rs", &main_file(r#""{}", dep1::hello()"#, &["dep1"]))
         .build();
 
     assert_that(
@@ -761,12 +738,7 @@ fn recompilation() {
     let git_project = git::new("bar", |project| {
         project
             .file("Cargo.toml", &basic_lib_manifest("bar"))
-            .file(
-                "src/bar.rs",
-                r#"
-                pub fn bar() {}
-            "#,
-            )
+            .file("src/bar.rs", "pub fn bar() {}")
     }).unwrap();
 
     let p = project()
@@ -885,12 +857,7 @@ fn update_with_shared_deps() {
     let git_project = git::new("bar", |project| {
         project
             .file("Cargo.toml", &basic_lib_manifest("bar"))
-            .file(
-                "src/bar.rs",
-                r#"
-                pub fn bar() {}
-            "#,
-            )
+            .file("src/bar.rs", "pub fn bar() {}")
     }).unwrap();
 
     let p = project()
@@ -1094,13 +1061,7 @@ fn dep_with_submodule() {
                 git_project.url()
             ),
         )
-        .file(
-            "src/lib.rs",
-            "
-            extern crate dep1;
-            pub fn foo() { dep1::dep() }
-        ",
-        )
+        .file("src/lib.rs", "extern crate dep1; pub fn foo() { dep1::dep() }")
         .build();
 
     assert_that(
@@ -1165,13 +1126,7 @@ fn dep_with_bad_submodule() {
                 git_project.url()
             ),
         )
-        .file(
-            "src/lib.rs",
-            "
-            extern crate dep1;
-            pub fn foo() { dep1::dep() }
-        ",
-        )
+        .file("src/lib.rs", "extern crate dep1; pub fn foo() { dep1::dep() }")
         .build();
 
     let expected = format!(
@@ -1577,12 +1532,7 @@ fn git_build_cmd_freshness() {
             )
             .file("build.rs", "fn main() {}")
             .file("src/lib.rs", "pub fn bar() -> i32 { 1 }")
-            .file(
-                ".gitignore",
-                "
-            src/bar.rs
-        ",
-            )
+            .file(".gitignore", "src/bar.rs")
     }).unwrap();
     foo.root().move_into_the_past();
 
@@ -2608,13 +2558,7 @@ fn include_overrides_gitignore() {
             }
         "#,
             )
-            .file(
-                "src/lib.rs",
-                r#"
-            mod not_incl;
-            mod incl;
-        "#,
-            )
+            .file("src/lib.rs", "mod not_incl; mod incl;")
             .file(
                 "src/mod.md",
                 r#"
@@ -2745,10 +2689,7 @@ fn invalid_git_dependency_manifest() {
                 git_project.url()
             ),
         )
-        .file(
-            "src/main.rs",
-            &main_file(r#""{}", dep1::hello()"#, &["dep1"]),
-        )
+        .file("src/main.rs", &main_file(r#""{}", dep1::hello()"#, &["dep1"]))
         .build();
 
     let git_root = git_project.root();

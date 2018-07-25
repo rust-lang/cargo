@@ -861,12 +861,7 @@ fn bad_license_file() {
             repository = "baz"
         "#,
         )
-        .file(
-            "src/main.rs",
-            r#"
-            fn main() {}
-        "#,
-        )
+        .file("src/main.rs", "fn main() {}")
         .build();
     assert_that(
         p.cargo("publish")
@@ -1784,14 +1779,7 @@ fn toml_lies_but_index_is_truth() {
 #[test]
 fn vv_prints_warnings() {
     Package::new("foo", "0.2.0")
-        .file(
-            "src/lib.rs",
-            r#"
-                #![deny(warnings)]
-
-                fn foo() {} // unused function
-            "#,
-        )
+        .file("src/lib.rs", "#![deny(warnings)] fn foo() {} // unused function")
         .publish();
 
     let p = project()
