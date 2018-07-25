@@ -40,6 +40,7 @@ libc = "0.2"
 log = "0.4"
 libgit2-sys = "0.7.5"
 num_cpus = "1.0"
+parking_lot_core = "0.2.11" # required only for minimal-versions. brought in by crossbeam.
 rustfix = "0.4"
 same-file = "1"
 semver = { version = "0.9.0", features = ["serde"] }
