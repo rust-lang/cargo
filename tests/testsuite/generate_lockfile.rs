@@ -2,7 +2,7 @@ use std::fs::{self, File};
 use std::io::prelude::*;
 
 use support::registry::Package;
-use support::{execs, paths, project, ProjectBuilder};
+use support::{basic_manifest, execs, paths, project, ProjectBuilder};
 use support::ChannelChanger;
 use support::hamcrest::{assert_that, existing_file, is_not};
 
@@ -10,15 +10,7 @@ use support::hamcrest::{assert_that, existing_file, is_not};
 fn adding_and_removing_packages() {
     let p = project()
         .file("src/main.rs", "fn main() {}")
-        .file(
-            "bar/Cargo.toml",
-            r#"
-            [package]
-            name = "bar"
-            authors = []
-            version = "0.0.1"
-        "#,
-        )
+        .file("bar/Cargo.toml", &basic_manifest("bar", "0.0.1"))
         .file("bar/src/lib.rs", "")
         .build();
 
@@ -49,14 +41,7 @@ fn adding_and_removing_packages() {
     // change the dep
     File::create(&p.root().join("bar/Cargo.toml"))
         .unwrap()
-        .write_all(
-            br#"
-        [package]
-        name = "bar"
-        authors = []
-        version = "0.0.2"
-    "#,
-        )
+        .write_all(basic_manifest("bar", "0.0.2").as_bytes())
         .unwrap();
     assert_that(p.cargo("generate-lockfile"), execs().with_status(0));
     let lock3 = p.read_lockfile();
@@ -118,15 +103,7 @@ fn no_index_update() {
 fn preserve_metadata() {
     let p = project()
         .file("src/main.rs", "fn main() {}")
-        .file(
-            "bar/Cargo.toml",
-            r#"
-            [package]
-            name = "bar"
-            authors = []
-            version = "0.0.1"
-        "#,
-        )
+        .file("bar/Cargo.toml", &basic_manifest("bar", "0.0.1"))
         .file("bar/src/lib.rs", "")
         .build();
 
@@ -160,15 +137,7 @@ foo = "bar"
 fn preserve_line_endings_issue_2076() {
     let p = project()
         .file("src/main.rs", "fn main() {}")
-        .file(
-            "bar/Cargo.toml",
-            r#"
-            [package]
-            name = "bar"
-            authors = []
-            version = "0.0.1"
-        "#,
-        )
+        .file("bar/Cargo.toml", &basic_manifest("bar", "0.0.1"))
         .file("bar/src/lib.rs", "")
         .build();
 
@@ -233,12 +202,7 @@ fn duplicate_entries_in_lockfile() {
         .file("src/lib.rs", "")
         .build();
 
-    let common_toml = r#"
-        [package]
-        name = "common"
-        authors = []
-        version = "0.0.1"
-        "#;
+    let common_toml = &basic_manifest("common", "0.0.1");
 
     let _common_in_a = ProjectBuilder::new(paths::root().join("a/common"))
         .file("Cargo.toml", common_toml)

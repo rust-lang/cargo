@@ -1,6 +1,6 @@
 use std::env;
 
-use support::{basic_bin_manifest, execs, git, main_file, project};
+use support::{basic_manifest, basic_bin_manifest, execs, git, main_file, project};
 use support::registry::Package;
 use support::hamcrest::{assert_that, existing_dir, existing_file, is_not};
 
@@ -57,31 +57,9 @@ fn clean_multiple_packages() {
         "#,
         )
         .file("src/foo.rs", &main_file(r#""i am foo""#, &[]))
-        .file(
-            "d1/Cargo.toml",
-            r#"
-            [package]
-            name = "d1"
-            version = "0.0.1"
-            authors = []
-
-            [[bin]]
-                name = "d1"
-        "#,
-        )
+        .file("d1/Cargo.toml", &basic_bin_manifest("d1"))
         .file("d1/src/main.rs", "fn main() { println!(\"d1\"); }")
-        .file(
-            "d2/Cargo.toml",
-            r#"
-            [package]
-            name = "d2"
-            version = "0.0.1"
-            authors = []
-
-            [[bin]]
-                name = "d2"
-        "#,
-        )
+        .file("d2/Cargo.toml", &basic_bin_manifest("d2"))
         .file("d2/src/main.rs", "fn main() { println!(\"d2\"); }")
         .build();
 
@@ -123,15 +101,7 @@ fn clean_release() {
         "#,
         )
         .file("src/main.rs", "fn main() {}")
-        .file(
-            "a/Cargo.toml",
-            r#"
-            [package]
-            name = "a"
-            version = "0.0.1"
-            authors = []
-        "#,
-        )
+        .file("a/Cargo.toml", &basic_manifest("a", "0.0.1"))
         .file("a/src/lib.rs", "")
         .build();
 
@@ -177,15 +147,7 @@ fn clean_doc() {
         "#,
         )
         .file("src/main.rs", "fn main() {}")
-        .file(
-            "a/Cargo.toml",
-            r#"
-            [package]
-            name = "a"
-            version = "0.0.1"
-            authors = []
-        "#,
-        )
+        .file("a/Cargo.toml", &basic_manifest("a", "0.0.1"))
         .file("a/src/lib.rs", "")
         .build();
 
@@ -257,15 +219,7 @@ fn build_script() {
 fn clean_git() {
     let git = git::new("dep", |project| {
         project
-            .file(
-                "Cargo.toml",
-                r#"
-            [project]
-            name = "dep"
-            version = "0.5.0"
-            authors = []
-        "#,
-            )
+            .file("Cargo.toml", &basic_manifest("dep", "0.5.0"))
             .file("src/lib.rs", "")
     }).unwrap();
 

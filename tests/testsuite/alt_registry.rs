@@ -1,6 +1,6 @@
 use support::ChannelChanger;
 use support::registry::{self, alt_api_path, Package};
-use support::{execs, paths, project};
+use support::{basic_manifest, execs, paths, project};
 use support::hamcrest::assert_that;
 use std::fs::File;
 use std::io::Write;
@@ -249,15 +249,7 @@ fn registry_and_path_dep_works() {
         "#,
         )
         .file("src/main.rs", "fn main() {}")
-        .file(
-            "bar/Cargo.toml",
-            r#"
-            [project]
-            name = "bar"
-            version = "0.0.1"
-            authors = []
-        "#,
-        )
+        .file("bar/Cargo.toml", &basic_manifest("bar", "0.0.1"))
         .file("bar/src/lib.rs", "")
         .build();
 

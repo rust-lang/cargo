@@ -3,7 +3,7 @@ use std::str;
 use cargo::util::process;
 use support::{is_nightly, ChannelChanger};
 use support::paths::CargoPathExt;
-use support::{basic_bin_manifest, basic_lib_manifest, execs, project};
+use support::{basic_manifest, basic_bin_manifest, basic_lib_manifest, execs, project};
 use support::hamcrest::{assert_that, existing_file};
 
 #[test]
@@ -876,15 +876,7 @@ fn lib_with_standard_name() {
     }
 
     let p = project()
-        .file(
-            "Cargo.toml",
-            r#"
-            [package]
-            name = "syntax"
-            version = "0.0.1"
-            authors = []
-        "#,
-        )
+        .file("Cargo.toml", &basic_manifest("syntax", "0.0.1"))
         .file(
             "src/lib.rs",
             "
@@ -1509,14 +1501,7 @@ fn bench_all_workspace() {
             fn bench_foo(_: &mut Bencher) -> () { () }
         "#,
         )
-        .file(
-            "bar/Cargo.toml",
-            r#"
-            [project]
-            name = "bar"
-            version = "0.1.0"
-        "#,
-        )
+        .file("bar/Cargo.toml", &basic_manifest("bar", "0.1.0"))
         .file(
             "bar/src/lib.rs",
             r#"
@@ -1572,14 +1557,7 @@ fn bench_all_exclude() {
             fn main() {}
         "#,
         )
-        .file(
-            "bar/Cargo.toml",
-            r#"
-            [project]
-            name = "bar"
-            version = "0.1.0"
-        "#,
-        )
+        .file("bar/Cargo.toml", &basic_manifest("bar", "0.1.0"))
         .file(
             "bar/src/lib.rs",
             r#"
@@ -1593,14 +1571,7 @@ fn bench_all_exclude() {
             }
         "#,
         )
-        .file(
-            "baz/Cargo.toml",
-            r#"
-            [project]
-            name = "baz"
-            version = "0.1.0"
-        "#,
-        )
+        .file("baz/Cargo.toml", &basic_manifest("baz", "0.1.0"))
         .file(
             "baz/src/lib.rs",
             r#"
@@ -1636,14 +1607,7 @@ fn bench_all_virtual_manifest() {
             members = ["bar", "baz"]
         "#,
         )
-        .file(
-            "bar/Cargo.toml",
-            r#"
-            [project]
-            name = "bar"
-            version = "0.1.0"
-        "#,
-        )
+        .file("bar/Cargo.toml", &basic_manifest("bar", "0.1.0"))
         .file(
             "bar/src/lib.rs",
             r#"
@@ -1662,14 +1626,7 @@ fn bench_all_virtual_manifest() {
             fn bench_bar(_: &mut Bencher) -> () { () }
         "#,
         )
-        .file(
-            "baz/Cargo.toml",
-            r#"
-            [project]
-            name = "baz"
-            version = "0.1.0"
-        "#,
-        )
+        .file("baz/Cargo.toml", &basic_manifest("baz", "0.1.0"))
         .file(
             "baz/src/lib.rs",
             r#"
@@ -1765,14 +1722,7 @@ fn bench_virtual_manifest_all_implied() {
             members = ["bar", "baz"]
         "#,
         )
-        .file(
-            "bar/Cargo.toml",
-            r#"
-            [project]
-            name = "bar"
-            version = "0.1.0"
-        "#,
-        )
+        .file("bar/Cargo.toml", &basic_manifest("bar", "0.1.0"))
         .file(
             "bar/src/lib.rs",
             r#"
@@ -1789,14 +1739,7 @@ fn bench_virtual_manifest_all_implied() {
             fn bench_bar(_: &mut Bencher) -> () { () }
         "#,
         )
-        .file(
-            "baz/Cargo.toml",
-            r#"
-            [project]
-            name = "baz"
-            version = "0.1.0"
-        "#,
-        )
+        .file("baz/Cargo.toml", &basic_manifest("baz", "0.1.0"))
         .file(
             "baz/src/lib.rs",
             r#"

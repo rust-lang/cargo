@@ -1,5 +1,5 @@
 use support::is_nightly;
-use support::{execs, project, Project};
+use support::{basic_manifest, execs, project, Project};
 use support::hamcrest::assert_that;
 
 // These tests try to exercise exactly which profiles are selected for every
@@ -57,11 +57,7 @@ fn all_target_project() -> Project {
         "#)
 
         // bar package
-        .file("bar/Cargo.toml", r#"
-            [package]
-            name = "bar"
-            version = "0.0.1"
-        "#)
+        .file("bar/Cargo.toml", &basic_manifest("bar", "0.0.1"))
         .file("bar/src/lib.rs", "")
 
         // bdep package

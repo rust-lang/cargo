@@ -3,7 +3,7 @@ use std::path::{Path, PathBuf};
 
 use cargo::util::paths as cargopaths;
 use support::paths;
-use support::{execs, git, project};
+use support::{basic_manifest, execs, git, project};
 use support::hamcrest::assert_that;
 
 #[test]
@@ -11,15 +11,7 @@ fn deleting_database_files() {
     let project = project();
     let git_project = git::new("bar", |project| {
         project
-            .file(
-                "Cargo.toml",
-                r#"
-                [project]
-                name = "bar"
-                version = "0.5.0"
-                authors = []
-            "#,
-            )
+            .file("Cargo.toml", &basic_manifest("bar", "0.5.0"))
             .file("src/lib.rs", "")
     }).unwrap();
 
@@ -83,15 +75,7 @@ fn deleting_checkout_files() {
     let project = project();
     let git_project = git::new("bar", |project| {
         project
-            .file(
-                "Cargo.toml",
-                r#"
-                [project]
-                name = "bar"
-                version = "0.5.0"
-                authors = []
-            "#,
-            )
+            .file("Cargo.toml", &basic_manifest("bar", "0.5.0"))
             .file("src/lib.rs", "")
     }).unwrap();
 

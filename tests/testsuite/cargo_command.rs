@@ -8,7 +8,7 @@ use cargo;
 use support::cargo_process;
 use support::paths::{self, CargoPathExt};
 use support::registry::Package;
-use support::{basic_bin_manifest, cargo_exe, execs, project, Project};
+use support::{basic_manifest, basic_bin_manifest, cargo_exe, execs, project, Project};
 use support::hamcrest::{assert_that, existing_file};
 
 #[cfg_attr(windows, allow(dead_code))]
@@ -261,15 +261,7 @@ fn cargo_subcommand_env() {
 #[test]
 fn cargo_subcommand_args() {
     let p = project().at("cargo-foo")
-        .file(
-            "Cargo.toml",
-            r#"
-            [package]
-            name = "cargo-foo"
-            version = "0.0.1"
-            authors = []
-        "#,
-        )
+        .file("Cargo.toml", &basic_manifest("cargo-foo", "0.0.1"))
         .file(
             "src/main.rs",
             r#"

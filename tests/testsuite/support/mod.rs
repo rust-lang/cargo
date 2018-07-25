@@ -118,13 +118,6 @@ pub mod paths;
 pub mod publish;
 pub mod registry;
 
-pub const BASIC_MANIFEST: &str = r#"
-[package]
-name = "foo"
-version = "0.0.1"
-authors = []
-"#;
-
 /*
  *
  * ===== Builders =====
@@ -265,7 +258,7 @@ impl ProjectBuilder {
 
         let manifest_path = self.root.root().join("Cargo.toml");
         if !self.no_manifest && self.files.iter().all(|fb| fb.path != manifest_path) {
-            self._file(Path::new("Cargo.toml"), BASIC_MANIFEST)
+            self._file(Path::new("Cargo.toml"), &basic_manifest("foo", "0.0.1"))
         }
 
         for file in self.files.iter() {
@@ -1229,6 +1222,18 @@ impl<T> Tap for T {
         callback(&mut self);
         self
     }
+}
+
+pub fn basic_manifest(name: &str, version: &str) -> String {
+    format!(
+        r#"
+        [package]
+        name = "{}"
+        version = "{}"
+        authors = []
+    "#,
+        name, version
+    )
 }
 
 pub fn basic_bin_manifest(name: &str) -> String {
