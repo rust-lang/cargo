@@ -6,7 +6,8 @@ use std::mem;
 use std::sync::mpsc::{channel, Receiver, Sender};
 use std::sync::Arc;
 
-use crossbeam::{self, Scope};
+use crossbeam;
+use crossbeam::thread::Scope;
 use jobserver::{Acquired, HelperThread};
 
 use core::profiles::Profile;
