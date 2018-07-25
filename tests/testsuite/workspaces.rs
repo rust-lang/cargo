@@ -1119,11 +1119,9 @@ fn rebuild_please() {
 
     sleep_ms(1000);
 
-    t!(t!(File::create(p.root().join("lib/src/lib.rs"))).write_all(
-        br#"
-        pub fn foo() -> u32 { 1 }
-    "#
-    ));
+    t!(t!(File::create(p.root().join("lib/src/lib.rs")))
+        .write_all(br#"pub fn foo() -> u32 { 1 }"#)
+    );
 
     assert_that(
         p.cargo("build").cwd(p.root().join("lib")),

@@ -125,11 +125,7 @@ fn cargo_compile_offline_with_cached_git_dep() {
     // Commit the changes and make sure we trigger a recompile
     File::create(&git_project.root().join("src/lib.rs"))
         .unwrap()
-        .write_all(
-            br#"
-        pub static COOL_STR:&str = "cached git repo rev2";
-    "#,
-        )
+        .write_all(br#"pub static COOL_STR:&str = "cached git repo rev2";"#)
         .unwrap();
     git::add(&repo);
     let rev2 = git::commit(&repo);
@@ -657,11 +653,7 @@ fn two_revs_same_deps() {
     // Commit the changes and make sure we trigger a recompile
     File::create(&bar.root().join("src/lib.rs"))
         .unwrap()
-        .write_all(
-            br#"
-        pub fn bar() -> i32 { 2 }
-    "#,
-        )
+        .write_all(br#"pub fn bar() -> i32 { 2 }"#)
         .unwrap();
     git::add(&repo);
     let rev2 = git::commit(&repo);
@@ -784,11 +776,7 @@ fn recompilation() {
     // Modify a file manually, shouldn't trigger a recompile
     File::create(&git_project.root().join("src/bar.rs"))
         .unwrap()
-        .write_all(
-            br#"
-        pub fn bar() { println!("hello!"); }
-    "#,
-        )
+        .write_all(br#"pub fn bar() { println!("hello!"); }"#)
         .unwrap();
 
     assert_that(p.cargo("build"), execs().with_stdout(""));
@@ -940,11 +928,7 @@ fn update_with_shared_deps() {
     // Modify a file manually, and commit it
     File::create(&git_project.root().join("src/bar.rs"))
         .unwrap()
-        .write_all(
-            br#"
-        pub fn bar() { println!("hello!"); }
-    "#,
-        )
+        .write_all(br#"pub fn bar() { println!("hello!"); }"#)
         .unwrap();
     let repo = git2::Repository::open(&git_project.root()).unwrap();
     let old_head = repo.head().unwrap().target().unwrap();
@@ -1204,11 +1188,7 @@ fn two_deps_only_update_one() {
 
     File::create(&git1.root().join("src/lib.rs"))
         .unwrap()
-        .write_all(
-            br#"
-        pub fn foo() {}
-    "#,
-        )
+        .write_all(br#"pub fn foo() {}"#)
         .unwrap();
     let repo = git2::Repository::open(&git1.root()).unwrap();
     git::add(&repo);
@@ -1268,11 +1248,7 @@ fn stale_cached_version() {
     // us pulling it down.
     File::create(&bar.root().join("src/lib.rs"))
         .unwrap()
-        .write_all(
-            br#"
-        pub fn bar() -> i32 { 1 + 0 }
-    "#,
-        )
+        .write_all(br#"pub fn bar() -> i32 { 1 + 0 }"#)
         .unwrap();
     let repo = git2::Repository::open(&bar.root()).unwrap();
     git::add(&repo);
@@ -1657,11 +1633,7 @@ fn git_repo_changing_no_rebuild() {
     // Make a commit to lock p2 to a different rev
     File::create(&bar.root().join("src/lib.rs"))
         .unwrap()
-        .write_all(
-            br#"
-        pub fn bar() -> i32 { 2 }
-    "#,
-        )
+        .write_all(br#"pub fn bar() -> i32 { 2 }"#)
         .unwrap();
     let repo = git2::Repository::open(&bar.root()).unwrap();
     git::add(&repo);
@@ -2121,11 +2093,7 @@ fn update_one_source_updates_all_packages_in_that_git_source() {
     // Just be sure to change a file
     File::create(&dep.root().join("src/lib.rs"))
         .unwrap()
-        .write_all(
-            br#"
-        pub fn bar() -> i32 { 2 }
-    "#,
-        )
+        .write_all(br#"pub fn bar() -> i32 { 2 }"#)
         .unwrap();
     git::add(&repo);
     git::commit(&repo);

@@ -30,12 +30,7 @@ fn setup_new_credentials() {
     let config = cargo_home().join("credentials");
     t!(fs::create_dir_all(config.parent().unwrap()));
     t!(t!(File::create(&config)).write_all(
-        format!(
-            r#"
-        token = "{token}"
-    "#,
-            token = ORIGINAL_TOKEN
-        ).as_bytes()
+        format!(r#"token = "{token}""#, token = ORIGINAL_TOKEN).as_bytes()
     ));
 }
 

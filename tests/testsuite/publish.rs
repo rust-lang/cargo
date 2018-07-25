@@ -87,11 +87,7 @@ fn old_token_location() {
     let credentials = paths::root().join("home/.cargo/credentials");
     File::create(credentials)
         .unwrap()
-        .write_all(
-            br#"
-            token = "api-token"
-        "#,
-        )
+        .write_all(br#"token = "api-token""#)
         .unwrap();
 
     let p = project()
