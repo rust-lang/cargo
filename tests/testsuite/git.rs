@@ -48,10 +48,7 @@ fn cargo_compile_simple_git_dep() {
                 git_project.url()
             ),
         )
-        .file(
-            "src/main.rs",
-            &main_file(r#""{}", dep1::hello()"#, &["dep1"]),
-        )
+        .file("src/main.rs", &main_file(r#""{}", dep1::hello()"#, &["dep1"]))
         .build();
 
     let root = project.root();
@@ -128,11 +125,7 @@ fn cargo_compile_offline_with_cached_git_dep() {
     // Commit the changes and make sure we trigger a recompile
     File::create(&git_project.root().join("src/lib.rs"))
         .unwrap()
-        .write_all(
-            br#"
-        pub static COOL_STR:&str = "cached git repo rev2";
-    "#,
-        )
+        .write_all(br#"pub static COOL_STR:&str = "cached git repo rev2";"#)
         .unwrap();
     git::add(&repo);
     let rev2 = git::commit(&repo);
@@ -297,10 +290,7 @@ fn cargo_compile_git_dep_branch() {
                 git_project.url()
             ),
         )
-        .file(
-            "src/main.rs",
-            &main_file(r#""{}", dep1::hello()"#, &["dep1"]),
-        )
+        .file("src/main.rs", &main_file(r#""{}", dep1::hello()"#, &["dep1"]))
         .build();
 
     let root = project.root();
@@ -373,10 +363,7 @@ fn cargo_compile_git_dep_tag() {
                 git_project.url()
             ),
         )
-        .file(
-            "src/main.rs",
-            &main_file(r#""{}", dep1::hello()"#, &["dep1"]),
-        )
+        .file("src/main.rs", &main_file(r#""{}", dep1::hello()"#, &["dep1"]))
         .build();
 
     let root = project.root();
@@ -472,10 +459,7 @@ fn cargo_compile_with_nested_paths() {
                 git_project.url()
             ),
         )
-        .file(
-            "src/foo.rs",
-            &main_file(r#""{}", dep1::hello()"#, &["dep1"]),
-        )
+        .file("src/foo.rs", &main_file(r#""{}", dep1::hello()"#, &["dep1"]))
         .build();
 
     p.cargo("build").exec_with_output().unwrap();
@@ -501,12 +485,7 @@ fn cargo_compile_with_malformed_nested_paths() {
                 }
             "#,
             )
-            .file(
-                "vendor/dep2/Cargo.toml",
-                r#"
-                !INVALID!
-            "#,
-            )
+            .file("vendor/dep2/Cargo.toml", "!INVALID!")
     }).unwrap();
 
     let p = project()
@@ -532,10 +511,7 @@ fn cargo_compile_with_malformed_nested_paths() {
                 git_project.url()
             ),
         )
-        .file(
-            "src/foo.rs",
-            &main_file(r#""{}", dep1::hello()"#, &["dep1"]),
-        )
+        .file("src/foo.rs", &main_file(r#""{}", dep1::hello()"#, &["dep1"]))
         .build();
 
     p.cargo("build").exec_with_output().unwrap();
@@ -646,10 +622,7 @@ fn cargo_compile_with_short_ssh_git() {
                 url
             ),
         )
-        .file(
-            "src/foo.rs",
-            &main_file(r#""{}", dep1::hello()"#, &["dep1"]),
-        )
+        .file("src/foo.rs", &main_file(r#""{}", dep1::hello()"#, &["dep1"]))
         .build();
 
     assert_that(
@@ -680,11 +653,7 @@ fn two_revs_same_deps() {
     // Commit the changes and make sure we trigger a recompile
     File::create(&bar.root().join("src/lib.rs"))
         .unwrap()
-        .write_all(
-            br#"
-        pub fn bar() -> i32 { 2 }
-    "#,
-        )
+        .write_all(br#"pub fn bar() -> i32 { 2 }"#)
         .unwrap();
     git::add(&repo);
     let rev2 = git::commit(&repo);
@@ -761,12 +730,7 @@ fn recompilation() {
     let git_project = git::new("bar", |project| {
         project
             .file("Cargo.toml", &basic_lib_manifest("bar"))
-            .file(
-                "src/bar.rs",
-                r#"
-                pub fn bar() {}
-            "#,
-            )
+            .file("src/bar.rs", "pub fn bar() {}")
     }).unwrap();
 
     let p = project()
@@ -812,11 +776,7 @@ fn recompilation() {
     // Modify a file manually, shouldn't trigger a recompile
     File::create(&git_project.root().join("src/bar.rs"))
         .unwrap()
-        .write_all(
-            br#"
-        pub fn bar() { println!("hello!"); }
-    "#,
-        )
+        .write_all(br#"pub fn bar() { println!("hello!"); }"#)
         .unwrap();
 
     assert_that(p.cargo("build"), execs().with_stdout(""));
@@ -885,12 +845,7 @@ fn update_with_shared_deps() {
     let git_project = git::new("bar", |project| {
         project
             .file("Cargo.toml", &basic_lib_manifest("bar"))
-            .file(
-                "src/bar.rs",
-                r#"
-                pub fn bar() {}
-            "#,
-            )
+            .file("src/bar.rs", "pub fn bar() {}")
     }).unwrap();
 
     let p = project()
@@ -973,11 +928,7 @@ fn update_with_shared_deps() {
     // Modify a file manually, and commit it
     File::create(&git_project.root().join("src/bar.rs"))
         .unwrap()
-        .write_all(
-            br#"
-        pub fn bar() { println!("hello!"); }
-    "#,
-        )
+        .write_all(br#"pub fn bar() { println!("hello!"); }"#)
         .unwrap();
     let repo = git2::Repository::open(&git_project.root()).unwrap();
     let old_head = repo.head().unwrap().target().unwrap();
@@ -1094,13 +1045,7 @@ fn dep_with_submodule() {
                 git_project.url()
             ),
         )
-        .file(
-            "src/lib.rs",
-            "
-            extern crate dep1;
-            pub fn foo() { dep1::dep() }
-        ",
-        )
+        .file("src/lib.rs", "extern crate dep1; pub fn foo() { dep1::dep() }")
         .build();
 
     assert_that(
@@ -1165,13 +1110,7 @@ fn dep_with_bad_submodule() {
                 git_project.url()
             ),
         )
-        .file(
-            "src/lib.rs",
-            "
-            extern crate dep1;
-            pub fn foo() { dep1::dep() }
-        ",
-        )
+        .file("src/lib.rs", "extern crate dep1; pub fn foo() { dep1::dep() }")
         .build();
 
     let expected = format!(
@@ -1249,11 +1188,7 @@ fn two_deps_only_update_one() {
 
     File::create(&git1.root().join("src/lib.rs"))
         .unwrap()
-        .write_all(
-            br#"
-        pub fn foo() {}
-    "#,
-        )
+        .write_all(br#"pub fn foo() {}"#)
         .unwrap();
     let repo = git2::Repository::open(&git1.root()).unwrap();
     git::add(&repo);
@@ -1313,11 +1248,7 @@ fn stale_cached_version() {
     // us pulling it down.
     File::create(&bar.root().join("src/lib.rs"))
         .unwrap()
-        .write_all(
-            br#"
-        pub fn bar() -> i32 { 1 + 0 }
-    "#,
-        )
+        .write_all(br#"pub fn bar() -> i32 { 1 + 0 }"#)
         .unwrap();
     let repo = git2::Repository::open(&bar.root()).unwrap();
     git::add(&repo);
@@ -1577,12 +1508,7 @@ fn git_build_cmd_freshness() {
             )
             .file("build.rs", "fn main() {}")
             .file("src/lib.rs", "pub fn bar() -> i32 { 1 }")
-            .file(
-                ".gitignore",
-                "
-            src/bar.rs
-        ",
-            )
+            .file(".gitignore", "src/bar.rs")
     }).unwrap();
     foo.root().move_into_the_past();
 
@@ -1707,11 +1633,7 @@ fn git_repo_changing_no_rebuild() {
     // Make a commit to lock p2 to a different rev
     File::create(&bar.root().join("src/lib.rs"))
         .unwrap()
-        .write_all(
-            br#"
-        pub fn bar() -> i32 { 2 }
-    "#,
-        )
+        .write_all(br#"pub fn bar() -> i32 { 2 }"#)
         .unwrap();
     let repo = git2::Repository::open(&bar.root()).unwrap();
     git::add(&repo);
@@ -2171,11 +2093,7 @@ fn update_one_source_updates_all_packages_in_that_git_source() {
     // Just be sure to change a file
     File::create(&dep.root().join("src/lib.rs"))
         .unwrap()
-        .write_all(
-            br#"
-        pub fn bar() -> i32 { 2 }
-    "#,
-        )
+        .write_all(br#"pub fn bar() -> i32 { 2 }"#)
         .unwrap();
     git::add(&repo);
     git::commit(&repo);
@@ -2608,13 +2526,7 @@ fn include_overrides_gitignore() {
             }
         "#,
             )
-            .file(
-                "src/lib.rs",
-                r#"
-            mod not_incl;
-            mod incl;
-        "#,
-            )
+            .file("src/lib.rs", "mod not_incl; mod incl;")
             .file(
                 "src/mod.md",
                 r#"
@@ -2745,10 +2657,7 @@ fn invalid_git_dependency_manifest() {
                 git_project.url()
             ),
         )
-        .file(
-            "src/main.rs",
-            &main_file(r#""{}", dep1::hello()"#, &["dep1"]),
-        )
+        .file("src/main.rs", &main_file(r#""{}", dep1::hello()"#, &["dep1"]))
         .build();
 
     let git_root = git_project.root();

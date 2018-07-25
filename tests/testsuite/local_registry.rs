@@ -42,15 +42,7 @@ fn simple() {
             bar = "0.0.1"
         "#,
         )
-        .file(
-            "src/lib.rs",
-            r#"
-            extern crate bar;
-            pub fn foo() {
-                bar::bar();
-            }
-        "#,
-        )
+        .file("src/lib.rs", "extern crate bar; pub fn foo() { bar::bar(); }")
         .build();
 
     assert_that(
@@ -94,15 +86,7 @@ fn multiple_versions() {
             bar = "*"
         "#,
         )
-        .file(
-            "src/lib.rs",
-            r#"
-            extern crate bar;
-            pub fn foo() {
-                bar::bar();
-            }
-        "#,
-        )
+        .file("src/lib.rs", "extern crate bar; pub fn foo() { bar::bar(); }")
         .build();
 
     assert_that(
@@ -452,15 +436,7 @@ fn crates_io_registry_url_is_optional() {
             bar = "0.0.1"
         "#,
         )
-        .file(
-            "src/lib.rs",
-            r#"
-            extern crate bar;
-            pub fn foo() {
-                bar::bar();
-            }
-        "#,
-        )
+        .file("src/lib.rs", "extern crate bar; pub fn foo() { bar::bar(); }")
         .build();
 
     assert_that(

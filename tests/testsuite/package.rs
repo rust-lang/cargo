@@ -23,9 +23,7 @@ fn simple() {
             license = "MIT"
             description = "foo"
         "#)
-        .file("src/main.rs", r#"
-            fn main() { println!("hello"); }
-        "#)
+        .file("src/main.rs", r#"fn main() { println!("hello"); }"#)
         .file("src/bar.txt", "") // should be ignored when packaging
         .build();
 
@@ -79,12 +77,7 @@ src[/]main.rs
 #[test]
 fn metadata_warning() {
     let p = project()
-        .file(
-            "src/main.rs",
-            r#"
-            fn main() {}
-        "#,
-        )
+        .file("src/main.rs", "fn main() {}")
         .build();
     assert_that(
         p.cargo("package"),
@@ -113,12 +106,7 @@ See http://doc.crates.io/manifest.html#package-metadata for more info.
             license = "MIT"
         "#,
         )
-        .file(
-            "src/main.rs",
-            r#"
-            fn main() {}
-        "#,
-        )
+        .file("src/main.rs", "fn main() {}")
         .build();
     assert_that(
         p.cargo("package"),
@@ -148,12 +136,7 @@ See http://doc.crates.io/manifest.html#package-metadata for more info.
             repository = "bar"
         "#,
         )
-        .file(
-            "src/main.rs",
-            r#"
-            fn main() {}
-        "#,
-        )
+        .file("src/main.rs", "fn main() {}")
         .build();
     assert_that(
         p.cargo("package"),
@@ -174,12 +157,7 @@ fn package_verbose() {
     let root = paths::root().join("all");
     let p = git::repo(&root)
         .file("Cargo.toml", &basic_manifest("foo", "0.0.1"))
-        .file(
-            "src/main.rs",
-            r#"
-            fn main() {}
-        "#,
-        )
+        .file("src/main.rs", "fn main() {}")
         .file("a/Cargo.toml", &basic_manifest("a", "0.0.1"))
         .file("a/src/lib.rs", "")
         .build();
@@ -223,12 +201,7 @@ See http://doc.crates.io/manifest.html#package-metadata for more info.
 #[test]
 fn package_verification() {
     let p = project()
-        .file(
-            "src/main.rs",
-            r#"
-            fn main() {}
-        "#,
-        )
+        .file("src/main.rs", "fn main() {}")
         .build();
     assert_that(p.cargo("build"), execs().with_status(0));
     assert_that(
@@ -318,9 +291,7 @@ fn exclude() {
                 "dir_deep_5/**",     # CHANGING (packaged -> ignored)
             ]
         "#)
-        .file("src/main.rs", r#"
-            fn main() { println!("hello"); }
-        "#)
+        .file("src/main.rs", r#"fn main() { println!("hello"); }"#)
         .file("bar.txt", "")
         .file("src/bar.txt", "")
         // file in root
@@ -434,9 +405,7 @@ fn include() {
             include = ["foo.txt", "**/*.rs", "Cargo.toml"]
         "#)
         .file("foo.txt", "")
-        .file("src/main.rs", r#"
-            fn main() { println!("hello"); }
-        "#)
+        .file("src/main.rs", r#"fn main() { println!("hello"); }"#)
         .file("src/bar.txt", "") // should be ignored when packaging
         .build();
 
@@ -458,13 +427,7 @@ See http://doc.crates.io/manifest.html#package-metadata for more info.
 #[test]
 fn package_lib_with_bin() {
     let p = project()
-        .file(
-            "src/main.rs",
-            r#"
-            extern crate foo;
-            fn main() {}
-        "#,
-        )
+        .file("src/main.rs", "extern crate foo; fn main() {}")
         .file("src/lib.rs", "")
         .build();
 
@@ -522,20 +485,11 @@ fn no_duplicates_from_modified_tracked_files() {
     let root = paths::root().join("all");
     let p = git::repo(&root)
         .file("Cargo.toml", &basic_manifest("foo", "0.0.1"))
-        .file(
-            "src/main.rs",
-            r#"
-            fn main() {}
-        "#,
-        )
+        .file("src/main.rs", "fn main() {}")
         .build();
     File::create(p.root().join("src/main.rs"))
         .unwrap()
-        .write_all(
-            br#"
-            fn main() { println!("A change!"); }
-        "#,
-        )
+        .write_all(br#"fn main() { println!("A change!"); }"#)
         .unwrap();
     let mut cargo = cargo_process();
     cargo.cwd(p.root());
@@ -624,12 +578,7 @@ src[..]main.rs
 #[test]
 fn package_weird_characters() {
     let p = project()
-        .file(
-            "src/main.rs",
-            r#"
-            fn main() { println!("hello"); }
-        "#,
-        )
+        .file("src/main.rs", r#"fn main() { println!("hello"); }"#)
         .file("src/:foo", "")
         .build();
 
@@ -652,12 +601,7 @@ Caused by:
 #[test]
 fn repackage_on_source_change() {
     let p = project()
-        .file(
-            "src/main.rs",
-            r#"
-            fn main() { println!("hello"); }
-        "#,
-        )
+        .file("src/main.rs", r#"fn main() { println!("hello"); }"#)
         .build();
 
     assert_that(p.cargo("package"), execs().with_status(0));
@@ -671,11 +615,7 @@ fn repackage_on_source_change() {
         )
     });
 
-    file.write_all(
-        br#"
-        fn main() { println!("foo"); }
-    "#,
-    ).unwrap();
+    file.write_all(br#"fn main() { println!("foo"); }"#).unwrap();
     std::mem::drop(file);
 
     let mut pro = process(&cargo_exe());
@@ -733,12 +673,7 @@ fn broken_symlink() {
             repository = 'foo'
         "#,
         )
-        .file(
-            "src/main.rs",
-            r#"
-            fn main() { println!("hello"); }
-        "#,
-        )
+        .file("src/main.rs", r#"fn main() { println!("hello"); }"#)
         .build();
     t!(fs::symlink("nowhere", &p.root().join("src/foo.rs")));
 
@@ -1335,9 +1270,7 @@ fn lock_file_and_workspace() {
 #[test]
 fn do_not_package_if_src_was_modified() {
     let p = project()
-        .file("src/main.rs", r#"
-            fn main() { println!("hello"); }
-        "#)
+        .file("src/main.rs", r#"fn main() { println!("hello"); }"#)
         .file("build.rs", r#"
             use std::fs::File;
             use std::io::Write;

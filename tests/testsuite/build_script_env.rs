@@ -7,12 +7,7 @@ use support::hamcrest::assert_that;
 #[test]
 fn rerun_if_env_changes() {
     let p = project()
-        .file(
-            "src/main.rs",
-            r#"
-            fn main() {}
-        "#,
-        )
+        .file("src/main.rs", "fn main() {}")
         .file(
             "build.rs",
             r#"
@@ -68,12 +63,7 @@ fn rerun_if_env_changes() {
 #[test]
 fn rerun_if_env_or_file_changes() {
     let p = project()
-        .file(
-            "src/main.rs",
-            r#"
-            fn main() {}
-        "#,
-        )
+        .file("src/main.rs", "fn main() {}")
         .file(
             "build.rs",
             r#"

@@ -12,15 +12,7 @@ use support::hamcrest::assert_that;
 fn replace() {
     Package::new("bar", "0.1.0").publish();
     Package::new("baz", "0.1.0")
-        .file(
-            "src/lib.rs",
-            r#"
-            extern crate bar;
-            pub fn baz() {
-                bar::bar();
-            }
-        "#,
-        )
+        .file("src/lib.rs", "extern crate bar; pub fn baz() { bar::bar(); }")
         .dep("bar", "0.1.0")
         .publish();
 
@@ -53,12 +45,7 @@ fn replace() {
         ",
         )
         .file("bar/Cargo.toml", &basic_manifest("bar", "0.1.0"))
-        .file(
-            "bar/src/lib.rs",
-            r#"
-            pub fn bar() {}
-        "#,
-        )
+        .file("bar/src/lib.rs", "pub fn bar() {}")
         .build();
 
     assert_that(
@@ -101,22 +88,9 @@ fn nonexistent() {
             bar = { path = "bar" }
         "#,
         )
-        .file(
-            "src/lib.rs",
-            "
-            extern crate bar;
-            pub fn foo() {
-                bar::bar();
-            }
-        ",
-        )
+        .file("src/lib.rs", "extern crate bar; pub fn foo() { bar::bar(); }")
         .file("bar/Cargo.toml", &basic_manifest("bar", "0.1.0"))
-        .file(
-            "bar/src/lib.rs",
-            r#"
-            pub fn bar() {}
-        "#,
-        )
+        .file("bar/src/lib.rs", "pub fn bar() {}")
         .build();
 
     assert_that(
@@ -162,22 +136,9 @@ fn patch_git() {
                 bar.url()
             ),
         )
-        .file(
-            "src/lib.rs",
-            "
-            extern crate bar;
-            pub fn foo() {
-                bar::bar();
-            }
-        ",
-        )
+        .file("src/lib.rs", "extern crate bar; pub fn foo() { bar::bar(); }")
         .file("bar/Cargo.toml", &basic_manifest("bar", "0.1.0"))
-        .file(
-            "bar/src/lib.rs",
-            r#"
-            pub fn bar() {}
-        "#,
-        )
+        .file("bar/src/lib.rs", "pub fn bar() {}")
         .build();
 
     assert_that(
@@ -225,15 +186,7 @@ fn patch_to_git() {
                 bar.url()
             ),
         )
-        .file(
-            "src/lib.rs",
-            "
-            extern crate bar;
-            pub fn foo() {
-                bar::bar();
-            }
-        ",
-        )
+        .file("src/lib.rs", "extern crate bar; pub fn foo() { bar::bar(); }")
         .build();
 
     assert_that(
@@ -276,12 +229,7 @@ fn unused() {
         )
         .file("src/lib.rs", "")
         .file("bar/Cargo.toml", &basic_manifest("bar", "0.2.0"))
-        .file(
-            "bar/src/lib.rs",
-            r#"
-            not rust code
-        "#,
-        )
+        .file("bar/src/lib.rs", "not rust code")
         .build();
 
     assert_that(
@@ -984,13 +932,7 @@ fn replace_prerelease() {
             baz = "1.1.0-pre.1"
         "#,
         )
-        .file(
-            "bar/src/main.rs",
-            "
-            extern crate baz;
-            fn main() { baz::baz() }
-        ",
-        )
+        .file("bar/src/main.rs", "extern crate baz; fn main() { baz::baz() }")
         .file(
             "baz/Cargo.toml",
             r#"
