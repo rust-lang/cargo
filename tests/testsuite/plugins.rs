@@ -2,7 +2,7 @@ use std::fs;
 use std::env;
 
 use support::{is_nightly, rustc_host};
-use support::{execs, project};
+use support::{basic_manifest, execs, project};
 use support::hamcrest::assert_that;
 
 #[test]
@@ -458,15 +458,7 @@ fn shared_panic_abort_plugins() {
             extern crate baz;
         "#,
         )
-        .file(
-            "baz/Cargo.toml",
-            r#"
-            [package]
-            name = "baz"
-            version = "0.0.1"
-            authors = []
-        "#,
-        )
+        .file("baz/Cargo.toml", &basic_manifest("baz", "0.0.1"))
         .file("baz/src/lib.rs", "")
         .build();
 

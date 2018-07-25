@@ -3,7 +3,7 @@ use std::fs::{self, File};
 use std::io::{Read, Write};
 
 use support::sleep_ms;
-use support::{basic_lib_manifest, execs, git, project};
+use support::{basic_manifest, basic_lib_manifest, execs, git, project};
 use support::registry::Package;
 use support::hamcrest::{assert_that, existing_dir, existing_file, is_not};
 
@@ -102,15 +102,7 @@ fn inferred_root() {
         "#,
         )
         .file("src/main.rs", "fn main() {}")
-        .file(
-            "bar/Cargo.toml",
-            r#"
-            [project]
-            name = "bar"
-            version = "0.1.0"
-            authors = []
-        "#,
-        )
+        .file("bar/Cargo.toml", &basic_manifest("bar", "0.1.0"))
         .file("bar/src/main.rs", "fn main() {}");
     let p = p.build();
 
@@ -147,15 +139,7 @@ fn inferred_path_dep() {
         "#,
         )
         .file("src/main.rs", "fn main() {}")
-        .file(
-            "bar/Cargo.toml",
-            r#"
-            [project]
-            name = "bar"
-            version = "0.1.0"
-            authors = []
-        "#,
-        )
+        .file("bar/Cargo.toml", &basic_manifest("bar", "0.1.0"))
         .file("bar/src/main.rs", "fn main() {}")
         .file("bar/src/lib.rs", "");
     let p = p.build();
@@ -207,15 +191,7 @@ fn transitive_path_dep() {
         )
         .file("bar/src/main.rs", "fn main() {}")
         .file("bar/src/lib.rs", "")
-        .file(
-            "baz/Cargo.toml",
-            r#"
-            [project]
-            name = "baz"
-            version = "0.1.0"
-            authors = []
-        "#,
-        )
+        .file("baz/Cargo.toml", &basic_manifest("baz", "0.1.0"))
         .file("baz/src/main.rs", "fn main() {}")
         .file("baz/src/lib.rs", "");
     let p = p.build();
@@ -346,15 +322,7 @@ fn parent_doesnt_point_to_child() {
         "#,
         )
         .file("src/main.rs", "fn main() {}")
-        .file(
-            "bar/Cargo.toml",
-            r#"
-            [project]
-            name = "bar"
-            version = "0.1.0"
-            authors = []
-        "#,
-        )
+        .file("bar/Cargo.toml", &basic_manifest("bar", "0.1.0"))
         .file("bar/src/main.rs", "fn main() {}");
     let p = p.build();
 
@@ -509,15 +477,7 @@ fn workspace_isnt_root() {
         "#,
         )
         .file("src/main.rs", "fn main() {}")
-        .file(
-            "bar/Cargo.toml",
-            r#"
-            [project]
-            name = "bar"
-            version = "0.1.0"
-            authors = []
-        "#,
-        )
+        .file("bar/Cargo.toml", &basic_manifest("bar", "0.1.0"))
         .file("bar/src/main.rs", "fn main() {}");
     let p = p.build();
 
@@ -788,15 +748,7 @@ fn virtual_works() {
             members = ["bar"]
         "#,
         )
-        .file(
-            "bar/Cargo.toml",
-            r#"
-            [project]
-            name = "bar"
-            version = "0.1.0"
-            authors = []
-        "#,
-        )
+        .file("bar/Cargo.toml", &basic_manifest("bar", "0.1.0"))
         .file("bar/src/main.rs", "fn main() {}");
     let p = p.build();
     assert_that(
@@ -818,15 +770,7 @@ fn explicit_package_argument_works_with_virtual_manifest() {
             members = ["bar"]
         "#,
         )
-        .file(
-            "bar/Cargo.toml",
-            r#"
-            [project]
-            name = "bar"
-            version = "0.1.0"
-            authors = []
-        "#,
-        )
+        .file("bar/Cargo.toml", &basic_manifest("bar", "0.1.0"))
         .file("bar/src/main.rs", "fn main() {}");
     let p = p.build();
     assert_that(
@@ -847,15 +791,7 @@ fn virtual_misconfigure() {
             [workspace]
         "#,
         )
-        .file(
-            "bar/Cargo.toml",
-            r#"
-            [project]
-            name = "bar"
-            version = "0.1.0"
-            authors = []
-        "#,
-        )
+        .file("bar/Cargo.toml", &basic_manifest("bar", "0.1.0"))
         .file("bar/src/main.rs", "fn main() {}");
     let p = p.build();
     assert_that(
@@ -883,15 +819,7 @@ fn virtual_build_all_implied() {
             members = ["bar"]
         "#,
         )
-        .file(
-            "bar/Cargo.toml",
-            r#"
-            [project]
-            name = "bar"
-            version = "0.1.0"
-            authors = []
-        "#,
-        )
+        .file("bar/Cargo.toml", &basic_manifest("bar", "0.1.0"))
         .file("bar/src/main.rs", "fn main() {}");
     let p = p.build();
     assert_that(p.cargo("build"), execs().with_status(0));
@@ -908,24 +836,8 @@ fn virtual_default_members() {
             default-members = ["bar"]
         "#,
         )
-        .file(
-            "bar/Cargo.toml",
-            r#"
-            [project]
-            name = "bar"
-            version = "0.1.0"
-            authors = []
-        "#,
-        )
-        .file(
-            "baz/Cargo.toml",
-            r#"
-            [project]
-            name = "baz"
-            version = "0.1.0"
-            authors = []
-        "#,
-        )
+        .file("bar/Cargo.toml", &basic_manifest("bar", "0.1.0"))
+        .file("baz/Cargo.toml", &basic_manifest("baz", "0.1.0"))
         .file("bar/src/main.rs", "fn main() {}")
         .file("baz/src/main.rs", "fn main() {}");
     let p = p.build();
@@ -945,15 +857,7 @@ fn virtual_default_member_is_not_a_member() {
             default-members = ["something-else"]
         "#,
         )
-        .file(
-            "bar/Cargo.toml",
-            r#"
-            [project]
-            name = "bar"
-            version = "0.1.0"
-            authors = []
-        "#,
-        )
+        .file("bar/Cargo.toml", &basic_manifest("bar", "0.1.0"))
         .file("bar/src/main.rs", "fn main() {}");
     let p = p.build();
     assert_that(
@@ -1053,25 +957,9 @@ fn members_include_path_deps() {
         "#,
         )
         .file("p1/src/lib.rs", "")
-        .file(
-            "p2/Cargo.toml",
-            r#"
-            [project]
-            name = "p2"
-            version = "0.1.0"
-            authors = []
-        "#,
-        )
+        .file("p2/Cargo.toml", &basic_manifest("p2", "0.1.0"))
         .file("p2/src/lib.rs", "")
-        .file(
-            "p3/Cargo.toml",
-            r#"
-            [project]
-            name = "p3"
-            version = "0.1.0"
-            authors = []
-        "#,
-        )
+        .file("p3/Cargo.toml", &basic_manifest("p3", "0.1.0"))
         .file("p3/src/lib.rs", "");
     let p = p.build();
 
@@ -1194,14 +1082,7 @@ fn rebuild_please() {
             members = ['lib', 'bin']
         "#,
         )
-        .file(
-            "lib/Cargo.toml",
-            r#"
-            [package]
-            name = "lib"
-            version = "0.1.0"
-        "#,
-        )
+        .file("lib/Cargo.toml", &basic_manifest("lib", "0.1.0"))
         .file(
             "lib/src/lib.rs",
             r#"
@@ -1266,14 +1147,7 @@ fn workspace_in_git() {
                 members = ["foo"]
             "#,
             )
-            .file(
-                "foo/Cargo.toml",
-                r#"
-                [package]
-                name = "foo"
-                version = "0.1.0"
-            "#,
-            )
+            .file("foo/Cargo.toml", &basic_manifest("foo", "0.1.0"))
             .file("foo/src/lib.rs", "")
     }).unwrap();
     let p = project()
@@ -1312,15 +1186,7 @@ fn lockfile_can_specify_nonexistant_members() {
             members = ["a"]
         "#,
         )
-        .file(
-            "a/Cargo.toml",
-            r#"
-            [project]
-            name = "a"
-            version = "0.1.0"
-            authors = []
-        "#,
-        )
+        .file("a/Cargo.toml", &basic_manifest("a", "0.1.0"))
         .file("a/src/main.rs", "fn main() {}")
         .file(
             "Cargo.lock",
@@ -1352,15 +1218,7 @@ fn you_cannot_generate_lockfile_for_empty_workspaces() {
             [workspace]
         "#,
         )
-        .file(
-            "bar/Cargo.toml",
-            r#"
-            [project]
-            name = "foo"
-            version = "0.1.0"
-            authors = []
-        "#,
-        )
+        .file("bar/Cargo.toml", &basic_manifest("foo", "0.1.0"))
         .file("bar/src/main.rs", "fn main() {}");
     let p = p.build();
 
@@ -1416,15 +1274,7 @@ fn workspace_with_transitive_dev_deps() {
             }
         "#,
         )
-        .file(
-            "baz/Cargo.toml",
-            r#"
-            [project]
-            name = "baz"
-            version = "0.5.0"
-            authors = ["mbrubeck@example.com"]
-        "#,
-        )
+        .file("baz/Cargo.toml", &basic_manifest("baz", "0.5.0"))
         .file("baz/src/lib.rs", r#"pub fn do_stuff() {}"#);
     let p = p.build();
 
@@ -1435,15 +1285,7 @@ fn workspace_with_transitive_dev_deps() {
 fn error_if_parent_cargo_toml_is_invalid() {
     let p = project()
         .file("Cargo.toml", "Totally not a TOML file")
-        .file(
-            "bar/Cargo.toml",
-            r#"
-            [project]
-            name = "bar"
-            version = "0.1.0"
-            authors = []
-        "#,
-        )
+        .file("bar/Cargo.toml", &basic_manifest("bar", "0.1.0"))
         .file("bar/src/main.rs", "fn main() {}");
     let p = p.build();
 
@@ -1512,15 +1354,7 @@ fn relative_path_for_root_works() {
     "#,
         )
         .file("src/main.rs", "fn main() {}")
-        .file(
-            "subproj/Cargo.toml",
-            r#"
-        [project]
-        name = "subproj"
-        version = "0.1.0"
-        authors = []
-    "#,
-        )
+        .file("subproj/Cargo.toml", &basic_manifest("subproj", "0.1.0"))
         .file("subproj/src/main.rs", "fn main() {}");
     let p = p.build();
 
@@ -1560,15 +1394,7 @@ fn path_dep_outside_workspace_is_not_member() {
         "#,
         )
         .file("ws/src/lib.rs", r"extern crate foo;")
-        .file(
-            "foo/Cargo.toml",
-            r#"
-            [project]
-            name = "foo"
-            version = "0.1.0"
-            authors = []
-        "#,
-        )
+        .file("foo/Cargo.toml", &basic_manifest("foo", "0.1.0"))
         .file("foo/src/lib.rs", "");
     let p = p.build();
 
@@ -1690,15 +1516,7 @@ fn test_path_dependency_under_member() {
             "foo/src/lib.rs",
             "extern crate bar; pub fn f() { bar::f() }",
         )
-        .file(
-            "foo/bar/Cargo.toml",
-            r#"
-            [project]
-            name = "bar"
-            version = "0.1.0"
-            authors = []
-        "#,
-        )
+        .file("foo/bar/Cargo.toml", &basic_manifest("bar", "0.1.0"))
         .file("foo/bar/src/lib.rs", "pub fn f() { }");
     let p = p.build();
 
@@ -1741,15 +1559,7 @@ fn excluded_simple() {
         "#,
         )
         .file("src/lib.rs", "")
-        .file(
-            "foo/Cargo.toml",
-            r#"
-            [project]
-            name = "foo"
-            version = "0.1.0"
-            authors = []
-        "#,
-        )
+        .file("foo/Cargo.toml", &basic_manifest("foo", "0.1.0"))
         .file("foo/src/lib.rs", "");
     let p = p.build();
 
@@ -1779,25 +1589,9 @@ fn exclude_members_preferred() {
         "#,
         )
         .file("src/lib.rs", "")
-        .file(
-            "foo/Cargo.toml",
-            r#"
-            [project]
-            name = "foo"
-            version = "0.1.0"
-            authors = []
-        "#,
-        )
+        .file("foo/Cargo.toml", &basic_manifest("foo", "0.1.0"))
         .file("foo/src/lib.rs", "")
-        .file(
-            "foo/bar/Cargo.toml",
-            r#"
-            [project]
-            name = "bar"
-            version = "0.1.0"
-            authors = []
-        "#,
-        )
+        .file("foo/bar/Cargo.toml", &basic_manifest("bar", "0.1.0"))
         .file("foo/bar/src/lib.rs", "");
     let p = p.build();
 
@@ -1834,25 +1628,9 @@ fn exclude_but_also_depend() {
         "#,
         )
         .file("src/lib.rs", "")
-        .file(
-            "foo/Cargo.toml",
-            r#"
-            [project]
-            name = "foo"
-            version = "0.1.0"
-            authors = []
-        "#,
-        )
+        .file("foo/Cargo.toml", &basic_manifest("foo", "0.1.0"))
         .file("foo/src/lib.rs", "")
-        .file(
-            "foo/bar/Cargo.toml",
-            r#"
-            [project]
-            name = "bar"
-            version = "0.1.0"
-            authors = []
-        "#,
-        )
+        .file("foo/bar/Cargo.toml", &basic_manifest("bar", "0.1.0"))
         .file("foo/bar/src/lib.rs", "");
     let p = p.build();
 
@@ -2159,14 +1937,7 @@ fn dep_used_with_separate_features() {
 fn dont_recurse_out_of_cargo_home() {
     let git_project = git::new("dep", |project| {
         project
-            .file(
-                "Cargo.toml",
-                r#"
-                [package]
-                name = "dep"
-                version = "0.1.0"
-            "#,
-            )
+            .file("Cargo.toml", &basic_manifest("dep", "0.1.0"))
             .file("src/lib.rs", "")
             .file(
                 "build.rs",
@@ -2226,19 +1997,9 @@ fn include_and_exclude() {
             members = ["foo"]
             exclude = ["foo/bar"]
             "#)
-        .file("foo/Cargo.toml", r#"
-            [project]
-            name = "foo"
-            version = "0.1.0"
-            authors = []
-            "#)
+        .file("foo/Cargo.toml", &basic_manifest("foo", "0.1.0"))
         .file("foo/src/lib.rs", "")
-        .file("foo/bar/Cargo.toml", r#"
-            [project]
-            name = "bar"
-            version = "0.1.0"
-            authors = []
-            "#)
+        .file("foo/bar/Cargo.toml", &basic_manifest("bar", "0.1.0"))
         .file("foo/bar/src/lib.rs", "");
     p.build();
 
@@ -2267,14 +2028,7 @@ fn cargo_home_at_root_works() {
         "#,
         )
         .file("src/lib.rs", "")
-        .file(
-            "a/Cargo.toml",
-            r#"
-            [package]
-            name = "a"
-            version = "0.1.0"
-        "#,
-        )
+        .file("a/Cargo.toml", &basic_manifest("a", "0.1.0"))
         .file("a/src/lib.rs", "");
     let p = p.build();
 

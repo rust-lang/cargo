@@ -5,7 +5,7 @@ use std::path::{Path, PathBuf};
 
 use git2;
 use support::{cargo_process, process, sleep_ms, ChannelChanger};
-use support::{cargo_exe, execs, git, paths, project, registry, path2url};
+use support::{basic_manifest, cargo_exe, execs, git, paths, project, registry, path2url};
 use support::registry::Package;
 use flate2::read::GzDecoder;
 use support::hamcrest::{assert_that, contains, existing_file};
@@ -173,30 +173,14 @@ See http://doc.crates.io/manifest.html#package-metadata for more info.
 fn package_verbose() {
     let root = paths::root().join("all");
     let p = git::repo(&root)
-        .file(
-            "Cargo.toml",
-            r#"
-            [project]
-            name = "foo"
-            version = "0.0.1"
-            authors = []
-        "#,
-        )
+        .file("Cargo.toml", &basic_manifest("foo", "0.0.1"))
         .file(
             "src/main.rs",
             r#"
             fn main() {}
         "#,
         )
-        .file(
-            "a/Cargo.toml",
-            r#"
-            [project]
-            name = "a"
-            version = "0.0.1"
-            authors = []
-        "#,
-        )
+        .file("a/Cargo.toml", &basic_manifest("a", "0.0.1"))
         .file("a/src/lib.rs", "")
         .build();
     let mut cargo = cargo_process();
@@ -281,15 +265,7 @@ fn path_dependency_no_version() {
         "#,
         )
         .file("src/main.rs", "fn main() {}")
-        .file(
-            "bar/Cargo.toml",
-            r#"
-            [package]
-            name = "bar"
-            version = "0.0.1"
-            authors = []
-        "#,
-        )
+        .file("bar/Cargo.toml", &basic_manifest("bar", "0.1.0"))
         .file("bar/src/lib.rs", "")
         .build();
 
@@ -545,15 +521,7 @@ fn package_git_submodule() {
 fn no_duplicates_from_modified_tracked_files() {
     let root = paths::root().join("all");
     let p = git::repo(&root)
-        .file(
-            "Cargo.toml",
-            r#"
-            [project]
-            name = "foo"
-            version = "0.0.1"
-            authors = []
-        "#,
-        )
+        .file("Cargo.toml", &basic_manifest("foo", "0.0.1"))
         .file(
             "src/main.rs",
             r#"
@@ -876,15 +844,7 @@ fn generated_manifest() {
         "#,
         )
         .file("src/main.rs", "")
-        .file(
-            "bar/Cargo.toml",
-            r#"
-            [package]
-            name = "bar"
-            version = "0.1.0"
-            authors = []
-        "#,
-        )
+        .file("bar/Cargo.toml", &basic_manifest("bar", "0.1.0"))
         .file("bar/src/lib.rs", "")
         .build();
 

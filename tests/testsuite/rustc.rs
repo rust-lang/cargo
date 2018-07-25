@@ -1,4 +1,4 @@
-use support::{basic_bin_manifest, basic_lib_manifest, execs, project};
+use support::{basic_manifest, basic_bin_manifest, basic_lib_manifest, execs, project};
 use support::hamcrest::assert_that;
 
 const CARGO_RUSTC_ERROR: &'static str =
@@ -259,15 +259,7 @@ fn build_foo_with_bar_dependency() {
         )
         .build();
     let _bar = project().at("bar")
-        .file(
-            "Cargo.toml",
-            r#"
-            [package]
-            name = "bar"
-            version = "0.1.0"
-            authors = []
-        "#,
-        )
+        .file("Cargo.toml", &basic_manifest("bar", "0.1.0"))
         .file(
             "src/lib.rs",
             r#"
@@ -321,15 +313,7 @@ fn build_only_bar_dependency() {
         )
         .build();
     let _bar = project().at("bar")
-        .file(
-            "Cargo.toml",
-            r#"
-            [package]
-            name = "bar"
-            version = "0.1.0"
-            authors = []
-        "#,
-        )
+        .file("Cargo.toml", &basic_manifest("bar", "0.1.0"))
         .file(
             "src/lib.rs",
             r#"
@@ -423,15 +407,7 @@ fn fail_with_multiple_packages() {
         .build();
 
     let _bar = project().at("bar")
-        .file(
-            "Cargo.toml",
-            r#"
-            [package]
-            name = "bar"
-            version = "0.1.0"
-            authors = []
-        "#,
-        )
+        .file("Cargo.toml", &basic_manifest("bar", "0.1.0"))
         .file(
             "src/main.rs",
             r#"
@@ -443,15 +419,7 @@ fn fail_with_multiple_packages() {
         .build();
 
     let _baz = project().at("baz")
-        .file(
-            "Cargo.toml",
-            r#"
-            [package]
-            name = "baz"
-            version = "0.1.0"
-            authors = []
-        "#,
-        )
+        .file("Cargo.toml", &basic_manifest("baz", "0.1.0"))
         .file(
             "src/main.rs",
             r#"
@@ -497,15 +465,7 @@ fn rustc_with_other_profile() {
             fn foo() {}
         "#,
         )
-        .file(
-            "a/Cargo.toml",
-            r#"
-            [package]
-            name = "a"
-            version = "0.1.0"
-            authors = []
-        "#,
-        )
+        .file("a/Cargo.toml", &basic_manifest("a", "0.1.0"))
         .file("a/src/lib.rs", "")
         .build();
 

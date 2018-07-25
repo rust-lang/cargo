@@ -2,7 +2,7 @@ use std::io::Write;
 use std::fs::{self, File};
 
 use support::rustc_host;
-use support::{basic_lib_manifest, execs, paths, project, project_in_home};
+use support::{basic_manifest, basic_lib_manifest, execs, paths, project, project_in_home};
 use support::hamcrest::assert_that;
 
 #[test]
@@ -105,14 +105,7 @@ fn env_rustflags_build_script_dep() {
         )
         .build();
     let _bar = project().at("bar")
-        .file(
-            "Cargo.toml",
-            r#"
-            [package]
-            name = "bar"
-            version = "0.0.1"
-        "#,
-        )
+        .file("Cargo.toml", &basic_manifest("bar", "0.0.1"))
         .file(
             "src/lib.rs",
             r#"
@@ -331,14 +324,7 @@ fn env_rustflags_build_script_dep_with_target() {
         )
         .build();
     let _bar = project().at("bar")
-        .file(
-            "Cargo.toml",
-            r#"
-            [package]
-            name = "bar"
-            version = "0.0.1"
-        "#,
-        )
+        .file("Cargo.toml", &basic_manifest("bar", "0.0.1"))
         .file(
             "src/lib.rs",
             r#"
@@ -597,14 +583,7 @@ fn build_rustflags_build_script_dep() {
         )
         .build();
     let _bar = project().at("bar")
-        .file(
-            "Cargo.toml",
-            r#"
-            [package]
-            name = "bar"
-            version = "0.0.1"
-        "#,
-        )
+        .file("Cargo.toml", &basic_manifest("bar", "0.0.1"))
         .file(
             "src/lib.rs",
             r#"
@@ -831,14 +810,7 @@ fn build_rustflags_build_script_dep_with_target() {
         )
         .build();
     let _bar = project().at("bar")
-        .file(
-            "Cargo.toml",
-            r#"
-            [package]
-            name = "bar"
-            version = "0.0.1"
-        "#,
-        )
+        .file("Cargo.toml", &basic_manifest("bar", "0.0.1"))
         .file(
             "src/lib.rs",
             r#"

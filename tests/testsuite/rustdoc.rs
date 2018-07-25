@@ -1,4 +1,4 @@
-use support::{execs, project};
+use support::{basic_manifest, execs, project};
 use support::hamcrest::assert_that;
 
 #[test]
@@ -70,15 +70,7 @@ fn rustdoc_foo_with_bar_dependency() {
         )
         .build();
     let _bar = project().at("bar")
-        .file(
-            "Cargo.toml",
-            r#"
-            [package]
-            name = "bar"
-            version = "0.0.1"
-            authors = []
-        "#,
-        )
+        .file("Cargo.toml", &basic_manifest("bar", "0.0.1"))
         .file(
             "src/lib.rs",
             r#"
@@ -133,15 +125,7 @@ fn rustdoc_only_bar_dependency() {
         )
         .build();
     let _bar = project().at("bar")
-        .file(
-            "Cargo.toml",
-            r#"
-            [package]
-            name = "bar"
-            version = "0.0.1"
-            authors = []
-        "#,
-        )
+        .file("Cargo.toml", &basic_manifest("bar", "0.0.1"))
         .file(
             "src/lib.rs",
             r#"
