@@ -286,20 +286,9 @@ fn no_rebuild_dependency() {
             path = "bar"
         "#,
         )
-        .file(
-            "src/main.rs",
-            r#"
-            extern crate bar;
-            fn main() { bar::bar() }
-        "#,
-        )
+        .file("src/main.rs", "extern crate bar; fn main() { bar::bar() }")
         .file("bar/Cargo.toml", &basic_lib_manifest("bar"))
-        .file(
-            "bar/src/bar.rs",
-            r#"
-            pub fn bar() {}
-        "#,
-        )
+        .file("bar/src/bar.rs", "pub fn bar() {}")
         .build();
     // First time around we should compile both foo and bar
     assert_that(
@@ -350,13 +339,7 @@ fn deep_dependencies_trigger_rebuild() {
             path = "bar"
         "#,
         )
-        .file(
-            "src/main.rs",
-            r#"
-            extern crate bar;
-            fn main() { bar::bar() }
-        "#,
-        )
+        .file("src/main.rs", "extern crate bar; fn main() { bar::bar() }")
         .file(
             "bar/Cargo.toml",
             r#"
@@ -372,20 +355,9 @@ fn deep_dependencies_trigger_rebuild() {
             path = "../baz"
         "#,
         )
-        .file(
-            "bar/src/bar.rs",
-            r#"
-            extern crate baz;
-            pub fn bar() { baz::baz() }
-        "#,
-        )
+        .file("bar/src/bar.rs", "extern crate baz; pub fn bar() { baz::baz() }")
         .file("baz/Cargo.toml", &basic_lib_manifest("baz"))
-        .file(
-            "baz/src/baz.rs",
-            r#"
-            pub fn baz() {}
-        "#,
-        )
+        .file("baz/src/baz.rs", "pub fn baz() {}")
         .build();
     assert_that(
         p.cargo("build"),
@@ -471,13 +443,7 @@ fn no_rebuild_two_deps() {
             path = "baz"
         "#,
         )
-        .file(
-            "src/main.rs",
-            r#"
-            extern crate bar;
-            fn main() { bar::bar() }
-        "#,
-        )
+        .file("src/main.rs", "extern crate bar; fn main() { bar::bar() }")
         .file(
             "bar/Cargo.toml",
             r#"
@@ -493,19 +459,9 @@ fn no_rebuild_two_deps() {
             path = "../baz"
         "#,
         )
-        .file(
-            "bar/src/bar.rs",
-            r#"
-            pub fn bar() {}
-        "#,
-        )
+        .file("bar/src/bar.rs", "pub fn bar() {}")
         .file("baz/Cargo.toml", &basic_lib_manifest("baz"))
-        .file(
-            "baz/src/baz.rs",
-            r#"
-            pub fn baz() {}
-        "#,
-        )
+        .file("baz/src/baz.rs", "pub fn baz() {}")
         .build();
     assert_that(
         p.cargo("build"),
@@ -667,15 +623,9 @@ fn override_self() {
 
     let p = project();
     let root = p.root().clone();
-    let p = p.file(
-        ".cargo/config",
-        &format!(
-            r#"
-            paths = ['{}']
-        "#,
-            root.display()
-        ),
-    ).file(
+    let p = p
+        .file(".cargo/config", &format!("paths = ['{}']", root.display()))
+        .file(
             "Cargo.toml",
             &format!(
                 r#"
@@ -723,9 +673,7 @@ fn override_path_dep() {
         .file(
             ".cargo/config",
             &format!(
-                r#"
-            paths = ['{}', '{}']
-        "#,
+                "paths = ['{}', '{}']",
                 bar.root().join("p1").display(),
                 bar.root().join("p2").display()
             ),
@@ -796,12 +744,7 @@ fn path_dep_build_cmd() {
             }
         "#,
         )
-        .file(
-            "bar/src/bar.rs.in",
-            r#"
-            pub fn gimme() -> i32 { 0 }
-        "#,
-        )
+        .file("bar/src/bar.rs.in", "pub fn gimme() -> i32 { 0 }")
         .build();
     p.root().join("bar").move_into_the_past();
 
@@ -990,12 +933,7 @@ fn override_and_depend() {
         "#,
         )
         .file("b/src/lib.rs", "")
-        .file(
-            "b/.cargo/config",
-            r#"
-            paths = ["../a"]
-        "#,
-        )
+        .file("b/.cargo/config", r#"paths = ["../a"]"#)
         .build();
     assert_that(
         p.cargo("build").cwd(p.root().join("b")),
@@ -1015,12 +953,7 @@ fn missing_path_dependency() {
     let p = project()
         .file("Cargo.toml", &basic_manifest("a", "0.5.0"))
         .file("src/lib.rs", "")
-        .file(
-            ".cargo/config",
-            r#"
-            paths = ["../whoa-this-does-not-exist"]
-        "#,
-        )
+        .file(".cargo/config", r#"paths = ["../whoa-this-does-not-exist"]"#)
         .build();
     assert_that(
         p.cargo("build"),

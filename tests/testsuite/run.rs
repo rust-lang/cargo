@@ -6,12 +6,7 @@ use support::hamcrest::{assert_that, existing_file};
 #[test]
 fn simple() {
     let p = project()
-        .file(
-            "src/main.rs",
-            r#"
-            fn main() { println!("hello"); }
-        "#,
-        )
+        .file("src/main.rs", r#"fn main() { println!("hello"); }"#)
         .build();
 
     assert_that(
@@ -33,12 +28,7 @@ fn simple() {
 #[test]
 fn simple_quiet() {
     let p = project()
-        .file(
-            "src/main.rs",
-            r#"
-            fn main() { println!("hello"); }
-        "#,
-        )
+        .file("src/main.rs", r#"fn main() { println!("hello"); }"#)
         .build();
 
     assert_that(
@@ -55,12 +45,7 @@ fn simple_quiet() {
 #[test]
 fn simple_quiet_and_verbose() {
     let p = project()
-        .file(
-            "src/main.rs",
-            r#"
-            fn main() { println!("hello"); }
-        "#,
-        )
+        .file("src/main.rs", r#"fn main() { println!("hello"); }"#)
         .build();
 
     assert_that(
@@ -81,12 +66,7 @@ fn quiet_and_verbose_config() {
             verbose = true
         "#,
         )
-        .file(
-            "src/main.rs",
-            r#"
-            fn main() { println!("hello"); }
-        "#,
-        )
+        .file("src/main.rs", r#"fn main() { println!("hello"); }"#)
         .build();
 
     assert_that(p.cargo("run").arg("-q"), execs().with_status(0));
@@ -115,12 +95,7 @@ fn simple_with_args() {
 #[test]
 fn exit_code() {
     let p = project()
-        .file(
-            "src/main.rs",
-            r#"
-            fn main() { std::process::exit(2); }
-        "#,
-        )
+        .file("src/main.rs", "fn main() { std::process::exit(2); }")
         .build();
 
     let mut output = String::from(
@@ -141,12 +116,7 @@ fn exit_code() {
 #[test]
 fn exit_code_verbose() {
     let p = project()
-        .file(
-            "src/main.rs",
-            r#"
-            fn main() { std::process::exit(2); }
-        "#,
-        )
+        .file("src/main.rs", "fn main() { std::process::exit(2); }")
         .build();
 
     let mut output = String::from(
@@ -389,18 +359,8 @@ consider adding `cargo-features = ["default-run"]` to the manifest
 fn run_example() {
     let p = project()
         .file("src/lib.rs", "")
-        .file(
-            "examples/a.rs",
-            r#"
-            fn main() { println!("example"); }
-        "#,
-        )
-        .file(
-            "src/bin/a.rs",
-            r#"
-            fn main() { println!("bin"); }
-        "#,
-        )
+        .file("examples/a.rs", r#"fn main() { println!("example"); }"#)
+        .file("src/bin/a.rs", r#"fn main() { println!("bin"); }"#)
         .build();
 
     assert_that(
@@ -434,12 +394,7 @@ fn run_library_example() {
         "#,
         )
         .file("src/lib.rs", "")
-        .file(
-            "examples/bar.rs",
-            r#"
-            fn foo() {}
-        "#,
-        )
+        .file("examples/bar.rs", "fn foo() {}")
         .build();
 
     assert_that(
@@ -480,12 +435,7 @@ fn autodiscover_examples_project(rust_edition: &str, autoexamples: Option<bool>)
                 autoexamples = autoexamples
             ),
         )
-        .file(
-            "examples/a.rs",
-            r#"
-            fn main() { println!("example"); }
-        "#,
-        )
+        .file("examples/a.rs", r#"fn main() { println!("example"); }"#)
         .file(
             "examples/do_magic.rs",
             r#"
@@ -602,18 +552,8 @@ fn run_example_autodiscover_2018() {
 fn run_bins() {
     let p = project()
         .file("src/lib.rs", "")
-        .file(
-            "examples/a.rs",
-            r#"
-            fn main() { println!("example"); }
-        "#,
-        )
-        .file(
-            "src/bin/a.rs",
-            r#"
-            fn main() { println!("bin"); }
-        "#,
-        )
+        .file("examples/a.rs", r#"fn main() { println!("example"); }"#)
+        .file("src/bin/a.rs", r#"fn main() { println!("bin"); }"#)
         .build();
 
     assert_that(
@@ -635,12 +575,7 @@ fn run_with_filename() {
             fn main() { println!("hello a.rs"); }
         "#,
         )
-        .file(
-            "examples/a.rs",
-            r#"
-            fn main() { println!("example"); }
-        "#,
-        )
+        .file("examples/a.rs", r#"fn main() { println!("example"); }"#)
         .build();
 
     assert_that(
@@ -681,18 +616,8 @@ Did you mean `a`?",
 #[test]
 fn either_name_or_example() {
     let p = project()
-        .file(
-            "src/bin/a.rs",
-            r#"
-            fn main() { println!("hello a.rs"); }
-        "#,
-        )
-        .file(
-            "examples/b.rs",
-            r#"
-            fn main() { println!("hello b.rs"); }
-        "#,
-        )
+        .file("src/bin/a.rs", r#"fn main() { println!("hello a.rs"); }"#)
+        .file("examples/b.rs", r#"fn main() { println!("hello b.rs"); }"#)
         .build();
 
     assert_that(
@@ -713,24 +638,9 @@ fn either_name_or_example() {
 fn one_bin_multiple_examples() {
     let p = project()
         .file("src/lib.rs", "")
-        .file(
-            "src/bin/main.rs",
-            r#"
-            fn main() { println!("hello main.rs"); }
-        "#,
-        )
-        .file(
-            "examples/a.rs",
-            r#"
-            fn main() { println!("hello a.rs"); }
-        "#,
-        )
-        .file(
-            "examples/b.rs",
-            r#"
-            fn main() { println!("hello b.rs"); }
-        "#,
-        )
+        .file("src/bin/main.rs", r#"fn main() { println!("hello main.rs"); }"#)
+        .file("examples/a.rs", r#"fn main() { println!("hello a.rs"); }"#)
+        .file("examples/b.rs", r#"fn main() { println!("hello b.rs"); }"#)
         .build();
 
     assert_that(
@@ -882,13 +792,7 @@ fn run_dylib_dep() {
             path = "bar"
         "#,
         )
-        .file(
-            "src/main.rs",
-            r#"
-            extern crate bar;
-            fn main() { bar::bar(); }
-        "#,
-        )
+        .file("src/main.rs", r#"extern crate bar; fn main() { bar::bar(); }"#)
         .file(
             "bar/Cargo.toml",
             r#"
@@ -951,12 +855,7 @@ fn run_bin_different_name() {
             name = "bar"
         "#,
         )
-        .file(
-            "src/bar.rs",
-            r#"
-            fn main() { }
-        "#,
-        )
+        .file("src/bar.rs", "fn main() {}")
         .build();
 
     assert_that(p.cargo("run"), execs().with_status(0));
@@ -988,12 +887,7 @@ fn dashes_are_forwarded() {
 #[test]
 fn run_from_executable_folder() {
     let p = project()
-        .file(
-            "src/main.rs",
-            r#"
-            fn main() { println!("hello"); }
-        "#,
-        )
+        .file("src/main.rs", r#"fn main() { println!("hello"); }"#)
         .build();
 
     let cwd = p.root().join("target").join("debug");
@@ -1128,14 +1022,7 @@ fn library_paths_sorted_alphabetically() {
 #[test]
 fn fail_no_extra_verbose() {
     let p = project()
-        .file(
-            "src/main.rs",
-            r#"
-            fn main() {
-                std::process::exit(1);
-            }
-        "#,
-        )
+        .file("src/main.rs", "fn main() { std::process::exit(1); }")
         .build();
 
     assert_that(

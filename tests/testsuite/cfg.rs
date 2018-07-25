@@ -220,10 +220,7 @@ fn works_through_the_registry() {
             bar = "0.1.0"
         "#,
         )
-        .file(
-            "src/lib.rs",
-            "#[allow(unused_extern_crates)] extern crate bar;",
-        )
+        .file("src/lib.rs", "#[allow(unused_extern_crates)] extern crate bar;")
         .build();
 
     assert_that(
@@ -268,10 +265,7 @@ fn ignore_version_from_other_platform() {
                 this_family, other_family
             ),
         )
-        .file(
-            "src/lib.rs",
-            "#[allow(unused_extern_crates)] extern crate bar;",
-        )
+        .file("src/lib.rs", "#[allow(unused_extern_crates)] extern crate bar;")
         .build();
 
     assert_that(

@@ -657,10 +657,7 @@ fn fix_two_files() {
 #[test]
 fn fixes_missing_ampersand() {
     let p = project()
-        .file(
-            "src/main.rs",
-            "fn main() { let mut x = 3; drop(x); }",
-        )
+        .file("src/main.rs", "fn main() { let mut x = 3; drop(x); }")
         .file(
             "src/lib.rs",
             r#"
@@ -677,18 +674,8 @@ fn fixes_missing_ampersand() {
                 pub fn foo() { let mut x = 3; drop(x); }
             "#,
         )
-        .file(
-            "examples/foo.rs",
-            r#"
-                fn main() { let mut x = 3; drop(x); }
-            "#,
-        )
-        .file(
-            "build.rs",
-            r#"
-                fn main() { let mut x = 3; drop(x); }
-            "#,
-        )
+        .file("examples/foo.rs", "fn main() { let mut x = 3; drop(x); }")
+        .file("build.rs", "fn main() { let mut x = 3; drop(x); }")
         .build();
 
     assert_that(
@@ -748,15 +735,7 @@ fn fix_features() {
 #[test]
 fn shows_warnings() {
     let p = project()
-        .file(
-            "src/lib.rs",
-            r#"
-                use std::default::Default;
-
-                pub fn foo() {
-                }
-            "#,
-        )
+        .file("src/lib.rs", "use std::default::Default; pub fn foo() {}")
         .build();
 
     assert_that(
@@ -769,13 +748,7 @@ fn shows_warnings() {
 fn warns_if_no_vcs_detected() {
     let p = project()
         .use_temp_dir()
-        .file(
-            "src/lib.rs",
-            r#"
-                pub fn foo() {
-                }
-            "#,
-        )
+        .file("src/lib.rs", "pub fn foo() {}")
         .build();
 
     assert_that(
@@ -796,13 +769,7 @@ destructive changes; if you'd like to suppress this error pass `--allow-no-vcs`\
 #[test]
 fn warns_about_dirty_working_directory() {
     let p = project()
-        .file(
-            "src/lib.rs",
-            r#"
-                pub fn foo() {
-                }
-            "#,
-        )
+        .file("src/lib.rs", "pub fn foo() {}")
         .build();
 
     let repo = git2::Repository::init(&p.root()).unwrap();
@@ -838,13 +805,7 @@ these files:
 #[test]
 fn does_not_warn_about_clean_working_directory() {
     let p = project()
-        .file(
-            "src/lib.rs",
-            r#"
-                pub fn foo() {
-                }
-            "#,
-        )
+        .file("src/lib.rs", "pub fn foo() {}")
         .build();
 
     let repo = git2::Repository::init(&p.root()).unwrap();
@@ -864,13 +825,7 @@ fn does_not_warn_about_clean_working_directory() {
 #[test]
 fn does_not_warn_about_dirty_ignored_files() {
     let p = project()
-        .file(
-            "src/lib.rs",
-            r#"
-                pub fn foo() {
-                }
-            "#,
-        )
+        .file("src/lib.rs", "pub fn foo() {}")
         .file(".gitignore", "foo\n")
         .build();
 

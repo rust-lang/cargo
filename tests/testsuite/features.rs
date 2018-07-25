@@ -389,13 +389,7 @@ fn no_transitive_dep_feature_requirement() {
             path = "../bar"
         "#,
         )
-        .file(
-            "derived/src/lib.rs",
-            r#"
-            extern crate bar;
-            pub use bar::test;
-        "#,
-        )
+        .file("derived/src/lib.rs", "extern crate bar; pub use bar::test;")
         .file(
             "bar/Cargo.toml",
             r#"
@@ -887,13 +881,7 @@ fn transitive_features() {
             path = "bar"
         "#,
         )
-        .file(
-            "src/main.rs",
-            "
-            extern crate bar;
-            fn main() { bar::baz(); }
-        ",
-        )
+        .file("src/main.rs", "extern crate bar; fn main() { bar::baz(); }")
         .file(
             "bar/Cargo.toml",
             r#"
@@ -906,13 +894,7 @@ fn transitive_features() {
             baz = []
         "#,
         )
-        .file(
-            "bar/src/lib.rs",
-            r#"
-            #[cfg(feature = "baz")]
-            pub fn baz() {}
-        "#,
-        )
+        .file("bar/src/lib.rs", r#"#[cfg(feature = "baz")] pub fn baz() {}"#)
         .build();
 
     assert_that(
@@ -1065,13 +1047,7 @@ fn unions_work_with_no_default_features() {
             b = { path = "b" }
         "#,
         )
-        .file(
-            "src/lib.rs",
-            r#"
-            extern crate a;
-            pub fn foo() { a::a(); }
-        "#,
-        )
+        .file("src/lib.rs", "extern crate a; pub fn foo() { a::a(); }")
         .file(
             "b/Cargo.toml",
             r#"
@@ -1098,13 +1074,7 @@ fn unions_work_with_no_default_features() {
             f1 = []
         "#,
         )
-        .file(
-            "a/src/lib.rs",
-            r#"
-            #[cfg(feature = "f1")]
-            pub fn a() {}
-        "#,
-        )
+        .file("a/src/lib.rs", r#"#[cfg(feature = "f1")] pub fn a() {}"#)
         .build();
 
     assert_that(p.cargo("build"), execs().with_status(0));
@@ -1163,15 +1133,7 @@ fn activating_feature_activates_dep() {
             a = ["foo/a"]
         "#,
         )
-        .file(
-            "src/lib.rs",
-            "
-            extern crate foo;
-            pub fn bar() {
-                foo::bar();
-            }
-        ",
-        )
+        .file("src/lib.rs", "extern crate foo; pub fn bar() { foo::bar(); }")
         .file(
             "foo/Cargo.toml",
             r#"
@@ -1184,13 +1146,7 @@ fn activating_feature_activates_dep() {
             a = []
         "#,
         )
-        .file(
-            "foo/src/lib.rs",
-            r#"
-            #[cfg(feature = "a")]
-            pub fn bar() {}
-        "#,
-        )
+        .file("foo/src/lib.rs", r#"#[cfg(feature = "a")] pub fn bar() {}"#)
         .build();
 
     assert_that(
@@ -1237,13 +1193,7 @@ fn dep_feature_in_cmd_line() {
             derived-feat = ["bar/some-feat"]
         "#,
         )
-        .file(
-            "derived/src/lib.rs",
-            r#"
-            extern crate bar;
-            pub use bar::test;
-        "#,
-        )
+        .file("derived/src/lib.rs", "extern crate bar; pub use bar::test;")
         .file(
             "bar/Cargo.toml",
             r#"

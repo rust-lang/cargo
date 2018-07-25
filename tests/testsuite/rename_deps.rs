@@ -89,13 +89,7 @@ fn rename_dependency() {
             baz = { version = "0.2.0", package = "bar" }
         "#,
         )
-        .file(
-            "src/lib.rs",
-            "
-            extern crate bar;
-            extern crate baz;
-        ",
-        )
+        .file("src/lib.rs", "extern crate bar; extern crate baz;")
         .build();
 
     assert_that(
@@ -121,12 +115,7 @@ fn rename_with_different_names() {
             baz = { path = "bar", package = "bar" }
         "#,
         )
-        .file(
-            "src/lib.rs",
-            "
-            extern crate baz;
-        ",
-        )
+        .file("src/lib.rs", "extern crate baz;")
         .file(
             "bar/Cargo.toml",
             r#"
@@ -236,16 +225,7 @@ fn rename_and_patch() {
                 foo = { path = "foo" }
             "#,
         )
-        .file(
-            "src/lib.rs",
-            "
-                extern crate bar;
-
-                pub fn foo() {
-                    bar::foo();
-                }
-            ",
-        )
+        .file("src/lib.rs", "extern crate bar; pub fn foo() { bar::foo(); }")
         .file("foo/Cargo.toml", &basic_manifest("foo", "0.1.0"))
         .file("foo/src/lib.rs", "pub fn foo() {}")
         .build();

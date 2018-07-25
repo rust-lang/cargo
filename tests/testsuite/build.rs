@@ -275,13 +275,7 @@ fn cargo_compile_duplicate_build_targets() {
             [dependencies]
         "#,
         )
-        .file(
-            "src/main.rs",
-            r#"
-            #![allow(warnings)]
-            fn main() {}
-        "#,
-        )
+        .file("src/main.rs", "#![allow(warnings)] fn main() {}")
         .build();
 
     assert_that(
@@ -938,12 +932,7 @@ fn cargo_compile_with_filename() {
             fn main() { println!("hello a.rs"); }
         "#,
         )
-        .file(
-            "examples/a.rs",
-            r#"
-            fn main() { println!("example"); }
-        "#,
-        )
+        .file("examples/a.rs", r#"fn main() { println!("example"); }"#)
         .build();
 
     assert_that(
@@ -1104,10 +1093,7 @@ fn compile_offline_without_maxvers_cached() {
 
     Package::new("present_dep", "1.2.3")
         .file("Cargo.toml", &basic_manifest("present_dep", "1.2.3"))
-        .file(
-            "src/lib.rs",
-            r#"pub fn get_version()->&'static str {"1.2.3"}"#,
-        )
+        .file("src/lib.rs", r#"pub fn get_version()->&'static str {"1.2.3"}"#)
         .publish();
 
     Package::new("present_dep", "1.2.5")
@@ -1359,12 +1345,7 @@ fn compile_path_dep_then_change_version() {
 #[test]
 fn ignores_carriage_return_in_lockfile() {
     let p = project()
-        .file(
-            "src/main.rs",
-            r#"
-            mod a; fn main() {}
-        "#,
-        )
+        .file("src/main.rs", r"mod a; fn main() {}")
         .file("src/a.rs", "")
         .build();
 
@@ -1648,12 +1629,7 @@ fn crate_library_path_env_var() {
 #[test]
 fn build_with_fake_libc_not_loading() {
     let p = project()
-        .file(
-            "src/main.rs",
-            r#"
-            fn main() {}
-        "#,
-        )
+        .file("src/main.rs", "fn main() {}")
         .file("src/lib.rs", r#" "#)
         .file("libc.so.6", r#""#)
         .build();
@@ -1683,12 +1659,7 @@ fn many_crate_types_old_style_lib_location() {
             crate_type = ["rlib", "dylib"]
         "#,
         )
-        .file(
-            "src/foo.rs",
-            r#"
-            pub fn foo() {}
-        "#,
-        )
+        .file("src/foo.rs", "pub fn foo() {}")
         .build();
     assert_that(
         p.cargo("build"),
@@ -1722,12 +1693,7 @@ fn many_crate_types_correct() {
             crate_type = ["rlib", "dylib"]
         "#,
         )
-        .file(
-            "src/lib.rs",
-            r#"
-            pub fn foo() {}
-        "#,
-        )
+        .file("src/lib.rs", "pub fn foo() {}")
         .build();
     assert_that(p.cargo("build"), execs().with_status(0));
 
@@ -2250,12 +2216,7 @@ fn release_build_ndebug() {
 #[test]
 fn inferred_main_bin() {
     let p = project()
-        .file(
-            "src/main.rs",
-            r#"
-            fn main() {}
-        "#,
-        )
+        .file("src/main.rs", "fn main() {}")
         .build();
 
     assert_that(p.cargo("build"), execs().with_status(0));
@@ -2277,13 +2238,7 @@ fn deletion_causes_failure() {
             path = "bar"
         "#,
         )
-        .file(
-            "src/main.rs",
-            r#"
-            extern crate bar;
-            fn main() {}
-        "#,
-        )
+        .file("src/main.rs", "extern crate bar; fn main() {}")
         .file("bar/Cargo.toml", &basic_manifest("bar", "0.0.1"))
         .file("bar/src/lib.rs", "")
         .build();
@@ -2296,12 +2251,7 @@ fn deletion_causes_failure() {
 #[test]
 fn bad_cargo_toml_in_target_dir() {
     let p = project()
-        .file(
-            "src/main.rs",
-            r#"
-            fn main() {}
-        "#,
-        )
+        .file("src/main.rs", "fn main() {}")
         .file("target/Cargo.toml", "bad-toml")
         .build();
 
@@ -2313,19 +2263,8 @@ fn bad_cargo_toml_in_target_dir() {
 fn lib_with_standard_name() {
     let p = project()
         .file("Cargo.toml", &basic_manifest("syntax", "0.0.1"))
-        .file(
-            "src/lib.rs",
-            "
-            pub fn foo() {}
-        ",
-        )
-        .file(
-            "src/main.rs",
-            "
-            extern crate syntax;
-            fn main() { syntax::foo() }
-        ",
-        )
+        .file("src/lib.rs", "pub fn foo() {}")
+        .file("src/main.rs", "extern crate syntax; fn main() { syntax::foo() }")
         .build();
 
     assert_that(
@@ -2383,15 +2322,7 @@ fn staticlib_rlib_and_bin() {
         "#,
         )
         .file("src/lib.rs", "pub fn foo() {}")
-        .file(
-            "src/main.rs",
-            r#"
-              extern crate foo;
-
-              fn main() {
-                  foo::foo();
-              }"#,
-        )
+        .file("src/main.rs", "extern crate foo; fn main() { foo::foo(); }")
         .build();
 
     assert_that(p.cargo("build").arg("-v"), execs().with_status(0));
@@ -2605,12 +2536,7 @@ fn bad_cargo_config() {
     let foo = project()
         .file("Cargo.toml", &basic_manifest("foo", "0.0.0"))
         .file("src/lib.rs", "")
-        .file(
-            ".cargo/config",
-            r#"
-              this is not valid toml
-        "#,
-        )
+        .file(".cargo/config", "this is not valid toml")
         .build();
     assert_that(
         foo.cargo("build").arg("-v"),
@@ -2625,7 +2551,7 @@ Caused by:
   could not parse input as TOML
 
 Caused by:
-  expected an equals, found an identifier at line 2
+  expected an equals, found an identifier at line 1
 ",
         ),
     );
@@ -2655,28 +2581,9 @@ fn cargo_platform_specific_dependency() {
                 host = host
             ),
         )
-        .file(
-            "src/main.rs",
-            r#"
-            extern crate dep;
-            fn main() { dep::dep() }
-        "#,
-        )
-        .file(
-            "tests/foo.rs",
-            r#"
-            extern crate dev;
-            #[test]
-            fn foo() { dev::dev() }
-        "#,
-        )
-        .file(
-            "build.rs",
-            r#"
-            extern crate build;
-            fn main() { build::build(); }
-        "#,
-        )
+        .file("src/main.rs", "extern crate dep; fn main() { dep::dep() }")
+        .file("tests/foo.rs", "extern crate dev; #[test] fn foo() { dev::dev() }")
+        .file("build.rs", "extern crate build; fn main() { build::build(); }")
         .file("dep/Cargo.toml", &basic_manifest("dep", "0.5.0"))
         .file("dep/src/lib.rs", "pub fn dep() {}")
         .file("build/Cargo.toml", &basic_manifest("build", "0.5.0"))
@@ -2709,16 +2616,7 @@ fn bad_platform_specific_dependency() {
         )
         .file("src/main.rs", &main_file(r#""{}", bar::gimme()"#, &["bar"]))
         .file("bar/Cargo.toml", &basic_manifest("bar", "0.5.0"))
-        .file(
-            "bar/src/lib.rs",
-            r#"
-            extern crate baz;
-
-            pub fn gimme() -> String {
-                format!("")
-            }
-        "#,
-        )
+        .file("bar/src/lib.rs", r#"extern crate baz; pub fn gimme() -> String { format!("") }"#)
         .build();
 
     assert_that(p.cargo("build"), execs().with_status(101));
@@ -2740,19 +2638,9 @@ fn cargo_platform_specific_dependency_wrong_platform() {
             path = "bar"
         "#,
         )
-        .file(
-            "src/main.rs",
-            r#"
-            fn main() {}
-        "#,
-        )
+        .file("src/main.rs", "fn main() {}")
         .file("bar/Cargo.toml", &basic_manifest("bar", "0.5.0"))
-        .file(
-            "bar/src/lib.rs",
-            r#"
-            invalid rust file, should not be compiled
-        "#,
-        )
+        .file("bar/src/lib.rs", "invalid rust file, should not be compiled")
         .build();
 
     p.cargo("build").exec_with_output().unwrap();
@@ -3821,19 +3709,9 @@ fn build_all_workspace() {
             [workspace]
         "#,
         )
-        .file(
-            "src/main.rs",
-            r#"
-            fn main() {}
-        "#,
-        )
+        .file("src/main.rs", "fn main() {}")
         .file("bar/Cargo.toml", &basic_manifest("bar", "0.1.0"))
-        .file(
-            "bar/src/lib.rs",
-            r#"
-            pub fn bar() {}
-        "#,
-        )
+        .file("bar/src/lib.rs", "pub fn bar() {}")
         .build();
 
     assert_that(
@@ -3860,28 +3738,11 @@ fn build_all_exclude() {
             members = ["bar", "baz"]
         "#,
         )
-        .file(
-            "src/main.rs",
-            r#"
-            fn main() {}
-        "#,
-        )
+        .file("src/main.rs", "fn main() {}")
         .file("bar/Cargo.toml", &basic_manifest("bar", "0.1.0"))
-        .file(
-            "bar/src/lib.rs",
-            r#"
-            pub fn bar() {}
-        "#,
-        )
+        .file("bar/src/lib.rs", "pub fn bar() {}")
         .file("baz/Cargo.toml", &basic_manifest("baz", "0.1.0"))
-        .file(
-            "baz/src/lib.rs",
-            r#"
-            pub fn baz() {
-                break_the_build();
-            }
-        "#,
-        )
+        .file("baz/src/lib.rs", "pub fn baz() { break_the_build(); }")
         .build();
 
     assert_that(
@@ -3952,19 +3813,9 @@ fn build_all_virtual_manifest() {
         "#,
         )
         .file("bar/Cargo.toml", &basic_manifest("bar", "0.1.0"))
-        .file(
-            "bar/src/lib.rs",
-            r#"
-            pub fn bar() {}
-        "#,
-        )
+        .file("bar/src/lib.rs", "pub fn bar() {}")
         .file("baz/Cargo.toml", &basic_manifest("baz", "0.1.0"))
-        .file(
-            "baz/src/lib.rs",
-            r#"
-            pub fn baz() {}
-        "#,
-        )
+        .file("baz/src/lib.rs", "pub fn baz() {}")
         .build();
 
     // The order in which bar and baz are built is not guaranteed
@@ -3993,19 +3844,9 @@ fn build_virtual_manifest_all_implied() {
         "#,
         )
         .file("bar/Cargo.toml", &basic_manifest("bar", "0.1.0"))
-        .file(
-            "bar/src/lib.rs",
-            r#"
-            pub fn bar() {}
-        "#,
-        )
+        .file("bar/src/lib.rs", "pub fn bar() {}")
         .file("baz/Cargo.toml", &basic_manifest("baz", "0.1.0"))
-        .file(
-            "baz/src/lib.rs",
-            r#"
-            pub fn baz() {}
-        "#,
-        )
+        .file("baz/src/lib.rs", "pub fn baz() {}")
         .build();
 
     // The order in which bar and baz are built is not guaranteed
@@ -4034,19 +3875,9 @@ fn build_virtual_manifest_one_project() {
         "#,
         )
         .file("bar/Cargo.toml", &basic_manifest("bar", "0.1.0"))
-        .file(
-            "bar/src/lib.rs",
-            r#"
-            pub fn bar() {}
-        "#,
-        )
+        .file( "bar/src/lib.rs", "pub fn bar() {}")
         .file("baz/Cargo.toml", &basic_manifest("baz", "0.1.0"))
-        .file(
-            "baz/src/lib.rs",
-            r#"
-            pub fn baz() {}
-        "#,
-        )
+        .file( "baz/src/lib.rs", "pub fn baz() {}")
         .build();
 
     assert_that(
@@ -4130,12 +3961,7 @@ fn build_all_member_dependency_same_name() {
             a = "0.1.0"
         "#,
         )
-        .file(
-            "a/src/lib.rs",
-            r#"
-            pub fn a() {}
-        "#,
-        )
+        .file("a/src/lib.rs", "pub fn a() {}")
         .build();
 
     Package::new("a", "0.1.0").publish();
@@ -4169,21 +3995,8 @@ fn run_proper_binary() {
         "#,
         )
         .file("src/lib.rs", "")
-        .file(
-            "src/bin/main.rs",
-            r#"
-            fn main() {
-                panic!("This should never be run.");
-            }
-        "#,
-        )
-        .file(
-            "src/bin/other.rs",
-            r#"
-            fn main() {
-            }
-        "#,
-        )
+        .file("src/bin/main.rs", r#"fn main() { panic!("This should never be run."); }"#)
+        .file("src/bin/other.rs", "fn main() {}")
         .build();
 
     assert_that(
@@ -4197,13 +4010,7 @@ fn run_proper_binary_main_rs() {
     let p = project()
         .file("Cargo.toml", &basic_bin_manifest("foo"))
         .file("src/lib.rs", "")
-        .file(
-            "src/bin/main.rs",
-            r#"
-            fn main() {
-            }
-        "#,
-        )
+        .file("src/bin/main.rs", "fn main() {}")
         .build();
 
     assert_that(
@@ -4228,22 +4035,8 @@ fn run_proper_alias_binary_from_src() {
             name = "bar"
         "#,
         )
-        .file(
-            "src/foo.rs",
-            r#"
-            fn main() {
-              println!("foo");
-            }
-        "#,
-        )
-        .file(
-            "src/bar.rs",
-            r#"
-            fn main() {
-              println!("bar");
-            }
-        "#,
-        )
+        .file("src/foo.rs", r#"fn main() { println!("foo"); }"#)
+        .file("src/bar.rs", r#"fn main() { println!("bar"); }"#)
         .build();
 
     assert_that(p.cargo("build").arg("--all"), execs().with_status(0));
@@ -4273,14 +4066,7 @@ fn run_proper_alias_binary_main_rs() {
             name = "bar"
         "#,
         )
-        .file(
-            "src/main.rs",
-            r#"
-            fn main() {
-              println!("main");
-            }
-        "#,
-        )
+        .file("src/main.rs", r#"fn main() { println!("main"); }"#)
         .build();
 
     assert_that(p.cargo("build").arg("--all"), execs().with_status(0));
@@ -4298,21 +4084,8 @@ fn run_proper_alias_binary_main_rs() {
 fn run_proper_binary_main_rs_as_foo() {
     let p = project()
         .file("Cargo.toml", &basic_bin_manifest("foo"))
-        .file(
-            "src/foo.rs",
-            r#"
-            fn main() {
-                panic!("This should never be run.");
-            }
-        "#,
-        )
-        .file(
-            "src/main.rs",
-            r#"
-            fn main() {
-            }
-        "#,
-        )
+        .file("src/foo.rs", r#" fn main() { panic!("This should never be run."); }"#)
+        .file("src/main.rs", "fn main() {}")
         .build();
 
     assert_that(
@@ -4448,12 +4221,7 @@ fn deterministic_cfg_flags() {
                 }
             "#,
         )
-        .file(
-            "src/main.rs",
-            r#"
-            fn main() {}
-        "#,
-        )
+        .file("src/main.rs", "fn main() {}")
         .build();
 
     assert_that(
