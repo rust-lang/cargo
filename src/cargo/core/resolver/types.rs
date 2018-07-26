@@ -63,7 +63,7 @@ impl<'a> RegistryQueryer<'a> {
                 None => continue,
                 Some(replacement) => replacement,
             };
-            debug!("found an override for {} {}", dep.name(), dep.version_req());
+            debug!("found an override for {} {}", dep.package_name(), dep.version_req());
 
             let mut summaries = self.registry.query_vec(dep, false)?.into_iter();
             let s = summaries.next().ok_or_else(|| {
@@ -117,7 +117,7 @@ impl<'a> RegistryQueryer<'a> {
             }
 
             for dep in summary.dependencies() {
-                debug!("\t{} => {}", dep.name(), dep.version_req());
+                debug!("\t{} => {}", dep.package_name(), dep.version_req());
             }
 
             candidate.replace = replace;

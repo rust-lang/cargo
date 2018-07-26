@@ -104,7 +104,7 @@ impl<'a, 'cfg> BuildContext<'a, 'cfg> {
 
         let crate_name = dep.target.crate_name();
         let mut names = deps.iter()
-            .map(|d| d.rename().unwrap_or(&crate_name));
+            .map(|d| d.rename().map(|s| s.as_str()).unwrap_or(&crate_name));
         let name = names.next().unwrap_or(&crate_name);
         for n in names {
             if n == name {

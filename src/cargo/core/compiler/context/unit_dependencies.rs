@@ -118,7 +118,7 @@ fn compute_deps<'a, 'cfg>(
 
             // If the dependency is optional, then we're only activating it
             // if the corresponding feature was activated
-            if dep.is_optional() && !bcx.resolve.features(id).contains(&*dep.name()) {
+            if dep.is_optional() && !bcx.resolve.features(id).contains(&*dep.name_in_toml()) {
                 return false;
             }
 

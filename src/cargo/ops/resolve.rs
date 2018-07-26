@@ -522,7 +522,7 @@ fn register_previous_locks<'a>(
                 "poisoning {} because {} looks like it changed {}",
                 dep.source_id(),
                 member.package_id(),
-                dep.name()
+                dep.package_name()
             );
             for id in resolve
                 .iter()

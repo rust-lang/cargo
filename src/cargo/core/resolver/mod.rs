@@ -263,14 +263,14 @@ fn activate_deps_loop(
             "{}[{}]>{} {} candidates",
             parent.name(),
             cur,
-            dep.name(),
+            dep.package_name(),
             candidates.len()
         );
         trace!(
             "{}[{}]>{} {} prev activations",
             parent.name(),
             cur,
-            dep.name(),
+            dep.package_name(),
             cx.prev_active(&dep).len()
         );
 
@@ -307,7 +307,7 @@ fn activate_deps_loop(
                 // It's our job here to backtrack, if possible, and find a
                 // different candidate to activate. If we can't find any
                 // candidates whatsoever then it's time to bail entirely.
-                trace!("{}[{}]>{} -- no candidates", parent.name(), cur, dep.name());
+                trace!("{}[{}]>{} -- no candidates", parent.name(), cur, dep.package_name());
 
                 // Use our list of `conflicting_activations` to add to our
                 // global list of past conflicting activations, effectively
@@ -400,7 +400,7 @@ fn activate_deps_loop(
                 "{}[{}]>{} trying {}",
                 parent.name(),
                 cur,
-                dep.name(),
+                dep.package_name(),
                 candidate.summary.version()
             );
             let res = activate(&mut cx, registry, Some((&parent, &dep)), candidate, &method);
@@ -551,7 +551,7 @@ fn activate_deps_loop(
                             "{}[{}]>{} skipping {} ",
                             parent.name(),
                             cur,
-                            dep.name(),
+                            dep.package_name(),
                             pid.version()
                         );
                         false
@@ -855,7 +855,7 @@ fn activation_error(
 ) -> CargoError {
     let graph = cx.graph();
     if !candidates.is_empty() {
-        let mut msg = format!("failed to select a version for `{}`.", dep.name());
+        let mut msg = format!("failed to select a version for `{}`.", dep.package_name());
         msg.push_str("\n    ... required by ");
         msg.push_str(&describe_path(&graph.path_to_top(parent.package_id())));
 
@@ -881,7 +881,7 @@ fn activation_error(
         for &(p, r) in links_errors.iter() {
             if let ConflictReason::Links(ref link) = *r {
                 msg.push_str("\n\nthe package `");
-                msg.push_str(&*dep.name());
+                msg.push_str(&*dep.package_name());
                 msg.push_str("` links to the native library `");
                 msg.push_str(link);
                 msg.push_str("`, but it conflicts with a previous package which links to `");
@@ -900,11 +900,11 @@ fn activation_error(
                 msg.push_str("\n\nthe package `");
                 msg.push_str(&*p.name());
                 msg.push_str("` depends on `");
-                msg.push_str(&*dep.name());
+                msg.push_str(&*dep.package_name());
                 msg.push_str("`, with features: `");
                 msg.push_str(features);
                 msg.push_str("` but `");
-                msg.push_str(&*dep.name());
+                msg.push_str(&*dep.package_name());
                 msg.push_str("` does not have these features.\n");
             }
             // p == parent so the full path is redundant.
@@ -923,7 +923,7 @@ fn activation_error(
         }
 
         msg.push_str("\n\nfailed to select a version for `");
-        msg.push_str(&*dep.name());
+        msg.push_str(&*dep.package_name());
         msg.push_str("` which could resolve this conflict");
 
         return format_err!("{}", msg);
@@ -964,7 +964,7 @@ fn activation_error(
              location searched: {}\n\
              versions found: {}\n",
             dep.version_req(),
-            dep.name(),
+            dep.package_name(),
             dep.source_id(),
             versions
         );
@@ -993,14 +993,14 @@ fn activation_error(
         candidates.dedup();
         let mut candidates: Vec<_> = candidates
             .iter()
-            .map(|n| (lev_distance(&*new_dep.name(), &*n), n))
+            .map(|n| (lev_distance(&*new_dep.package_name(), &*n), n))
             .filter(|&(d, _)| d < 4)
             .collect();
         candidates.sort_by_key(|o| o.0);
         let mut msg = format!(
             "no matching package named `{}` found\n\
              location searched: {}\n",
-            dep.name(),
+            dep.package_name(),
             dep.source_id()
         );
         if !candidates.is_empty() {
