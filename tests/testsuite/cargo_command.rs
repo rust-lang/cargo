@@ -61,6 +61,18 @@ fn path() -> Vec<PathBuf> {
 }
 
 #[test]
+fn list_commands_with_descriptions() {
+    let p = project().build();
+    let output = p.cargo("--list").exec_with_output().unwrap();
+    let output = str::from_utf8(&output.stdout).unwrap();
+    assert!(
+        output.contains("\n    build                Compile a local package and all of its dependencies"),
+        "missing build, with description: {}",
+        output
+    );
+}
+
+#[test]
 fn list_command_looks_at_path() {
     let proj = project().build();
     let proj = fake_file(

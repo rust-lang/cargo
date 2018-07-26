@@ -114,6 +114,7 @@ fn list_commands(config: &Config) -> BTreeSet<CommandInfo> {
     for cmd in commands::builtin() {
         commands.insert(CommandInfo::BuiltIn {
             name: cmd.get_name().to_string(),
+            about: cmd.p.meta.about.map(|s| s.to_string()),
         });
     }
 

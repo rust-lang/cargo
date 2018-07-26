@@ -70,8 +70,9 @@ Run with 'cargo -Z [FLAG] [SUBCOMMAND]'"
         println!("Installed Commands:");
         for command in list_commands(config) {
             match command {
-                CommandInfo::BuiltIn { name } => {
-                    println!("    {:<20} {}", name)
+                CommandInfo::BuiltIn { name, about } => {
+                    let summary = about.unwrap_or_default();
+                    println!("    {:<20} {}", name, summary)
                 }
                 CommandInfo::External { name, path } => {
                     if is_verbose {

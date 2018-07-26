@@ -414,7 +414,7 @@ pub fn values(args: &ArgMatches, name: &str) -> Vec<String> {
 
 #[derive(PartialEq, PartialOrd, Eq, Ord)]
 pub enum CommandInfo {
-    BuiltIn { name: String },
+    BuiltIn { name: String, about: Option<String>, },
     External { name: String, path: PathBuf },
 }
 
