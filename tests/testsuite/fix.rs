@@ -843,3 +843,18 @@ fn does_not_warn_about_dirty_ignored_files() {
         execs().with_status(0),
     );
 }
+
+#[test]
+fn fix_all_targets_by_default() {
+    let p = project()
+        .file("src/lib.rs", "pub fn foo() { let mut x = 3; drop(x); }")
+        .file("tests/foo.rs", "pub fn foo() { let mut x = 3; drop(x); }")
+        .build();
+    assert_that(
+        p.cargo("fix --allow-no-vcs")
+            .env("__CARGO_FIX_YOLO", "1"),
+        execs().with_status(0),
+    );
+    assert!(!p.read_file("src/lib.rs").contains("let mut x"));
+    assert!(!p.read_file("tests/foo.rs").contains("let mut x"));
+}
