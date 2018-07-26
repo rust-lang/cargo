@@ -51,7 +51,8 @@ pub fn package(ws: &Workspace, opts: &PackageOpts) -> CargoResult<Option<FileLoc
     // dirty. This will `bail!` if dirty, unless allow_dirty.
     let sha1_hash = check_repo_state(pkg, &src_files, opts.allow_dirty)?;
 
-    // Write out VCS info file for package, if we have a sha1 hash
+    // Write out VCS info file for package, if we have a sha1 hash, then
+    // preserve a shared lock on the file.
     let vcs_info = if let Some(hsh) = sha1_hash {
         let mut ifile = ws.target_dir().open_rw(
             VCS_INFO_FILE,
@@ -63,6 +64,14 @@ pub fn package(ws: &Workspace, opts: &PackageOpts) -> CargoResult<Option<FileLoc
         writeln!(ifile, r#"{{"git_head_revision_sha1":"{}"}}"#, hsh)?;
         ifile.flush()?;
         ifile.file().sync_all()?;
+        drop(ifile);
+
+        // Downgrade the flock to shared, read access.
+        let ifile = ws.target_dir().open_ro(
+            VCS_INFO_FILE,
+            config,
+            "(git) VCS info, read only"
+        )?;
         Some(ifile)
     } else {
         None
