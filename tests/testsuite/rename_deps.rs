@@ -319,3 +319,48 @@ fn rename_affects_fingerprint() {
         execs().with_status(101),
     );
 }
+
+#[test]
+fn can_run_doc_tests() {
+    Package::new("bar", "0.1.0").publish();
+    Package::new("bar", "0.2.0").publish();
+
+    let foo = project()
+        .file(
+            "Cargo.toml",
+            r#"
+            cargo-features = ["rename-dependency"]
+
+            [project]
+            name = "foo"
+            version = "0.0.1"
+
+            [dependencies]
+            bar = { version = "0.1.0" }
+            baz = { version = "0.2.0", package = "bar" }
+        "#,
+        )
+        .file(
+            "src/lib.rs",
+            "
+            extern crate bar;
+            extern crate baz;
+        ",
+        )
+        .build();
+
+    assert_that(
+        foo.cargo("test").arg("-v").masquerade_as_nightly_cargo(),
+        execs().with_status(0).with_stderr_contains(format!(
+            "\
+[DOCTEST] foo
+[RUNNING] `rustdoc --test {dir}[/]src[/]lib.rs \
+        [..] \
+        --extern baz={dir}[/]target[/]debug[/]deps[/]libbar-[..].rlib \
+        --extern bar={dir}[/]target[/]debug[/]deps[/]libbar-[..].rlib \
+        [..]`
+",
+            dir = foo.root().display(),
+        )),
+    );
+}

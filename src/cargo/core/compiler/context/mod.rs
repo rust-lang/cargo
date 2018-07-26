@@ -244,15 +244,16 @@ impl<'a, 'cfg> Context<'a, 'cfg> {
                 for dep in self.dep_targets(unit) {
                     if dep.target.is_lib() && dep.mode == CompileMode::Build {
                         let outputs = self.outputs(&dep)?;
-                        doctest_deps.extend(
-                            outputs
-                                .iter()
-                                .filter(|output| {
-                                    output.path.extension() == Some(OsStr::new("rlib"))
-                                        || dep.target.for_host()
-                                })
-                                .map(|output| (dep.target.clone(), output.path.clone())),
-                        );
+                        let outputs = outputs.iter().filter(|output| {
+                            output.path.extension() == Some(OsStr::new("rlib"))
+                                || dep.target.for_host()
+                        });
+                        for output in outputs {
+                            doctest_deps.push((
+                                self.bcx.extern_crate_name(unit, &dep)?,
+                                output.path.clone(),
+                            ));
+                        }
                     }
                 }
                 self.compilation.to_doc_test.push(compilation::Doctest {
