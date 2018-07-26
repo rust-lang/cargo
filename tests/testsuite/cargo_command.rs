@@ -170,7 +170,7 @@ error: no such subcommand: `biuld`
         cargo_process().arg("--list"),
         execs()
             .with_status(0)
-            .with_stdout_contains("    build\n")
+            .with_stdout_contains("    build                Compile a local package and all of its dependencies\n")
             .with_stdout_contains("    biuld\n"),
     );
 }
