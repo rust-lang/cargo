@@ -28,8 +28,9 @@ impl HgRepo {
     pub fn discover(path: &Path, cwd: &Path) -> CargoResult<HgRepo> {
         process("hg")
             .cwd(cwd)
+            .arg("--cwd")
+            .arg(path)
             .arg("root")
-            .cwd(path)
             .exec_with_output()?;
         Ok(HgRepo)
     }
