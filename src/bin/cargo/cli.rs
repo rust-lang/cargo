@@ -69,14 +69,17 @@ Run with 'cargo -Z [FLAG] [SUBCOMMAND]'"
     if args.is_present("list") {
         println!("Installed Commands:");
         for command in list_commands(config) {
-            let (command, path) = command;
-            if is_verbose {
-                match path {
-                    Some(p) => println!("    {:<20} {}", command, p),
-                    None => println!("    {:<20}", command),
+            match command {
+                CommandInfo::BuiltIn { name } => {
+                    println!("    {:<20} {}", name)
                 }
-            } else {
-                println!("    {}", command);
+                CommandInfo::External { name, path } => {
+                    if is_verbose {
+                        println!("    {:<20} {}", name, path.display())
+                    } else {
+                        println!("    {:<20}", name)
+                    }
+                }
             }
         }
         return Ok(());
