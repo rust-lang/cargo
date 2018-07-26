@@ -8,7 +8,7 @@ use git2::Config as GitConfig;
 use git2::Repository as GitRepository;
 
 use core::{compiler, Workspace};
-use util::{internal, FossilRepo, GitRepo, HgRepo, PijulRepo};
+use util::{internal, FossilRepo, GitRepo, HgRepo, PijulRepo, existing_vcs_repo};
 use util::{paths, Config};
 use util::errors::{CargoResult, CargoResultExt};
 
@@ -407,21 +407,6 @@ pub fn init(opts: &NewOptions, config: &Config) -> CargoResult<()> {
         )
     })?;
     Ok(())
-}
-
-// Check if we are in an existing repo. We define that to be true if either:
-//
-// 1. We are in a git repo and the path to the new project is not an ignored
-//    path in that repo.
-// 2. We are in an HG repo.
-pub fn existing_vcs_repo(path: &Path, cwd: &Path) -> bool {
-    fn in_git_repo(path: &Path, cwd: &Path) -> bool {
-        if let Ok(repo) = GitRepo::discover(path, cwd) {
-            repo.is_path_ignored(path).map(|ignored| !ignored).unwrap_or(true)
-        } else { false }
-    }
-
-    in_git_repo(path, cwd) || HgRepo::discover(path, cwd).is_ok()
 }
 
 fn mk(config: &Config, opts: &MkOptions) -> CargoResult<()> {

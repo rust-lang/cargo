@@ -14,9 +14,8 @@ use serde_json;
 
 use core::Workspace;
 use ops::{self, CompileOptions};
-use ops::cargo_new::existing_vcs_repo;
 use util::errors::CargoResult;
-use util::{LockServer, LockServerClient};
+use util::{LockServer, LockServerClient, existing_vcs_repo};
 use util::diagnostic_server::{Message, RustfixDiagnosticServer};
 use util::paths;
 
