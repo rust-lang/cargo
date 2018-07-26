@@ -74,7 +74,9 @@ impl EncodableResolve {
             (live_pkgs, all_pkgs)
         };
 
-        let lookup_id = |enc_id: &EncodablePackageId| -> CargoResult<Option<PackageId>> {
+        let lookup_id = |enc_id: &EncodablePackageId,
+                         dependent_pkg: Option<&PackageId>|
+         -> CargoResult<Option<PackageId>> {
             match live_pkgs.get(enc_id) {
                 Some(&(ref id, _)) => Ok(Some(id.clone())),
                 None => if all_pkgs.contains(enc_id) {
@@ -82,10 +84,14 @@ impl EncodableResolve {
                     // no longer a member of the workspace.
                     Ok(None)
                 } else {
+                    let suggestion = dependent_pkg
+                        .map(|p| format!("\n  consider running 'cargo update -p {}'", p.name()))
+                        .unwrap_or_default();
                     bail!(
                         "package `{}` is specified as a dependency, \
-                         but is missing from the package list",
-                        enc_id
+                         but is missing from the package list{}",
+                        enc_id,
+                        suggestion,
                     );
                 },
             }
@@ -105,7 +111,7 @@ impl EncodableResolve {
                 };
 
                 for edge in deps.iter() {
-                    if let Some(to_depend_on) = lookup_id(edge)? {
+                    if let Some(to_depend_on) = lookup_id(edge, Some(id))? {
                         g.link(id.clone(), to_depend_on);
                     }
                 }
@@ -118,7 +124,7 @@ impl EncodableResolve {
             for &(ref id, pkg) in live_pkgs.values() {
                 if let Some(ref replace) = pkg.replace {
                     assert!(pkg.dependencies.is_none());
-                    if let Some(replace_id) = lookup_id(replace)? {
+                    if let Some(replace_id) = lookup_id(replace, Some(id))? {
                         replacements.insert(id.clone(), replace_id);
                     }
                 }
@@ -151,7 +157,7 @@ impl EncodableResolve {
             let k = &k[prefix.len()..];
             let enc_id: EncodablePackageId = k.parse()
                 .chain_err(|| internal("invalid encoding of checksum in lockfile"))?;
-            let id = match lookup_id(&enc_id) {
+            let id = match lookup_id(&enc_id, None) {
                 Ok(Some(id)) => id,
                 _ => continue,
             };
