@@ -747,7 +747,6 @@ fn shows_warnings() {
 #[test]
 fn warns_if_no_vcs_detected() {
     let p = project()
-        .use_temp_dir()
         .file("src/lib.rs", "pub fn foo() {}")
         .build();
 
