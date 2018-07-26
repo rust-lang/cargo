@@ -626,7 +626,7 @@ You can run individual executable examples with the command `cargo run --example
 
 Specify `crate-type` to make an example be compiled as a library (additional
 information about crate types is available in
-[the Cargo reference](https://doc.rust-lang.org/reference/linkage.html)):
+[The Rust Reference](https://doc.rust-lang.org/reference/linkage.html)):
 
 ```toml
 [[example]]
