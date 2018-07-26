@@ -17,7 +17,7 @@ pub struct Doctest {
     pub target: Target,
     /// Extern dependencies needed by `rustdoc`. The path is the location of
     /// the compiled lib.
-    pub deps: Vec<(Target, PathBuf)>,
+    pub deps: Vec<(String, PathBuf)>,
 }
 
 /// A structure returning the result of a compilation.

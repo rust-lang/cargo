@@ -193,8 +193,8 @@ fn run_doc_tests(
             }
         }
 
-        for &(ref target, ref lib) in deps.iter() {
-            let mut arg = OsString::from(target.crate_name());
+        for &(ref extern_crate_name, ref lib) in deps.iter() {
+            let mut arg = OsString::from(extern_crate_name);
             arg.push("=");
             arg.push(lib);
             p.arg("--extern").arg(&arg);
