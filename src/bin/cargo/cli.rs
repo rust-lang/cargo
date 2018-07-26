@@ -72,6 +72,7 @@ Run with 'cargo -Z [FLAG] [SUBCOMMAND]'"
             match command {
                 CommandInfo::BuiltIn { name, about } => {
                     let summary = about.unwrap_or_default();
+                    let summary = summary.lines().next().unwrap_or(&summary); // display only the first line
                     println!("    {:<20} {}", name, summary)
                 }
                 CommandInfo::External { name, path } => {

@@ -70,6 +70,12 @@ fn list_commands_with_descriptions() {
         "missing build, with description: {}",
         output
     );
+    // assert read-manifest prints the right one-line description followed by another command, indented.
+    assert!(
+        output.contains("\n    read-manifest        Print a JSON representation of a Cargo.toml manifest.\n    "),
+        "missing build, with description: {}",
+        output
+    );
 }
 
 #[test]
