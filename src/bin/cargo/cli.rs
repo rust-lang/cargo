@@ -79,7 +79,7 @@ Run with 'cargo -Z [FLAG] [SUBCOMMAND]'"
                     if is_verbose {
                         println!("    {:<20} {}", name, path.display())
                     } else {
-                        println!("    {:<20}", name)
+                        println!("    {}", name)
                     }
                 }
             }
