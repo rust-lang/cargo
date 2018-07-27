@@ -481,7 +481,7 @@ fn calculate<'a, 'cfg>(
         deps,
         local: vec![local],
         memoized_hash: Mutex::new(None),
-        edition: unit.pkg.manifest().edition(),
+        edition: unit.target.edition(),
         rustflags: extra_flags,
     });
     cx.fingerprints.insert(*unit, Arc::clone(&fingerprint));
