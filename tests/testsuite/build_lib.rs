@@ -45,7 +45,7 @@ fn build_with_no_lib() {
         p.cargo("build").arg("--lib"),
         execs()
             .with_status(101)
-            .with_stderr("[ERROR] no library targets found"),
+            .with_stderr("[ERROR] no library targets found in package `foo`"),
     );
 }
 

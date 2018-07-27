@@ -3547,3 +3547,45 @@ fn test_build_script_links() {
         execs().with_status(0),
     );
 }
+
+#[test]
+fn doctest_skip_staticlib() {
+    let p = project()
+        .file(
+            "Cargo.toml",
+            r#"
+                [package]
+                name = "foo"
+                version = "0.0.1"
+
+                [lib]
+                crate-type = ["staticlib"]
+            "#,
+        )
+        .file(
+            "src/lib.rs",
+            r#"
+            //! ```
+            //! assert_eq!(1,2);
+            //! ```
+            "#,
+        )
+        .build();
+
+    assert_that(
+        p.cargo("test --doc"),
+        execs().with_status(101).with_stderr(
+            "[ERROR] doc tests are not supported for crate type(s) `staticlib` in package `foo`",
+        ),
+    );
+
+    assert_that(
+        p.cargo("test"),
+        execs().with_status(0).with_stderr(
+            "\
+[COMPILING] foo [..]
+[FINISHED] dev [..]
+[RUNNING] target[/]debug[/]deps[/]foo-[..]",
+        ),
+    )
+}
