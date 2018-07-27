@@ -411,3 +411,18 @@ pub fn values(args: &ArgMatches, name: &str) -> Vec<String> {
         .map(|s| s.to_string())
         .collect()
 }
+
+#[derive(PartialEq, PartialOrd, Eq, Ord)]
+pub enum CommandInfo {
+    BuiltIn { name: String, about: Option<String>, },
+    External { name: String, path: PathBuf },
+}
+
+impl CommandInfo {
+    pub fn name(&self) -> String {
+        match self {
+            CommandInfo::BuiltIn { name, .. } => name.to_string(),
+            CommandInfo::External { name, .. } => name.to_string(),
+        }
+    }
+}

@@ -61,6 +61,24 @@ fn path() -> Vec<PathBuf> {
 }
 
 #[test]
+fn list_commands_with_descriptions() {
+    let p = project().build();
+    let output = p.cargo("--list").exec_with_output().unwrap();
+    let output = str::from_utf8(&output.stdout).unwrap();
+    assert!(
+        output.contains("\n    build                Compile a local package and all of its dependencies"),
+        "missing build, with description: {}",
+        output
+    );
+    // assert read-manifest prints the right one-line description followed by another command, indented.
+    assert!(
+        output.contains("\n    read-manifest        Print a JSON representation of a Cargo.toml manifest.\n    "),
+        "missing build, with description: {}",
+        output
+    );
+}
+
+#[test]
 fn list_command_looks_at_path() {
     let proj = project().build();
     let proj = fake_file(
@@ -152,7 +170,7 @@ error: no such subcommand: `biuld`
         cargo_process().arg("--list"),
         execs()
             .with_status(0)
-            .with_stdout_contains("    build\n")
+            .with_stdout_contains("    build                Compile a local package and all of its dependencies\n")
             .with_stdout_contains("    biuld\n"),
     );
 }
