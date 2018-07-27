@@ -82,7 +82,7 @@ pub fn resolve_ws_with_method<'a>(
 
         Some(resolve)
     } else {
-        ops::load_pkg_lockfile(ws)?
+        ops::load_pkg_lockfile(ws, false)?
     };
 
     let resolved_with_overrides = ops::resolve_with_previous(
@@ -106,7 +106,7 @@ fn resolve_with_registry<'cfg>(
     registry: &mut PackageRegistry<'cfg>,
     warn: bool,
 ) -> CargoResult<Resolve> {
-    let prev = ops::load_pkg_lockfile(ws)?;
+    let prev = ops::load_pkg_lockfile(ws, false)?;
     let resolve = resolve_with_previous(
         registry,
         ws,

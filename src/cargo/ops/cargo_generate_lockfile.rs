@@ -46,7 +46,8 @@ pub fn update_lockfile(ws: &Workspace, opts: &UpdateOptions) -> CargoResult<()> 
         bail!("you can't update in the offline mode");
     }
 
-    let previous_resolve = match ops::load_pkg_lockfile(ws)? {
+    // `ignore_errors` is set to true, because we are about to clean the errors up.
+    let previous_resolve = match ops::load_pkg_lockfile(ws, true)? {
         Some(resolve) => resolve,
         None => return generate_lockfile(ws),
     };
