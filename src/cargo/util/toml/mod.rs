@@ -1357,6 +1357,7 @@ struct TomlTarget {
     harness: Option<bool>,
     #[serde(rename = "required-features")]
     required_features: Option<Vec<String>>,
+    edition: Option<String>,
 }
 
 #[derive(Clone)]

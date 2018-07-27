@@ -15,7 +15,7 @@ use std::fs::{self, DirEntry};
 use std::collections::HashSet;
 
 use core::{compiler, Edition, Target};
-use util::errors::CargoResult;
+use util::errors::{CargoResult, CargoResultExt};
 use super::{LibKind, PathValue, StringOrBool, TomlBenchTarget, TomlBinTarget, TomlExampleTarget,
             TomlLibTarget, TomlManifest, TomlTarget, TomlTestTarget};
 
@@ -183,7 +183,7 @@ fn clean_lib(
     };
 
     let mut target = Target::lib_target(&lib.name(), crate_types, path);
-    configure(lib, &mut target);
+    configure(lib, &mut target)?;
     Ok(Some(target))
 }
 
@@ -263,7 +263,7 @@ fn clean_bins(
         };
 
         let mut target = Target::bin_target(&bin.name(), path, bin.required_features.clone());
-        configure(bin, &mut target);
+        configure(bin, &mut target)?;
         result.push(target);
     }
     return Ok(result);
@@ -324,7 +324,7 @@ fn clean_examples(
             path,
             toml.required_features.clone(),
         );
-        configure(&toml, &mut target);
+        configure(&toml, &mut target)?;
         result.push(target);
     }
 
@@ -357,7 +357,7 @@ fn clean_tests(
     let mut result = Vec::new();
     for (path, toml) in targets {
         let mut target = Target::test_target(&toml.name(), path, toml.required_features.clone());
-        configure(&toml, &mut target);
+        configure(&toml, &mut target)?;
         result.push(target);
     }
     Ok(result)
@@ -410,7 +410,7 @@ fn clean_benches(
     let mut result = Vec::new();
     for (path, toml) in targets {
         let mut target = Target::bench_target(&toml.name(), path, toml.required_features.clone());
-        configure(&toml, &mut target);
+        configure(&toml, &mut target)?;
         result.push(target);
     }
 
@@ -682,7 +682,7 @@ fn validate_unique_names(targets: &[TomlTarget], target_kind: &str) -> CargoResu
     Ok(())
 }
 
-fn configure(toml: &TomlTarget, target: &mut Target) {
+fn configure(toml: &TomlTarget, target: &mut Target) -> CargoResult<()> {
     let t2 = target.clone();
     target
         .set_tested(toml.test.unwrap_or_else(|| t2.tested()))
@@ -694,7 +694,13 @@ fn configure(toml: &TomlTarget, target: &mut Target) {
             (None, None) => t2.for_host(),
             (Some(true), _) | (_, Some(true)) => true,
             (Some(false), _) | (_, Some(false)) => false,
+        })
+        .set_edition(match toml.edition.clone() {
+            None => t2.edition(),
+            // TODO: Check the edition feature gate
+            Some(s) => s.parse().chain_err(|| "failed to parse the `edition` key")?,
         });
+    Ok(())
 }
 
 fn target_path(
