@@ -96,7 +96,6 @@ use std::usize;
 use cargo::util::{ProcessBuilder, ProcessError, Rustc};
 use cargo;
 use serde_json::{self, Value};
-use tempfile::TempDir;
 use url::Url;
 
 use self::hamcrest as ham;
@@ -180,9 +179,8 @@ impl SymlinkBuilder {
     }
 }
 
-pub enum Project {
-    Rooted(PathBuf),
-    Temp(TempDir),
+pub struct Project {
+    root: PathBuf
 }
 
 #[must_use]
@@ -206,7 +204,7 @@ impl ProjectBuilder {
 
     pub fn new(root: PathBuf) -> ProjectBuilder {
         ProjectBuilder {
-            root: Project::Rooted(root),
+            root: Project { root },
             files: vec![],
             symlinks: vec![],
             no_manifest: false,
@@ -214,7 +212,7 @@ impl ProjectBuilder {
     }
 
     pub fn at<P: AsRef<Path>>(mut self, path: P) -> Self {
-        self.root = Project::Rooted(paths::root().join(path));
+        self.root = Project{root: paths::root().join(path)};
         self
     }
 
@@ -235,11 +233,6 @@ impl ProjectBuilder {
             self.root.root().join(dst),
             self.root.root().join(src),
         ));
-        self
-    }
-
-    pub fn use_temp_dir(mut self) -> Self {
-        self.root = Project::Temp(TempDir::new().unwrap());
         self
     }
 
@@ -286,10 +279,7 @@ impl ProjectBuilder {
 impl Project {
     /// Root of the project, ex: `/path/to/cargo/target/cit/t0/foo`
     pub fn root(&self) -> PathBuf {
-        match self {
-            Project::Rooted(p) => p.clone(),
-            Project::Temp(t) => t.path().to_path_buf(),
-        }
+        self.root.clone()
     }
 
     /// Project's target dir, ex: `/path/to/cargo/target/cit/t0/foo/target`

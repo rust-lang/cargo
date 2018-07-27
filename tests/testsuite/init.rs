@@ -6,7 +6,6 @@ use std::env;
 use cargo::util::ProcessBuilder;
 use support::{cargo_exe, execs, paths};
 use support::hamcrest::{assert_that, existing_dir, existing_file, is_not};
-use tempfile;
 
 fn cargo_process(s: &str) -> ProcessBuilder {
     let mut p = support::process(&cargo_exe());
@@ -62,12 +61,10 @@ fn simple_bin() {
 
 #[test]
 fn both_lib_and_bin() {
-    let td = tempfile::Builder::new().prefix("cargo").tempdir().unwrap();
     assert_that(
         cargo_process("init")
             .arg("--lib")
             .arg("--bin")
-            .cwd(td.path())
             .env("USER", "foo"),
         execs()
             .with_status(101)
@@ -304,21 +301,17 @@ fn simple_git() {
 
 #[test]
 fn auto_git() {
-    let td = tempfile::Builder::new().prefix("cargo").tempdir().unwrap();
-    let foo = &td.path().join("foo");
-    fs::create_dir_all(&foo).unwrap();
     assert_that(
         cargo_process("init")
             .arg("--lib")
-            .cwd(foo.clone())
             .env("USER", "foo"),
         execs().with_status(0),
     );
 
-    assert_that(&foo.join("Cargo.toml"), existing_file());
-    assert_that(&foo.join("src/lib.rs"), existing_file());
-    assert_that(&foo.join(".git"), existing_dir());
-    assert_that(&foo.join(".gitignore"), existing_file());
+    assert_that(&paths::root().join("Cargo.toml"), existing_file());
+    assert_that(&paths::root().join("src/lib.rs"), existing_file());
+    assert_that(&paths::root().join(".git"), existing_dir());
+    assert_that(&paths::root().join(".gitignore"), existing_file());
 }
 
 #[test]
