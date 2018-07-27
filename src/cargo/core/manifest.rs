@@ -200,6 +200,7 @@ pub struct Target {
     doctest: bool,
     harness: bool, // whether to use the test harness (--test)
     for_host: bool,
+    edition: Edition,
 }
 
 #[derive(Clone, PartialEq, Eq)]
@@ -280,6 +281,7 @@ compact_debug! {
                 doctest
                 harness
                 for_host
+                edition
             )]
         }
     }
@@ -507,6 +509,7 @@ impl Target {
             doctest: false,
             harness: true,
             for_host: false,
+            edition: Edition::Edition2015,
             tested: true,
             benched: true,
         }
@@ -625,6 +628,7 @@ impl Target {
     pub fn for_host(&self) -> bool {
         self.for_host
     }
+    pub fn edition(&self) -> Edition { self.edition }
     pub fn benched(&self) -> bool {
         self.benched
     }
@@ -744,6 +748,10 @@ impl Target {
     }
     pub fn set_for_host(&mut self, for_host: bool) -> &mut Target {
         self.for_host = for_host;
+        self
+    }
+    pub fn set_edition(&mut self, edition: Edition) -> &mut Target {
+        self.edition = edition;
         self
     }
     pub fn set_harness(&mut self, harness: bool) -> &mut Target {
