@@ -30,7 +30,7 @@ struct Patch {
 pub type Metadata = BTreeMap<String, String>;
 
 impl EncodableResolve {
-    pub fn into_resolve(self, ws: &Workspace) -> CargoResult<Resolve> {
+    pub fn into_resolve(self, ws: &Workspace, ignore_errors: bool) -> CargoResult<Resolve> {
         let path_deps = build_path_deps(ws);
 
         let packages = {
@@ -82,6 +82,9 @@ impl EncodableResolve {
                 None => if all_pkgs.contains(enc_id) {
                     // Package is found in the lockfile, but it is
                     // no longer a member of the workspace.
+                    Ok(None)
+                } else if ignore_errors {
+                    // We are asked to ignore errors
                     Ok(None)
                 } else {
                     let suggestion = dependent_pkg
