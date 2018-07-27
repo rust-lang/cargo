@@ -545,7 +545,11 @@ fn generate_targets<'a>(
                 proposals.extend(default_units);
                 if build_config.mode == CompileMode::Test {
                     // Include doctest for lib.
-                    if let Some(t) = pkg.targets().iter().find(|t| t.is_lib() && t.doctested()) {
+                    if let Some(t) = pkg
+                        .targets()
+                        .iter()
+                        .find(|t| t.is_lib() && t.doctested() && t.doctestable())
+                    {
                         proposals.push((new_unit(pkg, t, CompileMode::Doctest), false));
                     }
                 }
@@ -560,9 +564,16 @@ fn generate_targets<'a>(
             } => {
                 if lib {
                     if let Some(target) = pkg.targets().iter().find(|t| t.is_lib()) {
+                        if build_config.mode == CompileMode::Doctest && !target.doctestable() {
+                            bail!(
+                                "doc tests are not supported for crate type(s) `{}` in package `{}`",
+                                target.rustc_crate_types().join(", "),
+                                pkg.name()
+                            );
+                        }
                         proposals.push((new_unit(pkg, target, build_config.mode), false));
                     } else if !all_targets {
-                        bail!("no library targets found")
+                        bail!("no library targets found in package `{}`", pkg.name())
                     }
                 }
                 // If --tests was specified, add all targets that would be

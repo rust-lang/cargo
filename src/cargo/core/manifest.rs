@@ -628,9 +628,12 @@ impl Target {
     pub fn benched(&self) -> bool {
         self.benched
     }
-
     pub fn doctested(&self) -> bool {
-        self.doctest && match self.kind {
+        self.doctest
+    }
+
+    pub fn doctestable(&self) -> bool {
+        match self.kind {
             TargetKind::Lib(ref kinds) => kinds
                 .iter()
                 .any(|k| *k == LibKind::Rlib || *k == LibKind::Lib || *k == LibKind::ProcMacro),
