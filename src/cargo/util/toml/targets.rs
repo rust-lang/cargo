@@ -183,7 +183,7 @@ fn clean_lib(
     };
 
     let mut target = Target::lib_target(&lib.name(), crate_types, path);
-    configure(lib, &mut target)?;
+    configure(lib, &mut target, edition)?;
     Ok(Some(target))
 }
 
@@ -263,7 +263,7 @@ fn clean_bins(
         };
 
         let mut target = Target::bin_target(&bin.name(), path, bin.required_features.clone());
-        configure(bin, &mut target)?;
+        configure(bin, &mut target, edition)?;
         result.push(target);
     }
     return Ok(result);
@@ -324,7 +324,7 @@ fn clean_examples(
             path,
             toml.required_features.clone(),
         );
-        configure(&toml, &mut target)?;
+        configure(&toml, &mut target, edition)?;
         result.push(target);
     }
 
@@ -357,7 +357,7 @@ fn clean_tests(
     let mut result = Vec::new();
     for (path, toml) in targets {
         let mut target = Target::test_target(&toml.name(), path, toml.required_features.clone());
-        configure(&toml, &mut target)?;
+        configure(&toml, &mut target, edition)?;
         result.push(target);
     }
     Ok(result)
@@ -410,7 +410,7 @@ fn clean_benches(
     let mut result = Vec::new();
     for (path, toml) in targets {
         let mut target = Target::bench_target(&toml.name(), path, toml.required_features.clone());
-        configure(&toml, &mut target)?;
+        configure(&toml, &mut target, edition)?;
         result.push(target);
     }
 
@@ -682,7 +682,7 @@ fn validate_unique_names(targets: &[TomlTarget], target_kind: &str) -> CargoResu
     Ok(())
 }
 
-fn configure(toml: &TomlTarget, target: &mut Target) -> CargoResult<()> {
+fn configure(toml: &TomlTarget, target: &mut Target, edition: Edition) -> CargoResult<()> {
     let t2 = target.clone();
     target
         .set_tested(toml.test.unwrap_or_else(|| t2.tested()))
@@ -696,7 +696,7 @@ fn configure(toml: &TomlTarget, target: &mut Target) -> CargoResult<()> {
             (Some(false), _) | (_, Some(false)) => false,
         })
         .set_edition(match toml.edition.clone() {
-            None => t2.edition(),
+            None => edition,
             // TODO: Check the edition feature gate
             Some(s) => s.parse().chain_err(|| "failed to parse the `edition` key")?,
         });
