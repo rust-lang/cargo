@@ -15,7 +15,7 @@ pub use self::rustc::Rustc;
 pub use self::sha256::Sha256;
 pub use self::to_semver::ToSemver;
 pub use self::to_url::ToUrl;
-pub use self::vcs::{FossilRepo, GitRepo, HgRepo, PijulRepo};
+pub use self::vcs::{FossilRepo, GitRepo, HgRepo, PijulRepo, existing_vcs_repo};
 pub use self::read2::read2;
 pub use self::progress::{Progress, ProgressStyle};
 pub use self::lockserver::{LockServer, LockServerStarted, LockServerClient};
