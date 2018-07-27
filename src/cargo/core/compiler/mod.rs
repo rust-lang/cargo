@@ -554,7 +554,7 @@ fn prepare_rustc<'a, 'cfg>(
     crate_types: &[&str],
     unit: &Unit<'a>,
 ) -> CargoResult<ProcessBuilder> {
-    let mut base = cx.compilation.rustc_process(unit.pkg)?;
+    let mut base = cx.compilation.rustc_process(unit.pkg, unit.target)?;
     base.inherit_jobserver(&cx.jobserver);
     build_base_args(cx, &mut base, unit, crate_types)?;
     build_deps_args(&mut base, cx, unit)?;
@@ -563,7 +563,7 @@ fn prepare_rustc<'a, 'cfg>(
 
 fn rustdoc<'a, 'cfg>(cx: &mut Context<'a, 'cfg>, unit: &Unit<'a>) -> CargoResult<Work> {
     let bcx = cx.bcx;
-    let mut rustdoc = cx.compilation.rustdoc_process(unit.pkg)?;
+    let mut rustdoc = cx.compilation.rustdoc_process(unit.pkg, unit.target)?;
     rustdoc.inherit_jobserver(&cx.jobserver);
     rustdoc.arg("--crate-name").arg(&unit.target.crate_name());
     add_path_args(bcx, unit, &mut rustdoc);
