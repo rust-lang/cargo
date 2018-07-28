@@ -6,7 +6,7 @@ use cargo;
 use cargo::util::process;
 use support::paths::CargoPathExt;
 use support::registry::Package;
-use support::{basic_bin_manifest, basic_lib_manifest, cargo_exe, execs, project};
+use support::{basic_manifest, basic_bin_manifest, basic_lib_manifest, cargo_exe, execs, project};
 use support::{is_nightly, rustc_host, sleep_ms};
 use support::hamcrest::{assert_that, existing_file, is_not};
 
@@ -89,15 +89,7 @@ fn cargo_test_release() {
             fn test() { foo::foo(); }
         "#,
         )
-        .file(
-            "bar/Cargo.toml",
-            r#"
-            [package]
-            name = "bar"
-            version = "0.0.1"
-            authors = []
-        "#,
-        )
+        .file("bar/Cargo.toml", &basic_manifest("bar", "0.0.1"))
         .file("bar/src/lib.rs", "pub fn bar() {}")
         .build();
 
@@ -200,15 +192,6 @@ fn cargo_test_verbose() {
 #[test]
 fn many_similar_names() {
     let p = project()
-        .file(
-            "Cargo.toml",
-            r#"
-            [package]
-            name = "foo"
-            version = "0.0.1"
-            authors = []
-        "#,
-        )
         .file(
             "src/lib.rs",
             "
@@ -321,21 +304,8 @@ failures:
 fn cargo_test_failing_test_in_test() {
     let p = project()
         .file("Cargo.toml", &basic_bin_manifest("foo"))
-        .file(
-            "src/main.rs",
-            r#"
-            pub fn main() {
-                println!("hello");
-            }"#,
-        )
-        .file(
-            "tests/footest.rs",
-            r#"
-            #[test]
-            fn test_hello() {
-                assert!(false)
-            }"#,
-        )
+        .file("src/main.rs", r#"pub fn main() { println!("hello"); }"#)
+        .file("tests/footest.rs", "#[test] fn test_hello() { assert!(false) }")
         .build();
 
     assert_that(p.cargo("build"), execs().with_status(0));
@@ -368,7 +338,7 @@ failures:
 
 ---- test_hello stdout ----
 [..]thread 'test_hello' panicked at 'assertion failed: false', \
-      tests[/]footest.rs:4[..]
+      tests[/]footest.rs:1[..]
 ",
             )
             .with_stdout_contains(
@@ -385,14 +355,7 @@ failures:
 fn cargo_test_failing_test_in_lib() {
     let p = project()
         .file("Cargo.toml", &basic_lib_manifest("foo"))
-        .file(
-            "src/lib.rs",
-            r#"
-            #[test]
-            fn test_hello() {
-                assert!(false)
-            }"#,
-        )
+        .file("src/lib.rs", "#[test] fn test_hello() { assert!(false) }")
         .build();
 
     assert_that(
@@ -414,7 +377,7 @@ failures:
 
 ---- test_hello stdout ----
 [..]thread 'test_hello' panicked at 'assertion failed: false', \
-      src[/]lib.rs:4[..]
+      src[/]lib.rs:1[..]
 ",
             )
             .with_stdout_contains(
@@ -524,24 +487,8 @@ fn test_with_deep_lib_dep() {
         )
         .build();
     let _p2 = project().at("bar")
-        .file(
-            "Cargo.toml",
-            r#"
-            [package]
-            name = "bar"
-            version = "0.0.1"
-            authors = []
-        "#,
-        )
-        .file(
-            "src/lib.rs",
-            "
-            pub fn bar() {}
-
-            #[test]
-            fn foo_test() {}
-        ",
-        )
+        .file("Cargo.toml", &basic_manifest("bar", "0.0.1"))
+        .file("src/lib.rs", "pub fn bar() {} #[test] fn foo_test() {}")
         .build();
 
     assert_that(
@@ -633,13 +580,7 @@ fn external_test_named_test() {
         "#,
         )
         .file("src/lib.rs", "")
-        .file(
-            "tests/test.rs",
-            r#"
-            #[test]
-            fn foo() { }
-        "#,
-        )
+        .file("tests/test.rs", "#[test] fn foo() {}")
         .build();
 
     assert_that(p.cargo("test"), execs().with_status(0))
@@ -648,15 +589,6 @@ fn external_test_named_test() {
 #[test]
 fn external_test_implicit() {
     let p = project()
-        .file(
-            "Cargo.toml",
-            r#"
-            [project]
-            name = "foo"
-            version = "0.0.1"
-            authors = []
-        "#,
-        )
         .file(
             "src/lib.rs",
             r#"
@@ -699,20 +631,7 @@ fn external_test_implicit() {
 #[test]
 fn dont_run_examples() {
     let p = project()
-        .file(
-            "Cargo.toml",
-            r#"
-            [project]
-            name = "foo"
-            version = "0.0.1"
-            authors = []
-        "#,
-        )
-        .file(
-            "src/lib.rs",
-            r#"
-        "#,
-        )
+        .file("src/lib.rs", "")
         .file(
             "examples/dont-run-me-i-will-fail.rs",
             r#"
@@ -726,15 +645,6 @@ fn dont_run_examples() {
 #[test]
 fn pass_through_command_line() {
     let p = project()
-        .file(
-            "Cargo.toml",
-            r#"
-            [package]
-            name = "foo"
-            version = "0.0.1"
-            authors = []
-        "#,
-        )
         .file(
             "src/lib.rs",
             "
@@ -816,12 +726,7 @@ fn lib_bin_same_name() {
             name = "foo"
         "#,
         )
-        .file(
-            "src/lib.rs",
-            "
-            #[test] fn lib_test() {}
-        ",
-        )
+        .file("src/lib.rs", "#[test] fn lib_test() {}")
         .file(
             "src/main.rs",
             "
@@ -855,15 +760,7 @@ fn lib_bin_same_name() {
 #[test]
 fn lib_with_standard_name() {
     let p = project()
-        .file(
-            "Cargo.toml",
-            r#"
-            [package]
-            name = "syntax"
-            version = "0.0.1"
-            authors = []
-        "#,
-        )
+        .file("Cargo.toml", &basic_manifest("syntax", "0.0.1"))
         .file(
             "src/lib.rs",
             "
@@ -923,12 +820,7 @@ fn lib_with_standard_name2() {
             doctest = false
         "#,
         )
-        .file(
-            "src/lib.rs",
-            "
-            pub fn foo() {}
-        ",
-        )
+        .file("src/lib.rs", "pub fn foo() {}")
         .file(
             "src/main.rs",
             "
@@ -973,12 +865,7 @@ fn lib_without_name() {
             doctest = false
         "#,
         )
-        .file(
-            "src/lib.rs",
-            "
-            pub fn foo() {}
-        ",
-        )
+        .file("src/lib.rs", "pub fn foo() {}")
         .file(
             "src/main.rs",
             "
@@ -1026,12 +913,7 @@ fn bin_without_name() {
             path = "src/main.rs"
         "#,
         )
-        .file(
-            "src/lib.rs",
-            "
-            pub fn foo() {}
-        ",
-        )
+        .file("src/lib.rs", "pub fn foo() {}")
         .file(
             "src/main.rs",
             "
@@ -1076,12 +958,7 @@ fn bench_without_name() {
             path = "src/bench.rs"
         "#,
         )
-        .file(
-            "src/lib.rs",
-            "
-            pub fn foo() {}
-        ",
-        )
+        .file("src/lib.rs", "pub fn foo() {}")
         .file(
             "src/main.rs",
             "
@@ -1197,12 +1074,7 @@ fn example_without_name() {
             path = "examples/example.rs"
         "#,
         )
-        .file(
-            "src/lib.rs",
-            "
-            pub fn foo() {}
-        ",
-        )
+        .file("src/lib.rs", "pub fn foo() {}")
         .file(
             "src/main.rs",
             "
@@ -1241,15 +1113,6 @@ Caused by:
 #[test]
 fn bin_there_for_integration() {
     let p = project()
-        .file(
-            "Cargo.toml",
-            r#"
-            [package]
-            name = "foo"
-            version = "0.0.1"
-            authors = []
-        "#,
-        )
         .file(
             "src/main.rs",
             "
@@ -1336,12 +1199,7 @@ fn test_dylib() {
             crate_type = ["dylib"]
         "#,
         )
-        .file(
-            "bar/src/lib.rs",
-            "
-             pub fn baz() {}
-        ",
-        )
+        .file("bar/src/lib.rs", "pub fn baz() {}")
         .build();
 
     assert_that(
@@ -1389,13 +1247,7 @@ fn test_twice_with_build_cmd() {
         "#,
         )
         .file("build.rs", "fn main() {}")
-        .file(
-            "src/lib.rs",
-            "
-            #[test]
-            fn foo() {}
-        ",
-        )
+        .file("src/lib.rs", "#[test] fn foo() {}")
         .build();
 
     assert_that(
@@ -1432,22 +1284,7 @@ fn test_twice_with_build_cmd() {
 #[test]
 fn test_then_build() {
     let p = project()
-        .file(
-            "Cargo.toml",
-            r#"
-            [package]
-            name = "foo"
-            version = "0.0.1"
-            authors = []
-        "#,
-        )
-        .file(
-            "src/lib.rs",
-            "
-            #[test]
-            fn foo() {}
-        ",
-        )
+        .file("src/lib.rs", "#[test] fn foo() {}")
         .build();
 
     assert_that(
@@ -1472,22 +1309,7 @@ fn test_then_build() {
 #[test]
 fn test_no_run() {
     let p = project()
-        .file(
-            "Cargo.toml",
-            r#"
-            [package]
-            name = "foo"
-            version = "0.0.1"
-            authors = []
-        "#,
-        )
-        .file(
-            "src/lib.rs",
-            "
-            #[test]
-            fn foo() { panic!() }
-        ",
-        )
+        .file("src/lib.rs", "#[test] fn foo() { panic!() }")
         .build();
 
     assert_that(
@@ -1589,15 +1411,6 @@ fn test_run_implicit_bin_target() {
 #[test]
 fn test_run_specific_test_target() {
     let prj = project()
-        .file(
-            "Cargo.toml",
-            r#"
-            [package]
-            name = "foo"
-            version = "0.0.1"
-            authors = []
-        "#,
-        )
         .file("src/bin/a.rs", "fn main() { }")
         .file("src/bin/b.rs", "#[test] fn test_b() { } fn main() { }")
         .file("tests/a.rs", "#[test] fn test_a() { }")
@@ -1987,15 +1800,7 @@ fn almost_cyclic_but_not_quite() {
             extern crate foo;
         "#,
         )
-        .file(
-            "c/Cargo.toml",
-            r#"
-            [package]
-            name = "c"
-            version = "0.0.1"
-            authors = []
-        "#,
-        )
+        .file("c/Cargo.toml", &basic_manifest("c", "0.0.1"))
         .file("c/src/lib.rs", "")
         .build();
 
@@ -2018,10 +1823,7 @@ fn build_then_selective_test() {
             path = "b"
         "#,
         )
-        .file(
-            "src/lib.rs",
-            "#[allow(unused_extern_crates)] extern crate b;",
-        )
+        .file("src/lib.rs", "#[allow(unused_extern_crates)] extern crate b;")
         .file(
             "src/main.rs",
             r#"
@@ -2032,15 +1834,7 @@ fn build_then_selective_test() {
             fn main() {}
         "#,
         )
-        .file(
-            "b/Cargo.toml",
-            r#"
-            [package]
-            name = "b"
-            version = "0.0.1"
-            authors = []
-        "#,
-        )
+        .file("b/Cargo.toml", &basic_manifest("b", "0.0.1"))
         .file("b/src/lib.rs", "")
         .build();
 
@@ -2064,27 +1858,9 @@ fn example_dev_dep() {
             path = "bar"
         "#,
         )
-        .file(
-            "src/lib.rs",
-            r#"
-        "#,
-        )
-        .file(
-            "examples/e1.rs",
-            r#"
-            extern crate bar;
-            fn main() { }
-        "#,
-        )
-        .file(
-            "bar/Cargo.toml",
-            r#"
-            [package]
-            name = "bar"
-            version = "0.0.1"
-            authors = []
-        "#,
-        )
+        .file("src/lib.rs", "")
+        .file("examples/e1.rs", "extern crate bar; fn main() {}")
+        .file("bar/Cargo.toml", &basic_manifest("bar", "0.0.1"))
         .file(
             "bar/src/lib.rs",
             r#"
@@ -2174,15 +1950,6 @@ fn selective_testing_with_docs() {
 #[test]
 fn example_bin_same_name() {
     let p = project()
-        .file(
-            "Cargo.toml",
-            r#"
-            [package]
-            name = "foo"
-            version = "0.0.1"
-            authors = []
-        "#,
-        )
         .file("src/bin/foo.rs", r#"fn main() { println!("bin"); }"#)
         .file("examples/foo.rs", r#"fn main() { println!("example"); }"#)
         .build();
@@ -2226,15 +1993,6 @@ fn example_bin_same_name() {
 #[test]
 fn test_with_example_twice() {
     let p = project()
-        .file(
-            "Cargo.toml",
-            r#"
-            [package]
-            name = "foo"
-            version = "0.0.1"
-            authors = []
-        "#,
-        )
         .file("src/bin/foo.rs", r#"fn main() { println!("bin"); }"#)
         .file("examples/foo.rs", r#"fn main() { println!("example"); }"#)
         .build();
@@ -2272,15 +2030,7 @@ fn example_with_dev_dep() {
             "examples/ex.rs",
             "#[allow(unused_extern_crates)] extern crate a; fn main() {}",
         )
-        .file(
-            "a/Cargo.toml",
-            r#"
-            [package]
-            name = "a"
-            version = "0.0.1"
-            authors = []
-        "#,
-        )
+        .file("a/Cargo.toml", &basic_manifest("a", "0.0.1"))
         .file("a/src/lib.rs", "")
         .build();
 
@@ -2302,15 +2052,6 @@ fn example_with_dev_dep() {
 #[test]
 fn bin_is_preserved() {
     let p = project()
-        .file(
-            "Cargo.toml",
-            r#"
-            [package]
-            name = "foo"
-            version = "0.0.1"
-            authors = []
-        "#,
-        )
         .file("src/lib.rs", "")
         .file("src/main.rs", "fn main() {}")
         .build();
@@ -2326,15 +2067,6 @@ fn bin_is_preserved() {
 #[test]
 fn bad_example() {
     let p = project()
-        .file(
-            "Cargo.toml",
-            r#"
-            [package]
-            name = "foo"
-            version = "0.0.1"
-            authors = []
-        "#,
-        )
         .file("src/lib.rs", "");
     let p = p.build();
 
@@ -2397,15 +2129,7 @@ fn doctest_feature() {
 #[test]
 fn dashes_to_underscores() {
     let p = project()
-        .file(
-            "Cargo.toml",
-            r#"
-            [package]
-            name = "foo-bar"
-            version = "0.0.1"
-            authors = []
-        "#,
-        )
+        .file("Cargo.toml", &basic_manifest("foo-bar", "0.0.1"))
         .file(
             "src/lib.rs",
             r#"
@@ -2444,15 +2168,7 @@ fn doctest_dev_dep() {
             pub fn foo() {}
         "#,
         )
-        .file(
-            "b/Cargo.toml",
-            r#"
-            [package]
-            name = "b"
-            version = "0.0.1"
-            authors = []
-        "#,
-        )
+        .file("b/Cargo.toml", &basic_manifest("b", "0.0.1"))
         .file("b/src/lib.rs", "")
         .build();
 
@@ -2462,15 +2178,6 @@ fn doctest_dev_dep() {
 #[test]
 fn filter_no_doc_tests() {
     let p = project()
-        .file(
-            "Cargo.toml",
-            r#"
-            [package]
-            name = "foo"
-            version = "0.0.1"
-            authors = []
-        "#,
-        )
         .file(
             "src/lib.rs",
             r#"
@@ -2668,15 +2375,6 @@ fn dev_dep_with_build_script() {
 fn no_fail_fast() {
     let p = project()
         .file(
-            "Cargo.toml",
-            r#"
-            [package]
-            name = "foo"
-            version = "0.0.1"
-            authors = []
-        "#,
-        )
-        .file(
             "src/lib.rs",
             r#"
         pub fn add_one(x: i32) -> i32{
@@ -2810,15 +2508,6 @@ fn test_multiple_packages() {
 #[test]
 fn bin_does_not_rebuild_tests() {
     let p = project()
-        .file(
-            "Cargo.toml",
-            r#"
-            [package]
-            name = "foo"
-            version = "0.0.1"
-            authors = []
-        "#,
-        )
         .file("src/lib.rs", "")
         .file("src/main.rs", "fn main() {}")
         .file("tests/foo.rs", "");
@@ -2864,15 +2553,7 @@ fn selective_test_wonky_profile() {
         "#,
         )
         .file("src/lib.rs", "")
-        .file(
-            "a/Cargo.toml",
-            r#"
-            [package]
-            name = "a"
-            version = "0.0.1"
-            authors = []
-        "#,
-        )
+        .file("a/Cargo.toml", &basic_manifest("a", "0.0.1"))
         .file("a/src/lib.rs", "");
     let p = p.build();
 
@@ -2898,15 +2579,7 @@ fn selective_test_optional_dep() {
         "#,
         )
         .file("src/lib.rs", "")
-        .file(
-            "a/Cargo.toml",
-            r#"
-            [package]
-            name = "a"
-            version = "0.0.1"
-            authors = []
-        "#,
-        )
+        .file("a/Cargo.toml", &basic_manifest("a", "0.0.1"))
         .file("a/src/lib.rs", "");
     let p = p.build();
 
@@ -2932,15 +2605,6 @@ fn selective_test_optional_dep() {
 #[test]
 fn only_test_docs() {
     let p = project()
-        .file(
-            "Cargo.toml",
-            r#"
-            [package]
-            name = "foo"
-            version = "0.0.1"
-            authors = []
-        "#,
-        )
         .file(
             "src/lib.rs",
             r#"
@@ -3001,15 +2665,7 @@ fn test_panic_abort_with_dep() {
             fn foo() {}
         "#,
         )
-        .file(
-            "bar/Cargo.toml",
-            r#"
-            [package]
-            name = "bar"
-            version = "0.0.1"
-            authors = []
-        "#,
-        )
+        .file("bar/Cargo.toml", &basic_manifest("bar", "0.0.1"))
         .file("bar/src/lib.rs", "")
         .build();
     assert_that(p.cargo("test").arg("-v"), execs().with_status(0));
@@ -3031,15 +2687,7 @@ fn cfg_test_even_with_no_harness() {
             doctest = false
         "#,
         )
-        .file(
-            "src/lib.rs",
-            r#"
-            #[cfg(test)]
-            fn main() {
-                println!("hello!");
-            }
-        "#,
-        )
+        .file("src/lib.rs", r#"#[cfg(test)] fn main() { println!("hello!"); }"#)
         .build();
     assert_that(
         p.cargo("test").arg("-v"),
@@ -3076,15 +2724,7 @@ fn panic_abort_multiple() {
             "src/lib.rs",
             "#[allow(unused_extern_crates)] extern crate a;",
         )
-        .file(
-            "a/Cargo.toml",
-            r#"
-            [package]
-            name = "a"
-            version = "0.0.1"
-            authors = []
-        "#,
-        )
+        .file("a/Cargo.toml", &basic_manifest("a", "0.0.1"))
         .file("a/src/lib.rs", "")
         .build();
     assert_that(
@@ -3158,25 +2798,9 @@ fn pass_correct_cfgs_flags_to_rustdoc() {
             }
         "#,
         )
-        .file(
-            "libs/mock_serde_derive/Cargo.toml",
-            r#"
-            [package]
-            name = "mock_serde_derive"
-            version = "0.1.0"
-            authors = []
-        "#,
-        )
+        .file("libs/mock_serde_derive/Cargo.toml", &basic_manifest("mock_serde_derive", "0.1.0"))
         .file("libs/mock_serde_derive/src/lib.rs", "")
-        .file(
-            "libs/mock_serde_codegen/Cargo.toml",
-            r#"
-                [package]
-                name = "mock_serde_codegen"
-                version = "0.1.0"
-                authors = []
-            "#,
-        )
+        .file("libs/mock_serde_codegen/Cargo.toml", &basic_manifest("mock_serde_codegen", "0.1.0"))
         .file("libs/mock_serde_codegen/src/lib.rs", "");
     let p = p.build();
 
@@ -3226,15 +2850,7 @@ fn test_release_ignore_panic() {
             "src/lib.rs",
             "#[allow(unused_extern_crates)] extern crate a;",
         )
-        .file(
-            "a/Cargo.toml",
-            r#"
-            [package]
-            name = "a"
-            version = "0.0.1"
-            authors = []
-        "#,
-        )
+        .file("a/Cargo.toml", &basic_manifest("a", "0.0.1"))
         .file("a/src/lib.rs", "");
     let p = p.build();
     println!("test");
@@ -3264,15 +2880,7 @@ fn test_many_with_features() {
         "#,
         )
         .file("src/lib.rs", "")
-        .file(
-            "a/Cargo.toml",
-            r#"
-            [package]
-            name = "a"
-            version = "0.0.1"
-            authors = []
-        "#,
-        )
+        .file("a/Cargo.toml", &basic_manifest("a", "0.0.1"))
         .file("a/src/lib.rs", "")
         .build();
 
@@ -3298,28 +2906,9 @@ fn test_all_workspace() {
             [workspace]
         "#,
         )
-        .file(
-            "src/main.rs",
-            r#"
-            #[test]
-            fn foo_test() {}
-        "#,
-        )
-        .file(
-            "bar/Cargo.toml",
-            r#"
-            [project]
-            name = "bar"
-            version = "0.1.0"
-        "#,
-        )
-        .file(
-            "bar/src/lib.rs",
-            r#"
-            #[test]
-            fn bar_test() {}
-        "#,
-        )
+        .file("src/main.rs", "#[test] fn foo_test() {}")
+        .file("bar/Cargo.toml", &basic_manifest("bar", "0.1.0"))
+        .file("bar/src/lib.rs", "#[test] fn bar_test() {}")
         .build();
 
     assert_that(
@@ -3345,44 +2934,11 @@ fn test_all_exclude() {
             members = ["bar", "baz"]
         "#,
         )
-        .file(
-            "src/main.rs",
-            r#"
-            fn main() {}
-        "#,
-        )
-        .file(
-            "bar/Cargo.toml",
-            r#"
-            [project]
-            name = "bar"
-            version = "0.1.0"
-        "#,
-        )
-        .file(
-            "bar/src/lib.rs",
-            r#"
-            #[test]
-            pub fn bar() {}
-        "#,
-        )
-        .file(
-            "baz/Cargo.toml",
-            r#"
-            [project]
-            name = "baz"
-            version = "0.1.0"
-        "#,
-        )
-        .file(
-            "baz/src/lib.rs",
-            r#"
-            #[test]
-            pub fn baz() {
-                assert!(false);
-            }
-        "#,
-        )
+        .file("src/main.rs", "fn main() {}")
+        .file("bar/Cargo.toml", &basic_manifest("bar", "0.1.0"))
+        .file("bar/src/lib.rs", "#[test] pub fn bar() {}")
+        .file("baz/Cargo.toml", &basic_manifest("baz", "0.1.0"))
+        .file("baz/src/lib.rs", "#[test] pub fn baz() { assert!(false); }")
         .build();
 
     assert_that(
@@ -3404,36 +2960,10 @@ fn test_all_virtual_manifest() {
             members = ["a", "b"]
         "#,
         )
-        .file(
-            "a/Cargo.toml",
-            r#"
-            [project]
-            name = "a"
-            version = "0.1.0"
-        "#,
-        )
-        .file(
-            "a/src/lib.rs",
-            r#"
-            #[test]
-            fn a() {}
-        "#,
-        )
-        .file(
-            "b/Cargo.toml",
-            r#"
-            [project]
-            name = "b"
-            version = "0.1.0"
-        "#,
-        )
-        .file(
-            "b/src/lib.rs",
-            r#"
-            #[test]
-            fn b() {}
-        "#,
-        )
+        .file("a/Cargo.toml", &basic_manifest("a", "0.1.0"))
+        .file("a/src/lib.rs", "#[test] fn a() {}")
+        .file("b/Cargo.toml", &basic_manifest("b", "0.1.0"))
+        .file("b/src/lib.rs", "#[test] fn b() {}")
         .build();
 
     assert_that(
@@ -3455,36 +2985,10 @@ fn test_virtual_manifest_all_implied() {
             members = ["a", "b"]
         "#,
         )
-        .file(
-            "a/Cargo.toml",
-            r#"
-            [project]
-            name = "a"
-            version = "0.1.0"
-        "#,
-        )
-        .file(
-            "a/src/lib.rs",
-            r#"
-            #[test]
-            fn a() {}
-        "#,
-        )
-        .file(
-            "b/Cargo.toml",
-            r#"
-            [project]
-            name = "b"
-            version = "0.1.0"
-        "#,
-        )
-        .file(
-            "b/src/lib.rs",
-            r#"
-            #[test]
-            fn b() {}
-        "#,
-        )
+        .file("a/Cargo.toml", &basic_manifest("a", "0.1.0"))
+        .file("a/src/lib.rs", "#[test] fn a() {}")
+        .file("b/Cargo.toml", &basic_manifest("b", "0.1.0"))
+        .file("b/src/lib.rs", "#[test] fn b() {}")
         .build();
 
     assert_that(
@@ -3517,13 +3021,7 @@ fn test_all_member_dependency_same_name() {
             a = "0.1.0"
         "#,
         )
-        .file(
-            "a/src/lib.rs",
-            r#"
-            #[test]
-            fn a() {}
-        "#,
-        )
+        .file("a/src/lib.rs", "#[test] fn a() {}")
         .build();
 
     Package::new("a", "0.1.0").publish();
@@ -3559,20 +3057,8 @@ fn doctest_only_with_dev_dep() {
             pub fn a() {}
         "#,
         )
-        .file(
-            "b/Cargo.toml",
-            r#"
-            [project]
-            name = "b"
-            version = "0.1.0"
-        "#,
-        )
-        .file(
-            "b/src/lib.rs",
-            r#"
-            pub fn b() {}
-        "#,
-        )
+        .file("b/Cargo.toml", &basic_manifest("b", "0.1.0"))
+        .file("b/src/lib.rs", "pub fn b() {}")
         .build();
 
     assert_that(
@@ -3584,14 +3070,6 @@ fn doctest_only_with_dev_dep() {
 #[test]
 fn test_many_targets() {
     let p = project()
-        .file(
-            "Cargo.toml",
-            r#"
-            [project]
-            name = "foo"
-            version = "0.1.0"
-        "#,
-        )
         .file(
             "src/bin/a.rs",
             r#"
@@ -3627,30 +3105,10 @@ fn test_many_targets() {
             #[test] fn example_b() {}
         "#,
         )
-        .file(
-            "examples/c.rs",
-            r#"
-            #[test] fn example_c() { panic!(); }
-        "#,
-        )
-        .file(
-            "tests/a.rs",
-            r#"
-            #[test] fn test_a() {}
-        "#,
-        )
-        .file(
-            "tests/b.rs",
-            r#"
-            #[test] fn test_b() {}
-        "#,
-        )
-        .file(
-            "tests/c.rs",
-            r#"
-            does not compile
-        "#,
-        )
+        .file("examples/c.rs", "#[test] fn example_c() { panic!(); }")
+        .file("tests/a.rs", "#[test] fn test_a() {}")
+        .file("tests/b.rs", "#[test] fn test_b() {}")
+        .file("tests/c.rs", "does not compile")
         .build();
 
     assert_that(
@@ -3697,14 +3155,7 @@ fn doctest_and_registry() {
         "#,
         )
         .file("src/lib.rs", "")
-        .file(
-            "b/Cargo.toml",
-            r#"
-            [project]
-            name = "b"
-            version = "0.1.0"
-        "#,
-        )
+        .file("b/Cargo.toml", &basic_manifest("b", "0.1.0"))
         .file(
             "b/src/lib.rs",
             "
@@ -3773,32 +3224,9 @@ test env_test ... ok
 #[test]
 fn test_order() {
     let p = project()
-        .file(
-            "Cargo.toml",
-            r#"
-            [project]
-            name = "foo"
-            version = "0.1.0"
-        "#,
-        )
-        .file(
-            "src/lib.rs",
-            r#"
-            #[test] fn test_lib() {}
-        "#,
-        )
-        .file(
-            "tests/a.rs",
-            r#"
-            #[test] fn test_a() {}
-        "#,
-        )
-        .file(
-            "tests/z.rs",
-            r#"
-            #[test] fn test_z() {}
-        "#,
-        )
+        .file("src/lib.rs", "#[test] fn test_lib() {}")
+        .file("tests/a.rs", "#[test] fn test_a() {}")
+        .file("tests/z.rs", "#[test] fn test_z() {}")
         .build();
 
     assert_that(
@@ -3840,18 +3268,8 @@ fn cyclic_dev() {
             foo = { path = "." }
         "#,
         )
-        .file(
-            "src/lib.rs",
-            r#"
-            #[test] fn test_lib() {}
-        "#,
-        )
-        .file(
-            "tests/foo.rs",
-            r#"
-            extern crate foo;
-        "#,
-        )
+        .file("src/lib.rs", "#[test] fn test_lib() {}")
+        .file("tests/foo.rs", "extern crate foo;")
         .build();
 
     assert_that(p.cargo("test").arg("--all"), execs().with_status(0));
@@ -3981,14 +3399,6 @@ fn find_dependency_of_proc_macro_dependency_with_target() {
 fn test_hint_not_masked_by_doctest() {
     let p = project()
         .file(
-            "Cargo.toml",
-            r#"
-            [package]
-            name = "foo"
-            version = "0.0.1"
-        "#,
-        )
-        .file(
             "src/lib.rs",
             r#"
             /// ```
@@ -4030,36 +3440,10 @@ fn test_hint_workspace() {
             members = ["a", "b"]
         "#,
         )
-        .file(
-            "a/Cargo.toml",
-            r#"
-            [project]
-            name = "a"
-            version = "0.1.0"
-        "#,
-        )
-        .file(
-            "a/src/lib.rs",
-            r#"
-            #[test]
-            fn t1() {}
-        "#,
-        )
-        .file(
-            "b/Cargo.toml",
-            r#"
-            [project]
-            name = "b"
-            version = "0.1.0"
-        "#,
-        )
-        .file(
-            "b/src/lib.rs",
-            r#"
-            #[test]
-            fn t1() {assert!(false)}
-        "#,
-        )
+        .file("a/Cargo.toml", &basic_manifest("a", "0.1.0"))
+        .file("a/src/lib.rs", "#[test] fn t1() {}")
+        .file("b/Cargo.toml", &basic_manifest("b", "0.1.0"))
+        .file("b/src/lib.rs", "#[test] fn t1() {assert!(false)}")
         .build();
 
     assert_that(
@@ -4162,4 +3546,46 @@ fn test_build_script_links() {
         p.cargo("test --no-run"),
         execs().with_status(0),
     );
+}
+
+#[test]
+fn doctest_skip_staticlib() {
+    let p = project()
+        .file(
+            "Cargo.toml",
+            r#"
+                [package]
+                name = "foo"
+                version = "0.0.1"
+
+                [lib]
+                crate-type = ["staticlib"]
+            "#,
+        )
+        .file(
+            "src/lib.rs",
+            r#"
+            //! ```
+            //! assert_eq!(1,2);
+            //! ```
+            "#,
+        )
+        .build();
+
+    assert_that(
+        p.cargo("test --doc"),
+        execs().with_status(101).with_stderr(
+            "[ERROR] doc tests are not supported for crate type(s) `staticlib` in package `foo`",
+        ),
+    );
+
+    assert_that(
+        p.cargo("test"),
+        execs().with_status(0).with_stderr(
+            "\
+[COMPILING] foo [..]
+[FINISHED] dev [..]
+[RUNNING] target[/]debug[/]deps[/]foo-[..]",
+        ),
+    )
 }

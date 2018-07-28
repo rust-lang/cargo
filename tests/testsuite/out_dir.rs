@@ -5,20 +5,11 @@ use std::env;
 use support::hamcrest::assert_that;
 
 use support::{process, sleep_ms, ChannelChanger};
-use support::{execs, project};
+use support::{basic_manifest, execs, project};
 
 #[test]
 fn binary_with_debug() {
     let p = project()
-        .file(
-            "Cargo.toml",
-            r#"
-            [project]
-            name = "foo"
-            version = "0.0.1"
-            authors = []
-        "#,
-        )
         .file("src/main.rs", r#"fn main() { println!("Hello, World!") }"#)
         .build();
 
@@ -173,15 +164,7 @@ fn include_only_the_binary_from_the_current_package() {
             }
         "#,
         )
-        .file(
-            "utils/Cargo.toml",
-            r#"
-            [project]
-            name = "utils"
-            version = "0.0.1"
-            authors = []
-        "#,
-        )
+        .file("utils/Cargo.toml", &basic_manifest("utils", "0.0.1"))
         .file("utils/src/lib.rs", "")
         .build();
 
@@ -201,15 +184,6 @@ fn include_only_the_binary_from_the_current_package() {
 #[test]
 fn out_dir_is_a_file() {
     let p = project()
-        .file(
-            "Cargo.toml",
-            r#"
-            [project]
-            name = "foo"
-            version = "0.0.1"
-            authors = []
-        "#,
-        )
         .file("src/main.rs", r#"fn main() { println!("Hello, World!") }"#)
         .build();
     File::create(p.root().join("out")).unwrap();
@@ -226,15 +200,6 @@ fn out_dir_is_a_file() {
 #[test]
 fn replaces_artifacts() {
     let p = project()
-        .file(
-            "Cargo.toml",
-            r#"
-            [project]
-            name = "foo"
-            version = "0.0.1"
-            authors = []
-        "#,
-        )
         .file("src/main.rs", r#"fn main() { println!("foo") }"#)
         .build();
 

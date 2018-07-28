@@ -4,7 +4,7 @@ use std::fmt;
 use cargo::util::{Cfg, CfgExpr};
 use support::rustc_host;
 use support::registry::Package;
-use support::{execs, project};
+use support::{basic_manifest, execs, project};
 use support::hamcrest::assert_that;
 
 macro_rules! c {
@@ -159,15 +159,7 @@ fn cfg_easy() {
         "#,
         )
         .file("src/lib.rs", "extern crate b;")
-        .file(
-            "b/Cargo.toml",
-            r#"
-            [package]
-            name = "b"
-            version = "0.0.1"
-            authors = []
-        "#,
-        )
+        .file("b/Cargo.toml", &basic_manifest("b", "0.0.1"))
         .file("b/src/lib.rs", "")
         .build();
     assert_that(p.cargo("build").arg("-v"), execs().with_status(0));
@@ -193,15 +185,7 @@ fn dont_include() {
             ),
         )
         .file("src/lib.rs", "")
-        .file(
-            "b/Cargo.toml",
-            r#"
-            [package]
-            name = "b"
-            version = "0.0.1"
-            authors = []
-        "#,
-        )
+        .file("b/Cargo.toml", &basic_manifest("b", "0.0.1"))
         .file("b/src/lib.rs", "")
         .build();
     assert_that(
@@ -236,10 +220,7 @@ fn works_through_the_registry() {
             bar = "0.1.0"
         "#,
         )
-        .file(
-            "src/lib.rs",
-            "#[allow(unused_extern_crates)] extern crate bar;",
-        )
+        .file("src/lib.rs", "#[allow(unused_extern_crates)] extern crate bar;")
         .build();
 
     assert_that(
@@ -284,10 +265,7 @@ fn ignore_version_from_other_platform() {
                 this_family, other_family
             ),
         )
-        .file(
-            "src/lib.rs",
-            "#[allow(unused_extern_crates)] extern crate bar;",
-        )
+        .file("src/lib.rs", "#[allow(unused_extern_crates)] extern crate bar;")
         .build();
 
     assert_that(
@@ -402,15 +380,7 @@ fn multiple_match_ok() {
             ),
         )
         .file("src/lib.rs", "extern crate b;")
-        .file(
-            "b/Cargo.toml",
-            r#"
-            [package]
-            name = "b"
-            version = "0.0.1"
-            authors = []
-        "#,
-        )
+        .file("b/Cargo.toml", &basic_manifest("b", "0.0.1"))
         .file("b/src/lib.rs", "")
         .build();
     assert_that(p.cargo("build").arg("-v"), execs().with_status(0));
@@ -432,15 +402,7 @@ fn any_ok() {
         "#,
         )
         .file("src/lib.rs", "extern crate b;")
-        .file(
-            "b/Cargo.toml",
-            r#"
-            [package]
-            name = "b"
-            version = "0.0.1"
-            authors = []
-        "#,
-        )
+        .file("b/Cargo.toml", &basic_manifest("b", "0.0.1"))
         .file("b/src/lib.rs", "")
         .build();
     assert_that(p.cargo("build").arg("-v"), execs().with_status(0));
@@ -472,15 +434,7 @@ fn cfg_looks_at_rustflags_for_target() {
             fn main() { b::foo(); }
         "#,
         )
-        .file(
-            "b/Cargo.toml",
-            r#"
-            [package]
-            name = "b"
-            version = "0.0.1"
-            authors = []
-        "#,
-        )
+        .file("b/Cargo.toml", &basic_manifest("b", "0.0.1"))
         .file("b/src/lib.rs", "pub fn foo() {}")
         .build();
 

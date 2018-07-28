@@ -1,26 +1,12 @@
 use support::rustc_host;
 use support::registry::Package;
-use support::{cross_compile, execs, project};
+use support::{basic_manifest, cross_compile, execs, project};
 use support::hamcrest::assert_that;
 
 #[test]
 fn no_deps() {
     let p = project()
-        .file(
-            "Cargo.toml",
-            r#"
-            [package]
-            name = "foo"
-            authors = []
-            version = "0.0.1"
-        "#,
-        )
-        .file(
-            "src/main.rs",
-            r#"
-            mod a; fn main() {}
-        "#,
-        )
+        .file("src/main.rs", "mod a; fn main() {}")
         .file("src/a.rs", "")
         .build();
 
@@ -30,26 +16,12 @@ fn no_deps() {
 #[test]
 fn fetch_all_platform_dependencies_when_no_target_is_given() {
     Package::new("d1", "1.2.3")
-        .file(
-            "Cargo.toml",
-            r#"
-            [project]
-            name = "d1"
-            version = "1.2.3"
-        "#,
-        )
+        .file("Cargo.toml", &basic_manifest("d1", "1.2.3"))
         .file("src/lib.rs", "")
         .publish();
 
     Package::new("d2", "0.1.2")
-        .file(
-            "Cargo.toml",
-            r#"
-            [project]
-            name = "d2"
-            version = "0.1.2"
-        "#,
-        )
+        .file("Cargo.toml", &basic_manifest("d2", "0.1.2"))
         .file("src/lib.rs", "")
         .publish();
 
@@ -90,26 +62,12 @@ fn fetch_all_platform_dependencies_when_no_target_is_given() {
 #[test]
 fn fetch_platform_specific_dependencies() {
     Package::new("d1", "1.2.3")
-        .file(
-            "Cargo.toml",
-            r#"
-            [project]
-            name = "d1"
-            version = "1.2.3"
-        "#,
-        )
+        .file("Cargo.toml", &basic_manifest("d1", "1.2.3"))
         .file("src/lib.rs", "")
         .publish();
 
     Package::new("d2", "0.1.2")
-        .file(
-            "Cargo.toml",
-            r#"
-            [project]
-            name = "d2"
-            version = "0.1.2"
-        "#,
-        )
+        .file("Cargo.toml", &basic_manifest("d2", "0.1.2"))
         .file("src/lib.rs", "")
         .publish();
 

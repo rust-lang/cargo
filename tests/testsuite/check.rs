@@ -2,16 +2,9 @@ use support::install::exe;
 use support::is_nightly;
 use support::paths::CargoPathExt;
 use support::registry::Package;
-use support::{execs, project};
+use support::{basic_manifest, execs, project};
 use glob::glob;
 use support::hamcrest::{assert_that, existing_file, is_not};
-
-const SIMPLE_MANIFEST: &str = r#"
-[package]
-name = "foo"
-version = "0.0.1"
-authors = []
-"#;
 
 #[test]
 fn check_success() {
@@ -28,32 +21,11 @@ fn check_success() {
             path = "../bar"
         "#,
         )
-        .file(
-            "src/main.rs",
-            r#"
-            extern crate bar;
-            fn main() {
-                ::bar::baz();
-            }
-        "#,
-        )
+        .file("src/main.rs", "extern crate bar; fn main() { ::bar::baz(); }")
         .build();
     let _bar = project().at("bar")
-        .file(
-            "Cargo.toml",
-            r#"
-            [package]
-            name = "bar"
-            version = "0.1.0"
-            authors = []
-        "#,
-        )
-        .file(
-            "src/lib.rs",
-            r#"
-            pub fn baz() {}
-        "#,
-        )
+        .file("Cargo.toml", &basic_manifest("bar", "0.1.0"))
+        .file("src/lib.rs", "pub fn baz() {}")
         .build();
 
     assert_that(foo.cargo("check"), execs().with_status(0));
@@ -74,32 +46,11 @@ fn check_fail() {
             path = "../bar"
         "#,
         )
-        .file(
-            "src/main.rs",
-            r#"
-            extern crate bar;
-            fn main() {
-                ::bar::baz(42);
-            }
-        "#,
-        )
+        .file("src/main.rs", "extern crate bar; fn main() { ::bar::baz(42); }")
         .build();
     let _bar = project().at("bar")
-        .file(
-            "Cargo.toml",
-            r#"
-            [package]
-            name = "bar"
-            version = "0.1.0"
-            authors = []
-        "#,
-        )
-        .file(
-            "src/lib.rs",
-            r#"
-            pub fn baz() {}
-        "#,
-        )
+        .file("Cargo.toml", &basic_manifest("bar", "0.1.0"))
+        .file("src/lib.rs", "pub fn baz() {}")
         .build();
 
     assert_that(foo.cargo("check"), execs().with_status(101));
@@ -185,33 +136,12 @@ fn check_build() {
             path = "../bar"
         "#,
         )
-        .file(
-            "src/main.rs",
-            r#"
-            extern crate bar;
-            fn main() {
-                ::bar::baz();
-            }
-        "#,
-        )
+        .file("src/main.rs", "extern crate bar; fn main() { ::bar::baz(); }")
         .build();
 
     let _bar = project().at("bar")
-        .file(
-            "Cargo.toml",
-            r#"
-            [package]
-            name = "bar"
-            version = "0.1.0"
-            authors = []
-        "#,
-        )
-        .file(
-            "src/lib.rs",
-            r#"
-            pub fn baz() {}
-        "#,
-        )
+        .file("Cargo.toml", &basic_manifest("bar", "0.1.0"))
+        .file("src/lib.rs", "pub fn baz() {}")
         .build();
 
     assert_that(foo.cargo("check"), execs().with_status(0));
@@ -233,33 +163,12 @@ fn build_check() {
             path = "../bar"
         "#,
         )
-        .file(
-            "src/main.rs",
-            r#"
-            extern crate bar;
-            fn main() {
-                ::bar::baz();
-            }
-        "#,
-        )
+        .file("src/main.rs", "extern crate bar; fn main() { ::bar::baz(); }")
         .build();
 
     let _bar = project().at("bar")
-        .file(
-            "Cargo.toml",
-            r#"
-            [package]
-            name = "bar"
-            version = "0.1.0"
-            authors = []
-        "#,
-        )
-        .file(
-            "src/lib.rs",
-            r#"
-            pub fn baz() {}
-        "#,
-        )
+        .file("Cargo.toml", &basic_manifest("bar", "0.1.0"))
+        .file("src/lib.rs", "pub fn baz() {}")
         .build();
 
     assert_that(foo.cargo("build"), execs().with_status(0));
@@ -271,17 +180,6 @@ fn build_check() {
 #[test]
 fn issue_3418() {
     let foo = project()
-        .file(
-            "Cargo.toml",
-            r#"
-            [package]
-            name = "foo"
-            version = "0.1.0"
-            authors = []
-
-            [dependencies]
-        "#,
-        )
         .file("src/lib.rs", "")
         .file("src/main.rs", "fn main() {}")
         .build();
@@ -413,32 +311,11 @@ fn rustc_check() {
             path = "../bar"
         "#,
         )
-        .file(
-            "src/main.rs",
-            r#"
-            extern crate bar;
-            fn main() {
-                ::bar::baz();
-            }
-        "#,
-        )
+        .file("src/main.rs", "extern crate bar; fn main() { ::bar::baz(); }")
         .build();
     let _bar = project().at("bar")
-        .file(
-            "Cargo.toml",
-            r#"
-            [package]
-            name = "bar"
-            version = "0.1.0"
-            authors = []
-        "#,
-        )
-        .file(
-            "src/lib.rs",
-            r#"
-            pub fn baz() {}
-        "#,
-        )
+        .file("Cargo.toml", &basic_manifest("bar", "0.1.0"))
+        .file("src/lib.rs", "pub fn baz() {}")
         .build();
 
     assert_that(
@@ -466,32 +343,11 @@ fn rustc_check_err() {
             path = "../bar"
         "#,
         )
-        .file(
-            "src/main.rs",
-            r#"
-            extern crate bar;
-            fn main() {
-                ::bar::qux();
-            }
-        "#,
-        )
+        .file("src/main.rs", "extern crate bar; fn main() { ::bar::qux(); }")
         .build();
     let _bar = project().at("bar")
-        .file(
-            "Cargo.toml",
-            r#"
-            [package]
-            name = "bar"
-            version = "0.1.0"
-            authors = []
-        "#,
-        )
-        .file(
-            "src/lib.rs",
-            r#"
-            pub fn baz() {}
-        "#,
-        )
+        .file("Cargo.toml", &basic_manifest("bar", "0.1.0"))
+        .file("src/lib.rs", "pub fn baz() {}")
         .build();
 
     assert_that(
@@ -524,15 +380,7 @@ fn check_all() {
         .file("examples/a.rs", "fn main() {}")
         .file("tests/a.rs", "")
         .file("src/lib.rs", "")
-        .file(
-            "b/Cargo.toml",
-            r#"
-            [package]
-            name = "b"
-            version = "0.0.1"
-            authors = []
-        "#,
-        )
+        .file("b/Cargo.toml", &basic_manifest("b", "0.0.1"))
         .file("b/src/main.rs", "fn main() {}")
         .file("b/src/lib.rs", "")
         .build();
@@ -558,34 +406,10 @@ fn check_virtual_all_implied() {
             members = ["bar", "baz"]
         "#,
         )
-        .file(
-            "bar/Cargo.toml",
-            r#"
-            [project]
-            name = "bar"
-            version = "0.1.0"
-        "#,
-        )
-        .file(
-            "bar/src/lib.rs",
-            r#"
-            pub fn bar() {}
-        "#,
-        )
-        .file(
-            "baz/Cargo.toml",
-            r#"
-            [project]
-            name = "baz"
-            version = "0.1.0"
-        "#,
-        )
-        .file(
-            "baz/src/lib.rs",
-            r#"
-            pub fn baz() {}
-        "#,
-        )
+        .file("bar/Cargo.toml", &basic_manifest("bar", "0.1.0"))
+        .file("bar/src/lib.rs", "pub fn bar() {}")
+        .file("baz/Cargo.toml", &basic_manifest("baz", "0.1.0"))
+        .file("baz/src/lib.rs", "pub fn baz() {}")
         .build();
 
     assert_that(
@@ -600,7 +424,6 @@ fn check_virtual_all_implied() {
 #[test]
 fn targets_selected_default() {
     let foo = project()
-        .file("Cargo.toml", SIMPLE_MANIFEST)
         .file("src/main.rs", "fn main() {}")
         .file("src/lib.rs", "pub fn smth() {}")
         .file("examples/example1.rs", "fn main() {}")
@@ -623,7 +446,6 @@ fn targets_selected_default() {
 #[test]
 fn targets_selected_all() {
     let foo = project()
-        .file("Cargo.toml", SIMPLE_MANIFEST)
         .file("src/main.rs", "fn main() {}")
         .file("src/lib.rs", "pub fn smth() {}")
         .file("examples/example1.rs", "fn main() {}")
@@ -646,7 +468,6 @@ fn targets_selected_all() {
 #[test]
 fn check_unit_test_profile() {
     let foo = project()
-        .file("Cargo.toml", SIMPLE_MANIFEST)
         .file(
             "src/lib.rs",
             r#"
@@ -674,7 +495,6 @@ fn check_unit_test_profile() {
 #[test]
 fn check_filters() {
     let p = project()
-        .file("Cargo.toml", SIMPLE_MANIFEST)
         .file(
             "src/lib.rs",
             r#"
@@ -796,7 +616,6 @@ fn check_filters() {
 fn check_artifacts() {
     // Verify which artifacts are created when running check (#4059).
     let p = project()
-        .file("Cargo.toml", SIMPLE_MANIFEST)
         .file("src/lib.rs", "")
         .file("src/main.rs", "fn main() {}")
         .file("tests/t1.rs", "")

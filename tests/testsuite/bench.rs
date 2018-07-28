@@ -3,7 +3,7 @@ use std::str;
 use cargo::util::process;
 use support::{is_nightly, ChannelChanger};
 use support::paths::CargoPathExt;
-use support::{basic_bin_manifest, basic_lib_manifest, execs, project};
+use support::{basic_manifest, basic_bin_manifest, basic_lib_manifest, execs, project};
 use support::hamcrest::{assert_that, existing_file};
 
 #[test]
@@ -63,15 +63,6 @@ fn bench_bench_implicit() {
 
     let p = project()
         .file(
-            "Cargo.toml",
-            r#"
-            [package]
-            name = "foo"
-            version = "0.0.1"
-            authors = []
-        "#,
-        )
-        .file(
             "src/main.rs",
             r#"
             #![cfg_attr(test, feature(test))]
@@ -121,15 +112,6 @@ fn bench_bin_implicit() {
 
     let p = project()
         .file(
-            "Cargo.toml",
-            r#"
-            [package]
-            name = "foo"
-            version = "0.0.1"
-            authors = []
-        "#,
-        )
-        .file(
             "src/main.rs",
             r#"
             #![feature(test)]
@@ -178,15 +160,6 @@ fn bench_tarname() {
 
     let p = project()
         .file(
-            "Cargo.toml",
-            r#"
-            [package]
-            name = "foo"
-            version = "0.0.1"
-            authors = []
-        "#,
-        )
-        .file(
             "benches/bin1.rs",
             r#"
             #![feature(test)]
@@ -225,15 +198,6 @@ fn bench_multiple_targets() {
     }
 
     let p = project()
-        .file(
-            "Cargo.toml",
-            r#"
-            [package]
-            name = "foo"
-            version = "0.0.1"
-            authors = []
-        "#,
-        )
         .file(
             "benches/bin1.rs",
             r#"
@@ -313,15 +277,6 @@ fn many_similar_names() {
     }
 
     let p = project()
-        .file(
-            "Cargo.toml",
-            r#"
-            [package]
-            name = "foo"
-            version = "0.0.1"
-            authors = []
-        "#,
-        )
         .file(
             "src/lib.rs",
             "
@@ -537,15 +492,6 @@ fn bench_with_deep_lib_dep() {
         .build();
     let _p2 = project()
         .file(
-            "Cargo.toml",
-            r#"
-            [package]
-            name = "foo"
-            version = "0.0.1"
-            authors = []
-        "#,
-        )
-        .file(
             "src/lib.rs",
             "
             #![cfg_attr(test, feature(test))]
@@ -645,15 +591,6 @@ fn external_bench_implicit() {
     }
 
     let p = project()
-        .file(
-            "Cargo.toml",
-            r#"
-            [project]
-            name = "foo"
-            version = "0.0.1"
-            authors = []
-        "#,
-        )
         .file(
             "src/lib.rs",
             r#"
@@ -784,21 +721,10 @@ fn dont_run_examples() {
     }
 
     let p = project()
-        .file(
-            "Cargo.toml",
-            r#"
-            [project]
-            name = "foo"
-            version = "0.0.1"
-            authors = []
-        "#,
-        )
         .file("src/lib.rs", r"")
         .file(
             "examples/dont-run-me-i-will-fail.rs",
-            r#"
-            fn main() { panic!("Examples should not be run by 'cargo test'"); }
-        "#,
+            r#"fn main() { panic!("Examples should not be run by 'cargo test'"); }"#,
         )
         .build();
     assert_that(p.cargo("bench"), execs().with_status(0));
@@ -811,15 +737,6 @@ fn pass_through_command_line() {
     }
 
     let p = project()
-        .file(
-            "Cargo.toml",
-            r#"
-            [package]
-            name = "foo"
-            version = "0.0.1"
-            authors = []
-        "#,
-        )
         .file(
             "src/lib.rs",
             "
@@ -957,15 +874,7 @@ fn lib_with_standard_name() {
     }
 
     let p = project()
-        .file(
-            "Cargo.toml",
-            r#"
-            [package]
-            name = "syntax"
-            version = "0.0.1"
-            authors = []
-        "#,
-        )
+        .file("Cargo.toml", &basic_manifest("syntax", "0.0.1"))
         .file(
             "src/lib.rs",
             "
@@ -1033,12 +942,7 @@ fn lib_with_standard_name2() {
             doctest = false
         "#,
         )
-        .file(
-            "src/lib.rs",
-            "
-            pub fn foo() {}
-        ",
-        )
+        .file("src/lib.rs", "pub fn foo() {}")
         .file(
             "src/main.rs",
             "
@@ -1132,12 +1036,7 @@ fn bench_dylib() {
             crate_type = ["dylib"]
         "#,
         )
-        .file(
-            "bar/src/lib.rs",
-            "
-             pub fn baz() {}
-        ",
-        )
+        .file("bar/src/lib.rs", "pub fn baz() {}")
         .build();
 
     assert_that(
@@ -1352,13 +1251,7 @@ fn test_a_bench() {
         "#,
         )
         .file("src/lib.rs", "")
-        .file(
-            "benches/b.rs",
-            r#"
-            #[test]
-            fn foo() {}
-        "#,
-        )
+        .file("benches/b.rs", "#[test] fn foo() {}")
         .build();
 
     assert_that(
@@ -1382,15 +1275,6 @@ fn test_bench_no_run() {
     }
 
     let p = project()
-        .file(
-            "Cargo.toml",
-            r#"
-            [project]
-            name = "foo"
-            authors = []
-            version = "0.1.0"
-        "#,
-        )
         .file("src/lib.rs", "")
         .file(
             "benches/bbaz.rs",
@@ -1411,7 +1295,7 @@ fn test_bench_no_run() {
         p.cargo("bench").arg("--no-run"),
         execs().with_status(0).with_stderr(
             "\
-[COMPILING] foo v0.1.0 ([..])
+[COMPILING] foo v0.0.1 ([..])
 [FINISHED] release [optimized] target(s) in [..]
 ",
         ),
@@ -1581,12 +1465,7 @@ fn bench_all_workspace() {
             [workspace]
         "#,
         )
-        .file(
-            "src/main.rs",
-            r#"
-            fn main() {}
-        "#,
-        )
+        .file("src/main.rs", "fn main() {}")
         .file(
             "benches/foo.rs",
             r#"
@@ -1599,20 +1478,8 @@ fn bench_all_workspace() {
             fn bench_foo(_: &mut Bencher) -> () { () }
         "#,
         )
-        .file(
-            "bar/Cargo.toml",
-            r#"
-            [project]
-            name = "bar"
-            version = "0.1.0"
-        "#,
-        )
-        .file(
-            "bar/src/lib.rs",
-            r#"
-            pub fn bar() {}
-        "#,
-        )
+        .file("bar/Cargo.toml", &basic_manifest("bar", "0.1.0"))
+        .file("bar/src/lib.rs", "pub fn bar() {}")
         .file(
             "bar/benches/bar.rs",
             r#"
@@ -1656,20 +1523,8 @@ fn bench_all_exclude() {
             members = ["bar", "baz"]
         "#,
         )
-        .file(
-            "src/main.rs",
-            r#"
-            fn main() {}
-        "#,
-        )
-        .file(
-            "bar/Cargo.toml",
-            r#"
-            [project]
-            name = "bar"
-            version = "0.1.0"
-        "#,
-        )
+        .file("src/main.rs", "fn main() {}")
+        .file("bar/Cargo.toml", &basic_manifest("bar", "0.1.0"))
         .file(
             "bar/src/lib.rs",
             r#"
@@ -1683,23 +1538,8 @@ fn bench_all_exclude() {
             }
         "#,
         )
-        .file(
-            "baz/Cargo.toml",
-            r#"
-            [project]
-            name = "baz"
-            version = "0.1.0"
-        "#,
-        )
-        .file(
-            "baz/src/lib.rs",
-            r#"
-            #[test]
-            pub fn baz() {
-                break_the_build();
-            }
-        "#,
-        )
+        .file("baz/Cargo.toml", &basic_manifest("baz", "0.1.0"))
+        .file("baz/src/lib.rs", "#[test] pub fn baz() { break_the_build(); }")
         .build();
 
     assert_that(
@@ -1726,20 +1566,8 @@ fn bench_all_virtual_manifest() {
             members = ["bar", "baz"]
         "#,
         )
-        .file(
-            "bar/Cargo.toml",
-            r#"
-            [project]
-            name = "bar"
-            version = "0.1.0"
-        "#,
-        )
-        .file(
-            "bar/src/lib.rs",
-            r#"
-            pub fn bar() {}
-        "#,
-        )
+        .file("bar/Cargo.toml", &basic_manifest("bar", "0.1.0"))
+        .file("bar/src/lib.rs", "pub fn bar() {}")
         .file(
             "bar/benches/bar.rs",
             r#"
@@ -1752,20 +1580,8 @@ fn bench_all_virtual_manifest() {
             fn bench_bar(_: &mut Bencher) -> () { () }
         "#,
         )
-        .file(
-            "baz/Cargo.toml",
-            r#"
-            [project]
-            name = "baz"
-            version = "0.1.0"
-        "#,
-        )
-        .file(
-            "baz/src/lib.rs",
-            r#"
-            pub fn baz() {}
-        "#,
-        )
+        .file("baz/Cargo.toml", &basic_manifest("baz", "0.1.0"))
+        .file("baz/src/lib.rs", "pub fn baz() {}")
         .file(
             "baz/benches/baz.rs",
             r#"
@@ -1811,12 +1627,7 @@ fn legacy_bench_name() {
             name = "bench"
         "#,
         )
-        .file(
-            "src/lib.rs",
-            r#"
-            pub fn foo() {}
-        "#,
-        )
+        .file("src/lib.rs", "pub fn foo() {}")
         .file(
             "src/bench.rs",
             r#"
@@ -1855,20 +1666,8 @@ fn bench_virtual_manifest_all_implied() {
             members = ["bar", "baz"]
         "#,
         )
-        .file(
-            "bar/Cargo.toml",
-            r#"
-            [project]
-            name = "bar"
-            version = "0.1.0"
-        "#,
-        )
-        .file(
-            "bar/src/lib.rs",
-            r#"
-            pub fn foo() {}
-        "#,
-        )
+        .file("bar/Cargo.toml", &basic_manifest("bar", "0.1.0"))
+        .file("bar/src/lib.rs", "pub fn foo() {}")
         .file(
             "bar/benches/bar.rs",
             r#"
@@ -1879,20 +1678,8 @@ fn bench_virtual_manifest_all_implied() {
             fn bench_bar(_: &mut Bencher) -> () { () }
         "#,
         )
-        .file(
-            "baz/Cargo.toml",
-            r#"
-            [project]
-            name = "baz"
-            version = "0.1.0"
-        "#,
-        )
-        .file(
-            "baz/src/lib.rs",
-            r#"
-            pub fn baz() {}
-        "#,
-        )
+        .file("baz/Cargo.toml", &basic_manifest("baz", "0.1.0"))
+        .file("baz/src/lib.rs", "pub fn baz() {}")
         .file(
             "baz/benches/baz.rs",
             r#"

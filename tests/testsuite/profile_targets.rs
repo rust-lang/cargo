@@ -1,5 +1,5 @@
 use support::is_nightly;
-use support::{execs, project, Project};
+use support::{basic_manifest, execs, project, Project};
 use support::hamcrest::assert_that;
 
 // These tests try to exercise exactly which profiles are selected for every
@@ -35,14 +35,8 @@ fn all_target_project() -> Project {
         "#,
         )
         .file("src/lib.rs", "extern crate bar;")
-        .file("src/main.rs", r#"
-            extern crate foo;
-            fn main() {}
-        "#)
-        .file("examples/ex1.rs", r#"
-            extern crate foo;
-            fn main() {}
-        "#)
+        .file("src/main.rs", "extern crate foo; fn main() {}")
+        .file("examples/ex1.rs", "extern crate foo; fn main() {}")
         .file("tests/test1.rs", "extern crate foo;")
         .file("benches/bench1.rs", "extern crate foo;")
         .file("build.rs", r#"
@@ -57,11 +51,7 @@ fn all_target_project() -> Project {
         "#)
 
         // bar package
-        .file("bar/Cargo.toml", r#"
-            [package]
-            name = "bar"
-            version = "0.0.1"
-        "#)
+        .file("bar/Cargo.toml", &basic_manifest("bar", "0.0.1"))
         .file("bar/src/lib.rs", "")
 
         // bdep package

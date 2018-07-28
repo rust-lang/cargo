@@ -5,7 +5,7 @@ use cargo::util::process;
 use support::sleep_ms;
 use support::paths::{self, CargoPathExt};
 use support::registry::Package;
-use support::{execs, main_file, project};
+use support::{basic_manifest, basic_lib_manifest, execs, main_file, project};
 use support::hamcrest::{assert_that, existing_file, is_not};
 
 #[test]
@@ -58,20 +58,7 @@ fn cargo_compile_with_nested_deps_shorthand() {
             }
         "#,
         )
-        .file(
-            "bar/baz/Cargo.toml",
-            r#"
-            [project]
-
-            name = "baz"
-            version = "0.5.0"
-            authors = ["wycats@example.com"]
-
-            [lib]
-
-            name = "baz"
-        "#,
-        )
+        .file("bar/baz/Cargo.toml", &basic_lib_manifest("baz"))
         .file(
             "bar/baz/src/baz.rs",
             r#"
@@ -156,16 +143,7 @@ fn cargo_compile_with_root_dev_deps() {
         .file("src/main.rs", &main_file(r#""{}", bar::gimme()"#, &["bar"]))
         .build();
     let _p2 = project().at("bar")
-        .file(
-            "Cargo.toml",
-            r#"
-            [package]
-
-            name = "bar"
-            version = "0.5.0"
-            authors = ["wycats@example.com"]
-        "#,
-        )
+        .file("Cargo.toml", &basic_manifest("bar", "0.5.0"))
         .file(
             "src/lib.rs",
             r#"
@@ -203,16 +181,7 @@ fn cargo_compile_with_root_dev_deps_with_testing() {
         .file("src/main.rs", &main_file(r#""{}", bar::gimme()"#, &["bar"]))
         .build();
     let _p2 = project().at("bar")
-        .file(
-            "Cargo.toml",
-            r#"
-            [package]
-
-            name = "bar"
-            version = "0.5.0"
-            authors = ["wycats@example.com"]
-        "#,
-        )
+        .file("Cargo.toml", &basic_manifest("bar", "0.5.0"))
         .file(
             "src/lib.rs",
             r#"
@@ -317,32 +286,9 @@ fn no_rebuild_dependency() {
             path = "bar"
         "#,
         )
-        .file(
-            "src/main.rs",
-            r#"
-            extern crate bar;
-            fn main() { bar::bar() }
-        "#,
-        )
-        .file(
-            "bar/Cargo.toml",
-            r#"
-            [project]
-
-            name = "bar"
-            version = "0.5.0"
-            authors = ["wycats@example.com"]
-
-            [lib]
-            name = "bar"
-        "#,
-        )
-        .file(
-            "bar/src/bar.rs",
-            r#"
-            pub fn bar() {}
-        "#,
-        )
+        .file("src/main.rs", "extern crate bar; fn main() { bar::bar() }")
+        .file("bar/Cargo.toml", &basic_lib_manifest("bar"))
+        .file("bar/src/bar.rs", "pub fn bar() {}")
         .build();
     // First time around we should compile both foo and bar
     assert_that(
@@ -393,13 +339,7 @@ fn deep_dependencies_trigger_rebuild() {
             path = "bar"
         "#,
         )
-        .file(
-            "src/main.rs",
-            r#"
-            extern crate bar;
-            fn main() { bar::bar() }
-        "#,
-        )
+        .file("src/main.rs", "extern crate bar; fn main() { bar::bar() }")
         .file(
             "bar/Cargo.toml",
             r#"
@@ -415,32 +355,9 @@ fn deep_dependencies_trigger_rebuild() {
             path = "../baz"
         "#,
         )
-        .file(
-            "bar/src/bar.rs",
-            r#"
-            extern crate baz;
-            pub fn bar() { baz::baz() }
-        "#,
-        )
-        .file(
-            "baz/Cargo.toml",
-            r#"
-            [project]
-
-            name = "baz"
-            version = "0.5.0"
-            authors = ["wycats@example.com"]
-
-            [lib]
-            name = "baz"
-        "#,
-        )
-        .file(
-            "baz/src/baz.rs",
-            r#"
-            pub fn baz() {}
-        "#,
-        )
+        .file("bar/src/bar.rs", "extern crate baz; pub fn bar() { baz::baz() }")
+        .file("baz/Cargo.toml", &basic_lib_manifest("baz"))
+        .file("baz/src/baz.rs", "pub fn baz() {}")
         .build();
     assert_that(
         p.cargo("build"),
@@ -464,11 +381,7 @@ fn deep_dependencies_trigger_rebuild() {
     sleep_ms(1000);
     File::create(&p.root().join("baz/src/baz.rs"))
         .unwrap()
-        .write_all(
-            br#"
-        pub fn baz() { println!("hello!"); }
-    "#,
-        )
+        .write_all(br#"pub fn baz() { println!("hello!"); }"#)
         .unwrap();
     assert_that(
         p.cargo("build"),
@@ -526,13 +439,7 @@ fn no_rebuild_two_deps() {
             path = "baz"
         "#,
         )
-        .file(
-            "src/main.rs",
-            r#"
-            extern crate bar;
-            fn main() { bar::bar() }
-        "#,
-        )
+        .file("src/main.rs", "extern crate bar; fn main() { bar::bar() }")
         .file(
             "bar/Cargo.toml",
             r#"
@@ -548,31 +455,9 @@ fn no_rebuild_two_deps() {
             path = "../baz"
         "#,
         )
-        .file(
-            "bar/src/bar.rs",
-            r#"
-            pub fn bar() {}
-        "#,
-        )
-        .file(
-            "baz/Cargo.toml",
-            r#"
-            [project]
-
-            name = "baz"
-            version = "0.5.0"
-            authors = ["wycats@example.com"]
-
-            [lib]
-            name = "baz"
-        "#,
-        )
-        .file(
-            "baz/src/baz.rs",
-            r#"
-            pub fn baz() {}
-        "#,
-        )
+        .file("bar/src/bar.rs", "pub fn bar() {}")
+        .file("baz/Cargo.toml", &basic_lib_manifest("baz"))
+        .file("baz/src/baz.rs", "pub fn baz() {}")
         .build();
     assert_that(
         p.cargo("build"),
@@ -611,20 +496,7 @@ fn nested_deps_recompile() {
         "#,
         )
         .file("src/main.rs", &main_file(r#""{}", bar::gimme()"#, &["bar"]))
-        .file(
-            "src/bar/Cargo.toml",
-            r#"
-            [project]
-
-            name = "bar"
-            version = "0.5.0"
-            authors = ["wycats@example.com"]
-
-            [lib]
-
-            name = "bar"
-        "#,
-        )
+        .file("src/bar/Cargo.toml", &basic_lib_manifest("bar"))
         .file("src/bar/src/bar.rs", "pub fn gimme() -> i32 { 92 }")
         .build();
     let bar = p.url();
@@ -644,11 +516,7 @@ fn nested_deps_recompile() {
 
     File::create(&p.root().join("src/main.rs"))
         .unwrap()
-        .write_all(
-            br#"
-        fn main() {}
-    "#,
-        )
+        .write_all(br#"fn main() {}"#)
         .unwrap();
 
     // This shouldn't recompile `bar`
@@ -706,16 +574,7 @@ Caused by:
 #[test]
 fn override_relative() {
     let bar = project().at("bar")
-        .file(
-            "Cargo.toml",
-            r#"
-            [package]
-
-            name = "bar"
-            version = "0.5.0"
-            authors = ["wycats@example.com"]
-        "#,
-        )
+        .file("Cargo.toml", &basic_manifest("bar", "0.5.0"))
         .file("src/lib.rs", "")
         .build();
 
@@ -750,30 +609,15 @@ fn override_relative() {
 #[test]
 fn override_self() {
     let bar = project().at("bar")
-        .file(
-            "Cargo.toml",
-            r#"
-            [package]
-
-            name = "bar"
-            version = "0.5.0"
-            authors = ["wycats@example.com"]
-        "#,
-        )
+        .file("Cargo.toml", &basic_manifest("bar", "0.5.0"))
         .file("src/lib.rs", "")
         .build();
 
     let p = project();
     let root = p.root().clone();
-    let p = p.file(
-        ".cargo/config",
-        &format!(
-            r#"
-            paths = ['{}']
-        "#,
-            root.display()
-        ),
-    ).file(
+    let p = p
+        .file(".cargo/config", &format!("paths = ['{}']", root.display()))
+        .file(
             "Cargo.toml",
             &format!(
                 r#"
@@ -813,15 +657,7 @@ fn override_path_dep() {
        "#,
         )
         .file("p1/src/lib.rs", "")
-        .file(
-            "p2/Cargo.toml",
-            r#"
-            [package]
-            name = "p2"
-            version = "0.5.0"
-            authors = []
-       "#,
-        )
+        .file("p2/Cargo.toml", &basic_manifest("p2", "0.5.0"))
         .file("p2/src/lib.rs", "")
         .build();
 
@@ -829,9 +665,7 @@ fn override_path_dep() {
         .file(
             ".cargo/config",
             &format!(
-                r#"
-            paths = ['{}', '{}']
-        "#,
+                "paths = ['{}', '{}']",
                 bar.root().join("p1").display(),
                 bar.root().join("p2").display()
             ),
@@ -902,12 +736,7 @@ fn path_dep_build_cmd() {
             }
         "#,
         )
-        .file(
-            "bar/src/bar.rs.in",
-            r#"
-            pub fn gimme() -> i32 { 0 }
-        "#,
-        )
+        .file("bar/src/bar.rs.in", "pub fn gimme() -> i32 { 0 }")
         .build();
     p.root().join("bar").move_into_the_past();
 
@@ -976,16 +805,7 @@ fn dev_deps_no_rebuild_lib() {
             #[cfg(not(test))] pub fn foo() { env!("FOO"); }
         "#,
         )
-        .file(
-            "bar/Cargo.toml",
-            r#"
-            [package]
-
-            name = "bar"
-            version = "0.5.0"
-            authors = ["wycats@example.com"]
-        "#,
-        )
+        .file("bar/Cargo.toml", &basic_manifest("bar", "0.5.0"))
         .file("bar/src/lib.rs", "pub fn bar() {}")
         .build();
     assert_that(
@@ -1031,15 +851,7 @@ fn custom_target_no_rebuild() {
         "#,
         )
         .file("src/lib.rs", "")
-        .file(
-            "a/Cargo.toml",
-            r#"
-            [project]
-            name = "a"
-            version = "0.5.0"
-            authors = []
-        "#,
-        )
+        .file("a/Cargo.toml", &basic_manifest("a", "0.5.0"))
         .file("a/src/lib.rs", "")
         .file(
             "b/Cargo.toml",
@@ -1085,6 +897,7 @@ fn custom_target_no_rebuild() {
 #[test]
 fn override_and_depend() {
     let p = project()
+        .no_manifest()
         .file(
             "a/a1/Cargo.toml",
             r#"
@@ -1097,15 +910,7 @@ fn override_and_depend() {
         "#,
         )
         .file("a/a1/src/lib.rs", "")
-        .file(
-            "a/a2/Cargo.toml",
-            r#"
-            [project]
-            name = "a2"
-            version = "0.5.0"
-            authors = []
-        "#,
-        )
+        .file("a/a2/Cargo.toml", &basic_manifest("a2", "0.5.0"))
         .file("a/a2/src/lib.rs", "")
         .file(
             "b/Cargo.toml",
@@ -1120,12 +925,7 @@ fn override_and_depend() {
         "#,
         )
         .file("b/src/lib.rs", "")
-        .file(
-            "b/.cargo/config",
-            r#"
-            paths = ["../a"]
-        "#,
-        )
+        .file("b/.cargo/config", r#"paths = ["../a"]"#)
         .build();
     assert_that(
         p.cargo("build").cwd(p.root().join("b")),
@@ -1143,22 +943,9 @@ fn override_and_depend() {
 #[test]
 fn missing_path_dependency() {
     let p = project()
-        .file(
-            "Cargo.toml",
-            r#"
-            [project]
-            name = "a"
-            version = "0.5.0"
-            authors = []
-        "#,
-        )
+        .file("Cargo.toml", &basic_manifest("a", "0.5.0"))
         .file("src/lib.rs", "")
-        .file(
-            ".cargo/config",
-            r#"
-            paths = ["../whoa-this-does-not-exist"]
-        "#,
-        )
+        .file(".cargo/config", r#"paths = ["../whoa-this-does-not-exist"]"#)
         .build();
     assert_that(
         p.cargo("build"),
@@ -1264,15 +1051,7 @@ fn workspace_produces_rlib() {
         "#,
         )
         .file("src/lib.rs", "")
-        .file(
-            "foo/Cargo.toml",
-            r#"
-            [project]
-            name = "foo"
-            version = "0.5.0"
-            authors = []
-        "#,
-        )
+        .file("foo/Cargo.toml", &basic_manifest("foo", "0.5.0"))
         .file("foo/src/lib.rs", "")
         .build();
 

@@ -8,7 +8,7 @@ use cargo;
 use support::cargo_process;
 use support::paths::{self, CargoPathExt};
 use support::registry::Package;
-use support::{basic_bin_manifest, cargo_exe, execs, project, Project};
+use support::{basic_manifest, basic_bin_manifest, cargo_exe, execs, project, Project};
 use support::hamcrest::{assert_that, existing_file};
 
 #[cfg_attr(windows, allow(dead_code))]
@@ -58,6 +58,24 @@ fn fake_file(proj: Project, dir: &Path, name: &str, kind: &FakeKind) -> Project 
 
 fn path() -> Vec<PathBuf> {
     env::split_paths(&env::var_os("PATH").unwrap_or_default()).collect()
+}
+
+#[test]
+fn list_commands_with_descriptions() {
+    let p = project().build();
+    let output = p.cargo("--list").exec_with_output().unwrap();
+    let output = str::from_utf8(&output.stdout).unwrap();
+    assert!(
+        output.contains("\n    build                Compile a local package and all of its dependencies"),
+        "missing build, with description: {}",
+        output
+    );
+    // assert read-manifest prints the right one-line description followed by another command, indented.
+    assert!(
+        output.contains("\n    read-manifest        Print a JSON representation of a Cargo.toml manifest.\n    "),
+        "missing build, with description: {}",
+        output
+    );
 }
 
 #[test]
@@ -152,7 +170,7 @@ error: no such subcommand: `biuld`
         cargo_process().arg("--list"),
         execs()
             .with_status(0)
-            .with_stdout_contains("    build\n")
+            .with_stdout_contains("    build                Compile a local package and all of its dependencies\n")
             .with_stdout_contains("    biuld\n"),
     );
 }
@@ -261,15 +279,7 @@ fn cargo_subcommand_env() {
 #[test]
 fn cargo_subcommand_args() {
     let p = project().at("cargo-foo")
-        .file(
-            "Cargo.toml",
-            r#"
-            [package]
-            name = "cargo-foo"
-            version = "0.0.1"
-            authors = []
-        "#,
-        )
+        .file("Cargo.toml", &basic_manifest("cargo-foo", "0.0.1"))
         .file(
             "src/main.rs",
             r#"

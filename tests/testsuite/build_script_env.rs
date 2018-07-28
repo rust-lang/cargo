@@ -7,21 +7,7 @@ use support::hamcrest::assert_that;
 #[test]
 fn rerun_if_env_changes() {
     let p = project()
-        .file(
-            "Cargo.toml",
-            r#"
-            [package]
-            name = "foo"
-            version = "0.5.0"
-            authors = []
-        "#,
-        )
-        .file(
-            "src/main.rs",
-            r#"
-            fn main() {}
-        "#,
-        )
+        .file("src/main.rs", "fn main() {}")
         .file(
             "build.rs",
             r#"
@@ -36,7 +22,7 @@ fn rerun_if_env_changes() {
         p.cargo("build"),
         execs().with_status(0).with_stderr(
             "\
-[COMPILING] foo v0.5.0 ([..])
+[COMPILING] foo v0.0.1 ([..])
 [FINISHED] [..]
 ",
         ),
@@ -45,7 +31,7 @@ fn rerun_if_env_changes() {
         p.cargo("build").env("FOO", "bar"),
         execs().with_status(0).with_stderr(
             "\
-[COMPILING] foo v0.5.0 ([..])
+[COMPILING] foo v0.0.1 ([..])
 [FINISHED] [..]
 ",
         ),
@@ -54,7 +40,7 @@ fn rerun_if_env_changes() {
         p.cargo("build").env("FOO", "baz"),
         execs().with_status(0).with_stderr(
             "\
-[COMPILING] foo v0.5.0 ([..])
+[COMPILING] foo v0.0.1 ([..])
 [FINISHED] [..]
 ",
         ),
@@ -67,7 +53,7 @@ fn rerun_if_env_changes() {
         p.cargo("build"),
         execs().with_status(0).with_stderr(
             "\
-[COMPILING] foo v0.5.0 ([..])
+[COMPILING] foo v0.0.1 ([..])
 [FINISHED] [..]
 ",
         ),
@@ -77,21 +63,7 @@ fn rerun_if_env_changes() {
 #[test]
 fn rerun_if_env_or_file_changes() {
     let p = project()
-        .file(
-            "Cargo.toml",
-            r#"
-            [package]
-            name = "foo"
-            version = "0.5.0"
-            authors = []
-        "#,
-        )
-        .file(
-            "src/main.rs",
-            r#"
-            fn main() {}
-        "#,
-        )
+        .file("src/main.rs", "fn main() {}")
         .file(
             "build.rs",
             r#"
@@ -108,7 +80,7 @@ fn rerun_if_env_or_file_changes() {
         p.cargo("build"),
         execs().with_status(0).with_stderr(
             "\
-[COMPILING] foo v0.5.0 ([..])
+[COMPILING] foo v0.0.1 ([..])
 [FINISHED] [..]
 ",
         ),
@@ -117,7 +89,7 @@ fn rerun_if_env_or_file_changes() {
         p.cargo("build").env("FOO", "bar"),
         execs().with_status(0).with_stderr(
             "\
-[COMPILING] foo v0.5.0 ([..])
+[COMPILING] foo v0.0.1 ([..])
 [FINISHED] [..]
 ",
         ),
@@ -132,7 +104,7 @@ fn rerun_if_env_or_file_changes() {
         p.cargo("build").env("FOO", "bar"),
         execs().with_status(0).with_stderr(
             "\
-[COMPILING] foo v0.5.0 ([..])
+[COMPILING] foo v0.0.1 ([..])
 [FINISHED] [..]
 ",
         ),

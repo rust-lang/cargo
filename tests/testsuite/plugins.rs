@@ -2,7 +2,7 @@ use std::fs;
 use std::env;
 
 use support::{is_nightly, rustc_host};
-use support::{execs, project};
+use support::{basic_manifest, execs, project};
 use support::hamcrest::assert_that;
 
 #[test]
@@ -132,13 +132,7 @@ fn plugin_with_dynamic_native_dependency() {
             crate-type = ["dylib"]
         "#,
         )
-        .file(
-            "src/lib.rs",
-            r#"
-            #[no_mangle]
-            pub extern fn foo() {}
-        "#,
-        )
+        .file("src/lib.rs", "#[no_mangle] pub extern fn foo() {}")
         .build();
 
     let foo = project().at("ws/foo")
@@ -268,13 +262,7 @@ fn doctest_a_plugin() {
             bar = { path = "bar" }
         "#,
         )
-        .file(
-            "src/lib.rs",
-            r#"
-            #[macro_use]
-            extern crate bar;
-        "#,
-        )
+        .file("src/lib.rs", "#[macro_use] extern crate bar;")
         .file(
             "bar/Cargo.toml",
             r#"
@@ -288,12 +276,7 @@ fn doctest_a_plugin() {
             plugin = true
         "#,
         )
-        .file(
-            "bar/src/lib.rs",
-            r#"
-            pub fn bar() {}
-        "#,
-        )
+        .file("bar/src/lib.rs", "pub fn bar() {}")
         .build();
 
     assert_that(p.cargo("test").arg("-v"), execs().with_status(0));
@@ -429,12 +412,7 @@ fn shared_panic_abort_plugins() {
             baz = { path = "baz" }
         "#,
         )
-        .file(
-            "src/lib.rs",
-            "
-            extern crate baz;
-        ",
-        )
+        .file("src/lib.rs", "extern crate baz;")
         .file(
             "bar/Cargo.toml",
             r#"
@@ -458,15 +436,7 @@ fn shared_panic_abort_plugins() {
             extern crate baz;
         "#,
         )
-        .file(
-            "baz/Cargo.toml",
-            r#"
-            [package]
-            name = "baz"
-            version = "0.0.1"
-            authors = []
-        "#,
-        )
+        .file("baz/Cargo.toml", &basic_manifest("baz", "0.0.1"))
         .file("baz/src/lib.rs", "")
         .build();
 

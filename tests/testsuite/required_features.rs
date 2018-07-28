@@ -36,13 +36,7 @@ fn build_bin_default_features() {
             fn main() {}
         "#,
         )
-        .file(
-            "src/lib.rs",
-            r#"
-            #[cfg(feature = "a")]
-            pub fn foo() {}
-        "#,
-        )
+        .file("src/lib.rs", r#"#[cfg(feature = "a")] pub fn foo() {}"#)
         .build();
 
     assert_that(p.cargo("build"), execs().with_status(0));

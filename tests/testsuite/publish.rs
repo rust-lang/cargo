@@ -5,7 +5,7 @@ use std::io::SeekFrom;
 use support::ChannelChanger;
 use support::git::repo;
 use support::paths;
-use support::{execs, project, publish};
+use support::{basic_manifest, execs, project, publish};
 use flate2::read::GzDecoder;
 use support::hamcrest::assert_that;
 use tar::Archive;
@@ -87,11 +87,7 @@ fn old_token_location() {
     let credentials = paths::root().join("home/.cargo/credentials");
     File::create(credentials)
         .unwrap()
-        .write_all(
-            br#"
-            token = "api-token"
-        "#,
-        )
+        .write_all(br#"token = "api-token""#)
         .unwrap();
 
     let p = project()
@@ -376,15 +372,7 @@ fn path_dependency_no_version() {
         "#,
         )
         .file("src/main.rs", "fn main() {}")
-        .file(
-            "bar/Cargo.toml",
-            r#"
-            [package]
-            name = "bar"
-            version = "0.0.1"
-            authors = []
-        "#,
-        )
+        .file("bar/Cargo.toml", &basic_manifest("bar", "0.0.1"))
         .file("bar/src/lib.rs", "")
         .build();
 
@@ -512,7 +500,7 @@ fn publish_clean() {
 fn publish_in_sub_repo() {
     publish::setup();
 
-    let p = project().file("baz", "").build();
+    let p = project().no_manifest().file("baz", "").build();
 
     let _ = repo(&paths::root().join("foo"))
         .file(
@@ -578,7 +566,7 @@ fn publish_when_ignored() {
 fn ignore_when_crate_ignored() {
     publish::setup();
 
-    let p = project().file("bar/baz", "").build();
+    let p = project().no_manifest().file("bar/baz", "").build();
 
     let _ = repo(&paths::root().join("foo"))
         .file(".gitignore", "bar")
