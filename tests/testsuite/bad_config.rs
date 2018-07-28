@@ -1,19 +1,10 @@
-use support::{execs, project};
+use support::{basic_manifest, execs, project};
 use support::registry::Package;
 use support::hamcrest::assert_that;
 
 #[test]
 fn bad1() {
     let p = project()
-        .file(
-            "Cargo.toml",
-            r#"
-            [package]
-            name = "foo"
-            version = "0.0.0"
-            authors = []
-        "#,
-        )
         .file("src/lib.rs", "")
         .file(
             ".cargo/config",
@@ -39,15 +30,6 @@ but found string in [..]config
 #[test]
 fn bad2() {
     let p = project()
-        .file(
-            "Cargo.toml",
-            r#"
-            [package]
-            name = "foo"
-            version = "0.0.0"
-            authors = []
-        "#,
-        )
         .file("src/lib.rs", "")
         .file(
             ".cargo/config",
@@ -82,15 +64,6 @@ Caused by:
 #[test]
 fn bad3() {
     let p = project()
-        .file(
-            "Cargo.toml",
-            r#"
-            [package]
-            name = "foo"
-            version = "0.0.0"
-            authors = []
-        "#,
-        )
         .file("src/lib.rs", "")
         .file(
             ".cargo/config",
@@ -142,15 +115,6 @@ Caused by:
 #[test]
 fn bad6() {
     let p = project()
-        .file(
-            "Cargo.toml",
-            r#"
-            [package]
-            name = "foo"
-            version = "0.0.0"
-            authors = []
-        "#,
-        )
         .file("src/lib.rs", "")
         .file(
             ".cargo/config",
@@ -178,15 +142,6 @@ Caused by:
 #[test]
 fn bad_cargo_config_jobs() {
     let p = project()
-        .file(
-            "Cargo.toml",
-            r#"
-            [package]
-            name = "foo"
-            version = "0.0.0"
-            authors = []
-        "#,
-        )
         .file("src/lib.rs", "")
         .file(
             ".cargo/config",
@@ -211,15 +166,6 @@ invalid value: integer `-1`, expected u32
 #[test]
 fn default_cargo_config_jobs() {
     let p = project()
-        .file(
-            "Cargo.toml",
-            r#"
-            [package]
-            name = "foo"
-            version = "0.0.0"
-            authors = []
-        "#,
-        )
         .file("src/lib.rs", "")
         .file(
             ".cargo/config",
@@ -235,15 +181,6 @@ fn default_cargo_config_jobs() {
 #[test]
 fn good_cargo_config_jobs() {
     let p = project()
-        .file(
-            "Cargo.toml",
-            r#"
-            [package]
-            name = "foo"
-            version = "0.0.0"
-            authors = []
-        "#,
-        )
         .file("src/lib.rs", "")
         .file(
             ".cargo/config",
@@ -297,15 +234,6 @@ Caused by:
 #[test]
 fn bad_cargo_lock() {
     let p = project()
-        .file(
-            "Cargo.toml",
-            r#"
-            [package]
-            name = "foo"
-            version = "0.0.0"
-            authors = []
-        "#,
-        )
         .file("Cargo.lock", "[[package]]\nfoo = 92")
         .file("src/lib.rs", "")
         .build();
@@ -429,15 +357,6 @@ Caused by:
 #[test]
 fn bad_dependency_in_lockfile() {
     let p = project()
-        .file(
-            "Cargo.toml",
-            r#"
-            [project]
-            name = "foo"
-            version = "0.0.1"
-            authors = []
-        "#,
-        )
         .file("src/lib.rs", "")
         .file(
             "Cargo.lock",
@@ -679,36 +598,10 @@ Caused by:
 #[test]
 fn duplicate_deps() {
     let p = project()
-        .file(
-            "shim-bar/Cargo.toml",
-            r#"
-           [package]
-           name = "bar"
-           version = "0.0.1"
-           authors = []
-        "#,
-        )
-        .file(
-            "shim-bar/src/lib.rs",
-            r#"
-                pub fn a() {}
-        "#,
-        )
-        .file(
-            "linux-bar/Cargo.toml",
-            r#"
-           [package]
-           name = "bar"
-           version = "0.0.1"
-           authors = []
-        "#,
-        )
-        .file(
-            "linux-bar/src/lib.rs",
-            r#"
-                pub fn a() {}
-        "#,
-        )
+        .file("shim-bar/Cargo.toml", &basic_manifest("bar", "0.0.1"))
+        .file("shim-bar/src/lib.rs", "pub fn a() {}")
+        .file("linux-bar/Cargo.toml", &basic_manifest("bar", "0.0.1"))
+        .file("linux-bar/src/lib.rs", "pub fn a() {}")
         .file(
             "Cargo.toml",
             r#"
@@ -744,36 +637,10 @@ have a single canonical source path irrespective of build target.
 #[test]
 fn duplicate_deps_diff_sources() {
     let p = project()
-        .file(
-            "shim-bar/Cargo.toml",
-            r#"
-           [package]
-           name = "bar"
-           version = "0.0.1"
-           authors = []
-        "#,
-        )
-        .file(
-            "shim-bar/src/lib.rs",
-            r#"
-                pub fn a() {}
-        "#,
-        )
-        .file(
-            "linux-bar/Cargo.toml",
-            r#"
-           [package]
-           name = "bar"
-           version = "0.0.1"
-           authors = []
-        "#,
-        )
-        .file(
-            "linux-bar/src/lib.rs",
-            r#"
-                pub fn a() {}
-        "#,
-        )
+        .file("shim-bar/Cargo.toml", &basic_manifest("bar", "0.0.1"))
+        .file("shim-bar/src/lib.rs", "pub fn a() {}")
+        .file("linux-bar/Cargo.toml", &basic_manifest("bar", "0.0.1"))
+        .file("linux-bar/src/lib.rs", "pub fn a() {}")
         .file(
             "Cargo.toml",
             r#"
@@ -847,12 +714,7 @@ warning: unused manifest key: target.foo.bar
             bulid = "foo"
         "#,
         )
-        .file(
-            "src/lib.rs",
-            r#"
-            pub fn foo() {}
-        "#,
-        )
+        .file("src/lib.rs", "pub fn foo() {}")
         .build();
     assert_that(
         p.cargo("build"),
@@ -879,12 +741,7 @@ warning: unused manifest key: project.bulid
             build = "foo"
         "#,
         )
-        .file(
-            "src/lib.rs",
-            r#"
-            pub fn foo() {}
-        "#,
-        )
+        .file("src/lib.rs", "pub fn foo() {}")
         .build();
     assert_that(
         p.cargo("build"),
@@ -909,14 +766,7 @@ fn unused_keys_in_virtual_manifest() {
             bulid = "foo"
         "#,
         )
-        .file(
-            "bar/Cargo.toml",
-            r#"
-            [project]
-            version = "0.0.1"
-            name = "bar"
-        "#,
-        )
+        .file("bar/Cargo.toml", &basic_manifest("bar", "0.0.1"))
         .file("bar/src/lib.rs", r"")
         .build();
     assert_that(
@@ -965,21 +815,7 @@ to use. This will be considered an error in future versions
 #[test]
 fn invalid_toml_historically_allowed_is_warned() {
     let p = project()
-        .file(
-            "Cargo.toml",
-            r#"
-            [package]
-            name = "foo"
-            version = "0.0.0"
-            authors = []
-        "#,
-        )
-        .file(
-            ".cargo/config",
-            r#"
-            [bar] baz = 2
-        "#,
-        )
+        .file(".cargo/config", "[bar] baz = 2")
         .file("src/main.rs", "fn main() {}")
         .build();
 
@@ -994,7 +830,7 @@ The TOML spec requires newlines after table definitions (e.g. `[a] b = 1` is
 invalid), but this file has a table header which does not have a newline after
 it. A newline needs to be added and this warning will soon become a hard error
 in the future.
-[COMPILING] foo v0.0.0 ([..])
+[COMPILING] foo v0.0.1 ([..])
 [FINISHED] dev [unoptimized + debuginfo] target(s) in [..]
 ",
         ),
@@ -1036,22 +872,8 @@ This will be considered an error in future versions
 #[test]
 fn bad_source_config1() {
     let p = project()
-        .file(
-            "Cargo.toml",
-            r#"
-            [package]
-            name = "foo"
-            version = "0.0.0"
-            authors = []
-        "#,
-        )
         .file("src/lib.rs", "")
-        .file(
-            ".cargo/config",
-            r#"
-            [source.foo]
-        "#,
-        )
+        .file(".cargo/config", "[source.foo]")
         .build();
 
     assert_that(

@@ -1,4 +1,4 @@
-use support::{basic_bin_manifest, basic_lib_manifest, execs, project};
+use support::{basic_manifest, basic_bin_manifest, basic_lib_manifest, execs, project};
 use support::hamcrest::assert_that;
 
 const CARGO_RUSTC_ERROR: &'static str =
@@ -8,21 +8,7 @@ the package by passing e.g. `--lib` or `--bin NAME` to specify a single target";
 #[test]
 fn build_lib_for_foo() {
     let p = project()
-        .file(
-            "Cargo.toml",
-            r#"
-            [package]
-            name = "foo"
-            version = "0.0.1"
-            authors = []
-        "#,
-        )
-        .file(
-            "src/main.rs",
-            r#"
-            fn main() {}
-        "#,
-        )
+        .file("src/main.rs", "fn main() {}")
         .file("src/lib.rs", r#" "#)
         .build();
 
@@ -47,21 +33,7 @@ fn build_lib_for_foo() {
 #[test]
 fn lib() {
     let p = project()
-        .file(
-            "Cargo.toml",
-            r#"
-            [package]
-            name = "foo"
-            version = "0.0.1"
-            authors = []
-        "#,
-        )
-        .file(
-            "src/main.rs",
-            r#"
-            fn main() {}
-        "#,
-        )
+        .file("src/main.rs", "fn main() {}")
         .file("src/lib.rs", r#" "#)
         .build();
 
@@ -92,21 +64,7 @@ fn lib() {
 #[test]
 fn build_main_and_allow_unstable_options() {
     let p = project()
-        .file(
-            "Cargo.toml",
-            r#"
-            [package]
-            name = "foo"
-            version = "0.0.1"
-            authors = []
-        "#,
-        )
-        .file(
-            "src/main.rs",
-            r#"
-            fn main() {}
-        "#,
-        )
+        .file("src/main.rs", "fn main() {}")
         .file("src/lib.rs", r#" "#)
         .build();
 
@@ -140,21 +98,7 @@ fn build_main_and_allow_unstable_options() {
 #[test]
 fn fails_when_trying_to_build_main_and_lib_with_args() {
     let p = project()
-        .file(
-            "Cargo.toml",
-            r#"
-            [package]
-            name = "foo"
-            version = "0.0.1"
-            authors = []
-        "#,
-        )
-        .file(
-            "src/main.rs",
-            r#"
-            fn main() {}
-        "#,
-        )
+        .file("src/main.rs", "fn main() {}")
         .file("src/lib.rs", r#" "#)
         .build();
 
@@ -171,33 +115,9 @@ fn fails_when_trying_to_build_main_and_lib_with_args() {
 #[test]
 fn build_with_args_to_one_of_multiple_binaries() {
     let p = project()
-        .file(
-            "Cargo.toml",
-            r#"
-            [package]
-            name = "foo"
-            version = "0.0.1"
-            authors = []
-        "#,
-        )
-        .file(
-            "src/bin/foo.rs",
-            r#"
-            fn main() {}
-        "#,
-        )
-        .file(
-            "src/bin/bar.rs",
-            r#"
-            fn main() {}
-        "#,
-        )
-        .file(
-            "src/bin/baz.rs",
-            r#"
-            fn main() {}
-        "#,
-        )
+        .file("src/bin/foo.rs", "fn main() {}")
+        .file("src/bin/bar.rs", "fn main() {}")
+        .file("src/bin/baz.rs", "fn main() {}")
         .file("src/lib.rs", r#" "#)
         .build();
 
@@ -221,33 +141,9 @@ fn build_with_args_to_one_of_multiple_binaries() {
 #[test]
 fn fails_with_args_to_all_binaries() {
     let p = project()
-        .file(
-            "Cargo.toml",
-            r#"
-            [package]
-            name = "foo"
-            version = "0.0.1"
-            authors = []
-        "#,
-        )
-        .file(
-            "src/bin/foo.rs",
-            r#"
-            fn main() {}
-        "#,
-        )
-        .file(
-            "src/bin/bar.rs",
-            r#"
-            fn main() {}
-        "#,
-        )
-        .file(
-            "src/bin/baz.rs",
-            r#"
-            fn main() {}
-        "#,
-        )
+        .file("src/bin/foo.rs", "fn main() {}")
+        .file("src/bin/bar.rs", "fn main() {}")
+        .file("src/bin/baz.rs", "fn main() {}")
         .file("src/lib.rs", r#" "#)
         .build();
 
@@ -264,15 +160,6 @@ fn fails_with_args_to_all_binaries() {
 #[test]
 fn build_with_args_to_one_of_multiple_tests() {
     let p = project()
-        .file(
-            "Cargo.toml",
-            r#"
-            [package]
-            name = "foo"
-            version = "0.0.1"
-            authors = []
-        "#,
-        )
         .file("tests/foo.rs", r#" "#)
         .file("tests/bar.rs", r#" "#)
         .file("tests/baz.rs", r#" "#)
@@ -311,32 +198,11 @@ fn build_foo_with_bar_dependency() {
             path = "../bar"
         "#,
         )
-        .file(
-            "src/main.rs",
-            r#"
-            extern crate bar;
-            fn main() {
-                bar::baz()
-            }
-        "#,
-        )
+        .file("src/main.rs", "extern crate bar; fn main() { bar::baz() }")
         .build();
     let _bar = project().at("bar")
-        .file(
-            "Cargo.toml",
-            r#"
-            [package]
-            name = "bar"
-            version = "0.1.0"
-            authors = []
-        "#,
-        )
-        .file(
-            "src/lib.rs",
-            r#"
-            pub fn baz() {}
-        "#,
-        )
+        .file("Cargo.toml", &basic_manifest("bar", "0.1.0"))
+        .file("src/lib.rs", "pub fn baz() {}")
         .build();
 
     assert_that(
@@ -373,32 +239,11 @@ fn build_only_bar_dependency() {
             path = "../bar"
         "#,
         )
-        .file(
-            "src/main.rs",
-            r#"
-            extern crate bar;
-            fn main() {
-                bar::baz()
-            }
-        "#,
-        )
+        .file("src/main.rs", "extern crate bar; fn main() { bar::baz() }")
         .build();
     let _bar = project().at("bar")
-        .file(
-            "Cargo.toml",
-            r#"
-            [package]
-            name = "bar"
-            version = "0.1.0"
-            authors = []
-        "#,
-        )
-        .file(
-            "src/lib.rs",
-            r#"
-            pub fn baz() {}
-        "#,
-        )
+        .file("Cargo.toml", &basic_manifest("bar", "0.1.0"))
+        .file("src/lib.rs", "pub fn baz() {}")
         .build();
 
     assert_that(
@@ -416,15 +261,6 @@ fn build_only_bar_dependency() {
 #[test]
 fn targets_selected_default() {
     let p = project()
-        .file(
-            "Cargo.toml",
-            r#"
-            [package]
-            name = "foo"
-            version = "0.1.0"
-            authors = []
-        "#,
-        )
         .file("src/main.rs", "fn main() {}")
         .build();
     assert_that(
@@ -448,15 +284,6 @@ fn targets_selected_default() {
 #[test]
 fn targets_selected_all() {
     let p = project()
-        .file(
-            "Cargo.toml",
-            r#"
-            [package]
-            name = "foo"
-            version = "0.1.0"
-            authors = []
-        "#,
-        )
         .file("src/main.rs", "fn main() {}")
         .build();
     assert_that(
@@ -495,24 +322,11 @@ fn fail_with_multiple_packages() {
                 path = "../baz"
         "#,
         )
-        .file(
-            "src/main.rs",
-            r#"
-            fn main() {}
-        "#,
-        )
+        .file("src/main.rs", "fn main() {}")
         .build();
 
     let _bar = project().at("bar")
-        .file(
-            "Cargo.toml",
-            r#"
-            [package]
-            name = "bar"
-            version = "0.1.0"
-            authors = []
-        "#,
-        )
+        .file("Cargo.toml", &basic_manifest("bar", "0.1.0"))
         .file(
             "src/main.rs",
             r#"
@@ -524,15 +338,7 @@ fn fail_with_multiple_packages() {
         .build();
 
     let _baz = project().at("baz")
-        .file(
-            "Cargo.toml",
-            r#"
-            [package]
-            name = "baz"
-            version = "0.1.0"
-            authors = []
-        "#,
-        )
+        .file("Cargo.toml", &basic_manifest("baz", "0.1.0"))
         .file(
             "src/main.rs",
             r#"
@@ -578,15 +384,7 @@ fn rustc_with_other_profile() {
             fn foo() {}
         "#,
         )
-        .file(
-            "a/Cargo.toml",
-            r#"
-            [package]
-            name = "a"
-            version = "0.1.0"
-            authors = []
-        "#,
-        )
+        .file("a/Cargo.toml", &basic_manifest("a", "0.1.0"))
         .file("a/src/lib.rs", "")
         .build();
 

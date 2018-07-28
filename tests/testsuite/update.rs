@@ -1,7 +1,7 @@
 use std::fs::File;
 use std::io::prelude::*;
 
-use support::{execs, project};
+use support::{basic_manifest, execs, project};
 use support::registry::Package;
 use support::hamcrest::assert_that;
 
@@ -331,15 +331,7 @@ fn change_package_version() {
             "#,
         )
         .file("src/lib.rs", "")
-        .file(
-            "bar/Cargo.toml",
-            r#"
-                [package]
-                name = "bar"
-                version = "0.2.0-alpha"
-                authors = []
-            "#,
-        )
+        .file("bar/Cargo.toml", &basic_manifest("bar", "0.2.0-alpha"))
         .file("bar/src/lib.rs", "")
         .file(
             "Cargo.lock",

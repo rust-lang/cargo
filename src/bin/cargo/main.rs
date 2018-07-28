@@ -26,6 +26,8 @@ mod cli;
 mod command_prelude;
 mod commands;
 
+use command_prelude::*;
+
 fn main() {
     env_logger::init();
     cargo::core::maybe_allow_nightly_features();
@@ -81,7 +83,7 @@ fn aliased_command(config: &Config, command: &str) -> CargoResult<Option<Vec<Str
 }
 
 /// List all runnable commands
-fn list_commands(config: &Config) -> BTreeSet<(String, Option<String>)> {
+fn list_commands(config: &Config) -> BTreeSet<CommandInfo> {
     let prefix = "cargo-";
     let suffix = env::consts::EXE_SUFFIX;
     let mut commands = BTreeSet::new();
@@ -101,16 +103,19 @@ fn list_commands(config: &Config) -> BTreeSet<(String, Option<String>)> {
             }
             if is_executable(entry.path()) {
                 let end = filename.len() - suffix.len();
-                commands.insert((
-                    filename[prefix.len()..end].to_string(),
-                    Some(path.display().to_string()),
-                ));
+                commands.insert(CommandInfo::External {
+                    name: filename[prefix.len()..end].to_string(),
+                    path: path.clone(),
+                });
             }
         }
     }
 
     for cmd in commands::builtin() {
-        commands.insert((cmd.get_name().to_string(), None));
+        commands.insert(CommandInfo::BuiltIn {
+            name: cmd.get_name().to_string(),
+            about: cmd.p.meta.about.map(|s| s.to_string()),
+        });
     }
 
     commands
@@ -121,7 +126,8 @@ fn find_closest(config: &Config, cmd: &str) -> Option<String> {
     // Only consider candidates with a lev_distance of 3 or less so we don't
     // suggest out-of-the-blue options.
     cmds.into_iter()
-        .map(|(c, _)| (lev_distance(&c, cmd), c))
+        .map(|c| c.name())
+        .map(|c| (lev_distance(&c, cmd), c))
         .filter(|&(d, _)| d < 4)
         .min_by_key(|a| a.0)
         .map(|slot| slot.1)

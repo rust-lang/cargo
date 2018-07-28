@@ -1,26 +1,12 @@
 use cargo::util::paths::dylib_path_envvar;
 use support::{self, ChannelChanger};
-use support::{execs, project, Project, path2url};
+use support::{basic_bin_manifest, basic_lib_manifest, execs, project, Project, path2url};
 use support::hamcrest::{assert_that, existing_file};
 
 #[test]
 fn simple() {
     let p = project()
-        .file(
-            "Cargo.toml",
-            r#"
-            [project]
-            name = "foo"
-            version = "0.0.1"
-            authors = []
-        "#,
-        )
-        .file(
-            "src/main.rs",
-            r#"
-            fn main() { println!("hello"); }
-        "#,
-        )
+        .file("src/main.rs", r#"fn main() { println!("hello"); }"#)
         .build();
 
     assert_that(
@@ -42,21 +28,7 @@ fn simple() {
 #[test]
 fn simple_quiet() {
     let p = project()
-        .file(
-            "Cargo.toml",
-            r#"
-            [project]
-            name = "foo"
-            version = "0.0.1"
-            authors = []
-        "#,
-        )
-        .file(
-            "src/main.rs",
-            r#"
-            fn main() { println!("hello"); }
-        "#,
-        )
+        .file("src/main.rs", r#"fn main() { println!("hello"); }"#)
         .build();
 
     assert_that(
@@ -73,21 +45,7 @@ fn simple_quiet() {
 #[test]
 fn simple_quiet_and_verbose() {
     let p = project()
-        .file(
-            "Cargo.toml",
-            r#"
-            [project]
-            name = "foo"
-            version = "0.0.1"
-            authors = []
-        "#,
-        )
-        .file(
-            "src/main.rs",
-            r#"
-            fn main() { println!("hello"); }
-        "#,
-        )
+        .file("src/main.rs", r#"fn main() { println!("hello"); }"#)
         .build();
 
     assert_that(
@@ -102,27 +60,13 @@ fn simple_quiet_and_verbose() {
 fn quiet_and_verbose_config() {
     let p = project()
         .file(
-            "Cargo.toml",
-            r#"
-            [project]
-            name = "foo"
-            version = "0.0.1"
-            authors = []
-        "#,
-        )
-        .file(
             ".cargo/config",
             r#"
             [term]
             verbose = true
         "#,
         )
-        .file(
-            "src/main.rs",
-            r#"
-            fn main() { println!("hello"); }
-        "#,
-        )
+        .file("src/main.rs", r#"fn main() { println!("hello"); }"#)
         .build();
 
     assert_that(p.cargo("run").arg("-q"), execs().with_status(0));
@@ -131,15 +75,6 @@ fn quiet_and_verbose_config() {
 #[test]
 fn simple_with_args() {
     let p = project()
-        .file(
-            "Cargo.toml",
-            r#"
-            [project]
-            name = "foo"
-            version = "0.0.1"
-            authors = []
-        "#,
-        )
         .file(
             "src/main.rs",
             r#"
@@ -160,21 +95,7 @@ fn simple_with_args() {
 #[test]
 fn exit_code() {
     let p = project()
-        .file(
-            "Cargo.toml",
-            r#"
-            [project]
-            name = "foo"
-            version = "0.0.1"
-            authors = []
-        "#,
-        )
-        .file(
-            "src/main.rs",
-            r#"
-            fn main() { std::process::exit(2); }
-        "#,
-        )
+        .file("src/main.rs", "fn main() { std::process::exit(2); }")
         .build();
 
     let mut output = String::from(
@@ -195,21 +116,7 @@ fn exit_code() {
 #[test]
 fn exit_code_verbose() {
     let p = project()
-        .file(
-            "Cargo.toml",
-            r#"
-            [project]
-            name = "foo"
-            version = "0.0.1"
-            authors = []
-        "#,
-        )
-        .file(
-            "src/main.rs",
-            r#"
-            fn main() { std::process::exit(2); }
-        "#,
-        )
+        .file("src/main.rs", "fn main() { std::process::exit(2); }")
         .build();
 
     let mut output = String::from(
@@ -235,15 +142,6 @@ fn exit_code_verbose() {
 #[test]
 fn no_main_file() {
     let p = project()
-        .file(
-            "Cargo.toml",
-            r#"
-            [project]
-            name = "foo"
-            version = "0.0.1"
-            authors = []
-        "#,
-        )
         .file("src/lib.rs", "")
         .build();
 
@@ -259,15 +157,6 @@ fn no_main_file() {
 #[test]
 fn too_many_bins() {
     let p = project()
-        .file(
-            "Cargo.toml",
-            r#"
-            [project]
-            name = "foo"
-            version = "0.0.1"
-            authors = []
-        "#,
-        )
         .file("src/lib.rs", "")
         .file("src/bin/a.rs", "")
         .file("src/bin/b.rs", "")
@@ -298,15 +187,6 @@ fn too_many_bins() {
 #[test]
 fn specify_name() {
     let p = project()
-        .file(
-            "Cargo.toml",
-            r#"
-            [project]
-            name = "foo"
-            version = "0.0.1"
-            authors = []
-        "#,
-        )
         .file("src/lib.rs", "")
         .file(
             "src/bin/a.rs",
@@ -478,28 +358,9 @@ consider adding `cargo-features = ["default-run"]` to the manifest
 #[test]
 fn run_example() {
     let p = project()
-        .file(
-            "Cargo.toml",
-            r#"
-            [project]
-            name = "foo"
-            version = "0.0.1"
-            authors = []
-        "#,
-        )
         .file("src/lib.rs", "")
-        .file(
-            "examples/a.rs",
-            r#"
-            fn main() { println!("example"); }
-        "#,
-        )
-        .file(
-            "src/bin/a.rs",
-            r#"
-            fn main() { println!("bin"); }
-        "#,
-        )
+        .file("examples/a.rs", r#"fn main() { println!("example"); }"#)
+        .file("src/bin/a.rs", r#"fn main() { println!("bin"); }"#)
         .build();
 
     assert_that(
@@ -533,12 +394,7 @@ fn run_library_example() {
         "#,
         )
         .file("src/lib.rs", "")
-        .file(
-            "examples/bar.rs",
-            r#"
-            fn foo() {}
-        "#,
-        )
+        .file("examples/bar.rs", "fn foo() {}")
         .build();
 
     assert_that(
@@ -579,12 +435,7 @@ fn autodiscover_examples_project(rust_edition: &str, autoexamples: Option<bool>)
                 autoexamples = autoexamples
             ),
         )
-        .file(
-            "examples/a.rs",
-            r#"
-            fn main() { println!("example"); }
-        "#,
-        )
+        .file("examples/a.rs", r#"fn main() { println!("example"); }"#)
         .file(
             "examples/do_magic.rs",
             r#"
@@ -700,28 +551,9 @@ fn run_example_autodiscover_2018() {
 #[test]
 fn run_bins() {
     let p = project()
-        .file(
-            "Cargo.toml",
-            r#"
-            [project]
-            name = "foo"
-            version = "0.0.1"
-            authors = []
-        "#,
-        )
         .file("src/lib.rs", "")
-        .file(
-            "examples/a.rs",
-            r#"
-            fn main() { println!("example"); }
-        "#,
-        )
-        .file(
-            "src/bin/a.rs",
-            r#"
-            fn main() { println!("bin"); }
-        "#,
-        )
+        .file("examples/a.rs", r#"fn main() { println!("example"); }"#)
+        .file("src/bin/a.rs", r#"fn main() { println!("bin"); }"#)
         .build();
 
     assert_that(
@@ -735,15 +567,6 @@ fn run_bins() {
 #[test]
 fn run_with_filename() {
     let p = project()
-        .file(
-            "Cargo.toml",
-            r#"
-            [project]
-            name = "foo"
-            version = "0.0.1"
-            authors = []
-        "#,
-        )
         .file("src/lib.rs", "")
         .file(
             "src/bin/a.rs",
@@ -752,12 +575,7 @@ fn run_with_filename() {
             fn main() { println!("hello a.rs"); }
         "#,
         )
-        .file(
-            "examples/a.rs",
-            r#"
-            fn main() { println!("example"); }
-        "#,
-        )
+        .file("examples/a.rs", r#"fn main() { println!("example"); }"#)
         .build();
 
     assert_that(
@@ -798,27 +616,8 @@ Did you mean `a`?",
 #[test]
 fn either_name_or_example() {
     let p = project()
-        .file(
-            "Cargo.toml",
-            r#"
-            [project]
-            name = "foo"
-            version = "0.0.1"
-            authors = []
-        "#,
-        )
-        .file(
-            "src/bin/a.rs",
-            r#"
-            fn main() { println!("hello a.rs"); }
-        "#,
-        )
-        .file(
-            "examples/b.rs",
-            r#"
-            fn main() { println!("hello b.rs"); }
-        "#,
-        )
+        .file("src/bin/a.rs", r#"fn main() { println!("hello a.rs"); }"#)
+        .file("examples/b.rs", r#"fn main() { println!("hello b.rs"); }"#)
         .build();
 
     assert_that(
@@ -838,34 +637,10 @@ fn either_name_or_example() {
 #[test]
 fn one_bin_multiple_examples() {
     let p = project()
-        .file(
-            "Cargo.toml",
-            r#"
-            [project]
-            name = "foo"
-            version = "0.0.1"
-            authors = []
-        "#,
-        )
         .file("src/lib.rs", "")
-        .file(
-            "src/bin/main.rs",
-            r#"
-            fn main() { println!("hello main.rs"); }
-        "#,
-        )
-        .file(
-            "examples/a.rs",
-            r#"
-            fn main() { println!("hello a.rs"); }
-        "#,
-        )
-        .file(
-            "examples/b.rs",
-            r#"
-            fn main() { println!("hello b.rs"); }
-        "#,
-        )
+        .file("src/bin/main.rs", r#"fn main() { println!("hello main.rs"); }"#)
+        .file("examples/a.rs", r#"fn main() { println!("hello a.rs"); }"#)
+        .file("examples/b.rs", r#"fn main() { println!("hello b.rs"); }"#)
         .build();
 
     assert_that(
@@ -914,18 +689,7 @@ fn example_with_release_flag() {
             }
         "#,
         )
-        .file(
-            "bar/Cargo.toml",
-            r#"
-            [project]
-            name = "bar"
-            version = "0.0.1"
-            authors = []
-
-            [lib]
-            name = "bar"
-        "#,
-        )
+        .file("bar/Cargo.toml", &basic_lib_manifest("bar"))
         .file(
             "bar/src/bar.rs",
             r#"
@@ -950,7 +714,7 @@ fn example_with_release_flag() {
             .with_status(0)
             .with_stderr(&format!(
                 "\
-[COMPILING] bar v0.0.1 ({url}/bar)
+[COMPILING] bar v0.5.0 ({url}/bar)
 [RUNNING] `rustc --crate-name bar bar[/]src[/]bar.rs --crate-type lib \
         --emit=dep-info,link \
         -C opt-level=3 \
@@ -984,7 +748,7 @@ fast2",
             .with_status(0)
             .with_stderr(&format!(
                 "\
-[COMPILING] bar v0.0.1 ({url}/bar)
+[COMPILING] bar v0.5.0 ({url}/bar)
 [RUNNING] `rustc --crate-name bar bar[/]src[/]bar.rs --crate-type lib \
         --emit=dep-info,link \
         -C debuginfo=2 \
@@ -1028,13 +792,7 @@ fn run_dylib_dep() {
             path = "bar"
         "#,
         )
-        .file(
-            "src/main.rs",
-            r#"
-            extern crate bar;
-            fn main() { bar::bar(); }
-        "#,
-        )
+        .file("src/main.rs", r#"extern crate bar; fn main() { bar::bar(); }"#)
         .file(
             "bar/Cargo.toml",
             r#"
@@ -1060,15 +818,6 @@ fn run_dylib_dep() {
 #[test]
 fn release_works() {
     let p = project()
-        .file(
-            "Cargo.toml",
-            r#"
-            [project]
-            name = "foo"
-            version = "0.0.1"
-            authors = []
-        "#,
-        )
         .file(
             "src/main.rs",
             r#"
@@ -1106,12 +855,7 @@ fn run_bin_different_name() {
             name = "bar"
         "#,
         )
-        .file(
-            "src/bar.rs",
-            r#"
-            fn main() { }
-        "#,
-        )
+        .file("src/bar.rs", "fn main() {}")
         .build();
 
     assert_that(p.cargo("run"), execs().with_status(0));
@@ -1120,15 +864,6 @@ fn run_bin_different_name() {
 #[test]
 fn dashes_are_forwarded() {
     let p = project()
-        .file(
-            "Cargo.toml",
-            r#"
-            [project]
-            name = "foo"
-            version = "0.0.1"
-            authors = []
-        "#,
-        )
         .file(
             "src/bin/bar.rs",
             r#"
@@ -1152,21 +887,7 @@ fn dashes_are_forwarded() {
 #[test]
 fn run_from_executable_folder() {
     let p = project()
-        .file(
-            "Cargo.toml",
-            r#"
-            [project]
-            name = "foo"
-            version = "0.0.1"
-            authors = []
-        "#,
-        )
-        .file(
-            "src/main.rs",
-            r#"
-            fn main() { println!("hello"); }
-        "#,
-        )
+        .file("src/main.rs", r#"fn main() { println!("hello"); }"#)
         .build();
 
     let cwd = p.root().join("target").join("debug");
@@ -1301,23 +1022,7 @@ fn library_paths_sorted_alphabetically() {
 #[test]
 fn fail_no_extra_verbose() {
     let p = project()
-        .file(
-            "Cargo.toml",
-            r#"
-            [project]
-            name = "foo"
-            version = "0.0.1"
-            authors = []
-        "#,
-        )
-        .file(
-            "src/main.rs",
-            r#"
-            fn main() {
-                std::process::exit(1);
-            }
-        "#,
-        )
+        .file("src/main.rs", "fn main() { std::process::exit(1); }")
         .build();
 
     assert_that(
@@ -1329,6 +1034,7 @@ fn fail_no_extra_verbose() {
 #[test]
 fn run_multiple_packages() {
     let p = project()
+        .no_manifest()
         .file(
             "foo/Cargo.toml",
             r#"
@@ -1349,42 +1055,12 @@ fn run_multiple_packages() {
         "#,
         )
         .file("foo/src/foo.rs", "fn main() { println!(\"foo\"); }")
-        .file(
-            "foo/d1/Cargo.toml",
-            r#"
-            [package]
-            name = "d1"
-            version = "0.0.1"
-            authors = []
-
-            [[bin]]
-            name = "d1"
-        "#,
-        )
+        .file("foo/d1/Cargo.toml", &basic_bin_manifest("d1"))
         .file("foo/d1/src/lib.rs", "")
         .file("foo/d1/src/main.rs", "fn main() { println!(\"d1\"); }")
-        .file(
-            "foo/d2/Cargo.toml",
-            r#"
-            [package]
-            name = "d2"
-            version = "0.0.1"
-            authors = []
-
-            [[bin]]
-            name = "d2"
-        "#,
-        )
+        .file("foo/d2/Cargo.toml", &basic_bin_manifest("d2"))
         .file("foo/d2/src/main.rs", "fn main() { println!(\"d2\"); }")
-        .file(
-            "d3/Cargo.toml",
-            r#"
-            [package]
-            name = "d3"
-            version = "0.0.1"
-            authors = []
-        "#,
-        )
+        .file("d3/Cargo.toml", &basic_bin_manifest("d3"))
         .file("d3/src/main.rs", "fn main() { println!(\"d2\"); }")
         .build();
 
@@ -1422,15 +1098,6 @@ fn run_multiple_packages() {
 #[test]
 fn explicit_bin_with_args() {
     let p = project()
-        .file(
-            "Cargo.toml",
-            r#"
-            [project]
-            name = "foo"
-            version = "0.0.1"
-            authors = []
-        "#,
-        )
         .file(
             "src/main.rs",
             r#"

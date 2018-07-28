@@ -5,12 +5,7 @@ use support::hamcrest::assert_that;
 fn alias_incorrect_config_type() {
     let p = project()
         .file("Cargo.toml", &basic_bin_manifest("foo"))
-        .file(
-            "src/main.rs",
-            r#"
-            fn main() {
-        }"#,
-        )
+        .file("src/main.rs", "fn main() {}")
         .file(
             ".cargo/config",
             r#"
@@ -34,12 +29,7 @@ expected a list, but found a integer for [..]",
 fn alias_default_config_overrides_config() {
     let p = project()
         .file("Cargo.toml", &basic_bin_manifest("foo"))
-        .file(
-            "src/main.rs",
-            r#"
-            fn main() {
-        }"#,
-        )
+        .file("src/main.rs", "fn main() {}")
         .file(
             ".cargo/config",
             r#"
@@ -61,12 +51,7 @@ fn alias_default_config_overrides_config() {
 fn alias_config() {
     let p = project()
         .file("Cargo.toml", &basic_bin_manifest("foo"))
-        .file(
-            "src/main.rs",
-            r#"
-            fn main() {
-        }"#,
-        )
+        .file("src/main.rs", "fn main() {}")
         .file(
             ".cargo/config",
             r#"
@@ -92,12 +77,7 @@ fn alias_config() {
 fn recursive_alias() {
     let p = project()
         .file("Cargo.toml", &basic_bin_manifest("foo"))
-        .file(
-            "src/main.rs",
-            r#"
-            fn main() {
-        }"#,
-        )
+        .file("src/main.rs", r"fn main() {}")
         .file(
             ".cargo/config",
             r#"
@@ -122,12 +102,7 @@ fn recursive_alias() {
 fn alias_list_test() {
     let p = project()
         .file("Cargo.toml", &basic_bin_manifest("foo"))
-        .file(
-            "src/main.rs",
-            r#"
-            fn main() {
-         }"#,
-        )
+        .file("src/main.rs", "fn main() {}")
         .file(
             ".cargo/config",
             r#"
@@ -150,12 +125,7 @@ fn alias_list_test() {
 fn alias_with_flags_config() {
     let p = project()
         .file("Cargo.toml", &basic_bin_manifest("foo"))
-        .file(
-            "src/main.rs",
-            r#"
-            fn main() {
-         }"#,
-        )
+        .file("src/main.rs", "fn main() {}")
         .file(
             ".cargo/config",
             r#"
@@ -178,12 +148,7 @@ fn alias_with_flags_config() {
 fn cant_shadow_builtin() {
     let p = project()
         .file("Cargo.toml", &basic_bin_manifest("foo"))
-        .file(
-            "src/main.rs",
-            r#"
-            fn main() {
-         }"#,
-        )
+        .file("src/main.rs", "fn main() {}")
         .file(
             ".cargo/config",
             r#"

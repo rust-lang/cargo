@@ -2,7 +2,7 @@ use support::ChannelChanger;
 use support::git;
 use support::paths;
 use support::registry::Package;
-use support::{execs, project};
+use support::{basic_manifest, execs, project};
 use support::hamcrest::assert_that;
 
 #[test]
@@ -89,13 +89,7 @@ fn rename_dependency() {
             baz = { version = "0.2.0", package = "bar" }
         "#,
         )
-        .file(
-            "src/lib.rs",
-            "
-            extern crate bar;
-            extern crate baz;
-        ",
-        )
+        .file("src/lib.rs", "extern crate bar; extern crate baz;")
         .build();
 
     assert_that(
@@ -121,12 +115,7 @@ fn rename_with_different_names() {
             baz = { path = "bar", package = "bar" }
         "#,
         )
-        .file(
-            "src/lib.rs",
-            "
-            extern crate baz;
-        ",
-        )
+        .file("src/lib.rs", "extern crate baz;")
         .file(
             "bar/Cargo.toml",
             r#"
@@ -162,15 +151,7 @@ fn lots_of_names() {
         .publish();
 
     let g = git::repo(&paths::root().join("another"))
-        .file(
-            "Cargo.toml",
-            r#"
-                [package]
-                name = "foo"
-                version = "0.1.0"
-                authors = []
-            "#,
-        )
+        .file("Cargo.toml", &basic_manifest("foo", "0.1.0"))
         .file("src/lib.rs", "pub fn foo3() {}")
         .build();
 
@@ -212,15 +193,7 @@ fn lots_of_names() {
                 }
             ",
         )
-        .file(
-            "foo/Cargo.toml",
-            r#"
-                [project]
-                name = "foo"
-                version = "0.1.0"
-                authors = []
-            "#,
-        )
+        .file("foo/Cargo.toml", &basic_manifest("foo", "0.1.0"))
         .file("foo/src/lib.rs", "pub fn foo4() {}")
         .build();
 
@@ -252,25 +225,8 @@ fn rename_and_patch() {
                 foo = { path = "foo" }
             "#,
         )
-        .file(
-            "src/lib.rs",
-            "
-                extern crate bar;
-
-                pub fn foo() {
-                    bar::foo();
-                }
-            ",
-        )
-        .file(
-            "foo/Cargo.toml",
-            r#"
-                [project]
-                name = "foo"
-                version = "0.1.0"
-                authors = []
-            "#,
-        )
+        .file("src/lib.rs", "extern crate bar; pub fn foo() { bar::foo(); }")
+        .file("foo/Cargo.toml", &basic_manifest("foo", "0.1.0"))
         .file("foo/src/lib.rs", "pub fn foo() {}")
         .build();
 
@@ -361,5 +317,50 @@ fn rename_affects_fingerprint() {
     assert_that(
         p.cargo("build -v").masquerade_as_nightly_cargo(),
         execs().with_status(101),
+    );
+}
+
+#[test]
+fn can_run_doc_tests() {
+    Package::new("bar", "0.1.0").publish();
+    Package::new("bar", "0.2.0").publish();
+
+    let foo = project()
+        .file(
+            "Cargo.toml",
+            r#"
+            cargo-features = ["rename-dependency"]
+
+            [project]
+            name = "foo"
+            version = "0.0.1"
+
+            [dependencies]
+            bar = { version = "0.1.0" }
+            baz = { version = "0.2.0", package = "bar" }
+        "#,
+        )
+        .file(
+            "src/lib.rs",
+            "
+            extern crate bar;
+            extern crate baz;
+        ",
+        )
+        .build();
+
+    assert_that(
+        foo.cargo("test").arg("-v").masquerade_as_nightly_cargo(),
+        execs().with_status(0).with_stderr_contains(format!(
+            "\
+[DOCTEST] foo
+[RUNNING] `rustdoc --test {dir}[/]src[/]lib.rs \
+        [..] \
+        --extern baz={dir}[/]target[/]debug[/]deps[/]libbar-[..].rlib \
+        --extern bar={dir}[/]target[/]debug[/]deps[/]libbar-[..].rlib \
+        [..]`
+",
+            dir = foo.root().display(),
+        )),
     );
 }

@@ -1,5 +1,5 @@
 use support::is_nightly;
-use support::{execs, project};
+use support::{basic_manifest, execs, project};
 use support::hamcrest::assert_that;
 
 #[test]
@@ -8,16 +8,6 @@ fn custom_target_minimal() {
         return;
     }
     let p = project()
-        .file(
-            "Cargo.toml",
-            r#"
-            [package]
-
-            name = "foo"
-            version = "0.0.1"
-            authors = ["author@example.com"]
-        "#,
-        )
         .file(
             "src/lib.rs",
             r#"
@@ -111,16 +101,7 @@ fn custom_target_dependency() {
             unsafe auto trait Freeze {}
         "#,
         )
-        .file(
-            "bar/Cargo.toml",
-            r#"
-            [package]
-
-            name = "bar"
-            version = "0.0.1"
-            authors = ["author@example.com"]
-        "#,
-        )
+        .file("bar/Cargo.toml", &basic_manifest("bar", "0.0.1"))
         .file(
             "bar/src/lib.rs",
             r#"

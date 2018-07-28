@@ -13,7 +13,6 @@ extern crate serde_derive;
 #[macro_use]
 extern crate serde_json;
 extern crate tar;
-extern crate tempfile;
 extern crate toml;
 extern crate url;
 #[cfg(windows)]

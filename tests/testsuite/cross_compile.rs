@@ -1,6 +1,6 @@
 use cargo::util::process;
 use support::{is_nightly, rustc_host};
-use support::{basic_bin_manifest, cross_compile, execs, project};
+use support::{basic_manifest, basic_bin_manifest, cross_compile, execs, project};
 use support::hamcrest::{assert_that, existing_file};
 
 #[test]
@@ -139,24 +139,10 @@ fn simple_deps() {
             path = "../bar"
         "#,
         )
-        .file(
-            "src/main.rs",
-            r#"
-            extern crate bar;
-            fn main() { bar::bar(); }
-        "#,
-        )
+        .file("src/main.rs", "extern crate bar; fn main() { bar::bar(); }")
         .build();
     let _p2 = project().at("bar")
-        .file(
-            "Cargo.toml",
-            r#"
-            [package]
-            name = "bar"
-            version = "0.0.1"
-            authors = []
-        "#,
-        )
+        .file("Cargo.toml", &basic_manifest("bar", "0.0.1"))
         .file("src/lib.rs", "pub fn bar() {}")
         .build();
 
@@ -252,15 +238,7 @@ fn plugin_deps() {
         )
         .build();
     let _baz = project().at("baz")
-        .file(
-            "Cargo.toml",
-            r#"
-            [package]
-            name = "baz"
-            version = "0.0.1"
-            authors = []
-        "#,
-        )
+        .file("Cargo.toml", &basic_manifest("baz", "0.0.1"))
         .file("src/lib.rs", "pub fn baz() -> i32 { 1 }")
         .build();
 
@@ -363,15 +341,7 @@ fn plugin_to_the_max() {
         )
         .build();
     let _baz = project().at("baz")
-        .file(
-            "Cargo.toml",
-            r#"
-            [package]
-            name = "baz"
-            version = "0.0.1"
-            authors = []
-        "#,
-        )
+        .file("Cargo.toml",  &basic_manifest("baz", "0.0.1"))
         .file("src/lib.rs", "pub fn baz() -> i32 { 1 }")
         .build();
 
@@ -612,15 +582,6 @@ fn no_cross_doctests() {
 
     let p = project()
         .file(
-            "Cargo.toml",
-            r#"
-            [project]
-            name = "foo"
-            authors = []
-            version = "0.0.0"
-        "#,
-        )
-        .file(
             "src/lib.rs",
             r#"
             //! ```
@@ -633,7 +594,7 @@ fn no_cross_doctests() {
 
     let host_output = format!(
         "\
-[COMPILING] foo v0.0.0 ({foo})
+[COMPILING] foo v0.0.1 ({foo})
 [FINISHED] dev [unoptimized + debuginfo] target(s) in [..]
 [RUNNING] target[/]debug[/]deps[/]foo-[..][EXE]
 [DOCTEST] foo
@@ -653,7 +614,7 @@ fn no_cross_doctests() {
         p.cargo("test").arg("--target").arg(&target),
         execs().with_status(0).with_stderr(&format!(
             "\
-[COMPILING] foo v0.0.0 ({foo})
+[COMPILING] foo v0.0.1 ({foo})
 [FINISHED] dev [unoptimized + debuginfo] target(s) in [..]
 [RUNNING] target[/]{triple}[/]debug[/]deps[/]foo-[..][EXE]
 [DOCTEST] foo
@@ -669,7 +630,7 @@ fn no_cross_doctests() {
         p.cargo("test").arg("--target").arg(&target),
         execs().with_status(0).with_stderr(&format!(
             "\
-[COMPILING] foo v0.0.0 ({foo})
+[COMPILING] foo v0.0.1 ({foo})
 [FINISHED] dev [unoptimized + debuginfo] target(s) in [..]
 [RUNNING] target[/]{triple}[/]debug[/]deps[/]foo-[..][EXE]
 ",
@@ -686,15 +647,6 @@ fn simple_cargo_run() {
     }
 
     let p = project()
-        .file(
-            "Cargo.toml",
-            r#"
-            [package]
-            name = "foo"
-            version = "0.0.0"
-            authors = []
-        "#,
-        )
         .file(
             "src/main.rs",
             &format!(
@@ -829,12 +781,7 @@ fn build_script_needed_for_host_and_target() {
             build = 'build.rs'
         "#,
         )
-        .file(
-            "d1/src/lib.rs",
-            "
-            pub fn d1() {}
-        ",
-        )
+        .file("d1/src/lib.rs", "pub fn d1() {}")
         .file(
             "d1/build.rs",
             r#"
@@ -930,21 +877,8 @@ fn build_deps_for_the_right_arch() {
         "#,
         )
         .file("src/main.rs", "extern crate d2; fn main() {}")
-        .file(
-            "d1/Cargo.toml",
-            r#"
-            [package]
-            name = "d1"
-            version = "0.0.0"
-            authors = []
-        "#,
-        )
-        .file(
-            "d1/src/lib.rs",
-            "
-            pub fn d1() {}
-        ",
-        )
+        .file("d1/Cargo.toml",  &basic_manifest("d1", "0.0.0"))
+        .file("d1/src/lib.rs", "pub fn d1() {}")
         .file(
             "d2/Cargo.toml",
             r#"
@@ -1001,12 +935,7 @@ fn build_script_only_host() {
             build = "build.rs"
         "#,
         )
-        .file(
-            "d1/src/lib.rs",
-            "
-            pub fn d1() {}
-        ",
-        )
+        .file("d1/src/lib.rs", "pub fn d1() {}")
         .file(
             "d1/build.rs",
             r#"
@@ -1115,22 +1044,8 @@ fn build_script_with_platform_specific_dependencies() {
                 host
             ),
         )
-        .file(
-            "d1/src/lib.rs",
-            "
-            #[allow(unused_extern_crates)]
-            extern crate d2;
-        ",
-        )
-        .file(
-            "d2/Cargo.toml",
-            r#"
-            [package]
-            name = "d2"
-            version = "0.0.0"
-            authors = []
-        "#,
-        )
+        .file("d1/src/lib.rs", "#[allow(unused_extern_crates)] extern crate d2;")
+        .file("d2/Cargo.toml",  &basic_manifest("d2", "0.0.0"))
         .file("d2/src/lib.rs", "")
         .build();
 
@@ -1197,15 +1112,7 @@ fn platform_specific_dependencies_do_not_leak() {
             ),
         )
         .file("d1/src/lib.rs", "extern crate d2;")
-        .file(
-            "d2/Cargo.toml",
-            r#"
-            [package]
-            name = "d2"
-            version = "0.0.0"
-            authors = []
-        "#,
-        )
+        .file("d1/Cargo.toml",  &basic_manifest("d1", "0.0.0"))
         .file("d2/src/lib.rs", "")
         .build();
 
@@ -1282,12 +1189,7 @@ fn platform_specific_variables_reflected_in_build_scripts() {
             build = "build.rs"
         "#,
         )
-        .file(
-            "d1/build.rs",
-            r#"
-            fn main() { println!("cargo:val=1") }
-        "#,
-        )
+        .file("d1/build.rs", r#"fn main() { println!("cargo:val=1") }"#)
         .file("d1/src/lib.rs", "")
         .file(
             "d2/Cargo.toml",
@@ -1300,12 +1202,7 @@ fn platform_specific_variables_reflected_in_build_scripts() {
             build = "build.rs"
         "#,
         )
-        .file(
-            "d2/build.rs",
-            r#"
-            fn main() { println!("cargo:val=1") }
-        "#,
-        )
+        .file("d2/build.rs", r#"fn main() { println!("cargo:val=1") }"#)
         .file("d2/src/lib.rs", "")
         .build();
 

@@ -8,7 +8,7 @@ use support::cargo_process;
 use support::git;
 use support::paths;
 use support::registry::{cksum, Package};
-use support::{execs, project, ProjectBuilder};
+use support::{basic_manifest, execs, project, ProjectBuilder};
 use support::hamcrest::assert_that;
 
 fn setup() {
@@ -60,6 +60,11 @@ impl VendorPackage {
         self
     }
 
+    fn no_manifest(mut self) -> Self {
+        self.p = self.p.map(|pb| pb.no_manifest());
+        self
+    }
+
     fn build(&mut self) {
         let p = self.p.take().unwrap();
         let json = serde_json::to_string(&self.cksum).unwrap();
@@ -73,15 +78,7 @@ fn simple() {
     setup();
 
     VendorPackage::new("bar")
-        .file(
-            "Cargo.toml",
-            r#"
-            [package]
-            name = "bar"
-            version = "0.1.0"
-            authors = []
-        "#,
-        )
+        .file("Cargo.toml", &basic_manifest("bar", "0.1.0"))
         .file("src/lib.rs", "pub fn bar() {}")
         .build();
 
@@ -98,16 +95,7 @@ fn simple() {
             bar = "0.1.0"
         "#,
         )
-        .file(
-            "src/lib.rs",
-            r#"
-            extern crate bar;
-
-            pub fn foo() {
-                bar::bar();
-            }
-        "#,
-        )
+        .file("src/lib.rs", "extern crate bar; pub fn foo() { bar::bar(); }")
         .build();
 
     assert_that(
@@ -127,15 +115,6 @@ fn simple_install() {
     setup();
 
     VendorPackage::new("foo")
-        .file(
-            "Cargo.toml",
-            r#"
-            [package]
-            name = "foo"
-            version = "0.1.0"
-            authors = []
-        "#,
-        )
         .file("src/lib.rs", "pub fn foo() {}")
         .build();
 
@@ -149,26 +128,17 @@ fn simple_install() {
             authors = []
 
             [dependencies]
-            foo = "0.1.0"
+            foo = "0.0.1"
         "#,
         )
-        .file(
-            "src/main.rs",
-            r#"
-            extern crate foo;
-
-            pub fn main() {
-                foo::foo();
-            }
-        "#,
-        )
+        .file("src/main.rs", "extern crate foo; pub fn main() { foo::foo(); }")
         .build();
 
     assert_that(
         cargo_process().arg("install").arg("bar"),
         execs().with_status(0).with_stderr(
             "  Installing bar v0.1.0
-   Compiling foo v0.1.0
+   Compiling foo v0.0.1
    Compiling bar v0.1.0
     Finished release [optimized] target(s) in [..]s
   Installing [..]bar[..]
@@ -183,15 +153,6 @@ fn simple_install_fail() {
     setup();
 
     VendorPackage::new("foo")
-        .file(
-            "Cargo.toml",
-            r#"
-            [package]
-            name = "foo"
-            version = "0.1.0"
-            authors = []
-        "#,
-        )
         .file("src/lib.rs", "pub fn foo() {}")
         .build();
 
@@ -209,16 +170,7 @@ fn simple_install_fail() {
             baz = "9.8.7"
         "#,
         )
-        .file(
-            "src/main.rs",
-            r#"
-            extern crate foo;
-
-            pub fn main() {
-                foo::foo();
-            }
-        "#,
-        )
+        .file("src/main.rs", "extern crate foo; pub fn main() { foo::foo(); }")
         .build();
 
     assert_that(
@@ -242,15 +194,6 @@ fn install_without_feature_dep() {
     setup();
 
     VendorPackage::new("foo")
-        .file(
-            "Cargo.toml",
-            r#"
-            [package]
-            name = "foo"
-            version = "0.1.0"
-            authors = []
-        "#,
-        )
         .file("src/lib.rs", "pub fn foo() {}")
         .build();
 
@@ -264,30 +207,21 @@ fn install_without_feature_dep() {
             authors = []
 
             [dependencies]
-            foo = "0.1.0"
+            foo = "0.0.1"
             baz = { version = "9.8.7", optional = true }
 
             [features]
             wantbaz = ["baz"]
         "#,
         )
-        .file(
-            "src/main.rs",
-            r#"
-            extern crate foo;
-
-            pub fn main() {
-                foo::foo();
-            }
-        "#,
-        )
+        .file("src/main.rs", "extern crate foo; pub fn main() { foo::foo(); }")
         .build();
 
     assert_that(
         cargo_process().arg("install").arg("bar"),
         execs().with_status(0).with_stderr(
             "  Installing bar v0.1.0
-   Compiling foo v0.1.0
+   Compiling foo v0.0.1
    Compiling bar v0.1.0
     Finished release [optimized] target(s) in [..]s
   Installing [..]bar[..]
@@ -316,16 +250,7 @@ fn not_there() {
             bar = "0.1.0"
         "#,
         )
-        .file(
-            "src/lib.rs",
-            r#"
-            extern crate bar;
-
-            pub fn foo() {
-                bar::bar();
-            }
-        "#,
-        )
+        .file("src/lib.rs", "extern crate bar; pub fn foo() { bar::bar(); }")
         .build();
 
     assert_that(
@@ -345,29 +270,13 @@ fn multiple() {
     setup();
 
     VendorPackage::new("bar-0.1.0")
-        .file(
-            "Cargo.toml",
-            r#"
-            [package]
-            name = "bar"
-            version = "0.1.0"
-            authors = []
-        "#,
-        )
+        .file("Cargo.toml", &basic_manifest("bar", "0.1.0"))
         .file("src/lib.rs", "pub fn bar() {}")
         .file(".cargo-checksum", "")
         .build();
 
     VendorPackage::new("bar-0.2.0")
-        .file(
-            "Cargo.toml",
-            r#"
-            [package]
-            name = "bar"
-            version = "0.2.0"
-            authors = []
-        "#,
-        )
+        .file("Cargo.toml", &basic_manifest("bar", "0.2.0"))
         .file("src/lib.rs", "pub fn bar() {}")
         .file(".cargo-checksum", "")
         .build();
@@ -385,16 +294,7 @@ fn multiple() {
             bar = "0.1.0"
         "#,
         )
-        .file(
-            "src/lib.rs",
-            r#"
-            extern crate bar;
-
-            pub fn foo() {
-                bar::bar();
-            }
-        "#,
-        )
+        .file("src/lib.rs", "extern crate bar; pub fn foo() { bar::bar(); }")
         .build();
 
     assert_that(
@@ -424,16 +324,7 @@ fn crates_io_then_directory() {
             bar = "0.1.0"
         "#,
         )
-        .file(
-            "src/lib.rs",
-            r#"
-            extern crate bar;
-
-            pub fn foo() {
-                bar::bar();
-            }
-        "#,
-        )
+        .file("src/lib.rs", "extern crate bar; pub fn foo() { bar::bar(); }")
         .build();
 
     let cksum = Package::new("bar", "0.1.0")
@@ -456,15 +347,7 @@ fn crates_io_then_directory() {
     setup();
 
     let mut v = VendorPackage::new("bar");
-    v.file(
-        "Cargo.toml",
-        r#"
-        [package]
-        name = "bar"
-        version = "0.1.0"
-        authors = []
-    "#,
-    );
+    v.file("Cargo.toml", &basic_manifest("bar", "0.1.0"));
     v.file("src/lib.rs", "pub fn bar() -> u32 { 1 }");
     v.cksum.package = Some(cksum);
     v.build();
@@ -505,15 +388,7 @@ fn crates_io_then_bad_checksum() {
     setup();
 
     VendorPackage::new("bar")
-        .file(
-            "Cargo.toml",
-            r#"
-            [package]
-            name = "bar"
-            version = "0.1.0"
-            authors = []
-        "#,
-        )
+        .file("Cargo.toml", &basic_manifest("bar", "0.1.0"))
         .file("src/lib.rs", "")
         .build();
 
@@ -541,15 +416,7 @@ fn bad_file_checksum() {
     setup();
 
     VendorPackage::new("bar")
-        .file(
-            "Cargo.toml",
-            r#"
-            [package]
-            name = "bar"
-            version = "0.1.0"
-            authors = []
-        "#,
-        )
+        .file("Cargo.toml", &basic_manifest("bar", "0.1.0"))
         .file("src/lib.rs", "")
         .build();
 
@@ -593,18 +460,10 @@ fn only_dot_files_ok() {
     setup();
 
     VendorPackage::new("bar")
-        .file(
-            "Cargo.toml",
-            r#"
-            [package]
-            name = "bar"
-            version = "0.1.0"
-            authors = []
-        "#,
-        )
+        .file("Cargo.toml", &basic_manifest("bar", "0.1.0"))
         .file("src/lib.rs", "")
         .build();
-    VendorPackage::new("foo").file(".bar", "").build();
+    VendorPackage::new("foo").no_manifest().file(".bar", "").build();
 
     let p = project()
         .file(
@@ -630,18 +489,11 @@ fn random_files_ok() {
     setup();
 
     VendorPackage::new("bar")
-        .file(
-            "Cargo.toml",
-            r#"
-            [package]
-            name = "bar"
-            version = "0.1.0"
-            authors = []
-        "#,
-        )
+        .file("Cargo.toml", &basic_manifest("bar", "0.1.0"))
         .file("src/lib.rs", "")
         .build();
     VendorPackage::new("foo")
+        .no_manifest()
         .file("bar", "")
         .file("../test", "")
         .build();
@@ -668,27 +520,12 @@ fn random_files_ok() {
 #[test]
 fn git_lock_file_doesnt_change() {
     let git = git::new("git", |p| {
-        p.file(
-            "Cargo.toml",
-            r#"
-            [project]
-            name = "git"
-            version = "0.5.0"
-            authors = []
-        "#,
-        ).file("src/lib.rs", "")
+        p.file("Cargo.toml", &basic_manifest("git", "0.5.0"))
+        .file("src/lib.rs", "")
     }).unwrap();
 
     VendorPackage::new("git")
-        .file(
-            "Cargo.toml",
-            r#"
-            [package]
-            name = "git"
-            version = "0.5.0"
-            authors = []
-        "#,
-        )
+        .file("Cargo.toml", &basic_manifest("git", "0.5.0"))
         .file("src/lib.rs", "")
         .disable_checksum()
         .build();
@@ -752,15 +589,7 @@ fn git_lock_file_doesnt_change() {
 #[test]
 fn git_override_requires_lockfile() {
     VendorPackage::new("git")
-        .file(
-            "Cargo.toml",
-            r#"
-            [package]
-            name = "git"
-            version = "0.5.0"
-            authors = []
-        "#,
-        )
+        .file("Cargo.toml", &basic_manifest("git", "0.5.0"))
         .file("src/lib.rs", "")
         .disable_checksum()
         .build();

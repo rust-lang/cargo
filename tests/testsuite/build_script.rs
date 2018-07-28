@@ -8,7 +8,7 @@ use std::time::Duration;
 
 use cargo::util::paths::remove_dir_all;
 use support::{rustc_host, sleep_ms};
-use support::{cross_compile, execs, project};
+use support::{basic_manifest, cross_compile, execs, project};
 use support::paths::CargoPathExt;
 use support::registry::Package;
 use support::hamcrest::{assert_that, existing_dir, existing_file};
@@ -27,20 +27,8 @@ fn custom_build_script_failed() {
             build = "build.rs"
         "#,
         )
-        .file(
-            "src/main.rs",
-            r#"
-            fn main() {}
-        "#,
-        )
-        .file(
-            "build.rs",
-            r#"
-            fn main() {
-                std::process::exit(101);
-            }
-        "#,
-        )
+        .file("src/main.rs", "fn main() {}")
+        .file("build.rs", "fn main() { std::process::exit(101); }")
         .build();
     assert_that(
         p.cargo("build").arg("-v"),
@@ -75,12 +63,7 @@ fn custom_build_env_vars() {
             path = "bar"
         "#,
         )
-        .file(
-            "src/main.rs",
-            r#"
-            fn main() {}
-        "#,
-        )
+        .file("src/main.rs", "fn main() {}")
         .file(
             "bar/Cargo.toml",
             r#"
@@ -95,12 +78,7 @@ fn custom_build_env_vars() {
             foo = []
         "#,
         )
-        .file(
-            "bar/src/lib.rs",
-            r#"
-            pub fn hello() {}
-        "#,
-        );
+        .file("bar/src/lib.rs", "pub fn hello() {}");
 
     let file_content = format!(
         r#"
@@ -163,13 +141,6 @@ fn custom_build_env_var_rustc_linker() {
     if cross_compile::disabled() { return; }
     let target = cross_compile::alternate();
     let p = project()
-        .file("Cargo.toml",
-              r#"
-              [project]
-              name = "foo"
-              version = "0.0.1"
-              "#
-        )
         .file(
             ".cargo/config",
             &format!(
@@ -215,20 +186,8 @@ fn custom_build_script_wrong_rustc_flags() {
             build = "build.rs"
         "#,
         )
-        .file(
-            "src/main.rs",
-            r#"
-            fn main() {}
-        "#,
-        )
-        .file(
-            "build.rs",
-            r#"
-            fn main() {
-                println!("cargo:rustc-flags=-aaa -bbb");
-            }
-        "#,
-        )
+        .file("src/main.rs", "fn main() {}")
+        .file("build.rs", r#"fn main() { println!("cargo:rustc-flags=-aaa -bbb"); }"#)
         .build();
 
     assert_that(
@@ -256,9 +215,7 @@ fn custom_build_script_rustc_flags() {
             [dependencies.foo]
             path = "foo"
         "#)
-        .file("src/main.rs", r#"
-            fn main() {}
-        "#)
+        .file("src/main.rs", "fn main() {}")
         .file("foo/Cargo.toml", r#"
             [project]
 
@@ -615,12 +572,7 @@ fn only_rerun_build_script() {
         "#,
         )
         .file("src/lib.rs", "")
-        .file(
-            "build.rs",
-            r#"
-            fn main() {}
-        "#,
-        )
+        .file("build.rs", "fn main() {}")
         .build();
 
     assert_that(p.cargo("build").arg("-v"), execs().with_status(0));
@@ -724,12 +676,7 @@ fn testing_and_such() {
         "#,
         )
         .file("src/lib.rs", "")
-        .file(
-            "build.rs",
-            r#"
-            fn main() {}
-        "#,
-        )
+        .file("build.rs", "fn main() {}")
         .build();
 
     println!("build");
@@ -818,14 +765,7 @@ fn propagation_of_l_flags() {
         "#,
         )
         .file("a/src/lib.rs", "")
-        .file(
-            "a/build.rs",
-            r#"
-            fn main() {
-                println!("cargo:rustc-flags=-L bar");
-            }
-        "#,
-        )
+        .file("a/build.rs", r#"fn main() { println!("cargo:rustc-flags=-L bar"); }"#)
         .file(
             "b/Cargo.toml",
             r#"
@@ -963,15 +903,7 @@ fn build_deps_simple() {
             fn main() {}
         ",
         )
-        .file(
-            "a/Cargo.toml",
-            r#"
-            [project]
-            name = "a"
-            version = "0.5.0"
-            authors = []
-        "#,
-        )
+        .file("a/Cargo.toml", &basic_manifest("a", "0.5.0"))
         .file("a/src/lib.rs", "")
         .build();
 
@@ -1019,15 +951,7 @@ fn build_deps_not_for_normal() {
             fn main() {}
         ",
         )
-        .file(
-            "a/Cargo.toml",
-            r#"
-            [project]
-            name = "aaaaa"
-            version = "0.5.0"
-            authors = []
-        "#,
-        )
+        .file("a/Cargo.toml", &basic_manifest("aaaaa", "0.5.0"))
         .file("a/src/lib.rs", "")
         .build();
 
@@ -1090,15 +1014,7 @@ fn build_cmd_with_a_build_cmd() {
             "a/build.rs",
             "#[allow(unused_extern_crates)] extern crate b; fn main() {}",
         )
-        .file(
-            "b/Cargo.toml",
-            r#"
-            [project]
-            name = "b"
-            version = "0.5.0"
-            authors = []
-        "#,
-        )
+        .file("b/Cargo.toml", &basic_manifest("b", "0.5.0"))
         .file("b/src/lib.rs", "")
         .build();
 
@@ -1592,13 +1508,7 @@ fn build_script_with_dynamic_native_dependency() {
             plugin = true
         "#,
         )
-        .file(
-            "src/lib.rs",
-            r#"
-            #[no_mangle]
-            pub extern fn foo() {}
-        "#,
-        )
+        .file("src/lib.rs", "#[no_mangle] pub extern fn foo() {}")
         .build();
 
     let foo = project().at("ws/foo")
@@ -1615,13 +1525,7 @@ fn build_script_with_dynamic_native_dependency() {
             path = "bar"
         "#,
         )
-        .file(
-            "build.rs",
-            r#"
-            extern crate bar;
-            fn main() { bar::bar() }
-        "#,
-        )
+        .file("build.rs", "extern crate bar; fn main() { bar::bar() }")
         .file("src/lib.rs", "")
         .file(
             "bar/Cargo.toml",
@@ -1754,13 +1658,7 @@ fn build_script_with_lto() {
         "#,
         )
         .file("src/lib.rs", "")
-        .file(
-            "build.rs",
-            r#"
-              fn main() {
-              }
-        "#,
-        )
+        .file("build.rs", "fn main() {}")
         .build();
     assert_that(p.cargo("build"), execs().with_status(0));
 }
@@ -1798,15 +1696,7 @@ fn test_duplicate_deps() {
             fn main() { bar::do_nothing() }
         "#,
         )
-        .file(
-            "bar/Cargo.toml",
-            r#"
-            [project]
-            name = "bar"
-            version = "0.1.0"
-            authors = []
-        "#,
-        )
+        .file("bar/Cargo.toml", &basic_manifest("bar", "0.1.0"))
         .file("bar/src/lib.rs", "pub fn do_nothing() {}")
         .build();
 
@@ -1826,21 +1716,8 @@ fn cfg_feedback() {
             build = "build.rs"
         "#,
         )
-        .file(
-            "src/main.rs",
-            "
-            #[cfg(foo)]
-            fn main() {}
-        ",
-        )
-        .file(
-            "build.rs",
-            r#"
-            fn main() {
-                println!("cargo:rustc-cfg=foo");
-            }
-        "#,
-        )
+        .file("src/main.rs", "#[cfg(foo)] fn main() {}")
+        .file("build.rs", r#"fn main() { println!("cargo:rustc-cfg=foo"); }"#)
         .build();
     assert_that(p.cargo("build").arg("-v"), execs().with_status(0));
 }
@@ -1861,13 +1738,7 @@ fn cfg_override() {
             build = "build.rs"
         "#,
         )
-        .file(
-            "src/main.rs",
-            "
-            #[cfg(foo)]
-            fn main() {}
-        ",
-        )
+        .file("src/main.rs", "#[cfg(foo)] fn main() {}")
         .file("build.rs", "")
         .file(
             ".cargo/config",
@@ -1897,14 +1768,7 @@ fn cfg_test() {
             build = "build.rs"
         "#,
         )
-        .file(
-            "build.rs",
-            r#"
-            fn main() {
-                println!("cargo:rustc-cfg=foo");
-            }
-        "#,
-        )
+        .file("build.rs", r#"fn main() { println!("cargo:rustc-cfg=foo"); }"#)
         .file(
             "src/lib.rs",
             r#"
@@ -1927,14 +1791,7 @@ fn cfg_test() {
             }
         "#,
         )
-        .file(
-            "tests/test.rs",
-            r#"
-            #[cfg(foo)]
-            #[test]
-            fn test_bar() {}
-        "#,
-        )
+        .file("tests/test.rs", "#[cfg(foo)] #[test] fn test_bar() {}")
         .build();
     assert_that(
         p.cargo("test").arg("-v"),
@@ -1976,21 +1833,8 @@ fn cfg_doc() {
             path = "bar"
         "#,
         )
-        .file(
-            "build.rs",
-            r#"
-            fn main() {
-                println!("cargo:rustc-cfg=foo");
-            }
-        "#,
-        )
-        .file(
-            "src/lib.rs",
-            r#"
-            #[cfg(foo)]
-            pub fn foo() {}
-        "#,
-        )
+        .file("build.rs", r#"fn main() { println!("cargo:rustc-cfg=foo"); }"#)
+        .file("src/lib.rs", "#[cfg(foo)] pub fn foo() {}")
         .file(
             "bar/Cargo.toml",
             r#"
@@ -2001,21 +1845,8 @@ fn cfg_doc() {
             build = "build.rs"
         "#,
         )
-        .file(
-            "bar/build.rs",
-            r#"
-            fn main() {
-                println!("cargo:rustc-cfg=bar");
-            }
-        "#,
-        )
-        .file(
-            "bar/src/lib.rs",
-            r#"
-            #[cfg(bar)]
-            pub fn bar() {}
-        "#,
-        )
+        .file("bar/build.rs", r#"fn main() { println!("cargo:rustc-cfg=bar"); }"#)
+        .file("bar/src/lib.rs", "#[cfg(bar)] pub fn bar() {}")
         .build();
     assert_that(p.cargo("doc"), execs().with_status(0));
     assert_that(&p.root().join("target/doc"), existing_dir());
@@ -2076,14 +1907,7 @@ fn cfg_override_test() {
             }
         "#,
         )
-        .file(
-            "tests/test.rs",
-            r#"
-            #[cfg(foo)]
-            #[test]
-            fn test_bar() {}
-        "#,
-        )
+        .file("tests/test.rs", "#[cfg(foo)] #[test] fn test_bar() {}")
         .build();
     assert_that(
         p.cargo("test").arg("-v"),
@@ -2137,13 +1961,7 @@ fn cfg_override_doc() {
             ),
         )
         .file("build.rs", "")
-        .file(
-            "src/lib.rs",
-            r#"
-            #[cfg(foo)]
-            pub fn foo() {}
-        "#,
-        )
+        .file("src/lib.rs", "#[cfg(foo)] pub fn foo() {}")
         .file(
             "bar/Cargo.toml",
             r#"
@@ -2156,13 +1974,7 @@ fn cfg_override_doc() {
         "#,
         )
         .file("bar/build.rs", "")
-        .file(
-            "bar/src/lib.rs",
-            r#"
-            #[cfg(bar)]
-            pub fn bar() {}
-        "#,
-        )
+        .file("bar/src/lib.rs", "#[cfg(bar)] pub fn bar() {}")
         .build();
     assert_that(p.cargo("doc"), execs().with_status(0));
     assert_that(&p.root().join("target/doc"), existing_dir());
@@ -2198,14 +2010,7 @@ fn env_build() {
             }
         "#,
         )
-        .file(
-            "build.rs",
-            r#"
-            fn main() {
-                println!("cargo:rustc-env=FOO=foo");
-            }
-        "#,
-        )
+        .file("build.rs", r#"fn main() { println!("cargo:rustc-env=FOO=foo"); }"#)
         .build();
     assert_that(p.cargo("build").arg("-v"), execs().with_status(0));
     assert_that(
@@ -2227,20 +2032,8 @@ fn env_test() {
             build = "build.rs"
         "#,
         )
-        .file(
-            "build.rs",
-            r#"
-            fn main() {
-                println!("cargo:rustc-env=FOO=foo");
-            }
-        "#,
-        )
-        .file(
-            "src/lib.rs",
-            r#"
-            pub const FOO: &'static str = env!("FOO");
-        "#,
-        )
+        .file("build.rs", r#"fn main() { println!("cargo:rustc-env=FOO=foo"); }"#)
+        .file("src/lib.rs", r#"pub const FOO: &'static str = env!("FOO"); "#)
         .file(
             "tests/test.rs",
             r#"
@@ -2296,13 +2089,7 @@ fn env_doc() {
             fn main() {}
         "#,
         )
-        .file(
-            "build.rs",
-            r#"
-            fn main() {
-                println!("cargo:rustc-env=FOO=foo");
-            }
-        "#,
+        .file("build.rs", r#"fn main() { println!("cargo:rustc-env=FOO=foo"); }"#,
         )
         .build();
     assert_that(p.cargo("doc").arg("-v"), execs().with_status(0));
@@ -2970,13 +2757,7 @@ fn non_utf8_output() {
             }
         "#,
         )
-        .file(
-            "src/main.rs",
-            r#"
-            #[cfg(foo)]
-            fn main() {}
-        "#,
-        )
+        .file("src/main.rs", "#[cfg(foo)] fn main() {}")
         .build();
 
     assert_that(p.cargo("build").arg("-v"), execs().with_status(0));
@@ -3463,15 +3244,6 @@ fn switch_features_rerun() {
 fn assume_build_script_when_build_rs_present() {
     let p = project()
         .file(
-            "Cargo.toml",
-            r#"
-            [package]
-            name = "foo"
-            version = "0.0.1"
-            authors = []
-        "#,
-        )
-        .file(
             "src/main.rs",
             r#"
             fn main() {
@@ -3636,12 +3408,7 @@ fn deterministic_rustc_dependency_flags() {
             dep4 = "*"
         "#,
         )
-        .file(
-            "src/main.rs",
-            r#"
-            fn main() {}
-        "#,
-        )
+        .file("src/main.rs", "fn main() {}")
         .build();
 
     assert_that(
@@ -3735,27 +3502,13 @@ fn rename_with_link_search_path() {
             crate-type = ["cdylib"]
         "#,
         )
-        .file(
-            "src/lib.rs",
-            "
-            #[no_mangle]
-            pub extern fn cargo_test_foo() {}
-        ",
-        );
+        .file("src/lib.rs", "#[no_mangle] pub extern fn cargo_test_foo() {}");
     let p = p.build();
 
     assert_that(p.cargo("build"), execs().with_status(0));
 
     let p2 = project().at("bar")
-        .file(
-            "Cargo.toml",
-            r#"
-            [project]
-            name = "bar"
-            version = "0.5.0"
-            authors = []
-        "#,
-        )
+        .file("Cargo.toml", &basic_manifest("bar", "0.5.0"))
         .file(
             "build.rs",
             r#"
@@ -3906,21 +3659,8 @@ fn optional_build_script_dep() {
                 }
             "#,
         )
-        .file(
-            "bar/Cargo.toml",
-            r#"
-                [project]
-                name = "bar"
-                version = "0.5.0"
-                authors = []
-            "#,
-        )
-        .file(
-            "bar/src/lib.rs",
-            r#"
-                pub fn bar() -> u32 { 1 }
-            "#,
-        );
+        .file("bar/Cargo.toml", &basic_manifest("bar", "0.5.0"))
+        .file("bar/src/lib.rs", "pub fn bar() -> u32 { 1 }");
     let p = p.build();
 
     assert_that(p.cargo("run"), execs().with_status(0).with_stdout("0\n"));
@@ -3949,13 +3689,7 @@ fn optional_build_dep_and_required_normal_dep() {
             bar = { path = "./bar" }
             "#,
         )
-        .file(
-            "build.rs",
-            r#"
-            extern crate bar;
-            fn main() { bar::bar(); }
-        "#,
-        )
+        .file("build.rs", "extern crate bar; fn main() { bar::bar(); }")
         .file(
             "src/main.rs",
             r#"
@@ -3972,21 +3706,8 @@ fn optional_build_dep_and_required_normal_dep() {
                 }
             "#,
         )
-        .file(
-            "bar/Cargo.toml",
-            r#"
-                [project]
-                name = "bar"
-                version = "0.5.0"
-                authors = []
-            "#,
-        )
-        .file(
-            "bar/src/lib.rs",
-            r#"
-                pub fn bar() -> u32 { 1 }
-            "#,
-        );
+        .file("bar/Cargo.toml", &basic_manifest("bar", "0.5.0"))
+        .file("bar/src/lib.rs", "pub fn bar() -> u32 { 1 }");
     let p = p.build();
 
     assert_that(

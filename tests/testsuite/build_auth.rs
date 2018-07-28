@@ -7,7 +7,7 @@ use std::thread;
 use git2;
 use bufstream::BufStream;
 use support::paths;
-use support::{execs, project};
+use support::{basic_manifest, execs, project};
 use support::hamcrest::assert_that;
 
 // Test that HTTP auth is offered from `credential.helper`
@@ -72,15 +72,7 @@ fn http_auth_offered() {
     });
 
     let script = project().at("script")
-        .file(
-            "Cargo.toml",
-            r#"
-            [project]
-            name = "script"
-            version = "0.0.1"
-            authors = []
-        "#,
-        )
+        .file("Cargo.toml", &basic_manifest("script", "0.1.0"))
         .file(
             "src/main.rs",
             r#"

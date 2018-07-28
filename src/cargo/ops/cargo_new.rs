@@ -8,7 +8,7 @@ use git2::Config as GitConfig;
 use git2::Repository as GitRepository;
 
 use core::{compiler, Workspace};
-use util::{internal, FossilRepo, GitRepo, HgRepo, PijulRepo};
+use util::{internal, FossilRepo, GitRepo, HgRepo, PijulRepo, existing_vcs_repo};
 use util::{paths, Config};
 use util::errors::{CargoResult, CargoResultExt};
 
@@ -407,10 +407,6 @@ pub fn init(opts: &NewOptions, config: &Config) -> CargoResult<()> {
         )
     })?;
     Ok(())
-}
-
-pub fn existing_vcs_repo(path: &Path, cwd: &Path) -> bool {
-    GitRepo::discover(path, cwd).is_ok() || HgRepo::discover(path, cwd).is_ok()
 }
 
 fn mk(config: &Config, opts: &MkOptions) -> CargoResult<()> {

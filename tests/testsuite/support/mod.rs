@@ -11,7 +11,6 @@ specify some files to create.  The general form looks like this:
 
 ```
 let p = project()
-    .file("Cargo.toml", &basic_bin_manifest("foo"))
     .file("src/main.rs", r#"fn main() { println!("hi!"); }"#)
     .build();
 ```
@@ -97,7 +96,6 @@ use std::usize;
 use cargo::util::{ProcessBuilder, ProcessError, Rustc};
 use cargo;
 use serde_json::{self, Value};
-use tempfile::TempDir;
 use url::Url;
 
 use self::hamcrest as ham;
@@ -181,9 +179,8 @@ impl SymlinkBuilder {
     }
 }
 
-pub enum Project {
-    Rooted(PathBuf),
-    Temp(TempDir),
+pub struct Project {
+    root: PathBuf
 }
 
 #[must_use]
@@ -191,6 +188,7 @@ pub struct ProjectBuilder {
     root: Project,
     files: Vec<FileBuilder>,
     symlinks: Vec<SymlinkBuilder>,
+    no_manifest: bool,
 }
 
 impl ProjectBuilder {
@@ -206,14 +204,15 @@ impl ProjectBuilder {
 
     pub fn new(root: PathBuf) -> ProjectBuilder {
         ProjectBuilder {
-            root: Project::Rooted(root),
+            root: Project { root },
             files: vec![],
             symlinks: vec![],
+            no_manifest: false,
         }
     }
 
     pub fn at<P: AsRef<Path>>(mut self, path: P) -> Self {
-        self.root = Project::Rooted(paths::root().join(path));
+        self.root = Project{root: paths::root().join(path)};
         self
     }
 
@@ -237,18 +236,23 @@ impl ProjectBuilder {
         self
     }
 
-    pub fn use_temp_dir(mut self) -> Self {
-        self.root = Project::Temp(TempDir::new().unwrap());
+    pub fn no_manifest(mut self) -> Self {
+        self.no_manifest = true;
         self
     }
 
     /// Create the project.
-    pub fn build(self) -> Project {
+    pub fn build(mut self) -> Project {
         // First, clean the directory if it already exists
         self.rm_root();
 
         // Create the empty directory
         self.root.root().mkdir_p();
+
+        let manifest_path = self.root.root().join("Cargo.toml");
+        if !self.no_manifest && self.files.iter().all(|fb| fb.path != manifest_path) {
+            self._file(Path::new("Cargo.toml"), &basic_manifest("foo", "0.0.1"))
+        }
 
         for file in self.files.iter() {
             file.mk();
@@ -275,10 +279,7 @@ impl ProjectBuilder {
 impl Project {
     /// Root of the project, ex: `/path/to/cargo/target/cit/t0/foo`
     pub fn root(&self) -> PathBuf {
-        match self {
-            Project::Rooted(p) => p.clone(),
-            Project::Temp(t) => t.path().to_path_buf(),
-        }
+        self.root.clone()
     }
 
     /// Project's target dir, ex: `/path/to/cargo/target/cit/t0/foo/target`
@@ -1211,6 +1212,18 @@ impl<T> Tap for T {
         callback(&mut self);
         self
     }
+}
+
+pub fn basic_manifest(name: &str, version: &str) -> String {
+    format!(
+        r#"
+        [package]
+        name = "{}"
+        version = "{}"
+        authors = []
+    "#,
+        name, version
+    )
 }
 
 pub fn basic_bin_manifest(name: &str) -> String {

@@ -101,15 +101,6 @@ fn build_dep_info_dylib() {
 #[test]
 fn no_rewrite_if_no_change() {
     let p = project()
-        .file(
-            "Cargo.toml",
-            r#"
-            [package]
-            name = "foo"
-            version = "0.0.1"
-            authors = []
-        "#,
-        )
         .file("src/lib.rs", "")
         .build();
 

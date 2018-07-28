@@ -1,7 +1,7 @@
 use support::git;
 use support::paths;
 use support::registry::Package;
-use support::{execs, project};
+use support::{basic_manifest, execs, project};
 use support::hamcrest::assert_that;
 
 #[test]
@@ -9,15 +9,7 @@ fn override_simple() {
     Package::new("bar", "0.1.0").publish();
 
     let bar = git::repo(&paths::root().join("override"))
-        .file(
-            "Cargo.toml",
-            r#"
-            [package]
-            name = "bar"
-            version = "0.1.0"
-            authors = []
-        "#,
-        )
+        .file("Cargo.toml", &basic_manifest("bar", "0.1.0"))
         .file("src/lib.rs", "pub fn bar() {}")
         .build();
 
@@ -40,15 +32,7 @@ fn override_simple() {
                 bar.url()
             ),
         )
-        .file(
-            "src/lib.rs",
-            "
-            extern crate bar;
-            pub fn foo() {
-                bar::bar();
-            }
-        ",
-        )
+        .file("src/lib.rs", "extern crate bar; pub fn foo() { bar::bar(); }")
         .build();
 
     assert_that(
@@ -179,15 +163,7 @@ fn transitive() {
         .publish();
 
     let foo = git::repo(&paths::root().join("override"))
-        .file(
-            "Cargo.toml",
-            r#"
-            [package]
-            name = "bar"
-            version = "0.1.0"
-            authors = []
-        "#,
-        )
+        .file("Cargo.toml", &basic_manifest("bar", "0.1.0"))
         .file("src/lib.rs", "pub fn bar() {}")
         .build();
 
@@ -236,15 +212,7 @@ fn persists_across_rebuilds() {
     Package::new("bar", "0.1.0").publish();
 
     let foo = git::repo(&paths::root().join("override"))
-        .file(
-            "Cargo.toml",
-            r#"
-            [package]
-            name = "bar"
-            version = "0.1.0"
-            authors = []
-        "#,
-        )
+        .file("Cargo.toml", &basic_manifest("bar", "0.1.0"))
         .file("src/lib.rs", "pub fn bar() {}")
         .build();
 
@@ -267,15 +235,7 @@ fn persists_across_rebuilds() {
                 foo.url()
             ),
         )
-        .file(
-            "src/lib.rs",
-            "
-            extern crate bar;
-            pub fn foo() {
-                bar::bar();
-            }
-        ",
-        )
+        .file("src/lib.rs", "extern crate bar; pub fn foo() { bar::bar(); }")
         .build();
 
     assert_that(
@@ -299,15 +259,7 @@ fn replace_registry_with_path() {
     Package::new("bar", "0.1.0").publish();
 
     let _ = project().at("bar")
-        .file(
-            "Cargo.toml",
-            r#"
-            [package]
-            name = "bar"
-            version = "0.1.0"
-            authors = []
-        "#,
-        )
+        .file("Cargo.toml", &basic_manifest("bar", "0.1.0"))
         .file("src/lib.rs", "pub fn bar() {}")
         .build();
 
@@ -327,15 +279,7 @@ fn replace_registry_with_path() {
             "bar:0.1.0" = { path = "../bar" }
         "#,
         )
-        .file(
-            "src/lib.rs",
-            "
-            extern crate bar;
-            pub fn foo() {
-                bar::bar();
-            }
-        ",
-        )
+        .file("src/lib.rs", "extern crate bar; pub fn foo() { bar::bar(); }")
         .build();
 
     assert_that(
@@ -359,25 +303,11 @@ fn use_a_spec_to_select() {
     Package::new("baz", "0.2.0").publish();
     Package::new("bar", "0.1.1")
         .dep("baz", "0.2")
-        .file(
-            "src/lib.rs",
-            "
-                extern crate baz;
-                pub fn bar() { baz::baz3(); }
-            ",
-        )
+        .file("src/lib.rs", "extern crate baz; pub fn bar() { baz::baz3(); }")
         .publish();
 
     let foo = git::repo(&paths::root().join("override"))
-        .file(
-            "Cargo.toml",
-            r#"
-            [package]
-            name = "baz"
-            version = "0.2.0"
-            authors = []
-        "#,
-        )
+        .file("Cargo.toml", &basic_manifest("baz", "0.2.0"))
         .file("src/lib.rs", "pub fn baz3() {}")
         .build();
 
@@ -576,15 +506,7 @@ fn override_wrong_name() {
     Package::new("baz", "0.1.0").publish();
 
     let foo = git::repo(&paths::root().join("override"))
-        .file(
-            "Cargo.toml",
-            r#"
-            [package]
-            name = "bar"
-            version = "0.1.0"
-            authors = []
-        "#,
-        )
+        .file("Cargo.toml", &basic_manifest("bar", "0.1.0"))
         .file("src/lib.rs", "")
         .build();
 
@@ -708,15 +630,7 @@ fn multiple_specs() {
     Package::new("bar", "0.1.0").publish();
 
     let bar = git::repo(&paths::root().join("override"))
-        .file(
-            "Cargo.toml",
-            r#"
-            [package]
-            name = "bar"
-            version = "0.1.0"
-            authors = []
-        "#,
-        )
+        .file("Cargo.toml", &basic_manifest("bar", "0.1.0"))
         .file("src/lib.rs", "pub fn bar() {}")
         .build();
 
@@ -767,15 +681,7 @@ fn test_override_dep() {
     Package::new("bar", "0.1.0").publish();
 
     let bar = git::repo(&paths::root().join("override"))
-        .file(
-            "Cargo.toml",
-            r#"
-            [package]
-            name = "bar"
-            version = "0.1.0"
-            authors = []
-        "#,
-        )
+        .file("Cargo.toml", &basic_manifest("bar", "0.1.0"))
         .file("src/lib.rs", "pub fn bar() {}")
         .build();
 
@@ -819,15 +725,7 @@ fn update() {
     Package::new("bar", "0.1.0").publish();
 
     let bar = git::repo(&paths::root().join("override"))
-        .file(
-            "Cargo.toml",
-            r#"
-            [package]
-            name = "bar"
-            version = "0.1.0"
-            authors = []
-        "#,
-        )
+        .file("Cargo.toml", &basic_manifest("bar", "0.1.0"))
         .file("src/lib.rs", "pub fn bar() {}")
         .build();
 
@@ -870,15 +768,7 @@ fn update() {
 #[test]
 fn no_override_self() {
     let deps = git::repo(&paths::root().join("override"))
-        .file(
-            "far/Cargo.toml",
-            r#"
-            [package]
-            name = "far"
-            version = "0.1.0"
-            authors = []
-        "#,
-        )
+        .file("far/Cargo.toml", &basic_manifest("far", "0.1.0"))
         .file("far/src/lib.rs", "")
         .file(
             "near/Cargo.toml",
@@ -892,13 +782,7 @@ fn no_override_self() {
             far = { path = "../far" }
         "#,
         )
-        .file(
-            "near/src/lib.rs",
-            r#"
-            #![no_std]
-            pub extern crate far;
-        "#,
-        )
+        .file("near/src/lib.rs", "#![no_std] pub extern crate far;")
         .build();
 
     let p = project()
@@ -920,13 +804,7 @@ fn no_override_self() {
                 deps.url()
             ),
         )
-        .file(
-            "src/lib.rs",
-            r#"
-            #![no_std]
-            pub extern crate near;
-        "#,
-        )
+        .file("src/lib.rs", "#![no_std] pub extern crate near;")
         .build();
 
     assert_that(p.cargo("build").arg("--verbose"), execs().with_status(0));
@@ -977,12 +855,7 @@ fn broken_path_override_warns() {
         "#,
         )
         .file("a2/src/lib.rs", "")
-        .file(
-            ".cargo/config",
-            r#"
-            paths = ["a2"]
-        "#,
-        )
+        .file(".cargo/config", r#"paths = ["a2"]"#)
         .build();
 
     assert_that(
@@ -1118,21 +991,8 @@ fn override_an_override() {
             }
         ",
         )
-        .file(
-            "serde/Cargo.toml",
-            r#"
-            [package]
-            name = "serde"
-            version = "0.8.0"
-            authors = []
-        "#,
-        )
-        .file(
-            "serde/src/lib.rs",
-            "
-            pub fn serde08_override() {}
-        ",
-        )
+        .file("serde/Cargo.toml", &basic_manifest("serde", "0.8.0"))
+        .file("serde/src/lib.rs", "pub fn serde08_override() {}")
         .build();
 
     assert_that(p.cargo("build").arg("-v"), execs().with_status(0));
@@ -1157,15 +1017,7 @@ fn overriding_nonexistent_no_spurious() {
         "#,
         )
         .file("src/lib.rs", "pub fn bar() {}")
-        .file(
-            "baz/Cargo.toml",
-            r#"
-            [package]
-            name = "baz"
-            version = "0.1.0"
-            authors = []
-        "#,
-        )
+        .file("baz/Cargo.toml", &basic_manifest("baz", "0.1.0"))
         .file("baz/src/lib.rs", "pub fn baz() {}")
         .build();
 
@@ -1234,23 +1086,9 @@ fn no_warnings_when_replace_is_used_in_another_workspace_member() {
         "#,
         )
         .file("first_crate/src/lib.rs", "")
-        .file(
-            "second_crate/Cargo.toml",
-            r#"
-            [package]
-            name = "second_crate"
-            version = "0.1.0"
-        "#,
-        )
+        .file("second_crate/Cargo.toml", &basic_manifest("second_crate", "0.1.0"))
         .file("second_crate/src/lib.rs", "")
-        .file(
-            "local_bar/Cargo.toml",
-            r#"
-            [package]
-            name = "bar"
-            version = "0.1.0"
-        "#,
-        )
+        .file("local_bar/Cargo.toml", &basic_manifest("bar", "0.1.0"))
         .file("local_bar/src/lib.rs", "")
         .build();
 
@@ -1307,22 +1145,9 @@ fn override_to_path_dep() {
         "#,
         )
         .file("bar/src/lib.rs", "")
-        .file(
-            "bar/baz/Cargo.toml",
-            r#"
-            [package]
-            name = "baz"
-            version = "0.0.1"
-            authors = []
-        "#,
-        )
+        .file("bar/baz/Cargo.toml", &basic_manifest("baz", "0.0.1"))
         .file("bar/baz/src/lib.rs", "")
-        .file(
-            ".cargo/config",
-            r#"
-            paths = ["bar"]
-        "#,
-        )
+        .file(".cargo/config", r#"paths = ["bar"]"#)
         .build();
 
     assert_that(p.cargo("build"), execs().with_status(0));
@@ -1362,25 +1187,8 @@ fn replace_to_path_dep() {
             baz = { path = "baz" }
         "#,
         )
-        .file(
-            "bar/src/lib.rs",
-            "
-            extern crate baz;
-
-            pub fn bar() {
-                baz::baz();
-            }
-        ",
-        )
-        .file(
-            "bar/baz/Cargo.toml",
-            r#"
-            [package]
-            name = "baz"
-            version = "0.1.0"
-            authors = []
-        "#,
-        )
+        .file("bar/src/lib.rs", "extern crate baz; pub fn bar() { baz::baz(); }")
+        .file("bar/baz/Cargo.toml", &basic_manifest("baz", "0.1.0"))
         .file("bar/baz/src/lib.rs", "pub fn baz() {}")
         .build();
 
@@ -1431,12 +1239,7 @@ fn paths_ok_with_optional() {
         "#,
         )
         .file("bar2/src/lib.rs", "")
-        .file(
-            ".cargo/config",
-            r#"
-            paths = ["bar2"]
-        "#,
-        )
+        .file(".cargo/config", r#"paths = ["bar2"]"#)
         .build();
 
     assert_that(
@@ -1469,15 +1272,7 @@ fn paths_add_optional_bad() {
         "#,
         )
         .file("src/lib.rs", "")
-        .file(
-            "bar/Cargo.toml",
-            r#"
-            [package]
-            name = "bar"
-            version = "0.1.0"
-            authors = []
-        "#,
-        )
+        .file("bar/Cargo.toml", &basic_manifest("bar", "0.1.0"))
         .file("bar/src/lib.rs", "")
         .file(
             "bar2/Cargo.toml",
@@ -1492,12 +1287,7 @@ fn paths_add_optional_bad() {
         "#,
         )
         .file("bar2/src/lib.rs", "")
-        .file(
-            ".cargo/config",
-            r#"
-            paths = ["bar2"]
-        "#,
-        )
+        .file(".cargo/config", r#"paths = ["bar2"]"#)
         .build();
 
     assert_that(
@@ -1535,16 +1325,7 @@ fn override_with_default_feature() {
             'bar:0.1.0' = { path = "bar" }
         "#,
         )
-        .file(
-            "src/main.rs",
-            r#"
-            extern crate bar;
-
-            fn main() {
-                bar::bar();
-            }
-        "#,
-        )
+        .file("src/main.rs", "extern crate bar; fn main() { bar::bar(); }")
         .file(
             "bar/Cargo.toml",
             r#"

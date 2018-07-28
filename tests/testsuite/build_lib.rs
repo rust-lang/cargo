@@ -1,4 +1,4 @@
-use support::{basic_bin_manifest, execs, project, Project};
+use support::{basic_manifest, basic_bin_manifest, execs, project, Project};
 use support::hamcrest::assert_that;
 
 fn verbose_output_for_lib(p: &Project) -> String {
@@ -22,22 +22,7 @@ fn verbose_output_for_lib(p: &Project) -> String {
 #[test]
 fn build_lib_only() {
     let p = project()
-        .file(
-            "Cargo.toml",
-            r#"
-            [package]
-
-            name = "foo"
-            version = "0.0.1"
-            authors = ["wycats@example.com"]
-        "#,
-        )
-        .file(
-            "src/main.rs",
-            r#"
-            fn main() {}
-        "#,
-        )
+        .file("src/main.rs", "fn main() {}")
         .file("src/lib.rs", r#" "#)
         .build();
 
@@ -53,19 +38,14 @@ fn build_lib_only() {
 fn build_with_no_lib() {
     let p = project()
         .file("Cargo.toml", &basic_bin_manifest("foo"))
-        .file(
-            "src/main.rs",
-            r#"
-            fn main() {}
-        "#,
-        )
+        .file("src/main.rs", "fn main() {}")
         .build();
 
     assert_that(
         p.cargo("build").arg("--lib"),
         execs()
             .with_status(101)
-            .with_stderr("[ERROR] no library targets found"),
+            .with_stderr("[ERROR] no library targets found in package `foo`"),
     );
 }
 
@@ -86,23 +66,9 @@ fn build_with_relative_cargo_home_path() {
             "test-dependency" = { path = "src/test_dependency" }
         "#,
         )
-        .file(
-            "src/main.rs",
-            r#"
-            fn main() {}
-        "#,
-        )
+        .file("src/main.rs", "fn main() {}")
         .file("src/test_dependency/src/lib.rs", r#" "#)
-        .file(
-            "src/test_dependency/Cargo.toml",
-            r#"
-            [package]
-
-            name = "test-dependency"
-            version = "0.0.1"
-            authors = ["wycats@example.com"]
-        "#,
-        )
+        .file("src/test_dependency/Cargo.toml", &basic_manifest("test-dependency", "0.0.1"))
         .build();
 
     assert_that(
