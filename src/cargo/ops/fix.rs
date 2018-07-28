@@ -134,7 +134,7 @@ pub fn fix_maybe_exec_rustc() -> CargoResult<bool> {
     // not the best heuristic but matches what Cargo does today at least.
     let mut fixes = FixedCrate::default();
     if let Some(path) = filename {
-        if !Path::new(&path).is_absolute() {
+        if env::var("CARGO_PRIMARY_PACKAGE").is_ok() {
             trace!("start rustfixing {:?}", path);
             fixes = rustfix_crate(&lock_addr, rustc.as_ref(), &path)?;
         }
