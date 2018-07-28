@@ -326,6 +326,7 @@ fn exclude() {
             "\
 [WARNING] manifest has no description[..]
 See http://doc.crates.io/manifest.html#package-metadata for more info.
+[WARNING] No (git) Cargo.toml found at `[..]` in workdir `[..]`
 [PACKAGING] foo v0.0.1 ([..])
 [WARNING] [..] file `dir_root_1[/]some_dir[/]file` WILL be excluded [..]
 See [..]
@@ -415,6 +416,7 @@ fn include() {
             "\
 [WARNING] manifest has no description[..]
 See http://doc.crates.io/manifest.html#package-metadata for more info.
+[WARNING] No (git) Cargo.toml found at `[..]` in workdir `[..]`
 [PACKAGING] foo v0.0.1 ([..])
 [ARCHIVING] [..]
 [ARCHIVING] [..]
