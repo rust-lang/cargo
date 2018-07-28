@@ -59,7 +59,7 @@ pub fn package(ws: &Workspace, opts: &PackageOpts) -> CargoResult<Option<FileLoc
     }
 
     if !opts.allow_dirty {
-        check_not_dirty(pkg, &src)?;
+        check_not_dirty(pkg, &src, &config)?;
     }
 
     let filename = format!("{}-{}.crate", pkg.name(), pkg.version());
@@ -152,7 +152,7 @@ fn verify_dependencies(pkg: &Package) -> CargoResult<()> {
     Ok(())
 }
 
-fn check_not_dirty(p: &Package, src: &PathSource) -> CargoResult<()> {
+fn check_not_dirty(p: &Package, src: &PathSource, config: &Config) -> CargoResult<()> {
     if let Ok(repo) = git2::Repository::discover(p.root()) {
         if let Some(workdir) = repo.workdir() {
             debug!(
@@ -172,6 +172,7 @@ fn check_not_dirty(p: &Package, src: &PathSource) -> CargoResult<()> {
 
     // No VCS recognized, we don't know if the directory is dirty or not, so we
     // have to assume that it's clean.
+    config.shell().verbose(|shell| shell.warn("No (git) VCS found"))?;
     return Ok(());
 
     fn git(p: &Package, src: &PathSource, repo: &git2::Repository) -> CargoResult<()> {
