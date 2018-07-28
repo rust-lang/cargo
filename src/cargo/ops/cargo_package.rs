@@ -152,7 +152,12 @@ fn verify_dependencies(pkg: &Package) -> CargoResult<()> {
     Ok(())
 }
 
-fn check_not_dirty(p: &Package, src: &PathSource, ws: &Workspace, config: &Config) -> CargoResult<()> {
+fn check_not_dirty(
+    p: &Package,
+    src: &PathSource,
+    ws: &Workspace,
+    config: &Config
+) -> CargoResult<()> {
     let res = git2::Repository::discover(p.root())
         .or_else(|_e| git2::Repository::discover(ws.root()));
     match res {
