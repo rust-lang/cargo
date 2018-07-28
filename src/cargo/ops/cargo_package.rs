@@ -59,7 +59,7 @@ pub fn package(ws: &Workspace, opts: &PackageOpts) -> CargoResult<Option<FileLoc
     }
 
     if !opts.allow_dirty {
-        check_not_dirty(pkg, &src, &config)?;
+        check_not_dirty(pkg, &src, &ws, &config)?;
     }
 
     let filename = format!("{}-{}.crate", pkg.name(), pkg.version());
@@ -152,27 +152,33 @@ fn verify_dependencies(pkg: &Package) -> CargoResult<()> {
     Ok(())
 }
 
-fn check_not_dirty(p: &Package, src: &PathSource, config: &Config) -> CargoResult<()> {
-    if let Ok(repo) = git2::Repository::discover(p.root()) {
-        if let Some(workdir) = repo.workdir() {
-            debug!(
-                "found a git repo at {:?}, checking if index present",
-                workdir
-            );
-            let path = p.manifest_path();
-            let path = path.strip_prefix(workdir).unwrap_or(path);
-            if let Ok(status) = repo.status_file(path) {
-                if (status & git2::Status::IGNORED).is_empty() {
-                    debug!("Cargo.toml found in repo, checking if dirty");
-                    return git(p, src, &repo);
+fn check_not_dirty(p: &Package, src: &PathSource, ws: &Workspace, config: &Config) -> CargoResult<()> {
+    let res = git2::Repository::discover(p.root())
+        .or_else(|_e| git2::Repository::discover(ws.root()));
+    match res {
+        Ok(repo) => {
+            if let Some(workdir) = repo.workdir() {
+                config.shell().verbose(|shell| {
+                    shell.status("Checking", format!("git repo ({:?})", workdir))
+                })?;
+                let path = p.manifest_path();
+                let path = path.strip_prefix(workdir).unwrap_or(path);
+                if let Ok(status) = repo.status_file(path) {
+                    if (status & git2::Status::IGNORED).is_empty() {
+                        debug!("Cargo.toml found in repo, checking if dirty");
+                        return git(p, src, &repo);
+                    }
                 }
             }
         }
+        Err(ref r) => {
+            config.shell().verbose(|shell| {
+                shell.warn(format!("No (git) VCS found: {:?}", r))
+            })?;
+        }
     }
-
-    // No VCS recognized, we don't know if the directory is dirty or not, so we
-    // have to assume that it's clean.
-    config.shell().verbose(|shell| shell.warn("No (git) VCS found"))?;
+    // No VCS recognized, we don't know if the directory is dirty or not, so
+    // we have to assume that it's clean.
     return Ok(());
 
     fn git(p: &Package, src: &PathSource, repo: &git2::Repository) -> CargoResult<()> {
