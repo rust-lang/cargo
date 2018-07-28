@@ -196,7 +196,7 @@ fn fix_path_deps() {
         .build();
 
     assert_that(
-        p.cargo("fix --allow-no-vcs")
+        p.cargo("fix --allow-no-vcs -p foo -p bar")
             .env("__CARGO_FIX_YOLO", "1"),
         execs()
             .with_status(0)
