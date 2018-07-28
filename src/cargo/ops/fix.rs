@@ -1,8 +1,8 @@
 use std::collections::{HashMap, HashSet, BTreeSet};
 use std::env;
-use std::fs::File;
-use std::io::Write;
-use std::path::Path;
+use std::ffi::OsString;
+use std::fs;
+use std::path::{Path, PathBuf};
 use std::process::{self, Command, ExitStatus};
 use std::str;
 
@@ -21,6 +21,7 @@ use util::paths;
 
 const FIX_ENV: &str = "__CARGO_FIX_PLZ";
 const BROKEN_CODE_ENV: &str = "__CARGO_FIX_BROKEN_CODE";
+const EDITION_ENV: &str = "__CARGO_FIX_EDITION";
 
 pub struct FixOptions<'a> {
     pub edition: Option<&'a str>,
@@ -48,9 +49,10 @@ pub fn fix(ws: &Workspace, opts: &mut FixOptions) -> CargoResult<()> {
     }
 
     if let Some(edition) = opts.edition {
-        opts.compile_opts.build_config.extra_rustc_args.push("-W".to_string());
-        let lint_name = format!("rust-{}-compatibility", edition);
-        opts.compile_opts.build_config.extra_rustc_args.push(lint_name);
+        opts.compile_opts.build_config.extra_rustc_env.push((
+            EDITION_ENV.to_string(),
+            edition.to_string(),
+        ));
     }
     opts.compile_opts.build_config.cargo_as_rustc_wrapper = true;
     *opts.compile_opts.build_config.rustfix_diagnostic_server.borrow_mut() =
@@ -115,14 +117,8 @@ pub fn fix_maybe_exec_rustc() -> CargoResult<bool> {
         Err(_) => return Ok(false),
     };
 
-    // Try to figure out what we're compiling by looking for a rust-like file
-    // that exists.
-    let filename = env::args()
-        .skip(1)
-        .filter(|s| s.ends_with(".rs"))
-        .find(|s| Path::new(s).exists());
-
-    trace!("cargo-fix as rustc got file {:?}", filename);
+    let args = FixArgs::get();
+    trace!("cargo-fix as rustc got file {:?}", args.file);
     let rustc = env::var_os("RUSTC").expect("failed to find RUSTC env var");
 
     // Our goal is to fix only the crates that the end user is interested in.
@@ -133,10 +129,10 @@ pub fn fix_maybe_exec_rustc() -> CargoResult<bool> {
     // compiling a Rust file and it *doesn't* have an absolute filename. That's
     // not the best heuristic but matches what Cargo does today at least.
     let mut fixes = FixedCrate::default();
-    if let Some(path) = filename {
+    if let Some(path) = &args.file {
         if env::var("CARGO_PRIMARY_PACKAGE").is_ok() {
             trace!("start rustfixing {:?}", path);
-            fixes = rustfix_crate(&lock_addr, rustc.as_ref(), &path)?;
+            fixes = rustfix_crate(&lock_addr, rustc.as_ref(), path, &args)?;
         }
     }
 
@@ -148,11 +144,10 @@ pub fn fix_maybe_exec_rustc() -> CargoResult<bool> {
     // If we didn't actually make any changes then we can immediately exec the
     // new rustc, and otherwise we capture the output to hide it in the scenario
     // that we have to back it all out.
-    let mut cmd = Command::new(&rustc);
-    cmd.args(env::args().skip(1));
-    cmd.arg("--cap-lints=warn");
-    cmd.arg("--error-format=json");
     if !fixes.original_files.is_empty() {
+        let mut cmd = Command::new(&rustc);
+        args.apply(&mut cmd);
+        cmd.arg("--error-format=json");
         let output = cmd.output().context("failed to spawn rustc")?;
 
         if output.status.success() {
@@ -173,8 +168,7 @@ pub fn fix_maybe_exec_rustc() -> CargoResult<bool> {
         // below to recompile again.
         if !output.status.success() {
             for (k, v) in fixes.original_files {
-                File::create(&k)
-                    .and_then(|mut f| f.write_all(v.as_bytes()))
+                fs::write(&k, v)
                     .with_context(|_| format!("failed to write file `{}`", k))?;
             }
             log_failed_fix(&output.stderr)?;
@@ -182,8 +176,7 @@ pub fn fix_maybe_exec_rustc() -> CargoResult<bool> {
     }
 
     let mut cmd = Command::new(&rustc);
-    cmd.args(env::args().skip(1));
-    cmd.arg("--cap-lints=warn");
+    args.apply(&mut cmd);
     exit_with(cmd.status().context("failed to spawn rustc")?);
 }
 
@@ -193,9 +186,12 @@ struct FixedCrate {
     original_files: HashMap<String, String>,
 }
 
-fn rustfix_crate(lock_addr: &str, rustc: &Path, filename: &str)
+fn rustfix_crate(lock_addr: &str, rustc: &Path, filename: &Path, args: &FixArgs)
     -> Result<FixedCrate, Error>
 {
+    args.verify_not_preparing_for_enabled_edition()?;
+    args.warn_if_preparing_probably_inert()?;
+
     // If not empty, filter by these lints
     //
     // TODO: Implement a way to specify this
@@ -210,8 +206,8 @@ fn rustfix_crate(lock_addr: &str, rustc: &Path, filename: &str)
     let _lock = LockServerClient::lock(&lock_addr.parse()?, filename)?;
 
     let mut cmd = Command::new(&rustc);
-    cmd.args(env::args().skip(1));
-    cmd.arg("--error-format=json").arg("--cap-lints=warn");
+    cmd.arg("--error-format=json");
+    args.apply(&mut cmd);
     let output = cmd.output()
         .with_context(|_| format!("failed to execute `{}`", rustc.display()))?;
 
@@ -280,7 +276,8 @@ fn rustfix_crate(lock_addr: &str, rustc: &Path, filename: &str)
 
     debug!(
         "collected {} suggestions for `{}`",
-        num_suggestion, filename
+        num_suggestion,
+        filename.display(),
     );
 
     let mut original_files = HashMap::with_capacity(file_map.len());
@@ -311,8 +308,7 @@ fn rustfix_crate(lock_addr: &str, rustc: &Path, filename: &str)
                 continue;
             }
             Ok(new_code) => {
-                File::create(&file)
-                    .and_then(|mut f| f.write_all(new_code.as_bytes()))
+                fs::write(&file, new_code)
                     .with_context(|_| format!("failed to write file `{}`", file))?;
                 original_files.insert(file, code);
             }
@@ -368,4 +364,111 @@ fn log_failed_fix(stderr: &[u8]) -> Result<(), Error> {
     Message::FixFailed { files, krate }.post()?;
 
     Ok(())
+}
+
+#[derive(Default)]
+struct FixArgs {
+    file: Option<PathBuf>,
+    prepare_for_edition: Option<String>,
+    enabled_edition: Option<String>,
+    other: Vec<OsString>,
+}
+
+impl FixArgs {
+    fn get() -> FixArgs {
+        let mut ret = FixArgs::default();
+        for arg in env::args_os().skip(1) {
+            let path = PathBuf::from(arg);
+            if path.extension().and_then(|s| s.to_str()) == Some("rs") {
+                if path.exists() {
+                    ret.file = Some(path);
+                    continue
+                }
+            }
+            if let Some(s) = path.to_str() {
+                let prefix = "--edition=";
+                if s.starts_with(prefix) {
+                    ret.enabled_edition = Some(s[prefix.len()..].to_string());
+                    continue
+                }
+            }
+            ret.other.push(path.into());
+        }
+        if let Ok(s) = env::var(EDITION_ENV) {
+            ret.prepare_for_edition = Some(s);
+        }
+        return ret
+    }
+
+    fn apply(&self, cmd: &mut Command) {
+        if let Some(path) = &self.file {
+            cmd.arg(path);
+        }
+        cmd.args(&self.other)
+            .arg("--cap-lints=warn");
+        if let Some(edition) = &self.enabled_edition {
+            cmd.arg("--edition").arg(edition);
+        }
+        if let Some(prepare_for) = &self.prepare_for_edition {
+            cmd.arg("-W").arg(format!("rust-{}-compatibility", prepare_for));
+        }
+    }
+
+    /// Verify that we're not both preparing for an enabled edition and enabling
+    /// the edition.
+    ///
+    /// This indicates that `cargo fix --prepare-for` is being executed out of
+    /// order with enabling the edition itself, meaning that we wouldn't
+    /// actually be able to fix anything! If it looks like this is happening
+    /// then yield an error to the user, indicating that this is happening.
+    fn verify_not_preparing_for_enabled_edition(&self) -> CargoResult<()> {
+        let edition = match &self.prepare_for_edition {
+            Some(s) => s,
+            None => return Ok(()),
+        };
+        let enabled = match &self.enabled_edition {
+            Some(s) => s,
+            None => return Ok(()),
+        };
+        if edition != enabled {
+            return Ok(())
+        }
+        let path = match &self.file {
+            Some(s) => s,
+            None => return Ok(()),
+        };
+
+        Message::EditionAlreadyEnabled {
+            file: path.display().to_string(),
+            edition: edition.to_string(),
+        }.post()?;
+
+        process::exit(1);
+    }
+
+    fn warn_if_preparing_probably_inert(&self) -> CargoResult<()> {
+        let edition = match &self.prepare_for_edition {
+            Some(s) => s,
+            None => return Ok(()),
+        };
+        let path = match &self.file {
+            Some(s) => s,
+            None => return Ok(()),
+        };
+        let contents = match fs::read_to_string(path) {
+            Ok(s) => s,
+            Err(_) => return Ok(())
+        };
+
+        let feature_name = format!("rust_{}_preview", edition);
+        if contents.contains(&feature_name) {
+            return Ok(())
+        }
+        Message::PreviewNotFound {
+            file: path.display().to_string(),
+            edition: edition.to_string(),
+        }.post()?;
+
+        Ok(())
+    }
 }
