@@ -61,7 +61,13 @@ pub trait Executor: Send + Sync + 'static {
 
     /// In case of an `Err`, Cargo will not continue with the build process for
     /// this package.
-    fn exec(&self, cmd: ProcessBuilder, _id: &PackageId, _target: &Target) -> CargoResult<()> {
+    fn exec(
+        &self,
+        cmd: ProcessBuilder,
+        _id: &PackageId,
+        _target: &Target,
+        _mode: CompileMode
+    ) -> CargoResult<()> {
         cmd.exec()?;
         Ok(())
     }
@@ -71,6 +77,7 @@ pub trait Executor: Send + Sync + 'static {
         cmd: ProcessBuilder,
         _id: &PackageId,
         _target: &Target,
+        _mode: CompileMode,
         handle_stdout: &mut FnMut(&str) -> CargoResult<()>,
         handle_stderr: &mut FnMut(&str) -> CargoResult<()>,
     ) -> CargoResult<()> {
@@ -194,6 +201,7 @@ fn rustc<'a, 'cfg>(
     let json_messages = cx.bcx.build_config.json_messages();
     let package_id = unit.pkg.package_id().clone();
     let target = unit.target.clone();
+    let mode = unit.mode;
 
     exec.init(cx, unit);
     let exec = exec.clone();
@@ -246,6 +254,7 @@ fn rustc<'a, 'cfg>(
                 rustc,
                 &package_id,
                 &target,
+                mode,
                 &mut |line| {
                     if !line.is_empty() {
                         Err(internal(&format!(
@@ -279,7 +288,7 @@ fn rustc<'a, 'cfg>(
         } else if build_plan {
             state.build_plan(buildkey, rustc.clone(), outputs.clone());
         } else {
-            exec.exec(rustc, &package_id, &target)
+            exec.exec(rustc, &package_id, &target, mode)
                 .map_err(Internal::new)
                 .chain_err(|| format!("Could not compile `{}`.", name))?;
         }
