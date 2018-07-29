@@ -11,7 +11,7 @@ use crossbeam_utils::thread::Scope;
 use jobserver::{Acquired, HelperThread};
 
 use core::profiles::Profile;
-use core::{PackageId, Target};
+use core::{PackageId, Target, TargetKind};
 use handle_error;
 use util::{internal, profile, CargoResult, CargoResultExt, ProcessBuilder};
 use util::{Config, DependencyQueue, Dirty, Fresh, Freshness};
@@ -55,6 +55,27 @@ struct Key<'a> {
     profile: Profile,
     kind: Kind,
     mode: CompileMode,
+}
+
+impl<'a> Key<'a> {
+    fn name_for_progress(&self) -> String {
+        let pkg_name = self.pkg.name();
+        match self.mode {
+            CompileMode::Doc { .. } => format!("{}(doc)", pkg_name),
+            CompileMode::RunCustomBuild => format!("{}(build)", pkg_name),
+            _ => {
+                let annotation = match self.target.kind() {
+                    TargetKind::Lib(_) => return pkg_name.to_string(),
+                    TargetKind::CustomBuild => return format!("{}(build.rs)", pkg_name),
+                    TargetKind::Bin => "bin",
+                    TargetKind::Test => "test",
+                    TargetKind::Bench => "bench",
+                    TargetKind::ExampleBin | TargetKind::ExampleLib(_) => "example",
+                };
+                format!("{}({})", self.target.name(), annotation)
+            }
+        }
+    }
 }
 
 pub struct JobState<'a> {
@@ -254,10 +275,9 @@ impl<'a> JobQueue<'a> {
 
             if progress_maybe_changed {
                 let count = total - self.queue.len();
-                let active_names = self.active.iter().map(|key| match key.mode {
-                    CompileMode::Doc { .. } => format!("{}(doc)", key.pkg.name()),
-                    _ => key.pkg.name().to_string(),
-                }).collect::<Vec<_>>();
+                let active_names = self.active.iter()
+                    .map(Key::name_for_progress)
+                    .collect::<Vec<_>>();
                 drop(progress.tick_now(count, total, &format!(": {}", active_names.join(", "))));
             }
             let event = self.rx.recv().unwrap();
