@@ -7,7 +7,7 @@ use std::process::Command;
 
 use curl::easy::{Easy, List};
 use git2::{self, ObjectType};
-use serde::ser::{self, Serialize};
+use serde::ser;
 use url::Url;
 
 use core::GitReference;
@@ -29,7 +29,7 @@ where
     T: fmt::Display,
     S: ser::Serializer,
 {
-    t.to_string().serialize(s)
+    s.collect_str(t)
 }
 
 impl fmt::Display for GitRevision {
