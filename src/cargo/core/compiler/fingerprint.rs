@@ -6,7 +6,7 @@ use std::sync::{Arc, Mutex};
 
 use filetime::FileTime;
 use serde::de::{self, Deserialize};
-use serde::ser::{self, Serialize};
+use serde::ser;
 use serde_json;
 
 use core::{Edition, Package, TargetKind};
@@ -172,10 +172,8 @@ fn serialize_deps<S>(deps: &[DepFingerprint], ser: S) -> Result<S::Ok, S::Error>
 where
     S: ser::Serializer,
 {
-    deps.iter()
-        .map(|&(ref a, ref b, ref c)| (a, b, c.hash()))
-        .collect::<Vec<_>>()
-        .serialize(ser)
+    ser.collect_seq(deps.iter()
+       .map(|&(ref a, ref b, ref c)| (a, b, c.hash())))
 }
 
 fn deserialize_deps<'de, D>(d: D) -> Result<Vec<DepFingerprint>, D::Error>

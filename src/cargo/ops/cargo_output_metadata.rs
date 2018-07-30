@@ -1,4 +1,4 @@
-use serde::ser::{self, Serialize};
+use serde::ser;
 
 use core::resolver::Resolve;
 use core::{Package, PackageId, Workspace};
@@ -105,13 +105,11 @@ where
         features: Vec<&'a str>,
     }
 
-    resolve
+    s.collect_seq(resolve
         .iter()
         .map(|id| Node {
             id,
             dependencies: resolve.deps(id).map(|p| p.0).collect(),
             features: resolve.features_sorted(id),
-        })
-        .collect::<Vec<_>>()
-        .serialize(s)
+        }))
 }
