@@ -55,7 +55,7 @@ struct SerializedDependency<'a> {
 
     optional: bool,
     uses_default_features: bool,
-    features: &'a [String],
+    features: &'a [InternedString],
     target: Option<&'a Platform>,
 }
 
@@ -64,7 +64,6 @@ impl ser::Serialize for Dependency {
     where
         S: ser::Serializer,
     {
-        let string_features: Vec<_> = self.features().iter().map(|s| s.to_string()).collect();
         SerializedDependency {
             name: &*self.name(),
             source: self.source_id(),
@@ -72,7 +71,7 @@ impl ser::Serialize for Dependency {
             kind: self.kind(),
             optional: self.is_optional(),
             uses_default_features: self.uses_default_features(),
-            features: &string_features,
+            features: self.features(),
             target: self.platform(),
             rename: self.rename(),
         }.serialize(s)
