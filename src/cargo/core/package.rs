@@ -47,6 +47,7 @@ struct SerializedPackage<'a> {
     keywords: &'a [String],
     readme: Option<&'a str>,
     repository: Option<&'a str>,
+    edition: &'a str,
 }
 
 impl ser::Serialize for Package {
@@ -84,6 +85,7 @@ impl ser::Serialize for Package {
             keywords,
             readme,
             repository,
+            edition: &self.manifest.edition().to_string(),
         }.serialize(s)
     }
 }

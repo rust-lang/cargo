@@ -1,5 +1,5 @@
 use support::registry::Package;
-use support::{basic_bin_manifest, basic_lib_manifest, execs, main_file, project};
+use support::{basic_bin_manifest, basic_lib_manifest, execs, main_file, project, ChannelChanger};
 use support::hamcrest::assert_that;
 
 #[test]
@@ -26,6 +26,7 @@ fn cargo_metadata_simple() {
                 "keywords": [],
                 "source": null,
                 "dependencies": [],
+                "edition": "2015",
                 "license": null,
                 "license_file": null,
                 "description": null,
@@ -117,6 +118,7 @@ crate-type = ["lib", "staticlib"]
                 "keywords": [],
                 "source": null,
                 "dependencies": [],
+                "edition": "2015",
                 "license": null,
                 "license_file": null,
                 "description": null,
@@ -194,6 +196,7 @@ optional_feat = []
                 "keywords": [],
                 "source": null,
                 "dependencies": [],
+                "edition": "2015",
                 "license": null,
                 "license_file": null,
                 "description": null,
@@ -292,6 +295,7 @@ fn cargo_metadata_with_deps_and_version() {
                 "license": null,
                 "license_file": null,
                 "description": null,
+                "edition": "2015",
                 "targets": [
                     {
                         "kind": [
@@ -334,6 +338,7 @@ fn cargo_metadata_with_deps_and_version() {
                 "license": null,
                 "license_file": null,
                 "description": null,
+                "edition": "2015",
                 "targets": [
                     {
                         "kind": [
@@ -376,6 +381,7 @@ fn cargo_metadata_with_deps_and_version() {
                 "license": "MIT",
                 "license_file": null,
                 "description": "foo",
+                "edition": "2015",
                 "targets": [
                     {
                         "kind": [
@@ -461,6 +467,7 @@ name = "ex"
                 "license": null,
                 "license_file": null,
                 "description": null,
+                "edition": "2015",
                 "source": null,
                 "dependencies": [],
                 "targets": [
@@ -540,6 +547,7 @@ crate-type = ["rlib", "dylib"]
                 "license": null,
                 "license_file": null,
                 "description": null,
+                "edition": "2015",
                 "source": null,
                 "dependencies": [],
                 "targets": [
@@ -620,6 +628,7 @@ fn workspace_metadata() {
                 "license": null,
                 "license_file": null,
                 "description": null,
+                "edition": "2015",
                 "targets": [
                     {
                         "kind": [ "lib" ],
@@ -648,6 +657,7 @@ fn workspace_metadata() {
                 "license": null,
                 "license_file": null,
                 "description": null,
+                "edition": "2015",
                 "targets": [
                     {
                         "kind": [ "lib" ],
@@ -723,6 +733,7 @@ fn workspace_metadata_no_deps() {
                 "license": null,
                 "license_file": null,
                 "description": null,
+                "edition": "2015",
                 "targets": [
                     {
                         "kind": [ "lib" ],
@@ -751,6 +762,7 @@ fn workspace_metadata_no_deps() {
                 "license": null,
                 "license_file": null,
                 "description": null,
+                "edition": "2015",
                 "targets": [
                     {
                         "kind": [ "lib" ],
@@ -806,6 +818,7 @@ const MANIFEST_OUTPUT: &str = r#"
         "license": null,
         "license_file": null,
         "description": null,
+        "edition": "2015",
         "targets":[{
             "kind":["bin"],
             "crate_types":["bin"],
@@ -998,6 +1011,7 @@ fn package_metadata() {
                 "keywords": ["database"],
                 "source": null,
                 "dependencies": [],
+                "edition": "2015",
                 "license": null,
                 "license_file": null,
                 "description": null,
@@ -1065,6 +1079,7 @@ fn cargo_metadata_path_to_cargo_toml_project() {
                 "categories": [],
                 "dependencies": [],
                 "description": null,
+                "edition": "2015",
                 "features": {},
                 "id": "bar 0.5.0 ([..])",
                 "keywords": [],
@@ -1113,4 +1128,81 @@ fn cargo_metadata_path_to_cargo_toml_project() {
     );
 }
 
+#[test]
+fn edition_2018() {
+    let p = project()
+        .file("src/lib.rs", "")
+        .file(
+            "Cargo.toml",
+            r#"
+            cargo-features = ["edition"]
 
+            [package]
+            name = "foo"
+            version = "0.1.0"
+            authors = ["wycats@example.com"]
+            edition = "2018"
+        "#,
+        )
+        .build();
+    assert_that(
+        p.cargo("metadata").masquerade_as_nightly_cargo(),
+        execs().with_status(0).with_json(
+            r#"
+        {
+            "packages": [
+                {
+                    "authors": [
+                        "wycats@example.com"
+                    ],
+                    "categories": [],
+                    "dependencies": [],
+                    "description": null,
+                    "edition": "2018",
+                    "features": {},
+                    "id": "foo 0.1.0 (path+file:[..])",
+                    "keywords": [],
+                    "license": null,
+                    "license_file": null,
+                    "manifest_path": "[..]Cargo.toml",
+                    "metadata": null,
+                    "name": "foo",
+                    "readme": null,
+                    "repository": null,
+                    "source": null,
+                    "targets": [
+                        {
+                            "crate_types": [
+                                "lib"
+                            ],
+                            "kind": [
+                                "lib"
+                            ],
+                            "name": "foo",
+                            "src_path": "[..]src[/]lib.rs"
+                        }
+                    ],
+                    "version": "0.1.0"
+                }
+            ],
+            "resolve": {
+                "nodes": [
+                    {
+                        "dependencies": [],
+                        "features": [],
+                        "id": "foo 0.1.0 (path+file:[..])"
+                    }
+                ],
+                "root": "foo 0.1.0 (path+file:[..])"
+            },
+            "target_directory": "[..]",
+            "version": 1,
+            "workspace_members": [
+                "foo 0.1.0 (path+file:[..])"
+            ],
+            "workspace_root": "[..]"
+        }
+        "#,
+        ),
+    );
+}
