@@ -379,6 +379,20 @@ fn bad_dependency_in_lockfile() {
 
 Caused by:
   package `bar 0.1.0 ([..])` is specified as a dependency, but is missing from the package list
+  consider running 'cargo update -p foo'
+",
+        ),
+    );
+
+    assert_that(
+        p.cargo("build").arg("-v"),
+        execs().with_status(101).with_stderr(
+            "\
+[ERROR] failed to parse lock file at: [..]
+
+Caused by:
+  package `bar 0.1.0 ([..])` is specified as a dependency, but is missing from the package list
+  consider running 'cargo update -p foo'
 ",
         ),
     );
