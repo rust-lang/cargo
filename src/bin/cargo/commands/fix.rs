@@ -1,6 +1,6 @@
 use command_prelude::*;
 
-use cargo::ops;
+use cargo::ops::{self, CompileFilter, FilterRule};
 
 pub fn cli() -> App {
     subcommand("fix")
@@ -106,9 +106,26 @@ pub fn exec(config: &mut Config, args: &ArgMatches) -> CliResult {
         }
     };
     let mode = CompileMode::Check { test };
+
+    // Unlike other commands default `cargo fix` to all targets to fix as much
+    // code as we can.
+    let mut opts = args.compile_options(config, mode)?;
+    match opts.filter {
+        CompileFilter::Default { .. } => {
+            opts.filter = CompileFilter::Only {
+                all_targets: true,
+                lib: true,
+                bins: FilterRule::All,
+                examples: FilterRule::All,
+                benches: FilterRule::All,
+                tests: FilterRule::All,
+            };
+        }
+        _ => {}
+    }
     ops::fix(&ws, &mut ops::FixOptions {
         edition: args.value_of("edition"),
-        compile_opts: args.compile_options(config, mode)?,
+        compile_opts: opts,
         allow_dirty: args.is_present("allow-dirty"),
         allow_no_vcs: args.is_present("allow-no-vcs"),
         broken_code: args.is_present("broken-code"),
