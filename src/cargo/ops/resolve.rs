@@ -2,7 +2,7 @@ use std::collections::HashSet;
 
 use core::{PackageId, PackageIdSpec, PackageSet, Source, SourceId, Workspace};
 use core::registry::PackageRegistry;
-use core::resolver::{self, Method, Resolve};
+use core::resolver::{self, Method, Resolve, ErrorHandle};
 use sources::PathSource;
 use ops;
 use util::profile;
@@ -82,7 +82,7 @@ pub fn resolve_ws_with_method<'a>(
 
         Some(resolve)
     } else {
-        ops::load_pkg_lockfile(ws, false)?
+        ops::load_pkg_lockfile(ws, ErrorHandle::Raise)?
     };
 
     let resolved_with_overrides = ops::resolve_with_previous(
@@ -106,7 +106,7 @@ fn resolve_with_registry<'cfg>(
     registry: &mut PackageRegistry<'cfg>,
     warn: bool,
 ) -> CargoResult<Resolve> {
-    let prev = ops::load_pkg_lockfile(ws, false)?;
+    let prev = ops::load_pkg_lockfile(ws, ErrorHandle::Raise)?;
     let resolve = resolve_with_previous(
         registry,
         ws,
