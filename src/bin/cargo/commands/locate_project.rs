@@ -9,8 +9,8 @@ pub fn cli() -> App {
 }
 
 #[derive(Serialize)]
-pub struct ProjectLocation {
-    root: String,
+pub struct ProjectLocation<'a> {
+    root: &'a str,
 }
 
 pub fn exec(config: &mut Config, args: &ArgMatches) -> CliResult {
@@ -23,8 +23,7 @@ pub fn exec(config: &mut Config, args: &ArgMatches) -> CliResult {
                  not representable in Unicode"
             )
         })
-        .map_err(|e| CliError::new(e, 1))?
-        .to_string();
+        .map_err(|e| CliError::new(e, 1))?;
 
     let location = ProjectLocation { root };
 

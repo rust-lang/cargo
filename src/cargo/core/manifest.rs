@@ -158,13 +158,13 @@ impl ser::Serialize for TargetKind {
     {
         use self::TargetKind::*;
         match *self {
-            Lib(ref kinds) => kinds.iter().map(LibKind::crate_type).collect(),
-            Bin => vec!["bin"],
-            ExampleBin | ExampleLib(_) => vec!["example"],
-            Test => vec!["test"],
-            CustomBuild => vec!["custom-build"],
-            Bench => vec!["bench"],
-        }.serialize(s)
+            Lib(ref kinds) => s.collect_seq(kinds.iter().map(LibKind::crate_type)),
+            Bin => ["bin"].serialize(s),
+            ExampleBin | ExampleLib(_) => ["example"].serialize(s),
+            Test => ["test"].serialize(s),
+            CustomBuild => ["custom-build"].serialize(s),
+            Bench => ["bench"].serialize(s),
+        }
     }
 }
 
