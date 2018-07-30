@@ -5,7 +5,7 @@ use termcolor::Color::{self, Cyan, Green, Red};
 use core::PackageId;
 use core::registry::PackageRegistry;
 use core::{Resolve, SourceId, Workspace};
-use core::resolver::Method;
+use core::resolver::{Method, ErrorHandle};
 use ops;
 use util::config::Config;
 use util::CargoResult;
@@ -46,8 +46,8 @@ pub fn update_lockfile(ws: &Workspace, opts: &UpdateOptions) -> CargoResult<()> 
         bail!("you can't update in the offline mode");
     }
 
-    // `ignore_errors` is set to true, because we are about to clean the errors up.
-    let previous_resolve = match ops::load_pkg_lockfile(ws, true)? {
+    // ignore errors, because we are about to clean them up.
+    let previous_resolve = match ops::load_pkg_lockfile(ws, ErrorHandle::Ignore)? {
         Some(resolve) => resolve,
         None => return generate_lockfile(ws),
     };

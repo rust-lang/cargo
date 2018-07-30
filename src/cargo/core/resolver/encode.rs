@@ -29,8 +29,23 @@ struct Patch {
 
 pub type Metadata = BTreeMap<String, String>;
 
+pub enum ErrorHandle{
+    Ignore,
+    Raise,
+}
+
+impl ErrorHandle {
+    fn is_ignore(&self) -> bool {
+        use self::ErrorHandle::*;
+        match self {
+            Ignore => true,
+            Raise => false,
+        }
+    }
+}
+
 impl EncodableResolve {
-    pub fn into_resolve(self, ws: &Workspace, ignore_errors: bool) -> CargoResult<Resolve> {
+    pub fn into_resolve(self, ws: &Workspace, ignore_errors: ErrorHandle) -> CargoResult<Resolve> {
         let path_deps = build_path_deps(ws);
 
         let packages = {
@@ -83,7 +98,7 @@ impl EncodableResolve {
                     // Package is found in the lockfile, but it is
                     // no longer a member of the workspace.
                     Ok(None)
-                } else if ignore_errors {
+                } else if ignore_errors.is_ignore() {
                     // We are asked to ignore errors
                     Ok(None)
                 } else {

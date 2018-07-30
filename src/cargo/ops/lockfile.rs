@@ -3,12 +3,12 @@ use std::io::prelude::*;
 use toml;
 
 use core::{resolver, Resolve, Workspace};
-use core::resolver::WorkspaceResolve;
+use core::resolver::{WorkspaceResolve, ErrorHandle};
 use util::Filesystem;
 use util::errors::{CargoResult, CargoResultExt};
 use util::toml as cargo_toml;
 
-pub fn load_pkg_lockfile(ws: &Workspace, ignore_errors: bool) -> CargoResult<Option<Resolve>> {
+pub fn load_pkg_lockfile(ws: &Workspace, ignore_errors: ErrorHandle) -> CargoResult<Option<Resolve>> {
     if !ws.root().join("Cargo.lock").exists() {
         return Ok(None);
     }
@@ -115,8 +115,8 @@ fn are_equal_lockfiles(mut orig: String, current: &str, ws: &Workspace) -> bool 
         let res: CargoResult<bool> = (|| {
             let old: resolver::EncodableResolve = toml::from_str(&orig)?;
             let new: resolver::EncodableResolve = toml::from_str(current)?;
-            // `ignore_errors` is set to true, because we may be about to clean the errors up.
-            Ok(old.into_resolve(ws, true)? == new.into_resolve(ws, true)?)
+            // ignore errors, because we may be about to clean them up.
+            Ok(old.into_resolve(ws, ErrorHandle::Ignore)? == new.into_resolve(ws, ErrorHandle::Ignore)?)
         })();
         if let Ok(true) = res {
             return true;
