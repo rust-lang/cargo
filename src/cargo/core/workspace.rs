@@ -7,6 +7,7 @@ use std::slice;
 use glob::glob;
 use url::Url;
 
+use core::lints::Lints;
 use core::profiles::Profiles;
 use core::registry::PackageRegistry;
 use core::{Dependency, PackageIdSpec};
@@ -242,6 +243,16 @@ impl<'cfg> Workspace<'cfg> {
         match *self.packages.get(root) {
             MaybePackage::Package(ref p) => p.manifest().profiles(),
             MaybePackage::Virtual(ref vm) => vm.profiles(),
+        }
+    }
+
+    pub fn lints(&self) -> &Lints {
+        let root = self.root_manifest
+            .as_ref()
+            .unwrap_or(&self.current_manifest);
+        match *self.packages.get(root) {
+            MaybePackage::Package(ref p) => p.manifest().lints(),
+            MaybePackage::Virtual(ref vm) => vm.lints(),
         }
     }
 

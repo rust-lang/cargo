@@ -12,6 +12,7 @@ use toml;
 use url::Url;
 
 use core::interning::InternedString;
+use core::lints::Lints;
 use core::profiles::Profiles;
 use core::{Dependency, PackageId, PackageIdSpec, SourceId, Summary};
 use core::{Edition, Feature, Features, WorkspaceConfig};
@@ -44,17 +45,10 @@ pub struct Manifest {
     original: Rc<TomlManifest>,
     features: Features,
     edition: Edition,
-    lints: Option<Lints>,
+    lints: Lints,
     im_a_teapot: Option<bool>,
     default_run: Option<String>,
     metabuild: Option<Vec<String>>,
-}
-
-#[derive(Clone, Debug)]
-pub struct Lints {
-    pub warn: Vec<String>,
-    pub allow: Vec<String>,
-    pub deny: Vec<String>,
 }
 
 /// When parsing `Cargo.toml`, some warnings should silenced
@@ -76,6 +70,7 @@ pub struct VirtualManifest {
     workspace: WorkspaceConfig,
     profiles: Profiles,
     warnings: Warnings,
+    lints: Lints,
 }
 
 /// General metadata about a package which is just blindly uploaded to the
@@ -369,7 +364,7 @@ impl Manifest {
         workspace: WorkspaceConfig,
         features: Features,
         edition: Edition,
-        lints: Option<Lints>,
+        lints: Lints,
         im_a_teapot: Option<bool>,
         default_run: Option<String>,
         original: Rc<TomlManifest>,
@@ -433,6 +428,9 @@ impl Manifest {
     pub fn warnings(&self) -> &Warnings {
         &self.warnings
     }
+    pub fn lints(&self) -> &Lints {
+        &self.lints
+    }
     pub fn profiles(&self) -> &Profiles {
         &self.profiles
     }
@@ -461,10 +459,6 @@ impl Manifest {
 
     pub fn features(&self) -> &Features {
         &self.features
-    }
-
-    pub fn lints(&self) -> &Option<Lints> {
-        &self.lints
     }
 
     pub fn set_summary(&mut self, summary: Summary) {
@@ -545,6 +539,7 @@ impl VirtualManifest {
         patch: HashMap<Url, Vec<Dependency>>,
         workspace: WorkspaceConfig,
         profiles: Profiles,
+        lints: Lints,
     ) -> VirtualManifest {
         VirtualManifest {
             replace,
@@ -552,6 +547,7 @@ impl VirtualManifest {
             workspace,
             profiles,
             warnings: Warnings::new(),
+            lints,
         }
     }
 
@@ -565,6 +561,10 @@ impl VirtualManifest {
 
     pub fn workspace_config(&self) -> &WorkspaceConfig {
         &self.workspace
+    }
+
+    pub fn lints(&self) -> &Lints {
+        &self.lints
     }
 
     pub fn profiles(&self) -> &Profiles {

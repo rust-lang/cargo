@@ -1,13 +1,13 @@
-use cargotest::support::{execs, project};
-use hamcrest::assert_that;
+use support::{execs, project};
+use support::hamcrest::assert_that;
 
 #[test]
 fn deny() {
-    let p = project("foo")
+    let p = project()
         .file(
             "Cargo.toml",
             r#"
-            [project]
+            [package]
             name = "foo"
             version = "0.0.1"
             authors = []
@@ -29,11 +29,11 @@ fn deny() {
 
 #[test]
 fn empty_lints_block() {
-    let p = project("foo")
+    let p = project()
         .file(
             "Cargo.toml",
             r#"
-            [project]
+            [package]
             name = "foo"
             version = "0.0.1"
             authors = []
@@ -52,11 +52,11 @@ fn empty_lints_block() {
 
 #[test]
 fn invalid_state() {
-    let p = project("foo")
+    let p = project()
         .file(
             "Cargo.toml",
             r#"
-            [project]
+            [package]
             name = "foo"
             version = "0.0.1"
             authors = []
@@ -71,5 +71,107 @@ fn invalid_state() {
     assert_that(
         p.cargo("build"),
         execs().with_status(0),
+    );
+}
+
+#[test]
+fn virtual_workspace() {
+    let p = project()
+        .file(
+            "Cargo.toml",
+            r#"
+            [workspace]
+            members = ["bar"]
+
+            [lints]
+            dead_code = "deny"
+        "#,
+        )
+        .file(
+            "bar/Cargo.toml",
+            r#"
+            [project]
+            name = "bar"
+            version = "0.1.0"
+            authors = []
+        "#,
+        )
+        .file("bar/src/lib.rs", "fn baz() {}")
+        .build();
+
+    assert_that(
+        p.cargo("build"),
+        execs()
+            .with_status(101)
+            .with_stderr_contains("[..]error: function is never used: `baz`[..]"),
+    );
+}
+
+#[test]
+fn member_workspace() {
+    let p = project()
+        .file(
+            "Cargo.toml",
+            r#"
+            [workspace]
+            members = ["bar"]
+        "#,
+        )
+        .file(
+            "bar/Cargo.toml",
+            r#"
+            [project]
+            name = "bar"
+            version = "0.1.0"
+            authors = []
+
+            [lints]
+            dead_code = "deny"
+        "#,
+        )
+        .file("bar/src/lib.rs", "fn baz() {}")
+        .build();
+
+    assert_that(
+        p.cargo("build"),
+        execs()
+            .with_status(101)
+            .with_stderr_contains("[..]error: function is never used: `baz`[..]"),
+    );
+}
+
+#[test]
+fn virtual_workspace_overrides() {
+    let p = project()
+        .file(
+            "Cargo.toml",
+            r#"
+            [workspace]
+            members = ["bar"]
+
+            [lints]
+            dead_code = "deny"
+        "#,
+        )
+        .file(
+            "bar/Cargo.toml",
+            r#"
+            [project]
+            name = "bar"
+            version = "0.1.0"
+            authors = []
+
+            [lints]
+            dead_code = "allow"
+        "#,
+        )
+        .file("bar/src/lib.rs", "fn baz() {}")
+        .build();
+
+    assert_that(
+        p.cargo("build"),
+        execs()
+            .with_status(101)
+            .with_stderr_contains("[..]error: function is never used: `baz`[..]"),
     );
 }

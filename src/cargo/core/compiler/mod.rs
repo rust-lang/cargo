@@ -809,6 +809,8 @@ fn build_base_args<'a, 'cfg>(
         cmd.args(args);
     }
 
+    bcx.ws.lints().set_flags(cmd, unit.pkg.manifest().lints());
+
     // -C overflow-checks is implied by the setting of -C debug-assertions,
     // so we only need to provide -C overflow-checks if it differs from
     // the value of -C debug-assertions we would provide.

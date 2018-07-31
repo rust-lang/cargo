@@ -21,6 +21,7 @@ pub mod compiler;
 pub mod dependency;
 mod features;
 mod interning;
+pub mod lints;
 pub mod manifest;
 pub mod package;
 pub mod package_id;
