@@ -4,6 +4,7 @@ use hex;
 use std::hash::{Hash, Hasher, SipHasher};
 
 pub fn to_hex(num: u64) -> String {
+    #[cfg_attr(feature = "cargo-clippy", allow(identity_op))] // don't hate on vertical alignment, clippy
     hex::encode(&[
         (num >> 0) as u8,
         (num >> 8) as u8,
