@@ -66,6 +66,9 @@ fn do_read_manifest(
     let add_unused = |warnings: &mut Warnings| {
         for key in unused {
             warnings.add_warning(format!("unused manifest key: {}", key));
+            if key == "profile.debug" || key == "profiles.debug" {
+                warnings.add_warning("use `[profile.dev]` to configure debug builds".to_string());
+            }
         }
     };
 
