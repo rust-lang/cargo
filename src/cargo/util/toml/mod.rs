@@ -741,6 +741,7 @@ impl TomlManifest {
         }
     }
 
+    #[cfg_attr(feature = "cargo-clippy", allow(wrong_self_convention))] // perhaps Rc should be special cased in Clippy?
     fn to_real_manifest(
         me: &Rc<TomlManifest>,
         source_id: &SourceId,
@@ -996,6 +997,7 @@ impl TomlManifest {
         Ok((manifest, nested_paths))
     }
 
+    #[cfg_attr(feature = "cargo-clippy", allow(wrong_self_convention))] // perhaps Rc should be special cased in Clippy?
     fn to_virtual_manifest(
         me: &Rc<TomlManifest>,
         source_id: &SourceId,
