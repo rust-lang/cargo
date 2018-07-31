@@ -10,7 +10,7 @@ use git2;
 use tar::{Archive, Builder, EntryType, Header};
 
 use core::{Package, Source, SourceId, Workspace};
-use core::compiler::{BuildConfig, CompileMode, DefaultExecutor};
+use core::compiler::{BuildConfig, CompileMode, DefaultExecutor, Executor};
 use sources::PathSource;
 use util::{self, internal, Config, FileLock};
 use util::paths;
@@ -333,6 +333,7 @@ fn run_verify(ws: &Workspace, tar: &FileLock, opts: &PackageOpts) -> CargoResult
     let pkg_fingerprint = src.last_modified_file(&new_pkg)?;
     let ws = Workspace::ephemeral(new_pkg, config, None, true)?;
 
+    let exec: Arc<Executor> = Arc::new(DefaultExecutor);
     ops::compile_ws(
         &ws,
         None,
@@ -350,7 +351,7 @@ fn run_verify(ws: &Workspace, tar: &FileLock, opts: &PackageOpts) -> CargoResult
             target_rustc_args: None,
             export_dir: None,
         },
-        Arc::new(DefaultExecutor),
+        &exec,
     )?;
 
     // Check that build.rs didn't modify any files in the src directory.

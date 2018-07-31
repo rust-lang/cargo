@@ -893,7 +893,7 @@ impl TomlManifest {
         let summary = Summary::new(
             pkgid,
             deps,
-            me.features
+            &me.features
                 .as_ref()
                 .map(|x| {
                     x.iter()
