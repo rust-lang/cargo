@@ -1,10 +1,9 @@
-use ops;
 use core::{PackageIdSpec, Workspace};
-use core::resolver::ErrorHandle;
+use ops;
 use util::CargoResult;
 
 pub fn pkgid(ws: &Workspace, spec: Option<&str>) -> CargoResult<PackageIdSpec> {
-    let resolve = match ops::load_pkg_lockfile(ws, ErrorHandle::Raise)? {
+    let resolve = match ops::load_pkg_lockfile(ws)? {
         Some(resolve) => resolve,
         None => bail!("a Cargo.lock must exist for this command"),
     };
