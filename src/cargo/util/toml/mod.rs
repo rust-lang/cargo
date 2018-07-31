@@ -872,7 +872,7 @@ impl TomlManifest {
         {
             let mut names_sources = BTreeMap::new();
             for dep in &deps {
-                let name = dep.rename().unwrap_or_else(|| dep.name().as_str());
+                let name = dep.name_in_toml();
                 let prev = names_sources.insert(name.to_string(), dep.source_id());
                 if prev.is_some() && prev != Some(dep.source_id()) {
                     bail!(

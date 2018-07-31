@@ -145,7 +145,7 @@ fn verify_dependencies(pkg: &Package) -> CargoResult<()> {
                 "all path dependencies must have a version specified \
                  when packaging.\ndependency `{}` does not specify \
                  a version.",
-                dep.name()
+                dep.name_in_toml()
             )
         }
     }

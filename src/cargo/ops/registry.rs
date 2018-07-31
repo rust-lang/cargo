@@ -108,7 +108,7 @@ fn verify_dependencies(pkg: &Package, registry_src: &SourceId) -> CargoResult<()
                     "all path dependencies must have a version specified \
                      when publishing.\ndependency `{}` does not specify \
                      a version",
-                    dep.name()
+                    dep.package_name()
                 )
             }
         } else if dep.source_id() != registry_src {
@@ -119,7 +119,10 @@ fn verify_dependencies(pkg: &Package, registry_src: &SourceId) -> CargoResult<()
                     bail!("crates cannot be published to crates.io with dependencies sourced from other\n\
                            registries either publish `{}` on crates.io or pull it into this repository\n\
                            and specify it with a path and version\n\
-                           (crate `{}` is pulled from {})", dep.name(), dep.name(), dep.source_id());
+                           (crate `{}` is pulled from {})",
+                          dep.package_name(),
+                          dep.package_name(),
+                          dep.source_id());
                 }
             } else {
                 bail!(
@@ -128,8 +131,8 @@ fn verify_dependencies(pkg: &Package, registry_src: &SourceId) -> CargoResult<()
                      specify a crates.io version as a dependency or pull it into this \
                      repository and specify it with a path and version\n(crate `{}` has \
                      repository path `{}`)",
-                    dep.name(),
-                    dep.name(),
+                    dep.package_name(),
+                    dep.package_name(),
                     dep.source_id()
                 );
             }
@@ -164,7 +167,7 @@ fn transmit(
             Ok(NewCrateDependency {
                 optional: dep.is_optional(),
                 default_features: dep.uses_default_features(),
-                name: dep.name().to_string(),
+                name: dep.package_name().to_string(),
                 features: dep.features().iter().map(|s| s.to_string()).collect(),
                 version_req: dep.version_req().to_string(),
                 target: dep.platform().map(|s| s.to_string()),

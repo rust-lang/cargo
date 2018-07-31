@@ -197,7 +197,7 @@ impl<'cfg> PackageRegistry<'cfg> {
         // of summaries which should be the same length as `deps` above.
         let unlocked_summaries = deps.iter()
             .map(|dep| {
-                debug!("registring a patch for `{}` with `{}`", url, dep.name());
+                debug!("registring a patch for `{}` with `{}`", url, dep.package_name());
 
                 // Go straight to the source for resolving `dep`. Load it as we
                 // normally would and then ask it directly for the list of summaries
@@ -207,7 +207,7 @@ impl<'cfg> PackageRegistry<'cfg> {
                         format_err!(
                             "failed to load source for a dependency \
                              on `{}`",
-                            dep.name()
+                            dep.package_name()
                         )
                     })?;
 
@@ -223,14 +223,14 @@ impl<'cfg> PackageRegistry<'cfg> {
                         "patch for `{}` in `{}` did not resolve to any crates. If this is \
                          unexpected, you may wish to consult: \
                          https://github.com/rust-lang/cargo/issues/4678",
-                        dep.name(),
+                        dep.package_name(),
                         url
                     ),
                 };
                 if summaries.next().is_some() {
                     bail!(
                         "patch for `{}` in `{}` resolved to more than one candidate",
-                        dep.name(),
+                        dep.package_name(),
                         url
                     )
                 }
@@ -238,7 +238,7 @@ impl<'cfg> PackageRegistry<'cfg> {
                     bail!(
                         "patch for `{}` in `{}` points to the same source, but \
                          patches must point to different sources",
-                        dep.name(),
+                        dep.package_name(),
                         url
                     );
                 }
@@ -306,7 +306,7 @@ impl<'cfg> PackageRegistry<'cfg> {
     fn query_overrides(&mut self, dep: &Dependency) -> CargoResult<Option<Summary>> {
         for s in self.overrides.iter() {
             let src = self.sources.get_mut(s).unwrap();
-            let dep = Dependency::new_override(&*dep.name(), s);
+            let dep = Dependency::new_override(&*dep.package_name(), s);
             let mut results = src.query_vec(&dep)?;
             if !results.is_empty() {
                 return Ok(Some(results.remove(0)));
@@ -369,21 +369,21 @@ http://doc.crates.io/specifying-dependencies.html#overriding-dependencies
                  modified to not match the previously resolved version\n\n\
                  {}",
                 override_summary.package_id().name(),
-                dep.name(),
+                dep.package_name(),
                 boilerplate
             );
             self.source_config.config().shell().warn(&msg)?;
             return Ok(());
         }
 
-        if let Some(id) = real_deps.get(0) {
+        if let Some(dep) = real_deps.get(0) {
             let msg = format!(
                 "\
                 path override for crate `{}` has altered the original list of
                 dependencies; the dependency on `{}` was removed\n\n
                 {}",
                 override_summary.package_id().name(),
-                id.name(),
+                dep.package_name(),
                 boilerplate
             );
             self.source_config.config().shell().warn(&msg)?;
@@ -439,7 +439,7 @@ impl<'cfg> Registry for PackageRegistry<'cfg> {
                          with `{}`, \
                          looking at sources",
                         patches.len(),
-                        dep.name(),
+                        dep.package_name(),
                         dep.source_id(),
                         dep.version_req()
                     );
@@ -451,7 +451,7 @@ impl<'cfg> Registry for PackageRegistry<'cfg> {
                         format_err!(
                             "failed to load source for a dependency \
                              on `{}`",
-                            dep.name()
+                            dep.package_name()
                         )
                     })?;
 
@@ -542,7 +542,7 @@ fn lock(locked: &LockedMap, patches: &HashMap<Url, Vec<PackageId>>, summary: Sum
         None => summary,
     };
     summary.map_dependencies(|dep| {
-        trace!("\t{}/{}/{}", dep.name(), dep.version_req(), dep.source_id());
+        trace!("\t{}/{}/{}", dep.package_name(), dep.version_req(), dep.source_id());
 
         // If we've got a known set of overrides for this summary, then
         // one of a few cases can arise:
@@ -578,7 +578,7 @@ fn lock(locked: &LockedMap, patches: &HashMap<Url, Vec<PackageId>>, summary: Sum
         // If anything does then we lock it to that and move on.
         let v = locked
             .get(dep.source_id())
-            .and_then(|map| map.get(&*dep.name()))
+            .and_then(|map| map.get(&*dep.package_name()))
             .and_then(|vec| vec.iter().find(|&&(ref id, _)| dep.matches_id(id)));
         if let Some(&(ref id, _)) = v {
             trace!("\tsecond hit on {}", id);
@@ -592,7 +592,7 @@ fn lock(locked: &LockedMap, patches: &HashMap<Url, Vec<PackageId>>, summary: Sum
         let v = patches.get(dep.source_id().url()).map(|vec| {
             let dep2 = dep.clone();
             let mut iter = vec.iter().filter(move |p| {
-                dep2.name() == p.name() && dep2.version_req().matches(p.version())
+                dep2.matches_ignoring_source(p)
             });
             (iter.next(), iter)
         });

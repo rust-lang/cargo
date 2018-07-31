@@ -364,3 +364,103 @@ fn can_run_doc_tests() {
         )),
     );
 }
+
+#[test]
+fn features_still_work() {
+    Package::new("foo", "0.1.0").publish();
+    Package::new("bar", "0.1.0").publish();
+
+    let p = project()
+        .file(
+            "Cargo.toml",
+            r#"
+                [package]
+                name = "test"
+                version = "0.1.0"
+                authors = []
+
+                [dependencies]
+                p1 = { path = 'a', features = ['b'] }
+                p2 = { path = 'b' }
+            "#,
+        )
+        .file("src/lib.rs", "")
+        .file(
+            "a/Cargo.toml",
+            r#"
+                cargo-features = ["rename-dependency"]
+
+                [package]
+                name = "p1"
+                version = "0.1.0"
+                authors = []
+
+                [dependencies]
+                b = { version = "0.1", package = "foo", optional = true }
+            "#,
+        )
+        .file("a/src/lib.rs", "extern crate b;")
+        .file(
+            "b/Cargo.toml",
+            r#"
+                cargo-features = ["rename-dependency"]
+
+                [package]
+                name = "p2"
+                version = "0.1.0"
+                authors = []
+
+                [dependencies]
+                b = { version = "0.1", package = "bar", optional = true }
+
+                [features]
+                default = ['b']
+            "#,
+        )
+        .file("b/src/lib.rs", "extern crate b;")
+        .build();
+
+    assert_that(
+        p.cargo("build -v").masquerade_as_nightly_cargo(),
+        execs().with_status(0),
+    );
+}
+
+#[test]
+fn features_not_working() {
+    Package::new("foo", "0.1.0").publish();
+    Package::new("bar", "0.1.0").publish();
+
+    let p = project()
+        .file(
+            "Cargo.toml",
+            r#"
+                cargo-features = ["rename-dependency"]
+                [package]
+                name = "test"
+                version = "0.1.0"
+                authors = []
+
+                [dependencies]
+                a = { path = 'a', package = 'p1', optional = true }
+
+                [features]
+                default = ['p1']
+            "#,
+        )
+        .file("src/lib.rs", "")
+        .file("a/Cargo.toml", &basic_manifest("p1", "0.1.0"))
+        .build();
+
+    assert_that(
+        p.cargo("build -v").masquerade_as_nightly_cargo(),
+        execs()
+            .with_status(101)
+            .with_stderr("\
+error: failed to parse manifest at `[..]`
+
+Caused by:
+  Feature `default` includes `p1` which is neither a dependency nor another feature
+")
+    );
+}
