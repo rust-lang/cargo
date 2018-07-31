@@ -207,6 +207,7 @@ impl Config {
             } else {
                 None
             },
+            self.extra_verbose(),
         )
     }
 

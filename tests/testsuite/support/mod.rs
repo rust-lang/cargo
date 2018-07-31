@@ -1307,6 +1307,7 @@ pub static RUSTC: Rustc = Rustc::new(
     None,
     Path::new("should be path to rustup rustc, but we don't care in tests"),
     None,
+    false,
 ).unwrap()
 );
 

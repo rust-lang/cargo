@@ -34,10 +34,6 @@ fn features_are_quoted() {
             .with_status(101)
             .with_stderr_contains(
                 r#"[RUNNING] `rustc [..] --cfg 'feature="default"' --cfg 'feature="some_feature"' [..]`"#
-            ).with_stderr_contains(
-                r#"
-Caused by:
-  process didn't exit successfully: [..] --cfg 'feature="default"' --cfg 'feature="some_feature"' [..]"#
             )
     );
 }
