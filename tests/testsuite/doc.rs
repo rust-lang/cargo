@@ -1290,6 +1290,43 @@ fn doc_edition() {
     );
 }
 
+#[test]
+fn doc_target_edition() {
+    if !support::is_nightly() {
+        return;
+    }
+    let p = project()
+        .file(
+            "Cargo.toml",
+            r#"
+            cargo-features = ["edition"]
+            [package]
+            name = "foo"
+            version = "0.0.1"
+            authors = []
+
+            [lib]
+            edition = "2018"
+        "#,
+        )
+        .file("src/lib.rs", "")
+        .build();
+
+    assert_that(
+        p.cargo("doc -v").masquerade_as_nightly_cargo(),
+        execs()
+            .with_status(0)
+            .with_stderr_contains("[RUNNING] `rustdoc [..]-Zunstable-options --edition=2018[..]"),
+    );
+
+    assert_that(
+        p.cargo("test -v").masquerade_as_nightly_cargo(),
+        execs()
+            .with_status(0)
+            .with_stderr_contains("[RUNNING] `rustdoc [..]-Zunstable-options --edition=2018[..]")
+    );
+}
+
 // Tests an issue where depending on different versions of the same crate depending on `cfg`s
 // caused `cargo doc` to fail.
 #[test]

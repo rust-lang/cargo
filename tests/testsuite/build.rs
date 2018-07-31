@@ -4380,6 +4380,98 @@ fn inferred_benchmarks() {
 }
 
 #[test]
+fn target_edition() {
+    let p = project()
+        .file(
+            "Cargo.toml",
+            r#"
+            cargo-features = ["edition"]
+            [package]
+            name = "foo"
+            version = "0.0.1"
+
+            [lib]
+            edition = "2018"
+        "#,
+        )
+        .file("src/lib.rs", "")
+        .build();
+
+    assert_that(
+        p.cargo("build").arg("-v").masquerade_as_nightly_cargo(),
+        execs().with_stderr_contains("\
+[COMPILING] foo v0.0.1 ([..])
+[RUNNING] `rustc [..]--edition=2018 [..]
+"),
+    );
+}
+
+#[test]
+fn target_edition_override() {
+    let p = project()
+        .file(
+            "Cargo.toml",
+            r#"
+            cargo-features = ["edition"]
+            [package]
+            name = "foo"
+            version = "0.0.1"
+            authors = []
+            edition = "2018"
+
+            [lib]
+            edition = "2015"
+        "#,
+        )
+        .file("src/lib.rs", "")
+        .build();
+
+    assert_that(
+        p.cargo("build").arg("-v").masquerade_as_nightly_cargo(),
+        execs().with_stderr_contains("\
+[COMPILING] foo v0.0.1 ([..])
+[RUNNING] `rustc [..]--edition=2015 [..]
+"),
+    );
+}
+
+#[test]
+fn target_edition_feature_gated() {
+    let p = project()
+        .file(
+            "Cargo.toml",
+            r#"
+            [package]
+            name = "foo"
+            version = "0.0.1"
+            authors = []
+
+            [lib]
+            edition = "2018"
+        "#,
+        )
+        .file("src/lib.rs", "")
+        .build();
+
+    assert_that(
+        p.cargo("build").arg("-v").masquerade_as_nightly_cargo(),
+        execs().with_status(101).with_stderr(format!(
+            "\
+error: failed to parse manifest at `[..]`
+
+Caused by:
+  editions are unstable
+
+Caused by:
+  feature `edition` is required
+
+consider adding `cargo-features = [\"edition\"]` to the manifest
+"
+        )),
+    );
+}
+
+#[test]
 fn same_metadata_different_directory() {
     // A top-level crate built in two different workspaces should have the
     // same metadata hash.

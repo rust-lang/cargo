@@ -187,7 +187,10 @@ cargo +nightly build --out-dir=out -Z unstable-options
 
 You can opt in to a specific Rust Edition for your package with the `edition`
 key in `Cargo.toml`.  If you don't specify the edition, it will default to
-2015.  You need to include the appropriate `cargo-features`:
+2015.  You need to include the appropriate `cargo-features`.
+
+You can also specify `edition` on a per-target level, where it will otherwise
+default to the package `edition`.
 
 ```toml
 cargo-features = ["edition"]
@@ -195,6 +198,10 @@ cargo-features = ["edition"]
 [package]
 ...
 edition = "2018"
+
+[[bin]]
+...
+edition = "2015"
 ```
 
 
