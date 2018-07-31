@@ -488,6 +488,55 @@ impl TomlProfile {
 
 #[derive(Clone, Debug, Serialize, Eq, PartialEq)]
 #[serde(untagged)]
+pub enum StringOrU32 {
+    String(String),
+    U32(u32),
+}
+
+impl<'de> de::Deserialize<'de> for StringOrU32 {
+    fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
+    where
+        D: de::Deserializer<'de>,
+    {
+        struct Visitor;
+
+        impl<'de> de::Visitor<'de> for Visitor {
+            type Value = StringOrU32;
+
+            fn expecting(&self, formatter: &mut fmt::Formatter) -> fmt::Result {
+                formatter.write_str("an integer or a string")
+            }
+
+            fn visit_i64<E>(self, u: i64) -> Result<Self::Value, E>
+            where
+                E: de::Error,
+            {
+                Ok(StringOrU32::U32(u as u32))
+            }
+
+            fn visit_str<E>(self, s: &str) -> Result<Self::Value, E>
+            where
+                E: de::Error,
+            {
+                Ok(StringOrU32::String(s.to_string()))
+            }
+        }
+
+        deserializer.deserialize_any(Visitor)
+    }
+}
+
+impl StringOrU32 {
+    fn to_string(&self) -> String {
+        match self {
+            StringOrU32::String(v) => v.clone(),
+            StringOrU32::U32(v) => format!("{}", v),
+        }
+    }
+}
+
+#[derive(Clone, Debug, Serialize, Eq, PartialEq)]
+#[serde(untagged)]
 pub enum StringOrBool {
     String(String),
     Bool(bool),
@@ -603,7 +652,7 @@ pub struct TomlProject {
     license_file: Option<String>,
     repository: Option<String>,
     metadata: Option<toml::Value>,
-    edition: Option<String>,
+    edition: Option<StringOrU32>,
 }
 
 #[derive(Debug, Deserialize, Serialize)]
@@ -771,6 +820,7 @@ impl TomlManifest {
                 .require(Feature::edition())
                 .chain_err(|| "editions are unstable")?;
             edition
+                .to_string()
                 .parse()
                 .chain_err(|| "failed to parse the `edition` key")?
         } else {
