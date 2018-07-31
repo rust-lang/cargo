@@ -781,6 +781,7 @@ impl TomlManifest {
         // If we have a lib with a path, we're done
         // If we have a lib with no path, use the inferred lib or_else package name
         let targets = targets(
+            &features,
             me,
             package_name,
             package_root,
