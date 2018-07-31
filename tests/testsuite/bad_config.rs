@@ -1,6 +1,6 @@
-use support::{basic_manifest, execs, project};
-use support::registry::Package;
 use support::hamcrest::assert_that;
+use support::registry::Package;
+use support::{basic_manifest, execs, project};
 
 #[test]
 fn bad1() {
@@ -153,13 +153,13 @@ fn bad_cargo_config_jobs() {
         .build();
     assert_that(
         p.cargo("build").arg("-v"),
-        execs()
-            .with_status(101)
-            .with_stderr("\
+        execs().with_status(101).with_stderr(
+            "\
 [ERROR] error in [..].cargo[/]config: \
 could not load config key `build.jobs`: \
 invalid value: integer `-1`, expected u32
-"),
+",
+        ),
     );
 }
 
@@ -371,23 +371,7 @@ fn bad_dependency_in_lockfile() {
         )
         .build();
 
-    assert_that(
-        p.cargo("build"),
-        execs().with_status(101).with_stderr(
-            "\
-[ERROR] failed to parse lock file at: [..]
-
-Caused by:
-  package `bar 0.1.0 ([..])` is specified as a dependency, but is missing from the package list
-  consider running 'cargo update -p foo'
-",
-        ),
-    );
-
-    assert_that(
-        p.cargo("update -p foo"),
-        execs().with_status(0),
-    );
+    assert_that(p.cargo("build"), execs().with_status(0));
 }
 
 #[test]
@@ -733,7 +717,8 @@ warning: unused manifest key: project.bulid
         ),
     );
 
-    let p = project().at("bar")
+    let p = project()
+        .at("bar")
         .file(
             "Cargo.toml",
             r#"

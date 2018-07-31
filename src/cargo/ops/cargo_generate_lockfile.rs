@@ -2,10 +2,10 @@ use std::collections::{BTreeMap, HashSet};
 
 use termcolor::Color::{self, Cyan, Green, Red};
 
-use core::PackageId;
 use core::registry::PackageRegistry;
+use core::resolver::Method;
+use core::PackageId;
 use core::{Resolve, SourceId, Workspace};
-use core::resolver::{Method, ErrorHandle};
 use ops;
 use util::config::Config;
 use util::CargoResult;
@@ -46,8 +46,7 @@ pub fn update_lockfile(ws: &Workspace, opts: &UpdateOptions) -> CargoResult<()> 
         bail!("you can't update in the offline mode");
     }
 
-    // ignore errors, because we are about to clean them up.
-    let previous_resolve = match ops::load_pkg_lockfile(ws, ErrorHandle::Ignore)? {
+    let previous_resolve = match ops::load_pkg_lockfile(ws)? {
         Some(resolve) => resolve,
         None => return generate_lockfile(ws),
     };
