@@ -1,4 +1,5 @@
 #![allow(unknown_lints)]
+#![cfg_attr(feature = "cargo-clippy", allow(identity_op))] // used for vertical alignment
 
 extern crate curl;
 #[macro_use]

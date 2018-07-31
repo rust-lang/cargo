@@ -209,7 +209,7 @@ impl From<clap::Error> for CliError {
 
 pub fn process_error(
     msg: &str,
-    status: Option<&ExitStatus>,
+    status: Option<ExitStatus>,
     output: Option<&Output>,
 ) -> ProcessError {
     let exit = match status {
@@ -237,12 +237,12 @@ pub fn process_error(
 
     return ProcessError {
         desc,
-        exit: status.cloned(),
+        exit: status,
         output: output.cloned(),
     };
 
     #[cfg(unix)]
-    fn status_to_string(status: &ExitStatus) -> String {
+    fn status_to_string(status: ExitStatus) -> String {
         use std::os::unix::process::*;
         use libc;
 
@@ -272,7 +272,7 @@ pub fn process_error(
     }
 
     #[cfg(windows)]
-    fn status_to_string(status: &ExitStatus) -> String {
+    fn status_to_string(status: ExitStatus) -> String {
         status.to_string()
     }
 }

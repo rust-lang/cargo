@@ -495,8 +495,6 @@ impl Profile {
     /// Compare all fields except `name`, which doesn't affect compilation.
     /// This is necessary for `Unit` deduplication for things like "test" and
     /// "dev" which are essentially the same.
-    // The complexity of the result type is exempted because it's limited in scope.
-    #[cfg_attr(feature = "cargo-clippy", allow(type_complexity))]
     fn comparable(
         &self,
     ) -> (

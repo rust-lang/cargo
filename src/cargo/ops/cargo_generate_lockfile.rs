@@ -38,7 +38,7 @@ pub fn update_lockfile(ws: &Workspace, opts: &UpdateOptions) -> CargoResult<()> 
         bail!("cannot specify both aggressive and precise simultaneously")
     }
 
-    if ws.members().is_empty() {
+    if ws.members().count() == 0 {
         bail!("you can't generate a lockfile for an empty workspace.")
     }
 

@@ -35,7 +35,7 @@ impl Summary {
     pub fn new<K>(
         pkg_id: PackageId,
         dependencies: Vec<Dependency>,
-        features: BTreeMap<K, Vec<impl AsRef<str>>>,
+        features: &BTreeMap<K, Vec<impl AsRef<str>>>,
         links: Option<impl AsRef<str>>,
         namespaced_features: bool,
     ) -> CargoResult<Summary>
