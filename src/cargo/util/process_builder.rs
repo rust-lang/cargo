@@ -3,12 +3,12 @@ use std::env;
 use std::ffi::{OsStr, OsString};
 use std::fmt;
 use std::path::Path;
-use std::process::{Command, Output, Stdio};
+use std::process::{Command, Output, Stdio, ExitStatus};
 
 use jobserver::Client;
 use shell_escape::escape;
 
-use util::{process_error, CargoResult, CargoResultExt, read2};
+use util::{process_error, ProcessError, CargoResult, CargoResultExt, read2};
 
 /// A builder object for an external process, similar to `std::process::Command`.
 #[derive(Clone, Debug)]
@@ -26,6 +26,10 @@ pub struct ProcessBuilder {
     ///
     /// [jobserver_docs]: https://docs.rs/jobserver/0.1.6/jobserver/
     jobserver: Option<Client>,
+    /// Should we give as much information as possible?
+    ///
+    /// Currently this controls whether to print out the command line on failure.
+    verbose_output: bool,
 }
 
 impl fmt::Display for ProcessBuilder {
@@ -88,6 +92,11 @@ impl ProcessBuilder {
         self
     }
 
+    pub fn verbose(&mut self, verbose: bool) -> &mut ProcessBuilder {
+        self.verbose_output = verbose;
+        self
+    }
+
     /// Get the executable name.
     pub fn get_program(&self) -> &OsString {
         &self.program
@@ -128,6 +137,19 @@ impl ProcessBuilder {
         self
     }
 
+    fn unsuccessful(&self, exit: &ExitStatus, output: Option<&Output>) -> ProcessError {
+        let msg = if self.verbose_output {
+            format!("proces didn't exit successfully: {:?}", self.program)
+        } else {
+            format!("process didn't exit successfully: {}", self)
+        };
+        process_error(
+            &msg,
+            Some(exit),
+            output,
+        )
+    }
+
     /// Run the process, waiting for completion, and mapping non-success exit codes to an error.
     pub fn exec(&self) -> CargoResult<()> {
         let mut command = self.build_command();
@@ -142,11 +164,7 @@ impl ProcessBuilder {
         if exit.success() {
             Ok(())
         } else {
-            Err(process_error(
-                &format!("process didn't exit successfully: {}", self),
-                Some(&exit),
-                None,
-            ).into())
+            Err(self.unsuccessful(&exit, None).into())
         }
     }
 
@@ -191,11 +209,7 @@ impl ProcessBuilder {
         if output.status.success() {
             Ok(output)
         } else {
-            Err(process_error(
-                &format!("process didn't exit successfully: {}", self),
-                Some(&output.status),
-                Some(&output),
-            ).into())
+            Err(self.unsuccessful(&output.status, Some(&output)).into())
         }
     }
 
@@ -269,11 +283,7 @@ impl ProcessBuilder {
         {
             let to_print = if print_output { Some(&output) } else { None };
             if !output.status.success() {
-                return Err(process_error(
-                    &format!("process didn't exit successfully: {}", self),
-                    Some(&output.status),
-                    to_print,
-                ).into());
+                return Err(self.unsuccessful(&output.status, to_print).into());
             } else if let Some(e) = callback_error {
                 let cx = process_error(
                     &format!("failed to parse process output: {}", self),
@@ -322,5 +332,6 @@ pub fn process<T: AsRef<OsStr>>(cmd: T) -> ProcessBuilder {
         cwd: None,
         env: HashMap::new(),
         jobserver: None,
+        verbose_output: false,
     }
 }

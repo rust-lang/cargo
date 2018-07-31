@@ -23,6 +23,8 @@ pub struct Rustc {
     pub verbose_version: String,
     /// The host triple (arch-platform-OS), this comes from verbose_version.
     pub host: String,
+    /// Should termination print out command line.
+    pub verbose: bool,
     cache: Mutex<Cache>,
 }
 
@@ -37,6 +39,7 @@ impl Rustc {
         wrapper: Option<PathBuf>,
         rustup_rustc: &Path,
         cache_location: Option<PathBuf>,
+        verbose: bool,
     ) -> CargoResult<Rustc> {
         let _p = profile::start("Rustc::new");
 
@@ -60,13 +63,14 @@ impl Rustc {
             wrapper,
             verbose_version,
             host,
+            verbose,
             cache: Mutex::new(cache),
         })
     }
 
     /// Get a process builder set up to use the found rustc version, with a wrapper if Some
     pub fn process(&self) -> ProcessBuilder {
-        if let Some(ref wrapper) = self.wrapper {
+        let mut process = if let Some(ref wrapper) = self.wrapper {
             let mut cmd = util::process(wrapper);
             {
                 cmd.arg(&self.path);
@@ -74,7 +78,9 @@ impl Rustc {
             cmd
         } else {
             util::process(&self.path)
-        }
+        };
+        process.verbose(self.verbose);
+        process
     }
 
     pub fn cached_output(&self, cmd: &ProcessBuilder) -> CargoResult<(String, String)> {
