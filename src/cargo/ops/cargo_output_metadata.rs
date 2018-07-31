@@ -45,7 +45,7 @@ fn metadata_no_deps(ws: &Workspace, _opt: &OutputMetadataOptions) -> CargoResult
 }
 
 fn metadata_full(ws: &Workspace, opt: &OutputMetadataOptions) -> CargoResult<ExportInfo> {
-    let specs = Packages::All.into_package_id_specs(ws)?;
+    let specs = Packages::All.to_package_id_specs(ws)?;
     let deps = ops::resolve_ws_precisely(
         ws,
         None,

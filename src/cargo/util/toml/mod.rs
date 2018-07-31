@@ -151,8 +151,6 @@ type TomlBenchTarget = TomlTarget;
 
 #[derive(Debug, Serialize)]
 #[serde(untagged)]
-// While unfortunate, resolving the size difference with Box would be a large project
-#[cfg_attr(feature = "cargo-clippy", allow(large_enum_variant))]
 pub enum TomlDependency {
     Simple(String),
     Detailed(DetailedTomlDependency),
@@ -894,7 +892,7 @@ impl TomlManifest {
         let summary = Summary::new(
             pkgid,
             deps,
-            me.features
+            &me.features
                 .as_ref()
                 .map(|x| {
                     x.iter()

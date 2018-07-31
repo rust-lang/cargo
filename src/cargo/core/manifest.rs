@@ -17,8 +17,6 @@ use util::errors::*;
 use util::toml::TomlManifest;
 use util::Config;
 
-// While unfortunate, resolving the size difference with Box would be a large project
-#[cfg_attr(feature = "cargo-clippy", allow(large_enum_variant))]
 pub enum EitherManifest {
     Real(Manifest),
     Virtual(VirtualManifest),
@@ -208,7 +206,6 @@ struct NonHashedPathBuf {
     path: PathBuf,
 }
 
-#[cfg_attr(feature = "cargo-clippy", allow(derive_hash_xor_eq))] // current intentional incoherence
 impl Hash for NonHashedPathBuf {
     fn hash<H: Hasher>(&self, _: &mut H) {
         // ...

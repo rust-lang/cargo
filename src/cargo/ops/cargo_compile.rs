@@ -122,7 +122,7 @@ impl Packages {
         })
     }
 
-    pub fn into_package_id_specs(&self, ws: &Workspace) -> CargoResult<Vec<PackageIdSpec>> {
+    pub fn to_package_id_specs(&self, ws: &Workspace) -> CargoResult<Vec<PackageIdSpec>> {
         let specs = match *self {
             Packages::All => ws.members()
                 .map(Package::package_id)
@@ -185,7 +185,8 @@ pub fn compile<'a>(
     ws: &Workspace<'a>,
     options: &CompileOptions<'a>,
 ) -> CargoResult<Compilation<'a>> {
-    compile_with_exec(ws, options, Arc::new(DefaultExecutor))
+    let exec: Arc<Executor> = Arc::new(DefaultExecutor);
+    compile_with_exec(ws, options, &exec)
 }
 
 /// Like `compile` but allows specifying a custom `Executor` that will be able to intercept build
@@ -193,7 +194,7 @@ pub fn compile<'a>(
 pub fn compile_with_exec<'a>(
     ws: &Workspace<'a>,
     options: &CompileOptions<'a>,
-    exec: Arc<Executor>,
+    exec: &Arc<Executor>,
 ) -> CargoResult<Compilation<'a>> {
     ws.emit_warnings()?;
     compile_ws(ws, None, options, exec)
@@ -203,7 +204,7 @@ pub fn compile_ws<'a>(
     ws: &Workspace<'a>,
     source: Option<Box<Source + 'a>>,
     options: &CompileOptions<'a>,
-    exec: Arc<Executor>,
+    exec: &Arc<Executor>,
 ) -> CargoResult<Compilation<'a>> {
     let CompileOptions {
         config,
@@ -224,7 +225,7 @@ pub fn compile_ws<'a>(
         Kind::Host
     };
 
-    let specs = spec.into_package_id_specs(ws)?;
+    let specs = spec.to_package_id_specs(ws)?;
     let features = Method::split_features(features);
     let method = Method::Required {
         dev_deps: ws.require_optional_deps() || filter.need_dev_deps(build_config.mode),
