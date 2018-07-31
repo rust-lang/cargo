@@ -210,22 +210,39 @@ pub fn collect_suggestions<S: ::std::hash::BuildHasher>(
     }
 }
 
-pub fn apply_suggestions(code: &str, suggestions: &[Suggestion]) -> Result<String, Error> {
-    use replace::Data;
+pub struct CodeFix {
+    data: replace::Data,
+}
 
-    let mut fixed = Data::new(code.as_bytes());
+impl CodeFix {
+    pub fn new(s: &str) -> CodeFix {
+        CodeFix {
+            data: replace::Data::new(s.as_bytes()),
+        }
+    }
 
-    for sug in suggestions.iter().rev() {
-        for sol in &sug.solutions {
+    pub fn apply(&mut self, suggestion: &Suggestion) -> Result<(), Error> {
+        for sol in &suggestion.solutions {
             for r in &sol.replacements {
-                fixed.replace_range(
+                self.data.replace_range(
                     r.snippet.range.start,
                     r.snippet.range.end.saturating_sub(1),
                     r.replacement.as_bytes(),
                 )?;
             }
         }
+        Ok(())
     }
 
-    Ok(String::from_utf8(fixed.to_vec())?)
+    pub fn finish(&self) -> Result<String, Error> {
+        Ok(String::from_utf8(self.data.to_vec())?)
+    }
+}
+
+pub fn apply_suggestions(code: &str, suggestions: &[Suggestion]) -> Result<String, Error> {
+    let mut fix = CodeFix::new(code);
+    for suggestion in suggestions.iter().rev() {
+        fix.apply(suggestion)?;
+    }
+    fix.finish()
 }
