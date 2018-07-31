@@ -122,7 +122,7 @@ impl Packages {
         })
     }
 
-    pub fn into_package_id_specs(&self, ws: &Workspace) -> CargoResult<Vec<PackageIdSpec>> {
+    pub fn to_package_id_specs(&self, ws: &Workspace) -> CargoResult<Vec<PackageIdSpec>> {
         let specs = match *self {
             Packages::All => ws.members()
                 .map(Package::package_id)
@@ -225,7 +225,7 @@ pub fn compile_ws<'a>(
         Kind::Host
     };
 
-    let specs = spec.into_package_id_specs(ws)?;
+    let specs = spec.to_package_id_specs(ws)?;
     let features = Method::split_features(features);
     let method = Method::Required {
         dev_deps: ws.require_optional_deps() || filter.need_dev_deps(build_config.mode),
