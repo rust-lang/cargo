@@ -6,6 +6,7 @@ pub fn cli() -> App {
     subcommand("uninstall")
         .about("Remove a Rust binary")
         .arg(Arg::with_name("spec").multiple(true))
+        .arg_package_spec_simple("Package to uninstall")
         .arg(multi_opt("bin", "NAME", "Only uninstall the binary NAME"))
         .arg(opt("root", "Directory to uninstall packages from").value_name("DIR"))
         .after_help(
@@ -20,7 +21,10 @@ only uninstall particular binaries.
 
 pub fn exec(config: &mut Config, args: &ArgMatches) -> CliResult {
     let root = args.value_of("root");
-    let specs = args.values_of("spec").unwrap_or_default().collect();
+    let specs = args
+        .values_of("spec")
+        .unwrap_or_else(|| args.values_of("package").unwrap_or_default())
+        .collect();
     ops::uninstall(root, specs, &values(args, "bin"), config)?;
     Ok(())
 }
