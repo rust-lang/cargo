@@ -1,4 +1,5 @@
 #![allow(unknown_lints)]
+#![cfg_attr(feature = "cargo-clippy", allow(identity_op))] // used for vertical alignment
 
 extern crate curl;
 #[macro_use]
@@ -159,7 +160,6 @@ impl Registry {
         //      <le u32 of tarball>
         //      <source tarball>
         let stat = tarball.metadata()?;
-        #[cfg_attr(feature = "cargo-clippy", allow(identity_op))] // don't hate on vertical alignment, clippy
         let header = {
             let mut w = Vec::new();
             w.extend(

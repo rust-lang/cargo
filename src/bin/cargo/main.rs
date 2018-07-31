@@ -1,5 +1,5 @@
-// we have lots of arguments, cleaning this up would be a large project
-#![cfg_attr(feature = "cargo-clippy", allow(too_many_arguments))]
+#![cfg_attr(feature = "cargo-clippy", allow(too_many_arguments))] // large project
+#![cfg_attr(feature = "cargo-clippy", allow(redundant_closure))]  // there's a false positive
 
 extern crate cargo;
 extern crate clap;
@@ -135,7 +135,6 @@ fn find_closest(config: &Config, cmd: &str) -> Option<String> {
 
 fn execute_external_subcommand(config: &Config, cmd: &str, args: &[&str]) -> CliResult {
     let command_exe = format!("cargo-{}{}", cmd, env::consts::EXE_SUFFIX);
-    #[cfg_attr(feature = "cargo-clippy", allow(redundant_closure))] // false positive
     let path = search_directories(config)
         .iter()
         .map(|dir| dir.join(&command_exe))
