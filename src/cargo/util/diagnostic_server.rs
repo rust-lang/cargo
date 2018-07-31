@@ -48,6 +48,11 @@ pub enum Message {
         file: String,
         edition: String,
     },
+    IdiomEditionMismatch {
+        file: String,
+        idioms: String,
+        edition: Option<String>,
+    },
 }
 
 impl Message {
@@ -78,6 +83,7 @@ pub struct DiagnosticPrinter<'a> {
     config: &'a Config,
     preview_not_found: HashSet<String>,
     edition_already_enabled: HashSet<String>,
+    idiom_mismatch: HashSet<String>,
 }
 
 impl<'a> DiagnosticPrinter<'a> {
@@ -86,6 +92,7 @@ impl<'a> DiagnosticPrinter<'a> {
             config,
             preview_not_found: HashSet::new(),
             edition_already_enabled: HashSet::new(),
+            idiom_mismatch: HashSet::new(),
         }
     }
 
@@ -172,8 +179,32 @@ information about transitioning to the {0} edition see:
                 self.config.shell().error(&msg)?;
                 Ok(())
             }
-        }
+            Message::IdiomEditionMismatch { file, idioms, edition } => {
+                // Same as above
+                if !self.idiom_mismatch.insert(file.clone()) {
+                    return Ok(())
+                }
+                self.config.shell().error(&format!(
+                    "\
+cannot migrate to the idioms of the {} edition for `{}`
+because it is compiled {}, which doesn't match {0}
 
+consider migrating to the {0} edition by adding `edition = '{0}'` to
+`Cargo.toml` and then rerunning this command; a more detailed transition
+guide can be found at
+
+  https://rust-lang-nursery.github.io/edition-guide/editions/transitioning.html
+",
+                    idioms,
+                    file,
+                    match edition {
+                        Some(s) => format!("with the {} edition", s),
+                        None => format!("without an edition"),
+                    },
+                ))?;
+                Ok(())
+            }
+        }
     }
 }
 

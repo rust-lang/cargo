@@ -52,6 +52,11 @@ pub fn cli() -> App {
                 .hidden(true),
         )
         .arg(
+            Arg::with_name("idioms")
+                .long("edition-idioms")
+                .help("Fix warnings to migrate to the idioms of an edition")
+        )
+        .arg(
             Arg::with_name("allow-no-vcs")
                 .long("allow-no-vcs")
                 .help("Fix code even if a VCS was not detected"),
@@ -126,6 +131,7 @@ pub fn exec(config: &mut Config, args: &ArgMatches) -> CliResult {
     ops::fix(&ws, &mut ops::FixOptions {
         edition: args.is_present("edition"),
         prepare_for: args.value_of("prepare-for"),
+        idioms: args.is_present("idioms"),
         compile_opts: opts,
         allow_dirty: args.is_present("allow-dirty"),
         allow_no_vcs: args.is_present("allow-no-vcs"),

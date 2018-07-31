@@ -967,6 +967,62 @@ fn fix_overlapping() {
 }
 
 #[test]
+fn fix_idioms() {
+    if !is_nightly() {
+        return
+    }
+    let p = project()
+        .file(
+            "Cargo.toml",
+            r#"
+                cargo-features = ['edition']
+                [package]
+                name = 'foo'
+                version = '0.1.0'
+                edition = '2018'
+            "#,
+        )
+        .file(
+            "src/lib.rs",
+            r#"
+                use std::any::Any;
+                pub fn foo() {
+                    let _x: Box<Any> = Box::new(3);
+                }
+            "#
+        )
+        .build();
+
+    let stderr = "\
+[CHECKING] foo [..]
+[FIXING] src/lib.rs (1 fix)
+[FINISHED] [..]
+";
+    assert_that(
+        p.cargo("fix --edition-idioms --allow-no-vcs")
+            .masquerade_as_nightly_cargo(),
+        execs()
+            .with_stderr(stderr)
+            .with_status(0),
+    );
+
+    assert!(p.read_file("src/lib.rs").contains("Box<dyn Any>"));
+}
+
+#[test]
+fn idioms_2015_ok() {
+    let p = project()
+        .file("src/lib.rs", "")
+        .build();
+
+    assert_that(
+        p.cargo("fix --edition-idioms --allow-no-vcs")
+            .masquerade_as_nightly_cargo(),
+        execs().with_status(0),
+    );
+}
+
+#[test]
 fn both_edition_migrate_flags() {
     if !is_nightly() {
         return
