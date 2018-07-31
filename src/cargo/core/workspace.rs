@@ -777,12 +777,6 @@ impl<'cfg> Packages<'cfg> {
     }
 }
 
-impl<'a, 'cfg> Members<'a, 'cfg> {
-    pub fn is_empty(self) -> bool {
-        self.count() == 0
-    }
-}
-
 impl<'a, 'cfg> Iterator for Members<'a, 'cfg> {
     type Item = &'a Package;
 
