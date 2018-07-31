@@ -706,6 +706,33 @@ warning: unused manifest key: target.foo.bar
         .file(
             "Cargo.toml",
             r#"
+           [package]
+           name = "foo"
+           version = "0.1.0"
+           authors = []
+
+           [profile.debug]
+           debug = 1
+        "#,
+        )
+        .file("src/lib.rs", "")
+        .build();
+
+    assert_that(
+        p.cargo("build"),
+        execs().with_status(0).with_stderr(
+            "\
+warning: unused manifest key: profile.debug
+warning: use `[profile.dev]` to configure debug builds
+[..]
+[..]",
+        ),
+    );
+
+    let p = project()
+        .file(
+            "Cargo.toml",
+            r#"
             [project]
 
             name = "foo"
