@@ -161,7 +161,7 @@ fn run_doc_tests(
             deps,
         } = doctest_info;
         config.shell().status("Doc-tests", target.name())?;
-        let mut p = compilation.rustdoc_process(package)?;
+        let mut p = compilation.rustdoc_process(package, target)?;
         p.arg("--test")
             .arg(target.src_path())
             .arg("--crate-name")
