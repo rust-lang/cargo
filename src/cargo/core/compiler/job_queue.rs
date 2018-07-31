@@ -16,7 +16,7 @@ use handle_error;
 use util::{internal, profile, CargoResult, CargoResultExt, ProcessBuilder};
 use util::{Config, DependencyQueue, Dirty, Fresh, Freshness};
 use util::{Progress, ProgressStyle};
-use util::diagnostic_server;
+use util::diagnostic_server::{self, DiagnosticPrinter};
 
 use super::job::Job;
 use super::{BuildContext, BuildPlan, CompileMode, Context, Kind, Unit};
@@ -200,6 +200,7 @@ impl<'a> JobQueue<'a> {
         let mut tokens = Vec::new();
         let mut queue = Vec::new();
         let build_plan = cx.bcx.build_config.build_plan;
+        let mut print = DiagnosticPrinter::new(cx.bcx.config);
         trace!("queue: {:#?}", self.queue);
 
         // Iteratively execute the entire dependency graph. Each turn of the
@@ -311,7 +312,7 @@ impl<'a> JobQueue<'a> {
                     }
                 }
                 Message::FixDiagnostic(msg) => {
-                    msg.print_to(cx.bcx.config)?;
+                    print.print(&msg)?;
                 }
                 Message::Finish(key, result) => {
                     info!("end: {:?}", key);
