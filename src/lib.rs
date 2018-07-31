@@ -92,7 +92,7 @@ pub struct Replacement {
     pub replacement: String,
 }
 
-fn parse_snippet(span: &DiagnosticSpan) -> Snippet {
+fn parse_snippet(span: &DiagnosticSpan) -> Option<Snippet> {
     // unindent the snippet
     let indent = span.text
         .iter()
@@ -103,8 +103,7 @@ fn parse_snippet(span: &DiagnosticSpan) -> Snippet {
                 .count();
             std::cmp::min(indent, line.highlight_start)
         })
-        .min()
-        .expect("text to replace is empty");
+        .min()?;
     let start = span.text[0].highlight_start - 1;
     let end = span.text[0].highlight_end - 1;
     let lead = span.text[0].text[indent..start].to_string();
@@ -120,7 +119,7 @@ fn parse_snippet(span: &DiagnosticSpan) -> Snippet {
         body.push_str(&last.text[indent..last.highlight_end - 1]);
     }
     tail.push_str(&last.text[last.highlight_end - 1..]);
-    Snippet {
+    Some(Snippet {
         file_name: span.file_name.clone(),
         line_range: LineRange {
             start: LinePosition {
@@ -134,16 +133,13 @@ fn parse_snippet(span: &DiagnosticSpan) -> Snippet {
         },
         range: (span.byte_start as usize)..(span.byte_end as usize),
         text: (lead, body, tail),
-    }
+    })
 }
 
 fn collect_span(span: &DiagnosticSpan) -> Option<Replacement> {
-    span.suggested_replacement
-        .clone()
-        .map(|replacement| Replacement {
-            snippet: parse_snippet(span),
-            replacement,
-        })
+    let snippet = parse_snippet(span)?;
+    let replacement = span.suggested_replacement.clone()?;
+    Some(Replacement { snippet, replacement })
 }
 
 pub fn collect_suggestions<S: ::std::hash::BuildHasher>(
@@ -166,7 +162,7 @@ pub fn collect_suggestions<S: ::std::hash::BuildHasher>(
     let snippets = diagnostic
         .spans
         .iter()
-        .map(|span| parse_snippet(span))
+        .filter_map(|span| parse_snippet(span))
         .collect();
 
     let solutions: Vec<_> = diagnostic
