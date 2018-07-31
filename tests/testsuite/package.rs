@@ -172,6 +172,7 @@ fn package_verbose() {
             "\
 [WARNING] manifest has no description[..]
 See http://doc.crates.io/manifest.html#package-metadata for more info.
+[CHECKING] git repo ([..])
 [PACKAGING] foo v0.0.1 ([..])
 [ARCHIVING] [..]
 [ARCHIVING] [..]
@@ -190,6 +191,7 @@ See http://doc.crates.io/manifest.html#package-metadata for more info.
             "\
 [WARNING] manifest has no description[..]
 See http://doc.crates.io/manifest.html#package-metadata for more info.
+[CHECKING] git repo ([..])
 [PACKAGING] a v0.0.1 ([..])
 [ARCHIVING] [..]
 [ARCHIVING] [..]
@@ -326,6 +328,7 @@ fn exclude() {
             "\
 [WARNING] manifest has no description[..]
 See http://doc.crates.io/manifest.html#package-metadata for more info.
+[CHECKING] git repo ([..])
 [PACKAGING] foo v0.0.1 ([..])
 [WARNING] [..] file `dir_root_1[/]some_dir[/]file` WILL be excluded [..]
 See [..]
@@ -415,6 +418,7 @@ fn include() {
             "\
 [WARNING] manifest has no description[..]
 See http://doc.crates.io/manifest.html#package-metadata for more info.
+[CHECKING] git repo ([..])
 [PACKAGING] foo v0.0.1 ([..])
 [ARCHIVING] [..]
 [ARCHIVING] [..]
