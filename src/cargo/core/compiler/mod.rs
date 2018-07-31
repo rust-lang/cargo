@@ -161,11 +161,14 @@ fn compile<'a, 'cfg: 'a>(
 }
 
 fn rustc<'a, 'cfg>(
-    mut cx: &mut Context<'a, 'cfg>,
+    cx: &mut Context<'a, 'cfg>,
     unit: &Unit<'a>,
     exec: &Arc<Executor>,
 ) -> CargoResult<Work> {
     let mut rustc = prepare_rustc(cx, &unit.target.rustc_crate_types(), unit)?;
+    if cx.is_primary_package(unit) {
+        rustc.env("CARGO_PRIMARY_PACKAGE", "1");
+    }
     let build_plan = cx.bcx.build_config.build_plan;
 
     let name = unit.pkg.name().to_string();
@@ -195,7 +198,7 @@ fn rustc<'a, 'cfg>(
     } else {
         root.join(&cx.files().file_stem(unit))
     }.with_extension("d");
-    let dep_info_loc = fingerprint::dep_info_loc(&mut cx, unit);
+    let dep_info_loc = fingerprint::dep_info_loc(cx, unit);
 
     rustc.args(&cx.bcx.rustflags_args(unit)?);
     let json_messages = cx.bcx.build_config.json_messages();

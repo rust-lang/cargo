@@ -196,7 +196,7 @@ fn fix_path_deps() {
         .build();
 
     assert_that(
-        p.cargo("fix --allow-no-vcs")
+        p.cargo("fix --allow-no-vcs -p foo -p bar")
             .env("__CARGO_FIX_YOLO", "1"),
         execs()
             .with_status(0)
@@ -356,6 +356,9 @@ fn local_paths_no_fix() {
 
     let stderr = "\
 [CHECKING] foo v0.0.1 ([..])
+warning: failed to find `#![feature(rust_2018_preview)]` in `src[/]lib.rs`
+this may cause `cargo fix` to not be able to fix all
+issues in preparation for the 2018 edition
 [FINISHED] [..]
 ";
     assert_that(
@@ -856,4 +859,71 @@ fn fix_all_targets_by_default() {
     );
     assert!(!p.read_file("src/lib.rs").contains("let mut x"));
     assert!(!p.read_file("tests/foo.rs").contains("let mut x"));
+}
+
+#[test]
+fn prepare_for_and_enable() {
+    if !is_nightly() {
+        return
+    }
+    let p = project()
+        .file(
+            "Cargo.toml",
+            r#"
+                cargo-features = ['edition']
+
+                [package]
+                name = 'foo'
+                version = '0.1.0'
+                edition = '2018'
+            "#,
+        )
+        .file("src/lib.rs", "")
+        .build();
+
+    let stderr = "\
+[CHECKING] foo v0.1.0 ([..])
+error: cannot prepare for the 2018 edition when it is enabled, so cargo cannot
+automatically fix errors in `src[/]lib.rs`
+
+To prepare for the 2018 edition you should first remove `edition = '2018'` from
+your `Cargo.toml` and then rerun this command. Once all warnings have been fixed
+then you can re-enable the `edition` key in `Cargo.toml`. For some more
+information about transitioning to the 2018 edition see:
+
+  https://[..]
+
+";
+    assert_that(
+        p.cargo("fix --prepare-for 2018 --allow-no-vcs")
+            .masquerade_as_nightly_cargo(),
+        execs()
+            .with_stderr_contains(stderr)
+            .with_status(101),
+    );
+}
+
+#[test]
+fn prepare_for_without_feature_issues_warning() {
+    if !is_nightly() {
+        return
+    }
+    let p = project()
+        .file("src/lib.rs", "")
+        .build();
+
+    let stderr = "\
+[CHECKING] foo v0.0.1 ([..])
+warning: failed to find `#![feature(rust_2018_preview)]` in `src[/]lib.rs`
+this may cause `cargo fix` to not be able to fix all
+issues in preparation for the 2018 edition
+[FINISHED] [..]
+";
+    assert_that(
+        p.cargo("fix --prepare-for 2018 --allow-no-vcs")
+            .masquerade_as_nightly_cargo(),
+        execs()
+            .with_stderr(stderr)
+            .with_status(0),
+    );
 }
