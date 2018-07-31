@@ -927,3 +927,42 @@ issues in preparation for the 2018 edition
             .with_status(0),
     );
 }
+
+#[test]
+fn fix_overlapping() {
+    if !is_nightly() {
+        return
+    }
+    let p = project()
+        .file(
+            "src/lib.rs",
+            r#"
+                #![feature(rust_2018_preview)]
+
+                pub fn foo<T>() {}
+                pub struct A;
+
+                pub mod bar {
+                    pub fn baz() {
+                        ::foo::<::A>();
+                    }
+                }
+            "#
+        )
+        .build();
+
+    let stderr = "\
+[CHECKING] foo [..]
+[FIXING] src[/]lib.rs (2 fixes)
+[FINISHED] dev [..]
+";
+
+    assert_that(
+        p.cargo("fix --allow-no-vcs --prepare-for 2018 --lib"),
+        execs().with_status(0).with_stderr(stderr),
+    );
+
+    let contents = p.read_file("src/lib.rs");
+    println!("{}", contents);
+    assert!(contents.contains("crate::foo::<crate::A>()"));
+}
