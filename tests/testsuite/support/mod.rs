@@ -1169,7 +1169,7 @@ impl<'a> ham::Matcher<&'a mut ProcessBuilder> for Execs {
                         return self.match_output(out);
                     }
                 let mut s = format!("could not exec process {}: {}", process, e);
-                for cause in e.causes() {
+                for cause in e.iter_causes() {
                     s.push_str(&format!("\ncaused by: {}", cause));
                 }
                 Err(s)
