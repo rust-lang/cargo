@@ -287,7 +287,7 @@ fn rustc<'a, 'cfg>(
                     }
                     Ok(())
                 },
-            ).chain_err(|| format!("Could not compile `{}`.", name))?;
+            ).map_err(Internal::new).chain_err(|| format!("Could not compile `{}`.", name))?;
         } else if build_plan {
             state.build_plan(buildkey, rustc.clone(), outputs.clone());
         } else {
