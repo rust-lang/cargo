@@ -166,14 +166,15 @@ fn check_not_dirty(p: &Package, src: &PathSource, config: &Config) -> CargoResul
             }
             config.shell().verbose(|shell| {
                 shell.warn(format!(
-                    "No (git) Cargo.toml found at ({})",
-                    path.display()
+                    "No (git) Cargo.toml found at `{}` in workdir `{}`",
+                    path.display(),
+                    workdir.display()
                 ))
             })?;
         }
     } else {
         config.shell().verbose(|shell| {
-            shell.warn(format!("No (git) VCS found for ({})", p.root().display()))
+            shell.warn(format!("No (git) VCS found for `{}`", p.root().display()))
         })?;
     }
 
