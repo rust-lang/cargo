@@ -3399,6 +3399,7 @@ fn compiler_json_error_format() {
         "target":{
             "kind":["custom-build"],
             "crate_types":["bin"],
+            "edition": "2015",
             "name":"build-script-build",
             "src_path":"[..]build.rs"
         },
@@ -3420,6 +3421,7 @@ fn compiler_json_error_format() {
         "target":{
             "kind":["lib"],
             "crate_types":["lib"],
+            "edition": "2015",
             "name":"bar",
             "src_path":"[..]lib.rs"
         },
@@ -3440,6 +3442,7 @@ fn compiler_json_error_format() {
         "target":{
             "kind":["lib"],
             "crate_types":["lib"],
+            "edition": "2015",
             "name":"bar",
             "src_path":"[..]lib.rs"
         },
@@ -3462,6 +3465,7 @@ fn compiler_json_error_format() {
         "target":{
             "kind":["bin"],
             "crate_types":["bin"],
+            "edition": "2015",
             "name":"foo",
             "src_path":"[..]main.rs"
         },
@@ -3474,6 +3478,7 @@ fn compiler_json_error_format() {
         "target":{
             "kind":["bin"],
             "crate_types":["bin"],
+            "edition": "2015",
             "name":"foo",
             "src_path":"[..]main.rs"
         },
@@ -3504,6 +3509,7 @@ fn compiler_json_error_format() {
         "target":{
             "kind":["custom-build"],
             "crate_types":["bin"],
+            "edition": "2015",
             "name":"build-script-build",
             "src_path":"[..]build.rs"
         },
@@ -3533,6 +3539,7 @@ fn compiler_json_error_format() {
         "target":{
             "kind":["lib"],
             "crate_types":["lib"],
+            "edition": "2015",
             "name":"bar",
             "src_path":"[..]lib.rs"
         },
@@ -3555,6 +3562,7 @@ fn compiler_json_error_format() {
         "target":{
             "kind":["bin"],
             "crate_types":["bin"],
+            "edition": "2015",
             "name":"foo",
             "src_path":"[..]main.rs"
         },
@@ -3614,6 +3622,7 @@ fn message_format_json_forward_stderr() {
         "target":{
             "kind":["bin"],
             "crate_types":["bin"],
+            "edition": "2015",
             "name":"foo",
             "src_path":"[..]"
         },
@@ -3626,6 +3635,7 @@ fn message_format_json_forward_stderr() {
         "target":{
             "kind":["bin"],
             "crate_types":["bin"],
+            "edition": "2015",
             "name":"foo",
             "src_path":"[..]"
         },

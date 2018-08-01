@@ -228,6 +228,7 @@ struct SerializedTarget<'a> {
     crate_types: Vec<&'a str>,
     name: &'a str,
     src_path: &'a PathBuf,
+    edition: &'a str,
 }
 
 impl ser::Serialize for Target {
@@ -237,6 +238,7 @@ impl ser::Serialize for Target {
             crate_types: self.rustc_crate_types(),
             name: &self.name,
             src_path: &self.src_path.path,
+            edition: &self.edition.to_string()
         }.serialize(s)
     }
 }
