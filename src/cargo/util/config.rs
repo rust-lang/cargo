@@ -921,7 +921,7 @@ impl fmt::Display for ConfigError {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         let message = self
             .error
-            .causes()
+            .iter_chain()
             .map(|e| e.to_string())
             .collect::<Vec<_>>()
             .join("\nCaused by:\n  ");
