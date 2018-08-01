@@ -434,7 +434,7 @@ impl CompileFilter {
 /// Generates all the base targets for the packages the user has requested to
 /// compile. Dependencies for these targets are computed later in
 /// `unit_dependencies`.
-fn generate_targets<'a>(
+pub fn generate_targets<'a>(
     ws: &Workspace,
     profiles: &Profiles,
     packages: &[&'a Package],

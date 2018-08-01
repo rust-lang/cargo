@@ -1,5 +1,5 @@
 pub use self::cargo_clean::{clean, CleanOptions};
-pub use self::cargo_compile::{compile, compile_with_exec, compile_ws, CompileOptions};
+pub use self::cargo_compile::{compile, compile_with_exec, compile_ws, CompileOptions, generate_targets};
 pub use self::cargo_compile::{CompileFilter, FilterRule, Packages};
 pub use self::cargo_read_manifest::{read_package, read_packages};
 pub use self::cargo_run::run;

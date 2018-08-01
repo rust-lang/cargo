@@ -966,3 +966,118 @@ fn fix_overlapping() {
     println!("{}", contents);
     assert!(contents.contains("crate::foo::<crate::A>()"));
 }
+
+#[test]
+fn shows_warnings_on_second_run_without_changes() {
+    let p = project()
+        .file(
+            "Cargo.toml",
+            r#"
+                [package]
+                name = "foo"
+                version = "0.1.0"
+            "#,
+        )
+        .file(
+            "src/lib.rs",
+            r#"
+                use std::default::Default;
+
+                pub fn foo() {
+                }
+            "#,
+        )
+        .build();
+
+    assert_that(
+        p.cargo("fix --allow-no-vcs"),
+        execs().with_status(0).with_stderr_contains("[..]warning: unused import[..]"),
+    );
+
+    assert_that(
+        p.cargo("fix --allow-no-vcs"),
+        execs().with_status(0).with_stderr_contains("[..]warning: unused import[..]"),
+    );
+}
+
+#[test]
+fn shows_warnings_on_second_run_without_changes_on_multiple_targets() {
+    let p = project()
+        .file(
+            "Cargo.toml",
+            r#"
+                [package]
+                name = "foo"
+                version = "0.1.0"
+
+                [workspace]
+            "#,
+        )
+        .file(
+            "src/lib.rs",
+            r#"
+                use std::default::Default;
+
+                pub fn a() -> u32 { 3 }
+            "#,
+        )
+        .file(
+            "src/main.rs",
+            r#"
+                use std::default::Default;
+                fn main() { println!("3"); }
+            "#,
+        )
+        .file(
+            "tests/foo.rs",
+            r#"
+                use std::default::Default;
+                #[test]
+                fn foo_test() {
+                    println!("3");
+                }
+            "#,
+        )
+        .file(
+            "tests/bar.rs",
+            r#"
+                use std::default::Default;
+
+                #[test]
+                fn foo_test() {
+                    println!("3");
+                }
+            "#,
+        )
+        .file(
+            "examples/fooxample.rs",
+            r#"
+                use std::default::Default;
+
+                fn main() {
+                    println!("3");
+                }
+            "#,
+        )
+        .build();
+
+    assert_that(
+        p.cargo("fix --allow-no-vcs --all-targets"),
+        execs().with_status(0)
+            .with_stderr_contains(" --> examples/fooxample.rs:2:21")
+            .with_stderr_contains(" --> src/lib.rs:2:21")
+            .with_stderr_contains(" --> src/main.rs:2:21")
+            .with_stderr_contains(" --> tests/bar.rs:2:21")
+            .with_stderr_contains(" --> tests/foo.rs:2:21"),
+    );
+
+    assert_that(
+        p.cargo("fix --allow-no-vcs --all-targets"),
+        execs().with_status(0)
+            .with_stderr_contains(" --> examples/fooxample.rs:2:21")
+            .with_stderr_contains(" --> src/lib.rs:2:21")
+            .with_stderr_contains(" --> src/main.rs:2:21")
+            .with_stderr_contains(" --> tests/bar.rs:2:21")
+            .with_stderr_contains(" --> tests/foo.rs:2:21"),
+    );
+}
