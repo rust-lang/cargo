@@ -30,7 +30,7 @@ const PLEASE_REPORT_THIS_BUG: &str =
 pub enum Message {
     Fixing {
         file: String,
-        fixes: usize,
+        fixes: u32,
     },
     FixFailed {
         files: Vec<String>,
@@ -51,13 +51,6 @@ pub enum Message {
 }
 
 impl Message {
-    pub fn fixing(file: &str, num: usize) -> Message {
-        Message::Fixing {
-            file: file.into(),
-            fixes: num,
-        }
-    }
-
     pub fn post(&self) -> Result<(), Error> {
         let addr = env::var(DIAGNOSICS_SERVER_VAR)
             .context("diagnostics collector misconfigured")?;
