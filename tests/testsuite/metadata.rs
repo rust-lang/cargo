@@ -1197,7 +1197,7 @@ fn package_edition_2018() {
                                 "lib"
                             ],
                             "name": "foo",
-                            "src_path": "[..]src/lib.rs"
+                            "src_path": "[..]src[/]lib.rs"
                         }
                     ],
                     "version": "0.1.0"
@@ -1281,7 +1281,7 @@ fn target_edition_2018() {
                                 "lib"
                             ],
                             "name": "foo",
-                            "src_path": "[..]src/lib.rs"
+                            "src_path": "[..]src[/]lib.rs"
                         },
                         {
                             "crate_types": [
@@ -1292,7 +1292,7 @@ fn target_edition_2018() {
                                 "bin"
                             ],
                             "name": "foo",
-                            "src_path": "[..]src/main.rs"
+                            "src_path": "[..]src[/]main.rs"
                         }
                     ],
                     "version": "0.1.0"
