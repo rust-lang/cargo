@@ -16,11 +16,13 @@ static MANIFEST_OUTPUT: &'static str = r#"
     "license": null,
     "license_file": null,
     "description": null,
+    "edition": "2015",
     "source":null,
     "dependencies":[],
     "targets":[{
         "kind":["bin"],
         "crate_types":["bin"],
+        "edition": "2015",
         "name":"foo",
         "src_path":"[..][/]foo[/]src[/]foo.rs"
     }],

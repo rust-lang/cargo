@@ -3491,6 +3491,7 @@ fn json_artifact_includes_test_flag() {
         "target":{
             "kind":["lib"],
             "crate_types":["lib"],
+            "edition": "2015",
             "name":"foo",
             "src_path":"[..]lib.rs"
         },
@@ -3512,6 +3513,7 @@ fn json_artifact_includes_test_flag() {
         "target":{
             "kind":["lib"],
             "crate_types":["lib"],
+            "edition": "2015",
             "name":"foo",
             "src_path":"[..]lib.rs"
         },
