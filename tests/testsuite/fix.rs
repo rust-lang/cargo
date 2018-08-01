@@ -284,7 +284,7 @@ fn prepare_for_2018() {
 [FINISHED] [..]
 ";
     assert_that(
-        p.cargo("fix --prepare-for 2018 --allow-no-vcs"),
+        p.cargo("fix --edition --allow-no-vcs"),
         execs().with_status(0).with_stderr(stderr).with_stdout(""),
     );
 
@@ -324,7 +324,7 @@ fn local_paths() {
 ";
 
     assert_that(
-        p.cargo("fix --prepare-for 2018 --allow-no-vcs"),
+        p.cargo("fix --edition --allow-no-vcs"),
         execs().with_status(0).with_stderr(stderr).with_stdout(""),
     );
 
@@ -362,7 +362,7 @@ issues in preparation for the 2018 edition
 [FINISHED] [..]
 ";
     assert_that(
-        p.cargo("fix --prepare-for 2018 --allow-no-vcs"),
+        p.cargo("fix --edition --allow-no-vcs"),
         execs().with_status(0).with_stderr(stderr).with_stdout(""),
     );
 }
@@ -452,7 +452,7 @@ fn specify_rustflags() {
 [FINISHED] [..]
 ";
     assert_that(
-        p.cargo("fix --prepare-for 2018 --allow-no-vcs")
+        p.cargo("fix --edition --allow-no-vcs")
             .env("RUSTFLAGS", "-C target-cpu=native"),
         execs().with_status(0).with_stderr(stderr).with_stdout(""),
     );
@@ -882,7 +882,6 @@ fn prepare_for_and_enable() {
         .build();
 
     let stderr = "\
-[CHECKING] foo v0.1.0 ([..])
 error: cannot prepare for the 2018 edition when it is enabled, so cargo cannot
 automatically fix errors in `src[/]lib.rs`
 
@@ -895,7 +894,7 @@ information about transitioning to the 2018 edition see:
 
 ";
     assert_that(
-        p.cargo("fix --prepare-for 2018 --allow-no-vcs")
+        p.cargo("fix --edition --allow-no-vcs")
             .masquerade_as_nightly_cargo(),
         execs()
             .with_stderr_contains(stderr)
@@ -920,7 +919,7 @@ issues in preparation for the 2018 edition
 [FINISHED] [..]
 ";
     assert_that(
-        p.cargo("fix --prepare-for 2018 --allow-no-vcs")
+        p.cargo("fix --edition --allow-no-vcs")
             .masquerade_as_nightly_cargo(),
         execs()
             .with_stderr(stderr)
@@ -965,4 +964,28 @@ fn fix_overlapping() {
     let contents = p.read_file("src/lib.rs");
     println!("{}", contents);
     assert!(contents.contains("crate::foo::<crate::A>()"));
+}
+
+#[test]
+fn both_edition_migrate_flags() {
+    if !is_nightly() {
+        return
+    }
+    let p = project()
+        .file("src/lib.rs", "")
+        .build();
+
+    let stderr = "\
+error: The argument '--edition' cannot be used with '--prepare-for <prepare-for>'
+
+USAGE:
+    cargo[..] fix --edition --message-format <FMT>
+
+For more information try --help
+";
+
+    assert_that(
+        p.cargo("fix --prepare-for 2018 --edition"),
+        execs().with_status(1).with_stderr(stderr),
+    );
 }
