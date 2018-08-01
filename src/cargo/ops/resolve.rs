@@ -1,12 +1,12 @@
 use std::collections::HashSet;
 
-use core::{PackageId, PackageIdSpec, PackageSet, Source, SourceId, Workspace};
 use core::registry::PackageRegistry;
 use core::resolver::{self, Method, Resolve};
-use sources::PathSource;
+use core::{PackageId, PackageIdSpec, PackageSet, Source, SourceId, Workspace};
 use ops;
-use util::profile;
+use sources::PathSource;
 use util::errors::{CargoResult, CargoResultExt};
+use util::profile;
 
 /// Resolve all dependencies for the workspace using the previous
 /// lockfile as a guide if present.
@@ -272,7 +272,11 @@ pub fn resolve_with_previous<'a, 'cfg>(
                 // workspace, then we use `method` specified. Otherwise we use a
                 // base method with no features specified but using default features
                 // for any other packages specified with `-p`.
-                Method::Required { dev_deps, all_features, .. } => {
+                Method::Required {
+                    dev_deps,
+                    all_features,
+                    ..
+                } => {
                     let base = Method::Required {
                         dev_deps,
                         features: &[],
@@ -335,7 +339,10 @@ pub fn resolve_with_previous<'a, 'cfg>(
 
 /// Read the `paths` configuration variable to discover all path overrides that
 /// have been configured.
-pub fn add_overrides<'a>(registry: &mut PackageRegistry<'a>, ws: &Workspace<'a>) -> CargoResult<()> {
+pub fn add_overrides<'a>(
+    registry: &mut PackageRegistry<'a>,
+    ws: &Workspace<'a>,
+) -> CargoResult<()> {
     let paths = match ws.config().get_list("paths")? {
         Some(list) => list,
         None => return Ok(()),
@@ -364,7 +371,10 @@ pub fn add_overrides<'a>(registry: &mut PackageRegistry<'a>, ws: &Workspace<'a>)
     Ok(())
 }
 
-pub fn get_resolved_packages<'a>(resolve: &Resolve, registry: PackageRegistry<'a>) -> PackageSet<'a> {
+pub fn get_resolved_packages<'a>(
+    resolve: &Resolve,
+    registry: PackageRegistry<'a>,
+) -> PackageSet<'a> {
     let ids: Vec<PackageId> = resolve.iter().cloned().collect();
     registry.get(&ids)
 }
@@ -494,7 +504,8 @@ fn register_previous_locks<'a>(
             //       dependency on that crate to enable the feature. For now
             //       this bug is better than the always updating registry
             //       though...
-            if !ws.members()
+            if !ws
+                .members()
                 .any(|pkg| pkg.package_id() == member.package_id())
                 && (dep.is_optional() || !dep.is_transitive())
             {

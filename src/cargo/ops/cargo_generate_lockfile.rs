@@ -2,10 +2,10 @@ use std::collections::{BTreeMap, HashSet};
 
 use termcolor::Color::{self, Cyan, Green, Red};
 
-use core::PackageId;
 use core::registry::PackageRegistry;
-use core::{Resolve, SourceId, Workspace};
 use core::resolver::Method;
+use core::PackageId;
+use core::{Resolve, SourceId, Workspace};
 use ops;
 use util::config::Config;
 use util::CargoResult;
