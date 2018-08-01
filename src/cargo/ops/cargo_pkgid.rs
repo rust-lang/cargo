@@ -1,5 +1,5 @@
-use ops;
 use core::{PackageIdSpec, Workspace};
+use ops;
 use util::CargoResult;
 
 pub fn pkgid(ws: &Workspace, spec: Option<&str>) -> CargoResult<PackageIdSpec> {
