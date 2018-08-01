@@ -70,7 +70,7 @@ fn new_config(env: &[(&str, &str)]) -> Config {
 
 fn assert_error(error: CargoError, msgs: &str) {
     let causes = error
-        .causes()
+        .iter_chain()
         .map(|e| e.to_string())
         .collect::<Vec<_>>()
         .join("\n");
