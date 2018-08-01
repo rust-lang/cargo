@@ -160,15 +160,21 @@ fn check_not_dirty(p: &Package, src: &PathSource, config: &Config) -> CargoResul
             let path = path.strip_prefix(workdir).unwrap_or(path);
             if let Ok(status) = repo.status_file(path) {
                 if (status & git2::Status::IGNORED).is_empty() {
-                    debug!("found (git) Cargo.toml at {:?}", path);
+                    debug!(
+                        "found (git) Cargo.toml at {:?} in workdir {:?}, \
+                         manifest {:?}",
+                        path, workdir, p.manifest_path()
+                    );
                     return git(p, src, &repo);
                 }
             }
             config.shell().verbose(|shell| {
                 shell.warn(format!(
-                    "No (git) Cargo.toml found at `{}` in workdir `{}`",
+                    "No (git) Cargo.toml found at `{}` in workdir `{}`, \
+                     manifest `{}`",
                     path.display(),
-                    workdir.display()
+                    workdir.display(),
+                    p.manifest_path().display(),
                 ))
             })?;
         }
