@@ -5,7 +5,7 @@ use std::path::{Path, PathBuf};
 
 use git2;
 use support::{cargo_process, sleep_ms, ChannelChanger};
-use support::{basic_manifest, execs, git, paths, project, registry, path2url};
+use support::{basic_manifest, execs, git, is_nightly, paths, project, registry, path2url};
 use support::registry::Package;
 use flate2::read::GzDecoder;
 use support::hamcrest::{assert_that, contains, existing_file};
@@ -934,6 +934,9 @@ fn package_two_kinds_of_deps() {
 
 #[test]
 fn test_edition() {
+    if !is_nightly() { // --edition is nightly-only
+        return;
+    }
     let p = project()
         .file(
             "Cargo.toml",
@@ -982,7 +985,6 @@ fn test_edition_missing() {
     assert_that(
         p.cargo("build").arg("-v").masquerade_as_nightly_cargo(),
         execs()
-            .with_no_expected_status() // passes on nightly, fails on stable, b/c --edition is nightly-only
                 // --edition is still in flux and we're not passing -Zunstable-options
                 // from Cargo so it will probably error. Only partially match the output
                 // until stuff stabilizes
