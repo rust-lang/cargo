@@ -37,7 +37,7 @@ matrix:
         - rustup toolchain install nightly
         - cargo +nightly generate-lockfile -Z minimal-versions
         - cargo -V
-        - cargo check --tests
+        - cargo test
 
     - env: TARGET=x86_64-unknown-linux-gnu
            ALT=i686-unknown-linux-gnu

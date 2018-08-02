@@ -4,8 +4,8 @@
 #![cfg_attr(feature = "cargo-clippy", allow(boxed_local))]             // bug rust-lang-nursery/rust-clippy#1123
 #![cfg_attr(feature = "cargo-clippy", allow(cyclomatic_complexity))]   // large project
 #![cfg_attr(feature = "cargo-clippy", allow(derive_hash_xor_eq))]      // there's an intentional incoherence
-#![cfg_attr(feature = "cargo-clippy", allow(explicit_into_iter_loop))] // (unclear why)
-#![cfg_attr(feature = "cargo-clippy", allow(explicit_iter_loop))]      // (unclear why)
+#![cfg_attr(feature = "cargo-clippy", allow(explicit_into_iter_loop))] // explicit loops are clearer
+#![cfg_attr(feature = "cargo-clippy", allow(explicit_iter_loop))]      // explicit loops are clearer
 #![cfg_attr(feature = "cargo-clippy", allow(identity_op))]             // used for vertical alignment
 #![cfg_attr(feature = "cargo-clippy", allow(implicit_hasher))]         // large project
 #![cfg_attr(feature = "cargo-clippy", allow(large_enum_variant))]      // large project
