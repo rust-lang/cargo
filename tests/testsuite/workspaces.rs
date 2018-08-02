@@ -774,7 +774,7 @@ fn explicit_package_argument_works_with_virtual_manifest() {
         .file("bar/src/main.rs", "fn main() {}");
     let p = p.build();
     assert_that(
-        p.cargo("build").cwd(p.root()).args(&["--package", "bar"]),
+        p.cargo("build --package bar").cwd(p.root()),
         execs().with_status(0),
     );
     assert_that(&p.root().join("Cargo.lock"), existing_file());
@@ -1276,7 +1276,7 @@ fn workspace_with_transitive_dev_deps() {
         .file("baz/src/lib.rs", r#"pub fn do_stuff() {}"#);
     let p = p.build();
 
-    assert_that(p.cargo("test").args(&["-p", "bar"]), execs().with_status(0));
+    assert_that(p.cargo("test -p bar"), execs().with_status(0));
 }
 
 #[test]

@@ -2,9 +2,7 @@ use std::fs::{self, File};
 use std::io::prelude::*;
 use std::path::Path;
 
-use cargo::util::ProcessBuilder;
-use support;
-use support::execs;
+use support::{cargo_process, execs};
 use support::git::repo;
 use support::paths;
 use support::registry::{api_path, registry as registry_url, registry_path};
@@ -95,12 +93,6 @@ registry = '{reg}'
         .unwrap();
 }
 
-fn cargo_process(s: &str) -> ProcessBuilder {
-    let mut b = support::cargo_process();
-    b.arg(s);
-    b
-}
-
 #[test]
 fn not_update() {
     setup();
@@ -116,7 +108,7 @@ fn not_update() {
     regsrc.update().unwrap();
 
     assert_that(
-        cargo_process("search").arg("postgres"),
+        cargo_process("search postgres"),
         execs()
             .with_status(0)
             .with_stdout_contains(
@@ -132,7 +124,7 @@ fn replace_default() {
     set_cargo_config();
 
     assert_that(
-        cargo_process("search").arg("postgres"),
+        cargo_process("search postgres"),
         execs()
             .with_status(0)
             .with_stdout_contains(
@@ -147,10 +139,7 @@ fn simple() {
     setup();
 
     assert_that(
-        cargo_process("search")
-            .arg("postgres")
-            .arg("--index")
-            .arg(registry_url().to_string()),
+        cargo_process("search postgres --index").arg(registry_url().to_string()),
         execs().with_status(0).with_stdout_contains(
             "hoare = \"0.1.1\"    # Design by contract style assertions for Rust",
         ),
@@ -164,10 +153,7 @@ fn simple_with_host() {
     setup();
 
     assert_that(
-        cargo_process("search")
-            .arg("postgres")
-            .arg("--host")
-            .arg(registry_url().to_string()),
+        cargo_process("search postgres --host").arg(registry_url().to_string()),
         execs()
             .with_status(0)
             .with_stderr(&format!(
@@ -198,12 +184,7 @@ fn simple_with_index_and_host() {
     setup();
 
     assert_that(
-        cargo_process("search")
-            .arg("postgres")
-            .arg("--index")
-            .arg(registry_url().to_string())
-            .arg("--host")
-            .arg(registry_url().to_string()),
+        cargo_process("search postgres --index").arg(registry_url().to_string()).arg("--host").arg(registry_url().to_string()),
         execs()
             .with_status(0)
             .with_stderr(&format!(
@@ -232,11 +213,7 @@ fn multiple_query_params() {
     setup();
 
     assert_that(
-        cargo_process("search")
-            .arg("postgres")
-            .arg("sql")
-            .arg("--index")
-            .arg(registry_url().to_string()),
+        cargo_process("search postgres sql --index").arg(registry_url().to_string()),
         execs().with_status(0).with_stdout_contains(
             "hoare = \"0.1.1\"    # Design by contract style assertions for Rust",
         ),
@@ -245,15 +222,15 @@ fn multiple_query_params() {
 
 #[test]
 fn help() {
-    assert_that(cargo_process("search").arg("-h"), execs().with_status(0));
-    assert_that(cargo_process("help").arg("search"), execs().with_status(0));
+    assert_that(cargo_process("search -h"), execs().with_status(0));
+    assert_that(cargo_process("help search"), execs().with_status(0));
     // Ensure that help output goes to stdout, not stderr.
     assert_that(
-        cargo_process("search").arg("--help"),
+        cargo_process("search --help"),
         execs().with_stderr(""),
     );
     assert_that(
-        cargo_process("search").arg("--help"),
+        cargo_process("search --help"),
         execs().with_stdout_contains("[..] --frozen [..]"),
     );
 }

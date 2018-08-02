@@ -78,11 +78,7 @@ fn login_with_old_credentials() {
     setup_old_credentials();
 
     assert_that(
-        cargo_process()
-            .arg("login")
-            .arg("--host")
-            .arg(registry().to_string())
-            .arg(TOKEN),
+        cargo_process("login --host").arg(registry().to_string()).arg(TOKEN),
         execs().with_status(0),
     );
 
@@ -105,11 +101,7 @@ fn login_with_new_credentials() {
     setup_new_credentials();
 
     assert_that(
-        cargo_process()
-            .arg("login")
-            .arg("--host")
-            .arg(registry().to_string())
-            .arg(TOKEN),
+        cargo_process("login --host").arg(registry().to_string()).arg(TOKEN),
         execs().with_status(0),
     );
 
@@ -129,11 +121,7 @@ fn login_with_old_and_new_credentials() {
 #[test]
 fn login_without_credentials() {
     assert_that(
-        cargo_process()
-            .arg("login")
-            .arg("--host")
-            .arg(registry().to_string())
-            .arg(TOKEN),
+        cargo_process("login --host").arg(registry().to_string()).arg(TOKEN),
         execs().with_status(0),
     );
 
@@ -150,11 +138,7 @@ fn new_credentials_is_used_instead_old() {
     setup_new_credentials();
 
     assert_that(
-        cargo_process()
-            .arg("login")
-            .arg("--host")
-            .arg(registry().to_string())
-            .arg(TOKEN),
+        cargo_process("login --host").arg(registry().to_string()).arg(TOKEN),
         execs().with_status(0),
     );
 
@@ -172,13 +156,8 @@ fn registry_credentials() {
     let reg = "test-reg";
 
     assert_that(
-        cargo_process()
-            .arg("login")
-            .masquerade_as_nightly_cargo()
-            .arg("--registry")
-            .arg(reg)
-            .arg(TOKEN)
-            .arg("-Zunstable-options"),
+        cargo_process("login --registry").arg(reg).arg(TOKEN).arg("-Zunstable-options")
+            .masquerade_as_nightly_cargo(),
         execs().with_status(0),
     );
 
