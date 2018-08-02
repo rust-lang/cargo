@@ -3207,10 +3207,9 @@ fn cargo_test_env() {
         .file("src/lib.rs", &src)
         .build();
 
-    let mut pr = p.cargo("test");
     let cargo = cargo_exe().canonicalize().unwrap();
     assert_that(
-        pr.args(&["--lib", "--", "--nocapture"]),
+        p.cargo("test --lib -- --nocapture"),
         execs().with_status(0).with_stdout_contains(format!(
             "\
 {}

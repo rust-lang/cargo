@@ -283,7 +283,7 @@ fn bad_cksum() {
     t!(File::create(&pkg.archive_dst()));
 
     assert_that(
-        p.cargo("build").arg("-v"),
+        p.cargo("build -v"),
         execs().with_status(101).with_stderr(
             "\
 [UPDATING] registry [..]
@@ -376,7 +376,7 @@ fn package_with_path_deps() {
         .build();
 
     assert_that(
-        p.cargo("package").arg("-v"),
+        p.cargo("package -v"),
         execs().with_status(101).with_stderr_contains(
             "\
 [ERROR] failed to verify package tarball
@@ -701,7 +701,7 @@ fn update_lockfile() {
 
     println!("0.0.3 update");
     assert_that(
-        p.cargo("update").arg("-p").arg("bar"),
+        p.cargo("update -p bar"),
         execs().with_status(0).with_stderr(
             "\
 [UPDATING] registry `[..]`
@@ -728,7 +728,7 @@ fn update_lockfile() {
     Package::new("bar", "0.0.4").dep("spam", "0.2.5").publish();
     Package::new("spam", "0.2.5").publish();
     assert_that(
-        p.cargo("update").arg("-p").arg("bar"),
+        p.cargo("update -p bar"),
         execs().with_status(0).with_stderr(
             "\
 [UPDATING] registry `[..]`
@@ -741,7 +741,7 @@ fn update_lockfile() {
     println!("new dependencies update");
     Package::new("bar", "0.0.5").publish();
     assert_that(
-        p.cargo("update").arg("-p").arg("bar"),
+        p.cargo("update -p bar"),
         execs().with_status(0).with_stderr(
             "\
 [UPDATING] registry `[..]`
@@ -1144,7 +1144,7 @@ fn update_transitive_dependency() {
     Package::new("b", "0.1.1").publish();
 
     assert_that(
-        p.cargo("update").arg("-pb"),
+        p.cargo("update -pb"),
         execs().with_status(0).with_stderr(
             "\
 [UPDATING] registry `[..]`
@@ -1206,7 +1206,7 @@ fn update_backtracking_ok() {
         .publish();
 
     assert_that(
-        p.cargo("update").arg("-p").arg("hyper"),
+        p.cargo("update -p hyper"),
         execs().with_status(0).with_stderr(
             "\
 [UPDATING] registry `[..]`
@@ -1248,7 +1248,7 @@ fn update_multiple_packages() {
     Package::new("c", "0.1.1").publish();
 
     assert_that(
-        p.cargo("update").arg("-pa").arg("-pb"),
+        p.cargo("update -pa -pb"),
         execs().with_status(0).with_stderr(
             "\
 [UPDATING] registry `[..]`
@@ -1259,7 +1259,7 @@ fn update_multiple_packages() {
     );
 
     assert_that(
-        p.cargo("update").arg("-pb").arg("-pc"),
+        p.cargo("update -pb -pc"),
         execs().with_status(0).with_stderr(
             "\
 [UPDATING] registry `[..]`
@@ -1349,7 +1349,7 @@ fn update_same_prefix_oh_my_how_was_this_a_bug() {
 
     assert_that(p.cargo("generate-lockfile"), execs().with_status(0));
     assert_that(
-        p.cargo("update").arg("-pfoobar").arg("--precise=0.2.0"),
+        p.cargo("update -pfoobar --precise=0.2.0"),
         execs().with_status(0),
     );
 }
@@ -1466,7 +1466,7 @@ fn upstream_warnings_on_extra_verbose() {
         .publish();
 
     assert_that(
-        p.cargo("build").arg("-vv"),
+        p.cargo("build -vv"),
         execs()
             .with_status(0)
             .with_stderr_contains("[..]warning: function is never used[..]"),
@@ -1492,7 +1492,7 @@ fn disallow_network() {
         .build();
 
     assert_that(
-        p.cargo("build").arg("--frozen"),
+        p.cargo("build --frozen"),
         execs().with_status(101).with_stderr(
             "\
 error: failed to load source for a dependency on `foo`
@@ -1773,7 +1773,7 @@ fn toml_lies_but_index_is_truth() {
         .file("src/main.rs", "fn main() {}")
         .build();
 
-    assert_that(p.cargo("build").arg("-v"), execs().with_status(0));
+    assert_that(p.cargo("build -v"), execs().with_status(0));
 }
 
 #[test]
@@ -1798,7 +1798,7 @@ fn vv_prints_warnings() {
         .file("src/main.rs", "fn main() {}")
         .build();
 
-    assert_that(p.cargo("build").arg("-vv"), execs().with_status(0));
+    assert_that(p.cargo("build -vv"), execs().with_status(0));
 }
 
 #[test]
@@ -1824,7 +1824,7 @@ fn bad_and_or_malicious_packages_rejected() {
         .build();
 
     assert_that(
-        p.cargo("build").arg("-vv"),
+        p.cargo("build -vv"),
         execs().with_status(101).with_stderr(
             "\
 [UPDATING] [..]
