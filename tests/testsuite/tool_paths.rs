@@ -179,7 +179,7 @@ fn custom_runner() {
             "\
 [COMPILING] foo v0.0.1 ({url})
 [FINISHED] dev [unoptimized + debuginfo] target(s) in [..]
-[RUNNING] `nonexistent-runner -r target[/]debug[/]foo[EXE] --param`
+[RUNNING] `nonexistent-runner -r target/debug/foo[EXE] --param`
 ",
             url = p.url()
         )),
@@ -193,7 +193,7 @@ fn custom_runner() {
 [COMPILING] foo v0.0.1 ({url})
 [RUNNING] `rustc [..]`
 [FINISHED] dev [unoptimized + debuginfo] target(s) in [..]
-[RUNNING] `nonexistent-runner -r [..][/]target[/]debug[/]deps[/]test-[..][EXE] --param`
+[RUNNING] `nonexistent-runner -r [..]/target/debug/deps/test-[..][EXE] --param`
 ",
             url = p.url()
         )),
@@ -208,7 +208,7 @@ fn custom_runner() {
 [RUNNING] `rustc [..]`
 [RUNNING] `rustc [..]`
 [FINISHED] release [optimized] target(s) in [..]
-[RUNNING] `nonexistent-runner -r [..][/]target[/]release[/]deps[/]bench-[..][EXE] --param --bench`
+[RUNNING] `nonexistent-runner -r [..]/target/release/deps/bench-[..][EXE] --param --bench`
 ",
             url = p.url()
         )),

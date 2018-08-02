@@ -50,7 +50,7 @@ See [..]
         execs().with_status(0).with_stdout(
             "\
 Cargo.toml
-src[/]main.rs
+src/main.rs
 ",
         ),
     );
@@ -327,17 +327,17 @@ fn exclude() {
 [WARNING] manifest has no description[..]
 See http://doc.crates.io/manifest.html#package-metadata for more info.
 [PACKAGING] foo v0.0.1 ([..])
-[WARNING] [..] file `dir_root_1[/]some_dir[/]file` WILL be excluded [..]
+[WARNING] [..] file `dir_root_1/some_dir/file` WILL be excluded [..]
 See [..]
-[WARNING] [..] file `dir_root_2[/]some_dir[/]file` WILL be excluded [..]
+[WARNING] [..] file `dir_root_2/some_dir/file` WILL be excluded [..]
 See [..]
-[WARNING] [..] file `dir_root_3[/]some_dir[/]file` WILL be excluded [..]
+[WARNING] [..] file `dir_root_3/some_dir/file` WILL be excluded [..]
 See [..]
-[WARNING] [..] file `some_dir[/]dir_deep_1[/]some_dir[/]file` WILL be excluded [..]
+[WARNING] [..] file `some_dir/dir_deep_1/some_dir/file` WILL be excluded [..]
 See [..]
-[WARNING] [..] file `some_dir[/]dir_deep_3[/]some_dir[/]file` WILL be excluded [..]
+[WARNING] [..] file `some_dir/dir_deep_3/some_dir/file` WILL be excluded [..]
 See [..]
-[WARNING] [..] file `some_dir[/]file_deep_1` WILL be excluded [..]
+[WARNING] [..] file `some_dir/file_deep_1` WILL be excluded [..]
 See [..]
 [ARCHIVING] [..]
 [ARCHIVING] [..]
@@ -371,23 +371,23 @@ See [..]
         execs().with_status(0).with_stdout(
             "\
 Cargo.toml
-dir_root_1[/]some_dir[/]file
-dir_root_2[/]some_dir[/]file
-dir_root_3[/]some_dir[/]file
+dir_root_1/some_dir/file
+dir_root_2/some_dir/file
+dir_root_3/some_dir/file
 file_root_3
 file_root_4
 file_root_5
-some_dir[/]dir_deep_1[/]some_dir[/]file
-some_dir[/]dir_deep_2[/]some_dir[/]file
-some_dir[/]dir_deep_3[/]some_dir[/]file
-some_dir[/]dir_deep_4[/]some_dir[/]file
-some_dir[/]dir_deep_5[/]some_dir[/]file
-some_dir[/]file_deep_1
-some_dir[/]file_deep_2
-some_dir[/]file_deep_3
-some_dir[/]file_deep_4
-some_dir[/]file_deep_5
-src[/]main.rs
+some_dir/dir_deep_1/some_dir/file
+some_dir/dir_deep_2/some_dir/file
+some_dir/dir_deep_3/some_dir/file
+some_dir/dir_deep_4/some_dir/file
+some_dir/dir_deep_5/some_dir/file
+some_dir/file_deep_1
+some_dir/file_deep_2
+some_dir/file_deep_3
+some_dir/file_deep_4
+some_dir/file_deep_5
+src/main.rs
 ",
         ),
     );
@@ -1120,7 +1120,7 @@ See [..]
             "\
 Cargo.lock
 Cargo.toml
-src[/]main.rs
+src/main.rs
 ",
         ),
     );
@@ -1298,7 +1298,7 @@ error: failed to verify package tarball
 
 Caused by:
   Source directory was modified by build.rs during cargo publish. \
-Build scripts should not modify anything outside of OUT_DIR. Modified file: [..]src[/]generated.txt
+Build scripts should not modify anything outside of OUT_DIR. Modified file: [..]src/generated.txt
 
 To proceed despite this, pass the `--no-verify` flag.",
                ),

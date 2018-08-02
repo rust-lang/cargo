@@ -29,14 +29,14 @@ fn profile_overrides() {
         execs().with_status(0).with_stderr(&format!(
             "\
 [COMPILING] test v0.0.0 ({url})
-[RUNNING] `rustc --crate-name test src[/]lib.rs --crate-type lib \
+[RUNNING] `rustc --crate-name test src/lib.rs --crate-type lib \
         --emit=dep-info,link \
         -C opt-level=1 \
         -C debug-assertions=on \
         -C metadata=[..] \
         -C rpath \
         --out-dir [..] \
-        -L dependency={dir}[/]target[/]debug[/]deps`
+        -L dependency={dir}/target/debug/deps`
 [FINISHED] dev [optimized] target(s) in [..]
 ",
             dir = p.root().display(),
@@ -68,12 +68,12 @@ fn opt_level_override_0() {
         execs().with_status(0).with_stderr(&format!(
             "\
 [COMPILING] test v0.0.0 ({url})
-[RUNNING] `rustc --crate-name test src[/]lib.rs --crate-type lib \
+[RUNNING] `rustc --crate-name test src/lib.rs --crate-type lib \
         --emit=dep-info,link \
         -C debuginfo=2 \
         -C metadata=[..] \
         --out-dir [..] \
-        -L dependency={dir}[/]target[/]debug[/]deps`
+        -L dependency={dir}/target/debug/deps`
 [FINISHED] [..] target(s) in [..]
 ",
             dir = p.root().display(),
@@ -104,12 +104,12 @@ fn debug_override_1() {
         execs().with_status(0).with_stderr(&format!(
             "\
 [COMPILING] test v0.0.0 ({url})
-[RUNNING] `rustc --crate-name test src[/]lib.rs --crate-type lib \
+[RUNNING] `rustc --crate-name test src/lib.rs --crate-type lib \
         --emit=dep-info,link \
         -C debuginfo=1 \
         -C metadata=[..] \
         --out-dir [..] \
-        -L dependency={dir}[/]target[/]debug[/]deps`
+        -L dependency={dir}/target/debug/deps`
 [FINISHED] [..] target(s) in [..]
 ",
             dir = p.root().display(),
@@ -143,14 +143,14 @@ fn check_opt_level_override(profile_level: &str, rustc_level: &str) {
         execs().with_status(0).with_stderr(&format!(
             "\
 [COMPILING] test v0.0.0 ({url})
-[RUNNING] `rustc --crate-name test src[/]lib.rs --crate-type lib \
+[RUNNING] `rustc --crate-name test src/lib.rs --crate-type lib \
         --emit=dep-info,link \
         -C opt-level={level} \
         -C debuginfo=2 \
         -C debug-assertions=on \
         -C metadata=[..] \
         --out-dir [..] \
-        -L dependency={dir}[/]target[/]debug[/]deps`
+        -L dependency={dir}/target/debug/deps`
 [FINISHED] [..] target(s) in [..]
 ",
             dir = p.root().display(),
@@ -223,26 +223,26 @@ fn top_level_overrides_deps() {
         execs().with_status(0).with_stderr(&format!(
             "\
 [COMPILING] foo v0.0.0 ({url}/foo)
-[RUNNING] `rustc --crate-name foo foo[/]src[/]lib.rs \
+[RUNNING] `rustc --crate-name foo foo/src/lib.rs \
         --crate-type dylib --crate-type rlib \
         --emit=dep-info,link \
         -C prefer-dynamic \
         -C opt-level=1 \
         -C debuginfo=2 \
         -C metadata=[..] \
-        --out-dir {dir}[/]target[/]release[/]deps \
-        -L dependency={dir}[/]target[/]release[/]deps`
+        --out-dir {dir}/target/release/deps \
+        -L dependency={dir}/target/release/deps`
 [COMPILING] test v0.0.0 ({url})
-[RUNNING] `rustc --crate-name test src[/]lib.rs --crate-type lib \
+[RUNNING] `rustc --crate-name test src/lib.rs --crate-type lib \
         --emit=dep-info,link \
         -C opt-level=1 \
         -C debuginfo=2 \
         -C metadata=[..] \
         --out-dir [..] \
-        -L dependency={dir}[/]target[/]release[/]deps \
-        --extern foo={dir}[/]target[/]release[/]deps[/]\
+        -L dependency={dir}/target/release/deps \
+        --extern foo={dir}/target/release/deps/\
                      {prefix}foo[..]{suffix} \
-        --extern foo={dir}[/]target[/]release[/]deps[/]libfoo.rlib`
+        --extern foo={dir}/target/release/deps/libfoo.rlib`
 [FINISHED] release [optimized + debuginfo] target(s) in [..]
 ",
             dir = p.root().display(),
