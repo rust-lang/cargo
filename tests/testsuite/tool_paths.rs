@@ -174,7 +174,7 @@ fn custom_runner() {
         .build();
 
     assert_that(
-        p.cargo("run").args(&["--", "--param"]),
+        p.cargo("run -- --param"),
         execs().with_stderr_contains(&format!(
             "\
 [COMPILING] foo v0.0.1 ({url})
@@ -186,8 +186,7 @@ fn custom_runner() {
     );
 
     assert_that(
-        p.cargo("test")
-            .args(&["--test", "test", "--verbose", "--", "--param"]),
+        p.cargo("test --test test --verbose -- --param"),
         execs().with_stderr_contains(&format!(
             "\
 [COMPILING] foo v0.0.1 ({url})
@@ -200,8 +199,7 @@ fn custom_runner() {
     );
 
     assert_that(
-        p.cargo("bench")
-            .args(&["--bench", "bench", "--verbose", "--", "--param"]),
+        p.cargo("bench --bench bench --verbose -- --param"),
         execs().with_stderr_contains(&format!(
             "\
 [COMPILING] foo v0.0.1 ({url})

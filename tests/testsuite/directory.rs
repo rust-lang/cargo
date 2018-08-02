@@ -135,7 +135,7 @@ fn simple_install() {
         .build();
 
     assert_that(
-        cargo_process().arg("install").arg("bar"),
+        cargo_process("install bar"),
         execs().with_status(0).with_stderr(
             "  Installing bar v0.1.0
    Compiling foo v0.0.1
@@ -174,7 +174,7 @@ fn simple_install_fail() {
         .build();
 
     assert_that(
-        cargo_process().arg("install").arg("bar"),
+        cargo_process("install bar"),
         execs().with_status(101).with_stderr(
             "  Installing bar v0.1.0
 error: failed to compile `bar v0.1.0`, intermediate artifacts can be found at `[..]`
@@ -218,7 +218,7 @@ fn install_without_feature_dep() {
         .build();
 
     assert_that(
-        cargo_process().arg("install").arg("bar"),
+        cargo_process("install bar"),
         execs().with_status(0).with_stderr(
             "  Installing bar v0.1.0
    Compiling foo v0.0.1

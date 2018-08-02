@@ -361,12 +361,7 @@ impl Project {
     ///     assert_that(p.cargo("build --bin foo"), execs().with_status(0));
     pub fn cargo(&self, cmd: &str) -> ProcessBuilder {
         let mut p = self.process(&cargo_exe());
-        for arg in cmd.split_whitespace() {
-            if arg.contains('"') || arg.contains('\'') {
-                panic!("shell-style argument parsing is not supported")
-            }
-            p.arg(arg);
-        }
+        split_and_add_args(&mut p, cmd);
         return p;
     }
 
@@ -1376,8 +1371,25 @@ impl ChannelChanger for cargo::util::ProcessBuilder {
     }
 }
 
-pub fn cargo_process() -> cargo::util::ProcessBuilder {
-    process(&cargo_exe())
+fn split_and_add_args(p: &mut ProcessBuilder, s: &str) {
+    for arg in s.split_whitespace() {
+        if arg.contains('"') || arg.contains('\'') {
+            panic!("shell-style argument parsing is not supported")
+        }
+        p.arg(arg);
+    }
+}
+
+pub fn cargo_process(s: &str) -> ProcessBuilder {
+    let mut p = process(&cargo_exe());
+    split_and_add_args(&mut p, s);
+    p
+}
+
+pub fn git_process(s: &str) -> ProcessBuilder {
+    let mut p = process("git");
+    split_and_add_args(&mut p, s);
+    p
 }
 
 pub fn sleep_ms(ms: u64) {

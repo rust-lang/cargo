@@ -4,8 +4,8 @@ use std::io::prelude::*;
 use std::path::{Path, PathBuf};
 
 use git2;
-use support::{cargo_process, process, sleep_ms, ChannelChanger};
-use support::{basic_manifest, cargo_exe, execs, git, paths, project, registry, path2url};
+use support::{cargo_process, sleep_ms, ChannelChanger};
+use support::{basic_manifest, execs, git, paths, project, registry, path2url};
 use support::registry::Package;
 use flate2::read::GzDecoder;
 use support::hamcrest::{assert_that, contains, existing_file};
@@ -161,13 +161,11 @@ fn package_verbose() {
         .file("a/Cargo.toml", &basic_manifest("a", "0.0.1"))
         .file("a/src/lib.rs", "")
         .build();
-    let mut cargo = cargo_process();
-    cargo.cwd(p.root());
-    assert_that(cargo.clone().arg("build"), execs().with_status(0));
+    assert_that(cargo_process("build").cwd(p.root()), execs().with_status(0));
 
     println!("package main repo");
     assert_that(
-        cargo.clone().arg("package").arg("-v").arg("--no-verify"),
+        cargo_process("package -v --no-verify").cwd(p.root()),
         execs().with_status(0).with_stderr(
             "\
 [WARNING] manifest has no description[..]
@@ -181,11 +179,7 @@ See http://doc.crates.io/manifest.html#package-metadata for more info.
 
     println!("package sub-repo");
     assert_that(
-        cargo
-            .arg("package")
-            .arg("-v")
-            .arg("--no-verify")
-            .cwd(p.root().join("a")),
+        cargo_process("package -v --no-verify").cwd(p.root().join("a")),
         execs().with_status(0).with_stderr(
             "\
 [WARNING] manifest has no description[..]
@@ -469,11 +463,7 @@ fn package_git_submodule() {
         .unwrap();
 
     assert_that(
-        cargo_process()
-            .arg("package")
-            .cwd(project.root())
-            .arg("--no-verify")
-            .arg("-v"),
+        cargo_process("package --no-verify -v").cwd(project.root()),
         execs()
             .with_status(0)
             .with_stderr_contains("[ARCHIVING] bar/Makefile"),
@@ -491,11 +481,9 @@ fn no_duplicates_from_modified_tracked_files() {
         .unwrap()
         .write_all(br#"fn main() { println!("A change!"); }"#)
         .unwrap();
-    let mut cargo = cargo_process();
-    cargo.cwd(p.root());
-    assert_that(cargo.clone().arg("build"), execs().with_status(0));
+    assert_that(cargo_process("build").cwd(p.root()), execs().with_status(0));
     assert_that(
-        cargo.arg("package").arg("--list"),
+        cargo_process("package --list").cwd(p.root()),
         execs().with_status(0).with_stdout(
             "\
 Cargo.toml
@@ -618,12 +606,9 @@ fn repackage_on_source_change() {
     file.write_all(br#"fn main() { println!("foo"); }"#).unwrap();
     std::mem::drop(file);
 
-    let mut pro = process(&cargo_exe());
-    pro.arg("package").cwd(p.root());
-
     // Check that cargo rebuilds the tarball
     assert_that(
-        pro,
+        cargo_process("package").cwd(p.root()),
         execs().with_status(0).with_stderr(&format!(
             "\
 [WARNING] [..]
