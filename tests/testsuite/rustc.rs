@@ -17,11 +17,11 @@ fn build_lib_for_foo() {
         execs().with_status(0).with_stderr(format!(
             "\
 [COMPILING] foo v0.0.1 ({url})
-[RUNNING] `rustc --crate-name foo src[/]lib.rs --crate-type lib \
+[RUNNING] `rustc --crate-name foo src/lib.rs --crate-type lib \
         --emit=dep-info,link -C debuginfo=2 \
         -C metadata=[..] \
         --out-dir [..] \
-        -L dependency={dir}[/]target[/]debug[/]deps`
+        -L dependency={dir}/target/debug/deps`
 [FINISHED] dev [unoptimized + debuginfo] target(s) in [..]
 ",
             dir = p.root().display(),
@@ -47,12 +47,12 @@ fn lib() {
         execs().with_status(0).with_stderr(format!(
             "\
 [COMPILING] foo v0.0.1 ({url})
-[RUNNING] `rustc --crate-name foo src[/]lib.rs --crate-type lib \
+[RUNNING] `rustc --crate-name foo src/lib.rs --crate-type lib \
         --emit=dep-info,link -C debuginfo=2 \
         -C debug-assertions=off \
         -C metadata=[..] \
         --out-dir [..] \
-        -L dependency={dir}[/]target[/]debug[/]deps`
+        -L dependency={dir}/target/debug/deps`
 [FINISHED] dev [unoptimized + debuginfo] target(s) in [..]
 ",
             dir = p.root().display(),
@@ -73,18 +73,18 @@ fn build_main_and_allow_unstable_options() {
         execs().with_status(0).with_stderr(&format!(
             "\
 [COMPILING] {name} v{version} ({url})
-[RUNNING] `rustc --crate-name {name} src[/]lib.rs --crate-type lib \
+[RUNNING] `rustc --crate-name {name} src/lib.rs --crate-type lib \
         --emit=dep-info,link -C debuginfo=2 \
         -C metadata=[..] \
         --out-dir [..] \
-        -L dependency={dir}[/]target[/]debug[/]deps`
-[RUNNING] `rustc --crate-name {name} src[/]main.rs --crate-type bin \
+        -L dependency={dir}/target/debug/deps`
+[RUNNING] `rustc --crate-name {name} src/main.rs --crate-type bin \
         --emit=dep-info,link -C debuginfo=2 \
         -C debug-assertions \
         -C metadata=[..] \
         --out-dir [..] \
-        -L dependency={dir}[/]target[/]debug[/]deps \
-        --extern {name}={dir}[/]target[/]debug[/]deps[/]lib{name}-[..].rlib`
+        -L dependency={dir}/target/debug/deps \
+        --extern {name}={dir}/target/debug/deps/lib{name}-[..].rlib`
 [FINISHED] dev [unoptimized + debuginfo] target(s) in [..]
 ",
             dir = p.root().display(),
@@ -126,10 +126,10 @@ fn build_with_args_to_one_of_multiple_binaries() {
         execs().with_status(0).with_stderr(format!(
             "\
 [COMPILING] foo v0.0.1 ({url})
-[RUNNING] `rustc --crate-name foo src[/]lib.rs --crate-type lib --emit=dep-info,link \
+[RUNNING] `rustc --crate-name foo src/lib.rs --crate-type lib --emit=dep-info,link \
         -C debuginfo=2 -C metadata=[..] \
         --out-dir [..]`
-[RUNNING] `rustc --crate-name bar src[/]bin[/]bar.rs --crate-type bin --emit=dep-info,link \
+[RUNNING] `rustc --crate-name bar src/bin/bar.rs --crate-type bin --emit=dep-info,link \
         -C debuginfo=2 -C debug-assertions [..]`
 [FINISHED] dev [unoptimized + debuginfo] target(s) in [..]
 ",
@@ -171,10 +171,10 @@ fn build_with_args_to_one_of_multiple_tests() {
         execs().with_status(0).with_stderr(format!(
             "\
 [COMPILING] foo v0.0.1 ({url})
-[RUNNING] `rustc --crate-name foo src[/]lib.rs --crate-type lib --emit=dep-info,link \
+[RUNNING] `rustc --crate-name foo src/lib.rs --crate-type lib --emit=dep-info,link \
         -C debuginfo=2 -C metadata=[..] \
         --out-dir [..]`
-[RUNNING] `rustc --crate-name bar tests[/]bar.rs --emit=dep-info,link -C debuginfo=2 \
+[RUNNING] `rustc --crate-name bar tests/bar.rs --emit=dep-info,link -C debuginfo=2 \
         -C debug-assertions [..]--test[..]`
 [FINISHED] dev [unoptimized + debuginfo] target(s) in [..]
 ",
@@ -268,15 +268,15 @@ fn targets_selected_default() {
         execs().with_status(0)
         // bin
         .with_stderr_contains("\
-            [RUNNING] `rustc --crate-name foo src[/]main.rs --crate-type bin \
+            [RUNNING] `rustc --crate-name foo src/main.rs --crate-type bin \
             --emit=dep-info,link[..]")
         // bench
         .with_stderr_does_not_contain("\
-            [RUNNING] `rustc --crate-name foo src[/]main.rs --emit=dep-info,link \
+            [RUNNING] `rustc --crate-name foo src/main.rs --emit=dep-info,link \
             -C opt-level=3 --test [..]")
         // unit test
         .with_stderr_does_not_contain("\
-            [RUNNING] `rustc --crate-name foo src[/]main.rs --emit=dep-info,link \
+            [RUNNING] `rustc --crate-name foo src/main.rs --emit=dep-info,link \
             -C debuginfo=2 --test [..]"),
     );
 }
@@ -291,15 +291,15 @@ fn targets_selected_all() {
         execs().with_status(0)
         // bin
         .with_stderr_contains("\
-            [RUNNING] `rustc --crate-name foo src[/]main.rs --crate-type bin \
+            [RUNNING] `rustc --crate-name foo src/main.rs --crate-type bin \
             --emit=dep-info,link[..]")
         // bench
         .with_stderr_contains("\
-            [RUNNING] `rustc --crate-name foo src[/]main.rs --emit=dep-info,link \
+            [RUNNING] `rustc --crate-name foo src/main.rs --emit=dep-info,link \
             -C opt-level=3 --test [..]")
         // unit test
         .with_stderr_contains("\
-            [RUNNING] `rustc --crate-name foo src[/]main.rs --emit=dep-info,link \
+            [RUNNING] `rustc --crate-name foo src/main.rs --emit=dep-info,link \
             -C debuginfo=2 --test [..]"),
     );
 }
@@ -474,12 +474,12 @@ fn rustc_test_with_implicit_bin() {
             .with_status(0)
             .with_stderr_contains(
                 "\
-[RUNNING] `rustc --crate-name test1 tests[/]test1.rs [..] --cfg foo [..]
+[RUNNING] `rustc --crate-name test1 tests/test1.rs [..] --cfg foo [..]
 ",
             )
             .with_stderr_contains(
                 "\
-[RUNNING] `rustc --crate-name foo src[/]main.rs [..]
+[RUNNING] `rustc --crate-name foo src/main.rs [..]
 ",
             ),
     );

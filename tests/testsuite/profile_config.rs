@@ -69,11 +69,11 @@ fn profile_config_validate_warnings() {
             .masquerade_as_nightly_cargo(),
         execs().with_status(0).with_stderr_unordered(
             "\
-[WARNING] unused key `profile.asdf` in config file `[..].cargo[/]config`
-[WARNING] unused key `profile.test` in config file `[..].cargo[/]config`
-[WARNING] unused key `profile.dev.bad-key` in config file `[..].cargo[/]config`
-[WARNING] unused key `profile.dev.overrides.bar.bad-key-bar` in config file `[..].cargo[/]config`
-[WARNING] unused key `profile.dev.build-override.bad-key-bo` in config file `[..].cargo[/]config`
+[WARNING] unused key `profile.asdf` in config file `[..].cargo/config`
+[WARNING] unused key `profile.test` in config file `[..].cargo/config`
+[WARNING] unused key `profile.dev.bad-key` in config file `[..].cargo/config`
+[WARNING] unused key `profile.dev.overrides.bar.bad-key-bar` in config file `[..].cargo/config`
+[WARNING] unused key `profile.dev.build-override.bad-key-bo` in config file `[..].cargo/config`
 [COMPILING] foo [..]
 [FINISHED] [..]
 ",
@@ -107,10 +107,10 @@ fn profile_config_error_paths() {
             .masquerade_as_nightly_cargo(),
         execs().with_status(101).with_stderr(
             "\
-[ERROR] failed to parse manifest at `[..]foo[/]Cargo.toml`
+[ERROR] failed to parse manifest at `[..]foo/Cargo.toml`
 
 Caused by:
-  error in [..].cargo[/]config: `profile.dev.rpath` expected true/false, but found a string
+  error in [..].cargo/config: `profile.dev.rpath` expected true/false, but found a string
 ",
         ),
     );
@@ -144,7 +144,7 @@ fn profile_config_validate_errors() {
             .masquerade_as_nightly_cargo(),
         execs().with_status(101).with_stderr(
             "\
-[ERROR] failed to parse manifest at `[..]foo[/]Cargo.toml`
+[ERROR] failed to parse manifest at `[..]foo/Cargo.toml`
 
 Caused by:
   config profile `profile.dev` is not valid
@@ -178,7 +178,7 @@ fn profile_config_syntax_errors() {
 [ERROR] failed to parse manifest at [..]
 
 Caused by:
-  error in [..].cargo[/]config: `profile.dev.codegen-units` expected an integer, but found a string
+  error in [..].cargo/config: `profile.dev.codegen-units` expected an integer, but found a string
 ",
         ),
     );

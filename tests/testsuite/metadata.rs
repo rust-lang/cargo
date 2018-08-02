@@ -42,7 +42,7 @@ fn cargo_metadata_simple() {
                         ],
                         "edition": "2015",
                         "name": "foo",
-                        "src_path": "[..][/]foo[/]src[/]foo.rs"
+                        "src_path": "[..]/foo/src/foo.rs"
                     }
                 ],
                 "features": {},
@@ -61,9 +61,9 @@ fn cargo_metadata_simple() {
             ],
             "root": "foo 0.5.0 (path+file:[..]foo)"
         },
-        "target_directory": "[..]foo[/]target",
+        "target_directory": "[..]foo/target",
         "version": 1,
-        "workspace_root": "[..][/]foo"
+        "workspace_root": "[..]/foo"
     }"#,
         ),
     );
@@ -135,7 +135,7 @@ crate-type = ["lib", "staticlib"]
                         ],
                         "edition": "2015",
                         "name": "foo",
-                        "src_path": "[..][/]foo[/]src[/]lib.rs"
+                        "src_path": "[..]/foo/src/lib.rs"
                     }
                 ],
                 "features": {},
@@ -154,9 +154,9 @@ crate-type = ["lib", "staticlib"]
             ],
             "root": "foo 0.5.0 (path+file:[..]foo)"
         },
-        "target_directory": "[..]foo[/]target",
+        "target_directory": "[..]foo/target",
         "version": 1,
-        "workspace_root": "[..][/]foo"
+        "workspace_root": "[..]/foo"
     }"#,
         ),
     );
@@ -212,7 +212,7 @@ optional_feat = []
                         ],
                         "edition": "2015",
                         "name": "foo",
-                        "src_path": "[..][/]foo[/]src[/]lib.rs"
+                        "src_path": "[..]/foo/src/lib.rs"
                     }
                 ],
                 "features": {
@@ -240,9 +240,9 @@ optional_feat = []
             ],
             "root": "foo 0.5.0 (path+file:[..]foo)"
         },
-        "target_directory": "[..]foo[/]target",
+        "target_directory": "[..]foo/target",
         "version": 1,
-        "workspace_root": "[..][/]foo"
+        "workspace_root": "[..]/foo"
     }"#,
         ),
     );
@@ -429,9 +429,9 @@ fn cargo_metadata_with_deps_and_version() {
             ],
             "root": "foo 0.5.0 (path+file:[..]foo)"
         },
-        "target_directory": "[..]foo[/]target",
+        "target_directory": "[..]foo/target",
         "version": 1,
-        "workspace_root": "[..][/]foo"
+        "workspace_root": "[..]/foo"
     }"#,
         ),
     );
@@ -482,14 +482,14 @@ name = "ex"
                         "crate_types": [ "lib" ],
                         "edition": "2015",
                         "name": "foo",
-                        "src_path": "[..][/]foo[/]src[/]lib.rs"
+                        "src_path": "[..]/foo/src/lib.rs"
                     },
                     {
                         "kind": [ "example" ],
                         "crate_types": [ "bin" ],
                         "edition": "2015",
                         "name": "ex",
-                        "src_path": "[..][/]foo[/]examples[/]ex.rs"
+                        "src_path": "[..]/foo/examples/ex.rs"
                     }
                 ],
                 "features": {},
@@ -510,9 +510,9 @@ name = "ex"
                 }
             ]
         },
-        "target_directory": "[..]foo[/]target",
+        "target_directory": "[..]foo/target",
         "version": 1,
-        "workspace_root": "[..][/]foo"
+        "workspace_root": "[..]/foo"
     }"#,
         ),
     );
@@ -564,14 +564,14 @@ crate-type = ["rlib", "dylib"]
                         "crate_types": [ "lib" ],
                         "edition": "2015",
                         "name": "foo",
-                        "src_path": "[..][/]foo[/]src[/]lib.rs"
+                        "src_path": "[..]/foo/src/lib.rs"
                     },
                     {
                         "kind": [ "example" ],
                         "crate_types": [ "rlib", "dylib" ],
                         "edition": "2015",
                         "name": "ex",
-                        "src_path": "[..][/]foo[/]examples[/]ex.rs"
+                        "src_path": "[..]/foo/examples/ex.rs"
                     }
                 ],
                 "features": {},
@@ -592,9 +592,9 @@ crate-type = ["rlib", "dylib"]
                 }
             ]
         },
-        "target_directory": "[..]foo[/]target",
+        "target_directory": "[..]foo/target",
         "version": 1,
-        "workspace_root": "[..][/]foo"
+        "workspace_root": "[..]/foo"
     }"#,
         ),
     );
@@ -645,11 +645,11 @@ fn workspace_metadata() {
                         "crate_types": [ "lib" ],
                         "edition": "2015",
                         "name": "bar",
-                        "src_path": "[..]bar[/]src[/]lib.rs"
+                        "src_path": "[..]bar/src/lib.rs"
                     }
                 ],
                 "features": {},
-                "manifest_path": "[..]bar[/]Cargo.toml",
+                "manifest_path": "[..]bar/Cargo.toml",
                 "metadata": null
             },
             {
@@ -675,11 +675,11 @@ fn workspace_metadata() {
                         "crate_types": [ "lib" ],
                         "edition": "2015",
                         "name": "baz",
-                        "src_path": "[..]baz[/]src[/]lib.rs"
+                        "src_path": "[..]baz/src/lib.rs"
                     }
                 ],
                 "features": {},
-                "manifest_path": "[..]baz[/]Cargo.toml",
+                "manifest_path": "[..]baz/Cargo.toml",
                 "metadata": null
             }
         ],
@@ -699,9 +699,9 @@ fn workspace_metadata() {
             ],
             "root": null
         },
-        "target_directory": "[..]foo[/]target",
+        "target_directory": "[..]foo/target",
         "version": 1,
-        "workspace_root": "[..][/]foo"
+        "workspace_root": "[..]/foo"
     }"#,
         ),
     )
@@ -752,11 +752,11 @@ fn workspace_metadata_no_deps() {
                         "crate_types": [ "lib" ],
                         "edition": "2015",
                         "name": "bar",
-                        "src_path": "[..]bar[/]src[/]lib.rs"
+                        "src_path": "[..]bar/src/lib.rs"
                     }
                 ],
                 "features": {},
-                "manifest_path": "[..]bar[/]Cargo.toml",
+                "manifest_path": "[..]bar/Cargo.toml",
                 "metadata": null
             },
             {
@@ -782,19 +782,19 @@ fn workspace_metadata_no_deps() {
                         "crate_types": ["lib"],
                         "edition": "2015",
                         "name": "baz",
-                        "src_path": "[..]baz[/]src[/]lib.rs"
+                        "src_path": "[..]baz/src/lib.rs"
                     }
                 ],
                 "features": {},
-                "manifest_path": "[..]baz[/]Cargo.toml",
+                "manifest_path": "[..]baz/Cargo.toml",
                 "metadata": null
             }
         ],
         "workspace_members": ["baz 0.5.0 (path+file:[..]baz)", "bar 0.5.0 (path+file:[..]bar)"],
         "resolve": null,
-        "target_directory": "[..]foo[/]target",
+        "target_directory": "[..]foo/target",
         "version": 1,
-        "workspace_root": "[..][/]foo"
+        "workspace_root": "[..]/foo"
     }"#,
         ),
     )
@@ -838,7 +838,7 @@ const MANIFEST_OUTPUT: &str = r#"
             "crate_types":["bin"],
             "edition": "2015",
             "name":"foo",
-            "src_path":"[..][/]foo[/]src[/]foo.rs"
+            "src_path":"[..]/foo/src/foo.rs"
         }],
         "features":{},
         "manifest_path":"[..]Cargo.toml",
@@ -848,9 +848,9 @@ const MANIFEST_OUTPUT: &str = r#"
     }],
     "workspace_members": [ "foo 0.5.0 (path+file:[..]foo)" ],
     "resolve": null,
-    "target_directory": "[..]foo[/]target",
+    "target_directory": "[..]foo/target",
     "version": 1,
-    "workspace_root": "[..][/]foo"
+    "workspace_root": "[..]/foo"
 }"#;
 
 #[test]
@@ -1036,11 +1036,11 @@ fn package_metadata() {
                         "crate_types": [ "lib" ],
                         "edition": "2015",
                         "name": "foo",
-                        "src_path": "[..]foo[/]src[/]lib.rs"
+                        "src_path": "[..]foo/src/lib.rs"
                     }
                 ],
                 "features": {},
-                "manifest_path": "[..]foo[/]Cargo.toml",
+                "manifest_path": "[..]foo/Cargo.toml",
                 "metadata": {
                     "bar": {
                         "baz": "quux"
@@ -1050,9 +1050,9 @@ fn package_metadata() {
         ],
         "workspace_members": ["foo[..]"],
         "resolve": null,
-        "target_directory": "[..]foo[/]target",
+        "target_directory": "[..]foo/target",
         "version": 1,
-        "workspace_root": "[..][/]foo"
+        "workspace_root": "[..]/foo"
     }"#,
         ),
     );
@@ -1117,7 +1117,7 @@ fn cargo_metadata_path_to_cargo_toml_project() {
                         "lib"
                     ],
                     "name": "bar",
-                    "src_path": "[..]src[/]lib.rs"
+                    "src_path": "[..]src/lib.rs"
                 }
                 ],
                 "version": "0.5.0"
@@ -1197,7 +1197,7 @@ fn package_edition_2018() {
                                 "lib"
                             ],
                             "name": "foo",
-                            "src_path": "[..]src[/]lib.rs"
+                            "src_path": "[..]src/lib.rs"
                         }
                     ],
                     "version": "0.1.0"
@@ -1281,7 +1281,7 @@ fn target_edition_2018() {
                                 "lib"
                             ],
                             "name": "foo",
-                            "src_path": "[..]src[/]lib.rs"
+                            "src_path": "[..]src/lib.rs"
                         },
                         {
                             "crate_types": [
@@ -1292,7 +1292,7 @@ fn target_edition_2018() {
                                 "bin"
                             ],
                             "name": "foo",
-                            "src_path": "[..]src[/]main.rs"
+                            "src_path": "[..]src/main.rs"
                         }
                     ],
                     "version": "0.1.0"
