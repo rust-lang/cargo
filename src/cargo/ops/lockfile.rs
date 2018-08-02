@@ -2,11 +2,11 @@ use std::io::prelude::*;
 
 use toml;
 
-use core::{resolver, Resolve, Workspace};
 use core::resolver::WorkspaceResolve;
-use util::Filesystem;
+use core::{resolver, Resolve, Workspace};
 use util::errors::{CargoResult, CargoResultExt};
 use util::toml as cargo_toml;
+use util::Filesystem;
 
 pub fn load_pkg_lockfile(ws: &Workspace) -> CargoResult<Option<Resolve>> {
     if !ws.root().join("Cargo.lock").exists() {
@@ -25,8 +25,7 @@ pub fn load_pkg_lockfile(ws: &Workspace) -> CargoResult<Option<Resolve>> {
             let resolve: toml::Value = cargo_toml::parse(&s, f.path(), ws.config())?;
             let v: resolver::EncodableResolve = resolve.try_into()?;
             Ok(Some(v.into_resolve(ws)?))
-        })()
-            .chain_err(|| format!("failed to parse lock file at: {}", f.path().display()))?;
+        })().chain_err(|| format!("failed to parse lock file at: {}", f.path().display()))?;
     Ok(resolve)
 }
 

@@ -297,7 +297,7 @@ pub fn compile_ws<'a>(
             profiles,
             extra_compiler_args,
         )?;
-        let mut cx = Context::new(config, &bcx)?;
+        let cx = Context::new(config, &bcx)?;
         cx.compile(&units, export_dir.clone(), &exec)?
     };
 

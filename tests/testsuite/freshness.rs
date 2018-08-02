@@ -362,7 +362,7 @@ fn changing_bin_paths_common_target_features_caches_targets() {
 [..]Compiling dep_crate v0.0.1 ([..])
 [..]Compiling a v0.0.1 ([..])
 [FINISHED] dev [unoptimized + debuginfo] target(s) in [..]
-[RUNNING] `[..]target[/]debug[/]a[EXE]`
+[RUNNING] `[..]target/debug/a[EXE]`
 ",
         ),
     );
@@ -376,7 +376,7 @@ fn changing_bin_paths_common_target_features_caches_targets() {
             "\
 [..]Compiling a v0.0.1 ([..])
 [FINISHED] dev [unoptimized + debuginfo] target(s) in [..]
-[RUNNING] `[..]target[/]debug[/]a[EXE]`
+[RUNNING] `[..]target/debug/a[EXE]`
 ",
         ),
     );
@@ -389,7 +389,7 @@ fn changing_bin_paths_common_target_features_caches_targets() {
 [..]Compiling dep_crate v0.0.1 ([..])
 [..]Compiling b v0.0.1 ([..])
 [FINISHED] dev [unoptimized + debuginfo] target(s) in [..]
-[RUNNING] `[..]target[/]debug[/]b[EXE]`
+[RUNNING] `[..]target/debug/b[EXE]`
 ",
         ),
     );
@@ -403,7 +403,7 @@ fn changing_bin_paths_common_target_features_caches_targets() {
             "\
 [..]Compiling b v0.0.1 ([..])
 [FINISHED] dev [unoptimized + debuginfo] target(s) in [..]
-[RUNNING] `[..]target[/]debug[/]b[EXE]`
+[RUNNING] `[..]target/debug/b[EXE]`
 ",
         ),
     );
@@ -420,7 +420,7 @@ fn changing_bin_paths_common_target_features_caches_targets() {
             "\
 [..]Compiling a v0.0.1 ([..])
 [FINISHED] dev [unoptimized + debuginfo] target(s) in [..]
-[RUNNING] `[..]target[/]debug[/]a[EXE]`
+[RUNNING] `[..]target/debug/a[EXE]`
 ",
         ),
     );
@@ -437,7 +437,7 @@ fn changing_bin_paths_common_target_features_caches_targets() {
             "\
 [..]Compiling b v0.0.1 ([..])
 [FINISHED] dev [unoptimized + debuginfo] target(s) in [..]
-[RUNNING] `[..]target[/]debug[/]b[EXE]`
+[RUNNING] `[..]target/debug/b[EXE]`
 ",
         ),
     );
@@ -854,7 +854,7 @@ fn rebuild_if_environment_changes() {
                 "\
 [COMPILING] foo v0.0.1 ({dir})
 [FINISHED] dev [unoptimized + debuginfo] target(s) in [..]
-[RUNNING] `target[/]debug[/]foo[EXE]`
+[RUNNING] `target/debug/foo[EXE]`
 ",
                 dir = p.url()
             )),
@@ -882,7 +882,7 @@ fn rebuild_if_environment_changes() {
                 "\
 [COMPILING] foo v0.0.1 ({dir})
 [FINISHED] dev [unoptimized + debuginfo] target(s) in [..]
-[RUNNING] `target[/]debug[/]foo[EXE]`
+[RUNNING] `target/debug/foo[EXE]`
 ",
                 dir = p.url()
             )),

@@ -143,7 +143,7 @@ fn broken_fixes_backed_out() {
             after fixes were automatically applied the compiler reported \
             errors within these files:\n\
             \n  \
-            * src[/]lib.rs\n\
+            * src/lib.rs\n\
             \n\
             This likely indicates a bug in either rustc or cargo itself,\n\
             and we would appreciate a bug report! You're likely to see \n\
@@ -203,9 +203,9 @@ fn fix_path_deps() {
             .with_stdout("")
             .with_stderr("\
 [CHECKING] bar v0.1.0 ([..])
-[FIXING] bar[/]src[/]lib.rs (1 fix)
+[FIXING] bar/src/lib.rs (1 fix)
 [CHECKING] foo v0.1.0 ([..])
-[FIXING] src[/]lib.rs (1 fix)
+[FIXING] src/lib.rs (1 fix)
 [FINISHED] [..]
 ")
     );
@@ -280,11 +280,11 @@ fn prepare_for_2018() {
 
     let stderr = "\
 [CHECKING] foo v0.0.1 ([..])
-[FIXING] src[/]lib.rs (2 fixes)
+[FIXING] src/lib.rs (2 fixes)
 [FINISHED] [..]
 ";
     assert_that(
-        p.cargo("fix --prepare-for 2018 --allow-no-vcs"),
+        p.cargo("fix --edition --allow-no-vcs"),
         execs().with_status(0).with_stderr(stderr).with_stdout(""),
     );
 
@@ -319,12 +319,12 @@ fn local_paths() {
 
     let stderr = "\
 [CHECKING] foo v0.0.1 ([..])
-[FIXING] src[/]lib.rs (1 fix)
+[FIXING] src/lib.rs (1 fix)
 [FINISHED] [..]
 ";
 
     assert_that(
-        p.cargo("fix --prepare-for 2018 --allow-no-vcs"),
+        p.cargo("fix --edition --allow-no-vcs"),
         execs().with_status(0).with_stderr(stderr).with_stdout(""),
     );
 
@@ -356,13 +356,13 @@ fn local_paths_no_fix() {
 
     let stderr = "\
 [CHECKING] foo v0.0.1 ([..])
-warning: failed to find `#![feature(rust_2018_preview)]` in `src[/]lib.rs`
+warning: failed to find `#![feature(rust_2018_preview)]` in `src/lib.rs`
 this may cause `cargo fix` to not be able to fix all
 issues in preparation for the 2018 edition
 [FINISHED] [..]
 ";
     assert_that(
-        p.cargo("fix --prepare-for 2018 --allow-no-vcs"),
+        p.cargo("fix --edition --allow-no-vcs"),
         execs().with_status(0).with_stderr(stderr).with_stdout(""),
     );
 }
@@ -410,7 +410,7 @@ fn upgrade_extern_crate() {
     let stderr = "\
 [CHECKING] bar v0.1.0 ([..])
 [CHECKING] foo v0.1.0 ([..])
-[FIXING] src[/]lib.rs (1 fix)
+[FIXING] src/lib.rs (1 fix)
 [FINISHED] [..]
 ";
     assert_that(
@@ -448,11 +448,11 @@ fn specify_rustflags() {
 
     let stderr = "\
 [CHECKING] foo v0.0.1 ([..])
-[FIXING] src[/]lib.rs (1 fix)
+[FIXING] src/lib.rs (1 fix)
 [FINISHED] [..]
 ";
     assert_that(
-        p.cargo("fix --prepare-for 2018 --allow-no-vcs")
+        p.cargo("fix --edition --allow-no-vcs")
             .env("RUSTFLAGS", "-C target-cpu=native"),
         execs().with_status(0).with_stderr(stderr).with_stdout(""),
     );
@@ -490,7 +490,7 @@ fn fixes_extra_mut() {
 
     let stderr = "\
 [CHECKING] foo v0.0.1 ([..])
-[FIXING] src[/]lib.rs (1 fix)
+[FIXING] src/lib.rs (1 fix)
 [FINISHED] [..]
 ";
     assert_that(
@@ -517,7 +517,7 @@ fn fixes_two_missing_ampersands() {
 
     let stderr = "\
 [CHECKING] foo v0.0.1 ([..])
-[FIXING] src[/]lib.rs (2 fixes)
+[FIXING] src/lib.rs (2 fixes)
 [FINISHED] [..]
 ";
     assert_that(
@@ -543,7 +543,7 @@ fn tricky() {
 
     let stderr = "\
 [CHECKING] foo v0.0.1 ([..])
-[FIXING] src[/]lib.rs (2 fixes)
+[FIXING] src/lib.rs (2 fixes)
 [FINISHED] [..]
 ";
     assert_that(
@@ -650,8 +650,8 @@ fn fix_two_files() {
             .env("__CARGO_FIX_YOLO", "1"),
         execs()
             .with_status(0)
-            .with_stderr_contains("[FIXING] src[/]bar.rs (1 fix)")
-            .with_stderr_contains("[FIXING] src[/]lib.rs (1 fix)"),
+            .with_stderr_contains("[FIXING] src/bar.rs (1 fix)")
+            .with_stderr_contains("[FIXING] src/lib.rs (1 fix)"),
     );
     assert!(!p.read_file("src/lib.rs").contains("let mut x = 3;"));
     assert!(!p.read_file("src/bar.rs").contains("let mut x = 3;"));
@@ -694,10 +694,10 @@ fn fixes_missing_ampersand() {
             // compile (and fix) in `--test` mode first, we get two fixes. Otherwise
             // we'll fix one non-test thing, and then fix another one later in
             // test mode.
-            .with_stderr_contains("[FIXING] src[/]lib.rs[..]")
-            .with_stderr_contains("[FIXING] src[/]main.rs (1 fix)")
-            .with_stderr_contains("[FIXING] examples[/]foo.rs (1 fix)")
-            .with_stderr_contains("[FIXING] tests[/]a.rs (1 fix)")
+            .with_stderr_contains("[FIXING] src/lib.rs[..]")
+            .with_stderr_contains("[FIXING] src/main.rs (1 fix)")
+            .with_stderr_contains("[FIXING] examples/foo.rs (1 fix)")
+            .with_stderr_contains("[FIXING] tests/a.rs (1 fix)")
             .with_stderr_contains("[FINISHED] [..]"),
     );
     assert_that(p.cargo("build"), execs().with_status(0));
@@ -882,9 +882,8 @@ fn prepare_for_and_enable() {
         .build();
 
     let stderr = "\
-[CHECKING] foo v0.1.0 ([..])
 error: cannot prepare for the 2018 edition when it is enabled, so cargo cannot
-automatically fix errors in `src[/]lib.rs`
+automatically fix errors in `src/lib.rs`
 
 To prepare for the 2018 edition you should first remove `edition = '2018'` from
 your `Cargo.toml` and then rerun this command. Once all warnings have been fixed
@@ -895,7 +894,7 @@ information about transitioning to the 2018 edition see:
 
 ";
     assert_that(
-        p.cargo("fix --prepare-for 2018 --allow-no-vcs")
+        p.cargo("fix --edition --allow-no-vcs")
             .masquerade_as_nightly_cargo(),
         execs()
             .with_stderr_contains(stderr)
@@ -914,13 +913,13 @@ fn prepare_for_without_feature_issues_warning() {
 
     let stderr = "\
 [CHECKING] foo v0.0.1 ([..])
-warning: failed to find `#![feature(rust_2018_preview)]` in `src[/]lib.rs`
+warning: failed to find `#![feature(rust_2018_preview)]` in `src/lib.rs`
 this may cause `cargo fix` to not be able to fix all
 issues in preparation for the 2018 edition
 [FINISHED] [..]
 ";
     assert_that(
-        p.cargo("fix --prepare-for 2018 --allow-no-vcs")
+        p.cargo("fix --edition --allow-no-vcs")
             .masquerade_as_nightly_cargo(),
         execs()
             .with_stderr(stderr)
@@ -953,7 +952,7 @@ fn fix_overlapping() {
 
     let stderr = "\
 [CHECKING] foo [..]
-[FIXING] src[/]lib.rs (2 fixes)
+[FIXING] src/lib.rs (2 fixes)
 [FINISHED] dev [..]
 ";
 
@@ -965,4 +964,84 @@ fn fix_overlapping() {
     let contents = p.read_file("src/lib.rs");
     println!("{}", contents);
     assert!(contents.contains("crate::foo::<crate::A>()"));
+}
+
+#[test]
+fn fix_idioms() {
+    if !is_nightly() {
+        return
+    }
+    let p = project()
+        .file(
+            "Cargo.toml",
+            r#"
+                cargo-features = ['edition']
+                [package]
+                name = 'foo'
+                version = '0.1.0'
+                edition = '2018'
+            "#,
+        )
+        .file(
+            "src/lib.rs",
+            r#"
+                use std::any::Any;
+                pub fn foo() {
+                    let _x: Box<Any> = Box::new(3);
+                }
+            "#
+        )
+        .build();
+
+    let stderr = "\
+[CHECKING] foo [..]
+[FIXING] src/lib.rs (1 fix)
+[FINISHED] [..]
+";
+    assert_that(
+        p.cargo("fix --edition-idioms --allow-no-vcs")
+            .masquerade_as_nightly_cargo(),
+        execs()
+            .with_stderr(stderr)
+            .with_status(0),
+    );
+
+    assert!(p.read_file("src/lib.rs").contains("Box<dyn Any>"));
+}
+
+#[test]
+fn idioms_2015_ok() {
+    let p = project()
+        .file("src/lib.rs", "")
+        .build();
+
+    assert_that(
+        p.cargo("fix --edition-idioms --allow-no-vcs")
+            .masquerade_as_nightly_cargo(),
+        execs().with_status(0),
+    );
+}
+
+#[test]
+fn both_edition_migrate_flags() {
+    if !is_nightly() {
+        return
+    }
+    let p = project()
+        .file("src/lib.rs", "")
+        .build();
+
+    let stderr = "\
+error: The argument '--edition' cannot be used with '--prepare-for <prepare-for>'
+
+USAGE:
+    cargo[..] fix --edition --message-format <FMT>
+
+For more information try --help
+";
+
+    assert_that(
+        p.cargo("fix --prepare-for 2018 --edition"),
+        execs().with_status(1).with_stderr(stderr),
+    );
 }

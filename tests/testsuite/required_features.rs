@@ -337,7 +337,7 @@ fn test_default_features() {
                 "\
 [COMPILING] foo v0.0.1 ({})
 [FINISHED] dev [unoptimized + debuginfo] target(s) in [..]
-[RUNNING] target[/]debug[/]deps[/]foo-[..][EXE]",
+[RUNNING] target/debug/deps/foo-[..][EXE]",
                 p.url()
             ))
             .with_stdout_contains("test test ... ok"),
@@ -360,7 +360,7 @@ fn test_default_features() {
             .with_stderr(format!(
                 "\
 [FINISHED] dev [unoptimized + debuginfo] target(s) in [..]
-[RUNNING] target[/]debug[/]deps[/]foo-[..][EXE]"
+[RUNNING] target/debug/deps/foo-[..][EXE]"
             ))
             .with_stdout_contains("test test ... ok"),
     );
@@ -408,7 +408,7 @@ fn test_arg_features() {
                 "\
 [COMPILING] foo v0.0.1 ({})
 [FINISHED] dev [unoptimized + debuginfo] target(s) in [..]
-[RUNNING] target[/]debug[/]deps[/]foo-[..][EXE]",
+[RUNNING] target/debug/deps/foo-[..][EXE]",
                 p.url()
             ))
             .with_stdout_contains("test test ... ok"),
@@ -453,7 +453,7 @@ fn test_multiple_required_features() {
                 "\
 [COMPILING] foo v0.0.1 ({})
 [FINISHED] dev [unoptimized + debuginfo] target(s) in [..]
-[RUNNING] target[/]debug[/]deps[/]foo_2-[..][EXE]",
+[RUNNING] target/debug/deps/foo_2-[..][EXE]",
                 p.url()
             ))
             .with_stdout_contains("test test ... ok"),
@@ -467,8 +467,8 @@ fn test_multiple_required_features() {
                 "\
 [COMPILING] foo v0.0.1 ({})
 [FINISHED] dev [unoptimized + debuginfo] target(s) in [..]
-[RUNNING] target[/]debug[/]deps[/]foo_1-[..][EXE]
-[RUNNING] target[/]debug[/]deps[/]foo_2-[..][EXE]",
+[RUNNING] target/debug/deps/foo_1-[..][EXE]
+[RUNNING] target/debug/deps/foo_2-[..][EXE]",
                 p.url()
             ))
             .with_stdout_contains_n("test test ... ok", 2),
@@ -529,7 +529,7 @@ fn bench_default_features() {
                 "\
 [COMPILING] foo v0.0.1 ({})
 [FINISHED] release [optimized] target(s) in [..]
-[RUNNING] target[/]release[/]deps[/]foo-[..][EXE]",
+[RUNNING] target/release/deps/foo-[..][EXE]",
                 p.url()
             ))
             .with_stdout_contains("test bench ... bench: [..]"),
@@ -550,7 +550,7 @@ fn bench_default_features() {
             .with_stderr(format!(
                 "\
 [FINISHED] release [optimized] target(s) in [..]
-[RUNNING] target[/]release[/]deps[/]foo-[..][EXE]"
+[RUNNING] target/release/deps/foo-[..][EXE]"
             ))
             .with_stdout_contains("test bench ... bench: [..]"),
     );
@@ -611,7 +611,7 @@ fn bench_arg_features() {
                 "\
 [COMPILING] foo v0.0.1 ({})
 [FINISHED] release [optimized] target(s) in [..]
-[RUNNING] target[/]release[/]deps[/]foo-[..][EXE]",
+[RUNNING] target/release/deps/foo-[..][EXE]",
                 p.url()
             ))
             .with_stdout_contains("test bench ... bench: [..]"),
@@ -678,7 +678,7 @@ fn bench_multiple_required_features() {
                 "\
 [COMPILING] foo v0.0.1 ({})
 [FINISHED] release [optimized] target(s) in [..]
-[RUNNING] target[/]release[/]deps[/]foo_2-[..][EXE]",
+[RUNNING] target/release/deps/foo_2-[..][EXE]",
                 p.url()
             ))
             .with_stdout_contains("test bench ... bench: [..]"),
@@ -692,8 +692,8 @@ fn bench_multiple_required_features() {
                 "\
 [COMPILING] foo v0.0.1 ({})
 [FINISHED] release [optimized] target(s) in [..]
-[RUNNING] target[/]release[/]deps[/]foo_1-[..][EXE]
-[RUNNING] target[/]release[/]deps[/]foo_2-[..][EXE]",
+[RUNNING] target/release/deps/foo_1-[..][EXE]
+[RUNNING] target/release/deps/foo_2-[..][EXE]",
                 p.url()
             ))
             .with_stdout_contains_n("test bench ... bench: [..]", 2),
@@ -973,7 +973,7 @@ fn dep_feature_in_toml() {
                 "\
 [COMPILING] foo v0.0.1 ({})
 [FINISHED] dev [unoptimized + debuginfo] target(s) in [..]
-[RUNNING] target[/]debug[/]deps[/]foo-[..][EXE]",
+[RUNNING] target/debug/deps/foo-[..][EXE]",
                 p.url()
             ))
             .with_stdout_contains("test test ... ok"),
@@ -990,7 +990,7 @@ fn dep_feature_in_toml() {
 [COMPILING] bar v0.0.1 ({0}/bar)
 [COMPILING] foo v0.0.1 ({0})
 [FINISHED] release [optimized] target(s) in [..]
-[RUNNING] target[/]release[/]deps[/]foo-[..][EXE]",
+[RUNNING] target/release/deps/foo-[..][EXE]",
                     p.url()
                 ))
                 .with_stdout_contains("test bench ... bench: [..]"),
@@ -1126,7 +1126,7 @@ Consider enabling them by passing e.g. `--features=\"bar/a\"`
                 "\
 [COMPILING] foo v0.0.1 ({})
 [FINISHED] dev [unoptimized + debuginfo] target(s) in [..]
-[RUNNING] target[/]debug[/]deps[/]foo-[..][EXE]",
+[RUNNING] target/debug/deps/foo-[..][EXE]",
                 p.url()
             ))
             .with_stdout_contains("test test ... ok"),
@@ -1154,7 +1154,7 @@ Consider enabling them by passing e.g. `--features=\"bar/a\"`
 [COMPILING] bar v0.0.1 ({0}/bar)
 [COMPILING] foo v0.0.1 ({0})
 [FINISHED] release [optimized] target(s) in [..]
-[RUNNING] target[/]release[/]deps[/]foo-[..][EXE]",
+[RUNNING] target/release/deps/foo-[..][EXE]",
                     p.url()
                 ))
                 .with_stdout_contains("test bench ... bench: [..]"),
@@ -1215,7 +1215,7 @@ fn test_skips_compiling_bin_with_missing_required_features() {
                 "\
 [COMPILING] foo v0.0.1 ({})
 [FINISHED] dev [unoptimized + debuginfo] target(s) in [..]
-[RUNNING] target[/]debug[/]deps[/]foo-[..][EXE]",
+[RUNNING] target/debug/deps/foo-[..][EXE]",
                 p.url()
             ))
             .with_stdout_contains("running 0 tests"),
@@ -1244,7 +1244,7 @@ error[E0463]: can't find crate for `bar`",
                     "\
 [COMPILING] foo v0.0.1 ({})
 [FINISHED] release [optimized] target(s) in [..]
-[RUNNING] target[/]release[/]deps[/]foo-[..][EXE]",
+[RUNNING] target/release/deps/foo-[..][EXE]",
                     p.url()
                 ))
                 .with_stdout_contains("running 0 tests"),
