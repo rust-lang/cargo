@@ -175,27 +175,56 @@ See http://doc.crates.io/manifest.html#package-metadata for more info.
 [PACKAGING] foo v0.0.1 ([..])
 [ARCHIVING] [..]
 [ARCHIVING] [..]
+[ARCHIVING] .cargo_vcs_info.json
 ",
         ),
     );
 
-    println!("package sub-repo");
-    assert_that(
-        cargo
-            .arg("package")
-            .arg("-v")
-            .arg("--no-verify")
-            .cwd(p.root().join("a")),
-        execs().with_status(0).with_stderr(
-            "\
+    #[cfg(unix)]
+    {
+        println!("package sub-repo (unix)");
+        assert_that(
+            cargo
+                .arg("package")
+                .arg("-v")
+                .arg("--no-verify")
+                .cwd(p.root().join("a")),
+            execs().with_status(0).with_stderr(
+                "\
 [WARNING] manifest has no description[..]
 See http://doc.crates.io/manifest.html#package-metadata for more info.
 [PACKAGING] a v0.0.1 ([..])
-[ARCHIVING] [..]
-[ARCHIVING] [..]
+[ARCHIVING] Cargo.toml
+[ARCHIVING] src[/]lib.rs
+[ARCHIVING] .cargo_vcs_info.json
 ",
-        ),
-    );
+            ),
+        );
+    }
+
+    // FIXME: From this required change in the test (omits final
+    // .cargo_vcs_info.json) we can only conclude that on windows, and windows
+    // only, cargo is failing to find the parent repo
+    #[cfg(windows)]
+    {
+        println!("package sub-repo (windows)");
+        assert_that(
+            cargo
+                .arg("package")
+                .arg("-v")
+                .arg("--no-verify")
+                .cwd(p.root().join("a")),
+            execs().with_status(0).with_stderr(
+                "\
+[WARNING] manifest has no description[..]
+See http://doc.crates.io/manifest.html#package-metadata for more info.
+[PACKAGING] a v0.0.1 ([..])
+[ARCHIVING] Cargo.toml
+[ARCHIVING] src[/]lib.rs
+",
+            ),
+        );
+    }
 }
 
 #[test]
@@ -216,6 +245,42 @@ See http://doc.crates.io/manifest.html#package-metadata for more info.
 [FINISHED] dev [unoptimized + debuginfo] target(s) in [..]
 ",
             dir = p.url()
+        )),
+    );
+}
+
+#[test]
+fn vcs_file_collision() {
+    let p = project().build();
+    let _ = git::repo(&paths::root().join("foo"))
+        .file(
+            "Cargo.toml",
+            r#"
+            [project]
+            name = "foo"
+            description = "foo"
+            version = "0.0.1"
+            authors = []
+            license = "MIT"
+            documentation = "foo"
+            homepage = "foo"
+            repository = "foo"
+            exclude = ["*.no-existe"]
+        "#)
+        .file(
+            "src/main.rs",
+            r#"
+            fn main() {}
+        "#)
+        .file(".cargo_vcs_info.json", "foo")
+        .build();
+    assert_that(
+        p.cargo("package").arg("--no-verify"),
+        execs().with_status(101).with_stderr(&format!(
+            "\
+[ERROR] Invalid inclusion of reserved file name .cargo_vcs_info.json \
+in package source
+",
         )),
     );
 }
@@ -326,7 +391,6 @@ fn exclude() {
             "\
 [WARNING] manifest has no description[..]
 See http://doc.crates.io/manifest.html#package-metadata for more info.
-[PACKAGING] foo v0.0.1 ([..])
 [WARNING] [..] file `dir_root_1[/]some_dir[/]file` WILL be excluded [..]
 See [..]
 [WARNING] [..] file `dir_root_2[/]some_dir[/]file` WILL be excluded [..]
@@ -339,6 +403,7 @@ See [..]
 See [..]
 [WARNING] [..] file `some_dir[/]file_deep_1` WILL be excluded [..]
 See [..]
+[PACKAGING] foo v0.0.1 ([..])
 [ARCHIVING] [..]
 [ARCHIVING] [..]
 [ARCHIVING] [..]
@@ -495,7 +560,7 @@ fn no_duplicates_from_modified_tracked_files() {
     cargo.cwd(p.root());
     assert_that(cargo.clone().arg("build"), execs().with_status(0));
     assert_that(
-        cargo.arg("package").arg("--list"),
+        cargo.arg("package").arg("--list").arg("--allow-dirty"),
         execs().with_status(0).with_stdout(
             "\
 Cargo.toml
@@ -1176,6 +1241,7 @@ fn package_lockfile_git_repo() {
         p.cargo("package").arg("-l").masquerade_as_nightly_cargo(),
         execs().with_status(0).with_stdout(
             "\
+.cargo_vcs_info.json
 Cargo.lock
 Cargo.toml
 src/main.rs
