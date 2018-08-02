@@ -982,6 +982,7 @@ fn test_edition_missing() {
     assert_that(
         p.cargo("build").arg("-v").masquerade_as_nightly_cargo(),
         execs()
+            .with_no_expected_status() // passes on nightly, fails on stable, b/c --edition is nightly-only
                 // --edition is still in flux and we're not passing -Zunstable-options
                 // from Cargo so it will probably error. Only partially match the output
                 // until stuff stabilizes
