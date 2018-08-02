@@ -540,6 +540,11 @@ impl Execs {
         self
     }
 
+    pub fn with_no_expected_status(mut self) -> Execs {
+        self.expect_exit_code = None;
+        self
+    }
+
     /// Verify that stdout contains the given contiguous lines somewhere in
     /// its output.
     /// See `lines_match` for supported patterns.

@@ -4379,7 +4379,9 @@ fn target_edition() {
 
     assert_that(
         p.cargo("build").arg("-v").masquerade_as_nightly_cargo(),
-        execs().with_stderr_contains("\
+        execs()
+            .with_no_expected_status() // passes on nightly, fails on stable, b/c --edition is nightly-only
+            .with_stderr_contains("\
 [COMPILING] foo v0.0.1 ([..])
 [RUNNING] `rustc [..]--edition=2018 [..]
 "),
