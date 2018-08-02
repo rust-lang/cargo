@@ -890,7 +890,7 @@ fn do_not_rebuilds_on_local_install() {
         .file("src/main.rs", "fn main() {}")
         .build();
 
-    assert_that(p.cargo("build").arg("--release"), execs().with_status(0));
+    assert_that(p.cargo("build --release"), execs().with_status(0));
     assert_that(
         cargo_process("install").arg("--path").arg(p.root()),
         execs().with_status(0).with_stderr(
@@ -1391,7 +1391,7 @@ fn workspace_uses_workspace_target_dir() {
         .file("bar/src/main.rs", "fn main() {}")
         .build();
 
-    assert_that(p.cargo("build").cwd(p.root().join("bar")).arg("--release"),
+    assert_that(p.cargo("build --release").cwd(p.root().join("bar")),
                 execs().with_status(0));
     assert_that(
         cargo_process("install").arg("--path").arg(p.root().join("bar")),
