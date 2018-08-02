@@ -877,7 +877,7 @@ fn ambiguous_git_reference() {
 
     assert_that(
         p.cargo("build").arg("-v"),
-        execs().with_stderr_contains(
+        execs().with_status(101).with_stderr_contains(
             "\
 [WARNING] dependency (bar) specification is ambiguous. \
 Only one of `branch`, `tag` or `rev` is allowed. \
@@ -1097,7 +1097,7 @@ fn both_git_and_path_specified() {
 
     assert_that(
         foo.cargo("build").arg("-v"),
-        execs().with_stderr_contains(
+        execs().with_status(101).with_stderr_contains(
             "\
 [WARNING] dependency (bar) specification is ambiguous. \
 Only one of `git` or `path` is allowed. \
@@ -1162,7 +1162,7 @@ fn ignored_git_revision() {
 
     assert_that(
         foo.cargo("build").arg("-v"),
-        execs().with_stderr_contains(
+        execs().with_status(101).with_stderr_contains(
             "\
              [WARNING] key `branch` is ignored for dependency (bar). \
              This will be considered an error in future versions",
