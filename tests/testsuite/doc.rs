@@ -813,7 +813,7 @@ fn doc_release() {
         execs().with_status(0).with_stderr(
             "\
 [DOCUMENTING] foo v0.0.1 ([..])
-[RUNNING] `rustdoc [..] src[/]lib.rs [..]`
+[RUNNING] `rustdoc [..] src/lib.rs [..]`
 [FINISHED] release [optimized] target(s) in [..]
 ",
         ),
@@ -1178,7 +1178,7 @@ fn doc_workspace_open_different_library_and_package_names() {
         execs()
             .with_status(0)
             .with_stderr_contains("[..] Documenting foo v0.1.0 ([..])")
-            .with_stderr_contains("[..] Opening [..][/]foo[/]target[/]doc[/]foolib[/]index.html")
+            .with_stderr_contains("[..] Opening [..]/foo/target/doc/foolib/index.html")
     );
 }
 
@@ -1212,7 +1212,7 @@ fn doc_workspace_open_binary() {
         execs()
             .with_status(0)
             .with_stderr_contains("[..] Documenting foo v0.1.0 ([..])")
-            .with_stderr_contains("[..] Opening [..][/]foo[/]target[/]doc[/]foobin[/]index.html")
+            .with_stderr_contains("[..] Opening [..]/foo/target/doc/foobin/index.html")
     );
 }
 
@@ -1249,7 +1249,7 @@ fn doc_workspace_open_binary_and_library() {
         execs()
             .with_status(0)
             .with_stderr_contains("[..] Documenting foo v0.1.0 ([..])")
-            .with_stderr_contains("[..] Opening [..][/]foo[/]target[/]doc[/]foolib[/]index.html")
+            .with_stderr_contains("[..] Opening [..]/foo/target/doc/foolib/index.html")
     );
 }
 

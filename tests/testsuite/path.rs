@@ -200,7 +200,7 @@ fn cargo_compile_with_root_dev_deps_with_testing() {
 [COMPILING] [..] v0.5.0 ([..])
 [COMPILING] [..] v0.5.0 ([..])
 [FINISHED] dev [unoptimized + debuginfo] target(s) in [..]
-[RUNNING] target[/]debug[/]deps[/]foo-[..][EXE]",
+[RUNNING] target/debug/deps/foo-[..][EXE]",
             )
             .with_stdout_contains("running 0 tests"),
     );
@@ -562,7 +562,7 @@ Caused by:
   Unable to update file://[..]
 
 Caused by:
-  failed to read `[..]bar[/]Cargo.toml`
+  failed to read `[..]bar/Cargo.toml`
 
 Caused by:
   [..] (os error [..])
@@ -827,7 +827,7 @@ fn dev_deps_no_rebuild_lib() {
 [COMPILING] [..] v0.5.0 ({url}[..])
 [COMPILING] [..] v0.5.0 ({url}[..])
 [FINISHED] dev [unoptimized + debuginfo] target(s) in [..]
-[RUNNING] target[/]debug[/]deps[/]foo-[..][EXE]",
+[RUNNING] target/debug/deps/foo-[..][EXE]",
                 url = p.url()
             ))
             .with_stdout_contains("running 0 tests"),

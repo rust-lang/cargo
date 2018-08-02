@@ -23,7 +23,7 @@ crossbeam-utils = "0.5"
 crypto-hash = "0.3.1"
 curl = "0.4.13"
 env_logger = "0.5.4"
-failure = "0.1.1"
+failure = "0.1.2"
 filetime = "0.2"
 flate2 = "1.0"
 fs2 = "0.4"
@@ -56,9 +56,10 @@ url = "1.1"
 clap = "2.31.2"
 unicode-width = "0.1.5"
 
-# Not actually needed right now but required to make sure that rls/cargo build
-# with the same set of features in rust-lang/rust
-num-traits = "0.2" # enable the default feature
+# A noop dependency that changes in the Rust repository, it's a bit of a hack.
+# See the `src/tools/rustc-workspace-hack/README.md` file in `rust-lang/rust`
+# for more information.
+rustc-workspace-hack = "1.0.0"
 
 [target.'cfg(target_os = "macos")'.dependencies]
 core-foundation = { version = "0.6.0", features = ["mac_os_10_7_support"] }

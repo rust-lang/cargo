@@ -56,7 +56,7 @@ impl Internal {
 
 impl Fail for Internal {
     fn cause(&self) -> Option<&Fail> {
-        self.inner.cause().cause()
+        self.inner.as_fail().cause()
     }
 }
 

@@ -21,10 +21,15 @@ use util::paths;
 
 const FIX_ENV: &str = "__CARGO_FIX_PLZ";
 const BROKEN_CODE_ENV: &str = "__CARGO_FIX_BROKEN_CODE";
+const PREPARE_FOR_ENV: &str = "__CARGO_FIX_PREPARE_FOR";
 const EDITION_ENV: &str = "__CARGO_FIX_EDITION";
 
+const IDIOMS_ENV: &str = "__CARGO_FIX_IDIOMS";
+
 pub struct FixOptions<'a> {
-    pub edition: Option<&'a str>,
+    pub edition: bool,
+    pub prepare_for: Option<&'a str>,
+    pub idioms: bool,
     pub compile_opts: CompileOptions<'a>,
     pub allow_dirty: bool,
     pub allow_no_vcs: bool,
@@ -48,10 +53,19 @@ pub fn fix(ws: &Workspace, opts: &mut FixOptions) -> CargoResult<()> {
         opts.compile_opts.build_config.extra_rustc_env.push((key, "1".to_string()));
     }
 
-    if let Some(edition) = opts.edition {
+    if opts.edition {
+        let key = EDITION_ENV.to_string();
+        opts.compile_opts.build_config.extra_rustc_env.push((key, "1".to_string()));
+    } else if let Some(edition) = opts.prepare_for {
         opts.compile_opts.build_config.extra_rustc_env.push((
-            EDITION_ENV.to_string(),
+            PREPARE_FOR_ENV.to_string(),
             edition.to_string(),
+        ));
+    }
+    if opts.idioms {
+        opts.compile_opts.build_config.extra_rustc_env.push((
+            IDIOMS_ENV.to_string(),
+            "1".to_string(),
         ));
     }
     opts.compile_opts.build_config.cargo_as_rustc_wrapper = true;
@@ -465,9 +479,22 @@ fn log_failed_fix(stderr: &[u8]) -> Result<(), Error> {
 #[derive(Default)]
 struct FixArgs {
     file: Option<PathBuf>,
-    prepare_for_edition: Option<String>,
+    prepare_for_edition: PrepareFor,
+    idioms: bool,
     enabled_edition: Option<String>,
     other: Vec<OsString>,
+}
+
+enum PrepareFor {
+    Next,
+    Edition(String),
+    None,
+}
+
+impl Default for PrepareFor {
+    fn default() -> PrepareFor {
+        PrepareFor::None
+    }
 }
 
 impl FixArgs {
@@ -490,9 +517,12 @@ impl FixArgs {
             }
             ret.other.push(path.into());
         }
-        if let Ok(s) = env::var(EDITION_ENV) {
-            ret.prepare_for_edition = Some(s);
+        if let Ok(s) = env::var(PREPARE_FOR_ENV) {
+            ret.prepare_for_edition = PrepareFor::Edition(s);
+        } else if env::var(EDITION_ENV).is_ok() {
+            ret.prepare_for_edition = PrepareFor::Next;
         }
+        ret.idioms = env::var(IDIOMS_ENV).is_ok();
         return ret
     }
 
@@ -504,9 +534,22 @@ impl FixArgs {
             .arg("--cap-lints=warn");
         if let Some(edition) = &self.enabled_edition {
             cmd.arg("--edition").arg(edition);
+            if self.idioms {
+                match &edition[..] {
+                    "2018" => { cmd.arg("-Wrust-2018-idioms"); }
+                    _ => {}
+                }
+            }
         }
-        if let Some(prepare_for) = &self.prepare_for_edition {
-            cmd.arg("-W").arg(format!("rust-{}-compatibility", prepare_for));
+        match &self.prepare_for_edition {
+            PrepareFor::Edition(edition) => {
+                cmd.arg("-W").arg(format!("rust-{}-compatibility", edition));
+            }
+            PrepareFor::Next => {
+                let edition = self.next_edition();
+                cmd.arg("-W").arg(format!("rust-{}-compatibility", edition));
+            }
+            PrepareFor::None => {}
         }
     }
 
@@ -519,8 +562,9 @@ impl FixArgs {
     /// then yield an error to the user, indicating that this is happening.
     fn verify_not_preparing_for_enabled_edition(&self) -> CargoResult<()> {
         let edition = match &self.prepare_for_edition {
-            Some(s) => s,
-            None => return Ok(()),
+            PrepareFor::Edition(s) => s,
+            PrepareFor::Next => self.next_edition(),
+            PrepareFor::None => return Ok(()),
         };
         let enabled = match &self.enabled_edition {
             Some(s) => s,
@@ -542,10 +586,17 @@ impl FixArgs {
         process::exit(1);
     }
 
+    /// If we're preparing for an edition and we *don't* find the
+    /// `rust_2018_preview` feature, for example, in the entry point file then
+    /// it probably means that the edition isn't actually enabled, so we can't
+    /// actually fix anything.
+    ///
+    /// If this is the case, issue a warning.
     fn warn_if_preparing_probably_inert(&self) -> CargoResult<()> {
         let edition = match &self.prepare_for_edition {
-            Some(s) => s,
-            None => return Ok(()),
+            PrepareFor::Edition(s) => s,
+            PrepareFor::Next => self.next_edition(),
+            PrepareFor::None => return Ok(()),
         };
         let path = match &self.file {
             Some(s) => s,
@@ -566,5 +617,17 @@ impl FixArgs {
         }.post()?;
 
         Ok(())
+    }
+
+    fn next_edition(&self) -> &str {
+        match self.enabled_edition.as_ref().map(|s| &**s) {
+            // 2015 -> 2018,
+            None | Some("2015") => "2018",
+
+            // This'll probably be wrong in 2020, but that's future Cargo's
+            // problem. Eventually though we'll just add more editions here as
+            // necessary.
+            _ => "2018",
+        }
     }
 }

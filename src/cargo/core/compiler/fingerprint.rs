@@ -685,7 +685,7 @@ fn log_compare(unit: &Unit, compare: &CargoResult<()>) {
     };
     info!("fingerprint error for {}: {}", unit.pkg, ce);
 
-    for cause in ce.causes().skip(1) {
+    for cause in ce.iter_causes() {
         info!("  cause: {}", cause);
     }
 }

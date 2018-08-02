@@ -389,10 +389,10 @@ fn check_all() {
         p.cargo("check").arg("--all").arg("-v"),
         execs()
             .with_status(0)
-            .with_stderr_contains("[..] --crate-name foo src[/]lib.rs [..]")
-            .with_stderr_contains("[..] --crate-name foo src[/]main.rs [..]")
-            .with_stderr_contains("[..] --crate-name b b[/]src[/]lib.rs [..]")
-            .with_stderr_contains("[..] --crate-name b b[/]src[/]main.rs [..]"),
+            .with_stderr_contains("[..] --crate-name foo src/lib.rs [..]")
+            .with_stderr_contains("[..] --crate-name foo src/main.rs [..]")
+            .with_stderr_contains("[..] --crate-name b b/src/lib.rs [..]")
+            .with_stderr_contains("[..] --crate-name b b/src/main.rs [..]"),
     );
 }
 
@@ -416,8 +416,8 @@ fn check_virtual_all_implied() {
         p.cargo("check").arg("-v"),
         execs()
             .with_status(0)
-            .with_stderr_contains("[..] --crate-name bar bar[/]src[/]lib.rs [..]")
-            .with_stderr_contains("[..] --crate-name baz baz[/]src[/]lib.rs [..]"),
+            .with_stderr_contains("[..] --crate-name bar bar/src/lib.rs [..]")
+            .with_stderr_contains("[..] --crate-name baz baz/src/lib.rs [..]"),
     );
 }
 
@@ -435,11 +435,11 @@ fn targets_selected_default() {
         foo.cargo("check").arg("-v"),
         execs()
             .with_status(0)
-            .with_stderr_contains("[..] --crate-name foo src[/]lib.rs [..]")
-            .with_stderr_contains("[..] --crate-name foo src[/]main.rs [..]")
-            .with_stderr_does_not_contain("[..] --crate-name example1 examples[/]example1.rs [..]")
-            .with_stderr_does_not_contain("[..] --crate-name test2 tests[/]test2.rs [..]")
-            .with_stderr_does_not_contain("[..] --crate-name bench3 benches[/]bench3.rs [..]"),
+            .with_stderr_contains("[..] --crate-name foo src/lib.rs [..]")
+            .with_stderr_contains("[..] --crate-name foo src/main.rs [..]")
+            .with_stderr_does_not_contain("[..] --crate-name example1 examples/example1.rs [..]")
+            .with_stderr_does_not_contain("[..] --crate-name test2 tests/test2.rs [..]")
+            .with_stderr_does_not_contain("[..] --crate-name bench3 benches/bench3.rs [..]"),
     );
 }
 
@@ -457,11 +457,11 @@ fn targets_selected_all() {
         foo.cargo("check").arg("--all-targets").arg("-v"),
         execs()
             .with_status(0)
-            .with_stderr_contains("[..] --crate-name foo src[/]lib.rs [..]")
-            .with_stderr_contains("[..] --crate-name foo src[/]main.rs [..]")
-            .with_stderr_contains("[..] --crate-name example1 examples[/]example1.rs [..]")
-            .with_stderr_contains("[..] --crate-name test2 tests[/]test2.rs [..]")
-            .with_stderr_contains("[..] --crate-name bench3 benches[/]bench3.rs [..]"),
+            .with_stderr_contains("[..] --crate-name foo src/lib.rs [..]")
+            .with_stderr_contains("[..] --crate-name foo src/main.rs [..]")
+            .with_stderr_contains("[..] --crate-name example1 examples/example1.rs [..]")
+            .with_stderr_contains("[..] --crate-name test2 tests/test2.rs [..]")
+            .with_stderr_contains("[..] --crate-name bench3 benches/bench3.rs [..]"),
     );
 }
 
@@ -565,9 +565,9 @@ fn check_filters() {
         p.cargo("check").arg("--tests").arg("-v"),
         execs()
             .with_status(0)
-            .with_stderr_contains("[..] --crate-name foo src[/]lib.rs [..] --test [..]")
-            .with_stderr_contains("[..] --crate-name foo src[/]lib.rs --crate-type lib [..]")
-            .with_stderr_contains("[..] --crate-name foo src[/]main.rs [..] --test [..]")
+            .with_stderr_contains("[..] --crate-name foo src/lib.rs [..] --test [..]")
+            .with_stderr_contains("[..] --crate-name foo src/lib.rs --crate-type lib [..]")
+            .with_stderr_contains("[..] --crate-name foo src/main.rs [..] --test [..]")
             .with_stderr_contains("[..]unused_unit_lib[..]")
             .with_stderr_contains("[..]unused_unit_bin[..]")
             .with_stderr_contains("[..]unused_normal_lib[..]")
