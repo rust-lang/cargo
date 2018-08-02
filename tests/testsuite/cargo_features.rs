@@ -101,7 +101,7 @@ fn stable_feature_warns() {
         .build();
     assert_that(
         p.cargo("build"),
-        execs().with_status(0).with_stderr(
+        execs().with_stderr(
             "\
 warning: the cargo feature `test-dummy-stable` is now stable and is no longer \
 necessary to be listed in the manifest
@@ -131,7 +131,7 @@ fn nightly_feature_requires_nightly() {
         .build();
     assert_that(
         p.cargo("build").masquerade_as_nightly_cargo(),
-        execs().with_status(0).with_stderr(
+        execs().with_stderr(
             "\
 [COMPILING] a [..]
 [FINISHED] [..]
@@ -185,7 +185,7 @@ fn nightly_feature_requires_nightly_in_dep() {
         .build();
     assert_that(
         p.cargo("build").masquerade_as_nightly_cargo(),
-        execs().with_status(0).with_stderr(
+        execs().with_stderr(
             "\
 [COMPILING] a [..]
 [COMPILING] b [..]
@@ -233,7 +233,7 @@ fn cant_publish() {
         .build();
     assert_that(
         p.cargo("build").masquerade_as_nightly_cargo(),
-        execs().with_status(0).with_stderr(
+        execs().with_stderr(
             "\
 [COMPILING] a [..]
 [FINISHED] [..]
@@ -291,7 +291,6 @@ fn z_flags_rejected() {
             .masquerade_as_nightly_cargo()
             .arg("-Zprint-im-a-teapot"),
         execs()
-            .with_status(0)
             .with_stdout("im-a-teapot = true\n")
             .with_stderr(
                 "\
@@ -325,6 +324,6 @@ fn publish_allowed() {
             .arg("--index")
             .arg(publish::registry().to_string())
             .masquerade_as_nightly_cargo(),
-        execs().with_status(0),
+        execs(),
     );
 }

@@ -98,8 +98,8 @@ fn plugin_to_the_max() {
         .file("src/lib.rs", "pub fn baz() -> i32 { 1 }")
         .build();
 
-    assert_that(foo.cargo("build"), execs().with_status(0));
-    assert_that(foo.cargo("doc"), execs().with_status(0));
+    assert_that(foo.cargo("build"), execs());
+    assert_that(foo.cargo("doc"), execs());
 }
 
 #[test]
@@ -203,7 +203,7 @@ fn plugin_with_dynamic_native_dependency() {
         )
         .build();
 
-    assert_that(build.cargo("build"), execs().with_status(0));
+    assert_that(build.cargo("build"), execs());
 
     let src = workspace.root().join("target/debug");
     let lib = fs::read_dir(&src)
@@ -217,7 +217,7 @@ fn plugin_with_dynamic_native_dependency() {
 
     assert_that(
         foo.cargo("build").env("SRC", &lib).arg("-v"),
-        execs().with_status(0),
+        execs(),
     );
 }
 
@@ -244,7 +244,7 @@ fn plugin_integration() {
         .file("tests/it_works.rs", "")
         .build();
 
-    assert_that(p.cargo("test").arg("-v"), execs().with_status(0));
+    assert_that(p.cargo("test").arg("-v"), execs());
 }
 
 #[test]
@@ -279,7 +279,7 @@ fn doctest_a_plugin() {
         .file("bar/src/lib.rs", "pub fn bar() {}")
         .build();
 
-    assert_that(p.cargo("test").arg("-v"), execs().with_status(0));
+    assert_that(p.cargo("test").arg("-v"), execs());
 }
 
 // See #1515
@@ -386,7 +386,7 @@ fn panic_abort_plugins() {
         )
         .build();
 
-    assert_that(p.cargo("build"), execs().with_status(0));
+    assert_that(p.cargo("build"), execs());
 }
 
 #[test]
@@ -440,5 +440,5 @@ fn shared_panic_abort_plugins() {
         .file("baz/src/lib.rs", "")
         .build();
 
-    assert_that(p.cargo("build"), execs().with_status(0));
+    assert_that(p.cargo("build"), execs());
 }

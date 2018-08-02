@@ -22,7 +22,6 @@ the output.
 assert_that(
     p.cargo("run --bin foo"),
     execs()
-        .with_status(0)
         .with_stderr(
             "\
 [COMPILING] foo [..]
@@ -347,7 +346,7 @@ impl Project {
     /// Example:
     ///         assert_that(
     ///             p.process(&p.bin("foo")),
-    ///             execs().with_status(0).with_stdout("bar\n"),
+    ///             execs().with_stdout("bar\n"),
     ///         );
     pub fn process<T: AsRef<OsStr>>(&self, program: T) -> ProcessBuilder {
         let mut p = ::support::process(program);
@@ -358,7 +357,7 @@ impl Project {
     /// Create a `ProcessBuilder` to run cargo.
     /// Arguments can be separated by spaces.
     /// Example:
-    ///     assert_that(p.cargo("build --bin foo"), execs().with_status(0));
+    ///     assert_that(p.cargo("build --bin foo"), execs());
     pub fn cargo(&self, cmd: &str) -> ProcessBuilder {
         let mut p = self.process(&cargo_exe());
         split_and_add_args(&mut p, cmd);
@@ -1185,7 +1184,7 @@ pub fn execs() -> Execs {
         expect_stdout: None,
         expect_stderr: None,
         expect_stdin: None,
-        expect_exit_code: None,
+        expect_exit_code: Some(0),
         expect_stdout_contains: Vec::new(),
         expect_stderr_contains: Vec::new(),
         expect_either_contains: Vec::new(),

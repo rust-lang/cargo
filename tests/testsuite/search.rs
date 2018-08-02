@@ -110,7 +110,6 @@ fn not_update() {
     assert_that(
         cargo_process("search postgres"),
         execs()
-            .with_status(0)
             .with_stdout_contains(
                 "hoare = \"0.1.1\"    # Design by contract style assertions for Rust",
             )
@@ -126,7 +125,6 @@ fn replace_default() {
     assert_that(
         cargo_process("search postgres"),
         execs()
-            .with_status(0)
             .with_stdout_contains(
                 "hoare = \"0.1.1\"    # Design by contract style assertions for Rust",
             )
@@ -140,7 +138,7 @@ fn simple() {
 
     assert_that(
         cargo_process("search postgres --index").arg(registry_url().to_string()),
-        execs().with_status(0).with_stdout_contains(
+        execs().with_stdout_contains(
             "hoare = \"0.1.1\"    # Design by contract style assertions for Rust",
         ),
     );
@@ -155,7 +153,6 @@ fn simple_with_host() {
     assert_that(
         cargo_process("search postgres --host").arg(registry_url().to_string()),
         execs()
-            .with_status(0)
             .with_stderr(&format!(
                 "\
 [WARNING] The flag '--host' is no longer valid.
@@ -186,7 +183,6 @@ fn simple_with_index_and_host() {
     assert_that(
         cargo_process("search postgres --index").arg(registry_url().to_string()).arg("--host").arg(registry_url().to_string()),
         execs()
-            .with_status(0)
             .with_stderr(&format!(
                 "\
 [WARNING] The flag '--host' is no longer valid.
@@ -214,7 +210,7 @@ fn multiple_query_params() {
 
     assert_that(
         cargo_process("search postgres sql --index").arg(registry_url().to_string()),
-        execs().with_status(0).with_stdout_contains(
+        execs().with_stdout_contains(
             "hoare = \"0.1.1\"    # Design by contract style assertions for Rust",
         ),
     );
@@ -222,8 +218,8 @@ fn multiple_query_params() {
 
 #[test]
 fn help() {
-    assert_that(cargo_process("search -h"), execs().with_status(0));
-    assert_that(cargo_process("help search"), execs().with_status(0));
+    assert_that(cargo_process("search -h"), execs());
+    assert_that(cargo_process("help search"), execs());
     // Ensure that help output goes to stdout, not stderr.
     assert_that(
         cargo_process("search --help"),

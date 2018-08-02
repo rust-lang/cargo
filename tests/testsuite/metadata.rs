@@ -618,7 +618,7 @@ fn workspace_metadata() {
 
     assert_that(
         p.cargo("metadata"),
-        execs().with_status(0).with_json(
+        execs().with_json(
             r#"
     {
         "packages": [
@@ -725,7 +725,7 @@ fn workspace_metadata_no_deps() {
 
     assert_that(
         p.cargo("metadata").arg("--no-deps"),
-        execs().with_status(0).with_json(
+        execs().with_json(
             r#"
     {
         "packages": [
@@ -866,7 +866,7 @@ fn cargo_metadata_no_deps_path_to_cargo_toml_relative() {
             .arg("--manifest-path")
             .arg("foo/Cargo.toml")
             .cwd(p.root().parent().unwrap()),
-        execs().with_status(0).with_json(MANIFEST_OUTPUT),
+        execs().with_json(MANIFEST_OUTPUT),
     );
 }
 
@@ -883,7 +883,7 @@ fn cargo_metadata_no_deps_path_to_cargo_toml_absolute() {
             .arg("--manifest-path")
             .arg(p.root().join("Cargo.toml"))
             .cwd(p.root().parent().unwrap()),
-        execs().with_status(0).with_json(MANIFEST_OUTPUT),
+        execs().with_json(MANIFEST_OUTPUT),
     );
 }
 
@@ -936,7 +936,7 @@ fn cargo_metadata_no_deps_cwd() {
 
     assert_that(
         p.cargo("metadata").arg("--no-deps").cwd(p.root()),
-        execs().with_status(0).with_json(MANIFEST_OUTPUT),
+        execs().with_json(MANIFEST_OUTPUT),
     );
 }
 
@@ -983,7 +983,7 @@ fn multiple_features() {
 
     assert_that(
         p.cargo("metadata").arg("--features").arg("a b"),
-        execs().with_status(0),
+        execs(),
     );
 }
 
@@ -1077,14 +1077,14 @@ fn cargo_metadata_path_to_cargo_toml_project() {
         .arg("--manifest-path")
         .arg(p.root().join("bar/Cargo.toml"))
         .cwd(p.root().parent().unwrap()),
-        execs().with_status(0)
+        execs()
         );
 
     assert_that(
         p.cargo("metadata")
             .arg("--manifest-path")
             .arg(p.root().join("target/package/bar-0.5.0/Cargo.toml")),
-        execs().with_status(0).with_json(
+        execs().with_json(
         r#"
         {
             "packages": [
@@ -1164,7 +1164,7 @@ fn package_edition_2018() {
         .build();
     assert_that(
         p.cargo("metadata").masquerade_as_nightly_cargo(),
-        execs().with_status(0).with_json(
+        execs().with_json(
             r#"
         {
             "packages": [
@@ -1248,7 +1248,7 @@ fn target_edition_2018() {
         .build();
     assert_that(
         p.cargo("metadata").masquerade_as_nightly_cargo(),
-        execs().with_status(0).with_json(
+        execs().with_json(
             r#"
         {
             "packages": [

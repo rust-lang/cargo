@@ -37,7 +37,7 @@ fn run_test(path_env: Option<&OsStr>) {
         .build();
     Package::new("bar", "0.1.0").publish();
 
-    assert_that(foo.cargo("build"), execs().with_status(0));
+    assert_that(foo.cargo("build"), execs());
 
     let index = find_index();
     let path = paths::home().join("tmp");
@@ -75,7 +75,7 @@ fn run_test(path_env: Option<&OsStr>) {
         cmd.env("PATH", path);
     }
     cmd.env("RUST_LOG", "trace");
-    assert_that(cmd, execs().with_status(0));
+    assert_that(cmd, execs());
     let after = find_index()
         .join(".git/objects/pack")
         .read_dir()

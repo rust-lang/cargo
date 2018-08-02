@@ -17,9 +17,7 @@ fn create_empty_gitconfig() {
 fn simple_lib() {
     assert_that(
         cargo_process("new --lib foo --vcs none").env("USER", "foo"),
-        execs()
-            .with_status(0)
-            .with_stderr("[CREATED] library `foo` project"),
+        execs().with_stderr("[CREATED] library `foo` project"),
     );
 
     assert_that(&paths::root().join("foo"), existing_dir());
@@ -50,7 +48,7 @@ mod tests {
 
     assert_that(
         cargo_process("build").cwd(&paths::root().join("foo")),
-        execs().with_status(0),
+        execs(),
     );
 }
 
@@ -58,9 +56,7 @@ mod tests {
 fn simple_bin() {
     assert_that(
         cargo_process("new --bin foo").env("USER", "foo"),
-        execs()
-            .with_status(0)
-            .with_stderr("[CREATED] binary (application) `foo` project"),
+        execs().with_stderr("[CREATED] binary (application) `foo` project"),
     );
 
     assert_that(&paths::root().join("foo"), existing_dir());
@@ -69,7 +65,7 @@ fn simple_bin() {
 
     assert_that(
         cargo_process("build").cwd(&paths::root().join("foo")),
-        execs().with_status(0),
+        execs(),
     );
     assert_that(
         &paths::root().join(&format!("foo/target/debug/foo{}", env::consts::EXE_SUFFIX)),
@@ -91,7 +87,7 @@ fn both_lib_and_bin() {
 fn simple_git() {
     assert_that(
         cargo_process("new --lib foo").env("USER", "foo"),
-        execs().with_status(0),
+        execs(),
     );
 
     assert_that(&paths::root(), existing_dir());
@@ -102,7 +98,7 @@ fn simple_git() {
 
     assert_that(
         cargo_process("build").cwd(&paths::root().join("foo")),
-        execs().with_status(0),
+        execs(),
     );
 }
 
@@ -186,7 +182,7 @@ fn finds_author_user() {
     create_empty_gitconfig();
     assert_that(
         cargo_process("new foo").env("USER", "foo"),
-        execs().with_status(0),
+        execs(),
     );
 
     let toml = paths::root().join("foo/Cargo.toml");
@@ -203,7 +199,7 @@ fn finds_author_user_escaped() {
     create_empty_gitconfig();
     assert_that(
         cargo_process("new foo").env("USER", "foo \"bar\""),
-        execs().with_status(0),
+        execs(),
     );
 
     let toml = paths::root().join("foo/Cargo.toml");
@@ -220,7 +216,7 @@ fn finds_author_username() {
     create_empty_gitconfig();
     assert_that(
         cargo_process("new foo").env_remove("USER").env("USERNAME", "foo"),
-        execs().with_status(0),
+        execs(),
     );
 
     let toml = paths::root().join("foo/Cargo.toml");
@@ -240,7 +236,7 @@ fn finds_author_priority() {
             .env("EMAIL", "baz2")
             .env("CARGO_NAME", "bar")
             .env("CARGO_EMAIL", "baz"),
-        execs().with_status(0),
+        execs(),
     );
 
     let toml = paths::root().join("foo/Cargo.toml");
@@ -259,7 +255,7 @@ fn finds_author_email() {
         cargo_process("new foo")
             .env("USER", "bar")
             .env("EMAIL", "baz"),
-        execs().with_status(0),
+        execs(),
     );
 
     let toml = paths::root().join("foo/Cargo.toml");
@@ -277,7 +273,7 @@ fn finds_author_git() {
     git_process("config --global user.email baz").exec().unwrap();
     assert_that(
         cargo_process("new foo").env("USER", "foo"),
-        execs().with_status(0),
+        execs(),
     );
 
     let toml = paths::root().join("foo/Cargo.toml");
@@ -300,7 +296,7 @@ fn finds_local_author_git() {
     git_process("config user.email baz").exec().unwrap();
     assert_that(
         cargo_process("init").env("USER", "foo"),
-        execs().with_status(0),
+        execs(),
     );
 
     let toml = paths::root().join("Cargo.toml");
@@ -318,7 +314,7 @@ fn finds_git_email() {
         cargo_process("new foo")
             .env("GIT_AUTHOR_NAME", "foo")
             .env("GIT_AUTHOR_EMAIL", "gitfoo"),
-        execs().with_status(0),
+        execs(),
     );
 
     let toml = paths::root().join("foo/Cargo.toml");
@@ -337,7 +333,7 @@ fn finds_git_author() {
         cargo_process("new foo")
             .env_remove("USER")
             .env("GIT_COMMITTER_NAME", "gitfoo"),
-        execs().with_status(0),
+        execs(),
     );
 
     let toml = paths::root().join("foo/Cargo.toml");
@@ -369,7 +365,7 @@ fn author_prefers_cargo() {
 
     assert_that(
         cargo_process("new foo").env("USER", "foo"),
-        execs().with_status(0),
+        execs(),
     );
 
     let toml = paths::root().join("foo/Cargo.toml");
@@ -400,7 +396,7 @@ fn git_prefers_command_line() {
 
     assert_that(
         cargo_process("new foo --vcs git").env("USER", "foo"),
-        execs().with_status(0),
+        execs(),
     );
     assert!(paths::root().join("foo/.gitignore").exists());
 }
@@ -409,7 +405,7 @@ fn git_prefers_command_line() {
 fn subpackage_no_git() {
     assert_that(
         cargo_process("new foo").env("USER", "foo"),
-        execs().with_status(0),
+        execs(),
     );
 
     assert_that(&paths::root().join("foo/.git"), existing_dir());
@@ -419,7 +415,7 @@ fn subpackage_no_git() {
     fs::create_dir(&subpackage).unwrap();
     assert_that(
         cargo_process("new foo/components/subcomponent").env("USER", "foo"),
-        execs().with_status(0),
+        execs(),
     );
 
     assert_that(
@@ -436,7 +432,7 @@ fn subpackage_no_git() {
 fn subpackage_git_with_gitignore() {
     assert_that(
         cargo_process("new foo").env("USER", "foo"),
-        execs().with_status(0),
+        execs(),
     );
 
     assert_that(
@@ -455,7 +451,7 @@ fn subpackage_git_with_gitignore() {
     fs::create_dir(&subpackage).unwrap();
     assert_that(
         cargo_process("new foo/components/subcomponent").env("USER", "foo"),
-        execs().with_status(0),
+        execs(),
     );
 
     assert_that(
@@ -473,14 +469,14 @@ fn subpackage_git_with_gitignore() {
 fn subpackage_git_with_vcs_arg() {
     assert_that(
         cargo_process("new foo").env("USER", "foo"),
-        execs().with_status(0),
+        execs(),
     );
 
     let subpackage = paths::root().join("foo").join("components");
     fs::create_dir(&subpackage).unwrap();
     assert_that(
         cargo_process("new foo/components/subcomponent --vcs git").env("USER", "foo"),
-        execs().with_status(0),
+        execs(),
     );
 
     assert_that(
@@ -517,8 +513,6 @@ fn explicit_invalid_name_not_suggested() {
 fn explicit_project_name() {
     assert_that(
         cargo_process("new --lib foo --name bar").env("USER", "foo"),
-        execs()
-            .with_status(0)
-            .with_stderr("[CREATED] library `bar` project"),
+        execs().with_stderr("[CREATED] library `bar` project"),
     );
 }

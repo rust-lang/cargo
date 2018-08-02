@@ -415,7 +415,7 @@ fn minimal_version_cli() {
         p.cargo("generate-lockfile")
             .masquerade_as_nightly_cargo()
             .arg("-Zminimal-versions"),
-        execs().with_status(0),
+        execs(),
     );
 
     let lock = p.read_lockfile();

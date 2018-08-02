@@ -95,7 +95,7 @@ fn profile_override_basic() {
 
     assert_that(
         p.cargo("build -v").masquerade_as_nightly_cargo(),
-        execs().with_status(0).with_stderr(
+        execs().with_stderr(
             "[COMPILING] bar [..]
 [RUNNING] `rustc --crate-name bar [..] -C opt-level=3 [..]`
 [COMPILING] foo [..]
@@ -137,7 +137,7 @@ fn profile_override_warnings() {
 
     assert_that(
         p.cargo("build").masquerade_as_nightly_cargo(),
-        execs().with_status(0).with_stderr_contains(
+        execs().with_stderr_contains(
             "\
 [WARNING] version or URL in profile override spec `bar:1.2.3` does not match any of the packages: bar v0.5.0 ([..])
 [WARNING] profile override spec `bart` did not match any packages
@@ -315,7 +315,7 @@ fn profile_override_hierarchy() {
 
     assert_that(
         p.cargo("build -v").masquerade_as_nightly_cargo(),
-        execs().with_status(0).with_stderr_unordered("\
+        execs().with_stderr_unordered("\
 [COMPILING] m3 [..]
 [COMPILING] dep [..]
 [RUNNING] `rustc --crate-name m3 m3/src/lib.rs --crate-type lib --emit=dep-info,link -C codegen-units=4 [..]
@@ -429,7 +429,6 @@ fn profile_override_spec() {
     assert_that(
         p.cargo("build -v").masquerade_as_nightly_cargo(),
         execs()
-            .with_status(0)
             .with_stderr_contains(
                 "[RUNNING] `rustc [..]dep1/src/lib.rs [..] -C codegen-units=1 [..]",
             )

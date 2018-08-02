@@ -18,7 +18,6 @@ fn simple_lib() {
     assert_that(
         cargo_process("init --lib --vcs none").env("USER", "foo"),
         execs()
-            .with_status(0)
             .with_stderr("[CREATED] library project"),
     );
 
@@ -26,7 +25,7 @@ fn simple_lib() {
     assert_that(&paths::root().join("src/lib.rs"), existing_file());
     assert_that(&paths::root().join(".gitignore"), is_not(existing_file()));
 
-    assert_that(cargo_process("build"), execs().with_status(0));
+    assert_that(cargo_process("build"), execs());
 }
 
 #[test]
@@ -36,14 +35,13 @@ fn simple_bin() {
     assert_that(
         cargo_process("init --bin --vcs none").env("USER", "foo").cwd(&path),
         execs()
-            .with_status(0)
             .with_stderr("[CREATED] binary (application) project"),
     );
 
     assert_that(&paths::root().join("foo/Cargo.toml"), existing_file());
     assert_that(&paths::root().join("foo/src/main.rs"), existing_file());
 
-    assert_that(cargo_process("build").cwd(&path), execs().with_status(0));
+    assert_that(cargo_process("build").cwd(&path), execs());
     assert_that(
         &paths::root().join(&format!("foo/target/debug/foo{}", env::consts::EXE_SUFFIX)),
         existing_file(),
@@ -80,12 +78,12 @@ fn bin_already_exists(explicit: bool, rellocation: &str) {
     if explicit {
         assert_that(
             cargo_process("init --bin --vcs none").env("USER", "foo").cwd(&path),
-            execs().with_status(0),
+            execs(),
         );
     } else {
         assert_that(
             cargo_process("init --vcs none").env("USER", "foo").cwd(&path),
-            execs().with_status(0),
+            execs(),
         );
     }
 
@@ -220,7 +218,7 @@ fn lib_already_exists(rellocation: &str) {
 
     assert_that(
         cargo_process("init --vcs none").env("USER", "foo").cwd(&path),
-        execs().with_status(0),
+        execs(),
     );
 
     assert_that(&paths::root().join("foo/Cargo.toml"), existing_file());
@@ -252,7 +250,7 @@ fn lib_already_exists_nosrc() {
 fn simple_git() {
     assert_that(
         cargo_process("init --lib --vcs git").env("USER", "foo"),
-        execs().with_status(0),
+        execs(),
     );
 
     assert_that(&paths::root().join("Cargo.toml"), existing_file());
@@ -265,7 +263,7 @@ fn simple_git() {
 fn auto_git() {
     assert_that(
         cargo_process("init --lib").env("USER", "foo"),
-        execs().with_status(0),
+        execs(),
     );
 
     assert_that(&paths::root().join("Cargo.toml"), existing_file());
@@ -314,7 +312,7 @@ fn git_autodetect() {
 
     assert_that(
         cargo_process("init --lib").env("USER", "foo"),
-        execs().with_status(0),
+        execs(),
     );
 
     assert_that(&paths::root().join("Cargo.toml"), existing_file());
@@ -329,7 +327,7 @@ fn mercurial_autodetect() {
 
     assert_that(
         cargo_process("init --lib").env("USER", "foo"),
-        execs().with_status(0),
+        execs(),
     );
 
     assert_that(&paths::root().join("Cargo.toml"), existing_file());
@@ -349,7 +347,7 @@ fn gitignore_appended_not_replaced() {
 
     assert_that(
         cargo_process("init --lib").env("USER", "foo"),
-        execs().with_status(0),
+        execs(),
     );
 
     assert_that(&paths::root().join("Cargo.toml"), existing_file());
@@ -376,7 +374,7 @@ fn gitignore_added_newline_in_existing() {
 
     assert_that(
         cargo_process("init --lib").env("USER", "foo"),
-        execs().with_status(0),
+        execs(),
     );
 
     assert_that(&paths::root().join(".gitignore"), existing_file());
@@ -395,7 +393,7 @@ fn gitignore_no_newline_in_new() {
 
     assert_that(
         cargo_process("init --lib").env("USER", "foo"),
-        execs().with_status(0),
+        execs(),
     );
 
     assert_that(&paths::root().join(".gitignore"), existing_file());
@@ -419,7 +417,7 @@ fn mercurial_added_newline_in_existing() {
 
     assert_that(
         cargo_process("init --lib").env("USER", "foo"),
-        execs().with_status(0),
+        execs(),
     );
 
     assert_that(&paths::root().join(".hgignore"), existing_file());
@@ -438,7 +436,7 @@ fn mercurial_no_newline_in_new() {
 
     assert_that(
         cargo_process("init --lib").env("USER", "foo"),
-        execs().with_status(0),
+        execs(),
     );
 
     assert_that(&paths::root().join(".hgignore"), existing_file());
@@ -457,7 +455,7 @@ fn cargo_lock_gitignored_if_lib1() {
 
     assert_that(
         cargo_process("init --lib --vcs git").env("USER", "foo"),
-        execs().with_status(0),
+        execs(),
     );
 
     assert_that(&paths::root().join(".gitignore"), existing_file());
@@ -481,7 +479,7 @@ fn cargo_lock_gitignored_if_lib2() {
 
     assert_that(
         cargo_process("init --vcs git").env("USER", "foo"),
-        execs().with_status(0),
+        execs(),
     );
 
     assert_that(&paths::root().join(".gitignore"), existing_file());
@@ -500,7 +498,7 @@ fn cargo_lock_not_gitignored_if_bin1() {
 
     assert_that(
         cargo_process("init --vcs git --bin").env("USER", "foo"),
-        execs().with_status(0),
+        execs(),
     );
 
     assert_that(&paths::root().join(".gitignore"), existing_file());
@@ -524,7 +522,7 @@ fn cargo_lock_not_gitignored_if_bin2() {
 
     assert_that(
         cargo_process("init --vcs git").env("USER", "foo"),
-        execs().with_status(0),
+        execs(),
     );
 
     assert_that(&paths::root().join(".gitignore"), existing_file());
@@ -541,7 +539,7 @@ fn cargo_lock_not_gitignored_if_bin2() {
 fn with_argument() {
     assert_that(
         cargo_process("init foo --vcs none").env("USER", "foo"),
-        execs().with_status(0),
+        execs(),
     );
     assert_that(&paths::root().join("foo/Cargo.toml"), existing_file());
 }

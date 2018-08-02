@@ -57,7 +57,7 @@ fn probe_cfg_before_crate_type_discovery() {
         )
         .build();
 
-    assert_that(p.cargo("build"), execs().with_status(0));
+    assert_that(p.cargo("build"), execs());
 }
 
 #[test]
@@ -115,8 +115,8 @@ fn noop() {
         )
         .build();
 
-    assert_that(p.cargo("build"), execs().with_status(0));
-    assert_that(p.cargo("build"), execs().with_status(0));
+    assert_that(p.cargo("build"), execs());
+    assert_that(p.cargo("build"), execs());
 }
 
 #[test]
@@ -195,10 +195,10 @@ fn impl_and_derive() {
         )
         .build();
 
-    assert_that(p.cargo("build"), execs().with_status(0));
+    assert_that(p.cargo("build"), execs());
     assert_that(
         p.cargo("run"),
-        execs().with_status(0).with_stdout("X { success: true }"),
+        execs().with_stdout("X { success: true }"),
     );
 }
 
@@ -294,7 +294,6 @@ fn a() {
     assert_that(
         foo.cargo("test"),
         execs()
-            .with_status(0)
             .with_stdout_contains("test a ... ok")
             .with_stdout_contains_n("test [..] ... ok", 2),
     );

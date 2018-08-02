@@ -29,7 +29,6 @@ fn build_lib_only() {
     assert_that(
         p.cargo("build").arg("--lib").arg("-v"),
         execs()
-            .with_status(0)
             .with_stderr(verbose_output_for_lib(&p)),
     );
 }
@@ -73,6 +72,6 @@ fn build_with_relative_cargo_home_path() {
 
     assert_that(
         p.cargo("build").env("CARGO_HOME", "./cargo_home/"),
-        execs().with_status(0),
+        execs(),
     );
 }

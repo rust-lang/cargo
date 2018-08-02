@@ -84,7 +84,7 @@ fn http_auth_offered() {
         )
         .build();
 
-    assert_that(script.cargo("build").arg("-v"), execs().with_status(0));
+    assert_that(script.cargo("build").arg("-v"), execs());
     let script = script.bin("script");
 
     let config = paths::home().join(".gitconfig");
