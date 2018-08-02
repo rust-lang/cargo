@@ -831,8 +831,6 @@ impl Execs {
         // Let's not deal with \r\n vs \n on windows...
         let actual = actual.replace("\r", "");
         let actual = actual.replace("\t", "<tab>");
-        // or / vs \
-        let actual = actual.replace("\\", "/");
 
         match kind {
             MatchKind::Exact => {
@@ -1020,8 +1018,11 @@ enum MatchKind {
 /// - There is a wide range of macros (such as `[COMPILING]` or `[WARNING]`)
 ///   to match cargo's "status" output and allows you to ignore the alignment.
 ///   See `substitute_macros` for a complete list of macros.
-pub fn lines_match(expected: &str, mut actual: &str) -> bool {
-    let expected = substitute_macros(expected);
+pub fn lines_match(expected: &str, actual: &str) -> bool {
+    // Let's not deal with / vs \ (windows...)
+    let expected = expected.replace("\\", "/");
+    let mut actual: &str = &actual.replace("\\", "/");
+    let expected = substitute_macros(&expected);
     for (i, part) in expected.split("[..]").enumerate() {
         match actual.find(part) {
             Some(j) => {
