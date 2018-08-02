@@ -143,7 +143,7 @@ fn broken_fixes_backed_out() {
             after fixes were automatically applied the compiler reported \
             errors within these files:\n\
             \n  \
-            * src[/]lib.rs\n\
+            * src/lib.rs\n\
             \n\
             This likely indicates a bug in either rustc or cargo itself,\n\
             and we would appreciate a bug report! You're likely to see \n\
@@ -203,9 +203,9 @@ fn fix_path_deps() {
             .with_stdout("")
             .with_stderr("\
 [CHECKING] bar v0.1.0 ([..])
-[FIXING] bar[/]src[/]lib.rs (1 fix)
+[FIXING] bar/src/lib.rs (1 fix)
 [CHECKING] foo v0.1.0 ([..])
-[FIXING] src[/]lib.rs (1 fix)
+[FIXING] src/lib.rs (1 fix)
 [FINISHED] [..]
 ")
     );
@@ -280,7 +280,7 @@ fn prepare_for_2018() {
 
     let stderr = "\
 [CHECKING] foo v0.0.1 ([..])
-[FIXING] src[/]lib.rs (2 fixes)
+[FIXING] src/lib.rs (2 fixes)
 [FINISHED] [..]
 ";
     assert_that(
@@ -319,7 +319,7 @@ fn local_paths() {
 
     let stderr = "\
 [CHECKING] foo v0.0.1 ([..])
-[FIXING] src[/]lib.rs (1 fix)
+[FIXING] src/lib.rs (1 fix)
 [FINISHED] [..]
 ";
 
@@ -356,7 +356,7 @@ fn local_paths_no_fix() {
 
     let stderr = "\
 [CHECKING] foo v0.0.1 ([..])
-warning: failed to find `#![feature(rust_2018_preview)]` in `src[/]lib.rs`
+warning: failed to find `#![feature(rust_2018_preview)]` in `src/lib.rs`
 this may cause `cargo fix` to not be able to fix all
 issues in preparation for the 2018 edition
 [FINISHED] [..]
@@ -410,7 +410,7 @@ fn upgrade_extern_crate() {
     let stderr = "\
 [CHECKING] bar v0.1.0 ([..])
 [CHECKING] foo v0.1.0 ([..])
-[FIXING] src[/]lib.rs (1 fix)
+[FIXING] src/lib.rs (1 fix)
 [FINISHED] [..]
 ";
     assert_that(
@@ -448,7 +448,7 @@ fn specify_rustflags() {
 
     let stderr = "\
 [CHECKING] foo v0.0.1 ([..])
-[FIXING] src[/]lib.rs (1 fix)
+[FIXING] src/lib.rs (1 fix)
 [FINISHED] [..]
 ";
     assert_that(
@@ -490,7 +490,7 @@ fn fixes_extra_mut() {
 
     let stderr = "\
 [CHECKING] foo v0.0.1 ([..])
-[FIXING] src[/]lib.rs (1 fix)
+[FIXING] src/lib.rs (1 fix)
 [FINISHED] [..]
 ";
     assert_that(
@@ -517,7 +517,7 @@ fn fixes_two_missing_ampersands() {
 
     let stderr = "\
 [CHECKING] foo v0.0.1 ([..])
-[FIXING] src[/]lib.rs (2 fixes)
+[FIXING] src/lib.rs (2 fixes)
 [FINISHED] [..]
 ";
     assert_that(
@@ -543,7 +543,7 @@ fn tricky() {
 
     let stderr = "\
 [CHECKING] foo v0.0.1 ([..])
-[FIXING] src[/]lib.rs (2 fixes)
+[FIXING] src/lib.rs (2 fixes)
 [FINISHED] [..]
 ";
     assert_that(
@@ -650,8 +650,8 @@ fn fix_two_files() {
             .env("__CARGO_FIX_YOLO", "1"),
         execs()
             .with_status(0)
-            .with_stderr_contains("[FIXING] src[/]bar.rs (1 fix)")
-            .with_stderr_contains("[FIXING] src[/]lib.rs (1 fix)"),
+            .with_stderr_contains("[FIXING] src/bar.rs (1 fix)")
+            .with_stderr_contains("[FIXING] src/lib.rs (1 fix)"),
     );
     assert!(!p.read_file("src/lib.rs").contains("let mut x = 3;"));
     assert!(!p.read_file("src/bar.rs").contains("let mut x = 3;"));
@@ -694,10 +694,10 @@ fn fixes_missing_ampersand() {
             // compile (and fix) in `--test` mode first, we get two fixes. Otherwise
             // we'll fix one non-test thing, and then fix another one later in
             // test mode.
-            .with_stderr_contains("[FIXING] src[/]lib.rs[..]")
-            .with_stderr_contains("[FIXING] src[/]main.rs (1 fix)")
-            .with_stderr_contains("[FIXING] examples[/]foo.rs (1 fix)")
-            .with_stderr_contains("[FIXING] tests[/]a.rs (1 fix)")
+            .with_stderr_contains("[FIXING] src/lib.rs[..]")
+            .with_stderr_contains("[FIXING] src/main.rs (1 fix)")
+            .with_stderr_contains("[FIXING] examples/foo.rs (1 fix)")
+            .with_stderr_contains("[FIXING] tests/a.rs (1 fix)")
             .with_stderr_contains("[FINISHED] [..]"),
     );
     assert_that(p.cargo("build"), execs().with_status(0));
@@ -884,7 +884,7 @@ fn prepare_for_and_enable() {
     let stderr = "\
 [CHECKING] foo v0.1.0 ([..])
 error: cannot prepare for the 2018 edition when it is enabled, so cargo cannot
-automatically fix errors in `src[/]lib.rs`
+automatically fix errors in `src/lib.rs`
 
 To prepare for the 2018 edition you should first remove `edition = '2018'` from
 your `Cargo.toml` and then rerun this command. Once all warnings have been fixed
@@ -914,7 +914,7 @@ fn prepare_for_without_feature_issues_warning() {
 
     let stderr = "\
 [CHECKING] foo v0.0.1 ([..])
-warning: failed to find `#![feature(rust_2018_preview)]` in `src[/]lib.rs`
+warning: failed to find `#![feature(rust_2018_preview)]` in `src/lib.rs`
 this may cause `cargo fix` to not be able to fix all
 issues in preparation for the 2018 edition
 [FINISHED] [..]
@@ -953,7 +953,7 @@ fn fix_overlapping() {
 
     let stderr = "\
 [CHECKING] foo [..]
-[FIXING] src[/]lib.rs (2 fixes)
+[FIXING] src/lib.rs (2 fixes)
 [FINISHED] dev [..]
 ";
 

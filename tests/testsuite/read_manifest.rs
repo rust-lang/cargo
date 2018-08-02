@@ -24,7 +24,7 @@ static MANIFEST_OUTPUT: &'static str = r#"
         "crate_types":["bin"],
         "edition": "2015",
         "name":"foo",
-        "src_path":"[..][/]foo[/]src[/]foo.rs"
+        "src_path":"[..]/foo/src/foo.rs"
     }],
     "features":{},
     "manifest_path":"[..]Cargo.toml",

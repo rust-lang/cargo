@@ -36,9 +36,9 @@ fn custom_build_script_failed() {
             "\
 [COMPILING] foo v0.5.0 ({url})
 [RUNNING] `rustc --crate-name build_script_build build.rs --crate-type bin [..]`
-[RUNNING] `[..][/]build-script-build`
+[RUNNING] `[..]/build-script-build`
 [ERROR] failed to run custom build command for `foo v0.5.0 ({url})`
-process didn't exit successfully: `[..][/]build-script-build` (exit code: 101)",
+process didn't exit successfully: `[..]/build-script-build` (exit code: 101)",
             url = p.url()
         )),
     );
@@ -586,7 +586,7 @@ fn only_rerun_build_script() {
         execs().with_status(0).with_stderr(
             "\
 [COMPILING] foo v0.5.0 (file://[..])
-[RUNNING] `[..][/]build-script-build`
+[RUNNING] `[..]/build-script-build`
 [RUNNING] `rustc --crate-name foo [..]`
 [FINISHED] dev [unoptimized + debuginfo] target(s) in [..]
 ",
@@ -694,11 +694,11 @@ fn testing_and_such() {
             .with_stderr(
                 "\
 [COMPILING] foo v0.5.0 (file://[..])
-[RUNNING] `[..][/]build-script-build`
+[RUNNING] `[..]/build-script-build`
 [RUNNING] `rustc --crate-name foo [..]`
 [RUNNING] `rustc --crate-name foo [..]`
 [FINISHED] dev [unoptimized + debuginfo] target(s) in [..]
-[RUNNING] `[..][/]foo-[..][EXE]`
+[RUNNING] `[..]/foo-[..][EXE]`
 [DOCTEST] foo
 [RUNNING] `rustdoc --test [..]`",
             )
@@ -728,7 +728,7 @@ fn testing_and_such() {
             "\
 [COMPILING] foo v0.5.0 (file://[..])
 [FINISHED] dev [unoptimized + debuginfo] target(s) in [..]
-[RUNNING] `target[/]debug[/]foo[EXE]`
+[RUNNING] `target/debug/foo[EXE]`
 ",
         ),
     );
@@ -915,7 +915,7 @@ fn build_deps_simple() {
 [RUNNING] `rustc --crate-name a [..]`
 [COMPILING] foo v0.5.0 (file://[..])
 [RUNNING] `rustc [..] build.rs [..] --extern a=[..]`
-[RUNNING] `[..][/]foo-[..][/]build-script-build`
+[RUNNING] `[..]/foo-[..]/build-script-build`
 [RUNNING] `rustc --crate-name foo [..]`
 [FINISHED] dev [unoptimized + debuginfo] target(s) in [..]
 ",
@@ -1025,25 +1025,25 @@ fn build_cmd_with_a_build_cmd() {
 [COMPILING] b v0.5.0 (file://[..])
 [RUNNING] `rustc --crate-name b [..]`
 [COMPILING] a v0.5.0 (file://[..])
-[RUNNING] `rustc [..] a[/]build.rs [..] --extern b=[..]`
-[RUNNING] `[..][/]a-[..][/]build-script-build`
+[RUNNING] `rustc [..] a/build.rs [..] --extern b=[..]`
+[RUNNING] `[..]/a-[..]/build-script-build`
 [RUNNING] `rustc --crate-name a [..]lib.rs --crate-type lib \
     --emit=dep-info,link -C debuginfo=2 \
     -C metadata=[..] \
-    --out-dir [..]target[/]debug[/]deps \
-    -L [..]target[/]debug[/]deps`
+    --out-dir [..]target/debug/deps \
+    -L [..]target/debug/deps`
 [COMPILING] foo v0.5.0 (file://[..])
 [RUNNING] `rustc --crate-name build_script_build build.rs --crate-type bin \
     --emit=dep-info,link \
     -C debuginfo=2 -C metadata=[..] --out-dir [..] \
-    -L [..]target[/]debug[/]deps \
+    -L [..]target/debug/deps \
     --extern a=[..]liba[..].rlib`
-[RUNNING] `[..][/]foo-[..][/]build-script-build`
+[RUNNING] `[..]/foo-[..]/build-script-build`
 [RUNNING] `rustc --crate-name foo [..]lib.rs --crate-type lib \
     --emit=dep-info,link -C debuginfo=2 \
     -C metadata=[..] \
     --out-dir [..] \
-    -L [..]target[/]debug[/]deps`
+    -L [..]target/debug/deps`
 [FINISHED] dev [unoptimized + debuginfo] target(s) in [..]
 ",
         ),
@@ -1137,7 +1137,7 @@ fn output_separate_lines() {
             "\
 [COMPILING] foo v0.5.0 (file://[..])
 [RUNNING] `rustc [..] build.rs [..]`
-[RUNNING] `[..][/]foo-[..][/]build-script-build`
+[RUNNING] `[..]/foo-[..]/build-script-build`
 [RUNNING] `rustc --crate-name foo [..] -L foo -l static=foo`
 [ERROR] could not find native static library [..]
 ",
@@ -1175,7 +1175,7 @@ fn output_separate_lines_new() {
             "\
 [COMPILING] foo v0.5.0 (file://[..])
 [RUNNING] `rustc [..] build.rs [..]`
-[RUNNING] `[..][/]foo-[..][/]build-script-build`
+[RUNNING] `[..]/foo-[..]/build-script-build`
 [RUNNING] `rustc --crate-name foo [..] -L foo -l static=foo`
 [ERROR] could not find native static library [..]
 ",
@@ -1236,7 +1236,7 @@ fn code_generation() {
                 "\
 [COMPILING] foo v0.5.0 (file://[..])
 [FINISHED] dev [unoptimized + debuginfo] target(s) in [..]
-[RUNNING] `target[/]debug[/]foo`",
+[RUNNING] `target/debug/foo`",
             )
             .with_stdout("Hello, World!"),
     );
@@ -1800,13 +1800,13 @@ fn cfg_test() {
                 "\
 [COMPILING] foo v0.0.1 ({dir})
 [RUNNING] [..] build.rs [..]
-[RUNNING] `[..][/]build-script-build`
+[RUNNING] `[..]/build-script-build`
 [RUNNING] [..] --cfg foo[..]
 [RUNNING] [..] --cfg foo[..]
 [RUNNING] [..] --cfg foo[..]
 [FINISHED] dev [unoptimized + debuginfo] target(s) in [..]
-[RUNNING] `[..][/]foo-[..][EXE]`
-[RUNNING] `[..][/]test-[..][EXE]`
+[RUNNING] `[..]/foo-[..][EXE]`
+[RUNNING] `[..]/test-[..][EXE]`
 [DOCTEST] foo
 [RUNNING] [..] --cfg foo[..]",
                 dir = p.url()
@@ -1919,8 +1919,8 @@ fn cfg_override_test() {
 [RUNNING] `[..]`
 [RUNNING] `[..]`
 [FINISHED] dev [unoptimized + debuginfo] target(s) in [..]
-[RUNNING] `[..][/]foo-[..][EXE]`
-[RUNNING] `[..][/]test-[..][EXE]`
+[RUNNING] `[..]/foo-[..][EXE]`
+[RUNNING] `[..]/test-[..][EXE]`
 [DOCTEST] foo
 [RUNNING] [..] --cfg foo[..]",
                 dir = p.url()
@@ -2053,13 +2053,13 @@ fn env_test() {
                 "\
 [COMPILING] foo v0.0.1 ({dir})
 [RUNNING] [..] build.rs [..]
-[RUNNING] `[..][/]build-script-build`
+[RUNNING] `[..]/build-script-build`
 [RUNNING] [..] --crate-name foo[..]
 [RUNNING] [..] --crate-name foo[..]
 [RUNNING] [..] --crate-name test[..]
 [FINISHED] dev [unoptimized + debuginfo] target(s) in [..]
-[RUNNING] `[..][/]foo-[..][EXE]`
-[RUNNING] `[..][/]test-[..][EXE]`
+[RUNNING] `[..]/foo-[..][EXE]`
+[RUNNING] `[..]/test-[..][EXE]`
 [DOCTEST] foo
 [RUNNING] [..] --crate-name foo[..]",
                 dir = p.url()
@@ -2152,16 +2152,16 @@ fn flags_go_into_tests() {
             .with_stderr(
                 "\
 [COMPILING] a v0.5.0 ([..]
-[RUNNING] `rustc [..] a[/]build.rs [..]`
-[RUNNING] `[..][/]build-script-build`
-[RUNNING] `rustc [..] a[/]src[/]lib.rs [..] -L test[..]`
+[RUNNING] `rustc [..] a/build.rs [..]`
+[RUNNING] `[..]/build-script-build`
+[RUNNING] `rustc [..] a/src/lib.rs [..] -L test[..]`
 [COMPILING] b v0.5.0 ([..]
-[RUNNING] `rustc [..] b[/]src[/]lib.rs [..] -L test[..]`
+[RUNNING] `rustc [..] b/src/lib.rs [..] -L test[..]`
 [COMPILING] foo v0.5.0 ([..]
-[RUNNING] `rustc [..] src[/]lib.rs [..] -L test[..]`
-[RUNNING] `rustc [..] tests[/]foo.rs [..] -L test[..]`
+[RUNNING] `rustc [..] src/lib.rs [..] -L test[..]`
+[RUNNING] `rustc [..] tests/foo.rs [..] -L test[..]`
 [FINISHED] dev [unoptimized + debuginfo] target(s) in [..]
-[RUNNING] `[..][/]foo-[..][EXE]`",
+[RUNNING] `[..]/foo-[..][EXE]`",
             )
             .with_stdout_contains("running 0 tests"),
     );
@@ -2174,9 +2174,9 @@ fn flags_go_into_tests() {
                 "\
 [FRESH] a v0.5.0 ([..]
 [COMPILING] b v0.5.0 ([..]
-[RUNNING] `rustc [..] b[/]src[/]lib.rs [..] -L test[..]`
+[RUNNING] `rustc [..] b/src/lib.rs [..] -L test[..]`
 [FINISHED] dev [unoptimized + debuginfo] target(s) in [..]
-[RUNNING] `[..][/]b-[..][EXE]`",
+[RUNNING] `[..]/b-[..][EXE]`",
             )
             .with_stdout_contains("running 0 tests"),
     );
@@ -2544,8 +2544,8 @@ fn rebuild_only_on_explicit_paths() {
         execs().with_status(0).with_stderr(
             "\
 [COMPILING] foo v0.5.0 ([..])
-[RUNNING] `[..][/]build-script-build`
-[RUNNING] `rustc [..] src[/]lib.rs [..]`
+[RUNNING] `[..]/build-script-build`
+[RUNNING] `rustc [..] src/lib.rs [..]`
 [FINISHED] dev [unoptimized + debuginfo] target(s) in [..]
 ",
         ),
@@ -2562,8 +2562,8 @@ fn rebuild_only_on_explicit_paths() {
         execs().with_status(0).with_stderr(
             "\
 [COMPILING] foo v0.5.0 ([..])
-[RUNNING] `[..][/]build-script-build`
-[RUNNING] `rustc [..] src[/]lib.rs [..]`
+[RUNNING] `[..]/build-script-build`
+[RUNNING] `rustc [..] src/lib.rs [..]`
 [FINISHED] dev [unoptimized + debuginfo] target(s) in [..]
 ",
         ),
@@ -2603,8 +2603,8 @@ fn rebuild_only_on_explicit_paths() {
         execs().with_status(0).with_stderr(
             "\
 [COMPILING] foo v0.5.0 ([..])
-[RUNNING] `[..][/]build-script-build`
-[RUNNING] `rustc [..] src[/]lib.rs [..]`
+[RUNNING] `[..]/build-script-build`
+[RUNNING] `rustc [..] src/lib.rs [..]`
 [FINISHED] dev [unoptimized + debuginfo] target(s) in [..]
 ",
         ),
@@ -2618,8 +2618,8 @@ fn rebuild_only_on_explicit_paths() {
         execs().with_status(0).with_stderr(
             "\
 [COMPILING] foo v0.5.0 ([..])
-[RUNNING] `[..][/]build-script-build`
-[RUNNING] `rustc [..] src[/]lib.rs [..]`
+[RUNNING] `[..]/build-script-build`
+[RUNNING] `rustc [..] src/lib.rs [..]`
 [FINISHED] dev [unoptimized + debuginfo] target(s) in [..]
 ",
         ),

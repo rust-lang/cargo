@@ -27,7 +27,7 @@ assert_that(
             "\
 [COMPILING] foo [..]
 [FINISHED] [..]
-[RUNNING] `target[/]debug[/]foo`
+[RUNNING] `target/debug/foo`
 ",
         )
         .with_stdout("hi!"),
@@ -71,8 +71,8 @@ if !is_nightly() {
 
 ## Platform-specific Notes
 
-When checking output, be sure to use `[/]` when checking paths to
-automatically support backslashes on Windows.
+When checking output, use `/` for paths even on Windows: the actual output
+of `\` on Windows will be replaced with `/`.
 
 Be careful when executing binaries on Windows.  You should not rename, delete,
 or overwrite a binary immediately after running it.  Under some conditions
@@ -831,6 +831,8 @@ impl Execs {
         // Let's not deal with \r\n vs \n on windows...
         let actual = actual.replace("\r", "");
         let actual = actual.replace("\t", "<tab>");
+        // or / vs \
+        let actual = actual.replace("\\", "/");
 
         match kind {
             MatchKind::Exact => {
@@ -1013,8 +1015,6 @@ enum MatchKind {
 /// Compare a line with an expected pattern.
 /// - Use `[..]` as a wildcard to match 0 or more characters on the same line
 ///   (similar to `.*` in a regex).
-/// - Use `[/]` for path separators to automatically support backslash on
-///   Windows.
 /// - Use `[EXE]` to optionally add `.exe` on Windows (empty string on other
 ///   platforms).
 /// - There is a wide range of macros (such as `[COMPILING]` or `[WARNING]`)
@@ -1290,7 +1290,6 @@ fn substitute_macros(input: &str) -> String {
         ("[SUMMARY]", "     Summary"),
         ("[FIXING]", "      Fixing"),
         ("[EXE]", if cfg!(windows) { ".exe" } else { "" }),
-        ("[/]", if cfg!(windows) { "\\" } else { "/" }),
     ];
     let mut result = input.to_owned();
     for &(pat, subst) in macros.iter() {

@@ -155,7 +155,7 @@ fn bad_cargo_config_jobs() {
         p.cargo("build").arg("-v"),
         execs().with_status(101).with_stderr(
             "\
-[ERROR] error in [..].cargo[/]config: \
+[ERROR] error in [..].cargo/config: \
 could not load config key `build.jobs`: \
 invalid value: integer `-1`, expected u32
 ",
