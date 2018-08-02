@@ -8,7 +8,7 @@ use std::sync::mpsc::channel;
 use std::time::Duration;
 
 use git2;
-use support;
+use support::cargo_process;
 use support::install::{cargo_home, has_installed_exe};
 use support::git;
 use support::registry::Package;
@@ -57,14 +57,8 @@ fn concurrent_installs() {
     pkg("foo", "0.0.1");
     pkg("bar", "0.0.1");
 
-    let mut a = support::cargo_process()
-        .arg("install")
-        .arg("foo")
-        .build_command();
-    let mut b = support::cargo_process()
-        .arg("install")
-        .arg("bar")
-        .build_command();
+    let mut a = cargo_process("install foo").build_command();
+    let mut b = cargo_process("install bar").build_command();
 
     a.stdout(Stdio::piped()).stderr(Stdio::piped());
     b.stdout(Stdio::piped()).stderr(Stdio::piped());

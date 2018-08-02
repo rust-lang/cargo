@@ -87,12 +87,12 @@ fn list_command_looks_at_path() {
         "cargo-1",
         &FakeKind::Executable,
     );
-    let mut pr = cargo_process();
 
     let mut path = path();
     path.push(proj.root().join("path-test"));
     let path = env::join_paths(path.iter()).unwrap();
-    let output = pr.arg("-v").arg("--list").env("PATH", &path);
+    let mut p = cargo_process("-v --list");
+    let output = p.env("PATH", &path);
     let output = output.exec_with_output().unwrap();
     let output = str::from_utf8(&output.stdout).unwrap();
     assert!(
@@ -115,12 +115,12 @@ fn list_command_resolves_symlinks() {
             target: &cargo_exe(),
         },
     );
-    let mut pr = cargo_process();
 
     let mut path = path();
     path.push(proj.root().join("path-test"));
     let path = env::join_paths(path.iter()).unwrap();
-    let output = pr.arg("-v").arg("--list").env("PATH", &path);
+    let mut p = cargo_process("-v --list");
+    let output = p.env("PATH", &path);
     let output = output.exec_with_output().unwrap();
     let output = str::from_utf8(&output.stdout).unwrap();
     assert!(
@@ -133,7 +133,7 @@ fn list_command_resolves_symlinks() {
 #[test]
 fn find_closest_biuld_to_build() {
     assert_that(
-        cargo_process().arg("biuld"),
+        cargo_process("biuld"),
         execs().with_status(101).with_stderr_contains(
             "\
 error: no such subcommand: `biuld`
@@ -157,17 +157,17 @@ error: no such subcommand: `biuld`
         .publish();
 
     assert_that(
-        cargo_process().arg("install").arg("cargo-biuld"),
+        cargo_process("install cargo-biuld"),
         execs().with_status(0),
     );
     assert_that(
-        cargo_process().arg("biuld"),
+        cargo_process("biuld"),
         execs()
             .with_status(0)
             .with_stdout("Similar, but not identical to, build\n"),
     );
     assert_that(
-        cargo_process().arg("--list"),
+        cargo_process("--list"),
         execs()
             .with_status(0)
             .with_stdout_contains("    build                Compile a local package and all of its dependencies\n")
@@ -178,12 +178,9 @@ error: no such subcommand: `biuld`
 // if a subcommand is more than 3 edit distance away, we don't make a suggestion
 #[test]
 fn find_closest_dont_correct_nonsense() {
-    let mut pr = cargo_process();
-    pr.arg("there-is-no-way-that-there-is-a-command-close-to-this")
-        .cwd(&paths::root());
-
     assert_that(
-        pr,
+        cargo_process("there-is-no-way-that-there-is-a-command-close-to-this")
+            .cwd(&paths::root()),
         execs().with_status(101).with_stderr(
             "[ERROR] no such subcommand: \
                         `there-is-no-way-that-there-is-a-command-close-to-this`
@@ -194,15 +191,11 @@ fn find_closest_dont_correct_nonsense() {
 
 #[test]
 fn displays_subcommand_on_error() {
-    let mut pr = cargo_process();
-    pr.arg("invalid-command");
-
     assert_that(
-        pr,
-        execs().with_status(101).with_stderr(
-            "[ERROR] no such subcommand: `invalid-command`
-",
-        ),
+        cargo_process("invalid-command"),
+        execs()
+            .with_status(101)
+            .with_stderr("[ERROR] no such subcommand: `invalid-command`\n"),
     );
 }
 
@@ -224,11 +217,7 @@ fn override_cargo_home() {
         .unwrap();
 
     assert_that(
-        cargo_process()
-            .arg("new")
-            .arg("foo")
-            .env("USER", "foo")
-            .env("CARGO_HOME", &my_home),
+        cargo_process("new foo").env("USER", "foo").env("CARGO_HOME", &my_home),
         execs().with_status(0),
     );
 
@@ -264,14 +253,13 @@ fn cargo_subcommand_env() {
     assert_that(p.cargo("build"), execs().with_status(0));
     assert_that(&p.bin("cargo-envtest"), existing_file());
 
-    let mut pr = cargo_process();
     let cargo = cargo_exe().canonicalize().unwrap();
     let mut path = path();
     path.push(target_dir);
     let path = env::join_paths(path.iter()).unwrap();
 
     assert_that(
-        pr.arg("envtest").env("PATH", &path),
+        cargo_process("envtest").env("PATH", &path),
         execs().with_status(0).with_stdout(cargo.to_str().unwrap()),
     );
 }
@@ -300,12 +288,7 @@ fn cargo_subcommand_args() {
     let path = env::join_paths(path.iter()).unwrap();
 
     assert_that(
-        cargo_process()
-            .env("PATH", &path)
-            .arg("foo")
-            .arg("bar")
-            .arg("-v")
-            .arg("--help"),
+        cargo_process("foo bar -v --help").env("PATH", &path),
         execs().with_status(0).with_stdout(format!(
             r#"[{:?}, "foo", "bar", "-v", "--help"]"#,
             cargo_foo_bin
@@ -315,21 +298,12 @@ fn cargo_subcommand_args() {
 
 #[test]
 fn cargo_help() {
-    assert_that(cargo_process(), execs().with_status(0));
-    assert_that(cargo_process().arg("help"), execs().with_status(0));
-    assert_that(cargo_process().arg("-h"), execs().with_status(0));
-    assert_that(
-        cargo_process().arg("help").arg("build"),
-        execs().with_status(0),
-    );
-    assert_that(
-        cargo_process().arg("build").arg("-h"),
-        execs().with_status(0),
-    );
-    assert_that(
-        cargo_process().arg("help").arg("help"),
-        execs().with_status(0),
-    );
+    assert_that(cargo_process(""), execs().with_status(0));
+    assert_that(cargo_process("help"), execs().with_status(0));
+    assert_that(cargo_process("-h"), execs().with_status(0));
+    assert_that(cargo_process("help build"), execs().with_status(0));
+    assert_that(cargo_process("build -h"), execs().with_status(0));
+    assert_that(cargo_process("help help"), execs().with_status(0));
 }
 
 #[test]
@@ -346,11 +320,11 @@ fn cargo_help_external_subcommand() {
             )
             .publish();
     assert_that(
-        cargo_process().args(&["install", "cargo-fake-help"]),
+        cargo_process("install cargo-fake-help"),
         execs().with_status(0),
     );
     assert_that(
-        cargo_process().args(&["help", "fake-help"]),
+        cargo_process("help fake-help"),
         execs().with_status(0).with_stdout("fancy help output\n")
     );
 }
@@ -358,7 +332,7 @@ fn cargo_help_external_subcommand() {
 #[test]
 fn explain() {
     assert_that(
-        cargo_process().arg("--explain").arg("E0001"),
+        cargo_process("--explain E0001"),
         execs().with_status(0).with_stdout_contains(
             "This error suggests that the expression arm corresponding to the noted pattern",
         ),
@@ -370,7 +344,7 @@ fn explain() {
 #[test]
 fn z_flags_help() {
     assert_that(
-        cargo_process().arg("-Z").arg("help"),
+        cargo_process("-Z help"),
         execs().with_status(0).with_stdout_contains(
             "    -Z unstable-options -- Allow the usage of unstable options such as --registry",
         ),

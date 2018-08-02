@@ -821,7 +821,7 @@ fn login_with_no_cargo_dir() {
     let home = paths::home().join("new-home");
     t!(fs::create_dir(&home));
     assert_that(
-        cargo_process().arg("login").arg("foo").arg("-v"),
+        cargo_process("login foo -v"),
         execs().with_status(0),
     );
 }
@@ -832,15 +832,15 @@ fn login_with_differently_sized_token() {
     let home = paths::home().join("new-home");
     t!(fs::create_dir(&home));
     assert_that(
-        cargo_process().arg("login").arg("lmaolmaolmao").arg("-v"),
+        cargo_process("login lmaolmaolmao -v"),
         execs().with_status(0),
     );
     assert_that(
-        cargo_process().arg("login").arg("lmao").arg("-v"),
+        cargo_process("login lmao -v"),
         execs().with_status(0),
     );
     assert_that(
-        cargo_process().arg("login").arg("lmaolmaolmao").arg("-v"),
+        cargo_process("login lmaolmaolmao -v"),
         execs().with_status(0),
     );
 }
