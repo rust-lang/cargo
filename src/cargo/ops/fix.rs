@@ -24,9 +24,12 @@ const BROKEN_CODE_ENV: &str = "__CARGO_FIX_BROKEN_CODE";
 const PREPARE_FOR_ENV: &str = "__CARGO_FIX_PREPARE_FOR";
 const EDITION_ENV: &str = "__CARGO_FIX_EDITION";
 
+const IDIOMS_ENV: &str = "__CARGO_FIX_IDIOMS";
+
 pub struct FixOptions<'a> {
     pub edition: bool,
     pub prepare_for: Option<&'a str>,
+    pub idioms: bool,
     pub compile_opts: CompileOptions<'a>,
     pub allow_dirty: bool,
     pub allow_no_vcs: bool,
@@ -57,6 +60,12 @@ pub fn fix(ws: &Workspace, opts: &mut FixOptions) -> CargoResult<()> {
         opts.compile_opts.build_config.extra_rustc_env.push((
             PREPARE_FOR_ENV.to_string(),
             edition.to_string(),
+        ));
+    }
+    if opts.idioms {
+        opts.compile_opts.build_config.extra_rustc_env.push((
+            IDIOMS_ENV.to_string(),
+            "1".to_string(),
         ));
     }
     opts.compile_opts.build_config.cargo_as_rustc_wrapper = true;
@@ -471,6 +480,7 @@ fn log_failed_fix(stderr: &[u8]) -> Result<(), Error> {
 struct FixArgs {
     file: Option<PathBuf>,
     prepare_for_edition: PrepareFor,
+    idioms: bool,
     enabled_edition: Option<String>,
     other: Vec<OsString>,
 }
@@ -512,6 +522,7 @@ impl FixArgs {
         } else if env::var(EDITION_ENV).is_ok() {
             ret.prepare_for_edition = PrepareFor::Next;
         }
+        ret.idioms = env::var(IDIOMS_ENV).is_ok();
         return ret
     }
 
@@ -523,6 +534,12 @@ impl FixArgs {
             .arg("--cap-lints=warn");
         if let Some(edition) = &self.enabled_edition {
             cmd.arg("--edition").arg(edition);
+            if self.idioms {
+                match &edition[..] {
+                    "2018" => { cmd.arg("-Wrust-2018-idioms"); }
+                    _ => {}
+                }
+            }
         }
         match &self.prepare_for_edition {
             PrepareFor::Edition(edition) => {
@@ -569,6 +586,12 @@ impl FixArgs {
         process::exit(1);
     }
 
+    /// If we're preparing for an edition and we *don't* find the
+    /// `rust_2018_preview` feature, for example, in the entry point file then
+    /// it probably means that the edition isn't actually enabled, so we can't
+    /// actually fix anything.
+    ///
+    /// If this is the case, issue a warning.
     fn warn_if_preparing_probably_inert(&self) -> CargoResult<()> {
         let edition = match &self.prepare_for_edition {
             PrepareFor::Edition(s) => s,
