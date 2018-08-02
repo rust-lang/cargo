@@ -2,7 +2,7 @@ use std::fs::{self, File};
 use std::io::prelude::*;
 use std::env;
 
-use support::{cargo_process, process};
+use support::{cargo_process, git_process};
 use support::{execs, paths};
 use support::hamcrest::{assert_that, existing_dir, existing_file, is_not};
 
@@ -273,14 +273,8 @@ fn finds_author_email() {
 
 #[test]
 fn finds_author_git() {
-    process("git")
-        .args(&["config", "--global", "user.name", "bar"])
-        .exec()
-        .unwrap();
-    process("git")
-        .args(&["config", "--global", "user.email", "baz"])
-        .exec()
-        .unwrap();
+    git_process("config --global user.name bar").exec().unwrap();
+    git_process("config --global user.email baz").exec().unwrap();
     assert_that(
         cargo_process("new foo").env("USER", "foo"),
         execs().with_status(0),
@@ -297,25 +291,13 @@ fn finds_author_git() {
 
 #[test]
 fn finds_local_author_git() {
-    process("git").args(&["init"]).exec().unwrap();
-    process("git")
-        .args(&["config", "--global", "user.name", "foo"])
-        .exec()
-        .unwrap();
-    process("git")
-        .args(&["config", "--global", "user.email", "foo@bar"])
-        .exec()
-        .unwrap();
+    git_process("init").exec().unwrap();
+    git_process("config --global user.name foo").exec().unwrap();
+    git_process("config --global user.email foo@bar").exec().unwrap();
 
     // Set local git user config
-    process("git")
-        .args(&["config", "user.name", "bar"])
-        .exec()
-        .unwrap();
-    process("git")
-        .args(&["config", "user.email", "baz"])
-        .exec()
-        .unwrap();
+    git_process("config user.name bar").exec().unwrap();
+    git_process("config user.email baz").exec().unwrap();
     assert_that(
         cargo_process("init").env("USER", "foo"),
         execs().with_status(0),
@@ -369,14 +351,8 @@ fn finds_git_author() {
 
 #[test]
 fn author_prefers_cargo() {
-    process("git")
-        .args(&["config", "--global", "user.name", "foo"])
-        .exec()
-        .unwrap();
-    process("git")
-        .args(&["config", "--global", "user.email", "bar"])
-        .exec()
-        .unwrap();
+    git_process("config --global user.name foo").exec().unwrap();
+    git_process("config --global user.email bar").exec().unwrap();
     let root = paths::root();
     fs::create_dir(&root.join(".cargo")).unwrap();
     File::create(&root.join(".cargo/config"))
