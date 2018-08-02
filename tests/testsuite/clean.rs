@@ -208,7 +208,7 @@ fn build_script() {
 [COMPILING] foo v0.0.1 ([..])
 [RUNNING] `rustc [..] build.rs [..]`
 [RUNNING] `[..]build-script-build`
-[RUNNING] `rustc [..] src[/]main.rs [..]`
+[RUNNING] `rustc [..] src/main.rs [..]`
 [FINISHED] dev [unoptimized + debuginfo] target(s) in [..]
 ",
         ),

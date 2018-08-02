@@ -48,7 +48,7 @@ fn cargo_bench_simple() {
                 "\
 [COMPILING] foo v0.5.0 ({})
 [FINISHED] release [optimized] target(s) in [..]
-[RUNNING] target[/]release[/]deps[/]foo-[..][EXE]",
+[RUNNING] target/release/deps/foo-[..][EXE]",
                 p.url()
             ))
             .with_stdout_contains("test bench_hello ... bench: [..]"),
@@ -95,8 +95,8 @@ fn bench_bench_implicit() {
                 "\
 [COMPILING] foo v0.0.1 ({dir})
 [FINISHED] release [optimized] target(s) in [..]
-[RUNNING] target[/]release[/]deps[/]foo-[..][EXE]
-[RUNNING] target[/]release[/]deps[/]mybench-[..][EXE]
+[RUNNING] target/release/deps/foo-[..][EXE]
+[RUNNING] target/release/deps/mybench-[..][EXE]
 ",
                 dir = p.url()
             ))
@@ -144,7 +144,7 @@ fn bench_bin_implicit() {
                 "\
 [COMPILING] foo v0.0.1 ({dir})
 [FINISHED] release [optimized] target(s) in [..]
-[RUNNING] target[/]release[/]deps[/]foo-[..][EXE]
+[RUNNING] target/release/deps/foo-[..][EXE]
 ",
                 dir = p.url()
             ))
@@ -183,7 +183,7 @@ fn bench_tarname() {
                 "\
 [COMPILING] foo v0.0.1 ({dir})
 [FINISHED] release [optimized] target(s) in [..]
-[RUNNING] target[/]release[/]deps[/]bin2-[..][EXE]
+[RUNNING] target/release/deps/bin2-[..][EXE]
 ",
                 dir = p.url()
             ))
@@ -261,9 +261,9 @@ fn cargo_bench_verbose() {
             .with_stderr(&format!(
                 "\
 [COMPILING] foo v0.5.0 ({url})
-[RUNNING] `rustc [..] src[/]main.rs [..]`
+[RUNNING] `rustc [..] src/main.rs [..]`
 [FINISHED] release [optimized] target(s) in [..]
-[RUNNING] `[..]target[/]release[/]deps[/]foo-[..][EXE] hello --bench`",
+[RUNNING] `[..]target/release/deps/foo-[..][EXE] hello --bench`",
                 url = p.url()
             ))
             .with_stdout_contains("test bench_hello ... bench: [..]"),
@@ -372,7 +372,7 @@ fn cargo_bench_failing_test() {
                 "\
 [COMPILING] foo v0.5.0 ({})[..]
 [FINISHED] release [optimized] target(s) in [..]
-[RUNNING] target[/]release[/]deps[/]foo-[..][EXE]",
+[RUNNING] target/release/deps/foo-[..][EXE]",
                 p.url()
             ))
             .with_either_contains(
@@ -380,7 +380,7 @@ fn cargo_bench_failing_test() {
             )
             .with_either_contains("[..]left: `\"hello\"`[..]")
             .with_either_contains("[..]right: `\"nope\"`[..]")
-            .with_either_contains("[..]src[/]main.rs:15[..]")
+            .with_either_contains("[..]src/main.rs:15[..]")
             .with_status(101),
     );
 }
@@ -447,8 +447,8 @@ fn bench_with_lib_dep() {
                 "\
 [COMPILING] foo v0.0.1 ({})
 [FINISHED] release [optimized] target(s) in [..]
-[RUNNING] target[/]release[/]deps[/]foo-[..][EXE]
-[RUNNING] target[/]release[/]deps[/]baz-[..][EXE]",
+[RUNNING] target/release/deps/foo-[..][EXE]
+[RUNNING] target/release/deps/baz-[..][EXE]",
                 p.url()
             ))
             .with_stdout_contains("test lib_bench ... bench: [..]")
@@ -515,7 +515,7 @@ fn bench_with_deep_lib_dep() {
 [COMPILING] foo v0.0.1 ([..])
 [COMPILING] bar v0.0.1 ({dir})
 [FINISHED] release [optimized] target(s) in [..]
-[RUNNING] target[/]release[/]deps[/]bar-[..][EXE]",
+[RUNNING] target/release/deps/bar-[..][EXE]",
                 dir = p.url()
             ))
             .with_stdout_contains("test bar_bench ... bench: [..]"),
@@ -575,8 +575,8 @@ fn external_bench_explicit() {
                 "\
 [COMPILING] foo v0.0.1 ({})
 [FINISHED] release [optimized] target(s) in [..]
-[RUNNING] target[/]release[/]deps[/]foo-[..][EXE]
-[RUNNING] target[/]release[/]deps[/]bench-[..][EXE]",
+[RUNNING] target/release/deps/foo-[..][EXE]
+[RUNNING] target/release/deps/bench-[..][EXE]",
                 p.url()
             ))
             .with_stdout_contains("test internal_bench ... bench: [..]")
@@ -625,8 +625,8 @@ fn external_bench_implicit() {
                 "\
 [COMPILING] foo v0.0.1 ({})
 [FINISHED] release [optimized] target(s) in [..]
-[RUNNING] target[/]release[/]deps[/]foo-[..][EXE]
-[RUNNING] target[/]release[/]deps[/]external-[..][EXE]",
+[RUNNING] target/release/deps/foo-[..][EXE]
+[RUNNING] target/release/deps/external-[..][EXE]",
                 p.url()
             ))
             .with_stdout_contains("test internal_bench ... bench: [..]")
@@ -707,7 +707,7 @@ For more information on this warning you can consult
 https://github.com/rust-lang/cargo/issues/5330
 [COMPILING] foo v0.0.1 ({})
 [FINISHED] release [optimized] target(s) in [..]
-[RUNNING] target[/]release[/]deps[/]foo-[..][EXE]
+[RUNNING] target/release/deps/foo-[..][EXE]
 ",
             p.url()
         )),
@@ -758,7 +758,7 @@ fn pass_through_command_line() {
                 "\
 [COMPILING] foo v0.0.1 ({dir})
 [FINISHED] release [optimized] target(s) in [..]
-[RUNNING] target[/]release[/]deps[/]foo-[..][EXE]",
+[RUNNING] target/release/deps/foo-[..][EXE]",
                 dir = p.url()
             ))
             .with_stdout_contains("test bar ... bench: [..]"),
@@ -770,7 +770,7 @@ fn pass_through_command_line() {
             .with_status(0)
             .with_stderr(
                 "[FINISHED] release [optimized] target(s) in [..]
-[RUNNING] target[/]release[/]deps[/]foo-[..][EXE]",
+[RUNNING] target/release/deps/foo-[..][EXE]",
             )
             .with_stdout_contains("test foo ... bench: [..]"),
     );
@@ -859,8 +859,8 @@ fn lib_bin_same_name() {
                 "\
 [COMPILING] foo v0.0.1 ({})
 [FINISHED] release [optimized] target(s) in [..]
-[RUNNING] target[/]release[/]deps[/]foo-[..][EXE]
-[RUNNING] target[/]release[/]deps[/]foo-[..][EXE]",
+[RUNNING] target/release/deps/foo-[..][EXE]
+[RUNNING] target/release/deps/foo-[..][EXE]",
                 p.url()
             ))
             .with_stdout_contains_n("test [..] ... bench: [..]", 2),
@@ -912,8 +912,8 @@ fn lib_with_standard_name() {
                 "\
 [COMPILING] syntax v0.0.1 ({dir})
 [FINISHED] release [optimized] target(s) in [..]
-[RUNNING] target[/]release[/]deps[/]syntax-[..][EXE]
-[RUNNING] target[/]release[/]deps[/]bench-[..][EXE]",
+[RUNNING] target/release/deps/syntax-[..][EXE]
+[RUNNING] target/release/deps/bench-[..][EXE]",
                 dir = p.url()
             ))
             .with_stdout_contains("test foo_bench ... bench: [..]")
@@ -968,7 +968,7 @@ fn lib_with_standard_name2() {
                 "\
 [COMPILING] syntax v0.0.1 ({dir})
 [FINISHED] release [optimized] target(s) in [..]
-[RUNNING] target[/]release[/]deps[/]syntax-[..][EXE]",
+[RUNNING] target/release/deps/syntax-[..][EXE]",
                 dir = p.url()
             ))
             .with_stdout_contains("test bench ... bench: [..]"),
@@ -1052,8 +1052,8 @@ fn bench_dylib() {
 [RUNNING] [..] -C opt-level=3 [..]
 [RUNNING] [..] -C opt-level=3 [..]
 [FINISHED] release [optimized] target(s) in [..]
-[RUNNING] `[..]target[/]release[/]deps[/]foo-[..][EXE] --bench`
-[RUNNING] `[..]target[/]release[/]deps[/]bench-[..][EXE] --bench`",
+[RUNNING] `[..]target/release/deps/foo-[..][EXE] --bench`
+[RUNNING] `[..]target/release/deps/bench-[..][EXE] --bench`",
                 dir = p.url()
             ))
             .with_stdout_contains_n("test foo ... bench: [..]", 2),
@@ -1069,8 +1069,8 @@ fn bench_dylib() {
 [FRESH] bar v0.0.1 ({dir}/bar)
 [FRESH] foo v0.0.1 ({dir})
 [FINISHED] release [optimized] target(s) in [..]
-[RUNNING] `[..]target[/]release[/]deps[/]foo-[..][EXE] --bench`
-[RUNNING] `[..]target[/]release[/]deps[/]bench-[..][EXE] --bench`",
+[RUNNING] `[..]target/release/deps/foo-[..][EXE] --bench`
+[RUNNING] `[..]target/release/deps/bench-[..][EXE] --bench`",
                 dir = p.url()
             ))
             .with_stdout_contains_n("test foo ... bench: [..]", 2),
@@ -1115,7 +1115,7 @@ fn bench_twice_with_build_cmd() {
                 "\
 [COMPILING] foo v0.0.1 ({dir})
 [FINISHED] release [optimized] target(s) in [..]
-[RUNNING] target[/]release[/]deps[/]foo-[..][EXE]",
+[RUNNING] target/release/deps/foo-[..][EXE]",
                 dir = p.url()
             ))
             .with_stdout_contains("test foo ... bench: [..]"),
@@ -1127,7 +1127,7 @@ fn bench_twice_with_build_cmd() {
             .with_status(0)
             .with_stderr(
                 "[FINISHED] release [optimized] target(s) in [..]
-[RUNNING] target[/]release[/]deps[/]foo-[..][EXE]",
+[RUNNING] target/release/deps/foo-[..][EXE]",
             )
             .with_stdout_contains("test foo ... bench: [..]"),
     );
@@ -1215,8 +1215,8 @@ fn bench_with_examples() {
 [RUNNING] `rustc [..]`
 [RUNNING] `rustc [..]`
 [FINISHED] release [optimized] target(s) in [..]
-[RUNNING] `{dir}[/]target[/]release[/]deps[/]foo-[..][EXE] --bench`
-[RUNNING] `{dir}[/]target[/]release[/]deps[/]testb1-[..][EXE] --bench`",
+[RUNNING] `{dir}/target/release/deps/foo-[..][EXE] --bench`
+[RUNNING] `{dir}/target/release/deps/testb1-[..][EXE] --bench`",
                 dir = p.root().display(),
                 url = p.url()
             ))
@@ -1262,7 +1262,7 @@ fn test_a_bench() {
                 "\
 [COMPILING] foo v0.1.0 ([..])
 [FINISHED] dev [unoptimized + debuginfo] target(s) in [..]
-[RUNNING] target[/]debug[/]deps[/]b-[..][EXE]",
+[RUNNING] target/debug/deps/b-[..][EXE]",
             )
             .with_stdout_contains("test foo ... ok"),
     );
@@ -1343,9 +1343,9 @@ fn test_bench_no_fail_fast() {
             .arg("--test-threads=1"),
         execs()
             .with_status(101)
-            .with_stderr_contains("[RUNNING] target[/]release[/]deps[/]foo-[..][EXE]")
+            .with_stderr_contains("[RUNNING] target/release/deps/foo-[..][EXE]")
             .with_stdout_contains("running 2 tests")
-            .with_stderr_contains("[RUNNING] target[/]release[/]deps[/]foo-[..][EXE]")
+            .with_stderr_contains("[RUNNING] target/release/deps/foo-[..][EXE]")
             .with_stdout_contains("test bench_hello [..]")
             .with_stdout_contains("test bench_nope [..]"),
     );
@@ -1438,9 +1438,9 @@ fn test_bench_multiple_packages() {
         p.cargo("bench").arg("-p").arg("bar").arg("-p").arg("baz"),
         execs()
             .with_status(0)
-            .with_stderr_contains("[RUNNING] target[/]release[/]deps[/]bbaz-[..][EXE]")
+            .with_stderr_contains("[RUNNING] target/release/deps/bbaz-[..][EXE]")
             .with_stdout_contains("test bench_baz ... bench: [..]")
-            .with_stderr_contains("[RUNNING] target[/]release[/]deps[/]bbar-[..][EXE]")
+            .with_stderr_contains("[RUNNING] target/release/deps/bbar-[..][EXE]")
             .with_stdout_contains("test bench_bar ... bench: [..]"),
     );
 }
@@ -1498,9 +1498,9 @@ fn bench_all_workspace() {
         p.cargo("bench").arg("--all"),
         execs()
             .with_status(0)
-            .with_stderr_contains("[RUNNING] target[/]release[/]deps[/]bar-[..][EXE]")
+            .with_stderr_contains("[RUNNING] target/release/deps/bar-[..][EXE]")
             .with_stdout_contains("test bench_bar ... bench: [..]")
-            .with_stderr_contains("[RUNNING] target[/]release[/]deps[/]foo-[..][EXE]")
+            .with_stderr_contains("[RUNNING] target/release/deps/foo-[..][EXE]")
             .with_stdout_contains("test bench_foo ... bench: [..]"),
     );
 }
@@ -1601,9 +1601,9 @@ fn bench_all_virtual_manifest() {
         p.cargo("bench").arg("--all"),
         execs()
             .with_status(0)
-            .with_stderr_contains("[RUNNING] target[/]release[/]deps[/]baz-[..][EXE]")
+            .with_stderr_contains("[RUNNING] target/release/deps/baz-[..][EXE]")
             .with_stdout_contains("test bench_baz ... bench: [..]")
-            .with_stderr_contains("[RUNNING] target[/]release[/]deps[/]bar-[..][EXE]")
+            .with_stderr_contains("[RUNNING] target/release/deps/bar-[..][EXE]")
             .with_stdout_contains("test bench_bar ... bench: [..]"),
     );
 }
@@ -1646,7 +1646,7 @@ fn legacy_bench_name() {
         p.cargo("bench"),
         execs().with_status(0).with_stderr_contains(
             "\
-[WARNING] path `[..]src[/]bench.rs` was erroneously implicitly accepted for benchmark `bench`,
+[WARNING] path `[..]src/bench.rs` was erroneously implicitly accepted for benchmark `bench`,
 please set bench.path in Cargo.toml",
         ),
     );
@@ -1698,9 +1698,9 @@ fn bench_virtual_manifest_all_implied() {
         p.cargo("bench"),
         execs()
             .with_status(0)
-            .with_stderr_contains("[RUNNING] target[/]release[/]deps[/]baz-[..][EXE]")
+            .with_stderr_contains("[RUNNING] target/release/deps/baz-[..][EXE]")
             .with_stdout_contains("test bench_baz ... bench: [..]")
-            .with_stderr_contains("[RUNNING] target[/]release[/]deps[/]bar-[..][EXE]")
+            .with_stderr_contains("[RUNNING] target/release/deps/bar-[..][EXE]")
             .with_stdout_contains("test bench_bar ... bench: [..]"),
     );
 }
