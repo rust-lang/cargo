@@ -23,5 +23,5 @@ clone_depth: 1
 build: false
 
 test_script:
-  - if defined MINIMAL_VERSIONS cargo +nightly generate-lockfile -Z minimal-versions && cargo +stable check --tests
+  - if defined MINIMAL_VERSIONS cargo +nightly generate-lockfile -Z minimal-versions && cargo +stable test
   - if NOT defined MINIMAL_VERSIONS cargo test
