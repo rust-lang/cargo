@@ -1386,6 +1386,12 @@ pub fn cargo_process(s: &str) -> ProcessBuilder {
     p
 }
 
+pub fn git_process(s: &str) -> ProcessBuilder {
+    let mut p = process("git");
+    split_and_add_args(&mut p, s);
+    p
+}
+
 pub fn sleep_ms(ms: u64) {
     ::std::thread::sleep(Duration::from_millis(ms));
 }
