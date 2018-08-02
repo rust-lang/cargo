@@ -627,7 +627,7 @@ fn cargo_compile_with_short_ssh_git() {
 
     assert_that(
         p.cargo("build"),
-        execs().with_stdout("").with_stderr(&format!(
+        execs().with_status(101).with_stdout("").with_stderr(&format!(
             "\
 [ERROR] failed to parse manifest at `[..]`
 
@@ -2659,7 +2659,7 @@ fn invalid_git_dependency_manifest() {
 
     assert_that(
         project.cargo("build"),
-        execs().with_stderr(&format!(
+        execs().with_status(101).with_stderr(&format!(
             "[UPDATING] git repository `{}`\n\
              error: failed to load source for a dependency on `dep1`\n\
              \n\

@@ -175,7 +175,7 @@ fn custom_runner() {
 
     assert_that(
         p.cargo("run -- --param"),
-        execs().with_stderr_contains(&format!(
+        execs().with_status(101).with_stderr_contains(&format!(
             "\
 [COMPILING] foo v0.0.1 ({url})
 [FINISHED] dev [unoptimized + debuginfo] target(s) in [..]
@@ -187,7 +187,7 @@ fn custom_runner() {
 
     assert_that(
         p.cargo("test --test test --verbose -- --param"),
-        execs().with_stderr_contains(&format!(
+        execs().with_status(101).with_stderr_contains(&format!(
             "\
 [COMPILING] foo v0.0.1 ({url})
 [RUNNING] `rustc [..]`
@@ -200,7 +200,7 @@ fn custom_runner() {
 
     assert_that(
         p.cargo("bench --bench bench --verbose -- --param"),
-        execs().with_stderr_contains(&format!(
+        execs().with_status(101).with_stderr_contains(&format!(
             "\
 [COMPILING] foo v0.0.1 ({url})
 [RUNNING] `rustc [..]`

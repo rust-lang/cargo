@@ -332,7 +332,7 @@ fn native_plugin_dependency_with_custom_ar_linker() {
 
     assert_that(
         bar.cargo("build").arg("--verbose"),
-        execs().with_stderr_contains(
+        execs().with_status(101).with_stderr_contains(
             "\
 [COMPILING] foo v0.0.1 ([..])
 [RUNNING] `rustc [..] -C ar=nonexistent-ar -C linker=nonexistent-linker [..]`
