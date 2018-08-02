@@ -52,7 +52,7 @@ fn custom_target_minimal() {
             .arg("--target")
             .arg("custom-target.json")
             .arg("-v"),
-        execs().with_status(0),
+        execs(),
     );
     assert_that(
         p.cargo("build")
@@ -60,7 +60,7 @@ fn custom_target_minimal() {
             .arg("--target")
             .arg("src/../custom-target.json")
             .arg("-v"),
-        execs().with_status(0),
+        execs(),
     );
 }
 
@@ -146,6 +146,6 @@ fn custom_target_dependency() {
             .arg("--target")
             .arg("custom-target.json")
             .arg("-v"),
-        execs().with_status(0),
+        execs(),
     );
 }

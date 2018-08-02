@@ -158,18 +158,16 @@ error: no such subcommand: `biuld`
 
     assert_that(
         cargo_process("install cargo-biuld"),
-        execs().with_status(0),
+        execs(),
     );
     assert_that(
         cargo_process("biuld"),
         execs()
-            .with_status(0)
             .with_stdout("Similar, but not identical to, build\n"),
     );
     assert_that(
         cargo_process("--list"),
         execs()
-            .with_status(0)
             .with_stdout_contains("    build                Compile a local package and all of its dependencies\n")
             .with_stdout_contains("    biuld\n"),
     );
@@ -218,7 +216,7 @@ fn override_cargo_home() {
 
     assert_that(
         cargo_process("new foo").env("USER", "foo").env("CARGO_HOME", &my_home),
-        execs().with_status(0),
+        execs(),
     );
 
     let toml = paths::root().join("foo/Cargo.toml");
@@ -250,7 +248,7 @@ fn cargo_subcommand_env() {
 
     let target_dir = p.target_debug_dir();
 
-    assert_that(p.cargo("build"), execs().with_status(0));
+    assert_that(p.cargo("build"), execs());
     assert_that(&p.bin("cargo-envtest"), existing_file());
 
     let cargo = cargo_exe().canonicalize().unwrap();
@@ -260,7 +258,7 @@ fn cargo_subcommand_env() {
 
     assert_that(
         cargo_process("envtest").env("PATH", &path),
-        execs().with_status(0).with_stdout(cargo.to_str().unwrap()),
+        execs().with_stdout(cargo.to_str().unwrap()),
     );
 }
 
@@ -279,7 +277,7 @@ fn cargo_subcommand_args() {
         )
         .build();
 
-    assert_that(p.cargo("build"), execs().with_status(0));
+    assert_that(p.cargo("build"), execs());
     let cargo_foo_bin = p.bin("cargo-foo");
     assert_that(&cargo_foo_bin, existing_file());
 
@@ -289,7 +287,7 @@ fn cargo_subcommand_args() {
 
     assert_that(
         cargo_process("foo bar -v --help").env("PATH", &path),
-        execs().with_status(0).with_stdout(format!(
+        execs().with_stdout(format!(
             r#"[{:?}, "foo", "bar", "-v", "--help"]"#,
             cargo_foo_bin
         )),
@@ -298,12 +296,12 @@ fn cargo_subcommand_args() {
 
 #[test]
 fn cargo_help() {
-    assert_that(cargo_process(""), execs().with_status(0));
-    assert_that(cargo_process("help"), execs().with_status(0));
-    assert_that(cargo_process("-h"), execs().with_status(0));
-    assert_that(cargo_process("help build"), execs().with_status(0));
-    assert_that(cargo_process("build -h"), execs().with_status(0));
-    assert_that(cargo_process("help help"), execs().with_status(0));
+    assert_that(cargo_process(""), execs());
+    assert_that(cargo_process("help"), execs());
+    assert_that(cargo_process("-h"), execs());
+    assert_that(cargo_process("help build"), execs());
+    assert_that(cargo_process("build -h"), execs());
+    assert_that(cargo_process("help help"), execs());
 }
 
 #[test]
@@ -321,11 +319,11 @@ fn cargo_help_external_subcommand() {
             .publish();
     assert_that(
         cargo_process("install cargo-fake-help"),
-        execs().with_status(0),
+        execs(),
     );
     assert_that(
         cargo_process("help fake-help"),
-        execs().with_status(0).with_stdout("fancy help output\n")
+        execs().with_stdout("fancy help output\n")
     );
 }
 
@@ -333,7 +331,7 @@ fn cargo_help_external_subcommand() {
 fn explain() {
     assert_that(
         cargo_process("--explain E0001"),
-        execs().with_status(0).with_stdout_contains(
+        execs().with_stdout_contains(
             "This error suggests that the expression arm corresponding to the noted pattern",
         ),
     );
@@ -345,7 +343,7 @@ fn explain() {
 fn z_flags_help() {
     assert_that(
         cargo_process("-Z help"),
-        execs().with_status(0).with_stdout_contains(
+        execs().with_stdout_contains(
             "    -Z unstable-options -- Allow the usage of unstable options such as --registry",
         ),
     );

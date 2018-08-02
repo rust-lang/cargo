@@ -9,7 +9,7 @@ fn rustdoc_simple() {
 
     assert_that(
         p.cargo("rustdoc").arg("-v"),
-        execs().with_status(0).with_stderr(format!(
+        execs().with_stderr(format!(
             "\
 [DOCUMENTING] foo v0.0.1 ({url})
 [RUNNING] `rustdoc --crate-name foo src/lib.rs \
@@ -31,7 +31,7 @@ fn rustdoc_args() {
 
     assert_that(
         p.cargo("rustdoc").arg("-v").arg("--").arg("--cfg=foo"),
-        execs().with_status(0).with_stderr(format!(
+        execs().with_stderr(format!(
             "\
 [DOCUMENTING] foo v0.0.1 ({url})
 [RUNNING] `rustdoc --crate-name foo src/lib.rs \
@@ -70,7 +70,7 @@ fn rustdoc_foo_with_bar_dependency() {
 
     assert_that(
         foo.cargo("rustdoc").arg("-v").arg("--").arg("--cfg=foo"),
-        execs().with_status(0).with_stderr(format!(
+        execs().with_stderr(format!(
             "\
 [CHECKING] bar v0.0.1 ([..])
 [RUNNING] `rustc [..]bar/src/lib.rs [..]`
@@ -117,7 +117,7 @@ fn rustdoc_only_bar_dependency() {
             .arg("bar")
             .arg("--")
             .arg("--cfg=foo"),
-        execs().with_status(0).with_stderr(format!(
+        execs().with_stderr(format!(
             "\
 [DOCUMENTING] bar v0.0.1 ([..])
 [RUNNING] `rustdoc --crate-name bar [..]bar/src/lib.rs \
@@ -140,7 +140,7 @@ fn rustdoc_same_name_documents_lib() {
 
     assert_that(
         p.cargo("rustdoc").arg("-v").arg("--").arg("--cfg=foo"),
-        execs().with_status(0).with_stderr(format!(
+        execs().with_stderr(format!(
             "\
 [DOCUMENTING] foo v0.0.1 ([..])
 [RUNNING] `rustdoc --crate-name foo src/lib.rs \
@@ -175,7 +175,6 @@ fn features() {
     assert_that(
         p.cargo("rustdoc --verbose --features quux"),
         execs()
-            .with_status(0)
             .with_stderr_contains("[..]feature=[..]quux[..]"),
     );
 }
@@ -189,7 +188,7 @@ fn rustdoc_target() {
 
     assert_that(
         p.cargo("rustdoc --verbose --target x86_64-unknown-linux-gnu"),
-        execs().with_status(0).with_stderr("\
+        execs().with_stderr("\
 [DOCUMENTING] foo v0.0.1 ([..])
 [RUNNING] `rustdoc --crate-name foo src/lib.rs \
     --target x86_64-unknown-linux-gnu \

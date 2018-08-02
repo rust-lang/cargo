@@ -50,7 +50,7 @@ fn fix_broken_if_requested() {
     assert_that(
         p.cargo("fix --allow-no-vcs --broken-code")
             .env("__CARGO_FIX_YOLO", "1"),
-        execs().with_status(0),
+        execs(),
     );
 }
 
@@ -124,7 +124,7 @@ fn broken_fixes_backed_out() {
     // Build our rustc shim
     assert_that(
         p.cargo("build").cwd(p.root().join("foo")),
-        execs().with_status(0),
+        execs(),
     );
 
     // Attempt to fix code, but our shim will always fail the second compile
@@ -199,7 +199,6 @@ fn fix_path_deps() {
         p.cargo("fix --allow-no-vcs -p foo -p bar")
             .env("__CARGO_FIX_YOLO", "1"),
         execs()
-            .with_status(0)
             .with_stdout("")
             .with_stderr("\
 [CHECKING] bar v0.1.0 ([..])
@@ -245,7 +244,7 @@ fn do_not_fix_non_relevant_deps() {
         p.cargo("fix --allow-no-vcs")
             .env("__CARGO_FIX_YOLO", "1")
             .cwd(p.root().join("foo")),
-        execs().with_status(0)
+        execs()
     );
 
     assert!(p.read_file("bar/src/lib.rs").contains("mut"));
@@ -285,7 +284,7 @@ fn prepare_for_2018() {
 ";
     assert_that(
         p.cargo("fix --edition --allow-no-vcs"),
-        execs().with_status(0).with_stderr(stderr).with_stdout(""),
+        execs().with_stderr(stderr).with_stdout(""),
     );
 
     println!("{}", p.read_file("src/lib.rs"));
@@ -325,7 +324,7 @@ fn local_paths() {
 
     assert_that(
         p.cargo("fix --edition --allow-no-vcs"),
-        execs().with_status(0).with_stderr(stderr).with_stdout(""),
+        execs().with_stderr(stderr).with_stdout(""),
     );
 
     println!("{}", p.read_file("src/lib.rs"));
@@ -363,7 +362,7 @@ issues in preparation for the 2018 edition
 ";
     assert_that(
         p.cargo("fix --edition --allow-no-vcs"),
-        execs().with_status(0).with_stderr(stderr).with_stdout(""),
+        execs().with_stderr(stderr).with_stdout(""),
     );
 }
 
@@ -417,7 +416,7 @@ fn upgrade_extern_crate() {
         p.cargo("fix --allow-no-vcs")
             .env("__CARGO_FIX_YOLO", "1")
             .masquerade_as_nightly_cargo(),
-        execs().with_status(0).with_stderr(stderr).with_stdout(""),
+        execs().with_stderr(stderr).with_stdout(""),
     );
     println!("{}", p.read_file("src/lib.rs"));
     assert!(!p.read_file("src/lib.rs").contains("extern crate"));
@@ -454,7 +453,7 @@ fn specify_rustflags() {
     assert_that(
         p.cargo("fix --edition --allow-no-vcs")
             .env("RUSTFLAGS", "-C target-cpu=native"),
-        execs().with_status(0).with_stderr(stderr).with_stdout(""),
+        execs().with_stderr(stderr).with_stdout(""),
     );
 }
 
@@ -470,7 +469,7 @@ fn no_changes_necessary() {
 ";
     assert_that(
         p.cargo("fix --allow-no-vcs"),
-        execs().with_status(0).with_stderr(stderr).with_stdout(""),
+        execs().with_stderr(stderr).with_stdout(""),
     );
 }
 
@@ -496,7 +495,7 @@ fn fixes_extra_mut() {
     assert_that(
         p.cargo("fix --allow-no-vcs")
             .env("__CARGO_FIX_YOLO", "1"),
-        execs().with_status(0).with_stderr(stderr).with_stdout(""),
+        execs().with_stderr(stderr).with_stdout(""),
     );
 }
 
@@ -523,7 +522,7 @@ fn fixes_two_missing_ampersands() {
     assert_that(
         p.cargo("fix --allow-no-vcs")
             .env("__CARGO_FIX_YOLO", "1"),
-        execs().with_status(0).with_stderr(stderr).with_stdout(""),
+        execs().with_stderr(stderr).with_stdout(""),
     );
 }
 
@@ -549,7 +548,7 @@ fn tricky() {
     assert_that(
         p.cargo("fix --allow-no-vcs")
             .env("__CARGO_FIX_YOLO", "1"),
-        execs().with_status(0).with_stderr(stderr).with_stdout(""),
+        execs().with_stderr(stderr).with_stdout(""),
     );
 }
 
@@ -568,7 +567,7 @@ fn preserve_line_endings() {
     assert_that(
         p.cargo("fix --allow-no-vcs")
             .env("__CARGO_FIX_YOLO", "1"),
-        execs().with_status(0),
+        execs(),
     );
     assert!(p.read_file("src/lib.rs").contains("\r\n"));
 }
@@ -588,7 +587,7 @@ fn fix_deny_warnings() {
     assert_that(
         p.cargo("fix --allow-no-vcs")
             .env("__CARGO_FIX_YOLO", "1"),
-        execs().with_status(0),
+        execs(),
     );
 }
 
@@ -613,7 +612,7 @@ fn fix_deny_warnings_but_not_others() {
     assert_that(
         p.cargo("fix --allow-no-vcs")
             .env("__CARGO_FIX_YOLO", "1"),
-        execs().with_status(0),
+        execs(),
     );
     assert!(!p.read_file("src/lib.rs").contains("let mut x = 3;"));
     assert!(p.read_file("src/lib.rs").contains("fn bar() {}"));
@@ -649,7 +648,6 @@ fn fix_two_files() {
         p.cargo("fix --allow-no-vcs")
             .env("__CARGO_FIX_YOLO", "1"),
         execs()
-            .with_status(0)
             .with_stderr_contains("[FIXING] src/bar.rs (1 fix)")
             .with_stderr_contains("[FIXING] src/lib.rs (1 fix)"),
     );
@@ -685,7 +683,6 @@ fn fixes_missing_ampersand() {
         p.cargo("fix --all-targets --allow-no-vcs")
             .env("__CARGO_FIX_YOLO", "1"),
         execs()
-            .with_status(0)
             .with_stdout("")
             .with_stderr_contains("[COMPILING] foo v0.0.1 ([..])")
             .with_stderr_contains("[FIXING] build.rs (1 fix)")
@@ -700,8 +697,8 @@ fn fixes_missing_ampersand() {
             .with_stderr_contains("[FIXING] tests/a.rs (1 fix)")
             .with_stderr_contains("[FINISHED] [..]"),
     );
-    assert_that(p.cargo("build"), execs().with_status(0));
-    assert_that(p.cargo("test"), execs().with_status(0));
+    assert_that(p.cargo("build"), execs());
+    assert_that(p.cargo("test"), execs());
 }
 
 #[test]
@@ -729,10 +726,10 @@ fn fix_features() {
         )
         .build();
 
-    assert_that(p.cargo("fix --allow-no-vcs"), execs().with_status(0));
-    assert_that(p.cargo("build"), execs().with_status(0));
-    assert_that(p.cargo("fix --features bar --allow-no-vcs"), execs().with_status(0));
-    assert_that(p.cargo("build --features bar"), execs().with_status(0));
+    assert_that(p.cargo("fix --allow-no-vcs"), execs());
+    assert_that(p.cargo("build"), execs());
+    assert_that(p.cargo("fix --features bar --allow-no-vcs"), execs());
+    assert_that(p.cargo("build --features bar"), execs());
 }
 
 #[test]
@@ -743,7 +740,7 @@ fn shows_warnings() {
 
     assert_that(
         p.cargo("fix --allow-no-vcs"),
-        execs().with_status(0).with_stderr_contains("[..]warning: unused import[..]"),
+        execs().with_stderr_contains("[..]warning: unused import[..]"),
     );
 }
 
@@ -764,7 +761,7 @@ destructive changes; if you'd like to suppress this error pass `--allow-no-vcs`\
     );
     assert_that(
         p.cargo("fix --allow-no-vcs"),
-        execs().with_status(0),
+        execs(),
     );
 }
 
@@ -800,7 +797,7 @@ these files:
     );
     assert_that(
         p.cargo("fix --allow-dirty"),
-        execs().with_status(0),
+        execs(),
     );
 }
 
@@ -820,7 +817,7 @@ fn does_not_warn_about_clean_working_directory() {
 
     assert_that(
         p.cargo("fix"),
-        execs().with_status(0),
+        execs(),
     );
 }
 
@@ -842,7 +839,7 @@ fn does_not_warn_about_dirty_ignored_files() {
 
     assert_that(
         p.cargo("fix"),
-        execs().with_status(0),
+        execs(),
     );
 }
 
@@ -855,7 +852,7 @@ fn fix_all_targets_by_default() {
     assert_that(
         p.cargo("fix --allow-no-vcs")
             .env("__CARGO_FIX_YOLO", "1"),
-        execs().with_status(0),
+        execs(),
     );
     assert!(!p.read_file("src/lib.rs").contains("let mut x"));
     assert!(!p.read_file("tests/foo.rs").contains("let mut x"));
@@ -921,9 +918,7 @@ issues in preparation for the 2018 edition
     assert_that(
         p.cargo("fix --edition --allow-no-vcs")
             .masquerade_as_nightly_cargo(),
-        execs()
-            .with_stderr(stderr)
-            .with_status(0),
+        execs().with_stderr(stderr),
     );
 }
 
@@ -958,7 +953,7 @@ fn fix_overlapping() {
 
     assert_that(
         p.cargo("fix --allow-no-vcs --prepare-for 2018 --lib"),
-        execs().with_status(0).with_stderr(stderr),
+        execs().with_stderr(stderr),
     );
 
     let contents = p.read_file("src/lib.rs");

@@ -14,7 +14,7 @@ fn cargo_build_plan_simple() {
             .masquerade_as_nightly_cargo()
             .arg("--build-plan")
             .arg("-Zunstable-options"),
-        execs().with_status(0).with_json(
+        execs().with_json(
             r#"
     {
         "inputs": [
@@ -75,7 +75,7 @@ fn cargo_build_plan_single_dep() {
             .masquerade_as_nightly_cargo()
             .arg("--build-plan")
             .arg("-Zunstable-options"),
-        execs().with_status(0).with_json(
+        execs().with_json(
             r#"
     {
         "inputs": [
@@ -143,7 +143,7 @@ fn cargo_build_plan_build_script() {
             .masquerade_as_nightly_cargo()
             .arg("--build-plan")
             .arg("-Zunstable-options"),
-        execs().with_status(0).with_json(
+        execs().with_json(
             r#"
     {
         "inputs": [

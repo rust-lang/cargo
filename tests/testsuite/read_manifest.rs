@@ -43,7 +43,7 @@ fn cargo_read_manifest_path_to_cargo_toml_relative() {
             .arg("--manifest-path")
             .arg("foo/Cargo.toml")
             .cwd(p.root().parent().unwrap()),
-        execs().with_status(0).with_json(MANIFEST_OUTPUT),
+        execs().with_json(MANIFEST_OUTPUT),
     );
 }
 
@@ -59,7 +59,7 @@ fn cargo_read_manifest_path_to_cargo_toml_absolute() {
             .arg("--manifest-path")
             .arg(p.root().join("Cargo.toml"))
             .cwd(p.root().parent().unwrap()),
-        execs().with_status(0).with_json(MANIFEST_OUTPUT),
+        execs().with_json(MANIFEST_OUTPUT),
     );
 }
 
@@ -110,6 +110,6 @@ fn cargo_read_manifest_cwd() {
 
     assert_that(
         p.cargo("read-manifest").cwd(p.root()),
-        execs().with_status(0).with_json(MANIFEST_OUTPUT),
+        execs().with_json(MANIFEST_OUTPUT),
     );
 }

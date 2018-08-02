@@ -40,7 +40,7 @@ fn simple() {
 
     assert_that(
         p.cargo("build"),
-        execs().with_status(0).with_stderr(&format!(
+        execs().with_stderr(&format!(
             "\
 [UPDATING] registry `{reg}`
 [DOWNLOADING] bar v0.0.1 (registry `file://[..]`)
@@ -53,12 +53,12 @@ fn simple() {
         )),
     );
 
-    assert_that(p.cargo("clean"), execs().with_status(0));
+    assert_that(p.cargo("clean"), execs());
 
     // Don't download a second time
     assert_that(
         p.cargo("build"),
-        execs().with_status(0).with_stderr(&format!(
+        execs().with_stderr(&format!(
             "\
 [COMPILING] bar v0.0.1
 [COMPILING] foo v0.0.1 ({dir})
@@ -92,7 +92,7 @@ fn deps() {
 
     assert_that(
         p.cargo("build"),
-        execs().with_status(0).with_stderr(&format!(
+        execs().with_stderr(&format!(
             "\
 [UPDATING] registry `{reg}`
 [DOWNLOADING] [..] v0.0.1 (registry `file://[..]`)
@@ -335,7 +335,7 @@ required by package `foo v0.0.1 ([..])`
 
     assert_that(
         p.cargo("build"),
-        execs().with_status(0).with_stderr(&format!(
+        execs().with_stderr(&format!(
             "\
 [UPDATING] registry `{reg}`
 [DOWNLOADING] notyet v0.0.1 (registry `file://[..]`)
@@ -393,7 +393,7 @@ required by package `foo v0.0.1 ([..])`
 
     assert_that(
         p.cargo("package"),
-        execs().with_status(0).with_stderr(format!(
+        execs().with_stderr(format!(
             "\
 [PACKAGING] foo v0.0.1 ({dir})
 [VERIFYING] foo v0.0.1 ({dir})
@@ -430,7 +430,7 @@ fn lockfile_locks() {
 
     assert_that(
         p.cargo("build"),
-        execs().with_status(0).with_stderr(&format!(
+        execs().with_stderr(&format!(
             "\
 [UPDATING] registry `[..]`
 [DOWNLOADING] bar v0.0.1 (registry `file://[..]`)
@@ -445,7 +445,7 @@ fn lockfile_locks() {
     p.root().move_into_the_past();
     Package::new("bar", "0.0.2").publish();
 
-    assert_that(p.cargo("build"), execs().with_status(0).with_stdout(""));
+    assert_that(p.cargo("build"), execs().with_stdout(""));
 }
 
 #[test]
@@ -471,7 +471,7 @@ fn lockfile_locks_transitively() {
 
     assert_that(
         p.cargo("build"),
-        execs().with_status(0).with_stderr(&format!(
+        execs().with_stderr(&format!(
             "\
 [UPDATING] registry `[..]`
 [DOWNLOADING] [..] v0.0.1 (registry `file://[..]`)
@@ -489,7 +489,7 @@ fn lockfile_locks_transitively() {
     Package::new("baz", "0.0.2").publish();
     Package::new("bar", "0.0.2").dep("baz", "*").publish();
 
-    assert_that(p.cargo("build"), execs().with_status(0).with_stdout(""));
+    assert_that(p.cargo("build"), execs().with_stdout(""));
 }
 
 #[test]
@@ -520,7 +520,7 @@ fn yanks_are_not_used() {
 
     assert_that(
         p.cargo("build"),
-        execs().with_status(0).with_stderr(&format!(
+        execs().with_stderr(&format!(
             "\
 [UPDATING] registry `[..]`
 [DOWNLOADING] [..] v0.0.1 (registry `file://[..]`)
@@ -590,13 +590,13 @@ fn yanks_in_lockfiles_are_ok() {
 
     Package::new("bar", "0.0.1").publish();
 
-    assert_that(p.cargo("build"), execs().with_status(0));
+    assert_that(p.cargo("build"), execs());
 
     registry::registry_path().join("3").rm_rf();
 
     Package::new("bar", "0.0.1").yanked(true).publish();
 
-    assert_that(p.cargo("build"), execs().with_status(0).with_stdout(""));
+    assert_that(p.cargo("build"), execs().with_stdout(""));
 
     assert_that(
         p.cargo("update"),
@@ -629,13 +629,13 @@ fn update_with_lockfile_if_packages_missing() {
         .build();
 
     Package::new("bar", "0.0.1").publish();
-    assert_that(p.cargo("build"), execs().with_status(0));
+    assert_that(p.cargo("build"), execs());
     p.root().move_into_the_past();
 
     paths::home().join(".cargo/registry").rm_rf();
     assert_that(
         p.cargo("build"),
-        execs().with_status(0).with_stderr(
+        execs().with_stderr(
             "\
 [UPDATING] registry `[..]`
 [DOWNLOADING] bar v0.0.1 (registry `file://[..]`)
@@ -665,7 +665,7 @@ fn update_lockfile() {
 
     println!("0.0.1");
     Package::new("bar", "0.0.1").publish();
-    assert_that(p.cargo("build"), execs().with_status(0));
+    assert_that(p.cargo("build"), execs());
 
     Package::new("bar", "0.0.2").publish();
     Package::new("bar", "0.0.3").publish();
@@ -677,7 +677,7 @@ fn update_lockfile() {
             .arg("bar")
             .arg("--precise")
             .arg("0.0.2"),
-        execs().with_status(0).with_stderr(
+        execs().with_stderr(
             "\
 [UPDATING] registry `[..]`
 [UPDATING] bar v0.0.1 -> v0.0.2
@@ -688,7 +688,7 @@ fn update_lockfile() {
     println!("0.0.2 build");
     assert_that(
         p.cargo("build"),
-        execs().with_status(0).with_stderr(&format!(
+        execs().with_stderr(&format!(
             "\
 [DOWNLOADING] [..] v0.0.2 (registry `file://[..]`)
 [COMPILING] bar v0.0.2
@@ -702,7 +702,7 @@ fn update_lockfile() {
     println!("0.0.3 update");
     assert_that(
         p.cargo("update -p bar"),
-        execs().with_status(0).with_stderr(
+        execs().with_stderr(
             "\
 [UPDATING] registry `[..]`
 [UPDATING] bar v0.0.2 -> v0.0.3
@@ -713,7 +713,7 @@ fn update_lockfile() {
     println!("0.0.3 build");
     assert_that(
         p.cargo("build"),
-        execs().with_status(0).with_stderr(&format!(
+        execs().with_stderr(&format!(
             "\
 [DOWNLOADING] [..] v0.0.3 (registry `file://[..]`)
 [COMPILING] bar v0.0.3
@@ -729,7 +729,7 @@ fn update_lockfile() {
     Package::new("spam", "0.2.5").publish();
     assert_that(
         p.cargo("update -p bar"),
-        execs().with_status(0).with_stderr(
+        execs().with_stderr(
             "\
 [UPDATING] registry `[..]`
 [UPDATING] bar v0.0.3 -> v0.0.4
@@ -742,7 +742,7 @@ fn update_lockfile() {
     Package::new("bar", "0.0.5").publish();
     assert_that(
         p.cargo("update -p bar"),
-        execs().with_status(0).with_stderr(
+        execs().with_stderr(
             "\
 [UPDATING] registry `[..]`
 [UPDATING] bar v0.0.4 -> v0.0.5
@@ -803,7 +803,7 @@ fn dev_dependency_not_used() {
 
     assert_that(
         p.cargo("build"),
-        execs().with_status(0).with_stderr(&format!(
+        execs().with_stderr(&format!(
             "\
 [UPDATING] registry `[..]`
 [DOWNLOADING] [..] v0.0.1 (registry `file://[..]`)
@@ -822,7 +822,7 @@ fn login_with_no_cargo_dir() {
     t!(fs::create_dir(&home));
     assert_that(
         cargo_process("login foo -v"),
-        execs().with_status(0),
+        execs(),
     );
 }
 
@@ -833,15 +833,15 @@ fn login_with_differently_sized_token() {
     t!(fs::create_dir(&home));
     assert_that(
         cargo_process("login lmaolmaolmao -v"),
-        execs().with_status(0),
+        execs(),
     );
     assert_that(
         cargo_process("login lmao -v"),
-        execs().with_status(0),
+        execs(),
     );
     assert_that(
         cargo_process("login lmaolmaolmao -v"),
-        execs().with_status(0),
+        execs(),
     );
 }
 
@@ -909,7 +909,7 @@ fn updating_a_dep() {
 
     assert_that(
         p.cargo("build"),
-        execs().with_status(0).with_stderr(&format!(
+        execs().with_stderr(&format!(
             "\
 [UPDATING] registry `[..]`
 [DOWNLOADING] bar v0.0.1 (registry `file://[..]`)
@@ -938,7 +938,7 @@ fn updating_a_dep() {
     println!("second");
     assert_that(
         p.cargo("build"),
-        execs().with_status(0).with_stderr(&format!(
+        execs().with_stderr(&format!(
             "\
 [UPDATING] registry `[..]`
 [DOWNLOADING] bar v0.1.0 (registry `file://[..]`)
@@ -996,7 +996,7 @@ fn git_and_registry_dep() {
     p.root().move_into_the_past();
     assert_that(
         p.cargo("build"),
-        execs().with_status(0).with_stderr(&format!(
+        execs().with_stderr(&format!(
             "\
 [UPDATING] [..]
 [UPDATING] [..]
@@ -1012,7 +1012,7 @@ fn git_and_registry_dep() {
     p.root().move_into_the_past();
 
     println!("second");
-    assert_that(p.cargo("build"), execs().with_status(0).with_stdout(""));
+    assert_that(p.cargo("build"), execs().with_stdout(""));
 }
 
 #[test]
@@ -1035,7 +1035,7 @@ fn update_publish_then_update() {
         .file("src/main.rs", "fn main() {}")
         .build();
     Package::new("a", "0.1.0").publish();
-    assert_that(p.cargo("build"), execs().with_status(0));
+    assert_that(p.cargo("build"), execs());
 
     // Next, publish a new package and back up the copy of the registry we just
     // created.
@@ -1061,7 +1061,7 @@ fn update_publish_then_update() {
         )
         .file("src/main.rs", "fn main() {}")
         .build();
-    assert_that(p2.cargo("build"), execs().with_status(0));
+    assert_that(p2.cargo("build"), execs());
     registry.rm_rf();
     t!(fs::rename(&backup, &registry));
     t!(fs::rename(
@@ -1074,7 +1074,7 @@ fn update_publish_then_update() {
     // then build everything again.
     assert_that(
         p.cargo("build"),
-        execs().with_status(0).with_stderr(&format!(
+        execs().with_stderr(&format!(
             "\
 [UPDATING] [..]
 [DOWNLOADING] a v0.1.1 (registry `file://[..]`)
@@ -1109,7 +1109,7 @@ fn fetch_downloads() {
 
     assert_that(
         p.cargo("fetch"),
-        execs().with_status(0).with_stderr(
+        execs().with_stderr(
             "\
 [UPDATING] registry `[..]`
 [DOWNLOADING] a v0.1.0 (registry [..])
@@ -1139,13 +1139,13 @@ fn update_transitive_dependency() {
     Package::new("a", "0.1.0").dep("b", "*").publish();
     Package::new("b", "0.1.0").publish();
 
-    assert_that(p.cargo("fetch"), execs().with_status(0));
+    assert_that(p.cargo("fetch"), execs());
 
     Package::new("b", "0.1.1").publish();
 
     assert_that(
         p.cargo("update -pb"),
-        execs().with_status(0).with_stderr(
+        execs().with_stderr(
             "\
 [UPDATING] registry `[..]`
 [UPDATING] b v0.1.0 -> v0.1.1
@@ -1155,7 +1155,7 @@ fn update_transitive_dependency() {
 
     assert_that(
         p.cargo("build"),
-        execs().with_status(0).with_stderr(
+        execs().with_stderr(
             "\
 [DOWNLOADING] b v0.1.1 (registry `file://[..]`)
 [COMPILING] b v0.1.1
@@ -1197,7 +1197,7 @@ fn update_backtracking_ok() {
         .publish();
     Package::new("openssl", "0.1.0").publish();
 
-    assert_that(p.cargo("generate-lockfile"), execs().with_status(0));
+    assert_that(p.cargo("generate-lockfile"), execs());
 
     Package::new("openssl", "0.1.1").publish();
     Package::new("hyper", "0.6.6")
@@ -1207,7 +1207,7 @@ fn update_backtracking_ok() {
 
     assert_that(
         p.cargo("update -p hyper"),
-        execs().with_status(0).with_stderr(
+        execs().with_stderr(
             "\
 [UPDATING] registry `[..]`
 [UPDATING] hyper v0.6.5 -> v0.6.6
@@ -1241,7 +1241,7 @@ fn update_multiple_packages() {
     Package::new("b", "0.1.0").publish();
     Package::new("c", "0.1.0").publish();
 
-    assert_that(p.cargo("fetch"), execs().with_status(0));
+    assert_that(p.cargo("fetch"), execs());
 
     Package::new("a", "0.1.1").publish();
     Package::new("b", "0.1.1").publish();
@@ -1249,7 +1249,7 @@ fn update_multiple_packages() {
 
     assert_that(
         p.cargo("update -pa -pb"),
-        execs().with_status(0).with_stderr(
+        execs().with_stderr(
             "\
 [UPDATING] registry `[..]`
 [UPDATING] a v0.1.0 -> v0.1.1
@@ -1260,7 +1260,7 @@ fn update_multiple_packages() {
 
     assert_that(
         p.cargo("update -pb -pc"),
-        execs().with_status(0).with_stderr(
+        execs().with_stderr(
             "\
 [UPDATING] registry `[..]`
 [UPDATING] c v0.1.0 -> v0.1.1
@@ -1271,7 +1271,6 @@ fn update_multiple_packages() {
     assert_that(
         p.cargo("build"),
         execs()
-            .with_status(0)
             .with_stderr_contains("[DOWNLOADING] a v0.1.1 (registry `file://[..]`)")
             .with_stderr_contains("[DOWNLOADING] b v0.1.1 (registry `file://[..]`)")
             .with_stderr_contains("[DOWNLOADING] c v0.1.1 (registry `file://[..]`)")
@@ -1321,7 +1320,7 @@ fn bundled_crate_in_registry() {
         .file("bar/src/lib.rs", "")
         .publish();
 
-    assert_that(p.cargo("run"), execs().with_status(0));
+    assert_that(p.cargo("run"), execs());
 }
 
 #[test]
@@ -1347,10 +1346,10 @@ fn update_same_prefix_oh_my_how_was_this_a_bug() {
         .dep("foobar", "0.2.0")
         .publish();
 
-    assert_that(p.cargo("generate-lockfile"), execs().with_status(0));
+    assert_that(p.cargo("generate-lockfile"), execs());
     assert_that(
         p.cargo("update -pfoobar --precise=0.2.0"),
-        execs().with_status(0),
+        execs(),
     );
 }
 
@@ -1374,7 +1373,7 @@ fn use_semver() {
 
     Package::new("foo", "1.2.3-alpha.0").publish();
 
-    assert_that(p.cargo("build"), execs().with_status(0));
+    assert_that(p.cargo("build"), execs());
 }
 
 #[test]
@@ -1405,7 +1404,7 @@ fn only_download_relevant() {
 
     assert_that(
         p.cargo("build"),
-        execs().with_status(0).with_stderr(
+        execs().with_stderr(
             "\
 [UPDATING] registry `[..]`
 [DOWNLOADING] baz v0.1.0 ([..])
@@ -1440,7 +1439,7 @@ fn resolve_and_backtracking() {
         .publish();
     Package::new("foo", "0.1.0").publish();
 
-    assert_that(p.cargo("build"), execs().with_status(0));
+    assert_that(p.cargo("build"), execs());
 }
 
 #[test]
@@ -1467,9 +1466,7 @@ fn upstream_warnings_on_extra_verbose() {
 
     assert_that(
         p.cargo("build -vv"),
-        execs()
-            .with_status(0)
-            .with_stderr_contains("[..]warning: function is never used[..]"),
+        execs().with_stderr_contains("[..]warning: function is never used[..]"),
     );
 }
 
@@ -1540,7 +1537,7 @@ fn add_dep_dont_update_registry() {
 
     Package::new("remote", "0.3.4").publish();
 
-    assert_that(p.cargo("build"), execs().with_status(0));
+    assert_that(p.cargo("build"), execs());
 
     t!(t!(File::create(p.root().join("Cargo.toml"))).write_all(
         br#"
@@ -1557,7 +1554,7 @@ fn add_dep_dont_update_registry() {
 
     assert_that(
         p.cargo("build"),
-        execs().with_status(0).with_stderr(
+        execs().with_stderr(
             "\
 [COMPILING] bar v0.5.0 ([..])
 [FINISHED] [..]
@@ -1599,7 +1596,7 @@ fn bump_version_dont_update_registry() {
 
     Package::new("remote", "0.3.4").publish();
 
-    assert_that(p.cargo("build"), execs().with_status(0));
+    assert_that(p.cargo("build"), execs());
 
     t!(t!(File::create(p.root().join("Cargo.toml"))).write_all(
         br#"
@@ -1615,7 +1612,7 @@ fn bump_version_dont_update_registry() {
 
     assert_that(
         p.cargo("build"),
-        execs().with_status(0).with_stderr(
+        execs().with_stderr(
             "\
 [COMPILING] bar v0.6.0 ([..])
 [FINISHED] [..]
@@ -1646,7 +1643,7 @@ fn old_version_req() {
 
     assert_that(
         p.cargo("build"),
-        execs().with_status(0).with_stderr(
+        execs().with_stderr(
             "\
 warning: parsed version requirement `0.2*` is no longer valid
 
@@ -1715,7 +1712,7 @@ fn old_version_req_upstream() {
 
     assert_that(
         p.cargo("build"),
-        execs().with_status(0).with_stderr(
+        execs().with_stderr(
             "\
 [UPDATING] [..]
 [DOWNLOADING] [..]
@@ -1773,7 +1770,7 @@ fn toml_lies_but_index_is_truth() {
         .file("src/main.rs", "fn main() {}")
         .build();
 
-    assert_that(p.cargo("build -v"), execs().with_status(0));
+    assert_that(p.cargo("build -v"), execs());
 }
 
 #[test]
@@ -1798,7 +1795,7 @@ fn vv_prints_warnings() {
         .file("src/main.rs", "fn main() {}")
         .build();
 
-    assert_that(p.cargo("build -vv"), execs().with_status(0));
+    assert_that(p.cargo("build -vv"), execs());
 }
 
 #[test]
@@ -1867,7 +1864,7 @@ fn git_init_templatedir_missing() {
 
     assert_that(
         p.cargo("build"),
-        execs().with_status(0)
+        execs()
     );
 
     remove_dir_all(paths::home().join(".cargo/registry")).unwrap();
@@ -1881,10 +1878,10 @@ fn git_init_templatedir_missing() {
 
     assert_that(
         p.cargo("build"),
-        execs().with_status(0)
+        execs()
     );
     assert_that(
         p.cargo("build"),
-        execs().with_status(0)
+        execs()
     );
 }

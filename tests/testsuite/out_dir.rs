@@ -16,7 +16,7 @@ fn binary_with_debug() {
     assert_that(
         p.cargo("build -Z unstable-options --out-dir out")
             .masquerade_as_nightly_cargo(),
-        execs().with_status(0),
+        execs(),
     );
     check_dir_contents(
         &p.root().join("out"),
@@ -53,7 +53,7 @@ fn static_library_with_debug() {
     assert_that(
         p.cargo("build -Z unstable-options --out-dir out")
             .masquerade_as_nightly_cargo(),
-        execs().with_status(0),
+        execs(),
     );
     check_dir_contents(
         &p.root().join("out"),
@@ -90,7 +90,7 @@ fn dynamic_library_with_debug() {
     assert_that(
         p.cargo("build -Z unstable-options --out-dir out")
             .masquerade_as_nightly_cargo(),
-        execs().with_status(0),
+        execs(),
     );
     check_dir_contents(
         &p.root().join("out"),
@@ -126,7 +126,7 @@ fn rlib_with_debug() {
     assert_that(
         p.cargo("build -Z unstable-options --out-dir out")
             .masquerade_as_nightly_cargo(),
-        execs().with_status(0),
+        execs(),
     );
     check_dir_contents(
         &p.root().join("out"),
@@ -171,7 +171,7 @@ fn include_only_the_binary_from_the_current_package() {
     assert_that(
         p.cargo("build -Z unstable-options --bin foo --out-dir out")
             .masquerade_as_nightly_cargo(),
-        execs().with_status(0),
+        execs(),
     );
     check_dir_contents(
         &p.root().join("out"),
@@ -206,7 +206,7 @@ fn replaces_artifacts() {
     assert_that(
         p.cargo("build -Z unstable-options --out-dir out")
             .masquerade_as_nightly_cargo(),
-        execs().with_status(0),
+        execs(),
     );
     assert_that(
         process(&p.root()
@@ -220,7 +220,7 @@ fn replaces_artifacts() {
     assert_that(
         p.cargo("build -Z unstable-options --out-dir out")
             .masquerade_as_nightly_cargo(),
-        execs().with_status(0),
+        execs(),
     );
     assert_that(
         process(&p.root()

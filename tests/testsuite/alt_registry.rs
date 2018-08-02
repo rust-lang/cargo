@@ -59,7 +59,7 @@ fn depend_on_alt_registry() {
 
     assert_that(
         p.cargo("build").masquerade_as_nightly_cargo(),
-        execs().with_status(0).with_stderr(&format!(
+        execs().with_stderr(&format!(
             "\
 [UPDATING] registry `{reg}`
 [DOWNLOADING] bar v0.0.1 (registry `file://[..]`)
@@ -74,13 +74,13 @@ fn depend_on_alt_registry() {
 
     assert_that(
         p.cargo("clean").masquerade_as_nightly_cargo(),
-        execs().with_status(0),
+        execs(),
     );
 
     // Don't download a second time
     assert_that(
         p.cargo("build").masquerade_as_nightly_cargo(),
-        execs().with_status(0).with_stderr(&format!(
+        execs().with_stderr(&format!(
             "\
 [COMPILING] bar v0.0.1 (registry `file://[..]`)
 [COMPILING] foo v0.0.1 ({dir})
@@ -120,7 +120,7 @@ fn depend_on_alt_registry_depends_on_same_registry_no_index() {
 
     assert_that(
         p.cargo("build").masquerade_as_nightly_cargo(),
-        execs().with_status(0).with_stderr(&format!(
+        execs().with_stderr(&format!(
             "\
 [UPDATING] registry `{reg}`
 [DOWNLOADING] [..] v0.0.1 (registry `file://[..]`)
@@ -165,7 +165,7 @@ fn depend_on_alt_registry_depends_on_same_registry() {
 
     assert_that(
         p.cargo("build").masquerade_as_nightly_cargo(),
-        execs().with_status(0).with_stderr(&format!(
+        execs().with_stderr(&format!(
             "\
 [UPDATING] registry `{reg}`
 [DOWNLOADING] [..] v0.0.1 (registry `file://[..]`)
@@ -210,7 +210,7 @@ fn depend_on_alt_registry_depends_on_crates_io() {
 
     assert_that(
         p.cargo("build").masquerade_as_nightly_cargo(),
-        execs().with_status(0).with_stderr(&format!(
+        execs().with_stderr(&format!(
             "\
 [UPDATING] registry `{alt_reg}`
 [UPDATING] registry `{reg}`
@@ -255,7 +255,7 @@ fn registry_and_path_dep_works() {
 
     assert_that(
         p.cargo("build").masquerade_as_nightly_cargo(),
-        execs().with_status(0).with_stderr(&format!(
+        execs().with_stderr(&format!(
             "\
 [COMPILING] bar v0.0.1 ({dir}/bar)
 [COMPILING] foo v0.0.1 ({dir})
@@ -355,7 +355,7 @@ fn publish_with_registry_dependency() {
             .arg("alternative")
             .arg("TOKEN")
             .arg("-Zunstable-options"),
-        execs().with_status(0),
+        execs(),
     );
 
     assert_that(
@@ -364,7 +364,7 @@ fn publish_with_registry_dependency() {
             .arg("--registry")
             .arg("alternative")
             .arg("-Zunstable-options"),
-        execs().with_status(0),
+        execs(),
     );
 }
 
@@ -400,7 +400,6 @@ fn alt_registry_and_crates_io_deps() {
     assert_that(
         p.cargo("build").masquerade_as_nightly_cargo(),
         execs()
-            .with_status(0)
             .with_stderr_contains(format!(
                 "[UPDATING] registry `{}`",
                 registry::alt_registry()
@@ -467,7 +466,7 @@ fn publish_to_alt_registry() {
             .arg("alternative")
             .arg("TOKEN")
             .arg("-Zunstable-options"),
-        execs().with_status(0),
+        execs(),
     );
 
     // Now perform the actual publish
@@ -477,7 +476,7 @@ fn publish_to_alt_registry() {
             .arg("--registry")
             .arg("alternative")
             .arg("-Zunstable-options"),
-        execs().with_status(0),
+        execs(),
     );
 
     // Ensure that the crate is uploaded
@@ -516,7 +515,7 @@ fn publish_with_crates_io_dep() {
             .arg("alternative")
             .arg("TOKEN")
             .arg("-Zunstable-options"),
-        execs().with_status(0),
+        execs(),
     );
 
     assert_that(
@@ -525,7 +524,7 @@ fn publish_with_crates_io_dep() {
             .arg("--registry")
             .arg("alternative")
             .arg("-Zunstable-options"),
-        execs().with_status(0),
+        execs(),
     );
 }
 
