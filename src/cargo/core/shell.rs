@@ -239,6 +239,19 @@ impl Shell {
             ShellOut::Stream { stream, .. } => stream.supports_color(),
         }
     }
+
+    /// Prints a message and translates ANSI escape code into console colors.
+    pub fn print_ansi(&mut self, message: &[u8]) -> CargoResult<()> {
+        #[cfg(windows)]
+        {
+            if let ShellOut::Stream { stream, .. } = &mut self.err {
+                ::fwdansi::write_ansi(stream, message)?;
+                return Ok(());
+            }
+        }
+        self.err().write_all(message)?;
+        Ok(())
+    }
 }
 
 impl Default for Shell {

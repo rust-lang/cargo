@@ -306,7 +306,9 @@ impl<'a> JobQueue<'a> {
                     println!("{}", out);
                 }
                 Message::Stderr(err) => {
-                    writeln!(cx.bcx.config.shell().err(), "{}", err)?;
+                    let mut shell = cx.bcx.config.shell();
+                    shell.print_ansi(err.as_bytes())?;
+                    shell.err().write(b"\n")?;
                 }
                 Message::FixDiagnostic(msg) => {
                     print.print(&msg)?;

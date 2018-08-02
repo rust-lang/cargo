@@ -72,6 +72,18 @@ pub trait Executor: Send + Sync + 'static {
         Ok(())
     }
 
+    fn exec_and_capture_output(
+        &self,
+        cmd: ProcessBuilder,
+        id: &PackageId,
+        target: &Target,
+        mode: CompileMode,
+        _state: &job_queue::JobState<'_>,
+    ) -> CargoResult<()> {
+        // we forward to exec() to keep RLS working.
+        self.exec(cmd, id, target, mode)
+    }
+
     fn exec_json(
         &self,
         cmd: ProcessBuilder,
@@ -97,7 +109,18 @@ pub trait Executor: Send + Sync + 'static {
 #[derive(Copy, Clone)]
 pub struct DefaultExecutor;
 
-impl Executor for DefaultExecutor {}
+impl Executor for DefaultExecutor {
+    fn exec_and_capture_output(
+        &self,
+        cmd: ProcessBuilder,
+        _id: &PackageId,
+        _target: &Target,
+        _mode: CompileMode,
+        state: &job_queue::JobState<'_>,
+    ) -> CargoResult<()> {
+        state.capture_output(cmd, false).map(drop)
+    }
+}
 
 fn compile<'a, 'cfg: 'a>(
     cx: &mut Context<'a, 'cfg>,
@@ -216,6 +239,8 @@ fn rustc<'a, 'cfg>(
         .unwrap_or_else(|| cx.bcx.config.cwd())
         .to_path_buf();
 
+    let should_capture_output = cx.bcx.config.cli_unstable().compile_progress;
+
     return Ok(Work::new(move |state| {
         // Only at runtime have we discovered what the extra -L and -l
         // arguments are for native libraries, so we process those here. We
@@ -291,7 +316,12 @@ fn rustc<'a, 'cfg>(
         } else if build_plan {
             state.build_plan(buildkey, rustc.clone(), outputs.clone());
         } else {
-            exec.exec(rustc, &package_id, &target, mode)
+            let exec_result = if should_capture_output {
+                exec.exec_and_capture_output(rustc, &package_id, &target, mode, state)
+            } else {
+                exec.exec(rustc, &package_id, &target, mode)
+            };
+            exec_result
                 .map_err(Internal::new)
                 .chain_err(|| format!("Could not compile `{}`.", name))?;
         }
@@ -613,6 +643,8 @@ fn rustdoc<'a, 'cfg>(cx: &mut Context<'a, 'cfg>, unit: &Unit<'a>) -> CargoResult
     let build_state = cx.build_state.clone();
     let key = (unit.pkg.package_id().clone(), unit.kind);
 
+    let should_capture_output = cx.bcx.config.cli_unstable().compile_progress;
+
     Ok(Work::new(move |state| {
         if let Some(output) = build_state.outputs.lock().unwrap().get(&key) {
             for cfg in output.cfgs.iter() {
@@ -623,9 +655,13 @@ fn rustdoc<'a, 'cfg>(cx: &mut Context<'a, 'cfg>, unit: &Unit<'a>) -> CargoResult
             }
         }
         state.running(&rustdoc);
-        rustdoc
-            .exec()
-            .chain_err(|| format!("Could not document `{}`.", name))?;
+
+        let exec_result = if should_capture_output {
+            state.capture_output(rustdoc, false).map(drop)
+        } else {
+            rustdoc.exec()
+        };
+        exec_result.chain_err(|| format!("Could not document `{}`.", name))?;
         Ok(())
     }))
 }
