@@ -253,7 +253,7 @@ impl RustfixDiagnosticServer {
 
     fn run(self, on_message: &Fn(Message), done: &AtomicBool) {
         while let Ok((client, _)) = self.listener.accept() {
-            let mut client = BufReader::new(client);
+            let client = BufReader::new(client);
             match serde_json::from_reader(client) {
                 Ok(message) => on_message(message),
                 Err(e) => warn!("invalid diagnostics message: {}", e),
