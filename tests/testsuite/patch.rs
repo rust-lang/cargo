@@ -50,7 +50,7 @@ fn replace() {
 
     assert_that(
         p.cargo("build"),
-        execs().with_status(0).with_stderr(
+        execs().with_stderr(
             "\
 [UPDATING] registry `file://[..]`
 [DOWNLOADING] baz v0.1.0 ([..])
@@ -64,7 +64,7 @@ fn replace() {
 
     assert_that(
         p.cargo("build"),
-        execs().with_status(0).with_stderr("[FINISHED] [..]"),
+        execs().with_stderr("[FINISHED] [..]"),
     );
 }
 
@@ -95,7 +95,7 @@ fn nonexistent() {
 
     assert_that(
         p.cargo("build"),
-        execs().with_status(0).with_stderr(
+        execs().with_stderr(
             "\
 [UPDATING] registry `file://[..]`
 [COMPILING] bar v0.1.0 (file://[..])
@@ -106,7 +106,7 @@ fn nonexistent() {
     );
     assert_that(
         p.cargo("build"),
-        execs().with_status(0).with_stderr("[FINISHED] [..]"),
+        execs().with_stderr("[FINISHED] [..]"),
     );
 }
 
@@ -143,7 +143,7 @@ fn patch_git() {
 
     assert_that(
         p.cargo("build"),
-        execs().with_status(0).with_stderr(
+        execs().with_stderr(
             "\
 [UPDATING] git repository `file://[..]`
 [COMPILING] bar v0.1.0 (file://[..])
@@ -154,7 +154,7 @@ fn patch_git() {
     );
     assert_that(
         p.cargo("build"),
-        execs().with_status(0).with_stderr("[FINISHED] [..]"),
+        execs().with_stderr("[FINISHED] [..]"),
     );
 }
 
@@ -191,7 +191,7 @@ fn patch_to_git() {
 
     assert_that(
         p.cargo("build"),
-        execs().with_status(0).with_stderr(
+        execs().with_stderr(
             "\
 [UPDATING] git repository `file://[..]`
 [UPDATING] registry `file://[..]`
@@ -203,7 +203,7 @@ fn patch_to_git() {
     );
     assert_that(
         p.cargo("build"),
-        execs().with_status(0).with_stderr("[FINISHED] [..]"),
+        execs().with_stderr("[FINISHED] [..]"),
     );
 }
 
@@ -234,7 +234,7 @@ fn unused() {
 
     assert_that(
         p.cargo("build"),
-        execs().with_status(0).with_stderr(
+        execs().with_stderr(
             "\
 [UPDATING] registry `file://[..]`
 [DOWNLOADING] bar v0.1.0 [..]
@@ -246,7 +246,7 @@ fn unused() {
     );
     assert_that(
         p.cargo("build"),
-        execs().with_status(0).with_stderr("[FINISHED] [..]"),
+        execs().with_stderr("[FINISHED] [..]"),
     );
 
     // unused patch should be in the lock file
@@ -297,7 +297,7 @@ fn unused_git() {
 
     assert_that(
         p.cargo("build"),
-        execs().with_status(0).with_stderr(
+        execs().with_stderr(
             "\
 [UPDATING] git repository `file://[..]`
 [UPDATING] registry `file://[..]`
@@ -310,7 +310,7 @@ fn unused_git() {
     );
     assert_that(
         p.cargo("build"),
-        execs().with_status(0).with_stderr("[FINISHED] [..]"),
+        execs().with_stderr("[FINISHED] [..]"),
     );
 }
 
@@ -338,7 +338,7 @@ fn add_patch() {
 
     assert_that(
         p.cargo("build"),
-        execs().with_status(0).with_stderr(
+        execs().with_stderr(
             "\
 [UPDATING] registry `file://[..]`
 [DOWNLOADING] bar v0.1.0 [..]
@@ -350,7 +350,7 @@ fn add_patch() {
     );
     assert_that(
         p.cargo("build"),
-        execs().with_status(0).with_stderr("[FINISHED] [..]"),
+        execs().with_stderr("[FINISHED] [..]"),
     );
 
     t!(t!(File::create(p.root().join("Cargo.toml"))).write_all(
@@ -370,7 +370,7 @@ fn add_patch() {
 
     assert_that(
         p.cargo("build"),
-        execs().with_status(0).with_stderr(
+        execs().with_stderr(
             "\
 [COMPILING] bar v0.1.0 (file://[..])
 [COMPILING] foo v0.0.1 (file://[..])
@@ -380,7 +380,7 @@ fn add_patch() {
     );
     assert_that(
         p.cargo("build"),
-        execs().with_status(0).with_stderr("[FINISHED] [..]"),
+        execs().with_stderr("[FINISHED] [..]"),
     );
 }
 
@@ -408,7 +408,7 @@ fn add_ignored_patch() {
 
     assert_that(
         p.cargo("build"),
-        execs().with_status(0).with_stderr(
+        execs().with_stderr(
             "\
 [UPDATING] registry `file://[..]`
 [DOWNLOADING] bar v0.1.0 [..]
@@ -420,7 +420,7 @@ fn add_ignored_patch() {
     );
     assert_that(
         p.cargo("build"),
-        execs().with_status(0).with_stderr("[FINISHED] [..]"),
+        execs().with_stderr("[FINISHED] [..]"),
     );
 
     t!(t!(File::create(p.root().join("Cargo.toml"))).write_all(
@@ -441,12 +441,11 @@ fn add_ignored_patch() {
     assert_that(
         p.cargo("build"),
         execs()
-            .with_status(0)
             .with_stderr("[FINISHED] dev [unoptimized + debuginfo] target(s) in [..]"),
     );
     assert_that(
         p.cargo("build"),
-        execs().with_status(0).with_stderr("[FINISHED] [..]"),
+        execs().with_stderr("[FINISHED] [..]"),
     );
 }
 
@@ -477,7 +476,7 @@ fn new_minor() {
 
     assert_that(
         p.cargo("build"),
-        execs().with_status(0).with_stderr(
+        execs().with_stderr(
             "\
 [UPDATING] registry `file://[..]`
 [COMPILING] bar v0.1.1 [..]
@@ -528,7 +527,7 @@ fn transitive_new_minor() {
 
     assert_that(
         p.cargo("build"),
-        execs().with_status(0).with_stderr(
+        execs().with_stderr(
             "\
 [UPDATING] registry `file://[..]`
 [COMPILING] baz v0.1.1 [..]
@@ -567,7 +566,7 @@ fn new_major() {
 
     assert_that(
         p.cargo("build"),
-        execs().with_status(0).with_stderr(
+        execs().with_stderr(
             "\
 [UPDATING] registry `file://[..]`
 [COMPILING] bar v0.2.0 [..]
@@ -578,11 +577,10 @@ fn new_major() {
     );
 
     Package::new("bar", "0.2.0").publish();
-    assert_that(p.cargo("update"), execs().with_status(0));
+    assert_that(p.cargo("update"), execs());
     assert_that(
         p.cargo("build"),
         execs()
-            .with_status(0)
             .with_stderr("[FINISHED] dev [unoptimized + debuginfo] target(s) in [..]"),
     );
 
@@ -599,7 +597,7 @@ fn new_major() {
     ));
     assert_that(
         p.cargo("build"),
-        execs().with_status(0).with_stderr(
+        execs().with_stderr(
             "\
 [UPDATING] registry `file://[..]`
 [DOWNLOADING] bar v0.2.0 [..]
@@ -651,7 +649,7 @@ fn transitive_new_major() {
 
     assert_that(
         p.cargo("build"),
-        execs().with_status(0).with_stderr(
+        execs().with_stderr(
             "\
 [UPDATING] registry `file://[..]`
 [COMPILING] baz v0.2.0 [..]
@@ -693,7 +691,7 @@ fn remove_patch() {
         .build();
 
     // Generate a lock file where `foo` is unused
-    assert_that(p.cargo("build"), execs().with_status(0));
+    assert_that(p.cargo("build"), execs());
     let mut lock_file1 = String::new();
     File::open(p.root().join("Cargo.lock"))
         .unwrap()
@@ -718,7 +716,7 @@ fn remove_patch() {
     "#.as_bytes(),
         )
         .unwrap();
-    assert_that(p.cargo("build"), execs().with_status(0));
+    assert_that(p.cargo("build"), execs());
     let mut lock_file2 = String::new();
     File::open(p.root().join("Cargo.lock"))
         .unwrap()
@@ -727,7 +725,7 @@ fn remove_patch() {
 
     // Remove the lock file and build from scratch
     fs::remove_file(p.root().join("Cargo.lock")).unwrap();
-    assert_that(p.cargo("build"), execs().with_status(0));
+    assert_that(p.cargo("build"), execs());
     let mut lock_file3 = String::new();
     File::open(p.root().join("Cargo.lock"))
         .unwrap()
@@ -843,10 +841,10 @@ fn patch_in_virtual() {
         .file("foo/src/lib.rs", r#""#)
         .build();
 
-    assert_that(p.cargo("build"), execs().with_status(0));
+    assert_that(p.cargo("build"), execs());
     assert_that(
         p.cargo("build"),
-        execs().with_status(0).with_stderr("[FINISHED] [..]"),
+        execs().with_stderr("[FINISHED] [..]"),
     );
 }
 
@@ -897,12 +895,12 @@ fn patch_depends_on_another_patch() {
         .file("baz/src/lib.rs", r#""#)
         .build();
 
-    assert_that(p.cargo("build"), execs().with_status(0));
+    assert_that(p.cargo("build"), execs());
 
     // Nothing should be rebuilt, no registry should be updated.
     assert_that(
         p.cargo("build"),
-        execs().with_status(0).with_stderr("[FINISHED] [..]"),
+        execs().with_stderr("[FINISHED] [..]"),
     );
 }
 
@@ -946,5 +944,5 @@ fn replace_prerelease() {
         .file("baz/src/lib.rs", "pub fn baz() {}")
         .build();
 
-    assert_that(p.cargo("build"), execs().with_status(0));
+    assert_that(p.cargo("build"), execs());
 }

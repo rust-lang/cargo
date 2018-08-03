@@ -44,7 +44,7 @@ fn simple_cross_package() {
 
     assert_that(
         p.cargo("package").arg("--target").arg(&target),
-        execs().with_status(0).with_status(0).with_stderr(&format!(
+        execs().with_stderr(&format!(
             "   Packaging foo v0.0.0 ({dir})
    Verifying foo v0.0.0 ({dir})
    Compiling foo v0.0.0 ({dir}/target/package/foo-0.0.0)
@@ -121,7 +121,7 @@ fn publish_with_target() {
             .arg(publish::registry().to_string())
             .arg("--target")
             .arg(&target),
-        execs().with_status(0).with_stderr(&format!(
+        execs().with_stderr(&format!(
             "    Updating registry `{registry}`
    Packaging foo v0.0.0 ({dir})
    Verifying foo v0.0.0 ({dir})

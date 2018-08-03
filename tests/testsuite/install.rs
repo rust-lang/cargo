@@ -25,7 +25,7 @@ fn simple() {
 
     assert_that(
         cargo_process("install foo"),
-        execs().with_status(0).with_stderr(&format!(
+        execs().with_stderr(&format!(
             "\
 [UPDATING] registry `[..]`
 [DOWNLOADING] foo v0.0.1 (registry [..])
@@ -42,7 +42,7 @@ warning: be sure to add `[..]` to your PATH to be able to run the installed bina
 
     assert_that(
         cargo_process("uninstall foo"),
-        execs().with_status(0).with_stderr(&format!(
+        execs().with_stderr(&format!(
             "[REMOVING] {home}[..]bin[..]foo[..]",
             home = cargo_home().display()
         )),
@@ -83,7 +83,7 @@ error: some crates failed to install
 
     assert_that(
         cargo_process("uninstall foo bar"),
-        execs().with_status(0).with_stderr(&format!(
+        execs().with_stderr(&format!(
             "\
 [REMOVING] {home}[..]bin[..]foo[..]
 [REMOVING] {home}[..]bin[..]bar[..]
@@ -107,7 +107,7 @@ fn pick_max_version() {
 
     assert_that(
         cargo_process("install foo"),
-        execs().with_status(0).with_stderr(&format!(
+        execs().with_stderr(&format!(
             "\
 [UPDATING] registry `[..]`
 [DOWNLOADING] foo v0.2.1 (registry [..])
@@ -132,7 +132,7 @@ fn installs_beta_version_by_explicit_name_from_git() {
 
     assert_that(
         cargo_process("install --git").arg(p.url().to_string()).arg("foo"),
-        execs().with_status(0),
+        execs(),
     );
     assert_that(cargo_home(), has_installed_exe("foo"));
 }
@@ -211,7 +211,7 @@ fn install_location_precedence() {
 
     assert_that(
         cargo_process("install foo --root").arg(&t1).env("CARGO_INSTALL_ROOT", &t2),
-        execs().with_status(0),
+        execs(),
     );
     assert_that(&t1, has_installed_exe("foo"));
     assert_that(&t2, is_not(has_installed_exe("foo")));
@@ -220,14 +220,14 @@ fn install_location_precedence() {
 
     assert_that(
         cargo_process("install foo").env("CARGO_INSTALL_ROOT", &t2),
-        execs().with_status(0),
+        execs(),
     );
     assert_that(&t2, has_installed_exe("foo"));
     assert_that(&t3, is_not(has_installed_exe("foo")));
 
     println!("install install.root");
 
-    assert_that(cargo_process("install foo"), execs().with_status(0));
+    assert_that(cargo_process("install foo"), execs());
     assert_that(&t3, has_installed_exe("foo"));
     assert_that(&t4, is_not(has_installed_exe("foo")));
 
@@ -235,7 +235,7 @@ fn install_location_precedence() {
 
     println!("install cargo home");
 
-    assert_that(cargo_process("install foo"), execs().with_status(0));
+    assert_that(cargo_process("install foo"), execs());
     assert_that(&t4, has_installed_exe("foo"));
 }
 
@@ -247,7 +247,7 @@ fn install_path() {
 
     assert_that(
         cargo_process("install --path").arg(p.root()),
-        execs().with_status(0),
+        execs(),
     );
     assert_that(cargo_home(), has_installed_exe("foo"));
     assert_that(
@@ -293,14 +293,14 @@ fn multiple_crates_select() {
 
     assert_that(
         cargo_process("install --git").arg(p.url().to_string()).arg("foo"),
-        execs().with_status(0),
+        execs(),
     );
     assert_that(cargo_home(), has_installed_exe("foo"));
     assert_that(cargo_home(), is_not(has_installed_exe("bar")));
 
     assert_that(
         cargo_process("install --git").arg(p.url().to_string()).arg("bar"),
-        execs().with_status(0),
+        execs(),
     );
     assert_that(cargo_home(), has_installed_exe("bar"));
 }
@@ -327,7 +327,7 @@ fn multiple_crates_auto_binaries() {
 
     assert_that(
         cargo_process("install --path").arg(p.root()),
-        execs().with_status(0),
+        execs(),
     );
     assert_that(cargo_home(), has_installed_exe("foo"));
 }
@@ -362,7 +362,7 @@ fn multiple_crates_auto_examples() {
 
     assert_that(
         cargo_process("install --path").arg(p.root()).arg("--example=foo"),
-        execs().with_status(0),
+        execs(),
     );
     assert_that(cargo_home(), has_installed_exe("foo"));
 }
@@ -422,7 +422,7 @@ fn examples() {
 
     assert_that(
         cargo_process("install --path").arg(p.root()).arg("--example=foo"),
-        execs().with_status(0),
+        execs(),
     );
     assert_that(cargo_home(), has_installed_exe("foo"));
 }
@@ -436,7 +436,7 @@ fn install_twice() {
 
     assert_that(
         cargo_process("install --path").arg(p.root()),
-        execs().with_status(0),
+        execs(),
     );
     assert_that(
         cargo_process("install --path").arg(p.root()),
@@ -459,7 +459,7 @@ fn install_force() {
 
     assert_that(
         cargo_process("install --path").arg(p.root()),
-        execs().with_status(0),
+        execs(),
     );
 
     let p = project().at("foo2")
@@ -469,7 +469,7 @@ fn install_force() {
 
     assert_that(
         cargo_process("install --force --path").arg(p.root()),
-        execs().with_status(0).with_stderr(&format!(
+        execs().with_stderr(&format!(
             "\
 [INSTALLING] foo v0.2.0 ([..])
 [COMPILING] foo v0.2.0 ([..])
@@ -483,7 +483,7 @@ warning: be sure to add `[..]` to your PATH to be able to run the installed bina
 
     assert_that(
         cargo_process("install --list"),
-        execs().with_status(0).with_stdout(
+        execs().with_stdout(
             "\
 foo v0.2.0 ([..]):
     foo[..]
@@ -501,7 +501,7 @@ fn install_force_partial_overlap() {
 
     assert_that(
         cargo_process("install --path").arg(p.root()),
-        execs().with_status(0),
+        execs(),
     );
 
     let p = project().at("foo2")
@@ -512,7 +512,7 @@ fn install_force_partial_overlap() {
 
     assert_that(
         cargo_process("install --force --path").arg(p.root()),
-        execs().with_status(0).with_stderr(&format!(
+        execs().with_stderr(&format!(
             "\
 [INSTALLING] foo v0.2.0 ([..])
 [COMPILING] foo v0.2.0 ([..])
@@ -527,7 +527,7 @@ warning: be sure to add `[..]` to your PATH to be able to run the installed bina
 
     assert_that(
         cargo_process("install --list"),
-        execs().with_status(0).with_stdout(
+        execs().with_stdout(
             "\
 foo v0.0.1 ([..]):
     foo-bin1[..]
@@ -548,7 +548,7 @@ fn install_force_bin() {
 
     assert_that(
         cargo_process("install --path").arg(p.root()),
-        execs().with_status(0),
+        execs(),
     );
 
     let p = project().at("foo2")
@@ -559,7 +559,7 @@ fn install_force_bin() {
 
     assert_that(
         cargo_process("install --force --bin foo-bin2 --path").arg(p.root()),
-        execs().with_status(0).with_stderr(&format!(
+        execs().with_stderr(&format!(
             "\
 [INSTALLING] foo v0.2.0 ([..])
 [COMPILING] foo v0.2.0 ([..])
@@ -573,7 +573,7 @@ warning: be sure to add `[..]` to your PATH to be able to run the installed bina
 
     assert_that(
         cargo_process("install --list"),
-        execs().with_status(0).with_stdout(
+        execs().with_stdout(
             "\
 foo v0.0.1 ([..]):
     foo-bin1[..]
@@ -616,7 +616,7 @@ fn git_repo() {
     // use `--locked` to test that we don't even try to write a lockfile
     assert_that(
         cargo_process("install --locked --git").arg(p.url().to_string()),
-        execs().with_status(0).with_stderr(&format!(
+        execs().with_stderr(&format!(
             "\
 [UPDATING] git repository `[..]`
 [INSTALLING] foo v0.1.0 ([..])
@@ -640,17 +640,17 @@ fn list() {
 
     assert_that(
         cargo_process("install --list"),
-        execs().with_status(0).with_stdout(""),
+        execs().with_stdout(""),
     );
 
     assert_that(
         cargo_process("install bar --vers =0.2.1"),
-        execs().with_status(0),
+        execs(),
     );
-    assert_that(cargo_process("install foo"), execs().with_status(0));
+    assert_that(cargo_process("install foo"), execs());
     assert_that(
         cargo_process("install --list"),
-        execs().with_status(0).with_stdout(
+        execs().with_stdout(
             "\
 bar v0.2.1:
     bar[..]
@@ -664,10 +664,10 @@ foo v0.0.1:
 #[test]
 fn list_error() {
     pkg("foo", "0.0.1");
-    assert_that(cargo_process("install foo"), execs().with_status(0));
+    assert_that(cargo_process("install foo"), execs());
     assert_that(
         cargo_process("install --list"),
-        execs().with_status(0).with_stdout(
+        execs().with_stdout(
             "\
 foo v0.0.1:
     foo[..]
@@ -712,7 +712,7 @@ fn uninstall_pkg_does_not_exist() {
 fn uninstall_bin_does_not_exist() {
     pkg("foo", "0.0.1");
 
-    assert_that(cargo_process("install foo"), execs().with_status(0));
+    assert_that(cargo_process("install foo"), execs());
     assert_that(
         cargo_process("uninstall foo --bin=bar"),
         execs()
@@ -730,14 +730,14 @@ fn uninstall_piecemeal() {
 
     assert_that(
         cargo_process("install --path").arg(p.root()),
-        execs().with_status(0),
+        execs(),
     );
     assert_that(cargo_home(), has_installed_exe("foo"));
     assert_that(cargo_home(), has_installed_exe("bar"));
 
     assert_that(
         cargo_process("uninstall foo --bin=bar"),
-        execs().with_status(0).with_stderr("[REMOVING] [..]bar[..]"),
+        execs().with_stderr("[REMOVING] [..]bar[..]"),
     );
 
     assert_that(cargo_home(), has_installed_exe("foo"));
@@ -745,7 +745,7 @@ fn uninstall_piecemeal() {
 
     assert_that(
         cargo_process("uninstall foo --bin=foo"),
-        execs().with_status(0).with_stderr("[REMOVING] [..]foo[..]"),
+        execs().with_stderr("[REMOVING] [..]foo[..]"),
     );
     assert_that(cargo_home(), is_not(has_installed_exe("foo")));
 
@@ -764,15 +764,15 @@ fn subcommand_works_out_of_the_box() {
         .publish();
     assert_that(
         cargo_process("install cargo-foo"),
-        execs().with_status(0),
+        execs(),
     );
     assert_that(
         cargo_process("foo"),
-        execs().with_status(0).with_stdout("bar\n"),
+        execs().with_stdout("bar\n"),
     );
     assert_that(
         cargo_process("--list"),
-        execs().with_status(0).with_stdout_contains("    foo\n"),
+        execs().with_stdout_contains("    foo\n"),
     );
 }
 
@@ -784,7 +784,7 @@ fn installs_from_cwd_by_default() {
 
     assert_that(
         cargo_process("install").cwd(p.root()),
-        execs().with_status(0).with_stderr_contains(
+        execs().with_stderr_contains(
                 "\
 warning: To build the current package use `cargo build`, to install the current package run `cargo install --path .`
 ",
@@ -835,10 +835,10 @@ fn do_not_rebuilds_on_local_install() {
         .file("src/main.rs", "fn main() {}")
         .build();
 
-    assert_that(p.cargo("build --release"), execs().with_status(0));
+    assert_that(p.cargo("build --release"), execs());
     assert_that(
         cargo_process("install --path").arg(p.root()),
-        execs().with_status(0).with_stderr(
+        execs().with_stderr(
             "[INSTALLING] [..]
 [FINISHED] release [optimized] target(s) in [..]
 [INSTALLING] [..]
@@ -859,11 +859,11 @@ fn reports_unsuccessful_subcommand_result() {
         .publish();
     assert_that(
         cargo_process("install cargo-fail"),
-        execs().with_status(0),
+        execs(),
     );
     assert_that(
         cargo_process("--list"),
-        execs().with_status(0).with_stdout_contains("    fail\n"),
+        execs().with_stdout_contains("    fail\n"),
     );
     assert_that(
         cargo_process("fail"),
@@ -908,7 +908,7 @@ fn git_with_lockfile() {
 
     assert_that(
         cargo_process("install --git").arg(p.url().to_string()),
-        execs().with_status(0),
+        execs(),
     );
 }
 
@@ -920,7 +920,7 @@ fn q_silences_warnings() {
 
     assert_that(
         cargo_process("install -q --path").arg(p.root()),
-        execs().with_status(0).with_stderr(""),
+        execs().with_stderr(""),
     );
 }
 
@@ -937,7 +937,7 @@ fn readonly_dir() {
 
     assert_that(
         cargo_process("install foo").cwd(dir),
-        execs().with_status(0),
+        execs(),
     );
     assert_that(cargo_home(), has_installed_exe("foo"));
 }
@@ -974,9 +974,9 @@ fn use_path_workspace() {
         .file("baz/src/lib.rs", "")
         .build();
 
-    assert_that(p.cargo("build"), execs().with_status(0));
+    assert_that(p.cargo("build"), execs());
     let lock = p.read_lockfile();
-    assert_that(p.cargo("install"), execs().with_status(0));
+    assert_that(p.cargo("install"), execs());
     let lock2 = p.read_lockfile();
     assert_eq!(lock, lock2, "different lockfiles");
 }
@@ -1001,7 +1001,7 @@ fn dev_dependencies_no_check() {
         .build();
 
     assert_that(p.cargo("build"), execs().with_status(101));
-    assert_that(p.cargo("install"), execs().with_status(0));
+    assert_that(p.cargo("install"), execs());
 }
 
 #[test]
@@ -1025,9 +1025,9 @@ fn dev_dependencies_lock_file_untouched() {
         .file("a/src/lib.rs", "")
         .build();
 
-    assert_that(p.cargo("build"), execs().with_status(0));
+    assert_that(p.cargo("build"), execs());
     let lock = p.read_lockfile();
-    assert_that(p.cargo("install"), execs().with_status(0));
+    assert_that(p.cargo("install"), execs());
     let lock2 = p.read_lockfile();
     assert!(lock == lock2, "different lockfiles");
 }
@@ -1039,7 +1039,7 @@ fn install_target_native() {
     assert_that(
         cargo_process("install foo --target").arg(support::rustc_host()),
         execs()
-            .with_status(0),
+            ,
     );
     assert_that(cargo_home(), has_installed_exe("foo"));
 }
@@ -1055,7 +1055,7 @@ fn install_target_foreign() {
     assert_that(
         cargo_process("install foo --target").arg(cross_compile::alternate()),
         execs()
-            .with_status(0),
+            ,
     );
     assert_that(cargo_home(), has_installed_exe("foo"));
 }
@@ -1067,9 +1067,7 @@ fn vers_precise() {
 
     assert_that(
         cargo_process("install foo --vers 0.1.1"),
-        execs()
-            .with_status(0)
-            .with_stderr_contains("[DOWNLOADING] foo v0.1.1 (registry [..])"),
+        execs().with_stderr_contains("[DOWNLOADING] foo v0.1.1 (registry [..])"),
     );
 }
 
@@ -1080,9 +1078,7 @@ fn version_too() {
 
     assert_that(
         cargo_process("install foo --version 0.1.1"),
-        execs()
-            .with_status(0)
-            .with_stderr_contains("[DOWNLOADING] foo v0.1.1 (registry [..])"),
+        execs().with_stderr_contains("[DOWNLOADING] foo v0.1.1 (registry [..])"),
     );
 }
 
@@ -1108,7 +1104,7 @@ fn legacy_version_requirement() {
 
     assert_that(
         cargo_process("install foo --vers 0.1"),
-        execs().with_status(0).with_stderr_contains(
+        execs().with_stderr_contains(
             "\
 warning: the `--vers` provided, `0.1`, is not a valid semver version
 
@@ -1135,7 +1131,7 @@ fn uninstall_multiple_and_specifying_bin() {
 fn uninstall_multiple_and_some_pkg_does_not_exist() {
     pkg("foo", "0.0.1");
 
-    assert_that(cargo_process("install foo"), execs().with_status(0));
+    assert_that(cargo_process("install foo"), execs());
 
     assert_that(
         cargo_process("uninstall foo bar"),
@@ -1163,7 +1159,7 @@ fn custom_target_dir_for_git_source() {
 
     assert_that(
         cargo_process("install --git").arg(p.url().to_string()),
-        execs().with_status(0),
+        execs(),
     );
     assert_that(
         &paths::root().join("target/release"),
@@ -1173,7 +1169,7 @@ fn custom_target_dir_for_git_source() {
     assert_that(
         cargo_process("install --force --git").arg(p.url().to_string())
             .env("CARGO_TARGET_DIR", "target"),
-        execs().with_status(0),
+        execs(),
     );
     assert_that(&paths::root().join("target/release"), existing_dir());
 }
@@ -1206,7 +1202,7 @@ dependencies = [
         )
         .publish();
 
-    assert_that(cargo_process("install foo"), execs().with_status(0));
+    assert_that(cargo_process("install foo"), execs());
 }
 
 #[test]
@@ -1234,7 +1230,7 @@ dependencies = [
         )
         .publish();
 
-    assert_that(cargo_process("install foo"), execs().with_status(0));
+    assert_that(cargo_process("install foo"), execs());
 }
 
 #[test]
@@ -1258,7 +1254,7 @@ fn git_repo_replace() {
     let old_rev = repo.revparse_single("HEAD").unwrap().id();
     assert_that(
         cargo_process("install --git").arg(p.url().to_string()),
-        execs().with_status(0),
+        execs(),
     );
     git::commit(&repo);
     let new_rev = repo.revparse_single("HEAD").unwrap().id();
@@ -1273,7 +1269,7 @@ fn git_repo_replace() {
     );
     assert_that(
         cargo_process("install --force --git").arg(p.url().to_string()),
-        execs().with_status(0),
+        execs(),
     );
     assert!(
         fs::read_to_string(path)
@@ -1305,10 +1301,10 @@ fn workspace_uses_workspace_target_dir() {
         .build();
 
     assert_that(p.cargo("build --release").cwd(p.root().join("bar")),
-                execs().with_status(0));
+                execs());
     assert_that(
         cargo_process("install --path").arg(p.root().join("bar")),
-        execs().with_status(0).with_stderr(
+        execs().with_stderr(
             "[INSTALLING] [..]
 [FINISHED] release [optimized] target(s) in [..]
 [INSTALLING] [..]

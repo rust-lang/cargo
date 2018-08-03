@@ -34,7 +34,7 @@ fn read_env_vars_for_config() {
 
     assert_that(
         p.cargo("build").env("CARGO_BUILD_JOBS", "100"),
-        execs().with_status(0),
+        execs(),
     );
 }
 

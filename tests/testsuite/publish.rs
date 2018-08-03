@@ -34,7 +34,7 @@ fn simple() {
             .arg("--no-verify")
             .arg("--index")
             .arg(publish::registry().to_string()),
-        execs().with_status(0).with_stderr(&format!(
+        execs().with_stderr(&format!(
             "\
 [UPDATING] registry `{reg}`
 [WARNING] manifest has no documentation, [..]
@@ -110,7 +110,7 @@ fn old_token_location() {
             .arg("--no-verify")
             .arg("--index")
             .arg(publish::registry().to_string()),
-        execs().with_status(0).with_stderr(&format!(
+        execs().with_stderr(&format!(
             "\
 [UPDATING] registry `{reg}`
 [WARNING] manifest has no documentation, [..]
@@ -179,7 +179,7 @@ fn simple_with_host() {
             .arg("--no-verify")
             .arg("--host")
             .arg(publish::registry().to_string()),
-        execs().with_status(0).with_stderr(&format!(
+        execs().with_stderr(&format!(
             "\
 [WARNING] The flag '--host' is no longer valid.
 
@@ -259,7 +259,7 @@ fn simple_with_index_and_host() {
             .arg(publish::registry().to_string())
             .arg("--host")
             .arg(publish::registry().to_string()),
-        execs().with_status(0).with_stderr(&format!(
+        execs().with_stderr(&format!(
             "\
 [WARNING] The flag '--host' is no longer valid.
 
@@ -492,7 +492,7 @@ fn publish_clean() {
         p.cargo("publish")
             .arg("--index")
             .arg(publish::registry().to_string()),
-        execs().with_status(0),
+        execs(),
     );
 }
 
@@ -525,7 +525,7 @@ fn publish_in_sub_repo() {
             .cwd(p.root().join("bar"))
             .arg("--index")
             .arg(publish::registry().to_string()),
-        execs().with_status(0),
+        execs(),
     );
 }
 
@@ -558,7 +558,7 @@ fn publish_when_ignored() {
         p.cargo("publish")
             .arg("--index")
             .arg(publish::registry().to_string()),
-        execs().with_status(0),
+        execs(),
     );
 }
 
@@ -590,7 +590,7 @@ fn ignore_when_crate_ignored() {
             .cwd(p.root().join("bar"))
             .arg("--index")
             .arg(publish::registry().to_string()),
-        execs().with_status(0),
+        execs(),
     );
 }
 
@@ -648,7 +648,7 @@ fn dry_run() {
             .arg("--dry-run")
             .arg("--index")
             .arg(publish::registry().to_string()),
-        execs().with_status(0).with_stderr(&format!(
+        execs().with_stderr(&format!(
             "\
 [UPDATING] registry `[..]`
 [WARNING] manifest has no documentation, [..]
@@ -820,7 +820,7 @@ fn publish_allowed_registry() {
             .arg("--registry")
             .arg("alternative")
             .arg("-Zunstable-options"),
-        execs().with_status(0),
+        execs(),
     );
 }
 

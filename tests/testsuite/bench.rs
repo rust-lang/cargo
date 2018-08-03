@@ -90,7 +90,6 @@ fn bench_bench_implicit() {
     assert_that(
         p.cargo("bench").arg("--benches"),
         execs()
-            .with_status(0)
             .with_stderr(format!(
                 "\
 [COMPILING] foo v0.0.1 ({dir})
@@ -139,7 +138,6 @@ fn bench_bin_implicit() {
     assert_that(
         p.cargo("bench").arg("--bins"),
         execs()
-            .with_status(0)
             .with_stderr(format!(
                 "\
 [COMPILING] foo v0.0.1 ({dir})
@@ -178,7 +176,6 @@ fn bench_tarname() {
     assert_that(
         p.cargo("bench").arg("--bench").arg("bin2"),
         execs()
-            .with_status(0)
             .with_stderr(format!(
                 "\
 [COMPILING] foo v0.0.1 ({dir})
@@ -228,7 +225,6 @@ fn bench_multiple_targets() {
             .arg("--bench")
             .arg("bin2"),
         execs()
-            .with_status(0)
             .with_stdout_contains("test run1 ... bench: [..]")
             .with_stdout_contains("test run2 ... bench: [..]")
             .with_stdout_does_not_contain("[..]run3[..]"),
@@ -509,7 +505,6 @@ fn bench_with_deep_lib_dep() {
     assert_that(
         p.cargo("bench"),
         execs()
-            .with_status(0)
             .with_stderr(&format!(
                 "\
 [COMPILING] foo v0.0.1 ([..])
@@ -727,7 +722,7 @@ fn dont_run_examples() {
             r#"fn main() { panic!("Examples should not be run by 'cargo test'"); }"#,
         )
         .build();
-    assert_that(p.cargo("bench"), execs().with_status(0));
+    assert_that(p.cargo("bench"), execs());
 }
 
 #[test]
@@ -753,7 +748,6 @@ fn pass_through_command_line() {
     assert_that(
         p.cargo("bench").arg("bar"),
         execs()
-            .with_status(0)
             .with_stderr(&format!(
                 "\
 [COMPILING] foo v0.0.1 ({dir})
@@ -767,7 +761,6 @@ fn pass_through_command_line() {
     assert_that(
         p.cargo("bench").arg("foo"),
         execs()
-            .with_status(0)
             .with_stderr(
                 "[FINISHED] release [optimized] target(s) in [..]
 [RUNNING] target/release/deps/foo-[..][EXE]",
@@ -803,7 +796,7 @@ fn cargo_bench_twice() {
     p.cargo("build");
 
     for _ in 0..2 {
-        assert_that(p.cargo("bench"), execs().with_status(0));
+        assert_that(p.cargo("bench"), execs());
     }
 }
 
@@ -907,7 +900,6 @@ fn lib_with_standard_name() {
     assert_that(
         p.cargo("bench"),
         execs()
-            .with_status(0)
             .with_stderr(&format!(
                 "\
 [COMPILING] syntax v0.0.1 ({dir})
@@ -963,7 +955,6 @@ fn lib_with_standard_name2() {
     assert_that(
         p.cargo("bench"),
         execs()
-            .with_status(0)
             .with_stderr(&format!(
                 "\
 [COMPILING] syntax v0.0.1 ({dir})
@@ -1042,7 +1033,6 @@ fn bench_dylib() {
     assert_that(
         p.cargo("bench").arg("-v"),
         execs()
-            .with_status(0)
             .with_stderr(&format!(
                 "\
 [COMPILING] bar v0.0.1 ({dir}/bar)
@@ -1063,7 +1053,6 @@ fn bench_dylib() {
     assert_that(
         p.cargo("bench").arg("-v"),
         execs()
-            .with_status(0)
             .with_stderr(&format!(
                 "\
 [FRESH] bar v0.0.1 ({dir}/bar)
@@ -1110,7 +1099,6 @@ fn bench_twice_with_build_cmd() {
     assert_that(
         p.cargo("bench"),
         execs()
-            .with_status(0)
             .with_stderr(&format!(
                 "\
 [COMPILING] foo v0.0.1 ({dir})
@@ -1124,7 +1112,6 @@ fn bench_twice_with_build_cmd() {
     assert_that(
         p.cargo("bench"),
         execs()
-            .with_status(0)
             .with_stderr(
                 "[FINISHED] release [optimized] target(s) in [..]
 [RUNNING] target/release/deps/foo-[..][EXE]",
@@ -1207,7 +1194,6 @@ fn bench_with_examples() {
     assert_that(
         p.cargo("bench").arg("-v"),
         execs()
-            .with_status(0)
             .with_stderr(&format!(
                 "\
 [COMPILING] foo v6.6.6 ({url})
@@ -1257,7 +1243,6 @@ fn test_a_bench() {
     assert_that(
         p.cargo("test"),
         execs()
-            .with_status(0)
             .with_stderr(
                 "\
 [COMPILING] foo v0.1.0 ([..])
@@ -1293,7 +1278,7 @@ fn test_bench_no_run() {
 
     assert_that(
         p.cargo("bench").arg("--no-run"),
-        execs().with_status(0).with_stderr(
+        execs().with_stderr(
             "\
 [COMPILING] foo v0.0.1 ([..])
 [FINISHED] release [optimized] target(s) in [..]
@@ -1437,7 +1422,6 @@ fn test_bench_multiple_packages() {
     assert_that(
         p.cargo("bench").arg("-p").arg("bar").arg("-p").arg("baz"),
         execs()
-            .with_status(0)
             .with_stderr_contains("[RUNNING] target/release/deps/bbaz-[..][EXE]")
             .with_stdout_contains("test bench_baz ... bench: [..]")
             .with_stderr_contains("[RUNNING] target/release/deps/bbar-[..][EXE]")
@@ -1497,7 +1481,6 @@ fn bench_all_workspace() {
     assert_that(
         p.cargo("bench").arg("--all"),
         execs()
-            .with_status(0)
             .with_stderr_contains("[RUNNING] target/release/deps/bar-[..][EXE]")
             .with_stdout_contains("test bench_bar ... bench: [..]")
             .with_stderr_contains("[RUNNING] target/release/deps/foo-[..][EXE]")
@@ -1544,7 +1527,7 @@ fn bench_all_exclude() {
 
     assert_that(
         p.cargo("bench").arg("--all").arg("--exclude").arg("baz"),
-        execs().with_status(0).with_stdout_contains(
+        execs().with_stdout_contains(
             "\
 running 1 test
 test bar ... bench:           [..] ns/iter (+/- [..])",
@@ -1600,7 +1583,6 @@ fn bench_all_virtual_manifest() {
     assert_that(
         p.cargo("bench").arg("--all"),
         execs()
-            .with_status(0)
             .with_stderr_contains("[RUNNING] target/release/deps/baz-[..][EXE]")
             .with_stdout_contains("test bench_baz ... bench: [..]")
             .with_stderr_contains("[RUNNING] target/release/deps/bar-[..][EXE]")
@@ -1644,7 +1626,7 @@ fn legacy_bench_name() {
 
     assert_that(
         p.cargo("bench"),
-        execs().with_status(0).with_stderr_contains(
+        execs().with_stderr_contains(
             "\
 [WARNING] path `[..]src/bench.rs` was erroneously implicitly accepted for benchmark `bench`,
 please set bench.path in Cargo.toml",
@@ -1697,7 +1679,6 @@ fn bench_virtual_manifest_all_implied() {
     assert_that(
         p.cargo("bench"),
         execs()
-            .with_status(0)
             .with_stderr_contains("[RUNNING] target/release/deps/baz-[..][EXE]")
             .with_stdout_contains("test bench_baz ... bench: [..]")
             .with_stderr_contains("[RUNNING] target/release/deps/bar-[..][EXE]")

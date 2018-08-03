@@ -60,7 +60,7 @@ fn no_warning_on_success() {
     let upstream = make_upstream("");
     assert_that(
         upstream.cargo("build"),
-        execs().with_status(0).with_stderr(
+        execs().with_stderr(
             "\
 [UPDATING] registry `[..]`
 [DOWNLOADING] bar v0.0.1 ([..])
