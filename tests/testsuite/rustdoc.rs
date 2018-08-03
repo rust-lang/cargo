@@ -181,7 +181,7 @@ fn features() {
 }
 
 #[test]
-#[cfg(all(target_arch = "x86_64", target_os = "linux"))]
+#[cfg(all(target_arch = "x86_64", target_os = "linux", target_env = "gnu"))]
 fn rustdoc_target() {
     let p = project()
         .file("src/lib.rs", "")
