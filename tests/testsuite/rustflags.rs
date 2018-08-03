@@ -74,7 +74,7 @@ fn env_rustflags_build_script() {
 
     assert_that(
         p.cargo("build").env("RUSTFLAGS", "--cfg foo"),
-        execs().with_status(0),
+        execs(),
     );
 }
 
@@ -113,7 +113,7 @@ fn env_rustflags_build_script_dep() {
 
     assert_that(
         foo.cargo("build").env("RUSTFLAGS", "--cfg foo"),
-        execs().with_status(0),
+        execs(),
     );
 }
 
@@ -147,7 +147,7 @@ fn env_rustflags_plugin() {
 
     assert_that(
         p.cargo("build").env("RUSTFLAGS", "--cfg foo"),
-        execs().with_status(0),
+        execs(),
     );
 }
 
@@ -188,7 +188,7 @@ fn env_rustflags_plugin_dep() {
 
     assert_that(
         foo.cargo("build").env("RUSTFLAGS", "--cfg foo"),
-        execs().with_status(0),
+        execs(),
     );
 }
 
@@ -283,7 +283,7 @@ fn env_rustflags_build_script_with_target() {
             .env("RUSTFLAGS", "--cfg foo")
             .arg("--target")
             .arg(host),
-        execs().with_status(0),
+        execs(),
     );
 }
 
@@ -326,7 +326,7 @@ fn env_rustflags_build_script_dep_with_target() {
             .env("RUSTFLAGS", "--cfg foo")
             .arg("--target")
             .arg(host),
-        execs().with_status(0),
+        execs(),
     );
 }
 
@@ -364,7 +364,7 @@ fn env_rustflags_plugin_with_target() {
             .env("RUSTFLAGS", "--cfg foo")
             .arg("--target")
             .arg(host),
-        execs().with_status(0),
+        execs(),
     );
 }
 
@@ -409,7 +409,7 @@ fn env_rustflags_plugin_dep_with_target() {
             .env("RUSTFLAGS", "--cfg foo")
             .arg("--target")
             .arg(host),
-        execs().with_status(0),
+        execs(),
     );
 }
 
@@ -419,7 +419,7 @@ fn env_rustflags_recompile() {
         .file("src/lib.rs", "")
         .build();
 
-    assert_that(p.cargo("build"), execs().with_status(0));
+    assert_that(p.cargo("build"), execs());
     // Setting RUSTFLAGS forces a recompile
     assert_that(
         p.cargo("build").env("RUSTFLAGS", "-Z bogus"),
@@ -435,7 +435,7 @@ fn env_rustflags_recompile2() {
 
     assert_that(
         p.cargo("build").env("RUSTFLAGS", "--cfg foo"),
-        execs().with_status(0),
+        execs(),
     );
     // Setting RUSTFLAGS forces a recompile
     assert_that(
@@ -452,11 +452,11 @@ fn env_rustflags_no_recompile() {
 
     assert_that(
         p.cargo("build").env("RUSTFLAGS", "--cfg foo"),
-        execs().with_status(0),
+        execs(),
     );
     assert_that(
         p.cargo("build").env("RUSTFLAGS", "--cfg foo"),
-        execs().with_stdout("").with_status(0),
+        execs().with_stdout(""),
     );
 }
 
@@ -526,7 +526,7 @@ fn build_rustflags_build_script() {
         )
         .build();
 
-    assert_that(p.cargo("build"), execs().with_status(0));
+    assert_that(p.cargo("build"), execs());
 }
 
 #[test]
@@ -569,7 +569,7 @@ fn build_rustflags_build_script_dep() {
         )
         .build();
 
-    assert_that(foo.cargo("build"), execs().with_status(0));
+    assert_that(foo.cargo("build"), execs());
 }
 
 #[test]
@@ -607,7 +607,7 @@ fn build_rustflags_plugin() {
         )
         .build();
 
-    assert_that(p.cargo("build"), execs().with_status(0));
+    assert_that(p.cargo("build"), execs());
 }
 
 #[test]
@@ -652,7 +652,7 @@ fn build_rustflags_plugin_dep() {
         )
         .build();
 
-    assert_that(foo.cargo("build"), execs().with_status(0));
+    assert_that(foo.cargo("build"), execs());
 }
 
 #[test]
@@ -742,7 +742,7 @@ fn build_rustflags_build_script_with_target() {
     let host = rustc_host();
     assert_that(
         p.cargo("build").arg("--target").arg(host),
-        execs().with_status(0),
+        execs(),
     );
 }
 
@@ -789,7 +789,7 @@ fn build_rustflags_build_script_dep_with_target() {
     let host = rustc_host();
     assert_that(
         foo.cargo("build").arg("--target").arg(host),
-        execs().with_status(0),
+        execs(),
     );
 }
 
@@ -831,7 +831,7 @@ fn build_rustflags_plugin_with_target() {
     let host = rustc_host();
     assert_that(
         p.cargo("build").arg("--target").arg(host),
-        execs().with_status(0),
+        execs(),
     );
 }
 
@@ -880,7 +880,7 @@ fn build_rustflags_plugin_dep_with_target() {
     let host = rustc_host();
     assert_that(
         foo.cargo("build").arg("--target").arg(host),
-        execs().with_status(0),
+        execs(),
     );
 }
 
@@ -890,7 +890,7 @@ fn build_rustflags_recompile() {
         .file("src/lib.rs", "")
         .build();
 
-    assert_that(p.cargo("build"), execs().with_status(0));
+    assert_that(p.cargo("build"), execs());
 
     // Setting RUSTFLAGS forces a recompile
     let config = r#"
@@ -913,7 +913,7 @@ fn build_rustflags_recompile2() {
 
     assert_that(
         p.cargo("build").env("RUSTFLAGS", "--cfg foo"),
-        execs().with_status(0),
+        execs(),
     );
 
     // Setting RUSTFLAGS forces a recompile
@@ -944,11 +944,11 @@ fn build_rustflags_no_recompile() {
 
     assert_that(
         p.cargo("build").env("RUSTFLAGS", "--cfg foo"),
-        execs().with_status(0),
+        execs(),
     );
     assert_that(
         p.cargo("build").env("RUSTFLAGS", "--cfg foo"),
-        execs().with_stdout("").with_status(0),
+        execs().with_stdout(""),
     );
 }
 
@@ -974,7 +974,7 @@ fn build_rustflags_with_home_config() {
         .file("src/lib.rs", "")
         .build();
 
-    assert_that(p.cargo("build").arg("-v"), execs().with_status(0));
+    assert_that(p.cargo("build").arg("-v"), execs());
 }
 
 #[test]
@@ -1068,7 +1068,7 @@ fn cfg_rustflags_normal_source() {
 
     assert_that(
         p.cargo("build").arg("--lib").arg("-v"),
-        execs().with_status(0).with_stderr(
+        execs().with_stderr(
             "\
 [COMPILING] foo v0.0.1 ([..])
 [RUNNING] `rustc [..] --cfg bar[..]`
@@ -1079,7 +1079,7 @@ fn cfg_rustflags_normal_source() {
 
     assert_that(
         p.cargo("build").arg("--bin=a").arg("-v"),
-        execs().with_status(0).with_stderr(
+        execs().with_stderr(
             "\
 [COMPILING] foo v0.0.1 ([..])
 [RUNNING] `rustc [..] --cfg bar[..]`
@@ -1090,7 +1090,7 @@ fn cfg_rustflags_normal_source() {
 
     assert_that(
         p.cargo("build").arg("--example=b").arg("-v"),
-        execs().with_status(0).with_stderr(
+        execs().with_stderr(
             "\
 [COMPILING] foo v0.0.1 ([..])
 [RUNNING] `rustc [..] --cfg bar[..]`
@@ -1101,7 +1101,7 @@ fn cfg_rustflags_normal_source() {
 
     assert_that(
         p.cargo("test").arg("--no-run").arg("-v"),
-        execs().with_status(0).with_stderr(
+        execs().with_stderr(
             "\
 [COMPILING] foo v0.0.1 ([..])
 [RUNNING] `rustc [..] --cfg bar[..]`
@@ -1114,7 +1114,7 @@ fn cfg_rustflags_normal_source() {
 
     assert_that(
         p.cargo("bench").arg("--no-run").arg("-v"),
-        execs().with_status(0).with_stderr(
+        execs().with_stderr(
             "\
 [COMPILING] foo v0.0.1 ([..])
 [RUNNING] `rustc [..] --cfg bar[..]`
@@ -1155,7 +1155,7 @@ fn cfg_rustflags_precedence() {
 
     assert_that(
         p.cargo("build").arg("--lib").arg("-v"),
-        execs().with_status(0).with_stderr(
+        execs().with_stderr(
             "\
 [COMPILING] foo v0.0.1 ([..])
 [RUNNING] `rustc [..] --cfg bar[..]`
@@ -1166,7 +1166,7 @@ fn cfg_rustflags_precedence() {
 
     assert_that(
         p.cargo("build").arg("--bin=a").arg("-v"),
-        execs().with_status(0).with_stderr(
+        execs().with_stderr(
             "\
 [COMPILING] foo v0.0.1 ([..])
 [RUNNING] `rustc [..] --cfg bar[..]`
@@ -1177,7 +1177,7 @@ fn cfg_rustflags_precedence() {
 
     assert_that(
         p.cargo("build").arg("--example=b").arg("-v"),
-        execs().with_status(0).with_stderr(
+        execs().with_stderr(
             "\
 [COMPILING] foo v0.0.1 ([..])
 [RUNNING] `rustc [..] --cfg bar[..]`
@@ -1188,7 +1188,7 @@ fn cfg_rustflags_precedence() {
 
     assert_that(
         p.cargo("test").arg("--no-run").arg("-v"),
-        execs().with_status(0).with_stderr(
+        execs().with_stderr(
             "\
 [COMPILING] foo v0.0.1 ([..])
 [RUNNING] `rustc [..] --cfg bar[..]`
@@ -1201,7 +1201,7 @@ fn cfg_rustflags_precedence() {
 
     assert_that(
         p.cargo("bench").arg("--no-run").arg("-v"),
-        execs().with_status(0).with_stderr(
+        execs().with_stderr(
             "\
 [COMPILING] foo v0.0.1 ([..])
 [RUNNING] `rustc [..] --cfg bar[..]`
@@ -1228,7 +1228,7 @@ fn target_rustflags_string_and_array_form1() {
 
     assert_that(
         p1.cargo("build").arg("-v"),
-        execs().with_status(0).with_stderr(
+        execs().with_stderr(
             "\
 [COMPILING] foo v0.0.1 ([..])
 [RUNNING] `rustc [..] --cfg foo[..]`
@@ -1250,7 +1250,7 @@ fn target_rustflags_string_and_array_form1() {
 
     assert_that(
         p2.cargo("build").arg("-v"),
-        execs().with_status(0).with_stderr(
+        execs().with_stderr(
             "\
 [COMPILING] foo v0.0.1 ([..])
 [RUNNING] `rustc [..] --cfg foo[..]`
@@ -1278,7 +1278,7 @@ fn target_rustflags_string_and_array_form2() {
 
     assert_that(
         p1.cargo("build").arg("-v"),
-        execs().with_status(0).with_stderr(
+        execs().with_stderr(
             "\
 [COMPILING] foo v0.0.1 ([..])
 [RUNNING] `rustc [..] --cfg foo[..]`
@@ -1303,7 +1303,7 @@ fn target_rustflags_string_and_array_form2() {
 
     assert_that(
         p2.cargo("build").arg("-v"),
-        execs().with_status(0).with_stderr(
+        execs().with_stderr(
             "\
 [COMPILING] foo v0.0.1 ([..])
 [RUNNING] `rustc [..] --cfg foo[..]`
@@ -1345,9 +1345,9 @@ fn two_matching_in_config() {
         )
         .build();
 
-    assert_that(p1.cargo("run"), execs().with_status(0));
+    assert_that(p1.cargo("run"), execs());
     assert_that(
         p1.cargo("build"),
-        execs().with_status(0).with_stderr("[FINISHED] [..]"),
+        execs().with_stderr("[FINISHED] [..]"),
     );
 }

@@ -48,13 +48,13 @@ fn simple_cross() {
     let target = cross_compile::alternate();
     assert_that(
         p.cargo("build").arg("--target").arg(&target).arg("-v"),
-        execs().with_status(0),
+        execs(),
     );
     assert_that(&p.target_bin(&target, "foo"), existing_file());
 
     assert_that(
         process(&p.target_bin(&target, "foo")),
-        execs().with_status(0),
+        execs(),
     );
 }
 
@@ -111,12 +111,12 @@ fn simple_cross_config() {
         .build();
 
     let target = cross_compile::alternate();
-    assert_that(p.cargo("build").arg("-v"), execs().with_status(0));
+    assert_that(p.cargo("build").arg("-v"), execs());
     assert_that(&p.target_bin(&target, "foo"), existing_file());
 
     assert_that(
         process(&p.target_bin(&target, "foo")),
-        execs().with_status(0),
+        execs(),
     );
 }
 
@@ -149,13 +149,13 @@ fn simple_deps() {
     let target = cross_compile::alternate();
     assert_that(
         p.cargo("build").arg("--target").arg(&target),
-        execs().with_status(0),
+        execs(),
     );
     assert_that(&p.target_bin(&target, "foo"), existing_file());
 
     assert_that(
         process(&p.target_bin(&target, "foo")),
-        execs().with_status(0),
+        execs(),
     );
 }
 
@@ -245,13 +245,13 @@ fn plugin_deps() {
     let target = cross_compile::alternate();
     assert_that(
         foo.cargo("build").arg("--target").arg(&target),
-        execs().with_status(0),
+        execs(),
     );
     assert_that(&foo.target_bin(&target, "foo"), existing_file());
 
     assert_that(
         process(&foo.target_bin(&target, "foo")),
-        execs().with_status(0),
+        execs(),
     );
 }
 
@@ -348,18 +348,18 @@ fn plugin_to_the_max() {
     let target = cross_compile::alternate();
     assert_that(
         foo.cargo("build").arg("--target").arg(&target).arg("-v"),
-        execs().with_status(0),
+        execs(),
     );
     println!("second");
     assert_that(
         foo.cargo("build").arg("-v").arg("--target").arg(&target),
-        execs().with_status(0),
+        execs(),
     );
     assert_that(&foo.target_bin(&target, "foo"), existing_file());
 
     assert_that(
         process(&foo.target_bin(&target, "foo")),
-        execs().with_status(0),
+        execs(),
     );
 }
 
@@ -504,7 +504,7 @@ fn plugin_with_extra_dylib_dep() {
     let target = cross_compile::alternate();
     assert_that(
         foo.cargo("build").arg("--target").arg(&target),
-        execs().with_status(0),
+        execs(),
     );
 }
 
@@ -559,7 +559,6 @@ fn cross_tests() {
     assert_that(
         p.cargo("test").arg("--target").arg(&target),
         execs()
-            .with_status(0)
             .with_stderr(&format!(
                 "\
 [COMPILING] foo v0.0.0 ({foo})
@@ -605,14 +604,14 @@ fn no_cross_doctests() {
     println!("a");
     assert_that(
         p.cargo("test"),
-        execs().with_status(0).with_stderr(&host_output),
+        execs().with_stderr(&host_output),
     );
 
     println!("b");
     let target = cross_compile::host();
     assert_that(
         p.cargo("test").arg("--target").arg(&target),
-        execs().with_status(0).with_stderr(&format!(
+        execs().with_stderr(&format!(
             "\
 [COMPILING] foo v0.0.1 ({foo})
 [FINISHED] dev [unoptimized + debuginfo] target(s) in [..]
@@ -628,7 +627,7 @@ fn no_cross_doctests() {
     let target = cross_compile::alternate();
     assert_that(
         p.cargo("test").arg("--target").arg(&target),
-        execs().with_status(0).with_stderr(&format!(
+        execs().with_stderr(&format!(
             "\
 [COMPILING] foo v0.0.1 ({foo})
 [FINISHED] dev [unoptimized + debuginfo] target(s) in [..]
@@ -664,7 +663,7 @@ fn simple_cargo_run() {
     let target = cross_compile::alternate();
     assert_that(
         p.cargo("run").arg("--target").arg(&target),
-        execs().with_status(0),
+        execs(),
     );
 }
 
@@ -717,7 +716,7 @@ fn cross_with_a_build_script() {
 
     assert_that(
         p.cargo("build").arg("--target").arg(&target).arg("-v"),
-        execs().with_status(0).with_stderr(&format!(
+        execs().with_stderr(&format!(
             "\
 [COMPILING] foo v0.0.0 (file://[..])
 [RUNNING] `rustc [..] build.rs [..] --out-dir {dir}/target/debug/build/foo-[..]`
@@ -817,7 +816,6 @@ fn build_script_needed_for_host_and_target() {
     assert_that(
         p.cargo("build").arg("--target").arg(&target).arg("-v"),
         execs()
-            .with_status(0)
             .with_stderr_contains(&format!(
                 "[COMPILING] d1 v0.0.0 ({url}/d1)",
                 url = p.url()
@@ -899,7 +897,7 @@ fn build_deps_for_the_right_arch() {
     let target = cross_compile::alternate();
     assert_that(
         p.cargo("build").arg("--target").arg(&target).arg("-v"),
-        execs().with_status(0),
+        execs(),
     );
 }
 
@@ -953,7 +951,7 @@ fn build_script_only_host() {
     let target = cross_compile::alternate();
     assert_that(
         p.cargo("build").arg("--target").arg(&target).arg("-v"),
-        execs().with_status(0),
+        execs(),
     );
 }
 
@@ -986,7 +984,7 @@ fn plugin_build_script_right_arch() {
             .arg("-v")
             .arg("--target")
             .arg(cross_compile::alternate()),
-        execs().with_status(0).with_stderr(
+        execs().with_stderr(
             "\
 [COMPILING] foo v0.0.1 ([..])
 [RUNNING] `rustc [..] build.rs [..]`
@@ -1051,7 +1049,7 @@ fn build_script_with_platform_specific_dependencies() {
 
     assert_that(
         p.cargo("build").arg("-v").arg("--target").arg(&target),
-        execs().with_status(0).with_stderr(&format!(
+        execs().with_stderr(&format!(
             "\
 [COMPILING] d2 v0.0.0 ([..])
 [RUNNING] `rustc [..] d2/src/lib.rs [..]`
@@ -1206,10 +1204,10 @@ fn platform_specific_variables_reflected_in_build_scripts() {
         .file("d2/src/lib.rs", "")
         .build();
 
-    assert_that(p.cargo("build").arg("-v"), execs().with_status(0));
+    assert_that(p.cargo("build").arg("-v"), execs());
     assert_that(
         p.cargo("build").arg("-v").arg("--target").arg(&target),
-        execs().with_status(0),
+        execs(),
     );
 }
 
@@ -1288,7 +1286,6 @@ fn cross_test_dylib() {
     assert_that(
         p.cargo("test").arg("--target").arg(&target),
         execs()
-            .with_status(0)
             .with_stderr(&format!(
                 "\
 [COMPILING] bar v0.0.1 ({dir}/bar)

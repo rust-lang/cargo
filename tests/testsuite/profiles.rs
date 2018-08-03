@@ -26,7 +26,7 @@ fn profile_overrides() {
         .build();
     assert_that(
         p.cargo("build").arg("-v"),
-        execs().with_status(0).with_stderr(&format!(
+        execs().with_stderr(&format!(
             "\
 [COMPILING] test v0.0.0 ({url})
 [RUNNING] `rustc --crate-name test src/lib.rs --crate-type lib \
@@ -65,7 +65,7 @@ fn opt_level_override_0() {
         .build();
     assert_that(
         p.cargo("build").arg("-v"),
-        execs().with_status(0).with_stderr(&format!(
+        execs().with_stderr(&format!(
             "\
 [COMPILING] test v0.0.0 ({url})
 [RUNNING] `rustc --crate-name test src/lib.rs --crate-type lib \
@@ -101,7 +101,7 @@ fn debug_override_1() {
         .build();
     assert_that(
         p.cargo("build").arg("-v"),
-        execs().with_status(0).with_stderr(&format!(
+        execs().with_stderr(&format!(
             "\
 [COMPILING] test v0.0.0 ({url})
 [RUNNING] `rustc --crate-name test src/lib.rs --crate-type lib \
@@ -140,7 +140,7 @@ fn check_opt_level_override(profile_level: &str, rustc_level: &str) {
         .build();
     assert_that(
         p.cargo("build").arg("-v"),
-        execs().with_status(0).with_stderr(&format!(
+        execs().with_stderr(&format!(
             "\
 [COMPILING] test v0.0.0 ({url})
 [RUNNING] `rustc --crate-name test src/lib.rs --crate-type lib \
@@ -220,7 +220,7 @@ fn top_level_overrides_deps() {
         .build();
     assert_that(
         p.cargo("build").arg("-v").arg("--release"),
-        execs().with_status(0).with_stderr(&format!(
+        execs().with_stderr(&format!(
             "\
 [COMPILING] foo v0.0.0 ({url}/foo)
 [RUNNING] `rustc --crate-name foo foo/src/lib.rs \
@@ -290,7 +290,7 @@ fn profile_in_non_root_manifest_triggers_a_warning() {
 
     assert_that(
         p.cargo("build").cwd(p.root().join("bar")).arg("-v"),
-        execs().with_status(0).with_stderr(
+        execs().with_stderr(
             "\
 [WARNING] profiles for the non root package will be ignored, specify profiles at the workspace root:
 package:   [..]
@@ -332,7 +332,7 @@ fn profile_in_virtual_manifest_works() {
 
     assert_that(
         p.cargo("build").cwd(p.root().join("bar")).arg("-v"),
-        execs().with_status(0).with_stderr(
+        execs().with_stderr(
             "\
 [COMPILING] bar v0.1.0 ([..])
 [RUNNING] `rustc [..]`
@@ -363,7 +363,7 @@ fn profile_panic_test_bench() {
 
     assert_that(
         p.cargo("build"),
-        execs().with_status(0).with_stderr_contains(
+        execs().with_stderr_contains(
             "\
 [WARNING] `panic` setting is ignored for `test` profile
 [WARNING] `panic` setting is ignored for `bench` profile
@@ -392,7 +392,6 @@ fn profile_doc_deprecated() {
     assert_that(
         p.cargo("build"),
         execs()
-            .with_status(0)
             .with_stderr_contains("[WARNING] profile `doc` is deprecated and has no effect"),
     );
 }

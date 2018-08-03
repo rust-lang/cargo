@@ -298,7 +298,7 @@ fn invalid9() {
         .build();
 
     assert_that(p.cargo("build").arg("--features").arg("bar"),
-                execs().with_status(0).with_stderr("\
+                execs().with_stderr("\
 warning: Package `foo v0.0.1 ([..])` does not have feature `bar`. It has a required dependency with \
 that name, but only optional dependencies can be used as features. [..]
    Compiling bar v0.0.1 ([..])
@@ -342,7 +342,7 @@ fn invalid10() {
         .build();
 
     assert_that(p.cargo("build"),
-                execs().with_status(0).with_stderr("\
+                execs().with_stderr("\
 warning: Package `bar v0.0.1 ([..])` does not have feature `baz`. It has a required dependency with \
 that name, but only optional dependencies can be used as features. [..]
    Compiling baz v0.0.1 ([..])
@@ -451,7 +451,7 @@ fn no_feature_doesnt_build() {
 
     assert_that(
         p.cargo("build"),
-        execs().with_status(0).with_stderr(format!(
+        execs().with_stderr(format!(
             "\
 [COMPILING] foo v0.0.1 ({dir})
 [FINISHED] dev [unoptimized + debuginfo] target(s) in [..]
@@ -461,12 +461,12 @@ fn no_feature_doesnt_build() {
     );
     assert_that(
         p.process(&p.bin("foo")),
-        execs().with_status(0).with_stdout(""),
+        execs().with_stdout(""),
     );
 
     assert_that(
         p.cargo("build").arg("--features").arg("bar"),
-        execs().with_status(0).with_stderr(format!(
+        execs().with_stderr(format!(
             "\
 [COMPILING] bar v0.0.1 ({dir}/bar)
 [COMPILING] foo v0.0.1 ({dir})
@@ -477,7 +477,7 @@ fn no_feature_doesnt_build() {
     );
     assert_that(
         p.process(&p.bin("foo")),
-        execs().with_status(0).with_stdout("bar\n"),
+        execs().with_stdout("bar\n"),
     );
 }
 
@@ -517,7 +517,7 @@ fn default_feature_pulled_in() {
 
     assert_that(
         p.cargo("build"),
-        execs().with_status(0).with_stderr(format!(
+        execs().with_stderr(format!(
             "\
 [COMPILING] bar v0.0.1 ({dir}/bar)
 [COMPILING] foo v0.0.1 ({dir})
@@ -528,12 +528,12 @@ fn default_feature_pulled_in() {
     );
     assert_that(
         p.process(&p.bin("foo")),
-        execs().with_status(0).with_stdout("bar\n"),
+        execs().with_stdout("bar\n"),
     );
 
     assert_that(
         p.cargo("build").arg("--no-default-features"),
-        execs().with_status(0).with_stderr(format!(
+        execs().with_stderr(format!(
             "\
 [COMPILING] foo v0.0.1 ({dir})
 [FINISHED] dev [unoptimized + debuginfo] target(s) in [..]
@@ -543,7 +543,7 @@ fn default_feature_pulled_in() {
     );
     assert_that(
         p.process(&p.bin("foo")),
-        execs().with_status(0).with_stdout(""),
+        execs().with_stdout(""),
     );
 }
 
@@ -592,7 +592,7 @@ fn cyclic_feature2() {
         .file("src/main.rs", "fn main() {}")
         .build();
 
-    assert_that(p.cargo("build"), execs().with_status(0).with_stdout(""));
+    assert_that(p.cargo("build"), execs().with_stdout(""));
 }
 
 #[test]
@@ -643,7 +643,7 @@ fn groups_on_groups_on_groups() {
 
     assert_that(
         p.cargo("build"),
-        execs().with_status(0).with_stderr(format!(
+        execs().with_stderr(format!(
             "\
 [COMPILING] ba[..] v0.0.1 ({dir}/ba[..])
 [COMPILING] ba[..] v0.0.1 ({dir}/ba[..])
@@ -693,7 +693,7 @@ fn many_cli_features() {
 
     assert_that(
         p.cargo("build").arg("--features").arg("bar baz"),
-        execs().with_status(0).with_stderr(format!(
+        execs().with_stderr(format!(
             "\
 [COMPILING] ba[..] v0.0.1 ({dir}/ba[..])
 [COMPILING] ba[..] v0.0.1 ({dir}/ba[..])
@@ -778,7 +778,7 @@ fn union_features() {
 
     assert_that(
         p.cargo("build"),
-        execs().with_status(0).with_stderr(format!(
+        execs().with_stderr(format!(
             "\
 [COMPILING] d2 v0.0.1 ({dir}/d2)
 [COMPILING] d1 v0.0.1 ({dir}/d1)
@@ -826,7 +826,7 @@ fn many_features_no_rebuilds() {
 
     assert_that(
         p.cargo("build"),
-        execs().with_status(0).with_stderr(format!(
+        execs().with_stderr(format!(
             "\
 [COMPILING] a v0.1.0 ({dir}/a)
 [COMPILING] b v0.1.0 ({dir})
@@ -839,7 +839,7 @@ fn many_features_no_rebuilds() {
 
     assert_that(
         p.cargo("build").arg("-v"),
-        execs().with_status(0).with_stderr(
+        execs().with_stderr(
             "\
 [FRESH] a v0.1.0 ([..]/a)
 [FRESH] b v0.1.0 ([..])
@@ -858,7 +858,7 @@ fn empty_features() {
 
     assert_that(
         p.cargo("build").arg("--features").arg(""),
-        execs().with_status(0),
+        execs(),
     );
 }
 
@@ -899,7 +899,7 @@ fn transitive_features() {
 
     assert_that(
         p.cargo("build").arg("--features").arg("foo"),
-        execs().with_status(0),
+        execs(),
     );
 }
 
@@ -959,7 +959,7 @@ fn everything_in_the_lockfile() {
         .file("d3/src/lib.rs", "")
         .build();
 
-    assert_that(p.cargo("fetch"), execs().with_status(0));
+    assert_that(p.cargo("fetch"), execs());
     let loc = p.root().join("Cargo.lock");
     let mut lockfile = String::new();
     t!(t!(File::open(&loc)).read_to_string(&mut lockfile));
@@ -1026,9 +1026,9 @@ fn no_rebuild_when_frobbing_default_feature() {
         .file("a/src/lib.rs", "")
         .build();
 
-    assert_that(p.cargo("build"), execs().with_status(0));
-    assert_that(p.cargo("build"), execs().with_status(0).with_stdout(""));
-    assert_that(p.cargo("build"), execs().with_status(0).with_stdout(""));
+    assert_that(p.cargo("build"), execs());
+    assert_that(p.cargo("build"), execs().with_stdout(""));
+    assert_that(p.cargo("build"), execs().with_stdout(""));
 }
 
 #[test]
@@ -1077,9 +1077,9 @@ fn unions_work_with_no_default_features() {
         .file("a/src/lib.rs", r#"#[cfg(feature = "f1")] pub fn a() {}"#)
         .build();
 
-    assert_that(p.cargo("build"), execs().with_status(0));
-    assert_that(p.cargo("build"), execs().with_status(0).with_stdout(""));
-    assert_that(p.cargo("build"), execs().with_status(0).with_stdout(""));
+    assert_that(p.cargo("build"), execs());
+    assert_that(p.cargo("build"), execs().with_stdout(""));
+    assert_that(p.cargo("build"), execs().with_stdout(""));
 }
 
 #[test]
@@ -1106,7 +1106,7 @@ fn optional_and_dev_dep() {
 
     assert_that(
         p.cargo("build"),
-        execs().with_status(0).with_stderr(
+        execs().with_stderr(
             "\
 [COMPILING] test v0.1.0 ([..])
 [FINISHED] dev [unoptimized + debuginfo] target(s) in [..]
@@ -1151,7 +1151,7 @@ fn activating_feature_activates_dep() {
 
     assert_that(
         p.cargo("build").arg("--features").arg("a").arg("-v"),
-        execs().with_status(0),
+        execs(),
     );
 }
 
@@ -1225,7 +1225,7 @@ fn dep_feature_in_cmd_line() {
         p.cargo("build")
             .arg("--features")
             .arg("derived/derived-feat"),
-        execs().with_status(0),
+        execs(),
     );
 
     // Trying to enable features of transitive dependencies is an error
@@ -1291,7 +1291,7 @@ fn all_features_flag_enables_all_features() {
 
     assert_that(
         p.cargo("build").arg("--all-features"),
-        execs().with_status(0),
+        execs(),
     );
 }
 
@@ -1333,7 +1333,7 @@ fn many_cli_features_comma_delimited() {
 
     assert_that(
         p.cargo("build").arg("--features").arg("bar,baz"),
-        execs().with_status(0).with_stderr(format!(
+        execs().with_stderr(format!(
             "\
 [COMPILING] ba[..] v0.0.1 ({dir}/ba[..])
 [COMPILING] ba[..] v0.0.1 ({dir}/ba[..])
@@ -1399,7 +1399,7 @@ fn many_cli_features_comma_and_space_delimited() {
 
     assert_that(
         p.cargo("build").arg("--features").arg("bar,baz bam bap"),
-        execs().with_status(0).with_stderr(format!(
+        execs().with_stderr(format!(
             "\
 [COMPILING] ba[..] v0.0.1 ({dir}/ba[..])
 [COMPILING] ba[..] v0.0.1 ({dir}/ba[..])
@@ -1491,12 +1491,12 @@ fn combining_features_and_package() {
     assert_that(
         p.cargo("build -Z package-features --all --all-features")
             .masquerade_as_nightly_cargo(),
-        execs().with_status(0),
+        execs(),
     );
     assert_that(
         p.cargo("run -Z package-features --package bar --features main")
             .masquerade_as_nightly_cargo(),
-        execs().with_status(0),
+        execs(),
     );
 }
 
@@ -1632,7 +1632,7 @@ fn namespaced_implicit_feature() {
 
     assert_that(
         p.cargo("build").masquerade_as_nightly_cargo(),
-        execs().with_status(0),
+        execs(),
     );
 }
 
@@ -1777,7 +1777,7 @@ fn namespaced_same_name() {
 
     assert_that(
         p.cargo("build").masquerade_as_nightly_cargo(),
-        execs().with_status(0),
+        execs(),
     );
 }
 
@@ -1809,7 +1809,7 @@ fn only_dep_is_optional() {
 
     assert_that(
         p.cargo("build"),
-        execs().with_status(0),
+        execs(),
     );
 }
 
@@ -1848,6 +1848,6 @@ fn all_features_all_crates() {
 
     assert_that(
         p.cargo("build --all-features --all"),
-        execs().with_status(0),
+        execs(),
     );
 }

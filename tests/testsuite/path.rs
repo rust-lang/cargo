@@ -71,7 +71,7 @@ fn cargo_compile_with_nested_deps_shorthand() {
 
     assert_that(
         p.cargo("build"),
-        execs().with_status(0).with_stderr(&format!(
+        execs().with_stderr(&format!(
             "[COMPILING] baz v0.5.0 ({}/bar/baz)\n\
              [COMPILING] bar v0.5.0 ({}/bar)\n\
              [COMPILING] foo v0.5.0 ({})\n\
@@ -87,18 +87,18 @@ fn cargo_compile_with_nested_deps_shorthand() {
 
     assert_that(
         process(&p.bin("foo")),
-        execs().with_stdout("test passed\n").with_status(0),
+        execs().with_stdout("test passed\n"),
     );
 
     println!("cleaning");
     assert_that(
         p.cargo("clean").arg("-v"),
-        execs().with_stdout("").with_status(0),
+        execs().with_stdout(""),
     );
     println!("building baz");
     assert_that(
         p.cargo("build").arg("-p").arg("baz"),
-        execs().with_status(0).with_stderr(&format!(
+        execs().with_stderr(&format!(
             "[COMPILING] baz v0.5.0 ({}/bar/baz)\n\
              [FINISHED] dev [unoptimized + debuginfo] target(s) \
              in [..]\n",
@@ -108,7 +108,7 @@ fn cargo_compile_with_nested_deps_shorthand() {
     println!("building foo");
     assert_that(
         p.cargo("build").arg("-p").arg("foo"),
-        execs().with_status(0).with_stderr(&format!(
+        execs().with_stderr(&format!(
             "[COMPILING] bar v0.5.0 ({}/bar)\n\
              [COMPILING] foo v0.5.0 ({})\n\
              [FINISHED] dev [unoptimized + debuginfo] target(s) \
@@ -603,7 +603,7 @@ fn override_relative() {
         )
         .file("src/lib.rs", "")
         .build();
-    assert_that(p.cargo("build").arg("-v"), execs().with_status(0));
+    assert_that(p.cargo("build").arg("-v"), execs());
 }
 
 #[test]
@@ -638,7 +638,7 @@ fn override_self() {
         .file("src/main.rs", "fn main() {}")
         .build();
 
-    assert_that(p.cargo("build"), execs().with_status(0));
+    assert_that(p.cargo("build"), execs());
 }
 
 #[test]
@@ -690,7 +690,7 @@ fn override_path_dep() {
         .file("src/lib.rs", "")
         .build();
 
-    assert_that(p.cargo("build").arg("-v"), execs().with_status(0));
+    assert_that(p.cargo("build").arg("-v"), execs());
 }
 
 #[test]
@@ -810,7 +810,7 @@ fn dev_deps_no_rebuild_lib() {
         .build();
     assert_that(
         p.cargo("build").env("FOO", "bar"),
-        execs().with_status(0).with_stderr(&format!(
+        execs().with_stderr(&format!(
             "[COMPILING] foo v0.5.0 ({})\n\
              [FINISHED] dev [unoptimized + debuginfo] target(s) \
              in [..]\n",
@@ -821,7 +821,6 @@ fn dev_deps_no_rebuild_lib() {
     assert_that(
         p.cargo("test"),
         execs()
-            .with_status(0)
             .with_stderr(&format!(
                 "\
 [COMPILING] [..] v0.5.0 ({url}[..])
@@ -868,7 +867,7 @@ fn custom_target_no_rebuild() {
         .build();
     assert_that(
         p.cargo("build"),
-        execs().with_status(0).with_stderr(
+        execs().with_stderr(
             "\
 [COMPILING] a v0.5.0 ([..])
 [COMPILING] foo v0.5.0 ([..])
@@ -885,7 +884,7 @@ fn custom_target_no_rebuild() {
         p.cargo("build")
             .arg("--manifest-path=b/Cargo.toml")
             .env("CARGO_TARGET_DIR", "target_moved"),
-        execs().with_status(0).with_stderr(
+        execs().with_stderr(
             "\
 [COMPILING] b v0.5.0 ([..])
 [FINISHED] dev [unoptimized + debuginfo] target(s) in [..]
@@ -929,7 +928,7 @@ fn override_and_depend() {
         .build();
     assert_that(
         p.cargo("build").cwd(p.root().join("b")),
-        execs().with_status(0).with_stderr(
+        execs().with_stderr(
             "\
 [COMPILING] a2 v0.5.0 ([..])
 [COMPILING] a1 v0.5.0 ([..])
@@ -1000,7 +999,7 @@ fn invalid_path_dep_in_workspace_with_lockfile() {
         .build();
 
     // Generate a lock file
-    assert_that(p.cargo("build"), execs().with_status(0));
+    assert_that(p.cargo("build"), execs());
 
     // Change the dependency on `bar` to an invalid path
     File::create(&p.root().join("foo/Cargo.toml"))
@@ -1055,7 +1054,7 @@ fn workspace_produces_rlib() {
         .file("foo/src/lib.rs", "")
         .build();
 
-    assert_that(p.cargo("build"), execs().with_status(0));
+    assert_that(p.cargo("build"), execs());
 
     assert_that(&p.root().join("target/debug/libtop.rlib"), existing_file());
     assert_that(

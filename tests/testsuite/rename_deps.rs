@@ -94,7 +94,7 @@ fn rename_dependency() {
 
     assert_that(
         p.cargo("build").masquerade_as_nightly_cargo(),
-        execs().with_status(0),
+        execs(),
     );
 }
 
@@ -133,7 +133,7 @@ fn rename_with_different_names() {
 
     assert_that(
         p.cargo("build").masquerade_as_nightly_cargo(),
-        execs().with_status(0),
+        execs(),
     );
 }
 
@@ -199,7 +199,7 @@ fn lots_of_names() {
 
     assert_that(
         p.cargo("build -v").masquerade_as_nightly_cargo(),
-        execs().with_status(0),
+        execs(),
     );
 }
 
@@ -232,7 +232,7 @@ fn rename_and_patch() {
 
     assert_that(
         p.cargo("build -v").masquerade_as_nightly_cargo(),
-        execs().with_status(0),
+        execs(),
     );
 }
 
@@ -296,7 +296,7 @@ fn rename_affects_fingerprint() {
 
     assert_that(
         p.cargo("build -v").masquerade_as_nightly_cargo(),
-        execs().with_status(0),
+        execs(),
     );
 
     p.change_file(
@@ -351,7 +351,7 @@ fn can_run_doc_tests() {
 
     assert_that(
         foo.cargo("test").arg("-v").masquerade_as_nightly_cargo(),
-        execs().with_status(0).with_stderr_contains(format!(
+        execs().with_stderr_contains(format!(
             "\
 [DOCTEST] foo
 [RUNNING] `rustdoc --test {dir}/src/lib.rs \
@@ -422,7 +422,7 @@ fn features_still_work() {
 
     assert_that(
         p.cargo("build -v").masquerade_as_nightly_cargo(),
-        execs().with_status(0),
+        execs(),
     );
 }
 

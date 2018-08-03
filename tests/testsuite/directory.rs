@@ -100,7 +100,7 @@ fn simple() {
 
     assert_that(
         p.cargo("build"),
-        execs().with_status(0).with_stderr(
+        execs().with_stderr(
             "\
 [COMPILING] bar v0.1.0
 [COMPILING] foo v0.1.0 ([..]foo)
@@ -136,7 +136,7 @@ fn simple_install() {
 
     assert_that(
         cargo_process("install bar"),
-        execs().with_status(0).with_stderr(
+        execs().with_stderr(
             "  Installing bar v0.1.0
    Compiling foo v0.0.1
    Compiling bar v0.1.0
@@ -219,7 +219,7 @@ fn install_without_feature_dep() {
 
     assert_that(
         cargo_process("install bar"),
-        execs().with_status(0).with_stderr(
+        execs().with_stderr(
             "  Installing bar v0.1.0
    Compiling foo v0.0.1
    Compiling bar v0.1.0
@@ -299,7 +299,7 @@ fn multiple() {
 
     assert_that(
         p.cargo("build"),
-        execs().with_status(0).with_stderr(
+        execs().with_stderr(
             "\
 [COMPILING] bar v0.1.0
 [COMPILING] foo v0.1.0 ([..]foo)
@@ -333,7 +333,7 @@ fn crates_io_then_directory() {
 
     assert_that(
         p.cargo("build"),
-        execs().with_status(0).with_stderr(
+        execs().with_stderr(
             "\
 [UPDATING] registry `[..]`
 [DOWNLOADING] bar v0.1.0 ([..])
@@ -354,7 +354,7 @@ fn crates_io_then_directory() {
 
     assert_that(
         p.cargo("build"),
-        execs().with_status(0).with_stderr(
+        execs().with_stderr(
             "\
 [COMPILING] bar v0.1.0
 [COMPILING] foo v0.1.0 ([..]foo)
@@ -384,7 +384,7 @@ fn crates_io_then_bad_checksum() {
 
     Package::new("bar", "0.1.0").publish();
 
-    assert_that(p.cargo("build"), execs().with_status(0));
+    assert_that(p.cargo("build"), execs());
     setup();
 
     VendorPackage::new("bar")
@@ -481,7 +481,7 @@ fn only_dot_files_ok() {
         .file("src/lib.rs", "")
         .build();
 
-    assert_that(p.cargo("build"), execs().with_status(0));
+    assert_that(p.cargo("build"), execs());
 }
 
 #[test]
@@ -514,7 +514,7 @@ fn random_files_ok() {
         .file("src/lib.rs", "")
         .build();
 
-    assert_that(p.cargo("build"), execs().with_status(0));
+    assert_that(p.cargo("build"), execs());
 }
 
 #[test]
@@ -549,7 +549,7 @@ fn git_lock_file_doesnt_change() {
         .file("src/lib.rs", "")
         .build();
 
-    assert_that(p.cargo("build"), execs().with_status(0));
+    assert_that(p.cargo("build"), execs());
 
     let mut lock1 = String::new();
     t!(t!(File::open(p.root().join("Cargo.lock"))).read_to_string(&mut lock1));
@@ -572,7 +572,7 @@ fn git_lock_file_doesnt_change() {
 
     assert_that(
         p.cargo("build"),
-        execs().with_status(0).with_stderr(
+        execs().with_stderr(
             "\
 [COMPILING] [..]
 [COMPILING] [..]

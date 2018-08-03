@@ -14,7 +14,7 @@ fn build_lib_for_foo() {
 
     assert_that(
         p.cargo("rustc").arg("--lib").arg("-v"),
-        execs().with_status(0).with_stderr(format!(
+        execs().with_stderr(format!(
             "\
 [COMPILING] foo v0.0.1 ({url})
 [RUNNING] `rustc --crate-name foo src/lib.rs --crate-type lib \
@@ -44,7 +44,7 @@ fn lib() {
             .arg("--")
             .arg("-C")
             .arg("debug-assertions=off"),
-        execs().with_status(0).with_stderr(format!(
+        execs().with_stderr(format!(
             "\
 [COMPILING] foo v0.0.1 ({url})
 [RUNNING] `rustc --crate-name foo src/lib.rs --crate-type lib \
@@ -70,7 +70,7 @@ fn build_main_and_allow_unstable_options() {
 
     assert_that(
         p.cargo("rustc -v --bin foo -- -C debug-assertions"),
-        execs().with_status(0).with_stderr(&format!(
+        execs().with_stderr(&format!(
             "\
 [COMPILING] {name} v{version} ({url})
 [RUNNING] `rustc --crate-name {name} src/lib.rs --crate-type lib \
@@ -123,7 +123,7 @@ fn build_with_args_to_one_of_multiple_binaries() {
 
     assert_that(
         p.cargo("rustc -v --bin bar -- -C debug-assertions"),
-        execs().with_status(0).with_stderr(format!(
+        execs().with_stderr(format!(
             "\
 [COMPILING] foo v0.0.1 ({url})
 [RUNNING] `rustc --crate-name foo src/lib.rs --crate-type lib --emit=dep-info,link \
@@ -168,7 +168,7 @@ fn build_with_args_to_one_of_multiple_tests() {
 
     assert_that(
         p.cargo("rustc -v --test bar -- -C debug-assertions"),
-        execs().with_status(0).with_stderr(format!(
+        execs().with_stderr(format!(
             "\
 [COMPILING] foo v0.0.1 ({url})
 [RUNNING] `rustc --crate-name foo src/lib.rs --crate-type lib --emit=dep-info,link \
@@ -211,7 +211,7 @@ fn build_foo_with_bar_dependency() {
             .arg("--")
             .arg("-C")
             .arg("debug-assertions"),
-        execs().with_status(0).with_stderr(format!(
+        execs().with_stderr(format!(
             "\
 [COMPILING] bar v0.1.0 ([..])
 [RUNNING] `[..] -C debuginfo=2 [..]`
@@ -248,7 +248,7 @@ fn build_only_bar_dependency() {
 
     assert_that(
         foo.cargo("rustc -v -p bar -- -C debug-assertions"),
-        execs().with_status(0).with_stderr(
+        execs().with_stderr(
             "\
 [COMPILING] bar v0.1.0 ([..])
 [RUNNING] `rustc --crate-name bar [..] --crate-type lib [..] -C debug-assertions [..]`
@@ -265,7 +265,7 @@ fn targets_selected_default() {
         .build();
     assert_that(
         p.cargo("rustc").arg("-v"),
-        execs().with_status(0)
+        execs()
         // bin
         .with_stderr_contains("\
             [RUNNING] `rustc --crate-name foo src/main.rs --crate-type bin \
@@ -288,7 +288,7 @@ fn targets_selected_all() {
         .build();
     assert_that(
         p.cargo("rustc").arg("-v").arg("--all-targets"),
-        execs().with_status(0)
+        execs()
         // bin
         .with_stderr_contains("\
             [RUNNING] `rustc --crate-name foo src/main.rs --crate-type bin \
@@ -390,7 +390,7 @@ fn rustc_with_other_profile() {
 
     assert_that(
         p.cargo("rustc").arg("--profile").arg("test"),
-        execs().with_status(0),
+        execs(),
     );
 }
 
@@ -404,7 +404,7 @@ fn rustc_fingerprint() {
 
     assert_that(
         p.cargo("rustc -v -- -C debug-assertions"),
-        execs().with_status(0).with_stderr(
+        execs().with_stderr(
             "\
 [COMPILING] foo [..]
 [RUNNING] `rustc [..]-C debug-assertions [..]
@@ -415,7 +415,7 @@ fn rustc_fingerprint() {
 
     assert_that(
         p.cargo("rustc -v -- -C debug-assertions"),
-        execs().with_status(0).with_stderr(
+        execs().with_stderr(
             "\
 [FRESH] foo [..]
 [FINISHED] [..]
@@ -426,7 +426,6 @@ fn rustc_fingerprint() {
     assert_that(
         p.cargo("rustc -v"),
         execs()
-            .with_status(0)
             .with_stderr_does_not_contain("-C debug-assertions")
             .with_stderr(
                 "\
@@ -439,7 +438,7 @@ fn rustc_fingerprint() {
 
     assert_that(
         p.cargo("rustc -v"),
-        execs().with_status(0).with_stderr(
+        execs().with_stderr(
             "\
 [FRESH] foo [..]
 [FINISHED] [..]
@@ -471,7 +470,6 @@ fn rustc_test_with_implicit_bin() {
     assert_that(
         p.cargo("rustc --test test1 -v -- --cfg foo"),
         execs()
-            .with_status(0)
             .with_stderr_contains(
                 "\
 [RUNNING] `rustc --crate-name test1 tests/test1.rs [..] --cfg foo [..]
