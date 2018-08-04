@@ -251,20 +251,29 @@ compact_debug! {
                 match &self.kind {
                     TargetKind::Lib(kinds) => {
                         (
-                            Target::lib_target(&self.name, kinds.clone(), src.clone()),
+                            Target::lib_target(
+                                &self.name,
+                                kinds.clone(),
+                                src.clone(),
+                                Edition::Edition2015,
+                            ),
                             format!("lib_target({:?}, {:?}, {:?})",
                                     self.name, kinds, src),
                         )
                     }
                     TargetKind::CustomBuild => {
                         (
-                            Target::custom_build_target(&self.name, src.clone()),
+                            Target::custom_build_target(
+                                &self.name,
+                                src.clone(),
+                                Edition::Edition2015,
+                            ),
                             format!("custom_build_target({:?}, {:?})",
                                     self.name, src),
                         )
                     }
                     _ => (
-                        Target::with_path(src.clone()),
+                        Target::with_path(src.clone(), Edition::Edition2015),
                         format!("with_path({:?})", src),
                     ),
                 }
@@ -493,7 +502,7 @@ impl VirtualManifest {
 }
 
 impl Target {
-    fn with_path(src_path: PathBuf) -> Target {
+    fn with_path(src_path: PathBuf, edition: Edition) -> Target {
         assert!(
             src_path.is_absolute(),
             "`{}` is not absolute",
@@ -508,19 +517,24 @@ impl Target {
             doctest: false,
             harness: true,
             for_host: false,
-            edition: Edition::Edition2015,
+            edition,
             tested: true,
             benched: true,
         }
     }
 
-    pub fn lib_target(name: &str, crate_targets: Vec<LibKind>, src_path: PathBuf) -> Target {
+    pub fn lib_target(
+        name: &str,
+        crate_targets: Vec<LibKind>,
+        src_path: PathBuf,
+        edition: Edition,
+    ) -> Target {
         Target {
             kind: TargetKind::Lib(crate_targets),
             name: name.to_string(),
             doctest: true,
             doc: true,
-            ..Target::with_path(src_path)
+            ..Target::with_path(src_path, edition)
         }
     }
 
@@ -528,25 +542,30 @@ impl Target {
         name: &str,
         src_path: PathBuf,
         required_features: Option<Vec<String>>,
+        edition: Edition,
     ) -> Target {
         Target {
             kind: TargetKind::Bin,
             name: name.to_string(),
             required_features,
             doc: true,
-            ..Target::with_path(src_path)
+            ..Target::with_path(src_path, edition)
         }
     }
 
     /// Builds a `Target` corresponding to the `build = "build.rs"` entry.
-    pub fn custom_build_target(name: &str, src_path: PathBuf) -> Target {
+    pub fn custom_build_target(
+        name: &str,
+        src_path: PathBuf,
+        edition: Edition,
+    ) -> Target {
         Target {
             kind: TargetKind::CustomBuild,
             name: name.to_string(),
             for_host: true,
             benched: false,
             tested: false,
-            ..Target::with_path(src_path)
+            ..Target::with_path(src_path, edition)
         }
     }
 
@@ -555,6 +574,7 @@ impl Target {
         crate_targets: Vec<LibKind>,
         src_path: PathBuf,
         required_features: Option<Vec<String>>,
+        edition: Edition,
     ) -> Target {
         let kind = if crate_targets.is_empty() {
             TargetKind::ExampleBin
@@ -568,7 +588,7 @@ impl Target {
             required_features,
             tested: false,
             benched: false,
-            ..Target::with_path(src_path)
+            ..Target::with_path(src_path, edition)
         }
     }
 
@@ -576,13 +596,14 @@ impl Target {
         name: &str,
         src_path: PathBuf,
         required_features: Option<Vec<String>>,
+        edition: Edition,
     ) -> Target {
         Target {
             kind: TargetKind::Test,
             name: name.to_string(),
             required_features,
             benched: false,
-            ..Target::with_path(src_path)
+            ..Target::with_path(src_path, edition)
         }
     }
 
@@ -590,13 +611,14 @@ impl Target {
         name: &str,
         src_path: PathBuf,
         required_features: Option<Vec<String>>,
+        edition: Edition,
     ) -> Target {
         Target {
             kind: TargetKind::Bench,
             name: name.to_string(),
             required_features,
             tested: false,
-            ..Target::with_path(src_path)
+            ..Target::with_path(src_path, edition)
         }
     }
 

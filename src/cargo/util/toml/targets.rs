@@ -107,6 +107,7 @@ pub fn targets(
         targets.push(Target::custom_build_target(
             &name,
             package_root.join(custom_build),
+            edition,
         ));
     }
 
@@ -189,8 +190,8 @@ fn clean_lib(
         (None, _, _) => vec![LibKind::Lib],
     };
 
-    let mut target = Target::lib_target(&lib.name(), crate_types, path);
-    configure(features, lib, &mut target, edition)?;
+    let mut target = Target::lib_target(&lib.name(), crate_types, path, edition);
+    configure(features, lib, &mut target)?;
     Ok(Some(target))
 }
 
@@ -270,8 +271,13 @@ fn clean_bins(
             Err(e) => bail!("{}", e),
         };
 
-        let mut target = Target::bin_target(&bin.name(), path, bin.required_features.clone());
-        configure(features, bin, &mut target, edition)?;
+        let mut target = Target::bin_target(
+            &bin.name(),
+            path,
+            bin.required_features.clone(),
+            edition,
+        );
+        configure(features, bin, &mut target)?;
         result.push(target);
     }
     return Ok(result);
@@ -332,8 +338,9 @@ fn clean_examples(
             crate_types,
             path,
             toml.required_features.clone(),
+            edition,
         );
-        configure(features, &toml, &mut target, edition)?;
+        configure(features, &toml, &mut target)?;
         result.push(target);
     }
 
@@ -366,8 +373,13 @@ fn clean_tests(
 
     let mut result = Vec::new();
     for (path, toml) in targets {
-        let mut target = Target::test_target(&toml.name(), path, toml.required_features.clone());
-        configure(features, &toml, &mut target, edition)?;
+        let mut target = Target::test_target(
+            &toml.name(),
+            path,
+            toml.required_features.clone(),
+            edition,
+        );
+        configure(features, &toml, &mut target)?;
         result.push(target);
     }
     Ok(result)
@@ -420,8 +432,13 @@ fn clean_benches(
 
     let mut result = Vec::new();
     for (path, toml) in targets {
-        let mut target = Target::bench_target(&toml.name(), path, toml.required_features.clone());
-        configure(features, &toml, &mut target, edition)?;
+        let mut target = Target::bench_target(
+            &toml.name(),
+            path,
+            toml.required_features.clone(),
+            edition,
+        );
+        configure(features, &toml, &mut target)?;
         result.push(target);
     }
 
@@ -697,7 +714,6 @@ fn configure(
     features: &Features,
     toml: &TomlTarget,
     target: &mut Target,
-    edition: Edition,
 ) -> CargoResult<()> {
     let t2 = target.clone();
     target
@@ -710,14 +726,11 @@ fn configure(
             (None, None) => t2.for_host(),
             (Some(true), _) | (_, Some(true)) => true,
             (Some(false), _) | (_, Some(false)) => false,
-        })
-        .set_edition(match toml.edition.clone() {
-            None => edition,
-            Some(s) => {
-                features.require(Feature::edition()).chain_err(|| "editions are unstable")?;
-                s.parse().chain_err(|| "failed to parse the `edition` key")?
-            },
         });
+    if let Some(edition) = toml.edition.clone() {
+        features.require(Feature::edition()).chain_err(|| "editions are unstable")?;
+        target.set_edition(edition.parse().chain_err(|| "failed to parse the `edition` key")?);
+    }
     Ok(())
 }
 
