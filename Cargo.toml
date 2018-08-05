@@ -55,6 +55,7 @@ toml = "0.4.2"
 url = "1.1"
 clap = "2.31.2"
 unicode-width = "0.1.5"
+openssl = { version = '0.10.11', optional = true }
 
 # A noop dependency that changes in the Rust repository, it's a bit of a hack.
 # See the `src/tools/rustc-workspace-hack/README.md` file in `rust-lang/rust`
@@ -95,3 +96,6 @@ bufstream = "0.1"
 name = "cargo"
 test = false
 doc = false
+
+[features]
+vendored-openssl = ['openssl/vendored']
