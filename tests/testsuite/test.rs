@@ -960,7 +960,6 @@ fn bench_without_name() {
         .file(
             "src/bench.rs",
             "
-            #![feature(test)]
             extern crate syntax;
             extern crate test;
 
