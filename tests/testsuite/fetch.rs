@@ -15,6 +15,10 @@ fn no_deps() {
 
 #[test]
 fn fetch_all_platform_dependencies_when_no_target_is_given() {
+    if cross_compile::disabled() {
+        return;
+    }
+
     Package::new("d1", "1.2.3")
         .file("Cargo.toml", &basic_manifest("d1", "1.2.3"))
         .file("src/lib.rs", "")
@@ -60,6 +64,10 @@ fn fetch_all_platform_dependencies_when_no_target_is_given() {
 
 #[test]
 fn fetch_platform_specific_dependencies() {
+    if cross_compile::disabled() {
+        return;
+    }
+
     Package::new("d1", "1.2.3")
         .file("Cargo.toml", &basic_manifest("d1", "1.2.3"))
         .file("src/lib.rs", "")
