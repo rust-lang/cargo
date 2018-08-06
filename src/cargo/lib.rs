@@ -26,6 +26,8 @@ extern crate failure;
 extern crate filetime;
 extern crate flate2;
 extern crate fs2;
+#[cfg(windows)]
+extern crate fwdansi;
 extern crate git2;
 extern crate glob;
 extern crate hex;
