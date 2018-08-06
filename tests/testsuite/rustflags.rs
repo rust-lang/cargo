@@ -15,7 +15,6 @@ fn env_rustflags_normal_source() {
         .file(
             "benches/d.rs",
             r#"
-            #![feature(test)]
             extern crate test;
             #[bench] fn run1(_ben: &mut test::Bencher) { }"#,
         )
@@ -202,7 +201,6 @@ fn env_rustflags_normal_source_with_target() {
         .file(
             "benches/d.rs",
             r#"
-            #![feature(test)]
             extern crate test;
             #[bench] fn run1(_ben: &mut test::Bencher) { }"#,
         )
@@ -470,7 +468,6 @@ fn build_rustflags_normal_source() {
         .file(
             "benches/d.rs",
             r#"
-            #![feature(test)]
             extern crate test;
             #[bench] fn run1(_ben: &mut test::Bencher) { }"#,
         )
@@ -665,7 +662,6 @@ fn build_rustflags_normal_source_with_target() {
         .file(
             "benches/d.rs",
             r#"
-            #![feature(test)]
             extern crate test;
             #[bench] fn run1(_ben: &mut test::Bencher) { }"#,
         )
@@ -987,7 +983,6 @@ fn target_rustflags_normal_source() {
         .file(
             "benches/d.rs",
             r#"
-            #![feature(test)]
             extern crate test;
             #[bench] fn run1(_ben: &mut test::Bencher) { }"#,
         )

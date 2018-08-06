@@ -17,7 +17,6 @@ fn cargo_bench_simple() {
         .file(
             "src/main.rs",
             r#"
-            #![feature(test)]
             #[cfg(test)]
             extern crate test;
 
@@ -74,14 +73,12 @@ fn bench_bench_implicit() {
         .file(
             "tests/other.rs",
             r#"
-            #![feature(test)]
             extern crate test;
             #[bench] fn run3(_ben: &mut test::Bencher) { }"#,
         )
         .file(
             "benches/mybench.rs",
             r#"
-            #![feature(test)]
             extern crate test;
             #[bench] fn run2(_ben: &mut test::Bencher) { }"#,
         )
@@ -113,7 +110,6 @@ fn bench_bin_implicit() {
         .file(
             "src/main.rs",
             r#"
-            #![feature(test)]
             #[cfg(test)]
             extern crate test;
             #[bench] fn run1(_ben: &mut test::Bencher) { }
@@ -122,14 +118,12 @@ fn bench_bin_implicit() {
         .file(
             "tests/other.rs",
             r#"
-            #![feature(test)]
             extern crate test;
             #[bench] fn run3(_ben: &mut test::Bencher) { }"#,
         )
         .file(
             "benches/mybench.rs",
             r#"
-            #![feature(test)]
             extern crate test;
             #[bench] fn run2(_ben: &mut test::Bencher) { }"#,
         )
@@ -160,14 +154,12 @@ fn bench_tarname() {
         .file(
             "benches/bin1.rs",
             r#"
-            #![feature(test)]
             extern crate test;
             #[bench] fn run1(_ben: &mut test::Bencher) { }"#,
         )
         .file(
             "benches/bin2.rs",
             r#"
-            #![feature(test)]
             extern crate test;
             #[bench] fn run2(_ben: &mut test::Bencher) { }"#,
         )
@@ -198,21 +190,18 @@ fn bench_multiple_targets() {
         .file(
             "benches/bin1.rs",
             r#"
-            #![feature(test)]
             extern crate test;
             #[bench] fn run1(_ben: &mut test::Bencher) { }"#,
         )
         .file(
             "benches/bin2.rs",
             r#"
-            #![feature(test)]
             extern crate test;
             #[bench] fn run2(_ben: &mut test::Bencher) { }"#,
         )
         .file(
             "benches/bin3.rs",
             r#"
-            #![feature(test)]
             extern crate test;
             #[bench] fn run3(_ben: &mut test::Bencher) { }"#,
         )
@@ -242,7 +231,6 @@ fn cargo_bench_verbose() {
         .file(
             "src/main.rs",
             r#"
-            #![feature(test)]
             #[cfg(test)]
             extern crate test;
             fn main() {}
@@ -276,7 +264,6 @@ fn many_similar_names() {
         .file(
             "src/lib.rs",
             "
-            #![feature(test)]
             #[cfg(test)]
             extern crate test;
             pub fn foo() {}
@@ -286,7 +273,6 @@ fn many_similar_names() {
         .file(
             "src/main.rs",
             "
-            #![feature(test)]
             #[cfg(test)]
             extern crate foo;
             #[cfg(test)]
@@ -298,7 +284,6 @@ fn many_similar_names() {
         .file(
             "benches/foo.rs",
             r#"
-            #![feature(test)]
             extern crate foo;
             extern crate test;
             #[bench] fn bench_bench(_b: &mut test::Bencher) { foo::foo() }
@@ -336,7 +321,6 @@ fn cargo_bench_failing_test() {
         .file(
             "src/main.rs",
             r#"
-            #![feature(test)]
             #[cfg(test)]
             extern crate test;
             fn hello() -> &'static str {
@@ -422,7 +406,6 @@ fn bench_with_lib_dep() {
         .file(
             "src/main.rs",
             "
-            #![feature(test)]
             #[allow(unused_extern_crates)]
             extern crate foo;
             #[cfg(test)]
@@ -552,7 +535,6 @@ fn external_bench_explicit() {
         .file(
             "src/bench.rs",
             r#"
-            #![feature(test)]
             #[allow(unused_extern_crates)]
             extern crate foo;
             extern crate test;
@@ -602,7 +584,6 @@ fn external_bench_implicit() {
         .file(
             "benches/external.rs",
             r#"
-            #![feature(test)]
             #[allow(unused_extern_crates)]
             extern crate foo;
             extern crate test;
@@ -656,7 +637,6 @@ fn bench_autodiscover_2015() {
         .file(
             "benches/bench_basic.rs",
             r#"
-            #![feature(test)]
             #[allow(unused_extern_crates)]
             extern crate foo;
             extern crate test;
@@ -668,7 +648,6 @@ fn bench_autodiscover_2015() {
         .file(
             "benches/bench_magic.rs",
             r#"
-            #![feature(test)]
             #[allow(unused_extern_crates)]
             extern crate foo;
             extern crate test;
@@ -735,7 +714,6 @@ fn pass_through_command_line() {
         .file(
             "src/lib.rs",
             "
-            #![feature(test)]
             #[cfg(test)]
             extern crate test;
 
@@ -783,7 +761,6 @@ fn cargo_bench_twice() {
             "src/foo.rs",
             r#"
             #![crate_type = "rlib"]
-            #![feature(test)]
             #[cfg(test)]
             extern crate test;
 
@@ -887,7 +864,6 @@ fn lib_with_standard_name() {
         .file(
             "benches/bench.rs",
             "
-            #![feature(test)]
             extern crate syntax;
             extern crate test;
 
@@ -938,7 +914,6 @@ fn lib_with_standard_name2() {
         .file(
             "src/main.rs",
             "
-            #![feature(test)]
             #[cfg(test)]
             extern crate syntax;
             #[cfg(test)]
@@ -1006,7 +981,6 @@ fn bench_dylib() {
         .file(
             "benches/bench.rs",
             r#"
-            #![feature(test)]
             extern crate foo as the_foo;
             extern crate test;
 
@@ -1087,7 +1061,6 @@ fn bench_twice_with_build_cmd() {
         .file(
             "src/lib.rs",
             "
-            #![feature(test)]
             #[cfg(test)]
             extern crate test;
             #[bench]
@@ -1166,7 +1139,6 @@ fn bench_with_examples() {
         .file(
             "benches/testb1.rs",
             "
-            #![feature(test)]
             extern crate foo;
             extern crate test;
 
@@ -1264,8 +1236,6 @@ fn test_bench_no_run() {
         .file(
             "benches/bbaz.rs",
             r#"
-            #![feature(test)]
-
             extern crate test;
 
             use test::Bencher;
@@ -1298,7 +1268,6 @@ fn test_bench_no_fail_fast() {
         .file(
             "src/foo.rs",
             r#"
-            #![feature(test)]
             #[cfg(test)]
             extern crate test;
             fn hello() -> &'static str {
@@ -1379,7 +1348,6 @@ fn test_bench_multiple_packages() {
         .file(
             "benches/bbar.rs",
             r#"
-            #![feature(test)]
             extern crate test;
 
             use test::Bencher;
@@ -1408,7 +1376,6 @@ fn test_bench_multiple_packages() {
         .file(
             "benches/bbaz.rs",
             r#"
-            #![feature(test)]
             extern crate test;
 
             use test::Bencher;
@@ -1453,7 +1420,6 @@ fn bench_all_workspace() {
         .file(
             "benches/foo.rs",
             r#"
-            #![feature(test)]
             extern crate test;
 
             use test::Bencher;
@@ -1467,7 +1433,6 @@ fn bench_all_workspace() {
         .file(
             "bar/benches/bar.rs",
             r#"
-            #![feature(test)]
             extern crate test;
 
             use test::Bencher;
@@ -1511,7 +1476,6 @@ fn bench_all_exclude() {
         .file(
             "bar/src/lib.rs",
             r#"
-            #![feature(test)]
             #[cfg(test)]
             extern crate test;
 
@@ -1554,7 +1518,6 @@ fn bench_all_virtual_manifest() {
         .file(
             "bar/benches/bar.rs",
             r#"
-            #![feature(test)]
             extern crate test;
 
             use test::Bencher;
@@ -1568,7 +1531,6 @@ fn bench_all_virtual_manifest() {
         .file(
             "baz/benches/baz.rs",
             r#"
-            #![feature(test)]
             extern crate test;
 
             use test::Bencher;
@@ -1613,7 +1575,6 @@ fn legacy_bench_name() {
         .file(
             "src/bench.rs",
             r#"
-            #![feature(test)]
             extern crate test;
 
             use test::Bencher;
@@ -1653,7 +1614,6 @@ fn bench_virtual_manifest_all_implied() {
         .file(
             "bar/benches/bar.rs",
             r#"
-            #![feature(test)]
             extern crate test;
             use test::Bencher;
             #[bench]
@@ -1665,7 +1625,6 @@ fn bench_virtual_manifest_all_implied() {
         .file(
             "baz/benches/baz.rs",
             r#"
-            #![feature(test)]
             extern crate test;
             use test::Bencher;
             #[bench]

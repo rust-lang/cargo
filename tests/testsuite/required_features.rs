@@ -505,7 +505,6 @@ fn bench_default_features() {
         .file(
             "benches/foo.rs",
             r#"
-            #![feature(test)]
             extern crate test;
 
             #[bench]
@@ -584,7 +583,6 @@ fn bench_arg_features() {
         .file(
             "benches/foo.rs",
             r#"
-            #![feature(test)]
             extern crate test;
 
             #[bench]
@@ -640,7 +638,6 @@ fn bench_multiple_required_features() {
         .file(
             "benches/foo_1.rs",
             r#"
-            #![feature(test)]
             extern crate test;
 
             #[bench]
@@ -650,7 +647,6 @@ fn bench_multiple_required_features() {
         .file(
             "benches/foo_2.rs",
             r#"
-            #![feature(test)]
             extern crate test;
 
             #[bench]
@@ -915,7 +911,6 @@ fn dep_feature_in_toml() {
         .file(
             "benches/foo.rs",
             r#"
-            #![feature(test)]
             extern crate test;
 
             #[bench]
@@ -1024,7 +1019,6 @@ fn dep_feature_in_cmd_line() {
         .file(
             "benches/foo.rs",
             r#"
-            #![feature(test)]
             extern crate test;
 
             #[bench]
