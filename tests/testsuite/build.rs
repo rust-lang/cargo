@@ -4798,3 +4798,71 @@ fn invalid_jobs() {
             .with_stderr("error: Invalid value: could not parse `over9000` as a number"),
     );
 }
+
+#[test]
+fn target_filters_workspace() {
+    let ws = project()
+        .at("ws")
+        .file(
+            "Cargo.toml",
+            r#"
+        [workspace]
+        members = ["a", "b"]
+        "#,
+        ).file("a/Cargo.toml", &basic_lib_manifest("a"))
+        .file("a/src/lib.rs", "")
+        .file("a/examples/ex1.rs", "fn main() {}")
+        .file("b/Cargo.toml", &basic_bin_manifest("b"))
+        .file("b/src/main.rs", "fn main() {}")
+        .file("b/examples/ex1.rs", "fn main() {}")
+        .build();
+
+    assert_that(
+        ws.cargo("build -v --example ex"),
+        execs().with_status(101).with_stderr(
+            "\
+[ERROR] no example target named `ex`
+
+Did you mean `ex1`?",
+        ),
+    );
+
+    assert_that(
+        ws.cargo("build -v --lib"),
+        execs()
+            .with_status(0)
+            .with_stderr_contains("[RUNNING] `rustc [..]a/src/lib.rs[..]"),
+    );
+
+    assert_that(
+        ws.cargo("build -v --example ex1"),
+        execs()
+            .with_status(0)
+            .with_stderr_contains("[RUNNING] `rustc [..]a/examples/ex1.rs[..]")
+            .with_stderr_contains("[RUNNING] `rustc [..]b/examples/ex1.rs[..]"),
+    );
+}
+
+#[test]
+fn target_filters_workspace_not_found() {
+    let ws = project()
+        .at("ws")
+        .file(
+            "Cargo.toml",
+            r#"
+        [workspace]
+        members = ["a", "b"]
+        "#,
+        ).file("a/Cargo.toml", &basic_bin_manifest("a"))
+        .file("a/src/main.rs", "fn main() {}")
+        .file("b/Cargo.toml", &basic_bin_manifest("b"))
+        .file("b/src/main.rs", "fn main() {}")
+        .build();
+
+    assert_that(
+        ws.cargo("build -v --lib"),
+        execs().with_status(101).with_stderr(
+            "[ERROR] no library targets found in packages: a, b",
+        ),
+    );
+}

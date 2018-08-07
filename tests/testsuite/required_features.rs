@@ -56,7 +56,7 @@ fn build_bin_default_features() {
             .arg("--no-default-features"),
         execs().with_status(101).with_stderr(
             "\
-error: target `foo` requires the features: `a`
+error: target `foo` in package `foo` requires the features: `a`
 Consider enabling them by passing e.g. `--features=\"a\"`
 ",
         ),
@@ -178,7 +178,7 @@ fn build_example_default_features() {
             .arg("--no-default-features"),
         execs().with_status(101).with_stderr(
             "\
-error: target `foo` requires the features: `a`
+error: target `foo` in package `foo` requires the features: `a`
 Consider enabling them by passing e.g. `--features=\"a\"`
 ",
         ),
@@ -251,7 +251,7 @@ fn build_example_multiple_required_features() {
         p.cargo("build").arg("--example=foo_1"),
         execs().with_status(101).with_stderr(
             "\
-error: target `foo_1` requires the features: `b`, `c`
+error: target `foo_1` in package `foo` requires the features: `b`, `c`
 Consider enabling them by passing e.g. `--features=\"b c\"`
 ",
         ),
@@ -288,7 +288,7 @@ Consider enabling them by passing e.g. `--features=\"b c\"`
             .arg("--no-default-features"),
         execs().with_status(101).with_stderr(
             "\
-error: target `foo_1` requires the features: `b`, `c`
+error: target `foo_1` in package `foo` requires the features: `b`, `c`
 Consider enabling them by passing e.g. `--features=\"b c\"`
 ",
         ),
@@ -299,7 +299,7 @@ Consider enabling them by passing e.g. `--features=\"b c\"`
             .arg("--no-default-features"),
         execs().with_status(101).with_stderr(
             "\
-error: target `foo_2` requires the features: `a`
+error: target `foo_2` in package `foo` requires the features: `a`
 Consider enabling them by passing e.g. `--features=\"a\"`
 ",
         ),
@@ -368,7 +368,7 @@ fn test_default_features() {
             .arg("--no-default-features"),
         execs().with_status(101).with_stderr(
             "\
-error: target `foo` requires the features: `a`
+error: target `foo` in package `foo` requires the features: `a`
 Consider enabling them by passing e.g. `--features=\"a\"`
 ",
         ),
@@ -551,7 +551,7 @@ fn bench_default_features() {
             .arg("--no-default-features"),
         execs().with_status(101).with_stderr(
             "\
-error: target `foo` requires the features: `a`
+error: target `foo` in package `foo` requires the features: `a`
 Consider enabling them by passing e.g. `--features=\"a\"`
 ",
         ),
@@ -756,7 +756,7 @@ fn install_default_features() {
     `[..]target`
 
 Caused by:
-  target `foo` requires the features: `a`
+  target `foo` in package `foo` requires the features: `a`
 Consider enabling them by passing e.g. `--features=\"a\"`
 "
         )),
@@ -781,7 +781,7 @@ Consider enabling them by passing e.g. `--features=\"a\"`
     `[..]target`
 
 Caused by:
-  target `foo` requires the features: `a`
+  target `foo` in package `foo` requires the features: `a`
 Consider enabling them by passing e.g. `--features=\"a\"`
 "
         )),
@@ -1053,7 +1053,7 @@ fn dep_feature_in_cmd_line() {
         p.cargo("build").arg("--bin=foo"),
         execs().with_status(101).with_stderr(
             "\
-error: target `foo` requires the features: `bar/a`
+error: target `foo` in package `foo` requires the features: `bar/a`
 Consider enabling them by passing e.g. `--features=\"bar/a\"`
 ",
         ),
@@ -1073,7 +1073,7 @@ Consider enabling them by passing e.g. `--features=\"bar/a\"`
         p.cargo("build").arg("--example=foo"),
         execs().with_status(101).with_stderr(
             "\
-error: target `foo` requires the features: `bar/a`
+error: target `foo` in package `foo` requires the features: `bar/a`
 Consider enabling them by passing e.g. `--features=\"bar/a\"`
 ",
         ),
@@ -1272,7 +1272,7 @@ fn run_default() {
         p.cargo("run"),
         execs().with_status(101).with_stderr(
             "\
-error: target `foo` requires the features: `a`
+error: target `foo` in package `foo` requires the features: `a`
 Consider enabling them by passing e.g. `--features=\"a\"`
 ",
         ),
