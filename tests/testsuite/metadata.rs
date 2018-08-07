@@ -55,6 +55,7 @@ fn cargo_metadata_simple() {
             "nodes": [
                 {
                     "dependencies": [],
+                    "deps": [],
                     "features": [],
                     "id": "foo 0.5.0 (path+file:[..]foo)"
                 }
@@ -148,6 +149,7 @@ crate-type = ["lib", "staticlib"]
             "nodes": [
                 {
                     "dependencies": [],
+                    "deps": [],
                     "features": [],
                     "id": "foo 0.5.0 (path+file:[..]foo)"
                 }
@@ -231,6 +233,7 @@ optional_feat = []
             "nodes": [
                 {
                     "dependencies": [],
+                    "deps": [],
                     "features": [
                       "default",
                       "default_feat"
@@ -411,6 +414,9 @@ fn cargo_metadata_with_deps_and_version() {
                     "dependencies": [
                         "bar 0.0.1 (registry+[..])"
                     ],
+                    "deps": [
+                        { "name": "bar", "pkg": "bar 0.0.1 (registry+[..])" }
+                    ],
                     "features": [],
                     "id": "foo 0.5.0 (path+file:[..]foo)"
                 },
@@ -418,11 +424,15 @@ fn cargo_metadata_with_deps_and_version() {
                     "dependencies": [
                         "baz 0.0.1 (registry+[..])"
                     ],
+                    "deps": [
+                        { "name": "baz", "pkg": "baz 0.0.1 (registry+[..])" }
+                    ],
                     "features": [],
                     "id": "bar 0.0.1 (registry+[..])"
                 },
                 {
                     "dependencies": [],
+                    "deps": [],
                     "features": [],
                     "id": "baz 0.0.1 (registry+[..])"
                 }
@@ -506,7 +516,8 @@ name = "ex"
                 {
                     "id": "foo 0.1.0 (path+file:[..]foo)",
                     "features": [],
-                    "dependencies": []
+                    "dependencies": [],
+                    "deps": []
                 }
             ]
         },
@@ -588,7 +599,8 @@ crate-type = ["rlib", "dylib"]
                 {
                     "id": "foo 0.1.0 (path+file:[..]foo)",
                     "features": [],
-                    "dependencies": []
+                    "dependencies": [],
+                    "deps": []
                 }
             ]
         },
@@ -688,11 +700,13 @@ fn workspace_metadata() {
             "nodes": [
                 {
                     "dependencies": [],
+                    "deps": [],
                     "features": [],
                     "id": "baz 0.5.0 (path+file:[..]baz)"
                 },
                 {
                     "dependencies": [],
+                    "deps": [],
                     "features": [],
                     "id": "bar 0.5.0 (path+file:[..]bar)"
                 }
@@ -1127,6 +1141,7 @@ fn cargo_metadata_path_to_cargo_toml_project() {
                 "nodes": [
                 {
                     "dependencies": [],
+                    "deps": [],
                     "features": [],
                     "id": "bar 0.5.0 ([..])"
                 }
@@ -1207,6 +1222,7 @@ fn package_edition_2018() {
                 "nodes": [
                     {
                         "dependencies": [],
+                        "deps": [],
                         "features": [],
                         "id": "foo 0.1.0 (path+file:[..])"
                     }
@@ -1302,6 +1318,7 @@ fn target_edition_2018() {
                 "nodes": [
                     {
                         "dependencies": [],
+                        "deps": [],
                         "features": [],
                         "id": "foo 0.1.0 (path+file:[..])"
                     }
@@ -1316,6 +1333,201 @@ fn target_edition_2018() {
             "workspace_root": "[..]"
         }
         "#,
+        ),
+    );
+}
+
+#[test]
+fn rename_dependency() {
+    Package::new("bar", "0.1.0").publish();
+    Package::new("bar", "0.2.0").publish();
+
+    let p = project()
+        .file(
+            "Cargo.toml",
+            r#"
+            cargo-features = ["rename-dependency"]
+
+            [project]
+            name = "foo"
+            version = "0.0.1"
+            authors = []
+
+            [dependencies]
+            bar = { version = "0.1.0" }
+            baz = { version = "0.2.0", package = "bar" }
+        "#,
+        )
+        .file("src/lib.rs", "extern crate bar; extern crate baz;")
+        .build();
+
+    assert_that(
+        p.cargo("metadata").masquerade_as_nightly_cargo(),
+        execs().with_json(r#"
+{
+    "packages": [
+        {
+            "authors": [],
+            "categories": [],
+            "dependencies": [
+                {
+                    "features": [],
+                    "kind": null,
+                    "name": "bar",
+                    "optional": false,
+                    "rename": null,
+                    "req": "^0.1.0",
+                    "source": "registry+https://github.com/rust-lang/crates.io-index",
+                    "target": null,
+                    "uses_default_features": true
+                },
+                {
+                    "features": [],
+                    "kind": null,
+                    "name": "bar",
+                    "optional": false,
+                    "rename": "baz",
+                    "req": "^0.2.0",
+                    "source": "registry+https://github.com/rust-lang/crates.io-index",
+                    "target": null,
+                    "uses_default_features": true
+                }
+            ],
+            "description": null,
+            "edition": "2015",
+            "features": {},
+            "id": "foo 0.0.1[..]",
+            "keywords": [],
+            "license": null,
+            "license_file": null,
+            "manifest_path": "[..]",
+            "metadata": null,
+            "name": "foo",
+            "readme": null,
+            "repository": null,
+            "source": null,
+            "targets": [
+                {
+                    "crate_types": [
+                        "lib"
+                    ],
+                    "edition": "2015",
+                    "kind": [
+                        "lib"
+                    ],
+                    "name": "foo",
+                    "src_path": "[..]"
+                }
+            ],
+            "version": "0.0.1"
+        },
+        {
+            "authors": [],
+            "categories": [],
+            "dependencies": [],
+            "description": null,
+            "edition": "2015",
+            "features": {},
+            "id": "bar 0.1.0 (registry+https://github.com/rust-lang/crates.io-index)",
+            "keywords": [],
+            "license": null,
+            "license_file": null,
+            "manifest_path": "[..]",
+            "metadata": null,
+            "name": "bar",
+            "readme": null,
+            "repository": null,
+            "source": "registry+https://github.com/rust-lang/crates.io-index",
+            "targets": [
+                {
+                    "crate_types": [
+                        "lib"
+                    ],
+                    "edition": "2015",
+                    "kind": [
+                        "lib"
+                    ],
+                    "name": "bar",
+                    "src_path": "[..]"
+                }
+            ],
+            "version": "0.1.0"
+        },
+        {
+            "authors": [],
+            "categories": [],
+            "dependencies": [],
+            "description": null,
+            "edition": "2015",
+            "features": {},
+            "id": "bar 0.2.0 (registry+https://github.com/rust-lang/crates.io-index)",
+            "keywords": [],
+            "license": null,
+            "license_file": null,
+            "manifest_path": "[..]",
+            "metadata": null,
+            "name": "bar",
+            "readme": null,
+            "repository": null,
+            "source": "registry+https://github.com/rust-lang/crates.io-index",
+            "targets": [
+                {
+                    "crate_types": [
+                        "lib"
+                    ],
+                    "edition": "2015",
+                    "kind": [
+                        "lib"
+                    ],
+                    "name": "bar",
+                    "src_path": "[..]"
+                }
+            ],
+            "version": "0.2.0"
+        }
+    ],
+    "resolve": {
+        "nodes": [
+            {
+                "dependencies": [],
+                "deps": [],
+                "features": [],
+                "id": "bar 0.2.0 (registry+https://github.com/rust-lang/crates.io-index)"
+            },
+            {
+                "dependencies": [],
+                "deps": [],
+                "features": [],
+                "id": "bar 0.1.0 (registry+https://github.com/rust-lang/crates.io-index)"
+            },
+            {
+                "dependencies": [
+                    "bar 0.1.0 (registry+https://github.com/rust-lang/crates.io-index)",
+                    "bar 0.2.0 (registry+https://github.com/rust-lang/crates.io-index)"
+                ],
+                "deps": [
+                    {
+                        "name": "bar",
+                        "pkg": "bar 0.1.0 (registry+https://github.com/rust-lang/crates.io-index)"
+                    },
+                    {
+                        "name": "baz",
+                        "pkg": "bar 0.2.0 (registry+https://github.com/rust-lang/crates.io-index)"
+                    }
+                ],
+                "features": [],
+                "id": "foo 0.0.1[..]"
+            }
+        ],
+        "root": "foo 0.0.1[..]"
+    },
+    "target_directory": "[..]",
+    "version": 1,
+    "workspace_members": [
+        "foo 0.0.1[..]"
+    ],
+    "workspace_root": "[..]"
+}"#,
         ),
     );
 }
