@@ -3533,7 +3533,9 @@ fn doctest_skip_staticlib() {
     assert_that(
         p.cargo("test --doc"),
         execs().with_status(101).with_stderr(
-            "[ERROR] doc tests are not supported for crate type(s) `staticlib` in package `foo`",
+            "\
+[WARNING] doc tests are not supported for crate type(s) `staticlib` in package `foo`
+[ERROR] no library targets found in package `foo`",
         ),
     );
 
