@@ -4,7 +4,7 @@ use std::iter::FromIterator;
 
 use url::Url;
 
-use core::{Dependency, PackageId, PackageIdSpec, Summary};
+use core::{Dependency, PackageId, PackageIdSpec, Summary, Target};
 use util::Graph;
 use util::errors::CargoResult;
 use util::graph::{Edges, Nodes};
@@ -213,7 +213,34 @@ unable to verify that `{0}` is the same as when the lockfile was generated
         &self.metadata
     }
 
-    pub fn dependencies_listed(&self, from: &PackageId, to: &PackageId) -> &[Dependency] {
+    pub fn extern_crate_name(
+        &self,
+        from: &PackageId,
+        to: &PackageId,
+        to_target: &Target,
+    ) -> CargoResult<String> {
+        let deps = if from == to {
+            &[]
+        } else {
+            self.dependencies_listed(from, to)
+        };
+
+        let crate_name = to_target.crate_name();
+        let mut names = deps.iter()
+            .map(|d| d.rename().map(|s| s.as_str()).unwrap_or(&crate_name));
+        let name = names.next().unwrap_or(&crate_name);
+        for n in names {
+            if n == name {
+                continue
+            }
+            bail!("multiple dependencies listed for the same crate must \
+                   all have the same name, but the dependency on `{}` \
+                   is listed as having different names", to);
+        }
+        Ok(name.to_string())
+    }
+
+    fn dependencies_listed(&self, from: &PackageId, to: &PackageId) -> &[Dependency] {
         // We've got a dependency on `from` to `to`, but this dependency edge
         // may be affected by [replace]. If the `to` package is listed as the
         // target of a replacement (aka the key of a reverse replacement map)
