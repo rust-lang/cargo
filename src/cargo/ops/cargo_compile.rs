@@ -386,7 +386,10 @@ impl CompileFilter {
     pub fn need_dev_deps(&self, mode: CompileMode) -> bool {
         match mode {
             CompileMode::Test | CompileMode::Doctest | CompileMode::Bench => true,
-            CompileMode::Build | CompileMode::Doc { .. } | CompileMode::Check { .. } => match *self
+            CompileMode::Build
+            | CompileMode::Doc { .. }
+            | CompileMode::Check { .. }
+            | CompileMode::Install => match *self
             {
                 CompileFilter::Default { .. } => false,
                 CompileFilter::Only {
@@ -707,7 +710,7 @@ fn filter_default_targets(targets: &[Target], mode: CompileMode) -> Vec<&Target>
             .iter()
             .filter(|t| t.tested() || t.is_example())
             .collect(),
-        CompileMode::Build | CompileMode::Check { .. } => targets
+        CompileMode::Build | CompileMode::Check { .. } | CompileMode::Install => targets
             .iter()
             .filter(|t| t.is_bin() || t.is_lib())
             .collect(),
