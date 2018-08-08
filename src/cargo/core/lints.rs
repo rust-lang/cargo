@@ -8,6 +8,7 @@ enum LintKind {
     Allow,
     Warn,
     Deny,
+    Forbid,
 }
 
 #[derive(Clone, Debug)]
@@ -27,8 +28,9 @@ impl Lints {
                     "allow" => { lints.insert(lint_name.to_string(), LintKind::Allow); },
                     "warn" => { lints.insert(lint_name.to_string(), LintKind::Warn); },
                     "deny" => { lints.insert(lint_name.to_string(), LintKind::Deny); },
+                    "forbid" => { lints.insert(lint_name.to_string(), LintKind::Forbid); },
                     _ => warnings.push(format!(
-                        "invalid lint state for `{}` (expected `warn`, `allow` or `deny`)",
+                        "invalid lint state for `{}` (expected `warn`, `allow`, `deny` or `forbid`)",
                         lint_name
                     )),
                 }
@@ -59,6 +61,10 @@ impl Lints {
         let deny = get_kind(LintKind::Deny);
         if !deny.is_empty() {
             cmd.arg("-D").arg(deny);
+        }
+        let forbid = get_kind(LintKind::Forbid);
+        if !forbid.is_empty() {
+            cmd.arg("-F").arg(forbid);
         }
     }
 }
