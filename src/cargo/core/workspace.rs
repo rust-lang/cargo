@@ -246,13 +246,13 @@ impl<'cfg> Workspace<'cfg> {
         }
     }
 
-    pub fn lints(&self) -> &Lints {
+    pub fn virtual_lints(&self) -> Option<&Lints> {
         let root = self.root_manifest
             .as_ref()
             .unwrap_or(&self.current_manifest);
         match *self.packages.get(root) {
-            MaybePackage::Package(ref p) => p.manifest().lints(),
-            MaybePackage::Virtual(ref vm) => vm.lints(),
+            MaybePackage::Virtual(ref vm) => Some(vm.lints()),
+            _ => None,
         }
     }
 

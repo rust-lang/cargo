@@ -1,5 +1,4 @@
 use std::collections::BTreeMap;
-use std::collections::HashMap;
 
 use util::{CargoResult, ProcessBuilder};
 
@@ -11,9 +10,30 @@ enum LintKind {
     Forbid,
 }
 
+impl LintKind {
+    pub fn try_from_string(lint_state: &str) -> Option<LintKind> {
+        match lint_state.as_ref() {
+            "allow" => Some(LintKind::Allow),
+            "warn" => Some(LintKind::Warn),
+            "deny" => Some(LintKind::Deny),
+            "forbid" => Some(LintKind::Forbid),
+            _ => None,
+        }
+    }
+
+    pub fn flag(&self) -> char {
+        match self {
+            LintKind::Allow => 'A',
+            LintKind::Warn => 'W',
+            LintKind::Deny => 'D',
+            LintKind::Forbid => 'F',
+        }
+    }
+}
+
 #[derive(Clone, Debug)]
 pub struct Lints {
-    lints: HashMap<String, LintKind>,
+    lints: Vec<(String, LintKind)>,
 }
 
 impl Lints {
@@ -21,50 +41,25 @@ impl Lints {
         manifest_lints: Option<&BTreeMap<String, String>>,
         warnings: &mut Vec<String>,
     ) -> CargoResult<Lints> {
-        let mut lints = HashMap::new();
+        let mut lints = vec![];
         if let Some(lint_section) = manifest_lints {
             for (lint_name, lint_state) in lint_section.iter() {
-                match lint_state.as_ref() {
-                    "allow" => { lints.insert(lint_name.to_string(), LintKind::Allow); },
-                    "warn" => { lints.insert(lint_name.to_string(), LintKind::Warn); },
-                    "deny" => { lints.insert(lint_name.to_string(), LintKind::Deny); },
-                    "forbid" => { lints.insert(lint_name.to_string(), LintKind::Forbid); },
-                    _ => warnings.push(format!(
+                if let Some(state) = LintKind::try_from_string(lint_state) {
+                    lints.push((lint_name.to_string(), state));
+                } else {
+                    warnings.push(format!(
                         "invalid lint state for `{}` (expected `warn`, `allow`, `deny` or `forbid`)",
                         lint_name
-                    )),
+                    ));
                 }
             }
         }
         Ok(Lints { lints })
     }
 
-    pub fn set_flags(&self, cmd: &mut ProcessBuilder, package_lints: &Lints) {
-        let get_kind = |kind: LintKind| {
-            self.lints.iter()
-                .filter(|l| *l.1 == kind)
-                .chain(package_lints.lints.iter()
-                    .filter(|l| *l.1 == kind && !self.lints.contains_key(l.0)))
-                .map(|l| l.0.to_string())
-                .collect::<Vec<String>>()
-                .join(",")
-        };
-
-        let allow = get_kind(LintKind::Allow);
-        if !allow.is_empty() {
-            cmd.arg("-A").arg(allow);
-        }
-        let warn = get_kind(LintKind::Warn);
-        if !warn.is_empty() {
-            cmd.arg("-W").arg(warn);
-        }
-        let deny = get_kind(LintKind::Deny);
-        if !deny.is_empty() {
-            cmd.arg("-D").arg(deny);
-        }
-        let forbid = get_kind(LintKind::Forbid);
-        if !forbid.is_empty() {
-            cmd.arg("-F").arg(forbid);
+    pub fn set_flags(&self, cmd: &mut ProcessBuilder) {
+        for (lint_name, state) in self.lints.iter() {
+            cmd.arg(format!("-{}", state.flag())).arg(lint_name);
         }
     }
 }
