@@ -118,7 +118,7 @@ impl Executor for DefaultExecutor {
         _mode: CompileMode,
         state: &job_queue::JobState<'_>,
     ) -> CargoResult<()> {
-        state.capture_output(cmd, false).map(drop)
+        state.capture_output(&cmd, false).map(drop)
     }
 }
 
@@ -645,7 +645,7 @@ fn rustdoc<'a, 'cfg>(cx: &mut Context<'a, 'cfg>, unit: &Unit<'a>) -> CargoResult
                     false,
                 ).map(drop)
         } else if should_capture_output {
-            state.capture_output(rustdoc, false).map(drop)
+            state.capture_output(&rustdoc, false).map(drop)
         } else {
             rustdoc.exec()
         };

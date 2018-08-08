@@ -1024,12 +1024,12 @@ fn cargo_compile_with_downloaded_dependency_with_offline() {
         p2.cargo("build")
             .masquerade_as_nightly_cargo()
             .arg("-Zoffline"),
-        execs().with_stderr(format!(
+        execs().with_stderr(
             "\
 [COMPILING] present_dep v1.2.3
 [COMPILING] bar v0.1.0 ([..])
 [FINISHED] dev [unoptimized + debuginfo] target(s) in [..]"
-        )),
+    ),
     );
 }
 
@@ -4439,7 +4439,7 @@ fn target_edition_feature_gated() {
 
     assert_that(
         p.cargo("build").arg("-v").masquerade_as_nightly_cargo(),
-        execs().with_status(101).with_stderr(format!(
+        execs().with_status(101).with_stderr(
             "\
 error: failed to parse manifest at `[..]`
 
@@ -4451,7 +4451,7 @@ Caused by:
 
 consider adding `cargo-features = [\"edition\"]` to the manifest
 "
-        )),
+        ),
     );
 }
 

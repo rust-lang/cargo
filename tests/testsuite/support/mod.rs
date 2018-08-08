@@ -351,7 +351,7 @@ impl Project {
     pub fn process<T: AsRef<OsStr>>(&self, program: T) -> ProcessBuilder {
         let mut p = ::support::process(program);
         p.cwd(self.root());
-        return p;
+        p
     }
 
     /// Create a `ProcessBuilder` to run cargo.
@@ -361,7 +361,7 @@ impl Project {
     pub fn cargo(&self, cmd: &str) -> ProcessBuilder {
         let mut p = self.process(&cargo_exe());
         split_and_add_args(&mut p, cmd);
-        return p;
+        p
     }
 
     /// Returns the contents of `Cargo.lock`.
@@ -779,7 +779,7 @@ impl Execs {
                 .map_err(|_| "stdout was not utf8 encoded".to_owned())?;
             let lines = stdout
                 .lines()
-                .filter(|line| line.starts_with("{"))
+                .filter(|line| line.starts_with('{'))
                 .collect::<Vec<_>>();
             if lines.len() != objects.len() {
                 return Err(format!(
@@ -935,7 +935,7 @@ impl Execs {
                         }
                     };
                 }
-                if a.len() > 0 {
+                if !a.is_empty() {
                     Err(format!(
                         "Output included extra lines:\n\
                          {}\n",
@@ -1073,8 +1073,8 @@ fn find_mismatch<'a>(expected: &'a Value, actual: &'a Value) -> Option<(&'a Valu
                 },
             );
 
-            if l.len() > 0 {
-                assert!(r.len() > 0);
+            if !l.is_empty() {
+                assert!(!r.is_empty());
                 Some((&l[0], &r[0]))
             } else {
                 assert_eq!(r.len(), 0);
@@ -1255,8 +1255,8 @@ pub fn basic_lib_manifest(name: &str) -> String {
     )
 }
 
-pub fn path2url(p: PathBuf) -> Url {
-    Url::from_file_path(&*p).ok().unwrap()
+pub fn path2url<P: AsRef<Path>>(p: P) -> Url {
+    Url::from_file_path(p).ok().unwrap()
 }
 
 fn substitute_macros(input: &str) -> String {
@@ -1287,10 +1287,10 @@ fn substitute_macros(input: &str) -> String {
         ("[EXE]", if cfg!(windows) { ".exe" } else { "" }),
     ];
     let mut result = input.to_owned();
-    for &(pat, subst) in macros.iter() {
+    for &(pat, subst) in &macros {
         result = result.replace(pat, subst)
     }
-    return result;
+    result
 }
 
 pub mod install;
@@ -1357,7 +1357,7 @@ fn _process(t: &OsStr) -> cargo::util::ProcessBuilder {
      .env_remove("GIT_COMMITTER_EMAIL")
      .env_remove("CARGO_TARGET_DIR")     // we assume 'target'
      .env_remove("MSYSTEM"); // assume cmd.exe everywhere on windows
-    return p;
+    p
 }
 
 pub trait ChannelChanger: Sized {

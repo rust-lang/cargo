@@ -322,7 +322,7 @@ fn build_work<'a, 'cfg>(cx: &mut Context<'a, 'cfg>, unit: &Unit<'a>) -> CargoRes
         } else {
             state.running(&cmd);
             let output = if extra_verbose {
-                state.capture_output(cmd, true)
+                state.capture_output(&cmd, true)
             } else {
                 cmd.exec_with_output()
             };

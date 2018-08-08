@@ -52,7 +52,7 @@ fn multiple_installs() {
 
 #[test]
 fn concurrent_installs() {
-    const LOCKED_BUILD: &'static str = "waiting for file lock on build directory";
+    const LOCKED_BUILD: &str = "waiting for file lock on build directory";
 
     pkg("foo", "0.0.1");
     pkg("bar", "0.0.1");

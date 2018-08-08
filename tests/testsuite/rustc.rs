@@ -1,7 +1,7 @@
 use support::{basic_manifest, basic_bin_manifest, basic_lib_manifest, execs, project};
 use support::hamcrest::assert_that;
 
-const CARGO_RUSTC_ERROR: &'static str =
+const CARGO_RUSTC_ERROR: &str =
     "[ERROR] extra arguments to `rustc` can only be passed to one target, consider filtering
 the package by passing e.g. `--lib` or `--bin NAME` to specify a single target";
 

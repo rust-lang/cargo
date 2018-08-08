@@ -345,20 +345,20 @@ fn test_default_features() {
     assert_that(
         p.cargo("test").arg("--no-default-features"),
         execs()
-            .with_stderr(format!(
+            .with_stderr(
                 "[FINISHED] dev [unoptimized + debuginfo] target(s) in [..]"
-            ))
+            )
             .with_stdout(""),
     );
 
     assert_that(
         p.cargo("test").arg("--test=foo"),
         execs()
-            .with_stderr(format!(
+            .with_stderr(
                 "\
 [FINISHED] dev [unoptimized + debuginfo] target(s) in [..]
 [RUNNING] target/debug/deps/foo-[..][EXE]"
-            ))
+            )
             .with_stdout_contains("test test ... ok"),
     );
 
@@ -471,9 +471,9 @@ fn test_multiple_required_features() {
     assert_that(
         p.cargo("test").arg("--no-default-features"),
         execs()
-            .with_stderr(format!(
+            .with_stderr(
                 "[FINISHED] dev [unoptimized + debuginfo] target(s) in [..]"
-            ))
+            )
             .with_stdout(""),
     );
 }
@@ -530,18 +530,18 @@ fn bench_default_features() {
     assert_that(
         p.cargo("bench").arg("--no-default-features"),
         execs()
-            .with_stderr(format!("[FINISHED] release [optimized] target(s) in [..]"))
+            .with_stderr("[FINISHED] release [optimized] target(s) in [..]".to_string())
             .with_stdout(""),
     );
 
     assert_that(
         p.cargo("bench").arg("--bench=foo"),
         execs()
-            .with_stderr(format!(
+            .with_stderr(
                 "\
 [FINISHED] release [optimized] target(s) in [..]
 [RUNNING] target/release/deps/foo-[..][EXE]"
-            ))
+            )
             .with_stdout_contains("test bench ... bench: [..]"),
     );
 
@@ -689,7 +689,7 @@ fn bench_multiple_required_features() {
     assert_that(
         p.cargo("bench").arg("--no-default-features"),
         execs()
-            .with_stderr(format!("[FINISHED] release [optimized] target(s) in [..]"))
+            .with_stderr("[FINISHED] release [optimized] target(s) in [..]")
             .with_stdout(""),
     );
 }
@@ -728,13 +728,13 @@ fn install_default_features() {
 
     assert_that(
         p.cargo("install --path .").arg("--no-default-features"),
-        execs().with_status(101).with_stderr(format!(
+        execs().with_status(101).with_stderr(
             "\
 [INSTALLING] foo v0.0.1 ([..])
 [FINISHED] release [optimized] target(s) in [..]
 [ERROR] no binaries are available for install using the selected features
 "
-        )),
+        ),
     );
     assert_that(cargo_home(), is_not(has_installed_exe("foo")));
 
@@ -749,7 +749,7 @@ fn install_default_features() {
         p.cargo("install --path .")
             .arg("--bin=foo")
             .arg("--no-default-features"),
-        execs().with_status(101).with_stderr(format!(
+        execs().with_status(101).with_stderr(
             "\
 [INSTALLING] foo v0.0.1 ([..])
 [ERROR] failed to compile `foo v0.0.1 ([..])`, intermediate artifacts can be found at \
@@ -759,7 +759,7 @@ Caused by:
   target `foo` in package `foo` requires the features: `a`
 Consider enabling them by passing e.g. `--features=\"a\"`
 "
-        )),
+        ),
     );
     assert_that(cargo_home(), is_not(has_installed_exe("foo")));
 
@@ -774,7 +774,7 @@ Consider enabling them by passing e.g. `--features=\"a\"`
         p.cargo("install --path .")
             .arg("--example=foo")
             .arg("--no-default-features"),
-        execs().with_status(101).with_stderr(format!(
+        execs().with_status(101).with_stderr(
             "\
 [INSTALLING] foo v0.0.1 ([..])
 [ERROR] failed to compile `foo v0.0.1 ([..])`, intermediate artifacts can be found at \
@@ -784,7 +784,7 @@ Caused by:
   target `foo` in package `foo` requires the features: `a`
 Consider enabling them by passing e.g. `--features=\"a\"`
 "
-        )),
+        ),
     );
     assert_that(cargo_home(), is_not(has_installed_exe("foo")));
 }
@@ -1092,9 +1092,9 @@ Consider enabling them by passing e.g. `--features=\"bar/a\"`
     assert_that(
         p.cargo("test"),
         execs()
-            .with_stderr(format!(
+            .with_stderr(
                 "[FINISHED] dev [unoptimized + debuginfo] target(s) in [..]"
-            ))
+            )
             .with_stdout(""),
     );
 
@@ -1119,7 +1119,7 @@ Consider enabling them by passing e.g. `--features=\"bar/a\"`
         assert_that(
             p.cargo("bench"),
             execs()
-                .with_stderr(format!("[FINISHED] release [optimized] target(s) in [..]"))
+                .with_stderr("[FINISHED] release [optimized] target(s) in [..]")
                 .with_stdout(""),
         );
 
@@ -1144,13 +1144,13 @@ Consider enabling them by passing e.g. `--features=\"bar/a\"`
     // install
     assert_that(
         p.cargo("install --path ."),
-        execs().with_status(101).with_stderr(format!(
+        execs().with_status(101).with_stderr(
             "\
 [INSTALLING] foo v0.0.1 ([..])
 [FINISHED] release [optimized] target(s) in [..]
 [ERROR] no binaries are available for install using the selected features
 "
-        )),
+        ),
     );
     assert_that(cargo_home(), is_not(has_installed_exe("foo")));
 

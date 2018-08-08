@@ -270,7 +270,7 @@ fn rustfix_crate(lock_addr: &str, rustc: &Path, filename: &Path, args: &FixArgs)
         rustfix_and_fix(&mut fixes, rustc, filename, args)?;
         let mut progress_yet_to_be_made = false;
         for (path, file) in fixes.files.iter_mut() {
-            if file.errors_applying_fixes.len() == 0 {
+            if file.errors_applying_fixes.is_empty() {
                 continue
             }
             // If anything was successfully fixed *and* there's at least one
@@ -523,7 +523,7 @@ impl FixArgs {
             ret.prepare_for_edition = PrepareFor::Next;
         }
         ret.idioms = env::var(IDIOMS_ENV).is_ok();
-        return ret
+        ret
     }
 
     fn apply(&self, cmd: &mut Command) {
@@ -535,10 +535,7 @@ impl FixArgs {
         if let Some(edition) = &self.enabled_edition {
             cmd.arg("--edition").arg(edition);
             if self.idioms {
-                match &edition[..] {
-                    "2018" => { cmd.arg("-Wrust-2018-idioms"); }
-                    _ => {}
-                }
+                if edition == "2018" { cmd.arg("-Wrust-2018-idioms"); }
             }
         }
         match &self.prepare_for_edition {

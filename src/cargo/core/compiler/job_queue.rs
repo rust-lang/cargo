@@ -110,7 +110,7 @@ impl<'a> JobState<'a> {
 
     pub fn capture_output(
         &self,
-        cmd: ProcessBuilder,
+        cmd: &ProcessBuilder,
         print_output: bool,
     ) -> CargoResult<Output> {
         cmd.exec_with_streaming(

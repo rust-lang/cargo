@@ -1016,7 +1016,7 @@ fn test_edition_malformed() {
 
     assert_that(
         p.cargo("build").arg("-v").masquerade_as_nightly_cargo(),
-        execs().with_status(101).with_stderr(format!(
+        execs().with_status(101).with_stderr(
             "\
 error: failed to parse manifest at `[..]`
 
@@ -1025,8 +1025,8 @@ Caused by:
 
 Caused by:
   supported edition values are `2015` or `2018`, but `chicken` is unknown
-"
-        )),
+".to_string()
+        ),
     );
 }
 
@@ -1048,7 +1048,7 @@ fn test_edition_nightly() {
 
     assert_that(
         p.cargo("build").arg("-v").masquerade_as_nightly_cargo(),
-        execs().with_status(101).with_stderr(format!(
+        execs().with_status(101).with_stderr(
             "\
 error: failed to parse manifest at `[..]`
 
@@ -1060,7 +1060,7 @@ Caused by:
 
 consider adding `cargo-features = [\"edition\"]` to the manifest
 "
-        )),
+        ),
     );
 }
 
