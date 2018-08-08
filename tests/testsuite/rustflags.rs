@@ -678,7 +678,7 @@ fn build_rustflags_normal_source_with_target() {
         )
         .build();
 
-    let ref host = rustc_host();
+    let host = &rustc_host();
 
     // Use RUSTFLAGS to pass an argument that will generate an error
     assert_that(

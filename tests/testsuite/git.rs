@@ -61,7 +61,7 @@ fn cargo_compile_simple_git_dep() {
              [COMPILING] dep1 v0.5.0 ({}#[..])\n\
              [COMPILING] foo v0.5.0 ({})\n\
              [FINISHED] dev [unoptimized + debuginfo] target(s) in [..]\n",
-            path2url(git_root.clone()),
+            path2url(&git_root),
             path2url(git_root),
             path2url(root)
         )),
@@ -146,7 +146,7 @@ fn cargo_compile_offline_with_cached_git_dep() {
             rev = "{}"
             "#,
                     git_project.url(),
-                    rev1.clone()
+                    rev1
                 ),
             )
             .file("src/main.rs", "fn main(){}")
@@ -166,7 +166,7 @@ fn cargo_compile_offline_with_cached_git_dep() {
             rev = "{}"
             "#,
                 git_project.url(),
-                rev2.clone()
+                rev2
             ).as_bytes())
             .unwrap();
         assert_that(prj.cargo("build"), execs());
@@ -303,7 +303,7 @@ fn cargo_compile_git_dep_branch() {
              [COMPILING] dep1 v0.5.0 ({}?branch=branchy#[..])\n\
              [COMPILING] foo v0.5.0 ({})\n\
              [FINISHED] dev [unoptimized + debuginfo] target(s) in [..]\n",
-            path2url(git_root.clone()),
+            path2url(&git_root),
             path2url(git_root),
             path2url(root)
         )),
@@ -376,7 +376,7 @@ fn cargo_compile_git_dep_tag() {
              [COMPILING] dep1 v0.5.0 ({}?tag=v0.1.0#[..])\n\
              [COMPILING] foo v0.5.0 ({})\n\
              [FINISHED] dev [unoptimized + debuginfo] target(s) in [..]\n",
-            path2url(git_root.clone()),
+            path2url(&git_root),
             path2url(git_root),
             path2url(root)
         )),
@@ -2674,7 +2674,7 @@ fn invalid_git_dependency_manifest() {
              \n\
              Caused by:\n  \
              duplicate key: `categories` for key `project`",
-            path2url(git_root.clone()),
+            path2url(&git_root),
             path2url(git_root),
         )),
     );

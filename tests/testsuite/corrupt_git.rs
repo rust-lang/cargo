@@ -38,7 +38,7 @@ fn deleting_database_files() {
 
     let mut files = Vec::new();
     find_files(&paths::home().join(".cargo/git/db"), &mut files);
-    assert!(files.len() > 0);
+    assert!(!files.is_empty());
 
     let log = "cargo::sources::git=trace";
     for file in files {
@@ -120,7 +120,7 @@ fn deleting_checkout_files() {
         .join(".git");
     let mut files = Vec::new();
     find_files(&dir, &mut files);
-    assert!(files.len() > 0);
+    assert!(!files.is_empty());
 
     let log = "cargo::sources::git=trace";
     for file in files {

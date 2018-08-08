@@ -124,7 +124,7 @@ fn relative_tools() {
         .build();
 
     let foo_path = p.root().join("bar");
-    let foo_url = path2url(foo_path.clone());
+    let foo_url = path2url(&foo_path);
     let prefix = p.root().into_os_string().into_string().unwrap();
     let output = if cfg!(windows) {
         (
