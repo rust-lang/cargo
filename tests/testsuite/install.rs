@@ -1237,3 +1237,33 @@ warning: be sure to add `[..]` to your PATH to be able to run the installed bina
 ",
         ).run();
 }
+
+fn install_ignores_cargo_config() {
+    pkg("bar", "0.0.1");
+
+    let p = project("foo")
+        .file(
+            "Cargo.toml",
+            r#"
+            [package]
+            name = "foo"
+            version = "0.1.0"
+            authors = []
+        "#,
+        )
+        .file(
+            ".cargo/config",
+            r#"
+            [build]
+            target = "non-existing-target"
+        "#,
+        )
+        .file("src/main.rs", "fn main() {}")
+        .build();
+
+    assert_that(
+        cargo_process("install").arg("bar").cwd(p.root()),
+        execs().with_status(0),
+    );
+    assert_that(cargo_home(), has_installed_exe("bar"));
+}
