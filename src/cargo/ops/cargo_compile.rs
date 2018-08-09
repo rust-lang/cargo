@@ -83,24 +83,6 @@ impl<'a> CompileOptions<'a> {
             export_dir: None,
         })
     }
-
-    // Returns the unique specified package, or None
-    pub fn get_package<'b>(&self, ws: &'b Workspace) -> CargoResult<Option<&'b Package>> {
-        Ok(match self.spec {
-            Packages::All | Packages::Default | Packages::OptOut(_) => {
-                None
-            }
-            Packages::Packages(ref xs) => match xs.len() {
-                0 => Some(ws.current()?),
-                1 => Some(ws.members()
-                    .find(|pkg| *pkg.name() == xs[0])
-                    .ok_or_else(|| {
-                        format_err!("package `{}` is not a member of the workspace", xs[0])
-                    })?),
-                _ => None,
-            },
-        })
-    }
 }
 
 #[derive(Clone, PartialEq, Eq, Debug)]
@@ -156,6 +138,27 @@ impl Packages {
             bail!("no packages to compile")
         }
         Ok(specs)
+    }
+
+    pub fn get_packages<'ws>(&self, ws: &'ws Workspace) -> CargoResult<Vec<&'ws Package>> {
+        let packages: Vec<_> = match self {
+            Packages::Default => ws.default_members().collect(),
+            Packages::All => ws.members().collect(),
+            Packages::OptOut(ref opt_out) => ws
+                .members()
+                .filter(|pkg| !opt_out.iter().any(|name| pkg.name().as_str() == name))
+                .collect(),
+            Packages::Packages(ref pkgs) => pkgs
+                .iter()
+                .map(|name| {
+                    ws.members()
+                        .find(|pkg| pkg.name().as_str() == name)
+                        .ok_or_else(|| {
+                            format_err!("package `{}` is not a member of the workspace", name)
+                        })
+                }).collect::<CargoResult<Vec<_>>>()?,
+        };
+        Ok(packages)
     }
 }
 
