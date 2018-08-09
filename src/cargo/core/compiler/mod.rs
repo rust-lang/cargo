@@ -283,36 +283,10 @@ fn rustc<'a, 'cfg>(
                 &package_id,
                 &target,
                 mode,
-                &mut |line| {
-                    if !line.is_empty() {
-                        Err(internal(&format!(
-                            "compiler stdout is not empty: `{}`",
-                            line
-                        )))
-                    } else {
-                        Ok(())
-                    }
-                },
-                &mut |line| {
-                    // stderr from rustc can have a mix of JSON and non-JSON output
-                    if line.starts_with('{') {
-                        // Handle JSON lines
-                        let compiler_message = serde_json::from_str(line).map_err(|_| {
-                            internal(&format!("compiler produced invalid json: `{}`", line))
-                        })?;
-
-                        machine_message::emit(&machine_message::FromCompiler {
-                            package_id: &package_id,
-                            target: &target,
-                            message: compiler_message,
-                        });
-                    } else {
-                        // Forward non-JSON to stderr
-                        writeln!(io::stderr(), "{}", line)?;
-                    }
-                    Ok(())
-                },
-            ).map_err(Internal::new).chain_err(|| format!("Could not compile `{}`.", name))?;
+                &mut json_stdout,
+                &mut |line| json_stderr(line, &package_id, &target),
+            ).map_err(Internal::new)
+            .chain_err(|| format!("Could not compile `{}`.", name))?;
         } else if build_plan {
             state.build_plan(buildkey, rustc.clone(), outputs.clone());
         } else {
@@ -631,6 +605,10 @@ fn rustdoc<'a, 'cfg>(cx: &mut Context<'a, 'cfg>, unit: &Unit<'a>) -> CargoResult
         rustdoc.arg("--cfg").arg(&format!("feature=\"{}\"", feat));
     }
 
+    if bcx.build_config.json_messages() {
+        rustdoc.arg("--error-format").arg("json");
+    }
+
     if let Some(ref args) = bcx.extra_args_for(unit) {
         rustdoc.args(args);
     }
@@ -642,6 +620,9 @@ fn rustdoc<'a, 'cfg>(cx: &mut Context<'a, 'cfg>, unit: &Unit<'a>) -> CargoResult
     let name = unit.pkg.name().to_string();
     let build_state = cx.build_state.clone();
     let key = (unit.pkg.package_id().clone(), unit.kind);
+    let json_messages = bcx.build_config.json_messages();
+    let package_id = unit.pkg.package_id().clone();
+    let target = unit.target.clone();
 
     let should_capture_output = cx.bcx.config.cli_unstable().compile_progress;
 
@@ -656,7 +637,14 @@ fn rustdoc<'a, 'cfg>(cx: &mut Context<'a, 'cfg>, unit: &Unit<'a>) -> CargoResult
         }
         state.running(&rustdoc);
 
-        let exec_result = if should_capture_output {
+        let exec_result = if json_messages {
+            rustdoc
+                .exec_with_streaming(
+                    &mut json_stdout,
+                    &mut |line| json_stderr(line, &package_id, &target),
+                    false,
+                ).map(drop)
+        } else if should_capture_output {
             state.capture_output(rustdoc, false).map(drop)
         } else {
             rustdoc.exec()
@@ -998,4 +986,34 @@ impl Kind {
             Kind::Target => Kind::Target,
         }
     }
+}
+
+fn json_stdout(line: &str) -> CargoResult<()> {
+    if !line.is_empty() {
+        Err(internal(&format!(
+            "compiler stdout is not empty: `{}`",
+            line
+        )))
+    } else {
+        Ok(())
+    }
+}
+
+fn json_stderr(line: &str, package_id: &PackageId, target: &Target) -> CargoResult<()> {
+    // stderr from rustc/rustdoc can have a mix of JSON and non-JSON output
+    if line.starts_with('{') {
+        // Handle JSON lines
+        let compiler_message = serde_json::from_str(line)
+            .map_err(|_| internal(&format!("compiler produced invalid json: `{}`", line)))?;
+
+        machine_message::emit(&machine_message::FromCompiler {
+            package_id: package_id,
+            target: target,
+            message: compiler_message,
+        });
+    } else {
+        // Forward non-JSON to stderr
+        writeln!(io::stderr(), "{}", line)?;
+    }
+    Ok(())
 }
