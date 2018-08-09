@@ -733,8 +733,10 @@ fn build_base_args<'a, 'cfg>(
     add_path_args(bcx, unit, cmd);
     add_color(bcx, cmd);
 
-    if bcx.build_config.json_messages() {
-        cmd.arg("--error-format").arg("json");
+    match bcx.build_config.message_format {
+        MessageFormat::Human => (),
+        MessageFormat::Json => { cmd.arg("--error-format").arg("json"); },
+        MessageFormat::Short => { cmd.arg("--error-format").arg("short"); },
     }
 
     if !test {

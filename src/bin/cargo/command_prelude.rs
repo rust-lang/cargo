@@ -127,7 +127,7 @@ pub trait AppExt: Sized {
             opt("message-format", "Error format")
                 .value_name("FMT")
                 .case_insensitive(true)
-                .possible_values(&["human", "json"])
+                .possible_values(&["human", "json", "short"])
                 .default_value("human"),
         )
     }
@@ -270,6 +270,8 @@ pub trait ArgMatchesExt {
                     MessageFormat::Json
                 } else if f.eq_ignore_ascii_case("human") {
                     MessageFormat::Human
+                } else if f.eq_ignore_ascii_case("short") {
+                    MessageFormat::Short
                 } else {
                     panic!("Impossible message format: {:?}", f)
                 }
