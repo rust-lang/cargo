@@ -1,3 +1,4 @@
+use std::iter;
 use std::path::Path;
 
 use ops;
@@ -11,23 +12,20 @@ pub fn run(
 ) -> CargoResult<Option<ProcessError>> {
     let config = ws.config();
 
-    let pkg = options.get_package(ws)?
-        .unwrap_or_else(|| unreachable!("cargo run supports single package only"));
-
-    // We compute the `bins` here *just for diagnosis*.  The actual set of packages to be run
-    // is determined by the `ops::compile` call below.
-    let bins: Vec<_> = pkg.manifest()
-        .targets()
-        .iter()
-        .filter(|a| {
-            !a.is_lib() && !a.is_custom_build() && if !options.filter.is_specific() {
-                a.is_bin()
-            } else {
-                options.filter.target_run(a)
-            }
-        })
-        .map(|bin| (bin.name(), bin.kind()))
-        .collect();
+    // We compute the `bins` here *just for diagnosis*.  The actual set of
+    // packages to be run is determined by the `ops::compile` call below.
+    let packages = options.spec.get_packages(ws)?;
+    let bins: Vec<_> = packages
+        .into_iter()
+        .flat_map(|pkg| {
+            iter::repeat(pkg).zip(pkg.manifest().targets().iter().filter(|target| {
+                !target.is_lib() && !target.is_custom_build() && if !options.filter.is_specific() {
+                    target.is_bin()
+                } else {
+                    options.filter.target_run(target)
+                }
+            }))
+        }).collect();
 
     if bins.is_empty() {
         if !options.filter.is_specific() {
@@ -38,31 +36,34 @@ pub fn run(
     }
 
     if bins.len() == 1 {
-        let &(name, kind) = bins.first().unwrap();
-        if let TargetKind::ExampleLib(..) = kind {
+        let target = bins[0].1;
+        if let TargetKind::ExampleLib(..) = target.kind() {
             bail!(
-                    "example target `{}` is a library and cannot be executed",
-                    name
-                )
+                "example target `{}` is a library and cannot be executed",
+                target.name()
+            )
         }
     }
 
     if bins.len() > 1 {
         if !options.filter.is_specific() {
-            let names: Vec<&str> = bins.into_iter().map(|bin| bin.0).collect();
+            let names: Vec<&str> = bins
+                .into_iter()
+                .map(|(_pkg, target)| target.name())
+                .collect();
             if nightly_features_allowed() {
                 bail!(
                     "`cargo run` could not determine which binary to run. \
-                    Use the `--bin` option to specify a binary, \
-                    or (on nightly) the `default-run` manifest key.\n\
-                    available binaries: {}",
+                     Use the `--bin` option to specify a binary, \
+                     or (on nightly) the `default-run` manifest key.\n\
+                     available binaries: {}",
                     names.join(", ")
                 )
             } else {
                 bail!(
                     "`cargo run` requires that a project only have one \
-                    executable; use the `--bin` option to specify which one \
-                    to run\navailable binaries: {}",
+                     executable; use the `--bin` option to specify which one \
+                     to run\navailable binaries: {}",
                     names.join(", ")
                 )
             }
@@ -84,6 +85,7 @@ pub fn run(
         Some(path) => path.to_path_buf(),
         None => exe.to_path_buf(),
     };
+    let pkg = bins[0].0;
     let mut process = compile.target_process(exe, pkg)?;
     process.args(args).cwd(config.cwd());
 
