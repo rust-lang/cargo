@@ -283,7 +283,7 @@ fn rustc<'a, 'cfg>(
                 &package_id,
                 &target,
                 mode,
-                &mut json_stdout,
+                &mut assert_is_empty,
                 &mut |line| json_stderr(line, &package_id, &target),
             ).map_err(Internal::new)
             .chain_err(|| format!("Could not compile `{}`.", name))?;
@@ -640,7 +640,7 @@ fn rustdoc<'a, 'cfg>(cx: &mut Context<'a, 'cfg>, unit: &Unit<'a>) -> CargoResult
         let exec_result = if json_messages {
             rustdoc
                 .exec_with_streaming(
-                    &mut json_stdout,
+                    &mut assert_is_empty,
                     &mut |line| json_stderr(line, &package_id, &target),
                     false,
                 ).map(drop)
@@ -988,7 +988,7 @@ impl Kind {
     }
 }
 
-fn json_stdout(line: &str) -> CargoResult<()> {
+fn assert_is_empty(line: &str) -> CargoResult<()> {
     if !line.is_empty() {
         Err(internal(&format!(
             "compiler stdout is not empty: `{}`",

@@ -1359,6 +1359,13 @@ fn doc_private_items() {
     assert_that(&foo.root().join("target/doc/foo/private/index.html"), existing_file());
 }
 
+const BAD_INTRA_LINK_LIB: &'static str = r#"
+#![deny(intra_doc_link_resolution_failure)]
+
+/// [bad_link]
+pub fn foo() {}
+"#;
+
 #[test]
 fn doc_cap_lints() {
     if !is_nightly() {
@@ -1366,15 +1373,8 @@ fn doc_cap_lints() {
         return;
     }
     let a = git::new("a", |p| {
-        p.file("Cargo.toml", &basic_lib_manifest("a")).file(
-            "src/lib.rs",
-            "
-            #![deny(intra_doc_link_resolution_failure)]
-
-            /// [bad_link]
-            pub fn foo() {}
-        ",
-        )
+        p.file("Cargo.toml", &basic_lib_manifest("a"))
+            .file("src/lib.rs", BAD_INTRA_LINK_LIB)
     }).unwrap();
 
     let p = project()
@@ -1419,7 +1419,6 @@ fn doc_cap_lints() {
 ",
         ),
     );
-
 }
 
 #[test]
@@ -1428,7 +1427,7 @@ fn doc_message_format() {
         // This can be removed once 1.30 is stable (rustdoc --error-format stabilized).
         return;
     }
-    let p = project().file("src/lib.rs", "asdf").build();
+    let p = project().file("src/lib.rs", BAD_INTRA_LINK_LIB).build();
 
     assert_that(
         p.cargo("doc --message-format=json"),
@@ -1436,8 +1435,8 @@ fn doc_message_format() {
             r#"
             {
                 "message": {
-                    "children": [],
-                    "code": null,
+                    "children": "{...}",
+                    "code": "{...}",
                     "level": "error",
                     "message": "[..]",
                     "rendered": "[..]",
