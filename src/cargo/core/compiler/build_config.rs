@@ -182,7 +182,7 @@ impl CompileMode {
     /// List of all modes (currently used by `cargo clean -p` for computing
     /// all possible outputs).
     pub fn all_modes() -> &'static [CompileMode] {
-        static ALL: [CompileMode; 9] = [
+        static ALL: [CompileMode; 10] = [
             CompileMode::Test,
             CompileMode::Build,
             CompileMode::Check { test: true },
@@ -191,6 +191,7 @@ impl CompileMode {
             CompileMode::Doc { deps: true },
             CompileMode::Doc { deps: false },
             CompileMode::Doctest,
+            CompileMode::Install,
             CompileMode::RunCustomBuild,
         ];
         &ALL
