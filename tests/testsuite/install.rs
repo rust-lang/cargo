@@ -1238,10 +1238,11 @@ warning: be sure to add `[..]` to your PATH to be able to run the installed bina
         ).run();
 }
 
+#[test]
 fn install_ignores_cargo_config() {
     pkg("bar", "0.0.1");
 
-    let p = project("foo")
+    let p = project()
         .file(
             "Cargo.toml",
             r#"
