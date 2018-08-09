@@ -38,14 +38,18 @@ run. If you're passing arguments to both Cargo and the binary, the ones after
 pub fn exec(config: &mut Config, args: &ArgMatches) -> CliResult {
     let ws = args.workspace(config)?;
 
-    let mut compile_opts = args.compile_options_for_single_package(config, CompileMode::Build)?;
+    let mut compile_opts = args.compile_options(config, CompileMode::Build)?;
     if !args.is_present("example") && !args.is_present("bin") {
-        if let Some(default_run) = compile_opts.get_package(&ws)?
-            .and_then(|pkg| pkg.manifest().default_run())
-        {
+        let default_runs: Vec<_> = compile_opts
+            .spec
+            .get_packages(&ws)?
+            .iter()
+            .filter_map(|pkg| pkg.manifest().default_run())
+            .collect();
+        if default_runs.len() == 1 {
             compile_opts.filter = CompileFilter::new(
                 false,
-                vec![default_run.to_owned()],
+                vec![default_runs[0].to_owned()],
                 false,
                 vec![],
                 false,
@@ -56,7 +60,11 @@ pub fn exec(config: &mut Config, args: &ArgMatches) -> CliResult {
                 false,
             );
         } else {
+            // ops::run will take care of errors if len pkgs != 1.
             compile_opts.filter = CompileFilter::Default {
+                // Force this to false because the code in ops::run is not
+                // able to pre-check features before compilation starts to
+                // enforce that only 1 binary is built.
                 required_features_filterable: false,
             };
         }

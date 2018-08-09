@@ -1098,3 +1098,62 @@ fn explicit_bin_with_args() {
 
     assert_that(p.cargo("run --bin foo hello world"), execs());
 }
+
+#[test]
+fn run_workspace() {
+    let p = project()
+        .file(
+            "Cargo.toml",
+            r#"
+            [workspace]
+            members = ["a", "b"]
+        "#,
+        ).file("a/Cargo.toml", &basic_bin_manifest("a"))
+        .file("a/src/main.rs", r#"fn main() {println!("run-a");}"#)
+        .file("b/Cargo.toml", &basic_bin_manifest("b"))
+        .file("b/src/main.rs", r#"fn main() {println!("run-b");}"#)
+        .build();
+
+    assert_that(
+        p.cargo("run"),
+        execs().with_status(101).with_stderr(
+            "\
+[ERROR] `cargo run` requires that a project only have one executable[..]
+available binaries: a, b",
+        ),
+    );
+    assert_that(
+        p.cargo("run --bin a"),
+        execs().with_status(0).with_stdout("run-a"),
+    );
+}
+
+#[test]
+fn default_run_workspace() {
+    let p = project()
+        .file(
+            "Cargo.toml",
+            r#"
+            [workspace]
+            members = ["a", "b"]
+        "#,
+        ).file(
+            "a/Cargo.toml",
+            r#"
+            cargo-features = ["default-run"]
+
+            [project]
+            name = "a"
+            version = "0.0.1"
+            default-run = "a"
+        "#,
+        ).file("a/src/main.rs", r#"fn main() {println!("run-a");}"#)
+        .file("b/Cargo.toml", &basic_bin_manifest("b"))
+        .file("b/src/main.rs", r#"fn main() {println!("run-b");}"#)
+        .build();
+
+    assert_that(
+        p.cargo("run").masquerade_as_nightly_cargo(),
+        execs().with_status(0).with_stdout("run-a"),
+    );
+}
