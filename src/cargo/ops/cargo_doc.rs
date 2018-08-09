@@ -1,7 +1,9 @@
 use std::collections::HashMap;
 use std::fs;
 use std::path::Path;
-use std::process::Command;
+
+use failure::Fail;
+use opener;
 
 use core::Workspace;
 use ops;
@@ -97,55 +99,14 @@ pub fn doc(ws: &Workspace, options: &DocOptions) -> CargoResult<()> {
         if fs::metadata(&path).is_ok() {
             let mut shell = options.compile_opts.config.shell();
             shell.status("Opening", path.display())?;
-            match open_docs(&path) {
-                Ok(m) => shell.status("Launching", m)?,
-                Err(e) => {
-                    shell.warn("warning: could not determine a browser to open docs with, tried:")?;
-                    for method in e {
-                        shell.warn(format!("\t{}", method))?;
-                    }
+            if let Err(e) = opener::open(&path) {
+                shell.warn(format!("Couldn't open docs: {}", e))?;
+                for cause in (&e as &Fail).iter_chain() {
+                    shell.warn(format!("Caused by:\n {}", cause))?;
                 }
             }
         }
     }
 
     Ok(())
-}
-
-#[cfg(not(any(target_os = "windows", target_os = "macos")))]
-fn open_docs(path: &Path) -> Result<&'static str, Vec<&'static str>> {
-    use std::env;
-    let mut methods = Vec::new();
-    // trying $BROWSER
-    if let Ok(name) = env::var("BROWSER") {
-        match Command::new(name).arg(path).status() {
-            Ok(_) => return Ok("$BROWSER"),
-            Err(_) => methods.push("$BROWSER"),
-        }
-    }
-
-    for m in ["xdg-open", "gnome-open", "kde-open"].iter() {
-        match Command::new(m).arg(path).status() {
-            Ok(_) => return Ok(m),
-            Err(_) => methods.push(m),
-        }
-    }
-
-    Err(methods)
-}
-
-#[cfg(target_os = "windows")]
-fn open_docs(path: &Path) -> Result<&'static str, Vec<&'static str>> {
-    match Command::new("cmd").arg("/C").arg(path).status() {
-        Ok(_) => Ok("cmd /C"),
-        Err(_) => Err(vec!["cmd /C"]),
-    }
-}
-
-#[cfg(target_os = "macos")]
-fn open_docs(path: &Path) -> Result<&'static str, Vec<&'static str>> {
-    match Command::new("open").arg(path).status() {
-        Ok(_) => Ok("open"),
-        Err(_) => Err(vec!["open"]),
-    }
 }
