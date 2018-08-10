@@ -1450,3 +1450,21 @@ fn doc_message_format() {
         ),
     );
 }
+
+#[test]
+fn short_message_format() {
+    if !is_nightly() {
+        // This can be removed once 1.30 is stable (rustdoc --error-format stabilized).
+        return;
+    }
+    let p = project().file("src/lib.rs", BAD_INTRA_LINK_LIB).build();
+    assert_that(
+        p.cargo("doc --message-format=short"),
+        execs().with_status(101).with_stderr_contains(
+            "\
+src/lib.rs:4:6: error: `[bad_link]` cannot be resolved, ignoring it...
+error: Could not document `foo`.
+",
+        ),
+    );
+}
