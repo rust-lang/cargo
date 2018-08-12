@@ -51,9 +51,9 @@ See [..]
     // Skip the metadata payload and the size of the tarball
     let mut sz = [0; 4];
     assert_eq!(f.read(&mut sz).unwrap(), 4);
-    let sz = ((sz[0] as u32) << 0) | ((sz[1] as u32) << 8) | ((sz[2] as u32) << 16)
-        | ((sz[3] as u32) << 24);
-    f.seek(SeekFrom::Current(sz as i64 + 4)).unwrap();
+    let sz = (u32::from(sz[0]) << 0) | (u32::from(sz[1]) << 8) | (u32::from(sz[2]) << 16)
+        | (u32::from(sz[3]) << 24);
+    f.seek(SeekFrom::Current(i64::from(sz) + 4)).unwrap();
 
     // Verify the tarball
     let mut rdr = GzDecoder::new(f);
@@ -127,9 +127,9 @@ See [..]
     // Skip the metadata payload and the size of the tarball
     let mut sz = [0; 4];
     assert_eq!(f.read(&mut sz).unwrap(), 4);
-    let sz = ((sz[0] as u32) << 0) | ((sz[1] as u32) << 8) | ((sz[2] as u32) << 16)
-        | ((sz[3] as u32) << 24);
-    f.seek(SeekFrom::Current(sz as i64 + 4)).unwrap();
+    let sz = (u32::from(sz[0]) << 0) | (u32::from(sz[1]) << 8) | (u32::from(sz[2]) << 16)
+        | (u32::from(sz[3]) << 24);
+    f.seek(SeekFrom::Current(i64::from(sz) + 4)).unwrap();
 
     // Verify the tarball
     let mut rdr = GzDecoder::new(f);
@@ -205,15 +205,15 @@ See [..]
     // Skip the metadata payload and the size of the tarball
     let mut sz = [0; 4];
     assert_eq!(f.read(&mut sz).unwrap(), 4);
-    let sz = ((sz[0] as u32) << 0) | ((sz[1] as u32) << 8) | ((sz[2] as u32) << 16)
-        | ((sz[3] as u32) << 24);
-    f.seek(SeekFrom::Current(sz as i64 + 4)).unwrap();
+    let sz = (u32::from(sz[0]) << 0) | (u32::from(sz[1]) << 8) | (u32::from(sz[2]) << 16)
+        | (u32::from(sz[3]) << 24);
+    f.seek(SeekFrom::Current(i64::from(sz) + 4)).unwrap();
 
     // Verify the tarball
     let mut rdr = GzDecoder::new(f);
     assert_eq!(
         rdr.header().unwrap().filename().unwrap(),
-        "foo-0.0.1.crate".as_bytes()
+        b"foo-0.0.1.crate"
     );
     let mut contents = Vec::new();
     rdr.read_to_end(&mut contents).unwrap();
@@ -285,15 +285,15 @@ See [..]
     // Skip the metadata payload and the size of the tarball
     let mut sz = [0; 4];
     assert_eq!(f.read(&mut sz).unwrap(), 4);
-    let sz = ((sz[0] as u32) << 0) | ((sz[1] as u32) << 8) | ((sz[2] as u32) << 16)
-        | ((sz[3] as u32) << 24);
-    f.seek(SeekFrom::Current(sz as i64 + 4)).unwrap();
+    let sz = (u32::from(sz[0]) << 0) | (u32::from(sz[1]) << 8) | (u32::from(sz[2]) << 16)
+        | (u32::from(sz[3]) << 24);
+    f.seek(SeekFrom::Current(i64::from(sz) + 4)).unwrap();
 
     // Verify the tarball
     let mut rdr = GzDecoder::new(f);
     assert_eq!(
         rdr.header().unwrap().filename().unwrap(),
-        "foo-0.0.1.crate".as_bytes()
+        b"foo-0.0.1.crate"
     );
     let mut contents = Vec::new();
     rdr.read_to_end(&mut contents).unwrap();

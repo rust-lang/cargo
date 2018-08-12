@@ -702,7 +702,7 @@ fn remove_patch() {
     File::create(p.root().join("Cargo.toml"))
         .unwrap()
         .write_all(
-            r#"
+            br#"
         [package]
         name = "foo"
         version = "0.0.1"
@@ -713,7 +713,7 @@ fn remove_patch() {
 
         [patch.crates-io]
         bar = { path = 'bar' }
-    "#.as_bytes(),
+    "#,
         )
         .unwrap();
     assert_that(p.cargo("build"), execs());

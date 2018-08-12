@@ -60,7 +60,7 @@ fn check_token(expected_token: &str, registry: Option<&str>) -> bool {
             .get("registry")
             .and_then(|registry_table| registry_table.get("token"))
             .and_then(|v| match v {
-                &toml::Value::String(ref token) => Some(token.as_str().to_string()),
+                toml::Value::String(ref token) => Some(token.as_str().to_string()),
                 _ => None,
             }),
         _ => None,
