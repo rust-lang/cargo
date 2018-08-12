@@ -100,6 +100,7 @@ impl BuildConfig {
 pub enum MessageFormat {
     Human,
     Json,
+    Short,
 }
 
 /// The general "mode" of what to do.

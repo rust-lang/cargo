@@ -3571,7 +3571,7 @@ fn wrong_message_format_option() {
         execs().with_status(1).with_stderr_contains(
             "\
 error: 'XML' isn't a valid value for '--message-format <FMT>'
-<tab>[possible values: human, json]
+<tab>[possible values: human, json, short]
 ",
         ),
     );

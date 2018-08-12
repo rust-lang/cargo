@@ -364,7 +364,7 @@ case $state in
                     '(--lib --doc --bin --test --bench)--example=[example name]' \
                     '(--lib --doc --bin --example --bench)--test=[test name]' \
                     '(--lib --doc --bin --example --test)--bench=[benchmark name]' \
-                    '--message-format:error format:(human json)' \
+                    '--message-format:error format:(human json short)' \
                     '--frozen[require lock and cache up to date]' \
                     '--locked[require lock up to date]'
                     ;;
