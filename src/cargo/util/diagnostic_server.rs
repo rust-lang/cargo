@@ -199,7 +199,7 @@ guide can be found at
                     file,
                     match edition {
                         Some(s) => format!("with the {} edition", s),
-                        None => format!("without an edition"),
+                        None => "without an edition".to_string(),
                     },
                 ))?;
                 Ok(())

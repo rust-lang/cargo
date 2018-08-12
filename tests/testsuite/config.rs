@@ -4,6 +4,7 @@ use cargo::util::toml::{self, VecStringOrBool as VSOB};
 use cargo::CargoError;
 use support::{execs, lines_match, paths, project};
 use support::hamcrest::assert_that;
+use std::borrow::Borrow;
 use std::collections;
 use std::fs;
 
@@ -68,8 +69,9 @@ fn new_config(env: &[(&str, &str)]) -> Config {
     config
 }
 
-fn assert_error(error: CargoError, msgs: &str) {
+fn assert_error<E: Borrow<CargoError>>(error: E, msgs: &str) {
     let causes = error
+        .borrow()
         .iter_chain()
         .map(|e| e.to_string())
         .collect::<Vec<_>>()

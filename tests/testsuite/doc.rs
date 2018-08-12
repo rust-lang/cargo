@@ -626,7 +626,7 @@ fn doc_same_name() {
 
 #[test]
 fn doc_target() {
-    const TARGET: &'static str = "arm-unknown-linux-gnueabihf";
+    const TARGET: &str = "arm-unknown-linux-gnueabihf";
 
     let p = project()
         .file(

@@ -1,4 +1,6 @@
 #![deny(warnings)]
+#![cfg_attr(feature = "cargo-clippy", allow(blacklisted_name))]
+#![cfg_attr(feature = "cargo-clippy", allow(explicit_iter_loop))]
 
 extern crate bufstream;
 extern crate cargo;

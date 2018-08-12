@@ -110,7 +110,7 @@ impl fmt::Display for VersionInfo {
         if let Some(channel) = self.cfg_info.as_ref().map(|ci| &ci.release_channel) {
             if channel != "stable" {
                 write!(f, "-{}", channel)?;
-                let empty = String::from("");
+                let empty = String::new();
                 write!(f, "{}", self.pre_release.as_ref().unwrap_or(&empty))?;
             }
         };

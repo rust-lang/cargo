@@ -403,7 +403,7 @@ fn gitignore_no_newline_in_new() {
         .unwrap()
         .read_to_string(&mut contents)
         .unwrap();
-    assert!(!contents.starts_with("\n"));
+    assert!(!contents.starts_with('\n'));
 }
 
 #[test]
@@ -446,7 +446,7 @@ fn mercurial_no_newline_in_new() {
         .unwrap()
         .read_to_string(&mut contents)
         .unwrap();
-    assert!(!contents.starts_with("\n"));
+    assert!(!contents.starts_with('\n'));
 }
 
 #[test]
