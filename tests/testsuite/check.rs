@@ -723,6 +723,23 @@ fn check_artifacts() {
 }
 
 #[test]
+fn short_message_format() {
+    let foo = project()
+        .file("src/lib.rs", "fn foo() { let _x: bool = 'a'; }")
+        .build();
+    assert_that(
+        foo.cargo("check --message-format=short"),
+        execs().with_status(101).with_stderr_contains(
+            "\
+src/lib.rs:1:27: error[E0308]: mismatched types
+error: aborting due to previous error
+error: Could not compile `foo`.
+",
+        ),
+    );
+}
+
+#[test]
 fn proc_macro() {
     let p = project()
         .file(

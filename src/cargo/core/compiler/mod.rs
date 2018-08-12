@@ -605,9 +605,7 @@ fn rustdoc<'a, 'cfg>(cx: &mut Context<'a, 'cfg>, unit: &Unit<'a>) -> CargoResult
         rustdoc.arg("--cfg").arg(&format!("feature=\"{}\"", feat));
     }
 
-    if bcx.build_config.json_messages() {
-        rustdoc.arg("--error-format").arg("json");
-    }
+    add_error_format(bcx, &mut rustdoc);
 
     if let Some(ref args) = bcx.extra_args_for(unit) {
         rustdoc.args(args);
@@ -706,6 +704,14 @@ fn add_color(bcx: &BuildContext, cmd: &mut ProcessBuilder) {
     }
 }
 
+fn add_error_format(bcx: &BuildContext, cmd: &mut ProcessBuilder) {
+    match bcx.build_config.message_format {
+        MessageFormat::Human => (),
+        MessageFormat::Json => { cmd.arg("--error-format").arg("json"); },
+        MessageFormat::Short => { cmd.arg("--error-format").arg("short"); },
+    }
+}
+
 fn build_base_args<'a, 'cfg>(
     cx: &mut Context<'a, 'cfg>,
     cmd: &mut ProcessBuilder,
@@ -732,10 +738,7 @@ fn build_base_args<'a, 'cfg>(
 
     add_path_args(bcx, unit, cmd);
     add_color(bcx, cmd);
-
-    if bcx.build_config.json_messages() {
-        cmd.arg("--error-format").arg("json");
-    }
+    add_error_format(bcx, cmd);
 
     if !test {
         for crate_type in crate_types.iter() {
