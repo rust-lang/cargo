@@ -93,7 +93,7 @@ mod imp {
 
         // Indicate that when all handles to the job object are gone that all
         // process in the object should be killed. Note that this includes our
-        // entire process tree by default because we've added ourselves and and
+        // entire process tree by default because we've added ourselves and
         // our children will reside in the job once we spawn a process.
         let mut info: JOBOBJECT_EXTENDED_LIMIT_INFORMATION;
         info = mem::zeroed();
