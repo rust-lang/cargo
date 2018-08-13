@@ -37,7 +37,7 @@ fn override_simple() {
 
     assert_that(
         p.cargo("build"),
-        execs().with_status(0).with_stderr(
+        execs().with_stderr(
             "\
 [UPDATING] registry `file://[..]`
 [UPDATING] git repository `[..]`
@@ -191,7 +191,7 @@ fn transitive() {
 
     assert_that(
         p.cargo("build"),
-        execs().with_status(0).with_stderr(
+        execs().with_stderr(
             "\
 [UPDATING] registry `file://[..]`
 [UPDATING] git repository `[..]`
@@ -204,7 +204,7 @@ fn transitive() {
         ),
     );
 
-    assert_that(p.cargo("build"), execs().with_status(0).with_stdout(""));
+    assert_that(p.cargo("build"), execs().with_stdout(""));
 }
 
 #[test]
@@ -240,7 +240,7 @@ fn persists_across_rebuilds() {
 
     assert_that(
         p.cargo("build"),
-        execs().with_status(0).with_stderr(
+        execs().with_stderr(
             "\
 [UPDATING] registry `file://[..]`
 [UPDATING] git repository `file://[..]`
@@ -251,7 +251,7 @@ fn persists_across_rebuilds() {
         ),
     );
 
-    assert_that(p.cargo("build"), execs().with_status(0).with_stdout(""));
+    assert_that(p.cargo("build"), execs().with_stdout(""));
 }
 
 #[test]
@@ -284,7 +284,7 @@ fn replace_registry_with_path() {
 
     assert_that(
         p.cargo("build"),
-        execs().with_status(0).with_stderr(
+        execs().with_stderr(
             "\
 [UPDATING] registry `file://[..]`
 [COMPILING] bar v0.1.0 (file://[..])
@@ -347,7 +347,7 @@ fn use_a_spec_to_select() {
 
     assert_that(
         p.cargo("build"),
-        execs().with_status(0).with_stderr(
+        execs().with_stderr(
             "\
 [UPDATING] registry `file://[..]`
 [UPDATING] git repository `[..]`
@@ -408,7 +408,7 @@ fn override_adds_some_deps() {
 
     assert_that(
         p.cargo("build"),
-        execs().with_status(0).with_stderr(
+        execs().with_stderr(
             "\
 [UPDATING] registry `file://[..]`
 [UPDATING] git repository `[..]`
@@ -421,14 +421,14 @@ fn override_adds_some_deps() {
         ),
     );
 
-    assert_that(p.cargo("build"), execs().with_status(0).with_stdout(""));
+    assert_that(p.cargo("build"), execs().with_stdout(""));
 
     Package::new("baz", "0.1.2").publish();
     assert_that(
         p.cargo("update")
             .arg("-p")
             .arg(&format!("{}#bar", foo.url())),
-        execs().with_status(0).with_stderr(
+        execs().with_stderr(
             "\
 [UPDATING] git repository `file://[..]`
 [UPDATING] registry `file://[..]`
@@ -439,14 +439,14 @@ fn override_adds_some_deps() {
         p.cargo("update")
             .arg("-p")
             .arg("https://github.com/rust-lang/crates.io-index#bar"),
-        execs().with_status(0).with_stderr(
+        execs().with_stderr(
             "\
 [UPDATING] registry `file://[..]`
 ",
         ),
     );
 
-    assert_that(p.cargo("build"), execs().with_status(0).with_stdout(""));
+    assert_that(p.cargo("build"), execs().with_stdout(""));
 }
 
 #[test]
@@ -495,10 +495,10 @@ fn locked_means_locked_yes_no_seriously_i_mean_locked() {
         .file("src/lib.rs", "")
         .build();
 
-    assert_that(p.cargo("build"), execs().with_status(0));
+    assert_that(p.cargo("build"), execs());
 
-    assert_that(p.cargo("build"), execs().with_status(0).with_stdout(""));
-    assert_that(p.cargo("build"), execs().with_status(0).with_stdout(""));
+    assert_that(p.cargo("build"), execs().with_stdout(""));
+    assert_that(p.cargo("build"), execs().with_stdout(""));
 }
 
 #[test]
@@ -751,10 +751,10 @@ fn update() {
         .file("src/lib.rs", "")
         .build();
 
-    assert_that(p.cargo("generate-lockfile"), execs().with_status(0));
+    assert_that(p.cargo("generate-lockfile"), execs());
     assert_that(
         p.cargo("update"),
-        execs().with_status(0).with_stderr(
+        execs().with_stderr(
             "\
 [UPDATING] registry `[..]`
 [UPDATING] git repository `[..]`
@@ -807,7 +807,7 @@ fn no_override_self() {
         .file("src/lib.rs", "#![no_std] pub extern crate near;")
         .build();
 
-    assert_that(p.cargo("build").arg("--verbose"), execs().with_status(0));
+    assert_that(p.cargo("build").arg("--verbose"), execs());
 }
 
 #[test]
@@ -860,7 +860,7 @@ fn broken_path_override_warns() {
 
     assert_that(
         p.cargo("build"),
-        execs().with_status(0).with_stderr(
+        execs().with_stderr(
             "\
 [UPDATING] [..]
 warning: path override for crate `a` has altered the original list of
@@ -995,7 +995,7 @@ fn override_an_override() {
         .file("serde/src/lib.rs", "pub fn serde08_override() {}")
         .build();
 
-    assert_that(p.cargo("build").arg("-v"), execs().with_status(0));
+    assert_that(p.cargo("build").arg("-v"), execs());
 }
 
 #[test]
@@ -1044,11 +1044,10 @@ fn overriding_nonexistent_no_spurious() {
         .file("src/lib.rs", "")
         .build();
 
-    assert_that(p.cargo("build"), execs().with_status(0));
+    assert_that(p.cargo("build"), execs());
     assert_that(
         p.cargo("build"),
         execs()
-            .with_status(0)
             .with_stderr(
                 "\
 [WARNING] package replacement is not used: [..]baz:0.1.0
@@ -1094,7 +1093,7 @@ fn no_warnings_when_replace_is_used_in_another_workspace_member() {
 
     assert_that(
         p.cargo("build").cwd(p.root().join("first_crate")),
-        execs().with_status(0).with_stdout("").with_stderr(
+        execs().with_stdout("").with_stderr(
             "\
 [UPDATING] registry `[..]`
 [COMPILING] bar v0.1.0 ([..])
@@ -1105,7 +1104,7 @@ fn no_warnings_when_replace_is_used_in_another_workspace_member() {
 
     assert_that(
         p.cargo("build").cwd(p.root().join("second_crate")),
-        execs().with_status(0).with_stdout("").with_stderr(
+        execs().with_stdout("").with_stderr(
             "\
 [COMPILING] second_crate v0.1.0 ([..])
 [FINISHED] [..]",
@@ -1150,7 +1149,7 @@ fn override_to_path_dep() {
         .file(".cargo/config", r#"paths = ["bar"]"#)
         .build();
 
-    assert_that(p.cargo("build"), execs().with_status(0));
+    assert_that(p.cargo("build"), execs());
 }
 
 #[test]
@@ -1192,7 +1191,7 @@ fn replace_to_path_dep() {
         .file("bar/baz/src/lib.rs", "pub fn baz() {}")
         .build();
 
-    assert_that(p.cargo("build"), execs().with_status(0));
+    assert_that(p.cargo("build"), execs());
 }
 
 #[test]
@@ -1244,7 +1243,7 @@ fn paths_ok_with_optional() {
 
     assert_that(
         p.cargo("build"),
-        execs().with_status(0).with_stderr(
+        execs().with_stderr(
             "\
 [COMPILING] bar v0.1.0 ([..]bar2)
 [COMPILING] foo v0.0.1 ([..])
@@ -1292,7 +1291,7 @@ fn paths_add_optional_bad() {
 
     assert_that(
         p.cargo("build"),
-        execs().with_status(0).with_stderr_contains(
+        execs().with_stderr_contains(
             "\
 warning: path override for crate `bar` has altered the original list of
 dependencies; the dependency on `baz` was either added or\
@@ -1360,7 +1359,7 @@ fn override_with_default_feature() {
         .file("another2/src/lib.rs", "")
         .build();
 
-    assert_that(p.cargo("run"), execs().with_status(0));
+    assert_that(p.cargo("run"), execs());
 }
 
 #[test]

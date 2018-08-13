@@ -1,6 +1,6 @@
-use support::{basic_manifest, execs, project};
-use support::registry::Package;
 use support::hamcrest::assert_that;
+use support::registry::Package;
+use support::{basic_manifest, execs, project};
 
 #[test]
 fn bad1() {
@@ -153,13 +153,13 @@ fn bad_cargo_config_jobs() {
         .build();
     assert_that(
         p.cargo("build").arg("-v"),
-        execs()
-            .with_status(101)
-            .with_stderr("\
-[ERROR] error in [..].cargo[/]config: \
+        execs().with_status(101).with_stderr(
+            "\
+[ERROR] error in [..].cargo/config: \
 could not load config key `build.jobs`: \
 invalid value: integer `-1`, expected u32
-"),
+",
+        ),
     );
 }
 
@@ -175,7 +175,7 @@ fn default_cargo_config_jobs() {
         "#,
         )
         .build();
-    assert_that(p.cargo("build").arg("-v"), execs().with_status(0));
+    assert_that(p.cargo("build").arg("-v"), execs());
 }
 
 #[test]
@@ -190,7 +190,7 @@ fn good_cargo_config_jobs() {
         "#,
         )
         .build();
-    assert_that(p.cargo("build").arg("-v"), execs().with_status(0));
+    assert_that(p.cargo("build").arg("-v"), execs());
 }
 
 #[test]
@@ -371,17 +371,7 @@ fn bad_dependency_in_lockfile() {
         )
         .build();
 
-    assert_that(
-        p.cargo("build"),
-        execs().with_status(101).with_stderr(
-            "\
-[ERROR] failed to parse lock file at: [..]
-
-Caused by:
-  package `bar 0.1.0 ([..])` is specified as a dependency, but is missing from the package list
-",
-        ),
-    );
+    assert_that(p.cargo("build"), execs());
 }
 
 #[test]
@@ -693,12 +683,39 @@ fn unused_keys() {
 
     assert_that(
         p.cargo("build"),
-        execs().with_status(0).with_stderr(
+        execs().with_stderr(
             "\
 warning: unused manifest key: target.foo.bar
 [COMPILING] foo v0.1.0 (file:///[..])
 [FINISHED] dev [unoptimized + debuginfo] target(s) in [..]
 ",
+        ),
+    );
+
+    let p = project()
+        .file(
+            "Cargo.toml",
+            r#"
+           [package]
+           name = "foo"
+           version = "0.1.0"
+           authors = []
+
+           [profile.debug]
+           debug = 1
+        "#,
+        )
+        .file("src/lib.rs", "")
+        .build();
+
+    assert_that(
+        p.cargo("build"),
+        execs().with_stderr(
+            "\
+warning: unused manifest key: profile.debug
+warning: use `[profile.dev]` to configure debug builds
+[..]
+[..]",
         ),
     );
 
@@ -718,7 +735,7 @@ warning: unused manifest key: target.foo.bar
         .build();
     assert_that(
         p.cargo("build"),
-        execs().with_status(0).with_stderr(
+        execs().with_stderr(
             "\
 warning: unused manifest key: project.bulid
 [COMPILING] foo [..]
@@ -727,7 +744,8 @@ warning: unused manifest key: project.bulid
         ),
     );
 
-    let p = project().at("bar")
+    let p = project()
+        .at("bar")
         .file(
             "Cargo.toml",
             r#"
@@ -745,7 +763,7 @@ warning: unused manifest key: project.bulid
         .build();
     assert_that(
         p.cargo("build"),
-        execs().with_status(0).with_stderr(
+        execs().with_stderr(
             "\
 warning: unused manifest key: lib.build
 [COMPILING] foo [..]
@@ -771,7 +789,7 @@ fn unused_keys_in_virtual_manifest() {
         .build();
     assert_that(
         p.cargo("build --all"),
-        execs().with_status(0).with_stderr(
+        execs().with_stderr(
             "\
 warning: unused manifest key: workspace.bulid
 [COMPILING] bar [..]
@@ -803,7 +821,7 @@ fn empty_dependencies() {
 
     assert_that(
         p.cargo("build"),
-        execs().with_status(0).with_stderr_contains(
+        execs().with_stderr_contains(
             "\
 warning: dependency (bar) specified without providing a local path, Git repository, or version \
 to use. This will be considered an error in future versions
@@ -821,7 +839,7 @@ fn invalid_toml_historically_allowed_is_warned() {
 
     assert_that(
         p.cargo("build"),
-        execs().with_status(0).with_stderr(
+        execs().with_stderr(
             "\
 warning: TOML file found which contains invalid syntax and will soon not parse
 at `[..]config`.
@@ -859,7 +877,7 @@ fn ambiguous_git_reference() {
 
     assert_that(
         p.cargo("build").arg("-v"),
-        execs().with_stderr_contains(
+        execs().with_status(101).with_stderr_contains(
             "\
 [WARNING] dependency (bar) specification is ambiguous. \
 Only one of `branch`, `tag` or `rev` is allowed. \
@@ -1079,7 +1097,7 @@ fn both_git_and_path_specified() {
 
     assert_that(
         foo.cargo("build").arg("-v"),
-        execs().with_stderr_contains(
+        execs().with_status(101).with_stderr_contains(
             "\
 [WARNING] dependency (bar) specification is ambiguous. \
 Only one of `git` or `path` is allowed. \
@@ -1144,7 +1162,7 @@ fn ignored_git_revision() {
 
     assert_that(
         foo.cargo("build").arg("-v"),
-        execs().with_stderr_contains(
+        execs().with_status(101).with_stderr_contains(
             "\
              [WARNING] key `branch` is ignored for dependency (bar). \
              This will be considered an error in future versions",

@@ -61,7 +61,7 @@ fn cargo_compile_simple_git_dep() {
              [COMPILING] dep1 v0.5.0 ({}#[..])\n\
              [COMPILING] foo v0.5.0 ({})\n\
              [FINISHED] dev [unoptimized + debuginfo] target(s) in [..]\n",
-            path2url(git_root.clone()),
+            path2url(&git_root),
             path2url(git_root),
             path2url(root)
         )),
@@ -146,12 +146,12 @@ fn cargo_compile_offline_with_cached_git_dep() {
             rev = "{}"
             "#,
                     git_project.url(),
-                    rev1.clone()
+                    rev1
                 ),
             )
             .file("src/main.rs", "fn main(){}")
             .build();
-        assert_that(prj.cargo("build"), execs().with_status(0));
+        assert_that(prj.cargo("build"), execs());
 
         File::create(&prj.root().join("Cargo.toml"))
             .unwrap()
@@ -166,10 +166,10 @@ fn cargo_compile_offline_with_cached_git_dep() {
             rev = "{}"
             "#,
                 git_project.url(),
-                rev2.clone()
+                rev2
             ).as_bytes())
             .unwrap();
-        assert_that(prj.cargo("build"), execs().with_status(0));
+        assert_that(prj.cargo("build"), execs());
     }
 
     let p = project()
@@ -303,7 +303,7 @@ fn cargo_compile_git_dep_branch() {
              [COMPILING] dep1 v0.5.0 ({}?branch=branchy#[..])\n\
              [COMPILING] foo v0.5.0 ({})\n\
              [FINISHED] dev [unoptimized + debuginfo] target(s) in [..]\n",
-            path2url(git_root.clone()),
+            path2url(&git_root),
             path2url(git_root),
             path2url(root)
         )),
@@ -376,7 +376,7 @@ fn cargo_compile_git_dep_tag() {
              [COMPILING] dep1 v0.5.0 ({}?tag=v0.1.0#[..])\n\
              [COMPILING] foo v0.5.0 ({})\n\
              [FINISHED] dev [unoptimized + debuginfo] target(s) in [..]\n",
-            path2url(git_root.clone()),
+            path2url(&git_root),
             path2url(git_root),
             path2url(root)
         )),
@@ -389,7 +389,7 @@ fn cargo_compile_git_dep_tag() {
         execs().with_stdout("hello world\n"),
     );
 
-    assert_that(project.cargo("build"), execs().with_status(0));
+    assert_that(project.cargo("build"), execs());
 }
 
 #[test]
@@ -627,7 +627,7 @@ fn cargo_compile_with_short_ssh_git() {
 
     assert_that(
         p.cargo("build"),
-        execs().with_stdout("").with_stderr(&format!(
+        execs().with_status(101).with_stdout("").with_stderr(&format!(
             "\
 [ERROR] failed to parse manifest at `[..]`
 
@@ -720,9 +720,9 @@ fn two_revs_same_deps() {
         )
         .build();
 
-    assert_that(foo.cargo("build").arg("-v"), execs().with_status(0));
+    assert_that(foo.cargo("build").arg("-v"), execs());
     assert_that(&foo.bin("foo"), existing_file());
-    assert_that(foo.process(&foo.bin("foo")), execs().with_status(0));
+    assert_that(foo.process(&foo.bin("foo")), execs());
 }
 
 #[test]
@@ -1050,15 +1050,13 @@ fn dep_with_submodule() {
 
     assert_that(
         project.cargo("build"),
-        execs()
-            .with_stderr(
-                "\
+        execs().with_stderr(
+            "\
 [UPDATING] git repository [..]
 [COMPILING] dep1 [..]
 [COMPILING] foo [..]
 [FINISHED] dev [unoptimized + debuginfo] target(s) in [..]\n",
-            )
-            .with_status(0),
+        ),
     );
 }
 
@@ -1241,8 +1239,8 @@ fn stale_cached_version() {
         )
         .build();
 
-    assert_that(foo.cargo("build"), execs().with_status(0));
-    assert_that(foo.process(&foo.bin("foo")), execs().with_status(0));
+    assert_that(foo.cargo("build"), execs());
+    assert_that(foo.process(&foo.bin("foo")), execs());
 
     // Update the repo, and simulate someone else updating the lockfile and then
     // us pulling it down.
@@ -1284,7 +1282,7 @@ fn stale_cached_version() {
     // Now build!
     assert_that(
         foo.cargo("build"),
-        execs().with_status(0).with_stderr(&format!(
+        execs().with_stderr(&format!(
             "\
 [UPDATING] git repository `{bar}`
 [COMPILING] bar v0.0.0 ({bar}#[..])
@@ -1295,7 +1293,7 @@ fn stale_cached_version() {
             foo = foo.url()
         )),
     );
-    assert_that(foo.process(&foo.bin("foo")), execs().with_status(0));
+    assert_that(foo.process(&foo.bin("foo")), execs());
 }
 
 #[test]
@@ -1351,10 +1349,9 @@ fn dep_with_changed_submodule() {
                  [COMPILING] foo v0.5.0 ([..])\n\
                  [FINISHED] dev [unoptimized + debuginfo] target(s) in \
                  [..]\n\
-                 [RUNNING] `target[/]debug[/]foo[EXE]`\n",
+                 [RUNNING] `target/debug/foo[EXE]`\n",
             )
-            .with_stdout("project2\n")
-            .with_status(0),
+            .with_stdout("project2\n"),
     );
 
     File::create(&git_project.root().join(".gitmodules"))
@@ -1409,10 +1406,9 @@ fn dep_with_changed_submodule() {
                  [COMPILING] foo v0.5.0 ([..])\n\
                  [FINISHED] dev [unoptimized + debuginfo] target(s) in \
                  [..]\n\
-                 [RUNNING] `target[/]debug[/]foo[EXE]`\n",
+                 [RUNNING] `target/debug/foo[EXE]`\n",
             )
-            .with_stdout("project3\n")
-            .with_status(0),
+            .with_stdout("project3\n"),
     );
 }
 
@@ -1486,7 +1482,7 @@ fn dev_deps_with_testing() {
 [COMPILING] [..] v0.5.0 ([..])
 [COMPILING] [..] v0.5.0 ([..]
 [FINISHED] dev [unoptimized + debuginfo] target(s) in [..]
-[RUNNING] target[/]debug[/]deps[/]foo-[..][EXE]",
+[RUNNING] target/debug/deps/foo-[..][EXE]",
             )
             .with_stdout_contains("test tests::foo ... ok"),
     );
@@ -1516,7 +1512,7 @@ fn git_build_cmd_freshness() {
 
     assert_that(
         foo.cargo("build"),
-        execs().with_status(0).with_stderr(&format!(
+        execs().with_stderr(&format!(
             "\
 [COMPILING] foo v0.0.0 ({url})
 [FINISHED] dev [unoptimized + debuginfo] target(s) in [..]
@@ -1527,12 +1523,12 @@ fn git_build_cmd_freshness() {
 
     // Smoke test to make sure it doesn't compile again
     println!("first pass");
-    assert_that(foo.cargo("build"), execs().with_status(0).with_stdout(""));
+    assert_that(foo.cargo("build"), execs().with_stdout(""));
 
     // Modify an ignored file and make sure we don't rebuild
     println!("second pass");
     File::create(&foo.root().join("src/bar.rs")).unwrap();
-    assert_that(foo.cargo("build"), execs().with_status(0).with_stdout(""));
+    assert_that(foo.cargo("build"), execs().with_stdout(""));
 }
 
 #[test]
@@ -1733,7 +1729,7 @@ fn git_dep_build_cmd() {
 
     p.root().join("bar").move_into_the_past();
 
-    assert_that(p.cargo("build"), execs().with_status(0));
+    assert_that(p.cargo("build"), execs());
 
     assert_that(process(&p.bin("foo")), execs().with_stdout("0\n"));
 
@@ -1743,7 +1739,7 @@ fn git_dep_build_cmd() {
         .write_all(b"pub fn gimme() -> i32 { 1 }")
         .unwrap();
 
-    assert_that(p.cargo("build"), execs().with_status(0));
+    assert_that(p.cargo("build"), execs());
 
     assert_that(process(&p.bin("foo")), execs().with_stdout("1\n"));
 }
@@ -1775,13 +1771,13 @@ fn fetch_downloads() {
         .build();
     assert_that(
         p.cargo("fetch"),
-        execs().with_status(0).with_stderr(&format!(
+        execs().with_stderr(&format!(
             "[UPDATING] git repository `{url}`",
             url = bar.url()
         )),
     );
 
-    assert_that(p.cargo("fetch"), execs().with_status(0).with_stdout(""));
+    assert_that(p.cargo("fetch"), execs().with_stdout(""));
 }
 
 #[test]
@@ -1877,7 +1873,7 @@ fn update_ambiguous() {
         .file("src/main.rs", "fn main() {}")
         .build();
 
-    assert_that(p.cargo("generate-lockfile"), execs().with_status(0));
+    assert_that(p.cargo("generate-lockfile"), execs());
     assert_that(
         p.cargo("update").arg("-p").arg("bar"),
         execs().with_status(101).with_stderr(
@@ -1924,11 +1920,10 @@ fn update_one_dep_in_repo_with_many_deps() {
         .file("src/main.rs", "fn main() {}")
         .build();
 
-    assert_that(p.cargo("generate-lockfile"), execs().with_status(0));
+    assert_that(p.cargo("generate-lockfile"), execs());
     assert_that(
         p.cargo("update").arg("-p").arg("bar"),
         execs()
-            .with_status(0)
             .with_stderr(&format!("[UPDATING] git repository `{}`", bar.url())),
     );
 }
@@ -1999,7 +1994,7 @@ fn switch_deps_does_not_update_transitive() {
 
     assert_that(
         p.cargo("build"),
-        execs().with_status(0).with_stderr(&format!(
+        execs().with_stderr(&format!(
             "\
 [UPDATING] git repository `{}`
 [UPDATING] git repository `{}`
@@ -2034,7 +2029,7 @@ fn switch_deps_does_not_update_transitive() {
 
     assert_that(
         p.cargo("build"),
-        execs().with_status(0).with_stderr(&format!(
+        execs().with_stderr(&format!(
             "\
 [UPDATING] git repository `{}`
 [COMPILING] dep [..]
@@ -2085,7 +2080,7 @@ fn update_one_source_updates_all_packages_in_that_git_source() {
         .file("src/main.rs", "fn main() {}")
         .build();
 
-    assert_that(p.cargo("build"), execs().with_status(0));
+    assert_that(p.cargo("build"), execs());
 
     let repo = git2::Repository::open(&dep.root()).unwrap();
     let rev1 = repo.revparse_single("HEAD").unwrap().id();
@@ -2100,7 +2095,7 @@ fn update_one_source_updates_all_packages_in_that_git_source() {
 
     assert_that(
         p.cargo("update").arg("-p").arg("dep"),
-        execs().with_status(0),
+        execs(),
     );
     let mut lockfile = String::new();
     File::open(&p.root().join("Cargo.lock"))
@@ -2160,7 +2155,7 @@ fn switch_sources() {
 
     assert_that(
         p.cargo("build"),
-        execs().with_status(0).with_stderr(
+        execs().with_stderr(
             "\
 [UPDATING] git repository `file://[..]a1`
 [COMPILING] a v0.5.0 ([..]a1#[..]
@@ -2190,7 +2185,7 @@ fn switch_sources() {
 
     assert_that(
         p.cargo("build"),
-        execs().with_status(0).with_stderr(
+        execs().with_stderr(
             "\
 [UPDATING] git repository `file://[..]a2`
 [COMPILING] a v0.5.1 ([..]a2#[..]
@@ -2233,7 +2228,7 @@ fn dont_require_submodules_are_checked_out() {
 
     assert_that(
         git1.cargo("build").arg("-v").cwd(&dst),
-        execs().with_status(0),
+        execs(),
     );
 }
 
@@ -2286,7 +2281,7 @@ fn doctest_same_name() {
         )
         .build();
 
-    assert_that(p.cargo("test").arg("-v"), execs().with_status(0));
+    assert_that(p.cargo("test").arg("-v"), execs());
 }
 
 #[test]
@@ -2322,7 +2317,7 @@ fn lints_are_suppressed() {
 
     assert_that(
         p.cargo("build"),
-        execs().with_status(0).with_stderr(
+        execs().with_stderr(
             "\
 [UPDATING] git repository `[..]`
 [COMPILING] a v0.5.0 ([..])
@@ -2367,7 +2362,7 @@ fn denied_lints_are_allowed() {
 
     assert_that(
         p.cargo("build"),
-        execs().with_status(0).with_stderr(
+        execs().with_stderr(
             "\
 [UPDATING] git repository `[..]`
 [COMPILING] a v0.5.0 ([..])
@@ -2407,7 +2402,7 @@ fn add_a_git_dep() {
         .file("a/src/lib.rs", "")
         .build();
 
-    assert_that(p.cargo("build"), execs().with_status(0));
+    assert_that(p.cargo("build"), execs());
 
     File::create(p.root().join("a/Cargo.toml"))
         .unwrap()
@@ -2427,7 +2422,7 @@ fn add_a_git_dep() {
         )
         .unwrap();
 
-    assert_that(p.cargo("build"), execs().with_status(0));
+    assert_that(p.cargo("build"), execs());
 }
 
 #[test]
@@ -2470,8 +2465,8 @@ fn two_at_rev_instead_of_tag() {
         .file("src/lib.rs", "")
         .build();
 
-    assert_that(p.cargo("generate-lockfile"), execs().with_status(0));
-    assert_that(p.cargo("build").arg("-v"), execs().with_status(0));
+    assert_that(p.cargo("generate-lockfile"), execs());
+    assert_that(p.cargo("build").arg("-v"), execs());
 }
 
 #[test]
@@ -2538,7 +2533,7 @@ fn include_overrides_gitignore() {
     println!("build 1: all is new");
     assert_that(
         p.cargo("build").arg("-v"),
-        execs().with_status(0).with_stderr(
+        execs().with_stderr(
             "\
 [UPDATING] registry `[..]`
 [DOWNLOADING] filetime [..]
@@ -2549,8 +2544,8 @@ fn include_overrides_gitignore() {
 [RUNNING] `rustc --crate-name filetime [..]`
 [COMPILING] reduction [..]
 [RUNNING] `rustc --crate-name build_script_tango_build tango-build.rs --crate-type bin [..]`
-[RUNNING] `[..][/]build-script-tango-build`
-[RUNNING] `rustc --crate-name reduction src[/]lib.rs --crate-type lib [..]`
+[RUNNING] `[..]/build-script-tango-build`
+[RUNNING] `rustc --crate-name reduction src/lib.rs --crate-type lib [..]`
 [FINISHED] dev [unoptimized + debuginfo] target(s) in [..]
 ",
         ),
@@ -2559,7 +2554,7 @@ fn include_overrides_gitignore() {
     println!("build 2: nothing changed; file timestamps reset by build script");
     assert_that(
         p.cargo("build").arg("-v"),
-        execs().with_status(0).with_stderr(
+        execs().with_stderr(
             "\
 [FRESH] libc [..]
 [FRESH] filetime [..]
@@ -2575,12 +2570,12 @@ fn include_overrides_gitignore() {
 
     assert_that(
         p.cargo("build").arg("-v"),
-        execs().with_status(0).with_stderr(
+        execs().with_stderr(
             "\
 [FRESH] libc [..]
 [FRESH] filetime [..]
 [COMPILING] reduction [..]
-[RUNNING] `rustc --crate-name reduction src[/]lib.rs --crate-type lib [..]`
+[RUNNING] `rustc --crate-name reduction src/lib.rs --crate-type lib [..]`
 [FINISHED] dev [unoptimized + debuginfo] target(s) in [..]
 ",
         ),
@@ -2595,13 +2590,13 @@ fn include_overrides_gitignore() {
 
     assert_that(
         p.cargo("build").arg("-v"),
-        execs().with_status(0).with_stderr(
+        execs().with_stderr(
             "\
 [FRESH] libc [..]
 [FRESH] filetime [..]
 [COMPILING] reduction [..]
-[RUNNING] `[..][/]build-script-tango-build`
-[RUNNING] `rustc --crate-name reduction src[/]lib.rs --crate-type lib [..]`
+[RUNNING] `[..]/build-script-tango-build`
+[RUNNING] `rustc --crate-name reduction src/lib.rs --crate-type lib [..]`
 [FINISHED] dev [unoptimized + debuginfo] target(s) in [..]
 ",
         ),
@@ -2664,7 +2659,7 @@ fn invalid_git_dependency_manifest() {
 
     assert_that(
         project.cargo("build"),
-        execs().with_stderr(&format!(
+        execs().with_status(101).with_stderr(&format!(
             "[UPDATING] git repository `{}`\n\
              error: failed to load source for a dependency on `dep1`\n\
              \n\
@@ -2679,7 +2674,7 @@ fn invalid_git_dependency_manifest() {
              \n\
              Caused by:\n  \
              duplicate key: `categories` for key `project`",
-            path2url(git_root.clone()),
+            path2url(&git_root),
             path2url(git_root),
         )),
     );

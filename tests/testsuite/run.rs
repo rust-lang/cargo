@@ -12,12 +12,11 @@ fn simple() {
     assert_that(
         p.cargo("run"),
         execs()
-            .with_status(0)
             .with_stderr(&format!(
                 "\
 [COMPILING] foo v0.0.1 ({dir})
 [FINISHED] dev [unoptimized + debuginfo] target(s) in [..]
-[RUNNING] `target[/]debug[/]foo[EXE]`",
+[RUNNING] `target/debug/foo[EXE]`",
                 dir = path2url(p.root())
             ))
             .with_stdout("hello"),
@@ -33,12 +32,12 @@ fn simple_quiet() {
 
     assert_that(
         p.cargo("run -q"),
-        execs().with_status(0).with_stdout("hello"),
+        execs().with_stdout("hello"),
     );
 
     assert_that(
         p.cargo("run --quiet"),
-        execs().with_status(0).with_stdout("hello"),
+        execs().with_stdout("hello"),
     );
 }
 
@@ -69,7 +68,7 @@ fn quiet_and_verbose_config() {
         .file("src/main.rs", r#"fn main() { println!("hello"); }"#)
         .build();
 
-    assert_that(p.cargo("run").arg("-q"), execs().with_status(0));
+    assert_that(p.cargo("run").arg("-q"), execs());
 }
 
 #[test]
@@ -88,7 +87,7 @@ fn simple_with_args() {
 
     assert_that(
         p.cargo("run").arg("hello").arg("world"),
-        execs().with_status(0),
+        execs(),
     );
 }
 
@@ -209,14 +208,13 @@ fn specify_name() {
     assert_that(
         p.cargo("run").arg("--bin").arg("a").arg("-v"),
         execs()
-            .with_status(0)
             .with_stderr(&format!(
                 "\
 [COMPILING] foo v0.0.1 ({dir})
-[RUNNING] `rustc [..] src[/]lib.rs [..]`
-[RUNNING] `rustc [..] src[/]bin[/]a.rs [..]`
+[RUNNING] `rustc [..] src/lib.rs [..]`
+[RUNNING] `rustc [..] src/bin/a.rs [..]`
 [FINISHED] dev [unoptimized + debuginfo] target(s) in [..]
-[RUNNING] `target[/]debug[/]a[EXE]`",
+[RUNNING] `target/debug/a[EXE]`",
                 dir = path2url(p.root())
             ))
             .with_stdout("hello a.rs"),
@@ -225,13 +223,12 @@ fn specify_name() {
     assert_that(
         p.cargo("run").arg("--bin").arg("b").arg("-v"),
         execs()
-            .with_status(0)
             .with_stderr(
                 "\
 [COMPILING] foo v0.0.1 ([..])
-[RUNNING] `rustc [..] src[/]bin[/]b.rs [..]`
+[RUNNING] `rustc [..] src/bin/b.rs [..]`
 [FINISHED] dev [unoptimized + debuginfo] target(s) in [..]
-[RUNNING] `target[/]debug[/]b[EXE]`",
+[RUNNING] `target/debug/b[EXE]`",
             )
             .with_stdout("hello b.rs"),
     );
@@ -260,19 +257,16 @@ fn specify_default_run() {
     assert_that(
         p.cargo("run").masquerade_as_nightly_cargo(),
         execs()
-            .with_status(0)
             .with_stdout("hello A"),
     );
     assert_that(
         p.cargo("run").masquerade_as_nightly_cargo().arg("--bin").arg("a"),
         execs()
-            .with_status(0)
             .with_stdout("hello A"),
     );
     assert_that(
         p.cargo("run").masquerade_as_nightly_cargo().arg("--bin").arg("b"),
         execs()
-            .with_status(0)
             .with_stdout("hello B"),
     );
 }
@@ -366,12 +360,11 @@ fn run_example() {
     assert_that(
         p.cargo("run").arg("--example").arg("a"),
         execs()
-            .with_status(0)
             .with_stderr(&format!(
                 "\
 [COMPILING] foo v0.0.1 ({dir})
 [FINISHED] dev [unoptimized + debuginfo] target(s) in [..]
-[RUNNING] `target[/]debug[/]examples[/]a[EXE]`",
+[RUNNING] `target/debug/examples/a[EXE]`",
                 dir = path2url(p.root())
             ))
             .with_stdout("example"),
@@ -493,12 +486,11 @@ fn run_example_autodiscover_2015_with_autoexamples_enabled() {
             .arg("a")
             .masquerade_as_nightly_cargo(),
         execs()
-            .with_status(0)
             .with_stderr(&format!(
                 "\
 [COMPILING] foo v0.0.1 ({dir})
 [FINISHED] dev [unoptimized + debuginfo] target(s) in [..]
-[RUNNING] `target[/]debug[/]examples[/]a[EXE]`",
+[RUNNING] `target/debug/examples/a[EXE]`",
                 dir = path2url(p.root())
             ))
             .with_stdout("example"),
@@ -536,12 +528,11 @@ fn run_example_autodiscover_2018() {
             .arg("a")
             .masquerade_as_nightly_cargo(),
         execs()
-            .with_status(0)
             .with_stderr(&format!(
                 "\
 [COMPILING] foo v0.0.1 ({dir})
 [FINISHED] dev [unoptimized + debuginfo] target(s) in [..]
-[RUNNING] `target[/]debug[/]examples[/]a[EXE]`",
+[RUNNING] `target/debug/examples/a[EXE]`",
                 dir = path2url(p.root())
             ))
             .with_stdout("example"),
@@ -646,12 +637,11 @@ fn one_bin_multiple_examples() {
     assert_that(
         p.cargo("run"),
         execs()
-            .with_status(0)
             .with_stderr(&format!(
                 "\
 [COMPILING] foo v0.0.1 ({dir})
 [FINISHED] dev [unoptimized + debuginfo] target(s) in [..]
-[RUNNING] `target[/]debug[/]main[EXE]`",
+[RUNNING] `target/debug/main[EXE]`",
                 dir = path2url(p.root())
             ))
             .with_stdout("hello main.rs"),
@@ -711,26 +701,25 @@ fn example_with_release_flag() {
             .arg("--example")
             .arg("a"),
         execs()
-            .with_status(0)
             .with_stderr(&format!(
                 "\
 [COMPILING] bar v0.5.0 ({url}/bar)
-[RUNNING] `rustc --crate-name bar bar[/]src[/]bar.rs --crate-type lib \
+[RUNNING] `rustc --crate-name bar bar/src/bar.rs --crate-type lib \
         --emit=dep-info,link \
         -C opt-level=3 \
         -C metadata=[..] \
-        --out-dir {dir}[/]target[/]release[/]deps \
-        -L dependency={dir}[/]target[/]release[/]deps`
+        --out-dir {dir}/target/release/deps \
+        -L dependency={dir}/target/release/deps`
 [COMPILING] foo v0.0.1 ({url})
-[RUNNING] `rustc --crate-name a examples[/]a.rs --crate-type bin \
+[RUNNING] `rustc --crate-name a examples/a.rs --crate-type bin \
         --emit=dep-info,link \
         -C opt-level=3 \
         -C metadata=[..] \
-        --out-dir {dir}[/]target[/]release[/]examples \
-        -L dependency={dir}[/]target[/]release[/]deps \
-         --extern bar={dir}[/]target[/]release[/]deps[/]libbar-[..].rlib`
+        --out-dir {dir}/target/release/examples \
+        -L dependency={dir}/target/release/deps \
+         --extern bar={dir}/target/release/deps/libbar-[..].rlib`
 [FINISHED] release [optimized] target(s) in [..]
-[RUNNING] `target[/]release[/]examples[/]a[EXE]`
+[RUNNING] `target/release/examples/a[EXE]`
 ",
                 dir = p.root().display(),
                 url = path2url(p.root()),
@@ -745,26 +734,25 @@ fast2",
     assert_that(
         p.cargo("run").arg("-v").arg("--example").arg("a"),
         execs()
-            .with_status(0)
             .with_stderr(&format!(
                 "\
 [COMPILING] bar v0.5.0 ({url}/bar)
-[RUNNING] `rustc --crate-name bar bar[/]src[/]bar.rs --crate-type lib \
+[RUNNING] `rustc --crate-name bar bar/src/bar.rs --crate-type lib \
         --emit=dep-info,link \
         -C debuginfo=2 \
         -C metadata=[..] \
-        --out-dir {dir}[/]target[/]debug[/]deps \
-        -L dependency={dir}[/]target[/]debug[/]deps`
+        --out-dir {dir}/target/debug/deps \
+        -L dependency={dir}/target/debug/deps`
 [COMPILING] foo v0.0.1 ({url})
-[RUNNING] `rustc --crate-name a examples[/]a.rs --crate-type bin \
+[RUNNING] `rustc --crate-name a examples/a.rs --crate-type bin \
         --emit=dep-info,link \
         -C debuginfo=2 \
         -C metadata=[..] \
-        --out-dir {dir}[/]target[/]debug[/]examples \
-        -L dependency={dir}[/]target[/]debug[/]deps \
-         --extern bar={dir}[/]target[/]debug[/]deps[/]libbar-[..].rlib`
+        --out-dir {dir}/target/debug/examples \
+        -L dependency={dir}/target/debug/deps \
+         --extern bar={dir}/target/debug/deps/libbar-[..].rlib`
 [FINISHED] dev [unoptimized + debuginfo] target(s) in [..]
-[RUNNING] `target[/]debug[/]examples[/]a[EXE]`
+[RUNNING] `target/debug/examples/a[EXE]`
 ",
                 dir = p.root().display(),
                 url = path2url(p.root()),
@@ -811,7 +799,7 @@ fn run_dylib_dep() {
 
     assert_that(
         p.cargo("run").arg("hello").arg("world"),
-        execs().with_status(0),
+        execs(),
     );
 }
 
@@ -828,11 +816,11 @@ fn release_works() {
 
     assert_that(
         p.cargo("run").arg("--release"),
-        execs().with_status(0).with_stderr(&format!(
+        execs().with_stderr(&format!(
             "\
 [COMPILING] foo v0.0.1 ({dir})
 [FINISHED] release [optimized] target(s) in [..]
-[RUNNING] `target[/]release[/]foo[EXE]`
+[RUNNING] `target/release/foo[EXE]`
 ",
             dir = path2url(p.root()),
         )),
@@ -858,7 +846,7 @@ fn run_bin_different_name() {
         .file("src/bar.rs", "fn main() {}")
         .build();
 
-    assert_that(p.cargo("run"), execs().with_status(0));
+    assert_that(p.cargo("run"), execs());
 }
 
 #[test]
@@ -880,7 +868,7 @@ fn dashes_are_forwarded() {
 
     assert_that(
         p.cargo("run -- -- a -- b"),
-        execs().with_status(0),
+        execs(),
     );
 }
 
@@ -896,11 +884,10 @@ fn run_from_executable_folder() {
     assert_that(
         p.cargo("run").cwd(cwd),
         execs()
-            .with_status(0)
             .with_stderr(
                 "\
                  [FINISHED] dev [unoptimized + debuginfo] target(s) in [..]\n\
-                 [RUNNING] `.[/]foo[EXE]`",
+                 [RUNNING] `./foo[EXE]`",
             )
             .with_stdout("hello"),
     );
@@ -958,7 +945,7 @@ fn run_with_library_paths() {
         )
         .build();
 
-    assert_that(p.cargo("run"), execs().with_status(0));
+    assert_that(p.cargo("run"), execs());
 }
 
 #[test]
@@ -1016,7 +1003,7 @@ fn library_paths_sorted_alphabetically() {
         )
         .build();
 
-    assert_that(p.cargo("run"), execs().with_status(0));
+    assert_that(p.cargo("run"), execs());
 }
 
 #[test]
@@ -1072,15 +1059,15 @@ fn run_multiple_packages() {
 
     assert_that(
         cargo().arg("-p").arg("d1"),
-        execs().with_status(0).with_stdout("d1"),
+        execs().with_stdout("d1"),
     );
 
     assert_that(
         cargo().arg("-p").arg("d2").arg("--bin").arg("d2"),
-        execs().with_status(0).with_stdout("d2"),
+        execs().with_stdout("d2"),
     );
 
-    assert_that(cargo(), execs().with_status(0).with_stdout("foo"));
+    assert_that(cargo(), execs().with_stdout("foo"));
 
     assert_that(cargo().arg("-p").arg("d1").arg("-p").arg("d2"),
                 execs()
@@ -1109,5 +1096,64 @@ fn explicit_bin_with_args() {
         )
         .build();
 
-    assert_that(p.cargo("run --bin foo hello world"), execs().with_status(0));
+    assert_that(p.cargo("run --bin foo hello world"), execs());
+}
+
+#[test]
+fn run_workspace() {
+    let p = project()
+        .file(
+            "Cargo.toml",
+            r#"
+            [workspace]
+            members = ["a", "b"]
+        "#,
+        ).file("a/Cargo.toml", &basic_bin_manifest("a"))
+        .file("a/src/main.rs", r#"fn main() {println!("run-a");}"#)
+        .file("b/Cargo.toml", &basic_bin_manifest("b"))
+        .file("b/src/main.rs", r#"fn main() {println!("run-b");}"#)
+        .build();
+
+    assert_that(
+        p.cargo("run"),
+        execs().with_status(101).with_stderr(
+            "\
+[ERROR] `cargo run` requires that a project only have one executable[..]
+available binaries: a, b",
+        ),
+    );
+    assert_that(
+        p.cargo("run --bin a"),
+        execs().with_status(0).with_stdout("run-a"),
+    );
+}
+
+#[test]
+fn default_run_workspace() {
+    let p = project()
+        .file(
+            "Cargo.toml",
+            r#"
+            [workspace]
+            members = ["a", "b"]
+        "#,
+        ).file(
+            "a/Cargo.toml",
+            r#"
+            cargo-features = ["default-run"]
+
+            [project]
+            name = "a"
+            version = "0.0.1"
+            default-run = "a"
+        "#,
+        ).file("a/src/main.rs", r#"fn main() {println!("run-a");}"#)
+        .file("b/Cargo.toml", &basic_bin_manifest("b"))
+        .file("b/src/main.rs", r#"fn main() {println!("run-b");}"#)
+        .build();
+
+    assert_that(
+        p.cargo("run").masquerade_as_nightly_cargo(),
+        execs().with_status(0).with_stdout("run-a"),
+    );
 }

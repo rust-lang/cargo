@@ -128,7 +128,7 @@ impl Context {
 
     pub fn prev_active(&self, dep: &Dependency) -> &[Summary] {
         self.activations
-            .get(&(dep.name(), dep.source_id().clone()))
+            .get(&(dep.package_name(), dep.source_id().clone()))
             .map(|v| &v[..])
             .unwrap_or(&[])
     }
@@ -178,19 +178,19 @@ impl Context {
         for dep in deps {
             // Skip optional dependencies, but not those enabled through a
             // feature
-            if dep.is_optional() && !reqs.deps.contains_key(&dep.name()) {
+            if dep.is_optional() && !reqs.deps.contains_key(&dep.name_in_toml()) {
                 continue;
             }
             // So we want this dependency. Move the features we want from
             // `feature_deps` to `ret` and register ourselves as using this
             // name.
-            let base = reqs.deps.get(&dep.name()).unwrap_or(&default_dep);
-            used_features.insert(dep.name());
+            let base = reqs.deps.get(&dep.name_in_toml()).unwrap_or(&default_dep);
+            used_features.insert(dep.name_in_toml());
             let always_required = !dep.is_optional()
                 && !s
                     .dependencies()
                     .iter()
-                    .any(|d| d.is_optional() && d.name() == dep.name());
+                    .any(|d| d.is_optional() && d.name_in_toml() == dep.name_in_toml());
             if always_required && base.0 {
                 self.warnings.push(format!(
                     "Package `{}` does not have feature `{}`. It has a required dependency \
@@ -198,7 +198,7 @@ impl Context {
                      This is currently a warning to ease the transition, but it will become an \
                      error in the future.",
                     s.package_id(),
-                    dep.name()
+                    dep.name_in_toml()
                 ));
             }
             let mut base = base.1.clone();
@@ -220,8 +220,8 @@ impl Context {
         let remaining = reqs
             .deps
             .keys()
-            .filter(|&s| !used_features.contains(s))
-            .map(|s| s.as_str())
+            .cloned()
+            .filter(|s| !used_features.contains(s))
             .collect::<Vec<_>>();
         if !remaining.is_empty() {
             let features = remaining.join(", ");
@@ -298,10 +298,10 @@ fn build_requirements<'a, 'b: 'a>(
             all_features: true, ..
         } => {
             for key in s.features().keys() {
-                reqs.require_feature(InternedString::new(&key))?;
+                reqs.require_feature(*key)?;
             }
             for dep in s.dependencies().iter().filter(|d| d.is_optional()) {
-                reqs.require_dependency(dep.name());
+                reqs.require_dependency(dep.name_in_toml());
             }
         }
         Method::Required {
@@ -389,7 +389,7 @@ impl<'r> Requirements<'r> {
         for fv in self
             .summary
             .features()
-            .get(&feat)
+            .get(feat.as_str())
             .expect("must be a valid feature")
         {
             match *fv {

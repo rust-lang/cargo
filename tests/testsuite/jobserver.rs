@@ -50,7 +50,7 @@ fn jobserver_exists() {
         .file("src/lib.rs", "")
         .build();
 
-    assert_that(p.cargo("build"), execs().with_status(0));
+    assert_that(p.cargo("build"), execs());
 }
 
 #[test]
@@ -162,7 +162,7 @@ all:
             .env("CARGO", cargo_exe())
             .env("ADDR", addr.to_string())
             .arg("-j2"),
-        execs().with_status(0),
+        execs(),
     );
     child.join().unwrap();
 }
@@ -191,7 +191,7 @@ all:
 
     assert_that(
         p.process(make).env("CARGO", cargo_exe()).arg("-j2"),
-        execs().with_status(0).with_stderr(
+        execs().with_stderr(
             "\
 warning: a `-j` argument was passed to Cargo but Cargo is also configured \
 with an external jobserver in its environment, ignoring the `-j` parameter

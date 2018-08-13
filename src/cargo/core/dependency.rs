@@ -28,7 +28,7 @@ struct Inner {
     specified_req: bool,
     kind: Kind,
     only_match_name: bool,
-    rename: Option<String>,
+    rename: Option<InternedString>,
 
     optional: bool,
     default_features: bool,
@@ -55,7 +55,7 @@ struct SerializedDependency<'a> {
 
     optional: bool,
     uses_default_features: bool,
-    features: &'a [String],
+    features: &'a [InternedString],
     target: Option<&'a Platform>,
 }
 
@@ -64,17 +64,16 @@ impl ser::Serialize for Dependency {
     where
         S: ser::Serializer,
     {
-        let string_features: Vec<_> = self.features().iter().map(|s| s.to_string()).collect();
         SerializedDependency {
-            name: &*self.name(),
+            name: &*self.package_name(),
             source: self.source_id(),
             req: self.version_req().to_string(),
             kind: self.kind(),
             optional: self.is_optional(),
             uses_default_features: self.uses_default_features(),
-            features: &string_features,
+            features: self.features(),
             target: self.platform(),
-            rename: self.rename(),
+            rename: self.rename().map(|s| s.as_str()),
         }.serialize(s)
     }
 }
@@ -209,7 +208,49 @@ impl Dependency {
         &self.inner.req
     }
 
-    pub fn name(&self) -> InternedString {
+    /// This is the name of this `Dependency` as listed in `Cargo.toml`.
+    ///
+    /// Or in other words, this is what shows up in the `[dependencies]` section
+    /// on the left hand side. This is **not** the name of the package that's
+    /// being depended on as the dependency can be renamed. For that use
+    /// `package_name` below.
+    ///
+    /// Both of the dependencies below return `foo` for `name_in_toml`:
+    ///
+    /// ```toml
+    /// [dependencies]
+    /// foo = "0.1"
+    /// ```
+    ///
+    /// and ...
+    ///
+    /// ```toml
+    /// [dependencies]
+    /// foo = { version = "0.1", package = 'bar' }
+    /// ```
+    pub fn name_in_toml(&self) -> InternedString {
+        self.rename().unwrap_or(self.inner.name)
+    }
+
+    /// The name of the package that this `Dependency` depends on.
+    ///
+    /// Usually this is what's written on the left hand side of a dependencies
+    /// section, but it can also be renamed via the `package` key.
+    ///
+    /// Both of the dependencies below return `foo` for `package_name`:
+    ///
+    /// ```toml
+    /// [dependencies]
+    /// foo = "0.1"
+    /// ```
+    ///
+    /// and ...
+    ///
+    /// ```toml
+    /// [dependencies]
+    /// bar = { version = "0.1", package = 'foo' }
+    /// ```
+    pub fn package_name(&self) -> InternedString {
         self.inner.name
     }
 
@@ -240,8 +281,12 @@ impl Dependency {
         self.inner.platform.as_ref()
     }
 
-    pub fn rename(&self) -> Option<&str> {
-        self.inner.rename.as_ref().map(|s| &**s)
+    /// The renamed name of this dependency, if any.
+    ///
+    /// If the `package` key is used in `Cargo.toml` then this returns the same
+    /// value as `name_in_toml`.
+    pub fn rename(&self) -> Option<InternedString> {
+        self.inner.rename
     }
 
     pub fn set_kind(&mut self, kind: Kind) -> &mut Dependency {
@@ -286,7 +331,7 @@ impl Dependency {
     }
 
     pub fn set_rename(&mut self, rename: &str) -> &mut Dependency {
-        Rc::make_mut(&mut self.inner).rename = Some(rename.to_string());
+        Rc::make_mut(&mut self.inner).rename = Some(InternedString::new(rename));
         self
     }
 
@@ -296,7 +341,7 @@ impl Dependency {
         assert!(self.inner.req.matches(id.version()));
         trace!(
             "locking dep from `{}` with `{}` at {} to {}",
-            self.name(),
+            self.package_name(),
             self.version_req(),
             self.source_id(),
             id
@@ -347,7 +392,7 @@ impl Dependency {
 
     /// Returns true if the package (`sum`) can fulfill this dependency request.
     pub fn matches_ignoring_source(&self, id: &PackageId) -> bool {
-        self.name() == id.name() && self.version_req().matches(id.version())
+        self.package_name() == id.name() && self.version_req().matches(id.version())
     }
 
     /// Returns true if the package (`id`) can fulfill this dependency request.

@@ -253,7 +253,7 @@ impl<'cfg> RegistryIndex<'cfg> {
             .into_iter()
             .map(|dep| dep.into_dep(&self.source_id))
             .collect::<CargoResult<Vec<_>>>()?;
-        let summary = Summary::new(pkgid, deps, features, links, false)?;
+        let summary = Summary::new(pkgid, deps, &features, links, false)?;
         let summary = summary.set_checksum(cksum.clone());
         self.hashes
             .entry(name.as_str())
@@ -269,7 +269,8 @@ impl<'cfg> RegistryIndex<'cfg> {
         f: &mut FnMut(Summary),
     ) -> CargoResult<()> {
         let source_id = self.source_id.clone();
-        let summaries = self.summaries(dep.name().as_str(), load)?;
+        let name = dep.package_name().as_str();
+        let summaries = self.summaries(name, load)?;
         let summaries = summaries
             .iter()
             .filter(|&&(_, yanked)| dep.source_id().precise().is_some() || !yanked)
@@ -281,8 +282,8 @@ impl<'cfg> RegistryIndex<'cfg> {
         // this source, `<p_req>` is the version installed and `<f_req> is the
         // version requested (argument to `--precise`).
         let summaries = summaries.filter(|s| match source_id.precise() {
-            Some(p) if p.starts_with(&*dep.name()) && p[dep.name().len()..].starts_with('=') => {
-                let mut vers = p[dep.name().len() + 1..].splitn(2, "->");
+            Some(p) if p.starts_with(name) && p[name.len()..].starts_with('=') => {
+                let mut vers = p[name.len() + 1..].splitn(2, "->");
                 if dep
                     .version_req()
                     .matches(&Version::parse(vers.next().unwrap()).unwrap())

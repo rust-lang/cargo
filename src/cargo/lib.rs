@@ -1,14 +1,18 @@
 #![cfg_attr(test, deny(warnings))]
-// Currently, Cargo does not use clippy for its source code.
-// But if someone runs it they should know that
-// @alexcrichton disagree with clippy on some style things
-#![cfg_attr(feature = "cargo-clippy", allow(explicit_iter_loop))]
-#![cfg_attr(feature = "cargo-clippy", allow(explicit_into_iter_loop))]
-// also we use closures as an alternative to try catch blocks
-#![cfg_attr(feature = "cargo-clippy", allow(redundant_closure_call))]
 
-// we have some complicated functions, cleaning this up would be a large project
-#![cfg_attr(feature = "cargo-clippy", allow(cyclomatic_complexity))]
+// Clippy isn't enforced by CI, and know that @alexcrichton isn't a fan :)
+#![cfg_attr(feature = "cargo-clippy", allow(boxed_local))]             // bug rust-lang-nursery/rust-clippy#1123
+#![cfg_attr(feature = "cargo-clippy", allow(cyclomatic_complexity))]   // large project
+#![cfg_attr(feature = "cargo-clippy", allow(derive_hash_xor_eq))]      // there's an intentional incoherence
+#![cfg_attr(feature = "cargo-clippy", allow(explicit_into_iter_loop))] // (unclear why)
+#![cfg_attr(feature = "cargo-clippy", allow(explicit_iter_loop))]      // (unclear why)
+#![cfg_attr(feature = "cargo-clippy", allow(identity_op))]             // used for vertical alignment
+#![cfg_attr(feature = "cargo-clippy", allow(implicit_hasher))]         // large project
+#![cfg_attr(feature = "cargo-clippy", allow(large_enum_variant))]      // large project
+#![cfg_attr(feature = "cargo-clippy", allow(redundant_closure_call))]  // closures over try catch blocks
+#![cfg_attr(feature = "cargo-clippy", allow(too_many_arguments))]      // large project
+#![cfg_attr(feature = "cargo-clippy", allow(type_complexity))]         // there's an exceptionally complex type
+#![cfg_attr(feature = "cargo-clippy", allow(wrong_self_convention))]   // perhaps Rc should be special cased in Clippy?
 
 extern crate atty;
 extern crate clap;
@@ -22,6 +26,8 @@ extern crate failure;
 extern crate filetime;
 extern crate flate2;
 extern crate fs2;
+#[cfg(windows)]
+extern crate fwdansi;
 extern crate git2;
 extern crate glob;
 extern crate hex;
@@ -104,7 +110,7 @@ impl fmt::Display for VersionInfo {
         if let Some(channel) = self.cfg_info.as_ref().map(|ci| &ci.release_channel) {
             if channel != "stable" {
                 write!(f, "-{}", channel)?;
-                let empty = String::from("");
+                let empty = String::new();
                 write!(f, "{}", self.pre_release.as_ref().unwrap_or(&empty))?;
             }
         };
@@ -180,13 +186,13 @@ fn handle_cause(cargo_err: &Error, shell: &mut Shell) -> bool {
     if verbose == Verbose {
         // The first error has already been printed to the shell
         // Print all remaining errors
-        for err in cargo_err.causes().skip(1) {
+        for err in cargo_err.iter_causes() {
             print(&err.to_string(), shell);
         }
     } else {
         // The first error has already been printed to the shell
         // Print remaining errors until one marked as Internal appears
-        for err in cargo_err.causes().skip(1) {
+        for err in cargo_err.iter_causes() {
             if err.downcast_ref::<Internal>().is_some() {
                 return false;
             }

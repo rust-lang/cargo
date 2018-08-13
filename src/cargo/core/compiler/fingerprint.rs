@@ -6,7 +6,7 @@ use std::sync::{Arc, Mutex};
 
 use filetime::FileTime;
 use serde::de::{self, Deserialize};
-use serde::ser::{self, Serialize};
+use serde::ser;
 use serde_json;
 
 use core::{Edition, Package, TargetKind};
@@ -172,10 +172,8 @@ fn serialize_deps<S>(deps: &[DepFingerprint], ser: S) -> Result<S::Ok, S::Error>
 where
     S: ser::Serializer,
 {
-    deps.iter()
-        .map(|&(ref a, ref b, ref c)| (a, b, c.hash()))
-        .collect::<Vec<_>>()
-        .serialize(ser)
+    ser.collect_seq(deps.iter()
+       .map(|&(ref a, ref b, ref c)| (a, b, c.hash())))
 }
 
 fn deserialize_deps<'de, D>(d: D) -> Result<Vec<DepFingerprint>, D::Error>
@@ -481,7 +479,7 @@ fn calculate<'a, 'cfg>(
         deps,
         local: vec![local],
         memoized_hash: Mutex::new(None),
-        edition: unit.pkg.manifest().edition(),
+        edition: unit.target.edition(),
         rustflags: extra_flags,
     });
     cx.fingerprints.insert(*unit, Arc::clone(&fingerprint));
@@ -687,7 +685,7 @@ fn log_compare(unit: &Unit, compare: &CargoResult<()>) {
     };
     info!("fingerprint error for {}: {}", unit.pkg, ce);
 
-    for cause in ce.causes().skip(1) {
+    for cause in ce.iter_causes() {
         info!("  cause: {}", cause);
     }
 }

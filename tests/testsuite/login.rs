@@ -60,7 +60,7 @@ fn check_token(expected_token: &str, registry: Option<&str>) -> bool {
             .get("registry")
             .and_then(|registry_table| registry_table.get("token"))
             .and_then(|v| match v {
-                &toml::Value::String(ref token) => Some(token.as_str().to_string()),
+                toml::Value::String(ref token) => Some(token.as_str().to_string()),
                 _ => None,
             }),
         _ => None,
@@ -78,12 +78,8 @@ fn login_with_old_credentials() {
     setup_old_credentials();
 
     assert_that(
-        cargo_process()
-            .arg("login")
-            .arg("--host")
-            .arg(registry().to_string())
-            .arg(TOKEN),
-        execs().with_status(0),
+        cargo_process("login --host").arg(registry().to_string()).arg(TOKEN),
+        execs(),
     );
 
     let config = cargo_home().join("config");
@@ -105,12 +101,8 @@ fn login_with_new_credentials() {
     setup_new_credentials();
 
     assert_that(
-        cargo_process()
-            .arg("login")
-            .arg("--host")
-            .arg(registry().to_string())
-            .arg(TOKEN),
-        execs().with_status(0),
+        cargo_process("login --host").arg(registry().to_string()).arg(TOKEN),
+        execs(),
     );
 
     let config = cargo_home().join("config");
@@ -129,12 +121,8 @@ fn login_with_old_and_new_credentials() {
 #[test]
 fn login_without_credentials() {
     assert_that(
-        cargo_process()
-            .arg("login")
-            .arg("--host")
-            .arg(registry().to_string())
-            .arg(TOKEN),
-        execs().with_status(0),
+        cargo_process("login --host").arg(registry().to_string()).arg(TOKEN),
+        execs(),
     );
 
     let config = cargo_home().join("config");
@@ -150,12 +138,8 @@ fn new_credentials_is_used_instead_old() {
     setup_new_credentials();
 
     assert_that(
-        cargo_process()
-            .arg("login")
-            .arg("--host")
-            .arg(registry().to_string())
-            .arg(TOKEN),
-        execs().with_status(0),
+        cargo_process("login --host").arg(registry().to_string()).arg(TOKEN),
+        execs(),
     );
 
     let config = Config::new(Shell::new(), cargo_home(), cargo_home());
@@ -172,14 +156,9 @@ fn registry_credentials() {
     let reg = "test-reg";
 
     assert_that(
-        cargo_process()
-            .arg("login")
-            .masquerade_as_nightly_cargo()
-            .arg("--registry")
-            .arg(reg)
-            .arg(TOKEN)
-            .arg("-Zunstable-options"),
-        execs().with_status(0),
+        cargo_process("login --registry").arg(reg).arg(TOKEN).arg("-Zunstable-options")
+            .masquerade_as_nightly_cargo(),
+        execs(),
     );
 
     // Ensure that we have not updated the default token

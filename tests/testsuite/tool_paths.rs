@@ -124,7 +124,7 @@ fn relative_tools() {
         .build();
 
     let foo_path = p.root().join("bar");
-    let foo_url = path2url(foo_path.clone());
+    let foo_url = path2url(&foo_path);
     let prefix = p.root().into_os_string().into_string().unwrap();
     let output = if cfg!(windows) {
         (
@@ -174,41 +174,39 @@ fn custom_runner() {
         .build();
 
     assert_that(
-        p.cargo("run").args(&["--", "--param"]),
-        execs().with_stderr_contains(&format!(
+        p.cargo("run -- --param"),
+        execs().with_status(101).with_stderr_contains(&format!(
             "\
 [COMPILING] foo v0.0.1 ({url})
 [FINISHED] dev [unoptimized + debuginfo] target(s) in [..]
-[RUNNING] `nonexistent-runner -r target[/]debug[/]foo[EXE] --param`
+[RUNNING] `nonexistent-runner -r target/debug/foo[EXE] --param`
 ",
             url = p.url()
         )),
     );
 
     assert_that(
-        p.cargo("test")
-            .args(&["--test", "test", "--verbose", "--", "--param"]),
-        execs().with_stderr_contains(&format!(
+        p.cargo("test --test test --verbose -- --param"),
+        execs().with_status(101).with_stderr_contains(&format!(
             "\
 [COMPILING] foo v0.0.1 ({url})
 [RUNNING] `rustc [..]`
 [FINISHED] dev [unoptimized + debuginfo] target(s) in [..]
-[RUNNING] `nonexistent-runner -r [..][/]target[/]debug[/]deps[/]test-[..][EXE] --param`
+[RUNNING] `nonexistent-runner -r [..]/target/debug/deps/test-[..][EXE] --param`
 ",
             url = p.url()
         )),
     );
 
     assert_that(
-        p.cargo("bench")
-            .args(&["--bench", "bench", "--verbose", "--", "--param"]),
-        execs().with_stderr_contains(&format!(
+        p.cargo("bench --bench bench --verbose -- --param"),
+        execs().with_status(101).with_stderr_contains(&format!(
             "\
 [COMPILING] foo v0.0.1 ({url})
 [RUNNING] `rustc [..]`
 [RUNNING] `rustc [..]`
 [FINISHED] release [optimized] target(s) in [..]
-[RUNNING] `nonexistent-runner -r [..][/]target[/]release[/]deps[/]bench-[..][EXE] --param --bench`
+[RUNNING] `nonexistent-runner -r [..]/target/release/deps/bench-[..][EXE] --param --bench`
 ",
             url = p.url()
         )),

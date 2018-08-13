@@ -289,7 +289,7 @@ impl Package {
             ));
         }
 
-        return cksum;
+        cksum
     }
 
     fn make_archive(&self) {

@@ -130,7 +130,7 @@ pub fn add_submodule<'a>(
     t!(origin.fetch(&[], None, None));
     t!(subrepo.checkout_head(None));
     t!(s.add_finalize());
-    return s;
+    s
 }
 
 pub fn commit(repo: &git2::Repository) -> git2::Oid {

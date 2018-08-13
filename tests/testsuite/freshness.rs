@@ -16,7 +16,7 @@ fn modifying_and_moving() {
 
     assert_that(
         p.cargo("build"),
-        execs().with_status(0).with_stderr(format!(
+        execs().with_stderr(format!(
             "\
 [COMPILING] foo v0.0.1 ({dir})
 [FINISHED] dev [unoptimized + debuginfo] target(s) in [..]
@@ -25,7 +25,7 @@ fn modifying_and_moving() {
         )),
     );
 
-    assert_that(p.cargo("build"), execs().with_status(0).with_stdout(""));
+    assert_that(p.cargo("build"), execs().with_stdout(""));
     p.root().move_into_the_past();
     p.root().join("target").move_into_the_past();
 
@@ -35,7 +35,7 @@ fn modifying_and_moving() {
         .unwrap();
     assert_that(
         p.cargo("build"),
-        execs().with_status(0).with_stderr(format!(
+        execs().with_stderr(format!(
             "\
 [COMPILING] foo v0.0.1 ({dir})
 [FINISHED] dev [unoptimized + debuginfo] target(s) in [..]
@@ -60,7 +60,7 @@ fn modify_only_some_files() {
 
     assert_that(
         p.cargo("build"),
-        execs().with_status(0).with_stderr(format!(
+        execs().with_stderr(format!(
             "\
 [COMPILING] foo v0.0.1 ({dir})
 [FINISHED] dev [unoptimized + debuginfo] target(s) in [..]
@@ -68,7 +68,7 @@ fn modify_only_some_files() {
             dir = path2url(p.root())
         )),
     );
-    assert_that(p.cargo("test"), execs().with_status(0));
+    assert_that(p.cargo("test"), execs());
     sleep_ms(1000);
 
     assert_that(&p.bin("foo"), existing_file());
@@ -89,7 +89,7 @@ fn modify_only_some_files() {
     // Make sure the binary is rebuilt, not the lib
     assert_that(
         p.cargo("build"),
-        execs().with_status(0).with_stderr(format!(
+        execs().with_stderr(format!(
             "\
 [COMPILING] foo v0.0.1 ({dir})
 [FINISHED] dev [unoptimized + debuginfo] target(s) in [..]
@@ -134,21 +134,21 @@ fn rebuild_sub_package_then_while_package() {
         .file("b/src/lib.rs", "")
         .build();
 
-    assert_that(p.cargo("build"), execs().with_status(0));
+    assert_that(p.cargo("build"), execs());
 
     File::create(&p.root().join("b/src/lib.rs"))
         .unwrap()
         .write_all(br#"pub fn b() {}"#)
         .unwrap();
 
-    assert_that(p.cargo("build").arg("-pb"), execs().with_status(0));
+    assert_that(p.cargo("build").arg("-pb"), execs());
 
     File::create(&p.root().join("src/lib.rs"))
         .unwrap()
         .write_all(br#"extern crate a; extern crate b; pub fn toplevel() {}"#)
         .unwrap();
 
-    assert_that(p.cargo("build"), execs().with_status(0));
+    assert_that(p.cargo("build"), execs());
 }
 
 #[test]
@@ -171,7 +171,7 @@ fn changing_lib_features_caches_targets() {
 
     assert_that(
         p.cargo("build"),
-        execs().with_status(0).with_stderr(
+        execs().with_stderr(
             "\
 [..]Compiling foo v0.0.1 ([..])
 [FINISHED] dev [unoptimized + debuginfo] target(s) in [..]
@@ -181,7 +181,7 @@ fn changing_lib_features_caches_targets() {
 
     assert_that(
         p.cargo("build").arg("--features").arg("foo"),
-        execs().with_status(0).with_stderr(
+        execs().with_stderr(
             "\
 [..]Compiling foo v0.0.1 ([..])
 [FINISHED] dev [unoptimized + debuginfo] target(s) in [..]
@@ -194,16 +194,14 @@ fn changing_lib_features_caches_targets() {
     assert_that(
         p.cargo("build"),
         execs()
-            .with_status(0)
             .with_stderr("[FINISHED] dev [unoptimized + debuginfo] target(s) in [..]"),
     );
 
-    assert_that(p.cargo("build"), execs().with_status(0).with_stdout(""));
+    assert_that(p.cargo("build"), execs().with_stdout(""));
 
     assert_that(
         p.cargo("build").arg("--features").arg("foo"),
         execs()
-            .with_status(0)
             .with_stderr("[FINISHED] dev [unoptimized + debuginfo] target(s) in [..]"),
     );
 }
@@ -228,7 +226,7 @@ fn changing_profiles_caches_targets() {
 
     assert_that(
         p.cargo("build"),
-        execs().with_status(0).with_stderr(
+        execs().with_stderr(
             "\
 [..]Compiling foo v0.0.1 ([..])
 [FINISHED] dev [unoptimized + debuginfo] target(s) in [..]
@@ -238,7 +236,7 @@ fn changing_profiles_caches_targets() {
 
     assert_that(
         p.cargo("test"),
-        execs().with_status(0).with_stderr(
+        execs().with_stderr(
             "\
 [..]Compiling foo v0.0.1 ([..])
 [FINISHED] dev [unoptimized + debuginfo] target(s) in [..]
@@ -253,13 +251,12 @@ fn changing_profiles_caches_targets() {
     assert_that(
         p.cargo("build"),
         execs()
-            .with_status(0)
             .with_stderr("[FINISHED] dev [unoptimized + debuginfo] target(s) in [..]"),
     );
 
     assert_that(
         p.cargo("test").arg("foo"),
-        execs().with_status(0).with_stderr(
+        execs().with_stderr(
             "\
 [FINISHED] dev [unoptimized + debuginfo] target(s) in [..]
 [RUNNING] target[..]debug[..]deps[..]foo-[..][EXE]
@@ -357,26 +354,26 @@ fn changing_bin_paths_common_target_features_caches_targets() {
     /* Build and rebuild a/. Ensure dep_crate only builds once */
     assert_that(
         p.cargo("run").cwd(p.root().join("a")),
-        execs().with_status(0).with_stdout("ftest off").with_stderr(
+        execs().with_stdout("ftest off").with_stderr(
             "\
 [..]Compiling dep_crate v0.0.1 ([..])
 [..]Compiling a v0.0.1 ([..])
 [FINISHED] dev [unoptimized + debuginfo] target(s) in [..]
-[RUNNING] `[..]target[/]debug[/]a[EXE]`
+[RUNNING] `[..]target/debug/a[EXE]`
 ",
         ),
     );
     assert_that(
         p.cargo("clean").arg("-p").arg("a").cwd(p.root().join("a")),
-        execs().with_status(0),
+        execs(),
     );
     assert_that(
         p.cargo("run").cwd(p.root().join("a")),
-        execs().with_status(0).with_stdout("ftest off").with_stderr(
+        execs().with_stdout("ftest off").with_stderr(
             "\
 [..]Compiling a v0.0.1 ([..])
 [FINISHED] dev [unoptimized + debuginfo] target(s) in [..]
-[RUNNING] `[..]target[/]debug[/]a[EXE]`
+[RUNNING] `[..]target/debug/a[EXE]`
 ",
         ),
     );
@@ -384,26 +381,26 @@ fn changing_bin_paths_common_target_features_caches_targets() {
     /* Build and rebuild b/. Ensure dep_crate only builds once */
     assert_that(
         p.cargo("run").cwd(p.root().join("b")),
-        execs().with_status(0).with_stdout("ftest on").with_stderr(
+        execs().with_stdout("ftest on").with_stderr(
             "\
 [..]Compiling dep_crate v0.0.1 ([..])
 [..]Compiling b v0.0.1 ([..])
 [FINISHED] dev [unoptimized + debuginfo] target(s) in [..]
-[RUNNING] `[..]target[/]debug[/]b[EXE]`
+[RUNNING] `[..]target/debug/b[EXE]`
 ",
         ),
     );
     assert_that(
         p.cargo("clean").arg("-p").arg("b").cwd(p.root().join("b")),
-        execs().with_status(0),
+        execs(),
     );
     assert_that(
         p.cargo("run").cwd(p.root().join("b")),
-        execs().with_status(0).with_stdout("ftest on").with_stderr(
+        execs().with_stdout("ftest on").with_stderr(
             "\
 [..]Compiling b v0.0.1 ([..])
 [FINISHED] dev [unoptimized + debuginfo] target(s) in [..]
-[RUNNING] `[..]target[/]debug[/]b[EXE]`
+[RUNNING] `[..]target/debug/b[EXE]`
 ",
         ),
     );
@@ -412,15 +409,15 @@ fn changing_bin_paths_common_target_features_caches_targets() {
      * this should not cause a rebuild of dep_crate */
     assert_that(
         p.cargo("clean").arg("-p").arg("a").cwd(p.root().join("a")),
-        execs().with_status(0),
+        execs(),
     );
     assert_that(
         p.cargo("run").cwd(p.root().join("a")),
-        execs().with_status(0).with_stdout("ftest off").with_stderr(
+        execs().with_stdout("ftest off").with_stderr(
             "\
 [..]Compiling a v0.0.1 ([..])
 [FINISHED] dev [unoptimized + debuginfo] target(s) in [..]
-[RUNNING] `[..]target[/]debug[/]a[EXE]`
+[RUNNING] `[..]target/debug/a[EXE]`
 ",
         ),
     );
@@ -429,15 +426,15 @@ fn changing_bin_paths_common_target_features_caches_targets() {
      * this should not cause a rebuild */
     assert_that(
         p.cargo("clean").arg("-p").arg("b").cwd(p.root().join("b")),
-        execs().with_status(0),
+        execs(),
     );
     assert_that(
         p.cargo("run").cwd(p.root().join("b")),
-        execs().with_status(0).with_stdout("ftest on").with_stderr(
+        execs().with_stdout("ftest on").with_stderr(
             "\
 [..]Compiling b v0.0.1 ([..])
 [FINISHED] dev [unoptimized + debuginfo] target(s) in [..]
-[RUNNING] `[..]target[/]debug[/]b[EXE]`
+[RUNNING] `[..]target/debug/b[EXE]`
 ",
         ),
     );
@@ -482,7 +479,7 @@ fn changing_bin_features_caches_targets() {
 
     assert_that(
         p.cargo("build"),
-        execs().with_status(0).with_stderr(
+        execs().with_stderr(
             "\
 [COMPILING] foo v0.0.1 ([..])
 [FINISHED] dev [unoptimized + debuginfo] target(s) in [..]
@@ -491,12 +488,12 @@ fn changing_bin_features_caches_targets() {
     );
     assert_that(
         foo_proc("off1"),
-        execs().with_status(0).with_stdout("feature off"),
+        execs().with_stdout("feature off"),
     );
 
     assert_that(
         p.cargo("build").arg("--features").arg("foo"),
-        execs().with_status(0).with_stderr(
+        execs().with_stderr(
             "\
 [COMPILING] foo v0.0.1 ([..])
 [FINISHED] dev [unoptimized + debuginfo] target(s) in [..]
@@ -505,14 +502,14 @@ fn changing_bin_features_caches_targets() {
     );
     assert_that(
         foo_proc("on1"),
-        execs().with_status(0).with_stdout("feature on"),
+        execs().with_stdout("feature on"),
     );
 
     /* Targets should be cached from the first build */
 
     assert_that(
         p.cargo("build"),
-        execs().with_status(0).with_stderr(
+        execs().with_stderr(
             "\
 [FINISHED] dev [unoptimized + debuginfo] target(s) in [..]
 ",
@@ -520,12 +517,12 @@ fn changing_bin_features_caches_targets() {
     );
     assert_that(
         foo_proc("off2"),
-        execs().with_status(0).with_stdout("feature off"),
+        execs().with_stdout("feature off"),
     );
 
     assert_that(
         p.cargo("build").arg("--features").arg("foo"),
-        execs().with_status(0).with_stderr(
+        execs().with_stderr(
             "\
 [FINISHED] dev [unoptimized + debuginfo] target(s) in [..]
 ",
@@ -533,7 +530,7 @@ fn changing_bin_features_caches_targets() {
     );
     assert_that(
         foo_proc("on2"),
-        execs().with_status(0).with_stdout("feature on"),
+        execs().with_stdout("feature on"),
     );
 }
 
@@ -551,13 +548,13 @@ fn rebuild_tests_if_lib_changes() {
         )
         .build();
 
-    assert_that(p.cargo("build"), execs().with_status(0));
-    assert_that(p.cargo("test"), execs().with_status(0));
+    assert_that(p.cargo("build"), execs());
+    assert_that(p.cargo("test"), execs());
 
     sleep_ms(1000);
     File::create(&p.root().join("src/lib.rs")).unwrap();
 
-    assert_that(p.cargo("build").arg("-v"), execs().with_status(0));
+    assert_that(p.cargo("build").arg("-v"), execs());
     assert_that(p.cargo("test").arg("-v"), execs().with_status(101));
 }
 
@@ -610,10 +607,10 @@ fn no_rebuild_transitive_target_deps() {
         .file("c/src/lib.rs", "")
         .build();
 
-    assert_that(p.cargo("build"), execs().with_status(0));
+    assert_that(p.cargo("build"), execs());
     assert_that(
         p.cargo("test").arg("--no-run"),
-        execs().with_status(0).with_stderr(
+        execs().with_stderr(
             "\
 [COMPILING] c v0.0.1 ([..])
 [COMPILING] b v0.0.1 ([..])
@@ -661,8 +658,8 @@ fn rerun_if_changed_in_dep() {
         .file("a/src/lib.rs", "")
         .build();
 
-    assert_that(p.cargo("build"), execs().with_status(0));
-    assert_that(p.cargo("build"), execs().with_status(0).with_stdout(""));
+    assert_that(p.cargo("build"), execs());
+    assert_that(p.cargo("build"), execs().with_stdout(""));
 }
 
 #[test]
@@ -730,7 +727,7 @@ fn same_build_dir_cached_packages() {
 
     assert_that(
         p.cargo("build").cwd(p.root().join("a1")),
-        execs().with_status(0).with_stderr(&format!(
+        execs().with_stderr(&format!(
             "\
 [COMPILING] d v0.0.1 ({dir}/d)
 [COMPILING] c v0.0.1 ({dir}/c)
@@ -743,7 +740,7 @@ fn same_build_dir_cached_packages() {
     );
     assert_that(
         p.cargo("build").cwd(p.root().join("a2")),
-        execs().with_status(0).with_stderr(&format!(
+        execs().with_stderr(&format!(
             "\
 [COMPILING] a2 v0.0.1 ({dir}/a2)
 [FINISHED] dev [unoptimized + debuginfo] target(s) in [..]
@@ -773,14 +770,13 @@ fn no_rebuild_if_build_artifacts_move_backwards_in_time() {
         .file("a/src/lib.rs", "")
         .build();
 
-    assert_that(p.cargo("build"), execs().with_status(0));
+    assert_that(p.cargo("build"), execs());
 
     p.root().move_into_the_past();
 
     assert_that(
         p.cargo("build"),
         execs()
-            .with_status(0)
             .with_stdout("")
             .with_stderr("[FINISHED] [..]"),
     );
@@ -806,13 +802,13 @@ fn rebuild_if_build_artifacts_move_forward_in_time() {
         .file("a/src/lib.rs", "")
         .build();
 
-    assert_that(p.cargo("build"), execs().with_status(0));
+    assert_that(p.cargo("build"), execs());
 
     p.root().move_into_the_future();
 
     assert_that(
         p.cargo("build").env("RUST_LOG", ""),
-        execs().with_status(0).with_stdout("").with_stderr(
+        execs().with_stdout("").with_stderr(
             "\
 [COMPILING] a v0.0.1 ([..])
 [COMPILING] foo v0.0.1 ([..])
@@ -848,13 +844,12 @@ fn rebuild_if_environment_changes() {
     assert_that(
         p.cargo("run"),
         execs()
-            .with_status(0)
             .with_stdout("old desc")
             .with_stderr(&format!(
                 "\
 [COMPILING] foo v0.0.1 ({dir})
 [FINISHED] dev [unoptimized + debuginfo] target(s) in [..]
-[RUNNING] `target[/]debug[/]foo[EXE]`
+[RUNNING] `target/debug/foo[EXE]`
 ",
                 dir = p.url()
             )),
@@ -876,13 +871,12 @@ fn rebuild_if_environment_changes() {
     assert_that(
         p.cargo("run"),
         execs()
-            .with_status(0)
             .with_stdout("new desc")
             .with_stderr(&format!(
                 "\
 [COMPILING] foo v0.0.1 ({dir})
 [FINISHED] dev [unoptimized + debuginfo] target(s) in [..]
-[RUNNING] `target[/]debug[/]foo[EXE]`
+[RUNNING] `target/debug/foo[EXE]`
 ",
                 dir = p.url()
             )),
@@ -909,7 +903,7 @@ fn no_rebuild_when_rename_dir() {
         .file("foo/src/lib.rs", "")
         .build();
 
-    assert_that(p.cargo("build"), execs().with_status(0));
+    assert_that(p.cargo("build"), execs());
     let mut new = p.root();
     new.pop();
     new.push("bar");
@@ -918,7 +912,6 @@ fn no_rebuild_when_rename_dir() {
     assert_that(
         p.cargo("build").cwd(&new),
         execs()
-            .with_status(0)
             .with_stderr("[FINISHED] dev [unoptimized + debuginfo] target(s) in [..]"),
     );
 }
@@ -973,10 +966,10 @@ fn unused_optional_dep() {
         .file("baz/src/lib.rs", "")
         .build();
 
-    assert_that(p.cargo("build"), execs().with_status(0));
+    assert_that(p.cargo("build"), execs());
     assert_that(
         p.cargo("build"),
-        execs().with_status(0).with_stderr("[FINISHED] [..]"),
+        execs().with_stderr("[FINISHED] [..]"),
     );
 }
 
@@ -1030,10 +1023,10 @@ fn path_dev_dep_registry_updates() {
         .file("baz/src/lib.rs", "")
         .build();
 
-    assert_that(p.cargo("build"), execs().with_status(0));
+    assert_that(p.cargo("build"), execs());
     assert_that(
         p.cargo("build"),
-        execs().with_status(0).with_stderr("[FINISHED] [..]"),
+        execs().with_stderr("[FINISHED] [..]"),
     );
 }
 
@@ -1070,8 +1063,8 @@ fn change_panic_mode() {
         .file("baz/src/lib.rs", "extern crate bar;")
         .build();
 
-    assert_that(p.cargo("build -p bar"), execs().with_status(0));
-    assert_that(p.cargo("build -p baz"), execs().with_status(0));
+    assert_that(p.cargo("build -p bar"), execs());
+    assert_that(p.cargo("build -p baz"), execs());
 }
 
 #[test]
@@ -1123,15 +1116,15 @@ fn dont_rebuild_based_on_plugins() {
         .file("qux/src/lib.rs", "")
         .build();
 
-    assert_that(p.cargo("build"), execs().with_status(0));
-    assert_that(p.cargo("build -p baz"), execs().with_status(0));
+    assert_that(p.cargo("build"), execs());
+    assert_that(p.cargo("build -p baz"), execs());
     assert_that(
         p.cargo("build"),
-        execs().with_status(0).with_stderr("[FINISHED] [..]\n"),
+        execs().with_stderr("[FINISHED] [..]\n"),
     );
     assert_that(
         p.cargo("build -p bar"),
-        execs().with_status(0).with_stderr("[FINISHED] [..]\n"),
+        execs().with_stderr("[FINISHED] [..]\n"),
     );
 }
 
@@ -1156,10 +1149,10 @@ fn reuse_workspace_lib() {
         .file("baz/src/lib.rs", "")
         .build();
 
-    assert_that(p.cargo("build"), execs().with_status(0));
+    assert_that(p.cargo("build"), execs());
     assert_that(
         p.cargo("test -p baz -v --no-run"),
-        execs().with_status(0).with_stderr("\
+        execs().with_stderr("\
 [COMPILING] baz v0.1.1 ([..])
 [RUNNING] `rustc[..] --test [..]`
 [FINISHED] [..]

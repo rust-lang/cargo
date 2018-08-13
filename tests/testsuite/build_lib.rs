@@ -5,11 +5,11 @@ fn verbose_output_for_lib(p: &Project) -> String {
     format!(
         "\
 [COMPILING] {name} v{version} ({url})
-[RUNNING] `rustc --crate-name {name} src[/]lib.rs --crate-type lib \
+[RUNNING] `rustc --crate-name {name} src/lib.rs --crate-type lib \
         --emit=dep-info,link -C debuginfo=2 \
         -C metadata=[..] \
         --out-dir [..] \
-        -L dependency={dir}[/]target[/]debug[/]deps`
+        -L dependency={dir}/target/debug/deps`
 [FINISHED] dev [unoptimized + debuginfo] target(s) in [..]
 ",
         dir = p.root().display(),
@@ -29,7 +29,6 @@ fn build_lib_only() {
     assert_that(
         p.cargo("build").arg("--lib").arg("-v"),
         execs()
-            .with_status(0)
             .with_stderr(verbose_output_for_lib(&p)),
     );
 }
@@ -73,6 +72,6 @@ fn build_with_relative_cargo_home_path() {
 
     assert_that(
         p.cargo("build").env("CARGO_HOME", "./cargo_home/"),
-        execs().with_status(0),
+        execs(),
     );
 }

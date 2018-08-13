@@ -96,6 +96,7 @@ pub struct Context<'a, 'cfg: 'a> {
     pub links: Links<'a>,
     pub used_in_plugin: HashSet<Unit<'a>>,
     pub jobserver: Client,
+    primary_packages: HashSet<&'a PackageId>,
     unit_dependencies: HashMap<Unit<'a>, Vec<Unit<'a>>>,
     files: Option<CompilationFiles<'a, 'cfg>>,
 }
@@ -129,6 +130,7 @@ impl<'a, 'cfg> Context<'a, 'cfg> {
             jobserver,
             build_script_overridden: HashSet::new(),
 
+            primary_packages: HashSet::new(),
             unit_dependencies: HashMap::new(),
             files: None,
         })
@@ -321,6 +323,7 @@ impl<'a, 'cfg> Context<'a, 'cfg> {
             Some(target) => Some(Layout::new(self.bcx.ws, Some(target), dest)?),
             None => None,
         };
+        self.primary_packages.extend(units.iter().map(|u| u.pkg.package_id()));
 
         build_unit_dependencies(units, self.bcx, &mut self.unit_dependencies)?;
         self.build_used_in_plugin_map(units)?;
@@ -486,6 +489,10 @@ impl<'a, 'cfg> Context<'a, 'cfg> {
 
         let dir = self.files().layout(unit.kind).incremental().display();
         Ok(vec!["-C".to_string(), format!("incremental={}", dir)])
+    }
+
+    pub fn is_primary_package(&self, unit: &Unit<'a>) -> bool {
+        self.primary_packages.contains(unit.pkg.package_id())
     }
 }
 

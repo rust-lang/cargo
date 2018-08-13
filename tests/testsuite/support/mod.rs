@@ -22,12 +22,11 @@ the output.
 assert_that(
     p.cargo("run --bin foo"),
     execs()
-        .with_status(0)
         .with_stderr(
             "\
 [COMPILING] foo [..]
 [FINISHED] [..]
-[RUNNING] `target[/]debug[/]foo`
+[RUNNING] `target/debug/foo`
 ",
         )
         .with_stdout("hi!"),
@@ -71,8 +70,8 @@ if !is_nightly() {
 
 ## Platform-specific Notes
 
-When checking output, be sure to use `[/]` when checking paths to
-automatically support backslashes on Windows.
+When checking output, use `/` for paths even on Windows: the actual output
+of `\` on Windows will be replaced with `/`.
 
 Be careful when executing binaries on Windows.  You should not rename, delete,
 or overwrite a binary immediately after running it.  Under some conditions
@@ -347,27 +346,22 @@ impl Project {
     /// Example:
     ///         assert_that(
     ///             p.process(&p.bin("foo")),
-    ///             execs().with_status(0).with_stdout("bar\n"),
+    ///             execs().with_stdout("bar\n"),
     ///         );
     pub fn process<T: AsRef<OsStr>>(&self, program: T) -> ProcessBuilder {
         let mut p = ::support::process(program);
         p.cwd(self.root());
-        return p;
+        p
     }
 
     /// Create a `ProcessBuilder` to run cargo.
     /// Arguments can be separated by spaces.
     /// Example:
-    ///     assert_that(p.cargo("build --bin foo"), execs().with_status(0));
+    ///     assert_that(p.cargo("build --bin foo"), execs());
     pub fn cargo(&self, cmd: &str) -> ProcessBuilder {
         let mut p = self.process(&cargo_exe());
-        for arg in cmd.split_whitespace() {
-            if arg.contains('"') || arg.contains('\'') {
-                panic!("shell-style argument parsing is not supported")
-            }
-            p.arg(arg);
-        }
-        return p;
+        split_and_add_args(&mut p, cmd);
+        p
     }
 
     /// Returns the contents of `Cargo.lock`.
@@ -785,7 +779,7 @@ impl Execs {
                 .map_err(|_| "stdout was not utf8 encoded".to_owned())?;
             let lines = stdout
                 .lines()
-                .filter(|line| line.starts_with("{"))
+                .filter(|line| line.starts_with('{'))
                 .collect::<Vec<_>>();
             if lines.len() != objects.len() {
                 return Err(format!(
@@ -941,7 +935,7 @@ impl Execs {
                         }
                     };
                 }
-                if a.len() > 0 {
+                if !a.is_empty() {
                     Err(format!(
                         "Output included extra lines:\n\
                          {}\n",
@@ -1013,15 +1007,16 @@ enum MatchKind {
 /// Compare a line with an expected pattern.
 /// - Use `[..]` as a wildcard to match 0 or more characters on the same line
 ///   (similar to `.*` in a regex).
-/// - Use `[/]` for path separators to automatically support backslash on
-///   Windows.
 /// - Use `[EXE]` to optionally add `.exe` on Windows (empty string on other
 ///   platforms).
 /// - There is a wide range of macros (such as `[COMPILING]` or `[WARNING]`)
 ///   to match cargo's "status" output and allows you to ignore the alignment.
 ///   See `substitute_macros` for a complete list of macros.
-pub fn lines_match(expected: &str, mut actual: &str) -> bool {
-    let expected = substitute_macros(expected);
+pub fn lines_match(expected: &str, actual: &str) -> bool {
+    // Let's not deal with / vs \ (windows...)
+    let expected = expected.replace("\\", "/");
+    let mut actual: &str = &actual.replace("\\", "/");
+    let expected = substitute_macros(&expected);
     for (i, part) in expected.split("[..]").enumerate() {
         match actual.find(part) {
             Some(j) => {
@@ -1078,8 +1073,8 @@ fn find_mismatch<'a>(expected: &'a Value, actual: &'a Value) -> Option<(&'a Valu
                 },
             );
 
-            if l.len() > 0 {
-                assert!(r.len() > 0);
+            if !l.is_empty() {
+                assert!(!r.is_empty());
                 Some((&l[0], &r[0]))
             } else {
                 assert_eq!(r.len(), 0);
@@ -1169,7 +1164,7 @@ impl<'a> ham::Matcher<&'a mut ProcessBuilder> for Execs {
                         return self.match_output(out);
                     }
                 let mut s = format!("could not exec process {}: {}", process, e);
-                for cause in e.causes() {
+                for cause in e.iter_causes() {
                     s.push_str(&format!("\ncaused by: {}", cause));
                 }
                 Err(s)
@@ -1189,7 +1184,7 @@ pub fn execs() -> Execs {
         expect_stdout: None,
         expect_stderr: None,
         expect_stdin: None,
-        expect_exit_code: None,
+        expect_exit_code: Some(0),
         expect_stdout_contains: Vec::new(),
         expect_stderr_contains: Vec::new(),
         expect_either_contains: Vec::new(),
@@ -1260,8 +1255,8 @@ pub fn basic_lib_manifest(name: &str) -> String {
     )
 }
 
-pub fn path2url(p: PathBuf) -> Url {
-    Url::from_file_path(&*p).ok().unwrap()
+pub fn path2url<P: AsRef<Path>>(p: P) -> Url {
+    Url::from_file_path(p).ok().unwrap()
 }
 
 fn substitute_macros(input: &str) -> String {
@@ -1290,13 +1285,12 @@ fn substitute_macros(input: &str) -> String {
         ("[SUMMARY]", "     Summary"),
         ("[FIXING]", "      Fixing"),
         ("[EXE]", if cfg!(windows) { ".exe" } else { "" }),
-        ("[/]", if cfg!(windows) { "\\" } else { "/" }),
     ];
     let mut result = input.to_owned();
-    for &(pat, subst) in macros.iter() {
+    for &(pat, subst) in &macros {
         result = result.replace(pat, subst)
     }
-    return result;
+    result
 }
 
 pub mod install;
@@ -1363,7 +1357,7 @@ fn _process(t: &OsStr) -> cargo::util::ProcessBuilder {
      .env_remove("GIT_COMMITTER_EMAIL")
      .env_remove("CARGO_TARGET_DIR")     // we assume 'target'
      .env_remove("MSYSTEM"); // assume cmd.exe everywhere on windows
-    return p;
+    p
 }
 
 pub trait ChannelChanger: Sized {
@@ -1376,8 +1370,25 @@ impl ChannelChanger for cargo::util::ProcessBuilder {
     }
 }
 
-pub fn cargo_process() -> cargo::util::ProcessBuilder {
-    process(&cargo_exe())
+fn split_and_add_args(p: &mut ProcessBuilder, s: &str) {
+    for arg in s.split_whitespace() {
+        if arg.contains('"') || arg.contains('\'') {
+            panic!("shell-style argument parsing is not supported")
+        }
+        p.arg(arg);
+    }
+}
+
+pub fn cargo_process(s: &str) -> ProcessBuilder {
+    let mut p = process(&cargo_exe());
+    split_and_add_args(&mut p, s);
+    p
+}
+
+pub fn git_process(s: &str) -> ProcessBuilder {
+    let mut p = process("git");
+    split_and_add_args(&mut p, s);
+    p
 }
 
 pub fn sleep_ms(ms: u64) {

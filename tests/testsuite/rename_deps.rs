@@ -94,7 +94,7 @@ fn rename_dependency() {
 
     assert_that(
         p.cargo("build").masquerade_as_nightly_cargo(),
-        execs().with_status(0),
+        execs(),
     );
 }
 
@@ -133,7 +133,7 @@ fn rename_with_different_names() {
 
     assert_that(
         p.cargo("build").masquerade_as_nightly_cargo(),
-        execs().with_status(0),
+        execs(),
     );
 }
 
@@ -199,7 +199,7 @@ fn lots_of_names() {
 
     assert_that(
         p.cargo("build -v").masquerade_as_nightly_cargo(),
-        execs().with_status(0),
+        execs(),
     );
 }
 
@@ -232,7 +232,7 @@ fn rename_and_patch() {
 
     assert_that(
         p.cargo("build -v").masquerade_as_nightly_cargo(),
-        execs().with_status(0),
+        execs(),
     );
 }
 
@@ -296,7 +296,7 @@ fn rename_affects_fingerprint() {
 
     assert_that(
         p.cargo("build -v").masquerade_as_nightly_cargo(),
-        execs().with_status(0),
+        execs(),
     );
 
     p.change_file(
@@ -351,16 +351,116 @@ fn can_run_doc_tests() {
 
     assert_that(
         foo.cargo("test").arg("-v").masquerade_as_nightly_cargo(),
-        execs().with_status(0).with_stderr_contains(format!(
+        execs().with_stderr_contains(format!(
             "\
 [DOCTEST] foo
-[RUNNING] `rustdoc --test {dir}[/]src[/]lib.rs \
+[RUNNING] `rustdoc --test {dir}/src/lib.rs \
         [..] \
-        --extern baz={dir}[/]target[/]debug[/]deps[/]libbar-[..].rlib \
-        --extern bar={dir}[/]target[/]debug[/]deps[/]libbar-[..].rlib \
+        --extern baz={dir}/target/debug/deps/libbar-[..].rlib \
+        --extern bar={dir}/target/debug/deps/libbar-[..].rlib \
         [..]`
 ",
             dir = foo.root().display(),
         )),
+    );
+}
+
+#[test]
+fn features_still_work() {
+    Package::new("foo", "0.1.0").publish();
+    Package::new("bar", "0.1.0").publish();
+
+    let p = project()
+        .file(
+            "Cargo.toml",
+            r#"
+                [package]
+                name = "test"
+                version = "0.1.0"
+                authors = []
+
+                [dependencies]
+                p1 = { path = 'a', features = ['b'] }
+                p2 = { path = 'b' }
+            "#,
+        )
+        .file("src/lib.rs", "")
+        .file(
+            "a/Cargo.toml",
+            r#"
+                cargo-features = ["rename-dependency"]
+
+                [package]
+                name = "p1"
+                version = "0.1.0"
+                authors = []
+
+                [dependencies]
+                b = { version = "0.1", package = "foo", optional = true }
+            "#,
+        )
+        .file("a/src/lib.rs", "extern crate b;")
+        .file(
+            "b/Cargo.toml",
+            r#"
+                cargo-features = ["rename-dependency"]
+
+                [package]
+                name = "p2"
+                version = "0.1.0"
+                authors = []
+
+                [dependencies]
+                b = { version = "0.1", package = "bar", optional = true }
+
+                [features]
+                default = ['b']
+            "#,
+        )
+        .file("b/src/lib.rs", "extern crate b;")
+        .build();
+
+    assert_that(
+        p.cargo("build -v").masquerade_as_nightly_cargo(),
+        execs(),
+    );
+}
+
+#[test]
+fn features_not_working() {
+    Package::new("foo", "0.1.0").publish();
+    Package::new("bar", "0.1.0").publish();
+
+    let p = project()
+        .file(
+            "Cargo.toml",
+            r#"
+                cargo-features = ["rename-dependency"]
+                [package]
+                name = "test"
+                version = "0.1.0"
+                authors = []
+
+                [dependencies]
+                a = { path = 'a', package = 'p1', optional = true }
+
+                [features]
+                default = ['p1']
+            "#,
+        )
+        .file("src/lib.rs", "")
+        .file("a/Cargo.toml", &basic_manifest("p1", "0.1.0"))
+        .build();
+
+    assert_that(
+        p.cargo("build -v").masquerade_as_nightly_cargo(),
+        execs()
+            .with_status(101)
+            .with_stderr("\
+error: failed to parse manifest at `[..]`
+
+Caused by:
+  Feature `default` includes `p1` which is neither a dependency nor another feature
+")
     );
 }

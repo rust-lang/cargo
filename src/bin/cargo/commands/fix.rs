@@ -1,6 +1,6 @@
 use command_prelude::*;
 
-use cargo::ops;
+use cargo::ops::{self, CompileFilter, FilterRule};
 
 pub fn cli() -> App {
     subcommand("fix")
@@ -37,10 +37,24 @@ pub fn cli() -> App {
         )
         .arg(
             Arg::with_name("edition")
+                .long("edition")
+                .help("Fix in preparation for the next edition"),
+        )
+        .arg(
+            // This is a deprecated argument, we'll want to phase it out
+            // eventually.
+            Arg::with_name("prepare-for")
                 .long("prepare-for")
                 .help("Fix warnings in preparation of an edition upgrade")
                 .takes_value(true)
-                .possible_values(&["2018"]),
+                .possible_values(&["2018"])
+                .conflicts_with("edition")
+                .hidden(true),
+        )
+        .arg(
+            Arg::with_name("idioms")
+                .long("edition-idioms")
+                .help("Fix warnings to migrate to the idioms of an edition")
         )
         .arg(
             Arg::with_name("allow-no-vcs")
@@ -67,22 +81,16 @@ remaining warnings will be displayed when the check process is finished. For
 example if you'd like to prepare for the 2018 edition, you can do so by
 executing:
 
-    cargo fix --prepare-for 2018
-
-Note that this is not guaranteed to fix all your code as it only fixes code that
-`cargo check` would otherwise compile. For example unit tests are left out
-from this command, but they can be checked with:
-
-    cargo fix --prepare-for 2018 --all-targets
+    cargo fix --edition
 
 which behaves the same as `cargo check --all-targets`. Similarly if you'd like
 to fix code for different platforms you can do:
 
-    cargo fix --prepare-for 2018 --target x86_64-pc-windows-gnu
+    cargo fix --edition --target x86_64-pc-windows-gnu
 
 or if your crate has optional features:
 
-    cargo fix --prepare-for 2018 --no-default-features --features foo
+    cargo fix --edition --no-default-features --features foo
 
 If you encounter any problems with `cargo fix` or otherwise have any questions
 or feature requests please don't hesitate to file an issue at
@@ -106,9 +114,25 @@ pub fn exec(config: &mut Config, args: &ArgMatches) -> CliResult {
         }
     };
     let mode = CompileMode::Check { test };
+
+    // Unlike other commands default `cargo fix` to all targets to fix as much
+    // code as we can.
+    let mut opts = args.compile_options(config, mode)?;
+    if let CompileFilter::Default { .. } = opts.filter {
+        opts.filter = CompileFilter::Only {
+            all_targets: true,
+            lib: true,
+            bins: FilterRule::All,
+            examples: FilterRule::All,
+            benches: FilterRule::All,
+            tests: FilterRule::All,
+        }
+    }
     ops::fix(&ws, &mut ops::FixOptions {
-        edition: args.value_of("edition"),
-        compile_opts: args.compile_options(config, mode)?,
+        edition: args.is_present("edition"),
+        prepare_for: args.value_of("prepare-for"),
+        idioms: args.is_present("idioms"),
+        compile_opts: opts,
         allow_dirty: args.is_present("allow-dirty"),
         allow_no_vcs: args.is_present("allow-no-vcs"),
         broken_code: args.is_present("broken-code"),

@@ -231,6 +231,27 @@ impl Shell {
             ShellOut::Write(_) => ColorChoice::Never,
         }
     }
+
+    /// Whether the shell supports color.
+    pub fn supports_color(&self) -> bool {
+        match &self.err {
+            ShellOut::Write(_) => false,
+            ShellOut::Stream { stream, .. } => stream.supports_color(),
+        }
+    }
+
+    /// Prints a message and translates ANSI escape code into console colors.
+    pub fn print_ansi(&mut self, message: &[u8]) -> CargoResult<()> {
+        #[cfg(windows)]
+        {
+            if let ShellOut::Stream { stream, .. } = &mut self.err {
+                ::fwdansi::write_ansi(stream, message)?;
+                return Ok(());
+            }
+        }
+        self.err().write_all(message)?;
+        Ok(())
+    }
 }
 
 impl Default for Shell {

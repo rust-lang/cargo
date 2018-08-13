@@ -162,7 +162,7 @@ fn cfg_easy() {
         .file("b/Cargo.toml", &basic_manifest("b", "0.0.1"))
         .file("b/src/lib.rs", "")
         .build();
-    assert_that(p.cargo("build").arg("-v"), execs().with_status(0));
+    assert_that(p.cargo("build").arg("-v"), execs());
 }
 
 #[test]
@@ -190,7 +190,7 @@ fn dont_include() {
         .build();
     assert_that(
         p.cargo("build"),
-        execs().with_status(0).with_stderr(
+        execs().with_stderr(
             "\
 [COMPILING] a v0.0.1 ([..])
 [FINISHED] dev [unoptimized + debuginfo] target(s) in [..]
@@ -225,7 +225,7 @@ fn works_through_the_registry() {
 
     assert_that(
         p.cargo("build"),
-        execs().with_status(0).with_stderr(
+        execs().with_stderr(
             "\
 [UPDATING] registry [..]
 [DOWNLOADING] [..]
@@ -270,7 +270,7 @@ fn ignore_version_from_other_platform() {
 
     assert_that(
         p.cargo("build"),
-        execs().with_status(0).with_stderr(
+        execs().with_stderr(
             "\
 [UPDATING] registry [..]
 [DOWNLOADING] [..]
@@ -383,7 +383,7 @@ fn multiple_match_ok() {
         .file("b/Cargo.toml", &basic_manifest("b", "0.0.1"))
         .file("b/src/lib.rs", "")
         .build();
-    assert_that(p.cargo("build").arg("-v"), execs().with_status(0));
+    assert_that(p.cargo("build").arg("-v"), execs());
 }
 
 #[test]
@@ -405,12 +405,12 @@ fn any_ok() {
         .file("b/Cargo.toml", &basic_manifest("b", "0.0.1"))
         .file("b/src/lib.rs", "")
         .build();
-    assert_that(p.cargo("build").arg("-v"), execs().with_status(0));
+    assert_that(p.cargo("build").arg("-v"), execs());
 }
 
 // https://github.com/rust-lang/cargo/issues/5313
 #[test]
-#[cfg(all(target_arch = "x86_64", target_os = "linux"))]
+#[cfg(all(target_arch = "x86_64", target_os = "linux", target_env = "gnu"))]
 fn cfg_looks_at_rustflags_for_target() {
     let p = project()
         .file(
@@ -441,6 +441,6 @@ fn cfg_looks_at_rustflags_for_target() {
     assert_that(
         p.cargo("build --target x86_64-unknown-linux-gnu")
             .env("RUSTFLAGS", "--cfg with_b"),
-        execs().with_status(0),
+        execs(),
     );
 }

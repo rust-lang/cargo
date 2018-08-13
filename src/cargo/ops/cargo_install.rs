@@ -12,7 +12,7 @@ use toml;
 
 use core::{Dependency, Edition, Package, PackageIdSpec, Source, SourceId};
 use core::{PackageId, Workspace};
-use core::compiler::DefaultExecutor;
+use core::compiler::{DefaultExecutor, Executor};
 use ops::{self, CompileFilter};
 use sources::{GitSource, PathSource, SourceConfigMap};
 use util::{internal, Config};
@@ -262,8 +262,9 @@ fn install_one(
         check_overwrites(&dst, pkg, &opts.filter, &list, force)?;
     }
 
+    let exec: Arc<Executor> = Arc::new(DefaultExecutor);
     let compile =
-        ops::compile_ws(&ws, Some(source), opts, Arc::new(DefaultExecutor)).chain_err(|| {
+        ops::compile_ws(&ws, Some(source), opts, &exec).chain_err(|| {
             if let Some(td) = td_opt.take() {
                 // preserve the temporary directory, so the user can inspect it
                 td.into_path();

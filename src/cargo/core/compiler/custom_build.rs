@@ -254,6 +254,7 @@ fn build_work<'a, 'cfg>(cx: &mut Context<'a, 'cfg>, unit: &Unit<'a>) -> CargoRes
     let build_scripts = super::load_build_deps(cx, unit);
     let kind = unit.kind;
     let json_messages = bcx.build_config.json_messages();
+    let extra_verbose = bcx.config.extra_verbose();
 
     // Check to see if the build script has already run, and if it has keep
     // track of whether it has told us about some explicit dependencies
@@ -320,17 +321,12 @@ fn build_work<'a, 'cfg>(cx: &mut Context<'a, 'cfg>, unit: &Unit<'a>) -> CargoRes
             state.build_plan(invocation_name, cmd.clone(), Arc::new(Vec::new()));
         } else {
             state.running(&cmd);
-            let output = cmd.exec_with_streaming(
-                &mut |out_line| {
-                    state.stdout(out_line);
-                    Ok(())
-                },
-                &mut |err_line| {
-                    state.stderr(err_line);
-                    Ok(())
-                },
-                true,
-            ).map_err(|e| {
+            let output = if extra_verbose {
+                state.capture_output(&cmd, true)
+            } else {
+                cmd.exec_with_output()
+            };
+            let output = output.map_err(|e| {
                 format_err!(
                     "failed to run custom build command for `{}`\n{}",
                     pkg_name,

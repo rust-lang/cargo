@@ -1,6 +1,7 @@
 //! A small TCP server to handle collection of diagnostics information in a
 //! cross-platform way for the `cargo fix` command.
 
+use std::collections::HashSet;
 use std::env;
 use std::io::{BufReader, Read, Write};
 use std::net::{Shutdown, SocketAddr, TcpListener, TcpStream};
@@ -29,7 +30,7 @@ const PLEASE_REPORT_THIS_BUG: &str =
 pub enum Message {
     Fixing {
         file: String,
-        fixes: usize,
+        fixes: u32,
     },
     FixFailed {
         files: Vec<String>,
@@ -39,16 +40,22 @@ pub enum Message {
         file: String,
         message: String,
     },
+    PreviewNotFound {
+        file: String,
+        edition: String,
+    },
+    EditionAlreadyEnabled {
+        file: String,
+        edition: String,
+    },
+    IdiomEditionMismatch {
+        file: String,
+        idioms: String,
+        edition: Option<String>,
+    },
 }
 
 impl Message {
-    pub fn fixing(file: &str, num: usize) -> Message {
-        Message::Fixing {
-            file: file.into(),
-            fixes: num,
-        }
-    }
-
     pub fn post(&self) -> Result<(), Error> {
         let addr = env::var(DIAGNOSICS_SERVER_VAR)
             .context("diagnostics collector misconfigured")?;
@@ -70,53 +77,134 @@ impl Message {
 
         Ok(())
     }
+}
 
-    pub fn print_to(&self, config: &Config) -> CargoResult<()> {
-        match self {
+pub struct DiagnosticPrinter<'a> {
+    config: &'a Config,
+    preview_not_found: HashSet<String>,
+    edition_already_enabled: HashSet<String>,
+    idiom_mismatch: HashSet<String>,
+}
+
+impl<'a> DiagnosticPrinter<'a> {
+    pub fn new(config: &'a Config) -> DiagnosticPrinter<'a> {
+        DiagnosticPrinter {
+            config,
+            preview_not_found: HashSet::new(),
+            edition_already_enabled: HashSet::new(),
+            idiom_mismatch: HashSet::new(),
+        }
+    }
+
+    pub fn print(&mut self, msg: &Message) -> CargoResult<()> {
+        match msg {
             Message::Fixing { file, fixes } => {
                 let msg = if *fixes == 1 { "fix" } else { "fixes" };
                 let msg = format!("{} ({} {})", file, fixes, msg);
-                config.shell().status("Fixing", msg)
+                self.config.shell().status("Fixing", msg)
             }
             Message::ReplaceFailed { file, message } => {
                 let msg = format!("error applying suggestions to `{}`\n", file);
-                config.shell().warn(&msg)?;
+                self.config.shell().warn(&msg)?;
                 write!(
-                    config.shell().err(),
+                    self.config.shell().err(),
                     "The full error message was:\n\n> {}\n\n",
                     message,
                 )?;
-                write!(config.shell().err(), "{}", PLEASE_REPORT_THIS_BUG)?;
+                write!(self.config.shell().err(), "{}", PLEASE_REPORT_THIS_BUG)?;
                 Ok(())
             }
             Message::FixFailed { files, krate } => {
                 if let Some(ref krate) = *krate {
-                    config.shell().warn(&format!(
+                    self.config.shell().warn(&format!(
                         "failed to automatically apply fixes suggested by rustc \
                          to crate `{}`",
                         krate,
                     ))?;
                 } else {
-                    config.shell().warn(
+                    self.config.shell().warn(
                         "failed to automatically apply fixes suggested by rustc"
                     )?;
                 }
                 if !files.is_empty() {
                     writeln!(
-                        config.shell().err(),
+                        self.config.shell().err(),
                         "\nafter fixes were automatically applied the compiler \
                          reported errors within these files:\n"
                     )?;
                     for file in files {
-                        writeln!(config.shell().err(), "  * {}", file)?;
+                        writeln!(self.config.shell().err(), "  * {}", file)?;
                     }
-                    writeln!(config.shell().err())?;
+                    writeln!(self.config.shell().err())?;
                 }
-                write!(config.shell().err(), "{}", PLEASE_REPORT_THIS_BUG)?;
+                write!(self.config.shell().err(), "{}", PLEASE_REPORT_THIS_BUG)?;
+                Ok(())
+            }
+            Message::PreviewNotFound { file, edition } => {
+                // By default we're fixing a lot of things concurrently, don't
+                // warn about the same file multiple times.
+                if !self.preview_not_found.insert(file.clone()) {
+                    return Ok(())
+                }
+                self.config.shell().warn(&format!(
+                    "failed to find `#![feature(rust_{}_preview)]` in `{}`\n\
+                     this may cause `cargo fix` to not be able to fix all\n\
+                     issues in preparation for the {0} edition",
+                    edition,
+                    file,
+                ))?;
+                Ok(())
+            }
+            Message::EditionAlreadyEnabled { file, edition } => {
+                // Like above, only warn once per file
+                if !self.edition_already_enabled.insert(file.clone()) {
+                    return Ok(())
+                }
+
+                let msg = format!(
+                    "\
+cannot prepare for the {} edition when it is enabled, so cargo cannot
+automatically fix errors in `{}`
+
+To prepare for the {0} edition you should first remove `edition = '{0}'` from
+your `Cargo.toml` and then rerun this command. Once all warnings have been fixed
+then you can re-enable the `edition` key in `Cargo.toml`. For some more
+information about transitioning to the {0} edition see:
+
+  https://rust-lang-nursery.github.io/edition-guide/editions/transitioning.html
+",
+                    edition,
+                    file,
+                );
+                self.config.shell().error(&msg)?;
+                Ok(())
+            }
+            Message::IdiomEditionMismatch { file, idioms, edition } => {
+                // Same as above
+                if !self.idiom_mismatch.insert(file.clone()) {
+                    return Ok(())
+                }
+                self.config.shell().error(&format!(
+                    "\
+cannot migrate to the idioms of the {} edition for `{}`
+because it is compiled {}, which doesn't match {0}
+
+consider migrating to the {0} edition by adding `edition = '{0}'` to
+`Cargo.toml` and then rerunning this command; a more detailed transition
+guide can be found at
+
+  https://rust-lang-nursery.github.io/edition-guide/editions/transitioning.html
+",
+                    idioms,
+                    file,
+                    match edition {
+                        Some(s) => format!("with the {} edition", s),
+                        None => "without an edition".to_string(),
+                    },
+                ))?;
                 Ok(())
             }
         }
-
     }
 }
 
@@ -165,7 +253,7 @@ impl RustfixDiagnosticServer {
 
     fn run(self, on_message: &Fn(Message), done: &AtomicBool) {
         while let Ok((client, _)) = self.listener.accept() {
-            let mut client = BufReader::new(client);
+            let client = BufReader::new(client);
             match serde_json::from_reader(client) {
                 Ok(message) => on_message(message),
                 Err(e) => warn!("invalid diagnostics message: {}", e),

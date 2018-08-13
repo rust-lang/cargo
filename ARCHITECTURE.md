@@ -93,13 +93,13 @@ call to `execs()`:
 // Before
 assert_that(
     p.cargo("run"),
-    execs().with_status(0)
+    execs()
 );
 
 // After
 assert_that(
     p.cargo("run"),
-    execs().stream().with_status(0)
+    execs().stream()
 );
 ```
 

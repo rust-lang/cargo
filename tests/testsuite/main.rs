@@ -1,4 +1,6 @@
 #![deny(warnings)]
+#![cfg_attr(feature = "cargo-clippy", allow(blacklisted_name))]
+#![cfg_attr(feature = "cargo-clippy", allow(explicit_iter_loop))]
 
 extern crate bufstream;
 extern crate cargo;
@@ -47,6 +49,7 @@ mod death;
 mod dep_info;
 mod directory;
 mod doc;
+mod edition;
 mod features;
 mod fetch;
 mod fix;

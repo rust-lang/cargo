@@ -16,13 +16,15 @@ static MANIFEST_OUTPUT: &'static str = r#"
     "license": null,
     "license_file": null,
     "description": null,
+    "edition": "2015",
     "source":null,
     "dependencies":[],
     "targets":[{
         "kind":["bin"],
         "crate_types":["bin"],
+        "edition": "2015",
         "name":"foo",
-        "src_path":"[..][/]foo[/]src[/]foo.rs"
+        "src_path":"[..]/foo/src/foo.rs"
     }],
     "features":{},
     "manifest_path":"[..]Cargo.toml",
@@ -41,7 +43,7 @@ fn cargo_read_manifest_path_to_cargo_toml_relative() {
             .arg("--manifest-path")
             .arg("foo/Cargo.toml")
             .cwd(p.root().parent().unwrap()),
-        execs().with_status(0).with_json(MANIFEST_OUTPUT),
+        execs().with_json(MANIFEST_OUTPUT),
     );
 }
 
@@ -57,7 +59,7 @@ fn cargo_read_manifest_path_to_cargo_toml_absolute() {
             .arg("--manifest-path")
             .arg(p.root().join("Cargo.toml"))
             .cwd(p.root().parent().unwrap()),
-        execs().with_status(0).with_json(MANIFEST_OUTPUT),
+        execs().with_json(MANIFEST_OUTPUT),
     );
 }
 
@@ -108,6 +110,6 @@ fn cargo_read_manifest_cwd() {
 
     assert_that(
         p.cargo("read-manifest").cwd(p.root()),
-        execs().with_status(0).with_json(MANIFEST_OUTPUT),
+        execs().with_json(MANIFEST_OUTPUT),
     );
 }
