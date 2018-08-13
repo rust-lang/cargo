@@ -66,6 +66,9 @@ fn do_read_manifest(
     let add_unused = |warnings: &mut Warnings| {
         for key in unused {
             warnings.add_warning(format!("unused manifest key: {}", key));
+            if key == "profile.debug" || key == "profiles.debug" {
+                warnings.add_warning("use `[profile.dev]` to configure debug builds".to_string());
+            }
         }
     };
 
@@ -151,8 +154,6 @@ type TomlBenchTarget = TomlTarget;
 
 #[derive(Debug, Serialize)]
 #[serde(untagged)]
-// While unfortunate, resolving the size difference with Box would be a large project
-#[cfg_attr(feature = "cargo-clippy", allow(large_enum_variant))]
 pub enum TomlDependency {
     Simple(String),
     Detailed(DetailedTomlDependency),
@@ -781,6 +782,7 @@ impl TomlManifest {
         // If we have a lib with a path, we're done
         // If we have a lib with no path, use the inferred lib or_else package name
         let targets = targets(
+            &features,
             me,
             package_name,
             package_root,
@@ -871,7 +873,7 @@ impl TomlManifest {
         {
             let mut names_sources = BTreeMap::new();
             for dep in &deps {
-                let name = dep.rename().unwrap_or_else(|| dep.name().as_str());
+                let name = dep.name_in_toml();
                 let prev = names_sources.insert(name.to_string(), dep.source_id());
                 if prev.is_some() && prev != Some(dep.source_id()) {
                     bail!(
@@ -893,7 +895,7 @@ impl TomlManifest {
         let summary = Summary::new(
             pkgid,
             deps,
-            me.features
+            &me.features
                 .as_ref()
                 .map(|x| {
                     x.iter()
@@ -1357,6 +1359,7 @@ struct TomlTarget {
     harness: Option<bool>,
     #[serde(rename = "required-features")]
     required_features: Option<Vec<String>>,
+    edition: Option<String>,
 }
 
 #[derive(Clone)]

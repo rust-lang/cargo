@@ -144,7 +144,7 @@ impl ProcessBuilder {
         } else {
             Err(process_error(
                 &format!("process didn't exit successfully: {}", self),
-                Some(&exit),
+                Some(exit),
                 None,
             ).into())
         }
@@ -193,7 +193,7 @@ impl ProcessBuilder {
         } else {
             Err(process_error(
                 &format!("process didn't exit successfully: {}", self),
-                Some(&output.status),
+                Some(output.status),
                 Some(&output),
             ).into())
         }
@@ -271,13 +271,13 @@ impl ProcessBuilder {
             if !output.status.success() {
                 return Err(process_error(
                     &format!("process didn't exit successfully: {}", self),
-                    Some(&output.status),
+                    Some(output.status),
                     to_print,
                 ).into());
             } else if let Some(e) = callback_error {
                 let cx = process_error(
                     &format!("failed to parse process output: {}", self),
-                    Some(&output.status),
+                    Some(output.status),
                     to_print,
                 );
                 return Err(e.context(cx).into());

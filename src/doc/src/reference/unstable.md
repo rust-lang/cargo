@@ -99,6 +99,24 @@ extern crate bar;  // registry `custom`
 extern crate baz;  // git repository
 ```
 
+Note that if you have an optional dependency like:
+
+```toml
+[dependencies]
+foo = { version = "0.1", package = 'bar', optional = true }
+```
+
+you're depending on the crate `bar` from crates.io, but your crate has a `foo`
+feature instead of a `bar` feature. That is, names of features take after the
+name of the dependency, not the package name, when renamed.
+
+Enabling transitive dependencies works similarly, for example we could add the
+following to the above manifest:
+
+```toml
+[features]
+log-debug = ['foo/log-debug'] # using 'bar/log-debug' would be an error!
+```
 
 ### publish-lockfile
 * Original Issue: [#2263](https://github.com/rust-lang/cargo/issues/2263)
@@ -187,7 +205,10 @@ cargo +nightly build --out-dir=out -Z unstable-options
 
 You can opt in to a specific Rust Edition for your package with the `edition`
 key in `Cargo.toml`.  If you don't specify the edition, it will default to
-2015.  You need to include the appropriate `cargo-features`:
+2015.  You need to include the appropriate `cargo-features`.
+
+You can also specify `edition` on a per-target level, where it will otherwise
+default to the package `edition`.
 
 ```toml
 cargo-features = ["edition"]
@@ -195,6 +216,10 @@ cargo-features = ["edition"]
 [package]
 ...
 edition = "2018"
+
+[[bin]]
+...
+edition = "2015"
 ```
 
 

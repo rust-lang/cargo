@@ -47,7 +47,7 @@ fn simple() {
 
     assert_that(
         p.cargo("build"),
-        execs().with_status(0).with_stderr(&format!(
+        execs().with_stderr(&format!(
             "\
 [UNPACKING] bar v0.0.1 ([..])
 [COMPILING] bar v0.0.1
@@ -59,9 +59,9 @@ fn simple() {
     );
     assert_that(
         p.cargo("build"),
-        execs().with_status(0).with_stderr("[FINISHED] [..]"),
+        execs().with_stderr("[FINISHED] [..]"),
     );
-    assert_that(p.cargo("test"), execs().with_status(0));
+    assert_that(p.cargo("test"), execs());
 }
 
 #[test]
@@ -91,7 +91,7 @@ fn multiple_versions() {
 
     assert_that(
         p.cargo("build"),
-        execs().with_status(0).with_stderr(&format!(
+        execs().with_stderr(&format!(
             "\
 [UNPACKING] bar v0.1.0 ([..])
 [COMPILING] bar v0.1.0
@@ -110,7 +110,6 @@ fn multiple_versions() {
     assert_that(
         p.cargo("update").arg("-v"),
         execs()
-            .with_status(0)
             .with_stderr("[UPDATING] bar v0.1.0 -> v0.2.0"),
     );
 }
@@ -156,7 +155,7 @@ fn multiple_names() {
 
     assert_that(
         p.cargo("build"),
-        execs().with_status(0).with_stderr(&format!(
+        execs().with_stderr(&format!(
             "\
 [UNPACKING] [..]
 [UNPACKING] [..]
@@ -212,7 +211,7 @@ fn interdependent() {
 
     assert_that(
         p.cargo("build"),
-        execs().with_status(0).with_stderr(&format!(
+        execs().with_stderr(&format!(
             "\
 [UNPACKING] [..]
 [UNPACKING] [..]
@@ -282,7 +281,7 @@ fn path_dep_rewritten() {
 
     assert_that(
         p.cargo("build"),
-        execs().with_status(0).with_stderr(&format!(
+        execs().with_stderr(&format!(
             "\
 [UNPACKING] [..]
 [UNPACKING] [..]
@@ -373,7 +372,7 @@ fn different_directory_replacing_the_registry_is_bad() {
 
     // Generate a lock file against the crates.io registry
     Package::new("bar", "0.0.1").publish();
-    assert_that(p.cargo("build"), execs().with_status(0));
+    assert_that(p.cargo("build"), execs());
 
     // Switch back to our directory source, and now that we're replacing
     // crates.io make sure that this fails because we're replacing with a
@@ -441,7 +440,7 @@ fn crates_io_registry_url_is_optional() {
 
     assert_that(
         p.cargo("build"),
-        execs().with_status(0).with_stderr(&format!(
+        execs().with_stderr(&format!(
             "\
 [UNPACKING] bar v0.0.1 ([..])
 [COMPILING] bar v0.0.1
@@ -453,7 +452,7 @@ fn crates_io_registry_url_is_optional() {
     );
     assert_that(
         p.cargo("build"),
-        execs().with_status(0).with_stderr("[FINISHED] [..]"),
+        execs().with_stderr("[FINISHED] [..]"),
     );
-    assert_that(p.cargo("test"), execs().with_status(0));
+    assert_that(p.cargo("test"), execs());
 }

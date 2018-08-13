@@ -2,10 +2,10 @@ use std::collections::{BTreeMap, HashSet};
 
 use termcolor::Color::{self, Cyan, Green, Red};
 
-use core::PackageId;
 use core::registry::PackageRegistry;
-use core::{Resolve, SourceId, Workspace};
 use core::resolver::Method;
+use core::PackageId;
+use core::{Resolve, SourceId, Workspace};
 use ops;
 use util::config::Config;
 use util::CargoResult;
@@ -38,7 +38,7 @@ pub fn update_lockfile(ws: &Workspace, opts: &UpdateOptions) -> CargoResult<()> 
         bail!("cannot specify both aggressive and precise simultaneously")
     }
 
-    if ws.members().is_empty() {
+    if ws.members().count() == 0 {
         bail!("you can't generate a lockfile for an empty workspace.")
     }
 

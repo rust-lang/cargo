@@ -34,11 +34,11 @@ fn deleting_database_files() {
         .file("src/lib.rs", "")
         .build();
 
-    assert_that(project.cargo("build"), execs().with_status(0));
+    assert_that(project.cargo("build"), execs());
 
     let mut files = Vec::new();
     find_files(&paths::home().join(".cargo/git/db"), &mut files);
-    assert!(files.len() > 0);
+    assert!(!files.is_empty());
 
     let log = "cargo::sources::git=trace";
     for file in files {
@@ -49,7 +49,7 @@ fn deleting_database_files() {
         cargopaths::remove_file(&file).unwrap();
         assert_that(
             project.cargo("build").env("RUST_LOG", log).arg("-v"),
-            execs().with_status(0),
+            execs(),
         );
 
         if !file.exists() {
@@ -65,7 +65,7 @@ fn deleting_database_files() {
             .unwrap();
         assert_that(
             project.cargo("build").env("RUST_LOG", log).arg("-v"),
-            execs().with_status(0),
+            execs(),
         );
     }
 }
@@ -98,7 +98,7 @@ fn deleting_checkout_files() {
         .file("src/lib.rs", "")
         .build();
 
-    assert_that(project.cargo("build"), execs().with_status(0));
+    assert_that(project.cargo("build"), execs());
 
     let dir = paths::home()
         .join(".cargo/git/checkouts")
@@ -120,7 +120,7 @@ fn deleting_checkout_files() {
         .join(".git");
     let mut files = Vec::new();
     find_files(&dir, &mut files);
-    assert!(files.len() > 0);
+    assert!(!files.is_empty());
 
     let log = "cargo::sources::git=trace";
     for file in files {
@@ -131,7 +131,7 @@ fn deleting_checkout_files() {
         cargopaths::remove_file(&file).unwrap();
         assert_that(
             project.cargo("build").env("RUST_LOG", log).arg("-v"),
-            execs().with_status(0),
+            execs(),
         );
 
         if !file.exists() {
@@ -147,7 +147,7 @@ fn deleting_checkout_files() {
             .unwrap();
         assert_that(
             project.cargo("build").env("RUST_LOG", log).arg("-v"),
-            execs().with_status(0),
+            execs(),
         );
     }
 }

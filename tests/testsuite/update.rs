@@ -38,7 +38,7 @@ fn minor_update_two_places() {
         .file("foo/src/lib.rs", "")
         .build();
 
-    assert_that(p.cargo("build"), execs().with_status(0));
+    assert_that(p.cargo("build"), execs());
     Package::new("log", "0.1.1").publish();
 
     File::create(p.root().join("foo/Cargo.toml"))
@@ -56,7 +56,7 @@ fn minor_update_two_places() {
         )
         .unwrap();
 
-    assert_that(p.cargo("build"), execs().with_status(0));
+    assert_that(p.cargo("build"), execs());
 }
 
 #[test]
@@ -95,7 +95,7 @@ fn transitive_minor_update() {
         .file("foo/src/lib.rs", "")
         .build();
 
-    assert_that(p.cargo("build"), execs().with_status(0));
+    assert_that(p.cargo("build"), execs());
 
     Package::new("log", "0.1.1").publish();
     Package::new("serde", "0.1.1").dep("log", "0.1.1").publish();
@@ -111,7 +111,7 @@ fn transitive_minor_update() {
     // to change this one day.
     assert_that(
         p.cargo("update").arg("-p").arg("serde"),
-        execs().with_status(0).with_stderr(
+        execs().with_stderr(
             "\
 [UPDATING] registry `[..]`
 ",
@@ -155,14 +155,14 @@ fn conservative() {
         .file("foo/src/lib.rs", "")
         .build();
 
-    assert_that(p.cargo("build"), execs().with_status(0));
+    assert_that(p.cargo("build"), execs());
 
     Package::new("log", "0.1.1").publish();
     Package::new("serde", "0.1.1").dep("log", "0.1").publish();
 
     assert_that(
         p.cargo("update").arg("-p").arg("serde"),
-        execs().with_status(0).with_stderr(
+        execs().with_stderr(
             "\
 [UPDATING] registry `[..]`
 [UPDATING] serde v0.1.0 -> v0.1.1
@@ -204,13 +204,13 @@ fn update_via_new_dep() {
         .file("foo/src/lib.rs", "")
         .build();
 
-    assert_that(p.cargo("build"), execs().with_status(0));
+    assert_that(p.cargo("build"), execs());
     Package::new("log", "0.1.1").publish();
 
     p.uncomment_root_manifest();
     assert_that(
         p.cargo("build").env("RUST_LOG", "cargo=trace"),
-        execs().with_status(0),
+        execs(),
     );
 }
 
@@ -249,11 +249,11 @@ fn update_via_new_member() {
         .file("foo/src/lib.rs", "")
         .build();
 
-    assert_that(p.cargo("build"), execs().with_status(0));
+    assert_that(p.cargo("build"), execs());
     Package::new("log", "0.1.1").publish();
 
     p.uncomment_root_manifest();
-    assert_that(p.cargo("build"), execs().with_status(0));
+    assert_that(p.cargo("build"), execs());
 }
 
 #[test]
@@ -276,13 +276,13 @@ fn add_dep_deep_new_requirement() {
         .file("src/lib.rs", "")
         .build();
 
-    assert_that(p.cargo("build"), execs().with_status(0));
+    assert_that(p.cargo("build"), execs());
 
     Package::new("log", "0.1.1").publish();
     Package::new("bar", "0.1.0").dep("log", "0.1.1").publish();
 
     p.uncomment_root_manifest();
-    assert_that(p.cargo("build"), execs().with_status(0));
+    assert_that(p.cargo("build"), execs());
 }
 
 #[test]
@@ -306,13 +306,13 @@ fn everything_real_deep() {
         .file("src/lib.rs", "")
         .build();
 
-    assert_that(p.cargo("build"), execs().with_status(0));
+    assert_that(p.cargo("build"), execs());
 
     Package::new("log", "0.1.1").publish();
     Package::new("bar", "0.1.0").dep("log", "0.1.1").publish();
 
     p.uncomment_root_manifest();
-    assert_that(p.cargo("build"), execs().with_status(0));
+    assert_that(p.cargo("build"), execs());
 }
 
 #[test]
@@ -348,7 +348,7 @@ fn change_package_version() {
         )
         .build();
 
-    assert_that(p.cargo("build"), execs().with_status(0));
+    assert_that(p.cargo("build"), execs());
 }
 
 #[test]
@@ -387,7 +387,7 @@ fn update_precise() {
         .file("foo/src/lib.rs", "")
         .build();
 
-    assert_that(p.cargo("build"), execs().with_status(0));
+    assert_that(p.cargo("build"), execs());
 
     Package::new("serde", "0.2.0").publish();
 
@@ -397,7 +397,7 @@ fn update_precise() {
             .arg("serde:0.2.1")
             .arg("--precise")
             .arg("0.2.0"),
-        execs().with_status(0).with_stderr(
+        execs().with_stderr(
             "\
 [UPDATING] registry `[..]`
 [UPDATING] serde v0.2.1 -> v0.2.0

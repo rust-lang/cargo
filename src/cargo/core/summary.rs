@@ -35,23 +35,24 @@ impl Summary {
     pub fn new<K>(
         pkg_id: PackageId,
         dependencies: Vec<Dependency>,
-        features: BTreeMap<K, Vec<impl AsRef<str>>>,
+        features: &BTreeMap<K, Vec<impl AsRef<str>>>,
         links: Option<impl AsRef<str>>,
         namespaced_features: bool,
     ) -> CargoResult<Summary>
     where K: Borrow<str> + Ord + Display {
         for dep in dependencies.iter() {
-            if !namespaced_features && features.get(&*dep.name()).is_some() {
+            let feature = dep.name_in_toml();
+            if !namespaced_features && features.get(&*feature).is_some() {
                 bail!(
                     "Features and dependencies cannot have the \
                      same name: `{}`",
-                    dep.name()
+                    feature
                 )
             }
             if dep.is_optional() && !dep.is_transitive() {
                 bail!(
                     "Dev-dependencies are not allowed to be optional: `{}`",
-                    dep.name()
+                    feature
                 )
             }
         }
@@ -147,7 +148,7 @@ where K: Borrow<str> + Ord + Display {
     let mut dep_map = HashMap::new();
     for dep in dependencies.iter() {
         dep_map
-            .entry(dep.name().as_str())
+            .entry(dep.name_in_toml())
             .or_insert_with(Vec::new)
             .push(dep);
     }

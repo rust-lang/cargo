@@ -1,7 +1,7 @@
 use support::{basic_manifest, basic_bin_manifest, basic_lib_manifest, execs, project};
 use support::hamcrest::assert_that;
 
-const CARGO_RUSTC_ERROR: &'static str =
+const CARGO_RUSTC_ERROR: &str =
     "[ERROR] extra arguments to `rustc` can only be passed to one target, consider filtering
 the package by passing e.g. `--lib` or `--bin NAME` to specify a single target";
 
@@ -14,14 +14,14 @@ fn build_lib_for_foo() {
 
     assert_that(
         p.cargo("rustc").arg("--lib").arg("-v"),
-        execs().with_status(0).with_stderr(format!(
+        execs().with_stderr(format!(
             "\
 [COMPILING] foo v0.0.1 ({url})
-[RUNNING] `rustc --crate-name foo src[/]lib.rs --crate-type lib \
+[RUNNING] `rustc --crate-name foo src/lib.rs --crate-type lib \
         --emit=dep-info,link -C debuginfo=2 \
         -C metadata=[..] \
         --out-dir [..] \
-        -L dependency={dir}[/]target[/]debug[/]deps`
+        -L dependency={dir}/target/debug/deps`
 [FINISHED] dev [unoptimized + debuginfo] target(s) in [..]
 ",
             dir = p.root().display(),
@@ -44,15 +44,15 @@ fn lib() {
             .arg("--")
             .arg("-C")
             .arg("debug-assertions=off"),
-        execs().with_status(0).with_stderr(format!(
+        execs().with_stderr(format!(
             "\
 [COMPILING] foo v0.0.1 ({url})
-[RUNNING] `rustc --crate-name foo src[/]lib.rs --crate-type lib \
+[RUNNING] `rustc --crate-name foo src/lib.rs --crate-type lib \
         --emit=dep-info,link -C debuginfo=2 \
         -C debug-assertions=off \
         -C metadata=[..] \
         --out-dir [..] \
-        -L dependency={dir}[/]target[/]debug[/]deps`
+        -L dependency={dir}/target/debug/deps`
 [FINISHED] dev [unoptimized + debuginfo] target(s) in [..]
 ",
             dir = p.root().display(),
@@ -70,21 +70,21 @@ fn build_main_and_allow_unstable_options() {
 
     assert_that(
         p.cargo("rustc -v --bin foo -- -C debug-assertions"),
-        execs().with_status(0).with_stderr(&format!(
+        execs().with_stderr(&format!(
             "\
 [COMPILING] {name} v{version} ({url})
-[RUNNING] `rustc --crate-name {name} src[/]lib.rs --crate-type lib \
+[RUNNING] `rustc --crate-name {name} src/lib.rs --crate-type lib \
         --emit=dep-info,link -C debuginfo=2 \
         -C metadata=[..] \
         --out-dir [..] \
-        -L dependency={dir}[/]target[/]debug[/]deps`
-[RUNNING] `rustc --crate-name {name} src[/]main.rs --crate-type bin \
+        -L dependency={dir}/target/debug/deps`
+[RUNNING] `rustc --crate-name {name} src/main.rs --crate-type bin \
         --emit=dep-info,link -C debuginfo=2 \
         -C debug-assertions \
         -C metadata=[..] \
         --out-dir [..] \
-        -L dependency={dir}[/]target[/]debug[/]deps \
-        --extern {name}={dir}[/]target[/]debug[/]deps[/]lib{name}-[..].rlib`
+        -L dependency={dir}/target/debug/deps \
+        --extern {name}={dir}/target/debug/deps/lib{name}-[..].rlib`
 [FINISHED] dev [unoptimized + debuginfo] target(s) in [..]
 ",
             dir = p.root().display(),
@@ -123,13 +123,13 @@ fn build_with_args_to_one_of_multiple_binaries() {
 
     assert_that(
         p.cargo("rustc -v --bin bar -- -C debug-assertions"),
-        execs().with_status(0).with_stderr(format!(
+        execs().with_stderr(format!(
             "\
 [COMPILING] foo v0.0.1 ({url})
-[RUNNING] `rustc --crate-name foo src[/]lib.rs --crate-type lib --emit=dep-info,link \
+[RUNNING] `rustc --crate-name foo src/lib.rs --crate-type lib --emit=dep-info,link \
         -C debuginfo=2 -C metadata=[..] \
         --out-dir [..]`
-[RUNNING] `rustc --crate-name bar src[/]bin[/]bar.rs --crate-type bin --emit=dep-info,link \
+[RUNNING] `rustc --crate-name bar src/bin/bar.rs --crate-type bin --emit=dep-info,link \
         -C debuginfo=2 -C debug-assertions [..]`
 [FINISHED] dev [unoptimized + debuginfo] target(s) in [..]
 ",
@@ -168,13 +168,13 @@ fn build_with_args_to_one_of_multiple_tests() {
 
     assert_that(
         p.cargo("rustc -v --test bar -- -C debug-assertions"),
-        execs().with_status(0).with_stderr(format!(
+        execs().with_stderr(format!(
             "\
 [COMPILING] foo v0.0.1 ({url})
-[RUNNING] `rustc --crate-name foo src[/]lib.rs --crate-type lib --emit=dep-info,link \
+[RUNNING] `rustc --crate-name foo src/lib.rs --crate-type lib --emit=dep-info,link \
         -C debuginfo=2 -C metadata=[..] \
         --out-dir [..]`
-[RUNNING] `rustc --crate-name bar tests[/]bar.rs --emit=dep-info,link -C debuginfo=2 \
+[RUNNING] `rustc --crate-name bar tests/bar.rs --emit=dep-info,link -C debuginfo=2 \
         -C debug-assertions [..]--test[..]`
 [FINISHED] dev [unoptimized + debuginfo] target(s) in [..]
 ",
@@ -211,7 +211,7 @@ fn build_foo_with_bar_dependency() {
             .arg("--")
             .arg("-C")
             .arg("debug-assertions"),
-        execs().with_status(0).with_stderr(format!(
+        execs().with_stderr(format!(
             "\
 [COMPILING] bar v0.1.0 ([..])
 [RUNNING] `[..] -C debuginfo=2 [..]`
@@ -248,7 +248,7 @@ fn build_only_bar_dependency() {
 
     assert_that(
         foo.cargo("rustc -v -p bar -- -C debug-assertions"),
-        execs().with_status(0).with_stderr(
+        execs().with_stderr(
             "\
 [COMPILING] bar v0.1.0 ([..])
 [RUNNING] `rustc --crate-name bar [..] --crate-type lib [..] -C debug-assertions [..]`
@@ -265,18 +265,18 @@ fn targets_selected_default() {
         .build();
     assert_that(
         p.cargo("rustc").arg("-v"),
-        execs().with_status(0)
+        execs()
         // bin
         .with_stderr_contains("\
-            [RUNNING] `rustc --crate-name foo src[/]main.rs --crate-type bin \
+            [RUNNING] `rustc --crate-name foo src/main.rs --crate-type bin \
             --emit=dep-info,link[..]")
         // bench
         .with_stderr_does_not_contain("\
-            [RUNNING] `rustc --crate-name foo src[/]main.rs --emit=dep-info,link \
+            [RUNNING] `rustc --crate-name foo src/main.rs --emit=dep-info,link \
             -C opt-level=3 --test [..]")
         // unit test
         .with_stderr_does_not_contain("\
-            [RUNNING] `rustc --crate-name foo src[/]main.rs --emit=dep-info,link \
+            [RUNNING] `rustc --crate-name foo src/main.rs --emit=dep-info,link \
             -C debuginfo=2 --test [..]"),
     );
 }
@@ -288,18 +288,18 @@ fn targets_selected_all() {
         .build();
     assert_that(
         p.cargo("rustc").arg("-v").arg("--all-targets"),
-        execs().with_status(0)
+        execs()
         // bin
         .with_stderr_contains("\
-            [RUNNING] `rustc --crate-name foo src[/]main.rs --crate-type bin \
+            [RUNNING] `rustc --crate-name foo src/main.rs --crate-type bin \
             --emit=dep-info,link[..]")
         // bench
         .with_stderr_contains("\
-            [RUNNING] `rustc --crate-name foo src[/]main.rs --emit=dep-info,link \
+            [RUNNING] `rustc --crate-name foo src/main.rs --emit=dep-info,link \
             -C opt-level=3 --test [..]")
         // unit test
         .with_stderr_contains("\
-            [RUNNING] `rustc --crate-name foo src[/]main.rs --emit=dep-info,link \
+            [RUNNING] `rustc --crate-name foo src/main.rs --emit=dep-info,link \
             -C debuginfo=2 --test [..]"),
     );
 }
@@ -390,7 +390,7 @@ fn rustc_with_other_profile() {
 
     assert_that(
         p.cargo("rustc").arg("--profile").arg("test"),
-        execs().with_status(0),
+        execs(),
     );
 }
 
@@ -404,7 +404,7 @@ fn rustc_fingerprint() {
 
     assert_that(
         p.cargo("rustc -v -- -C debug-assertions"),
-        execs().with_status(0).with_stderr(
+        execs().with_stderr(
             "\
 [COMPILING] foo [..]
 [RUNNING] `rustc [..]-C debug-assertions [..]
@@ -415,7 +415,7 @@ fn rustc_fingerprint() {
 
     assert_that(
         p.cargo("rustc -v -- -C debug-assertions"),
-        execs().with_status(0).with_stderr(
+        execs().with_stderr(
             "\
 [FRESH] foo [..]
 [FINISHED] [..]
@@ -426,7 +426,6 @@ fn rustc_fingerprint() {
     assert_that(
         p.cargo("rustc -v"),
         execs()
-            .with_status(0)
             .with_stderr_does_not_contain("-C debug-assertions")
             .with_stderr(
                 "\
@@ -439,7 +438,7 @@ fn rustc_fingerprint() {
 
     assert_that(
         p.cargo("rustc -v"),
-        execs().with_status(0).with_stderr(
+        execs().with_stderr(
             "\
 [FRESH] foo [..]
 [FINISHED] [..]
@@ -471,15 +470,14 @@ fn rustc_test_with_implicit_bin() {
     assert_that(
         p.cargo("rustc --test test1 -v -- --cfg foo"),
         execs()
-            .with_status(0)
             .with_stderr_contains(
                 "\
-[RUNNING] `rustc --crate-name test1 tests[/]test1.rs [..] --cfg foo [..]
+[RUNNING] `rustc --crate-name test1 tests/test1.rs [..] --cfg foo [..]
 ",
             )
             .with_stderr_contains(
                 "\
-[RUNNING] `rustc --crate-name foo src[/]main.rs [..]
+[RUNNING] `rustc --crate-name foo src/main.rs [..]
 ",
             ),
     );

@@ -17,8 +17,6 @@ use util::errors::*;
 use util::toml::TomlManifest;
 use util::Config;
 
-// While unfortunate, resolving the size difference with Box would be a large project
-#[cfg_attr(feature = "cargo-clippy", allow(large_enum_variant))]
 pub enum EitherManifest {
     Real(Manifest),
     Virtual(VirtualManifest),
@@ -158,13 +156,13 @@ impl ser::Serialize for TargetKind {
     {
         use self::TargetKind::*;
         match *self {
-            Lib(ref kinds) => kinds.iter().map(LibKind::crate_type).collect(),
-            Bin => vec!["bin"],
-            ExampleBin | ExampleLib(_) => vec!["example"],
-            Test => vec!["test"],
-            CustomBuild => vec!["custom-build"],
-            Bench => vec!["bench"],
-        }.serialize(s)
+            Lib(ref kinds) => s.collect_seq(kinds.iter().map(LibKind::crate_type)),
+            Bin => ["bin"].serialize(s),
+            ExampleBin | ExampleLib(_) => ["example"].serialize(s),
+            Test => ["test"].serialize(s),
+            CustomBuild => ["custom-build"].serialize(s),
+            Bench => ["bench"].serialize(s),
+        }
     }
 }
 
@@ -200,6 +198,7 @@ pub struct Target {
     doctest: bool,
     harness: bool, // whether to use the test harness (--test)
     for_host: bool,
+    edition: Edition,
 }
 
 #[derive(Clone, PartialEq, Eq)]
@@ -207,7 +206,6 @@ struct NonHashedPathBuf {
     path: PathBuf,
 }
 
-#[cfg_attr(feature = "cargo-clippy", allow(derive_hash_xor_eq))] // current intentional incoherence
 impl Hash for NonHashedPathBuf {
     fn hash<H: Hasher>(&self, _: &mut H) {
         // ...
@@ -230,6 +228,7 @@ struct SerializedTarget<'a> {
     crate_types: Vec<&'a str>,
     name: &'a str,
     src_path: &'a PathBuf,
+    edition: &'a str,
 }
 
 impl ser::Serialize for Target {
@@ -239,6 +238,7 @@ impl ser::Serialize for Target {
             crate_types: self.rustc_crate_types(),
             name: &self.name,
             src_path: &self.src_path.path,
+            edition: &self.edition.to_string()
         }.serialize(s)
     }
 }
@@ -251,20 +251,29 @@ compact_debug! {
                 match &self.kind {
                     TargetKind::Lib(kinds) => {
                         (
-                            Target::lib_target(&self.name, kinds.clone(), src.clone()),
+                            Target::lib_target(
+                                &self.name,
+                                kinds.clone(),
+                                src.clone(),
+                                Edition::Edition2015,
+                            ),
                             format!("lib_target({:?}, {:?}, {:?})",
                                     self.name, kinds, src),
                         )
                     }
                     TargetKind::CustomBuild => {
                         (
-                            Target::custom_build_target(&self.name, src.clone()),
+                            Target::custom_build_target(
+                                &self.name,
+                                src.clone(),
+                                Edition::Edition2015,
+                            ),
                             format!("custom_build_target({:?}, {:?})",
                                     self.name, src),
                         )
                     }
                     _ => (
-                        Target::with_path(src.clone()),
+                        Target::with_path(src.clone(), Edition::Edition2015),
                         format!("with_path({:?})", src),
                     ),
                 }
@@ -280,6 +289,7 @@ compact_debug! {
                 doctest
                 harness
                 for_host
+                edition
             )]
         }
     }
@@ -492,7 +502,7 @@ impl VirtualManifest {
 }
 
 impl Target {
-    fn with_path(src_path: PathBuf) -> Target {
+    fn with_path(src_path: PathBuf, edition: Edition) -> Target {
         assert!(
             src_path.is_absolute(),
             "`{}` is not absolute",
@@ -507,18 +517,24 @@ impl Target {
             doctest: false,
             harness: true,
             for_host: false,
+            edition,
             tested: true,
             benched: true,
         }
     }
 
-    pub fn lib_target(name: &str, crate_targets: Vec<LibKind>, src_path: PathBuf) -> Target {
+    pub fn lib_target(
+        name: &str,
+        crate_targets: Vec<LibKind>,
+        src_path: PathBuf,
+        edition: Edition,
+    ) -> Target {
         Target {
             kind: TargetKind::Lib(crate_targets),
             name: name.to_string(),
             doctest: true,
             doc: true,
-            ..Target::with_path(src_path)
+            ..Target::with_path(src_path, edition)
         }
     }
 
@@ -526,25 +542,30 @@ impl Target {
         name: &str,
         src_path: PathBuf,
         required_features: Option<Vec<String>>,
+        edition: Edition,
     ) -> Target {
         Target {
             kind: TargetKind::Bin,
             name: name.to_string(),
             required_features,
             doc: true,
-            ..Target::with_path(src_path)
+            ..Target::with_path(src_path, edition)
         }
     }
 
     /// Builds a `Target` corresponding to the `build = "build.rs"` entry.
-    pub fn custom_build_target(name: &str, src_path: PathBuf) -> Target {
+    pub fn custom_build_target(
+        name: &str,
+        src_path: PathBuf,
+        edition: Edition,
+    ) -> Target {
         Target {
             kind: TargetKind::CustomBuild,
             name: name.to_string(),
             for_host: true,
             benched: false,
             tested: false,
-            ..Target::with_path(src_path)
+            ..Target::with_path(src_path, edition)
         }
     }
 
@@ -553,6 +574,7 @@ impl Target {
         crate_targets: Vec<LibKind>,
         src_path: PathBuf,
         required_features: Option<Vec<String>>,
+        edition: Edition,
     ) -> Target {
         let kind = if crate_targets.is_empty() {
             TargetKind::ExampleBin
@@ -566,7 +588,7 @@ impl Target {
             required_features,
             tested: false,
             benched: false,
-            ..Target::with_path(src_path)
+            ..Target::with_path(src_path, edition)
         }
     }
 
@@ -574,13 +596,14 @@ impl Target {
         name: &str,
         src_path: PathBuf,
         required_features: Option<Vec<String>>,
+        edition: Edition,
     ) -> Target {
         Target {
             kind: TargetKind::Test,
             name: name.to_string(),
             required_features,
             benched: false,
-            ..Target::with_path(src_path)
+            ..Target::with_path(src_path, edition)
         }
     }
 
@@ -588,13 +611,14 @@ impl Target {
         name: &str,
         src_path: PathBuf,
         required_features: Option<Vec<String>>,
+        edition: Edition,
     ) -> Target {
         Target {
             kind: TargetKind::Bench,
             name: name.to_string(),
             required_features,
             tested: false,
-            ..Target::with_path(src_path)
+            ..Target::with_path(src_path, edition)
         }
     }
 
@@ -625,6 +649,7 @@ impl Target {
     pub fn for_host(&self) -> bool {
         self.for_host
     }
+    pub fn edition(&self) -> Edition { self.edition }
     pub fn benched(&self) -> bool {
         self.benched
     }
@@ -744,6 +769,10 @@ impl Target {
     }
     pub fn set_for_host(&mut self, for_host: bool) -> &mut Target {
         self.for_host = for_host;
+        self
+    }
+    pub fn set_edition(&mut self, edition: Edition) -> &mut Target {
+        self.edition = edition;
         self
     }
     pub fn set_harness(&mut self, harness: bool) -> &mut Target {

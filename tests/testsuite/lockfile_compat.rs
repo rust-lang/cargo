@@ -60,7 +60,7 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
         .file("Cargo.lock", old_lockfile)
         .build();
 
-    assert_that(p.cargo(cargo_command), execs().with_status(0));
+    assert_that(p.cargo(cargo_command), execs());
 
     let lock = p.read_lockfile();
     for (l, r) in expected_lockfile.lines().zip(lock.lines()) {
@@ -110,7 +110,7 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
         .file("Cargo.lock", &old_lockfile)
         .build();
 
-    assert_that(p.cargo("build").arg("--locked"), execs().with_status(0));
+    assert_that(p.cargo("build").arg("--locked"), execs());
 
     let lock = p.read_lockfile();
     for (l, r) in old_lockfile.lines().zip(lock.lines()) {
@@ -161,7 +161,7 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 
     let p = p.build();
 
-    assert_that(p.cargo("build"), execs().with_status(0));
+    assert_that(p.cargo("build"), execs());
 
     let lock = p.read_lockfile();
     assert!(
@@ -400,7 +400,7 @@ fn current_lockfile_format() {
         .file("src/lib.rs", "");
     let p = p.build();
 
-    assert_that(p.cargo("build"), execs().with_status(0));
+    assert_that(p.cargo("build"), execs());
 
     let actual = p.read_lockfile();
 
@@ -462,7 +462,7 @@ dependencies = [
 
     let p = p.build();
 
-    assert_that(p.cargo("build"), execs().with_status(0));
+    assert_that(p.cargo("build"), execs());
 
     let lock = p.read_lockfile();
     assert!(lock.starts_with(lockfile.trim()));

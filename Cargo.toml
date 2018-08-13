@@ -23,11 +23,11 @@ crossbeam-utils = "0.5"
 crypto-hash = "0.3.1"
 curl = "0.4.13"
 env_logger = "0.5.4"
-failure = "0.1.1"
+failure = "0.1.2"
 filetime = "0.2"
 flate2 = "1.0"
 fs2 = "0.4"
-git2 = "0.7.3"
+git2 = "0.7.5"
 git2-curl = "0.8.1"
 glob = "0.2.11"
 hex = "0.3"
@@ -40,7 +40,7 @@ libc = "0.2"
 log = "0.4"
 libgit2-sys = "0.7.5"
 num_cpus = "1.0"
-rustfix = "0.4"
+rustfix = "0.4.2"
 same-file = "1"
 semver = { version = "0.9.0", features = ["serde"] }
 serde = "1.0"
@@ -55,16 +55,19 @@ toml = "0.4.2"
 url = "1.1"
 clap = "2.31.2"
 unicode-width = "0.1.5"
+openssl = { version = '0.10.11', optional = true }
 
-# Not actually needed right now but required to make sure that rls/cargo build
-# with the same set of features in rust-lang/rust
-num-traits = "0.2" # enable the default feature
+# A noop dependency that changes in the Rust repository, it's a bit of a hack.
+# See the `src/tools/rustc-workspace-hack/README.md` file in `rust-lang/rust`
+# for more information.
+rustc-workspace-hack = "1.0.0"
 
 [target.'cfg(target_os = "macos")'.dependencies]
 core-foundation = { version = "0.6.0", features = ["mac_os_10_7_support"] }
 
 [target.'cfg(windows)'.dependencies]
 miow = "0.3.1"
+fwdansi = "1"
 
 [target.'cfg(windows)'.dependencies.winapi]
 version = "0.3"
@@ -94,3 +97,6 @@ bufstream = "0.1"
 name = "cargo"
 test = false
 doc = false
+
+[features]
+vendored-openssl = ['openssl/vendored']

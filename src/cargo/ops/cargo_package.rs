@@ -10,7 +10,7 @@ use git2;
 use tar::{Archive, Builder, EntryType, Header};
 
 use core::{Package, Source, SourceId, Workspace};
-use core::compiler::{BuildConfig, CompileMode, DefaultExecutor};
+use core::compiler::{BuildConfig, CompileMode, DefaultExecutor, Executor};
 use sources::PathSource;
 use util::{self, internal, Config, FileLock};
 use util::paths;
@@ -59,7 +59,7 @@ pub fn package(ws: &Workspace, opts: &PackageOpts) -> CargoResult<Option<FileLoc
     }
 
     if !opts.allow_dirty {
-        check_not_dirty(pkg, &src)?;
+        check_not_dirty(pkg, &src, &config)?;
     }
 
     let filename = format!("{}-{}.crate", pkg.name(), pkg.version());
@@ -145,33 +145,43 @@ fn verify_dependencies(pkg: &Package) -> CargoResult<()> {
                 "all path dependencies must have a version specified \
                  when packaging.\ndependency `{}` does not specify \
                  a version.",
-                dep.name()
+                dep.name_in_toml()
             )
         }
     }
     Ok(())
 }
 
-fn check_not_dirty(p: &Package, src: &PathSource) -> CargoResult<()> {
+fn check_not_dirty(p: &Package, src: &PathSource, config: &Config) -> CargoResult<()> {
     if let Ok(repo) = git2::Repository::discover(p.root()) {
         if let Some(workdir) = repo.workdir() {
-            debug!(
-                "found a git repo at {:?}, checking if index present",
-                workdir
-            );
+            debug!("found a git repo at {:?}", workdir);
             let path = p.manifest_path();
             let path = path.strip_prefix(workdir).unwrap_or(path);
             if let Ok(status) = repo.status_file(path) {
                 if (status & git2::Status::IGNORED).is_empty() {
-                    debug!("Cargo.toml found in repo, checking if dirty");
+                    debug!(
+                        "found (git) Cargo.toml at {:?} in workdir {:?}",
+                        path, workdir
+                    );
                     return git(p, src, &repo);
                 }
             }
+            config.shell().verbose(|shell| {
+                shell.warn(format!(
+                    "No (git) Cargo.toml found at `{}` in workdir `{}`",
+                    path.display(), workdir.display()
+                ))
+            })?;
         }
+    } else {
+        config.shell().verbose(|shell| {
+            shell.warn(format!("No (git) VCS found for `{}`", p.root().display()))
+        })?;
     }
 
-    // No VCS recognized, we don't know if the directory is dirty or not, so we
-    // have to assume that it's clean.
+    // No VCS with a checked in Cargo.toml found. so we don't know if the
+    // directory is dirty or not, so we have to assume that it's clean.
     return Ok(());
 
     fn git(p: &Package, src: &PathSource, repo: &git2::Repository) -> CargoResult<()> {
@@ -333,6 +343,7 @@ fn run_verify(ws: &Workspace, tar: &FileLock, opts: &PackageOpts) -> CargoResult
     let pkg_fingerprint = src.last_modified_file(&new_pkg)?;
     let ws = Workspace::ephemeral(new_pkg, config, None, true)?;
 
+    let exec: Arc<Executor> = Arc::new(DefaultExecutor);
     ops::compile_ws(
         &ws,
         None,
@@ -350,7 +361,7 @@ fn run_verify(ws: &Workspace, tar: &FileLock, opts: &PackageOpts) -> CargoResult
             target_rustc_args: None,
             export_dir: None,
         },
-        Arc::new(DefaultExecutor),
+        &exec,
     )?;
 
     // Check that build.rs didn't modify any files in the src directory.

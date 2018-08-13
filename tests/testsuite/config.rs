@@ -4,6 +4,7 @@ use cargo::util::toml::{self, VecStringOrBool as VSOB};
 use cargo::CargoError;
 use support::{execs, lines_match, paths, project};
 use support::hamcrest::assert_that;
+use std::borrow::Borrow;
 use std::collections;
 use std::fs;
 
@@ -34,7 +35,7 @@ fn read_env_vars_for_config() {
 
     assert_that(
         p.cargo("build").env("CARGO_BUILD_JOBS", "100"),
-        execs().with_status(0),
+        execs(),
     );
 }
 
@@ -68,9 +69,10 @@ fn new_config(env: &[(&str, &str)]) -> Config {
     config
 }
 
-fn assert_error(error: CargoError, msgs: &str) {
+fn assert_error<E: Borrow<CargoError>>(error: E, msgs: &str) {
     let causes = error
-        .causes()
+        .borrow()
+        .iter_chain()
         .map(|e| e.to_string())
         .collect::<Vec<_>>()
         .join("\n");
@@ -132,7 +134,7 @@ unused = 456
     let path = paths::root().join("shell.out");
     let output = fs::read_to_string(path).unwrap();
     let expected = "\
-warning: unused key `S.unused` in config file `[..][/].cargo[/]config`
+warning: unused key `S.unused` in config file `[..]/.cargo/config`
 ";
     if !lines_match(expected, &output) {
         panic!(
@@ -294,7 +296,7 @@ opt-level = 'foo'
 
     assert_error(
         config.get::<toml::TomlProfile>("profile.dev").unwrap_err(),
-        "error in [..][/].cargo[/]config: \
+        "error in [..]/.cargo/config: \
          could not load config key `profile.dev.opt-level`: \
          must be an integer, `z`, or `s`, but found: foo",
     );
@@ -367,11 +369,11 @@ big = 123456789
     );
     assert_error(
         config.get::<i64>("S.f2").unwrap_err(),
-        "error in [..][/].cargo[/]config: `S.f2` expected an integer, but found a string",
+        "error in [..]/.cargo/config: `S.f2` expected an integer, but found a string",
     );
     assert_error(
         config.get::<u8>("S.big").unwrap_err(),
-        "error in [..].cargo[/]config: could not load config key `S.big`: \
+        "error in [..].cargo/config: could not load config key `S.big`: \
          invalid value: integer `123456789`, expected u8",
     );
 
@@ -427,7 +429,7 @@ fn config_bad_toml() {
         "\
 could not load Cargo configuration
 Caused by:
-  could not parse TOML configuration in `[..][/].cargo[/]config`
+  could not parse TOML configuration in `[..]/.cargo/config`
 Caused by:
   could not parse input as TOML
 Caused by:
@@ -477,7 +479,7 @@ l = ['y']
         config.get::<L>("l3").unwrap_err(),
         "\
 invalid configuration for key `l3`
-expected a list, but found a integer for `l3` in [..][/].cargo[/]config",
+expected a list, but found a integer for `l3` in [..]/.cargo/config",
     );
     assert_eq!(
         config.get::<L>("l4").unwrap(),
@@ -656,7 +658,7 @@ i64max = 9223372036854775807
 
     assert_error(
         config.get::<u32>("nneg").unwrap_err(),
-        "error in [..].cargo[/]config: \
+        "error in [..].cargo/config: \
          could not load config key `nneg`: \
          invalid value: integer `-123456789`, expected u32",
     );
@@ -668,7 +670,7 @@ i64max = 9223372036854775807
     );
     assert_error(
         config.get::<i8>("npos").unwrap_err(),
-        "error in [..].cargo[/]config: \
+        "error in [..].cargo/config: \
          could not load config key `npos`: \
          invalid value: integer `123456789`, expected i8",
     );

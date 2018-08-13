@@ -10,11 +10,15 @@ fn no_deps() {
         .file("src/a.rs", "")
         .build();
 
-    assert_that(p.cargo("fetch"), execs().with_status(0).with_stdout(""));
+    assert_that(p.cargo("fetch"), execs().with_stdout(""));
 }
 
 #[test]
 fn fetch_all_platform_dependencies_when_no_target_is_given() {
+    if cross_compile::disabled() {
+        return;
+    }
+
     Package::new("d1", "1.2.3")
         .file("Cargo.toml", &basic_manifest("d1", "1.2.3"))
         .file("src/lib.rs", "")
@@ -53,7 +57,6 @@ fn fetch_all_platform_dependencies_when_no_target_is_given() {
     assert_that(
         p.cargo("fetch"),
         execs()
-            .with_status(0)
             .with_stderr_contains("[..] Downloading d1 v1.2.3 [..]")
             .with_stderr_contains("[..] Downloading d2 v0.1.2 [..]"),
     );
@@ -61,6 +64,10 @@ fn fetch_all_platform_dependencies_when_no_target_is_given() {
 
 #[test]
 fn fetch_platform_specific_dependencies() {
+    if cross_compile::disabled() {
+        return;
+    }
+
     Package::new("d1", "1.2.3")
         .file("Cargo.toml", &basic_manifest("d1", "1.2.3"))
         .file("src/lib.rs", "")
@@ -99,7 +106,6 @@ fn fetch_platform_specific_dependencies() {
     assert_that(
         p.cargo("fetch").arg("--target").arg(&host),
         execs()
-            .with_status(0)
             .with_stderr_contains("[..] Downloading d1 v1.2.3 [..]")
             .with_stderr_does_not_contain("[..] Downloading d2 v0.1.2 [..]"),
     );
@@ -107,7 +113,6 @@ fn fetch_platform_specific_dependencies() {
     assert_that(
         p.cargo("fetch").arg("--target").arg(&target),
         execs()
-            .with_status(0)
             .with_stderr_contains("[..] Downloading d2 v0.1.2[..]")
             .with_stderr_does_not_contain("[..] Downloading d1 v1.2.3 [..]"),
     );

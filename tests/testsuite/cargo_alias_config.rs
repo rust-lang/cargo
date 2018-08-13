@@ -42,7 +42,6 @@ fn alias_default_config_overrides_config() {
     assert_that(
         p.cargo("b").arg("-v"),
         execs()
-            .with_status(0)
             .with_stderr_contains("[COMPILING] foo v0.5.0 [..]"),
     );
 }
@@ -64,7 +63,6 @@ fn alias_config() {
     assert_that(
         p.cargo("b-cargo-test -v"),
         execs()
-            .with_status(0)
             .with_stderr_contains(
                 "\
 [COMPILING] foo v0.5.0 [..]
@@ -90,7 +88,7 @@ fn recursive_alias() {
 
     assert_that(
         p.cargo("a-cargo-test"),
-        execs().with_status(0).with_stderr_contains(
+        execs().with_stderr_contains(
             "\
 [COMPILING] foo v0.5.0 [..]
 [RUNNING] `rustc --crate-name foo [..]",
@@ -115,7 +113,6 @@ fn alias_list_test() {
     assert_that(
         p.cargo("b-cargo-test").arg("-v"),
         execs()
-            .with_status(0)
             .with_stderr_contains("[COMPILING] foo v0.5.0 [..]")
             .with_stderr_contains("[RUNNING] `rustc --crate-name [..]"),
     );
@@ -138,7 +135,6 @@ fn alias_with_flags_config() {
     assert_that(
         p.cargo("b-cargo-test").arg("-v"),
         execs()
-            .with_status(0)
             .with_stderr_contains("[COMPILING] foo v0.5.0 [..]")
             .with_stderr_contains("[RUNNING] `rustc --crate-name foo [..]"),
     );
@@ -160,7 +156,7 @@ fn cant_shadow_builtin() {
 
     assert_that(
         p.cargo("build"),
-        execs().with_status(0).with_stderr(
+        execs().with_stderr(
             "\
 [WARNING] alias `build` is ignored, because it is shadowed by a built in command
 [COMPILING] foo v0.5.0 ([..])

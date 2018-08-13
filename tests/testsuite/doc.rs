@@ -30,7 +30,7 @@ fn simple() {
 
     assert_that(
         p.cargo("doc"),
-        execs().with_status(0).with_stderr(&format!(
+        execs().with_stderr(&format!(
             "\
 [..] foo v0.0.1 ({dir})
 [..] foo v0.0.1 ({dir})
@@ -62,7 +62,7 @@ fn doc_no_libs() {
         .file("src/main.rs", "bad code")
         .build();
 
-    assert_that(p.cargo("doc"), execs().with_status(0));
+    assert_that(p.cargo("doc"), execs());
 }
 
 #[test]
@@ -73,7 +73,7 @@ fn doc_twice() {
 
     assert_that(
         p.cargo("doc"),
-        execs().with_status(0).with_stderr(&format!(
+        execs().with_stderr(&format!(
             "\
 [DOCUMENTING] foo v0.0.1 ({dir})
 [FINISHED] dev [unoptimized + debuginfo] target(s) in [..]
@@ -82,7 +82,7 @@ fn doc_twice() {
         )),
     );
 
-    assert_that(p.cargo("doc"), execs().with_status(0).with_stdout(""))
+    assert_that(p.cargo("doc"), execs().with_stdout(""))
 }
 
 #[test]
@@ -107,7 +107,7 @@ fn doc_deps() {
 
     assert_that(
         p.cargo("doc"),
-        execs().with_status(0).with_stderr(&format!(
+        execs().with_stderr(&format!(
             "\
 [..] bar v0.0.1 ({dir}/bar)
 [..] bar v0.0.1 ({dir}/bar)
@@ -139,7 +139,7 @@ fn doc_deps() {
     assert_that(
         p.cargo("doc")
             .env("RUST_LOG", "cargo::ops::cargo_rustc::fingerprint"),
-        execs().with_status(0).with_stdout(""),
+        execs().with_stdout(""),
     );
 
     assert_that(&p.root().join("target/doc"), existing_dir());
@@ -169,7 +169,7 @@ fn doc_no_deps() {
 
     assert_that(
         p.cargo("doc").arg("--no-deps"),
-        execs().with_status(0).with_stderr(&format!(
+        execs().with_stderr(&format!(
             "\
 [CHECKING] bar v0.0.1 ({dir}/bar)
 [DOCUMENTING] foo v0.0.1 ({dir})
@@ -207,7 +207,7 @@ fn doc_only_bin() {
         .file("bar/src/lib.rs", "pub fn bar() {}")
         .build();
 
-    assert_that(p.cargo("doc").arg("-v"), execs().with_status(0));
+    assert_that(p.cargo("doc").arg("-v"), execs());
 
     assert_that(&p.root().join("target/doc"), existing_dir());
     assert_that(&p.root().join("target/doc/bar/index.html"), existing_file());
@@ -297,7 +297,6 @@ fn doc_multiple_targets_same_name() {
     assert_that(
         p.cargo("doc").arg("--all"),
         execs()
-            .with_status(0)
             .with_stderr_contains(&format!("[DOCUMENTING] foo v0.1.0 ({}/foo)", root))
             .with_stderr_contains(&format!("[DOCUMENTING] bar v0.1.0 ({}/bar)", root))
             .with_stderr_contains("[FINISHED] dev [unoptimized + debuginfo] target(s) in [..]"),
@@ -386,7 +385,7 @@ fn doc_multiple_targets_same_name_undoced() {
         .file("bar/src/foo-cli.rs", "")
         .build();
 
-    assert_that(p.cargo("doc").arg("--all"), execs().with_status(0));
+    assert_that(p.cargo("doc").arg("--all"), execs());
 }
 
 #[test]
@@ -413,7 +412,7 @@ fn doc_lib_bin_same_name_documents_lib() {
 
     assert_that(
         p.cargo("doc"),
-        execs().with_status(0).with_stderr(&format!(
+        execs().with_stderr(&format!(
             "\
 [DOCUMENTING] foo v0.0.1 ({dir})
 [FINISHED] dev [unoptimized + debuginfo] target(s) in [..]
@@ -457,7 +456,7 @@ fn doc_lib_bin_same_name_documents_lib_when_requested() {
 
     assert_that(
         p.cargo("doc").arg("--lib"),
-        execs().with_status(0).with_stderr(&format!(
+        execs().with_stderr(&format!(
             "\
 [DOCUMENTING] foo v0.0.1 ({dir})
 [FINISHED] dev [unoptimized + debuginfo] target(s) in [..]
@@ -501,7 +500,7 @@ fn doc_lib_bin_same_name_documents_named_bin_when_requested() {
 
     assert_that(
         p.cargo("doc").arg("--bin").arg("foo"),
-        execs().with_status(0).with_stderr(&format!(
+        execs().with_stderr(&format!(
             "\
 [CHECKING] foo v0.0.1 ({dir})
 [DOCUMENTING] foo v0.0.1 ({dir})
@@ -546,7 +545,7 @@ fn doc_lib_bin_same_name_documents_bins_when_requested() {
 
     assert_that(
         p.cargo("doc").arg("--bins"),
-        execs().with_status(0).with_stderr(&format!(
+        execs().with_stderr(&format!(
             "\
 [CHECKING] foo v0.0.1 ({dir})
 [DOCUMENTING] foo v0.0.1 ({dir})
@@ -602,7 +601,7 @@ fn doc_dash_p() {
 
     assert_that(
         p.cargo("doc").arg("-p").arg("a"),
-        execs().with_status(0).with_stderr(
+        execs().with_stderr(
             "\
 [..] b v0.0.1 (file://[..])
 [..] b v0.0.1 (file://[..])
@@ -622,12 +621,12 @@ fn doc_same_name() {
         .file("tests/main.rs", "fn main() {}")
         .build();
 
-    assert_that(p.cargo("doc"), execs().with_status(0));
+    assert_that(p.cargo("doc"), execs());
 }
 
 #[test]
 fn doc_target() {
-    const TARGET: &'static str = "arm-unknown-linux-gnueabihf";
+    const TARGET: &str = "arm-unknown-linux-gnueabihf";
 
     let p = project()
         .file(
@@ -645,7 +644,7 @@ fn doc_target() {
 
     assert_that(
         p.cargo("doc").arg("--target").arg(TARGET).arg("--verbose"),
-        execs().with_status(0),
+        execs(),
     );
     assert_that(
         &p.root().join(&format!("target/{}/doc", TARGET)),
@@ -678,7 +677,7 @@ fn target_specific_not_documented() {
         .file("a/src/lib.rs", "not rust")
         .build();
 
-    assert_that(p.cargo("doc"), execs().with_status(0));
+    assert_that(p.cargo("doc"), execs());
 }
 
 #[test]
@@ -767,7 +766,7 @@ fn target_specific_documented() {
         )
         .build();
 
-    assert_that(p.cargo("doc"), execs().with_status(0));
+    assert_that(p.cargo("doc"), execs());
 }
 
 #[test]
@@ -798,7 +797,7 @@ fn no_document_build_deps() {
         )
         .build();
 
-    assert_that(p.cargo("doc"), execs().with_status(0));
+    assert_that(p.cargo("doc"), execs());
 }
 
 #[test]
@@ -807,13 +806,13 @@ fn doc_release() {
         .file("src/lib.rs", "")
         .build();
 
-    assert_that(p.cargo("build").arg("--release"), execs().with_status(0));
+    assert_that(p.cargo("build").arg("--release"), execs());
     assert_that(
         p.cargo("doc").arg("--release").arg("-v"),
-        execs().with_status(0).with_stderr(
+        execs().with_stderr(
             "\
 [DOCUMENTING] foo v0.0.1 ([..])
-[RUNNING] `rustdoc [..] src[/]lib.rs [..]`
+[RUNNING] `rustdoc [..] src/lib.rs [..]`
 [FINISHED] release [optimized] target(s) in [..]
 ",
         ),
@@ -852,7 +851,7 @@ fn doc_multiple_deps() {
             .arg("-p")
             .arg("baz")
             .arg("-v"),
-        execs().with_status(0),
+        execs(),
     );
 
     assert_that(&p.root().join("target/doc"), existing_dir());
@@ -903,7 +902,7 @@ fn features() {
         .build();
     assert_that(
         p.cargo("doc").arg("--features").arg("foo"),
-        execs().with_status(0),
+        execs(),
     );
     assert_that(&p.root().join("target/doc"), existing_dir());
     assert_that(
@@ -928,12 +927,12 @@ fn rerun_when_dir_removed() {
         )
         .build();
 
-    assert_that(p.cargo("doc"), execs().with_status(0));
+    assert_that(p.cargo("doc"), execs());
     assert_that(&p.root().join("target/doc/foo/index.html"), existing_file());
 
     fs::remove_dir_all(p.root().join("target/doc/foo")).unwrap();
 
-    assert_that(p.cargo("doc"), execs().with_status(0));
+    assert_that(p.cargo("doc"), execs());
     assert_that(&p.root().join("target/doc/foo/index.html"), existing_file());
 }
 
@@ -958,7 +957,7 @@ fn document_only_lib() {
         "#,
         )
         .build();
-    assert_that(p.cargo("doc").arg("--lib"), execs().with_status(0));
+    assert_that(p.cargo("doc").arg("--lib"), execs());
     assert_that(&p.root().join("target/doc/foo/index.html"), existing_file());
 }
 
@@ -986,7 +985,7 @@ fn plugins_no_use_target() {
         p.cargo("doc")
             .arg("--target=x86_64-unknown-openbsd")
             .arg("-v"),
-        execs().with_status(0),
+        execs(),
     );
 }
 
@@ -1015,7 +1014,6 @@ fn doc_all_workspace() {
     assert_that(
         p.cargo("doc").arg("--all"),
         execs()
-            .with_status(0)
             .with_stderr_contains("[..] Documenting bar v0.1.0 ([..])")
             .with_stderr_contains("[..] Checking bar v0.1.0 ([..])")
             .with_stderr_contains("[..] Documenting foo v0.1.0 ([..])"),
@@ -1042,7 +1040,6 @@ fn doc_all_virtual_manifest() {
     assert_that(
         p.cargo("doc").arg("--all"),
         execs()
-            .with_status(0)
             .with_stderr_contains("[..] Documenting baz v0.1.0 ([..])")
             .with_stderr_contains("[..] Documenting bar v0.1.0 ([..])"),
     );
@@ -1068,7 +1065,6 @@ fn doc_virtual_manifest_all_implied() {
     assert_that(
         p.cargo("doc"),
         execs()
-            .with_status(0)
             .with_stderr_contains("[..] Documenting baz v0.1.0 ([..])")
             .with_stderr_contains("[..] Documenting bar v0.1.0 ([..])"),
     );
@@ -1107,7 +1103,6 @@ fn doc_all_member_dependency_same_name() {
     assert_that(
         p.cargo("doc").arg("--all"),
         execs()
-            .with_status(0)
             .with_stderr_contains("[..] Updating registry `[..]`")
             .with_stderr_contains("[..] Documenting bar v0.1.0 ([..])"),
     );
@@ -1176,9 +1171,8 @@ fn doc_workspace_open_different_library_and_package_names() {
     assert_that(
         p.cargo("doc --open").env("BROWSER", "echo"),
         execs()
-            .with_status(0)
             .with_stderr_contains("[..] Documenting foo v0.1.0 ([..])")
-            .with_stderr_contains("[..] Opening [..][/]foo[/]target[/]doc[/]foolib[/]index.html")
+            .with_stderr_contains("[..] Opening [..]/foo/target/doc/foolib/index.html")
     );
 }
 
@@ -1210,9 +1204,8 @@ fn doc_workspace_open_binary() {
     assert_that(
         p.cargo("doc --open").env("BROWSER", "echo"),
         execs()
-            .with_status(0)
             .with_stderr_contains("[..] Documenting foo v0.1.0 ([..])")
-            .with_stderr_contains("[..] Opening [..][/]foo[/]target[/]doc[/]foobin[/]index.html")
+            .with_stderr_contains("[..] Opening [..]/foo/target/doc/foobin/index.html")
     );
 }
 
@@ -1247,9 +1240,8 @@ fn doc_workspace_open_binary_and_library() {
     assert_that(
         p.cargo("doc --open").env("BROWSER", "echo"),
         execs()
-            .with_status(0)
             .with_stderr_contains("[..] Documenting foo v0.1.0 ([..])")
-            .with_stderr_contains("[..] Opening [..][/]foo[/]target[/]doc[/]foolib[/]index.html")
+            .with_stderr_contains("[..] Opening [..]/foo/target/doc/foolib/index.html")
     );
 }
 
@@ -1278,14 +1270,47 @@ fn doc_edition() {
     assert_that(
         p.cargo("doc -v").masquerade_as_nightly_cargo(),
         execs()
-            .with_status(0)
             .with_stderr_contains("[RUNNING] `rustdoc [..]-Zunstable-options --edition=2018[..]"),
     );
 
     assert_that(
         p.cargo("test -v").masquerade_as_nightly_cargo(),
         execs()
-            .with_status(0)
+            .with_stderr_contains("[RUNNING] `rustdoc [..]-Zunstable-options --edition=2018[..]")
+    );
+}
+
+#[test]
+fn doc_target_edition() {
+    if !support::is_nightly() {
+        return;
+    }
+    let p = project()
+        .file(
+            "Cargo.toml",
+            r#"
+            cargo-features = ["edition"]
+            [package]
+            name = "foo"
+            version = "0.0.1"
+            authors = []
+
+            [lib]
+            edition = "2018"
+        "#,
+        )
+        .file("src/lib.rs", "")
+        .build();
+
+    assert_that(
+        p.cargo("doc -v").masquerade_as_nightly_cargo(),
+        execs()
+            .with_stderr_contains("[RUNNING] `rustdoc [..]-Zunstable-options --edition=2018[..]"),
+    );
+
+    assert_that(
+        p.cargo("test -v").masquerade_as_nightly_cargo(),
+        execs()
             .with_stderr_contains("[RUNNING] `rustdoc [..]-Zunstable-options --edition=2018[..]")
     );
 }
@@ -1319,8 +1344,8 @@ fn issue_5345() {
     Package::new("bar", "0.1.0").publish();
     Package::new("bar", "0.2.0").publish();
 
-    assert_that(foo.cargo("build"), execs().with_status(0));
-    assert_that(foo.cargo("doc"), execs().with_status(0));
+    assert_that(foo.cargo("build"), execs());
+    assert_that(foo.cargo("doc"), execs());
 }
 
 #[test]
@@ -1328,11 +1353,18 @@ fn doc_private_items() {
     let foo = project()
         .file("src/lib.rs", "mod private { fn private_item() {} }")
         .build();
-    assert_that(foo.cargo("doc").arg("--document-private-items"), execs().with_status(0));
+    assert_that(foo.cargo("doc").arg("--document-private-items"), execs());
 
     assert_that(&foo.root().join("target/doc"), existing_dir());
     assert_that(&foo.root().join("target/doc/foo/private/index.html"), existing_file());
 }
+
+const BAD_INTRA_LINK_LIB: &'static str = r#"
+#![deny(intra_doc_link_resolution_failure)]
+
+/// [bad_link]
+pub fn foo() {}
+"#;
 
 #[test]
 fn doc_cap_lints() {
@@ -1341,15 +1373,8 @@ fn doc_cap_lints() {
         return;
     }
     let a = git::new("a", |p| {
-        p.file("Cargo.toml", &basic_lib_manifest("a")).file(
-            "src/lib.rs",
-            "
-            #![deny(intra_doc_link_resolution_failure)]
-
-            /// [bad_link]
-            pub fn foo() {}
-        ",
-        )
+        p.file("Cargo.toml", &basic_lib_manifest("a"))
+            .file("src/lib.rs", BAD_INTRA_LINK_LIB)
     }).unwrap();
 
     let p = project()
@@ -1373,7 +1398,7 @@ fn doc_cap_lints() {
 
     assert_that(
         p.cargo("doc"),
-        execs().with_status(0).with_stderr_unordered(
+        execs().with_stderr_unordered(
             "\
 [UPDATING] git repository `[..]`
 [DOCUMENTING] a v0.5.0 ([..])
@@ -1388,11 +1413,58 @@ fn doc_cap_lints() {
 
     assert_that(
         p.cargo("doc -vv"),
-        execs().with_status(0).with_stderr_contains(
+        execs().with_stderr_contains(
             "\
 [WARNING] `[bad_link]` cannot be resolved, ignoring it...
 ",
         ),
     );
+}
 
+#[test]
+fn doc_message_format() {
+    if !is_nightly() {
+        // This can be removed once 1.30 is stable (rustdoc --error-format stabilized).
+        return;
+    }
+    let p = project().file("src/lib.rs", BAD_INTRA_LINK_LIB).build();
+
+    assert_that(
+        p.cargo("doc --message-format=json"),
+        execs().with_status(101).with_json(
+            r#"
+            {
+                "message": {
+                    "children": "{...}",
+                    "code": "{...}",
+                    "level": "error",
+                    "message": "[..]",
+                    "rendered": "[..]",
+                    "spans": "{...}"
+                },
+                "package_id": "foo [..]",
+                "reason": "compiler-message",
+                "target": "{...}"
+            }
+            "#,
+        ),
+    );
+}
+
+#[test]
+fn short_message_format() {
+    if !is_nightly() {
+        // This can be removed once 1.30 is stable (rustdoc --error-format stabilized).
+        return;
+    }
+    let p = project().file("src/lib.rs", BAD_INTRA_LINK_LIB).build();
+    assert_that(
+        p.cargo("doc --message-format=short"),
+        execs().with_status(101).with_stderr_contains(
+            "\
+src/lib.rs:4:6: error: `[bad_link]` cannot be resolved, ignoring it...
+error: Could not document `foo`.
+",
+        ),
+    );
 }

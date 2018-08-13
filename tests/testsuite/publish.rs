@@ -34,7 +34,7 @@ fn simple() {
             .arg("--no-verify")
             .arg("--index")
             .arg(publish::registry().to_string()),
-        execs().with_status(0).with_stderr(&format!(
+        execs().with_stderr(&format!(
             "\
 [UPDATING] registry `{reg}`
 [WARNING] manifest has no documentation, [..]
@@ -51,9 +51,9 @@ See [..]
     // Skip the metadata payload and the size of the tarball
     let mut sz = [0; 4];
     assert_eq!(f.read(&mut sz).unwrap(), 4);
-    let sz = ((sz[0] as u32) << 0) | ((sz[1] as u32) << 8) | ((sz[2] as u32) << 16)
-        | ((sz[3] as u32) << 24);
-    f.seek(SeekFrom::Current(sz as i64 + 4)).unwrap();
+    let sz = (u32::from(sz[0]) << 0) | (u32::from(sz[1]) << 8) | (u32::from(sz[2]) << 16)
+        | (u32::from(sz[3]) << 24);
+    f.seek(SeekFrom::Current(i64::from(sz) + 4)).unwrap();
 
     // Verify the tarball
     let mut rdr = GzDecoder::new(f);
@@ -110,7 +110,7 @@ fn old_token_location() {
             .arg("--no-verify")
             .arg("--index")
             .arg(publish::registry().to_string()),
-        execs().with_status(0).with_stderr(&format!(
+        execs().with_stderr(&format!(
             "\
 [UPDATING] registry `{reg}`
 [WARNING] manifest has no documentation, [..]
@@ -127,9 +127,9 @@ See [..]
     // Skip the metadata payload and the size of the tarball
     let mut sz = [0; 4];
     assert_eq!(f.read(&mut sz).unwrap(), 4);
-    let sz = ((sz[0] as u32) << 0) | ((sz[1] as u32) << 8) | ((sz[2] as u32) << 16)
-        | ((sz[3] as u32) << 24);
-    f.seek(SeekFrom::Current(sz as i64 + 4)).unwrap();
+    let sz = (u32::from(sz[0]) << 0) | (u32::from(sz[1]) << 8) | (u32::from(sz[2]) << 16)
+        | (u32::from(sz[3]) << 24);
+    f.seek(SeekFrom::Current(i64::from(sz) + 4)).unwrap();
 
     // Verify the tarball
     let mut rdr = GzDecoder::new(f);
@@ -179,7 +179,7 @@ fn simple_with_host() {
             .arg("--no-verify")
             .arg("--host")
             .arg(publish::registry().to_string()),
-        execs().with_status(0).with_stderr(&format!(
+        execs().with_stderr(&format!(
             "\
 [WARNING] The flag '--host' is no longer valid.
 
@@ -205,15 +205,15 @@ See [..]
     // Skip the metadata payload and the size of the tarball
     let mut sz = [0; 4];
     assert_eq!(f.read(&mut sz).unwrap(), 4);
-    let sz = ((sz[0] as u32) << 0) | ((sz[1] as u32) << 8) | ((sz[2] as u32) << 16)
-        | ((sz[3] as u32) << 24);
-    f.seek(SeekFrom::Current(sz as i64 + 4)).unwrap();
+    let sz = (u32::from(sz[0]) << 0) | (u32::from(sz[1]) << 8) | (u32::from(sz[2]) << 16)
+        | (u32::from(sz[3]) << 24);
+    f.seek(SeekFrom::Current(i64::from(sz) + 4)).unwrap();
 
     // Verify the tarball
     let mut rdr = GzDecoder::new(f);
     assert_eq!(
         rdr.header().unwrap().filename().unwrap(),
-        "foo-0.0.1.crate".as_bytes()
+        b"foo-0.0.1.crate"
     );
     let mut contents = Vec::new();
     rdr.read_to_end(&mut contents).unwrap();
@@ -259,7 +259,7 @@ fn simple_with_index_and_host() {
             .arg(publish::registry().to_string())
             .arg("--host")
             .arg(publish::registry().to_string()),
-        execs().with_status(0).with_stderr(&format!(
+        execs().with_stderr(&format!(
             "\
 [WARNING] The flag '--host' is no longer valid.
 
@@ -285,15 +285,15 @@ See [..]
     // Skip the metadata payload and the size of the tarball
     let mut sz = [0; 4];
     assert_eq!(f.read(&mut sz).unwrap(), 4);
-    let sz = ((sz[0] as u32) << 0) | ((sz[1] as u32) << 8) | ((sz[2] as u32) << 16)
-        | ((sz[3] as u32) << 24);
-    f.seek(SeekFrom::Current(sz as i64 + 4)).unwrap();
+    let sz = (u32::from(sz[0]) << 0) | (u32::from(sz[1]) << 8) | (u32::from(sz[2]) << 16)
+        | (u32::from(sz[3]) << 24);
+    f.seek(SeekFrom::Current(i64::from(sz) + 4)).unwrap();
 
     // Verify the tarball
     let mut rdr = GzDecoder::new(f);
     assert_eq!(
         rdr.header().unwrap().filename().unwrap(),
-        "foo-0.0.1.crate".as_bytes()
+        b"foo-0.0.1.crate"
     );
     let mut contents = Vec::new();
     rdr.read_to_end(&mut contents).unwrap();
@@ -492,7 +492,7 @@ fn publish_clean() {
         p.cargo("publish")
             .arg("--index")
             .arg(publish::registry().to_string()),
-        execs().with_status(0),
+        execs(),
     );
 }
 
@@ -525,7 +525,7 @@ fn publish_in_sub_repo() {
             .cwd(p.root().join("bar"))
             .arg("--index")
             .arg(publish::registry().to_string()),
-        execs().with_status(0),
+        execs(),
     );
 }
 
@@ -558,7 +558,7 @@ fn publish_when_ignored() {
         p.cargo("publish")
             .arg("--index")
             .arg(publish::registry().to_string()),
-        execs().with_status(0),
+        execs(),
     );
 }
 
@@ -590,7 +590,7 @@ fn ignore_when_crate_ignored() {
             .cwd(p.root().join("bar"))
             .arg("--index")
             .arg(publish::registry().to_string()),
-        execs().with_status(0),
+        execs(),
     );
 }
 
@@ -648,7 +648,7 @@ fn dry_run() {
             .arg("--dry-run")
             .arg("--index")
             .arg(publish::registry().to_string()),
-        execs().with_status(0).with_stderr(&format!(
+        execs().with_stderr(&format!(
             "\
 [UPDATING] registry `[..]`
 [WARNING] manifest has no documentation, [..]
@@ -820,7 +820,7 @@ fn publish_allowed_registry() {
             .arg("--registry")
             .arg("alternative")
             .arg("-Zunstable-options"),
-        execs().with_status(0),
+        execs(),
     );
 }
 

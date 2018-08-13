@@ -5,6 +5,7 @@ use std::io;
 use std::mem;
 use std::sync::mpsc::{channel, Receiver, Sender};
 use std::sync::Arc;
+use std::process::Output;
 
 use crossbeam_utils;
 use crossbeam_utils::thread::Scope;
@@ -16,7 +17,7 @@ use handle_error;
 use util::{internal, profile, CargoResult, CargoResultExt, ProcessBuilder};
 use util::{Config, DependencyQueue, Dirty, Fresh, Freshness};
 use util::{Progress, ProgressStyle};
-use util::diagnostic_server;
+use util::diagnostic_server::{self, DiagnosticPrinter};
 
 use super::job::Job;
 use super::{BuildContext, BuildPlan, CompileMode, Context, Kind, Unit};
@@ -107,12 +108,22 @@ impl<'a> JobState<'a> {
             .send(Message::BuildPlanMsg(module_name, cmd, filenames));
     }
 
-    pub fn stdout(&self, out: &str) {
-        let _ = self.tx.send(Message::Stdout(out.to_string()));
-    }
-
-    pub fn stderr(&self, err: &str) {
-        let _ = self.tx.send(Message::Stderr(err.to_string()));
+    pub fn capture_output(
+        &self,
+        cmd: &ProcessBuilder,
+        print_output: bool,
+    ) -> CargoResult<Output> {
+        cmd.exec_with_streaming(
+            &mut |out| {
+                let _ = self.tx.send(Message::Stdout(out.to_string()));
+                Ok(())
+            },
+            &mut |err| {
+                let _ = self.tx.send(Message::Stderr(err.to_string()));
+                Ok(())
+            },
+            print_output,
+        )
     }
 }
 
@@ -200,6 +211,7 @@ impl<'a> JobQueue<'a> {
         let mut tokens = Vec::new();
         let mut queue = Vec::new();
         let build_plan = cx.bcx.build_config.build_plan;
+        let mut print = DiagnosticPrinter::new(cx.bcx.config);
         trace!("queue: {:#?}", self.queue);
 
         // Iteratively execute the entire dependency graph. Each turn of the
@@ -225,7 +237,6 @@ impl<'a> JobQueue<'a> {
         //       currently a pretty big task. This is issue #5695.
         let mut error = None;
         let mut progress = Progress::with_style("Building", ProgressStyle::Ratio, cx.bcx.config);
-        let mut progress_maybe_changed = true; // avoid flickering due to build script
         if !cx.bcx.config.cli_unstable().compile_progress {
             progress.disable();
         }
@@ -273,22 +284,13 @@ impl<'a> JobQueue<'a> {
             // to the jobserver itself.
             tokens.truncate(self.active.len() - 1);
 
-            if progress_maybe_changed {
-                let count = total - self.queue.len();
-                let active_names = self.active.iter()
-                    .map(Key::name_for_progress)
-                    .collect::<Vec<_>>();
-                drop(progress.tick_now(count, total, &format!(": {}", active_names.join(", "))));
-            }
+            let count = total - self.queue.len();
+            let active_names = self.active.iter()
+                .map(Key::name_for_progress)
+                .collect::<Vec<_>>();
+            drop(progress.tick_now(count, total, &format!(": {}", active_names.join(", "))));
             let event = self.rx.recv().unwrap();
-
-            progress_maybe_changed = match event {
-                Message::Stdout(_) | Message::Stderr(_) => cx.bcx.config.extra_verbose(),
-                _ => true,
-            };
-            if progress_maybe_changed {
-                progress.clear();
-            }
+            progress.clear();
 
             match event {
                 Message::Run(cmd) => {
@@ -301,17 +303,15 @@ impl<'a> JobQueue<'a> {
                     plan.update(&module_name, &cmd, &filenames)?;
                 }
                 Message::Stdout(out) => {
-                    if cx.bcx.config.extra_verbose() {
-                        println!("{}", out);
-                    }
+                    println!("{}", out);
                 }
                 Message::Stderr(err) => {
-                    if cx.bcx.config.extra_verbose() {
-                        writeln!(cx.bcx.config.shell().err(), "{}", err)?;
-                    }
+                    let mut shell = cx.bcx.config.shell();
+                    shell.print_ansi(err.as_bytes())?;
+                    shell.err().write(b"\n")?;
                 }
                 Message::FixDiagnostic(msg) => {
-                    msg.print_to(cx.bcx.config)?;
+                    print.print(&msg)?;
                 }
                 Message::Finish(key, result) => {
                     info!("end: {:?}", key);

@@ -18,7 +18,7 @@ pub struct DocOptions<'a> {
 
 /// Main method for `cargo doc`.
 pub fn doc(ws: &Workspace, options: &DocOptions) -> CargoResult<()> {
-    let specs = options.compile_opts.spec.into_package_id_specs(ws)?;
+    let specs = options.compile_opts.spec.to_package_id_specs(ws)?;
     let resolve = ops::resolve_ws_precisely(
         ws,
         None,
