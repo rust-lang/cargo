@@ -44,22 +44,14 @@ mod imp {
 mod imp {
     extern crate winapi;
 
-    use std::ffi::OsString;
     use std::io;
     use std::mem;
-    use std::os::windows::prelude::*;
     use std::ptr;
 
-    use self::winapi::shared::basetsd::*;
     use self::winapi::shared::minwindef::*;
-    use self::winapi::shared::minwindef::{FALSE, TRUE};
     use self::winapi::um::handleapi::*;
     use self::winapi::um::jobapi2::*;
-    use self::winapi::um::jobapi::*;
     use self::winapi::um::processthreadsapi::*;
-    use self::winapi::um::psapi::*;
-    use self::winapi::um::synchapi::*;
-    use self::winapi::um::winbase::*;
     use self::winapi::um::winnt::*;
     use self::winapi::um::winnt::HANDLE;
 
