@@ -1,7 +1,6 @@
 use std::env;
 use std::fs::{self, File};
 use std::io::prelude::*;
-use std::path::PathBuf;
 use std::io;
 use std::thread;
 use std::time::Duration;
@@ -3555,7 +3554,7 @@ fn rename_with_link_search_path() {
     // the `p` project. On OSX the `libfoo.dylib` artifact references the
     // original path in `p` so we want to make sure that it can't find it (hence
     // the deletion).
-    let root = PathBuf::from(p.root());
+    let root = p.root();
     let root = root.join("target").join("debug").join("deps");
     let file = format!("{}foo{}", env::consts::DLL_PREFIX, env::consts::DLL_SUFFIX);
     let src = root.join(&file);
