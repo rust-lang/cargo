@@ -1010,8 +1010,8 @@ fn json_stderr(line: &str, package_id: &PackageId, target: &Target) -> CargoResu
             .map_err(|_| internal(&format!("compiler produced invalid json: `{}`", line)))?;
 
         machine_message::emit(&machine_message::FromCompiler {
-            package_id: package_id,
-            target: target,
+            package_id,
+            target,
             message: compiler_message,
         });
     } else {
