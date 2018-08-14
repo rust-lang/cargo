@@ -724,6 +724,10 @@ fn check_artifacts() {
 
 #[test]
 fn short_message_format() {
+    if !is_nightly() {
+        // This can be removed once 1.30 is stable (rustdoc --error-format stabilized).
+        return;
+    }
     let foo = project()
         .file("src/lib.rs", "fn foo() { let _x: bool = 'a'; }")
         .build();
