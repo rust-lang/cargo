@@ -328,7 +328,7 @@ fn rustfix_and_fix(fixes: &mut FixedCrate, rustc: &Path, filename: &Path, args: 
             filename,
             output.status.code()
         );
-        return Ok(Default::default());
+        return Ok(());
     }
 
     let fix_mode = env::var_os("__CARGO_FIX_YOLO")

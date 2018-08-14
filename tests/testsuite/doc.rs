@@ -1359,7 +1359,7 @@ fn doc_private_items() {
     assert_that(&foo.root().join("target/doc/foo/private/index.html"), existing_file());
 }
 
-const BAD_INTRA_LINK_LIB: &'static str = r#"
+const BAD_INTRA_LINK_LIB: &str = r#"
 #![deny(intra_doc_link_resolution_failure)]
 
 /// [bad_link]
