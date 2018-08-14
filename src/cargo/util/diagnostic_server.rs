@@ -193,7 +193,7 @@ consider migrating to the {0} edition by adding `edition = '{0}'` to
 `Cargo.toml` and then rerunning this command; a more detailed transition
 guide can be found at
 
-  https://rust-lang-nursery.github.io/edition-guide/editions/transitioning.html
+  https://rust-lang-nursery.github.io/edition-guide/editions/transitioning-your-code-to-a-new-edition.html
 ",
                     idioms,
                     file,
