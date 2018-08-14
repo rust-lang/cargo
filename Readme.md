@@ -25,7 +25,7 @@ To get the tool to automatically fix warnings in, run `cargo install cargo-fix`.
 ## Using `cargo fix` to transition to Rust 2018
 
 Instructions on how to use this tool to transition a crate to Rust 2018 can be
-found [in the Rust Edition Guide.](https://rust-lang-nursery.github.io/edition-guide/editions/transitioning.html)
+found [in the Rust Edition Guide.](https://rust-lang-nursery.github.io/edition-guide/editions/transitioning-your-code-to-a-new-edition.html)
 
 ## License
 
