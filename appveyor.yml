@@ -7,6 +7,7 @@ environment:
     OTHER_TARGET: i686-pc-windows-msvc
     MAKE_TARGETS: test-unit-x86_64-pc-windows-msvc
     MINIMAL_VERSIONS: true
+    CFG_DISABLE_CROSS_TESTS: 1
 
 install:
   - appveyor-retry appveyor DownloadFile https://win.rustup.rs/ -FileName rustup-init.exe
