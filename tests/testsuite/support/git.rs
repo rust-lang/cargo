@@ -137,9 +137,8 @@ pub fn commit(repo: &git2::Repository) -> git2::Oid {
     let tree_id = t!(t!(repo.index()).write_tree());
     let sig = t!(repo.signature());
     let mut parents = Vec::new();
-    match repo.head().ok().map(|h| h.target().unwrap()) {
-        Some(parent) => parents.push(t!(repo.find_commit(parent))),
-        None => {}
+    if let Some(parent) = repo.head().ok().map(|h| h.target().unwrap()) {
+        parents.push(t!(repo.find_commit(parent)))
     }
     let parents = parents.iter().collect::<Vec<_>>();
     t!(repo.commit(

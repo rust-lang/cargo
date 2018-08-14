@@ -261,12 +261,7 @@ impl ProjectBuilder {
             symlink.mk();
         }
 
-        let ProjectBuilder {
-            root,
-            files: _,
-            symlinks: _,
-            ..
-        } = self;
+        let ProjectBuilder { root, .. } = self;
         root
     }
 

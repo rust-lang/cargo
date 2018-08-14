@@ -651,10 +651,10 @@ i64max = 9223372036854775807
         ("CARGO_EI64MAX", "9223372036854775807"),
     ]);
 
-    assert_eq!(config.get::<u64>("i64max").unwrap(), 9223372036854775807);
-    assert_eq!(config.get::<i64>("i64max").unwrap(), 9223372036854775807);
-    assert_eq!(config.get::<u64>("ei64max").unwrap(), 9223372036854775807);
-    assert_eq!(config.get::<i64>("ei64max").unwrap(), 9223372036854775807);
+    assert_eq!(config.get::<u64>("i64max").unwrap(), 9_223_372_036_854_775_807);
+    assert_eq!(config.get::<i64>("i64max").unwrap(), 9_223_372_036_854_775_807);
+    assert_eq!(config.get::<u64>("ei64max").unwrap(), 9_223_372_036_854_775_807);
+    assert_eq!(config.get::<i64>("ei64max").unwrap(), 9_223_372_036_854_775_807);
 
     assert_error(
         config.get::<u32>("nneg").unwrap_err(),

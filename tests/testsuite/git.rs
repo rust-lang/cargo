@@ -218,24 +218,22 @@ fn cargo_compile_offline_with_cached_git_dep() {
         execs().with_stdout("hello from cached git repo rev2\n"),
     );
 
-    drop(
-        File::create(&p.root().join("Cargo.toml"))
-            .unwrap()
-            .write_all(&format!(
-                r#"
-            [project]
-            name = "foo"
-            version = "0.5.0"
+    File::create(&p.root().join("Cargo.toml"))
+        .unwrap()
+        .write_all(&format!(
+            r#"
+        [project]
+        name = "foo"
+        version = "0.5.0"
 
-            [dependencies.dep1]
-            git = '{}'
-            rev = "{}"
+        [dependencies.dep1]
+        git = '{}'
+        rev = "{}"
     "#,
-                git_project.url(),
-                rev1
-            ).as_bytes())
-            .unwrap(),
-    );
+            git_project.url(),
+            rev1
+        ).as_bytes())
+        .unwrap();
 
     let _out = p
         .cargo("build")
