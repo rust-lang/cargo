@@ -7,6 +7,7 @@ environment:
     OTHER_TARGET: i686-pc-windows-msvc
     MAKE_TARGETS: test-unit-x86_64-pc-windows-msvc
     MINIMAL_VERSIONS: true
+    CFG_DISABLE_CROSS_TESTS: 1
 
 install:
   - appveyor-retry appveyor DownloadFile https://win.rustup.rs/ -FileName rustup-init.exe
@@ -23,5 +24,8 @@ clone_depth: 1
 build: false
 
 test_script:
+  # we don't have ci time to run the full `cargo test` with `minimal-versions` like
+  # - if defined MINIMAL_VERSIONS cargo +nightly generate-lockfile -Z minimal-versions && cargo +stable test
+  # so we just run `cargo check --tests` like
   - if defined MINIMAL_VERSIONS cargo +nightly generate-lockfile -Z minimal-versions && cargo +stable check --tests
   - if NOT defined MINIMAL_VERSIONS cargo test
