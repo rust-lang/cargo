@@ -45,7 +45,7 @@ pub struct Manifest {
     original: Rc<TomlManifest>,
     features: Features,
     edition: Edition,
-    lints: Lints,
+    lints: Option<Vec<Lints>>,
     im_a_teapot: Option<bool>,
     default_run: Option<String>,
     metabuild: Option<Vec<String>>,
@@ -70,7 +70,7 @@ pub struct VirtualManifest {
     workspace: WorkspaceConfig,
     profiles: Profiles,
     warnings: Warnings,
-    lints: Lints,
+    lints: Option<Vec<Lints>>,
 }
 
 /// General metadata about a package which is just blindly uploaded to the
@@ -364,7 +364,7 @@ impl Manifest {
         workspace: WorkspaceConfig,
         features: Features,
         edition: Edition,
-        lints: Lints,
+        lints: Option<Vec<Lints>>,
         im_a_teapot: Option<bool>,
         default_run: Option<String>,
         original: Rc<TomlManifest>,
@@ -428,7 +428,7 @@ impl Manifest {
     pub fn warnings(&self) -> &Warnings {
         &self.warnings
     }
-    pub fn lints(&self) -> &Lints {
+    pub fn lints(&self) -> &Option<Vec<Lints>> {
         &self.lints
     }
     pub fn profiles(&self) -> &Profiles {
@@ -539,7 +539,7 @@ impl VirtualManifest {
         patch: HashMap<Url, Vec<Dependency>>,
         workspace: WorkspaceConfig,
         profiles: Profiles,
-        lints: Lints,
+        lints: Option<Vec<Lints>>,
     ) -> VirtualManifest {
         VirtualManifest {
             replace,
@@ -563,7 +563,7 @@ impl VirtualManifest {
         &self.workspace
     }
 
-    pub fn lints(&self) -> &Lints {
+    pub fn lints(&self) -> &Option<Vec<Lints>> {
         &self.lints
     }
 

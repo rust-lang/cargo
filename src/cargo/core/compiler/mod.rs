@@ -809,9 +809,17 @@ fn build_base_args<'a, 'cfg>(
         cmd.args(args);
     }
 
-    unit.pkg.manifest().lints().set_flags(cmd);
-    if let Some(virtual_lints) = bcx.ws.virtual_lints() {
-        virtual_lints.set_flags(cmd);
+    let unit_cfg = bcx.cfg(unit.kind);
+    let features = bcx.resolve.features(unit.pkg.package_id());
+    if let Some(ref lints) = unit.pkg.manifest().lints() {
+        for ref lint_section in lints.iter() {
+            lint_section.set_lint_flags(unit_cfg, features, cmd);
+        }
+    }
+    if let Some(ref virtual_lints) = bcx.ws.virtual_lints() {
+        for ref lint_section in virtual_lints.iter() {
+            lint_section.set_lint_flags(unit_cfg, features, cmd);
+        }
     }
 
     // -C overflow-checks is implied by the setting of -C debug-assertions,

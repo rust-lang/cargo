@@ -1,6 +1,9 @@
 use std::collections::BTreeMap;
+use std::collections::HashSet;
+use std::str::FromStr;
 
-use util::{CargoResult, ProcessBuilder};
+use util::{Cfg, CfgExpr, ProcessBuilder};
+use util::errors::CargoResult;
 
 #[derive(Clone, PartialEq, Debug)]
 enum LintKind {
@@ -34,30 +37,50 @@ impl LintKind {
 #[derive(Clone, Debug)]
 pub struct Lints {
     lints: Vec<(String, LintKind)>,
+    cfg: Option<CfgExpr>,
 }
 
 impl Lints {
     pub fn new(
-        manifest_lints: Option<&BTreeMap<String, String>>,
+        cfg: Option<&String>,
+        manifest_lints: &BTreeMap<String, String>,
         warnings: &mut Vec<String>,
     ) -> CargoResult<Lints> {
+        let cfg = if let Some(t) = cfg {
+            if t.starts_with("cfg(") && t.ends_with(')') {
+                Some(CfgExpr::from_str(&t[4..t.len() - 1])?)
+            } else {
+                bail!("expected `cfg(...)`, found {}", t)
+            }
+        } else {
+            None
+        };
+
         let mut lints = vec![];
-        if let Some(lint_section) = manifest_lints {
-            for (lint_name, lint_state) in lint_section.iter() {
-                if let Some(state) = LintKind::try_from_string(lint_state) {
-                    lints.push((lint_name.to_string(), state));
-                } else {
-                    warnings.push(format!(
-                        "invalid lint state for `{}` (expected `warn`, `allow`, `deny` or `forbid`)",
-                        lint_name
-                    ));
-                }
+        for (lint_name, lint_state) in manifest_lints.iter() {
+            if let Some(state) = LintKind::try_from_string(lint_state) {
+                lints.push((lint_name.to_string(), state));
+            } else {
+                warnings.push(format!(
+                    "invalid lint state for `{}` (expected `warn`, `allow`, `deny` or `forbid`)",
+                    lint_name
+                ));
             }
         }
-        Ok(Lints { lints })
+        Ok(Lints { lints, cfg })
     }
 
-    pub fn set_flags(&self, cmd: &mut ProcessBuilder) {
+    pub fn set_lint_flags(&self, unit_cfg: &[Cfg], features: &HashSet<String>, cmd: &mut ProcessBuilder) {
+        match self.cfg {
+            None => self.set_flags(cmd),
+            Some(CfgExpr::Value(Cfg::KeyPair(ref key, ref value)))
+                if key == "feature" && features.contains(value) => self.set_flags(cmd),
+            Some(ref cfg) if cfg.matches(unit_cfg) => self.set_flags(cmd),
+            _ => (),
+        }
+    }
+
+    fn set_flags(&self, cmd: &mut ProcessBuilder) {
         for (lint_name, state) in self.lints.iter() {
             cmd.arg(format!("-{}", state.flag())).arg(lint_name);
         }

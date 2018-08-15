@@ -242,6 +242,8 @@ pub struct TomlManifest {
     workspace: Option<TomlWorkspace>,
     badges: Option<BTreeMap<String, BTreeMap<String, String>>>,
     lints: Option<BTreeMap<String, String>>,
+    #[serde(rename = "lints2")]
+    feature_lints: Option<BTreeMap<String, BTreeMap<String, String>>>,
 }
 
 #[derive(Deserialize, Serialize, Clone, Debug, Default)]
@@ -751,6 +753,7 @@ impl TomlManifest {
             badges: self.badges.clone(),
             cargo_features: self.cargo_features.clone(),
             lints: self.lints.clone(),
+            feature_lints: self.feature_lints.clone(),
         });
 
         fn map_deps(
@@ -1000,7 +1003,7 @@ impl TomlManifest {
             ),
         };
         let profiles = Profiles::new(me.profile.as_ref(), config, &features, &mut warnings)?;
-        let lints = Lints::new(me.lints.as_ref(), &mut warnings)?;
+        let lints = lints(me.lints.as_ref(), me.feature_lints.as_ref(), &mut warnings)?;
         let publish = match project.publish {
             Some(VecStringOrBool::VecString(ref vecstring)) => {
                 features
@@ -1114,7 +1117,7 @@ impl TomlManifest {
             (me.replace(&mut cx)?, me.patch(&mut cx)?)
         };
         let profiles = Profiles::new(me.profile.as_ref(), config, &features, &mut warnings)?;
-        let lints = Lints::new(me.lints.as_ref(), &mut warnings)?;
+        let lints = lints(me.lints.as_ref(), me.feature_lints.as_ref(), &mut warnings)?;
         let workspace_config = match me.workspace {
             Some(ref config) => WorkspaceConfig::Root(WorkspaceRootConfig::new(
                 &root,
@@ -1494,4 +1497,25 @@ impl fmt::Debug for PathValue {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         self.0.fmt(f)
     }
+}
+
+fn lints(
+    toml_lints: Option<&BTreeMap<String, String>>,
+    toml_feature_lints: Option<&BTreeMap<String, BTreeMap<String, String>>>,
+    warnings: &mut Vec<String>
+) -> CargoResult<Option<Vec<Lints>>> {
+    let mut lints = vec![];
+    if let Some(toml_lints) = toml_lints {
+        lints.push(Lints::new(None, toml_lints, warnings)?);
+    }
+    if let Some(toml_feature_lints) = toml_feature_lints {
+        for (ref cfg, ref feature_lints) in toml_feature_lints.iter() {
+            lints.push(Lints::new(Some(cfg), feature_lints, warnings)?);
+        }
+    }
+    Ok(if !lints.is_empty() {
+        Some(lints)
+    } else {
+        None
+    })
 }
