@@ -92,7 +92,7 @@ pub fn package(ws: &Workspace, opts: &PackageOpts) -> CargoResult<Option<FileLoc
         .shell()
         .status("Packaging", pkg.package_id().to_string())?;
     dst.file().set_len(0)?;
-    tar(ws, &src_files, vcs_info, dst.file(), &filename)
+    tar(ws, &src_files, vcs_info.as_ref(), dst.file(), &filename)
         .chain_err(|| format_err!("failed to prepare local package for uploading"))?;
     if opts.verify {
         dst.seek(SeekFrom::Start(0))?;
@@ -269,7 +269,7 @@ fn check_vcs_file_collision(pkg: &Package, src_files: &[PathBuf]) -> CargoResult
 fn tar(
     ws: &Workspace,
     src_files: &[PathBuf],
-    vcs_info: Option<serde_json::Value>,
+    vcs_info: Option<&serde_json::Value>,
     dst: &File,
     filename: &str
 ) -> CargoResult<()> {
