@@ -1,6 +1,6 @@
 use std::fs::{self, File};
-use std::io::{Cursor, SeekFrom, Write};
 use std::io::prelude::*;
+use std::io::SeekFrom;
 use std::path::{self, Path, PathBuf};
 use std::sync::Arc;
 
@@ -370,16 +370,14 @@ fn tar(
         header.set_path(&path).chain_err(|| {
             format!("failed to add to archive: `{}`", fnd)
         })?;
-        let mut buff = Cursor::new(Vec::with_capacity(256));
-        writeln!(buff, "{}", serde_json::to_string_pretty(json)?)?;
+        let json = format!("{}\n", serde_json::to_string_pretty(json)?);
         let mut header = Header::new_ustar();
         header.set_path(&path)?;
         header.set_entry_type(EntryType::file());
         header.set_mode(0o644);
-        header.set_size(buff.position() as u64);
+        header.set_size(json.len() as u64);
         header.set_cksum();
-        buff.seek(SeekFrom::Start(0))?;
-        ar.append(&header, &mut buff).chain_err(|| {
+        ar.append(&header, json.as_bytes()).chain_err(|| {
             internal(format!("could not archive source file `{}`", fnd))
         })?;
     }
