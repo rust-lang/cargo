@@ -9,7 +9,7 @@ use std::fs::{self, File};
 use std::io::prelude::*;
 use std::io::SeekFrom;
 use std::mem;
-use std::os::unix::fs::MetadataExt;
+#[cfg(unix)] use std::os::unix::fs::MetadataExt;
 use std::path::{Path, PathBuf};
 use std::process::Command;
 use std::str::FromStr;
@@ -668,7 +668,7 @@ impl Config {
         let metadata = metadata?;
         let mut contents = String::new();
 
-        if cfg!(not(unix)) || (metadata.mode() & 0o100 == 0) {
+        if ! is_executable(metadata) {
             let mut file = File::open(&credentials)?;
             file.read_to_string(&mut contents).chain_err(|| {
                 format!(
@@ -795,6 +795,18 @@ impl Config {
         T::deserialize(d).map_err(|e| e.into())
     }
 }
+
+/// Check whether the credentials file is executable
+#[cfg(unix)]
+fn is_executable(m: fs::Metadata) -> bool {
+    return m.mode() & 0o100 == 0;
+}
+
+#[cfg(not(unix))]
+fn is_executable(m: fs::Metadata) -> bool {
+    return false;
+}
+
 
 /// A segment of a config key.
 ///
