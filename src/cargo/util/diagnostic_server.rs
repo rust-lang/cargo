@@ -171,7 +171,7 @@ your `Cargo.toml` and then rerun this command. Once all warnings have been fixed
 then you can re-enable the `edition` key in `Cargo.toml`. For some more
 information about transitioning to the {0} edition see:
 
-  https://rust-lang-nursery.github.io/edition-guide/editions/transitioning.html
+  https://rust-lang-nursery.github.io/edition-guide/editions/transitioning-your-code-to-a-new-edition.html
 ",
                     edition,
                     file,
