@@ -229,6 +229,8 @@ struct SerializedTarget<'a> {
     name: &'a str,
     src_path: &'a PathBuf,
     edition: &'a str,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    required_features: Option<Vec<&'a str>>,
 }
 
 impl ser::Serialize for Target {
@@ -238,7 +240,11 @@ impl ser::Serialize for Target {
             crate_types: self.rustc_crate_types(),
             name: &self.name,
             src_path: &self.src_path.path,
-            edition: &self.edition.to_string()
+            edition: &self.edition.to_string(),
+            required_features: self
+                .required_features
+                .as_ref()
+                .map(|rf| rf.iter().map(|s| &**s).collect()),
         }.serialize(s)
     }
 }
