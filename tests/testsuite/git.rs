@@ -94,7 +94,7 @@ fn cargo_compile_forbird_git_httpsrepo_offline() {
         .file("src/main.rs", "")
         .build();
 
-    assert_that(p.cargo("build").masquerade_as_nightly_cargo().arg("-Zoffline"),
+    assert_that(p.cargo("build -Zoffline").masquerade_as_nightly_cargo(),
                 execs().with_status(101).
                     with_stderr("\
 error: failed to load source for a dependency on `dep1`
@@ -198,9 +198,8 @@ fn cargo_compile_offline_with_cached_git_dep() {
 
     assert_that(
         p
-            .cargo("build")
-            .masquerade_as_nightly_cargo()
-            .arg("-Zoffline"),
+            .cargo("build -Zoffline")
+            .masquerade_as_nightly_cargo(),
         execs().with_stderr(format!(
             "\
 [COMPILING] dep1 v0.5.0 ({}#[..])
@@ -236,9 +235,8 @@ fn cargo_compile_offline_with_cached_git_dep() {
         .unwrap();
 
     let _out = p
-        .cargo("build")
+        .cargo("build -Zoffline")
         .masquerade_as_nightly_cargo()
-        .arg("-Zoffline")
         .exec_with_output();
     assert_that(
         process(&p.bin("foo")),
@@ -961,8 +959,7 @@ Caused by:
     // anything because we already have the rev in the db.
     println!("bar precise update");
     assert_that(
-        p.cargo("update -p bar --precise")
-            .arg(&old_head.to_string()),
+        p.cargo("update -p bar --precise").arg(&old_head.to_string()),
         execs().with_stdout(""),
     );
 

@@ -1355,18 +1355,14 @@ fn relative_path_for_root_works() {
     let p = p.build();
 
     assert_that(
-        p.cargo("build")
-            .cwd(p.root())
-            .arg("--manifest-path")
-            .arg("./Cargo.toml"),
+        p.cargo("build --manifest-path ./Cargo.toml")
+            .cwd(p.root()),
         execs(),
     );
 
     assert_that(
-        p.cargo("build")
-            .cwd(p.root().join("subproj"))
-            .arg("--manifest-path")
-            .arg("../Cargo.toml"),
+        p.cargo("build --manifest-path ../Cargo.toml")
+            .cwd(p.root().join("subproj")),
         execs(),
     );
 }

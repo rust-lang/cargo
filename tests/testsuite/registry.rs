@@ -767,9 +767,8 @@ fn update_offline() {
         .file("src/main.rs", "fn main() {}")
         .build();
     assert_that(
-        p.cargo("update")
-            .masquerade_as_nightly_cargo()
-            .arg("-Zoffline"),
+        p.cargo("update -Zoffline")
+            .masquerade_as_nightly_cargo(),
         execs()
             .with_status(101)
             .with_stderr("error: you can't update in the offline mode[..]"),

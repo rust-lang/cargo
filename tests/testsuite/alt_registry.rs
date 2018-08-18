@@ -316,10 +316,9 @@ fn cannot_publish_to_crates_io_with_registry_dependency() {
     Package::new("bar", "0.0.1").alternative(true).publish();
 
     assert_that(
-        p.cargo("publish")
-            .masquerade_as_nightly_cargo()
-            .arg("--index")
-            .arg(registry::registry().to_string()),
+        p.cargo("publish --index")
+            .arg(registry::registry().to_string())
+            .masquerade_as_nightly_cargo(),
         execs().with_status(101),
     );
 }
@@ -349,21 +348,14 @@ fn publish_with_registry_dependency() {
 
     // Login so that we have the token available
     assert_that(
-        p.cargo("login")
-            .masquerade_as_nightly_cargo()
-            .arg("--registry")
-            .arg("alternative")
-            .arg("TOKEN")
-            .arg("-Zunstable-options"),
+        p.cargo("login --registry alternative TOKEN -Zunstable-options")
+            .masquerade_as_nightly_cargo(),
         execs(),
     );
 
     assert_that(
-        p.cargo("publish")
-            .masquerade_as_nightly_cargo()
-            .arg("--registry")
-            .arg("alternative")
-            .arg("-Zunstable-options"),
+        p.cargo("publish --registry alternative -Zunstable-options")
+            .masquerade_as_nightly_cargo(),
         execs(),
     );
 }
@@ -427,11 +419,8 @@ fn block_publish_due_to_no_token() {
 
     // Now perform the actual publish
     assert_that(
-        p.cargo("publish")
-            .masquerade_as_nightly_cargo()
-            .arg("--registry")
-            .arg("alternative")
-            .arg("-Zunstable-options"),
+        p.cargo("publish --registry alternative -Zunstable-options")
+            .masquerade_as_nightly_cargo(),
         execs()
             .with_status(101)
             .with_stderr_contains("error: no upload token found, please run `cargo login`"),
@@ -460,22 +449,15 @@ fn publish_to_alt_registry() {
 
     // Login so that we have the token available
     assert_that(
-        p.cargo("login")
-            .masquerade_as_nightly_cargo()
-            .arg("--registry")
-            .arg("alternative")
-            .arg("TOKEN")
-            .arg("-Zunstable-options"),
+        p.cargo("login --registry alternative TOKEN -Zunstable-options")
+            .masquerade_as_nightly_cargo(),
         execs(),
     );
 
     // Now perform the actual publish
     assert_that(
-        p.cargo("publish")
-            .masquerade_as_nightly_cargo()
-            .arg("--registry")
-            .arg("alternative")
-            .arg("-Zunstable-options"),
+        p.cargo("publish --registry alternative -Zunstable-options")
+            .masquerade_as_nightly_cargo(),
         execs(),
     );
 
@@ -509,21 +491,14 @@ fn publish_with_crates_io_dep() {
 
     // Login so that we have the token available
     assert_that(
-        p.cargo("login")
-            .masquerade_as_nightly_cargo()
-            .arg("--registry")
-            .arg("alternative")
-            .arg("TOKEN")
-            .arg("-Zunstable-options"),
+        p.cargo("login --registry alternative TOKEN -Zunstable-options")
+            .masquerade_as_nightly_cargo(),
         execs(),
     );
 
     assert_that(
-        p.cargo("publish")
-            .masquerade_as_nightly_cargo()
-            .arg("--registry")
-            .arg("alternative")
-            .arg("-Zunstable-options"),
+        p.cargo("publish --registry alternative -Zunstable-options")
+            .masquerade_as_nightly_cargo(),
         execs(),
     );
 }
@@ -560,11 +535,8 @@ fn credentials_in_url_forbidden() {
         .build();
 
     assert_that(
-        p.cargo("publish")
-            .masquerade_as_nightly_cargo()
-            .arg("--registry")
-            .arg("alternative")
-            .arg("-Zunstable-options"),
+        p.cargo("publish --registry alternative -Zunstable-options")
+            .masquerade_as_nightly_cargo(),
         execs()
             .with_status(101)
             .with_stderr_contains("error: Registry URLs may not contain credentials"),

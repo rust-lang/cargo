@@ -289,7 +289,7 @@ fn profile_in_non_root_manifest_triggers_a_warning() {
         .build();
 
     assert_that(
-        p.cargo("build").cwd(p.root().join("bar")).arg("-v"),
+        p.cargo("build -v").cwd(p.root().join("bar")),
         execs().with_stderr(
             "\
 [WARNING] profiles for the non root package will be ignored, specify profiles at the workspace root:
@@ -331,7 +331,7 @@ fn profile_in_virtual_manifest_works() {
         .build();
 
     assert_that(
-        p.cargo("build").cwd(p.root().join("bar")).arg("-v"),
+        p.cargo("build -v").cwd(p.root().join("bar")),
         execs().with_stderr(
             "\
 [COMPILING] bar v0.1.0 ([..])

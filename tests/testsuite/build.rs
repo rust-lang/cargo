@@ -964,9 +964,8 @@ fn cargo_compile_path_with_offline() {
         .build();
 
     assert_that(
-        p.cargo("build")
-            .masquerade_as_nightly_cargo()
-            .arg("-Zoffline"),
+        p.cargo("build -Zoffline")
+            .masquerade_as_nightly_cargo(),
         execs(),
     );
 }
@@ -1013,9 +1012,8 @@ fn cargo_compile_with_downloaded_dependency_with_offline() {
         .build();
 
     assert_that(
-        p2.cargo("build")
-            .masquerade_as_nightly_cargo()
-            .arg("-Zoffline"),
+        p2.cargo("build -Zoffline")
+            .masquerade_as_nightly_cargo(),
         execs().with_stderr(
             "\
 [COMPILING] present_dep v1.2.3
@@ -1043,9 +1041,8 @@ fn cargo_compile_offline_not_try_update() {
         .build();
 
     assert_that(
-        p.cargo("build")
-            .masquerade_as_nightly_cargo()
-            .arg("-Zoffline"),
+        p.cargo("build -Zoffline")
+            .masquerade_as_nightly_cargo(),
         execs().with_status(101).with_stderr(
             "\
 error: no matching package named `not_cached_dep` found
@@ -1116,9 +1113,8 @@ fn main(){
         .build();
 
     assert_that(
-        p2.cargo("run")
-            .masquerade_as_nightly_cargo()
-            .arg("-Zoffline"),
+        p2.cargo("run -Zoffline")
+            .masquerade_as_nightly_cargo(),
         execs()
             .with_stderr(format!(
                 "\
@@ -1267,9 +1263,8 @@ fn compile_offline_while_transitive_dep_not_cached() {
     drop(File::create(baz_path).ok().unwrap().write_all(&content));
 
     assert_that(
-        p.cargo("build")
-            .masquerade_as_nightly_cargo()
-            .arg("-Zoffline"),
+        p.cargo("build -Zoffline")
+            .masquerade_as_nightly_cargo(),
         execs().with_status(101).with_stderr(
             "\
 error: no matching package named `baz` found
@@ -2918,9 +2913,8 @@ fn rustc_env_var() {
         .build();
 
     assert_that(
-        p.cargo("build")
-            .env("RUSTC", "rustc-that-does-not-exist")
-            .arg("-v"),
+        p.cargo("build -v")
+            .env("RUSTC", "rustc-that-does-not-exist"),
         execs().with_status(101).with_stderr(
             "\
 [ERROR] could not execute process `rustc-that-does-not-exist -vV` ([..])
@@ -4748,9 +4742,8 @@ fn avoid_dev_deps() {
 
     assert_that(p.cargo("build"), execs().with_status(101));
     assert_that(
-        p.cargo("build")
-            .masquerade_as_nightly_cargo()
-            .arg("-Zavoid-dev-deps"),
+        p.cargo("build -Zavoid-dev-deps")
+            .masquerade_as_nightly_cargo(),
         execs(),
     );
 }

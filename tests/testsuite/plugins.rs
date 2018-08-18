@@ -216,7 +216,7 @@ fn plugin_with_dynamic_native_dependency() {
         .unwrap();
 
     assert_that(
-        foo.cargo("build").env("SRC", &lib).arg("-v"),
+        foo.cargo("build -v").env("SRC", &lib),
         execs(),
     );
 }

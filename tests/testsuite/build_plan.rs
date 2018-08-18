@@ -10,10 +10,8 @@ fn cargo_build_plan_simple() {
         .build();
 
     assert_that(
-        p.cargo("build")
-            .masquerade_as_nightly_cargo()
-            .arg("--build-plan")
-            .arg("-Zunstable-options"),
+        p.cargo("build --build-plan -Zunstable-options")
+            .masquerade_as_nightly_cargo(),
         execs().with_json(
             r#"
     {
@@ -71,10 +69,8 @@ fn cargo_build_plan_single_dep() {
         .file("bar/src/lib.rs", "pub fn bar() {}")
         .build();
     assert_that(
-        p.cargo("build")
-            .masquerade_as_nightly_cargo()
-            .arg("--build-plan")
-            .arg("-Zunstable-options"),
+        p.cargo("build --build-plan -Zunstable-options")
+            .masquerade_as_nightly_cargo(),
         execs().with_json(
             r#"
     {
@@ -139,10 +135,8 @@ fn cargo_build_plan_build_script() {
         .build();
 
     assert_that(
-        p.cargo("build")
-            .masquerade_as_nightly_cargo()
-            .arg("--build-plan")
-            .arg("-Zunstable-options"),
+        p.cargo("build --build-plan -Zunstable-options")
+            .masquerade_as_nightly_cargo(),
         execs().with_json(
             r#"
     {
