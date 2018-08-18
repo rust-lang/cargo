@@ -1562,15 +1562,13 @@ fn build_script_with_dynamic_native_dependency() {
 
     assert_that(
         build
-            .cargo("build")
-            .arg("-v")
+            .cargo("build -v")
             .env("RUST_LOG", "cargo::ops::cargo_rustc"),
         execs(),
     );
 
     assert_that(
-        foo.cargo("build")
-            .arg("-v")
+        foo.cargo("build -v")
             .env("SRC", build.root())
             .env("RUST_LOG", "cargo::ops::cargo_rustc"),
         execs(),
@@ -2435,8 +2433,7 @@ fn fresh_builds_possible_with_link_libs() {
     );
 
     assert_that(
-        p.cargo("build")
-            .arg("-v")
+        p.cargo("build -v")
             .env("RUST_LOG", "cargo::ops::cargo_rustc::fingerprint=info"),
         execs().with_stderr(
             "\
@@ -2493,8 +2490,7 @@ fn fresh_builds_possible_with_multiple_metadata_overrides() {
     );
 
     assert_that(
-        p.cargo("build")
-            .arg("-v")
+        p.cargo("build -v")
             .env("RUST_LOG", "cargo::ops::cargo_rustc::fingerprint=info"),
         execs().with_stderr(
             "\

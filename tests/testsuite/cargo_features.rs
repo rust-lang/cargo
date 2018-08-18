@@ -320,8 +320,7 @@ fn publish_allowed() {
         .file("src/lib.rs", "")
         .build();
     assert_that(
-        p.cargo("publish")
-            .arg("--index")
+        p.cargo("publish --index")
             .arg(publish::registry().to_string())
             .masquerade_as_nightly_cargo(),
         execs(),

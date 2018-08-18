@@ -980,9 +980,7 @@ fn plugin_build_script_right_arch() {
         .build();
 
     assert_that(
-        p.cargo("build")
-            .arg("-v")
-            .arg("--target")
+        p.cargo("build -v --target")
             .arg(cross_compile::alternate()),
         execs().with_stderr(
             "\

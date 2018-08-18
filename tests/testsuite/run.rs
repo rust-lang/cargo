@@ -446,9 +446,7 @@ fn run_example_autodiscover_2015() {
 
     let p = autodiscover_examples_project("2015", None);
     assert_that(
-        p.cargo("run")
-            .arg("--example")
-            .arg("a")
+        p.cargo("run --example a")
             .masquerade_as_nightly_cargo(),
         execs().with_status(101).with_stderr(
             "warning: \
@@ -481,9 +479,7 @@ fn run_example_autodiscover_2015_with_autoexamples_enabled() {
 
     let p = autodiscover_examples_project("2015", Some(true));
     assert_that(
-        p.cargo("run")
-            .arg("--example")
-            .arg("a")
+        p.cargo("run --example a")
             .masquerade_as_nightly_cargo(),
         execs()
             .with_stderr(&format!(
@@ -505,9 +501,7 @@ fn run_example_autodiscover_2015_with_autoexamples_disabled() {
 
     let p = autodiscover_examples_project("2015", Some(false));
     assert_that(
-        p.cargo("run")
-            .arg("--example")
-            .arg("a")
+        p.cargo("run --example a")
             .masquerade_as_nightly_cargo(),
         execs()
             .with_status(101)
@@ -523,9 +517,7 @@ fn run_example_autodiscover_2018() {
 
     let p = autodiscover_examples_project("2018", None);
     assert_that(
-        p.cargo("run")
-            .arg("--example")
-            .arg("a")
+        p.cargo("run --example a")
             .masquerade_as_nightly_cargo(),
         execs()
             .with_stderr(&format!(
@@ -612,11 +604,7 @@ fn either_name_or_example() {
         .build();
 
     assert_that(
-        p.cargo("run")
-            .arg("--bin")
-            .arg("a")
-            .arg("--example")
-            .arg("b"),
+        p.cargo("run --bin a --example b"),
         execs().with_status(101).with_stderr(
             "[ERROR] `cargo run` can run at most one \
              executable, but multiple were \
@@ -695,11 +683,7 @@ fn example_with_release_flag() {
         .build();
 
     assert_that(
-        p.cargo("run")
-            .arg("-v")
-            .arg("--release")
-            .arg("--example")
-            .arg("a"),
+        p.cargo("run -v --release --example a"),
         execs()
             .with_stderr(&format!(
                 "\

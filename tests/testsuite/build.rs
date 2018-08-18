@@ -98,17 +98,13 @@ fn incremental_profile() {
     );
 
     assert_that(
-        p.cargo("build")
-            .arg("--release")
-            .arg("-v")
+        p.cargo("build --release -v")
             .env_remove("CARGO_INCREMENTAL"),
         execs().with_stderr_contains("[..]C incremental=[..]"),
     );
 
     assert_that(
-        p.cargo("build")
-            .arg("--release")
-            .arg("-v")
+        p.cargo("build --release -v")
             .env("CARGO_INCREMENTAL", "0"),
         execs().with_stderr_does_not_contain("[..]C incremental=[..]"),
     );
@@ -162,9 +158,7 @@ fn cargo_compile_manifest_path() {
         .build();
 
     assert_that(
-        p.cargo("build")
-            .arg("--manifest-path")
-            .arg("foo/Cargo.toml")
+        p.cargo("build --manifest-path foo/Cargo.toml")
             .cwd(p.root().parent().unwrap()),
         execs(),
     );
@@ -223,9 +217,7 @@ fn cargo_compile_with_invalid_manifest3() {
         .build();
 
     assert_that(
-        p.cargo("build")
-            .arg("--manifest-path")
-            .arg("src/Cargo.toml"),
+        p.cargo("build --manifest-path src/Cargo.toml"),
         execs().with_status(101).with_stderr(
             "\
 [ERROR] failed to parse manifest at `[..]`
@@ -1411,8 +1403,7 @@ fn cargo_default_env_metadata_env_var() {
 
     // If you set the env-var, then we expect metadata on libbar
     assert_that(
-        p.cargo("build")
-            .arg("-v")
+        p.cargo("build -v")
             .env("__CARGO_DEFAULT_LIB_METADATA", "stable"),
         execs().with_stderr(&format!(
             "\
@@ -2742,9 +2733,7 @@ fn example_bin_same_name() {
         .file("examples/foo.rs", "fn main() {}")
         .build();
 
-    p.cargo("test")
-        .arg("--no-run")
-        .arg("-v")
+    p.cargo("test --no-run -v")
         .exec_with_output()
         .unwrap();
 
@@ -2752,9 +2741,7 @@ fn example_bin_same_name() {
     // We expect a file of the form bin/foo-{metadata_hash}
     assert_that(&p.bin("examples/foo"), existing_file());
 
-    p.cargo("test")
-        .arg("--no-run")
-        .arg("-v")
+    p.cargo("test --no-run -v")
         .exec_with_output()
         .unwrap();
 
@@ -3266,11 +3253,7 @@ fn invalid_spec() {
     );
 
     assert_that(
-        p.cargo("build")
-            .arg("-p")
-            .arg("d1")
-            .arg("-p")
-            .arg("notAValidDep"),
+        p.cargo("build -p d1 -p notAValidDep"),
         execs()
             .with_status(101)
             .with_stderr("[ERROR] package id specification `notAValidDep` matched no packages"),
@@ -3585,12 +3568,7 @@ fn message_format_json_forward_stderr() {
         .build();
 
     assert_that(
-        p.cargo("rustc")
-            .arg("--release")
-            .arg("--bin")
-            .arg("foo")
-            .arg("--message-format")
-            .arg("JSON"),
+        p.cargo("rustc --release --bin foo --message-format JSON"),
         execs().with_json(
             r#"
     {
@@ -4087,8 +4065,7 @@ fn rustc_wrapper() {
         .build();
 
     assert_that(
-        p.cargo("build")
-            .arg("-v")
+        p.cargo("build -v")
             .env("RUSTC_WRAPPER", "/usr/bin/env"),
         execs().with_stderr_contains("[RUNNING] `/usr/bin/env rustc --crate-name foo [..]"),
     );
@@ -4536,10 +4513,7 @@ fn uplift_dsym_of_bin_on_mac() {
         .build();
 
     assert_that(
-        p.cargo("build")
-            .arg("--bins")
-            .arg("--examples")
-            .arg("--tests"),
+        p.cargo("build --bins --examples --tests"),
         execs(),
     );
     assert_that(&p.bin("foo.dSYM"), existing_dir());
@@ -4568,10 +4542,7 @@ fn uplift_pdb_of_bin_on_windows() {
         .build();
 
     assert_that(
-        p.cargo("build")
-            .arg("--bins")
-            .arg("--examples")
-            .arg("--tests"),
+        p.cargo("build --bins --examples --tests"),
         execs(),
     );
     assert_that(&p.target_debug_dir().join("foo.pdb"), existing_file());

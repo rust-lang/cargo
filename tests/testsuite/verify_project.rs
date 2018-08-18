@@ -13,9 +13,7 @@ fn cargo_verify_project_path_to_cargo_toml_relative() {
         .build();
 
     assert_that(
-        p.cargo("verify-project")
-            .arg("--manifest-path")
-            .arg("foo/Cargo.toml")
+        p.cargo("verify-project --manifest-path foo/Cargo.toml")
             .cwd(p.root().parent().unwrap()),
         execs()
             .with_stdout(verify_project_success_output()),
@@ -30,8 +28,7 @@ fn cargo_verify_project_path_to_cargo_toml_absolute() {
         .build();
 
     assert_that(
-        p.cargo("verify-project")
-            .arg("--manifest-path")
+        p.cargo("verify-project --manifest-path")
             .arg(p.root().join("Cargo.toml"))
             .cwd(p.root().parent().unwrap()),
         execs()

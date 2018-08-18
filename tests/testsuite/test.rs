@@ -1851,11 +1851,7 @@ fn example_dev_dep() {
         .build();
     assert_that(p.cargo("test"), execs());
     assert_that(
-        p.cargo("run")
-            .arg("--example")
-            .arg("e1")
-            .arg("--release")
-            .arg("-v"),
+        p.cargo("run --example e1 --release -v"),
         execs(),
     );
 }
@@ -2546,13 +2542,7 @@ fn selective_test_optional_dep() {
     let p = p.build();
 
     assert_that(
-        p.cargo("test")
-            .arg("-v")
-            .arg("--no-run")
-            .arg("--features")
-            .arg("a")
-            .arg("-p")
-            .arg("a"),
+        p.cargo("test -v --no-run --features a -p a"),
         execs().with_stderr(
             "\
 [COMPILING] a v0.0.1 ([..])
@@ -2766,10 +2756,7 @@ fn pass_correct_cfgs_flags_to_rustdoc() {
     let p = p.build();
 
     assert_that(
-        p.cargo("test")
-            .arg("--package")
-            .arg("feature_a")
-            .arg("--verbose"),
+        p.cargo("test --package feature_a --verbose"),
         execs().with_stderr_contains(
             "\
 [DOCTEST] feature_a
@@ -3070,20 +3057,7 @@ fn test_many_targets() {
         .build();
 
     assert_that(
-        p.cargo("test")
-            .arg("--verbose")
-            .arg("--bin")
-            .arg("a")
-            .arg("--bin")
-            .arg("b")
-            .arg("--example")
-            .arg("a")
-            .arg("--example")
-            .arg("b")
-            .arg("--test")
-            .arg("a")
-            .arg("--test")
-            .arg("b"),
+        p.cargo("test --verbose --bin a --bin b --example a --example b --test a --test b"),
         execs()
             .with_stdout_contains("test bin_a ... ok")
             .with_stdout_contains("test bin_b ... ok")
@@ -3343,9 +3317,7 @@ fn find_dependency_of_proc_macro_dependency_with_target() {
         .publish();
     assert_that(
         p
-            .cargo("test")
-            .arg("--all")
-            .arg("--target")
+            .cargo("test --all --target")
             .arg(rustc_host()),
         execs(),
     );

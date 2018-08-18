@@ -425,8 +425,7 @@ fn override_adds_some_deps() {
 
     Package::new("baz", "0.1.2").publish();
     assert_that(
-        p.cargo("update")
-            .arg("-p")
+        p.cargo("update -p")
             .arg(&format!("{}#bar", foo.url())),
         execs().with_stderr(
             "\
@@ -436,9 +435,7 @@ fn override_adds_some_deps() {
         ),
     );
     assert_that(
-        p.cargo("update")
-            .arg("-p")
-            .arg("https://github.com/rust-lang/crates.io-index#bar"),
+        p.cargo("update -p https://github.com/rust-lang/crates.io-index#bar"),
         execs().with_stderr(
             "\
 [UPDATING] registry `file://[..]`

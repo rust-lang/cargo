@@ -1222,9 +1222,7 @@ fn dep_feature_in_cmd_line() {
     // We should be able to enable the feature "derived-feat", which enables "some-feat",
     // on the command line. The feature is enabled, thus building should be successful:
     assert_that(
-        p.cargo("build")
-            .arg("--features")
-            .arg("derived/derived-feat"),
+        p.cargo("build --features derived/derived-feat"),
         execs(),
     );
 
@@ -1238,9 +1236,7 @@ fn dep_feature_in_cmd_line() {
 
     // Hierarchical feature specification should still be disallowed
     assert_that(
-        p.cargo("build")
-            .arg("--features")
-            .arg("derived/bar/some-feat"),
+        p.cargo("build --features derived/bar/some-feat"),
         execs()
             .with_status(101)
             .with_stderr("[ERROR] feature names may not contain slashes: `bar/some-feat`"),

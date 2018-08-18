@@ -945,11 +945,7 @@ fn update_with_shared_deps() {
     // Don't do anything bad on a weird --precise argument
     println!("bar bad precise update");
     assert_that(
-        p.cargo("update")
-            .arg("-p")
-            .arg("bar")
-            .arg("--precise")
-            .arg("0.1.2"),
+        p.cargo("update -p bar --precise 0.1.2"),
         execs().with_status(101).with_stderr(
             "\
 [UPDATING] git repository [..]
@@ -965,10 +961,7 @@ Caused by:
     // anything because we already have the rev in the db.
     println!("bar precise update");
     assert_that(
-        p.cargo("update")
-            .arg("-p")
-            .arg("bar")
-            .arg("--precise")
+        p.cargo("update -p bar --precise")
             .arg(&old_head.to_string()),
         execs().with_stdout(""),
     );

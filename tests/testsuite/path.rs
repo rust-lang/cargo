@@ -881,8 +881,7 @@ fn custom_target_no_rebuild() {
         p.root().join("target_moved")
     ));
     assert_that(
-        p.cargo("build")
-            .arg("--manifest-path=b/Cargo.toml")
+        p.cargo("build --manifest-path=b/Cargo.toml")
             .env("CARGO_TARGET_DIR", "target_moved"),
         execs().with_stderr(
             "\
