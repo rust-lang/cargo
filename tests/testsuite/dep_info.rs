@@ -37,7 +37,7 @@ fn build_dep_info_lib() {
         .file("examples/ex.rs", "")
         .build();
 
-    assert_that(p.cargo("build").arg("--example=ex"), execs());
+    assert_that(p.cargo("build --example=ex"), execs());
     assert_that(
         &p.example_lib("ex", "lib").with_extension("d"),
         existing_file(),
@@ -64,7 +64,7 @@ fn build_dep_info_rlib() {
         .file("examples/ex.rs", "")
         .build();
 
-    assert_that(p.cargo("build").arg("--example=ex"), execs());
+    assert_that(p.cargo("build --example=ex"), execs());
     assert_that(
         &p.example_lib("ex", "rlib").with_extension("d"),
         existing_file(),
@@ -91,7 +91,7 @@ fn build_dep_info_dylib() {
         .file("examples/ex.rs", "")
         .build();
 
-    assert_that(p.cargo("build").arg("--example=ex"), execs());
+    assert_that(p.cargo("build --example=ex"), execs());
     assert_that(
         &p.example_lib("ex", "dylib").with_extension("d"),
         existing_file(),

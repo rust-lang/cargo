@@ -88,7 +88,7 @@ fn bench_bench_implicit() {
         .build();
 
     assert_that(
-        p.cargo("bench").arg("--benches"),
+        p.cargo("bench --benches"),
         execs()
             .with_stderr(format!(
                 "\
@@ -136,7 +136,7 @@ fn bench_bin_implicit() {
         .build();
 
     assert_that(
-        p.cargo("bench").arg("--bins"),
+        p.cargo("bench --bins"),
         execs()
             .with_stderr(format!(
                 "\
@@ -174,7 +174,7 @@ fn bench_tarname() {
         .build();
 
     assert_that(
-        p.cargo("bench").arg("--bench").arg("bin2"),
+        p.cargo("bench --bench bin2"),
         execs()
             .with_stderr(format!(
                 "\
@@ -252,7 +252,7 @@ fn cargo_bench_verbose() {
         .build();
 
     assert_that(
-        p.cargo("bench").arg("-v").arg("hello"),
+        p.cargo("bench -v hello"),
         execs()
             .with_stderr(&format!(
                 "\
@@ -361,7 +361,7 @@ fn cargo_bench_failing_test() {
 
     // Force libtest into serial execution so that the test header will be printed.
     assert_that(
-        p.cargo("bench").arg("--").arg("--test-threads=1"),
+        p.cargo("bench -- --test-threads=1"),
         execs()
             .with_stdout_contains("test bench_hello ...[..]")
             .with_stderr_contains(format!(
@@ -746,7 +746,7 @@ fn pass_through_command_line() {
         .build();
 
     assert_that(
-        p.cargo("bench").arg("bar"),
+        p.cargo("bench bar"),
         execs()
             .with_stderr(&format!(
                 "\
@@ -759,7 +759,7 @@ fn pass_through_command_line() {
     );
 
     assert_that(
-        p.cargo("bench").arg("foo"),
+        p.cargo("bench foo"),
         execs()
             .with_stderr(
                 "[FINISHED] release [optimized] target(s) in [..]
@@ -1031,7 +1031,7 @@ fn bench_dylib() {
         .build();
 
     assert_that(
-        p.cargo("bench").arg("-v"),
+        p.cargo("bench -v"),
         execs()
             .with_stderr(&format!(
                 "\
@@ -1051,7 +1051,7 @@ fn bench_dylib() {
 
     p.root().move_into_the_past();
     assert_that(
-        p.cargo("bench").arg("-v"),
+        p.cargo("bench -v"),
         execs()
             .with_stderr(&format!(
                 "\
@@ -1192,7 +1192,7 @@ fn bench_with_examples() {
         .build();
 
     assert_that(
-        p.cargo("bench").arg("-v"),
+        p.cargo("bench -v"),
         execs()
             .with_stderr(&format!(
                 "\
@@ -1277,7 +1277,7 @@ fn test_bench_no_run() {
         .build();
 
     assert_that(
-        p.cargo("bench").arg("--no-run"),
+        p.cargo("bench --no-run"),
         execs().with_stderr(
             "\
 [COMPILING] foo v0.0.1 ([..])
@@ -1420,7 +1420,7 @@ fn test_bench_multiple_packages() {
         .build();
 
     assert_that(
-        p.cargo("bench").arg("-p").arg("bar").arg("-p").arg("baz"),
+        p.cargo("bench -p bar -p baz"),
         execs()
             .with_stderr_contains("[RUNNING] target/release/deps/bbaz-[..][EXE]")
             .with_stdout_contains("test bench_baz ... bench: [..]")
@@ -1479,7 +1479,7 @@ fn bench_all_workspace() {
         .build();
 
     assert_that(
-        p.cargo("bench").arg("--all"),
+        p.cargo("bench --all"),
         execs()
             .with_stderr_contains("[RUNNING] target/release/deps/bar-[..][EXE]")
             .with_stdout_contains("test bench_bar ... bench: [..]")
@@ -1526,7 +1526,7 @@ fn bench_all_exclude() {
         .build();
 
     assert_that(
-        p.cargo("bench").arg("--all").arg("--exclude").arg("baz"),
+        p.cargo("bench --all --exclude baz"),
         execs().with_stdout_contains(
             "\
 running 1 test
@@ -1581,7 +1581,7 @@ fn bench_all_virtual_manifest() {
 
     // The order in which bar and baz are built is not guaranteed
     assert_that(
-        p.cargo("bench").arg("--all"),
+        p.cargo("bench --all"),
         execs()
             .with_stderr_contains("[RUNNING] target/release/deps/baz-[..][EXE]")
             .with_stdout_contains("test bench_baz ... bench: [..]")

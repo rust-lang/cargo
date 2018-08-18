@@ -141,7 +141,7 @@ fn rebuild_sub_package_then_while_package() {
         .write_all(br#"pub fn b() {}"#)
         .unwrap();
 
-    assert_that(p.cargo("build").arg("-pb"), execs());
+    assert_that(p.cargo("build -pb"), execs());
 
     File::create(&p.root().join("src/lib.rs"))
         .unwrap()
@@ -180,7 +180,7 @@ fn changing_lib_features_caches_targets() {
     );
 
     assert_that(
-        p.cargo("build").arg("--features").arg("foo"),
+        p.cargo("build --features foo"),
         execs().with_stderr(
             "\
 [..]Compiling foo v0.0.1 ([..])
@@ -200,7 +200,7 @@ fn changing_lib_features_caches_targets() {
     assert_that(p.cargo("build"), execs().with_stdout(""));
 
     assert_that(
-        p.cargo("build").arg("--features").arg("foo"),
+        p.cargo("build --features foo"),
         execs()
             .with_stderr("[FINISHED] dev [unoptimized + debuginfo] target(s) in [..]"),
     );
@@ -255,7 +255,7 @@ fn changing_profiles_caches_targets() {
     );
 
     assert_that(
-        p.cargo("test").arg("foo"),
+        p.cargo("test foo"),
         execs().with_stderr(
             "\
 [FINISHED] dev [unoptimized + debuginfo] target(s) in [..]
@@ -364,7 +364,7 @@ fn changing_bin_paths_common_target_features_caches_targets() {
         ),
     );
     assert_that(
-        p.cargo("clean").arg("-p").arg("a").cwd(p.root().join("a")),
+        p.cargo("clean -p a").cwd(p.root().join("a")),
         execs(),
     );
     assert_that(
@@ -391,7 +391,7 @@ fn changing_bin_paths_common_target_features_caches_targets() {
         ),
     );
     assert_that(
-        p.cargo("clean").arg("-p").arg("b").cwd(p.root().join("b")),
+        p.cargo("clean -p b").cwd(p.root().join("b")),
         execs(),
     );
     assert_that(
@@ -408,7 +408,7 @@ fn changing_bin_paths_common_target_features_caches_targets() {
     /* Build a/ package again. If we cache different feature dep builds correctly,
      * this should not cause a rebuild of dep_crate */
     assert_that(
-        p.cargo("clean").arg("-p").arg("a").cwd(p.root().join("a")),
+        p.cargo("clean -p a").cwd(p.root().join("a")),
         execs(),
     );
     assert_that(
@@ -425,7 +425,7 @@ fn changing_bin_paths_common_target_features_caches_targets() {
     /* Build b/ package again. If we cache different feature dep builds correctly,
      * this should not cause a rebuild */
     assert_that(
-        p.cargo("clean").arg("-p").arg("b").cwd(p.root().join("b")),
+        p.cargo("clean -p b").cwd(p.root().join("b")),
         execs(),
     );
     assert_that(
@@ -492,7 +492,7 @@ fn changing_bin_features_caches_targets() {
     );
 
     assert_that(
-        p.cargo("build").arg("--features").arg("foo"),
+        p.cargo("build --features foo"),
         execs().with_stderr(
             "\
 [COMPILING] foo v0.0.1 ([..])
@@ -521,7 +521,7 @@ fn changing_bin_features_caches_targets() {
     );
 
     assert_that(
-        p.cargo("build").arg("--features").arg("foo"),
+        p.cargo("build --features foo"),
         execs().with_stderr(
             "\
 [FINISHED] dev [unoptimized + debuginfo] target(s) in [..]
@@ -554,8 +554,8 @@ fn rebuild_tests_if_lib_changes() {
     sleep_ms(1000);
     File::create(&p.root().join("src/lib.rs")).unwrap();
 
-    assert_that(p.cargo("build").arg("-v"), execs());
-    assert_that(p.cargo("test").arg("-v"), execs().with_status(101));
+    assert_that(p.cargo("build -v"), execs());
+    assert_that(p.cargo("test -v"), execs().with_status(101));
 }
 
 #[test]
@@ -609,7 +609,7 @@ fn no_rebuild_transitive_target_deps() {
 
     assert_that(p.cargo("build"), execs());
     assert_that(
-        p.cargo("test").arg("--no-run"),
+        p.cargo("test --no-run"),
         execs().with_stderr(
             "\
 [COMPILING] c v0.0.1 ([..])

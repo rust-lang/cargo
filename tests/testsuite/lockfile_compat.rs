@@ -110,7 +110,7 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
         .file("Cargo.lock", &old_lockfile)
         .build();
 
-    assert_that(p.cargo("build").arg("--locked"), execs());
+    assert_that(p.cargo("build --locked"), execs());
 
     let lock = p.read_lockfile();
     for (l, r) in old_lockfile.lines().zip(lock.lines()) {
@@ -489,7 +489,7 @@ fn locked_correct_error() {
     let p = p.build();
 
     assert_that(
-        p.cargo("build").arg("--locked"),
+        p.cargo("build --locked"),
         execs().with_status(101).with_stderr(
             "\
 [UPDATING] registry `[..]`

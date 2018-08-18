@@ -708,7 +708,7 @@ fn test_override_dep() {
         .build();
 
     assert_that(
-        p.cargo("test").arg("-p").arg("bar"),
+        p.cargo("test -p bar"),
         execs().with_status(101).with_stderr_contains(
             "\
 error: There are multiple `bar` packages in your project, and the [..]
@@ -807,7 +807,7 @@ fn no_override_self() {
         .file("src/lib.rs", "#![no_std] pub extern crate near;")
         .build();
 
-    assert_that(p.cargo("build").arg("--verbose"), execs());
+    assert_that(p.cargo("build --verbose"), execs());
 }
 
 #[test]
@@ -995,7 +995,7 @@ fn override_an_override() {
         .file("serde/src/lib.rs", "pub fn serde08_override() {}")
         .build();
 
-    assert_that(p.cargo("build").arg("-v"), execs());
+    assert_that(p.cargo("build -v"), execs());
 }
 
 #[test]

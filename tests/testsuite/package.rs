@@ -46,7 +46,7 @@ See [..]
         existing_file(),
     );
     assert_that(
-        p.cargo("package").arg("-l"),
+        p.cargo("package -l"),
         execs().with_stdout(
             "\
 Cargo.toml
@@ -315,7 +315,7 @@ fn exclude() {
         .build();
 
     assert_that(
-        p.cargo("package").arg("--no-verify").arg("-v"),
+        p.cargo("package --no-verify -v"),
         execs().with_stdout("").with_stderr(
             "\
 [WARNING] manifest has no description[..]
@@ -362,7 +362,7 @@ See [..]
     );
 
     assert_that(
-        p.cargo("package").arg("-l"),
+        p.cargo("package -l"),
         execs().with_stdout(
             "\
 Cargo.toml
@@ -405,7 +405,7 @@ fn include() {
         .build();
 
     assert_that(
-        p.cargo("package").arg("--no-verify").arg("-v"),
+        p.cargo("package --no-verify -v"),
         execs().with_stderr(
             "\
 [WARNING] manifest has no description[..]
@@ -427,7 +427,7 @@ fn package_lib_with_bin() {
         .file("src/lib.rs", "")
         .build();
 
-    assert_that(p.cargo("package").arg("-v"), execs());
+    assert_that(p.cargo("package -v"), execs());
 }
 
 #[test]
@@ -534,7 +534,7 @@ See http://doc.crates.io/manifest.html#package-metadata for more info.
         existing_file(),
     );
     assert_that(
-        p.cargo("package").arg("-l"),
+        p.cargo("package -l"),
         execs().with_stdout(
             "\
 Cargo.toml
@@ -663,7 +663,7 @@ fn broken_symlink() {
     t!(fs::symlink("nowhere", &p.root().join("src/foo.rs")));
 
     assert_that(
-        p.cargo("package").arg("-v"),
+        p.cargo("package -v"),
         execs().with_status(101).with_stderr_contains(
             "\
 error: failed to prepare local package for uploading
@@ -929,7 +929,7 @@ fn package_two_kinds_of_deps() {
         .build();
 
     assert_that(
-        p.cargo("package").arg("--no-verify"),
+        p.cargo("package --no-verify"),
         execs(),
     );
 }
@@ -955,7 +955,7 @@ fn test_edition() {
         .build();
 
     assert_that(
-        p.cargo("build").arg("-v").masquerade_as_nightly_cargo(),
+        p.cargo("build -v").masquerade_as_nightly_cargo(),
         execs()
                 // --edition is still in flux and we're not passing -Zunstable-options
                 // from Cargo so it will probably error. Only partially match the output
@@ -985,7 +985,7 @@ fn test_edition_missing() {
         .build();
 
     assert_that(
-        p.cargo("build").arg("-v").masquerade_as_nightly_cargo(),
+        p.cargo("build -v").masquerade_as_nightly_cargo(),
         execs()
                 // --edition is still in flux and we're not passing -Zunstable-options
                 // from Cargo so it will probably error. Only partially match the output
@@ -1015,7 +1015,7 @@ fn test_edition_malformed() {
         .build();
 
     assert_that(
-        p.cargo("build").arg("-v").masquerade_as_nightly_cargo(),
+        p.cargo("build -v").masquerade_as_nightly_cargo(),
         execs().with_status(101).with_stderr(
             "\
 error: failed to parse manifest at `[..]`
@@ -1047,7 +1047,7 @@ fn test_edition_nightly() {
         .build();
 
     assert_that(
-        p.cargo("build").arg("-v").masquerade_as_nightly_cargo(),
+        p.cargo("build -v").masquerade_as_nightly_cargo(),
         execs().with_status(101).with_stderr(
             "\
 error: failed to parse manifest at `[..]`
@@ -1103,7 +1103,7 @@ See [..]
         existing_file(),
     );
     assert_that(
-        p.cargo("package").arg("-l").masquerade_as_nightly_cargo(),
+        p.cargo("package -l").masquerade_as_nightly_cargo(),
         execs().with_stdout(
             "\
 Cargo.lock
@@ -1161,7 +1161,7 @@ fn package_lockfile_git_repo() {
         .file("src/main.rs", "fn main() {}")
         .build();
     assert_that(
-        p.cargo("package").arg("-l").masquerade_as_nightly_cargo(),
+        p.cargo("package -l").masquerade_as_nightly_cargo(),
         execs().with_stdout(
             "\
 Cargo.lock

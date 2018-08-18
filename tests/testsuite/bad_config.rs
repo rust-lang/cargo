@@ -40,7 +40,7 @@ fn bad2() {
         )
         .build();
     assert_that(
-        p.cargo("publish").arg("-v"),
+        p.cargo("publish -v"),
         execs().with_status(101).with_stderr(
             "\
 [ERROR] could not load Cargo configuration
@@ -76,7 +76,7 @@ fn bad3() {
     Package::new("foo", "1.0.0").publish();
 
     assert_that(
-        p.cargo("publish").arg("-v"),
+        p.cargo("publish -v"),
         execs().with_status(101).with_stderr(
             "\
 error: failed to update registry [..]
@@ -100,7 +100,7 @@ fn bad4() {
         )
         .build();
     assert_that(
-        p.cargo("new").arg("-v").arg("foo"),
+        p.cargo("new -v foo"),
         execs().with_status(101).with_stderr(
             "\
 [ERROR] Failed to create project `foo` at `[..]`
@@ -127,7 +127,7 @@ fn bad6() {
     Package::new("foo", "1.0.0").publish();
 
     assert_that(
-        p.cargo("publish").arg("-v"),
+        p.cargo("publish -v"),
         execs().with_status(101).with_stderr(
             "\
 error: failed to update registry [..]
@@ -152,7 +152,7 @@ fn bad_cargo_config_jobs() {
         )
         .build();
     assert_that(
-        p.cargo("build").arg("-v"),
+        p.cargo("build -v"),
         execs().with_status(101).with_stderr(
             "\
 [ERROR] error in [..].cargo/config: \
@@ -175,7 +175,7 @@ fn default_cargo_config_jobs() {
         "#,
         )
         .build();
-    assert_that(p.cargo("build").arg("-v"), execs());
+    assert_that(p.cargo("build -v"), execs());
 }
 
 #[test]
@@ -190,7 +190,7 @@ fn good_cargo_config_jobs() {
         "#,
         )
         .build();
-    assert_that(p.cargo("build").arg("-v"), execs());
+    assert_that(p.cargo("build -v"), execs());
 }
 
 #[test]
@@ -213,7 +213,7 @@ fn invalid_global_config() {
         .build();
 
     assert_that(
-        p.cargo("build").arg("-v"),
+        p.cargo("build -v"),
         execs().with_status(101).with_stderr(
             "\
 [ERROR] could not load Cargo configuration
@@ -239,7 +239,7 @@ fn bad_cargo_lock() {
         .build();
 
     assert_that(
-        p.cargo("build").arg("-v"),
+        p.cargo("build -v"),
         execs().with_status(101).with_stderr(
             "\
 [ERROR] failed to parse lock file at: [..]Cargo.lock
@@ -342,7 +342,7 @@ fn bad_source_in_cargo_lock() {
         .build();
 
     assert_that(
-        p.cargo("build").arg("--verbose"),
+        p.cargo("build --verbose"),
         execs().with_status(101).with_stderr(
             "\
 [ERROR] failed to parse lock file at: [..]
@@ -393,7 +393,7 @@ fn bad_git_dependency() {
         .build();
 
     assert_that(
-        p.cargo("build").arg("-v"),
+        p.cargo("build -v"),
         execs().with_status(101).with_stderr(
             "\
 [UPDATING] git repository `file:///`
@@ -431,7 +431,7 @@ fn bad_crate_type() {
         .build();
 
     assert_that(
-        p.cargo("build").arg("-v"),
+        p.cargo("build -v"),
         execs().with_status(101).with_stderr_contains(
             "error: failed to run `rustc` to learn about crate-type bad_type information",
         ),
@@ -536,7 +536,7 @@ fn duplicate_example_names() {
         .build();
 
     assert_that(
-        p.cargo("build").arg("--example").arg("ex"),
+        p.cargo("build --example ex"),
         execs().with_status(101).with_stderr(
             "\
 [ERROR] failed to parse manifest at `[..]`
@@ -876,7 +876,7 @@ fn ambiguous_git_reference() {
         .build();
 
     assert_that(
-        p.cargo("build").arg("-v"),
+        p.cargo("build -v"),
         execs().with_status(101).with_stderr_contains(
             "\
 [WARNING] dependency (bar) specification is ambiguous. \
@@ -1096,7 +1096,7 @@ fn both_git_and_path_specified() {
         .build();
 
     assert_that(
-        foo.cargo("build").arg("-v"),
+        foo.cargo("build -v"),
         execs().with_status(101).with_stderr_contains(
             "\
 [WARNING] dependency (bar) specification is ambiguous. \
@@ -1161,7 +1161,7 @@ fn ignored_git_revision() {
         .build();
 
     assert_that(
-        foo.cargo("build").arg("-v"),
+        foo.cargo("build -v"),
         execs().with_status(101).with_stderr_contains(
             "\
              [WARNING] key `branch` is ignored for dependency (bar). \
