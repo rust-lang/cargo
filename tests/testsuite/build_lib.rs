@@ -27,7 +27,7 @@ fn build_lib_only() {
         .build();
 
     assert_that(
-        p.cargo("build").arg("--lib").arg("-v"),
+        p.cargo("build --lib -v"),
         execs()
             .with_stderr(verbose_output_for_lib(&p)),
     );
@@ -41,7 +41,7 @@ fn build_with_no_lib() {
         .build();
 
     assert_that(
-        p.cargo("build").arg("--lib"),
+        p.cargo("build --lib"),
         execs()
             .with_status(101)
             .with_stderr("[ERROR] no library targets found in package `foo`"),

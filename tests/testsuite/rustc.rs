@@ -13,7 +13,7 @@ fn build_lib_for_foo() {
         .build();
 
     assert_that(
-        p.cargo("rustc").arg("--lib").arg("-v"),
+        p.cargo("rustc --lib -v"),
         execs().with_stderr(format!(
             "\
 [COMPILING] foo v0.0.1 ({url})
@@ -264,7 +264,7 @@ fn targets_selected_default() {
         .file("src/main.rs", "fn main() {}")
         .build();
     assert_that(
-        p.cargo("rustc").arg("-v"),
+        p.cargo("rustc -v"),
         execs()
         // bin
         .with_stderr_contains("\
@@ -287,7 +287,7 @@ fn targets_selected_all() {
         .file("src/main.rs", "fn main() {}")
         .build();
     assert_that(
-        p.cargo("rustc").arg("-v").arg("--all-targets"),
+        p.cargo("rustc -v --all-targets"),
         execs()
         // bin
         .with_stderr_contains("\
@@ -389,7 +389,7 @@ fn rustc_with_other_profile() {
         .build();
 
     assert_that(
-        p.cargo("rustc").arg("--profile").arg("test"),
+        p.cargo("rustc --profile test"),
         execs(),
     );
 }

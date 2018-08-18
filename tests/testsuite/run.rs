@@ -48,7 +48,7 @@ fn simple_quiet_and_verbose() {
         .build();
 
     assert_that(
-        p.cargo("run").arg("-q").arg("-v"),
+        p.cargo("run -q -v"),
         execs()
             .with_status(101)
             .with_stderr("[ERROR] cannot set both --verbose and --quiet"),
@@ -68,7 +68,7 @@ fn quiet_and_verbose_config() {
         .file("src/main.rs", r#"fn main() { println!("hello"); }"#)
         .build();
 
-    assert_that(p.cargo("run").arg("-q"), execs());
+    assert_that(p.cargo("run -q"), execs());
 }
 
 #[test]
@@ -86,7 +86,7 @@ fn simple_with_args() {
         .build();
 
     assert_that(
-        p.cargo("run").arg("hello").arg("world"),
+        p.cargo("run hello world"),
         execs(),
     );
 }
@@ -133,7 +133,7 @@ fn exit_code_verbose() {
     }
 
     assert_that(
-        p.cargo("run").arg("-v"),
+        p.cargo("run -v"),
         execs().with_status(2).with_stderr(output),
     );
 }
@@ -206,7 +206,7 @@ fn specify_name() {
         .build();
 
     assert_that(
-        p.cargo("run").arg("--bin").arg("a").arg("-v"),
+        p.cargo("run --bin a -v"),
         execs()
             .with_stderr(&format!(
                 "\
@@ -221,7 +221,7 @@ fn specify_name() {
     );
 
     assert_that(
-        p.cargo("run").arg("--bin").arg("b").arg("-v"),
+        p.cargo("run --bin b -v"),
         execs()
             .with_stderr(
                 "\
@@ -358,7 +358,7 @@ fn run_example() {
         .build();
 
     assert_that(
-        p.cargo("run").arg("--example").arg("a"),
+        p.cargo("run --example a"),
         execs()
             .with_stderr(&format!(
                 "\
@@ -391,7 +391,7 @@ fn run_library_example() {
         .build();
 
     assert_that(
-        p.cargo("run").arg("--example").arg("bar"),
+        p.cargo("run --example bar"),
         execs()
             .with_status(101)
             .with_stderr("[ERROR] example target `bar` is a library and cannot be executed"),
@@ -548,7 +548,7 @@ fn run_bins() {
         .build();
 
     assert_that(
-        p.cargo("run").arg("--bins"),
+        p.cargo("run --bins"),
         execs().with_status(1).with_stderr_contains(
             "error: Found argument '--bins' which wasn't expected, or isn't valid in this context",
         ),
@@ -570,14 +570,14 @@ fn run_with_filename() {
         .build();
 
     assert_that(
-        p.cargo("run").arg("--bin").arg("bin.rs"),
+        p.cargo("run --bin bin.rs"),
         execs()
             .with_status(101)
             .with_stderr("[ERROR] no bin target named `bin.rs`"),
     );
 
     assert_that(
-        p.cargo("run").arg("--bin").arg("a.rs"),
+        p.cargo("run --bin a.rs"),
         execs().with_status(101).with_stderr(
             "\
 [ERROR] no bin target named `a.rs`
@@ -587,14 +587,14 @@ Did you mean `a`?",
     );
 
     assert_that(
-        p.cargo("run").arg("--example").arg("example.rs"),
+        p.cargo("run --example example.rs"),
         execs()
             .with_status(101)
             .with_stderr("[ERROR] no example target named `example.rs`"),
     );
 
     assert_that(
-        p.cargo("run").arg("--example").arg("a.rs"),
+        p.cargo("run --example a.rs"),
         execs().with_status(101).with_stderr(
             "\
 [ERROR] no example target named `a.rs`
@@ -732,7 +732,7 @@ fast2",
     );
 
     assert_that(
-        p.cargo("run").arg("-v").arg("--example").arg("a"),
+        p.cargo("run -v --example a"),
         execs()
             .with_stderr(&format!(
                 "\
@@ -798,7 +798,7 @@ fn run_dylib_dep() {
         .build();
 
     assert_that(
-        p.cargo("run").arg("hello").arg("world"),
+        p.cargo("run hello world"),
         execs(),
     );
 }
@@ -815,7 +815,7 @@ fn release_works() {
         .build();
 
     assert_that(
-        p.cargo("run").arg("--release"),
+        p.cargo("run --release"),
         execs().with_stderr(&format!(
             "\
 [COMPILING] foo v0.0.1 ({dir})
@@ -1013,7 +1013,7 @@ fn fail_no_extra_verbose() {
         .build();
 
     assert_that(
-        p.cargo("run").arg("-q"),
+        p.cargo("run -q"),
         execs().with_status(1).with_stdout("").with_stderr(""),
     );
 }

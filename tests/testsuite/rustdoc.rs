@@ -8,7 +8,7 @@ fn rustdoc_simple() {
         .build();
 
     assert_that(
-        p.cargo("rustdoc").arg("-v"),
+        p.cargo("rustdoc -v"),
         execs().with_stderr(format!(
             "\
 [DOCUMENTING] foo v0.0.1 ({url})
@@ -30,7 +30,7 @@ fn rustdoc_args() {
         .build();
 
     assert_that(
-        p.cargo("rustdoc").arg("-v").arg("--").arg("--cfg=foo"),
+        p.cargo("rustdoc -v -- --cfg=foo"),
         execs().with_stderr(format!(
             "\
 [DOCUMENTING] foo v0.0.1 ({url})
@@ -69,7 +69,7 @@ fn rustdoc_foo_with_bar_dependency() {
         .build();
 
     assert_that(
-        foo.cargo("rustdoc").arg("-v").arg("--").arg("--cfg=foo"),
+        foo.cargo("rustdoc -v -- --cfg=foo"),
         execs().with_stderr(format!(
             "\
 [CHECKING] bar v0.0.1 ([..])
@@ -139,7 +139,7 @@ fn rustdoc_same_name_documents_lib() {
         .build();
 
     assert_that(
-        p.cargo("rustdoc").arg("-v").arg("--").arg("--cfg=foo"),
+        p.cargo("rustdoc -v -- --cfg=foo"),
         execs().with_stderr(format!(
             "\
 [DOCUMENTING] foo v0.0.1 ([..])

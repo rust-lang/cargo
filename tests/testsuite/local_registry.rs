@@ -108,7 +108,7 @@ fn multiple_versions() {
         .publish();
 
     assert_that(
-        p.cargo("update").arg("-v"),
+        p.cargo("update -v"),
         execs()
             .with_stderr("[UPDATING] bar v0.1.0 -> v0.2.0"),
     );

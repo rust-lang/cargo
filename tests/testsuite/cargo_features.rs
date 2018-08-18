@@ -273,7 +273,7 @@ fn z_flags_rejected() {
         .file("src/lib.rs", "")
         .build();
     assert_that(
-        p.cargo("build").arg("-Zprint-im-a-teapot"),
+        p.cargo("build -Zprint-im-a-teapot"),
         execs()
             .with_status(101)
             .with_stderr("error: the `-Z` flag is only accepted on the nightly channel of Cargo"),

@@ -445,7 +445,7 @@ fn debug_release_ok() {
     fs::remove_dir_all(p.root().join("target")).unwrap();
 
     let mut a = p.cargo("build").build_command();
-    let mut b = p.cargo("build").arg("--release").build_command();
+    let mut b = p.cargo("build --release").build_command();
     a.stdout(Stdio::piped()).stderr(Stdio::piped());
     b.stdout(Stdio::piped()).stderr(Stdio::piped());
     let a = a.spawn().unwrap();

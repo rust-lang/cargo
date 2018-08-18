@@ -81,7 +81,7 @@ fn cargo_metadata_warns_on_implicit_version() {
                 execs().with_stderr("[WARNING] please specify `--format-version` flag explicitly to avoid compatibility problems"));
 
     assert_that(
-        p.cargo("metadata").arg("--format-version").arg("1"),
+        p.cargo("metadata --format-version 1"),
         execs().with_stderr(""),
     );
 }
@@ -738,7 +738,7 @@ fn workspace_metadata_no_deps() {
         .build();
 
     assert_that(
-        p.cargo("metadata").arg("--no-deps"),
+        p.cargo("metadata --no-deps"),
         execs().with_json(
             r#"
     {
@@ -819,7 +819,7 @@ fn cargo_metadata_with_invalid_manifest() {
     let p = project().file("Cargo.toml", "").build();
 
     assert_that(
-        p.cargo("metadata").arg("--format-version").arg("1"),
+        p.cargo("metadata --format-version 1"),
         execs().with_status(101).with_stderr(
             "\
 [ERROR] failed to parse manifest at `[..]`
@@ -949,7 +949,7 @@ fn cargo_metadata_no_deps_cwd() {
         .build();
 
     assert_that(
-        p.cargo("metadata").arg("--no-deps").cwd(p.root()),
+        p.cargo("metadata --no-deps").cwd(p.root()),
         execs().with_json(MANIFEST_OUTPUT),
     );
 }
@@ -996,7 +996,7 @@ fn multiple_features() {
         .build();
 
     assert_that(
-        p.cargo("metadata").arg("--features").arg("a b"),
+        p.cargo("metadata --features a b"),
         execs(),
     );
 }
@@ -1024,7 +1024,7 @@ fn package_metadata() {
         .build();
 
     assert_that(
-        p.cargo("metadata").arg("--no-deps"),
+        p.cargo("metadata --no-deps"),
         execs().with_json(
             r#"
     {

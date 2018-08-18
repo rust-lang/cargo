@@ -25,7 +25,7 @@ fn profile_overrides() {
         .file("src/lib.rs", "")
         .build();
     assert_that(
-        p.cargo("build").arg("-v"),
+        p.cargo("build -v"),
         execs().with_stderr(&format!(
             "\
 [COMPILING] test v0.0.0 ({url})
@@ -64,7 +64,7 @@ fn opt_level_override_0() {
         .file("src/lib.rs", "")
         .build();
     assert_that(
-        p.cargo("build").arg("-v"),
+        p.cargo("build -v"),
         execs().with_stderr(&format!(
             "\
 [COMPILING] test v0.0.0 ({url})
@@ -100,7 +100,7 @@ fn debug_override_1() {
         .file("src/lib.rs", "")
         .build();
     assert_that(
-        p.cargo("build").arg("-v"),
+        p.cargo("build -v"),
         execs().with_stderr(&format!(
             "\
 [COMPILING] test v0.0.0 ({url})
@@ -139,7 +139,7 @@ fn check_opt_level_override(profile_level: &str, rustc_level: &str) {
         .file("src/lib.rs", "")
         .build();
     assert_that(
-        p.cargo("build").arg("-v"),
+        p.cargo("build -v"),
         execs().with_stderr(&format!(
             "\
 [COMPILING] test v0.0.0 ({url})
@@ -219,7 +219,7 @@ fn top_level_overrides_deps() {
         .file("foo/src/lib.rs", "")
         .build();
     assert_that(
-        p.cargo("build").arg("-v").arg("--release"),
+        p.cargo("build -v --release"),
         execs().with_stderr(&format!(
             "\
 [COMPILING] foo v0.0.0 ({url}/foo)

@@ -43,7 +43,7 @@ fn simple_cross_package() {
     let target = cross_compile::alternate();
 
     assert_that(
-        p.cargo("package").arg("--target").arg(&target),
+        p.cargo("package --target").arg(&target),
         execs().with_stderr(&format!(
             "   Packaging foo v0.0.0 ({dir})
    Verifying foo v0.0.0 ({dir})

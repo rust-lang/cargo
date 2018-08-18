@@ -93,7 +93,7 @@ fn cargo_test_release() {
         .build();
 
     assert_that(
-        p.cargo("test").arg("-v").arg("--release"),
+        p.cargo("test -v --release"),
         execs()
             .with_stderr(format!(
                 "\
@@ -149,7 +149,7 @@ fn cargo_test_overflow_checks() {
         )
         .build();
 
-    assert_that(p.cargo("build").arg("--release"), execs());
+    assert_that(p.cargo("build --release"), execs());
     assert_that(&p.release_bin("foo"), existing_file());
 
     assert_that(
@@ -172,7 +172,7 @@ fn cargo_test_verbose() {
         .build();
 
     assert_that(
-        p.cargo("test").arg("-v").arg("hello"),
+        p.cargo("test -v hello"),
         execs()
             .with_stderr(format!(
                 "\
@@ -213,7 +213,7 @@ fn many_similar_names() {
         )
         .build();
 
-    let output = p.cargo("test").arg("-v").exec_with_output().unwrap();
+    let output = p.cargo("test -v").exec_with_output().unwrap();
     let output = str::from_utf8(&output.stdout).unwrap();
     assert!(
         output.contains("test bin_test"),
@@ -648,7 +648,7 @@ fn pass_through_command_line() {
         .build();
 
     assert_that(
-        p.cargo("test").arg("bar"),
+        p.cargo("test bar"),
         execs()
             .with_stderr(&format!(
                 "\
@@ -663,7 +663,7 @@ fn pass_through_command_line() {
     );
 
     assert_that(
-        p.cargo("test").arg("foo"),
+        p.cargo("test foo"),
         execs()
             .with_stderr(
                 "\
@@ -1120,7 +1120,7 @@ fn bin_there_for_integration() {
         )
         .build();
 
-    let output = p.cargo("test").arg("-v").exec_with_output().unwrap();
+    let output = p.cargo("test -v").exec_with_output().unwrap();
     let output = str::from_utf8(&output.stdout).unwrap();
     assert!(
         output.contains("main_test ... ok"),
@@ -1295,7 +1295,7 @@ fn test_no_run() {
         .build();
 
     assert_that(
-        p.cargo("test").arg("--no-run"),
+        p.cargo("test --no-run"),
         execs().with_stderr(&format!(
             "\
 [COMPILING] foo v0.0.1 ({dir})
@@ -1331,7 +1331,7 @@ fn test_run_specific_bin_target() {
         .build();
 
     assert_that(
-        prj.cargo("test").arg("--bin").arg("bin2"),
+        prj.cargo("test --bin bin2"),
         execs()
             .with_stderr(format!(
                 "\
@@ -1375,7 +1375,7 @@ fn test_run_implicit_bin_target() {
         .build();
 
     assert_that(
-        prj.cargo("test").arg("--bins"),
+        prj.cargo("test --bins"),
         execs()
             .with_stderr(format!(
                 "\
@@ -1398,7 +1398,7 @@ fn test_run_specific_test_target() {
         .build();
 
     assert_that(
-        prj.cargo("test").arg("--test").arg("b"),
+        prj.cargo("test --test b"),
         execs()
             .with_stderr(format!(
                 "\
@@ -1441,7 +1441,7 @@ fn test_run_implicit_test_target() {
         .build();
 
     assert_that(
-        prj.cargo("test").arg("--tests"),
+        prj.cargo("test --tests"),
         execs()
             .with_stderr(format!(
                 "\
@@ -1485,7 +1485,7 @@ fn test_run_implicit_bench_target() {
         .build();
 
     assert_that(
-        prj.cargo("test").arg("--benches"),
+        prj.cargo("test --benches"),
         execs()
             .with_stderr(format!(
                 "\
@@ -1609,7 +1609,7 @@ fn test_no_harness() {
         .build();
 
     assert_that(
-        p.cargo("test").arg("--").arg("--nocapture"),
+        p.cargo("test -- --nocapture"),
         execs().with_stderr(&format!(
             "\
 [COMPILING] foo v0.0.1 ({dir})
@@ -1683,7 +1683,7 @@ fn selective_testing() {
 
     println!("d1");
     assert_that(
-        p.cargo("test").arg("-p").arg("d1"),
+        p.cargo("test -p d1"),
         execs()
             .with_stderr(&format!(
                 "\
@@ -1698,7 +1698,7 @@ fn selective_testing() {
 
     println!("d2");
     assert_that(
-        p.cargo("test").arg("-p").arg("d2"),
+        p.cargo("test -p d2"),
         execs()
             .with_stderr(&format!(
                 "\
@@ -1809,7 +1809,7 @@ fn build_then_selective_test() {
 
     assert_that(p.cargo("build"), execs());
     p.root().move_into_the_past();
-    assert_that(p.cargo("test").arg("-p").arg("b"), execs());
+    assert_that(p.cargo("test -p b"), execs());
 }
 
 #[test]
@@ -1901,7 +1901,7 @@ fn selective_testing_with_docs() {
     let p = p.build();
 
     assert_that(
-        p.cargo("test").arg("-p").arg("d1"),
+        p.cargo("test -p d1"),
         execs()
             .with_stderr(&format!(
                 "\
@@ -1923,7 +1923,7 @@ fn example_bin_same_name() {
         .build();
 
     assert_that(
-        p.cargo("test").arg("--no-run").arg("-v"),
+        p.cargo("test --no-run -v"),
         execs().with_stderr(&format!(
             "\
 [COMPILING] foo v0.0.1 ({dir})
@@ -1965,10 +1965,10 @@ fn test_with_example_twice() {
         .build();
 
     println!("first");
-    assert_that(p.cargo("test").arg("-v"), execs());
+    assert_that(p.cargo("test -v"), execs());
     assert_that(&p.bin("examples/foo"), existing_file());
     println!("second");
-    assert_that(p.cargo("test").arg("-v"), execs());
+    assert_that(p.cargo("test -v"), execs());
     assert_that(&p.bin("examples/foo"), existing_file());
 }
 
@@ -2002,7 +2002,7 @@ fn example_with_dev_dep() {
         .build();
 
     assert_that(
-        p.cargo("test").arg("-v"),
+        p.cargo("test -v"),
         execs().with_stderr(
             "\
 [..]
@@ -2023,11 +2023,11 @@ fn bin_is_preserved() {
         .file("src/main.rs", "fn main() {}")
         .build();
 
-    assert_that(p.cargo("build").arg("-v"), execs());
+    assert_that(p.cargo("build -v"), execs());
     assert_that(&p.bin("foo"), existing_file());
 
     println!("testing");
-    assert_that(p.cargo("test").arg("-v"), execs());
+    assert_that(p.cargo("test -v"), execs());
     assert_that(&p.bin("foo"), existing_file());
 }
 
@@ -2038,13 +2038,13 @@ fn bad_example() {
     let p = p.build();
 
     assert_that(
-        p.cargo("run").arg("--example").arg("foo"),
+        p.cargo("run --example foo"),
         execs()
             .with_status(101)
             .with_stderr("[ERROR] no example target named `foo`"),
     );
     assert_that(
-        p.cargo("run").arg("--bin").arg("foo"),
+        p.cargo("run --bin foo"),
         execs()
             .with_status(101)
             .with_stderr("[ERROR] no bin target named `foo`"),
@@ -2078,7 +2078,7 @@ fn doctest_feature() {
         .build();
 
     assert_that(
-        p.cargo("test").arg("--features").arg("bar"),
+        p.cargo("test --features bar"),
         execs()
             .with_stderr(
                 "\
@@ -2107,7 +2107,7 @@ fn dashes_to_underscores() {
         )
         .build();
 
-    assert_that(p.cargo("test").arg("-v"), execs());
+    assert_that(p.cargo("test -v"), execs());
 }
 
 #[test]
@@ -2138,7 +2138,7 @@ fn doctest_dev_dep() {
         .file("b/src/lib.rs", "")
         .build();
 
-    assert_that(p.cargo("test").arg("-v"), execs());
+    assert_that(p.cargo("test -v"), execs());
 }
 
 #[test]
@@ -2157,7 +2157,7 @@ fn filter_no_doc_tests() {
         .build();
 
     assert_that(
-        p.cargo("test").arg("--test=foo"),
+        p.cargo("test --test=foo"),
         execs()
             .with_stderr(
                 "\
@@ -2384,7 +2384,7 @@ fn no_fail_fast() {
         )
         .build();
     assert_that(
-        p.cargo("test").arg("--no-fail-fast"),
+        p.cargo("test --no-fail-fast"),
         execs()
             .with_status(101)
             .with_stderr_contains(
@@ -2459,7 +2459,7 @@ fn test_multiple_packages() {
     let p = p.build();
 
     assert_that(
-        p.cargo("test").arg("-p").arg("d1").arg("-p").arg("d2"),
+        p.cargo("test -p d1 -p d2"),
         execs()
             .with_stderr_contains("[RUNNING] target/debug/deps/d1-[..][EXE]")
             .with_stderr_contains("[RUNNING] target/debug/deps/d2-[..][EXE]")
@@ -2475,7 +2475,7 @@ fn bin_does_not_rebuild_tests() {
         .file("tests/foo.rs", "");
     let p = p.build();
 
-    assert_that(p.cargo("test").arg("-v"), execs());
+    assert_that(p.cargo("test -v"), execs());
 
     sleep_ms(1000);
     File::create(&p.root().join("src/main.rs"))
@@ -2484,7 +2484,7 @@ fn bin_does_not_rebuild_tests() {
         .unwrap();
 
     assert_that(
-        p.cargo("test").arg("-v").arg("--no-run"),
+        p.cargo("test -v --no-run"),
         execs().with_stderr(
             "\
 [COMPILING] foo v0.0.1 ([..])
@@ -2587,7 +2587,7 @@ fn only_test_docs() {
     let p = p.build();
 
     assert_that(
-        p.cargo("test").arg("--doc"),
+        p.cargo("test --doc"),
         execs()
             .with_stderr(
                 "\
@@ -2629,7 +2629,7 @@ fn test_panic_abort_with_dep() {
         .file("bar/Cargo.toml", &basic_manifest("bar", "0.0.1"))
         .file("bar/src/lib.rs", "")
         .build();
-    assert_that(p.cargo("test").arg("-v"), execs());
+    assert_that(p.cargo("test -v"), execs());
 }
 
 #[test]
@@ -2651,7 +2651,7 @@ fn cfg_test_even_with_no_harness() {
         .file("src/lib.rs", r#"#[cfg(test)] fn main() { println!("hello!"); }"#)
         .build();
     assert_that(
-        p.cargo("test").arg("-v"),
+        p.cargo("test -v"),
         execs().with_stdout("hello!\n").with_stderr(
             "\
 [COMPILING] foo v0.0.1 ([..])
@@ -2778,7 +2778,7 @@ fn pass_correct_cfgs_flags_to_rustdoc() {
     );
 
     assert_that(
-        p.cargo("test").arg("--verbose"),
+        p.cargo("test --verbose"),
         execs().with_stderr_contains(
             "\
 [DOCTEST] foo
@@ -2815,9 +2815,9 @@ fn test_release_ignore_panic() {
         .file("a/src/lib.rs", "");
     let p = p.build();
     println!("test");
-    assert_that(p.cargo("test").arg("-v"), execs());
+    assert_that(p.cargo("test -v"), execs());
     println!("bench");
-    assert_that(p.cargo("bench").arg("-v"), execs());
+    assert_that(p.cargo("bench -v"), execs());
 }
 
 #[test]
@@ -2873,7 +2873,7 @@ fn test_all_workspace() {
         .build();
 
     assert_that(
-        p.cargo("test").arg("--all"),
+        p.cargo("test --all"),
         execs()
             .with_stdout_contains("test foo_test ... ok")
             .with_stdout_contains("test bar_test ... ok"),
@@ -2902,7 +2902,7 @@ fn test_all_exclude() {
         .build();
 
     assert_that(
-        p.cargo("test").arg("--all").arg("--exclude").arg("baz"),
+        p.cargo("test --all --exclude baz"),
         execs().with_stdout_contains(
             "running 1 test
 test bar ... ok",
@@ -2927,7 +2927,7 @@ fn test_all_virtual_manifest() {
         .build();
 
     assert_that(
-        p.cargo("test").arg("--all"),
+        p.cargo("test --all"),
         execs()
             .with_stdout_contains("test a ... ok")
             .with_stdout_contains("test b ... ok"),
@@ -2985,7 +2985,7 @@ fn test_all_member_dependency_same_name() {
     Package::new("a", "0.1.0").publish();
 
     assert_that(
-        p.cargo("test").arg("--all"),
+        p.cargo("test --all"),
         execs().with_stdout_contains("test a ... ok"),
     );
 }
@@ -3020,7 +3020,7 @@ fn doctest_only_with_dev_dep() {
         .build();
 
     assert_that(
-        p.cargo("test").arg("--doc").arg("-v"),
+        p.cargo("test --doc -v"),
         execs(),
     );
 }
@@ -3139,7 +3139,7 @@ fn doctest_and_registry() {
     Package::new("b", "0.1.0").publish();
 
     assert_that(
-        p.cargo("test").arg("--all").arg("-v"),
+        p.cargo("test --all -v"),
         execs(),
     );
 }
@@ -3186,7 +3186,7 @@ fn test_order() {
         .build();
 
     assert_that(
-        p.cargo("test").arg("--all"),
+        p.cargo("test --all"),
         execs().with_stdout_contains(
             "
 running 1 test
@@ -3228,7 +3228,7 @@ fn cyclic_dev() {
         .file("tests/foo.rs", "extern crate foo;")
         .build();
 
-    assert_that(p.cargo("test").arg("--all"), execs());
+    assert_that(p.cargo("test --all"), execs());
 }
 
 #[test]
@@ -3270,7 +3270,7 @@ fn publish_a_crate_without_tests() {
 
     assert_that(p.cargo("test"), execs());
     assert_that(
-        p.cargo("test").arg("--package").arg("testless"),
+        p.cargo("test --package testless"),
         execs(),
     );
 }
@@ -3374,7 +3374,7 @@ fn test_hint_not_masked_by_doctest() {
         )
         .build();
     assert_that(
-        p.cargo("test").arg("--no-fail-fast"),
+        p.cargo("test --no-fail-fast"),
         execs()
             .with_status(101)
             .with_stdout_contains("test this_fails ... FAILED")

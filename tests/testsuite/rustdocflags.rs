@@ -28,7 +28,7 @@ fn parses_config() {
         .build();
 
     assert_that(
-        p.cargo("doc").arg("-v"),
+        p.cargo("doc -v"),
         execs()
             .with_stderr_contains("[RUNNING] `rustdoc [..] --cfg foo[..]`"),
     );

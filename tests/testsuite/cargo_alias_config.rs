@@ -16,7 +16,7 @@ fn alias_incorrect_config_type() {
         .build();
 
     assert_that(
-        p.cargo("b-cargo-test").arg("-v"),
+        p.cargo("b-cargo-test -v"),
         execs().with_status(101).with_stderr_contains(
             "\
 [ERROR] invalid configuration for key `alias.b-cargo-test`
@@ -40,7 +40,7 @@ fn alias_default_config_overrides_config() {
         .build();
 
     assert_that(
-        p.cargo("b").arg("-v"),
+        p.cargo("b -v"),
         execs()
             .with_stderr_contains("[COMPILING] foo v0.5.0 [..]"),
     );
@@ -111,7 +111,7 @@ fn alias_list_test() {
         .build();
 
     assert_that(
-        p.cargo("b-cargo-test").arg("-v"),
+        p.cargo("b-cargo-test -v"),
         execs()
             .with_stderr_contains("[COMPILING] foo v0.5.0 [..]")
             .with_stderr_contains("[RUNNING] `rustc --crate-name [..]"),
@@ -133,7 +133,7 @@ fn alias_with_flags_config() {
         .build();
 
     assert_that(
-        p.cargo("b-cargo-test").arg("-v"),
+        p.cargo("b-cargo-test -v"),
         execs()
             .with_stderr_contains("[COMPILING] foo v0.5.0 [..]")
             .with_stderr_contains("[RUNNING] `rustc --crate-name foo [..]"),
