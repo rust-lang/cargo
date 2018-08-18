@@ -219,11 +219,7 @@ fn bench_multiple_targets() {
         .build();
 
     assert_that(
-        p.cargo("bench")
-            .arg("--bench")
-            .arg("bin1")
-            .arg("--bench")
-            .arg("bin2"),
+        p.cargo("bench --bench bin1 --bench bin2"),
         execs()
             .with_stdout_contains("test run1 ... bench: [..]")
             .with_stdout_contains("test run2 ... bench: [..]")
@@ -680,8 +676,7 @@ fn bench_autodiscover_2015() {
         .build();
 
     assert_that(
-        p.cargo("bench")
-            .arg("bench_basic")
+        p.cargo("bench bench_basic")
             .masquerade_as_nightly_cargo(),
         execs().with_stderr(&format!(
             "warning: \
@@ -1322,10 +1317,7 @@ fn test_bench_no_fail_fast() {
         .build();
 
     assert_that(
-        p.cargo("bench")
-            .arg("--no-fail-fast")
-            .arg("--")
-            .arg("--test-threads=1"),
+        p.cargo("bench --no-fail-fast -- --test-threads=1"),
         execs()
             .with_status(101)
             .with_stderr_contains("[RUNNING] target/release/deps/foo-[..][EXE]")

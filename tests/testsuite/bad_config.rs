@@ -15,9 +15,7 @@ fn bad1() {
         )
         .build();
     assert_that(
-        p.cargo("build")
-            .arg("-v")
-            .arg("--target=nonexistent-target"),
+        p.cargo("build -v --target=nonexistent-target"),
         execs().with_status(101).with_stderr(
             "\
 [ERROR] expected table for configuration key `target.nonexistent-target`, \

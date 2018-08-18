@@ -51,9 +51,7 @@ fn build_bin_default_features() {
     assert_that(&p.bin("foo"), existing_file());
 
     assert_that(
-        p.cargo("build")
-            .arg("--bin=foo")
-            .arg("--no-default-features"),
+        p.cargo("build --bin=foo --no-default-features"),
         execs().with_status(101).with_stderr(
             "\
 error: target `foo` in package `foo` requires the features: `a`
@@ -173,9 +171,7 @@ fn build_example_default_features() {
     assert_that(&p.bin("examples/foo"), existing_file());
 
     assert_that(
-        p.cargo("build")
-            .arg("--example=foo")
-            .arg("--no-default-features"),
+        p.cargo("build --example=foo --no-default-features"),
         execs().with_status(101).with_stderr(
             "\
 error: target `foo` in package `foo` requires the features: `a`
@@ -208,10 +204,7 @@ fn build_example_arg_features() {
         .build();
 
     assert_that(
-        p.cargo("build")
-            .arg("--example=foo")
-            .arg("--features")
-            .arg("a"),
+        p.cargo("build --example=foo --features a"),
         execs(),
     );
     assert_that(&p.bin("examples/foo"), existing_file());
@@ -265,17 +258,11 @@ Consider enabling them by passing e.g. `--features=\"b c\"`
     assert_that(&p.bin("examples/foo_2"), existing_file());
 
     assert_that(
-        p.cargo("build")
-            .arg("--example=foo_1")
-            .arg("--features")
-            .arg("c"),
+        p.cargo("build --example=foo_1 --features c"),
         execs(),
     );
     assert_that(
-        p.cargo("build")
-            .arg("--example=foo_2")
-            .arg("--features")
-            .arg("c"),
+        p.cargo("build --example=foo_2 --features c"),
         execs(),
     );
 
@@ -283,9 +270,7 @@ Consider enabling them by passing e.g. `--features=\"b c\"`
     assert_that(&p.bin("examples/foo_2"), existing_file());
 
     assert_that(
-        p.cargo("build")
-            .arg("--example=foo_1")
-            .arg("--no-default-features"),
+        p.cargo("build --example=foo_1 --no-default-features"),
         execs().with_status(101).with_stderr(
             "\
 error: target `foo_1` in package `foo` requires the features: `b`, `c`
@@ -294,9 +279,7 @@ Consider enabling them by passing e.g. `--features=\"b c\"`
         ),
     );
     assert_that(
-        p.cargo("build")
-            .arg("--example=foo_2")
-            .arg("--no-default-features"),
+        p.cargo("build --example=foo_2 --no-default-features"),
         execs().with_status(101).with_stderr(
             "\
 error: target `foo_2` in package `foo` requires the features: `a`
@@ -363,9 +346,7 @@ fn test_default_features() {
     );
 
     assert_that(
-        p.cargo("test")
-            .arg("--test=foo")
-            .arg("--no-default-features"),
+        p.cargo("test --test=foo --no-default-features"),
         execs().with_status(101).with_stderr(
             "\
 error: target `foo` in package `foo` requires the features: `a`
@@ -546,9 +527,7 @@ fn bench_default_features() {
     );
 
     assert_that(
-        p.cargo("bench")
-            .arg("--bench=foo")
-            .arg("--no-default-features"),
+        p.cargo("bench --bench=foo --no-default-features"),
         execs().with_status(101).with_stderr(
             "\
 error: target `foo` in package `foo` requires the features: `a`
@@ -746,9 +725,7 @@ fn install_default_features() {
     assert_that(p.cargo("uninstall foo"), execs());
 
     assert_that(
-        p.cargo("install --path .")
-            .arg("--bin=foo")
-            .arg("--no-default-features"),
+        p.cargo("install --path . --bin=foo --no-default-features"),
         execs().with_status(101).with_stderr(
             "\
 [INSTALLING] foo v0.0.1 ([..])
@@ -771,9 +748,7 @@ Consider enabling them by passing e.g. `--features=\"a\"`
     assert_that(p.cargo("uninstall foo"), execs());
 
     assert_that(
-        p.cargo("install --path .")
-            .arg("--example=foo")
-            .arg("--no-default-features"),
+        p.cargo("install --path . --example=foo --no-default-features"),
         execs().with_status(101).with_stderr(
             "\
 [INSTALLING] foo v0.0.1 ([..])
@@ -1060,10 +1035,7 @@ Consider enabling them by passing e.g. `--features=\"bar/a\"`
     );
 
     assert_that(
-        p.cargo("build")
-            .arg("--bin=foo")
-            .arg("--features")
-            .arg("bar/a"),
+        p.cargo("build --bin=foo --features bar/a"),
         execs(),
     );
     assert_that(&p.bin("foo"), existing_file());
@@ -1080,10 +1052,7 @@ Consider enabling them by passing e.g. `--features=\"bar/a\"`
     );
 
     assert_that(
-        p.cargo("build")
-            .arg("--example=foo")
-            .arg("--features")
-            .arg("bar/a"),
+        p.cargo("build --example=foo --features bar/a"),
         execs(),
     );
     assert_that(&p.bin("examples/foo"), existing_file());
@@ -1099,10 +1068,7 @@ Consider enabling them by passing e.g. `--features=\"bar/a\"`
     );
 
     assert_that(
-        p.cargo("test")
-            .arg("--test=foo")
-            .arg("--features")
-            .arg("bar/a"),
+        p.cargo("test --test=foo --features bar/a"),
         execs()
             .with_stderr(format!(
                 "\
@@ -1124,10 +1090,7 @@ Consider enabling them by passing e.g. `--features=\"bar/a\"`
         );
 
         assert_that(
-            p.cargo("bench")
-                .arg("--bench=foo")
-                .arg("--features")
-                .arg("bar/a"),
+            p.cargo("bench --bench=foo --features bar/a"),
             execs()
                 .with_stderr(format!(
                     "\
@@ -1201,11 +1164,7 @@ fn test_skips_compiling_bin_with_missing_required_features() {
     );
 
     assert_that(
-        p.cargo("test")
-            .arg("--features")
-            .arg("a")
-            .arg("-j")
-            .arg("1"),
+        p.cargo("test --features a -j 1"),
         execs().with_status(101).with_stderr_contains(format!(
             "\
 [COMPILING] foo v0.0.1 ({})
@@ -1229,11 +1188,7 @@ error[E0463]: can't find crate for `bar`",
         );
 
         assert_that(
-            p.cargo("bench")
-                .arg("--features")
-                .arg("a")
-                .arg("-j")
-                .arg("1"),
+            p.cargo("bench --features a -j 1"),
             execs().with_status(101).with_stderr_contains(format!(
                 "\
 [COMPILING] foo v0.0.1 ({})

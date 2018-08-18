@@ -39,9 +39,7 @@ fn cargo_read_manifest_path_to_cargo_toml_relative() {
         .build();
 
     assert_that(
-        p.cargo("read-manifest")
-            .arg("--manifest-path")
-            .arg("foo/Cargo.toml")
+        p.cargo("read-manifest --manifest-path foo/Cargo.toml")
             .cwd(p.root().parent().unwrap()),
         execs().with_json(MANIFEST_OUTPUT),
     );
@@ -55,8 +53,7 @@ fn cargo_read_manifest_path_to_cargo_toml_absolute() {
         .build();
 
     assert_that(
-        p.cargo("read-manifest")
-            .arg("--manifest-path")
+        p.cargo("read-manifest --manifest-path")
             .arg(p.root().join("Cargo.toml"))
             .cwd(p.root().parent().unwrap()),
         execs().with_json(MANIFEST_OUTPUT),
@@ -71,9 +68,7 @@ fn cargo_read_manifest_path_to_cargo_toml_parent_relative() {
         .build();
 
     assert_that(
-        p.cargo("read-manifest")
-            .arg("--manifest-path")
-            .arg("foo")
+        p.cargo("read-manifest --manifest-path foo")
             .cwd(p.root().parent().unwrap()),
         execs().with_status(101).with_stderr(
             "[ERROR] the manifest-path must be \
@@ -90,8 +85,7 @@ fn cargo_read_manifest_path_to_cargo_toml_parent_absolute() {
         .build();
 
     assert_that(
-        p.cargo("read-manifest")
-            .arg("--manifest-path")
+        p.cargo("read-manifest --manifest-path")
             .arg(p.root())
             .cwd(p.root().parent().unwrap()),
         execs().with_status(101).with_stderr(

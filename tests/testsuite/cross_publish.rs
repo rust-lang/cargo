@@ -116,8 +116,7 @@ fn publish_with_target() {
     let target = cross_compile::alternate();
 
     assert_that(
-        p.cargo("publish")
-            .arg("--index")
+        p.cargo("publish --index")
             .arg(publish::registry().to_string())
             .arg("--target")
             .arg(&target),

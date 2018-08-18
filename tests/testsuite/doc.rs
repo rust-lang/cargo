@@ -845,12 +845,7 @@ fn doc_multiple_deps() {
         .build();
 
     assert_that(
-        p.cargo("doc")
-            .arg("-p")
-            .arg("bar")
-            .arg("-p")
-            .arg("baz")
-            .arg("-v"),
+        p.cargo("doc -p bar -p baz -v"),
         execs(),
     );
 
@@ -982,9 +977,7 @@ fn plugins_no_use_target() {
         .file("src/lib.rs", "")
         .build();
     assert_that(
-        p.cargo("doc")
-            .arg("--target=x86_64-unknown-openbsd")
-            .arg("-v"),
+        p.cargo("doc --target=x86_64-unknown-openbsd -v"),
         execs(),
     );
 }

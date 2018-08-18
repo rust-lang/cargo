@@ -111,12 +111,7 @@ fn rustdoc_only_bar_dependency() {
         .build();
 
     assert_that(
-        foo.cargo("rustdoc")
-            .arg("-v")
-            .arg("-p")
-            .arg("bar")
-            .arg("--")
-            .arg("--cfg=foo"),
+        foo.cargo("rustdoc -v -p bar -- --cfg=foo"),
         execs().with_stderr(format!(
             "\
 [DOCUMENTING] bar v0.0.1 ([..])

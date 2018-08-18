@@ -690,9 +690,7 @@ fn build_rustflags_normal_source_with_target() {
         execs().with_status(101),
     );
     assert_that(
-        p.cargo("build")
-            .arg("--example=b")
-            .arg("--target")
+        p.cargo("build --example=b --target")
             .arg(host),
         execs().with_status(101),
     );

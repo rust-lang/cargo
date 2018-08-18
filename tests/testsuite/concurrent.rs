@@ -246,12 +246,10 @@ fn git_same_repo_different_tags() {
         .file("b/src/main.rs", "extern crate dep; fn main() { dep::tag2(); }");
     let p = p.build();
 
-    let mut a = p.cargo("build")
-        .arg("-v")
+    let mut a = p.cargo("build -v")
         .cwd(p.root().join("a"))
         .build_command();
-    let mut b = p.cargo("build")
-        .arg("-v")
+    let mut b = p.cargo("build -v")
         .cwd(p.root().join("b"))
         .build_command();
 

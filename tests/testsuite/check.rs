@@ -317,11 +317,7 @@ fn rustc_check() {
         .build();
 
     assert_that(
-        foo.cargo("rustc")
-            .arg("--profile")
-            .arg("check")
-            .arg("--")
-            .arg("--emit=metadata"),
+        foo.cargo("rustc --profile check -- --emit=metadata"),
         execs(),
     );
 }
@@ -349,11 +345,7 @@ fn rustc_check_err() {
         .build();
 
     assert_that(
-        foo.cargo("rustc")
-            .arg("--profile")
-            .arg("check")
-            .arg("--")
-            .arg("--emit=metadata"),
+        foo.cargo("rustc --profile check -- --emit=metadata"),
         execs().with_status(101),
     );
 }

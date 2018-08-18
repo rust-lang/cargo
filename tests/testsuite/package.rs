@@ -867,8 +867,7 @@ fn ignore_workspace_specifier() {
         .build();
 
     assert_that(
-        p.cargo("package")
-            .arg("--no-verify")
+        p.cargo("package --no-verify")
             .cwd(p.root().join("bar")),
         execs(),
     );

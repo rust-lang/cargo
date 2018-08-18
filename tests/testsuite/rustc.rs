@@ -38,12 +38,7 @@ fn lib() {
         .build();
 
     assert_that(
-        p.cargo("rustc")
-            .arg("--lib")
-            .arg("-v")
-            .arg("--")
-            .arg("-C")
-            .arg("debug-assertions=off"),
+        p.cargo("rustc --lib -v -- -C debug-assertions=off"),
         execs().with_stderr(format!(
             "\
 [COMPILING] foo v0.0.1 ({url})
@@ -103,11 +98,7 @@ fn fails_when_trying_to_build_main_and_lib_with_args() {
         .build();
 
     assert_that(
-        p.cargo("rustc")
-            .arg("-v")
-            .arg("--")
-            .arg("-C")
-            .arg("debug-assertions"),
+        p.cargo("rustc -v -- -C debug-assertions"),
         execs().with_status(101).with_stderr(CARGO_RUSTC_ERROR),
     );
 }
@@ -148,11 +139,7 @@ fn fails_with_args_to_all_binaries() {
         .build();
 
     assert_that(
-        p.cargo("rustc")
-            .arg("-v")
-            .arg("--")
-            .arg("-C")
-            .arg("debug-assertions"),
+        p.cargo("rustc -v -- -C debug-assertions"),
         execs().with_status(101).with_stderr(CARGO_RUSTC_ERROR),
     );
 }
@@ -206,11 +193,7 @@ fn build_foo_with_bar_dependency() {
         .build();
 
     assert_that(
-        foo.cargo("rustc")
-            .arg("-v")
-            .arg("--")
-            .arg("-C")
-            .arg("debug-assertions"),
+        foo.cargo("rustc -v -- -C debug-assertions"),
         execs().with_stderr(format!(
             "\
 [COMPILING] bar v0.1.0 ([..])
