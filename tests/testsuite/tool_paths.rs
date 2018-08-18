@@ -38,7 +38,7 @@ fn pathless_tools() {
 #[test]
 fn absolute_tools() {
     let target = rustc_host();
-    let root = if cfg!(windows) { r#"C:\\"# } else { "/" };
+    let root = if cfg!(windows) { r#"C:\"# } else { "/" };
 
     // Escaped as they appear within a TOML config file
     let config = if cfg!(windows) {
