@@ -568,8 +568,15 @@ impl<'de> de::Deserialize<'de> for VecStringOrBool {
     }
 }
 
+/// Represents the `package`/`project` sections of a `Cargo.toml`.
+///
+/// Note that the order of the fields matters, since this is the order they
+/// are serialized to a TOML file.  For example, you cannot have values after
+/// the field `metadata`, since it is a table and values cannot appear after
+/// tables.
 #[derive(Deserialize, Serialize, Clone, Debug)]
 pub struct TomlProject {
+    edition: Option<String>,
     name: String,
     version: semver::Version,
     authors: Option<Vec<String>>,
@@ -604,7 +611,6 @@ pub struct TomlProject {
     license_file: Option<String>,
     repository: Option<String>,
     metadata: Option<toml::Value>,
-    edition: Option<String>,
 }
 
 #[derive(Debug, Deserialize, Serialize)]
