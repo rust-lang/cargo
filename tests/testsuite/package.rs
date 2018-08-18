@@ -968,6 +968,32 @@ fn test_edition() {
 }
 
 #[test]
+fn edition_with_metadata() {
+    if !is_nightly() { // --edition is nightly-only
+        return;
+    }
+
+    let p = project()
+        .file("Cargo.toml", r#"
+            cargo-features = ["edition"]
+            [package]
+            name = "foo"
+            version = "0.0.1"
+            authors = []
+            edition = "2018"
+            [package.metadata.docs.rs]
+            features = ["foobar"]
+        "#)
+        .file("src/lib.rs", "")
+        .build();
+
+    assert_that(
+        p.cargo("package").masquerade_as_nightly_cargo(),
+        execs(),
+    );
+}
+
+#[test]
 fn test_edition_missing() {
     // no edition = 2015
     let p = project()
