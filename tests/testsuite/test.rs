@@ -3315,12 +3315,7 @@ fn find_dependency_of_proc_macro_dependency_with_target() {
         .dep("bar", "0.1")
         .file("src/lib.rs", "extern crate bar;")
         .publish();
-    assert_that(
-        p
-            .cargo("test --all --target")
-            .arg(rustc_host()),
-        execs(),
-    );
+    assert_that(p.cargo("test --all --target").arg(rustc_host()), execs());
 }
 
 #[test]

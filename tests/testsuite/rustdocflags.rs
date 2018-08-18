@@ -8,7 +8,7 @@ fn parses_env() {
         .build();
 
     assert_that(
-        p.cargo("doc").env("RUSTDOCFLAGS", "--cfg=foo").arg("-v"),
+        p.cargo("doc -v").env("RUSTDOCFLAGS", "--cfg=foo"),
         execs()
             .with_stderr_contains("[RUNNING] `rustdoc [..] --cfg=foo[..]`"),
     );

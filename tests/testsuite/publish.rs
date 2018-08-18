@@ -672,11 +672,8 @@ fn block_publish_feature_not_enabled() {
         .build();
 
     assert_that(
-        p.cargo("publish")
-            .masquerade_as_nightly_cargo()
-            .arg("--registry")
-            .arg("alternative")
-            .arg("-Zunstable-options"),
+        p.cargo("publish --registry alternative -Zunstable-options")
+            .masquerade_as_nightly_cargo(),
         execs().with_status(101).with_stderr(
             "\
 error: failed to parse manifest at `[..]`
@@ -755,11 +752,8 @@ fn publish_empty_list() {
         .build();
 
     assert_that(
-        p.cargo("publish")
-            .masquerade_as_nightly_cargo()
-            .arg("--registry")
-            .arg("alternative")
-            .arg("-Zunstable-options"),
+        p.cargo("publish --registry alternative -Zunstable-options")
+            .masquerade_as_nightly_cargo(),
         execs().with_status(101).with_stderr(
             "\
 [ERROR] some crates cannot be published.
@@ -796,11 +790,8 @@ fn publish_allowed_registry() {
         .build();
 
     assert_that(
-        p.cargo("publish")
-            .masquerade_as_nightly_cargo()
-            .arg("--registry")
-            .arg("alternative")
-            .arg("-Zunstable-options"),
+        p.cargo("publish --registry alternative -Zunstable-options")
+            .masquerade_as_nightly_cargo(),
         execs(),
     );
 }
@@ -828,11 +819,8 @@ fn block_publish_no_registry() {
         .build();
 
     assert_that(
-        p.cargo("publish")
-            .masquerade_as_nightly_cargo()
-            .arg("--registry")
-            .arg("alternative")
-            .arg("-Zunstable-options"),
+        p.cargo("publish --registry alternative -Zunstable-options")
+            .masquerade_as_nightly_cargo(),
         execs().with_status(101).with_stderr(
             "\
 [ERROR] some crates cannot be published.

@@ -260,12 +260,12 @@ fn specify_default_run() {
             .with_stdout("hello A"),
     );
     assert_that(
-        p.cargo("run").masquerade_as_nightly_cargo().arg("--bin").arg("a"),
+        p.cargo("run --bin a").masquerade_as_nightly_cargo(),
         execs()
             .with_stdout("hello A"),
     );
     assert_that(
-        p.cargo("run").masquerade_as_nightly_cargo().arg("--bin").arg("b"),
+        p.cargo("run --bin b").masquerade_as_nightly_cargo(),
         execs()
             .with_stdout("hello B"),
     );

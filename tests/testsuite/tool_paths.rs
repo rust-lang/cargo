@@ -139,7 +139,7 @@ fn relative_tools() {
     };
 
     assert_that(
-        p.cargo("build").cwd(foo_path).arg("--verbose"),
+        p.cargo("build --verbose").cwd(foo_path),
         execs().with_stderr(&format!(
             "\
 [COMPILING] bar v0.5.0 ({url})

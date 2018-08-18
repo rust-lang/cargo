@@ -48,7 +48,7 @@ fn deleting_database_files() {
         println!("deleting {}", file.display());
         cargopaths::remove_file(&file).unwrap();
         assert_that(
-            project.cargo("build").env("RUST_LOG", log).arg("-v"),
+            project.cargo("build -v").env("RUST_LOG", log),
             execs(),
         );
 
@@ -64,7 +64,7 @@ fn deleting_database_files() {
             .set_len(2)
             .unwrap();
         assert_that(
-            project.cargo("build").env("RUST_LOG", log).arg("-v"),
+            project.cargo("build -v").env("RUST_LOG", log),
             execs(),
         );
     }
@@ -130,7 +130,7 @@ fn deleting_checkout_files() {
         println!("deleting {}", file.display());
         cargopaths::remove_file(&file).unwrap();
         assert_that(
-            project.cargo("build").env("RUST_LOG", log).arg("-v"),
+            project.cargo("build -v").env("RUST_LOG", log),
             execs(),
         );
 
@@ -146,7 +146,7 @@ fn deleting_checkout_files() {
             .set_len(2)
             .unwrap();
         assert_that(
-            project.cargo("build").env("RUST_LOG", log).arg("-v"),
+            project.cargo("build -v").env("RUST_LOG", log),
             execs(),
         );
     }

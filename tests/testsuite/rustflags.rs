@@ -23,17 +23,16 @@ fn env_rustflags_normal_source() {
 
     // Use RUSTFLAGS to pass an argument that will generate an error
     assert_that(
-        p.cargo("build").env("RUSTFLAGS", "-Z bogus").arg("--lib"),
+        p.cargo("build --lib").env("RUSTFLAGS", "-Z bogus"),
         execs().with_status(101),
     );
     assert_that(
-        p.cargo("build").env("RUSTFLAGS", "-Z bogus").arg("--bin=a"),
+        p.cargo("build --bin=a").env("RUSTFLAGS", "-Z bogus"),
         execs().with_status(101),
     );
     assert_that(
-        p.cargo("build")
-            .env("RUSTFLAGS", "-Z bogus")
-            .arg("--example=b"),
+        p.cargo("build --example=b")
+            .env("RUSTFLAGS", "-Z bogus"),
         execs().with_status(101),
     );
     assert_that(
@@ -212,41 +211,33 @@ fn env_rustflags_normal_source_with_target() {
 
     // Use RUSTFLAGS to pass an argument that will generate an error
     assert_that(
-        p.cargo("build")
-            .env("RUSTFLAGS", "-Z bogus")
-            .arg("--lib")
-            .arg("--target")
-            .arg(host),
+        p.cargo("build --lib --target")
+            .arg(host)
+            .env("RUSTFLAGS", "-Z bogus"),
         execs().with_status(101),
     );
     assert_that(
-        p.cargo("build")
-            .env("RUSTFLAGS", "-Z bogus")
-            .arg("--bin=a")
-            .arg("--target")
-            .arg(host),
+        p.cargo("build --bin=a --target")
+            .arg(host)
+            .env("RUSTFLAGS", "-Z bogus"),
         execs().with_status(101),
     );
     assert_that(
-        p.cargo("build")
-            .env("RUSTFLAGS", "-Z bogus")
-            .arg("--example=b")
-            .arg("--target")
-            .arg(host),
+        p.cargo("build --example=b --target")
+            .arg(host)
+            .env("RUSTFLAGS", "-Z bogus"),
         execs().with_status(101),
     );
     assert_that(
-        p.cargo("test")
-            .env("RUSTFLAGS", "-Z bogus")
-            .arg("--target")
-            .arg(host),
+        p.cargo("test --target")
+            .arg(host)
+            .env("RUSTFLAGS", "-Z bogus"),
         execs().with_status(101),
     );
     assert_that(
-        p.cargo("bench")
-            .env("RUSTFLAGS", "-Z bogus")
-            .arg("--target")
-            .arg(host),
+        p.cargo("bench --target")
+            .arg(host)
+            .env("RUSTFLAGS", "-Z bogus"),
         execs().with_status(101),
     );
 }
@@ -279,10 +270,9 @@ fn env_rustflags_build_script_with_target() {
 
     let host = rustc_host();
     assert_that(
-        p.cargo("build")
-            .env("RUSTFLAGS", "--cfg foo")
-            .arg("--target")
-            .arg(host),
+        p.cargo("build --target")
+            .arg(host)
+            .env("RUSTFLAGS", "--cfg foo"),
         execs(),
     );
 }
@@ -322,10 +312,9 @@ fn env_rustflags_build_script_dep_with_target() {
 
     let host = rustc_host();
     assert_that(
-        foo.cargo("build")
-            .env("RUSTFLAGS", "--cfg foo")
-            .arg("--target")
-            .arg(host),
+        foo.cargo("build --target")
+            .arg(host)
+            .env("RUSTFLAGS", "--cfg foo"),
         execs(),
     );
 }
@@ -360,10 +349,9 @@ fn env_rustflags_plugin_with_target() {
 
     let host = rustc_host();
     assert_that(
-        p.cargo("build")
-            .env("RUSTFLAGS", "--cfg foo")
-            .arg("--target")
-            .arg(host),
+        p.cargo("build --target")
+            .arg(host)
+            .env("RUSTFLAGS", "--cfg foo"),
         execs(),
     );
 }
@@ -405,10 +393,9 @@ fn env_rustflags_plugin_dep_with_target() {
 
     let host = rustc_host();
     assert_that(
-        foo.cargo("build")
-            .env("RUSTFLAGS", "--cfg foo")
-            .arg("--target")
-            .arg(host),
+        foo.cargo("build --target")
+            .arg(host)
+            .env("RUSTFLAGS", "--cfg foo"),
         execs(),
     );
 }

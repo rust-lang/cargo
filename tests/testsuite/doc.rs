@@ -643,7 +643,7 @@ fn doc_target() {
         .build();
 
     assert_that(
-        p.cargo("doc --target").arg(TARGET).arg("--verbose"),
+        p.cargo("doc --verbose --target").arg(TARGET),
         execs(),
     );
     assert_that(

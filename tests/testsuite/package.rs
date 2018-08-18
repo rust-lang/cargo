@@ -769,9 +769,8 @@ fn generated_manifest() {
         .build();
 
     assert_that(
-        p.cargo("package")
-            .masquerade_as_nightly_cargo()
-            .arg("--no-verify"),
+        p.cargo("package --no-verify")
+            .masquerade_as_nightly_cargo(),
         execs(),
     );
 

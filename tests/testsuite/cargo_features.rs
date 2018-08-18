@@ -280,16 +280,15 @@ fn z_flags_rejected() {
     );
 
     assert_that(
-        p.cargo("build").masquerade_as_nightly_cargo().arg("-Zarg"),
+        p.cargo("build -Zarg").masquerade_as_nightly_cargo(),
         execs()
             .with_status(101)
             .with_stderr("error: unknown `-Z` flag specified: arg"),
     );
 
     assert_that(
-        p.cargo("build")
-            .masquerade_as_nightly_cargo()
-            .arg("-Zprint-im-a-teapot"),
+        p.cargo("build -Zprint-im-a-teapot")
+            .masquerade_as_nightly_cargo(),
         execs()
             .with_stdout("im-a-teapot = true\n")
             .with_stderr(
