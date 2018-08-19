@@ -692,7 +692,7 @@ fn many_cli_features() {
         .build();
 
     assert_that(
-        p.cargo("build --features bar baz"),
+        p.cargo("build --features").arg("bar baz"),
         execs().with_stderr(format!(
             "\
 [COMPILING] ba[..] v0.0.1 ({dir}/ba[..])
@@ -1394,7 +1394,7 @@ fn many_cli_features_comma_and_space_delimited() {
         .build();
 
     assert_that(
-        p.cargo("build --features bar,baz bam bap"),
+        p.cargo("build --features").arg("bar,baz bam bap"),
         execs().with_stderr(format!(
             "\
 [COMPILING] ba[..] v0.0.1 ({dir}/ba[..])
