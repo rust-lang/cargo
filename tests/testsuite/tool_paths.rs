@@ -38,6 +38,7 @@ fn pathless_tools() {
 #[test]
 fn absolute_tools() {
     let target = rustc_host();
+    let root = if cfg!(windows) { r#"C:\"# } else { "/" };
 
     // Escaped as they appear within a TOML config file
     let config = if cfg!(windows) {
@@ -67,26 +68,16 @@ fn absolute_tools() {
         )
         .build();
 
-    let output = if cfg!(windows) {
-        (
-            r#"C:\bogus\nonexistent-ar"#,
-            r#"C:\bogus\nonexistent-linker"#,
-        )
-    } else {
-        (r#"/bogus/nonexistent-ar"#, r#"/bogus/nonexistent-linker"#)
-    };
-
     assert_that(
         foo.cargo("build --verbose"),
         execs().with_stderr(&format!(
             "\
 [COMPILING] foo v0.5.0 ({url})
-[RUNNING] `rustc [..] -C ar={ar} -C linker={linker} [..]`
+[RUNNING] `rustc [..] -C ar={root}bogus/nonexistent-ar -C linker={root}bogus/nonexistent-linker [..]`
 [FINISHED] dev [unoptimized + debuginfo] target(s) in [..]
 ",
             url = foo.url(),
-            ar = output.0,
-            linker = output.1
+            root = root,
         )),
     )
 }
@@ -126,29 +117,17 @@ fn relative_tools() {
     let foo_path = p.root().join("bar");
     let foo_url = path2url(&foo_path);
     let prefix = p.root().into_os_string().into_string().unwrap();
-    let output = if cfg!(windows) {
-        (
-            format!(r#"{}\.\nonexistent-ar"#, prefix),
-            format!(r#"{}\.\tools\nonexistent-linker"#, prefix),
-        )
-    } else {
-        (
-            format!(r#"{}/./nonexistent-ar"#, prefix),
-            format!(r#"{}/./tools/nonexistent-linker"#, prefix),
-        )
-    };
 
     assert_that(
         p.cargo("build --verbose").cwd(foo_path),
         execs().with_stderr(&format!(
             "\
 [COMPILING] bar v0.5.0 ({url})
-[RUNNING] `rustc [..] -C ar={ar} -C linker={linker} [..]`
+[RUNNING] `rustc [..] -C ar={prefix}/./nonexistent-ar -C linker={prefix}/./tools/nonexistent-linker [..]`
 [FINISHED] dev [unoptimized + debuginfo] target(s) in [..]
 ",
             url = foo_url,
-            ar = output.0,
-            linker = output.1
+            prefix = prefix,
         )),
     )
 }
