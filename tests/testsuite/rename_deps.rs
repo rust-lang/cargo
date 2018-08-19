@@ -350,7 +350,7 @@ fn can_run_doc_tests() {
         .build();
 
     assert_that(
-        foo.cargo("test").arg("-v").masquerade_as_nightly_cargo(),
+        foo.cargo("test -v").masquerade_as_nightly_cargo(),
         execs().with_stderr_contains(format!(
             "\
 [DOCTEST] foo

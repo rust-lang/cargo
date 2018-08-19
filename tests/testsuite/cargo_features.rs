@@ -273,23 +273,22 @@ fn z_flags_rejected() {
         .file("src/lib.rs", "")
         .build();
     assert_that(
-        p.cargo("build").arg("-Zprint-im-a-teapot"),
+        p.cargo("build -Zprint-im-a-teapot"),
         execs()
             .with_status(101)
             .with_stderr("error: the `-Z` flag is only accepted on the nightly channel of Cargo"),
     );
 
     assert_that(
-        p.cargo("build").masquerade_as_nightly_cargo().arg("-Zarg"),
+        p.cargo("build -Zarg").masquerade_as_nightly_cargo(),
         execs()
             .with_status(101)
             .with_stderr("error: unknown `-Z` flag specified: arg"),
     );
 
     assert_that(
-        p.cargo("build")
-            .masquerade_as_nightly_cargo()
-            .arg("-Zprint-im-a-teapot"),
+        p.cargo("build -Zprint-im-a-teapot")
+            .masquerade_as_nightly_cargo(),
         execs()
             .with_stdout("im-a-teapot = true\n")
             .with_stderr(
@@ -320,8 +319,7 @@ fn publish_allowed() {
         .file("src/lib.rs", "")
         .build();
     assert_that(
-        p.cargo("publish")
-            .arg("--index")
+        p.cargo("publish --index")
             .arg(publish::registry().to_string())
             .masquerade_as_nightly_cargo(),
         execs(),

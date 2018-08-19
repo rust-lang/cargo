@@ -672,11 +672,7 @@ fn update_lockfile() {
     paths::home().join(".cargo/registry").rm_rf();
     println!("0.0.2 update");
     assert_that(
-        p.cargo("update")
-            .arg("-p")
-            .arg("bar")
-            .arg("--precise")
-            .arg("0.0.2"),
+        p.cargo("update -p bar --precise 0.0.2"),
         execs().with_stderr(
             "\
 [UPDATING] registry `[..]`
@@ -771,9 +767,8 @@ fn update_offline() {
         .file("src/main.rs", "fn main() {}")
         .build();
     assert_that(
-        p.cargo("update")
-            .masquerade_as_nightly_cargo()
-            .arg("-Zoffline"),
+        p.cargo("update -Zoffline")
+            .masquerade_as_nightly_cargo(),
         execs()
             .with_status(101)
             .with_stderr("error: you can't update in the offline mode[..]"),
@@ -864,9 +859,7 @@ fn bad_license_file() {
         .file("src/main.rs", "fn main() {}")
         .build();
     assert_that(
-        p.cargo("publish")
-            .arg("-v")
-            .arg("--index")
+        p.cargo("publish -v --index")
             .arg(registry().to_string()),
         execs()
             .with_status(101)

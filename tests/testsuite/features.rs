@@ -146,7 +146,7 @@ failed to select a version for `bar` which could resolve this conflict",
     p.change_file("Cargo.toml", &basic_manifest("foo", "0.0.1"));
 
     assert_that(
-        p.cargo("build").arg("--features").arg("test"),
+        p.cargo("build --features test"),
         execs()
             .with_status(101)
             .with_stderr("error: Package `foo v0.0.1 ([..])` does not have these features: `test`"),
@@ -204,7 +204,7 @@ fn invalid6() {
         .build();
 
     assert_that(
-        p.cargo("build").arg("--features").arg("foo"),
+        p.cargo("build --features foo"),
         execs().with_status(101).with_stderr(
             "\
 [ERROR] failed to parse manifest at `[..]`
@@ -236,7 +236,7 @@ fn invalid7() {
         .build();
 
     assert_that(
-        p.cargo("build").arg("--features").arg("foo"),
+        p.cargo("build --features foo"),
         execs().with_status(101).with_stderr(
             "\
 [ERROR] failed to parse manifest at `[..]`
@@ -270,7 +270,7 @@ fn invalid8() {
         .build();
 
     assert_that(
-        p.cargo("build").arg("--features").arg("foo"),
+        p.cargo("build --features foo"),
         execs()
             .with_status(101)
             .with_stderr("[ERROR] feature names may not contain slashes: `foo/bar`"),
@@ -297,7 +297,7 @@ fn invalid9() {
         .file("bar/src/lib.rs", "")
         .build();
 
-    assert_that(p.cargo("build").arg("--features").arg("bar"),
+    assert_that(p.cargo("build --features bar"),
                 execs().with_stderr("\
 warning: Package `foo v0.0.1 ([..])` does not have feature `bar`. It has a required dependency with \
 that name, but only optional dependencies can be used as features. [..]
@@ -465,7 +465,7 @@ fn no_feature_doesnt_build() {
     );
 
     assert_that(
-        p.cargo("build").arg("--features").arg("bar"),
+        p.cargo("build --features bar"),
         execs().with_stderr(format!(
             "\
 [COMPILING] bar v0.0.1 ({dir}/bar)
@@ -532,7 +532,7 @@ fn default_feature_pulled_in() {
     );
 
     assert_that(
-        p.cargo("build").arg("--no-default-features"),
+        p.cargo("build --no-default-features"),
         execs().with_stderr(format!(
             "\
 [COMPILING] foo v0.0.1 ({dir})
@@ -692,7 +692,7 @@ fn many_cli_features() {
         .build();
 
     assert_that(
-        p.cargo("build").arg("--features").arg("bar baz"),
+        p.cargo("build --features").arg("bar baz"),
         execs().with_stderr(format!(
             "\
 [COMPILING] ba[..] v0.0.1 ({dir}/ba[..])
@@ -838,7 +838,7 @@ fn many_features_no_rebuilds() {
     p.root().move_into_the_past();
 
     assert_that(
-        p.cargo("build").arg("-v"),
+        p.cargo("build -v"),
         execs().with_stderr(
             "\
 [FRESH] a v0.1.0 ([..]/a)
@@ -857,7 +857,7 @@ fn empty_features() {
         .build();
 
     assert_that(
-        p.cargo("build").arg("--features").arg(""),
+        p.cargo("build --features").arg(""),
         execs(),
     );
 }
@@ -898,7 +898,7 @@ fn transitive_features() {
         .build();
 
     assert_that(
-        p.cargo("build").arg("--features").arg("foo"),
+        p.cargo("build --features foo"),
         execs(),
     );
 }
@@ -1150,7 +1150,7 @@ fn activating_feature_activates_dep() {
         .build();
 
     assert_that(
-        p.cargo("build").arg("--features").arg("a").arg("-v"),
+        p.cargo("build --features a -v"),
         execs(),
     );
 }
@@ -1222,15 +1222,13 @@ fn dep_feature_in_cmd_line() {
     // We should be able to enable the feature "derived-feat", which enables "some-feat",
     // on the command line. The feature is enabled, thus building should be successful:
     assert_that(
-        p.cargo("build")
-            .arg("--features")
-            .arg("derived/derived-feat"),
+        p.cargo("build --features derived/derived-feat"),
         execs(),
     );
 
     // Trying to enable features of transitive dependencies is an error
     assert_that(
-        p.cargo("build").arg("--features").arg("bar/some-feat"),
+        p.cargo("build --features bar/some-feat"),
         execs()
             .with_status(101)
             .with_stderr("error: Package `foo v0.0.1 ([..])` does not have these features: `bar`"),
@@ -1238,9 +1236,7 @@ fn dep_feature_in_cmd_line() {
 
     // Hierarchical feature specification should still be disallowed
     assert_that(
-        p.cargo("build")
-            .arg("--features")
-            .arg("derived/bar/some-feat"),
+        p.cargo("build --features derived/bar/some-feat"),
         execs()
             .with_status(101)
             .with_stderr("[ERROR] feature names may not contain slashes: `bar/some-feat`"),
@@ -1290,7 +1286,7 @@ fn all_features_flag_enables_all_features() {
         .build();
 
     assert_that(
-        p.cargo("build").arg("--all-features"),
+        p.cargo("build --all-features"),
         execs(),
     );
 }
@@ -1332,7 +1328,7 @@ fn many_cli_features_comma_delimited() {
         .build();
 
     assert_that(
-        p.cargo("build").arg("--features").arg("bar,baz"),
+        p.cargo("build --features bar,baz"),
         execs().with_stderr(format!(
             "\
 [COMPILING] ba[..] v0.0.1 ({dir}/ba[..])
@@ -1398,7 +1394,7 @@ fn many_cli_features_comma_and_space_delimited() {
         .build();
 
     assert_that(
-        p.cargo("build").arg("--features").arg("bar,baz bam bap"),
+        p.cargo("build --features").arg("bar,baz bam bap"),
         execs().with_stderr(format!(
             "\
 [COMPILING] ba[..] v0.0.1 ({dir}/ba[..])

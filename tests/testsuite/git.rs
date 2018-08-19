@@ -94,7 +94,7 @@ fn cargo_compile_forbird_git_httpsrepo_offline() {
         .file("src/main.rs", "")
         .build();
 
-    assert_that(p.cargo("build").masquerade_as_nightly_cargo().arg("-Zoffline"),
+    assert_that(p.cargo("build -Zoffline").masquerade_as_nightly_cargo(),
                 execs().with_status(101).
                     with_stderr("\
 error: failed to load source for a dependency on `dep1`
@@ -198,9 +198,8 @@ fn cargo_compile_offline_with_cached_git_dep() {
 
     assert_that(
         p
-            .cargo("build")
-            .masquerade_as_nightly_cargo()
-            .arg("-Zoffline"),
+            .cargo("build -Zoffline")
+            .masquerade_as_nightly_cargo(),
         execs().with_stderr(format!(
             "\
 [COMPILING] dep1 v0.5.0 ({}#[..])
@@ -236,9 +235,8 @@ fn cargo_compile_offline_with_cached_git_dep() {
         .unwrap();
 
     let _out = p
-        .cargo("build")
+        .cargo("build -Zoffline")
         .masquerade_as_nightly_cargo()
-        .arg("-Zoffline")
         .exec_with_output();
     assert_that(
         process(&p.bin("foo")),
@@ -718,7 +716,7 @@ fn two_revs_same_deps() {
         )
         .build();
 
-    assert_that(foo.cargo("build").arg("-v"), execs());
+    assert_that(foo.cargo("build -v"), execs());
     assert_that(&foo.bin("foo"), existing_file());
     assert_that(foo.process(&foo.bin("foo")), execs());
 }
@@ -824,7 +822,7 @@ fn recompilation() {
 
     // Make sure clean only cleans one dep
     assert_that(
-        p.cargo("clean").arg("-p").arg("foo"),
+        p.cargo("clean -p foo"),
         execs().with_stdout(""),
     );
     assert_that(
@@ -938,18 +936,14 @@ fn update_with_shared_deps() {
     // By default, not transitive updates
     println!("dep1 update");
     assert_that(
-        p.cargo("update").arg("-p").arg("dep1"),
+        p.cargo("update -p dep1"),
         execs().with_stdout(""),
     );
 
     // Don't do anything bad on a weird --precise argument
     println!("bar bad precise update");
     assert_that(
-        p.cargo("update")
-            .arg("-p")
-            .arg("bar")
-            .arg("--precise")
-            .arg("0.1.2"),
+        p.cargo("update -p bar --precise 0.1.2"),
         execs().with_status(101).with_stderr(
             "\
 [UPDATING] git repository [..]
@@ -965,18 +959,14 @@ Caused by:
     // anything because we already have the rev in the db.
     println!("bar precise update");
     assert_that(
-        p.cargo("update")
-            .arg("-p")
-            .arg("bar")
-            .arg("--precise")
-            .arg(&old_head.to_string()),
+        p.cargo("update -p bar --precise").arg(&old_head.to_string()),
         execs().with_stdout(""),
     );
 
     // Updating aggressively should, however, update the repo.
     println!("dep1 aggressive update");
     assert_that(
-        p.cargo("update").arg("-p").arg("dep1").arg("--aggressive"),
+        p.cargo("update -p dep1 --aggressive"),
         execs().with_stderr(&format!(
             "[UPDATING] git repository `{}`\n\
              [UPDATING] bar v0.5.0 ([..]) -> #[..]\n\
@@ -1003,7 +993,7 @@ Caused by:
 
     // We should be able to update transitive deps
     assert_that(
-        p.cargo("update").arg("-p").arg("bar"),
+        p.cargo("update -p bar"),
         execs().with_stderr(&format!(
             "[UPDATING] git repository `{}`",
             git_project.url()
@@ -1191,7 +1181,7 @@ fn two_deps_only_update_one() {
     git::commit(&repo);
 
     assert_that(
-        p.cargo("update").arg("-p").arg("dep1"),
+        p.cargo("update -p dep1"),
         execs().with_stderr(&format!(
             "[UPDATING] git repository `{}`\n\
              [UPDATING] dep1 v0.5.0 ([..]) -> #[..]\n\
@@ -1386,7 +1376,7 @@ fn dep_with_changed_submodule() {
     // Update the dependency and carry on!
     println!("update");
     assert_that(
-        p.cargo("update").arg("-v"),
+        p.cargo("update -v"),
         execs().with_stderr("").with_stderr(&format!(
             "[UPDATING] git repository `{}`\n\
              [UPDATING] dep1 v0.5.0 ([..]) -> #[..]\n\
@@ -1873,7 +1863,7 @@ fn update_ambiguous() {
 
     assert_that(p.cargo("generate-lockfile"), execs());
     assert_that(
-        p.cargo("update").arg("-p").arg("bar"),
+        p.cargo("update -p bar"),
         execs().with_status(101).with_stderr(
             "\
 [ERROR] There are multiple `bar` packages in your project, and the specification `bar` \
@@ -1920,7 +1910,7 @@ fn update_one_dep_in_repo_with_many_deps() {
 
     assert_that(p.cargo("generate-lockfile"), execs());
     assert_that(
-        p.cargo("update").arg("-p").arg("bar"),
+        p.cargo("update -p bar"),
         execs()
             .with_stderr(&format!("[UPDATING] git repository `{}`", bar.url())),
     );
@@ -2092,7 +2082,7 @@ fn update_one_source_updates_all_packages_in_that_git_source() {
     git::commit(&repo);
 
     assert_that(
-        p.cargo("update").arg("-p").arg("dep"),
+        p.cargo("update -p dep"),
         execs(),
     );
     let mut lockfile = String::new();
@@ -2225,7 +2215,7 @@ fn dont_require_submodules_are_checked_out() {
     git2::Repository::clone(&url, &dst).unwrap();
 
     assert_that(
-        git1.cargo("build").arg("-v").cwd(&dst),
+        git1.cargo("build -v").cwd(&dst),
         execs(),
     );
 }
@@ -2279,7 +2269,7 @@ fn doctest_same_name() {
         )
         .build();
 
-    assert_that(p.cargo("test").arg("-v"), execs());
+    assert_that(p.cargo("test -v"), execs());
 }
 
 #[test]
@@ -2464,7 +2454,7 @@ fn two_at_rev_instead_of_tag() {
         .build();
 
     assert_that(p.cargo("generate-lockfile"), execs());
-    assert_that(p.cargo("build").arg("-v"), execs());
+    assert_that(p.cargo("build -v"), execs());
 }
 
 #[test]
@@ -2530,7 +2520,7 @@ fn include_overrides_gitignore() {
 
     println!("build 1: all is new");
     assert_that(
-        p.cargo("build").arg("-v"),
+        p.cargo("build -v"),
         execs().with_stderr(
             "\
 [UPDATING] registry `[..]`
@@ -2551,7 +2541,7 @@ fn include_overrides_gitignore() {
 
     println!("build 2: nothing changed; file timestamps reset by build script");
     assert_that(
-        p.cargo("build").arg("-v"),
+        p.cargo("build -v"),
         execs().with_stderr(
             "\
 [FRESH] libc [..]
@@ -2567,7 +2557,7 @@ fn include_overrides_gitignore() {
     File::create(p.root().join("src").join("not_incl.rs")).unwrap();
 
     assert_that(
-        p.cargo("build").arg("-v"),
+        p.cargo("build -v"),
         execs().with_stderr(
             "\
 [FRESH] libc [..]
@@ -2587,7 +2577,7 @@ fn include_overrides_gitignore() {
     File::create(p.root().join("src").join("incl.rs")).unwrap();
 
     assert_that(
-        p.cargo("build").arg("-v"),
+        p.cargo("build -v"),
         execs().with_stderr(
             "\
 [FRESH] libc [..]

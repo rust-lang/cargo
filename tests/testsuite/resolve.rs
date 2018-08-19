@@ -412,9 +412,8 @@ fn minimal_version_cli() {
         .build();
 
     assert_that(
-        p.cargo("generate-lockfile")
-            .masquerade_as_nightly_cargo()
-            .arg("-Zminimal-versions"),
+        p.cargo("generate-lockfile -Zminimal-versions")
+            .masquerade_as_nightly_cargo(),
         execs(),
     );
 

@@ -92,9 +92,8 @@ fn no_index_update() {
     );
 
     assert_that(
-        p.cargo("generate-lockfile")
-            .masquerade_as_nightly_cargo()
-            .arg("-Zno-index-update"),
+        p.cargo("generate-lockfile -Zno-index-update")
+            .masquerade_as_nightly_cargo(),
         execs().with_stdout("").with_stderr(""),
     );
 }

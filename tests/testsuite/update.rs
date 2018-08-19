@@ -110,7 +110,7 @@ fn transitive_minor_update() {
     // Also note that this is probably counterintuitive and weird. We may wish
     // to change this one day.
     assert_that(
-        p.cargo("update").arg("-p").arg("serde"),
+        p.cargo("update -p serde"),
         execs().with_stderr(
             "\
 [UPDATING] registry `[..]`
@@ -161,7 +161,7 @@ fn conservative() {
     Package::new("serde", "0.1.1").dep("log", "0.1").publish();
 
     assert_that(
-        p.cargo("update").arg("-p").arg("serde"),
+        p.cargo("update -p serde"),
         execs().with_stderr(
             "\
 [UPDATING] registry `[..]`
@@ -392,11 +392,7 @@ fn update_precise() {
     Package::new("serde", "0.2.0").publish();
 
     assert_that(
-        p.cargo("update")
-            .arg("-p")
-            .arg("serde:0.2.1")
-            .arg("--precise")
-            .arg("0.2.0"),
+        p.cargo("update -p serde:0.2.1 --precise 0.2.0"),
         execs().with_stderr(
             "\
 [UPDATING] registry `[..]`

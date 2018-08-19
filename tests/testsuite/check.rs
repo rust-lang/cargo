@@ -185,7 +185,7 @@ fn issue_3418() {
         .build();
 
     assert_that(
-        foo.cargo("check").arg("-v"),
+        foo.cargo("check -v"),
         execs()
             .with_stderr_contains("[..] --emit=dep-info,metadata [..]"),
     );
@@ -317,11 +317,7 @@ fn rustc_check() {
         .build();
 
     assert_that(
-        foo.cargo("rustc")
-            .arg("--profile")
-            .arg("check")
-            .arg("--")
-            .arg("--emit=metadata"),
+        foo.cargo("rustc --profile check -- --emit=metadata"),
         execs(),
     );
 }
@@ -349,11 +345,7 @@ fn rustc_check_err() {
         .build();
 
     assert_that(
-        foo.cargo("rustc")
-            .arg("--profile")
-            .arg("check")
-            .arg("--")
-            .arg("--emit=metadata"),
+        foo.cargo("rustc --profile check -- --emit=metadata"),
         execs().with_status(101),
     );
 }
@@ -384,7 +376,7 @@ fn check_all() {
         .build();
 
     assert_that(
-        p.cargo("check").arg("--all").arg("-v"),
+        p.cargo("check --all -v"),
         execs()
             .with_stderr_contains("[..] --crate-name foo src/lib.rs [..]")
             .with_stderr_contains("[..] --crate-name foo src/main.rs [..]")
@@ -410,7 +402,7 @@ fn check_virtual_all_implied() {
         .build();
 
     assert_that(
-        p.cargo("check").arg("-v"),
+        p.cargo("check -v"),
         execs()
             .with_stderr_contains("[..] --crate-name bar bar/src/lib.rs [..]")
             .with_stderr_contains("[..] --crate-name baz baz/src/lib.rs [..]"),
@@ -428,7 +420,7 @@ fn targets_selected_default() {
         .build();
 
     assert_that(
-        foo.cargo("check").arg("-v"),
+        foo.cargo("check -v"),
         execs()
             .with_stderr_contains("[..] --crate-name foo src/lib.rs [..]")
             .with_stderr_contains("[..] --crate-name foo src/main.rs [..]")
@@ -449,7 +441,7 @@ fn targets_selected_all() {
         .build();
 
     assert_that(
-        foo.cargo("check").arg("--all-targets").arg("-v"),
+        foo.cargo("check --all-targets -v"),
         execs()
             .with_stderr_contains("[..] --crate-name foo src/lib.rs [..]")
             .with_stderr_contains("[..] --crate-name foo src/main.rs [..]")
@@ -478,7 +470,7 @@ fn check_unit_test_profile() {
 
     assert_that(foo.cargo("check"), execs());
     assert_that(
-        foo.cargo("check").arg("--profile").arg("test"),
+        foo.cargo("check --profile test"),
         execs()
             .with_status(101)
             .with_stderr_contains("[..]badtext[..]"),
@@ -555,7 +547,7 @@ fn check_filters() {
     );
     p.root().join("target").rm_rf();
     assert_that(
-        p.cargo("check").arg("--tests").arg("-v"),
+        p.cargo("check --tests -v"),
         execs()
             .with_stderr_contains("[..] --crate-name foo src/lib.rs [..] --test [..]")
             .with_stderr_contains("[..] --crate-name foo src/lib.rs --crate-type lib [..]")
@@ -573,7 +565,7 @@ fn check_filters() {
     );
     p.root().join("target").rm_rf();
     assert_that(
-        p.cargo("check").arg("--test").arg("t1").arg("-v"),
+        p.cargo("check --test t1 -v"),
         execs()
             .with_stderr_contains("[..]unused_normal_lib[..]")
             .with_stderr_contains("[..]unused_unit_t1[..]")
@@ -587,7 +579,7 @@ fn check_filters() {
     );
     p.root().join("target").rm_rf();
     assert_that(
-        p.cargo("check").arg("--all-targets").arg("-v"),
+        p.cargo("check --all-targets -v"),
         execs()
             .with_stderr_contains("[..]unused_normal_lib[..]")
             .with_stderr_contains("[..]unused_normal_bin[..]")
@@ -624,7 +616,7 @@ fn check_artifacts() {
     );
 
     p.root().join("target").rm_rf();
-    assert_that(p.cargo("check").arg("--lib"), execs());
+    assert_that(p.cargo("check --lib"), execs());
     assert_that(&p.root().join("target/debug/libfoo.rmeta"), existing_file());
     assert_that(
         &p.root().join("target/debug/libfoo.rlib"),
@@ -637,7 +629,7 @@ fn check_artifacts() {
 
     p.root().join("target").rm_rf();
     assert_that(
-        p.cargo("check").arg("--bin").arg("foo"),
+        p.cargo("check --bin foo"),
         execs(),
     );
     if is_nightly() {
@@ -657,7 +649,7 @@ fn check_artifacts() {
 
     p.root().join("target").rm_rf();
     assert_that(
-        p.cargo("check").arg("--test").arg("t1"),
+        p.cargo("check --test t1"),
         execs(),
     );
     assert_that(
@@ -681,7 +673,7 @@ fn check_artifacts() {
 
     p.root().join("target").rm_rf();
     assert_that(
-        p.cargo("check").arg("--example").arg("ex1"),
+        p.cargo("check --example ex1"),
         execs(),
     );
     assert_that(
@@ -699,7 +691,7 @@ fn check_artifacts() {
 
     p.root().join("target").rm_rf();
     assert_that(
-        p.cargo("check").arg("--bench").arg("b1"),
+        p.cargo("check --bench b1"),
         execs(),
     );
     assert_that(
@@ -780,7 +772,7 @@ fn proc_macro() {
         )
         .build();
     assert_that(
-        p.cargo("check").arg("-v").env("RUST_LOG", "cargo=trace"),
+        p.cargo("check -v").env("RUST_LOG", "cargo=trace"),
         execs(),
     );
 }

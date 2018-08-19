@@ -92,12 +92,12 @@ fn cargo_compile_with_nested_deps_shorthand() {
 
     println!("cleaning");
     assert_that(
-        p.cargo("clean").arg("-v"),
+        p.cargo("clean -v"),
         execs().with_stdout(""),
     );
     println!("building baz");
     assert_that(
-        p.cargo("build").arg("-p").arg("baz"),
+        p.cargo("build -p baz"),
         execs().with_stderr(&format!(
             "[COMPILING] baz v0.5.0 ({}/bar/baz)\n\
              [FINISHED] dev [unoptimized + debuginfo] target(s) \
@@ -107,7 +107,7 @@ fn cargo_compile_with_nested_deps_shorthand() {
     );
     println!("building foo");
     assert_that(
-        p.cargo("build").arg("-p").arg("foo"),
+        p.cargo("build -p foo"),
         execs().with_stderr(&format!(
             "[COMPILING] bar v0.5.0 ({}/bar)\n\
              [COMPILING] foo v0.5.0 ({})\n\
@@ -603,7 +603,7 @@ fn override_relative() {
         )
         .file("src/lib.rs", "")
         .build();
-    assert_that(p.cargo("build").arg("-v"), execs());
+    assert_that(p.cargo("build -v"), execs());
 }
 
 #[test]
@@ -690,7 +690,7 @@ fn override_path_dep() {
         .file("src/lib.rs", "")
         .build();
 
-    assert_that(p.cargo("build").arg("-v"), execs());
+    assert_that(p.cargo("build -v"), execs());
 }
 
 #[test]
@@ -881,8 +881,7 @@ fn custom_target_no_rebuild() {
         p.root().join("target_moved")
     ));
     assert_that(
-        p.cargo("build")
-            .arg("--manifest-path=b/Cargo.toml")
+        p.cargo("build --manifest-path=b/Cargo.toml")
             .env("CARGO_TARGET_DIR", "target_moved"),
         execs().with_stderr(
             "\
@@ -1082,7 +1081,7 @@ fn thin_lto_works() {
         .build();
 
     assert_that(
-        p.cargo("build").arg("--release").arg("-v"),
+        p.cargo("build --release -v"),
         execs().with_stderr(
             "\
 [COMPILING] top [..]

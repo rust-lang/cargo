@@ -47,19 +47,11 @@ fn custom_target_minimal() {
         .build();
 
     assert_that(
-        p.cargo("build")
-            .arg("--lib")
-            .arg("--target")
-            .arg("custom-target.json")
-            .arg("-v"),
+        p.cargo("build --lib --target custom-target.json -v"),
         execs(),
     );
     assert_that(
-        p.cargo("build")
-            .arg("--lib")
-            .arg("--target")
-            .arg("src/../custom-target.json")
-            .arg("-v"),
+        p.cargo("build --lib --target src/../custom-target.json -v"),
         execs(),
     );
 }
@@ -141,11 +133,7 @@ fn custom_target_dependency() {
         .build();
 
     assert_that(
-        p.cargo("build")
-            .arg("--lib")
-            .arg("--target")
-            .arg("custom-target.json")
-            .arg("-v"),
+        p.cargo("build --lib --target custom-target.json -v"),
         execs(),
     );
 }
