@@ -8,7 +8,7 @@ fn parses_env() {
         .build();
 
     assert_that(
-        p.cargo("doc").env("RUSTDOCFLAGS", "--cfg=foo").arg("-v"),
+        p.cargo("doc -v").env("RUSTDOCFLAGS", "--cfg=foo"),
         execs()
             .with_stderr_contains("[RUNNING] `rustdoc [..] --cfg=foo[..]`"),
     );
@@ -28,7 +28,7 @@ fn parses_config() {
         .build();
 
     assert_that(
-        p.cargo("doc").arg("-v"),
+        p.cargo("doc -v"),
         execs()
             .with_stderr_contains("[RUNNING] `rustdoc [..] --cfg foo[..]`"),
     );
@@ -86,8 +86,7 @@ fn rustdocflags_passed_to_rustdoc_through_cargo_test() {
         .build();
 
     assert_that(
-        p.cargo("test")
-            .arg("--doc")
+        p.cargo("test --doc")
             .env("RUSTDOCFLAGS", "--cfg do_not_choke"),
         execs(),
     );
@@ -100,8 +99,7 @@ fn rustdocflags_passed_to_rustdoc_through_cargo_test_only_once() {
         .build();
 
     assert_that(
-        p.cargo("test")
-            .arg("--doc")
+        p.cargo("test --doc")
             .env("RUSTDOCFLAGS", "--markdown-no-toc"),
         execs(),
     );

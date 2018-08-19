@@ -168,7 +168,7 @@ fn doc_no_deps() {
         .build();
 
     assert_that(
-        p.cargo("doc").arg("--no-deps"),
+        p.cargo("doc --no-deps"),
         execs().with_stderr(&format!(
             "\
 [CHECKING] bar v0.0.1 ({dir}/bar)
@@ -207,7 +207,7 @@ fn doc_only_bin() {
         .file("bar/src/lib.rs", "pub fn bar() {}")
         .build();
 
-    assert_that(p.cargo("doc").arg("-v"), execs());
+    assert_that(p.cargo("doc -v"), execs());
 
     assert_that(&p.root().join("target/doc"), existing_dir());
     assert_that(&p.root().join("target/doc/bar/index.html"), existing_file());
@@ -248,7 +248,7 @@ fn doc_multiple_targets_same_name_lib() {
         .build();
 
     assert_that(
-        p.cargo("doc").arg("--all"),
+        p.cargo("doc --all"),
         execs()
             .with_status(101)
             .with_stderr_contains("[..] library `foo_lib` is specified [..]")
@@ -295,7 +295,7 @@ fn doc_multiple_targets_same_name() {
     let root = path2url(p.root());
 
     assert_that(
-        p.cargo("doc").arg("--all"),
+        p.cargo("doc --all"),
         execs()
             .with_stderr_contains(&format!("[DOCUMENTING] foo v0.1.0 ({}/foo)", root))
             .with_stderr_contains(&format!("[DOCUMENTING] bar v0.1.0 ({}/bar)", root))
@@ -341,7 +341,7 @@ fn doc_multiple_targets_same_name_bin() {
         .build();
 
     assert_that(
-        p.cargo("doc").arg("--all"),
+        p.cargo("doc --all"),
         execs()
             .with_status(101)
             .with_stderr_contains("[..] binary `foo_cli` is specified [..]")
@@ -385,7 +385,7 @@ fn doc_multiple_targets_same_name_undoced() {
         .file("bar/src/foo-cli.rs", "")
         .build();
 
-    assert_that(p.cargo("doc").arg("--all"), execs());
+    assert_that(p.cargo("doc --all"), execs());
 }
 
 #[test]
@@ -455,7 +455,7 @@ fn doc_lib_bin_same_name_documents_lib_when_requested() {
         .build();
 
     assert_that(
-        p.cargo("doc").arg("--lib"),
+        p.cargo("doc --lib"),
         execs().with_stderr(&format!(
             "\
 [DOCUMENTING] foo v0.0.1 ({dir})
@@ -499,7 +499,7 @@ fn doc_lib_bin_same_name_documents_named_bin_when_requested() {
         .build();
 
     assert_that(
-        p.cargo("doc").arg("--bin").arg("foo"),
+        p.cargo("doc --bin foo"),
         execs().with_stderr(&format!(
             "\
 [CHECKING] foo v0.0.1 ({dir})
@@ -544,7 +544,7 @@ fn doc_lib_bin_same_name_documents_bins_when_requested() {
         .build();
 
     assert_that(
-        p.cargo("doc").arg("--bins"),
+        p.cargo("doc --bins"),
         execs().with_stderr(&format!(
             "\
 [CHECKING] foo v0.0.1 ({dir})
@@ -600,7 +600,7 @@ fn doc_dash_p() {
         .build();
 
     assert_that(
-        p.cargo("doc").arg("-p").arg("a"),
+        p.cargo("doc -p a"),
         execs().with_stderr(
             "\
 [..] b v0.0.1 (file://[..])
@@ -643,7 +643,7 @@ fn doc_target() {
         .build();
 
     assert_that(
-        p.cargo("doc").arg("--target").arg(TARGET).arg("--verbose"),
+        p.cargo("doc --verbose --target").arg(TARGET),
         execs(),
     );
     assert_that(
@@ -806,9 +806,9 @@ fn doc_release() {
         .file("src/lib.rs", "")
         .build();
 
-    assert_that(p.cargo("build").arg("--release"), execs());
+    assert_that(p.cargo("build --release"), execs());
     assert_that(
-        p.cargo("doc").arg("--release").arg("-v"),
+        p.cargo("doc --release -v"),
         execs().with_stderr(
             "\
 [DOCUMENTING] foo v0.0.1 ([..])
@@ -845,12 +845,7 @@ fn doc_multiple_deps() {
         .build();
 
     assert_that(
-        p.cargo("doc")
-            .arg("-p")
-            .arg("bar")
-            .arg("-p")
-            .arg("baz")
-            .arg("-v"),
+        p.cargo("doc -p bar -p baz -v"),
         execs(),
     );
 
@@ -901,7 +896,7 @@ fn features() {
         .file("bar/src/lib.rs", r#"#[cfg(feature = "bar")] pub fn bar() {}"#)
         .build();
     assert_that(
-        p.cargo("doc").arg("--features").arg("foo"),
+        p.cargo("doc --features foo"),
         execs(),
     );
     assert_that(&p.root().join("target/doc"), existing_dir());
@@ -957,7 +952,7 @@ fn document_only_lib() {
         "#,
         )
         .build();
-    assert_that(p.cargo("doc").arg("--lib"), execs());
+    assert_that(p.cargo("doc --lib"), execs());
     assert_that(&p.root().join("target/doc/foo/index.html"), existing_file());
 }
 
@@ -982,9 +977,7 @@ fn plugins_no_use_target() {
         .file("src/lib.rs", "")
         .build();
     assert_that(
-        p.cargo("doc")
-            .arg("--target=x86_64-unknown-openbsd")
-            .arg("-v"),
+        p.cargo("doc --target=x86_64-unknown-openbsd -v"),
         execs(),
     );
 }
@@ -1012,7 +1005,7 @@ fn doc_all_workspace() {
 
     // The order in which bar is compiled or documented is not deterministic
     assert_that(
-        p.cargo("doc").arg("--all"),
+        p.cargo("doc --all"),
         execs()
             .with_stderr_contains("[..] Documenting bar v0.1.0 ([..])")
             .with_stderr_contains("[..] Checking bar v0.1.0 ([..])")
@@ -1038,7 +1031,7 @@ fn doc_all_virtual_manifest() {
 
     // The order in which bar and baz are documented is not guaranteed
     assert_that(
-        p.cargo("doc").arg("--all"),
+        p.cargo("doc --all"),
         execs()
             .with_stderr_contains("[..] Documenting baz v0.1.0 ([..])")
             .with_stderr_contains("[..] Documenting bar v0.1.0 ([..])"),
@@ -1101,7 +1094,7 @@ fn doc_all_member_dependency_same_name() {
     Package::new("bar", "0.1.0").publish();
 
     assert_that(
-        p.cargo("doc").arg("--all"),
+        p.cargo("doc --all"),
         execs()
             .with_stderr_contains("[..] Updating registry `[..]`")
             .with_stderr_contains("[..] Documenting bar v0.1.0 ([..])"),
@@ -1126,7 +1119,7 @@ fn doc_workspace_open_help_message() {
 
     // The order in which bar is compiled or documented is not deterministic
     assert_that(
-        p.cargo("doc").arg("--all").arg("--open"),
+        p.cargo("doc --all --open"),
         execs()
             .with_status(101)
             .with_stderr_contains("[..] Documenting bar v0.1.0 ([..])")
@@ -1353,7 +1346,7 @@ fn doc_private_items() {
     let foo = project()
         .file("src/lib.rs", "mod private { fn private_item() {} }")
         .build();
-    assert_that(foo.cargo("doc").arg("--document-private-items"), execs());
+    assert_that(foo.cargo("doc --document-private-items"), execs());
 
     assert_that(&foo.root().join("target/doc"), existing_dir());
     assert_that(&foo.root().join("target/doc/foo/private/index.html"), existing_file());

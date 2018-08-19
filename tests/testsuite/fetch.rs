@@ -104,14 +104,14 @@ fn fetch_platform_specific_dependencies() {
         .build();
 
     assert_that(
-        p.cargo("fetch").arg("--target").arg(&host),
+        p.cargo("fetch --target").arg(&host),
         execs()
             .with_stderr_contains("[..] Downloading d1 v1.2.3 [..]")
             .with_stderr_does_not_contain("[..] Downloading d2 v0.1.2 [..]"),
     );
 
     assert_that(
-        p.cargo("fetch").arg("--target").arg(&target),
+        p.cargo("fetch --target").arg(&target),
         execs()
             .with_stderr_contains("[..] Downloading d2 v0.1.2[..]")
             .with_stderr_does_not_contain("[..] Downloading d1 v1.2.3 [..]"),

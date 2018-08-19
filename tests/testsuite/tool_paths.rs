@@ -23,7 +23,7 @@ fn pathless_tools() {
         .build();
 
     assert_that(
-        foo.cargo("build").arg("--verbose"),
+        foo.cargo("build --verbose"),
         execs().with_stderr(&format!(
             "\
 [COMPILING] foo v0.5.0 ({url})
@@ -77,7 +77,7 @@ fn absolute_tools() {
     };
 
     assert_that(
-        foo.cargo("build").arg("--verbose"),
+        foo.cargo("build --verbose"),
         execs().with_stderr(&format!(
             "\
 [COMPILING] foo v0.5.0 ({url})
@@ -139,7 +139,7 @@ fn relative_tools() {
     };
 
     assert_that(
-        p.cargo("build").cwd(foo_path).arg("--verbose"),
+        p.cargo("build --verbose").cwd(foo_path),
         execs().with_stderr(&format!(
             "\
 [COMPILING] bar v0.5.0 ({url})

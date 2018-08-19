@@ -999,7 +999,7 @@ fn new_warns_you_this_will_not_work() {
     let p = p.build();
 
     assert_that(
-        p.cargo("new").arg("--lib").arg("bar").env("USER", "foo"),
+        p.cargo("new --lib bar").env("USER", "foo"),
         execs().with_stderr(
             "\
 warning: compiling this new crate may not work due to invalid workspace \
@@ -1355,18 +1355,14 @@ fn relative_path_for_root_works() {
     let p = p.build();
 
     assert_that(
-        p.cargo("build")
-            .cwd(p.root())
-            .arg("--manifest-path")
-            .arg("./Cargo.toml"),
+        p.cargo("build --manifest-path ./Cargo.toml")
+            .cwd(p.root()),
         execs(),
     );
 
     assert_that(
-        p.cargo("build")
-            .cwd(p.root().join("subproj"))
-            .arg("--manifest-path")
-            .arg("../Cargo.toml"),
+        p.cargo("build --manifest-path ../Cargo.toml")
+            .cwd(p.root().join("subproj")),
         execs(),
     );
 }
@@ -1867,7 +1863,7 @@ fn dep_used_with_separate_features() {
 
     // Build the entire workspace
     assert_that(
-        p.cargo("build").arg("--all"),
+        p.cargo("build --all"),
         execs().with_stderr(
             "\
 [..]Compiling feat_lib v0.1.0 ([..])
@@ -2015,7 +2011,7 @@ fn cargo_home_at_root_works() {
 
     assert_that(p.cargo("build"), execs());
     assert_that(
-        p.cargo("build").arg("--frozen").env("CARGO_HOME", p.root()),
+        p.cargo("build --frozen").env("CARGO_HOME", p.root()),
         execs(),
     );
 }

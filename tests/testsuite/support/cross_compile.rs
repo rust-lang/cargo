@@ -33,8 +33,7 @@ pub fn disabled() -> bool {
             .file("src/cross_test.rs", &main_file(r#""testing!""#, &[]))
             .build();
 
-        let result = p.cargo("build")
-            .arg("--target")
+        let result = p.cargo("build --target")
             .arg(&cross_target)
             .exec_with_output();
 

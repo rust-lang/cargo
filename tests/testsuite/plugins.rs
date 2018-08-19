@@ -216,7 +216,7 @@ fn plugin_with_dynamic_native_dependency() {
         .unwrap();
 
     assert_that(
-        foo.cargo("build").env("SRC", &lib).arg("-v"),
+        foo.cargo("build -v").env("SRC", &lib),
         execs(),
     );
 }
@@ -244,7 +244,7 @@ fn plugin_integration() {
         .file("tests/it_works.rs", "")
         .build();
 
-    assert_that(p.cargo("test").arg("-v"), execs());
+    assert_that(p.cargo("test -v"), execs());
 }
 
 #[test]
@@ -279,7 +279,7 @@ fn doctest_a_plugin() {
         .file("bar/src/lib.rs", "pub fn bar() {}")
         .build();
 
-    assert_that(p.cargo("test").arg("-v"), execs());
+    assert_that(p.cargo("test -v"), execs());
 }
 
 // See #1515
@@ -331,7 +331,7 @@ fn native_plugin_dependency_with_custom_ar_linker() {
         .build();
 
     assert_that(
-        bar.cargo("build").arg("--verbose"),
+        bar.cargo("build --verbose"),
         execs().with_status(101).with_stderr_contains(
             "\
 [COMPILING] foo v0.0.1 ([..])

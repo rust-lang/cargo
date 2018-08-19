@@ -81,7 +81,7 @@ fn cargo_metadata_warns_on_implicit_version() {
                 execs().with_stderr("[WARNING] please specify `--format-version` flag explicitly to avoid compatibility problems"));
 
     assert_that(
-        p.cargo("metadata").arg("--format-version").arg("1"),
+        p.cargo("metadata --format-version 1"),
         execs().with_stderr(""),
     );
 }
@@ -277,10 +277,7 @@ fn cargo_metadata_with_deps_and_version() {
     Package::new("bar", "0.0.1").dep("baz", "0.0.1").publish();
 
     assert_that(
-        p.cargo("metadata")
-            .arg("-q")
-            .arg("--format-version")
-            .arg("1"),
+        p.cargo("metadata -q --format-version 1"),
         execs().with_json(
             r#"
     {
@@ -738,7 +735,7 @@ fn workspace_metadata_no_deps() {
         .build();
 
     assert_that(
-        p.cargo("metadata").arg("--no-deps"),
+        p.cargo("metadata --no-deps"),
         execs().with_json(
             r#"
     {
@@ -819,7 +816,7 @@ fn cargo_metadata_with_invalid_manifest() {
     let p = project().file("Cargo.toml", "").build();
 
     assert_that(
-        p.cargo("metadata").arg("--format-version").arg("1"),
+        p.cargo("metadata --format-version 1"),
         execs().with_status(101).with_stderr(
             "\
 [ERROR] failed to parse manifest at `[..]`
@@ -875,10 +872,7 @@ fn cargo_metadata_no_deps_path_to_cargo_toml_relative() {
         .build();
 
     assert_that(
-        p.cargo("metadata")
-            .arg("--no-deps")
-            .arg("--manifest-path")
-            .arg("foo/Cargo.toml")
+        p.cargo("metadata --no-deps --manifest-path foo/Cargo.toml")
             .cwd(p.root().parent().unwrap()),
         execs().with_json(MANIFEST_OUTPUT),
     );
@@ -892,9 +886,7 @@ fn cargo_metadata_no_deps_path_to_cargo_toml_absolute() {
         .build();
 
     assert_that(
-        p.cargo("metadata")
-            .arg("--no-deps")
-            .arg("--manifest-path")
+        p.cargo("metadata --no-deps --manifest-path")
             .arg(p.root().join("Cargo.toml"))
             .cwd(p.root().parent().unwrap()),
         execs().with_json(MANIFEST_OUTPUT),
@@ -909,10 +901,7 @@ fn cargo_metadata_no_deps_path_to_cargo_toml_parent_relative() {
         .build();
 
     assert_that(
-        p.cargo("metadata")
-            .arg("--no-deps")
-            .arg("--manifest-path")
-            .arg("foo")
+        p.cargo("metadata --no-deps --manifest-path foo")
             .cwd(p.root().parent().unwrap()),
         execs().with_status(101).with_stderr(
             "[ERROR] the manifest-path must be \
@@ -929,9 +918,7 @@ fn cargo_metadata_no_deps_path_to_cargo_toml_parent_absolute() {
         .build();
 
     assert_that(
-        p.cargo("metadata")
-            .arg("--no-deps")
-            .arg("--manifest-path")
+        p.cargo("metadata --no-deps --manifest-path")
             .arg(p.root())
             .cwd(p.root().parent().unwrap()),
         execs().with_status(101).with_stderr(
@@ -949,7 +936,7 @@ fn cargo_metadata_no_deps_cwd() {
         .build();
 
     assert_that(
-        p.cargo("metadata").arg("--no-deps").cwd(p.root()),
+        p.cargo("metadata --no-deps").cwd(p.root()),
         execs().with_json(MANIFEST_OUTPUT),
     );
 }
@@ -962,10 +949,7 @@ fn cargo_metadata_bad_version() {
         .build();
 
     assert_that(
-        p.cargo("metadata")
-            .arg("--no-deps")
-            .arg("--format-version")
-            .arg("2")
+        p.cargo("metadata --no-deps --format-version 2")
             .cwd(p.root()),
         execs().with_status(1).with_stderr_contains(
             "\
@@ -996,7 +980,7 @@ fn multiple_features() {
         .build();
 
     assert_that(
-        p.cargo("metadata").arg("--features").arg("a b"),
+        p.cargo("metadata --features").arg("a b"),
         execs(),
     );
 }
@@ -1024,7 +1008,7 @@ fn package_metadata() {
         .build();
 
     assert_that(
-        p.cargo("metadata").arg("--no-deps"),
+        p.cargo("metadata --no-deps"),
         execs().with_json(
             r#"
     {
@@ -1087,16 +1071,14 @@ fn cargo_metadata_path_to_cargo_toml_project() {
         .build();
 
     assert_that(
-    p.cargo("package")
-        .arg("--manifest-path")
+    p.cargo("package --manifest-path")
         .arg(p.root().join("bar/Cargo.toml"))
         .cwd(p.root().parent().unwrap()),
         execs()
         );
 
     assert_that(
-        p.cargo("metadata")
-            .arg("--manifest-path")
+        p.cargo("metadata --manifest-path")
             .arg(p.root().join("target/package/bar-0.5.0/Cargo.toml")),
         execs().with_json(
         r#"

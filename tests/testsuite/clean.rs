@@ -105,23 +105,23 @@ fn clean_release() {
         .file("a/src/lib.rs", "")
         .build();
 
-    assert_that(p.cargo("build").arg("--release"), execs());
+    assert_that(p.cargo("build --release"), execs());
 
     assert_that(
-        p.cargo("clean").arg("-p").arg("foo"),
+        p.cargo("clean -p foo"),
         execs(),
     );
     assert_that(
-        p.cargo("build").arg("--release"),
+        p.cargo("build --release"),
         execs().with_stdout(""),
     );
 
     assert_that(
-        p.cargo("clean").arg("-p").arg("foo").arg("--release"),
+        p.cargo("clean -p foo --release"),
         execs(),
     );
     assert_that(
-        p.cargo("build").arg("--release"),
+        p.cargo("build --release"),
         execs().with_stderr(
             "\
 [COMPILING] foo v0.0.1 ([..])
@@ -157,7 +157,7 @@ fn clean_doc() {
 
     assert_that(doc_path, existing_dir());
 
-    assert_that(p.cargo("clean").arg("--doc"), execs());
+    assert_that(p.cargo("clean --doc"), execs());
 
     assert_that(doc_path, is_not(existing_dir()));
     assert_that(p.build_dir(), existing_dir());
@@ -198,11 +198,11 @@ fn build_script() {
 
     assert_that(p.cargo("build").env("FIRST", "1"), execs());
     assert_that(
-        p.cargo("clean").arg("-p").arg("foo"),
+        p.cargo("clean -p foo"),
         execs(),
     );
     assert_that(
-        p.cargo("build").arg("-v"),
+        p.cargo("build -v"),
         execs().with_stderr(
             "\
 [COMPILING] foo v0.0.1 ([..])
@@ -244,7 +244,7 @@ fn clean_git() {
 
     assert_that(p.cargo("build"), execs());
     assert_that(
-        p.cargo("clean").arg("-p").arg("dep"),
+        p.cargo("clean -p dep"),
         execs().with_stdout(""),
     );
     assert_that(p.cargo("build"), execs());
@@ -272,7 +272,7 @@ fn registry() {
 
     assert_that(p.cargo("build"), execs());
     assert_that(
-        p.cargo("clean").arg("-p").arg("bar"),
+        p.cargo("clean -p bar"),
         execs().with_stdout(""),
     );
     assert_that(p.cargo("build"), execs());
@@ -299,7 +299,7 @@ fn clean_verbose() {
 
     assert_that(p.cargo("build"), execs());
     assert_that(
-        p.cargo("clean").arg("-p").arg("bar").arg("--verbose"),
+        p.cargo("clean -p bar --verbose"),
         execs().with_stderr(
             "\
 [REMOVING] [..]

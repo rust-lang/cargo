@@ -30,9 +30,7 @@ fn simple() {
         .build();
 
     assert_that(
-        p.cargo("publish")
-            .arg("--no-verify")
-            .arg("--index")
+        p.cargo("publish --no-verify --index")
             .arg(publish::registry().to_string()),
         execs().with_stderr(&format!(
             "\
@@ -106,9 +104,7 @@ fn old_token_location() {
         .build();
 
     assert_that(
-        p.cargo("publish")
-            .arg("--no-verify")
-            .arg("--index")
+        p.cargo("publish --no-verify --index")
             .arg(publish::registry().to_string()),
         execs().with_stderr(&format!(
             "\
@@ -175,9 +171,7 @@ fn simple_with_host() {
         .build();
 
     assert_that(
-        p.cargo("publish")
-            .arg("--no-verify")
-            .arg("--host")
+        p.cargo("publish --no-verify --host")
             .arg(publish::registry().to_string()),
         execs().with_stderr(&format!(
             "\
@@ -253,9 +247,7 @@ fn simple_with_index_and_host() {
         .build();
 
     assert_that(
-        p.cargo("publish")
-            .arg("--no-verify")
-            .arg("--index")
+        p.cargo("publish --no-verify --index")
             .arg(publish::registry().to_string())
             .arg("--host")
             .arg(publish::registry().to_string()),
@@ -334,10 +326,7 @@ fn git_deps() {
         .build();
 
     assert_that(
-        p.cargo("publish")
-            .arg("-v")
-            .arg("--no-verify")
-            .arg("--index")
+        p.cargo("publish -v --no-verify --index")
             .arg(publish::registry().to_string()),
         execs().with_status(101).with_stderr(
             "\
@@ -377,8 +366,7 @@ fn path_dependency_no_version() {
         .build();
 
     assert_that(
-        p.cargo("publish")
-            .arg("--index")
+        p.cargo("publish --index")
             .arg(publish::registry().to_string()),
         execs().with_status(101).with_stderr(
             "\
@@ -411,8 +399,7 @@ fn unpublishable_crate() {
         .build();
 
     assert_that(
-        p.cargo("publish")
-            .arg("--index")
+        p.cargo("publish --index")
             .arg(publish::registry().to_string()),
         execs().with_status(101).with_stderr(
             "\
@@ -447,8 +434,7 @@ fn dont_publish_dirty() {
         .build();
 
     assert_that(
-        p.cargo("publish")
-            .arg("--index")
+        p.cargo("publish --index")
             .arg(publish::registry().to_string()),
         execs().with_status(101).with_stderr(
             "\
@@ -489,8 +475,7 @@ fn publish_clean() {
         .build();
 
     assert_that(
-        p.cargo("publish")
-            .arg("--index")
+        p.cargo("publish --index")
             .arg(publish::registry().to_string()),
         execs(),
     );
@@ -555,8 +540,7 @@ fn publish_when_ignored() {
         .build();
 
     assert_that(
-        p.cargo("publish")
-            .arg("--index")
+        p.cargo("publish --index")
             .arg(publish::registry().to_string()),
         execs(),
     );
@@ -617,8 +601,7 @@ fn new_crate_rejected() {
         )
         .nocommit_file("src/main.rs", "fn main() {}");
     assert_that(
-        p.cargo("publish")
-            .arg("--index")
+        p.cargo("publish --index")
             .arg(publish::registry().to_string()),
         execs().with_status(101),
     );
@@ -644,9 +627,7 @@ fn dry_run() {
         .build();
 
     assert_that(
-        p.cargo("publish")
-            .arg("--dry-run")
-            .arg("--index")
+        p.cargo("publish --dry-run --index")
             .arg(publish::registry().to_string()),
         execs().with_stderr(&format!(
             "\
@@ -691,11 +672,8 @@ fn block_publish_feature_not_enabled() {
         .build();
 
     assert_that(
-        p.cargo("publish")
-            .masquerade_as_nightly_cargo()
-            .arg("--registry")
-            .arg("alternative")
-            .arg("-Zunstable-options"),
+        p.cargo("publish --registry alternative -Zunstable-options")
+            .masquerade_as_nightly_cargo(),
         execs().with_status(101).with_stderr(
             "\
 error: failed to parse manifest at `[..]`
@@ -774,11 +752,8 @@ fn publish_empty_list() {
         .build();
 
     assert_that(
-        p.cargo("publish")
-            .masquerade_as_nightly_cargo()
-            .arg("--registry")
-            .arg("alternative")
-            .arg("-Zunstable-options"),
+        p.cargo("publish --registry alternative -Zunstable-options")
+            .masquerade_as_nightly_cargo(),
         execs().with_status(101).with_stderr(
             "\
 [ERROR] some crates cannot be published.
@@ -815,11 +790,8 @@ fn publish_allowed_registry() {
         .build();
 
     assert_that(
-        p.cargo("publish")
-            .masquerade_as_nightly_cargo()
-            .arg("--registry")
-            .arg("alternative")
-            .arg("-Zunstable-options"),
+        p.cargo("publish --registry alternative -Zunstable-options")
+            .masquerade_as_nightly_cargo(),
         execs(),
     );
 }
@@ -847,11 +819,8 @@ fn block_publish_no_registry() {
         .build();
 
     assert_that(
-        p.cargo("publish")
-            .masquerade_as_nightly_cargo()
-            .arg("--registry")
-            .arg("alternative")
-            .arg("-Zunstable-options"),
+        p.cargo("publish --registry alternative -Zunstable-options")
+            .masquerade_as_nightly_cargo(),
         execs().with_status(101).with_stderr(
             "\
 [ERROR] some crates cannot be published.
