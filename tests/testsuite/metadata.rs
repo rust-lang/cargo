@@ -980,7 +980,7 @@ fn multiple_features() {
         .build();
 
     assert_that(
-        p.cargo("metadata --features a b"),
+        p.cargo("metadata --features").arg("a b"),
         execs(),
     );
 }
