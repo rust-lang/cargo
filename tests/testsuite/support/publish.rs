@@ -42,7 +42,7 @@ pub fn setup() -> Repository {
                 r#"{{
                     "dl": "{0}",
                     "api": "{0}",
-                    "commands": "{1}"
+                    "commands": {1}
                 }}"#,
                 upload(),
                 COMMANDS,
