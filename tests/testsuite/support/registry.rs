@@ -55,7 +55,7 @@ pub const COMMANDS: &str = r#"{
     "search": ["v1"],
     "owner": ["v1"],
     "login": ["v1"]
-}";
+}"#;
 
 pub struct Package {
     name: String,
@@ -110,10 +110,9 @@ pub fn init() {
         .file(
             "config.json",
             &format!(
-                r#"
-            {{"dl":"{0}","api":"{0}","commands":"{1}"}}
-        "#,
-                dl_url(), COMMANDS,
+                r#"{{"dl":"{0}","api":"{0}","commands":"{1}"}}"#,
+                dl_url(),
+                COMMANDS,
             ),
         )
         .build();

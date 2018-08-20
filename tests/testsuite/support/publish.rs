@@ -40,11 +40,11 @@ pub fn setup() -> Repository {
             "config.json",
             &format!(
                 r#"{{
-            "dl": "{0}",
-            "api": "{0}",
-            "commands": "{1}"
-        }}"#,
-                upload()
+                    "dl": "{0}",
+                    "api": "{0}",
+                    "commands": "{1}"
+                }}"#,
+                upload(),
                 COMMANDS,
             ),
         )
