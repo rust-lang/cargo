@@ -1,12 +1,13 @@
 use std::fs::{self, File};
-use std::io::SeekFrom;
 use std::io::prelude::*;
-use std::path::{self, Path};
+use std::io::SeekFrom;
+use std::path::{self, Path, PathBuf};
 use std::sync::Arc;
 
 use flate2::read::GzDecoder;
 use flate2::{Compression, GzBuilder};
 use git2;
+use serde_json;
 use tar::{Archive, Builder, EntryType, Header};
 
 use core::{Package, Source, SourceId, Workspace};
@@ -28,6 +29,8 @@ pub struct PackageOpts<'cfg> {
     pub registry: Option<String>,
 }
 
+static VCS_INFO_FILE: &'static str = ".cargo_vcs_info.json";
+
 pub fn package(ws: &Workspace, opts: &PackageOpts) -> CargoResult<Option<FileLock>> {
     ops::resolve_ws(ws)?;
     let pkg = ws.current()?;
@@ -42,6 +45,19 @@ pub fn package(ws: &Workspace, opts: &PackageOpts) -> CargoResult<Option<FileLoc
 
     verify_dependencies(pkg)?;
 
+    // `list_files` outputs warnings as a side effect, so only do it once.
+    let src_files = src.list_files(pkg)?;
+
+    // Make sure a VCS info file is not included in source, regardless of if
+    // we produced the file above, and in particular if we did not.
+    check_vcs_file_collision(pkg, &src_files)?;
+
+    // Check (git) repository state, getting the current commit hash if not
+    // dirty. This will `bail!` if dirty, unless allow_dirty. Produce json
+    // info for any sha1 (HEAD revision) returned.
+    let vcs_info = check_repo_state(pkg, &src_files, &config, opts.allow_dirty)?
+        .map(|h| json!({"git":{"sha1": h}}));
+
     if opts.list {
         let root = pkg.root();
         let mut list: Vec<_> = src.list_files(pkg)?
@@ -51,15 +67,14 @@ pub fn package(ws: &Workspace, opts: &PackageOpts) -> CargoResult<Option<FileLoc
         if include_lockfile(pkg) {
             list.push("Cargo.lock".into());
         }
+        if vcs_info.is_some() {
+            list.push(Path::new(VCS_INFO_FILE).to_path_buf());
+        }
         list.sort_unstable();
         for file in list.iter() {
             println!("{}", file.display());
         }
         return Ok(None);
-    }
-
-    if !opts.allow_dirty {
-        check_not_dirty(pkg, &src, &config)?;
     }
 
     let filename = format!("{}-{}.crate", pkg.name(), pkg.version());
@@ -77,7 +92,7 @@ pub fn package(ws: &Workspace, opts: &PackageOpts) -> CargoResult<Option<FileLoc
         .shell()
         .status("Packaging", pkg.package_id().to_string())?;
     dst.file().set_len(0)?;
-    tar(ws, &src, dst.file(), &filename)
+    tar(ws, &src_files, vcs_info.as_ref(), dst.file(), &filename)
         .chain_err(|| format_err!("failed to prepare local package for uploading"))?;
     if opts.verify {
         dst.seek(SeekFrom::Start(0))?;
@@ -152,7 +167,16 @@ fn verify_dependencies(pkg: &Package) -> CargoResult<()> {
     Ok(())
 }
 
-fn check_not_dirty(p: &Package, src: &PathSource, config: &Config) -> CargoResult<()> {
+// Check if the package source is in a *git* DVCS repository. If *git*, and
+// the source is *dirty* (e.g. has uncommited changes) and not `allow_dirty`
+// then `bail!` with an informative message. Otherwise return the sha1 hash of
+// the current *HEAD* commit, or `None` if *dirty*.
+fn check_repo_state(
+    p: &Package,
+    src_files: &[PathBuf],
+    config: &Config,
+    allow_dirty: bool
+) -> CargoResult<Option<String>> {
     if let Ok(repo) = git2::Repository::discover(p.root()) {
         if let Some(workdir) = repo.workdir() {
             debug!("found a git repo at {:?}", workdir);
@@ -164,7 +188,7 @@ fn check_not_dirty(p: &Package, src: &PathSource, config: &Config) -> CargoResul
                         "found (git) Cargo.toml at {:?} in workdir {:?}",
                         path, workdir
                     );
-                    return git(p, src, &repo);
+                    return git(p, src_files, &repo, allow_dirty);
                 }
             }
             config.shell().verbose(|shell| {
@@ -182,11 +206,16 @@ fn check_not_dirty(p: &Package, src: &PathSource, config: &Config) -> CargoResul
 
     // No VCS with a checked in Cargo.toml found. so we don't know if the
     // directory is dirty or not, so we have to assume that it's clean.
-    return Ok(());
+    return Ok(None);
 
-    fn git(p: &Package, src: &PathSource, repo: &git2::Repository) -> CargoResult<()> {
+    fn git(
+        p: &Package,
+        src_files: &[PathBuf],
+        repo: &git2::Repository,
+        allow_dirty: bool
+    ) -> CargoResult<Option<String>> {
         let workdir = repo.workdir().unwrap();
-        let dirty = src.list_files(p)?
+        let dirty = src_files
             .iter()
             .filter(|file| {
                 let relative = file.strip_prefix(workdir).unwrap();
@@ -204,20 +233,46 @@ fn check_not_dirty(p: &Package, src: &PathSource, config: &Config) -> CargoResul
             })
             .collect::<Vec<_>>();
         if dirty.is_empty() {
-            Ok(())
+            let rev_obj = repo.revparse_single("HEAD")?;
+            Ok(Some(rev_obj.id().to_string()))
         } else {
-            bail!(
-                "{} files in the working directory contain changes that were \
-                 not yet committed into git:\n\n{}\n\n\
-                 to proceed despite this, pass the `--allow-dirty` flag",
-                dirty.len(),
-                dirty.join("\n")
-            )
+            if !allow_dirty {
+                bail!(
+                    "{} files in the working directory contain changes that were \
+                     not yet committed into git:\n\n{}\n\n\
+                     to proceed despite this, pass the `--allow-dirty` flag",
+                    dirty.len(),
+                    dirty.join("\n")
+                )
+            }
+            Ok(None)
         }
     }
 }
 
-fn tar(ws: &Workspace, src: &PathSource, dst: &File, filename: &str) -> CargoResult<()> {
+// Check for and `bail!` if a source file matches ROOT/VCS_INFO_FILE, since
+// this is now a cargo reserved file name, and we don't want to allow
+// forgery.
+fn check_vcs_file_collision(pkg: &Package, src_files: &[PathBuf]) -> CargoResult<()> {
+    let root = pkg.root();
+    let vcs_info_path = Path::new(VCS_INFO_FILE);
+    let collision = src_files.iter().find(|&p| {
+        util::without_prefix(&p, root).unwrap() == vcs_info_path
+    });
+    if collision.is_some() {
+        bail!("Invalid inclusion of reserved file name \
+               {} in package source", VCS_INFO_FILE);
+    }
+    Ok(())
+}
+
+fn tar(
+    ws: &Workspace,
+    src_files: &[PathBuf],
+    vcs_info: Option<&serde_json::Value>,
+    dst: &File,
+    filename: &str
+) -> CargoResult<()> {
     // Prepare the encoder and its header
     let filename = Path::new(filename);
     let encoder = GzBuilder::new()
@@ -229,7 +284,7 @@ fn tar(ws: &Workspace, src: &PathSource, dst: &File, filename: &str) -> CargoRes
     let pkg = ws.current()?;
     let config = ws.config();
     let root = pkg.root();
-    for file in src.list_files(pkg)?.iter() {
+    for file in src_files.iter() {
         let relative = util::without_prefix(file, root).unwrap();
         check_filename(relative)?;
         let relative = relative.to_str().ok_or_else(|| {
@@ -295,6 +350,36 @@ fn tar(ws: &Workspace, src: &PathSource, dst: &File, filename: &str) -> CargoRes
             ar.append(&header, &mut file)
                 .chain_err(|| internal(format!("could not archive source file `{}`", relative)))?;
         }
+    }
+
+    if let Some(ref json) = vcs_info {
+        let filename: PathBuf = Path::new(VCS_INFO_FILE).into();
+        debug_assert!(check_filename(&filename).is_ok());
+        let fnd = filename.display();
+        config
+            .shell()
+            .verbose(|shell| shell.status("Archiving", &fnd))?;
+        let path = format!(
+            "{}-{}{}{}",
+            pkg.name(),
+            pkg.version(),
+            path::MAIN_SEPARATOR,
+            fnd
+        );
+        let mut header = Header::new_ustar();
+        header.set_path(&path).chain_err(|| {
+            format!("failed to add to archive: `{}`", fnd)
+        })?;
+        let json = format!("{}\n", serde_json::to_string_pretty(json)?);
+        let mut header = Header::new_ustar();
+        header.set_path(&path)?;
+        header.set_entry_type(EntryType::file());
+        header.set_mode(0o644);
+        header.set_size(json.len() as u64);
+        header.set_cksum();
+        ar.append(&header, json.as_bytes()).chain_err(|| {
+            internal(format!("could not archive source file `{}`", fnd))
+        })?;
     }
 
     if include_lockfile(pkg) {

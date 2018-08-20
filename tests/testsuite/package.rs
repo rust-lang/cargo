@@ -155,17 +155,17 @@ See http://doc.crates.io/manifest.html#package-metadata for more info.
 #[test]
 fn package_verbose() {
     let root = paths::root().join("all");
-    let p = git::repo(&root)
+    let repo = git::repo(&root)
         .file("Cargo.toml", &basic_manifest("foo", "0.0.1"))
         .file("src/main.rs", "fn main() {}")
         .file("a/Cargo.toml", &basic_manifest("a", "0.0.1"))
         .file("a/src/lib.rs", "")
         .build();
-    assert_that(cargo_process("build").cwd(p.root()), execs());
+    assert_that(cargo_process("build").cwd(repo.root()), execs());
 
     println!("package main repo");
     assert_that(
-        cargo_process("package -v --no-verify").cwd(p.root()),
+        cargo_process("package -v --no-verify").cwd(repo.root()),
         execs().with_stderr(
             "\
 [WARNING] manifest has no description[..]
@@ -173,20 +173,46 @@ See http://doc.crates.io/manifest.html#package-metadata for more info.
 [PACKAGING] foo v0.0.1 ([..])
 [ARCHIVING] [..]
 [ARCHIVING] [..]
+[ARCHIVING] .cargo_vcs_info.json
 ",
         ),
     );
 
+    let f = File::open(&repo.root().join("target/package/foo-0.0.1.crate")).unwrap();
+    let mut rdr = GzDecoder::new(f);
+    let mut contents = Vec::new();
+    rdr.read_to_end(&mut contents).unwrap();
+    let mut ar = Archive::new(&contents[..]);
+    let mut entry = ar.entries().unwrap()
+        .map(|f| f.unwrap())
+        .find(|e| e.path().unwrap().ends_with(".cargo_vcs_info.json"))
+        .unwrap();
+    let mut contents = String::new();
+    entry.read_to_string(&mut contents).unwrap();
+    assert_eq!(
+        &contents[..],
+        &*format!(
+            r#"{{
+  "git": {{
+    "sha1": "{}"
+  }}
+}}
+"#,
+            repo.revparse_head()
+        )
+    );
+
     println!("package sub-repo");
     assert_that(
-        cargo_process("package -v --no-verify").cwd(p.root().join("a")),
+        cargo_process("package -v --no-verify").cwd(repo.root().join("a")),
         execs().with_stderr(
             "\
 [WARNING] manifest has no description[..]
 See http://doc.crates.io/manifest.html#package-metadata for more info.
 [PACKAGING] a v0.0.1 ([..])
-[ARCHIVING] [..]
-[ARCHIVING] [..]
+[ARCHIVING] Cargo.toml
+[ARCHIVING] src/lib.rs
+[ARCHIVING] .cargo_vcs_info.json
 ",
         ),
     );
@@ -210,6 +236,42 @@ See http://doc.crates.io/manifest.html#package-metadata for more info.
 [FINISHED] dev [unoptimized + debuginfo] target(s) in [..]
 ",
             dir = p.url()
+        )),
+    );
+}
+
+#[test]
+fn vcs_file_collision() {
+    let p = project().build();
+    let _ = git::repo(&paths::root().join("foo"))
+        .file(
+            "Cargo.toml",
+            r#"
+            [project]
+            name = "foo"
+            description = "foo"
+            version = "0.0.1"
+            authors = []
+            license = "MIT"
+            documentation = "foo"
+            homepage = "foo"
+            repository = "foo"
+            exclude = ["*.no-existe"]
+        "#)
+        .file(
+            "src/main.rs",
+            r#"
+            fn main() {}
+        "#)
+        .file(".cargo_vcs_info.json", "foo")
+        .build();
+    assert_that(
+        p.cargo("package").arg("--no-verify"),
+        execs().with_status(101).with_stderr(&format!(
+            "\
+[ERROR] Invalid inclusion of reserved file name .cargo_vcs_info.json \
+in package source
+",
         )),
     );
 }
@@ -320,8 +382,6 @@ fn exclude() {
             "\
 [WARNING] manifest has no description[..]
 See http://doc.crates.io/manifest.html#package-metadata for more info.
-[WARNING] No (git) Cargo.toml found at `[..]` in workdir `[..]`
-[PACKAGING] foo v0.0.1 ([..])
 [WARNING] [..] file `dir_root_1/some_dir/file` WILL be excluded [..]
 See [..]
 [WARNING] [..] file `dir_root_2/some_dir/file` WILL be excluded [..]
@@ -334,6 +394,8 @@ See [..]
 See [..]
 [WARNING] [..] file `some_dir/file_deep_1` WILL be excluded [..]
 See [..]
+[WARNING] No (git) Cargo.toml found at `[..]` in workdir `[..]`
+[PACKAGING] foo v0.0.1 ([..])
 [ARCHIVING] [..]
 [ARCHIVING] [..]
 [ARCHIVING] [..]
@@ -483,7 +545,7 @@ fn no_duplicates_from_modified_tracked_files() {
         .unwrap();
     assert_that(cargo_process("build").cwd(p.root()), execs());
     assert_that(
-        cargo_process("package --list").cwd(p.root()),
+        cargo_process("package --list --allow-dirty").cwd(p.root()),
         execs().with_stdout(
             "\
 Cargo.toml
@@ -1188,6 +1250,7 @@ fn package_lockfile_git_repo() {
         p.cargo("package -l").masquerade_as_nightly_cargo(),
         execs().with_stdout(
             "\
+.cargo_vcs_info.json
 Cargo.lock
 Cargo.toml
 src/main.rs
