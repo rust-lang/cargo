@@ -19,29 +19,49 @@ pub fn cli() -> App {
 }
 
 pub fn exec(config: &mut Config, args: &ArgMatches) -> CliResult {
+    // 1. Get the registry src for this command
     let registry = args.registry(config)?;
+    let src_id = match &registry {
+        Some(registry)  => SourceId::alt_registry(config, registry),
+        None            => SourceId::crates_io(config),
+    }?;
+    let mut src = RegistrySource::remote(&src_id, config);
 
+    // 2. Update the src so that we have the latest information
+    src.update()?;
+
+    // 3. Check if this registry supports cargo login v1
+    let reg_cfg = src.config()?.unwrap();
+    if !reg_cfg.commands.get("login").unwrap_or(&vec![]).iter().any(|v| v == "v1") {
+        let registry = match &registry {
+            Some(registry)  => registry,
+            None            => "crates-io",
+        };
+        Err(format_err!("`{}` does not support the `cargo login` command with \
+                     version `v1`", registry))?;
+    }
+
+    // 4. Either we already have the token, or we get it from the command line
     let token = match args.value_of("token") {
         Some(token) => token.to_string(),
         None => {
-            let host = match registry {
-                Some(ref _registry) => {
-                    return Err(format_err!(
-                        "token must be provided when \
-                         --registry is provided."
-                    ).into());
-                }
-                None => {
-                    let src = SourceId::crates_io(config)?;
-                    let mut src = RegistrySource::remote(&src, config);
-                    src.update()?;
-                    let config = src.config()?.unwrap();
-                    args.value_of("host")
-                        .map(|s| s.to_string())
-                        .unwrap_or_else(|| config.api.unwrap())
-                }
+            // Print instructions to stdout. The exact wording of the message is determined by
+            // whether or not the user passed `--registry`.
+            let host = args.value_of("host")
+                .map(|s| s.to_string())
+                .unwrap_or_else(|| reg_cfg.api.unwrap());
+            let separator = match host.ends_with("/") {
+                true    => "",
+                false   => "/",
             };
-            println!("please visit {}me and paste the API Token below", host);
+            if registry.is_some() {
+                println!("please paste the API Token below (you may be able to obtain your token
+                          by visiting {}{}me", host, separator);
+            } else {
+                println!("please visit {}{}me and paste the API Token below", host, separator);
+            }
+
+            // Read the token from stdin.
             let mut line = String::new();
             let input = io::stdin();
             input

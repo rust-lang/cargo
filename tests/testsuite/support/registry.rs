@@ -49,6 +49,14 @@ pub fn alt_api_url() -> Url {
     Url::from_file_path(&*alt_api_path()).ok().unwrap()
 }
 
+pub const COMMANDS: &str = r#"{
+    "publish": ["v1"],
+    "yank": ["v1"],
+    "search": ["v1"],
+    "owner": ["v1"],
+    "login": ["v1"]
+}";
+
 pub struct Package {
     name: String,
     vers: String,
@@ -103,9 +111,9 @@ pub fn init() {
             "config.json",
             &format!(
                 r#"
-            {{"dl":"{0}","api":"{0}"}}
+            {{"dl":"{0}","api":"{0}","commands":"{1}"}}
         "#,
-                dl_url()
+                dl_url(), COMMANDS,
             ),
         )
         .build();
@@ -117,10 +125,11 @@ pub fn init() {
             "config.json",
             &format!(
                 r#"
-            {{"dl":"{}","api":"{}"}}
+            {{"dl":"{}","api":"{}","commands":"{}"}}
         "#,
                 alt_dl_url(),
-                alt_api_url()
+                alt_api_url(),
+                COMMANDS,
             ),
         )
         .build();

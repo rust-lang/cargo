@@ -210,6 +210,9 @@ pub struct RegistryConfig {
     /// API endpoint for the registry. This is what's actually hit to perform
     /// operations like yanks, owner modifications, publish new crates, etc.
     pub api: Option<String>,
+
+    #[serde(default)]
+    pub commands: BTreeMap<String, Vec<String>>,
 }
 
 #[derive(Deserialize)]

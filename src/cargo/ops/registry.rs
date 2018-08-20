@@ -315,14 +315,15 @@ pub fn registry(
     } = registry_configuration(config, registry.clone())?;
     let token = token.or(token_config);
     let sid = get_source_id(config, index_config.or(index), registry)?;
-    let api_host = {
+    let (api_host, commands) = {
         let mut src = RegistrySource::remote(&sid, config);
         src.update()
             .chain_err(|| format!("failed to update {}", sid))?;
-        (src.config()?).unwrap().api.unwrap()
+        let cfg = src.config()?.unwrap();
+        (cfg.api.unwrap(), cfg.commands)
     };
     let handle = http_handle(config)?;
-    Ok((Registry::new_handle(api_host, token, handle), sid))
+    Ok((Registry::new_handle(api_host, commands, token, handle), sid))
 }
 
 /// Create a new HTTP handle with appropriate global configuration for cargo.
@@ -599,11 +600,12 @@ pub fn search(
                 .chain_err(|| format!("failed to update {}", &sid))?;
             regsrc.config()?
         }
-    };
+    }.unwrap();
 
-    let api_host = cfg.unwrap().api.unwrap();
+    let api_host = cfg.api.unwrap();
+    let commands = cfg.commands;
     let handle = http_handle(config)?;
-    let mut registry = Registry::new_handle(api_host, None, handle);
+    let mut registry = Registry::new_handle(api_host, commands, None, handle);
     let (crates, total_crates) = registry
         .search(query, limit)
         .chain_err(|| "failed to retrieve search results from the registry")?;

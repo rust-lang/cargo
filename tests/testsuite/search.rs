@@ -5,7 +5,7 @@ use std::path::Path;
 use support::{cargo_process, execs};
 use support::git::repo;
 use support::paths;
-use support::registry::{api_path, registry as registry_url, registry_path};
+use support::registry::{api_path, registry as registry_url, registry_path, COMMANDS};
 use support::hamcrest::assert_that;
 use url::Url;
 
@@ -65,7 +65,8 @@ fn setup() {
 
     // Init a new registry
     let _ = repo(&registry_path())
-        .file("config.json", &format!(r#"{{"dl":"{0}","api":"{0}"}}"#, api()))
+        .file("config.json", &format!(r#"{{"dl":"{0}","api":"{0}","commands":"{1}"}}"#, api(),
+                                      COMMANDS))
         .build();
 
     let base = api_path().join("api/v1/crates");

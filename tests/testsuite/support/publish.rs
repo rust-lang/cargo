@@ -4,6 +4,7 @@ use std::fs::{self, File};
 
 use support::paths;
 use support::git::{repo, Repository};
+use support::registry::COMMANDS;
 
 use url::Url;
 
@@ -40,9 +41,11 @@ pub fn setup() -> Repository {
             &format!(
                 r#"{{
             "dl": "{0}",
-            "api": "{0}"
+            "api": "{0}",
+            "commands": "{1}"
         }}"#,
                 upload()
+                COMMANDS,
             ),
         )
         .build()
