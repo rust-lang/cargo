@@ -785,12 +785,12 @@ fn warns_about_dirty_working_directory() {
         execs()
             .with_status(101)
             .with_stderr("\
-error: the working directory of this project is detected as dirty, and `cargo \
-fix` can potentially perform destructive changes; if you'd like to \
-suppress this error pass `--allow-dirty`, or commit the changes to \
-these files:
+error: the working directory of this project has uncommitted changes, \
+and `cargo fix` can potentially perform destructive changes; if you'd \
+like to suppress this error pass `--allow-dirty`, or commit the changes \
+to these files:
 
-  * src/lib.rs
+  * src/lib.rs (dirty)
 
 
 ")

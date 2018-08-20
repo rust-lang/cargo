@@ -113,10 +113,10 @@ fn check_version_control(opts: &FixOptions) -> CargoResult<()> {
     for file in dirty_files {
         files_list.push_str("  * ");
         files_list.push_str(&file);
-        files_list.push_str("\n");
+        files_list.push_str(" (dirty)\n");
     }
 
-    bail!("the working directory of this project is detected as dirty, and \
+    bail!("the working directory of this project has uncommitted changes, and \
            `cargo fix` can potentially perform destructive changes; if you'd \
            like to suppress this error pass `--allow-dirty`, or commit the \
            changes to these files:\n\
