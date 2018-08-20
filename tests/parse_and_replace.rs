@@ -13,6 +13,7 @@ extern crate difference;
 
 use std::collections::HashSet;
 use std::ffi::OsString;
+use std::env;
 use std::fs;
 use std::path::{Path, PathBuf};
 use std::process::Output;
@@ -51,7 +52,7 @@ fn compile(file: &Path, mode: &str) -> Result<Output, Error> {
         args.push("--edition=2018".into());
     }
 
-    let res = duct::cmd("rustc", &args)
+    let res = duct::cmd(env::var_os("RUSTC").unwrap_or("rustc".into()), &args)
         .env("CLIPPY_DISABLE_DOCS_LINKS", "true")
         .env_remove("RUST_LOG")
         .stdout_capture()
