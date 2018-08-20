@@ -229,7 +229,7 @@ struct SerializedTarget<'a> {
     name: &'a str,
     src_path: &'a PathBuf,
     edition: &'a str,
-    #[serde(skip_serializing_if = "Option::is_none")]
+    #[serde(rename = "required-features", skip_serializing_if = "Option::is_none")]
     required_features: Option<Vec<&'a str>>,
 }
 
