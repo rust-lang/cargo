@@ -2545,6 +2545,7 @@ fn rebuild_only_on_explicit_paths() {
     sleep_ms(1000);
     File::create(p.root().join("foo")).unwrap();
     File::create(p.root().join("bar")).unwrap();
+    sleep_ms(1000); // make sure the to-be-created outfile has a timestamp distinct from the infiles
 
     // now the exist, so run once, catch the mtime, then shouldn't run again
     println!("run with");
