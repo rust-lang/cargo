@@ -744,7 +744,11 @@ where
                 return true;
             }
         };
-        if mtime2 > mtime {
+        // Equal mtimes could mean that the input was changed in that same second,
+        // but *after* the output was generated.  So this means they are stale.
+        // In theory, cargo is using nanosecond precision throughout so this
+        // should not make a difference -- but it was necessary to fix #5918.
+        if mtime2 >= mtime {
             info!("stale: {} -- {} vs {}", path.display(), mtime2, mtime);
             true
         } else {
