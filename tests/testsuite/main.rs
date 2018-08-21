@@ -9,6 +9,8 @@ extern crate flate2;
 extern crate git2;
 extern crate glob;
 extern crate hex;
+#[macro_use]
+extern crate lazy_static;
 extern crate libc;
 #[macro_use]
 extern crate proptest;
