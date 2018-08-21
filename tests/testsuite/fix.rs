@@ -7,6 +7,8 @@ use support::{basic_manifest, execs, project};
 use support::{is_nightly, ChannelChanger};
 use support::hamcrest::assert_that;
 
+use std::io::Write;
+
 #[test]
 fn do_not_fix_broken_builds() {
     let p = project()
@@ -799,6 +801,46 @@ commit the changes to these files:
         p.cargo("fix --allow-dirty"),
         execs(),
     );
+}
+
+#[test]
+fn warns_about_staged_working_directory() {
+    let p = project()
+        .file("src/lib.rs", "pub fn foo() {}")
+        .build();
+
+    let repo = git2::Repository::init(&p.root()).unwrap();
+    let mut cfg = t!(repo.config());
+    t!(cfg.set_str("user.email", "foo@bar.com"));
+    t!(cfg.set_str("user.name", "Foo Bar"));
+    drop(cfg);
+    git::add(&repo);
+    git::commit(&repo);
+    File::create(&p.root().join("src/lib.rs"))
+        .unwrap()
+        .write_all("pub fn bar() {}".to_string().as_bytes())
+        .unwrap();
+    git::add(&repo);
+
+    assert_that(
+        p.cargo("fix"),
+        execs()
+            .with_status(101)
+            .with_stderr("\
+error: the working directory of this project has uncommitted changes, \
+and `cargo fix` can potentially perform destructive changes; if you'd \
+like to suppress this error pass `--allow-dirty`, `--allow-staged`, or \
+commit the changes to these files:
+
+  * src/lib.rs (staged)
+
+
+")
+    );
+     assert_that(
+         p.cargo("fix --allow-staged"),
+         execs(),
+     );
 }
 
 #[test]
