@@ -93,6 +93,7 @@ features = [
 
 [dev-dependencies]
 bufstream = "0.1"
+proptest = "0.8.4"
 
 [[bin]]
 name = "cargo"
