@@ -2748,3 +2748,53 @@ fn failed_submodule_checkout() {
     drop(TcpStream::connect(&addr));
     t.join().unwrap();
 }
+
+#[test]
+fn use_the_cli() {
+    let project = project();
+    let git_project = git::new("dep1", |project| {
+        project.file("Cargo.toml", &basic_manifest("dep1", "0.5.0"))
+            .file("src/lib.rs", "")
+    }).unwrap();
+
+    let project = project
+        .file(
+            "Cargo.toml",
+            &format!(
+                r#"
+                    [project]
+                    name = "foo"
+                    version = "0.5.0"
+                    authors = []
+
+                    [dependencies]
+                    dep1 = {{ git = '{}' }}
+                "#,
+                git_project.url()
+            ),
+        )
+        .file("src/lib.rs", "")
+        .file(
+            ".cargo/config",
+            "
+                [net]
+                git-fetch-with-cli = true
+            "
+        )
+        .build();
+
+    let stderr = "\
+[UPDATING] git repository `[..]`
+[RUNNING] `git fetch [..]`
+[COMPILING] dep1 [..]
+[RUNNING] `rustc [..]`
+[COMPILING] foo [..]
+[RUNNING] `rustc [..]`
+[FINISHED] [..]
+";
+
+    assert_that(
+        project.cargo("build -v"),
+        execs().with_stderr(stderr)
+    );
+}
