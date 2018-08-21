@@ -62,10 +62,13 @@ trait ToDep {
     fn to_dep(self) -> Dependency;
 }
 
+lazy_static! {
+    static ref EXAMPLE_DOT_COM: ::url::Url = "http://example.com".to_url().unwrap();
+}
+
 impl ToDep for &'static str {
     fn to_dep(self) -> Dependency {
-        let url = "http://example.com".to_url().unwrap();
-        let source_id = SourceId::for_registry(&url).unwrap();
+        let source_id = SourceId::for_registry(&EXAMPLE_DOT_COM).unwrap();
         Dependency::parse_no_deprecated(self, Some("1.0.0"), &source_id).unwrap()
     }
 }
@@ -117,8 +120,7 @@ macro_rules! pkg {
 }
 
 fn registry_loc() -> SourceId {
-    let remote = "http://example.com".to_url().unwrap();
-    SourceId::for_registry(&remote).unwrap()
+    SourceId::for_registry(&EXAMPLE_DOT_COM).unwrap()
 }
 
 fn pkg(name: &str) -> Summary {
@@ -161,8 +163,7 @@ fn dep(name: &str) -> Dependency {
     dep_req(name, "1.0.0")
 }
 fn dep_req(name: &str, req: &str) -> Dependency {
-    let url = "http://example.com".to_url().unwrap();
-    let source_id = SourceId::for_registry(&url).unwrap();
+    let source_id = SourceId::for_registry(&EXAMPLE_DOT_COM).unwrap();
     Dependency::parse_no_deprecated(name, Some(req), &source_id).unwrap()
 }
 
