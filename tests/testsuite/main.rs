@@ -11,6 +11,8 @@ extern crate glob;
 extern crate hex;
 extern crate libc;
 #[macro_use]
+extern crate proptest;
+#[macro_use]
 extern crate serde_derive;
 #[macro_use]
 extern crate serde_json;
