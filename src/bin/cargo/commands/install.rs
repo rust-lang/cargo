@@ -60,9 +60,10 @@ By default cargo will refuse to overwrite existing binaries. The `--force` flag
 enables overwriting existing binaries. Thus you can reinstall a crate with
 `cargo install --force <crate>`.
 
-As a special convenience, omitting the <crate> specification entirely will
+Omitting the <crate> specification entirely will
 install the crate in the current directory. That is, `install` is equivalent to
-the more explicit `install --path .`.
+the more explicit `install --path .`.  This behaviour is deprecated, and no
+longer supported as of the Rust 2018 edition.
 
 If the source is crates.io or `--git` then by default the crate will be built
 in a temporary target directory.  To avoid this, the target directory can be

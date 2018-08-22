@@ -237,15 +237,16 @@ fn install_one(
     if from_cwd {
         match pkg.manifest().edition() {
             Edition::Edition2015 => config.shell().warn(
-                "To build the current package use `cargo build`, \
-                 to install the current package run `cargo install --path .`",
+                "Using `cargo install` to install the binaries for the \
+                 project in current working directory is deprecated, \
+                 use `cargo install --path .` instead. \
+                 Use `cargo build` if you want to simply build the package.",
             )?,
             Edition::Edition2018 => bail!(
-                "To build the current package use `cargo build`, \
-                 to install the current package run `cargo install --path .`, \
-                 otherwise specify a crate to install from \
-                 crates.io, or use --path or --git to \
-                 specify alternate source"
+                "Using `cargo install` to install the binaries for the \
+                 project in current working directory is no longer supported, \
+                 use `cargo install --path .` instead. \
+                 Use `cargo build` if you want to simply build the package."
             ),
         }
     };
