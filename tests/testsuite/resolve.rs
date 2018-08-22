@@ -1,4 +1,4 @@
-use std::collections::{BTreeMap, HashSet};
+use std::collections::{BTreeMap, BTreeSet, HashSet};
 
 use support::hamcrest::{assert_that, contains, is_not};
 
@@ -12,11 +12,9 @@ use support::ChannelChanger;
 use support::{execs, project};
 use support::registry::Package;
 
-use proptest::collection::btree_map;
-use proptest::collection::vec;
+use proptest::collection::{btree_map, btree_set, vec};
 use proptest::prelude::*;
 use proptest::sample::subsequence;
-use std::iter;
 
 fn resolve(
     pkg: &PackageId,
@@ -195,7 +193,7 @@ fn loc_names(names: &[(&'static str, &'static str)]) -> Vec<PackageId> {
 /// This generates a random registry index.
 /// Unlike vec((Name, Ver, vec((Name, VerRq), ..), ..)
 /// This strategy has a high probability of having valid dependencies
-fn registry_strategy() -> impl Strategy<Value = Vec<Summary>> {
+fn registry_strategy() -> impl Strategy<Value=Vec<Summary>> {
     const VALID_NAME_STRATEGY: &str = "[A-Za-z_-][A-Za-z0-9_-]*";
     const MAX_CRATES: usize = 10;
     const MAX_VERSIONS: usize = 10;
@@ -203,74 +201,83 @@ fn registry_strategy() -> impl Strategy<Value = Vec<Summary>> {
     fn range(max: usize) -> impl Strategy<Value = (usize, usize)> {
         (0..max).prop_flat_map(move |low| (Just(low), low..=max))
     }
-    btree_map(VALID_NAME_STRATEGY, 1..=MAX_CRATES, 1..=MAX_VERSIONS)
-        .prop_map(|mut b| {
-            // root is the name of the thing being compiled
-            // so it would be confusing to have it in the index
-            b.remove("root");
-            (
-                b.iter().map(|(name, _)| name.clone()).collect::<Vec<_>>(),
-                b.iter()
-                    .flat_map(|(name, &num)| {
-                        iter::repeat(name.clone())
-                            .take(num)
-                            .enumerate()
-                            .map(|(i, name)| (name, format!("{}.0.0", i + 1)))
-                    })
-                    .collect::<Vec<_>>(),
-            )
-        })
-        .prop_flat_map(|(names, data)| {
-            let names_len = names.len();
-            let data_len = data.len();
-            (
-                Just(data),
-                vec(subsequence(names, 0..names_len), data_len..=data_len),
-            )
-        })
-        .prop_flat_map(|(data, deps)| {
-            let len = deps.iter().map(|x| x.len()).sum();
-            (
-                Just(data),
-                Just(deps),
-                vec(
-                    range(MAX_VERSIONS).prop_map(|(b, e)| format!(">={}.0.0, <={}.0.0", b, e)),
-                    len..=len,
-                ),
-            )
-        })
-        .prop_map(|(data, deps, vers)| {
-            let mut i = 0;
-            data.into_iter()
-                .zip(deps.into_iter())
-                .map(|((name, ver), deps)| {
-                    let d: Vec<Dependency> = deps.into_iter()
-                        .filter(|n| &name < n)
-                        .map(|n| {
-                            i += 1;
-                            dep_req(&n, &vers[i - 1])
-                        })
-                        .collect();
-                    let pkgid = (name.as_str(), ver).to_pkgid();
-                    let link = if pkgid.name().ends_with("-sys") { Some(pkgid.name().as_str()) } else { None };
 
-                    Summary::new(pkgid, d, &BTreeMap::<String, Vec<String>>::new(), link, false).unwrap()
-                })
-                .collect()
-        })
+    fn ver(max: usize) -> impl Strategy<Value=(usize, usize, usize)> {
+        (0..=max, 0..=max, 0..=max)
+    }
+
+    btree_map(
+        VALID_NAME_STRATEGY,
+        btree_set(
+            ver(MAX_VERSIONS).prop_map(|(a, b, c)| format!("{}.{}.{}", a, b, c)),
+            1..=MAX_VERSIONS,
+        ),
+        1..=MAX_CRATES,
+    ).prop_map(|mut b| {
+        // root is the name of the thing being compiled
+        // so it would be confusing to have it in the index
+        b.remove("root");
+        // if randomly pointing to a dependency that does not exist then call it `bad`
+        b.insert("bad".to_owned(), BTreeSet::new());
+        (
+            b.iter()
+                .map(|(name, _)| name.clone())
+                .collect::<Vec<String>>(),
+            b.iter()
+                .flat_map(|(name, vers)| vers.into_iter().map(move |v| (name.clone(), v.clone())))
+                .collect::<Vec<_>>(),
+        )
+    }).prop_flat_map(|(names, data)| {
+        let names_len = names.len();
+        let data_len = data.len();
+        (
+            Just(data),
+            vec(subsequence(names, 0..names_len), data_len..=data_len),
+        )
+    }).prop_flat_map(|(data, deps)| {
+        let len = deps.iter().map(|x| x.len()).sum();
+        (
+            Just(data),
+            Just(deps),
+            vec(
+                range(MAX_VERSIONS).prop_map(|(b, e)| format!(">={}.0.0, <={}.0.0", b, e)),
+                len..=len,
+            ),
+        )
+    }).prop_map(|(data, deps, vers)| {
+        let mut i = 0;
+        data.into_iter()
+            .zip(deps.into_iter())
+            .map(|((name, ver), deps)| {
+                let d: Vec<Dependency> = deps.into_iter()
+                    .filter(|n| &name < n)
+                    .map(|n| {
+                        i += 1;
+                        dep_req(&n, &vers[i - 1])
+                    })
+                    .collect();
+                let pkgid = (name.as_str(), &*ver).to_pkgid();
+                let link = if pkgid.name().ends_with("-sys") { Some(pkgid.name().as_str()) } else { None };
+
+                Summary::new(pkgid, d, &BTreeMap::<String, Vec<String>>::new(), link, false).unwrap()
+            })
+            .collect()
+    })
 }
 
 proptest! {
     #[test]
-    fn doesnt_crash(reg in registry_strategy()) {
-        let this = reg.last().unwrap().name();
-        let reg = registry(reg);
-
-        resolve(
-            &pkg_id("root"),
-            vec![dep(&this)],
-            &reg,
-        ).unwrap();
+    fn doesnt_crash(input in registry_strategy()) {
+        let reg = registry(input.clone());
+        // there is only a small chance that eny one
+        // crate will be interesting. So we try them all.
+        for this in input {
+            let _res = resolve(
+                &pkg_id("root"),
+                vec![dep_req(&this.name(), &format!("={}", this.version()))],
+                &reg,
+            );
+        }
     }
 }
 
