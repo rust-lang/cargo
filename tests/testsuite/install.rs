@@ -785,9 +785,10 @@ fn installs_from_cwd_by_default() {
     assert_that(
         cargo_process("install").cwd(p.root()),
         execs().with_stderr_contains(
-                "\
-warning: To build the current package use `cargo build`, to install the current package run `cargo install --path .`
-",
+            "warning: Using `cargo install` to install the binaries for the \
+             project in current working directory is deprecated, \
+             use `cargo install --path .` instead. \
+             Use `cargo build` if you want to simply build the package.",
         ),
     );
     assert_that(cargo_home(), has_installed_exe("foo"));
@@ -819,11 +820,10 @@ fn installs_from_cwd_with_2018_warnings() {
     assert_that(
         cargo_process("install").cwd(p.root()).masquerade_as_nightly_cargo(),
         execs().with_status(101).with_stderr_contains(
-            "error: To build the current package use `cargo build`, \
-             to install the current package run `cargo install --path .`, \
-             otherwise specify a crate to install from crates.io, \
-             or use --path or --git to specify alternate source\
-             ",
+            "error: Using `cargo install` to install the binaries for the \
+             project in current working directory is no longer supported, \
+             use `cargo install --path .` instead. \
+             Use `cargo build` if you want to simply build the package.",
         ),
     );
     assert_that(cargo_home(), is_not(has_installed_exe("foo")));
