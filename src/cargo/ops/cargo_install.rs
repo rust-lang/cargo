@@ -246,7 +246,7 @@ fn install_one(
                 "Using `cargo install` to install the binaries for the \
                  project in current working directory is no longer supported, \
                  use `cargo install --path .` instead. \
-                 Use `cargo build` if you want to simply build the package.",
+                 Use `cargo build` if you want to simply build the package."
             ),
         }
     };
