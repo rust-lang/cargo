@@ -81,39 +81,33 @@ trait ToPkgId {
     fn to_pkgid(&self) -> PackageId;
 }
 
+impl<'a> ToPkgId for PackageId {
+    fn to_pkgid(&self) -> PackageId {
+        self.clone()
+    }
+}
+
 impl<'a> ToPkgId for &'a str {
     fn to_pkgid(&self) -> PackageId {
         PackageId::new(*self, "1.0.0", &registry_loc()).unwrap()
     }
 }
 
-impl<'a> ToPkgId for (&'a str, &'a str) {
+impl<T: AsRef<str>, U: AsRef<str>> ToPkgId for (T, U) {
     fn to_pkgid(&self) -> PackageId {
-        let (name, vers) = *self;
-        PackageId::new(name, vers, &registry_loc()).unwrap()
-    }
-}
-
-impl<'a> ToPkgId for (&'a str, String) {
-    fn to_pkgid(&self) -> PackageId {
-        let (name, ref vers) = *self;
-        PackageId::new(name, vers, &registry_loc()).unwrap()
+        let (name, vers) = self;
+        PackageId::new(name.as_ref(), vers.as_ref(), &registry_loc()).unwrap()
     }
 }
 
 macro_rules! pkg {
     ($pkgid:expr => [$($deps:expr),+]) => ({
         let d: Vec<Dependency> = vec![$($deps.to_dep()),+];
-        let pkgid = $pkgid.to_pkgid();
-        let link = if pkgid.name().ends_with("-sys") {Some(pkgid.name().as_str())} else {None};
-
-        Summary::new(pkgid, d, &BTreeMap::<String, Vec<String>>::new(), link, false).unwrap()
+        pkg_dep($pkgid, d)
     });
 
     ($pkgid:expr) => ({
-        let pkgid = $pkgid.to_pkgid();
-        let link = if pkgid.name().ends_with("-sys") {Some(pkgid.name().as_str())} else {None};
-        Summary::new(pkgid, Vec::new(), &BTreeMap::<String, Vec<String>>::new(), link, false).unwrap()
+        pkg($pkgid)
     })
 }
 
@@ -121,13 +115,18 @@ fn registry_loc() -> SourceId {
     SourceId::for_registry(&EXAMPLE_DOT_COM).unwrap()
 }
 
-fn pkg(name: &str) -> Summary {
-    let link = if name.ends_with("-sys") {
-        Some(name)
+fn pkg<T: ToPkgId>(name: T) -> Summary {
+    pkg_dep(name, Vec::new())
+}
+
+fn pkg_dep<T: ToPkgId>(name: T, dep: Vec<Dependency>) -> Summary {
+    let pkgid = name.to_pkgid();
+    let link = if pkgid.name().ends_with("-sys") {
+        Some(pkgid.name().as_str())
     } else {
         None
     };
-    Summary::new(pkg_id(name), Vec::new(), &BTreeMap::<String, Vec<String>>::new(), link, false).unwrap()
+    Summary::new(name.to_pkgid(), dep, &BTreeMap::<String, Vec<String>>::new(), link, false).unwrap()
 }
 
 fn pkg_id(name: &str) -> PackageId {
@@ -209,7 +208,7 @@ fn registry_strategy() -> impl Strategy<Value=Vec<Summary>> {
     btree_map(
         VALID_NAME_STRATEGY,
         btree_set(
-            ver(MAX_VERSIONS).prop_map(|(a, b, c)| format!("{}.{}.{}", a, b, c)),
+            ver(MAX_VERSIONS),
             1..=MAX_VERSIONS,
         ),
         1..=MAX_CRATES,
@@ -220,10 +219,10 @@ fn registry_strategy() -> impl Strategy<Value=Vec<Summary>> {
         // if randomly pointing to a dependency that does not exist then call it `bad`
         b.insert("bad".to_owned(), BTreeSet::new());
         let names = b.iter()
-            .map(|(name, _)| name.clone())
-            .collect::<Vec<String>>();
+            .map(|(name, _)| pkg_id(name).name())
+            .collect::<Vec<_>>();
         let data = b.iter()
-            .flat_map(|(name, vers)| vers.into_iter().map(move |v| (name.clone(), v.clone())))
+            .flat_map(|(name, vers)| vers.iter().map(move |(a, b, c)| (name, format!("{}.{}.{}", a, b, c)).to_pkgid()))
             .collect::<Vec<_>>();
         let names_len = names.len();
         let data_len = data.len();
@@ -245,18 +244,15 @@ fn registry_strategy() -> impl Strategy<Value=Vec<Summary>> {
         let mut i = 0;
         data.into_iter()
             .zip(deps.into_iter())
-            .map(|((name, ver), deps)| {
+            .map(|(pkgid, deps)| {
                 let d: Vec<Dependency> = deps.into_iter()
-                    .filter(|n| &name < n)
+                    .filter(|n| pkgid.name().as_str() < n)
                     .map(|n| {
                         i += 1;
                         dep_req(&n, &vers[i - 1])
                     })
                     .collect();
-                let pkgid = (name.as_str(), &*ver).to_pkgid();
-                let link = if pkgid.name().ends_with("-sys") { Some(pkgid.name().as_str()) } else { None };
-
-                Summary::new(pkgid, d, &BTreeMap::<String, Vec<String>>::new(), link, false).unwrap()
+                pkg_dep(pkgid, d)
             })
             .collect()
     })
@@ -301,14 +297,14 @@ fn assert_same(a: &[PackageId], b: &[PackageId]) {
 
 #[test]
 fn test_resolving_only_package() {
-    let reg = registry(vec![pkg("foo")]);
+    let reg = registry(vec![pkg!("foo")]);
     let res = resolve(&pkg_id("root"), vec![dep("foo")], &reg).unwrap();
     assert_same(&res, &names(&["root", "foo"]));
 }
 
 #[test]
 fn test_resolving_one_dep() {
-    let reg = registry(vec![pkg("foo"), pkg("bar")]);
+    let reg = registry(vec![pkg!("foo"), pkg!("bar")]);
     let res = resolve(&pkg_id("root"), vec![dep("foo")], &reg).unwrap();
     assert_same(&res, &names(&["root", "foo"]));
 }
