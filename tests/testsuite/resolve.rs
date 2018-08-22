@@ -213,21 +213,18 @@ fn registry_strategy() -> impl Strategy<Value=Vec<Summary>> {
             1..=MAX_VERSIONS,
         ),
         1..=MAX_CRATES,
-    ).prop_map(|mut b| {
+    ).prop_flat_map(|mut b| {
         // root is the name of the thing being compiled
         // so it would be confusing to have it in the index
         b.remove("root");
         // if randomly pointing to a dependency that does not exist then call it `bad`
         b.insert("bad".to_owned(), BTreeSet::new());
-        (
-            b.iter()
-                .map(|(name, _)| name.clone())
-                .collect::<Vec<String>>(),
-            b.iter()
-                .flat_map(|(name, vers)| vers.into_iter().map(move |v| (name.clone(), v.clone())))
-                .collect::<Vec<_>>(),
-        )
-    }).prop_flat_map(|(names, data)| {
+        let names = b.iter()
+            .map(|(name, _)| name.clone())
+            .collect::<Vec<String>>();
+        let data = b.iter()
+            .flat_map(|(name, vers)| vers.into_iter().map(move |v| (name.clone(), v.clone())))
+            .collect::<Vec<_>>();
         let names_len = names.len();
         let data_len = data.len();
         (
