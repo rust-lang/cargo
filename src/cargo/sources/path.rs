@@ -489,6 +489,10 @@ impl<'cfg> PathSource<'cfg> {
         trace!("last modified file {}: {}", self.path.display(), max);
         Ok((max, max_path))
     }
+
+    pub fn path(&self) -> &Path {
+        &self.path
+    }
 }
 
 impl<'cfg> Debug for PathSource<'cfg> {

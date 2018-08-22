@@ -171,27 +171,16 @@ fn install_one(
             &mut |git| git.read_packages(),
         )?
     } else if source_id.is_path() {
-        let path = source_id
-            .url()
-            .to_file_path()
-            .map_err(|()| format_err!("path sources must have a valid path"))?;
-        let mut src = PathSource::new(&path, source_id, config);
+        let mut src = path_source(source_id, config)?;
         src.update().chain_err(|| {
             format_err!(
                 "`{}` is not a crate root; specify a crate to \
                  install from crates.io, or use --path or --git to \
                  specify an alternate source",
-                path.display()
+                src.path().display()
             )
         })?;
-        select_pkg(
-            PathSource::new(&path, source_id, config),
-            krate,
-            vers,
-            config,
-            is_first_install,
-            &mut |path| path.read_packages(),
-        )?
+        select_pkg(src, krate, vers, config, false, &mut |path| path.read_packages())?
     } else {
         select_pkg(
             map.load(source_id)?,
@@ -416,6 +405,14 @@ fn install_one(
     }
 
     Ok(())
+}
+
+fn path_source<'a>(source_id: &SourceId, config: &'a Config) -> CargoResult<PathSource<'a>> {
+    let path = source_id
+        .url()
+        .to_file_path()
+        .map_err(|()| format_err!("path sources must have a valid path"))?;
+    Ok(PathSource::new(&path, source_id, config))
 }
 
 fn select_pkg<'a, T>(
@@ -719,6 +716,9 @@ pub fn uninstall(
     let scheduled_error = if specs.len() == 1 {
         uninstall_one(&root, specs[0], bins, config)?;
         false
+    } else if specs.len() == 0 {
+        uninstall_cwd(&root, bins, config)?;
+        false
     } else {
         let mut succeeded = vec![];
         let mut failed = vec![];
@@ -768,13 +768,38 @@ pub fn uninstall_one(
     config: &Config,
 ) -> CargoResult<()> {
     let crate_metadata = metadata(config, root)?;
-    let mut metadata = read_crate_list(&crate_metadata)?;
+    let metadata = read_crate_list(&crate_metadata)?;
+    let pkgid = PackageIdSpec::query_str(spec, metadata.v1.keys())?.clone();
+    uninstall_pkgid(crate_metadata, metadata, &pkgid, bins, config)
+}
+
+fn uninstall_cwd(
+    root: &Filesystem,
+    bins: &[String],
+    config: &Config,
+) -> CargoResult<()> {
+    let crate_metadata = metadata(config, root)?;
+    let metadata = read_crate_list(&crate_metadata)?;
+    let source_id = SourceId::for_path(config.cwd())?;
+    let src = path_source(&source_id, config)?;
+    let (pkg, _source) =
+        select_pkg(src, None, None, config, true, &mut |path| path.read_packages())?;
+    let pkgid = pkg.package_id();
+    uninstall_pkgid(crate_metadata, metadata, pkgid, bins, config)
+}
+
+fn uninstall_pkgid(
+    crate_metadata: FileLock,
+    mut metadata: CrateListingV1,
+    pkgid: &PackageId,
+    bins: &[String],
+    config: &Config,
+) -> CargoResult<()> {
     let mut to_remove = Vec::new();
     {
-        let result = PackageIdSpec::query_str(spec, metadata.v1.keys())?.clone();
-        let mut installed = match metadata.v1.entry(result.clone()) {
+        let mut installed = match metadata.v1.entry(pkgid.clone()) {
             Entry::Occupied(e) => e,
-            Entry::Vacant(..) => panic!("entry not found: {}", result),
+            Entry::Vacant(..) => bail!("package `{}` is not installed", pkgid),
         };
         let dst = crate_metadata.parent().join("bin");
         for bin in installed.get() {
@@ -799,7 +824,7 @@ pub fn uninstall_one(
 
         for bin in bins.iter() {
             if !installed.get().contains(bin) {
-                bail!("binary `{}` not installed as part of `{}`", bin, result)
+                bail!("binary `{}` not installed as part of `{}`", bin, pkgid)
             }
         }
 
