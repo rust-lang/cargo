@@ -263,7 +263,9 @@ impl<'cfg> RegistryData for RemoteRegistry<'cfg> {
                     body.extend_from_slice(buf);
                     Ok(buf.len())
                 })?;
-                handle.perform()?;
+                handle.perform().chain_err(|| {
+                    format!("failed to download from `{}`", url)
+                })?;
             }
             let code = handle.response_code()?;
             if code != 200 && code != 0 {
