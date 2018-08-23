@@ -680,8 +680,10 @@ fn path_args(bcx: &BuildContext, unit: &Unit) -> (PathBuf, PathBuf) {
         unit.target.src_path().path().to_path_buf()
     };
     assert!(src.is_absolute());
-    if let Ok(path) = src.strip_prefix(ws_root) {
-        return (path.to_path_buf(), ws_root.to_path_buf());
+    if unit.pkg.package_id().source_id().is_path() {
+        if let Ok(path) = src.strip_prefix(ws_root) {
+            return (path.to_path_buf(), ws_root.to_path_buf());
+        }
     }
     (src, unit.pkg.root().to_path_buf())
 }

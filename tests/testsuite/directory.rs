@@ -16,12 +16,12 @@ fn setup() {
     t!(fs::create_dir(&root.join(".cargo")));
     t!(t!(File::create(root.join(".cargo/config"))).write_all(
         br#"
-        [source.crates-io]
-        replace-with = 'my-awesome-local-registry'
+            [source.crates-io]
+            replace-with = 'my-awesome-local-registry'
 
-        [source.my-awesome-local-registry]
-        directory = 'index'
-    "#
+            [source.my-awesome-local-registry]
+            directory = 'index'
+        "#
     ));
 }
 
@@ -639,6 +639,64 @@ used against vendored source code
 remove the source replacement configuration, generate a lock file, and then
 restore the source replacement configuration to continue the build
 
+",
+        ),
+    );
+}
+
+#[test]
+fn workspace_different_locations() {
+    let p = project()
+        .no_manifest()
+        .file(
+            "foo/Cargo.toml",
+            r#"
+                [package]
+                name = 'foo'
+                version = '0.1.0'
+
+                [dependencies]
+                baz = "*"
+            "#,
+        )
+        .file("foo/src/lib.rs", "")
+        .file("foo/vendor/baz/Cargo.toml", &basic_manifest("baz", "0.1.0"))
+        .file("foo/vendor/baz/src/lib.rs", "")
+        .file("foo/vendor/baz/.cargo-checksum.json", "{\"files\":{}}")
+        .file(
+            "bar/Cargo.toml",
+            r#"
+                [package]
+                name = 'bar'
+                version = '0.1.0'
+
+                [dependencies]
+                baz = "*"
+            "#,
+        )
+        .file("bar/src/lib.rs", "")
+        .file(
+            ".cargo/config",
+            r#"
+                [build]
+                target-dir = './target'
+
+                [source.crates-io]
+                replace-with = 'my-awesome-local-registry'
+
+                [source.my-awesome-local-registry]
+                directory = 'foo/vendor'
+            "#,
+        )
+        .build();
+
+    assert_that(p.cargo("build").cwd(p.root().join("foo")), execs());
+    assert_that(
+        p.cargo("build").cwd(p.root().join("bar")),
+        execs().with_status(0).with_stderr(
+            "\
+[COMPILING] bar [..]
+[FINISHED] [..]
 ",
         ),
     );
