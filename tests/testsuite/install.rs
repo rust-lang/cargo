@@ -830,6 +830,65 @@ fn installs_from_cwd_with_2018_warnings() {
 }
 
 #[test]
+fn uninstall_cwd() {
+    let p = project().file("src/main.rs", "fn main() {}").build();
+    assert_that(
+        p.cargo("install --path ."),
+        execs().with_stderr(&format!("\
+[INSTALLING] foo v0.0.1 ({url})
+[COMPILING] foo v0.0.1 ({url})
+[FINISHED] release [optimized] target(s) in [..]
+[INSTALLING] {home}/bin/foo[EXE]
+warning: be sure to add `{home}/bin` to your PATH to be able to run the installed binaries",
+            home = cargo_home().display(),
+            url = p.url(),
+        )),
+    );
+    assert_that(cargo_home(), has_installed_exe("foo"));
+
+    assert_that(
+        p.cargo("uninstall"),
+        execs().with_stdout("").with_stderr(&format!("\
+[REMOVING] {home}/bin/foo[EXE]",
+            home = cargo_home().display()
+        )),
+    );
+    assert_that(cargo_home(), is_not(has_installed_exe("foo")));
+}
+
+#[test]
+fn uninstall_cwd_not_installed() {
+    let p = project().file("src/main.rs", "fn main() {}").build();
+    assert_that(
+        p.cargo("uninstall"),
+        execs().with_status(101).with_stdout("").with_stderr(format!("\
+error: package `foo v0.0.1 ({url})` is not installed",
+            url = p.url(),
+        )),
+    );
+}
+
+#[test]
+fn uninstall_cwd_no_project() {
+    let err_msg = if cfg!(windows) {
+        "The system cannot find the file specified."
+    } else {
+        "No such file or directory"
+    };
+    assert_that(
+        cargo_process("uninstall"),
+        execs().with_status(101).with_stdout("").with_stderr(format!("\
+[ERROR] failed to read `{root}/Cargo.toml`
+
+Caused by:
+  {err_msg} (os error 2)",
+            root = paths::root().display(),
+            err_msg = err_msg,
+        )),
+    );
+}
+
+#[test]
 fn do_not_rebuilds_on_local_install() {
     let p = project()
         .file("src/main.rs", "fn main() {}")
