@@ -870,14 +870,20 @@ error: package `foo v0.0.1 ({url})` is not installed",
 
 #[test]
 fn uninstall_cwd_no_project() {
+    let err_msg = if cfg!(windows) {
+        "The system cannot find the file specified."
+    } else {
+        "No such file or directory"
+    };
     assert_that(
         cargo_process("uninstall"),
         execs().with_status(101).with_stdout("").with_stderr(format!("\
 [ERROR] failed to read `{root}/Cargo.toml`
 
 Caused by:
-  No such file or directory (os error 2)",
+  {err_msg} (os error 2)",
             root = paths::root().display(),
+            err_msg = err_msg,
         )),
     );
 }
