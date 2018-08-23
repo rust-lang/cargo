@@ -1,4 +1,4 @@
-use std::collections::{BTreeMap, BTreeSet, HashSet};
+use std::collections::{BTreeMap, HashSet};
 
 use support::hamcrest::{assert_that, contains, is_not};
 
@@ -216,10 +216,10 @@ fn registry_strategy() -> impl Strategy<Value=Vec<Summary>> {
         // root is the name of the thing being compiled
         // so it would be confusing to have it in the index
         b.remove("root");
-        // if randomly pointing to a dependency that does not exist then call it `bad`
-        b.insert("bad".to_owned(), BTreeSet::new());
-        let names = b.iter()
-            .map(|(name, _)| pkg_id(name).name())
+        let names = Some("bad".to_owned()) // if randomly pointing to a dependency that does not exist then call it `bad`
+            .iter()
+            .chain(b.iter().map(|(name, _)| name))
+            .map(|name| pkg_id(name).name())
             .collect::<Vec<_>>();
         let data = b.iter()
             .flat_map(|(name, vers)| vers.iter().map(move |(a, b, c)| (name, format!("{}.{}.{}", a, b, c)).to_pkgid()))
@@ -246,7 +246,7 @@ fn registry_strategy() -> impl Strategy<Value=Vec<Summary>> {
             .zip(deps.into_iter())
             .map(|(pkgid, deps)| {
                 let d: Vec<Dependency> = deps.into_iter()
-                    .filter(|n| pkgid.name().as_str() < n)
+                    .filter(|n| pkgid.name() < *n || n.as_str() == "bad")
                     .map(|n| {
                         i += 1;
                         dep_req(&n, &vers[i - 1])
@@ -264,7 +264,7 @@ proptest! {
         let reg = registry(input.clone());
         // there is only a small chance that eny one
         // crate will be interesting. So we try them all.
-        for this in input {
+        for this in input.iter().rev() {
             let _res = resolve(
                 &pkg_id("root"),
                 vec![dep_req(&this.name(), &format!("={}", this.version()))],
