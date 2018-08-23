@@ -41,6 +41,19 @@ pub struct PublishOpts<'cfg> {
 }
 
 pub fn publish(ws: &Workspace, opts: &PublishOpts) -> CargoResult<()> {
+    match ws.current_opt() {
+        Some(_) => publish_package(ws, opts),
+        None => {
+            for member in ws.members() {
+                let pkg_ws = Workspace::new(member.manifest_path(), ws.config())?;
+                publish(&pkg_ws, opts)?;
+            }
+            Ok(())
+        }
+    }
+}
+
+fn publish_package(ws: &Workspace, opts: &PublishOpts) -> CargoResult<()> {
     let pkg = ws.current()?;
 
     if let Some(ref allowed_registries) = *pkg.publish() {

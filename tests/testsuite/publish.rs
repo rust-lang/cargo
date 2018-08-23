@@ -829,3 +829,70 @@ fn block_publish_no_registry() {
         ),
     );
 }
+
+#[test]
+fn simple_workspace() {
+    publish::setup();
+
+    let p = project()
+        .file(
+            "Cargo.toml",
+            r#"
+            [workspace]
+
+            members = [
+                "foo",
+                "bar"
+            ] 
+        "#,
+        )
+        .file(
+            "foo/Cargo.toml",
+            r#"
+            [package]
+            name = "foo"
+            version = "0.0.1"
+            authors = []
+            license = "MIT"
+            description = "foo"
+        "#,
+        )
+        .file("foo/src/main.rs", "fn main() {}")
+        .file(
+            "bar/Cargo.toml",
+            r#"
+            [package]
+            name = "bar"
+            version = "0.0.2"
+            authors = []
+            license = "MIT"
+            description = "bar"
+        "#,
+        )
+        .file("bar/src/main.rs", "fn main() {}")
+        .build();
+
+    assert_that(
+        p.cargo("publish")
+            .arg("--no-verify")
+            .arg("--index")
+            .arg(publish::registry().to_string()),
+        execs().with_status(0).with_stderr(&format!(
+            "\
+[UPDATING] registry `{reg}`
+[WARNING] manifest has no documentation, [..]
+See [..]
+[PACKAGING] foo v0.0.1 ({dir}/foo)
+[UPLOADING] foo v0.0.1 ({dir}/foo)
+[UPDATING] registry `{reg}`
+[WARNING] manifest has no documentation, [..]
+See [..]
+[PACKAGING] bar v0.0.2 ({dir}/bar)
+[UPLOADING] bar v0.0.2 ({dir}/bar)
+",
+            dir = p.url(),
+            reg = publish::registry()
+        )),
+    );
+
+}
