@@ -523,6 +523,7 @@ pub fn cargo_exe() -> PathBuf {
  *
  */
 
+#[must_use]
 #[derive(Clone)]
 pub struct Execs {
     expect_stdout: Option<String>,
