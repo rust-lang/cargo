@@ -161,15 +161,6 @@ impl<'a, 'cfg: 'a> CompilationFiles<'a, 'cfg> {
         self.layout(unit.kind).build().join(dir).join("out")
     }
 
-    pub fn metabuild_path(&self, unit: &Unit<'a>) -> PathBuf {
-        let metadata = self.metadata(unit).expect("metabuild metadata");
-        self.layout(unit.kind).metabuild().join(format!(
-            "metabuild-{}-{}.rs",
-            unit.pkg.name(),
-            metadata
-        ))
-    }
-
     /// Returns the file stem for a given target/profile combo (with metadata)
     pub fn file_stem(&self, unit: &Unit<'a>) -> String {
         match self.metas[unit] {

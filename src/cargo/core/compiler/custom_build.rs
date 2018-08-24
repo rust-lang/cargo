@@ -562,7 +562,8 @@ fn prepare_metabuild<'a, 'cfg>(
     }
     output.push("}\n".to_string());
     let output = output.join("");
-    let path = cx.files().metabuild_path(unit);
+    let path = unit.pkg.manifest().metabuild_path(cx.bcx.ws.target_dir());
+    fs::create_dir_all(path.parent().unwrap())?;
     paths::write_if_changed(path, &output)?;
     Ok(())
 }

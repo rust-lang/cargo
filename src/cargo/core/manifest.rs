@@ -1,6 +1,8 @@
+#![allow(deprecated)] // for SipHasher
+
 use std::collections::{BTreeMap, HashMap};
 use std::fmt;
-use std::hash::{Hash, Hasher};
+use std::hash::{Hash, Hasher, SipHasher};
 use std::path::{Path, PathBuf};
 use std::rc::Rc;
 
@@ -15,7 +17,7 @@ use core::{Dependency, PackageId, PackageIdSpec, SourceId, Summary};
 use core::{Edition, Feature, Features, WorkspaceConfig};
 use util::errors::*;
 use util::toml::TomlManifest;
-use util::Config;
+use util::{Config, Filesystem};
 
 pub enum EitherManifest {
     Real(Manifest),
@@ -191,7 +193,7 @@ pub struct Target {
     // as it's absolute currently and is otherwise a little too brittle for
     // causing rebuilds. Instead the hash for the path that we send to the
     // compiler is handled elsewhere.
-    src_path: NonHashedPathBuf,
+    src_path: TargetSourcePath,
     required_features: Option<Vec<String>>,
     tested: bool,
     benched: bool,
@@ -203,19 +205,50 @@ pub struct Target {
 }
 
 #[derive(Clone, PartialEq, Eq)]
-struct NonHashedPathBuf {
-    path: PathBuf,
+pub enum TargetSourcePath {
+    Path(PathBuf),
+    Metabuild,
 }
 
-impl Hash for NonHashedPathBuf {
+impl TargetSourcePath {
+    pub fn path(&self) -> &Path {
+        match self {
+            TargetSourcePath::Path(path) => path.as_ref(),
+            TargetSourcePath::Metabuild => panic!("metabuild not expected"),
+        }
+    }
+
+    pub fn is_path(&self) -> bool {
+        match self {
+            TargetSourcePath::Path(_) => true,
+            _ => false,
+        }
+    }
+}
+
+impl Hash for TargetSourcePath {
     fn hash<H: Hasher>(&self, _: &mut H) {
         // ...
     }
 }
 
-impl fmt::Debug for NonHashedPathBuf {
+impl fmt::Debug for TargetSourcePath {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        self.path.fmt(f)
+        match self {
+            TargetSourcePath::Path(path) => path.fmt(f),
+            TargetSourcePath::Metabuild => "metabuild".fmt(f),
+        }
+    }
+}
+
+impl From<PathBuf> for TargetSourcePath {
+    fn from(path: PathBuf) -> Self {
+        assert!(
+            path.is_absolute(),
+            "`{}` is not absolute",
+            path.display()
+        );
+        TargetSourcePath::Path(path)
     }
 }
 
@@ -240,7 +273,7 @@ impl ser::Serialize for Target {
             kind: &self.kind,
             crate_types: self.rustc_crate_types(),
             name: &self.name,
-            src_path: &self.src_path.path,
+            src_path: &self.src_path.path().to_path_buf(),
             edition: &self.edition.to_string(),
             required_features: self
                 .required_features
@@ -254,34 +287,43 @@ compact_debug! {
     impl fmt::Debug for Target {
         fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
             let (default, default_name) = {
-                let src = self.src_path().to_path_buf();
                 match &self.kind {
                     TargetKind::Lib(kinds) => {
                         (
                             Target::lib_target(
                                 &self.name,
                                 kinds.clone(),
-                                src.clone(),
-                                Edition::Edition2015,
+                                self.src_path().path().to_path_buf(),
+                                self.edition,
                             ),
-                            format!("lib_target({:?}, {:?}, {:?})",
-                                    self.name, kinds, src),
+                            format!("lib_target({:?}, {:?}, {:?}, {:?})",
+                                    self.name, kinds, self.src_path, self.edition),
                         )
                     }
                     TargetKind::CustomBuild => {
-                        (
-                            Target::custom_build_target(
-                                &self.name,
-                                src.clone(),
-                                Edition::Edition2015,
-                            ),
-                            format!("custom_build_target({:?}, {:?})",
-                                    self.name, src),
-                        )
+                        match self.src_path {
+                            TargetSourcePath::Path(ref path) => {
+                                (
+                                    Target::custom_build_target(
+                                        &self.name,
+                                        path.to_path_buf(),
+                                        self.edition,
+                                    ),
+                                    format!("custom_build_target({:?}, {:?}, {:?})",
+                                            self.name, path, self.edition),
+                                )
+                            }
+                            TargetSourcePath::Metabuild => {
+                                (
+                                    Target::metabuild_target(&self.name),
+                                    format!("metabuild_target({:?})", self.name),
+                                )
+                            }
+                        }
                     }
                     _ => (
-                        Target::with_path(src.clone(), Edition::Edition2015),
-                        format!("with_path({:?})", src),
+                        Target::new(self.src_path.clone(), self.edition),
+                        format!("with_path({:?}, {:?})", self.src_path, self.edition),
                     ),
                 }
             };
@@ -471,6 +513,16 @@ impl Manifest {
     pub fn metabuild(&self) -> Option<&Vec<String>> {
         self.metabuild.as_ref()
     }
+
+    pub fn metabuild_path(&self, target_dir: Filesystem) -> PathBuf {
+        let mut hasher = SipHasher::new_with_keys(0, 0);
+        self.package_id().hash(&mut hasher);
+        let hash = hasher.finish();
+        target_dir
+            .into_path_unlocked()
+            .join(".metabuild")
+            .join(format!("metabuild-{}-{:016x}.rs", self.name(), hash))
+    }
 }
 
 impl VirtualManifest {
@@ -515,16 +567,11 @@ impl VirtualManifest {
 }
 
 impl Target {
-    fn with_path(src_path: PathBuf, edition: Edition) -> Target {
-        assert!(
-            src_path.is_absolute(),
-            "`{}` is not absolute",
-            src_path.display()
-        );
+    fn new(src_path: TargetSourcePath, edition: Edition) -> Target {
         Target {
             kind: TargetKind::Bin,
             name: String::new(),
-            src_path: NonHashedPathBuf { path: src_path },
+            src_path,
             required_features: None,
             doc: false,
             doctest: false,
@@ -534,6 +581,10 @@ impl Target {
             tested: true,
             benched: true,
         }
+    }
+
+    fn with_path(src_path: PathBuf, edition: Edition) -> Target {
+        Target::new(TargetSourcePath::from(src_path), edition)
     }
 
     pub fn lib_target(
@@ -579,6 +630,17 @@ impl Target {
             benched: false,
             tested: false,
             ..Target::with_path(src_path, edition)
+        }
+    }
+
+    pub fn metabuild_target(name: &str) -> Target {
+        Target {
+            kind: TargetKind::CustomBuild,
+            name: name.to_string(),
+            for_host: true,
+            benched: false,
+            tested: false,
+            ..Target::new(TargetSourcePath::Metabuild, Edition::Edition2015)
         }
     }
 
@@ -641,8 +703,11 @@ impl Target {
     pub fn crate_name(&self) -> String {
         self.name.replace("-", "_")
     }
-    pub fn src_path(&self) -> &Path {
-        &self.src_path.path
+    pub fn src_path(&self) -> &TargetSourcePath {
+        &self.src_path
+    }
+    pub fn set_src_path(&mut self, src_path: TargetSourcePath) {
+        self.src_path = src_path;
     }
     pub fn required_features(&self) -> Option<&Vec<String>> {
         self.required_features.as_ref()

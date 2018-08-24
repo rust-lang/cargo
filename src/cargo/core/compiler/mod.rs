@@ -8,6 +8,7 @@ use std::sync::Arc;
 use same_file::is_same_file;
 use serde_json;
 
+use core::manifest::TargetSourcePath;
 use core::profiles::{Lto, Profile};
 use core::shell::ColorChoice;
 use core::{PackageId, Target};
@@ -390,7 +391,6 @@ fn link_targets<'a, 'cfg>(
     let outputs = cx.outputs(unit)?;
     let export_dir = cx.files().export_dir();
     let package_id = unit.pkg.package_id().clone();
-    let target = unit.target.clone();
     let profile = unit.profile;
     let unit_mode = unit.mode;
     let features = bcx.resolve
@@ -399,6 +399,12 @@ fn link_targets<'a, 'cfg>(
         .map(|s| s.to_owned())
         .collect();
     let json_messages = bcx.build_config.json_messages();
+    let mut target = unit.target.clone();
+    if let TargetSourcePath::Metabuild = target.src_path() {
+        // Give it something to serialize.
+        let path = unit.pkg.manifest().metabuild_path(cx.bcx.ws.target_dir());
+        target.set_src_path(TargetSourcePath::Path(path));
+    }
 
     Ok(Work::new(move |_| {
         // If we're a "root crate", e.g. the target of this compilation, then we
@@ -582,7 +588,7 @@ fn rustdoc<'a, 'cfg>(cx: &mut Context<'a, 'cfg>, unit: &Unit<'a>) -> CargoResult
     let mut rustdoc = cx.compilation.rustdoc_process(unit.pkg, unit.target)?;
     rustdoc.inherit_jobserver(&cx.jobserver);
     rustdoc.arg("--crate-name").arg(&unit.target.crate_name());
-    add_path_args(cx, unit, &mut rustdoc);
+    add_path_args(bcx, unit, &mut rustdoc);
     add_cap_lints(bcx, unit, &mut rustdoc);
     add_color(bcx, &mut rustdoc);
 
@@ -666,13 +672,12 @@ fn rustdoc<'a, 'cfg>(cx: &mut Context<'a, 'cfg>, unit: &Unit<'a>) -> CargoResult
 //
 // The first returned value here is the argument to pass to rustc, and the
 // second is the cwd that rustc should operate in.
-fn path_args<'a, 'cfg>(cx: &Context<'a, 'cfg>, unit: &Unit) -> (PathBuf, PathBuf) {
-    let ws_root = cx.bcx.ws.root();
-    // TODO: this is a hack
+fn path_args(bcx: &BuildContext, unit: &Unit) -> (PathBuf, PathBuf) {
+    let ws_root = bcx.ws.root();
     let src = if unit.target.is_custom_build() && unit.pkg.manifest().metabuild().is_some() {
-        cx.files().metabuild_path(unit)
+        unit.pkg.manifest().metabuild_path(bcx.ws.target_dir())
     } else {
-        unit.target.src_path().to_path_buf()
+        unit.target.src_path().path().to_path_buf()
     };
     assert!(src.is_absolute());
     if let Ok(path) = src.strip_prefix(ws_root) {
@@ -681,8 +686,8 @@ fn path_args<'a, 'cfg>(cx: &Context<'a, 'cfg>, unit: &Unit) -> (PathBuf, PathBuf
     (src, unit.pkg.root().to_path_buf())
 }
 
-fn add_path_args<'a, 'cfg>(cx: &Context<'a, 'cfg>, unit: &Unit, cmd: &mut ProcessBuilder) {
-    let (arg, cwd) = path_args(cx, unit);
+fn add_path_args(bcx: &BuildContext, unit: &Unit, cmd: &mut ProcessBuilder) {
+    let (arg, cwd) = path_args(bcx, unit);
     cmd.arg(arg);
     cmd.cwd(cwd);
 }
@@ -741,7 +746,7 @@ fn build_base_args<'a, 'cfg>(
 
     cmd.arg("--crate-name").arg(&unit.target.crate_name());
 
-    add_path_args(cx, unit, cmd);
+    add_path_args(bcx, unit, cmd);
     add_color(bcx, cmd);
     add_error_format(bcx, cmd);
 

@@ -13,7 +13,7 @@ use toml;
 use url::Url;
 
 use core::dependency::{Kind, Platform};
-use core::manifest::{LibKind, ManifestMetadata, Warnings};
+use core::manifest::{LibKind, ManifestMetadata, TargetSourcePath, Warnings};
 use core::profiles::Profiles;
 use core::{Dependency, Manifest, PackageId, Summary, Target};
 use core::{Edition, EitherManifest, Feature, Features, VirtualManifest};
@@ -1208,9 +1208,12 @@ impl TomlManifest {
 /// If not, the name of the offending build target is returned.
 fn unique_build_targets(targets: &[Target], package_root: &Path) -> Result<(), String> {
     let mut seen = HashSet::new();
-    for v in targets.iter().map(|e| package_root.join(e.src_path())) {
-        if !seen.insert(v.clone()) {
-            return Err(v.display().to_string());
+    for target in targets {
+        if let TargetSourcePath::Path(path) = target.src_path() {
+            let full = package_root.join(path);
+            if !seen.insert(full.clone()) {
+                return Err(full.display().to_string());
+            }
         }
     }
     Ok(())

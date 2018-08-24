@@ -154,6 +154,7 @@ pub fn write_if_changed<P: AsRef<Path>, C: AsRef<[u8]>>(path: P, contents: C) ->
         f.read_to_end(&mut orig)?;
         if orig != contents {
             f.set_len(0)?;
+            f.seek(io::SeekFrom::Start(0))?;
             f.write_all(contents)?;
         }
         Ok(())

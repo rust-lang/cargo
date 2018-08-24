@@ -64,7 +64,6 @@ pub struct Layout {
     deps: PathBuf,
     native: PathBuf,
     build: PathBuf,
-    metabuild: PathBuf,
     incremental: PathBuf,
     fingerprint: PathBuf,
     examples: PathBuf,
@@ -113,7 +112,6 @@ impl Layout {
             deps: root.join("deps"),
             native: root.join("native"),
             build: root.join("build"),
-            metabuild: root.join(".metabuild"),
             incremental: root.join("incremental"),
             fingerprint: root.join(".fingerprint"),
             examples: root.join("examples"),
@@ -165,7 +163,6 @@ impl Layout {
         mkdir(&self.fingerprint)?;
         mkdir(&self.examples)?;
         mkdir(&self.build)?;
-        mkdir(&self.metabuild)?;
 
         return Ok(());
 
@@ -204,9 +201,5 @@ impl Layout {
     /// Fetch the build path.
     pub fn build(&self) -> &Path {
         &self.build
-    }
-    /// Fetch the metabuild path.
-    pub fn metabuild(&self) -> &Path {
-        &self.metabuild
     }
 }

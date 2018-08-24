@@ -128,11 +128,10 @@ pub fn targets(
             }
         }
 
-        targets.push(Target::custom_build_target(
-            &package.name,
-            // TODO: Fix this.
-            package_root.join("metabuild.rs"),
-        ));
+        targets.push(Target::metabuild_target(&format!(
+            "metabuild-{}",
+            package.name
+        )));
     }
 
     Ok(targets)
