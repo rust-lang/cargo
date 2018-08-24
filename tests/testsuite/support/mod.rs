@@ -552,12 +552,8 @@ impl Execs {
     /// Verify that stderr is equal to the given lines.
     /// See `lines_match` for supported patterns.
     pub fn with_stderr<S: ToString>(mut self, expected: S) -> Execs {
-        self._with_stderr(&expected);
-        self
-    }
-
-    fn _with_stderr(&mut self, expected: &ToString) {
         self.expect_stderr = Some(expected.to_string());
+        self
     }
 
     /// Verify the exit code from the process.
