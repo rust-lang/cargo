@@ -1,4 +1,5 @@
 use std::collections::{BTreeMap, HashSet};
+use std::cmp::{max, min};
 
 use support::hamcrest::{assert_that, contains, is_not};
 
@@ -15,6 +16,7 @@ use support::registry::Package;
 use proptest::collection::{btree_map, btree_set, vec};
 use proptest::prelude::*;
 use proptest::sample::subsequence;
+use proptest::string::string_regex;
 
 fn resolve(
     pkg: &PackageId,
@@ -190,20 +192,21 @@ fn loc_names(names: &[(&'static str, &'static str)]) -> Vec<PackageId> {
 /// Unlike vec((Name, Ver, vec((Name, VerRq), ..), ..)
 /// This strategy has a high probability of having valid dependencies
 fn registry_strategy() -> impl Strategy<Value=Vec<Summary>> {
-    const VALID_NAME_STRATEGY: &str = "[A-Za-z_-][A-Za-z0-9_-]*";
     const MAX_CRATES: usize = 10;
     const MAX_VERSIONS: usize = 10;
 
-    fn range(max: usize) -> impl Strategy<Value = (usize, usize)> {
-        (0..max).prop_flat_map(move |low| (Just(low), low..=max))
+    let valid_name_strategy = string_regex("[A-Za-z_-][A-Za-z0-9_-]*").unwrap();
+
+    fn range(m: usize) -> impl Strategy<Value = (usize, usize)> {
+        (..m, ..m).prop_map(|(a, b)| (min(a, b), max(a,b)))
     }
 
     fn ver(max: usize) -> impl Strategy<Value=(usize, usize, usize)> {
-        (0..=max, 0..=max, 0..=max)
+        (..=max, ..=max, ..=max)
     }
 
     btree_map(
-        VALID_NAME_STRATEGY,
+        valid_name_strategy,
         btree_set(
             ver(MAX_VERSIONS),
             1..=MAX_VERSIONS,
@@ -225,16 +228,10 @@ fn registry_strategy() -> impl Strategy<Value=Vec<Summary>> {
         let data_len = data.len();
         (
             Just(data),
-            vec(subsequence(names, 0..names_len), data_len..=data_len),
-        )
-    }).prop_flat_map(|(data, deps)| {
-        let len = deps.iter().map(|x| x.len()).sum();
-        (
-            Just(data),
-            Just(deps),
+            vec(subsequence(names, ..names_len), data_len),
             vec(
                 range(MAX_VERSIONS).prop_map(|(b, e)| format!(">={}.0.0, <={}.0.0", b, e)),
-                len..=len,
+                names_len*data_len,
             ),
         )
     }).prop_map(|(data, deps, vers)| {
@@ -262,11 +259,15 @@ proptest! {
         // there is only a small chance that eny one
         // crate will be interesting. So we try them all.
         for this in input.iter().rev() {
-            let _res = resolve(
+            let res = resolve(
                 &pkg_id("root"),
                 vec![dep_req(&this.name(), &format!("={}", this.version()))],
                 &reg,
             );
+
+            if let Ok(r) = res {
+                prop_assert!(r.len() <= 4)
+            }
         }
     }
 }
