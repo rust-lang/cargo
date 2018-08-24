@@ -184,6 +184,10 @@ impl Package {
         self.full_dep(name, vers, None, "dev", &[], None)
     }
 
+    pub fn build_dep(&mut self, name: &str, vers: &str) -> &mut Package {
+        self.full_dep(name, vers, None, "build", &[], None)
+    }
+
     fn full_dep(
         &mut self,
         name: &str,

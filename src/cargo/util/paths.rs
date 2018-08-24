@@ -142,6 +142,27 @@ pub fn write(path: &Path, contents: &[u8]) -> CargoResult<()> {
     Ok(())
 }
 
+pub fn write_if_changed<P: AsRef<Path>, C: AsRef<[u8]>>(path: P, contents: C) -> CargoResult<()> {
+    (|| -> CargoResult<()> {
+        let contents = contents.as_ref();
+        let mut f = OpenOptions::new()
+            .read(true)
+            .write(true)
+            .create(true)
+            .open(&path)?;
+        let mut orig = Vec::new();
+        f.read_to_end(&mut orig)?;
+        if orig != contents {
+            f.set_len(0)?;
+            f.seek(io::SeekFrom::Start(0))?;
+            f.write_all(contents)?;
+        }
+        Ok(())
+    })()
+        .chain_err(|| format!("failed to write `{}`", path.as_ref().display()))?;
+    Ok(())
+}
+
 pub fn append(path: &Path, contents: &[u8]) -> CargoResult<()> {
     (|| -> CargoResult<()> {
         let mut f = OpenOptions::new()
