@@ -8,6 +8,7 @@ use std::sync::Arc;
 use same_file::is_same_file;
 use serde_json;
 
+use core::manifest::TargetSourcePath;
 use core::profiles::{Lto, Profile};
 use core::shell::ColorChoice;
 use core::{PackageId, Target};
@@ -390,7 +391,6 @@ fn link_targets<'a, 'cfg>(
     let outputs = cx.outputs(unit)?;
     let export_dir = cx.files().export_dir();
     let package_id = unit.pkg.package_id().clone();
-    let target = unit.target.clone();
     let profile = unit.profile;
     let unit_mode = unit.mode;
     let features = bcx.resolve
@@ -399,6 +399,12 @@ fn link_targets<'a, 'cfg>(
         .map(|s| s.to_owned())
         .collect();
     let json_messages = bcx.build_config.json_messages();
+    let mut target = unit.target.clone();
+    if let TargetSourcePath::Metabuild = target.src_path() {
+        // Give it something to serialize.
+        let path = unit.pkg.manifest().metabuild_path(cx.bcx.ws.target_dir());
+        target.set_src_path(TargetSourcePath::Path(path));
+    }
 
     Ok(Work::new(move |_| {
         // If we're a "root crate", e.g. the target of this compilation, then we
@@ -668,12 +674,16 @@ fn rustdoc<'a, 'cfg>(cx: &mut Context<'a, 'cfg>, unit: &Unit<'a>) -> CargoResult
 // second is the cwd that rustc should operate in.
 fn path_args(bcx: &BuildContext, unit: &Unit) -> (PathBuf, PathBuf) {
     let ws_root = bcx.ws.root();
-    let src = unit.target.src_path();
+    let src = if unit.target.is_custom_build() && unit.pkg.manifest().metabuild().is_some() {
+        unit.pkg.manifest().metabuild_path(bcx.ws.target_dir())
+    } else {
+        unit.target.src_path().path().to_path_buf()
+    };
     assert!(src.is_absolute());
-    match src.strip_prefix(ws_root) {
-        Ok(path) => (path.to_path_buf(), ws_root.to_path_buf()),
-        Err(_) => (src.to_path_buf(), unit.pkg.root().to_path_buf()),
+    if let Ok(path) = src.strip_prefix(ws_root) {
+        return (path.to_path_buf(), ws_root.to_path_buf());
     }
+    (src, unit.pkg.root().to_path_buf())
 }
 
 fn add_path_args(bcx: &BuildContext, unit: &Unit, cmd: &mut ProcessBuilder) {

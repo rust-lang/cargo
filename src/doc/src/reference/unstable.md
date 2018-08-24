@@ -345,3 +345,36 @@ both `src/bin/a.rs` and `src/bin/b.rs`:
 [project]
 default-run = "a"
 ```
+
+### Metabuild
+* Tracking Issue: [rust-lang/rust#49803](https://github.com/rust-lang/rust/issues/49803)
+* RFC: [#2196](https://github.com/rust-lang/rfcs/blob/master/text/2196-metabuild.md)
+
+Metabuild is a feature to have declarative build scripts.  Instead of writing
+a `build.rs` script, you specify a list of build dependencies in the
+`metabuild` key in `Cargo.toml`.  A build script is automatically generated
+that runs each build dependency in order.  Metabuild packages can then read
+metadata from `Cargo.toml` to specify their behavior.
+
+Include `cargo-features` at the top of `Cargo.toml`, a `metadata` key in the
+`package`, list the dependencies in `build-dependencies`, and add any metadata
+that the metabuild packages require.  Example:
+
+```toml
+cargo-features = ["metabuild"]
+
+[package]
+name = "mypackage"
+version = "0.0.1"
+metabuild = ["foo", "bar"]
+
+[build-dependencies]
+foo = "1.0"
+bar = "1.0"
+
+[package.metadata.foo]
+extra-info = "qwerty"
+```
+
+Metabuild packages should have a public function called `metabuild` that
+performs the same actions as a regular `build.rs` script would perform.
