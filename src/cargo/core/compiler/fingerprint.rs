@@ -474,7 +474,7 @@ fn calculate<'a, 'cfg>(
         profile: profile_hash,
         // Note that .0 is hashed here, not .1 which is the cwd. That doesn't
         // actually affect the output artifact so there's no need to hash it.
-        path: util::hash_u64(&super::path_args(cx, unit).0),
+        path: util::hash_u64(&super::path_args(&cx.bcx, unit).0),
         features: format!("{:?}", bcx.resolve.features_sorted(unit.pkg.package_id())),
         deps,
         local: vec![local],
