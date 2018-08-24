@@ -220,7 +220,7 @@ fn plugin_deps() {
 
             use rustc_plugin::Registry;
             use syntax::tokenstream::TokenTree;
-            use syntax::codemap::Span;
+            use syntax::source_map::Span;
             use syntax::ast::*;
             use syntax::ext::base::{ExtCtxt, MacEager, MacResult};
             use syntax::ext::build::AstBuilder;
@@ -320,7 +320,7 @@ fn plugin_to_the_max() {
 
             use rustc_plugin::Registry;
             use syntax::tokenstream::TokenTree;
-            use syntax::codemap::Span;
+            use syntax::source_map::Span;
             use syntax::ast::*;
             use syntax::ext::base::{ExtCtxt, MacEager, MacResult};
             use syntax::ext::build::AstBuilder;
