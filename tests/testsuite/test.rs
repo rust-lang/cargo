@@ -693,8 +693,6 @@ fn cargo_test_twice() {
         )
         .build();
 
-    p.cargo("build");
-
     for _ in 0..2 {
         assert_that(p.cargo("test"), execs());
     }
