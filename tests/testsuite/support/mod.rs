@@ -545,14 +545,14 @@ pub struct Execs {
 impl Execs {
     /// Verify that stdout is equal to the given lines.
     /// See `lines_match` for supported patterns.
-    pub fn with_stdout<S: ToString>(mut self, expected: S) -> Execs {
+    pub fn with_stdout<S: ToString>(&mut self, expected: S) -> &mut Self {
         self.expect_stdout = Some(expected.to_string());
         self
     }
 
     /// Verify that stderr is equal to the given lines.
     /// See `lines_match` for supported patterns.
-    pub fn with_stderr<S: ToString>(mut self, expected: S) -> Execs {
+    pub fn with_stderr<S: ToString>(&mut self, expected: S) -> &mut Self {
         self.expect_stderr = Some(expected.to_string());
         self
     }
@@ -560,7 +560,7 @@ impl Execs {
     /// Verify the exit code from the process.
     ///
     /// This is not necessary if the expected exit code is `0`.
-    pub fn with_status(mut self, expected: i32) -> Execs {
+    pub fn with_status(&mut self, expected: i32) -> &mut Self {
         self.expect_exit_code = Some(expected);
         self
     }
@@ -568,7 +568,7 @@ impl Execs {
     /// Verify that stdout contains the given contiguous lines somewhere in
     /// its output.
     /// See `lines_match` for supported patterns.
-    pub fn with_stdout_contains<S: ToString>(mut self, expected: S) -> Execs {
+    pub fn with_stdout_contains<S: ToString>(&mut self, expected: S) -> &mut Self {
         self.expect_stdout_contains.push(expected.to_string());
         self
     }
@@ -576,7 +576,7 @@ impl Execs {
     /// Verify that stderr contains the given contiguous lines somewhere in
     /// its output.
     /// See `lines_match` for supported patterns.
-    pub fn with_stderr_contains<S: ToString>(mut self, expected: S) -> Execs {
+    pub fn with_stderr_contains<S: ToString>(&mut self, expected: S) -> &mut Self {
         self.expect_stderr_contains.push(expected.to_string());
         self
     }
@@ -584,7 +584,7 @@ impl Execs {
     /// Verify that either stdout or stderr contains the given contiguous
     /// lines somewhere in its output.
     /// See `lines_match` for supported patterns.
-    pub fn with_either_contains<S: ToString>(mut self, expected: S) -> Execs {
+    pub fn with_either_contains<S: ToString>(&mut self, expected: S) -> &mut Self {
         self.expect_either_contains.push(expected.to_string());
         self
     }
@@ -592,7 +592,7 @@ impl Execs {
     /// Verify that stdout contains the given contiguous lines somewhere in
     /// its output, and should be repeated `number` times.
     /// See `lines_match` for supported patterns.
-    pub fn with_stdout_contains_n<S: ToString>(mut self, expected: S, number: usize) -> Execs {
+    pub fn with_stdout_contains_n<S: ToString>(&mut self, expected: S, number: usize) -> &mut Self {
         self.expect_stdout_contains_n
             .push((expected.to_string(), number));
         self
@@ -601,7 +601,7 @@ impl Execs {
     /// Verify that stdout does not contain the given contiguous lines.
     /// See `lines_match` for supported patterns.
     /// See note on `with_stderr_does_not_contain`.
-    pub fn with_stdout_does_not_contain<S: ToString>(mut self, expected: S) -> Execs {
+    pub fn with_stdout_does_not_contain<S: ToString>(&mut self, expected: S) -> &mut Self {
         self.expect_stdout_not_contains.push(expected.to_string());
         self
     }
@@ -614,7 +614,7 @@ impl Execs {
     /// your test will pass without verifying the correct behavior. If
     /// possible, write the test first so that it fails, and then implement
     /// your fix/feature to make it pass.
-    pub fn with_stderr_does_not_contain<S: ToString>(mut self, expected: S) -> Execs {
+    pub fn with_stderr_does_not_contain<S: ToString>(&mut self, expected: S) -> &mut Self {
         self.expect_stderr_not_contains.push(expected.to_string());
         self
     }
@@ -634,7 +634,7 @@ impl Execs {
     ///     [RUNNING] `rustc --crate-name foo [..]
     /// This will randomly fail if the other crate name is `bar`, and the
     /// order changes.
-    pub fn with_stderr_unordered<S: ToString>(mut self, expected: S) -> Execs {
+    pub fn with_stderr_unordered<S: ToString>(&mut self, expected: S) -> &mut Self {
         self.expect_stderr_unordered.push(expected.to_string());
         self
     }
@@ -655,7 +655,7 @@ impl Execs {
     /// The order of arrays is ignored.
     /// Strings support patterns described in `lines_match`.
     /// Use `{...}` to match any object.
-    pub fn with_json(mut self, expected: &str) -> Execs {
+    pub fn with_json(&mut self, expected: &str) -> &mut Self {
         self.expect_json = Some(
             expected
                 .split("\n\n")
@@ -669,7 +669,7 @@ impl Execs {
     /// Useful for printf debugging of the tests.
     /// CAUTION: CI will fail if you leave this in your test!
     #[allow(unused)]
-    pub fn stream(mut self) -> Execs {
+    pub fn stream(&mut self) -> &mut Self {
         self.stream_output = true;
         self
     }
@@ -1193,13 +1193,31 @@ impl ham::Matcher<ProcessBuilder> for Execs {
     }
 }
 
+impl<'t> ham::Matcher<ProcessBuilder> for &'t mut Execs {
+    fn matches(&self, process: ProcessBuilder) -> ham::MatchResult {
+        self.match_process(&process)
+    }
+}
+
 impl<'a> ham::Matcher<&'a mut ProcessBuilder> for Execs {
     fn matches(&self, process: &'a mut ProcessBuilder) -> ham::MatchResult {
         self.match_process(process)
     }
 }
 
+impl<'a, 't> ham::Matcher<&'a mut ProcessBuilder> for &'t mut Execs {
+    fn matches(&self, process: &'a mut ProcessBuilder) -> ham::MatchResult {
+        self.match_process(process)
+    }
+}
+
 impl ham::Matcher<Output> for Execs {
+    fn matches(&self, output: Output) -> ham::MatchResult {
+        self.match_output(&output)
+    }
+}
+
+impl<'t> ham::Matcher<Output> for &'t mut Execs {
     fn matches(&self, output: Output) -> ham::MatchResult {
         self.match_output(&output)
     }
