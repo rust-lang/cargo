@@ -49,6 +49,70 @@ pub fn alt_api_url() -> Url {
     Url::from_file_path(&*alt_api_path()).ok().unwrap()
 }
 
+/// A builder for creating a new package in a registry.
+///
+/// This uses "source replacement" using an automatically generated
+/// `.cargo/config` file to ensure that dependencies will use these packages
+/// instead of contacting crates.io. See `source-replacement.md` for more
+/// details on how source replacement works.
+///
+/// Call `publish` to finalize and create the package.
+///
+/// If no files are specified, an empty `lib.rs` file is automatically created.
+///
+/// The `Cargo.toml` file is automatically generated based on the methods
+/// called on `Package` (for example, calling `dep()` will add to the
+/// `[dependencies]` automatically). You may also specify a `Cargo.toml` file
+/// to override the generated one.
+///
+/// This supports different registry types:
+/// - Regular source replacement that replaces `crates.io` (the default).
+/// - A "local registry" which is a subset for vendoring (see
+///   `Package::local`).
+/// - An "alternative registry" which requires specifying the registry name
+///   (see `Package::alternative`).
+///
+/// This does not support "directory sources". See `directory.rs` for
+/// `VendorPackage` which implements directory sources.
+///
+/// # Example
+/// ```
+/// // Publish package "a" depending on "b".
+/// Package::new("a", "1.0.0")
+///     .dep("b", "1.0.0")
+///     .file("src/lib.rs", r#"
+///         extern crate b;
+///         pub fn f() -> i32 { b::f() * 2 }
+///     "#)
+///     .publish();
+///
+/// // Publish package "b".
+/// Package::new("b", "1.0.0")
+///     .file("src/lib.rs", r#"
+///         pub fn f() -> i32 { 12 }
+///     "#)
+///     .publish();
+///
+/// // Create a project that uses package "a".
+/// let p = project()
+///     .file("Cargo.toml", r#"
+///         [package]
+///         name = "foo"
+///         version = "0.0.1"
+///
+///         [dependencies]
+///         a = "1.0"
+///     "#)
+///     .file("src/main.rs", r#"
+///         extern crate a;
+///         fn main() { println!("{}", a::f()); }
+///     "#)
+///     .build();
+///
+/// assert_that(
+///     p.cargo("run"),
+///     execs().with_stdout("24"));
+/// ```
 pub struct Package {
     name: String,
     vers: String,
@@ -128,6 +192,8 @@ pub fn init() {
 }
 
 impl Package {
+    /// Create a new package builder.
+    /// Call `publish()` to finalize and build the package.
     pub fn new(name: &str, vers: &str) -> Package {
         init();
         Package {
@@ -143,47 +209,92 @@ impl Package {
         }
     }
 
+    /// Call with `true` to publish in a "local registry".
+    ///
+    /// See `source-replacement.html#local-registry-sources` for more details
+    /// on local registries. See `local_registry.rs` for the tests that use
+    /// this.
     pub fn local(&mut self, local: bool) -> &mut Package {
         self.local = local;
         self
     }
 
+    /// Call with `true` to publish in an "alternative registry".
+    ///
+    /// The name of the alternative registry is called "alternative".
+    ///
+    /// See `unstable.html#alternate-registries` for more details on
+    /// alternative registries. See `alt_registry.rs` for the tests that use
+    /// this.
     pub fn alternative(&mut self, alternative: bool) -> &mut Package {
         self.alternative = alternative;
         self
     }
 
+    /// Add a file to the package.
     pub fn file(&mut self, name: &str, contents: &str) -> &mut Package {
         self.files.push((name.to_string(), contents.to_string()));
         self
     }
 
+    /// Add an "extra" file that is not rooted within the package.
+    ///
+    /// Normal files are automatically placed within a directory named
+    /// `$PACKAGE-$VERSION`. This allows you to override that behavior,
+    /// typically for testing invalid behavior.
     pub fn extra_file(&mut self, name: &str, contents: &str) -> &mut Package {
         self.extra_files
             .push((name.to_string(), contents.to_string()));
         self
     }
 
+    /// Add a normal dependency. Example:
+    /// ```
+    /// [dependencies]
+    /// foo = {version = "1.0"}
+    /// ```
     pub fn dep(&mut self, name: &str, vers: &str) -> &mut Package {
         self.full_dep(name, vers, None, "normal", &[], None)
     }
 
+    /// Add a dependency with the given feature. Example:
+    /// ```
+    /// [dependencies]
+    /// foo = {version = "1.0", "features": ["feat1", "feat2"]}
+    /// ```
     pub fn feature_dep(&mut self, name: &str, vers: &str, features: &[&str]) -> &mut Package {
         self.full_dep(name, vers, None, "normal", features, None)
     }
 
+    /// Add a platform-specific dependency. Example:
+    /// ```
+    /// [target.'cfg(windows)'.dependencies]
+    /// foo = {version = "1.0"}
+    /// ```
     pub fn target_dep(&mut self, name: &str, vers: &str, target: &str) -> &mut Package {
         self.full_dep(name, vers, Some(target), "normal", &[], None)
     }
 
+    /// Add a dependency to an alternative registry.
+    /// The given registry should be a URI to the alternative registry.
     pub fn registry_dep(&mut self, name: &str, vers: &str, registry: &str) -> &mut Package {
         self.full_dep(name, vers, None, "normal", &[], Some(registry))
     }
 
+    /// Add a dev-dependency. Example:
+    /// ```
+    /// [dev-dependencies]
+    /// foo = {version = "1.0"}
+    /// ```
     pub fn dev_dep(&mut self, name: &str, vers: &str) -> &mut Package {
         self.full_dep(name, vers, None, "dev", &[], None)
     }
 
+    /// Add a build-dependency. Example:
+    /// ```
+    /// [build-dependencies]
+    /// foo = {version = "1.0"}
+    /// ```
     pub fn build_dep(&mut self, name: &str, vers: &str) -> &mut Package {
         self.full_dep(name, vers, None, "build", &[], None)
     }
@@ -208,11 +319,18 @@ impl Package {
         self
     }
 
+    /// Specify whether or not the package is "yanked".
     pub fn yanked(&mut self, yanked: bool) -> &mut Package {
         self.yanked = yanked;
         self
     }
 
+    /// Create the package and place it in the registry.
+    ///
+    /// This does not actually use Cargo's publishing system, but instead
+    /// manually creates the entry in the registry on the filesystem.
+    ///
+    /// Returns the checksum for the package.
     pub fn publish(&self) -> String {
         self.make_archive();
 
@@ -358,6 +476,7 @@ impl Package {
         t!(ar.append(&header, contents.as_bytes()));
     }
 
+    /// Returns the path to the compressed package file.
     pub fn archive_dst(&self) -> PathBuf {
         if self.local {
             registry_path().join(format!("{}-{}.crate", self.name, self.vers))
