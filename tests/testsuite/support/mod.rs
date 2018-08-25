@@ -15,6 +15,9 @@ let p = project()
     .build();
 ```
 
+If you do not specify a `Cargo.toml` manifest using `file()`, one is
+automatically created with a project name of `foo` using `basic_manifest()`.
+
 To run cargo, call the `cargo` method and use the `hamcrest` matchers to check
 the output.
 
@@ -77,6 +80,34 @@ Be careful when executing binaries on Windows.  You should not rename, delete,
 or overwrite a binary immediately after running it.  Under some conditions
 Windows will fail with errors like "directory not empty" or "failed to remove"
 or "access is denied".
+
+## Specifying Dependencies
+
+You should not write any tests that use the network such as contacting
+crates.io. Typically, simple path dependencies are the easiest way to add a
+dependency. Example:
+
+```
+let p = project()
+    .file("Cargo.toml", r#"
+        [package]
+        name = "foo"
+        version = "1.0.0"
+
+        [dependencies]
+        bar = {path = "bar"}
+    "#)
+    .file("src/lib.rs", "extern crate bar;")
+    .file("bar/Cargo.toml", &basic_manifest("bar", "1.0.0"))
+    .file("bar/src/lib.rs", "")
+    .build();
+```
+
+If you need to test with registry dependencies, see
+`support::registry::Package` for creating packages you can depend on.
+
+If you need to test git dependencies, see `support::git` to create a git
+dependency.
 
 */
 
@@ -530,6 +561,8 @@ impl Execs {
     }
 
     /// Verify the exit code from the process.
+    ///
+    /// This is not necessary if the expected exit code is `0`.
     pub fn with_status(mut self, expected: i32) -> Execs {
         self.expect_exit_code = Some(expected);
         self
