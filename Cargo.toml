@@ -93,8 +93,7 @@ features = [
 
 [dev-dependencies]
 bufstream = "0.1"
-proptest = "0.8.4"
-wait-timeout = "0.1.4" # required only for minimal-versions. brought in by proptest.
+proptest = "0.8.6"
 
 [[bin]]
 name = "cargo"
