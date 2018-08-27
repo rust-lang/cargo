@@ -17,6 +17,7 @@ use proptest::collection::{btree_map, btree_set, vec};
 use proptest::prelude::*;
 use proptest::sample::subsequence;
 use proptest::string::string_regex;
+use proptest::test_runner::basic_result_cache;
 
 fn resolve(
     pkg: &PackageId,
@@ -257,12 +258,18 @@ fn registry_strategy() -> impl Strategy<Value=Vec<Summary>> {
 }
 
 proptest! {
+    #![proptest_config(ProptestConfig {
+        result_cache: basic_result_cache,
+        cases: 256,
+        .. ProptestConfig::default()
+    })]
     #[test]
     fn doesnt_crash(input in registry_strategy()) {
         let reg = registry(input.clone());
         // there is only a small chance that eny one
-        // crate will be interesting. So we try them all.
-        for this in input.iter().rev() {
+        // crate will be interesting.
+        // So we some of the most complicated.
+        for this in input.iter().rev().take(100) {
             let res = resolve(
                 &pkg_id("root"),
                 vec![dep_req(&this.name(), &format!("={}", this.version()))],
