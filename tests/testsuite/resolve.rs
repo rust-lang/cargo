@@ -225,10 +225,15 @@ fn registry_strategy() -> impl Strategy<Value=Vec<Summary>> {
             .flat_map(|(name, vers)| vers.iter().map(move |(a, b, c)| (name, format!("{}.{}.{}", a, b, c)).to_pkgid()))
             .collect::<Vec<_>>();
         let names_len = names.len();
+        let deps: Vec<_> = data.iter().map(|name| {
+            let s: Vec<_> = names.iter().cloned().filter(|&n| name.name() < n || n.as_str() == "bad").collect();
+            let s_len = s.len();
+            subsequence(s, ..s_len)
+        }).collect();
         let data_len = data.len();
         (
             Just(data),
-            vec(subsequence(names, ..names_len), data_len),
+            deps,
             vec(
                 range(MAX_VERSIONS).prop_map(|(b, e)| format!(">={}.0.0, <={}.0.0", b, e)),
                 names_len*data_len,
@@ -240,7 +245,6 @@ fn registry_strategy() -> impl Strategy<Value=Vec<Summary>> {
             .zip(deps.into_iter())
             .map(|(pkgid, deps)| {
                 let d: Vec<Dependency> = deps.into_iter()
-                    .filter(|n| pkgid.name() < *n || n.as_str() == "bad")
                     .map(|n| {
                         i += 1;
                         dep_req(&n, &vers[i - 1])
