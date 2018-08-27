@@ -1,5 +1,4 @@
 use std::collections::{BTreeMap, HashSet};
-use std::cmp::{max, min};
 
 use support::hamcrest::{assert_that, contains, is_not};
 
@@ -13,7 +12,7 @@ use support::ChannelChanger;
 use support::{execs, project};
 use support::registry::Package;
 
-use proptest::collection::{btree_map, btree_set, vec};
+use proptest::collection::{btree_map, btree_set};
 use proptest::prelude::*;
 use proptest::sample::subsequence;
 use proptest::string::string_regex;
@@ -192,26 +191,19 @@ fn loc_names(names: &[(&'static str, &'static str)]) -> Vec<PackageId> {
 /// This generates a random registry index.
 /// Unlike vec((Name, Ver, vec((Name, VerRq), ..), ..)
 /// This strategy has a high probability of having valid dependencies
-fn registry_strategy() -> impl Strategy<Value=Vec<Summary>> {
-    const MAX_CRATES: usize = 10;
+fn registry_strategy() -> impl Strategy<Value = Vec<Summary>> {
+    const MAX_CRATES: usize = 50;
     const MAX_VERSIONS: usize = 10;
 
     let valid_name_strategy = string_regex("[A-Za-z_-][A-Za-z0-9_-]*").unwrap();
 
-    fn range(m: usize) -> impl Strategy<Value = (usize, usize)> {
-        (..m, ..m).prop_map(|(a, b)| (min(a, b), max(a,b)))
-    }
-
-    fn ver(max: usize) -> impl Strategy<Value=(usize, usize, usize)> {
+    fn ver(max: usize) -> impl Strategy<Value = (usize, usize, usize)> {
         (..=max, ..=max, ..=max)
     }
 
     btree_map(
         valid_name_strategy,
-        btree_set(
-            ver(MAX_VERSIONS),
-            1..=MAX_VERSIONS,
-        ),
+        btree_set(ver(MAX_VERSIONS), 1..=MAX_VERSIONS),
         1..=MAX_CRATES,
     ).prop_flat_map(|mut b| {
         // root is the name of the thing being compiled
@@ -222,37 +214,59 @@ fn registry_strategy() -> impl Strategy<Value=Vec<Summary>> {
             .chain(b.iter().map(|(name, _)| name))
             .map(|name| pkg_id(name).name())
             .collect::<Vec<_>>();
-        let data = b.iter()
-            .flat_map(|(name, vers)| vers.iter().map(move |(a, b, c)| (name, format!("{}.{}.{}", a, b, c)).to_pkgid()))
-            .collect::<Vec<_>>();
-        let names_len = names.len();
-        let deps: Vec<_> = data.iter().map(|name| {
-            let s: Vec<_> = names.iter().cloned().filter(|&n| name.name() < n || n.as_str() == "bad").collect();
-            let s_len = s.len();
-            subsequence(s, ..s_len)
-        }).collect();
-        let data_len = data.len();
-        (
-            Just(data),
-            deps,
-            vec(
-                range(MAX_VERSIONS).prop_map(|(b, e)| format!(">={}.0.0, <={}.0.0", b, e)),
-                names_len*data_len,
-            ),
-        )
-    }).prop_map(|(data, deps, vers)| {
-        let mut i = 0;
+        let data = b
+            .iter()
+            .flat_map(|(name, vers)| {
+                vers.iter()
+                    .map(move |(a, b, c)| (name, format!("{}.{}.{}", a, b, c)).to_pkgid())
+            }).collect::<Vec<_>>();
+        let deps: Vec<_> = data
+            .iter()
+            .map(|name| {
+                let s: Vec<_> = names
+                    .iter()
+                    .cloned()
+                    .filter(|n| name.name() < *n || n.as_str() == "bad")
+                    .collect();
+                let s_len = s.len();
+                let vers = b
+                    .iter()
+                    .map(|(name, ver)| (pkg_id(name).name(), ver.iter().cloned().collect()))
+                    .collect::<BTreeMap<_, Vec<_>>>();
+                subsequence(s, ..s_len).prop_flat_map(move |deps| {
+                    deps.into_iter()
+                        .map(|name| {
+                            let s = vers.get(name.as_str()).unwrap_or(&vec![]).clone();
+                            (
+                                Just(name),
+                                if s.is_empty() {
+                                    subsequence(s, 0)
+                                } else if s.len() == 1 {
+                                    subsequence(s, 1)
+                                } else {
+                                    subsequence(s, 1..=2)
+                                }.prop_map(|v| {
+                                    if v.is_empty() {
+                                        "=6.6.6".to_string()
+                                    } else if v.len() == 1 {
+                                        format!("={}.{}.{}", v[0].0, v[0].1, v[0].2)
+                                    } else {
+                                        format!(
+                                            ">={}.{}.{}, <={}.{}.{}",
+                                            v[0].0, v[0].1, v[0].2, v[1].0, v[1].1, v[1].2
+                                        )
+                                    }
+                                }),
+                            )
+                                .prop_map(|(name, ver)| dep_req(&name, &ver))
+                        }).collect::<Vec<_>>()
+                })
+            }).collect();
+        (Just(data), deps)
+    }).prop_map(|(data, deps)| {
         data.into_iter()
             .zip(deps.into_iter())
-            .map(|(pkgid, deps)| {
-                let d: Vec<Dependency> = deps.into_iter()
-                    .map(|n| {
-                        i += 1;
-                        dep_req(&n, &vers[i - 1])
-                    })
-                    .collect();
-                pkg_dep(pkgid, d)
-            })
+            .map(|(pkgid, deps)| pkg_dep(pkgid, deps))
             .collect()
     })
 }
@@ -277,7 +291,7 @@ proptest! {
             );
 
             if let Ok(r) = res {
-                prop_assert!(r.len() <= 4)
+                prop_assert!(r.len() <= 10)
             }
         }
     }
