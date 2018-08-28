@@ -191,9 +191,7 @@ fn loc_names(names: &[(&'static str, &'static str)]) -> Vec<PackageId> {
 /// This generates a random registry index.
 /// Unlike vec((Name, Ver, vec((Name, VerRq), ..), ..)
 /// This strategy has a high probability of having valid dependencies
-fn registry_strategy() -> impl Strategy<Value = Vec<Summary>> {
-    const MAX_CRATES: usize = 50;
-    const MAX_VERSIONS: usize = 10;
+fn registry_strategy(max_crates: usize, max_versions: usize) -> impl Strategy<Value = Vec<Summary>> {
 
     let valid_name_strategy = string_regex("[A-Za-z_-][A-Za-z0-9_-]*").unwrap();
 
@@ -203,8 +201,8 @@ fn registry_strategy() -> impl Strategy<Value = Vec<Summary>> {
 
     btree_map(
         valid_name_strategy,
-        btree_set(ver(MAX_VERSIONS), 1..=MAX_VERSIONS),
-        1..=MAX_CRATES,
+        btree_set(ver(max_versions), 1..=max_versions),
+        1..=max_crates,
     ).prop_flat_map(|mut b| {
         // root is the name of the thing being compiled
         // so it would be confusing to have it in the index
@@ -278,7 +276,7 @@ proptest! {
         .. ProptestConfig::default()
     })]
     #[test]
-    fn doesnt_crash(input in registry_strategy()) {
+    fn doesnt_crash(input in registry_strategy(50, 10)) {
         let reg = registry(input.clone());
         // there is only a small chance that eny one
         // crate will be interesting.
