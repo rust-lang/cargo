@@ -715,7 +715,8 @@ impl Execs {
         p.exec_with_output()
     }
 
-    pub fn build_command(&self) -> Command {
+    pub fn build_command(&mut self) -> Command {
+        self.ran = true;
         // TODO avoid unwrap
         let p = (&self.process_builder).clone().unwrap();
         p.build_command()
