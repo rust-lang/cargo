@@ -1,4 +1,3 @@
-use support::ChannelChanger;
 use support::{execs, project, publish};
 use support::hamcrest::assert_that;
 

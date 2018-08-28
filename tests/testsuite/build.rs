@@ -3,13 +3,12 @@ use std::fs::{self, File};
 use std::io::prelude::*;
 
 use cargo::util::paths::dylib_path_envvar;
-use cargo::util::{process, ProcessBuilder};
+use cargo::util::process;
 use support::{basic_manifest, basic_bin_manifest, basic_lib_manifest, is_nightly, rustc_host, sleep_ms};
 use support::paths::{root, CargoPathExt};
 use support::ProjectBuilder;
-use support::{execs, main_file, project};
+use support::{Execs, execs, main_file, project};
 use support::registry::Package;
-use support::ChannelChanger;
 use support::hamcrest::{assert_that, existing_dir, existing_file, is_not};
 
 #[test]
@@ -1553,15 +1552,15 @@ fn crate_authors_env_vars() {
 }
 
 // The tester may already have LD_LIBRARY_PATH=::/foo/bar which leads to a false positive error
-fn setenv_for_removing_empty_component(mut p: ProcessBuilder) -> ProcessBuilder {
+fn setenv_for_removing_empty_component(mut execs: Execs) -> Execs {
     let v = dylib_path_envvar();
     if let Ok(search_path) = env::var(v) {
         let new_search_path = env::join_paths(
             env::split_paths(&search_path).filter(|e| !e.as_os_str().is_empty()),
         ).expect("join_paths");
-        p.env(v, new_search_path); // build_command() will override LD_LIBRARY_PATH accordingly
+        execs.env(v, new_search_path); // build_command() will override LD_LIBRARY_PATH accordingly
     }
-    p
+    execs
 }
 
 // Regression test for #4277

@@ -11,7 +11,6 @@ use cargo::util::process;
 use support::sleep_ms;
 use support::paths::{self, CargoPathExt};
 use support::{basic_manifest, basic_lib_manifest, execs, git, main_file, project, path2url};
-use support::ChannelChanger;
 use support::hamcrest::{assert_that, existing_file};
 
 #[test]

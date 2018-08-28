@@ -1,4 +1,3 @@
-use support::ChannelChanger;
 use support::{basic_manifest, basic_bin_manifest, execs, main_file, project};
 use support::hamcrest::{assert_that, existing_file, is_not};
 

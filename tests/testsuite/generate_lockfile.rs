@@ -3,7 +3,6 @@ use std::io::prelude::*;
 
 use support::registry::Package;
 use support::{basic_manifest, execs, paths, project, ProjectBuilder};
-use support::ChannelChanger;
 use support::hamcrest::{assert_that, existing_file, is_not};
 
 #[test]

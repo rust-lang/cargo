@@ -8,7 +8,6 @@ use cargo::core::{Dependency, PackageId, Registry, Summary, enable_nightly_featu
 use cargo::util::{CargoResult, Config, ToUrl};
 use cargo::core::resolver::{self, Method};
 
-use support::ChannelChanger;
 use support::{execs, project};
 use support::registry::Package;
 

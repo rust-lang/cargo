@@ -1,7 +1,7 @@
 use std::str;
 
 use cargo::util::process;
-use support::{is_nightly, ChannelChanger};
+use support::is_nightly;
 use support::paths::CargoPathExt;
 use support::{basic_manifest, basic_bin_manifest, basic_lib_manifest, execs, project};
 use support::hamcrest::{assert_that, existing_file};

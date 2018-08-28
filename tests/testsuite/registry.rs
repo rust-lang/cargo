@@ -750,7 +750,6 @@ fn update_lockfile() {
 
 #[test]
 fn update_offline() {
-    use support::ChannelChanger;
     let p = project()
         .file(
             "Cargo.toml",
