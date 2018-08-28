@@ -1,9 +1,8 @@
 use std::fs::File;
 use std::io::prelude::*;
 
-use support::{basic_manifest, execs, project};
 use support::registry::Package;
-use support::hamcrest::assert_that;
+use support::{basic_manifest, project};
 
 #[test]
 fn minor_update_two_places() {
@@ -21,8 +20,7 @@ fn minor_update_two_places() {
                 log = "0.1"
                 foo = { path = "foo" }
             "#,
-        )
-        .file("src/lib.rs", "")
+        ).file("src/lib.rs", "")
         .file(
             "foo/Cargo.toml",
             r#"
@@ -34,11 +32,10 @@ fn minor_update_two_places() {
                 [dependencies]
                 log = "0.1"
             "#,
-        )
-        .file("foo/src/lib.rs", "")
+        ).file("foo/src/lib.rs", "")
         .build();
 
-    assert_that(p.cargo("build"), execs());
+    p.cargo("build").run();
     Package::new("log", "0.1.1").publish();
 
     File::create(p.root().join("foo/Cargo.toml"))
@@ -53,10 +50,9 @@ fn minor_update_two_places() {
                 [dependencies]
                 log = "0.1.1"
             "#,
-        )
-        .unwrap();
+        ).unwrap();
 
-    assert_that(p.cargo("build"), execs());
+    p.cargo("build").run();
 }
 
 #[test]
@@ -78,8 +74,7 @@ fn transitive_minor_update() {
                 log = "0.1"
                 foo = { path = "foo" }
             "#,
-        )
-        .file("src/lib.rs", "")
+        ).file("src/lib.rs", "")
         .file(
             "foo/Cargo.toml",
             r#"
@@ -91,11 +86,10 @@ fn transitive_minor_update() {
                 [dependencies]
                 serde = "0.1"
             "#,
-        )
-        .file("foo/src/lib.rs", "")
+        ).file("foo/src/lib.rs", "")
         .build();
 
-    assert_that(p.cargo("build"), execs());
+    p.cargo("build").run();
 
     Package::new("log", "0.1.1").publish();
     Package::new("serde", "0.1.1").dep("log", "0.1.1").publish();
@@ -109,14 +103,12 @@ fn transitive_minor_update() {
     //
     // Also note that this is probably counterintuitive and weird. We may wish
     // to change this one day.
-    assert_that(
-        p.cargo("update -p serde"),
-        execs().with_stderr(
+    p.cargo("update -p serde")
+        .with_stderr(
             "\
 [UPDATING] registry `[..]`
 ",
-        ),
-    );
+        ).run();
 }
 
 #[test]
@@ -138,8 +130,7 @@ fn conservative() {
                 log = "0.1"
                 foo = { path = "foo" }
             "#,
-        )
-        .file("src/lib.rs", "")
+        ).file("src/lib.rs", "")
         .file(
             "foo/Cargo.toml",
             r#"
@@ -151,24 +142,21 @@ fn conservative() {
                 [dependencies]
                 serde = "0.1"
             "#,
-        )
-        .file("foo/src/lib.rs", "")
+        ).file("foo/src/lib.rs", "")
         .build();
 
-    assert_that(p.cargo("build"), execs());
+    p.cargo("build").run();
 
     Package::new("log", "0.1.1").publish();
     Package::new("serde", "0.1.1").dep("log", "0.1").publish();
 
-    assert_that(
-        p.cargo("update -p serde"),
-        execs().with_stderr(
+    p.cargo("update -p serde")
+        .with_stderr(
             "\
 [UPDATING] registry `[..]`
 [UPDATING] serde v0.1.0 -> v0.1.1
 ",
-        ),
-    );
+        ).run();
 }
 
 #[test]
@@ -187,8 +175,7 @@ fn update_via_new_dep() {
                 log = "0.1"
                 # foo = { path = "foo" }
             "#,
-        )
-        .file("src/lib.rs", "")
+        ).file("src/lib.rs", "")
         .file(
             "foo/Cargo.toml",
             r#"
@@ -200,18 +187,14 @@ fn update_via_new_dep() {
                 [dependencies]
                 log = "0.1.1"
             "#,
-        )
-        .file("foo/src/lib.rs", "")
+        ).file("foo/src/lib.rs", "")
         .build();
 
-    assert_that(p.cargo("build"), execs());
+    p.cargo("build").run();
     Package::new("log", "0.1.1").publish();
 
     p.uncomment_root_manifest();
-    assert_that(
-        p.cargo("build").env("RUST_LOG", "cargo=trace"),
-        execs(),
-    );
+    p.cargo("build").env("RUST_LOG", "cargo=trace").run();
 }
 
 #[test]
@@ -232,8 +215,7 @@ fn update_via_new_member() {
                 [dependencies]
                 log = "0.1"
             "#,
-        )
-        .file("src/lib.rs", "")
+        ).file("src/lib.rs", "")
         .file(
             "foo/Cargo.toml",
             r#"
@@ -245,15 +227,14 @@ fn update_via_new_member() {
                 [dependencies]
                 log = "0.1.1"
             "#,
-        )
-        .file("foo/src/lib.rs", "")
+        ).file("foo/src/lib.rs", "")
         .build();
 
-    assert_that(p.cargo("build"), execs());
+    p.cargo("build").run();
     Package::new("log", "0.1.1").publish();
 
     p.uncomment_root_manifest();
-    assert_that(p.cargo("build"), execs());
+    p.cargo("build").run();
 }
 
 #[test]
@@ -272,17 +253,16 @@ fn add_dep_deep_new_requirement() {
                 log = "0.1"
                 # bar = "0.1"
             "#,
-        )
-        .file("src/lib.rs", "")
+        ).file("src/lib.rs", "")
         .build();
 
-    assert_that(p.cargo("build"), execs());
+    p.cargo("build").run();
 
     Package::new("log", "0.1.1").publish();
     Package::new("bar", "0.1.0").dep("log", "0.1.1").publish();
 
     p.uncomment_root_manifest();
-    assert_that(p.cargo("build"), execs());
+    p.cargo("build").run();
 }
 
 #[test]
@@ -302,17 +282,16 @@ fn everything_real_deep() {
                 foo = "0.1"
                 # bar = "0.1"
             "#,
-        )
-        .file("src/lib.rs", "")
+        ).file("src/lib.rs", "")
         .build();
 
-    assert_that(p.cargo("build"), execs());
+    p.cargo("build").run();
 
     Package::new("log", "0.1.1").publish();
     Package::new("bar", "0.1.0").dep("log", "0.1.1").publish();
 
     p.uncomment_root_manifest();
-    assert_that(p.cargo("build"), execs());
+    p.cargo("build").run();
 }
 
 #[test]
@@ -329,8 +308,7 @@ fn change_package_version() {
                 [dependencies]
                 bar = { path = "bar", version = "0.2.0-alpha" }
             "#,
-        )
-        .file("src/lib.rs", "")
+        ).file("src/lib.rs", "")
         .file("bar/Cargo.toml", &basic_manifest("bar", "0.2.0-alpha"))
         .file("bar/src/lib.rs", "")
         .file(
@@ -345,10 +323,9 @@ fn change_package_version() {
                 name = "bar"
                 version = "0.2.0"
             "#,
-        )
-        .build();
+        ).build();
 
-    assert_that(p.cargo("build"), execs());
+    p.cargo("build").run();
 }
 
 #[test]
@@ -370,8 +347,7 @@ fn update_precise() {
                 serde = "0.2"
                 foo = { path = "foo" }
             "#,
-        )
-        .file("src/lib.rs", "")
+        ).file("src/lib.rs", "")
         .file(
             "foo/Cargo.toml",
             r#"
@@ -383,21 +359,18 @@ fn update_precise() {
                 [dependencies]
                 serde = "0.1"
             "#,
-        )
-        .file("foo/src/lib.rs", "")
+        ).file("foo/src/lib.rs", "")
         .build();
 
-    assert_that(p.cargo("build"), execs());
+    p.cargo("build").run();
 
     Package::new("serde", "0.2.0").publish();
 
-    assert_that(
-        p.cargo("update -p serde:0.2.1 --precise 0.2.0"),
-        execs().with_stderr(
+    p.cargo("update -p serde:0.2.1 --precise 0.2.0")
+        .with_stderr(
             "\
 [UPDATING] registry `[..]`
 [UPDATING] serde v0.2.1 -> v0.2.0
 ",
-        ),
-    );
+        ).run();
 }

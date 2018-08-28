@@ -2,14 +2,13 @@ use std::collections::{BTreeMap, HashSet};
 
 use support::hamcrest::{assert_that, contains, is_not};
 
-use cargo::core::source::{GitReference, SourceId};
 use cargo::core::dependency::Kind::{self, Development};
-use cargo::core::{Dependency, PackageId, Registry, Summary, enable_nightly_features};
-use cargo::util::{CargoResult, Config, ToUrl};
 use cargo::core::resolver::{self, Method};
+use cargo::core::source::{GitReference, SourceId};
+use cargo::core::{enable_nightly_features, Dependency, PackageId, Registry, Summary};
+use cargo::util::{CargoResult, Config, ToUrl};
 
-use support::ChannelChanger;
-use support::{execs, project};
+use support::project;
 use support::registry::Package;
 
 fn resolve(
@@ -28,7 +27,12 @@ fn resolve_with_config(
 ) -> CargoResult<Vec<PackageId>> {
     struct MyRegistry<'a>(&'a [Summary]);
     impl<'a> Registry for MyRegistry<'a> {
-        fn query(&mut self, dep: &Dependency, f: &mut FnMut(Summary), fuzzy: bool) -> CargoResult<()> {
+        fn query(
+            &mut self,
+            dep: &Dependency,
+            f: &mut FnMut(Summary),
+            fuzzy: bool,
+        ) -> CargoResult<()> {
             for summary in self.0.iter() {
                 if fuzzy || dep.matches(summary) {
                     f(summary.clone());
@@ -38,7 +42,13 @@ fn resolve_with_config(
         }
     }
     let mut registry = MyRegistry(registry);
-    let summary = Summary::new(pkg.clone(), deps, &BTreeMap::<String, Vec<String>>::new(), None::<String>, false).unwrap();
+    let summary = Summary::new(
+        pkg.clone(),
+        deps,
+        &BTreeMap::<String, Vec<String>>::new(),
+        None::<String>,
+        false,
+    ).unwrap();
     let method = Method::Everything;
     let resolve = resolver::resolve(
         &[(summary, method)],
@@ -121,7 +131,13 @@ fn pkg(name: &str) -> Summary {
     } else {
         None
     };
-    Summary::new(pkg_id(name), Vec::new(), &BTreeMap::<String, Vec<String>>::new(), link, false).unwrap()
+    Summary::new(
+        pkg_id(name),
+        Vec::new(),
+        &BTreeMap::<String, Vec<String>>::new(),
+        link,
+        false,
+    ).unwrap()
 }
 
 fn pkg_id(name: &str) -> PackageId {
@@ -343,10 +359,10 @@ fn test_resolving_maximum_version_with_transitive_deps() {
 #[test]
 fn test_resolving_minimum_version_with_transitive_deps() {
     enable_nightly_features(); // -Z minimal-versions
-    // When the minimal-versions config option is specified then the lowest
-    // possible version of a package should be selected. "util 1.0.0" can't be
-    // selected because of the requirements of "bar", so the minimum version
-    // must be 1.1.1.
+                               // When the minimal-versions config option is specified then the lowest
+                               // possible version of a package should be selected. "util 1.0.0" can't be
+                               // selected because of the requirements of "bar", so the minimum version
+                               // must be 1.1.1.
     let reg = registry(vec![
         pkg!(("util", "1.2.2")),
         pkg!(("util", "1.0.0")),
@@ -365,8 +381,7 @@ fn test_resolving_minimum_version_with_transitive_deps() {
             false,
             &None,
             &["minimal-versions".to_string()],
-        )
-        .unwrap();
+        ).unwrap();
 
     let res = resolve_with_config(
         &pkg_id("root"),
@@ -407,15 +422,12 @@ fn minimal_version_cli() {
             [dependencies]
             dep = "1.0"
         "#,
-        )
-        .file("src/main.rs", "fn main() {}")
+        ).file("src/main.rs", "fn main() {}")
         .build();
 
-    assert_that(
-        p.cargo("generate-lockfile -Zminimal-versions")
-            .masquerade_as_nightly_cargo(),
-        execs(),
-    );
+    p.cargo("generate-lockfile -Zminimal-versions")
+        .masquerade_as_nightly_cargo()
+        .run();
 
     let lock = p.read_lockfile();
 
@@ -445,18 +457,9 @@ fn resolving_wrong_case_from_registry() {
     // For back compatibility reasons, we probably won't.
     // But we may want to future prove ourselves by understanding it.
     // This test documents the current behavior.
-    let reg = registry(vec![
-        pkg!(("foo", "1.0.0")),
-        pkg!("bar" => ["Foo"]),
-    ]);
+    let reg = registry(vec![pkg!(("foo", "1.0.0")), pkg!("bar" => ["Foo"])]);
 
-    assert!(
-        resolve(
-            &pkg_id("root"),
-            vec![dep("bar")],
-            &reg
-        ).is_err()
-    );
+    assert!(resolve(&pkg_id("root"), vec![dep("bar")], &reg).is_err());
 }
 
 #[test]
@@ -465,18 +468,9 @@ fn resolving_mis_hyphenated_from_registry() {
     // For back compatibility reasons, we probably won't.
     // But we may want to future prove ourselves by understanding it.
     // This test documents the current behavior.
-    let reg = registry(vec![
-        pkg!(("fo-o", "1.0.0")),
-        pkg!("bar" => ["fo_o"]),
-    ]);
+    let reg = registry(vec![pkg!(("fo-o", "1.0.0")), pkg!("bar" => ["fo_o"])]);
 
-    assert!(
-        resolve(
-            &pkg_id("root"),
-            vec![dep("bar")],
-            &reg
-        ).is_err()
-    );
+    assert!(resolve(&pkg_id("root"), vec![dep("bar")], &reg).is_err());
 }
 
 #[test]

@@ -1,6 +1,4 @@
-use support::ChannelChanger;
-use support::{execs, project, publish};
-use support::hamcrest::assert_that;
+use support::{project, publish};
 
 #[test]
 fn feature_required() {
@@ -14,12 +12,12 @@ fn feature_required() {
             authors = []
             im-a-teapot = true
         "#,
-        )
-        .file("src/lib.rs", "")
+        ).file("src/lib.rs", "")
         .build();
-    assert_that(
-        p.cargo("build").masquerade_as_nightly_cargo(),
-        execs().with_status(101).with_stderr(
+    p.cargo("build")
+        .masquerade_as_nightly_cargo()
+        .with_status(101)
+        .with_stderr(
             "\
 error: failed to parse manifest at `[..]`
 
@@ -31,12 +29,11 @@ Caused by:
 
 consider adding `cargo-features = [\"test-dummy-unstable\"]` to the manifest
 ",
-        ),
-    );
+        ).run();
 
-    assert_that(
-        p.cargo("build"),
-        execs().with_status(101).with_stderr(
+    p.cargo("build")
+        .with_status(101)
+        .with_stderr(
             "\
 error: failed to parse manifest at `[..]`
 
@@ -50,8 +47,7 @@ this Cargo does not support nightly features, but if you
 switch to nightly channel you can add
 `cargo-features = [\"test-dummy-unstable\"]` to enable this feature
 ",
-        ),
-    );
+        ).run();
 }
 
 #[test]
@@ -67,20 +63,18 @@ fn unknown_feature() {
             version = "0.0.1"
             authors = []
         "#,
-        )
-        .file("src/lib.rs", "")
+        ).file("src/lib.rs", "")
         .build();
-    assert_that(
-        p.cargo("build"),
-        execs().with_status(101).with_stderr(
+    p.cargo("build")
+        .with_status(101)
+        .with_stderr(
             "\
 error: failed to parse manifest at `[..]`
 
 Caused by:
   unknown cargo feature `foo`
 ",
-        ),
-    );
+        ).run();
 }
 
 #[test]
@@ -96,20 +90,17 @@ fn stable_feature_warns() {
             version = "0.0.1"
             authors = []
         "#,
-        )
-        .file("src/lib.rs", "")
+        ).file("src/lib.rs", "")
         .build();
-    assert_that(
-        p.cargo("build"),
-        execs().with_stderr(
+    p.cargo("build")
+        .with_stderr(
             "\
 warning: the cargo feature `test-dummy-stable` is now stable and is no longer \
 necessary to be listed in the manifest
 [COMPILING] a [..]
 [FINISHED] [..]
 ",
-        ),
-    );
+        ).run();
 }
 
 #[test]
@@ -126,22 +117,20 @@ fn nightly_feature_requires_nightly() {
             authors = []
             im-a-teapot = true
         "#,
-        )
-        .file("src/lib.rs", "")
+        ).file("src/lib.rs", "")
         .build();
-    assert_that(
-        p.cargo("build").masquerade_as_nightly_cargo(),
-        execs().with_stderr(
+    p.cargo("build")
+        .masquerade_as_nightly_cargo()
+        .with_stderr(
             "\
 [COMPILING] a [..]
 [FINISHED] [..]
 ",
-        ),
-    );
+        ).run();
 
-    assert_that(
-        p.cargo("build"),
-        execs().with_status(101).with_stderr(
+    p.cargo("build")
+        .with_status(101)
+        .with_stderr(
             "\
 error: failed to parse manifest at `[..]`
 
@@ -149,8 +138,7 @@ Caused by:
   the cargo feature `test-dummy-unstable` requires a nightly version of Cargo, \
   but this is the `stable` channel
 ",
-        ),
-    );
+        ).run();
 }
 
 #[test]
@@ -167,8 +155,7 @@ fn nightly_feature_requires_nightly_in_dep() {
             [dependencies]
             a = { path = "a" }
         "#,
-        )
-        .file("src/lib.rs", "")
+        ).file("src/lib.rs", "")
         .file(
             "a/Cargo.toml",
             r#"
@@ -180,23 +167,21 @@ fn nightly_feature_requires_nightly_in_dep() {
             authors = []
             im-a-teapot = true
         "#,
-        )
-        .file("a/src/lib.rs", "")
+        ).file("a/src/lib.rs", "")
         .build();
-    assert_that(
-        p.cargo("build").masquerade_as_nightly_cargo(),
-        execs().with_stderr(
+    p.cargo("build")
+        .masquerade_as_nightly_cargo()
+        .with_stderr(
             "\
 [COMPILING] a [..]
 [COMPILING] b [..]
 [FINISHED] [..]
 ",
-        ),
-    );
+        ).run();
 
-    assert_that(
-        p.cargo("build"),
-        execs().with_status(101).with_stderr(
+    p.cargo("build")
+        .with_status(101)
+        .with_stderr(
             "\
 error: failed to load source for a dependency on `a`
 
@@ -210,8 +195,7 @@ Caused by:
   the cargo feature `test-dummy-unstable` requires a nightly version of Cargo, \
   but this is the `stable` channel
 ",
-        ),
-    );
+        ).run();
 }
 
 #[test]
@@ -228,22 +212,20 @@ fn cant_publish() {
             authors = []
             im-a-teapot = true
         "#,
-        )
-        .file("src/lib.rs", "")
+        ).file("src/lib.rs", "")
         .build();
-    assert_that(
-        p.cargo("build").masquerade_as_nightly_cargo(),
-        execs().with_stderr(
+    p.cargo("build")
+        .masquerade_as_nightly_cargo()
+        .with_stderr(
             "\
 [COMPILING] a [..]
 [FINISHED] [..]
 ",
-        ),
-    );
+        ).run();
 
-    assert_that(
-        p.cargo("build"),
-        execs().with_status(101).with_stderr(
+    p.cargo("build")
+        .with_status(101)
+        .with_stderr(
             "\
 error: failed to parse manifest at `[..]`
 
@@ -251,8 +233,7 @@ Caused by:
   the cargo feature `test-dummy-unstable` requires a nightly version of Cargo, \
   but this is the `stable` channel
 ",
-        ),
-    );
+        ).run();
 }
 
 #[test]
@@ -269,35 +250,28 @@ fn z_flags_rejected() {
             authors = []
             im-a-teapot = true
         "#,
-        )
-        .file("src/lib.rs", "")
+        ).file("src/lib.rs", "")
         .build();
-    assert_that(
-        p.cargo("build -Zprint-im-a-teapot"),
-        execs()
-            .with_status(101)
-            .with_stderr("error: the `-Z` flag is only accepted on the nightly channel of Cargo"),
-    );
+    p.cargo("build -Zprint-im-a-teapot")
+        .with_status(101)
+        .with_stderr("error: the `-Z` flag is only accepted on the nightly channel of Cargo")
+        .run();
 
-    assert_that(
-        p.cargo("build -Zarg").masquerade_as_nightly_cargo(),
-        execs()
-            .with_status(101)
-            .with_stderr("error: unknown `-Z` flag specified: arg"),
-    );
+    p.cargo("build -Zarg")
+        .masquerade_as_nightly_cargo()
+        .with_status(101)
+        .with_stderr("error: unknown `-Z` flag specified: arg")
+        .run();
 
-    assert_that(
-        p.cargo("build -Zprint-im-a-teapot")
-            .masquerade_as_nightly_cargo(),
-        execs()
-            .with_stdout("im-a-teapot = true\n")
-            .with_stderr(
-                "\
+    p.cargo("build -Zprint-im-a-teapot")
+        .masquerade_as_nightly_cargo()
+        .with_stdout("im-a-teapot = true\n")
+        .with_stderr(
+            "\
 [COMPILING] a [..]
 [FINISHED] [..]
 ",
-            ),
-    );
+        ).run();
 }
 
 #[test]
@@ -315,13 +289,10 @@ fn publish_allowed() {
             version = "0.0.1"
             authors = []
         "#,
-        )
-        .file("src/lib.rs", "")
+        ).file("src/lib.rs", "")
         .build();
-    assert_that(
-        p.cargo("publish --index")
-            .arg(publish::registry().to_string())
-            .masquerade_as_nightly_cargo(),
-        execs(),
-    );
+    p.cargo("publish --index")
+        .arg(publish::registry().to_string())
+        .masquerade_as_nightly_cargo()
+        .run();
 }

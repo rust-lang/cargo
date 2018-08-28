@@ -46,7 +46,7 @@ use cargo::util::ProcessError;
 use git2;
 use url::Url;
 
-use support::{project, Project, ProjectBuilder, path2url};
+use support::{path2url, project, Project, ProjectBuilder};
 
 #[must_use]
 pub struct RepoBuilder {
@@ -105,7 +105,8 @@ impl RepoBuilder {
             let id = t!(index.write_tree());
             let tree = t!(self.repo.find_tree(id));
             let sig = t!(self.repo.signature());
-            t!(self.repo
+            t!(self
+                .repo
                 .commit(Some("HEAD"), &sig, &sig, "Initial commit", &tree, &[]));
         }
         let RepoBuilder { repo, .. } = self;
@@ -123,7 +124,11 @@ impl Repository {
     }
 
     pub fn revparse_head(&self) -> String {
-        self.0.revparse_single("HEAD").expect("revparse HEAD").id().to_string()
+        self.0
+            .revparse_single("HEAD")
+            .expect("revparse HEAD")
+            .id()
+            .to_string()
     }
 }
 

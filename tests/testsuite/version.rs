@@ -1,37 +1,30 @@
 use cargo;
-use support::{execs, project};
-use support::hamcrest::assert_that;
+use support::project;
 
 #[test]
 fn simple() {
     let p = project().build();
 
-    assert_that(
-        p.cargo("version"),
-        execs()
-            .with_stdout(&format!("{}\n", cargo::version())),
-    );
+    p.cargo("version")
+        .with_stdout(&format!("{}\n", cargo::version()))
+        .run();
 
-    assert_that(
-        p.cargo("--version"),
-        execs()
-            .with_stdout(&format!("{}\n", cargo::version())),
-    );
+    p.cargo("--version")
+        .with_stdout(&format!("{}\n", cargo::version()))
+        .run();
 }
 
 #[test]
 #[cfg_attr(target_os = "windows", ignore)]
 fn version_works_without_rustc() {
     let p = project().build();
-    assert_that(p.cargo("version").env("PATH", ""), execs());
+    p.cargo("version").env("PATH", "").run();
 }
 
 #[test]
 fn version_works_with_bad_config() {
-    let p = project()
-        .file(".cargo/config", "this is not toml")
-        .build();
-    assert_that(p.cargo("version"), execs());
+    let p = project().file(".cargo/config", "this is not toml").build();
+    p.cargo("version").run();
 }
 
 #[test]
@@ -43,7 +36,6 @@ fn version_works_with_bad_target_dir() {
             [build]
             target-dir = 4
         "#,
-        )
-        .build();
-    assert_that(p.cargo("version"), execs());
+        ).build();
+    p.cargo("version").run();
 }

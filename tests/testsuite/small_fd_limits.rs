@@ -4,11 +4,10 @@ use std::path::PathBuf;
 use std::process::Command;
 
 use git2;
-use support::{execs, project};
-use support::registry::Package;
-use support::paths;
 use support::git;
-use support::hamcrest::assert_that;
+use support::paths;
+use support::project;
+use support::registry::Package;
 
 use url::Url;
 
@@ -32,12 +31,11 @@ fn run_test(path_env: Option<&OsStr>) {
             [dependencies]
             bar = "*"
         "#,
-        )
-        .file("src/lib.rs", "")
+        ).file("src/lib.rs", "")
         .build();
     Package::new("bar", "0.1.0").publish();
 
-    assert_that(foo.cargo("build"), execs());
+    foo.cargo("build").run();
 
     let index = find_index();
     let path = paths::home().join("tmp");
@@ -75,7 +73,7 @@ fn run_test(path_env: Option<&OsStr>) {
         cmd.env("PATH", path);
     }
     cmd.env("RUST_LOG", "trace");
-    assert_that(cmd, execs());
+    cmd.run();
     let after = find_index()
         .join(".git/objects/pack")
         .read_dir()
