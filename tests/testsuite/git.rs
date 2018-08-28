@@ -226,10 +226,7 @@ fn cargo_compile_offline_with_cached_git_dep() {
             ).as_bytes(),
         ).unwrap();
 
-    let _out = p
-        .cargo("build -Zoffline")
-        .masquerade_as_nightly_cargo()
-        .exec_with_output();
+    p.cargo("build -Zoffline").masquerade_as_nightly_cargo().run();
     p.process(&p.bin("foo"))
         .with_stdout("hello from cached git repo rev1\n")
         .run();
@@ -448,7 +445,7 @@ fn cargo_compile_with_nested_paths() {
             &main_file(r#""{}", dep1::hello()"#, &["dep1"]),
         ).build();
 
-    p.cargo("build").exec_with_output().unwrap();
+    p.cargo("build").run();
 
     assert_that(&p.bin("foo"), existing_file());
 
@@ -497,7 +494,7 @@ fn cargo_compile_with_malformed_nested_paths() {
             &main_file(r#""{}", dep1::hello()"#, &["dep1"]),
         ).build();
 
-    p.cargo("build").exec_with_output().unwrap();
+    p.cargo("build").run();
 
     assert_that(&p.bin("foo"), existing_file());
 
@@ -563,7 +560,7 @@ fn cargo_compile_with_meta_package() {
             ),
         ).build();
 
-    p.cargo("build").exec_with_output().unwrap();
+    p.cargo("build").run();
 
     assert_that(&p.bin("foo"), existing_file());
 

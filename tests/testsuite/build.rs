@@ -582,7 +582,7 @@ fn cargo_compile_with_nested_deps_inferred() {
         "#,
         ).build();
 
-    p.cargo("build").exec_with_output().unwrap();
+    p.cargo("build").run();
 
     assert_that(&p.bin("foo"), existing_file());
     assert_that(&p.bin("libbar.rlib"), is_not(existing_file()));
@@ -641,7 +641,7 @@ fn cargo_compile_with_nested_deps_correct_bin() {
         "#,
         ).build();
 
-    p.cargo("build").exec_with_output().unwrap();
+    p.cargo("build").run();
 
     assert_that(&p.bin("foo"), existing_file());
     assert_that(&p.bin("libbar.rlib"), is_not(existing_file()));
@@ -701,7 +701,7 @@ fn cargo_compile_with_nested_deps_shorthand() {
         "#,
         ).build();
 
-    p.cargo("build").exec_with_output().unwrap();
+    p.cargo("build").run();
 
     assert_that(&p.bin("foo"), existing_file());
     assert_that(&p.bin("libbar.rlib"), is_not(existing_file()));
@@ -1155,7 +1155,7 @@ fn compile_offline_while_transitive_dep_not_cached() {
         .build();
 
     // simulate download bar, but fail to download baz
-    let _out = p.cargo("build").exec_with_output();
+    p.cargo("build").with_status(101).run();
 
     drop(File::create(baz_path).ok().unwrap().write_all(&content));
 
@@ -2407,7 +2407,7 @@ fn cargo_platform_specific_dependency_wrong_platform() {
             "invalid rust file, should not be compiled",
         ).build();
 
-    p.cargo("build").exec_with_output().unwrap();
+    p.cargo("build").run();
 
     assert_that(&p.bin("foo"), existing_file());
     p.process(&p.bin("foo")).run();
@@ -2524,13 +2524,13 @@ fn example_bin_same_name() {
         .file("examples/foo.rs", "fn main() {}")
         .build();
 
-    p.cargo("test --no-run -v").exec_with_output().unwrap();
+    p.cargo("test --no-run -v").run();
 
     assert_that(&p.bin("foo"), is_not(existing_file()));
     // We expect a file of the form bin/foo-{metadata_hash}
     assert_that(&p.bin("examples/foo"), existing_file());
 
-    p.cargo("test --no-run -v").exec_with_output().unwrap();
+    p.cargo("test --no-run -v").run();
 
     assert_that(&p.bin("foo"), is_not(existing_file()));
     // We expect a file of the form bin/foo-{metadata_hash}
