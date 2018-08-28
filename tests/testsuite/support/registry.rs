@@ -4,15 +4,15 @@ use std::io::prelude::*;
 use std::path::{Path, PathBuf};
 
 use cargo::util::Sha256;
-use flate2::Compression;
 use flate2::write::GzEncoder;
+use flate2::Compression;
 use git2;
 use hex;
 use tar::{Builder, Header};
 use url::Url;
 
-use support::paths;
 use support::git::repo;
+use support::paths;
 
 pub fn registry_path() -> PathBuf {
     paths::root().join("registry")
@@ -171,8 +171,7 @@ pub fn init() {
         "#,
                 dl_url()
             ),
-        )
-        .build();
+        ).build();
     fs::create_dir_all(dl_path().join("api/v1/crates")).unwrap();
 
     // Init an alt registry
@@ -186,8 +185,7 @@ pub fn init() {
                 alt_dl_url(),
                 alt_api_url()
             ),
-        )
-        .build();
+        ).build();
     fs::create_dir_all(alt_api_path().join("api/v1/crates")).unwrap();
 }
 
@@ -335,7 +333,8 @@ impl Package {
         self.make_archive();
 
         // Figure out what we're going to write into the index
-        let deps = self.deps
+        let deps = self
+            .deps
             .iter()
             .map(|dep| {
                 json!({
@@ -348,8 +347,7 @@ impl Package {
                 "kind": dep.kind,
                 "registry": dep.registry,
             })
-            })
-            .collect::<Vec<_>>();
+            }).collect::<Vec<_>>();
         let cksum = {
             let mut c = Vec::new();
             t!(t!(File::open(&self.archive_dst())).read_to_end(&mut c));

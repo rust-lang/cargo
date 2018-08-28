@@ -2,11 +2,7 @@
 //! in the output, their arguments are quoted properly
 //! so that the command can be run in a terminal
 
-use support::{
-    execs,
-    project,
-};
-use support::hamcrest::assert_that;
+use support::project;
 
 #[test]
 fn features_are_quoted() {
@@ -23,14 +19,11 @@ fn features_are_quoted() {
             some_feature = []
             default = ["some_feature"]
             "#,
-        )
-        .file("src/main.rs", "fn main() {error}")
+        ).file("src/main.rs", "fn main() {error}")
         .build();
 
-    assert_that(
-        p.cargo("check -v")
-            .env("MSYSTEM", "1"),
-        execs()
+    p.cargo("check -v")
+            .env("MSYSTEM", "1")
             .with_status(101)
             .with_stderr_contains(
                 r#"[RUNNING] `rustc [..] --cfg 'feature="default"' --cfg 'feature="some_feature"' [..]`"#
@@ -39,5 +32,5 @@ fn features_are_quoted() {
 Caused by:
   process didn't exit successfully: [..] --cfg 'feature="default"' --cfg 'feature="some_feature"' [..]"#
             )
-    );
+    .run();
 }

@@ -1,8 +1,7 @@
 use std::env;
 
 use support::is_nightly;
-use support::{execs, project};
-use support::hamcrest::assert_that;
+use support::project;
 
 #[test]
 fn profile_overrides() {
@@ -21,12 +20,10 @@ fn profile_overrides() {
             debug = false
             rpath = true
         "#,
-        )
-        .file("src/lib.rs", "")
+        ).file("src/lib.rs", "")
         .build();
-    assert_that(
-        p.cargo("build -v"),
-        execs().with_stderr(&format!(
+    p.cargo("build -v")
+        .with_stderr(&format!(
             "\
 [COMPILING] test v0.0.0 ({url})
 [RUNNING] `rustc --crate-name test src/lib.rs --crate-type lib \
@@ -41,8 +38,7 @@ fn profile_overrides() {
 ",
             dir = p.root().display(),
             url = p.url(),
-        )),
-    );
+        )).run();
 }
 
 #[test]
@@ -60,12 +56,10 @@ fn opt_level_override_0() {
             [profile.dev]
             opt-level = 0
         "#,
-        )
-        .file("src/lib.rs", "")
+        ).file("src/lib.rs", "")
         .build();
-    assert_that(
-        p.cargo("build -v"),
-        execs().with_stderr(&format!(
+    p.cargo("build -v")
+        .with_stderr(&format!(
             "\
 [COMPILING] test v0.0.0 ({url})
 [RUNNING] `rustc --crate-name test src/lib.rs --crate-type lib \
@@ -78,8 +72,7 @@ fn opt_level_override_0() {
 ",
             dir = p.root().display(),
             url = p.url()
-        )),
-    );
+        )).run();
 }
 
 #[test]
@@ -96,12 +89,10 @@ fn debug_override_1() {
             [profile.dev]
             debug = 1
         "#,
-        )
-        .file("src/lib.rs", "")
+        ).file("src/lib.rs", "")
         .build();
-    assert_that(
-        p.cargo("build -v"),
-        execs().with_stderr(&format!(
+    p.cargo("build -v")
+        .with_stderr(&format!(
             "\
 [COMPILING] test v0.0.0 ({url})
 [RUNNING] `rustc --crate-name test src/lib.rs --crate-type lib \
@@ -114,8 +105,7 @@ fn debug_override_1() {
 ",
             dir = p.root().display(),
             url = p.url()
-        )),
-    );
+        )).run();
 }
 
 fn check_opt_level_override(profile_level: &str, rustc_level: &str) {
@@ -135,12 +125,10 @@ fn check_opt_level_override(profile_level: &str, rustc_level: &str) {
         "#,
                 level = profile_level
             ),
-        )
-        .file("src/lib.rs", "")
+        ).file("src/lib.rs", "")
         .build();
-    assert_that(
-        p.cargo("build -v"),
-        execs().with_stderr(&format!(
+    p.cargo("build -v")
+        .with_stderr(&format!(
             "\
 [COMPILING] test v0.0.0 ({url})
 [RUNNING] `rustc --crate-name test src/lib.rs --crate-type lib \
@@ -156,8 +144,7 @@ fn check_opt_level_override(profile_level: &str, rustc_level: &str) {
             dir = p.root().display(),
             url = p.url(),
             level = rustc_level
-        )),
-    );
+        )).run();
 }
 
 #[test]
@@ -196,8 +183,7 @@ fn top_level_overrides_deps() {
             [dependencies.foo]
             path = "foo"
         "#,
-        )
-        .file("src/lib.rs", "")
+        ).file("src/lib.rs", "")
         .file(
             "foo/Cargo.toml",
             r#"
@@ -215,12 +201,10 @@ fn top_level_overrides_deps() {
             name = "foo"
             crate_type = ["dylib", "rlib"]
         "#,
-        )
-        .file("foo/src/lib.rs", "")
+        ).file("foo/src/lib.rs", "")
         .build();
-    assert_that(
-        p.cargo("build -v --release"),
-        execs().with_stderr(&format!(
+    p.cargo("build -v --release")
+        .with_stderr(&format!(
             "\
 [COMPILING] foo v0.0.0 ({url}/foo)
 [RUNNING] `rustc --crate-name foo foo/src/lib.rs \
@@ -249,8 +233,7 @@ fn top_level_overrides_deps() {
             url = p.url(),
             prefix = env::consts::DLL_PREFIX,
             suffix = env::consts::DLL_SUFFIX
-        )),
-    );
+        )).run();
 }
 
 #[test]
@@ -270,8 +253,7 @@ fn profile_in_non_root_manifest_triggers_a_warning() {
             [profile.dev]
             debug = false
         "#,
-        )
-        .file("src/main.rs", "fn main() {}")
+        ).file("src/main.rs", "fn main() {}")
         .file(
             "bar/Cargo.toml",
             r#"
@@ -284,13 +266,12 @@ fn profile_in_non_root_manifest_triggers_a_warning() {
             [profile.dev]
             opt-level = 1
         "#,
-        )
-        .file("bar/src/main.rs", "fn main() {}")
+        ).file("bar/src/main.rs", "fn main() {}")
         .build();
 
-    assert_that(
-        p.cargo("build -v").cwd(p.root().join("bar")),
-        execs().with_stderr(
+    p.cargo("build -v")
+        .cwd(p.root().join("bar"))
+        .with_stderr(
             "\
 [WARNING] profiles for the non root package will be ignored, specify profiles at the workspace root:
 package:   [..]
@@ -298,8 +279,7 @@ workspace: [..]
 [COMPILING] bar v0.1.0 ([..])
 [RUNNING] `rustc [..]`
 [FINISHED] dev [unoptimized] target(s) in [..]",
-        ),
-    );
+        ).run();
 }
 
 #[test]
@@ -315,8 +295,7 @@ fn profile_in_virtual_manifest_works() {
             opt-level = 1
             debug = false
         "#,
-        )
-        .file("src/main.rs", "fn main() {}")
+        ).file("src/main.rs", "fn main() {}")
         .file(
             "bar/Cargo.toml",
             r#"
@@ -326,19 +305,17 @@ fn profile_in_virtual_manifest_works() {
             authors = []
             workspace = ".."
         "#,
-        )
-        .file("bar/src/main.rs", "fn main() {}")
+        ).file("bar/src/main.rs", "fn main() {}")
         .build();
 
-    assert_that(
-        p.cargo("build -v").cwd(p.root().join("bar")),
-        execs().with_stderr(
+    p.cargo("build -v")
+        .cwd(p.root().join("bar"))
+        .with_stderr(
             "\
 [COMPILING] bar v0.1.0 ([..])
 [RUNNING] `rustc [..]`
 [FINISHED] dev [optimized] target(s) in [..]",
-        ),
-    );
+        ).run();
 }
 
 #[test]
@@ -357,19 +334,16 @@ fn profile_panic_test_bench() {
             [profile.bench]
             panic = "abort"
         "#,
-        )
-        .file("src/lib.rs", "")
+        ).file("src/lib.rs", "")
         .build();
 
-    assert_that(
-        p.cargo("build"),
-        execs().with_stderr_contains(
+    p.cargo("build")
+        .with_stderr_contains(
             "\
 [WARNING] `panic` setting is ignored for `test` profile
 [WARNING] `panic` setting is ignored for `bench` profile
 ",
-        ),
-    );
+        ).run();
 }
 
 #[test]
@@ -385,13 +359,10 @@ fn profile_doc_deprecated() {
             [profile.doc]
             opt-level = 0
         "#,
-        )
-        .file("src/lib.rs", "")
+        ).file("src/lib.rs", "")
         .build();
 
-    assert_that(
-        p.cargo("build"),
-        execs()
-            .with_stderr_contains("[WARNING] profile `doc` is deprecated and has no effect"),
-    );
+    p.cargo("build")
+        .with_stderr_contains("[WARNING] profile `doc` is deprecated and has no effect")
+        .run();
 }
