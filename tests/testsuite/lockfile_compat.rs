@@ -1,7 +1,6 @@
 use support::git;
 use support::registry::Package;
-use support::{basic_manifest, execs, lines_match, project};
-use support::hamcrest::assert_that;
+use support::{basic_manifest, lines_match, project};
 
 #[test]
 fn oldest_lockfile_still_works() {
@@ -55,12 +54,11 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
             [dependencies]
             bar = "0.1.0"
         "#,
-        )
-        .file("src/lib.rs", "")
+        ).file("src/lib.rs", "")
         .file("Cargo.lock", old_lockfile)
         .build();
 
-    assert_that(p.cargo(cargo_command), execs());
+    p.cargo(cargo_command).run();
 
     let lock = p.read_lockfile();
     for (l, r) in expected_lockfile.lines().zip(lock.lines()) {
@@ -105,12 +103,11 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
             [dependencies]
             bar = "0.1.0"
         "#,
-        )
-        .file("src/lib.rs", "")
+        ).file("src/lib.rs", "")
         .file("Cargo.lock", &old_lockfile)
         .build();
 
-    assert_that(p.cargo("build --locked"), execs());
+    p.cargo("build --locked").run();
 
     let lock = p.read_lockfile();
     for (l, r) in old_lockfile.lines().zip(lock.lines()) {
@@ -136,8 +133,7 @@ fn totally_wild_checksums_works() {
             [dependencies]
             bar = "0.1.0"
         "#,
-        )
-        .file("src/lib.rs", "")
+        ).file("src/lib.rs", "")
         .file(
             "Cargo.lock",
             r#"
@@ -161,7 +157,7 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 
     let p = p.build();
 
-    assert_that(p.cargo("build"), execs());
+    p.cargo("build").run();
 
     let lock = p.read_lockfile();
     assert!(
@@ -201,8 +197,7 @@ fn wrong_checksum_is_an_error() {
             [dependencies]
             bar = "0.1.0"
         "#,
-        )
-        .file("src/lib.rs", "")
+        ).file("src/lib.rs", "")
         .file(
             "Cargo.lock",
             r#"
@@ -225,9 +220,9 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 
     let p = p.build();
 
-    assert_that(
-        p.cargo("build"),
-        execs().with_status(101).with_stderr(
+    p.cargo("build")
+        .with_status(101)
+        .with_stderr(
             "\
 [UPDATING] registry `[..]`
 error: checksum for `bar v0.1.0` changed between lock files
@@ -241,8 +236,7 @@ this could be indicative of a few possible errors:
 unable to verify that `bar v0.1.0` is the same as when the lockfile was generated
 
 ",
-        ),
-    );
+        ).run();
 }
 
 // If the checksum is unlisted in the lockfile (e.g. <none>) yet we can
@@ -264,8 +258,7 @@ fn unlisted_checksum_is_bad_if_we_calculate() {
             [dependencies]
             bar = "0.1.0"
         "#,
-        )
-        .file("src/lib.rs", "")
+        ).file("src/lib.rs", "")
         .file(
             "Cargo.lock",
             r#"
@@ -287,9 +280,9 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
         );
     let p = p.build();
 
-    assert_that(
-        p.cargo("fetch"),
-        execs().with_status(101).with_stderr(
+    p.cargo("fetch")
+        .with_status(101)
+        .with_stderr(
             "\
 [UPDATING] registry `[..]`
 error: checksum for `bar v0.1.0` was not previously calculated, but a checksum \
@@ -304,8 +297,7 @@ this could be indicative of a few possible situations:
     * the lock file is corrupt
 
 ",
-        ),
-    );
+        ).run();
 }
 
 // If the checksum is listed in the lockfile yet we cannot calculate it (e.g.
@@ -314,7 +306,7 @@ this could be indicative of a few possible situations:
 fn listed_checksum_bad_if_we_cannot_compute() {
     let git = git::new("bar", |p| {
         p.file("Cargo.toml", &basic_manifest("bar", "0.1.0"))
-         .file("src/lib.rs", "")
+            .file("src/lib.rs", "")
     }).unwrap();
 
     let p = project()
@@ -332,8 +324,7 @@ fn listed_checksum_bad_if_we_cannot_compute() {
         "#,
                 git.url()
             ),
-        )
-        .file("src/lib.rs", "")
+        ).file("src/lib.rs", "")
         .file(
             "Cargo.lock",
             &format!(
@@ -359,9 +350,9 @@ source = "git+{0}"
 
     let p = p.build();
 
-    assert_that(
-        p.cargo("fetch"),
-        execs().with_status(101).with_stderr(
+    p.cargo("fetch")
+        .with_status(101)
+        .with_stderr(
             "\
 [UPDATING] git repository `[..]`
 error: checksum for `bar v0.1.0 ([..])` could not be calculated, but a \
@@ -376,8 +367,7 @@ this could be indicative of a few possible situations:
 unable to verify that `bar v0.1.0 ([..])` is the same as when the lockfile was generated
 
 ",
-        ),
-    );
+        ).run();
 }
 
 #[test]
@@ -396,11 +386,10 @@ fn current_lockfile_format() {
             [dependencies]
             bar = "0.1.0"
         "#,
-        )
-        .file("src/lib.rs", "");
+        ).file("src/lib.rs", "");
     let p = p.build();
 
-    assert_that(p.cargo("build"), execs());
+    p.cargo("build").run();
 
     let actual = p.read_lockfile();
 
@@ -456,13 +445,12 @@ dependencies = [
             [dependencies]
             bar = "0.1.0"
         "#,
-        )
-        .file("src/lib.rs", "")
+        ).file("src/lib.rs", "")
         .file("Cargo.lock", lockfile);
 
     let p = p.build();
 
-    assert_that(p.cargo("build"), execs());
+    p.cargo("build").run();
 
     let lock = p.read_lockfile();
     assert!(lock.starts_with(lockfile.trim()));
@@ -484,17 +472,15 @@ fn locked_correct_error() {
             [dependencies]
             bar = "0.1.0"
         "#,
-        )
-        .file("src/lib.rs", "");
+        ).file("src/lib.rs", "");
     let p = p.build();
 
-    assert_that(
-        p.cargo("build --locked"),
-        execs().with_status(101).with_stderr(
+    p.cargo("build --locked")
+        .with_status(101)
+        .with_stderr(
             "\
 [UPDATING] registry `[..]`
 error: the lock file needs to be updated but --locked was passed to prevent this
 ",
-        ),
-    );
+        ).run();
 }

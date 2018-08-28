@@ -38,7 +38,7 @@ struct SerializedPackage<'a> {
     description: Option<&'a str>,
     source: &'a SourceId,
     dependencies: &'a [Dependency],
-    targets: &'a [Target],
+    targets: Vec<&'a Target>,
     features: &'a FeatureMap,
     manifest_path: &'a str,
     metadata: Option<&'a toml::Value>,
@@ -48,6 +48,8 @@ struct SerializedPackage<'a> {
     readme: Option<&'a str>,
     repository: Option<&'a str>,
     edition: &'a str,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    metabuild: Option<&'a Vec<String>>,
 }
 
 impl ser::Serialize for Package {
@@ -66,6 +68,15 @@ impl ser::Serialize for Package {
         let keywords = manmeta.keywords.as_ref();
         let readme = manmeta.readme.as_ref().map(String::as_ref);
         let repository = manmeta.repository.as_ref().map(String::as_ref);
+        // Filter out metabuild targets. They are an internal implementation
+        // detail that is probably not relevant externally. There's also not a
+        // real path to show in `src_path`, and this avoids changing the format.
+        let targets: Vec<&Target> = self
+            .manifest
+            .targets()
+            .iter()
+            .filter(|t| t.src_path().is_path())
+            .collect();
 
         SerializedPackage {
             name: &*package_id.name(),
@@ -76,7 +87,7 @@ impl ser::Serialize for Package {
             description,
             source: summary.source_id(),
             dependencies: summary.dependencies(),
-            targets: self.manifest.targets(),
+            targets,
             features: summary.features(),
             manifest_path: &self.manifest_path.display().to_string(),
             metadata: self.manifest.custom_metadata(),
@@ -86,6 +97,7 @@ impl ser::Serialize for Package {
             readme,
             repository,
             edition: &self.manifest.edition().to_string(),
+            metabuild: self.manifest.metabuild(),
         }.serialize(s)
     }
 }

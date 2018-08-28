@@ -1,9 +1,9 @@
 use std::net::TcpListener;
-use std::thread;
 use std::process::Command;
+use std::thread;
 
-use support::{cargo_exe, execs, project};
 use support::hamcrest::assert_that;
+use support::{cargo_exe, execs, project};
 
 #[test]
 fn jobserver_exists() {
@@ -46,11 +46,10 @@ fn jobserver_exists() {
                 // a little too complicated for a test...
             }
         "#,
-        )
-        .file("src/lib.rs", "")
+        ).file("src/lib.rs", "")
         .build();
 
-    assert_that(p.cargo("build"), execs());
+    p.cargo("build").run();
 }
 
 #[test]
@@ -78,8 +77,7 @@ fn makes_jobserver_used() {
             d2 = { path = "d2" }
             d3 = { path = "d3" }
         "#,
-        )
-        .file("src/lib.rs", "")
+        ).file("src/lib.rs", "")
         .file(
             "d1/Cargo.toml",
             r#"
@@ -89,8 +87,7 @@ fn makes_jobserver_used() {
             authors = []
             build = "../dbuild.rs"
         "#,
-        )
-        .file("d1/src/lib.rs", "")
+        ).file("d1/src/lib.rs", "")
         .file(
             "d2/Cargo.toml",
             r#"
@@ -100,8 +97,7 @@ fn makes_jobserver_used() {
             authors = []
             build = "../dbuild.rs"
         "#,
-        )
-        .file("d2/src/lib.rs", "")
+        ).file("d2/src/lib.rs", "")
         .file(
             "d3/Cargo.toml",
             r#"
@@ -111,8 +107,7 @@ fn makes_jobserver_used() {
             authors = []
             build = "../dbuild.rs"
         "#,
-        )
-        .file("d3/src/lib.rs", "")
+        ).file("d3/src/lib.rs", "")
         .file(
             "dbuild.rs",
             r#"
@@ -127,15 +122,13 @@ fn makes_jobserver_used() {
                 stream.read_to_end(&mut v).unwrap();
             }
         "#,
-        )
-        .file(
+        ).file(
             "Makefile",
             "\
 all:
 \t+$(CARGO) build
 ",
-        )
-        .build();
+        ).build();
 
     let l = TcpListener::bind("127.0.0.1:0").unwrap();
     let addr = l.local_addr().unwrap();
@@ -186,8 +179,7 @@ fn jobserver_and_j() {
 all:
 \t+$(CARGO) build -j2
 ",
-        )
-        .build();
+        ).build();
 
     assert_that(
         p.process(make).env("CARGO", cargo_exe()).arg("-j2"),

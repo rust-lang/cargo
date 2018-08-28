@@ -1,6 +1,4 @@
-use support::{basic_manifest, basic_lib_manifest, execs, project};
-use support::ChannelChanger;
-use support::hamcrest::assert_that;
+use support::{basic_lib_manifest, basic_manifest, project};
 
 #[test]
 fn profile_override_gated() {
@@ -16,13 +14,13 @@ fn profile_override_gated() {
             [profile.dev.build-override]
             opt-level = 3
         "#,
-        )
-        .file("src/lib.rs", "")
+        ).file("src/lib.rs", "")
         .build();
 
-    assert_that(
-        p.cargo("build").masquerade_as_nightly_cargo(),
-        execs().with_status(101).with_stderr(
+    p.cargo("build")
+        .masquerade_as_nightly_cargo()
+        .with_status(101)
+        .with_stderr(
             "\
 error: failed to parse manifest at `[..]`
 
@@ -31,8 +29,7 @@ Caused by:
 
 consider adding `cargo-features = [\"profile-overrides\"]` to the manifest
 ",
-        ),
-    );
+        ).run();
 
     let p = project()
         .file(
@@ -46,13 +43,13 @@ consider adding `cargo-features = [\"profile-overrides\"]` to the manifest
             [profile.dev.overrides."*"]
             opt-level = 3
         "#,
-        )
-        .file("src/lib.rs", "")
+        ).file("src/lib.rs", "")
         .build();
 
-    assert_that(
-        p.cargo("build").masquerade_as_nightly_cargo(),
-        execs().with_status(101).with_stderr(
+    p.cargo("build")
+        .masquerade_as_nightly_cargo()
+        .with_status(101)
+        .with_stderr(
             "\
 error: failed to parse manifest at `[..]`
 
@@ -61,8 +58,7 @@ Caused by:
 
 consider adding `cargo-features = [\"profile-overrides\"]` to the manifest
 ",
-        ),
-    );
+        ).run();
 }
 
 #[test]
@@ -87,22 +83,20 @@ fn profile_override_basic() {
             [profile.dev.overrides.bar]
             opt-level = 3
         "#,
-        )
-        .file("src/lib.rs", "")
+        ).file("src/lib.rs", "")
         .file("bar/Cargo.toml", &basic_lib_manifest("bar"))
         .file("bar/src/lib.rs", "")
         .build();
 
-    assert_that(
-        p.cargo("build -v").masquerade_as_nightly_cargo(),
-        execs().with_stderr(
+    p.cargo("build -v")
+        .masquerade_as_nightly_cargo()
+        .with_stderr(
             "[COMPILING] bar [..]
 [RUNNING] `rustc --crate-name bar [..] -C opt-level=3 [..]`
 [COMPILING] foo [..]
 [RUNNING] `rustc --crate-name foo [..] -C opt-level=1 [..]`
 [FINISHED] dev [optimized + debuginfo] target(s) in [..]",
-        ),
-    );
+        ).run();
 }
 
 #[test]
@@ -129,15 +123,12 @@ fn profile_override_warnings() {
             [profile.dev.overrides."bar:1.2.3"]
             opt-level = 3
         "#,
-        )
-        .file("src/lib.rs", "")
+        ).file("src/lib.rs", "")
         .file("bar/Cargo.toml", &basic_lib_manifest("bar"))
         .file("bar/src/lib.rs", "")
         .build();
 
-    assert_that(
-        p.cargo("build").masquerade_as_nightly_cargo(),
-        execs().with_stderr_contains(
+    p.cargo("build").masquerade_as_nightly_cargo().with_stderr_contains(
             "\
 [WARNING] version or URL in profile override spec `bar:1.2.3` does not match any of the packages: bar v0.5.0 ([..])
 [WARNING] profile override spec `bart` did not match any packages
@@ -146,8 +137,8 @@ Did you mean `bar`?
 [WARNING] profile override spec `no-suggestion` did not match any packages
 [COMPILING] [..]
 ",
-        ),
-    );
+        )
+        .run();
 }
 
 #[test]
@@ -168,21 +159,20 @@ fn profile_override_dev_release_only() {
             [profile.test.overrides.bar]
             opt-level = 3
         "#,
-        )
-        .file("src/lib.rs", "")
+        ).file("src/lib.rs", "")
         .file("bar/Cargo.toml", &basic_lib_manifest("bar"))
         .file("bar/src/lib.rs", "")
         .build();
 
-    assert_that(
-        p.cargo("build").masquerade_as_nightly_cargo(),
-        execs().with_status(101).with_stderr_contains(
+    p.cargo("build")
+        .masquerade_as_nightly_cargo()
+        .with_status(101)
+        .with_stderr_contains(
             "\
 Caused by:
   Profile overrides may only be specified for `dev` or `release` profile, not `test`.
 ",
-        ),
-    );
+        ).run();
 }
 
 #[test]
@@ -222,18 +212,16 @@ fn profile_override_bad_settings() {
             "#,
                     snippet
                 ),
-            )
-            .file("src/lib.rs", "")
+            ).file("src/lib.rs", "")
             .file("bar/Cargo.toml", &basic_lib_manifest("bar"))
             .file("bar/src/lib.rs", "")
             .build();
 
-        assert_that(
-            p.cargo("build").masquerade_as_nightly_cargo(),
-            execs()
-                .with_status(101)
-                .with_stderr_contains(format!("Caused by:\n  {}", expected)),
-        );
+        p.cargo("build")
+            .masquerade_as_nightly_cargo()
+            .with_status(101)
+            .with_stderr_contains(format!("Caused by:\n  {}", expected))
+            .run();
     }
 }
 
@@ -299,7 +287,8 @@ fn profile_override_hierarchy() {
         .build();
 
     // dep (outside of workspace)
-    let _dep = project().at("dep")
+    let _dep = project()
+        .at("dep")
         .file("Cargo.toml", &basic_lib_manifest("dep"))
         .file("src/lib.rs", "")
         .build();
@@ -313,9 +302,7 @@ fn profile_override_hierarchy() {
     // m2: 2 (as [profile.dev.overrides.m2])
     // m1: 1 (as [profile.dev])
 
-    assert_that(
-        p.cargo("build -v").masquerade_as_nightly_cargo(),
-        execs().with_stderr_unordered("\
+    p.cargo("build -v").masquerade_as_nightly_cargo().with_stderr_unordered("\
 [COMPILING] m3 [..]
 [COMPILING] dep [..]
 [RUNNING] `rustc --crate-name m3 m3/src/lib.rs --crate-type lib --emit=dep-info,link -C codegen-units=4 [..]
@@ -331,8 +318,8 @@ fn profile_override_hierarchy() {
 [RUNNING] `rustc --crate-name m1 m1/src/lib.rs --crate-type lib --emit=dep-info,link -C codegen-units=1 [..]
 [FINISHED] dev [unoptimized + debuginfo] [..]
 ",
-        ),
-    );
+        )
+        .run();
 }
 
 #[test]
@@ -356,20 +343,19 @@ fn profile_override_spec_multiple() {
             [profile.dev.overrides."bar:0.5.0"]
             opt-level = 3
             "#,
-        )
-        .file("src/lib.rs", "")
+        ).file("src/lib.rs", "")
         .file("bar/Cargo.toml", &basic_lib_manifest("bar"))
         .file("bar/src/lib.rs", "")
         .build();
 
-    assert_that(
-        p.cargo("build -v").masquerade_as_nightly_cargo(),
-        execs().with_status(101).with_stderr_contains(
+    p.cargo("build -v")
+        .masquerade_as_nightly_cargo()
+        .with_status(101)
+        .with_stderr_contains(
             "\
 [ERROR] multiple profile overrides in profile `dev` match package `bar v0.5.0 ([..])`
 found profile override specs: bar, bar:0.5.0",
-        ),
-    );
+        ).run();
 }
 
 #[test]
@@ -416,24 +402,21 @@ fn profile_override_spec() {
 
         .build();
 
-    project().at("dep1")
+    project()
+        .at("dep1")
         .file("Cargo.toml", &basic_manifest("dep", "1.0.0"))
         .file("src/lib.rs", "")
         .build();
 
-    project().at("dep2")
+    project()
+        .at("dep2")
         .file("Cargo.toml", &basic_manifest("dep", "2.0.0"))
         .file("src/lib.rs", "")
         .build();
 
-    assert_that(
-        p.cargo("build -v").masquerade_as_nightly_cargo(),
-        execs()
-            .with_stderr_contains(
-                "[RUNNING] `rustc [..]dep1/src/lib.rs [..] -C codegen-units=1 [..]",
-            )
-            .with_stderr_contains(
-                "[RUNNING] `rustc [..]dep2/src/lib.rs [..] -C codegen-units=2 [..]",
-            ),
-    );
+    p.cargo("build -v")
+        .masquerade_as_nightly_cargo()
+        .with_stderr_contains("[RUNNING] `rustc [..]dep1/src/lib.rs [..] -C codegen-units=1 [..]")
+        .with_stderr_contains("[RUNNING] `rustc [..]dep2/src/lib.rs [..] -C codegen-units=2 [..]")
+        .run();
 }

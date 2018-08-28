@@ -3,8 +3,7 @@ use std::io::prelude::*;
 
 use support::paths::{self, CargoPathExt};
 use support::registry::Package;
-use support::{basic_manifest, execs, project};
-use support::hamcrest::assert_that;
+use support::{basic_manifest, project};
 
 fn setup() {
     let root = paths::root();
@@ -41,13 +40,13 @@ fn simple() {
             [dependencies]
             bar = "0.0.1"
         "#,
-        )
-        .file("src/lib.rs", "extern crate bar; pub fn foo() { bar::bar(); }")
-        .build();
+        ).file(
+            "src/lib.rs",
+            "extern crate bar; pub fn foo() { bar::bar(); }",
+        ).build();
 
-    assert_that(
-        p.cargo("build"),
-        execs().with_stderr(&format!(
+    p.cargo("build")
+        .with_stderr(&format!(
             "\
 [UNPACKING] bar v0.0.1 ([..])
 [COMPILING] bar v0.0.1
@@ -55,13 +54,9 @@ fn simple() {
 [FINISHED] [..]
 ",
             dir = p.url()
-        )),
-    );
-    assert_that(
-        p.cargo("build"),
-        execs().with_stderr("[FINISHED] [..]"),
-    );
-    assert_that(p.cargo("test"), execs());
+        )).run();
+    p.cargo("build").with_stderr("[FINISHED] [..]").run();
+    p.cargo("test").run();
 }
 
 #[test]
@@ -85,13 +80,13 @@ fn multiple_versions() {
             [dependencies]
             bar = "*"
         "#,
-        )
-        .file("src/lib.rs", "extern crate bar; pub fn foo() { bar::bar(); }")
-        .build();
+        ).file(
+            "src/lib.rs",
+            "extern crate bar; pub fn foo() { bar::bar(); }",
+        ).build();
 
-    assert_that(
-        p.cargo("build"),
-        execs().with_stderr(&format!(
+    p.cargo("build")
+        .with_stderr(&format!(
             "\
 [UNPACKING] bar v0.1.0 ([..])
 [COMPILING] bar v0.1.0
@@ -99,19 +94,16 @@ fn multiple_versions() {
 [FINISHED] [..]
 ",
             dir = p.url()
-        )),
-    );
+        )).run();
 
     Package::new("bar", "0.2.0")
         .local(true)
         .file("src/lib.rs", "pub fn bar() {}")
         .publish();
 
-    assert_that(
-        p.cargo("update -v"),
-        execs()
-            .with_stderr("[UPDATING] bar v0.1.0 -> v0.2.0"),
-    );
+    p.cargo("update -v")
+        .with_stderr("[UPDATING] bar v0.1.0 -> v0.2.0")
+        .run();
 }
 
 #[test]
@@ -139,8 +131,7 @@ fn multiple_names() {
             bar = "*"
             baz = "*"
         "#,
-        )
-        .file(
+        ).file(
             "src/lib.rs",
             r#"
             extern crate bar;
@@ -150,12 +141,10 @@ fn multiple_names() {
                 baz::baz();
             }
         "#,
-        )
-        .build();
+        ).build();
 
-    assert_that(
-        p.cargo("build"),
-        execs().with_stderr(&format!(
+    p.cargo("build")
+        .with_stderr(&format!(
             "\
 [UNPACKING] [..]
 [UNPACKING] [..]
@@ -165,8 +154,7 @@ fn multiple_names() {
 [FINISHED] [..]
 ",
             dir = p.url()
-        )),
-    );
+        )).run();
 }
 
 #[test]
@@ -195,8 +183,7 @@ fn interdependent() {
             bar = "*"
             baz = "*"
         "#,
-        )
-        .file(
+        ).file(
             "src/lib.rs",
             r#"
             extern crate bar;
@@ -206,12 +193,10 @@ fn interdependent() {
                 baz::baz();
             }
         "#,
-        )
-        .build();
+        ).build();
 
-    assert_that(
-        p.cargo("build"),
-        execs().with_stderr(&format!(
+    p.cargo("build")
+        .with_stderr(&format!(
             "\
 [UNPACKING] [..]
 [UNPACKING] [..]
@@ -221,8 +206,7 @@ fn interdependent() {
 [FINISHED] [..]
 ",
             dir = p.url()
-        )),
-    );
+        )).run();
 }
 
 #[test]
@@ -246,8 +230,7 @@ fn path_dep_rewritten() {
                 [dependencies]
                 bar = { path = "bar", version = "*" }
             "#,
-        )
-        .file("src/lib.rs", "extern crate bar; pub fn baz() {}")
+        ).file("src/lib.rs", "extern crate bar; pub fn baz() {}")
         .file("bar/Cargo.toml", &basic_manifest("bar", "0.0.1"))
         .file("bar/src/lib.rs", "pub fn bar() {}")
         .publish();
@@ -265,8 +248,7 @@ fn path_dep_rewritten() {
             bar = "*"
             baz = "*"
         "#,
-        )
-        .file(
+        ).file(
             "src/lib.rs",
             r#"
             extern crate bar;
@@ -276,12 +258,10 @@ fn path_dep_rewritten() {
                 baz::baz();
             }
         "#,
-        )
-        .build();
+        ).build();
 
-    assert_that(
-        p.cargo("build"),
-        execs().with_stderr(&format!(
+    p.cargo("build")
+        .with_stderr(&format!(
             "\
 [UNPACKING] [..]
 [UNPACKING] [..]
@@ -291,8 +271,7 @@ fn path_dep_rewritten() {
 [FINISHED] [..]
 ",
             dir = p.url()
-        )),
-    );
+        )).run();
 }
 
 #[test]
@@ -310,8 +289,7 @@ fn invalid_dir_bad() {
             [dependencies]
             bar = "*"
         "#,
-        )
-        .file("src/lib.rs", "")
+        ).file("src/lib.rs", "")
         .file(
             ".cargo/config",
             r#"
@@ -322,12 +300,11 @@ fn invalid_dir_bad() {
             [source.my-awesome-local-directory]
             local-registry = '/path/to/nowhere'
         "#,
-        )
-        .build();
+        ).build();
 
-    assert_that(
-        p.cargo("build"),
-        execs().with_status(101).with_stderr(
+    p.cargo("build")
+        .with_status(101)
+        .with_stderr(
             "\
 [ERROR] failed to load source for a dependency on `bar`
 
@@ -340,8 +317,7 @@ Caused by:
 Caused by:
   local registry path is not a directory: [..]path[..]to[..]nowhere
 ",
-        ),
-    );
+        ).run();
 }
 
 #[test]
@@ -366,13 +342,12 @@ fn different_directory_replacing_the_registry_is_bad() {
             [dependencies]
             bar = "*"
         "#,
-        )
-        .file("src/lib.rs", "")
+        ).file("src/lib.rs", "")
         .build();
 
     // Generate a lock file against the crates.io registry
     Package::new("bar", "0.0.1").publish();
-    assert_that(p.cargo("build"), execs());
+    p.cargo("build").run();
 
     // Switch back to our directory source, and now that we're replacing
     // crates.io make sure that this fails because we're replacing with a
@@ -384,9 +359,9 @@ fn different_directory_replacing_the_registry_is_bad() {
         .local(true)
         .publish();
 
-    assert_that(
-        p.cargo("build"),
-        execs().with_status(101).with_stderr(
+    p.cargo("build")
+        .with_status(101)
+        .with_stderr(
             "\
 [ERROR] checksum for `bar v0.0.1` changed between lock files
 
@@ -399,8 +374,7 @@ this could be indicative of a few possible errors:
 unable to verify that `bar v0.0.1` is the same as when the lockfile was generated
 
 ",
-        ),
-    );
+        ).run();
 }
 
 #[test]
@@ -434,13 +408,13 @@ fn crates_io_registry_url_is_optional() {
             [dependencies]
             bar = "0.0.1"
         "#,
-        )
-        .file("src/lib.rs", "extern crate bar; pub fn foo() { bar::bar(); }")
-        .build();
+        ).file(
+            "src/lib.rs",
+            "extern crate bar; pub fn foo() { bar::bar(); }",
+        ).build();
 
-    assert_that(
-        p.cargo("build"),
-        execs().with_stderr(&format!(
+    p.cargo("build")
+        .with_stderr(&format!(
             "\
 [UNPACKING] bar v0.0.1 ([..])
 [COMPILING] bar v0.0.1
@@ -448,11 +422,7 @@ fn crates_io_registry_url_is_optional() {
 [FINISHED] [..]
 ",
             dir = p.url()
-        )),
-    );
-    assert_that(
-        p.cargo("build"),
-        execs().with_stderr("[FINISHED] [..]"),
-    );
-    assert_that(p.cargo("test"), execs());
+        )).run();
+    p.cargo("build").with_stderr("[FINISHED] [..]").run();
+    p.cargo("test").run();
 }
