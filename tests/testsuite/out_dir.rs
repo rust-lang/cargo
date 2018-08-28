@@ -2,10 +2,8 @@ use std::env;
 use std::fs::{self, File};
 use std::path::Path;
 
-use support::hamcrest::assert_that;
-
-use support::{basic_manifest, execs, project};
-use support::{process, sleep_ms};
+use support::sleep_ms;
+use support::{basic_manifest, project};
 
 #[test]
 fn binary_with_debug() {
@@ -186,13 +184,11 @@ fn replaces_artifacts() {
     p.cargo("build -Z unstable-options --out-dir out")
         .masquerade_as_nightly_cargo()
         .run();
-    assert_that(
-        process(
-            &p.root()
-                .join(&format!("out/foo{}", env::consts::EXE_SUFFIX)),
-        ),
-        execs().with_stdout("foo"),
-    );
+    p.process(
+        &p.root()
+            .join(&format!("out/foo{}", env::consts::EXE_SUFFIX)),
+    ).with_stdout("foo")
+    .run();
 
     sleep_ms(1000);
     p.change_file("src/main.rs", r#"fn main() { println!("bar") }"#);
@@ -200,13 +196,11 @@ fn replaces_artifacts() {
     p.cargo("build -Z unstable-options --out-dir out")
         .masquerade_as_nightly_cargo()
         .run();
-    assert_that(
-        process(
-            &p.root()
-                .join(&format!("out/foo{}", env::consts::EXE_SUFFIX)),
-        ),
-        execs().with_stdout("bar"),
-    );
+    p.process(
+        &p.root()
+            .join(&format!("out/foo{}", env::consts::EXE_SUFFIX)),
+    ).with_stdout("bar")
+    .run();
 }
 
 fn check_dir_contents(

@@ -7,11 +7,10 @@ use std::sync::atomic::{AtomicBool, Ordering};
 use std::sync::Arc;
 use std::thread;
 
-use cargo::util::process;
 use support::hamcrest::{assert_that, existing_file};
 use support::paths::{self, CargoPathExt};
 use support::sleep_ms;
-use support::{basic_lib_manifest, basic_manifest, execs, git, main_file, path2url, project};
+use support::{basic_lib_manifest, basic_manifest, git, main_file, path2url, project};
 
 #[test]
 fn cargo_compile_simple_git_dep() {
@@ -68,10 +67,10 @@ fn cargo_compile_simple_git_dep() {
 
     assert_that(&project.bin("foo"), existing_file());
 
-    assert_that(
-        process(&project.bin("foo")),
-        execs().with_stdout("hello world\n"),
-    );
+    project
+        .process(&project.bin("foo"))
+        .with_stdout("hello world\n")
+        .run();
 }
 
 #[test]
@@ -205,10 +204,9 @@ fn cargo_compile_offline_with_cached_git_dep() {
 
     assert_that(&p.bin("foo"), existing_file());
 
-    assert_that(
-        process(&p.bin("foo")),
-        execs().with_stdout("hello from cached git repo rev2\n"),
-    );
+    p.process(&p.bin("foo"))
+        .with_stdout("hello from cached git repo rev2\n")
+        .run();
 
     File::create(&p.root().join("Cargo.toml"))
         .unwrap()
@@ -232,10 +230,9 @@ fn cargo_compile_offline_with_cached_git_dep() {
         .cargo("build -Zoffline")
         .masquerade_as_nightly_cargo()
         .exec_with_output();
-    assert_that(
-        process(&p.bin("foo")),
-        execs().with_stdout("hello from cached git repo rev1\n"),
-    );
+    p.process(&p.bin("foo"))
+        .with_stdout("hello from cached git repo rev1\n")
+        .run();
 }
 
 #[test]
@@ -301,10 +298,10 @@ fn cargo_compile_git_dep_branch() {
 
     assert_that(&project.bin("foo"), existing_file());
 
-    assert_that(
-        process(&project.bin("foo")),
-        execs().with_stdout("hello world\n"),
-    );
+    project
+        .process(&project.bin("foo"))
+        .with_stdout("hello world\n")
+        .run();
 }
 
 #[test]
@@ -374,10 +371,10 @@ fn cargo_compile_git_dep_tag() {
 
     assert_that(&project.bin("foo"), existing_file());
 
-    assert_that(
-        process(&project.bin("foo")),
-        execs().with_stdout("hello world\n"),
-    );
+    project
+        .process(&project.bin("foo"))
+        .with_stdout("hello world\n")
+        .run();
 
     project.cargo("build").run();
 }
@@ -455,7 +452,7 @@ fn cargo_compile_with_nested_paths() {
 
     assert_that(&p.bin("foo"), existing_file());
 
-    assert_that(process(&p.bin("foo")), execs().with_stdout("hello world\n"));
+    p.process(&p.bin("foo")).with_stdout("hello world\n").run();
 }
 
 #[test]
@@ -504,7 +501,7 @@ fn cargo_compile_with_malformed_nested_paths() {
 
     assert_that(&p.bin("foo"), existing_file());
 
-    assert_that(process(&p.bin("foo")), execs().with_stdout("hello world\n"));
+    p.process(&p.bin("foo")).with_stdout("hello world\n").run();
 }
 
 #[test]
@@ -570,10 +567,9 @@ fn cargo_compile_with_meta_package() {
 
     assert_that(&p.bin("foo"), existing_file());
 
-    assert_that(
-        process(&p.bin("foo")),
-        execs().with_stdout("this is dep1 this is dep2\n"),
-    );
+    p.process(&p.bin("foo"))
+        .with_stdout("this is dep1 this is dep2\n")
+        .run();
 }
 
 #[test]
@@ -1631,7 +1627,7 @@ fn git_dep_build_cmd() {
 
     p.cargo("build").run();
 
-    assert_that(process(&p.bin("foo")), execs().with_stdout("0\n"));
+    p.process(&p.bin("foo")).with_stdout("0\n").run();
 
     // Touching bar.rs.in should cause the `build` command to run again.
     fs::File::create(&p.root().join("bar/src/bar.rs.in"))
@@ -1641,7 +1637,7 @@ fn git_dep_build_cmd() {
 
     p.cargo("build").run();
 
-    assert_that(process(&p.bin("foo")), execs().with_stdout("1\n"));
+    p.process(&p.bin("foo")).with_stdout("1\n").run();
 }
 
 #[test]

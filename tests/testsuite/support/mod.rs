@@ -1262,18 +1262,6 @@ impl fmt::Debug for Execs {
     }
 }
 
-impl ham::Matcher<ProcessBuilder> for Execs {
-    fn matches(&self, process: ProcessBuilder) -> ham::MatchResult {
-        self.match_process(&process)
-    }
-}
-
-impl<'t> ham::Matcher<ProcessBuilder> for &'t mut Execs {
-    fn matches(&self, process: ProcessBuilder) -> ham::MatchResult {
-        self.match_process(&process)
-    }
-}
-
 impl ham::Matcher<Output> for Execs {
     fn matches(&self, output: Output) -> ham::MatchResult {
         self.match_output(&output)
