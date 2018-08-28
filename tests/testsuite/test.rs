@@ -1,6 +1,5 @@
 use std::fs::File;
 use std::io::prelude::*;
-use std::str;
 
 use cargo;
 use support::hamcrest::{assert_that, existing_file, is_not};
@@ -187,23 +186,11 @@ fn many_similar_names() {
         "#,
         ).build();
 
-    let output = p.cargo("test -v").exec_with_output().unwrap();
-    let output = str::from_utf8(&output.stdout).unwrap();
-    assert!(
-        output.contains("test bin_test"),
-        "bin_test missing\n{}",
-        output
-    );
-    assert!(
-        output.contains("test lib_test"),
-        "lib_test missing\n{}",
-        output
-    );
-    assert!(
-        output.contains("test test_test"),
-        "test_test missing\n{}",
-        output
-    );
+    p.cargo("test -v")
+        .with_stdout_contains("test bin_test ... ok")
+        .with_stdout_contains("test lib_test ... ok")
+        .with_stdout_contains("test test_test ... ok")
+        .run();
 }
 
 #[test]
@@ -1003,18 +990,10 @@ fn bin_there_for_integration() {
         "#,
         ).build();
 
-    let output = p.cargo("test -v").exec_with_output().unwrap();
-    let output = str::from_utf8(&output.stdout).unwrap();
-    assert!(
-        output.contains("main_test ... ok"),
-        "no main_test\n{}",
-        output
-    );
-    assert!(
-        output.contains("test_test ... ok"),
-        "no test_test\n{}",
-        output
-    );
+    p.cargo("test -v")
+        .with_stdout_contains("test main_test ... ok")
+        .with_stdout_contains("test test_test ... ok")
+        .run();
 }
 
 #[test]
