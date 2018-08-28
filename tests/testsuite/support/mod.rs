@@ -1127,8 +1127,7 @@ impl Execs {
 impl Drop for Execs {
     fn drop(&mut self) {
         if !self.ran {
-            // TODO: Re-enable when everything goes through Execs#run
-            // panic!("forgot to run this command");
+            panic!("forgot to run this command");
         }
     }
 }
