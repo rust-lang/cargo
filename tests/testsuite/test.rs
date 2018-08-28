@@ -1722,10 +1722,9 @@ fn example_bin_same_name() {
     assert_that(&p.bin("foo"), is_not(existing_file()));
     assert_that(&p.bin("examples/foo"), existing_file());
 
-    assert_that(
-        p.process(&p.bin("examples/foo")),
-        execs().with_stdout("example\n"),
-    );
+    p.process(&p.bin("examples/foo"))
+        .with_stdout("example\n")
+        .run();
 
     p.cargo("run")
         .with_stderr(

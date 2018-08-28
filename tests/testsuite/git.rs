@@ -700,7 +700,7 @@ fn two_revs_same_deps() {
 
     foo.cargo("build -v").run();
     assert_that(&foo.bin("foo"), existing_file());
-    assert_that(foo.process(&foo.bin("foo")), execs());
+    foo.process(&foo.bin("foo")).run();
 }
 
 #[test]
@@ -1173,7 +1173,7 @@ fn stale_cached_version() {
         ).build();
 
     foo.cargo("build").run();
-    assert_that(foo.process(&foo.bin("foo")), execs());
+    foo.process(&foo.bin("foo")).run();
 
     // Update the repo, and simulate someone else updating the lockfile and then
     // us pulling it down.
@@ -1223,7 +1223,7 @@ fn stale_cached_version() {
             bar = bar.url(),
             foo = foo.url()
         )).run();
-    assert_that(foo.process(&foo.bin("foo")), execs());
+    foo.process(&foo.bin("foo")).run();
 }
 
 #[test]

@@ -374,10 +374,10 @@ impl Project {
     ///             p.process(&p.bin("foo")),
     ///             execs().with_stdout("bar\n"),
     ///         );
-    pub fn process<T: AsRef<OsStr>>(&self, program: T) -> ProcessBuilder {
+    pub fn process<T: AsRef<OsStr>>(&self, program: T) -> Execs {
         let mut p = ::support::process(program);
         p.cwd(self.root());
-        p
+        execs().with_process_builder(p)
     }
 
     /// Create a `ProcessBuilder` to run cargo.
@@ -385,9 +385,11 @@ impl Project {
     /// Example:
     ///     p.cargo("build --bin foo").run();
     pub fn cargo(&self, cmd: &str) -> Execs {
-        let mut p = self.process(&cargo_exe());
-        split_and_add_args(&mut p, cmd);
-        execs().with_process_builder(p)
+        let mut execs = self.process(&cargo_exe());
+        if let Some(ref mut p) = execs.process_builder {
+            split_and_add_args(p, cmd);
+        }
+        execs
     }
 
     /// Returns the contents of `Cargo.lock`.
@@ -1269,18 +1271,6 @@ impl ham::Matcher<ProcessBuilder> for Execs {
 impl<'t> ham::Matcher<ProcessBuilder> for &'t mut Execs {
     fn matches(&self, process: ProcessBuilder) -> ham::MatchResult {
         self.match_process(&process)
-    }
-}
-
-impl<'a> ham::Matcher<&'a mut ProcessBuilder> for Execs {
-    fn matches(&self, process: &'a mut ProcessBuilder) -> ham::MatchResult {
-        self.match_process(process)
-    }
-}
-
-impl<'a, 't> ham::Matcher<&'a mut ProcessBuilder> for &'t mut Execs {
-    fn matches(&self, process: &'a mut ProcessBuilder) -> ham::MatchResult {
-        self.match_process(process)
     }
 }
 

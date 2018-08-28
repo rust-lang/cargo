@@ -5,7 +5,7 @@ use support::hamcrest::{assert_that, existing_file};
 use support::paths::CargoPathExt;
 use support::registry::Package;
 use support::sleep_ms;
-use support::{basic_manifest, execs, path2url, project};
+use support::{basic_manifest, path2url, project};
 
 #[test]
 fn modifying_and_moving() {
@@ -435,7 +435,7 @@ fn changing_bin_features_caches_targets() {
 [FINISHED] dev [unoptimized + debuginfo] target(s) in [..]
 ",
         ).run();
-    assert_that(foo_proc("off1"), execs().with_stdout("feature off"));
+    foo_proc("off1").with_stdout("feature off").run();
 
     p.cargo("build --features foo")
         .with_stderr(
@@ -444,7 +444,7 @@ fn changing_bin_features_caches_targets() {
 [FINISHED] dev [unoptimized + debuginfo] target(s) in [..]
 ",
         ).run();
-    assert_that(foo_proc("on1"), execs().with_stdout("feature on"));
+    foo_proc("on1").with_stdout("feature on").run();
 
     /* Targets should be cached from the first build */
 
@@ -454,7 +454,7 @@ fn changing_bin_features_caches_targets() {
 [FINISHED] dev [unoptimized + debuginfo] target(s) in [..]
 ",
         ).run();
-    assert_that(foo_proc("off2"), execs().with_stdout("feature off"));
+    foo_proc("off2").with_stdout("feature off").run();
 
     p.cargo("build --features foo")
         .with_stderr(
@@ -462,7 +462,7 @@ fn changing_bin_features_caches_targets() {
 [FINISHED] dev [unoptimized + debuginfo] target(s) in [..]
 ",
         ).run();
-    assert_that(foo_proc("on2"), execs().with_stdout("feature on"));
+    foo_proc("on2").with_stdout("feature on").run();
 }
 
 #[test]
