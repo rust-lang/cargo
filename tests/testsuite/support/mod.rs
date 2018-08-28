@@ -22,18 +22,16 @@ To run cargo, call the `cargo` method and use the `hamcrest` matchers to check
 the output.
 
 ```
-assert_that(
-    p.cargo("run --bin foo"),
-    execs()
-        .with_stderr(
-            "\
+p.cargo("run --bin foo")
+    .with_stderr(
+        "\
 [COMPILING] foo [..]
 [FINISHED] [..]
 [RUNNING] `target/debug/foo`
 ",
-        )
-        .with_stdout("hi!"),
-);
+    )
+    .with_stdout("hi!")
+    .run();
 ```
 
 The project creates a mini sandbox under the "cargo integration test"
@@ -123,8 +121,8 @@ use std::str;
 use std::time::Duration;
 use std::usize;
 
-use cargo::util::{CargoResult, ProcessBuilder, ProcessError, Rustc};
 use cargo;
+use cargo::util::{CargoResult, ProcessBuilder, ProcessError, Rustc};
 use serde_json::{self, Value};
 use url::Url;
 
@@ -210,7 +208,7 @@ impl SymlinkBuilder {
 }
 
 pub struct Project {
-    root: PathBuf
+    root: PathBuf,
 }
 
 #[must_use]
@@ -242,7 +240,9 @@ impl ProjectBuilder {
     }
 
     pub fn at<P: AsRef<Path>>(mut self, path: P) -> Self {
-        self.root = Project{root: paths::root().join(path)};
+        self.root = Project {
+            root: paths::root().join(path),
+        };
         self
     }
 
@@ -383,7 +383,7 @@ impl Project {
     /// Create a `ProcessBuilder` to run cargo.
     /// Arguments can be separated by spaces.
     /// Example:
-    ///     assert_that(p.cargo("build --bin foo"), execs());
+    ///     p.cargo("build --bin foo").run();
     pub fn cargo(&self, cmd: &str) -> Execs {
         let mut p = self.process(&cargo_exe());
         split_and_add_args(&mut p, cmd);
@@ -507,8 +507,7 @@ pub fn cargo_dir() -> PathBuf {
                 }
                 path
             })
-        })
-        .unwrap_or_else(|| panic!("CARGO_BIN_PATH wasn't set. Cannot continue running test"))
+        }).unwrap_or_else(|| panic!("CARGO_BIN_PATH wasn't set. Cannot continue running test"))
 }
 
 pub fn cargo_exe() -> PathBuf {
@@ -728,11 +727,13 @@ impl Execs {
         self
     }
 
-    #[allow(dead_code)]
     pub fn run(&mut self) {
         self.ran = true;
         let p = (&self.process_builder).clone().unwrap();
-        ham::assert_that(p, self)
+        // ham::assert_that(p, self)
+        if let Err(e) = self.match_process(&p) {
+            panic!("\nExpected: {:?}\n    but: {}", self, e)
+        }
     }
 
     fn match_process(&self, process: &ProcessBuilder) -> ham::MatchResult {
@@ -754,7 +755,11 @@ impl Execs {
             Ok(out) => self.match_output(&out),
             Err(e) => {
                 let err = e.downcast_ref::<ProcessError>();
-                if let Some(&ProcessError { output: Some(ref out), .. }) = err {
+                if let Some(&ProcessError {
+                    output: Some(ref out),
+                    ..
+                }) = err
+                {
                     return self.match_output(out);
                 }
                 let mut s = format!("could not exec process {}: {}", process, e);
@@ -1107,8 +1112,7 @@ impl Execs {
                 (Some(a), None) => Some(format!("{:3} -\n    + |{}|\n", i, a)),
                 (None, Some(e)) => Some(format!("{:3} - |{}|\n    +\n", i, e)),
                 (None, None) => panic!("Cannot get here"),
-            })
-            .collect()
+            }).collect()
     }
 }
 
@@ -1253,40 +1257,6 @@ fn zip_all<T, I1: Iterator<Item = T>, I2: Iterator<Item = T>>(a: I1, b: I2) -> Z
 impl fmt::Debug for Execs {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         write!(f, "execs")
-    }
-}
-
-// TODO: Remove this temporary matcher while transitioning off of assert_that
-impl ham::Matcher<Execs> for Execs {
-    fn matches(&self, mut execs: Execs) -> ham::MatchResult {
-        self.matches(&mut execs)
-    }
-}
-
-// TODO: Remove this temporary matcher while transitioning off of assert_that
-impl<'a> ham::Matcher<&'a mut Execs> for Execs {
-    fn matches(&self, execs: &'a mut Execs) -> ham::MatchResult {
-        // TODO: avoid unwrap
-        let mut p = (&execs.process_builder).clone().unwrap();
-        self.matches(&mut p)
-    }
-}
-
-// TODO: Remove this temporary matcher while transitioning off of assert_that
-impl<'t> ham::Matcher<Execs> for &'t mut Execs {
-    fn matches(&self, execs: Execs) -> ham::MatchResult {
-        // TODO: avoid unwrap
-        let mut p = (&execs.process_builder).clone().unwrap();
-        self.matches(&mut p)
-    }
-}
-
-// TODO: Remove this temporary matcher while transitioning off of assert_that
-impl<'a, 't> ham::Matcher<&'a mut Execs> for &'t mut Execs {
-    fn matches(&self, execs: &'a mut Execs) -> ham::MatchResult {
-        // TODO: avoid unwrap
-        let mut p = (&execs.process_builder).clone().unwrap();
-        self.matches(&mut p)
     }
 }
 
@@ -1528,10 +1498,10 @@ fn split_and_add_args(p: &mut ProcessBuilder, s: &str) {
     }
 }
 
-pub fn cargo_process(s: &str) -> ProcessBuilder {
+pub fn cargo_process(s: &str) -> Execs {
     let mut p = process(&cargo_exe());
     split_and_add_args(&mut p, s);
-    p
+    execs().with_process_builder(p)
 }
 
 pub fn git_process(s: &str) -> ProcessBuilder {

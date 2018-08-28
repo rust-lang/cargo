@@ -2,8 +2,7 @@ use glob::glob;
 use serde_json;
 use std::str;
 use support::{
-    basic_lib_manifest, basic_manifest, execs, hamcrest::assert_that, project, registry::Package,
-    rustc_host, Project,
+    basic_lib_manifest, basic_manifest, project, registry::Package, rustc_host, Project,
 };
 
 #[test]
@@ -20,9 +19,10 @@ fn metabuild_gated() {
         ).file("src/lib.rs", "")
         .build();
 
-    assert_that(
-        p.cargo("build").masquerade_as_nightly_cargo(),
-        execs().with_status(101).with_stderr_contains(
+    p.cargo("build")
+        .masquerade_as_nightly_cargo()
+        .with_status(101)
+        .with_stderr_contains(
             "\
 error: failed to parse manifest at `[..]`
 
@@ -31,8 +31,7 @@ Caused by:
 
 consider adding `cargo-features = [\"metabuild\"]` to the manifest
 ",
-        ),
-    );
+        ).run();
 }
 
 fn basic_project() -> Project {
@@ -71,12 +70,11 @@ fn basic_project() -> Project {
 #[test]
 fn metabuild_basic() {
     let p = basic_project();
-    assert_that(
-        p.cargo("build -vv").masquerade_as_nightly_cargo(),
-        execs()
-            .with_stdout_contains("Hello mb")
-            .with_stdout_contains("Hello mb-other"),
-    );
+    p.cargo("build -vv")
+        .masquerade_as_nightly_cargo()
+        .with_stdout_contains("Hello mb")
+        .with_stdout_contains("Hello mb-other")
+        .run();
 }
 
 #[test]
@@ -102,17 +100,17 @@ fn metabuild_error_both() {
             r#"pub fn metabuild() { println!("Hello mb"); }"#,
         ).build();
 
-    assert_that(
-        p.cargo("build -vv").masquerade_as_nightly_cargo(),
-        execs().with_status(101).with_stderr_contains(
+    p.cargo("build -vv")
+        .masquerade_as_nightly_cargo()
+        .with_status(101)
+        .with_stderr_contains(
             "\
 error: failed to parse manifest at [..]
 
 Caused by:
   cannot specify both `metabuild` and `build`
 ",
-        ),
-    );
+        ).run();
 }
 
 #[test]
@@ -130,16 +128,16 @@ fn metabuild_missing_dep() {
         ).file("src/lib.rs", "")
         .build();
 
-    assert_that(
-        p.cargo("build -vv").masquerade_as_nightly_cargo(),
-        execs().with_status(101).with_stderr_contains(
+    p.cargo("build -vv")
+        .masquerade_as_nightly_cargo()
+        .with_status(101)
+        .with_stderr_contains(
             "\
 error: failed to parse manifest at [..]
 
 Caused by:
   metabuild package `mb` must be specified in `build-dependencies`",
-        ),
-    );
+        ).run();
 }
 
 #[test]
@@ -164,16 +162,15 @@ fn metabuild_optional_dep() {
             r#"pub fn metabuild() { println!("Hello mb"); }"#,
         ).build();
 
-    assert_that(
-        p.cargo("build -vv").masquerade_as_nightly_cargo(),
-        execs().with_stdout_does_not_contain("Hello mb"),
-    );
+    p.cargo("build -vv")
+        .masquerade_as_nightly_cargo()
+        .with_stdout_does_not_contain("Hello mb")
+        .run();
 
-    assert_that(
-        p.cargo("build -vv --features mb")
-            .masquerade_as_nightly_cargo(),
-        execs().with_stdout_contains("Hello mb"),
-    );
+    p.cargo("build -vv --features mb")
+        .masquerade_as_nightly_cargo()
+        .with_stdout_contains("Hello mb")
+        .run();
 }
 
 #[test]
@@ -207,10 +204,10 @@ fn metabuild_lib_name() {
             r#"pub fn metabuild() { println!("Hello mb"); }"#,
         ).build();
 
-    assert_that(
-        p.cargo("build -vv").masquerade_as_nightly_cargo(),
-        execs().with_stdout_contains("Hello mb"),
-    );
+    p.cargo("build -vv")
+        .masquerade_as_nightly_cargo()
+        .with_stdout_contains("Hello mb")
+        .run();
 }
 
 #[test]
@@ -236,23 +233,21 @@ fn metabuild_fresh() {
             r#"pub fn metabuild() { println!("Hello mb"); }"#,
         ).build();
 
-    assert_that(
-        p.cargo("build -vv").masquerade_as_nightly_cargo(),
-        execs().with_stdout_contains("Hello mb"),
-    );
+    p.cargo("build -vv")
+        .masquerade_as_nightly_cargo()
+        .with_stdout_contains("Hello mb")
+        .run();
 
-    assert_that(
-        p.cargo("build -vv").masquerade_as_nightly_cargo(),
-        execs()
-            .with_stdout_does_not_contain("Hello mb")
-            .with_stderr(
-                "\
+    p.cargo("build -vv")
+        .masquerade_as_nightly_cargo()
+        .with_stdout_does_not_contain("Hello mb")
+        .with_stderr(
+            "\
 [FRESH] mb [..]
 [FRESH] foo [..]
 [FINISHED] dev [..]
 ",
-            ),
-    );
+        ).run();
 }
 
 #[test]
@@ -282,10 +277,10 @@ fn metabuild_links() {
             }"#,
         ).build();
 
-    assert_that(
-        p.cargo("build -vv").masquerade_as_nightly_cargo(),
-        execs().with_stdout_contains("Hello mb"),
-    );
+    p.cargo("build -vv")
+        .masquerade_as_nightly_cargo()
+        .with_stdout_contains("Hello mb")
+        .run();
 }
 
 #[test]
@@ -320,7 +315,7 @@ fn metabuild_override() {
             ),
         ).build();
 
-    assert_that(p.cargo("build -vv").masquerade_as_nightly_cargo(), execs());
+    p.cargo("build -vv").masquerade_as_nightly_cargo().run();
 }
 
 #[test]
@@ -379,14 +374,13 @@ fn metabuild_workspace() {
         )
         .build();
 
-    assert_that(
-        p.cargo("build -vv --all").masquerade_as_nightly_cargo(),
-        execs()
-            .with_stdout_contains("Hello mb1 [..]member1")
-            .with_stdout_contains("Hello mb2 [..]member1")
-            .with_stdout_contains("Hello mb1 [..]member2")
-            .with_stdout_does_not_contain("Hello mb2 [..]member2"),
-    );
+    p.cargo("build -vv --all")
+        .masquerade_as_nightly_cargo()
+        .with_stdout_contains("Hello mb1 [..]member1")
+        .with_stdout_contains("Hello mb2 [..]member1")
+        .with_stdout_contains("Hello mb1 [..]member2")
+        .with_stdout_does_not_contain("Hello mb2 [..]member2")
+        .run();
 }
 
 #[test]
@@ -420,10 +414,9 @@ fn metabuild_metadata() {
 fn metabuild_build_plan() {
     let p = basic_project();
 
-    assert_that(
-        p.cargo("build --build-plan -Zunstable-options")
-            .masquerade_as_nightly_cargo(),
-        execs().with_json(
+    p.cargo("build --build-plan -Zunstable-options")
+        .masquerade_as_nightly_cargo()
+        .with_json(
             r#"
 {
     "invocations": [
@@ -500,8 +493,7 @@ fn metabuild_build_plan() {
     ]
 }
 "#,
-        ),
-    );
+        ).run();
 
     assert_eq!(
         glob(
@@ -578,12 +570,11 @@ fn metabuild_two_versions() {
         )
         .build();
 
-    assert_that(
-        p.cargo("build -vv --all").masquerade_as_nightly_cargo(),
-        execs()
-            .with_stdout_contains("Hello mb1 [..]member1")
-            .with_stdout_contains("Hello mb2 [..]member2"),
-    );
+    p.cargo("build -vv --all")
+        .masquerade_as_nightly_cargo()
+        .with_stdout_contains("Hello mb1 [..]member1")
+        .with_stdout_contains("Hello mb2 [..]member2")
+        .run();
 
     assert_eq!(
         glob(
@@ -635,10 +626,10 @@ fn metabuild_external_dependency() {
         ).file("src/lib.rs", "extern crate dep;")
         .build();
 
-    assert_that(
-        p.cargo("build -vv").masquerade_as_nightly_cargo(),
-        execs().with_stdout_contains("Hello mb"),
-    );
+    p.cargo("build -vv")
+        .masquerade_as_nightly_cargo()
+        .with_stdout_contains("Hello mb")
+        .run();
 
     assert_eq!(
         glob(
@@ -655,9 +646,7 @@ fn metabuild_external_dependency() {
 #[test]
 fn metabuild_json_artifact() {
     let p = basic_project();
-    assert_that(
-        p.cargo("build --message-format=json")
-            .masquerade_as_nightly_cargo(),
-        execs(),
-    );
+    p.cargo("build --message-format=json")
+        .masquerade_as_nightly_cargo()
+        .run();
 }

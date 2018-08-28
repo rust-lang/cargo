@@ -1,10 +1,10 @@
 use std::fs::File;
-use std::path::PathBuf;
 use std::io::prelude::*;
+use std::path::PathBuf;
 
-use support::{cross_compile, execs, project, publish};
-use support::hamcrest::{assert_that, contains};
 use flate2::read::GzDecoder;
+use support::hamcrest::{assert_that, contains};
+use support::{cross_compile, project, publish};
 use tar::Archive;
 
 #[test]
@@ -25,8 +25,7 @@ fn simple_cross_package() {
             description = "foo"
             repository = "bar"
         "#,
-        )
-        .file(
+        ).file(
             "src/main.rs",
             &format!(
                 r#"
@@ -37,22 +36,20 @@ fn simple_cross_package() {
         "#,
                 cross_compile::alternate_arch()
             ),
-        )
-        .build();
+        ).build();
 
     let target = cross_compile::alternate();
 
-    assert_that(
-        p.cargo("package --target").arg(&target),
-        execs().with_stderr(&format!(
+    p.cargo("package --target")
+        .arg(&target)
+        .with_stderr(&format!(
             "   Packaging foo v0.0.0 ({dir})
    Verifying foo v0.0.0 ({dir})
    Compiling foo v0.0.0 ({dir}/target/package/foo-0.0.0)
     Finished dev [unoptimized + debuginfo] target(s) in [..]
 ",
             dir = p.url()
-        )),
-    );
+        )).run();
 
     // Check that the tarball contains the files
     let f = File::open(&p.root().join("target/package/foo-0.0.0.crate")).unwrap();
@@ -98,8 +95,7 @@ fn publish_with_target() {
             description = "foo"
             repository = "bar"
         "#,
-        )
-        .file(
+        ).file(
             "src/main.rs",
             &format!(
                 r#"
@@ -110,17 +106,15 @@ fn publish_with_target() {
         "#,
                 cross_compile::alternate_arch()
             ),
-        )
-        .build();
+        ).build();
 
     let target = cross_compile::alternate();
 
-    assert_that(
-        p.cargo("publish --index")
-            .arg(publish::registry().to_string())
-            .arg("--target")
-            .arg(&target),
-        execs().with_stderr(&format!(
+    p.cargo("publish --index")
+        .arg(publish::registry().to_string())
+        .arg("--target")
+        .arg(&target)
+        .with_stderr(&format!(
             "    Updating registry `{registry}`
    Packaging foo v0.0.0 ({dir})
    Verifying foo v0.0.0 ({dir})
@@ -130,6 +124,5 @@ fn publish_with_target() {
 ",
             dir = p.url(),
             registry = publish::registry()
-        )),
-    );
+        )).run();
 }
