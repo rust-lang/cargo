@@ -1,5 +1,4 @@
-use support::{basic_manifest, basic_bin_manifest, execs, project, Project};
-use support::hamcrest::assert_that;
+use support::{basic_bin_manifest, basic_manifest, project, Project};
 
 fn verbose_output_for_lib(p: &Project) -> String {
     format!(
@@ -26,11 +25,9 @@ fn build_lib_only() {
         .file("src/lib.rs", r#" "#)
         .build();
 
-    assert_that(
-        p.cargo("build --lib -v"),
-        execs()
-            .with_stderr(verbose_output_for_lib(&p)),
-    );
+    p.cargo("build --lib -v")
+        .with_stderr(verbose_output_for_lib(&p))
+        .run();
 }
 
 #[test]
@@ -40,12 +37,10 @@ fn build_with_no_lib() {
         .file("src/main.rs", "fn main() {}")
         .build();
 
-    assert_that(
-        p.cargo("build --lib"),
-        execs()
-            .with_status(101)
-            .with_stderr("[ERROR] no library targets found in package `foo`"),
-    );
+    p.cargo("build --lib")
+        .with_status(101)
+        .with_stderr("[ERROR] no library targets found in package `foo`")
+        .run();
 }
 
 #[test]
@@ -64,14 +59,12 @@ fn build_with_relative_cargo_home_path() {
 
             "test-dependency" = { path = "src/test_dependency" }
         "#,
-        )
-        .file("src/main.rs", "fn main() {}")
+        ).file("src/main.rs", "fn main() {}")
         .file("src/test_dependency/src/lib.rs", r#" "#)
-        .file("src/test_dependency/Cargo.toml", &basic_manifest("test-dependency", "0.0.1"))
-        .build();
+        .file(
+            "src/test_dependency/Cargo.toml",
+            &basic_manifest("test-dependency", "0.0.1"),
+        ).build();
 
-    assert_that(
-        p.cargo("build").env("CARGO_HOME", "./cargo_home/"),
-        execs(),
-    );
+    p.cargo("build").env("CARGO_HOME", "./cargo_home/").run();
 }

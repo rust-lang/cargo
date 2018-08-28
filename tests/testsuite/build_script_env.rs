@@ -1,8 +1,7 @@
 use std::fs::File;
 
+use support::project;
 use support::sleep_ms;
-use support::{execs, project};
-use support::hamcrest::assert_that;
 
 #[test]
 fn rerun_if_env_changes() {
@@ -15,49 +14,42 @@ fn rerun_if_env_changes() {
                 println!("cargo:rerun-if-env-changed=FOO");
             }
         "#,
-        )
-        .build();
+        ).build();
 
-    assert_that(
-        p.cargo("build"),
-        execs().with_stderr(
+    p.cargo("build")
+        .with_stderr(
             "\
 [COMPILING] foo v0.0.1 ([..])
 [FINISHED] [..]
 ",
-        ),
-    );
-    assert_that(
-        p.cargo("build").env("FOO", "bar"),
-        execs().with_stderr(
+        ).run();
+    p.cargo("build")
+        .env("FOO", "bar")
+        .with_stderr(
             "\
 [COMPILING] foo v0.0.1 ([..])
 [FINISHED] [..]
 ",
-        ),
-    );
-    assert_that(
-        p.cargo("build").env("FOO", "baz"),
-        execs().with_stderr(
+        ).run();
+    p.cargo("build")
+        .env("FOO", "baz")
+        .with_stderr(
             "\
 [COMPILING] foo v0.0.1 ([..])
 [FINISHED] [..]
 ",
-        ),
-    );
-    assert_that(
-        p.cargo("build").env("FOO", "baz"),
-        execs().with_stderr("[FINISHED] [..]"),
-    );
-    assert_that(
-        p.cargo("build"),
-        execs().with_stderr(
+        ).run();
+    p.cargo("build")
+        .env("FOO", "baz")
+        .with_stderr("[FINISHED] [..]")
+        .run();
+    p.cargo("build")
+        .with_stderr(
             "\
 [COMPILING] foo v0.0.1 ([..])
 [FINISHED] [..]
 ",
-        ),
-    );
+        ).run();
 }
 
 #[test]
@@ -72,41 +64,36 @@ fn rerun_if_env_or_file_changes() {
                 println!("cargo:rerun-if-changed=foo");
             }
         "#,
-        )
-        .file("foo", "")
+        ).file("foo", "")
         .build();
 
-    assert_that(
-        p.cargo("build"),
-        execs().with_stderr(
+    p.cargo("build")
+        .with_stderr(
             "\
 [COMPILING] foo v0.0.1 ([..])
 [FINISHED] [..]
 ",
-        ),
-    );
-    assert_that(
-        p.cargo("build").env("FOO", "bar"),
-        execs().with_stderr(
+        ).run();
+    p.cargo("build")
+        .env("FOO", "bar")
+        .with_stderr(
             "\
 [COMPILING] foo v0.0.1 ([..])
 [FINISHED] [..]
 ",
-        ),
-    );
-    assert_that(
-        p.cargo("build").env("FOO", "bar"),
-        execs().with_stderr("[FINISHED] [..]"),
-    );
+        ).run();
+    p.cargo("build")
+        .env("FOO", "bar")
+        .with_stderr("[FINISHED] [..]")
+        .run();
     sleep_ms(1000);
     File::create(p.root().join("foo")).unwrap();
-    assert_that(
-        p.cargo("build").env("FOO", "bar"),
-        execs().with_stderr(
+    p.cargo("build")
+        .env("FOO", "bar")
+        .with_stderr(
             "\
 [COMPILING] foo v0.0.1 ([..])
 [FINISHED] [..]
 ",
-        ),
-    );
+        ).run();
 }

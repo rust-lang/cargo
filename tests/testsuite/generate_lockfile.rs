@@ -1,10 +1,9 @@
 use std::fs::{self, File};
 use std::io::prelude::*;
 
-use support::registry::Package;
-use support::{basic_manifest, execs, paths, project, ProjectBuilder};
-use support::ChannelChanger;
 use support::hamcrest::{assert_that, existing_file, is_not};
+use support::registry::Package;
+use support::{basic_manifest, paths, project, ProjectBuilder};
 
 #[test]
 fn adding_and_removing_packages() {
@@ -14,7 +13,7 @@ fn adding_and_removing_packages() {
         .file("bar/src/lib.rs", "")
         .build();
 
-    assert_that(p.cargo("generate-lockfile"), execs());
+    p.cargo("generate-lockfile").run();
 
     let toml = p.root().join("Cargo.toml");
     let lock1 = p.read_lockfile();
@@ -32,9 +31,8 @@ fn adding_and_removing_packages() {
         [dependencies.bar]
         path = "bar"
     "#,
-        )
-        .unwrap();
-    assert_that(p.cargo("generate-lockfile"), execs());
+        ).unwrap();
+    p.cargo("generate-lockfile").run();
     let lock2 = p.read_lockfile();
     assert_ne!(lock1, lock2);
 
@@ -43,7 +41,7 @@ fn adding_and_removing_packages() {
         .unwrap()
         .write_all(basic_manifest("bar", "0.0.2").as_bytes())
         .unwrap();
-    assert_that(p.cargo("generate-lockfile"), execs());
+    p.cargo("generate-lockfile").run();
     let lock3 = p.read_lockfile();
     assert_ne!(lock1, lock3);
     assert_ne!(lock2, lock3);
@@ -59,9 +57,8 @@ fn adding_and_removing_packages() {
         authors = []
         version = "0.0.1"
     "#,
-        )
-        .unwrap();
-    assert_that(p.cargo("generate-lockfile"), execs());
+        ).unwrap();
+    p.cargo("generate-lockfile").run();
     let lock4 = p.read_lockfile();
     assert_eq!(lock1, lock4);
 }
@@ -82,20 +79,18 @@ fn no_index_update() {
             [dependencies]
             serde = "1.0"
         "#,
-        )
-        .file("src/main.rs", "fn main() {}")
+        ).file("src/main.rs", "fn main() {}")
         .build();
 
-    assert_that(
-        p.cargo("generate-lockfile"),
-        execs().with_stderr("[UPDATING] registry `[..]`"),
-    );
+    p.cargo("generate-lockfile")
+        .with_stderr("[UPDATING] registry `[..]`")
+        .run();
 
-    assert_that(
-        p.cargo("generate-lockfile -Zno-index-update")
-            .masquerade_as_nightly_cargo(),
-        execs().with_stdout("").with_stderr(""),
-    );
+    p.cargo("generate-lockfile -Zno-index-update")
+        .masquerade_as_nightly_cargo()
+        .with_stdout("")
+        .with_stderr("")
+        .run();
 }
 
 #[test]
@@ -106,7 +101,7 @@ fn preserve_metadata() {
         .file("bar/src/lib.rs", "")
         .build();
 
-    assert_that(p.cargo("generate-lockfile"), execs());
+    p.cargo("generate-lockfile").run();
 
     let metadata = r#"
 [metadata]
@@ -122,12 +117,12 @@ foo = "bar"
         .unwrap();
 
     // Build and make sure the metadata is still there
-    assert_that(p.cargo("build"), execs());
+    p.cargo("build").run();
     let lock = p.read_lockfile();
     assert!(lock.contains(metadata.trim()), "{}", lock);
 
     // Update and make sure the metadata is still there
-    assert_that(p.cargo("update"), execs());
+    p.cargo("update").run();
     let lock = p.read_lockfile();
     assert!(lock.contains(metadata.trim()), "{}", lock);
 }
@@ -141,9 +136,9 @@ fn preserve_line_endings_issue_2076() {
         .build();
 
     let lockfile = p.root().join("Cargo.lock");
-    assert_that(p.cargo("generate-lockfile"), execs());
+    p.cargo("generate-lockfile").run();
     assert_that(&lockfile, existing_file());
-    assert_that(p.cargo("generate-lockfile"), execs());
+    p.cargo("generate-lockfile").run();
 
     let lock0 = p.read_lockfile();
 
@@ -157,7 +152,7 @@ fn preserve_line_endings_issue_2076() {
             .unwrap();
     }
 
-    assert_that(p.cargo("generate-lockfile"), execs());
+    p.cargo("generate-lockfile").run();
 
     let lock2 = p.read_lockfile();
 
@@ -167,19 +162,17 @@ fn preserve_line_endings_issue_2076() {
 
 #[test]
 fn cargo_update_generate_lockfile() {
-    let p = project()
-        .file("src/main.rs", "fn main() {}")
-        .build();
+    let p = project().file("src/main.rs", "fn main() {}").build();
 
     let lockfile = p.root().join("Cargo.lock");
     assert_that(&lockfile, is_not(existing_file()));
-    assert_that(p.cargo("update"), execs().with_stdout(""));
+    p.cargo("update").with_stdout("").run();
     assert_that(&lockfile, existing_file());
 
     fs::remove_file(p.root().join("Cargo.lock")).unwrap();
 
     assert_that(&lockfile, is_not(existing_file()));
-    assert_that(p.cargo("update"), execs().with_stdout(""));
+    p.cargo("update").with_stdout("").run();
     assert_that(&lockfile, existing_file());
 }
 
@@ -197,8 +190,7 @@ fn duplicate_entries_in_lockfile() {
             [dependencies]
             common = {path="common"}
             "#,
-        )
-        .file("src/lib.rs", "")
+        ).file("src/lib.rs", "")
         .build();
 
     let common_toml = &basic_manifest("common", "0.0.1");
@@ -221,8 +213,7 @@ fn duplicate_entries_in_lockfile() {
             common = {path="common"}
             a = {path="../a"}
             "#,
-        )
-        .file("src/lib.rs", "")
+        ).file("src/lib.rs", "")
         .build();
 
     let _common_in_b = ProjectBuilder::new(paths::root().join("b/common"))
@@ -231,12 +222,11 @@ fn duplicate_entries_in_lockfile() {
         .build();
 
     // should fail due to a duplicate package `common` in the lockfile
-    assert_that(
-        b.cargo("build"),
-        execs().with_status(101).with_stderr_contains(
+    b.cargo("build")
+        .with_status(101)
+        .with_stderr_contains(
             "[..]package collision in the lockfile: packages common [..] and \
              common [..] are different, but only one can be written to \
              lockfile unambigiously",
-        ),
-    );
+        ).run();
 }

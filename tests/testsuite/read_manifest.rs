@@ -1,5 +1,4 @@
-use support::{basic_bin_manifest, execs, main_file, project};
-use support::hamcrest::assert_that;
+use support::{basic_bin_manifest, main_file, project};
 
 static MANIFEST_OUTPUT: &'static str = r#"
 {
@@ -38,11 +37,10 @@ fn cargo_read_manifest_path_to_cargo_toml_relative() {
         .file("src/foo.rs", &main_file(r#""i am foo""#, &[]))
         .build();
 
-    assert_that(
-        p.cargo("read-manifest --manifest-path foo/Cargo.toml")
-            .cwd(p.root().parent().unwrap()),
-        execs().with_json(MANIFEST_OUTPUT),
-    );
+    p.cargo("read-manifest --manifest-path foo/Cargo.toml")
+        .cwd(p.root().parent().unwrap())
+        .with_json(MANIFEST_OUTPUT)
+        .run();
 }
 
 #[test]
@@ -52,12 +50,11 @@ fn cargo_read_manifest_path_to_cargo_toml_absolute() {
         .file("src/foo.rs", &main_file(r#""i am foo""#, &[]))
         .build();
 
-    assert_that(
-        p.cargo("read-manifest --manifest-path")
-            .arg(p.root().join("Cargo.toml"))
-            .cwd(p.root().parent().unwrap()),
-        execs().with_json(MANIFEST_OUTPUT),
-    );
+    p.cargo("read-manifest --manifest-path")
+        .arg(p.root().join("Cargo.toml"))
+        .cwd(p.root().parent().unwrap())
+        .with_json(MANIFEST_OUTPUT)
+        .run();
 }
 
 #[test]
@@ -67,14 +64,13 @@ fn cargo_read_manifest_path_to_cargo_toml_parent_relative() {
         .file("src/foo.rs", &main_file(r#""i am foo""#, &[]))
         .build();
 
-    assert_that(
-        p.cargo("read-manifest --manifest-path foo")
-            .cwd(p.root().parent().unwrap()),
-        execs().with_status(101).with_stderr(
+    p.cargo("read-manifest --manifest-path foo")
+        .cwd(p.root().parent().unwrap())
+        .with_status(101)
+        .with_stderr(
             "[ERROR] the manifest-path must be \
              a path to a Cargo.toml file",
-        ),
-    );
+        ).run();
 }
 
 #[test]
@@ -84,15 +80,14 @@ fn cargo_read_manifest_path_to_cargo_toml_parent_absolute() {
         .file("src/foo.rs", &main_file(r#""i am foo""#, &[]))
         .build();
 
-    assert_that(
-        p.cargo("read-manifest --manifest-path")
-            .arg(p.root())
-            .cwd(p.root().parent().unwrap()),
-        execs().with_status(101).with_stderr(
+    p.cargo("read-manifest --manifest-path")
+        .arg(p.root())
+        .cwd(p.root().parent().unwrap())
+        .with_status(101)
+        .with_stderr(
             "[ERROR] the manifest-path must be \
              a path to a Cargo.toml file",
-        ),
-    );
+        ).run();
 }
 
 #[test]
@@ -102,8 +97,8 @@ fn cargo_read_manifest_cwd() {
         .file("src/foo.rs", &main_file(r#""i am foo""#, &[]))
         .build();
 
-    assert_that(
-        p.cargo("read-manifest").cwd(p.root()),
-        execs().with_json(MANIFEST_OUTPUT),
-    );
+    p.cargo("read-manifest")
+        .cwd(p.root())
+        .with_json(MANIFEST_OUTPUT)
+        .run();
 }

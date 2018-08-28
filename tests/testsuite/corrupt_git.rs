@@ -3,8 +3,7 @@ use std::path::{Path, PathBuf};
 
 use cargo::util::paths as cargopaths;
 use support::paths;
-use support::{basic_manifest, execs, git, project};
-use support::hamcrest::assert_that;
+use support::{basic_manifest, git, project};
 
 #[test]
 fn deleting_database_files() {
@@ -30,11 +29,10 @@ fn deleting_database_files() {
         "#,
                 git_project.url()
             ),
-        )
-        .file("src/lib.rs", "")
+        ).file("src/lib.rs", "")
         .build();
 
-    assert_that(project.cargo("build"), execs());
+    project.cargo("build").run();
 
     let mut files = Vec::new();
     find_files(&paths::home().join(".cargo/git/db"), &mut files);
@@ -47,10 +45,7 @@ fn deleting_database_files() {
         }
         println!("deleting {}", file.display());
         cargopaths::remove_file(&file).unwrap();
-        assert_that(
-            project.cargo("build -v").env("RUST_LOG", log),
-            execs(),
-        );
+        project.cargo("build -v").env("RUST_LOG", log).run();
 
         if !file.exists() {
             continue;
@@ -63,10 +58,7 @@ fn deleting_database_files() {
             .unwrap()
             .set_len(2)
             .unwrap();
-        assert_that(
-            project.cargo("build -v").env("RUST_LOG", log),
-            execs(),
-        );
+        project.cargo("build -v").env("RUST_LOG", log).run();
     }
 }
 
@@ -94,11 +86,10 @@ fn deleting_checkout_files() {
         "#,
                 git_project.url()
             ),
-        )
-        .file("src/lib.rs", "")
+        ).file("src/lib.rs", "")
         .build();
 
-    assert_that(project.cargo("build"), execs());
+    project.cargo("build").run();
 
     let dir = paths::home()
         .join(".cargo/git/checkouts")
@@ -129,10 +120,7 @@ fn deleting_checkout_files() {
         }
         println!("deleting {}", file.display());
         cargopaths::remove_file(&file).unwrap();
-        assert_that(
-            project.cargo("build -v").env("RUST_LOG", log),
-            execs(),
-        );
+        project.cargo("build -v").env("RUST_LOG", log).run();
 
         if !file.exists() {
             continue;
@@ -145,10 +133,7 @@ fn deleting_checkout_files() {
             .unwrap()
             .set_len(2)
             .unwrap();
-        assert_that(
-            project.cargo("build -v").env("RUST_LOG", log),
-            execs(),
-        );
+        project.cargo("build -v").env("RUST_LOG", log).run();
     }
 }
 

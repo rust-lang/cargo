@@ -1,8 +1,7 @@
 use support::git;
 use support::paths;
 use support::registry::Package;
-use support::{basic_manifest, execs, project};
-use support::hamcrest::assert_that;
+use support::{basic_manifest, project};
 
 #[test]
 fn override_simple() {
@@ -31,13 +30,13 @@ fn override_simple() {
         "#,
                 bar.url()
             ),
-        )
-        .file("src/lib.rs", "extern crate bar; pub fn foo() { bar::bar(); }")
-        .build();
+        ).file(
+            "src/lib.rs",
+            "extern crate bar; pub fn foo() { bar::bar(); }",
+        ).build();
 
-    assert_that(
-        p.cargo("build"),
-        execs().with_stderr(
+    p.cargo("build")
+        .with_stderr(
             "\
 [UPDATING] registry `file://[..]`
 [UPDATING] git repository `[..]`
@@ -45,8 +44,7 @@ fn override_simple() {
 [COMPILING] foo v0.0.1 (file://[..])
 [FINISHED] dev [unoptimized + debuginfo] target(s) in [..]
 ",
-        ),
-    );
+        ).run();
 }
 
 #[test]
@@ -66,21 +64,19 @@ fn missing_version() {
             [replace]
             bar = { git = 'https://example.com' }
         "#,
-        )
-        .file("src/lib.rs", "")
+        ).file("src/lib.rs", "")
         .build();
 
-    assert_that(
-        p.cargo("build"),
-        execs().with_status(101).with_stderr(
+    p.cargo("build")
+        .with_status(101)
+        .with_stderr(
             "\
 error: failed to parse manifest at `[..]`
 
 Caused by:
   replacements must specify a version to replace, but `[..]bar` does not
 ",
-        ),
-    );
+        ).run();
 }
 
 #[test]
@@ -100,21 +96,19 @@ fn invalid_semver_version() {
             [replace]
             "bar:*" = { git = 'https://example.com' }
         "#,
-        )
-        .file("src/lib.rs", "")
+        ).file("src/lib.rs", "")
         .build();
 
-    assert_that(
-        p.cargo("build"),
-        execs().with_status(101).with_stderr_contains(
+    p.cargo("build")
+        .with_status(101)
+        .with_stderr_contains(
             "\
 error: failed to parse manifest at `[..]`
 
 Caused by:
   replacements must specify a valid semver version to replace, but `bar:*` does not
 ",
-        ),
-    );
+        ).run();
 }
 
 #[test]
@@ -137,21 +131,19 @@ fn different_version() {
             [replace]
             "bar:0.1.0" = "0.2.0"
         "#,
-        )
-        .file("src/lib.rs", "")
+        ).file("src/lib.rs", "")
         .build();
 
-    assert_that(
-        p.cargo("build"),
-        execs().with_status(101).with_stderr(
+    p.cargo("build")
+        .with_status(101)
+        .with_stderr(
             "\
 error: failed to parse manifest at `[..]`
 
 Caused by:
   replacements cannot specify a version requirement, but found one for [..]
 ",
-        ),
-    );
+        ).run();
 }
 
 #[test]
@@ -185,13 +177,11 @@ fn transitive() {
         "#,
                 foo.url()
             ),
-        )
-        .file("src/lib.rs", "")
+        ).file("src/lib.rs", "")
         .build();
 
-    assert_that(
-        p.cargo("build"),
-        execs().with_stderr(
+    p.cargo("build")
+        .with_stderr(
             "\
 [UPDATING] registry `file://[..]`
 [UPDATING] git repository `[..]`
@@ -201,10 +191,9 @@ fn transitive() {
 [COMPILING] foo v0.0.1 (file://[..])
 [FINISHED] dev [unoptimized + debuginfo] target(s) in [..]
 ",
-        ),
-    );
+        ).run();
 
-    assert_that(p.cargo("build"), execs().with_stdout(""));
+    p.cargo("build").with_stdout("").run();
 }
 
 #[test]
@@ -234,13 +223,13 @@ fn persists_across_rebuilds() {
         "#,
                 foo.url()
             ),
-        )
-        .file("src/lib.rs", "extern crate bar; pub fn foo() { bar::bar(); }")
-        .build();
+        ).file(
+            "src/lib.rs",
+            "extern crate bar; pub fn foo() { bar::bar(); }",
+        ).build();
 
-    assert_that(
-        p.cargo("build"),
-        execs().with_stderr(
+    p.cargo("build")
+        .with_stderr(
             "\
 [UPDATING] registry `file://[..]`
 [UPDATING] git repository `file://[..]`
@@ -248,17 +237,17 @@ fn persists_across_rebuilds() {
 [COMPILING] foo v0.0.1 (file://[..])
 [FINISHED] dev [unoptimized + debuginfo] target(s) in [..]
 ",
-        ),
-    );
+        ).run();
 
-    assert_that(p.cargo("build"), execs().with_stdout(""));
+    p.cargo("build").with_stdout("").run();
 }
 
 #[test]
 fn replace_registry_with_path() {
     Package::new("bar", "0.1.0").publish();
 
-    let _ = project().at("bar")
+    let _ = project()
+        .at("bar")
         .file("Cargo.toml", &basic_manifest("bar", "0.1.0"))
         .file("src/lib.rs", "pub fn bar() {}")
         .build();
@@ -278,21 +267,20 @@ fn replace_registry_with_path() {
             [replace]
             "bar:0.1.0" = { path = "../bar" }
         "#,
-        )
-        .file("src/lib.rs", "extern crate bar; pub fn foo() { bar::bar(); }")
-        .build();
+        ).file(
+            "src/lib.rs",
+            "extern crate bar; pub fn foo() { bar::bar(); }",
+        ).build();
 
-    assert_that(
-        p.cargo("build"),
-        execs().with_stderr(
+    p.cargo("build")
+        .with_stderr(
             "\
 [UPDATING] registry `file://[..]`
 [COMPILING] bar v0.1.0 (file://[..])
 [COMPILING] foo v0.0.1 (file://[..])
 [FINISHED] dev [unoptimized + debuginfo] target(s) in [..]
 ",
-        ),
-    );
+        ).run();
 }
 
 #[test]
@@ -303,8 +291,10 @@ fn use_a_spec_to_select() {
     Package::new("baz", "0.2.0").publish();
     Package::new("bar", "0.1.1")
         .dep("baz", "0.2")
-        .file("src/lib.rs", "extern crate baz; pub fn bar() { baz::baz3(); }")
-        .publish();
+        .file(
+            "src/lib.rs",
+            "extern crate baz; pub fn bar() { baz::baz3(); }",
+        ).publish();
 
     let foo = git::repo(&paths::root().join("override"))
         .file("Cargo.toml", &basic_manifest("baz", "0.2.0"))
@@ -330,8 +320,7 @@ fn use_a_spec_to_select() {
         "#,
                 foo.url()
             ),
-        )
-        .file(
+        ).file(
             "src/lib.rs",
             "
             extern crate bar;
@@ -342,12 +331,10 @@ fn use_a_spec_to_select() {
                 bar::bar();
             }
         ",
-        )
-        .build();
+        ).build();
 
-    assert_that(
-        p.cargo("build"),
-        execs().with_stderr(
+    p.cargo("build")
+        .with_stderr(
             "\
 [UPDATING] registry `file://[..]`
 [UPDATING] git repository `[..]`
@@ -359,8 +346,7 @@ fn use_a_spec_to_select() {
 [COMPILING] foo v0.0.1 (file://[..])
 [FINISHED] dev [unoptimized + debuginfo] target(s) in [..]
 ",
-        ),
-    );
+        ).run();
 }
 
 #[test]
@@ -380,8 +366,7 @@ fn override_adds_some_deps() {
             [dependencies]
             baz = "0.1"
         "#,
-        )
-        .file("src/lib.rs", "")
+        ).file("src/lib.rs", "")
         .build();
 
     let p = project()
@@ -402,13 +387,11 @@ fn override_adds_some_deps() {
         "#,
                 foo.url()
             ),
-        )
-        .file("src/lib.rs", "")
+        ).file("src/lib.rs", "")
         .build();
 
-    assert_that(
-        p.cargo("build"),
-        execs().with_stderr(
+    p.cargo("build")
+        .with_stderr(
             "\
 [UPDATING] registry `file://[..]`
 [UPDATING] git repository `[..]`
@@ -418,32 +401,27 @@ fn override_adds_some_deps() {
 [COMPILING] foo v0.0.1 (file://[..])
 [FINISHED] dev [unoptimized + debuginfo] target(s) in [..]
 ",
-        ),
-    );
+        ).run();
 
-    assert_that(p.cargo("build"), execs().with_stdout(""));
+    p.cargo("build").with_stdout("").run();
 
     Package::new("baz", "0.1.2").publish();
-    assert_that(
-        p.cargo("update -p")
-            .arg(&format!("{}#bar", foo.url())),
-        execs().with_stderr(
+    p.cargo("update -p")
+        .arg(&format!("{}#bar", foo.url()))
+        .with_stderr(
             "\
 [UPDATING] git repository `file://[..]`
 [UPDATING] registry `file://[..]`
 ",
-        ),
-    );
-    assert_that(
-        p.cargo("update -p https://github.com/rust-lang/crates.io-index#bar"),
-        execs().with_stderr(
+        ).run();
+    p.cargo("update -p https://github.com/rust-lang/crates.io-index#bar")
+        .with_stderr(
             "\
 [UPDATING] registry `file://[..]`
 ",
-        ),
-    );
+        ).run();
 
-    assert_that(p.cargo("build"), execs().with_stdout(""));
+    p.cargo("build").with_stdout("").run();
 }
 
 #[test]
@@ -465,8 +443,7 @@ fn locked_means_locked_yes_no_seriously_i_mean_locked() {
             [dependencies]
             baz = "*"
         "#,
-        )
-        .file("src/lib.rs", "")
+        ).file("src/lib.rs", "")
         .build();
 
     let p = project()
@@ -488,14 +465,13 @@ fn locked_means_locked_yes_no_seriously_i_mean_locked() {
         "#,
                 foo.url()
             ),
-        )
-        .file("src/lib.rs", "")
+        ).file("src/lib.rs", "")
         .build();
 
-    assert_that(p.cargo("build"), execs());
+    p.cargo("build").run();
 
-    assert_that(p.cargo("build"), execs().with_stdout(""));
-    assert_that(p.cargo("build"), execs().with_stdout(""));
+    p.cargo("build").with_stdout("").run();
+    p.cargo("build").with_stdout("").run();
 }
 
 #[test]
@@ -525,13 +501,12 @@ fn override_wrong_name() {
         "#,
                 foo.url()
             ),
-        )
-        .file("src/lib.rs", "")
+        ).file("src/lib.rs", "")
         .build();
 
-    assert_that(
-        p.cargo("build"),
-        execs().with_status(101).with_stderr(
+    p.cargo("build")
+        .with_status(101)
+        .with_stderr(
             "\
 [UPDATING] registry [..]
 [UPDATING] git repository [..]
@@ -539,8 +514,7 @@ error: no matching package for override `[..]baz:0.1.0` found
 location searched: file://[..]
 version required: = 0.1.0
 ",
-        ),
-    );
+        ).run();
 }
 
 #[test]
@@ -569,13 +543,12 @@ fn override_with_nothing() {
         "#,
                 foo.url()
             ),
-        )
-        .file("src/lib.rs", "")
+        ).file("src/lib.rs", "")
         .build();
 
-    assert_that(
-        p.cargo("build"),
-        execs().with_status(101).with_stderr(
+    p.cargo("build")
+        .with_status(101)
+        .with_stderr(
             "\
 [UPDATING] registry [..]
 [UPDATING] git repository [..]
@@ -587,8 +560,7 @@ Caused by:
 Caused by:
   Could not find Cargo.toml in `[..]`
 ",
-        ),
-    );
+        ).run();
 }
 
 #[test]
@@ -605,21 +577,19 @@ fn override_wrong_version() {
             [replace]
             "bar:0.1.0" = { git = 'https://example.com', version = '0.2.0' }
         "#,
-        )
-        .file("src/lib.rs", "")
+        ).file("src/lib.rs", "")
         .build();
 
-    assert_that(
-        p.cargo("build"),
-        execs().with_status(101).with_stderr(
+    p.cargo("build")
+        .with_status(101)
+        .with_stderr(
             "\
 error: failed to parse manifest at `[..]`
 
 Caused by:
   replacements cannot specify a version requirement, but found one for `[..]bar:0.1.0`
 ",
-        ),
-    );
+        ).run();
 }
 
 #[test]
@@ -652,13 +622,12 @@ fn multiple_specs() {
         "#,
                 bar.url()
             ),
-        )
-        .file("src/lib.rs", "")
+        ).file("src/lib.rs", "")
         .build();
 
-    assert_that(
-        p.cargo("build"),
-        execs().with_status(101).with_stderr(
+    p.cargo("build")
+        .with_status(101)
+        .with_stderr(
             "\
 [UPDATING] registry [..]
 [UPDATING] git repository [..]
@@ -669,8 +638,7 @@ error: overlapping replacement specifications found:
 
 both specifications match: bar v0.1.0
 ",
-        ),
-    );
+        ).run();
 }
 
 #[test]
@@ -700,21 +668,19 @@ fn test_override_dep() {
         "#,
                 bar.url()
             ),
-        )
-        .file("src/lib.rs", "")
+        ).file("src/lib.rs", "")
         .build();
 
-    assert_that(
-        p.cargo("test -p bar"),
-        execs().with_status(101).with_stderr_contains(
+    p.cargo("test -p bar")
+        .with_status(101)
+        .with_stderr_contains(
             "\
 error: There are multiple `bar` packages in your project, and the [..]
 Please re-run this command with [..]
   [..]#bar:0.1.0
   [..]#bar:0.1.0
 ",
-        ),
-    );
+        ).run();
 }
 
 #[test]
@@ -744,20 +710,17 @@ fn update() {
         "#,
                 bar.url()
             ),
-        )
-        .file("src/lib.rs", "")
+        ).file("src/lib.rs", "")
         .build();
 
-    assert_that(p.cargo("generate-lockfile"), execs());
-    assert_that(
-        p.cargo("update"),
-        execs().with_stderr(
+    p.cargo("generate-lockfile").run();
+    p.cargo("update")
+        .with_stderr(
             "\
 [UPDATING] registry `[..]`
 [UPDATING] git repository `[..]`
 ",
-        ),
-    );
+        ).run();
 }
 
 // foo -> near -> far
@@ -778,8 +741,7 @@ fn no_override_self() {
             [dependencies]
             far = { path = "../far" }
         "#,
-        )
-        .file("near/src/lib.rs", "#![no_std] pub extern crate far;")
+        ).file("near/src/lib.rs", "#![no_std] pub extern crate far;")
         .build();
 
     let p = project()
@@ -800,11 +762,10 @@ fn no_override_self() {
         "#,
                 deps.url()
             ),
-        )
-        .file("src/lib.rs", "#![no_std] pub extern crate near;")
+        ).file("src/lib.rs", "#![no_std] pub extern crate near;")
         .build();
 
-    assert_that(p.cargo("build --verbose"), execs());
+    p.cargo("build --verbose").run();
 }
 
 #[test]
@@ -824,8 +785,7 @@ fn broken_path_override_warns() {
             [dependencies]
             a = { path = "a1" }
         "#,
-        )
-        .file("src/lib.rs", "")
+        ).file("src/lib.rs", "")
         .file(
             "a1/Cargo.toml",
             r#"
@@ -837,8 +797,7 @@ fn broken_path_override_warns() {
             [dependencies]
             bar = "0.1"
         "#,
-        )
-        .file("a1/src/lib.rs", "")
+        ).file("a1/src/lib.rs", "")
         .file(
             "a2/Cargo.toml",
             r#"
@@ -850,14 +809,12 @@ fn broken_path_override_warns() {
             [dependencies]
             bar = "0.2"
         "#,
-        )
-        .file("a2/src/lib.rs", "")
+        ).file("a2/src/lib.rs", "")
         .file(".cargo/config", r#"paths = ["a2"]"#)
         .build();
 
-    assert_that(
-        p.cargo("build"),
-        execs().with_stderr(
+    p.cargo("build")
+        .with_stderr(
             "\
 [UPDATING] [..]
 warning: path override for crate `a` has altered the original list of
@@ -881,8 +838,7 @@ http://doc.crates.io/specifying-dependencies.html#overriding-dependencies
 [COMPILING] [..]
 [FINISHED] [..]
 ",
-        ),
-    );
+        ).run();
 }
 
 #[test]
@@ -914,8 +870,7 @@ fn override_an_override() {
             "chrono:0.2.0" = { path = "chrono" }
             "serde:0.8.0" = { path = "serde" }
         "#,
-        )
-        .file(
+        ).file(
             "Cargo.lock",
             r#"
             [[package]]
@@ -954,8 +909,7 @@ fn override_an_override() {
             name = "serde"
             version = "0.8.0"
         "#,
-        )
-        .file(
+        ).file(
             "src/lib.rs",
             "
             extern crate chrono;
@@ -966,8 +920,7 @@ fn override_an_override() {
                 serde::serde08_override();
             }
         ",
-        )
-        .file(
+        ).file(
             "chrono/Cargo.toml",
             r#"
             [package]
@@ -978,8 +931,7 @@ fn override_an_override() {
             [dependencies]
             serde = "< 0.9"
         "#,
-        )
-        .file(
+        ).file(
             "chrono/src/lib.rs",
             "
             extern crate serde;
@@ -987,12 +939,11 @@ fn override_an_override() {
                 serde::serde07();
             }
         ",
-        )
-        .file("serde/Cargo.toml", &basic_manifest("serde", "0.8.0"))
+        ).file("serde/Cargo.toml", &basic_manifest("serde", "0.8.0"))
         .file("serde/src/lib.rs", "pub fn serde08_override() {}")
         .build();
 
-    assert_that(p.cargo("build -v"), execs());
+    p.cargo("build -v").run();
 }
 
 #[test]
@@ -1012,8 +963,7 @@ fn overriding_nonexistent_no_spurious() {
             [dependencies]
             baz = { path = "baz" }
         "#,
-        )
-        .file("src/lib.rs", "pub fn bar() {}")
+        ).file("src/lib.rs", "pub fn bar() {}")
         .file("baz/Cargo.toml", &basic_manifest("baz", "0.1.0"))
         .file("baz/src/lib.rs", "pub fn baz() {}")
         .build();
@@ -1037,22 +987,18 @@ fn overriding_nonexistent_no_spurious() {
         "#,
                 url = bar.url()
             ),
-        )
-        .file("src/lib.rs", "")
+        ).file("src/lib.rs", "")
         .build();
 
-    assert_that(p.cargo("build"), execs());
-    assert_that(
-        p.cargo("build"),
-        execs()
-            .with_stderr(
-                "\
+    p.cargo("build").run();
+    p.cargo("build")
+        .with_stderr(
+            "\
 [WARNING] package replacement is not used: [..]baz:0.1.0
 [FINISHED] [..]
 ",
-            )
-            .with_stdout(""),
-    );
+        ).with_stdout("")
+        .run();
 }
 
 #[test]
@@ -1069,8 +1015,7 @@ fn no_warnings_when_replace_is_used_in_another_workspace_member() {
 
             [replace]
             "bar:0.1.0" = { path = "local_bar" }"#,
-        )
-        .file(
+        ).file(
             "first_crate/Cargo.toml",
             r#"
             [package]
@@ -1080,33 +1025,34 @@ fn no_warnings_when_replace_is_used_in_another_workspace_member() {
             [dependencies]
             bar = "0.1.0"
         "#,
-        )
-        .file("first_crate/src/lib.rs", "")
-        .file("second_crate/Cargo.toml", &basic_manifest("second_crate", "0.1.0"))
-        .file("second_crate/src/lib.rs", "")
+        ).file("first_crate/src/lib.rs", "")
+        .file(
+            "second_crate/Cargo.toml",
+            &basic_manifest("second_crate", "0.1.0"),
+        ).file("second_crate/src/lib.rs", "")
         .file("local_bar/Cargo.toml", &basic_manifest("bar", "0.1.0"))
         .file("local_bar/src/lib.rs", "")
         .build();
 
-    assert_that(
-        p.cargo("build").cwd(p.root().join("first_crate")),
-        execs().with_stdout("").with_stderr(
+    p.cargo("build")
+        .cwd(p.root().join("first_crate"))
+        .with_stdout("")
+        .with_stderr(
             "\
 [UPDATING] registry `[..]`
 [COMPILING] bar v0.1.0 ([..])
 [COMPILING] first_crate v0.1.0 ([..])
 [FINISHED] [..]",
-        ),
-    );
+        ).run();
 
-    assert_that(
-        p.cargo("build").cwd(p.root().join("second_crate")),
-        execs().with_stdout("").with_stderr(
+    p.cargo("build")
+        .cwd(p.root().join("second_crate"))
+        .with_stdout("")
+        .with_stderr(
             "\
 [COMPILING] second_crate v0.1.0 ([..])
 [FINISHED] [..]",
-        ),
-    );
+        ).run();
 }
 
 #[test]
@@ -1126,8 +1072,7 @@ fn override_to_path_dep() {
             [dependencies]
             bar = "0.1.0"
         "#,
-        )
-        .file("src/lib.rs", "")
+        ).file("src/lib.rs", "")
         .file(
             "bar/Cargo.toml",
             r#"
@@ -1139,14 +1084,13 @@ fn override_to_path_dep() {
             [dependencies]
             baz = { path = "baz" }
         "#,
-        )
-        .file("bar/src/lib.rs", "")
+        ).file("bar/src/lib.rs", "")
         .file("bar/baz/Cargo.toml", &basic_manifest("baz", "0.0.1"))
         .file("bar/baz/src/lib.rs", "")
         .file(".cargo/config", r#"paths = ["bar"]"#)
         .build();
 
-    assert_that(p.cargo("build"), execs());
+    p.cargo("build").run();
 }
 
 #[test]
@@ -1169,8 +1113,7 @@ fn replace_to_path_dep() {
             [replace]
             "bar:0.1.0" = { path = "bar" }
         "#,
-        )
-        .file("src/lib.rs", "extern crate bar;")
+        ).file("src/lib.rs", "extern crate bar;")
         .file(
             "bar/Cargo.toml",
             r#"
@@ -1182,13 +1125,14 @@ fn replace_to_path_dep() {
             [dependencies]
             baz = { path = "baz" }
         "#,
-        )
-        .file("bar/src/lib.rs", "extern crate baz; pub fn bar() { baz::baz(); }")
-        .file("bar/baz/Cargo.toml", &basic_manifest("baz", "0.1.0"))
+        ).file(
+            "bar/src/lib.rs",
+            "extern crate baz; pub fn bar() { baz::baz(); }",
+        ).file("bar/baz/Cargo.toml", &basic_manifest("baz", "0.1.0"))
         .file("bar/baz/src/lib.rs", "pub fn baz() {}")
         .build();
 
-    assert_that(p.cargo("build"), execs());
+    p.cargo("build").run();
 }
 
 #[test]
@@ -1207,8 +1151,7 @@ fn paths_ok_with_optional() {
             [dependencies]
             bar = { path = "bar" }
         "#,
-        )
-        .file("src/lib.rs", "")
+        ).file("src/lib.rs", "")
         .file(
             "bar/Cargo.toml",
             r#"
@@ -1220,8 +1163,7 @@ fn paths_ok_with_optional() {
             [dependencies]
             baz = { version = "0.1", optional = true }
         "#,
-        )
-        .file("bar/src/lib.rs", "")
+        ).file("bar/src/lib.rs", "")
         .file(
             "bar2/Cargo.toml",
             r#"
@@ -1233,21 +1175,18 @@ fn paths_ok_with_optional() {
             [dependencies]
             baz = { version = "0.1", optional = true }
         "#,
-        )
-        .file("bar2/src/lib.rs", "")
+        ).file("bar2/src/lib.rs", "")
         .file(".cargo/config", r#"paths = ["bar2"]"#)
         .build();
 
-    assert_that(
-        p.cargo("build"),
-        execs().with_stderr(
+    p.cargo("build")
+        .with_stderr(
             "\
 [COMPILING] bar v0.1.0 ([..]bar2)
 [COMPILING] foo v0.0.1 ([..])
 [FINISHED] [..]
 ",
-        ),
-    );
+        ).run();
 }
 
 #[test]
@@ -1266,8 +1205,7 @@ fn paths_add_optional_bad() {
             [dependencies]
             bar = { path = "bar" }
         "#,
-        )
-        .file("src/lib.rs", "")
+        ).file("src/lib.rs", "")
         .file("bar/Cargo.toml", &basic_manifest("bar", "0.1.0"))
         .file("bar/src/lib.rs", "")
         .file(
@@ -1281,20 +1219,17 @@ fn paths_add_optional_bad() {
             [dependencies]
             baz = { version = "0.1", optional = true }
         "#,
-        )
-        .file("bar2/src/lib.rs", "")
+        ).file("bar2/src/lib.rs", "")
         .file(".cargo/config", r#"paths = ["bar2"]"#)
         .build();
 
-    assert_that(
-        p.cargo("build"),
-        execs().with_stderr_contains(
+    p.cargo("build")
+        .with_stderr_contains(
             "\
 warning: path override for crate `bar` has altered the original list of
 dependencies; the dependency on `baz` was either added or\
 ",
-        ),
-    );
+        ).run();
 }
 
 #[test]
@@ -1320,8 +1255,7 @@ fn override_with_default_feature() {
             [replace]
             'bar:0.1.0' = { path = "bar" }
         "#,
-        )
-        .file("src/main.rs", "extern crate bar; fn main() { bar::bar(); }")
+        ).file("src/main.rs", "extern crate bar; fn main() { bar::bar(); }")
         .file(
             "bar/Cargo.toml",
             r#"
@@ -1333,15 +1267,13 @@ fn override_with_default_feature() {
             [features]
             default = []
         "#,
-        )
-        .file(
+        ).file(
             "bar/src/lib.rs",
             r#"
             #[cfg(feature = "default")]
             pub fn bar() {}
         "#,
-        )
-        .file(
+        ).file(
             "another2/Cargo.toml",
             r#"
             [package]
@@ -1352,11 +1284,10 @@ fn override_with_default_feature() {
             [dependencies]
             bar = { version = "0.1", default-features = false }
         "#,
-        )
-        .file("another2/src/lib.rs", "")
+        ).file("another2/src/lib.rs", "")
         .build();
 
-    assert_that(p.cargo("run"), execs());
+    p.cargo("run").run();
 }
 
 #[test]
@@ -1378,8 +1309,7 @@ fn override_plus_dep() {
             [replace]
             'bar:0.1.0' = { path = "bar" }
         "#,
-        )
-        .file("src/lib.rs", "")
+        ).file("src/lib.rs", "")
         .file(
             "bar/Cargo.toml",
             r#"
@@ -1391,14 +1321,11 @@ fn override_plus_dep() {
             [dependencies]
             foo = { path = ".." }
         "#,
-        )
-        .file("bar/src/lib.rs", "")
+        ).file("bar/src/lib.rs", "")
         .build();
 
-    assert_that(
-        p.cargo("build"),
-        execs()
-            .with_status(101)
-            .with_stderr_contains("error: cyclic package dependency: [..]"),
-    );
+    p.cargo("build")
+        .with_status(101)
+        .with_stderr_contains("error: cyclic package dependency: [..]")
+        .run();
 }

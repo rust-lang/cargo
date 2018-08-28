@@ -1,6 +1,5 @@
-use support::hamcrest::assert_that;
 use support::registry::Package;
-use support::{basic_manifest, execs, project};
+use support::{basic_manifest, project};
 
 #[test]
 fn bad1() {
@@ -12,17 +11,15 @@ fn bad1() {
               [target]
               nonexistent-target = "foo"
         "#,
-        )
-        .build();
-    assert_that(
-        p.cargo("build -v --target=nonexistent-target"),
-        execs().with_status(101).with_stderr(
+        ).build();
+    p.cargo("build -v --target=nonexistent-target")
+        .with_status(101)
+        .with_stderr(
             "\
 [ERROR] expected table for configuration key `target.nonexistent-target`, \
 but found string in [..]config
 ",
-        ),
-    );
+        ).run();
 }
 
 #[test]
@@ -35,11 +32,10 @@ fn bad2() {
               [http]
                 proxy = 3.0
         "#,
-        )
-        .build();
-    assert_that(
-        p.cargo("publish -v"),
-        execs().with_status(101).with_stderr(
+        ).build();
+    p.cargo("publish -v")
+        .with_status(101)
+        .with_stderr(
             "\
 [ERROR] could not load Cargo configuration
 
@@ -55,8 +51,7 @@ Caused by:
 Caused by:
   found TOML configuration value of unknown type `float`
 ",
-        ),
-    );
+        ).run();
 }
 
 #[test]
@@ -69,21 +64,19 @@ fn bad3() {
             [http]
               proxy = true
         "#,
-        )
-        .build();
+        ).build();
     Package::new("foo", "1.0.0").publish();
 
-    assert_that(
-        p.cargo("publish -v"),
-        execs().with_status(101).with_stderr(
+    p.cargo("publish -v")
+        .with_status(101)
+        .with_stderr(
             "\
 error: failed to update registry [..]
 
 Caused by:
   error in [..]config: `http.proxy` expected a string, but found a boolean
 ",
-        ),
-    );
+        ).run();
 }
 
 #[test]
@@ -95,19 +88,17 @@ fn bad4() {
             [cargo-new]
               name = false
         "#,
-        )
-        .build();
-    assert_that(
-        p.cargo("new -v foo"),
-        execs().with_status(101).with_stderr(
+        ).build();
+    p.cargo("new -v foo")
+        .with_status(101)
+        .with_stderr(
             "\
 [ERROR] Failed to create project `foo` at `[..]`
 
 Caused by:
   error in [..]config: `cargo-new.name` expected a string, but found a boolean
 ",
-        ),
-    );
+        ).run();
 }
 
 #[test]
@@ -120,21 +111,19 @@ fn bad6() {
             [http]
               user-agent = true
         "#,
-        )
-        .build();
+        ).build();
     Package::new("foo", "1.0.0").publish();
 
-    assert_that(
-        p.cargo("publish -v"),
-        execs().with_status(101).with_stderr(
+    p.cargo("publish -v")
+        .with_status(101)
+        .with_stderr(
             "\
 error: failed to update registry [..]
 
 Caused by:
   error in [..]config: `http.user-agent` expected a string, but found a boolean
 ",
-        ),
-    );
+        ).run();
 }
 
 #[test]
@@ -147,18 +136,16 @@ fn bad_cargo_config_jobs() {
             [build]
             jobs = -1
         "#,
-        )
-        .build();
-    assert_that(
-        p.cargo("build -v"),
-        execs().with_status(101).with_stderr(
+        ).build();
+    p.cargo("build -v")
+        .with_status(101)
+        .with_stderr(
             "\
 [ERROR] error in [..].cargo/config: \
 could not load config key `build.jobs`: \
 invalid value: integer `-1`, expected u32
 ",
-        ),
-    );
+        ).run();
 }
 
 #[test]
@@ -171,9 +158,8 @@ fn default_cargo_config_jobs() {
             [build]
             jobs = 1
         "#,
-        )
-        .build();
-    assert_that(p.cargo("build -v"), execs());
+        ).build();
+    p.cargo("build -v").run();
 }
 
 #[test]
@@ -186,9 +172,8 @@ fn good_cargo_config_jobs() {
             [build]
             jobs = 4
         "#,
-        )
-        .build();
-    assert_that(p.cargo("build -v"), execs());
+        ).build();
+    p.cargo("build -v").run();
 }
 
 #[test]
@@ -205,14 +190,13 @@ fn invalid_global_config() {
             [dependencies]
             foo = "0.1.0"
         "#,
-        )
-        .file(".cargo/config", "4")
+        ).file(".cargo/config", "4")
         .file("src/lib.rs", "")
         .build();
 
-    assert_that(
-        p.cargo("build -v"),
-        execs().with_status(101).with_stderr(
+    p.cargo("build -v")
+        .with_status(101)
+        .with_stderr(
             "\
 [ERROR] could not load Cargo configuration
 
@@ -225,8 +209,7 @@ Caused by:
 Caused by:
   expected an equals, found eof at line 1
 ",
-        ),
-    );
+        ).run();
 }
 
 #[test]
@@ -236,17 +219,16 @@ fn bad_cargo_lock() {
         .file("src/lib.rs", "")
         .build();
 
-    assert_that(
-        p.cargo("build -v"),
-        execs().with_status(101).with_stderr(
+    p.cargo("build -v")
+        .with_status(101)
+        .with_stderr(
             "\
 [ERROR] failed to parse lock file at: [..]Cargo.lock
 
 Caused by:
   missing field `name` for key `package`
 ",
-        ),
-    );
+        ).run();
 }
 
 #[test]
@@ -265,8 +247,7 @@ fn duplicate_packages_in_cargo_lock() {
             [dependencies]
             bar = "0.1.0"
         "#,
-        )
-        .file("src/lib.rs", "")
+        ).file("src/lib.rs", "")
         .file(
             "Cargo.lock",
             r#"
@@ -287,20 +268,18 @@ fn duplicate_packages_in_cargo_lock() {
             version = "0.1.0"
             source = "registry+https://github.com/rust-lang/crates.io-index"
         "#,
-        )
-        .build();
+        ).build();
 
-    assert_that(
-        p.cargo("build"),
-        execs().with_status(101).with_stderr(
+    p.cargo("build")
+        .with_status(101)
+        .with_stderr(
             "\
 [ERROR] failed to parse lock file at: [..]
 
 Caused by:
   package `bar` is specified twice in the lockfile
 ",
-        ),
-    );
+        ).run();
 }
 
 #[test]
@@ -319,8 +298,7 @@ fn bad_source_in_cargo_lock() {
             [dependencies]
             bar = "0.1.0"
         "#,
-        )
-        .file("src/lib.rs", "")
+        ).file("src/lib.rs", "")
         .file(
             "Cargo.lock",
             r#"
@@ -336,20 +314,18 @@ fn bad_source_in_cargo_lock() {
             version = "0.1.0"
             source = "You shall not parse"
         "#,
-        )
-        .build();
+        ).build();
 
-    assert_that(
-        p.cargo("build --verbose"),
-        execs().with_status(101).with_stderr(
+    p.cargo("build --verbose")
+        .with_status(101)
+        .with_stderr(
             "\
 [ERROR] failed to parse lock file at: [..]
 
 Caused by:
   invalid source `You shall not parse` for key `package.source`
 ",
-        ),
-    );
+        ).run();
 }
 
 #[test]
@@ -366,10 +342,9 @@ fn bad_dependency_in_lockfile() {
              "bar 0.1.0 (registry+https://github.com/rust-lang/crates.io-index)",
             ]
         "#,
-        )
-        .build();
+        ).build();
 
-    assert_that(p.cargo("build"), execs());
+    p.cargo("build").run();
 }
 
 #[test]
@@ -386,13 +361,12 @@ fn bad_git_dependency() {
             [dependencies]
             foo = { git = "file:.." }
         "#,
-        )
-        .file("src/lib.rs", "")
+        ).file("src/lib.rs", "")
         .build();
 
-    assert_that(
-        p.cargo("build -v"),
-        execs().with_status(101).with_stderr(
+    p.cargo("build -v")
+        .with_status(101)
+        .with_stderr(
             "\
 [UPDATING] git repository `file:///`
 [ERROR] failed to load source for a dependency on `foo`
@@ -406,8 +380,7 @@ Caused by:
 Caused by:
   [..]'file:///' is not a valid local file URI[..]
 ",
-        ),
-    );
+        ).run();
 }
 
 #[test]
@@ -424,16 +397,14 @@ fn bad_crate_type() {
             [lib]
             crate-type = ["bad_type", "rlib"]
         "#,
-        )
-        .file("src/lib.rs", "")
+        ).file("src/lib.rs", "")
         .build();
 
-    assert_that(
-        p.cargo("build -v"),
-        execs().with_status(101).with_stderr_contains(
+    p.cargo("build -v")
+        .with_status(101)
+        .with_stderr_contains(
             "error: failed to run `rustc` to learn about crate-type bad_type information",
-        ),
-    );
+        ).run();
 }
 
 #[test]
@@ -452,13 +423,12 @@ fn malformed_override() {
               foo: "bar"
             }
         "#,
-        )
-        .file("src/lib.rs", "")
+        ).file("src/lib.rs", "")
         .build();
 
-    assert_that(
-        p.cargo("build"),
-        execs().with_status(101).with_stderr(
+    p.cargo("build")
+        .with_status(101)
+        .with_stderr(
             "\
 [ERROR] failed to parse manifest at `[..]`
 
@@ -468,8 +438,7 @@ Caused by:
 Caused by:
   expected a table key, found a newline at line 8
 ",
-        ),
-    );
+        ).run();
 }
 
 #[test]
@@ -491,22 +460,20 @@ fn duplicate_binary_names() {
            name = "e"
            path = "b.rs"
         "#,
-        )
-        .file("a.rs", r#"fn main() -> () {}"#)
+        ).file("a.rs", r#"fn main() -> () {}"#)
         .file("b.rs", r#"fn main() -> () {}"#)
         .build();
 
-    assert_that(
-        p.cargo("build"),
-        execs().with_status(101).with_stderr(
+    p.cargo("build")
+        .with_status(101)
+        .with_stderr(
             "\
 [ERROR] failed to parse manifest at `[..]`
 
 Caused by:
   found duplicate binary name e, but all binary targets must have a unique name
 ",
-        ),
-    );
+        ).run();
 }
 
 #[test]
@@ -528,22 +495,20 @@ fn duplicate_example_names() {
            name = "ex"
            path = "examples/ex2.rs"
         "#,
-        )
-        .file("examples/ex.rs", r#"fn main () -> () {}"#)
+        ).file("examples/ex.rs", r#"fn main () -> () {}"#)
         .file("examples/ex2.rs", r#"fn main () -> () {}"#)
         .build();
 
-    assert_that(
-        p.cargo("build --example ex"),
-        execs().with_status(101).with_stderr(
+    p.cargo("build --example ex")
+        .with_status(101)
+        .with_stderr(
             "\
 [ERROR] failed to parse manifest at `[..]`
 
 Caused by:
   found duplicate example name ex, but all example targets must have a unique name
 ",
-        ),
-    );
+        ).run();
 }
 
 #[test]
@@ -565,22 +530,20 @@ fn duplicate_bench_names() {
            name = "ex"
            path = "benches/ex2.rs"
         "#,
-        )
-        .file("benches/ex.rs", r#"fn main () {}"#)
+        ).file("benches/ex.rs", r#"fn main () {}"#)
         .file("benches/ex2.rs", r#"fn main () {}"#)
         .build();
 
-    assert_that(
-        p.cargo("bench"),
-        execs().with_status(101).with_stderr(
+    p.cargo("bench")
+        .with_status(101)
+        .with_stderr(
             "\
 [ERROR] failed to parse manifest at `[..]`
 
 Caused by:
   found duplicate bench name ex, but all bench targets must have a unique name
 ",
-        ),
-    );
+        ).run();
 }
 
 #[test]
@@ -604,13 +567,12 @@ fn duplicate_deps() {
            [target.x86_64-unknown-linux-gnu.dependencies]
            bar = { path = "linux-bar" }
         "#,
-        )
-        .file("src/main.rs", r#"fn main () {}"#)
+        ).file("src/main.rs", r#"fn main () {}"#)
         .build();
 
-    assert_that(
-        p.cargo("build"),
-        execs().with_status(101).with_stderr(
+    p.cargo("build")
+        .with_status(101)
+        .with_stderr(
             "\
 [ERROR] failed to parse manifest at `[..]`
 
@@ -618,8 +580,7 @@ Caused by:
   Dependency 'bar' has different source paths depending on the build target. Each dependency must \
 have a single canonical source path irrespective of build target.
 ",
-        ),
-    );
+        ).run();
 }
 
 #[test]
@@ -643,13 +604,12 @@ fn duplicate_deps_diff_sources() {
            [target.x86_64-unknown-linux-gnu.dependencies]
            bar = { path = "linux-bar" }
         "#,
-        )
-        .file("src/main.rs", r#"fn main () {}"#)
+        ).file("src/main.rs", r#"fn main () {}"#)
         .build();
 
-    assert_that(
-        p.cargo("build"),
-        execs().with_status(101).with_stderr(
+    p.cargo("build")
+        .with_status(101)
+        .with_stderr(
             "\
 [ERROR] failed to parse manifest at `[..]`
 
@@ -657,8 +617,7 @@ Caused by:
   Dependency 'bar' has different source paths depending on the build target. Each dependency must \
 have a single canonical source path irrespective of build target.
 ",
-        ),
-    );
+        ).run();
 }
 
 #[test]
@@ -675,20 +634,17 @@ fn unused_keys() {
            [target.foo]
            bar = "3"
         "#,
-        )
-        .file("src/lib.rs", "")
+        ).file("src/lib.rs", "")
         .build();
 
-    assert_that(
-        p.cargo("build"),
-        execs().with_stderr(
+    p.cargo("build")
+        .with_stderr(
             "\
 warning: unused manifest key: target.foo.bar
 [COMPILING] foo v0.1.0 (file:///[..])
 [FINISHED] dev [unoptimized + debuginfo] target(s) in [..]
 ",
-        ),
-    );
+        ).run();
 
     let p = project()
         .file(
@@ -702,20 +658,17 @@ warning: unused manifest key: target.foo.bar
            [profile.debug]
            debug = 1
         "#,
-        )
-        .file("src/lib.rs", "")
+        ).file("src/lib.rs", "")
         .build();
 
-    assert_that(
-        p.cargo("build"),
-        execs().with_stderr(
+    p.cargo("build")
+        .with_stderr(
             "\
 warning: unused manifest key: profile.debug
 warning: use `[profile.dev]` to configure debug builds
 [..]
 [..]",
-        ),
-    );
+        ).run();
 
     let p = project()
         .file(
@@ -728,19 +681,16 @@ warning: use `[profile.dev]` to configure debug builds
             authors = ["wycats@example.com"]
             bulid = "foo"
         "#,
-        )
-        .file("src/lib.rs", "pub fn foo() {}")
+        ).file("src/lib.rs", "pub fn foo() {}")
         .build();
-    assert_that(
-        p.cargo("build"),
-        execs().with_stderr(
+    p.cargo("build")
+        .with_stderr(
             "\
 warning: unused manifest key: project.bulid
 [COMPILING] foo [..]
 [FINISHED] dev [unoptimized + debuginfo] target(s) in [..]
 ",
-        ),
-    );
+        ).run();
 
     let p = project()
         .at("bar")
@@ -756,19 +706,16 @@ warning: unused manifest key: project.bulid
             [lib]
             build = "foo"
         "#,
-        )
-        .file("src/lib.rs", "pub fn foo() {}")
+        ).file("src/lib.rs", "pub fn foo() {}")
         .build();
-    assert_that(
-        p.cargo("build"),
-        execs().with_stderr(
+    p.cargo("build")
+        .with_stderr(
             "\
 warning: unused manifest key: lib.build
 [COMPILING] foo [..]
 [FINISHED] dev [unoptimized + debuginfo] target(s) in [..]
 ",
-        ),
-    );
+        ).run();
 }
 
 #[test]
@@ -781,20 +728,17 @@ fn unused_keys_in_virtual_manifest() {
             members = ["bar"]
             bulid = "foo"
         "#,
-        )
-        .file("bar/Cargo.toml", &basic_manifest("bar", "0.0.1"))
+        ).file("bar/Cargo.toml", &basic_manifest("bar", "0.0.1"))
         .file("bar/src/lib.rs", r"")
         .build();
-    assert_that(
-        p.cargo("build --all"),
-        execs().with_stderr(
+    p.cargo("build --all")
+        .with_stderr(
             "\
 warning: unused manifest key: workspace.bulid
 [COMPILING] bar [..]
 [FINISHED] dev [unoptimized + debuginfo] target(s) in [..]
 ",
-        ),
-    );
+        ).run();
 }
 
 #[test]
@@ -811,21 +755,18 @@ fn empty_dependencies() {
             [dependencies]
             bar = {}
         "#,
-        )
-        .file("src/main.rs", "fn main() {}")
+        ).file("src/main.rs", "fn main() {}")
         .build();
 
     Package::new("bar", "0.0.1").publish();
 
-    assert_that(
-        p.cargo("build"),
-        execs().with_stderr_contains(
+    p.cargo("build")
+        .with_stderr_contains(
             "\
 warning: dependency (bar) specified without providing a local path, Git repository, or version \
 to use. This will be considered an error in future versions
 ",
-        ),
-    );
+        ).run();
 }
 
 #[test]
@@ -835,9 +776,8 @@ fn invalid_toml_historically_allowed_is_warned() {
         .file("src/main.rs", "fn main() {}")
         .build();
 
-    assert_that(
-        p.cargo("build"),
-        execs().with_stderr(
+    p.cargo("build")
+        .with_stderr(
             "\
 warning: TOML file found which contains invalid syntax and will soon not parse
 at `[..]config`.
@@ -849,8 +789,7 @@ in the future.
 [COMPILING] foo v0.0.1 ([..])
 [FINISHED] dev [unoptimized + debuginfo] target(s) in [..]
 ",
-        ),
-    );
+        ).run();
 }
 
 #[test]
@@ -869,20 +808,18 @@ fn ambiguous_git_reference() {
             branch = "master"
             tag = "some-tag"
         "#,
-        )
-        .file("src/lib.rs", "")
+        ).file("src/lib.rs", "")
         .build();
 
-    assert_that(
-        p.cargo("build -v"),
-        execs().with_status(101).with_stderr_contains(
+    p.cargo("build -v")
+        .with_status(101)
+        .with_stderr_contains(
             "\
 [WARNING] dependency (bar) specification is ambiguous. \
 Only one of `branch`, `tag` or `rev` is allowed. \
 This will be considered an error in future versions
 ",
-        ),
-    );
+        ).run();
 }
 
 #[test]
@@ -892,12 +829,10 @@ fn bad_source_config1() {
         .file(".cargo/config", "[source.foo]")
         .build();
 
-    assert_that(
-        p.cargo("build"),
-        execs()
-            .with_status(101)
-            .with_stderr("error: no source URL specified for `source.foo`, need [..]"),
-    );
+    p.cargo("build")
+        .with_status(101)
+        .with_stderr("error: no source URL specified for `source.foo`, need [..]")
+        .run();
 }
 
 #[test]
@@ -914,8 +849,7 @@ fn bad_source_config2() {
             [dependencies]
             bar = "*"
         "#,
-        )
-        .file("src/lib.rs", "")
+        ).file("src/lib.rs", "")
         .file(
             ".cargo/config",
             r#"
@@ -923,12 +857,11 @@ fn bad_source_config2() {
             registry = 'http://example.com'
             replace-with = 'bar'
         "#,
-        )
-        .build();
+        ).build();
 
-    assert_that(
-        p.cargo("build"),
-        execs().with_status(101).with_stderr(
+    p.cargo("build")
+        .with_status(101)
+        .with_stderr(
             "\
 error: failed to load source for a dependency on `bar`
 
@@ -939,8 +872,7 @@ Caused by:
   could not find a configured source with the name `bar` \
     when attempting to lookup `crates-io` (configuration in [..])
 ",
-        ),
-    );
+        ).run();
 }
 
 #[test]
@@ -957,8 +889,7 @@ fn bad_source_config3() {
             [dependencies]
             bar = "*"
         "#,
-        )
-        .file("src/lib.rs", "")
+        ).file("src/lib.rs", "")
         .file(
             ".cargo/config",
             r#"
@@ -966,12 +897,11 @@ fn bad_source_config3() {
             registry = 'http://example.com'
             replace-with = 'crates-io'
         "#,
-        )
-        .build();
+        ).build();
 
-    assert_that(
-        p.cargo("build"),
-        execs().with_status(101).with_stderr(
+    p.cargo("build")
+        .with_status(101)
+        .with_stderr(
             "\
 error: failed to load source for a dependency on `bar`
 
@@ -981,8 +911,7 @@ Caused by:
 Caused by:
   detected a cycle of `replace-with` sources, [..]
 ",
-        ),
-    );
+        ).run();
 }
 
 #[test]
@@ -999,8 +928,7 @@ fn bad_source_config4() {
             [dependencies]
             bar = "*"
         "#,
-        )
-        .file("src/lib.rs", "")
+        ).file("src/lib.rs", "")
         .file(
             ".cargo/config",
             r#"
@@ -1012,12 +940,11 @@ fn bad_source_config4() {
             registry = 'http://example.com'
             replace-with = 'crates-io'
         "#,
-        )
-        .build();
+        ).build();
 
-    assert_that(
-        p.cargo("build"),
-        execs().with_status(101).with_stderr(
+    p.cargo("build")
+        .with_status(101)
+        .with_stderr(
             "\
 error: failed to load source for a dependency on `bar`
 
@@ -1028,8 +955,7 @@ Caused by:
   detected a cycle of `replace-with` sources, the source `crates-io` is \
     eventually replaced with itself (configuration in [..])
 ",
-        ),
-    );
+        ).run();
 }
 
 #[test]
@@ -1046,8 +972,7 @@ fn bad_source_config5() {
             [dependencies]
             bar = "*"
         "#,
-        )
-        .file("src/lib.rs", "")
+        ).file("src/lib.rs", "")
         .file(
             ".cargo/config",
             r#"
@@ -1058,20 +983,18 @@ fn bad_source_config5() {
             [source.bar]
             registry = 'not a url'
         "#,
-        )
-        .build();
+        ).build();
 
-    assert_that(
-        p.cargo("build"),
-        execs().with_status(101).with_stderr(
+    p.cargo("build")
+        .with_status(101)
+        .with_stderr(
             "\
 error: configuration key `source.bar.registry` specified an invalid URL (in [..])
 
 Caused by:
   invalid url `not a url`: [..]
 ",
-        ),
-    );
+        ).run();
 }
 
 #[test]
@@ -1089,20 +1012,18 @@ fn both_git_and_path_specified() {
         git = "https://127.0.0.1"
         path = "bar"
     "#,
-        )
-        .file("src/lib.rs", "")
+        ).file("src/lib.rs", "")
         .build();
 
-    assert_that(
-        foo.cargo("build -v"),
-        execs().with_status(101).with_stderr_contains(
+    foo.cargo("build -v")
+        .with_status(101)
+        .with_stderr_contains(
             "\
 [WARNING] dependency (bar) specification is ambiguous. \
 Only one of `git` or `path` is allowed. \
 This will be considered an error in future versions
 ",
-        ),
-    );
+        ).run();
 }
 
 #[test]
@@ -1119,8 +1040,7 @@ fn bad_source_config6() {
             [dependencies]
             bar = "*"
         "#,
-        )
-        .file("src/lib.rs", "")
+        ).file("src/lib.rs", "")
         .file(
             ".cargo/config",
             r#"
@@ -1128,15 +1048,12 @@ fn bad_source_config6() {
             registry = 'http://example.com'
             replace-with = ['not', 'a', 'string']
         "#,
-        )
-        .build();
+        ).build();
 
-    assert_that(
-        p.cargo("build"),
-        execs().with_status(101).with_stderr(
+    p.cargo("build").with_status(101).with_stderr(
             "error: expected a string, but found a array for `source.crates-io.replace-with` in [..]",
-        ),
-    );
+        )
+        .run();
 }
 
 #[test]
@@ -1154,18 +1071,16 @@ fn ignored_git_revision() {
         path = "bar"
         branch = "spam"
     "#,
-        )
-        .file("src/lib.rs", "")
+        ).file("src/lib.rs", "")
         .build();
 
-    assert_that(
-        foo.cargo("build -v"),
-        execs().with_status(101).with_stderr_contains(
+    foo.cargo("build -v")
+        .with_status(101)
+        .with_stderr_contains(
             "\
              [WARNING] key `branch` is ignored for dependency (bar). \
              This will be considered an error in future versions",
-        ),
-    );
+        ).run();
 }
 
 #[test]
@@ -1182,8 +1097,7 @@ fn bad_source_config7() {
             [dependencies]
             bar = "*"
         "#,
-        )
-        .file("src/lib.rs", "")
+        ).file("src/lib.rs", "")
         .file(
             ".cargo/config",
             r#"
@@ -1191,17 +1105,14 @@ fn bad_source_config7() {
             registry = 'http://example.com'
             local-registry = 'file:///another/file'
         "#,
-        )
-        .build();
+        ).build();
 
     Package::new("bar", "0.1.0").publish();
 
-    assert_that(
-        p.cargo("build"),
-        execs()
-            .with_status(101)
-            .with_stderr("error: more than one source URL specified for `source.foo`"),
-    );
+    p.cargo("build")
+        .with_status(101)
+        .with_stderr("error: more than one source URL specified for `source.foo`")
+        .run();
 }
 
 #[test]
@@ -1218,21 +1129,19 @@ fn bad_dependency() {
             [dependencies]
             bar = 3
         "#,
-        )
-        .file("src/lib.rs", "")
+        ).file("src/lib.rs", "")
         .build();
 
-    assert_that(
-        p.cargo("build"),
-        execs().with_status(101).with_stderr(
+    p.cargo("build")
+        .with_status(101)
+        .with_stderr(
             "\
 error: failed to parse manifest at `[..]`
 
 Caused by:
   invalid type: integer `3`, expected a version string like [..]
 ",
-        ),
-    );
+        ).run();
 }
 
 #[test]
@@ -1249,21 +1158,19 @@ fn bad_debuginfo() {
             [profile.dev]
             debug = 'a'
         "#,
-        )
-        .file("src/lib.rs", "")
+        ).file("src/lib.rs", "")
         .build();
 
-    assert_that(
-        p.cargo("build"),
-        execs().with_status(101).with_stderr(
+    p.cargo("build")
+        .with_status(101)
+        .with_stderr(
             "\
 error: failed to parse manifest at `[..]`
 
 Caused by:
   invalid type: string \"a\", expected a boolean or an integer for [..]
 ",
-        ),
-    );
+        ).run();
 }
 
 #[test]
@@ -1278,19 +1185,17 @@ fn bad_opt_level() {
             authors = []
             build = 3
         "#,
-        )
-        .file("src/lib.rs", "")
+        ).file("src/lib.rs", "")
         .build();
 
-    assert_that(
-        p.cargo("build"),
-        execs().with_status(101).with_stderr(
+    p.cargo("build")
+        .with_status(101)
+        .with_stderr(
             "\
 error: failed to parse manifest at `[..]`
 
 Caused by:
   invalid type: integer `3`, expected a boolean or a string for key [..]
 ",
-        ),
-    );
+        ).run();
 }

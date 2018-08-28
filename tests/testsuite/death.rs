@@ -20,7 +20,7 @@ fn enabled() -> bool {
 // can succeed or not.
 #[cfg(windows)]
 fn enabled() -> bool {
-    use winapi::um::{handleapi, jobapi, processthreadsapi, jobapi2};
+    use winapi::um::{handleapi, jobapi, jobapi2, processthreadsapi};
 
     unsafe {
         // If we're not currently in a job, then we can definitely run these
@@ -66,8 +66,7 @@ fn ctrl_c_kills_everyone() {
             authors = []
             build = "build.rs"
         "#,
-        )
-        .file("src/lib.rs", "")
+        ).file("src/lib.rs", "")
         .file(
             "build.rs",
             &format!(
@@ -83,8 +82,7 @@ fn ctrl_c_kills_everyone() {
         "#,
                 addr
             ),
-        )
-        .build();
+        ).build();
 
     let mut cargo = p.cargo("build").build_command();
     cargo
