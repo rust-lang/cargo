@@ -674,6 +674,38 @@ impl Execs {
         self
     }
 
+
+    fn match_process(&self, process: &ProcessBuilder) -> ham::MatchResult {
+        println!("running {}", process);
+        let res = if self.stream_output {
+            if env::var("CI").is_ok() {
+                panic!("`.stream()` is for local debugging")
+            }
+            process.exec_with_streaming(
+                &mut |out| Ok(println!("{}", out)),
+                &mut |err| Ok(eprintln!("{}", err)),
+                false,
+            )
+        } else {
+            process.exec_with_output()
+        };
+
+        match res {
+            Ok(out) => self.match_output(&out),
+            Err(e) => {
+                let err = e.downcast_ref::<ProcessError>();
+                if let Some(&ProcessError { output: Some(ref out), .. }) = err {
+                    return self.match_output(out);
+                }
+                let mut s = format!("could not exec process {}: {}", process, e);
+                for cause in e.iter_causes() {
+                    s.push_str(&format!("\ncaused by: {}", cause));
+                }
+                Err(s)
+            }
+        }
+    }
+
     fn match_output(&self, actual: &Output) -> ham::MatchResult {
         self.match_status(actual)
             .and(self.match_stdout(actual))
@@ -1156,45 +1188,14 @@ impl fmt::Debug for Execs {
 }
 
 impl ham::Matcher<ProcessBuilder> for Execs {
-    fn matches(&self, mut process: ProcessBuilder) -> ham::MatchResult {
-        self.matches(&mut process)
+    fn matches(&self, process: ProcessBuilder) -> ham::MatchResult {
+        self.match_process(&process)
     }
 }
 
 impl<'a> ham::Matcher<&'a mut ProcessBuilder> for Execs {
     fn matches(&self, process: &'a mut ProcessBuilder) -> ham::MatchResult {
-        println!("running {}", process);
-        let res = if self.stream_output {
-            if env::var("CI").is_ok() {
-                panic!("`.stream()` is for local debugging")
-            }
-            process.exec_with_streaming(
-                &mut |out| Ok(println!("{}", out)),
-                &mut |err| Ok(eprintln!("{}", err)),
-                false,
-            )
-        } else {
-            process.exec_with_output()
-        };
-
-        match res {
-            Ok(out) => self.match_output(&out),
-            Err(e) => {
-                let err = e.downcast_ref::<ProcessError>();
-                if let Some(&ProcessError {
-                    output: Some(ref out),
-                    ..
-                }) = err
-                    {
-                        return self.match_output(out);
-                    }
-                let mut s = format!("could not exec process {}: {}", process, e);
-                for cause in e.iter_causes() {
-                    s.push_str(&format!("\ncaused by: {}", cause));
-                }
-                Err(s)
-            }
-        }
+        self.match_process(process)
     }
 }
 
