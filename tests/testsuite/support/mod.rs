@@ -732,8 +732,14 @@ impl Execs {
     pub fn run(&mut self) {
         self.ran = true;
         let p = (&self.process_builder).clone().unwrap();
-        // ham::assert_that(p, self)
         if let Err(e) = self.match_process(&p) {
+            panic!("\nExpected: {:?}\n    but: {}", self, e)
+        }
+    }
+
+    pub fn run_output(&mut self, output: &Output) {
+        self.ran = true;
+        if let Err(e) = self.match_output(output) {
             panic!("\nExpected: {:?}\n    but: {}", self, e)
         }
     }
@@ -1259,18 +1265,6 @@ fn zip_all<T, I1: Iterator<Item = T>, I2: Iterator<Item = T>>(a: I1, b: I2) -> Z
 impl fmt::Debug for Execs {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         write!(f, "execs")
-    }
-}
-
-impl ham::Matcher<Output> for Execs {
-    fn matches(&self, output: Output) -> ham::MatchResult {
-        self.match_output(&output)
-    }
-}
-
-impl<'t> ham::Matcher<Output> for &'t mut Execs {
-    fn matches(&self, output: Output) -> ham::MatchResult {
-        self.match_output(&output)
     }
 }
 
