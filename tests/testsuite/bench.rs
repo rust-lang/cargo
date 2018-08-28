@@ -1,10 +1,9 @@
 use std::str;
 
-use cargo::util::process;
 use support::hamcrest::{assert_that, existing_file};
 use support::is_nightly;
 use support::paths::CargoPathExt;
-use support::{basic_bin_manifest, basic_lib_manifest, basic_manifest, execs, project};
+use support::{basic_bin_manifest, basic_lib_manifest, basic_manifest, project};
 
 #[test]
 fn cargo_bench_simple() {
@@ -38,7 +37,7 @@ fn cargo_bench_simple() {
     p.cargo("build").run();
     assert_that(&p.bin("foo"), existing_file());
 
-    assert_that(process(&p.bin("foo")), execs().with_stdout("hello\n"));
+    p.process(&p.bin("foo")).with_stdout("hello\n").run();
 
     p.cargo("bench")
         .with_stderr(&format!(
@@ -319,7 +318,7 @@ fn cargo_bench_failing_test() {
     p.cargo("build").run();
     assert_that(&p.bin("foo"), existing_file());
 
-    assert_that(process(&p.bin("foo")), execs().with_stdout("hello\n"));
+    p.process(&p.bin("foo")).with_stdout("hello\n").run();
 
     // Force libtest into serial execution so that the test header will be printed.
     p.cargo("bench -- --test-threads=1")

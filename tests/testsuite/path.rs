@@ -1,12 +1,11 @@
 use std::fs::{self, File};
 use std::io::prelude::*;
 
-use cargo::util::process;
 use support::hamcrest::{assert_that, existing_file, is_not};
 use support::paths::{self, CargoPathExt};
 use support::registry::Package;
 use support::sleep_ms;
-use support::{basic_lib_manifest, basic_manifest, execs, main_file, project};
+use support::{basic_lib_manifest, basic_manifest, main_file, project};
 
 #[test]
 #[cfg(not(windows))] // I have no idea why this is failing spuriously on
@@ -79,7 +78,7 @@ fn cargo_compile_with_nested_deps_shorthand() {
 
     assert_that(&p.bin("foo"), existing_file());
 
-    assert_that(process(&p.bin("foo")), execs().with_stdout("test passed\n"));
+    p.process(&p.bin("foo")).with_stdout("test passed\n").run();
 
     println!("cleaning");
     p.cargo("clean -v").with_stdout("").run();
@@ -241,7 +240,7 @@ fn cargo_compile_with_transitive_dev_deps() {
 
     assert_that(&p.bin("foo"), existing_file());
 
-    assert_that(process(&p.bin("foo")), execs().with_stdout("zoidberg\n"));
+    p.process(&p.bin("foo")).with_stdout("zoidberg\n").run();
 }
 
 #[test]
@@ -698,7 +697,7 @@ fn path_dep_build_cmd() {
 
     assert_that(&p.bin("foo"), existing_file());
 
-    assert_that(process(&p.bin("foo")), execs().with_stdout("0\n"));
+    p.process(&p.bin("foo")).with_stdout("0\n").run();
 
     // Touching bar.rs.in should cause the `build` command to run again.
     {
@@ -718,7 +717,7 @@ fn path_dep_build_cmd() {
             p.url()
         )).run();
 
-    assert_that(process(&p.bin("foo")), execs().with_stdout("1\n"));
+    p.process(&p.bin("foo")).with_stdout("1\n").run();
 }
 
 #[test]

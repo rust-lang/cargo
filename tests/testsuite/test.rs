@@ -3,11 +3,10 @@ use std::io::prelude::*;
 use std::str;
 
 use cargo;
-use cargo::util::process;
 use support::hamcrest::{assert_that, existing_file, is_not};
 use support::paths::CargoPathExt;
 use support::registry::Package;
-use support::{basic_bin_manifest, basic_lib_manifest, basic_manifest, cargo_exe, execs, project};
+use support::{basic_bin_manifest, basic_lib_manifest, basic_manifest, cargo_exe, project};
 use support::{is_nightly, rustc_host, sleep_ms};
 
 #[test]
@@ -34,7 +33,7 @@ fn cargo_test_simple() {
     p.cargo("build").run();
     assert_that(&p.bin("foo"), existing_file());
 
-    assert_that(process(&p.bin("foo")), execs().with_stdout("hello\n"));
+    p.process(&p.bin("foo")).with_stdout("hello\n").run();
 
     p.cargo("test")
         .with_stderr(format!(
@@ -137,7 +136,7 @@ fn cargo_test_overflow_checks() {
     p.cargo("build --release").run();
     assert_that(&p.release_bin("foo"), existing_file());
 
-    assert_that(process(&p.release_bin("foo")), execs().with_stdout(""));
+    p.process(&p.release_bin("foo")).with_stdout("").run();
 }
 
 #[test]
@@ -231,7 +230,7 @@ fn cargo_test_failing_test_in_bin() {
     p.cargo("build").run();
     assert_that(&p.bin("foo"), existing_file());
 
-    assert_that(process(&p.bin("foo")), execs().with_stdout("hello\n"));
+    p.process(&p.bin("foo")).with_stdout("hello\n").run();
 
     p.cargo("test")
         .with_stderr(format!(
@@ -276,7 +275,7 @@ fn cargo_test_failing_test_in_test() {
     p.cargo("build").run();
     assert_that(&p.bin("foo"), existing_file());
 
-    assert_that(process(&p.bin("foo")), execs().with_stdout("hello\n"));
+    p.process(&p.bin("foo")).with_stdout("hello\n").run();
 
     p.cargo("test")
         .with_stderr(format!(
