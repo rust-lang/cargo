@@ -516,8 +516,6 @@ pub fn cargo_exe() -> PathBuf {
     cargo_dir().join(format!("cargo{}", env::consts::EXE_SUFFIX))
 }
 
-/// Returns an absolute path in the filesystem that `path` points to. The
-/// returned path does not contain any symlinks in its hierarchy.
 /*
  *
  * ===== Matchers =====
