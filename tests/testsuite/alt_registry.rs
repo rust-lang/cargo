@@ -1,4 +1,3 @@
-use support::ChannelChanger;
 use support::registry::{self, alt_api_path, Package};
 use support::{basic_manifest, execs, paths, project};
 use support::hamcrest::assert_that;

@@ -1,5 +1,5 @@
 use cargo::util::paths::dylib_path_envvar;
-use support::{self, ChannelChanger};
+use support;
 use support::{basic_bin_manifest, basic_lib_manifest, execs, project, Project, path2url};
 use support::hamcrest::{assert_that, existing_file};
 

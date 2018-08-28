@@ -1,4 +1,3 @@
-use support::ChannelChanger;
 use support::git;
 use support::paths;
 use support::registry::Package;

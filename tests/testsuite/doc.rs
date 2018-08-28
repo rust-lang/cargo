@@ -3,7 +3,7 @@ use std::str;
 use std::fs::{self, File};
 use std::io::Read;
 
-use support::{is_nightly, rustc_host, ChannelChanger};
+use support::{is_nightly, rustc_host};
 use support::{basic_manifest, basic_lib_manifest, execs, git, project, path2url};
 use support::paths::CargoPathExt;
 use support::registry::Package;

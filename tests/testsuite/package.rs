@@ -4,7 +4,7 @@ use std::io::prelude::*;
 use std::path::{Path, PathBuf};
 
 use git2;
-use support::{cargo_process, sleep_ms, ChannelChanger};
+use support::{cargo_process, sleep_ms};
 use support::{basic_manifest, execs, git, is_nightly, paths, project, registry, path2url};
 use support::registry::Package;
 use flate2::read::GzDecoder;

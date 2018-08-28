@@ -1,5 +1,4 @@
 use support::{basic_manifest, basic_lib_manifest, execs, project};
-use support::ChannelChanger;
 use support::hamcrest::assert_that;
 
 #[test]

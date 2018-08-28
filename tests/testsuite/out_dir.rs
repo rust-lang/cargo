@@ -4,7 +4,7 @@ use std::env;
 
 use support::hamcrest::assert_that;
 
-use support::{process, sleep_ms, ChannelChanger};
+use support::{process, sleep_ms};
 use support::{basic_manifest, execs, project};
 
 #[test]

@@ -2,7 +2,6 @@ use std::io::prelude::*;
 use std::fs::{self, File};
 use std::io::SeekFrom;
 
-use support::ChannelChanger;
 use support::git::repo;
 use support::paths;
 use support::{basic_manifest, execs, project, publish};

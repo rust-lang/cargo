@@ -4,7 +4,7 @@ use git2;
 
 use support::git;
 use support::{basic_manifest, execs, project};
-use support::{is_nightly, ChannelChanger};
+use support::is_nightly;
 use support::hamcrest::assert_that;
 
 #[test]

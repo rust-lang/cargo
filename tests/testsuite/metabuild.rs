@@ -3,7 +3,7 @@ use serde_json;
 use std::str;
 use support::{
     basic_lib_manifest, basic_manifest, execs, hamcrest::assert_that, project, registry::Package,
-    rustc_host, ChannelChanger, Project,
+    rustc_host, Project,
 };
 
 #[test]
