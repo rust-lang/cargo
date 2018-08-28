@@ -2,11 +2,10 @@ use std::fs::{self, File};
 use std::io::prelude::*;
 use std::path::Path;
 
-use support::{cargo_process, execs};
+use support::cargo_process;
 use support::git::repo;
 use support::paths;
 use support::registry::{api_path, registry as registry_url, registry_path};
-use support::hamcrest::assert_that;
 use url::Url;
 
 fn api() -> Url {
@@ -65,8 +64,10 @@ fn setup() {
 
     // Init a new registry
     let _ = repo(&registry_path())
-        .file("config.json", &format!(r#"{{"dl":"{0}","api":"{0}"}}"#, api()))
-        .build();
+        .file(
+            "config.json",
+            &format!(r#"{{"dl":"{0}","api":"{0}"}}"#, api()),
+        ).build();
 
     let base = api_path().join("api/v1/crates");
     write_crates(&base);
@@ -89,8 +90,7 @@ registry = '{reg}'
 "#,
                 reg = registry_url(),
             ).as_bytes(),
-        )
-        .unwrap();
+        ).unwrap();
 }
 
 #[test]
@@ -107,14 +107,12 @@ fn not_update() {
     let mut regsrc = RegistrySource::remote(&sid, &cfg);
     regsrc.update().unwrap();
 
-    assert_that(
-        cargo_process("search postgres"),
-        execs()
+    cargo_process("search postgres")
             .with_stdout_contains(
                 "hoare = \"0.1.1\"    # Design by contract style assertions for Rust",
             )
-            .with_stderr(""), // without "Updating registry ..."
-    );
+            .with_stderr("") // without "Updating registry ..."
+    .run();
 }
 
 #[test]
@@ -122,26 +120,20 @@ fn replace_default() {
     setup();
     set_cargo_config();
 
-    assert_that(
-        cargo_process("search postgres"),
-        execs()
-            .with_stdout_contains(
-                "hoare = \"0.1.1\"    # Design by contract style assertions for Rust",
-            )
-            .with_stderr_contains("[..]Updating registry[..]"),
-    );
+    cargo_process("search postgres")
+        .with_stdout_contains("hoare = \"0.1.1\"    # Design by contract style assertions for Rust")
+        .with_stderr_contains("[..]Updating registry[..]")
+        .run();
 }
 
 #[test]
 fn simple() {
     setup();
 
-    assert_that(
-        cargo_process("search postgres --index").arg(registry_url().to_string()),
-        execs().with_stdout_contains(
-            "hoare = \"0.1.1\"    # Design by contract style assertions for Rust",
-        ),
-    );
+    cargo_process("search postgres --index")
+        .arg(registry_url().to_string())
+        .with_stdout_contains("hoare = \"0.1.1\"    # Design by contract style assertions for Rust")
+        .run();
 }
 
 // TODO: Deprecated
@@ -150,9 +142,7 @@ fn simple() {
 fn simple_with_host() {
     setup();
 
-    assert_that(
-        cargo_process("search postgres --host").arg(registry_url().to_string()),
-        execs()
+    cargo_process("search postgres --host").arg(registry_url().to_string())
             .with_stderr(&format!(
                 "\
 [WARNING] The flag '--host' is no longer valid.
@@ -170,8 +160,8 @@ about this warning.
             ))
             .with_stdout_contains(
                 "hoare = \"0.1.1\"    # Design by contract style assertions for Rust",
-            ),
-    );
+            )
+        .run();
 }
 
 // TODO: Deprecated
@@ -180,9 +170,7 @@ about this warning.
 fn simple_with_index_and_host() {
     setup();
 
-    assert_that(
-        cargo_process("search postgres --index").arg(registry_url().to_string()).arg("--host").arg(registry_url().to_string()),
-        execs()
+    cargo_process("search postgres --index").arg(registry_url().to_string()).arg("--host").arg(registry_url().to_string())
             .with_stderr(&format!(
                 "\
 [WARNING] The flag '--host' is no longer valid.
@@ -200,33 +188,27 @@ about this warning.
             ))
             .with_stdout_contains(
                 "hoare = \"0.1.1\"    # Design by contract style assertions for Rust",
-            ),
-    );
+            )
+        .run();
 }
 
 #[test]
 fn multiple_query_params() {
     setup();
 
-    assert_that(
-        cargo_process("search postgres sql --index").arg(registry_url().to_string()),
-        execs().with_stdout_contains(
-            "hoare = \"0.1.1\"    # Design by contract style assertions for Rust",
-        ),
-    );
+    cargo_process("search postgres sql --index")
+        .arg(registry_url().to_string())
+        .with_stdout_contains("hoare = \"0.1.1\"    # Design by contract style assertions for Rust")
+        .run();
 }
 
 #[test]
 fn help() {
-    assert_that(cargo_process("search -h"), execs());
-    assert_that(cargo_process("help search"), execs());
+    cargo_process("search -h").run();
+    cargo_process("help search").run();
     // Ensure that help output goes to stdout, not stderr.
-    assert_that(
-        cargo_process("search --help"),
-        execs().with_stderr(""),
-    );
-    assert_that(
-        cargo_process("search --help"),
-        execs().with_stdout_contains("[..] --frozen [..]"),
-    );
+    cargo_process("search --help").with_stderr("").run();
+    cargo_process("search --help")
+        .with_stdout_contains("[..] --frozen [..]")
+        .run();
 }

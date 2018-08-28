@@ -3,9 +3,8 @@ use std::fs::File;
 use git2;
 
 use support::git;
-use support::{basic_manifest, execs, project};
 use support::is_nightly;
-use support::hamcrest::assert_that;
+use support::{basic_manifest, project};
 
 #[test]
 fn do_not_fix_broken_builds() {
@@ -22,14 +21,12 @@ fn do_not_fix_broken_builds() {
                     let _x: u32 = "a";
                 }
             "#,
-        )
-        .build();
+        ).build();
 
-    assert_that(
-        p.cargo("fix --allow-no-vcs")
-            .env("__CARGO_FIX_YOLO", "1"),
-        execs().with_status(101),
-    );
+    p.cargo("fix --allow-no-vcs")
+        .env("__CARGO_FIX_YOLO", "1")
+        .with_status(101)
+        .run();
     assert!(p.read_file("src/lib.rs").contains("let mut x = 3;"));
 }
 
@@ -44,14 +41,11 @@ fn fix_broken_if_requested() {
                     foo(1);
                 }
             "#,
-        )
-        .build();
+        ).build();
 
-    assert_that(
-        p.cargo("fix --allow-no-vcs --broken-code")
-            .env("__CARGO_FIX_YOLO", "1"),
-        execs(),
-    );
+    p.cargo("fix --allow-no-vcs --broken-code")
+        .env("__CARGO_FIX_YOLO", "1")
+        .run();
 }
 
 #[test]
@@ -65,8 +59,7 @@ fn broken_fixes_backed_out() {
                 version = '0.1.0'
                 [workspace]
             "#,
-        )
-        .file(
+        ).file(
             "foo/src/main.rs",
             r##"
                 use std::env;
@@ -99,8 +92,7 @@ fn broken_fixes_backed_out() {
                     process::exit(status.code().unwrap_or(2));
                 }
             "##,
-        )
-        .file(
+        ).file(
             "bar/Cargo.toml",
             r#"
                 [package]
@@ -108,8 +100,7 @@ fn broken_fixes_backed_out() {
                 version = '0.1.0'
                 [workspace]
             "#,
-        )
-        .file("bar/build.rs", "fn main() {}")
+        ).file("bar/build.rs", "fn main() {}")
         .file(
             "bar/src/lib.rs",
             r#"
@@ -118,42 +109,37 @@ fn broken_fixes_backed_out() {
                     drop(x);
                 }
             "#,
-        )
-        .build();
+        ).build();
 
     // Build our rustc shim
-    assert_that(
-        p.cargo("build").cwd(p.root().join("foo")),
-        execs(),
-    );
+    p.cargo("build").cwd(p.root().join("foo")).run();
 
     // Attempt to fix code, but our shim will always fail the second compile
-    assert_that(
-        p.cargo("fix --allow-no-vcs")
-            .cwd(p.root().join("bar"))
-            .env("__CARGO_FIX_YOLO", "1")
-            .env("RUSTC", p.root().join("foo/target/debug/foo")),
-        execs()
-            .with_status(101)
-            .with_stderr_contains("[..]not rust code[..]")
-            .with_stderr_contains("\
-            warning: failed to automatically apply fixes suggested by rustc \
-            to crate `bar`\n\
-            \n\
-            after fixes were automatically applied the compiler reported \
-            errors within these files:\n\
-            \n  \
-            * src/lib.rs\n\
-            \n\
-            This likely indicates a bug in either rustc or cargo itself,\n\
-            and we would appreciate a bug report! You're likely to see \n\
-            a number of compiler warnings after this message which cargo\n\
-            attempted to fix but failed. If you could open an issue at\n\
-            https://github.com/rust-lang/cargo/issues\n\
-            quoting the full output of this command we'd be very appreciative!\
-            ")
-            .with_stderr_does_not_contain("[..][FIXING][..]"),
-    );
+    p.cargo("fix --allow-no-vcs")
+        .cwd(p.root().join("bar"))
+        .env("__CARGO_FIX_YOLO", "1")
+        .env("RUSTC", p.root().join("foo/target/debug/foo"))
+        .with_status(101)
+        .with_stderr_contains("[..]not rust code[..]")
+        .with_stderr_contains(
+            "\
+             warning: failed to automatically apply fixes suggested by rustc \
+             to crate `bar`\n\
+             \n\
+             after fixes were automatically applied the compiler reported \
+             errors within these files:\n\
+             \n  \
+             * src/lib.rs\n\
+             \n\
+             This likely indicates a bug in either rustc or cargo itself,\n\
+             and we would appreciate a bug report! You're likely to see \n\
+             a number of compiler warnings after this message which cargo\n\
+             attempted to fix but failed. If you could open an issue at\n\
+             https://github.com/rust-lang/cargo/issues\n\
+             quoting the full output of this command we'd be very appreciative!\
+             ",
+        ).with_stderr_does_not_contain("[..][FIXING][..]")
+        .run();
 }
 
 #[test]
@@ -171,8 +157,7 @@ fn fix_path_deps() {
 
                 [workspace]
             "#,
-        )
-        .file(
+        ).file(
             "src/lib.rs",
             r#"
                 extern crate bar;
@@ -182,8 +167,7 @@ fn fix_path_deps() {
                     x
                 }
             "#,
-        )
-        .file("bar/Cargo.toml", &basic_manifest("bar", "0.1.0"))
+        ).file("bar/Cargo.toml", &basic_manifest("bar", "0.1.0"))
         .file(
             "bar/src/lib.rs",
             r#"
@@ -192,22 +176,20 @@ fn fix_path_deps() {
                     x
                 }
             "#,
-        )
-        .build();
+        ).build();
 
-    assert_that(
-        p.cargo("fix --allow-no-vcs -p foo -p bar")
-            .env("__CARGO_FIX_YOLO", "1"),
-        execs()
-            .with_stdout("")
-            .with_stderr("\
+    p.cargo("fix --allow-no-vcs -p foo -p bar")
+        .env("__CARGO_FIX_YOLO", "1")
+        .with_stdout("")
+        .with_stderr(
+            "\
 [CHECKING] bar v0.1.0 ([..])
 [FIXING] bar/src/lib.rs (1 fix)
 [CHECKING] foo v0.1.0 ([..])
 [FIXING] src/lib.rs (1 fix)
 [FINISHED] [..]
-")
-    );
+",
+        ).run();
 }
 
 #[test]
@@ -226,8 +208,7 @@ fn do_not_fix_non_relevant_deps() {
 
                 [workspace]
             "#,
-        )
-        .file("foo/src/lib.rs", "")
+        ).file("foo/src/lib.rs", "")
         .file("bar/Cargo.toml", &basic_manifest("bar", "0.1.0"))
         .file(
             "bar/src/lib.rs",
@@ -237,15 +218,12 @@ fn do_not_fix_non_relevant_deps() {
                     x
                 }
             "#,
-        )
-        .build();
+        ).build();
 
-    assert_that(
-        p.cargo("fix --allow-no-vcs")
-            .env("__CARGO_FIX_YOLO", "1")
-            .cwd(p.root().join("foo")),
-        execs()
-    );
+    p.cargo("fix --allow-no-vcs")
+        .env("__CARGO_FIX_YOLO", "1")
+        .cwd(p.root().join("foo"))
+        .run();
 
     assert!(p.read_file("bar/src/lib.rs").contains("mut"));
 }
@@ -253,7 +231,7 @@ fn do_not_fix_non_relevant_deps() {
 #[test]
 fn prepare_for_2018() {
     if !is_nightly() {
-        return
+        return;
     }
     let p = project()
         .file(
@@ -274,28 +252,30 @@ fn prepare_for_2018() {
                     let x = ::foo::FOO;
                 }
             "#,
-        )
-        .build();
+        ).build();
 
     let stderr = "\
 [CHECKING] foo v0.0.1 ([..])
 [FIXING] src/lib.rs (2 fixes)
 [FINISHED] [..]
 ";
-    assert_that(
-        p.cargo("fix --edition --allow-no-vcs"),
-        execs().with_stderr(stderr).with_stdout(""),
-    );
+    p.cargo("fix --edition --allow-no-vcs")
+        .with_stderr(stderr)
+        .with_stdout("")
+        .run();
 
     println!("{}", p.read_file("src/lib.rs"));
     assert!(p.read_file("src/lib.rs").contains("use crate::foo::FOO;"));
-    assert!(p.read_file("src/lib.rs").contains("let x = crate::foo::FOO;"));
+    assert!(
+        p.read_file("src/lib.rs")
+            .contains("let x = crate::foo::FOO;")
+    );
 }
 
 #[test]
 fn local_paths() {
     if !is_nightly() {
-        return
+        return;
     }
     let p = project()
         .file(
@@ -313,8 +293,7 @@ fn local_paths() {
                     foo();
                 }
             "#,
-        )
-        .build();
+        ).build();
 
     let stderr = "\
 [CHECKING] foo v0.0.1 ([..])
@@ -322,10 +301,10 @@ fn local_paths() {
 [FINISHED] [..]
 ";
 
-    assert_that(
-        p.cargo("fix --edition --allow-no-vcs"),
-        execs().with_stderr(stderr).with_stdout(""),
-    );
+    p.cargo("fix --edition --allow-no-vcs")
+        .with_stderr(stderr)
+        .with_stdout("")
+        .run();
 
     println!("{}", p.read_file("src/lib.rs"));
     assert!(p.read_file("src/lib.rs").contains("use crate::test::foo;"));
@@ -334,7 +313,7 @@ fn local_paths() {
 #[test]
 fn local_paths_no_fix() {
     if !is_nightly() {
-        return
+        return;
     }
     let p = project()
         .file(
@@ -350,8 +329,7 @@ fn local_paths_no_fix() {
                     foo();
                 }
             "#,
-        )
-        .build();
+        ).build();
 
     let stderr = "\
 [CHECKING] foo v0.0.1 ([..])
@@ -360,16 +338,16 @@ this may cause `cargo fix` to not be able to fix all
 issues in preparation for the 2018 edition
 [FINISHED] [..]
 ";
-    assert_that(
-        p.cargo("fix --edition --allow-no-vcs"),
-        execs().with_stderr(stderr).with_stdout(""),
-    );
+    p.cargo("fix --edition --allow-no-vcs")
+        .with_stderr(stderr)
+        .with_stdout("")
+        .run();
 }
 
 #[test]
 fn upgrade_extern_crate() {
     if !is_nightly() {
-        return
+        return;
     }
     let p = project()
         .file(
@@ -387,8 +365,7 @@ fn upgrade_extern_crate() {
                 [dependencies]
                 bar = { path = 'bar' }
             "#,
-        )
-        .file(
+        ).file(
             "src/lib.rs",
             r#"
                 #![warn(rust_2018_idioms)]
@@ -401,8 +378,7 @@ fn upgrade_extern_crate() {
                     bar();
                 }
             "#,
-        )
-        .file("bar/Cargo.toml", &basic_manifest("bar", "0.1.0"))
+        ).file("bar/Cargo.toml", &basic_manifest("bar", "0.1.0"))
         .file("bar/src/lib.rs", "pub fn bar() {}")
         .build();
 
@@ -412,12 +388,12 @@ fn upgrade_extern_crate() {
 [FIXING] src/lib.rs (1 fix)
 [FINISHED] [..]
 ";
-    assert_that(
-        p.cargo("fix --allow-no-vcs")
-            .env("__CARGO_FIX_YOLO", "1")
-            .masquerade_as_nightly_cargo(),
-        execs().with_stderr(stderr).with_stdout(""),
-    );
+    p.cargo("fix --allow-no-vcs")
+        .env("__CARGO_FIX_YOLO", "1")
+        .masquerade_as_nightly_cargo()
+        .with_stderr(stderr)
+        .with_stdout("")
+        .run();
     println!("{}", p.read_file("src/lib.rs"));
     assert!(!p.read_file("src/lib.rs").contains("extern crate"));
 }
@@ -425,7 +401,7 @@ fn upgrade_extern_crate() {
 #[test]
 fn specify_rustflags() {
     if !is_nightly() {
-        return
+        return;
     }
     let p = project()
         .file(
@@ -442,35 +418,32 @@ fn specify_rustflags() {
                     let x = ::foo::FOO;
                 }
             "#,
-        )
-        .build();
+        ).build();
 
     let stderr = "\
 [CHECKING] foo v0.0.1 ([..])
 [FIXING] src/lib.rs (1 fix)
 [FINISHED] [..]
 ";
-    assert_that(
-        p.cargo("fix --edition --allow-no-vcs")
-            .env("RUSTFLAGS", "-C target-cpu=native"),
-        execs().with_stderr(stderr).with_stdout(""),
-    );
+    p.cargo("fix --edition --allow-no-vcs")
+        .env("RUSTFLAGS", "-C target-cpu=native")
+        .with_stderr(stderr)
+        .with_stdout("")
+        .run();
 }
 
 #[test]
 fn no_changes_necessary() {
-    let p = project()
-        .file("src/lib.rs", "")
-        .build();
+    let p = project().file("src/lib.rs", "").build();
 
     let stderr = "\
 [CHECKING] foo v0.0.1 ([..])
 [FINISHED] [..]
 ";
-    assert_that(
-        p.cargo("fix --allow-no-vcs"),
-        execs().with_stderr(stderr).with_stdout(""),
-    );
+    p.cargo("fix --allow-no-vcs")
+        .with_stderr(stderr)
+        .with_stdout("")
+        .run();
 }
 
 #[test]
@@ -484,19 +457,18 @@ fn fixes_extra_mut() {
                     x
                 }
             "#,
-        )
-        .build();
+        ).build();
 
     let stderr = "\
 [CHECKING] foo v0.0.1 ([..])
 [FIXING] src/lib.rs (1 fix)
 [FINISHED] [..]
 ";
-    assert_that(
-        p.cargo("fix --allow-no-vcs")
-            .env("__CARGO_FIX_YOLO", "1"),
-        execs().with_stderr(stderr).with_stdout(""),
-    );
+    p.cargo("fix --allow-no-vcs")
+        .env("__CARGO_FIX_YOLO", "1")
+        .with_stderr(stderr)
+        .with_stdout("")
+        .run();
 }
 
 #[test]
@@ -511,19 +483,18 @@ fn fixes_two_missing_ampersands() {
                     x + y
                 }
             "#,
-        )
-        .build();
+        ).build();
 
     let stderr = "\
 [CHECKING] foo v0.0.1 ([..])
 [FIXING] src/lib.rs (2 fixes)
 [FINISHED] [..]
 ";
-    assert_that(
-        p.cargo("fix --allow-no-vcs")
-            .env("__CARGO_FIX_YOLO", "1"),
-        execs().with_stderr(stderr).with_stdout(""),
-    );
+    p.cargo("fix --allow-no-vcs")
+        .env("__CARGO_FIX_YOLO", "1")
+        .with_stderr(stderr)
+        .with_stdout("")
+        .run();
 }
 
 #[test]
@@ -537,19 +508,18 @@ fn tricky() {
                     x + y
                 }
             "#,
-        )
-        .build();
+        ).build();
 
     let stderr = "\
 [CHECKING] foo v0.0.1 ([..])
 [FIXING] src/lib.rs (2 fixes)
 [FINISHED] [..]
 ";
-    assert_that(
-        p.cargo("fix --allow-no-vcs")
-            .env("__CARGO_FIX_YOLO", "1"),
-        execs().with_stderr(stderr).with_stdout(""),
-    );
+    p.cargo("fix --allow-no-vcs")
+        .env("__CARGO_FIX_YOLO", "1")
+        .with_stderr(stderr)
+        .with_stdout("")
+        .run();
 }
 
 #[test]
@@ -561,14 +531,11 @@ fn preserve_line_endings() {
              fn add(a: &u32) -> u32 { a + 1 }\r\n\
              pub fn foo() -> u32 { let mut x = 3; add(&x) }\r\n\
              ",
-        )
-        .build();
+        ).build();
 
-    assert_that(
-        p.cargo("fix --allow-no-vcs")
-            .env("__CARGO_FIX_YOLO", "1"),
-        execs(),
-    );
+    p.cargo("fix --allow-no-vcs")
+        .env("__CARGO_FIX_YOLO", "1")
+        .run();
     assert!(p.read_file("src/lib.rs").contains("\r\n"));
 }
 
@@ -581,14 +548,11 @@ fn fix_deny_warnings() {
                 #![deny(warnings)]
                 pub fn foo() { let mut x = 3; drop(x); }
             ",
-        )
-        .build();
+        ).build();
 
-    assert_that(
-        p.cargo("fix --allow-no-vcs")
-            .env("__CARGO_FIX_YOLO", "1"),
-        execs(),
-    );
+    p.cargo("fix --allow-no-vcs")
+        .env("__CARGO_FIX_YOLO", "1")
+        .run();
 }
 
 #[test]
@@ -606,14 +570,11 @@ fn fix_deny_warnings_but_not_others() {
 
                 fn bar() {}
             ",
-        )
-        .build();
+        ).build();
 
-    assert_that(
-        p.cargo("fix --allow-no-vcs")
-            .env("__CARGO_FIX_YOLO", "1"),
-        execs(),
-    );
+    p.cargo("fix --allow-no-vcs")
+        .env("__CARGO_FIX_YOLO", "1")
+        .run();
     assert!(!p.read_file("src/lib.rs").contains("let mut x = 3;"));
     assert!(p.read_file("src/lib.rs").contains("fn bar() {}"));
 }
@@ -631,8 +592,7 @@ fn fix_two_files() {
                     x
                 }
             ",
-        )
-        .file(
+        ).file(
             "src/bar.rs",
             "
                 pub fn foo() -> u32 {
@@ -641,16 +601,13 @@ fn fix_two_files() {
                 }
 
             ",
-        )
-        .build();
+        ).build();
 
-    assert_that(
-        p.cargo("fix --allow-no-vcs")
-            .env("__CARGO_FIX_YOLO", "1"),
-        execs()
-            .with_stderr_contains("[FIXING] src/bar.rs (1 fix)")
-            .with_stderr_contains("[FIXING] src/lib.rs (1 fix)"),
-    );
+    p.cargo("fix --allow-no-vcs")
+        .env("__CARGO_FIX_YOLO", "1")
+        .with_stderr_contains("[FIXING] src/bar.rs (1 fix)")
+        .with_stderr_contains("[FIXING] src/lib.rs (1 fix)")
+        .run();
     assert!(!p.read_file("src/lib.rs").contains("let mut x = 3;"));
     assert!(!p.read_file("src/bar.rs").contains("let mut x = 3;"));
 }
@@ -667,22 +624,18 @@ fn fixes_missing_ampersand() {
                 #[test]
                 pub fn foo2() { let mut x = 3; drop(x); }
             "#,
-        )
-        .file(
+        ).file(
             "tests/a.rs",
             r#"
                 #[test]
                 pub fn foo() { let mut x = 3; drop(x); }
             "#,
-        )
-        .file("examples/foo.rs", "fn main() { let mut x = 3; drop(x); }")
+        ).file("examples/foo.rs", "fn main() { let mut x = 3; drop(x); }")
         .file("build.rs", "fn main() { let mut x = 3; drop(x); }")
         .build();
 
-    assert_that(
-        p.cargo("fix --all-targets --allow-no-vcs")
-            .env("__CARGO_FIX_YOLO", "1"),
-        execs()
+    p.cargo("fix --all-targets --allow-no-vcs")
+            .env("__CARGO_FIX_YOLO", "1")
             .with_stdout("")
             .with_stderr_contains("[COMPILING] foo v0.0.1 ([..])")
             .with_stderr_contains("[FIXING] build.rs (1 fix)")
@@ -695,10 +648,9 @@ fn fixes_missing_ampersand() {
             .with_stderr_contains("[FIXING] src/main.rs (1 fix)")
             .with_stderr_contains("[FIXING] examples/foo.rs (1 fix)")
             .with_stderr_contains("[FIXING] tests/a.rs (1 fix)")
-            .with_stderr_contains("[FINISHED] [..]"),
-    );
-    assert_that(p.cargo("build"), execs());
-    assert_that(p.cargo("test"), execs());
+            .with_stderr_contains("[FINISHED] [..]").run();
+    p.cargo("build").run();
+    p.cargo("test").run();
 }
 
 #[test]
@@ -716,20 +668,18 @@ fn fix_features() {
 
                 [workspace]
             "#,
-        )
-        .file(
+        ).file(
             "src/lib.rs",
             r#"
             #[cfg(feature = "bar")]
             pub fn foo() -> u32 { let mut x = 3; x }
         "#,
-        )
-        .build();
+        ).build();
 
-    assert_that(p.cargo("fix --allow-no-vcs"), execs());
-    assert_that(p.cargo("build"), execs());
-    assert_that(p.cargo("fix --features bar --allow-no-vcs"), execs());
-    assert_that(p.cargo("build --features bar"), execs());
+    p.cargo("fix --allow-no-vcs").run();
+    p.cargo("build").run();
+    p.cargo("fix --features bar --allow-no-vcs").run();
+    p.cargo("build --features bar").run();
 }
 
 #[test]
@@ -738,38 +688,29 @@ fn shows_warnings() {
         .file("src/lib.rs", "use std::default::Default; pub fn foo() {}")
         .build();
 
-    assert_that(
-        p.cargo("fix --allow-no-vcs"),
-        execs().with_stderr_contains("[..]warning: unused import[..]"),
-    );
+    p.cargo("fix --allow-no-vcs")
+        .with_stderr_contains("[..]warning: unused import[..]")
+        .run();
 }
 
 #[test]
 fn warns_if_no_vcs_detected() {
-    let p = project()
-        .file("src/lib.rs", "pub fn foo() {}")
-        .build();
+    let p = project().file("src/lib.rs", "pub fn foo() {}").build();
 
-    assert_that(
-        p.cargo("fix"),
-        execs()
-            .with_status(101)
-            .with_stderr("\
-error: no VCS found for this project and `cargo fix` can potentially perform \
-destructive changes; if you'd like to suppress this error pass `--allow-no-vcs`\
-")
-    );
-    assert_that(
-        p.cargo("fix --allow-no-vcs"),
-        execs(),
-    );
+    p.cargo("fix")
+        .with_status(101)
+        .with_stderr(
+            "\
+             error: no VCS found for this project and `cargo fix` can potentially perform \
+             destructive changes; if you'd like to suppress this error pass `--allow-no-vcs`\
+             ",
+        ).run();
+    p.cargo("fix --allow-no-vcs").run();
 }
 
 #[test]
 fn warns_about_dirty_working_directory() {
-    let p = project()
-        .file("src/lib.rs", "pub fn foo() {}")
-        .build();
+    let p = project().file("src/lib.rs", "pub fn foo() {}").build();
 
     let repo = git2::Repository::init(&p.root()).unwrap();
     let mut cfg = t!(repo.config());
@@ -780,11 +721,10 @@ fn warns_about_dirty_working_directory() {
     git::commit(&repo);
     File::create(p.root().join("src/lib.rs")).unwrap();
 
-    assert_that(
-        p.cargo("fix"),
-        execs()
-            .with_status(101)
-            .with_stderr("\
+    p.cargo("fix")
+        .with_status(101)
+        .with_stderr(
+            "\
 error: the working directory of this project is detected as dirty, and `cargo \
 fix` can potentially perform destructive changes; if you'd like to \
 suppress this error pass `--allow-dirty`, or commit the changes to \
@@ -793,19 +733,14 @@ these files:
   * src/lib.rs
 
 
-")
-    );
-    assert_that(
-        p.cargo("fix --allow-dirty"),
-        execs(),
-    );
+",
+        ).run();
+    p.cargo("fix --allow-dirty").run();
 }
 
 #[test]
 fn does_not_warn_about_clean_working_directory() {
-    let p = project()
-        .file("src/lib.rs", "pub fn foo() {}")
-        .build();
+    let p = project().file("src/lib.rs", "pub fn foo() {}").build();
 
     let repo = git2::Repository::init(&p.root()).unwrap();
     let mut cfg = t!(repo.config());
@@ -815,10 +750,7 @@ fn does_not_warn_about_clean_working_directory() {
     git::add(&repo);
     git::commit(&repo);
 
-    assert_that(
-        p.cargo("fix"),
-        execs(),
-    );
+    p.cargo("fix").run();
 }
 
 #[test]
@@ -837,10 +769,7 @@ fn does_not_warn_about_dirty_ignored_files() {
     git::commit(&repo);
     File::create(p.root().join("bar")).unwrap();
 
-    assert_that(
-        p.cargo("fix"),
-        execs(),
-    );
+    p.cargo("fix").run();
 }
 
 #[test]
@@ -849,11 +778,9 @@ fn fix_all_targets_by_default() {
         .file("src/lib.rs", "pub fn foo() { let mut x = 3; drop(x); }")
         .file("tests/foo.rs", "pub fn foo() { let mut x = 3; drop(x); }")
         .build();
-    assert_that(
-        p.cargo("fix --allow-no-vcs")
-            .env("__CARGO_FIX_YOLO", "1"),
-        execs(),
-    );
+    p.cargo("fix --allow-no-vcs")
+        .env("__CARGO_FIX_YOLO", "1")
+        .run();
     assert!(!p.read_file("src/lib.rs").contains("let mut x"));
     assert!(!p.read_file("tests/foo.rs").contains("let mut x"));
 }
@@ -861,7 +788,7 @@ fn fix_all_targets_by_default() {
 #[test]
 fn prepare_for_and_enable() {
     if !is_nightly() {
-        return
+        return;
     }
     let p = project()
         .file(
@@ -874,8 +801,7 @@ fn prepare_for_and_enable() {
                 version = '0.1.0'
                 edition = '2018'
             "#,
-        )
-        .file("src/lib.rs", "")
+        ).file("src/lib.rs", "")
         .build();
 
     let stderr = "\
@@ -890,23 +816,19 @@ information about transitioning to the 2018 edition see:
   https://[..]
 
 ";
-    assert_that(
-        p.cargo("fix --edition --allow-no-vcs")
-            .masquerade_as_nightly_cargo(),
-        execs()
-            .with_stderr_contains(stderr)
-            .with_status(101),
-    );
+    p.cargo("fix --edition --allow-no-vcs")
+        .masquerade_as_nightly_cargo()
+        .with_stderr_contains(stderr)
+        .with_status(101)
+        .run();
 }
 
 #[test]
 fn prepare_for_without_feature_issues_warning() {
     if !is_nightly() {
-        return
+        return;
     }
-    let p = project()
-        .file("src/lib.rs", "")
-        .build();
+    let p = project().file("src/lib.rs", "").build();
 
     let stderr = "\
 [CHECKING] foo v0.0.1 ([..])
@@ -915,17 +837,16 @@ this may cause `cargo fix` to not be able to fix all
 issues in preparation for the 2018 edition
 [FINISHED] [..]
 ";
-    assert_that(
-        p.cargo("fix --edition --allow-no-vcs")
-            .masquerade_as_nightly_cargo(),
-        execs().with_stderr(stderr),
-    );
+    p.cargo("fix --edition --allow-no-vcs")
+        .masquerade_as_nightly_cargo()
+        .with_stderr(stderr)
+        .run();
 }
 
 #[test]
 fn fix_overlapping() {
     if !is_nightly() {
-        return
+        return;
     }
     let p = project()
         .file(
@@ -941,9 +862,8 @@ fn fix_overlapping() {
                         ::foo::<::A>();
                     }
                 }
-            "#
-        )
-        .build();
+            "#,
+        ).build();
 
     let stderr = "\
 [CHECKING] foo [..]
@@ -951,10 +871,9 @@ fn fix_overlapping() {
 [FINISHED] dev [..]
 ";
 
-    assert_that(
-        p.cargo("fix --allow-no-vcs --prepare-for 2018 --lib"),
-        execs().with_stderr(stderr),
-    );
+    p.cargo("fix --allow-no-vcs --prepare-for 2018 --lib")
+        .with_stderr(stderr)
+        .run();
 
     let contents = p.read_file("src/lib.rs");
     println!("{}", contents);
@@ -964,7 +883,7 @@ fn fix_overlapping() {
 #[test]
 fn fix_idioms() {
     if !is_nightly() {
-        return
+        return;
     }
     let p = project()
         .file(
@@ -976,55 +895,46 @@ fn fix_idioms() {
                 version = '0.1.0'
                 edition = '2018'
             "#,
-        )
-        .file(
+        ).file(
             "src/lib.rs",
             r#"
                 use std::any::Any;
                 pub fn foo() {
                     let _x: Box<Any> = Box::new(3);
                 }
-            "#
-        )
-        .build();
+            "#,
+        ).build();
 
     let stderr = "\
 [CHECKING] foo [..]
 [FIXING] src/lib.rs (1 fix)
 [FINISHED] [..]
 ";
-    assert_that(
-        p.cargo("fix --edition-idioms --allow-no-vcs")
-            .masquerade_as_nightly_cargo(),
-        execs()
-            .with_stderr(stderr)
-            .with_status(0),
-    );
+    p.cargo("fix --edition-idioms --allow-no-vcs")
+        .masquerade_as_nightly_cargo()
+        .with_stderr(stderr)
+        .with_status(0)
+        .run();
 
     assert!(p.read_file("src/lib.rs").contains("Box<dyn Any>"));
 }
 
 #[test]
 fn idioms_2015_ok() {
-    let p = project()
-        .file("src/lib.rs", "")
-        .build();
+    let p = project().file("src/lib.rs", "").build();
 
-    assert_that(
-        p.cargo("fix --edition-idioms --allow-no-vcs")
-            .masquerade_as_nightly_cargo(),
-        execs().with_status(0),
-    );
+    p.cargo("fix --edition-idioms --allow-no-vcs")
+        .masquerade_as_nightly_cargo()
+        .with_status(0)
+        .run();
 }
 
 #[test]
 fn both_edition_migrate_flags() {
     if !is_nightly() {
-        return
+        return;
     }
-    let p = project()
-        .file("src/lib.rs", "")
-        .build();
+    let p = project().file("src/lib.rs", "").build();
 
     let stderr = "\
 error: The argument '--edition' cannot be used with '--prepare-for <prepare-for>'
@@ -1035,8 +945,8 @@ USAGE:
 For more information try --help
 ";
 
-    assert_that(
-        p.cargo("fix --prepare-for 2018 --edition"),
-        execs().with_status(1).with_stderr(stderr),
-    );
+    p.cargo("fix --prepare-for 2018 --edition")
+        .with_status(1)
+        .with_stderr(stderr)
+        .run();
 }

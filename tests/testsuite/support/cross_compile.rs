@@ -1,7 +1,7 @@
 use std::env;
 use std::process::Command;
-use std::sync::{Once, ONCE_INIT};
 use std::sync::atomic::{AtomicBool, Ordering, ATOMIC_BOOL_INIT};
+use std::sync::{Once, ONCE_INIT};
 
 use support::{basic_bin_manifest, main_file, project};
 
@@ -28,12 +28,14 @@ pub fn disabled() -> bool {
     let cross_target = alternate();
 
     CHECK.call_once(|| {
-        let p = project().at("cross_test")
+        let p = project()
+            .at("cross_test")
             .file("Cargo.toml", &basic_bin_manifest("cross_test"))
             .file("src/cross_test.rs", &main_file(r#""testing!""#, &[]))
             .build();
 
-        let result = p.cargo("build --target")
+        let result = p
+            .cargo("build --target")
             .arg(&cross_target)
             .exec_with_output();
 
