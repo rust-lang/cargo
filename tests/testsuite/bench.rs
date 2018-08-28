@@ -1,5 +1,3 @@
-use std::str;
-
 use support::hamcrest::{assert_that, existing_file};
 use support::is_nightly;
 use support::paths::CargoPathExt;
@@ -268,23 +266,11 @@ fn many_similar_names() {
         "#,
         ).build();
 
-    let output = p.cargo("bench").exec_with_output().unwrap();
-    let output = str::from_utf8(&output.stdout).unwrap();
-    assert!(
-        output.contains("test bin_bench"),
-        "bin_bench missing\n{}",
-        output
-    );
-    assert!(
-        output.contains("test lib_bench"),
-        "lib_bench missing\n{}",
-        output
-    );
-    assert!(
-        output.contains("test bench_bench"),
-        "bench_bench missing\n{}",
-        output
-    );
+    p.cargo("bench")
+        .with_stdout_contains("test bin_bench ... bench:           0 ns/iter (+/- 0)")
+        .with_stdout_contains("test lib_bench ... bench:           0 ns/iter (+/- 0)")
+        .with_stdout_contains("test bench_bench ... bench:           0 ns/iter (+/- 0)")
+        .run();
 }
 
 #[test]
