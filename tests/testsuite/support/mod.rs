@@ -708,7 +708,8 @@ impl Execs {
         self
     }
 
-    pub fn exec_with_output(&self) -> CargoResult<Output> {
+    pub fn exec_with_output(&mut self) -> CargoResult<Output> {
+        self.ran = true;
         // TODO avoid unwrap
         let p = (&self.process_builder).clone().unwrap();
         p.exec_with_output()
