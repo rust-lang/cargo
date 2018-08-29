@@ -5,7 +5,7 @@ use std::path::{Path, PathBuf};
 
 use flate2::read::GzDecoder;
 use git2;
-use support::hamcrest::{assert_that, contains, existing_file};
+use support::hamcrest::{assert_that, existing_file};
 use support::registry::Package;
 use support::{basic_manifest, git, is_nightly, path2url, paths, project, registry};
 use support::{cargo_process, sleep_ms};
@@ -665,10 +665,7 @@ See [..]
     let entry_paths = entries
         .map(|entry| entry.unwrap().path().unwrap().into_owned())
         .collect::<Vec<PathBuf>>();
-    assert_that(
-        &entry_paths,
-        contains(vec![PathBuf::from("foo-0.0.1/src/foo.rs")]),
-    );
+    assert!(entry_paths.contains(&PathBuf::from("foo-0.0.1/src/foo.rs")));
 }
 
 #[test]

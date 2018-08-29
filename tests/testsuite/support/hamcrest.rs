@@ -78,24 +78,3 @@ where
         }
     }
 }
-
-pub fn contains<T>(item: Vec<T>) -> Contains<T> {
-    Contains(item)
-}
-
-#[derive(Debug)]
-pub struct Contains<T>(Vec<T>);
-
-impl<'a, T> Matcher<&'a Vec<T>> for Contains<T>
-where
-    T: fmt::Debug + PartialEq,
-{
-    fn matches(&self, actual: &'a Vec<T>) -> Result<(), String> {
-        for item in self.0.iter() {
-            if !actual.contains(item) {
-                return Err(format!("failed to find {:?}", item));
-            }
-        }
-        Ok(())
-    }
-}
