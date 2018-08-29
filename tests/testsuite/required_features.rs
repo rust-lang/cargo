@@ -1,5 +1,4 @@
-use support::hamcrest::{assert_that, is_not};
-use support::install::{cargo_home, has_installed_exe};
+use support::install::{cargo_home, assert_has_installed_exe, assert_has_not_installed_exe};
 use support::is_nightly;
 use support::project;
 
@@ -608,7 +607,7 @@ fn install_default_features() {
         .build();
 
     p.cargo("install --path .").run();
-    assert_that(cargo_home(), has_installed_exe("foo"));
+    assert_has_installed_exe(cargo_home(), "foo");
     p.cargo("uninstall foo").run();
 
     p.cargo("install --path . --no-default-features")
@@ -620,10 +619,10 @@ fn install_default_features() {
 [ERROR] no binaries are available for install using the selected features
 ",
         ).run();
-    assert_that(cargo_home(), is_not(has_installed_exe("foo")));
+    assert_has_not_installed_exe(cargo_home(), "foo");
 
     p.cargo("install --path . --bin=foo").run();
-    assert_that(cargo_home(), has_installed_exe("foo"));
+    assert_has_installed_exe(cargo_home(), "foo");
     p.cargo("uninstall foo").run();
 
     p.cargo("install --path . --bin=foo --no-default-features")
@@ -639,10 +638,10 @@ Caused by:
 Consider enabling them by passing e.g. `--features=\"a\"`
 ",
         ).run();
-    assert_that(cargo_home(), is_not(has_installed_exe("foo")));
+    assert_has_not_installed_exe(cargo_home(), "foo");
 
     p.cargo("install --path . --example=foo").run();
-    assert_that(cargo_home(), has_installed_exe("foo"));
+    assert_has_installed_exe(cargo_home(), "foo");
     p.cargo("uninstall foo").run();
 
     p.cargo("install --path . --example=foo --no-default-features")
@@ -658,7 +657,7 @@ Caused by:
 Consider enabling them by passing e.g. `--features=\"a\"`
 ",
         ).run();
-    assert_that(cargo_home(), is_not(has_installed_exe("foo")));
+    assert_has_not_installed_exe(cargo_home(), "foo");
 }
 
 #[test]
@@ -683,7 +682,7 @@ fn install_arg_features() {
         .build();
 
     p.cargo("install --features a").run();
-    assert_that(cargo_home(), has_installed_exe("foo"));
+    assert_has_installed_exe(cargo_home(), "foo");
     p.cargo("uninstall foo").run();
 }
 
@@ -719,13 +718,13 @@ fn install_multiple_required_features() {
         .build();
 
     p.cargo("install --path .").run();
-    assert_that(cargo_home(), is_not(has_installed_exe("foo_1")));
-    assert_that(cargo_home(), has_installed_exe("foo_2"));
+    assert_has_not_installed_exe(cargo_home(), "foo_1");
+    assert_has_installed_exe(cargo_home(), "foo_2");
     p.cargo("uninstall foo").run();
 
     p.cargo("install --path . --features c").run();
-    assert_that(cargo_home(), has_installed_exe("foo_1"));
-    assert_that(cargo_home(), has_installed_exe("foo_2"));
+    assert_has_installed_exe(cargo_home(), "foo_1");
+    assert_has_installed_exe(cargo_home(), "foo_2");
     p.cargo("uninstall foo").run();
 
     p.cargo("install --path . --no-default-features")
@@ -737,8 +736,8 @@ fn install_multiple_required_features() {
 [ERROR] no binaries are available for install using the selected features
 ",
         ).run();
-    assert_that(cargo_home(), is_not(has_installed_exe("foo_1")));
-    assert_that(cargo_home(), is_not(has_installed_exe("foo_2")));
+    assert_has_not_installed_exe(cargo_home(), "foo_1");
+    assert_has_not_installed_exe(cargo_home(), "foo_2");
 }
 
 #[test]
@@ -834,7 +833,7 @@ fn dep_feature_in_toml() {
 
     // install
     p.cargo("install").run();
-    assert_that(cargo_home(), has_installed_exe("foo"));
+    assert_has_installed_exe(cargo_home(), "foo");
     p.cargo("uninstall foo").run();
 }
 
@@ -967,10 +966,10 @@ Consider enabling them by passing e.g. `--features=\"bar/a\"`
 [ERROR] no binaries are available for install using the selected features
 ",
         ).run();
-    assert_that(cargo_home(), is_not(has_installed_exe("foo")));
+    assert_has_not_installed_exe(cargo_home(), "foo");
 
     p.cargo("install --features bar/a").run();
-    assert_that(cargo_home(), has_installed_exe("foo"));
+    assert_has_installed_exe(cargo_home(), "foo");
     p.cargo("uninstall foo").run();
 }
 
