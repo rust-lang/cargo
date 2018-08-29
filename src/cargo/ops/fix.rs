@@ -557,15 +557,8 @@ impl FixArgs {
                 if edition == "2018" { cmd.arg("-Wrust-2018-idioms"); }
             }
         }
-        match &self.prepare_for_edition {
-            PrepareFor::Edition(edition) => {
-                cmd.arg("-W").arg(format!("rust-{}-compatibility", edition));
-            }
-            PrepareFor::Next => {
-                let edition = self.next_edition();
-                cmd.arg("-W").arg(format!("rust-{}-compatibility", edition));
-            }
-            PrepareFor::None => {}
+        if let Some(edition) = self.prepare_for_edition_resolve() {
+            cmd.arg("-W").arg(format!("rust-{}-compatibility", edition));
         }
     }
 
@@ -577,10 +570,9 @@ impl FixArgs {
     /// actually be able to fix anything! If it looks like this is happening
     /// then yield an error to the user, indicating that this is happening.
     fn verify_not_preparing_for_enabled_edition(&self) -> CargoResult<()> {
-        let edition = match &self.prepare_for_edition {
-            PrepareFor::Edition(s) => s,
-            PrepareFor::Next => self.next_edition(),
-            PrepareFor::None => return Ok(()),
+        let edition = match self.prepare_for_edition_resolve() {
+            Some(s) => s,
+            None => return Ok(()),
         };
         let enabled = match &self.enabled_edition {
             Some(s) => s,
@@ -609,10 +601,9 @@ impl FixArgs {
     ///
     /// If this is the case, issue a warning.
     fn warn_if_preparing_probably_inert(&self) -> CargoResult<()> {
-        let edition = match &self.prepare_for_edition {
-            PrepareFor::Edition(s) => s,
-            PrepareFor::Next => self.next_edition(),
-            PrepareFor::None => return Ok(()),
+        let edition = match self.prepare_for_edition_resolve() {
+            Some(s) => s,
+            None => return Ok(()),
         };
         let path = match &self.file {
             Some(s) => s,
@@ -633,6 +624,14 @@ impl FixArgs {
         }.post()?;
 
         Ok(())
+    }
+
+    fn prepare_for_edition_resolve(&self) -> Option<&str> {
+        match &self.prepare_for_edition {
+            PrepareFor::Edition(s) => Some(s),
+            PrepareFor::Next => Some(self.next_edition()),
+            PrepareFor::None => None,
+        }
     }
 
     fn next_edition(&self) -> &str {
