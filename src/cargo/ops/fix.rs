@@ -309,7 +309,9 @@ fn rustfix_and_fix(fixes: &mut FixedCrate, rustc: &Path, filename: &Path, args: 
     // If not empty, filter by these lints
     //
     // TODO: Implement a way to specify this
-    let only = HashSet::new();
+    let mut only = HashSet::new();
+    only.insert("rust_2018_compatibility".to_string());
+    only.insert("rust_2015_compatibility".to_string());
 
     let mut cmd = Command::new(rustc);
     cmd.arg("--error-format=json");
