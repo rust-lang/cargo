@@ -310,8 +310,11 @@ fn rustfix_and_fix(fixes: &mut FixedCrate, rustc: &Path, filename: &Path, args: 
     //
     // TODO: Implement a way to specify this
     let mut only = HashSet::new();
-    only.insert("rust_2018_compatibility".to_string());
-    only.insert("rust_2015_compatibility".to_string());
+    match &args.prepare_for_edition {
+        PrepareFor::Edition(edition) => { only.insert(format!("rust_{}_compatibility", edition)); },
+        PrepareFor::Next => { only.insert(format!("rust_{}_compatibility", args.next_edition())); },
+        PrepareFor::None => (),
+    }
 
     let mut cmd = Command::new(rustc);
     cmd.arg("--error-format=json");
