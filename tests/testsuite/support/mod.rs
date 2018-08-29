@@ -18,8 +18,7 @@ let p = project()
 If you do not specify a `Cargo.toml` manifest using `file()`, one is
 automatically created with a project name of `foo` using `basic_manifest()`.
 
-To run cargo, call the `cargo` method and use the `hamcrest` matchers to check
-the output.
+To run cargo, call the `cargo` method and make assertions on the execution:
 
 ```
 p.cargo("run --bin foo")
@@ -41,10 +40,6 @@ directory.  There is also an empty `home` directory created that will be used
 as a home directory instead of your normal home directory.
 
 See `support::lines_match` for an explanation of the string pattern matching.
-
-See the `hamcrest` module for other matchers like
-`is_not(existing_file(path))`.  This is not the actual hamcrest library, but
-instead a lightweight subset of matchers that are used in cargo tests.
 
 Browse the `pub` functions in the `support` module for a variety of other
 helpful utilities.
