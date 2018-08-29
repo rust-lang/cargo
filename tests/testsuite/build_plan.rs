@@ -1,4 +1,3 @@
-use support::hamcrest::{assert_that, existing_file, is_not};
 use support::{basic_bin_manifest, basic_manifest, main_file, project};
 
 #[test]
@@ -34,7 +33,7 @@ fn cargo_build_plan_simple() {
     }
     "#,
         ).run();
-    assert_that(&p.bin("foo"), is_not(existing_file()));
+    assert!(!p.bin("foo").is_file());
 }
 
 #[test]

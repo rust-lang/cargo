@@ -1,5 +1,4 @@
 use glob::glob;
-use support::hamcrest::{assert_that, existing_file, is_not};
 use support::install::exe;
 use support::is_nightly;
 use support::paths::CargoPathExt;
@@ -573,27 +572,15 @@ fn check_artifacts() {
         .file("benches/b1.rs", "")
         .build();
     p.cargo("check").run();
-    assert_that(&p.root().join("target/debug/libfoo.rmeta"), existing_file());
-    assert_that(
-        &p.root().join("target/debug/libfoo.rlib"),
-        is_not(existing_file()),
-    );
-    assert_that(
-        &p.root().join("target/debug").join(exe("foo")),
-        is_not(existing_file()),
-    );
+    assert!(p.root().join("target/debug/libfoo.rmeta").is_file());
+    assert!(!p.root().join("target/debug/libfoo.rlib").is_file());
+    assert!(!p.root().join("target/debug").join(exe("foo")).is_file());
 
     p.root().join("target").rm_rf();
     p.cargo("check --lib").run();
-    assert_that(&p.root().join("target/debug/libfoo.rmeta"), existing_file());
-    assert_that(
-        &p.root().join("target/debug/libfoo.rlib"),
-        is_not(existing_file()),
-    );
-    assert_that(
-        &p.root().join("target/debug").join(exe("foo")),
-        is_not(existing_file()),
-    );
+    assert!(p.root().join("target/debug/libfoo.rmeta").is_file());
+    assert!(!p.root().join("target/debug/libfoo.rlib").is_file());
+    assert!(!p.root().join("target/debug").join(exe("foo")).is_file());
 
     p.root().join("target").rm_rf();
     p.cargo("check --bin foo").run();
@@ -601,31 +588,16 @@ fn check_artifacts() {
         // The nightly check can be removed once 1.27 is stable.
         // Bins now generate `rmeta` files.
         // See: https://github.com/rust-lang/rust/pull/49289
-        assert_that(&p.root().join("target/debug/libfoo.rmeta"), existing_file());
+        assert!(p.root().join("target/debug/libfoo.rmeta").is_file());
     }
-    assert_that(
-        &p.root().join("target/debug/libfoo.rlib"),
-        is_not(existing_file()),
-    );
-    assert_that(
-        &p.root().join("target/debug").join(exe("foo")),
-        is_not(existing_file()),
-    );
+    assert!(!p.root().join("target/debug/libfoo.rlib").is_file());
+    assert!(!p.root().join("target/debug").join(exe("foo")).is_file());
 
     p.root().join("target").rm_rf();
     p.cargo("check --test t1").run();
-    assert_that(
-        &p.root().join("target/debug/libfoo.rmeta"),
-        is_not(existing_file()),
-    );
-    assert_that(
-        &p.root().join("target/debug/libfoo.rlib"),
-        is_not(existing_file()),
-    );
-    assert_that(
-        &p.root().join("target/debug").join(exe("foo")),
-        is_not(existing_file()),
-    );
+    assert!(!p.root().join("target/debug/libfoo.rmeta").is_file());
+    assert!(!p.root().join("target/debug/libfoo.rlib").is_file());
+    assert!(!p.root().join("target/debug").join(exe("foo")).is_file());
     assert_eq!(
         glob(&p.root().join("target/debug/t1-*").to_str().unwrap())
             .unwrap()
@@ -635,33 +607,20 @@ fn check_artifacts() {
 
     p.root().join("target").rm_rf();
     p.cargo("check --example ex1").run();
-    assert_that(
-        &p.root().join("target/debug/libfoo.rmeta"),
-        is_not(existing_file()),
-    );
-    assert_that(
-        &p.root().join("target/debug/libfoo.rlib"),
-        is_not(existing_file()),
-    );
-    assert_that(
-        &p.root().join("target/debug/examples").join(exe("ex1")),
-        is_not(existing_file()),
+    assert!(!p.root().join("target/debug/libfoo.rmeta").is_file());
+    assert!(!p.root().join("target/debug/libfoo.rlib").is_file());
+    assert!(
+        !p.root()
+            .join("target/debug/examples")
+            .join(exe("ex1"))
+            .is_file()
     );
 
     p.root().join("target").rm_rf();
     p.cargo("check --bench b1").run();
-    assert_that(
-        &p.root().join("target/debug/libfoo.rmeta"),
-        is_not(existing_file()),
-    );
-    assert_that(
-        &p.root().join("target/debug/libfoo.rlib"),
-        is_not(existing_file()),
-    );
-    assert_that(
-        &p.root().join("target/debug").join(exe("foo")),
-        is_not(existing_file()),
-    );
+    assert!(!p.root().join("target/debug/libfoo.rmeta").is_file());
+    assert!(!p.root().join("target/debug/libfoo.rlib").is_file());
+    assert!(!p.root().join("target/debug").join(exe("foo")).is_file());
     assert_eq!(
         glob(&p.root().join("target/debug/b1-*").to_str().unwrap())
             .unwrap()

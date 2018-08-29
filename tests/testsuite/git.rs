@@ -7,7 +7,6 @@ use std::sync::atomic::{AtomicBool, Ordering};
 use std::sync::Arc;
 use std::thread;
 
-use support::hamcrest::{assert_that, existing_file};
 use support::paths::{self, CargoPathExt};
 use support::sleep_ms;
 use support::{basic_lib_manifest, basic_manifest, git, main_file, path2url, project};
@@ -65,7 +64,7 @@ fn cargo_compile_simple_git_dep() {
             path2url(root)
         )).run();
 
-    assert_that(&project.bin("foo"), existing_file());
+    assert!(project.bin("foo").is_file());
 
     project
         .process(&project.bin("foo"))
@@ -202,7 +201,7 @@ fn cargo_compile_offline_with_cached_git_dep() {
             path2url(root)
         )).run();
 
-    assert_that(&p.bin("foo"), existing_file());
+    assert!(p.bin("foo").is_file());
 
     p.process(&p.bin("foo"))
         .with_stdout("hello from cached git repo rev2\n")
@@ -293,7 +292,7 @@ fn cargo_compile_git_dep_branch() {
             path2url(root)
         )).run();
 
-    assert_that(&project.bin("foo"), existing_file());
+    assert!(project.bin("foo").is_file());
 
     project
         .process(&project.bin("foo"))
@@ -366,7 +365,7 @@ fn cargo_compile_git_dep_tag() {
             path2url(root)
         )).run();
 
-    assert_that(&project.bin("foo"), existing_file());
+    assert!(project.bin("foo").is_file());
 
     project
         .process(&project.bin("foo"))
@@ -447,7 +446,7 @@ fn cargo_compile_with_nested_paths() {
 
     p.cargo("build").run();
 
-    assert_that(&p.bin("foo"), existing_file());
+    assert!(p.bin("foo").is_file());
 
     p.process(&p.bin("foo")).with_stdout("hello world\n").run();
 }
@@ -496,7 +495,7 @@ fn cargo_compile_with_malformed_nested_paths() {
 
     p.cargo("build").run();
 
-    assert_that(&p.bin("foo"), existing_file());
+    assert!(p.bin("foo").is_file());
 
     p.process(&p.bin("foo")).with_stdout("hello world\n").run();
 }
@@ -562,7 +561,7 @@ fn cargo_compile_with_meta_package() {
 
     p.cargo("build").run();
 
-    assert_that(&p.bin("foo"), existing_file());
+    assert!(p.bin("foo").is_file());
 
     p.process(&p.bin("foo"))
         .with_stdout("this is dep1 this is dep2\n")
@@ -692,7 +691,7 @@ fn two_revs_same_deps() {
         ).build();
 
     foo.cargo("build -v").run();
-    assert_that(&foo.bin("foo"), existing_file());
+    assert!(foo.bin("foo").is_file());
     foo.process(&foo.bin("foo")).run();
 }
 

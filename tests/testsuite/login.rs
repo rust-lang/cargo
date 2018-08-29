@@ -4,7 +4,6 @@ use std::io::prelude::*;
 use cargo::core::Shell;
 use cargo::util::config::Config;
 use support::cargo_process;
-use support::hamcrest::{assert_that, existing_file, is_not};
 use support::install::cargo_home;
 use support::registry::registry;
 use toml;
@@ -34,7 +33,7 @@ fn setup_new_credentials() {
 
 fn check_token(expected_token: &str, registry: Option<&str>) -> bool {
     let credentials = cargo_home().join("credentials");
-    assert_that(&credentials, existing_file());
+    assert!(credentials.is_file());
 
     let mut contents = String::new();
     File::open(&credentials)
@@ -81,7 +80,7 @@ fn login_with_old_credentials() {
         .run();
 
     let config = cargo_home().join("config");
-    assert_that(&config, existing_file());
+    assert!(config.is_file());
 
     let mut contents = String::new();
     File::open(&config)
@@ -104,7 +103,7 @@ fn login_with_new_credentials() {
         .run();
 
     let config = cargo_home().join("config");
-    assert_that(&config, is_not(existing_file()));
+    assert!(!config.is_file());
 
     // Ensure that we get the new token for the registry
     assert!(check_token(TOKEN, None));
@@ -124,7 +123,7 @@ fn login_without_credentials() {
         .run();
 
     let config = cargo_home().join("config");
-    assert_that(&config, is_not(existing_file()));
+    assert!(!config.is_file());
 
     // Ensure that we get the new token for the registry
     assert!(check_token(TOKEN, None));

@@ -3,7 +3,6 @@ use std::fs::{self, File};
 use std::io::prelude::*;
 use support;
 
-use support::hamcrest::{assert_that, existing_file, is_not};
 use support::{paths, Execs};
 
 fn cargo_process(s: &str) -> Execs {
@@ -19,9 +18,9 @@ fn simple_lib() {
         .with_stderr("[CREATED] library project")
         .run();
 
-    assert_that(&paths::root().join("Cargo.toml"), existing_file());
-    assert_that(&paths::root().join("src/lib.rs"), existing_file());
-    assert_that(&paths::root().join(".gitignore"), is_not(existing_file()));
+    assert!(paths::root().join("Cargo.toml").is_file());
+    assert!(paths::root().join("src/lib.rs").is_file());
+    assert!(!paths::root().join(".gitignore").is_file());
 
     cargo_process("build").run();
 }
@@ -36,13 +35,14 @@ fn simple_bin() {
         .with_stderr("[CREATED] binary (application) project")
         .run();
 
-    assert_that(&paths::root().join("foo/Cargo.toml"), existing_file());
-    assert_that(&paths::root().join("foo/src/main.rs"), existing_file());
+    assert!(paths::root().join("foo/Cargo.toml").is_file());
+    assert!(paths::root().join("foo/src/main.rs").is_file());
 
     cargo_process("build").cwd(&path).run();
-    assert_that(
-        &paths::root().join(&format!("foo/target/debug/foo{}", env::consts::EXE_SUFFIX)),
-        existing_file(),
+    assert!(
+        paths::root()
+            .join(&format!("foo/target/debug/foo{}", env::consts::EXE_SUFFIX))
+            .is_file()
     );
 }
 
@@ -84,11 +84,8 @@ fn bin_already_exists(explicit: bool, rellocation: &str) {
             .run();
     }
 
-    assert_that(&paths::root().join("foo/Cargo.toml"), existing_file());
-    assert_that(
-        &paths::root().join("foo/src/lib.rs"),
-        is_not(existing_file()),
-    );
+    assert!(paths::root().join("foo/Cargo.toml").is_file());
+    assert!(!paths::root().join("foo/src/lib.rs").is_file());
 
     // Check that our file is not overwritten
     let mut new_content = Vec::new();
@@ -153,10 +150,7 @@ fn confused_by_multiple_lib_files() {
         )
         .run();
 
-    assert_that(
-        &paths::root().join("foo/Cargo.toml"),
-        is_not(existing_file()),
-    );
+    assert!(!paths::root().join("foo/Cargo.toml").is_file());
 }
 
 #[test]
@@ -191,10 +185,7 @@ cannot automatically generate Cargo.toml as the main target would be ambiguous
 ",
         ).run();
 
-    assert_that(
-        &paths::root().join("foo/Cargo.toml"),
-        is_not(existing_file()),
-    );
+    assert!(!paths::root().join("foo/Cargo.toml").is_file());
 }
 
 fn lib_already_exists(rellocation: &str) {
@@ -217,11 +208,8 @@ fn lib_already_exists(rellocation: &str) {
         .cwd(&path)
         .run();
 
-    assert_that(&paths::root().join("foo/Cargo.toml"), existing_file());
-    assert_that(
-        &paths::root().join("foo/src/main.rs"),
-        is_not(existing_file()),
-    );
+    assert!(paths::root().join("foo/Cargo.toml").is_file());
+    assert!(!paths::root().join("foo/src/main.rs").is_file());
 
     // Check that our file is not overwritten
     let mut new_content = Vec::new();
@@ -248,20 +236,20 @@ fn simple_git() {
         .env("USER", "foo")
         .run();
 
-    assert_that(&paths::root().join("Cargo.toml"), existing_file());
-    assert_that(&paths::root().join("src/lib.rs"), existing_file());
+    assert!(paths::root().join("Cargo.toml").is_file());
+    assert!(paths::root().join("src/lib.rs").is_file());
     assert!(paths::root().join(".git").is_dir());
-    assert_that(&paths::root().join(".gitignore"), existing_file());
+    assert!(paths::root().join(".gitignore").is_file());
 }
 
 #[test]
 fn auto_git() {
     cargo_process("init --lib").env("USER", "foo").run();
 
-    assert_that(&paths::root().join("Cargo.toml"), existing_file());
-    assert_that(&paths::root().join("src/lib.rs"), existing_file());
+    assert!(paths::root().join("Cargo.toml").is_file());
+    assert!(paths::root().join("src/lib.rs").is_file());
     assert!(paths::root().join(".git").is_dir());
-    assert_that(&paths::root().join(".gitignore"), existing_file());
+    assert!(paths::root().join(".gitignore").is_file());
 }
 
 #[test]
@@ -279,7 +267,7 @@ use --name to override crate name
 ",
         ).run();
 
-    assert_that(&foo.join("Cargo.toml"), is_not(existing_file()));
+    assert!(!foo.join("Cargo.toml").is_file());
 }
 
 #[test]
@@ -297,7 +285,7 @@ use --name to override crate name
 ",
         ).run();
 
-    assert_that(&test.join("Cargo.toml"), is_not(existing_file()));
+    assert!(!test.join("Cargo.toml").is_file());
 }
 
 #[test]
@@ -306,10 +294,10 @@ fn git_autodetect() {
 
     cargo_process("init --lib").env("USER", "foo").run();
 
-    assert_that(&paths::root().join("Cargo.toml"), existing_file());
-    assert_that(&paths::root().join("src/lib.rs"), existing_file());
+    assert!(paths::root().join("Cargo.toml").is_file());
+    assert!(paths::root().join("src/lib.rs").is_file());
     assert!(paths::root().join(".git").is_dir());
-    assert_that(&paths::root().join(".gitignore"), existing_file());
+    assert!(paths::root().join(".gitignore").is_file());
 }
 
 #[test]
@@ -318,10 +306,10 @@ fn mercurial_autodetect() {
 
     cargo_process("init --lib").env("USER", "foo").run();
 
-    assert_that(&paths::root().join("Cargo.toml"), existing_file());
-    assert_that(&paths::root().join("src/lib.rs"), existing_file());
+    assert!(paths::root().join("Cargo.toml").is_file());
+    assert!(paths::root().join("src/lib.rs").is_file());
     assert!(!paths::root().join(".git").is_dir());
-    assert_that(&paths::root().join(".hgignore"), existing_file());
+    assert!(paths::root().join(".hgignore").is_file());
 }
 
 #[test]
@@ -335,10 +323,10 @@ fn gitignore_appended_not_replaced() {
 
     cargo_process("init --lib").env("USER", "foo").run();
 
-    assert_that(&paths::root().join("Cargo.toml"), existing_file());
-    assert_that(&paths::root().join("src/lib.rs"), existing_file());
+    assert!(paths::root().join("Cargo.toml").is_file());
+    assert!(paths::root().join("src/lib.rs").is_file());
     assert!(paths::root().join(".git").is_dir());
-    assert_that(&paths::root().join(".gitignore"), existing_file());
+    assert!(paths::root().join(".gitignore").is_file());
 
     let mut contents = String::new();
     File::open(&paths::root().join(".gitignore"))
@@ -359,7 +347,7 @@ fn gitignore_added_newline_in_existing() {
 
     cargo_process("init --lib").env("USER", "foo").run();
 
-    assert_that(&paths::root().join(".gitignore"), existing_file());
+    assert!(paths::root().join(".gitignore").is_file());
 
     let mut contents = String::new();
     File::open(&paths::root().join(".gitignore"))
@@ -375,7 +363,7 @@ fn gitignore_no_newline_in_new() {
 
     cargo_process("init --lib").env("USER", "foo").run();
 
-    assert_that(&paths::root().join(".gitignore"), existing_file());
+    assert!(paths::root().join(".gitignore").is_file());
 
     let mut contents = String::new();
     File::open(&paths::root().join(".gitignore"))
@@ -396,7 +384,7 @@ fn mercurial_added_newline_in_existing() {
 
     cargo_process("init --lib").env("USER", "foo").run();
 
-    assert_that(&paths::root().join(".hgignore"), existing_file());
+    assert!(paths::root().join(".hgignore").is_file());
 
     let mut contents = String::new();
     File::open(&paths::root().join(".hgignore"))
@@ -412,7 +400,7 @@ fn mercurial_no_newline_in_new() {
 
     cargo_process("init --lib").env("USER", "foo").run();
 
-    assert_that(&paths::root().join(".hgignore"), existing_file());
+    assert!(paths::root().join(".hgignore").is_file());
 
     let mut contents = String::new();
     File::open(&paths::root().join(".hgignore"))
@@ -430,7 +418,7 @@ fn cargo_lock_gitignored_if_lib1() {
         .env("USER", "foo")
         .run();
 
-    assert_that(&paths::root().join(".gitignore"), existing_file());
+    assert!(paths::root().join(".gitignore").is_file());
 
     let mut contents = String::new();
     File::open(&paths::root().join(".gitignore"))
@@ -451,7 +439,7 @@ fn cargo_lock_gitignored_if_lib2() {
 
     cargo_process("init --vcs git").env("USER", "foo").run();
 
-    assert_that(&paths::root().join(".gitignore"), existing_file());
+    assert!(paths::root().join(".gitignore").is_file());
 
     let mut contents = String::new();
     File::open(&paths::root().join(".gitignore"))
@@ -469,7 +457,7 @@ fn cargo_lock_not_gitignored_if_bin1() {
         .env("USER", "foo")
         .run();
 
-    assert_that(&paths::root().join(".gitignore"), existing_file());
+    assert!(paths::root().join(".gitignore").is_file());
 
     let mut contents = String::new();
     File::open(&paths::root().join(".gitignore"))
@@ -490,7 +478,7 @@ fn cargo_lock_not_gitignored_if_bin2() {
 
     cargo_process("init --vcs git").env("USER", "foo").run();
 
-    assert_that(&paths::root().join(".gitignore"), existing_file());
+    assert!(paths::root().join(".gitignore").is_file());
 
     let mut contents = String::new();
     File::open(&paths::root().join(".gitignore"))
@@ -505,7 +493,7 @@ fn with_argument() {
     cargo_process("init foo --vcs none")
         .env("USER", "foo")
         .run();
-    assert_that(&paths::root().join("foo/Cargo.toml"), existing_file());
+    assert!(paths::root().join("foo/Cargo.toml").is_file());
 }
 
 #[test]

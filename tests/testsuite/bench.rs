@@ -1,4 +1,3 @@
-use support::hamcrest::{assert_that, existing_file};
 use support::is_nightly;
 use support::paths::CargoPathExt;
 use support::{basic_bin_manifest, basic_lib_manifest, basic_manifest, project};
@@ -33,7 +32,7 @@ fn cargo_bench_simple() {
         ).build();
 
     p.cargo("build").run();
-    assert_that(&p.bin("foo"), existing_file());
+    assert!(p.bin("foo").is_file());
 
     p.process(&p.bin("foo")).with_stdout("hello\n").run();
 
@@ -302,7 +301,7 @@ fn cargo_bench_failing_test() {
         ).build();
 
     p.cargo("build").run();
-    assert_that(&p.bin("foo"), existing_file());
+    assert!(p.bin("foo").is_file());
 
     p.process(&p.bin("foo")).with_stdout("hello\n").run();
 
