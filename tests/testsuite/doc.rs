@@ -3,7 +3,6 @@ use std::io::Read;
 use std::str;
 use support;
 
-use cargo::util::ProcessError;
 use glob::glob;
 use support::hamcrest::{assert_that, existing_dir, existing_file, is_not};
 use support::paths::CargoPathExt;
@@ -652,23 +651,11 @@ fn output_not_captured() {
         ",
         ).build();
 
-    let error = p.cargo("doc").exec_with_output().err().unwrap();
-    if let Ok(perr) = error.downcast::<ProcessError>() {
-        let output = perr.output.unwrap();
-        let stderr = str::from_utf8(&output.stderr).unwrap();
-
-        assert!(stderr.contains("☃"), "no snowman\n{}", stderr);
-        assert!(
-            stderr.contains("unknown start of token"),
-            "no message{}",
-            stderr
-        );
-    } else {
-        assert!(
-            false,
-            "an error kind other than ProcessErrorKind was encountered"
-        );
-    }
+    p.cargo("doc")
+        .with_status(101)
+        .with_stderr_contains("1 | ☃")
+        .with_stderr_contains(r"error: unknown start of token: \u{2603}")
+        .run();
 }
 
 #[test]
