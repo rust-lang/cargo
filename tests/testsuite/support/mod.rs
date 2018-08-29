@@ -126,7 +126,6 @@ use cargo::util::{CargoResult, ProcessBuilder, ProcessError, Rustc};
 use serde_json::{self, Value};
 use url::Url;
 
-use self::hamcrest as ham;
 use self::paths::CargoPathExt;
 
 macro_rules! t {
@@ -522,6 +521,8 @@ pub fn cargo_exe() -> PathBuf {
  *
  */
 
+pub type MatchResult = Result<(), String>;
+
 #[must_use]
 #[derive(Clone)]
 pub struct Execs {
@@ -744,7 +745,7 @@ impl Execs {
         }
     }
 
-    fn match_process(&self, process: &ProcessBuilder) -> ham::MatchResult {
+    fn match_process(&self, process: &ProcessBuilder) -> MatchResult {
         println!("running {}", process);
         let res = if self.stream_output {
             if env::var("CI").is_ok() {
@@ -779,13 +780,13 @@ impl Execs {
         }
     }
 
-    fn match_output(&self, actual: &Output) -> ham::MatchResult {
+    fn match_output(&self, actual: &Output) -> MatchResult {
         self.match_status(actual)
             .and(self.match_stdout(actual))
             .and(self.match_stderr(actual))
     }
 
-    fn match_status(&self, actual: &Output) -> ham::MatchResult {
+    fn match_status(&self, actual: &Output) -> MatchResult {
         match self.expect_exit_code {
             None => Ok(()),
             Some(code) if actual.status.code() == Some(code) => Ok(()),
@@ -798,7 +799,7 @@ impl Execs {
         }
     }
 
-    fn match_stdout(&self, actual: &Output) -> ham::MatchResult {
+    fn match_stdout(&self, actual: &Output) -> MatchResult {
         self.match_std(
             self.expect_stdout.as_ref(),
             &actual.stdout,
@@ -926,7 +927,7 @@ impl Execs {
         Ok(())
     }
 
-    fn match_stderr(&self, actual: &Output) -> ham::MatchResult {
+    fn match_stderr(&self, actual: &Output) -> MatchResult {
         self.match_std(
             self.expect_stderr.as_ref(),
             &actual.stderr,
@@ -943,7 +944,7 @@ impl Execs {
         description: &str,
         extra: &[u8],
         kind: MatchKind,
-    ) -> ham::MatchResult {
+    ) -> MatchResult {
         let out = match expected {
             Some(out) => out,
             None => return Ok(()),
@@ -1078,7 +1079,7 @@ impl Execs {
         }
     }
 
-    fn match_json(&self, expected: &Value, line: &str) -> ham::MatchResult {
+    fn match_json(&self, expected: &Value, line: &str) -> MatchResult {
         let actual = match line.parse() {
             Err(e) => return Err(format!("invalid json, {}:\n`{}`", e, line)),
             Ok(actual) => actual,
