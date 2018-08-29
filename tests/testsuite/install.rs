@@ -5,8 +5,7 @@ use support;
 use git2;
 use support::cross_compile;
 use support::git;
-use support::hamcrest::{assert_that, is_not};
-use support::install::{cargo_home, has_installed_exe};
+use support::install::{assert_has_installed_exe, assert_has_not_installed_exe, cargo_home};
 use support::paths;
 use support::registry::Package;
 use support::{basic_manifest, cargo_process, project};
@@ -37,14 +36,14 @@ warning: be sure to add `[..]` to your PATH to be able to run the installed bina
 ",
             home = cargo_home().display()
         )).run();
-    assert_that(cargo_home(), has_installed_exe("foo"));
+    assert_has_installed_exe(cargo_home(), "foo");
 
     cargo_process("uninstall foo")
         .with_stderr(&format!(
             "[REMOVING] {home}[..]bin[..]foo[..]",
             home = cargo_home().display()
         )).run();
-    assert_that(cargo_home(), is_not(has_installed_exe("foo")));
+    assert_has_not_installed_exe(cargo_home(), "foo");
 }
 
 #[test]
@@ -74,8 +73,8 @@ error: some crates failed to install
 ",
             home = cargo_home().display()
         )).run();
-    assert_that(cargo_home(), has_installed_exe("foo"));
-    assert_that(cargo_home(), has_installed_exe("bar"));
+    assert_has_installed_exe(cargo_home(), "foo");
+    assert_has_installed_exe(cargo_home(), "bar");
 
     cargo_process("uninstall foo bar")
         .with_stderr(&format!(
@@ -87,8 +86,8 @@ error: some crates failed to install
             home = cargo_home().display()
         )).run();
 
-    assert_that(cargo_home(), is_not(has_installed_exe("foo")));
-    assert_that(cargo_home(), is_not(has_installed_exe("bar")));
+    assert_has_not_installed_exe(cargo_home(), "foo");
+    assert_has_not_installed_exe(cargo_home(), "bar");
 }
 
 #[test]
@@ -112,7 +111,7 @@ warning: be sure to add `[..]` to your PATH to be able to run the installed bina
 ",
             home = cargo_home().display()
         )).run();
-    assert_that(cargo_home(), has_installed_exe("foo"));
+    assert_has_installed_exe(cargo_home(), "foo");
 }
 
 #[test]
@@ -126,7 +125,7 @@ fn installs_beta_version_by_explicit_name_from_git() {
         .arg(p.url().to_string())
         .arg("foo")
         .run();
-    assert_that(cargo_home(), has_installed_exe("foo"));
+    assert_has_installed_exe(cargo_home(), "foo");
 }
 
 #[test]
@@ -201,29 +200,29 @@ fn install_location_precedence() {
         .arg(&t1)
         .env("CARGO_INSTALL_ROOT", &t2)
         .run();
-    assert_that(&t1, has_installed_exe("foo"));
-    assert_that(&t2, is_not(has_installed_exe("foo")));
+    assert_has_installed_exe(&t1, "foo");
+    assert_has_not_installed_exe(&t2, "foo");
 
     println!("install CARGO_INSTALL_ROOT");
 
     cargo_process("install foo")
         .env("CARGO_INSTALL_ROOT", &t2)
         .run();
-    assert_that(&t2, has_installed_exe("foo"));
-    assert_that(&t3, is_not(has_installed_exe("foo")));
+    assert_has_installed_exe(&t2, "foo");
+    assert_has_not_installed_exe(&t3, "foo");
 
     println!("install install.root");
 
     cargo_process("install foo").run();
-    assert_that(&t3, has_installed_exe("foo"));
-    assert_that(&t4, is_not(has_installed_exe("foo")));
+    assert_has_installed_exe(&t3, "foo");
+    assert_has_not_installed_exe(&t4, "foo");
 
     fs::remove_file(root.join(".cargo/config")).unwrap();
 
     println!("install cargo home");
 
     cargo_process("install foo").run();
-    assert_that(&t4, has_installed_exe("foo"));
+    assert_has_installed_exe(&t4, "foo");
 }
 
 #[test]
@@ -231,7 +230,7 @@ fn install_path() {
     let p = project().file("src/main.rs", "fn main() {}").build();
 
     cargo_process("install --path").arg(p.root()).run();
-    assert_that(cargo_home(), has_installed_exe("foo"));
+    assert_has_installed_exe(cargo_home(), "foo");
     cargo_process("install --path .")
         .cwd(p.root())
         .with_status(101)
@@ -277,14 +276,14 @@ fn multiple_crates_select() {
         .arg(p.url().to_string())
         .arg("foo")
         .run();
-    assert_that(cargo_home(), has_installed_exe("foo"));
-    assert_that(cargo_home(), is_not(has_installed_exe("bar")));
+    assert_has_installed_exe(cargo_home(), "foo");
+    assert_has_not_installed_exe(cargo_home(), "bar");
 
     cargo_process("install --git")
         .arg(p.url().to_string())
         .arg("bar")
         .run();
-    assert_that(cargo_home(), has_installed_exe("bar"));
+    assert_has_installed_exe(cargo_home(), "bar");
 }
 
 #[test]
@@ -307,7 +306,7 @@ fn multiple_crates_auto_binaries() {
         .build();
 
     cargo_process("install --path").arg(p.root()).run();
-    assert_that(cargo_home(), has_installed_exe("foo"));
+    assert_has_installed_exe(cargo_home(), "foo");
 }
 
 #[test]
@@ -340,7 +339,7 @@ fn multiple_crates_auto_examples() {
         .arg(p.root())
         .arg("--example=foo")
         .run();
-    assert_that(cargo_home(), has_installed_exe("foo"));
+    assert_has_installed_exe(cargo_home(), "foo");
 }
 
 #[test]
@@ -399,7 +398,7 @@ fn examples() {
         .arg(p.root())
         .arg("--example=foo")
         .run();
-    assert_that(cargo_home(), has_installed_exe("foo"));
+    assert_has_installed_exe(cargo_home(), "foo");
 }
 
 #[test]
@@ -580,8 +579,8 @@ warning: be sure to add `[..]` to your PATH to be able to run the installed bina
 ",
             home = cargo_home().display()
         )).run();
-    assert_that(cargo_home(), has_installed_exe("foo"));
-    assert_that(cargo_home(), has_installed_exe("foo"));
+    assert_has_installed_exe(cargo_home(), "foo");
+    assert_has_installed_exe(cargo_home(), "foo");
 }
 
 #[test]
@@ -666,20 +665,20 @@ fn uninstall_piecemeal() {
         .build();
 
     cargo_process("install --path").arg(p.root()).run();
-    assert_that(cargo_home(), has_installed_exe("foo"));
-    assert_that(cargo_home(), has_installed_exe("bar"));
+    assert_has_installed_exe(cargo_home(), "foo");
+    assert_has_installed_exe(cargo_home(), "bar");
 
     cargo_process("uninstall foo --bin=bar")
         .with_stderr("[REMOVING] [..]bar[..]")
         .run();
 
-    assert_that(cargo_home(), has_installed_exe("foo"));
-    assert_that(cargo_home(), is_not(has_installed_exe("bar")));
+    assert_has_installed_exe(cargo_home(), "foo");
+    assert_has_not_installed_exe(cargo_home(), "bar");
 
     cargo_process("uninstall foo --bin=foo")
         .with_stderr("[REMOVING] [..]foo[..]")
         .run();
-    assert_that(cargo_home(), is_not(has_installed_exe("foo")));
+    assert_has_not_installed_exe(cargo_home(), "foo");
 
     cargo_process("uninstall foo")
         .with_status(101)
@@ -711,7 +710,7 @@ fn installs_from_cwd_by_default() {
              use `cargo install --path .` instead. \
              Use `cargo build` if you want to simply build the package.",
         ).run();
-    assert_that(cargo_home(), has_installed_exe("foo"));
+    assert_has_installed_exe(cargo_home(), "foo");
 }
 
 #[test]
@@ -746,7 +745,7 @@ fn installs_from_cwd_with_2018_warnings() {
              use `cargo install --path .` instead. \
              Use `cargo build` if you want to simply build the package.",
         ).run();
-    assert_that(cargo_home(), is_not(has_installed_exe("foo")));
+    assert_has_not_installed_exe(cargo_home(), "foo");
 }
 
 #[test]
@@ -763,7 +762,7 @@ warning: be sure to add `{home}/bin` to your PATH to be able to run the installe
             home = cargo_home().display(),
             url = p.url(),
         )).run();
-    assert_that(cargo_home(), has_installed_exe("foo"));
+    assert_has_installed_exe(cargo_home(), "foo");
 
     p.cargo("uninstall")
         .with_stdout("")
@@ -772,7 +771,7 @@ warning: be sure to add `{home}/bin` to your PATH to be able to run the installe
              [REMOVING] {home}/bin/foo[EXE]",
             home = cargo_home().display()
         )).run();
-    assert_that(cargo_home(), is_not(has_installed_exe("foo")));
+    assert_has_not_installed_exe(cargo_home(), "foo");
 }
 
 #[test]
@@ -826,7 +825,7 @@ warning: be sure to add `[..]` to your PATH to be able to run the installed bina
 
     assert!(p.build_dir().exists());
     assert!(p.release_bin("foo").exists());
-    assert_that(cargo_home(), has_installed_exe("foo"));
+    assert_has_installed_exe(cargo_home(), "foo");
 }
 
 #[test]
@@ -902,7 +901,7 @@ fn readonly_dir() {
     fs::set_permissions(dir, perms).unwrap();
 
     cargo_process("install foo").cwd(dir).run();
-    assert_that(cargo_home(), has_installed_exe("foo"));
+    assert_has_installed_exe(cargo_home(), "foo");
 }
 
 #[test]
@@ -998,7 +997,7 @@ fn install_target_native() {
     cargo_process("install foo --target")
         .arg(support::rustc_host())
         .run();
-    assert_that(cargo_home(), has_installed_exe("foo"));
+    assert_has_installed_exe(cargo_home(), "foo");
 }
 
 #[test]
@@ -1012,7 +1011,7 @@ fn install_target_foreign() {
     cargo_process("install foo --target")
         .arg(cross_compile::alternate())
         .run();
-    assert_that(cargo_home(), has_installed_exe("foo"));
+    assert_has_installed_exe(cargo_home(), "foo");
 }
 
 #[test]
@@ -1093,8 +1092,8 @@ error: some packages failed to uninstall
             home = cargo_home().display()
         )).run();
 
-    assert_that(cargo_home(), is_not(has_installed_exe("foo")));
-    assert_that(cargo_home(), is_not(has_installed_exe("bar")));
+    assert_has_not_installed_exe(cargo_home(), "foo");
+    assert_has_not_installed_exe(cargo_home(), "bar");
 }
 
 #[test]
