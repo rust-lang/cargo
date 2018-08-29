@@ -950,6 +950,16 @@ impl Execs {
         // Let's not deal with \r\n vs \n on windows...
         let actual = actual.replace("\r", "");
         let actual = actual.replace("\t", "<tab>");
+        let actual = match self.process_builder {
+            None => actual,
+            Some(ref p) => match p.get_cwd() {
+                None => actual,
+                Some(cwd) => actual
+                    .replace(&path2url(cwd).to_string(), "CWD")
+                    .replace(&cwd.display().to_string(), "CWD")
+                ,
+            },
+        };
 
         match kind {
             MatchKind::Exact => {

@@ -36,10 +36,9 @@ fn cargo_test_simple() {
     p.cargo("test")
         .with_stderr(format!(
             "\
-[COMPILING] foo v0.5.0 ({})
+[COMPILING] foo v0.5.0 (CWD)
 [FINISHED] dev [unoptimized + debuginfo] target(s) in [..]
 [RUNNING] target/debug/deps/foo-[..][EXE]",
-            p.url()
         )).with_stdout_contains("test test_hello ... ok")
         .run();
 }
@@ -82,9 +81,9 @@ fn cargo_test_release() {
     p.cargo("test -v --release")
         .with_stderr(format!(
             "\
-[COMPILING] bar v0.0.1 ({dir}/bar)
+[COMPILING] bar v0.0.1 (CWD/bar)
 [RUNNING] [..] -C opt-level=3 [..]
-[COMPILING] foo v0.1.0 ({dir})
+[COMPILING] foo v0.1.0 (CWD)
 [RUNNING] [..] -C opt-level=3 [..]
 [RUNNING] [..] -C opt-level=3 [..]
 [RUNNING] [..] -C opt-level=3 [..]
@@ -93,7 +92,6 @@ fn cargo_test_release() {
 [RUNNING] `[..]target/release/deps/test-[..][EXE]`
 [DOCTEST] foo
 [RUNNING] `rustdoc --test [..]lib.rs[..]`",
-            dir = p.url()
         )).with_stdout_contains_n("test test ... ok", 2)
         .with_stdout_contains("running 0 tests")
         .run();
@@ -152,11 +150,10 @@ fn cargo_test_verbose() {
     p.cargo("test -v hello")
         .with_stderr(format!(
             "\
-[COMPILING] foo v0.5.0 ({url})
+[COMPILING] foo v0.5.0 (CWD)
 [RUNNING] `rustc [..] src/main.rs [..]`
 [FINISHED] dev [unoptimized + debuginfo] target(s) in [..]
 [RUNNING] `[..]target/debug/deps/foo-[..][EXE] hello`",
-            url = p.url()
         )).with_stdout_contains("test test_hello ... ok")
         .run();
 }
@@ -221,11 +218,10 @@ fn cargo_test_failing_test_in_bin() {
     p.cargo("test")
         .with_stderr(format!(
             "\
-[COMPILING] foo v0.5.0 ({url})
+[COMPILING] foo v0.5.0 (CWD)
 [FINISHED] dev [unoptimized + debuginfo] target(s) in [..]
 [RUNNING] target/debug/deps/foo-[..][EXE]
 [ERROR] test failed, to rerun pass '--bin foo'",
-            url = p.url()
         )).with_stdout_contains(
             "
 running 1 test
@@ -266,12 +262,11 @@ fn cargo_test_failing_test_in_test() {
     p.cargo("test")
         .with_stderr(format!(
             "\
-[COMPILING] foo v0.5.0 ({url})
+[COMPILING] foo v0.5.0 (CWD)
 [FINISHED] dev [unoptimized + debuginfo] target(s) in [..]
 [RUNNING] target/debug/deps/foo-[..][EXE]
 [RUNNING] target/debug/deps/footest-[..][EXE]
 [ERROR] test failed, to rerun pass '--test footest'",
-            url = p.url()
         )).with_stdout_contains("running 0 tests")
         .with_stdout_contains(
             "\
@@ -303,11 +298,10 @@ fn cargo_test_failing_test_in_lib() {
     p.cargo("test")
         .with_stderr(format!(
             "\
-[COMPILING] foo v0.5.0 ({url})
+[COMPILING] foo v0.5.0 (CWD)
 [FINISHED] dev [unoptimized + debuginfo] target(s) in [..]
 [RUNNING] target/debug/deps/foo-[..][EXE]
 [ERROR] test failed, to rerun pass '--lib'",
-            url = p.url()
         )).with_stdout_contains(
             "\
 test test_hello ... FAILED
@@ -372,12 +366,11 @@ fn test_with_lib_dep() {
     p.cargo("test")
         .with_stderr(format!(
             "\
-[COMPILING] foo v0.0.1 ({})
+[COMPILING] foo v0.0.1 (CWD)
 [FINISHED] dev [unoptimized + debuginfo] target(s) in [..]
 [RUNNING] target/debug/deps/foo-[..][EXE]
 [RUNNING] target/debug/deps/baz-[..][EXE]
 [DOCTEST] foo",
-            p.url()
         )).with_stdout_contains("test lib_test ... ok")
         .with_stdout_contains("test bin_test ... ok")
         .with_stdout_contains_n("test [..] ... ok", 3)
@@ -424,11 +417,10 @@ fn test_with_deep_lib_dep() {
         .with_stderr(&format!(
             "\
 [COMPILING] bar v0.0.1 ([..])
-[COMPILING] foo v0.0.1 ({dir})
+[COMPILING] foo v0.0.1 (CWD)
 [FINISHED] dev [unoptimized + debuginfo] target(s) in [..]
 [RUNNING] target[..]
 [DOCTEST] foo",
-            dir = p.url()
         )).with_stdout_contains("test bar_test ... ok")
         .with_stdout_contains_n("test [..] ... ok", 2)
         .run();
@@ -470,12 +462,11 @@ fn external_test_explicit() {
     p.cargo("test")
         .with_stderr(format!(
             "\
-[COMPILING] foo v0.0.1 ({})
+[COMPILING] foo v0.0.1 (CWD)
 [FINISHED] dev [unoptimized + debuginfo] target(s) in [..]
 [RUNNING] target/debug/deps/foo-[..][EXE]
 [RUNNING] target/debug/deps/test-[..][EXE]
 [DOCTEST] foo",
-            p.url()
         )).with_stdout_contains("test internal_test ... ok")
         .with_stdout_contains("test external_test ... ok")
         .with_stdout_contains("running 0 tests")
@@ -527,12 +518,11 @@ fn external_test_implicit() {
     p.cargo("test")
         .with_stderr(format!(
             "\
-[COMPILING] foo v0.0.1 ({})
+[COMPILING] foo v0.0.1 (CWD)
 [FINISHED] dev [unoptimized + debuginfo] target(s) in [..]
 [RUNNING] target/debug/deps/foo-[..][EXE]
 [RUNNING] target/debug/deps/external-[..][EXE]
 [DOCTEST] foo",
-            p.url()
         )).with_stdout_contains("test internal_test ... ok")
         .with_stdout_contains("test external_test ... ok")
         .with_stdout_contains("running 0 tests")
@@ -566,11 +556,10 @@ fn pass_through_command_line() {
     p.cargo("test bar")
         .with_stderr(&format!(
             "\
-[COMPILING] foo v0.0.1 ({dir})
+[COMPILING] foo v0.0.1 (CWD)
 [FINISHED] dev [unoptimized + debuginfo] target(s) in [..]
 [RUNNING] target/debug/deps/foo-[..][EXE]
 [DOCTEST] foo",
-            dir = p.url()
         )).with_stdout_contains("test bar ... ok")
         .with_stdout_contains("running 0 tests")
         .run();
@@ -638,12 +627,11 @@ fn lib_bin_same_name() {
     p.cargo("test")
         .with_stderr(format!(
             "\
-[COMPILING] foo v0.0.1 ({})
+[COMPILING] foo v0.0.1 (CWD)
 [FINISHED] dev [unoptimized + debuginfo] target(s) in [..]
 [RUNNING] target/debug/deps/foo-[..][EXE]
 [RUNNING] target/debug/deps/foo-[..][EXE]
 [DOCTEST] foo",
-            p.url()
         )).with_stdout_contains_n("test [..] ... ok", 2)
         .with_stdout_contains("running 0 tests")
         .run();
@@ -677,12 +665,11 @@ fn lib_with_standard_name() {
     p.cargo("test")
         .with_stderr(&format!(
             "\
-[COMPILING] syntax v0.0.1 ({dir})
+[COMPILING] syntax v0.0.1 (CWD)
 [FINISHED] dev [unoptimized + debuginfo] target(s) in [..]
 [RUNNING] target/debug/deps/syntax-[..][EXE]
 [RUNNING] target/debug/deps/test-[..][EXE]
 [DOCTEST] syntax",
-            dir = p.url()
         )).with_stdout_contains("test foo_test ... ok")
         .with_stdout_contains("test test ... ok")
         .with_stdout_contains_n("test [..] ... ok", 3)
@@ -721,10 +708,9 @@ fn lib_with_standard_name2() {
     p.cargo("test")
         .with_stderr(&format!(
             "\
-[COMPILING] syntax v0.0.1 ({dir})
+[COMPILING] syntax v0.0.1 (CWD)
 [FINISHED] dev [unoptimized + debuginfo] target(s) in [..]
 [RUNNING] target/debug/deps/syntax-[..][EXE]",
-            dir = p.url()
         )).with_stdout_contains("test test ... ok")
         .run();
 }
@@ -760,10 +746,9 @@ fn lib_without_name() {
     p.cargo("test")
         .with_stderr(&format!(
             "\
-[COMPILING] syntax v0.0.1 ({dir})
+[COMPILING] syntax v0.0.1 (CWD)
 [FINISHED] dev [unoptimized + debuginfo] target(s) in [..]
 [RUNNING] target/debug/deps/syntax-[..][EXE]",
-            dir = p.url()
         )).with_stdout_contains("test test ... ok")
         .run();
 }
@@ -1049,12 +1034,11 @@ fn test_dylib() {
     p.cargo("test")
         .with_stderr(&format!(
             "\
-[COMPILING] bar v0.0.1 ({dir}/bar)
-[COMPILING] foo v0.0.1 ({dir})
+[COMPILING] bar v0.0.1 (CWD/bar)
+[COMPILING] foo v0.0.1 (CWD)
 [FINISHED] dev [unoptimized + debuginfo] target(s) in [..]
 [RUNNING] target/debug/deps/foo-[..][EXE]
 [RUNNING] target/debug/deps/test-[..][EXE]",
-            dir = p.url()
         )).with_stdout_contains_n("test foo ... ok", 2)
         .run();
 
@@ -1088,11 +1072,10 @@ fn test_twice_with_build_cmd() {
     p.cargo("test")
         .with_stderr(&format!(
             "\
-[COMPILING] foo v0.0.1 ({dir})
+[COMPILING] foo v0.0.1 (CWD)
 [FINISHED] dev [unoptimized + debuginfo] target(s) in [..]
 [RUNNING] target/debug/deps/foo-[..][EXE]
 [DOCTEST] foo",
-            dir = p.url()
         )).with_stdout_contains("test foo ... ok")
         .with_stdout_contains("running 0 tests")
         .run();
@@ -1115,11 +1098,10 @@ fn test_then_build() {
     p.cargo("test")
         .with_stderr(&format!(
             "\
-[COMPILING] foo v0.0.1 ({dir})
+[COMPILING] foo v0.0.1 (CWD)
 [FINISHED] dev [unoptimized + debuginfo] target(s) in [..]
 [RUNNING] target/debug/deps/foo-[..][EXE]
 [DOCTEST] foo",
-            dir = p.url()
         )).with_stdout_contains("test foo ... ok")
         .with_stdout_contains("running 0 tests")
         .run();
@@ -1136,10 +1118,9 @@ fn test_no_run() {
     p.cargo("test --no-run")
         .with_stderr(&format!(
             "\
-[COMPILING] foo v0.0.1 ({dir})
+[COMPILING] foo v0.0.1 (CWD)
 [FINISHED] dev [unoptimized + debuginfo] target(s) in [..]
 ",
-            dir = p.url()
         )).run();
 }
 
@@ -1167,13 +1148,12 @@ fn test_run_specific_bin_target() {
         .build();
 
     prj.cargo("test --bin bin2")
-        .with_stderr(format!(
+        .with_stderr(
             "\
-[COMPILING] foo v0.0.1 ({dir})
+[COMPILING] foo v0.0.1 (CWD)
 [FINISHED] dev [unoptimized + debuginfo] target(s) in [..]
 [RUNNING] target/debug/deps/bin2-[..][EXE]",
-            dir = prj.url()
-        )).with_stdout_contains("test test2 ... ok")
+        ).with_stdout_contains("test test2 ... ok")
         .run();
 }
 
@@ -1205,13 +1185,12 @@ fn test_run_implicit_bin_target() {
         ).build();
 
     prj.cargo("test --bins")
-        .with_stderr(format!(
+        .with_stderr(
             "\
-[COMPILING] foo v0.0.1 ({dir})
+[COMPILING] foo v0.0.1 (CWD)
 [FINISHED] dev [unoptimized + debuginfo] target(s) in [..]
 [RUNNING] target/debug/deps/mybin-[..][EXE]",
-            dir = prj.url()
-        )).with_stdout_contains("test test_in_bin ... ok")
+        ).with_stdout_contains("test test_in_bin ... ok")
         .run();
 }
 
@@ -1225,13 +1204,12 @@ fn test_run_specific_test_target() {
         .build();
 
     prj.cargo("test --test b")
-        .with_stderr(format!(
+        .with_stderr(
             "\
-[COMPILING] foo v0.0.1 ({dir})
+[COMPILING] foo v0.0.1 (CWD)
 [FINISHED] dev [unoptimized + debuginfo] target(s) in [..]
 [RUNNING] target/debug/deps/b-[..][EXE]",
-            dir = prj.url()
-        )).with_stdout_contains("test test_b ... ok")
+        ).with_stdout_contains("test test_b ... ok")
         .run();
 }
 
@@ -1262,14 +1240,13 @@ fn test_run_implicit_test_target() {
         ).build();
 
     prj.cargo("test --tests")
-        .with_stderr(format!(
+        .with_stderr(
             "\
-[COMPILING] foo v0.0.1 ({dir})
+[COMPILING] foo v0.0.1 (CWD)
 [FINISHED] dev [unoptimized + debuginfo] target(s) in [..]
 [RUNNING] target/debug/deps/mybin-[..][EXE]
 [RUNNING] target/debug/deps/mytest-[..][EXE]",
-            dir = prj.url()
-        )).with_stdout_contains("test test_in_test ... ok")
+        ).with_stdout_contains("test test_in_test ... ok")
         .run();
 }
 
@@ -1300,14 +1277,13 @@ fn test_run_implicit_bench_target() {
         ).build();
 
     prj.cargo("test --benches")
-        .with_stderr(format!(
+        .with_stderr(
             "\
-[COMPILING] foo v0.0.1 ({dir})
+[COMPILING] foo v0.0.1 (CWD)
 [FINISHED] dev [unoptimized + debuginfo] target(s) in [..]
 [RUNNING] target/debug/deps/mybin-[..][EXE]
 [RUNNING] target/debug/deps/mybench-[..][EXE]",
-            dir = prj.url()
-        )).with_stdout_contains("test test_in_bench ... ok")
+        ).with_stdout_contains("test test_in_bench ... ok")
         .run();
 }
 
@@ -1408,11 +1384,10 @@ fn test_no_harness() {
     p.cargo("test -- --nocapture")
         .with_stderr(&format!(
             "\
-[COMPILING] foo v0.0.1 ({dir})
+[COMPILING] foo v0.0.1 (CWD)
 [FINISHED] dev [unoptimized + debuginfo] target(s) in [..]
 [RUNNING] target/debug/deps/bar-[..][EXE]
 ",
-            dir = p.url()
         )).run();
 }
 
@@ -1476,11 +1451,10 @@ fn selective_testing() {
     p.cargo("test -p d1")
         .with_stderr(&format!(
             "\
-[COMPILING] d1 v0.0.1 ({dir}/d1)
+[COMPILING] d1 v0.0.1 (CWD/d1)
 [FINISHED] dev [unoptimized + debuginfo] target(s) in [..]
 [RUNNING] target/debug/deps/d1-[..][EXE]
 [RUNNING] target/debug/deps/d1-[..][EXE]",
-            dir = p.url()
         )).with_stdout_contains_n("running 0 tests", 2)
         .run();
 
@@ -1488,11 +1462,10 @@ fn selective_testing() {
     p.cargo("test -p d2")
         .with_stderr(&format!(
             "\
-[COMPILING] d2 v0.0.1 ({dir}/d2)
+[COMPILING] d2 v0.0.1 (CWD/d2)
 [FINISHED] dev [unoptimized + debuginfo] target(s) in [..]
 [RUNNING] target/debug/deps/d2-[..][EXE]
 [RUNNING] target/debug/deps/d2-[..][EXE]",
-            dir = p.url()
         )).with_stdout_contains_n("running 0 tests", 2)
         .run();
 
@@ -1500,10 +1473,9 @@ fn selective_testing() {
     p.cargo("test")
         .with_stderr(&format!(
             "\
-[COMPILING] foo v0.0.1 ({dir})
+[COMPILING] foo v0.0.1 (CWD)
 [FINISHED] dev [unoptimized + debuginfo] target(s) in [..]
 [RUNNING] target/debug/deps/foo-[..][EXE]",
-            dir = p.url()
         )).with_stdout_contains("running 0 tests")
         .run();
 }
@@ -1669,11 +1641,10 @@ fn selective_testing_with_docs() {
     p.cargo("test -p d1")
         .with_stderr(&format!(
             "\
-[COMPILING] d1 v0.0.1 ({dir}/d1)
+[COMPILING] d1 v0.0.1 (CWD/d1)
 [FINISHED] dev [unoptimized + debuginfo] target(s) in [..]
 [RUNNING] target/debug/deps/d1[..][EXE]
 [DOCTEST] d1",
-            dir = p.url()
         )).with_stdout_contains_n("running 0 tests", 2)
         .run();
 }
@@ -1688,12 +1659,11 @@ fn example_bin_same_name() {
     p.cargo("test --no-run -v")
         .with_stderr(&format!(
             "\
-[COMPILING] foo v0.0.1 ({dir})
+[COMPILING] foo v0.0.1 (CWD)
 [RUNNING] `rustc [..]`
 [RUNNING] `rustc [..]`
 [FINISHED] dev [unoptimized + debuginfo] target(s) in [..]
 ",
-            dir = p.url()
         )).run();
 
     assert!(!p.bin("foo").is_file());

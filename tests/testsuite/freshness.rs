@@ -4,7 +4,7 @@ use std::io::prelude::*;
 use support::paths::CargoPathExt;
 use support::registry::Package;
 use support::sleep_ms;
-use support::{basic_manifest, path2url, project};
+use support::{basic_manifest, project};
 
 #[test]
 fn modifying_and_moving() {
@@ -16,10 +16,9 @@ fn modifying_and_moving() {
     p.cargo("build")
         .with_stderr(format!(
             "\
-[COMPILING] foo v0.0.1 ({dir})
+[COMPILING] foo v0.0.1 (CWD)
 [FINISHED] dev [unoptimized + debuginfo] target(s) in [..]
 ",
-            dir = path2url(p.root())
         )).run();
 
     p.cargo("build").with_stdout("").run();
@@ -33,10 +32,9 @@ fn modifying_and_moving() {
     p.cargo("build")
         .with_stderr(format!(
             "\
-[COMPILING] foo v0.0.1 ({dir})
+[COMPILING] foo v0.0.1 (CWD)
 [FINISHED] dev [unoptimized + debuginfo] target(s) in [..]
 ",
-            dir = path2url(p.root())
         )).run();
 
     fs::rename(&p.root().join("src/a.rs"), &p.root().join("src/b.rs")).unwrap();
@@ -56,10 +54,9 @@ fn modify_only_some_files() {
     p.cargo("build")
         .with_stderr(format!(
             "\
-[COMPILING] foo v0.0.1 ({dir})
+[COMPILING] foo v0.0.1 (CWD)
 [FINISHED] dev [unoptimized + debuginfo] target(s) in [..]
 ",
-            dir = path2url(p.root())
         )).run();
     p.cargo("test").run();
     sleep_ms(1000);
@@ -83,10 +80,9 @@ fn modify_only_some_files() {
     p.cargo("build")
         .with_stderr(format!(
             "\
-[COMPILING] foo v0.0.1 ({dir})
+[COMPILING] foo v0.0.1 (CWD)
 [FINISHED] dev [unoptimized + debuginfo] target(s) in [..]
 ",
-            dir = path2url(p.root())
         )).run();
     assert!(p.bin("foo").is_file());
 }
@@ -648,7 +644,7 @@ fn same_build_dir_cached_packages() {
 [COMPILING] d v0.0.1 ({dir}/d)
 [COMPILING] c v0.0.1 ({dir}/c)
 [COMPILING] b v0.0.1 ({dir}/b)
-[COMPILING] a1 v0.0.1 ({dir}/a1)
+[COMPILING] a1 v0.0.1 (CWD)
 [FINISHED] dev [unoptimized + debuginfo] target(s) in [..]
 ",
             dir = p.url()
@@ -657,10 +653,9 @@ fn same_build_dir_cached_packages() {
         .cwd(p.root().join("a2"))
         .with_stderr(&format!(
             "\
-[COMPILING] a2 v0.0.1 ({dir}/a2)
+[COMPILING] a2 v0.0.1 (CWD)
 [FINISHED] dev [unoptimized + debuginfo] target(s) in [..]
 ",
-            dir = p.url()
         )).run();
 }
 
@@ -753,11 +748,10 @@ fn rebuild_if_environment_changes() {
         .with_stdout("old desc")
         .with_stderr(&format!(
             "\
-[COMPILING] foo v0.0.1 ({dir})
+[COMPILING] foo v0.0.1 (CWD)
 [FINISHED] dev [unoptimized + debuginfo] target(s) in [..]
 [RUNNING] `target/debug/foo[EXE]`
 ",
-            dir = p.url()
         )).run();
 
     File::create(&p.root().join("Cargo.toml"))
@@ -776,11 +770,10 @@ fn rebuild_if_environment_changes() {
         .with_stdout("new desc")
         .with_stderr(&format!(
             "\
-[COMPILING] foo v0.0.1 ({dir})
+[COMPILING] foo v0.0.1 (CWD)
 [FINISHED] dev [unoptimized + debuginfo] target(s) in [..]
 [RUNNING] `target/debug/foo[EXE]`
 ",
-            dir = p.url()
         )).run();
 }
 

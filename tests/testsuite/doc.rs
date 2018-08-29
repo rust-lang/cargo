@@ -6,7 +6,7 @@ use support;
 use glob::glob;
 use support::paths::CargoPathExt;
 use support::registry::Package;
-use support::{basic_lib_manifest, basic_manifest, git, path2url, project};
+use support::{basic_lib_manifest, basic_manifest, git, project};
 use support::{is_nightly, rustc_host};
 
 #[test]
@@ -28,11 +28,10 @@ fn simple() {
     p.cargo("doc")
         .with_stderr(&format!(
             "\
-[..] foo v0.0.1 ({dir})
-[..] foo v0.0.1 ({dir})
+[..] foo v0.0.1 (CWD)
+[..] foo v0.0.1 (CWD)
 [FINISHED] dev [unoptimized + debuginfo] target(s) in [..]
 ",
-            dir = path2url(p.root())
         )).run();
     assert!(p.root().join("target/doc").is_dir());
     assert!(p.root().join("target/doc/foo/index.html").is_file());
@@ -66,10 +65,9 @@ fn doc_twice() {
     p.cargo("doc")
         .with_stderr(&format!(
             "\
-[DOCUMENTING] foo v0.0.1 ({dir})
+[DOCUMENTING] foo v0.0.1 (CWD)
 [FINISHED] dev [unoptimized + debuginfo] target(s) in [..]
 ",
-            dir = path2url(p.root())
         )).run();
 
     p.cargo("doc").with_stdout("").run();
@@ -97,12 +95,11 @@ fn doc_deps() {
     p.cargo("doc")
         .with_stderr(&format!(
             "\
-[..] bar v0.0.1 ({dir}/bar)
-[..] bar v0.0.1 ({dir}/bar)
-[DOCUMENTING] foo v0.0.1 ({dir})
+[..] bar v0.0.1 (CWD/bar)
+[..] bar v0.0.1 (CWD/bar)
+[DOCUMENTING] foo v0.0.1 (CWD)
 [FINISHED] dev [unoptimized + debuginfo] target(s) in [..]
 ",
-            dir = path2url(p.root())
         )).run();
 
     assert!(p.root().join("target/doc").is_dir());
@@ -159,11 +156,10 @@ fn doc_no_deps() {
     p.cargo("doc --no-deps")
         .with_stderr(&format!(
             "\
-[CHECKING] bar v0.0.1 ({dir}/bar)
-[DOCUMENTING] foo v0.0.1 ({dir})
+[CHECKING] bar v0.0.1 (CWD/bar)
+[DOCUMENTING] foo v0.0.1 (CWD)
 [FINISHED] dev [unoptimized + debuginfo] target(s) in [..]
 ",
-            dir = path2url(p.root())
         )).run();
 
     assert!(p.root().join("target/doc").is_dir());
@@ -268,11 +264,9 @@ fn doc_multiple_targets_same_name() {
         ).file("bar/src/lib.rs", "")
         .build();
 
-    let root = path2url(p.root());
-
     p.cargo("doc --all")
-        .with_stderr_contains(&format!("[DOCUMENTING] foo v0.1.0 ({}/foo)", root))
-        .with_stderr_contains(&format!("[DOCUMENTING] bar v0.1.0 ({}/bar)", root))
+        .with_stderr_contains("[DOCUMENTING] foo v0.1.0 (CWD/foo)")
+        .with_stderr_contains("[DOCUMENTING] bar v0.1.0 (CWD/bar)")
         .with_stderr_contains("[FINISHED] dev [unoptimized + debuginfo] target(s) in [..]")
         .run();
     assert!(p.root().join("target/doc").is_dir());
@@ -377,10 +371,9 @@ fn doc_lib_bin_same_name_documents_lib() {
     p.cargo("doc")
         .with_stderr(&format!(
             "\
-[DOCUMENTING] foo v0.0.1 ({dir})
+[DOCUMENTING] foo v0.0.1 (CWD)
 [FINISHED] dev [unoptimized + debuginfo] target(s) in [..]
 ",
-            dir = path2url(p.root())
         )).run();
     assert!(p.root().join("target/doc").is_dir());
     let doc_file = p.root().join("target/doc/foo/index.html");
@@ -417,10 +410,9 @@ fn doc_lib_bin_same_name_documents_lib_when_requested() {
     p.cargo("doc --lib")
         .with_stderr(&format!(
             "\
-[DOCUMENTING] foo v0.0.1 ({dir})
+[DOCUMENTING] foo v0.0.1 (CWD)
 [FINISHED] dev [unoptimized + debuginfo] target(s) in [..]
 ",
-            dir = path2url(p.root())
         )).run();
     assert!(p.root().join("target/doc").is_dir());
     let doc_file = p.root().join("target/doc/foo/index.html");
@@ -457,11 +449,10 @@ fn doc_lib_bin_same_name_documents_named_bin_when_requested() {
     p.cargo("doc --bin foo")
         .with_stderr(&format!(
             "\
-[CHECKING] foo v0.0.1 ({dir})
-[DOCUMENTING] foo v0.0.1 ({dir})
+[CHECKING] foo v0.0.1 (CWD)
+[DOCUMENTING] foo v0.0.1 (CWD)
 [FINISHED] dev [unoptimized + debuginfo] target(s) in [..]
 ",
-            dir = path2url(p.root())
         )).run();
     assert!(p.root().join("target/doc").is_dir());
     let doc_file = p.root().join("target/doc/foo/index.html");
@@ -498,11 +489,10 @@ fn doc_lib_bin_same_name_documents_bins_when_requested() {
     p.cargo("doc --bins")
         .with_stderr(&format!(
             "\
-[CHECKING] foo v0.0.1 ({dir})
-[DOCUMENTING] foo v0.0.1 ({dir})
+[CHECKING] foo v0.0.1 (CWD)
+[DOCUMENTING] foo v0.0.1 (CWD)
 [FINISHED] dev [unoptimized + debuginfo] target(s) in [..]
 ",
-            dir = path2url(p.root())
         )).run();
     assert!(p.root().join("target/doc").is_dir());
     let doc_file = p.root().join("target/doc/foo/index.html");
@@ -550,9 +540,9 @@ fn doc_dash_p() {
     p.cargo("doc -p a")
         .with_stderr(
             "\
-[..] b v0.0.1 (file://[..])
-[..] b v0.0.1 (file://[..])
-[DOCUMENTING] a v0.0.1 (file://[..])
+[..] b v0.0.1 (CWD/b)
+[..] b v0.0.1 (CWD/b)
+[DOCUMENTING] a v0.0.1 (CWD/a)
 [FINISHED] dev [unoptimized + debuginfo] target(s) in [..]
 ",
         ).run();
@@ -1038,7 +1028,7 @@ fn doc_workspace_open_different_library_and_package_names() {
     p.cargo("doc --open")
         .env("BROWSER", "echo")
         .with_stderr_contains("[..] Documenting foo v0.1.0 ([..])")
-        .with_stderr_contains("[..] Opening [..]/foo/target/doc/foolib/index.html")
+        .with_stderr_contains("[..] CWD/target/doc/foolib/index.html")
         .run();
 }
 
@@ -1068,7 +1058,7 @@ fn doc_workspace_open_binary() {
     p.cargo("doc --open")
         .env("BROWSER", "echo")
         .with_stderr_contains("[..] Documenting foo v0.1.0 ([..])")
-        .with_stderr_contains("[..] Opening [..]/foo/target/doc/foobin/index.html")
+        .with_stderr_contains("[..] Opening CWD/target/doc/foobin/index.html")
         .run();
 }
 
@@ -1101,7 +1091,7 @@ fn doc_workspace_open_binary_and_library() {
     p.cargo("doc --open")
         .env("BROWSER", "echo")
         .with_stderr_contains("[..] Documenting foo v0.1.0 ([..])")
-        .with_stderr_contains("[..] Opening [..]/foo/target/doc/foolib/index.html")
+        .with_stderr_contains("[..] Opening CWD/target/doc/foolib/index.html")
         .run();
 }
 

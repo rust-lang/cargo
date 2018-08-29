@@ -1,22 +1,4 @@
-use support::{basic_bin_manifest, basic_manifest, project, Project};
-
-fn verbose_output_for_lib(p: &Project) -> String {
-    format!(
-        "\
-[COMPILING] {name} v{version} ({url})
-[RUNNING] `rustc --crate-name {name} src/lib.rs --crate-type lib \
-        --emit=dep-info,link -C debuginfo=2 \
-        -C metadata=[..] \
-        --out-dir [..] \
-        -L dependency={dir}/target/debug/deps`
-[FINISHED] dev [unoptimized + debuginfo] target(s) in [..]
-",
-        dir = p.root().display(),
-        url = p.url(),
-        name = "foo",
-        version = "0.0.1"
-    )
-}
+use support::{basic_bin_manifest, basic_manifest, project};
 
 #[test]
 fn build_lib_only() {
@@ -26,8 +8,16 @@ fn build_lib_only() {
         .build();
 
     p.cargo("build --lib -v")
-        .with_stderr(verbose_output_for_lib(&p))
-        .run();
+        .with_stderr(
+            "\
+[COMPILING] foo v0.0.1 (CWD)
+[RUNNING] `rustc --crate-name foo src/lib.rs --crate-type lib \
+        --emit=dep-info,link -C debuginfo=2 \
+        -C metadata=[..] \
+        --out-dir [..] \
+        -L dependency=CWD/target/debug/deps`
+[FINISHED] dev [unoptimized + debuginfo] target(s) in [..]",
+        ).run();
 }
 
 #[test]

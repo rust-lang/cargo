@@ -1,6 +1,6 @@
 use cargo::util::paths::dylib_path_envvar;
 use support;
-use support::{basic_bin_manifest, basic_lib_manifest, path2url, project, Project};
+use support::{basic_bin_manifest, basic_lib_manifest, project, Project};
 
 #[test]
 fn simple() {
@@ -11,10 +11,9 @@ fn simple() {
     p.cargo("run")
         .with_stderr(&format!(
             "\
-[COMPILING] foo v0.0.1 ({dir})
+[COMPILING] foo v0.0.1 (CWD)
 [FINISHED] dev [unoptimized + debuginfo] target(s) in [..]
 [RUNNING] `target/debug/foo[EXE]`",
-            dir = path2url(p.root())
         )).with_stdout("hello")
         .run();
     assert!(p.bin("foo").is_file());
@@ -82,7 +81,7 @@ fn exit_code() {
 
     let mut output = String::from(
         "\
-[COMPILING] foo v0.0.1 (file[..])
+[COMPILING] foo v0.0.1 (CWD)
 [FINISHED] dev [unoptimized + debuginfo] target(s) in [..]
 [RUNNING] `target[..]`
 ",
@@ -103,7 +102,7 @@ fn exit_code_verbose() {
 
     let mut output = String::from(
         "\
-[COMPILING] foo v0.0.1 (file[..])
+[COMPILING] foo v0.0.1 (CWD)
 [RUNNING] `rustc [..]`
 [FINISHED] dev [unoptimized + debuginfo] target(s) in [..]
 [RUNNING] `target[..]`
@@ -182,12 +181,11 @@ fn specify_name() {
     p.cargo("run --bin a -v")
         .with_stderr(&format!(
             "\
-[COMPILING] foo v0.0.1 ({dir})
+[COMPILING] foo v0.0.1 (CWD)
 [RUNNING] `rustc [..] src/lib.rs [..]`
 [RUNNING] `rustc [..] src/bin/a.rs [..]`
 [FINISHED] dev [unoptimized + debuginfo] target(s) in [..]
 [RUNNING] `target/debug/a[EXE]`",
-            dir = path2url(p.root())
         )).with_stdout("hello a.rs")
         .run();
 
@@ -320,10 +318,9 @@ fn run_example() {
     p.cargo("run --example a")
         .with_stderr(&format!(
             "\
-[COMPILING] foo v0.0.1 ({dir})
+[COMPILING] foo v0.0.1 (CWD)
 [FINISHED] dev [unoptimized + debuginfo] target(s) in [..]
 [RUNNING] `target/debug/examples/a[EXE]`",
-            dir = path2url(p.root())
         )).with_stdout("example")
         .run();
 }
@@ -433,10 +430,9 @@ fn run_example_autodiscover_2015_with_autoexamples_enabled() {
         .masquerade_as_nightly_cargo()
         .with_stderr(&format!(
             "\
-[COMPILING] foo v0.0.1 ({dir})
+[COMPILING] foo v0.0.1 (CWD)
 [FINISHED] dev [unoptimized + debuginfo] target(s) in [..]
 [RUNNING] `target/debug/examples/a[EXE]`",
-            dir = path2url(p.root())
         )).with_stdout("example")
         .run();
 }
@@ -466,10 +462,9 @@ fn run_example_autodiscover_2018() {
         .masquerade_as_nightly_cargo()
         .with_stderr(&format!(
             "\
-[COMPILING] foo v0.0.1 ({dir})
+[COMPILING] foo v0.0.1 (CWD)
 [FINISHED] dev [unoptimized + debuginfo] target(s) in [..]
 [RUNNING] `target/debug/examples/a[EXE]`",
-            dir = path2url(p.root())
         )).with_stdout("example")
         .run();
 }
@@ -561,10 +556,9 @@ fn one_bin_multiple_examples() {
     p.cargo("run")
         .with_stderr(&format!(
             "\
-[COMPILING] foo v0.0.1 ({dir})
+[COMPILING] foo v0.0.1 (CWD)
 [FINISHED] dev [unoptimized + debuginfo] target(s) in [..]
 [RUNNING] `target/debug/main[EXE]`",
-            dir = path2url(p.root())
         )).with_stdout("hello main.rs")
         .run();
 }
@@ -615,26 +609,24 @@ fn example_with_release_flag() {
     p.cargo("run -v --release --example a")
         .with_stderr(&format!(
             "\
-[COMPILING] bar v0.5.0 ({url}/bar)
+[COMPILING] bar v0.5.0 (CWD/bar)
 [RUNNING] `rustc --crate-name bar bar/src/bar.rs --crate-type lib \
         --emit=dep-info,link \
         -C opt-level=3 \
         -C metadata=[..] \
-        --out-dir {dir}/target/release/deps \
-        -L dependency={dir}/target/release/deps`
-[COMPILING] foo v0.0.1 ({url})
+        --out-dir CWD/target/release/deps \
+        -L dependency=CWD/target/release/deps`
+[COMPILING] foo v0.0.1 (CWD)
 [RUNNING] `rustc --crate-name a examples/a.rs --crate-type bin \
         --emit=dep-info,link \
         -C opt-level=3 \
         -C metadata=[..] \
-        --out-dir {dir}/target/release/examples \
-        -L dependency={dir}/target/release/deps \
-         --extern bar={dir}/target/release/deps/libbar-[..].rlib`
+        --out-dir CWD/target/release/examples \
+        -L dependency=CWD/target/release/deps \
+         --extern bar=CWD/target/release/deps/libbar-[..].rlib`
 [FINISHED] release [optimized] target(s) in [..]
 [RUNNING] `target/release/examples/a[EXE]`
 ",
-            dir = p.root().display(),
-            url = path2url(p.root()),
         )).with_stdout(
             "\
 fast1
@@ -644,26 +636,24 @@ fast2",
     p.cargo("run -v --example a")
         .with_stderr(&format!(
             "\
-[COMPILING] bar v0.5.0 ({url}/bar)
+[COMPILING] bar v0.5.0 (CWD/bar)
 [RUNNING] `rustc --crate-name bar bar/src/bar.rs --crate-type lib \
         --emit=dep-info,link \
         -C debuginfo=2 \
         -C metadata=[..] \
-        --out-dir {dir}/target/debug/deps \
-        -L dependency={dir}/target/debug/deps`
-[COMPILING] foo v0.0.1 ({url})
+        --out-dir CWD/target/debug/deps \
+        -L dependency=CWD/target/debug/deps`
+[COMPILING] foo v0.0.1 (CWD)
 [RUNNING] `rustc --crate-name a examples/a.rs --crate-type bin \
         --emit=dep-info,link \
         -C debuginfo=2 \
         -C metadata=[..] \
-        --out-dir {dir}/target/debug/examples \
-        -L dependency={dir}/target/debug/deps \
-         --extern bar={dir}/target/debug/deps/libbar-[..].rlib`
+        --out-dir CWD/target/debug/examples \
+        -L dependency=CWD/target/debug/deps \
+         --extern bar=CWD/target/debug/deps/libbar-[..].rlib`
 [FINISHED] dev [unoptimized + debuginfo] target(s) in [..]
 [RUNNING] `target/debug/examples/a[EXE]`
 ",
-            dir = p.root().display(),
-            url = path2url(p.root()),
         )).with_stdout(
             "\
 slow1
@@ -719,11 +709,10 @@ fn release_works() {
     p.cargo("run --release")
         .with_stderr(&format!(
             "\
-[COMPILING] foo v0.0.1 ({dir})
+[COMPILING] foo v0.0.1 (CWD)
 [FINISHED] release [optimized] target(s) in [..]
 [RUNNING] `target/release/foo[EXE]`
 ",
-            dir = path2url(p.root()),
         )).run();
     assert!(p.release_bin("foo").is_file());
 }

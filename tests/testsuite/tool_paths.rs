@@ -1,5 +1,5 @@
 use support::rustc_host;
-use support::{basic_lib_manifest, path2url, project};
+use support::{basic_lib_manifest, project};
 
 #[test]
 fn pathless_tools() {
@@ -23,11 +23,10 @@ fn pathless_tools() {
     foo.cargo("build --verbose")
         .with_stderr(&format!(
             "\
-[COMPILING] foo v0.5.0 ({url})
+[COMPILING] foo v0.5.0 (CWD)
 [RUNNING] `rustc [..] -C ar=nonexistent-ar -C linker=nonexistent-linker [..]`
 [FINISHED] dev [unoptimized + debuginfo] target(s) in [..]
 ",
-            url = foo.url()
         )).run();
 }
 
@@ -65,11 +64,10 @@ fn absolute_tools() {
 
     foo.cargo("build --verbose").with_stderr(&format!(
             "\
-[COMPILING] foo v0.5.0 ({url})
+[COMPILING] foo v0.5.0 (CWD)
 [RUNNING] `rustc [..] -C ar={root}bogus/nonexistent-ar -C linker={root}bogus/nonexistent-linker [..]`
 [FINISHED] dev [unoptimized + debuginfo] target(s) in [..]
 ",
-            url = foo.url(),
             root = root,
         )).run();
 }
@@ -105,17 +103,14 @@ fn relative_tools() {
             ),
         ).build();
 
-    let foo_path = p.root().join("bar");
-    let foo_url = path2url(&foo_path);
     let prefix = p.root().into_os_string().into_string().unwrap();
 
-    p.cargo("build --verbose").cwd(foo_path).with_stderr(&format!(
+    p.cargo("build --verbose").cwd(p.root().join("bar")).with_stderr(&format!(
             "\
-[COMPILING] bar v0.5.0 ({url})
+[COMPILING] bar v0.5.0 (CWD)
 [RUNNING] `rustc [..] -C ar={prefix}/./nonexistent-ar -C linker={prefix}/./tools/nonexistent-linker [..]`
 [FINISHED] dev [unoptimized + debuginfo] target(s) in [..]
 ",
-            url = foo_url,
             prefix = prefix,
         )).run();
 }
@@ -143,35 +138,32 @@ fn custom_runner() {
         .with_status(101)
         .with_stderr_contains(&format!(
             "\
-[COMPILING] foo v0.0.1 ({url})
+[COMPILING] foo v0.0.1 (CWD)
 [FINISHED] dev [unoptimized + debuginfo] target(s) in [..]
 [RUNNING] `nonexistent-runner -r target/debug/foo[EXE] --param`
 ",
-            url = p.url()
         )).run();
 
     p.cargo("test --test test --verbose -- --param")
         .with_status(101)
         .with_stderr_contains(&format!(
             "\
-[COMPILING] foo v0.0.1 ({url})
+[COMPILING] foo v0.0.1 (CWD)
 [RUNNING] `rustc [..]`
 [FINISHED] dev [unoptimized + debuginfo] target(s) in [..]
 [RUNNING] `nonexistent-runner -r [..]/target/debug/deps/test-[..][EXE] --param`
 ",
-            url = p.url()
         )).run();
 
     p.cargo("bench --bench bench --verbose -- --param")
         .with_status(101)
         .with_stderr_contains(&format!(
             "\
-[COMPILING] foo v0.0.1 ({url})
+[COMPILING] foo v0.0.1 (CWD)
 [RUNNING] `rustc [..]`
 [RUNNING] `rustc [..]`
 [FINISHED] release [optimized] target(s) in [..]
 [RUNNING] `nonexistent-runner -r [..]/target/release/deps/bench-[..][EXE] --param --bench`
 ",
-            url = p.url()
         )).run();
 }

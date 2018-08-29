@@ -49,7 +49,6 @@ fn cargo_compile_simple_git_dep() {
             &main_file(r#""{}", dep1::hello()"#, &["dep1"]),
         ).build();
 
-    let root = project.root();
     let git_root = git_project.root();
 
     project
@@ -57,11 +56,10 @@ fn cargo_compile_simple_git_dep() {
         .with_stderr(&format!(
             "[UPDATING] git repository `{}`\n\
              [COMPILING] dep1 v0.5.0 ({}#[..])\n\
-             [COMPILING] foo v0.5.0 ({})\n\
+             [COMPILING] foo v0.5.0 (CWD)\n\
              [FINISHED] dev [unoptimized + debuginfo] target(s) in [..]\n",
             path2url(&git_root),
-            path2url(git_root),
-            path2url(root)
+            path2url(&git_root),
         )).run();
 
     assert!(project.bin("foo").is_file());
@@ -187,7 +185,6 @@ fn cargo_compile_offline_with_cached_git_dep() {
             &main_file(r#""hello from {}", dep1::COOL_STR"#, &["dep1"]),
         ).build();
 
-    let root = p.root();
     let git_root = git_project.root();
 
     p.cargo("build -Zoffline")
@@ -195,10 +192,9 @@ fn cargo_compile_offline_with_cached_git_dep() {
         .with_stderr(format!(
             "\
 [COMPILING] dep1 v0.5.0 ({}#[..])
-[COMPILING] foo v0.5.0 ({})
+[COMPILING] foo v0.5.0 (CWD)
 [FINISHED] dev [unoptimized + debuginfo] target(s) in [..]",
             path2url(git_root),
-            path2url(root)
         )).run();
 
     assert!(p.bin("foo").is_file());
@@ -277,7 +273,6 @@ fn cargo_compile_git_dep_branch() {
             &main_file(r#""{}", dep1::hello()"#, &["dep1"]),
         ).build();
 
-    let root = project.root();
     let git_root = git_project.root();
 
     project
@@ -285,11 +280,10 @@ fn cargo_compile_git_dep_branch() {
         .with_stderr(&format!(
             "[UPDATING] git repository `{}`\n\
              [COMPILING] dep1 v0.5.0 ({}?branch=branchy#[..])\n\
-             [COMPILING] foo v0.5.0 ({})\n\
+             [COMPILING] foo v0.5.0 (CWD)\n\
              [FINISHED] dev [unoptimized + debuginfo] target(s) in [..]\n",
             path2url(&git_root),
-            path2url(git_root),
-            path2url(root)
+            path2url(&git_root),
         )).run();
 
     assert!(project.bin("foo").is_file());
@@ -350,7 +344,6 @@ fn cargo_compile_git_dep_tag() {
             &main_file(r#""{}", dep1::hello()"#, &["dep1"]),
         ).build();
 
-    let root = project.root();
     let git_root = git_project.root();
 
     project
@@ -358,11 +351,10 @@ fn cargo_compile_git_dep_tag() {
         .with_stderr(&format!(
             "[UPDATING] git repository `{}`\n\
              [COMPILING] dep1 v0.5.0 ({}?tag=v0.1.0#[..])\n\
-             [COMPILING] foo v0.5.0 ({})\n\
+             [COMPILING] foo v0.5.0 (CWD)\n\
              [FINISHED] dev [unoptimized + debuginfo] target(s) in [..]\n",
             path2url(&git_root),
-            path2url(git_root),
-            path2url(root)
+            path2url(&git_root),
         )).run();
 
     assert!(project.bin("foo").is_file());
@@ -729,12 +721,11 @@ fn recompilation() {
         .with_stderr(&format!(
             "[UPDATING] git repository `{}`\n\
              [COMPILING] bar v0.5.0 ({}#[..])\n\
-             [COMPILING] foo v0.5.0 ({})\n\
+             [COMPILING] foo v0.5.0 (CWD)\n\
              [FINISHED] dev [unoptimized + debuginfo] target(s) \
              in [..]\n",
             git_project.url(),
             git_project.url(),
-            p.url()
         )).run();
 
     // Don't recompile the second time
@@ -778,22 +769,20 @@ fn recompilation() {
     p.cargo("build")
         .with_stderr(&format!(
             "[COMPILING] bar v0.5.0 ({}#[..])\n\
-             [COMPILING] foo v0.5.0 ({})\n\
+             [COMPILING] foo v0.5.0 (CWD)\n\
              [FINISHED] dev [unoptimized + debuginfo] target(s) \
              in [..]\n",
             git_project.url(),
-            p.url()
         )).run();
 
     // Make sure clean only cleans one dep
     p.cargo("clean -p foo").with_stdout("").run();
     p.cargo("build")
-        .with_stderr(&format!(
-            "[COMPILING] foo v0.5.0 ({})\n\
+        .with_stderr(
+            "[COMPILING] foo v0.5.0 (CWD)\n\
              [FINISHED] dev [unoptimized + debuginfo] target(s) \
-             in [..]\n",
-            p.url()
-        )).run();
+             in [..]"
+        ).run();
 }
 
 #[test]
@@ -869,10 +858,9 @@ fn update_with_shared_deps() {
 [COMPILING] bar v0.5.0 ({git}#[..])
 [COMPILING] [..] v0.5.0 ([..])
 [COMPILING] [..] v0.5.0 ([..])
-[COMPILING] foo v0.5.0 ({dir})
+[COMPILING] foo v0.5.0 (CWD)
 [FINISHED] dev [unoptimized + debuginfo] target(s) in [..]\n",
             git = git_project.url(),
-            dir = p.url()
         )).run();
 
     // Modify a file manually, and commit it
@@ -929,12 +917,11 @@ Caused by:
         .with_stderr(&format!(
             "\
 [COMPILING] bar v0.5.0 ({git}#[..])
-[COMPILING] [..] v0.5.0 ({dir}[..]dep[..])
-[COMPILING] [..] v0.5.0 ({dir}[..]dep[..])
-[COMPILING] foo v0.5.0 ({dir})
+[COMPILING] [..] v0.5.0 (CWD[..]dep[..])
+[COMPILING] [..] v0.5.0 (CWD[..]dep[..])
+[COMPILING] foo v0.5.0 (CWD)
 [FINISHED] dev [unoptimized + debuginfo] target(s) in [..]\n",
             git = git_project.url(),
-            dir = p.url()
         )).run();
 
     // We should be able to update transitive deps
@@ -1103,15 +1090,14 @@ fn two_deps_only_update_one() {
         .build();
 
     p.cargo("build")
-        .with_stderr(&format!(
+        .with_stderr(
             "[UPDATING] git repository `[..]`\n\
              [UPDATING] git repository `[..]`\n\
              [COMPILING] [..] v0.5.0 ([..])\n\
              [COMPILING] [..] v0.5.0 ([..])\n\
-             [COMPILING] foo v0.5.0 ({})\n\
+             [COMPILING] foo v0.5.0 (CWD)\n\
              [FINISHED] dev [unoptimized + debuginfo] target(s) in [..]\n",
-            p.url()
-        )).run();
+        ).run();
 
     File::create(&git1.root().join("src/lib.rs"))
         .unwrap()
@@ -1209,11 +1195,10 @@ fn stale_cached_version() {
             "\
 [UPDATING] git repository `{bar}`
 [COMPILING] bar v0.0.0 ({bar}#[..])
-[COMPILING] foo v0.0.0 ({foo})
+[COMPILING] foo v0.0.0 (CWD)
 [FINISHED] dev [unoptimized + debuginfo] target(s) in [..]
 ",
             bar = bar.url(),
-            foo = foo.url()
         )).run();
     foo.process(&foo.bin("foo")).run();
 }
@@ -1373,10 +1358,9 @@ fn dev_deps_with_testing() {
         .with_stderr(&format!(
             "\
 [UPDATING] git repository `{bar}`
-[COMPILING] foo v0.5.0 ({url})
+[COMPILING] foo v0.5.0 (CWD)
 [FINISHED] dev [unoptimized + debuginfo] target(s) in [..]
 ",
-            url = p.url(),
             bar = p2.url()
         )).run();
 
@@ -1417,10 +1401,9 @@ fn git_build_cmd_freshness() {
     foo.cargo("build")
         .with_stderr(&format!(
             "\
-[COMPILING] foo v0.0.0 ({url})
+[COMPILING] foo v0.0.0 (CWD)
 [FINISHED] dev [unoptimized + debuginfo] target(s) in [..]
 ",
-            url = foo.url()
         )).run();
 
     // Smoke test to make sure it doesn't compile again
@@ -1475,10 +1458,9 @@ fn git_name_not_always_needed() {
         .with_stderr(&format!(
             "\
 [UPDATING] git repository `{bar}`
-[COMPILING] foo v0.5.0 ({url})
+[COMPILING] foo v0.5.0 (CWD)
 [FINISHED] dev [unoptimized + debuginfo] target(s) in [..]
 ",
-            url = p.url(),
             bar = p2.url()
         )).run();
 }
@@ -1698,11 +1680,10 @@ fn warnings_in_git_dep() {
         .with_stderr(&format!(
             "[UPDATING] git repository `{}`\n\
              [COMPILING] bar v0.5.0 ({}#[..])\n\
-             [COMPILING] foo v0.5.0 ({})\n\
+             [COMPILING] foo v0.5.0 (CWD)\n\
              [FINISHED] dev [unoptimized + debuginfo] target(s) in [..]\n",
             bar.url(),
             bar.url(),
-            p.url()
         )).run();
 }
 
@@ -2510,7 +2491,7 @@ fn invalid_git_dependency_manifest() {
              Caused by:\n  \
              duplicate key: `categories` for key `project`",
             path2url(&git_root),
-            path2url(git_root),
+            path2url(&git_root),
         )).run();
 }
 

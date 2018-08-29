@@ -357,18 +357,16 @@ fn linker_and_ar() {
         .with_status(101)
         .with_stderr_contains(&format!(
             "\
-[COMPILING] foo v0.5.0 ({url})
+[COMPILING] foo v0.5.0 (CWD)
 [RUNNING] `rustc --crate-name foo src/foo.rs --crate-type bin \
     --emit=dep-info,link -C debuginfo=2 \
     -C metadata=[..] \
-    --out-dir {dir}/target/{target}/debug/deps \
+    --out-dir CWD/target/{target}/debug/deps \
     --target {target} \
     -C ar=my-ar-tool -C linker=my-linker-tool \
-    -L dependency={dir}/target/{target}/debug/deps \
-    -L dependency={dir}/target/debug/deps`
+    -L dependency=CWD/target/{target}/debug/deps \
+    -L dependency=CWD/target/debug/deps`
 ",
-            dir = p.root().display(),
-            url = p.url(),
             target = target,
         )).run();
 }
@@ -506,11 +504,10 @@ fn cross_tests() {
         .arg(&target)
         .with_stderr(&format!(
             "\
-[COMPILING] foo v0.0.0 ({foo})
+[COMPILING] foo v0.0.0 (CWD)
 [FINISHED] dev [unoptimized + debuginfo] target(s) in [..]
 [RUNNING] target/{triple}/debug/deps/foo-[..][EXE]
 [RUNNING] target/{triple}/debug/deps/bar-[..][EXE]",
-            foo = p.url(),
             triple = target
         )).with_stdout_contains("test test_foo ... ok")
         .with_stdout_contains("test test ... ok")
@@ -536,12 +533,11 @@ fn no_cross_doctests() {
 
     let host_output = format!(
         "\
-[COMPILING] foo v0.0.1 ({foo})
+[COMPILING] foo v0.0.1 (CWD)
 [FINISHED] dev [unoptimized + debuginfo] target(s) in [..]
 [RUNNING] target/debug/deps/foo-[..][EXE]
 [DOCTEST] foo
 ",
-        foo = p.url()
     );
 
     println!("a");
@@ -553,12 +549,11 @@ fn no_cross_doctests() {
         .arg(&target)
         .with_stderr(&format!(
             "\
-[COMPILING] foo v0.0.1 ({foo})
+[COMPILING] foo v0.0.1 (CWD)
 [FINISHED] dev [unoptimized + debuginfo] target(s) in [..]
 [RUNNING] target/{triple}/debug/deps/foo-[..][EXE]
 [DOCTEST] foo
 ",
-            foo = p.url(),
             triple = target
         )).run();
 
@@ -568,11 +563,10 @@ fn no_cross_doctests() {
         .arg(&target)
         .with_stderr(&format!(
             "\
-[COMPILING] foo v0.0.1 ({foo})
+[COMPILING] foo v0.0.1 (CWD)
 [FINISHED] dev [unoptimized + debuginfo] target(s) in [..]
 [RUNNING] target/{triple}/debug/deps/foo-[..][EXE]
 ",
-            foo = p.url(),
             triple = target
         )).run();
 }
@@ -650,14 +644,13 @@ fn cross_with_a_build_script() {
         .arg(&target)
         .with_stderr(&format!(
             "\
-[COMPILING] foo v0.0.0 (file://[..])
-[RUNNING] `rustc [..] build.rs [..] --out-dir {dir}/target/debug/build/foo-[..]`
-[RUNNING] `{dir}/target/debug/build/foo-[..]/build-script-build`
+[COMPILING] foo v0.0.0 (CWD)
+[RUNNING] `rustc [..] build.rs [..] --out-dir CWD/target/debug/build/foo-[..]`
+[RUNNING] `CWD/target/debug/build/foo-[..]/build-script-build`
 [RUNNING] `rustc [..] src/main.rs [..] --target {target} [..]`
 [FINISHED] dev [unoptimized + debuginfo] target(s) in [..]
 ",
             target = target,
-            dir = p.root().display()
         )).run();
 }
 
@@ -739,26 +732,20 @@ fn build_script_needed_for_host_and_target() {
 
     p.cargo("build -v --target")
         .arg(&target)
-        .with_stderr_contains(&format!("[COMPILING] d1 v0.0.0 ({url}/d1)", url = p.url()))
+        .with_stderr_contains(&"[COMPILING] d1 v0.0.0 (CWD/d1)")
+        .with_stderr_contains(
+            "[RUNNING] `rustc [..] d1/build.rs [..] --out-dir CWD/target/debug/build/d1-[..]`",
+        )
+        .with_stderr_contains("[RUNNING] `CWD/target/debug/build/d1-[..]/build-script-build`")
+        .with_stderr_contains("[RUNNING] `rustc [..] d1/src/lib.rs [..]`")
+        .with_stderr_contains("[COMPILING] d2 v0.0.0 (CWD/d2)")
         .with_stderr_contains(&format!(
-            "[RUNNING] `rustc [..] d1/build.rs [..] --out-dir {dir}/target/debug/build/d1-[..]`",
-            dir = p.root().display()
-        )).with_stderr_contains(&format!(
-            "[RUNNING] `{dir}/target/debug/build/d1-[..]/build-script-build`",
-            dir = p.root().display()
-        )).with_stderr_contains("[RUNNING] `rustc [..] d1/src/lib.rs [..]`")
-        .with_stderr_contains(&format!("[COMPILING] d2 v0.0.0 ({url}/d2)", url = p.url()))
-        .with_stderr_contains(&format!(
-            "\
-             [RUNNING] `rustc [..] d2/src/lib.rs [..] \
-             -L /path/to/{host}`",
+            "[RUNNING] `rustc [..] d2/src/lib.rs [..] -L /path/to/{host}`",
             host = host
-        )).with_stderr_contains(&format!("[COMPILING] foo v0.0.0 ({url})", url = p.url()))
+        )).with_stderr_contains("[COMPILING] foo v0.0.0 (CWD)")
         .with_stderr_contains(&format!(
-            "\
-             [RUNNING] `rustc [..] build.rs [..] --out-dir {dir}/target/debug/build/foo-[..] \
+            "[RUNNING] `rustc [..] build.rs [..] --out-dir CWD/target/debug/build/foo-[..] \
              -L /path/to/{host}`",
-            dir = p.root().display(),
             host = host
         )).with_stderr_contains(&format!(
             "\
@@ -953,11 +940,10 @@ fn build_script_with_platform_specific_dependencies() {
 [RUNNING] `rustc [..] d1/src/lib.rs [..]`
 [COMPILING] foo v0.0.1 ([..])
 [RUNNING] `rustc [..] build.rs [..]`
-[RUNNING] `{dir}/target/debug/build/foo-[..]/build-script-build`
+[RUNNING] `CWD/target/debug/build/foo-[..]/build-script-build`
 [RUNNING] `rustc [..] src/lib.rs [..] --target {target} [..]`
 [FINISHED] dev [unoptimized + debuginfo] target(s) in [..]
 ",
-            dir = p.root().display(),
             target = target
         )).run();
 }
@@ -1167,12 +1153,11 @@ fn cross_test_dylib() {
         .arg(&target)
         .with_stderr(&format!(
             "\
-[COMPILING] bar v0.0.1 ({dir}/bar)
-[COMPILING] foo v0.0.1 ({dir})
+[COMPILING] bar v0.0.1 (CWD/bar)
+[COMPILING] foo v0.0.1 (CWD)
 [FINISHED] dev [unoptimized + debuginfo] target(s) in [..]
 [RUNNING] target/{arch}/debug/deps/foo-[..][EXE]
 [RUNNING] target/{arch}/debug/deps/test-[..][EXE]",
-            dir = p.url(),
             arch = cross_compile::alternate()
         )).with_stdout_contains_n("test foo ... ok", 2)
         .run();

@@ -42,12 +42,11 @@ fn simple_cross_package() {
     p.cargo("package --target")
         .arg(&target)
         .with_stderr(&format!(
-            "   Packaging foo v0.0.0 ({dir})
-   Verifying foo v0.0.0 ({dir})
-   Compiling foo v0.0.0 ({dir}/target/package/foo-0.0.0)
+            "   Packaging foo v0.0.0 (CWD)
+   Verifying foo v0.0.0 (CWD)
+   Compiling foo v0.0.0 (CWD/target/package/foo-0.0.0)
     Finished dev [unoptimized + debuginfo] target(s) in [..]
 ",
-            dir = p.url()
         )).run();
 
     // Check that the tarball contains the files
@@ -106,13 +105,12 @@ fn publish_with_target() {
         .arg(&target)
         .with_stderr(&format!(
             "    Updating registry `{registry}`
-   Packaging foo v0.0.0 ({dir})
-   Verifying foo v0.0.0 ({dir})
-   Compiling foo v0.0.0 ({dir}/target/package/foo-0.0.0)
+   Packaging foo v0.0.0 (CWD)
+   Verifying foo v0.0.0 (CWD)
+   Compiling foo v0.0.0 (CWD/target/package/foo-0.0.0)
     Finished dev [unoptimized + debuginfo] target(s) in [..]
-   Uploading foo v0.0.0 ({dir})
+   Uploading foo v0.0.0 (CWD)
 ",
-            dir = p.url(),
             registry = publish::registry()
         )).run();
 }

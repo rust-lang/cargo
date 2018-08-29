@@ -274,10 +274,9 @@ fn test_default_features() {
     p.cargo("test")
         .with_stderr(format!(
             "\
-[COMPILING] foo v0.0.1 ({})
+[COMPILING] foo v0.0.1 (CWD)
 [FINISHED] dev [unoptimized + debuginfo] target(s) in [..]
 [RUNNING] target/debug/deps/foo-[..][EXE]",
-            p.url()
         )).with_stdout_contains("test test ... ok")
         .run();
 
@@ -328,10 +327,9 @@ fn test_arg_features() {
     p.cargo("test --features a")
         .with_stderr(format!(
             "\
-[COMPILING] foo v0.0.1 ({})
+[COMPILING] foo v0.0.1 (CWD)
 [FINISHED] dev [unoptimized + debuginfo] target(s) in [..]
 [RUNNING] target/debug/deps/foo-[..][EXE]",
-            p.url()
         )).with_stdout_contains("test test ... ok")
         .run();
 }
@@ -368,21 +366,19 @@ fn test_multiple_required_features() {
     p.cargo("test")
         .with_stderr(format!(
             "\
-[COMPILING] foo v0.0.1 ({})
+[COMPILING] foo v0.0.1 (CWD)
 [FINISHED] dev [unoptimized + debuginfo] target(s) in [..]
 [RUNNING] target/debug/deps/foo_2-[..][EXE]",
-            p.url()
         )).with_stdout_contains("test test ... ok")
         .run();
 
     p.cargo("test --features c")
         .with_stderr(format!(
             "\
-[COMPILING] foo v0.0.1 ({})
+[COMPILING] foo v0.0.1 (CWD)
 [FINISHED] dev [unoptimized + debuginfo] target(s) in [..]
 [RUNNING] target/debug/deps/foo_1-[..][EXE]
 [RUNNING] target/debug/deps/foo_2-[..][EXE]",
-            p.url()
         )).with_stdout_contains_n("test test ... ok", 2)
         .run();
 
@@ -429,10 +425,9 @@ fn bench_default_features() {
     p.cargo("bench")
         .with_stderr(format!(
             "\
-[COMPILING] foo v0.0.1 ({})
+[COMPILING] foo v0.0.1 (CWD)
 [FINISHED] release [optimized] target(s) in [..]
 [RUNNING] target/release/deps/foo-[..][EXE]",
-            p.url()
         )).with_stdout_contains("test bench ... bench: [..]")
         .run();
 
@@ -495,10 +490,9 @@ fn bench_arg_features() {
     p.cargo("bench --features a")
         .with_stderr(format!(
             "\
-[COMPILING] foo v0.0.1 ({})
+[COMPILING] foo v0.0.1 (CWD)
 [FINISHED] release [optimized] target(s) in [..]
 [RUNNING] target/release/deps/foo-[..][EXE]",
-            p.url()
         )).with_stdout_contains("test bench ... bench: [..]")
         .run();
 }
@@ -555,21 +549,19 @@ fn bench_multiple_required_features() {
     p.cargo("bench")
         .with_stderr(format!(
             "\
-[COMPILING] foo v0.0.1 ({})
+[COMPILING] foo v0.0.1 (CWD)
 [FINISHED] release [optimized] target(s) in [..]
 [RUNNING] target/release/deps/foo_2-[..][EXE]",
-            p.url()
         )).with_stdout_contains("test bench ... bench: [..]")
         .run();
 
     p.cargo("bench --features c")
         .with_stderr(format!(
             "\
-[COMPILING] foo v0.0.1 ({})
+[COMPILING] foo v0.0.1 (CWD)
 [FINISHED] release [optimized] target(s) in [..]
 [RUNNING] target/release/deps/foo_1-[..][EXE]
 [RUNNING] target/release/deps/foo_2-[..][EXE]",
-            p.url()
         )).with_stdout_contains_n("test bench ... bench: [..]", 2)
         .run();
 
@@ -810,24 +802,22 @@ fn dep_feature_in_toml() {
     p.cargo("test --test=foo")
         .with_stderr(format!(
             "\
-[COMPILING] foo v0.0.1 ({})
+[COMPILING] foo v0.0.1 (CWD)
 [FINISHED] dev [unoptimized + debuginfo] target(s) in [..]
 [RUNNING] target/debug/deps/foo-[..][EXE]",
-            p.url()
         )).with_stdout_contains("test test ... ok")
         .run();
 
     // bench
     if is_nightly() {
         p.cargo("bench --bench=foo")
-            .with_stderr(format!(
+            .with_stderr(
                 "\
-[COMPILING] bar v0.0.1 ({0}/bar)
-[COMPILING] foo v0.0.1 ({0})
+[COMPILING] bar v0.0.1 (CWD/bar)
+[COMPILING] foo v0.0.1 (CWD)
 [FINISHED] release [optimized] target(s) in [..]
 [RUNNING] target/release/deps/foo-[..][EXE]",
-                p.url()
-            )).with_stdout_contains("test bench ... bench: [..]")
+            ).with_stdout_contains("test bench ... bench: [..]")
             .run();
     }
 
@@ -930,10 +920,9 @@ Consider enabling them by passing e.g. `--features=\"bar/a\"`
     p.cargo("test --test=foo --features bar/a")
         .with_stderr(format!(
             "\
-[COMPILING] foo v0.0.1 ({})
+[COMPILING] foo v0.0.1 (CWD)
 [FINISHED] dev [unoptimized + debuginfo] target(s) in [..]
 [RUNNING] target/debug/deps/foo-[..][EXE]",
-            p.url()
         )).with_stdout_contains("test test ... ok")
         .run();
 
@@ -945,14 +934,13 @@ Consider enabling them by passing e.g. `--features=\"bar/a\"`
             .run();
 
         p.cargo("bench --bench=foo --features bar/a")
-            .with_stderr(format!(
+            .with_stderr(
                 "\
-[COMPILING] bar v0.0.1 ({0}/bar)
-[COMPILING] foo v0.0.1 ({0})
+[COMPILING] bar v0.0.1 (CWD/bar)
+[COMPILING] foo v0.0.1 (CWD)
 [FINISHED] release [optimized] target(s) in [..]
 [RUNNING] target/release/deps/foo-[..][EXE]",
-                p.url()
-            )).with_stdout_contains("test bench ... bench: [..]")
+            ).with_stdout_contains("test bench ... bench: [..]")
             .run();
     }
 
@@ -1000,10 +988,9 @@ fn test_skips_compiling_bin_with_missing_required_features() {
     p.cargo("test")
         .with_stderr(format!(
             "\
-[COMPILING] foo v0.0.1 ({})
+[COMPILING] foo v0.0.1 (CWD)
 [FINISHED] dev [unoptimized + debuginfo] target(s) in [..]
 [RUNNING] target/debug/deps/foo-[..][EXE]",
-            p.url()
         )).with_stdout_contains("running 0 tests")
         .run();
 
@@ -1011,30 +998,27 @@ fn test_skips_compiling_bin_with_missing_required_features() {
         .with_status(101)
         .with_stderr_contains(format!(
             "\
-[COMPILING] foo v0.0.1 ({})
+[COMPILING] foo v0.0.1 (CWD)
 error[E0463]: can't find crate for `bar`",
-            p.url()
         )).run();
 
     if is_nightly() {
         p.cargo("bench")
-            .with_stderr(format!(
+            .with_stderr(
                 "\
-[COMPILING] foo v0.0.1 ({})
+[COMPILING] foo v0.0.1 (CWD)
 [FINISHED] release [optimized] target(s) in [..]
 [RUNNING] target/release/deps/foo-[..][EXE]",
-                p.url()
-            )).with_stdout_contains("running 0 tests")
+            ).with_stdout_contains("running 0 tests")
             .run();
 
         p.cargo("bench --features a -j 1")
             .with_status(101)
-            .with_stderr_contains(format!(
+            .with_stderr_contains(
                 "\
-[COMPILING] foo v0.0.1 ({})
+[COMPILING] foo v0.0.1 (CWD)
 error[E0463]: can't find crate for `bar`",
-                p.url()
-            )).run();
+            ).run();
     }
 }
 

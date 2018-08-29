@@ -31,12 +31,11 @@ fn custom_build_script_failed() {
         .with_status(101)
         .with_stderr(&format!(
             "\
-[COMPILING] foo v0.5.0 ({url})
+[COMPILING] foo v0.5.0 (CWD)
 [RUNNING] `rustc --crate-name build_script_build build.rs --crate-type bin [..]`
 [RUNNING] `[..]/build-script-build`
-[ERROR] failed to run custom build command for `foo v0.5.0 ({url})`
+[ERROR] failed to run custom build command for `foo v0.5.0 (CWD)`
 process didn't exit successfully: `[..]/build-script-build` (exit code: 101)",
-            url = p.url()
         )).run();
 }
 
@@ -182,9 +181,8 @@ fn custom_build_script_wrong_rustc_flags() {
         .with_status(101)
         .with_stderr_contains(&format!(
             "\
-             [ERROR] Only `-l` and `-L` flags are allowed in build script of `foo v0.5.0 ({})`: \
+             [ERROR] Only `-l` and `-L` flags are allowed in build script of `foo v0.5.0 (CWD)`: \
              `-aaa -bbb`",
-            p.url()
         )).run();
 }
 
@@ -192,7 +190,9 @@ fn custom_build_script_wrong_rustc_flags() {
 #[test]
 fn custom_build_script_rustc_flags() {
     let p = project()
-        .file("Cargo.toml", r#"
+        .file(
+            "Cargo.toml",
+            r#"
             [project]
 
             name = "bar"
@@ -201,40 +201,43 @@ fn custom_build_script_rustc_flags() {
 
             [dependencies.foo]
             path = "foo"
-        "#)
-        .file("src/main.rs", "fn main() {}")
-        .file("foo/Cargo.toml", r#"
+        "#,
+        ).file("src/main.rs", "fn main() {}")
+        .file(
+            "foo/Cargo.toml",
+            r#"
             [project]
 
             name = "foo"
             version = "0.5.0"
             authors = ["wycats@example.com"]
             build = "build.rs"
-        "#)
-        .file("foo/src/lib.rs", r#"
-        "#)
-        .file("foo/build.rs", r#"
+        "#,
+        ).file("foo/src/lib.rs", "")
+        .file(
+            "foo/build.rs",
+            r#"
             fn main() {
                 println!("cargo:rustc-flags=-l nonexistinglib -L /dummy/path1 -L /dummy/path2");
             }
-        "#)
-        .build();
+        "#,
+        ).build();
 
     // TODO: TEST FAILS BECAUSE OF WRONG STDOUT (but otherwise, the build works)
-    p.cargo("build --verbose").with_status(101)
-                       .with_stderr(&format!("\
-[COMPILING] bar v0.5.0 ({url})
-[RUNNING] `rustc --crate-name test {dir}{sep}src{sep}lib.rs --crate-type lib -C debuginfo=2 \
+    p.cargo("build --verbose")
+        .with_status(101)
+        .with_stderr(
+            "\
+[COMPILING] bar v0.5.0 (CWD)
+[RUNNING] `rustc --crate-name test CWD/src/lib.rs --crate-type lib -C debuginfo=2 \
         -C metadata=[..] \
         -C extra-filename=-[..] \
-        --out-dir {dir}{sep}target \
+        --out-dir CWD/target \
         --emit=dep-info,link \
-        -L {dir}{sep}target \
-        -L {dir}{sep}target{sep}deps`
-", sep = path::SEP,
-dir = p.root().display(),
-url = p.url(),
-)).run();
+        -L CWD/target \
+        -L CWD/target/deps`
+",
+        ).run();
 }
 */
 
@@ -257,7 +260,7 @@ fn links_no_build_cmd() {
         .with_status(101)
         .with_stderr(
             "\
-[ERROR] package `foo v0.5.0 (file://[..])` specifies that it links to `a` but does \
+[ERROR] package `foo v0.5.0 (CWD)` specifies that it links to `a` but does \
 not have a custom build script
 ",
         ).run();
@@ -548,7 +551,7 @@ fn only_rerun_build_script() {
     p.cargo("build -v")
         .with_stderr(
             "\
-[COMPILING] foo v0.5.0 (file://[..])
+[COMPILING] foo v0.5.0 (CWD)
 [RUNNING] `[..]/build-script-build`
 [RUNNING] `rustc --crate-name foo [..]`
 [FINISHED] dev [unoptimized + debuginfo] target(s) in [..]
@@ -648,7 +651,7 @@ fn testing_and_such() {
     p.cargo("test -vj1")
         .with_stderr(
             "\
-[COMPILING] foo v0.5.0 (file://[..])
+[COMPILING] foo v0.5.0 (CWD)
 [RUNNING] `[..]/build-script-build`
 [RUNNING] `rustc --crate-name foo [..]`
 [RUNNING] `rustc --crate-name foo [..]`
@@ -663,7 +666,7 @@ fn testing_and_such() {
     p.cargo("doc -v")
         .with_stderr(
             "\
-[DOCUMENTING] foo v0.5.0 (file://[..])
+[DOCUMENTING] foo v0.5.0 (CWD)
 [RUNNING] `rustdoc [..]`
 [FINISHED] dev [unoptimized + debuginfo] target(s) in [..]
 ",
@@ -677,7 +680,7 @@ fn testing_and_such() {
     p.cargo("run")
         .with_stderr(
             "\
-[COMPILING] foo v0.5.0 (file://[..])
+[COMPILING] foo v0.5.0 (CWD)
 [FINISHED] dev [unoptimized + debuginfo] target(s) in [..]
 [RUNNING] `target/debug/foo[EXE]`
 ",
@@ -743,7 +746,7 @@ fn propagation_of_l_flags() {
         .with_stderr_contains(
             "\
 [RUNNING] `rustc --crate-name a [..] -L bar[..]-L foo[..]`
-[COMPILING] foo v0.5.0 (file://[..])
+[COMPILING] foo v0.5.0 (CWD)
 [RUNNING] `rustc --crate-name foo [..] -L bar -L foo`
 ",
         ).run();
@@ -812,7 +815,7 @@ fn propagation_of_l_flags_new() {
         .with_stderr_contains(
             "\
 [RUNNING] `rustc --crate-name a [..] -L bar[..]-L foo[..]`
-[COMPILING] foo v0.5.0 (file://[..])
+[COMPILING] foo v0.5.0 (CWD)
 [RUNNING] `rustc --crate-name foo [..] -L bar -L foo`
 ",
         ).run();
@@ -847,9 +850,9 @@ fn build_deps_simple() {
     p.cargo("build -v")
         .with_stderr(
             "\
-[COMPILING] a v0.5.0 (file://[..])
+[COMPILING] a v0.5.0 (CWD/a)
 [RUNNING] `rustc --crate-name a [..]`
-[COMPILING] foo v0.5.0 (file://[..])
+[COMPILING] foo v0.5.0 (CWD)
 [RUNNING] `rustc [..] build.rs [..] --extern a=[..]`
 [RUNNING] `[..]/foo-[..]/build-script-build`
 [RUNNING] `rustc --crate-name foo [..]`
@@ -947,9 +950,9 @@ fn build_cmd_with_a_build_cmd() {
     p.cargo("build -v")
         .with_stderr(
             "\
-[COMPILING] b v0.5.0 (file://[..])
+[COMPILING] b v0.5.0 (CWD/b)
 [RUNNING] `rustc --crate-name b [..]`
-[COMPILING] a v0.5.0 (file://[..])
+[COMPILING] a v0.5.0 (CWD/a)
 [RUNNING] `rustc [..] a/build.rs [..] --extern b=[..]`
 [RUNNING] `[..]/a-[..]/build-script-build`
 [RUNNING] `rustc --crate-name a [..]lib.rs --crate-type lib \
@@ -957,7 +960,7 @@ fn build_cmd_with_a_build_cmd() {
     -C metadata=[..] \
     --out-dir [..]target/debug/deps \
     -L [..]target/debug/deps`
-[COMPILING] foo v0.5.0 (file://[..])
+[COMPILING] foo v0.5.0 (CWD)
 [RUNNING] `rustc --crate-name build_script_build build.rs --crate-type bin \
     --emit=dep-info,link \
     -C debuginfo=2 -C metadata=[..] --out-dir [..] \
@@ -1054,7 +1057,7 @@ fn output_separate_lines() {
         .with_status(101)
         .with_stderr_contains(
             "\
-[COMPILING] foo v0.5.0 (file://[..])
+[COMPILING] foo v0.5.0 (CWD)
 [RUNNING] `rustc [..] build.rs [..]`
 [RUNNING] `[..]/foo-[..]/build-script-build`
 [RUNNING] `rustc --crate-name foo [..] -L foo -l static=foo`
@@ -1089,7 +1092,7 @@ fn output_separate_lines_new() {
         .with_status(101)
         .with_stderr_contains(
             "\
-[COMPILING] foo v0.5.0 (file://[..])
+[COMPILING] foo v0.5.0 (CWD)
 [RUNNING] `rustc [..] build.rs [..]`
 [RUNNING] `[..]/foo-[..]/build-script-build`
 [RUNNING] `rustc --crate-name foo [..] -L foo -l static=foo`
@@ -1143,7 +1146,7 @@ fn code_generation() {
     p.cargo("run")
         .with_stderr(
             "\
-[COMPILING] foo v0.5.0 (file://[..])
+[COMPILING] foo v0.5.0 (CWD)
 [FINISHED] dev [unoptimized + debuginfo] target(s) in [..]
 [RUNNING] `target/debug/foo`",
         ).with_stdout("Hello, World!")
@@ -1668,7 +1671,7 @@ fn cfg_test() {
     p.cargo("test -v")
         .with_stderr(format!(
             "\
-[COMPILING] foo v0.0.1 ({dir})
+[COMPILING] foo v0.0.1 (CWD)
 [RUNNING] [..] build.rs [..]
 [RUNNING] `[..]/build-script-build`
 [RUNNING] [..] --cfg foo[..]
@@ -1679,7 +1682,6 @@ fn cfg_test() {
 [RUNNING] `[..]/test-[..][EXE]`
 [DOCTEST] foo
 [RUNNING] [..] --cfg foo[..]",
-            dir = p.url()
         )).with_stdout_contains("test test_foo ... ok")
         .with_stdout_contains("test test_bar ... ok")
         .with_stdout_contains_n("test [..] ... ok", 3)
@@ -1774,7 +1776,7 @@ fn cfg_override_test() {
     p.cargo("test -v")
         .with_stderr(format!(
             "\
-[COMPILING] foo v0.0.1 ({dir})
+[COMPILING] foo v0.0.1 (CWD)
 [RUNNING] `[..]`
 [RUNNING] `[..]`
 [RUNNING] `[..]`
@@ -1783,7 +1785,6 @@ fn cfg_override_test() {
 [RUNNING] `[..]/test-[..][EXE]`
 [DOCTEST] foo
 [RUNNING] [..] --cfg foo[..]",
-            dir = p.url()
         )).with_stdout_contains("test test_foo ... ok")
         .with_stdout_contains("test test_bar ... ok")
         .with_stdout_contains_n("test [..] ... ok", 3)
@@ -1898,7 +1899,7 @@ fn env_test() {
     p.cargo("test -v")
         .with_stderr(format!(
             "\
-[COMPILING] foo v0.0.1 ({dir})
+[COMPILING] foo v0.0.1 (CWD)
 [RUNNING] [..] build.rs [..]
 [RUNNING] `[..]/build-script-build`
 [RUNNING] [..] --crate-name foo[..]
@@ -1909,7 +1910,6 @@ fn env_test() {
 [RUNNING] `[..]/test-[..][EXE]`
 [DOCTEST] foo
 [RUNNING] [..] --crate-name foo[..]",
-            dir = p.url()
         )).with_stdout_contains_n("running 0 tests", 2)
         .with_stdout_contains("test test_foo ... ok")
         .run();

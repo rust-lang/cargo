@@ -24,25 +24,22 @@ fn simple() {
     pkg("foo", "0.0.1");
 
     cargo_process("install foo")
-        .with_stderr(&format!(
+        .with_stderr(
             "\
 [UPDATING] registry `[..]`
 [DOWNLOADING] foo v0.0.1 (registry [..])
 [INSTALLING] foo v0.0.1
 [COMPILING] foo v0.0.1
 [FINISHED] release [optimized] target(s) in [..]
-[INSTALLING] {home}[..]bin[..]foo[..]
+[INSTALLING] CWD/home/.cargo/bin/foo[EXE]
 warning: be sure to add `[..]` to your PATH to be able to run the installed binaries
 ",
-            home = cargo_home().display()
-        )).run();
+        ).run();
     assert_has_installed_exe(cargo_home(), "foo");
 
     cargo_process("uninstall foo")
-        .with_stderr(&format!(
-            "[REMOVING] {home}[..]bin[..]foo[..]",
-            home = cargo_home().display()
-        )).run();
+        .with_stderr("[REMOVING] CWD/home/.cargo/bin/foo[EXE]")
+        .run();
     assert_has_not_installed_exe(cargo_home(), "foo");
 }
 
@@ -53,38 +50,36 @@ fn multiple_pkgs() {
 
     cargo_process("install foo bar baz")
         .with_status(101)
-        .with_stderr(&format!(
+        .with_stderr(
             "\
 [UPDATING] registry `[..]`
-[DOWNLOADING] foo v0.0.1 (registry `file://[..]`)
+[DOWNLOADING] foo v0.0.1 (registry `CWD/registry`)
 [INSTALLING] foo v0.0.1
 [COMPILING] foo v0.0.1
 [FINISHED] release [optimized] target(s) in [..]
-[INSTALLING] {home}[..]bin[..]foo[..]
-[DOWNLOADING] bar v0.0.2 (registry `file://[..]`)
+[INSTALLING] CWD/home/.cargo/bin/foo[EXE]
+[DOWNLOADING] bar v0.0.2 (registry `CWD/registry`)
 [INSTALLING] bar v0.0.2
 [COMPILING] bar v0.0.2
 [FINISHED] release [optimized] target(s) in [..]
-[INSTALLING] {home}[..]bin[..]bar[..]
+[INSTALLING] CWD/home/.cargo/bin/bar[EXE]
 error: could not find `baz` in registry `[..]`
 [SUMMARY] Successfully installed foo, bar! Failed to install baz (see error(s) above).
 warning: be sure to add `[..]` to your PATH to be able to run the installed binaries
 error: some crates failed to install
 ",
-            home = cargo_home().display()
-        )).run();
+        ).run();
     assert_has_installed_exe(cargo_home(), "foo");
     assert_has_installed_exe(cargo_home(), "bar");
 
     cargo_process("uninstall foo bar")
-        .with_stderr(&format!(
+        .with_stderr(
             "\
-[REMOVING] {home}[..]bin[..]foo[..]
-[REMOVING] {home}[..]bin[..]bar[..]
+[REMOVING] CWD/home/.cargo/bin/foo[EXE]
+[REMOVING] CWD/home/.cargo/bin/bar[EXE]
 [SUMMARY] Successfully uninstalled foo, bar!
 ",
-            home = cargo_home().display()
-        )).run();
+        ).run();
 
     assert_has_not_installed_exe(cargo_home(), "foo");
     assert_has_not_installed_exe(cargo_home(), "bar");
@@ -99,18 +94,17 @@ fn pick_max_version() {
     pkg("foo", "0.3.0-pre.2");
 
     cargo_process("install foo")
-        .with_stderr(&format!(
+        .with_stderr(
             "\
 [UPDATING] registry `[..]`
 [DOWNLOADING] foo v0.2.1 (registry [..])
 [INSTALLING] foo v0.2.1
 [COMPILING] foo v0.2.1
 [FINISHED] release [optimized] target(s) in [..]
-[INSTALLING] {home}[..]bin[..]foo[..]
+[INSTALLING] CWD/home/.cargo/bin/foo[EXE]
 warning: be sure to add `[..]` to your PATH to be able to run the installed binaries
 ",
-            home = cargo_home().display()
-        )).run();
+        ).run();
     assert_has_installed_exe(cargo_home(), "foo");
 }
 
@@ -436,16 +430,15 @@ fn install_force() {
 
     cargo_process("install --force --path")
         .arg(p.root())
-        .with_stderr(&format!(
+        .with_stderr(
             "\
 [INSTALLING] foo v0.2.0 ([..])
 [COMPILING] foo v0.2.0 ([..])
 [FINISHED] release [optimized] target(s) in [..]
-[REPLACING] {home}[..]bin[..]foo[..]
+[REPLACING] CWD/home/.cargo/bin/foo[EXE]
 warning: be sure to add `[..]` to your PATH to be able to run the installed binaries
 ",
-            home = cargo_home().display()
-        )).run();
+        ).run();
 
     cargo_process("install --list")
         .with_stdout(
@@ -474,17 +467,16 @@ fn install_force_partial_overlap() {
 
     cargo_process("install --force --path")
         .arg(p.root())
-        .with_stderr(&format!(
+        .with_stderr(
             "\
 [INSTALLING] foo v0.2.0 ([..])
 [COMPILING] foo v0.2.0 ([..])
 [FINISHED] release [optimized] target(s) in [..]
-[INSTALLING] {home}[..]bin[..]foo-bin3[..]
-[REPLACING] {home}[..]bin[..]foo-bin2[..]
+[INSTALLING] CWD/home/.cargo/bin/foo-bin3[EXE]
+[REPLACING] CWD/home/.cargo/bin/foo-bin2[EXE]
 warning: be sure to add `[..]` to your PATH to be able to run the installed binaries
 ",
-            home = cargo_home().display()
-        )).run();
+        ).run();
 
     cargo_process("install --list")
         .with_stdout(
@@ -516,16 +508,15 @@ fn install_force_bin() {
 
     cargo_process("install --force --bin foo-bin2 --path")
         .arg(p.root())
-        .with_stderr(&format!(
+        .with_stderr(
             "\
 [INSTALLING] foo v0.2.0 ([..])
 [COMPILING] foo v0.2.0 ([..])
 [FINISHED] release [optimized] target(s) in [..]
-[REPLACING] {home}[..]bin[..]foo-bin2[..]
+[REPLACING] CWD/home/.cargo/bin/foo-bin2[EXE]
 warning: be sure to add `[..]` to your PATH to be able to run the installed binaries
 ",
-            home = cargo_home().display()
-        )).run();
+        ).run();
 
     cargo_process("install --list")
         .with_stdout(
@@ -568,17 +559,16 @@ fn git_repo() {
     // use `--locked` to test that we don't even try to write a lockfile
     cargo_process("install --locked --git")
         .arg(p.url().to_string())
-        .with_stderr(&format!(
+        .with_stderr(
             "\
 [UPDATING] git repository `[..]`
 [INSTALLING] foo v0.1.0 ([..])
 [COMPILING] foo v0.1.0 ([..])
 [FINISHED] release [optimized] target(s) in [..]
-[INSTALLING] {home}[..]bin[..]foo[..]
+[INSTALLING] CWD/home/.cargo/bin/foo[EXE]
 warning: be sure to add `[..]` to your PATH to be able to run the installed binaries
 ",
-            home = cargo_home().display()
-        )).run();
+        ).run();
     assert_has_installed_exe(cargo_home(), "foo");
     assert_has_installed_exe(cargo_home(), "foo");
 }
@@ -754,13 +744,12 @@ fn uninstall_cwd() {
     p.cargo("install --path .")
         .with_stderr(&format!(
             "\
-[INSTALLING] foo v0.0.1 ({url})
-[COMPILING] foo v0.0.1 ({url})
+[INSTALLING] foo v0.0.1 (CWD)
+[COMPILING] foo v0.0.1 (CWD)
 [FINISHED] release [optimized] target(s) in [..]
 [INSTALLING] {home}/bin/foo[EXE]
 warning: be sure to add `{home}/bin` to your PATH to be able to run the installed binaries",
             home = cargo_home().display(),
-            url = p.url(),
         )).run();
     assert_has_installed_exe(cargo_home(), "foo");
 
@@ -782,8 +771,7 @@ fn uninstall_cwd_not_installed() {
         .with_stdout("")
         .with_stderr(format!(
             "\
-             error: package `foo v0.0.1 ({url})` is not installed",
-            url = p.url(),
+             error: package `foo v0.0.1 (CWD)` is not installed",
         )).run();
 }
 
@@ -799,11 +787,10 @@ fn uninstall_cwd_no_project() {
         .with_stdout("")
         .with_stderr(format!(
             "\
-[ERROR] failed to read `{root}/Cargo.toml`
+[ERROR] failed to read `CWD/Cargo.toml`
 
 Caused by:
   {err_msg} (os error 2)",
-            root = paths::root().display(),
             err_msg = err_msg,
         )).run();
 }
@@ -1082,15 +1069,14 @@ fn uninstall_multiple_and_some_pkg_does_not_exist() {
 
     cargo_process("uninstall foo bar")
         .with_status(101)
-        .with_stderr(&format!(
+        .with_stderr(
             "\
-[REMOVING] {home}[..]bin[..]foo[..]
+[REMOVING] CWD/home/.cargo/bin/foo[EXE]
 error: package id specification `bar` matched no packages
 [SUMMARY] Successfully uninstalled foo! Failed to uninstall bar (see error(s) above).
 error: some packages failed to uninstall
 ",
-            home = cargo_home().display()
-        )).run();
+        ).run();
 
     assert_has_not_installed_exe(cargo_home(), "foo");
     assert_has_not_installed_exe(cargo_home(), "bar");
