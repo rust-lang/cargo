@@ -84,10 +84,13 @@ fn list_command_looks_at_path() {
     let mut path = path();
     path.push(proj.root().join("path-test"));
     let path = env::join_paths(path.iter()).unwrap();
-    cargo_process("-v --list")
-        .env("PATH", &path)
-        .with_stdout_contains(format!("    1                   {}", proj.root().join("path-test").join("cargo-1").display()))
-        .run();
+    let output = cargo_process("-v --list").env("PATH", &path).exec_with_output().unwrap();
+    let output = str::from_utf8(&output.stdout).unwrap();
+    assert!(
+        output.contains("\n    1                   "),
+        "missing 1: {}",
+        output
+    );
 }
 
 // windows and symlinks don't currently agree that well
@@ -107,10 +110,13 @@ fn list_command_resolves_symlinks() {
     let mut path = path();
     path.push(proj.root().join("path-test"));
     let path = env::join_paths(path.iter()).unwrap();
-    cargo_process("-v --list")
-        .env("PATH", &path)
-        .with_stdout_contains(format!("    2                   {}", proj.root().join("path-test").join("cargo-2").display()))
-        .run();
+    let output = cargo_process("-v --list").env("PATH", &path).exec_with_output().unwrap();
+    let output = str::from_utf8(&output.stdout).unwrap();
+    assert!(
+        output.contains("\n    2                   "),
+        "missing 2: {}",
+        output
+    );
 }
 
 #[test]
