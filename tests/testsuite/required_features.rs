@@ -1,5 +1,4 @@
-use support::hamcrest::{assert_that, existing_file, is_not};
-use support::install::{cargo_home, has_installed_exe};
+use support::install::{cargo_home, assert_has_installed_exe, assert_has_not_installed_exe};
 use support::is_nightly;
 use support::project;
 
@@ -38,12 +37,12 @@ fn build_bin_default_features() {
         .build();
 
     p.cargo("build").run();
-    assert_that(&p.bin("foo"), existing_file());
+    assert!(p.bin("foo").is_file());
 
     p.cargo("build --no-default-features").run();
 
     p.cargo("build --bin=foo").run();
-    assert_that(&p.bin("foo"), existing_file());
+    assert!(p.bin("foo").is_file());
 
     p.cargo("build --bin=foo --no-default-features")
         .with_status(101)
@@ -77,7 +76,7 @@ fn build_bin_arg_features() {
         .build();
 
     p.cargo("build --features a").run();
-    assert_that(&p.bin("foo"), existing_file());
+    assert!(p.bin("foo").is_file());
 }
 
 #[test]
@@ -113,13 +112,13 @@ fn build_bin_multiple_required_features() {
 
     p.cargo("build").run();
 
-    assert_that(&p.bin("foo_1"), is_not(existing_file()));
-    assert_that(&p.bin("foo_2"), existing_file());
+    assert!(!p.bin("foo_1").is_file());
+    assert!(p.bin("foo_2").is_file());
 
     p.cargo("build --features c").run();
 
-    assert_that(&p.bin("foo_1"), existing_file());
-    assert_that(&p.bin("foo_2"), existing_file());
+    assert!(p.bin("foo_1").is_file());
+    assert!(p.bin("foo_2").is_file());
 
     p.cargo("build --no-default-features").run();
 }
@@ -147,7 +146,7 @@ fn build_example_default_features() {
         .build();
 
     p.cargo("build --example=foo").run();
-    assert_that(&p.bin("examples/foo"), existing_file());
+    assert!(p.bin("examples/foo").is_file());
 
     p.cargo("build --example=foo --no-default-features")
         .with_status(101)
@@ -181,7 +180,7 @@ fn build_example_arg_features() {
         .build();
 
     p.cargo("build --example=foo --features a").run();
-    assert_that(&p.bin("examples/foo"), existing_file());
+    assert!(p.bin("examples/foo").is_file());
 }
 
 #[test]
@@ -223,14 +222,14 @@ Consider enabling them by passing e.g. `--features=\"b c\"`
         ).run();
     p.cargo("build --example=foo_2").run();
 
-    assert_that(&p.bin("examples/foo_1"), is_not(existing_file()));
-    assert_that(&p.bin("examples/foo_2"), existing_file());
+    assert!(!p.bin("examples/foo_1").is_file());
+    assert!(p.bin("examples/foo_2").is_file());
 
     p.cargo("build --example=foo_1 --features c").run();
     p.cargo("build --example=foo_2 --features c").run();
 
-    assert_that(&p.bin("examples/foo_1"), existing_file());
-    assert_that(&p.bin("examples/foo_2"), existing_file());
+    assert!(p.bin("examples/foo_1").is_file());
+    assert!(p.bin("examples/foo_2").is_file());
 
     p.cargo("build --example=foo_1 --no-default-features")
         .with_status(101)
@@ -608,7 +607,7 @@ fn install_default_features() {
         .build();
 
     p.cargo("install --path .").run();
-    assert_that(cargo_home(), has_installed_exe("foo"));
+    assert_has_installed_exe(cargo_home(), "foo");
     p.cargo("uninstall foo").run();
 
     p.cargo("install --path . --no-default-features")
@@ -620,10 +619,10 @@ fn install_default_features() {
 [ERROR] no binaries are available for install using the selected features
 ",
         ).run();
-    assert_that(cargo_home(), is_not(has_installed_exe("foo")));
+    assert_has_not_installed_exe(cargo_home(), "foo");
 
     p.cargo("install --path . --bin=foo").run();
-    assert_that(cargo_home(), has_installed_exe("foo"));
+    assert_has_installed_exe(cargo_home(), "foo");
     p.cargo("uninstall foo").run();
 
     p.cargo("install --path . --bin=foo --no-default-features")
@@ -639,10 +638,10 @@ Caused by:
 Consider enabling them by passing e.g. `--features=\"a\"`
 ",
         ).run();
-    assert_that(cargo_home(), is_not(has_installed_exe("foo")));
+    assert_has_not_installed_exe(cargo_home(), "foo");
 
     p.cargo("install --path . --example=foo").run();
-    assert_that(cargo_home(), has_installed_exe("foo"));
+    assert_has_installed_exe(cargo_home(), "foo");
     p.cargo("uninstall foo").run();
 
     p.cargo("install --path . --example=foo --no-default-features")
@@ -658,7 +657,7 @@ Caused by:
 Consider enabling them by passing e.g. `--features=\"a\"`
 ",
         ).run();
-    assert_that(cargo_home(), is_not(has_installed_exe("foo")));
+    assert_has_not_installed_exe(cargo_home(), "foo");
 }
 
 #[test]
@@ -683,7 +682,7 @@ fn install_arg_features() {
         .build();
 
     p.cargo("install --features a").run();
-    assert_that(cargo_home(), has_installed_exe("foo"));
+    assert_has_installed_exe(cargo_home(), "foo");
     p.cargo("uninstall foo").run();
 }
 
@@ -719,13 +718,13 @@ fn install_multiple_required_features() {
         .build();
 
     p.cargo("install --path .").run();
-    assert_that(cargo_home(), is_not(has_installed_exe("foo_1")));
-    assert_that(cargo_home(), has_installed_exe("foo_2"));
+    assert_has_not_installed_exe(cargo_home(), "foo_1");
+    assert_has_installed_exe(cargo_home(), "foo_2");
     p.cargo("uninstall foo").run();
 
     p.cargo("install --path . --features c").run();
-    assert_that(cargo_home(), has_installed_exe("foo_1"));
-    assert_that(cargo_home(), has_installed_exe("foo_2"));
+    assert_has_installed_exe(cargo_home(), "foo_1");
+    assert_has_installed_exe(cargo_home(), "foo_2");
     p.cargo("uninstall foo").run();
 
     p.cargo("install --path . --no-default-features")
@@ -737,8 +736,8 @@ fn install_multiple_required_features() {
 [ERROR] no binaries are available for install using the selected features
 ",
         ).run();
-    assert_that(cargo_home(), is_not(has_installed_exe("foo_1")));
-    assert_that(cargo_home(), is_not(has_installed_exe("foo_2")));
+    assert_has_not_installed_exe(cargo_home(), "foo_1");
+    assert_has_not_installed_exe(cargo_home(), "foo_2");
 }
 
 #[test]
@@ -801,11 +800,11 @@ fn dep_feature_in_toml() {
 
     // bin
     p.cargo("build --bin=foo").run();
-    assert_that(&p.bin("foo"), existing_file());
+    assert!(p.bin("foo").is_file());
 
     // example
     p.cargo("build --example=foo").run();
-    assert_that(&p.bin("examples/foo"), existing_file());
+    assert!(p.bin("examples/foo").is_file());
 
     // test
     p.cargo("test --test=foo")
@@ -834,7 +833,7 @@ fn dep_feature_in_toml() {
 
     // install
     p.cargo("install").run();
-    assert_that(cargo_home(), has_installed_exe("foo"));
+    assert_has_installed_exe(cargo_home(), "foo");
     p.cargo("uninstall foo").run();
 }
 
@@ -907,7 +906,7 @@ Consider enabling them by passing e.g. `--features=\"bar/a\"`
         ).run();
 
     p.cargo("build --bin=foo --features bar/a").run();
-    assert_that(&p.bin("foo"), existing_file());
+    assert!(p.bin("foo").is_file());
 
     // example
     p.cargo("build --example=foo")
@@ -920,7 +919,7 @@ Consider enabling them by passing e.g. `--features=\"bar/a\"`
         ).run();
 
     p.cargo("build --example=foo --features bar/a").run();
-    assert_that(&p.bin("examples/foo"), existing_file());
+    assert!(p.bin("examples/foo").is_file());
 
     // test
     p.cargo("test")
@@ -967,10 +966,10 @@ Consider enabling them by passing e.g. `--features=\"bar/a\"`
 [ERROR] no binaries are available for install using the selected features
 ",
         ).run();
-    assert_that(cargo_home(), is_not(has_installed_exe("foo")));
+    assert_has_not_installed_exe(cargo_home(), "foo");
 
     p.cargo("install --features bar/a").run();
-    assert_that(cargo_home(), has_installed_exe("foo"));
+    assert_has_installed_exe(cargo_home(), "foo");
     p.cargo("uninstall foo").run();
 }
 

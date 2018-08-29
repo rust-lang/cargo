@@ -10,8 +10,7 @@ use std::{env, str};
 use git2;
 use support::cargo_process;
 use support::git;
-use support::hamcrest::{assert_that, existing_file};
-use support::install::{cargo_home, has_installed_exe};
+use support::install::{cargo_home, assert_has_installed_exe};
 use support::registry::Package;
 use support::{basic_manifest, execs, project};
 
@@ -46,8 +45,8 @@ fn multiple_installs() {
     execs().run_output(&a);
     execs().run_output(&b);
 
-    assert_that(cargo_home(), has_installed_exe("foo"));
-    assert_that(cargo_home(), has_installed_exe("bar"));
+    assert_has_installed_exe(cargo_home(), "foo");
+    assert_has_installed_exe(cargo_home(), "bar");
 }
 
 #[test]
@@ -75,8 +74,8 @@ fn concurrent_installs() {
     execs().run_output(&a);
     execs().run_output(&b);
 
-    assert_that(cargo_home(), has_installed_exe("foo"));
-    assert_that(cargo_home(), has_installed_exe("bar"));
+    assert_has_installed_exe(cargo_home(), "foo");
+    assert_has_installed_exe(cargo_home(), "bar");
 }
 
 #[test]
@@ -115,7 +114,7 @@ fn one_install_should_be_bad() {
         .with_stderr_contains("warning: be sure to add `[..]` to your PATH [..]")
         .run_output(&good);
 
-    assert_that(cargo_home(), has_installed_exe("foo"));
+    assert_has_installed_exe(cargo_home(), "foo");
 }
 
 #[test]
@@ -172,17 +171,17 @@ fn multiple_registry_fetches() {
     execs().run_output(&b);
 
     let suffix = env::consts::EXE_SUFFIX;
-    assert_that(
-        &p.root()
+    assert!(
+        p.root()
             .join("a/target/debug")
-            .join(format!("foo{}", suffix)),
-        existing_file(),
+            .join(format!("foo{}", suffix))
+            .is_file()
     );
-    assert_that(
-        &p.root()
+    assert!(
+        p.root()
             .join("b/target/debug")
-            .join(format!("bar{}", suffix)),
-        existing_file(),
+            .join(format!("bar{}", suffix))
+            .is_file()
     );
 }
 

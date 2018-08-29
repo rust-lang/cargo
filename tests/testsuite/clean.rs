@@ -1,6 +1,5 @@
 use std::env;
 
-use support::hamcrest::{assert_that, existing_dir, existing_file, is_not};
 use support::registry::Package;
 use support::{basic_bin_manifest, basic_manifest, git, main_file, project};
 
@@ -12,10 +11,10 @@ fn cargo_clean_simple() {
         .build();
 
     p.cargo("build").run();
-    assert_that(&p.build_dir(), existing_dir());
+    assert!(p.build_dir().is_dir());
 
     p.cargo("clean").run();
-    assert_that(&p.build_dir(), is_not(existing_dir()));
+    assert!(!p.build_dir().is_dir());
 }
 
 #[test]
@@ -27,13 +26,13 @@ fn different_dir() {
         .build();
 
     p.cargo("build").run();
-    assert_that(&p.build_dir(), existing_dir());
+    assert!(p.build_dir().is_dir());
 
     p.cargo("clean")
         .cwd(&p.root().join("src"))
         .with_stdout("")
         .run();
-    assert_that(&p.build_dir(), is_not(existing_dir()));
+    assert!(!p.build_dir().is_dir());
 }
 
 #[test]
@@ -73,17 +72,17 @@ fn clean_multiple_packages() {
         .join("debug")
         .join(format!("d2{}", env::consts::EXE_SUFFIX));
 
-    assert_that(&p.bin("foo"), existing_file());
-    assert_that(d1_path, existing_file());
-    assert_that(d2_path, existing_file());
+    assert!(p.bin("foo").is_file());
+    assert!(d1_path.is_file());
+    assert!(d2_path.is_file());
 
     p.cargo("clean -p d1 -p d2")
         .cwd(&p.root().join("src"))
         .with_stdout("")
         .run();
-    assert_that(&p.bin("foo"), existing_file());
-    assert_that(d1_path, is_not(existing_file()));
-    assert_that(d2_path, is_not(existing_file()));
+    assert!(p.bin("foo").is_file());
+    assert!(!d1_path.is_file());
+    assert!(!d2_path.is_file());
 }
 
 #[test]
@@ -143,12 +142,12 @@ fn clean_doc() {
 
     let doc_path = &p.build_dir().join("doc");
 
-    assert_that(doc_path, existing_dir());
+    assert!(doc_path.is_dir());
 
     p.cargo("clean --doc").run();
 
-    assert_that(doc_path, is_not(existing_dir()));
-    assert_that(p.build_dir(), existing_dir());
+    assert!(!doc_path.is_dir());
+    assert!(p.build_dir().is_dir());
 }
 
 #[test]

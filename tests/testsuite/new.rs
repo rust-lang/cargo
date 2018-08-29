@@ -2,7 +2,6 @@ use std::env;
 use std::fs::{self, File};
 use std::io::prelude::*;
 
-use support::hamcrest::{assert_that, existing_dir, existing_file, is_not};
 use support::paths;
 use support::{cargo_process, git_process};
 
@@ -20,13 +19,10 @@ fn simple_lib() {
         .with_stderr("[CREATED] library `foo` project")
         .run();
 
-    assert_that(&paths::root().join("foo"), existing_dir());
-    assert_that(&paths::root().join("foo/Cargo.toml"), existing_file());
-    assert_that(&paths::root().join("foo/src/lib.rs"), existing_file());
-    assert_that(
-        &paths::root().join("foo/.gitignore"),
-        is_not(existing_file()),
-    );
+    assert!(paths::root().join("foo").is_dir());
+    assert!(paths::root().join("foo/Cargo.toml").is_file());
+    assert!(paths::root().join("foo/src/lib.rs").is_file());
+    assert!(!paths::root().join("foo/.gitignore").is_file());
 
     let lib = paths::root().join("foo/src/lib.rs");
     let mut contents = String::new();
@@ -56,14 +52,15 @@ fn simple_bin() {
         .with_stderr("[CREATED] binary (application) `foo` project")
         .run();
 
-    assert_that(&paths::root().join("foo"), existing_dir());
-    assert_that(&paths::root().join("foo/Cargo.toml"), existing_file());
-    assert_that(&paths::root().join("foo/src/main.rs"), existing_file());
+    assert!(paths::root().join("foo").is_dir());
+    assert!(paths::root().join("foo/Cargo.toml").is_file());
+    assert!(paths::root().join("foo/src/main.rs").is_file());
 
     cargo_process("build").cwd(&paths::root().join("foo")).run();
-    assert_that(
-        &paths::root().join(&format!("foo/target/debug/foo{}", env::consts::EXE_SUFFIX)),
-        existing_file(),
+    assert!(
+        paths::root()
+            .join(&format!("foo/target/debug/foo{}", env::consts::EXE_SUFFIX))
+            .is_file()
     );
 }
 
@@ -80,11 +77,11 @@ fn both_lib_and_bin() {
 fn simple_git() {
     cargo_process("new --lib foo").env("USER", "foo").run();
 
-    assert_that(&paths::root(), existing_dir());
-    assert_that(&paths::root().join("foo/Cargo.toml"), existing_file());
-    assert_that(&paths::root().join("foo/src/lib.rs"), existing_file());
-    assert_that(&paths::root().join("foo/.git"), existing_dir());
-    assert_that(&paths::root().join("foo/.gitignore"), existing_file());
+    assert!(paths::root().is_dir());
+    assert!(paths::root().join("foo/Cargo.toml").is_file());
+    assert!(paths::root().join("foo/src/lib.rs").is_file());
+    assert!(paths::root().join("foo/.git").is_dir());
+    assert!(paths::root().join("foo/.gitignore").is_file());
 
     cargo_process("build").cwd(&paths::root().join("foo")).run();
 }
@@ -364,8 +361,8 @@ fn git_prefers_command_line() {
 fn subpackage_no_git() {
     cargo_process("new foo").env("USER", "foo").run();
 
-    assert_that(&paths::root().join("foo/.git"), existing_dir());
-    assert_that(&paths::root().join("foo/.gitignore"), existing_file());
+    assert!(paths::root().join("foo/.git").is_dir());
+    assert!(paths::root().join("foo/.gitignore").is_file());
 
     let subpackage = paths::root().join("foo").join("components");
     fs::create_dir(&subpackage).unwrap();
@@ -373,13 +370,15 @@ fn subpackage_no_git() {
         .env("USER", "foo")
         .run();
 
-    assert_that(
-        &paths::root().join("foo/components/subcomponent/.git"),
-        is_not(existing_file()),
+    assert!(
+        !paths::root()
+            .join("foo/components/subcomponent/.git")
+            .is_file()
     );
-    assert_that(
-        &paths::root().join("foo/components/subcomponent/.gitignore"),
-        is_not(existing_file()),
+    assert!(
+        !paths::root()
+            .join("foo/components/subcomponent/.gitignore")
+            .is_file()
     );
 }
 
@@ -387,8 +386,8 @@ fn subpackage_no_git() {
 fn subpackage_git_with_gitignore() {
     cargo_process("new foo").env("USER", "foo").run();
 
-    assert_that(&paths::root().join("foo/.git"), existing_dir());
-    assert_that(&paths::root().join("foo/.gitignore"), existing_file());
+    assert!(paths::root().join("foo/.git").is_dir());
+    assert!(paths::root().join("foo/.gitignore").is_file());
 
     let gitignore = paths::root().join("foo/.gitignore");
     fs::write(gitignore, b"components").unwrap();
@@ -399,13 +398,15 @@ fn subpackage_git_with_gitignore() {
         .env("USER", "foo")
         .run();
 
-    assert_that(
-        &paths::root().join("foo/components/subcomponent/.git"),
-        existing_dir(),
+    assert!(
+        paths::root()
+            .join("foo/components/subcomponent/.git")
+            .is_dir()
     );
-    assert_that(
-        &paths::root().join("foo/components/subcomponent/.gitignore"),
-        existing_file(),
+    assert!(
+        paths::root()
+            .join("foo/components/subcomponent/.gitignore")
+            .is_file()
     );
 }
 
@@ -419,13 +420,15 @@ fn subpackage_git_with_vcs_arg() {
         .env("USER", "foo")
         .run();
 
-    assert_that(
-        &paths::root().join("foo/components/subcomponent/.git"),
-        existing_dir(),
+    assert!(
+        paths::root()
+            .join("foo/components/subcomponent/.git")
+            .is_dir()
     );
-    assert_that(
-        &paths::root().join("foo/components/subcomponent/.gitignore"),
-        existing_file(),
+    assert!(
+        paths::root()
+            .join("foo/components/subcomponent/.gitignore")
+            .is_file()
     );
 }
 

@@ -1,7 +1,6 @@
 use std::fs::{self, File};
 use std::io::prelude::*;
 
-use support::hamcrest::{assert_that, existing_file, is_not};
 use support::paths::{self, CargoPathExt};
 use support::registry::Package;
 use support::sleep_ms;
@@ -76,7 +75,7 @@ fn cargo_compile_with_nested_deps_shorthand() {
             p.url()
         )).run();
 
-    assert_that(&p.bin("foo"), existing_file());
+    assert!(p.bin("foo").is_file());
 
     p.process(&p.bin("foo")).with_stdout("test passed\n").run();
 
@@ -238,7 +237,7 @@ fn cargo_compile_with_transitive_dev_deps() {
             p.url()
         )).run();
 
-    assert_that(&p.bin("foo"), existing_file());
+    assert!(p.bin("foo").is_file());
 
     p.process(&p.bin("foo")).with_stdout("zoidberg\n").run();
 }
@@ -429,9 +428,9 @@ fn no_rebuild_two_deps() {
             p.url(),
             p.url()
         )).run();
-    assert_that(&p.bin("foo"), existing_file());
+    assert!(p.bin("foo").is_file());
     p.cargo("build").with_stdout("").run();
-    assert_that(&p.bin("foo"), existing_file());
+    assert!(p.bin("foo").is_file());
 }
 
 #[test]
@@ -695,7 +694,7 @@ fn path_dep_build_cmd() {
             p.url()
         )).run();
 
-    assert_that(&p.bin("foo"), existing_file());
+    assert!(p.bin("foo").is_file());
 
     p.process(&p.bin("foo")).with_stdout("0\n").run();
 
@@ -977,11 +976,8 @@ fn workspace_produces_rlib() {
 
     p.cargo("build").run();
 
-    assert_that(&p.root().join("target/debug/libtop.rlib"), existing_file());
-    assert_that(
-        &p.root().join("target/debug/libfoo.rlib"),
-        is_not(existing_file()),
-    );
+    assert!(p.root().join("target/debug/libtop.rlib").is_file());
+    assert!(!p.root().join("target/debug/libfoo.rlib").is_file());
 }
 
 #[test]

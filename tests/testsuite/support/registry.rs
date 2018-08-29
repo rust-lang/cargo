@@ -109,9 +109,7 @@ pub fn alt_api_url() -> Url {
 ///     "#)
 ///     .build();
 ///
-/// assert_that(
-///     p.cargo("run"),
-///     execs().with_stdout("24"));
+/// p.cargo("run").with_stdout("24").run();
 /// ```
 pub struct Package {
     name: String,

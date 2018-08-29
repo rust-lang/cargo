@@ -18,8 +18,7 @@ let p = project()
 If you do not specify a `Cargo.toml` manifest using `file()`, one is
 automatically created with a project name of `foo` using `basic_manifest()`.
 
-To run cargo, call the `cargo` method and use the `hamcrest` matchers to check
-the output.
+To run cargo, call the `cargo` method and make assertions on the execution:
 
 ```
 p.cargo("run --bin foo")
@@ -41,10 +40,6 @@ directory.  There is also an empty `home` directory created that will be used
 as a home directory instead of your normal home directory.
 
 See `support::lines_match` for an explanation of the string pattern matching.
-
-See the `hamcrest` module for other matchers like
-`is_not(existing_file(path))`.  This is not the actual hamcrest library, but
-instead a lightweight subset of matchers that are used in cargo tests.
 
 Browse the `pub` functions in the `support` module for a variety of other
 helpful utilities.
@@ -126,7 +121,6 @@ use cargo::util::{CargoResult, ProcessBuilder, ProcessError, Rustc};
 use serde_json::{self, Value};
 use url::Url;
 
-use self::hamcrest as ham;
 use self::paths::CargoPathExt;
 
 macro_rules! t {
@@ -140,7 +134,6 @@ macro_rules! t {
 
 pub mod cross_compile;
 pub mod git;
-pub mod hamcrest;
 pub mod paths;
 pub mod publish;
 pub mod registry;
@@ -368,12 +361,12 @@ impl Project {
         FileBuilder::new(self.root().join(path), body).mk()
     }
 
-    /// Create a `ProcessBuilder` to run a program in the project.
+    /// Create a `ProcessBuilder` to run a program in the project
+    /// and wrap it in an Execs to assert on the execution.
     /// Example:
-    ///         assert_that(
-    ///             p.process(&p.bin("foo")),
-    ///             execs().with_stdout("bar\n"),
-    ///         );
+    ///         p.process(&p.bin("foo"))
+    ///             .with_stdout("bar\n")
+    ///             .run();
     pub fn process<T: AsRef<OsStr>>(&self, program: T) -> Execs {
         let mut p = ::support::process(program);
         p.cwd(self.root());
@@ -521,6 +514,8 @@ pub fn cargo_exe() -> PathBuf {
  * ===== Matchers =====
  *
  */
+
+pub type MatchResult = Result<(), String>;
 
 #[must_use]
 #[derive(Clone)]
@@ -744,7 +739,7 @@ impl Execs {
         }
     }
 
-    fn match_process(&self, process: &ProcessBuilder) -> ham::MatchResult {
+    fn match_process(&self, process: &ProcessBuilder) -> MatchResult {
         println!("running {}", process);
         let res = if self.stream_output {
             if env::var("CI").is_ok() {
@@ -779,13 +774,13 @@ impl Execs {
         }
     }
 
-    fn match_output(&self, actual: &Output) -> ham::MatchResult {
+    fn match_output(&self, actual: &Output) -> MatchResult {
         self.match_status(actual)
             .and(self.match_stdout(actual))
             .and(self.match_stderr(actual))
     }
 
-    fn match_status(&self, actual: &Output) -> ham::MatchResult {
+    fn match_status(&self, actual: &Output) -> MatchResult {
         match self.expect_exit_code {
             None => Ok(()),
             Some(code) if actual.status.code() == Some(code) => Ok(()),
@@ -798,7 +793,7 @@ impl Execs {
         }
     }
 
-    fn match_stdout(&self, actual: &Output) -> ham::MatchResult {
+    fn match_stdout(&self, actual: &Output) -> MatchResult {
         self.match_std(
             self.expect_stdout.as_ref(),
             &actual.stdout,
@@ -926,7 +921,7 @@ impl Execs {
         Ok(())
     }
 
-    fn match_stderr(&self, actual: &Output) -> ham::MatchResult {
+    fn match_stderr(&self, actual: &Output) -> MatchResult {
         self.match_std(
             self.expect_stderr.as_ref(),
             &actual.stderr,
@@ -943,7 +938,7 @@ impl Execs {
         description: &str,
         extra: &[u8],
         kind: MatchKind,
-    ) -> ham::MatchResult {
+    ) -> MatchResult {
         let out = match expected {
             Some(out) => out,
             None => return Ok(()),
@@ -1078,7 +1073,7 @@ impl Execs {
         }
     }
 
-    fn match_json(&self, expected: &Value, line: &str) -> ham::MatchResult {
+    fn match_json(&self, expected: &Value, line: &str) -> MatchResult {
         let actual = match line.parse() {
             Err(e) => return Err(format!("invalid json, {}:\n`{}`", e, line)),
             Ok(actual) => actual,

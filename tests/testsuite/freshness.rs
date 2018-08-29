@@ -1,7 +1,6 @@
 use std::fs::{self, File};
 use std::io::prelude::*;
 
-use support::hamcrest::{assert_that, existing_file};
 use support::paths::CargoPathExt;
 use support::registry::Package;
 use support::sleep_ms;
@@ -65,7 +64,7 @@ fn modify_only_some_files() {
     p.cargo("test").run();
     sleep_ms(1000);
 
-    assert_that(&p.bin("foo"), existing_file());
+    assert!(p.bin("foo").is_file());
 
     let lib = p.root().join("src/lib.rs");
     let bin = p.root().join("src/b.rs");
@@ -89,7 +88,7 @@ fn modify_only_some_files() {
 ",
             dir = path2url(p.root())
         )).run();
-    assert_that(&p.bin("foo"), existing_file());
+    assert!(p.bin("foo").is_file());
 }
 
 #[test]

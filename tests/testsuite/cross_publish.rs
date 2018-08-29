@@ -3,7 +3,6 @@ use std::io::prelude::*;
 use std::path::PathBuf;
 
 use flate2::read::GzDecoder;
-use support::hamcrest::{assert_that, contains};
 use support::{cross_compile, project, publish};
 use tar::Archive;
 
@@ -61,18 +60,9 @@ fn simple_cross_package() {
     let entry_paths = entries
         .map(|entry| entry.unwrap().path().unwrap().into_owned())
         .collect::<Vec<PathBuf>>();
-    assert_that(
-        &entry_paths,
-        contains(vec![PathBuf::from("foo-0.0.0/Cargo.toml")]),
-    );
-    assert_that(
-        &entry_paths,
-        contains(vec![PathBuf::from("foo-0.0.0/Cargo.toml.orig")]),
-    );
-    assert_that(
-        &entry_paths,
-        contains(vec![PathBuf::from("foo-0.0.0/src/main.rs")]),
-    );
+    assert!(entry_paths.contains(&PathBuf::from("foo-0.0.0/Cargo.toml")));
+    assert!(entry_paths.contains(&PathBuf::from("foo-0.0.0/Cargo.toml.orig")));
+    assert!(entry_paths.contains(&PathBuf::from("foo-0.0.0/src/main.rs")));
 }
 
 #[test]

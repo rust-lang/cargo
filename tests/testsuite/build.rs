@@ -3,7 +3,6 @@ use std::fs::{self, File};
 use std::io::prelude::*;
 
 use cargo::util::paths::dylib_path_envvar;
-use support::hamcrest::{assert_that, existing_dir, existing_file, is_not};
 use support::paths::{root, CargoPathExt};
 use support::registry::Package;
 use support::ProjectBuilder;
@@ -20,7 +19,7 @@ fn cargo_compile_simple() {
         .build();
 
     p.cargo("build").run();
-    assert_that(&p.bin("foo"), existing_file());
+    assert!(p.bin("foo").is_file());
 
     p.process(&p.bin("foo")).with_stdout("i am foo\n").run();
 }
@@ -144,7 +143,7 @@ fn cargo_compile_manifest_path() {
     p.cargo("build --manifest-path foo/Cargo.toml")
         .cwd(p.root().parent().unwrap())
         .run();
-    assert_that(&p.bin("foo"), existing_file());
+    assert!(p.bin("foo").is_file());
 }
 
 #[test]
@@ -445,7 +444,7 @@ fn cargo_compile_with_invalid_code() {
 
 To learn more, run the command again with --verbose.\n",
         ).run();
-    assert_that(&p.root().join("Cargo.lock"), existing_file());
+    assert!(p.root().join("Cargo.lock").is_file());
 }
 
 #[test]
@@ -527,7 +526,7 @@ fn cargo_compile_with_warnings_in_a_dep_package() {
         .with_stderr_contains("[..]function is never used: `dead`[..]")
         .run();
 
-    assert_that(&p.bin("foo"), existing_file());
+    assert!(p.bin("foo").is_file());
 
     p.process(&p.bin("foo")).with_stdout("test passed\n").run();
 }
@@ -584,9 +583,9 @@ fn cargo_compile_with_nested_deps_inferred() {
 
     p.cargo("build").run();
 
-    assert_that(&p.bin("foo"), existing_file());
-    assert_that(&p.bin("libbar.rlib"), is_not(existing_file()));
-    assert_that(&p.bin("libbaz.rlib"), is_not(existing_file()));
+    assert!(p.bin("foo").is_file());
+    assert!(!p.bin("libbar.rlib").is_file());
+    assert!(!p.bin("libbaz.rlib").is_file());
 
     p.process(&p.bin("foo")).with_stdout("test passed\n").run();
 }
@@ -643,9 +642,9 @@ fn cargo_compile_with_nested_deps_correct_bin() {
 
     p.cargo("build").run();
 
-    assert_that(&p.bin("foo"), existing_file());
-    assert_that(&p.bin("libbar.rlib"), is_not(existing_file()));
-    assert_that(&p.bin("libbaz.rlib"), is_not(existing_file()));
+    assert!(p.bin("foo").is_file());
+    assert!(!p.bin("libbar.rlib").is_file());
+    assert!(!p.bin("libbaz.rlib").is_file());
 
     p.process(&p.bin("foo")).with_stdout("test passed\n").run();
 }
@@ -703,9 +702,9 @@ fn cargo_compile_with_nested_deps_shorthand() {
 
     p.cargo("build").run();
 
-    assert_that(&p.bin("foo"), existing_file());
-    assert_that(&p.bin("libbar.rlib"), is_not(existing_file()));
-    assert_that(&p.bin("libbaz.rlib"), is_not(existing_file()));
+    assert!(p.bin("foo").is_file());
+    assert!(!p.bin("libbar.rlib").is_file());
+    assert!(!p.bin("libbaz.rlib").is_file());
 
     p.process(&p.bin("foo")).with_stdout("test passed\n").run();
 }
@@ -769,9 +768,9 @@ fn cargo_compile_with_nested_deps_longhand() {
 
     p.cargo("build").run();
 
-    assert_that(&p.bin("foo"), existing_file());
-    assert_that(&p.bin("libbar.rlib"), is_not(existing_file()));
-    assert_that(&p.bin("libbaz.rlib"), is_not(existing_file()));
+    assert!(p.bin("foo").is_file());
+    assert!(!p.bin("libbar.rlib").is_file());
+    assert!(!p.bin("libbaz.rlib").is_file());
 
     p.process(&p.bin("foo")).with_stdout("test passed\n").run();
 }
@@ -1503,9 +1502,9 @@ fn many_crate_types_old_style_lib_location() {
 please rename the file to `src/lib.rs` or set lib.path in Cargo.toml",
         ).run();
 
-    assert_that(&p.root().join("target/debug/libfoo.rlib"), existing_file());
+    assert!(p.root().join("target/debug/libfoo.rlib").is_file());
     let fname = format!("{}foo{}", env::consts::DLL_PREFIX, env::consts::DLL_SUFFIX);
-    assert_that(&p.root().join("target/debug").join(&fname), existing_file());
+    assert!(p.root().join("target/debug").join(&fname).is_file());
 }
 
 #[test]
@@ -1529,9 +1528,9 @@ fn many_crate_types_correct() {
         .build();
     p.cargo("build").run();
 
-    assert_that(&p.root().join("target/debug/libfoo.rlib"), existing_file());
+    assert!(p.root().join("target/debug/libfoo.rlib").is_file());
     let fname = format!("{}foo{}", env::consts::DLL_PREFIX, env::consts::DLL_SUFFIX);
-    assert_that(&p.root().join("target/debug").join(&fname), existing_file());
+    assert!(p.root().join("target/debug").join(&fname).is_file());
 }
 
 #[test]
@@ -1579,7 +1578,7 @@ fn ignore_broken_symlinks() {
         .build();
 
     p.cargo("build").run();
-    assert_that(&p.bin("foo"), existing_file());
+    assert!(p.bin("foo").is_file());
 
     p.process(&p.bin("foo")).with_stdout("i am foo\n").run();
 }
@@ -2356,7 +2355,7 @@ fn cargo_platform_specific_dependency() {
 
     p.cargo("build").run();
 
-    assert_that(&p.bin("foo"), existing_file());
+    assert!(p.bin("foo").is_file());
     p.cargo("test").run();
 }
 
@@ -2409,7 +2408,7 @@ fn cargo_platform_specific_dependency_wrong_platform() {
 
     p.cargo("build").run();
 
-    assert_that(&p.bin("foo"), existing_file());
+    assert!(p.bin("foo").is_file());
     p.process(&p.bin("foo")).run();
 
     let loc = p.root().join("Cargo.lock");
@@ -2441,7 +2440,7 @@ fn example_as_lib() {
         .build();
 
     p.cargo("build --example=ex").run();
-    assert_that(&p.example_lib("ex", "lib"), existing_file());
+    assert!(p.example_lib("ex", "lib").is_file());
 }
 
 #[test]
@@ -2464,7 +2463,7 @@ fn example_as_rlib() {
         .build();
 
     p.cargo("build --example=ex").run();
-    assert_that(&p.example_lib("ex", "rlib"), existing_file());
+    assert!(p.example_lib("ex", "rlib").is_file());
 }
 
 #[test]
@@ -2487,7 +2486,7 @@ fn example_as_dylib() {
         .build();
 
     p.cargo("build --example=ex").run();
-    assert_that(&p.example_lib("ex", "dylib"), existing_file());
+    assert!(p.example_lib("ex", "dylib").is_file());
 }
 
 #[test]
@@ -2514,7 +2513,7 @@ fn example_as_proc_macro() {
         .build();
 
     p.cargo("build --example=ex").run();
-    assert_that(&p.example_lib("ex", "proc-macro"), existing_file());
+    assert!(p.example_lib("ex", "proc-macro").is_file());
 }
 
 #[test]
@@ -2526,15 +2525,15 @@ fn example_bin_same_name() {
 
     p.cargo("test --no-run -v").run();
 
-    assert_that(&p.bin("foo"), is_not(existing_file()));
+    assert!(!p.bin("foo").is_file());
     // We expect a file of the form bin/foo-{metadata_hash}
-    assert_that(&p.bin("examples/foo"), existing_file());
+    assert!(p.bin("examples/foo").is_file());
 
     p.cargo("test --no-run -v").run();
 
-    assert_that(&p.bin("foo"), is_not(existing_file()));
+    assert!(!p.bin("foo").is_file());
     // We expect a file of the form bin/foo-{metadata_hash}
-    assert_that(&p.bin("examples/foo"), existing_file());
+    assert!(p.bin("examples/foo").is_file());
 }
 
 #[test]
@@ -2542,7 +2541,7 @@ fn compile_then_delete() {
     let p = project().file("src/main.rs", "fn main() {}").build();
 
     p.cargo("run -v").run();
-    assert_that(&p.bin("foo"), existing_file());
+    assert!(p.bin("foo").is_file());
     if cfg!(windows) {
         // On windows unlinking immediately after running often fails, so sleep
         sleep_ms(100);
@@ -2645,12 +2644,9 @@ fn predictable_filenames() {
         .build();
 
     p.cargo("build -v").run();
-    assert_that(&p.root().join("target/debug/libfoo.rlib"), existing_file());
+    assert!(p.root().join("target/debug/libfoo.rlib").is_file());
     let dylib_name = format!("{}foo{}", env::consts::DLL_PREFIX, env::consts::DLL_SUFFIX);
-    assert_that(
-        &p.root().join("target/debug").join(dylib_name),
-        existing_file(),
-    );
+    assert!(p.root().join("target/debug").join(dylib_name).is_file());
 }
 
 #[test]
@@ -2662,7 +2658,7 @@ fn dashes_to_underscores() {
         .build();
 
     p.cargo("build -v").run();
-    assert_that(&p.bin("foo-bar"), existing_file());
+    assert!(p.bin("foo-bar").is_file());
 }
 
 #[test]
@@ -2701,7 +2697,7 @@ Caused by:
 [..]
 ",
         ).run();
-    assert_that(&p.bin("a"), is_not(existing_file()));
+    assert!(!p.bin("a").is_file());
 }
 
 #[test]
@@ -2715,13 +2711,13 @@ fn filtering() {
         .build();
 
     p.cargo("build --lib").run();
-    assert_that(&p.bin("a"), is_not(existing_file()));
+    assert!(!p.bin("a").is_file());
 
     p.cargo("build --bin=a --example=a").run();
-    assert_that(&p.bin("a"), existing_file());
-    assert_that(&p.bin("b"), is_not(existing_file()));
-    assert_that(&p.bin("examples/a"), existing_file());
-    assert_that(&p.bin("examples/b"), is_not(existing_file()));
+    assert!(p.bin("a").is_file());
+    assert!(!p.bin("b").is_file());
+    assert!(p.bin("examples/a").is_file());
+    assert!(!p.bin("examples/b").is_file());
 }
 
 #[test]
@@ -2735,10 +2731,10 @@ fn filtering_implicit_bins() {
         .build();
 
     p.cargo("build --bins").run();
-    assert_that(&p.bin("a"), existing_file());
-    assert_that(&p.bin("b"), existing_file());
-    assert_that(&p.bin("examples/a"), is_not(existing_file()));
-    assert_that(&p.bin("examples/b"), is_not(existing_file()));
+    assert!(p.bin("a").is_file());
+    assert!(p.bin("b").is_file());
+    assert!(!p.bin("examples/a").is_file());
+    assert!(!p.bin("examples/b").is_file());
 }
 
 #[test]
@@ -2752,10 +2748,10 @@ fn filtering_implicit_examples() {
         .build();
 
     p.cargo("build --examples").run();
-    assert_that(&p.bin("a"), is_not(existing_file()));
-    assert_that(&p.bin("b"), is_not(existing_file()));
-    assert_that(&p.bin("examples/a"), existing_file());
-    assert_that(&p.bin("examples/b"), existing_file());
+    assert!(!p.bin("a").is_file());
+    assert!(!p.bin("b").is_file());
+    assert!(p.bin("examples/a").is_file());
+    assert!(p.bin("examples/b").is_file());
 }
 
 #[test]
@@ -2794,24 +2790,12 @@ fn custom_target_dir_env() {
     let exe_name = format!("foo{}", env::consts::EXE_SUFFIX);
 
     p.cargo("build").env("CARGO_TARGET_DIR", "foo/target").run();
-    assert_that(
-        &p.root().join("foo/target/debug").join(&exe_name),
-        existing_file(),
-    );
-    assert_that(
-        &p.root().join("target/debug").join(&exe_name),
-        is_not(existing_file()),
-    );
+    assert!(p.root().join("foo/target/debug").join(&exe_name).is_file());
+    assert!(!p.root().join("target/debug").join(&exe_name).is_file());
 
     p.cargo("build").run();
-    assert_that(
-        &p.root().join("foo/target/debug").join(&exe_name),
-        existing_file(),
-    );
-    assert_that(
-        &p.root().join("target/debug").join(&exe_name),
-        existing_file(),
-    );
+    assert!(p.root().join("foo/target/debug").join(&exe_name).is_file());
+    assert!(p.root().join("target/debug").join(&exe_name).is_file());
 
     fs::create_dir(p.root().join(".cargo")).unwrap();
     File::create(p.root().join(".cargo/config"))
@@ -2823,18 +2807,9 @@ fn custom_target_dir_env() {
     "#,
         ).unwrap();
     p.cargo("build").env("CARGO_TARGET_DIR", "bar/target").run();
-    assert_that(
-        &p.root().join("bar/target/debug").join(&exe_name),
-        existing_file(),
-    );
-    assert_that(
-        &p.root().join("foo/target/debug").join(&exe_name),
-        existing_file(),
-    );
-    assert_that(
-        &p.root().join("target/debug").join(&exe_name),
-        existing_file(),
-    );
+    assert!(p.root().join("bar/target/debug").join(&exe_name).is_file());
+    assert!(p.root().join("foo/target/debug").join(&exe_name).is_file());
+    assert!(p.root().join("target/debug").join(&exe_name).is_file());
 }
 
 #[test]
@@ -2844,24 +2819,12 @@ fn custom_target_dir_line_parameter() {
     let exe_name = format!("foo{}", env::consts::EXE_SUFFIX);
 
     p.cargo("build --target-dir foo/target").run();
-    assert_that(
-        &p.root().join("foo/target/debug").join(&exe_name),
-        existing_file(),
-    );
-    assert_that(
-        &p.root().join("target/debug").join(&exe_name),
-        is_not(existing_file()),
-    );
+    assert!(p.root().join("foo/target/debug").join(&exe_name).is_file());
+    assert!(!p.root().join("target/debug").join(&exe_name).is_file());
 
     p.cargo("build").run();
-    assert_that(
-        &p.root().join("foo/target/debug").join(&exe_name),
-        existing_file(),
-    );
-    assert_that(
-        &p.root().join("target/debug").join(&exe_name),
-        existing_file(),
-    );
+    assert!(p.root().join("foo/target/debug").join(&exe_name).is_file());
+    assert!(p.root().join("target/debug").join(&exe_name).is_file());
 
     fs::create_dir(p.root().join(".cargo")).unwrap();
     File::create(p.root().join(".cargo/config"))
@@ -2873,38 +2836,22 @@ fn custom_target_dir_line_parameter() {
     "#,
         ).unwrap();
     p.cargo("build --target-dir bar/target").run();
-    assert_that(
-        &p.root().join("bar/target/debug").join(&exe_name),
-        existing_file(),
-    );
-    assert_that(
-        &p.root().join("foo/target/debug").join(&exe_name),
-        existing_file(),
-    );
-    assert_that(
-        &p.root().join("target/debug").join(&exe_name),
-        existing_file(),
-    );
+    assert!(p.root().join("bar/target/debug").join(&exe_name).is_file());
+    assert!(p.root().join("foo/target/debug").join(&exe_name).is_file());
+    assert!(p.root().join("target/debug").join(&exe_name).is_file());
 
     p.cargo("build --target-dir foobar/target")
         .env("CARGO_TARGET_DIR", "bar/target")
         .run();
-    assert_that(
-        &p.root().join("foobar/target/debug").join(&exe_name),
-        existing_file(),
+    assert!(
+        p.root()
+            .join("foobar/target/debug")
+            .join(&exe_name)
+            .is_file()
     );
-    assert_that(
-        &p.root().join("bar/target/debug").join(&exe_name),
-        existing_file(),
-    );
-    assert_that(
-        &p.root().join("foo/target/debug").join(&exe_name),
-        existing_file(),
-    );
-    assert_that(
-        &p.root().join("target/debug").join(&exe_name),
-        existing_file(),
-    );
+    assert!(p.root().join("bar/target/debug").join(&exe_name).is_file());
+    assert!(p.root().join("foo/target/debug").join(&exe_name).is_file());
+    assert!(p.root().join("target/debug").join(&exe_name).is_file());
 }
 
 #[test]
@@ -2947,7 +2894,7 @@ fn build_multiple_packages() {
 
     p.cargo("build -p d1 -p d2 -p foo").run();
 
-    assert_that(&p.bin("foo"), existing_file());
+    assert!(p.bin("foo").is_file());
     p.process(&p.bin("foo")).with_stdout("i am foo\n").run();
 
     let d1_path = &p
@@ -2959,10 +2906,10 @@ fn build_multiple_packages() {
         .join("debug")
         .join(format!("d2{}", env::consts::EXE_SUFFIX));
 
-    assert_that(d1_path, existing_file());
+    assert!(d1_path.is_file());
     p.process(d1_path).with_stdout("d1").run();
 
-    assert_that(d2_path, existing_file());
+    assert!(d2_path.is_file());
     p.process(d2_path).with_stdout("d2").run();
 }
 
@@ -3468,14 +3415,14 @@ fn build_all_workspace_implicit_examples() {
              [..] Compiling foo v0.1.0 ([..])\n\
              [..] Finished dev [unoptimized + debuginfo] target(s) in [..]\n",
         ).run();
-    assert_that(&p.bin("a"), is_not(existing_file()));
-    assert_that(&p.bin("b"), is_not(existing_file()));
-    assert_that(&p.bin("examples/c"), existing_file());
-    assert_that(&p.bin("examples/d"), existing_file());
-    assert_that(&p.bin("e"), is_not(existing_file()));
-    assert_that(&p.bin("f"), is_not(existing_file()));
-    assert_that(&p.bin("examples/g"), existing_file());
-    assert_that(&p.bin("examples/h"), existing_file());
+    assert!(!p.bin("a").is_file());
+    assert!(!p.bin("b").is_file());
+    assert!(p.bin("examples/c").is_file());
+    assert!(p.bin("examples/d").is_file());
+    assert!(!p.bin("e").is_file());
+    assert!(!p.bin("f").is_file());
+    assert!(p.bin("examples/g").is_file());
+    assert!(p.bin("examples/h").is_file());
 }
 
 #[test]
@@ -3586,14 +3533,14 @@ fn build_all_virtual_manifest_implicit_examples() {
              [..] Compiling [..] v0.1.0 ([..])\n\
              [..] Finished dev [unoptimized + debuginfo] target(s) in [..]\n",
         ).run();
-    assert_that(&p.bin("a"), is_not(existing_file()));
-    assert_that(&p.bin("b"), is_not(existing_file()));
-    assert_that(&p.bin("examples/c"), existing_file());
-    assert_that(&p.bin("examples/d"), existing_file());
-    assert_that(&p.bin("e"), is_not(existing_file()));
-    assert_that(&p.bin("f"), is_not(existing_file()));
-    assert_that(&p.bin("examples/g"), existing_file());
-    assert_that(&p.bin("examples/h"), existing_file());
+    assert!(!p.bin("a").is_file());
+    assert!(!p.bin("b").is_file());
+    assert!(p.bin("examples/c").is_file());
+    assert!(p.bin("examples/d").is_file());
+    assert!(!p.bin("e").is_file());
+    assert!(!p.bin("f").is_file());
+    assert!(p.bin("examples/g").is_file());
+    assert!(p.bin("examples/h").is_file());
 }
 
 #[test]
@@ -3773,10 +3720,7 @@ fn cdylib_not_lifted() {
 
     for file in files {
         println!("checking: {}", file);
-        assert_that(
-            &p.root().join("target/debug/deps").join(&file),
-            existing_file(),
-        );
+        assert!(p.root().join("target/debug/deps").join(&file).is_file());
     }
 }
 
@@ -3809,7 +3753,7 @@ fn cdylib_final_outputs() {
 
     for file in files {
         println!("checking: {}", file);
-        assert_that(&p.root().join("target/debug").join(&file), existing_file());
+        assert!(p.root().join("target/debug").join(&file).is_file());
     }
 }
 
@@ -3915,9 +3859,9 @@ fn inferred_bins() {
         .build();
 
     p.cargo("build").run();
-    assert_that(&p.bin("foo"), existing_file());
-    assert_that(&p.bin("bar"), existing_file());
-    assert_that(&p.bin("baz"), existing_file());
+    assert!(p.bin("foo").is_file());
+    assert!(p.bin("bar").is_file());
+    assert!(p.bin("baz").is_file());
 }
 
 #[test]
@@ -3954,7 +3898,7 @@ fn inferred_bin_path() {
         .build();
 
     p.cargo("build").run();
-    assert_that(&p.bin("bar"), existing_file());
+    assert!(p.bin("bar").is_file());
 }
 
 #[test]
@@ -3966,8 +3910,8 @@ fn inferred_examples() {
         .build();
 
     p.cargo("test").run();
-    assert_that(&p.bin("examples/bar"), existing_file());
-    assert_that(&p.bin("examples/baz"), existing_file());
+    assert!(p.bin("examples/bar").is_file());
+    assert!(p.bin("examples/baz").is_file());
 }
 
 #[test]
@@ -4164,8 +4108,8 @@ fn uplift_dsym_of_bin_on_mac() {
         .build();
 
     p.cargo("build --bins --examples --tests").run();
-    assert_that(&p.bin("foo.dSYM"), existing_dir());
-    assert_that(&p.bin("b.dSYM"), existing_dir());
+    assert!(p.bin("foo.dSYM").is_dir());
+    assert!(p.bin("b.dSYM").is_dir());
     assert!(
         p.bin("b.dSYM")
             .symlink_metadata()
@@ -4173,8 +4117,8 @@ fn uplift_dsym_of_bin_on_mac() {
             .file_type()
             .is_symlink()
     );
-    assert_that(&p.bin("c.dSYM"), is_not(existing_dir()));
-    assert_that(&p.bin("d.dSYM"), is_not(existing_dir()));
+    assert!(!p.bin("c.dSYM").is_dir());
+    assert!(!p.bin("d.dSYM").is_dir());
 }
 
 #[test]
@@ -4190,10 +4134,10 @@ fn uplift_pdb_of_bin_on_windows() {
         .build();
 
     p.cargo("build --bins --examples --tests").run();
-    assert_that(&p.target_debug_dir().join("foo.pdb"), existing_file());
-    assert_that(&p.target_debug_dir().join("b.pdb"), existing_file());
-    assert_that(&p.target_debug_dir().join("c.pdb"), is_not(existing_file()));
-    assert_that(&p.target_debug_dir().join("d.pdb"), is_not(existing_file()));
+    assert!(p.target_debug_dir().join("foo.pdb").is_file());
+    assert!(p.target_debug_dir().join("b.pdb").is_file());
+    assert!(!p.target_debug_dir().join("c.pdb").is_file());
+    assert!(!p.target_debug_dir().join("d.pdb").is_file());
 }
 
 // Make sure that `cargo build` chooses the correct profile for building

@@ -1,5 +1,4 @@
 use filetime::FileTime;
-use support::hamcrest::{assert_that, existing_file};
 use support::{basic_bin_manifest, main_file, project};
 
 #[test]
@@ -13,7 +12,7 @@ fn build_dep_info() {
 
     let depinfo_bin_path = &p.bin("foo").with_extension("d");
 
-    assert_that(depinfo_bin_path, existing_file());
+    assert!(depinfo_bin_path.is_file());
 }
 
 #[test]
@@ -37,10 +36,7 @@ fn build_dep_info_lib() {
         .build();
 
     p.cargo("build --example=ex").run();
-    assert_that(
-        &p.example_lib("ex", "lib").with_extension("d"),
-        existing_file(),
-    );
+    assert!(p.example_lib("ex", "lib").with_extension("d").is_file());
 }
 
 #[test]
@@ -63,10 +59,7 @@ fn build_dep_info_rlib() {
         .build();
 
     p.cargo("build --example=ex").run();
-    assert_that(
-        &p.example_lib("ex", "rlib").with_extension("d"),
-        existing_file(),
-    );
+    assert!(p.example_lib("ex", "rlib").with_extension("d").is_file());
 }
 
 #[test]
@@ -89,10 +82,7 @@ fn build_dep_info_dylib() {
         .build();
 
     p.cargo("build --example=ex").run();
-    assert_that(
-        &p.example_lib("ex", "dylib").with_extension("d"),
-        existing_file(),
-    );
+    assert!(p.example_lib("ex", "dylib").with_extension("d").is_file());
 }
 
 #[test]

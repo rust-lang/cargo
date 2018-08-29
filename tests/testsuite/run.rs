@@ -1,6 +1,5 @@
 use cargo::util::paths::dylib_path_envvar;
 use support;
-use support::hamcrest::{assert_that, existing_file};
 use support::{basic_bin_manifest, basic_lib_manifest, path2url, project, Project};
 
 #[test]
@@ -18,7 +17,7 @@ fn simple() {
             dir = path2url(p.root())
         )).with_stdout("hello")
         .run();
-    assert_that(&p.bin("foo"), existing_file());
+    assert!(p.bin("foo").is_file());
 }
 
 #[test]
@@ -726,7 +725,7 @@ fn release_works() {
 ",
             dir = path2url(p.root()),
         )).run();
-    assert_that(&p.release_bin("foo"), existing_file());
+    assert!(p.release_bin("foo").is_file());
 }
 
 #[test]
