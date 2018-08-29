@@ -881,6 +881,20 @@ fn fix_overlapping() {
 }
 
 #[test]
+fn prepare_for_leaves_unrelated_warnings_alone() {
+    if !is_nightly() { return; }
+
+    let p = project().file("src/main.rs", "fn main() { let x = 1; }").build();
+
+    p.cargo("fix --allow-no-vcs --prepare-for 2018").run();
+
+    let contents = p.read_file("src/main.rs");
+    println!("{}", contents);
+    assert!(contents.contains("let x = 1;"));
+    assert!(!contents.contains("let _x = 1;"));
+}
+
+#[test]
 fn fix_idioms() {
     if !is_nightly() {
         return;
