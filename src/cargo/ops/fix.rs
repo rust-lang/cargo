@@ -34,6 +34,7 @@ pub struct FixOptions<'a> {
     pub allow_dirty: bool,
     pub allow_no_vcs: bool,
     pub broken_code: bool,
+    pub allow_staged: bool,
 }
 
 pub fn fix(ws: &Workspace, opts: &mut FixOptions) -> CargoResult<()> {
@@ -93,10 +94,21 @@ fn check_version_control(opts: &FixOptions) -> CargoResult<()> {
 
     let mut dirty_files = Vec::new();
     if let Ok(repo) = git2::Repository::discover(config.cwd()) {
-        let mut opts = git2::StatusOptions::new();
-        opts.include_ignored(false);
-        for status in repo.statuses(Some(&mut opts))?.iter() {
+        let mut git_opts = git2::StatusOptions::new();
+        git_opts.include_ignored(false);
+        for status in repo.statuses(Some(&mut git_opts))?.iter() {
             if status.status() != git2::Status::CURRENT {
+                if opts.allow_staged {
+                    if status.status() == git2::Status::INDEX_NEW
+                        || status.status() == git2::Status::INDEX_MODIFIED
+                        || status.status() == git2::Status::INDEX_DELETED
+                        || status.status() == git2::Status::INDEX_RENAMED
+                        || status.status() == git2::Status::INDEX_TYPECHANGE
+                    {
+                        continue;
+                    }
+                }
+
                 if let Some(path) = status.path() {
                     dirty_files.push(path.to_string());
                 }

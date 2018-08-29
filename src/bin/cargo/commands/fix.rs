@@ -31,6 +31,11 @@ pub fn cli() -> App {
         .arg_manifest_path()
         .arg_message_format()
         .arg(
+            Arg::with_name("allow-staged")
+                .long("allow-staged")
+                .help("Fix code that has been staged for committing"),
+        )
+        .arg(
             Arg::with_name("broken-code")
                 .long("broken-code")
                 .help("Fix code even if it already has compiler errors"),
@@ -136,6 +141,7 @@ pub fn exec(config: &mut Config, args: &ArgMatches) -> CliResult {
         allow_dirty: args.is_present("allow-dirty"),
         allow_no_vcs: args.is_present("allow-no-vcs"),
         broken_code: args.is_present("broken-code"),
+        allow_staged: args.is_present("allow-staged"),
     })?;
     Ok(())
 }
