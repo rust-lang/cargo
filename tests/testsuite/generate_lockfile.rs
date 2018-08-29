@@ -1,7 +1,6 @@
 use std::fs::{self, File};
 use std::io::prelude::*;
 
-use support::hamcrest::{assert_that, existing_file, is_not};
 use support::registry::Package;
 use support::{basic_manifest, paths, project, ProjectBuilder};
 
@@ -137,7 +136,7 @@ fn preserve_line_endings_issue_2076() {
 
     let lockfile = p.root().join("Cargo.lock");
     p.cargo("generate-lockfile").run();
-    assert_that(&lockfile, existing_file());
+    assert!(lockfile.is_file());
     p.cargo("generate-lockfile").run();
 
     let lock0 = p.read_lockfile();
@@ -165,15 +164,15 @@ fn cargo_update_generate_lockfile() {
     let p = project().file("src/main.rs", "fn main() {}").build();
 
     let lockfile = p.root().join("Cargo.lock");
-    assert_that(&lockfile, is_not(existing_file()));
+    assert!(!lockfile.is_file());
     p.cargo("update").with_stdout("").run();
-    assert_that(&lockfile, existing_file());
+    assert!(lockfile.is_file());
 
     fs::remove_file(p.root().join("Cargo.lock")).unwrap();
 
-    assert_that(&lockfile, is_not(existing_file()));
+    assert!(!lockfile.is_file());
     p.cargo("update").with_stdout("").run();
-    assert_that(&lockfile, existing_file());
+    assert!(lockfile.is_file());
 }
 
 #[test]

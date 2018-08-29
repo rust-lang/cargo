@@ -6,7 +6,6 @@ use std::str;
 
 use cargo;
 use support::cargo_process;
-use support::hamcrest::{assert_that, existing_file};
 use support::paths::{self, CargoPathExt};
 use support::registry::Package;
 use support::{basic_bin_manifest, basic_manifest, cargo_exe, project, Project};
@@ -227,7 +226,7 @@ fn cargo_subcommand_env() {
     let target_dir = p.target_debug_dir();
 
     p.cargo("build").run();
-    assert_that(&p.bin("cargo-envtest"), existing_file());
+    assert!(p.bin("cargo-envtest").is_file());
 
     let cargo = cargo_exe().canonicalize().unwrap();
     let mut path = path();
@@ -257,7 +256,7 @@ fn cargo_subcommand_args() {
 
     p.cargo("build").run();
     let cargo_foo_bin = p.bin("cargo-foo");
-    assert_that(&cargo_foo_bin, existing_file());
+    assert!(cargo_foo_bin.is_file());
 
     let mut path = path();
     path.push(p.target_debug_dir());

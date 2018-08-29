@@ -1,4 +1,4 @@
-use support::hamcrest::{assert_that, existing_file, is_not};
+use support::hamcrest::{assert_that, is_not};
 use support::install::{cargo_home, has_installed_exe};
 use support::is_nightly;
 use support::project;
@@ -38,12 +38,12 @@ fn build_bin_default_features() {
         .build();
 
     p.cargo("build").run();
-    assert_that(&p.bin("foo"), existing_file());
+    assert!(p.bin("foo").is_file());
 
     p.cargo("build --no-default-features").run();
 
     p.cargo("build --bin=foo").run();
-    assert_that(&p.bin("foo"), existing_file());
+    assert!(p.bin("foo").is_file());
 
     p.cargo("build --bin=foo --no-default-features")
         .with_status(101)
@@ -77,7 +77,7 @@ fn build_bin_arg_features() {
         .build();
 
     p.cargo("build --features a").run();
-    assert_that(&p.bin("foo"), existing_file());
+    assert!(p.bin("foo").is_file());
 }
 
 #[test]
@@ -113,13 +113,13 @@ fn build_bin_multiple_required_features() {
 
     p.cargo("build").run();
 
-    assert_that(&p.bin("foo_1"), is_not(existing_file()));
-    assert_that(&p.bin("foo_2"), existing_file());
+    assert!(!p.bin("foo_1").is_file());
+    assert!(p.bin("foo_2").is_file());
 
     p.cargo("build --features c").run();
 
-    assert_that(&p.bin("foo_1"), existing_file());
-    assert_that(&p.bin("foo_2"), existing_file());
+    assert!(p.bin("foo_1").is_file());
+    assert!(p.bin("foo_2").is_file());
 
     p.cargo("build --no-default-features").run();
 }
@@ -147,7 +147,7 @@ fn build_example_default_features() {
         .build();
 
     p.cargo("build --example=foo").run();
-    assert_that(&p.bin("examples/foo"), existing_file());
+    assert!(p.bin("examples/foo").is_file());
 
     p.cargo("build --example=foo --no-default-features")
         .with_status(101)
@@ -181,7 +181,7 @@ fn build_example_arg_features() {
         .build();
 
     p.cargo("build --example=foo --features a").run();
-    assert_that(&p.bin("examples/foo"), existing_file());
+    assert!(p.bin("examples/foo").is_file());
 }
 
 #[test]
@@ -223,14 +223,14 @@ Consider enabling them by passing e.g. `--features=\"b c\"`
         ).run();
     p.cargo("build --example=foo_2").run();
 
-    assert_that(&p.bin("examples/foo_1"), is_not(existing_file()));
-    assert_that(&p.bin("examples/foo_2"), existing_file());
+    assert!(!p.bin("examples/foo_1").is_file());
+    assert!(p.bin("examples/foo_2").is_file());
 
     p.cargo("build --example=foo_1 --features c").run();
     p.cargo("build --example=foo_2 --features c").run();
 
-    assert_that(&p.bin("examples/foo_1"), existing_file());
-    assert_that(&p.bin("examples/foo_2"), existing_file());
+    assert!(p.bin("examples/foo_1").is_file());
+    assert!(p.bin("examples/foo_2").is_file());
 
     p.cargo("build --example=foo_1 --no-default-features")
         .with_status(101)
@@ -801,11 +801,11 @@ fn dep_feature_in_toml() {
 
     // bin
     p.cargo("build --bin=foo").run();
-    assert_that(&p.bin("foo"), existing_file());
+    assert!(p.bin("foo").is_file());
 
     // example
     p.cargo("build --example=foo").run();
-    assert_that(&p.bin("examples/foo"), existing_file());
+    assert!(p.bin("examples/foo").is_file());
 
     // test
     p.cargo("test --test=foo")
@@ -907,7 +907,7 @@ Consider enabling them by passing e.g. `--features=\"bar/a\"`
         ).run();
 
     p.cargo("build --bin=foo --features bar/a").run();
-    assert_that(&p.bin("foo"), existing_file());
+    assert!(p.bin("foo").is_file());
 
     // example
     p.cargo("build --example=foo")
@@ -920,7 +920,7 @@ Consider enabling them by passing e.g. `--features=\"bar/a\"`
         ).run();
 
     p.cargo("build --example=foo --features bar/a").run();
-    assert_that(&p.bin("examples/foo"), existing_file());
+    assert!(p.bin("examples/foo").is_file());
 
     // test
     p.cargo("test")

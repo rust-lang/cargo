@@ -1,6 +1,5 @@
 use std::fmt;
 use std::marker;
-use std::path::Path;
 
 pub type MatchResult = Result<(), String>;
 
@@ -11,26 +10,6 @@ pub trait Matcher<T>: fmt::Debug {
 pub fn assert_that<T, U: Matcher<T>>(actual: T, matcher: U) {
     if let Err(e) = matcher.matches(actual) {
         panic!("\nExpected: {:?}\n    but: {}", matcher, e)
-    }
-}
-
-pub fn existing_file() -> ExistingFile {
-    ExistingFile
-}
-
-#[derive(Debug)]
-pub struct ExistingFile;
-
-impl<P> Matcher<P> for ExistingFile
-where
-    P: AsRef<Path>,
-{
-    fn matches(&self, actual: P) -> Result<(), String> {
-        if actual.as_ref().is_file() {
-            Ok(())
-        } else {
-            Err(format!("{} was not a file", actual.as_ref().display()))
-        }
     }
 }
 

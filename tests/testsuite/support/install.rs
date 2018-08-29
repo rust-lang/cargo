@@ -1,7 +1,7 @@
 use std::fmt;
 use std::path::{Path, PathBuf};
 
-use support::hamcrest::{existing_file, MatchResult, Matcher};
+use support::hamcrest::{MatchResult, Matcher};
 
 use support::paths;
 
@@ -28,7 +28,11 @@ pub fn exe(name: &str) -> String {
 impl<P: AsRef<Path>> Matcher<P> for InstalledExe {
     fn matches(&self, path: P) -> MatchResult {
         let path = path.as_ref().join("bin").join(exe(self.0));
-        existing_file().matches(&path)
+        if path.is_file() {
+            Ok(())
+        } else {
+            Err(format!("{} was not a file", path.display()))
+        }
     }
 }
 
