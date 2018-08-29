@@ -33,6 +33,7 @@ pub struct FixOptions<'a> {
     pub compile_opts: CompileOptions<'a>,
     pub allow_dirty: bool,
     pub allow_no_vcs: bool,
+    pub allow_staged: bool,
     pub broken_code: bool,
 }
 
@@ -87,25 +88,38 @@ fn check_version_control(opts: &FixOptions) -> CargoResult<()> {
                error pass `--allow-no-vcs`")
     }
 
-    if opts.allow_dirty {
+    if opts.allow_dirty && opts.allow_staged {
         return Ok(())
     }
 
     let mut dirty_files = Vec::new();
+    let mut staged_files = Vec::new();
     if let Ok(repo) = git2::Repository::discover(config.cwd()) {
-        let mut opts = git2::StatusOptions::new();
-        opts.include_ignored(false);
-        for status in repo.statuses(Some(&mut opts))?.iter() {
-            if status.status() != git2::Status::CURRENT {
-                if let Some(path) = status.path() {
-                    dirty_files.push(path.to_string());
-                }
+        let mut repo_opts = git2::StatusOptions::new();
+        repo_opts.include_ignored(false);
+        for status in repo.statuses(Some(&mut repo_opts))?.iter() {
+            if let Some(path) = status.path() {
+                match status.status() {
+                    git2::Status::CURRENT => (),
+                    git2::Status::INDEX_NEW |
+                    git2::Status::INDEX_MODIFIED |
+                    git2::Status::INDEX_DELETED |
+                    git2::Status::INDEX_RENAMED |
+                    git2::Status::INDEX_TYPECHANGE =>
+                        if !opts.allow_staged {
+                            staged_files.push(path.to_string())
+                        },
+                    _ =>
+                        if !opts.allow_dirty {
+                            dirty_files.push(path.to_string())
+                        },
+                };
             }
 
         }
     }
 
-    if dirty_files.is_empty() {
+    if dirty_files.is_empty() && staged_files.is_empty() {
         return Ok(())
     }
 
@@ -113,13 +127,18 @@ fn check_version_control(opts: &FixOptions) -> CargoResult<()> {
     for file in dirty_files {
         files_list.push_str("  * ");
         files_list.push_str(&file);
-        files_list.push_str("\n");
+        files_list.push_str(" (dirty)\n");
+    }
+    for file in staged_files {
+        files_list.push_str("  * ");
+        files_list.push_str(&file);
+        files_list.push_str(" (staged)\n");
     }
 
-    bail!("the working directory of this project is detected as dirty, and \
+    bail!("the working directory of this project has uncommitted changes, and \
            `cargo fix` can potentially perform destructive changes; if you'd \
-           like to suppress this error pass `--allow-dirty`, or commit the \
-           changes to these files:\n\
+           like to suppress this error pass `--allow-dirty`, `--allow-staged`, \
+           or commit the changes to these files:\n\
            \n\
            {}\n\
           ", files_list);
