@@ -289,6 +289,11 @@ pub fn compile_ws<'a>(
         extra_compiler_args = Some((units[0], args));
     }
 
+    let extra_rustc_env = &build_config.extra_rustc_env;
+    if extra_rustc_env.iter().any(|(k, _v)| k == ops::fix::FIX_ENV) {
+        print_targets_features_cfg(&units);
+    }
+
     let ret = {
         let _p = profile::start("compiling");
         let bcx = BuildContext::new(
@@ -801,4 +806,55 @@ fn find_named_targets<'a>(
         }
     }
     Ok(result)
+}
+
+fn print_targets_features_cfg(units: &[Unit]) {
+    let targets = units_to_targets_string(units);
+    let features = "No optional features enabled.";
+    let cfg_flags = "No specific cfg flags given.";
+    println!(
+        "Collecting suggestions for these targets: {targets} {features} {cfg_flags}",
+        targets = targets,
+        features = features,
+        cfg_flags = cfg_flags
+    );
+}
+
+fn units_to_targets_string(units: &[Unit]) -> String {
+    let mut targets = String::new();
+    let names = units.iter().map(unit_to_string).collect::<Vec<_>>();
+    let mut names_iter = names.iter();
+    if let Some(first_name) = names_iter.next() {
+        targets.push_str(first_name);
+        for (idx, name) in names_iter.enumerate() {
+            if idx < names.len() - 2 {
+                targets.push_str(", ")
+            } else {
+                targets.push_str(", and ")
+            }
+            targets.push_str(name);
+        }
+    }
+    targets.push_str(".");
+    targets
+}
+
+fn unit_to_string(unit: &Unit) -> String {
+    let target_name = unit.target.name();
+    match unit.target.kind() {
+        TargetKind::Lib(..) => {
+            if unit.mode.is_any_test() {
+                "library (unit test)".to_string()
+            } else if unit.mode.is_doc() {
+                "library (doc)".to_string()
+            } else {
+                "library".to_string()
+            }
+        }
+        TargetKind::Bin => format!("{} (bin)", target_name),
+        TargetKind::Test => format!("{} (test)", target_name),
+        TargetKind::Bench => format!("{} (bench)", target_name),
+        TargetKind::ExampleBin | TargetKind::ExampleLib(..) => format!("{} (example)", target_name),
+        TargetKind::CustomBuild => format!("{} (build-script)", target_name),
+    }
 }

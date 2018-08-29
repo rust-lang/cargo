@@ -19,7 +19,7 @@ use util::{LockServer, LockServerClient, existing_vcs_repo};
 use util::diagnostic_server::{Message, RustfixDiagnosticServer};
 use util::paths;
 
-const FIX_ENV: &str = "__CARGO_FIX_PLZ";
+pub const FIX_ENV: &str = "__CARGO_FIX_PLZ";
 const BROKEN_CODE_ENV: &str = "__CARGO_FIX_BROKEN_CODE";
 const PREPARE_FOR_ENV: &str = "__CARGO_FIX_PREPARE_FOR";
 const EDITION_ENV: &str = "__CARGO_FIX_EDITION";

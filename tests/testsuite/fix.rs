@@ -180,7 +180,11 @@ fn fix_path_deps() {
 
     p.cargo("fix --allow-no-vcs -p foo -p bar")
         .env("__CARGO_FIX_YOLO", "1")
-        .with_stdout("")
+        .with_stdout(
+            "Collecting suggestions for these targets: library, library, library (unit test), library (unit test), library (unit test), and library (unit test). \
+             No optional features enabled. \
+             No specific cfg flags given.",
+        )
         .with_stderr(
             "\
 [CHECKING] bar v0.1.0 ([..])
@@ -261,7 +265,11 @@ fn prepare_for_2018() {
 ";
     p.cargo("fix --edition --allow-no-vcs")
         .with_stderr(stderr)
-        .with_stdout("")
+        .with_stdout(
+            "Collecting suggestions for these targets: library, library (unit test), and library (unit test). \
+             No optional features enabled. \
+             No specific cfg flags given.",
+        )
         .run();
 
     println!("{}", p.read_file("src/lib.rs"));
@@ -303,7 +311,11 @@ fn local_paths() {
 
     p.cargo("fix --edition --allow-no-vcs")
         .with_stderr(stderr)
-        .with_stdout("")
+        .with_stdout(
+            "Collecting suggestions for these targets: library, library (unit test), and library (unit test). \
+             No optional features enabled. \
+             No specific cfg flags given.",
+        )
         .run();
 
     println!("{}", p.read_file("src/lib.rs"));
@@ -340,7 +352,11 @@ issues in preparation for the 2018 edition
 ";
     p.cargo("fix --edition --allow-no-vcs")
         .with_stderr(stderr)
-        .with_stdout("")
+        .with_stdout(
+            "Collecting suggestions for these targets: library, library (unit test), and library (unit test). \
+             No optional features enabled. \
+             No specific cfg flags given.",
+        )
         .run();
 }
 
@@ -392,7 +408,11 @@ fn upgrade_extern_crate() {
         .env("__CARGO_FIX_YOLO", "1")
         .masquerade_as_nightly_cargo()
         .with_stderr(stderr)
-        .with_stdout("")
+        .with_stdout(
+            "Collecting suggestions for these targets: library, library (unit test), and library (unit test). \
+             No optional features enabled. \
+             No specific cfg flags given.",
+        )
         .run();
     println!("{}", p.read_file("src/lib.rs"));
     assert!(!p.read_file("src/lib.rs").contains("extern crate"));
@@ -428,7 +448,11 @@ fn specify_rustflags() {
     p.cargo("fix --edition --allow-no-vcs")
         .env("RUSTFLAGS", "-C target-cpu=native")
         .with_stderr(stderr)
-        .with_stdout("")
+        .with_stdout(
+            "Collecting suggestions for these targets: library, library (unit test), and library (unit test). \
+             No optional features enabled. \
+             No specific cfg flags given.",
+        )
         .run();
 }
 
@@ -442,7 +466,11 @@ fn no_changes_necessary() {
 ";
     p.cargo("fix --allow-no-vcs")
         .with_stderr(stderr)
-        .with_stdout("")
+        .with_stdout(
+            "Collecting suggestions for these targets: library, library (unit test), and library (unit test). \
+             No optional features enabled. \
+             No specific cfg flags given.",
+        )
         .run();
 }
 
@@ -467,7 +495,11 @@ fn fixes_extra_mut() {
     p.cargo("fix --allow-no-vcs")
         .env("__CARGO_FIX_YOLO", "1")
         .with_stderr(stderr)
-        .with_stdout("")
+        .with_stdout(
+            "Collecting suggestions for these targets: library, library (unit test), and library (unit test). \
+             No optional features enabled. \
+             No specific cfg flags given.",
+        )
         .run();
 }
 
@@ -493,7 +525,11 @@ fn fixes_two_missing_ampersands() {
     p.cargo("fix --allow-no-vcs")
         .env("__CARGO_FIX_YOLO", "1")
         .with_stderr(stderr)
-        .with_stdout("")
+        .with_stdout(
+            "Collecting suggestions for these targets: library, library (unit test), and library (unit test). \
+             No optional features enabled. \
+             No specific cfg flags given.",
+        )
         .run();
 }
 
@@ -518,7 +554,11 @@ fn tricky() {
     p.cargo("fix --allow-no-vcs")
         .env("__CARGO_FIX_YOLO", "1")
         .with_stderr(stderr)
-        .with_stdout("")
+        .with_stdout(
+            "Collecting suggestions for these targets: library, library (unit test), and library (unit test). \
+             No optional features enabled. \
+             No specific cfg flags given.",
+        )
         .run();
 }
 
@@ -636,7 +676,11 @@ fn fixes_missing_ampersand() {
 
     p.cargo("fix --all-targets --allow-no-vcs")
             .env("__CARGO_FIX_YOLO", "1")
-            .with_stdout("")
+            .with_stdout(
+                "Collecting suggestions for these targets: library, foo (bin), foo (example), library (unit test), foo (bin), a (test), library (unit test), and foo (bin). \
+                 No optional features enabled. \
+                 No specific cfg flags given.",
+            )
             .with_stderr_contains("[COMPILING] foo v0.0.1 ([..])")
             .with_stderr_contains("[FIXING] build.rs (1 fix)")
             // Don't assert number of fixes for this one, as we don't know if we're
@@ -780,7 +824,11 @@ fn fix_all_targets_by_default() {
         .build();
     p.cargo("fix --allow-no-vcs")
         .env("__CARGO_FIX_YOLO", "1")
-        .run();
+        .with_stdout_contains(
+            "Collecting suggestions for these targets: library, library (unit test), foo (test), and library (unit test). \
+             No optional features enabled. \
+             No specific cfg flags given.",
+        ).run();
     assert!(!p.read_file("src/lib.rs").contains("let mut x"));
     assert!(!p.read_file("tests/foo.rs").contains("let mut x"));
 }
