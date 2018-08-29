@@ -6,7 +6,6 @@ use std::thread;
 use std::time::Duration;
 
 use cargo::util::paths::remove_dir_all;
-use support::hamcrest::{assert_that, existing_dir, existing_file};
 use support::paths::CargoPathExt;
 use support::registry::Package;
 use support::{basic_manifest, cross_compile, project};
@@ -1721,15 +1720,9 @@ fn cfg_doc() {
         ).file("bar/src/lib.rs", "#[cfg(bar)] pub fn bar() {}")
         .build();
     p.cargo("doc").run();
-    assert_that(&p.root().join("target/doc"), existing_dir());
-    assert_that(
-        &p.root().join("target/doc/foo/fn.foo.html"),
-        existing_file(),
-    );
-    assert_that(
-        &p.root().join("target/doc/bar/fn.bar.html"),
-        existing_file(),
-    );
+    assert!(p.root().join("target/doc").is_dir());
+    assert!(p.root().join("target/doc/foo/fn.foo.html").is_file());
+    assert!(p.root().join("target/doc/bar/fn.bar.html").is_file());
 }
 
 #[test]
@@ -1840,15 +1833,9 @@ fn cfg_override_doc() {
         .file("bar/src/lib.rs", "#[cfg(bar)] pub fn bar() {}")
         .build();
     p.cargo("doc").run();
-    assert_that(&p.root().join("target/doc"), existing_dir());
-    assert_that(
-        &p.root().join("target/doc/foo/fn.foo.html"),
-        existing_file(),
-    );
-    assert_that(
-        &p.root().join("target/doc/bar/fn.bar.html"),
-        existing_file(),
-    );
+    assert!(p.root().join("target/doc").is_dir());
+    assert!(p.root().join("target/doc/foo/fn.foo.html").is_file());
+    assert!(p.root().join("target/doc/bar/fn.bar.html").is_file());
 }
 
 #[test]

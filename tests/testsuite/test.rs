@@ -2,7 +2,6 @@ use std::fs::File;
 use std::io::prelude::*;
 
 use cargo;
-use support::hamcrest::{assert_that, existing_file, is_not};
 use support::paths::CargoPathExt;
 use support::registry::Package;
 use support::{basic_bin_manifest, basic_lib_manifest, basic_manifest, cargo_exe, project};
@@ -30,7 +29,7 @@ fn cargo_test_simple() {
         ).build();
 
     p.cargo("build").run();
-    assert_that(&p.bin("foo"), existing_file());
+    assert!(p.bin("foo").is_file());
 
     p.process(&p.bin("foo")).with_stdout("hello\n").run();
 
@@ -133,7 +132,7 @@ fn cargo_test_overflow_checks() {
         ).build();
 
     p.cargo("build --release").run();
-    assert_that(&p.release_bin("foo"), existing_file());
+    assert!(p.release_bin("foo").is_file());
 
     p.process(&p.release_bin("foo")).with_stdout("").run();
 }
@@ -215,7 +214,7 @@ fn cargo_test_failing_test_in_bin() {
         ).build();
 
     p.cargo("build").run();
-    assert_that(&p.bin("foo"), existing_file());
+    assert!(p.bin("foo").is_file());
 
     p.process(&p.bin("foo")).with_stdout("hello\n").run();
 
@@ -260,7 +259,7 @@ fn cargo_test_failing_test_in_test() {
         ).build();
 
     p.cargo("build").run();
-    assert_that(&p.bin("foo"), existing_file());
+    assert!(p.bin("foo").is_file());
 
     p.process(&p.bin("foo")).with_stdout("hello\n").run();
 
@@ -1697,8 +1696,8 @@ fn example_bin_same_name() {
             dir = p.url()
         )).run();
 
-    assert_that(&p.bin("foo"), is_not(existing_file()));
-    assert_that(&p.bin("examples/foo"), existing_file());
+    assert!(!p.bin("foo").is_file());
+    assert!(p.bin("examples/foo").is_file());
 
     p.process(&p.bin("examples/foo"))
         .with_stdout("example\n")
@@ -1712,7 +1711,7 @@ fn example_bin_same_name() {
 [RUNNING] [..]",
         ).with_stdout("bin")
         .run();
-    assert_that(&p.bin("foo"), existing_file());
+    assert!(p.bin("foo").is_file());
 }
 
 #[test]
@@ -1724,10 +1723,10 @@ fn test_with_example_twice() {
 
     println!("first");
     p.cargo("test -v").run();
-    assert_that(&p.bin("examples/foo"), existing_file());
+    assert!(p.bin("examples/foo").is_file());
     println!("second");
     p.cargo("test -v").run();
-    assert_that(&p.bin("examples/foo"), existing_file());
+    assert!(p.bin("examples/foo").is_file());
 }
 
 #[test]
@@ -1778,11 +1777,11 @@ fn bin_is_preserved() {
         .build();
 
     p.cargo("build -v").run();
-    assert_that(&p.bin("foo"), existing_file());
+    assert!(p.bin("foo").is_file());
 
     println!("testing");
     p.cargo("test -v").run();
-    assert_that(&p.bin("foo"), existing_file());
+    assert!(p.bin("foo").is_file());
 }
 
 #[test]

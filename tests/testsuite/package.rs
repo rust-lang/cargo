@@ -5,7 +5,6 @@ use std::path::{Path, PathBuf};
 
 use flate2::read::GzDecoder;
 use git2;
-use support::hamcrest::{assert_that, contains, existing_file};
 use support::registry::Package;
 use support::{basic_manifest, git, is_nightly, path2url, paths, project, registry};
 use support::{cargo_process, sleep_ms};
@@ -39,10 +38,7 @@ See [..]
 ",
             dir = p.url()
         )).run();
-    assert_that(
-        &p.root().join("target/package/foo-0.0.1.crate"),
-        existing_file(),
-    );
+    assert!(p.root().join("target/package/foo-0.0.1.crate").is_file());
     p.cargo("package -l")
         .with_stdout(
             "\
@@ -398,10 +394,7 @@ See [..]
 ",
         ).run();
 
-    assert_that(
-        &p.root().join("target/package/foo-0.0.1.crate"),
-        existing_file(),
-    );
+    assert!(p.root().join("target/package/foo-0.0.1.crate").is_file());
 
     p.cargo("package -l")
         .with_stdout(
@@ -564,10 +557,7 @@ See http://doc.crates.io/manifest.html#package-metadata for more info.
 ",
             dir = p.url()
         )).run();
-    assert_that(
-        &p.root().join("target/package/foo-0.0.1.crate"),
-        existing_file(),
-    );
+    assert!(p.root().join("target/package/foo-0.0.1.crate").is_file());
     p.cargo("package -l")
         .with_stdout(
             "\
@@ -665,10 +655,7 @@ See [..]
     let entry_paths = entries
         .map(|entry| entry.unwrap().path().unwrap().into_owned())
         .collect::<Vec<PathBuf>>();
-    assert_that(
-        &entry_paths,
-        contains(vec![PathBuf::from("foo-0.0.1/src/foo.rs")]),
-    );
+    assert!(entry_paths.contains(&PathBuf::from("foo-0.0.1/src/foo.rs")));
 }
 
 #[test]
@@ -1131,10 +1118,7 @@ See [..]
 ",
             dir = p.url()
         )).run();
-    assert_that(
-        &p.root().join("target/package/foo-0.0.1.crate"),
-        existing_file(),
-    );
+    assert!(p.root().join("target/package/foo-0.0.1.crate").is_file());
     p.cargo("package -l")
         .masquerade_as_nightly_cargo()
         .with_stdout(
