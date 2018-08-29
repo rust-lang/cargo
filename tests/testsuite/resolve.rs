@@ -224,7 +224,7 @@ fn registry_strategy(max_crates: usize, max_versions: usize) -> impl Strategy<Va
                 let s: Vec<_> = names
                     .iter()
                     .cloned()
-                    .filter(|n| name.name() < *n || n.as_str() == "bad")
+                    .filter(|n| name.name() > *n || n.as_str() == "bad")
                     .collect();
                 let s_len = s.len();
                 let vers = b
@@ -273,6 +273,7 @@ proptest! {
     #![proptest_config(ProptestConfig {
         result_cache: basic_result_cache,
         cases: 256,
+        max_flat_map_regens: 100, // raise this number for slower and better shrinking
         .. ProptestConfig::default()
     })]
     #[test]
@@ -280,7 +281,7 @@ proptest! {
         let reg = registry(input.clone());
         // there is only a small chance that eny one
         // crate will be interesting.
-        // So we some of the most complicated.
+        // So we try some of the most complicated.
         for this in input.iter().rev().take(100) {
             let res = resolve(
                 &pkg_id("root"),
@@ -289,7 +290,7 @@ proptest! {
             );
 
             if let Ok(r) = res {
-                prop_assert!(r.len() <= 10)
+                prop_assert!(r.len() <= 20, "(\"{}\", =\"{}\")", this.name(), this.version())
             }
         }
     }
