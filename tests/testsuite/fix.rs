@@ -1041,3 +1041,38 @@ fn shows_warnings_on_second_run_without_changes_on_multiple_targets() {
         .with_stderr_contains(" --> tests/foo.rs:2:21")
         .run();
 }
+
+#[test]
+fn doesnt_rebuild_dependencies() {
+    let p = project()
+        .file(
+            "Cargo.toml",
+            r#"
+                [package]
+                name = "foo"
+                version = "0.1.0"
+
+                [dependencies]
+                bar = { path = 'bar' }
+
+                [workspace]
+            "#,
+        ).file("src/lib.rs", "extern crate bar;")
+        .file("bar/Cargo.toml", &basic_manifest("bar", "0.1.0"))
+        .file("bar/src/lib.rs", "")
+        .build();
+
+    p.cargo("fix --allow-no-vcs -p foo")
+        .env("__CARGO_FIX_YOLO", "1")
+        .with_stdout("")
+        .with_stderr_contains("[CHECKING] bar v0.1.0 ([..])")
+        .with_stderr_contains("[CHECKING] foo v0.1.0 ([..])")
+        .run();
+
+    p.cargo("fix --allow-no-vcs -p foo")
+        .env("__CARGO_FIX_YOLO", "1")
+        .with_stdout("")
+        .with_stderr_does_not_contain("[CHECKING] bar v0.1.0 ([..])")
+        .with_stderr_contains("[CHECKING] foo v0.1.0 ([..])")
+        .run();
+}
