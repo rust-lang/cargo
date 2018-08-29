@@ -331,13 +331,12 @@ fn can_run_doc_tests() {
         .with_stderr_contains(format!(
             "\
 [DOCTEST] foo
-[RUNNING] `rustdoc --test {dir}/src/lib.rs \
+[RUNNING] `rustdoc --test CWD/src/lib.rs \
         [..] \
-        --extern baz={dir}/target/debug/deps/libbar-[..].rlib \
-        --extern bar={dir}/target/debug/deps/libbar-[..].rlib \
+        --extern baz=CWD/target/debug/deps/libbar-[..].rlib \
+        --extern bar=CWD/target/debug/deps/libbar-[..].rlib \
         [..]`
 ",
-            dir = foo.root().display(),
         )).run();
 }
 

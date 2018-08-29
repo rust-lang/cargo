@@ -59,10 +59,9 @@ fn depend_on_alt_registry() {
 [UPDATING] registry `{reg}`
 [DOWNLOADING] bar v0.0.1 (registry `file://[..]`)
 [COMPILING] bar v0.0.1 (registry `file://[..]`)
-[COMPILING] foo v0.0.1 ({dir})
+[COMPILING] foo v0.0.1 (CWD)
 [FINISHED] dev [unoptimized + debuginfo] target(s) in [..]s
 ",
-            dir = p.url(),
             reg = registry::alt_registry()
         )).run();
 
@@ -71,14 +70,13 @@ fn depend_on_alt_registry() {
     // Don't download a second time
     p.cargo("build")
         .masquerade_as_nightly_cargo()
-        .with_stderr(&format!(
+        .with_stderr(
             "\
 [COMPILING] bar v0.0.1 (registry `file://[..]`)
-[COMPILING] foo v0.0.1 ({dir})
+[COMPILING] foo v0.0.1 (CWD)
 [FINISHED] dev [unoptimized + debuginfo] target(s) in [..]s
 ",
-            dir = p.url()
-        )).run();
+        ).run();
 }
 
 #[test]
@@ -116,10 +114,9 @@ fn depend_on_alt_registry_depends_on_same_registry_no_index() {
 [DOWNLOADING] [..] v0.0.1 (registry `file://[..]`)
 [COMPILING] baz v0.0.1 (registry `file://[..]`)
 [COMPILING] bar v0.0.1 (registry `file://[..]`)
-[COMPILING] foo v0.0.1 ({dir})
+[COMPILING] foo v0.0.1 (CWD)
 [FINISHED] dev [unoptimized + debuginfo] target(s) in [..]s
 ",
-            dir = p.url(),
             reg = registry::alt_registry()
         )).run();
 }
@@ -159,10 +156,9 @@ fn depend_on_alt_registry_depends_on_same_registry() {
 [DOWNLOADING] [..] v0.0.1 (registry `file://[..]`)
 [COMPILING] baz v0.0.1 (registry `file://[..]`)
 [COMPILING] bar v0.0.1 (registry `file://[..]`)
-[COMPILING] foo v0.0.1 ({dir})
+[COMPILING] foo v0.0.1 (CWD)
 [FINISHED] dev [unoptimized + debuginfo] target(s) in [..]s
 ",
-            dir = p.url(),
             reg = registry::alt_registry()
         )).run();
 }
@@ -203,10 +199,9 @@ fn depend_on_alt_registry_depends_on_crates_io() {
 [DOWNLOADING] [..] v0.0.1 (registry `file://[..]`)
 [COMPILING] baz v0.0.1 (registry `file://[..]`)
 [COMPILING] bar v0.0.1 (registry `file://[..]`)
-[COMPILING] foo v0.0.1 ({dir})
+[COMPILING] foo v0.0.1 (CWD)
 [FINISHED] dev [unoptimized + debuginfo] target(s) in [..]s
 ",
-            dir = p.url(),
             alt_reg = registry::alt_registry(),
             reg = registry::registry()
         )).run();
@@ -238,14 +233,13 @@ fn registry_and_path_dep_works() {
 
     p.cargo("build")
         .masquerade_as_nightly_cargo()
-        .with_stderr(&format!(
+        .with_stderr(
             "\
-[COMPILING] bar v0.0.1 ({dir}/bar)
-[COMPILING] foo v0.0.1 ({dir})
+[COMPILING] bar v0.0.1 (CWD/bar)
+[COMPILING] foo v0.0.1 (CWD)
 [FINISHED] dev [unoptimized + debuginfo] target(s) in [..]s
 ",
-            dir = p.url()
-        )).run();
+        ).run();
 }
 
 #[test]
@@ -371,7 +365,7 @@ fn alt_registry_and_crates_io_deps() {
         .with_stderr_contains("[DOWNLOADING] alt_reg_dep v0.1.0 (registry `file://[..]`)")
         .with_stderr_contains("[COMPILING] alt_reg_dep v0.1.0 (registry `file://[..]`)")
         .with_stderr_contains("[COMPILING] crates_io_dep v0.0.1")
-        .with_stderr_contains(&format!("[COMPILING] foo v0.0.1 ({})", p.url()))
+        .with_stderr_contains("[COMPILING] foo v0.0.1 (CWD)")
         .with_stderr_contains("[FINISHED] dev [unoptimized + debuginfo] target(s) in [..]s")
         .run();
 }

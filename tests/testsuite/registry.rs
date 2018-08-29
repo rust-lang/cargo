@@ -42,10 +42,9 @@ fn simple() {
 [UPDATING] registry `{reg}`
 [DOWNLOADING] bar v0.0.1 (registry `file://[..]`)
 [COMPILING] bar v0.0.1
-[COMPILING] foo v0.0.1 ({dir})
+[COMPILING] foo v0.0.1 (CWD)
 [FINISHED] dev [unoptimized + debuginfo] target(s) in [..]s
 ",
-            dir = p.url(),
             reg = registry::registry()
         )).run();
 
@@ -56,10 +55,9 @@ fn simple() {
         .with_stderr(&format!(
             "\
 [COMPILING] bar v0.0.1
-[COMPILING] foo v0.0.1 ({dir})
+[COMPILING] foo v0.0.1 (CWD)
 [FINISHED] dev [unoptimized + debuginfo] target(s) in [..]s
 ",
-            dir = p.url()
         )).run();
 }
 
@@ -91,10 +89,9 @@ fn deps() {
 [DOWNLOADING] [..] v0.0.1 (registry `file://[..]`)
 [COMPILING] baz v0.0.1
 [COMPILING] bar v0.0.1
-[COMPILING] foo v0.0.1 ({dir})
+[COMPILING] foo v0.0.1 (CWD)
 [FINISHED] dev [unoptimized + debuginfo] target(s) in [..]s
 ",
-            dir = p.url(),
             reg = registry::registry()
         )).run();
 }
@@ -317,10 +314,9 @@ required by package `foo v0.0.1 ([..])`
 [UPDATING] registry `{reg}`
 [DOWNLOADING] notyet v0.0.1 (registry `file://[..]`)
 [COMPILING] notyet v0.0.1
-[COMPILING] foo v0.0.1 ({dir})
+[COMPILING] foo v0.0.1 (CWD)
 [FINISHED] dev [unoptimized + debuginfo] target(s) in [..]s
 ",
-            dir = p.url(),
             reg = registry::registry()
         )).run();
 }
@@ -368,15 +364,14 @@ required by package `foo v0.0.1 ([..])`
     p.cargo("package")
         .with_stderr(format!(
             "\
-[PACKAGING] foo v0.0.1 ({dir})
-[VERIFYING] foo v0.0.1 ({dir})
+[PACKAGING] foo v0.0.1 (CWD)
+[VERIFYING] foo v0.0.1 (CWD)
 [UPDATING] registry `[..]`
 [DOWNLOADING] notyet v0.0.1 (registry `file://[..]`)
 [COMPILING] notyet v0.0.1
-[COMPILING] foo v0.0.1 ({dir}[..])
+[COMPILING] foo v0.0.1 (CWD[..])
 [FINISHED] dev [unoptimized + debuginfo] target(s) in [..]s
 ",
-            dir = p.url()
         )).run();
 }
 
@@ -405,10 +400,9 @@ fn lockfile_locks() {
 [UPDATING] registry `[..]`
 [DOWNLOADING] bar v0.0.1 (registry `file://[..]`)
 [COMPILING] bar v0.0.1
-[COMPILING] foo v0.0.1 ({dir})
+[COMPILING] foo v0.0.1 (CWD)
 [FINISHED] dev [unoptimized + debuginfo] target(s) in [..]s
 ",
-            dir = p.url()
         )).run();
 
     p.root().move_into_the_past();
@@ -445,10 +439,9 @@ fn lockfile_locks_transitively() {
 [DOWNLOADING] [..] v0.0.1 (registry `file://[..]`)
 [COMPILING] baz v0.0.1
 [COMPILING] bar v0.0.1
-[COMPILING] foo v0.0.1 ({dir})
+[COMPILING] foo v0.0.1 (CWD)
 [FINISHED] dev [unoptimized + debuginfo] target(s) in [..]s
 ",
-            dir = p.url()
         )).run();
 
     p.root().move_into_the_past();
@@ -491,10 +484,9 @@ fn yanks_are_not_used() {
 [DOWNLOADING] [..] v0.0.1 (registry `file://[..]`)
 [COMPILING] baz v0.0.1
 [COMPILING] bar v0.0.1
-[COMPILING] foo v0.0.1 ({dir})
+[COMPILING] foo v0.0.1 (CWD)
 [FINISHED] dev [unoptimized + debuginfo] target(s) in [..]s
 ",
-            dir = p.url()
         )).run();
 }
 
@@ -640,10 +632,9 @@ fn update_lockfile() {
             "\
 [DOWNLOADING] [..] v0.0.2 (registry `file://[..]`)
 [COMPILING] bar v0.0.2
-[COMPILING] foo v0.0.1 ({dir})
+[COMPILING] foo v0.0.1 (CWD)
 [FINISHED] dev [unoptimized + debuginfo] target(s) in [..]s
 ",
-            dir = p.url()
         )).run();
 
     println!("0.0.3 update");
@@ -661,10 +652,9 @@ fn update_lockfile() {
             "\
 [DOWNLOADING] [..] v0.0.3 (registry `file://[..]`)
 [COMPILING] bar v0.0.3
-[COMPILING] foo v0.0.1 ({dir})
+[COMPILING] foo v0.0.1 (CWD)
 [FINISHED] dev [unoptimized + debuginfo] target(s) in [..]s
 ",
-            dir = p.url()
         )).run();
 
     println!("new dependencies update");
@@ -740,10 +730,9 @@ fn dev_dependency_not_used() {
 [UPDATING] registry `[..]`
 [DOWNLOADING] [..] v0.0.1 (registry `file://[..]`)
 [COMPILING] bar v0.0.1
-[COMPILING] foo v0.0.1 ({dir})
+[COMPILING] foo v0.0.1 (CWD)
 [FINISHED] dev [unoptimized + debuginfo] target(s) in [..]s
 ",
-            dir = p.url()
         )).run();
 }
 
@@ -825,11 +814,10 @@ fn updating_a_dep() {
 [UPDATING] registry `[..]`
 [DOWNLOADING] bar v0.0.1 (registry `file://[..]`)
 [COMPILING] bar v0.0.1
-[COMPILING] a v0.0.1 ({dir}/a)
-[COMPILING] foo v0.0.1 ({dir})
+[COMPILING] a v0.0.1 (CWD/a)
+[COMPILING] foo v0.0.1 (CWD)
 [FINISHED] dev [unoptimized + debuginfo] target(s) in [..]s
 ",
-            dir = p.url()
         )).run();
 
     t!(t!(File::create(&p.root().join("a/Cargo.toml"))).write_all(
@@ -852,11 +840,10 @@ fn updating_a_dep() {
 [UPDATING] registry `[..]`
 [DOWNLOADING] bar v0.1.0 (registry `file://[..]`)
 [COMPILING] bar v0.1.0
-[COMPILING] a v0.0.1 ({dir}/a)
-[COMPILING] foo v0.0.1 ({dir})
+[COMPILING] a v0.0.1 (CWD/a)
+[COMPILING] foo v0.0.1 (CWD)
 [FINISHED] dev [unoptimized + debuginfo] target(s) in [..]s
 ",
-            dir = p.url()
         )).run();
 }
 
@@ -908,10 +895,9 @@ fn git_and_registry_dep() {
 [DOWNLOADING] a v0.0.1 (registry `file://[..]`)
 [COMPILING] a v0.0.1
 [COMPILING] b v0.0.1 ([..])
-[COMPILING] foo v0.0.1 ({dir})
+[COMPILING] foo v0.0.1 (CWD)
 [FINISHED] dev [unoptimized + debuginfo] target(s) in [..]s
 ",
-            dir = p.url()
         )).run();
     p.root().move_into_the_past();
 
@@ -981,10 +967,9 @@ fn update_publish_then_update() {
 [UPDATING] [..]
 [DOWNLOADING] a v0.1.1 (registry `file://[..]`)
 [COMPILING] a v0.1.1
-[COMPILING] foo v0.5.0 ({dir})
+[COMPILING] foo v0.5.0 (CWD)
 [FINISHED] dev [unoptimized + debuginfo] target(s) in [..]s
 ",
-            dir = p.url()
         )).run();
 }
 

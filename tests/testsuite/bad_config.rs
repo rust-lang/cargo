@@ -641,7 +641,7 @@ fn unused_keys() {
         .with_stderr(
             "\
 warning: unused manifest key: target.foo.bar
-[COMPILING] foo v0.1.0 (file:///[..])
+[COMPILING] foo v0.1.0 (CWD)
 [FINISHED] dev [unoptimized + debuginfo] target(s) in [..]
 ",
         ).run();
