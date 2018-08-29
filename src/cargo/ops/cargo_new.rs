@@ -417,6 +417,8 @@ fn mk(config: &Config, opts: &MkOptions) -> CargoResult<()> {
     let ignore = [
         "/target\n",
         "**/*.rs.bk\n",
+        "/.idea\n",
+        "**/*.iml\n",
         if !opts.bin { "Cargo.lock\n" } else { "" },
     ].concat();
     // Mercurial glob ignores can't be rooted, so just sticking a 'syntax: glob' at the top of the
@@ -425,6 +427,8 @@ fn mk(config: &Config, opts: &MkOptions) -> CargoResult<()> {
     let hgignore = [
         "^target/\n",
         "glob:*.rs.bk\n",
+        "^\\.idea/\n",
+        "glob:*.iml\n",
         if !opts.bin { "glob:Cargo.lock\n" } else { "" },
     ].concat();
 
