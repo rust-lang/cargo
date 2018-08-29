@@ -2,7 +2,7 @@ use std::env;
 use std::fs::{self, File};
 use std::io::{Read, Write};
 
-use support::hamcrest::{assert_that, existing_dir, existing_file, is_not};
+use support::hamcrest::{assert_that, existing_file, is_not};
 use support::registry::Package;
 use support::sleep_ms;
 use support::{basic_lib_manifest, basic_manifest, git, project};
@@ -882,10 +882,10 @@ fn members_include_path_deps() {
     p.cargo("build").cwd(p.root().join("p3")).run();
     p.cargo("build").run();
 
-    assert_that(&p.root().join("target"), existing_dir());
-    assert_that(&p.root().join("p1/target"), is_not(existing_dir()));
-    assert_that(&p.root().join("p2/target"), is_not(existing_dir()));
-    assert_that(&p.root().join("p3/target"), is_not(existing_dir()));
+    assert!(p.root().join("target").is_dir());
+    assert!(!p.root().join("p1/target").is_dir());
+    assert!(!p.root().join("p2/target").is_dir());
+    assert!(!p.root().join("p3/target").is_dir());
 }
 
 #[test]
@@ -1306,17 +1306,17 @@ fn test_in_and_out_of_workspace() {
     p.cargo("build").cwd(p.root().join("ws")).run();
 
     assert_that(&p.root().join("ws/Cargo.lock"), existing_file());
-    assert_that(&p.root().join("ws/target"), existing_dir());
+    assert!(p.root().join("ws/target").is_dir());
     assert_that(&p.root().join("foo/Cargo.lock"), is_not(existing_file()));
-    assert_that(&p.root().join("foo/target"), is_not(existing_dir()));
+    assert!(!p.root().join("foo/target").is_dir());
     assert_that(&p.root().join("bar/Cargo.lock"), is_not(existing_file()));
-    assert_that(&p.root().join("bar/target"), is_not(existing_dir()));
+    assert!(!p.root().join("bar/target").is_dir());
 
     p.cargo("build").cwd(p.root().join("foo")).run();
     assert_that(&p.root().join("foo/Cargo.lock"), existing_file());
-    assert_that(&p.root().join("foo/target"), existing_dir());
+    assert!(p.root().join("foo/target").is_dir());
     assert_that(&p.root().join("bar/Cargo.lock"), is_not(existing_file()));
-    assert_that(&p.root().join("bar/target"), is_not(existing_dir()));
+    assert!(!p.root().join("bar/target").is_dir());
 }
 
 #[test]
@@ -1363,7 +1363,7 @@ fn test_path_dependency_under_member() {
         &p.root().join("foo/bar/Cargo.lock"),
         is_not(existing_file()),
     );
-    assert_that(&p.root().join("foo/bar/target"), is_not(existing_dir()));
+    assert!(!p.root().join("foo/bar/target").is_dir());
 
     p.cargo("build").cwd(p.root().join("foo/bar")).run();
 
@@ -1371,7 +1371,7 @@ fn test_path_dependency_under_member() {
         &p.root().join("foo/bar/Cargo.lock"),
         is_not(existing_file()),
     );
-    assert_that(&p.root().join("foo/bar/target"), is_not(existing_dir()));
+    assert!(!p.root().join("foo/bar/target").is_dir());
 }
 
 #[test]
@@ -1394,9 +1394,9 @@ fn excluded_simple() {
     let p = p.build();
 
     p.cargo("build").run();
-    assert_that(&p.root().join("target"), existing_dir());
+    assert!(p.root().join("target").is_dir());
     p.cargo("build").cwd(p.root().join("foo")).run();
-    assert_that(&p.root().join("foo/target"), existing_dir());
+    assert!(p.root().join("foo/target").is_dir());
 }
 
 #[test]
@@ -1422,11 +1422,11 @@ fn exclude_members_preferred() {
     let p = p.build();
 
     p.cargo("build").run();
-    assert_that(&p.root().join("target"), existing_dir());
+    assert!(p.root().join("target").is_dir());
     p.cargo("build").cwd(p.root().join("foo")).run();
-    assert_that(&p.root().join("foo/target"), existing_dir());
+    assert!(p.root().join("foo/target").is_dir());
     p.cargo("build").cwd(p.root().join("foo/bar")).run();
-    assert_that(&p.root().join("foo/bar/target"), is_not(existing_dir()));
+    assert!(!p.root().join("foo/bar/target").is_dir());
 }
 
 #[test]
@@ -1454,11 +1454,11 @@ fn exclude_but_also_depend() {
     let p = p.build();
 
     p.cargo("build").run();
-    assert_that(&p.root().join("target"), existing_dir());
+    assert!(p.root().join("target").is_dir());
     p.cargo("build").cwd(p.root().join("foo")).run();
-    assert_that(&p.root().join("foo/target"), existing_dir());
+    assert!(p.root().join("foo/target").is_dir());
     p.cargo("build").cwd(p.root().join("foo/bar")).run();
-    assert_that(&p.root().join("foo/bar/target"), existing_dir());
+    assert!(p.root().join("foo/bar/target").is_dir());
 }
 
 #[test]
@@ -1789,10 +1789,10 @@ fn include_and_exclude() {
     p.build();
 
     p.cargo("build").cwd(p.root().join("foo")).run();
-    assert_that(&p.root().join("target"), existing_dir());
-    assert_that(&p.root().join("foo/target"), is_not(existing_dir()));
+    assert!(p.root().join("target").is_dir());
+    assert!(!p.root().join("foo/target").is_dir());
     p.cargo("build").cwd(p.root().join("foo/bar")).run();
-    assert_that(&p.root().join("foo/bar/target"), existing_dir());
+    assert!(p.root().join("foo/bar/target").is_dir());
 }
 */
 

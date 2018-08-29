@@ -2,7 +2,7 @@ use std::env;
 use std::fs::{self, File};
 use std::io::prelude::*;
 
-use support::hamcrest::{assert_that, existing_dir, existing_file, is_not};
+use support::hamcrest::{assert_that, existing_file, is_not};
 use support::paths;
 use support::{cargo_process, git_process};
 
@@ -20,7 +20,7 @@ fn simple_lib() {
         .with_stderr("[CREATED] library `foo` project")
         .run();
 
-    assert_that(&paths::root().join("foo"), existing_dir());
+    assert!(paths::root().join("foo").is_dir());
     assert_that(&paths::root().join("foo/Cargo.toml"), existing_file());
     assert_that(&paths::root().join("foo/src/lib.rs"), existing_file());
     assert_that(
@@ -56,7 +56,7 @@ fn simple_bin() {
         .with_stderr("[CREATED] binary (application) `foo` project")
         .run();
 
-    assert_that(&paths::root().join("foo"), existing_dir());
+    assert!(paths::root().join("foo").is_dir());
     assert_that(&paths::root().join("foo/Cargo.toml"), existing_file());
     assert_that(&paths::root().join("foo/src/main.rs"), existing_file());
 
@@ -80,10 +80,10 @@ fn both_lib_and_bin() {
 fn simple_git() {
     cargo_process("new --lib foo").env("USER", "foo").run();
 
-    assert_that(&paths::root(), existing_dir());
+    assert!(paths::root().is_dir());
     assert_that(&paths::root().join("foo/Cargo.toml"), existing_file());
     assert_that(&paths::root().join("foo/src/lib.rs"), existing_file());
-    assert_that(&paths::root().join("foo/.git"), existing_dir());
+    assert!(paths::root().join("foo/.git").is_dir());
     assert_that(&paths::root().join("foo/.gitignore"), existing_file());
 
     cargo_process("build").cwd(&paths::root().join("foo")).run();
@@ -364,7 +364,7 @@ fn git_prefers_command_line() {
 fn subpackage_no_git() {
     cargo_process("new foo").env("USER", "foo").run();
 
-    assert_that(&paths::root().join("foo/.git"), existing_dir());
+    assert!(paths::root().join("foo/.git").is_dir());
     assert_that(&paths::root().join("foo/.gitignore"), existing_file());
 
     let subpackage = paths::root().join("foo").join("components");
@@ -387,7 +387,7 @@ fn subpackage_no_git() {
 fn subpackage_git_with_gitignore() {
     cargo_process("new foo").env("USER", "foo").run();
 
-    assert_that(&paths::root().join("foo/.git"), existing_dir());
+    assert!(paths::root().join("foo/.git").is_dir());
     assert_that(&paths::root().join("foo/.gitignore"), existing_file());
 
     let gitignore = paths::root().join("foo/.gitignore");
@@ -399,10 +399,7 @@ fn subpackage_git_with_gitignore() {
         .env("USER", "foo")
         .run();
 
-    assert_that(
-        &paths::root().join("foo/components/subcomponent/.git"),
-        existing_dir(),
-    );
+    assert!(paths::root().join("foo/components/subcomponent/.git").is_dir());
     assert_that(
         &paths::root().join("foo/components/subcomponent/.gitignore"),
         existing_file(),
@@ -419,10 +416,7 @@ fn subpackage_git_with_vcs_arg() {
         .env("USER", "foo")
         .run();
 
-    assert_that(
-        &paths::root().join("foo/components/subcomponent/.git"),
-        existing_dir(),
-    );
+    assert!(paths::root().join("foo/components/subcomponent/.git").is_dir());
     assert_that(
         &paths::root().join("foo/components/subcomponent/.gitignore"),
         existing_file(),

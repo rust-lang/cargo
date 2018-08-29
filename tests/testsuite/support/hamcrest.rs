@@ -34,26 +34,6 @@ where
     }
 }
 
-pub fn existing_dir() -> ExistingDir {
-    ExistingDir
-}
-
-#[derive(Debug)]
-pub struct ExistingDir;
-
-impl<P> Matcher<P> for ExistingDir
-where
-    P: AsRef<Path>,
-{
-    fn matches(&self, actual: P) -> Result<(), String> {
-        if actual.as_ref().is_dir() {
-            Ok(())
-        } else {
-            Err(format!("{} was not a dir", actual.as_ref().display()))
-        }
-    }
-}
-
 pub fn is_not<T, M: Matcher<T>>(matcher: M) -> IsNot<T, M> {
     IsNot {
         matcher,

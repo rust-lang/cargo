@@ -4,7 +4,7 @@ use std::str;
 use support;
 
 use glob::glob;
-use support::hamcrest::{assert_that, existing_dir, existing_file, is_not};
+use support::hamcrest::{assert_that, existing_file, is_not};
 use support::paths::CargoPathExt;
 use support::registry::Package;
 use support::{basic_lib_manifest, basic_manifest, git, path2url, project};
@@ -35,7 +35,7 @@ fn simple() {
 ",
             dir = path2url(p.root())
         )).run();
-    assert_that(&p.root().join("target/doc"), existing_dir());
+    assert!(p.root().join("target/doc").is_dir());
     assert_that(&p.root().join("target/doc/foo/index.html"), existing_file());
 }
 
@@ -106,7 +106,7 @@ fn doc_deps() {
             dir = path2url(p.root())
         )).run();
 
-    assert_that(&p.root().join("target/doc"), existing_dir());
+    assert!(p.root().join("target/doc").is_dir());
     assert_that(&p.root().join("target/doc/foo/index.html"), existing_file());
     assert_that(&p.root().join("target/doc/bar/index.html"), existing_file());
 
@@ -133,7 +133,7 @@ fn doc_deps() {
         .with_stdout("")
         .run();
 
-    assert_that(&p.root().join("target/doc"), existing_dir());
+    assert!(p.root().join("target/doc").is_dir());
     assert_that(&p.root().join("target/doc/foo/index.html"), existing_file());
     assert_that(&p.root().join("target/doc/bar/index.html"), existing_file());
 }
@@ -167,7 +167,7 @@ fn doc_no_deps() {
             dir = path2url(p.root())
         )).run();
 
-    assert_that(&p.root().join("target/doc"), existing_dir());
+    assert!(p.root().join("target/doc").is_dir());
     assert_that(&p.root().join("target/doc/foo/index.html"), existing_file());
     assert_that(
         &p.root().join("target/doc/bar/index.html"),
@@ -196,7 +196,7 @@ fn doc_only_bin() {
 
     p.cargo("doc -v").run();
 
-    assert_that(&p.root().join("target/doc"), existing_dir());
+    assert!(p.root().join("target/doc").is_dir());
     assert_that(&p.root().join("target/doc/bar/index.html"), existing_file());
     assert_that(&p.root().join("target/doc/foo/index.html"), existing_file());
 }
@@ -279,7 +279,7 @@ fn doc_multiple_targets_same_name() {
         .with_stderr_contains(&format!("[DOCUMENTING] bar v0.1.0 ({}/bar)", root))
         .with_stderr_contains("[FINISHED] dev [unoptimized + debuginfo] target(s) in [..]")
         .run();
-    assert_that(&p.root().join("target/doc"), existing_dir());
+    assert!(p.root().join("target/doc").is_dir());
     let doc_file = p.root().join("target/doc/foo_lib/index.html");
     assert_that(&doc_file, existing_file());
 }
@@ -386,7 +386,7 @@ fn doc_lib_bin_same_name_documents_lib() {
 ",
             dir = path2url(p.root())
         )).run();
-    assert_that(&p.root().join("target/doc"), existing_dir());
+    assert!(p.root().join("target/doc").is_dir());
     let doc_file = p.root().join("target/doc/foo/index.html");
     assert_that(&doc_file, existing_file());
     let mut doc_html = String::new();
@@ -426,7 +426,7 @@ fn doc_lib_bin_same_name_documents_lib_when_requested() {
 ",
             dir = path2url(p.root())
         )).run();
-    assert_that(&p.root().join("target/doc"), existing_dir());
+    assert!(p.root().join("target/doc").is_dir());
     let doc_file = p.root().join("target/doc/foo/index.html");
     assert_that(&doc_file, existing_file());
     let mut doc_html = String::new();
@@ -467,7 +467,7 @@ fn doc_lib_bin_same_name_documents_named_bin_when_requested() {
 ",
             dir = path2url(p.root())
         )).run();
-    assert_that(&p.root().join("target/doc"), existing_dir());
+    assert!(p.root().join("target/doc").is_dir());
     let doc_file = p.root().join("target/doc/foo/index.html");
     assert_that(&doc_file, existing_file());
     let mut doc_html = String::new();
@@ -508,7 +508,7 @@ fn doc_lib_bin_same_name_documents_bins_when_requested() {
 ",
             dir = path2url(p.root())
         )).run();
-    assert_that(&p.root().join("target/doc"), existing_dir());
+    assert!(p.root().join("target/doc").is_dir());
     let doc_file = p.root().join("target/doc/foo/index.html");
     assert_that(&doc_file, existing_file());
     let mut doc_html = String::new();
@@ -592,10 +592,7 @@ fn doc_target() {
         ).build();
 
     p.cargo("doc --verbose --target").arg(TARGET).run();
-    assert_that(
-        &p.root().join(&format!("target/{}/doc", TARGET)),
-        existing_dir(),
-    );
+    assert!(p.root().join(&format!("target/{}/doc", TARGET)).is_dir());
     assert_that(
         &p.root()
             .join(&format!("target/{}/doc/foo/index.html", TARGET)),
@@ -767,7 +764,7 @@ fn doc_multiple_deps() {
 
     p.cargo("doc -p bar -p baz -v").run();
 
-    assert_that(&p.root().join("target/doc"), existing_dir());
+    assert!(p.root().join("target/doc").is_dir());
     assert_that(&p.root().join("target/doc/bar/index.html"), existing_file());
     assert_that(&p.root().join("target/doc/baz/index.html"), existing_file());
 }
@@ -813,7 +810,7 @@ fn features() {
             r#"#[cfg(feature = "bar")] pub fn bar() {}"#,
         ).build();
     p.cargo("doc --features foo").run();
-    assert_that(&p.root().join("target/doc"), existing_dir());
+    assert!(p.root().join("target/doc").is_dir());
     assert_that(
         &p.root().join("target/doc/foo/fn.foo.html"),
         existing_file(),
@@ -1221,7 +1218,7 @@ fn doc_private_items() {
         .build();
     foo.cargo("doc --document-private-items").run();
 
-    assert_that(&foo.root().join("target/doc"), existing_dir());
+    assert!(foo.root().join("target/doc").is_dir());
     assert_that(
         &foo.root().join("target/doc/foo/private/index.html"),
         existing_file(),

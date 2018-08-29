@@ -3,7 +3,7 @@ use std::fs::{self, File};
 use std::io::prelude::*;
 use support;
 
-use support::hamcrest::{assert_that, existing_dir, existing_file, is_not};
+use support::hamcrest::{assert_that, existing_file, is_not};
 use support::{paths, Execs};
 
 fn cargo_process(s: &str) -> Execs {
@@ -250,7 +250,7 @@ fn simple_git() {
 
     assert_that(&paths::root().join("Cargo.toml"), existing_file());
     assert_that(&paths::root().join("src/lib.rs"), existing_file());
-    assert_that(&paths::root().join(".git"), existing_dir());
+    assert!(paths::root().join(".git").is_dir());
     assert_that(&paths::root().join(".gitignore"), existing_file());
 }
 
@@ -260,7 +260,7 @@ fn auto_git() {
 
     assert_that(&paths::root().join("Cargo.toml"), existing_file());
     assert_that(&paths::root().join("src/lib.rs"), existing_file());
-    assert_that(&paths::root().join(".git"), existing_dir());
+    assert!(paths::root().join(".git").is_dir());
     assert_that(&paths::root().join(".gitignore"), existing_file());
 }
 
@@ -308,7 +308,7 @@ fn git_autodetect() {
 
     assert_that(&paths::root().join("Cargo.toml"), existing_file());
     assert_that(&paths::root().join("src/lib.rs"), existing_file());
-    assert_that(&paths::root().join(".git"), existing_dir());
+    assert!(paths::root().join(".git").is_dir());
     assert_that(&paths::root().join(".gitignore"), existing_file());
 }
 
@@ -320,7 +320,7 @@ fn mercurial_autodetect() {
 
     assert_that(&paths::root().join("Cargo.toml"), existing_file());
     assert_that(&paths::root().join("src/lib.rs"), existing_file());
-    assert_that(&paths::root().join(".git"), is_not(existing_dir()));
+    assert!(!paths::root().join(".git").is_dir());
     assert_that(&paths::root().join(".hgignore"), existing_file());
 }
 
@@ -337,7 +337,7 @@ fn gitignore_appended_not_replaced() {
 
     assert_that(&paths::root().join("Cargo.toml"), existing_file());
     assert_that(&paths::root().join("src/lib.rs"), existing_file());
-    assert_that(&paths::root().join(".git"), existing_dir());
+    assert!(paths::root().join(".git").is_dir());
     assert_that(&paths::root().join(".gitignore"), existing_file());
 
     let mut contents = String::new();
