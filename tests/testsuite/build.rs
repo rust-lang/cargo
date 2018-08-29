@@ -3,7 +3,7 @@ use std::fs::{self, File};
 use std::io::prelude::*;
 
 use cargo::util::paths::dylib_path_envvar;
-use support::hamcrest::{assert_that, existing_dir, existing_file, is_not};
+use support::hamcrest::{assert_that, existing_file, is_not};
 use support::paths::{root, CargoPathExt};
 use support::registry::Package;
 use support::ProjectBuilder;
@@ -4164,8 +4164,8 @@ fn uplift_dsym_of_bin_on_mac() {
         .build();
 
     p.cargo("build --bins --examples --tests").run();
-    assert_that(&p.bin("foo.dSYM"), existing_dir());
-    assert_that(&p.bin("b.dSYM"), existing_dir());
+    assert!(p.bin("foo.dSYM").is_dir());
+    assert!(p.bin("b.dSYM").is_dir());
     assert!(
         p.bin("b.dSYM")
             .symlink_metadata()
@@ -4173,8 +4173,8 @@ fn uplift_dsym_of_bin_on_mac() {
             .file_type()
             .is_symlink()
     );
-    assert_that(&p.bin("c.dSYM"), is_not(existing_dir()));
-    assert_that(&p.bin("d.dSYM"), is_not(existing_dir()));
+    assert!(!p.bin("c.dSYM").is_dir());
+    assert!(!p.bin("d.dSYM").is_dir());
 }
 
 #[test]

@@ -5,7 +5,7 @@ use support;
 use git2;
 use support::cross_compile;
 use support::git;
-use support::hamcrest::{assert_that, existing_dir, is_not};
+use support::hamcrest::{assert_that, is_not};
 use support::install::{cargo_home, has_installed_exe};
 use support::paths;
 use support::registry::Package;
@@ -1107,16 +1107,13 @@ fn custom_target_dir_for_git_source() {
     cargo_process("install --git")
         .arg(p.url().to_string())
         .run();
-    assert_that(
-        &paths::root().join("target/release"),
-        is_not(existing_dir()),
-    );
+    assert!(!paths::root().join("target/release").is_dir());
 
     cargo_process("install --force --git")
         .arg(p.url().to_string())
         .env("CARGO_TARGET_DIR", "target")
         .run();
-    assert_that(&paths::root().join("target/release"), existing_dir());
+    assert!(paths::root().join("target/release").is_dir());
 }
 
 #[test]
