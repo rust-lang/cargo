@@ -2,8 +2,7 @@ use std::net::TcpListener;
 use std::process::Command;
 use std::thread;
 
-use support::hamcrest::assert_that;
-use support::{cargo_exe, execs, project};
+use support::{cargo_exe, project};
 
 #[test]
 fn jobserver_exists() {
@@ -150,13 +149,11 @@ all:
         drop((a2, a3));
     });
 
-    assert_that(
-        p.process(make)
-            .env("CARGO", cargo_exe())
-            .env("ADDR", addr.to_string())
-            .arg("-j2"),
-        execs(),
-    );
+    p.process(make)
+        .env("CARGO", cargo_exe())
+        .env("ADDR", addr.to_string())
+        .arg("-j2")
+        .run();
     child.join().unwrap();
 }
 
@@ -181,15 +178,15 @@ all:
 ",
         ).build();
 
-    assert_that(
-        p.process(make).env("CARGO", cargo_exe()).arg("-j2"),
-        execs().with_stderr(
+    p.process(make)
+        .env("CARGO", cargo_exe())
+        .arg("-j2")
+        .with_stderr(
             "\
 warning: a `-j` argument was passed to Cargo but Cargo is also configured \
 with an external jobserver in its environment, ignoring the `-j` parameter
 [COMPILING] [..]
 [FINISHED] [..]
 ",
-        ),
-    );
+        ).run();
 }

@@ -64,21 +64,11 @@ fn path() -> Vec<PathBuf> {
 #[test]
 fn list_commands_with_descriptions() {
     let p = project().build();
-    let output = p.cargo("--list").exec_with_output().unwrap();
-    let output = str::from_utf8(&output.stdout).unwrap();
-    assert!(
-        output.contains(
-            "\n    build                Compile a local package and all of its dependencies"
-        ),
-        "missing build, with description: {}",
-        output
-    );
-    // assert read-manifest prints the right one-line description followed by another command, indented.
-    assert!(
-        output.contains("\n    read-manifest        Print a JSON representation of a Cargo.toml manifest.\n    "),
-        "missing build, with description: {}",
-        output
-    );
+    p.cargo("--list")
+        .with_stdout_contains("    build                Compile a local package and all of its dependencies")
+        // assert read-manifest prints the right one-line description followed by another command, indented.
+        .with_stdout_contains("    read-manifest        Print a JSON representation of a Cargo.toml manifest.")
+        .run();
 }
 
 #[test]
@@ -94,9 +84,7 @@ fn list_command_looks_at_path() {
     let mut path = path();
     path.push(proj.root().join("path-test"));
     let path = env::join_paths(path.iter()).unwrap();
-    let mut p = cargo_process("-v --list");
-    let output = p.env("PATH", &path);
-    let output = output.exec_with_output().unwrap();
+    let output = cargo_process("-v --list").env("PATH", &path).exec_with_output().unwrap();
     let output = str::from_utf8(&output.stdout).unwrap();
     assert!(
         output.contains("\n    1                   "),
@@ -122,9 +110,7 @@ fn list_command_resolves_symlinks() {
     let mut path = path();
     path.push(proj.root().join("path-test"));
     let path = env::join_paths(path.iter()).unwrap();
-    let mut p = cargo_process("-v --list");
-    let output = p.env("PATH", &path);
-    let output = output.exec_with_output().unwrap();
+    let output = cargo_process("-v --list").env("PATH", &path).exec_with_output().unwrap();
     let output = str::from_utf8(&output.stdout).unwrap();
     assert!(
         output.contains("\n    2                   "),

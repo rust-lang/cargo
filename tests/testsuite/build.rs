@@ -3,7 +3,6 @@ use std::fs::{self, File};
 use std::io::prelude::*;
 
 use cargo::util::paths::dylib_path_envvar;
-use cargo::util::process;
 use support::hamcrest::{assert_that, existing_dir, existing_file, is_not};
 use support::paths::{root, CargoPathExt};
 use support::registry::Package;
@@ -11,7 +10,7 @@ use support::ProjectBuilder;
 use support::{
     basic_bin_manifest, basic_lib_manifest, basic_manifest, is_nightly, rustc_host, sleep_ms,
 };
-use support::{execs, main_file, project, Execs};
+use support::{main_file, project, Execs};
 
 #[test]
 fn cargo_compile_simple() {
@@ -23,7 +22,7 @@ fn cargo_compile_simple() {
     p.cargo("build").run();
     assert_that(&p.bin("foo"), existing_file());
 
-    assert_that(process(&p.bin("foo")), execs().with_stdout("i am foo\n"));
+    p.process(&p.bin("foo")).with_stdout("i am foo\n").run();
 }
 
 #[test]
@@ -530,7 +529,7 @@ fn cargo_compile_with_warnings_in_a_dep_package() {
 
     assert_that(&p.bin("foo"), existing_file());
 
-    assert_that(process(&p.bin("foo")), execs().with_stdout("test passed\n"));
+    p.process(&p.bin("foo")).with_stdout("test passed\n").run();
 }
 
 #[test]
@@ -583,13 +582,13 @@ fn cargo_compile_with_nested_deps_inferred() {
         "#,
         ).build();
 
-    p.cargo("build").exec_with_output().unwrap();
+    p.cargo("build").run();
 
     assert_that(&p.bin("foo"), existing_file());
     assert_that(&p.bin("libbar.rlib"), is_not(existing_file()));
     assert_that(&p.bin("libbaz.rlib"), is_not(existing_file()));
 
-    assert_that(process(&p.bin("foo")), execs().with_stdout("test passed\n"));
+    p.process(&p.bin("foo")).with_stdout("test passed\n").run();
 }
 
 #[test]
@@ -642,13 +641,13 @@ fn cargo_compile_with_nested_deps_correct_bin() {
         "#,
         ).build();
 
-    p.cargo("build").exec_with_output().unwrap();
+    p.cargo("build").run();
 
     assert_that(&p.bin("foo"), existing_file());
     assert_that(&p.bin("libbar.rlib"), is_not(existing_file()));
     assert_that(&p.bin("libbaz.rlib"), is_not(existing_file()));
 
-    assert_that(process(&p.bin("foo")), execs().with_stdout("test passed\n"));
+    p.process(&p.bin("foo")).with_stdout("test passed\n").run();
 }
 
 #[test]
@@ -702,13 +701,13 @@ fn cargo_compile_with_nested_deps_shorthand() {
         "#,
         ).build();
 
-    p.cargo("build").exec_with_output().unwrap();
+    p.cargo("build").run();
 
     assert_that(&p.bin("foo"), existing_file());
     assert_that(&p.bin("libbar.rlib"), is_not(existing_file()));
     assert_that(&p.bin("libbaz.rlib"), is_not(existing_file()));
 
-    assert_that(process(&p.bin("foo")), execs().with_stdout("test passed\n"));
+    p.process(&p.bin("foo")).with_stdout("test passed\n").run();
 }
 
 #[test]
@@ -774,7 +773,7 @@ fn cargo_compile_with_nested_deps_longhand() {
     assert_that(&p.bin("libbar.rlib"), is_not(existing_file()));
     assert_that(&p.bin("libbaz.rlib"), is_not(existing_file()));
 
-    assert_that(process(&p.bin("foo")), execs().with_stdout("test passed\n"));
+    p.process(&p.bin("foo")).with_stdout("test passed\n").run();
 }
 
 // Check that Cargo gives a sensible error if a dependency can't be found
@@ -1156,7 +1155,7 @@ fn compile_offline_while_transitive_dep_not_cached() {
         .build();
 
     // simulate download bar, but fail to download baz
-    let _out = p.cargo("build").exec_with_output();
+    p.cargo("build").with_status(101).run();
 
     drop(File::create(baz_path).ok().unwrap().write_all(&content));
 
@@ -1378,10 +1377,9 @@ fn crate_env_vars() {
     p.cargo("build -v").run();
 
     println!("bin");
-    assert_that(
-        process(&p.bin("foo")),
-        execs().with_stdout(&format!("0-5-1 @ alpha.1 in {}\n", p.root().display())),
-    );
+    p.process(&p.bin("foo"))
+        .with_stdout(&format!("0-5-1 @ alpha.1 in {}\n", p.root().display()))
+        .run();
 
     println!("test");
     p.cargo("test -v").run();
@@ -1425,10 +1423,9 @@ fn crate_authors_env_vars() {
     p.cargo("build -v").run();
 
     println!("bin");
-    assert_that(
-        process(&p.bin("foo")),
-        execs().with_stdout("wycats@example.com:neikos@example.com"),
-    );
+    p.process(&p.bin("foo"))
+        .with_stdout("wycats@example.com:neikos@example.com")
+        .run();
 
     println!("test");
     p.cargo("test -v").run();
@@ -1584,7 +1581,7 @@ fn ignore_broken_symlinks() {
     p.cargo("build").run();
     assert_that(&p.bin("foo"), existing_file());
 
-    assert_that(process(&p.bin("foo")), execs().with_stdout("i am foo\n"));
+    p.process(&p.bin("foo")).with_stdout("i am foo\n").run();
 }
 
 #[test]
@@ -1787,14 +1784,12 @@ fn explicit_examples() {
         ).build();
 
     p.cargo("test -v").run();
-    assert_that(
-        process(&p.bin("examples/hello")),
-        execs().with_stdout("Hello, World!\n"),
-    );
-    assert_that(
-        process(&p.bin("examples/goodbye")),
-        execs().with_stdout("Goodbye, World!\n"),
-    );
+    p.process(&p.bin("examples/hello"))
+        .with_stdout("Hello, World!\n")
+        .run();
+    p.process(&p.bin("examples/goodbye"))
+        .with_stdout("Goodbye, World!\n")
+        .run();
 }
 
 #[test]
@@ -1948,14 +1943,12 @@ fn implicit_examples() {
         ).build();
 
     p.cargo("test").run();
-    assert_that(
-        process(&p.bin("examples/hello")),
-        execs().with_stdout("Hello, World!\n"),
-    );
-    assert_that(
-        process(&p.bin("examples/goodbye")),
-        execs().with_stdout("Goodbye, World!\n"),
-    );
+    p.process(&p.bin("examples/hello"))
+        .with_stdout("Hello, World!\n")
+        .run();
+    p.process(&p.bin("examples/goodbye"))
+        .with_stdout("Goodbye, World!\n")
+        .run();
 }
 
 #[test]
@@ -1976,7 +1969,7 @@ fn standard_build_no_ndebug() {
         ).build();
 
     p.cargo("build").run();
-    assert_that(process(&p.bin("foo")), execs().with_stdout("slow\n"));
+    p.process(&p.bin("foo")).with_stdout("slow\n").run();
 }
 
 #[test]
@@ -1997,10 +1990,7 @@ fn release_build_ndebug() {
         ).build();
 
     p.cargo("build --release").run();
-    assert_that(
-        process(&p.release_bin("foo")),
-        execs().with_stdout("fast\n"),
-    );
+    p.process(&p.release_bin("foo")).with_stdout("fast\n").run();
 }
 
 #[test]
@@ -2008,7 +1998,7 @@ fn inferred_main_bin() {
     let p = project().file("src/main.rs", "fn main() {}").build();
 
     p.cargo("build").run();
-    assert_that(process(&p.bin("foo")), execs());
+    p.process(&p.bin("foo")).run();
 }
 
 #[test]
@@ -2043,7 +2033,7 @@ fn bad_cargo_toml_in_target_dir() {
         .build();
 
     p.cargo("build").run();
-    assert_that(process(&p.bin("foo")), execs());
+    p.process(&p.bin("foo")).run();
 }
 
 #[test]
@@ -2417,10 +2407,10 @@ fn cargo_platform_specific_dependency_wrong_platform() {
             "invalid rust file, should not be compiled",
         ).build();
 
-    p.cargo("build").exec_with_output().unwrap();
+    p.cargo("build").run();
 
     assert_that(&p.bin("foo"), existing_file());
-    assert_that(process(&p.bin("foo")), execs());
+    p.process(&p.bin("foo")).run();
 
     let loc = p.root().join("Cargo.lock");
     let mut lockfile = String::new();
@@ -2534,13 +2524,13 @@ fn example_bin_same_name() {
         .file("examples/foo.rs", "fn main() {}")
         .build();
 
-    p.cargo("test --no-run -v").exec_with_output().unwrap();
+    p.cargo("test --no-run -v").run();
 
     assert_that(&p.bin("foo"), is_not(existing_file()));
     // We expect a file of the form bin/foo-{metadata_hash}
     assert_that(&p.bin("examples/foo"), existing_file());
 
-    p.cargo("test --no-run -v").exec_with_output().unwrap();
+    p.cargo("test --no-run -v").run();
 
     assert_that(&p.bin("foo"), is_not(existing_file()));
     // We expect a file of the form bin/foo-{metadata_hash}
@@ -2958,7 +2948,7 @@ fn build_multiple_packages() {
     p.cargo("build -p d1 -p d2 -p foo").run();
 
     assert_that(&p.bin("foo"), existing_file());
-    assert_that(process(&p.bin("foo")), execs().with_stdout("i am foo\n"));
+    p.process(&p.bin("foo")).with_stdout("i am foo\n").run();
 
     let d1_path = &p
         .build_dir()
@@ -2970,10 +2960,10 @@ fn build_multiple_packages() {
         .join(format!("d2{}", env::consts::EXE_SUFFIX));
 
     assert_that(d1_path, existing_file());
-    assert_that(process(d1_path), execs().with_stdout("d1"));
+    p.process(d1_path).with_stdout("d1").run();
 
     assert_that(d2_path, existing_file());
-    assert_that(process(d2_path), execs().with_stdout("d2"));
+    p.process(d2_path).with_stdout("d2").run();
 }
 
 #[test]
@@ -3696,8 +3686,8 @@ fn run_proper_alias_binary_from_src() {
         .build();
 
     p.cargo("build --all").run();
-    assert_that(process(&p.bin("foo")), execs().with_stdout("foo\n"));
-    assert_that(process(&p.bin("bar")), execs().with_stdout("bar\n"));
+    p.process(&p.bin("foo")).with_stdout("foo\n").run();
+    p.process(&p.bin("bar")).with_stdout("bar\n").run();
 }
 
 #[test]
@@ -3719,8 +3709,8 @@ fn run_proper_alias_binary_main_rs() {
         .build();
 
     p.cargo("build --all").run();
-    assert_that(process(&p.bin("foo")), execs().with_stdout("main\n"));
-    assert_that(process(&p.bin("bar")), execs().with_stdout("main\n"));
+    p.process(&p.bin("foo")).with_stdout("main\n").run();
+    p.process(&p.bin("bar")).with_stdout("main\n").run();
 }
 
 #[test]

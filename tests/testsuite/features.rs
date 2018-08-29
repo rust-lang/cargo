@@ -1,10 +1,9 @@
 use std::fs::File;
 use std::io::prelude::*;
 
-use support::hamcrest::assert_that;
 use support::paths::CargoPathExt;
 use support::registry::Package;
-use support::{basic_manifest, execs, project};
+use support::{basic_manifest, project};
 
 #[test]
 fn invalid1() {
@@ -423,7 +422,7 @@ fn no_feature_doesnt_build() {
 ",
             dir = p.url()
         )).run();
-    assert_that(p.process(&p.bin("foo")), execs().with_stdout(""));
+    p.process(&p.bin("foo")).with_stdout("").run();
 
     p.cargo("build --features bar")
         .with_stderr(format!(
@@ -434,7 +433,7 @@ fn no_feature_doesnt_build() {
 ",
             dir = p.url()
         )).run();
-    assert_that(p.process(&p.bin("foo")), execs().with_stdout("bar\n"));
+    p.process(&p.bin("foo")).with_stdout("bar\n").run();
 }
 
 #[test]
@@ -478,7 +477,7 @@ fn default_feature_pulled_in() {
 ",
             dir = p.url()
         )).run();
-    assert_that(p.process(&p.bin("foo")), execs().with_stdout("bar\n"));
+    p.process(&p.bin("foo")).with_stdout("bar\n").run();
 
     p.cargo("build --no-default-features")
         .with_stderr(format!(
@@ -488,7 +487,7 @@ fn default_feature_pulled_in() {
 ",
             dir = p.url()
         )).run();
-    assert_that(p.process(&p.bin("foo")), execs().with_stdout(""));
+    p.process(&p.bin("foo")).with_stdout("").run();
 }
 
 #[test]

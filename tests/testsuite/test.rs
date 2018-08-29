@@ -1,13 +1,11 @@
 use std::fs::File;
 use std::io::prelude::*;
-use std::str;
 
 use cargo;
-use cargo::util::process;
 use support::hamcrest::{assert_that, existing_file, is_not};
 use support::paths::CargoPathExt;
 use support::registry::Package;
-use support::{basic_bin_manifest, basic_lib_manifest, basic_manifest, cargo_exe, execs, project};
+use support::{basic_bin_manifest, basic_lib_manifest, basic_manifest, cargo_exe, project};
 use support::{is_nightly, rustc_host, sleep_ms};
 
 #[test]
@@ -34,7 +32,7 @@ fn cargo_test_simple() {
     p.cargo("build").run();
     assert_that(&p.bin("foo"), existing_file());
 
-    assert_that(process(&p.bin("foo")), execs().with_stdout("hello\n"));
+    p.process(&p.bin("foo")).with_stdout("hello\n").run();
 
     p.cargo("test")
         .with_stderr(format!(
@@ -137,7 +135,7 @@ fn cargo_test_overflow_checks() {
     p.cargo("build --release").run();
     assert_that(&p.release_bin("foo"), existing_file());
 
-    assert_that(process(&p.release_bin("foo")), execs().with_stdout(""));
+    p.process(&p.release_bin("foo")).with_stdout("").run();
 }
 
 #[test]
@@ -188,23 +186,11 @@ fn many_similar_names() {
         "#,
         ).build();
 
-    let output = p.cargo("test -v").exec_with_output().unwrap();
-    let output = str::from_utf8(&output.stdout).unwrap();
-    assert!(
-        output.contains("test bin_test"),
-        "bin_test missing\n{}",
-        output
-    );
-    assert!(
-        output.contains("test lib_test"),
-        "lib_test missing\n{}",
-        output
-    );
-    assert!(
-        output.contains("test test_test"),
-        "test_test missing\n{}",
-        output
-    );
+    p.cargo("test -v")
+        .with_stdout_contains("test bin_test ... ok")
+        .with_stdout_contains("test lib_test ... ok")
+        .with_stdout_contains("test test_test ... ok")
+        .run();
 }
 
 #[test]
@@ -231,7 +217,7 @@ fn cargo_test_failing_test_in_bin() {
     p.cargo("build").run();
     assert_that(&p.bin("foo"), existing_file());
 
-    assert_that(process(&p.bin("foo")), execs().with_stdout("hello\n"));
+    p.process(&p.bin("foo")).with_stdout("hello\n").run();
 
     p.cargo("test")
         .with_stderr(format!(
@@ -276,7 +262,7 @@ fn cargo_test_failing_test_in_test() {
     p.cargo("build").run();
     assert_that(&p.bin("foo"), existing_file());
 
-    assert_that(process(&p.bin("foo")), execs().with_stdout("hello\n"));
+    p.process(&p.bin("foo")).with_stdout("hello\n").run();
 
     p.cargo("test")
         .with_stderr(format!(
@@ -1004,18 +990,10 @@ fn bin_there_for_integration() {
         "#,
         ).build();
 
-    let output = p.cargo("test -v").exec_with_output().unwrap();
-    let output = str::from_utf8(&output.stdout).unwrap();
-    assert!(
-        output.contains("main_test ... ok"),
-        "no main_test\n{}",
-        output
-    );
-    assert!(
-        output.contains("test_test ... ok"),
-        "no test_test\n{}",
-        output
-    );
+    p.cargo("test -v")
+        .with_stdout_contains("test main_test ... ok")
+        .with_stdout_contains("test test_test ... ok")
+        .run();
 }
 
 #[test]
@@ -1722,10 +1700,9 @@ fn example_bin_same_name() {
     assert_that(&p.bin("foo"), is_not(existing_file()));
     assert_that(&p.bin("examples/foo"), existing_file());
 
-    assert_that(
-        p.process(&p.bin("examples/foo")),
-        execs().with_stdout("example\n"),
-    );
+    p.process(&p.bin("examples/foo"))
+        .with_stdout("example\n")
+        .run();
 
     p.cargo("run")
         .with_stderr(

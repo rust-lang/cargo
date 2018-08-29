@@ -1,6 +1,5 @@
-use cargo::util::process;
 use support::hamcrest::{assert_that, existing_file};
-use support::{basic_bin_manifest, basic_manifest, cross_compile, execs, project};
+use support::{basic_bin_manifest, basic_manifest, cross_compile, project};
 use support::{is_nightly, rustc_host};
 
 #[test]
@@ -46,7 +45,7 @@ fn simple_cross() {
     p.cargo("build -v --target").arg(&target).run();
     assert_that(&p.target_bin(&target, "foo"), existing_file());
 
-    assert_that(process(&p.target_bin(&target, "foo")), execs());
+    p.process(&p.target_bin(&target, "foo")).run();
 }
 
 #[test]
@@ -101,7 +100,7 @@ fn simple_cross_config() {
     p.cargo("build -v").run();
     assert_that(&p.target_bin(&target, "foo"), existing_file());
 
-    assert_that(process(&p.target_bin(&target, "foo")), execs());
+    p.process(&p.target_bin(&target, "foo")).run();
 }
 
 #[test]
@@ -134,7 +133,7 @@ fn simple_deps() {
     p.cargo("build --target").arg(&target).run();
     assert_that(&p.target_bin(&target, "foo"), existing_file());
 
-    assert_that(process(&p.target_bin(&target, "foo")), execs());
+    p.process(&p.target_bin(&target, "foo")).run();
 }
 
 #[test]
@@ -222,7 +221,7 @@ fn plugin_deps() {
     foo.cargo("build --target").arg(&target).run();
     assert_that(&foo.target_bin(&target, "foo"), existing_file());
 
-    assert_that(process(&foo.target_bin(&target, "foo")), execs());
+    foo.process(&foo.target_bin(&target, "foo")).run();
 }
 
 #[test]
@@ -319,7 +318,7 @@ fn plugin_to_the_max() {
     foo.cargo("build -v --target").arg(&target).run();
     assert_that(&foo.target_bin(&target, "foo"), existing_file());
 
-    assert_that(process(&foo.target_bin(&target, "foo")), execs());
+    foo.process(&foo.target_bin(&target, "foo")).run();
 }
 
 #[test]

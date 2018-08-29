@@ -775,7 +775,7 @@ fn run_from_executable_folder() {
         .build();
 
     let cwd = p.root().join("target").join("debug");
-    p.cargo("build").exec_with_output().unwrap();
+    p.cargo("build").run();
 
     p.cargo("run")
         .cwd(cwd)

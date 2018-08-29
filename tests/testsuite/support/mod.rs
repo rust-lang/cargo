@@ -374,10 +374,10 @@ impl Project {
     ///             p.process(&p.bin("foo")),
     ///             execs().with_stdout("bar\n"),
     ///         );
-    pub fn process<T: AsRef<OsStr>>(&self, program: T) -> ProcessBuilder {
+    pub fn process<T: AsRef<OsStr>>(&self, program: T) -> Execs {
         let mut p = ::support::process(program);
         p.cwd(self.root());
-        p
+        execs().with_process_builder(p)
     }
 
     /// Create a `ProcessBuilder` to run cargo.
@@ -385,9 +385,11 @@ impl Project {
     /// Example:
     ///     p.cargo("build --bin foo").run();
     pub fn cargo(&self, cmd: &str) -> Execs {
-        let mut p = self.process(&cargo_exe());
-        split_and_add_args(&mut p, cmd);
-        execs().with_process_builder(p)
+        let mut execs = self.process(&cargo_exe());
+        if let Some(ref mut p) = execs.process_builder {
+            split_and_add_args(p, cmd);
+        }
+        execs
     }
 
     /// Returns the contents of `Cargo.lock`.
@@ -514,8 +516,6 @@ pub fn cargo_exe() -> PathBuf {
     cargo_dir().join(format!("cargo{}", env::consts::EXE_SUFFIX))
 }
 
-/// Returns an absolute path in the filesystem that `path` points to. The
-/// returned path does not contain any symlinks in its hierarchy.
 /*
  *
  * ===== Matchers =====
@@ -708,13 +708,15 @@ impl Execs {
         self
     }
 
-    pub fn exec_with_output(&self) -> CargoResult<Output> {
+    pub fn exec_with_output(&mut self) -> CargoResult<Output> {
+        self.ran = true;
         // TODO avoid unwrap
         let p = (&self.process_builder).clone().unwrap();
         p.exec_with_output()
     }
 
-    pub fn build_command(&self) -> Command {
+    pub fn build_command(&mut self) -> Command {
+        self.ran = true;
         // TODO avoid unwrap
         let p = (&self.process_builder).clone().unwrap();
         p.build_command()
@@ -730,8 +732,14 @@ impl Execs {
     pub fn run(&mut self) {
         self.ran = true;
         let p = (&self.process_builder).clone().unwrap();
-        // ham::assert_that(p, self)
         if let Err(e) = self.match_process(&p) {
+            panic!("\nExpected: {:?}\n    but: {}", self, e)
+        }
+    }
+
+    pub fn run_output(&mut self, output: &Output) {
+        self.ran = true;
+        if let Err(e) = self.match_output(output) {
             panic!("\nExpected: {:?}\n    but: {}", self, e)
         }
     }
@@ -1119,8 +1127,7 @@ impl Execs {
 impl Drop for Execs {
     fn drop(&mut self) {
         if !self.ran {
-            // TODO: Re-enable when everything goes through Execs#run
-            // panic!("forgot to run this command");
+            panic!("forgot to run this command");
         }
     }
 }
@@ -1257,42 +1264,6 @@ fn zip_all<T, I1: Iterator<Item = T>, I2: Iterator<Item = T>>(a: I1, b: I2) -> Z
 impl fmt::Debug for Execs {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         write!(f, "execs")
-    }
-}
-
-impl ham::Matcher<ProcessBuilder> for Execs {
-    fn matches(&self, process: ProcessBuilder) -> ham::MatchResult {
-        self.match_process(&process)
-    }
-}
-
-impl<'t> ham::Matcher<ProcessBuilder> for &'t mut Execs {
-    fn matches(&self, process: ProcessBuilder) -> ham::MatchResult {
-        self.match_process(&process)
-    }
-}
-
-impl<'a> ham::Matcher<&'a mut ProcessBuilder> for Execs {
-    fn matches(&self, process: &'a mut ProcessBuilder) -> ham::MatchResult {
-        self.match_process(process)
-    }
-}
-
-impl<'a, 't> ham::Matcher<&'a mut ProcessBuilder> for &'t mut Execs {
-    fn matches(&self, process: &'a mut ProcessBuilder) -> ham::MatchResult {
-        self.match_process(process)
-    }
-}
-
-impl ham::Matcher<Output> for Execs {
-    fn matches(&self, output: Output) -> ham::MatchResult {
-        self.match_output(&output)
-    }
-}
-
-impl<'t> ham::Matcher<Output> for &'t mut Execs {
-    fn matches(&self, output: Output) -> ham::MatchResult {
-        self.match_output(&output)
     }
 }
 

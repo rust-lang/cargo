@@ -43,8 +43,8 @@ fn multiple_installs() {
     let b = b.wait_with_output().unwrap();
     let a = a.join().unwrap();
 
-    assert_that(a, execs());
-    assert_that(b, execs());
+    execs().run_output(&a);
+    execs().run_output(&b);
 
     assert_that(cargo_home(), has_installed_exe("foo"));
     assert_that(cargo_home(), has_installed_exe("bar"));
@@ -72,8 +72,8 @@ fn concurrent_installs() {
     assert!(!str::from_utf8(&a.stderr).unwrap().contains(LOCKED_BUILD));
     assert!(!str::from_utf8(&b.stderr).unwrap().contains(LOCKED_BUILD));
 
-    assert_that(a, execs());
-    assert_that(b, execs());
+    execs().run_output(&a);
+    execs().run_output(&b);
 
     assert_that(cargo_home(), has_installed_exe("foo"));
     assert_that(cargo_home(), has_installed_exe("bar"));
@@ -106,16 +106,14 @@ fn one_install_should_be_bad() {
     } else {
         (b, a)
     };
-    assert_that(
-        bad,
-        execs().with_status(101).with_stderr_contains(
+    execs()
+        .with_status(101)
+        .with_stderr_contains(
             "[ERROR] binary `foo[..]` already exists in destination as part of `[..]`",
-        ),
-    );
-    assert_that(
-        good,
-        execs().with_stderr_contains("warning: be sure to add `[..]` to your PATH [..]"),
-    );
+        ).run_output(&bad);
+    execs()
+        .with_stderr_contains("warning: be sure to add `[..]` to your PATH [..]")
+        .run_output(&good);
 
     assert_that(cargo_home(), has_installed_exe("foo"));
 }
@@ -170,8 +168,8 @@ fn multiple_registry_fetches() {
     let b = b.wait_with_output().unwrap();
     let a = a.join().unwrap();
 
-    assert_that(a, execs());
-    assert_that(b, execs());
+    execs().run_output(&a);
+    execs().run_output(&b);
 
     let suffix = env::consts::EXE_SUFFIX;
     assert_that(
@@ -258,8 +256,8 @@ fn git_same_repo_different_tags() {
     let b = b.wait_with_output().unwrap();
     let a = a.join().unwrap();
 
-    assert_that(a, execs());
-    assert_that(b, execs());
+    execs().run_output(&a);
+    execs().run_output(&b);
 }
 
 #[test]
@@ -337,8 +335,8 @@ fn git_same_branch_different_revs() {
     let b = b.wait_with_output().unwrap();
     let a = a.join().unwrap();
 
-    assert_that(a, execs());
-    assert_that(b, execs());
+    execs().run_output(&a);
+    execs().run_output(&b);
 }
 
 #[test]
@@ -360,8 +358,8 @@ fn same_project() {
     let b = b.wait_with_output().unwrap();
     let a = a.join().unwrap();
 
-    assert_that(a, execs());
-    assert_that(b, execs());
+    execs().run_output(&a);
+    execs().run_output(&b);
 }
 
 // Make sure that if Cargo dies while holding a lock that it's released and the
@@ -425,7 +423,7 @@ fn killing_cargo_releases_the_lock() {
 
     // We killed `a`, so it shouldn't succeed, but `b` should have succeeded.
     assert!(!a.status.success());
-    assert_that(b, execs());
+    execs().run_output(&b);
 }
 
 #[test]
@@ -446,24 +444,20 @@ fn debug_release_ok() {
     let b = b.wait_with_output().unwrap();
     let a = a.join().unwrap();
 
-    assert_that(
-        a,
-        execs().with_stderr(
+    execs()
+        .with_stderr(
             "\
 [COMPILING] foo v0.0.1 [..]
 [FINISHED] dev [unoptimized + debuginfo] target(s) in [..]
 ",
-        ),
-    );
-    assert_that(
-        b,
-        execs().with_stderr(
+        ).run_output(&a);
+    execs()
+        .with_stderr(
             "\
 [COMPILING] foo v0.0.1 [..]
 [FINISHED] release [optimized] target(s) in [..]
 ",
-        ),
-    );
+        ).run_output(&b);
 }
 
 #[test]
@@ -519,6 +513,6 @@ fn no_deadlock_with_git_dependencies() {
 
     for _ in 0..n_concurrent_builds {
         let result = rx.recv_timeout(Duration::from_secs(30)).expect("Deadlock!");
-        assert_that(result, execs())
+        execs().run_output(&result);
     }
 }
