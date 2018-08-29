@@ -157,7 +157,8 @@ impl<'a, 'cfg> Context<'a, 'cfg> {
             // part of this, that's all done next as part of the `execute`
             // function which will run everything in order with proper
             // parallelism.
-            super::compile(&mut self, &mut queue, &mut plan, unit, exec)?;
+            let force_rebuild = self.bcx.build_config.force_rebuild;
+            super::compile(&mut self, &mut queue, &mut plan, unit, exec, force_rebuild)?;
         }
 
         // Now that we've figured out everything that we're going to do, do it!

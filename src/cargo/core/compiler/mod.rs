@@ -129,10 +129,10 @@ fn compile<'a, 'cfg: 'a>(
     plan: &mut BuildPlan,
     unit: &Unit<'a>,
     exec: &Arc<Executor>,
+    force_rebuild: bool,
 ) -> CargoResult<()> {
     let bcx = cx.bcx;
     let build_plan = bcx.build_config.build_plan;
-    let force_rebuild = bcx.build_config.force_rebuild;
     if !cx.compiled.insert(*unit) {
         return Ok(());
     }
@@ -176,7 +176,7 @@ fn compile<'a, 'cfg: 'a>(
 
     // Be sure to compile all dependencies of this target as well.
     for unit in cx.dep_targets(unit).iter() {
-        compile(cx, jobs, plan, unit, exec)?;
+        compile(cx, jobs, plan, unit, exec, false)?;
     }
     if build_plan {
         plan.add(cx, unit)?;
