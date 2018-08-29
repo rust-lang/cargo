@@ -367,12 +367,12 @@ impl Project {
         FileBuilder::new(self.root().join(path), body).mk()
     }
 
-    /// Create a `ProcessBuilder` to run a program in the project.
+    /// Create a `ProcessBuilder` to run a program in the project
+    /// and wrap it in an Execs to assert on the execution.
     /// Example:
-    ///         assert_that(
-    ///             p.process(&p.bin("foo")),
-    ///             execs().with_stdout("bar\n"),
-    ///         );
+    ///         p.process(&p.bin("foo"))
+    ///             .with_stdout("bar\n")
+    ///             .run();
     pub fn process<T: AsRef<OsStr>>(&self, program: T) -> Execs {
         let mut p = ::support::process(program);
         p.cwd(self.root());
