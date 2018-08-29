@@ -134,7 +134,6 @@ macro_rules! t {
 
 pub mod cross_compile;
 pub mod git;
-pub mod hamcrest;
 pub mod paths;
 pub mod publish;
 pub mod registry;
