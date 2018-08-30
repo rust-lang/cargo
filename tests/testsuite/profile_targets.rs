@@ -1,6 +1,5 @@
 use support::is_nightly;
-use support::{basic_manifest, execs, project, Project};
-use support::hamcrest::assert_that;
+use support::{basic_manifest, project, Project};
 
 // These tests try to exercise exactly which profiles are selected for every
 // target.
@@ -76,7 +75,7 @@ fn profile_selection_build() {
     // - bdep `panic` is not set because it thinks `build.rs` is a plugin.
     // - bar `panic` is not set because it is shared with `bdep`.
     // - build_script_build is built without panic because it thinks `build.rs` is a plugin.
-    assert_that(p.cargo("build -vv"), execs().with_stderr_unordered("\
+    p.cargo("build -vv").with_stderr_unordered("\
 [COMPILING] bar [..]
 [RUNNING] `rustc --crate-name bar bar/src/lib.rs --crate-type lib --emit=dep-info,link -C codegen-units=1 -C debuginfo=2 [..]
 [COMPILING] bdep [..]
@@ -88,18 +87,16 @@ foo custom build PROFILE=debug DEBUG=true OPT_LEVEL=0
 [RUNNING] `rustc --crate-name foo src/lib.rs --crate-type lib --emit=dep-info,link -C panic=abort -C codegen-units=1 -C debuginfo=2 [..]
 [RUNNING] `rustc --crate-name foo src/main.rs --crate-type bin --emit=dep-info,link -C panic=abort -C codegen-units=1 -C debuginfo=2 [..]
 [FINISHED] dev [unoptimized + debuginfo] [..]
-"));
-    assert_that(
-        p.cargo("build -vv"),
-        execs().with_stderr_unordered(
+").run();
+    p.cargo("build -vv")
+        .with_stderr_unordered(
             "\
 [FRESH] bar [..]
 [FRESH] bdep [..]
 [FRESH] foo [..]
 [FINISHED] dev [unoptimized + debuginfo] [..]
 ",
-        ),
-    );
+        ).run();
 }
 
 #[test]
@@ -107,8 +104,7 @@ fn profile_selection_build_release() {
     let p = all_target_project();
 
     // Build default targets, release.
-    assert_that(p.cargo("build --release -vv"),
-        execs().with_stderr_unordered("\
+    p.cargo("build --release -vv").with_stderr_unordered("\
 [COMPILING] bar [..]
 [RUNNING] `rustc --crate-name bar bar/src/lib.rs --crate-type lib --emit=dep-info,link -C opt-level=3 -C codegen-units=2 [..]
 [COMPILING] bdep [..]
@@ -120,18 +116,16 @@ foo custom build PROFILE=release DEBUG=false OPT_LEVEL=3
 [RUNNING] `rustc --crate-name foo src/lib.rs --crate-type lib --emit=dep-info,link -C opt-level=3 -C panic=abort -C codegen-units=2 [..]
 [RUNNING] `rustc --crate-name foo src/main.rs --crate-type bin --emit=dep-info,link -C opt-level=3 -C panic=abort -C codegen-units=2 [..]
 [FINISHED] release [optimized] [..]
-"));
-    assert_that(
-        p.cargo("build --release -vv"),
-        execs().with_stderr_unordered(
+").run();
+    p.cargo("build --release -vv")
+        .with_stderr_unordered(
             "\
 [FRESH] bar [..]
 [FRESH] bdep [..]
 [FRESH] foo [..]
 [FINISHED] release [optimized] [..]
 ",
-        ),
-    );
+        ).run();
 }
 
 #[test]
@@ -173,8 +167,7 @@ fn profile_selection_build_all_targets() {
     //   bin      bench      test(bench)
     //   bin      dev        build
     //   example  dev        build
-    assert_that(p.cargo("build --all-targets -vv"),
-        execs().with_stderr_unordered("\
+    p.cargo("build --all-targets -vv").with_stderr_unordered("\
 [COMPILING] bar [..]
 [RUNNING] `rustc --crate-name bar bar/src/lib.rs --crate-type lib --emit=dep-info,link -C codegen-units=1 -C debuginfo=2 [..]
 [RUNNING] `rustc --crate-name bar bar/src/lib.rs --crate-type lib --emit=dep-info,link -C codegen-units=1 -C debuginfo=2 [..]
@@ -197,18 +190,16 @@ foo custom build PROFILE=debug DEBUG=true OPT_LEVEL=0
 [RUNNING] `rustc --crate-name foo src/main.rs --crate-type bin --emit=dep-info,link -C panic=abort -C codegen-units=1 -C debuginfo=2 [..]`
 [RUNNING] `rustc --crate-name ex1 examples/ex1.rs --crate-type bin --emit=dep-info,link -C panic=abort -C codegen-units=1 -C debuginfo=2 [..]`
 [FINISHED] dev [unoptimized + debuginfo] [..]
-"));
-    assert_that(
-        p.cargo("build -vv"),
-        execs().with_stderr_unordered(
+").run();
+    p.cargo("build -vv")
+        .with_stderr_unordered(
             "\
 [FRESH] bar [..]
 [FRESH] bdep [..]
 [FRESH] foo [..]
 [FINISHED] dev [unoptimized + debuginfo] [..]
 ",
-        ),
-    );
+        ).run();
 }
 
 #[test]
@@ -247,8 +238,7 @@ fn profile_selection_build_all_targets_release() {
     //   bin      bench          test   (bench/test de-duped)
     //   bin      release        build
     //   example  release        build
-    assert_that(p.cargo("build --all-targets --release -vv"),
-        execs().with_stderr_unordered("\
+    p.cargo("build --all-targets --release -vv").with_stderr_unordered("\
 [COMPILING] bar [..]
 [RUNNING] `rustc --crate-name bar bar/src/lib.rs --crate-type lib --emit=dep-info,link -C opt-level=3 -C codegen-units=2 [..]
 [RUNNING] `rustc --crate-name bar bar/src/lib.rs --crate-type lib --emit=dep-info,link -C opt-level=3 -C codegen-units=2 [..]
@@ -267,18 +257,16 @@ foo custom build PROFILE=release DEBUG=false OPT_LEVEL=3
 [RUNNING] `rustc --crate-name foo src/main.rs --crate-type bin --emit=dep-info,link -C opt-level=3 -C panic=abort -C codegen-units=2 [..]`
 [RUNNING] `rustc --crate-name ex1 examples/ex1.rs --crate-type bin --emit=dep-info,link -C opt-level=3 -C panic=abort -C codegen-units=2 [..]`
 [FINISHED] release [optimized] [..]
-"));
-    assert_that(
-        p.cargo("build --all-targets --release -vv"),
-        execs().with_stderr_unordered(
+").run();
+    p.cargo("build --all-targets --release -vv")
+        .with_stderr_unordered(
             "\
 [FRESH] bar [..]
 [FRESH] bdep [..]
 [FRESH] foo [..]
 [FINISHED] release [optimized] [..]
 ",
-        ),
-    );
+        ).run();
 }
 
 #[test]
@@ -307,7 +295,7 @@ fn profile_selection_test() {
     //   bin      test           test
     //   bin      dev            build
     //
-    assert_that(p.cargo("test -vv"), execs().with_stderr_unordered("\
+    p.cargo("test -vv").with_stderr_unordered("\
 [COMPILING] bar [..]
 [RUNNING] `rustc --crate-name bar bar/src/lib.rs --crate-type lib --emit=dep-info,link -C codegen-units=1 -C debuginfo=2 [..]
 [RUNNING] `rustc --crate-name bar bar/src/lib.rs --crate-type lib --emit=dep-info,link -C codegen-units=1 -C debuginfo=2 [..]
@@ -330,10 +318,9 @@ foo custom build PROFILE=debug DEBUG=true OPT_LEVEL=0
 [RUNNING] `[..]/deps/test1-[..]`
 [DOCTEST] foo
 [RUNNING] `rustdoc --test [..]
-"));
-    assert_that(
-        p.cargo("test -vv"),
-        execs().with_stderr_unordered(
+").run();
+    p.cargo("test -vv")
+        .with_stderr_unordered(
             "\
 [FRESH] bar [..]
 [FRESH] bdep [..]
@@ -345,8 +332,7 @@ foo custom build PROFILE=debug DEBUG=true OPT_LEVEL=0
 [DOCTEST] foo
 [RUNNING] `rustdoc --test [..]
 ",
-        ),
-    );
+        ).run();
 }
 
 #[test]
@@ -375,7 +361,7 @@ fn profile_selection_test_release() {
     //   bin      bench          test
     //   bin      release        build
     //
-    assert_that(p.cargo("test --release -vv"), execs().with_stderr_unordered("\
+    p.cargo("test --release -vv").with_stderr_unordered("\
 [COMPILING] bar [..]
 [RUNNING] `rustc --crate-name bar bar/src/lib.rs --crate-type lib --emit=dep-info,link -C opt-level=3 -C codegen-units=2 [..]
 [RUNNING] `rustc --crate-name bar bar/src/lib.rs --crate-type lib --emit=dep-info,link -C opt-level=3 -C codegen-units=2 [..]
@@ -398,10 +384,9 @@ foo custom build PROFILE=release DEBUG=false OPT_LEVEL=3
 [RUNNING] `[..]/deps/test1-[..]`
 [DOCTEST] foo
 [RUNNING] `rustdoc --test [..]`
-"));
-    assert_that(
-        p.cargo("test --release -vv"),
-        execs().with_stderr_unordered(
+").run();
+    p.cargo("test --release -vv")
+        .with_stderr_unordered(
             "\
 [FRESH] bar [..]
 [FRESH] bdep [..]
@@ -413,8 +398,7 @@ foo custom build PROFILE=release DEBUG=false OPT_LEVEL=3
 [DOCTEST] foo
 [RUNNING] `rustdoc --test [..]
 ",
-        ),
-    );
+        ).run();
 }
 
 #[test]
@@ -443,7 +427,7 @@ fn profile_selection_bench() {
     //   bin      bench          test(bench)
     //   bin      release        build
     //
-    assert_that(p.cargo("bench -vv"), execs().with_stderr_unordered("\
+    p.cargo("bench -vv").with_stderr_unordered("\
 [COMPILING] bar [..]
 [RUNNING] `rustc --crate-name bar bar/src/lib.rs --crate-type lib --emit=dep-info,link -C opt-level=3 -C codegen-units=2 [..]
 [RUNNING] `rustc --crate-name bar bar/src/lib.rs --crate-type lib --emit=dep-info,link -C opt-level=3 -C codegen-units=2 [..]
@@ -463,10 +447,9 @@ foo custom build PROFILE=release DEBUG=false OPT_LEVEL=3
 [RUNNING] `[..]/deps/foo-[..] --bench`
 [RUNNING] `[..]/deps/foo-[..] --bench`
 [RUNNING] `[..]/deps/bench1-[..] --bench`
-"));
-    assert_that(
-        p.cargo("bench -vv"),
-        execs().with_stderr_unordered(
+").run();
+    p.cargo("bench -vv")
+        .with_stderr_unordered(
             "\
 [FRESH] bar [..]
 [FRESH] bdep [..]
@@ -476,8 +459,7 @@ foo custom build PROFILE=release DEBUG=false OPT_LEVEL=3
 [RUNNING] `[..]/deps/foo-[..] --bench`
 [RUNNING] `[..]/deps/bench1-[..] --bench`
 ",
-        ),
-    );
+        ).run();
 }
 
 #[test]
@@ -513,7 +495,7 @@ fn profile_selection_check_all_targets() {
     //   bin      dev            check
     //   bin      dev-panic      check-test (checking bin as a unittest)
     //
-    assert_that(p.cargo("check --all-targets -vv"), execs().with_stderr_unordered("\
+    p.cargo("check --all-targets -vv").with_stderr_unordered("\
 [COMPILING] bar [..]
 [RUNNING] `rustc --crate-name bar bar/src/lib.rs --crate-type lib --emit=dep-info,link -C codegen-units=1 -C debuginfo=2 [..]
 [RUNNING] `rustc --crate-name bar bar/src/lib.rs --crate-type lib --emit=dep-info,metadata -C codegen-units=1 -C debuginfo=2 [..]
@@ -533,23 +515,21 @@ foo custom build PROFILE=debug DEBUG=true OPT_LEVEL=0
 [RUNNING] `rustc --crate-name ex1 examples/ex1.rs --crate-type bin --emit=dep-info,metadata -C panic=abort -C codegen-units=1 -C debuginfo=2 [..]
 [RUNNING] `rustc --crate-name foo src/main.rs --crate-type bin --emit=dep-info,metadata -C panic=abort -C codegen-units=1 -C debuginfo=2 [..]
 [FINISHED] dev [unoptimized + debuginfo] [..]
-"));
+").run();
     // Starting with Rust 1.27, rustc emits `rmeta` files for bins, so
     // everything should be completely fresh.  Previously, bins were being
     // rechecked.
     // See https://github.com/rust-lang/rust/pull/49289 and
     // https://github.com/rust-lang/cargo/issues/3624
-    assert_that(
-        p.cargo("check --all-targets -vv"),
-        execs().with_stderr_unordered(
+    p.cargo("check --all-targets -vv")
+        .with_stderr_unordered(
             "\
 [FRESH] bar [..]
 [FRESH] bdep [..]
 [FRESH] foo [..]
 [FINISHED] dev [unoptimized + debuginfo] [..]
 ",
-        ),
-    );
+        ).run();
 }
 
 #[test]
@@ -565,7 +545,7 @@ fn profile_selection_check_all_targets_release() {
     // This is a pretty straightforward variant of
     // `profile_selection_check_all_targets` that uses `release` instead of
     // `dev` for all targets.
-    assert_that(p.cargo("check --all-targets --release -vv"), execs().with_stderr_unordered("\
+    p.cargo("check --all-targets --release -vv").with_stderr_unordered("\
 [COMPILING] bar [..]
 [RUNNING] `rustc --crate-name bar bar/src/lib.rs --crate-type lib --emit=dep-info,link -C opt-level=3 -C codegen-units=2 [..]
 [RUNNING] `rustc --crate-name bar bar/src/lib.rs --crate-type lib --emit=dep-info,metadata -C opt-level=3 -C codegen-units=2 [..]
@@ -585,19 +565,17 @@ foo custom build PROFILE=release DEBUG=false OPT_LEVEL=3
 [RUNNING] `rustc --crate-name ex1 examples/ex1.rs --crate-type bin --emit=dep-info,metadata -C opt-level=3 -C panic=abort -C codegen-units=2 [..]
 [RUNNING] `rustc --crate-name foo src/main.rs --crate-type bin --emit=dep-info,metadata -C opt-level=3 -C panic=abort -C codegen-units=2 [..]
 [FINISHED] release [optimized] [..]
-"));
+").run();
 
-    assert_that(
-        p.cargo("check --all-targets --release -vv"),
-        execs().with_stderr_unordered(
+    p.cargo("check --all-targets --release -vv")
+        .with_stderr_unordered(
             "\
 [FRESH] bar [..]
 [FRESH] bdep [..]
 [FRESH] foo [..]
 [FINISHED] release [optimized] [..]
 ",
-        ),
-    );
+        ).run();
 }
 
 #[test]
@@ -632,7 +610,7 @@ fn profile_selection_check_all_targets_test() {
     //   bench    dev-panic  check-test
     //   bin      dev-panic  check-test
     //
-    assert_that(p.cargo("check --all-targets --profile=test -vv"), execs().with_stderr_unordered("\
+    p.cargo("check --all-targets --profile=test -vv").with_stderr_unordered("\
 [COMPILING] bar [..]
 [RUNNING] `rustc --crate-name bar bar/src/lib.rs --crate-type lib --emit=dep-info,link -C codegen-units=1 -C debuginfo=2 [..]
 [RUNNING] `rustc --crate-name bar bar/src/lib.rs --crate-type lib --emit=dep-info,metadata -C codegen-units=1 -C debuginfo=2 [..]
@@ -649,19 +627,17 @@ foo custom build PROFILE=debug DEBUG=true OPT_LEVEL=0
 [RUNNING] `rustc --crate-name bench1 benches/bench1.rs --emit=dep-info,metadata -C codegen-units=1 -C debuginfo=2 --test [..]
 [RUNNING] `rustc --crate-name ex1 examples/ex1.rs --emit=dep-info,metadata -C codegen-units=1 -C debuginfo=2 --test [..]
 [FINISHED] dev [unoptimized + debuginfo] [..]
-"));
+").run();
 
-    assert_that(
-        p.cargo("check --all-targets --profile=test -vv"),
-        execs().with_stderr_unordered(
+    p.cargo("check --all-targets --profile=test -vv")
+        .with_stderr_unordered(
             "\
 [FRESH] bar [..]
 [FRESH] bdep [..]
 [FRESH] foo [..]
 [FINISHED] dev [unoptimized + debuginfo] [..]
 ",
-        ),
-    );
+        ).run();
 }
 
 #[test]
@@ -678,7 +654,7 @@ fn profile_selection_doc() {
     //   foo  custom  dev*       link     For build.rs
     //
     //   `*` = wants panic, but it is cleared when args are built.
-    assert_that(p.cargo("doc -vv"), execs().with_stderr_unordered("\
+    p.cargo("doc -vv").with_stderr_unordered("\
 [COMPILING] bar [..]
 [DOCUMENTING] bar [..]
 [RUNNING] `rustc --crate-name bar bar/src/lib.rs --crate-type lib --emit=dep-info,link -C codegen-units=1 -C debuginfo=2 [..]
@@ -693,5 +669,5 @@ foo custom build PROFILE=debug DEBUG=true OPT_LEVEL=0
 [DOCUMENTING] foo [..]
 [RUNNING] `rustdoc --crate-name foo src/lib.rs [..]
 [FINISHED] dev [unoptimized + debuginfo] [..]
-"));
+").run();
 }

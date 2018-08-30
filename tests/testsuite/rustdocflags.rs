@@ -1,17 +1,13 @@
-use support::{execs, project};
-use support::hamcrest::assert_that;
+use support::project;
 
 #[test]
 fn parses_env() {
-    let p = project()
-        .file("src/lib.rs", "")
-        .build();
+    let p = project().file("src/lib.rs", "").build();
 
-    assert_that(
-        p.cargo("doc -v").env("RUSTDOCFLAGS", "--cfg=foo"),
-        execs()
-            .with_stderr_contains("[RUNNING] `rustdoc [..] --cfg=foo[..]`"),
-    );
+    p.cargo("doc -v")
+        .env("RUSTDOCFLAGS", "--cfg=foo")
+        .with_stderr_contains("[RUNNING] `rustdoc [..] --cfg=foo[..]`")
+        .run();
 }
 
 #[test]
@@ -24,52 +20,40 @@ fn parses_config() {
             [build]
             rustdocflags = ["--cfg", "foo"]
         "#,
-        )
-        .build();
+        ).build();
 
-    assert_that(
-        p.cargo("doc -v"),
-        execs()
-            .with_stderr_contains("[RUNNING] `rustdoc [..] --cfg foo[..]`"),
-    );
+    p.cargo("doc -v")
+        .with_stderr_contains("[RUNNING] `rustdoc [..] --cfg foo[..]`")
+        .run();
 }
 
 #[test]
 fn bad_flags() {
-    let p = project()
-        .file("src/lib.rs", "")
-        .build();
+    let p = project().file("src/lib.rs", "").build();
 
-    assert_that(
-        p.cargo("doc").env("RUSTDOCFLAGS", "--bogus"),
-        execs().with_status(101),
-    );
+    p.cargo("doc")
+        .env("RUSTDOCFLAGS", "--bogus")
+        .with_status(101)
+        .run();
 }
 
 #[test]
 fn rerun() {
-    let p = project()
-        .file("src/lib.rs", "")
-        .build();
+    let p = project().file("src/lib.rs", "").build();
 
-    assert_that(
-        p.cargo("doc").env("RUSTDOCFLAGS", "--cfg=foo"),
-        execs(),
-    );
-    assert_that(
-        p.cargo("doc").env("RUSTDOCFLAGS", "--cfg=foo"),
-        execs()
-            .with_stderr("[FINISHED] dev [unoptimized + debuginfo] target(s) in [..]"),
-    );
-    assert_that(
-        p.cargo("doc").env("RUSTDOCFLAGS", "--cfg=bar"),
-        execs().with_stderr(
+    p.cargo("doc").env("RUSTDOCFLAGS", "--cfg=foo").run();
+    p.cargo("doc")
+        .env("RUSTDOCFLAGS", "--cfg=foo")
+        .with_stderr("[FINISHED] dev [unoptimized + debuginfo] target(s) in [..]")
+        .run();
+    p.cargo("doc")
+        .env("RUSTDOCFLAGS", "--cfg=bar")
+        .with_stderr(
             "\
 [DOCUMENTING] foo v0.0.1 ([..])
 [FINISHED] dev [unoptimized + debuginfo] target(s) in [..]
 ",
-        ),
-    );
+        ).run();
 }
 
 #[test]
@@ -82,25 +66,18 @@ fn rustdocflags_passed_to_rustdoc_through_cargo_test() {
             //! assert!(cfg!(do_not_choke));
             //! ```
         "#,
-        )
-        .build();
+        ).build();
 
-    assert_that(
-        p.cargo("test --doc")
-            .env("RUSTDOCFLAGS", "--cfg do_not_choke"),
-        execs(),
-    );
+    p.cargo("test --doc")
+        .env("RUSTDOCFLAGS", "--cfg do_not_choke")
+        .run();
 }
 
 #[test]
 fn rustdocflags_passed_to_rustdoc_through_cargo_test_only_once() {
-    let p = project()
-        .file("src/lib.rs", "")
-        .build();
+    let p = project().file("src/lib.rs", "").build();
 
-    assert_that(
-        p.cargo("test --doc")
-            .env("RUSTDOCFLAGS", "--markdown-no-toc"),
-        execs(),
-    );
+    p.cargo("test --doc")
+        .env("RUSTDOCFLAGS", "--markdown-no-toc")
+        .run();
 }

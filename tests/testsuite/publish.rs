@@ -1,13 +1,11 @@
-use std::io::prelude::*;
 use std::fs::{self, File};
+use std::io::prelude::*;
 use std::io::SeekFrom;
 
-use support::ChannelChanger;
+use flate2::read::GzDecoder;
 use support::git::repo;
 use support::paths;
-use support::{basic_manifest, execs, project, publish};
-use flate2::read::GzDecoder;
-use support::hamcrest::assert_that;
+use support::{basic_manifest, project, publish};
 use tar::Archive;
 
 #[test]
@@ -25,31 +23,29 @@ fn simple() {
             license = "MIT"
             description = "foo"
         "#,
-        )
-        .file("src/main.rs", "fn main() {}")
+        ).file("src/main.rs", "fn main() {}")
         .build();
 
-    assert_that(
-        p.cargo("publish --no-verify --index")
-            .arg(publish::registry().to_string()),
-        execs().with_stderr(&format!(
+    p.cargo("publish --no-verify --index")
+        .arg(publish::registry().to_string())
+        .with_stderr(&format!(
             "\
 [UPDATING] registry `{reg}`
 [WARNING] manifest has no documentation, [..]
 See [..]
-[PACKAGING] foo v0.0.1 ({dir})
-[UPLOADING] foo v0.0.1 ({dir})
+[PACKAGING] foo v0.0.1 (CWD)
+[UPLOADING] foo v0.0.1 (CWD)
 ",
-            dir = p.url(),
             reg = publish::registry()
-        )),
-    );
+        )).run();
 
     let mut f = File::open(&publish::upload_path().join("api/v1/crates/new")).unwrap();
     // Skip the metadata payload and the size of the tarball
     let mut sz = [0; 4];
     assert_eq!(f.read(&mut sz).unwrap(), 4);
-    let sz = (u32::from(sz[0]) << 0) | (u32::from(sz[1]) << 8) | (u32::from(sz[2]) << 16)
+    let sz = (u32::from(sz[0]) << 0)
+        | (u32::from(sz[1]) << 8)
+        | (u32::from(sz[2]) << 16)
         | (u32::from(sz[3]) << 24);
     f.seek(SeekFrom::Current(i64::from(sz) + 4)).unwrap();
 
@@ -67,7 +63,8 @@ See [..]
         let fname = file.header().path_bytes();
         let fname = &*fname;
         assert!(
-            fname == b"foo-0.0.1/Cargo.toml" || fname == b"foo-0.0.1/Cargo.toml.orig"
+            fname == b"foo-0.0.1/Cargo.toml"
+                || fname == b"foo-0.0.1/Cargo.toml.orig"
                 || fname == b"foo-0.0.1/src/main.rs",
             "unexpected filename: {:?}",
             file.header().path()
@@ -99,31 +96,29 @@ fn old_token_location() {
             license = "MIT"
             description = "foo"
         "#,
-        )
-        .file("src/main.rs", "fn main() {}")
+        ).file("src/main.rs", "fn main() {}")
         .build();
 
-    assert_that(
-        p.cargo("publish --no-verify --index")
-            .arg(publish::registry().to_string()),
-        execs().with_stderr(&format!(
+    p.cargo("publish --no-verify --index")
+        .arg(publish::registry().to_string())
+        .with_stderr(&format!(
             "\
 [UPDATING] registry `{reg}`
 [WARNING] manifest has no documentation, [..]
 See [..]
-[PACKAGING] foo v0.0.1 ({dir})
-[UPLOADING] foo v0.0.1 ({dir})
+[PACKAGING] foo v0.0.1 (CWD)
+[UPLOADING] foo v0.0.1 (CWD)
 ",
-            dir = p.url(),
             reg = publish::registry()
-        )),
-    );
+        )).run();
 
     let mut f = File::open(&publish::upload_path().join("api/v1/crates/new")).unwrap();
     // Skip the metadata payload and the size of the tarball
     let mut sz = [0; 4];
     assert_eq!(f.read(&mut sz).unwrap(), 4);
-    let sz = (u32::from(sz[0]) << 0) | (u32::from(sz[1]) << 8) | (u32::from(sz[2]) << 16)
+    let sz = (u32::from(sz[0]) << 0)
+        | (u32::from(sz[1]) << 8)
+        | (u32::from(sz[2]) << 16)
         | (u32::from(sz[3]) << 24);
     f.seek(SeekFrom::Current(i64::from(sz) + 4)).unwrap();
 
@@ -141,7 +136,8 @@ See [..]
         let fname = file.header().path_bytes();
         let fname = &*fname;
         assert!(
-            fname == b"foo-0.0.1/Cargo.toml" || fname == b"foo-0.0.1/Cargo.toml.orig"
+            fname == b"foo-0.0.1/Cargo.toml"
+                || fname == b"foo-0.0.1/Cargo.toml.orig"
                 || fname == b"foo-0.0.1/src/main.rs",
             "unexpected filename: {:?}",
             file.header().path()
@@ -166,14 +162,12 @@ fn simple_with_host() {
             license = "MIT"
             description = "foo"
         "#,
-        )
-        .file("src/main.rs", "fn main() {}")
+        ).file("src/main.rs", "fn main() {}")
         .build();
 
-    assert_that(
-        p.cargo("publish --no-verify --host")
-            .arg(publish::registry().to_string()),
-        execs().with_stderr(&format!(
+    p.cargo("publish --no-verify --host")
+        .arg(publish::registry().to_string())
+        .with_stderr(&format!(
             "\
 [WARNING] The flag '--host' is no longer valid.
 
@@ -187,19 +181,19 @@ about this warning.
 [UPDATING] registry `{reg}`
 [WARNING] manifest has no documentation, [..]
 See [..]
-[PACKAGING] foo v0.0.1 ({dir})
-[UPLOADING] foo v0.0.1 ({dir})
+[PACKAGING] foo v0.0.1 (CWD)
+[UPLOADING] foo v0.0.1 (CWD)
 ",
-            dir = p.url(),
             reg = publish::registry()
-        )),
-    );
+        )).run();
 
     let mut f = File::open(&publish::upload_path().join("api/v1/crates/new")).unwrap();
     // Skip the metadata payload and the size of the tarball
     let mut sz = [0; 4];
     assert_eq!(f.read(&mut sz).unwrap(), 4);
-    let sz = (u32::from(sz[0]) << 0) | (u32::from(sz[1]) << 8) | (u32::from(sz[2]) << 16)
+    let sz = (u32::from(sz[0]) << 0)
+        | (u32::from(sz[1]) << 8)
+        | (u32::from(sz[2]) << 16)
         | (u32::from(sz[3]) << 24);
     f.seek(SeekFrom::Current(i64::from(sz) + 4)).unwrap();
 
@@ -217,7 +211,8 @@ See [..]
         let fname = file.header().path_bytes();
         let fname = &*fname;
         assert!(
-            fname == b"foo-0.0.1/Cargo.toml" || fname == b"foo-0.0.1/Cargo.toml.orig"
+            fname == b"foo-0.0.1/Cargo.toml"
+                || fname == b"foo-0.0.1/Cargo.toml.orig"
                 || fname == b"foo-0.0.1/src/main.rs",
             "unexpected filename: {:?}",
             file.header().path()
@@ -242,16 +237,14 @@ fn simple_with_index_and_host() {
             license = "MIT"
             description = "foo"
         "#,
-        )
-        .file("src/main.rs", "fn main() {}")
+        ).file("src/main.rs", "fn main() {}")
         .build();
 
-    assert_that(
-        p.cargo("publish --no-verify --index")
-            .arg(publish::registry().to_string())
-            .arg("--host")
-            .arg(publish::registry().to_string()),
-        execs().with_stderr(&format!(
+    p.cargo("publish --no-verify --index")
+        .arg(publish::registry().to_string())
+        .arg("--host")
+        .arg(publish::registry().to_string())
+        .with_stderr(&format!(
             "\
 [WARNING] The flag '--host' is no longer valid.
 
@@ -265,19 +258,19 @@ about this warning.
 [UPDATING] registry `{reg}`
 [WARNING] manifest has no documentation, [..]
 See [..]
-[PACKAGING] foo v0.0.1 ({dir})
-[UPLOADING] foo v0.0.1 ({dir})
+[PACKAGING] foo v0.0.1 (CWD)
+[UPLOADING] foo v0.0.1 (CWD)
 ",
-            dir = p.url(),
             reg = publish::registry()
-        )),
-    );
+        )).run();
 
     let mut f = File::open(&publish::upload_path().join("api/v1/crates/new")).unwrap();
     // Skip the metadata payload and the size of the tarball
     let mut sz = [0; 4];
     assert_eq!(f.read(&mut sz).unwrap(), 4);
-    let sz = (u32::from(sz[0]) << 0) | (u32::from(sz[1]) << 8) | (u32::from(sz[2]) << 16)
+    let sz = (u32::from(sz[0]) << 0)
+        | (u32::from(sz[1]) << 8)
+        | (u32::from(sz[2]) << 16)
         | (u32::from(sz[3]) << 24);
     f.seek(SeekFrom::Current(i64::from(sz) + 4)).unwrap();
 
@@ -295,7 +288,8 @@ See [..]
         let fname = file.header().path_bytes();
         let fname = &*fname;
         assert!(
-            fname == b"foo-0.0.1/Cargo.toml" || fname == b"foo-0.0.1/Cargo.toml.orig"
+            fname == b"foo-0.0.1/Cargo.toml"
+                || fname == b"foo-0.0.1/Cargo.toml.orig"
                 || fname == b"foo-0.0.1/src/main.rs",
             "unexpected filename: {:?}",
             file.header().path()
@@ -321,14 +315,13 @@ fn git_deps() {
             [dependencies.foo]
             git = "git://path/to/nowhere"
         "#,
-        )
-        .file("src/main.rs", "fn main() {}")
+        ).file("src/main.rs", "fn main() {}")
         .build();
 
-    assert_that(
-        p.cargo("publish -v --no-verify --index")
-            .arg(publish::registry().to_string()),
-        execs().with_status(101).with_stderr(
+    p.cargo("publish -v --no-verify --index")
+        .arg(publish::registry().to_string())
+        .with_status(101)
+        .with_stderr(
             "\
 [UPDATING] registry [..]
 [ERROR] crates cannot be published to crates.io with dependencies sourced from \
@@ -337,8 +330,7 @@ specify a crates.io version as a dependency or pull it into this \
 repository and specify it with a path and version\n\
 (crate `foo` has repository path `git://path/to/nowhere`)\
 ",
-        ),
-    );
+        ).run();
 }
 
 #[test]
@@ -359,23 +351,21 @@ fn path_dependency_no_version() {
             [dependencies.bar]
             path = "bar"
         "#,
-        )
-        .file("src/main.rs", "fn main() {}")
+        ).file("src/main.rs", "fn main() {}")
         .file("bar/Cargo.toml", &basic_manifest("bar", "0.0.1"))
         .file("bar/src/lib.rs", "")
         .build();
 
-    assert_that(
-        p.cargo("publish --index")
-            .arg(publish::registry().to_string()),
-        execs().with_status(101).with_stderr(
+    p.cargo("publish --index")
+        .arg(publish::registry().to_string())
+        .with_status(101)
+        .with_stderr(
             "\
 [UPDATING] registry [..]
 [ERROR] all path dependencies must have a version specified when publishing.
 dependency `bar` does not specify a version
 ",
-        ),
-    );
+        ).run();
 }
 
 #[test]
@@ -394,20 +384,18 @@ fn unpublishable_crate() {
             description = "foo"
             publish = false
         "#,
-        )
-        .file("src/main.rs", "fn main() {}")
+        ).file("src/main.rs", "fn main() {}")
         .build();
 
-    assert_that(
-        p.cargo("publish --index")
-            .arg(publish::registry().to_string()),
-        execs().with_status(101).with_stderr(
+    p.cargo("publish --index")
+        .arg(publish::registry().to_string())
+        .with_status(101)
+        .with_stderr(
             "\
 [ERROR] some crates cannot be published.
 `foo` is marked as unpublishable
 ",
-        ),
-    );
+        ).run();
 }
 
 #[test]
@@ -429,14 +417,13 @@ fn dont_publish_dirty() {
             homepage = "foo"
             repository = "foo"
         "#,
-        )
-        .file("src/main.rs", "fn main() {}")
+        ).file("src/main.rs", "fn main() {}")
         .build();
 
-    assert_that(
-        p.cargo("publish --index")
-            .arg(publish::registry().to_string()),
-        execs().with_status(101).with_stderr(
+    p.cargo("publish --index")
+        .arg(publish::registry().to_string())
+        .with_status(101)
+        .with_stderr(
             "\
 [UPDATING] registry `[..]`
 error: 1 files in the working directory contain changes that were not yet \
@@ -446,8 +433,7 @@ bar
 
 to proceed despite this, pass the `--allow-dirty` flag
 ",
-        ),
-    );
+        ).run();
 }
 
 #[test]
@@ -470,15 +456,12 @@ fn publish_clean() {
             homepage = "foo"
             repository = "foo"
         "#,
-        )
-        .file("src/main.rs", "fn main() {}")
+        ).file("src/main.rs", "fn main() {}")
         .build();
 
-    assert_that(
-        p.cargo("publish --index")
-            .arg(publish::registry().to_string()),
-        execs(),
-    );
+    p.cargo("publish --index")
+        .arg(publish::registry().to_string())
+        .run();
 }
 
 #[test]
@@ -501,17 +484,14 @@ fn publish_in_sub_repo() {
             homepage = "foo"
             repository = "foo"
         "#,
-        )
-        .file("bar/src/main.rs", "fn main() {}")
+        ).file("bar/src/main.rs", "fn main() {}")
         .build();
 
-    assert_that(
-        p.cargo("publish")
-            .cwd(p.root().join("bar"))
-            .arg("--index")
-            .arg(publish::registry().to_string()),
-        execs(),
-    );
+    p.cargo("publish")
+        .cwd(p.root().join("bar"))
+        .arg("--index")
+        .arg(publish::registry().to_string())
+        .run();
 }
 
 #[test]
@@ -534,16 +514,13 @@ fn publish_when_ignored() {
             homepage = "foo"
             repository = "foo"
         "#,
-        )
-        .file("src/main.rs", "fn main() {}")
+        ).file("src/main.rs", "fn main() {}")
         .file(".gitignore", "baz")
         .build();
 
-    assert_that(
-        p.cargo("publish --index")
-            .arg(publish::registry().to_string()),
-        execs(),
-    );
+    p.cargo("publish --index")
+        .arg(publish::registry().to_string())
+        .run();
 }
 
 #[test]
@@ -567,15 +544,12 @@ fn ignore_when_crate_ignored() {
             homepage = "foo"
             repository = "foo"
         "#,
-        )
-        .nocommit_file("bar/src/main.rs", "fn main() {}");
-    assert_that(
-        p.cargo("publish")
-            .cwd(p.root().join("bar"))
-            .arg("--index")
-            .arg(publish::registry().to_string()),
-        execs(),
-    );
+        ).nocommit_file("bar/src/main.rs", "fn main() {}");
+    p.cargo("publish")
+        .cwd(p.root().join("bar"))
+        .arg("--index")
+        .arg(publish::registry().to_string())
+        .run();
 }
 
 #[test]
@@ -598,13 +572,11 @@ fn new_crate_rejected() {
             homepage = "foo"
             repository = "foo"
         "#,
-        )
-        .nocommit_file("src/main.rs", "fn main() {}");
-    assert_that(
-        p.cargo("publish --index")
-            .arg(publish::registry().to_string()),
-        execs().with_status(101),
-    );
+        ).nocommit_file("src/main.rs", "fn main() {}");
+    p.cargo("publish --index")
+        .arg(publish::registry().to_string())
+        .with_status(101)
+        .run();
 }
 
 #[test]
@@ -622,28 +594,24 @@ fn dry_run() {
             license = "MIT"
             description = "foo"
         "#,
-        )
-        .file("src/main.rs", "fn main() {}")
+        ).file("src/main.rs", "fn main() {}")
         .build();
 
-    assert_that(
-        p.cargo("publish --dry-run --index")
-            .arg(publish::registry().to_string()),
-        execs().with_stderr(&format!(
+    p.cargo("publish --dry-run --index")
+        .arg(publish::registry().to_string())
+        .with_stderr(&format!(
             "\
 [UPDATING] registry `[..]`
 [WARNING] manifest has no documentation, [..]
 See [..]
-[PACKAGING] foo v0.0.1 ({dir})
-[VERIFYING] foo v0.0.1 ({dir})
+[PACKAGING] foo v0.0.1 (CWD)
+[VERIFYING] foo v0.0.1 (CWD)
 [COMPILING] foo v0.0.1 [..]
 [FINISHED] dev [unoptimized + debuginfo] target(s) in [..]
-[UPLOADING] foo v0.0.1 ({dir})
+[UPLOADING] foo v0.0.1 (CWD)
 [WARNING] aborting upload due to dry run
 ",
-            dir = p.url()
-        )),
-    );
+        )).run();
 
     // Ensure the API request wasn't actually made
     assert!(!publish::upload_path().join("api/v1/crates/new").exists());
@@ -667,14 +635,13 @@ fn block_publish_feature_not_enabled() {
                 "test"
             ]
         "#,
-        )
-        .file("src/main.rs", "fn main() {}")
+        ).file("src/main.rs", "fn main() {}")
         .build();
 
-    assert_that(
-        p.cargo("publish --registry alternative -Zunstable-options")
-            .masquerade_as_nightly_cargo(),
-        execs().with_status(101).with_stderr(
+    p.cargo("publish --registry alternative -Zunstable-options")
+        .masquerade_as_nightly_cargo()
+        .with_status(101)
+        .with_stderr(
             "\
 error: failed to parse manifest at `[..]`
 
@@ -686,8 +653,7 @@ Caused by:
 
 consider adding `cargo-features = [\"alternative-registries\"]` to the manifest
 ",
-        ),
-    );
+        ).run();
 }
 
 #[test]
@@ -710,23 +676,21 @@ fn registry_not_in_publish_list() {
                 "test"
             ]
         "#,
-        )
-        .file("src/main.rs", "fn main() {}")
+        ).file("src/main.rs", "fn main() {}")
         .build();
 
-    assert_that(
-        p.cargo("publish")
-            .masquerade_as_nightly_cargo()
-            .arg("--registry")
-            .arg("alternative")
-            .arg("-Zunstable-options"),
-        execs().with_status(101).with_stderr(
+    p.cargo("publish")
+        .masquerade_as_nightly_cargo()
+        .arg("--registry")
+        .arg("alternative")
+        .arg("-Zunstable-options")
+        .with_status(101)
+        .with_stderr(
             "\
 [ERROR] some crates cannot be published.
 `foo` is marked as unpublishable
 ",
-        ),
-    );
+        ).run();
 }
 
 #[test]
@@ -747,20 +711,18 @@ fn publish_empty_list() {
             description = "foo"
             publish = []
         "#,
-        )
-        .file("src/main.rs", "fn main() {}")
+        ).file("src/main.rs", "fn main() {}")
         .build();
 
-    assert_that(
-        p.cargo("publish --registry alternative -Zunstable-options")
-            .masquerade_as_nightly_cargo(),
-        execs().with_status(101).with_stderr(
+    p.cargo("publish --registry alternative -Zunstable-options")
+        .masquerade_as_nightly_cargo()
+        .with_status(101)
+        .with_stderr(
             "\
 [ERROR] some crates cannot be published.
 `foo` is marked as unpublishable
 ",
-        ),
-    );
+        ).run();
 }
 
 #[test]
@@ -785,15 +747,12 @@ fn publish_allowed_registry() {
             homepage = "foo"
             publish = ["alternative"]
         "#,
-        )
-        .file("src/main.rs", "fn main() {}")
+        ).file("src/main.rs", "fn main() {}")
         .build();
 
-    assert_that(
-        p.cargo("publish --registry alternative -Zunstable-options")
-            .masquerade_as_nightly_cargo(),
-        execs(),
-    );
+    p.cargo("publish --registry alternative -Zunstable-options")
+        .masquerade_as_nightly_cargo()
+        .run();
 }
 
 #[test]
@@ -814,18 +773,16 @@ fn block_publish_no_registry() {
             description = "foo"
             publish = []
         "#,
-        )
-        .file("src/main.rs", "fn main() {}")
+        ).file("src/main.rs", "fn main() {}")
         .build();
 
-    assert_that(
-        p.cargo("publish --registry alternative -Zunstable-options")
-            .masquerade_as_nightly_cargo(),
-        execs().with_status(101).with_stderr(
+    p.cargo("publish --registry alternative -Zunstable-options")
+        .masquerade_as_nightly_cargo()
+        .with_status(101)
+        .with_stderr(
             "\
 [ERROR] some crates cannot be published.
 `foo` is marked as unpublishable
 ",
-        ),
-    );
+        ).run();
 }

@@ -1,6 +1,5 @@
 use support::is_nightly;
-use support::{execs, project};
-use support::hamcrest::assert_that;
+use support::project;
 
 #[test]
 fn probe_cfg_before_crate_type_discovery() {
@@ -16,8 +15,7 @@ fn probe_cfg_before_crate_type_discovery() {
             [target.'cfg(not(stage300))'.dependencies.noop]
             path = "../noop"
         "#,
-        )
-        .file(
+        ).file(
             "src/main.rs",
             r#"
             #[macro_use]
@@ -28,9 +26,9 @@ fn probe_cfg_before_crate_type_discovery() {
 
             fn main() {}
         "#,
-        )
-        .build();
-    let _noop = project().at("noop")
+        ).build();
+    let _noop = project()
+        .at("noop")
         .file(
             "Cargo.toml",
             r#"
@@ -42,8 +40,7 @@ fn probe_cfg_before_crate_type_discovery() {
             [lib]
             proc-macro = true
         "#,
-        )
-        .file(
+        ).file(
             "src/lib.rs",
             r#"
             extern crate proc_macro;
@@ -54,10 +51,9 @@ fn probe_cfg_before_crate_type_discovery() {
                 "".parse().unwrap()
             }
         "#,
-        )
-        .build();
+        ).build();
 
-    assert_that(p.cargo("build"), execs());
+    p.cargo("build").run();
 }
 
 #[test]
@@ -74,8 +70,7 @@ fn noop() {
             [dependencies.noop]
             path = "../noop"
         "#,
-        )
-        .file(
+        ).file(
             "src/main.rs",
             r#"
             #[macro_use]
@@ -86,9 +81,9 @@ fn noop() {
 
             fn main() {}
         "#,
-        )
-        .build();
-    let _noop = project().at("noop")
+        ).build();
+    let _noop = project()
+        .at("noop")
         .file(
             "Cargo.toml",
             r#"
@@ -100,8 +95,7 @@ fn noop() {
             [lib]
             proc-macro = true
         "#,
-        )
-        .file(
+        ).file(
             "src/lib.rs",
             r#"
             extern crate proc_macro;
@@ -112,11 +106,10 @@ fn noop() {
                 "".parse().unwrap()
             }
         "#,
-        )
-        .build();
+        ).build();
 
-    assert_that(p.cargo("build"), execs());
-    assert_that(p.cargo("build"), execs());
+    p.cargo("build").run();
+    p.cargo("build").run();
 }
 
 #[test]
@@ -133,8 +126,7 @@ fn impl_and_derive() {
             [dependencies.transmogrify]
             path = "../transmogrify"
         "#,
-        )
-        .file(
+        ).file(
             "src/main.rs",
             r#"
             #[macro_use]
@@ -153,9 +145,9 @@ fn impl_and_derive() {
                 println!("{:?}", x);
             }
         "#,
-        )
-        .build();
-    let _transmogrify = project().at("transmogrify")
+        ).build();
+    let _transmogrify = project()
+        .at("transmogrify")
         .file(
             "Cargo.toml",
             r#"
@@ -167,8 +159,7 @@ fn impl_and_derive() {
             [lib]
             proc-macro = true
         "#,
-        )
-        .file(
+        ).file(
             "src/lib.rs",
             r#"
             extern crate proc_macro;
@@ -192,14 +183,10 @@ fn impl_and_derive() {
                 ".parse().unwrap()
             }
         "#,
-        )
-        .build();
+        ).build();
 
-    assert_that(p.cargo("build"), execs());
-    assert_that(
-        p.cargo("run"),
-        execs().with_stdout("X { success: true }"),
-    );
+    p.cargo("build").run();
+    p.cargo("run").with_stdout("X { success: true }").run();
 }
 
 #[test]
@@ -221,8 +208,7 @@ fn plugin_and_proc_macro() {
             plugin = true
             proc-macro = true
         "#,
-        )
-        .file(
+        ).file(
             "src/lib.rs",
             r#"
             #![feature(plugin_registrar, rustc_private)]
@@ -242,14 +228,13 @@ fn plugin_and_proc_macro() {
                 input
             }
         "#,
-        )
-        .build();
+        ).build();
 
     let msg = "  lib.plugin and lib.proc-macro cannot both be true";
-    assert_that(
-        p.cargo("build"),
-        execs().with_status(101).with_stderr_contains(msg),
-    );
+    p.cargo("build")
+        .with_status(101)
+        .with_stderr_contains(msg)
+        .run();
 }
 
 #[test]
@@ -265,8 +250,7 @@ fn proc_macro_doctest() {
             [lib]
             proc-macro = true
         "#,
-        )
-        .file(
+        ).file(
             "src/lib.rs",
             r#"
 #![crate_type = "proc-macro"]
@@ -288,13 +272,10 @@ fn a() {
   assert!(true);
 }
 "#,
-        )
-        .build();
+        ).build();
 
-    assert_that(
-        foo.cargo("test"),
-        execs()
-            .with_stdout_contains("test a ... ok")
-            .with_stdout_contains_n("test [..] ... ok", 2),
-    );
+    foo.cargo("test")
+        .with_stdout_contains("test a ... ok")
+        .with_stdout_contains_n("test [..] ... ok", 2)
+        .run();
 }

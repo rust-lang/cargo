@@ -83,24 +83,17 @@ rust source code is created in a temporary directory, `cargo` binary
 is invoked via `std::process::Command` and then stdout and stderr are
 verified against the expected output. To simplify testing, several
 macros of the form `[MACRO]` are used in the expected output. For
-example, `[..]` matches any string and `[/]` matches `/` on Unixes and
-`\` on windows.
+example, `[..]` matches any string.
 
-To see stdout and stderr streams of the subordinate process, add `.stream()` 
-call to `execs()`:
+To see stdout and stderr streams of the subordinate process, add `.stream()`
+call to the built-up `Execs`:
 
 ```rust
 // Before
-assert_that(
-    p.cargo("run"),
-    execs()
-);
+p.cargo("run").run();
 
 // After
-assert_that(
-    p.cargo("run"),
-    execs().stream()
-);
+p.cargo("run").stream().run();
 ```
 
 Alternatively to build and run a custom version of cargo simply run `cargo build`

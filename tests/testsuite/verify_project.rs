@@ -1,5 +1,4 @@
-use support::{basic_bin_manifest, execs, main_file, project};
-use support::hamcrest::assert_that;
+use support::{basic_bin_manifest, main_file, project};
 
 fn verify_project_success_output() -> String {
     r#"{"success":"true"}"#.into()
@@ -12,12 +11,10 @@ fn cargo_verify_project_path_to_cargo_toml_relative() {
         .file("src/foo.rs", &main_file(r#""i am foo""#, &[]))
         .build();
 
-    assert_that(
-        p.cargo("verify-project --manifest-path foo/Cargo.toml")
-            .cwd(p.root().parent().unwrap()),
-        execs()
-            .with_stdout(verify_project_success_output()),
-    );
+    p.cargo("verify-project --manifest-path foo/Cargo.toml")
+        .cwd(p.root().parent().unwrap())
+        .with_stdout(verify_project_success_output())
+        .run();
 }
 
 #[test]
@@ -27,13 +24,11 @@ fn cargo_verify_project_path_to_cargo_toml_absolute() {
         .file("src/foo.rs", &main_file(r#""i am foo""#, &[]))
         .build();
 
-    assert_that(
-        p.cargo("verify-project --manifest-path")
-            .arg(p.root().join("Cargo.toml"))
-            .cwd(p.root().parent().unwrap()),
-        execs()
-            .with_stdout(verify_project_success_output()),
-    );
+    p.cargo("verify-project --manifest-path")
+        .arg(p.root().join("Cargo.toml"))
+        .cwd(p.root().parent().unwrap())
+        .with_stdout(verify_project_success_output())
+        .run();
 }
 
 #[test]
@@ -43,9 +38,8 @@ fn cargo_verify_project_cwd() {
         .file("src/foo.rs", &main_file(r#""i am foo""#, &[]))
         .build();
 
-    assert_that(
-        p.cargo("verify-project").cwd(p.root()),
-        execs()
-            .with_stdout(verify_project_success_output()),
-    );
+    p.cargo("verify-project")
+        .cwd(p.root())
+        .with_stdout(verify_project_success_output())
+        .run();
 }

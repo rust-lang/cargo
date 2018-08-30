@@ -1,11 +1,9 @@
-use std::path::Path;
-use std::fs::{self, File};
 use std::env;
+use std::fs::{self, File};
+use std::path::Path;
 
-use support::hamcrest::assert_that;
-
-use support::{process, sleep_ms, ChannelChanger};
-use support::{basic_manifest, execs, project};
+use support::sleep_ms;
+use support::{basic_manifest, project};
 
 #[test]
 fn binary_with_debug() {
@@ -13,11 +11,9 @@ fn binary_with_debug() {
         .file("src/main.rs", r#"fn main() { println!("Hello, World!") }"#)
         .build();
 
-    assert_that(
-        p.cargo("build -Z unstable-options --out-dir out")
-            .masquerade_as_nightly_cargo(),
-        execs(),
-    );
+    p.cargo("build -Z unstable-options --out-dir out")
+        .masquerade_as_nightly_cargo()
+        .run();
     check_dir_contents(
         &p.root().join("out"),
         &["foo"],
@@ -40,21 +36,17 @@ fn static_library_with_debug() {
             [lib]
             crate-type = ["staticlib"]
         "#,
-        )
-        .file(
+        ).file(
             "src/lib.rs",
             r#"
             #[no_mangle]
             pub extern "C" fn foo() { println!("Hello, World!") }
         "#,
-        )
-        .build();
+        ).build();
 
-    assert_that(
-        p.cargo("build -Z unstable-options --out-dir out")
-            .masquerade_as_nightly_cargo(),
-        execs(),
-    );
+    p.cargo("build -Z unstable-options --out-dir out")
+        .masquerade_as_nightly_cargo()
+        .run();
     check_dir_contents(
         &p.root().join("out"),
         &["libfoo.a"],
@@ -77,21 +69,17 @@ fn dynamic_library_with_debug() {
             [lib]
             crate-type = ["cdylib"]
         "#,
-        )
-        .file(
+        ).file(
             "src/lib.rs",
             r#"
             #[no_mangle]
             pub extern "C" fn foo() { println!("Hello, World!") }
         "#,
-        )
-        .build();
+        ).build();
 
-    assert_that(
-        p.cargo("build -Z unstable-options --out-dir out")
-            .masquerade_as_nightly_cargo(),
-        execs(),
-    );
+    p.cargo("build -Z unstable-options --out-dir out")
+        .masquerade_as_nightly_cargo()
+        .run();
     check_dir_contents(
         &p.root().join("out"),
         &["libfoo.so"],
@@ -114,20 +102,16 @@ fn rlib_with_debug() {
             [lib]
             crate-type = ["rlib"]
         "#,
-        )
-        .file(
+        ).file(
             "src/lib.rs",
             r#"
             pub fn foo() { println!("Hello, World!") }
         "#,
-        )
-        .build();
+        ).build();
 
-    assert_that(
-        p.cargo("build -Z unstable-options --out-dir out")
-            .masquerade_as_nightly_cargo(),
-        execs(),
-    );
+    p.cargo("build -Z unstable-options --out-dir out")
+        .masquerade_as_nightly_cargo()
+        .run();
     check_dir_contents(
         &p.root().join("out"),
         &["libfoo.rlib"],
@@ -152,8 +136,7 @@ fn include_only_the_binary_from_the_current_package() {
             [dependencies]
             utils = { path = "./utils" }
         "#,
-        )
-        .file("src/lib.rs", "extern crate utils;")
+        ).file("src/lib.rs", "extern crate utils;")
         .file(
             "src/main.rs",
             r#"
@@ -163,16 +146,13 @@ fn include_only_the_binary_from_the_current_package() {
                 println!("Hello, World!")
             }
         "#,
-        )
-        .file("utils/Cargo.toml", &basic_manifest("utils", "0.0.1"))
+        ).file("utils/Cargo.toml", &basic_manifest("utils", "0.0.1"))
         .file("utils/src/lib.rs", "")
         .build();
 
-    assert_that(
-        p.cargo("build -Z unstable-options --bin foo --out-dir out")
-            .masquerade_as_nightly_cargo(),
-        execs(),
-    );
+    p.cargo("build -Z unstable-options --bin foo --out-dir out")
+        .masquerade_as_nightly_cargo()
+        .run();
     check_dir_contents(
         &p.root().join("out"),
         &["foo"],
@@ -188,13 +168,11 @@ fn out_dir_is_a_file() {
         .build();
     File::create(p.root().join("out")).unwrap();
 
-    assert_that(
-        p.cargo("build -Z unstable-options --out-dir out")
-            .masquerade_as_nightly_cargo(),
-        execs()
-            .with_status(101)
-            .with_stderr_contains("[ERROR] failed to link or copy [..]"),
-    );
+    p.cargo("build -Z unstable-options --out-dir out")
+        .masquerade_as_nightly_cargo()
+        .with_status(101)
+        .with_stderr_contains("[ERROR] failed to link or copy [..]")
+        .run();
 }
 
 #[test]
@@ -203,30 +181,26 @@ fn replaces_artifacts() {
         .file("src/main.rs", r#"fn main() { println!("foo") }"#)
         .build();
 
-    assert_that(
-        p.cargo("build -Z unstable-options --out-dir out")
-            .masquerade_as_nightly_cargo(),
-        execs(),
-    );
-    assert_that(
-        process(&p.root()
-            .join(&format!("out/foo{}", env::consts::EXE_SUFFIX))),
-        execs().with_stdout("foo"),
-    );
+    p.cargo("build -Z unstable-options --out-dir out")
+        .masquerade_as_nightly_cargo()
+        .run();
+    p.process(
+        &p.root()
+            .join(&format!("out/foo{}", env::consts::EXE_SUFFIX)),
+    ).with_stdout("foo")
+    .run();
 
     sleep_ms(1000);
     p.change_file("src/main.rs", r#"fn main() { println!("bar") }"#);
 
-    assert_that(
-        p.cargo("build -Z unstable-options --out-dir out")
-            .masquerade_as_nightly_cargo(),
-        execs(),
-    );
-    assert_that(
-        process(&p.root()
-            .join(&format!("out/foo{}", env::consts::EXE_SUFFIX))),
-        execs().with_stdout("bar"),
-    );
+    p.cargo("build -Z unstable-options --out-dir out")
+        .masquerade_as_nightly_cargo()
+        .run();
+    p.process(
+        &p.root()
+            .join(&format!("out/foo{}", env::consts::EXE_SUFFIX)),
+    ).with_stdout("bar")
+    .run();
 }
 
 fn check_dir_contents(

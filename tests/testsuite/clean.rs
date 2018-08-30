@@ -1,8 +1,7 @@
 use std::env;
 
-use support::{basic_manifest, basic_bin_manifest, execs, git, main_file, project};
 use support::registry::Package;
-use support::hamcrest::{assert_that, existing_dir, existing_file, is_not};
+use support::{basic_bin_manifest, basic_manifest, git, main_file, project};
 
 #[test]
 fn cargo_clean_simple() {
@@ -11,11 +10,11 @@ fn cargo_clean_simple() {
         .file("src/foo.rs", &main_file(r#""i am foo""#, &[]))
         .build();
 
-    assert_that(p.cargo("build"), execs());
-    assert_that(&p.build_dir(), existing_dir());
+    p.cargo("build").run();
+    assert!(p.build_dir().is_dir());
 
-    assert_that(p.cargo("clean"), execs());
-    assert_that(&p.build_dir(), is_not(existing_dir()));
+    p.cargo("clean").run();
+    assert!(!p.build_dir().is_dir());
 }
 
 #[test]
@@ -26,14 +25,14 @@ fn different_dir() {
         .file("src/bar/a.rs", "")
         .build();
 
-    assert_that(p.cargo("build"), execs());
-    assert_that(&p.build_dir(), existing_dir());
+    p.cargo("build").run();
+    assert!(p.build_dir().is_dir());
 
-    assert_that(
-        p.cargo("clean").cwd(&p.root().join("src")),
-        execs().with_stdout(""),
-    );
-    assert_that(&p.build_dir(), is_not(existing_dir()));
+    p.cargo("clean")
+        .cwd(&p.root().join("src"))
+        .with_stdout("")
+        .run();
+    assert!(!p.build_dir().is_dir());
 }
 
 #[test]
@@ -55,34 +54,35 @@ fn clean_multiple_packages() {
             [[bin]]
                 name = "foo"
         "#,
-        )
-        .file("src/foo.rs", &main_file(r#""i am foo""#, &[]))
+        ).file("src/foo.rs", &main_file(r#""i am foo""#, &[]))
         .file("d1/Cargo.toml", &basic_bin_manifest("d1"))
         .file("d1/src/main.rs", "fn main() { println!(\"d1\"); }")
         .file("d2/Cargo.toml", &basic_bin_manifest("d2"))
         .file("d2/src/main.rs", "fn main() { println!(\"d2\"); }")
         .build();
 
-    assert_that(p.cargo("build -p d1 -p d2 -p foo"), execs());
+    p.cargo("build -p d1 -p d2 -p foo").run();
 
-    let d1_path = &p.build_dir()
+    let d1_path = &p
+        .build_dir()
         .join("debug")
         .join(format!("d1{}", env::consts::EXE_SUFFIX));
-    let d2_path = &p.build_dir()
+    let d2_path = &p
+        .build_dir()
         .join("debug")
         .join(format!("d2{}", env::consts::EXE_SUFFIX));
 
-    assert_that(&p.bin("foo"), existing_file());
-    assert_that(d1_path, existing_file());
-    assert_that(d2_path, existing_file());
+    assert!(p.bin("foo").is_file());
+    assert!(d1_path.is_file());
+    assert!(d2_path.is_file());
 
-    assert_that(
-        p.cargo("clean -p d1 -p d2").cwd(&p.root().join("src")),
-        execs().with_stdout(""),
-    );
-    assert_that(&p.bin("foo"), existing_file());
-    assert_that(d1_path, is_not(existing_file()));
-    assert_that(d2_path, is_not(existing_file()));
+    p.cargo("clean -p d1 -p d2")
+        .cwd(&p.root().join("src"))
+        .with_stdout("")
+        .run();
+    assert!(p.bin("foo").is_file());
+    assert!(!d1_path.is_file());
+    assert!(!d2_path.is_file());
 }
 
 #[test]
@@ -99,36 +99,24 @@ fn clean_release() {
             [dependencies]
             a = { path = "a" }
         "#,
-        )
-        .file("src/main.rs", "fn main() {}")
+        ).file("src/main.rs", "fn main() {}")
         .file("a/Cargo.toml", &basic_manifest("a", "0.0.1"))
         .file("a/src/lib.rs", "")
         .build();
 
-    assert_that(p.cargo("build --release"), execs());
+    p.cargo("build --release").run();
 
-    assert_that(
-        p.cargo("clean -p foo"),
-        execs(),
-    );
-    assert_that(
-        p.cargo("build --release"),
-        execs().with_stdout(""),
-    );
+    p.cargo("clean -p foo").run();
+    p.cargo("build --release").with_stdout("").run();
 
-    assert_that(
-        p.cargo("clean -p foo --release"),
-        execs(),
-    );
-    assert_that(
-        p.cargo("build --release"),
-        execs().with_stderr(
+    p.cargo("clean -p foo --release").run();
+    p.cargo("build --release")
+        .with_stderr(
             "\
 [COMPILING] foo v0.0.1 ([..])
 [FINISHED] release [optimized] target(s) in [..]
 ",
-        ),
-    );
+        ).run();
 }
 
 #[test]
@@ -145,22 +133,21 @@ fn clean_doc() {
             [dependencies]
             a = { path = "a" }
         "#,
-        )
-        .file("src/main.rs", "fn main() {}")
+        ).file("src/main.rs", "fn main() {}")
         .file("a/Cargo.toml", &basic_manifest("a", "0.0.1"))
         .file("a/src/lib.rs", "")
         .build();
 
-    assert_that(p.cargo("doc"), execs());
+    p.cargo("doc").run();
 
     let doc_path = &p.build_dir().join("doc");
 
-    assert_that(doc_path, existing_dir());
+    assert!(doc_path.is_dir());
 
-    assert_that(p.cargo("clean --doc"), execs());
+    p.cargo("clean --doc").run();
 
-    assert_that(doc_path, is_not(existing_dir()));
-    assert_that(p.build_dir(), existing_dir());
+    assert!(!doc_path.is_dir());
+    assert!(p.build_dir().is_dir());
 }
 
 #[test]
@@ -175,8 +162,7 @@ fn build_script() {
             authors = []
             build = "build.rs"
         "#,
-        )
-        .file("src/main.rs", "fn main() {}")
+        ).file("src/main.rs", "fn main() {}")
         .file(
             "build.rs",
             r#"
@@ -192,18 +178,13 @@ fn build_script() {
                 }
             }
         "#,
-        )
-        .file("a/src/lib.rs", "")
+        ).file("a/src/lib.rs", "")
         .build();
 
-    assert_that(p.cargo("build").env("FIRST", "1"), execs());
-    assert_that(
-        p.cargo("clean -p foo"),
-        execs(),
-    );
-    assert_that(
-        p.cargo("build -v"),
-        execs().with_stderr(
+    p.cargo("build").env("FIRST", "1").run();
+    p.cargo("clean -p foo").run();
+    p.cargo("build -v")
+        .with_stderr(
             "\
 [COMPILING] foo v0.0.1 ([..])
 [RUNNING] `rustc [..] build.rs [..]`
@@ -211,8 +192,7 @@ fn build_script() {
 [RUNNING] `rustc [..] src/main.rs [..]`
 [FINISHED] dev [unoptimized + debuginfo] target(s) in [..]
 ",
-        ),
-    );
+        ).run();
 }
 
 #[test]
@@ -238,16 +218,12 @@ fn clean_git() {
         "#,
                 git.url()
             ),
-        )
-        .file("src/main.rs", "fn main() {}")
+        ).file("src/main.rs", "fn main() {}")
         .build();
 
-    assert_that(p.cargo("build"), execs());
-    assert_that(
-        p.cargo("clean -p dep"),
-        execs().with_stdout(""),
-    );
-    assert_that(p.cargo("build"), execs());
+    p.cargo("build").run();
+    p.cargo("clean -p dep").with_stdout("").run();
+    p.cargo("build").run();
 }
 
 #[test]
@@ -264,18 +240,14 @@ fn registry() {
             [dependencies]
             bar = "0.1"
         "#,
-        )
-        .file("src/main.rs", "fn main() {}")
+        ).file("src/main.rs", "fn main() {}")
         .build();
 
     Package::new("bar", "0.1.0").publish();
 
-    assert_that(p.cargo("build"), execs());
-    assert_that(
-        p.cargo("clean -p bar"),
-        execs().with_stdout(""),
-    );
-    assert_that(p.cargo("build"), execs());
+    p.cargo("build").run();
+    p.cargo("clean -p bar").with_stdout("").run();
+    p.cargo("build").run();
 }
 
 #[test]
@@ -291,21 +263,18 @@ fn clean_verbose() {
         [dependencies]
         bar = "0.1"
     "#,
-        )
-        .file("src/main.rs", "fn main() {}")
+        ).file("src/main.rs", "fn main() {}")
         .build();
 
     Package::new("bar", "0.1.0").publish();
 
-    assert_that(p.cargo("build"), execs());
-    assert_that(
-        p.cargo("clean -p bar --verbose"),
-        execs().with_stderr(
+    p.cargo("build").run();
+    p.cargo("clean -p bar --verbose")
+        .with_stderr(
             "\
 [REMOVING] [..]
 [REMOVING] [..]
 ",
-        ),
-    );
-    assert_that(p.cargo("build"), execs());
+        ).run();
+    p.cargo("build").run();
 }

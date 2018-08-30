@@ -11,9 +11,10 @@ use serde::ser;
 use url::Url;
 
 use core::GitReference;
-use util::{internal, network, Config, Progress, ToUrl};
-use util::paths;
 use util::errors::{CargoError, CargoResult, CargoResultExt};
+use util::paths;
+use util::process_builder::process;
+use util::{internal, network, Config, Progress, ToUrl};
 
 #[derive(PartialEq, Clone, Debug)]
 pub struct GitRevision(git2::Oid);
@@ -691,6 +692,18 @@ pub fn fetch(
     // request we're about to issue.
     maybe_gc_repo(repo)?;
 
+    // Unfortuantely `libgit2` is notably lacking in the realm of authentication
+    // when compared to the `git` command line. As a result, allow an escape
+    // hatch for users that would prefer to use `git`-the-CLI for fetching
+    // repositories instead of `libgit2`-the-library. This should make more
+    // flavors of authentication possible while also still giving us all the
+    // speed and portability of using `libgit2`.
+    if let Some(val) = config.get_bool("net.git-fetch-with-cli")? {
+        if val.val {
+            return fetch_with_cli(repo, url, refspec, config);
+        }
+    }
+
     debug!("doing a fetch for {}", url);
     let git_config = git2::Config::open_default()?;
     with_fetch_options(&git_config, url, config, &mut |mut opts| {
@@ -730,6 +743,24 @@ pub fn fetch(
         }
         Ok(())
     })
+}
+
+fn fetch_with_cli(
+    repo: &mut git2::Repository,
+    url: &Url,
+    refspec: &str,
+    config: &Config,
+) -> CargoResult<()> {
+    let mut cmd = process("git");
+    cmd.arg("fetch")
+        .arg("--tags") // fetch all tags
+        .arg("--quiet")
+        .arg(url.to_string())
+        .arg(refspec)
+        .cwd(repo.path());
+    config.shell().verbose(|s| s.status("Running", &cmd.to_string()))?;
+    cmd.exec()?;
+    Ok(())
 }
 
 /// Cargo has a bunch of long-lived git repositories in its global cache and
