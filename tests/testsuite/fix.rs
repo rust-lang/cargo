@@ -1065,14 +1065,19 @@ fn doesnt_rebuild_dependencies() {
     p.cargo("fix --allow-no-vcs -p foo")
         .env("__CARGO_FIX_YOLO", "1")
         .with_stdout("")
-        .with_stderr_contains("[CHECKING] bar v0.1.0 ([..])")
-        .with_stderr_contains("[CHECKING] foo v0.1.0 ([..])")
+        .with_stderr("\
+[CHECKING] bar v0.1.0 ([..])
+[CHECKING] foo v0.1.0 ([..])
+[FINISHED] dev [unoptimized + debuginfo] target(s) in [..]
+")
         .run();
 
     p.cargo("fix --allow-no-vcs -p foo")
         .env("__CARGO_FIX_YOLO", "1")
         .with_stdout("")
-        .with_stderr_does_not_contain("[CHECKING] bar v0.1.0 ([..])")
-        .with_stderr_contains("[CHECKING] foo v0.1.0 ([..])")
+        .with_stderr("\
+[CHECKING] foo v0.1.0 ([..])
+[FINISHED] dev [unoptimized + debuginfo] target(s) in [..]
+")
         .run();
 }
