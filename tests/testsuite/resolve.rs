@@ -78,7 +78,7 @@ trait ToPkgId {
     fn to_pkgid(&self) -> PackageId;
 }
 
-impl<'a> ToPkgId for PackageId {
+impl ToPkgId for PackageId {
     fn to_pkgid(&self) -> PackageId {
         self.clone()
     }
@@ -207,34 +207,27 @@ fn registry_strategy(max_crates: usize, max_versions: usize) -> impl Strategy<Va
         // root is the name of the thing being compiled
         // so it would be confusing to have it in the index
         b.remove("root");
-        let names = Some("bad".to_owned()) // if randomly pointing to a dependency that does not exist then call it `bad`
+        let vers = b
             .iter()
-            .chain(b.iter().map(|(name, _)| name))
-            .map(|name| pkg_id(name).name())
-            .collect::<Vec<_>>();
-        let data = b
+            .map(|(name, ver)| (pkg_id(name).name(), ver.iter().map(|(a, b, c)| format!("{}.{}.{}", a, b, c)).collect()))
+            .collect::<BTreeMap<_, Vec<String>>>();
+        vers
             .iter()
             .flat_map(|(name, vers)| {
                 vers.iter()
-                    .map(move |(a, b, c)| (name, format!("{}.{}.{}", a, b, c)).to_pkgid())
-            }).collect::<Vec<_>>();
-        let deps: Vec<_> = data
-            .iter()
+                    .map(move |x| (name.as_str(), x).to_pkgid())
+            })
             .map(|name| {
-                let s: Vec<_> = names
-                    .iter()
-                    .cloned()
-                    .filter(|n| name.name() > *n || n.as_str() == "bad")
-                    .collect();
+                let s: Vec<_> = Some(pkg_id("bad").name()) // if randomly pointing to a dependency that does not exist then call it `bad`
+                    .into_iter()
+                    .chain(vers.keys().cloned().take_while(|&n| name.name() > n))
+                    .collect::<Vec<_>>();
                 let s_len = s.len();
-                let vers = b
-                    .iter()
-                    .map(|(name, ver)| (pkg_id(name).name(), ver.iter().cloned().collect()))
-                    .collect::<BTreeMap<_, Vec<_>>>();
+                let vers = vers.clone();
                 subsequence(s, ..s_len).prop_flat_map(move |deps| {
                     deps.into_iter()
                         .map(|name| {
-                            let s = vers.get(name.as_str()).unwrap_or(&vec![]).clone();
+                            let s = vers.get(&name).unwrap_or(&vec![]).clone();
                             (
                                 Just(name),
                                 if s.is_empty() {
@@ -247,25 +240,15 @@ fn registry_strategy(max_crates: usize, max_versions: usize) -> impl Strategy<Va
                                     if v.is_empty() {
                                         "=6.6.6".to_string()
                                     } else if v.len() == 1 {
-                                        format!("={}.{}.{}", v[0].0, v[0].1, v[0].2)
+                                        format!("={}", v[0])
                                     } else {
-                                        format!(
-                                            ">={}.{}.{}, <={}.{}.{}",
-                                            v[0].0, v[0].1, v[0].2, v[1].0, v[1].1, v[1].2
-                                        )
+                                        format!(">={}, <={}",v[0], v[1])
                                     }
                                 }),
-                            )
-                                .prop_map(|(name, ver)| dep_req(&name, &ver))
+                            ).prop_map(|(name, ver)| dep_req(&name, &ver))
                         }).collect::<Vec<_>>()
-                })
-            }).collect();
-        (Just(data), deps)
-    }).prop_map(|(data, deps)| {
-        data.into_iter()
-            .zip(deps.into_iter())
-            .map(|(pkgid, deps)| pkg_dep(pkgid, deps))
-            .collect()
+                }).prop_map( move |deps| pkg_dep(name.clone(), deps))
+            }).collect::<Vec<_>>()
     })
 }
 
