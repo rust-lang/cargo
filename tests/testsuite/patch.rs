@@ -52,9 +52,9 @@ fn replace() {
             "\
 [UPDATING] registry `file://[..]`
 [DOWNLOADING] baz v0.1.0 ([..])
-[COMPILING] bar v0.1.0 (file://[..])
+[COMPILING] bar v0.1.0 (CWD/bar)
 [COMPILING] baz v0.1.0
-[COMPILING] foo v0.0.1 (file://[..])
+[COMPILING] foo v0.0.1 (CWD)
 [FINISHED] dev [unoptimized + debuginfo] target(s) in [..]
 ",
         ).run();
@@ -92,8 +92,8 @@ fn nonexistent() {
         .with_stderr(
             "\
 [UPDATING] registry `file://[..]`
-[COMPILING] bar v0.1.0 (file://[..])
-[COMPILING] foo v0.0.1 (file://[..])
+[COMPILING] bar v0.1.0 (CWD/bar)
+[COMPILING] foo v0.0.1 (CWD)
 [FINISHED] dev [unoptimized + debuginfo] target(s) in [..]
 ",
         ).run();
@@ -136,8 +136,8 @@ fn patch_git() {
         .with_stderr(
             "\
 [UPDATING] git repository `file://[..]`
-[COMPILING] bar v0.1.0 (file://[..])
-[COMPILING] foo v0.0.1 (file://[..])
+[COMPILING] bar v0.1.0 (CWD/bar)
+[COMPILING] foo v0.0.1 (CWD)
 [FINISHED] dev [unoptimized + debuginfo] target(s) in [..]
 ",
         ).run();
@@ -182,7 +182,7 @@ fn patch_to_git() {
 [UPDATING] git repository `file://[..]`
 [UPDATING] registry `file://[..]`
 [COMPILING] bar v0.1.0 (file://[..])
-[COMPILING] foo v0.0.1 (file://[..])
+[COMPILING] foo v0.0.1 (CWD)
 [FINISHED] dev [unoptimized + debuginfo] target(s) in [..]
 ",
         ).run();
@@ -219,7 +219,7 @@ fn unused() {
 [UPDATING] registry `file://[..]`
 [DOWNLOADING] bar v0.1.0 [..]
 [COMPILING] bar v0.1.0
-[COMPILING] foo v0.0.1 (file://[..])
+[COMPILING] foo v0.0.1 (CWD)
 [FINISHED] dev [unoptimized + debuginfo] target(s) in [..]
 ",
         ).run();
@@ -277,7 +277,7 @@ fn unused_git() {
 [UPDATING] registry `file://[..]`
 [DOWNLOADING] bar v0.1.0 [..]
 [COMPILING] bar v0.1.0
-[COMPILING] foo v0.0.1 (file://[..])
+[COMPILING] foo v0.0.1 (CWD)
 [FINISHED] dev [unoptimized + debuginfo] target(s) in [..]
 ",
         ).run();
@@ -311,7 +311,7 @@ fn add_patch() {
 [UPDATING] registry `file://[..]`
 [DOWNLOADING] bar v0.1.0 [..]
 [COMPILING] bar v0.1.0
-[COMPILING] foo v0.0.1 (file://[..])
+[COMPILING] foo v0.0.1 (CWD)
 [FINISHED] dev [unoptimized + debuginfo] target(s) in [..]
 ",
         ).run();
@@ -335,8 +335,8 @@ fn add_patch() {
     p.cargo("build")
         .with_stderr(
             "\
-[COMPILING] bar v0.1.0 (file://[..])
-[COMPILING] foo v0.0.1 (file://[..])
+[COMPILING] bar v0.1.0 (CWD/bar)
+[COMPILING] foo v0.0.1 (CWD)
 [FINISHED] dev [unoptimized + debuginfo] target(s) in [..]
 ",
         ).run();
@@ -370,7 +370,7 @@ fn add_ignored_patch() {
 [UPDATING] registry `file://[..]`
 [DOWNLOADING] bar v0.1.0 [..]
 [COMPILING] bar v0.1.0
-[COMPILING] foo v0.0.1 (file://[..])
+[COMPILING] foo v0.0.1 (CWD)
 [FINISHED] dev [unoptimized + debuginfo] target(s) in [..]
 ",
         ).run();
@@ -426,7 +426,7 @@ fn new_minor() {
             "\
 [UPDATING] registry `file://[..]`
 [COMPILING] bar v0.1.1 [..]
-[COMPILING] foo v0.0.1 (file://[..])
+[COMPILING] foo v0.0.1 (CWD)
 [FINISHED] dev [unoptimized + debuginfo] target(s) in [..]
 ",
         ).run();
@@ -474,7 +474,7 @@ fn transitive_new_minor() {
 [UPDATING] registry `file://[..]`
 [COMPILING] baz v0.1.1 [..]
 [COMPILING] bar v0.1.0 [..]
-[COMPILING] foo v0.0.1 (file://[..])
+[COMPILING] foo v0.0.1 (CWD)
 [FINISHED] dev [unoptimized + debuginfo] target(s) in [..]
 ",
         ).run();
@@ -509,7 +509,7 @@ fn new_major() {
             "\
 [UPDATING] registry `file://[..]`
 [COMPILING] bar v0.2.0 [..]
-[COMPILING] foo v0.0.1 (file://[..])
+[COMPILING] foo v0.0.1 (CWD)
 [FINISHED] dev [unoptimized + debuginfo] target(s) in [..]
 ",
         ).run();
@@ -537,7 +537,7 @@ fn new_major() {
 [UPDATING] registry `file://[..]`
 [DOWNLOADING] bar v0.2.0 [..]
 [COMPILING] bar v0.2.0
-[COMPILING] foo v0.0.1 (file://[..])
+[COMPILING] foo v0.0.1 (CWD)
 [FINISHED] dev [unoptimized + debuginfo] target(s) in [..]
 ",
         ).run();
@@ -585,7 +585,7 @@ fn transitive_new_major() {
 [UPDATING] registry `file://[..]`
 [COMPILING] baz v0.2.0 [..]
 [COMPILING] bar v0.1.0 [..]
-[COMPILING] foo v0.0.1 (file://[..])
+[COMPILING] foo v0.0.1 (CWD)
 [FINISHED] dev [unoptimized + debuginfo] target(s) in [..]
 ",
         ).run();

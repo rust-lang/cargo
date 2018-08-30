@@ -417,21 +417,19 @@ fn no_feature_doesnt_build() {
     p.cargo("build")
         .with_stderr(format!(
             "\
-[COMPILING] foo v0.0.1 ({dir})
+[COMPILING] foo v0.0.1 (CWD)
 [FINISHED] dev [unoptimized + debuginfo] target(s) in [..]
 ",
-            dir = p.url()
         )).run();
     p.process(&p.bin("foo")).with_stdout("").run();
 
     p.cargo("build --features bar")
         .with_stderr(format!(
             "\
-[COMPILING] bar v0.0.1 ({dir}/bar)
-[COMPILING] foo v0.0.1 ({dir})
+[COMPILING] bar v0.0.1 (CWD/bar)
+[COMPILING] foo v0.0.1 (CWD)
 [FINISHED] dev [unoptimized + debuginfo] target(s) in [..]
 ",
-            dir = p.url()
         )).run();
     p.process(&p.bin("foo")).with_stdout("bar\n").run();
 }
@@ -471,21 +469,19 @@ fn default_feature_pulled_in() {
     p.cargo("build")
         .with_stderr(format!(
             "\
-[COMPILING] bar v0.0.1 ({dir}/bar)
-[COMPILING] foo v0.0.1 ({dir})
+[COMPILING] bar v0.0.1 (CWD/bar)
+[COMPILING] foo v0.0.1 (CWD)
 [FINISHED] dev [unoptimized + debuginfo] target(s) in [..]
 ",
-            dir = p.url()
         )).run();
     p.process(&p.bin("foo")).with_stdout("bar\n").run();
 
     p.cargo("build --no-default-features")
         .with_stderr(format!(
             "\
-[COMPILING] foo v0.0.1 ({dir})
+[COMPILING] foo v0.0.1 (CWD)
 [FINISHED] dev [unoptimized + debuginfo] target(s) in [..]
 ",
-            dir = p.url()
         )).run();
     p.process(&p.bin("foo")).with_stdout("").run();
 }
@@ -581,12 +577,11 @@ fn groups_on_groups_on_groups() {
     p.cargo("build")
         .with_stderr(format!(
             "\
-[COMPILING] ba[..] v0.0.1 ({dir}/ba[..])
-[COMPILING] ba[..] v0.0.1 ({dir}/ba[..])
-[COMPILING] foo v0.0.1 ({dir})
+[COMPILING] ba[..] v0.0.1 (CWD/ba[..])
+[COMPILING] ba[..] v0.0.1 (CWD/ba[..])
+[COMPILING] foo v0.0.1 (CWD)
 [FINISHED] dev [unoptimized + debuginfo] target(s) in [..]
 ",
-            dir = p.url()
         )).run();
 }
 
@@ -628,12 +623,11 @@ fn many_cli_features() {
         .arg("bar baz")
         .with_stderr(format!(
             "\
-[COMPILING] ba[..] v0.0.1 ({dir}/ba[..])
-[COMPILING] ba[..] v0.0.1 ({dir}/ba[..])
-[COMPILING] foo v0.0.1 ({dir})
+[COMPILING] ba[..] v0.0.1 (CWD/ba[..])
+[COMPILING] ba[..] v0.0.1 (CWD/ba[..])
+[COMPILING] foo v0.0.1 (CWD)
 [FINISHED] dev [unoptimized + debuginfo] target(s) in [..]
 ",
-            dir = p.url()
         )).run();
 }
 
@@ -706,12 +700,11 @@ fn union_features() {
     p.cargo("build")
         .with_stderr(format!(
             "\
-[COMPILING] d2 v0.0.1 ({dir}/d2)
-[COMPILING] d1 v0.0.1 ({dir}/d1)
-[COMPILING] foo v0.0.1 ({dir})
+[COMPILING] d2 v0.0.1 (CWD/d2)
+[COMPILING] d1 v0.0.1 (CWD/d1)
+[COMPILING] foo v0.0.1 (CWD)
 [FINISHED] dev [unoptimized + debuginfo] target(s) in [..]
 ",
-            dir = p.url()
         )).run();
 }
 
@@ -750,11 +743,10 @@ fn many_features_no_rebuilds() {
     p.cargo("build")
         .with_stderr(format!(
             "\
-[COMPILING] a v0.1.0 ({dir}/a)
-[COMPILING] b v0.1.0 ({dir})
+[COMPILING] a v0.1.0 (CWD/a)
+[COMPILING] b v0.1.0 (CWD)
 [FINISHED] dev [unoptimized + debuginfo] target(s) in [..]
 ",
-            dir = p.url()
         )).run();
     p.root().move_into_the_past();
 
@@ -1207,12 +1199,11 @@ fn many_cli_features_comma_delimited() {
     p.cargo("build --features bar,baz")
         .with_stderr(format!(
             "\
-[COMPILING] ba[..] v0.0.1 ({dir}/ba[..])
-[COMPILING] ba[..] v0.0.1 ({dir}/ba[..])
-[COMPILING] foo v0.0.1 ({dir})
+[COMPILING] ba[..] v0.0.1 (CWD/ba[..])
+[COMPILING] ba[..] v0.0.1 (CWD/ba[..])
+[COMPILING] foo v0.0.1 (CWD)
 [FINISHED] dev [unoptimized + debuginfo] target(s) in [..]
 ",
-            dir = p.url()
         )).run();
 }
 
@@ -1270,14 +1261,13 @@ fn many_cli_features_comma_and_space_delimited() {
         .arg("bar,baz bam bap")
         .with_stderr(format!(
             "\
-[COMPILING] ba[..] v0.0.1 ({dir}/ba[..])
-[COMPILING] ba[..] v0.0.1 ({dir}/ba[..])
-[COMPILING] ba[..] v0.0.1 ({dir}/ba[..])
-[COMPILING] ba[..] v0.0.1 ({dir}/ba[..])
-[COMPILING] foo v0.0.1 ({dir})
+[COMPILING] ba[..] v0.0.1 (CWD/ba[..])
+[COMPILING] ba[..] v0.0.1 (CWD/ba[..])
+[COMPILING] ba[..] v0.0.1 (CWD/ba[..])
+[COMPILING] ba[..] v0.0.1 (CWD/ba[..])
+[COMPILING] foo v0.0.1 (CWD)
 [FINISHED] dev [unoptimized + debuginfo] target(s) in [..]
 ",
-            dir = p.url()
         )).run();
 }
 

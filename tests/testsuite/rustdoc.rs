@@ -7,14 +7,12 @@ fn rustdoc_simple() {
     p.cargo("rustdoc -v")
         .with_stderr(format!(
             "\
-[DOCUMENTING] foo v0.0.1 ({url})
+[DOCUMENTING] foo v0.0.1 (CWD)
 [RUNNING] `rustdoc --crate-name foo src/lib.rs \
-        -o {dir}/target/doc \
-        -L dependency={dir}/target/debug/deps`
+        -o CWD/target/doc \
+        -L dependency=CWD/target/debug/deps`
 [FINISHED] dev [unoptimized + debuginfo] target(s) in [..]
 ",
-            dir = p.root().display(),
-            url = p.url()
         )).run();
 }
 
@@ -25,15 +23,13 @@ fn rustdoc_args() {
     p.cargo("rustdoc -v -- --cfg=foo")
         .with_stderr(format!(
             "\
-[DOCUMENTING] foo v0.0.1 ({url})
+[DOCUMENTING] foo v0.0.1 (CWD)
 [RUNNING] `rustdoc --crate-name foo src/lib.rs \
-        -o {dir}/target/doc \
+        -o CWD/target/doc \
         --cfg=foo \
-        -L dependency={dir}/target/debug/deps`
+        -L dependency=CWD/target/debug/deps`
 [FINISHED] dev [unoptimized + debuginfo] target(s) in [..]
 ",
-            dir = p.root().display(),
-            url = p.url()
         )).run();
 }
 
@@ -64,16 +60,14 @@ fn rustdoc_foo_with_bar_dependency() {
             "\
 [CHECKING] bar v0.0.1 ([..])
 [RUNNING] `rustc [..]bar/src/lib.rs [..]`
-[DOCUMENTING] foo v0.0.1 ({url})
+[DOCUMENTING] foo v0.0.1 (CWD)
 [RUNNING] `rustdoc --crate-name foo src/lib.rs \
-        -o {dir}/target/doc \
+        -o CWD/target/doc \
         --cfg=foo \
-        -L dependency={dir}/target/debug/deps \
+        -L dependency=CWD/target/debug/deps \
         --extern [..]`
 [FINISHED] dev [unoptimized + debuginfo] target(s) in [..]
 ",
-            dir = foo.root().display(),
-            url = foo.url()
         )).run();
 }
 
@@ -104,12 +98,11 @@ fn rustdoc_only_bar_dependency() {
             "\
 [DOCUMENTING] bar v0.0.1 ([..])
 [RUNNING] `rustdoc --crate-name bar [..]bar/src/lib.rs \
-        -o {dir}/target/doc \
+        -o CWD/target/doc \
         --cfg=foo \
-        -L dependency={dir}/target/debug/deps`
+        -L dependency=CWD/target/debug/deps`
 [FINISHED] dev [unoptimized + debuginfo] target(s) in [..]
 ",
-            dir = foo.root().display()
         )).run();
 }
 
@@ -125,12 +118,11 @@ fn rustdoc_same_name_documents_lib() {
             "\
 [DOCUMENTING] foo v0.0.1 ([..])
 [RUNNING] `rustdoc --crate-name foo src/lib.rs \
-        -o {dir}/target/doc \
+        -o CWD/target/doc \
         --cfg=foo \
-        -L dependency={dir}/target/debug/deps`
+        -L dependency=CWD/target/debug/deps`
 [FINISHED] dev [unoptimized + debuginfo] target(s) in [..]
 ",
-            dir = p.root().display()
         )).run();
 }
 
@@ -171,9 +163,9 @@ fn rustdoc_target() {
 [DOCUMENTING] foo v0.0.1 ([..])
 [RUNNING] `rustdoc --crate-name foo src/lib.rs \
     --target x86_64-unknown-linux-gnu \
-    -o [..]foo/target/x86_64-unknown-linux-gnu/doc \
-    -L dependency=[..]foo/target/x86_64-unknown-linux-gnu/debug/deps \
-    -L dependency=[..]foo/target/debug/deps`
+    -o CWD/target/x86_64-unknown-linux-gnu/doc \
+    -L dependency=CWD/target/x86_64-unknown-linux-gnu/debug/deps \
+    -L dependency=CWD/target/debug/deps`
 [FINISHED] dev [unoptimized + debuginfo] target(s) in [..]",
         ).run();
 }

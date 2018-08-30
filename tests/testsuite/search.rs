@@ -143,7 +143,7 @@ fn simple_with_host() {
     setup();
 
     cargo_process("search postgres --host").arg(registry_url().to_string())
-            .with_stderr(&format!(
+            .with_stderr(
                 "\
 [WARNING] The flag '--host' is no longer valid.
 
@@ -154,10 +154,9 @@ wants the location of the index. Please use '--index' instead.
 This will soon become a hard error, so it's either recommended
 to update to a fixed version or contact the upstream maintainer
 about this warning.
-[UPDATING] registry `{reg}`
+[UPDATING] registry `CWD/registry`
 ",
-                reg = registry_url()
-            ))
+            )
             .with_stdout_contains(
                 "hoare = \"0.1.1\"    # Design by contract style assertions for Rust",
             )
@@ -171,7 +170,7 @@ fn simple_with_index_and_host() {
     setup();
 
     cargo_process("search postgres --index").arg(registry_url().to_string()).arg("--host").arg(registry_url().to_string())
-            .with_stderr(&format!(
+            .with_stderr(
                 "\
 [WARNING] The flag '--host' is no longer valid.
 
@@ -182,10 +181,9 @@ wants the location of the index. Please use '--index' instead.
 This will soon become a hard error, so it's either recommended
 to update to a fixed version or contact the upstream maintainer
 about this warning.
-[UPDATING] registry `{reg}`
+[UPDATING] registry `CWD/registry`
 ",
-                reg = registry_url()
-            ))
+            )
             .with_stdout_contains(
                 "hoare = \"0.1.1\"    # Design by contract style assertions for Rust",
             )
