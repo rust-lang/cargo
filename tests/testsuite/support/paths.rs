@@ -1,10 +1,10 @@
-use std::env;
 use std::cell::Cell;
+use std::env;
 use std::fs;
 use std::io::{self, ErrorKind};
 use std::path::{Path, PathBuf};
-use std::sync::{Once, ONCE_INIT};
 use std::sync::atomic::{AtomicUsize, Ordering, ATOMIC_USIZE_INIT};
+use std::sync::{Once, ONCE_INIT};
 
 use filetime::{self, FileTime};
 

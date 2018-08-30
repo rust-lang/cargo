@@ -1,11 +1,10 @@
 use std::fs::{self, File};
 use std::io::prelude::*;
 
-use support::sleep_ms;
 use support::paths::CargoPathExt;
 use support::registry::Package;
-use support::{basic_manifest, execs, path2url, project};
-use support::hamcrest::{assert_that, existing_file};
+use support::sleep_ms;
+use support::{basic_manifest, project};
 
 #[test]
 fn modifying_and_moving() {
@@ -14,18 +13,15 @@ fn modifying_and_moving() {
         .file("src/a.rs", "")
         .build();
 
-    assert_that(
-        p.cargo("build"),
-        execs().with_stderr(format!(
+    p.cargo("build")
+        .with_stderr(format!(
             "\
-[COMPILING] foo v0.0.1 ({dir})
+[COMPILING] foo v0.0.1 (CWD)
 [FINISHED] dev [unoptimized + debuginfo] target(s) in [..]
 ",
-            dir = path2url(p.root())
-        )),
-    );
+        )).run();
 
-    assert_that(p.cargo("build"), execs().with_stdout(""));
+    p.cargo("build").with_stdout("").run();
     p.root().move_into_the_past();
     p.root().join("target").move_into_the_past();
 
@@ -33,19 +29,16 @@ fn modifying_and_moving() {
         .unwrap()
         .write_all(b"#[allow(unused)]fn main() {}")
         .unwrap();
-    assert_that(
-        p.cargo("build"),
-        execs().with_stderr(format!(
+    p.cargo("build")
+        .with_stderr(format!(
             "\
-[COMPILING] foo v0.0.1 ({dir})
+[COMPILING] foo v0.0.1 (CWD)
 [FINISHED] dev [unoptimized + debuginfo] target(s) in [..]
 ",
-            dir = path2url(p.root())
-        )),
-    );
+        )).run();
 
     fs::rename(&p.root().join("src/a.rs"), &p.root().join("src/b.rs")).unwrap();
-    assert_that(p.cargo("build"), execs().with_status(101));
+    p.cargo("build").with_status(101).run();
 }
 
 #[test]
@@ -58,20 +51,17 @@ fn modify_only_some_files() {
         .file("tests/test.rs", "")
         .build();
 
-    assert_that(
-        p.cargo("build"),
-        execs().with_stderr(format!(
+    p.cargo("build")
+        .with_stderr(format!(
             "\
-[COMPILING] foo v0.0.1 ({dir})
+[COMPILING] foo v0.0.1 (CWD)
 [FINISHED] dev [unoptimized + debuginfo] target(s) in [..]
 ",
-            dir = path2url(p.root())
-        )),
-    );
-    assert_that(p.cargo("test"), execs());
+        )).run();
+    p.cargo("test").run();
     sleep_ms(1000);
 
-    assert_that(&p.bin("foo"), existing_file());
+    assert!(p.bin("foo").is_file());
 
     let lib = p.root().join("src/lib.rs");
     let bin = p.root().join("src/b.rs");
@@ -87,17 +77,14 @@ fn modify_only_some_files() {
     lib.move_into_the_past();
 
     // Make sure the binary is rebuilt, not the lib
-    assert_that(
-        p.cargo("build"),
-        execs().with_stderr(format!(
+    p.cargo("build")
+        .with_stderr(format!(
             "\
-[COMPILING] foo v0.0.1 ({dir})
+[COMPILING] foo v0.0.1 (CWD)
 [FINISHED] dev [unoptimized + debuginfo] target(s) in [..]
 ",
-            dir = path2url(p.root())
-        )),
-    );
-    assert_that(&p.bin("foo"), existing_file());
+        )).run();
+    assert!(p.bin("foo").is_file());
 }
 
 #[test]
@@ -116,8 +103,7 @@ fn rebuild_sub_package_then_while_package() {
             [dependencies.b]
             path = "b"
         "#,
-        )
-        .file("src/lib.rs", "extern crate a; extern crate b;")
+        ).file("src/lib.rs", "extern crate a; extern crate b;")
         .file(
             "a/Cargo.toml",
             r#"
@@ -128,27 +114,26 @@ fn rebuild_sub_package_then_while_package() {
             [dependencies.b]
             path = "../b"
         "#,
-        )
-        .file("a/src/lib.rs", "extern crate b;")
+        ).file("a/src/lib.rs", "extern crate b;")
         .file("b/Cargo.toml", &basic_manifest("b", "0.0.1"))
         .file("b/src/lib.rs", "")
         .build();
 
-    assert_that(p.cargo("build"), execs());
+    p.cargo("build").run();
 
     File::create(&p.root().join("b/src/lib.rs"))
         .unwrap()
         .write_all(br#"pub fn b() {}"#)
         .unwrap();
 
-    assert_that(p.cargo("build -pb"), execs());
+    p.cargo("build -pb").run();
 
     File::create(&p.root().join("src/lib.rs"))
         .unwrap()
         .write_all(br#"extern crate a; extern crate b; pub fn toplevel() {}"#)
         .unwrap();
 
-    assert_that(p.cargo("build"), execs());
+    p.cargo("build").run();
 }
 
 #[test]
@@ -165,45 +150,36 @@ fn changing_lib_features_caches_targets() {
             [features]
             foo = []
         "#,
-        )
-        .file("src/lib.rs", "")
+        ).file("src/lib.rs", "")
         .build();
 
-    assert_that(
-        p.cargo("build"),
-        execs().with_stderr(
+    p.cargo("build")
+        .with_stderr(
             "\
 [..]Compiling foo v0.0.1 ([..])
 [FINISHED] dev [unoptimized + debuginfo] target(s) in [..]
 ",
-        ),
-    );
+        ).run();
 
-    assert_that(
-        p.cargo("build --features foo"),
-        execs().with_stderr(
+    p.cargo("build --features foo")
+        .with_stderr(
             "\
 [..]Compiling foo v0.0.1 ([..])
 [FINISHED] dev [unoptimized + debuginfo] target(s) in [..]
 ",
-        ),
-    );
+        ).run();
 
     /* Targets should be cached from the first build */
 
-    assert_that(
-        p.cargo("build"),
-        execs()
-            .with_stderr("[FINISHED] dev [unoptimized + debuginfo] target(s) in [..]"),
-    );
+    p.cargo("build")
+        .with_stderr("[FINISHED] dev [unoptimized + debuginfo] target(s) in [..]")
+        .run();
 
-    assert_that(p.cargo("build"), execs().with_stdout(""));
+    p.cargo("build").with_stdout("").run();
 
-    assert_that(
-        p.cargo("build --features foo"),
-        execs()
-            .with_stderr("[FINISHED] dev [unoptimized + debuginfo] target(s) in [..]"),
-    );
+    p.cargo("build --features foo")
+        .with_stderr("[FINISHED] dev [unoptimized + debuginfo] target(s) in [..]")
+        .run();
 }
 
 #[test]
@@ -220,50 +196,41 @@ fn changing_profiles_caches_targets() {
             [profile.dev]
             panic = "abort"
         "#,
-        )
-        .file("src/lib.rs", "")
+        ).file("src/lib.rs", "")
         .build();
 
-    assert_that(
-        p.cargo("build"),
-        execs().with_stderr(
+    p.cargo("build")
+        .with_stderr(
             "\
 [..]Compiling foo v0.0.1 ([..])
 [FINISHED] dev [unoptimized + debuginfo] target(s) in [..]
 ",
-        ),
-    );
+        ).run();
 
-    assert_that(
-        p.cargo("test"),
-        execs().with_stderr(
+    p.cargo("test")
+        .with_stderr(
             "\
 [..]Compiling foo v0.0.1 ([..])
 [FINISHED] dev [unoptimized + debuginfo] target(s) in [..]
 [RUNNING] target[..]debug[..]deps[..]foo-[..][EXE]
 [DOCTEST] foo
 ",
-        ),
-    );
+        ).run();
 
     /* Targets should be cached from the first build */
 
-    assert_that(
-        p.cargo("build"),
-        execs()
-            .with_stderr("[FINISHED] dev [unoptimized + debuginfo] target(s) in [..]"),
-    );
+    p.cargo("build")
+        .with_stderr("[FINISHED] dev [unoptimized + debuginfo] target(s) in [..]")
+        .run();
 
-    assert_that(
-        p.cargo("test foo"),
-        execs().with_stderr(
+    p.cargo("test foo")
+        .with_stderr(
             "\
 [FINISHED] dev [unoptimized + debuginfo] target(s) in [..]
 [RUNNING] target[..]debug[..]deps[..]foo-[..][EXE]
 [DOCTEST] foo
 ",
-        ),
-    );
+        ).run();
 }
 
 #[test]
@@ -277,8 +244,7 @@ fn changing_bin_paths_common_target_features_caches_targets() {
             [build]
             target-dir = "./target"
         "#,
-        )
-        .file(
+        ).file(
             "dep_crate/Cargo.toml",
             r#"
             [package]
@@ -289,8 +255,7 @@ fn changing_bin_paths_common_target_features_caches_targets() {
             [features]
             ftest  = []
         "#,
-        )
-        .file(
+        ).file(
             "dep_crate/src/lib.rs",
             r#"
             #[cfg(feature = "ftest")]
@@ -302,8 +267,7 @@ fn changing_bin_paths_common_target_features_caches_targets() {
                 println!("ftest off")
             }
         "#,
-        )
-        .file(
+        ).file(
             "a/Cargo.toml",
             r#"
             [package]
@@ -314,8 +278,7 @@ fn changing_bin_paths_common_target_features_caches_targets() {
             [dependencies]
             dep_crate = {path = "../dep_crate", features = []}
         "#,
-        )
-        .file("a/src/lib.rs", "")
+        ).file("a/src/lib.rs", "")
         .file(
             "a/src/main.rs",
             r#"
@@ -325,8 +288,7 @@ fn changing_bin_paths_common_target_features_caches_targets() {
                 yo();
             }
         "#,
-        )
-        .file(
+        ).file(
             "b/Cargo.toml",
             r#"
             [package]
@@ -337,8 +299,7 @@ fn changing_bin_paths_common_target_features_caches_targets() {
             [dependencies]
             dep_crate = {path = "../dep_crate", features = ["ftest"]}
         "#,
-        )
-        .file("b/src/lib.rs", "")
+        ).file("b/src/lib.rs", "")
         .file(
             "b/src/main.rs",
             r#"
@@ -348,96 +309,83 @@ fn changing_bin_paths_common_target_features_caches_targets() {
                 yo();
             }
         "#,
-        )
-        .build();
+        ).build();
 
     /* Build and rebuild a/. Ensure dep_crate only builds once */
-    assert_that(
-        p.cargo("run").cwd(p.root().join("a")),
-        execs().with_stdout("ftest off").with_stderr(
+    p.cargo("run")
+        .cwd(p.root().join("a"))
+        .with_stdout("ftest off")
+        .with_stderr(
             "\
 [..]Compiling dep_crate v0.0.1 ([..])
 [..]Compiling a v0.0.1 ([..])
 [FINISHED] dev [unoptimized + debuginfo] target(s) in [..]
 [RUNNING] `[..]target/debug/a[EXE]`
 ",
-        ),
-    );
-    assert_that(
-        p.cargo("clean -p a").cwd(p.root().join("a")),
-        execs(),
-    );
-    assert_that(
-        p.cargo("run").cwd(p.root().join("a")),
-        execs().with_stdout("ftest off").with_stderr(
+        ).run();
+    p.cargo("clean -p a").cwd(p.root().join("a")).run();
+    p.cargo("run")
+        .cwd(p.root().join("a"))
+        .with_stdout("ftest off")
+        .with_stderr(
             "\
 [..]Compiling a v0.0.1 ([..])
 [FINISHED] dev [unoptimized + debuginfo] target(s) in [..]
 [RUNNING] `[..]target/debug/a[EXE]`
 ",
-        ),
-    );
+        ).run();
 
     /* Build and rebuild b/. Ensure dep_crate only builds once */
-    assert_that(
-        p.cargo("run").cwd(p.root().join("b")),
-        execs().with_stdout("ftest on").with_stderr(
+    p.cargo("run")
+        .cwd(p.root().join("b"))
+        .with_stdout("ftest on")
+        .with_stderr(
             "\
 [..]Compiling dep_crate v0.0.1 ([..])
 [..]Compiling b v0.0.1 ([..])
 [FINISHED] dev [unoptimized + debuginfo] target(s) in [..]
 [RUNNING] `[..]target/debug/b[EXE]`
 ",
-        ),
-    );
-    assert_that(
-        p.cargo("clean -p b").cwd(p.root().join("b")),
-        execs(),
-    );
-    assert_that(
-        p.cargo("run").cwd(p.root().join("b")),
-        execs().with_stdout("ftest on").with_stderr(
+        ).run();
+    p.cargo("clean -p b").cwd(p.root().join("b")).run();
+    p.cargo("run")
+        .cwd(p.root().join("b"))
+        .with_stdout("ftest on")
+        .with_stderr(
             "\
 [..]Compiling b v0.0.1 ([..])
 [FINISHED] dev [unoptimized + debuginfo] target(s) in [..]
 [RUNNING] `[..]target/debug/b[EXE]`
 ",
-        ),
-    );
+        ).run();
 
     /* Build a/ package again. If we cache different feature dep builds correctly,
      * this should not cause a rebuild of dep_crate */
-    assert_that(
-        p.cargo("clean -p a").cwd(p.root().join("a")),
-        execs(),
-    );
-    assert_that(
-        p.cargo("run").cwd(p.root().join("a")),
-        execs().with_stdout("ftest off").with_stderr(
+    p.cargo("clean -p a").cwd(p.root().join("a")).run();
+    p.cargo("run")
+        .cwd(p.root().join("a"))
+        .with_stdout("ftest off")
+        .with_stderr(
             "\
 [..]Compiling a v0.0.1 ([..])
 [FINISHED] dev [unoptimized + debuginfo] target(s) in [..]
 [RUNNING] `[..]target/debug/a[EXE]`
 ",
-        ),
-    );
+        ).run();
 
     /* Build b/ package again. If we cache different feature dep builds correctly,
      * this should not cause a rebuild */
-    assert_that(
-        p.cargo("clean -p b").cwd(p.root().join("b")),
-        execs(),
-    );
-    assert_that(
-        p.cargo("run").cwd(p.root().join("b")),
-        execs().with_stdout("ftest on").with_stderr(
+    p.cargo("clean -p b").cwd(p.root().join("b")).run();
+    p.cargo("run")
+        .cwd(p.root().join("b"))
+        .with_stdout("ftest on")
+        .with_stderr(
             "\
 [..]Compiling b v0.0.1 ([..])
 [FINISHED] dev [unoptimized + debuginfo] target(s) in [..]
 [RUNNING] `[..]target/debug/b[EXE]`
 ",
-        ),
-    );
+        ).run();
 }
 
 #[test]
@@ -454,8 +402,7 @@ fn changing_bin_features_caches_targets() {
             [features]
             foo = []
         "#,
-        )
-        .file(
+        ).file(
             "src/main.rs",
             r#"
             fn main() {
@@ -463,8 +410,7 @@ fn changing_bin_features_caches_targets() {
                 println!("{}", msg);
             }
         "#,
-        )
-        .build();
+        ).build();
 
     // Windows has a problem with replacing a binary that was just executed.
     // Unlinking it will succeed, but then attempting to immediately replace
@@ -477,61 +423,41 @@ fn changing_bin_features_caches_targets() {
         p.process(dst)
     };
 
-    assert_that(
-        p.cargo("build"),
-        execs().with_stderr(
+    p.cargo("build")
+        .with_stderr(
             "\
 [COMPILING] foo v0.0.1 ([..])
 [FINISHED] dev [unoptimized + debuginfo] target(s) in [..]
 ",
-        ),
-    );
-    assert_that(
-        foo_proc("off1"),
-        execs().with_stdout("feature off"),
-    );
+        ).run();
+    foo_proc("off1").with_stdout("feature off").run();
 
-    assert_that(
-        p.cargo("build --features foo"),
-        execs().with_stderr(
+    p.cargo("build --features foo")
+        .with_stderr(
             "\
 [COMPILING] foo v0.0.1 ([..])
 [FINISHED] dev [unoptimized + debuginfo] target(s) in [..]
 ",
-        ),
-    );
-    assert_that(
-        foo_proc("on1"),
-        execs().with_stdout("feature on"),
-    );
+        ).run();
+    foo_proc("on1").with_stdout("feature on").run();
 
     /* Targets should be cached from the first build */
 
-    assert_that(
-        p.cargo("build"),
-        execs().with_stderr(
+    p.cargo("build")
+        .with_stderr(
             "\
 [FINISHED] dev [unoptimized + debuginfo] target(s) in [..]
 ",
-        ),
-    );
-    assert_that(
-        foo_proc("off2"),
-        execs().with_stdout("feature off"),
-    );
+        ).run();
+    foo_proc("off2").with_stdout("feature off").run();
 
-    assert_that(
-        p.cargo("build --features foo"),
-        execs().with_stderr(
+    p.cargo("build --features foo")
+        .with_stderr(
             "\
 [FINISHED] dev [unoptimized + debuginfo] target(s) in [..]
 ",
-        ),
-    );
-    assert_that(
-        foo_proc("on2"),
-        execs().with_stdout("feature on"),
-    );
+        ).run();
+    foo_proc("on2").with_stdout("feature on").run();
 }
 
 #[test]
@@ -545,17 +471,16 @@ fn rebuild_tests_if_lib_changes() {
             #[test]
             fn test() { foo::foo(); }
         "#,
-        )
-        .build();
+        ).build();
 
-    assert_that(p.cargo("build"), execs());
-    assert_that(p.cargo("test"), execs());
+    p.cargo("build").run();
+    p.cargo("test").run();
 
     sleep_ms(1000);
     File::create(&p.root().join("src/lib.rs")).unwrap();
 
-    assert_that(p.cargo("build -v"), execs());
-    assert_that(p.cargo("test -v"), execs().with_status(101));
+    p.cargo("build -v").run();
+    p.cargo("test -v").with_status(101).run();
 }
 
 #[test]
@@ -574,8 +499,7 @@ fn no_rebuild_transitive_target_deps() {
             [dev-dependencies]
             b = { path = "b" }
         "#,
-        )
-        .file("src/lib.rs", "")
+        ).file("src/lib.rs", "")
         .file("tests/foo.rs", "")
         .file(
             "a/Cargo.toml",
@@ -588,8 +512,7 @@ fn no_rebuild_transitive_target_deps() {
             [target.foo.dependencies]
             c = { path = "../c" }
         "#,
-        )
-        .file("a/src/lib.rs", "")
+        ).file("a/src/lib.rs", "")
         .file(
             "b/Cargo.toml",
             r#"
@@ -601,24 +524,21 @@ fn no_rebuild_transitive_target_deps() {
             [dependencies]
             c = { path = "../c" }
         "#,
-        )
-        .file("b/src/lib.rs", "")
+        ).file("b/src/lib.rs", "")
         .file("c/Cargo.toml", &basic_manifest("c", "0.0.1"))
         .file("c/src/lib.rs", "")
         .build();
 
-    assert_that(p.cargo("build"), execs());
-    assert_that(
-        p.cargo("test --no-run"),
-        execs().with_stderr(
+    p.cargo("build").run();
+    p.cargo("test --no-run")
+        .with_stderr(
             "\
 [COMPILING] c v0.0.1 ([..])
 [COMPILING] b v0.0.1 ([..])
 [COMPILING] foo v0.0.1 ([..])
 [FINISHED] dev [unoptimized + debuginfo] target(s) in [..]
 ",
-        ),
-    );
+        ).run();
 }
 
 #[test]
@@ -635,8 +555,7 @@ fn rerun_if_changed_in_dep() {
             [dependencies]
             a = { path = "a" }
         "#,
-        )
-        .file("src/lib.rs", "")
+        ).file("src/lib.rs", "")
         .file(
             "a/Cargo.toml",
             r#"
@@ -646,20 +565,18 @@ fn rerun_if_changed_in_dep() {
             authors = []
             build = "build.rs"
         "#,
-        )
-        .file(
+        ).file(
             "a/build.rs",
             r#"
             fn main() {
                 println!("cargo:rerun-if-changed=build.rs");
             }
         "#,
-        )
-        .file("a/src/lib.rs", "")
+        ).file("a/src/lib.rs", "")
         .build();
 
-    assert_that(p.cargo("build"), execs());
-    assert_that(p.cargo("build"), execs().with_stdout(""));
+    p.cargo("build").run();
+    p.cargo("build").with_stdout("").run();
 }
 
 #[test]
@@ -676,8 +593,7 @@ fn same_build_dir_cached_packages() {
             [dependencies]
             b = { path = "../b" }
         "#,
-        )
-        .file("a1/src/lib.rs", "")
+        ).file("a1/src/lib.rs", "")
         .file(
             "a2/Cargo.toml",
             r#"
@@ -688,8 +604,7 @@ fn same_build_dir_cached_packages() {
             [dependencies]
             b = { path = "../b" }
         "#,
-        )
-        .file("a2/src/lib.rs", "")
+        ).file("a2/src/lib.rs", "")
         .file(
             "b/Cargo.toml",
             r#"
@@ -700,8 +615,7 @@ fn same_build_dir_cached_packages() {
             [dependencies]
             c = { path = "../c" }
         "#,
-        )
-        .file("b/src/lib.rs", "")
+        ).file("b/src/lib.rs", "")
         .file(
             "c/Cargo.toml",
             r#"
@@ -712,8 +626,7 @@ fn same_build_dir_cached_packages() {
             [dependencies]
             d = { path = "../d" }
         "#,
-        )
-        .file("c/src/lib.rs", "")
+        ).file("c/src/lib.rs", "")
         .file("d/Cargo.toml", &basic_manifest("d", "0.0.1"))
         .file("d/src/lib.rs", "")
         .file(
@@ -722,32 +635,28 @@ fn same_build_dir_cached_packages() {
             [build]
             target-dir = "./target"
         "#,
-        )
-        .build();
+        ).build();
 
-    assert_that(
-        p.cargo("build").cwd(p.root().join("a1")),
-        execs().with_stderr(&format!(
+    p.cargo("build")
+        .cwd(p.root().join("a1"))
+        .with_stderr(&format!(
             "\
 [COMPILING] d v0.0.1 ({dir}/d)
 [COMPILING] c v0.0.1 ({dir}/c)
 [COMPILING] b v0.0.1 ({dir}/b)
-[COMPILING] a1 v0.0.1 ({dir}/a1)
+[COMPILING] a1 v0.0.1 (CWD)
 [FINISHED] dev [unoptimized + debuginfo] target(s) in [..]
 ",
             dir = p.url()
-        )),
-    );
-    assert_that(
-        p.cargo("build").cwd(p.root().join("a2")),
-        execs().with_stderr(&format!(
+        )).run();
+    p.cargo("build")
+        .cwd(p.root().join("a2"))
+        .with_stderr(&format!(
             "\
-[COMPILING] a2 v0.0.1 ({dir}/a2)
+[COMPILING] a2 v0.0.1 (CWD)
 [FINISHED] dev [unoptimized + debuginfo] target(s) in [..]
 ",
-            dir = p.url()
-        )),
-    );
+        )).run();
 }
 
 #[test]
@@ -764,22 +673,19 @@ fn no_rebuild_if_build_artifacts_move_backwards_in_time() {
             [dependencies]
             a = { path = "a" }
         "#,
-        )
-        .file("src/lib.rs", "")
+        ).file("src/lib.rs", "")
         .file("a/Cargo.toml", &basic_manifest("a", "0.0.1"))
         .file("a/src/lib.rs", "")
         .build();
 
-    assert_that(p.cargo("build"), execs());
+    p.cargo("build").run();
 
     p.root().move_into_the_past();
 
-    assert_that(
-        p.cargo("build"),
-        execs()
-            .with_stdout("")
-            .with_stderr("[FINISHED] [..]"),
-    );
+    p.cargo("build")
+        .with_stdout("")
+        .with_stderr("[FINISHED] [..]")
+        .run();
 }
 
 #[test]
@@ -796,26 +702,25 @@ fn rebuild_if_build_artifacts_move_forward_in_time() {
             [dependencies]
             a = { path = "a" }
         "#,
-        )
-        .file("src/lib.rs", "")
+        ).file("src/lib.rs", "")
         .file("a/Cargo.toml", &basic_manifest("a", "0.0.1"))
         .file("a/src/lib.rs", "")
         .build();
 
-    assert_that(p.cargo("build"), execs());
+    p.cargo("build").run();
 
     p.root().move_into_the_future();
 
-    assert_that(
-        p.cargo("build").env("RUST_LOG", ""),
-        execs().with_stdout("").with_stderr(
+    p.cargo("build")
+        .env("RUST_LOG", "")
+        .with_stdout("")
+        .with_stderr(
             "\
 [COMPILING] a v0.0.1 ([..])
 [COMPILING] foo v0.0.1 ([..])
 [FINISHED] [..]
 ",
-        ),
-    );
+        ).run();
 }
 
 #[test]
@@ -830,30 +735,24 @@ fn rebuild_if_environment_changes() {
             version = "0.0.1"
             authors = []
         "#,
-        )
-        .file(
+        ).file(
             "src/main.rs",
             r#"
             fn main() {
                 println!("{}", env!("CARGO_PKG_DESCRIPTION"));
             }
         "#,
-        )
-        .build();
+        ).build();
 
-    assert_that(
-        p.cargo("run"),
-        execs()
-            .with_stdout("old desc")
-            .with_stderr(&format!(
-                "\
-[COMPILING] foo v0.0.1 ({dir})
+    p.cargo("run")
+        .with_stdout("old desc")
+        .with_stderr(&format!(
+            "\
+[COMPILING] foo v0.0.1 (CWD)
 [FINISHED] dev [unoptimized + debuginfo] target(s) in [..]
 [RUNNING] `target/debug/foo[EXE]`
 ",
-                dir = p.url()
-            )),
-    );
+        )).run();
 
     File::create(&p.root().join("Cargo.toml"))
         .unwrap()
@@ -865,22 +764,17 @@ fn rebuild_if_environment_changes() {
         version = "0.0.1"
         authors = []
     "#,
-        )
-        .unwrap();
+        ).unwrap();
 
-    assert_that(
-        p.cargo("run"),
-        execs()
-            .with_stdout("new desc")
-            .with_stderr(&format!(
-                "\
-[COMPILING] foo v0.0.1 ({dir})
+    p.cargo("run")
+        .with_stdout("new desc")
+        .with_stderr(&format!(
+            "\
+[COMPILING] foo v0.0.1 (CWD)
 [FINISHED] dev [unoptimized + debuginfo] target(s) in [..]
 [RUNNING] `target/debug/foo[EXE]`
 ",
-                dir = p.url()
-            )),
-    );
+        )).run();
 }
 
 #[test]
@@ -897,23 +791,21 @@ fn no_rebuild_when_rename_dir() {
             [dependencies]
             foo = { path = "foo" }
         "#,
-        )
-        .file("src/lib.rs", "")
+        ).file("src/lib.rs", "")
         .file("foo/Cargo.toml", &basic_manifest("foo", "0.0.1"))
         .file("foo/src/lib.rs", "")
         .build();
 
-    assert_that(p.cargo("build"), execs());
+    p.cargo("build").run();
     let mut new = p.root();
     new.pop();
     new.push("bar");
     fs::rename(p.root(), &new).unwrap();
 
-    assert_that(
-        p.cargo("build").cwd(&new),
-        execs()
-            .with_stderr("[FINISHED] dev [unoptimized + debuginfo] target(s) in [..]"),
-    );
+    p.cargo("build")
+        .cwd(&new)
+        .with_stderr("[FINISHED] dev [unoptimized + debuginfo] target(s) in [..]")
+        .run();
 }
 
 #[test]
@@ -936,8 +828,7 @@ fn unused_optional_dep() {
                 baz = { path = "baz" }
                 registry1 = "*"
             "#,
-        )
-        .file("src/lib.rs", "")
+        ).file("src/lib.rs", "")
         .file(
             "bar/Cargo.toml",
             r#"
@@ -949,8 +840,7 @@ fn unused_optional_dep() {
                 [dev-dependencies]
                 registry2 = "*"
             "#,
-        )
-        .file("bar/src/lib.rs", "")
+        ).file("bar/src/lib.rs", "")
         .file(
             "baz/Cargo.toml",
             r#"
@@ -962,15 +852,11 @@ fn unused_optional_dep() {
                 [dependencies]
                 registry3 = { version = "*", optional = true }
             "#,
-        )
-        .file("baz/src/lib.rs", "")
+        ).file("baz/src/lib.rs", "")
         .build();
 
-    assert_that(p.cargo("build"), execs());
-    assert_that(
-        p.cargo("build"),
-        execs().with_stderr("[FINISHED] [..]"),
-    );
+    p.cargo("build").run();
+    p.cargo("build").with_stderr("[FINISHED] [..]").run();
 }
 
 #[test]
@@ -990,8 +876,7 @@ fn path_dev_dep_registry_updates() {
                 [dependencies]
                 bar = { path = "bar" }
             "#,
-        )
-        .file("src/lib.rs", "")
+        ).file("src/lib.rs", "")
         .file(
             "bar/Cargo.toml",
             r#"
@@ -1006,8 +891,7 @@ fn path_dev_dep_registry_updates() {
                 [dev-dependencies]
                 baz = { path = "../baz"}
             "#,
-        )
-        .file("bar/src/lib.rs", "")
+        ).file("bar/src/lib.rs", "")
         .file(
             "baz/Cargo.toml",
             r#"
@@ -1019,15 +903,11 @@ fn path_dev_dep_registry_updates() {
                 [dependencies]
                 registry2 = "*"
             "#,
-        )
-        .file("baz/src/lib.rs", "")
+        ).file("baz/src/lib.rs", "")
         .build();
 
-    assert_that(p.cargo("build"), execs());
-    assert_that(
-        p.cargo("build"),
-        execs().with_stderr("[FINISHED] [..]"),
-    );
+    p.cargo("build").run();
+    p.cargo("build").with_stderr("[FINISHED] [..]").run();
 }
 
 #[test]
@@ -1041,8 +921,7 @@ fn change_panic_mode() {
                 [profile.dev]
                 panic = 'abort'
             "#,
-        )
-        .file("src/lib.rs", "")
+        ).file("src/lib.rs", "")
         .file("bar/Cargo.toml", &basic_manifest("bar", "0.1.1"))
         .file("bar/src/lib.rs", "")
         .file(
@@ -1059,12 +938,11 @@ fn change_panic_mode() {
                 [dependencies]
                 bar = { path = '../bar' }
             "#,
-        )
-        .file("baz/src/lib.rs", "extern crate bar;")
+        ).file("baz/src/lib.rs", "extern crate bar;")
         .build();
 
-    assert_that(p.cargo("build -p bar"), execs());
-    assert_that(p.cargo("build -p baz"), execs());
+    p.cargo("build -p bar").run();
+    p.cargo("build -p baz").run();
 }
 
 #[test]
@@ -1083,8 +961,7 @@ fn dont_rebuild_based_on_plugins() {
                 [dependencies]
                 proc-macro-thing = { path = 'proc-macro-thing' }
             "#,
-        )
-        .file("src/lib.rs", "")
+        ).file("src/lib.rs", "")
         .file(
             "proc-macro-thing/Cargo.toml",
             r#"
@@ -1098,8 +975,7 @@ fn dont_rebuild_based_on_plugins() {
                 [dependencies]
                 qux = { path = '../qux' }
             "#,
-        )
-        .file("proc-macro-thing/src/lib.rs", "")
+        ).file("proc-macro-thing/src/lib.rs", "")
         .file(
             "baz/Cargo.toml",
             r#"
@@ -1110,22 +986,17 @@ fn dont_rebuild_based_on_plugins() {
                 [dependencies]
                 qux = { path = '../qux' }
             "#,
-        )
-        .file("baz/src/main.rs", "fn main() {}")
+        ).file("baz/src/main.rs", "fn main() {}")
         .file("qux/Cargo.toml", &basic_manifest("qux", "0.1.1"))
         .file("qux/src/lib.rs", "")
         .build();
 
-    assert_that(p.cargo("build"), execs());
-    assert_that(p.cargo("build -p baz"), execs());
-    assert_that(
-        p.cargo("build"),
-        execs().with_stderr("[FINISHED] [..]\n"),
-    );
-    assert_that(
-        p.cargo("build -p bar"),
-        execs().with_stderr("[FINISHED] [..]\n"),
-    );
+    p.cargo("build").run();
+    p.cargo("build -p baz").run();
+    p.cargo("build").with_stderr("[FINISHED] [..]\n").run();
+    p.cargo("build -p bar")
+        .with_stderr("[FINISHED] [..]\n")
+        .run();
 }
 
 #[test]
@@ -1143,18 +1014,18 @@ fn reuse_workspace_lib() {
                 [dependencies]
                 baz = { path = 'baz' }
             "#,
-        )
-        .file("src/lib.rs", "")
+        ).file("src/lib.rs", "")
         .file("baz/Cargo.toml", &basic_manifest("baz", "0.1.1"))
         .file("baz/src/lib.rs", "")
         .build();
 
-    assert_that(p.cargo("build"), execs());
-    assert_that(
-        p.cargo("test -p baz -v --no-run"),
-        execs().with_stderr("\
+    p.cargo("build").run();
+    p.cargo("test -p baz -v --no-run")
+        .with_stderr(
+            "\
 [COMPILING] baz v0.1.1 ([..])
 [RUNNING] `rustc[..] --test [..]`
 [FINISHED] [..]
-"));
+",
+        ).run();
 }

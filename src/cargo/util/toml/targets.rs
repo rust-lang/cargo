@@ -16,8 +16,10 @@ use std::collections::HashSet;
 
 use core::{compiler, Edition, Feature, Features, Target};
 use util::errors::{CargoResult, CargoResultExt};
-use super::{LibKind, PathValue, StringOrBool, TomlBenchTarget, TomlBinTarget, TomlExampleTarget,
-            TomlLibTarget, TomlManifest, TomlTarget, TomlTestTarget};
+use super::{
+    LibKind, PathValue, StringOrBool, StringOrVec, TomlBenchTarget, TomlBinTarget,
+    TomlExampleTarget, TomlLibTarget, TomlManifest, TomlTarget, TomlTestTarget,
+};
 
 pub fn targets(
     features: &Features,
@@ -26,6 +28,7 @@ pub fn targets(
     package_root: &Path,
     edition: Edition,
     custom_build: &Option<StringOrBool>,
+    metabuild: &Option<StringOrVec>,
     warnings: &mut Vec<String>,
     errors: &mut Vec<String>,
 ) -> CargoResult<Vec<Target>> {
@@ -97,6 +100,9 @@ pub fn targets(
 
     // processing the custom build script
     if let Some(custom_build) = manifest.maybe_custom_build(custom_build, package_root) {
+        if metabuild.is_some() {
+            bail!("cannot specify both `metabuild` and `build`");
+        }
         let name = format!(
             "build-script-{}",
             custom_build
@@ -109,6 +115,23 @@ pub fn targets(
             package_root.join(custom_build),
             edition,
         ));
+    }
+    if let Some(metabuild) = metabuild {
+        // Verify names match available build deps.
+        let bdeps = manifest.build_dependencies.as_ref();
+        for name in &metabuild.0 {
+            if !bdeps.map_or(false, |bd| bd.contains_key(name)) {
+                bail!(
+                    "metabuild package `{}` must be specified in `build-dependencies`",
+                    name
+                );
+            }
+        }
+
+        targets.push(Target::metabuild_target(&format!(
+            "metabuild-{}",
+            package.name
+        )));
     }
 
     Ok(targets)

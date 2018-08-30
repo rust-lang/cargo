@@ -1,12 +1,11 @@
-use cargo::core::{Shell, enable_nightly_features};
+use cargo::core::{enable_nightly_features, Shell};
 use cargo::util::config::{self, Config};
 use cargo::util::toml::{self, VecStringOrBool as VSOB};
 use cargo::CargoError;
-use support::{execs, lines_match, paths, project};
-use support::hamcrest::assert_that;
 use std::borrow::Borrow;
 use std::collections;
 use std::fs;
+use support::{lines_match, paths, project};
 
 #[test]
 fn read_env_vars_for_config() {
@@ -20,8 +19,7 @@ fn read_env_vars_for_config() {
             version = "0.0.0"
             build = "build.rs"
         "#,
-        )
-        .file("src/lib.rs", "")
+        ).file("src/lib.rs", "")
         .file(
             "build.rs",
             r#"
@@ -30,13 +28,9 @@ fn read_env_vars_for_config() {
                 assert_eq!(env::var("NUM_JOBS").unwrap(), "100");
             }
         "#,
-        )
-        .build();
+        ).build();
 
-    assert_that(
-        p.cargo("build").env("CARGO_BUILD_JOBS", "100"),
-        execs(),
-    );
+    p.cargo("build").env("CARGO_BUILD_JOBS", "100").run();
 }
 
 fn write_config(config: &str) {
@@ -57,15 +51,16 @@ fn new_config(env: &[(&str, &str)]) -> Config {
         .collect();
     let mut config = Config::new(shell, cwd, homedir);
     config.set_env(env);
-    config.configure(
-        0,
-        None,
-        &None,
-        false,
-        false,
-        &None,
-        &["advanced-env".into()],
-    ).unwrap();
+    config
+        .configure(
+            0,
+            None,
+            &None,
+            false,
+            false,
+            &None,
+            &["advanced-env".into()],
+        ).unwrap();
     config
 }
 
@@ -651,10 +646,22 @@ i64max = 9223372036854775807
         ("CARGO_EI64MAX", "9223372036854775807"),
     ]);
 
-    assert_eq!(config.get::<u64>("i64max").unwrap(), 9_223_372_036_854_775_807);
-    assert_eq!(config.get::<i64>("i64max").unwrap(), 9_223_372_036_854_775_807);
-    assert_eq!(config.get::<u64>("ei64max").unwrap(), 9_223_372_036_854_775_807);
-    assert_eq!(config.get::<i64>("ei64max").unwrap(), 9_223_372_036_854_775_807);
+    assert_eq!(
+        config.get::<u64>("i64max").unwrap(),
+        9_223_372_036_854_775_807
+    );
+    assert_eq!(
+        config.get::<i64>("i64max").unwrap(),
+        9_223_372_036_854_775_807
+    );
+    assert_eq!(
+        config.get::<u64>("ei64max").unwrap(),
+        9_223_372_036_854_775_807
+    );
+    assert_eq!(
+        config.get::<i64>("ei64max").unwrap(),
+        9_223_372_036_854_775_807
+    );
 
     assert_error(
         config.get::<u32>("nneg").unwrap_err(),

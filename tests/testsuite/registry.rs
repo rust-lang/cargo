@@ -7,8 +7,7 @@ use support::cargo_process;
 use support::git;
 use support::paths::{self, CargoPathExt};
 use support::registry::{self, Package};
-use support::{basic_manifest, execs, project};
-use support::hamcrest::assert_that;
+use support::{basic_manifest, project};
 use url::Url;
 
 fn registry_path() -> PathBuf {
@@ -32,41 +31,34 @@ fn simple() {
             [dependencies]
             bar = ">= 0.0.0"
         "#,
-        )
-        .file("src/main.rs", "fn main() {}")
+        ).file("src/main.rs", "fn main() {}")
         .build();
 
     Package::new("bar", "0.0.1").publish();
 
-    assert_that(
-        p.cargo("build"),
-        execs().with_stderr(&format!(
+    p.cargo("build")
+        .with_stderr(&format!(
             "\
 [UPDATING] registry `{reg}`
 [DOWNLOADING] bar v0.0.1 (registry `file://[..]`)
 [COMPILING] bar v0.0.1
-[COMPILING] foo v0.0.1 ({dir})
+[COMPILING] foo v0.0.1 (CWD)
 [FINISHED] dev [unoptimized + debuginfo] target(s) in [..]s
 ",
-            dir = p.url(),
             reg = registry::registry()
-        )),
-    );
+        )).run();
 
-    assert_that(p.cargo("clean"), execs());
+    p.cargo("clean").run();
 
     // Don't download a second time
-    assert_that(
-        p.cargo("build"),
-        execs().with_stderr(&format!(
+    p.cargo("build")
+        .with_stderr(&format!(
             "\
 [COMPILING] bar v0.0.1
-[COMPILING] foo v0.0.1 ({dir})
+[COMPILING] foo v0.0.1 (CWD)
 [FINISHED] dev [unoptimized + debuginfo] target(s) in [..]s
 ",
-            dir = p.url()
-        )),
-    );
+        )).run();
 }
 
 #[test]
@@ -83,29 +75,25 @@ fn deps() {
             [dependencies]
             bar = ">= 0.0.0"
         "#,
-        )
-        .file("src/main.rs", "fn main() {}")
+        ).file("src/main.rs", "fn main() {}")
         .build();
 
     Package::new("baz", "0.0.1").publish();
     Package::new("bar", "0.0.1").dep("baz", "*").publish();
 
-    assert_that(
-        p.cargo("build"),
-        execs().with_stderr(&format!(
+    p.cargo("build")
+        .with_stderr(&format!(
             "\
 [UPDATING] registry `{reg}`
 [DOWNLOADING] [..] v0.0.1 (registry `file://[..]`)
 [DOWNLOADING] [..] v0.0.1 (registry `file://[..]`)
 [COMPILING] baz v0.0.1
 [COMPILING] bar v0.0.1
-[COMPILING] foo v0.0.1 ({dir})
+[COMPILING] foo v0.0.1 (CWD)
 [FINISHED] dev [unoptimized + debuginfo] target(s) in [..]s
 ",
-            dir = p.url(),
             reg = registry::registry()
-        )),
-    );
+        )).run();
 }
 
 #[test]
@@ -124,21 +112,19 @@ fn nonexistent() {
             [dependencies]
             nonexistent = ">= 0.0.0"
         "#,
-        )
-        .file("src/main.rs", "fn main() {}")
+        ).file("src/main.rs", "fn main() {}")
         .build();
 
-    assert_that(
-        p.cargo("build"),
-        execs().with_status(101).with_stderr(
+    p.cargo("build")
+        .with_status(101)
+        .with_stderr(
             "\
 [UPDATING] registry [..]
 error: no matching package named `nonexistent` found
 location searched: registry [..]
 required by package `foo v0.0.1 ([..])`
 ",
-        ),
-    );
+        ).run();
 }
 
 #[test]
@@ -157,14 +143,13 @@ fn wrong_case() {
             [dependencies]
             Init = ">= 0.0.0"
         "#,
-        )
-        .file("src/main.rs", "fn main() {}")
+        ).file("src/main.rs", "fn main() {}")
         .build();
 
     // #5678 to make this work
-    assert_that(
-        p.cargo("build"),
-        execs().with_status(101).with_stderr(
+    p.cargo("build")
+        .with_status(101)
+        .with_stderr(
             "\
 [UPDATING] registry [..]
 error: no matching package named `Init` found
@@ -172,8 +157,7 @@ location searched: registry [..]
 did you mean: init
 required by package `foo v0.0.1 ([..])`
 ",
-        ),
-    );
+        ).run();
 }
 
 #[test]
@@ -192,14 +176,13 @@ fn mis_hyphenated() {
             [dependencies]
             mis_hyphenated = ">= 0.0.0"
         "#,
-        )
-        .file("src/main.rs", "fn main() {}")
+        ).file("src/main.rs", "fn main() {}")
         .build();
 
     // #2775 to make this work
-    assert_that(
-        p.cargo("build"),
-        execs().with_status(101).with_stderr(
+    p.cargo("build")
+        .with_status(101)
+        .with_stderr(
             "\
 [UPDATING] registry [..]
 error: no matching package named `mis_hyphenated` found
@@ -207,8 +190,7 @@ location searched: registry [..]
 did you mean: mis-hyphenated
 required by package `foo v0.0.1 ([..])`
 ",
-        ),
-    );
+        ).run();
 }
 
 #[test]
@@ -225,39 +207,36 @@ fn wrong_version() {
             [dependencies]
             foo = ">= 1.0.0"
         "#,
-        )
-        .file("src/main.rs", "fn main() {}")
+        ).file("src/main.rs", "fn main() {}")
         .build();
 
     Package::new("foo", "0.0.1").publish();
     Package::new("foo", "0.0.2").publish();
 
-    assert_that(
-        p.cargo("build"),
-        execs().with_status(101).with_stderr_contains(
+    p.cargo("build")
+        .with_status(101)
+        .with_stderr_contains(
             "\
 error: no matching version `>= 1.0.0` found for package `foo`
 location searched: registry [..]
 versions found: 0.0.2, 0.0.1
 required by package `foo v0.0.1 ([..])`
 ",
-        ),
-    );
+        ).run();
 
     Package::new("foo", "0.0.3").publish();
     Package::new("foo", "0.0.4").publish();
 
-    assert_that(
-        p.cargo("build"),
-        execs().with_status(101).with_stderr_contains(
+    p.cargo("build")
+        .with_status(101)
+        .with_stderr_contains(
             "\
 error: no matching version `>= 1.0.0` found for package `foo`
 location searched: registry [..]
 versions found: 0.0.4, 0.0.3, 0.0.2, ...
 required by package `foo v0.0.1 ([..])`
 ",
-        ),
-    );
+        ).run();
 }
 
 #[test]
@@ -274,17 +253,16 @@ fn bad_cksum() {
             [dependencies]
             bad-cksum = ">= 0.0.0"
         "#,
-        )
-        .file("src/main.rs", "fn main() {}")
+        ).file("src/main.rs", "fn main() {}")
         .build();
 
     let pkg = Package::new("bad-cksum", "0.0.1");
     pkg.publish();
     t!(File::create(&pkg.archive_dst()));
 
-    assert_that(
-        p.cargo("build -v"),
-        execs().with_status(101).with_stderr(
+    p.cargo("build -v")
+        .with_status(101)
+        .with_stderr(
             "\
 [UPDATING] registry [..]
 [DOWNLOADING] bad-cksum [..]
@@ -296,8 +274,7 @@ Caused by:
 Caused by:
   failed to verify the checksum of `bad-cksum v0.0.1 (registry `file://[..]`)`
 ",
-        ),
-    );
+        ).run();
 }
 
 #[test]
@@ -316,37 +293,32 @@ fn update_registry() {
             [dependencies]
             notyet = ">= 0.0.0"
         "#,
-        )
-        .file("src/main.rs", "fn main() {}")
+        ).file("src/main.rs", "fn main() {}")
         .build();
 
-    assert_that(
-        p.cargo("build"),
-        execs().with_status(101).with_stderr_contains(
+    p.cargo("build")
+        .with_status(101)
+        .with_stderr_contains(
             "\
 error: no matching package named `notyet` found
 location searched: registry `[..]`
 required by package `foo v0.0.1 ([..])`
 ",
-        ),
-    );
+        ).run();
 
     Package::new("notyet", "0.0.1").publish();
 
-    assert_that(
-        p.cargo("build"),
-        execs().with_stderr(&format!(
+    p.cargo("build")
+        .with_stderr(&format!(
             "\
 [UPDATING] registry `{reg}`
 [DOWNLOADING] notyet v0.0.1 (registry `file://[..]`)
 [COMPILING] notyet v0.0.1
-[COMPILING] foo v0.0.1 ({dir})
+[COMPILING] foo v0.0.1 (CWD)
 [FINISHED] dev [unoptimized + debuginfo] target(s) in [..]s
 ",
-            dir = p.url(),
             reg = registry::registry()
-        )),
-    );
+        )).run();
 }
 
 #[test]
@@ -369,15 +341,14 @@ fn package_with_path_deps() {
             version = "0.0.1"
             path = "notyet"
         "#,
-        )
-        .file("src/main.rs", "fn main() {}")
+        ).file("src/main.rs", "fn main() {}")
         .file("notyet/Cargo.toml", &basic_manifest("notyet", "0.0.1"))
         .file("notyet/src/lib.rs", "")
         .build();
 
-    assert_that(
-        p.cargo("package -v"),
-        execs().with_status(101).with_stderr_contains(
+    p.cargo("package -v")
+        .with_status(101)
+        .with_stderr_contains(
             "\
 [ERROR] failed to verify package tarball
 
@@ -386,26 +357,22 @@ Caused by:
 location searched: registry [..]
 required by package `foo v0.0.1 ([..])`
 ",
-        ),
-    );
+        ).run();
 
     Package::new("notyet", "0.0.1").publish();
 
-    assert_that(
-        p.cargo("package"),
-        execs().with_stderr(format!(
+    p.cargo("package")
+        .with_stderr(format!(
             "\
-[PACKAGING] foo v0.0.1 ({dir})
-[VERIFYING] foo v0.0.1 ({dir})
+[PACKAGING] foo v0.0.1 (CWD)
+[VERIFYING] foo v0.0.1 (CWD)
 [UPDATING] registry `[..]`
 [DOWNLOADING] notyet v0.0.1 (registry `file://[..]`)
 [COMPILING] notyet v0.0.1
-[COMPILING] foo v0.0.1 ({dir}[..])
+[COMPILING] foo v0.0.1 (CWD[..])
 [FINISHED] dev [unoptimized + debuginfo] target(s) in [..]s
 ",
-            dir = p.url()
-        )),
-    );
+        )).run();
 }
 
 #[test]
@@ -422,30 +389,26 @@ fn lockfile_locks() {
             [dependencies]
             bar = "*"
         "#,
-        )
-        .file("src/main.rs", "fn main() {}")
+        ).file("src/main.rs", "fn main() {}")
         .build();
 
     Package::new("bar", "0.0.1").publish();
 
-    assert_that(
-        p.cargo("build"),
-        execs().with_stderr(&format!(
+    p.cargo("build")
+        .with_stderr(&format!(
             "\
 [UPDATING] registry `[..]`
 [DOWNLOADING] bar v0.0.1 (registry `file://[..]`)
 [COMPILING] bar v0.0.1
-[COMPILING] foo v0.0.1 ({dir})
+[COMPILING] foo v0.0.1 (CWD)
 [FINISHED] dev [unoptimized + debuginfo] target(s) in [..]s
 ",
-            dir = p.url()
-        )),
-    );
+        )).run();
 
     p.root().move_into_the_past();
     Package::new("bar", "0.0.2").publish();
 
-    assert_that(p.cargo("build"), execs().with_stdout(""));
+    p.cargo("build").with_stdout("").run();
 }
 
 #[test]
@@ -462,34 +425,30 @@ fn lockfile_locks_transitively() {
             [dependencies]
             bar = "*"
         "#,
-        )
-        .file("src/main.rs", "fn main() {}")
+        ).file("src/main.rs", "fn main() {}")
         .build();
 
     Package::new("baz", "0.0.1").publish();
     Package::new("bar", "0.0.1").dep("baz", "*").publish();
 
-    assert_that(
-        p.cargo("build"),
-        execs().with_stderr(&format!(
+    p.cargo("build")
+        .with_stderr(&format!(
             "\
 [UPDATING] registry `[..]`
 [DOWNLOADING] [..] v0.0.1 (registry `file://[..]`)
 [DOWNLOADING] [..] v0.0.1 (registry `file://[..]`)
 [COMPILING] baz v0.0.1
 [COMPILING] bar v0.0.1
-[COMPILING] foo v0.0.1 ({dir})
+[COMPILING] foo v0.0.1 (CWD)
 [FINISHED] dev [unoptimized + debuginfo] target(s) in [..]s
 ",
-            dir = p.url()
-        )),
-    );
+        )).run();
 
     p.root().move_into_the_past();
     Package::new("baz", "0.0.2").publish();
     Package::new("bar", "0.0.2").dep("baz", "*").publish();
 
-    assert_that(p.cargo("build"), execs().with_stdout(""));
+    p.cargo("build").with_stdout("").run();
 }
 
 #[test]
@@ -506,8 +465,7 @@ fn yanks_are_not_used() {
             [dependencies]
             bar = "*"
         "#,
-        )
-        .file("src/main.rs", "fn main() {}")
+        ).file("src/main.rs", "fn main() {}")
         .build();
 
     Package::new("baz", "0.0.1").publish();
@@ -518,21 +476,18 @@ fn yanks_are_not_used() {
         .yanked(true)
         .publish();
 
-    assert_that(
-        p.cargo("build"),
-        execs().with_stderr(&format!(
+    p.cargo("build")
+        .with_stderr(&format!(
             "\
 [UPDATING] registry `[..]`
 [DOWNLOADING] [..] v0.0.1 (registry `file://[..]`)
 [DOWNLOADING] [..] v0.0.1 (registry `file://[..]`)
 [COMPILING] baz v0.0.1
 [COMPILING] bar v0.0.1
-[COMPILING] foo v0.0.1 ({dir})
+[COMPILING] foo v0.0.1 (CWD)
 [FINISHED] dev [unoptimized + debuginfo] target(s) in [..]s
 ",
-            dir = p.url()
-        )),
-    );
+        )).run();
 }
 
 #[test]
@@ -549,25 +504,23 @@ fn relying_on_a_yank_is_bad() {
             [dependencies]
             bar = "*"
         "#,
-        )
-        .file("src/main.rs", "fn main() {}")
+        ).file("src/main.rs", "fn main() {}")
         .build();
 
     Package::new("baz", "0.0.1").publish();
     Package::new("baz", "0.0.2").yanked(true).publish();
     Package::new("bar", "0.0.1").dep("baz", "=0.0.2").publish();
 
-    assert_that(
-        p.cargo("build"),
-        execs().with_status(101).with_stderr_contains(
+    p.cargo("build")
+        .with_status(101)
+        .with_stderr_contains(
             "\
 error: no matching version `= 0.0.2` found for package `baz`
 location searched: registry `[..]`
 versions found: 0.0.1
 required by package `bar v0.0.1`
 ",
-        ),
-    );
+        ).run();
 }
 
 #[test]
@@ -584,30 +537,28 @@ fn yanks_in_lockfiles_are_ok() {
             [dependencies]
             bar = "*"
         "#,
-        )
-        .file("src/main.rs", "fn main() {}")
+        ).file("src/main.rs", "fn main() {}")
         .build();
 
     Package::new("bar", "0.0.1").publish();
 
-    assert_that(p.cargo("build"), execs());
+    p.cargo("build").run();
 
     registry::registry_path().join("3").rm_rf();
 
     Package::new("bar", "0.0.1").yanked(true).publish();
 
-    assert_that(p.cargo("build"), execs().with_stdout(""));
+    p.cargo("build").with_stdout("").run();
 
-    assert_that(
-        p.cargo("update"),
-        execs().with_status(101).with_stderr_contains(
+    p.cargo("update")
+        .with_status(101)
+        .with_stderr_contains(
             "\
 error: no matching package named `bar` found
 location searched: registry [..]
 required by package `foo v0.0.1 ([..])`
 ",
-        ),
-    );
+        ).run();
 }
 
 #[test]
@@ -624,25 +575,22 @@ fn update_with_lockfile_if_packages_missing() {
             [dependencies]
             bar = "*"
         "#,
-        )
-        .file("src/main.rs", "fn main() {}")
+        ).file("src/main.rs", "fn main() {}")
         .build();
 
     Package::new("bar", "0.0.1").publish();
-    assert_that(p.cargo("build"), execs());
+    p.cargo("build").run();
     p.root().move_into_the_past();
 
     paths::home().join(".cargo/registry").rm_rf();
-    assert_that(
-        p.cargo("build"),
-        execs().with_stderr(
+    p.cargo("build")
+        .with_stderr(
             "\
 [UPDATING] registry `[..]`
 [DOWNLOADING] bar v0.0.1 (registry `file://[..]`)
 [FINISHED] dev [unoptimized + debuginfo] target(s) in [..]s
 ",
-        ),
-    );
+        ).run();
 }
 
 #[test]
@@ -659,98 +607,82 @@ fn update_lockfile() {
             [dependencies]
             bar = "*"
         "#,
-        )
-        .file("src/main.rs", "fn main() {}")
+        ).file("src/main.rs", "fn main() {}")
         .build();
 
     println!("0.0.1");
     Package::new("bar", "0.0.1").publish();
-    assert_that(p.cargo("build"), execs());
+    p.cargo("build").run();
 
     Package::new("bar", "0.0.2").publish();
     Package::new("bar", "0.0.3").publish();
     paths::home().join(".cargo/registry").rm_rf();
     println!("0.0.2 update");
-    assert_that(
-        p.cargo("update -p bar --precise 0.0.2"),
-        execs().with_stderr(
+    p.cargo("update -p bar --precise 0.0.2")
+        .with_stderr(
             "\
 [UPDATING] registry `[..]`
 [UPDATING] bar v0.0.1 -> v0.0.2
 ",
-        ),
-    );
+        ).run();
 
     println!("0.0.2 build");
-    assert_that(
-        p.cargo("build"),
-        execs().with_stderr(&format!(
+    p.cargo("build")
+        .with_stderr(&format!(
             "\
 [DOWNLOADING] [..] v0.0.2 (registry `file://[..]`)
 [COMPILING] bar v0.0.2
-[COMPILING] foo v0.0.1 ({dir})
+[COMPILING] foo v0.0.1 (CWD)
 [FINISHED] dev [unoptimized + debuginfo] target(s) in [..]s
 ",
-            dir = p.url()
-        )),
-    );
+        )).run();
 
     println!("0.0.3 update");
-    assert_that(
-        p.cargo("update -p bar"),
-        execs().with_stderr(
+    p.cargo("update -p bar")
+        .with_stderr(
             "\
 [UPDATING] registry `[..]`
 [UPDATING] bar v0.0.2 -> v0.0.3
 ",
-        ),
-    );
+        ).run();
 
     println!("0.0.3 build");
-    assert_that(
-        p.cargo("build"),
-        execs().with_stderr(&format!(
+    p.cargo("build")
+        .with_stderr(&format!(
             "\
 [DOWNLOADING] [..] v0.0.3 (registry `file://[..]`)
 [COMPILING] bar v0.0.3
-[COMPILING] foo v0.0.1 ({dir})
+[COMPILING] foo v0.0.1 (CWD)
 [FINISHED] dev [unoptimized + debuginfo] target(s) in [..]s
 ",
-            dir = p.url()
-        )),
-    );
+        )).run();
 
     println!("new dependencies update");
     Package::new("bar", "0.0.4").dep("spam", "0.2.5").publish();
     Package::new("spam", "0.2.5").publish();
-    assert_that(
-        p.cargo("update -p bar"),
-        execs().with_stderr(
+    p.cargo("update -p bar")
+        .with_stderr(
             "\
 [UPDATING] registry `[..]`
 [UPDATING] bar v0.0.3 -> v0.0.4
 [ADDING] spam v0.2.5
 ",
-        ),
-    );
+        ).run();
 
     println!("new dependencies update");
     Package::new("bar", "0.0.5").publish();
-    assert_that(
-        p.cargo("update -p bar"),
-        execs().with_stderr(
+    p.cargo("update -p bar")
+        .with_stderr(
             "\
 [UPDATING] registry `[..]`
 [UPDATING] bar v0.0.4 -> v0.0.5
 [REMOVING] spam v0.2.5
 ",
-        ),
-    );
+        ).run();
 }
 
 #[test]
 fn update_offline() {
-    use support::ChannelChanger;
     let p = project()
         .file(
             "Cargo.toml",
@@ -763,16 +695,13 @@ fn update_offline() {
             [dependencies]
             bar = "*"
         "#,
-        )
-        .file("src/main.rs", "fn main() {}")
+        ).file("src/main.rs", "fn main() {}")
         .build();
-    assert_that(
-        p.cargo("update -Zoffline")
-            .masquerade_as_nightly_cargo(),
-        execs()
-            .with_status(101)
-            .with_stderr("error: you can't update in the offline mode[..]"),
-    );
+    p.cargo("update -Zoffline")
+        .masquerade_as_nightly_cargo()
+        .with_status(101)
+        .with_stderr("error: you can't update in the offline mode[..]")
+        .run();
 }
 
 #[test]
@@ -789,36 +718,29 @@ fn dev_dependency_not_used() {
             [dependencies]
             bar = "*"
         "#,
-        )
-        .file("src/main.rs", "fn main() {}")
+        ).file("src/main.rs", "fn main() {}")
         .build();
 
     Package::new("baz", "0.0.1").publish();
     Package::new("bar", "0.0.1").dev_dep("baz", "*").publish();
 
-    assert_that(
-        p.cargo("build"),
-        execs().with_stderr(&format!(
+    p.cargo("build")
+        .with_stderr(&format!(
             "\
 [UPDATING] registry `[..]`
 [DOWNLOADING] [..] v0.0.1 (registry `file://[..]`)
 [COMPILING] bar v0.0.1
-[COMPILING] foo v0.0.1 ({dir})
+[COMPILING] foo v0.0.1 (CWD)
 [FINISHED] dev [unoptimized + debuginfo] target(s) in [..]s
 ",
-            dir = p.url()
-        )),
-    );
+        )).run();
 }
 
 #[test]
 fn login_with_no_cargo_dir() {
     let home = paths::home().join("new-home");
     t!(fs::create_dir(&home));
-    assert_that(
-        cargo_process("login foo -v"),
-        execs(),
-    );
+    cargo_process("login foo -v").run();
 }
 
 #[test]
@@ -826,18 +748,9 @@ fn login_with_differently_sized_token() {
     // Verify that the configuration file gets properly trunchated.
     let home = paths::home().join("new-home");
     t!(fs::create_dir(&home));
-    assert_that(
-        cargo_process("login lmaolmaolmao -v"),
-        execs(),
-    );
-    assert_that(
-        cargo_process("login lmao -v"),
-        execs(),
-    );
-    assert_that(
-        cargo_process("login lmaolmaolmao -v"),
-        execs(),
-    );
+    cargo_process("login lmaolmaolmao -v").run();
+    cargo_process("login lmao -v").run();
+    cargo_process("login lmaolmaolmao -v").run();
 }
 
 #[test]
@@ -855,16 +768,13 @@ fn bad_license_file() {
             description = "bar"
             repository = "baz"
         "#,
-        )
-        .file("src/main.rs", "fn main() {}")
+        ).file("src/main.rs", "fn main() {}")
         .build();
-    assert_that(
-        p.cargo("publish -v --index")
-            .arg(registry().to_string()),
-        execs()
-            .with_status(101)
-            .with_stderr_contains("[ERROR] the license file `foo` does not exist"),
-    );
+    p.cargo("publish -v --index")
+        .arg(registry().to_string())
+        .with_status(101)
+        .with_stderr_contains("[ERROR] the license file `foo` does not exist")
+        .run();
 }
 
 #[test]
@@ -881,8 +791,7 @@ fn updating_a_dep() {
             [dependencies.a]
             path = "a"
         "#,
-        )
-        .file("src/main.rs", "fn main() {}")
+        ).file("src/main.rs", "fn main() {}")
         .file(
             "a/Cargo.toml",
             r#"
@@ -894,26 +803,22 @@ fn updating_a_dep() {
             [dependencies]
             bar = "*"
         "#,
-        )
-        .file("a/src/lib.rs", "")
+        ).file("a/src/lib.rs", "")
         .build();
 
     Package::new("bar", "0.0.1").publish();
 
-    assert_that(
-        p.cargo("build"),
-        execs().with_stderr(&format!(
+    p.cargo("build")
+        .with_stderr(&format!(
             "\
 [UPDATING] registry `[..]`
 [DOWNLOADING] bar v0.0.1 (registry `file://[..]`)
 [COMPILING] bar v0.0.1
-[COMPILING] a v0.0.1 ({dir}/a)
-[COMPILING] foo v0.0.1 ({dir})
+[COMPILING] a v0.0.1 (CWD/a)
+[COMPILING] foo v0.0.1 (CWD)
 [FINISHED] dev [unoptimized + debuginfo] target(s) in [..]s
 ",
-            dir = p.url()
-        )),
-    );
+        )).run();
 
     t!(t!(File::create(&p.root().join("a/Cargo.toml"))).write_all(
         br#"
@@ -929,20 +834,17 @@ fn updating_a_dep() {
     Package::new("bar", "0.1.0").publish();
 
     println!("second");
-    assert_that(
-        p.cargo("build"),
-        execs().with_stderr(&format!(
+    p.cargo("build")
+        .with_stderr(&format!(
             "\
 [UPDATING] registry `[..]`
 [DOWNLOADING] bar v0.1.0 (registry `file://[..]`)
 [COMPILING] bar v0.1.0
-[COMPILING] a v0.0.1 ({dir}/a)
-[COMPILING] foo v0.0.1 ({dir})
+[COMPILING] a v0.0.1 (CWD/a)
+[COMPILING] foo v0.0.1 (CWD)
 [FINISHED] dev [unoptimized + debuginfo] target(s) in [..]s
 ",
-            dir = p.url()
-        )),
-    );
+        )).run();
 }
 
 #[test]
@@ -959,8 +861,7 @@ fn git_and_registry_dep() {
             [dependencies]
             a = "0.0.1"
         "#,
-        )
-        .file("src/lib.rs", "")
+        ).file("src/lib.rs", "")
         .build();
     let p = project()
         .file(
@@ -980,32 +881,28 @@ fn git_and_registry_dep() {
         "#,
                 b.url()
             ),
-        )
-        .file("src/main.rs", "fn main() {}")
+        ).file("src/main.rs", "fn main() {}")
         .build();
 
     Package::new("a", "0.0.1").publish();
 
     p.root().move_into_the_past();
-    assert_that(
-        p.cargo("build"),
-        execs().with_stderr(&format!(
+    p.cargo("build")
+        .with_stderr(&format!(
             "\
 [UPDATING] [..]
 [UPDATING] [..]
 [DOWNLOADING] a v0.0.1 (registry `file://[..]`)
 [COMPILING] a v0.0.1
 [COMPILING] b v0.0.1 ([..])
-[COMPILING] foo v0.0.1 ({dir})
+[COMPILING] foo v0.0.1 (CWD)
 [FINISHED] dev [unoptimized + debuginfo] target(s) in [..]s
 ",
-            dir = p.url()
-        )),
-    );
+        )).run();
     p.root().move_into_the_past();
 
     println!("second");
-    assert_that(p.cargo("build"), execs().with_stdout(""));
+    p.cargo("build").with_stdout("").run();
 }
 
 #[test]
@@ -1024,11 +921,10 @@ fn update_publish_then_update() {
             [dependencies]
             a = "0.1.0"
         "#,
-        )
-        .file("src/main.rs", "fn main() {}")
+        ).file("src/main.rs", "fn main() {}")
         .build();
     Package::new("a", "0.1.0").publish();
-    assert_that(p.cargo("build"), execs());
+    p.cargo("build").run();
 
     // Next, publish a new package and back up the copy of the registry we just
     // created.
@@ -1039,7 +935,8 @@ fn update_publish_then_update() {
 
     // Generate a Cargo.lock with the newer version, and then move the old copy
     // of the registry back into place.
-    let p2 = project().at("foo2")
+    let p2 = project()
+        .at("foo2")
         .file(
             "Cargo.toml",
             r#"
@@ -1051,10 +948,9 @@ fn update_publish_then_update() {
             [dependencies]
             a = "0.1.1"
         "#,
-        )
-        .file("src/main.rs", "fn main() {}")
+        ).file("src/main.rs", "fn main() {}")
         .build();
-    assert_that(p2.cargo("build"), execs());
+    p2.cargo("build").run();
     registry.rm_rf();
     t!(fs::rename(&backup, &registry));
     t!(fs::rename(
@@ -1065,19 +961,16 @@ fn update_publish_then_update() {
     // Finally, build the first project again (with our newer Cargo.lock) which
     // should force an update of the old registry, download the new crate, and
     // then build everything again.
-    assert_that(
-        p.cargo("build"),
-        execs().with_stderr(&format!(
+    p.cargo("build")
+        .with_stderr(&format!(
             "\
 [UPDATING] [..]
 [DOWNLOADING] a v0.1.1 (registry `file://[..]`)
 [COMPILING] a v0.1.1
-[COMPILING] foo v0.5.0 ({dir})
+[COMPILING] foo v0.5.0 (CWD)
 [FINISHED] dev [unoptimized + debuginfo] target(s) in [..]s
 ",
-            dir = p.url()
-        )),
-    );
+        )).run();
 }
 
 #[test]
@@ -1094,21 +987,18 @@ fn fetch_downloads() {
             [dependencies]
             a = "0.1.0"
         "#,
-        )
-        .file("src/main.rs", "fn main() {}")
+        ).file("src/main.rs", "fn main() {}")
         .build();
 
     Package::new("a", "0.1.0").publish();
 
-    assert_that(
-        p.cargo("fetch"),
-        execs().with_stderr(
+    p.cargo("fetch")
+        .with_stderr(
             "\
 [UPDATING] registry `[..]`
 [DOWNLOADING] a v0.1.0 (registry [..])
 ",
-        ),
-    );
+        ).run();
 }
 
 #[test]
@@ -1125,30 +1015,26 @@ fn update_transitive_dependency() {
             [dependencies]
             a = "0.1.0"
         "#,
-        )
-        .file("src/main.rs", "fn main() {}")
+        ).file("src/main.rs", "fn main() {}")
         .build();
 
     Package::new("a", "0.1.0").dep("b", "*").publish();
     Package::new("b", "0.1.0").publish();
 
-    assert_that(p.cargo("fetch"), execs());
+    p.cargo("fetch").run();
 
     Package::new("b", "0.1.1").publish();
 
-    assert_that(
-        p.cargo("update -pb"),
-        execs().with_stderr(
+    p.cargo("update -pb")
+        .with_stderr(
             "\
 [UPDATING] registry `[..]`
 [UPDATING] b v0.1.0 -> v0.1.1
 ",
-        ),
-    );
+        ).run();
 
-    assert_that(
-        p.cargo("build"),
-        execs().with_stderr(
+    p.cargo("build")
+        .with_stderr(
             "\
 [DOWNLOADING] b v0.1.1 (registry `file://[..]`)
 [COMPILING] b v0.1.1
@@ -1156,8 +1042,7 @@ fn update_transitive_dependency() {
 [COMPILING] foo v0.5.0 ([..])
 [FINISHED] dev [unoptimized + debuginfo] target(s) in [..]s
 ",
-        ),
-    );
+        ).run();
 }
 
 #[test]
@@ -1174,8 +1059,7 @@ fn update_backtracking_ok() {
             [dependencies]
             webdriver = "0.1"
         "#,
-        )
-        .file("src/main.rs", "fn main() {}")
+        ).file("src/main.rs", "fn main() {}")
         .build();
 
     Package::new("webdriver", "0.1.0")
@@ -1190,7 +1074,7 @@ fn update_backtracking_ok() {
         .publish();
     Package::new("openssl", "0.1.0").publish();
 
-    assert_that(p.cargo("generate-lockfile"), execs());
+    p.cargo("generate-lockfile").run();
 
     Package::new("openssl", "0.1.1").publish();
     Package::new("hyper", "0.6.6")
@@ -1198,16 +1082,14 @@ fn update_backtracking_ok() {
         .dep("cookie", "0.1.0")
         .publish();
 
-    assert_that(
-        p.cargo("update -p hyper"),
-        execs().with_stderr(
+    p.cargo("update -p hyper")
+        .with_stderr(
             "\
 [UPDATING] registry `[..]`
 [UPDATING] hyper v0.6.5 -> v0.6.6
 [UPDATING] openssl v0.1.0 -> v0.1.1
 ",
-        ),
-    );
+        ).run();
 }
 
 #[test]
@@ -1226,52 +1108,45 @@ fn update_multiple_packages() {
             b = "*"
             c = "*"
         "#,
-        )
-        .file("src/main.rs", "fn main() {}")
+        ).file("src/main.rs", "fn main() {}")
         .build();
 
     Package::new("a", "0.1.0").publish();
     Package::new("b", "0.1.0").publish();
     Package::new("c", "0.1.0").publish();
 
-    assert_that(p.cargo("fetch"), execs());
+    p.cargo("fetch").run();
 
     Package::new("a", "0.1.1").publish();
     Package::new("b", "0.1.1").publish();
     Package::new("c", "0.1.1").publish();
 
-    assert_that(
-        p.cargo("update -pa -pb"),
-        execs().with_stderr(
+    p.cargo("update -pa -pb")
+        .with_stderr(
             "\
 [UPDATING] registry `[..]`
 [UPDATING] a v0.1.0 -> v0.1.1
 [UPDATING] b v0.1.0 -> v0.1.1
 ",
-        ),
-    );
+        ).run();
 
-    assert_that(
-        p.cargo("update -pb -pc"),
-        execs().with_stderr(
+    p.cargo("update -pb -pc")
+        .with_stderr(
             "\
 [UPDATING] registry `[..]`
 [UPDATING] c v0.1.0 -> v0.1.1
 ",
-        ),
-    );
+        ).run();
 
-    assert_that(
-        p.cargo("build"),
-        execs()
-            .with_stderr_contains("[DOWNLOADING] a v0.1.1 (registry `file://[..]`)")
-            .with_stderr_contains("[DOWNLOADING] b v0.1.1 (registry `file://[..]`)")
-            .with_stderr_contains("[DOWNLOADING] c v0.1.1 (registry `file://[..]`)")
-            .with_stderr_contains("[COMPILING] a v0.1.1")
-            .with_stderr_contains("[COMPILING] b v0.1.1")
-            .with_stderr_contains("[COMPILING] c v0.1.1")
-            .with_stderr_contains("[COMPILING] foo v0.5.0 ([..])"),
-    );
+    p.cargo("build")
+        .with_stderr_contains("[DOWNLOADING] a v0.1.1 (registry `file://[..]`)")
+        .with_stderr_contains("[DOWNLOADING] b v0.1.1 (registry `file://[..]`)")
+        .with_stderr_contains("[DOWNLOADING] c v0.1.1 (registry `file://[..]`)")
+        .with_stderr_contains("[COMPILING] a v0.1.1")
+        .with_stderr_contains("[COMPILING] b v0.1.1")
+        .with_stderr_contains("[COMPILING] c v0.1.1")
+        .with_stderr_contains("[COMPILING] foo v0.5.0 ([..])")
+        .run();
 }
 
 #[test]
@@ -1289,8 +1164,7 @@ fn bundled_crate_in_registry() {
             bar = "0.1"
             baz = "0.1"
         "#,
-        )
-        .file("src/main.rs", "fn main() {}")
+        ).file("src/main.rs", "fn main() {}")
         .build();
 
     Package::new("bar", "0.1.0").publish();
@@ -1307,13 +1181,12 @@ fn bundled_crate_in_registry() {
             [dependencies]
             bar = { path = "bar", version = "0.1.0" }
         "#,
-        )
-        .file("src/lib.rs", "")
+        ).file("src/lib.rs", "")
         .file("bar/Cargo.toml", &basic_manifest("bar", "0.1.0"))
         .file("bar/src/lib.rs", "")
         .publish();
 
-    assert_that(p.cargo("run"), execs());
+    p.cargo("run").run();
 }
 
 #[test]
@@ -1330,8 +1203,7 @@ fn update_same_prefix_oh_my_how_was_this_a_bug() {
             [dependencies]
             foo = "0.1"
         "#,
-        )
-        .file("src/main.rs", "fn main() {}")
+        ).file("src/main.rs", "fn main() {}")
         .build();
 
     Package::new("foobar", "0.2.0").publish();
@@ -1339,11 +1211,8 @@ fn update_same_prefix_oh_my_how_was_this_a_bug() {
         .dep("foobar", "0.2.0")
         .publish();
 
-    assert_that(p.cargo("generate-lockfile"), execs());
-    assert_that(
-        p.cargo("update -pfoobar --precise=0.2.0"),
-        execs(),
-    );
+    p.cargo("generate-lockfile").run();
+    p.cargo("update -pfoobar --precise=0.2.0").run();
 }
 
 #[test]
@@ -1360,13 +1229,12 @@ fn use_semver() {
             [dependencies]
             foo = "1.2.3-alpha.0"
         "#,
-        )
-        .file("src/main.rs", "fn main() {}")
+        ).file("src/main.rs", "fn main() {}")
         .build();
 
     Package::new("foo", "1.2.3-alpha.0").publish();
 
-    assert_that(p.cargo("build"), execs());
+    p.cargo("build").run();
 }
 
 #[test]
@@ -1387,17 +1255,15 @@ fn only_download_relevant() {
             [dependencies]
             baz = "*"
         "#,
-        )
-        .file("src/main.rs", "fn main() {}")
+        ).file("src/main.rs", "fn main() {}")
         .build();
 
     Package::new("foo", "0.1.0").publish();
     Package::new("bar", "0.1.0").publish();
     Package::new("baz", "0.1.0").publish();
 
-    assert_that(
-        p.cargo("build"),
-        execs().with_stderr(
+    p.cargo("build")
+        .with_stderr(
             "\
 [UPDATING] registry `[..]`
 [DOWNLOADING] baz v0.1.0 ([..])
@@ -1405,8 +1271,7 @@ fn only_download_relevant() {
 [COMPILING] bar v0.5.0 ([..])
 [FINISHED] dev [unoptimized + debuginfo] target(s) in [..]s
 ",
-        ),
-    );
+        ).run();
 }
 
 #[test]
@@ -1423,8 +1288,7 @@ fn resolve_and_backtracking() {
             [dependencies]
             foo = "*"
         "#,
-        )
-        .file("src/main.rs", "fn main() {}")
+        ).file("src/main.rs", "fn main() {}")
         .build();
 
     Package::new("foo", "0.1.1")
@@ -1432,7 +1296,7 @@ fn resolve_and_backtracking() {
         .publish();
     Package::new("foo", "0.1.0").publish();
 
-    assert_that(p.cargo("build"), execs());
+    p.cargo("build").run();
 }
 
 #[test]
@@ -1449,18 +1313,16 @@ fn upstream_warnings_on_extra_verbose() {
             [dependencies]
             foo = "*"
         "#,
-        )
-        .file("src/main.rs", "fn main() {}")
+        ).file("src/main.rs", "fn main() {}")
         .build();
 
     Package::new("foo", "0.1.0")
         .file("src/lib.rs", "fn unused() {}")
         .publish();
 
-    assert_that(
-        p.cargo("build -vv"),
-        execs().with_stderr_contains("[..]warning: function is never used[..]"),
-    );
+    p.cargo("build -vv")
+        .with_stderr_contains("[..]warning: function is never used[..]")
+        .run();
 }
 
 #[test]
@@ -1477,13 +1339,12 @@ fn disallow_network() {
             [dependencies]
             foo = "*"
         "#,
-        )
-        .file("src/main.rs", "fn main() {}")
+        ).file("src/main.rs", "fn main() {}")
         .build();
 
-    assert_that(
-        p.cargo("build --frozen"),
-        execs().with_status(101).with_stderr(
+    p.cargo("build --frozen")
+        .with_status(101)
+        .with_stderr(
             "\
 error: failed to load source for a dependency on `foo`
 
@@ -1493,8 +1354,7 @@ Caused by:
 Caused by:
   attempting to make an HTTP request, but --frozen was specified
 ",
-        ),
-    );
+        ).run();
 }
 
 #[test]
@@ -1511,8 +1371,7 @@ fn add_dep_dont_update_registry() {
             [dependencies]
             baz = { path = "baz" }
         "#,
-        )
-        .file("src/main.rs", "fn main() {}")
+        ).file("src/main.rs", "fn main() {}")
         .file(
             "baz/Cargo.toml",
             r#"
@@ -1524,13 +1383,12 @@ fn add_dep_dont_update_registry() {
             [dependencies]
             remote = "0.3"
         "#,
-        )
-        .file("baz/src/lib.rs", "")
+        ).file("baz/src/lib.rs", "")
         .build();
 
     Package::new("remote", "0.3.4").publish();
 
-    assert_that(p.cargo("build"), execs());
+    p.cargo("build").run();
 
     t!(t!(File::create(p.root().join("Cargo.toml"))).write_all(
         br#"
@@ -1545,15 +1403,13 @@ fn add_dep_dont_update_registry() {
     "#
     ));
 
-    assert_that(
-        p.cargo("build"),
-        execs().with_stderr(
+    p.cargo("build")
+        .with_stderr(
             "\
 [COMPILING] bar v0.5.0 ([..])
 [FINISHED] [..]
 ",
-        ),
-    );
+        ).run();
 }
 
 #[test]
@@ -1570,8 +1426,7 @@ fn bump_version_dont_update_registry() {
             [dependencies]
             baz = { path = "baz" }
         "#,
-        )
-        .file("src/main.rs", "fn main() {}")
+        ).file("src/main.rs", "fn main() {}")
         .file(
             "baz/Cargo.toml",
             r#"
@@ -1583,13 +1438,12 @@ fn bump_version_dont_update_registry() {
             [dependencies]
             remote = "0.3"
         "#,
-        )
-        .file("baz/src/lib.rs", "")
+        ).file("baz/src/lib.rs", "")
         .build();
 
     Package::new("remote", "0.3.4").publish();
 
-    assert_that(p.cargo("build"), execs());
+    p.cargo("build").run();
 
     t!(t!(File::create(p.root().join("Cargo.toml"))).write_all(
         br#"
@@ -1603,15 +1457,13 @@ fn bump_version_dont_update_registry() {
     "#
     ));
 
-    assert_that(
-        p.cargo("build"),
-        execs().with_stderr(
+    p.cargo("build")
+        .with_stderr(
             "\
 [COMPILING] bar v0.6.0 ([..])
 [FINISHED] [..]
 ",
-        ),
-    );
+        ).run();
 }
 
 #[test]
@@ -1628,15 +1480,13 @@ fn old_version_req() {
             [dependencies]
             remote = "0.2*"
         "#,
-        )
-        .file("src/main.rs", "fn main() {}")
+        ).file("src/main.rs", "fn main() {}")
         .build();
 
     Package::new("remote", "0.2.0").publish();
 
-    assert_that(
-        p.cargo("build"),
-        execs().with_stderr(
+    p.cargo("build")
+        .with_stderr(
             "\
 warning: parsed version requirement `0.2*` is no longer valid
 
@@ -1664,8 +1514,7 @@ this warning.
 [COMPILING] [..]
 [FINISHED] [..]
 ",
-        ),
-    );
+        ).run();
 }
 
 #[test]
@@ -1682,8 +1531,7 @@ fn old_version_req_upstream() {
             [dependencies]
             remote = "0.3"
         "#,
-        )
-        .file("src/main.rs", "fn main() {}")
+        ).file("src/main.rs", "fn main() {}")
         .build();
 
     Package::new("remote", "0.3.0")
@@ -1698,14 +1546,12 @@ fn old_version_req_upstream() {
                 [dependencies]
                 bar = "0.2*"
             "#,
-        )
-        .file("src/lib.rs", "")
+        ).file("src/lib.rs", "")
         .publish();
     Package::new("bar", "0.2.0").publish();
 
-    assert_that(
-        p.cargo("build"),
-        execs().with_stderr(
+    p.cargo("build")
+        .with_stderr(
             "\
 [UPDATING] [..]
 [DOWNLOADING] [..]
@@ -1723,8 +1569,7 @@ this warning.
 [COMPILING] [..]
 [FINISHED] [..]
 ",
-        ),
-    );
+        ).run();
 }
 
 #[test]
@@ -1743,8 +1588,7 @@ fn toml_lies_but_index_is_truth() {
                 [dependencies]
                 foo = "0.1.0"
             "#,
-        )
-        .file("src/lib.rs", "extern crate foo;")
+        ).file("src/lib.rs", "extern crate foo;")
         .publish();
 
     let p = project()
@@ -1759,18 +1603,19 @@ fn toml_lies_but_index_is_truth() {
             [dependencies]
             bar = "0.3"
         "#,
-        )
-        .file("src/main.rs", "fn main() {}")
+        ).file("src/main.rs", "fn main() {}")
         .build();
 
-    assert_that(p.cargo("build -v"), execs());
+    p.cargo("build -v").run();
 }
 
 #[test]
 fn vv_prints_warnings() {
     Package::new("foo", "0.2.0")
-        .file("src/lib.rs", "#![deny(warnings)] fn foo() {} // unused function")
-        .publish();
+        .file(
+            "src/lib.rs",
+            "#![deny(warnings)] fn foo() {} // unused function",
+        ).publish();
 
     let p = project()
         .file(
@@ -1784,11 +1629,10 @@ fn vv_prints_warnings() {
             [dependencies]
             foo = "0.2"
         "#,
-        )
-        .file("src/main.rs", "fn main() {}")
+        ).file("src/main.rs", "fn main() {}")
         .build();
 
-    assert_that(p.cargo("build -vv"), execs());
+    p.cargo("build -vv").run();
 }
 
 #[test]
@@ -1809,13 +1653,12 @@ fn bad_and_or_malicious_packages_rejected() {
             [dependencies]
             foo = "0.2"
         "#,
-        )
-        .file("src/main.rs", "fn main() {}")
+        ).file("src/main.rs", "fn main() {}")
         .build();
 
-    assert_that(
-        p.cargo("build -vv"),
-        execs().with_status(101).with_stderr(
+    p.cargo("build -vv")
+        .with_status(101)
+        .with_stderr(
             "\
 [UPDATING] [..]
 [DOWNLOADING] [..]
@@ -1830,8 +1673,7 @@ Caused by:
 Caused by:
   [..] contains a file at \"foo-0.1.0/src/lib.rs\" which isn't under \"foo-0.2.0\"
 ",
-        ),
-    );
+        ).run();
 }
 
 #[test]
@@ -1851,30 +1693,21 @@ fn git_init_templatedir_missing() {
                 [dependencies]
                 foo = "0.2"
             "#,
-        )
-        .file("src/main.rs", "fn main() {}")
+        ).file("src/main.rs", "fn main() {}")
         .build();
 
-    assert_that(
-        p.cargo("build"),
-        execs()
-    );
+    p.cargo("build").run();
 
     remove_dir_all(paths::home().join(".cargo/registry")).unwrap();
     File::create(paths::home().join(".gitconfig"))
         .unwrap()
-        .write_all(br#"
+        .write_all(
+            br#"
             [init]
             templatedir = nowhere
-        "#)
-        .unwrap();
+        "#,
+        ).unwrap();
 
-    assert_that(
-        p.cargo("build"),
-        execs()
-    );
-    assert_that(
-        p.cargo("build"),
-        execs()
-    );
+    p.cargo("build").run();
+    p.cargo("build").run();
 }

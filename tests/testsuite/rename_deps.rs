@@ -1,9 +1,7 @@
-use support::ChannelChanger;
 use support::git;
 use support::paths;
 use support::registry::Package;
-use support::{basic_manifest, execs, project};
-use support::hamcrest::assert_that;
+use support::{basic_manifest, project};
 
 #[test]
 fn gated() {
@@ -19,13 +17,13 @@ fn gated() {
             [dependencies]
             bar = { package = "foo", version = "0.1" }
         "#,
-        )
-        .file("src/lib.rs", "")
+        ).file("src/lib.rs", "")
         .build();
 
-    assert_that(
-        p.cargo("build").masquerade_as_nightly_cargo(),
-        execs().with_status(101).with_stderr(
+    p.cargo("build")
+        .masquerade_as_nightly_cargo()
+        .with_status(101)
+        .with_stderr(
             "\
 error: failed to parse manifest at `[..]`
 
@@ -34,10 +32,10 @@ Caused by:
 
 consider adding `cargo-features = [\"rename-dependency\"]` to the manifest
 ",
-        ),
-    );
+        ).run();
 
-    let p = project().at("bar")
+    let p = project()
+        .at("bar")
         .file(
             "Cargo.toml",
             r#"
@@ -49,13 +47,13 @@ consider adding `cargo-features = [\"rename-dependency\"]` to the manifest
             [dependencies]
             bar = { version = "0.1", package = "baz" }
         "#,
-        )
-        .file("src/lib.rs", "")
+        ).file("src/lib.rs", "")
         .build();
 
-    assert_that(
-        p.cargo("build").masquerade_as_nightly_cargo(),
-        execs().with_status(101).with_stderr(
+    p.cargo("build")
+        .masquerade_as_nightly_cargo()
+        .with_status(101)
+        .with_stderr(
             "\
 error: failed to parse manifest at `[..]`
 
@@ -64,8 +62,7 @@ Caused by:
 
 consider adding `cargo-features = [\"rename-dependency\"]` to the manifest
 ",
-        ),
-    );
+        ).run();
 }
 
 #[test]
@@ -88,14 +85,10 @@ fn rename_dependency() {
             bar = { version = "0.1.0" }
             baz = { version = "0.2.0", package = "bar" }
         "#,
-        )
-        .file("src/lib.rs", "extern crate bar; extern crate baz;")
+        ).file("src/lib.rs", "extern crate bar; extern crate baz;")
         .build();
 
-    assert_that(
-        p.cargo("build").masquerade_as_nightly_cargo(),
-        execs(),
-    );
+    p.cargo("build").masquerade_as_nightly_cargo().run();
 }
 
 #[test]
@@ -114,8 +107,7 @@ fn rename_with_different_names() {
             [dependencies]
             baz = { path = "bar", package = "bar" }
         "#,
-        )
-        .file("src/lib.rs", "extern crate baz;")
+        ).file("src/lib.rs", "extern crate baz;")
         .file(
             "bar/Cargo.toml",
             r#"
@@ -127,14 +119,10 @@ fn rename_with_different_names() {
             [lib]
             name = "random_name"
         "#,
-        )
-        .file("bar/src/lib.rs", "")
+        ).file("bar/src/lib.rs", "")
         .build();
 
-    assert_that(
-        p.cargo("build").masquerade_as_nightly_cargo(),
-        execs(),
-    );
+    p.cargo("build").masquerade_as_nightly_cargo().run();
 }
 
 #[test]
@@ -158,7 +146,8 @@ fn lots_of_names() {
     let p = project()
         .file(
             "Cargo.toml",
-            &format!(r#"
+            &format!(
+                r#"
                 cargo-features = ["alternative-registries", "rename-dependency"]
 
                 [package]
@@ -173,9 +162,9 @@ fn lots_of_names() {
                 foo3 = {{ git = '{}', package = "foo" }}
                 foo4 = {{ path = "foo", package = "foo" }}
             "#,
-            g.url())
-        )
-        .file(
+                g.url()
+            ),
+        ).file(
             "src/lib.rs",
             "
                 extern crate foo;
@@ -192,15 +181,11 @@ fn lots_of_names() {
                     foo4::foo4();
                 }
             ",
-        )
-        .file("foo/Cargo.toml", &basic_manifest("foo", "0.1.0"))
+        ).file("foo/Cargo.toml", &basic_manifest("foo", "0.1.0"))
         .file("foo/src/lib.rs", "pub fn foo4() {}")
         .build();
 
-    assert_that(
-        p.cargo("build -v").masquerade_as_nightly_cargo(),
-        execs(),
-    );
+    p.cargo("build -v").masquerade_as_nightly_cargo().run();
 }
 
 #[test]
@@ -224,16 +209,14 @@ fn rename_and_patch() {
                 [patch.crates-io]
                 foo = { path = "foo" }
             "#,
-        )
-        .file("src/lib.rs", "extern crate bar; pub fn foo() { bar::foo(); }")
-        .file("foo/Cargo.toml", &basic_manifest("foo", "0.1.0"))
+        ).file(
+            "src/lib.rs",
+            "extern crate bar; pub fn foo() { bar::foo(); }",
+        ).file("foo/Cargo.toml", &basic_manifest("foo", "0.1.0"))
         .file("foo/src/lib.rs", "pub fn foo() {}")
         .build();
 
-    assert_that(
-        p.cargo("build -v").masquerade_as_nightly_cargo(),
-        execs(),
-    );
+    p.cargo("build -v").masquerade_as_nightly_cargo().run();
 }
 
 #[test]
@@ -256,20 +239,20 @@ fn rename_twice() {
                 [build-dependencies]
                 foo = { version = "0.1" }
             "#,
-        )
-        .file("src/lib.rs", "",)
+        ).file("src/lib.rs", "")
         .build();
 
-    assert_that(
-        p.cargo("build -v").masquerade_as_nightly_cargo(),
-        execs().with_status(101)
-            .with_stderr("\
+    p.cargo("build -v")
+        .masquerade_as_nightly_cargo()
+        .with_status(101)
+        .with_stderr(
+            "\
 [UPDATING] registry `[..]`
 [DOWNLOADING] foo v0.1.0 (registry [..])
 error: multiple dependencies listed for the same crate must all have the same \
 name, but the dependency on `foo v0.1.0` is listed as having different names
-")
-    );
+",
+        ).run();
 }
 
 #[test]
@@ -290,14 +273,10 @@ fn rename_affects_fingerprint() {
                 [dependencies]
                 foo = { version = "0.1", package = "foo" }
             "#,
-        )
-        .file("src/lib.rs", "extern crate foo;")
+        ).file("src/lib.rs", "extern crate foo;")
         .build();
 
-    assert_that(
-        p.cargo("build -v").masquerade_as_nightly_cargo(),
-        execs(),
-    );
+    p.cargo("build -v").masquerade_as_nightly_cargo().run();
 
     p.change_file(
         "Cargo.toml",
@@ -314,10 +293,10 @@ fn rename_affects_fingerprint() {
         "#,
     );
 
-    assert_that(
-        p.cargo("build -v").masquerade_as_nightly_cargo(),
-        execs().with_status(101),
-    );
+    p.cargo("build -v")
+        .masquerade_as_nightly_cargo()
+        .with_status(101)
+        .run();
 }
 
 #[test]
@@ -339,30 +318,26 @@ fn can_run_doc_tests() {
             bar = { version = "0.1.0" }
             baz = { version = "0.2.0", package = "bar" }
         "#,
-        )
-        .file(
+        ).file(
             "src/lib.rs",
             "
             extern crate bar;
             extern crate baz;
         ",
-        )
-        .build();
+        ).build();
 
-    assert_that(
-        foo.cargo("test -v").masquerade_as_nightly_cargo(),
-        execs().with_stderr_contains(format!(
+    foo.cargo("test -v")
+        .masquerade_as_nightly_cargo()
+        .with_stderr_contains(format!(
             "\
 [DOCTEST] foo
-[RUNNING] `rustdoc --test {dir}/src/lib.rs \
+[RUNNING] `rustdoc --test CWD/src/lib.rs \
         [..] \
-        --extern baz={dir}/target/debug/deps/libbar-[..].rlib \
-        --extern bar={dir}/target/debug/deps/libbar-[..].rlib \
+        --extern baz=CWD/target/debug/deps/libbar-[..].rlib \
+        --extern bar=CWD/target/debug/deps/libbar-[..].rlib \
         [..]`
 ",
-            dir = foo.root().display(),
-        )),
-    );
+        )).run();
 }
 
 #[test]
@@ -383,8 +358,7 @@ fn features_still_work() {
                 p1 = { path = 'a', features = ['b'] }
                 p2 = { path = 'b' }
             "#,
-        )
-        .file("src/lib.rs", "")
+        ).file("src/lib.rs", "")
         .file(
             "a/Cargo.toml",
             r#"
@@ -398,8 +372,7 @@ fn features_still_work() {
                 [dependencies]
                 b = { version = "0.1", package = "foo", optional = true }
             "#,
-        )
-        .file("a/src/lib.rs", "extern crate b;")
+        ).file("a/src/lib.rs", "extern crate b;")
         .file(
             "b/Cargo.toml",
             r#"
@@ -416,14 +389,10 @@ fn features_still_work() {
                 [features]
                 default = ['b']
             "#,
-        )
-        .file("b/src/lib.rs", "extern crate b;")
+        ).file("b/src/lib.rs", "extern crate b;")
         .build();
 
-    assert_that(
-        p.cargo("build -v").masquerade_as_nightly_cargo(),
-        execs(),
-    );
+    p.cargo("build -v").masquerade_as_nightly_cargo().run();
 }
 
 #[test]
@@ -447,20 +416,19 @@ fn features_not_working() {
                 [features]
                 default = ['p1']
             "#,
-        )
-        .file("src/lib.rs", "")
+        ).file("src/lib.rs", "")
         .file("a/Cargo.toml", &basic_manifest("p1", "0.1.0"))
         .build();
 
-    assert_that(
-        p.cargo("build -v").masquerade_as_nightly_cargo(),
-        execs()
-            .with_status(101)
-            .with_stderr("\
+    p.cargo("build -v")
+        .masquerade_as_nightly_cargo()
+        .with_status(101)
+        .with_stderr(
+            "\
 error: failed to parse manifest at `[..]`
 
 Caused by:
   Feature `default` includes `p1` which is neither a dependency nor another feature
-")
-    );
+",
+        ).run();
 }

@@ -1,19 +1,18 @@
-use std::str::FromStr;
 use std::fmt;
+use std::str::FromStr;
 
 use cargo::util::{Cfg, CfgExpr};
-use support::rustc_host;
 use support::registry::Package;
-use support::{basic_manifest, execs, project};
-use support::hamcrest::assert_that;
+use support::rustc_host;
+use support::{basic_manifest, project};
 
 macro_rules! c {
-    ($a:ident) => (
+    ($a:ident) => {
         Cfg::Name(stringify!($a).to_string())
-    );
-    ($a:ident = $e:expr) => (
+    };
+    ($a:ident = $e:expr) => {
         Cfg::KeyPair(stringify!($a).to_string(), $e.to_string())
-    );
+    };
 }
 
 macro_rules! e {
@@ -157,12 +156,11 @@ fn cfg_easy() {
             [target."cfg(windows)".dependencies]
             b = { path = 'b' }
         "#,
-        )
-        .file("src/lib.rs", "extern crate b;")
+        ).file("src/lib.rs", "extern crate b;")
         .file("b/Cargo.toml", &basic_manifest("b", "0.0.1"))
         .file("b/src/lib.rs", "")
         .build();
-    assert_that(p.cargo("build -v"), execs());
+    p.cargo("build -v").run();
 }
 
 #[test]
@@ -183,20 +181,17 @@ fn dont_include() {
         "#,
                 other_family
             ),
-        )
-        .file("src/lib.rs", "")
+        ).file("src/lib.rs", "")
         .file("b/Cargo.toml", &basic_manifest("b", "0.0.1"))
         .file("b/src/lib.rs", "")
         .build();
-    assert_that(
-        p.cargo("build"),
-        execs().with_stderr(
+    p.cargo("build")
+        .with_stderr(
             "\
 [COMPILING] a v0.0.1 ([..])
 [FINISHED] dev [unoptimized + debuginfo] target(s) in [..]
 ",
-        ),
-    );
+        ).run();
 }
 
 #[test]
@@ -219,13 +214,13 @@ fn works_through_the_registry() {
             [dependencies]
             bar = "0.1.0"
         "#,
-        )
-        .file("src/lib.rs", "#[allow(unused_extern_crates)] extern crate bar;")
-        .build();
+        ).file(
+            "src/lib.rs",
+            "#[allow(unused_extern_crates)] extern crate bar;",
+        ).build();
 
-    assert_that(
-        p.cargo("build"),
-        execs().with_stderr(
+    p.cargo("build")
+        .with_stderr(
             "\
 [UPDATING] registry [..]
 [DOWNLOADING] [..]
@@ -235,8 +230,7 @@ fn works_through_the_registry() {
 [COMPILING] foo v0.0.1 ([..])
 [FINISHED] dev [unoptimized + debuginfo] target(s) in [..]
 ",
-        ),
-    );
+        ).run();
 }
 
 #[test]
@@ -264,13 +258,13 @@ fn ignore_version_from_other_platform() {
         "#,
                 this_family, other_family
             ),
-        )
-        .file("src/lib.rs", "#[allow(unused_extern_crates)] extern crate bar;")
-        .build();
+        ).file(
+            "src/lib.rs",
+            "#[allow(unused_extern_crates)] extern crate bar;",
+        ).build();
 
-    assert_that(
-        p.cargo("build"),
-        execs().with_stderr(
+    p.cargo("build")
+        .with_stderr(
             "\
 [UPDATING] registry [..]
 [DOWNLOADING] [..]
@@ -278,8 +272,7 @@ fn ignore_version_from_other_platform() {
 [COMPILING] foo v0.0.1 ([..])
 [FINISHED] dev [unoptimized + debuginfo] target(s) in [..]
 ",
-        ),
-    );
+        ).run();
 }
 
 #[test]
@@ -296,13 +289,12 @@ fn bad_target_spec() {
             [target.'cfg(4)'.dependencies]
             bar = "0.1.0"
         "#,
-        )
-        .file("src/lib.rs", "")
+        ).file("src/lib.rs", "")
         .build();
 
-    assert_that(
-        p.cargo("build"),
-        execs().with_status(101).with_stderr(
+    p.cargo("build")
+        .with_status(101)
+        .with_stderr(
             "\
 [ERROR] failed to parse manifest at `[..]`
 
@@ -312,8 +304,7 @@ Caused by:
 Caused by:
   unexpected character in cfg `4`, [..]
 ",
-        ),
-    );
+        ).run();
 }
 
 #[test]
@@ -330,13 +321,12 @@ fn bad_target_spec2() {
             [target.'cfg(bar =)'.dependencies]
             baz = "0.1.0"
         "#,
-        )
-        .file("src/lib.rs", "")
+        ).file("src/lib.rs", "")
         .build();
 
-    assert_that(
-        p.cargo("build"),
-        execs().with_status(101).with_stderr(
+    p.cargo("build")
+        .with_status(101)
+        .with_stderr(
             "\
 [ERROR] failed to parse manifest at `[..]`
 
@@ -346,8 +336,7 @@ Caused by:
 Caused by:
   expected a string, found nothing
 ",
-        ),
-    );
+        ).run();
 }
 
 #[test]
@@ -378,12 +367,11 @@ fn multiple_match_ok() {
         "#,
                 rustc_host()
             ),
-        )
-        .file("src/lib.rs", "extern crate b;")
+        ).file("src/lib.rs", "extern crate b;")
         .file("b/Cargo.toml", &basic_manifest("b", "0.0.1"))
         .file("b/src/lib.rs", "")
         .build();
-    assert_that(p.cargo("build -v"), execs());
+    p.cargo("build -v").run();
 }
 
 #[test]
@@ -400,17 +388,20 @@ fn any_ok() {
             [target."cfg(any(windows, unix))".dependencies]
             b = { path = 'b' }
         "#,
-        )
-        .file("src/lib.rs", "extern crate b;")
+        ).file("src/lib.rs", "extern crate b;")
         .file("b/Cargo.toml", &basic_manifest("b", "0.0.1"))
         .file("b/src/lib.rs", "")
         .build();
-    assert_that(p.cargo("build -v"), execs());
+    p.cargo("build -v").run();
 }
 
 // https://github.com/rust-lang/cargo/issues/5313
 #[test]
-#[cfg(all(target_arch = "x86_64", target_os = "linux", target_env = "gnu"))]
+#[cfg(all(
+    target_arch = "x86_64",
+    target_os = "linux",
+    target_env = "gnu"
+))]
 fn cfg_looks_at_rustflags_for_target() {
     let p = project()
         .file(
@@ -424,8 +415,7 @@ fn cfg_looks_at_rustflags_for_target() {
             [target.'cfg(with_b)'.dependencies]
             b = { path = 'b' }
         "#,
-        )
-        .file(
+        ).file(
             "src/main.rs",
             r#"
             #[cfg(with_b)]
@@ -433,14 +423,11 @@ fn cfg_looks_at_rustflags_for_target() {
 
             fn main() { b::foo(); }
         "#,
-        )
-        .file("b/Cargo.toml", &basic_manifest("b", "0.0.1"))
+        ).file("b/Cargo.toml", &basic_manifest("b", "0.0.1"))
         .file("b/src/lib.rs", "pub fn foo() {}")
         .build();
 
-    assert_that(
-        p.cargo("build --target x86_64-unknown-linux-gnu")
-            .env("RUSTFLAGS", "--cfg with_b"),
-        execs(),
-    );
+    p.cargo("build --target x86_64-unknown-linux-gnu")
+        .env("RUSTFLAGS", "--cfg with_b")
+        .run();
 }

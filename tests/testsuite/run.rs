@@ -1,7 +1,6 @@
 use cargo::util::paths::dylib_path_envvar;
-use support::{self, ChannelChanger};
-use support::{basic_bin_manifest, basic_lib_manifest, execs, project, Project, path2url};
-use support::hamcrest::{assert_that, existing_file};
+use support;
+use support::{basic_bin_manifest, basic_lib_manifest, project, Project};
 
 #[test]
 fn simple() {
@@ -9,19 +8,15 @@ fn simple() {
         .file("src/main.rs", r#"fn main() { println!("hello"); }"#)
         .build();
 
-    assert_that(
-        p.cargo("run"),
-        execs()
-            .with_stderr(&format!(
-                "\
-[COMPILING] foo v0.0.1 ({dir})
+    p.cargo("run")
+        .with_stderr(&format!(
+            "\
+[COMPILING] foo v0.0.1 (CWD)
 [FINISHED] dev [unoptimized + debuginfo] target(s) in [..]
 [RUNNING] `target/debug/foo[EXE]`",
-                dir = path2url(p.root())
-            ))
-            .with_stdout("hello"),
-    );
-    assert_that(&p.bin("foo"), existing_file());
+        )).with_stdout("hello")
+        .run();
+    assert!(p.bin("foo").is_file());
 }
 
 #[test]
@@ -30,15 +25,9 @@ fn simple_quiet() {
         .file("src/main.rs", r#"fn main() { println!("hello"); }"#)
         .build();
 
-    assert_that(
-        p.cargo("run -q"),
-        execs().with_stdout("hello"),
-    );
+    p.cargo("run -q").with_stdout("hello").run();
 
-    assert_that(
-        p.cargo("run --quiet"),
-        execs().with_stdout("hello"),
-    );
+    p.cargo("run --quiet").with_stdout("hello").run();
 }
 
 #[test]
@@ -47,12 +36,10 @@ fn simple_quiet_and_verbose() {
         .file("src/main.rs", r#"fn main() { println!("hello"); }"#)
         .build();
 
-    assert_that(
-        p.cargo("run -q -v"),
-        execs()
-            .with_status(101)
-            .with_stderr("[ERROR] cannot set both --verbose and --quiet"),
-    );
+    p.cargo("run -q -v")
+        .with_status(101)
+        .with_stderr("[ERROR] cannot set both --verbose and --quiet")
+        .run();
 }
 
 #[test]
@@ -64,11 +51,10 @@ fn quiet_and_verbose_config() {
             [term]
             verbose = true
         "#,
-        )
-        .file("src/main.rs", r#"fn main() { println!("hello"); }"#)
+        ).file("src/main.rs", r#"fn main() { println!("hello"); }"#)
         .build();
 
-    assert_that(p.cargo("run -q"), execs());
+    p.cargo("run -q").run();
 }
 
 #[test]
@@ -82,13 +68,9 @@ fn simple_with_args() {
                 assert_eq!(std::env::args().nth(2).unwrap(), "world");
             }
         "#,
-        )
-        .build();
+        ).build();
 
-    assert_that(
-        p.cargo("run hello world"),
-        execs(),
-    );
+    p.cargo("run hello world").run();
 }
 
 #[test]
@@ -99,7 +81,7 @@ fn exit_code() {
 
     let mut output = String::from(
         "\
-[COMPILING] foo v0.0.1 (file[..])
+[COMPILING] foo v0.0.1 (CWD)
 [FINISHED] dev [unoptimized + debuginfo] target(s) in [..]
 [RUNNING] `target[..]`
 ",
@@ -109,7 +91,7 @@ fn exit_code() {
             "[ERROR] process didn't exit successfully: `target[..]foo[..]` (exit code: 2)",
         );
     }
-    assert_that(p.cargo("run"), execs().with_status(2).with_stderr(output));
+    p.cargo("run").with_status(2).with_stderr(output).run();
 }
 
 #[test]
@@ -120,7 +102,7 @@ fn exit_code_verbose() {
 
     let mut output = String::from(
         "\
-[COMPILING] foo v0.0.1 (file[..])
+[COMPILING] foo v0.0.1 (CWD)
 [RUNNING] `rustc [..]`
 [FINISHED] dev [unoptimized + debuginfo] target(s) in [..]
 [RUNNING] `target[..]`
@@ -132,25 +114,19 @@ fn exit_code_verbose() {
         );
     }
 
-    assert_that(
-        p.cargo("run -v"),
-        execs().with_status(2).with_stderr(output),
-    );
+    p.cargo("run -v").with_status(2).with_stderr(output).run();
 }
 
 #[test]
 fn no_main_file() {
-    let p = project()
-        .file("src/lib.rs", "")
-        .build();
+    let p = project().file("src/lib.rs", "").build();
 
-    assert_that(
-        p.cargo("run"),
-        execs().with_status(101).with_stderr(
+    p.cargo("run")
+        .with_status(101)
+        .with_stderr(
             "[ERROR] a bin target must be available \
              for `cargo run`\n",
-        ),
-    );
+        ).run();
 }
 
 #[test]
@@ -161,26 +137,25 @@ fn too_many_bins() {
         .file("src/bin/b.rs", "")
         .build();
 
-    assert_that(
-        p.cargo("run"),
-        // Using [..] here because the order is not stable
-        execs().with_status(101).with_stderr(
+    // Using [..] here because the order is not stable
+    p.cargo("run")
+        .with_status(101)
+        .with_stderr(
             "[ERROR] `cargo run` requires that a project only \
              have one executable; use the `--bin` option \
              to specify which one to run\navailable binaries: [..]\n",
-        ),
-    );
+        ).run();
 
-    assert_that(
-        p.cargo("run").masquerade_as_nightly_cargo(),
-        // Using [..] here because the order is not stable
-        execs().with_status(101).with_stderr(
+    // Using [..] here because the order is not stable
+    p.cargo("run")
+        .masquerade_as_nightly_cargo()
+        .with_status(101)
+        .with_stderr(
             "[ERROR] `cargo run` could not determine which binary to run. \
              Use the `--bin` option to specify a binary, or (on \
              nightly) the `default-run` manifest key.\
              \navailable binaries: [..]\n",
-        ),
-    );
+        ).run();
 }
 
 #[test]
@@ -194,44 +169,35 @@ fn specify_name() {
             extern crate foo;
             fn main() { println!("hello a.rs"); }
         "#,
-        )
-        .file(
+        ).file(
             "src/bin/b.rs",
             r#"
             #[allow(unused_extern_crates)]
             extern crate foo;
             fn main() { println!("hello b.rs"); }
         "#,
-        )
-        .build();
+        ).build();
 
-    assert_that(
-        p.cargo("run --bin a -v"),
-        execs()
-            .with_stderr(&format!(
-                "\
-[COMPILING] foo v0.0.1 ({dir})
+    p.cargo("run --bin a -v")
+        .with_stderr(&format!(
+            "\
+[COMPILING] foo v0.0.1 (CWD)
 [RUNNING] `rustc [..] src/lib.rs [..]`
 [RUNNING] `rustc [..] src/bin/a.rs [..]`
 [FINISHED] dev [unoptimized + debuginfo] target(s) in [..]
 [RUNNING] `target/debug/a[EXE]`",
-                dir = path2url(p.root())
-            ))
-            .with_stdout("hello a.rs"),
-    );
+        )).with_stdout("hello a.rs")
+        .run();
 
-    assert_that(
-        p.cargo("run --bin b -v"),
-        execs()
-            .with_stderr(
-                "\
+    p.cargo("run --bin b -v")
+        .with_stderr(
+            "\
 [COMPILING] foo v0.0.1 ([..])
 [RUNNING] `rustc [..] src/bin/b.rs [..]`
 [FINISHED] dev [unoptimized + debuginfo] target(s) in [..]
 [RUNNING] `target/debug/b[EXE]`",
-            )
-            .with_stdout("hello b.rs"),
-    );
+        ).with_stdout("hello b.rs")
+        .run();
 }
 
 #[test]
@@ -248,27 +214,23 @@ fn specify_default_run() {
             authors = []
             default-run = "a"
         "#,
-        )
-        .file("src/lib.rs", "")
+        ).file("src/lib.rs", "")
         .file("src/bin/a.rs", r#"fn main() { println!("hello A"); }"#)
         .file("src/bin/b.rs", r#"fn main() { println!("hello B"); }"#)
         .build();
 
-    assert_that(
-        p.cargo("run").masquerade_as_nightly_cargo(),
-        execs()
-            .with_stdout("hello A"),
-    );
-    assert_that(
-        p.cargo("run --bin a").masquerade_as_nightly_cargo(),
-        execs()
-            .with_stdout("hello A"),
-    );
-    assert_that(
-        p.cargo("run --bin b").masquerade_as_nightly_cargo(),
-        execs()
-            .with_stdout("hello B"),
-    );
+    p.cargo("run")
+        .masquerade_as_nightly_cargo()
+        .with_stdout("hello A")
+        .run();
+    p.cargo("run --bin a")
+        .masquerade_as_nightly_cargo()
+        .with_stdout("hello A")
+        .run();
+    p.cargo("run --bin b")
+        .masquerade_as_nightly_cargo()
+        .with_stdout("hello B")
+        .run();
 }
 
 #[test]
@@ -285,17 +247,15 @@ fn bogus_default_run() {
             authors = []
             default-run = "b"
         "#,
-        )
-        .file("src/lib.rs", "")
+        ).file("src/lib.rs", "")
         .file("src/bin/a.rs", r#"fn main() { println!("hello A"); }"#)
         .build();
 
-    assert_that(
-        p.cargo("run").masquerade_as_nightly_cargo(),
-        execs().with_status(101).with_stderr(
-            "error: no bin target named `b`\n\nDid you mean [..]?",
-        ),
-    );
+    p.cargo("run")
+        .masquerade_as_nightly_cargo()
+        .with_status(101)
+        .with_stderr("error: no bin target named `b`\n\nDid you mean [..]?")
+        .run();
 }
 
 #[test]
@@ -310,14 +270,13 @@ fn default_run_unstable() {
             authors = []
             default-run = "a"
         "#,
-        )
-        .file("src/bin/a.rs", r#"fn main() { println!("hello A"); }"#)
+        ).file("src/bin/a.rs", r#"fn main() { println!("hello A"); }"#)
         .build();
 
-    assert_that(
-        p.cargo("run"),
-        execs().with_status(101).with_stderr(
-r#"error: failed to parse manifest at [..]
+    p.cargo("run")
+        .with_status(101)
+        .with_stderr(
+            r#"error: failed to parse manifest at [..]
 
 Caused by:
   the `default-run` manifest key is unstable
@@ -329,13 +288,13 @@ this Cargo does not support nightly features, but if you
 switch to nightly channel you can add
 `cargo-features = ["default-run"]` to enable this feature
 "#,
-        ),
-    );
+        ).run();
 
-    assert_that(
-        p.cargo("run").masquerade_as_nightly_cargo(),
-        execs().with_status(101).with_stderr(
-r#"error: failed to parse manifest at [..]
+    p.cargo("run")
+        .masquerade_as_nightly_cargo()
+        .with_status(101)
+        .with_stderr(
+            r#"error: failed to parse manifest at [..]
 
 Caused by:
   the `default-run` manifest key is unstable
@@ -345,8 +304,7 @@ Caused by:
 
 consider adding `cargo-features = ["default-run"]` to the manifest
 "#,
-        ),
-    );
+        ).run();
 }
 
 #[test]
@@ -357,18 +315,14 @@ fn run_example() {
         .file("src/bin/a.rs", r#"fn main() { println!("bin"); }"#)
         .build();
 
-    assert_that(
-        p.cargo("run --example a"),
-        execs()
-            .with_stderr(&format!(
-                "\
-[COMPILING] foo v0.0.1 ({dir})
+    p.cargo("run --example a")
+        .with_stderr(&format!(
+            "\
+[COMPILING] foo v0.0.1 (CWD)
 [FINISHED] dev [unoptimized + debuginfo] target(s) in [..]
 [RUNNING] `target/debug/examples/a[EXE]`",
-                dir = path2url(p.root())
-            ))
-            .with_stdout("example"),
-    );
+        )).with_stdout("example")
+        .run();
 }
 
 #[test]
@@ -385,17 +339,14 @@ fn run_library_example() {
             name = "bar"
             crate_type = ["lib"]
         "#,
-        )
-        .file("src/lib.rs", "")
+        ).file("src/lib.rs", "")
         .file("examples/bar.rs", "fn foo() {}")
         .build();
 
-    assert_that(
-        p.cargo("run --example bar"),
-        execs()
-            .with_status(101)
-            .with_stderr("[ERROR] example target `bar` is a library and cannot be executed"),
-    );
+    p.cargo("run --example bar")
+        .with_status(101)
+        .with_stderr("[ERROR] example target `bar` is a library and cannot be executed")
+        .run();
 }
 
 fn autodiscover_examples_project(rust_edition: &str, autoexamples: Option<bool>) -> Project {
@@ -427,15 +378,13 @@ fn autodiscover_examples_project(rust_edition: &str, autoexamples: Option<bool>)
                 rust_edition = rust_edition,
                 autoexamples = autoexamples
             ),
-        )
-        .file("examples/a.rs", r#"fn main() { println!("example"); }"#)
+        ).file("examples/a.rs", r#"fn main() { println!("example"); }"#)
         .file(
             "examples/do_magic.rs",
             r#"
             fn main() { println!("magic example"); }
         "#,
-        )
-        .build()
+        ).build()
 }
 
 #[test]
@@ -445,10 +394,10 @@ fn run_example_autodiscover_2015() {
     }
 
     let p = autodiscover_examples_project("2015", None);
-    assert_that(
-        p.cargo("run --example a")
-            .masquerade_as_nightly_cargo(),
-        execs().with_status(101).with_stderr(
+    p.cargo("run --example a")
+        .masquerade_as_nightly_cargo()
+        .with_status(101)
+        .with_stderr(
             "warning: \
 An explicit [[example]] section is specified in Cargo.toml which currently
 disables Cargo from automatically inferring other example targets.
@@ -467,8 +416,7 @@ For more information on this warning you can consult
 https://github.com/rust-lang/cargo/issues/5330
 error: no example target named `a`
 ",
-        ),
-    );
+        ).run();
 }
 
 #[test]
@@ -478,19 +426,15 @@ fn run_example_autodiscover_2015_with_autoexamples_enabled() {
     }
 
     let p = autodiscover_examples_project("2015", Some(true));
-    assert_that(
-        p.cargo("run --example a")
-            .masquerade_as_nightly_cargo(),
-        execs()
-            .with_stderr(&format!(
-                "\
-[COMPILING] foo v0.0.1 ({dir})
+    p.cargo("run --example a")
+        .masquerade_as_nightly_cargo()
+        .with_stderr(&format!(
+            "\
+[COMPILING] foo v0.0.1 (CWD)
 [FINISHED] dev [unoptimized + debuginfo] target(s) in [..]
 [RUNNING] `target/debug/examples/a[EXE]`",
-                dir = path2url(p.root())
-            ))
-            .with_stdout("example"),
-    );
+        )).with_stdout("example")
+        .run();
 }
 
 #[test]
@@ -500,13 +444,11 @@ fn run_example_autodiscover_2015_with_autoexamples_disabled() {
     }
 
     let p = autodiscover_examples_project("2015", Some(false));
-    assert_that(
-        p.cargo("run --example a")
-            .masquerade_as_nightly_cargo(),
-        execs()
-            .with_status(101)
-            .with_stderr("error: no example target named `a`\n"),
-    );
+    p.cargo("run --example a")
+        .masquerade_as_nightly_cargo()
+        .with_status(101)
+        .with_stderr("error: no example target named `a`\n")
+        .run();
 }
 
 #[test]
@@ -516,19 +458,15 @@ fn run_example_autodiscover_2018() {
     }
 
     let p = autodiscover_examples_project("2018", None);
-    assert_that(
-        p.cargo("run --example a")
-            .masquerade_as_nightly_cargo(),
-        execs()
-            .with_stderr(&format!(
-                "\
-[COMPILING] foo v0.0.1 ({dir})
+    p.cargo("run --example a")
+        .masquerade_as_nightly_cargo()
+        .with_stderr(&format!(
+            "\
+[COMPILING] foo v0.0.1 (CWD)
 [FINISHED] dev [unoptimized + debuginfo] target(s) in [..]
 [RUNNING] `target/debug/examples/a[EXE]`",
-                dir = path2url(p.root())
-            ))
-            .with_stdout("example"),
-    );
+        )).with_stdout("example")
+        .run();
 }
 
 #[test]
@@ -539,12 +477,11 @@ fn run_bins() {
         .file("src/bin/a.rs", r#"fn main() { println!("bin"); }"#)
         .build();
 
-    assert_that(
-        p.cargo("run --bins"),
-        execs().with_status(1).with_stderr_contains(
+    p.cargo("run --bins")
+        .with_status(1)
+        .with_stderr_contains(
             "error: Found argument '--bins' which wasn't expected, or isn't valid in this context",
-        ),
-    );
+        ).run();
 }
 
 #[test]
@@ -557,43 +494,36 @@ fn run_with_filename() {
             extern crate foo;
             fn main() { println!("hello a.rs"); }
         "#,
-        )
-        .file("examples/a.rs", r#"fn main() { println!("example"); }"#)
+        ).file("examples/a.rs", r#"fn main() { println!("example"); }"#)
         .build();
 
-    assert_that(
-        p.cargo("run --bin bin.rs"),
-        execs()
-            .with_status(101)
-            .with_stderr("[ERROR] no bin target named `bin.rs`"),
-    );
+    p.cargo("run --bin bin.rs")
+        .with_status(101)
+        .with_stderr("[ERROR] no bin target named `bin.rs`")
+        .run();
 
-    assert_that(
-        p.cargo("run --bin a.rs"),
-        execs().with_status(101).with_stderr(
+    p.cargo("run --bin a.rs")
+        .with_status(101)
+        .with_stderr(
             "\
 [ERROR] no bin target named `a.rs`
 
 Did you mean `a`?",
-        ),
-    );
+        ).run();
 
-    assert_that(
-        p.cargo("run --example example.rs"),
-        execs()
-            .with_status(101)
-            .with_stderr("[ERROR] no example target named `example.rs`"),
-    );
+    p.cargo("run --example example.rs")
+        .with_status(101)
+        .with_stderr("[ERROR] no example target named `example.rs`")
+        .run();
 
-    assert_that(
-        p.cargo("run --example a.rs"),
-        execs().with_status(101).with_stderr(
+    p.cargo("run --example a.rs")
+        .with_status(101)
+        .with_stderr(
             "\
 [ERROR] no example target named `a.rs`
 
 Did you mean `a`?",
-        ),
-    );
+        ).run();
 }
 
 #[test]
@@ -603,37 +533,34 @@ fn either_name_or_example() {
         .file("examples/b.rs", r#"fn main() { println!("hello b.rs"); }"#)
         .build();
 
-    assert_that(
-        p.cargo("run --bin a --example b"),
-        execs().with_status(101).with_stderr(
+    p.cargo("run --bin a --example b")
+        .with_status(101)
+        .with_stderr(
             "[ERROR] `cargo run` can run at most one \
              executable, but multiple were \
              specified",
-        ),
-    );
+        ).run();
 }
 
 #[test]
 fn one_bin_multiple_examples() {
     let p = project()
         .file("src/lib.rs", "")
-        .file("src/bin/main.rs", r#"fn main() { println!("hello main.rs"); }"#)
-        .file("examples/a.rs", r#"fn main() { println!("hello a.rs"); }"#)
+        .file(
+            "src/bin/main.rs",
+            r#"fn main() { println!("hello main.rs"); }"#,
+        ).file("examples/a.rs", r#"fn main() { println!("hello a.rs"); }"#)
         .file("examples/b.rs", r#"fn main() { println!("hello b.rs"); }"#)
         .build();
 
-    assert_that(
-        p.cargo("run"),
-        execs()
-            .with_stderr(&format!(
-                "\
-[COMPILING] foo v0.0.1 ({dir})
+    p.cargo("run")
+        .with_stderr(&format!(
+            "\
+[COMPILING] foo v0.0.1 (CWD)
 [FINISHED] dev [unoptimized + debuginfo] target(s) in [..]
 [RUNNING] `target/debug/main[EXE]`",
-                dir = path2url(p.root())
-            ))
-            .with_stdout("hello main.rs"),
-    );
+        )).with_stdout("hello main.rs")
+        .run();
 }
 
 #[test]
@@ -651,8 +578,7 @@ fn example_with_release_flag() {
             version = "*"
             path = "bar"
         "#,
-        )
-        .file(
+        ).file(
             "examples/a.rs",
             r#"
             extern crate bar;
@@ -666,8 +592,7 @@ fn example_with_release_flag() {
                 bar::baz();
             }
         "#,
-        )
-        .file("bar/Cargo.toml", &basic_lib_manifest("bar"))
+        ).file("bar/Cargo.toml", &basic_lib_manifest("bar"))
         .file(
             "bar/src/bar.rs",
             r#"
@@ -679,74 +604,61 @@ fn example_with_release_flag() {
                 }
             }
         "#,
-        )
-        .build();
+        ).build();
 
-    assert_that(
-        p.cargo("run -v --release --example a"),
-        execs()
-            .with_stderr(&format!(
-                "\
-[COMPILING] bar v0.5.0 ({url}/bar)
+    p.cargo("run -v --release --example a")
+        .with_stderr(&format!(
+            "\
+[COMPILING] bar v0.5.0 (CWD/bar)
 [RUNNING] `rustc --crate-name bar bar/src/bar.rs --crate-type lib \
         --emit=dep-info,link \
         -C opt-level=3 \
         -C metadata=[..] \
-        --out-dir {dir}/target/release/deps \
-        -L dependency={dir}/target/release/deps`
-[COMPILING] foo v0.0.1 ({url})
+        --out-dir CWD/target/release/deps \
+        -L dependency=CWD/target/release/deps`
+[COMPILING] foo v0.0.1 (CWD)
 [RUNNING] `rustc --crate-name a examples/a.rs --crate-type bin \
         --emit=dep-info,link \
         -C opt-level=3 \
         -C metadata=[..] \
-        --out-dir {dir}/target/release/examples \
-        -L dependency={dir}/target/release/deps \
-         --extern bar={dir}/target/release/deps/libbar-[..].rlib`
+        --out-dir CWD/target/release/examples \
+        -L dependency=CWD/target/release/deps \
+         --extern bar=CWD/target/release/deps/libbar-[..].rlib`
 [FINISHED] release [optimized] target(s) in [..]
 [RUNNING] `target/release/examples/a[EXE]`
 ",
-                dir = p.root().display(),
-                url = path2url(p.root()),
-            ))
-            .with_stdout(
-                "\
+        )).with_stdout(
+            "\
 fast1
 fast2",
-            ),
-    );
+        ).run();
 
-    assert_that(
-        p.cargo("run -v --example a"),
-        execs()
-            .with_stderr(&format!(
-                "\
-[COMPILING] bar v0.5.0 ({url}/bar)
+    p.cargo("run -v --example a")
+        .with_stderr(&format!(
+            "\
+[COMPILING] bar v0.5.0 (CWD/bar)
 [RUNNING] `rustc --crate-name bar bar/src/bar.rs --crate-type lib \
         --emit=dep-info,link \
         -C debuginfo=2 \
         -C metadata=[..] \
-        --out-dir {dir}/target/debug/deps \
-        -L dependency={dir}/target/debug/deps`
-[COMPILING] foo v0.0.1 ({url})
+        --out-dir CWD/target/debug/deps \
+        -L dependency=CWD/target/debug/deps`
+[COMPILING] foo v0.0.1 (CWD)
 [RUNNING] `rustc --crate-name a examples/a.rs --crate-type bin \
         --emit=dep-info,link \
         -C debuginfo=2 \
         -C metadata=[..] \
-        --out-dir {dir}/target/debug/examples \
-        -L dependency={dir}/target/debug/deps \
-         --extern bar={dir}/target/debug/deps/libbar-[..].rlib`
+        --out-dir CWD/target/debug/examples \
+        -L dependency=CWD/target/debug/deps \
+         --extern bar=CWD/target/debug/deps/libbar-[..].rlib`
 [FINISHED] dev [unoptimized + debuginfo] target(s) in [..]
 [RUNNING] `target/debug/examples/a[EXE]`
 ",
-                dir = p.root().display(),
-                url = path2url(p.root()),
-            ))
-            .with_stdout(
-                "\
+        )).with_stdout(
+            "\
 slow1
 slow2",
-            ),
-    );
+        ).run();
 }
 
 #[test]
@@ -763,9 +675,10 @@ fn run_dylib_dep() {
             [dependencies.bar]
             path = "bar"
         "#,
-        )
-        .file("src/main.rs", r#"extern crate bar; fn main() { bar::bar(); }"#)
-        .file(
+        ).file(
+            "src/main.rs",
+            r#"extern crate bar; fn main() { bar::bar(); }"#,
+        ).file(
             "bar/Cargo.toml",
             r#"
             [package]
@@ -777,14 +690,10 @@ fn run_dylib_dep() {
             name = "bar"
             crate-type = ["dylib"]
         "#,
-        )
-        .file("bar/src/lib.rs", "pub fn bar() {}")
+        ).file("bar/src/lib.rs", "pub fn bar() {}")
         .build();
 
-    assert_that(
-        p.cargo("run hello world"),
-        execs(),
-    );
+    p.cargo("run hello world").run();
 }
 
 #[test]
@@ -795,21 +704,17 @@ fn release_works() {
             r#"
             fn main() { if cfg!(debug_assertions) { panic!() } }
         "#,
-        )
-        .build();
+        ).build();
 
-    assert_that(
-        p.cargo("run --release"),
-        execs().with_stderr(&format!(
+    p.cargo("run --release")
+        .with_stderr(&format!(
             "\
-[COMPILING] foo v0.0.1 ({dir})
+[COMPILING] foo v0.0.1 (CWD)
 [FINISHED] release [optimized] target(s) in [..]
 [RUNNING] `target/release/foo[EXE]`
 ",
-            dir = path2url(p.root()),
-        )),
-    );
-    assert_that(&p.release_bin("foo"), existing_file());
+        )).run();
+    assert!(p.release_bin("foo").is_file());
 }
 
 #[test]
@@ -826,11 +731,10 @@ fn run_bin_different_name() {
             [[bin]]
             name = "bar"
         "#,
-        )
-        .file("src/bar.rs", "fn main() {}")
+        ).file("src/bar.rs", "fn main() {}")
         .build();
 
-    assert_that(p.cargo("run"), execs());
+    p.cargo("run").run();
 }
 
 #[test]
@@ -847,13 +751,9 @@ fn dashes_are_forwarded() {
                 assert_eq!(s[4], "b");
             }
         "#,
-        )
-        .build();
+        ).build();
 
-    assert_that(
-        p.cargo("run -- -- a -- b"),
-        execs(),
-    );
+    p.cargo("run -- -- a -- b").run();
 }
 
 #[test]
@@ -863,18 +763,16 @@ fn run_from_executable_folder() {
         .build();
 
     let cwd = p.root().join("target").join("debug");
-    p.cargo("build").exec_with_output().unwrap();
+    p.cargo("build").run();
 
-    assert_that(
-        p.cargo("run").cwd(cwd),
-        execs()
-            .with_stderr(
-                "\
-                 [FINISHED] dev [unoptimized + debuginfo] target(s) in [..]\n\
-                 [RUNNING] `./foo[EXE]`",
-            )
-            .with_stdout("hello"),
-    );
+    p.cargo("run")
+        .cwd(cwd)
+        .with_stderr(
+            "\
+             [FINISHED] dev [unoptimized + debuginfo] target(s) in [..]\n\
+             [RUNNING] `./foo[EXE]`",
+        ).with_stdout("hello")
+        .run();
 }
 
 #[test]
@@ -889,16 +787,17 @@ fn run_with_library_paths() {
     let mut dir2 = p.target_debug_dir();
     dir2.push("dir=containing=equal=signs");
 
-    let p = p.file(
-        "Cargo.toml",
-        r#"
+    let p = p
+        .file(
+            "Cargo.toml",
+            r#"
             [project]
             name = "foo"
             version = "0.0.1"
             authors = []
             build = "build.rs"
         "#,
-    ).file(
+        ).file(
             "build.rs",
             &format!(
                 r##"
@@ -910,8 +809,7 @@ fn run_with_library_paths() {
                 dir1.display(),
                 dir2.display()
             ),
-        )
-        .file(
+        ).file(
             "src/main.rs",
             &format!(
                 r##"
@@ -926,10 +824,9 @@ fn run_with_library_paths() {
                 dir1.display(),
                 dir2.display()
             ),
-        )
-        .build();
+        ).build();
 
-    assert_that(p.cargo("run"), execs());
+    p.cargo("run").run();
 }
 
 #[test]
@@ -945,16 +842,17 @@ fn library_paths_sorted_alphabetically() {
     let mut dir3 = p.target_debug_dir();
     dir3.push("aaaaaaa");
 
-    let p = p.file(
-        "Cargo.toml",
-        r#"
+    let p = p
+        .file(
+            "Cargo.toml",
+            r#"
             [project]
             name = "foo"
             version = "0.0.1"
             authors = []
             build = "build.rs"
         "#,
-    ).file(
+        ).file(
             "build.rs",
             &format!(
                 r##"
@@ -968,8 +866,7 @@ fn library_paths_sorted_alphabetically() {
                 dir2.display(),
                 dir3.display()
             ),
-        )
-        .file(
+        ).file(
             "src/main.rs",
             &format!(
                 r##"
@@ -984,10 +881,9 @@ fn library_paths_sorted_alphabetically() {
         "##,
                 dylib_path_envvar()
             ),
-        )
-        .build();
+        ).build();
 
-    assert_that(p.cargo("run"), execs());
+    p.cargo("run").run();
 }
 
 #[test]
@@ -996,10 +892,11 @@ fn fail_no_extra_verbose() {
         .file("src/main.rs", "fn main() { std::process::exit(1); }")
         .build();
 
-    assert_that(
-        p.cargo("run -q"),
-        execs().with_status(1).with_stdout("").with_stderr(""),
-    );
+    p.cargo("run -q")
+        .with_status(1)
+        .with_stdout("")
+        .with_stderr("")
+        .run();
 }
 
 #[test]
@@ -1024,8 +921,7 @@ fn run_multiple_packages() {
             [[bin]]
             name = "foo"
         "#,
-        )
-        .file("foo/src/foo.rs", "fn main() { println!(\"foo\"); }")
+        ).file("foo/src/foo.rs", "fn main() { println!(\"foo\"); }")
         .file("foo/d1/Cargo.toml", &basic_bin_manifest("d1"))
         .file("foo/d1/src/lib.rs", "")
         .file("foo/d1/src/main.rs", "fn main() { println!(\"d1\"); }")
@@ -1041,29 +937,28 @@ fn run_multiple_packages() {
         process_builder
     };
 
-    assert_that(
-        cargo().arg("-p").arg("d1"),
-        execs().with_stdout("d1"),
-    );
+    cargo().arg("-p").arg("d1").with_stdout("d1").run();
 
-    assert_that(
-        cargo().arg("-p").arg("d2").arg("--bin").arg("d2"),
-        execs().with_stdout("d2"),
-    );
+    cargo()
+        .arg("-p")
+        .arg("d2")
+        .arg("--bin")
+        .arg("d2")
+        .with_stdout("d2")
+        .run();
 
-    assert_that(cargo(), execs().with_stdout("foo"));
+    cargo().with_stdout("foo").run();
 
-    assert_that(cargo().arg("-p").arg("d1").arg("-p").arg("d2"),
-                execs()
+    cargo().arg("-p").arg("d1").arg("-p").arg("d2")
                     .with_status(1)
-                    .with_stderr_contains("error: The argument '--package <SPEC>' was provided more than once, but cannot be used multiple times"));
+                    .with_stderr_contains("error: The argument '--package <SPEC>' was provided more than once, but cannot be used multiple times").run();
 
-    assert_that(
-        cargo().arg("-p").arg("d3"),
-        execs()
-            .with_status(101)
-            .with_stderr_contains("[ERROR] package `d3` is not a member of the workspace"),
-    );
+    cargo()
+        .arg("-p")
+        .arg("d3")
+        .with_status(101)
+        .with_stderr_contains("[ERROR] package `d3` is not a member of the workspace")
+        .run();
 }
 
 #[test]
@@ -1077,10 +972,9 @@ fn explicit_bin_with_args() {
                 assert_eq!(std::env::args().nth(2).unwrap(), "world");
             }
         "#,
-        )
-        .build();
+        ).build();
 
-    assert_that(p.cargo("run --bin foo hello world"), execs());
+    p.cargo("run --bin foo hello world").run();
 }
 
 #[test]
@@ -1098,18 +992,17 @@ fn run_workspace() {
         .file("b/src/main.rs", r#"fn main() {println!("run-b");}"#)
         .build();
 
-    assert_that(
-        p.cargo("run"),
-        execs().with_status(101).with_stderr(
+    p.cargo("run")
+        .with_status(101)
+        .with_stderr(
             "\
 [ERROR] `cargo run` requires that a project only have one executable[..]
 available binaries: a, b",
-        ),
-    );
-    assert_that(
-        p.cargo("run --bin a"),
-        execs().with_status(0).with_stdout("run-a"),
-    );
+        ).run();
+    p.cargo("run --bin a")
+        .with_status(0)
+        .with_stdout("run-a")
+        .run();
 }
 
 #[test]
@@ -1136,8 +1029,9 @@ fn default_run_workspace() {
         .file("b/src/main.rs", r#"fn main() {println!("run-b");}"#)
         .build();
 
-    assert_that(
-        p.cargo("run").masquerade_as_nightly_cargo(),
-        execs().with_status(0).with_stdout("run-a"),
-    );
+    p.cargo("run")
+        .masquerade_as_nightly_cargo()
+        .with_status(0)
+        .with_stdout("run-a")
+        .run();
 }
