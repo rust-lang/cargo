@@ -1,7 +1,4 @@
-use std::fs::File;
-
 use support::project;
-use support::sleep_ms;
 
 #[test]
 fn rerun_if_env_changes() {
@@ -54,7 +51,7 @@ fn rerun_if_env_changes() {
 
 #[test]
 fn rerun_if_env_or_file_changes() {
-    let p = project()
+    let mut p = project()
         .file("src/main.rs", "fn main() {}")
         .file(
             "build.rs",
@@ -86,8 +83,7 @@ fn rerun_if_env_or_file_changes() {
         .env("FOO", "bar")
         .with_stderr("[FINISHED] [..]")
         .run();
-    sleep_ms(1000);
-    File::create(p.root().join("foo")).unwrap();
+    p.write_file("foo", "");
     p.cargo("build")
         .env("FOO", "bar")
         .with_stderr(

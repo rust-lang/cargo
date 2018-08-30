@@ -1,7 +1,6 @@
 use std::fs::File;
 use std::io::prelude::*;
 
-use support::paths::CargoPathExt;
 use support::registry::Package;
 use support::{basic_manifest, project};
 
@@ -101,7 +100,7 @@ Consider adding `optional = true` to the dependency
 
 #[test]
 fn invalid4() {
-    let p = project()
+    let mut p = project()
         .file(
             "Cargo.toml",
             r#"
@@ -133,7 +132,7 @@ the package `foo` depends on `bar`, with features: `bar` but `bar` does not have
 failed to select a version for `bar` which could resolve this conflict",
         ).run();
 
-    p.change_file("Cargo.toml", &basic_manifest("foo", "0.0.1"));
+    p.write_file("Cargo.toml", &basic_manifest("foo", "0.0.1"));
 
     p.cargo("build --features test")
         .with_status(101)
@@ -747,8 +746,8 @@ fn many_features_no_rebuilds() {
 [COMPILING] b v0.1.0 (CWD)
 [FINISHED] dev [unoptimized + debuginfo] target(s) in [..]
 ",
-        ).run();
-    p.root().move_into_the_past();
+        )
+        .run();
 
     p.cargo("build -v")
         .with_stderr(

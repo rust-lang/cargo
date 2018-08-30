@@ -1,5 +1,5 @@
 use std::env;
-use support::paths::CargoPathExt;
+use filetime::{self, FileTime};
 use support::{basic_manifest, project};
 
 #[test]
@@ -79,7 +79,9 @@ fn rustc_info_cache() {
         .with_stderr_does_not_contain(update)
         .run();
 
-    other_rustc.move_into_the_future();
+    let mtime = FileTime::from_last_modification_time(&other_rustc.metadata().unwrap());
+    let mtime = FileTime::from_unix_time(mtime.unix_seconds() + 1, mtime.nanoseconds());
+    filetime::set_file_times(&other_rustc, mtime, mtime).unwrap();
 
     p.cargo("build")
         .env("RUST_LOG", "cargo::util::rustc=info")

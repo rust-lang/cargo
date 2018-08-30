@@ -1,6 +1,6 @@
 use git2;
 use std::env;
-use std::fs::{self, File};
+use std::fs::File;
 use std::io::prelude::*;
 use std::net::{TcpListener, TcpStream};
 use std::path::Path;
@@ -8,8 +8,7 @@ use std::sync::atomic::{AtomicBool, Ordering};
 use std::sync::Arc;
 use std::thread;
 
-use support::paths::{self, CargoPathExt};
-use support::sleep_ms;
+use support::paths;
 use support::{basic_lib_manifest, basic_manifest, git, main_file, path2url, project};
 
 #[test]
@@ -756,7 +755,6 @@ fn recompilation() {
 
     println!("compile after commit");
     p.cargo("build").with_stdout("").run();
-    p.root().move_into_the_past();
 
     // Update the dependency and carry on!
     p.cargo("update")
@@ -873,8 +871,6 @@ fn update_with_shared_deps() {
     let old_head = repo.head().unwrap().target().unwrap();
     git::add(&repo);
     git::commit(&repo);
-
-    sleep_ms(1000);
 
     // By default, not transitive updates
     println!("dep1 update");
@@ -1164,8 +1160,6 @@ fn stale_cached_version() {
     git::add(&repo);
     git::commit(&repo);
 
-    sleep_ms(1000);
-
     let rev = repo.revparse_single("HEAD").unwrap().id();
 
     File::create(&foo.root().join("Cargo.lock"))
@@ -1286,7 +1280,6 @@ fn dep_with_changed_submodule() {
     git::add(&repo);
     git::commit(&repo);
 
-    sleep_ms(1000);
     // Update the dependency and carry on!
     println!("update");
     p.cargo("update -v")
@@ -1395,9 +1388,6 @@ fn git_build_cmd_freshness() {
             .file("src/lib.rs", "pub fn bar() -> i32 { 1 }")
             .file(".gitignore", "src/bar.rs")
     }).unwrap();
-    foo.root().move_into_the_past();
-
-    sleep_ms(1000);
 
     foo.cargo("build")
         .with_stderr(
@@ -1494,7 +1484,6 @@ fn git_repo_changing_no_rebuild() {
         ).file("src/main.rs", "fn main() {}")
         .file("build.rs", "fn main() {}")
         .build();
-    p1.root().move_into_the_past();
     p1.cargo("build")
         .with_stderr(&format!(
             "\
@@ -1551,7 +1540,7 @@ fn git_repo_changing_no_rebuild() {
 
 #[test]
 fn git_dep_build_cmd() {
-    let p = git::new("foo", |project| {
+    let mut p = git::new("foo", |project| {
         project
             .file(
                 "Cargo.toml",
@@ -1602,17 +1591,12 @@ fn git_dep_build_cmd() {
             )
     }).unwrap();
 
-    p.root().join("bar").move_into_the_past();
-
     p.cargo("build").run();
 
     p.process(&p.bin("foo")).with_stdout("0\n").run();
 
     // Touching bar.rs.in should cause the `build` command to run again.
-    fs::File::create(&p.root().join("bar/src/bar.rs.in"))
-        .unwrap()
-        .write_all(b"pub fn gimme() -> i32 { 1 }")
-        .unwrap();
+    p.write_file("bar/src/bar.rs.in", "pub fn gimme() -> i32 { 1 }");
 
     p.cargo("build").run();
 
@@ -2385,7 +2369,6 @@ fn include_overrides_gitignore() {
         ).run();
 
     println!("build 3: touch `src/not_incl.rs`; expect build script *not* re-run");
-    sleep_ms(1000);
     File::create(p.root().join("src").join("not_incl.rs")).unwrap();
 
     p.cargo("build -v")
@@ -2403,7 +2386,6 @@ fn include_overrides_gitignore() {
     // explicitly included file should cause a build-script re-run,
     // even if that same file is matched by `.gitignore`.
     println!("build 4: touch `src/incl.rs`; expect build script re-run");
-    sleep_ms(1000);
     File::create(p.root().join("src").join("incl.rs")).unwrap();
 
     p.cargo("build -v")

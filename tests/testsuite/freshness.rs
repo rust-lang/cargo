@@ -1,14 +1,14 @@
 use std::fs::{self, File};
 use std::io::prelude::*;
 
-use support::paths::CargoPathExt;
+use filetime::{self, FileTime};
+
 use support::registry::Package;
-use support::sleep_ms;
 use support::{basic_manifest, project};
 
 #[test]
 fn modifying_and_moving() {
-    let p = project()
+    let mut p = project()
         .file("src/main.rs", "mod a; fn main() {}")
         .file("src/a.rs", "")
         .build();
@@ -22,13 +22,8 @@ fn modifying_and_moving() {
         ).run();
 
     p.cargo("build").with_stdout("").run();
-    p.root().move_into_the_past();
-    p.root().join("target").move_into_the_past();
 
-    File::create(&p.root().join("src/a.rs"))
-        .unwrap()
-        .write_all(b"#[allow(unused)]fn main() {}")
-        .unwrap();
+    p.write_file("src/a.rs", "#[allow(unused)] fn main() {}");
     p.cargo("build")
         .with_stderr(
             "\
@@ -37,13 +32,14 @@ fn modifying_and_moving() {
 ",
         ).run();
 
-    fs::rename(&p.root().join("src/a.rs"), &p.root().join("src/b.rs")).unwrap();
+    p.write_file("src/b.rs", "");
+    fs::remove_file(p.root().join("src/a.rs")).unwrap();
     p.cargo("build").with_status(101).run();
 }
 
 #[test]
 fn modify_only_some_files() {
-    let p = project()
+    let mut p = project()
         .file("src/lib.rs", "mod a;")
         .file("src/a.rs", "")
         .file("src/main.rs", "mod b; fn main() {}")
@@ -59,22 +55,14 @@ fn modify_only_some_files() {
 ",
         ).run();
     p.cargo("test").run();
-    sleep_ms(1000);
 
     assert!(p.bin("foo").is_file());
 
-    let lib = p.root().join("src/lib.rs");
-    let bin = p.root().join("src/b.rs");
+    // we shouldn't recompile the library
+    fs::write(p.root().join("src/lib.rs"), "invalid rust code").unwrap();
 
-    File::create(&lib)
-        .unwrap()
-        .write_all(b"invalid rust code")
-        .unwrap();
-    File::create(&bin)
-        .unwrap()
-        .write_all(b"#[allow(unused)]fn foo() {}")
-        .unwrap();
-    lib.move_into_the_past();
+    // but we should recompile the binary
+    p.write_file("src/b.rs", "#[allow(unused)] fn foo() {}");
 
     // Make sure the binary is rebuilt, not the lib
     p.cargo("build")
@@ -462,7 +450,7 @@ fn changing_bin_features_caches_targets() {
 
 #[test]
 fn rebuild_tests_if_lib_changes() {
-    let p = project()
+    let mut p = project()
         .file("src/lib.rs", "pub fn foo() {}")
         .file(
             "tests/foo.rs",
@@ -476,8 +464,7 @@ fn rebuild_tests_if_lib_changes() {
     p.cargo("build").run();
     p.cargo("test").run();
 
-    sleep_ms(1000);
-    File::create(&p.root().join("src/lib.rs")).unwrap();
+    p.write_file("src/lib.rs", "");
 
     p.cargo("build -v").run();
     p.cargo("test -v").with_status(101).run();
@@ -680,7 +667,11 @@ fn no_rebuild_if_build_artifacts_move_backwards_in_time() {
 
     p.cargo("build").run();
 
-    p.root().move_into_the_past();
+    filetime::set_file_times(
+        p.root().join("src/lib.rs"),
+        FileTime::from_unix_time(0, 0),
+        FileTime::from_unix_time(0, 0),
+    ).unwrap();
 
     p.cargo("build")
         .with_stdout("")
@@ -690,29 +681,29 @@ fn no_rebuild_if_build_artifacts_move_backwards_in_time() {
 
 #[test]
 fn rebuild_if_build_artifacts_move_forward_in_time() {
-    let p = project()
+    let mut p = project()
         .file(
             "Cargo.toml",
             r#"
-            [package]
-            name = "foo"
-            version = "0.0.1"
-            authors = []
+                [package]
+                name = "foo"
+                version = "0.0.1"
+                authors = []
 
-            [dependencies]
-            a = { path = "a" }
-        "#,
-        ).file("src/lib.rs", "")
+                [dependencies]
+                a = { path = "a" }
+            "#,
+        )
+        .file("src/lib.rs", "")
         .file("a/Cargo.toml", &basic_manifest("a", "0.0.1"))
         .file("a/src/lib.rs", "")
         .build();
 
     p.cargo("build").run();
 
-    p.root().move_into_the_future();
+    p.write_file("a/src/lib.rs", "");
 
     p.cargo("build")
-        .env("RUST_LOG", "")
         .with_stdout("")
         .with_stderr(
             "\
@@ -779,7 +770,7 @@ fn rebuild_if_environment_changes() {
 
 #[test]
 fn no_rebuild_when_rename_dir() {
-    let p = project()
+    let mut p = project()
         .file(
             "Cargo.toml",
             r#"
@@ -801,9 +792,9 @@ fn no_rebuild_when_rename_dir() {
     new.pop();
     new.push("bar");
     fs::rename(p.root(), &new).unwrap();
+    p.set_root(&new);
 
     p.cargo("build")
-        .cwd(&new)
         .with_stderr("[FINISHED] dev [unoptimized + debuginfo] target(s) in [..]")
         .run();
 }

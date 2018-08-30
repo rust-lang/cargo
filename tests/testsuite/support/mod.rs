@@ -104,20 +104,22 @@ dependency.
 
 */
 
+use std::collections::HashMap;
 use std::env;
 use std::ffi::OsStr;
 use std::fmt;
-use std::fs;
+use std::fs::{self, File};
 use std::io::prelude::*;
 use std::os;
 use std::path::{Path, PathBuf};
 use std::process::{Command, Output};
 use std::str;
-use std::time::Duration;
+use std::thread;
 use std::usize;
 
-use cargo;
 use cargo::util::{CargoResult, ProcessBuilder, ProcessError, Rustc};
+use cargo;
+use filetime::{self, FileTime};
 use serde_json::{self, Value};
 use url::Url;
 
@@ -201,7 +203,21 @@ impl SymlinkBuilder {
 }
 
 pub struct Project {
+    /// Absolute path to the directory containing `Cargo.toml` for this project.
     root: PathBuf,
+    /// `mtime` of a file at the very start of the build, which is used to
+    /// ensure that all files are always set to this `mtime`. This is set on
+    /// `build`.
+    start: FileTime,
+    /// A map of files which have been updated since this project was created,
+    /// and the `FileTime` entry is the mtime to set the file to.
+    updates: HashMap<PathBuf, FileTime>,
+    /// Each time a file is created/updated we'll simulate time passing, and
+    /// this counter keeps track of how many times that's happened.
+    next_update: i64,
+    /// An escape hatch for a few existing tests to opt out of dealing with
+    /// `touch_everything_to_start`, shouldn't be used for new tests!
+    disable_mtime_management: bool,
 }
 
 #[must_use]
@@ -225,7 +241,7 @@ impl ProjectBuilder {
 
     pub fn new(root: PathBuf) -> ProjectBuilder {
         ProjectBuilder {
-            root: Project { root },
+            root: Project::at(root),
             files: vec![],
             symlinks: vec![],
             no_manifest: false,
@@ -233,9 +249,7 @@ impl ProjectBuilder {
     }
 
     pub fn at<P: AsRef<Path>>(mut self, path: P) -> Self {
-        self.root = Project {
-            root: paths::root().join(path),
-        };
+        self.root = Project::at(paths::root().join(path));
         self
     }
 
@@ -285,8 +299,11 @@ impl ProjectBuilder {
             symlink.mk();
         }
 
-        let ProjectBuilder { root, .. } = self;
-        root
+        let start = paths::home().join(".start");
+        File::create(&start).unwrap();
+        let ProjectBuilder { mut root, .. } = self;
+        root.start = FileTime::from_last_modification_time(&start.metadata().unwrap());
+        return root
     }
 
     fn rm_root(&self) {
@@ -295,9 +312,39 @@ impl ProjectBuilder {
 }
 
 impl Project {
+    fn at(root: PathBuf) -> Project {
+        Project {
+            root,
+            start: FileTime::zero(),
+            next_update: 1,
+            updates: HashMap::new(),
+            disable_mtime_management: false,
+        }
+    }
+
     /// Root of the project, ex: `/path/to/cargo/target/cit/t0/foo`
     pub fn root(&self) -> PathBuf {
         self.root.clone()
+    }
+
+    pub fn set_root(&mut self, root: &Path) {
+        self.root = root.to_path_buf();
+    }
+
+    pub fn disable_mtime_management(&mut self) {
+        self.disable_mtime_management = true;
+    }
+
+    pub fn write_file(&mut self, path: &str, contents: &str) {
+        let path = self.root().join(path);
+        fs::write(&path, contents).unwrap();
+        let seconds_offset = self.next_update;
+        self.next_update += 1;
+        let new_time = FileTime::from_unix_time(
+            self.start.unix_seconds() + seconds_offset * 100,
+            self.start.nanoseconds(),
+        );
+        self.updates.insert(path, new_time);
     }
 
     /// Project's target dir, ex: `/path/to/cargo/target/cit/t0/foo/target`
@@ -356,11 +403,6 @@ impl Project {
         ))
     }
 
-    /// Change the contents of an existing file.
-    pub fn change_file(&self, path: &str, body: &str) {
-        FileBuilder::new(self.root().join(path), body).mk()
-    }
-
     /// Create a `ProcessBuilder` to run a program in the project
     /// and wrap it in an Execs to assert on the execution.
     /// Example:
@@ -382,6 +424,7 @@ impl Project {
         if let Some(ref mut p) = execs.process_builder {
             split_and_add_args(p, cmd);
         }
+        self.touch_everything_to_start(&self.root);
         execs
     }
 
@@ -447,6 +490,36 @@ impl Project {
                 }
             }
             _ => unreachable!(),
+        }
+    }
+
+    pub fn move_start_back_one_second(&mut self) {
+        self.start = FileTime::from_unix_time(
+            self.start.unix_seconds() - 1,
+            self.start.nanoseconds(),
+        );
+    }
+
+    fn touch_everything_to_start(&self, dir: &Path) {
+        if self.disable_mtime_management {
+            return
+        }
+        // ignore the target directory as it's got Cargo-specific files in there
+        if dir.file_name().unwrap() == "target" {
+            return
+        }
+        for entry in dir.read_dir().unwrap() {
+            let entry = entry.unwrap();
+            let path = entry.path();
+            let file_type = entry.file_type().unwrap();
+            if file_type.is_dir() {
+                self.touch_everything_to_start(&path);
+            } else if file_type.is_file() {
+                let new_time = self.updates.get(&path).cloned().unwrap_or(self.start);
+                paths::do_op(&path, "set file times", |path| {
+                    filetime::set_file_times(path, new_time, new_time)
+                });
+            }
         }
     }
 }
@@ -1131,7 +1204,7 @@ impl Execs {
 
 impl Drop for Execs {
     fn drop(&mut self) {
-        if !self.ran {
+        if !self.ran && !thread::panicking() {
             panic!("forgot to run this command");
         }
     }
@@ -1484,8 +1557,4 @@ pub fn git_process(s: &str) -> ProcessBuilder {
     let mut p = process("git");
     split_and_add_args(&mut p, s);
     p
-}
-
-pub fn sleep_ms(ms: u64) {
-    ::std::thread::sleep(Duration::from_millis(ms));
 }

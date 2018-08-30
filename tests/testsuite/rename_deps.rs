@@ -259,7 +259,7 @@ name, but the dependency on `foo v0.1.0` is listed as having different names
 fn rename_affects_fingerprint() {
     Package::new("foo", "0.1.0").publish();
 
-    let p = project()
+    let mut p = project()
         .file(
             "Cargo.toml",
             r#"
@@ -278,7 +278,7 @@ fn rename_affects_fingerprint() {
 
     p.cargo("build -v").masquerade_as_nightly_cargo().run();
 
-    p.change_file(
+    p.write_file(
         "Cargo.toml",
         r#"
                 cargo-features = ["rename-dependency"]

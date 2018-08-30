@@ -1,13 +1,15 @@
 use std::env;
 use std::fs::{self, File};
 use std::io::prelude::*;
+use std::thread;
+use std::time::Duration;
 
 use cargo::util::paths::dylib_path_envvar;
 use support::paths::{root, CargoPathExt};
 use support::registry::Package;
 use support::ProjectBuilder;
 use support::{
-    basic_bin_manifest, basic_lib_manifest, basic_manifest, is_nightly, rustc_host, sleep_ms,
+    basic_bin_manifest, basic_lib_manifest, basic_manifest, is_nightly, rustc_host,
 };
 use support::{main_file, project, Execs};
 
@@ -1986,7 +1988,7 @@ fn inferred_main_bin() {
 
 #[test]
 fn deletion_causes_failure() {
-    let p = project()
+    let mut p = project()
         .file(
             "Cargo.toml",
             r#"
@@ -2004,7 +2006,7 @@ fn deletion_causes_failure() {
         .build();
 
     p.cargo("build").run();
-    p.change_file("Cargo.toml", &basic_manifest("foo", "0.0.1"));
+    p.write_file("Cargo.toml", &basic_manifest("foo", "0.0.1"));
     p.cargo("build").with_status(101).run();
 }
 
@@ -2123,7 +2125,7 @@ fn single_lib() {
 
 #[test]
 fn freshness_ignores_excluded() {
-    let foo = project()
+    let mut foo = project()
         .file(
             "Cargo.toml",
             r#"
@@ -2137,7 +2139,6 @@ fn freshness_ignores_excluded() {
         ).file("build.rs", "fn main() {}")
         .file("src/lib.rs", "pub fn bar() -> i32 { 1 }")
         .build();
-    foo.root().move_into_the_past();
 
     foo.cargo("build")
         .with_stderr(
@@ -2149,17 +2150,17 @@ fn freshness_ignores_excluded() {
 
     // Smoke test to make sure it doesn't compile again
     println!("first pass");
-    foo.cargo("build").with_stdout("").run();
+    foo.cargo("build").with_stderr("[FINISHED] [..]\n").run();
 
     // Modify an ignored file and make sure we don't rebuild
     println!("second pass");
-    File::create(&foo.root().join("src/bar.rs")).unwrap();
-    foo.cargo("build").with_stdout("").run();
+    foo.write_file("src/bar.rs", "");
+    foo.cargo("build").with_stderr("[FINISHED] [..]\n").run();
 }
 
 #[test]
 fn rebuild_preserves_out_dir() {
-    let foo = project()
+    let mut foo = project()
         .file(
             "Cargo.toml",
             r#"
@@ -2187,7 +2188,6 @@ fn rebuild_preserves_out_dir() {
         "#,
         ).file("src/lib.rs", "pub fn bar() -> i32 { 1 }")
         .build();
-    foo.root().move_into_the_past();
 
     foo.cargo("build")
         .env("FIRST", "1")
@@ -2198,7 +2198,7 @@ fn rebuild_preserves_out_dir() {
 ",
         ).run();
 
-    File::create(&foo.root().join("src/bar.rs")).unwrap();
+    foo.write_file("src/bar.rs", "");
     foo.cargo("build")
         .with_stderr(
             "\
@@ -2247,8 +2247,7 @@ fn recompile_space_in_name() {
         ).file("src/my lib.rs", "")
         .build();
     foo.cargo("build").run();
-    foo.root().move_into_the_past();
-    foo.cargo("build").with_stdout("").run();
+    foo.cargo("build").with_stderr("[FINISHED] [..]\n").run();
 }
 
 #[cfg(unix)]
@@ -2524,7 +2523,7 @@ fn compile_then_delete() {
     assert!(p.bin("foo").is_file());
     if cfg!(windows) {
         // On windows unlinking immediately after running often fails, so sleep
-        sleep_ms(100);
+        thread::sleep(Duration::from_millis(100));
     }
     fs::remove_file(&p.bin("foo")).unwrap();
     p.cargo("run -v").run();

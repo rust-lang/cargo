@@ -1,5 +1,4 @@
 use support::is_nightly;
-use support::paths::CargoPathExt;
 use support::{basic_bin_manifest, basic_lib_manifest, basic_manifest, project};
 
 #[test]
@@ -13,22 +12,23 @@ fn cargo_bench_simple() {
         .file(
             "src/main.rs",
             r#"
-            #![feature(test)]
-            #[cfg(test)]
-            extern crate test;
+                #![feature(test)]
+                #[cfg(test)]
+                extern crate test;
 
-            fn hello() -> &'static str {
-                "hello"
-            }
+                fn hello() -> &'static str {
+                    "hello"
+                }
 
-            pub fn main() {
-                println!("{}", hello())
-            }
+                pub fn main() {
+                    println!("{}", hello())
+                }
 
-            #[bench]
-            fn bench_hello(_b: &mut test::Bencher) {
-                assert_eq!(hello(), "hello")
-            }"#,
+                #[bench]
+                fn bench_hello(_b: &mut test::Bencher) {
+                    assert_eq!(hello(), "hello")
+                }
+            "#,
         ).build();
 
     p.cargo("build").run();
@@ -42,7 +42,8 @@ fn cargo_bench_simple() {
 [COMPILING] foo v0.5.0 (CWD)
 [FINISHED] release [optimized] target(s) in [..]
 [RUNNING] target/release/deps/foo-[..][EXE]",
-        ).with_stdout_contains("test bench_hello ... bench: [..]")
+        )
+        .with_stdout_contains("test bench_hello ... bench: [..]")
         .run();
 }
 
@@ -844,7 +845,7 @@ fn bench_dylib() {
         return;
     }
 
-    let p = project()
+    let mut p = project()
         .file(
             "Cargo.toml",
             r#"
@@ -913,7 +914,7 @@ fn bench_dylib() {
         ).with_stdout_contains_n("test foo ... bench: [..]", 2)
         .run();
 
-    p.root().move_into_the_past();
+    p.write_file("foo", "bar");
     p.cargo("bench -v")
         .with_stderr(
             "\

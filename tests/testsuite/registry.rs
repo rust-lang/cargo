@@ -405,10 +405,9 @@ fn lockfile_locks() {
 ",
         ).run();
 
-    p.root().move_into_the_past();
     Package::new("bar", "0.0.2").publish();
 
-    p.cargo("build").with_stdout("").run();
+    p.cargo("build").with_stderr("[FINISHED] [..]\n").run();
 }
 
 #[test]
@@ -444,11 +443,10 @@ fn lockfile_locks_transitively() {
 ",
         ).run();
 
-    p.root().move_into_the_past();
     Package::new("baz", "0.0.2").publish();
     Package::new("bar", "0.0.2").dep("baz", "*").publish();
 
-    p.cargo("build").with_stdout("").run();
+    p.cargo("build").with_stderr("[FINISHED] [..]\n").run();
 }
 
 #[test]
@@ -548,7 +546,7 @@ fn yanks_in_lockfiles_are_ok() {
 
     Package::new("bar", "0.0.1").yanked(true).publish();
 
-    p.cargo("build").with_stdout("").run();
+    p.cargo("build").with_stderr("[FINISHED] [..]\n").run();
 
     p.cargo("update")
         .with_status(101)
@@ -580,7 +578,6 @@ fn update_with_lockfile_if_packages_missing() {
 
     Package::new("bar", "0.0.1").publish();
     p.cargo("build").run();
-    p.root().move_into_the_past();
 
     paths::home().join(".cargo/registry").rm_rf();
     p.cargo("build")
@@ -886,7 +883,6 @@ fn git_and_registry_dep() {
 
     Package::new("a", "0.0.1").publish();
 
-    p.root().move_into_the_past();
     p.cargo("build")
         .with_stderr(
             "\
@@ -898,11 +894,11 @@ fn git_and_registry_dep() {
 [COMPILING] foo v0.0.1 (CWD)
 [FINISHED] dev [unoptimized + debuginfo] target(s) in [..]s
 ",
-        ).run();
-    p.root().move_into_the_past();
+        )
+        .run();
 
     println!("second");
-    p.cargo("build").with_stdout("").run();
+    p.cargo("build").with_stderr("[FINISHED] [..]\n").run();
 }
 
 #[test]

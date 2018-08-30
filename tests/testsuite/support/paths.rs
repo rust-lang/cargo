@@ -6,8 +6,6 @@ use std::path::{Path, PathBuf};
 use std::sync::atomic::{AtomicUsize, Ordering, ATOMIC_USIZE_INIT};
 use std::sync::{Once, ONCE_INIT};
 
-use filetime::{self, FileTime};
-
 static CARGO_INTEGRATION_TEST_DIR: &'static str = "cit";
 static NEXT_ID: AtomicUsize = ATOMIC_USIZE_INIT;
 
@@ -58,18 +56,6 @@ pub fn home() -> PathBuf {
 pub trait CargoPathExt {
     fn rm_rf(&self);
     fn mkdir_p(&self);
-
-    fn move_into_the_past(&self) {
-        self.move_in_time(|sec, nsec| (sec - 3600, nsec))
-    }
-
-    fn move_into_the_future(&self) {
-        self.move_in_time(|sec, nsec| (sec + 3600, nsec))
-    }
-
-    fn move_in_time<F>(&self, travel_amount: F)
-    where
-        F: Fn(i64, u32) -> (i64, u32);
 }
 
 impl CargoPathExt for Path {
@@ -99,52 +85,9 @@ impl CargoPathExt for Path {
         fs::create_dir_all(self)
             .unwrap_or_else(|e| panic!("failed to mkdir_p {}: {}", self.display(), e))
     }
-
-    fn move_in_time<F>(&self, travel_amount: F)
-    where
-        F: Fn(i64, u32) -> ((i64, u32)),
-    {
-        if self.is_file() {
-            time_travel(self, &travel_amount);
-        } else {
-            recurse(self, &self.join("target"), &travel_amount);
-        }
-
-        fn recurse<F>(p: &Path, bad: &Path, travel_amount: &F)
-        where
-            F: Fn(i64, u32) -> ((i64, u32)),
-        {
-            if p.is_file() {
-                time_travel(p, travel_amount)
-            } else if !p.starts_with(bad) {
-                for f in t!(fs::read_dir(p)) {
-                    let f = t!(f).path();
-                    recurse(&f, bad, travel_amount);
-                }
-            }
-        }
-
-        fn time_travel<F>(path: &Path, travel_amount: &F)
-        where
-            F: Fn(i64, u32) -> ((i64, u32)),
-        {
-            let stat = t!(path.metadata());
-
-            let mtime = FileTime::from_last_modification_time(&stat);
-
-            let (sec, nsec) = travel_amount(mtime.unix_seconds(), mtime.nanoseconds());
-            let newtime = FileTime::from_unix_time(sec, nsec);
-
-            // Sadly change_file_times has a failure mode where a readonly file
-            // cannot have its times changed on windows.
-            do_op(path, "set file times", |path| {
-                filetime::set_file_times(path, newtime, newtime)
-            });
-        }
-    }
 }
 
-fn do_op<F>(path: &Path, desc: &str, mut f: F)
+pub fn do_op<F>(path: &Path, desc: &str, mut f: F)
 where
     F: FnMut(&Path) -> io::Result<()>,
 {
