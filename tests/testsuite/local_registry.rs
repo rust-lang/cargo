@@ -50,10 +50,9 @@ fn simple() {
             "\
 [UNPACKING] bar v0.0.1 ([..])
 [COMPILING] bar v0.0.1
-[COMPILING] foo v0.0.1 ({dir})
+[COMPILING] foo v0.0.1 (CWD)
 [FINISHED] [..]
 ",
-            dir = p.url()
         )).run();
     p.cargo("build").with_stderr("[FINISHED] [..]").run();
     p.cargo("test").run();
@@ -90,10 +89,9 @@ fn multiple_versions() {
             "\
 [UNPACKING] bar v0.1.0 ([..])
 [COMPILING] bar v0.1.0
-[COMPILING] foo v0.0.1 ({dir})
+[COMPILING] foo v0.0.1 (CWD)
 [FINISHED] [..]
 ",
-            dir = p.url()
         )).run();
 
     Package::new("bar", "0.2.0")
@@ -150,10 +148,9 @@ fn multiple_names() {
 [UNPACKING] [..]
 [COMPILING] [..]
 [COMPILING] [..]
-[COMPILING] foo v0.0.1 ({dir})
+[COMPILING] foo v0.0.1 (CWD)
 [FINISHED] [..]
 ",
-            dir = p.url()
         )).run();
 }
 
@@ -202,10 +199,9 @@ fn interdependent() {
 [UNPACKING] [..]
 [COMPILING] bar v0.0.1
 [COMPILING] baz v0.1.0
-[COMPILING] foo v0.0.1 ({dir})
+[COMPILING] foo v0.0.1 (CWD)
 [FINISHED] [..]
 ",
-            dir = p.url()
         )).run();
 }
 
@@ -267,10 +263,9 @@ fn path_dep_rewritten() {
 [UNPACKING] [..]
 [COMPILING] bar v0.0.1
 [COMPILING] baz v0.1.0
-[COMPILING] foo v0.0.1 ({dir})
+[COMPILING] foo v0.0.1 (CWD)
 [FINISHED] [..]
 ",
-            dir = p.url()
         )).run();
 }
 
@@ -418,10 +413,9 @@ fn crates_io_registry_url_is_optional() {
             "\
 [UNPACKING] bar v0.0.1 ([..])
 [COMPILING] bar v0.0.1
-[COMPILING] foo v0.0.1 ({dir})
+[COMPILING] foo v0.0.1 (CWD)
 [FINISHED] [..]
 ",
-            dir = p.url()
         )).run();
     p.cargo("build").with_stderr("[FINISHED] [..]").run();
     p.cargo("test").run();

@@ -31,12 +31,11 @@ fn simple() {
             "\
 [WARNING] manifest has no documentation[..]
 See [..]
-[PACKAGING] foo v0.0.1 ({dir})
-[VERIFYING] foo v0.0.1 ({dir})
-[COMPILING] foo v0.0.1 ({dir}[..])
+[PACKAGING] foo v0.0.1 (CWD)
+[VERIFYING] foo v0.0.1 (CWD)
+[COMPILING] foo v0.0.1 (CWD[..])
 [FINISHED] dev [unoptimized + debuginfo] target(s) in [..]
 ",
-            dir = p.url()
         )).run();
     assert!(p.root().join("target/package/foo-0.0.1.crate").is_file());
     p.cargo("package -l")
@@ -76,12 +75,11 @@ fn metadata_warning() {
 warning: manifest has no description, license, license-file, documentation, \
 homepage or repository.
 See http://doc.crates.io/manifest.html#package-metadata for more info.
-[PACKAGING] foo v0.0.1 ({dir})
-[VERIFYING] foo v0.0.1 ({dir})
-[COMPILING] foo v0.0.1 ({dir}[..])
+[PACKAGING] foo v0.0.1 (CWD)
+[VERIFYING] foo v0.0.1 (CWD)
+[COMPILING] foo v0.0.1 (CWD[..])
 [FINISHED] dev [unoptimized + debuginfo] target(s) in [..]
 ",
-            dir = p.url()
         )).run();
 
     let p = project()
@@ -101,12 +99,11 @@ See http://doc.crates.io/manifest.html#package-metadata for more info.
             "\
 warning: manifest has no description, documentation, homepage or repository.
 See http://doc.crates.io/manifest.html#package-metadata for more info.
-[PACKAGING] foo v0.0.1 ({dir})
-[VERIFYING] foo v0.0.1 ({dir})
-[COMPILING] foo v0.0.1 ({dir}[..])
+[PACKAGING] foo v0.0.1 (CWD)
+[VERIFYING] foo v0.0.1 (CWD)
+[COMPILING] foo v0.0.1 (CWD[..])
 [FINISHED] dev [unoptimized + debuginfo] target(s) in [..]
 ",
-            dir = p.url()
         )).run();
 
     let p = project()
@@ -126,12 +123,11 @@ See http://doc.crates.io/manifest.html#package-metadata for more info.
     p.cargo("package")
         .with_stderr(&format!(
             "\
-[PACKAGING] foo v0.0.1 ({dir})
-[VERIFYING] foo v0.0.1 ({dir})
-[COMPILING] foo v0.0.1 ({dir}[..])
+[PACKAGING] foo v0.0.1 (CWD)
+[VERIFYING] foo v0.0.1 (CWD)
+[COMPILING] foo v0.0.1 (CWD[..])
 [FINISHED] dev [unoptimized + debuginfo] target(s) in [..]
 ",
-            dir = p.url()
         )).run();
 }
 
@@ -210,12 +206,11 @@ fn package_verification() {
             "\
 [WARNING] manifest has no description[..]
 See http://doc.crates.io/manifest.html#package-metadata for more info.
-[PACKAGING] foo v0.0.1 ({dir})
-[VERIFYING] foo v0.0.1 ({dir})
-[COMPILING] foo v0.0.1 ({dir}[..])
+[PACKAGING] foo v0.0.1 (CWD)
+[VERIFYING] foo v0.0.1 (CWD)
+[COMPILING] foo v0.0.1 (CWD[..])
 [FINISHED] dev [unoptimized + debuginfo] target(s) in [..]
 ",
-            dir = p.url()
         )).run();
 }
 
@@ -550,12 +545,11 @@ fn ignore_nested() {
             "\
 [WARNING] manifest has no documentation[..]
 See http://doc.crates.io/manifest.html#package-metadata for more info.
-[PACKAGING] foo v0.0.1 ({dir})
-[VERIFYING] foo v0.0.1 ({dir})
-[COMPILING] foo v0.0.1 ({dir}[..])
+[PACKAGING] foo v0.0.1 (CWD)
+[VERIFYING] foo v0.0.1 (CWD)
+[COMPILING] foo v0.0.1 (CWD[..])
 [FINISHED] dev [unoptimized + debuginfo] target(s) in [..]
 ",
-            dir = p.url()
         )).run();
     assert!(p.root().join("target/package/foo-0.0.1.crate").is_file());
     p.cargo("package -l")
@@ -637,12 +631,11 @@ fn repackage_on_source_change() {
             "\
 [WARNING] [..]
 See [..]
-[PACKAGING] foo v0.0.1 ({dir})
-[VERIFYING] foo v0.0.1 ({dir})
-[COMPILING] foo v0.0.1 ({dir}[..])
+[PACKAGING] foo v0.0.1 (CWD)
+[VERIFYING] foo v0.0.1 (CWD)
+[COMPILING] foo v0.0.1 (CWD[..])
 [FINISHED] dev [unoptimized + debuginfo] target(s) in [..]
 ",
-            dir = p.url()
         )).run();
 
     // Check that the tarball contains the added file
@@ -1111,12 +1104,11 @@ fn package_lockfile() {
             "\
 [WARNING] manifest has no documentation[..]
 See [..]
-[PACKAGING] foo v0.0.1 ({dir})
-[VERIFYING] foo v0.0.1 ({dir})
-[COMPILING] foo v0.0.1 ({dir}[..])
+[PACKAGING] foo v0.0.1 (CWD)
+[VERIFYING] foo v0.0.1 (CWD)
+[COMPILING] foo v0.0.1 (CWD[..])
 [FINISHED] dev [unoptimized + debuginfo] target(s) in [..]
 ",
-            dir = p.url()
         )).run();
     assert!(p.root().join("target/package/foo-0.0.1.crate").is_file());
     p.cargo("package -l")

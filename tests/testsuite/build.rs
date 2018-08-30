@@ -804,13 +804,12 @@ fn cargo_compile_with_dep_name_mismatch() {
 
     p.cargo("build")
         .with_status(101)
-        .with_stderr(&format!(
+        .with_stderr(
             r#"error: no matching package named `notquitebar` found
-location searched: {proj_dir}/bar
-required by package `foo v0.0.1 ({proj_dir})`
+location searched: CWD/bar
+required by package `foo v0.0.1 (CWD)`
 "#,
-            proj_dir = p.url()
-        )).run();
+        ).run();
 }
 
 #[test]
@@ -1021,10 +1020,9 @@ fn main(){
         .with_stderr(format!(
             "\
 [COMPILING] present_dep v1.2.3
-[COMPILING] foo v0.1.0 ({url})
+[COMPILING] foo v0.1.0 (CWD)
 [FINISHED] dev [unoptimized + debuginfo] target(s) in [..]
      Running `[..]`",
-            url = p2.url()
         )).with_stdout("1.2.3")
         .run();
 }
@@ -1166,7 +1164,7 @@ fn compile_offline_while_transitive_dep_not_cached() {
 error: no matching package named `baz` found
 location searched: registry `[..]`
 required by package `bar v0.1.0`
-    ... which is depended on by `foo v0.0.1 ([..]/foo)`
+    ... which is depended on by `foo v0.0.1 (CWD)`
 As a reminder, you're using offline mode (-Z offline) \
 which can sometimes cause surprising resolution failures, \
 if this error is too confusing you may with to retry \
@@ -1262,24 +1260,22 @@ fn cargo_default_env_metadata_env_var() {
     p.cargo("build -v")
         .with_stderr(&format!(
             "\
-[COMPILING] bar v0.0.1 ({url}/bar)
+[COMPILING] bar v0.0.1 (CWD/bar)
 [RUNNING] `rustc --crate-name bar bar/src/lib.rs --crate-type dylib \
         --emit=dep-info,link \
         -C prefer-dynamic -C debuginfo=2 \
         -C metadata=[..] \
         --out-dir [..] \
-        -L dependency={dir}/target/debug/deps`
-[COMPILING] foo v0.0.1 ({url})
+        -L dependency=CWD/target/debug/deps`
+[COMPILING] foo v0.0.1 (CWD)
 [RUNNING] `rustc --crate-name foo src/lib.rs --crate-type lib \
         --emit=dep-info,link -C debuginfo=2 \
         -C metadata=[..] \
         -C extra-filename=[..] \
         --out-dir [..] \
-        -L dependency={dir}/target/debug/deps \
-        --extern bar={dir}/target/debug/deps/{prefix}bar{suffix}`
+        -L dependency=CWD/target/debug/deps \
+        --extern bar=CWD/target/debug/deps/{prefix}bar{suffix}`
 [FINISHED] dev [unoptimized + debuginfo] target(s) in [..]",
-            dir = p.root().display(),
-            url = p.url(),
             prefix = env::consts::DLL_PREFIX,
             suffix = env::consts::DLL_SUFFIX,
         )).run();
@@ -1291,25 +1287,23 @@ fn cargo_default_env_metadata_env_var() {
         .env("__CARGO_DEFAULT_LIB_METADATA", "stable")
         .with_stderr(&format!(
             "\
-[COMPILING] bar v0.0.1 ({url}/bar)
+[COMPILING] bar v0.0.1 (CWD/bar)
 [RUNNING] `rustc --crate-name bar bar/src/lib.rs --crate-type dylib \
         --emit=dep-info,link \
         -C prefer-dynamic -C debuginfo=2 \
         -C metadata=[..] \
         --out-dir [..] \
-        -L dependency={dir}/target/debug/deps`
-[COMPILING] foo v0.0.1 ({url})
+        -L dependency=CWD/target/debug/deps`
+[COMPILING] foo v0.0.1 (CWD)
 [RUNNING] `rustc --crate-name foo src/lib.rs --crate-type lib \
         --emit=dep-info,link -C debuginfo=2 \
         -C metadata=[..] \
         -C extra-filename=[..] \
         --out-dir [..] \
-        -L dependency={dir}/target/debug/deps \
-        --extern bar={dir}/target/debug/deps/{prefix}bar-[..]{suffix}`
+        -L dependency=CWD/target/debug/deps \
+        --extern bar=CWD/target/debug/deps/{prefix}bar-[..]{suffix}`
 [FINISHED] dev [unoptimized + debuginfo] target(s) in [..]
 ",
-            dir = p.root().display(),
-            url = p.url(),
             prefix = env::consts::DLL_PREFIX,
             suffix = env::consts::DLL_SUFFIX,
         )).run();
@@ -1376,9 +1370,7 @@ fn crate_env_vars() {
     p.cargo("build -v").run();
 
     println!("bin");
-    p.process(&p.bin("foo"))
-        .with_stdout(&format!("0-5-1 @ alpha.1 in {}\n", p.root().display()))
-        .run();
+    p.process(&p.bin("foo")).with_stdout("0-5-1 @ alpha.1 in CWD").run();
 
     println!("test");
     p.cargo("test -v").run();
@@ -1559,8 +1551,8 @@ fn self_dependency() {
         .with_status(101)
         .with_stderr(
             "\
-[ERROR] cyclic package dependency: package `test v0.0.0 ([..])` depends on itself. Cycle:
-package `test v0.0.0 ([..]foo)`",
+[ERROR] cyclic package dependency: package `test v0.0.0 (CWD)` depends on itself. Cycle:
+package `test v0.0.0 (CWD)`",
         ).run();
 }
 
@@ -1623,18 +1615,16 @@ fn lto_build() {
     p.cargo("build -v --release")
         .with_stderr(&format!(
             "\
-[COMPILING] test v0.0.0 ({url})
+[COMPILING] test v0.0.0 (CWD)
 [RUNNING] `rustc --crate-name test src/main.rs --crate-type bin \
         --emit=dep-info,link \
         -C opt-level=3 \
         -C lto \
         -C metadata=[..] \
-        --out-dir {dir}/target/release/deps \
-        -L dependency={dir}/target/release/deps`
+        --out-dir CWD/target/release/deps \
+        -L dependency=CWD/target/release/deps`
 [FINISHED] release [optimized] target(s) in [..]
 ",
-            dir = p.root().display(),
-            url = p.url(),
         )).run();
 }
 
@@ -1644,16 +1634,14 @@ fn verbose_build() {
     p.cargo("build -v")
         .with_stderr(&format!(
             "\
-[COMPILING] foo v0.0.1 ({url})
+[COMPILING] foo v0.0.1 (CWD)
 [RUNNING] `rustc --crate-name foo src/lib.rs --crate-type lib \
         --emit=dep-info,link -C debuginfo=2 \
         -C metadata=[..] \
         --out-dir [..] \
-        -L dependency={dir}/target/debug/deps`
+        -L dependency=CWD/target/debug/deps`
 [FINISHED] dev [unoptimized + debuginfo] target(s) in [..]
 ",
-            dir = p.root().display(),
-            url = p.url(),
         )).run();
 }
 
@@ -1663,17 +1651,15 @@ fn verbose_release_build() {
     p.cargo("build -v --release")
         .with_stderr(&format!(
             "\
-[COMPILING] foo v0.0.1 ({url})
+[COMPILING] foo v0.0.1 (CWD)
 [RUNNING] `rustc --crate-name foo src/lib.rs --crate-type lib \
         --emit=dep-info,link \
         -C opt-level=3 \
         -C metadata=[..] \
         --out-dir [..] \
-        -L dependency={dir}/target/release/deps`
+        -L dependency=CWD/target/release/deps`
 [FINISHED] release [optimized] target(s) in [..]
 ",
-            dir = p.root().display(),
-            url = p.url(),
         )).run();
 }
 
@@ -1711,7 +1697,7 @@ fn verbose_release_build_deps() {
     p.cargo("build -v --release")
         .with_stderr(&format!(
             "\
-[COMPILING] foo v0.0.0 ({url}/foo)
+[COMPILING] foo v0.0.0 (CWD/foo)
 [RUNNING] `rustc --crate-name foo foo/src/lib.rs \
         --crate-type dylib --crate-type rlib \
         --emit=dep-info,link \
@@ -1719,20 +1705,18 @@ fn verbose_release_build_deps() {
         -C opt-level=3 \
         -C metadata=[..] \
         --out-dir [..] \
-        -L dependency={dir}/target/release/deps`
-[COMPILING] test v0.0.0 ({url})
+        -L dependency=CWD/target/release/deps`
+[COMPILING] test v0.0.0 (CWD)
 [RUNNING] `rustc --crate-name test src/lib.rs --crate-type lib \
         --emit=dep-info,link \
         -C opt-level=3 \
         -C metadata=[..] \
         --out-dir [..] \
-        -L dependency={dir}/target/release/deps \
-        --extern foo={dir}/target/release/deps/{prefix}foo{suffix} \
-        --extern foo={dir}/target/release/deps/libfoo.rlib`
+        -L dependency=CWD/target/release/deps \
+        --extern foo=CWD/target/release/deps/{prefix}foo{suffix} \
+        --extern foo=CWD/target/release/deps/libfoo.rlib`
 [FINISHED] release [optimized] target(s) in [..]
 ",
-            dir = p.root().display(),
-            url = p.url(),
             prefix = env::consts::DLL_PREFIX,
             suffix = env::consts::DLL_SUFFIX
         )).run();
@@ -2048,10 +2032,9 @@ fn lib_with_standard_name() {
     p.cargo("build")
         .with_stderr(&format!(
             "\
-[COMPILING] syntax v0.0.1 ({dir})
+[COMPILING] syntax v0.0.1 (CWD)
 [FINISHED] dev [unoptimized + debuginfo] target(s) in [..]
 ",
-            dir = p.url()
         )).run();
 }
 
@@ -2159,10 +2142,9 @@ fn freshness_ignores_excluded() {
     foo.cargo("build")
         .with_stderr(&format!(
             "\
-[COMPILING] foo v0.0.0 ({url})
+[COMPILING] foo v0.0.0 (CWD)
 [FINISHED] dev [unoptimized + debuginfo] target(s) in [..]
 ",
-            url = foo.url()
         )).run();
 
     // Smoke test to make sure it doesn't compile again
@@ -2211,20 +2193,18 @@ fn rebuild_preserves_out_dir() {
         .env("FIRST", "1")
         .with_stderr(&format!(
             "\
-[COMPILING] foo v0.0.0 ({url})
+[COMPILING] foo v0.0.0 (CWD)
 [FINISHED] dev [unoptimized + debuginfo] target(s) in [..]
 ",
-            url = foo.url()
         )).run();
 
     File::create(&foo.root().join("src/bar.rs")).unwrap();
     foo.cargo("build")
         .with_stderr(&format!(
             "\
-[COMPILING] foo v0.0.0 ({url})
+[COMPILING] foo v0.0.0 (CWD)
 [FINISHED] dev [unoptimized + debuginfo] target(s) in [..]
 ",
-            url = foo.url()
         )).run();
 }
 
@@ -2618,11 +2598,13 @@ fn cyclic_deps_rejected() {
         ).file("a/src/lib.rs", "")
         .build();
 
-    p.cargo("build -v").with_status(101)
-                       .with_stderr(
-r#"[ERROR] cyclic package dependency: package `a v0.0.1 ([..])` depends on itself. Cycle:
-package `a v0.0.1 ([..]a)`
-    ... which is depended on by `foo v0.0.1 ([..]foo)`[..]"#).run();
+    p.cargo("build -v")
+        .with_status(101)
+        .with_stderr(
+"[ERROR] cyclic package dependency: package `a v0.0.1 (CWD/a)` depends on itself. Cycle:
+package `a v0.0.1 (CWD/a)`
+    ... which is depended on by `foo v0.0.1 (CWD)`",
+        ).run();
 }
 
 #[test]

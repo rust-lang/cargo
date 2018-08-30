@@ -104,11 +104,10 @@ fn existing() {
     fs::create_dir(&dst).unwrap();
     cargo_process("new foo")
         .with_status(101)
-        .with_stderr(format!(
-            "[ERROR] destination `{}` already exists\n\n\
+        .with_stderr(
+            "[ERROR] destination `CWD/foo` already exists\n\n\
              Use `cargo init` to initialize the directory",
-            dst.display()
-        )).run();
+        ).run();
 }
 
 #[test]

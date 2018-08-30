@@ -41,7 +41,7 @@ fn override_simple() {
 [UPDATING] registry `file://[..]`
 [UPDATING] git repository `[..]`
 [COMPILING] bar v0.1.0 (file://[..])
-[COMPILING] foo v0.0.1 (file://[..])
+[COMPILING] foo v0.0.1 (CWD)
 [FINISHED] dev [unoptimized + debuginfo] target(s) in [..]
 ",
         ).run();
@@ -188,7 +188,7 @@ fn transitive() {
 [DOWNLOADING] baz v0.2.0 (registry [..])
 [COMPILING] bar v0.1.0 (file://[..])
 [COMPILING] baz v0.2.0
-[COMPILING] foo v0.0.1 (file://[..])
+[COMPILING] foo v0.0.1 (CWD)
 [FINISHED] dev [unoptimized + debuginfo] target(s) in [..]
 ",
         ).run();
@@ -234,7 +234,7 @@ fn persists_across_rebuilds() {
 [UPDATING] registry `file://[..]`
 [UPDATING] git repository `file://[..]`
 [COMPILING] bar v0.1.0 (file://[..])
-[COMPILING] foo v0.0.1 (file://[..])
+[COMPILING] foo v0.0.1 (CWD)
 [FINISHED] dev [unoptimized + debuginfo] target(s) in [..]
 ",
         ).run();
@@ -277,7 +277,7 @@ fn replace_registry_with_path() {
             "\
 [UPDATING] registry `file://[..]`
 [COMPILING] bar v0.1.0 (file://[..])
-[COMPILING] foo v0.0.1 (file://[..])
+[COMPILING] foo v0.0.1 (CWD)
 [FINISHED] dev [unoptimized + debuginfo] target(s) in [..]
 ",
         ).run();
@@ -343,7 +343,7 @@ fn use_a_spec_to_select() {
 [COMPILING] [..]
 [COMPILING] [..]
 [COMPILING] [..]
-[COMPILING] foo v0.0.1 (file://[..])
+[COMPILING] foo v0.0.1 (CWD)
 [FINISHED] dev [unoptimized + debuginfo] target(s) in [..]
 ",
         ).run();
@@ -398,7 +398,7 @@ fn override_adds_some_deps() {
 [DOWNLOADING] baz v0.1.1 (registry [..])
 [COMPILING] baz v0.1.1
 [COMPILING] bar v0.1.0 ([..])
-[COMPILING] foo v0.0.1 (file://[..])
+[COMPILING] foo v0.0.1 (CWD)
 [FINISHED] dev [unoptimized + debuginfo] target(s) in [..]
 ",
         ).run();

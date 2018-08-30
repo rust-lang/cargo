@@ -33,10 +33,9 @@ fn simple() {
 [UPDATING] registry `{reg}`
 [WARNING] manifest has no documentation, [..]
 See [..]
-[PACKAGING] foo v0.0.1 ({dir})
-[UPLOADING] foo v0.0.1 ({dir})
+[PACKAGING] foo v0.0.1 (CWD)
+[UPLOADING] foo v0.0.1 (CWD)
 ",
-            dir = p.url(),
             reg = publish::registry()
         )).run();
 
@@ -107,10 +106,9 @@ fn old_token_location() {
 [UPDATING] registry `{reg}`
 [WARNING] manifest has no documentation, [..]
 See [..]
-[PACKAGING] foo v0.0.1 ({dir})
-[UPLOADING] foo v0.0.1 ({dir})
+[PACKAGING] foo v0.0.1 (CWD)
+[UPLOADING] foo v0.0.1 (CWD)
 ",
-            dir = p.url(),
             reg = publish::registry()
         )).run();
 
@@ -183,10 +181,9 @@ about this warning.
 [UPDATING] registry `{reg}`
 [WARNING] manifest has no documentation, [..]
 See [..]
-[PACKAGING] foo v0.0.1 ({dir})
-[UPLOADING] foo v0.0.1 ({dir})
+[PACKAGING] foo v0.0.1 (CWD)
+[UPLOADING] foo v0.0.1 (CWD)
 ",
-            dir = p.url(),
             reg = publish::registry()
         )).run();
 
@@ -261,10 +258,9 @@ about this warning.
 [UPDATING] registry `{reg}`
 [WARNING] manifest has no documentation, [..]
 See [..]
-[PACKAGING] foo v0.0.1 ({dir})
-[UPLOADING] foo v0.0.1 ({dir})
+[PACKAGING] foo v0.0.1 (CWD)
+[UPLOADING] foo v0.0.1 (CWD)
 ",
-            dir = p.url(),
             reg = publish::registry()
         )).run();
 
@@ -608,14 +604,13 @@ fn dry_run() {
 [UPDATING] registry `[..]`
 [WARNING] manifest has no documentation, [..]
 See [..]
-[PACKAGING] foo v0.0.1 ({dir})
-[VERIFYING] foo v0.0.1 ({dir})
+[PACKAGING] foo v0.0.1 (CWD)
+[VERIFYING] foo v0.0.1 (CWD)
 [COMPILING] foo v0.0.1 [..]
 [FINISHED] dev [unoptimized + debuginfo] target(s) in [..]
-[UPLOADING] foo v0.0.1 ({dir})
+[UPLOADING] foo v0.0.1 (CWD)
 [WARNING] aborting upload due to dry run
 ",
-            dir = p.url()
         )).run();
 
     // Ensure the API request wasn't actually made
