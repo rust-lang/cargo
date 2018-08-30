@@ -247,27 +247,26 @@ fn registry_strategy(
                 subsequence(s, ..s_len)
                     .prop_flat_map(move |deps| {
                         deps.into_iter()
-                            .map(|name| {
-                                let s = vers.get(&name).unwrap_or(&vec![]).clone();
-                                (
-                                    Just(name),
-                                    if s.is_empty() {
-                                        subsequence(s, 0)
-                                    } else if s.len() == 1 {
-                                        subsequence(s, 1)
-                                    } else {
-                                        subsequence(s, 1..=2)
-                                    }.prop_map(|v| {
-                                        if v.is_empty() {
-                                            "=6.6.6".to_string()
+                            .map(|dep_name| {
+                                let s = vers.get(&dep_name).unwrap_or(&vec![]).clone();
+                                if s.is_empty() {
+                                    subsequence(s, 0)
+                                } else if s.len() == 1 {
+                                    subsequence(s, 1)
+                                } else {
+                                    subsequence(s, 1..=2)
+                                }.prop_map(move |v| {
+                                    dep_req(
+                                        &dep_name,
+                                        &if v.is_empty() {
+                                            "=6.6.6".to_owned()
                                         } else if v.len() == 1 {
                                             format!("={}", v[0])
                                         } else {
                                             format!(">={}, <={}", v[0], v[1])
-                                        }
-                                    }),
-                                )
-                                    .prop_map(|(name, ver)| dep_req(&name, &ver))
+                                        },
+                                    )
+                                })
                             }).collect::<Vec<_>>()
                     }).prop_map(move |deps| pkg_dep(name.clone(), deps))
             }).collect::<Vec<_>>()
