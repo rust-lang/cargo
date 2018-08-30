@@ -343,11 +343,11 @@ fn deep_dependencies_trigger_rebuild() {
     //
     // We base recompilation off mtime, so sleep for at least a second to ensure
     // that this write will change the mtime.
-    sleep_ms(1000);
     File::create(&p.root().join("baz/src/baz.rs"))
         .unwrap()
         .write_all(br#"pub fn baz() { println!("hello!"); }"#)
         .unwrap();
+    sleep_ms(1000);
     p.cargo("build")
         .with_stderr(&format!(
             "[COMPILING] baz v0.5.0 ({}/baz)\n\
@@ -361,7 +361,6 @@ fn deep_dependencies_trigger_rebuild() {
         )).run();
 
     // Make sure an update to bar doesn't trigger baz
-    sleep_ms(1000);
     File::create(&p.root().join("bar/src/bar.rs"))
         .unwrap()
         .write_all(
@@ -370,6 +369,7 @@ fn deep_dependencies_trigger_rebuild() {
         pub fn bar() { println!("hello!"); baz::baz(); }
     "#,
         ).unwrap();
+    sleep_ms(1000);
     p.cargo("build")
         .with_stderr(&format!(
             "[COMPILING] bar v0.5.0 ({}/bar)\n\
