@@ -1,4 +1,5 @@
 use std::cmp::PartialEq;
+use std::cmp::{max, min};
 use std::collections::{BTreeMap, HashSet};
 
 use cargo::core::dependency::Kind::{self, Development};
@@ -238,35 +239,35 @@ fn registry_strategy(
         vers.iter()
             .flat_map(|(name, vers)| vers.iter().map(move |x| (name.as_str(), x).to_pkgid()))
             .map(|name| {
-                let s: Vec<_> = Some(pkg_id("bad").name()) // if randomly pointing to a dependency that does not exist then call it `bad`
-                    .into_iter()
-                    .chain(vers.keys().cloned().take_while(|&n| name.name() > n))
+                let s: Vec<_> = vers
+                    .keys()
+                    .cloned()
+                    .take_while(|&n| name.name() > n)
                     .collect::<Vec<_>>();
                 let s_len = s.len();
                 let vers = vers.clone();
-                subsequence(s, ..s_len)
+                prop::option::weighted(0.95, subsequence(s, ..=s_len))
                     .prop_flat_map(move |deps| {
-                        deps.into_iter()
+                        deps.unwrap_or_else(|| vec![pkg_id("bad").name()])
+                            .into_iter()
                             .map(|dep_name| {
                                 let s = vers.get(&dep_name).unwrap_or(&vec![]).clone();
-                                if s.is_empty() {
-                                    subsequence(s, 0)
-                                } else if s.len() == 1 {
-                                    subsequence(s, 1)
-                                } else {
-                                    subsequence(s, 1..=2)
-                                }.prop_map(move |v| {
-                                    dep_req(
-                                        &dep_name,
-                                        &if v.is_empty() {
-                                            "=6.6.6".to_owned()
-                                        } else if v.len() == 1 {
-                                            format!("={}", v[0])
-                                        } else {
-                                            format!(">={}, <={}", v[0], v[1])
-                                        },
-                                    )
-                                })
+                                (any::<prop::sample::Index>(), any::<prop::sample::Index>())
+                                    .prop_map(move |(a, b)| {
+                                        if s.is_empty() {
+                                            return dep_req(&dep_name, "=6.6.6");
+                                        }
+                                        let (a, b) = (a.index(s.len()), b.index(s.len()));
+                                        let (a, b) = (min(a, b), max(a, b));
+                                        dep_req(
+                                            &dep_name,
+                                            &if a == b {
+                                                format!("={}", s[a])
+                                            } else {
+                                                format!(">={}, <={}", s[a], s[b])
+                                            },
+                                        )
+                                    })
                             }).collect::<Vec<_>>()
                     }).prop_map(move |deps| pkg_dep(name.clone(), deps))
             }).collect::<Vec<_>>()
@@ -286,7 +287,7 @@ proptest! {
         // there is only a small chance that eny one
         // crate will be interesting.
         // So we try some of the most complicated.
-        for this in input.iter().rev().take(100) {
+        for this in input.iter().rev().take(10) {
             let res = resolve(
                 &pkg_id("root"),
                 vec![dep_req(&this.name(), &format!("={}", this.version()))],
@@ -294,7 +295,7 @@ proptest! {
             );
 
             if let Ok(r) = res {
-                prop_assert!(r.len() <= 20, "(\"{}\", =\"{}\")", this.name(), this.version())
+                prop_assert!(r.len() <= 30, "(\"{}\", =\"{}\")", this.name(), this.version())
             }
         }
     }
