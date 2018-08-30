@@ -367,8 +367,12 @@ pub fn configure_http_handle(config: &Config, handle: &mut Easy) -> CargoResult<
     // connect phase as well as a "low speed" timeout so if we don't receive
     // many bytes in a large-ish period of time then we time out.
     handle.connect_timeout(Duration::new(30, 0))?;
-    handle.low_speed_limit(10 /* bytes per second */)?;
-    handle.low_speed_time(Duration::new(30, 0))?;
+    if let Some(config_low_speed_limit) = low_speed_limit(config)? {
+        handle.low_speed_limit(config_low_speed_limit)?;
+    }
+    if let Some(config_low_speed_time) = low_speed_time(config)? {
+        handle.low_speed_time(config_low_speed_time)?;
+    }
     if let Some(proxy) = http_proxy(config)? {
         handle.proxy(&proxy)?;
     }
@@ -388,6 +392,22 @@ pub fn configure_http_handle(config: &Config, handle: &mut Easy) -> CargoResult<
         handle.useragent(&version().to_string())?;
     }
     Ok(())
+}
+
+/// Find an override from config for curl low-speed-limit option, otherwise use default value
+fn low_speed_limit(config: &Config) -> CargoResult<Option<u32>> {
+    if let Some(s) = config.get::<Option<u32>>("http.low-speed-limit")? {
+        return Ok(Some(s));
+    }
+    Ok(Some(10))
+}
+
+/// Find an override from config for curl low-speed-time option, otherwise use default value
+fn low_speed_time(config: &Config) -> CargoResult<Option<Duration>> {
+    if let Some(s) = config.get::<Option<u64>>("http.low-speed-time")? {
+        return Ok(Some(Duration::new(s, 0)));
+    }
+    Ok(Some(Duration::new(30, 0)))
 }
 
 /// Find an explicit HTTP proxy if one is available.
