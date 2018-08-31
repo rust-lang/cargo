@@ -129,6 +129,7 @@ fn compile<'a, 'cfg: 'a>(
     plan: &mut BuildPlan,
     unit: &Unit<'a>,
     exec: &Arc<Executor>,
+    force_rebuild: bool,
 ) -> CargoResult<()> {
     let bcx = cx.bcx;
     let build_plan = bcx.build_config.build_plan;
@@ -164,7 +165,7 @@ fn compile<'a, 'cfg: 'a>(
         let dirty = work.then(link_targets(cx, unit, false)?).then(dirty);
         let fresh = link_targets(cx, unit, true)?.then(fresh);
 
-        if exec.force_rebuild(unit) {
+        if exec.force_rebuild(unit) || force_rebuild {
             freshness = Freshness::Dirty;
         }
 
@@ -175,7 +176,7 @@ fn compile<'a, 'cfg: 'a>(
 
     // Be sure to compile all dependencies of this target as well.
     for unit in cx.dep_targets(unit).iter() {
-        compile(cx, jobs, plan, unit, exec)?;
+        compile(cx, jobs, plan, unit, exec, false)?;
     }
     if build_plan {
         plan.add(cx, unit)?;
