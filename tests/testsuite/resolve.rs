@@ -1,6 +1,7 @@
 use std::cmp::PartialEq;
 use std::cmp::{max, min};
 use std::collections::{BTreeMap, HashSet};
+use std::env;
 
 use cargo::core::dependency::Kind::{self, Development};
 use cargo::core::resolver::{self, Method};
@@ -205,6 +206,18 @@ fn loc_names(names: &[(&'static str, &'static str)]) -> Vec<PackageId> {
         .collect()
 }
 
+/// This attempts to make sure that CI will fail fast,
+/// but that local builds will give a small clear test case.
+fn ci_no_shrink<T: ::std::fmt::Debug>(
+    s: impl Strategy<Value = T> + 'static,
+) -> impl Strategy<Value = T> {
+    if true || env::var("CI").is_ok() {
+        s.no_shrink().boxed()
+    } else {
+        s.boxed()
+    }
+}
+
 /// This generates a random registry index.
 /// Unlike vec((Name, Ver, vec((Name, VerRq), ..), ..)
 /// This strategy has a high probability of having valid dependencies
@@ -289,7 +302,7 @@ proptest! {
         .. ProptestConfig::default()
     })]
     #[test]
-    fn doesnt_crash(input in registry_strategy(50, 10)) {
+    fn doesnt_crash(input in ci_no_shrink(registry_strategy(50, 10))) {
         let reg = registry(input.clone());
         // there is only a small chance that eny one
         // crate will be interesting.
