@@ -11,7 +11,7 @@ use cargo::util::{CargoResult, Config, ToUrl};
 use support::project;
 use support::registry::Package;
 
-use proptest::collection::{btree_map, btree_set};
+use proptest::collection::{btree_map, btree_set, vec};
 use proptest::prelude::*;
 use proptest::sample::subsequence;
 use proptest::string::string_regex;
@@ -226,7 +226,7 @@ fn registry_strategy(
         // root is the name of the thing being compiled
         // so it would be confusing to have it in the index
         b.remove("root");
-        let vers = b
+        let vers: BTreeMap<_, Vec<String>> = b
             .iter()
             .map(|(name, ver)| {
                 (
@@ -235,7 +235,7 @@ fn registry_strategy(
                         .map(|(a, b, c)| format!("{}.{}.{}", a, b, c))
                         .collect(),
                 )
-            }).collect::<BTreeMap<_, Vec<String>>>();
+            }).collect();
         vers.iter()
             .flat_map(|(name, vers)| vers.iter().map(move |x| (name.as_str(), x).to_pkgid()))
             .map(|name| {
@@ -246,30 +246,37 @@ fn registry_strategy(
                     .collect::<Vec<_>>();
                 let s_len = s.len();
                 let vers = vers.clone();
-                prop::option::weighted(0.95, subsequence(s, ..=s_len))
-                    .prop_flat_map(move |deps| {
-                        deps.unwrap_or_else(|| vec![pkg_id("bad").name()])
-                            .into_iter()
-                            .map(|dep_name| {
+                prop::option::weighted(
+                    0.95,
+                    (
+                        subsequence(s, ..=s_len),
+                        vec(
+                            (any::<prop::sample::Index>(), any::<prop::sample::Index>()),
+                            s_len,
+                        ),
+                    ),
+                ).prop_map(move |deps| {
+                    deps.map(|x| {
+                        x.0.into_iter()
+                            .zip(x.1.into_iter())
+                            .map(|(dep_name, (a, b))| {
                                 let s = vers.get(&dep_name).unwrap_or(&vec![]).clone();
-                                (any::<prop::sample::Index>(), any::<prop::sample::Index>())
-                                    .prop_map(move |(a, b)| {
-                                        if s.is_empty() {
-                                            return dep_req(&dep_name, "=6.6.6");
-                                        }
-                                        let (a, b) = (a.index(s.len()), b.index(s.len()));
-                                        let (a, b) = (min(a, b), max(a, b));
-                                        dep_req(
-                                            &dep_name,
-                                            &if a == b {
-                                                format!("={}", s[a])
-                                            } else {
-                                                format!(">={}, <={}", s[a], s[b])
-                                            },
-                                        )
-                                    })
+                                if s.is_empty() {
+                                    return dep_req(&dep_name, "=6.6.6");
+                                }
+                                let (a, b) = (a.index(s.len()), b.index(s.len()));
+                                let (a, b) = (min(a, b), max(a, b));
+                                dep_req(
+                                    &dep_name,
+                                    &if a == b {
+                                        format!("={}", s[a])
+                                    } else {
+                                        format!(">={}, <={}", s[a], s[b])
+                                    },
+                                )
                             }).collect::<Vec<_>>()
-                    }).prop_map(move |deps| pkg_dep(name.clone(), deps))
+                    }).unwrap_or_else(|| vec![dep_req("bad", "=6.6.6")])
+                }).prop_map(move |deps| pkg_dep(name.clone(), deps))
             }).collect::<Vec<_>>()
     })
 }
