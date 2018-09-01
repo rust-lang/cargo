@@ -60,13 +60,8 @@ impl BuildConfig {
                 bail!("target was empty")
             }
         }
-        let target = if mode == CompileMode::Install {
-            // ignore `.cargo/config` when compiling for `cargo install`
-            requested_target
-        } else {
-            let cfg_target = config.get_string("build.target")?.map(|s| s.val);
-            requested_target.clone().or(cfg_target)
-        };
+        let cfg_target = config.get_string("build.target")?.map(|s| s.val);
+        let target = requested_target.clone().or(cfg_target);
 
         if jobs == Some(0) {
             bail!("jobs must be at least 1")
@@ -136,8 +131,6 @@ pub enum CompileMode {
     Doc { deps: bool },
     /// A target that will be tested with `rustdoc`.
     Doctest,
-    // Like `Build` but we are compiling something that will be installed
-    Install,
     /// A marker for Units that represent the execution of a `build.rs`
     /// script.
     RunCustomBuild,
@@ -182,7 +175,7 @@ impl CompileMode {
     /// List of all modes (currently used by `cargo clean -p` for computing
     /// all possible outputs).
     pub fn all_modes() -> &'static [CompileMode] {
-        static ALL: [CompileMode; 10] = [
+        static ALL: [CompileMode; 9] = [
             CompileMode::Test,
             CompileMode::Build,
             CompileMode::Check { test: true },
@@ -191,7 +184,6 @@ impl CompileMode {
             CompileMode::Doc { deps: true },
             CompileMode::Doc { deps: false },
             CompileMode::Doctest,
-            CompileMode::Install,
             CompileMode::RunCustomBuild,
         ];
         &ALL
