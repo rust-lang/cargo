@@ -84,7 +84,6 @@ impl Profiles {
             CompileMode::Build
             | CompileMode::Check { .. }
             | CompileMode::Doctest
-            | CompileMode::Install
             | CompileMode::RunCustomBuild => {
                 // Note: RunCustomBuild doesn't normally use this code path.
                 // `build_unit_profiles` normally ensures that it selects the
