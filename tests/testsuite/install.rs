@@ -1262,9 +1262,6 @@ fn install_ignores_cargo_config() {
         .file("src/main.rs", "fn main() {}")
         .build();
 
-    assert_that(
-        cargo_process("install").arg("bar").cwd(p.root()),
-        execs().with_status(0),
-    );
-    assert_that(cargo_home(), has_installed_exe("bar"));
+    cargo_process("install bar").cwd(p.root()).with_status(0).run();
+    assert_has_installed_exe(cargo_home(), "bar");
 }
