@@ -23,7 +23,7 @@ fn profile_overrides() {
         ).file("src/lib.rs", "")
         .build();
     p.cargo("build -v")
-        .with_stderr(&format!(
+        .with_stderr(
             "\
 [COMPILING] test v0.0.0 (CWD)
 [RUNNING] `rustc --crate-name test src/lib.rs --crate-type lib \
@@ -36,7 +36,7 @@ fn profile_overrides() {
         -L dependency=CWD/target/debug/deps`
 [FINISHED] dev [optimized] target(s) in [..]
 ",
-        )).run();
+        ).run();
 }
 
 #[test]
@@ -57,7 +57,7 @@ fn opt_level_override_0() {
         ).file("src/lib.rs", "")
         .build();
     p.cargo("build -v")
-        .with_stderr(&format!(
+        .with_stderr(
             "\
 [COMPILING] test v0.0.0 (CWD)
 [RUNNING] `rustc --crate-name test src/lib.rs --crate-type lib \
@@ -68,7 +68,7 @@ fn opt_level_override_0() {
         -L dependency=CWD/target/debug/deps`
 [FINISHED] [..] target(s) in [..]
 ",
-        )).run();
+        ).run();
 }
 
 #[test]
@@ -88,7 +88,7 @@ fn debug_override_1() {
         ).file("src/lib.rs", "")
         .build();
     p.cargo("build -v")
-        .with_stderr(&format!(
+        .with_stderr(
             "\
 [COMPILING] test v0.0.0 (CWD)
 [RUNNING] `rustc --crate-name test src/lib.rs --crate-type lib \
@@ -99,7 +99,7 @@ fn debug_override_1() {
         -L dependency=CWD/target/debug/deps`
 [FINISHED] [..] target(s) in [..]
 ",
-        )).run();
+        ).run();
 }
 
 fn check_opt_level_override(profile_level: &str, rustc_level: &str) {

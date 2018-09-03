@@ -26,13 +26,13 @@ fn simple() {
         .build();
 
     p.cargo("doc")
-        .with_stderr(&format!(
+        .with_stderr(
             "\
 [..] foo v0.0.1 (CWD)
 [..] foo v0.0.1 (CWD)
 [FINISHED] dev [unoptimized + debuginfo] target(s) in [..]
 ",
-        )).run();
+        ).run();
     assert!(p.root().join("target/doc").is_dir());
     assert!(p.root().join("target/doc/foo/index.html").is_file());
 }
@@ -63,12 +63,12 @@ fn doc_twice() {
     let p = project().file("src/lib.rs", "pub fn foo() {}").build();
 
     p.cargo("doc")
-        .with_stderr(&format!(
+        .with_stderr(
             "\
 [DOCUMENTING] foo v0.0.1 (CWD)
 [FINISHED] dev [unoptimized + debuginfo] target(s) in [..]
 ",
-        )).run();
+        ).run();
 
     p.cargo("doc").with_stdout("").run();
 }
@@ -93,14 +93,14 @@ fn doc_deps() {
         .build();
 
     p.cargo("doc")
-        .with_stderr(&format!(
+        .with_stderr(
             "\
 [..] bar v0.0.1 (CWD/bar)
 [..] bar v0.0.1 (CWD/bar)
 [DOCUMENTING] foo v0.0.1 (CWD)
 [FINISHED] dev [unoptimized + debuginfo] target(s) in [..]
 ",
-        )).run();
+        ).run();
 
     assert!(p.root().join("target/doc").is_dir());
     assert!(p.root().join("target/doc/foo/index.html").is_file());
@@ -154,13 +154,13 @@ fn doc_no_deps() {
         .build();
 
     p.cargo("doc --no-deps")
-        .with_stderr(&format!(
+        .with_stderr(
             "\
 [CHECKING] bar v0.0.1 (CWD/bar)
 [DOCUMENTING] foo v0.0.1 (CWD)
 [FINISHED] dev [unoptimized + debuginfo] target(s) in [..]
 ",
-        )).run();
+        ).run();
 
     assert!(p.root().join("target/doc").is_dir());
     assert!(p.root().join("target/doc/foo/index.html").is_file());
@@ -369,12 +369,12 @@ fn doc_lib_bin_same_name_documents_lib() {
         ).build();
 
     p.cargo("doc")
-        .with_stderr(&format!(
+        .with_stderr(
             "\
 [DOCUMENTING] foo v0.0.1 (CWD)
 [FINISHED] dev [unoptimized + debuginfo] target(s) in [..]
 ",
-        )).run();
+        ).run();
     assert!(p.root().join("target/doc").is_dir());
     let doc_file = p.root().join("target/doc/foo/index.html");
     assert!(doc_file.is_file());
@@ -408,12 +408,12 @@ fn doc_lib_bin_same_name_documents_lib_when_requested() {
         ).build();
 
     p.cargo("doc --lib")
-        .with_stderr(&format!(
+        .with_stderr(
             "\
 [DOCUMENTING] foo v0.0.1 (CWD)
 [FINISHED] dev [unoptimized + debuginfo] target(s) in [..]
 ",
-        )).run();
+        ).run();
     assert!(p.root().join("target/doc").is_dir());
     let doc_file = p.root().join("target/doc/foo/index.html");
     assert!(doc_file.is_file());
@@ -447,13 +447,13 @@ fn doc_lib_bin_same_name_documents_named_bin_when_requested() {
         ).build();
 
     p.cargo("doc --bin foo")
-        .with_stderr(&format!(
+        .with_stderr(
             "\
 [CHECKING] foo v0.0.1 (CWD)
 [DOCUMENTING] foo v0.0.1 (CWD)
 [FINISHED] dev [unoptimized + debuginfo] target(s) in [..]
 ",
-        )).run();
+        ).run();
     assert!(p.root().join("target/doc").is_dir());
     let doc_file = p.root().join("target/doc/foo/index.html");
     assert!(doc_file.is_file());
@@ -487,13 +487,13 @@ fn doc_lib_bin_same_name_documents_bins_when_requested() {
         ).build();
 
     p.cargo("doc --bins")
-        .with_stderr(&format!(
+        .with_stderr(
             "\
 [CHECKING] foo v0.0.1 (CWD)
 [DOCUMENTING] foo v0.0.1 (CWD)
 [FINISHED] dev [unoptimized + debuginfo] target(s) in [..]
 ",
-        )).run();
+        ).run();
     assert!(p.root().join("target/doc").is_dir());
     let doc_file = p.root().join("target/doc/foo/index.html");
     assert!(doc_file.is_file());

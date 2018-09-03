@@ -27,7 +27,7 @@ fn simple() {
         .build();
 
     p.cargo("package")
-        .with_stderr(&format!(
+        .with_stderr(
             "\
 [WARNING] manifest has no documentation[..]
 See [..]
@@ -36,7 +36,7 @@ See [..]
 [COMPILING] foo v0.0.1 (CWD[..])
 [FINISHED] dev [unoptimized + debuginfo] target(s) in [..]
 ",
-        )).run();
+        ).run();
     assert!(p.root().join("target/package/foo-0.0.1.crate").is_file());
     p.cargo("package -l")
         .with_stdout(
@@ -70,7 +70,7 @@ src/main.rs
 fn metadata_warning() {
     let p = project().file("src/main.rs", "fn main() {}").build();
     p.cargo("package")
-        .with_stderr(&format!(
+        .with_stderr(
             "\
 warning: manifest has no description, license, license-file, documentation, \
 homepage or repository.
@@ -80,7 +80,7 @@ See http://doc.crates.io/manifest.html#package-metadata for more info.
 [COMPILING] foo v0.0.1 (CWD[..])
 [FINISHED] dev [unoptimized + debuginfo] target(s) in [..]
 ",
-        )).run();
+        ).run();
 
     let p = project()
         .file(
@@ -95,7 +95,7 @@ See http://doc.crates.io/manifest.html#package-metadata for more info.
         ).file("src/main.rs", "fn main() {}")
         .build();
     p.cargo("package")
-        .with_stderr(&format!(
+        .with_stderr(
             "\
 warning: manifest has no description, documentation, homepage or repository.
 See http://doc.crates.io/manifest.html#package-metadata for more info.
@@ -104,7 +104,7 @@ See http://doc.crates.io/manifest.html#package-metadata for more info.
 [COMPILING] foo v0.0.1 (CWD[..])
 [FINISHED] dev [unoptimized + debuginfo] target(s) in [..]
 ",
-        )).run();
+        ).run();
 
     let p = project()
         .file(
@@ -121,14 +121,14 @@ See http://doc.crates.io/manifest.html#package-metadata for more info.
         ).file("src/main.rs", "fn main() {}")
         .build();
     p.cargo("package")
-        .with_stderr(&format!(
+        .with_stderr(
             "\
 [PACKAGING] foo v0.0.1 (CWD)
 [VERIFYING] foo v0.0.1 (CWD)
 [COMPILING] foo v0.0.1 (CWD[..])
 [FINISHED] dev [unoptimized + debuginfo] target(s) in [..]
 ",
-        )).run();
+        ).run();
 }
 
 #[test]
@@ -202,7 +202,7 @@ fn package_verification() {
     let p = project().file("src/main.rs", "fn main() {}").build();
     p.cargo("build").run();
     p.cargo("package")
-        .with_stderr(&format!(
+        .with_stderr(
             "\
 [WARNING] manifest has no description[..]
 See http://doc.crates.io/manifest.html#package-metadata for more info.
@@ -211,7 +211,7 @@ See http://doc.crates.io/manifest.html#package-metadata for more info.
 [COMPILING] foo v0.0.1 (CWD[..])
 [FINISHED] dev [unoptimized + debuginfo] target(s) in [..]
 ",
-        )).run();
+        ).run();
 }
 
 #[test]
@@ -242,12 +242,12 @@ fn vcs_file_collision() {
     p.cargo("package")
         .arg("--no-verify")
         .with_status(101)
-        .with_stderr(&format!(
+        .with_stderr(
             "\
 [ERROR] Invalid inclusion of reserved file name .cargo_vcs_info.json \
 in package source
 ",
-        )).run();
+        ).run();
 }
 
 #[test]
@@ -541,7 +541,7 @@ fn ignore_nested() {
         .build();
 
     p.cargo("package")
-        .with_stderr(&format!(
+        .with_stderr(
             "\
 [WARNING] manifest has no documentation[..]
 See http://doc.crates.io/manifest.html#package-metadata for more info.
@@ -550,7 +550,7 @@ See http://doc.crates.io/manifest.html#package-metadata for more info.
 [COMPILING] foo v0.0.1 (CWD[..])
 [FINISHED] dev [unoptimized + debuginfo] target(s) in [..]
 ",
-        )).run();
+        ).run();
     assert!(p.root().join("target/package/foo-0.0.1.crate").is_file());
     p.cargo("package -l")
         .with_stdout(
@@ -627,7 +627,7 @@ fn repackage_on_source_change() {
     // Check that cargo rebuilds the tarball
     cargo_process("package")
         .cwd(p.root())
-        .with_stderr(&format!(
+        .with_stderr(
             "\
 [WARNING] [..]
 See [..]
@@ -636,7 +636,7 @@ See [..]
 [COMPILING] foo v0.0.1 (CWD[..])
 [FINISHED] dev [unoptimized + debuginfo] target(s) in [..]
 ",
-        )).run();
+        ).run();
 
     // Check that the tarball contains the added file
     let f = File::open(&p.root().join("target/package/foo-0.0.1.crate")).unwrap();
@@ -1100,7 +1100,7 @@ fn package_lockfile() {
 
     p.cargo("package")
         .masquerade_as_nightly_cargo()
-        .with_stderr(&format!(
+        .with_stderr(
             "\
 [WARNING] manifest has no documentation[..]
 See [..]
@@ -1109,7 +1109,7 @@ See [..]
 [COMPILING] foo v0.0.1 (CWD[..])
 [FINISHED] dev [unoptimized + debuginfo] target(s) in [..]
 ",
-        )).run();
+        ).run();
     assert!(p.root().join("target/package/foo-0.0.1.crate").is_file());
     p.cargo("package -l")
         .masquerade_as_nightly_cargo()
