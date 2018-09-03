@@ -531,14 +531,13 @@ fn no_cross_doctests() {
         "#,
         ).build();
 
-    let host_output = format!(
+    let host_output =
         "\
 [COMPILING] foo v0.0.1 (CWD)
 [FINISHED] dev [unoptimized + debuginfo] target(s) in [..]
 [RUNNING] target/debug/deps/foo-[..][EXE]
 [DOCTEST] foo
-",
-    );
+";
 
     println!("a");
     p.cargo("test").with_stderr(&host_output).run();

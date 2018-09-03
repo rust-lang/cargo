@@ -21,13 +21,13 @@ fn pathless_tools() {
         ).build();
 
     foo.cargo("build --verbose")
-        .with_stderr(&format!(
+        .with_stderr(
             "\
 [COMPILING] foo v0.5.0 (CWD)
 [RUNNING] `rustc [..] -C ar=nonexistent-ar -C linker=nonexistent-linker [..]`
 [FINISHED] dev [unoptimized + debuginfo] target(s) in [..]
 ",
-        )).run();
+        ).run();
 }
 
 #[test]
@@ -136,28 +136,28 @@ fn custom_runner() {
 
     p.cargo("run -- --param")
         .with_status(101)
-        .with_stderr_contains(&format!(
+        .with_stderr_contains(
             "\
 [COMPILING] foo v0.0.1 (CWD)
 [FINISHED] dev [unoptimized + debuginfo] target(s) in [..]
 [RUNNING] `nonexistent-runner -r target/debug/foo[EXE] --param`
 ",
-        )).run();
+        ).run();
 
     p.cargo("test --test test --verbose -- --param")
         .with_status(101)
-        .with_stderr_contains(&format!(
+        .with_stderr_contains(
             "\
 [COMPILING] foo v0.0.1 (CWD)
 [RUNNING] `rustc [..]`
 [FINISHED] dev [unoptimized + debuginfo] target(s) in [..]
 [RUNNING] `nonexistent-runner -r [..]/target/debug/deps/test-[..][EXE] --param`
 ",
-        )).run();
+        ).run();
 
     p.cargo("bench --bench bench --verbose -- --param")
         .with_status(101)
-        .with_stderr_contains(&format!(
+        .with_stderr_contains(
             "\
 [COMPILING] foo v0.0.1 (CWD)
 [RUNNING] `rustc [..]`
@@ -165,5 +165,5 @@ fn custom_runner() {
 [FINISHED] release [optimized] target(s) in [..]
 [RUNNING] `nonexistent-runner -r [..]/target/release/deps/bench-[..][EXE] --param --bench`
 ",
-        )).run();
+        ).run();
 }

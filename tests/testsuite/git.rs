@@ -1399,12 +1399,12 @@ fn git_build_cmd_freshness() {
     sleep_ms(1000);
 
     foo.cargo("build")
-        .with_stderr(&format!(
+        .with_stderr(
             "\
 [COMPILING] foo v0.0.0 (CWD)
 [FINISHED] dev [unoptimized + debuginfo] target(s) in [..]
 ",
-        )).run();
+        ).run();
 
     // Smoke test to make sure it doesn't compile again
     println!("first pass");

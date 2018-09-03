@@ -41,13 +41,13 @@ fn simple_cross_package() {
 
     p.cargo("package --target")
         .arg(&target)
-        .with_stderr(&format!(
+        .with_stderr(
             "   Packaging foo v0.0.0 (CWD)
    Verifying foo v0.0.0 (CWD)
    Compiling foo v0.0.0 (CWD/target/package/foo-0.0.0)
     Finished dev [unoptimized + debuginfo] target(s) in [..]
 ",
-        )).run();
+        ).run();
 
     // Check that the tarball contains the files
     let f = File::open(&p.root().join("target/package/foo-0.0.0.crate")).unwrap();

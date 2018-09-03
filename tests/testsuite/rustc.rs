@@ -12,7 +12,7 @@ fn build_lib_for_foo() {
         .build();
 
     p.cargo("rustc --lib -v")
-        .with_stderr(format!(
+        .with_stderr(
             "\
 [COMPILING] foo v0.0.1 (CWD)
 [RUNNING] `rustc --crate-name foo src/lib.rs --crate-type lib \
@@ -22,7 +22,7 @@ fn build_lib_for_foo() {
         -L dependency=CWD/target/debug/deps`
 [FINISHED] dev [unoptimized + debuginfo] target(s) in [..]
 ",
-        )).run();
+        ).run();
 }
 
 #[test]
@@ -33,7 +33,7 @@ fn lib() {
         .build();
 
     p.cargo("rustc --lib -v -- -C debug-assertions=off")
-        .with_stderr(format!(
+        .with_stderr(
             "\
 [COMPILING] foo v0.0.1 (CWD)
 [RUNNING] `rustc --crate-name foo src/lib.rs --crate-type lib \
@@ -44,7 +44,7 @@ fn lib() {
         -L dependency=CWD/target/debug/deps`
 [FINISHED] dev [unoptimized + debuginfo] target(s) in [..]
 ",
-        )).run();
+        ).run();
 }
 
 #[test]
@@ -55,7 +55,7 @@ fn build_main_and_allow_unstable_options() {
         .build();
 
     p.cargo("rustc -v --bin foo -- -C debug-assertions")
-        .with_stderr(&format!(
+        .with_stderr(format!(
             "\
 [COMPILING] {name} v{version} (CWD)
 [RUNNING] `rustc --crate-name {name} src/lib.rs --crate-type lib \
@@ -100,7 +100,7 @@ fn build_with_args_to_one_of_multiple_binaries() {
         .build();
 
     p.cargo("rustc -v --bin bar -- -C debug-assertions")
-        .with_stderr(format!(
+        .with_stderr(
             "\
 [COMPILING] foo v0.0.1 (CWD)
 [RUNNING] `rustc --crate-name foo src/lib.rs --crate-type lib --emit=dep-info,link \
@@ -110,7 +110,7 @@ fn build_with_args_to_one_of_multiple_binaries() {
         -C debuginfo=2 -C debug-assertions [..]`
 [FINISHED] dev [unoptimized + debuginfo] target(s) in [..]
 ",
-        )).run();
+        ).run();
 }
 
 #[test]
@@ -138,7 +138,7 @@ fn build_with_args_to_one_of_multiple_tests() {
         .build();
 
     p.cargo("rustc -v --test bar -- -C debug-assertions")
-        .with_stderr(format!(
+        .with_stderr(
             "\
 [COMPILING] foo v0.0.1 (CWD)
 [RUNNING] `rustc --crate-name foo src/lib.rs --crate-type lib --emit=dep-info,link \
@@ -148,7 +148,7 @@ fn build_with_args_to_one_of_multiple_tests() {
         -C debug-assertions [..]--test[..]`
 [FINISHED] dev [unoptimized + debuginfo] target(s) in [..]
 ",
-        )).run();
+        ).run();
 }
 
 #[test]
@@ -174,7 +174,7 @@ fn build_foo_with_bar_dependency() {
         .build();
 
     foo.cargo("rustc -v -- -C debug-assertions")
-        .with_stderr(format!(
+        .with_stderr(
             "\
 [COMPILING] bar v0.1.0 ([..])
 [RUNNING] `[..] -C debuginfo=2 [..]`
@@ -182,7 +182,7 @@ fn build_foo_with_bar_dependency() {
 [RUNNING] `[..] -C debuginfo=2 -C debug-assertions [..]`
 [FINISHED] dev [unoptimized + debuginfo] target(s) in [..]
 ",
-        )).run();
+        ).run();
 }
 
 #[test]

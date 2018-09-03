@@ -769,10 +769,10 @@ fn uninstall_cwd_not_installed() {
     p.cargo("uninstall")
         .with_status(101)
         .with_stdout("")
-        .with_stderr(format!(
+        .with_stderr(
             "\
              error: package `foo v0.0.1 (CWD)` is not installed",
-        )).run();
+        ).run();
 }
 
 #[test]
