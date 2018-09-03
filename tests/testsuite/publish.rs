@@ -599,7 +599,7 @@ fn dry_run() {
 
     p.cargo("publish --dry-run --index")
         .arg(publish::registry().to_string())
-        .with_stderr(&format!(
+        .with_stderr(
             "\
 [UPDATING] registry `[..]`
 [WARNING] manifest has no documentation, [..]
@@ -611,7 +611,7 @@ See [..]
 [UPLOADING] foo v0.0.1 (CWD)
 [WARNING] aborting upload due to dry run
 ",
-        )).run();
+        ).run();
 
     // Ensure the API request wasn't actually made
     assert!(!publish::upload_path().join("api/v1/crates/new").exists());
