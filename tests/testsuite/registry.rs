@@ -52,13 +52,13 @@ fn simple() {
 
     // Don't download a second time
     p.cargo("build")
-        .with_stderr(&format!(
+        .with_stderr(
             "\
 [COMPILING] bar v0.0.1
 [COMPILING] foo v0.0.1 (CWD)
 [FINISHED] dev [unoptimized + debuginfo] target(s) in [..]s
 ",
-        )).run();
+        ).run();
 }
 
 #[test]
@@ -309,7 +309,7 @@ required by package `foo v0.0.1 ([..])`
     Package::new("notyet", "0.0.1").publish();
 
     p.cargo("build")
-        .with_stderr(&format!(
+        .with_stderr(format!(
             "\
 [UPDATING] registry `{reg}`
 [DOWNLOADING] notyet v0.0.1 (registry `file://[..]`)
@@ -362,7 +362,7 @@ required by package `foo v0.0.1 ([..])`
     Package::new("notyet", "0.0.1").publish();
 
     p.cargo("package")
-        .with_stderr(format!(
+        .with_stderr(
             "\
 [PACKAGING] foo v0.0.1 (CWD)
 [VERIFYING] foo v0.0.1 (CWD)
@@ -372,7 +372,7 @@ required by package `foo v0.0.1 ([..])`
 [COMPILING] foo v0.0.1 (CWD[..])
 [FINISHED] dev [unoptimized + debuginfo] target(s) in [..]s
 ",
-        )).run();
+        ).run();
 }
 
 #[test]
@@ -395,7 +395,7 @@ fn lockfile_locks() {
     Package::new("bar", "0.0.1").publish();
 
     p.cargo("build")
-        .with_stderr(&format!(
+        .with_stderr(
             "\
 [UPDATING] registry `[..]`
 [DOWNLOADING] bar v0.0.1 (registry `file://[..]`)
@@ -403,7 +403,7 @@ fn lockfile_locks() {
 [COMPILING] foo v0.0.1 (CWD)
 [FINISHED] dev [unoptimized + debuginfo] target(s) in [..]s
 ",
-        )).run();
+        ).run();
 
     p.root().move_into_the_past();
     Package::new("bar", "0.0.2").publish();
@@ -432,7 +432,7 @@ fn lockfile_locks_transitively() {
     Package::new("bar", "0.0.1").dep("baz", "*").publish();
 
     p.cargo("build")
-        .with_stderr(&format!(
+        .with_stderr(
             "\
 [UPDATING] registry `[..]`
 [DOWNLOADING] [..] v0.0.1 (registry `file://[..]`)
@@ -442,7 +442,7 @@ fn lockfile_locks_transitively() {
 [COMPILING] foo v0.0.1 (CWD)
 [FINISHED] dev [unoptimized + debuginfo] target(s) in [..]s
 ",
-        )).run();
+        ).run();
 
     p.root().move_into_the_past();
     Package::new("baz", "0.0.2").publish();
@@ -477,7 +477,7 @@ fn yanks_are_not_used() {
         .publish();
 
     p.cargo("build")
-        .with_stderr(&format!(
+        .with_stderr(
             "\
 [UPDATING] registry `[..]`
 [DOWNLOADING] [..] v0.0.1 (registry `file://[..]`)
@@ -487,7 +487,7 @@ fn yanks_are_not_used() {
 [COMPILING] foo v0.0.1 (CWD)
 [FINISHED] dev [unoptimized + debuginfo] target(s) in [..]s
 ",
-        )).run();
+        ).run();
 }
 
 #[test]
@@ -628,14 +628,14 @@ fn update_lockfile() {
 
     println!("0.0.2 build");
     p.cargo("build")
-        .with_stderr(&format!(
+        .with_stderr(
             "\
 [DOWNLOADING] [..] v0.0.2 (registry `file://[..]`)
 [COMPILING] bar v0.0.2
 [COMPILING] foo v0.0.1 (CWD)
 [FINISHED] dev [unoptimized + debuginfo] target(s) in [..]s
 ",
-        )).run();
+        ).run();
 
     println!("0.0.3 update");
     p.cargo("update -p bar")
@@ -648,14 +648,14 @@ fn update_lockfile() {
 
     println!("0.0.3 build");
     p.cargo("build")
-        .with_stderr(&format!(
+        .with_stderr(
             "\
 [DOWNLOADING] [..] v0.0.3 (registry `file://[..]`)
 [COMPILING] bar v0.0.3
 [COMPILING] foo v0.0.1 (CWD)
 [FINISHED] dev [unoptimized + debuginfo] target(s) in [..]s
 ",
-        )).run();
+        ).run();
 
     println!("new dependencies update");
     Package::new("bar", "0.0.4").dep("spam", "0.2.5").publish();
@@ -725,7 +725,7 @@ fn dev_dependency_not_used() {
     Package::new("bar", "0.0.1").dev_dep("baz", "*").publish();
 
     p.cargo("build")
-        .with_stderr(&format!(
+        .with_stderr(
             "\
 [UPDATING] registry `[..]`
 [DOWNLOADING] [..] v0.0.1 (registry `file://[..]`)
@@ -733,7 +733,7 @@ fn dev_dependency_not_used() {
 [COMPILING] foo v0.0.1 (CWD)
 [FINISHED] dev [unoptimized + debuginfo] target(s) in [..]s
 ",
-        )).run();
+        ).run();
 }
 
 #[test]
@@ -809,7 +809,7 @@ fn updating_a_dep() {
     Package::new("bar", "0.0.1").publish();
 
     p.cargo("build")
-        .with_stderr(&format!(
+        .with_stderr(
             "\
 [UPDATING] registry `[..]`
 [DOWNLOADING] bar v0.0.1 (registry `file://[..]`)
@@ -818,7 +818,7 @@ fn updating_a_dep() {
 [COMPILING] foo v0.0.1 (CWD)
 [FINISHED] dev [unoptimized + debuginfo] target(s) in [..]s
 ",
-        )).run();
+        ).run();
 
     t!(t!(File::create(&p.root().join("a/Cargo.toml"))).write_all(
         br#"
@@ -835,7 +835,7 @@ fn updating_a_dep() {
 
     println!("second");
     p.cargo("build")
-        .with_stderr(&format!(
+        .with_stderr(
             "\
 [UPDATING] registry `[..]`
 [DOWNLOADING] bar v0.1.0 (registry `file://[..]`)
@@ -844,7 +844,7 @@ fn updating_a_dep() {
 [COMPILING] foo v0.0.1 (CWD)
 [FINISHED] dev [unoptimized + debuginfo] target(s) in [..]s
 ",
-        )).run();
+        ).run();
 }
 
 #[test]
@@ -888,7 +888,7 @@ fn git_and_registry_dep() {
 
     p.root().move_into_the_past();
     p.cargo("build")
-        .with_stderr(&format!(
+        .with_stderr(
             "\
 [UPDATING] [..]
 [UPDATING] [..]
@@ -898,7 +898,7 @@ fn git_and_registry_dep() {
 [COMPILING] foo v0.0.1 (CWD)
 [FINISHED] dev [unoptimized + debuginfo] target(s) in [..]s
 ",
-        )).run();
+        ).run();
     p.root().move_into_the_past();
 
     println!("second");
@@ -962,7 +962,7 @@ fn update_publish_then_update() {
     // should force an update of the old registry, download the new crate, and
     // then build everything again.
     p.cargo("build")
-        .with_stderr(&format!(
+        .with_stderr(
             "\
 [UPDATING] [..]
 [DOWNLOADING] a v0.1.1 (registry `file://[..]`)
@@ -970,7 +970,7 @@ fn update_publish_then_update() {
 [COMPILING] foo v0.5.0 (CWD)
 [FINISHED] dev [unoptimized + debuginfo] target(s) in [..]s
 ",
-        )).run();
+        ).run();
 }
 
 #[test]

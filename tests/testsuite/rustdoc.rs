@@ -5,7 +5,7 @@ fn rustdoc_simple() {
     let p = project().file("src/lib.rs", "").build();
 
     p.cargo("rustdoc -v")
-        .with_stderr(format!(
+        .with_stderr(
             "\
 [DOCUMENTING] foo v0.0.1 (CWD)
 [RUNNING] `rustdoc --crate-name foo src/lib.rs \
@@ -13,7 +13,7 @@ fn rustdoc_simple() {
         -L dependency=CWD/target/debug/deps`
 [FINISHED] dev [unoptimized + debuginfo] target(s) in [..]
 ",
-        )).run();
+        ).run();
 }
 
 #[test]
@@ -21,7 +21,7 @@ fn rustdoc_args() {
     let p = project().file("src/lib.rs", "").build();
 
     p.cargo("rustdoc -v -- --cfg=foo")
-        .with_stderr(format!(
+        .with_stderr(
             "\
 [DOCUMENTING] foo v0.0.1 (CWD)
 [RUNNING] `rustdoc --crate-name foo src/lib.rs \
@@ -30,7 +30,7 @@ fn rustdoc_args() {
         -L dependency=CWD/target/debug/deps`
 [FINISHED] dev [unoptimized + debuginfo] target(s) in [..]
 ",
-        )).run();
+        ).run();
 }
 
 #[test]
@@ -56,7 +56,7 @@ fn rustdoc_foo_with_bar_dependency() {
         .build();
 
     foo.cargo("rustdoc -v -- --cfg=foo")
-        .with_stderr(format!(
+        .with_stderr(
             "\
 [CHECKING] bar v0.0.1 ([..])
 [RUNNING] `rustc [..]bar/src/lib.rs [..]`
@@ -68,7 +68,7 @@ fn rustdoc_foo_with_bar_dependency() {
         --extern [..]`
 [FINISHED] dev [unoptimized + debuginfo] target(s) in [..]
 ",
-        )).run();
+        ).run();
 }
 
 #[test]
@@ -94,7 +94,7 @@ fn rustdoc_only_bar_dependency() {
         .build();
 
     foo.cargo("rustdoc -v -p bar -- --cfg=foo")
-        .with_stderr(format!(
+        .with_stderr(
             "\
 [DOCUMENTING] bar v0.0.1 ([..])
 [RUNNING] `rustdoc --crate-name bar [..]bar/src/lib.rs \
@@ -103,7 +103,7 @@ fn rustdoc_only_bar_dependency() {
         -L dependency=CWD/target/debug/deps`
 [FINISHED] dev [unoptimized + debuginfo] target(s) in [..]
 ",
-        )).run();
+        ).run();
 }
 
 #[test]
@@ -114,7 +114,7 @@ fn rustdoc_same_name_documents_lib() {
         .build();
 
     p.cargo("rustdoc -v -- --cfg=foo")
-        .with_stderr(format!(
+        .with_stderr(
             "\
 [DOCUMENTING] foo v0.0.1 ([..])
 [RUNNING] `rustdoc --crate-name foo src/lib.rs \
@@ -123,7 +123,7 @@ fn rustdoc_same_name_documents_lib() {
         -L dependency=CWD/target/debug/deps`
 [FINISHED] dev [unoptimized + debuginfo] target(s) in [..]
 ",
-        )).run();
+        ).run();
 }
 
 #[test]

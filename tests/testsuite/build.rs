@@ -1017,13 +1017,13 @@ fn main(){
 
     p2.cargo("run -Zoffline")
         .masquerade_as_nightly_cargo()
-        .with_stderr(format!(
+        .with_stderr(
             "\
 [COMPILING] present_dep v1.2.3
 [COMPILING] foo v0.1.0 (CWD)
 [FINISHED] dev [unoptimized + debuginfo] target(s) in [..]
      Running `[..]`",
-        )).with_stdout("1.2.3")
+        ).with_stdout("1.2.3")
         .run();
 }
 
@@ -1613,7 +1613,7 @@ fn lto_build() {
         ).file("src/main.rs", "fn main() {}")
         .build();
     p.cargo("build -v --release")
-        .with_stderr(&format!(
+        .with_stderr(
             "\
 [COMPILING] test v0.0.0 (CWD)
 [RUNNING] `rustc --crate-name test src/main.rs --crate-type bin \
@@ -1625,14 +1625,14 @@ fn lto_build() {
         -L dependency=CWD/target/release/deps`
 [FINISHED] release [optimized] target(s) in [..]
 ",
-        )).run();
+        ).run();
 }
 
 #[test]
 fn verbose_build() {
     let p = project().file("src/lib.rs", "").build();
     p.cargo("build -v")
-        .with_stderr(&format!(
+        .with_stderr(
             "\
 [COMPILING] foo v0.0.1 (CWD)
 [RUNNING] `rustc --crate-name foo src/lib.rs --crate-type lib \
@@ -1642,14 +1642,14 @@ fn verbose_build() {
         -L dependency=CWD/target/debug/deps`
 [FINISHED] dev [unoptimized + debuginfo] target(s) in [..]
 ",
-        )).run();
+        ).run();
 }
 
 #[test]
 fn verbose_release_build() {
     let p = project().file("src/lib.rs", "").build();
     p.cargo("build -v --release")
-        .with_stderr(&format!(
+        .with_stderr(
             "\
 [COMPILING] foo v0.0.1 (CWD)
 [RUNNING] `rustc --crate-name foo src/lib.rs --crate-type lib \
@@ -1660,7 +1660,7 @@ fn verbose_release_build() {
         -L dependency=CWD/target/release/deps`
 [FINISHED] release [optimized] target(s) in [..]
 ",
-        )).run();
+        ).run();
 }
 
 #[test]
@@ -2030,12 +2030,12 @@ fn lib_with_standard_name() {
         ).build();
 
     p.cargo("build")
-        .with_stderr(&format!(
+        .with_stderr(
             "\
 [COMPILING] syntax v0.0.1 (CWD)
 [FINISHED] dev [unoptimized + debuginfo] target(s) in [..]
 ",
-        )).run();
+        ).run();
 }
 
 #[test]
@@ -2140,12 +2140,12 @@ fn freshness_ignores_excluded() {
     foo.root().move_into_the_past();
 
     foo.cargo("build")
-        .with_stderr(&format!(
+        .with_stderr(
             "\
 [COMPILING] foo v0.0.0 (CWD)
 [FINISHED] dev [unoptimized + debuginfo] target(s) in [..]
 ",
-        )).run();
+        ).run();
 
     // Smoke test to make sure it doesn't compile again
     println!("first pass");
@@ -2191,21 +2191,21 @@ fn rebuild_preserves_out_dir() {
 
     foo.cargo("build")
         .env("FIRST", "1")
-        .with_stderr(&format!(
+        .with_stderr(
             "\
 [COMPILING] foo v0.0.0 (CWD)
 [FINISHED] dev [unoptimized + debuginfo] target(s) in [..]
 ",
-        )).run();
+        ).run();
 
     File::create(&foo.root().join("src/bar.rs")).unwrap();
     foo.cargo("build")
-        .with_stderr(&format!(
+        .with_stderr(
             "\
 [COMPILING] foo v0.0.0 (CWD)
 [FINISHED] dev [unoptimized + debuginfo] target(s) in [..]
 ",
-        )).run();
+        ).run();
 }
 
 #[test]

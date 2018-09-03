@@ -328,7 +328,7 @@ fn can_run_doc_tests() {
 
     foo.cargo("test -v")
         .masquerade_as_nightly_cargo()
-        .with_stderr_contains(format!(
+        .with_stderr_contains(
             "\
 [DOCTEST] foo
 [RUNNING] `rustdoc --test CWD/src/lib.rs \
@@ -337,7 +337,7 @@ fn can_run_doc_tests() {
         --extern bar=CWD/target/debug/deps/libbar-[..].rlib \
         [..]`
 ",
-        )).run();
+        ).run();
 }
 
 #[test]
