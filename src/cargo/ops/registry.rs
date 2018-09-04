@@ -367,6 +367,7 @@ pub fn configure_http_handle(config: &Config, handle: &mut Easy) -> CargoResult<
     // connect phase as well as a "low speed" timeout so if we don't receive
     // many bytes in a large-ish period of time then we time out.
     handle.connect_timeout(Duration::new(30, 0))?;
+    handle.low_speed_time(Duration::new(30, 0))?;
     handle.low_speed_limit(http_low_speed_limit(config)?)?;
     if let Some(proxy) = http_proxy(config)? {
         handle.proxy(&proxy)?;
