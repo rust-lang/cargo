@@ -354,7 +354,7 @@ To change the dependency graph via an override it's recommended to use the
 `[replace]` feature of Cargo instead of the path override feature. This is
 documented online at the url below for more information.
 
-http://doc.crates.io/specifying-dependencies.html#overriding-dependencies
+https://doc.rust-lang.org/cargo/reference/specifying-dependencies.html#overriding-dependencies
 ";
 
         for dep in override_summary.dependencies() {
