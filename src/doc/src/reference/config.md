@@ -95,7 +95,7 @@ proxy = "host:port" # HTTP proxy to use for HTTP requests (defaults to none)
 timeout = 60000     # Timeout for each HTTP request, in milliseconds
 cainfo = "cert.pem" # Path to Certificate Authority (CA) bundle (optional)
 check-revoke = true # Indicates whether SSL certs are checked for revocation
-low-speed-limit = 0 # Lower threshold for bytes/sec (10 = default, 0 = disabled)
+low-speed-limit = 5 # Lower threshold for bytes/sec (10 = default, 0 = disabled)
 
 [build]
 jobs = 1                  # number of parallel jobs, defaults to # of CPUs
