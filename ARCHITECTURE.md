@@ -4,17 +4,27 @@ This document gives a high level overview of Cargo internals. You may
 find it useful if you want to contribute to Cargo or if you are
 interested in the inner workings of Cargo.
 
+The purpose of Cargo is to formalize a canonical Rust workflow, by automating
+the standard tasks associated with distributing software.  Cargo simplifies
+structuring a new project, adding dependencies, writing and running unit tests,
+and more.
+
 
 ## Subcommands
 
-Cargo is organized as a set of `clap` subcommands. All subcommands live in
+Cargo is a single binary composed of a set of [`clap`][] subcommands. All subcommands live in
 `src/bin/cargo/commands` directory. `src/bin/cargo/main.rs` is the entry point.
 
-A typical subcommand, such as `src/bin/cargo/commands/build.rs`, parses command line
-options, reads the configuration files, discovers the Cargo project in
-the current directory and delegates the actual implementation to one
+Each subcommand, such as `src/bin/cargo/commands/build.rs`, has its own API
+interface, similarly to Git's, parsing command line options, reading the
+configuration files, discovering the Cargo project in the current directory and
+delegating the actual implementation to one
 of the functions in `src/cargo/ops/mod.rs`. This short file is a good
 place to find out about most of the things that Cargo can do.
+Subcommands are designed to pipe to one another, and custom subcommands make
+Cargo easy to extend and attach tools to.
+
+[`clap`]: https://clap.rs/
 
 
 ## Important Data Structures
