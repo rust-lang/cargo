@@ -1,4 +1,5 @@
 use git2;
+use std::env;
 use std::fs::{self, File};
 use std::io::prelude::*;
 use std::net::{TcpListener, TcpStream};
@@ -2575,6 +2576,12 @@ fn failed_submodule_checkout() {
 
 #[test]
 fn use_the_cli() {
+    if env::var("CARGO_TEST_DISABLE_GIT_CLI") == Ok("1".to_string()) {
+        // mingw git on Windows does not support Windows-style file URIs.
+        // Appveyor in the rust repo has that git up front in the PATH instead
+        // of Git-for-Windows, which causes this to fail.
+        return;
+    }
     let project = project();
     let git_project = git::new("dep1", |project| {
         project
