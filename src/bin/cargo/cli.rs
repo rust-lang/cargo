@@ -28,13 +28,14 @@ pub fn main(config: &mut Config) -> CliResult {
             "
 Available unstable (nightly-only) flags:
 
-    -Z avoid-dev-deps   -- Avoid installing dev-dependencies if possible
-    -Z minimal-versions -- Install minimal dependency versions instead of maximum
-    -Z no-index-update  -- Do not update the registry, avoids a network request for benchmarking
-    -Z offline          -- Offline mode that does not perform network requests
-    -Z unstable-options -- Allow the usage of unstable options such as --registry
-    -Z config-profile   -- Read profiles from .cargo/config files
-    -Z compile-progress -- Display a progress bar while compiling
+    -Z avoid-dev-deps    -- Avoid installing dev-dependencies if possible
+    -Z minimal-versions  -- Install minimal dependency versions instead of maximum
+    -Z no-index-update   -- Do not update the registry, avoids a network request for benchmarking
+    -Z offline           -- Offline mode that does not perform network requests
+    -Z unstable-options  -- Allow the usage of unstable options such as --registry
+    -Z config-profile    -- Read profiles from .cargo/config files
+    -Z compile-progress  -- Display a progress bar while compiling
+    -Z allow-yanked-deps -- Allow depending on yanked crates
 
 Run with 'cargo -Z [FLAG] [SUBCOMMAND]'"
         );

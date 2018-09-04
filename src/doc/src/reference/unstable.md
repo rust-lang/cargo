@@ -198,6 +198,18 @@ directory.  Example:
 cargo +nightly build --out-dir=out -Z unstable-options
 ```
 
+## allow-yanked-deps
+* Original Issue: [#4425](https://github.com/rust-lang/cargo/issues/4225)
+
+This feature allows your project to depend on yanked crates.
+
+The flag can be useful if you need to build an old project that relies on a
+yanked dependency, and you can't update it. The flag should not be used on new
+or maintained projects: remember that yanked crates are not meant to be used.
+
+```
+cargo +nightly build -Z allow-yanked-deps
+```
 
 ### Edition
 * Tracking Issue: [rust-lang/rust#44581](https://github.com/rust-lang/rust/issues/44581)

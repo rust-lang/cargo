@@ -315,6 +315,6 @@ fn explain() {
 fn z_flags_help() {
     cargo_process("-Z help")
         .with_stdout_contains(
-            "    -Z unstable-options -- Allow the usage of unstable options such as --registry",
+            "    -Z unstable-options  -- Allow the usage of unstable options such as --registry",
         ).run();
 }
