@@ -268,12 +268,15 @@ impl<'cfg> RegistryIndex<'cfg> {
         load: &mut RegistryData,
         f: &mut FnMut(Summary),
     ) -> CargoResult<()> {
+        let allow_yanked_deps = self.config.cli_unstable().allow_yanked_deps;
         let source_id = self.source_id.clone();
         let name = dep.package_name().as_str();
         let summaries = self.summaries(name, load)?;
         let summaries = summaries
             .iter()
-            .filter(|&&(_, yanked)| dep.source_id().precise().is_some() || !yanked)
+            .filter(|&&(_, yanked)| {
+                dep.source_id().precise().is_some() || allow_yanked_deps || !yanked
+            })
             .map(|s| s.0.clone());
 
         // Handle `cargo update --precise` here. If specified, our own source

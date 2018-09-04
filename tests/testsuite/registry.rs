@@ -524,6 +524,42 @@ required by package `bar v0.0.1`
 }
 
 #[test]
+fn yanks_are_used_with_z_flag() {
+    let p = project()
+        .file(
+            "Cargo.toml",
+            r#"
+            [project]
+            name = "foo"
+            version = "0.0.1"
+            authors = []
+
+            [dependencies]
+            bar = "*"
+        "#,
+        ).file("src/main.rs", "fn main() {}")
+        .build();
+
+    Package::new("baz", "0.0.1").publish();
+    Package::new("baz", "0.0.2").yanked(true).publish();
+    Package::new("bar", "0.0.1").dep("baz", "=0.0.2").publish();
+
+    p.cargo("build -Zallow-yanked-deps")
+        .masquerade_as_nightly_cargo()
+        .with_stderr(&format!(
+            "\
+[UPDATING] registry `[..]`
+[DOWNLOADING] [..] (registry `file://[..]`)
+[DOWNLOADING] [..] (registry `file://[..]`)
+[COMPILING] baz v0.0.2
+[COMPILING] bar v0.0.1
+[COMPILING] foo v0.0.1 (CWD)
+[FINISHED] dev [unoptimized + debuginfo] target(s) in [..]s
+",
+        )).run();
+}
+
+#[test]
 fn yanks_in_lockfiles_are_ok() {
     let p = project()
         .file(
