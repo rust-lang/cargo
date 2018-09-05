@@ -6,7 +6,7 @@ use std::path::PathBuf;
 use semver::Version;
 use lazycell::LazyCell;
 
-use core::{Feature, Package, PackageId, Target, TargetKind};
+use core::{Edition, Package, PackageId, Target, TargetKind};
 use util::{self, join_paths, process, CargoResult, Config, ProcessBuilder};
 use super::BuildContext;
 
@@ -123,8 +123,7 @@ impl<'cfg> Compilation<'cfg> {
     /// See `process`.
     pub fn rustc_process(&self, pkg: &Package, target: &Target) -> CargoResult<ProcessBuilder> {
         let mut p = self.fill_env(self.rustc_process.clone(), pkg, true)?;
-        let manifest = pkg.manifest();
-        if manifest.features().is_enabled(Feature::edition()) {
+        if target.edition() != Edition::Edition2015 {
             p.arg(format!("--edition={}", target.edition()));
         }
         Ok(p)
@@ -133,8 +132,7 @@ impl<'cfg> Compilation<'cfg> {
     /// See `process`.
     pub fn rustdoc_process(&self, pkg: &Package, target: &Target) -> CargoResult<ProcessBuilder> {
         let mut p = self.fill_env(process(&*self.config.rustdoc()?), pkg, false)?;
-        let manifest = pkg.manifest();
-        if manifest.features().is_enabled(Feature::edition()) {
+        if target.edition() != Edition::Edition2015 {
             p.arg("-Zunstable-options");
             p.arg(format!("--edition={}", target.edition()));
         }
