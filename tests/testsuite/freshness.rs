@@ -311,9 +311,11 @@ fn changing_bin_paths_common_target_features_caches_targets() {
         "#,
         ).build();
 
+    let a = p.within("a");
+    let b = p.within("b");
+
     /* Build and rebuild a/. Ensure dep_crate only builds once */
-    p.cargo("run")
-        .cwd(p.root().join("a"))
+    a.cargo("run")
         .with_stdout("ftest off")
         .with_stderr(
             "\
@@ -323,9 +325,8 @@ fn changing_bin_paths_common_target_features_caches_targets() {
 [RUNNING] `[..]target/debug/a[EXE]`
 ",
         ).run();
-    p.cargo("clean -p a").cwd(p.root().join("a")).run();
-    p.cargo("run")
-        .cwd(p.root().join("a"))
+    a.cargo("clean -p a").run();
+    a.cargo("run")
         .with_stdout("ftest off")
         .with_stderr(
             "\
@@ -336,8 +337,7 @@ fn changing_bin_paths_common_target_features_caches_targets() {
         ).run();
 
     /* Build and rebuild b/. Ensure dep_crate only builds once */
-    p.cargo("run")
-        .cwd(p.root().join("b"))
+    b.cargo("run")
         .with_stdout("ftest on")
         .with_stderr(
             "\
@@ -347,9 +347,8 @@ fn changing_bin_paths_common_target_features_caches_targets() {
 [RUNNING] `[..]target/debug/b[EXE]`
 ",
         ).run();
-    p.cargo("clean -p b").cwd(p.root().join("b")).run();
-    p.cargo("run")
-        .cwd(p.root().join("b"))
+    b.cargo("clean -p b").run();
+    b.cargo("run")
         .with_stdout("ftest on")
         .with_stderr(
             "\
@@ -361,9 +360,8 @@ fn changing_bin_paths_common_target_features_caches_targets() {
 
     /* Build a/ package again. If we cache different feature dep builds correctly,
      * this should not cause a rebuild of dep_crate */
-    p.cargo("clean -p a").cwd(p.root().join("a")).run();
-    p.cargo("run")
-        .cwd(p.root().join("a"))
+    a.cargo("clean -p a").run();
+    a.cargo("run")
         .with_stdout("ftest off")
         .with_stderr(
             "\
@@ -375,9 +373,8 @@ fn changing_bin_paths_common_target_features_caches_targets() {
 
     /* Build b/ package again. If we cache different feature dep builds correctly,
      * this should not cause a rebuild */
-    p.cargo("clean -p b").cwd(p.root().join("b")).run();
-    p.cargo("run")
-        .cwd(p.root().join("b"))
+    b.cargo("clean -p b").run();
+    b.cargo("run")
         .with_stdout("ftest on")
         .with_stderr(
             "\
