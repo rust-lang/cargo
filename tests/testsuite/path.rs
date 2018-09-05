@@ -1,9 +1,8 @@
 use std::fs::{self, File};
 use std::io::prelude::*;
 
-use support::paths::{self, CargoPathExt};
+use support::paths;
 use support::registry::Package;
-use support::sleep_ms;
 use support::{basic_lib_manifest, basic_manifest, main_file, project};
 
 #[test]
@@ -236,7 +235,7 @@ fn cargo_compile_with_transitive_dev_deps() {
 
 #[test]
 fn no_rebuild_dependency() {
-    let p = project()
+    let mut p = project()
         .file(
             "Cargo.toml",
             r#"
@@ -253,6 +252,7 @@ fn no_rebuild_dependency() {
         .file("bar/Cargo.toml", &basic_lib_manifest("bar"))
         .file("bar/src/bar.rs", "pub fn bar() {}")
         .build();
+
     // First time around we should compile both foo and bar
     p.cargo("build")
         .with_stderr(
@@ -262,14 +262,14 @@ fn no_rebuild_dependency() {
              in [..]\n",
         ).run();
 
-    sleep_ms(1000);
-    p.change_file(
+    p.write_file(
         "src/main.rs",
         r#"
-        extern crate bar;
-        fn main() { bar::bar(); }
-    "#,
+            extern crate bar;
+            fn main() { bar::bar(); }
+        "#,
     );
+
     // Don't compile bar, but do recompile foo.
     p.cargo("build")
         .with_stderr(
@@ -282,40 +282,49 @@ fn no_rebuild_dependency() {
 
 #[test]
 fn deep_dependencies_trigger_rebuild() {
-    let p = project()
+    let sleep = || {
+        use std::thread;
+        use std::time::Duration;
+        thread::sleep(Duration::new(1, 0));
+    };
+    let mut p = project()
         .file(
             "Cargo.toml",
             r#"
-            [project]
+                [project]
 
-            name = "foo"
-            version = "0.5.0"
-            authors = ["wycats@example.com"]
+                name = "foo"
+                version = "0.5.0"
+                authors = ["wycats@example.com"]
 
-            [dependencies.bar]
-            path = "bar"
-        "#,
-        ).file("src/main.rs", "extern crate bar; fn main() { bar::bar() }")
+                [dependencies.bar]
+                path = "bar"
+            "#,
+        )
+        .file("src/main.rs", "extern crate bar; fn main() { bar::bar() }")
         .file(
             "bar/Cargo.toml",
             r#"
-            [project]
+                [project]
 
-            name = "bar"
-            version = "0.5.0"
-            authors = ["wycats@example.com"]
+                name = "bar"
+                version = "0.5.0"
+                authors = ["wycats@example.com"]
 
-            [lib]
-            name = "bar"
-            [dependencies.baz]
-            path = "../baz"
-        "#,
-        ).file(
+                [lib]
+                name = "bar"
+                [dependencies.baz]
+                path = "../baz"
+            "#,
+        )
+        .file(
             "bar/src/bar.rs",
             "extern crate baz; pub fn bar() { baz::baz() }",
-        ).file("baz/Cargo.toml", &basic_lib_manifest("baz"))
+        )
+        .file("baz/Cargo.toml", &basic_lib_manifest("baz"))
         .file("baz/src/baz.rs", "pub fn baz() {}")
         .build();
+    p.disable_mtime_management();
     p.cargo("build")
         .with_stderr(
             "[COMPILING] baz v0.5.0 (CWD/baz)\n\
@@ -327,14 +336,9 @@ fn deep_dependencies_trigger_rebuild() {
     p.cargo("build").with_stdout("").run();
 
     // Make sure an update to baz triggers a rebuild of bar
-    //
-    // We base recompilation off mtime, so sleep for at least a second to ensure
-    // that this write will change the mtime.
-    File::create(&p.root().join("baz/src/baz.rs"))
-        .unwrap()
-        .write_all(br#"pub fn baz() { println!("hello!"); }"#)
-        .unwrap();
-    sleep_ms(1000);
+    sleep();
+    p.write_file("baz/src/baz.rs", "pub fn baz() {}");
+
     p.cargo("build")
         .with_stderr(
             "[COMPILING] baz v0.5.0 (CWD/baz)\n\
@@ -345,22 +349,22 @@ fn deep_dependencies_trigger_rebuild() {
         ).run();
 
     // Make sure an update to bar doesn't trigger baz
-    File::create(&p.root().join("bar/src/bar.rs"))
-        .unwrap()
-        .write_all(
-            br#"
-        extern crate baz;
-        pub fn bar() { println!("hello!"); baz::baz(); }
-    "#,
-        ).unwrap();
-    sleep_ms(1000);
+    sleep();
+    p.write_file(
+        "bar/src/bar.rs",
+        r#"
+            extern crate baz;
+            pub fn bar() { println!("hello!"); baz::baz(); }
+        "#,
+    );
     p.cargo("build")
         .with_stderr(
             "[COMPILING] bar v0.5.0 (CWD/bar)\n\
              [COMPILING] foo v0.5.0 (CWD)\n\
              [FINISHED] dev [unoptimized + debuginfo] target(s) \
              in [..]\n",
-        ).run();
+        )
+        .run();
 }
 
 #[test]
@@ -414,7 +418,7 @@ fn no_rebuild_two_deps() {
 
 #[test]
 fn nested_deps_recompile() {
-    let p = project()
+    let mut p = project()
         .file(
             "Cargo.toml",
             r#"
@@ -440,13 +444,10 @@ fn nested_deps_recompile() {
              [COMPILING] foo v0.5.0 (CWD)\n\
              [FINISHED] dev [unoptimized + debuginfo] target(s) \
              in [..]\n",
-        ).run();
-    sleep_ms(1000);
+        )
+        .run();
 
-    File::create(&p.root().join("src/main.rs"))
-        .unwrap()
-        .write_all(br#"fn main() {}"#)
-        .unwrap();
+    p.write_file("src/main.rs", "fn main() {}");
 
     // This shouldn't recompile `bar`
     p.cargo("build")
@@ -617,7 +618,7 @@ fn override_path_dep() {
 
 #[test]
 fn path_dep_build_cmd() {
-    let p = project()
+    let mut p = project()
         .file(
             "Cargo.toml",
             r#"
@@ -657,7 +658,6 @@ fn path_dep_build_cmd() {
         "#,
         ).file("bar/src/bar.rs.in", "pub fn gimme() -> i32 { 0 }")
         .build();
-    p.root().join("bar").move_into_the_past();
 
     p.cargo("build")
         .with_stderr(
@@ -672,12 +672,7 @@ fn path_dep_build_cmd() {
     p.process(&p.bin("foo")).with_stdout("0\n").run();
 
     // Touching bar.rs.in should cause the `build` command to run again.
-    {
-        let file = fs::File::create(&p.root().join("bar/src/bar.rs.in"));
-        file.unwrap()
-            .write_all(br#"pub fn gimme() -> i32 { 1 }"#)
-            .unwrap();
-    }
+    p.write_file("bar/src/bar.rs.in", "pub fn gimme() -> i32 { 1 } ");
 
     p.cargo("build")
         .with_stderr(
@@ -775,11 +770,12 @@ fn custom_target_no_rebuild() {
 ",
         ).run();
 
+    let mut cargo = p.cargo("build --manifest-path=b/Cargo.toml");
     t!(fs::rename(
         p.root().join("target"),
         p.root().join("target_moved")
     ));
-    p.cargo("build --manifest-path=b/Cargo.toml")
+    cargo
         .env("CARGO_TARGET_DIR", "target_moved")
         .with_stderr(
             "\

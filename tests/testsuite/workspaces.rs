@@ -1,9 +1,8 @@
 use std::env;
 use std::fs::{self, File};
-use std::io::{Read, Write};
+use std::io::Read;
 
 use support::registry::Package;
-use support::sleep_ms;
 use support::{basic_lib_manifest, basic_manifest, git, project};
 
 #[test]
@@ -1004,14 +1003,11 @@ fn rebuild_please() {
             }
         "#,
         );
-    let p = p.build();
+    let mut p = p.build();
 
     p.cargo("run").cwd(p.root().join("bin")).run();
 
-    sleep_ms(1000);
-
-    t!(t!(File::create(p.root().join("lib/src/lib.rs")))
-        .write_all(br#"pub fn foo() -> u32 { 1 }"#));
+    p.write_file("lib/src/lib.rs", "pub fn foo() -> u32 { 1 }");
 
     p.cargo("build").cwd(p.root().join("lib")).run();
 

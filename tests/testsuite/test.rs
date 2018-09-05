@@ -1,11 +1,7 @@
-use std::fs::File;
-use std::io::prelude::*;
-
 use cargo;
-use support::paths::CargoPathExt;
 use support::registry::Package;
 use support::{basic_bin_manifest, basic_lib_manifest, basic_manifest, cargo_exe, project};
-use support::{is_nightly, rustc_host, sleep_ms};
+use support::{is_nightly, rustc_host};
 
 #[test]
 fn cargo_test_simple() {
@@ -1042,7 +1038,6 @@ fn test_dylib() {
         ).with_stdout_contains_n("test foo ... ok", 2)
         .run();
 
-    p.root().move_into_the_past();
     p.cargo("test")
         .with_stderr(
             "\
@@ -1558,7 +1553,6 @@ fn build_then_selective_test() {
         .build();
 
     p.cargo("build").run();
-    p.root().move_into_the_past();
     p.cargo("test -p b").run();
 }
 
@@ -2151,15 +2145,11 @@ fn bin_does_not_rebuild_tests() {
         .file("src/lib.rs", "")
         .file("src/main.rs", "fn main() {}")
         .file("tests/foo.rs", "");
-    let p = p.build();
+    let mut p = p.build();
 
     p.cargo("test -v").run();
 
-    sleep_ms(1000);
-    File::create(&p.root().join("src/main.rs"))
-        .unwrap()
-        .write_all(b"fn main() { 3; }")
-        .unwrap();
+    p.write_file("src/main.rs", "fn main() { 3; }");
 
     p.cargo("test -v --no-run")
         .with_stderr(

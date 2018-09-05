@@ -9,7 +9,7 @@ use cargo::util::paths::remove_dir_all;
 use support::paths::CargoPathExt;
 use support::registry::Package;
 use support::{basic_manifest, cross_compile, project};
-use support::{rustc_host, sleep_ms};
+use support::rustc_host;
 
 #[test]
 fn custom_build_script_failed() {
@@ -528,7 +528,7 @@ fn links_passes_env_vars() {
 
 #[test]
 fn only_rerun_build_script() {
-    let p = project()
+    let mut p = project()
         .file(
             "Cargo.toml",
             r#"
@@ -543,10 +543,8 @@ fn only_rerun_build_script() {
         .build();
 
     p.cargo("build -v").run();
-    p.root().move_into_the_past();
 
-    File::create(&p.root().join("some-new-file")).unwrap();
-    p.root().move_into_the_past();
+    p.write_file("some-new-file", "");
 
     p.cargo("build -v")
         .with_stderr(
@@ -585,9 +583,8 @@ fn rebuild_continues_to_pass_env_vars() {
             }
         "#,
         ).build();
-    a.root().move_into_the_past();
 
-    let p = project()
+    let mut p = project()
         .file(
             "Cargo.toml",
             &format!(
@@ -616,17 +613,15 @@ fn rebuild_continues_to_pass_env_vars() {
         ).build();
 
     p.cargo("build -v").run();
-    p.root().move_into_the_past();
 
-    File::create(&p.root().join("some-new-file")).unwrap();
-    p.root().move_into_the_past();
+    p.write_file("some-new-file", "");
 
     p.cargo("build -v").run();
 }
 
 #[test]
 fn testing_and_such() {
-    let p = project()
+    let mut p = project()
         .file(
             "Cargo.toml",
             r#"
@@ -642,10 +637,8 @@ fn testing_and_such() {
 
     println!("build");
     p.cargo("build -v").run();
-    p.root().move_into_the_past();
 
-    File::create(&p.root().join("src/lib.rs")).unwrap();
-    p.root().move_into_the_past();
+    p.write_file("src/lib.rs", "");
 
     println!("test");
     p.cargo("test -vj1")
@@ -672,10 +665,7 @@ fn testing_and_such() {
 ",
         ).run();
 
-    File::create(&p.root().join("src/main.rs"))
-        .unwrap()
-        .write_all(b"fn main() {}")
-        .unwrap();
+    p.write_file("src/main.rs", "fn main() {}");
     println!("run");
     p.cargo("run")
         .with_stderr(
@@ -979,7 +969,7 @@ fn build_cmd_with_a_build_cmd() {
 
 #[test]
 fn out_dir_is_preserved() {
-    let p = project()
+    let mut p = project()
         .file(
             "Cargo.toml",
             r#"
@@ -1005,29 +995,27 @@ fn out_dir_is_preserved() {
 
     // Make the file
     p.cargo("build -v").run();
-    p.root().move_into_the_past();
 
     // Change to asserting that it's there
-    File::create(&p.root().join("build.rs"))
-        .unwrap()
-        .write_all(
-            br#"
-        use std::env;
-        use std::old_io::File;
-        fn main() {
-            let out = env::var("OUT_DIR").unwrap();
-            File::open(&Path::new(&out).join("foo")).unwrap();
-        }
-    "#,
-        ).unwrap();
-    p.root().move_into_the_past();
+    p.write_file(
+        "build.rs",
+        r#"
+            use std::env;
+            use std::fs::File;
+            use std::path::Path;
+            fn main() {
+                let out = env::var("OUT_DIR").unwrap();
+                File::open(&Path::new(&out).join("foo")).unwrap();
+            }
+        "#,
+    );
     p.cargo("build -v").run();
 
     // Run a fresh build where file should be preserved
     p.cargo("build -v").run();
 
     // One last time to make sure it's still there.
-    File::create(&p.root().join("foo")).unwrap();
+    p.write_file("foo", "");
     p.cargo("build -v").run();
 }
 
@@ -1455,12 +1443,10 @@ fn build_script_with_dynamic_native_dependency() {
 
     build
         .cargo("build -v")
-        .env("RUST_LOG", "cargo::ops::cargo_rustc")
         .run();
 
     foo.cargo("build -v")
         .env("SRC", build.root())
-        .env("RUST_LOG", "cargo::ops::cargo_rustc")
         .run();
 }
 
@@ -2248,7 +2234,6 @@ fn fresh_builds_possible_with_link_libs() {
         ).run();
 
     p.cargo("build -v")
-        .env("RUST_LOG", "cargo::ops::cargo_rustc::fingerprint=info")
         .with_stderr(
             "\
 [FRESH] foo v0.5.0 ([..])
@@ -2299,7 +2284,6 @@ fn fresh_builds_possible_with_multiple_metadata_overrides() {
         ).run();
 
     p.cargo("build -v")
-        .env("RUST_LOG", "cargo::ops::cargo_rustc::fingerprint=info")
         .with_stderr(
             "\
 [FRESH] foo v0.5.0 ([..])
@@ -2310,7 +2294,12 @@ fn fresh_builds_possible_with_multiple_metadata_overrides() {
 
 #[test]
 fn rebuild_only_on_explicit_paths() {
-    let p = project()
+    let sleep = || {
+        use std::thread;
+        use std::time::Duration;
+        thread::sleep(Duration::new(1, 0));
+    };
+    let mut p = project()
         .file(
             "Cargo.toml",
             r#"
@@ -2330,6 +2319,7 @@ fn rebuild_only_on_explicit_paths() {
             }
         "#,
         ).build();
+    p.disable_mtime_management(); // TODO: should fix this test a different way...
 
     p.cargo("build -v").run();
 
@@ -2345,10 +2335,10 @@ fn rebuild_only_on_explicit_paths() {
 ",
         ).run();
 
-    sleep_ms(1000);
-    File::create(p.root().join("foo")).unwrap();
-    File::create(p.root().join("bar")).unwrap();
-    sleep_ms(1000); // make sure the to-be-created outfile has a timestamp distinct from the infiles
+    sleep();
+    p.write_file("foo", "");
+    p.write_file("bar", "");
+    sleep();
 
     // now the exist, so run once, catch the mtime, then shouldn't run again
     println!("run with");
@@ -2371,11 +2361,11 @@ fn rebuild_only_on_explicit_paths() {
 ",
         ).run();
 
-    sleep_ms(1000);
+    sleep();
 
     // random other files do not affect freshness
     println!("run baz");
-    File::create(p.root().join("baz")).unwrap();
+    p.write_file("baz", "");
     p.cargo("build -v")
         .with_stderr(
             "\
@@ -2386,7 +2376,7 @@ fn rebuild_only_on_explicit_paths() {
 
     // but changing dependent files does
     println!("run foo change");
-    File::create(p.root().join("foo")).unwrap();
+    p.write_file("foo", "");
     p.cargo("build -v")
         .with_stderr(
             "\
@@ -3257,7 +3247,7 @@ fn rename_with_link_search_path() {
             }
         "#,
         );
-    let p2 = p2.build();
+    let mut p2 = p2.build();
 
     // Move the output `libfoo.so` into the directory of `p2`, and then delete
     // the `p` project. On OSX the `libfoo.dylib` artifact references the
@@ -3306,6 +3296,7 @@ fn rename_with_link_search_path() {
         println!("assuming {} is spurious, waiting to try again", error);
         thread::sleep(Duration::from_millis(100));
     }
+    p2.set_root(&new);
 
     p2.cargo("run")
         .cwd(&new)

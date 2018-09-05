@@ -2,7 +2,6 @@ use std::env;
 use std::fs::{self, File};
 use std::path::Path;
 
-use support::sleep_ms;
 use support::{basic_manifest, project};
 
 #[test]
@@ -177,7 +176,7 @@ fn out_dir_is_a_file() {
 
 #[test]
 fn replaces_artifacts() {
-    let p = project()
+    let mut p = project()
         .file("src/main.rs", r#"fn main() { println!("foo") }"#)
         .build();
 
@@ -190,8 +189,7 @@ fn replaces_artifacts() {
     ).with_stdout("foo")
     .run();
 
-    sleep_ms(1000);
-    p.change_file("src/main.rs", r#"fn main() { println!("bar") }"#);
+    p.write_file("src/main.rs", r#"fn main() { println!("bar") }"#);
 
     p.cargo("build -Z unstable-options --out-dir out")
         .masquerade_as_nightly_cargo()

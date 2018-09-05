@@ -7,7 +7,7 @@ use flate2::read::GzDecoder;
 use git2;
 use support::registry::Package;
 use support::{basic_manifest, git, is_nightly, path2url, paths, project, registry};
-use support::{cargo_process, sleep_ms};
+use support::cargo_process;
 use tar::Archive;
 
 #[test]
@@ -691,7 +691,7 @@ Caused by:
 
 #[test]
 fn do_not_package_if_repository_is_dirty() {
-    let p = project().build();
+    let mut p = project().build();
 
     // Create a Git repository containing a minimal Rust project.
     let _ = git::repo(&paths::root().join("foo"))
@@ -711,7 +711,7 @@ fn do_not_package_if_repository_is_dirty() {
         .build();
 
     // Modify Cargo.toml without committing the change.
-    p.change_file(
+    p.write_file(
         "Cargo.toml",
         r#"
             [project]
@@ -1257,7 +1257,7 @@ fn lock_file_and_workspace() {
 
 #[test]
 fn do_not_package_if_src_was_modified() {
-    let p = project()
+    let mut p = project()
         .file("src/main.rs", r#"fn main() { println!("hello"); }"#)
         .file(
             "build.rs",
@@ -1270,14 +1270,13 @@ fn do_not_package_if_src_was_modified() {
                 file.write_all(b"Hello, world of generated files.").expect("failed to write");
             }
         "#,
-        ).build();
+        )
+        .build();
 
-    if cfg!(target_os = "macos") {
-        // MacOS has 1s resolution filesystem.
-        // If src/main.rs is created within 1s of src/generated.txt, then it
-        // won't trigger the modification check.
-        sleep_ms(1000);
-    }
+    // MacOS has 1s resolution filesystem.
+    // If src/main.rs is created within 1s of src/generated.txt, then it
+    // won't trigger the modification check.
+    p.move_start_back_one_second();
 
     p.cargo("package")
         .with_status(101)
