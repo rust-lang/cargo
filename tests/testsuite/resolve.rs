@@ -357,7 +357,32 @@ proptest! {
                     }
                 }
 
-                Err(_) => {}
+                Err(_) => {
+                    // If resolution was unsuccessful, then it should stay unsuccessful
+                    // even if any version of a crate is unpublished.
+                    let summary_to_unpublish = index_to_unpublish.get(&input);
+                    let new_reg = registry(
+                        input
+                            .iter()
+                            .cloned()
+                            .filter(|x| summary_to_unpublish != x)
+                            .collect(),
+                    );
+
+                    let res = resolve(
+                        &pkg_id("root"),
+                        vec![dep_req(&this.name(), &format!("={}", this.version()))],
+                        &new_reg,
+                    );
+
+                    prop_assert!(
+                        res.is_err(),
+                        "full index did not work for `{} = \"={}\"` but unpublishing {:?} fixed it!",
+                        this.name(),
+                        this.version(),
+                        summary_to_unpublish
+                    )
+                }
             }
         }
     }
