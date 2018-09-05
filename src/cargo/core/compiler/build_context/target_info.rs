@@ -4,6 +4,7 @@ use std::path::PathBuf;
 use std::str::{self, FromStr};
 
 use super::env_args;
+use core::compiler::BuildConfig;
 use util::{CargoResult, CargoResultExt, Cfg, Config, ProcessBuilder, Rustc};
 use core::TargetKind;
 use super::Kind;
@@ -53,13 +54,13 @@ impl FileType {
 impl TargetInfo {
     pub fn new(
         config: &Config,
-        requested_target: &Option<String>,
+        build_config: &BuildConfig,
         rustc: &Rustc,
         kind: Kind,
     ) -> CargoResult<TargetInfo> {
         let rustflags = env_args(
             config,
-            requested_target,
+            &build_config.requested_target,
             &rustc.host,
             None,
             kind,
@@ -74,7 +75,7 @@ impl TargetInfo {
             .args(&rustflags)
             .env_remove("RUST_LOG");
 
-        let target_triple = requested_target
+        let target_triple = build_config.requested_target
             .as_ref()
             .map(|s| s.as_str())
             .unwrap_or(&rustc.host);
@@ -136,7 +137,12 @@ impl TargetInfo {
         }
 
         let cfg = if has_cfg_and_sysroot {
-            Some(lines.map(Cfg::from_str).collect::<CargoResult<_>>()?)
+            let mut cfg: Vec<Cfg> = lines.map(Cfg::from_str).collect::<CargoResult<_>>()?;
+            // if it is a test, put a new cfg `test`
+            if build_config.mode.is_any_test() {
+                cfg.push(Cfg::Name(String::from("test")));
+            }
+            Some(cfg)
         } else {
             None
         };

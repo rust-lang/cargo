@@ -68,9 +68,9 @@ impl<'a, 'cfg> BuildContext<'a, 'cfg> {
             let _p = profile::start("BuildContext::probe_target_info");
             debug!("probe_target_info");
             let host_info =
-                TargetInfo::new(config, &build_config.requested_target, &rustc, Kind::Host)?;
+                TargetInfo::new(config, build_config, &rustc, Kind::Host)?;
             let target_info =
-                TargetInfo::new(config, &build_config.requested_target, &rustc, Kind::Target)?;
+                TargetInfo::new(config, build_config, &rustc, Kind::Target)?;
             (host_info, target_info)
         };
 
