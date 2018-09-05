@@ -85,6 +85,7 @@ impl FromStr for Edition {
     }
 }
 
+#[derive(PartialEq)]
 enum Status {
     Stable,
     Unstable,
@@ -106,7 +107,7 @@ macro_rules! features {
             $(
                 pub fn $feature() -> &'static Feature {
                     fn get(features: &Features) -> bool {
-                        features.$feature
+                        stab!($stab) == Status::Stable || features.$feature
                     }
                     static FEAT: Feature = Feature {
                         name: stringify!($feature),
@@ -173,7 +174,7 @@ features! {
         [unstable] alternative_registries: bool,
 
         // Using editions
-        [unstable] edition: bool,
+        [stable] edition: bool,
 
         // Renaming a package in the manifest via the `package` key
         [unstable] rename_dependency: bool,
