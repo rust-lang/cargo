@@ -300,6 +300,10 @@ impl Project {
         self.root.clone()
     }
 
+    pub fn within<P: AsRef<Path>>(&self, path: P) -> Self {
+        Project { root: self.root.join(path) }
+    }
+
     /// Project's target dir, ex: `/path/to/cargo/target/cit/t0/foo/target`
     pub fn build_dir(&self) -> PathBuf {
         self.root().join("target")

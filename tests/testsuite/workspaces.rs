@@ -1005,20 +1005,18 @@ fn rebuild_please() {
         "#,
         );
     let p = p.build();
+    let bin = p.within("bin");
+    let lib = p.within("lib");
 
-    p.cargo("run").cwd(p.root().join("bin")).run();
+    bin.cargo("run").run();
 
     sleep_ms(1000);
 
     t!(t!(File::create(p.root().join("lib/src/lib.rs")))
         .write_all(br#"pub fn foo() -> u32 { 1 }"#));
 
-    p.cargo("build").cwd(p.root().join("lib")).run();
-
-    p.cargo("run")
-        .cwd(p.root().join("bin"))
-        .with_status(101)
-        .run();
+    lib.cargo("build").run();
+    bin.cargo("run").with_status(101).run();
 }
 
 #[test]
@@ -1676,13 +1674,14 @@ fn dep_used_with_separate_features() {
         ).run();
     assert!(p.bin("caller1").is_file());
     assert!(p.bin("caller2").is_file());
+    let caller1 = p.within("caller1");
+    let caller2 = p.within("caller2");
 
     // Build caller1. should build the dep library. Because the features
     // are different than the full workspace, it rebuilds.
     // Ideally once we solve https://github.com/rust-lang/cargo/issues/3620, then
     // a single cargo build at the top level will be enough.
-    p.cargo("build")
-        .cwd(p.root().join("caller1"))
+    caller1.cargo("build")
         .with_stderr(
             "\
 [..]Compiling feat_lib v0.1.0 ([..])
@@ -1693,16 +1692,13 @@ fn dep_used_with_separate_features() {
 
     // Alternate building caller2/caller1 a few times, just to make sure
     // features are being built separately.  Should not rebuild anything
-    p.cargo("build")
-        .cwd(p.root().join("caller2"))
+    caller2.cargo("build")
         .with_stderr("[FINISHED] dev [unoptimized + debuginfo] target(s) in [..]")
         .run();
-    p.cargo("build")
-        .cwd(p.root().join("caller1"))
+    caller1.cargo("build")
         .with_stderr("[FINISHED] dev [unoptimized + debuginfo] target(s) in [..]")
         .run();
-    p.cargo("build")
-        .cwd(p.root().join("caller2"))
+    caller2.cargo("build")
         .with_stderr("[FINISHED] dev [unoptimized + debuginfo] target(s) in [..]")
         .run();
 }
