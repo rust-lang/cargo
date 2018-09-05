@@ -684,3 +684,9 @@ fn proc_macro() {
         ).build();
     p.cargo("check -v").env("RUST_LOG", "cargo=trace").run();
 }
+
+#[test]
+fn does_not_use_empty_rustc_wrapper() {
+    let p = project().file("src/lib.rs", "").build();
+    p.cargo("check").env("RUSTC_WRAPPER", "").run();
+}

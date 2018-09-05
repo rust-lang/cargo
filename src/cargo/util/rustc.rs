@@ -66,12 +66,13 @@ impl Rustc {
 
     /// Get a process builder set up to use the found rustc version, with a wrapper if Some
     pub fn process(&self) -> ProcessBuilder {
-        if let Some(ref wrapper) = self.wrapper {
-            let mut cmd = util::process(wrapper);
-            cmd.arg(&self.path);
-            cmd
-        } else {
-            self.process_no_wrapper()
+        match self.wrapper {
+            Some(ref wrapper) if !wrapper.as_os_str().is_empty() => {
+                let mut cmd = util::process(wrapper);
+                cmd.arg(&self.path);
+                cmd
+            }
+            _ => self.process_no_wrapper()
         }
     }
 
