@@ -92,7 +92,7 @@ token = "..."   # Access token (found on the central repo’s website)
 [http]
 proxy = "host:port" # HTTP proxy to use for HTTP requests (defaults to none)
                     # in libcurl format, e.g. "socks5h://host:port"
-timeout = 60000     # Timeout for each HTTP request, in milliseconds
+timeout = 30        # Timeout for each HTTP request, in seconds
 cainfo = "cert.pem" # Path to Certificate Authority (CA) bundle (optional)
 check-revoke = true # Indicates whether SSL certs are checked for revocation
 low-speed-limit = 5 # Lower threshold for bytes/sec (10 = default, 0 = disabled)
