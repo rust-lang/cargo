@@ -302,7 +302,10 @@ proptest! {
         .. ProptestConfig::default()
     })]
     #[test]
-    fn doesnt_crash(input in ci_no_shrink(registry_strategy(50, 10))) {
+    fn limited_independence_of_irrelevant_alternatives(
+        input in ci_no_shrink(registry_strategy(50, 10)),
+        index_to_unpublish in any::<prop::sample::Index>()
+    )  {
         let reg = registry(input.clone());
         // there is only a small chance that eny one
         // crate will be interesting.
@@ -314,8 +317,47 @@ proptest! {
                 &reg,
             );
 
-            if let Ok(r) = res {
-                prop_assert!(r.len() <= 30, "(\"{}\", =\"{}\")", this.name(), this.version())
+            match res {
+                Ok(r) => {
+                    // If resolution was successful, then unpublishing a version of a crate
+                    // that was not selected should not change that.
+                    let not_selected: Vec<_> = input
+                        .iter()
+                        .cloned()
+                        .filter(|x| !r.contains(x.package_id()))
+                        .collect();
+                    if !not_selected.is_empty() {
+                        let summary_to_unpublish = index_to_unpublish.get(&not_selected);
+                        let new_reg = registry(
+                            input
+                                .iter()
+                                .cloned()
+                                .filter(|x| summary_to_unpublish != x)
+                                .collect(),
+                        );
+
+                        let res = resolve(
+                            &pkg_id("root"),
+                            vec![dep_req(&this.name(), &format!("={}", this.version()))],
+                            &new_reg,
+                        );
+
+                        // Note: that we can not assert that the two `res` are identical
+                        // as the resolver does depend on irrelevant alternatives.
+                        // It uses how constrained a dependency requirement is
+                        // to determine what order to evaluate requirements.
+
+                        prop_assert!(
+                            res.is_ok(),
+                            "unpublishing {:?} stopped `{} = \"={}\"` from working",
+                            summary_to_unpublish,
+                            this.name(),
+                            this.version()
+                        )
+                    }
+                }
+
+                Err(_) => {}
             }
         }
     }
