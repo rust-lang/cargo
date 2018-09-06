@@ -965,7 +965,7 @@ fn resolving_with_constrained_sibling_transitive_dep_effects() {
 
 #[test]
 fn dont_yet_know_the_problem() {
-    // WIP minimized bug found in:
+    // minimized bug found in:
     // https://github.com/rust-lang/cargo/commit/003c29b0c71e5ea28fbe8e72c148c755c9f3f8d9
     let input = vec![
         pkg!(("a", "1.0.0")),
@@ -1004,8 +1004,7 @@ fn dont_yet_know_the_problem() {
     );
     assert_eq!(input.len(), new_reg.len() + 1);
     // it should still build
-    // TODO: uncomment when minimized: assert!(resolve(&pkg_id("root"), vec![dep("g")], &new_reg).is_ok());
-    assert!(resolve(&pkg_id("root"), vec![dep("g")], &new_reg).is_err());
+    assert!(resolve(&pkg_id("root"), vec![dep("g")], &new_reg).is_ok());
 }
 
 #[test]
