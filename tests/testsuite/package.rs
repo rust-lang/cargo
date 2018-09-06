@@ -506,8 +506,9 @@ fn no_duplicates_from_modified_tracked_files() {
         .unwrap()
         .write_all(br#"fn main() { println!("A change!"); }"#)
         .unwrap();
-    p.cargo("build").run();
-    p.cargo("package --list --allow-dirty")
+    cargo_process("build").cwd(p.root()).run();
+    cargo_process("package --list --allow-dirty")
+        .cwd(p.root())
         .with_stdout(
             "\
 Cargo.toml
