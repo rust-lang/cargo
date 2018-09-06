@@ -968,36 +968,30 @@ fn dont_yet_know_the_problem() {
     // WIP minimized bug found in:
     // https://github.com/rust-lang/cargo/commit/003c29b0c71e5ea28fbe8e72c148c755c9f3f8d9
     let input = vec![
-        pkg!(("a", "1.4.3")),
-        pkg!(("a", "2.1.0")),
-        pkg!(("b", "0.0.0") => [
-            dep_req("a", ">=1.4.3,<=2.1.0")]),
-        pkg!(("to_yank", "3.5.4")),
-        pkg!(("to_yank", "4.0.4")),
-        pkg!(("to_yank", "4.3.0")),
-        pkg!(("c", "2.5.4") => [
-            dep_req("to_yank", "=4.0.4")
+        pkg!(("a", "0.0.0")),
+        pkg!(("a", "0.0.1")),
+        pkg!("b" => [dep_req("a", "*")]),
+        pkg!(("to_yank", "0.0.0")),
+        pkg!(("to_yank", "1.0.0")),
+        pkg!(("to_yank", "1.1.0")),
+        pkg!(("c", "0.0.0") => [dep_req("to_yank", "=1.0")]),
+        pkg!(("c", "1.0.0")),
+        pkg!(("c", "2.0.0") => [dep_req("to_yank", "1.1")]),
+        pkg!(("d", "0.0.0") => [
+            dep_req("to_yank", "0"),
+            dep_req("c", "0")
         ]),
-        pkg!(("c", "3.4.4")),
-        pkg!(("c", "4.3.1") => [
-            dep_req("to_yank", "=4.3.0")]),
-        pkg!(("d", "3.0.1") => [
-            dep_req("to_yank", "=3.5.4"),
-            dep_req("c", "=2.5.4")
-        ]),
-        pkg!(("d", "5.5.4") => [
-            dep_req("c", "=2.5.4")
-        ]),
+        pkg!(("d", "1.0.0") => [dep_req("c", "0")]),
         pkg!("e" => [
-            dep_req("b", "=0.0.0"),
-            dep_req("c", ">=3.4.4,<=4.3.1"),
-            dep_req("d", ">=3.0.1,<=5.5.4")
+            dep("b"),
+            dep_req("c", ">=1,<3"),
+            dep_req("d", "*")
         ]),
     ];
     let reg = registry(input.clone());
 
     let res = resolve(&pkg_id("root"), vec![dep("e")], &reg).unwrap();
-    let package_to_yank = ("to_yank", "3.5.4").to_pkgid();
+    let package_to_yank = ("to_yank", "0.0.0").to_pkgid();
     // this package is not used in the resolution.
     assert!(!res.contains(&package_to_yank));
     // so when we yank it
