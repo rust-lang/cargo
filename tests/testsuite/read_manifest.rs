@@ -98,7 +98,6 @@ fn cargo_read_manifest_cwd() {
         .build();
 
     p.cargo("read-manifest")
-        .cwd(p.root())
         .with_json(MANIFEST_OUTPUT)
         .run();
 }
