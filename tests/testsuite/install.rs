@@ -1241,15 +1241,6 @@ fn install_ignores_cargo_config() {
 
     let p = project()
         .file(
-            "Cargo.toml",
-            r#"
-            [package]
-            name = "foo"
-            version = "0.1.0"
-            authors = []
-        "#,
-        )
-        .file(
             ".cargo/config",
             r#"
             [build]
@@ -1259,6 +1250,6 @@ fn install_ignores_cargo_config() {
         .file("src/main.rs", "fn main() {}")
         .build();
 
-    p.cargo("install bar").with_status(0).run();
+    p.cargo("install bar").run();
     assert_has_installed_exe(cargo_home(), "bar");
 }
