@@ -968,30 +968,30 @@ fn dont_yet_know_the_problem() {
     // WIP minimized bug found in:
     // https://github.com/rust-lang/cargo/commit/003c29b0c71e5ea28fbe8e72c148c755c9f3f8d9
     let input = vec![
-        pkg!(("a", "0.0.0")),
-        pkg!(("a", "0.0.1")),
-        pkg!("b" => [dep_req("a", "*")]),
-        pkg!(("to_yank", "0.0.0")),
-        pkg!(("to_yank", "1.0.0")),
-        pkg!(("to_yank", "1.1.0")),
-        pkg!(("c", "0.0.0") => [dep_req("to_yank", "=1.0")]),
+        pkg!(("a", "1.0.0")),
+        pkg!(("a", "1.1.0")),
+        pkg!("b" => [dep("a")]),
         pkg!(("c", "1.0.0")),
-        pkg!(("c", "2.0.0") => [dep_req("to_yank", "1.1")]),
-        pkg!(("d", "0.0.0") => [
-            dep_req("to_yank", "0"),
-            dep_req("c", "0")
+        pkg!(("c", "1.1.0")),
+        pkg!("d" => [dep_req("c", "=1.0")]),
+        pkg!(("e", "1.0.0")),
+        pkg!(("e", "1.1.0") => [dep_req("c", "1.1")]),
+        pkg!("to_yank"),
+        pkg!(("f", "1.0.0") => [
+            dep("to_yank"),
+            dep("d")
         ]),
-        pkg!(("d", "1.0.0") => [dep_req("c", "0")]),
-        pkg!("e" => [
+        pkg!(("f", "1.1.0") => [dep("d")]),
+        pkg!("g" => [
             dep("b"),
-            dep_req("c", ">=1,<3"),
-            dep_req("d", "*")
+            dep("e"),
+            dep("f")
         ]),
     ];
     let reg = registry(input.clone());
 
-    let res = resolve(&pkg_id("root"), vec![dep("e")], &reg).unwrap();
-    let package_to_yank = ("to_yank", "0.0.0").to_pkgid();
+    let res = resolve(&pkg_id("root"), vec![dep("g")], &reg).unwrap();
+    let package_to_yank = "to_yank".to_pkgid();
     // this package is not used in the resolution.
     assert!(!res.contains(&package_to_yank));
     // so when we yank it
@@ -1004,8 +1004,8 @@ fn dont_yet_know_the_problem() {
     );
     assert_eq!(input.len(), new_reg.len() + 1);
     // it should still build
-    // TODO: uncomment when minimized: assert!(resolve(&pkg_id("root"), vec![dep("e")], &new_reg).is_ok());
-    assert!(resolve(&pkg_id("root"), vec![dep("e")], &new_reg).is_err());
+    // TODO: uncomment when minimized: assert!(resolve(&pkg_id("root"), vec![dep("g")], &new_reg).is_ok());
+    assert!(resolve(&pkg_id("root"), vec![dep("g")], &new_reg).is_err());
 }
 
 #[test]
