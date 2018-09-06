@@ -3928,19 +3928,17 @@ fn target_edition() {
         .file(
             "Cargo.toml",
             r#"
-            cargo-features = ["edition"]
-            [package]
-            name = "foo"
-            version = "0.0.1"
+                [package]
+                name = "foo"
+                version = "0.0.1"
 
-            [lib]
-            edition = "2018"
-        "#,
+                [lib]
+                edition = "2018"
+            "#,
         ).file("src/lib.rs", "")
         .build();
 
     p.cargo("build -v")
-        .masquerade_as_nightly_cargo()
         .with_stderr_contains(
             "\
 [COMPILING] foo v0.0.1 ([..])
@@ -3955,62 +3953,26 @@ fn target_edition_override() {
         .file(
             "Cargo.toml",
             r#"
-            cargo-features = ["edition"]
-            [package]
-            name = "foo"
-            version = "0.0.1"
-            authors = []
-            edition = "2018"
+                [package]
+                name = "foo"
+                version = "0.0.1"
+                authors = []
+                edition = "2018"
 
-            [lib]
-            edition = "2015"
-        "#,
-        ).file("src/lib.rs", "")
+                [lib]
+                edition = "2015"
+            "#,
+        ).file(
+            "src/lib.rs",
+            "
+                pub fn async() {}
+                pub fn try() {}
+                pub fn await() {}
+            "
+        )
         .build();
 
-    p.cargo("build -v")
-        .masquerade_as_nightly_cargo()
-        .with_stderr_contains(
-            "\
-[COMPILING] foo v0.0.1 ([..])
-[RUNNING] `rustc [..]--edition=2015 [..]
-",
-        ).run();
-}
-
-#[test]
-fn target_edition_feature_gated() {
-    let p = project()
-        .file(
-            "Cargo.toml",
-            r#"
-            [package]
-            name = "foo"
-            version = "0.0.1"
-            authors = []
-
-            [lib]
-            edition = "2018"
-        "#,
-        ).file("src/lib.rs", "")
-        .build();
-
-    p.cargo("build -v")
-        .masquerade_as_nightly_cargo()
-        .with_status(101)
-        .with_stderr(
-            "\
-error: failed to parse manifest at `[..]`
-
-Caused by:
-  editions are unstable
-
-Caused by:
-  feature `edition` is required
-
-consider adding `cargo-features = [\"edition\"]` to the manifest
-",
-        ).run();
+    p.cargo("build -v").run();
 }
 
 #[test]
