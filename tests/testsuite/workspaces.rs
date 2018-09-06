@@ -699,7 +699,7 @@ fn explicit_package_argument_works_with_virtual_manifest() {
         ).file("bar/Cargo.toml", &basic_manifest("bar", "0.1.0"))
         .file("bar/src/main.rs", "fn main() {}");
     let p = p.build();
-    p.cargo("build --package bar").cwd(p.root()).run();
+    p.cargo("build --package bar").run();
     assert!(p.root().join("Cargo.lock").is_file());
     assert!(p.bin("bar").is_file());
     assert!(!p.root().join("bar/Cargo.lock").is_file());
@@ -1222,7 +1222,6 @@ fn relative_path_for_root_works() {
     let p = p.build();
 
     p.cargo("build --manifest-path ./Cargo.toml")
-        .cwd(p.root())
         .run();
 
     p.cargo("build --manifest-path ../Cargo.toml")

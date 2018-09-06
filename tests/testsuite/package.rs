@@ -490,8 +490,7 @@ fn package_git_submodule() {
             None,
         ).unwrap();
 
-    cargo_process("package --no-verify -v")
-        .cwd(project.root())
+    project.cargo("package --no-verify -v")
         .with_stderr_contains("[ARCHIVING] bar/Makefile")
         .run();
 }
@@ -507,9 +506,8 @@ fn no_duplicates_from_modified_tracked_files() {
         .unwrap()
         .write_all(br#"fn main() { println!("A change!"); }"#)
         .unwrap();
-    cargo_process("build").cwd(p.root()).run();
-    cargo_process("package --list --allow-dirty")
-        .cwd(p.root())
+    p.cargo("build").run();
+    p.cargo("package --list --allow-dirty")
         .with_stdout(
             "\
 Cargo.toml
@@ -625,8 +623,7 @@ fn repackage_on_source_change() {
     std::mem::drop(file);
 
     // Check that cargo rebuilds the tarball
-    cargo_process("package")
-        .cwd(p.root())
+    p.cargo("package")
         .with_stderr(
             "\
 [WARNING] [..]
