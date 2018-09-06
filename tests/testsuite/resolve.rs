@@ -964,6 +964,249 @@ fn resolving_with_constrained_sibling_transitive_dep_effects() {
 }
 
 #[test]
+fn dont_yet_know_the_problem() {
+    // WIP minimized bug found in:
+    // https://github.com/rust-lang/cargo/commit/003c29b0c71e5ea28fbe8e72c148c755c9f3f8d9
+    let input = vec![
+        pkg!(("--Z4SU_-l_BDn2-65jkv", "1.4.5")),
+        pkg!(("--Z4SU_-l_BDn2-65jkv", "2.2.3")),
+        pkg!(("--Z4SU_-l_BDn2-65jkv", "3.2.3")),
+        pkg!(("--Z4SU_-l_BDn2-65jkv", "5.1.1")),
+        pkg!(("--Z4SU_-l_BDn2-65jkv", "5.5.2")),
+        pkg!(("-Rai56flSboJ0P3MGM0-R", "1.4.3")),
+        pkg!(("-Rai56flSboJ0P3MGM0-R", "2.1.0") => [
+            dep_req("--Z4SU_-l_BDn2-65jkv", ">=1.4.5,<=3.2.3")]),
+        pkg!(("-Rai56flSboJ0P3MGM0-R", "2.1.5") => [
+            dep_req("bad", "=6.6.6")]),
+        pkg!(("-Rai56flSboJ0P3MGM0-R", "4.0.1") => [
+            dep_req("--Z4SU_-l_BDn2-65jkv", ">=1.4.5,<=2.2.3")]),
+        pkg!(("-Rai56flSboJ0P3MGM0-R", "5.1.3") => [
+            dep_req("--Z4SU_-l_BDn2-65jkv", "=2.2.3")]),
+        pkg!(("-W6-1tL_7-d__oL_W---Qgcg-z", "0.0.0") => [
+            dep_req("--Z4SU_-l_BDn2-65jkv", ">=1.4.5,<=5.5.2"),
+            dep_req("-Rai56flSboJ0P3MGM0-R", ">=1.4.3,<=2.1.5")]),
+        pkg!(("-ijzO-b-7ZP-L2EiSN-b996towI4", "1.1.5") => [
+            dep_req("-W6-1tL_7-d__oL_W---Qgcg-z", "=0.0.0")]),
+        pkg!(("-m6Kl38-PQG7Kg-", "0.0.4") => [
+            dep_req("--Z4SU_-l_BDn2-65jkv", ">=3.2.3,<=5.1.1"),
+            dep_req("-Rai56flSboJ0P3MGM0-R", ">=1.4.3,<=2.1.5"),
+            dep_req("-W6-1tL_7-d__oL_W---Qgcg-z", "=0.0.0"),
+            dep_req("-ijzO-b-7ZP-L2EiSN-b996towI4", "=1.1.5")]),
+        pkg!(("-m6Kl38-PQG7Kg-", "3.5.2") => [
+            dep_req("-Rai56flSboJ0P3MGM0-R", "=4.0.1"),
+            dep_req("-W6-1tL_7-d__oL_W---Qgcg-z", "=0.0.0")]),
+        pkg!(("-m6Kl38-PQG7Kg-", "4.1.3") => [
+            dep_req("--Z4SU_-l_BDn2-65jkv", "=3.2.3"),
+            dep_req("-Rai56flSboJ0P3MGM0-R", ">=1.4.3,<=2.1.5"),
+            dep_req("-W6-1tL_7-d__oL_W---Qgcg-z", "=0.0.0"),
+            dep_req("-ijzO-b-7ZP-L2EiSN-b996towI4", "=1.1.5")]),
+        pkg!(("E", "0.5.5") => [
+            dep_req("-Rai56flSboJ0P3MGM0-R", ">=2.1.0,<=2.1.5"),
+            dep_req("-W6-1tL_7-d__oL_W---Qgcg-z", "=0.0.0")]),
+        pkg!(("E", "2.3.2") => [
+            dep_req("-Rai56flSboJ0P3MGM0-R", ">=1.4.3,<=2.1.0"),
+            dep_req("-ijzO-b-7ZP-L2EiSN-b996towI4", "=1.1.5")]),
+        pkg!(("I-_eFdfZc___Aw-_W-VNtF", "1.3.1") => [
+            dep_req("-Rai56flSboJ0P3MGM0-R", ">=2.1.0,<=2.1.5"),
+            dep_req("-W6-1tL_7-d__oL_W---Qgcg-z", "=0.0.0"),
+            dep_req("-m6Kl38-PQG7Kg-", ">=0.0.4,<=4.1.3"),
+            dep_req("E", "=0.5.5")]),
+        pkg!(("I-_eFdfZc___Aw-_W-VNtF", "3.5.4")),
+        pkg!(("I-_eFdfZc___Aw-_W-VNtF", "4.0.4") => [
+            dep_req("--Z4SU_-l_BDn2-65jkv", ">=1.4.5,<=5.5.2"),
+            dep_req("-Rai56flSboJ0P3MGM0-R", ">=1.4.3,<=2.1.5"),
+            dep_req("-W6-1tL_7-d__oL_W---Qgcg-z", "=0.0.0"),
+            dep_req("-ijzO-b-7ZP-L2EiSN-b996towI4", "=1.1.5"),
+            dep_req("-m6Kl38-PQG7Kg-", ">=0.0.4,<=3.5.2")]),
+        pkg!(("I-_eFdfZc___Aw-_W-VNtF", "4.3.0")),
+        pkg!(("I-_eFdfZc___Aw-_W-VNtF", "5.2.1") => [
+            dep_req("--Z4SU_-l_BDn2-65jkv", ">=1.4.5,<=3.2.3"),
+            dep_req("-Rai56flSboJ0P3MGM0-R", ">=2.1.0,<=2.1.5"),
+            dep_req("-W6-1tL_7-d__oL_W---Qgcg-z", "=0.0.0"),
+            dep_req("-ijzO-b-7ZP-L2EiSN-b996towI4", "=1.1.5"),
+            dep_req("-m6Kl38-PQG7Kg-", ">=0.0.4,<=4.1.3"),
+            dep_req("E", "=0.5.5")]),
+        pkg!(("X1cpwzRgr3-f_Z--z", "0.0.0") => [
+            dep_req("--Z4SU_-l_BDn2-65jkv", ">=1.4.5,<=5.1.1"),
+            dep_req("-Rai56flSboJ0P3MGM0-R", ">=1.4.3,<=4.0.1"),
+            dep_req("-W6-1tL_7-d__oL_W---Qgcg-z", "=0.0.0"),
+            dep_req("-ijzO-b-7ZP-L2EiSN-b996towI4", "=1.1.5"),
+            dep_req("-m6Kl38-PQG7Kg-", ">=0.0.4,<=4.1.3"),
+            dep_req("E", "=0.5.5"),
+            dep_req("I-_eFdfZc___Aw-_W-VNtF", "=4.3.0")]),
+        pkg!(("X1cpwzRgr3-f_Z--z", "1.3.1") => [
+            dep_req("--Z4SU_-l_BDn2-65jkv", ">=1.4.5,<=2.2.3"),
+            dep_req("-Rai56flSboJ0P3MGM0-R", ">=2.1.0,<=2.1.5"),
+            dep_req("-W6-1tL_7-d__oL_W---Qgcg-z", "=0.0.0"),
+            dep_req("-ijzO-b-7ZP-L2EiSN-b996towI4", "=1.1.5"),
+            dep_req("-m6Kl38-PQG7Kg-", ">=3.5.2,<=4.1.3"),
+            dep_req("E", ">=0.5.5,<=2.3.2"),
+            dep_req("I-_eFdfZc___Aw-_W-VNtF", ">=3.5.4,<=5.2.1")]),
+        pkg!(("X1cpwzRgr3-f_Z--z", "1.3.2") => [
+            dep_req("--Z4SU_-l_BDn2-65jkv", "=3.2.3"),
+            dep_req("-Rai56flSboJ0P3MGM0-R", ">=2.1.0,<=4.0.1"),
+            dep_req("-ijzO-b-7ZP-L2EiSN-b996towI4", "=1.1.5"),
+            dep_req("E", ">=0.5.5,<=2.3.2"),
+            dep_req("I-_eFdfZc___Aw-_W-VNtF", "=3.5.4")]),
+        pkg!(("X1cpwzRgr3-f_Z--z", "2.0.5") => [
+            dep_req("--Z4SU_-l_BDn2-65jkv", ">=2.2.3,<=5.1.1"),
+            dep_req("-Rai56flSboJ0P3MGM0-R", ">=1.4.3,<=2.1.0"),
+            dep_req("-W6-1tL_7-d__oL_W---Qgcg-z", "=0.0.0"),
+            dep_req("-ijzO-b-7ZP-L2EiSN-b996towI4", "=1.1.5"),
+            dep_req("-m6Kl38-PQG7Kg-", ">=0.0.4,<=3.5.2"),
+            dep_req("E", "=2.3.2"),
+            dep_req("I-_eFdfZc___Aw-_W-VNtF", ">=1.3.1,<=4.3.0")]),
+        pkg!(("X1cpwzRgr3-f_Z--z", "4.1.3") => [
+            dep_req("--Z4SU_-l_BDn2-65jkv", "=1.4.5"),
+            dep_req("-Rai56flSboJ0P3MGM0-R", ">=4.0.1,<=5.1.3"),
+            dep_req("-W6-1tL_7-d__oL_W---Qgcg-z", "=0.0.0"),
+            dep_req("-ijzO-b-7ZP-L2EiSN-b996towI4", "=1.1.5"),
+            dep_req("-m6Kl38-PQG7Kg-", ">=3.5.2,<=4.1.3"),
+            dep_req("E", ">=0.5.5,<=2.3.2"),
+            dep_req("I-_eFdfZc___Aw-_W-VNtF", ">=4.3.0,<=5.2.1")]),
+        pkg!(("Z3-LN_81Tn3-", "0.0.0") => [
+            dep_req("--Z4SU_-l_BDn2-65jkv", ">=3.2.3,<=5.5.2"),
+            dep_req("-W6-1tL_7-d__oL_W---Qgcg-z", "=0.0.0"),
+            dep_req("-ijzO-b-7ZP-L2EiSN-b996towI4", "=1.1.5"),
+            dep_req("-m6Kl38-PQG7Kg-", ">=3.5.2,<=4.1.3"),
+            dep_req("E", "=2.3.2"),
+            dep_req("I-_eFdfZc___Aw-_W-VNtF", ">=1.3.1,<=4.0.4")]),
+        pkg!(("Z3-LN_81Tn3-", "1.1.2") => [
+            dep_req("X1cpwzRgr3-f_Z--z", ">=1.3.2,<=2.0.5")]),
+        pkg!(("Z3-LN_81Tn3-", "1.4.2") => [
+            dep_req("--Z4SU_-l_BDn2-65jkv", ">=5.1.1,<=5.5.2"),
+            dep_req("-ijzO-b-7ZP-L2EiSN-b996towI4", "=1.1.5"),
+            dep_req("-m6Kl38-PQG7Kg-", ">=0.0.4,<=3.5.2"),
+            dep_req("E", ">=0.5.5,<=2.3.2"),
+            dep_req("X1cpwzRgr3-f_Z--z", ">=0.0.0,<=1.3.2")]),
+        pkg!(("Z3-LN_81Tn3-", "2.2.2") => [
+            dep_req("--Z4SU_-l_BDn2-65jkv", ">=3.2.3,<=5.5.2"),
+            dep_req("-Rai56flSboJ0P3MGM0-R", ">=2.1.5,<=4.0.1"),
+            dep_req("-W6-1tL_7-d__oL_W---Qgcg-z", "=0.0.0"),
+            dep_req("-ijzO-b-7ZP-L2EiSN-b996towI4", "=1.1.5"),
+            dep_req("-m6Kl38-PQG7Kg-", "=3.5.2"),
+            dep_req("E", "=0.5.5"),
+            dep_req("I-_eFdfZc___Aw-_W-VNtF", "=1.3.1"),
+            dep_req("X1cpwzRgr3-f_Z--z", ">=1.3.2,<=2.0.5")]),
+        pkg!(("Z3-LN_81Tn3-", "4.3.4")),
+        pkg!(("_5r1___Wiao4pU", "1.4.5") => [
+            dep_req("--Z4SU_-l_BDn2-65jkv", ">=3.2.3,<=5.1.1")]),
+        pkg!(("_5r1___Wiao4pU", "2.4.3") => [
+            dep_req("--Z4SU_-l_BDn2-65jkv", ">=1.4.5,<=5.5.2"),
+            dep_req("-Rai56flSboJ0P3MGM0-R", "=4.0.1"),
+            dep_req("-ijzO-b-7ZP-L2EiSN-b996towI4", "=1.1.5")]),
+        pkg!(("_5r1___Wiao4pU", "2.5.2") => [
+            dep_req("--Z4SU_-l_BDn2-65jkv", ">=1.4.5,<=5.5.2"),
+            dep_req("-Rai56flSboJ0P3MGM0-R", ">=4.0.1,<=5.1.3"),
+            dep_req("-W6-1tL_7-d__oL_W---Qgcg-z", "=0.0.0"),
+            dep_req("-ijzO-b-7ZP-L2EiSN-b996towI4", "=1.1.5"),
+            dep_req("-m6Kl38-PQG7Kg-", ">=0.0.4,<=4.1.3"),
+            dep_req("I-_eFdfZc___Aw-_W-VNtF", ">=1.3.1,<=3.5.4"),
+            dep_req("X1cpwzRgr3-f_Z--z", ">=1.3.1,<=2.0.5")]),
+        pkg!(("_5r1___Wiao4pU", "5.0.2") => [
+            dep_req("X1cpwzRgr3-f_Z--z", ">=0.0.0,<=4.1.3")]),
+        pkg!(("_7GYt6", "2.4.0") => [
+            dep_req("--Z4SU_-l_BDn2-65jkv", "=5.5.2"),
+            dep_req("-Rai56flSboJ0P3MGM0-R", "=2.1.5"),
+            dep_req("I-_eFdfZc___Aw-_W-VNtF", ">=4.0.4,<=4.3.0")]),
+        pkg!(("_7GYt6", "2.5.4") => [
+            dep_req("--Z4SU_-l_BDn2-65jkv", ">=2.2.3,<=3.2.3"),
+            dep_req("-Rai56flSboJ0P3MGM0-R", ">=1.4.3,<=5.1.3"),
+            dep_req("-ijzO-b-7ZP-L2EiSN-b996towI4", "=1.1.5"),
+            dep_req("-m6Kl38-PQG7Kg-", "=0.0.4"),
+            dep_req("E", "=0.5.5"),
+            dep_req("I-_eFdfZc___Aw-_W-VNtF", "=4.0.4"),
+            dep_req("Z3-LN_81Tn3-", ">=1.1.2,<=4.3.4")]),
+        pkg!(("_7GYt6", "3.3.5") => [
+            dep_req("--Z4SU_-l_BDn2-65jkv", "=2.2.3"),
+            dep_req("-Rai56flSboJ0P3MGM0-R", ">=1.4.3,<=2.1.0"),
+            dep_req("-W6-1tL_7-d__oL_W---Qgcg-z", "=0.0.0"),
+            dep_req("-ijzO-b-7ZP-L2EiSN-b996towI4", "=1.1.5"),
+            dep_req("-m6Kl38-PQG7Kg-", ">=0.0.4,<=3.5.2")]),
+        pkg!(("_7GYt6", "3.4.4") => [
+            dep_req("--Z4SU_-l_BDn2-65jkv", ">=2.2.3,<=5.1.1"),
+            dep_req("-Rai56flSboJ0P3MGM0-R", ">=4.0.1,<=5.1.3"),
+            dep_req("-W6-1tL_7-d__oL_W---Qgcg-z", "=0.0.0"),
+            dep_req("-ijzO-b-7ZP-L2EiSN-b996towI4", "=1.1.5"),
+            dep_req("-m6Kl38-PQG7Kg-", ">=0.0.4,<=4.1.3"),
+            dep_req("I-_eFdfZc___Aw-_W-VNtF", ">=4.0.4,<=5.2.1"),
+            dep_req("X1cpwzRgr3-f_Z--z", ">=0.0.0,<=1.3.1"),
+            dep_req("Z3-LN_81Tn3-", ">=1.1.2,<=2.2.2"),
+            dep_req("_5r1___Wiao4pU", ">=2.4.3,<=5.0.2")]),
+        pkg!(("_7GYt6", "4.3.1") => [
+            dep_req("-W6-1tL_7-d__oL_W---Qgcg-z", "=0.0.0"),
+            dep_req("-m6Kl38-PQG7Kg-", ">=3.5.2,<=4.1.3"),
+            dep_req("X1cpwzRgr3-f_Z--z", "=0.0.0")]),
+        pkg!(("b_SvYO8", "3.3.3") => [
+            dep_req("-ijzO-b-7ZP-L2EiSN-b996towI4", "=1.1.5"),
+            dep_req("Z3-LN_81Tn3-", ">=1.4.2,<=4.3.4")]),
+        pkg!(("b_SvYO8", "3.3.4") => [
+            dep_req("-m6Kl38-PQG7Kg-", ">=0.0.4,<=3.5.2")]),
+        pkg!(("b_SvYO8", "5.3.4") => [
+            dep_req("X1cpwzRgr3-f_Z--z", ">=0.0.0,<=1.3.1")]),
+        pkg!(("b_SvYO8", "5.4.3") => [
+            dep_req("-Rai56flSboJ0P3MGM0-R", "=2.1.0"),
+            dep_req("X1cpwzRgr3-f_Z--z", ">=2.0.5,<=4.1.3")]),
+        pkg!(("j--Zt_m9__D-1-5=Ny8UMt-h", "2.3.4")),
+        pkg!(("j--Zt_m9__D-1-5=Ny8UMt-h", "3.0.1") => [
+            dep_req("--Z4SU_-l_BDn2-65jkv", ">=2.2.3,<=5.5.2"),
+            dep_req("E", ">=0.5.5,<=2.3.2"),
+            dep_req("I-_eFdfZc___Aw-_W-VNtF", "=3.5.4"),
+            dep_req("X1cpwzRgr3-f_Z--z", ">=1.3.1,<=4.1.3"),
+            dep_req("_7GYt6", "=2.5.4")]),
+        pkg!(("j--Zt_m9__D-1-5=Ny8UMt-h", "5.5.4") => [
+            dep_req("--Z4SU_-l_BDn2-65jkv", "=3.2.3"),
+            dep_req("-Rai56flSboJ0P3MGM0-R", ">=1.4.3,<=2.1.5"),
+            dep_req("-W6-1tL_7-d__oL_W---Qgcg-z", "=0.0.0"),
+            dep_req("-ijzO-b-7ZP-L2EiSN-b996towI4", "=1.1.5"),
+            dep_req("-m6Kl38-PQG7Kg-", ">=3.5.2,<=4.1.3"),
+            dep_req("I-_eFdfZc___Aw-_W-VNtF", ">=4.3.0,<=5.2.1"),
+            dep_req("_7GYt6", "=2.5.4"),
+            dep_req("b_SvYO8", "=5.4.3")]),
+        pkg!(("j5k-6_4A55l-o-KAh", "4.3.5")),
+        pkg!(("s", "1.1.2") => [
+            dep_req("--Z4SU_-l_BDn2-65jkv", ">=2.2.3,<=5.1.1"),
+            dep_req("-Rai56flSboJ0P3MGM0-R", ">=4.0.1,<=5.1.3"),
+            dep_req("-W6-1tL_7-d__oL_W---Qgcg-z", "=0.0.0"),
+            dep_req("-ijzO-b-7ZP-L2EiSN-b996towI4", "=1.1.5"),
+            dep_req("-m6Kl38-PQG7Kg-", "=0.0.4"),
+            dep_req("E", ">=0.5.5,<=2.3.2"),
+            dep_req("I-_eFdfZc___Aw-_W-VNtF", "=4.0.4"),
+            dep_req("X1cpwzRgr3-f_Z--z", ">=0.0.0,<=4.1.3"),
+            dep_req("_5r1___Wiao4pU", ">=2.4.3,<=5.0.2"),
+            dep_req("_7GYt6", ">=3.4.4,<=4.3.1"),
+            dep_req("b_SvYO8", ">=3.3.3,<=5.4.3"),
+            dep_req("j5k-6_4A55l-o-KAh", "=4.3.5")]),
+        pkg!(("s", "1.5.2") => [
+            dep_req("--Z4SU_-l_BDn2-65jkv", ">=2.2.3,<=5.5.2"),
+            dep_req("-ijzO-b-7ZP-L2EiSN-b996towI4", "=1.1.5"),
+            dep_req("-m6Kl38-PQG7Kg-", ">=0.0.4,<=3.5.2"),
+            dep_req("_7GYt6", ">=3.4.4,<=4.3.1"),
+            dep_req("b_SvYO8", "=5.4.3"),
+            dep_req("j--Zt_m9__D-1-5=Ny8UMt-h", ">=3.0.1,<=5.5.4"),
+            dep_req("j5k-6_4A55l-o-KAh", "=4.3.5")]),
+    ];
+    let reg = registry(input.clone());
+
+    let res = resolve(&pkg_id("root"), vec![dep_req("s", "=1.5.2")], &reg).unwrap();
+    let package_to_yank = ("I-_eFdfZc___Aw-_W-VNtF", "3.5.4").to_pkgid();
+    // this package is not used in the resolution.
+    assert!(!res.contains(&package_to_yank));
+    // so when we yank it
+    let new_reg = registry(
+        input
+            .iter()
+            .cloned()
+            .filter(|x| &package_to_yank != x.package_id())
+            .collect(),
+    );
+    assert_eq!(input.len(), new_reg.len() + 1);
+    // it should still build
+    // TODO: uncomment when minimized: assert!(resolve(&pkg_id("root"), vec![dep_req("s", "=1.5.2")], &new_reg).is_ok());
+    assert!(resolve(&pkg_id("root"), vec![dep_req("s", "=1.5.2")], &new_reg).is_err());
+}
+
+#[test]
 fn resolving_but_no_exists() {
     let reg = registry(vec![]);
 
