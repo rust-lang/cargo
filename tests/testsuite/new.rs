@@ -455,3 +455,30 @@ fn explicit_project_name() {
         .with_stderr("[CREATED] library `bar` project")
         .run();
 }
+
+#[test]
+fn new_with_edition_2015() {
+    cargo_process("new --edition 2015 foo")
+        .env("USER", "foo")
+        .run();
+    let manifest = fs::read_to_string(paths::root().join("foo/Cargo.toml")).unwrap();
+    assert!(manifest.contains("edition = \"2015\""));
+}
+
+#[test]
+fn new_with_edition_2018() {
+    cargo_process("new --edition 2018 foo")
+        .env("USER", "foo")
+        .run();
+    let manifest = fs::read_to_string(paths::root().join("foo/Cargo.toml")).unwrap();
+    assert!(manifest.contains("edition = \"2018\""));
+}
+
+#[test]
+fn new_with_bad_edition() {
+    cargo_process("new --edition something_else foo")
+        .env("USER", "foo")
+        .with_stderr_contains("error: 'something_else' isn't a valid value[..]")
+        .with_status(1)
+        .run();
+}

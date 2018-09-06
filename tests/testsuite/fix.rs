@@ -355,8 +355,6 @@ fn upgrade_extern_crate() {
         .file(
             "Cargo.toml",
             r#"
-                cargo-features = ["edition"]
-
                 [package]
                 name = "foo"
                 version = "0.1.0"
@@ -392,7 +390,6 @@ fn upgrade_extern_crate() {
 ";
     p.cargo("fix --allow-no-vcs")
         .env("__CARGO_FIX_YOLO", "1")
-        .masquerade_as_nightly_cargo()
         .with_stderr(stderr)
         .with_stdout("")
         .run();
@@ -830,8 +827,6 @@ fn prepare_for_and_enable() {
         .file(
             "Cargo.toml",
             r#"
-                cargo-features = ['edition']
-
                 [package]
                 name = 'foo'
                 version = '0.1.0'
@@ -853,7 +848,6 @@ information about transitioning to the 2018 edition see:
 
 ";
     p.cargo("fix --edition --allow-no-vcs")
-        .masquerade_as_nightly_cargo()
         .with_stderr_contains(stderr)
         .with_status(101)
         .run();
@@ -925,7 +919,6 @@ fn fix_idioms() {
         .file(
             "Cargo.toml",
             r#"
-                cargo-features = ['edition']
                 [package]
                 name = 'foo'
                 version = '0.1.0'
@@ -947,7 +940,6 @@ fn fix_idioms() {
 [FINISHED] [..]
 ";
     p.cargo("fix --edition-idioms --allow-no-vcs")
-        .masquerade_as_nightly_cargo()
         .with_stderr(stderr)
         .with_status(0)
         .run();

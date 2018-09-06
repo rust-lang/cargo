@@ -971,45 +971,19 @@ fn edition_with_metadata() {
         .file(
             "Cargo.toml",
             r#"
-            cargo-features = ["edition"]
-            [package]
-            name = "foo"
-            version = "0.0.1"
-            authors = []
-            edition = "2018"
-            [package.metadata.docs.rs]
-            features = ["foobar"]
-        "#,
+                [package]
+                name = "foo"
+                version = "0.0.1"
+                authors = []
+                edition = "2018"
+
+                [package.metadata.docs.rs]
+                features = ["foobar"]
+            "#,
         ).file("src/lib.rs", "")
         .build();
 
-    p.cargo("package").masquerade_as_nightly_cargo().run();
-}
-
-#[test]
-fn test_edition_missing() {
-    // no edition = 2015
-    let p = project()
-        .file(
-            "Cargo.toml",
-            r#"
-            cargo-features = ["edition"]
-            [package]
-            name = "foo"
-            version = "0.0.1"
-            authors = []
-        "#,
-        ).file("src/lib.rs", r#" "#)
-        .build();
-
-    p.cargo("build -v").masquerade_as_nightly_cargo()
-                // --edition is still in flux and we're not passing -Zunstable-options
-                // from Cargo so it will probably error. Only partially match the output
-                // until stuff stabilizes
-                .with_stderr_contains("\
-[COMPILING] foo v0.0.1 ([..])
-[RUNNING] `rustc [..]--edition=2015 [..]
-").run();
+    p.cargo("package").run();
 }
 
 #[test]
@@ -1018,18 +992,16 @@ fn test_edition_malformed() {
         .file(
             "Cargo.toml",
             r#"
-            cargo-features = ["edition"]
-            [package]
-            name = "foo"
-            version = "0.0.1"
-            authors = []
-            edition = "chicken"
-        "#,
+                [package]
+                name = "foo"
+                version = "0.0.1"
+                authors = []
+                edition = "chicken"
+            "#,
         ).file("src/lib.rs", r#" "#)
         .build();
 
     p.cargo("build -v")
-        .masquerade_as_nightly_cargo()
         .with_status(101)
         .with_stderr(
             "\
@@ -1041,39 +1013,6 @@ Caused by:
 Caused by:
   supported edition values are `2015` or `2018`, but `chicken` is unknown
 ".to_string(),
-        ).run();
-}
-
-#[test]
-fn test_edition_nightly() {
-    let p = project()
-        .file(
-            "Cargo.toml",
-            r#"
-            [package]
-            name = "foo"
-            version = "0.0.1"
-            authors = []
-            edition = "2015"
-        "#,
-        ).file("src/lib.rs", r#" "#)
-        .build();
-
-    p.cargo("build -v")
-        .masquerade_as_nightly_cargo()
-        .with_status(101)
-        .with_stderr(
-            "\
-error: failed to parse manifest at `[..]`
-
-Caused by:
-  editions are unstable
-
-Caused by:
-  feature `edition` is required
-
-consider adding `cargo-features = [\"edition\"]` to the manifest
-",
         ).run();
 }
 
