@@ -490,8 +490,7 @@ fn package_git_submodule() {
             None,
         ).unwrap();
 
-    cargo_process("package --no-verify -v")
-        .cwd(project.root())
+    project.cargo("package --no-verify -v")
         .with_stderr_contains("[ARCHIVING] bar/Makefile")
         .run();
 }
@@ -625,8 +624,7 @@ fn repackage_on_source_change() {
     std::mem::drop(file);
 
     // Check that cargo rebuilds the tarball
-    cargo_process("package")
-        .cwd(p.root())
+    p.cargo("package")
         .with_stderr(
             "\
 [WARNING] [..]

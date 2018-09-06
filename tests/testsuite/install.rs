@@ -225,8 +225,7 @@ fn install_path() {
 
     cargo_process("install --path").arg(p.root()).run();
     assert_has_installed_exe(cargo_home(), "foo");
-    cargo_process("install --path .")
-        .cwd(p.root())
+    p.cargo("install --path .")
         .with_status(101)
         .with_stderr(
             "\
@@ -692,8 +691,7 @@ fn subcommand_works_out_of_the_box() {
 fn installs_from_cwd_by_default() {
     let p = project().file("src/main.rs", "fn main() {}").build();
 
-    cargo_process("install")
-        .cwd(p.root())
+    p.cargo("install")
         .with_stderr_contains(
             "warning: Using `cargo install` to install the binaries for the \
              project in current working directory is deprecated, \
@@ -725,8 +723,7 @@ fn installs_from_cwd_with_2018_warnings() {
         ).file("src/main.rs", "fn main() {}")
         .build();
 
-    cargo_process("install")
-        .cwd(p.root())
+    p.cargo("install")
         .masquerade_as_nightly_cargo()
         .with_status(101)
         .with_stderr_contains(
@@ -1244,15 +1241,6 @@ fn install_ignores_cargo_config() {
 
     let p = project()
         .file(
-            "Cargo.toml",
-            r#"
-            [package]
-            name = "foo"
-            version = "0.1.0"
-            authors = []
-        "#,
-        )
-        .file(
             ".cargo/config",
             r#"
             [build]
@@ -1262,6 +1250,6 @@ fn install_ignores_cargo_config() {
         .file("src/main.rs", "fn main() {}")
         .build();
 
-    cargo_process("install bar").cwd(p.root()).with_status(0).run();
+    p.cargo("install bar").run();
     assert_has_installed_exe(cargo_home(), "bar");
 }
