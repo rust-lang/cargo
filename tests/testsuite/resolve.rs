@@ -968,36 +968,36 @@ fn dont_yet_know_the_problem() {
     // WIP minimized bug found in:
     // https://github.com/rust-lang/cargo/commit/003c29b0c71e5ea28fbe8e72c148c755c9f3f8d9
     let input = vec![
-        pkg!(("B", "1.4.3")),
-        pkg!(("B", "2.1.0")),
-        pkg!(("C", "0.0.0") => [
-            dep_req("B", ">=1.4.3,<=2.1.0")]),
-        pkg!(("I-_eFdfZc___Aw-_W-VNtF", "3.5.4")),
-        pkg!(("I-_eFdfZc___Aw-_W-VNtF", "4.0.4")),
-        pkg!(("I-_eFdfZc___Aw-_W-VNtF", "4.3.0")),
-        pkg!(("_7GYt6", "2.5.4") => [
-            dep_req("I-_eFdfZc___Aw-_W-VNtF", "=4.0.4")
+        pkg!(("a", "1.4.3")),
+        pkg!(("a", "2.1.0")),
+        pkg!(("b", "0.0.0") => [
+            dep_req("a", ">=1.4.3,<=2.1.0")]),
+        pkg!(("to_yank", "3.5.4")),
+        pkg!(("to_yank", "4.0.4")),
+        pkg!(("to_yank", "4.3.0")),
+        pkg!(("c", "2.5.4") => [
+            dep_req("to_yank", "=4.0.4")
         ]),
-        pkg!(("_7GYt6", "3.4.4")),
-        pkg!(("_7GYt6", "4.3.1") => [
-            dep_req("I-_eFdfZc___Aw-_W-VNtF", "=4.3.0")]),
-        pkg!(("j--Zt_m9__D-1-5=Ny8UMt-h", "3.0.1") => [
-            dep_req("I-_eFdfZc___Aw-_W-VNtF", "=3.5.4"),
-            dep_req("_7GYt6", "=2.5.4")
+        pkg!(("c", "3.4.4")),
+        pkg!(("c", "4.3.1") => [
+            dep_req("to_yank", "=4.3.0")]),
+        pkg!(("d", "3.0.1") => [
+            dep_req("to_yank", "=3.5.4"),
+            dep_req("c", "=2.5.4")
         ]),
-        pkg!(("j--Zt_m9__D-1-5=Ny8UMt-h", "5.5.4") => [
-            dep_req("_7GYt6", "=2.5.4")
+        pkg!(("d", "5.5.4") => [
+            dep_req("c", "=2.5.4")
         ]),
-        pkg!("s" => [
-            dep_req("C", "=0.0.0"),
-            dep_req("_7GYt6", ">=3.4.4,<=4.3.1"),
-            dep_req("j--Zt_m9__D-1-5=Ny8UMt-h", ">=3.0.1,<=5.5.4")
+        pkg!("e" => [
+            dep_req("b", "=0.0.0"),
+            dep_req("c", ">=3.4.4,<=4.3.1"),
+            dep_req("d", ">=3.0.1,<=5.5.4")
         ]),
     ];
     let reg = registry(input.clone());
 
-    let res = resolve(&pkg_id("root"), vec![dep("s")], &reg).unwrap();
-    let package_to_yank = ("I-_eFdfZc___Aw-_W-VNtF", "3.5.4").to_pkgid();
+    let res = resolve(&pkg_id("root"), vec![dep("e")], &reg).unwrap();
+    let package_to_yank = ("to_yank", "3.5.4").to_pkgid();
     // this package is not used in the resolution.
     assert!(!res.contains(&package_to_yank));
     // so when we yank it
@@ -1010,8 +1010,8 @@ fn dont_yet_know_the_problem() {
     );
     assert_eq!(input.len(), new_reg.len() + 1);
     // it should still build
-    // TODO: uncomment when minimized: assert!(resolve(&pkg_id("root"), vec![dep("s")], &new_reg).is_ok());
-    assert!(resolve(&pkg_id("root"), vec![dep("s")], &new_reg).is_err());
+    // TODO: uncomment when minimized: assert!(resolve(&pkg_id("root"), vec![dep("e")], &new_reg).is_ok());
+    assert!(resolve(&pkg_id("root"), vec![dep("e")], &new_reg).is_err());
 }
 
 #[test]
