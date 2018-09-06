@@ -1117,3 +1117,26 @@ fn doesnt_rebuild_dependencies() {
 ")
         .run();
 }
+
+#[test]
+fn does_not_crash_with_rustc_wrapper() {
+    // We don't have /usr/bin/env on Windows.
+    if cfg!(windows) {
+        return;
+    }
+    let p = project()
+        .file(
+            "Cargo.toml",
+            r#"
+                [package]
+                name = "foo"
+                version = "0.1.0"
+            "#,
+        )
+        .file("src/lib.rs", "")
+        .build();
+
+    p.cargo("fix --allow-no-vcs")
+        .env("RUSTC_WRAPPER", "/usr/bin/env")
+        .run();
+}

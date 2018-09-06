@@ -68,13 +68,15 @@ impl Rustc {
     pub fn process(&self) -> ProcessBuilder {
         if let Some(ref wrapper) = self.wrapper {
             let mut cmd = util::process(wrapper);
-            {
-                cmd.arg(&self.path);
-            }
+            cmd.arg(&self.path);
             cmd
         } else {
-            util::process(&self.path)
+            self.process_no_wrapper()
         }
+    }
+
+    pub fn process_no_wrapper(&self) -> ProcessBuilder {
+        util::process(&self.path)
     }
 
     pub fn cached_output(&self, cmd: &ProcessBuilder) -> CargoResult<(String, String)> {
