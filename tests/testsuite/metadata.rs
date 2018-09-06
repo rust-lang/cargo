@@ -903,7 +903,6 @@ fn cargo_metadata_no_deps_cwd() {
         .build();
 
     p.cargo("metadata --no-deps")
-        .cwd(p.root())
         .with_json(MANIFEST_OUTPUT)
         .run();
 }
@@ -916,7 +915,6 @@ fn cargo_metadata_bad_version() {
         .build();
 
     p.cargo("metadata --no-deps --format-version 2")
-        .cwd(p.root())
         .with_status(1)
         .with_stderr_contains(
             "\
