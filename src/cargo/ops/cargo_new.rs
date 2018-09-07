@@ -535,18 +535,16 @@ path = {}
             r#"[package]
 name = "{}"
 version = "0.1.0"
-authors = [{}]{}
+authors = [{}]
+edition = {}
 
 [dependencies]
 {}"#,
             name,
             toml::Value::String(author),
             match opts.edition {
-                Some(edition) => {
-                    let edition = toml::Value::String(edition.to_string());
-                    format!("\nedition = {}", edition)
-                }
-                None => String::new(),
+                Some(edition) => toml::Value::String(edition.to_string()),
+                None => toml::Value::String("2018".to_string()),
             },
             cargotoml_path_specifier
         ).as_bytes(),
