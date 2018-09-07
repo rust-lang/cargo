@@ -266,10 +266,7 @@ fn bad_cksum() {
             "\
 [UPDATING] [..] index
 [DOWNLOADING] bad-cksum [..]
-[ERROR] unable to get packages from source
-
-Caused by:
-  failed to download replaced source registry `https://[..]`
+[ERROR] failed to download replaced source registry `https://[..]`
 
 Caused by:
   failed to verify the checksum of `bad-cksum v0.0.1 (registry `[ROOT][..]`)`
@@ -1662,10 +1659,7 @@ fn bad_and_or_malicious_packages_rejected() {
             "\
 [UPDATING] [..]
 [DOWNLOADING] [..]
-error: unable to get packages from source
-
-Caused by:
-  failed to download [..]
+error: failed to download [..]
 
 Caused by:
   failed to unpack [..]

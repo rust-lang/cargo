@@ -11,6 +11,7 @@ use lazycell::LazyCell;
 
 use core::{Dependency, Manifest, PackageId, SourceId, Target};
 use core::{FeatureMap, SourceMap, Summary};
+use core::source::MaybePackage;
 use core::interning::InternedString;
 use util::{internal, lev_distance, Config};
 use util::errors::{CargoResult, CargoResultExt};
@@ -240,16 +241,22 @@ impl hash::Hash for Package {
 pub struct PackageSet<'cfg> {
     packages: HashMap<PackageId, LazyCell<Package>>,
     sources: RefCell<SourceMap<'cfg>>,
+    config: &'cfg Config,
 }
 
 impl<'cfg> PackageSet<'cfg> {
-    pub fn new(package_ids: &[PackageId], sources: SourceMap<'cfg>) -> PackageSet<'cfg> {
+    pub fn new(
+        package_ids: &[PackageId],
+        sources: SourceMap<'cfg>,
+        config: &'cfg Config,
+    ) -> PackageSet<'cfg> {
         PackageSet {
             packages: package_ids
                 .iter()
                 .map(|id| (id.clone(), LazyCell::new()))
                 .collect(),
             sources: RefCell::new(sources),
+            config,
         }
     }
 
@@ -271,6 +278,14 @@ impl<'cfg> PackageSet<'cfg> {
         let pkg = source
             .download(id)
             .chain_err(|| format_err!("unable to get packages from source"))?;
+        let pkg = match pkg {
+            MaybePackage::Ready(pkg) => pkg,
+            MaybePackage::Download { url, descriptor } => {
+                self.config.shell().status("Downloading", descriptor)?;
+                let data = download(self.config, &url)?;
+                source.finish_download(id, data)?
+            }
+        };
         assert!(slot.fill(pkg).is_ok());
         Ok(slot.borrow().unwrap())
     }
@@ -278,4 +293,45 @@ impl<'cfg> PackageSet<'cfg> {
     pub fn sources(&self) -> Ref<SourceMap<'cfg>> {
         self.sources.borrow()
     }
+}
+
+fn download(config: &Config, url: &str) -> CargoResult<Vec<u8>> {
+    use util::network;
+    use util::Progress;
+    use util::errors::HttpNot200;
+
+    let mut handle = config.http()?.borrow_mut();
+    handle.get(true)?;
+    handle.url(&url)?;
+    handle.follow_location(true)?;
+    let mut body = Vec::new();
+    network::with_retry(config, || {
+        body = Vec::new();
+        let mut pb = Progress::new("Fetch", config);
+        {
+            handle.progress(true)?;
+            let mut handle = handle.transfer();
+            handle.progress_function(|dl_total, dl_cur, _, _| {
+                pb.tick(dl_cur as usize, dl_total as usize).is_ok()
+            })?;
+            handle.write_function(|buf| {
+                body.extend_from_slice(buf);
+                Ok(buf.len())
+            })?;
+            handle.perform().chain_err(|| {
+                format!("failed to download from `{}`", url)
+            })?;
+        }
+        let code = handle.response_code()?;
+        if code != 200 && code != 0 {
+            let url = handle.effective_url()?.unwrap_or(&url);
+            Err(HttpNot200 {
+                code,
+                url: url.to_string(),
+            }.into())
+        } else {
+            Ok(())
+        }
+    })?;
+    Ok(body)
 }
