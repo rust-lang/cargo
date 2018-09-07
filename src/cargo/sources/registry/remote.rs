@@ -14,10 +14,10 @@ use lazycell::LazyCell;
 use core::{PackageId, SourceId};
 use sources::git;
 use sources::registry::{RegistryConfig, RegistryData, CRATE_TEMPLATE, INDEX_LOCK, VERSION_TEMPLATE};
-use util::network;
+use sources::registry::MaybeLock;
 use util::{FileLock, Filesystem};
-use util::{Config, Progress, Sha256, ToUrl};
-use util::errors::{CargoResult, CargoResultExt, HttpNot200};
+use util::{Config, Sha256};
+use util::errors::{CargoResult, CargoResultExt};
 
 pub struct RemoteRegistry<'cfg> {
     index_path: Filesystem,
@@ -122,6 +122,10 @@ impl<'cfg> RemoteRegistry<'cfg> {
         *self.tree.borrow_mut() = Some(tree);
         Ok(Ref::map(self.tree.borrow(), |s| s.as_ref().unwrap()))
     }
+
+    fn filename(&self, pkg: &PackageId) -> String {
+        format!("{}-{}.crate", pkg.name(), pkg.version())
+    }
 }
 
 impl<'cfg> RegistryData for RemoteRegistry<'cfg> {
@@ -206,9 +210,8 @@ impl<'cfg> RegistryData for RemoteRegistry<'cfg> {
         Ok(())
     }
 
-    fn download(&mut self, pkg: &PackageId, checksum: &str) -> CargoResult<FileLock> {
-        let filename = format!("{}-{}.crate", pkg.name(), pkg.version());
-        let path = Path::new(&filename);
+    fn download(&mut self, pkg: &PackageId, _checksum: &str) -> CargoResult<MaybeLock> {
+        let filename = self.filename(pkg);
 
         // Attempt to open an read-only copy first to avoid an exclusive write
         // lock and also work with read-only filesystems. Note that we check the
@@ -216,18 +219,12 @@ impl<'cfg> RegistryData for RemoteRegistry<'cfg> {
         //
         // If this fails then we fall through to the exclusive path where we may
         // have to redownload the file.
-        if let Ok(dst) = self.cache_path.open_ro(path, self.config, &filename) {
+        if let Ok(dst) = self.cache_path.open_ro(&filename, self.config, &filename) {
             let meta = dst.file().metadata()?;
             if meta.len() > 0 {
-                return Ok(dst);
+                return Ok(MaybeLock::Ready(dst));
             }
         }
-        let mut dst = self.cache_path.open_rw(path, self.config, &filename)?;
-        let meta = dst.file().metadata()?;
-        if meta.len() > 0 {
-            return Ok(dst);
-        }
-        self.config.shell().status("Downloading", pkg)?;
 
         let config = self.config()?.unwrap();
         let mut url = config.dl.clone();
@@ -235,56 +232,29 @@ impl<'cfg> RegistryData for RemoteRegistry<'cfg> {
             write!(url, "/{}/{}/download", CRATE_TEMPLATE, VERSION_TEMPLATE).unwrap();
         }
         let url = url.replace(CRATE_TEMPLATE, &*pkg.name())
-            .replace(VERSION_TEMPLATE, &pkg.version().to_string())
-            .to_url()?;
+            .replace(VERSION_TEMPLATE, &pkg.version().to_string());
 
-        // TODO: don't download into memory, but ensure that if we ctrl-c a
-        //       download we should resume either from the start or the middle
-        //       on the next time
-        let url = url.to_string();
-        let mut handle = self.config.http()?.borrow_mut();
-        handle.get(true)?;
-        handle.url(&url)?;
-        handle.follow_location(true)?;
-        let mut state = Sha256::new();
-        let mut body = Vec::new();
-        network::with_retry(self.config, || {
-            state = Sha256::new();
-            body = Vec::new();
-            let mut pb = Progress::new("Fetch", self.config);
-            {
-                handle.progress(true)?;
-                let mut handle = handle.transfer();
-                handle.progress_function(|dl_total, dl_cur, _, _| {
-                    pb.tick(dl_cur as usize, dl_total as usize).is_ok()
-                })?;
-                handle.write_function(|buf| {
-                    state.update(buf);
-                    body.extend_from_slice(buf);
-                    Ok(buf.len())
-                })?;
-                handle.perform().chain_err(|| {
-                    format!("failed to download from `{}`", url)
-                })?;
-            }
-            let code = handle.response_code()?;
-            if code != 200 && code != 0 {
-                let url = handle.effective_url()?.unwrap_or(&url);
-                Err(HttpNot200 {
-                    code,
-                    url: url.to_string(),
-                }.into())
-            } else {
-                Ok(())
-            }
-        })?;
+        Ok(MaybeLock::Download { url, descriptor: pkg.to_string() })
+    }
 
+    fn finish_download(&mut self, pkg: &PackageId, checksum: &str, data: &[u8])
+        -> CargoResult<FileLock>
+    {
         // Verify what we just downloaded
+        let mut state = Sha256::new();
+        state.update(data);
         if hex::encode(state.finish()) != checksum {
             bail!("failed to verify the checksum of `{}`", pkg)
         }
 
-        dst.write_all(&body)?;
+        let filename = self.filename(pkg);
+        let mut dst = self.cache_path.open_rw(&filename, self.config, &filename)?;
+        let meta = dst.file().metadata()?;
+        if meta.len() > 0 {
+            return Ok(dst);
+        }
+
+        dst.write_all(data)?;
         dst.seek(SeekFrom::Start(0))?;
         Ok(dst)
     }

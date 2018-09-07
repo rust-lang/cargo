@@ -49,7 +49,10 @@ pub trait Source {
 
     /// The download method fetches the full package for each name and
     /// version specified.
-    fn download(&mut self, package: &PackageId) -> CargoResult<Package>;
+    fn download(&mut self, package: &PackageId) -> CargoResult<MaybePackage>;
+
+    fn finish_download(&mut self, package: &PackageId, contents: Vec<u8>)
+        -> CargoResult<Package>;
 
     /// Generates a unique string which represents the fingerprint of the
     /// current state of the source.
@@ -71,6 +74,14 @@ pub trait Source {
     /// which may not be cacheable.
     fn verify(&self, _pkg: &PackageId) -> CargoResult<()> {
         Ok(())
+    }
+}
+
+pub enum MaybePackage {
+    Ready(Package),
+    Download {
+        url: String,
+        descriptor: String,
     }
 }
 
@@ -111,8 +122,12 @@ impl<'a, T: Source + ?Sized + 'a> Source for Box<T> {
     }
 
     /// Forwards to `Source::download`
-    fn download(&mut self, id: &PackageId) -> CargoResult<Package> {
+    fn download(&mut self, id: &PackageId) -> CargoResult<MaybePackage> {
         (**self).download(id)
+    }
+
+    fn finish_download(&mut self, id: &PackageId, data: Vec<u8>) -> CargoResult<Package> {
+        (**self).finish_download(id, data)
     }
 
     /// Forwards to `Source::fingerprint`
@@ -121,6 +136,52 @@ impl<'a, T: Source + ?Sized + 'a> Source for Box<T> {
     }
 
     /// Forwards to `Source::verify`
+    fn verify(&self, pkg: &PackageId) -> CargoResult<()> {
+        (**self).verify(pkg)
+    }
+}
+
+impl<'a, T: Source + ?Sized + 'a> Source for &'a mut T {
+    fn supports_checksums(&self) -> bool {
+        (**self).supports_checksums()
+    }
+
+    fn requires_precise(&self) -> bool {
+        (**self).requires_precise()
+    }
+
+    fn query(&mut self, dep: &Dependency, f: &mut FnMut(Summary)) -> CargoResult<()> {
+        (**self).query(dep, f)
+    }
+
+    fn fuzzy_query(&mut self, dep: &Dependency, f: &mut FnMut(Summary)) -> CargoResult<()> {
+        (**self).fuzzy_query(dep, f)
+    }
+
+    fn source_id(&self) -> &SourceId {
+        (**self).source_id()
+    }
+
+    fn replaced_source_id(&self) -> &SourceId {
+        (**self).replaced_source_id()
+    }
+
+    fn update(&mut self) -> CargoResult<()> {
+        (**self).update()
+    }
+
+    fn download(&mut self, id: &PackageId) -> CargoResult<MaybePackage> {
+        (**self).download(id)
+    }
+
+    fn finish_download(&mut self, id: &PackageId, data: Vec<u8>) -> CargoResult<Package> {
+        (**self).finish_download(id, data)
+    }
+
+    fn fingerprint(&self, pkg: &Package) -> CargoResult<String> {
+        (**self).fingerprint(pkg)
+    }
+
     fn verify(&self, pkg: &PackageId) -> CargoResult<()> {
         (**self).verify(pkg)
     }

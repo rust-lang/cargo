@@ -1,4 +1,5 @@
 use core::{Dependency, Package, PackageId, Source, SourceId, Summary};
+use core::source::MaybePackage;
 use util::errors::{CargoResult, CargoResultExt};
 
 pub struct ReplacedSource<'cfg> {
@@ -71,10 +72,25 @@ impl<'cfg> Source for ReplacedSource<'cfg> {
         Ok(())
     }
 
-    fn download(&mut self, id: &PackageId) -> CargoResult<Package> {
+    fn download(&mut self, id: &PackageId) -> CargoResult<MaybePackage> {
         let id = id.with_source_id(&self.replace_with);
         let pkg = self.inner
             .download(&id)
+            .chain_err(|| format!("failed to download replaced source {}", self.to_replace))?;
+        Ok(match pkg {
+            MaybePackage::Ready(pkg) => {
+                MaybePackage::Ready(pkg.map_source(&self.replace_with, &self.to_replace))
+            }
+            other @ MaybePackage::Download { .. } => other,
+        })
+    }
+
+    fn finish_download(&mut self, id: &PackageId, data: Vec<u8>)
+        -> CargoResult<Package>
+    {
+        let id = id.with_source_id(&self.replace_with);
+        let pkg = self.inner
+            .finish_download(&id, data)
             .chain_err(|| format!("failed to download replaced source {}", self.to_replace))?;
         Ok(pkg.map_source(&self.replace_with, &self.to_replace))
     }
