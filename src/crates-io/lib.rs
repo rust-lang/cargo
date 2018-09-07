@@ -68,7 +68,10 @@ pub struct NewCrateDependency {
     pub version_req: String,
     pub target: Option<String>,
     pub kind: String,
-    #[serde(skip_serializing_if = "Option::is_none")] pub registry: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub registry: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub explicit_name_in_toml: Option<String>,
 }
 
 #[derive(Deserialize)]

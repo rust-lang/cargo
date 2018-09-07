@@ -6,7 +6,7 @@ use cargo::util::paths::remove_dir_all;
 use support::cargo_process;
 use support::git;
 use support::paths::{self, CargoPathExt};
-use support::registry::{self, Package};
+use support::registry::{self, Package, Dependency};
 use support::{basic_manifest, project};
 use url::Url;
 
@@ -1710,4 +1710,58 @@ fn git_init_templatedir_missing() {
 
     p.cargo("build").run();
     p.cargo("build").run();
+}
+
+#[test]
+fn rename_deps_and_features() {
+    Package::new("foo", "0.1.0")
+        .file("src/lib.rs", "pub fn f1() {}")
+        .publish();
+    Package::new("foo", "0.2.0")
+        .file("src/lib.rs", "pub fn f2() {}")
+        .publish();
+    Package::new("bar", "0.2.0")
+        .add_dep(Dependency::new("foo01", "0.1.0").package("foo").optional(true))
+        .add_dep(Dependency::new("foo02", "0.2.0").package("foo"))
+        .feature("another", &["foo01"])
+        .file(
+            "src/lib.rs",
+            r#"
+                extern crate foo02;
+                #[cfg(feature = "foo01")]
+                extern crate foo01;
+
+                pub fn foo() {
+                    foo02::f2();
+                    #[cfg(feature = "foo01")]
+                    foo01::f1();
+                }
+            "#,
+        )
+        .publish();
+
+    let p = project()
+        .file(
+            "Cargo.toml",
+            r#"
+                [project]
+                name = "a"
+                version = "0.5.0"
+                authors = []
+
+                [dependencies]
+                bar = "0.2"
+            "#,
+        ).file(
+            "src/main.rs",
+            "
+                extern crate bar;
+                fn main() { bar::foo(); }
+            ",
+        )
+        .build();
+
+    p.cargo("build").run();
+    p.cargo("build --features bar/foo01").run();
+    p.cargo("build --features bar/another").run();
 }

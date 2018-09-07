@@ -177,6 +177,7 @@ fn transmit(
                     Kind::Development => "dev",
                 }.to_string(),
                 registry: dep_registry,
+                explicit_name_in_toml: dep.explicit_name_in_toml().map(|s| s.to_string()),
             })
         })
         .collect::<CargoResult<Vec<NewCrateDependency>>>()?;
