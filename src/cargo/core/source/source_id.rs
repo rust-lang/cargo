@@ -210,7 +210,11 @@ impl SourceId {
     }
 
     pub fn display_registry(&self) -> String {
-        format!("registry `{}`", self.url())
+        if self.is_default_registry() {
+            "registry".to_string()
+        } else {
+            format!("registry `{}`", self.url())
+        }
     }
 
     /// Is this source from a filesystem path
