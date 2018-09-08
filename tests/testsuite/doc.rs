@@ -967,7 +967,7 @@ fn doc_all_member_dependency_same_name() {
     Package::new("bar", "0.1.0").publish();
 
     p.cargo("doc --all")
-        .with_stderr_contains("[..] Updating registry `[..]`")
+        .with_stderr_contains("[..] Updating `[..]` index")
         .with_stderr_contains("[..] Documenting bar v0.1.0 ([..])")
         .run();
 }

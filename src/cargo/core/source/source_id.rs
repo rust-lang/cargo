@@ -211,9 +211,9 @@ impl SourceId {
 
     pub fn display_registry(&self) -> String {
         if self.is_default_registry() {
-            "registry".to_string()
+            "crates.io index".to_string()
         } else {
-            format!("registry `{}`", self.url())
+            format!("`{}` index", self.url())
         }
     }
 

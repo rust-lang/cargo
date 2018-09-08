@@ -111,7 +111,7 @@ fn not_update() {
             .with_stdout_contains(
                 "hoare = \"0.1.1\"    # Design by contract style assertions for Rust",
             )
-            .with_stderr("") // without "Updating registry ..."
+            .with_stderr("") // without "Updating ... index"
     .run();
 }
 
@@ -122,7 +122,7 @@ fn replace_default() {
 
     cargo_process("search postgres")
         .with_stdout_contains("hoare = \"0.1.1\"    # Design by contract style assertions for Rust")
-        .with_stderr_contains("[..]Updating registry[..]")
+        .with_stderr_contains("[..]Updating [..] index")
         .run();
 }
 
