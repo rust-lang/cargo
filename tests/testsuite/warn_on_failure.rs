@@ -58,7 +58,7 @@ fn no_warning_on_success() {
         .cargo("build")
         .with_stderr(
             "\
-[UPDATING] registry `[..]`
+[UPDATING] `[..]` index
 [DOWNLOADING] bar v0.0.1 ([..])
 [COMPILING] bar v0.0.1
 [COMPILING] foo v0.0.1 ([..])
@@ -78,7 +78,7 @@ fn no_warning_on_bin_failure() {
         .with_stderr_does_not_contain("hidden stderr")
         .with_stderr_does_not_contain(&format!("[WARNING] {}", WARNING1))
         .with_stderr_does_not_contain(&format!("[WARNING] {}", WARNING2))
-        .with_stderr_contains("[UPDATING] registry `[..]`")
+        .with_stderr_contains("[UPDATING] `[..]` index")
         .with_stderr_contains("[DOWNLOADING] bar v0.0.1 ([..])")
         .with_stderr_contains("[COMPILING] bar v0.0.1")
         .with_stderr_contains("[COMPILING] foo v0.0.1 ([..])")
@@ -95,7 +95,7 @@ fn warning_on_lib_failure() {
         .with_stdout_does_not_contain("hidden stdout")
         .with_stderr_does_not_contain("hidden stderr")
         .with_stderr_does_not_contain("[COMPILING] foo v0.0.1 ([..])")
-        .with_stderr_contains("[UPDATING] registry `[..]`")
+        .with_stderr_contains("[UPDATING] `[..]` index")
         .with_stderr_contains("[DOWNLOADING] bar v0.0.1 ([..])")
         .with_stderr_contains("[COMPILING] bar v0.0.1")
         .with_stderr_contains(&format!("[WARNING] {}", WARNING1))
