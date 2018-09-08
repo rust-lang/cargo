@@ -16,7 +16,7 @@ fn modifying_and_moving() {
     p.cargo("build")
         .with_stderr(
             "\
-[COMPILING] foo v0.0.1 (CWD)
+[COMPILING] foo v0.0.1 ([CWD])
 [FINISHED] dev [unoptimized + debuginfo] target(s) in [..]
 ",
         ).run();
@@ -32,7 +32,7 @@ fn modifying_and_moving() {
     p.cargo("build")
         .with_stderr(
             "\
-[COMPILING] foo v0.0.1 (CWD)
+[COMPILING] foo v0.0.1 ([CWD])
 [FINISHED] dev [unoptimized + debuginfo] target(s) in [..]
 ",
         ).run();
@@ -54,7 +54,7 @@ fn modify_only_some_files() {
     p.cargo("build")
         .with_stderr(
             "\
-[COMPILING] foo v0.0.1 (CWD)
+[COMPILING] foo v0.0.1 ([CWD])
 [FINISHED] dev [unoptimized + debuginfo] target(s) in [..]
 ",
         ).run();
@@ -80,7 +80,7 @@ fn modify_only_some_files() {
     p.cargo("build")
         .with_stderr(
             "\
-[COMPILING] foo v0.0.1 (CWD)
+[COMPILING] foo v0.0.1 ([CWD])
 [FINISHED] dev [unoptimized + debuginfo] target(s) in [..]
 ",
         ).run();
@@ -644,16 +644,16 @@ fn same_build_dir_cached_packages() {
 [COMPILING] d v0.0.1 ({dir}/d)
 [COMPILING] c v0.0.1 ({dir}/c)
 [COMPILING] b v0.0.1 ({dir}/b)
-[COMPILING] a1 v0.0.1 (CWD)
+[COMPILING] a1 v0.0.1 ([CWD])
 [FINISHED] dev [unoptimized + debuginfo] target(s) in [..]
 ",
-            dir = p.url()
+            dir = p.url().to_file_path().unwrap().to_str().unwrap()
         )).run();
     p.cargo("build")
         .cwd(p.root().join("a2"))
         .with_stderr(
             "\
-[COMPILING] a2 v0.0.1 (CWD)
+[COMPILING] a2 v0.0.1 ([CWD])
 [FINISHED] dev [unoptimized + debuginfo] target(s) in [..]
 ",
         ).run();
@@ -748,7 +748,7 @@ fn rebuild_if_environment_changes() {
         .with_stdout("old desc")
         .with_stderr(
             "\
-[COMPILING] foo v0.0.1 (CWD)
+[COMPILING] foo v0.0.1 ([CWD])
 [FINISHED] dev [unoptimized + debuginfo] target(s) in [..]
 [RUNNING] `target/debug/foo[EXE]`
 ",
@@ -770,7 +770,7 @@ fn rebuild_if_environment_changes() {
         .with_stdout("new desc")
         .with_stderr(
             "\
-[COMPILING] foo v0.0.1 (CWD)
+[COMPILING] foo v0.0.1 ([CWD])
 [FINISHED] dev [unoptimized + debuginfo] target(s) in [..]
 [RUNNING] `target/debug/foo[EXE]`
 ",

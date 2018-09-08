@@ -25,7 +25,7 @@ fn profile_overrides() {
     p.cargo("build -v")
         .with_stderr(
             "\
-[COMPILING] test v0.0.0 (CWD)
+[COMPILING] test v0.0.0 ([CWD])
 [RUNNING] `rustc --crate-name test src/lib.rs --crate-type lib \
         --emit=dep-info,link \
         -C opt-level=1 \
@@ -33,7 +33,7 @@ fn profile_overrides() {
         -C metadata=[..] \
         -C rpath \
         --out-dir [..] \
-        -L dependency=CWD/target/debug/deps`
+        -L dependency=[CWD]/target/debug/deps`
 [FINISHED] dev [optimized] target(s) in [..]
 ",
         ).run();
@@ -59,13 +59,13 @@ fn opt_level_override_0() {
     p.cargo("build -v")
         .with_stderr(
             "\
-[COMPILING] test v0.0.0 (CWD)
+[COMPILING] test v0.0.0 ([CWD])
 [RUNNING] `rustc --crate-name test src/lib.rs --crate-type lib \
         --emit=dep-info,link \
         -C debuginfo=2 \
         -C metadata=[..] \
         --out-dir [..] \
-        -L dependency=CWD/target/debug/deps`
+        -L dependency=[CWD]/target/debug/deps`
 [FINISHED] [..] target(s) in [..]
 ",
         ).run();
@@ -90,13 +90,13 @@ fn debug_override_1() {
     p.cargo("build -v")
         .with_stderr(
             "\
-[COMPILING] test v0.0.0 (CWD)
+[COMPILING] test v0.0.0 ([CWD])
 [RUNNING] `rustc --crate-name test src/lib.rs --crate-type lib \
         --emit=dep-info,link \
         -C debuginfo=1 \
         -C metadata=[..] \
         --out-dir [..] \
-        -L dependency=CWD/target/debug/deps`
+        -L dependency=[CWD]/target/debug/deps`
 [FINISHED] [..] target(s) in [..]
 ",
         ).run();
@@ -124,7 +124,7 @@ fn check_opt_level_override(profile_level: &str, rustc_level: &str) {
     p.cargo("build -v")
         .with_stderr(&format!(
             "\
-[COMPILING] test v0.0.0 (CWD)
+[COMPILING] test v0.0.0 ([CWD])
 [RUNNING] `rustc --crate-name test src/lib.rs --crate-type lib \
         --emit=dep-info,link \
         -C opt-level={level} \
@@ -132,7 +132,7 @@ fn check_opt_level_override(profile_level: &str, rustc_level: &str) {
         -C debug-assertions=on \
         -C metadata=[..] \
         --out-dir [..] \
-        -L dependency=CWD/target/debug/deps`
+        -L dependency=[CWD]/target/debug/deps`
 [FINISHED] [..] target(s) in [..]
 ",
             level = rustc_level
@@ -198,7 +198,7 @@ fn top_level_overrides_deps() {
     p.cargo("build -v --release")
         .with_stderr(&format!(
             "\
-[COMPILING] foo v0.0.0 (CWD/foo)
+[COMPILING] foo v0.0.0 ([CWD]/foo)
 [RUNNING] `rustc --crate-name foo foo/src/lib.rs \
         --crate-type dylib --crate-type rlib \
         --emit=dep-info,link \
@@ -206,19 +206,19 @@ fn top_level_overrides_deps() {
         -C opt-level=1 \
         -C debuginfo=2 \
         -C metadata=[..] \
-        --out-dir CWD/target/release/deps \
-        -L dependency=CWD/target/release/deps`
-[COMPILING] test v0.0.0 (CWD)
+        --out-dir [CWD]/target/release/deps \
+        -L dependency=[CWD]/target/release/deps`
+[COMPILING] test v0.0.0 ([CWD])
 [RUNNING] `rustc --crate-name test src/lib.rs --crate-type lib \
         --emit=dep-info,link \
         -C opt-level=1 \
         -C debuginfo=2 \
         -C metadata=[..] \
         --out-dir [..] \
-        -L dependency=CWD/target/release/deps \
-        --extern foo=CWD/target/release/deps/\
+        -L dependency=[CWD]/target/release/deps \
+        --extern foo=[CWD]/target/release/deps/\
                      {prefix}foo[..]{suffix} \
-        --extern foo=CWD/target/release/deps/libfoo.rlib`
+        --extern foo=[CWD]/target/release/deps/libfoo.rlib`
 [FINISHED] release [optimized + debuginfo] target(s) in [..]
 ",
             prefix = env::consts::DLL_PREFIX,

@@ -38,10 +38,10 @@ fn override_simple() {
     p.cargo("build")
         .with_stderr(
             "\
-[UPDATING] registry `file://[..]`
+[UPDATING] registry `[ROOT][..]`
 [UPDATING] git repository `[..]`
-[COMPILING] bar v0.1.0 (file://[..])
-[COMPILING] foo v0.0.1 (CWD)
+[COMPILING] bar v0.1.0 ([ROOT][..])
+[COMPILING] foo v0.0.1 ([CWD])
 [FINISHED] dev [unoptimized + debuginfo] target(s) in [..]
 ",
         ).run();
@@ -183,12 +183,12 @@ fn transitive() {
     p.cargo("build")
         .with_stderr(
             "\
-[UPDATING] registry `file://[..]`
+[UPDATING] registry `[ROOT][..]`
 [UPDATING] git repository `[..]`
 [DOWNLOADING] baz v0.2.0 (registry [..])
-[COMPILING] bar v0.1.0 (file://[..])
+[COMPILING] bar v0.1.0 ([ROOT][..])
 [COMPILING] baz v0.2.0
-[COMPILING] foo v0.0.1 (CWD)
+[COMPILING] foo v0.0.1 ([CWD])
 [FINISHED] dev [unoptimized + debuginfo] target(s) in [..]
 ",
         ).run();
@@ -231,10 +231,10 @@ fn persists_across_rebuilds() {
     p.cargo("build")
         .with_stderr(
             "\
-[UPDATING] registry `file://[..]`
-[UPDATING] git repository `file://[..]`
-[COMPILING] bar v0.1.0 (file://[..])
-[COMPILING] foo v0.0.1 (CWD)
+[UPDATING] registry `[ROOT][..]`
+[UPDATING] git repository `[ROOT][..]`
+[COMPILING] bar v0.1.0 ([ROOT][..])
+[COMPILING] foo v0.0.1 ([CWD])
 [FINISHED] dev [unoptimized + debuginfo] target(s) in [..]
 ",
         ).run();
@@ -275,9 +275,9 @@ fn replace_registry_with_path() {
     p.cargo("build")
         .with_stderr(
             "\
-[UPDATING] registry `file://[..]`
-[COMPILING] bar v0.1.0 (file://[..])
-[COMPILING] foo v0.0.1 (CWD)
+[UPDATING] registry `[ROOT][..]`
+[COMPILING] bar v0.1.0 ([ROOT][..])
+[COMPILING] foo v0.0.1 ([CWD])
 [FINISHED] dev [unoptimized + debuginfo] target(s) in [..]
 ",
         ).run();
@@ -336,14 +336,14 @@ fn use_a_spec_to_select() {
     p.cargo("build")
         .with_stderr(
             "\
-[UPDATING] registry `file://[..]`
+[UPDATING] registry `[ROOT][..]`
 [UPDATING] git repository `[..]`
 [DOWNLOADING] [..]
 [DOWNLOADING] [..]
 [COMPILING] [..]
 [COMPILING] [..]
 [COMPILING] [..]
-[COMPILING] foo v0.0.1 (CWD)
+[COMPILING] foo v0.0.1 ([CWD])
 [FINISHED] dev [unoptimized + debuginfo] target(s) in [..]
 ",
         ).run();
@@ -393,12 +393,12 @@ fn override_adds_some_deps() {
     p.cargo("build")
         .with_stderr(
             "\
-[UPDATING] registry `file://[..]`
+[UPDATING] registry `[ROOT][..]`
 [UPDATING] git repository `[..]`
 [DOWNLOADING] baz v0.1.1 (registry [..])
 [COMPILING] baz v0.1.1
 [COMPILING] bar v0.1.0 ([..])
-[COMPILING] foo v0.0.1 (CWD)
+[COMPILING] foo v0.0.1 ([CWD])
 [FINISHED] dev [unoptimized + debuginfo] target(s) in [..]
 ",
         ).run();
@@ -410,14 +410,14 @@ fn override_adds_some_deps() {
         .arg(&format!("{}#bar", foo.url()))
         .with_stderr(
             "\
-[UPDATING] git repository `file://[..]`
-[UPDATING] registry `file://[..]`
+[UPDATING] git repository `[ROOT][..]`
+[UPDATING] registry `[ROOT][..]`
 ",
         ).run();
     p.cargo("update -p https://github.com/rust-lang/crates.io-index#bar")
         .with_stderr(
             "\
-[UPDATING] registry `file://[..]`
+[UPDATING] registry `[ROOT][..]`
 ",
         ).run();
 
@@ -511,7 +511,7 @@ fn override_wrong_name() {
 [UPDATING] registry [..]
 [UPDATING] git repository [..]
 error: no matching package for override `[..]baz:0.1.0` found
-location searched: file://[..]
+location searched: [ROOT][..]
 version required: = 0.1.0
 ",
         ).run();
@@ -555,7 +555,7 @@ fn override_with_nothing() {
 [ERROR] failed to load source for a dependency on `bar`
 
 Caused by:
-  Unable to update file://[..]
+  Unable to update [ROOT][..]
 
 Caused by:
   Could not find Cargo.toml in `[..]`

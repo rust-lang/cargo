@@ -102,7 +102,7 @@ fn simple() {
         .with_stderr(
             "\
 [COMPILING] bar v0.1.0
-[COMPILING] foo v0.1.0 (CWD)
+[COMPILING] foo v0.1.0 ([CWD])
 [FINISHED] [..]
 ",
         ).run();
@@ -298,7 +298,7 @@ fn multiple() {
         .with_stderr(
             "\
 [COMPILING] bar v0.1.0
-[COMPILING] foo v0.1.0 (CWD)
+[COMPILING] foo v0.1.0 ([CWD])
 [FINISHED] [..]
 ",
         ).run();
@@ -333,7 +333,7 @@ fn crates_io_then_directory() {
 [UPDATING] registry `[..]`
 [DOWNLOADING] bar v0.1.0 ([..])
 [COMPILING] bar v0.1.0
-[COMPILING] foo v0.1.0 (CWD)
+[COMPILING] foo v0.1.0 ([CWD])
 [FINISHED] [..]
 ",
         ).run();
@@ -350,7 +350,7 @@ fn crates_io_then_directory() {
         .with_stderr(
             "\
 [COMPILING] bar v0.1.0
-[COMPILING] foo v0.1.0 (CWD)
+[COMPILING] foo v0.1.0 ([CWD])
 [FINISHED] [..]
 ",
         ).run();
