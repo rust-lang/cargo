@@ -2,7 +2,6 @@ use std::collections::{BTreeSet, HashMap, HashSet};
 use std::env;
 use std::ffi::OsStr;
 use std::path::PathBuf;
-use std::str::FromStr;
 
 use semver::Version;
 
@@ -275,22 +274,17 @@ fn target_runner(bcx: &BuildContext) -> CargoResult<Option<(PathBuf, Vec<String>
         if let Some(table) = bcx.config.get_table("target")? {
             let mut matching_runner = None;
 
-            for t in table.val.keys() {
-                if t.starts_with("cfg(") && t.ends_with(')') {
-                    let cfg = &t[4..t.len() - 1];
-                    if let Ok(c) = CfgExpr::from_str(cfg) {
-                        if c.matches(target_cfg) {
-                            let key = format!("target.{}.runner", t);
-                            if let Some(runner) = bcx.config.get_path_and_args(&key)? {
-                                // more than one match, error out
-                                if matching_runner.is_some() {
-                                    bail!("several matching instances of `target.'cfg(..)'.runner` \
-                                           in `.cargo/config`")
-                                }
-
-                                matching_runner = Some(runner.val);
-                            }
+            for key in table.val.keys() {
+                if CfgExpr::matches_key(key, target_cfg) {
+                    let key = format!("target.{}.runner", key);
+                    if let Some(runner) = bcx.config.get_path_and_args(&key)? {
+                        // more than one match, error out
+                        if matching_runner.is_some() {
+                            bail!("several matching instances of `target.'cfg(..)'.runner` \
+                                   in `.cargo/config`")
                         }
+
+                        matching_runner = Some(runner.val);
                     }
                 }
             }
