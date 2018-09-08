@@ -247,7 +247,7 @@ fn rename_twice() {
         .with_status(101)
         .with_stderr(
             "\
-[UPDATING] registry `[..]`
+[UPDATING] `[..]` index
 [DOWNLOADING] foo v0.1.0 (registry [..])
 error: multiple dependencies listed for the same crate must all have the same \
 name, but the dependency on `foo v0.1.0` is listed as having different names

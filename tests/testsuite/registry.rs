@@ -39,7 +39,7 @@ fn simple() {
     p.cargo("build")
         .with_stderr(&format!(
             "\
-[UPDATING] registry `{reg}`
+[UPDATING] `{reg}` index
 [DOWNLOADING] bar v0.0.1 (registry `file://[..]`)
 [COMPILING] bar v0.0.1
 [COMPILING] foo v0.0.1 (CWD)
@@ -84,7 +84,7 @@ fn deps() {
     p.cargo("build")
         .with_stderr(&format!(
             "\
-[UPDATING] registry `{reg}`
+[UPDATING] `{reg}` index
 [DOWNLOADING] [..] v0.0.1 (registry `file://[..]`)
 [DOWNLOADING] [..] v0.0.1 (registry `file://[..]`)
 [COMPILING] baz v0.0.1
@@ -119,7 +119,7 @@ fn nonexistent() {
         .with_status(101)
         .with_stderr(
             "\
-[UPDATING] registry [..]
+[UPDATING] [..] index
 error: no matching package named `nonexistent` found
 location searched: registry [..]
 required by package `foo v0.0.1 ([..])`
@@ -151,7 +151,7 @@ fn wrong_case() {
         .with_status(101)
         .with_stderr(
             "\
-[UPDATING] registry [..]
+[UPDATING] [..] index
 error: no matching package named `Init` found
 location searched: registry [..]
 did you mean: init
@@ -184,7 +184,7 @@ fn mis_hyphenated() {
         .with_status(101)
         .with_stderr(
             "\
-[UPDATING] registry [..]
+[UPDATING] [..] index
 error: no matching package named `mis_hyphenated` found
 location searched: registry [..]
 did you mean: mis-hyphenated
@@ -264,7 +264,7 @@ fn bad_cksum() {
         .with_status(101)
         .with_stderr(
             "\
-[UPDATING] registry [..]
+[UPDATING] [..] index
 [DOWNLOADING] bad-cksum [..]
 [ERROR] unable to get packages from source
 
@@ -311,7 +311,7 @@ required by package `foo v0.0.1 ([..])`
     p.cargo("build")
         .with_stderr(format!(
             "\
-[UPDATING] registry `{reg}`
+[UPDATING] `{reg}` index
 [DOWNLOADING] notyet v0.0.1 (registry `file://[..]`)
 [COMPILING] notyet v0.0.1
 [COMPILING] foo v0.0.1 (CWD)
@@ -366,7 +366,7 @@ required by package `foo v0.0.1 ([..])`
             "\
 [PACKAGING] foo v0.0.1 (CWD)
 [VERIFYING] foo v0.0.1 (CWD)
-[UPDATING] registry `[..]`
+[UPDATING] `[..]` index
 [DOWNLOADING] notyet v0.0.1 (registry `file://[..]`)
 [COMPILING] notyet v0.0.1
 [COMPILING] foo v0.0.1 (CWD[..])
@@ -397,7 +397,7 @@ fn lockfile_locks() {
     p.cargo("build")
         .with_stderr(
             "\
-[UPDATING] registry `[..]`
+[UPDATING] `[..]` index
 [DOWNLOADING] bar v0.0.1 (registry `file://[..]`)
 [COMPILING] bar v0.0.1
 [COMPILING] foo v0.0.1 (CWD)
@@ -434,7 +434,7 @@ fn lockfile_locks_transitively() {
     p.cargo("build")
         .with_stderr(
             "\
-[UPDATING] registry `[..]`
+[UPDATING] `[..]` index
 [DOWNLOADING] [..] v0.0.1 (registry `file://[..]`)
 [DOWNLOADING] [..] v0.0.1 (registry `file://[..]`)
 [COMPILING] baz v0.0.1
@@ -479,7 +479,7 @@ fn yanks_are_not_used() {
     p.cargo("build")
         .with_stderr(
             "\
-[UPDATING] registry `[..]`
+[UPDATING] `[..]` index
 [DOWNLOADING] [..] v0.0.1 (registry `file://[..]`)
 [DOWNLOADING] [..] v0.0.1 (registry `file://[..]`)
 [COMPILING] baz v0.0.1
@@ -586,7 +586,7 @@ fn update_with_lockfile_if_packages_missing() {
     p.cargo("build")
         .with_stderr(
             "\
-[UPDATING] registry `[..]`
+[UPDATING] `[..]` index
 [DOWNLOADING] bar v0.0.1 (registry `file://[..]`)
 [FINISHED] dev [unoptimized + debuginfo] target(s) in [..]s
 ",
@@ -621,7 +621,7 @@ fn update_lockfile() {
     p.cargo("update -p bar --precise 0.0.2")
         .with_stderr(
             "\
-[UPDATING] registry `[..]`
+[UPDATING] `[..]` index
 [UPDATING] bar v0.0.1 -> v0.0.2
 ",
         ).run();
@@ -641,7 +641,7 @@ fn update_lockfile() {
     p.cargo("update -p bar")
         .with_stderr(
             "\
-[UPDATING] registry `[..]`
+[UPDATING] `[..]` index
 [UPDATING] bar v0.0.2 -> v0.0.3
 ",
         ).run();
@@ -663,7 +663,7 @@ fn update_lockfile() {
     p.cargo("update -p bar")
         .with_stderr(
             "\
-[UPDATING] registry `[..]`
+[UPDATING] `[..]` index
 [UPDATING] bar v0.0.3 -> v0.0.4
 [ADDING] spam v0.2.5
 ",
@@ -674,7 +674,7 @@ fn update_lockfile() {
     p.cargo("update -p bar")
         .with_stderr(
             "\
-[UPDATING] registry `[..]`
+[UPDATING] `[..]` index
 [UPDATING] bar v0.0.4 -> v0.0.5
 [REMOVING] spam v0.2.5
 ",
@@ -727,7 +727,7 @@ fn dev_dependency_not_used() {
     p.cargo("build")
         .with_stderr(
             "\
-[UPDATING] registry `[..]`
+[UPDATING] `[..]` index
 [DOWNLOADING] [..] v0.0.1 (registry `file://[..]`)
 [COMPILING] bar v0.0.1
 [COMPILING] foo v0.0.1 (CWD)
@@ -811,7 +811,7 @@ fn updating_a_dep() {
     p.cargo("build")
         .with_stderr(
             "\
-[UPDATING] registry `[..]`
+[UPDATING] `[..]` index
 [DOWNLOADING] bar v0.0.1 (registry `file://[..]`)
 [COMPILING] bar v0.0.1
 [COMPILING] a v0.0.1 (CWD/a)
@@ -837,7 +837,7 @@ fn updating_a_dep() {
     p.cargo("build")
         .with_stderr(
             "\
-[UPDATING] registry `[..]`
+[UPDATING] `[..]` index
 [DOWNLOADING] bar v0.1.0 (registry `file://[..]`)
 [COMPILING] bar v0.1.0
 [COMPILING] a v0.0.1 (CWD/a)
@@ -995,7 +995,7 @@ fn fetch_downloads() {
     p.cargo("fetch")
         .with_stderr(
             "\
-[UPDATING] registry `[..]`
+[UPDATING] `[..]` index
 [DOWNLOADING] a v0.1.0 (registry [..])
 ",
         ).run();
@@ -1028,7 +1028,7 @@ fn update_transitive_dependency() {
     p.cargo("update -pb")
         .with_stderr(
             "\
-[UPDATING] registry `[..]`
+[UPDATING] `[..]` index
 [UPDATING] b v0.1.0 -> v0.1.1
 ",
         ).run();
@@ -1085,7 +1085,7 @@ fn update_backtracking_ok() {
     p.cargo("update -p hyper")
         .with_stderr(
             "\
-[UPDATING] registry `[..]`
+[UPDATING] `[..]` index
 [UPDATING] hyper v0.6.5 -> v0.6.6
 [UPDATING] openssl v0.1.0 -> v0.1.1
 ",
@@ -1124,7 +1124,7 @@ fn update_multiple_packages() {
     p.cargo("update -pa -pb")
         .with_stderr(
             "\
-[UPDATING] registry `[..]`
+[UPDATING] `[..]` index
 [UPDATING] a v0.1.0 -> v0.1.1
 [UPDATING] b v0.1.0 -> v0.1.1
 ",
@@ -1133,7 +1133,7 @@ fn update_multiple_packages() {
     p.cargo("update -pb -pc")
         .with_stderr(
             "\
-[UPDATING] registry `[..]`
+[UPDATING] `[..]` index
 [UPDATING] c v0.1.0 -> v0.1.1
 ",
         ).run();
@@ -1265,7 +1265,7 @@ fn only_download_relevant() {
     p.cargo("build")
         .with_stderr(
             "\
-[UPDATING] registry `[..]`
+[UPDATING] `[..]` index
 [DOWNLOADING] baz v0.1.0 ([..])
 [COMPILING] baz v0.1.0
 [COMPILING] bar v0.5.0 ([..])
