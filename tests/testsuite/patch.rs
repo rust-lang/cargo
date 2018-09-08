@@ -50,11 +50,11 @@ fn replace() {
     p.cargo("build")
         .with_stderr(
             "\
-[UPDATING] registry `file://[..]`
+[UPDATING] registry `[ROOT][..]`
 [DOWNLOADING] baz v0.1.0 ([..])
-[COMPILING] bar v0.1.0 (CWD/bar)
+[COMPILING] bar v0.1.0 ([CWD]/bar)
 [COMPILING] baz v0.1.0
-[COMPILING] foo v0.0.1 (CWD)
+[COMPILING] foo v0.0.1 ([CWD])
 [FINISHED] dev [unoptimized + debuginfo] target(s) in [..]
 ",
         ).run();
@@ -91,9 +91,9 @@ fn nonexistent() {
     p.cargo("build")
         .with_stderr(
             "\
-[UPDATING] registry `file://[..]`
-[COMPILING] bar v0.1.0 (CWD/bar)
-[COMPILING] foo v0.0.1 (CWD)
+[UPDATING] registry `[ROOT][..]`
+[COMPILING] bar v0.1.0 ([CWD]/bar)
+[COMPILING] foo v0.0.1 ([CWD])
 [FINISHED] dev [unoptimized + debuginfo] target(s) in [..]
 ",
         ).run();
@@ -135,9 +135,9 @@ fn patch_git() {
     p.cargo("build")
         .with_stderr(
             "\
-[UPDATING] git repository `file://[..]`
-[COMPILING] bar v0.1.0 (CWD/bar)
-[COMPILING] foo v0.0.1 (CWD)
+[UPDATING] git repository `[ROOT][..]`
+[COMPILING] bar v0.1.0 ([CWD]/bar)
+[COMPILING] foo v0.0.1 ([CWD])
 [FINISHED] dev [unoptimized + debuginfo] target(s) in [..]
 ",
         ).run();
@@ -179,10 +179,10 @@ fn patch_to_git() {
     p.cargo("build")
         .with_stderr(
             "\
-[UPDATING] git repository `file://[..]`
-[UPDATING] registry `file://[..]`
-[COMPILING] bar v0.1.0 (file://[..])
-[COMPILING] foo v0.0.1 (CWD)
+[UPDATING] git repository `[ROOT][..]`
+[UPDATING] registry `[ROOT][..]`
+[COMPILING] bar v0.1.0 ([ROOT][..])
+[COMPILING] foo v0.0.1 ([CWD])
 [FINISHED] dev [unoptimized + debuginfo] target(s) in [..]
 ",
         ).run();
@@ -216,10 +216,10 @@ fn unused() {
     p.cargo("build")
         .with_stderr(
             "\
-[UPDATING] registry `file://[..]`
+[UPDATING] registry `[ROOT][..]`
 [DOWNLOADING] bar v0.1.0 [..]
 [COMPILING] bar v0.1.0
-[COMPILING] foo v0.0.1 (CWD)
+[COMPILING] foo v0.0.1 ([CWD])
 [FINISHED] dev [unoptimized + debuginfo] target(s) in [..]
 ",
         ).run();
@@ -273,11 +273,11 @@ fn unused_git() {
     p.cargo("build")
         .with_stderr(
             "\
-[UPDATING] git repository `file://[..]`
-[UPDATING] registry `file://[..]`
+[UPDATING] git repository `[ROOT][..]`
+[UPDATING] registry `[ROOT][..]`
 [DOWNLOADING] bar v0.1.0 [..]
 [COMPILING] bar v0.1.0
-[COMPILING] foo v0.0.1 (CWD)
+[COMPILING] foo v0.0.1 ([CWD])
 [FINISHED] dev [unoptimized + debuginfo] target(s) in [..]
 ",
         ).run();
@@ -308,10 +308,10 @@ fn add_patch() {
     p.cargo("build")
         .with_stderr(
             "\
-[UPDATING] registry `file://[..]`
+[UPDATING] registry `[ROOT][..]`
 [DOWNLOADING] bar v0.1.0 [..]
 [COMPILING] bar v0.1.0
-[COMPILING] foo v0.0.1 (CWD)
+[COMPILING] foo v0.0.1 ([CWD])
 [FINISHED] dev [unoptimized + debuginfo] target(s) in [..]
 ",
         ).run();
@@ -335,8 +335,8 @@ fn add_patch() {
     p.cargo("build")
         .with_stderr(
             "\
-[COMPILING] bar v0.1.0 (CWD/bar)
-[COMPILING] foo v0.0.1 (CWD)
+[COMPILING] bar v0.1.0 ([CWD]/bar)
+[COMPILING] foo v0.0.1 ([CWD])
 [FINISHED] dev [unoptimized + debuginfo] target(s) in [..]
 ",
         ).run();
@@ -367,10 +367,10 @@ fn add_ignored_patch() {
     p.cargo("build")
         .with_stderr(
             "\
-[UPDATING] registry `file://[..]`
+[UPDATING] registry `[ROOT][..]`
 [DOWNLOADING] bar v0.1.0 [..]
 [COMPILING] bar v0.1.0
-[COMPILING] foo v0.0.1 (CWD)
+[COMPILING] foo v0.0.1 ([CWD])
 [FINISHED] dev [unoptimized + debuginfo] target(s) in [..]
 ",
         ).run();
@@ -424,9 +424,9 @@ fn new_minor() {
     p.cargo("build")
         .with_stderr(
             "\
-[UPDATING] registry `file://[..]`
+[UPDATING] registry `[ROOT][..]`
 [COMPILING] bar v0.1.1 [..]
-[COMPILING] foo v0.0.1 (CWD)
+[COMPILING] foo v0.0.1 ([CWD])
 [FINISHED] dev [unoptimized + debuginfo] target(s) in [..]
 ",
         ).run();
@@ -471,10 +471,10 @@ fn transitive_new_minor() {
     p.cargo("build")
         .with_stderr(
             "\
-[UPDATING] registry `file://[..]`
+[UPDATING] registry `[ROOT][..]`
 [COMPILING] baz v0.1.1 [..]
 [COMPILING] bar v0.1.0 [..]
-[COMPILING] foo v0.0.1 (CWD)
+[COMPILING] foo v0.0.1 ([CWD])
 [FINISHED] dev [unoptimized + debuginfo] target(s) in [..]
 ",
         ).run();
@@ -507,9 +507,9 @@ fn new_major() {
     p.cargo("build")
         .with_stderr(
             "\
-[UPDATING] registry `file://[..]`
+[UPDATING] registry `[ROOT][..]`
 [COMPILING] bar v0.2.0 [..]
-[COMPILING] foo v0.0.1 (CWD)
+[COMPILING] foo v0.0.1 ([CWD])
 [FINISHED] dev [unoptimized + debuginfo] target(s) in [..]
 ",
         ).run();
@@ -534,10 +534,10 @@ fn new_major() {
     p.cargo("build")
         .with_stderr(
             "\
-[UPDATING] registry `file://[..]`
+[UPDATING] registry `[ROOT][..]`
 [DOWNLOADING] bar v0.2.0 [..]
 [COMPILING] bar v0.2.0
-[COMPILING] foo v0.0.1 (CWD)
+[COMPILING] foo v0.0.1 ([CWD])
 [FINISHED] dev [unoptimized + debuginfo] target(s) in [..]
 ",
         ).run();
@@ -582,10 +582,10 @@ fn transitive_new_major() {
     p.cargo("build")
         .with_stderr(
             "\
-[UPDATING] registry `file://[..]`
+[UPDATING] registry `[ROOT][..]`
 [COMPILING] baz v0.2.0 [..]
 [COMPILING] bar v0.1.0 [..]
-[COMPILING] foo v0.0.1 (CWD)
+[COMPILING] foo v0.0.1 ([CWD])
 [FINISHED] dev [unoptimized + debuginfo] target(s) in [..]
 ",
         ).run();

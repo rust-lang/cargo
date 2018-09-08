@@ -250,13 +250,13 @@ In any case, typically all you need to do now is:
 
 ```console
 $ cargo build
-   Compiling uuid v1.0.0 (file://.../uuid)
-   Compiling my-library v0.1.0 (file://.../my-library)
+   Compiling uuid v1.0.0 (.../uuid)
+   Compiling my-library v0.1.0 (.../my-library)
     Finished dev [unoptimized + debuginfo] target(s) in 0.32 secs
 ```
 
 And that's it! You're now building with the local version of `uuid` (note the
-`file://` in the build output). If you don't see the `file://` version getting
+path in parentheses in the build output). If you don't see the local path version getting
 built then you may need to run `cargo update -p uuid --precise $version` where
 `$version` is the version of the locally checked out copy of `uuid`.
 

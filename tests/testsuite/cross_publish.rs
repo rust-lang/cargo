@@ -42,9 +42,9 @@ fn simple_cross_package() {
     p.cargo("package --target")
         .arg(&target)
         .with_stderr(
-            "   Packaging foo v0.0.0 (CWD)
-   Verifying foo v0.0.0 (CWD)
-   Compiling foo v0.0.0 (CWD/target/package/foo-0.0.0)
+            "   Packaging foo v0.0.0 ([CWD])
+   Verifying foo v0.0.0 ([CWD])
+   Compiling foo v0.0.0 ([CWD]/target/package/foo-0.0.0)
     Finished dev [unoptimized + debuginfo] target(s) in [..]
 ",
         ).run();
@@ -105,11 +105,11 @@ fn publish_with_target() {
         .arg(&target)
         .with_stderr(&format!(
             "    Updating registry `{registry}`
-   Packaging foo v0.0.0 (CWD)
-   Verifying foo v0.0.0 (CWD)
-   Compiling foo v0.0.0 (CWD/target/package/foo-0.0.0)
+   Packaging foo v0.0.0 ([CWD])
+   Verifying foo v0.0.0 ([CWD])
+   Compiling foo v0.0.0 ([CWD]/target/package/foo-0.0.0)
     Finished dev [unoptimized + debuginfo] target(s) in [..]
-   Uploading foo v0.0.0 (CWD)
+   Uploading foo v0.0.0 ([CWD])
 ",
             registry = publish::registry()
         )).run();

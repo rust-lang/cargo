@@ -40,12 +40,12 @@ fn simple() {
         .with_stderr(&format!(
             "\
 [UPDATING] registry `{reg}`
-[DOWNLOADING] bar v0.0.1 (registry `file://[..]`)
+[DOWNLOADING] bar v0.0.1 (registry `[ROOT][..]`)
 [COMPILING] bar v0.0.1
-[COMPILING] foo v0.0.1 (CWD)
+[COMPILING] foo v0.0.1 ([CWD])
 [FINISHED] dev [unoptimized + debuginfo] target(s) in [..]s
 ",
-            reg = registry::registry()
+            reg = registry::registry_path().to_str().unwrap()
         )).run();
 
     p.cargo("clean").run();
@@ -55,7 +55,7 @@ fn simple() {
         .with_stderr(
             "\
 [COMPILING] bar v0.0.1
-[COMPILING] foo v0.0.1 (CWD)
+[COMPILING] foo v0.0.1 ([CWD])
 [FINISHED] dev [unoptimized + debuginfo] target(s) in [..]s
 ",
         ).run();
@@ -85,14 +85,14 @@ fn deps() {
         .with_stderr(&format!(
             "\
 [UPDATING] registry `{reg}`
-[DOWNLOADING] [..] v0.0.1 (registry `file://[..]`)
-[DOWNLOADING] [..] v0.0.1 (registry `file://[..]`)
+[DOWNLOADING] [..] v0.0.1 (registry `[ROOT][..]`)
+[DOWNLOADING] [..] v0.0.1 (registry `[ROOT][..]`)
 [COMPILING] baz v0.0.1
 [COMPILING] bar v0.0.1
-[COMPILING] foo v0.0.1 (CWD)
+[COMPILING] foo v0.0.1 ([CWD])
 [FINISHED] dev [unoptimized + debuginfo] target(s) in [..]s
 ",
-            reg = registry::registry()
+            reg = registry::registry_path().to_str().unwrap()
         )).run();
 }
 
@@ -272,7 +272,7 @@ Caused by:
   failed to download replaced source registry `https://[..]`
 
 Caused by:
-  failed to verify the checksum of `bad-cksum v0.0.1 (registry `file://[..]`)`
+  failed to verify the checksum of `bad-cksum v0.0.1 (registry `[ROOT][..]`)`
 ",
         ).run();
 }
@@ -312,12 +312,12 @@ required by package `foo v0.0.1 ([..])`
         .with_stderr(format!(
             "\
 [UPDATING] registry `{reg}`
-[DOWNLOADING] notyet v0.0.1 (registry `file://[..]`)
+[DOWNLOADING] notyet v0.0.1 (registry `[ROOT][..]`)
 [COMPILING] notyet v0.0.1
-[COMPILING] foo v0.0.1 (CWD)
+[COMPILING] foo v0.0.1 ([CWD])
 [FINISHED] dev [unoptimized + debuginfo] target(s) in [..]s
 ",
-            reg = registry::registry()
+            reg = registry::registry_path().to_str().unwrap()
         )).run();
 }
 
@@ -364,12 +364,12 @@ required by package `foo v0.0.1 ([..])`
     p.cargo("package")
         .with_stderr(
             "\
-[PACKAGING] foo v0.0.1 (CWD)
-[VERIFYING] foo v0.0.1 (CWD)
+[PACKAGING] foo v0.0.1 ([CWD])
+[VERIFYING] foo v0.0.1 ([CWD])
 [UPDATING] registry `[..]`
-[DOWNLOADING] notyet v0.0.1 (registry `file://[..]`)
+[DOWNLOADING] notyet v0.0.1 (registry `[ROOT][..]`)
 [COMPILING] notyet v0.0.1
-[COMPILING] foo v0.0.1 (CWD[..])
+[COMPILING] foo v0.0.1 ([CWD][..])
 [FINISHED] dev [unoptimized + debuginfo] target(s) in [..]s
 ",
         ).run();
@@ -398,9 +398,9 @@ fn lockfile_locks() {
         .with_stderr(
             "\
 [UPDATING] registry `[..]`
-[DOWNLOADING] bar v0.0.1 (registry `file://[..]`)
+[DOWNLOADING] bar v0.0.1 (registry `[ROOT][..]`)
 [COMPILING] bar v0.0.1
-[COMPILING] foo v0.0.1 (CWD)
+[COMPILING] foo v0.0.1 ([CWD])
 [FINISHED] dev [unoptimized + debuginfo] target(s) in [..]s
 ",
         ).run();
@@ -435,11 +435,11 @@ fn lockfile_locks_transitively() {
         .with_stderr(
             "\
 [UPDATING] registry `[..]`
-[DOWNLOADING] [..] v0.0.1 (registry `file://[..]`)
-[DOWNLOADING] [..] v0.0.1 (registry `file://[..]`)
+[DOWNLOADING] [..] v0.0.1 (registry `[ROOT][..]`)
+[DOWNLOADING] [..] v0.0.1 (registry `[ROOT][..]`)
 [COMPILING] baz v0.0.1
 [COMPILING] bar v0.0.1
-[COMPILING] foo v0.0.1 (CWD)
+[COMPILING] foo v0.0.1 ([CWD])
 [FINISHED] dev [unoptimized + debuginfo] target(s) in [..]s
 ",
         ).run();
@@ -480,11 +480,11 @@ fn yanks_are_not_used() {
         .with_stderr(
             "\
 [UPDATING] registry `[..]`
-[DOWNLOADING] [..] v0.0.1 (registry `file://[..]`)
-[DOWNLOADING] [..] v0.0.1 (registry `file://[..]`)
+[DOWNLOADING] [..] v0.0.1 (registry `[ROOT][..]`)
+[DOWNLOADING] [..] v0.0.1 (registry `[ROOT][..]`)
 [COMPILING] baz v0.0.1
 [COMPILING] bar v0.0.1
-[COMPILING] foo v0.0.1 (CWD)
+[COMPILING] foo v0.0.1 ([CWD])
 [FINISHED] dev [unoptimized + debuginfo] target(s) in [..]s
 ",
         ).run();
@@ -587,7 +587,7 @@ fn update_with_lockfile_if_packages_missing() {
         .with_stderr(
             "\
 [UPDATING] registry `[..]`
-[DOWNLOADING] bar v0.0.1 (registry `file://[..]`)
+[DOWNLOADING] bar v0.0.1 (registry `[ROOT][..]`)
 [FINISHED] dev [unoptimized + debuginfo] target(s) in [..]s
 ",
         ).run();
@@ -630,9 +630,9 @@ fn update_lockfile() {
     p.cargo("build")
         .with_stderr(
             "\
-[DOWNLOADING] [..] v0.0.2 (registry `file://[..]`)
+[DOWNLOADING] [..] v0.0.2 (registry `[ROOT][..]`)
 [COMPILING] bar v0.0.2
-[COMPILING] foo v0.0.1 (CWD)
+[COMPILING] foo v0.0.1 ([CWD])
 [FINISHED] dev [unoptimized + debuginfo] target(s) in [..]s
 ",
         ).run();
@@ -650,9 +650,9 @@ fn update_lockfile() {
     p.cargo("build")
         .with_stderr(
             "\
-[DOWNLOADING] [..] v0.0.3 (registry `file://[..]`)
+[DOWNLOADING] [..] v0.0.3 (registry `[ROOT][..]`)
 [COMPILING] bar v0.0.3
-[COMPILING] foo v0.0.1 (CWD)
+[COMPILING] foo v0.0.1 ([CWD])
 [FINISHED] dev [unoptimized + debuginfo] target(s) in [..]s
 ",
         ).run();
@@ -728,9 +728,9 @@ fn dev_dependency_not_used() {
         .with_stderr(
             "\
 [UPDATING] registry `[..]`
-[DOWNLOADING] [..] v0.0.1 (registry `file://[..]`)
+[DOWNLOADING] [..] v0.0.1 (registry `[ROOT][..]`)
 [COMPILING] bar v0.0.1
-[COMPILING] foo v0.0.1 (CWD)
+[COMPILING] foo v0.0.1 ([CWD])
 [FINISHED] dev [unoptimized + debuginfo] target(s) in [..]s
 ",
         ).run();
@@ -812,10 +812,10 @@ fn updating_a_dep() {
         .with_stderr(
             "\
 [UPDATING] registry `[..]`
-[DOWNLOADING] bar v0.0.1 (registry `file://[..]`)
+[DOWNLOADING] bar v0.0.1 (registry `[ROOT][..]`)
 [COMPILING] bar v0.0.1
-[COMPILING] a v0.0.1 (CWD/a)
-[COMPILING] foo v0.0.1 (CWD)
+[COMPILING] a v0.0.1 ([CWD]/a)
+[COMPILING] foo v0.0.1 ([CWD])
 [FINISHED] dev [unoptimized + debuginfo] target(s) in [..]s
 ",
         ).run();
@@ -838,10 +838,10 @@ fn updating_a_dep() {
         .with_stderr(
             "\
 [UPDATING] registry `[..]`
-[DOWNLOADING] bar v0.1.0 (registry `file://[..]`)
+[DOWNLOADING] bar v0.1.0 (registry `[ROOT][..]`)
 [COMPILING] bar v0.1.0
-[COMPILING] a v0.0.1 (CWD/a)
-[COMPILING] foo v0.0.1 (CWD)
+[COMPILING] a v0.0.1 ([CWD]/a)
+[COMPILING] foo v0.0.1 ([CWD])
 [FINISHED] dev [unoptimized + debuginfo] target(s) in [..]s
 ",
         ).run();
@@ -892,10 +892,10 @@ fn git_and_registry_dep() {
             "\
 [UPDATING] [..]
 [UPDATING] [..]
-[DOWNLOADING] a v0.0.1 (registry `file://[..]`)
+[DOWNLOADING] a v0.0.1 (registry `[ROOT][..]`)
 [COMPILING] a v0.0.1
 [COMPILING] b v0.0.1 ([..])
-[COMPILING] foo v0.0.1 (CWD)
+[COMPILING] foo v0.0.1 ([CWD])
 [FINISHED] dev [unoptimized + debuginfo] target(s) in [..]s
 ",
         ).run();
@@ -965,9 +965,9 @@ fn update_publish_then_update() {
         .with_stderr(
             "\
 [UPDATING] [..]
-[DOWNLOADING] a v0.1.1 (registry `file://[..]`)
+[DOWNLOADING] a v0.1.1 (registry `[ROOT][..]`)
 [COMPILING] a v0.1.1
-[COMPILING] foo v0.5.0 (CWD)
+[COMPILING] foo v0.5.0 ([CWD])
 [FINISHED] dev [unoptimized + debuginfo] target(s) in [..]s
 ",
         ).run();
@@ -1036,7 +1036,7 @@ fn update_transitive_dependency() {
     p.cargo("build")
         .with_stderr(
             "\
-[DOWNLOADING] b v0.1.1 (registry `file://[..]`)
+[DOWNLOADING] b v0.1.1 (registry `[ROOT][..]`)
 [COMPILING] b v0.1.1
 [COMPILING] a v0.1.0
 [COMPILING] foo v0.5.0 ([..])
@@ -1139,9 +1139,9 @@ fn update_multiple_packages() {
         ).run();
 
     p.cargo("build")
-        .with_stderr_contains("[DOWNLOADING] a v0.1.1 (registry `file://[..]`)")
-        .with_stderr_contains("[DOWNLOADING] b v0.1.1 (registry `file://[..]`)")
-        .with_stderr_contains("[DOWNLOADING] c v0.1.1 (registry `file://[..]`)")
+        .with_stderr_contains("[DOWNLOADING] a v0.1.1 (registry `[ROOT][..]`)")
+        .with_stderr_contains("[DOWNLOADING] b v0.1.1 (registry `[ROOT][..]`)")
+        .with_stderr_contains("[DOWNLOADING] c v0.1.1 (registry `[ROOT][..]`)")
         .with_stderr_contains("[COMPILING] a v0.1.1")
         .with_stderr_contains("[COMPILING] b v0.1.1")
         .with_stderr_contains("[COMPILING] c v0.1.1")

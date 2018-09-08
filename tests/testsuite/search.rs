@@ -154,7 +154,7 @@ wants the location of the index. Please use '--index' instead.
 This will soon become a hard error, so it's either recommended
 to update to a fixed version or contact the upstream maintainer
 about this warning.
-[UPDATING] registry `CWD/registry`
+[UPDATING] registry `[CWD]/registry`
 ",
             )
             .with_stdout_contains(
@@ -181,7 +181,7 @@ wants the location of the index. Please use '--index' instead.
 This will soon become a hard error, so it's either recommended
 to update to a fixed version or contact the upstream maintainer
 about this warning.
-[UPDATING] registry `CWD/registry`
+[UPDATING] registry `[CWD]/registry`
 ",
             )
             .with_stdout_contains(

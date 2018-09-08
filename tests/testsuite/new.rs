@@ -105,7 +105,7 @@ fn existing() {
     cargo_process("new foo")
         .with_status(101)
         .with_stderr(
-            "[ERROR] destination `CWD/foo` already exists\n\n\
+            "[ERROR] destination `[CWD]/foo` already exists\n\n\
              Use `cargo init` to initialize the directory",
         ).run();
 }

@@ -33,10 +33,10 @@ fn simple() {
 [UPDATING] registry `{reg}`
 [WARNING] manifest has no documentation, [..]
 See [..]
-[PACKAGING] foo v0.0.1 (CWD)
-[UPLOADING] foo v0.0.1 (CWD)
+[PACKAGING] foo v0.0.1 ([CWD])
+[UPLOADING] foo v0.0.1 ([CWD])
 ",
-            reg = publish::registry()
+            reg = publish::registry_path().to_str().unwrap()
         )).run();
 
     let mut f = File::open(&publish::upload_path().join("api/v1/crates/new")).unwrap();
@@ -106,10 +106,10 @@ fn old_token_location() {
 [UPDATING] registry `{reg}`
 [WARNING] manifest has no documentation, [..]
 See [..]
-[PACKAGING] foo v0.0.1 (CWD)
-[UPLOADING] foo v0.0.1 (CWD)
+[PACKAGING] foo v0.0.1 ([CWD])
+[UPLOADING] foo v0.0.1 ([CWD])
 ",
-            reg = publish::registry()
+            reg = publish::registry_path().to_str().unwrap()
         )).run();
 
     let mut f = File::open(&publish::upload_path().join("api/v1/crates/new")).unwrap();
@@ -181,10 +181,10 @@ about this warning.
 [UPDATING] registry `{reg}`
 [WARNING] manifest has no documentation, [..]
 See [..]
-[PACKAGING] foo v0.0.1 (CWD)
-[UPLOADING] foo v0.0.1 (CWD)
+[PACKAGING] foo v0.0.1 ([CWD])
+[UPLOADING] foo v0.0.1 ([CWD])
 ",
-            reg = publish::registry()
+            reg = publish::registry_path().to_str().unwrap()
         )).run();
 
     let mut f = File::open(&publish::upload_path().join("api/v1/crates/new")).unwrap();
@@ -258,10 +258,10 @@ about this warning.
 [UPDATING] registry `{reg}`
 [WARNING] manifest has no documentation, [..]
 See [..]
-[PACKAGING] foo v0.0.1 (CWD)
-[UPLOADING] foo v0.0.1 (CWD)
+[PACKAGING] foo v0.0.1 ([CWD])
+[UPLOADING] foo v0.0.1 ([CWD])
 ",
-            reg = publish::registry()
+            reg = publish::registry_path().to_str().unwrap()
         )).run();
 
     let mut f = File::open(&publish::upload_path().join("api/v1/crates/new")).unwrap();
@@ -604,11 +604,11 @@ fn dry_run() {
 [UPDATING] registry `[..]`
 [WARNING] manifest has no documentation, [..]
 See [..]
-[PACKAGING] foo v0.0.1 (CWD)
-[VERIFYING] foo v0.0.1 (CWD)
+[PACKAGING] foo v0.0.1 ([CWD])
+[VERIFYING] foo v0.0.1 ([CWD])
 [COMPILING] foo v0.0.1 [..]
 [FINISHED] dev [unoptimized + debuginfo] target(s) in [..]
-[UPLOADING] foo v0.0.1 (CWD)
+[UPLOADING] foo v0.0.1 ([CWD])
 [WARNING] aborting upload due to dry run
 ",
         ).run();
