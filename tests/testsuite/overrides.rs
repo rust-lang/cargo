@@ -40,7 +40,7 @@ fn override_simple() {
             "\
 [UPDATING] `[ROOT][..]` index
 [UPDATING] git repository `[..]`
-[COMPILING] bar v0.1.0 ([ROOT][..])
+[COMPILING] bar v0.1.0 (file://[..])
 [COMPILING] foo v0.0.1 ([CWD])
 [FINISHED] dev [unoptimized + debuginfo] target(s) in [..]
 ",
@@ -186,7 +186,7 @@ fn transitive() {
 [UPDATING] `[ROOT][..]` index
 [UPDATING] git repository `[..]`
 [DOWNLOADING] baz v0.2.0 (registry [..])
-[COMPILING] bar v0.1.0 ([ROOT][..])
+[COMPILING] bar v0.1.0 (file://[..])
 [COMPILING] baz v0.2.0
 [COMPILING] foo v0.0.1 ([CWD])
 [FINISHED] dev [unoptimized + debuginfo] target(s) in [..]
@@ -232,8 +232,8 @@ fn persists_across_rebuilds() {
         .with_stderr(
             "\
 [UPDATING] `[ROOT][..]` index
-[UPDATING] git repository `[ROOT][..]`
-[COMPILING] bar v0.1.0 ([ROOT][..])
+[UPDATING] git repository `file://[..]`
+[COMPILING] bar v0.1.0 (file://[..])
 [COMPILING] foo v0.0.1 ([CWD])
 [FINISHED] dev [unoptimized + debuginfo] target(s) in [..]
 ",
@@ -410,7 +410,7 @@ fn override_adds_some_deps() {
         .arg(&format!("{}#bar", foo.url()))
         .with_stderr(
             "\
-[UPDATING] git repository `[ROOT][..]`
+[UPDATING] git repository `file://[..]`
 [UPDATING] `[ROOT][..]` index
 ",
         ).run();
@@ -511,7 +511,7 @@ fn override_wrong_name() {
 [UPDATING] [..] index
 [UPDATING] git repository [..]
 error: no matching package for override `[..]baz:0.1.0` found
-location searched: [ROOT][..]
+location searched: file://[..]
 version required: = 0.1.0
 ",
         ).run();
@@ -555,7 +555,7 @@ fn override_with_nothing() {
 [ERROR] failed to load source for a dependency on `bar`
 
 Caused by:
-  Unable to update [ROOT][..]
+  Unable to update file://[..]
 
 Caused by:
   Could not find Cargo.toml in `[..]`
