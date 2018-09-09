@@ -135,7 +135,7 @@ fn patch_git() {
     p.cargo("build")
         .with_stderr(
             "\
-[UPDATING] git repository `[ROOT][..]`
+[UPDATING] git repository `file://[..]`
 [COMPILING] bar v0.1.0 ([CWD]/bar)
 [COMPILING] foo v0.0.1 ([CWD])
 [FINISHED] dev [unoptimized + debuginfo] target(s) in [..]
@@ -179,9 +179,9 @@ fn patch_to_git() {
     p.cargo("build")
         .with_stderr(
             "\
-[UPDATING] git repository `[ROOT][..]`
+[UPDATING] git repository `file://[..]`
 [UPDATING] `[ROOT][..]` index
-[COMPILING] bar v0.1.0 ([ROOT][..])
+[COMPILING] bar v0.1.0 (file://[..])
 [COMPILING] foo v0.0.1 ([CWD])
 [FINISHED] dev [unoptimized + debuginfo] target(s) in [..]
 ",
@@ -273,7 +273,7 @@ fn unused_git() {
     p.cargo("build")
         .with_stderr(
             "\
-[UPDATING] git repository `[ROOT][..]`
+[UPDATING] git repository `file://[..]`
 [UPDATING] `[ROOT][..]` index
 [DOWNLOADING] bar v0.1.0 [..]
 [COMPILING] bar v0.1.0

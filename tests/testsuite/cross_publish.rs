@@ -111,6 +111,6 @@ fn publish_with_target() {
     Finished dev [unoptimized + debuginfo] target(s) in [..]
    Uploading foo v0.0.0 ([CWD])
 ",
-            registry = publish::registry()
+            registry = publish::registry_path().to_str().unwrap()
         )).run();
 }
