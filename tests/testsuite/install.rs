@@ -26,7 +26,7 @@ fn simple() {
     cargo_process("install foo")
         .with_stderr(
             "\
-[UPDATING] registry `[..]`
+[UPDATING] `[..]` index
 [DOWNLOADING] foo v0.0.1 (registry [..])
 [INSTALLING] foo v0.0.1
 [COMPILING] foo v0.0.1
@@ -52,7 +52,7 @@ fn multiple_pkgs() {
         .with_status(101)
         .with_stderr(
             "\
-[UPDATING] registry `[..]`
+[UPDATING] `[..]` index
 [DOWNLOADING] foo v0.0.1 (registry `CWD/registry`)
 [INSTALLING] foo v0.0.1
 [COMPILING] foo v0.0.1
@@ -96,7 +96,7 @@ fn pick_max_version() {
     cargo_process("install foo")
         .with_stderr(
             "\
-[UPDATING] registry `[..]`
+[UPDATING] `[..]` index
 [DOWNLOADING] foo v0.2.1 (registry [..])
 [INSTALLING] foo v0.2.1
 [COMPILING] foo v0.2.1
@@ -129,7 +129,7 @@ fn missing() {
         .with_status(101)
         .with_stderr(
             "\
-[UPDATING] registry [..]
+[UPDATING] [..] index
 [ERROR] could not find `bar` in registry `[..]`
 ",
         ).run();
@@ -142,7 +142,7 @@ fn bad_version() {
         .with_status(101)
         .with_stderr(
             "\
-[UPDATING] registry [..]
+[UPDATING] [..] index
 [ERROR] could not find `foo` in registry `[..]` with version `=0.2.0`
 ",
         ).run();

@@ -556,7 +556,7 @@ fn share_dependencies() {
     p.cargo("build")
         .with_stderr(
             "\
-[UPDATING] registry `[..]`
+[UPDATING] `[..]` index
 [DOWNLOADING] dep1 v0.1.3 ([..])
 [COMPILING] dep1 v0.1.3
 [COMPILING] foo v0.1.0 ([..])
@@ -599,7 +599,7 @@ fn fetch_fetches_all() {
     p.cargo("fetch")
         .with_stderr(
             "\
-[UPDATING] registry `[..]`
+[UPDATING] `[..]` index
 [DOWNLOADING] dep1 v0.1.3 ([..])
 ",
         ).run();
@@ -641,7 +641,7 @@ fn lock_works_for_everyone() {
     Package::new("dep2", "0.1.0").publish();
 
     p.cargo("generate-lockfile")
-        .with_stderr("[UPDATING] registry `[..]`")
+        .with_stderr("[UPDATING] `[..]` index")
         .run();
 
     Package::new("dep1", "0.1.1").publish();

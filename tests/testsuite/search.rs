@@ -111,7 +111,7 @@ fn not_update() {
             .with_stdout_contains(
                 "hoare = \"0.1.1\"    # Design by contract style assertions for Rust",
             )
-            .with_stderr("") // without "Updating registry ..."
+            .with_stderr("") // without "Updating ... index"
     .run();
 }
 
@@ -122,7 +122,7 @@ fn replace_default() {
 
     cargo_process("search postgres")
         .with_stdout_contains("hoare = \"0.1.1\"    # Design by contract style assertions for Rust")
-        .with_stderr_contains("[..]Updating registry[..]")
+        .with_stderr_contains("[..]Updating [..] index")
         .run();
 }
 
@@ -154,7 +154,7 @@ wants the location of the index. Please use '--index' instead.
 This will soon become a hard error, so it's either recommended
 to update to a fixed version or contact the upstream maintainer
 about this warning.
-[UPDATING] registry `CWD/registry`
+[UPDATING] `CWD/registry` index
 ",
             )
             .with_stdout_contains(
@@ -181,7 +181,7 @@ wants the location of the index. Please use '--index' instead.
 This will soon become a hard error, so it's either recommended
 to update to a fixed version or contact the upstream maintainer
 about this warning.
-[UPDATING] registry `CWD/registry`
+[UPDATING] `CWD/registry` index
 ",
             )
             .with_stdout_contains(

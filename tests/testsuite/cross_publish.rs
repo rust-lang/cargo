@@ -104,7 +104,7 @@ fn publish_with_target() {
         .arg("--target")
         .arg(&target)
         .with_stderr(&format!(
-            "    Updating registry `{registry}`
+            "    Updating `{registry}` index
    Packaging foo v0.0.0 (CWD)
    Verifying foo v0.0.0 (CWD)
    Compiling foo v0.0.0 (CWD/target/package/foo-0.0.0)

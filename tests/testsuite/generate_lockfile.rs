@@ -82,7 +82,7 @@ fn no_index_update() {
         .build();
 
     p.cargo("generate-lockfile")
-        .with_stderr("[UPDATING] registry `[..]`")
+        .with_stderr("[UPDATING] `[..]` index")
         .run();
 
     p.cargo("generate-lockfile -Zno-index-update")
