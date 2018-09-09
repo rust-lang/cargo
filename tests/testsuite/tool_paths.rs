@@ -185,7 +185,7 @@ fn custom_runner_cfg() {
         .with_status(101)
         .with_stderr_contains(&format!(
             "\
-[COMPILING] foo v0.0.1 (CWD)
+[COMPILING] foo v0.0.1 ([CWD])
 [FINISHED] dev [unoptimized + debuginfo] target(s) in [..]
 [RUNNING] `nonexistent-runner -r target/debug/foo[EXE] --param`
 ",
@@ -217,7 +217,7 @@ fn custom_runner_cfg_precedence() {
         .with_status(101)
         .with_stderr_contains(&format!(
             "\
-            [COMPILING] foo v0.0.1 (CWD)
+            [COMPILING] foo v0.0.1 ([CWD])
 [FINISHED] dev [unoptimized + debuginfo] target(s) in [..]
 [RUNNING] `nonexistent-runner -r target/debug/foo[EXE] --param`
 ",
