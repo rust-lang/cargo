@@ -56,7 +56,7 @@ fn depend_on_alt_registry() {
         .masquerade_as_nightly_cargo()
         .with_stderr(&format!(
             "\
-[UPDATING] registry `{reg}`
+[UPDATING] `{reg}` index
 [DOWNLOADING] bar v0.0.1 (registry `[ROOT][..]`)
 [COMPILING] bar v0.0.1 (registry `[ROOT][..]`)
 [COMPILING] foo v0.0.1 ([CWD])
@@ -109,7 +109,7 @@ fn depend_on_alt_registry_depends_on_same_registry_no_index() {
         .masquerade_as_nightly_cargo()
         .with_stderr(&format!(
             "\
-[UPDATING] registry `{reg}`
+[UPDATING] `{reg}` index
 [DOWNLOADING] [..] v0.0.1 (registry `[ROOT][..]`)
 [DOWNLOADING] [..] v0.0.1 (registry `[ROOT][..]`)
 [COMPILING] baz v0.0.1 (registry `[ROOT][..]`)
@@ -151,7 +151,7 @@ fn depend_on_alt_registry_depends_on_same_registry() {
         .masquerade_as_nightly_cargo()
         .with_stderr(&format!(
             "\
-[UPDATING] registry `{reg}`
+[UPDATING] `{reg}` index
 [DOWNLOADING] [..] v0.0.1 (registry `[ROOT][..]`)
 [DOWNLOADING] [..] v0.0.1 (registry `[ROOT][..]`)
 [COMPILING] baz v0.0.1 (registry `[ROOT][..]`)
@@ -193,8 +193,8 @@ fn depend_on_alt_registry_depends_on_crates_io() {
         .masquerade_as_nightly_cargo()
         .with_stderr(&format!(
             "\
-[UPDATING] registry `{alt_reg}`
-[UPDATING] registry `{reg}`
+[UPDATING] `{alt_reg}` index
+[UPDATING] `{reg}` index
 [DOWNLOADING] [..] v0.0.1 (registry `[ROOT][..]`)
 [DOWNLOADING] [..] v0.0.1 (registry `[ROOT][..]`)
 [COMPILING] baz v0.0.1 (registry `[ROOT][..]`)
@@ -358,11 +358,10 @@ fn alt_registry_and_crates_io_deps() {
     p.cargo("build")
         .masquerade_as_nightly_cargo()
         .with_stderr_contains(format!(
-            "[UPDATING] registry `{}`",
+            "[UPDATING] `{}` index",
             registry::alt_registry_path().to_str().unwrap()
-        ))
-        .with_stderr_contains(&format!(
-            "[UPDATING] registry `{}`",
+        )).with_stderr_contains(&format!(
+            "[UPDATING] `{}` index",
             registry::registry_path().to_str().unwrap()))
         .with_stderr_contains("[DOWNLOADING] crates_io_dep v0.0.1 (registry `[ROOT][..]`)")
         .with_stderr_contains("[DOWNLOADING] alt_reg_dep v0.1.0 (registry `[ROOT][..]`)")

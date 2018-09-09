@@ -13,7 +13,7 @@ fn cargo_process(s: &str) -> Execs {
 
 #[test]
 fn simple_lib() {
-    cargo_process("init --lib --vcs none")
+    cargo_process("init --lib --vcs none --edition 2015")
         .env("USER", "foo")
         .with_stderr("[CREATED] library project")
         .run();
@@ -29,7 +29,7 @@ fn simple_lib() {
 fn simple_bin() {
     let path = paths::root().join("foo");
     fs::create_dir(&path).unwrap();
-    cargo_process("init --bin --vcs none")
+    cargo_process("init --bin --vcs none --edition 2015")
         .env("USER", "foo")
         .cwd(&path)
         .with_stderr("[CREATED] binary (application) project")

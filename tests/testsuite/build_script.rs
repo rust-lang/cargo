@@ -2706,7 +2706,7 @@ fn warnings_hidden_for_upstream() {
     p.cargo("build -v")
         .with_stderr(
             "\
-[UPDATING] registry `[..]`
+[UPDATING] `[..]` index
 [DOWNLOADING] bar v0.1.0 ([..])
 [COMPILING] bar v0.1.0
 [RUNNING] `rustc [..]`
@@ -2760,7 +2760,7 @@ fn warnings_printed_on_vv() {
     p.cargo("build -vv")
         .with_stderr(
             "\
-[UPDATING] registry `[..]`
+[UPDATING] `[..]` index
 [DOWNLOADING] bar v0.1.0 ([..])
 [COMPILING] bar v0.1.0
 [RUNNING] `rustc [..]`

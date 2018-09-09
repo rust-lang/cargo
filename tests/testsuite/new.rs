@@ -14,7 +14,7 @@ fn create_empty_gitconfig() {
 
 #[test]
 fn simple_lib() {
-    cargo_process("new --lib foo --vcs none")
+    cargo_process("new --lib foo --vcs none --edition 2015")
         .env("USER", "foo")
         .with_stderr("[CREATED] library `foo` project")
         .run();
@@ -47,7 +47,7 @@ mod tests {
 
 #[test]
 fn simple_bin() {
-    cargo_process("new --bin foo")
+    cargo_process("new --bin foo --edition 2015")
         .env("USER", "foo")
         .with_stderr("[CREATED] binary (application) `foo` project")
         .run();
@@ -75,7 +75,7 @@ fn both_lib_and_bin() {
 
 #[test]
 fn simple_git() {
-    cargo_process("new --lib foo").env("USER", "foo").run();
+    cargo_process("new --lib foo --edition 2015").env("USER", "foo").run();
 
     assert!(paths::root().is_dir());
     assert!(paths::root().join("foo/Cargo.toml").is_file());
@@ -453,5 +453,41 @@ fn explicit_project_name() {
     cargo_process("new --lib foo --name bar")
         .env("USER", "foo")
         .with_stderr("[CREATED] library `bar` project")
+        .run();
+}
+
+#[test]
+fn new_with_edition_2015() {
+    cargo_process("new --edition 2015 foo")
+        .env("USER", "foo")
+        .run();
+    let manifest = fs::read_to_string(paths::root().join("foo/Cargo.toml")).unwrap();
+    assert!(manifest.contains("edition = \"2015\""));
+}
+
+#[test]
+fn new_with_edition_2018() {
+    cargo_process("new --edition 2018 foo")
+        .env("USER", "foo")
+        .run();
+    let manifest = fs::read_to_string(paths::root().join("foo/Cargo.toml")).unwrap();
+    assert!(manifest.contains("edition = \"2018\""));
+}
+
+#[test]
+fn new_default_edition() {
+    cargo_process("new foo")
+        .env("USER", "foo")
+        .run();
+    let manifest = fs::read_to_string(paths::root().join("foo/Cargo.toml")).unwrap();
+    assert!(manifest.contains("edition = \"2018\""));
+}
+
+#[test]
+fn new_with_bad_edition() {
+    cargo_process("new --edition something_else foo")
+        .env("USER", "foo")
+        .with_stderr_contains("error: 'something_else' isn't a valid value[..]")
+        .with_status(1)
         .run();
 }

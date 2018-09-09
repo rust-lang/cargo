@@ -224,7 +224,7 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
         .with_status(101)
         .with_stderr(
             "\
-[UPDATING] registry `[..]`
+[UPDATING] `[..]` index
 error: checksum for `bar v0.1.0` changed between lock files
 
 this could be indicative of a few possible errors:
@@ -284,7 +284,7 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
         .with_status(101)
         .with_stderr(
             "\
-[UPDATING] registry `[..]`
+[UPDATING] `[..]` index
 error: checksum for `bar v0.1.0` was not previously calculated, but a checksum \
 could now be calculated
 
@@ -479,7 +479,7 @@ fn locked_correct_error() {
         .with_status(101)
         .with_stderr(
             "\
-[UPDATING] registry `[..]`
+[UPDATING] `[..]` index
 error: the lock file needs to be updated but --locked was passed to prevent this
 ",
         ).run();
