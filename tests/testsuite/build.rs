@@ -3551,7 +3551,7 @@ fn build_all_member_dependency_same_name() {
 
     p.cargo("build --all")
         .with_stderr(
-            "[..] Updating registry `[..]`\n\
+            "[..] Updating `[..]` index\n\
              [..] Downloading a v0.1.0 ([..])\n\
              [..] Compiling a v0.1.0\n\
              [..] Compiling a v0.1.0 ([..])\n\

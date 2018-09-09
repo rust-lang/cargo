@@ -46,7 +46,7 @@ their dependencies, compile them all, and update the `Cargo.lock`:
 
 ```console
 $ cargo build
-      Updating registry `https://github.com/rust-lang/crates.io-index`
+      Updating crates.io index
    Downloading memchr v0.1.5
    Downloading libc v0.1.10
    Downloading regex-syntax v0.2.1

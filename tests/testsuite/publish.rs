@@ -30,7 +30,7 @@ fn simple() {
         .arg(publish::registry().to_string())
         .with_stderr(&format!(
             "\
-[UPDATING] registry `{reg}`
+[UPDATING] `{reg}` index
 [WARNING] manifest has no documentation, [..]
 See [..]
 [PACKAGING] foo v0.0.1 (CWD)
@@ -103,7 +103,7 @@ fn old_token_location() {
         .arg(publish::registry().to_string())
         .with_stderr(&format!(
             "\
-[UPDATING] registry `{reg}`
+[UPDATING] `{reg}` index
 [WARNING] manifest has no documentation, [..]
 See [..]
 [PACKAGING] foo v0.0.1 (CWD)
@@ -178,7 +178,7 @@ wants the location of the index. Please use '--index' instead.
 This will soon become a hard error, so it's either recommended
 to update to a fixed version or contact the upstream maintainer
 about this warning.
-[UPDATING] registry `{reg}`
+[UPDATING] `{reg}` index
 [WARNING] manifest has no documentation, [..]
 See [..]
 [PACKAGING] foo v0.0.1 (CWD)
@@ -255,7 +255,7 @@ wants the location of the index. Please use '--index' instead.
 This will soon become a hard error, so it's either recommended
 to update to a fixed version or contact the upstream maintainer
 about this warning.
-[UPDATING] registry `{reg}`
+[UPDATING] `{reg}` index
 [WARNING] manifest has no documentation, [..]
 See [..]
 [PACKAGING] foo v0.0.1 (CWD)
@@ -323,7 +323,7 @@ fn git_deps() {
         .with_status(101)
         .with_stderr(
             "\
-[UPDATING] registry [..]
+[UPDATING] [..] index
 [ERROR] crates cannot be published to crates.io with dependencies sourced from \
 a repository\neither publish `foo` as its own crate on crates.io and \
 specify a crates.io version as a dependency or pull it into this \
@@ -361,7 +361,7 @@ fn path_dependency_no_version() {
         .with_status(101)
         .with_stderr(
             "\
-[UPDATING] registry [..]
+[UPDATING] [..] index
 [ERROR] all path dependencies must have a version specified when publishing.
 dependency `bar` does not specify a version
 ",
@@ -425,7 +425,7 @@ fn dont_publish_dirty() {
         .with_status(101)
         .with_stderr(
             "\
-[UPDATING] registry `[..]`
+[UPDATING] `[..]` index
 error: 1 files in the working directory contain changes that were not yet \
 committed into git:
 
@@ -601,7 +601,7 @@ fn dry_run() {
         .arg(publish::registry().to_string())
         .with_stderr(
             "\
-[UPDATING] registry `[..]`
+[UPDATING] `[..]` index
 [WARNING] manifest has no documentation, [..]
 See [..]
 [PACKAGING] foo v0.0.1 (CWD)
