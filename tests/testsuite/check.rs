@@ -521,7 +521,7 @@ fn check_filters() {
     p.root().join("target").rm_rf();
     p.cargo("check --tests -v")
         .with_stderr_contains("[..] --crate-name foo src/lib.rs [..] --test [..]")
-        .with_stderr_contains("[..] --crate-name foo src/lib.rs --crate-type lib [..]")
+        .with_stderr_contains("[..] --crate-name foo src/lib.rs [..] --crate-type lib [..]")
         .with_stderr_contains("[..] --crate-name foo src/main.rs [..] --test [..]")
         .with_stderr_contains("[..]unused_unit_lib[..]")
         .with_stderr_contains("[..]unused_unit_bin[..]")
