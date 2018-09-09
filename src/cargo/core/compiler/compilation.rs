@@ -4,10 +4,9 @@ use std::ffi::OsStr;
 use std::path::PathBuf;
 
 use semver::Version;
-use lazycell::LazyCell;
 
 use core::{Edition, Package, PackageId, Target, TargetKind};
-use util::{self, join_paths, process, CargoResult, Config, ProcessBuilder};
+use util::{self, join_paths, process, CargoResult, CfgExpr, Config, ProcessBuilder};
 use super::BuildContext;
 
 pub struct Doctest {
@@ -77,7 +76,7 @@ pub struct Compilation<'cfg> {
     config: &'cfg Config,
     rustc_process: ProcessBuilder,
 
-    target_runner: LazyCell<Option<(PathBuf, Vec<String>)>>,
+    target_runner: Option<(PathBuf, Vec<String>)>,
 }
 
 impl<'cfg> Compilation<'cfg> {
@@ -124,7 +123,7 @@ impl<'cfg> Compilation<'cfg> {
             rustc_process: rustc,
             host: bcx.host_triple().to_string(),
             target: bcx.target_triple().to_string(),
-            target_runner: LazyCell::new(),
+            target_runner: target_runner(&bcx)?,
         })
     }
 
@@ -156,11 +155,8 @@ impl<'cfg> Compilation<'cfg> {
         self.fill_env(process(cmd), pkg, true)
     }
 
-    fn target_runner(&self) -> CargoResult<&Option<(PathBuf, Vec<String>)>> {
-        self.target_runner.try_borrow_with(|| {
-            let key = format!("target.{}.runner", self.target);
-            Ok(self.config.get_path_and_args(&key)?.map(|v| v.val))
-        })
+    fn target_runner(&self) -> &Option<(PathBuf, Vec<String>)> {
+        &self.target_runner
     }
 
     /// See `process`.
@@ -169,7 +165,7 @@ impl<'cfg> Compilation<'cfg> {
         cmd: T,
         pkg: &Package,
     ) -> CargoResult<ProcessBuilder> {
-        let builder = if let Some((ref runner, ref args)) = *self.target_runner()? {
+        let builder = if let Some((ref runner, ref args)) = *self.target_runner() {
             let mut builder = process(runner);
             builder.args(args);
             builder.arg(cmd);
@@ -262,4 +258,40 @@ fn pre_version_component(v: &Version) -> String {
     }
 
     ret
+}
+
+fn target_runner(bcx: &BuildContext) -> CargoResult<Option<(PathBuf, Vec<String>)>> {
+    let target = bcx.target_triple();
+
+    // try target.{}.runner
+    let key = format!("target.{}.runner", target);
+    if let Some(v) = bcx.config.get_path_and_args(&key)? {
+        return Ok(Some(v.val));
+    }
+
+    // try target.'cfg(...)'.runner
+    if let Some(target_cfg) = bcx.target_info.cfg() {
+        if let Some(table) = bcx.config.get_table("target")? {
+            let mut matching_runner = None;
+
+            for key in table.val.keys() {
+                if CfgExpr::matches_key(key, target_cfg) {
+                    let key = format!("target.{}.runner", key);
+                    if let Some(runner) = bcx.config.get_path_and_args(&key)? {
+                        // more than one match, error out
+                        if matching_runner.is_some() {
+                            bail!("several matching instances of `target.'cfg(..)'.runner` \
+                                   in `.cargo/config`")
+                        }
+
+                        matching_runner = Some(runner.val);
+                    }
+                }
+            }
+
+            return Ok(matching_runner);
+        }
+    }
+
+    Ok(None)
 }
