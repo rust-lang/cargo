@@ -167,3 +167,83 @@ fn custom_runner() {
 ",
         ).run();
 }
+
+// can set a custom runner via `target.'cfg(..)'.runner`
+#[test]
+fn custom_runner_cfg() {
+    let p = project()
+        .file("src/main.rs", "fn main() {}")
+        .file(
+            ".cargo/config",
+            r#"
+            [target.'cfg(not(target_os = "none"))']
+            runner = "nonexistent-runner -r"
+            "#,
+        ).build();
+
+    p.cargo("run -- --param")
+        .with_status(101)
+        .with_stderr_contains(&format!(
+            "\
+[COMPILING] foo v0.0.1 (CWD)
+[FINISHED] dev [unoptimized + debuginfo] target(s) in [..]
+[RUNNING] `nonexistent-runner -r target/debug/foo[EXE] --param`
+",
+        )).run();
+}
+
+// custom runner set via `target.$triple.runner` have precende over `target.'cfg(..)'.runner`
+#[test]
+fn custom_runner_cfg_precedence() {
+    let target = rustc_host();
+
+    let p = project()
+        .file("src/main.rs", "fn main() {}")
+        .file(
+            ".cargo/config",
+            &format!(
+                r#"
+            [target.'cfg(not(target_os = "none"))']
+            runner = "ignored-runner"
+
+            [target.{}]
+            runner = "nonexistent-runner -r"
+        "#,
+                target
+            ),
+        ).build();
+
+    p.cargo("run -- --param")
+        .with_status(101)
+        .with_stderr_contains(&format!(
+            "\
+            [COMPILING] foo v0.0.1 (CWD)
+[FINISHED] dev [unoptimized + debuginfo] target(s) in [..]
+[RUNNING] `nonexistent-runner -r target/debug/foo[EXE] --param`
+",
+        )).run();
+}
+
+#[test]
+fn custom_runner_cfg_collision() {
+    let p = project()
+        .file("src/main.rs", "fn main() {}")
+        .file(
+            ".cargo/config",
+            r#"
+            [target.'cfg(not(target_arch = "avr"))']
+            runner = "true"
+
+            [target.'cfg(not(target_os = "none"))']
+            runner = "false"
+            "#,
+        ).build();
+
+    p.cargo("run -- --param")
+        .with_status(101)
+        .with_stderr_contains(&format!(
+            "\
+[ERROR] several matching instances of `target.'cfg(..)'.runner` in `.cargo/config`
+",
+        )).run();
+}
