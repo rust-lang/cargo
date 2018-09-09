@@ -83,6 +83,11 @@ rustflags = ["..", ".."]
 # are concatenated. The `cfg` syntax only applies to rustflags, and not to
 # linker.
 rustflags = ["..", ".."]
+# Similar for the $triple configuration, but using the `cfg` syntax.
+# If one or more `cfg`s, and a $triple target are candidates, then the $triple
+# will be used
+# If several `cfg` are candidates, then the build will error
+runner = ".."
 
 # Configuration keys related to the registry
 [registry]

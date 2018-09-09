@@ -210,7 +210,11 @@ impl SourceId {
     }
 
     pub fn display_registry(&self) -> String {
-        format!("registry `{}`", url_display(self.url()))
+        if self.is_default_registry() {
+            "crates.io index".to_string()
+        } else {
+            format!("`{}` index", url_display(self.url()))
+        }
     }
 
     /// Is this source from a filesystem path

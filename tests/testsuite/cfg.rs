@@ -222,7 +222,7 @@ fn works_through_the_registry() {
     p.cargo("build")
         .with_stderr(
             "\
-[UPDATING] registry [..]
+[UPDATING] [..] index
 [DOWNLOADING] [..]
 [DOWNLOADING] [..]
 [COMPILING] baz v0.1.0
@@ -266,7 +266,7 @@ fn ignore_version_from_other_platform() {
     p.cargo("build")
         .with_stderr(
             "\
-[UPDATING] registry [..]
+[UPDATING] [..] index
 [DOWNLOADING] [..]
 [COMPILING] bar v0.1.0
 [COMPILING] foo v0.0.1 ([..])

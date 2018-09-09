@@ -549,45 +549,42 @@ fn bench_autodiscover_2015() {
         .file(
             "Cargo.toml",
             r#"
-            cargo-features = ["edition"]
+                [project]
+                name = "foo"
+                version = "0.0.1"
+                authors = []
+                edition = "2015"
 
-            [project]
-            name = "foo"
-            version = "0.0.1"
-            authors = []
-            edition = "2015"
-
-            [[bench]]
-            name = "bench_magic"
-            required-features = ["magic"]
-        "#,
+                [[bench]]
+                name = "bench_magic"
+                required-features = ["magic"]
+            "#,
         ).file("src/lib.rs", "")
         .file(
             "benches/bench_basic.rs",
             r#"
-            #![feature(test)]
-            #[allow(unused_extern_crates)]
-            extern crate foo;
-            extern crate test;
+                #![feature(test)]
+                #[allow(unused_extern_crates)]
+                extern crate foo;
+                extern crate test;
 
-            #[bench]
-            fn bench_basic(_b: &mut test::Bencher) {}
-        "#,
+                #[bench]
+                fn bench_basic(_b: &mut test::Bencher) {}
+            "#,
         ).file(
             "benches/bench_magic.rs",
             r#"
-            #![feature(test)]
-            #[allow(unused_extern_crates)]
-            extern crate foo;
-            extern crate test;
+                #![feature(test)]
+                #[allow(unused_extern_crates)]
+                extern crate foo;
+                extern crate test;
 
-            #[bench]
-            fn bench_magic(_b: &mut test::Bencher) {}
-        "#,
+                #[bench]
+                fn bench_magic(_b: &mut test::Bencher) {}
+            "#,
         ).build();
 
     p.cargo("bench bench_basic")
-        .masquerade_as_nightly_cargo()
         .with_stderr(
             "warning: \
 An explicit [[bench]] section is specified in Cargo.toml which currently

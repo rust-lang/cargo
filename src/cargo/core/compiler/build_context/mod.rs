@@ -1,7 +1,7 @@
 use std::collections::HashMap;
 use std::env;
 use std::path::{Path, PathBuf};
-use std::str::{self, FromStr};
+use std::str;
 
 use core::profiles::Profiles;
 use core::{Dependency, Workspace};
@@ -393,16 +393,9 @@ fn env_args(
     // ...including target.'cfg(...)'.rustflags
     if let Some(target_cfg) = target_cfg {
         if let Some(table) = config.get_table("target")? {
-            let cfgs = table.val.keys().filter_map(|t| {
-                if t.starts_with("cfg(") && t.ends_with(')') {
-                    let cfg = &t[4..t.len() - 1];
-                    CfgExpr::from_str(cfg).ok().and_then(|c| {
-                        if c.matches(target_cfg) {
-                            Some(t)
-                        } else {
-                            None
-                        }
-                    })
+            let cfgs = table.val.keys().filter_map(|key| {
+                if CfgExpr::matches_key(key, target_cfg) {
+                    Some(key)
                 } else {
                     None
                 }

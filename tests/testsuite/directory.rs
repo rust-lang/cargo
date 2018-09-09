@@ -330,7 +330,7 @@ fn crates_io_then_directory() {
     p.cargo("build")
         .with_stderr(
             "\
-[UPDATING] registry `[..]`
+[UPDATING] `[..]` index
 [DOWNLOADING] bar v0.1.0 ([..])
 [COMPILING] bar v0.1.0
 [COMPILING] foo v0.1.0 ([CWD])

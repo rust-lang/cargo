@@ -2358,7 +2358,7 @@ fn include_overrides_gitignore() {
     p.cargo("build -v")
         .with_stderr(
             "\
-[UPDATING] registry `[..]`
+[UPDATING] `[..]` index
 [DOWNLOADING] filetime [..]
 [DOWNLOADING] libc [..]
 [COMPILING] libc [..]

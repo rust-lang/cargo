@@ -359,22 +359,20 @@ fn autodiscover_examples_project(rust_edition: &str, autoexamples: Option<bool>)
             "Cargo.toml",
             &format!(
                 r#"
-            cargo-features = ["edition"]
+                    [project]
+                    name = "foo"
+                    version = "0.0.1"
+                    authors = []
+                    edition = "{rust_edition}"
+                    {autoexamples}
 
-            [project]
-            name = "foo"
-            version = "0.0.1"
-            authors = []
-            edition = "{rust_edition}"
-            {autoexamples}
+                    [features]
+                    magic = []
 
-            [features]
-            magic = []
-
-            [[example]]
-            name = "do_magic"
-            required-features = ["magic"]
-        "#,
+                    [[example]]
+                    name = "do_magic"
+                    required-features = ["magic"]
+                "#,
                 rust_edition = rust_edition,
                 autoexamples = autoexamples
             ),
@@ -382,8 +380,8 @@ fn autodiscover_examples_project(rust_edition: &str, autoexamples: Option<bool>)
         .file(
             "examples/do_magic.rs",
             r#"
-            fn main() { println!("magic example"); }
-        "#,
+                fn main() { println!("magic example"); }
+            "#,
         ).build()
 }
 
@@ -395,7 +393,6 @@ fn run_example_autodiscover_2015() {
 
     let p = autodiscover_examples_project("2015", None);
     p.cargo("run --example a")
-        .masquerade_as_nightly_cargo()
         .with_status(101)
         .with_stderr(
             "warning: \
@@ -427,7 +424,6 @@ fn run_example_autodiscover_2015_with_autoexamples_enabled() {
 
     let p = autodiscover_examples_project("2015", Some(true));
     p.cargo("run --example a")
-        .masquerade_as_nightly_cargo()
         .with_stderr(
             "\
 [COMPILING] foo v0.0.1 ([CWD])
@@ -445,7 +441,6 @@ fn run_example_autodiscover_2015_with_autoexamples_disabled() {
 
     let p = autodiscover_examples_project("2015", Some(false));
     p.cargo("run --example a")
-        .masquerade_as_nightly_cargo()
         .with_status(101)
         .with_stderr("error: no example target named `a`\n")
         .run();
@@ -459,7 +454,6 @@ fn run_example_autodiscover_2018() {
 
     let p = autodiscover_examples_project("2018", None);
     p.cargo("run --example a")
-        .masquerade_as_nightly_cargo()
         .with_stderr(
             "\
 [COMPILING] foo v0.0.1 ([CWD])
