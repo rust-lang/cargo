@@ -16,7 +16,7 @@ fn http_auth_offered() {
     let addr = server.local_addr().unwrap();
 
     fn headers(rdr: &mut BufRead) -> HashSet<String> {
-        let valid = ["GET", "Authorization", "Accept", "User-Agent"];
+        let valid = ["GET", "Authorization", "Accept"];
         rdr.lines()
             .map(|s| s.unwrap())
             .take_while(|s| s.len() > 2)
@@ -28,7 +28,6 @@ fn http_auth_offered() {
     let t = thread::spawn(move || {
         let mut conn = BufStream::new(server.accept().unwrap().0);
         let req = headers(&mut conn);
-        let user_agent = "User-Agent: git/2.0 (libgit2 0.27.0)";
         conn.write_all(
             b"\
             HTTP/1.1 401 Unauthorized\r\n\
@@ -41,7 +40,6 @@ fn http_auth_offered() {
             vec![
                 "GET /foo/bar/info/refs?service=git-upload-pack HTTP/1.1",
                 "Accept: */*",
-                user_agent,
             ].into_iter()
             .map(|s| s.to_string())
             .collect()
@@ -63,7 +61,6 @@ fn http_auth_offered() {
                 "GET /foo/bar/info/refs?service=git-upload-pack HTTP/1.1",
                 "Authorization: Basic Zm9vOmJhcg==",
                 "Accept: */*",
-                user_agent,
             ].into_iter()
             .map(|s| s.to_string())
             .collect()
