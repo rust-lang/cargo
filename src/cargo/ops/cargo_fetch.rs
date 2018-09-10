@@ -33,7 +33,7 @@ pub fn fetch<'a>(
                 continue;
             }
 
-            packages.get(id)?;
+            packages.start_download(id)?;
             let deps = resolve.deps(id)
                 .filter(|&(_id, deps)| {
                     deps.iter()
@@ -57,6 +57,10 @@ pub fn fetch<'a>(
                 .map(|(id, _deps)| id);
             deps_to_fetch.extend(deps);
         }
+    }
+
+    while packages.remaining_downloads() > 0 {
+        packages.wait_for_download()?;
     }
 
     Ok((resolve, packages))

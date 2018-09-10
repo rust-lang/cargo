@@ -52,7 +52,7 @@ pub fn clean(ws: &Workspace, opts: &CleanOptions) -> CargoResult<()> {
     for spec in opts.spec.iter() {
         // Translate the spec to a Package
         let pkgid = resolve.query(spec)?;
-        let pkg = packages.get(pkgid)?;
+        let pkg = packages.get_one(pkgid)?;
 
         // Generate all relevant `Unit` targets for this package
         for target in pkg.targets() {

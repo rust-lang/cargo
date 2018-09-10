@@ -242,6 +242,12 @@ pub struct PackageSet<'cfg> {
     packages: HashMap<PackageId, LazyCell<Package>>,
     sources: RefCell<SourceMap<'cfg>>,
     config: &'cfg Config,
+    downloads: RefCell<Downloads>,
+}
+
+#[derive(Default, Debug)]
+struct Downloads {
+    pending: Vec<(String, String, PackageId)>,
 }
 
 impl<'cfg> PackageSet<'cfg> {
@@ -257,6 +263,7 @@ impl<'cfg> PackageSet<'cfg> {
                 .collect(),
             sources: RefCell::new(sources),
             config,
+            downloads: Default::default(),
         }
     }
 
@@ -264,12 +271,13 @@ impl<'cfg> PackageSet<'cfg> {
         Box::new(self.packages.keys())
     }
 
-    pub fn get(&self, id: &PackageId) -> CargoResult<&Package> {
+    pub fn start_download(&self, id: &PackageId) -> CargoResult<Option<&Package>> {
+        let mut downloads = self.downloads.borrow_mut();
         let slot = self.packages
             .get(id)
             .ok_or_else(|| internal(format!("couldn't find `{}` in package set", id)))?;
         if let Some(pkg) = slot.borrow() {
-            return Ok(pkg);
+            return Ok(Some(pkg));
         }
         let mut sources = self.sources.borrow_mut();
         let source = sources
@@ -278,16 +286,44 @@ impl<'cfg> PackageSet<'cfg> {
         let pkg = source
             .download(id)
             .chain_err(|| format_err!("unable to get packages from source"))?;
-        let pkg = match pkg {
-            MaybePackage::Ready(pkg) => pkg,
-            MaybePackage::Download { url, descriptor } => {
-                self.config.shell().status("Downloading", descriptor)?;
-                let data = download(self.config, &url)?;
-                source.finish_download(id, data)?
+        match pkg {
+            MaybePackage::Ready(pkg) => {
+                assert!(slot.fill(pkg).is_ok());
+                Ok(Some(slot.borrow().unwrap()))
             }
-        };
+            MaybePackage::Download { url, descriptor } => {
+                downloads.pending.push((url, descriptor, id.clone()));
+                Ok(None)
+            }
+        }
+    }
+
+    pub fn remaining_downloads(&self) -> usize {
+        let downloads = self.downloads.borrow();
+        downloads.pending.len()
+    }
+
+    pub fn wait_for_download(&self) -> CargoResult<&Package> {
+        let mut downloads = self.downloads.borrow_mut();
+        let (url, descriptor, id) = downloads.pending.pop().unwrap();
+        self.config.shell().status("Downloading", descriptor)?;
+        let data = download(self.config, &url)?;
+        let mut sources = self.sources.borrow_mut();
+        let source = sources
+            .get_mut(id.source_id())
+            .ok_or_else(|| internal(format!("couldn't find source for `{}`", id)))?;
+        let pkg = source.finish_download(&id, data)?;
+        let slot = &self.packages[&id];
         assert!(slot.fill(pkg).is_ok());
         Ok(slot.borrow().unwrap())
+    }
+
+    pub fn get_one(&self, id: &PackageId) -> CargoResult<&Package> {
+        assert_eq!(self.remaining_downloads(), 0);
+        match self.start_download(id)? {
+            Some(s) => Ok(s),
+            None => self.wait_for_download(),
+        }
     }
 
     pub fn sources(&self) -> Ref<SourceMap<'cfg>> {
