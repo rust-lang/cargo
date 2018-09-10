@@ -5,7 +5,7 @@ use std::str;
 
 use core::profiles::Profiles;
 use core::{Dependency, Workspace};
-use core::{Package, PackageId, PackageSet, Resolve};
+use core::{PackageId, PackageSet, Resolve};
 use util::errors::CargoResult;
 use util::{profile, Cfg, CfgExpr, Config, Rustc};
 
@@ -107,11 +107,6 @@ impl<'a, 'cfg> BuildContext<'a, 'cfg> {
         platform.matches(name, info.cfg())
     }
 
-    /// Gets a package for the given package id.
-    pub fn get_package(&self, id: &PackageId) -> CargoResult<&'a Package> {
-        self.packages.get_one(id)
-    }
-
     /// Get the user-specified linker for a particular host or target
     pub fn linker(&self, kind: Kind) -> Option<&Path> {
         self.target_config(kind).linker.as_ref().map(|s| s.as_ref())
@@ -197,18 +192,6 @@ impl<'a, 'cfg> BuildContext<'a, 'cfg> {
 
     pub fn extra_args_for(&self, unit: &Unit<'a>) -> Option<&Vec<String>> {
         self.extra_compiler_args.get(unit)
-    }
-
-    /// Return the list of filenames read by cargo to generate the BuildContext
-    /// (all Cargo.toml, etc).
-    pub fn inputs(&self) -> CargoResult<Vec<PathBuf>> {
-        let mut inputs = Vec::new();
-        for id in self.packages.package_ids() {
-            let pkg = self.get_package(id)?;
-            inputs.push(pkg.manifest_path().to_path_buf());
-        }
-        inputs.sort();
-        Ok(inputs)
     }
 }
 
