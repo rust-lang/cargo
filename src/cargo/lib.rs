@@ -20,6 +20,8 @@ extern crate clap;
 extern crate core_foundation;
 extern crate crates_io as registry;
 extern crate crossbeam_utils;
+#[cfg(windows)]
+extern crate ctrlc;
 extern crate curl;
 #[macro_use]
 extern crate failure;
