@@ -109,7 +109,7 @@ impl<'a, 'cfg> BuildContext<'a, 'cfg> {
 
     /// Gets a package for the given package id.
     pub fn get_package(&self, id: &PackageId) -> CargoResult<&'a Package> {
-        self.packages.get(id)
+        self.packages.get_one(id)
     }
 
     /// Get the user-specified linker for a particular host or target
