@@ -170,9 +170,11 @@ impl ProcessBuilder {
 
     /// On unix, executes the process using the unix syscall `execvp`, which will block this
     /// process, and will only return if there is an error. On windows this is a synonym for
-    /// `exec`.
+    /// `exec`, except we install a ctrlc handler first to prevent us from eating
+    /// the signal the subprocess may care about.
     #[cfg(windows)]
     pub fn exec_replace(&self) -> CargoResult<()> {
+        ::ctrlc::set_handler(move || {} )?;
         self.exec()
     }
 

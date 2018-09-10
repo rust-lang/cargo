@@ -67,6 +67,7 @@ rustc-workspace-hack = "1.0.0"
 core-foundation = { version = "0.6.0", features = ["mac_os_10_7_support"] }
 
 [target.'cfg(windows)'.dependencies]
+ctrlc = "3.1.1"
 miow = "0.3.1"
 fwdansi = "1"
 
