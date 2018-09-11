@@ -518,7 +518,7 @@ where
             let pkg = {
                 let mut map = SourceMap::new();
                 map.insert(Box::new(&mut source));
-                PackageSet::new(&[pkgid.clone()], map, config)
+                PackageSet::new(&[pkgid.clone()], map, config)?
                     .get_one(&pkgid)?
                     .clone()
             };

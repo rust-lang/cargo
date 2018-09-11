@@ -94,7 +94,7 @@ impl<'cfg> PackageRegistry<'cfg> {
         })
     }
 
-    pub fn get(self, package_ids: &[PackageId]) -> PackageSet<'cfg> {
+    pub fn get(self, package_ids: &[PackageId]) -> CargoResult<PackageSet<'cfg>> {
         trace!("getting packages; sources={}", self.sources.len());
         PackageSet::new(package_ids, self.sources, self.config)
     }
