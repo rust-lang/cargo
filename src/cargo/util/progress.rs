@@ -62,6 +62,10 @@ impl<'cfg> Progress<'cfg> {
         self.state = None;
     }
 
+    pub fn is_enabled(&self) -> bool {
+        self.state.is_some()
+    }
+
     pub fn new(name: &str, cfg: &'cfg Config) -> Progress<'cfg> {
         Self::with_style(name, ProgressStyle::Percentage, cfg)
     }

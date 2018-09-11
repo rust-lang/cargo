@@ -6,6 +6,38 @@ use failure::Error;
 use util::Config;
 use util::errors::{CargoResult, HttpNot200};
 
+pub struct Retry<'a> {
+    config: &'a Config,
+    remaining: u32,
+}
+
+impl<'a> Retry<'a> {
+    pub fn new(config: &'a Config) -> CargoResult<Retry<'a>> {
+        Ok(Retry {
+            config,
+            remaining: config.get::<Option<u32>>("net.retry")?.unwrap_or(2),
+        })
+    }
+
+    pub fn try<T>(&mut self, f: impl FnOnce() -> CargoResult<T>)
+        -> CargoResult<Option<T>>
+    {
+        match f() {
+            Err(ref e) if maybe_spurious(e) && self.remaining > 0 => {
+                let msg = format!(
+                    "spurious network error ({} tries \
+                     remaining): {}",
+                    self.remaining, e
+                );
+                self.config.shell().warn(msg)?;
+                self.remaining -= 1;
+                Ok(None)
+            }
+            other => other.map(Some),
+        }
+    }
+}
+
 fn maybe_spurious(err: &Error) -> bool {
     for e in err.iter_chain() {
         if let Some(git_err) = e.downcast_ref::<git2::Error>() {
@@ -48,21 +80,10 @@ pub fn with_retry<T, F>(config: &Config, mut callback: F) -> CargoResult<T>
 where
     F: FnMut() -> CargoResult<T>,
 {
-    let mut remaining = config.get::<Option<u32>>("net.retry")?.unwrap_or(2);
+    let mut retry = Retry::new(config)?;
     loop {
-        match callback() {
-            Ok(ret) => return Ok(ret),
-            Err(ref e) if maybe_spurious(e) && remaining > 0 => {
-                let msg = format!(
-                    "spurious network error ({} tries \
-                     remaining): {}",
-                    remaining, e
-                );
-                config.shell().warn(msg)?;
-                remaining -= 1;
-            }
-            //todo impl from
-            Err(e) => return Err(e),
+        if let Some(ret) = retry.try(&mut callback)? {
+            return Ok(ret)
         }
     }
 }

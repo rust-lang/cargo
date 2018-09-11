@@ -15,7 +15,7 @@
 //! (for example, with and without tests), so we actually build a dependency
 //! graph of `Unit`s, which capture these properties.
 
-use std::cell::{RefCell, Cell};
+use std::cell::RefCell;
 use std::collections::{HashMap, HashSet};
 
 use CargoResult;
@@ -28,7 +28,7 @@ struct State<'a: 'tmp, 'cfg: 'a, 'tmp> {
     bcx: &'tmp BuildContext<'a, 'cfg>,
     deps: &'tmp mut HashMap<Unit<'a>, Vec<Unit<'a>>>,
     pkgs: RefCell<&'tmp mut HashMap<&'a PackageId, &'a Package>>,
-    waiting_on_downloads: Cell<bool>,
+    waiting_on_download: HashSet<&'a PackageId>,
 }
 
 pub fn build_unit_dependencies<'a, 'cfg>(
@@ -43,7 +43,7 @@ pub fn build_unit_dependencies<'a, 'cfg>(
         bcx,
         deps,
         pkgs: RefCell::new(pkgs),
-        waiting_on_downloads: Cell::new(false),
+        waiting_on_download: HashSet::new(),
     };
 
     loop {
@@ -64,7 +64,7 @@ pub fn build_unit_dependencies<'a, 'cfg>(
             deps_of(unit, &mut state, profile_for)?;
         }
 
-        if state.waiting_on_downloads.replace(false) {
+        if state.waiting_on_download.len() > 0 {
             state.finish_some_downloads()?;
             state.deps.clear();
         } else {
@@ -492,11 +492,14 @@ impl<'a, 'cfg, 'tmp> State<'a, 'cfg, 'tmp> {
         if let Some(pkg) = pkgs.get(id) {
             return Ok(Some(pkg))
         }
+        if !self.waiting_on_download.insert(id) {
+            return Ok(None)
+        }
         if let Some(pkg) = self.bcx.packages.start_download(id)? {
             pkgs.insert(id, pkg);
+            self.waiting_on_download.remove(id);
             return Ok(Some(pkg))
         }
-        self.waiting_on_downloads.set(true);
         Ok(None)
     }
 
@@ -512,6 +515,7 @@ impl<'a, 'cfg, 'tmp> State<'a, 'cfg, 'tmp> {
         assert!(self.bcx.packages.remaining_downloads() > 0);
         loop {
             let pkg = self.bcx.packages.wait_for_download()?;
+            self.waiting_on_download.remove(pkg.package_id());
             self.pkgs.borrow_mut().insert(pkg.package_id(), pkg);
 
             // Arbitrarily choose that 5 or more packages concurrently download
