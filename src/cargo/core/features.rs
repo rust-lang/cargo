@@ -319,6 +319,7 @@ pub struct CliUnstable {
     pub advanced_env: bool,
     pub config_profile: bool,
     pub compile_progress: bool,
+    pub allow_yanked_deps: bool,
 }
 
 impl CliUnstable {
@@ -356,6 +357,7 @@ impl CliUnstable {
             "advanced-env" => self.advanced_env = true,
             "config-profile" => self.config_profile = true,
             "compile-progress" => self.compile_progress = true,
+            "allow-yanked-deps" => self.allow_yanked_deps = true,
             _ => bail!("unknown `-Z` flag specified: {}", k),
         }
 
