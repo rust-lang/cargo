@@ -376,7 +376,7 @@ my-library = { git = 'https://example.com/git/my-library' }
 uuid = "1.0"
 
 [patch.crates-io]
-uuid = { git = 'https://github.com/rust-lang-nursery/uuid', version = '2.0.0' }
+uuid = { git = 'https://github.com/rust-lang-nursery/uuid', branch = '2.0.0' }
 ```
 
 Note that this will actually resolve to two versions of the `uuid` crate. The
