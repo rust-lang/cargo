@@ -23,7 +23,7 @@ fn pathless_tools() {
     foo.cargo("build --verbose")
         .with_stderr(
             "\
-[COMPILING] foo v0.5.0 (CWD)
+[COMPILING] foo v0.5.0 ([CWD])
 [RUNNING] `rustc [..] -C ar=nonexistent-ar -C linker=nonexistent-linker [..]`
 [FINISHED] dev [unoptimized + debuginfo] target(s) in [..]
 ",
@@ -64,7 +64,7 @@ fn absolute_tools() {
 
     foo.cargo("build --verbose").with_stderr(&format!(
             "\
-[COMPILING] foo v0.5.0 (CWD)
+[COMPILING] foo v0.5.0 ([CWD])
 [RUNNING] `rustc [..] -C ar={root}bogus/nonexistent-ar -C linker={root}bogus/nonexistent-linker [..]`
 [FINISHED] dev [unoptimized + debuginfo] target(s) in [..]
 ",
@@ -107,7 +107,7 @@ fn relative_tools() {
 
     p.cargo("build --verbose").cwd(p.root().join("bar")).with_stderr(&format!(
             "\
-[COMPILING] bar v0.5.0 (CWD)
+[COMPILING] bar v0.5.0 ([CWD])
 [RUNNING] `rustc [..] -C ar={prefix}/./nonexistent-ar -C linker={prefix}/./tools/nonexistent-linker [..]`
 [FINISHED] dev [unoptimized + debuginfo] target(s) in [..]
 ",
@@ -138,7 +138,7 @@ fn custom_runner() {
         .with_status(101)
         .with_stderr_contains(
             "\
-[COMPILING] foo v0.0.1 (CWD)
+[COMPILING] foo v0.0.1 ([CWD])
 [FINISHED] dev [unoptimized + debuginfo] target(s) in [..]
 [RUNNING] `nonexistent-runner -r target/debug/foo[EXE] --param`
 ",
@@ -148,7 +148,7 @@ fn custom_runner() {
         .with_status(101)
         .with_stderr_contains(
             "\
-[COMPILING] foo v0.0.1 (CWD)
+[COMPILING] foo v0.0.1 ([CWD])
 [RUNNING] `rustc [..]`
 [FINISHED] dev [unoptimized + debuginfo] target(s) in [..]
 [RUNNING] `nonexistent-runner -r [..]/target/debug/deps/test-[..][EXE] --param`
@@ -159,7 +159,7 @@ fn custom_runner() {
         .with_status(101)
         .with_stderr_contains(
             "\
-[COMPILING] foo v0.0.1 (CWD)
+[COMPILING] foo v0.0.1 ([CWD])
 [RUNNING] `rustc [..]`
 [RUNNING] `rustc [..]`
 [FINISHED] release [optimized] target(s) in [..]
@@ -185,7 +185,7 @@ fn custom_runner_cfg() {
         .with_status(101)
         .with_stderr_contains(&format!(
             "\
-[COMPILING] foo v0.0.1 (CWD)
+[COMPILING] foo v0.0.1 ([CWD])
 [FINISHED] dev [unoptimized + debuginfo] target(s) in [..]
 [RUNNING] `nonexistent-runner -r target/debug/foo[EXE] --param`
 ",
@@ -217,7 +217,7 @@ fn custom_runner_cfg_precedence() {
         .with_status(101)
         .with_stderr_contains(&format!(
             "\
-            [COMPILING] foo v0.0.1 (CWD)
+            [COMPILING] foo v0.0.1 ([CWD])
 [FINISHED] dev [unoptimized + debuginfo] target(s) in [..]
 [RUNNING] `nonexistent-runner -r target/debug/foo[EXE] --param`
 ",

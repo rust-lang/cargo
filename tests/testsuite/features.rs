@@ -417,7 +417,7 @@ fn no_feature_doesnt_build() {
     p.cargo("build")
         .with_stderr(
             "\
-[COMPILING] foo v0.0.1 (CWD)
+[COMPILING] foo v0.0.1 ([CWD])
 [FINISHED] dev [unoptimized + debuginfo] target(s) in [..]
 ",
         ).run();
@@ -426,8 +426,8 @@ fn no_feature_doesnt_build() {
     p.cargo("build --features bar")
         .with_stderr(
             "\
-[COMPILING] bar v0.0.1 (CWD/bar)
-[COMPILING] foo v0.0.1 (CWD)
+[COMPILING] bar v0.0.1 ([CWD]/bar)
+[COMPILING] foo v0.0.1 ([CWD])
 [FINISHED] dev [unoptimized + debuginfo] target(s) in [..]
 ",
         ).run();
@@ -469,8 +469,8 @@ fn default_feature_pulled_in() {
     p.cargo("build")
         .with_stderr(
             "\
-[COMPILING] bar v0.0.1 (CWD/bar)
-[COMPILING] foo v0.0.1 (CWD)
+[COMPILING] bar v0.0.1 ([CWD]/bar)
+[COMPILING] foo v0.0.1 ([CWD])
 [FINISHED] dev [unoptimized + debuginfo] target(s) in [..]
 ",
         ).run();
@@ -479,7 +479,7 @@ fn default_feature_pulled_in() {
     p.cargo("build --no-default-features")
         .with_stderr(
             "\
-[COMPILING] foo v0.0.1 (CWD)
+[COMPILING] foo v0.0.1 ([CWD])
 [FINISHED] dev [unoptimized + debuginfo] target(s) in [..]
 ",
         ).run();
@@ -577,9 +577,9 @@ fn groups_on_groups_on_groups() {
     p.cargo("build")
         .with_stderr(
             "\
-[COMPILING] ba[..] v0.0.1 (CWD/ba[..])
-[COMPILING] ba[..] v0.0.1 (CWD/ba[..])
-[COMPILING] foo v0.0.1 (CWD)
+[COMPILING] ba[..] v0.0.1 ([CWD]/ba[..])
+[COMPILING] ba[..] v0.0.1 ([CWD]/ba[..])
+[COMPILING] foo v0.0.1 ([CWD])
 [FINISHED] dev [unoptimized + debuginfo] target(s) in [..]
 ",
         ).run();
@@ -623,9 +623,9 @@ fn many_cli_features() {
         .arg("bar baz")
         .with_stderr(
             "\
-[COMPILING] ba[..] v0.0.1 (CWD/ba[..])
-[COMPILING] ba[..] v0.0.1 (CWD/ba[..])
-[COMPILING] foo v0.0.1 (CWD)
+[COMPILING] ba[..] v0.0.1 ([CWD]/ba[..])
+[COMPILING] ba[..] v0.0.1 ([CWD]/ba[..])
+[COMPILING] foo v0.0.1 ([CWD])
 [FINISHED] dev [unoptimized + debuginfo] target(s) in [..]
 ",
         ).run();
@@ -700,9 +700,9 @@ fn union_features() {
     p.cargo("build")
         .with_stderr(
             "\
-[COMPILING] d2 v0.0.1 (CWD/d2)
-[COMPILING] d1 v0.0.1 (CWD/d1)
-[COMPILING] foo v0.0.1 (CWD)
+[COMPILING] d2 v0.0.1 ([CWD]/d2)
+[COMPILING] d1 v0.0.1 ([CWD]/d1)
+[COMPILING] foo v0.0.1 ([CWD])
 [FINISHED] dev [unoptimized + debuginfo] target(s) in [..]
 ",
         ).run();
@@ -743,8 +743,8 @@ fn many_features_no_rebuilds() {
     p.cargo("build")
         .with_stderr(
             "\
-[COMPILING] a v0.1.0 (CWD/a)
-[COMPILING] b v0.1.0 (CWD)
+[COMPILING] a v0.1.0 ([CWD]/a)
+[COMPILING] b v0.1.0 ([CWD])
 [FINISHED] dev [unoptimized + debuginfo] target(s) in [..]
 ",
         ).run();
@@ -1199,9 +1199,9 @@ fn many_cli_features_comma_delimited() {
     p.cargo("build --features bar,baz")
         .with_stderr(
             "\
-[COMPILING] ba[..] v0.0.1 (CWD/ba[..])
-[COMPILING] ba[..] v0.0.1 (CWD/ba[..])
-[COMPILING] foo v0.0.1 (CWD)
+[COMPILING] ba[..] v0.0.1 ([CWD]/ba[..])
+[COMPILING] ba[..] v0.0.1 ([CWD]/ba[..])
+[COMPILING] foo v0.0.1 ([CWD])
 [FINISHED] dev [unoptimized + debuginfo] target(s) in [..]
 ",
         ).run();
@@ -1261,11 +1261,11 @@ fn many_cli_features_comma_and_space_delimited() {
         .arg("bar,baz bam bap")
         .with_stderr(
             "\
-[COMPILING] ba[..] v0.0.1 (CWD/ba[..])
-[COMPILING] ba[..] v0.0.1 (CWD/ba[..])
-[COMPILING] ba[..] v0.0.1 (CWD/ba[..])
-[COMPILING] ba[..] v0.0.1 (CWD/ba[..])
-[COMPILING] foo v0.0.1 (CWD)
+[COMPILING] ba[..] v0.0.1 ([CWD]/ba[..])
+[COMPILING] ba[..] v0.0.1 ([CWD]/ba[..])
+[COMPILING] ba[..] v0.0.1 ([CWD]/ba[..])
+[COMPILING] ba[..] v0.0.1 ([CWD]/ba[..])
+[COMPILING] foo v0.0.1 ([CWD])
 [FINISHED] dev [unoptimized + debuginfo] target(s) in [..]
 ",
         ).run();
