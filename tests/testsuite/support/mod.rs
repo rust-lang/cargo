@@ -940,9 +940,29 @@ impl Execs {
         kind: MatchKind,
     ) -> MatchResult {
         let out = match expected {
-            Some(out) => out,
+            Some(out) => {
+                // Do the template replacements on the expected string.
+                let replaced = match self.process_builder {
+                    None => out.to_string(),
+                    Some(ref p) => match p.get_cwd() {
+                        None => out.to_string(),
+                        Some(cwd) => out
+                            .replace( "[CWD]", &cwd.display().to_string())
+                        ,
+                    },
+                };
+
+                // On Windows, we need to use a wildcard for the drive,
+                // because we don't actually know what it will be.
+                let replaced = replaced
+                    .replace("[ROOT]",
+                             if cfg!(windows) { r#"[..]:\"# } else { "/" });
+
+                replaced
+            },
             None => return Ok(()),
         };
+
         let actual = match str::from_utf8(actual) {
             Err(..) => return Err(format!("{} was not utf8 encoded", description)),
             Ok(actual) => actual,
@@ -950,16 +970,6 @@ impl Execs {
         // Let's not deal with \r\n vs \n on windows...
         let actual = actual.replace("\r", "");
         let actual = actual.replace("\t", "<tab>");
-        let actual = match self.process_builder {
-            None => actual,
-            Some(ref p) => match p.get_cwd() {
-                None => actual,
-                Some(cwd) => actual
-                    .replace(&path2url(cwd).to_string(), "CWD")
-                    .replace(&cwd.display().to_string(), "CWD")
-                ,
-            },
-        };
 
         match kind {
             MatchKind::Exact => {

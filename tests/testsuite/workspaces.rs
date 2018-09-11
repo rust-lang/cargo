@@ -722,7 +722,7 @@ fn virtual_misconfigure() {
         .with_stderr(
             "\
 error: current package believes it's in a workspace when it's not:
-current:   CWD/Cargo.toml
+current:   [CWD]/Cargo.toml
 workspace: [..]Cargo.toml
 
 this may be fixable by adding `bar` to the `workspace.members` array of the \
