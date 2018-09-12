@@ -1327,7 +1327,7 @@ fn test_run_implicit_example_target() {
 
     // Compiles myexm1 as normal, but does not run it.
     prj.cargo("test -v")
-        .with_stderr_contains("[RUNNING] `rustc [..]myexm1.rs --crate-type bin[..]")
+        .with_stderr_contains("[RUNNING] `rustc [..]myexm1.rs [..]--crate-type bin[..]")
         .with_stderr_contains("[RUNNING] `rustc [..]myexm2.rs [..]--test[..]")
         .with_stderr_does_not_contain("[RUNNING] [..]myexm1-[..]")
         .with_stderr_contains("[RUNNING] [..]target/debug/examples/myexm2-[..]")
