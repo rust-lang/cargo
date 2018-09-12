@@ -275,7 +275,6 @@ fn rustc<'a, 'cfg>(
             }
         }
 
-        state.running(&rustc);
         if json_messages {
             exec.exec_json(
                 rustc,
@@ -635,7 +634,6 @@ fn rustdoc<'a, 'cfg>(cx: &mut Context<'a, 'cfg>, unit: &Unit<'a>) -> CargoResult
                 rustdoc.env(name, value);
             }
         }
-        state.running(&rustdoc);
 
         let exec_result = if json_messages {
             rustdoc

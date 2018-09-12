@@ -84,7 +84,6 @@ pub struct JobState<'a> {
 }
 
 enum Message<'a> {
-    Run(String),
     BuildPlanMsg(String, ProcessBuilder, Arc<Vec<OutputFile>>),
     Stdout(String),
     Stderr(String),
@@ -94,10 +93,6 @@ enum Message<'a> {
 }
 
 impl<'a> JobState<'a> {
-    pub fn running(&self, cmd: &ProcessBuilder) {
-        let _ = self.tx.send(Message::Run(cmd.to_string()));
-    }
-
     pub fn build_plan(
         &self,
         module_name: String,
@@ -290,12 +285,6 @@ impl<'a> JobQueue<'a> {
             progress.clear();
 
             match event {
-                Message::Run(cmd) => {
-                    cx.bcx
-                        .config
-                        .shell()
-                        .verbose(|c| c.status("Running", &cmd))?;
-                }
                 Message::BuildPlanMsg(module_name, cmd, filenames) => {
                     plan.update(&module_name, &cmd, &filenames)?;
                 }
