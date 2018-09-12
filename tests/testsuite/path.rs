@@ -970,7 +970,7 @@ fn thin_lto_works() {
         .with_stderr(
             "\
 [COMPILING] top [..]
-[RUNNING] `rustc [..] -C lto=thin [..]`
+[RUNNING] `[..] rustc [..] -C lto=thin [..]`
 [FINISHED] [..]
 ",
         ).run();

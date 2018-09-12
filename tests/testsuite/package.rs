@@ -956,7 +956,7 @@ fn test_edition() {
                 // until stuff stabilizes
                 .with_stderr_contains("\
 [COMPILING] foo v0.0.1 ([..])
-[RUNNING] `rustc [..]--edition=2018 [..]
+[RUNNING] `[..] rustc [..]--edition=2018 [..]
 ").run();
 }
 

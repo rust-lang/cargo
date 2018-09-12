@@ -92,9 +92,9 @@ fn profile_override_basic() {
         .masquerade_as_nightly_cargo()
         .with_stderr(
             "[COMPILING] bar [..]
-[RUNNING] `rustc --crate-name bar [..] -C opt-level=3 [..]`
+[RUNNING] `[..] rustc --crate-name bar [..] -C opt-level=3 [..]`
 [COMPILING] foo [..]
-[RUNNING] `rustc --crate-name foo [..] -C opt-level=1 [..]`
+[RUNNING] `[..] rustc --crate-name foo [..] -C opt-level=1 [..]`
 [FINISHED] dev [optimized + debuginfo] target(s) in [..]",
         ).run();
 }
@@ -305,17 +305,17 @@ fn profile_override_hierarchy() {
     p.cargo("build -v").masquerade_as_nightly_cargo().with_stderr_unordered("\
 [COMPILING] m3 [..]
 [COMPILING] dep [..]
-[RUNNING] `rustc --crate-name m3 m3/src/lib.rs --color never --crate-type lib --emit=dep-info,link -C codegen-units=4 [..]
-[RUNNING] `rustc --crate-name dep [..]dep/src/lib.rs --color never --crate-type lib --emit=dep-info,link -C codegen-units=3 [..]
-[RUNNING] `rustc --crate-name m3 m3/src/lib.rs --color never --crate-type lib --emit=dep-info,link -C codegen-units=1 [..]
-[RUNNING] `rustc --crate-name build_script_build m1/build.rs --color never --crate-type bin --emit=dep-info,link -C codegen-units=4 [..]
+[RUNNING] `[..] rustc --crate-name m3 m3/src/lib.rs --color never --crate-type lib --emit=dep-info,link -C codegen-units=4 [..]
+[RUNNING] `[..] rustc --crate-name dep [..]dep/src/lib.rs --color never --crate-type lib --emit=dep-info,link -C codegen-units=3 [..]
+[RUNNING] `[..] rustc --crate-name m3 m3/src/lib.rs --color never --crate-type lib --emit=dep-info,link -C codegen-units=1 [..]
+[RUNNING] `[..] rustc --crate-name build_script_build m1/build.rs --color never --crate-type bin --emit=dep-info,link -C codegen-units=4 [..]
 [COMPILING] m2 [..]
-[RUNNING] `rustc --crate-name build_script_build m2/build.rs --color never --crate-type bin --emit=dep-info,link -C codegen-units=2 [..]
+[RUNNING] `[..] rustc --crate-name build_script_build m2/build.rs --color never --crate-type bin --emit=dep-info,link -C codegen-units=2 [..]
 [RUNNING] `[..]/m1-[..]/build-script-build`
 [RUNNING] `[..]/m2-[..]/build-script-build`
-[RUNNING] `rustc --crate-name m2 m2/src/lib.rs --color never --crate-type lib --emit=dep-info,link -C codegen-units=2 [..]
+[RUNNING] `[..] rustc --crate-name m2 m2/src/lib.rs --color never --crate-type lib --emit=dep-info,link -C codegen-units=2 [..]
 [COMPILING] m1 [..]
-[RUNNING] `rustc --crate-name m1 m1/src/lib.rs --color never --crate-type lib --emit=dep-info,link -C codegen-units=1 [..]
+[RUNNING] `[..] rustc --crate-name m1 m1/src/lib.rs --color never --crate-type lib --emit=dep-info,link -C codegen-units=1 [..]
 [FINISHED] dev [unoptimized + debuginfo] [..]
 ",
         )
@@ -416,7 +416,7 @@ fn profile_override_spec() {
 
     p.cargo("build -v")
         .masquerade_as_nightly_cargo()
-        .with_stderr_contains("[RUNNING] `rustc [..]dep1/src/lib.rs [..] -C codegen-units=1 [..]")
-        .with_stderr_contains("[RUNNING] `rustc [..]dep2/src/lib.rs [..] -C codegen-units=2 [..]")
+        .with_stderr_contains("[RUNNING] `[..] rustc [..]dep1/src/lib.rs [..] -C codegen-units=1 [..]")
+        .with_stderr_contains("[RUNNING] `[..] rustc [..]dep2/src/lib.rs [..] -C codegen-units=2 [..]")
         .run();
 }

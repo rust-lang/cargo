@@ -26,7 +26,7 @@ fn features_are_quoted() {
             .env("MSYSTEM", "1")
             .with_status(101)
             .with_stderr_contains(
-                r#"[RUNNING] `rustc [..] --cfg 'feature="default"' --cfg 'feature="some_feature"' [..]`"#
+                r#"[RUNNING] `[..] rustc [..] --cfg 'feature="default"' --cfg 'feature="some_feature"' [..]`"#
             ).with_stderr_contains(
                 r#"
 Caused by:

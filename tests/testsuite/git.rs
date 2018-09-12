@@ -2362,13 +2362,13 @@ fn include_overrides_gitignore() {
 [DOWNLOADING] filetime [..]
 [DOWNLOADING] libc [..]
 [COMPILING] libc [..]
-[RUNNING] `rustc --crate-name libc [..]`
+[RUNNING] `[..] rustc --crate-name libc [..]`
 [COMPILING] filetime [..]
-[RUNNING] `rustc --crate-name filetime [..]`
+[RUNNING] `[..] rustc --crate-name filetime [..]`
 [COMPILING] reduction [..]
-[RUNNING] `rustc --crate-name build_script_tango_build tango-build.rs --crate-type bin [..]`
+[RUNNING] `[..] rustc --crate-name build_script_tango_build tango-build.rs --crate-type bin [..]`
 [RUNNING] `[..]/build-script-tango-build`
-[RUNNING] `rustc --crate-name reduction src/lib.rs --crate-type lib [..]`
+[RUNNING] `[..] rustc --crate-name reduction src/lib.rs --crate-type lib [..]`
 [FINISHED] dev [unoptimized + debuginfo] target(s) in [..]
 ",
         ).run();
@@ -2394,7 +2394,7 @@ fn include_overrides_gitignore() {
 [FRESH] libc [..]
 [FRESH] filetime [..]
 [COMPILING] reduction [..]
-[RUNNING] `rustc --crate-name reduction src/lib.rs --crate-type lib [..]`
+[RUNNING] `[..] rustc --crate-name reduction src/lib.rs --crate-type lib [..]`
 [FINISHED] dev [unoptimized + debuginfo] target(s) in [..]
 ",
         ).run();
@@ -2413,7 +2413,7 @@ fn include_overrides_gitignore() {
 [FRESH] filetime [..]
 [COMPILING] reduction [..]
 [RUNNING] `[..]/build-script-tango-build`
-[RUNNING] `rustc --crate-name reduction src/lib.rs --crate-type lib [..]`
+[RUNNING] `[..] rustc --crate-name reduction src/lib.rs --crate-type lib [..]`
 [FINISHED] dev [unoptimized + debuginfo] target(s) in [..]
 ",
         ).run();
@@ -2617,9 +2617,9 @@ fn use_the_cli() {
 [UPDATING] git repository `[..]`
 [RUNNING] `git fetch [..]`
 [COMPILING] dep1 [..]
-[RUNNING] `rustc [..]`
+[RUNNING] `[..] rustc [..]`
 [COMPILING] foo [..]
-[RUNNING] `rustc [..]`
+[RUNNING] `[..] rustc [..]`
 [FINISHED] [..]
 ";
 

@@ -1024,7 +1024,7 @@ fn reuse_workspace_lib() {
         .with_stderr(
             "\
 [COMPILING] baz v0.1.1 ([..])
-[RUNNING] `rustc[..] --test [..]`
+[RUNNING] `[..] rustc[..] --test [..]`
 [FINISHED] [..]
 ",
         ).run();

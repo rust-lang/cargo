@@ -932,7 +932,7 @@ fn cfg_rustflags_normal_source() {
         .with_stderr(
             "\
 [COMPILING] foo v0.0.1 ([..])
-[RUNNING] `rustc [..] --cfg bar[..]`
+[RUNNING] `[..] rustc [..] --cfg bar[..]`
 [FINISHED] dev [unoptimized + debuginfo] target(s) in [..]
 ",
         ).run();
@@ -941,7 +941,7 @@ fn cfg_rustflags_normal_source() {
         .with_stderr(
             "\
 [COMPILING] foo v0.0.1 ([..])
-[RUNNING] `rustc [..] --cfg bar[..]`
+[RUNNING] `[..] rustc [..] --cfg bar[..]`
 [FINISHED] dev [unoptimized + debuginfo] target(s) in [..]
 ",
         ).run();
@@ -950,7 +950,7 @@ fn cfg_rustflags_normal_source() {
         .with_stderr(
             "\
 [COMPILING] foo v0.0.1 ([..])
-[RUNNING] `rustc [..] --cfg bar[..]`
+[RUNNING] `[..] rustc [..] --cfg bar[..]`
 [FINISHED] dev [unoptimized + debuginfo] target(s) in [..]
 ",
         ).run();
@@ -959,9 +959,9 @@ fn cfg_rustflags_normal_source() {
         .with_stderr(
             "\
 [COMPILING] foo v0.0.1 ([..])
-[RUNNING] `rustc [..] --cfg bar[..]`
-[RUNNING] `rustc [..] --cfg bar[..]`
-[RUNNING] `rustc [..] --cfg bar[..]`
+[RUNNING] `[..] rustc [..] --cfg bar[..]`
+[RUNNING] `[..] rustc [..] --cfg bar[..]`
+[RUNNING] `[..] rustc [..] --cfg bar[..]`
 [FINISHED] dev [unoptimized + debuginfo] target(s) in [..]
 ",
         ).run();
@@ -970,9 +970,9 @@ fn cfg_rustflags_normal_source() {
         .with_stderr(
             "\
 [COMPILING] foo v0.0.1 ([..])
-[RUNNING] `rustc [..] --cfg bar[..]`
-[RUNNING] `rustc [..] --cfg bar[..]`
-[RUNNING] `rustc [..] --cfg bar[..]`
+[RUNNING] `[..] rustc [..] --cfg bar[..]`
+[RUNNING] `[..] rustc [..] --cfg bar[..]`
+[RUNNING] `[..] rustc [..] --cfg bar[..]`
 [FINISHED] release [optimized] target(s) in [..]
 ",
         ).run();
@@ -1008,7 +1008,7 @@ fn cfg_rustflags_precedence() {
         .with_stderr(
             "\
 [COMPILING] foo v0.0.1 ([..])
-[RUNNING] `rustc [..] --cfg bar[..]`
+[RUNNING] `[..] rustc [..] --cfg bar[..]`
 [FINISHED] dev [unoptimized + debuginfo] target(s) in [..]
 ",
         ).run();
@@ -1017,7 +1017,7 @@ fn cfg_rustflags_precedence() {
         .with_stderr(
             "\
 [COMPILING] foo v0.0.1 ([..])
-[RUNNING] `rustc [..] --cfg bar[..]`
+[RUNNING] `[..] rustc [..] --cfg bar[..]`
 [FINISHED] dev [unoptimized + debuginfo] target(s) in [..]
 ",
         ).run();
@@ -1026,7 +1026,7 @@ fn cfg_rustflags_precedence() {
         .with_stderr(
             "\
 [COMPILING] foo v0.0.1 ([..])
-[RUNNING] `rustc [..] --cfg bar[..]`
+[RUNNING] `[..] rustc [..] --cfg bar[..]`
 [FINISHED] dev [unoptimized + debuginfo] target(s) in [..]
 ",
         ).run();
@@ -1035,9 +1035,9 @@ fn cfg_rustflags_precedence() {
         .with_stderr(
             "\
 [COMPILING] foo v0.0.1 ([..])
-[RUNNING] `rustc [..] --cfg bar[..]`
-[RUNNING] `rustc [..] --cfg bar[..]`
-[RUNNING] `rustc [..] --cfg bar[..]`
+[RUNNING] `[..] rustc [..] --cfg bar[..]`
+[RUNNING] `[..] rustc [..] --cfg bar[..]`
+[RUNNING] `[..] rustc [..] --cfg bar[..]`
 [FINISHED] dev [unoptimized + debuginfo] target(s) in [..]
 ",
         ).run();
@@ -1046,9 +1046,9 @@ fn cfg_rustflags_precedence() {
         .with_stderr(
             "\
 [COMPILING] foo v0.0.1 ([..])
-[RUNNING] `rustc [..] --cfg bar[..]`
-[RUNNING] `rustc [..] --cfg bar[..]`
-[RUNNING] `rustc [..] --cfg bar[..]`
+[RUNNING] `[..] rustc [..] --cfg bar[..]`
+[RUNNING] `[..] rustc [..] --cfg bar[..]`
+[RUNNING] `[..] rustc [..] --cfg bar[..]`
 [FINISHED] release [optimized] target(s) in [..]
 ",
         ).run();
@@ -1070,7 +1070,7 @@ fn target_rustflags_string_and_array_form1() {
         .with_stderr(
             "\
 [COMPILING] foo v0.0.1 ([..])
-[RUNNING] `rustc [..] --cfg foo[..]`
+[RUNNING] `[..] rustc [..] --cfg foo[..]`
 [FINISHED] dev [unoptimized + debuginfo] target(s) in [..]
 ",
         ).run();
@@ -1089,7 +1089,7 @@ fn target_rustflags_string_and_array_form1() {
         .with_stderr(
             "\
 [COMPILING] foo v0.0.1 ([..])
-[RUNNING] `rustc [..] --cfg foo[..]`
+[RUNNING] `[..] rustc [..] --cfg foo[..]`
 [FINISHED] dev [unoptimized + debuginfo] target(s) in [..]
 ",
         ).run();
@@ -1114,7 +1114,7 @@ fn target_rustflags_string_and_array_form2() {
         .with_stderr(
             "\
 [COMPILING] foo v0.0.1 ([..])
-[RUNNING] `rustc [..] --cfg foo[..]`
+[RUNNING] `[..] rustc [..] --cfg foo[..]`
 [FINISHED] dev [unoptimized + debuginfo] target(s) in [..]
 ",
         ).run();
@@ -1136,7 +1136,7 @@ fn target_rustflags_string_and_array_form2() {
         .with_stderr(
             "\
 [COMPILING] foo v0.0.1 ([..])
-[RUNNING] `rustc [..] --cfg foo[..]`
+[RUNNING] `[..] rustc [..] --cfg foo[..]`
 [FINISHED] dev [unoptimized + debuginfo] target(s) in [..]
 ",
         ).run();

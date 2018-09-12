@@ -103,9 +103,9 @@ fn exit_code_verbose() {
     let mut output = String::from(
         "\
 [COMPILING] foo v0.0.1 ([CWD])
-[RUNNING] `rustc [..]`
+[RUNNING] `[..] rustc [..]`
 [FINISHED] dev [unoptimized + debuginfo] target(s) in [..]
-[RUNNING] `target[..]`
+[RUNNING] `[..] target[..]`
 ",
     );
     if !cfg!(unix) {
@@ -182,10 +182,10 @@ fn specify_name() {
         .with_stderr(
             "\
 [COMPILING] foo v0.0.1 ([CWD])
-[RUNNING] `rustc [..] src/lib.rs [..]`
-[RUNNING] `rustc [..] src/bin/a.rs [..]`
+[RUNNING] `[..] rustc [..] src/lib.rs [..]`
+[RUNNING] `[..] rustc [..] src/bin/a.rs [..]`
 [FINISHED] dev [unoptimized + debuginfo] target(s) in [..]
-[RUNNING] `target/debug/a[EXE]`",
+[RUNNING] `[..] target/debug/a[EXE]`",
         ).with_stdout("hello a.rs")
         .run();
 
@@ -193,9 +193,9 @@ fn specify_name() {
         .with_stderr(
             "\
 [COMPILING] foo v0.0.1 ([..])
-[RUNNING] `rustc [..] src/bin/b.rs [..]`
+[RUNNING] `[..] rustc [..] src/bin/b.rs [..]`
 [FINISHED] dev [unoptimized + debuginfo] target(s) in [..]
-[RUNNING] `target/debug/b[EXE]`",
+[RUNNING] `[..] target/debug/b[EXE]`",
         ).with_stdout("hello b.rs")
         .run();
 }
@@ -604,14 +604,14 @@ fn example_with_release_flag() {
         .with_stderr(
             "\
 [COMPILING] bar v0.5.0 ([CWD]/bar)
-[RUNNING] `rustc --crate-name bar bar/src/bar.rs --color never --crate-type lib \
+[RUNNING] `[..] rustc --crate-name bar bar/src/bar.rs --color never --crate-type lib \
         --emit=dep-info,link \
         -C opt-level=3 \
         -C metadata=[..] \
         --out-dir [CWD]/target/release/deps \
         -L dependency=[CWD]/target/release/deps`
 [COMPILING] foo v0.0.1 ([CWD])
-[RUNNING] `rustc --crate-name a examples/a.rs --color never --crate-type bin \
+[RUNNING] `[..] rustc --crate-name a examples/a.rs --color never --crate-type bin \
         --emit=dep-info,link \
         -C opt-level=3 \
         -C metadata=[..] \
@@ -619,7 +619,7 @@ fn example_with_release_flag() {
         -L dependency=[CWD]/target/release/deps \
          --extern bar=[CWD]/target/release/deps/libbar-[..].rlib`
 [FINISHED] release [optimized] target(s) in [..]
-[RUNNING] `target/release/examples/a[EXE]`
+[RUNNING] `[..] target/release/examples/a[EXE]`
 ",
         ).with_stdout(
             "\
@@ -631,14 +631,14 @@ fast2",
         .with_stderr(
             "\
 [COMPILING] bar v0.5.0 ([CWD]/bar)
-[RUNNING] `rustc --crate-name bar bar/src/bar.rs --color never --crate-type lib \
+[RUNNING] `[..] rustc --crate-name bar bar/src/bar.rs --color never --crate-type lib \
         --emit=dep-info,link \
         -C debuginfo=2 \
         -C metadata=[..] \
         --out-dir [CWD]/target/debug/deps \
         -L dependency=[CWD]/target/debug/deps`
 [COMPILING] foo v0.0.1 ([CWD])
-[RUNNING] `rustc --crate-name a examples/a.rs --color never --crate-type bin \
+[RUNNING] `[..] rustc --crate-name a examples/a.rs --color never --crate-type bin \
         --emit=dep-info,link \
         -C debuginfo=2 \
         -C metadata=[..] \
@@ -646,7 +646,7 @@ fast2",
         -L dependency=[CWD]/target/debug/deps \
          --extern bar=[CWD]/target/debug/deps/libbar-[..].rlib`
 [FINISHED] dev [unoptimized + debuginfo] target(s) in [..]
-[RUNNING] `target/debug/examples/a[EXE]`
+[RUNNING] `[..] target/debug/examples/a[EXE]`
 ",
         ).with_stdout(
             "\

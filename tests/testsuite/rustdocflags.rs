@@ -6,7 +6,7 @@ fn parses_env() {
 
     p.cargo("doc -v")
         .env("RUSTDOCFLAGS", "--cfg=foo")
-        .with_stderr_contains("[RUNNING] `rustdoc [..] --cfg=foo[..]`")
+        .with_stderr_contains("[RUNNING] `[..] rustdoc [..] --cfg=foo[..]`")
         .run();
 }
 
@@ -23,7 +23,7 @@ fn parses_config() {
         ).build();
 
     p.cargo("doc -v")
-        .with_stderr_contains("[RUNNING] `rustdoc [..] --cfg foo[..]`")
+        .with_stderr_contains("[RUNNING] `[..] rustdoc [..] --cfg foo[..]`")
         .run();
 }
 
