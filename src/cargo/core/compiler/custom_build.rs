@@ -324,7 +324,6 @@ fn build_work<'a, 'cfg>(cx: &mut Context<'a, 'cfg>, unit: &Unit<'a>) -> CargoRes
         if build_plan {
             state.build_plan(invocation_name, cmd.clone(), Arc::new(Vec::new()));
         } else {
-            state.running(&cmd);
             let output = if extra_verbose {
                 state.capture_output(&cmd, true)
             } else {
