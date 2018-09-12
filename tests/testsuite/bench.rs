@@ -216,7 +216,7 @@ fn cargo_bench_verbose() {
         .with_stderr(
             "\
 [COMPILING] foo v0.5.0 ([CWD])
-[RUNNING] `rustc [..] src/main.rs [..]`
+[RUNNING] `[..] rustc [..] src/main.rs [..]`
 [FINISHED] release [optimized] target(s) in [..]
 [RUNNING] `[..]target/release/deps/foo-[..][EXE] hello --bench`",
         ).with_stdout_contains("test bench_hello ... bench: [..]")
@@ -1039,12 +1039,12 @@ fn bench_with_examples() {
         .with_stderr(
             "\
 [COMPILING] foo v6.6.6 ([CWD])
-[RUNNING] `rustc [..]`
-[RUNNING] `rustc [..]`
-[RUNNING] `rustc [..]`
+[RUNNING] `[..] rustc [..]`
+[RUNNING] `[..] rustc [..]`
+[RUNNING] `[..] rustc [..]`
 [FINISHED] release [optimized] target(s) in [..]
-[RUNNING] `[CWD]/target/release/deps/foo-[..][EXE] --bench`
-[RUNNING] `[CWD]/target/release/deps/testb1-[..][EXE] --bench`",
+[RUNNING] `[..] [CWD]/target/release/deps/foo-[..][EXE] --bench`
+[RUNNING] `[..] [CWD]/target/release/deps/testb1-[..][EXE] --bench`",
         ).with_stdout_contains("test bench_bench1 ... bench: [..]")
         .with_stdout_contains("test bench_bench2 ... bench: [..]")
         .run();

@@ -91,7 +91,7 @@ fn cargo_test_release() {
 [RUNNING] `[..]target/release/deps/foo-[..][EXE]`
 [RUNNING] `[..]target/release/deps/test-[..][EXE]`
 [DOCTEST] foo
-[RUNNING] `rustdoc --test [..]lib.rs[..]`",
+[RUNNING] `[..] rustdoc --test [..]lib.rs[..]`",
         ).with_stdout_contains_n("test test ... ok", 2)
         .with_stdout_contains("running 0 tests")
         .run();
@@ -151,7 +151,7 @@ fn cargo_test_verbose() {
         .with_stderr(
             "\
 [COMPILING] foo v0.5.0 ([CWD])
-[RUNNING] `rustc [..] src/main.rs [..]`
+[RUNNING] `[..] rustc [..] src/main.rs [..]`
 [FINISHED] dev [unoptimized + debuginfo] target(s) in [..]
 [RUNNING] `[..]target/debug/deps/foo-[..][EXE] hello`",
         ).with_stdout_contains("test test_hello ... ok")
@@ -1327,8 +1327,8 @@ fn test_run_implicit_example_target() {
 
     // Compiles myexm1 as normal, but does not run it.
     prj.cargo("test -v")
-        .with_stderr_contains("[RUNNING] `rustc [..]myexm1.rs [..]--crate-type bin[..]")
-        .with_stderr_contains("[RUNNING] `rustc [..]myexm2.rs [..]--test[..]")
+        .with_stderr_contains("[RUNNING] `[..] rustc [..]myexm1.rs [..]--crate-type bin[..]")
+        .with_stderr_contains("[RUNNING] `[..] rustc [..]myexm2.rs [..]--test[..]")
         .with_stderr_does_not_contain("[RUNNING] [..]myexm1-[..]")
         .with_stderr_contains("[RUNNING] [..]target/debug/examples/myexm2-[..]")
         .run();
@@ -1660,8 +1660,8 @@ fn example_bin_same_name() {
         .with_stderr(
             "\
 [COMPILING] foo v0.0.1 ([CWD])
-[RUNNING] `rustc [..]`
-[RUNNING] `rustc [..]`
+[RUNNING] `[..] rustc [..]`
+[RUNNING] `[..] rustc [..]`
 [FINISHED] dev [unoptimized + debuginfo] target(s) in [..]
 ",
         ).run();
@@ -1733,7 +1733,7 @@ fn example_with_dev_dep() {
 [..]
 [..]
 [..]
-[RUNNING] `rustc --crate-name ex [..] --extern a=[..]`
+[RUNNING] `[..] rustc --crate-name ex [..] --extern a=[..]`
 [FINISHED] dev [unoptimized + debuginfo] target(s) in [..]
 ",
         ).run();
@@ -2165,8 +2165,8 @@ fn bin_does_not_rebuild_tests() {
         .with_stderr(
             "\
 [COMPILING] foo v0.0.1 ([..])
-[RUNNING] `rustc [..] src/main.rs [..]`
-[RUNNING] `rustc [..] src/main.rs [..]`
+[RUNNING] `[..] rustc [..] src/main.rs [..]`
+[RUNNING] `[..] rustc [..] src/main.rs [..]`
 [FINISHED] dev [unoptimized + debuginfo] target(s) in [..]
 ",
         ).run();
@@ -2220,8 +2220,8 @@ fn selective_test_optional_dep() {
         .with_stderr(
             "\
 [COMPILING] a v0.0.1 ([..])
-[RUNNING] `rustc [..] a/src/lib.rs [..]`
-[RUNNING] `rustc [..] a/src/lib.rs [..]`
+[RUNNING] `[..] rustc [..] a/src/lib.rs [..]`
+[RUNNING] `[..] rustc [..] a/src/lib.rs [..]`
 [FINISHED] dev [unoptimized + debuginfo] target(s) in [..]
 ",
         ).run();
@@ -2313,7 +2313,7 @@ fn cfg_test_even_with_no_harness() {
         .with_stderr(
             "\
 [COMPILING] foo v0.0.1 ([..])
-[RUNNING] `rustc [..]`
+[RUNNING] `[..] rustc [..]`
 [FINISHED] dev [unoptimized + debuginfo] target(s) in [..]
 [RUNNING] `[..]`
 ",
@@ -2421,14 +2421,14 @@ fn pass_correct_cfgs_flags_to_rustdoc() {
         .with_stderr_contains(
             "\
 [DOCTEST] feature_a
-[RUNNING] `rustdoc --test [..]mock_serde_codegen[..]`",
+[RUNNING] `[..] rustdoc --test [..]mock_serde_codegen[..]`",
         ).run();
 
     p.cargo("test --verbose")
         .with_stderr_contains(
             "\
 [DOCTEST] foo
-[RUNNING] `rustdoc --test [..]feature_a[..]`",
+[RUNNING] `[..] rustdoc --test [..]feature_a[..]`",
         ).run();
 }
 
@@ -2688,8 +2688,8 @@ fn test_many_targets() {
         .with_stdout_contains("test bin_b ... ok")
         .with_stdout_contains("test test_a ... ok")
         .with_stdout_contains("test test_b ... ok")
-        .with_stderr_contains("[RUNNING] `rustc --crate-name a examples/a.rs [..]`")
-        .with_stderr_contains("[RUNNING] `rustc --crate-name b examples/b.rs [..]`")
+        .with_stderr_contains("[RUNNING] `[..] rustc --crate-name a examples/a.rs [..]`")
+        .with_stderr_contains("[RUNNING] `[..] rustc --crate-name b examples/b.rs [..]`")
         .run();
 }
 

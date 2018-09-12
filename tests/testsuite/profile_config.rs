@@ -241,7 +241,7 @@ fn profile_config_all_options() {
         .with_stderr(
             "\
 [COMPILING] foo [..]
-[RUNNING] `rustc --crate-name foo [..] \
+[RUNNING] `[..] rustc --crate-name foo [..] \
             -C opt-level=1 \
             -C panic=abort \
             -C codegen-units=2 \
@@ -300,9 +300,9 @@ fn profile_config_override_precedence() {
         .with_stderr(
             "\
 [COMPILING] bar [..]
-[RUNNING] `rustc --crate-name bar [..] -C opt-level=2 -C codegen-units=2 [..]
+[RUNNING] `[..] rustc --crate-name bar [..] -C opt-level=2 -C codegen-units=2 [..]
 [COMPILING] foo [..]
-[RUNNING] `rustc --crate-name foo [..]-C codegen-units=2 [..]
+[RUNNING] `[..] rustc --crate-name foo [..]-C codegen-units=2 [..]
 [FINISHED] dev [unoptimized + debuginfo] target(s) in [..]",
         ).run();
 }

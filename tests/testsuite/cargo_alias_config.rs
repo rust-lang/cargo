@@ -57,7 +57,7 @@ fn alias_config() {
         .with_stderr_contains(
             "\
 [COMPILING] foo v0.5.0 [..]
-[RUNNING] `rustc --crate-name foo [..]",
+[RUNNING] `[..] rustc --crate-name foo [..]",
         ).run();
 }
 
@@ -79,7 +79,7 @@ fn recursive_alias() {
         .with_stderr_contains(
             "\
 [COMPILING] foo v0.5.0 [..]
-[RUNNING] `rustc --crate-name foo [..]",
+[RUNNING] `[..] rustc --crate-name foo [..]",
         ).run();
 }
 
@@ -98,7 +98,7 @@ fn alias_list_test() {
 
     p.cargo("b-cargo-test -v")
         .with_stderr_contains("[COMPILING] foo v0.5.0 [..]")
-        .with_stderr_contains("[RUNNING] `rustc --crate-name [..]")
+        .with_stderr_contains("[RUNNING] `[..] rustc --crate-name [..]")
         .run();
 }
 
@@ -117,7 +117,7 @@ fn alias_with_flags_config() {
 
     p.cargo("b-cargo-test -v")
         .with_stderr_contains("[COMPILING] foo v0.5.0 [..]")
-        .with_stderr_contains("[RUNNING] `rustc --crate-name foo [..]")
+        .with_stderr_contains("[RUNNING] `[..] rustc --crate-name foo [..]")
         .run();
 }
 

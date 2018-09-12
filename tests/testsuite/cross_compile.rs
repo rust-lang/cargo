@@ -358,7 +358,7 @@ fn linker_and_ar() {
         .with_stderr_contains(&format!(
             "\
 [COMPILING] foo v0.5.0 ([CWD])
-[RUNNING] `rustc --crate-name foo src/foo.rs --color never --crate-type bin \
+[RUNNING] `[..] rustc --crate-name foo src/foo.rs --color never --crate-type bin \
     --emit=dep-info,link -C debuginfo=2 \
     -C metadata=[..] \
     --out-dir [CWD]/target/{target}/debug/deps \
@@ -644,9 +644,9 @@ fn cross_with_a_build_script() {
         .with_stderr(&format!(
             "\
 [COMPILING] foo v0.0.0 ([CWD])
-[RUNNING] `rustc [..] build.rs [..] --out-dir [CWD]/target/debug/build/foo-[..]`
-[RUNNING] `[CWD]/target/debug/build/foo-[..]/build-script-build`
-[RUNNING] `rustc [..] src/main.rs [..] --target {target} [..]`
+[RUNNING] `[..] rustc [..] build.rs [..] --out-dir [CWD]/target/debug/build/foo-[..]`
+[RUNNING] `[..] [CWD]/target/debug/build/foo-[..]/build-script-build`
+[RUNNING] `[..] rustc [..] src/main.rs [..] --target {target} [..]`
 [FINISHED] dev [unoptimized + debuginfo] target(s) in [..]
 ",
             target = target,
@@ -733,22 +733,22 @@ fn build_script_needed_for_host_and_target() {
         .arg(&target)
         .with_stderr_contains(&"[COMPILING] d1 v0.0.0 ([CWD]/d1)")
         .with_stderr_contains(
-            "[RUNNING] `rustc [..] d1/build.rs [..] --out-dir [CWD]/target/debug/build/d1-[..]`",
+            "[RUNNING] `[..] rustc [..] d1/build.rs [..] --out-dir [CWD]/target/debug/build/d1-[..]`",
         )
-        .with_stderr_contains("[RUNNING] `[CWD]/target/debug/build/d1-[..]/build-script-build`")
-        .with_stderr_contains("[RUNNING] `rustc [..] d1/src/lib.rs [..]`")
+        .with_stderr_contains("[RUNNING] `[..] [CWD]/target/debug/build/d1-[..]/build-script-build`")
+        .with_stderr_contains("[RUNNING] `[..] rustc [..] d1/src/lib.rs [..]`")
         .with_stderr_contains("[COMPILING] d2 v0.0.0 ([CWD]/d2)")
         .with_stderr_contains(&format!(
-            "[RUNNING] `rustc [..] d2/src/lib.rs [..] -L /path/to/{host}`",
+            "[RUNNING] `[..] rustc [..] d2/src/lib.rs [..] -L /path/to/{host}`",
             host = host
         )).with_stderr_contains("[COMPILING] foo v0.0.0 ([CWD])")
         .with_stderr_contains(&format!(
-            "[RUNNING] `rustc [..] build.rs [..] --out-dir [CWD]/target/debug/build/foo-[..] \
+            "[RUNNING] `[..] rustc [..] build.rs [..] --out-dir [CWD]/target/debug/build/foo-[..] \
              -L /path/to/{host}`",
             host = host
         )).with_stderr_contains(&format!(
             "\
-             [RUNNING] `rustc [..] src/main.rs [..] --target {target} [..] \
+             [RUNNING] `[..] rustc [..] src/main.rs [..] --target {target} [..] \
              -L /path/to/{target}`",
             target = target
         )).run();
@@ -871,9 +871,9 @@ fn plugin_build_script_right_arch() {
         .with_stderr(
             "\
 [COMPILING] foo v0.0.1 ([..])
-[RUNNING] `rustc [..] build.rs [..]`
+[RUNNING] `[..] rustc [..] build.rs [..]`
 [RUNNING] `[..]/build-script-build`
-[RUNNING] `rustc [..] src/lib.rs [..]`
+[RUNNING] `[..] rustc [..] src/lib.rs [..]`
 [FINISHED] dev [unoptimized + debuginfo] target(s) in [..]
 ",
         ).run();
@@ -934,13 +934,13 @@ fn build_script_with_platform_specific_dependencies() {
         .with_stderr(&format!(
             "\
 [COMPILING] d2 v0.0.0 ([..])
-[RUNNING] `rustc [..] d2/src/lib.rs [..]`
+[RUNNING] `[..] rustc [..] d2/src/lib.rs [..]`
 [COMPILING] d1 v0.0.0 ([..])
-[RUNNING] `rustc [..] d1/src/lib.rs [..]`
+[RUNNING] `[..] rustc [..] d1/src/lib.rs [..]`
 [COMPILING] foo v0.0.1 ([..])
-[RUNNING] `rustc [..] build.rs [..]`
-[RUNNING] `[CWD]/target/debug/build/foo-[..]/build-script-build`
-[RUNNING] `rustc [..] src/lib.rs [..] --target {target} [..]`
+[RUNNING] `[..] rustc [..] build.rs [..]`
+[RUNNING] `[..] [CWD]/target/debug/build/foo-[..]/build-script-build`
+[RUNNING] `[..] rustc [..] src/lib.rs [..] --target {target} [..]`
 [FINISHED] dev [unoptimized + debuginfo] target(s) in [..]
 ",
             target = target

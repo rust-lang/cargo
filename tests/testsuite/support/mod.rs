@@ -26,7 +26,7 @@ p.cargo("run --bin foo")
         "\
 [COMPILING] foo [..]
 [FINISHED] [..]
-[RUNNING] `target/debug/foo`
+[RUNNING] `[..] target/debug/foo`
 ",
     )
     .with_stdout("hi!")
@@ -631,8 +631,8 @@ impl Execs {
     /// Be careful when using patterns such as `[..]`, because you may end up
     /// with multiple lines that might match, and this is not smart enough to
     /// do anything like longest-match.  For example, avoid something like:
-    ///     [RUNNING] `rustc [..]
-    ///     [RUNNING] `rustc --crate-name foo [..]
+    ///     [RUNNING] `[..] rustc [..]
+    ///     [RUNNING] `[..] rustc --crate-name foo [..]
     /// This will randomly fail if the other crate name is `bar`, and the
     /// order changes.
     pub fn with_stderr_unordered<S: ToString>(&mut self, expected: S) -> &mut Self {

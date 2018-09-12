@@ -24,7 +24,7 @@ fn pathless_tools() {
         .with_stderr(
             "\
 [COMPILING] foo v0.5.0 ([CWD])
-[RUNNING] `rustc [..] -C ar=nonexistent-ar -C linker=nonexistent-linker [..]`
+[RUNNING] `[..] rustc [..] -C ar=nonexistent-ar -C linker=nonexistent-linker [..]`
 [FINISHED] dev [unoptimized + debuginfo] target(s) in [..]
 ",
         ).run();
@@ -65,7 +65,7 @@ fn absolute_tools() {
     foo.cargo("build --verbose").with_stderr(&format!(
             "\
 [COMPILING] foo v0.5.0 ([CWD])
-[RUNNING] `rustc [..] -C ar={root}bogus/nonexistent-ar -C linker={root}bogus/nonexistent-linker [..]`
+[RUNNING] `[..] rustc [..] -C ar={root}bogus/nonexistent-ar -C linker={root}bogus/nonexistent-linker [..]`
 [FINISHED] dev [unoptimized + debuginfo] target(s) in [..]
 ",
             root = root,
@@ -108,7 +108,7 @@ fn relative_tools() {
     p.cargo("build --verbose").cwd(p.root().join("bar")).with_stderr(&format!(
             "\
 [COMPILING] bar v0.5.0 ([CWD])
-[RUNNING] `rustc [..] -C ar={prefix}/./nonexistent-ar -C linker={prefix}/./tools/nonexistent-linker [..]`
+[RUNNING] `[..] rustc [..] -C ar={prefix}/./nonexistent-ar -C linker={prefix}/./tools/nonexistent-linker [..]`
 [FINISHED] dev [unoptimized + debuginfo] target(s) in [..]
 ",
             prefix = prefix,
@@ -140,7 +140,7 @@ fn custom_runner() {
             "\
 [COMPILING] foo v0.0.1 ([CWD])
 [FINISHED] dev [unoptimized + debuginfo] target(s) in [..]
-[RUNNING] `nonexistent-runner -r target/debug/foo[EXE] --param`
+[RUNNING] `[..] nonexistent-runner -r target/debug/foo[EXE] --param`
 ",
         ).run();
 
@@ -149,9 +149,9 @@ fn custom_runner() {
         .with_stderr_contains(
             "\
 [COMPILING] foo v0.0.1 ([CWD])
-[RUNNING] `rustc [..]`
+[RUNNING] `[..] rustc [..]`
 [FINISHED] dev [unoptimized + debuginfo] target(s) in [..]
-[RUNNING] `nonexistent-runner -r [..]/target/debug/deps/test-[..][EXE] --param`
+[RUNNING] `[..] nonexistent-runner -r [..]/target/debug/deps/test-[..][EXE] --param`
 ",
         ).run();
 
@@ -160,10 +160,10 @@ fn custom_runner() {
         .with_stderr_contains(
             "\
 [COMPILING] foo v0.0.1 ([CWD])
-[RUNNING] `rustc [..]`
-[RUNNING] `rustc [..]`
+[RUNNING] `[..] rustc [..]`
+[RUNNING] `[..] rustc [..]`
 [FINISHED] release [optimized] target(s) in [..]
-[RUNNING] `nonexistent-runner -r [..]/target/release/deps/bench-[..][EXE] --param --bench`
+[RUNNING] `[..] nonexistent-runner -r [..]/target/release/deps/bench-[..][EXE] --param --bench`
 ",
         ).run();
 }
@@ -187,7 +187,7 @@ fn custom_runner_cfg() {
             "\
 [COMPILING] foo v0.0.1 ([CWD])
 [FINISHED] dev [unoptimized + debuginfo] target(s) in [..]
-[RUNNING] `nonexistent-runner -r target/debug/foo[EXE] --param`
+[RUNNING] `[..] nonexistent-runner -r target/debug/foo[EXE] --param`
 ",
         )).run();
 }
@@ -219,7 +219,7 @@ fn custom_runner_cfg_precedence() {
             "\
             [COMPILING] foo v0.0.1 ([CWD])
 [FINISHED] dev [unoptimized + debuginfo] target(s) in [..]
-[RUNNING] `nonexistent-runner -r target/debug/foo[EXE] --param`
+[RUNNING] `[..] nonexistent-runner -r target/debug/foo[EXE] --param`
 ",
         )).run();
 }

@@ -750,7 +750,7 @@ fn rebuild_if_environment_changes() {
             "\
 [COMPILING] foo v0.0.1 ([CWD])
 [FINISHED] dev [unoptimized + debuginfo] target(s) in [..]
-[RUNNING] `target/debug/foo[EXE]`
+[RUNNING] `[..] target/debug/foo[EXE]`
 ",
         ).run();
 
@@ -772,7 +772,7 @@ fn rebuild_if_environment_changes() {
             "\
 [COMPILING] foo v0.0.1 ([CWD])
 [FINISHED] dev [unoptimized + debuginfo] target(s) in [..]
-[RUNNING] `target/debug/foo[EXE]`
+[RUNNING] `[..] target/debug/foo[EXE]`
 ",
         ).run();
 }
@@ -1024,7 +1024,7 @@ fn reuse_workspace_lib() {
         .with_stderr(
             "\
 [COMPILING] baz v0.1.1 ([..])
-[RUNNING] `rustc[..] --test [..]`
+[RUNNING] `[..] rustc[..] --test [..]`
 [FINISHED] [..]
 ",
         ).run();
