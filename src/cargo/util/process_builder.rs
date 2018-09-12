@@ -30,10 +30,10 @@ pub struct ProcessBuilder {
 
 impl fmt::Display for ProcessBuilder {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        write!(f, "`");
+        write!(f, "`")?;
 
         for (key, value) in self.env.iter() {
-            write!(f, "{}={} ", key, escape(value.as_ref().unwrap_or(&OsString::from("")).to_string_lossy()));
+            write!(f, "{}={} ", key, escape(value.as_ref().unwrap_or(&OsString::from("")).to_string_lossy()))?;
         }
 
         write!(f, "{}", self.program.to_string_lossy())?;
