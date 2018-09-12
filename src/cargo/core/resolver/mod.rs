@@ -523,12 +523,13 @@ fn activate_deps_loop(
                         }
                     };
 
-                    // If we're only here for the error messages then we know
-                    // one of our candidate deps will fail, meaning we will
-                    // fail and that none of the backtrack frames will find a
+                    // If we're only here for the error messages
+                    // and we did not use backtracking to explore our deps
+                    // then we know one of our candidate deps will fail,
+                    // meaning we will fail and that none of the backtrack frames will find a
                     // candidate that will help. Consequently let's clean up the
                     // no longer needed backtrack frames.
-                    if activate_for_error_message {
+                    if !backtracked && activate_for_error_message {
                         backtrack_stack.clear();
                     }
 
