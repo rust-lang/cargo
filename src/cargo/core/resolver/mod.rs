@@ -782,6 +782,10 @@ impl RemainingCandidates {
 // Versions `a` and `b` are compatible if their left-most nonzero digit is the
 // same.
 fn compatible(a: &semver::Version, b: &semver::Version) -> bool {
+    if !a.pre.is_empty() || !b.pre.is_empty() {
+        return a == b;
+    }
+
     if a.major != b.major {
         return false;
     }

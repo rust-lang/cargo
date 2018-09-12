@@ -509,7 +509,7 @@ fn resolving_backtrack_features() {
 }
 
 #[test]
-fn resolving_allows_multiple_compatible_versions() {
+fn resolving_allows_multiple_incompatible_versions() {
     let reg = registry(vec![
         pkg!(("foo", "1.0.0")),
         pkg!(("foo", "2.0.0")),
@@ -532,6 +532,39 @@ fn resolving_allows_multiple_compatible_versions() {
             ("foo", "2.0.0"),
             ("foo", "0.1.0"),
             ("foo", "0.2.0"),
+            ("d1", "1.0.0"),
+            ("d2", "1.0.0"),
+            ("d3", "1.0.0"),
+            ("d4", "1.0.0"),
+            ("bar", "1.0.0"),
+        ]),
+    );
+}
+
+#[test]
+fn resolving_allows_multiple_prerelease_versions() {
+    let reg = registry(vec![
+        pkg!(("foo", "1.0.0")),
+        pkg!(("foo", "2.0.0")),
+        pkg!(("foo", "2.0.0-alpha")),
+        pkg!(("foo", "2.0.0-beta")),
+        pkg!("bar" => ["d1", "d2", "d3", "d4"]),
+        pkg!("d1" => [dep_req("foo", "=1")]),
+        pkg!("d2" => [dep_req("foo", "=2")]),
+        pkg!("d3" => [dep_req("foo", "=2.0.0-alpha")]),
+        pkg!("d4" => [dep_req("foo", "=2.0.0-beta")]),
+    ]);
+
+    let res = resolve(&pkg_id("root"), vec![dep("bar")], &reg).unwrap();
+
+    assert_contains(
+        &res,
+        &names(&[
+            ("root", "1.0.0"),
+            ("foo", "1.0.0"),
+            ("foo", "2.0.0"),
+            ("foo", "2.0.0-alpha"),
+            ("foo", "2.0.0-beta"),
             ("d1", "1.0.0"),
             ("d2", "1.0.0"),
             ("d3", "1.0.0"),
