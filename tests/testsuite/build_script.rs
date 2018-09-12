@@ -1148,7 +1148,7 @@ fn code_generation() {
             "\
 [COMPILING] foo v0.5.0 ([CWD])
 [FINISHED] dev [unoptimized + debuginfo] target(s) in [..]
-[RUNNING] `target/debug/foo`",
+[RUNNING] `[..] target/debug/foo`",
         ).with_stdout("Hello, World!")
         .run();
 

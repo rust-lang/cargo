@@ -26,7 +26,7 @@ p.cargo("run --bin foo")
         "\
 [COMPILING] foo [..]
 [FINISHED] [..]
-[RUNNING] `target/debug/foo`
+[RUNNING] `[..] target/debug/foo`
 ",
     )
     .with_stdout("hi!")

@@ -13,7 +13,7 @@ fn simple() {
             "\
 [COMPILING] foo v0.0.1 ([CWD])
 [FINISHED] dev [unoptimized + debuginfo] target(s) in [..]
-[RUNNING] `target/debug/foo[EXE]`",
+[RUNNING] `[..] target/debug/foo[EXE]`",
         ).with_stdout("hello")
         .run();
     assert!(p.bin("foo").is_file());
@@ -83,7 +83,7 @@ fn exit_code() {
         "\
 [COMPILING] foo v0.0.1 ([CWD])
 [FINISHED] dev [unoptimized + debuginfo] target(s) in [..]
-[RUNNING] `target[..]`
+[RUNNING] `[..] target[..]`
 ",
     );
     if !cfg!(unix) {
@@ -320,7 +320,7 @@ fn run_example() {
             "\
 [COMPILING] foo v0.0.1 ([CWD])
 [FINISHED] dev [unoptimized + debuginfo] target(s) in [..]
-[RUNNING] `target/debug/examples/a[EXE]`",
+[RUNNING] `[..] target/debug/examples/a[EXE]`",
         ).with_stdout("example")
         .run();
 }
@@ -428,7 +428,7 @@ fn run_example_autodiscover_2015_with_autoexamples_enabled() {
             "\
 [COMPILING] foo v0.0.1 ([CWD])
 [FINISHED] dev [unoptimized + debuginfo] target(s) in [..]
-[RUNNING] `target/debug/examples/a[EXE]`",
+[RUNNING] `[..] target/debug/examples/a[EXE]`",
         ).with_stdout("example")
         .run();
 }
@@ -458,7 +458,7 @@ fn run_example_autodiscover_2018() {
             "\
 [COMPILING] foo v0.0.1 ([CWD])
 [FINISHED] dev [unoptimized + debuginfo] target(s) in [..]
-[RUNNING] `target/debug/examples/a[EXE]`",
+[RUNNING] `[..] target/debug/examples/a[EXE]`",
         ).with_stdout("example")
         .run();
 }
@@ -552,7 +552,7 @@ fn one_bin_multiple_examples() {
             "\
 [COMPILING] foo v0.0.1 ([CWD])
 [FINISHED] dev [unoptimized + debuginfo] target(s) in [..]
-[RUNNING] `target/debug/main[EXE]`",
+[RUNNING] `[..] target/debug/main[EXE]`",
         ).with_stdout("hello main.rs")
         .run();
 }
@@ -705,7 +705,7 @@ fn release_works() {
             "\
 [COMPILING] foo v0.0.1 ([CWD])
 [FINISHED] release [optimized] target(s) in [..]
-[RUNNING] `target/release/foo[EXE]`
+[RUNNING] `[..] target/release/foo[EXE]`
 ",
         ).run();
     assert!(p.release_bin("foo").is_file());
@@ -764,7 +764,7 @@ fn run_from_executable_folder() {
         .with_stderr(
             "\
              [FINISHED] dev [unoptimized + debuginfo] target(s) in [..]\n\
-             [RUNNING] `./foo[EXE]`",
+             [RUNNING] `[..] ./foo[EXE]`",
         ).with_stdout("hello")
         .run();
 }

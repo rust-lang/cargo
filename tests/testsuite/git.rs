@@ -1253,7 +1253,7 @@ fn dep_with_changed_submodule() {
              [COMPILING] foo v0.5.0 ([..])\n\
              [FINISHED] dev [unoptimized + debuginfo] target(s) in \
              [..]\n\
-             [RUNNING] `target/debug/foo[EXE]`\n",
+             [RUNNING] `[..] target/debug/foo[EXE]`\n",
         ).with_stdout("project2\n")
         .run();
 
@@ -1305,7 +1305,7 @@ fn dep_with_changed_submodule() {
              [COMPILING] foo v0.5.0 ([..])\n\
              [FINISHED] dev [unoptimized + debuginfo] target(s) in \
              [..]\n\
-             [RUNNING] `target/debug/foo[EXE]`\n",
+             [RUNNING] `[..] target/debug/foo[EXE]`\n",
         ).with_stdout("project3\n")
         .run();
 }
