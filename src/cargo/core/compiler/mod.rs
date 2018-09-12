@@ -13,7 +13,7 @@ use core::profiles::{Lto, Profile};
 use core::{PackageId, Target};
 use util::errors::{CargoResult, CargoResultExt, Internal};
 use util::paths;
-use util::{self, machine_message, Freshness, ProcessBuilder};
+use util::{self, machine_message, Freshness, ProcessBuilder, process};
 use util::{internal, join_paths, profile};
 
 use self::build_plan::BuildPlan;
@@ -583,7 +583,12 @@ fn rustdoc<'a, 'cfg>(cx: &mut Context<'a, 'cfg>, unit: &Unit<'a>) -> CargoResult
     rustdoc.arg("--crate-name").arg(&unit.target.crate_name());
     add_path_args(bcx, unit, &mut rustdoc);
     add_cap_lints(bcx, unit, &mut rustdoc);
-    add_color(bcx, &mut rustdoc);
+
+    let mut can_add_color_process = process(&*bcx.config.rustdoc()?);
+    can_add_color_process.args(&["--color", "never", "-V"]);
+    if bcx.rustc.cached_success(&can_add_color_process)? {
+        add_color(bcx, &mut rustdoc);
+    }
 
     if unit.kind != Kind::Host {
         if let Some(ref target) = bcx.build_config.requested_target {
