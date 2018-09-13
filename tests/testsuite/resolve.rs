@@ -1020,83 +1020,45 @@ fn dont_yet_know_the_problem_2() {
         pkg!(("-3_FxaLyA_P0a6K-__915B_-UtU_", "4.2.0")),
         pkg!(("-3_FxaLyA_P0a6K-__915B_-UtU_", "4.7.5")),
         pkg!(("-3_FxaLyA_P0a6K-__915B_-UtU_", "6.3.6")),
-        pkg!(("-3_FxaLyA_P0a6K-__915B_-UtU_", "9.0.4")),
         pkg!(("-8E6S_M3Qy", "0.9.9")),
-        pkg!(("-8E6S_M3Qy", "1.0.2") => [
-            dep_req("-3_FxaLyA_P0a6K-__915B_-UtU_", "=9.0.4")]
-        ),
-        pkg!(("-8E6S_M3Qy", "1.7.8") => [
-            dep_req("-3_FxaLyA_P0a6K-__915B_-UtU_", ">=0.6.4, <=4.2.0")]
-        ),
+        pkg!(("-8E6S_M3Qy", "1.0.2")),
+        pkg!(("-8E6S_M3Qy", "1.7.8")),
         pkg!(("-8E6S_M3Qy", "1.8.10")),
-        pkg!(("-8E6S_M3Qy", "2.2.1") => [
-            dep_req("-3_FxaLyA_P0a6K-__915B_-UtU_", ">=3.4.8, <=4.7.5")]
-        ),
-        pkg!(("-8E6S_M3Qy", "5.7.0") => [
-            dep_req("-3_FxaLyA_P0a6K-__915B_-UtU_", ">=0.6.4, <=4.2.0")]
-        ),
+        pkg!(("-8E6S_M3Qy", "2.2.1")),
+        pkg!(("-8E6S_M3Qy", "5.7.0")),
         pkg!(("-8E6S_M3Qy", "9.6.9")),
         pkg!(("-8E6S_M3Qy", "10.3.7")),
-        pkg!(("-8E6S_M3Qy", "10.4.1") => [
-            dep_req("-3_FxaLyA_P0a6K-__915B_-UtU_", "=3.4.8")]
-        ),
+        pkg!(("-8E6S_M3Qy", "10.4.1")),
         pkg!(("-A_B0x--aRz6-3__R6u--f_R-5--rmvc", "3.4.0")),
         pkg!(("-A_B0x--aRz6-3__R6u--f_R-5--rmvc", "9.6.9") => [
             dep_req("-8E6S_M3Qy", ">=2.2.1, <=10.4.1")]
         ),
         pkg!(("-C-Ep-2Zw-8b_-_l", "2.2.5")),
-        pkg!(("-C-Ep-2Zw-8b_-_l", "3.10.8") => [
-            dep_req("-3_FxaLyA_P0a6K-__915B_-UtU_", "=3.4.8")]
-        ),
-        pkg!(("-C-Ep-2Zw-8b_-_l", "5.7.2") => [
-            dep_req("-8E6S_M3Qy", ">=0.9.9, <=10.4.1")]
-        ),
-        pkg!(("-C-Ep-2Zw-8b_-_l", "5.8.0") => [
-            dep_req("-A_B0x--aRz6-3__R6u--f_R-5--rmvc", "=3.4.0")]
-        ),
-        pkg!(("-C-Ep-2Zw-8b_-_l", "6.2.8") => [
-            dep_req("bad", "=6.6.6")]
-        ),
-        pkg!(("-C-Ep-2Zw-8b_-_l", "7.2.7")),
-        pkg!(("-C-Ep-2Zw-8b_-_l", "10.8.8")),
         pkg!(("-O-3-r-e-9700q-vJE09H5X_P7", "1.1.5")),
-        pkg!(("-O-3-r-e-9700q-vJE09H5X_P7", "5.1.6") => [
-            dep_req("-3_FxaLyA_P0a6K-__915B_-UtU_", ">=6.3.6, <=9.0.4"),
-            dep_req("-8E6S_M3Qy", ">=5.7.0, <=9.6.9"),
-            dep_req("-C-Ep-2Zw-8b_-_l", ">=7.2.7, <=10.8.8")]
-        ),
+        pkg!(("-O-3-r-e-9700q-vJE09H5X_P7", "5.1.6")),
         pkg!(("-O-3-r-e-9700q-vJE09H5X_P7", "6.3.8") => [
             dep_req("-3_FxaLyA_P0a6K-__915B_-UtU_", ">=3.4.8, <=4.2.0"),
-            dep_req("-A_B0x--aRz6-3__R6u--f_R-5--rmvc", ">=3.4.0, <=9.6.9"),
-            dep_req("-C-Ep-2Zw-8b_-_l", ">=7.2.7, <=10.8.8")]
-        ),
-        pkg!(("-O-3-r-e-9700q-vJE09H5X_P7", "6.10.9") => [
-            dep_req("-8E6S_M3Qy", ">=0.9.9, <=1.0.2"),
             dep_req("-A_B0x--aRz6-3__R6u--f_R-5--rmvc", ">=3.4.0, <=9.6.9")]
         ),
+        pkg!(("-O-3-r-e-9700q-vJE09H5X_P7", "6.10.9")),
         pkg!(("-Ov-A_zyIy_E-216Dz__m67H--1UmU_3", "0.7.0") => [
             dep_req("-3_FxaLyA_P0a6K-__915B_-UtU_", ">=2.7.4, <=3.4.8"),
-            dep_req("-A_B0x--aRz6-3__R6u--f_R-5--rmvc", ">=3.4.0, <=9.6.9"),
-            dep_req("-C-Ep-2Zw-8b_-_l", ">=6.2.8, <=10.8.8")]
+            dep_req("-A_B0x--aRz6-3__R6u--f_R-5--rmvc", ">=3.4.0, <=9.6.9")]
         ),
         pkg!(("-Ov-A_zyIy_E-216Dz__m67H--1UmU_3", "0.10.6") => [
             dep_req("-3_FxaLyA_P0a6K-__915B_-UtU_", ">=0.6.4, <=2.7.4"),
             dep_req("-8E6S_M3Qy", ">=0.9.9, <=1.0.2"),
-            dep_req("-C-Ep-2Zw-8b_-_l", ">=7.2.7, <=10.8.8"),
             dep_req("-O-3-r-e-9700q-vJE09H5X_P7", ">=5.1.6, <=6.10.9")]
         ),
         pkg!(("-Ov-A_zyIy_E-216Dz__m67H--1UmU_3", "3.8.10") => [
-            dep_req("-A_B0x--aRz6-3__R6u--f_R-5--rmvc", "=9.6.9"),
-            dep_req("-C-Ep-2Zw-8b_-_l", ">=2.2.5, <=5.8.0")]
+            dep_req("-A_B0x--aRz6-3__R6u--f_R-5--rmvc", "=9.6.9")]
         ),
         pkg!(("-Ov-A_zyIy_E-216Dz__m67H--1UmU_3", "8.7.4") => [
-            dep_req("-A_B0x--aRz6-3__R6u--f_R-5--rmvc", ">=3.4.0, <=9.6.9"),
-            dep_req("-C-Ep-2Zw-8b_-_l", ">=5.7.2, <=5.8.0")]
+            dep_req("-A_B0x--aRz6-3__R6u--f_R-5--rmvc", ">=3.4.0, <=9.6.9")]
         ),
         pkg!(("-Ov-A_zyIy_E-216Dz__m67H--1UmU_3", "9.4.6") => [
             dep_req("-8E6S_M3Qy", ">=1.8.10, <=10.3.7"),
             dep_req("-A_B0x--aRz6-3__R6u--f_R-5--rmvc", "=3.4.0"),
-            dep_req("-C-Ep-2Zw-8b_-_l", ">=2.2.5, <=5.8.0"),
             dep_req("-O-3-r-e-9700q-vJE09H5X_P7", ">=1.1.5, <=6.3.8")]
         ),
         pkg!(("-Ov-A_zyIy_E-216Dz__m67H--1UmU_3", "10.0.1") => [
@@ -1105,8 +1067,7 @@ fn dont_yet_know_the_problem_2() {
         pkg!(("-Ov-A_zyIy_E-216Dz__m67H--1UmU_3", "10.4.5") => [
             dep_req("-3_FxaLyA_P0a6K-__915B_-UtU_", ">=0.6.4, <=2.10.6"),
             dep_req("-8E6S_M3Qy", ">=1.7.8, <=10.4.1"),
-            dep_req("-A_B0x--aRz6-3__R6u--f_R-5--rmvc", ">=3.4.0, <=9.6.9"),
-            dep_req("-C-Ep-2Zw-8b_-_l", ">=2.2.5, <=7.2.7")]
+            dep_req("-A_B0x--aRz6-3__R6u--f_R-5--rmvc", ">=3.4.0, <=9.6.9")]
         ),
         pkg!(("-Ov-A_zyIy_E-216Dz__m67H--1UmU_3", "10.5.10") => [
             dep_req("-O-3-r-e-9700q-vJE09H5X_P7", "=5.1.6")]
@@ -1116,1258 +1077,86 @@ fn dont_yet_know_the_problem_2() {
         ),
         pkg!(("-Tw9Qgx__r__X_E__JB____Qe-8", "5.8.3") => [
             dep_req("-3_FxaLyA_P0a6K-__915B_-UtU_", "=2.7.4"),
-            dep_req("-8E6S_M3Qy", ">=1.7.8, <=9.6.9"),
             dep_req("-A_B0x--aRz6-3__R6u--f_R-5--rmvc", "=3.4.0"),
             dep_req("-C-Ep-2Zw-8b_-_l", "=2.2.5"),
             dep_req("-Ov-A_zyIy_E-216Dz__m67H--1UmU_3", ">=3.8.10, <=9.4.6")]
         ),
-        pkg!(("-_6i2q4-_-q", "0.4.5") => [
-            dep_req("-8E6S_M3Qy", ">=2.2.1, <=9.6.9"),
-            dep_req("-C-Ep-2Zw-8b_-_l", ">=2.2.5, <=5.8.0"),
-            dep_req("-O-3-r-e-9700q-vJE09H5X_P7", ">=5.1.6, <=6.3.8")]
-        ),
-        pkg!(("-_6i2q4-_-q", "0.8.1") => [
-            dep_req("-8E6S_M3Qy", ">=1.0.2, <=1.7.8"),
-            dep_req("-C-Ep-2Zw-8b_-_l", ">=5.8.0, <=10.8.8"),
-            dep_req("-Ov-A_zyIy_E-216Dz__m67H--1UmU_3", "=0.7.0")]
-        ),
         pkg!(("-_6i2q4-_-q", "1.8.8") => [
-            dep_req("-3_FxaLyA_P0a6K-__915B_-UtU_", ">=0.6.4, <=9.0.4"),
-            dep_req("-8E6S_M3Qy", ">=1.0.2, <=10.4.1"),
-            dep_req("-C-Ep-2Zw-8b_-_l", ">=6.2.8, <=7.2.7"),
             dep_req("-Ov-A_zyIy_E-216Dz__m67H--1UmU_3", ">=9.4.6, <=10.0.1")]
         ),
-        pkg!(("-_6i2q4-_-q", "10.2.5") => [
-            dep_req("-3_FxaLyA_P0a6K-__915B_-UtU_", ">=2.7.4, <=3.4.8"),
-            dep_req("-A_B0x--aRz6-3__R6u--f_R-5--rmvc", ">=3.4.0, <=9.6.9"),
-            dep_req("-O-3-r-e-9700q-vJE09H5X_P7", "=6.10.9"),
-            dep_req("-Tw9Qgx__r__X_E__JB____Qe-8", ">=0.6.3, <=5.8.3")]
-        ),
+        pkg!(("-_6i2q4-_-q", "10.2.5")),
         pkg!(("-e__zm79_s_PM5-vkuZjq", "4.4.6") => [
-            dep_req("-3_FxaLyA_P0a6K-__915B_-UtU_", ">=3.4.8, <=6.3.6"),
             dep_req("-Ov-A_zyIy_E-216Dz__m67H--1UmU_3", ">=0.10.6, <=10.0.1")]
         ),
         pkg!(("-e__zm79_s_PM5-vkuZjq", "5.3.8") => [
-            dep_req("-3_FxaLyA_P0a6K-__915B_-UtU_", ">=2.10.6, <=6.3.6"),
-            dep_req("-8E6S_M3Qy", ">=0.9.9, <=1.7.8"),
-            dep_req("-C-Ep-2Zw-8b_-_l", ">=3.10.8, <=7.2.7"),
             dep_req("-O-3-r-e-9700q-vJE09H5X_P7", "=6.3.8"),
             dep_req("-Tw9Qgx__r__X_E__JB____Qe-8", "=5.8.3"),
             dep_req("-_6i2q4-_-q", ">=0.8.1, <=10.2.5")]
         ),
-        pkg!(("-e__zm79_s_PM5-vkuZjq", "5.8.2") => [
-            dep_req("-3_FxaLyA_P0a6K-__915B_-UtU_", ">=2.10.6, <=4.7.5"),
-            dep_req("-8E6S_M3Qy", ">=1.7.8, <=5.7.0"),
-            dep_req("-A_B0x--aRz6-3__R6u--f_R-5--rmvc", ">=3.4.0, <=9.6.9"),
-            dep_req("-O-3-r-e-9700q-vJE09H5X_P7", ">=5.1.6, <=6.3.8"),
-            dep_req("-Ov-A_zyIy_E-216Dz__m67H--1UmU_3", ">=10.0.1, <=10.5.10"),
-            dep_req("-_6i2q4-_-q", ">=1.8.8, <=10.2.5")]
-        ),
-        pkg!(("-e__zm79_s_PM5-vkuZjq", "6.0.6") => [
-            dep_req("-C-Ep-2Zw-8b_-_l", ">=2.2.5, <=6.2.8")]
-        ),
-        pkg!(("-e__zm79_s_PM5-vkuZjq", "9.4.6") => [
-            dep_req("-C-Ep-2Zw-8b_-_l", ">=3.10.8, <=10.8.8")]
-        ),
-        pkg!(("-e__zm79_s_PM5-vkuZjq", "9.10.3") => [
-            dep_req("-3_FxaLyA_P0a6K-__915B_-UtU_", "=2.7.4"),
-            dep_req("-A_B0x--aRz6-3__R6u--f_R-5--rmvc", "=9.6.9"),
-            dep_req("-C-Ep-2Zw-8b_-_l", "=5.7.2"),
-            dep_req("-Tw9Qgx__r__X_E__JB____Qe-8", "=0.6.3")]
-        ),
-        pkg!(("-f0j8__50Qf", "1.5.9") => [
-            dep_req("-O-3-r-e-9700q-vJE09H5X_P7", ">=1.1.5, <=6.10.9"),
-            dep_req("-Tw9Qgx__r__X_E__JB____Qe-8", "=5.8.3")]
-        ),
+        pkg!(("-e__zm79_s_PM5-vkuZjq", "9.4.6")),
         pkg!(("-f0j8__50Qf", "4.1.2") => [
-            dep_req("-3_FxaLyA_P0a6K-__915B_-UtU_", ">=2.7.4, <=2.10.6"),
-            dep_req("-8E6S_M3Qy", ">=2.2.1, <=9.6.9"),
-            dep_req("-A_B0x--aRz6-3__R6u--f_R-5--rmvc", ">=3.4.0, <=9.6.9"),
-            dep_req("-O-3-r-e-9700q-vJE09H5X_P7", "=6.10.9"),
-            dep_req("-Ov-A_zyIy_E-216Dz__m67H--1UmU_3", ">=8.7.4, <=10.5.10"),
-            dep_req("-Tw9Qgx__r__X_E__JB____Qe-8", "=5.8.3"),
-            dep_req("-_6i2q4-_-q", ">=0.4.5, <=0.8.1"),
-            dep_req("-e__zm79_s_PM5-vkuZjq", "=4.4.6")]
+            dep_req("-O-3-r-e-9700q-vJE09H5X_P7", "=6.10.9")]
         ),
-        pkg!(("-f0j8__50Qf", "5.5.6") => [
-            dep_req("-8E6S_M3Qy", ">=1.7.8, <=2.2.1"),
-            dep_req("-A_B0x--aRz6-3__R6u--f_R-5--rmvc", "=9.6.9"),
-            dep_req("-O-3-r-e-9700q-vJE09H5X_P7", ">=1.1.5, <=6.3.8"),
-            dep_req("-Tw9Qgx__r__X_E__JB____Qe-8", "=0.6.3"),
-            dep_req("-e__zm79_s_PM5-vkuZjq", "=6.0.6")]
-        ),
+        pkg!(("-f0j8__50Qf", "5.5.6")),
         pkg!(("-f0j8__50Qf", "5.6.10") => [
             dep_req("-e__zm79_s_PM5-vkuZjq", "=4.4.6")]
         ),
-        pkg!(("-f0j8__50Qf", "7.1.2") => [
-            dep_req("-3_FxaLyA_P0a6K-__915B_-UtU_", ">=2.10.6, <=6.3.6"),
-            dep_req("-8E6S_M3Qy", ">=2.2.1, <=10.3.7"),
-            dep_req("-A_B0x--aRz6-3__R6u--f_R-5--rmvc", "=3.4.0"),
-            dep_req("-C-Ep-2Zw-8b_-_l", "=3.10.8"),
-            dep_req("-O-3-r-e-9700q-vJE09H5X_P7", "=5.1.6"),
-            dep_req("-Ov-A_zyIy_E-216Dz__m67H--1UmU_3", ">=0.10.6, <=3.8.10"),
-            dep_req("-Tw9Qgx__r__X_E__JB____Qe-8", ">=0.6.3, <=5.8.3"),
-            dep_req("-_6i2q4-_-q", "=1.8.8"),
-            dep_req("-e__zm79_s_PM5-vkuZjq", "=9.4.6")]
-        ),
-        pkg!(("-f0j8__50Qf", "8.1.7") => [
-            dep_req("-8E6S_M3Qy", ">=2.2.1, <=9.6.9"),
-            dep_req("-A_B0x--aRz6-3__R6u--f_R-5--rmvc", ">=3.4.0, <=9.6.9"),
-            dep_req("-O-3-r-e-9700q-vJE09H5X_P7", "=1.1.5")]
-        ),
-        pkg!(("-f0j8__50Qf", "8.6.0") => [
-            dep_req("-3_FxaLyA_P0a6K-__915B_-UtU_", ">=2.7.4, <=4.7.5"),
-            dep_req("-A_B0x--aRz6-3__R6u--f_R-5--rmvc", ">=3.4.0, <=9.6.9"),
-            dep_req("-C-Ep-2Zw-8b_-_l", "=2.2.5"),
-            dep_req("-O-3-r-e-9700q-vJE09H5X_P7", ">=5.1.6, <=6.10.9"),
-            dep_req("-Ov-A_zyIy_E-216Dz__m67H--1UmU_3", ">=0.7.0, <=8.7.4"),
-            dep_req("-Tw9Qgx__r__X_E__JB____Qe-8", ">=0.6.3, <=5.8.3"),
-            dep_req("-_6i2q4-_-q", ">=1.8.8, <=10.2.5"),
-            dep_req("-e__zm79_s_PM5-vkuZjq", ">=5.3.8, <=6.0.6")]
-        ),
-        pkg!(("-f0j8__50Qf", "9.5.9") => [
-            dep_req("-C-Ep-2Zw-8b_-_l", ">=2.2.5, <=6.2.8"),
-            dep_req("-Tw9Qgx__r__X_E__JB____Qe-8", ">=0.6.3, <=5.8.3"),
-            dep_req("-e__zm79_s_PM5-vkuZjq", "=6.0.6")]
-        ),
-        pkg!(("-f0j8__50Qf", "10.1.8") => [
-            dep_req("bad", "=6.6.6")]
-        ),
-        pkg!(("-f0j8__50Qf", "10.5.3") => [
-            dep_req("-C-Ep-2Zw-8b_-_l", ">=5.7.2, <=10.8.8"),
-            dep_req("-Ov-A_zyIy_E-216Dz__m67H--1UmU_3", ">=0.10.6, <=9.4.6")]
-        ),
-        pkg!(("-kV_0_6nt", "1.2.9") => [
-            dep_req("-A_B0x--aRz6-3__R6u--f_R-5--rmvc", "=3.4.0"),
-            dep_req("-Ov-A_zyIy_E-216Dz__m67H--1UmU_3", ">=0.10.6, <=10.5.10"),
-            dep_req("-_6i2q4-_-q", ">=0.8.1, <=10.2.5"),
-            dep_req("-e__zm79_s_PM5-vkuZjq", ">=4.4.6, <=5.8.2"),
-            dep_req("-f0j8__50Qf", ">=7.1.2, <=8.1.7")]
-        ),
-        pkg!(("-kV_0_6nt", "3.1.4") => [
-            dep_req("-f0j8__50Qf", ">=5.6.10, <=10.5.3")]
-        ),
-        pkg!(("-kV_0_6nt", "3.9.1") => [
-            dep_req("-3_FxaLyA_P0a6K-__915B_-UtU_", ">=3.4.8, <=9.0.4"),
-            dep_req("-8E6S_M3Qy", ">=1.8.10, <=10.3.7"),
-            dep_req("-A_B0x--aRz6-3__R6u--f_R-5--rmvc", "=3.4.0"),
-            dep_req("-C-Ep-2Zw-8b_-_l", ">=6.2.8, <=7.2.7"),
-            dep_req("-O-3-r-e-9700q-vJE09H5X_P7", ">=5.1.6, <=6.10.9"),
-            dep_req("-Ov-A_zyIy_E-216Dz__m67H--1UmU_3", ">=9.4.6, <=10.5.10"),
-            dep_req("-Tw9Qgx__r__X_E__JB____Qe-8", ">=0.6.3, <=5.8.3"),
-            dep_req("-e__zm79_s_PM5-vkuZjq", ">=5.3.8, <=9.4.6"),
-            dep_req("-f0j8__50Qf", ">=5.5.6, <=8.6.0")]
-        ),
-        pkg!(("-kV_0_6nt", "5.4.9") => [
-            dep_req("-3_FxaLyA_P0a6K-__915B_-UtU_", ">=4.7.5, <=9.0.4"),
-            dep_req("-C-Ep-2Zw-8b_-_l", ">=2.2.5, <=3.10.8"),
-            dep_req("-O-3-r-e-9700q-vJE09H5X_P7", "=6.10.9"),
-            dep_req("-f0j8__50Qf", ">=5.6.10, <=8.1.7")]
-        ),
-        pkg!(("-kV_0_6nt", "5.9.1") => [
-            dep_req("-A_B0x--aRz6-3__R6u--f_R-5--rmvc", "=3.4.0"),
-            dep_req("-C-Ep-2Zw-8b_-_l", ">=2.2.5, <=7.2.7"),
-            dep_req("-_6i2q4-_-q", "=0.8.1")]
-        ),
-        pkg!(("-kV_0_6nt", "6.7.5")),
-        pkg!(("-kV_0_6nt", "7.8.9") => [
-            dep_req("-3_FxaLyA_P0a6K-__915B_-UtU_", ">=2.10.6, <=4.2.0"),
-            dep_req("-8E6S_M3Qy", ">=1.7.8, <=9.6.9"),
-            dep_req("-A_B0x--aRz6-3__R6u--f_R-5--rmvc", "=9.6.9"),
-            dep_req("-C-Ep-2Zw-8b_-_l", ">=2.2.5, <=6.2.8"),
-            dep_req("-O-3-r-e-9700q-vJE09H5X_P7", ">=5.1.6, <=6.3.8"),
-            dep_req("-Ov-A_zyIy_E-216Dz__m67H--1UmU_3", ">=0.10.6, <=10.4.5"),
-            dep_req("-Tw9Qgx__r__X_E__JB____Qe-8", "=0.6.3"),
-            dep_req("-_6i2q4-_-q", ">=0.8.1, <=10.2.5"),
-            dep_req("-e__zm79_s_PM5-vkuZjq", ">=6.0.6, <=9.10.3"),
-            dep_req("-f0j8__50Qf", ">=1.5.9, <=8.6.0")]
-        ),
         pkg!(("-zC6_m4Ye-D5v_Bwgq--J7mN5_IKf4O8-", "4.4.9") => [
-            dep_req("-8E6S_M3Qy", ">=0.9.9, <=2.2.1"),
-            dep_req("-C-Ep-2Zw-8b_-_l", ">=5.8.0, <=10.8.8"),
-            dep_req("-Ov-A_zyIy_E-216Dz__m67H--1UmU_3", ">=3.8.10, <=9.4.6"),
             dep_req("-Tw9Qgx__r__X_E__JB____Qe-8", "=0.6.3"),
-            dep_req("-e__zm79_s_PM5-vkuZjq", ">=5.3.8, <=9.4.6"),
-            dep_req("-f0j8__50Qf", ">=5.5.6, <=9.5.9")]
+            dep_req("-e__zm79_s_PM5-vkuZjq", ">=5.3.8, <=9.4.6")]
         ),
         pkg!(("-zC6_m4Ye-D5v_Bwgq--J7mN5_IKf4O8-", "6.5.3") => [
-            dep_req("-3_FxaLyA_P0a6K-__915B_-UtU_", ">=4.2.0, <=9.0.4"),
-            dep_req("-8E6S_M3Qy", ">=1.0.2, <=2.2.1"),
-            dep_req("-A_B0x--aRz6-3__R6u--f_R-5--rmvc", ">=3.4.0, <=9.6.9"),
-            dep_req("-C-Ep-2Zw-8b_-_l", ">=3.10.8, <=5.8.0"),
-            dep_req("-O-3-r-e-9700q-vJE09H5X_P7", "=6.10.9"),
-            dep_req("-Ov-A_zyIy_E-216Dz__m67H--1UmU_3", ">=0.7.0, <=10.5.10"),
-            dep_req("-Tw9Qgx__r__X_E__JB____Qe-8", "=5.8.3"),
-            dep_req("-_6i2q4-_-q", ">=0.8.1, <=1.8.8"),
-            dep_req("-e__zm79_s_PM5-vkuZjq", ">=5.8.2, <=9.10.3"),
-            dep_req("-f0j8__50Qf", ">=4.1.2, <=5.6.10"),
-            dep_req("-kV_0_6nt", "=6.7.5")]
-        ),
-        pkg!(("-zC6_m4Ye-D5v_Bwgq--J7mN5_IKf4O8-", "7.0.10") => [
-            dep_req("-8E6S_M3Qy", ">=9.6.9, <=10.4.1")]
-        ),
-        pkg!(("-zQs", "3.0.1") => [
-            dep_req("-3_FxaLyA_P0a6K-__915B_-UtU_", ">=2.7.4, <=4.7.5"),
-            dep_req("-C-Ep-2Zw-8b_-_l", ">=5.7.2, <=7.2.7")]
+            dep_req("-O-3-r-e-9700q-vJE09H5X_P7", "=6.10.9")]
         ),
         pkg!(("-zQs", "8.3.9") => [
-            dep_req("-3_FxaLyA_P0a6K-__915B_-UtU_", ">=2.10.6, <=6.3.6"),
-            dep_req("-8E6S_M3Qy", ">=1.0.2, <=5.7.0"),
-            dep_req("-Ov-A_zyIy_E-216Dz__m67H--1UmU_3", ">=9.4.6, <=10.0.1"),
             dep_req("-_6i2q4-_-q", ">=0.8.1, <=1.8.8"),
-            dep_req("-e__zm79_s_PM5-vkuZjq", ">=5.8.2, <=9.10.3"),
-            dep_req("-f0j8__50Qf", ">=5.5.6, <=8.1.7"),
-            dep_req("-kV_0_6nt", ">=3.9.1, <=5.4.9"),
             dep_req("-zC6_m4Ye-D5v_Bwgq--J7mN5_IKf4O8-", ">=4.4.9, <=6.5.3")]
         ),
-        pkg!(("AO_z_AZ_", "1.5.6") => [
-            dep_req("bad", "=6.6.6")]
-        ),
-        pkg!(("AO_z_AZ_", "1.9.10") => [
-            dep_req("-3_FxaLyA_P0a6K-__915B_-UtU_", ">=0.6.4, <=2.10.6"),
-            dep_req("-8E6S_M3Qy", "=1.0.2"),
-            dep_req("-A_B0x--aRz6-3__R6u--f_R-5--rmvc", ">=3.4.0, <=9.6.9"),
-            dep_req("-C-Ep-2Zw-8b_-_l", "=3.10.8"),
-            dep_req("-O-3-r-e-9700q-vJE09H5X_P7", ">=1.1.5, <=5.1.6"),
-            dep_req("-Tw9Qgx__r__X_E__JB____Qe-8", "=5.8.3"),
-            dep_req("-_6i2q4-_-q", "=0.8.1"),
-            dep_req("-e__zm79_s_PM5-vkuZjq", "=9.4.6"),
-            dep_req("-kV_0_6nt", ">=3.9.1, <=5.4.9"),
-            dep_req("-zC6_m4Ye-D5v_Bwgq--J7mN5_IKf4O8-", "=7.0.10"),
-            dep_req("-zQs", ">=3.0.1, <=8.3.9")]
-        ),
-        pkg!(("AO_z_AZ_", "4.0.8") => [
-            dep_req("-C-Ep-2Zw-8b_-_l", "=7.2.7"),
-            dep_req("-kV_0_6nt", ">=3.1.4, <=5.9.1")]
-        ),
-        pkg!(("AO_z_AZ_", "4.9.7") => [
-            dep_req("-3_FxaLyA_P0a6K-__915B_-UtU_", ">=2.10.6, <=9.0.4"),
-            dep_req("-8E6S_M3Qy", ">=1.0.2, <=10.4.1"),
-            dep_req("-A_B0x--aRz6-3__R6u--f_R-5--rmvc", ">=3.4.0, <=9.6.9"),
-            dep_req("-C-Ep-2Zw-8b_-_l", ">=7.2.7, <=10.8.8"),
-            dep_req("-Ov-A_zyIy_E-216Dz__m67H--1UmU_3", ">=8.7.4, <=10.4.5"),
-            dep_req("-Tw9Qgx__r__X_E__JB____Qe-8", ">=0.6.3, <=5.8.3"),
-            dep_req("-_6i2q4-_-q", ">=0.4.5, <=10.2.5"),
-            dep_req("-e__zm79_s_PM5-vkuZjq", ">=4.4.6, <=9.4.6"),
-            dep_req("-f0j8__50Qf", ">=8.1.7, <=8.6.0"),
-            dep_req("-kV_0_6nt", ">=5.4.9, <=5.9.1"),
-            dep_req("-zC6_m4Ye-D5v_Bwgq--J7mN5_IKf4O8-", "=7.0.10"),
-            dep_req("-zQs", ">=3.0.1, <=8.3.9")]
-        ),
-        pkg!(("AO_z_AZ_", "6.10.2") => [
-            dep_req("-3_FxaLyA_P0a6K-__915B_-UtU_", "=6.3.6"),
-            dep_req("-A_B0x--aRz6-3__R6u--f_R-5--rmvc", "=3.4.0"),
-            dep_req("-C-Ep-2Zw-8b_-_l", ">=3.10.8, <=6.2.8"),
-            dep_req("-O-3-r-e-9700q-vJE09H5X_P7", "=5.1.6"),
-            dep_req("-Ov-A_zyIy_E-216Dz__m67H--1UmU_3", ">=8.7.4, <=10.4.5"),
-            dep_req("-Tw9Qgx__r__X_E__JB____Qe-8", "=0.6.3"),
-            dep_req("-_6i2q4-_-q", "=1.8.8"),
-            dep_req("-e__zm79_s_PM5-vkuZjq", ">=4.4.6, <=9.4.6"),
-            dep_req("-f0j8__50Qf", ">=7.1.2, <=8.6.0"),
-            dep_req("-kV_0_6nt", ">=1.2.9, <=3.9.1"),
-            dep_req("-zC6_m4Ye-D5v_Bwgq--J7mN5_IKf4O8-", ">=4.4.9, <=7.0.10"),
-            dep_req("-zQs", ">=3.0.1, <=8.3.9")]
-        ),
-        pkg!(("AO_z_AZ_", "8.2.8") => [
-            dep_req("-3_FxaLyA_P0a6K-__915B_-UtU_", ">=0.6.4, <=2.10.6"),
-            dep_req("-8E6S_M3Qy", ">=1.8.10, <=2.2.1"),
-            dep_req("-A_B0x--aRz6-3__R6u--f_R-5--rmvc", "=3.4.0"),
-            dep_req("-C-Ep-2Zw-8b_-_l", ">=2.2.5, <=5.7.2"),
-            dep_req("-O-3-r-e-9700q-vJE09H5X_P7", ">=5.1.6, <=6.3.8"),
-            dep_req("-Ov-A_zyIy_E-216Dz__m67H--1UmU_3", "=9.4.6"),
-            dep_req("-Tw9Qgx__r__X_E__JB____Qe-8", "=5.8.3"),
-            dep_req("-_6i2q4-_-q", ">=0.8.1, <=10.2.5"),
-            dep_req("-e__zm79_s_PM5-vkuZjq", ">=5.8.2, <=6.0.6"),
-            dep_req("-f0j8__50Qf", ">=8.6.0, <=10.1.8"),
-            dep_req("-kV_0_6nt", ">=3.1.4, <=5.9.1"),
-            dep_req("-zC6_m4Ye-D5v_Bwgq--J7mN5_IKf4O8-", ">=4.4.9, <=6.5.3")]
-        ),
-        pkg!(("AO_z_AZ_", "9.0.5") => [
-            dep_req("-3_FxaLyA_P0a6K-__915B_-UtU_", ">=2.10.6, <=3.4.8"),
-            dep_req("-8E6S_M3Qy", ">=1.8.10, <=9.6.9"),
-            dep_req("-A_B0x--aRz6-3__R6u--f_R-5--rmvc", "=3.4.0"),
-            dep_req("-C-Ep-2Zw-8b_-_l", ">=2.2.5, <=5.8.0"),
-            dep_req("-O-3-r-e-9700q-vJE09H5X_P7", ">=1.1.5, <=5.1.6"),
-            dep_req("-_6i2q4-_-q", ">=1.8.8, <=10.2.5")]
-        ),
-        pkg!(("AO_z_AZ_", "9.0.9") => [
-            dep_req("-C-Ep-2Zw-8b_-_l", ">=2.2.5, <=6.2.8"),
-            dep_req("-kV_0_6nt", ">=3.9.1, <=5.4.9")]
-        ),
-        pkg!(("H40R--sg9rt_M_", "1.0.1")),
         pkg!(("HN_O_Oq-_X-p68Bcd---4MrF-gD-haqn", "0.9.0") => [
-            dep_req("-8E6S_M3Qy", ">=0.9.9, <=10.4.1"),
-            dep_req("-A_B0x--aRz6-3__R6u--f_R-5--rmvc", ">=3.4.0, <=9.6.9"),
-            dep_req("-O-3-r-e-9700q-vJE09H5X_P7", ">=1.1.5, <=5.1.6"),
-            dep_req("-Tw9Qgx__r__X_E__JB____Qe-8", "=5.8.3"),
-            dep_req("-zC6_m4Ye-D5v_Bwgq--J7mN5_IKf4O8-", "=6.5.3"),
-            dep_req("-zQs", ">=3.0.1, <=8.3.9")]
+            dep_req("-zC6_m4Ye-D5v_Bwgq--J7mN5_IKf4O8-", "=6.5.3")]
         ),
         pkg!(("HN_O_Oq-_X-p68Bcd---4MrF-gD-haqn", "0.9.3") => [
-            dep_req("-3_FxaLyA_P0a6K-__915B_-UtU_", "=4.2.0"),
-            dep_req("-8E6S_M3Qy", ">=1.0.2, <=1.8.10"),
-            dep_req("-A_B0x--aRz6-3__R6u--f_R-5--rmvc", "=3.4.0"),
-            dep_req("-C-Ep-2Zw-8b_-_l", ">=2.2.5, <=5.8.0"),
-            dep_req("-O-3-r-e-9700q-vJE09H5X_P7", "=6.3.8"),
-            dep_req("-Ov-A_zyIy_E-216Dz__m67H--1UmU_3", ">=10.4.5, <=10.5.10"),
-            dep_req("-Tw9Qgx__r__X_E__JB____Qe-8", ">=0.6.3, <=5.8.3"),
-            dep_req("-_6i2q4-_-q", ">=0.4.5, <=1.8.8"),
-            dep_req("-f0j8__50Qf", ">=7.1.2, <=10.1.8"),
-            dep_req("-zC6_m4Ye-D5v_Bwgq--J7mN5_IKf4O8-", "=7.0.10"),
-            dep_req("-zQs", "=3.0.1"),
-            dep_req("H40R--sg9rt_M_", "=1.0.1")]
+            dep_req("-Ov-A_zyIy_E-216Dz__m67H--1UmU_3", ">=10.4.5, <=10.5.10")]
         ),
-        pkg!(("HN_O_Oq-_X-p68Bcd---4MrF-gD-haqn", "2.5.7") => [
-            dep_req("-Tw9Qgx__r__X_E__JB____Qe-8", "=0.6.3"),
-            dep_req("-_6i2q4-_-q", ">=1.8.8, <=10.2.5"),
-            dep_req("-f0j8__50Qf", ">=5.5.6, <=10.1.8"),
-            dep_req("-kV_0_6nt", ">=5.4.9, <=7.8.9"),
-            dep_req("-zC6_m4Ye-D5v_Bwgq--J7mN5_IKf4O8-", "=6.5.3"),
-            dep_req("AO_z_AZ_", ">=8.2.8, <=9.0.9")]
-        ),
-        pkg!(("HN_O_Oq-_X-p68Bcd---4MrF-gD-haqn", "2.6.5") => [
-            dep_req("-A_B0x--aRz6-3__R6u--f_R-5--rmvc", "=9.6.9"),
-            dep_req("-C-Ep-2Zw-8b_-_l", ">=2.2.5, <=5.8.0")]
-        ),
-        pkg!(("HN_O_Oq-_X-p68Bcd---4MrF-gD-haqn", "2.10.7") => [
-            dep_req("-8E6S_M3Qy", ">=1.7.8, <=1.8.10"),
-            dep_req("-A_B0x--aRz6-3__R6u--f_R-5--rmvc", ">=3.4.0, <=9.6.9"),
-            dep_req("-C-Ep-2Zw-8b_-_l", ">=2.2.5, <=5.7.2"),
-            dep_req("-Tw9Qgx__r__X_E__JB____Qe-8", ">=0.6.3, <=5.8.3"),
-            dep_req("-f0j8__50Qf", "=8.6.0"),
-            dep_req("-kV_0_6nt", ">=3.1.4, <=5.9.1"),
-            dep_req("AO_z_AZ_", ">=1.5.6, <=8.2.8")]
-        ),
-        pkg!(("HN_O_Oq-_X-p68Bcd---4MrF-gD-haqn", "4.3.4") => [
-            dep_req("-A_B0x--aRz6-3__R6u--f_R-5--rmvc", "=3.4.0"),
-            dep_req("-O-3-r-e-9700q-vJE09H5X_P7", ">=6.3.8, <=6.10.9"),
-            dep_req("-Ov-A_zyIy_E-216Dz__m67H--1UmU_3", ">=3.8.10, <=8.7.4"),
-            dep_req("-e__zm79_s_PM5-vkuZjq", ">=6.0.6, <=9.10.3"),
-            dep_req("-zQs", "=3.0.1")]
-        ),
-        pkg!(("HN_O_Oq-_X-p68Bcd---4MrF-gD-haqn", "5.8.1") => [
-            dep_req("-8E6S_M3Qy", ">=5.7.0, <=10.3.7"),
-            dep_req("-A_B0x--aRz6-3__R6u--f_R-5--rmvc", ">=3.4.0, <=9.6.9"),
-            dep_req("-C-Ep-2Zw-8b_-_l", ">=5.8.0, <=6.2.8"),
-            dep_req("-Ov-A_zyIy_E-216Dz__m67H--1UmU_3", ">=10.0.1, <=10.5.10"),
-            dep_req("-_6i2q4-_-q", ">=0.8.1, <=1.8.8"),
-            dep_req("-e__zm79_s_PM5-vkuZjq", ">=4.4.6, <=9.4.6"),
-            dep_req("-kV_0_6nt", "=5.9.1"),
-            dep_req("-zC6_m4Ye-D5v_Bwgq--J7mN5_IKf4O8-", ">=6.5.3, <=7.0.10"),
-            dep_req("-zQs", "=3.0.1"),
-            dep_req("AO_z_AZ_", ">=8.2.8, <=9.0.5"),
-            dep_req("H40R--sg9rt_M_", "=1.0.1")]
-        ),
-        pkg!(("HN_O_Oq-_X-p68Bcd---4MrF-gD-haqn", "7.7.9") => [
-            dep_req("-C-Ep-2Zw-8b_-_l", "=7.2.7")]
-        ),
-        pkg!(("HN_O_Oq-_X-p68Bcd---4MrF-gD-haqn", "8.2.1") => [
-            dep_req("-3_FxaLyA_P0a6K-__915B_-UtU_", "=0.6.4"),
-            dep_req("-8E6S_M3Qy", ">=9.6.9, <=10.4.1"),
-            dep_req("-A_B0x--aRz6-3__R6u--f_R-5--rmvc", "=3.4.0"),
-            dep_req("-C-Ep-2Zw-8b_-_l", ">=2.2.5, <=6.2.8"),
-            dep_req("-O-3-r-e-9700q-vJE09H5X_P7", ">=5.1.6, <=6.3.8"),
-            dep_req("-Ov-A_zyIy_E-216Dz__m67H--1UmU_3", ">=0.7.0, <=0.10.6"),
-            dep_req("-e__zm79_s_PM5-vkuZjq", ">=5.8.2, <=9.4.6"),
-            dep_req("-f0j8__50Qf", "=5.6.10"),
-            dep_req("-zC6_m4Ye-D5v_Bwgq--J7mN5_IKf4O8-", ">=6.5.3, <=7.0.10"),
-            dep_req("-zQs", "=3.0.1"),
-            dep_req("AO_z_AZ_", ">=6.10.2, <=9.0.9"),
-            dep_req("H40R--sg9rt_M_", "=1.0.1")]
-        ),
-        pkg!(("I8-uW", "1.6.10") => [
-            dep_req("-3_FxaLyA_P0a6K-__915B_-UtU_", ">=4.7.5, <=9.0.4"),
-            dep_req("-8E6S_M3Qy", ">=1.7.8, <=10.4.1"),
-            dep_req("-A_B0x--aRz6-3__R6u--f_R-5--rmvc", ">=3.4.0, <=9.6.9"),
-            dep_req("-C-Ep-2Zw-8b_-_l", ">=7.2.7, <=10.8.8"),
-            dep_req("-O-3-r-e-9700q-vJE09H5X_P7", ">=1.1.5, <=6.3.8"),
-            dep_req("-Ov-A_zyIy_E-216Dz__m67H--1UmU_3", ">=0.10.6, <=3.8.10"),
-            dep_req("-Tw9Qgx__r__X_E__JB____Qe-8", ">=0.6.3, <=5.8.3"),
-            dep_req("-_6i2q4-_-q", "=10.2.5"),
-            dep_req("-e__zm79_s_PM5-vkuZjq", ">=5.8.2, <=9.10.3"),
-            dep_req("-f0j8__50Qf", "=10.5.3"),
-            dep_req("-kV_0_6nt", ">=1.2.9, <=3.9.1"),
-            dep_req("-zC6_m4Ye-D5v_Bwgq--J7mN5_IKf4O8-", ">=6.5.3, <=7.0.10"),
-            dep_req("-zQs", ">=3.0.1, <=8.3.9"),
-            dep_req("AO_z_AZ_", ">=4.0.8, <=9.0.5"),
-            dep_req("HN_O_Oq-_X-p68Bcd---4MrF-gD-haqn", ">=2.5.7, <=8.2.1")]
-        ),
-        pkg!(("I8-uW", "2.2.0") => [
-            dep_req("-8E6S_M3Qy", ">=1.8.10, <=2.2.1"),
-            dep_req("-A_B0x--aRz6-3__R6u--f_R-5--rmvc", ">=3.4.0, <=9.6.9"),
-            dep_req("-C-Ep-2Zw-8b_-_l", "=7.2.7"),
-            dep_req("-_6i2q4-_-q", ">=1.8.8, <=10.2.5"),
-            dep_req("-f0j8__50Qf", ">=5.6.10, <=10.5.3"),
-            dep_req("-zQs", "=3.0.1"),
-            dep_req("H40R--sg9rt_M_", "=1.0.1")]
-        ),
-        pkg!(("I8-uW", "3.5.3") => [
-            dep_req("-8E6S_M3Qy", ">=1.0.2, <=1.8.10"),
-            dep_req("-C-Ep-2Zw-8b_-_l", ">=2.2.5, <=7.2.7"),
-            dep_req("-O-3-r-e-9700q-vJE09H5X_P7", ">=5.1.6, <=6.3.8"),
-            dep_req("-Ov-A_zyIy_E-216Dz__m67H--1UmU_3", ">=0.7.0, <=10.5.10"),
-            dep_req("-Tw9Qgx__r__X_E__JB____Qe-8", "=5.8.3"),
-            dep_req("-kV_0_6nt", ">=3.1.4, <=3.9.1"),
-            dep_req("-zC6_m4Ye-D5v_Bwgq--J7mN5_IKf4O8-", ">=6.5.3, <=7.0.10"),
-            dep_req("-zQs", ">=3.0.1, <=8.3.9"),
-            dep_req("AO_z_AZ_", ">=1.5.6, <=9.0.5"),
-            dep_req("H40R--sg9rt_M_", "=1.0.1")]
-        ),
-        pkg!(("I8-uW", "4.5.2") => [
-            dep_req("-8E6S_M3Qy", ">=5.7.0, <=10.3.7"),
-            dep_req("-O-3-r-e-9700q-vJE09H5X_P7", ">=5.1.6, <=6.3.8"),
-            dep_req("-Ov-A_zyIy_E-216Dz__m67H--1UmU_3", ">=10.0.1, <=10.5.10"),
-            dep_req("-Tw9Qgx__r__X_E__JB____Qe-8", "=5.8.3"),
-            dep_req("-e__zm79_s_PM5-vkuZjq", ">=4.4.6, <=9.10.3"),
-            dep_req("-f0j8__50Qf", ">=1.5.9, <=7.1.2"),
-            dep_req("HN_O_Oq-_X-p68Bcd---4MrF-gD-haqn", ">=2.6.5, <=8.2.1")]
-        ),
-        pkg!(("I8-uW", "4.6.7") => [
-            dep_req("-C-Ep-2Zw-8b_-_l", ">=3.10.8, <=6.2.8"),
-            dep_req("-kV_0_6nt", ">=1.2.9, <=7.8.9"),
-            dep_req("-zQs", "=3.0.1"),
-            dep_req("AO_z_AZ_", ">=1.5.6, <=6.10.2")]
-        ),
-        pkg!(("I8-uW", "5.7.7") => [
-            dep_req("-3_FxaLyA_P0a6K-__915B_-UtU_", ">=0.6.4, <=4.7.5"),
-            dep_req("-8E6S_M3Qy", ">=1.0.2, <=9.6.9"),
-            dep_req("-A_B0x--aRz6-3__R6u--f_R-5--rmvc", ">=3.4.0, <=9.6.9"),
-            dep_req("-C-Ep-2Zw-8b_-_l", ">=5.7.2, <=6.2.8"),
-            dep_req("-O-3-r-e-9700q-vJE09H5X_P7", ">=1.1.5, <=6.10.9"),
-            dep_req("-Ov-A_zyIy_E-216Dz__m67H--1UmU_3", ">=8.7.4, <=10.0.1"),
-            dep_req("-_6i2q4-_-q", ">=0.4.5, <=0.8.1"),
-            dep_req("-e__zm79_s_PM5-vkuZjq", ">=4.4.6, <=5.3.8"),
-            dep_req("-f0j8__50Qf", ">=4.1.2, <=5.6.10"),
-            dep_req("-kV_0_6nt", ">=5.4.9, <=6.7.5"),
-            dep_req("-zC6_m4Ye-D5v_Bwgq--J7mN5_IKf4O8-", "=6.5.3"),
-            dep_req("-zQs", "=8.3.9"),
-            dep_req("AO_z_AZ_", ">=4.0.8, <=8.2.8"),
-            dep_req("H40R--sg9rt_M_", "=1.0.1")]
-        ),
-        pkg!(("I8-uW", "6.10.3") => [
-            dep_req("-A_B0x--aRz6-3__R6u--f_R-5--rmvc", "=3.4.0"),
-            dep_req("-O-3-r-e-9700q-vJE09H5X_P7", ">=1.1.5, <=5.1.6")]
-        ),
-        pkg!(("I8-uW", "8.1.4") => [
-            dep_req("-A_B0x--aRz6-3__R6u--f_R-5--rmvc", ">=3.4.0, <=9.6.9"),
-            dep_req("-C-Ep-2Zw-8b_-_l", ">=5.8.0, <=10.8.8"),
-            dep_req("-Ov-A_zyIy_E-216Dz__m67H--1UmU_3", ">=10.4.5, <=10.5.10"),
-            dep_req("-Tw9Qgx__r__X_E__JB____Qe-8", ">=0.6.3, <=5.8.3"),
-            dep_req("-kV_0_6nt", ">=5.4.9, <=6.7.5"),
-            dep_req("HN_O_Oq-_X-p68Bcd---4MrF-gD-haqn", ">=2.10.7, <=8.2.1")]
-        ),
-        pkg!(("I8-uW", "10.10.2") => [
-            dep_req("-8E6S_M3Qy", ">=9.6.9, <=10.3.7"),
-            dep_req("-_6i2q4-_-q", ">=0.4.5, <=0.8.1"),
-            dep_req("-zQs", ">=3.0.1, <=8.3.9"),
-            dep_req("H40R--sg9rt_M_", "=1.0.1")]
-        ),
-        pkg!(("IkNt5XT2-", "10.5.0") => [
-            dep_req("-Tw9Qgx__r__X_E__JB____Qe-8", "=5.8.3"),
-            dep_req("-_6i2q4-_-q", ">=0.4.5, <=1.8.8"),
-            dep_req("AO_z_AZ_", ">=9.0.5, <=9.0.9"),
-            dep_req("I8-uW", ">=4.5.2, <=5.7.7")]
-        ),
-        pkg!(("Ne2wKI0k19N--w0_kwki02_B9", "1.0.3") => [
-            dep_req("-8E6S_M3Qy", ">=1.7.8, <=9.6.9"),
-            dep_req("-A_B0x--aRz6-3__R6u--f_R-5--rmvc", ">=3.4.0, <=9.6.9"),
-            dep_req("-C-Ep-2Zw-8b_-_l", ">=2.2.5, <=6.2.8"),
-            dep_req("-O-3-r-e-9700q-vJE09H5X_P7", ">=6.3.8, <=6.10.9"),
-            dep_req("-Ov-A_zyIy_E-216Dz__m67H--1UmU_3", ">=0.7.0, <=3.8.10"),
-            dep_req("-e__zm79_s_PM5-vkuZjq", ">=9.4.6, <=9.10.3"),
-            dep_req("-zC6_m4Ye-D5v_Bwgq--J7mN5_IKf4O8-", ">=4.4.9, <=6.5.3"),
-            dep_req("-zQs", ">=3.0.1, <=8.3.9"),
-            dep_req("AO_z_AZ_", ">=1.9.10, <=4.0.8"),
-            dep_req("HN_O_Oq-_X-p68Bcd---4MrF-gD-haqn", ">=2.10.7, <=8.2.1"),
-            dep_req("I8-uW", ">=1.6.10, <=3.5.3"),
-            dep_req("IkNt5XT2-", "=10.5.0")]
-        ),
+        pkg!(("Ne2wKI0k19N--w0_kwki02_B9", "1.0.3")),
         pkg!(("Ne2wKI0k19N--w0_kwki02_B9", "4.9.10") => [
             dep_req("-A_B0x--aRz6-3__R6u--f_R-5--rmvc", ">=3.4.0, <=9.6.9")]
         ),
-        pkg!(("Ne2wKI0k19N--w0_kwki02_B9", "8.0.1") => [
-            dep_req("-3_FxaLyA_P0a6K-__915B_-UtU_", ">=4.7.5, <=9.0.4"),
-            dep_req("-A_B0x--aRz6-3__R6u--f_R-5--rmvc", "=3.4.0"),
-            dep_req("-Ov-A_zyIy_E-216Dz__m67H--1UmU_3", ">=0.7.0, <=9.4.6"),
-            dep_req("-Tw9Qgx__r__X_E__JB____Qe-8", "=0.6.3"),
-            dep_req("-_6i2q4-_-q", "=0.8.1"),
-            dep_req("-e__zm79_s_PM5-vkuZjq", ">=5.8.2, <=9.10.3"),
-            dep_req("-f0j8__50Qf", ">=5.5.6, <=7.1.2"),
-            dep_req("-kV_0_6nt", ">=5.9.1, <=6.7.5"),
-            dep_req("AO_z_AZ_", ">=4.0.8, <=6.10.2"),
-            dep_req("H40R--sg9rt_M_", "=1.0.1"),
-            dep_req("IkNt5XT2-", "=10.5.0")]
-        ),
+        pkg!(("Ne2wKI0k19N--w0_kwki02_B9", "8.0.1")),
         pkg!(("Ne2wKI0k19N--w0_kwki02_B9", "8.8.1") => [
-            dep_req("-C-Ep-2Zw-8b_-_l", ">=5.8.0, <=6.2.8"),
             dep_req("HN_O_Oq-_X-p68Bcd---4MrF-gD-haqn", ">=0.9.0, <=0.9.3")]
         ),
-        pkg!(("Uw-B_-3_", "4.5.7") => [
-            dep_req("-A_B0x--aRz6-3__R6u--f_R-5--rmvc", ">=3.4.0, <=9.6.9"),
-            dep_req("-C-Ep-2Zw-8b_-_l", ">=6.2.8, <=10.8.8"),
-            dep_req("HN_O_Oq-_X-p68Bcd---4MrF-gD-haqn", ">=2.6.5, <=7.7.9")]
-        ),
-        pkg!(("Ze-4-Lh4v", "0.4.10") => [
-            dep_req("-3_FxaLyA_P0a6K-__915B_-UtU_", ">=3.4.8, <=4.7.5"),
-            dep_req("-A_B0x--aRz6-3__R6u--f_R-5--rmvc", "=9.6.9"),
-            dep_req("-C-Ep-2Zw-8b_-_l", ">=2.2.5, <=7.2.7"),
-            dep_req("-O-3-r-e-9700q-vJE09H5X_P7", ">=6.3.8, <=6.10.9"),
-            dep_req("-Ov-A_zyIy_E-216Dz__m67H--1UmU_3", ">=0.7.0, <=8.7.4"),
-            dep_req("-Tw9Qgx__r__X_E__JB____Qe-8", "=0.6.3"),
-            dep_req("-_6i2q4-_-q", ">=0.4.5, <=0.8.1"),
-            dep_req("-e__zm79_s_PM5-vkuZjq", ">=5.3.8, <=9.10.3"),
-            dep_req("-f0j8__50Qf", ">=9.5.9, <=10.5.3"),
-            dep_req("-kV_0_6nt", ">=6.7.5, <=7.8.9"),
-            dep_req("-zC6_m4Ye-D5v_Bwgq--J7mN5_IKf4O8-", ">=6.5.3, <=7.0.10"),
-            dep_req("-zQs", "=8.3.9"),
-            dep_req("AO_z_AZ_", ">=8.2.8, <=9.0.9"),
-            dep_req("HN_O_Oq-_X-p68Bcd---4MrF-gD-haqn", ">=2.5.7, <=7.7.9"),
-            dep_req("I8-uW", ">=2.2.0, <=8.1.4"),
-            dep_req("IkNt5XT2-", "=10.5.0"),
-            dep_req("Ne2wKI0k19N--w0_kwki02_B9", ">=4.9.10, <=8.8.1"),
-            dep_req("Uw-B_-3_", "=4.5.7")]
-        ),
-        pkg!(("Ze-4-Lh4v", "2.6.4") => [
-            dep_req("-3_FxaLyA_P0a6K-__915B_-UtU_", "=2.7.4"),
-            dep_req("-8E6S_M3Qy", ">=2.2.1, <=5.7.0"),
-            dep_req("-A_B0x--aRz6-3__R6u--f_R-5--rmvc", "=3.4.0"),
-            dep_req("-C-Ep-2Zw-8b_-_l", "=5.7.2"),
-            dep_req("-O-3-r-e-9700q-vJE09H5X_P7", ">=1.1.5, <=5.1.6"),
-            dep_req("-Ov-A_zyIy_E-216Dz__m67H--1UmU_3", ">=9.4.6, <=10.5.10"),
-            dep_req("-_6i2q4-_-q", ">=0.4.5, <=0.8.1"),
-            dep_req("-e__zm79_s_PM5-vkuZjq", ">=5.3.8, <=6.0.6"),
-            dep_req("-f0j8__50Qf", ">=5.6.10, <=7.1.2"),
-            dep_req("-kV_0_6nt", ">=3.1.4, <=7.8.9"),
-            dep_req("-zC6_m4Ye-D5v_Bwgq--J7mN5_IKf4O8-", ">=4.4.9, <=7.0.10"),
-            dep_req("-zQs", "=3.0.1"),
-            dep_req("H40R--sg9rt_M_", "=1.0.1"),
-            dep_req("I8-uW", ">=4.5.2, <=4.6.7"),
-            dep_req("IkNt5XT2-", "=10.5.0"),
-            dep_req("Uw-B_-3_", "=4.5.7")]
-        ),
-        pkg!(("Ze-4-Lh4v", "3.4.9") => [
-            dep_req("-3_FxaLyA_P0a6K-__915B_-UtU_", "=2.7.4"),
-            dep_req("-8E6S_M3Qy", ">=1.0.2, <=1.8.10"),
-            dep_req("-C-Ep-2Zw-8b_-_l", ">=3.10.8, <=5.8.0"),
-            dep_req("-O-3-r-e-9700q-vJE09H5X_P7", "=6.10.9"),
-            dep_req("-Ov-A_zyIy_E-216Dz__m67H--1UmU_3", ">=3.8.10, <=10.4.5"),
-            dep_req("-Tw9Qgx__r__X_E__JB____Qe-8", ">=0.6.3, <=5.8.3"),
-            dep_req("-e__zm79_s_PM5-vkuZjq", "=6.0.6"),
-            dep_req("-f0j8__50Qf", ">=4.1.2, <=7.1.2"),
-            dep_req("-kV_0_6nt", ">=3.9.1, <=6.7.5"),
-            dep_req("-zC6_m4Ye-D5v_Bwgq--J7mN5_IKf4O8-", ">=4.4.9, <=7.0.10"),
-            dep_req("-zQs", ">=3.0.1, <=8.3.9"),
-            dep_req("H40R--sg9rt_M_", "=1.0.1"),
-            dep_req("HN_O_Oq-_X-p68Bcd---4MrF-gD-haqn", ">=2.6.5, <=8.2.1"),
-            dep_req("I8-uW", ">=1.6.10, <=5.7.7"),
-            dep_req("IkNt5XT2-", "=10.5.0")]
-        ),
-        pkg!(("Ze-4-Lh4v", "5.5.5") => [
-            dep_req("-3_FxaLyA_P0a6K-__915B_-UtU_", ">=0.6.4, <=4.7.5"),
-            dep_req("-8E6S_M3Qy", ">=0.9.9, <=1.0.2"),
-            dep_req("-C-Ep-2Zw-8b_-_l", ">=2.2.5, <=7.2.7"),
-            dep_req("-Tw9Qgx__r__X_E__JB____Qe-8", "=0.6.3"),
-            dep_req("-e__zm79_s_PM5-vkuZjq", ">=4.4.6, <=5.3.8"),
-            dep_req("-f0j8__50Qf", ">=8.1.7, <=8.6.0"),
-            dep_req("I8-uW", ">=3.5.3, <=8.1.4")]
-        ),
-        pkg!(("Ze-4-Lh4v", "6.5.8") => [
-            dep_req("-3_FxaLyA_P0a6K-__915B_-UtU_", ">=4.7.5, <=6.3.6"),
-            dep_req("-C-Ep-2Zw-8b_-_l", ">=2.2.5, <=5.8.0"),
-            dep_req("-Ov-A_zyIy_E-216Dz__m67H--1UmU_3", ">=0.10.6, <=8.7.4"),
-            dep_req("-e__zm79_s_PM5-vkuZjq", "=9.4.6"),
-            dep_req("-kV_0_6nt", ">=5.4.9, <=5.9.1"),
-            dep_req("-zC6_m4Ye-D5v_Bwgq--J7mN5_IKf4O8-", ">=4.4.9, <=6.5.3"),
-            dep_req("-zQs", "=3.0.1"),
-            dep_req("AO_z_AZ_", ">=1.5.6, <=6.10.2"),
-            dep_req("HN_O_Oq-_X-p68Bcd---4MrF-gD-haqn", ">=0.9.0, <=2.5.7"),
-            dep_req("IkNt5XT2-", "=10.5.0"),
-            dep_req("Ne2wKI0k19N--w0_kwki02_B9", ">=4.9.10, <=8.0.1"),
-            dep_req("Uw-B_-3_", "=4.5.7")]
-        ),
-        pkg!(("Ze-4-Lh4v", "7.0.5") => [
-            dep_req("-8E6S_M3Qy", ">=0.9.9, <=10.4.1"),
-            dep_req("-A_B0x--aRz6-3__R6u--f_R-5--rmvc", "=3.4.0"),
-            dep_req("-C-Ep-2Zw-8b_-_l", ">=5.7.2, <=7.2.7"),
-            dep_req("-O-3-r-e-9700q-vJE09H5X_P7", ">=1.1.5, <=6.3.8"),
-            dep_req("-Ov-A_zyIy_E-216Dz__m67H--1UmU_3", ">=9.4.6, <=10.4.5"),
-            dep_req("-e__zm79_s_PM5-vkuZjq", ">=6.0.6, <=9.10.3"),
-            dep_req("-kV_0_6nt", ">=3.9.1, <=7.8.9"),
-            dep_req("-zQs", "=8.3.9"),
-            dep_req("AO_z_AZ_", ">=6.10.2, <=8.2.8"),
-            dep_req("I8-uW", ">=3.5.3, <=4.6.7"),
-            dep_req("IkNt5XT2-", "=10.5.0"),
-            dep_req("Ne2wKI0k19N--w0_kwki02_B9", ">=8.0.1, <=8.8.1")]
-        ),
-        pkg!(("Ze-4-Lh4v", "10.0.7") => [
-            dep_req("-8E6S_M3Qy", ">=2.2.1, <=5.7.0"),
-            dep_req("-C-Ep-2Zw-8b_-_l", ">=3.10.8, <=5.7.2"),
-            dep_req("-Ov-A_zyIy_E-216Dz__m67H--1UmU_3", ">=9.4.6, <=10.0.1"),
-            dep_req("-Tw9Qgx__r__X_E__JB____Qe-8", ">=0.6.3, <=5.8.3"),
-            dep_req("-f0j8__50Qf", ">=5.5.6, <=7.1.2"),
-            dep_req("-kV_0_6nt", ">=3.9.1, <=5.9.1"),
-            dep_req("-zQs", ">=3.0.1, <=8.3.9"),
-            dep_req("HN_O_Oq-_X-p68Bcd---4MrF-gD-haqn", ">=5.8.1, <=7.7.9")]
-        ),
-        pkg!(("Ze-4-Lh4v", "10.10.3") => [
-            dep_req("-3_FxaLyA_P0a6K-__915B_-UtU_", ">=0.6.4, <=2.10.6"),
-            dep_req("-A_B0x--aRz6-3__R6u--f_R-5--rmvc", "=9.6.9"),
-            dep_req("-Ov-A_zyIy_E-216Dz__m67H--1UmU_3", "=10.0.1"),
-            dep_req("-Tw9Qgx__r__X_E__JB____Qe-8", ">=0.6.3, <=5.8.3"),
-            dep_req("-e__zm79_s_PM5-vkuZjq", ">=5.8.2, <=9.4.6"),
-            dep_req("-f0j8__50Qf", "=1.5.9"),
-            dep_req("-kV_0_6nt", "=3.9.1"),
-            dep_req("H40R--sg9rt_M_", "=1.0.1"),
-            dep_req("IkNt5XT2-", "=10.5.0"),
-            dep_req("Uw-B_-3_", "=4.5.7")]
-        ),
-        pkg!(("_-_l5Dj_08vgI-", "0.0.4") => [
-            dep_req("-3_FxaLyA_P0a6K-__915B_-UtU_", ">=3.4.8, <=9.0.4"),
-            dep_req("-A_B0x--aRz6-3__R6u--f_R-5--rmvc", ">=3.4.0, <=9.6.9"),
-            dep_req("-Tw9Qgx__r__X_E__JB____Qe-8", ">=0.6.3, <=5.8.3"),
-            dep_req("-_6i2q4-_-q", ">=0.4.5, <=10.2.5"),
-            dep_req("-e__zm79_s_PM5-vkuZjq", ">=5.8.2, <=9.4.6"),
-            dep_req("AO_z_AZ_", ">=1.5.6, <=8.2.8")]
-        ),
-        pkg!(("_-_l5Dj_08vgI-", "2.1.3") => [
-            dep_req("-3_FxaLyA_P0a6K-__915B_-UtU_", "=4.7.5"),
-            dep_req("-8E6S_M3Qy", ">=1.7.8, <=2.2.1"),
-            dep_req("-A_B0x--aRz6-3__R6u--f_R-5--rmvc", "=3.4.0"),
-            dep_req("-C-Ep-2Zw-8b_-_l", ">=3.10.8, <=10.8.8"),
-            dep_req("-O-3-r-e-9700q-vJE09H5X_P7", "=6.3.8"),
-            dep_req("-Ov-A_zyIy_E-216Dz__m67H--1UmU_3", ">=3.8.10, <=9.4.6"),
-            dep_req("-Tw9Qgx__r__X_E__JB____Qe-8", "=0.6.3"),
-            dep_req("-e__zm79_s_PM5-vkuZjq", ">=4.4.6, <=6.0.6"),
-            dep_req("-f0j8__50Qf", ">=10.1.8, <=10.5.3"),
-            dep_req("-kV_0_6nt", ">=5.9.1, <=7.8.9"),
-            dep_req("-zC6_m4Ye-D5v_Bwgq--J7mN5_IKf4O8-", "=4.4.9"),
-            dep_req("-zQs", "=3.0.1"),
-            dep_req("HN_O_Oq-_X-p68Bcd---4MrF-gD-haqn", ">=2.6.5, <=7.7.9"),
-            dep_req("IkNt5XT2-", "=10.5.0"),
-            dep_req("Ne2wKI0k19N--w0_kwki02_B9", ">=4.9.10, <=8.8.1"),
-            dep_req("Uw-B_-3_", "=4.5.7"),
-            dep_req("Ze-4-Lh4v", ">=2.6.4, <=6.5.8")]
-        ),
-        pkg!(("_-_l5Dj_08vgI-", "6.6.2") => [
-            dep_req("bad", "=6.6.6")]
-        ),
-        pkg!(("_-_l5Dj_08vgI-", "7.8.1") => [
-            dep_req("-3_FxaLyA_P0a6K-__915B_-UtU_", ">=2.10.6, <=3.4.8"),
-            dep_req("-8E6S_M3Qy", ">=1.7.8, <=1.8.10"),
-            dep_req("-O-3-r-e-9700q-vJE09H5X_P7", "=6.3.8"),
-            dep_req("-zC6_m4Ye-D5v_Bwgq--J7mN5_IKf4O8-", "=6.5.3"),
-            dep_req("I8-uW", "=5.7.7")]
-        ),
-        pkg!(("_-_l5Dj_08vgI-", "7.8.10") => [
-            dep_req("-3_FxaLyA_P0a6K-__915B_-UtU_", ">=0.6.4, <=2.7.4"),
-            dep_req("-8E6S_M3Qy", "=10.3.7"),
-            dep_req("-A_B0x--aRz6-3__R6u--f_R-5--rmvc", ">=3.4.0, <=9.6.9"),
-            dep_req("-C-Ep-2Zw-8b_-_l", ">=2.2.5, <=7.2.7"),
-            dep_req("-O-3-r-e-9700q-vJE09H5X_P7", ">=6.3.8, <=6.10.9"),
-            dep_req("-Ov-A_zyIy_E-216Dz__m67H--1UmU_3", ">=9.4.6, <=10.4.5"),
-            dep_req("-Tw9Qgx__r__X_E__JB____Qe-8", ">=0.6.3, <=5.8.3"),
-            dep_req("-_6i2q4-_-q", ">=0.8.1, <=10.2.5"),
-            dep_req("-e__zm79_s_PM5-vkuZjq", ">=5.8.2, <=9.4.6"),
-            dep_req("-f0j8__50Qf", "=8.1.7"),
-            dep_req("-kV_0_6nt", ">=3.1.4, <=6.7.5"),
-            dep_req("-zC6_m4Ye-D5v_Bwgq--J7mN5_IKf4O8-", ">=4.4.9, <=7.0.10"),
-            dep_req("-zQs", ">=3.0.1, <=8.3.9"),
-            dep_req("AO_z_AZ_", ">=8.2.8, <=9.0.9"),
-            dep_req("H40R--sg9rt_M_", "=1.0.1"),
-            dep_req("HN_O_Oq-_X-p68Bcd---4MrF-gD-haqn", ">=2.10.7, <=4.3.4"),
-            dep_req("I8-uW", ">=4.6.7, <=5.7.7"),
-            dep_req("IkNt5XT2-", "=10.5.0"),
-            dep_req("Ne2wKI0k19N--w0_kwki02_B9", "=1.0.3"),
-            dep_req("Uw-B_-3_", "=4.5.7"),
-            dep_req("Ze-4-Lh4v", ">=0.4.10, <=7.0.5")]
-        ),
-        pkg!(("_-_l5Dj_08vgI-", "8.1.3") => [
-            dep_req("Ne2wKI0k19N--w0_kwki02_B9", ">=1.0.3, <=8.8.1")]
-        ),
-        pkg!(("_-_l5Dj_08vgI-", "9.0.9") => [
-            dep_req("-8E6S_M3Qy", ">=0.9.9, <=9.6.9"),
-            dep_req("-A_B0x--aRz6-3__R6u--f_R-5--rmvc", ">=3.4.0, <=9.6.9"),
-            dep_req("-C-Ep-2Zw-8b_-_l", ">=2.2.5, <=5.8.0"),
-            dep_req("-O-3-r-e-9700q-vJE09H5X_P7", ">=5.1.6, <=6.3.8"),
-            dep_req("-Ov-A_zyIy_E-216Dz__m67H--1UmU_3", ">=0.10.6, <=9.4.6"),
-            dep_req("-Tw9Qgx__r__X_E__JB____Qe-8", ">=0.6.3, <=5.8.3"),
-            dep_req("-_6i2q4-_-q", ">=0.8.1, <=10.2.5"),
-            dep_req("-e__zm79_s_PM5-vkuZjq", ">=5.8.2, <=6.0.6"),
-            dep_req("-f0j8__50Qf", ">=8.1.7, <=10.5.3"),
-            dep_req("-kV_0_6nt", ">=1.2.9, <=3.9.1"),
-            dep_req("-zC6_m4Ye-D5v_Bwgq--J7mN5_IKf4O8-", ">=4.4.9, <=6.5.3"),
-            dep_req("-zQs", "=8.3.9"),
-            dep_req("AO_z_AZ_", ">=1.9.10, <=4.9.7"),
-            dep_req("H40R--sg9rt_M_", "=1.0.1"),
-            dep_req("HN_O_Oq-_X-p68Bcd---4MrF-gD-haqn", ">=5.8.1, <=7.7.9"),
-            dep_req("I8-uW", ">=4.6.7, <=8.1.4"),
-            dep_req("IkNt5XT2-", "=10.5.0"),
-            dep_req("Ne2wKI0k19N--w0_kwki02_B9", ">=8.0.1, <=8.8.1"),
-            dep_req("Uw-B_-3_", "=4.5.7"),
-            dep_req("Ze-4-Lh4v", ">=2.6.4, <=10.10.3")]
-        ),
-        pkg!(("_-_l5Dj_08vgI-", "10.5.4") => [
-            dep_req("-3_FxaLyA_P0a6K-__915B_-UtU_", ">=2.10.6, <=6.3.6"),
-            dep_req("-8E6S_M3Qy", ">=10.3.7, <=10.4.1"),
-            dep_req("-A_B0x--aRz6-3__R6u--f_R-5--rmvc", "=9.6.9"),
-            dep_req("-C-Ep-2Zw-8b_-_l", ">=6.2.8, <=7.2.7"),
-            dep_req("-O-3-r-e-9700q-vJE09H5X_P7", ">=1.1.5, <=6.10.9"),
-            dep_req("-Ov-A_zyIy_E-216Dz__m67H--1UmU_3", ">=3.8.10, <=10.0.1"),
-            dep_req("-Tw9Qgx__r__X_E__JB____Qe-8", "=5.8.3"),
-            dep_req("-_6i2q4-_-q", ">=0.8.1, <=10.2.5"),
-            dep_req("-e__zm79_s_PM5-vkuZjq", ">=6.0.6, <=9.10.3"),
-            dep_req("-f0j8__50Qf", "=10.5.3"),
-            dep_req("-kV_0_6nt", "=3.9.1"),
-            dep_req("-zC6_m4Ye-D5v_Bwgq--J7mN5_IKf4O8-", ">=4.4.9, <=6.5.3"),
-            dep_req("-zQs", ">=3.0.1, <=8.3.9"),
-            dep_req("AO_z_AZ_", "=1.9.10"),
-            dep_req("H40R--sg9rt_M_", "=1.0.1"),
-            dep_req("HN_O_Oq-_X-p68Bcd---4MrF-gD-haqn", ">=2.5.7, <=7.7.9"),
-            dep_req("I8-uW", "=10.10.2"),
-            dep_req("IkNt5XT2-", "=10.5.0"),
-            dep_req("Ne2wKI0k19N--w0_kwki02_B9", ">=1.0.3, <=8.8.1"),
-            dep_req("Uw-B_-3_", "=4.5.7"),
-            dep_req("Ze-4-Lh4v", ">=6.5.8, <=10.10.3")]
-        ),
         pkg!(("_7_ZdSH-7Y__M_--IcZP_8t", "4.7.8") => [
-            dep_req("-3_FxaLyA_P0a6K-__915B_-UtU_", ">=2.7.4, <=2.10.6"),
-            dep_req("-8E6S_M3Qy", ">=2.2.1, <=9.6.9"),
-            dep_req("-A_B0x--aRz6-3__R6u--f_R-5--rmvc", "=9.6.9"),
-            dep_req("-C-Ep-2Zw-8b_-_l", ">=3.10.8, <=5.8.0"),
-            dep_req("-O-3-r-e-9700q-vJE09H5X_P7", ">=5.1.6, <=6.3.8"),
-            dep_req("-Tw9Qgx__r__X_E__JB____Qe-8", ">=0.6.3, <=5.8.3"),
-            dep_req("-_6i2q4-_-q", ">=0.8.1, <=10.2.5"),
             dep_req("-f0j8__50Qf", ">=5.5.6, <=5.6.10"),
-            dep_req("-kV_0_6nt", ">=3.9.1, <=5.4.9"),
-            dep_req("-zC6_m4Ye-D5v_Bwgq--J7mN5_IKf4O8-", ">=4.4.9, <=6.5.3"),
             dep_req("-zQs", "=8.3.9"),
-            dep_req("AO_z_AZ_", ">=1.5.6, <=8.2.8"),
-            dep_req("H40R--sg9rt_M_", "=1.0.1"),
-            dep_req("HN_O_Oq-_X-p68Bcd---4MrF-gD-haqn", ">=0.9.0, <=2.6.5"),
-            dep_req("Ne2wKI0k19N--w0_kwki02_B9", ">=1.0.3, <=8.0.1"),
-            dep_req("Uw-B_-3_", "=4.5.7"),
-            dep_req("Ze-4-Lh4v", ">=2.6.4, <=3.4.9"),
-            dep_req("_-_l5Dj_08vgI-", "=0.0.4")]
+            dep_req("Ne2wKI0k19N--w0_kwki02_B9", ">=1.0.3, <=8.0.1")]
         ),
         pkg!(("_7_ZdSH-7Y__M_--IcZP_8t", "7.4.9") => [
-            dep_req("-f0j8__50Qf", ">=10.1.8, <=10.5.3"),
-            dep_req("I8-uW", ">=1.6.10, <=4.5.2"),
-            dep_req("_-_l5Dj_08vgI-", ">=2.1.3, <=7.8.1")]
-        ),
-        pkg!(("_7_ZdSH-7Y__M_--IcZP_8t", "8.3.9") => [
-            dep_req("bad", "=6.6.6")]
-        ),
-        pkg!(("_9IcR0_H-5_C--3", "0.3.2") => [
-            dep_req("-3_FxaLyA_P0a6K-__915B_-UtU_", ">=0.6.4, <=3.4.8"),
-            dep_req("-8E6S_M3Qy", "=1.0.2"),
-            dep_req("-A_B0x--aRz6-3__R6u--f_R-5--rmvc", ">=3.4.0, <=9.6.9"),
-            dep_req("-C-Ep-2Zw-8b_-_l", ">=7.2.7, <=10.8.8"),
-            dep_req("-Ov-A_zyIy_E-216Dz__m67H--1UmU_3", ">=0.7.0, <=10.4.5"),
-            dep_req("-_6i2q4-_-q", ">=0.4.5, <=1.8.8"),
-            dep_req("-e__zm79_s_PM5-vkuZjq", ">=5.8.2, <=9.10.3"),
-            dep_req("-f0j8__50Qf", ">=1.5.9, <=5.5.6"),
-            dep_req("-zC6_m4Ye-D5v_Bwgq--J7mN5_IKf4O8-", ">=4.4.9, <=7.0.10"),
-            dep_req("-zQs", ">=3.0.1, <=8.3.9"),
-            dep_req("AO_z_AZ_", ">=1.5.6, <=8.2.8"),
-            dep_req("I8-uW", ">=3.5.3, <=10.10.2"),
-            dep_req("IkNt5XT2-", "=10.5.0"),
-            dep_req("_7_ZdSH-7Y__M_--IcZP_8t", ">=4.7.8, <=8.3.9")]
-        ),
-        pkg!(("_9IcR0_H-5_C--3", "1.3.0") => [
-            dep_req("Uw-B_-3_", "=4.5.7")]
-        ),
-        pkg!(("_9IcR0_H-5_C--3", "1.6.2")),
-        pkg!(("_9IcR0_H-5_C--3", "2.2.6") => [
-            dep_req("-3_FxaLyA_P0a6K-__915B_-UtU_", ">=2.10.6, <=9.0.4"),
-            dep_req("-8E6S_M3Qy", ">=2.2.1, <=10.4.1"),
-            dep_req("-A_B0x--aRz6-3__R6u--f_R-5--rmvc", ">=3.4.0, <=9.6.9"),
-            dep_req("-C-Ep-2Zw-8b_-_l", ">=5.8.0, <=6.2.8"),
-            dep_req("-Ov-A_zyIy_E-216Dz__m67H--1UmU_3", ">=3.8.10, <=8.7.4"),
-            dep_req("-Tw9Qgx__r__X_E__JB____Qe-8", ">=0.6.3, <=5.8.3"),
-            dep_req("-_6i2q4-_-q", ">=0.4.5, <=10.2.5"),
-            dep_req("-e__zm79_s_PM5-vkuZjq", ">=4.4.6, <=5.8.2"),
-            dep_req("-f0j8__50Qf", "=8.6.0"),
-            dep_req("-kV_0_6nt", ">=5.4.9, <=6.7.5"),
-            dep_req("-zC6_m4Ye-D5v_Bwgq--J7mN5_IKf4O8-", ">=6.5.3, <=7.0.10"),
-            dep_req("-zQs", "=8.3.9"),
-            dep_req("AO_z_AZ_", ">=1.9.10, <=4.9.7"),
-            dep_req("H40R--sg9rt_M_", "=1.0.1"),
-            dep_req("HN_O_Oq-_X-p68Bcd---4MrF-gD-haqn", ">=2.5.7, <=2.6.5"),
-            dep_req("I8-uW", ">=1.6.10, <=10.10.2"),
-            dep_req("IkNt5XT2-", "=10.5.0"),
-            dep_req("Ne2wKI0k19N--w0_kwki02_B9", ">=1.0.3, <=8.0.1"),
-            dep_req("Uw-B_-3_", "=4.5.7"),
-            dep_req("Ze-4-Lh4v", ">=0.4.10, <=10.0.7"),
-            dep_req("_7_ZdSH-7Y__M_--IcZP_8t", ">=4.7.8, <=7.4.9")]
-        ),
-        pkg!(("_9IcR0_H-5_C--3", "2.10.2") => [
-            dep_req("-3_FxaLyA_P0a6K-__915B_-UtU_", ">=2.7.4, <=9.0.4"),
-            dep_req("-8E6S_M3Qy", ">=9.6.9, <=10.3.7"),
-            dep_req("-A_B0x--aRz6-3__R6u--f_R-5--rmvc", ">=3.4.0, <=9.6.9"),
-            dep_req("-C-Ep-2Zw-8b_-_l", ">=6.2.8, <=10.8.8"),
-            dep_req("-O-3-r-e-9700q-vJE09H5X_P7", "=5.1.6"),
-            dep_req("-Tw9Qgx__r__X_E__JB____Qe-8", "=0.6.3"),
-            dep_req("-e__zm79_s_PM5-vkuZjq", ">=5.3.8, <=9.4.6"),
-            dep_req("-f0j8__50Qf", "=7.1.2"),
-            dep_req("-kV_0_6nt", ">=3.1.4, <=5.9.1"),
-            dep_req("-zC6_m4Ye-D5v_Bwgq--J7mN5_IKf4O8-", ">=4.4.9, <=7.0.10"),
-            dep_req("-zQs", "=8.3.9"),
-            dep_req("H40R--sg9rt_M_", "=1.0.1"),
-            dep_req("HN_O_Oq-_X-p68Bcd---4MrF-gD-haqn", ">=2.5.7, <=2.6.5"),
-            dep_req("I8-uW", ">=4.5.2, <=4.6.7"),
-            dep_req("IkNt5XT2-", "=10.5.0"),
-            dep_req("Ne2wKI0k19N--w0_kwki02_B9", ">=1.0.3, <=8.0.1"),
-            dep_req("Uw-B_-3_", "=4.5.7"),
-            dep_req("Ze-4-Lh4v", ">=2.6.4, <=10.0.7"),
-            dep_req("_-_l5Dj_08vgI-", ">=8.1.3, <=10.5.4"),
-            dep_req("_7_ZdSH-7Y__M_--IcZP_8t", ">=4.7.8, <=7.4.9")]
-        ),
-        pkg!(("_9IcR0_H-5_C--3", "4.4.3") => [
-            dep_req("-C-Ep-2Zw-8b_-_l", ">=5.8.0, <=10.8.8"),
-            dep_req("-Tw9Qgx__r__X_E__JB____Qe-8", "=5.8.3"),
-            dep_req("-_6i2q4-_-q", "=10.2.5"),
-            dep_req("-e__zm79_s_PM5-vkuZjq", ">=5.3.8, <=5.8.2"),
-            dep_req("-f0j8__50Qf", ">=7.1.2, <=10.5.3"),
-            dep_req("-kV_0_6nt", "=3.1.4"),
-            dep_req("-zC6_m4Ye-D5v_Bwgq--J7mN5_IKf4O8-", ">=6.5.3, <=7.0.10"),
-            dep_req("-zQs", ">=3.0.1, <=8.3.9"),
-            dep_req("AO_z_AZ_", ">=1.5.6, <=4.0.8"),
-            dep_req("HN_O_Oq-_X-p68Bcd---4MrF-gD-haqn", ">=2.5.7, <=4.3.4"),
-            dep_req("I8-uW", ">=1.6.10, <=4.6.7"),
-            dep_req("IkNt5XT2-", "=10.5.0"),
-            dep_req("Uw-B_-3_", "=4.5.7"),
-            dep_req("Ze-4-Lh4v", ">=6.5.8, <=10.0.7"),
-            dep_req("_-_l5Dj_08vgI-", ">=7.8.1, <=7.8.10"),
-            dep_req("_7_ZdSH-7Y__M_--IcZP_8t", ">=7.4.9, <=8.3.9")]
-        ),
-        pkg!(("_9IcR0_H-5_C--3", "4.4.10") => [
-            dep_req("-8E6S_M3Qy", ">=1.7.8, <=2.2.1"),
-            dep_req("-A_B0x--aRz6-3__R6u--f_R-5--rmvc", "=3.4.0"),
-            dep_req("-C-Ep-2Zw-8b_-_l", ">=2.2.5, <=5.7.2"),
-            dep_req("-O-3-r-e-9700q-vJE09H5X_P7", ">=1.1.5, <=6.10.9"),
-            dep_req("-Tw9Qgx__r__X_E__JB____Qe-8", "=5.8.3"),
-            dep_req("-_6i2q4-_-q", ">=0.8.1, <=10.2.5"),
-            dep_req("-e__zm79_s_PM5-vkuZjq", ">=5.8.2, <=9.4.6"),
-            dep_req("-f0j8__50Qf", ">=5.6.10, <=9.5.9"),
-            dep_req("-kV_0_6nt", ">=3.1.4, <=7.8.9"),
-            dep_req("-zC6_m4Ye-D5v_Bwgq--J7mN5_IKf4O8-", "=7.0.10"),
-            dep_req("-zQs", ">=3.0.1, <=8.3.9"),
-            dep_req("AO_z_AZ_", ">=1.9.10, <=4.9.7"),
-            dep_req("H40R--sg9rt_M_", "=1.0.1"),
-            dep_req("HN_O_Oq-_X-p68Bcd---4MrF-gD-haqn", ">=4.3.4, <=8.2.1"),
-            dep_req("I8-uW", ">=4.6.7, <=6.10.3"),
-            dep_req("IkNt5XT2-", "=10.5.0"),
-            dep_req("Uw-B_-3_", "=4.5.7"),
-            dep_req("Ze-4-Lh4v", ">=3.4.9, <=5.5.5"),
-            dep_req("_7_ZdSH-7Y__M_--IcZP_8t", ">=4.7.8, <=7.4.9")]
-        ),
-        pkg!(("_9IcR0_H-5_C--3", "5.2.8") => [
-            dep_req("-3_FxaLyA_P0a6K-__915B_-UtU_", ">=0.6.4, <=3.4.8"),
-            dep_req("-C-Ep-2Zw-8b_-_l", ">=5.8.0, <=7.2.7"),
-            dep_req("-O-3-r-e-9700q-vJE09H5X_P7", ">=1.1.5, <=6.3.8"),
-            dep_req("-Ov-A_zyIy_E-216Dz__m67H--1UmU_3", ">=3.8.10, <=8.7.4"),
-            dep_req("-Tw9Qgx__r__X_E__JB____Qe-8", ">=0.6.3, <=5.8.3"),
-            dep_req("-_6i2q4-_-q", ">=0.8.1, <=1.8.8"),
-            dep_req("-e__zm79_s_PM5-vkuZjq", ">=4.4.6, <=9.10.3"),
-            dep_req("-f0j8__50Qf", ">=8.6.0, <=10.5.3"),
-            dep_req("-zQs", ">=3.0.1, <=8.3.9"),
-            dep_req("AO_z_AZ_", ">=8.2.8, <=9.0.5"),
-            dep_req("H40R--sg9rt_M_", "=1.0.1"),
-            dep_req("IkNt5XT2-", "=10.5.0"),
-            dep_req("Uw-B_-3_", "=4.5.7"),
-            dep_req("Ze-4-Lh4v", ">=5.5.5, <=6.5.8"),
-            dep_req("_-_l5Dj_08vgI-", ">=9.0.9, <=10.5.4"),
-            dep_req("_7_ZdSH-7Y__M_--IcZP_8t", "=8.3.9")]
-        ),
-        pkg!(("_9IcR0_H-5_C--3", "5.6.6") => [
-            dep_req("-8E6S_M3Qy", ">=1.0.2, <=10.3.7"),
-            dep_req("-A_B0x--aRz6-3__R6u--f_R-5--rmvc", ">=3.4.0, <=9.6.9"),
-            dep_req("-O-3-r-e-9700q-vJE09H5X_P7", ">=1.1.5, <=6.3.8"),
-            dep_req("-Ov-A_zyIy_E-216Dz__m67H--1UmU_3", ">=10.0.1, <=10.4.5"),
-            dep_req("-Tw9Qgx__r__X_E__JB____Qe-8", "=0.6.3"),
-            dep_req("AO_z_AZ_", "=6.10.2"),
-            dep_req("H40R--sg9rt_M_", "=1.0.1"),
-            dep_req("_7_ZdSH-7Y__M_--IcZP_8t", ">=7.4.9, <=8.3.9")]
-        ),
-        pkg!(("_9IcR0_H-5_C--3", "10.8.8") => [
-            dep_req("-A_B0x--aRz6-3__R6u--f_R-5--rmvc", ">=3.4.0, <=9.6.9"),
-            dep_req("-e__zm79_s_PM5-vkuZjq", ">=6.0.6, <=9.10.3")]
-        ),
-        pkg!(("_DDfM_Mw_-s_T_FF--6-1-_7jNO", "0.2.2") => [
-            dep_req("-3_FxaLyA_P0a6K-__915B_-UtU_", ">=6.3.6, <=9.0.4"),
-            dep_req("-8E6S_M3Qy", ">=0.9.9, <=1.0.2"),
-            dep_req("-Tw9Qgx__r__X_E__JB____Qe-8", ">=0.6.3, <=5.8.3"),
-            dep_req("-_6i2q4-_-q", "=1.8.8"),
-            dep_req("-f0j8__50Qf", ">=4.1.2, <=8.6.0"),
-            dep_req("-zC6_m4Ye-D5v_Bwgq--J7mN5_IKf4O8-", "=6.5.3"),
-            dep_req("I8-uW", ">=3.5.3, <=10.10.2"),
-            dep_req("IkNt5XT2-", "=10.5.0"),
-            dep_req("Uw-B_-3_", "=4.5.7"),
-            dep_req("_7_ZdSH-7Y__M_--IcZP_8t", "=7.4.9")]
+            dep_req("-3_FxaLyA_P0a6K-__915B_-UtU_", "=4.7.5")]
         ),
         pkg!(("_DDfM_Mw_-s_T_FF--6-1-_7jNO", "0.2.9") => [
-            dep_req("-8E6S_M3Qy", ">=10.3.7, <=10.4.1"),
-            dep_req("-Tw9Qgx__r__X_E__JB____Qe-8", "=0.6.3"),
-            dep_req("-_6i2q4-_-q", ">=0.4.5, <=10.2.5"),
-            dep_req("-f0j8__50Qf", ">=4.1.2, <=5.5.6"),
-            dep_req("HN_O_Oq-_X-p68Bcd---4MrF-gD-haqn", ">=0.9.3, <=8.2.1"),
-            dep_req("I8-uW", ">=4.5.2, <=5.7.7"),
-            dep_req("_9IcR0_H-5_C--3", "=10.8.8")]
+            dep_req("-f0j8__50Qf", ">=4.1.2, <=5.5.6")]
         ),
-        pkg!(("_DDfM_Mw_-s_T_FF--6-1-_7jNO", "5.2.7") => [
-            dep_req("-C-Ep-2Zw-8b_-_l", ">=2.2.5, <=5.8.0"),
-            dep_req("AO_z_AZ_", ">=4.9.7, <=9.0.9"),
-            dep_req("H40R--sg9rt_M_", "=1.0.1"),
-            dep_req("HN_O_Oq-_X-p68Bcd---4MrF-gD-haqn", ">=0.9.0, <=4.3.4"),
-            dep_req("Ne2wKI0k19N--w0_kwki02_B9", ">=8.0.1, <=8.8.1")]
+        pkg!("_Q_Ub_Ygdo-RKyBXG_-0_1--2d-" => [
+            dep_req("_DDfM_Mw_-s_T_FF--6-1-_7jNO", "=0.2.9")]
         ),
-        pkg!(("_DDfM_Mw_-s_T_FF--6-1-_7jNO", "6.8.5") => [
-            dep_req("-3_FxaLyA_P0a6K-__915B_-UtU_", ">=2.10.6, <=4.2.0"),
-            dep_req("-Tw9Qgx__r__X_E__JB____Qe-8", "=5.8.3"),
-            dep_req("-_6i2q4-_-q", ">=0.4.5, <=10.2.5"),
-            dep_req("-e__zm79_s_PM5-vkuZjq", ">=5.3.8, <=5.8.2"),
-            dep_req("-kV_0_6nt", "=6.7.5"),
-            dep_req("-zC6_m4Ye-D5v_Bwgq--J7mN5_IKf4O8-", "=7.0.10"),
-            dep_req("AO_z_AZ_", ">=4.0.8, <=8.2.8")]
-        ),
-        pkg!(("_DDfM_Mw_-s_T_FF--6-1-_7jNO", "8.0.9") => [
-            dep_req("-3_FxaLyA_P0a6K-__915B_-UtU_", ">=3.4.8, <=6.3.6"),
-            dep_req("-zQs", "=8.3.9")]
-        ),
-        pkg!(("_DDfM_Mw_-s_T_FF--6-1-_7jNO", "8.1.6") => [
-            dep_req("-3_FxaLyA_P0a6K-__915B_-UtU_", ">=3.4.8, <=6.3.6"),
-            dep_req("-8E6S_M3Qy", ">=1.0.2, <=1.7.8"),
-            dep_req("-A_B0x--aRz6-3__R6u--f_R-5--rmvc", "=3.4.0"),
-            dep_req("-O-3-r-e-9700q-vJE09H5X_P7", ">=5.1.6, <=6.3.8"),
-            dep_req("-Ov-A_zyIy_E-216Dz__m67H--1UmU_3", ">=9.4.6, <=10.4.5"),
-            dep_req("-_6i2q4-_-q", ">=0.4.5, <=0.8.1"),
-            dep_req("-e__zm79_s_PM5-vkuZjq", ">=5.8.2, <=9.4.6"),
-            dep_req("-f0j8__50Qf", ">=4.1.2, <=7.1.2"),
-            dep_req("-zC6_m4Ye-D5v_Bwgq--J7mN5_IKf4O8-", ">=4.4.9, <=7.0.10"),
-            dep_req("-zQs", ">=3.0.1, <=8.3.9"),
-            dep_req("AO_z_AZ_", ">=1.9.10, <=8.2.8"),
-            dep_req("H40R--sg9rt_M_", "=1.0.1"),
-            dep_req("I8-uW", ">=4.5.2, <=5.7.7"),
-            dep_req("IkNt5XT2-", "=10.5.0"),
-            dep_req("Ne2wKI0k19N--w0_kwki02_B9", ">=4.9.10, <=8.0.1"),
-            dep_req("Uw-B_-3_", "=4.5.7"),
-            dep_req("Ze-4-Lh4v", ">=0.4.10, <=3.4.9"),
-            dep_req("_-_l5Dj_08vgI-", ">=2.1.3, <=9.0.9"),
-            dep_req("_7_ZdSH-7Y__M_--IcZP_8t", ">=4.7.8, <=7.4.9"),
-            dep_req("_9IcR0_H-5_C--3", ">=1.3.0, <=5.6.6")]
-        ),
-        pkg!(("_DDfM_Mw_-s_T_FF--6-1-_7jNO", "8.3.3") => [
-            dep_req("-3_FxaLyA_P0a6K-__915B_-UtU_", ">=4.7.5, <=6.3.6"),
-            dep_req("-8E6S_M3Qy", ">=9.6.9, <=10.3.7"),
-            dep_req("-A_B0x--aRz6-3__R6u--f_R-5--rmvc", ">=3.4.0, <=9.6.9"),
-            dep_req("-C-Ep-2Zw-8b_-_l", ">=5.7.2, <=10.8.8"),
-            dep_req("-O-3-r-e-9700q-vJE09H5X_P7", ">=5.1.6, <=6.10.9"),
-            dep_req("-Ov-A_zyIy_E-216Dz__m67H--1UmU_3", "=8.7.4"),
-            dep_req("-Tw9Qgx__r__X_E__JB____Qe-8", ">=0.6.3, <=5.8.3"),
-            dep_req("-_6i2q4-_-q", ">=0.4.5, <=10.2.5"),
-            dep_req("-e__zm79_s_PM5-vkuZjq", "=4.4.6"),
-            dep_req("-f0j8__50Qf", "=9.5.9"),
-            dep_req("-kV_0_6nt", ">=5.9.1, <=6.7.5"),
-            dep_req("-zQs", ">=3.0.1, <=8.3.9"),
-            dep_req("AO_z_AZ_", ">=1.9.10, <=4.0.8"),
-            dep_req("H40R--sg9rt_M_", "=1.0.1"),
-            dep_req("HN_O_Oq-_X-p68Bcd---4MrF-gD-haqn", "=5.8.1"),
-            dep_req("Uw-B_-3_", "=4.5.7"),
-            dep_req("_7_ZdSH-7Y__M_--IcZP_8t", "=8.3.9"),
-            dep_req("_9IcR0_H-5_C--3", ">=1.3.0, <=2.2.6")]
-        ),
-        pkg!(("_DDfM_Mw_-s_T_FF--6-1-_7jNO", "8.3.8") => [
-            dep_req("-3_FxaLyA_P0a6K-__915B_-UtU_", ">=0.6.4, <=2.7.4"),
-            dep_req("-8E6S_M3Qy", "=0.9.9"),
-            dep_req("-A_B0x--aRz6-3__R6u--f_R-5--rmvc", "=9.6.9"),
-            dep_req("-C-Ep-2Zw-8b_-_l", ">=3.10.8, <=7.2.7"),
-            dep_req("-O-3-r-e-9700q-vJE09H5X_P7", ">=1.1.5, <=6.10.9"),
-            dep_req("-Ov-A_zyIy_E-216Dz__m67H--1UmU_3", ">=8.7.4, <=9.4.6"),
-            dep_req("-Tw9Qgx__r__X_E__JB____Qe-8", ">=0.6.3, <=5.8.3"),
-            dep_req("-_6i2q4-_-q", ">=0.8.1, <=1.8.8"),
-            dep_req("-e__zm79_s_PM5-vkuZjq", ">=5.8.2, <=9.10.3"),
-            dep_req("-f0j8__50Qf", ">=4.1.2, <=5.6.10"),
-            dep_req("-kV_0_6nt", ">=1.2.9, <=5.9.1"),
-            dep_req("-zC6_m4Ye-D5v_Bwgq--J7mN5_IKf4O8-", ">=4.4.9, <=7.0.10"),
-            dep_req("-zQs", "=3.0.1"),
-            dep_req("AO_z_AZ_", ">=1.5.6, <=4.0.8"),
-            dep_req("H40R--sg9rt_M_", "=1.0.1"),
-            dep_req("HN_O_Oq-_X-p68Bcd---4MrF-gD-haqn", ">=2.10.7, <=7.7.9"),
-            dep_req("I8-uW", ">=2.2.0, <=4.6.7"),
-            dep_req("IkNt5XT2-", "=10.5.0"),
-            dep_req("Ne2wKI0k19N--w0_kwki02_B9", ">=1.0.3, <=8.0.1"),
-            dep_req("Uw-B_-3_", "=4.5.7"),
-            dep_req("Ze-4-Lh4v", ">=6.5.8, <=7.0.5"),
-            dep_req("_-_l5Dj_08vgI-", ">=0.0.4, <=6.6.2"),
-            dep_req("_7_ZdSH-7Y__M_--IcZP_8t", "=8.3.9"),
-            dep_req("_9IcR0_H-5_C--3", ">=1.3.0, <=4.4.10")]
-        ),
-        pkg!(("_DDfM_Mw_-s_T_FF--6-1-_7jNO", "9.7.0") => [
-            dep_req("-3_FxaLyA_P0a6K-__915B_-UtU_", ">=2.10.6, <=4.7.5"),
-            dep_req("-A_B0x--aRz6-3__R6u--f_R-5--rmvc", ">=3.4.0, <=9.6.9"),
-            dep_req("-O-3-r-e-9700q-vJE09H5X_P7", ">=6.3.8, <=6.10.9"),
-            dep_req("-Ov-A_zyIy_E-216Dz__m67H--1UmU_3", ">=8.7.4, <=9.4.6"),
-            dep_req("-_6i2q4-_-q", ">=0.4.5, <=1.8.8"),
-            dep_req("-zC6_m4Ye-D5v_Bwgq--J7mN5_IKf4O8-", "=6.5.3"),
-            dep_req("-zQs", ">=3.0.1, <=8.3.9"),
-            dep_req("I8-uW", ">=5.7.7, <=10.10.2"),
-            dep_req("_-_l5Dj_08vgI-", ">=8.1.3, <=10.5.4")]
-        ),
-        pkg!(("_DDfM_Mw_-s_T_FF--6-1-_7jNO", "10.2.6") => [
-            dep_req("-3_FxaLyA_P0a6K-__915B_-UtU_", ">=2.10.6, <=4.7.5"),
-            dep_req("-8E6S_M3Qy", ">=1.7.8, <=9.6.9"),
-            dep_req("-C-Ep-2Zw-8b_-_l", ">=2.2.5, <=7.2.7"),
-            dep_req("-O-3-r-e-9700q-vJE09H5X_P7", "=5.1.6"),
-            dep_req("-Ov-A_zyIy_E-216Dz__m67H--1UmU_3", ">=0.7.0, <=0.10.6"),
-            dep_req("-Tw9Qgx__r__X_E__JB____Qe-8", ">=0.6.3, <=5.8.3"),
-            dep_req("-_6i2q4-_-q", "=0.4.5"),
-            dep_req("-e__zm79_s_PM5-vkuZjq", ">=5.3.8, <=9.10.3"),
-            dep_req("-f0j8__50Qf", ">=5.5.6, <=5.6.10"),
-            dep_req("-zC6_m4Ye-D5v_Bwgq--J7mN5_IKf4O8-", ">=4.4.9, <=6.5.3"),
-            dep_req("AO_z_AZ_", ">=1.5.6, <=6.10.2"),
-            dep_req("H40R--sg9rt_M_", "=1.0.1"),
-            dep_req("HN_O_Oq-_X-p68Bcd---4MrF-gD-haqn", ">=0.9.0, <=4.3.4"),
-            dep_req("I8-uW", ">=3.5.3, <=5.7.7"),
-            dep_req("Ne2wKI0k19N--w0_kwki02_B9", ">=4.9.10, <=8.0.1"),
-            dep_req("Uw-B_-3_", "=4.5.7"),
-            dep_req("Ze-4-Lh4v", ">=6.5.8, <=10.10.3"),
-            dep_req("_-_l5Dj_08vgI-", ">=2.1.3, <=7.8.10"),
-            dep_req("_7_ZdSH-7Y__M_--IcZP_8t", "=4.7.8"),
-            dep_req("_9IcR0_H-5_C--3", ">=0.3.2, <=2.10.2")]
-        ),
-        pkg!(("_NKE-r_R7v77Spm__1Z-Nlvg_r-i-h-X", "6.1.3") => [
-            dep_req("H40R--sg9rt_M_", "=1.0.1"),
-            dep_req("HN_O_Oq-_X-p68Bcd---4MrF-gD-haqn", ">=0.9.3, <=5.8.1")]
-        ),
-        pkg!(("_NKE-r_R7v77Spm__1Z-Nlvg_r-i-h-X", "6.7.7") => [
-            dep_req("-3_FxaLyA_P0a6K-__915B_-UtU_", ">=2.10.6, <=3.4.8"),
-            dep_req("-8E6S_M3Qy", ">=10.3.7, <=10.4.1"),
-            dep_req("-A_B0x--aRz6-3__R6u--f_R-5--rmvc", ">=3.4.0, <=9.6.9"),
-            dep_req("-C-Ep-2Zw-8b_-_l", ">=2.2.5, <=3.10.8"),
-            dep_req("-Ov-A_zyIy_E-216Dz__m67H--1UmU_3", "=0.7.0"),
-            dep_req("-Tw9Qgx__r__X_E__JB____Qe-8", "=0.6.3"),
-            dep_req("-e__zm79_s_PM5-vkuZjq", ">=5.3.8, <=6.0.6"),
-            dep_req("-f0j8__50Qf", ">=4.1.2, <=10.1.8"),
-            dep_req("-kV_0_6nt", ">=5.9.1, <=7.8.9"),
-            dep_req("-zC6_m4Ye-D5v_Bwgq--J7mN5_IKf4O8-", ">=6.5.3, <=7.0.10"),
-            dep_req("-zQs", ">=3.0.1, <=8.3.9"),
-            dep_req("AO_z_AZ_", "=4.0.8"),
-            dep_req("H40R--sg9rt_M_", "=1.0.1"),
-            dep_req("HN_O_Oq-_X-p68Bcd---4MrF-gD-haqn", ">=2.5.7, <=2.10.7"),
-            dep_req("I8-uW", ">=4.5.2, <=5.7.7"),
-            dep_req("IkNt5XT2-", "=10.5.0"),
-            dep_req("Ne2wKI0k19N--w0_kwki02_B9", "=8.0.1"),
-            dep_req("Uw-B_-3_", "=4.5.7"),
-            dep_req("Ze-4-Lh4v", ">=10.0.7, <=10.10.3"),
-            dep_req("_-_l5Dj_08vgI-", ">=8.1.3, <=10.5.4"),
-            dep_req("_7_ZdSH-7Y__M_--IcZP_8t", ">=4.7.8, <=8.3.9"),
-            dep_req("_9IcR0_H-5_C--3", ">=0.3.2, <=2.2.6"),
-            dep_req("_DDfM_Mw_-s_T_FF--6-1-_7jNO", ">=8.0.9, <=8.3.8")]
-        ),
-        pkg!(("_NKE-r_R7v77Spm__1Z-Nlvg_r-i-h-X", "8.6.10") => [
-            dep_req("-A_B0x--aRz6-3__R6u--f_R-5--rmvc", "=9.6.9"),
-            dep_req("-C-Ep-2Zw-8b_-_l", ">=5.7.2, <=6.2.8"),
-            dep_req("-Ov-A_zyIy_E-216Dz__m67H--1UmU_3", ">=10.4.5, <=10.5.10"),
-            dep_req("-_6i2q4-_-q", ">=0.8.1, <=1.8.8"),
-            dep_req("-e__zm79_s_PM5-vkuZjq", ">=5.3.8, <=9.4.6"),
-            dep_req("AO_z_AZ_", ">=1.5.6, <=9.0.5"),
-            dep_req("H40R--sg9rt_M_", "=1.0.1"),
-            dep_req("HN_O_Oq-_X-p68Bcd---4MrF-gD-haqn", ">=5.8.1, <=7.7.9"),
-            dep_req("Ne2wKI0k19N--w0_kwki02_B9", ">=4.9.10, <=8.8.1"),
-            dep_req("Ze-4-Lh4v", ">=6.5.8, <=10.10.3"),
-            dep_req("_7_ZdSH-7Y__M_--IcZP_8t", ">=7.4.9, <=8.3.9"),
-            dep_req("_DDfM_Mw_-s_T_FF--6-1-_7jNO", "=6.8.5")]
-        ),
-        pkg!(("_NKE-r_R7v77Spm__1Z-Nlvg_r-i-h-X", "8.8.1") => [
-            dep_req("-3_FxaLyA_P0a6K-__915B_-UtU_", "=2.7.4"),
-            dep_req("-A_B0x--aRz6-3__R6u--f_R-5--rmvc", "=3.4.0"),
-            dep_req("-C-Ep-2Zw-8b_-_l", ">=2.2.5, <=6.2.8"),
-            dep_req("-O-3-r-e-9700q-vJE09H5X_P7", ">=1.1.5, <=5.1.6"),
-            dep_req("-Tw9Qgx__r__X_E__JB____Qe-8", "=5.8.3"),
-            dep_req("-_6i2q4-_-q", ">=0.8.1, <=1.8.8"),
-            dep_req("-e__zm79_s_PM5-vkuZjq", "=5.8.2"),
-            dep_req("-kV_0_6nt", ">=5.9.1, <=7.8.9"),
-            dep_req("-zC6_m4Ye-D5v_Bwgq--J7mN5_IKf4O8-", ">=4.4.9, <=6.5.3"),
-            dep_req("-zQs", "=8.3.9"),
-            dep_req("AO_z_AZ_", ">=8.2.8, <=9.0.5"),
-            dep_req("H40R--sg9rt_M_", "=1.0.1"),
-            dep_req("HN_O_Oq-_X-p68Bcd---4MrF-gD-haqn", ">=4.3.4, <=8.2.1"),
-            dep_req("I8-uW", ">=4.6.7, <=5.7.7"),
-            dep_req("Ne2wKI0k19N--w0_kwki02_B9", ">=4.9.10, <=8.8.1"),
-            dep_req("Uw-B_-3_", "=4.5.7"),
-            dep_req("Ze-4-Lh4v", ">=2.6.4, <=10.10.3"),
-            dep_req("_-_l5Dj_08vgI-", ">=7.8.1, <=9.0.9"),
-            dep_req("_7_ZdSH-7Y__M_--IcZP_8t", ">=4.7.8, <=8.3.9"),
-            dep_req("_9IcR0_H-5_C--3", ">=4.4.3, <=5.6.6"),
-            dep_req("_DDfM_Mw_-s_T_FF--6-1-_7jNO", ">=8.0.9, <=8.1.6")]
-        ),
-        pkg!(("_NKE-r_R7v77Spm__1Z-Nlvg_r-i-h-X", "8.9.1") => [
-            dep_req("-3_FxaLyA_P0a6K-__915B_-UtU_", ">=0.6.4, <=3.4.8"),
-            dep_req("-8E6S_M3Qy", ">=1.8.10, <=5.7.0"),
-            dep_req("-A_B0x--aRz6-3__R6u--f_R-5--rmvc", "=3.4.0"),
-            dep_req("-C-Ep-2Zw-8b_-_l", ">=5.7.2, <=7.2.7"),
-            dep_req("-O-3-r-e-9700q-vJE09H5X_P7", ">=5.1.6, <=6.3.8"),
-            dep_req("-Ov-A_zyIy_E-216Dz__m67H--1UmU_3", ">=0.7.0, <=10.4.5"),
-            dep_req("-Tw9Qgx__r__X_E__JB____Qe-8", "=0.6.3"),
-            dep_req("-_6i2q4-_-q", ">=0.8.1, <=10.2.5"),
-            dep_req("-e__zm79_s_PM5-vkuZjq", ">=4.4.6, <=5.3.8"),
-            dep_req("-f0j8__50Qf", ">=5.5.6, <=5.6.10"),
-            dep_req("-kV_0_6nt", ">=3.9.1, <=5.9.1"),
-            dep_req("-zC6_m4Ye-D5v_Bwgq--J7mN5_IKf4O8-", ">=4.4.9, <=6.5.3"),
-            dep_req("-zQs", "=8.3.9"),
-            dep_req("AO_z_AZ_", ">=9.0.5, <=9.0.9"),
-            dep_req("H40R--sg9rt_M_", "=1.0.1"),
-            dep_req("HN_O_Oq-_X-p68Bcd---4MrF-gD-haqn", ">=2.6.5, <=5.8.1"),
-            dep_req("I8-uW", ">=2.2.0, <=4.6.7"),
-            dep_req("IkNt5XT2-", "=10.5.0"),
-            dep_req("Ne2wKI0k19N--w0_kwki02_B9", ">=8.0.1, <=8.8.1"),
-            dep_req("Uw-B_-3_", "=4.5.7"),
-            dep_req("Ze-4-Lh4v", ">=5.5.5, <=10.10.3"),
-            dep_req("_-_l5Dj_08vgI-", ">=6.6.2, <=8.1.3"),
-            dep_req("_7_ZdSH-7Y__M_--IcZP_8t", ">=4.7.8, <=7.4.9"),
-            dep_req("_9IcR0_H-5_C--3", ">=0.3.2, <=5.2.8"),
-            dep_req("_DDfM_Mw_-s_T_FF--6-1-_7jNO", "=9.7.0")]
-        ),
-        pkg!(("_Q_Ub_Ygdo-RKyBXG_-0_1--2d-", "2.1.3") => [
-            dep_req("-3_FxaLyA_P0a6K-__915B_-UtU_", ">=2.7.4, <=4.2.0"),
-            dep_req("-8E6S_M3Qy", ">=0.9.9, <=10.4.1"),
-            dep_req("-A_B0x--aRz6-3__R6u--f_R-5--rmvc", "=9.6.9"),
-            dep_req("-C-Ep-2Zw-8b_-_l", ">=2.2.5, <=7.2.7"),
-            dep_req("-O-3-r-e-9700q-vJE09H5X_P7", ">=1.1.5, <=6.3.8"),
-            dep_req("-Ov-A_zyIy_E-216Dz__m67H--1UmU_3", ">=9.4.6, <=10.4.5"),
-            dep_req("-_6i2q4-_-q", ">=0.4.5, <=1.8.8"),
-            dep_req("-e__zm79_s_PM5-vkuZjq", ">=5.8.2, <=6.0.6"),
-            dep_req("-f0j8__50Qf", ">=5.5.6, <=10.1.8"),
-            dep_req("-kV_0_6nt", ">=1.2.9, <=6.7.5"),
-            dep_req("-zC6_m4Ye-D5v_Bwgq--J7mN5_IKf4O8-", ">=6.5.3, <=7.0.10"),
-            dep_req("AO_z_AZ_", ">=1.9.10, <=9.0.5"),
-            dep_req("H40R--sg9rt_M_", "=1.0.1"),
-            dep_req("HN_O_Oq-_X-p68Bcd---4MrF-gD-haqn", ">=2.5.7, <=5.8.1"),
-            dep_req("I8-uW", ">=4.5.2, <=6.10.3"),
-            dep_req("IkNt5XT2-", "=10.5.0"),
-            dep_req("Ne2wKI0k19N--w0_kwki02_B9", ">=8.0.1, <=8.8.1"),
-            dep_req("Ze-4-Lh4v", ">=2.6.4, <=6.5.8"),
-            dep_req("_-_l5Dj_08vgI-", ">=9.0.9, <=10.5.4"),
-            dep_req("_7_ZdSH-7Y__M_--IcZP_8t", "=4.7.8"),
-            dep_req("_9IcR0_H-5_C--3", ">=1.6.2, <=5.6.6"),
-            dep_req("_DDfM_Mw_-s_T_FF--6-1-_7jNO", "=0.2.9"),
-            dep_req("_NKE-r_R7v77Spm__1Z-Nlvg_r-i-h-X", ">=6.1.3, <=8.9.1")]
-        ),
-        pkg!(("_Q_Ub_Ygdo-RKyBXG_-0_1--2d-", "3.3.9") => [
-            dep_req("-A_B0x--aRz6-3__R6u--f_R-5--rmvc", ">=3.4.0, <=9.6.9"),
-            dep_req("-C-Ep-2Zw-8b_-_l", ">=2.2.5, <=5.7.2"),
-            dep_req("-O-3-r-e-9700q-vJE09H5X_P7", ">=5.1.6, <=6.10.9"),
-            dep_req("-Ov-A_zyIy_E-216Dz__m67H--1UmU_3", ">=10.0.1, <=10.5.10"),
-            dep_req("-Tw9Qgx__r__X_E__JB____Qe-8", "=0.6.3"),
-            dep_req("-_6i2q4-_-q", ">=0.4.5, <=1.8.8"),
-            dep_req("-e__zm79_s_PM5-vkuZjq", ">=9.4.6, <=9.10.3"),
-            dep_req("-f0j8__50Qf", ">=5.6.10, <=9.5.9"),
-            dep_req("-zC6_m4Ye-D5v_Bwgq--J7mN5_IKf4O8-", ">=4.4.9, <=6.5.3"),
-            dep_req("-zQs", "=3.0.1"),
-            dep_req("AO_z_AZ_", ">=1.5.6, <=4.9.7"),
-            dep_req("H40R--sg9rt_M_", "=1.0.1"),
-            dep_req("HN_O_Oq-_X-p68Bcd---4MrF-gD-haqn", ">=2.6.5, <=5.8.1"),
-            dep_req("I8-uW", ">=3.5.3, <=8.1.4"),
-            dep_req("IkNt5XT2-", "=10.5.0"),
-            dep_req("Ne2wKI0k19N--w0_kwki02_B9", ">=1.0.3, <=4.9.10"),
-            dep_req("Uw-B_-3_", "=4.5.7"),
-            dep_req("_7_ZdSH-7Y__M_--IcZP_8t", ">=4.7.8, <=8.3.9"),
-            dep_req("_9IcR0_H-5_C--3", "=1.3.0"),
-            dep_req("_DDfM_Mw_-s_T_FF--6-1-_7jNO", ">=8.3.8, <=10.2.6"),
-            dep_req("_NKE-r_R7v77Spm__1Z-Nlvg_r-i-h-X", "=8.6.10")]
-        ),
-        pkg!(("_dl", "6.3.3") => [
-            dep_req("-3_FxaLyA_P0a6K-__915B_-UtU_", ">=0.6.4, <=3.4.8"),
-            dep_req("-8E6S_M3Qy", ">=1.0.2, <=2.2.1"),
-            dep_req("-C-Ep-2Zw-8b_-_l", ">=5.8.0, <=10.8.8"),
-            dep_req("-O-3-r-e-9700q-vJE09H5X_P7", ">=6.3.8, <=6.10.9"),
-            dep_req("-Ov-A_zyIy_E-216Dz__m67H--1UmU_3", ">=8.7.4, <=10.5.10"),
-            dep_req("-Tw9Qgx__r__X_E__JB____Qe-8", "=5.8.3"),
-            dep_req("-_6i2q4-_-q", ">=0.4.5, <=10.2.5"),
-            dep_req("-e__zm79_s_PM5-vkuZjq", ">=4.4.6, <=6.0.6"),
-            dep_req("-f0j8__50Qf", ">=10.1.8, <=10.5.3"),
-            dep_req("-zC6_m4Ye-D5v_Bwgq--J7mN5_IKf4O8-", "=4.4.9"),
-            dep_req("-zQs", ">=3.0.1, <=8.3.9"),
-            dep_req("AO_z_AZ_", ">=4.0.8, <=8.2.8"),
-            dep_req("H40R--sg9rt_M_", "=1.0.1"),
-            dep_req("HN_O_Oq-_X-p68Bcd---4MrF-gD-haqn", ">=0.9.0, <=0.9.3"),
-            dep_req("I8-uW", ">=1.6.10, <=10.10.2"),
-            dep_req("IkNt5XT2-", "=10.5.0"),
-            dep_req("Ne2wKI0k19N--w0_kwki02_B9", "=8.0.1"),
-            dep_req("Uw-B_-3_", "=4.5.7"),
-            dep_req("Ze-4-Lh4v", ">=3.4.9, <=10.10.3"),
-            dep_req("_-_l5Dj_08vgI-", ">=7.8.1, <=7.8.10"),
-            dep_req("_7_ZdSH-7Y__M_--IcZP_8t", "=8.3.9"),
-            dep_req("_9IcR0_H-5_C--3", ">=0.3.2, <=4.4.3"),
-            dep_req("_DDfM_Mw_-s_T_FF--6-1-_7jNO", ">=0.2.2, <=10.2.6"),
-            dep_req("_NKE-r_R7v77Spm__1Z-Nlvg_r-i-h-X", ">=6.1.3, <=8.6.10")]
+        pkg!("_dl" => [
+            dep("bad")]
         ),
         pkg!(("aaBqm-_3v7B_Q-yU", "3.8.3") => [
-            dep_req("-3_FxaLyA_P0a6K-__915B_-UtU_", ">=2.10.6, <=3.4.8"),
-            dep_req("-A_B0x--aRz6-3__R6u--f_R-5--rmvc", "=3.4.0"),
-            dep_req("-C-Ep-2Zw-8b_-_l", ">=2.2.5, <=5.7.2"),
-            dep_req("-_6i2q4-_-q", "=0.8.1"),
-            dep_req("-kV_0_6nt", ">=1.2.9, <=3.9.1"),
-            dep_req("AO_z_AZ_", ">=6.10.2, <=9.0.9"),
-            dep_req("HN_O_Oq-_X-p68Bcd---4MrF-gD-haqn", ">=7.7.9, <=8.2.1"),
-            dep_req("I8-uW", ">=6.10.3, <=10.10.2"),
-            dep_req("IkNt5XT2-", "=10.5.0"),
-            dep_req("Uw-B_-3_", "=4.5.7"),
-            dep_req("_9IcR0_H-5_C--3", ">=1.3.0, <=2.2.6"),
-            dep_req("_DDfM_Mw_-s_T_FF--6-1-_7jNO", ">=0.2.9, <=9.7.0"),
-            dep_req("_NKE-r_R7v77Spm__1Z-Nlvg_r-i-h-X", ">=6.7.7, <=8.9.1"),
-            dep_req("_dl", "=6.3.3")]
+            dep_req("_dl", "*")]
         ),
         pkg!(("aaBqm-_3v7B_Q-yU", "6.8.3") => [
-            dep_req("-Ov-A_zyIy_E-216Dz__m67H--1UmU_3", ">=3.8.10, <=10.5.10"),
-            dep_req("AO_z_AZ_", ">=1.5.6, <=4.9.7"),
-            dep_req("_Q_Ub_Ygdo-RKyBXG_-0_1--2d-", ">=2.1.3, <=3.3.9")]
+            dep_req("_Q_Ub_Ygdo-RKyBXG_-0_1--2d-", "*")]
         ),
         pkg!(("aaBqm-_3v7B_Q-yU", "8.1.9") => [
-            dep_req("-3_FxaLyA_P0a6K-__915B_-UtU_", ">=2.7.4, <=2.10.6"),
-            dep_req("-Ov-A_zyIy_E-216Dz__m67H--1UmU_3", ">=0.10.6, <=10.4.5"),
-            dep_req("-_6i2q4-_-q", ">=1.8.8, <=10.2.5"),
-            dep_req("-kV_0_6nt", "=1.2.9"),
-            dep_req("I8-uW", ">=1.6.10, <=2.2.0"),
-            dep_req("Ne2wKI0k19N--w0_kwki02_B9", "=8.8.1"),
-            dep_req("_-_l5Dj_08vgI-", ">=0.0.4, <=2.1.3")]
-        ),
-        pkg!(("fFuLmr_2t83BdOL6", "9.3.5") => [
-            dep_req("-C-Ep-2Zw-8b_-_l", ">=3.10.8, <=10.8.8"),
-            dep_req("-e__zm79_s_PM5-vkuZjq", ">=5.8.2, <=6.0.6"),
-            dep_req("-f0j8__50Qf", ">=9.5.9, <=10.5.3"),
-            dep_req("-zQs", "=3.0.1"),
-            dep_req("AO_z_AZ_", ">=1.5.6, <=8.2.8"),
-            dep_req("IkNt5XT2-", "=10.5.0"),
-            dep_req("Ne2wKI0k19N--w0_kwki02_B9", "=4.9.10"),
-            dep_req("Uw-B_-3_", "=4.5.7"),
-            dep_req("Ze-4-Lh4v", ">=3.4.9, <=6.5.8"),
-            dep_req("_-_l5Dj_08vgI-", "=7.8.1"),
-            dep_req("_7_ZdSH-7Y__M_--IcZP_8t", "=4.7.8"),
-            dep_req("_DDfM_Mw_-s_T_FF--6-1-_7jNO", ">=0.2.9, <=9.7.0"),
-            dep_req("_NKE-r_R7v77Spm__1Z-Nlvg_r-i-h-X", ">=6.1.3, <=8.8.1")]
-        ),
-        pkg!(("fFuLmr_2t83BdOL6", "9.5.2") => [
-            dep_req("-C-Ep-2Zw-8b_-_l", ">=2.2.5, <=5.7.2"),
-            dep_req("AO_z_AZ_", ">=1.5.6, <=1.9.10"),
-            dep_req("Uw-B_-3_", "=4.5.7"),
-            dep_req("_9IcR0_H-5_C--3", ">=1.3.0, <=2.2.6"),
-            dep_req("_DDfM_Mw_-s_T_FF--6-1-_7jNO", ">=0.2.9, <=8.1.6")]
+            dep_req("Ne2wKI0k19N--w0_kwki02_B9", "=8.8.1")]
         ),
         pkg!(("vR_m-wg2_8-oEim", "6.0.10") => [
-            dep_req("-3_FxaLyA_P0a6K-__915B_-UtU_", ">=4.2.0, <=6.3.6"),
-            dep_req("-A_B0x--aRz6-3__R6u--f_R-5--rmvc", "=3.4.0"),
-            dep_req("-Tw9Qgx__r__X_E__JB____Qe-8", ">=0.6.3, <=5.8.3"),
             dep_req("-e__zm79_s_PM5-vkuZjq", "=5.3.8"),
-            dep_req("-zC6_m4Ye-D5v_Bwgq--J7mN5_IKf4O8-", "=4.4.9"),
-            dep_req("-zQs", "=8.3.9"),
-            dep_req("HN_O_Oq-_X-p68Bcd---4MrF-gD-haqn", ">=0.9.0, <=8.2.1"),
             dep_req("Ne2wKI0k19N--w0_kwki02_B9", ">=1.0.3, <=4.9.10"),
-            dep_req("Ze-4-Lh4v", "=10.0.7"),
-            dep_req("_-_l5Dj_08vgI-", ">=6.6.2, <=8.1.3"),
-            dep_req("_7_ZdSH-7Y__M_--IcZP_8t", ">=4.7.8, <=7.4.9"),
-            dep_req("aaBqm-_3v7B_Q-yU", ">=3.8.3, <=8.1.9"),
-            dep_req("fFuLmr_2t83BdOL6", ">=9.3.5, <=9.5.2")]
+            dep_req("_7_ZdSH-7Y__M_--IcZP_8t", "*"),
+            dep_req("aaBqm-_3v7B_Q-yU", "*")]
         )
     ];
     let reg = registry(input.clone());
