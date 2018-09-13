@@ -315,6 +315,7 @@ pub trait ArgMatchesExt {
             ),
             target_rustdoc_args: None,
             target_rustc_args: None,
+            local_rustdoc_args: None,
             export_dir: None,
         };
         Ok(opts)
