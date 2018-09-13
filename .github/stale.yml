@@ -28,4 +28,8 @@ markComment: >
   comment and a team member can reopen this issue. Opening a new issue is also
   acceptable!
 
+closeComment: >
+  A comment to confirm that this is being closed due to being stale and the
+  previous comment should have more information.
+
 limitPerRun: 1 # 1 per hour, so 24 per day
