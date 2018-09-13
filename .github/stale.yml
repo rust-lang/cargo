@@ -33,3 +33,5 @@ closeComment: >
   previous comment should have more information.
 
 limitPerRun: 1 # 1 per hour, so 24 per day
+
+only: issues
