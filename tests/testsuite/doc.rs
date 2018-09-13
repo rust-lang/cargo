@@ -1206,6 +1206,31 @@ fn doc_private_items() {
     );
 }
 
+#[test]
+fn doc_private_ws() {
+    let p = project()
+        .file(
+            "Cargo.toml",
+            r#"
+            [workspace]
+            members = ["a", "b"]
+        "#,
+        ).file("a/Cargo.toml", &basic_manifest("a", "0.0.1"))
+        .file("a/src/lib.rs", "fn p() {}")
+        .file("b/Cargo.toml", &basic_manifest("b", "0.0.1"))
+        .file("b/src/lib.rs", "fn p2() {}")
+        .file("b/src/main.rs", "fn main() {}")
+        .build();
+    p.cargo("doc --all --bins --lib --document-private-items -v")
+        .with_stderr_contains(
+            "[RUNNING] `rustdoc [..] a/src/lib.rs [..]--document-private-items[..]",
+        ).with_stderr_contains(
+            "[RUNNING] `rustdoc [..] b/src/lib.rs [..]--document-private-items[..]",
+        ).with_stderr_contains(
+            "[RUNNING] `rustdoc [..] b/src/main.rs [..]--document-private-items[..]",
+        ).run();
+}
+
 const BAD_INTRA_LINK_LIB: &str = r#"
 #![deny(intra_doc_link_resolution_failure)]
 
