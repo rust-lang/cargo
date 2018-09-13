@@ -24,12 +24,8 @@ pub struct BuildContext<'a, 'cfg: 'a> {
     pub resolve: &'a Resolve,
     pub profiles: &'a Profiles,
     pub build_config: &'a BuildConfig,
-    /// This is a workaround to carry the extra compiler args for either
-    /// `rustc` or `rustdoc` given on the command-line for the commands `cargo
-    /// rustc` and `cargo rustdoc`.  These commands only support one target,
-    /// but we don't want the args passed to any dependencies, so we include
-    /// the `Unit` corresponding to the top-level target.
-    pub extra_compiler_args: Option<(Unit<'a>, Vec<String>)>,
+    /// Extra compiler args for either `rustc` or `rustdoc`.
+    pub extra_compiler_args: HashMap<Unit<'a>, Vec<String>>,
     pub packages: &'a PackageSet<'cfg>,
 
     /// Information about the compiler
@@ -51,7 +47,7 @@ impl<'a, 'cfg> BuildContext<'a, 'cfg> {
         config: &'cfg Config,
         build_config: &'a BuildConfig,
         profiles: &'a Profiles,
-        extra_compiler_args: Option<(Unit<'a>, Vec<String>)>,
+        extra_compiler_args: HashMap<Unit<'a>, Vec<String>>,
     ) -> CargoResult<BuildContext<'a, 'cfg>> {
         let incremental_env = match env::var("CARGO_INCREMENTAL") {
             Ok(v) => Some(v == "1"),
@@ -200,12 +196,7 @@ impl<'a, 'cfg> BuildContext<'a, 'cfg> {
     }
 
     pub fn extra_args_for(&self, unit: &Unit<'a>) -> Option<&Vec<String>> {
-        if let Some((ref args_unit, ref args)) = self.extra_compiler_args {
-            if args_unit == unit {
-                return Some(args);
-            }
-        }
-        None
+        self.extra_compiler_args.get(unit)
     }
 
     /// Return the list of filenames read by cargo to generate the BuildContext
