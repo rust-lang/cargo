@@ -4,8 +4,6 @@ daysUntilStale: 180
 
 exemptLabels:
   - C-tracking-issue      # keep tracking issues open
-  - E-easy                # keep good first issues for first time contributors
-  - E-help-wanted         # .. or any other issue for which help is wanted
   - "Feature accepted"    # keep accepted features
   - I-nominated           # keep issue nominated for triaging
   - P-high                # keep anything high priority open!
