@@ -1,0 +1,22 @@
+# Default values: https://probot.github.io/apps/stale/#installation
+
+exemptLabels:
+  - C-tracking-issue      # keep tracking issues open
+  - E-easy                # keep good first issues for first time contributors
+  - E-help-wanted         # .. or any other issue for which help is wanted
+  - "Feature accepted"    # keep accepted features
+  - I-nominated           # keep issue nominated for triaging
+  - P-high                # keep anything high priority open!
+
+staleLabel: stale
+
+markComment: >
+  As there hasn't been any recent activity here this has been marked as stale,
+  and will be closed if no further activity occurs.  If you feel strongly that
+  this should be remain open feel free to leave a comment, perhaps mentioning:
+
+  * Is this still relevant?
+  * If so, what is blocking it?
+  * Is there anything you can do to help move it forward?
+
+  Thank you for contributing!
