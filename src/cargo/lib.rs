@@ -15,6 +15,7 @@
 #![cfg_attr(feature = "cargo-clippy", allow(wrong_self_convention))]   // perhaps Rc should be special cased in Clippy?
 
 extern crate atty;
+extern crate bytesize;
 extern crate clap;
 #[cfg(target_os = "macos")]
 extern crate core_foundation;

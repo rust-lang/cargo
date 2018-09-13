@@ -4,21 +4,22 @@ use std::fmt;
 use std::hash;
 use std::mem;
 use std::path::{Path, PathBuf};
-use std::time::Duration;
+use std::time::{Instant, Duration};
 
+use bytesize::ByteSize;
+use curl::easy::{Easy, HttpVersion};
+use curl::multi::{Multi, EasyHandle};
+use lazycell::LazyCell;
 use semver::Version;
 use serde::ser;
 use toml;
-use lazycell::LazyCell;
-use curl::easy::{Easy, HttpVersion};
-use curl::multi::{Multi, EasyHandle};
 
 use core::{Dependency, Manifest, PackageId, SourceId, Target};
 use core::{FeatureMap, SourceMap, Summary};
 use core::source::MaybePackage;
 use core::interning::InternedString;
 use ops;
-use util::{internal, lev_distance, Config, Progress, ProgressStyle};
+use util::{self, internal, lev_distance, Config, Progress, ProgressStyle};
 use util::errors::{CargoResult, CargoResultExt, HttpNot200};
 use util::network::Retry;
 
@@ -258,9 +259,11 @@ pub struct Downloads<'a, 'cfg: 'a> {
     results: Vec<(usize, CargoResult<()>)>,
     next: usize,
     retry: Retry<'cfg>,
-    progress: RefCell<Progress<'cfg>>,
+    progress: RefCell<Option<Progress<'cfg>>>,
     downloads_finished: usize,
-    downloaded_bytes: usize,
+    downloaded_bytes: u64,
+    largest: (u64, String),
+    start: Instant,
 }
 
 struct Download {
@@ -269,8 +272,9 @@ struct Download {
     data: RefCell<Vec<u8>>,
     url: String,
     descriptor: String,
-    total: Cell<usize>,
-    current: Cell<usize>,
+    total: Cell<u64>,
+    current: Cell<u64>,
+    start: Instant,
 }
 
 impl<'cfg> PackageSet<'cfg> {
@@ -304,19 +308,21 @@ impl<'cfg> PackageSet<'cfg> {
     pub fn enable_download<'a>(&'a self) -> CargoResult<Downloads<'a, 'cfg>> {
         assert!(!self.downloading.replace(true));
         Ok(Downloads {
+            start: Instant::now(),
             set: self,
             next: 0,
             pending: HashMap::new(),
             pending_ids: HashSet::new(),
             results: Vec::new(),
             retry: Retry::new(self.config)?,
-            progress: RefCell::new(Progress::with_style(
+            progress: RefCell::new(Some(Progress::with_style(
                 "Downloading",
                 ProgressStyle::Ratio,
                 self.config,
-            )),
+            ))),
             downloads_finished: 0,
             downloaded_bytes: 0,
+            largest: (0, String::new()),
         })
     }
     pub fn get_one(&self, id: &PackageId) -> CargoResult<&Package> {
@@ -409,9 +415,9 @@ impl<'a, 'cfg> Downloads<'a, 'cfg> {
         handle.progress_function(move |dl_total, dl_cur, _, _| {
             tls::with(|downloads| {
                 let dl = &downloads.pending[&token].0;
-                dl.total.set(dl_total as usize);
-                dl.current.set(dl_cur as usize);
-                downloads.tick(false).is_ok()
+                dl.total.set(dl_total as u64);
+                dl.current.set(dl_cur as u64);
+                downloads.tick(WhyTick::DownloadUpdate).is_ok()
             })
         })?;
 
@@ -423,8 +429,10 @@ impl<'a, 'cfg> Downloads<'a, 'cfg> {
             descriptor,
             total: Cell::new(0),
             current: Cell::new(0),
+            start: Instant::now(),
         };
         self.enqueue(dl, handle)?;
+        self.tick(WhyTick::DownloadStarted)?;
 
         Ok(None)
     }
@@ -443,8 +451,6 @@ impl<'a, 'cfg> Downloads<'a, 'cfg> {
     ///
     /// This function will panic if there are no remaining downloads.
     pub fn wait(&mut self) -> CargoResult<&'a Package> {
-        self.tick(true)?;
-
         let (dl, data) = loop {
             assert_eq!(self.pending.len(), self.pending_ids.len());
             let (token, result) = self.wait_for_curl()?;
@@ -496,13 +502,26 @@ impl<'a, 'cfg> Downloads<'a, 'cfg> {
         //
         // We can continue to iterate on this, but this is hopefully good enough
         // for now.
-        if !self.progress.borrow().is_enabled() {
+        if !self.progress.borrow().as_ref().unwrap().is_enabled() {
             self.set.config.shell().status("Downloading", &dl.descriptor)?;
         }
 
         self.downloads_finished += 1;
         self.downloaded_bytes += dl.total.get();
-        self.tick(true)?;
+        if dl.total.get() > self.largest.0 {
+            self.largest = (dl.total.get(), dl.id.name().to_string());
+        }
+
+        // We're about to synchronously extract the crate below. While we're
+        // doing that our download progress won't actually be updated, nor do we
+        // have a great view into the progress of the extraction. Let's prepare
+        // the user for this CPU-heavy step if it looks like it'll take some
+        // time to do so.
+        if dl.total.get() < ByteSize::kb(400).0 {
+            self.tick(WhyTick::DownloadFinished)?;
+        } else {
+            self.tick(WhyTick::Extracting(&dl.id.name()))?;
+        }
 
         // Inform the original source that the download is finished which
         // should allow us to actually get the package and fill it in now.
@@ -564,17 +583,67 @@ impl<'a, 'cfg> Downloads<'a, 'cfg> {
         }
     }
 
-    fn tick(&self, now: bool) -> CargoResult<()> {
-        self.progress.borrow_mut().tick(
-            self.downloads_finished,
-            self.downloads_finished + self.pending.len(),
-        )
+    fn tick(&self, why: WhyTick) -> CargoResult<()> {
+        let mut progress = self.progress.borrow_mut();
+        let progress = progress.as_mut().unwrap();
+
+        if let WhyTick::DownloadUpdate = why {
+            if !progress.update_allowed() {
+                return Ok(())
+            }
+        }
+        let mut msg = format!("{} crates", self.pending.len());
+        match why {
+            WhyTick::Extracting(krate) => {
+                msg.push_str(&format!(", extracting {} ...", krate));
+            }
+            _ => {
+                let mut dur = Duration::new(0, 0);
+                let mut remaining = 0;
+                for (dl, _) in self.pending.values() {
+                    dur += dl.start.elapsed();
+                    remaining += dl.total.get() - dl.current.get();
+                }
+                if remaining > 0 && dur > Duration::from_millis(500) {
+                    msg.push_str(&format!(", remaining bytes: {}", ByteSize(remaining)));
+                }
+            }
+        }
+        progress.print_now(&msg)
     }
+}
+
+enum WhyTick<'a> {
+    DownloadStarted,
+    DownloadUpdate,
+    DownloadFinished,
+    Extracting(&'a str),
 }
 
 impl<'a, 'cfg> Drop for Downloads<'a, 'cfg> {
     fn drop(&mut self) {
         self.set.downloading.set(false);
+        let progress = self.progress.get_mut().take().unwrap();
+        // Don't print a download summary if we're not using a progress bar,
+        // we've already printed lots of `Downloading...` items.
+        if !progress.is_enabled() {
+            return
+        }
+        if self.downloads_finished == 0 {
+            return
+        }
+        let mut status = format!("{} crates ({}) in {}",
+                                 self.downloads_finished,
+                                 ByteSize(self.downloaded_bytes),
+                                 util::elapsed(self.start.elapsed()));
+        if self.largest.0 > ByteSize::mb(1).0 {
+            status.push_str(&format!(
+                " (largest was `{}` at {})",
+                self.largest.1,
+                ByteSize(self.largest.0),
+            ));
+        }
+        drop(self.set.config.shell().status("Downloaded", status));
     }
 }
 
