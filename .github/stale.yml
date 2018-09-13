@@ -20,3 +20,5 @@ markComment: >
   * Is there anything you can do to help move it forward?
 
   Thank you for contributing!
+
+limitPerRun: 1 # 1 per hour, so 24 per day
