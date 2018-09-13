@@ -1,5 +1,7 @@
 # Default values: https://probot.github.io/apps/stale/#installation
 
+daysUntilStale: 180
+
 exemptLabels:
   - C-tracking-issue      # keep tracking issues open
   - E-easy                # keep good first issues for first time contributors
