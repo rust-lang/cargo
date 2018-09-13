@@ -25,6 +25,7 @@ pub fn fetch<'a>(
     let target_info =
         TargetInfo::new(config, &build_config.requested_target, &rustc, Kind::Target)?;
     {
+        let mut downloads = packages.enable_download()?;
         let mut fetched_packages = HashSet::new();
         let mut deps_to_fetch = ws.members().map(|p| p.package_id()).collect::<Vec<_>>();
 
@@ -33,7 +34,7 @@ pub fn fetch<'a>(
                 continue;
             }
 
-            packages.start_download(id)?;
+            downloads.start(id)?;
             let deps = resolve.deps(id)
                 .filter(|&(_id, deps)| {
                     deps.iter()
@@ -57,10 +58,9 @@ pub fn fetch<'a>(
                 .map(|(id, _deps)| id);
             deps_to_fetch.extend(deps);
         }
-    }
-
-    while packages.remaining_downloads() > 0 {
-        packages.wait_for_download()?;
+        while downloads.remaining() > 0 {
+            downloads.wait()?;
+        }
     }
 
     Ok((resolve, packages))

@@ -1,4 +1,4 @@
-use std::cell::{Ref, RefCell};
+use std::cell::{Ref, RefCell, Cell};
 use std::collections::{HashMap, HashSet};
 use std::fmt;
 use std::hash;
@@ -247,18 +247,20 @@ pub struct PackageSet<'cfg> {
     packages: HashMap<PackageId, LazyCell<Package>>,
     sources: RefCell<SourceMap<'cfg>>,
     config: &'cfg Config,
-    downloads: RefCell<Downloads<'cfg>>,
+    multi: Multi,
+    downloading: Cell<bool>,
 }
 
-pub(crate) struct Downloads<'cfg> {
+pub struct Downloads<'a, 'cfg: 'a> {
+    set: &'a PackageSet<'cfg>,
     pending: HashMap<usize, (Download, EasyHandle)>,
     pending_ids: HashSet<PackageId>,
     results: Vec<(usize, CargoResult<()>)>,
     next: usize,
-    multi: Multi,
     retry: Retry<'cfg>,
-    progress: Progress<'cfg>,
+    progress: RefCell<Progress<'cfg>>,
     downloads_finished: usize,
+    downloaded_bytes: usize,
 }
 
 struct Download {
@@ -267,6 +269,8 @@ struct Download {
     data: RefCell<Vec<u8>>,
     url: String,
     descriptor: String,
+    total: Cell<usize>,
+    current: Cell<usize>,
 }
 
 impl<'cfg> PackageSet<'cfg> {
@@ -288,20 +292,8 @@ impl<'cfg> PackageSet<'cfg> {
                 .collect(),
             sources: RefCell::new(sources),
             config,
-            downloads: RefCell::new(Downloads {
-                multi,
-                next: 0,
-                pending: HashMap::new(),
-                pending_ids: HashSet::new(),
-                results: Vec::new(),
-                retry: Retry::new(config)?,
-                progress: Progress::with_style(
-                    "Downloading",
-                    ProgressStyle::Ratio,
-                    config,
-                ),
-                downloads_finished: 0,
-            }),
+            multi,
+            downloading: Cell::new(false),
         })
     }
 
@@ -309,17 +301,47 @@ impl<'cfg> PackageSet<'cfg> {
         Box::new(self.packages.keys())
     }
 
+    pub fn enable_download<'a>(&'a self) -> CargoResult<Downloads<'a, 'cfg>> {
+        assert!(!self.downloading.replace(true));
+        Ok(Downloads {
+            set: self,
+            next: 0,
+            pending: HashMap::new(),
+            pending_ids: HashSet::new(),
+            results: Vec::new(),
+            retry: Retry::new(self.config)?,
+            progress: RefCell::new(Progress::with_style(
+                "Downloading",
+                ProgressStyle::Ratio,
+                self.config,
+            )),
+            downloads_finished: 0,
+            downloaded_bytes: 0,
+        })
+    }
+    pub fn get_one(&self, id: &PackageId) -> CargoResult<&Package> {
+        let mut e = self.enable_download()?;
+        match e.start(id)? {
+            Some(s) => Ok(s),
+            None => e.wait(),
+        }
+    }
+
+    pub fn sources(&self) -> Ref<SourceMap<'cfg>> {
+        self.sources.borrow()
+    }
+}
+
+impl<'a, 'cfg> Downloads<'a, 'cfg> {
     /// Starts to download the package for the `id` specified.
     ///
     /// Returns `None` if the package is queued up for download and will
     /// eventually be returned from `wait_for_download`. Returns `Some(pkg)` if
     /// the package is ready and doesn't need to be downloaded.
-    pub fn start_download(&self, id: &PackageId) -> CargoResult<Option<&Package>> {
-        let mut downloads = self.downloads.borrow_mut();
-
+    pub fn start(&mut self, id: &PackageId) -> CargoResult<Option<&'a Package>> {
         // First up see if we've already cached this package, in which case
         // there's nothing to do.
-        let slot = self.packages
+        let slot = self.set.packages
             .get(id)
             .ok_or_else(|| internal(format!("couldn't find `{}` in package set", id)))?;
         if let Some(pkg) = slot.borrow() {
@@ -329,7 +351,7 @@ impl<'cfg> PackageSet<'cfg> {
         // Ask the original source fo this `PackageId` for the corresponding
         // package. That may immediately come back and tell us that the package
         // is ready, or it could tell us that it needs to be downloaded.
-        let mut sources = self.sources.borrow_mut();
+        let mut sources = self.set.sources.borrow_mut();
         let source = sources
             .get_mut(id.source_id())
             .ok_or_else(|| internal(format!("couldn't find source for `{}`", id)))?;
@@ -349,12 +371,12 @@ impl<'cfg> PackageSet<'cfg> {
         // internal state and hand off an `Easy` handle to our libcurl `Multi`
         // handle. This won't actually start the transfer, but later it'll
         // hapen during `wait_for_download`
-        let token = downloads.next;
-        downloads.next += 1;
+        let token = self.next;
+        self.next += 1;
         debug!("downloading {} as {}", id, token);
-        assert!(downloads.pending_ids.insert(id.clone()));
+        assert!(self.pending_ids.insert(id.clone()));
 
-        let mut handle = ops::http_handle(self.config)?;
+        let mut handle = ops::http_handle(self.set.config)?;
         handle.get(true)?;
         handle.url(&url)?;
         handle.follow_location(true)?; // follow redirects
@@ -383,22 +405,33 @@ impl<'cfg> PackageSet<'cfg> {
             Ok(buf.len())
         })?;
 
+        handle.progress(true)?;
+        handle.progress_function(move |dl_total, dl_cur, _, _| {
+            tls::with(|downloads| {
+                let dl = &downloads.pending[&token].0;
+                dl.total.set(dl_total as usize);
+                dl.current.set(dl_cur as usize);
+                downloads.tick(false).is_ok()
+            })
+        })?;
+
         let dl = Download {
             token,
             data: RefCell::new(Vec::new()),
             id: id.clone(),
             url,
             descriptor,
+            total: Cell::new(0),
+            current: Cell::new(0),
         };
-        downloads.enqueue(dl, handle)?;
+        self.enqueue(dl, handle)?;
 
         Ok(None)
     }
 
     /// Returns the number of crates that are still downloading
-    pub fn remaining_downloads(&self) -> usize {
-        let downloads = self.downloads.borrow();
-        downloads.pending.len()
+    pub fn remaining(&self) -> usize {
+        self.pending.len()
     }
 
     /// Blocks the current thread waiting for a package to finish downloading.
@@ -409,33 +442,30 @@ impl<'cfg> PackageSet<'cfg> {
     /// # Panics
     ///
     /// This function will panic if there are no remaining downloads.
-    pub fn wait_for_download(&self) -> CargoResult<&Package> {
-        let mut downloads = self.downloads.borrow_mut();
-        let downloads = &mut *downloads;
-        downloads.tick_now()?;
+    pub fn wait(&mut self) -> CargoResult<&'a Package> {
+        self.tick(true)?;
 
         let (dl, data) = loop {
-            assert_eq!(downloads.pending.len(), downloads.pending_ids.len());
-            let (token, result) = downloads.wait_for_curl()?;
+            assert_eq!(self.pending.len(), self.pending_ids.len());
+            let (token, result) = self.wait_for_curl()?;
             debug!("{} finished with {:?}", token, result);
 
-            let (mut dl, handle) = downloads.pending.remove(&token)
+            let (mut dl, handle) = self.pending.remove(&token)
                 .expect("got a token for a non-in-progress transfer");
             let data = mem::replace(&mut *dl.data.borrow_mut(), Vec::new());
-            let mut handle = downloads.multi.remove(handle)?;
+            let mut handle = self.set.multi.remove(handle)?;
 
             // Check if this was a spurious error. If it was a spurious error
             // then we want to re-enqueue our request for another attempt and
             // then we wait for another request to finish.
             let ret = {
-                downloads.retry.try(|| {
+                self.retry.try(|| {
                     result.chain_err(|| {
                         format!("failed to download from `{}`", dl.url)
                     })?;
 
                     let code = handle.response_code()?;
                     if code != 200 && code != 0 {
-                        handle.url(&dl.url)?;
                         let url = handle.effective_url()?.unwrap_or(&dl.url);
                         return Err(HttpNot200 {
                             code,
@@ -448,43 +478,30 @@ impl<'cfg> PackageSet<'cfg> {
             if ret.is_some() {
                 break (dl, data)
             }
-            downloads.enqueue(dl, handle)?;
+            self.enqueue(dl, handle)?;
         };
-        downloads.pending_ids.remove(&dl.id);
-        if !downloads.progress.is_enabled() {
-            self.config.shell().status("Downloading", &dl.descriptor)?;
+        self.pending_ids.remove(&dl.id);
+        if !self.progress.borrow().is_enabled() {
+            self.set.config.shell().status("Downloading", &dl.descriptor)?;
         }
-        downloads.downloads_finished += 1;
-        downloads.tick_now()?;
+        self.downloads_finished += 1;
+        self.downloaded_bytes += dl.total.get();
+        self.tick(true)?;
 
         // Inform the original source that the download is finished which
         // should allow us to actually get the package and fill it in now.
-        let mut sources = self.sources.borrow_mut();
+        let mut sources = self.set.sources.borrow_mut();
         let source = sources
             .get_mut(dl.id.source_id())
             .ok_or_else(|| internal(format!("couldn't find source for `{}`", dl.id)))?;
         let pkg = source.finish_download(&dl.id, data)?;
-        let slot = &self.packages[&dl.id];
+        let slot = &self.set.packages[&dl.id];
         assert!(slot.fill(pkg).is_ok());
         Ok(slot.borrow().unwrap())
     }
 
-    pub fn get_one(&self, id: &PackageId) -> CargoResult<&Package> {
-        assert_eq!(self.remaining_downloads(), 0);
-        match self.start_download(id)? {
-            Some(s) => Ok(s),
-            None => self.wait_for_download(),
-        }
-    }
-
-    pub fn sources(&self) -> Ref<SourceMap<'cfg>> {
-        self.sources.borrow()
-    }
-}
-
-impl<'cfg> Downloads<'cfg> {
     fn enqueue(&mut self, dl: Download, handle: Easy) -> CargoResult<()> {
-        let mut handle = self.multi.add(handle)?;
+        let mut handle = self.set.multi.add(handle)?;
         handle.set_token(dl.token)?;
         self.pending.insert(dl.token, (dl, handle));
         Ok(())
@@ -508,12 +525,12 @@ impl<'cfg> Downloads<'cfg> {
         // `wait` method on `multi`.
         loop {
             let n = tls::set(self, || {
-                self.multi.perform()
+                self.set.multi.perform()
                     .chain_err(|| "failed to perform http requests")
             })?;
             debug!("handles remaining: {}", n);
             let results = &mut self.results;
-            self.multi.messages(|msg| {
+            self.set.multi.messages(|msg| {
                 let token = msg.token().expect("failed to read token");
                 if let Some(result) = msg.result() {
                     results.push((token, result.map_err(|e| e.into())));
@@ -526,16 +543,22 @@ impl<'cfg> Downloads<'cfg> {
                 break Ok(pair)
             }
             assert!(self.pending.len() > 0);
-            self.multi.wait(&mut [], Duration::new(60, 0))
+            self.set.multi.wait(&mut [], Duration::new(60, 0))
                 .chain_err(|| "failed to wait on curl `Multi`")?;
         }
     }
 
-    fn tick_now(&mut self) -> CargoResult<()> {
-        self.progress.tick(
+    fn tick(&self, now: bool) -> CargoResult<()> {
+        self.progress.borrow_mut().tick(
             self.downloads_finished,
             self.downloads_finished + self.pending.len(),
         )
+    }
+}
+
+impl<'a, 'cfg> Drop for Downloads<'a, 'cfg> {
+    fn drop(&mut self) {
+        self.set.downloading.set(false);
     }
 }
 

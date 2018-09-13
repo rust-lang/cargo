@@ -57,15 +57,17 @@ fn metadata_full(ws: &Workspace, opt: &OutputMetadataOptions) -> CargoResult<Exp
         &specs,
     )?;
     let mut packages = HashMap::new();
+    let mut downloads = package_set.enable_download()?;
     for id in package_set.package_ids() {
-        if let Some(pkg) = package_set.start_download(id)? {
+        if let Some(pkg) = downloads.start(id)? {
             packages.insert(id.clone(), pkg.clone());
         }
     }
-    while package_set.remaining_downloads() > 0 {
-        let pkg = package_set.wait_for_download()?;
+    while downloads.remaining() > 0 {
+        let pkg = downloads.wait()?;
         packages.insert(pkg.package_id().clone(), pkg.clone());
     }
+    drop(downloads);
 
     Ok(ExportInfo {
         packages: packages.values().map(|p| (*p).clone()).collect(),
