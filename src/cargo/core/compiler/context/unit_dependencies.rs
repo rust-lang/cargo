@@ -22,6 +22,7 @@ use CargoResult;
 use core::dependency::Kind as DepKind;
 use core::profiles::ProfileFor;
 use core::{Package, Target, PackageId};
+use core::package::Downloads;
 use super::{BuildContext, CompileMode, Kind, Unit};
 
 struct State<'a: 'tmp, 'cfg: 'a, 'tmp> {
@@ -29,6 +30,7 @@ struct State<'a: 'tmp, 'cfg: 'a, 'tmp> {
     deps: &'tmp mut HashMap<Unit<'a>, Vec<Unit<'a>>>,
     pkgs: RefCell<&'tmp mut HashMap<&'a PackageId, &'a Package>>,
     waiting_on_download: HashSet<&'a PackageId>,
+    downloads: Downloads<'a, 'cfg>,
 }
 
 pub fn build_unit_dependencies<'a, 'cfg>(
@@ -44,6 +46,7 @@ pub fn build_unit_dependencies<'a, 'cfg>(
         deps,
         pkgs: RefCell::new(pkgs),
         waiting_on_download: HashSet::new(),
+        downloads: bcx.packages.enable_download()?,
     };
 
     loop {
@@ -495,7 +498,7 @@ impl<'a, 'cfg, 'tmp> State<'a, 'cfg, 'tmp> {
         if !self.waiting_on_download.insert(id) {
             return Ok(None)
         }
-        if let Some(pkg) = self.bcx.packages.start_download(id)? {
+        if let Some(pkg) = self.downloads.start(id)? {
             pkgs.insert(id, pkg);
             self.waiting_on_download.remove(id);
             return Ok(Some(pkg))
@@ -512,9 +515,9 @@ impl<'a, 'cfg, 'tmp> State<'a, 'cfg, 'tmp> {
     /// returns, and it's hoped that by returning we'll be able to push more
     /// packages to download into the queu.
     fn finish_some_downloads(&mut self) -> CargoResult<()> {
-        assert!(self.bcx.packages.remaining_downloads() > 0);
+        assert!(self.downloads.remaining() > 0);
         loop {
-            let pkg = self.bcx.packages.wait_for_download()?;
+            let pkg = self.downloads.wait()?;
             self.waiting_on_download.remove(pkg.package_id());
             self.pkgs.borrow_mut().insert(pkg.package_id(), pkg);
 
@@ -522,7 +525,7 @@ impl<'a, 'cfg, 'tmp> State<'a, 'cfg, 'tmp> {
             // is a good enough number to "fill the network pipe". If we have
             // less than this let's recompute the whole unit dependency graph
             // again and try to find some more packages to download.
-            if self.bcx.packages.remaining_downloads() < 5 {
+            if self.downloads.remaining() < 5 {
                 break
             }
         }
