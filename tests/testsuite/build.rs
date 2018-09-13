@@ -257,7 +257,7 @@ Caused by:
 }
 
 #[test]
-fn cargo_compile_with_invalid_package_name() {
+fn cargo_compile_with_empty_package_name() {
     let p = project()
         .file("Cargo.toml", &basic_manifest("", "0.0.0"))
         .build();
@@ -270,6 +270,24 @@ fn cargo_compile_with_invalid_package_name() {
 
 Caused by:
   package name cannot be an empty string
+",
+        ).run();
+}
+
+#[test]
+fn cargo_compile_with_invalid_package_name() {
+    let p = project()
+        .file("Cargo.toml", &basic_manifest("foo::bar", "0.0.0"))
+        .build();
+
+    p.cargo("build")
+        .with_status(101)
+        .with_stderr(
+            "\
+[ERROR] failed to parse manifest at `[..]`
+
+Caused by:
+  Invalid character `:` in package name: `foo::bar`
 ",
         ).run();
 }
