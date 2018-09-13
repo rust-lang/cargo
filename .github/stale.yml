@@ -5,8 +5,6 @@ daysUntilStale: 180
 exemptLabels:
   - C-tracking-issue      # keep tracking issues open
   - "Feature accepted"    # keep accepted features
-  - I-nominated           # keep issue nominated for triaging
-  - P-high                # keep anything high priority open!
 
 staleLabel: stale
 
