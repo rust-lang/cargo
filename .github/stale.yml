@@ -4,6 +4,7 @@ daysUntilStale: 180
 
 exemptLabels:
   - C-tracking-issue      # keep tracking issues open
+  - C-feature-request     # keep feature requests open (at least for now)
   - "Feature accepted"    # keep accepted features
 
 staleLabel: stale
