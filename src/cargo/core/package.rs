@@ -481,9 +481,25 @@ impl<'a, 'cfg> Downloads<'a, 'cfg> {
             self.enqueue(dl, handle)?;
         };
         self.pending_ids.remove(&dl.id);
+
+        // If the progress bar isn't enabled then we still want to provide some
+        // semblance of progress of how we're downloading crates. Historically
+        // we did this by printing `Downloading ...` as we downloaded each crate
+        // one at a time, but now we download them all in parallel so there's no
+        // sense of progress if they get printed all at once.
+        //
+        // As a sort of weird compromise/hack we print `Downloading ...` when a
+        // crate is *finished* rather than when it starts. This should give a
+        // good sense of progress as we're printing as things complete (as
+        // opposed to all at once at the beginning). It's a bit of a lie because
+        // the crate is already downloaded, though.
+        //
+        // We can continue to iterate on this, but this is hopefully good enough
+        // for now.
         if !self.progress.borrow().is_enabled() {
             self.set.config.shell().status("Downloading", &dl.descriptor)?;
         }
+
         self.downloads_finished += 1;
         self.downloaded_bytes += dl.total.get();
         self.tick(true)?;
