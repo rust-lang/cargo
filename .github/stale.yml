@@ -13,14 +13,23 @@ exemptLabels:
 staleLabel: stale
 
 markComment: >
-  As there hasn't been any recent activity here this has been marked as stale,
-  and will be closed if no further activity occurs.  If you feel strongly that
-  this should be remain open feel free to leave a comment, perhaps mentioning:
+  As there hasn't been any recent activity here for 180 days this has been
+  marked as stale, and if no further activity happens for 7 days this will be
+  automatically closed. This is an automatic action and may be in error, if this
+  issue should remain open please comment to that effect!
+
+  When commenting, we'd be eternally grateful if some details such as these
+  could be included:
 
   * Is this still relevant?
   * If so, what is blocking it?
-  * Is there anything you can do to help move it forward?
+  * Is it known what could be done to help move this forward?
 
   Thank you for contributing!
+
+  If you're reading this comment from the distant future, fear not if this issue
+  was closed automatically. If you believe it's still an issue please leave a
+  comment and a team member can reopen this issue. Opening a new issue is also
+  acceptable!
 
 limitPerRun: 1 # 1 per hour, so 24 per day
