@@ -325,7 +325,7 @@ fn activate_deps_loop(
                     past_conflicting_activations.insert(&dep, &conflicting_activations);
                 }
 
-                match find_candidate(&mut backtrack_stack, &parent, &conflicting_activations) {
+                match find_candidate(&mut backtrack_stack, &parent, backtracked, &conflicting_activations) {
                     Some((candidate, has_another, frame)) => {
                         // Reset all of our local variables used with the
                         // contents of `frame` to complete our backtrack.
@@ -518,18 +518,18 @@ fn activate_deps_loop(
                             find_candidate(
                                 &mut backtrack_stack.clone(),
                                 &parent,
+                                backtracked,
                                 &conflicting_activations,
                             ).is_none()
                         }
                     };
 
-                    // If we're only here for the error messages
-                    // and we did not use backtracking to explore our deps
-                    // then we know one of our candidate deps will fail,
-                    // meaning we will fail and that none of the backtrack frames will find a
+                    // If we're only here for the error messages then we know
+                    // one of our candidate deps will fail, meaning we will
+                    // fail and that none of the backtrack frames will find a
                     // candidate that will help. Consequently let's clean up the
                     // no longer needed backtrack frames.
-                    if !backtracked && activate_for_error_message {
+                    if activate_for_error_message {
                         backtrack_stack.clear();
                     }
 
@@ -810,6 +810,7 @@ fn compatible(a: &semver::Version, b: &semver::Version) -> bool {
 fn find_candidate(
     backtrack_stack: &mut Vec<BacktrackFrame>,
     parent: &Summary,
+    backtracked: bool,
     conflicting_activations: &HashMap<PackageId, ConflictReason>,
 ) -> Option<(Candidate, bool, BacktrackFrame)> {
     while let Some(mut frame) = backtrack_stack.pop() {
@@ -831,11 +832,14 @@ fn find_candidate(
         // active in this back up we know that we're guaranteed to not actually
         // make any progress. As a result if we hit this condition we can
         // completely skip this backtrack frame and move on to the next.
-        if frame
-            .context_backup
-            .is_conflicting(Some(parent.package_id()), conflicting_activations)
-        {
-            continue;
+        if !backtracked {
+            if frame
+                .context_backup
+                .is_conflicting(Some(parent.package_id()), conflicting_activations)
+            {
+                trace!("{} = \"{}\" skip as not solving {}: {:?}", frame.dep.package_name(), frame.dep.version_req(), parent.package_id(), conflicting_activations);
+                continue;
+            }
         }
 
         return Some((candidate, has_another, frame));

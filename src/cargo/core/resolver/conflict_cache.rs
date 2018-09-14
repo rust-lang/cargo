@@ -81,7 +81,7 @@ impl ConflictCache {
             .entry(dep.clone())
             .or_insert_with(Vec::new);
         if !past.contains(con) {
-            trace!("{} adding a skip {:?}", dep.package_name(), con);
+            trace!("{} = \"{}\" adding a skip {:?}", dep.package_name(), dep.version_req(), con);
             past.push(con.clone());
             for c in con.keys() {
                 self.dep_from_pid
