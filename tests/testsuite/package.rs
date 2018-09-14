@@ -932,10 +932,6 @@ fn package_two_kinds_of_deps() {
 
 #[test]
 fn test_edition() {
-    if !is_nightly() {
-        // --edition is nightly-only
-        return;
-    }
     let p = project()
         .file(
             "Cargo.toml",
@@ -951,10 +947,11 @@ fn test_edition() {
         .build();
 
     p.cargo("build -v").masquerade_as_nightly_cargo()
-                // --edition is still in flux and we're not passing -Zunstable-options
-                // from Cargo so it will probably error. Only partially match the output
-                // until stuff stabilizes
-                .with_stderr_contains("\
+        .without_status() // passes on nightly, fails on stable, b/c --edition is nightly-only
+        // --edition is still in flux and we're not passing -Zunstable-options
+        // from Cargo so it will probably error. Only partially match the output
+        // until stuff stabilizes
+        .with_stderr_contains("\
 [COMPILING] foo v0.0.1 ([..])
 [RUNNING] `rustc [..]--edition=2018 [..]
 ").run();
