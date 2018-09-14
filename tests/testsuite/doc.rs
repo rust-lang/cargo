@@ -635,7 +635,6 @@ fn output_not_captured() {
         ).build();
 
     p.cargo("doc")
-        .with_status(101)
         .with_stderr_contains("1 | ☃")
         .with_stderr_contains(r"error: unknown start of token: \u{2603}")
         .run();
