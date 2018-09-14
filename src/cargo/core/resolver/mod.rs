@@ -305,7 +305,12 @@ fn activate_deps_loop(
                 // It's our job here to backtrack, if possible, and find a
                 // different candidate to activate. If we can't find any
                 // candidates whatsoever then it's time to bail entirely.
-                trace!("{}[{}]>{} -- no candidates", parent.name(), cur, dep.package_name());
+                trace!(
+                    "{}[{}]>{} -- no candidates",
+                    parent.name(),
+                    cur,
+                    dep.package_name()
+                );
 
                 // Use our list of `conflicting_activations` to add to our
                 // global list of past conflicting activations, effectively
@@ -325,7 +330,12 @@ fn activate_deps_loop(
                     past_conflicting_activations.insert(&dep, &conflicting_activations);
                 }
 
-                match find_candidate(&mut backtrack_stack, &parent, backtracked, &conflicting_activations) {
+                match find_candidate(
+                    &mut backtrack_stack,
+                    &parent,
+                    backtracked,
+                    &conflicting_activations,
+                ) {
                     Some((candidate, has_another, frame)) => {
                         // Reset all of our local variables used with the
                         // contents of `frame` to complete our backtrack.
@@ -432,8 +442,7 @@ fn activate_deps_loop(
                             .clone()
                             .filter_map(|(_, (ref new_dep, _, _))| {
                                 past_conflicting_activations.conflicting(&cx, new_dep)
-                            })
-                            .next()
+                            }).next()
                         {
                             // If one of our deps is known unresolvable
                             // then we will not succeed.
@@ -467,18 +476,14 @@ fn activate_deps_loop(
                                 .iter()
                                 .flat_map(|other| other.flatten())
                                 // for deps related to us
-                                .filter(|&(_, ref other_dep)|
-                                        known_related_bad_deps.contains(other_dep))
-                                .filter_map(|(other_parent, other_dep)| {
+                                .filter(|&(_, ref other_dep)| {
+                                    known_related_bad_deps.contains(other_dep)
+                                }).filter_map(|(other_parent, other_dep)| {
                                     past_conflicting_activations
-                                        .find_conflicting(
-                                            &cx,
-                                            &other_dep,
-                                            |con| con.contains_key(&pid)
-                                        )
-                                        .map(|con| (other_parent, con))
-                                })
-                                .next()
+                                        .find_conflicting(&cx, &other_dep, |con| {
+                                            con.contains_key(&pid)
+                                        }).map(|con| (other_parent, con))
+                                }).next()
                             {
                                 let rel = conflict.get(&pid).unwrap().clone();
 
@@ -837,7 +842,13 @@ fn find_candidate(
                 .context_backup
                 .is_conflicting(Some(parent.package_id()), conflicting_activations)
             {
-                trace!("{} = \"{}\" skip as not solving {}: {:?}", frame.dep.package_name(), frame.dep.version_req(), parent.package_id(), conflicting_activations);
+                trace!(
+                    "{} = \"{}\" skip as not solving {}: {:?}",
+                    frame.dep.package_name(),
+                    frame.dep.version_req(),
+                    parent.package_id(),
+                    conflicting_activations
+                );
                 continue;
             }
         }

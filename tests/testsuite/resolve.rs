@@ -964,7 +964,12 @@ fn resolving_with_constrained_sibling_transitive_dep_effects() {
 }
 
 #[test]
-fn dont_yet_know_the_problem() {
+fn incomplete_information_skiping() {
+    // When backtracking due to a failed dependency, if Cargo is
+    // trying to be clever and skip irrelevant dependencies, care must
+    // be taken to not miss the transitive effects of alternatives.
+    // Fuzzing discovered that for some reason cargo was skiping based
+    // on incomplete information in the following case:
     // minimized bug found in:
     // https://github.com/rust-lang/cargo/commit/003c29b0c71e5ea28fbe8e72c148c755c9f3f8d9
     let input = vec![
@@ -1007,10 +1012,13 @@ fn dont_yet_know_the_problem() {
     assert!(resolve(&pkg_id("root"), vec![dep("g")], &new_reg).is_ok());
 }
 
-
 #[test]
-fn dont_yet_know_the_problem_2() {
-    // minimized bug found in:
+fn incomplete_information_skiping_2() {
+    // When backtracking due to a failed dependency, if Cargo is
+    // trying to be clever and skip irrelevant dependencies, care must
+    // be taken to not miss the transitive effects of alternatives.
+    // Fuzzing discovered that for some reason cargo was skiping based
+    // on incomplete information in the following case:
     // https://github.com/rust-lang/cargo/commit/003c29b0c71e5ea28fbe8e72c148c755c9f3f8d9
     let input = vec![
         pkg!(("b", "3.8.10")),
@@ -1074,7 +1082,12 @@ fn dont_yet_know_the_problem_2() {
 }
 
 #[test]
-fn dont_yet_know_the_problem_3() {
+fn incomplete_information_skiping_3() {
+    // When backtracking due to a failed dependency, if Cargo is
+    // trying to be clever and skip irrelevant dependencies, care must
+    // be taken to not miss the transitive effects of alternatives.
+    // Fuzzing discovered that for some reason cargo was skiping based
+    // on incomplete information in the following case:
     // minimized bug found in:
     // https://github.com/rust-lang/cargo/commit/003c29b0c71e5ea28fbe8e72c148c755c9f3f8d9
     let input = vec![
