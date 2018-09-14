@@ -1013,132 +1013,30 @@ fn dont_yet_know_the_problem_2() {
     // minimized bug found in:
     // https://github.com/rust-lang/cargo/commit/003c29b0c71e5ea28fbe8e72c148c755c9f3f8d9
     let input = vec![
-        pkg!(("-3_FxaLyA_P0a6K-__915B_-UtU_", "0.6.4")),
-        pkg!(("-3_FxaLyA_P0a6K-__915B_-UtU_", "2.7.4")),
-        pkg!(("-3_FxaLyA_P0a6K-__915B_-UtU_", "2.10.6")),
-        pkg!(("-3_FxaLyA_P0a6K-__915B_-UtU_", "3.4.8")),
-        pkg!(("-3_FxaLyA_P0a6K-__915B_-UtU_", "4.2.0")),
-        pkg!(("-3_FxaLyA_P0a6K-__915B_-UtU_", "4.7.5")),
-        pkg!(("-3_FxaLyA_P0a6K-__915B_-UtU_", "6.3.6")),
-        pkg!(("-8E6S_M3Qy", "0.9.9")),
-        pkg!(("-8E6S_M3Qy", "1.0.2")),
-        pkg!(("-8E6S_M3Qy", "1.7.8")),
-        pkg!(("-8E6S_M3Qy", "1.8.10")),
-        pkg!(("-8E6S_M3Qy", "2.2.1")),
-        pkg!(("-8E6S_M3Qy", "5.7.0")),
-        pkg!(("-8E6S_M3Qy", "9.6.9")),
-        pkg!(("-8E6S_M3Qy", "10.3.7")),
-        pkg!(("-8E6S_M3Qy", "10.4.1")),
-        pkg!(("-A_B0x--aRz6-3__R6u--f_R-5--rmvc", "3.4.0")),
-        pkg!(("-A_B0x--aRz6-3__R6u--f_R-5--rmvc", "9.6.9") => [
-            dep_req("-8E6S_M3Qy", ">=2.2.1, <=10.4.1")]
-        ),
-        pkg!(("-C-Ep-2Zw-8b_-_l", "2.2.5")),
-        pkg!(("-O-3-r-e-9700q-vJE09H5X_P7", "1.1.5")),
         pkg!(("-O-3-r-e-9700q-vJE09H5X_P7", "5.1.6")),
-        pkg!(("-O-3-r-e-9700q-vJE09H5X_P7", "6.3.8") => [
-            dep_req("-3_FxaLyA_P0a6K-__915B_-UtU_", ">=3.4.8, <=4.2.0"),
-            dep_req("-A_B0x--aRz6-3__R6u--f_R-5--rmvc", ">=3.4.0, <=9.6.9")]
-        ),
+        pkg!(("-O-3-r-e-9700q-vJE09H5X_P7", "6.3.8")),
         pkg!(("-O-3-r-e-9700q-vJE09H5X_P7", "6.10.9")),
-        pkg!(("-Ov-A_zyIy_E-216Dz__m67H--1UmU_3", "0.7.0") => [
-            dep_req("-3_FxaLyA_P0a6K-__915B_-UtU_", ">=2.7.4, <=3.4.8"),
-            dep_req("-A_B0x--aRz6-3__R6u--f_R-5--rmvc", ">=3.4.0, <=9.6.9")]
-        ),
-        pkg!(("-Ov-A_zyIy_E-216Dz__m67H--1UmU_3", "0.10.6") => [
-            dep_req("-3_FxaLyA_P0a6K-__915B_-UtU_", ">=0.6.4, <=2.7.4"),
-            dep_req("-8E6S_M3Qy", ">=0.9.9, <=1.0.2"),
-            dep_req("-O-3-r-e-9700q-vJE09H5X_P7", ">=5.1.6, <=6.10.9")]
-        ),
-        pkg!(("-Ov-A_zyIy_E-216Dz__m67H--1UmU_3", "3.8.10") => [
-            dep_req("-A_B0x--aRz6-3__R6u--f_R-5--rmvc", "=9.6.9")]
-        ),
-        pkg!(("-Ov-A_zyIy_E-216Dz__m67H--1UmU_3", "8.7.4") => [
-            dep_req("-A_B0x--aRz6-3__R6u--f_R-5--rmvc", ">=3.4.0, <=9.6.9")]
-        ),
-        pkg!(("-Ov-A_zyIy_E-216Dz__m67H--1UmU_3", "9.4.6") => [
-            dep_req("-8E6S_M3Qy", ">=1.8.10, <=10.3.7"),
-            dep_req("-A_B0x--aRz6-3__R6u--f_R-5--rmvc", "=3.4.0"),
-            dep_req("-O-3-r-e-9700q-vJE09H5X_P7", ">=1.1.5, <=6.3.8")]
-        ),
-        pkg!(("-Ov-A_zyIy_E-216Dz__m67H--1UmU_3", "10.0.1") => [
-            dep_req("-8E6S_M3Qy", ">=2.2.1, <=10.4.1")]
-        ),
-        pkg!(("-Ov-A_zyIy_E-216Dz__m67H--1UmU_3", "10.4.5") => [
-            dep_req("-3_FxaLyA_P0a6K-__915B_-UtU_", ">=0.6.4, <=2.10.6"),
-            dep_req("-8E6S_M3Qy", ">=1.7.8, <=10.4.1"),
-            dep_req("-A_B0x--aRz6-3__R6u--f_R-5--rmvc", ">=3.4.0, <=9.6.9")]
-        ),
-        pkg!(("-Ov-A_zyIy_E-216Dz__m67H--1UmU_3", "10.5.10") => [
-            dep_req("-O-3-r-e-9700q-vJE09H5X_P7", "=5.1.6")]
-        ),
-        pkg!(("-Tw9Qgx__r__X_E__JB____Qe-8", "0.6.3") => [
-            dep_req("-3_FxaLyA_P0a6K-__915B_-UtU_", ">=4.2.0, <=6.3.6")]
-        ),
-        pkg!(("-Tw9Qgx__r__X_E__JB____Qe-8", "5.8.3") => [
-            dep_req("-3_FxaLyA_P0a6K-__915B_-UtU_", "=2.7.4"),
-            dep_req("-A_B0x--aRz6-3__R6u--f_R-5--rmvc", "=3.4.0"),
-            dep_req("-C-Ep-2Zw-8b_-_l", "=2.2.5"),
-            dep_req("-Ov-A_zyIy_E-216Dz__m67H--1UmU_3", ">=3.8.10, <=9.4.6")]
-        ),
-        pkg!(("-_6i2q4-_-q", "1.8.8") => [
-            dep_req("-Ov-A_zyIy_E-216Dz__m67H--1UmU_3", ">=9.4.6, <=10.0.1")]
-        ),
+        pkg!(("-Ov-A_zyIy_E-216Dz__m67H--1UmU_3", "3.8.10")),
+        pkg!(("-Ov-A_zyIy_E-216Dz__m67H--1UmU_3", "8.7.4")),
+        pkg!(("-Ov-A_zyIy_E-216Dz__m67H--1UmU_3", "9.4.6")),
+        pkg!(("-_6i2q4-_-q", "1.8.8")),
         pkg!(("-_6i2q4-_-q", "10.2.5")),
-        pkg!(("-e__zm79_s_PM5-vkuZjq", "4.4.6") => [
-            dep_req("-Ov-A_zyIy_E-216Dz__m67H--1UmU_3", ">=0.10.6, <=10.0.1")]
-        ),
-        pkg!(("-e__zm79_s_PM5-vkuZjq", "5.3.8") => [
-            dep_req("-O-3-r-e-9700q-vJE09H5X_P7", "=6.3.8"),
-            dep_req("-Tw9Qgx__r__X_E__JB____Qe-8", "=5.8.3"),
-            dep_req("-_6i2q4-_-q", ">=0.8.1, <=10.2.5")]
-        ),
-        pkg!(("-e__zm79_s_PM5-vkuZjq", "9.4.6")),
         pkg!(("-f0j8__50Qf", "4.1.2") => [
             dep_req("-O-3-r-e-9700q-vJE09H5X_P7", "=6.10.9")]
         ),
         pkg!(("-f0j8__50Qf", "5.5.6")),
-        pkg!(("-f0j8__50Qf", "5.6.10") => [
-            dep_req("-e__zm79_s_PM5-vkuZjq", "=4.4.6")]
-        ),
-        pkg!(("-zC6_m4Ye-D5v_Bwgq--J7mN5_IKf4O8-", "4.4.9") => [
-            dep_req("-Tw9Qgx__r__X_E__JB____Qe-8", "=0.6.3"),
-            dep_req("-e__zm79_s_PM5-vkuZjq", ">=5.3.8, <=9.4.6")]
-        ),
-        pkg!(("-zC6_m4Ye-D5v_Bwgq--J7mN5_IKf4O8-", "6.5.3") => [
-            dep_req("-O-3-r-e-9700q-vJE09H5X_P7", "=6.10.9")]
-        ),
-        pkg!(("-zQs", "8.3.9") => [
-            dep_req("-_6i2q4-_-q", ">=0.8.1, <=1.8.8"),
-            dep_req("-zC6_m4Ye-D5v_Bwgq--J7mN5_IKf4O8-", ">=4.4.9, <=6.5.3")]
-        ),
-        pkg!(("HN_O_Oq-_X-p68Bcd---4MrF-gD-haqn", "0.9.0") => [
-            dep_req("-zC6_m4Ye-D5v_Bwgq--J7mN5_IKf4O8-", "=6.5.3")]
-        ),
-        pkg!(("HN_O_Oq-_X-p68Bcd---4MrF-gD-haqn", "0.9.3") => [
-            dep_req("-Ov-A_zyIy_E-216Dz__m67H--1UmU_3", ">=10.4.5, <=10.5.10")]
-        ),
-        pkg!(("Ne2wKI0k19N--w0_kwki02_B9", "1.0.3")),
-        pkg!(("Ne2wKI0k19N--w0_kwki02_B9", "4.9.10") => [
-            dep_req("-A_B0x--aRz6-3__R6u--f_R-5--rmvc", ">=3.4.0, <=9.6.9")]
-        ),
+        pkg!(("-f0j8__50Qf", "5.6.10")),
         pkg!(("Ne2wKI0k19N--w0_kwki02_B9", "8.0.1")),
-        pkg!(("Ne2wKI0k19N--w0_kwki02_B9", "8.8.1") => [
-            dep_req("HN_O_Oq-_X-p68Bcd---4MrF-gD-haqn", ">=0.9.0, <=0.9.3")]
-        ),
+        pkg!(("Ne2wKI0k19N--w0_kwki02_B9", "8.8.1")),
         pkg!(("_7_ZdSH-7Y__M_--IcZP_8t", "4.7.8") => [
             dep_req("-f0j8__50Qf", ">=5.5.6, <=5.6.10"),
-            dep_req("-zQs", "=8.3.9"),
             dep_req("Ne2wKI0k19N--w0_kwki02_B9", ">=1.0.3, <=8.0.1")]
         ),
         pkg!(("_7_ZdSH-7Y__M_--IcZP_8t", "7.4.9") => [
-            dep_req("-3_FxaLyA_P0a6K-__915B_-UtU_", "=4.7.5")]
+            dep_req("bad", "=4.7.5")]
         ),
         pkg!(("_DDfM_Mw_-s_T_FF--6-1-_7jNO", "0.2.9") => [
             dep_req("-f0j8__50Qf", ">=4.1.2, <=5.5.6")]
-        ),
-        pkg!("_Q_Ub_Ygdo-RKyBXG_-0_1--2d-" => [
-            dep_req("_DDfM_Mw_-s_T_FF--6-1-_7jNO", "=0.2.9")]
         ),
         pkg!("_dl" => [
             dep("bad")]
@@ -1147,14 +1045,15 @@ fn dont_yet_know_the_problem_2() {
             dep_req("_dl", "*")]
         ),
         pkg!(("aaBqm-_3v7B_Q-yU", "6.8.3") => [
-            dep_req("_Q_Ub_Ygdo-RKyBXG_-0_1--2d-", "*")]
+            dep_req("_DDfM_Mw_-s_T_FF--6-1-_7jNO", "=0.2.9")]
         ),
         pkg!(("aaBqm-_3v7B_Q-yU", "8.1.9") => [
             dep_req("Ne2wKI0k19N--w0_kwki02_B9", "=8.8.1")]
         ),
         pkg!(("vR_m-wg2_8-oEim", "6.0.10") => [
-            dep_req("-e__zm79_s_PM5-vkuZjq", "=5.3.8"),
-            dep_req("Ne2wKI0k19N--w0_kwki02_B9", ">=1.0.3, <=4.9.10"),
+            dep_req("-O-3-r-e-9700q-vJE09H5X_P7", "=6.3.8"),
+            dep_req("-Ov-A_zyIy_E-216Dz__m67H--1UmU_3", ">=3.8.10, <=9.4.6"),
+            dep_req("-_6i2q4-_-q", ">=0.8.1, <=10.2.5"),
             dep_req("_7_ZdSH-7Y__M_--IcZP_8t", "*"),
             dep_req("aaBqm-_3v7B_Q-yU", "*")]
         )
