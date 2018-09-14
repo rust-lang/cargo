@@ -104,7 +104,7 @@ impl<'a> ToPkgId for (&'a str, String) {
 }
 
 macro_rules! pkg {
-    ($pkgid:expr => [$($deps:expr),+]) => ({
+    ($pkgid:expr => [$($deps:expr),* $(,)* ]) => ({
         let d: Vec<Dependency> = vec![$($deps.to_dep()),+];
         let pkgid = $pkgid.to_pkgid();
         let link = if pkgid.name().ends_with("-sys") {Some(pkgid.name().as_str())} else {None};
@@ -979,13 +979,13 @@ fn dont_yet_know_the_problem() {
         pkg!("to_yank"),
         pkg!(("f", "1.0.0") => [
             dep("to_yank"),
-            dep("d")
+            dep("d"),
         ]),
         pkg!(("f", "1.1.0") => [dep("d")]),
         pkg!("g" => [
             dep("b"),
             dep("e"),
-            dep("f")
+            dep("f"),
         ]),
     ];
     let reg = registry(input.clone());
@@ -1013,49 +1013,46 @@ fn dont_yet_know_the_problem_2() {
     // minimized bug found in:
     // https://github.com/rust-lang/cargo/commit/003c29b0c71e5ea28fbe8e72c148c755c9f3f8d9
     let input = vec![
-        pkg!(("a", "6.3.8")),
-        pkg!(("a", "6.10.9")),
         pkg!(("b", "3.8.10")),
         pkg!(("b", "8.7.4")),
         pkg!(("b", "9.4.6")),
         pkg!(("c", "1.8.8")),
         pkg!(("c", "10.2.5")),
         pkg!(("d", "4.1.2") => [
-            dep_req("a", "=6.10.9")]
-        ),
+            dep_req("bad", "=6.10.9"),
+        ]),
         pkg!(("d", "5.5.6")),
         pkg!(("d", "5.6.10")),
         pkg!(("to_yank", "8.0.1")),
         pkg!(("to_yank", "8.8.1")),
         pkg!(("e", "4.7.8") => [
             dep_req("d", ">=5.5.6, <=5.6.10"),
-            dep_req("to_yank", "=8.0.1")]
-        ),
+            dep_req("to_yank", "=8.0.1"),
+        ]),
         pkg!(("e", "7.4.9") => [
-            dep_req("bad", "=4.7.5")]
-        ),
+            dep_req("bad", "=4.7.5"),
+        ]),
         pkg!("f" => [
-            dep_req("d", ">=4.1.2, <=5.5.6")]
-        ),
+            dep_req("d", ">=4.1.2, <=5.5.6"),
+        ]),
         pkg!("g" => [
-            dep("bad")]
-        ),
+            dep("bad"),
+        ]),
         pkg!(("h", "3.8.3") => [
-            dep_req("g", "*")]
-        ),
+            dep_req("g", "*"),
+        ]),
         pkg!(("h", "6.8.3") => [
-            dep("f")]
-        ),
+            dep("f"),
+        ]),
         pkg!(("h", "8.1.9") => [
-            dep_req("to_yank", "=8.8.1")]
-        ),
+            dep_req("to_yank", "=8.8.1"),
+        ]),
         pkg!("i" => [
-            dep_req("a", "=6.3.8"),
             dep_req("b", "*"),
             dep_req("c", "*"),
             dep_req("e", "*"),
-            dep_req("h", "*")]
-        )
+            dep_req("h", "*"),
+        ]),
     ];
     let reg = registry(input.clone());
 
