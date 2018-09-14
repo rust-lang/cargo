@@ -1256,20 +1256,39 @@ warning: be sure to add `[..]` to your PATH to be able to run the installed bina
 }
 
 #[test]
-fn install_ignores_cargo_config() {
+fn install_ignores_local_cargo_config() {
     pkg("bar", "0.0.1");
 
     let p = project()
         .file(
             ".cargo/config",
             r#"
-            [build]
-            target = "non-existing-target"
-        "#,
+                [build]
+                target = "non-existing-target"
+            "#,
         )
         .file("src/main.rs", "fn main() {}")
         .build();
 
     p.cargo("install bar").run();
     assert_has_installed_exe(cargo_home(), "bar");
+}
+
+#[test]
+fn install_global_cargo_config() {
+    pkg("bar", "0.0.1");
+
+    let config = cargo_home().join("config");
+    let mut toml = fs::read_to_string(&config).unwrap_or(String::new());
+
+    toml.push_str(r#"
+        [build]
+        target = 'nonexistent'
+    "#);
+    fs::write(&config, toml).unwrap();
+
+    cargo_process("install bar")
+        .with_status(101)
+        .with_stderr_contains("[..]--target nonexistent[..]")
+        .run();
 }
