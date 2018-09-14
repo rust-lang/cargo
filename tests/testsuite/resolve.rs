@@ -1070,8 +1070,7 @@ fn dont_yet_know_the_problem_2() {
     );
     assert_eq!(input.len(), new_reg.len() + 1);
     // it should still build
-    // TODO: uncomment when minimized: assert!(resolve(&pkg_id("root"), vec![dep("i")], &new_reg).is_ok());
-    assert!(resolve(&pkg_id("root"), vec![dep("i")], &new_reg).is_err());
+    assert!(resolve(&pkg_id("root"), vec![dep("i")], &new_reg).is_ok());
 }
 
 #[test]
@@ -1086,26 +1085,23 @@ fn dont_yet_know_the_problem_3() {
             dep_req("to_yank", "=3.0.3"),
         ] },
         pkg!{("a", "3.3.2") => [
-            dep_req("to_yank", ">=3.0.3, <=3.3.0"),
+            dep_req("to_yank", "<=3.3.0"),
         ] },
         pkg!{("b", "0.1.3") => [
             dep_req("a", "=3.3.0"),
         ] },
         pkg!{("b", "2.0.2") => [
-            dep_req("to_yank", ">=3.3.0, <=3.3.1"),
-            dep_req("a", ">=3.3.0, <=3.3.2"),
+            dep_req("to_yank", "3.3.0"),
+            dep_req("a", "*"),
         ] },
         pkg!{("b", "2.3.3") => [
-            dep_req("to_yank", ">=3.3.0, <=3.3.1"),
+            dep_req("to_yank", "3.3.0"),
             dep_req("a", "=3.3.0"),
-        ] },
-        pkg!{"c" => [
-            dep_req("b", "*"),
         ] },
     ];
     let reg = registry(input.clone());
 
-    let res = resolve(&pkg_id("root"), vec![dep("c")], &reg).unwrap();
+    let res = resolve(&pkg_id("root"), vec![dep_req("b", "*")], &reg).unwrap();
     let package_to_yank = ("to_yank", "3.0.3").to_pkgid();
     // this package is not used in the resolution.
     assert!(!res.contains(&package_to_yank));
@@ -1119,8 +1115,7 @@ fn dont_yet_know_the_problem_3() {
     );
     assert_eq!(input.len(), new_reg.len() + 1);
     // it should still build
-    // TODO: uncomment when minimized: assert!(resolve(&pkg_id("root"), vec![dep("c")], &new_reg).is_ok());
-    assert!(resolve(&pkg_id("root"), vec![dep("c")], &new_reg).is_err());
+    assert!(resolve(&pkg_id("root"), vec![dep_req("b", "*")], &new_reg).is_ok());
 }
 
 #[test]
