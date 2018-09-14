@@ -509,11 +509,11 @@ impl<'a, 'cfg, 'tmp> State<'a, 'cfg, 'tmp> {
     /// Completes at least one downloading, maybe waiting for more to complete.
     ///
     /// This function will block the current thread waiting for at least one
-    /// create to finish downloading. The function may continue to download more
+    /// crate to finish downloading. The function may continue to download more
     /// crates if it looks like there's a long enough queue of crates to keep
     /// downloading. When only a handful of packages remain this function
     /// returns, and it's hoped that by returning we'll be able to push more
-    /// packages to download into the queu.
+    /// packages to download into the queue.
     fn finish_some_downloads(&mut self) -> CargoResult<()> {
         assert!(self.downloads.remaining() > 0);
         loop {

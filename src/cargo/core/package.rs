@@ -325,12 +325,23 @@ impl<'cfg> PackageSet<'cfg> {
             largest: (0, String::new()),
         })
     }
+
     pub fn get_one(&self, id: &PackageId) -> CargoResult<&Package> {
-        let mut e = self.enable_download()?;
-        match e.start(id)? {
-            Some(s) => Ok(s),
-            None => e.wait(),
+        Ok(self.get_many(Some(id))?.remove(0))
+    }
+
+    pub fn get_many<'a>(&self, ids: impl IntoIterator<Item = &'a PackageId>)
+        -> CargoResult<Vec<&Package>>
+    {
+        let mut pkgs = Vec::new();
+        let mut downloads = self.enable_download()?;
+        for id in ids {
+            pkgs.extend(downloads.start(id)?);
         }
+        while downloads.remaining() > 0 {
+            pkgs.push(downloads.wait()?);
+        }
+        Ok(pkgs)
     }
 
     pub fn sources(&self) -> Ref<SourceMap<'cfg>> {
@@ -421,6 +432,16 @@ impl<'a, 'cfg> Downloads<'a, 'cfg> {
             })
         })?;
 
+        // If the progress bar isn't enabled then it may be awhile before the
+        // first crate finishes downloading so we inform immediately that we're
+        // downloading crates here.
+        if self.downloads_finished == 0 &&
+            self.pending.len() == 0 &&
+            !self.progress.borrow().as_ref().unwrap().is_enabled()
+        {
+            self.set.config.shell().status("Downloading", "crates ...")?;
+        }
+
         let dl = Download {
             token,
             data: RefCell::new(Vec::new()),
@@ -489,21 +510,9 @@ impl<'a, 'cfg> Downloads<'a, 'cfg> {
         self.pending_ids.remove(&dl.id);
 
         // If the progress bar isn't enabled then we still want to provide some
-        // semblance of progress of how we're downloading crates. Historically
-        // we did this by printing `Downloading ...` as we downloaded each crate
-        // one at a time, but now we download them all in parallel so there's no
-        // sense of progress if they get printed all at once.
-        //
-        // As a sort of weird compromise/hack we print `Downloading ...` when a
-        // crate is *finished* rather than when it starts. This should give a
-        // good sense of progress as we're printing as things complete (as
-        // opposed to all at once at the beginning). It's a bit of a lie because
-        // the crate is already downloaded, though.
-        //
-        // We can continue to iterate on this, but this is hopefully good enough
-        // for now.
+        // semblance of progress of how we're downloading crates.
         if !self.progress.borrow().as_ref().unwrap().is_enabled() {
-            self.set.config.shell().status("Downloading", &dl.descriptor)?;
+            self.set.config.shell().status("Downloaded", &dl.descriptor)?;
         }
 
         self.downloads_finished += 1;

@@ -3569,11 +3569,12 @@ fn build_all_member_dependency_same_name() {
 
     p.cargo("build --all")
         .with_stderr(
-            "[..] Updating `[..]` index\n\
-             [..] Downloading a v0.1.0 ([..])\n\
-             [..] Compiling a v0.1.0\n\
-             [..] Compiling a v0.1.0 ([..])\n\
-             [..] Finished dev [unoptimized + debuginfo] target(s) in [..]\n",
+            "[UPDATING] `[..]` index\n\
+             [DOWNLOADING] crates ...\n\
+             [DOWNLOADED] a v0.1.0 ([..])\n\
+             [COMPILING] a v0.1.0\n\
+             [COMPILING] a v0.1.0 ([..])\n\
+             [FINISHED] dev [unoptimized + debuginfo] target(s) in [..]\n",
         ).run();
 }
 

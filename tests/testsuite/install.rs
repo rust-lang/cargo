@@ -27,7 +27,8 @@ fn simple() {
         .with_stderr(
             "\
 [UPDATING] `[..]` index
-[DOWNLOADING] foo v0.0.1 (registry [..])
+[DOWNLOADING] crates ...
+[DOWNLOADED] foo v0.0.1 (registry [..])
 [INSTALLING] foo v0.0.1
 [COMPILING] foo v0.0.1
 [FINISHED] release [optimized] target(s) in [..]
@@ -53,12 +54,14 @@ fn multiple_pkgs() {
         .with_stderr(
             "\
 [UPDATING] `[..]` index
-[DOWNLOADING] foo v0.0.1 (registry `[CWD]/registry`)
+[DOWNLOADING] crates ...
+[DOWNLOADED] foo v0.0.1 (registry `[CWD]/registry`)
 [INSTALLING] foo v0.0.1
 [COMPILING] foo v0.0.1
 [FINISHED] release [optimized] target(s) in [..]
 [INSTALLING] [CWD]/home/.cargo/bin/foo[EXE]
-[DOWNLOADING] bar v0.0.2 (registry `[CWD]/registry`)
+[DOWNLOADING] crates ...
+[DOWNLOADED] bar v0.0.2 (registry `[CWD]/registry`)
 [INSTALLING] bar v0.0.2
 [COMPILING] bar v0.0.2
 [FINISHED] release [optimized] target(s) in [..]
@@ -97,7 +100,8 @@ fn pick_max_version() {
         .with_stderr(
             "\
 [UPDATING] `[..]` index
-[DOWNLOADING] foo v0.2.1 (registry [..])
+[DOWNLOADING] crates ...
+[DOWNLOADED] foo v0.2.1 (registry [..])
 [INSTALLING] foo v0.2.1
 [COMPILING] foo v0.2.1
 [FINISHED] release [optimized] target(s) in [..]
@@ -1004,7 +1008,7 @@ fn vers_precise() {
     pkg("foo", "0.1.2");
 
     cargo_process("install foo --vers 0.1.1")
-        .with_stderr_contains("[DOWNLOADING] foo v0.1.1 (registry [..])")
+        .with_stderr_contains("[DOWNLOADED] foo v0.1.1 (registry [..])")
         .run();
 }
 
@@ -1014,7 +1018,7 @@ fn version_too() {
     pkg("foo", "0.1.2");
 
     cargo_process("install foo --version 0.1.1")
-        .with_stderr_contains("[DOWNLOADING] foo v0.1.1 (registry [..])")
+        .with_stderr_contains("[DOWNLOADED] foo v0.1.1 (registry [..])")
         .run();
 }
 

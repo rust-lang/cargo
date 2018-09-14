@@ -331,7 +331,8 @@ fn crates_io_then_directory() {
         .with_stderr(
             "\
 [UPDATING] `[..]` index
-[DOWNLOADING] bar v0.1.0 ([..])
+[DOWNLOADING] crates ...
+[DOWNLOADED] bar v0.1.0 ([..])
 [COMPILING] bar v0.1.0
 [COMPILING] foo v0.1.0 ([CWD])
 [FINISHED] [..]

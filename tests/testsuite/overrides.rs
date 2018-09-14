@@ -185,7 +185,8 @@ fn transitive() {
             "\
 [UPDATING] `[ROOT][..]` index
 [UPDATING] git repository `[..]`
-[DOWNLOADING] baz v0.2.0 (registry [..])
+[DOWNLOADING] crates ...
+[DOWNLOADED] baz v0.2.0 (registry [..])
 [COMPILING] bar v0.1.0 (file://[..])
 [COMPILING] baz v0.2.0
 [COMPILING] foo v0.0.1 ([CWD])
@@ -338,8 +339,9 @@ fn use_a_spec_to_select() {
             "\
 [UPDATING] `[ROOT][..]` index
 [UPDATING] git repository `[..]`
-[DOWNLOADING] [..]
-[DOWNLOADING] [..]
+[DOWNLOADING] crates ...
+[DOWNLOADED] [..]
+[DOWNLOADED] [..]
 [COMPILING] [..]
 [COMPILING] [..]
 [COMPILING] [..]
@@ -395,7 +397,8 @@ fn override_adds_some_deps() {
             "\
 [UPDATING] `[ROOT][..]` index
 [UPDATING] git repository `[..]`
-[DOWNLOADING] baz v0.1.1 (registry [..])
+[DOWNLOADING] crates ...
+[DOWNLOADED] baz v0.1.1 (registry [..])
 [COMPILING] baz v0.1.1
 [COMPILING] bar v0.1.0 ([..])
 [COMPILING] foo v0.0.1 ([CWD])
@@ -832,7 +835,8 @@ documented online at the url below for more information.
 
 https://doc.rust-lang.org/cargo/reference/specifying-dependencies.html#overriding-dependencies
 
-[DOWNLOADING] [..]
+[DOWNLOADING] crates ...
+[DOWNLOADED] [..]
 [COMPILING] [..]
 [COMPILING] [..]
 [COMPILING] [..]
