@@ -566,6 +566,14 @@ impl Execs {
         self
     }
 
+    /// Remove exit code check for the process.
+    ///
+    /// By default, the expected exit code is `0`.
+    pub fn without_status(&mut self) -> &mut Self {
+        self.expect_exit_code = None;
+        self
+    }
+
     /// Verify that stdout contains the given contiguous lines somewhere in
     /// its output.
     /// See `lines_match` for supported patterns.
