@@ -223,8 +223,9 @@ fn works_through_the_registry() {
         .with_stderr(
             "\
 [UPDATING] [..] index
-[DOWNLOADING] [..]
-[DOWNLOADING] [..]
+[DOWNLOADING] crates ...
+[DOWNLOADED] [..]
+[DOWNLOADED] [..]
 [COMPILING] baz v0.1.0
 [COMPILING] bar v0.1.0
 [COMPILING] foo v0.0.1 ([..])
@@ -267,7 +268,8 @@ fn ignore_version_from_other_platform() {
         .with_stderr(
             "\
 [UPDATING] [..] index
-[DOWNLOADING] [..]
+[DOWNLOADING] crates ...
+[DOWNLOADED] [..]
 [COMPILING] bar v0.1.0
 [COMPILING] foo v0.0.1 ([..])
 [FINISHED] dev [unoptimized + debuginfo] target(s) in [..]

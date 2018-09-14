@@ -53,8 +53,8 @@ fn fetch_all_platform_dependencies_when_no_target_is_given() {
         .build();
 
     p.cargo("fetch")
-        .with_stderr_contains("[..] Downloading d1 v1.2.3 [..]")
-        .with_stderr_contains("[..] Downloading d2 v0.1.2 [..]")
+        .with_stderr_contains("[DOWNLOADED] d1 v1.2.3 [..]")
+        .with_stderr_contains("[DOWNLOADED] d2 v0.1.2 [..]")
         .run();
 }
 
@@ -100,13 +100,13 @@ fn fetch_platform_specific_dependencies() {
 
     p.cargo("fetch --target")
         .arg(&host)
-        .with_stderr_contains("[..] Downloading d1 v1.2.3 [..]")
-        .with_stderr_does_not_contain("[..] Downloading d2 v0.1.2 [..]")
+        .with_stderr_contains("[DOWNLOADED] d1 v1.2.3 [..]")
+        .with_stderr_does_not_contain("[DOWNLOADED] d2 v0.1.2 [..]")
         .run();
 
     p.cargo("fetch --target")
         .arg(&target)
-        .with_stderr_contains("[..] Downloading d2 v0.1.2[..]")
-        .with_stderr_does_not_contain("[..] Downloading d1 v1.2.3 [..]")
+        .with_stderr_contains("[DOWNLOADED] d2 v0.1.2[..]")
+        .with_stderr_does_not_contain("[DOWNLOADED] d1 v1.2.3 [..]")
         .run();
 }

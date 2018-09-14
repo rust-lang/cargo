@@ -243,16 +243,10 @@ pub fn compile_ws<'a>(
     let resolve = ops::resolve_ws_with_method(ws, source, method, &specs)?;
     let (packages, resolve_with_overrides) = resolve;
 
-    let mut to_builds = Vec::new();
-    let mut downloads = packages.enable_download()?;
-    for spec in specs.iter() {
-        let pkgid = spec.query(resolve_with_overrides.iter())?;
-        to_builds.extend(downloads.start(pkgid)?);
-    }
-    while downloads.remaining() > 0 {
-        to_builds.push(downloads.wait()?);
-    }
-    drop(downloads);
+    let to_build_ids = specs.iter()
+        .map(|s| s.query(resolve_with_overrides.iter()))
+        .collect::<CargoResult<Vec<_>>>()?;
+    let mut to_builds = packages.get_many(to_build_ids)?;
 
     // The ordering here affects some error messages coming out of cargo, so
     // let's be test and CLI friendly by always printing in the same order if

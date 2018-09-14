@@ -2359,8 +2359,8 @@ fn include_overrides_gitignore() {
         .with_stderr(
             "\
 [UPDATING] `[..]` index
-[DOWNLOADING] filetime [..]
-[DOWNLOADING] libc [..]
+[DOWNLOADED] filetime [..]
+[DOWNLOADED] libc [..]
 [COMPILING] libc [..]
 [RUNNING] `rustc --crate-name libc [..]`
 [COMPILING] filetime [..]

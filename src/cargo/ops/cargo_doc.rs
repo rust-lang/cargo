@@ -31,16 +31,10 @@ pub fn doc(ws: &Workspace, options: &DocOptions) -> CargoResult<()> {
     )?;
     let (packages, resolve_with_overrides) = resolve;
 
-    let mut pkgs = Vec::new();
-    let mut downloads = packages.enable_download()?;
-    for spec in specs.iter() {
-        let pkgid = spec.query(resolve_with_overrides.iter())?;
-        pkgs.extend(downloads.start(pkgid)?);
-    }
-    while downloads.remaining() > 0 {
-        pkgs.push(downloads.wait()?);
-    }
-    drop(downloads);
+    let ids = specs.iter()
+        .map(|s| s.query(resolve_with_overrides.iter()))
+        .collect::<CargoResult<Vec<_>>>()?;
+    let pkgs = packages.get_many(ids)?;
 
     let mut lib_names = HashMap::new();
     let mut bin_names = HashMap::new();
