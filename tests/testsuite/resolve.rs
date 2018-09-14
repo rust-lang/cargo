@@ -1075,6 +1075,74 @@ fn dont_yet_know_the_problem_2() {
 }
 
 #[test]
+fn dont_yet_know_the_problem_3() {
+    // minimized bug found in:
+    // https://github.com/rust-lang/cargo/commit/003c29b0c71e5ea28fbe8e72c148c755c9f3f8d9
+    let input = vec![
+        pkg!{("-T-_-_A_CO--XgN_K2B4416_G--sys", "2.3.0")},
+        pkg!{("DKrq_-0Z9a3-Sgq-3uF_6-m--_", "3.0.3")},
+        pkg!{("DKrq_-0Z9a3-Sgq-3uF_6-m--_", "3.3.0") => [
+            dep_req("-T-_-_A_CO--XgN_K2B4416_G--sys", "=2.3.0"),
+        ] },
+        pkg!{("DKrq_-0Z9a3-Sgq-3uF_6-m--_", "3.3.1") => [
+            dep_req("-T-_-_A_CO--XgN_K2B4416_G--sys", "=2.3.0"),
+        ] },
+        pkg!{("GRF35jH--W_Yy-TWb--bA1beA_5", "3.3.0") => [
+            dep_req("-T-_-_A_CO--XgN_K2B4416_G--sys", "=2.3.0"),
+            dep_req("DKrq_-0Z9a3-Sgq-3uF_6-m--_", "=3.0.3"),
+        ] },
+        pkg!{("GRF35jH--W_Yy-TWb--bA1beA_5", "3.3.2") => [
+            dep_req("-T-_-_A_CO--XgN_K2B4416_G--sys", "=2.3.0"),
+            dep_req("DKrq_-0Z9a3-Sgq-3uF_6-m--_", ">=3.0.3, <=3.3.0"),
+        ] },
+        pkg!{("QUW50-sys", "1.0.2") => [
+            dep_req("-T-_-_A_CO--XgN_K2B4416_G--sys", "=2.3.0"),
+            dep_req("GRF35jH--W_Yy-TWb--bA1beA_5", "=3.3.2"),
+        ] },
+        pkg!{("QUW50-sys", "1.2.0")},
+        pkg!{("QUW50-sys", "1.3.1")},
+        pkg!{("S-y_ebdMD--O_yAi-X3-EePZaHE7LBWk-sys", "0.1.3") => [
+            dep_req("-T-_-_A_CO--XgN_K2B4416_G--sys", "=2.3.0"),
+            dep_req("GRF35jH--W_Yy-TWb--bA1beA_5", "=3.3.0"),
+            dep_req("QUW50-sys", "=1.3.1"),
+        ] },
+        pkg!{("S-y_ebdMD--O_yAi-X3-EePZaHE7LBWk-sys", "2.0.2") => [
+            dep_req("-T-_-_A_CO--XgN_K2B4416_G--sys", "=2.3.0"),
+            dep_req("DKrq_-0Z9a3-Sgq-3uF_6-m--_", ">=3.3.0, <=3.3.1"),
+            dep_req("GRF35jH--W_Yy-TWb--bA1beA_5", ">=3.3.0, <=3.3.2"),
+            dep_req("QUW50-sys", ">=1.0.2, <=1.3.1"),
+        ] },
+        pkg!{("S-y_ebdMD--O_yAi-X3-EePZaHE7LBWk-sys", "2.3.3") => [
+            dep_req("-T-_-_A_CO--XgN_K2B4416_G--sys", "=2.3.0"),
+            dep_req("DKrq_-0Z9a3-Sgq-3uF_6-m--_", ">=3.3.0, <=3.3.1"),
+            dep_req("GRF35jH--W_Yy-TWb--bA1beA_5", "=3.3.0"),
+            dep_req("QUW50-sys", ">=1.0.2, <=1.2.0"),
+        ] },
+        pkg!{"z" => [
+            dep_req("S-y_ebdMD--O_yAi-X3-EePZaHE7LBWk-sys", ">=0.1.3, <=2.3.3"),
+        ] },
+    ];
+    let reg = registry(input.clone());
+
+    let res = resolve(&pkg_id("root"), vec![dep("z")], &reg).unwrap();
+    let package_to_yank = ("DKrq_-0Z9a3-Sgq-3uF_6-m--_", "3.0.3").to_pkgid();
+    // this package is not used in the resolution.
+    assert!(!res.contains(&package_to_yank));
+    // so when we yank it
+    let new_reg = registry(
+        input
+            .iter()
+            .cloned()
+            .filter(|x| &package_to_yank != x.package_id())
+            .collect(),
+    );
+    assert_eq!(input.len(), new_reg.len() + 1);
+    // it should still build
+    // TODO: uncomment when minimized: assert!(resolve(&pkg_id("root"), vec![dep("z")], &new_reg).is_ok());
+    assert!(resolve(&pkg_id("root"), vec![dep("z")], &new_reg).is_err());
+}
+
+#[test]
 fn resolving_but_no_exists() {
     let reg = registry(vec![]);
 
