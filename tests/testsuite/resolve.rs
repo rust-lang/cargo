@@ -1013,55 +1013,54 @@ fn dont_yet_know_the_problem_2() {
     // minimized bug found in:
     // https://github.com/rust-lang/cargo/commit/003c29b0c71e5ea28fbe8e72c148c755c9f3f8d9
     let input = vec![
-        pkg!(("-O-3-r-e-9700q-vJE09H5X_P7", "5.1.6")),
-        pkg!(("-O-3-r-e-9700q-vJE09H5X_P7", "6.3.8")),
-        pkg!(("-O-3-r-e-9700q-vJE09H5X_P7", "6.10.9")),
-        pkg!(("-Ov-A_zyIy_E-216Dz__m67H--1UmU_3", "3.8.10")),
-        pkg!(("-Ov-A_zyIy_E-216Dz__m67H--1UmU_3", "8.7.4")),
-        pkg!(("-Ov-A_zyIy_E-216Dz__m67H--1UmU_3", "9.4.6")),
-        pkg!(("-_6i2q4-_-q", "1.8.8")),
-        pkg!(("-_6i2q4-_-q", "10.2.5")),
-        pkg!(("-f0j8__50Qf", "4.1.2") => [
-            dep_req("-O-3-r-e-9700q-vJE09H5X_P7", "=6.10.9")]
+        pkg!(("a", "6.3.8")),
+        pkg!(("a", "6.10.9")),
+        pkg!(("b", "3.8.10")),
+        pkg!(("b", "8.7.4")),
+        pkg!(("b", "9.4.6")),
+        pkg!(("c", "1.8.8")),
+        pkg!(("c", "10.2.5")),
+        pkg!(("d", "4.1.2") => [
+            dep_req("a", "=6.10.9")]
         ),
-        pkg!(("-f0j8__50Qf", "5.5.6")),
-        pkg!(("-f0j8__50Qf", "5.6.10")),
-        pkg!(("Ne2wKI0k19N--w0_kwki02_B9", "8.0.1")),
-        pkg!(("Ne2wKI0k19N--w0_kwki02_B9", "8.8.1")),
-        pkg!(("_7_ZdSH-7Y__M_--IcZP_8t", "4.7.8") => [
-            dep_req("-f0j8__50Qf", ">=5.5.6, <=5.6.10"),
-            dep_req("Ne2wKI0k19N--w0_kwki02_B9", ">=1.0.3, <=8.0.1")]
+        pkg!(("d", "5.5.6")),
+        pkg!(("d", "5.6.10")),
+        pkg!(("to_yank", "8.0.1")),
+        pkg!(("to_yank", "8.8.1")),
+        pkg!(("e", "4.7.8") => [
+            dep_req("d", ">=5.5.6, <=5.6.10"),
+            dep_req("to_yank", "=8.0.1")]
         ),
-        pkg!(("_7_ZdSH-7Y__M_--IcZP_8t", "7.4.9") => [
+        pkg!(("e", "7.4.9") => [
             dep_req("bad", "=4.7.5")]
         ),
-        pkg!(("_DDfM_Mw_-s_T_FF--6-1-_7jNO", "0.2.9") => [
-            dep_req("-f0j8__50Qf", ">=4.1.2, <=5.5.6")]
+        pkg!("f" => [
+            dep_req("d", ">=4.1.2, <=5.5.6")]
         ),
-        pkg!("_dl" => [
+        pkg!("g" => [
             dep("bad")]
         ),
-        pkg!(("aaBqm-_3v7B_Q-yU", "3.8.3") => [
-            dep_req("_dl", "*")]
+        pkg!(("h", "3.8.3") => [
+            dep_req("g", "*")]
         ),
-        pkg!(("aaBqm-_3v7B_Q-yU", "6.8.3") => [
-            dep_req("_DDfM_Mw_-s_T_FF--6-1-_7jNO", "=0.2.9")]
+        pkg!(("h", "6.8.3") => [
+            dep("f")]
         ),
-        pkg!(("aaBqm-_3v7B_Q-yU", "8.1.9") => [
-            dep_req("Ne2wKI0k19N--w0_kwki02_B9", "=8.8.1")]
+        pkg!(("h", "8.1.9") => [
+            dep_req("to_yank", "=8.8.1")]
         ),
-        pkg!(("vR_m-wg2_8-oEim", "6.0.10") => [
-            dep_req("-O-3-r-e-9700q-vJE09H5X_P7", "=6.3.8"),
-            dep_req("-Ov-A_zyIy_E-216Dz__m67H--1UmU_3", ">=3.8.10, <=9.4.6"),
-            dep_req("-_6i2q4-_-q", ">=0.8.1, <=10.2.5"),
-            dep_req("_7_ZdSH-7Y__M_--IcZP_8t", "*"),
-            dep_req("aaBqm-_3v7B_Q-yU", "*")]
+        pkg!("i" => [
+            dep_req("a", "=6.3.8"),
+            dep_req("b", "*"),
+            dep_req("c", "*"),
+            dep_req("e", "*"),
+            dep_req("h", "*")]
         )
     ];
     let reg = registry(input.clone());
 
-    let res = resolve(&pkg_id("root"), vec![dep_req("vR_m-wg2_8-oEim", "=6.0.10")], &reg).unwrap();
-    let package_to_yank = ("Ne2wKI0k19N--w0_kwki02_B9", "8.8.1").to_pkgid();
+    let res = resolve(&pkg_id("root"), vec![dep("i")], &reg).unwrap();
+    let package_to_yank = ("to_yank", "8.8.1").to_pkgid();
     // this package is not used in the resolution.
     assert!(!res.contains(&package_to_yank));
     // so when we yank it
@@ -1074,8 +1073,8 @@ fn dont_yet_know_the_problem_2() {
     );
     assert_eq!(input.len(), new_reg.len() + 1);
     // it should still build
-    // TODO: uncomment when minimized: assert!(resolve(&pkg_id("root"), vec![dep_req("vR_m-wg2_8-oEim", "=6.0.10")], &new_reg).is_ok());
-    assert!(resolve(&pkg_id("root"), vec![dep_req("vR_m-wg2_8-oEim", "=6.0.10")], &new_reg).is_err());
+    // TODO: uncomment when minimized: assert!(resolve(&pkg_id("root"), vec![dep("i")], &new_reg).is_ok());
+    assert!(resolve(&pkg_id("root"), vec![dep("i")], &new_reg).is_err());
 }
 
 #[test]
