@@ -11,7 +11,7 @@ staleLabel: stale
 
 markComment: >
   As there hasn't been any activity here in over 180 days I've marked this as
-  stale and if no further activity happens for 7 days I'll will close it.
+  stale and if no further activity happens for 7 days I will close it.
 
 
   [I'm a bot](https://github.com/probot/stale) so this may be in error!  If this
