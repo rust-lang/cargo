@@ -28,6 +28,10 @@ markComment: >
   Thank you for contributing!
 
 
+  (The cargo team is currently evaluating the use of Stale bot, and using #6035
+  as the tracking issue to gather feedback.)
+
+
   If you're reading this comment from the distant future, fear not if this
   was closed automatically. If you believe it's still an issue please leave a
   comment and a team member can reopen this issue. Opening a new issue is also
