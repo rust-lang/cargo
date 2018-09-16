@@ -41,6 +41,8 @@ extern crate libc;
 extern crate libgit2_sys;
 #[macro_use]
 extern crate log;
+#[macro_use]
+extern crate miniserde;
 extern crate num_cpus;
 extern crate opener;
 extern crate rustfix;
