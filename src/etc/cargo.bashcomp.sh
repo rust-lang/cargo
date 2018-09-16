@@ -238,6 +238,8 @@ _toolchains(){
 				result+=("+${BASH_REMATCH[1]}-${BASH_REMATCH[3]}")
 			fi
 			result+=("+$line")
+		else
+			result+=("+$line")
 		fi
 	done <<< "$toolchains"
 	echo "${result[@]}"
