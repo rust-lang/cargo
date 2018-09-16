@@ -33,6 +33,7 @@ dependencies (version set to \"*\").",
 
 pub fn exec(config: &mut Config, args: &ArgMatches) -> CliResult {
     let ws = args.workspace(config)?;
+    let compile_opts = args.compile_options(config, CompileMode::Build)?;
 
     println!("cargo add subcommand executed");
 
@@ -66,6 +67,7 @@ pub fn exec(config: &mut Config, args: &ArgMatches) -> CliResult {
             krate,
             &source,
             version,
+            &compile_opts,
         )?;
 
     Ok(())
