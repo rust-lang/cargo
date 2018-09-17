@@ -264,6 +264,7 @@ pub struct Downloads<'a, 'cfg: 'a> {
     downloaded_bytes: u64,
     largest: (u64, String),
     start: Instant,
+    success: bool,
 }
 
 struct Download {
@@ -323,6 +324,7 @@ impl<'cfg> PackageSet<'cfg> {
             downloads_finished: 0,
             downloaded_bytes: 0,
             largest: (0, String::new()),
+            success: false,
         })
     }
 
@@ -341,6 +343,7 @@ impl<'cfg> PackageSet<'cfg> {
         while downloads.remaining() > 0 {
             pkgs.push(downloads.wait()?);
         }
+        downloads.success = true;
         Ok(pkgs)
     }
 
@@ -651,7 +654,12 @@ impl<'a, 'cfg> Drop for Downloads<'a, 'cfg> {
         if !progress.is_enabled() {
             return
         }
+        // If we didn't download anything, no need for a summary
         if self.downloads_finished == 0 {
+            return
+        }
+        // If an error happened, let's not clutter up the output
+        if !self.success {
             return
         }
         let mut status = format!("{} crates ({}) in {}",
