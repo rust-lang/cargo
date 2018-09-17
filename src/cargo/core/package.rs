@@ -627,7 +627,12 @@ impl<'a, 'cfg> Downloads<'a, 'cfg> {
                 let mut remaining = 0;
                 for (dl, _) in self.pending.values() {
                     dur += dl.start.elapsed();
-                    remaining += dl.total.get() - dl.current.get();
+                    // If the total/current look weird just throw out the data
+                    // point, sounds like curl has more to learn before we have
+                    // the true information.
+                    if dl.total.get() >= dl.current.get() {
+                        remaining += dl.total.get() - dl.current.get();
+                    }
                 }
                 if remaining > 0 && dur > Duration::from_millis(500) {
                     msg.push_str(&format!(", remaining bytes: {}", ByteSize(remaining)));
