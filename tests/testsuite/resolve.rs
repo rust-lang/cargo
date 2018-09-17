@@ -225,26 +225,41 @@ fn registry_strategy(
     max_crates: usize,
     max_versions: usize,
 ) -> impl Strategy<Value = Vec<Summary>> {
-    let name_strategy = string_regex("[A-Za-z_-][A-Za-z0-9_-]*(-sys)?").unwrap();
+    let name = string_regex("[A-Za-z_-][A-Za-z0-9_-]*(-sys)?").unwrap();
 
-    let raw_version_strategy = [..max_versions; 3];
+    let raw_version = [..max_versions; 3];
     let version_from_raw = |v: &[usize; 3]| format!("{}.{}.{}", v[0], v[1], v[2]);
 
-    let list_of_versions_strategy = btree_set(raw_version_strategy, 1..=max_versions)
-        .prop_map(move |ver| ver.iter().map(version_from_raw).collect::<Vec<_>>());
+    // If this is false than the crate will depend on the nonexistent "bad"
+    // instead of the complex set we generated for it.
+    let allow_deps = prop::bool::weighted(0.95);
+
+    let list_of_versions =
+        btree_set((raw_version, allow_deps), 1..=max_versions).prop_map(move |ver| {
+            ver.iter()
+                .map(|a| (version_from_raw(&a.0), a.1))
+                .collect::<Vec<_>>()
+        });
 
     let list_of_crates_with_versions =
-        btree_map(name_strategy, list_of_versions_strategy, 1..=max_crates).prop_map(|mut vers| {
+        btree_map(name, list_of_versions, 1..=max_crates).prop_map(|mut vers| {
             // root is the name of the thing being compiled
             // so it would be confusing to have it in the index
             vers.remove("root");
+            // bad is a name reserved for a dep that won't work
+            vers.remove("bad");
             vers
         });
 
     list_of_crates_with_versions.prop_flat_map(|vers| {
         vers.iter()
-            .flat_map(|(name, vers)| vers.iter().map(move |x| (name.as_str(), x).to_pkgid()))
-            .map(|name| {
+            .flat_map(|(name, vers)| {
+                vers.iter()
+                    .map(move |x| ((name.as_str(), &x.0).to_pkgid(), x.1))
+            }).map(|(name, allow_deps)| {
+                if !allow_deps {
+                    return Just(pkg_dep(name.clone(), vec![dep_req("bad", "*")])).boxed();
+                }
                 let s: Vec<_> = vers
                     .keys()
                     .cloned()
@@ -252,37 +267,32 @@ fn registry_strategy(
                     .collect::<Vec<_>>();
                 let s_len = s.len();
                 let vers = vers.clone();
-                prop::option::weighted(
-                    0.95,
-                    (
-                        subsequence(s, ..=s_len),
-                        vec(
-                            (any::<prop::sample::Index>(), any::<prop::sample::Index>()),
-                            s_len,
-                        ),
+                (
+                    subsequence(s, ..=s_len),
+                    vec(
+                        (any::<prop::sample::Index>(), any::<prop::sample::Index>()),
+                        s_len,
                     ),
-                ).prop_map(move |deps| {
-                    deps.map(|x| {
-                        x.0.into_iter()
-                            .zip(x.1.into_iter())
+                )
+                    .prop_map(move |deps| {
+                        deps.0
+                            .into_iter()
+                            .zip(deps.1.into_iter())
                             .map(|(dep_name, (a, b))| {
-                                let s = vers.get(&dep_name).unwrap_or(&vec![]).clone();
-                                if s.is_empty() {
-                                    return dep_req(&dep_name, "=6.6.6");
-                                }
+                                let s = vers[&dep_name].clone();
                                 let (a, b) = (a.index(s.len()), b.index(s.len()));
                                 let (a, b) = (min(a, b), max(a, b));
                                 dep_req(
                                     &dep_name,
                                     &if a == b {
-                                        format!("={}", s[a])
+                                        format!("={}", s[a].0)
                                     } else {
-                                        format!(">={}, <={}", s[a], s[b])
+                                        format!(">={}, <={}", s[a].0, s[b].0)
                                     },
                                 )
                             }).collect::<Vec<_>>()
-                    }).unwrap_or_else(|| vec![dep_req("bad", "=6.6.6")])
-                }).prop_map(move |deps| pkg_dep(name.clone(), deps))
+                    }).prop_map(move |deps| pkg_dep(name.clone(), deps))
+                    .boxed()
             }).collect::<Vec<_>>()
     })
 }
