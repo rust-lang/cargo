@@ -21,7 +21,7 @@ pub fn cli() -> App {
             "Fix all tests",
             "Fix only the specified bench target",
             "Fix all benches",
-            "Fix all targets (lib and bin targets by default)",
+            "Fix all targets (default)",
         )
         .arg_release("Fix artifacts in release mode, with optimizations")
         .arg(opt("profile", "Profile to build the selected target for").value_name("PROFILE"))
