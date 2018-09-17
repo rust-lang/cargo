@@ -125,7 +125,7 @@ __cargo_commands=$(cargo --list 2>/dev/null | tail -n +2)
 _locate_manifest(){
 	local manifest=`cargo locate-project 2>/dev/null`
 	# regexp-replace manifest '\{"root":"|"\}' ''
-	echo ${manifest:9:-2}
+	echo ${manifest:9:${#manifest}-11}
 }
 
 # Extracts the values of "name" from the array given in $1 and shows them as
@@ -237,6 +237,8 @@ _toolchains(){
 				# channel-date
 				result+=("+${BASH_REMATCH[1]}-${BASH_REMATCH[3]}")
 			fi
+			result+=("+$line")
+		else
 			result+=("+$line")
 		fi
 	done <<< "$toolchains"
