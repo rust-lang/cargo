@@ -417,7 +417,11 @@ impl<'a, 'cfg> Downloads<'a, 'cfg> {
         handle.write_function(move |buf| {
             debug!("{} - {} bytes of data", token, buf.len());
             tls::with(|downloads| {
-                downloads.pending[&token].0.data.borrow_mut().extend_from_slice(buf);
+                if let Some(downloads) = downloads {
+                    downloads.pending[&token].0.data
+                        .borrow_mut()
+                        .extend_from_slice(buf);
+                }
             });
             Ok(buf.len())
         })?;
@@ -425,6 +429,10 @@ impl<'a, 'cfg> Downloads<'a, 'cfg> {
         handle.progress(true)?;
         handle.progress_function(move |dl_total, dl_cur, _, _| {
             tls::with(|downloads| {
+                let downloads = match downloads {
+                    Some(d) => d,
+                    None => return false,
+                };
                 let dl = &downloads.pending[&token].0;
                 dl.total.set(dl_total as u64);
                 dl.current.set(dl_cur as u64);
@@ -663,11 +671,14 @@ mod tls {
 
     thread_local!(static PTR: Cell<usize> = Cell::new(0));
 
-    pub(crate) fn with<R>(f: impl FnOnce(&Downloads) -> R) -> R {
+    pub(crate) fn with<R>(f: impl FnOnce(Option<&Downloads>) -> R) -> R {
         let ptr = PTR.with(|p| p.get());
-        assert!(ptr != 0);
-        unsafe {
-            f(&*(ptr as *const Downloads))
+        if ptr == 0 {
+            f(None)
+        } else {
+            unsafe {
+                f(Some(&*(ptr as *const Downloads)))
+            }
         }
     }
 
