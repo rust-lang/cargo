@@ -3101,3 +3101,70 @@ fn doctest_skip_staticlib() {
 [RUNNING] target/debug/deps/foo-[..]",
         ).run();
 }
+
+#[test]
+fn can_not_mix_doc_tests_and_regular_tests() {
+    let p = project()
+        .file("src/lib.rs", "\
+/// ```
+/// assert_eq!(1, 1)
+/// ```
+pub fn foo() -> u8 { 1 }
+
+#[cfg(test)] mod tests {
+    #[test] fn it_works() { assert_eq!(2 + 2, 4); }
+}
+")
+        .build();
+
+    p.cargo("test")
+        .with_stderr("\
+[COMPILING] foo v0.0.1 ([CWD])
+[FINISHED] dev [unoptimized + debuginfo] target(s) in [..]
+[RUNNING] target/debug/deps/foo-[..]
+[DOCTEST] foo
+")
+        .with_stdout("
+running 1 test
+test tests::it_works ... ok
+
+test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out
+
+
+running 1 test
+test src/lib.rs - foo (line 1) ... ok
+
+test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out
+\n")
+        .run();
+
+    p.cargo("test --lib")
+        .with_stderr("\
+[FINISHED] dev [unoptimized + debuginfo] target(s) in [..]
+[RUNNING] target/debug/deps/foo-[..]\n")
+        .with_stdout("
+running 1 test
+test tests::it_works ... ok
+
+test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out
+\n")
+        .run();
+
+    p.cargo("test --doc")
+        .with_stderr("\
+[FINISHED] dev [unoptimized + debuginfo] target(s) in [..]
+[DOCTEST] foo
+")
+        .with_stdout("
+running 1 test
+test src/lib.rs - foo (line 1) ... ok
+
+test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out
+
+").run();
+
+    p.cargo("test --lib --doc")
+        .with_status(101)
+        .with_stderr("[ERROR] Can't mix --doc with other target selecting options\n")
+        .run();
+}
