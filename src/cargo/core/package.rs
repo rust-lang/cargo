@@ -585,9 +585,11 @@ impl<'a, 'cfg> Downloads<'a, 'cfg> {
             })?;
             debug!("handles remaining: {}", n);
             let results = &mut self.results;
+            let pending = &self.pending;
             self.set.multi.messages(|msg| {
                 let token = msg.token().expect("failed to read token");
-                if let Some(result) = msg.result() {
+                let handle = &pending[&token].1;
+                if let Some(result) = msg.result_for(&handle) {
                     results.push((token, result.map_err(|e| e.into())));
                 } else {
                     debug!("message without a result (?)");
