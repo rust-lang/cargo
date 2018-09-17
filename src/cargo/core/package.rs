@@ -489,15 +489,14 @@ impl<'a, 'cfg> Downloads<'a, 'cfg> {
                 .expect("got a token for a non-in-progress transfer");
             let data = mem::replace(&mut *dl.data.borrow_mut(), Vec::new());
             let mut handle = self.set.multi.remove(handle)?;
+            self.pending_ids.remove(&dl.id);
 
             // Check if this was a spurious error. If it was a spurious error
             // then we want to re-enqueue our request for another attempt and
             // then we wait for another request to finish.
             let ret = {
                 self.retry.try(|| {
-                    result.chain_err(|| {
-                        format!("failed to download from `{}`", dl.url)
-                    })?;
+                    result?;
 
                     let code = handle.response_code()?;
                     if code != 200 && code != 0 {
@@ -508,14 +507,18 @@ impl<'a, 'cfg> Downloads<'a, 'cfg> {
                         }.into())
                     }
                     Ok(())
+                }).chain_err(|| {
+                    format!("failed to download from `{}`", dl.url)
                 })?
             };
-            if ret.is_some() {
-                break (dl, data)
+            match ret {
+                Some(()) => break (dl, data),
+                None => {
+                    self.pending_ids.insert(dl.id.clone());
+                    self.enqueue(dl, handle)?
+                }
             }
-            self.enqueue(dl, handle)?;
         };
-        self.pending_ids.remove(&dl.id);
 
         // If the progress bar isn't enabled then we still want to provide some
         // semblance of progress of how we're downloading crates.
