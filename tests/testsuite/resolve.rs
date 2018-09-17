@@ -225,37 +225,30 @@ fn registry_strategy(
     max_crates: usize,
     max_versions: usize,
 ) -> impl Strategy<Value = Vec<Summary>> {
-    let valid_name_strategy = string_regex("[A-Za-z_-][A-Za-z0-9_-]*").unwrap();
+    let name_strategy = string_regex("[A-Za-z_-][A-Za-z0-9_-]*(-sys)?").unwrap();
 
-    fn ver(max: usize) -> impl Strategy<Value = (usize, usize, usize)> {
-        (..=max, ..=max, ..=max)
-    }
+    let raw_version_strategy = [..max_versions; 3];
+    let version_from_raw = |v: &[usize; 3]| format!("{}.{}.{}", v[0], v[1], v[2]);
 
-    btree_map(
-        valid_name_strategy,
-        btree_set(ver(max_versions), 1..=max_versions),
-        1..=max_crates,
-    ).prop_flat_map(|mut b| {
-        // root is the name of the thing being compiled
-        // so it would be confusing to have it in the index
-        b.remove("root");
-        let vers: BTreeMap<_, Vec<String>> = b
-            .iter()
-            .map(|(name, ver)| {
-                (
-                    pkg_id(name).name(),
-                    ver.iter()
-                        .map(|(a, b, c)| format!("{}.{}.{}", a, b, c))
-                        .collect(),
-                )
-            }).collect();
+    let list_of_versions_strategy = btree_set(raw_version_strategy, 1..=max_versions)
+        .prop_map(move |ver| ver.iter().map(version_from_raw).collect::<Vec<_>>());
+
+    let list_of_crates_with_versions =
+        btree_map(name_strategy, list_of_versions_strategy, 1..=max_crates).prop_map(|mut vers| {
+            // root is the name of the thing being compiled
+            // so it would be confusing to have it in the index
+            vers.remove("root");
+            vers
+        });
+
+    list_of_crates_with_versions.prop_flat_map(|vers| {
         vers.iter()
             .flat_map(|(name, vers)| vers.iter().map(move |x| (name.as_str(), x).to_pkgid()))
             .map(|name| {
                 let s: Vec<_> = vers
                     .keys()
                     .cloned()
-                    .take_while(|&n| name.name() > n)
+                    .take_while(|n| name.name().as_str() > n)
                     .collect::<Vec<_>>();
                 let s_len = s.len();
                 let vers = vers.clone();
