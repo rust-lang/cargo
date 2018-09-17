@@ -14,7 +14,7 @@ use support::registry::Package;
 
 use proptest::collection::{btree_map, btree_set, vec};
 use proptest::prelude::*;
-use proptest::sample::subsequence;
+use proptest::sample::Index;
 use proptest::string::string_regex;
 use proptest::test_runner::basic_result_cache;
 
@@ -211,7 +211,7 @@ fn loc_names(names: &[(&'static str, &'static str)]) -> Vec<PackageId> {
 fn ci_no_shrink<T: ::std::fmt::Debug>(
     s: impl Strategy<Value = T> + 'static,
 ) -> impl Strategy<Value = T> {
-    if true || env::var("CI").is_ok() {
+    if env::var("CI").is_ok() {
         s.no_shrink().boxed()
     } else {
         s.boxed()
@@ -251,57 +251,70 @@ fn registry_strategy(
             vers
         });
 
-    list_of_crates_with_versions.prop_flat_map(|vers| {
-        vers.iter()
-            .flat_map(|(name, vers)| {
-                vers.iter()
-                    .map(move |x| ((name.as_str(), &x.0).to_pkgid(), x.1))
-            }).map(|(name, allow_deps)| {
-                if !allow_deps {
-                    return Just(pkg_dep(name.clone(), vec![dep_req("bad", "*")])).boxed();
+    // each version of each crate can depend on each crate smaller then it
+    let max_deps = 1 + max_versions * (max_crates * (max_crates - 1)) / 2;
+
+    let raw_version_range = (any::<Index>(), any::<Index>());
+    let raw_dependency = (any::<Index>(), any::<Index>(), raw_version_range);
+
+    fn order_index(a: Index, b: Index, size: usize) -> (usize, usize) {
+        let (a, b) = (a.index(size), b.index(size));
+        (min(a, b), max(a, b))
+    }
+
+    let list_of_raw_dependency = vec(raw_dependency, ..=max_deps);
+
+    (list_of_crates_with_versions, list_of_raw_dependency).prop_map(
+        |(crate_vers_by_name, raw_dependencies)| {
+            let list_of_pkgid: Vec<_> = crate_vers_by_name
+                .iter()
+                .flat_map(|(name, vers)| vers.iter().map(move |x| ((name.as_str(), &x.0), x.1)))
+                .collect();
+            let len_all_pkgid = list_of_pkgid.len();
+            let mut dependency_by_pkgid = vec![vec![]; len_all_pkgid];
+            for (a, b, (c, d)) in raw_dependencies {
+                let (a, b) = order_index(a, b, len_all_pkgid);
+                let ((dep_name, _), _) = list_of_pkgid[a];
+                if (list_of_pkgid[b].0).0 == dep_name {
+                    continue;
                 }
-                let s: Vec<_> = vers
-                    .keys()
-                    .cloned()
-                    .take_while(|n| name.name().as_str() > n)
-                    .collect::<Vec<_>>();
-                let s_len = s.len();
-                let vers = vers.clone();
-                (
-                    subsequence(s, ..=s_len),
-                    vec(
-                        (any::<prop::sample::Index>(), any::<prop::sample::Index>()),
-                        s_len,
-                    ),
-                )
-                    .prop_map(move |deps| {
-                        deps.0
-                            .into_iter()
-                            .zip(deps.1.into_iter())
-                            .map(|(dep_name, (a, b))| {
-                                let s = vers[&dep_name].clone();
-                                let (a, b) = (a.index(s.len()), b.index(s.len()));
-                                let (a, b) = (min(a, b), max(a, b));
-                                dep_req(
-                                    &dep_name,
-                                    &if a == b {
-                                        format!("={}", s[a].0)
-                                    } else {
-                                        format!(">={}, <={}", s[a].0, s[b].0)
-                                    },
-                                )
-                            }).collect::<Vec<_>>()
-                    }).prop_map(move |deps| pkg_dep(name.clone(), deps))
-                    .boxed()
-            }).collect::<Vec<_>>()
-    })
+                let s = &crate_vers_by_name[dep_name];
+                let (c, d) = order_index(c, d, s.len());
+
+                dependency_by_pkgid[b].push(dep_req(
+                    &dep_name,
+                    &if c == d {
+                        format!("={}", s[c].0)
+                    } else {
+                        format!(">={}, <={}", s[c].0, s[d].0)
+                    },
+                ))
+            }
+
+            list_of_pkgid
+                .into_iter()
+                .zip(dependency_by_pkgid.into_iter())
+                .map(|(((name, ver), allow_deps), deps)| {
+                    pkg_dep(
+                        (name, ver).to_pkgid(),
+                        if !allow_deps {
+                            vec![dep_req("bad", "*")]
+                        } else {
+                            let mut deps = deps;
+                            deps.sort_by_key(|d| d.name_in_toml());
+                            deps.dedup_by_key(|d| d.name_in_toml());
+                            deps
+                        },
+                    )
+                }).collect()
+        },
+    )
 }
 
 proptest! {
     #![proptest_config(ProptestConfig {
         result_cache: basic_result_cache,
         cases: 256,
-        max_flat_map_regens: 100, // raise this number for slower and better shrinking
         .. ProptestConfig::default()
     })]
     #[test]
@@ -353,7 +366,7 @@ proptest! {
                         prop_assert!(
                             res.is_ok(),
                             "unpublishing {:?} stopped `{} = \"={}\"` from working",
-                            summary_to_unpublish,
+                            summary_to_unpublish.package_id(),
                             this.name(),
                             this.version()
                         )
@@ -383,7 +396,7 @@ proptest! {
                         "full index did not work for `{} = \"={}\"` but unpublishing {:?} fixed it!",
                         this.name(),
                         this.version(),
-                        summary_to_unpublish
+                        summary_to_unpublish.package_id()
                     )
                 }
             }
