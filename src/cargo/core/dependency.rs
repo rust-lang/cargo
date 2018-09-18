@@ -28,7 +28,7 @@ struct Inner {
     specified_req: bool,
     kind: Kind,
     only_match_name: bool,
-    rename: Option<InternedString>,
+    explicit_name_in_toml: Option<InternedString>,
 
     optional: bool,
     default_features: bool,
@@ -73,7 +73,7 @@ impl ser::Serialize for Dependency {
             uses_default_features: self.uses_default_features(),
             features: self.features(),
             target: self.platform(),
-            rename: self.rename().map(|s| s.as_str()),
+            rename: self.explicit_name_in_toml().map(|s| s.as_str()),
         }.serialize(s)
     }
 }
@@ -199,7 +199,7 @@ impl Dependency {
                 default_features: true,
                 specified_req: false,
                 platform: None,
-                rename: None,
+                explicit_name_in_toml: None,
             }),
         }
     }
@@ -229,7 +229,7 @@ impl Dependency {
     /// foo = { version = "0.1", package = 'bar' }
     /// ```
     pub fn name_in_toml(&self) -> InternedString {
-        self.rename().unwrap_or(self.inner.name)
+        self.explicit_name_in_toml().unwrap_or(self.inner.name)
     }
 
     /// The name of the package that this `Dependency` depends on.
@@ -285,8 +285,8 @@ impl Dependency {
     ///
     /// If the `package` key is used in `Cargo.toml` then this returns the same
     /// value as `name_in_toml`.
-    pub fn rename(&self) -> Option<InternedString> {
-        self.inner.rename
+    pub fn explicit_name_in_toml(&self) -> Option<InternedString> {
+        self.inner.explicit_name_in_toml
     }
 
     pub fn set_kind(&mut self, kind: Kind) -> &mut Dependency {
@@ -330,8 +330,8 @@ impl Dependency {
         self
     }
 
-    pub fn set_rename(&mut self, rename: &str) -> &mut Dependency {
-        Rc::make_mut(&mut self.inner).rename = Some(InternedString::new(rename));
+    pub fn set_explicit_name_in_toml(&mut self, name: &str) -> &mut Dependency {
+        Rc::make_mut(&mut self.inner).explicit_name_in_toml = Some(InternedString::new(name));
         self
     }
 
