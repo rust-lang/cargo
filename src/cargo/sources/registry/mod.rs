@@ -275,6 +275,7 @@ struct RegistryDependency<'a> {
     target: Option<Cow<'a, str>>,
     kind: Option<Cow<'a, str>>,
     registry: Option<Cow<'a, str>>,
+    package: Option<Cow<'a, str>>,
 }
 
 impl<'a> RegistryDependency<'a> {
@@ -289,6 +290,7 @@ impl<'a> RegistryDependency<'a> {
             target,
             kind,
             registry,
+            package,
         } = self;
 
         let id = if let Some(registry) = registry {
@@ -297,7 +299,15 @@ impl<'a> RegistryDependency<'a> {
             default.clone()
         };
 
-        let mut dep = Dependency::parse_no_deprecated(&name, Some(&req), &id)?;
+
+        let mut dep = Dependency::parse_no_deprecated(
+            package.as_ref().unwrap_or(&name),
+            Some(&req),
+            &id,
+        )?;
+        if package.is_some() {
+            dep.set_explicit_name_in_toml(&name);
+        }
         let kind = match kind.as_ref().map(|s| &s[..]).unwrap_or("") {
             "dev" => Kind::Development,
             "build" => Kind::Build,
