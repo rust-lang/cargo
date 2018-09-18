@@ -15,46 +15,75 @@
 //! (for example, with and without tests), so we actually build a dependency
 //! graph of `Unit`s, which capture these properties.
 
+use std::cell::RefCell;
 use std::collections::{HashMap, HashSet};
 
 use CargoResult;
 use core::dependency::Kind as DepKind;
 use core::profiles::ProfileFor;
-use core::{Package, Target};
+use core::{Package, Target, PackageId};
+use core::package::Downloads;
 use super::{BuildContext, CompileMode, Kind, Unit};
+
+struct State<'a: 'tmp, 'cfg: 'a, 'tmp> {
+    bcx: &'tmp BuildContext<'a, 'cfg>,
+    deps: &'tmp mut HashMap<Unit<'a>, Vec<Unit<'a>>>,
+    pkgs: RefCell<&'tmp mut HashMap<&'a PackageId, &'a Package>>,
+    waiting_on_download: HashSet<&'a PackageId>,
+    downloads: Downloads<'a, 'cfg>,
+}
 
 pub fn build_unit_dependencies<'a, 'cfg>(
     roots: &[Unit<'a>],
     bcx: &BuildContext<'a, 'cfg>,
     deps: &mut HashMap<Unit<'a>, Vec<Unit<'a>>>,
+    pkgs: &mut HashMap<&'a PackageId, &'a Package>,
 ) -> CargoResult<()> {
     assert!(deps.is_empty(), "can only build unit deps once");
 
-    for unit in roots.iter() {
-        // Dependencies of tests/benches should not have `panic` set.
-        // We check the global test mode to see if we are running in `cargo
-        // test` in which case we ensure all dependencies have `panic`
-        // cleared, and avoid building the lib thrice (once with `panic`, once
-        // without, once for --test).  In particular, the lib included for
-        // doctests and examples are `Build` mode here.
-        let profile_for = if unit.mode.is_any_test() || bcx.build_config.test() {
-            ProfileFor::TestDependency
-        } else {
-            ProfileFor::Any
-        };
-        deps_of(unit, bcx, deps, profile_for)?;
-    }
-    trace!("ALL UNIT DEPENDENCIES {:#?}", deps);
+    let mut state = State {
+        bcx,
+        deps,
+        pkgs: RefCell::new(pkgs),
+        waiting_on_download: HashSet::new(),
+        downloads: bcx.packages.enable_download()?,
+    };
 
-    connect_run_custom_build_deps(bcx, deps);
+    loop {
+        for unit in roots.iter() {
+            state.get(unit.pkg.package_id())?;
+
+            // Dependencies of tests/benches should not have `panic` set.
+            // We check the global test mode to see if we are running in `cargo
+            // test` in which case we ensure all dependencies have `panic`
+            // cleared, and avoid building the lib thrice (once with `panic`, once
+            // without, once for --test).  In particular, the lib included for
+            // doctests and examples are `Build` mode here.
+            let profile_for = if unit.mode.is_any_test() || bcx.build_config.test() {
+                ProfileFor::TestDependency
+            } else {
+                ProfileFor::Any
+            };
+            deps_of(unit, &mut state, profile_for)?;
+        }
+
+        if state.waiting_on_download.len() > 0 {
+            state.finish_some_downloads()?;
+            state.deps.clear();
+        } else {
+            break
+        }
+    }
+    trace!("ALL UNIT DEPENDENCIES {:#?}", state.deps);
+
+    connect_run_custom_build_deps(&mut state);
 
     Ok(())
 }
 
-fn deps_of<'a, 'cfg>(
+fn deps_of<'a, 'cfg, 'tmp>(
     unit: &Unit<'a>,
-    bcx: &BuildContext<'a, 'cfg>,
-    deps: &mut HashMap<Unit<'a>, Vec<Unit<'a>>>,
+    state: &mut State<'a, 'cfg, 'tmp>,
     profile_for: ProfileFor,
 ) -> CargoResult<()> {
     // Currently the `deps` map does not include `profile_for`.  This should
@@ -63,12 +92,12 @@ fn deps_of<'a, 'cfg>(
     // `TestDependency`.  `CustomBuild` should also be fine since if the
     // requested unit's settings are the same as `Any`, `CustomBuild` can't
     // affect anything else in the hierarchy.
-    if !deps.contains_key(unit) {
-        let unit_deps = compute_deps(unit, bcx, profile_for)?;
+    if !state.deps.contains_key(unit) {
+        let unit_deps = compute_deps(unit, state, profile_for)?;
         let to_insert: Vec<_> = unit_deps.iter().map(|&(unit, _)| unit).collect();
-        deps.insert(*unit, to_insert);
+        state.deps.insert(*unit, to_insert);
         for (unit, profile_for) in unit_deps {
-            deps_of(&unit, bcx, deps, profile_for)?;
+            deps_of(&unit, state, profile_for)?;
         }
     }
     Ok(())
@@ -78,63 +107,82 @@ fn deps_of<'a, 'cfg>(
 /// for that package.
 /// This returns a vec of `(Unit, ProfileFor)` pairs.  The `ProfileFor`
 /// is the profile type that should be used for dependencies of the unit.
-fn compute_deps<'a, 'cfg>(
+fn compute_deps<'a, 'cfg, 'tmp>(
     unit: &Unit<'a>,
-    bcx: &BuildContext<'a, 'cfg>,
+    state: &mut State<'a, 'cfg, 'tmp>,
     profile_for: ProfileFor,
 ) -> CargoResult<Vec<(Unit<'a>, ProfileFor)>> {
     if unit.mode.is_run_custom_build() {
-        return compute_deps_custom_build(unit, bcx);
+        return compute_deps_custom_build(unit, state.bcx);
     } else if unit.mode.is_doc() && !unit.mode.is_any_test() {
         // Note: This does not include Doctest.
-        return compute_deps_doc(unit, bcx);
+        return compute_deps_doc(unit, state);
     }
 
+    let bcx = state.bcx;
     let id = unit.pkg.package_id();
-    let deps = bcx.resolve.deps(id);
-    let mut ret = deps.filter(|&(_id, deps)| {
-        assert!(!deps.is_empty());
-        deps.iter().any(|dep| {
-            // If this target is a build command, then we only want build
-            // dependencies, otherwise we want everything *other than* build
-            // dependencies.
-            if unit.target.is_custom_build() != dep.is_build() {
-                return false;
-            }
+    let deps = bcx.resolve.deps(id)
+        .filter(|&(_id, deps)| {
+            assert!(!deps.is_empty());
+            deps.iter().any(|dep| {
+                // If this target is a build command, then we only want build
+                // dependencies, otherwise we want everything *other than* build
+                // dependencies.
+                if unit.target.is_custom_build() != dep.is_build() {
+                    return false;
+                }
 
-            // If this dependency is *not* a transitive dependency, then it
-            // only applies to test/example targets
-            if !dep.is_transitive() && !unit.target.is_test() && !unit.target.is_example()
-                && !unit.mode.is_any_test()
-            {
-                return false;
-            }
+                // If this dependency is *not* a transitive dependency, then it
+                // only applies to test/example targets
+                if !dep.is_transitive() &&
+                    !unit.target.is_test() &&
+                    !unit.target.is_example() &&
+                    !unit.mode.is_any_test()
+                {
+                    return false;
+                }
 
-            // If this dependency is only available for certain platforms,
-            // make sure we're only enabling it for that platform.
-            if !bcx.dep_platform_activated(dep, unit.kind) {
-                return false;
-            }
+                // If this dependency is only available for certain platforms,
+                // make sure we're only enabling it for that platform.
+                if !bcx.dep_platform_activated(dep, unit.kind) {
+                    return false;
+                }
 
-            // If the dependency is optional, then we're only activating it
-            // if the corresponding feature was activated
-            if dep.is_optional() && !bcx.resolve.features(id).contains(&*dep.name_in_toml()) {
-                return false;
-            }
+                // If the dependency is optional, then we're only activating it
+                // if the corresponding feature was activated
+                if dep.is_optional() &&
+                    !bcx.resolve.features(id).contains(&*dep.name_in_toml())
+                {
+                    return false;
+                }
 
-            // If we've gotten past all that, then this dependency is
-            // actually used!
-            true
-        })
-    }).filter_map(|(id, _)| match bcx.get_package(id) {
-            Ok(pkg) => pkg.targets().iter().find(|t| t.is_lib()).map(|t| {
-                let mode = check_or_build_mode(unit.mode, t);
-                let unit = new_unit(bcx, pkg, t, profile_for, unit.kind.for_target(t), mode);
-                Ok((unit, profile_for))
-            }),
-            Err(e) => Some(Err(e)),
-        })
-        .collect::<CargoResult<Vec<_>>>()?;
+                // If we've gotten past all that, then this dependency is
+                // actually used!
+                true
+            })
+        });
+
+    let mut ret = Vec::new();
+    for (id, _) in deps {
+        let pkg = match state.get(id)? {
+            Some(pkg) => pkg,
+            None => continue,
+        };
+        let lib = match pkg.targets().iter().find(|t| t.is_lib()) {
+            Some(t) => t,
+            None => continue,
+        };
+        let mode = check_or_build_mode(unit.mode, lib);
+        let unit = new_unit(
+            bcx,
+            pkg,
+            lib,
+            profile_for,
+            unit.kind.for_target(lib),
+            mode,
+        );
+        ret.push((unit, profile_for));
+    }
 
     // If this target is a build script, then what we've collected so far is
     // all we need. If this isn't a build script, then it depends on the
@@ -221,10 +269,11 @@ fn compute_deps_custom_build<'a, 'cfg>(
 }
 
 /// Returns the dependencies necessary to document a package
-fn compute_deps_doc<'a, 'cfg>(
+fn compute_deps_doc<'a, 'cfg, 'tmp>(
     unit: &Unit<'a>,
-    bcx: &BuildContext<'a, 'cfg>,
+    state: &mut State<'a, 'cfg, 'tmp>,
 ) -> CargoResult<Vec<(Unit<'a>, ProfileFor)>> {
+    let bcx = state.bcx;
     let deps = bcx.resolve
         .deps(unit.pkg.package_id())
         .filter(|&(_id, deps)| {
@@ -232,15 +281,17 @@ fn compute_deps_doc<'a, 'cfg>(
                 DepKind::Normal => bcx.dep_platform_activated(dep, unit.kind),
                 _ => false,
             })
-        })
-        .map(|(id, _deps)| bcx.get_package(id));
+        });
 
     // To document a library, we depend on dependencies actually being
     // built. If we're documenting *all* libraries, then we also depend on
     // the documentation of the library being built.
     let mut ret = Vec::new();
-    for dep in deps {
-        let dep = dep?;
+    for (id, _deps) in deps {
+        let dep = match state.get(id)? {
+            Some(dep) => dep,
+            None => continue,
+        };
         let lib = match dep.targets().iter().find(|t| t.is_lib()) {
             Some(lib) => lib,
             None => continue,
@@ -288,7 +339,14 @@ fn maybe_lib<'a>(
 ) -> Option<(Unit<'a>, ProfileFor)> {
     unit.pkg.targets().iter().find(|t| t.linkable()).map(|t| {
         let mode = check_or_build_mode(unit.mode, t);
-        let unit = new_unit(bcx, unit.pkg, t, profile_for, unit.kind.for_target(t), mode);
+        let unit = new_unit(
+            bcx,
+            unit.pkg,
+            t,
+            profile_for,
+            unit.kind.for_target(t),
+            mode,
+        );
         (unit, profile_for)
     })
 }
@@ -373,10 +431,7 @@ fn new_unit<'a>(
 ///
 /// Here we take the entire `deps` map and add more dependencies from execution
 /// of one build script to execution of another build script.
-fn connect_run_custom_build_deps<'a>(
-    bcx: &BuildContext,
-    deps: &mut HashMap<Unit<'a>, Vec<Unit<'a>>>,
-) {
+fn connect_run_custom_build_deps(state: &mut State) {
     let mut new_deps = Vec::new();
 
     {
@@ -386,7 +441,7 @@ fn connect_run_custom_build_deps<'a>(
         // have the build script as the key and the library would be in the
         // value's set.
         let mut reverse_deps = HashMap::new();
-        for (unit, deps) in deps.iter() {
+        for (unit, deps) in state.deps.iter() {
             for dep in deps {
                 if dep.mode == CompileMode::RunCustomBuild {
                     reverse_deps.entry(dep)
@@ -405,7 +460,7 @@ fn connect_run_custom_build_deps<'a>(
         // `links`, then we depend on that package's build script! Here we use
         // `dep_build_script` to manufacture an appropriate build script unit to
         // depend on.
-        for unit in deps.keys().filter(|k| k.mode == CompileMode::RunCustomBuild) {
+        for unit in state.deps.keys().filter(|k| k.mode == CompileMode::RunCustomBuild) {
             let reverse_deps = match reverse_deps.get(unit) {
                 Some(set) => set,
                 None => continue,
@@ -413,13 +468,13 @@ fn connect_run_custom_build_deps<'a>(
 
             let to_add = reverse_deps
                 .iter()
-                .flat_map(|reverse_dep| deps[reverse_dep].iter())
+                .flat_map(|reverse_dep| state.deps[reverse_dep].iter())
                 .filter(|other| {
                     other.pkg != unit.pkg &&
                         other.target.linkable() &&
                         other.pkg.manifest().links().is_some()
                 })
-                .filter_map(|other| dep_build_script(other, bcx).map(|p| p.0))
+                .filter_map(|other| dep_build_script(other, state.bcx).map(|p| p.0))
                 .collect::<HashSet<_>>();
 
             if !to_add.is_empty() {
@@ -430,6 +485,50 @@ fn connect_run_custom_build_deps<'a>(
 
     // And finally, add in all the missing dependencies!
     for (unit, new_deps) in new_deps {
-        deps.get_mut(&unit).unwrap().extend(new_deps);
+        state.deps.get_mut(&unit).unwrap().extend(new_deps);
+    }
+}
+
+impl<'a, 'cfg, 'tmp> State<'a, 'cfg, 'tmp> {
+    fn get(&mut self, id: &'a PackageId) -> CargoResult<Option<&'a Package>> {
+        let mut pkgs = self.pkgs.borrow_mut();
+        if let Some(pkg) = pkgs.get(id) {
+            return Ok(Some(pkg))
+        }
+        if !self.waiting_on_download.insert(id) {
+            return Ok(None)
+        }
+        if let Some(pkg) = self.downloads.start(id)? {
+            pkgs.insert(id, pkg);
+            self.waiting_on_download.remove(id);
+            return Ok(Some(pkg))
+        }
+        Ok(None)
+    }
+
+    /// Completes at least one downloading, maybe waiting for more to complete.
+    ///
+    /// This function will block the current thread waiting for at least one
+    /// crate to finish downloading. The function may continue to download more
+    /// crates if it looks like there's a long enough queue of crates to keep
+    /// downloading. When only a handful of packages remain this function
+    /// returns, and it's hoped that by returning we'll be able to push more
+    /// packages to download into the queue.
+    fn finish_some_downloads(&mut self) -> CargoResult<()> {
+        assert!(self.downloads.remaining() > 0);
+        loop {
+            let pkg = self.downloads.wait()?;
+            self.waiting_on_download.remove(pkg.package_id());
+            self.pkgs.borrow_mut().insert(pkg.package_id(), pkg);
+
+            // Arbitrarily choose that 5 or more packages concurrently download
+            // is a good enough number to "fill the network pipe". If we have
+            // less than this let's recompute the whole unit dependency graph
+            // again and try to find some more packages to download.
+            if self.downloads.remaining() < 5 {
+                break
+            }
+        }
+        Ok(())
     }
 }

@@ -1389,6 +1389,7 @@ fn substitute_macros(input: &str) -> String {
         ("[DOCTEST]", "   Doc-tests"),
         ("[PACKAGING]", "   Packaging"),
         ("[DOWNLOADING]", " Downloading"),
+        ("[DOWNLOADED]", "  Downloaded"),
         ("[UPLOADING]", "   Uploading"),
         ("[VERIFYING]", "   Verifying"),
         ("[ARCHIVING]", "   Archiving"),

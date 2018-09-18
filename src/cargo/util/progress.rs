@@ -16,13 +16,17 @@ pub enum ProgressStyle {
     Ratio,
 }
 
+struct Throttle {
+    first: bool,
+    last_update: Instant,
+}
+
 struct State<'cfg> {
     config: &'cfg Config,
     format: Format,
-    first: bool,
-    last_update: Instant,
     name: String,
     done: bool,
+    throttle: Throttle,
 }
 
 struct Format {
@@ -50,10 +54,9 @@ impl<'cfg> Progress<'cfg> {
                     max_width: n,
                     max_print: 80,
                 },
-                first: true,
-                last_update: Instant::now(),
                 name: name.to_string(),
                 done: false,
+                throttle: Throttle::new(),
             }),
         }
     }
@@ -62,36 +65,19 @@ impl<'cfg> Progress<'cfg> {
         self.state = None;
     }
 
+    pub fn is_enabled(&self) -> bool {
+        self.state.is_some()
+    }
+
     pub fn new(name: &str, cfg: &'cfg Config) -> Progress<'cfg> {
         Self::with_style(name, ProgressStyle::Percentage, cfg)
     }
 
     pub fn tick(&mut self, cur: usize, max: usize) -> CargoResult<()> {
-        match self.state {
-            Some(ref mut s) => s.tick(cur, max, "", true),
-            None => Ok(()),
-        }
-    }
-
-    pub fn clear(&mut self) {
-        if let Some(ref mut s) = self.state {
-            s.clear();
-        }
-    }
-
-    pub fn tick_now(&mut self, cur: usize, max: usize, msg: &str) -> CargoResult<()> {
-        match self.state {
-            Some(ref mut s) => s.tick(cur, max, msg, false),
-            None => Ok(()),
-        }
-    }
-}
-
-impl<'cfg> State<'cfg> {
-    fn tick(&mut self, cur: usize, max: usize, msg: &str, throttle: bool) -> CargoResult<()> {
-        if self.done {
-            return Ok(());
-        }
+        let s = match &mut self.state {
+            Some(s) => s,
+            None => return Ok(()),
+        };
 
         // Don't update too often as it can cause excessive performance loss
         // just putting stuff onto the terminal. We also want to avoid
@@ -105,33 +91,107 @@ impl<'cfg> State<'cfg> {
         // 2. If we've drawn something, then we rate limit ourselves to only
         //    draw to the console every so often. Currently there's a 100ms
         //    delay between updates.
-        if throttle {
-            if self.first {
-                let delay = Duration::from_millis(500);
-                if self.last_update.elapsed() < delay {
-                    return Ok(());
-                }
-                self.first = false;
-            } else {
-                let interval = Duration::from_millis(100);
-                if self.last_update.elapsed() < interval {
-                    return Ok(());
-                }
-            }
-            self.last_update = Instant::now();
+        if !s.throttle.allowed() {
+            return Ok(())
         }
 
-        if cur == max {
+        s.tick(cur, max, "")
+    }
+
+    pub fn tick_now(&mut self, cur: usize, max: usize, msg: &str) -> CargoResult<()> {
+        match self.state {
+            Some(ref mut s) => s.tick(cur, max, msg),
+            None => Ok(()),
+        }
+    }
+
+    pub fn update_allowed(&mut self) -> bool {
+        match &mut self.state {
+            Some(s) => s.throttle.allowed(),
+            None => false,
+        }
+    }
+
+    pub fn print_now(&mut self, msg: &str) -> CargoResult<()> {
+        match &mut self.state {
+            Some(s) => s.print("", msg),
+            None => Ok(()),
+        }
+    }
+
+    pub fn clear(&mut self) {
+        if let Some(ref mut s) = self.state {
+            s.clear();
+        }
+    }
+}
+
+impl Throttle {
+    fn new() -> Throttle {
+        Throttle {
+            first: true,
+            last_update: Instant::now(),
+        }
+    }
+
+    fn allowed(&mut self) -> bool {
+        if self.first {
+            let delay = Duration::from_millis(500);
+            if self.last_update.elapsed() < delay {
+                return false
+            }
+        } else {
+            let interval = Duration::from_millis(100);
+            if self.last_update.elapsed() < interval {
+                return false
+            }
+        }
+        self.update();
+        true
+    }
+
+    fn update(&mut self) {
+        self.first = false;
+        self.last_update = Instant::now();
+    }
+}
+
+impl<'cfg> State<'cfg> {
+    fn tick(&mut self, cur: usize, max: usize, msg: &str) -> CargoResult<()> {
+        if self.done {
+            return Ok(());
+        }
+
+        if max > 0 && cur == max {
             self.done = true;
         }
 
         // Write out a pretty header, then the progress bar itself, and then
         // return back to the beginning of the line for the next print.
         self.try_update_max_width();
-        if let Some(string) = self.format.progress_status(cur, max, msg) {
-            self.config.shell().status_header(&self.name)?;
-            write!(self.config.shell().err(), "{}\r", string)?;
+        if let Some(pbar) = self.format.progress(cur, max) {
+            self.print(&pbar, msg)?;
         }
+        Ok(())
+    }
+
+    fn print(&mut self, prefix: &str, msg: &str) -> CargoResult<()> {
+        self.throttle.update();
+        self.try_update_max_width();
+
+        // make sure we have enough room for the header
+        if self.format.max_width < 15 {
+            return Ok(())
+        }
+        self.config.shell().status_header(&self.name)?;
+        let mut line = prefix.to_string();
+        self.format.render(&mut line, msg);
+
+        while line.len() < self.format.max_width - 15 {
+            line.push(' ');
+        }
+
+        write!(self.config.shell().err(), "{}\r", line)?;
         Ok(())
     }
 
@@ -149,7 +209,7 @@ impl<'cfg> State<'cfg> {
 }
 
 impl Format {
-    fn progress_status(&self, cur: usize, max: usize, msg: &str) -> Option<String> {
+    fn progress(&self, cur: usize, max: usize) -> Option<String> {
         // Render the percentage at the far right and then figure how long the
         // progress bar is
         let pct = (cur as f64) / (max as f64);
@@ -188,26 +248,36 @@ impl Format {
         string.push_str("]");
         string.push_str(&stats);
 
-        let mut avail_msg_len = self.max_width - self.width();
+        Some(string)
+    }
+
+    fn render(&self, string: &mut String, msg: &str) {
+        let mut avail_msg_len = self.max_width - string.len() - 15;
         let mut ellipsis_pos = 0;
-        if avail_msg_len > 3 {
-            for c in msg.chars() {
-                let display_width = c.width().unwrap_or(0);
-                if avail_msg_len >= display_width {
-                    avail_msg_len -= display_width;
-                    string.push(c);
-                    if avail_msg_len >= 3 {
-                        ellipsis_pos = string.len();
-                    }
-                } else {
-                    string.truncate(ellipsis_pos);
-                    string.push_str("...");
-                    break;
+        if avail_msg_len <= 3 {
+            return
+        }
+        for c in msg.chars() {
+            let display_width = c.width().unwrap_or(0);
+            if avail_msg_len >= display_width {
+                avail_msg_len -= display_width;
+                string.push(c);
+                if avail_msg_len >= 3 {
+                    ellipsis_pos = string.len();
                 }
+            } else {
+                string.truncate(ellipsis_pos);
+                string.push_str("...");
+                break;
             }
         }
+    }
 
-        Some(string)
+    #[cfg(test)]
+    fn progress_status(&self, cur: usize, max: usize, msg: &str) -> Option<String> {
+        let mut ret = self.progress(cur, max)?;
+        self.render(&mut ret, msg);
+        Some(ret)
     }
 
     fn width(&self) -> usize {

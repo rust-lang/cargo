@@ -57,7 +57,8 @@ fn depend_on_alt_registry() {
         .with_stderr(&format!(
             "\
 [UPDATING] `{reg}` index
-[DOWNLOADING] bar v0.0.1 (registry `[ROOT][..]`)
+[DOWNLOADING] crates ...
+[DOWNLOADED] bar v0.0.1 (registry `[ROOT][..]`)
 [COMPILING] bar v0.0.1 (registry `[ROOT][..]`)
 [COMPILING] foo v0.0.1 ([CWD])
 [FINISHED] dev [unoptimized + debuginfo] target(s) in [..]s
@@ -110,8 +111,9 @@ fn depend_on_alt_registry_depends_on_same_registry_no_index() {
         .with_stderr(&format!(
             "\
 [UPDATING] `{reg}` index
-[DOWNLOADING] [..] v0.0.1 (registry `[ROOT][..]`)
-[DOWNLOADING] [..] v0.0.1 (registry `[ROOT][..]`)
+[DOWNLOADING] crates ...
+[DOWNLOADED] [..] v0.0.1 (registry `[ROOT][..]`)
+[DOWNLOADED] [..] v0.0.1 (registry `[ROOT][..]`)
 [COMPILING] baz v0.0.1 (registry `[ROOT][..]`)
 [COMPILING] bar v0.0.1 (registry `[ROOT][..]`)
 [COMPILING] foo v0.0.1 ([CWD])
@@ -152,8 +154,9 @@ fn depend_on_alt_registry_depends_on_same_registry() {
         .with_stderr(&format!(
             "\
 [UPDATING] `{reg}` index
-[DOWNLOADING] [..] v0.0.1 (registry `[ROOT][..]`)
-[DOWNLOADING] [..] v0.0.1 (registry `[ROOT][..]`)
+[DOWNLOADING] crates ...
+[DOWNLOADED] [..] v0.0.1 (registry `[ROOT][..]`)
+[DOWNLOADED] [..] v0.0.1 (registry `[ROOT][..]`)
 [COMPILING] baz v0.0.1 (registry `[ROOT][..]`)
 [COMPILING] bar v0.0.1 (registry `[ROOT][..]`)
 [COMPILING] foo v0.0.1 ([CWD])
@@ -195,8 +198,9 @@ fn depend_on_alt_registry_depends_on_crates_io() {
             "\
 [UPDATING] `{alt_reg}` index
 [UPDATING] `{reg}` index
-[DOWNLOADING] [..] v0.0.1 (registry `[ROOT][..]`)
-[DOWNLOADING] [..] v0.0.1 (registry `[ROOT][..]`)
+[DOWNLOADING] crates ...
+[DOWNLOADED] [..] v0.0.1 (registry `[ROOT][..]`)
+[DOWNLOADED] [..] v0.0.1 (registry `[ROOT][..]`)
 [COMPILING] baz v0.0.1 (registry `[ROOT][..]`)
 [COMPILING] bar v0.0.1 (registry `[ROOT][..]`)
 [COMPILING] foo v0.0.1 ([CWD])
@@ -363,8 +367,8 @@ fn alt_registry_and_crates_io_deps() {
         )).with_stderr_contains(&format!(
             "[UPDATING] `{}` index",
             registry::registry_path().to_str().unwrap()))
-        .with_stderr_contains("[DOWNLOADING] crates_io_dep v0.0.1 (registry `[ROOT][..]`)")
-        .with_stderr_contains("[DOWNLOADING] alt_reg_dep v0.1.0 (registry `[ROOT][..]`)")
+        .with_stderr_contains("[DOWNLOADED] crates_io_dep v0.0.1 (registry `[ROOT][..]`)")
+        .with_stderr_contains("[DOWNLOADED] alt_reg_dep v0.1.0 (registry `[ROOT][..]`)")
         .with_stderr_contains("[COMPILING] alt_reg_dep v0.1.0 (registry `[ROOT][..]`)")
         .with_stderr_contains("[COMPILING] crates_io_dep v0.0.1")
         .with_stderr_contains("[COMPILING] foo v0.0.1 ([CWD])")

@@ -40,7 +40,8 @@ fn simple() {
         .with_stderr(&format!(
             "\
 [UPDATING] `{reg}` index
-[DOWNLOADING] bar v0.0.1 (registry `[ROOT][..]`)
+[DOWNLOADING] crates ...
+[DOWNLOADED] bar v0.0.1 (registry `[ROOT][..]`)
 [COMPILING] bar v0.0.1
 [COMPILING] foo v0.0.1 ([CWD])
 [FINISHED] dev [unoptimized + debuginfo] target(s) in [..]s
@@ -85,8 +86,9 @@ fn deps() {
         .with_stderr(&format!(
             "\
 [UPDATING] `{reg}` index
-[DOWNLOADING] [..] v0.0.1 (registry `[ROOT][..]`)
-[DOWNLOADING] [..] v0.0.1 (registry `[ROOT][..]`)
+[DOWNLOADING] crates ...
+[DOWNLOADED] [..] v0.0.1 (registry `[ROOT][..]`)
+[DOWNLOADED] [..] v0.0.1 (registry `[ROOT][..]`)
 [COMPILING] baz v0.0.1
 [COMPILING] bar v0.0.1
 [COMPILING] foo v0.0.1 ([CWD])
@@ -265,11 +267,9 @@ fn bad_cksum() {
         .with_stderr(
             "\
 [UPDATING] [..] index
-[DOWNLOADING] bad-cksum [..]
-[ERROR] unable to get packages from source
-
-Caused by:
-  failed to download replaced source registry `https://[..]`
+[DOWNLOADING] crates ...
+[DOWNLOADED] bad-cksum [..]
+[ERROR] failed to download replaced source registry `https://[..]`
 
 Caused by:
   failed to verify the checksum of `bad-cksum v0.0.1 (registry `[ROOT][..]`)`
@@ -312,7 +312,8 @@ required by package `foo v0.0.1 ([..])`
         .with_stderr(format!(
             "\
 [UPDATING] `{reg}` index
-[DOWNLOADING] notyet v0.0.1 (registry `[ROOT][..]`)
+[DOWNLOADING] crates ...
+[DOWNLOADED] notyet v0.0.1 (registry `[ROOT][..]`)
 [COMPILING] notyet v0.0.1
 [COMPILING] foo v0.0.1 ([CWD])
 [FINISHED] dev [unoptimized + debuginfo] target(s) in [..]s
@@ -367,7 +368,8 @@ required by package `foo v0.0.1 ([..])`
 [PACKAGING] foo v0.0.1 ([CWD])
 [VERIFYING] foo v0.0.1 ([CWD])
 [UPDATING] `[..]` index
-[DOWNLOADING] notyet v0.0.1 (registry `[ROOT][..]`)
+[DOWNLOADING] crates ...
+[DOWNLOADED] notyet v0.0.1 (registry `[ROOT][..]`)
 [COMPILING] notyet v0.0.1
 [COMPILING] foo v0.0.1 ([CWD][..])
 [FINISHED] dev [unoptimized + debuginfo] target(s) in [..]s
@@ -398,7 +400,8 @@ fn lockfile_locks() {
         .with_stderr(
             "\
 [UPDATING] `[..]` index
-[DOWNLOADING] bar v0.0.1 (registry `[ROOT][..]`)
+[DOWNLOADING] crates ...
+[DOWNLOADED] bar v0.0.1 (registry `[ROOT][..]`)
 [COMPILING] bar v0.0.1
 [COMPILING] foo v0.0.1 ([CWD])
 [FINISHED] dev [unoptimized + debuginfo] target(s) in [..]s
@@ -435,8 +438,9 @@ fn lockfile_locks_transitively() {
         .with_stderr(
             "\
 [UPDATING] `[..]` index
-[DOWNLOADING] [..] v0.0.1 (registry `[ROOT][..]`)
-[DOWNLOADING] [..] v0.0.1 (registry `[ROOT][..]`)
+[DOWNLOADING] crates ...
+[DOWNLOADED] [..] v0.0.1 (registry `[ROOT][..]`)
+[DOWNLOADED] [..] v0.0.1 (registry `[ROOT][..]`)
 [COMPILING] baz v0.0.1
 [COMPILING] bar v0.0.1
 [COMPILING] foo v0.0.1 ([CWD])
@@ -480,8 +484,9 @@ fn yanks_are_not_used() {
         .with_stderr(
             "\
 [UPDATING] `[..]` index
-[DOWNLOADING] [..] v0.0.1 (registry `[ROOT][..]`)
-[DOWNLOADING] [..] v0.0.1 (registry `[ROOT][..]`)
+[DOWNLOADING] crates ...
+[DOWNLOADED] [..] v0.0.1 (registry `[ROOT][..]`)
+[DOWNLOADED] [..] v0.0.1 (registry `[ROOT][..]`)
 [COMPILING] baz v0.0.1
 [COMPILING] bar v0.0.1
 [COMPILING] foo v0.0.1 ([CWD])
@@ -587,7 +592,8 @@ fn update_with_lockfile_if_packages_missing() {
         .with_stderr(
             "\
 [UPDATING] `[..]` index
-[DOWNLOADING] bar v0.0.1 (registry `[ROOT][..]`)
+[DOWNLOADING] crates ...
+[DOWNLOADED] bar v0.0.1 (registry `[ROOT][..]`)
 [FINISHED] dev [unoptimized + debuginfo] target(s) in [..]s
 ",
         ).run();
@@ -630,7 +636,8 @@ fn update_lockfile() {
     p.cargo("build")
         .with_stderr(
             "\
-[DOWNLOADING] [..] v0.0.2 (registry `[ROOT][..]`)
+[DOWNLOADING] crates ...
+[DOWNLOADED] [..] v0.0.2 (registry `[ROOT][..]`)
 [COMPILING] bar v0.0.2
 [COMPILING] foo v0.0.1 ([CWD])
 [FINISHED] dev [unoptimized + debuginfo] target(s) in [..]s
@@ -650,7 +657,8 @@ fn update_lockfile() {
     p.cargo("build")
         .with_stderr(
             "\
-[DOWNLOADING] [..] v0.0.3 (registry `[ROOT][..]`)
+[DOWNLOADING] crates ...
+[DOWNLOADED] [..] v0.0.3 (registry `[ROOT][..]`)
 [COMPILING] bar v0.0.3
 [COMPILING] foo v0.0.1 ([CWD])
 [FINISHED] dev [unoptimized + debuginfo] target(s) in [..]s
@@ -728,7 +736,8 @@ fn dev_dependency_not_used() {
         .with_stderr(
             "\
 [UPDATING] `[..]` index
-[DOWNLOADING] [..] v0.0.1 (registry `[ROOT][..]`)
+[DOWNLOADING] crates ...
+[DOWNLOADED] [..] v0.0.1 (registry `[ROOT][..]`)
 [COMPILING] bar v0.0.1
 [COMPILING] foo v0.0.1 ([CWD])
 [FINISHED] dev [unoptimized + debuginfo] target(s) in [..]s
@@ -812,7 +821,8 @@ fn updating_a_dep() {
         .with_stderr(
             "\
 [UPDATING] `[..]` index
-[DOWNLOADING] bar v0.0.1 (registry `[ROOT][..]`)
+[DOWNLOADING] crates ...
+[DOWNLOADED] bar v0.0.1 (registry `[ROOT][..]`)
 [COMPILING] bar v0.0.1
 [COMPILING] a v0.0.1 ([CWD]/a)
 [COMPILING] foo v0.0.1 ([CWD])
@@ -838,7 +848,8 @@ fn updating_a_dep() {
         .with_stderr(
             "\
 [UPDATING] `[..]` index
-[DOWNLOADING] bar v0.1.0 (registry `[ROOT][..]`)
+[DOWNLOADING] crates ...
+[DOWNLOADED] bar v0.1.0 (registry `[ROOT][..]`)
 [COMPILING] bar v0.1.0
 [COMPILING] a v0.0.1 ([CWD]/a)
 [COMPILING] foo v0.0.1 ([CWD])
@@ -892,7 +903,8 @@ fn git_and_registry_dep() {
             "\
 [UPDATING] [..]
 [UPDATING] [..]
-[DOWNLOADING] a v0.0.1 (registry `[ROOT][..]`)
+[DOWNLOADING] crates ...
+[DOWNLOADED] a v0.0.1 (registry `[ROOT][..]`)
 [COMPILING] a v0.0.1
 [COMPILING] b v0.0.1 ([..])
 [COMPILING] foo v0.0.1 ([CWD])
@@ -965,7 +977,8 @@ fn update_publish_then_update() {
         .with_stderr(
             "\
 [UPDATING] [..]
-[DOWNLOADING] a v0.1.1 (registry `[ROOT][..]`)
+[DOWNLOADING] crates ...
+[DOWNLOADED] a v0.1.1 (registry `[ROOT][..]`)
 [COMPILING] a v0.1.1
 [COMPILING] foo v0.5.0 ([CWD])
 [FINISHED] dev [unoptimized + debuginfo] target(s) in [..]s
@@ -996,7 +1009,8 @@ fn fetch_downloads() {
         .with_stderr(
             "\
 [UPDATING] `[..]` index
-[DOWNLOADING] a v0.1.0 (registry [..])
+[DOWNLOADING] crates ...
+[DOWNLOADED] a v0.1.0 (registry [..])
 ",
         ).run();
 }
@@ -1036,7 +1050,8 @@ fn update_transitive_dependency() {
     p.cargo("build")
         .with_stderr(
             "\
-[DOWNLOADING] b v0.1.1 (registry `[ROOT][..]`)
+[DOWNLOADING] crates ...
+[DOWNLOADED] b v0.1.1 (registry `[ROOT][..]`)
 [COMPILING] b v0.1.1
 [COMPILING] a v0.1.0
 [COMPILING] foo v0.5.0 ([..])
@@ -1139,9 +1154,9 @@ fn update_multiple_packages() {
         ).run();
 
     p.cargo("build")
-        .with_stderr_contains("[DOWNLOADING] a v0.1.1 (registry `[ROOT][..]`)")
-        .with_stderr_contains("[DOWNLOADING] b v0.1.1 (registry `[ROOT][..]`)")
-        .with_stderr_contains("[DOWNLOADING] c v0.1.1 (registry `[ROOT][..]`)")
+        .with_stderr_contains("[DOWNLOADED] a v0.1.1 (registry `[ROOT][..]`)")
+        .with_stderr_contains("[DOWNLOADED] b v0.1.1 (registry `[ROOT][..]`)")
+        .with_stderr_contains("[DOWNLOADED] c v0.1.1 (registry `[ROOT][..]`)")
         .with_stderr_contains("[COMPILING] a v0.1.1")
         .with_stderr_contains("[COMPILING] b v0.1.1")
         .with_stderr_contains("[COMPILING] c v0.1.1")
@@ -1266,7 +1281,8 @@ fn only_download_relevant() {
         .with_stderr(
             "\
 [UPDATING] `[..]` index
-[DOWNLOADING] baz v0.1.0 ([..])
+[DOWNLOADING] crates ...
+[DOWNLOADED] baz v0.1.0 ([..])
 [COMPILING] baz v0.1.0
 [COMPILING] bar v0.5.0 ([..])
 [FINISHED] dev [unoptimized + debuginfo] target(s) in [..]s
@@ -1509,7 +1525,8 @@ update to a fixed version or contact the upstream maintainer about
 this warning.
 
 [UPDATING] [..]
-[DOWNLOADING] [..]
+[DOWNLOADING] crates ...
+[DOWNLOADED] [..]
 [COMPILING] [..]
 [COMPILING] [..]
 [FINISHED] [..]
@@ -1554,7 +1571,8 @@ fn old_version_req_upstream() {
         .with_stderr(
             "\
 [UPDATING] [..]
-[DOWNLOADING] [..]
+[DOWNLOADING] crates ...
+[DOWNLOADED] [..]
 warning: parsed version requirement `0.2*` is no longer valid
 
 Previous versions of Cargo accepted this malformed requirement,
@@ -1661,11 +1679,9 @@ fn bad_and_or_malicious_packages_rejected() {
         .with_stderr(
             "\
 [UPDATING] [..]
-[DOWNLOADING] [..]
-error: unable to get packages from source
-
-Caused by:
-  failed to download [..]
+[DOWNLOADING] crates ...
+[DOWNLOADED] [..]
+error: failed to download [..]
 
 Caused by:
   failed to unpack [..]

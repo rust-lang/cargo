@@ -99,6 +99,7 @@ pub struct Context<'a, 'cfg: 'a> {
     primary_packages: HashSet<&'a PackageId>,
     unit_dependencies: HashMap<Unit<'a>, Vec<Unit<'a>>>,
     files: Option<CompilationFiles<'a, 'cfg>>,
+    package_cache: HashMap<&'a PackageId, &'a Package>,
 }
 
 impl<'a, 'cfg> Context<'a, 'cfg> {
@@ -133,6 +134,7 @@ impl<'a, 'cfg> Context<'a, 'cfg> {
             primary_packages: HashSet::new(),
             unit_dependencies: HashMap::new(),
             files: None,
+            package_cache: HashMap::new(),
         })
     }
 
@@ -165,7 +167,7 @@ impl<'a, 'cfg> Context<'a, 'cfg> {
         queue.execute(&mut self, &mut plan)?;
 
         if build_plan {
-            plan.set_inputs(self.bcx.inputs()?);
+            plan.set_inputs(self.inputs()?);
             plan.output_plan();
         }
 
@@ -326,7 +328,12 @@ impl<'a, 'cfg> Context<'a, 'cfg> {
         };
         self.primary_packages.extend(units.iter().map(|u| u.pkg.package_id()));
 
-        build_unit_dependencies(units, self.bcx, &mut self.unit_dependencies)?;
+        build_unit_dependencies(
+            units,
+            self.bcx,
+            &mut self.unit_dependencies,
+            &mut self.package_cache,
+        )?;
         self.build_used_in_plugin_map(units)?;
         let files = CompilationFiles::new(
             units,
@@ -494,6 +501,25 @@ impl<'a, 'cfg> Context<'a, 'cfg> {
 
     pub fn is_primary_package(&self, unit: &Unit<'a>) -> bool {
         self.primary_packages.contains(unit.pkg.package_id())
+    }
+
+    /// Gets a package for the given package id.
+    pub fn get_package(&self, id: &PackageId) -> CargoResult<&'a Package> {
+        self.package_cache.get(id)
+            .cloned()
+            .ok_or_else(|| format_err!("failed to find {}", id))
+    }
+
+    /// Return the list of filenames read by cargo to generate the BuildContext
+    /// (all Cargo.toml, etc).
+    pub fn inputs(&self) -> CargoResult<Vec<PathBuf>> {
+        let mut inputs = Vec::new();
+        for id in self.bcx.packages.package_ids() {
+            let pkg = self.get_package(id)?;
+            inputs.push(pkg.manifest_path().to_path_buf());
+        }
+        inputs.sort();
+        Ok(inputs)
     }
 }
 

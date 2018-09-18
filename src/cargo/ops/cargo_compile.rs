@@ -243,15 +243,19 @@ pub fn compile_ws<'a>(
     let resolve = ops::resolve_ws_with_method(ws, source, method, &specs)?;
     let (packages, resolve_with_overrides) = resolve;
 
-    let to_builds = specs
-        .iter()
-        .map(|p| {
-            let pkgid = p.query(resolve_with_overrides.iter())?;
-            let p = packages.get(pkgid)?;
-            p.manifest().print_teapot(ws.config());
-            Ok(p)
-        })
+    let to_build_ids = specs.iter()
+        .map(|s| s.query(resolve_with_overrides.iter()))
         .collect::<CargoResult<Vec<_>>>()?;
+    let mut to_builds = packages.get_many(to_build_ids)?;
+
+    // The ordering here affects some error messages coming out of cargo, so
+    // let's be test and CLI friendly by always printing in the same order if
+    // there's an error.
+    to_builds.sort_by_key(|p| p.package_id());
+
+    for pkg in to_builds.iter() {
+        pkg.manifest().print_teapot(ws.config());
+    }
 
     let (extra_args, extra_args_name) = match (target_rustc_args, target_rustdoc_args) {
         (&Some(ref args), _) => (Some(args.clone()), "rustc"),

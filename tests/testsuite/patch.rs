@@ -51,7 +51,8 @@ fn replace() {
         .with_stderr(
             "\
 [UPDATING] `[ROOT][..]` index
-[DOWNLOADING] baz v0.1.0 ([..])
+[DOWNLOADING] crates ...
+[DOWNLOADED] baz v0.1.0 ([..])
 [COMPILING] bar v0.1.0 ([CWD]/bar)
 [COMPILING] baz v0.1.0
 [COMPILING] foo v0.0.1 ([CWD])
@@ -217,7 +218,8 @@ fn unused() {
         .with_stderr(
             "\
 [UPDATING] `[ROOT][..]` index
-[DOWNLOADING] bar v0.1.0 [..]
+[DOWNLOADING] crates ...
+[DOWNLOADED] bar v0.1.0 [..]
 [COMPILING] bar v0.1.0
 [COMPILING] foo v0.0.1 ([CWD])
 [FINISHED] dev [unoptimized + debuginfo] target(s) in [..]
@@ -275,7 +277,8 @@ fn unused_git() {
             "\
 [UPDATING] git repository `file://[..]`
 [UPDATING] `[ROOT][..]` index
-[DOWNLOADING] bar v0.1.0 [..]
+[DOWNLOADING] crates ...
+[DOWNLOADED] bar v0.1.0 [..]
 [COMPILING] bar v0.1.0
 [COMPILING] foo v0.0.1 ([CWD])
 [FINISHED] dev [unoptimized + debuginfo] target(s) in [..]
@@ -309,7 +312,8 @@ fn add_patch() {
         .with_stderr(
             "\
 [UPDATING] `[ROOT][..]` index
-[DOWNLOADING] bar v0.1.0 [..]
+[DOWNLOADING] crates ...
+[DOWNLOADED] bar v0.1.0 [..]
 [COMPILING] bar v0.1.0
 [COMPILING] foo v0.0.1 ([CWD])
 [FINISHED] dev [unoptimized + debuginfo] target(s) in [..]
@@ -368,7 +372,8 @@ fn add_ignored_patch() {
         .with_stderr(
             "\
 [UPDATING] `[ROOT][..]` index
-[DOWNLOADING] bar v0.1.0 [..]
+[DOWNLOADING] crates ...
+[DOWNLOADED] bar v0.1.0 [..]
 [COMPILING] bar v0.1.0
 [COMPILING] foo v0.0.1 ([CWD])
 [FINISHED] dev [unoptimized + debuginfo] target(s) in [..]
@@ -535,7 +540,8 @@ fn new_major() {
         .with_stderr(
             "\
 [UPDATING] `[ROOT][..]` index
-[DOWNLOADING] bar v0.2.0 [..]
+[DOWNLOADING] crates ...
+[DOWNLOADED] bar v0.2.0 [..]
 [COMPILING] bar v0.2.0
 [COMPILING] foo v0.0.1 ([CWD])
 [FINISHED] dev [unoptimized + debuginfo] target(s) in [..]
