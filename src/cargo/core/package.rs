@@ -250,6 +250,7 @@ pub struct PackageSet<'cfg> {
     config: &'cfg Config,
     multi: Multi,
     downloading: Cell<bool>,
+    multiplexing: bool,
 }
 
 pub struct Downloads<'a, 'cfg: 'a> {
@@ -286,9 +287,21 @@ impl<'cfg> PackageSet<'cfg> {
     ) -> CargoResult<PackageSet<'cfg>> {
         // We've enabled the `http2` feature of `curl` in Cargo, so treat
         // failures here as fatal as it would indicate a build-time problem.
+        //
+        // Note that the multiplexing support is pretty new so we're having it
+        // off-by-default temporarily.
+        //
+        // Also note that pipelining is disabled as curl authors have indicated
+        // that it's buggy, and we've empirically seen that it's buggy with HTTP
+        // proxies.
         let mut multi = Multi::new();
-        multi.pipelining(false, true)
+        let multiplexing = config.get::<Option<bool>>("http.multiplexing")?
+            .unwrap_or(false);
+        multi.pipelining(false, multiplexing)
             .chain_err(|| "failed to enable multiplexing/pipelining in curl")?;
+
+        // let's not flood crates.io with connections
+        multi.set_max_host_connections(2)?;
 
         Ok(PackageSet {
             packages: package_ids
@@ -299,6 +312,7 @@ impl<'cfg> PackageSet<'cfg> {
             config,
             multi,
             downloading: Cell::new(false),
+            multiplexing,
         })
     }
 
@@ -405,8 +419,10 @@ impl<'a, 'cfg> Downloads<'a, 'cfg> {
         // downloads much faster. Currently Cargo requests the `http2` feature
         // of the `curl` crate which means it should always be built in, so
         // treat it as a fatal error of http/2 support isn't found.
-        handle.http_version(HttpVersion::V2)
-            .chain_err(|| "failed to enable HTTP2, is curl not built right?")?;
+        if self.set.multiplexing {
+            handle.http_version(HttpVersion::V2)
+                .chain_err(|| "failed to enable HTTP2, is curl not built right?")?;
+        }
 
         // This is an option to `libcurl` which indicates that if there's a
         // bunch of parallel requests to the same host they all wait until the
