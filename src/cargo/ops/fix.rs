@@ -233,7 +233,6 @@ fn rustfix_crate(lock_addr: &str, rustc: &Path, filename: &Path, args: &FixArgs)
     -> Result<FixedCrate, Error>
 {
     args.verify_not_preparing_for_enabled_edition()?;
-    args.warn_if_preparing_probably_inert()?;
 
     // First up we want to make sure that each crate is only checked by one
     // process at a time. If two invocations concurrently check a crate then
@@ -594,38 +593,6 @@ impl FixArgs {
         }.post()?;
 
         process::exit(1);
-    }
-
-    /// If we're preparing for an edition and we *don't* find the
-    /// `rust_2018_preview` feature, for example, in the entry point file then
-    /// it probably means that the edition isn't actually enabled, so we can't
-    /// actually fix anything.
-    ///
-    /// If this is the case, issue a warning.
-    fn warn_if_preparing_probably_inert(&self) -> CargoResult<()> {
-        let edition = match self.prepare_for_edition_resolve() {
-            Some(s) => s,
-            None => return Ok(()),
-        };
-        let path = match &self.file {
-            Some(s) => s,
-            None => return Ok(()),
-        };
-        let contents = match fs::read_to_string(path) {
-            Ok(s) => s,
-            Err(_) => return Ok(())
-        };
-
-        let feature_name = format!("rust_{}_preview", edition);
-        if contents.contains(&feature_name) {
-            return Ok(())
-        }
-        Message::PreviewNotFound {
-            file: path.display().to_string(),
-            edition: edition.to_string(),
-        }.post()?;
-
-        Ok(())
     }
 
     fn prepare_for_edition_resolve(&self) -> Option<&str> {

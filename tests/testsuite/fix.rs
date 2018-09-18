@@ -335,9 +335,6 @@ fn local_paths_no_fix() {
 
     let stderr = "\
 [CHECKING] foo v0.0.1 ([..])
-warning: failed to find `#![feature(rust_2018_preview)]` in `src/lib.rs`
-this may cause `cargo fix` to not be able to fix all
-issues in preparation for the 2018 edition
 [FINISHED] [..]
 ";
     p.cargo("fix --edition --allow-no-vcs")
@@ -850,26 +847,6 @@ information about transitioning to the 2018 edition see:
     p.cargo("fix --edition --allow-no-vcs")
         .with_stderr_contains(stderr)
         .with_status(101)
-        .run();
-}
-
-#[test]
-fn prepare_for_without_feature_issues_warning() {
-    if !is_nightly() {
-        return;
-    }
-    let p = project().file("src/lib.rs", "").build();
-
-    let stderr = "\
-[CHECKING] foo v0.0.1 ([..])
-warning: failed to find `#![feature(rust_2018_preview)]` in `src/lib.rs`
-this may cause `cargo fix` to not be able to fix all
-issues in preparation for the 2018 edition
-[FINISHED] [..]
-";
-    p.cargo("fix --edition --allow-no-vcs")
-        .masquerade_as_nightly_cargo()
-        .with_stderr(stderr)
         .run();
 }
 
