@@ -18,7 +18,6 @@ use proptest::sample::Index;
 use proptest::strategy::ValueTree;
 use proptest::string::string_regex;
 use proptest::test_runner::TestRunner;
-use proptest::test_runner::basic_result_cache;
 
 fn resolve(
     pkg: &PackageId,
@@ -361,14 +360,18 @@ fn meta_test_deep_trees_from_strategy() {
 
 proptest! {
     #![proptest_config(ProptestConfig {
-        result_cache: basic_result_cache,
-        cases: 256,
+        cases:
+            if env::var("CI").is_ok() {
+                256 // we have a lot of builds in CI so one or another of them will find problems
+            } else {
+                1024 // but locally try and find it in the one build
+            },
         .. ProptestConfig::default()
     })]
     #[test]
     fn limited_independence_of_irrelevant_alternatives(
         input in ci_no_shrink(registry_strategy(50, 10)),
-        index_to_unpublish in any::<prop::sample::Index>()
+        indexs_to_unpublish in vec(any::<prop::sample::Index>(), 10)
     )  {
         let reg = registry(input.clone());
         // there is only a small chance that eny one
@@ -391,7 +394,43 @@ proptest! {
                         .filter(|x| !r.contains(x.package_id()))
                         .collect();
                     if !not_selected.is_empty() {
-                        let summary_to_unpublish = index_to_unpublish.get(&not_selected);
+                        for index_to_unpublish in &indexs_to_unpublish {
+                            let summary_to_unpublish = index_to_unpublish.get(&not_selected);
+                            let new_reg = registry(
+                                input
+                                    .iter()
+                                    .cloned()
+                                    .filter(|x| summary_to_unpublish != x)
+                                    .collect(),
+                            );
+
+                            let res = resolve(
+                                &pkg_id("root"),
+                                vec![dep_req(&this.name(), &format!("={}", this.version()))],
+                                &new_reg,
+                            );
+
+                            // Note: that we can not assert that the two `res` are identical
+                            // as the resolver does depend on irrelevant alternatives.
+                            // It uses how constrained a dependency requirement is
+                            // to determine what order to evaluate requirements.
+
+                            prop_assert!(
+                                res.is_ok(),
+                                "unpublishing {:?} stopped `{} = \"={}\"` from working",
+                                summary_to_unpublish.package_id(),
+                                this.name(),
+                                this.version()
+                            )
+                        }
+                    }
+                }
+
+                Err(_) => {
+                    // If resolution was unsuccessful, then it should stay unsuccessful
+                    // even if any version of a crate is unpublished.
+                    for index_to_unpublish in &indexs_to_unpublish {
+                        let summary_to_unpublish = index_to_unpublish.get(&input);
                         let new_reg = registry(
                             input
                                 .iter()
@@ -406,46 +445,14 @@ proptest! {
                             &new_reg,
                         );
 
-                        // Note: that we can not assert that the two `res` are identical
-                        // as the resolver does depend on irrelevant alternatives.
-                        // It uses how constrained a dependency requirement is
-                        // to determine what order to evaluate requirements.
-
                         prop_assert!(
-                            res.is_ok(),
-                            "unpublishing {:?} stopped `{} = \"={}\"` from working",
-                            summary_to_unpublish.package_id(),
+                            res.is_err(),
+                            "full index did not work for `{} = \"={}\"` but unpublishing {:?} fixed it!",
                             this.name(),
-                            this.version()
+                            this.version(),
+                            summary_to_unpublish.package_id()
                         )
                     }
-                }
-
-                Err(_) => {
-                    // If resolution was unsuccessful, then it should stay unsuccessful
-                    // even if any version of a crate is unpublished.
-                    let summary_to_unpublish = index_to_unpublish.get(&input);
-                    let new_reg = registry(
-                        input
-                            .iter()
-                            .cloned()
-                            .filter(|x| summary_to_unpublish != x)
-                            .collect(),
-                    );
-
-                    let res = resolve(
-                        &pkg_id("root"),
-                        vec![dep_req(&this.name(), &format!("={}", this.version()))],
-                        &new_reg,
-                    );
-
-                    prop_assert!(
-                        res.is_err(),
-                        "full index did not work for `{} = \"={}\"` but unpublishing {:?} fixed it!",
-                        this.name(),
-                        this.version(),
-                        summary_to_unpublish.package_id()
-                    )
                 }
             }
         }
