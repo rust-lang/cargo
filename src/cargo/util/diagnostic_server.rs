@@ -40,10 +40,6 @@ pub enum Message {
         file: String,
         message: String,
     },
-    PreviewNotFound {
-        file: String,
-        edition: String,
-    },
     EditionAlreadyEnabled {
         file: String,
         edition: String,
@@ -81,7 +77,6 @@ impl Message {
 
 pub struct DiagnosticPrinter<'a> {
     config: &'a Config,
-    preview_not_found: HashSet<String>,
     edition_already_enabled: HashSet<String>,
     idiom_mismatch: HashSet<String>,
 }
@@ -90,7 +85,6 @@ impl<'a> DiagnosticPrinter<'a> {
     pub fn new(config: &'a Config) -> DiagnosticPrinter<'a> {
         DiagnosticPrinter {
             config,
-            preview_not_found: HashSet::new(),
             edition_already_enabled: HashSet::new(),
             idiom_mismatch: HashSet::new(),
         }
@@ -138,21 +132,6 @@ impl<'a> DiagnosticPrinter<'a> {
                     writeln!(self.config.shell().err())?;
                 }
                 write!(self.config.shell().err(), "{}", PLEASE_REPORT_THIS_BUG)?;
-                Ok(())
-            }
-            Message::PreviewNotFound { file, edition } => {
-                // By default we're fixing a lot of things concurrently, don't
-                // warn about the same file multiple times.
-                if !self.preview_not_found.insert(file.clone()) {
-                    return Ok(())
-                }
-                self.config.shell().warn(&format!(
-                    "failed to find `#![feature(rust_{}_preview)]` in `{}`\n\
-                     this may cause `cargo fix` to not be able to fix all\n\
-                     issues in preparation for the {0} edition",
-                    edition,
-                    file,
-                ))?;
                 Ok(())
             }
             Message::EditionAlreadyEnabled { file, edition } => {
