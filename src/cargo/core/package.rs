@@ -287,7 +287,7 @@ impl<'cfg> PackageSet<'cfg> {
         // We've enabled the `http2` feature of `curl` in Cargo, so treat
         // failures here as fatal as it would indicate a build-time problem.
         let mut multi = Multi::new();
-        multi.pipelining(true, true)
+        multi.pipelining(false, true)
             .chain_err(|| "failed to enable multiplexing/pipelining in curl")?;
 
         Ok(PackageSet {
