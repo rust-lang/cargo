@@ -19,7 +19,7 @@ pub fn cli() -> App {
             "Build all tests",
             "Build only the specified bench target",
             "Build all benches",
-            "Build all targets (lib and bin targets by default)",
+            "Build all targets",
         )
         .arg_release("Build artifacts in release mode, with optimizations")
         .arg(opt("profile", "Profile to build the selected target for").value_name("PROFILE"))

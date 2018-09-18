@@ -27,7 +27,7 @@ pub fn cli() -> App {
             "Test all tests",
             "Test only the specified bench target",
             "Test all benches",
-            "Test all targets (default)",
+            "Test all targets",
         )
         .arg(opt("doc", "Test only this library's documentation"))
         .arg(opt("no-run", "Compile, but don't run tests"))
@@ -116,7 +116,6 @@ pub fn exec(config: &mut Config, args: &ArgMatches) -> CliResult {
     let ops = ops::TestOptions {
         no_run: args.is_present("no-run"),
         no_fail_fast: args.is_present("no-fail-fast"),
-        only_doc: doc,
         compile_opts,
     };
 
