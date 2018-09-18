@@ -9,6 +9,7 @@ use hex;
 use serde_json;
 
 use core::{Dependency, Package, PackageId, Source, SourceId, Summary};
+use core::source::MaybePackage;
 use sources::PathSource;
 use util::{Config, Sha256};
 use util::errors::{CargoResult, CargoResultExt};
@@ -150,12 +151,17 @@ impl<'cfg> Source for DirectorySource<'cfg> {
         Ok(())
     }
 
-    fn download(&mut self, id: &PackageId) -> CargoResult<Package> {
+    fn download(&mut self, id: &PackageId) -> CargoResult<MaybePackage> {
         self.packages
             .get(id)
             .map(|p| &p.0)
             .cloned()
+            .map(MaybePackage::Ready)
             .ok_or_else(|| format_err!("failed to find package with id: {}", id))
+    }
+
+    fn finish_download(&mut self, _id: &PackageId, _data: Vec<u8>) -> CargoResult<Package> {
+        panic!("no downloads to do")
     }
 
     fn fingerprint(&self, pkg: &Package) -> CargoResult<String> {

@@ -37,6 +37,7 @@ pub trait Registry {
 /// a `Source`. Each `Source` in the map has been updated (using network
 /// operations if necessary) and is ready to be queried for packages.
 pub struct PackageRegistry<'cfg> {
+    config: &'cfg Config,
     sources: SourceMap<'cfg>,
 
     // A list of sources which are considered "overrides" which take precedent
@@ -81,6 +82,7 @@ impl<'cfg> PackageRegistry<'cfg> {
     pub fn new(config: &'cfg Config) -> CargoResult<PackageRegistry<'cfg>> {
         let source_config = SourceConfigMap::new(config)?;
         Ok(PackageRegistry {
+            config,
             sources: SourceMap::new(),
             source_ids: HashMap::new(),
             overrides: Vec::new(),
@@ -92,9 +94,9 @@ impl<'cfg> PackageRegistry<'cfg> {
         })
     }
 
-    pub fn get(self, package_ids: &[PackageId]) -> PackageSet<'cfg> {
+    pub fn get(self, package_ids: &[PackageId]) -> CargoResult<PackageSet<'cfg>> {
         trace!("getting packages; sources={}", self.sources.len());
-        PackageSet::new(package_ids, self.sources)
+        PackageSet::new(package_ids, self.sources, self.config)
     }
 
     fn ensure_loaded(&mut self, namespace: &SourceId, kind: Kind) -> CargoResult<()> {
