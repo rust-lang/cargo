@@ -14,12 +14,12 @@ fn build_lib_for_foo() {
     p.cargo("rustc --lib -v")
         .with_stderr(
             "\
-[COMPILING] foo v0.0.1 (CWD)
-[RUNNING] `rustc --crate-name foo src/lib.rs --crate-type lib \
+[COMPILING] foo v0.0.1 ([CWD])
+[RUNNING] `rustc --crate-name foo src/lib.rs --color never --crate-type lib \
         --emit=dep-info,link -C debuginfo=2 \
         -C metadata=[..] \
         --out-dir [..] \
-        -L dependency=CWD/target/debug/deps`
+        -L dependency=[CWD]/target/debug/deps`
 [FINISHED] dev [unoptimized + debuginfo] target(s) in [..]
 ",
         ).run();
@@ -35,13 +35,13 @@ fn lib() {
     p.cargo("rustc --lib -v -- -C debug-assertions=off")
         .with_stderr(
             "\
-[COMPILING] foo v0.0.1 (CWD)
-[RUNNING] `rustc --crate-name foo src/lib.rs --crate-type lib \
+[COMPILING] foo v0.0.1 ([CWD])
+[RUNNING] `rustc --crate-name foo src/lib.rs --color never --crate-type lib \
         --emit=dep-info,link -C debuginfo=2 \
         -C debug-assertions=off \
         -C metadata=[..] \
         --out-dir [..] \
-        -L dependency=CWD/target/debug/deps`
+        -L dependency=[CWD]/target/debug/deps`
 [FINISHED] dev [unoptimized + debuginfo] target(s) in [..]
 ",
         ).run();
@@ -57,19 +57,19 @@ fn build_main_and_allow_unstable_options() {
     p.cargo("rustc -v --bin foo -- -C debug-assertions")
         .with_stderr(format!(
             "\
-[COMPILING] {name} v{version} (CWD)
-[RUNNING] `rustc --crate-name {name} src/lib.rs --crate-type lib \
+[COMPILING] {name} v{version} ([CWD])
+[RUNNING] `rustc --crate-name {name} src/lib.rs --color never --crate-type lib \
         --emit=dep-info,link -C debuginfo=2 \
         -C metadata=[..] \
         --out-dir [..] \
-        -L dependency=CWD/target/debug/deps`
-[RUNNING] `rustc --crate-name {name} src/main.rs --crate-type bin \
+        -L dependency=[CWD]/target/debug/deps`
+[RUNNING] `rustc --crate-name {name} src/main.rs --color never --crate-type bin \
         --emit=dep-info,link -C debuginfo=2 \
         -C debug-assertions \
         -C metadata=[..] \
         --out-dir [..] \
-        -L dependency=CWD/target/debug/deps \
-        --extern {name}=CWD/target/debug/deps/lib{name}-[..].rlib`
+        -L dependency=[CWD]/target/debug/deps \
+        --extern {name}=[CWD]/target/debug/deps/lib{name}-[..].rlib`
 [FINISHED] dev [unoptimized + debuginfo] target(s) in [..]
 ",
             name = "foo",
@@ -102,11 +102,11 @@ fn build_with_args_to_one_of_multiple_binaries() {
     p.cargo("rustc -v --bin bar -- -C debug-assertions")
         .with_stderr(
             "\
-[COMPILING] foo v0.0.1 (CWD)
-[RUNNING] `rustc --crate-name foo src/lib.rs --crate-type lib --emit=dep-info,link \
+[COMPILING] foo v0.0.1 ([CWD])
+[RUNNING] `rustc --crate-name foo src/lib.rs --color never --crate-type lib --emit=dep-info,link \
         -C debuginfo=2 -C metadata=[..] \
         --out-dir [..]`
-[RUNNING] `rustc --crate-name bar src/bin/bar.rs --crate-type bin --emit=dep-info,link \
+[RUNNING] `rustc --crate-name bar src/bin/bar.rs --color never --crate-type bin --emit=dep-info,link \
         -C debuginfo=2 -C debug-assertions [..]`
 [FINISHED] dev [unoptimized + debuginfo] target(s) in [..]
 ",
@@ -140,11 +140,11 @@ fn build_with_args_to_one_of_multiple_tests() {
     p.cargo("rustc -v --test bar -- -C debug-assertions")
         .with_stderr(
             "\
-[COMPILING] foo v0.0.1 (CWD)
-[RUNNING] `rustc --crate-name foo src/lib.rs --crate-type lib --emit=dep-info,link \
+[COMPILING] foo v0.0.1 ([CWD])
+[RUNNING] `rustc --crate-name foo src/lib.rs --color never --crate-type lib --emit=dep-info,link \
         -C debuginfo=2 -C metadata=[..] \
         --out-dir [..]`
-[RUNNING] `rustc --crate-name bar tests/bar.rs --emit=dep-info,link -C debuginfo=2 \
+[RUNNING] `rustc --crate-name bar tests/bar.rs --color never --emit=dep-info,link -C debuginfo=2 \
         -C debug-assertions [..]--test[..]`
 [FINISHED] dev [unoptimized + debuginfo] target(s) in [..]
 ",
@@ -178,7 +178,7 @@ fn build_foo_with_bar_dependency() {
             "\
 [COMPILING] bar v0.1.0 ([..])
 [RUNNING] `[..] -C debuginfo=2 [..]`
-[COMPILING] foo v0.0.1 (CWD)
+[COMPILING] foo v0.0.1 ([CWD])
 [RUNNING] `[..] -C debuginfo=2 -C debug-assertions [..]`
 [FINISHED] dev [unoptimized + debuginfo] target(s) in [..]
 ",
@@ -211,7 +211,7 @@ fn build_only_bar_dependency() {
         .with_stderr(
             "\
 [COMPILING] bar v0.1.0 ([..])
-[RUNNING] `rustc --crate-name bar [..] --crate-type lib [..] -C debug-assertions [..]`
+[RUNNING] `rustc --crate-name bar [..] --color never --crate-type lib [..] -C debug-assertions [..]`
 [FINISHED] dev [unoptimized + debuginfo] target(s) in [..]
 ",
         ).run();
@@ -223,15 +223,15 @@ fn targets_selected_default() {
     p.cargo("rustc -v")
         // bin
         .with_stderr_contains("\
-            [RUNNING] `rustc --crate-name foo src/main.rs --crate-type bin \
+            [RUNNING] `rustc --crate-name foo src/main.rs --color never --crate-type bin \
             --emit=dep-info,link[..]")
         // bench
         .with_stderr_does_not_contain("\
-            [RUNNING] `rustc --crate-name foo src/main.rs --emit=dep-info,link \
+            [RUNNING] `rustc --crate-name foo src/main.rs --color never --emit=dep-info,link \
             -C opt-level=3 --test [..]")
         // unit test
         .with_stderr_does_not_contain("\
-            [RUNNING] `rustc --crate-name foo src/main.rs --emit=dep-info,link \
+            [RUNNING] `rustc --crate-name foo src/main.rs --color never --emit=dep-info,link \
             -C debuginfo=2 --test [..]").run();
 }
 
@@ -241,15 +241,15 @@ fn targets_selected_all() {
     p.cargo("rustc -v --all-targets")
         // bin
         .with_stderr_contains("\
-            [RUNNING] `rustc --crate-name foo src/main.rs --crate-type bin \
+            [RUNNING] `rustc --crate-name foo src/main.rs --color never --crate-type bin \
             --emit=dep-info,link[..]")
         // bench
         .with_stderr_contains("\
-            [RUNNING] `rustc --crate-name foo src/main.rs --emit=dep-info,link \
+            [RUNNING] `rustc --crate-name foo src/main.rs --color never --emit=dep-info,link \
             -C opt-level=3 --test [..]")
         // unit test
         .with_stderr_contains("\
-            [RUNNING] `rustc --crate-name foo src/main.rs --emit=dep-info,link \
+            [RUNNING] `rustc --crate-name foo src/main.rs --color never --emit=dep-info,link \
             -C debuginfo=2 --test [..]").run();
 }
 

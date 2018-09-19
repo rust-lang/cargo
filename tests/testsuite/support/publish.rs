@@ -47,7 +47,7 @@ pub fn setup() -> Repository {
         ).build()
 }
 
-fn registry_path() -> PathBuf {
+pub fn registry_path() -> PathBuf {
     paths::root().join("registry")
 }
 pub fn registry() -> Url {

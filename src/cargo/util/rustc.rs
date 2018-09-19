@@ -4,6 +4,7 @@ use std::path::{Path, PathBuf};
 use std::hash::{Hash, Hasher, SipHasher};
 use std::collections::hash_map::{Entry, HashMap};
 use std::sync::Mutex;
+use std::process::Stdio;
 use std::env;
 
 use serde_json;
@@ -83,6 +84,10 @@ impl Rustc {
     pub fn cached_output(&self, cmd: &ProcessBuilder) -> CargoResult<(String, String)> {
         self.cache.lock().unwrap().cached_output(cmd)
     }
+
+    pub fn cached_success(&self, cmd: &ProcessBuilder) -> CargoResult<bool> {
+        self.cache.lock().unwrap().cached_success(cmd)
+    }
 }
 
 /// It is a well known that `rustc` is not the fastest compiler in the world.
@@ -104,6 +109,7 @@ struct Cache {
 struct CacheData {
     rustc_fingerprint: u64,
     outputs: HashMap<u64, (String, String)>,
+    successes: HashMap<u64, bool>,
 }
 
 impl Cache {
@@ -113,6 +119,7 @@ impl Cache {
                 let empty = CacheData {
                     rustc_fingerprint,
                     outputs: HashMap::new(),
+                    successes: HashMap::new(),
                 };
                 let mut dirty = true;
                 let data = match read(&cache_location) {
@@ -174,6 +181,28 @@ impl Cache {
                 entry.insert(output.clone());
                 self.dirty = true;
                 Ok(output)
+            }
+        }
+    }
+
+    fn cached_success(&mut self, cmd: &ProcessBuilder) -> CargoResult<bool> {
+        let key = process_fingerprint(cmd);
+        match self.data.successes.entry(key) {
+            Entry::Occupied(entry) => {
+                info!("rustc info cache hit");
+                Ok(*entry.get())
+            }
+            Entry::Vacant(entry) => {
+                info!("rustc info cache miss");
+                let success = cmd
+                    .build_command()
+                    .stdout(Stdio::null())
+                    .stderr(Stdio::null())
+                    .status()?
+                    .success();
+                entry.insert(success);
+                self.dirty = true;
+                Ok(success)
             }
         }
     }

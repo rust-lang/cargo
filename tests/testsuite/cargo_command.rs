@@ -268,7 +268,7 @@ fn cargo_subcommand_args() {
             if cfg!(windows) { // weird edge-case w/ CWD & (windows vs unix)
                 format!(r#"[{:?}, "foo", "bar", "-v", "--help"]"#, cargo_foo_bin)
             } else {
-                r#"["CWD/cargo-foo/target/debug/cargo-foo", "foo", "bar", "-v", "--help"]"#.to_string()
+                r#"["[CWD]/cargo-foo/target/debug/cargo-foo", "foo", "bar", "-v", "--help"]"#.to_string()
             }
         ).run();
 }

@@ -50,11 +50,11 @@ fn replace() {
     p.cargo("build")
         .with_stderr(
             "\
-[UPDATING] `file://[..]` index
+[UPDATING] `[ROOT][..]` index
 [DOWNLOADING] baz v0.1.0 ([..])
-[COMPILING] bar v0.1.0 (CWD/bar)
+[COMPILING] bar v0.1.0 ([CWD]/bar)
 [COMPILING] baz v0.1.0
-[COMPILING] foo v0.0.1 (CWD)
+[COMPILING] foo v0.0.1 ([CWD])
 [FINISHED] dev [unoptimized + debuginfo] target(s) in [..]
 ",
         ).run();
@@ -91,9 +91,9 @@ fn nonexistent() {
     p.cargo("build")
         .with_stderr(
             "\
-[UPDATING] `file://[..]` index
-[COMPILING] bar v0.1.0 (CWD/bar)
-[COMPILING] foo v0.0.1 (CWD)
+[UPDATING] `[ROOT][..]` index
+[COMPILING] bar v0.1.0 ([CWD]/bar)
+[COMPILING] foo v0.0.1 ([CWD])
 [FINISHED] dev [unoptimized + debuginfo] target(s) in [..]
 ",
         ).run();
@@ -136,8 +136,8 @@ fn patch_git() {
         .with_stderr(
             "\
 [UPDATING] git repository `file://[..]`
-[COMPILING] bar v0.1.0 (CWD/bar)
-[COMPILING] foo v0.0.1 (CWD)
+[COMPILING] bar v0.1.0 ([CWD]/bar)
+[COMPILING] foo v0.0.1 ([CWD])
 [FINISHED] dev [unoptimized + debuginfo] target(s) in [..]
 ",
         ).run();
@@ -180,9 +180,9 @@ fn patch_to_git() {
         .with_stderr(
             "\
 [UPDATING] git repository `file://[..]`
-[UPDATING] `file://[..]` index
+[UPDATING] `[ROOT][..]` index
 [COMPILING] bar v0.1.0 (file://[..])
-[COMPILING] foo v0.0.1 (CWD)
+[COMPILING] foo v0.0.1 ([CWD])
 [FINISHED] dev [unoptimized + debuginfo] target(s) in [..]
 ",
         ).run();
@@ -216,10 +216,10 @@ fn unused() {
     p.cargo("build")
         .with_stderr(
             "\
-[UPDATING] `file://[..]` index
+[UPDATING] `[ROOT][..]` index
 [DOWNLOADING] bar v0.1.0 [..]
 [COMPILING] bar v0.1.0
-[COMPILING] foo v0.0.1 (CWD)
+[COMPILING] foo v0.0.1 ([CWD])
 [FINISHED] dev [unoptimized + debuginfo] target(s) in [..]
 ",
         ).run();
@@ -274,10 +274,10 @@ fn unused_git() {
         .with_stderr(
             "\
 [UPDATING] git repository `file://[..]`
-[UPDATING] `file://[..]` index
+[UPDATING] `[ROOT][..]` index
 [DOWNLOADING] bar v0.1.0 [..]
 [COMPILING] bar v0.1.0
-[COMPILING] foo v0.0.1 (CWD)
+[COMPILING] foo v0.0.1 ([CWD])
 [FINISHED] dev [unoptimized + debuginfo] target(s) in [..]
 ",
         ).run();
@@ -308,10 +308,10 @@ fn add_patch() {
     p.cargo("build")
         .with_stderr(
             "\
-[UPDATING] `file://[..]` index
+[UPDATING] `[ROOT][..]` index
 [DOWNLOADING] bar v0.1.0 [..]
 [COMPILING] bar v0.1.0
-[COMPILING] foo v0.0.1 (CWD)
+[COMPILING] foo v0.0.1 ([CWD])
 [FINISHED] dev [unoptimized + debuginfo] target(s) in [..]
 ",
         ).run();
@@ -335,8 +335,8 @@ fn add_patch() {
     p.cargo("build")
         .with_stderr(
             "\
-[COMPILING] bar v0.1.0 (CWD/bar)
-[COMPILING] foo v0.0.1 (CWD)
+[COMPILING] bar v0.1.0 ([CWD]/bar)
+[COMPILING] foo v0.0.1 ([CWD])
 [FINISHED] dev [unoptimized + debuginfo] target(s) in [..]
 ",
         ).run();
@@ -367,10 +367,10 @@ fn add_ignored_patch() {
     p.cargo("build")
         .with_stderr(
             "\
-[UPDATING] `file://[..]` index
+[UPDATING] `[ROOT][..]` index
 [DOWNLOADING] bar v0.1.0 [..]
 [COMPILING] bar v0.1.0
-[COMPILING] foo v0.0.1 (CWD)
+[COMPILING] foo v0.0.1 ([CWD])
 [FINISHED] dev [unoptimized + debuginfo] target(s) in [..]
 ",
         ).run();
@@ -424,9 +424,9 @@ fn new_minor() {
     p.cargo("build")
         .with_stderr(
             "\
-[UPDATING] `file://[..]` index
+[UPDATING] `[ROOT][..]` index
 [COMPILING] bar v0.1.1 [..]
-[COMPILING] foo v0.0.1 (CWD)
+[COMPILING] foo v0.0.1 ([CWD])
 [FINISHED] dev [unoptimized + debuginfo] target(s) in [..]
 ",
         ).run();
@@ -471,10 +471,10 @@ fn transitive_new_minor() {
     p.cargo("build")
         .with_stderr(
             "\
-[UPDATING] `file://[..]` index
+[UPDATING] `[ROOT][..]` index
 [COMPILING] baz v0.1.1 [..]
 [COMPILING] bar v0.1.0 [..]
-[COMPILING] foo v0.0.1 (CWD)
+[COMPILING] foo v0.0.1 ([CWD])
 [FINISHED] dev [unoptimized + debuginfo] target(s) in [..]
 ",
         ).run();
@@ -507,9 +507,9 @@ fn new_major() {
     p.cargo("build")
         .with_stderr(
             "\
-[UPDATING] `file://[..]` index
+[UPDATING] `[ROOT][..]` index
 [COMPILING] bar v0.2.0 [..]
-[COMPILING] foo v0.0.1 (CWD)
+[COMPILING] foo v0.0.1 ([CWD])
 [FINISHED] dev [unoptimized + debuginfo] target(s) in [..]
 ",
         ).run();
@@ -534,10 +534,10 @@ fn new_major() {
     p.cargo("build")
         .with_stderr(
             "\
-[UPDATING] `file://[..]` index
+[UPDATING] `[ROOT][..]` index
 [DOWNLOADING] bar v0.2.0 [..]
 [COMPILING] bar v0.2.0
-[COMPILING] foo v0.0.1 (CWD)
+[COMPILING] foo v0.0.1 ([CWD])
 [FINISHED] dev [unoptimized + debuginfo] target(s) in [..]
 ",
         ).run();
@@ -582,10 +582,10 @@ fn transitive_new_major() {
     p.cargo("build")
         .with_stderr(
             "\
-[UPDATING] `file://[..]` index
+[UPDATING] `[ROOT][..]` index
 [COMPILING] baz v0.2.0 [..]
 [COMPILING] bar v0.1.0 [..]
-[COMPILING] foo v0.0.1 (CWD)
+[COMPILING] foo v0.0.1 ([CWD])
 [FINISHED] dev [unoptimized + debuginfo] target(s) in [..]
 ",
         ).run();

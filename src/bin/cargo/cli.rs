@@ -34,7 +34,6 @@ Available unstable (nightly-only) flags:
     -Z offline          -- Offline mode that does not perform network requests
     -Z unstable-options -- Allow the usage of unstable options such as --registry
     -Z config-profile   -- Read profiles from .cargo/config files
-    -Z compile-progress -- Display a progress bar while compiling
 
 Run with 'cargo -Z [FLAG] [SUBCOMMAND]'"
         );
