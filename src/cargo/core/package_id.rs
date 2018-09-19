@@ -1,3 +1,4 @@
+use std::borrow::Cow;
 use std::cmp::Ordering;
 use std::fmt::{self, Formatter};
 use std::hash::Hash;
@@ -5,6 +6,7 @@ use std::hash;
 use std::path::Path;
 use std::sync::Arc;
 
+use miniserde;
 use semver;
 use serde::de;
 use serde::ser;
@@ -37,6 +39,17 @@ impl ser::Serialize for PackageId {
             self.inner.version,
             self.inner.source_id.to_url()
         ))
+    }
+}
+
+impl miniserde::Serialize for PackageId {
+    fn begin(&self) -> miniserde::ser::Fragment {
+        miniserde::ser::Fragment::Str(Cow::Owned(format!(
+            "{} {} ({})",
+            self.inner.name,
+            self.inner.version,
+            self.inner.source_id.to_url(),
+        )))
     }
 }
 

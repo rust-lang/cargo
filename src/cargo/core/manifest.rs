@@ -1,11 +1,14 @@
 #![allow(deprecated)] // for SipHasher
 
+use std::borrow::Cow;
 use std::collections::{BTreeMap, HashMap};
 use std::fmt;
 use std::hash::{Hash, Hasher, SipHasher};
 use std::path::{Path, PathBuf};
 use std::rc::Rc;
+use std::slice;
 
+use miniserde;
 use semver::Version;
 use serde::ser;
 use toml;
@@ -123,6 +126,12 @@ impl LibKind {
     }
 }
 
+impl miniserde::Serialize for LibKind {
+    fn begin(&self) -> miniserde::ser::Fragment {
+        miniserde::ser::Fragment::Str(Cow::Borrowed(self.crate_type()))
+    }
+}
+
 impl fmt::Debug for LibKind {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         self.crate_type().fmt(f)
@@ -166,6 +175,37 @@ impl ser::Serialize for TargetKind {
             CustomBuild => ["custom-build"].serialize(s),
             Bench => ["bench"].serialize(s),
         }
+    }
+}
+
+impl miniserde::Serialize for TargetKind {
+    fn begin(&self) -> miniserde::ser::Fragment {
+        use miniserde::ser::{Fragment, Seq, Serialize};
+        use self::TargetKind::*;
+
+        enum KindsStream<'a> {
+            Lib(slice::Iter<'a, LibKind>),
+            // double reference to enable cast to &dyn Serialize
+            Single(Option<&'static &'static str>),
+        }
+
+        impl<'a> Seq for KindsStream<'a> {
+            fn next(&mut self) -> Option<&Serialize> {
+                Some(match self {
+                    KindsStream::Lib(kinds) => kinds.next()?,
+                    KindsStream::Single(single) => single.take()?,
+                })
+            }
+        }
+
+        Fragment::Seq(Box::new(match self {
+            Lib(kinds) => KindsStream::Lib(kinds.iter()),
+            Bin => KindsStream::Single(Some(&"bin")),
+            ExampleBin | ExampleLib(_) => KindsStream::Single(Some(&"example")),
+            Test => KindsStream::Single(Some(&"test")),
+            CustomBuild => KindsStream::Single(Some(&"custom-build")),
+            Bench => KindsStream::Single(Some(&"bench")),
+        }))
     }
 }
 
@@ -261,25 +301,69 @@ struct SerializedTarget<'a> {
     /// See https://doc.rust-lang.org/reference/linkage.html
     crate_types: Vec<&'a str>,
     name: &'a str,
-    src_path: &'a PathBuf,
-    edition: &'a str,
+    src_path: &'a Path,
+    edition: String,
     #[serde(rename = "required-features", skip_serializing_if = "Option::is_none")]
     required_features: Option<Vec<&'a str>>,
 }
 
-impl ser::Serialize for Target {
-    fn serialize<S: ser::Serializer>(&self, s: S) -> Result<S::Ok, S::Error> {
+impl Target {
+    fn to_serialized_target(&self) -> SerializedTarget {
         SerializedTarget {
             kind: &self.kind,
             crate_types: self.rustc_crate_types(),
             name: &self.name,
-            src_path: &self.src_path.path().to_path_buf(),
-            edition: &self.edition.to_string(),
+            src_path: self.src_path.path(),
+            edition: self.edition.to_string(),
             required_features: self
                 .required_features
                 .as_ref()
                 .map(|rf| rf.iter().map(|s| &**s).collect()),
-        }.serialize(s)
+        }
+    }
+}
+
+impl ser::Serialize for Target {
+    fn serialize<S: ser::Serializer>(&self, s: S) -> Result<S::Ok, S::Error> {
+        self.to_serialized_target().serialize(s)
+    }
+}
+
+impl miniserde::Serialize for Target {
+    fn begin(&self) -> miniserde::ser::Fragment {
+        use miniserde::ser::{Fragment, Map, Serialize};
+
+        struct TargetStream<'a> {
+            data: SerializedTarget<'a>,
+            src_path: Cow<'a, str>,
+            state: usize,
+        }
+
+        impl<'a> Map for TargetStream<'a> {
+            fn next(&mut self) -> Option<(Cow<str>, &Serialize)> {
+                let state = self.state;
+                self.state += 1;
+                match state {
+                    0 => Some((Cow::Borrowed("kind"), self.data.kind)),
+                    1 => Some((Cow::Borrowed("crate_types"), &self.data.crate_types)),
+                    2 => Some((Cow::Borrowed("name"), &self.data.name)),
+                    3 => Some((Cow::Borrowed("src_path"), &self.src_path)),
+                    4 => Some((Cow::Borrowed("edition"), &self.data.edition)),
+                    5 => Some((
+                        // skipped if None
+                        Cow::Borrowed("required-features"),
+                        self.data.required_features.as_ref()?,
+                    )),
+                    _ => None,
+                }
+            }
+        }
+
+        Fragment::Map(Box::new(TargetStream {
+            data: self.to_serialized_target(),
+            src_path: self.src_path.path().to_string_lossy(),
+            state: 0,
+        }))
     }
 }
 

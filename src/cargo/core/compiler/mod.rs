@@ -5,8 +5,8 @@ use std::io::{self, Write};
 use std::path::{self, Path, PathBuf};
 use std::sync::Arc;
 
+use miniserde;
 use same_file::is_same_file;
-use serde_json;
 
 use core::manifest::TargetSourcePath;
 use core::profiles::{Lto, Profile};
@@ -1009,7 +1009,7 @@ fn json_stderr(line: &str, package_id: &PackageId, target: &Target) -> CargoResu
     // stderr from rustc/rustdoc can have a mix of JSON and non-JSON output
     if line.starts_with('{') {
         // Handle JSON lines
-        let compiler_message = serde_json::from_str(line)
+        let compiler_message = miniserde::json::from_str(line)
             .map_err(|_| internal(&format!("compiler produced invalid json: `{}`", line)))?;
 
         machine_message::emit(&machine_message::FromCompiler {
