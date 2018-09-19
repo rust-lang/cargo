@@ -416,7 +416,7 @@ fn path_source<'a>(source_id: &SourceId, config: &'a Config) -> CargoResult<Path
     Ok(PathSource::new(&path, source_id, config))
 }
 
-fn select_pkg<'a, T>(
+pub fn select_pkg<'a, T>(
     mut source: T,
     name: Option<&str>,
     vers: Option<&str>,

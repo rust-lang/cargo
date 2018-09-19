@@ -19,7 +19,7 @@ pub struct Manifest {
     pub data: toml_edit::Document,
 }
 
-/// If a manifest is specified, return that one, otherise perform a manifest search starting from
+/// If a manifest is specified, return that one, otherwise perform a manifest search starting from
 /// the current directory.
 /// If a manifest is specified, return that one. If a path is specified, perform a manifest search
 /// starting from there. If nothing is specified, start searching from the current directory
