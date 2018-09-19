@@ -1,3 +1,4 @@
+use std::collections::HashMap;
 use std::fs;
 use std::path::Path;
 
@@ -97,7 +98,7 @@ pub fn clean(ws: &Workspace, opts: &CleanOptions) -> CargoResult<()> {
         opts.config,
         &build_config,
         profiles,
-        None,
+        HashMap::new(),
     )?;
     let mut cx = Context::new(config, &bcx)?;
     cx.prepare_units(None, &units)?;

@@ -53,11 +53,13 @@ pub struct CompileOptions<'a> {
     /// Filter to apply to the root package to select which targets will be
     /// built.
     pub filter: CompileFilter,
-    /// Extra arguments to be passed to rustdoc (for main crate and dependencies)
+    /// Extra arguments to be passed to rustdoc (single target only)
     pub target_rustdoc_args: Option<Vec<String>>,
     /// The specified target will be compiled with all the available arguments,
     /// note that this only accounts for the *final* invocation of rustc
     pub target_rustc_args: Option<Vec<String>>,
+    /// Extra arguments passed to all selected targets for rustdoc.
+    pub local_rustdoc_args: Option<Vec<String>>,
     /// The directory to copy final artifacts to. Note that even if `out_dir` is
     /// set, a copy of artifacts still could be found a `target/(debug\release)`
     /// as usual.
@@ -80,6 +82,7 @@ impl<'a> CompileOptions<'a> {
             },
             target_rustdoc_args: None,
             target_rustc_args: None,
+            local_rustdoc_args: None,
             export_dir: None,
         })
     }
@@ -219,6 +222,7 @@ pub fn compile_ws<'a>(
         ref filter,
         ref target_rustdoc_args,
         ref target_rustc_args,
+        ref local_rustdoc_args,
         ref export_dir,
     } = *options;
 
@@ -265,8 +269,6 @@ pub fn compile_ws<'a>(
     let profiles = ws.profiles();
     profiles.validate_packages(&mut config.shell(), &packages)?;
 
-    let mut extra_compiler_args = None;
-
     let units = generate_targets(
         ws,
         profiles,
@@ -277,6 +279,7 @@ pub fn compile_ws<'a>(
         build_config,
     )?;
 
+    let mut extra_compiler_args = HashMap::new();
     if let Some(args) = extra_args {
         if units.len() != 1 {
             bail!(
@@ -286,7 +289,14 @@ pub fn compile_ws<'a>(
                 extra_args_name
             );
         }
-        extra_compiler_args = Some((units[0], args));
+        extra_compiler_args.insert(units[0], args);
+    }
+    if let Some(args) = local_rustdoc_args {
+        for unit in &units {
+            if unit.mode.is_doc() {
+                extra_compiler_args.insert(*unit, args.clone());
+            }
+        }
     }
 
     let ret = {

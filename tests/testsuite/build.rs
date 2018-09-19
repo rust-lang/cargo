@@ -257,7 +257,7 @@ Caused by:
 }
 
 #[test]
-fn cargo_compile_with_invalid_package_name() {
+fn cargo_compile_with_empty_package_name() {
     let p = project()
         .file("Cargo.toml", &basic_manifest("", "0.0.0"))
         .build();
@@ -270,6 +270,24 @@ fn cargo_compile_with_invalid_package_name() {
 
 Caused by:
   package name cannot be an empty string
+",
+        ).run();
+}
+
+#[test]
+fn cargo_compile_with_invalid_package_name() {
+    let p = project()
+        .file("Cargo.toml", &basic_manifest("foo::bar", "0.0.0"))
+        .build();
+
+    p.cargo("build")
+        .with_status(101)
+        .with_stderr(
+            "\
+[ERROR] failed to parse manifest at `[..]`
+
+Caused by:
+  Invalid character `:` in package name: `foo::bar`
 ",
         ).run();
 }
@@ -806,8 +824,8 @@ fn cargo_compile_with_dep_name_mismatch() {
         .with_status(101)
         .with_stderr(
             r#"error: no matching package named `notquitebar` found
-location searched: CWD/bar
-required by package `foo v0.0.1 (CWD)`
+location searched: [CWD]/bar
+required by package `foo v0.0.1 ([CWD])`
 "#,
         ).run();
 }
@@ -1020,7 +1038,7 @@ fn main(){
         .with_stderr(
             "\
 [COMPILING] present_dep v1.2.3
-[COMPILING] foo v0.1.0 (CWD)
+[COMPILING] foo v0.1.0 ([CWD])
 [FINISHED] dev [unoptimized + debuginfo] target(s) in [..]
      Running `[..]`",
         ).with_stdout("1.2.3")
@@ -1164,7 +1182,7 @@ fn compile_offline_while_transitive_dep_not_cached() {
 error: no matching package named `baz` found
 location searched: registry `[..]`
 required by package `bar v0.1.0`
-    ... which is depended on by `foo v0.0.1 (CWD)`
+    ... which is depended on by `foo v0.0.1 ([CWD])`
 As a reminder, you're using offline mode (-Z offline) \
 which can sometimes cause surprising resolution failures, \
 if this error is too confusing you may with to retry \
@@ -1260,21 +1278,21 @@ fn cargo_default_env_metadata_env_var() {
     p.cargo("build -v")
         .with_stderr(&format!(
             "\
-[COMPILING] bar v0.0.1 (CWD/bar)
-[RUNNING] `rustc --crate-name bar bar/src/lib.rs --crate-type dylib \
+[COMPILING] bar v0.0.1 ([CWD]/bar)
+[RUNNING] `rustc --crate-name bar bar/src/lib.rs --color never --crate-type dylib \
         --emit=dep-info,link \
         -C prefer-dynamic -C debuginfo=2 \
         -C metadata=[..] \
         --out-dir [..] \
-        -L dependency=CWD/target/debug/deps`
-[COMPILING] foo v0.0.1 (CWD)
-[RUNNING] `rustc --crate-name foo src/lib.rs --crate-type lib \
+        -L dependency=[CWD]/target/debug/deps`
+[COMPILING] foo v0.0.1 ([CWD])
+[RUNNING] `rustc --crate-name foo src/lib.rs --color never --crate-type lib \
         --emit=dep-info,link -C debuginfo=2 \
         -C metadata=[..] \
         -C extra-filename=[..] \
         --out-dir [..] \
-        -L dependency=CWD/target/debug/deps \
-        --extern bar=CWD/target/debug/deps/{prefix}bar{suffix}`
+        -L dependency=[CWD]/target/debug/deps \
+        --extern bar=[CWD]/target/debug/deps/{prefix}bar{suffix}`
 [FINISHED] dev [unoptimized + debuginfo] target(s) in [..]",
             prefix = env::consts::DLL_PREFIX,
             suffix = env::consts::DLL_SUFFIX,
@@ -1287,21 +1305,21 @@ fn cargo_default_env_metadata_env_var() {
         .env("__CARGO_DEFAULT_LIB_METADATA", "stable")
         .with_stderr(&format!(
             "\
-[COMPILING] bar v0.0.1 (CWD/bar)
-[RUNNING] `rustc --crate-name bar bar/src/lib.rs --crate-type dylib \
+[COMPILING] bar v0.0.1 ([CWD]/bar)
+[RUNNING] `rustc --crate-name bar bar/src/lib.rs --color never --crate-type dylib \
         --emit=dep-info,link \
         -C prefer-dynamic -C debuginfo=2 \
         -C metadata=[..] \
         --out-dir [..] \
-        -L dependency=CWD/target/debug/deps`
-[COMPILING] foo v0.0.1 (CWD)
-[RUNNING] `rustc --crate-name foo src/lib.rs --crate-type lib \
+        -L dependency=[CWD]/target/debug/deps`
+[COMPILING] foo v0.0.1 ([CWD])
+[RUNNING] `rustc --crate-name foo src/lib.rs --color never --crate-type lib \
         --emit=dep-info,link -C debuginfo=2 \
         -C metadata=[..] \
         -C extra-filename=[..] \
         --out-dir [..] \
-        -L dependency=CWD/target/debug/deps \
-        --extern bar=CWD/target/debug/deps/{prefix}bar-[..]{suffix}`
+        -L dependency=[CWD]/target/debug/deps \
+        --extern bar=[CWD]/target/debug/deps/{prefix}bar-[..]{suffix}`
 [FINISHED] dev [unoptimized + debuginfo] target(s) in [..]
 ",
             prefix = env::consts::DLL_PREFIX,
@@ -1370,7 +1388,7 @@ fn crate_env_vars() {
     p.cargo("build -v").run();
 
     println!("bin");
-    p.process(&p.bin("foo")).with_stdout("0-5-1 @ alpha.1 in CWD").run();
+    p.process(&p.bin("foo")).with_stdout("0-5-1 @ alpha.1 in [CWD]").run();
 
     println!("test");
     p.cargo("test -v").run();
@@ -1551,8 +1569,8 @@ fn self_dependency() {
         .with_status(101)
         .with_stderr(
             "\
-[ERROR] cyclic package dependency: package `test v0.0.0 (CWD)` depends on itself. Cycle:
-package `test v0.0.0 (CWD)`",
+[ERROR] cyclic package dependency: package `test v0.0.0 ([CWD])` depends on itself. Cycle:
+package `test v0.0.0 ([CWD])`",
         ).run();
 }
 
@@ -1615,14 +1633,14 @@ fn lto_build() {
     p.cargo("build -v --release")
         .with_stderr(
             "\
-[COMPILING] test v0.0.0 (CWD)
-[RUNNING] `rustc --crate-name test src/main.rs --crate-type bin \
+[COMPILING] test v0.0.0 ([CWD])
+[RUNNING] `rustc --crate-name test src/main.rs --color never --crate-type bin \
         --emit=dep-info,link \
         -C opt-level=3 \
         -C lto \
         -C metadata=[..] \
-        --out-dir CWD/target/release/deps \
-        -L dependency=CWD/target/release/deps`
+        --out-dir [CWD]/target/release/deps \
+        -L dependency=[CWD]/target/release/deps`
 [FINISHED] release [optimized] target(s) in [..]
 ",
         ).run();
@@ -1634,12 +1652,12 @@ fn verbose_build() {
     p.cargo("build -v")
         .with_stderr(
             "\
-[COMPILING] foo v0.0.1 (CWD)
-[RUNNING] `rustc --crate-name foo src/lib.rs --crate-type lib \
+[COMPILING] foo v0.0.1 ([CWD])
+[RUNNING] `rustc --crate-name foo src/lib.rs --color never --crate-type lib \
         --emit=dep-info,link -C debuginfo=2 \
         -C metadata=[..] \
         --out-dir [..] \
-        -L dependency=CWD/target/debug/deps`
+        -L dependency=[CWD]/target/debug/deps`
 [FINISHED] dev [unoptimized + debuginfo] target(s) in [..]
 ",
         ).run();
@@ -1651,13 +1669,13 @@ fn verbose_release_build() {
     p.cargo("build -v --release")
         .with_stderr(
             "\
-[COMPILING] foo v0.0.1 (CWD)
-[RUNNING] `rustc --crate-name foo src/lib.rs --crate-type lib \
+[COMPILING] foo v0.0.1 ([CWD])
+[RUNNING] `rustc --crate-name foo src/lib.rs --color never --crate-type lib \
         --emit=dep-info,link \
         -C opt-level=3 \
         -C metadata=[..] \
         --out-dir [..] \
-        -L dependency=CWD/target/release/deps`
+        -L dependency=[CWD]/target/release/deps`
 [FINISHED] release [optimized] target(s) in [..]
 ",
         ).run();
@@ -1697,24 +1715,24 @@ fn verbose_release_build_deps() {
     p.cargo("build -v --release")
         .with_stderr(&format!(
             "\
-[COMPILING] foo v0.0.0 (CWD/foo)
-[RUNNING] `rustc --crate-name foo foo/src/lib.rs \
+[COMPILING] foo v0.0.0 ([CWD]/foo)
+[RUNNING] `rustc --crate-name foo foo/src/lib.rs --color never \
         --crate-type dylib --crate-type rlib \
         --emit=dep-info,link \
         -C prefer-dynamic \
         -C opt-level=3 \
         -C metadata=[..] \
         --out-dir [..] \
-        -L dependency=CWD/target/release/deps`
-[COMPILING] test v0.0.0 (CWD)
-[RUNNING] `rustc --crate-name test src/lib.rs --crate-type lib \
+        -L dependency=[CWD]/target/release/deps`
+[COMPILING] test v0.0.0 ([CWD])
+[RUNNING] `rustc --crate-name test src/lib.rs --color never --crate-type lib \
         --emit=dep-info,link \
         -C opt-level=3 \
         -C metadata=[..] \
         --out-dir [..] \
-        -L dependency=CWD/target/release/deps \
-        --extern foo=CWD/target/release/deps/{prefix}foo{suffix} \
-        --extern foo=CWD/target/release/deps/libfoo.rlib`
+        -L dependency=[CWD]/target/release/deps \
+        --extern foo=[CWD]/target/release/deps/{prefix}foo{suffix} \
+        --extern foo=[CWD]/target/release/deps/libfoo.rlib`
 [FINISHED] release [optimized] target(s) in [..]
 ",
             prefix = env::consts::DLL_PREFIX,
@@ -2032,7 +2050,7 @@ fn lib_with_standard_name() {
     p.cargo("build")
         .with_stderr(
             "\
-[COMPILING] syntax v0.0.1 (CWD)
+[COMPILING] syntax v0.0.1 ([CWD])
 [FINISHED] dev [unoptimized + debuginfo] target(s) in [..]
 ",
         ).run();
@@ -2142,7 +2160,7 @@ fn freshness_ignores_excluded() {
     foo.cargo("build")
         .with_stderr(
             "\
-[COMPILING] foo v0.0.0 (CWD)
+[COMPILING] foo v0.0.0 ([CWD])
 [FINISHED] dev [unoptimized + debuginfo] target(s) in [..]
 ",
         ).run();
@@ -2193,7 +2211,7 @@ fn rebuild_preserves_out_dir() {
         .env("FIRST", "1")
         .with_stderr(
             "\
-[COMPILING] foo v0.0.0 (CWD)
+[COMPILING] foo v0.0.0 ([CWD])
 [FINISHED] dev [unoptimized + debuginfo] target(s) in [..]
 ",
         ).run();
@@ -2202,7 +2220,7 @@ fn rebuild_preserves_out_dir() {
     foo.cargo("build")
         .with_stderr(
             "\
-[COMPILING] foo v0.0.0 (CWD)
+[COMPILING] foo v0.0.0 ([CWD])
 [FINISHED] dev [unoptimized + debuginfo] target(s) in [..]
 ",
         ).run();
@@ -2601,9 +2619,9 @@ fn cyclic_deps_rejected() {
     p.cargo("build -v")
         .with_status(101)
         .with_stderr(
-"[ERROR] cyclic package dependency: package `a v0.0.1 (CWD/a)` depends on itself. Cycle:
-package `a v0.0.1 (CWD/a)`
-    ... which is depended on by `foo v0.0.1 (CWD)`",
+"[ERROR] cyclic package dependency: package `a v0.0.1 ([CWD]/a)` depends on itself. Cycle:
+package `a v0.0.1 ([CWD]/a)`
+    ... which is depended on by `foo v0.0.1 ([CWD])`",
         ).run();
 }
 
@@ -4099,11 +4117,11 @@ fn build_filter_infer_profile() {
     p.cargo("build -v")
         .with_stderr_contains(
             "\
-             [RUNNING] `rustc --crate-name foo src/lib.rs --crate-type lib \
+             [RUNNING] `rustc --crate-name foo src/lib.rs --color never --crate-type lib \
              --emit=dep-info,link[..]",
         ).with_stderr_contains(
             "\
-             [RUNNING] `rustc --crate-name foo src/main.rs --crate-type bin \
+             [RUNNING] `rustc --crate-name foo src/main.rs --color never --crate-type bin \
              --emit=dep-info,link[..]",
         ).run();
 
@@ -4111,13 +4129,13 @@ fn build_filter_infer_profile() {
     p.cargo("build -v --test=t1")
         .with_stderr_contains(
             "\
-             [RUNNING] `rustc --crate-name foo src/lib.rs --crate-type lib \
+             [RUNNING] `rustc --crate-name foo src/lib.rs --color never --crate-type lib \
              --emit=dep-info,link[..]",
         ).with_stderr_contains(
-            "[RUNNING] `rustc --crate-name t1 tests/t1.rs --emit=dep-info,link[..]",
+            "[RUNNING] `rustc --crate-name t1 tests/t1.rs --color never --emit=dep-info,link[..]",
         ).with_stderr_contains(
             "\
-             [RUNNING] `rustc --crate-name foo src/main.rs --crate-type bin \
+             [RUNNING] `rustc --crate-name foo src/main.rs --color never --crate-type bin \
              --emit=dep-info,link[..]",
         ).run();
 
@@ -4125,15 +4143,15 @@ fn build_filter_infer_profile() {
     p.cargo("build -v --bench=b1")
         .with_stderr_contains(
             "\
-             [RUNNING] `rustc --crate-name foo src/lib.rs --crate-type lib \
+             [RUNNING] `rustc --crate-name foo src/lib.rs --color never --crate-type lib \
              --emit=dep-info,link[..]",
         ).with_stderr_contains(
             "\
-             [RUNNING] `rustc --crate-name b1 benches/b1.rs --emit=dep-info,link \
+             [RUNNING] `rustc --crate-name b1 benches/b1.rs --color never --emit=dep-info,link \
              -C opt-level=3[..]",
         ).with_stderr_contains(
             "\
-             [RUNNING] `rustc --crate-name foo src/main.rs --crate-type bin \
+             [RUNNING] `rustc --crate-name foo src/main.rs --color never --crate-type bin \
              --emit=dep-info,link[..]",
         ).run();
 }
@@ -4144,15 +4162,15 @@ fn targets_selected_default() {
     p.cargo("build -v")
         // bin
         .with_stderr_contains("\
-            [RUNNING] `rustc --crate-name foo src/main.rs --crate-type bin \
+            [RUNNING] `rustc --crate-name foo src/main.rs --color never --crate-type bin \
             --emit=dep-info,link[..]")
         // bench
         .with_stderr_does_not_contain("\
-            [RUNNING] `rustc --crate-name foo src/main.rs --emit=dep-info,link \
+            [RUNNING] `rustc --crate-name foo src/main.rs --color never --emit=dep-info,link \
             -C opt-level=3 --test [..]")
         // unit test
         .with_stderr_does_not_contain("\
-            [RUNNING] `rustc --crate-name foo src/main.rs --emit=dep-info,link \
+            [RUNNING] `rustc --crate-name foo src/main.rs --color never --emit=dep-info,link \
             -C debuginfo=2 --test [..]").run();
 }
 
@@ -4162,15 +4180,15 @@ fn targets_selected_all() {
     p.cargo("build -v --all-targets")
         // bin
         .with_stderr_contains("\
-            [RUNNING] `rustc --crate-name foo src/main.rs --crate-type bin \
+            [RUNNING] `rustc --crate-name foo src/main.rs --color never --crate-type bin \
             --emit=dep-info,link[..]")
         // bench
         .with_stderr_contains("\
-            [RUNNING] `rustc --crate-name foo src/main.rs --emit=dep-info,link \
+            [RUNNING] `rustc --crate-name foo src/main.rs --color never --emit=dep-info,link \
             -C opt-level=3 --test [..]")
         // unit test
         .with_stderr_contains("\
-            [RUNNING] `rustc --crate-name foo src/main.rs --emit=dep-info,link \
+            [RUNNING] `rustc --crate-name foo src/main.rs --color never --emit=dep-info,link \
             -C debuginfo=2 --test [..]").run();
 }
 
@@ -4180,15 +4198,15 @@ fn all_targets_no_lib() {
     p.cargo("build -v --all-targets")
         // bin
         .with_stderr_contains("\
-            [RUNNING] `rustc --crate-name foo src/main.rs --crate-type bin \
+            [RUNNING] `rustc --crate-name foo src/main.rs --color never --crate-type bin \
             --emit=dep-info,link[..]")
         // bench
         .with_stderr_contains("\
-            [RUNNING] `rustc --crate-name foo src/main.rs --emit=dep-info,link \
+            [RUNNING] `rustc --crate-name foo src/main.rs --color never --emit=dep-info,link \
             -C opt-level=3 --test [..]")
         // unit test
         .with_stderr_contains("\
-            [RUNNING] `rustc --crate-name foo src/main.rs --emit=dep-info,link \
+            [RUNNING] `rustc --crate-name foo src/main.rs --color never --emit=dep-info,link \
             -C debuginfo=2 --test [..]").run();
 }
 

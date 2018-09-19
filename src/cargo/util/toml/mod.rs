@@ -810,6 +810,16 @@ impl TomlManifest {
             bail!("package name cannot be an empty string")
         }
 
+        for c in package_name.chars() {
+            if c.is_alphanumeric() {
+                continue;
+            }
+            if c == '_' || c == '-' {
+                continue;
+            }
+            bail!("Invalid character `{}` in package name: `{}`", c, package_name)
+        }
+
         let pkgid = project.to_package_id(source_id)?;
 
         let edition = if let Some(ref edition) = project.edition {

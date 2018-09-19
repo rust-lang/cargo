@@ -94,7 +94,7 @@ fn profile_config_error_paths() {
         .with_status(101)
         .with_stderr(
             "\
-[ERROR] failed to parse manifest at `CWD/Cargo.toml`
+[ERROR] failed to parse manifest at `[CWD]/Cargo.toml`
 
 Caused by:
   error in [..].cargo/config: `profile.dev.rpath` expected true/false, but found a string
@@ -128,7 +128,7 @@ fn profile_config_validate_errors() {
         .with_status(101)
         .with_stderr(
             "\
-[ERROR] failed to parse manifest at `CWD/Cargo.toml`
+[ERROR] failed to parse manifest at `[CWD]/Cargo.toml`
 
 Caused by:
   config profile `profile.dev` is not valid
