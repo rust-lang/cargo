@@ -15,7 +15,9 @@ use support::registry::Package;
 use proptest::collection::{btree_map, btree_set, vec};
 use proptest::prelude::*;
 use proptest::sample::Index;
+use proptest::strategy::ValueTree;
 use proptest::string::string_regex;
+use proptest::test_runner::TestRunner;
 use proptest::test_runner::basic_result_cache;
 
 fn resolve(
@@ -309,6 +311,52 @@ fn registry_strategy(
                 }).collect()
         },
     )
+}
+
+/// This test is to test the generator to ensure
+/// that it makes registries with large dependency trees
+#[test]
+fn meta_test_deep_trees_from_strategy() {
+    let mut seen_an_error = false;
+    let mut seen_a_deep_tree = false;
+
+    let strategy = ci_no_shrink(registry_strategy(50, 10));
+    for _ in 0..256 {
+        let input = strategy
+            .new_tree(&mut TestRunner::default())
+            .unwrap()
+            .current();
+        let reg = registry(input.clone());
+        for this in input.iter().rev().take(10) {
+            let res = resolve(
+                &pkg_id("root"),
+                vec![dep_req(&this.name(), &format!("={}", this.version()))],
+                &reg,
+            );
+            match res {
+                Ok(r) => {
+                    if r.len() >= 7 {
+                        seen_a_deep_tree = true;
+                    }
+                }
+                Err(_) => {
+                    seen_an_error = true;
+                }
+            }
+            if seen_a_deep_tree && seen_an_error {
+                return;
+            }
+        }
+    }
+
+    assert!(
+        seen_an_error,
+        "In 2560 tries we did not see any crates that could not be built!"
+    );
+    assert!(
+        seen_a_deep_tree,
+        "In 2560 tries we did not see any crates that had more then 7 pkg in the dependency tree!"
+    );
 }
 
 proptest! {
