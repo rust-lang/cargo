@@ -1,6 +1,7 @@
 # Default values: https://probot.github.io/apps/stale/#installation
 
 daysUntilStale: 180
+daysUntilClose: 30
 
 exemptLabels:
   - C-tracking-issue      # keep tracking issues open
@@ -11,7 +12,7 @@ staleLabel: stale
 
 markComment: >
   As there hasn't been any activity here in over 6 months I've marked this as
-  stale and if no further activity happens for 7 days I will close it.
+  stale and if no further activity happens for 30 days I will close it.
 
 
   [I'm a bot](https://github.com/probot/stale) so this may be in error!  If this
