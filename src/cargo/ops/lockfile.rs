@@ -84,8 +84,9 @@ pub fn write_pkg_lockfile(ws: &Workspace, resolve: &Resolve) -> CargoResult<()> 
             "--frozen"
         };
         bail!(
-            "the lock file needs to be updated but {} was passed to \
+            "the lock file {} needs to be updated but {} was passed to \
              prevent this",
+            ws.root().to_path_buf().join("Cargo.lock").display(),
             flag
         );
     }
