@@ -247,8 +247,9 @@ fn rename_twice() {
         .with_status(101)
         .with_stderr(
             "\
-[UPDATING] registry `[..]`
-[DOWNLOADING] foo v0.1.0 (registry [..])
+[UPDATING] `[..]` index
+[DOWNLOADING] crates ...
+[DOWNLOADED] foo v0.1.0 (registry [..])
 error: multiple dependencies listed for the same crate must all have the same \
 name, but the dependency on `foo v0.1.0` is listed as having different names
 ",
@@ -328,16 +329,16 @@ fn can_run_doc_tests() {
 
     foo.cargo("test -v")
         .masquerade_as_nightly_cargo()
-        .with_stderr_contains(format!(
+        .with_stderr_contains(
             "\
 [DOCTEST] foo
-[RUNNING] `rustdoc --test CWD/src/lib.rs \
+[RUNNING] `rustdoc --test [CWD]/src/lib.rs \
         [..] \
-        --extern baz=CWD/target/debug/deps/libbar-[..].rlib \
-        --extern bar=CWD/target/debug/deps/libbar-[..].rlib \
+        --extern baz=[CWD]/target/debug/deps/libbar-[..].rlib \
+        --extern bar=[CWD]/target/debug/deps/libbar-[..].rlib \
         [..]`
 ",
-        )).run();
+        ).run();
 }
 
 #[test]

@@ -51,7 +51,7 @@ pub fn exec(config: &mut Config, args: &ArgMatches) -> CliResult {
         deps: !args.is_present("no-deps"),
     };
     let mut compile_opts = args.compile_options(config, mode)?;
-    compile_opts.target_rustdoc_args = if args.is_present("document-private-items") {
+    compile_opts.local_rustdoc_args = if args.is_present("document-private-items") {
         Some(vec!["--document-private-items".to_string()])
     } else {
         None

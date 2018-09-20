@@ -10,7 +10,6 @@ pub struct TestOptions<'a> {
     pub compile_opts: ops::CompileOptions<'a>,
     pub no_run: bool,
     pub no_fail_fast: bool,
-    pub only_doc: bool,
 }
 
 pub fn run_tests(
@@ -23,25 +22,11 @@ pub fn run_tests(
     if options.no_run {
         return Ok(None);
     }
-    let (test, mut errors) = if options.only_doc {
-        assert!(options.compile_opts.filter.is_specific());
-        run_doc_tests(options, test_args, &compilation)?
-    } else {
-        run_unit_tests(options, test_args, &compilation)?
-    };
+    let (test, mut errors) = run_unit_tests(options, test_args, &compilation)?;
 
     // If we have an error and want to fail fast, return
     if !errors.is_empty() && !options.no_fail_fast {
         return Ok(Some(CargoTestError::new(test, errors)));
-    }
-
-    // If a specific test was requested or we're not running any tests at all,
-    // don't run any doc tests.
-    if options.compile_opts.filter.is_specific() {
-        match errors.len() {
-            0 => return Ok(None),
-            _ => return Ok(Some(CargoTestError::new(test, errors))),
-        }
     }
 
     let (doctest, docerrors) = run_doc_tests(options, test_args, &compilation)?;

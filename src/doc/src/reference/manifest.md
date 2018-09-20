@@ -26,10 +26,28 @@ Versioning](http://semver.org/), so make sure you follow some basic rules:
   structs or variants to enums.
 * After 1.0.0, only make breaking changes when you increment the major version.
   Don’t break the build.
-* After 1.0.0, don’t add any new public API (no new `pub` anything) in tiny
+* After 1.0.0, don’t add any new public API (no new `pub` anything) in patch-level
   versions. Always increment the minor version if you add any new `pub` structs,
   traits, fields, types, functions, methods or anything else.
 * Use version numbers with three numeric parts such as 1.0.0 rather than 1.0.
+
+#### The `edition` field (optional)
+
+You can opt in to a specific Rust Edition for your package with the
+`edition` key in `Cargo.toml`.  If you don't specify the edition, it will
+default to 2015.
+
+```toml
+[package]
+# ...
+edition = '2018'
+```
+
+The `edition` key affects which edition your package is compiled with. Cargo
+will always generate projects via `cargo new` with the `edition` key set to the
+latest edition. Setting the `edition` key in `[package]` will affect all
+targets/crates in the package, including test suites, benchmarks, binaries,
+examples, etc.
 
 #### The `build` field (optional)
 
@@ -714,6 +732,12 @@ proc-macro = false
 # stops it from generating a test harness. This is useful when the binary being
 # built manages the test runner itself.
 harness = true
+
+# If set then a target can be configured to use a different edition than the
+# `[package]` is configured to use, perhaps only compiling a library with the
+# 2018 edition or only compiling one unit test with the 2015 edition. By default
+# all targets are compiled with the edition specified in `[package]`.
+edition = '2015'
 ```
 
 The `[package]` also includes the optional `autobins`, `autoexamples`,

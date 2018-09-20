@@ -14,6 +14,7 @@ use jobserver::{Acquired, HelperThread};
 use core::profiles::Profile;
 use core::{PackageId, Target, TargetKind};
 use handle_error;
+use util;
 use util::{internal, profile, CargoResult, CargoResultExt, ProcessBuilder};
 use util::{Config, DependencyQueue, Dirty, Fresh, Freshness};
 use util::{Progress, ProgressStyle};
@@ -237,9 +238,6 @@ impl<'a> JobQueue<'a> {
         //       currently a pretty big task. This is issue #5695.
         let mut error = None;
         let mut progress = Progress::with_style("Building", ProgressStyle::Ratio, cx.bcx.config);
-        if !cx.bcx.config.cli_unstable().compile_progress {
-            progress.disable();
-        }
         let total = self.queue.len();
         loop {
             // Dequeue as much work as we can, learning about everything
@@ -371,16 +369,7 @@ impl<'a> JobQueue<'a> {
             opt_type += " + debuginfo";
         }
 
-        let time_elapsed = {
-            let duration = cx.bcx.config.creation_time().elapsed();
-            let secs = duration.as_secs();
-
-            if secs >= 60 {
-                format!("{}m {:02}s", secs / 60, secs % 60)
-            } else {
-                format!("{}.{:02}s", secs, duration.subsec_nanos() / 10_000_000)
-            }
-        };
+        let time_elapsed = util::elapsed(cx.bcx.config.creation_time().elapsed());
 
         if self.queue.is_empty() {
             let message = format!(
@@ -538,7 +527,7 @@ impl<'a> Key<'a> {
 
     fn dependencies<'cfg>(&self, cx: &Context<'a, 'cfg>) -> CargoResult<Vec<Key<'a>>> {
         let unit = Unit {
-            pkg: cx.bcx.get_package(self.pkg)?,
+            pkg: cx.get_package(self.pkg)?,
             target: self.target,
             profile: self.profile,
             kind: self.kind,

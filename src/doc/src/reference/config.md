@@ -83,6 +83,11 @@ rustflags = ["..", ".."]
 # are concatenated. The `cfg` syntax only applies to rustflags, and not to
 # linker.
 rustflags = ["..", ".."]
+# Similar for the $triple configuration, but using the `cfg` syntax.
+# If one or more `cfg`s, and a $triple target are candidates, then the $triple
+# will be used
+# If several `cfg` are candidates, then the build will error
+runner = ".."
 
 # Configuration keys related to the registry
 [registry]
@@ -92,15 +97,17 @@ token = "..."   # Access token (found on the central repo’s website)
 [http]
 proxy = "host:port" # HTTP proxy to use for HTTP requests (defaults to none)
                     # in libcurl format, e.g. "socks5h://host:port"
-timeout = 60000     # Timeout for each HTTP request, in milliseconds
+timeout = 30        # Timeout for each HTTP request, in seconds
 cainfo = "cert.pem" # Path to Certificate Authority (CA) bundle (optional)
 check-revoke = true # Indicates whether SSL certs are checked for revocation
+low-speed-limit = 5 # Lower threshold for bytes/sec (10 = default, 0 = disabled)
+multiplexing = false  # whether or not to use HTTP/2 multiplexing where possible
 
 [build]
 jobs = 1                  # number of parallel jobs, defaults to # of CPUs
 rustc = "rustc"           # the rust compiler tool
 rustdoc = "rustdoc"       # the doc generator tool
-target = "triple"         # build for the target triple
+target = "triple"         # build for the target triple (ignored by `cargo install`)
 target-dir = "target"     # path of where to place all generated artifacts
 rustflags = ["..", ".."]  # custom flags to pass to all compiler invocations
 incremental = true        # whether or not to enable incremental compilation

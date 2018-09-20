@@ -6,7 +6,7 @@ use cargo::util::paths::remove_dir_all;
 use support::cargo_process;
 use support::git;
 use support::paths::{self, CargoPathExt};
-use support::registry::{self, Package};
+use support::registry::{self, Package, Dependency};
 use support::{basic_manifest, project};
 use url::Url;
 
@@ -39,26 +39,27 @@ fn simple() {
     p.cargo("build")
         .with_stderr(&format!(
             "\
-[UPDATING] registry `{reg}`
-[DOWNLOADING] bar v0.0.1 (registry `file://[..]`)
+[UPDATING] `{reg}` index
+[DOWNLOADING] crates ...
+[DOWNLOADED] bar v0.0.1 (registry `[ROOT][..]`)
 [COMPILING] bar v0.0.1
-[COMPILING] foo v0.0.1 (CWD)
+[COMPILING] foo v0.0.1 ([CWD])
 [FINISHED] dev [unoptimized + debuginfo] target(s) in [..]s
 ",
-            reg = registry::registry()
+            reg = registry::registry_path().to_str().unwrap()
         )).run();
 
     p.cargo("clean").run();
 
     // Don't download a second time
     p.cargo("build")
-        .with_stderr(&format!(
+        .with_stderr(
             "\
 [COMPILING] bar v0.0.1
-[COMPILING] foo v0.0.1 (CWD)
+[COMPILING] foo v0.0.1 ([CWD])
 [FINISHED] dev [unoptimized + debuginfo] target(s) in [..]s
 ",
-        )).run();
+        ).run();
 }
 
 #[test]
@@ -84,15 +85,16 @@ fn deps() {
     p.cargo("build")
         .with_stderr(&format!(
             "\
-[UPDATING] registry `{reg}`
-[DOWNLOADING] [..] v0.0.1 (registry `file://[..]`)
-[DOWNLOADING] [..] v0.0.1 (registry `file://[..]`)
+[UPDATING] `{reg}` index
+[DOWNLOADING] crates ...
+[DOWNLOADED] [..] v0.0.1 (registry `[ROOT][..]`)
+[DOWNLOADED] [..] v0.0.1 (registry `[ROOT][..]`)
 [COMPILING] baz v0.0.1
 [COMPILING] bar v0.0.1
-[COMPILING] foo v0.0.1 (CWD)
+[COMPILING] foo v0.0.1 ([CWD])
 [FINISHED] dev [unoptimized + debuginfo] target(s) in [..]s
 ",
-            reg = registry::registry()
+            reg = registry::registry_path().to_str().unwrap()
         )).run();
 }
 
@@ -119,7 +121,7 @@ fn nonexistent() {
         .with_status(101)
         .with_stderr(
             "\
-[UPDATING] registry [..]
+[UPDATING] [..] index
 error: no matching package named `nonexistent` found
 location searched: registry [..]
 required by package `foo v0.0.1 ([..])`
@@ -151,7 +153,7 @@ fn wrong_case() {
         .with_status(101)
         .with_stderr(
             "\
-[UPDATING] registry [..]
+[UPDATING] [..] index
 error: no matching package named `Init` found
 location searched: registry [..]
 did you mean: init
@@ -184,7 +186,7 @@ fn mis_hyphenated() {
         .with_status(101)
         .with_stderr(
             "\
-[UPDATING] registry [..]
+[UPDATING] [..] index
 error: no matching package named `mis_hyphenated` found
 location searched: registry [..]
 did you mean: mis-hyphenated
@@ -264,15 +266,13 @@ fn bad_cksum() {
         .with_status(101)
         .with_stderr(
             "\
-[UPDATING] registry [..]
-[DOWNLOADING] bad-cksum [..]
-[ERROR] unable to get packages from source
+[UPDATING] [..] index
+[DOWNLOADING] crates ...
+[DOWNLOADED] bad-cksum [..]
+[ERROR] failed to download replaced source registry `https://[..]`
 
 Caused by:
-  failed to download replaced source registry `https://[..]`
-
-Caused by:
-  failed to verify the checksum of `bad-cksum v0.0.1 (registry `file://[..]`)`
+  failed to verify the checksum of `bad-cksum v0.0.1 (registry `[ROOT][..]`)`
 ",
         ).run();
 }
@@ -309,15 +309,16 @@ required by package `foo v0.0.1 ([..])`
     Package::new("notyet", "0.0.1").publish();
 
     p.cargo("build")
-        .with_stderr(&format!(
+        .with_stderr(format!(
             "\
-[UPDATING] registry `{reg}`
-[DOWNLOADING] notyet v0.0.1 (registry `file://[..]`)
+[UPDATING] `{reg}` index
+[DOWNLOADING] crates ...
+[DOWNLOADED] notyet v0.0.1 (registry `[ROOT][..]`)
 [COMPILING] notyet v0.0.1
-[COMPILING] foo v0.0.1 (CWD)
+[COMPILING] foo v0.0.1 ([CWD])
 [FINISHED] dev [unoptimized + debuginfo] target(s) in [..]s
 ",
-            reg = registry::registry()
+            reg = registry::registry_path().to_str().unwrap()
         )).run();
 }
 
@@ -362,17 +363,18 @@ required by package `foo v0.0.1 ([..])`
     Package::new("notyet", "0.0.1").publish();
 
     p.cargo("package")
-        .with_stderr(format!(
+        .with_stderr(
             "\
-[PACKAGING] foo v0.0.1 (CWD)
-[VERIFYING] foo v0.0.1 (CWD)
-[UPDATING] registry `[..]`
-[DOWNLOADING] notyet v0.0.1 (registry `file://[..]`)
+[PACKAGING] foo v0.0.1 ([CWD])
+[VERIFYING] foo v0.0.1 ([CWD])
+[UPDATING] `[..]` index
+[DOWNLOADING] crates ...
+[DOWNLOADED] notyet v0.0.1 (registry `[ROOT][..]`)
 [COMPILING] notyet v0.0.1
-[COMPILING] foo v0.0.1 (CWD[..])
+[COMPILING] foo v0.0.1 ([CWD][..])
 [FINISHED] dev [unoptimized + debuginfo] target(s) in [..]s
 ",
-        )).run();
+        ).run();
 }
 
 #[test]
@@ -395,15 +397,16 @@ fn lockfile_locks() {
     Package::new("bar", "0.0.1").publish();
 
     p.cargo("build")
-        .with_stderr(&format!(
+        .with_stderr(
             "\
-[UPDATING] registry `[..]`
-[DOWNLOADING] bar v0.0.1 (registry `file://[..]`)
+[UPDATING] `[..]` index
+[DOWNLOADING] crates ...
+[DOWNLOADED] bar v0.0.1 (registry `[ROOT][..]`)
 [COMPILING] bar v0.0.1
-[COMPILING] foo v0.0.1 (CWD)
+[COMPILING] foo v0.0.1 ([CWD])
 [FINISHED] dev [unoptimized + debuginfo] target(s) in [..]s
 ",
-        )).run();
+        ).run();
 
     p.root().move_into_the_past();
     Package::new("bar", "0.0.2").publish();
@@ -432,17 +435,18 @@ fn lockfile_locks_transitively() {
     Package::new("bar", "0.0.1").dep("baz", "*").publish();
 
     p.cargo("build")
-        .with_stderr(&format!(
+        .with_stderr(
             "\
-[UPDATING] registry `[..]`
-[DOWNLOADING] [..] v0.0.1 (registry `file://[..]`)
-[DOWNLOADING] [..] v0.0.1 (registry `file://[..]`)
+[UPDATING] `[..]` index
+[DOWNLOADING] crates ...
+[DOWNLOADED] [..] v0.0.1 (registry `[ROOT][..]`)
+[DOWNLOADED] [..] v0.0.1 (registry `[ROOT][..]`)
 [COMPILING] baz v0.0.1
 [COMPILING] bar v0.0.1
-[COMPILING] foo v0.0.1 (CWD)
+[COMPILING] foo v0.0.1 ([CWD])
 [FINISHED] dev [unoptimized + debuginfo] target(s) in [..]s
 ",
-        )).run();
+        ).run();
 
     p.root().move_into_the_past();
     Package::new("baz", "0.0.2").publish();
@@ -477,17 +481,18 @@ fn yanks_are_not_used() {
         .publish();
 
     p.cargo("build")
-        .with_stderr(&format!(
+        .with_stderr(
             "\
-[UPDATING] registry `[..]`
-[DOWNLOADING] [..] v0.0.1 (registry `file://[..]`)
-[DOWNLOADING] [..] v0.0.1 (registry `file://[..]`)
+[UPDATING] `[..]` index
+[DOWNLOADING] crates ...
+[DOWNLOADED] [..] v0.0.1 (registry `[ROOT][..]`)
+[DOWNLOADED] [..] v0.0.1 (registry `[ROOT][..]`)
 [COMPILING] baz v0.0.1
 [COMPILING] bar v0.0.1
-[COMPILING] foo v0.0.1 (CWD)
+[COMPILING] foo v0.0.1 ([CWD])
 [FINISHED] dev [unoptimized + debuginfo] target(s) in [..]s
 ",
-        )).run();
+        ).run();
 }
 
 #[test]
@@ -586,8 +591,9 @@ fn update_with_lockfile_if_packages_missing() {
     p.cargo("build")
         .with_stderr(
             "\
-[UPDATING] registry `[..]`
-[DOWNLOADING] bar v0.0.1 (registry `file://[..]`)
+[UPDATING] `[..]` index
+[DOWNLOADING] crates ...
+[DOWNLOADED] bar v0.0.1 (registry `[ROOT][..]`)
 [FINISHED] dev [unoptimized + debuginfo] target(s) in [..]s
 ",
         ).run();
@@ -621,41 +627,43 @@ fn update_lockfile() {
     p.cargo("update -p bar --precise 0.0.2")
         .with_stderr(
             "\
-[UPDATING] registry `[..]`
+[UPDATING] `[..]` index
 [UPDATING] bar v0.0.1 -> v0.0.2
 ",
         ).run();
 
     println!("0.0.2 build");
     p.cargo("build")
-        .with_stderr(&format!(
+        .with_stderr(
             "\
-[DOWNLOADING] [..] v0.0.2 (registry `file://[..]`)
+[DOWNLOADING] crates ...
+[DOWNLOADED] [..] v0.0.2 (registry `[ROOT][..]`)
 [COMPILING] bar v0.0.2
-[COMPILING] foo v0.0.1 (CWD)
+[COMPILING] foo v0.0.1 ([CWD])
 [FINISHED] dev [unoptimized + debuginfo] target(s) in [..]s
 ",
-        )).run();
+        ).run();
 
     println!("0.0.3 update");
     p.cargo("update -p bar")
         .with_stderr(
             "\
-[UPDATING] registry `[..]`
+[UPDATING] `[..]` index
 [UPDATING] bar v0.0.2 -> v0.0.3
 ",
         ).run();
 
     println!("0.0.3 build");
     p.cargo("build")
-        .with_stderr(&format!(
+        .with_stderr(
             "\
-[DOWNLOADING] [..] v0.0.3 (registry `file://[..]`)
+[DOWNLOADING] crates ...
+[DOWNLOADED] [..] v0.0.3 (registry `[ROOT][..]`)
 [COMPILING] bar v0.0.3
-[COMPILING] foo v0.0.1 (CWD)
+[COMPILING] foo v0.0.1 ([CWD])
 [FINISHED] dev [unoptimized + debuginfo] target(s) in [..]s
 ",
-        )).run();
+        ).run();
 
     println!("new dependencies update");
     Package::new("bar", "0.0.4").dep("spam", "0.2.5").publish();
@@ -663,7 +671,7 @@ fn update_lockfile() {
     p.cargo("update -p bar")
         .with_stderr(
             "\
-[UPDATING] registry `[..]`
+[UPDATING] `[..]` index
 [UPDATING] bar v0.0.3 -> v0.0.4
 [ADDING] spam v0.2.5
 ",
@@ -674,7 +682,7 @@ fn update_lockfile() {
     p.cargo("update -p bar")
         .with_stderr(
             "\
-[UPDATING] registry `[..]`
+[UPDATING] `[..]` index
 [UPDATING] bar v0.0.4 -> v0.0.5
 [REMOVING] spam v0.2.5
 ",
@@ -725,15 +733,16 @@ fn dev_dependency_not_used() {
     Package::new("bar", "0.0.1").dev_dep("baz", "*").publish();
 
     p.cargo("build")
-        .with_stderr(&format!(
+        .with_stderr(
             "\
-[UPDATING] registry `[..]`
-[DOWNLOADING] [..] v0.0.1 (registry `file://[..]`)
+[UPDATING] `[..]` index
+[DOWNLOADING] crates ...
+[DOWNLOADED] [..] v0.0.1 (registry `[ROOT][..]`)
 [COMPILING] bar v0.0.1
-[COMPILING] foo v0.0.1 (CWD)
+[COMPILING] foo v0.0.1 ([CWD])
 [FINISHED] dev [unoptimized + debuginfo] target(s) in [..]s
 ",
-        )).run();
+        ).run();
 }
 
 #[test]
@@ -809,16 +818,17 @@ fn updating_a_dep() {
     Package::new("bar", "0.0.1").publish();
 
     p.cargo("build")
-        .with_stderr(&format!(
+        .with_stderr(
             "\
-[UPDATING] registry `[..]`
-[DOWNLOADING] bar v0.0.1 (registry `file://[..]`)
+[UPDATING] `[..]` index
+[DOWNLOADING] crates ...
+[DOWNLOADED] bar v0.0.1 (registry `[ROOT][..]`)
 [COMPILING] bar v0.0.1
-[COMPILING] a v0.0.1 (CWD/a)
-[COMPILING] foo v0.0.1 (CWD)
+[COMPILING] a v0.0.1 ([CWD]/a)
+[COMPILING] foo v0.0.1 ([CWD])
 [FINISHED] dev [unoptimized + debuginfo] target(s) in [..]s
 ",
-        )).run();
+        ).run();
 
     t!(t!(File::create(&p.root().join("a/Cargo.toml"))).write_all(
         br#"
@@ -835,16 +845,17 @@ fn updating_a_dep() {
 
     println!("second");
     p.cargo("build")
-        .with_stderr(&format!(
+        .with_stderr(
             "\
-[UPDATING] registry `[..]`
-[DOWNLOADING] bar v0.1.0 (registry `file://[..]`)
+[UPDATING] `[..]` index
+[DOWNLOADING] crates ...
+[DOWNLOADED] bar v0.1.0 (registry `[ROOT][..]`)
 [COMPILING] bar v0.1.0
-[COMPILING] a v0.0.1 (CWD/a)
-[COMPILING] foo v0.0.1 (CWD)
+[COMPILING] a v0.0.1 ([CWD]/a)
+[COMPILING] foo v0.0.1 ([CWD])
 [FINISHED] dev [unoptimized + debuginfo] target(s) in [..]s
 ",
-        )).run();
+        ).run();
 }
 
 #[test]
@@ -888,17 +899,18 @@ fn git_and_registry_dep() {
 
     p.root().move_into_the_past();
     p.cargo("build")
-        .with_stderr(&format!(
+        .with_stderr(
             "\
 [UPDATING] [..]
 [UPDATING] [..]
-[DOWNLOADING] a v0.0.1 (registry `file://[..]`)
+[DOWNLOADING] crates ...
+[DOWNLOADED] a v0.0.1 (registry `[ROOT][..]`)
 [COMPILING] a v0.0.1
 [COMPILING] b v0.0.1 ([..])
-[COMPILING] foo v0.0.1 (CWD)
+[COMPILING] foo v0.0.1 ([CWD])
 [FINISHED] dev [unoptimized + debuginfo] target(s) in [..]s
 ",
-        )).run();
+        ).run();
     p.root().move_into_the_past();
 
     println!("second");
@@ -962,15 +974,16 @@ fn update_publish_then_update() {
     // should force an update of the old registry, download the new crate, and
     // then build everything again.
     p.cargo("build")
-        .with_stderr(&format!(
+        .with_stderr(
             "\
 [UPDATING] [..]
-[DOWNLOADING] a v0.1.1 (registry `file://[..]`)
+[DOWNLOADING] crates ...
+[DOWNLOADED] a v0.1.1 (registry `[ROOT][..]`)
 [COMPILING] a v0.1.1
-[COMPILING] foo v0.5.0 (CWD)
+[COMPILING] foo v0.5.0 ([CWD])
 [FINISHED] dev [unoptimized + debuginfo] target(s) in [..]s
 ",
-        )).run();
+        ).run();
 }
 
 #[test]
@@ -995,8 +1008,9 @@ fn fetch_downloads() {
     p.cargo("fetch")
         .with_stderr(
             "\
-[UPDATING] registry `[..]`
-[DOWNLOADING] a v0.1.0 (registry [..])
+[UPDATING] `[..]` index
+[DOWNLOADING] crates ...
+[DOWNLOADED] a v0.1.0 (registry [..])
 ",
         ).run();
 }
@@ -1028,7 +1042,7 @@ fn update_transitive_dependency() {
     p.cargo("update -pb")
         .with_stderr(
             "\
-[UPDATING] registry `[..]`
+[UPDATING] `[..]` index
 [UPDATING] b v0.1.0 -> v0.1.1
 ",
         ).run();
@@ -1036,7 +1050,8 @@ fn update_transitive_dependency() {
     p.cargo("build")
         .with_stderr(
             "\
-[DOWNLOADING] b v0.1.1 (registry `file://[..]`)
+[DOWNLOADING] crates ...
+[DOWNLOADED] b v0.1.1 (registry `[ROOT][..]`)
 [COMPILING] b v0.1.1
 [COMPILING] a v0.1.0
 [COMPILING] foo v0.5.0 ([..])
@@ -1085,7 +1100,7 @@ fn update_backtracking_ok() {
     p.cargo("update -p hyper")
         .with_stderr(
             "\
-[UPDATING] registry `[..]`
+[UPDATING] `[..]` index
 [UPDATING] hyper v0.6.5 -> v0.6.6
 [UPDATING] openssl v0.1.0 -> v0.1.1
 ",
@@ -1124,7 +1139,7 @@ fn update_multiple_packages() {
     p.cargo("update -pa -pb")
         .with_stderr(
             "\
-[UPDATING] registry `[..]`
+[UPDATING] `[..]` index
 [UPDATING] a v0.1.0 -> v0.1.1
 [UPDATING] b v0.1.0 -> v0.1.1
 ",
@@ -1133,15 +1148,15 @@ fn update_multiple_packages() {
     p.cargo("update -pb -pc")
         .with_stderr(
             "\
-[UPDATING] registry `[..]`
+[UPDATING] `[..]` index
 [UPDATING] c v0.1.0 -> v0.1.1
 ",
         ).run();
 
     p.cargo("build")
-        .with_stderr_contains("[DOWNLOADING] a v0.1.1 (registry `file://[..]`)")
-        .with_stderr_contains("[DOWNLOADING] b v0.1.1 (registry `file://[..]`)")
-        .with_stderr_contains("[DOWNLOADING] c v0.1.1 (registry `file://[..]`)")
+        .with_stderr_contains("[DOWNLOADED] a v0.1.1 (registry `[ROOT][..]`)")
+        .with_stderr_contains("[DOWNLOADED] b v0.1.1 (registry `[ROOT][..]`)")
+        .with_stderr_contains("[DOWNLOADED] c v0.1.1 (registry `[ROOT][..]`)")
         .with_stderr_contains("[COMPILING] a v0.1.1")
         .with_stderr_contains("[COMPILING] b v0.1.1")
         .with_stderr_contains("[COMPILING] c v0.1.1")
@@ -1265,8 +1280,9 @@ fn only_download_relevant() {
     p.cargo("build")
         .with_stderr(
             "\
-[UPDATING] registry `[..]`
-[DOWNLOADING] baz v0.1.0 ([..])
+[UPDATING] `[..]` index
+[DOWNLOADING] crates ...
+[DOWNLOADED] baz v0.1.0 ([..])
 [COMPILING] baz v0.1.0
 [COMPILING] bar v0.5.0 ([..])
 [FINISHED] dev [unoptimized + debuginfo] target(s) in [..]s
@@ -1509,7 +1525,8 @@ update to a fixed version or contact the upstream maintainer about
 this warning.
 
 [UPDATING] [..]
-[DOWNLOADING] [..]
+[DOWNLOADING] crates ...
+[DOWNLOADED] [..]
 [COMPILING] [..]
 [COMPILING] [..]
 [FINISHED] [..]
@@ -1554,7 +1571,8 @@ fn old_version_req_upstream() {
         .with_stderr(
             "\
 [UPDATING] [..]
-[DOWNLOADING] [..]
+[DOWNLOADING] crates ...
+[DOWNLOADED] [..]
 warning: parsed version requirement `0.2*` is no longer valid
 
 Previous versions of Cargo accepted this malformed requirement,
@@ -1661,11 +1679,9 @@ fn bad_and_or_malicious_packages_rejected() {
         .with_stderr(
             "\
 [UPDATING] [..]
-[DOWNLOADING] [..]
-error: unable to get packages from source
-
-Caused by:
-  failed to download [..]
+[DOWNLOADING] crates ...
+[DOWNLOADED] [..]
+error: failed to download [..]
 
 Caused by:
   failed to unpack [..]
@@ -1710,4 +1726,58 @@ fn git_init_templatedir_missing() {
 
     p.cargo("build").run();
     p.cargo("build").run();
+}
+
+#[test]
+fn rename_deps_and_features() {
+    Package::new("foo", "0.1.0")
+        .file("src/lib.rs", "pub fn f1() {}")
+        .publish();
+    Package::new("foo", "0.2.0")
+        .file("src/lib.rs", "pub fn f2() {}")
+        .publish();
+    Package::new("bar", "0.2.0")
+        .add_dep(Dependency::new("foo01", "0.1.0").package("foo").optional(true))
+        .add_dep(Dependency::new("foo02", "0.2.0").package("foo"))
+        .feature("another", &["foo01"])
+        .file(
+            "src/lib.rs",
+            r#"
+                extern crate foo02;
+                #[cfg(feature = "foo01")]
+                extern crate foo01;
+
+                pub fn foo() {
+                    foo02::f2();
+                    #[cfg(feature = "foo01")]
+                    foo01::f1();
+                }
+            "#,
+        )
+        .publish();
+
+    let p = project()
+        .file(
+            "Cargo.toml",
+            r#"
+                [project]
+                name = "a"
+                version = "0.5.0"
+                authors = []
+
+                [dependencies]
+                bar = "0.2"
+            "#,
+        ).file(
+            "src/main.rs",
+            "
+                extern crate bar;
+                fn main() { bar::foo(); }
+            ",
+        )
+        .build();
+
+    p.cargo("build").run();
+    p.cargo("build --features bar/foo01").run();
+    p.cargo("build --features bar/another").run();
 }

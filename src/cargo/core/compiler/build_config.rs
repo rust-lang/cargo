@@ -16,6 +16,8 @@ pub struct BuildConfig {
     pub mode: CompileMode,
     /// Whether to print std output in json format (for machine reading)
     pub message_format: MessageFormat,
+    /// Force cargo to do a full rebuild and treat each target as changed.
+    pub force_rebuild: bool,
     /// Output a build plan to stdout instead of actually compiling.
     pub build_plan: bool,
     /// Use Cargo itself as the wrapper around rustc, only used for `cargo fix`
@@ -79,6 +81,7 @@ impl BuildConfig {
             release: false,
             mode,
             message_format: MessageFormat::Human,
+            force_rebuild: false,
             build_plan: false,
             cargo_as_rustc_wrapper: false,
             extra_rustc_env: Vec::new(),

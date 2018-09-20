@@ -21,7 +21,7 @@ pub fn cli() -> App {
             "Fix all tests",
             "Fix only the specified bench target",
             "Fix all benches",
-            "Fix all targets (lib and bin targets by default)",
+            "Fix all targets (default)",
         )
         .arg_release("Fix artifacts in release mode, with optimizations")
         .arg(opt("profile", "Profile to build the selected target for").value_name("PROFILE"))
@@ -73,7 +73,7 @@ pub fn cli() -> App {
         )
         .after_help(
             "\
-This Cargo subcommmand will automatically take rustc's suggestions from
+This Cargo subcommand will automatically take rustc's suggestions from
 diagnostics like warnings and apply them to your source code. This is intended
 to help automate tasks that rustc itself already knows how to tell you to fix!
 The `cargo fix` subcommand is also being developed for the Rust 2018 edition

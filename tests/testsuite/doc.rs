@@ -26,13 +26,13 @@ fn simple() {
         .build();
 
     p.cargo("doc")
-        .with_stderr(&format!(
+        .with_stderr(
             "\
-[..] foo v0.0.1 (CWD)
-[..] foo v0.0.1 (CWD)
+[..] foo v0.0.1 ([CWD])
+[..] foo v0.0.1 ([CWD])
 [FINISHED] dev [unoptimized + debuginfo] target(s) in [..]
 ",
-        )).run();
+        ).run();
     assert!(p.root().join("target/doc").is_dir());
     assert!(p.root().join("target/doc/foo/index.html").is_file());
 }
@@ -63,12 +63,12 @@ fn doc_twice() {
     let p = project().file("src/lib.rs", "pub fn foo() {}").build();
 
     p.cargo("doc")
-        .with_stderr(&format!(
+        .with_stderr(
             "\
-[DOCUMENTING] foo v0.0.1 (CWD)
+[DOCUMENTING] foo v0.0.1 ([CWD])
 [FINISHED] dev [unoptimized + debuginfo] target(s) in [..]
 ",
-        )).run();
+        ).run();
 
     p.cargo("doc").with_stdout("").run();
 }
@@ -93,14 +93,14 @@ fn doc_deps() {
         .build();
 
     p.cargo("doc")
-        .with_stderr(&format!(
+        .with_stderr(
             "\
-[..] bar v0.0.1 (CWD/bar)
-[..] bar v0.0.1 (CWD/bar)
-[DOCUMENTING] foo v0.0.1 (CWD)
+[..] bar v0.0.1 ([CWD]/bar)
+[..] bar v0.0.1 ([CWD]/bar)
+[DOCUMENTING] foo v0.0.1 ([CWD])
 [FINISHED] dev [unoptimized + debuginfo] target(s) in [..]
 ",
-        )).run();
+        ).run();
 
     assert!(p.root().join("target/doc").is_dir());
     assert!(p.root().join("target/doc/foo/index.html").is_file());
@@ -154,13 +154,13 @@ fn doc_no_deps() {
         .build();
 
     p.cargo("doc --no-deps")
-        .with_stderr(&format!(
+        .with_stderr(
             "\
-[CHECKING] bar v0.0.1 (CWD/bar)
-[DOCUMENTING] foo v0.0.1 (CWD)
+[CHECKING] bar v0.0.1 ([CWD]/bar)
+[DOCUMENTING] foo v0.0.1 ([CWD])
 [FINISHED] dev [unoptimized + debuginfo] target(s) in [..]
 ",
-        )).run();
+        ).run();
 
     assert!(p.root().join("target/doc").is_dir());
     assert!(p.root().join("target/doc/foo/index.html").is_file());
@@ -265,8 +265,8 @@ fn doc_multiple_targets_same_name() {
         .build();
 
     p.cargo("doc --all")
-        .with_stderr_contains("[DOCUMENTING] foo v0.1.0 (CWD/foo)")
-        .with_stderr_contains("[DOCUMENTING] bar v0.1.0 (CWD/bar)")
+        .with_stderr_contains("[DOCUMENTING] foo v0.1.0 ([CWD]/foo)")
+        .with_stderr_contains("[DOCUMENTING] bar v0.1.0 ([CWD]/bar)")
         .with_stderr_contains("[FINISHED] dev [unoptimized + debuginfo] target(s) in [..]")
         .run();
     assert!(p.root().join("target/doc").is_dir());
@@ -369,12 +369,12 @@ fn doc_lib_bin_same_name_documents_lib() {
         ).build();
 
     p.cargo("doc")
-        .with_stderr(&format!(
+        .with_stderr(
             "\
-[DOCUMENTING] foo v0.0.1 (CWD)
+[DOCUMENTING] foo v0.0.1 ([CWD])
 [FINISHED] dev [unoptimized + debuginfo] target(s) in [..]
 ",
-        )).run();
+        ).run();
     assert!(p.root().join("target/doc").is_dir());
     let doc_file = p.root().join("target/doc/foo/index.html");
     assert!(doc_file.is_file());
@@ -408,12 +408,12 @@ fn doc_lib_bin_same_name_documents_lib_when_requested() {
         ).build();
 
     p.cargo("doc --lib")
-        .with_stderr(&format!(
+        .with_stderr(
             "\
-[DOCUMENTING] foo v0.0.1 (CWD)
+[DOCUMENTING] foo v0.0.1 ([CWD])
 [FINISHED] dev [unoptimized + debuginfo] target(s) in [..]
 ",
-        )).run();
+        ).run();
     assert!(p.root().join("target/doc").is_dir());
     let doc_file = p.root().join("target/doc/foo/index.html");
     assert!(doc_file.is_file());
@@ -447,13 +447,13 @@ fn doc_lib_bin_same_name_documents_named_bin_when_requested() {
         ).build();
 
     p.cargo("doc --bin foo")
-        .with_stderr(&format!(
+        .with_stderr(
             "\
-[CHECKING] foo v0.0.1 (CWD)
-[DOCUMENTING] foo v0.0.1 (CWD)
+[CHECKING] foo v0.0.1 ([CWD])
+[DOCUMENTING] foo v0.0.1 ([CWD])
 [FINISHED] dev [unoptimized + debuginfo] target(s) in [..]
 ",
-        )).run();
+        ).run();
     assert!(p.root().join("target/doc").is_dir());
     let doc_file = p.root().join("target/doc/foo/index.html");
     assert!(doc_file.is_file());
@@ -487,13 +487,13 @@ fn doc_lib_bin_same_name_documents_bins_when_requested() {
         ).build();
 
     p.cargo("doc --bins")
-        .with_stderr(&format!(
+        .with_stderr(
             "\
-[CHECKING] foo v0.0.1 (CWD)
-[DOCUMENTING] foo v0.0.1 (CWD)
+[CHECKING] foo v0.0.1 ([CWD])
+[DOCUMENTING] foo v0.0.1 ([CWD])
 [FINISHED] dev [unoptimized + debuginfo] target(s) in [..]
 ",
-        )).run();
+        ).run();
     assert!(p.root().join("target/doc").is_dir());
     let doc_file = p.root().join("target/doc/foo/index.html");
     assert!(doc_file.is_file());
@@ -540,9 +540,9 @@ fn doc_dash_p() {
     p.cargo("doc -p a")
         .with_stderr(
             "\
-[..] b v0.0.1 (CWD/b)
-[..] b v0.0.1 (CWD/b)
-[DOCUMENTING] a v0.0.1 (CWD/a)
+[..] b v0.0.1 ([CWD]/b)
+[..] b v0.0.1 ([CWD]/b)
+[DOCUMENTING] a v0.0.1 ([CWD]/a)
 [FINISHED] dev [unoptimized + debuginfo] target(s) in [..]
 ",
         ).run();
@@ -635,7 +635,7 @@ fn output_not_captured() {
         ).build();
 
     p.cargo("doc")
-        .with_status(101)
+        .without_status()
         .with_stderr_contains("1 | ☃")
         .with_stderr_contains(r"error: unknown start of token: \u{2603}")
         .run();
@@ -967,7 +967,7 @@ fn doc_all_member_dependency_same_name() {
     Package::new("bar", "0.1.0").publish();
 
     p.cargo("doc --all")
-        .with_stderr_contains("[..] Updating registry `[..]`")
+        .with_stderr_contains("[..] Updating `[..]` index")
         .with_stderr_contains("[..] Documenting bar v0.1.0 ([..])")
         .run();
 }
@@ -1028,7 +1028,7 @@ fn doc_workspace_open_different_library_and_package_names() {
     p.cargo("doc --open")
         .env("BROWSER", "echo")
         .with_stderr_contains("[..] Documenting foo v0.1.0 ([..])")
-        .with_stderr_contains("[..] CWD/target/doc/foolib/index.html")
+        .with_stderr_contains("[..] [CWD]/target/doc/foolib/index.html")
         .run();
 }
 
@@ -1058,7 +1058,7 @@ fn doc_workspace_open_binary() {
     p.cargo("doc --open")
         .env("BROWSER", "echo")
         .with_stderr_contains("[..] Documenting foo v0.1.0 ([..])")
-        .with_stderr_contains("[..] Opening CWD/target/doc/foobin/index.html")
+        .with_stderr_contains("[..] Opening [CWD]/target/doc/foobin/index.html")
         .run();
 }
 
@@ -1091,7 +1091,7 @@ fn doc_workspace_open_binary_and_library() {
     p.cargo("doc --open")
         .env("BROWSER", "echo")
         .with_stderr_contains("[..] Documenting foo v0.1.0 ([..])")
-        .with_stderr_contains("[..] Opening CWD/target/doc/foolib/index.html")
+        .with_stderr_contains("[..] Opening [CWD]/target/doc/foolib/index.html")
         .run();
 }
 
@@ -1204,6 +1204,31 @@ fn doc_private_items() {
             .join("target/doc/foo/private/index.html")
             .is_file()
     );
+}
+
+#[test]
+fn doc_private_ws() {
+    let p = project()
+        .file(
+            "Cargo.toml",
+            r#"
+            [workspace]
+            members = ["a", "b"]
+        "#,
+        ).file("a/Cargo.toml", &basic_manifest("a", "0.0.1"))
+        .file("a/src/lib.rs", "fn p() {}")
+        .file("b/Cargo.toml", &basic_manifest("b", "0.0.1"))
+        .file("b/src/lib.rs", "fn p2() {}")
+        .file("b/src/main.rs", "fn main() {}")
+        .build();
+    p.cargo("doc --all --bins --lib --document-private-items -v")
+        .with_stderr_contains(
+            "[RUNNING] `rustdoc [..] a/src/lib.rs [..]--document-private-items[..]",
+        ).with_stderr_contains(
+            "[RUNNING] `rustdoc [..] b/src/lib.rs [..]--document-private-items[..]",
+        ).with_stderr_contains(
+            "[RUNNING] `rustdoc [..] b/src/main.rs [..]--document-private-items[..]",
+        ).run();
 }
 
 const BAD_INTRA_LINK_LIB: &str = r#"

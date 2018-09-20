@@ -1,3 +1,4 @@
+use std::collections::HashMap;
 use std::fs;
 use std::path::Path;
 
@@ -51,7 +52,7 @@ pub fn clean(ws: &Workspace, opts: &CleanOptions) -> CargoResult<()> {
     for spec in opts.spec.iter() {
         // Translate the spec to a Package
         let pkgid = resolve.query(spec)?;
-        let pkg = packages.get(pkgid)?;
+        let pkg = packages.get_one(pkgid)?;
 
         // Generate all relevant `Unit` targets for this package
         for target in pkg.targets() {
@@ -97,7 +98,7 @@ pub fn clean(ws: &Workspace, opts: &CleanOptions) -> CargoResult<()> {
         opts.config,
         &build_config,
         profiles,
-        None,
+        HashMap::new(),
     )?;
     let mut cx = Context::new(config, &bcx)?;
     cx.prepare_units(None, &units)?;

@@ -26,7 +26,7 @@ pub fn cli() -> App {
             "Benchmark all tests",
             "Benchmark only the specified bench target",
             "Benchmark all benches",
-            "Benchmark all targets (default)",
+            "Benchmark all targets",
         )
         .arg(opt("no-run", "Compile, but don't run benchmarks"))
         .arg_package_spec(
@@ -78,7 +78,6 @@ pub fn exec(config: &mut Config, args: &ArgMatches) -> CliResult {
     let ops = TestOptions {
         no_run: args.is_present("no-run"),
         no_fail_fast: args.is_present("no-fail-fast"),
-        only_doc: false,
         compile_opts,
     };
 

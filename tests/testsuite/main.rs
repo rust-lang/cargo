@@ -103,3 +103,9 @@ mod verify_project;
 mod version;
 mod warn_on_failure;
 mod workspaces;
+
+#[test]
+fn aaa_trigger_cross_compile_disabled_check() {
+    // This triggers the cross compile disabled check to run ASAP, see #5141
+    support::cross_compile::disabled();
+}

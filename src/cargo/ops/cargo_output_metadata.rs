@@ -1,7 +1,9 @@
+use std::collections::HashMap;
+
 use serde::ser;
 
 use core::resolver::Resolve;
-use core::{Package, PackageId, Workspace, PackageSet};
+use core::{Package, PackageId, Workspace};
 use ops::{self, Packages};
 use util::CargoResult;
 
@@ -18,7 +20,7 @@ pub struct OutputMetadataOptions {
 /// Loads the manifest, resolves the dependencies of the project to the concrete
 /// used versions - considering overrides - and writes all dependencies in a JSON
 /// format to stdout.
-pub fn output_metadata<'a>(ws: &'a Workspace, opt: &OutputMetadataOptions) -> CargoResult<ExportInfo<'a>> {
+pub fn output_metadata(ws: &Workspace, opt: &OutputMetadataOptions) -> CargoResult<ExportInfo> {
     if opt.version != VERSION {
         bail!(
             "metadata version {} not supported, only {} is currently supported",
@@ -33,7 +35,7 @@ pub fn output_metadata<'a>(ws: &'a Workspace, opt: &OutputMetadataOptions) -> Ca
     }
 }
 
-fn metadata_no_deps<'a>(ws: &'a Workspace, _opt: &OutputMetadataOptions) -> CargoResult<ExportInfo<'a>> {
+fn metadata_no_deps(ws: &Workspace, _opt: &OutputMetadataOptions) -> CargoResult<ExportInfo> {
     Ok(ExportInfo {
         packages: ws.members().cloned().collect(),
         workspace_members: ws.members().map(|pkg| pkg.package_id().clone()).collect(),
@@ -44,9 +46,9 @@ fn metadata_no_deps<'a>(ws: &'a Workspace, _opt: &OutputMetadataOptions) -> Carg
     })
 }
 
-fn metadata_full<'a>(ws: &'a Workspace, opt: &OutputMetadataOptions) -> CargoResult<ExportInfo<'a>> {
+fn metadata_full(ws: &Workspace, opt: &OutputMetadataOptions) -> CargoResult<ExportInfo> {
     let specs = Packages::All.to_package_id_specs(ws)?;
-    let deps = ops::resolve_ws_precisely(
+    let (package_set, resolve) = ops::resolve_ws_precisely(
         ws,
         None,
         &opt.features,
@@ -54,18 +56,16 @@ fn metadata_full<'a>(ws: &'a Workspace, opt: &OutputMetadataOptions) -> CargoRes
         opt.no_default_features,
         &specs,
     )?;
-    let (package_set, resolve) = deps;
-
-    let packages = package_set
-        .package_ids()
-        .map(|i| package_set.get(i).map(|p| p.clone()))
-        .collect::<CargoResult<Vec<_>>>()?;
+    let mut packages = HashMap::new();
+    for pkg in package_set.get_many(package_set.package_ids())? {
+        packages.insert(pkg.package_id().clone(), pkg.clone());
+    }
 
     Ok(ExportInfo {
-        packages,
+        packages: packages.values().map(|p| (*p).clone()).collect(),
         workspace_members: ws.members().map(|pkg| pkg.package_id().clone()).collect(),
         resolve: Some(MetadataResolve {
-            resolve: (package_set, resolve),
+            resolve: (packages, resolve),
             root: ws.current_opt().map(|pkg| pkg.package_id().clone()),
         }),
         target_directory: ws.target_dir().display().to_string(),
@@ -75,10 +75,10 @@ fn metadata_full<'a>(ws: &'a Workspace, opt: &OutputMetadataOptions) -> CargoRes
 }
 
 #[derive(Serialize)]
-pub struct ExportInfo<'a> {
+pub struct ExportInfo {
     packages: Vec<Package>,
     workspace_members: Vec<PackageId>,
-    resolve: Option<MetadataResolve<'a>>,
+    resolve: Option<MetadataResolve>,
     target_directory: String,
     version: u32,
     workspace_root: String,
@@ -88,13 +88,13 @@ pub struct ExportInfo<'a> {
 /// The one from lockfile does not fit because it uses a non-standard
 /// format for `PackageId`s
 #[derive(Serialize)]
-struct MetadataResolve<'a> {
+struct MetadataResolve {
     #[serde(rename = "nodes", serialize_with = "serialize_resolve")]
-    resolve: (PackageSet<'a>, Resolve),
+    resolve: (HashMap<PackageId, Package>, Resolve),
     root: Option<PackageId>,
 }
 
-fn serialize_resolve<S>((package_set, resolve): &(PackageSet, Resolve), s: S) -> Result<S::Ok, S::Error>
+fn serialize_resolve<S>((packages, resolve): &(HashMap<PackageId, Package>, Resolve), s: S) -> Result<S::Ok, S::Error>
 where
     S: ser::Serializer,
 {
@@ -119,7 +119,7 @@ where
             dependencies: resolve.deps(id).map(|(pkg, _deps)| pkg).collect(),
             deps: resolve.deps(id)
                 .map(|(pkg, _deps)| {
-                    let name = package_set.get(pkg).ok()
+                    let name = packages.get(pkg)
                         .and_then(|pkg| pkg.targets().iter().find(|t| t.is_lib()))
                         .and_then(|lib_target| {
                             resolve.extern_crate_name(id, pkg, lib_target).ok()

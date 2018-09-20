@@ -53,11 +53,13 @@ pub struct CompileOptions<'a> {
     /// Filter to apply to the root package to select which targets will be
     /// built.
     pub filter: CompileFilter,
-    /// Extra arguments to be passed to rustdoc (for main crate and dependencies)
+    /// Extra arguments to be passed to rustdoc (single target only)
     pub target_rustdoc_args: Option<Vec<String>>,
     /// The specified target will be compiled with all the available arguments,
     /// note that this only accounts for the *final* invocation of rustc
     pub target_rustc_args: Option<Vec<String>>,
+    /// Extra arguments passed to all selected targets for rustdoc.
+    pub local_rustdoc_args: Option<Vec<String>>,
     /// The directory to copy final artifacts to. Note that even if `out_dir` is
     /// set, a copy of artifacts still could be found a `target/(debug\release)`
     /// as usual.
@@ -80,6 +82,7 @@ impl<'a> CompileOptions<'a> {
             },
             target_rustdoc_args: None,
             target_rustc_args: None,
+            local_rustdoc_args: None,
             export_dir: None,
         })
     }
@@ -219,6 +222,7 @@ pub fn compile_ws<'a>(
         ref filter,
         ref target_rustdoc_args,
         ref target_rustc_args,
+        ref local_rustdoc_args,
         ref export_dir,
     } = *options;
 
@@ -239,15 +243,19 @@ pub fn compile_ws<'a>(
     let resolve = ops::resolve_ws_with_method(ws, source, method, &specs)?;
     let (packages, resolve_with_overrides) = resolve;
 
-    let to_builds = specs
-        .iter()
-        .map(|p| {
-            let pkgid = p.query(resolve_with_overrides.iter())?;
-            let p = packages.get(pkgid)?;
-            p.manifest().print_teapot(ws.config());
-            Ok(p)
-        })
+    let to_build_ids = specs.iter()
+        .map(|s| s.query(resolve_with_overrides.iter()))
         .collect::<CargoResult<Vec<_>>>()?;
+    let mut to_builds = packages.get_many(to_build_ids)?;
+
+    // The ordering here affects some error messages coming out of cargo, so
+    // let's be test and CLI friendly by always printing in the same order if
+    // there's an error.
+    to_builds.sort_by_key(|p| p.package_id());
+
+    for pkg in to_builds.iter() {
+        pkg.manifest().print_teapot(ws.config());
+    }
 
     let (extra_args, extra_args_name) = match (target_rustc_args, target_rustdoc_args) {
         (&Some(ref args), _) => (Some(args.clone()), "rustc"),
@@ -265,8 +273,6 @@ pub fn compile_ws<'a>(
     let profiles = ws.profiles();
     profiles.validate_packages(&mut config.shell(), &packages)?;
 
-    let mut extra_compiler_args = None;
-
     let units = generate_targets(
         ws,
         profiles,
@@ -277,6 +283,7 @@ pub fn compile_ws<'a>(
         build_config,
     )?;
 
+    let mut extra_compiler_args = HashMap::new();
     if let Some(args) = extra_args {
         if units.len() != 1 {
             bail!(
@@ -286,7 +293,14 @@ pub fn compile_ws<'a>(
                 extra_args_name
             );
         }
-        extra_compiler_args = Some((units[0], args));
+        extra_compiler_args.insert(units[0], args);
+    }
+    if let Some(args) = local_rustdoc_args {
+        for unit in &units {
+            if unit.mode.is_doc() {
+                extra_compiler_args.insert(*unit, args.clone());
+            }
+        }
     }
 
     let ret = {
@@ -434,6 +448,22 @@ impl CompileFilter {
     }
 }
 
+/// A proposed target.
+///
+/// Proposed targets are later filtered into actual Units based on whether or
+/// not the target requires its features to be present.
+#[derive(Debug)]
+struct Proposal<'a> {
+    pkg: &'a Package,
+    target: &'a Target,
+    /// Indicates whether or not all required features *must* be present. If
+    /// false, and the features are not available, then it will be silently
+    /// skipped. Generally, targets specified by name (`--bin foo`) are
+    /// required, all others can be silently skipped if features are missing.
+    requires_features: bool,
+    mode: CompileMode,
+}
+
 /// Generates all the base targets for the packages the user has requested to
 /// compile. Dependencies for these targets are computed later in
 /// `unit_dependencies`.
@@ -521,13 +551,8 @@ fn generate_targets<'a>(
         }
     };
 
-    // Create a list of proposed targets.  The `bool` value indicates
-    // whether or not all required features *must* be present. If false,
-    // and the features are not available, then it will be silently
-    // skipped.  Generally, targets specified by name (`--bin foo`) are
-    // required, all others can be silently skipped if features are
-    // missing.
-    let mut proposals: Vec<(&Package, &Target, bool, CompileMode)> = Vec::new();
+    // Create a list of proposed targets.
+    let mut proposals: Vec<Proposal> = Vec::new();
 
     match *filter {
         CompileFilter::Default {
@@ -535,22 +560,24 @@ fn generate_targets<'a>(
         } => {
             for pkg in packages {
                 let default = filter_default_targets(pkg.targets(), build_config.mode);
-                proposals.extend(default.into_iter().map(|target| {
-                    (
-                        *pkg,
-                        target,
-                        !required_features_filterable,
-                        build_config.mode,
-                    )
+                proposals.extend(default.into_iter().map(|target| Proposal {
+                    pkg,
+                    target,
+                    requires_features: !required_features_filterable,
+                    mode: build_config.mode,
                 }));
                 if build_config.mode == CompileMode::Test {
-                    // Include doctest for lib.
                     if let Some(t) = pkg
                         .targets()
                         .iter()
                         .find(|t| t.is_lib() && t.doctested() && t.doctestable())
                     {
-                        proposals.push((pkg, t, false, CompileMode::Doctest));
+                        proposals.push(Proposal {
+                            pkg,
+                            target: t,
+                            requires_features: false,
+                            mode: CompileMode::Doctest,
+                        });
                     }
                 }
             }
@@ -576,7 +603,12 @@ fn generate_targets<'a>(
                                 pkg.name()
                             ))?;
                         } else {
-                            libs.push((*pkg, target, false, build_config.mode));
+                            libs.push(Proposal {
+                                pkg,
+                                target,
+                                requires_features: false,
+                                mode: build_config.mode,
+                            });
                         }
                     }
                 }
@@ -590,6 +622,7 @@ fn generate_targets<'a>(
                 }
                 proposals.extend(libs);
             }
+
             // If --tests was specified, add all targets that would be
             // generated by `cargo test`.
             let test_filter = match *tests {
@@ -647,8 +680,8 @@ fn generate_targets<'a>(
     // Only include targets that are libraries or have all required
     // features available.
     let mut features_map = HashMap::new();
-    let mut units = Vec::new();
-    for (pkg, target, required, mode) in proposals {
+    let mut units = HashSet::new();
+    for Proposal { pkg, target, requires_features, mode} in proposals {
         let unavailable_features = match target.required_features() {
             Some(rf) => {
                 let features = features_map
@@ -660,8 +693,8 @@ fn generate_targets<'a>(
         };
         if target.is_lib() || unavailable_features.is_empty() {
             let unit = new_unit(pkg, target, mode);
-            units.push(unit);
-        } else if required {
+            units.insert(unit);
+        } else if requires_features {
             let required_features = target.required_features().unwrap();
             let quoted_required_features: Vec<String> = required_features
                 .iter()
@@ -678,7 +711,7 @@ fn generate_targets<'a>(
         }
         // else, silently skip target.
     }
-    Ok(units)
+    Ok(units.into_iter().collect())
 }
 
 fn resolve_all_features(
@@ -736,14 +769,19 @@ fn list_rule_targets<'a>(
     target_desc: &'static str,
     is_expected_kind: fn(&Target) -> bool,
     mode: CompileMode,
-) -> CargoResult<Vec<(&'a Package, &'a Target, bool, CompileMode)>> {
+) -> CargoResult<Vec<Proposal<'a>>> {
     let mut result = Vec::new();
     match *rule {
         FilterRule::All => {
             for pkg in packages {
                 for target in pkg.targets() {
                     if is_expected_kind(target) {
-                        result.push((*pkg, target, false, mode));
+                        result.push(Proposal {
+                            pkg,
+                            target,
+                            requires_features: false,
+                            mode,
+                        });
                     }
                 }
             }
@@ -770,12 +808,17 @@ fn find_named_targets<'a>(
     target_desc: &'static str,
     is_expected_kind: fn(&Target) -> bool,
     mode: CompileMode,
-) -> CargoResult<Vec<(&'a Package, &'a Target, bool, CompileMode)>> {
+) -> CargoResult<Vec<Proposal<'a>>> {
     let mut result = Vec::new();
     for pkg in packages {
         for target in pkg.targets() {
             if target.name() == target_name && is_expected_kind(target) {
-                result.push((*pkg, target, true, mode));
+                result.push(Proposal {
+                    pkg,
+                    target,
+                    requires_features: true,
+                    mode,
+                });
             }
         }
     }

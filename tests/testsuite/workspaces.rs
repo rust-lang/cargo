@@ -556,8 +556,9 @@ fn share_dependencies() {
     p.cargo("build")
         .with_stderr(
             "\
-[UPDATING] registry `[..]`
-[DOWNLOADING] dep1 v0.1.3 ([..])
+[UPDATING] `[..]` index
+[DOWNLOADING] crates ...
+[DOWNLOADED] dep1 v0.1.3 ([..])
 [COMPILING] dep1 v0.1.3
 [COMPILING] foo v0.1.0 ([..])
 [FINISHED] dev [unoptimized + debuginfo] target(s) in [..]
@@ -599,8 +600,9 @@ fn fetch_fetches_all() {
     p.cargo("fetch")
         .with_stderr(
             "\
-[UPDATING] registry `[..]`
-[DOWNLOADING] dep1 v0.1.3 ([..])
+[UPDATING] `[..]` index
+[DOWNLOADING] crates ...
+[DOWNLOADED] dep1 v0.1.3 ([..])
 ",
         ).run();
 }
@@ -641,7 +643,7 @@ fn lock_works_for_everyone() {
     Package::new("dep2", "0.1.0").publish();
 
     p.cargo("generate-lockfile")
-        .with_stderr("[UPDATING] registry `[..]`")
+        .with_stderr("[UPDATING] `[..]` index")
         .run();
 
     Package::new("dep1", "0.1.1").publish();
@@ -650,7 +652,8 @@ fn lock_works_for_everyone() {
     p.cargo("build")
         .with_stderr(
             "\
-[DOWNLOADING] dep2 v0.1.0 ([..])
+[DOWNLOADING] crates ...
+[DOWNLOADED] dep2 v0.1.0 ([..])
 [COMPILING] dep2 v0.1.0
 [COMPILING] foo v0.1.0 ([..])
 [FINISHED] dev [unoptimized + debuginfo] target(s) in [..]
@@ -661,7 +664,8 @@ fn lock_works_for_everyone() {
         .cwd(p.root().join("bar"))
         .with_stderr(
             "\
-[DOWNLOADING] dep1 v0.1.0 ([..])
+[DOWNLOADING] crates ...
+[DOWNLOADED] dep1 v0.1.0 ([..])
 [COMPILING] dep1 v0.1.0
 [COMPILING] bar v0.1.0 ([..])
 [FINISHED] dev [unoptimized + debuginfo] target(s) in [..]
@@ -699,7 +703,7 @@ fn explicit_package_argument_works_with_virtual_manifest() {
         ).file("bar/Cargo.toml", &basic_manifest("bar", "0.1.0"))
         .file("bar/src/main.rs", "fn main() {}");
     let p = p.build();
-    p.cargo("build --package bar").cwd(p.root()).run();
+    p.cargo("build --package bar").run();
     assert!(p.root().join("Cargo.lock").is_file());
     assert!(p.bin("bar").is_file());
     assert!(!p.root().join("bar/Cargo.lock").is_file());
@@ -722,7 +726,7 @@ fn virtual_misconfigure() {
         .with_stderr(
             "\
 error: current package believes it's in a workspace when it's not:
-current:   CWD/Cargo.toml
+current:   [CWD]/Cargo.toml
 workspace: [..]Cargo.toml
 
 this may be fixable by adding `bar` to the `workspace.members` array of the \
@@ -1222,7 +1226,6 @@ fn relative_path_for_root_works() {
     let p = p.build();
 
     p.cargo("build --manifest-path ./Cargo.toml")
-        .cwd(p.root())
         .run();
 
     p.cargo("build --manifest-path ../Cargo.toml")

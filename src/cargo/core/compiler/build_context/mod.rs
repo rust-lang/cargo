@@ -1,11 +1,11 @@
 use std::collections::HashMap;
 use std::env;
 use std::path::{Path, PathBuf};
-use std::str::{self, FromStr};
+use std::str;
 
 use core::profiles::Profiles;
 use core::{Dependency, Workspace};
-use core::{Package, PackageId, PackageSet, Resolve};
+use core::{PackageId, PackageSet, Resolve};
 use util::errors::CargoResult;
 use util::{profile, Cfg, CfgExpr, Config, Rustc};
 
@@ -24,12 +24,8 @@ pub struct BuildContext<'a, 'cfg: 'a> {
     pub resolve: &'a Resolve,
     pub profiles: &'a Profiles,
     pub build_config: &'a BuildConfig,
-    /// This is a workaround to carry the extra compiler args for either
-    /// `rustc` or `rustdoc` given on the command-line for the commands `cargo
-    /// rustc` and `cargo rustdoc`.  These commands only support one target,
-    /// but we don't want the args passed to any dependencies, so we include
-    /// the `Unit` corresponding to the top-level target.
-    pub extra_compiler_args: Option<(Unit<'a>, Vec<String>)>,
+    /// Extra compiler args for either `rustc` or `rustdoc`.
+    pub extra_compiler_args: HashMap<Unit<'a>, Vec<String>>,
     pub packages: &'a PackageSet<'cfg>,
 
     /// Information about the compiler
@@ -51,7 +47,7 @@ impl<'a, 'cfg> BuildContext<'a, 'cfg> {
         config: &'cfg Config,
         build_config: &'a BuildConfig,
         profiles: &'a Profiles,
-        extra_compiler_args: Option<(Unit<'a>, Vec<String>)>,
+        extra_compiler_args: HashMap<Unit<'a>, Vec<String>>,
     ) -> CargoResult<BuildContext<'a, 'cfg>> {
         let incremental_env = match env::var("CARGO_INCREMENTAL") {
             Ok(v) => Some(v == "1"),
@@ -109,11 +105,6 @@ impl<'a, 'cfg> BuildContext<'a, 'cfg> {
             Kind::Target => (self.target_triple(), &self.target_info),
         };
         platform.matches(name, info.cfg())
-    }
-
-    /// Gets a package for the given package id.
-    pub fn get_package(&self, id: &PackageId) -> CargoResult<&'a Package> {
-        self.packages.get(id)
     }
 
     /// Get the user-specified linker for a particular host or target
@@ -200,24 +191,7 @@ impl<'a, 'cfg> BuildContext<'a, 'cfg> {
     }
 
     pub fn extra_args_for(&self, unit: &Unit<'a>) -> Option<&Vec<String>> {
-        if let Some((ref args_unit, ref args)) = self.extra_compiler_args {
-            if args_unit == unit {
-                return Some(args);
-            }
-        }
-        None
-    }
-
-    /// Return the list of filenames read by cargo to generate the BuildContext
-    /// (all Cargo.toml, etc).
-    pub fn inputs(&self) -> CargoResult<Vec<PathBuf>> {
-        let mut inputs = Vec::new();
-        for id in self.packages.package_ids() {
-            let pkg = self.get_package(id)?;
-            inputs.push(pkg.manifest_path().to_path_buf());
-        }
-        inputs.sort();
-        Ok(inputs)
+        self.extra_compiler_args.get(unit)
     }
 }
 
@@ -393,16 +367,9 @@ fn env_args(
     // ...including target.'cfg(...)'.rustflags
     if let Some(target_cfg) = target_cfg {
         if let Some(table) = config.get_table("target")? {
-            let cfgs = table.val.keys().filter_map(|t| {
-                if t.starts_with("cfg(") && t.ends_with(')') {
-                    let cfg = &t[4..t.len() - 1];
-                    CfgExpr::from_str(cfg).ok().and_then(|c| {
-                        if c.matches(target_cfg) {
-                            Some(t)
-                        } else {
-                            None
-                        }
-                    })
+            let cfgs = table.val.keys().filter_map(|key| {
+                if CfgExpr::matches_key(key, target_cfg) {
+                    Some(key)
                 } else {
                     None
                 }

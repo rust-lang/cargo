@@ -1,8 +1,8 @@
 use std::collections::{HashMap, HashSet};
 
-use core::{Dependency, PackageId};
-use core::resolver::Context;
 use super::types::ConflictReason;
+use core::resolver::Context;
+use core::{Dependency, PackageId};
 
 pub(super) struct ConflictCache {
     // `con_from_dep` is a cache of the reasons for each time we
@@ -77,11 +77,17 @@ impl ConflictCache {
     /// `dep` is known to be unresolvable if
     /// all the `PackageId` entries are activated
     pub fn insert(&mut self, dep: &Dependency, con: &HashMap<PackageId, ConflictReason>) {
-        let past = self.con_from_dep
+        let past = self
+            .con_from_dep
             .entry(dep.clone())
             .or_insert_with(Vec::new);
         if !past.contains(con) {
-            trace!("{} adding a skip {:?}", dep.package_name(), con);
+            trace!(
+                "{} = \"{}\" adding a skip {:?}",
+                dep.package_name(),
+                dep.version_req(),
+                con
+            );
             past.push(con.clone());
             for c in con.keys() {
                 self.dep_from_pid

@@ -23,7 +23,7 @@ pub fn cli() -> App {
             "Build all tests",
             "Build only the specified bench target",
             "Build all benches",
-            "Build all targets (default)",
+            "Build all targets",
         )
         .arg_release("Build artifacts in release mode, with optimizations")
         .arg_features()

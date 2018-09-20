@@ -23,20 +23,20 @@ fn profile_overrides() {
         ).file("src/lib.rs", "")
         .build();
     p.cargo("build -v")
-        .with_stderr(&format!(
+        .with_stderr(
             "\
-[COMPILING] test v0.0.0 (CWD)
-[RUNNING] `rustc --crate-name test src/lib.rs --crate-type lib \
+[COMPILING] test v0.0.0 ([CWD])
+[RUNNING] `rustc --crate-name test src/lib.rs --color never --crate-type lib \
         --emit=dep-info,link \
         -C opt-level=1 \
         -C debug-assertions=on \
         -C metadata=[..] \
         -C rpath \
         --out-dir [..] \
-        -L dependency=CWD/target/debug/deps`
+        -L dependency=[CWD]/target/debug/deps`
 [FINISHED] dev [optimized] target(s) in [..]
 ",
-        )).run();
+        ).run();
 }
 
 #[test]
@@ -57,18 +57,18 @@ fn opt_level_override_0() {
         ).file("src/lib.rs", "")
         .build();
     p.cargo("build -v")
-        .with_stderr(&format!(
+        .with_stderr(
             "\
-[COMPILING] test v0.0.0 (CWD)
-[RUNNING] `rustc --crate-name test src/lib.rs --crate-type lib \
+[COMPILING] test v0.0.0 ([CWD])
+[RUNNING] `rustc --crate-name test src/lib.rs --color never --crate-type lib \
         --emit=dep-info,link \
         -C debuginfo=2 \
         -C metadata=[..] \
         --out-dir [..] \
-        -L dependency=CWD/target/debug/deps`
+        -L dependency=[CWD]/target/debug/deps`
 [FINISHED] [..] target(s) in [..]
 ",
-        )).run();
+        ).run();
 }
 
 #[test]
@@ -88,18 +88,18 @@ fn debug_override_1() {
         ).file("src/lib.rs", "")
         .build();
     p.cargo("build -v")
-        .with_stderr(&format!(
+        .with_stderr(
             "\
-[COMPILING] test v0.0.0 (CWD)
-[RUNNING] `rustc --crate-name test src/lib.rs --crate-type lib \
+[COMPILING] test v0.0.0 ([CWD])
+[RUNNING] `rustc --crate-name test src/lib.rs --color never --crate-type lib \
         --emit=dep-info,link \
         -C debuginfo=1 \
         -C metadata=[..] \
         --out-dir [..] \
-        -L dependency=CWD/target/debug/deps`
+        -L dependency=[CWD]/target/debug/deps`
 [FINISHED] [..] target(s) in [..]
 ",
-        )).run();
+        ).run();
 }
 
 fn check_opt_level_override(profile_level: &str, rustc_level: &str) {
@@ -124,15 +124,15 @@ fn check_opt_level_override(profile_level: &str, rustc_level: &str) {
     p.cargo("build -v")
         .with_stderr(&format!(
             "\
-[COMPILING] test v0.0.0 (CWD)
-[RUNNING] `rustc --crate-name test src/lib.rs --crate-type lib \
+[COMPILING] test v0.0.0 ([CWD])
+[RUNNING] `rustc --crate-name test src/lib.rs --color never --crate-type lib \
         --emit=dep-info,link \
         -C opt-level={level} \
         -C debuginfo=2 \
         -C debug-assertions=on \
         -C metadata=[..] \
         --out-dir [..] \
-        -L dependency=CWD/target/debug/deps`
+        -L dependency=[CWD]/target/debug/deps`
 [FINISHED] [..] target(s) in [..]
 ",
             level = rustc_level
@@ -198,27 +198,27 @@ fn top_level_overrides_deps() {
     p.cargo("build -v --release")
         .with_stderr(&format!(
             "\
-[COMPILING] foo v0.0.0 (CWD/foo)
-[RUNNING] `rustc --crate-name foo foo/src/lib.rs \
+[COMPILING] foo v0.0.0 ([CWD]/foo)
+[RUNNING] `rustc --crate-name foo foo/src/lib.rs --color never \
         --crate-type dylib --crate-type rlib \
         --emit=dep-info,link \
         -C prefer-dynamic \
         -C opt-level=1 \
         -C debuginfo=2 \
         -C metadata=[..] \
-        --out-dir CWD/target/release/deps \
-        -L dependency=CWD/target/release/deps`
-[COMPILING] test v0.0.0 (CWD)
-[RUNNING] `rustc --crate-name test src/lib.rs --crate-type lib \
+        --out-dir [CWD]/target/release/deps \
+        -L dependency=[CWD]/target/release/deps`
+[COMPILING] test v0.0.0 ([CWD])
+[RUNNING] `rustc --crate-name test src/lib.rs --color never --crate-type lib \
         --emit=dep-info,link \
         -C opt-level=1 \
         -C debuginfo=2 \
         -C metadata=[..] \
         --out-dir [..] \
-        -L dependency=CWD/target/release/deps \
-        --extern foo=CWD/target/release/deps/\
+        -L dependency=[CWD]/target/release/deps \
+        --extern foo=[CWD]/target/release/deps/\
                      {prefix}foo[..]{suffix} \
-        --extern foo=CWD/target/release/deps/libfoo.rlib`
+        --extern foo=[CWD]/target/release/deps/libfoo.rlib`
 [FINISHED] release [optimized + debuginfo] target(s) in [..]
 ",
             prefix = env::consts::DLL_PREFIX,
