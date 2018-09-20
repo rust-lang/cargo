@@ -169,7 +169,7 @@ fn install_one(
             krate,
             vers,
             config,
-            is_first_install,
+            true,
             &mut |git| git.read_packages(),
         )?
     } else if source_id.is_path() {
