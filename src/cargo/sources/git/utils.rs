@@ -621,7 +621,7 @@ fn reset(repo: &git2::Repository, obj: &git2::Object, config: &Config) -> CargoR
     let mut pb = Progress::new("Checkout", config);
     let mut opts = git2::build::CheckoutBuilder::new();
     opts.progress(|_, cur, max| {
-        drop(pb.tick(cur, max));
+        drop(pb.tick(cur, max, 1 /* active count */));
     });
     repo.reset(obj, git2::ResetType::Hard, Some(&mut opts))?;
     Ok(())
@@ -641,7 +641,7 @@ pub fn with_fetch_options(
 
             rcb.transfer_progress(|stats| {
                 progress
-                    .tick(stats.indexed_objects(), stats.total_objects())
+                    .tick(stats.indexed_objects(), stats.total_objects(), 1 /*active count*/)
                     .is_ok()
             });
 

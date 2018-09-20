@@ -277,7 +277,7 @@ impl<'a> JobQueue<'a> {
             let active_names = self.active.iter()
                 .map(Key::name_for_progress)
                 .collect::<Vec<_>>();
-            drop(progress.tick_now(count, total, &format!(": {}", active_names.join(", "))));
+            drop(progress.tick_now(count, total, active_names));
             let event = self.rx.recv().unwrap();
             progress.clear();
 
