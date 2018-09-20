@@ -30,13 +30,20 @@ struct State<'cfg> {
 }
 
 struct Format {
-    style: ProgressStyle,
+    formatting: String,
     max_width: usize,
     max_print: usize,
 }
 
 impl<'cfg> Progress<'cfg> {
-    pub fn with_style(name: &str, style: ProgressStyle, cfg: &'cfg Config) -> Progress<'cfg> {
+    pub fn with_style(name: &str, cfg: &'cfg Config) -> Progress<'cfg> {
+   // @TODO: use   let format_template = cfg.get_string("TERM").unwrap().map(|s| s.val);
+        let format_template: String = match env::var("CARGO_STATUS") {
+            Ok(template) => template,
+            // if not set, fall back to default
+            Err(_) => String::from("[%b] %s/%t%n"),
+        };
+
         // report no progress when -q (for quiet) or TERM=dumb are set
         let dumb = match env::var("TERM") {
             Ok(term) => term == "dumb",
@@ -50,7 +57,7 @@ impl<'cfg> Progress<'cfg> {
             state: cfg.shell().err_width().map(|n| State {
                 config: cfg,
                 format: Format {
-                    style,
+                    formatting: format_template,
                     max_width: n,
                     max_print: 80,
                 },
@@ -70,7 +77,7 @@ impl<'cfg> Progress<'cfg> {
     }
 
     pub fn new(name: &str, cfg: &'cfg Config) -> Progress<'cfg> {
-        Self::with_style(name, ProgressStyle::Percentage, cfg)
+        Self::with_style(name, cfg)
     }
 
     pub fn tick(&mut self, cur: usize, max: usize, active: usize) -> CargoResult<()> {
@@ -171,7 +178,7 @@ impl<'cfg> State<'cfg> {
         // Write out a pretty header, then the progress bar itself, and then
         // return back to the beginning of the line for the next print.
         self.try_update_max_width();
-        if let Some(pbar) = self.format.progress(cur, max, active) {
+        if let Some(pbar) = self.format.progress(cur, max, active, msg) {
             self.print(&pbar, msg)?;
         }
         Ok(())
@@ -209,44 +216,101 @@ impl<'cfg> State<'cfg> {
 }
 
 impl Format {
-    fn progress(&self, cur: usize, max: usize, _active: usize) -> Option<String> {
-        // Render the percentage at the far right and then figure how long the
-        // progress bar is
+    fn progress(&self, cur: usize, max: usize, _active: usize, msg: &str) -> Option<String> {
+        // %b progress bar
+        // %s number of done jobs
+        // %t number of total jobs
+        // %p progress percentage
+        // %n list of names of running jobs
+
+        let template = &self.formatting; // what the formatting is supposed to look like
+         // what is left if we remove all dynamic parameters
+         // will be "[] /" for default formatting of "[%b] %s/%t%n"
+        let mut template_skelleton = template.to_string();
+        for fmt in &["%b", "%s", "%t", "%p", "%n"] {
+            // remove all the formatting specifiers
+            template_skelleton = template_skelleton.replace(fmt, "");
+        }
+        let length_of_formatters = template.len() - template_skelleton.len(); // will be 12-4 = 8 for default, "%b%s%t%n".len()
+
+        // Render the percentage at the far right and then figure how long the progress bar is
         let pct = (cur as f64) / (max as f64);
         let pct = if !pct.is_finite() { 0.0 } else { pct };
-        let stats = match self.style {
-            ProgressStyle::Percentage => format!(" {:6.02}%", pct * 100.0),
-            ProgressStyle::Ratio => format!(" {}/{}", cur, max),
-        };
-        let extra_len = stats.len() + 2 /* [ and ] */ + 15 /* status header */;
+
+        let percentage = if template.contains("%p") { format!("{:6.02}%", pct * 100.0) } else { String::new() };
+        // compile status default looks like this
+        //      Building [=====>                    ] 30/128,
+        // |____________|||________________________||| ||    \_
+        // status header |    progress bar          `|cur`fmt  max
+        // passed via formatting          both passed via formatting
+        let cur_str = if template.contains("%s") { cur.to_string() } else { String::new() };
+        let max_str = if template.contains("%t") { max.to_string() } else { String::new() };
+        const STATUS_HEADER_LEN: usize = 15;
+        // extra_len is everything without the progress bar and without the jobs_names
+        let extra_len =  STATUS_HEADER_LEN + percentage.len() + cur_str.len() + max_str.len()  + /* all other fmt chars: */ template_skelleton.len();
+        // display_width will determine the length of the progress bar
+
         let display_width = match self.width().checked_sub(extra_len) {
             Some(n) => n,
             None => return None,
         };
 
-        let mut string = String::with_capacity(self.max_width);
-        string.push('[');
+        let mut progress_bar = String::with_capacity(self.max_width);
         let hashes = display_width as f64 * pct;
         let hashes = hashes as usize;
 
         // Draw the `===>`
         if hashes > 0 {
-            string.push_str(&"=".repeat(hashes-1));
+            progress_bar.push_str(&"=".repeat(hashes-1));
             if cur == max {
-                string.push_str("=");
+                progress_bar.push_str("=");
             } else {
-                string.push_str(">");
+                progress_bar.push_str(">");
             }
         }
 
         // Draw the empty space we have left to do
-        string.push_str(&" ".repeat(display_width - hashes));
+        progress_bar.push_str(&" ".repeat(display_width - hashes));
 
-        string.push_str("]");
-        string.push_str(&stats);
+        let mut jobs_names = String::new();
+        let mut avail_msg_len = self.max_width - (
+                progress_bar.len()
+                + template_skelleton.len()
+                + length_of_formatters /* <- since we replace these */
+                + percentage.len()
+                + cur_str.len()
+                + max_str.len()
+                + 7  /* ?? */);
+
+        let mut ellipsis_pos = 0;
+        if avail_msg_len > 3 {
+            for c in msg.chars() {
+                let display_width = c.width().unwrap_or(0);
+                if avail_msg_len >= display_width {
+                    avail_msg_len -= display_width;
+                    jobs_names.push(c);
+                    if avail_msg_len >= 3 {
+                        ellipsis_pos = jobs_names.len();
+                    }
+                } else {
+                    jobs_names.truncate(ellipsis_pos);
+                    jobs_names.push_str("...");
+                    break;
+                }
+            }
+        }
+        let mut string = template.clone();
+        string = string.replace("%s", &cur_str);
+        string = string.replace("%t", &max_str);
+        string = string.replace("%p", &percentage);
+        string = string.replace("%b", &progress_bar);
+        string = string.replace("%n", &jobs_names);
+
 
         Some(string)
     }
+
+
 
     fn render(&self, string: &mut String, msg: &str) {
         let mut avail_msg_len = self.max_width - string.len() - 15;
@@ -272,8 +336,7 @@ impl Format {
 
     #[cfg(test)]
     fn progress_status(&self, cur: usize, max: usize, active: usize, msg: &str) -> Option<String> {
-        let mut ret = self.progress(cur, max, active)?;
-        self.render(&mut ret, msg);
+        let ret = self.progress(cur, max, active, msg)?;
         Some(ret)
     }
 
@@ -291,7 +354,7 @@ impl<'cfg> Drop for State<'cfg> {
 #[test]
 fn test_progress_status() {
     let format = Format {
-        style: ProgressStyle::Ratio,
+        formatting: "[%b] %s/%t%n".to_string(),
         max_print: 40,
         max_width: 60,
     };
@@ -359,7 +422,7 @@ fn test_progress_status() {
 #[test]
 fn test_progress_status_percentage() {
     let format = Format {
-        style: ProgressStyle::Percentage,
+        formatting: "[%b] %p%n".to_string(),
         max_print: 40,
         max_width: 60,
     };
@@ -384,7 +447,7 @@ fn test_progress_status_percentage() {
 #[test]
 fn test_progress_status_too_short() {
     let format = Format {
-        style: ProgressStyle::Percentage,
+        formatting: "[%b] %p%n".to_string(),
         max_print: 25,
         max_width: 25,
     };
@@ -394,7 +457,7 @@ fn test_progress_status_too_short() {
     );
 
     let format = Format {
-        style: ProgressStyle::Percentage,
+         formatting: "[%b] %p%n".to_string(),
         max_print: 24,
         max_width: 24,
     };

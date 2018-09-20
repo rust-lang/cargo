@@ -19,7 +19,7 @@ use core::{FeatureMap, SourceMap, Summary};
 use core::source::MaybePackage;
 use core::interning::InternedString;
 use ops;
-use util::{self, internal, lev_distance, Config, Progress, ProgressStyle};
+use util::{self, internal, lev_distance, Config, Progress};
 use util::errors::{CargoResult, CargoResultExt, HttpNot200};
 use util::network::Retry;
 
@@ -332,7 +332,6 @@ impl<'cfg> PackageSet<'cfg> {
             retry: Retry::new(self.config)?,
             progress: RefCell::new(Some(Progress::with_style(
                 "Downloading",
-                ProgressStyle::Ratio,
                 self.config,
             ))),
             downloads_finished: 0,
