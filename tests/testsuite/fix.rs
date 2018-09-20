@@ -335,9 +335,6 @@ fn local_paths_no_fix() {
 
     let stderr = "\
 [CHECKING] foo v0.0.1 ([..])
-warning: failed to find `#![feature(rust_2018_preview)]` in `src/lib.rs`
-this may cause `cargo fix` to not be able to fix all
-issues in preparation for the 2018 edition
 [FINISHED] [..]
 ";
     p.cargo("fix --edition --allow-no-vcs")
@@ -355,8 +352,6 @@ fn upgrade_extern_crate() {
         .file(
             "Cargo.toml",
             r#"
-                cargo-features = ["edition"]
-
                 [package]
                 name = "foo"
                 version = "0.1.0"
@@ -392,7 +387,6 @@ fn upgrade_extern_crate() {
 ";
     p.cargo("fix --allow-no-vcs")
         .env("__CARGO_FIX_YOLO", "1")
-        .masquerade_as_nightly_cargo()
         .with_stderr(stderr)
         .with_stdout("")
         .run();
@@ -830,8 +824,6 @@ fn prepare_for_and_enable() {
         .file(
             "Cargo.toml",
             r#"
-                cargo-features = ['edition']
-
                 [package]
                 name = 'foo'
                 version = '0.1.0'
@@ -853,29 +845,8 @@ information about transitioning to the 2018 edition see:
 
 ";
     p.cargo("fix --edition --allow-no-vcs")
-        .masquerade_as_nightly_cargo()
         .with_stderr_contains(stderr)
         .with_status(101)
-        .run();
-}
-
-#[test]
-fn prepare_for_without_feature_issues_warning() {
-    if !is_nightly() {
-        return;
-    }
-    let p = project().file("src/lib.rs", "").build();
-
-    let stderr = "\
-[CHECKING] foo v0.0.1 ([..])
-warning: failed to find `#![feature(rust_2018_preview)]` in `src/lib.rs`
-this may cause `cargo fix` to not be able to fix all
-issues in preparation for the 2018 edition
-[FINISHED] [..]
-";
-    p.cargo("fix --edition --allow-no-vcs")
-        .masquerade_as_nightly_cargo()
-        .with_stderr(stderr)
         .run();
 }
 
@@ -925,7 +896,6 @@ fn fix_idioms() {
         .file(
             "Cargo.toml",
             r#"
-                cargo-features = ['edition']
                 [package]
                 name = 'foo'
                 version = '0.1.0'
@@ -947,7 +917,6 @@ fn fix_idioms() {
 [FINISHED] [..]
 ";
     p.cargo("fix --edition-idioms --allow-no-vcs")
-        .masquerade_as_nightly_cargo()
         .with_stderr(stderr)
         .with_status(0)
         .run();
@@ -984,5 +953,159 @@ For more information try --help
     p.cargo("fix --prepare-for 2018 --edition")
         .with_status(1)
         .with_stderr(stderr)
+        .run();
+}
+
+#[test]
+fn shows_warnings_on_second_run_without_changes() {
+    let p = project()
+        .file(
+            "src/lib.rs",
+            r#"
+                use std::default::Default;
+
+                pub fn foo() {
+                }
+            "#,
+        )
+        .build();
+
+    p.cargo("fix --allow-no-vcs")
+        .with_stderr_contains("[..]warning: unused import[..]")
+        .run();
+
+    p.cargo("fix --allow-no-vcs")
+        .with_stderr_contains("[..]warning: unused import[..]")
+        .run();
+}
+
+#[test]
+fn shows_warnings_on_second_run_without_changes_on_multiple_targets() {
+    let p = project()
+        .file(
+            "src/lib.rs",
+            r#"
+                use std::default::Default;
+
+                pub fn a() -> u32 { 3 }
+            "#,
+        )
+        .file(
+            "src/main.rs",
+            r#"
+                use std::default::Default;
+                fn main() { println!("3"); }
+            "#,
+        )
+        .file(
+            "tests/foo.rs",
+            r#"
+                use std::default::Default;
+                #[test]
+                fn foo_test() {
+                    println!("3");
+                }
+            "#,
+        )
+        .file(
+            "tests/bar.rs",
+            r#"
+                use std::default::Default;
+
+                #[test]
+                fn foo_test() {
+                    println!("3");
+                }
+            "#,
+        )
+        .file(
+            "examples/fooxample.rs",
+            r#"
+                use std::default::Default;
+
+                fn main() {
+                    println!("3");
+                }
+            "#,
+        )
+        .build();
+
+    p.cargo("fix --allow-no-vcs --all-targets")
+        .with_stderr_contains(" --> examples/fooxample.rs:2:21")
+        .with_stderr_contains(" --> src/lib.rs:2:21")
+        .with_stderr_contains(" --> src/main.rs:2:21")
+        .with_stderr_contains(" --> tests/bar.rs:2:21")
+        .with_stderr_contains(" --> tests/foo.rs:2:21")
+        .run();
+
+    p.cargo("fix --allow-no-vcs --all-targets")
+        .with_stderr_contains(" --> examples/fooxample.rs:2:21")
+        .with_stderr_contains(" --> src/lib.rs:2:21")
+        .with_stderr_contains(" --> src/main.rs:2:21")
+        .with_stderr_contains(" --> tests/bar.rs:2:21")
+        .with_stderr_contains(" --> tests/foo.rs:2:21")
+        .run();
+}
+
+#[test]
+fn doesnt_rebuild_dependencies() {
+    let p = project()
+        .file(
+            "Cargo.toml",
+            r#"
+                [package]
+                name = "foo"
+                version = "0.1.0"
+
+                [dependencies]
+                bar = { path = 'bar' }
+
+                [workspace]
+            "#,
+        ).file("src/lib.rs", "extern crate bar;")
+        .file("bar/Cargo.toml", &basic_manifest("bar", "0.1.0"))
+        .file("bar/src/lib.rs", "")
+        .build();
+
+    p.cargo("fix --allow-no-vcs -p foo")
+        .env("__CARGO_FIX_YOLO", "1")
+        .with_stdout("")
+        .with_stderr("\
+[CHECKING] bar v0.1.0 ([..])
+[CHECKING] foo v0.1.0 ([..])
+[FINISHED] dev [unoptimized + debuginfo] target(s) in [..]
+")
+        .run();
+
+    p.cargo("fix --allow-no-vcs -p foo")
+        .env("__CARGO_FIX_YOLO", "1")
+        .with_stdout("")
+        .with_stderr("\
+[CHECKING] foo v0.1.0 ([..])
+[FINISHED] dev [unoptimized + debuginfo] target(s) in [..]
+")
+        .run();
+}
+
+#[test]
+fn does_not_crash_with_rustc_wrapper() {
+    // We don't have /usr/bin/env on Windows.
+    if cfg!(windows) {
+        return;
+    }
+    let p = project()
+        .file(
+            "Cargo.toml",
+            r#"
+                [package]
+                name = "foo"
+                version = "0.1.0"
+            "#,
+        )
+        .file("src/lib.rs", "")
+        .build();
+
+    p.cargo("fix --allow-no-vcs")
+        .env("RUSTC_WRAPPER", "/usr/bin/env")
         .run();
 }

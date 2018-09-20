@@ -150,30 +150,23 @@ impl ProcessBuilder {
         }
     }
 
-    /// On unix, executes the process using the unix syscall `execvp`, which will block this
-    /// process, and will only return if there is an error. On windows this is a synonym for
-    /// `exec`.
-    #[cfg(unix)]
+    /// Replaces the current process with the target process.
+    ///
+    /// On Unix, this executes the process using the unix syscall `execvp`, which will block
+    /// this process, and will only return if there is an error.
+    ///
+    /// On Windows this isn't technically possible. Instead we emulate it to the best of our
+    /// ability. One aspect we fix here is that we specify a handler for the ctrl-c handler.
+    /// In doing so (and by effectively ignoring it) we should emulate proxying ctrl-c
+    /// handling to the application at hand, which will either terminate or handle it itself.
+    /// According to microsoft's documentation at:
+    /// https://docs.microsoft.com/en-us/windows/console/ctrl-c-and-ctrl-break-signals
+    /// the ctrl-c signal is sent to all processes attached to a terminal, which should
+    /// include our child process. If the child terminates then we'll reap them in Cargo
+    /// pretty quickly, and if the child handles the signal then we won't terminate
+    /// (and we shouldn't!) until the process itself later exits.
     pub fn exec_replace(&self) -> CargoResult<()> {
-        use std::os::unix::process::CommandExt;
-
-        let mut command = self.build_command();
-        let error = command.exec();
-        Err(::util::CargoError::from(error)
-            .context(process_error(
-                &format!("could not execute process {}", self),
-                None,
-                None,
-            ))
-            .into())
-    }
-
-    /// On unix, executes the process using the unix syscall `execvp`, which will block this
-    /// process, and will only return if there is an error. On windows this is a synonym for
-    /// `exec`.
-    #[cfg(windows)]
-    pub fn exec_replace(&self) -> CargoResult<()> {
-        self.exec()
+        imp::exec_replace(self)
     }
 
     /// Execute the process, returning the stdio output, or an error if non-zero exit status.
@@ -322,5 +315,53 @@ pub fn process<T: AsRef<OsStr>>(cmd: T) -> ProcessBuilder {
         cwd: None,
         env: HashMap::new(),
         jobserver: None,
+    }
+}
+
+#[cfg(unix)]
+mod imp {
+    use CargoResult;
+    use std::os::unix::process::CommandExt;
+    use util::{process_error, ProcessBuilder};
+
+    pub fn exec_replace(process_builder: &ProcessBuilder) -> CargoResult<()> {
+        let mut command = process_builder.build_command();
+        let error = command.exec();
+        Err(::util::CargoError::from(error)
+            .context(process_error(
+                &format!("could not execute process {}", process_builder),
+                None,
+                None,
+            ))
+            .into())
+    }
+}
+
+#[cfg(windows)]
+mod imp {
+    extern crate winapi;
+
+    use CargoResult;
+    use util::{process_error, ProcessBuilder};
+    use self::winapi::shared::minwindef::{BOOL, DWORD, FALSE, TRUE};
+    use self::winapi::um::consoleapi::SetConsoleCtrlHandler;
+
+    unsafe extern "system" fn ctrlc_handler(_: DWORD) -> BOOL {
+        // Do nothing. Let the child process handle it.
+        TRUE
+    }
+
+    pub fn exec_replace(process_builder: &ProcessBuilder) -> CargoResult<()> {
+        unsafe {
+            if SetConsoleCtrlHandler(Some(ctrlc_handler), TRUE) == FALSE {
+                return Err(process_error(
+                    "Could not set Ctrl-C handler.",
+                    None,
+                    None).into());
+            }
+        }
+
+        // Just exec the process as normal.
+        process_builder.exec()
     }
 }

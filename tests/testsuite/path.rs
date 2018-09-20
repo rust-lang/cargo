@@ -64,13 +64,13 @@ fn cargo_compile_with_nested_deps_shorthand() {
         ).build();
 
     p.cargo("build")
-        .with_stderr(&format!(
-            "[COMPILING] baz v0.5.0 (CWD/bar/baz)\n\
-             [COMPILING] bar v0.5.0 (CWD/bar)\n\
-             [COMPILING] foo v0.5.0 (CWD)\n\
+        .with_stderr(
+            "[COMPILING] baz v0.5.0 ([CWD]/bar/baz)\n\
+             [COMPILING] bar v0.5.0 ([CWD]/bar)\n\
+             [COMPILING] foo v0.5.0 ([CWD])\n\
              [FINISHED] dev [unoptimized + debuginfo] target(s) \
              in [..]\n",
-        )).run();
+        ).run();
 
     assert!(p.bin("foo").is_file());
 
@@ -80,19 +80,19 @@ fn cargo_compile_with_nested_deps_shorthand() {
     p.cargo("clean -v").with_stdout("").run();
     println!("building baz");
     p.cargo("build -p baz")
-        .with_stderr(&format!(
-            "[COMPILING] baz v0.5.0 (CWD/bar/baz)\n\
+        .with_stderr(
+            "[COMPILING] baz v0.5.0 ([CWD]/bar/baz)\n\
              [FINISHED] dev [unoptimized + debuginfo] target(s) \
              in [..]\n",
-        )).run();
+        ).run();
     println!("building foo");
     p.cargo("build -p foo")
-        .with_stderr(&format!(
-            "[COMPILING] bar v0.5.0 (CWD/bar)\n\
-             [COMPILING] foo v0.5.0 (CWD)\n\
+        .with_stderr(
+            "[COMPILING] bar v0.5.0 ([CWD]/bar)\n\
+             [COMPILING] foo v0.5.0 ([CWD])\n\
              [FINISHED] dev [unoptimized + debuginfo] target(s) \
              in [..]\n",
-        )).run();
+        ).run();
 }
 
 #[test]
@@ -222,12 +222,12 @@ fn cargo_compile_with_transitive_dev_deps() {
         ).build();
 
     p.cargo("build")
-        .with_stderr(&format!(
-            "[COMPILING] bar v0.5.0 (CWD/bar)\n\
-             [COMPILING] foo v0.5.0 (CWD)\n\
+        .with_stderr(
+            "[COMPILING] bar v0.5.0 ([CWD]/bar)\n\
+             [COMPILING] foo v0.5.0 ([CWD])\n\
              [FINISHED] dev [unoptimized + debuginfo] target(s) in \
              [..]\n",
-        )).run();
+        ).run();
 
     assert!(p.bin("foo").is_file());
 
@@ -255,12 +255,12 @@ fn no_rebuild_dependency() {
         .build();
     // First time around we should compile both foo and bar
     p.cargo("build")
-        .with_stderr(&format!(
-            "[COMPILING] bar v0.5.0 (CWD/bar)\n\
-             [COMPILING] foo v0.5.0 (CWD)\n\
+        .with_stderr(
+            "[COMPILING] bar v0.5.0 ([CWD]/bar)\n\
+             [COMPILING] foo v0.5.0 ([CWD])\n\
              [FINISHED] dev [unoptimized + debuginfo] target(s) \
              in [..]\n",
-        )).run();
+        ).run();
 
     sleep_ms(1000);
     p.change_file(
@@ -317,35 +317,34 @@ fn deep_dependencies_trigger_rebuild() {
         .file("baz/src/baz.rs", "pub fn baz() {}")
         .build();
     p.cargo("build")
-        .with_stderr(&format!(
-            "[COMPILING] baz v0.5.0 (CWD/baz)\n\
-             [COMPILING] bar v0.5.0 (CWD/bar)\n\
-             [COMPILING] foo v0.5.0 (CWD)\n\
+        .with_stderr(
+            "[COMPILING] baz v0.5.0 ([CWD]/baz)\n\
+             [COMPILING] bar v0.5.0 ([CWD]/bar)\n\
+             [COMPILING] foo v0.5.0 ([CWD])\n\
              [FINISHED] dev [unoptimized + debuginfo] target(s) \
              in [..]\n",
-        )).run();
+        ).run();
     p.cargo("build").with_stdout("").run();
 
     // Make sure an update to baz triggers a rebuild of bar
     //
     // We base recompilation off mtime, so sleep for at least a second to ensure
     // that this write will change the mtime.
-    sleep_ms(1000);
     File::create(&p.root().join("baz/src/baz.rs"))
         .unwrap()
         .write_all(br#"pub fn baz() { println!("hello!"); }"#)
         .unwrap();
+    sleep_ms(1000);
     p.cargo("build")
-        .with_stderr(&format!(
-            "[COMPILING] baz v0.5.0 (CWD/baz)\n\
-             [COMPILING] bar v0.5.0 (CWD/bar)\n\
-             [COMPILING] foo v0.5.0 (CWD)\n\
+        .with_stderr(
+            "[COMPILING] baz v0.5.0 ([CWD]/baz)\n\
+             [COMPILING] bar v0.5.0 ([CWD]/bar)\n\
+             [COMPILING] foo v0.5.0 ([CWD])\n\
              [FINISHED] dev [unoptimized + debuginfo] target(s) \
              in [..]\n",
-        )).run();
+        ).run();
 
     // Make sure an update to bar doesn't trigger baz
-    sleep_ms(1000);
     File::create(&p.root().join("bar/src/bar.rs"))
         .unwrap()
         .write_all(
@@ -354,13 +353,14 @@ fn deep_dependencies_trigger_rebuild() {
         pub fn bar() { println!("hello!"); baz::baz(); }
     "#,
         ).unwrap();
+    sleep_ms(1000);
     p.cargo("build")
-        .with_stderr(&format!(
-            "[COMPILING] bar v0.5.0 (CWD/bar)\n\
-             [COMPILING] foo v0.5.0 (CWD)\n\
+        .with_stderr(
+            "[COMPILING] bar v0.5.0 ([CWD]/bar)\n\
+             [COMPILING] foo v0.5.0 ([CWD])\n\
              [FINISHED] dev [unoptimized + debuginfo] target(s) \
              in [..]\n",
-        )).run();
+        ).run();
 }
 
 #[test]
@@ -400,13 +400,13 @@ fn no_rebuild_two_deps() {
         .file("baz/src/baz.rs", "pub fn baz() {}")
         .build();
     p.cargo("build")
-        .with_stderr(&format!(
-            "[COMPILING] baz v0.5.0 (CWD/baz)\n\
-             [COMPILING] bar v0.5.0 (CWD/bar)\n\
-             [COMPILING] foo v0.5.0 (CWD)\n\
+        .with_stderr(
+            "[COMPILING] baz v0.5.0 ([CWD]/baz)\n\
+             [COMPILING] bar v0.5.0 ([CWD]/bar)\n\
+             [COMPILING] foo v0.5.0 ([CWD])\n\
              [FINISHED] dev [unoptimized + debuginfo] target(s) \
              in [..]\n",
-        )).run();
+        ).run();
     assert!(p.bin("foo").is_file());
     p.cargo("build").with_stdout("").run();
     assert!(p.bin("foo").is_file());
@@ -435,12 +435,12 @@ fn nested_deps_recompile() {
         .build();
 
     p.cargo("build")
-        .with_stderr(&format!(
-            "[COMPILING] bar v0.5.0 (CWD/src/bar)\n\
-             [COMPILING] foo v0.5.0 (CWD)\n\
+        .with_stderr(
+            "[COMPILING] bar v0.5.0 ([CWD]/src/bar)\n\
+             [COMPILING] foo v0.5.0 ([CWD])\n\
              [FINISHED] dev [unoptimized + debuginfo] target(s) \
              in [..]\n",
-        )).run();
+        ).run();
     sleep_ms(1000);
 
     File::create(&p.root().join("src/main.rs"))
@@ -450,11 +450,11 @@ fn nested_deps_recompile() {
 
     // This shouldn't recompile `bar`
     p.cargo("build")
-        .with_stderr(&format!(
-            "[COMPILING] foo v0.5.0 (CWD)\n\
+        .with_stderr(
+            "[COMPILING] foo v0.5.0 ([CWD])\n\
              [FINISHED] dev [unoptimized + debuginfo] target(s) \
              in [..]\n",
-        )).run();
+        ).run();
 }
 
 #[test]
@@ -484,7 +484,7 @@ fn error_message_for_missing_manifest() {
 [ERROR] failed to load source for a dependency on `bar`
 
 Caused by:
-  Unable to update CWD/src/bar
+  Unable to update [CWD]/src/bar
 
 Caused by:
   failed to read `[..]bar/Cargo.toml`
@@ -660,12 +660,12 @@ fn path_dep_build_cmd() {
     p.root().join("bar").move_into_the_past();
 
     p.cargo("build")
-        .with_stderr(&format!(
-            "[COMPILING] bar v0.5.0 (CWD/bar)\n\
-             [COMPILING] foo v0.5.0 (CWD)\n\
+        .with_stderr(
+            "[COMPILING] bar v0.5.0 ([CWD]/bar)\n\
+             [COMPILING] foo v0.5.0 ([CWD])\n\
              [FINISHED] dev [unoptimized + debuginfo] target(s) in \
              [..]\n",
-        )).run();
+        ).run();
 
     assert!(p.bin("foo").is_file());
 
@@ -680,12 +680,12 @@ fn path_dep_build_cmd() {
     }
 
     p.cargo("build")
-        .with_stderr(&format!(
-            "[COMPILING] bar v0.5.0 (CWD/bar)\n\
-             [COMPILING] foo v0.5.0 (CWD)\n\
+        .with_stderr(
+            "[COMPILING] bar v0.5.0 ([CWD]/bar)\n\
+             [COMPILING] foo v0.5.0 ([CWD])\n\
              [FINISHED] dev [unoptimized + debuginfo] target(s) in \
              [..]\n",
-        )).run();
+        ).run();
 
     p.process(&p.bin("foo")).with_stdout("1\n").run();
 }
@@ -719,20 +719,20 @@ fn dev_deps_no_rebuild_lib() {
         .build();
     p.cargo("build")
         .env("FOO", "bar")
-        .with_stderr(&format!(
-            "[COMPILING] foo v0.5.0 (CWD)\n\
+        .with_stderr(
+            "[COMPILING] foo v0.5.0 ([CWD])\n\
              [FINISHED] dev [unoptimized + debuginfo] target(s) \
              in [..]\n",
-        )).run();
+        ).run();
 
     p.cargo("test")
-        .with_stderr(&format!(
+        .with_stderr(
             "\
-[COMPILING] [..] v0.5.0 (CWD[..])
-[COMPILING] [..] v0.5.0 (CWD[..])
+[COMPILING] [..] v0.5.0 ([CWD][..])
+[COMPILING] [..] v0.5.0 ([CWD][..])
 [FINISHED] dev [unoptimized + debuginfo] target(s) in [..]
 [RUNNING] target/debug/deps/foo-[..][EXE]",
-        )).with_stdout_contains("running 0 tests")
+        ).with_stdout_contains("running 0 tests")
         .run();
 }
 

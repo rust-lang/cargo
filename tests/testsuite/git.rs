@@ -1,4 +1,5 @@
 use git2;
+use std::env;
 use std::fs::{self, File};
 use std::io::prelude::*;
 use std::net::{TcpListener, TcpStream};
@@ -56,7 +57,7 @@ fn cargo_compile_simple_git_dep() {
         .with_stderr(&format!(
             "[UPDATING] git repository `{}`\n\
              [COMPILING] dep1 v0.5.0 ({}#[..])\n\
-             [COMPILING] foo v0.5.0 (CWD)\n\
+             [COMPILING] foo v0.5.0 ([CWD])\n\
              [FINISHED] dev [unoptimized + debuginfo] target(s) in [..]\n",
             path2url(&git_root),
             path2url(&git_root),
@@ -192,7 +193,7 @@ fn cargo_compile_offline_with_cached_git_dep() {
         .with_stderr(format!(
             "\
 [COMPILING] dep1 v0.5.0 ({}#[..])
-[COMPILING] foo v0.5.0 (CWD)
+[COMPILING] foo v0.5.0 ([CWD])
 [FINISHED] dev [unoptimized + debuginfo] target(s) in [..]",
             path2url(git_root),
         )).run();
@@ -280,7 +281,7 @@ fn cargo_compile_git_dep_branch() {
         .with_stderr(&format!(
             "[UPDATING] git repository `{}`\n\
              [COMPILING] dep1 v0.5.0 ({}?branch=branchy#[..])\n\
-             [COMPILING] foo v0.5.0 (CWD)\n\
+             [COMPILING] foo v0.5.0 ([CWD])\n\
              [FINISHED] dev [unoptimized + debuginfo] target(s) in [..]\n",
             path2url(&git_root),
             path2url(&git_root),
@@ -351,7 +352,7 @@ fn cargo_compile_git_dep_tag() {
         .with_stderr(&format!(
             "[UPDATING] git repository `{}`\n\
              [COMPILING] dep1 v0.5.0 ({}?tag=v0.1.0#[..])\n\
-             [COMPILING] foo v0.5.0 (CWD)\n\
+             [COMPILING] foo v0.5.0 ([CWD])\n\
              [FINISHED] dev [unoptimized + debuginfo] target(s) in [..]\n",
             path2url(&git_root),
             path2url(&git_root),
@@ -721,7 +722,7 @@ fn recompilation() {
         .with_stderr(&format!(
             "[UPDATING] git repository `{}`\n\
              [COMPILING] bar v0.5.0 ({}#[..])\n\
-             [COMPILING] foo v0.5.0 (CWD)\n\
+             [COMPILING] foo v0.5.0 ([CWD])\n\
              [FINISHED] dev [unoptimized + debuginfo] target(s) \
              in [..]\n",
             git_project.url(),
@@ -769,7 +770,7 @@ fn recompilation() {
     p.cargo("build")
         .with_stderr(&format!(
             "[COMPILING] bar v0.5.0 ({}#[..])\n\
-             [COMPILING] foo v0.5.0 (CWD)\n\
+             [COMPILING] foo v0.5.0 ([CWD])\n\
              [FINISHED] dev [unoptimized + debuginfo] target(s) \
              in [..]\n",
             git_project.url(),
@@ -779,7 +780,7 @@ fn recompilation() {
     p.cargo("clean -p foo").with_stdout("").run();
     p.cargo("build")
         .with_stderr(
-            "[COMPILING] foo v0.5.0 (CWD)\n\
+            "[COMPILING] foo v0.5.0 ([CWD])\n\
              [FINISHED] dev [unoptimized + debuginfo] target(s) \
              in [..]"
         ).run();
@@ -858,7 +859,7 @@ fn update_with_shared_deps() {
 [COMPILING] bar v0.5.0 ({git}#[..])
 [COMPILING] [..] v0.5.0 ([..])
 [COMPILING] [..] v0.5.0 ([..])
-[COMPILING] foo v0.5.0 (CWD)
+[COMPILING] foo v0.5.0 ([CWD])
 [FINISHED] dev [unoptimized + debuginfo] target(s) in [..]\n",
             git = git_project.url(),
         )).run();
@@ -917,9 +918,9 @@ Caused by:
         .with_stderr(&format!(
             "\
 [COMPILING] bar v0.5.0 ({git}#[..])
-[COMPILING] [..] v0.5.0 (CWD[..]dep[..])
-[COMPILING] [..] v0.5.0 (CWD[..]dep[..])
-[COMPILING] foo v0.5.0 (CWD)
+[COMPILING] [..] v0.5.0 ([CWD][..]dep[..])
+[COMPILING] [..] v0.5.0 ([CWD][..]dep[..])
+[COMPILING] foo v0.5.0 ([CWD])
 [FINISHED] dev [unoptimized + debuginfo] target(s) in [..]\n",
             git = git_project.url(),
         )).run();
@@ -1095,7 +1096,7 @@ fn two_deps_only_update_one() {
              [UPDATING] git repository `[..]`\n\
              [COMPILING] [..] v0.5.0 ([..])\n\
              [COMPILING] [..] v0.5.0 ([..])\n\
-             [COMPILING] foo v0.5.0 (CWD)\n\
+             [COMPILING] foo v0.5.0 ([CWD])\n\
              [FINISHED] dev [unoptimized + debuginfo] target(s) in [..]\n",
         ).run();
 
@@ -1195,7 +1196,7 @@ fn stale_cached_version() {
             "\
 [UPDATING] git repository `{bar}`
 [COMPILING] bar v0.0.0 ({bar}#[..])
-[COMPILING] foo v0.0.0 (CWD)
+[COMPILING] foo v0.0.0 ([CWD])
 [FINISHED] dev [unoptimized + debuginfo] target(s) in [..]
 ",
             bar = bar.url(),
@@ -1358,7 +1359,7 @@ fn dev_deps_with_testing() {
         .with_stderr(&format!(
             "\
 [UPDATING] git repository `{bar}`
-[COMPILING] foo v0.5.0 (CWD)
+[COMPILING] foo v0.5.0 ([CWD])
 [FINISHED] dev [unoptimized + debuginfo] target(s) in [..]
 ",
             bar = p2.url()
@@ -1399,12 +1400,12 @@ fn git_build_cmd_freshness() {
     sleep_ms(1000);
 
     foo.cargo("build")
-        .with_stderr(&format!(
+        .with_stderr(
             "\
-[COMPILING] foo v0.0.0 (CWD)
+[COMPILING] foo v0.0.0 ([CWD])
 [FINISHED] dev [unoptimized + debuginfo] target(s) in [..]
 ",
-        )).run();
+        ).run();
 
     // Smoke test to make sure it doesn't compile again
     println!("first pass");
@@ -1458,7 +1459,7 @@ fn git_name_not_always_needed() {
         .with_stderr(&format!(
             "\
 [UPDATING] git repository `{bar}`
-[COMPILING] foo v0.5.0 (CWD)
+[COMPILING] foo v0.5.0 ([CWD])
 [FINISHED] dev [unoptimized + debuginfo] target(s) in [..]
 ",
             bar = p2.url()
@@ -1680,7 +1681,7 @@ fn warnings_in_git_dep() {
         .with_stderr(&format!(
             "[UPDATING] git repository `{}`\n\
              [COMPILING] bar v0.5.0 ({}#[..])\n\
-             [COMPILING] foo v0.5.0 (CWD)\n\
+             [COMPILING] foo v0.5.0 ([CWD])\n\
              [FINISHED] dev [unoptimized + debuginfo] target(s) in [..]\n",
             bar.url(),
             bar.url(),
@@ -2357,9 +2358,9 @@ fn include_overrides_gitignore() {
     p.cargo("build -v")
         .with_stderr(
             "\
-[UPDATING] registry `[..]`
-[DOWNLOADING] filetime [..]
-[DOWNLOADING] libc [..]
+[UPDATING] `[..]` index
+[DOWNLOADED] filetime [..]
+[DOWNLOADED] libc [..]
 [COMPILING] libc [..]
 [RUNNING] `rustc --crate-name libc [..]`
 [COMPILING] filetime [..]
@@ -2575,6 +2576,12 @@ fn failed_submodule_checkout() {
 
 #[test]
 fn use_the_cli() {
+    if env::var("CARGO_TEST_DISABLE_GIT_CLI") == Ok("1".to_string()) {
+        // mingw git on Windows does not support Windows-style file URIs.
+        // Appveyor in the rust repo has that git up front in the PATH instead
+        // of Git-for-Windows, which causes this to fail.
+        return;
+    }
     let project = project();
     let git_project = git::new("dep1", |project| {
         project

@@ -110,7 +110,7 @@ impl<T: AsRef<str>, U: AsRef<str>> ToPkgId for (T, U) {
 }
 
 macro_rules! pkg {
-    ($pkgid:expr => [$($deps:expr),+]) => ({
+    ($pkgid:expr => [$($deps:expr),+ $(,)* ]) => ({
         let d: Vec<Dependency> = vec![$($deps.to_dep()),+];
         pkg_dep($pkgid, d)
     });
@@ -1220,6 +1220,174 @@ fn resolving_with_constrained_sibling_transitive_dep_effects() {
             ("D", "1.0.105"),
         ]),
     );
+}
+
+#[test]
+fn incomplete_information_skiping() {
+    // When backtracking due to a failed dependency, if Cargo is
+    // trying to be clever and skip irrelevant dependencies, care must
+    // be taken to not miss the transitive effects of alternatives.
+    // Fuzzing discovered that for some reason cargo was skiping based
+    // on incomplete information in the following case:
+    // minimized bug found in:
+    // https://github.com/rust-lang/cargo/commit/003c29b0c71e5ea28fbe8e72c148c755c9f3f8d9
+    let input = vec![
+        pkg!(("a", "1.0.0")),
+        pkg!(("a", "1.1.0")),
+        pkg!("b" => [dep("a")]),
+        pkg!(("c", "1.0.0")),
+        pkg!(("c", "1.1.0")),
+        pkg!("d" => [dep_req("c", "=1.0")]),
+        pkg!(("e", "1.0.0")),
+        pkg!(("e", "1.1.0") => [dep_req("c", "1.1")]),
+        pkg!("to_yank"),
+        pkg!(("f", "1.0.0") => [
+            dep("to_yank"),
+            dep("d"),
+        ]),
+        pkg!(("f", "1.1.0") => [dep("d")]),
+        pkg!("g" => [
+            dep("b"),
+            dep("e"),
+            dep("f"),
+        ]),
+    ];
+    let reg = registry(input.clone());
+
+    let res = resolve(&pkg_id("root"), vec![dep("g")], &reg).unwrap();
+    let package_to_yank = "to_yank".to_pkgid();
+    // this package is not used in the resolution.
+    assert!(!res.contains(&package_to_yank));
+    // so when we yank it
+    let new_reg = registry(
+        input
+            .iter()
+            .cloned()
+            .filter(|x| &package_to_yank != x.package_id())
+            .collect(),
+    );
+    assert_eq!(input.len(), new_reg.len() + 1);
+    // it should still build
+    assert!(resolve(&pkg_id("root"), vec![dep("g")], &new_reg).is_ok());
+}
+
+#[test]
+fn incomplete_information_skiping_2() {
+    // When backtracking due to a failed dependency, if Cargo is
+    // trying to be clever and skip irrelevant dependencies, care must
+    // be taken to not miss the transitive effects of alternatives.
+    // Fuzzing discovered that for some reason cargo was skiping based
+    // on incomplete information in the following case:
+    // https://github.com/rust-lang/cargo/commit/003c29b0c71e5ea28fbe8e72c148c755c9f3f8d9
+    let input = vec![
+        pkg!(("b", "3.8.10")),
+        pkg!(("b", "8.7.4")),
+        pkg!(("b", "9.4.6")),
+        pkg!(("c", "1.8.8")),
+        pkg!(("c", "10.2.5")),
+        pkg!(("d", "4.1.2") => [
+            dep_req("bad", "=6.10.9"),
+        ]),
+        pkg!(("d", "5.5.6")),
+        pkg!(("d", "5.6.10")),
+        pkg!(("to_yank", "8.0.1")),
+        pkg!(("to_yank", "8.8.1")),
+        pkg!(("e", "4.7.8") => [
+            dep_req("d", ">=5.5.6, <=5.6.10"),
+            dep_req("to_yank", "=8.0.1"),
+        ]),
+        pkg!(("e", "7.4.9") => [
+            dep_req("bad", "=4.7.5"),
+        ]),
+        pkg!("f" => [
+            dep_req("d", ">=4.1.2, <=5.5.6"),
+        ]),
+        pkg!("g" => [
+            dep("bad"),
+        ]),
+        pkg!(("h", "3.8.3") => [
+            dep_req("g", "*"),
+        ]),
+        pkg!(("h", "6.8.3") => [
+            dep("f"),
+        ]),
+        pkg!(("h", "8.1.9") => [
+            dep_req("to_yank", "=8.8.1"),
+        ]),
+        pkg!("i" => [
+            dep_req("b", "*"),
+            dep_req("c", "*"),
+            dep_req("e", "*"),
+            dep_req("h", "*"),
+        ]),
+    ];
+    let reg = registry(input.clone());
+
+    let res = resolve(&pkg_id("root"), vec![dep("i")], &reg).unwrap();
+    let package_to_yank = ("to_yank", "8.8.1").to_pkgid();
+    // this package is not used in the resolution.
+    assert!(!res.contains(&package_to_yank));
+    // so when we yank it
+    let new_reg = registry(
+        input
+            .iter()
+            .cloned()
+            .filter(|x| &package_to_yank != x.package_id())
+            .collect(),
+    );
+    assert_eq!(input.len(), new_reg.len() + 1);
+    // it should still build
+    assert!(resolve(&pkg_id("root"), vec![dep("i")], &new_reg).is_ok());
+}
+
+#[test]
+fn incomplete_information_skiping_3() {
+    // When backtracking due to a failed dependency, if Cargo is
+    // trying to be clever and skip irrelevant dependencies, care must
+    // be taken to not miss the transitive effects of alternatives.
+    // Fuzzing discovered that for some reason cargo was skiping based
+    // on incomplete information in the following case:
+    // minimized bug found in:
+    // https://github.com/rust-lang/cargo/commit/003c29b0c71e5ea28fbe8e72c148c755c9f3f8d9
+    let input = vec![
+        pkg!{("to_yank", "3.0.3")},
+        pkg!{("to_yank", "3.3.0")},
+        pkg!{("to_yank", "3.3.1")},
+        pkg!{("a", "3.3.0") => [
+            dep_req("to_yank", "=3.0.3"),
+        ] },
+        pkg!{("a", "3.3.2") => [
+            dep_req("to_yank", "<=3.3.0"),
+        ] },
+        pkg!{("b", "0.1.3") => [
+            dep_req("a", "=3.3.0"),
+        ] },
+        pkg!{("b", "2.0.2") => [
+            dep_req("to_yank", "3.3.0"),
+            dep_req("a", "*"),
+        ] },
+        pkg!{("b", "2.3.3") => [
+            dep_req("to_yank", "3.3.0"),
+            dep_req("a", "=3.3.0"),
+        ] },
+    ];
+    let reg = registry(input.clone());
+
+    let res = resolve(&pkg_id("root"), vec![dep_req("b", "*")], &reg).unwrap();
+    let package_to_yank = ("to_yank", "3.0.3").to_pkgid();
+    // this package is not used in the resolution.
+    assert!(!res.contains(&package_to_yank));
+    // so when we yank it
+    let new_reg = registry(
+        input
+            .iter()
+            .cloned()
+            .filter(|x| &package_to_yank != x.package_id())
+            .collect(),
+    );
+    assert_eq!(input.len(), new_reg.len() + 1);
+    // it should still build
+    assert!(resolve(&pkg_id("root"), vec![dep_req("b", "*")], &new_reg).is_ok());
 }
 
 #[test]

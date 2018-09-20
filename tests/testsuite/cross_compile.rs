@@ -357,15 +357,15 @@ fn linker_and_ar() {
         .with_status(101)
         .with_stderr_contains(&format!(
             "\
-[COMPILING] foo v0.5.0 (CWD)
-[RUNNING] `rustc --crate-name foo src/foo.rs --crate-type bin \
+[COMPILING] foo v0.5.0 ([CWD])
+[RUNNING] `rustc --crate-name foo src/foo.rs --color never --crate-type bin \
     --emit=dep-info,link -C debuginfo=2 \
     -C metadata=[..] \
-    --out-dir CWD/target/{target}/debug/deps \
+    --out-dir [CWD]/target/{target}/debug/deps \
     --target {target} \
     -C ar=my-ar-tool -C linker=my-linker-tool \
-    -L dependency=CWD/target/{target}/debug/deps \
-    -L dependency=CWD/target/debug/deps`
+    -L dependency=[CWD]/target/{target}/debug/deps \
+    -L dependency=[CWD]/target/debug/deps`
 ",
             target = target,
         )).run();
@@ -504,7 +504,7 @@ fn cross_tests() {
         .arg(&target)
         .with_stderr(&format!(
             "\
-[COMPILING] foo v0.0.0 (CWD)
+[COMPILING] foo v0.0.0 ([CWD])
 [FINISHED] dev [unoptimized + debuginfo] target(s) in [..]
 [RUNNING] target/{triple}/debug/deps/foo-[..][EXE]
 [RUNNING] target/{triple}/debug/deps/bar-[..][EXE]",
@@ -531,14 +531,13 @@ fn no_cross_doctests() {
         "#,
         ).build();
 
-    let host_output = format!(
+    let host_output =
         "\
-[COMPILING] foo v0.0.1 (CWD)
+[COMPILING] foo v0.0.1 ([CWD])
 [FINISHED] dev [unoptimized + debuginfo] target(s) in [..]
 [RUNNING] target/debug/deps/foo-[..][EXE]
 [DOCTEST] foo
-",
-    );
+";
 
     println!("a");
     p.cargo("test").with_stderr(&host_output).run();
@@ -549,7 +548,7 @@ fn no_cross_doctests() {
         .arg(&target)
         .with_stderr(&format!(
             "\
-[COMPILING] foo v0.0.1 (CWD)
+[COMPILING] foo v0.0.1 ([CWD])
 [FINISHED] dev [unoptimized + debuginfo] target(s) in [..]
 [RUNNING] target/{triple}/debug/deps/foo-[..][EXE]
 [DOCTEST] foo
@@ -563,7 +562,7 @@ fn no_cross_doctests() {
         .arg(&target)
         .with_stderr(&format!(
             "\
-[COMPILING] foo v0.0.1 (CWD)
+[COMPILING] foo v0.0.1 ([CWD])
 [FINISHED] dev [unoptimized + debuginfo] target(s) in [..]
 [RUNNING] target/{triple}/debug/deps/foo-[..][EXE]
 ",
@@ -644,9 +643,9 @@ fn cross_with_a_build_script() {
         .arg(&target)
         .with_stderr(&format!(
             "\
-[COMPILING] foo v0.0.0 (CWD)
-[RUNNING] `rustc [..] build.rs [..] --out-dir CWD/target/debug/build/foo-[..]`
-[RUNNING] `CWD/target/debug/build/foo-[..]/build-script-build`
+[COMPILING] foo v0.0.0 ([CWD])
+[RUNNING] `rustc [..] build.rs [..] --out-dir [CWD]/target/debug/build/foo-[..]`
+[RUNNING] `[CWD]/target/debug/build/foo-[..]/build-script-build`
 [RUNNING] `rustc [..] src/main.rs [..] --target {target} [..]`
 [FINISHED] dev [unoptimized + debuginfo] target(s) in [..]
 ",
@@ -732,19 +731,19 @@ fn build_script_needed_for_host_and_target() {
 
     p.cargo("build -v --target")
         .arg(&target)
-        .with_stderr_contains(&"[COMPILING] d1 v0.0.0 (CWD/d1)")
+        .with_stderr_contains(&"[COMPILING] d1 v0.0.0 ([CWD]/d1)")
         .with_stderr_contains(
-            "[RUNNING] `rustc [..] d1/build.rs [..] --out-dir CWD/target/debug/build/d1-[..]`",
+            "[RUNNING] `rustc [..] d1/build.rs [..] --out-dir [CWD]/target/debug/build/d1-[..]`",
         )
-        .with_stderr_contains("[RUNNING] `CWD/target/debug/build/d1-[..]/build-script-build`")
+        .with_stderr_contains("[RUNNING] `[CWD]/target/debug/build/d1-[..]/build-script-build`")
         .with_stderr_contains("[RUNNING] `rustc [..] d1/src/lib.rs [..]`")
-        .with_stderr_contains("[COMPILING] d2 v0.0.0 (CWD/d2)")
+        .with_stderr_contains("[COMPILING] d2 v0.0.0 ([CWD]/d2)")
         .with_stderr_contains(&format!(
             "[RUNNING] `rustc [..] d2/src/lib.rs [..] -L /path/to/{host}`",
             host = host
-        )).with_stderr_contains("[COMPILING] foo v0.0.0 (CWD)")
+        )).with_stderr_contains("[COMPILING] foo v0.0.0 ([CWD])")
         .with_stderr_contains(&format!(
-            "[RUNNING] `rustc [..] build.rs [..] --out-dir CWD/target/debug/build/foo-[..] \
+            "[RUNNING] `rustc [..] build.rs [..] --out-dir [CWD]/target/debug/build/foo-[..] \
              -L /path/to/{host}`",
             host = host
         )).with_stderr_contains(&format!(
@@ -940,7 +939,7 @@ fn build_script_with_platform_specific_dependencies() {
 [RUNNING] `rustc [..] d1/src/lib.rs [..]`
 [COMPILING] foo v0.0.1 ([..])
 [RUNNING] `rustc [..] build.rs [..]`
-[RUNNING] `CWD/target/debug/build/foo-[..]/build-script-build`
+[RUNNING] `[CWD]/target/debug/build/foo-[..]/build-script-build`
 [RUNNING] `rustc [..] src/lib.rs [..] --target {target} [..]`
 [FINISHED] dev [unoptimized + debuginfo] target(s) in [..]
 ",
@@ -1153,8 +1152,8 @@ fn cross_test_dylib() {
         .arg(&target)
         .with_stderr(&format!(
             "\
-[COMPILING] bar v0.0.1 (CWD/bar)
-[COMPILING] foo v0.0.1 (CWD)
+[COMPILING] bar v0.0.1 ([CWD]/bar)
+[COMPILING] foo v0.0.1 ([CWD])
 [FINISHED] dev [unoptimized + debuginfo] target(s) in [..]
 [RUNNING] target/{arch}/debug/deps/foo-[..][EXE]
 [RUNNING] target/{arch}/debug/deps/test-[..][EXE]",

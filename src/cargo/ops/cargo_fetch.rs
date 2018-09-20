@@ -27,13 +27,14 @@ pub fn fetch<'a>(
     {
         let mut fetched_packages = HashSet::new();
         let mut deps_to_fetch = ws.members().map(|p| p.package_id()).collect::<Vec<_>>();
+        let mut to_download = Vec::new();
 
         while let Some(id) = deps_to_fetch.pop() {
             if !fetched_packages.insert(id) {
                 continue;
             }
 
-            packages.get(id)?;
+            to_download.push(id.clone());
             let deps = resolve.deps(id)
                 .filter(|&(_id, deps)| {
                     deps.iter()
@@ -57,6 +58,7 @@ pub fn fetch<'a>(
                 .map(|(id, _deps)| id);
             deps_to_fetch.extend(deps);
         }
+        packages.get_many(&to_download)?;
     }
 
     Ok((resolve, packages))

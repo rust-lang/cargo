@@ -415,22 +415,22 @@ fn no_feature_doesnt_build() {
         .build();
 
     p.cargo("build")
-        .with_stderr(format!(
+        .with_stderr(
             "\
-[COMPILING] foo v0.0.1 (CWD)
+[COMPILING] foo v0.0.1 ([CWD])
 [FINISHED] dev [unoptimized + debuginfo] target(s) in [..]
 ",
-        )).run();
+        ).run();
     p.process(&p.bin("foo")).with_stdout("").run();
 
     p.cargo("build --features bar")
-        .with_stderr(format!(
+        .with_stderr(
             "\
-[COMPILING] bar v0.0.1 (CWD/bar)
-[COMPILING] foo v0.0.1 (CWD)
+[COMPILING] bar v0.0.1 ([CWD]/bar)
+[COMPILING] foo v0.0.1 ([CWD])
 [FINISHED] dev [unoptimized + debuginfo] target(s) in [..]
 ",
-        )).run();
+        ).run();
     p.process(&p.bin("foo")).with_stdout("bar\n").run();
 }
 
@@ -467,22 +467,22 @@ fn default_feature_pulled_in() {
         .build();
 
     p.cargo("build")
-        .with_stderr(format!(
+        .with_stderr(
             "\
-[COMPILING] bar v0.0.1 (CWD/bar)
-[COMPILING] foo v0.0.1 (CWD)
+[COMPILING] bar v0.0.1 ([CWD]/bar)
+[COMPILING] foo v0.0.1 ([CWD])
 [FINISHED] dev [unoptimized + debuginfo] target(s) in [..]
 ",
-        )).run();
+        ).run();
     p.process(&p.bin("foo")).with_stdout("bar\n").run();
 
     p.cargo("build --no-default-features")
-        .with_stderr(format!(
+        .with_stderr(
             "\
-[COMPILING] foo v0.0.1 (CWD)
+[COMPILING] foo v0.0.1 ([CWD])
 [FINISHED] dev [unoptimized + debuginfo] target(s) in [..]
 ",
-        )).run();
+        ).run();
     p.process(&p.bin("foo")).with_stdout("").run();
 }
 
@@ -575,14 +575,14 @@ fn groups_on_groups_on_groups() {
         .build();
 
     p.cargo("build")
-        .with_stderr(format!(
+        .with_stderr(
             "\
-[COMPILING] ba[..] v0.0.1 (CWD/ba[..])
-[COMPILING] ba[..] v0.0.1 (CWD/ba[..])
-[COMPILING] foo v0.0.1 (CWD)
+[COMPILING] ba[..] v0.0.1 ([CWD]/ba[..])
+[COMPILING] ba[..] v0.0.1 ([CWD]/ba[..])
+[COMPILING] foo v0.0.1 ([CWD])
 [FINISHED] dev [unoptimized + debuginfo] target(s) in [..]
 ",
-        )).run();
+        ).run();
 }
 
 #[test]
@@ -621,14 +621,14 @@ fn many_cli_features() {
 
     p.cargo("build --features")
         .arg("bar baz")
-        .with_stderr(format!(
+        .with_stderr(
             "\
-[COMPILING] ba[..] v0.0.1 (CWD/ba[..])
-[COMPILING] ba[..] v0.0.1 (CWD/ba[..])
-[COMPILING] foo v0.0.1 (CWD)
+[COMPILING] ba[..] v0.0.1 ([CWD]/ba[..])
+[COMPILING] ba[..] v0.0.1 ([CWD]/ba[..])
+[COMPILING] foo v0.0.1 ([CWD])
 [FINISHED] dev [unoptimized + debuginfo] target(s) in [..]
 ",
-        )).run();
+        ).run();
 }
 
 #[test]
@@ -698,14 +698,14 @@ fn union_features() {
         ).build();
 
     p.cargo("build")
-        .with_stderr(format!(
+        .with_stderr(
             "\
-[COMPILING] d2 v0.0.1 (CWD/d2)
-[COMPILING] d1 v0.0.1 (CWD/d1)
-[COMPILING] foo v0.0.1 (CWD)
+[COMPILING] d2 v0.0.1 ([CWD]/d2)
+[COMPILING] d1 v0.0.1 ([CWD]/d1)
+[COMPILING] foo v0.0.1 ([CWD])
 [FINISHED] dev [unoptimized + debuginfo] target(s) in [..]
 ",
-        )).run();
+        ).run();
 }
 
 #[test]
@@ -741,13 +741,13 @@ fn many_features_no_rebuilds() {
         .build();
 
     p.cargo("build")
-        .with_stderr(format!(
+        .with_stderr(
             "\
-[COMPILING] a v0.1.0 (CWD/a)
-[COMPILING] b v0.1.0 (CWD)
+[COMPILING] a v0.1.0 ([CWD]/a)
+[COMPILING] b v0.1.0 ([CWD])
 [FINISHED] dev [unoptimized + debuginfo] target(s) in [..]
 ",
-        )).run();
+        ).run();
     p.root().move_into_the_past();
 
     p.cargo("build -v")
@@ -1197,14 +1197,14 @@ fn many_cli_features_comma_delimited() {
         .build();
 
     p.cargo("build --features bar,baz")
-        .with_stderr(format!(
+        .with_stderr(
             "\
-[COMPILING] ba[..] v0.0.1 (CWD/ba[..])
-[COMPILING] ba[..] v0.0.1 (CWD/ba[..])
-[COMPILING] foo v0.0.1 (CWD)
+[COMPILING] ba[..] v0.0.1 ([CWD]/ba[..])
+[COMPILING] ba[..] v0.0.1 ([CWD]/ba[..])
+[COMPILING] foo v0.0.1 ([CWD])
 [FINISHED] dev [unoptimized + debuginfo] target(s) in [..]
 ",
-        )).run();
+        ).run();
 }
 
 #[test]
@@ -1259,16 +1259,16 @@ fn many_cli_features_comma_and_space_delimited() {
 
     p.cargo("build --features")
         .arg("bar,baz bam bap")
-        .with_stderr(format!(
+        .with_stderr(
             "\
-[COMPILING] ba[..] v0.0.1 (CWD/ba[..])
-[COMPILING] ba[..] v0.0.1 (CWD/ba[..])
-[COMPILING] ba[..] v0.0.1 (CWD/ba[..])
-[COMPILING] ba[..] v0.0.1 (CWD/ba[..])
-[COMPILING] foo v0.0.1 (CWD)
+[COMPILING] ba[..] v0.0.1 ([CWD]/ba[..])
+[COMPILING] ba[..] v0.0.1 ([CWD]/ba[..])
+[COMPILING] ba[..] v0.0.1 ([CWD]/ba[..])
+[COMPILING] ba[..] v0.0.1 ([CWD]/ba[..])
+[COMPILING] foo v0.0.1 ([CWD])
 [FINISHED] dev [unoptimized + debuginfo] target(s) in [..]
 ",
-        )).run();
+        ).run();
 }
 
 #[test]

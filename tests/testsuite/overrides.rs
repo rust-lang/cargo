@@ -38,10 +38,10 @@ fn override_simple() {
     p.cargo("build")
         .with_stderr(
             "\
-[UPDATING] registry `file://[..]`
+[UPDATING] `[ROOT][..]` index
 [UPDATING] git repository `[..]`
 [COMPILING] bar v0.1.0 (file://[..])
-[COMPILING] foo v0.0.1 (CWD)
+[COMPILING] foo v0.0.1 ([CWD])
 [FINISHED] dev [unoptimized + debuginfo] target(s) in [..]
 ",
         ).run();
@@ -183,12 +183,13 @@ fn transitive() {
     p.cargo("build")
         .with_stderr(
             "\
-[UPDATING] registry `file://[..]`
+[UPDATING] `[ROOT][..]` index
 [UPDATING] git repository `[..]`
-[DOWNLOADING] baz v0.2.0 (registry [..])
+[DOWNLOADING] crates ...
+[DOWNLOADED] baz v0.2.0 (registry [..])
 [COMPILING] bar v0.1.0 (file://[..])
 [COMPILING] baz v0.2.0
-[COMPILING] foo v0.0.1 (CWD)
+[COMPILING] foo v0.0.1 ([CWD])
 [FINISHED] dev [unoptimized + debuginfo] target(s) in [..]
 ",
         ).run();
@@ -231,10 +232,10 @@ fn persists_across_rebuilds() {
     p.cargo("build")
         .with_stderr(
             "\
-[UPDATING] registry `file://[..]`
+[UPDATING] `[ROOT][..]` index
 [UPDATING] git repository `file://[..]`
 [COMPILING] bar v0.1.0 (file://[..])
-[COMPILING] foo v0.0.1 (CWD)
+[COMPILING] foo v0.0.1 ([CWD])
 [FINISHED] dev [unoptimized + debuginfo] target(s) in [..]
 ",
         ).run();
@@ -275,9 +276,9 @@ fn replace_registry_with_path() {
     p.cargo("build")
         .with_stderr(
             "\
-[UPDATING] registry `file://[..]`
-[COMPILING] bar v0.1.0 (file://[..])
-[COMPILING] foo v0.0.1 (CWD)
+[UPDATING] `[ROOT][..]` index
+[COMPILING] bar v0.1.0 ([ROOT][..])
+[COMPILING] foo v0.0.1 ([CWD])
 [FINISHED] dev [unoptimized + debuginfo] target(s) in [..]
 ",
         ).run();
@@ -336,14 +337,15 @@ fn use_a_spec_to_select() {
     p.cargo("build")
         .with_stderr(
             "\
-[UPDATING] registry `file://[..]`
+[UPDATING] `[ROOT][..]` index
 [UPDATING] git repository `[..]`
-[DOWNLOADING] [..]
-[DOWNLOADING] [..]
+[DOWNLOADING] crates ...
+[DOWNLOADED] [..]
+[DOWNLOADED] [..]
 [COMPILING] [..]
 [COMPILING] [..]
 [COMPILING] [..]
-[COMPILING] foo v0.0.1 (CWD)
+[COMPILING] foo v0.0.1 ([CWD])
 [FINISHED] dev [unoptimized + debuginfo] target(s) in [..]
 ",
         ).run();
@@ -393,12 +395,13 @@ fn override_adds_some_deps() {
     p.cargo("build")
         .with_stderr(
             "\
-[UPDATING] registry `file://[..]`
+[UPDATING] `[ROOT][..]` index
 [UPDATING] git repository `[..]`
-[DOWNLOADING] baz v0.1.1 (registry [..])
+[DOWNLOADING] crates ...
+[DOWNLOADED] baz v0.1.1 (registry [..])
 [COMPILING] baz v0.1.1
 [COMPILING] bar v0.1.0 ([..])
-[COMPILING] foo v0.0.1 (CWD)
+[COMPILING] foo v0.0.1 ([CWD])
 [FINISHED] dev [unoptimized + debuginfo] target(s) in [..]
 ",
         ).run();
@@ -411,13 +414,13 @@ fn override_adds_some_deps() {
         .with_stderr(
             "\
 [UPDATING] git repository `file://[..]`
-[UPDATING] registry `file://[..]`
+[UPDATING] `[ROOT][..]` index
 ",
         ).run();
     p.cargo("update -p https://github.com/rust-lang/crates.io-index#bar")
         .with_stderr(
             "\
-[UPDATING] registry `file://[..]`
+[UPDATING] `[ROOT][..]` index
 ",
         ).run();
 
@@ -508,7 +511,7 @@ fn override_wrong_name() {
         .with_status(101)
         .with_stderr(
             "\
-[UPDATING] registry [..]
+[UPDATING] [..] index
 [UPDATING] git repository [..]
 error: no matching package for override `[..]baz:0.1.0` found
 location searched: file://[..]
@@ -550,7 +553,7 @@ fn override_with_nothing() {
         .with_status(101)
         .with_stderr(
             "\
-[UPDATING] registry [..]
+[UPDATING] [..] index
 [UPDATING] git repository [..]
 [ERROR] failed to load source for a dependency on `bar`
 
@@ -629,7 +632,7 @@ fn multiple_specs() {
         .with_status(101)
         .with_stderr(
             "\
-[UPDATING] registry [..]
+[UPDATING] [..] index
 [UPDATING] git repository [..]
 error: overlapping replacement specifications found:
 
@@ -717,7 +720,7 @@ fn update() {
     p.cargo("update")
         .with_stderr(
             "\
-[UPDATING] registry `[..]`
+[UPDATING] `[..]` index
 [UPDATING] git repository `[..]`
 ",
         ).run();
@@ -830,9 +833,10 @@ To change the dependency graph via an override it's recommended to use the
 `[replace]` feature of Cargo instead of the path override feature. This is
 documented online at the url below for more information.
 
-http://doc.crates.io/specifying-dependencies.html#overriding-dependencies
+https://doc.rust-lang.org/cargo/reference/specifying-dependencies.html#overriding-dependencies
 
-[DOWNLOADING] [..]
+[DOWNLOADING] crates ...
+[DOWNLOADED] [..]
 [COMPILING] [..]
 [COMPILING] [..]
 [COMPILING] [..]
@@ -1039,7 +1043,7 @@ fn no_warnings_when_replace_is_used_in_another_workspace_member() {
         .with_stdout("")
         .with_stderr(
             "\
-[UPDATING] registry `[..]`
+[UPDATING] `[..]` index
 [COMPILING] bar v0.1.0 ([..])
 [COMPILING] first_crate v0.1.0 ([..])
 [FINISHED] [..]",

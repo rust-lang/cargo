@@ -10,11 +10,10 @@ use serde_json;
 
 use core::manifest::TargetSourcePath;
 use core::profiles::{Lto, Profile};
-use core::shell::ColorChoice;
 use core::{PackageId, Target};
 use util::errors::{CargoResult, CargoResultExt, Internal};
 use util::paths;
-use util::{self, machine_message, Freshness, ProcessBuilder};
+use util::{self, machine_message, Freshness, ProcessBuilder, process};
 use util::{internal, join_paths, profile};
 
 use self::build_plan::BuildPlan;
@@ -129,6 +128,7 @@ fn compile<'a, 'cfg: 'a>(
     plan: &mut BuildPlan,
     unit: &Unit<'a>,
     exec: &Arc<Executor>,
+    force_rebuild: bool,
 ) -> CargoResult<()> {
     let bcx = cx.bcx;
     let build_plan = bcx.build_config.build_plan;
@@ -164,7 +164,7 @@ fn compile<'a, 'cfg: 'a>(
         let dirty = work.then(link_targets(cx, unit, false)?).then(dirty);
         let fresh = link_targets(cx, unit, true)?.then(fresh);
 
-        if exec.force_rebuild(unit) {
+        if exec.force_rebuild(unit) || force_rebuild {
             freshness = Freshness::Dirty;
         }
 
@@ -175,7 +175,7 @@ fn compile<'a, 'cfg: 'a>(
 
     // Be sure to compile all dependencies of this target as well.
     for unit in cx.dep_targets(unit).iter() {
-        compile(cx, jobs, plan, unit, exec)?;
+        compile(cx, jobs, plan, unit, exec, false)?;
     }
     if build_plan {
         plan.add(cx, unit)?;
@@ -240,8 +240,6 @@ fn rustc<'a, 'cfg>(
         .unwrap_or_else(|| cx.bcx.config.cwd())
         .to_path_buf();
 
-    let should_capture_output = cx.bcx.config.cli_unstable().compile_progress;
-
     return Ok(Work::new(move |state| {
         // Only at runtime have we discovered what the extra -L and -l
         // arguments are for native libraries, so we process those here. We
@@ -291,12 +289,7 @@ fn rustc<'a, 'cfg>(
         } else if build_plan {
             state.build_plan(buildkey, rustc.clone(), outputs.clone());
         } else {
-            let exec_result = if should_capture_output {
-                exec.exec_and_capture_output(rustc, &package_id, &target, mode, state)
-            } else {
-                exec.exec(rustc, &package_id, &target, mode)
-            };
-            exec_result
+            exec.exec_and_capture_output(rustc, &package_id, &target, mode, state)
                 .map_err(Internal::new)
                 .chain_err(|| format!("Could not compile `{}`.", name))?;
         }
@@ -590,7 +583,12 @@ fn rustdoc<'a, 'cfg>(cx: &mut Context<'a, 'cfg>, unit: &Unit<'a>) -> CargoResult
     rustdoc.arg("--crate-name").arg(&unit.target.crate_name());
     add_path_args(bcx, unit, &mut rustdoc);
     add_cap_lints(bcx, unit, &mut rustdoc);
-    add_color(bcx, &mut rustdoc);
+
+    let mut can_add_color_process = process(&*bcx.config.rustdoc()?);
+    can_add_color_process.args(&["--color", "never", "-V"]);
+    if bcx.rustc.cached_success(&can_add_color_process)? {
+        add_color(bcx, &mut rustdoc);
+    }
 
     if unit.kind != Kind::Host {
         if let Some(ref target) = bcx.build_config.requested_target {
@@ -628,8 +626,6 @@ fn rustdoc<'a, 'cfg>(cx: &mut Context<'a, 'cfg>, unit: &Unit<'a>) -> CargoResult
     let package_id = unit.pkg.package_id().clone();
     let target = unit.target.clone();
 
-    let should_capture_output = cx.bcx.config.cli_unstable().compile_progress;
-
     Ok(Work::new(move |state| {
         if let Some(output) = build_state.outputs.lock().unwrap().get(&key) {
             for cfg in output.cfgs.iter() {
@@ -648,10 +644,8 @@ fn rustdoc<'a, 'cfg>(cx: &mut Context<'a, 'cfg>, unit: &Unit<'a>) -> CargoResult
                     &mut |line| json_stderr(line, &package_id, &target),
                     false,
                 ).map(drop)
-        } else if should_capture_output {
-            state.capture_output(&rustdoc, false).map(drop)
         } else {
-            rustdoc.exec()
+            state.capture_output(&rustdoc, false).map(drop)
         };
         exec_result.chain_err(|| format!("Could not document `{}`.", name))?;
         Ok(())
@@ -708,12 +702,9 @@ fn add_cap_lints(bcx: &BuildContext, unit: &Unit, cmd: &mut ProcessBuilder) {
 }
 
 fn add_color(bcx: &BuildContext, cmd: &mut ProcessBuilder) {
-    let capture_output = bcx.config.cli_unstable().compile_progress;
     let shell = bcx.config.shell();
-    if capture_output || shell.color_choice() != ColorChoice::CargoAuto {
-        let color = if shell.supports_color() { "always" } else { "never" };
-        cmd.args(&["--color", color]);
-    }
+    let color = if shell.supports_color() { "always" } else { "never" };
+    cmd.args(&["--color", color]);
 }
 
 fn add_error_format(bcx: &BuildContext, cmd: &mut ProcessBuilder) {

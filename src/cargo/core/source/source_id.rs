@@ -210,7 +210,11 @@ impl SourceId {
     }
 
     pub fn display_registry(&self) -> String {
-        format!("registry `{}`", self.url())
+        if self.is_default_registry() {
+            "crates.io index".to_string()
+        } else {
+            format!("`{}` index", url_display(self.url()))
+        }
     }
 
     /// Is this source from a filesystem path
@@ -363,6 +367,18 @@ impl<'de> de::Deserialize<'de> for SourceId {
     }
 }
 
+fn url_display(url: &Url) -> String {
+    if url.scheme() == "file" {
+        if let Ok(path) = url.to_file_path() {
+            if let Some(path_str) = path.to_str() {
+                return path_str.to_string();
+            }
+        }
+    }
+
+    url.as_str().to_string()
+}
+
 impl fmt::Display for SourceId {
     fn fmt(&self, f: &mut Formatter) -> fmt::Result {
         match *self.inner {
@@ -370,13 +386,15 @@ impl fmt::Display for SourceId {
                 kind: Kind::Path,
                 ref url,
                 ..
-            } => fmt::Display::fmt(url, f),
+            } => write!(f, "{}", url_display(url)),
             SourceIdInner {
                 kind: Kind::Git(ref reference),
                 ref url,
                 ref precise,
                 ..
             } => {
+                // Don't replace the URL display for git references,
+                // because those are kind of expected to be URLs.
                 write!(f, "{}", url)?;
                 if let Some(pretty) = reference.pretty_ref() {
                     write!(f, "?{}", pretty)?;
@@ -397,12 +415,12 @@ impl fmt::Display for SourceId {
                 kind: Kind::LocalRegistry,
                 ref url,
                 ..
-            } => write!(f, "registry `{}`", url),
+            } => write!(f, "registry `{}`", url_display(url)),
             SourceIdInner {
                 kind: Kind::Directory,
                 ref url,
                 ..
-            } => write!(f, "dir {}", url),
+            } => write!(f, "dir {}", url_display(url)),
         }
     }
 }

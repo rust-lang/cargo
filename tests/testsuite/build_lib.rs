@@ -10,12 +10,12 @@ fn build_lib_only() {
     p.cargo("build --lib -v")
         .with_stderr(
             "\
-[COMPILING] foo v0.0.1 (CWD)
-[RUNNING] `rustc --crate-name foo src/lib.rs --crate-type lib \
+[COMPILING] foo v0.0.1 ([CWD])
+[RUNNING] `rustc --crate-name foo src/lib.rs --color never --crate-type lib \
         --emit=dep-info,link -C debuginfo=2 \
         -C metadata=[..] \
         --out-dir [..] \
-        -L dependency=CWD/target/debug/deps`
+        -L dependency=[CWD]/target/debug/deps`
 [FINISHED] dev [unoptimized + debuginfo] target(s) in [..]",
         ).run();
 }

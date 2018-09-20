@@ -39,7 +39,6 @@ fn cargo_verify_project_cwd() {
         .build();
 
     p.cargo("verify-project")
-        .cwd(p.root())
         .with_stdout(verify_project_success_output())
         .run();
 }

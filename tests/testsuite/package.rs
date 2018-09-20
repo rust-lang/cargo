@@ -27,16 +27,16 @@ fn simple() {
         .build();
 
     p.cargo("package")
-        .with_stderr(&format!(
+        .with_stderr(
             "\
 [WARNING] manifest has no documentation[..]
 See [..]
-[PACKAGING] foo v0.0.1 (CWD)
-[VERIFYING] foo v0.0.1 (CWD)
-[COMPILING] foo v0.0.1 (CWD[..])
+[PACKAGING] foo v0.0.1 ([CWD])
+[VERIFYING] foo v0.0.1 ([CWD])
+[COMPILING] foo v0.0.1 ([CWD][..])
 [FINISHED] dev [unoptimized + debuginfo] target(s) in [..]
 ",
-        )).run();
+        ).run();
     assert!(p.root().join("target/package/foo-0.0.1.crate").is_file());
     p.cargo("package -l")
         .with_stdout(
@@ -70,17 +70,17 @@ src/main.rs
 fn metadata_warning() {
     let p = project().file("src/main.rs", "fn main() {}").build();
     p.cargo("package")
-        .with_stderr(&format!(
+        .with_stderr(
             "\
 warning: manifest has no description, license, license-file, documentation, \
 homepage or repository.
 See http://doc.crates.io/manifest.html#package-metadata for more info.
-[PACKAGING] foo v0.0.1 (CWD)
-[VERIFYING] foo v0.0.1 (CWD)
-[COMPILING] foo v0.0.1 (CWD[..])
+[PACKAGING] foo v0.0.1 ([CWD])
+[VERIFYING] foo v0.0.1 ([CWD])
+[COMPILING] foo v0.0.1 ([CWD][..])
 [FINISHED] dev [unoptimized + debuginfo] target(s) in [..]
 ",
-        )).run();
+        ).run();
 
     let p = project()
         .file(
@@ -95,16 +95,16 @@ See http://doc.crates.io/manifest.html#package-metadata for more info.
         ).file("src/main.rs", "fn main() {}")
         .build();
     p.cargo("package")
-        .with_stderr(&format!(
+        .with_stderr(
             "\
 warning: manifest has no description, documentation, homepage or repository.
 See http://doc.crates.io/manifest.html#package-metadata for more info.
-[PACKAGING] foo v0.0.1 (CWD)
-[VERIFYING] foo v0.0.1 (CWD)
-[COMPILING] foo v0.0.1 (CWD[..])
+[PACKAGING] foo v0.0.1 ([CWD])
+[VERIFYING] foo v0.0.1 ([CWD])
+[COMPILING] foo v0.0.1 ([CWD][..])
 [FINISHED] dev [unoptimized + debuginfo] target(s) in [..]
 ",
-        )).run();
+        ).run();
 
     let p = project()
         .file(
@@ -121,14 +121,14 @@ See http://doc.crates.io/manifest.html#package-metadata for more info.
         ).file("src/main.rs", "fn main() {}")
         .build();
     p.cargo("package")
-        .with_stderr(&format!(
+        .with_stderr(
             "\
-[PACKAGING] foo v0.0.1 (CWD)
-[VERIFYING] foo v0.0.1 (CWD)
-[COMPILING] foo v0.0.1 (CWD[..])
+[PACKAGING] foo v0.0.1 ([CWD])
+[VERIFYING] foo v0.0.1 ([CWD])
+[COMPILING] foo v0.0.1 ([CWD][..])
 [FINISHED] dev [unoptimized + debuginfo] target(s) in [..]
 ",
-        )).run();
+        ).run();
 }
 
 #[test]
@@ -202,16 +202,16 @@ fn package_verification() {
     let p = project().file("src/main.rs", "fn main() {}").build();
     p.cargo("build").run();
     p.cargo("package")
-        .with_stderr(&format!(
+        .with_stderr(
             "\
 [WARNING] manifest has no description[..]
 See http://doc.crates.io/manifest.html#package-metadata for more info.
-[PACKAGING] foo v0.0.1 (CWD)
-[VERIFYING] foo v0.0.1 (CWD)
-[COMPILING] foo v0.0.1 (CWD[..])
+[PACKAGING] foo v0.0.1 ([CWD])
+[VERIFYING] foo v0.0.1 ([CWD])
+[COMPILING] foo v0.0.1 ([CWD][..])
 [FINISHED] dev [unoptimized + debuginfo] target(s) in [..]
 ",
-        )).run();
+        ).run();
 }
 
 #[test]
@@ -242,12 +242,12 @@ fn vcs_file_collision() {
     p.cargo("package")
         .arg("--no-verify")
         .with_status(101)
-        .with_stderr(&format!(
+        .with_stderr(
             "\
 [ERROR] Invalid inclusion of reserved file name .cargo_vcs_info.json \
 in package source
 ",
-        )).run();
+        ).run();
 }
 
 #[test]
@@ -490,8 +490,7 @@ fn package_git_submodule() {
             None,
         ).unwrap();
 
-    cargo_process("package --no-verify -v")
-        .cwd(project.root())
+    project.cargo("package --no-verify -v")
         .with_stderr_contains("[ARCHIVING] bar/Makefile")
         .run();
 }
@@ -541,16 +540,16 @@ fn ignore_nested() {
         .build();
 
     p.cargo("package")
-        .with_stderr(&format!(
+        .with_stderr(
             "\
 [WARNING] manifest has no documentation[..]
 See http://doc.crates.io/manifest.html#package-metadata for more info.
-[PACKAGING] foo v0.0.1 (CWD)
-[VERIFYING] foo v0.0.1 (CWD)
-[COMPILING] foo v0.0.1 (CWD[..])
+[PACKAGING] foo v0.0.1 ([CWD])
+[VERIFYING] foo v0.0.1 ([CWD])
+[COMPILING] foo v0.0.1 ([CWD][..])
 [FINISHED] dev [unoptimized + debuginfo] target(s) in [..]
 ",
-        )).run();
+        ).run();
     assert!(p.root().join("target/package/foo-0.0.1.crate").is_file());
     p.cargo("package -l")
         .with_stdout(
@@ -625,18 +624,17 @@ fn repackage_on_source_change() {
     std::mem::drop(file);
 
     // Check that cargo rebuilds the tarball
-    cargo_process("package")
-        .cwd(p.root())
-        .with_stderr(&format!(
+    p.cargo("package")
+        .with_stderr(
             "\
 [WARNING] [..]
 See [..]
-[PACKAGING] foo v0.0.1 (CWD)
-[VERIFYING] foo v0.0.1 (CWD)
-[COMPILING] foo v0.0.1 (CWD[..])
+[PACKAGING] foo v0.0.1 ([CWD])
+[VERIFYING] foo v0.0.1 ([CWD])
+[COMPILING] foo v0.0.1 ([CWD][..])
 [FINISHED] dev [unoptimized + debuginfo] target(s) in [..]
 ",
-        )).run();
+        ).run();
 
     // Check that the tarball contains the added file
     let f = File::open(&p.root().join("target/package/foo-0.0.1.crate")).unwrap();
@@ -934,10 +932,6 @@ fn package_two_kinds_of_deps() {
 
 #[test]
 fn test_edition() {
-    if !is_nightly() {
-        // --edition is nightly-only
-        return;
-    }
     let p = project()
         .file(
             "Cargo.toml",
@@ -953,10 +947,11 @@ fn test_edition() {
         .build();
 
     p.cargo("build -v").masquerade_as_nightly_cargo()
-                // --edition is still in flux and we're not passing -Zunstable-options
-                // from Cargo so it will probably error. Only partially match the output
-                // until stuff stabilizes
-                .with_stderr_contains("\
+        .without_status() // passes on nightly, fails on stable, b/c --edition is nightly-only
+        // --edition is still in flux and we're not passing -Zunstable-options
+        // from Cargo so it will probably error. Only partially match the output
+        // until stuff stabilizes
+        .with_stderr_contains("\
 [COMPILING] foo v0.0.1 ([..])
 [RUNNING] `rustc [..]--edition=2018 [..]
 ").run();
@@ -973,45 +968,19 @@ fn edition_with_metadata() {
         .file(
             "Cargo.toml",
             r#"
-            cargo-features = ["edition"]
-            [package]
-            name = "foo"
-            version = "0.0.1"
-            authors = []
-            edition = "2018"
-            [package.metadata.docs.rs]
-            features = ["foobar"]
-        "#,
+                [package]
+                name = "foo"
+                version = "0.0.1"
+                authors = []
+                edition = "2018"
+
+                [package.metadata.docs.rs]
+                features = ["foobar"]
+            "#,
         ).file("src/lib.rs", "")
         .build();
 
-    p.cargo("package").masquerade_as_nightly_cargo().run();
-}
-
-#[test]
-fn test_edition_missing() {
-    // no edition = 2015
-    let p = project()
-        .file(
-            "Cargo.toml",
-            r#"
-            cargo-features = ["edition"]
-            [package]
-            name = "foo"
-            version = "0.0.1"
-            authors = []
-        "#,
-        ).file("src/lib.rs", r#" "#)
-        .build();
-
-    p.cargo("build -v").masquerade_as_nightly_cargo()
-                // --edition is still in flux and we're not passing -Zunstable-options
-                // from Cargo so it will probably error. Only partially match the output
-                // until stuff stabilizes
-                .with_stderr_contains("\
-[COMPILING] foo v0.0.1 ([..])
-[RUNNING] `rustc [..]--edition=2015 [..]
-").run();
+    p.cargo("package").run();
 }
 
 #[test]
@@ -1020,18 +989,16 @@ fn test_edition_malformed() {
         .file(
             "Cargo.toml",
             r#"
-            cargo-features = ["edition"]
-            [package]
-            name = "foo"
-            version = "0.0.1"
-            authors = []
-            edition = "chicken"
-        "#,
+                [package]
+                name = "foo"
+                version = "0.0.1"
+                authors = []
+                edition = "chicken"
+            "#,
         ).file("src/lib.rs", r#" "#)
         .build();
 
     p.cargo("build -v")
-        .masquerade_as_nightly_cargo()
         .with_status(101)
         .with_stderr(
             "\
@@ -1043,39 +1010,6 @@ Caused by:
 Caused by:
   supported edition values are `2015` or `2018`, but `chicken` is unknown
 ".to_string(),
-        ).run();
-}
-
-#[test]
-fn test_edition_nightly() {
-    let p = project()
-        .file(
-            "Cargo.toml",
-            r#"
-            [package]
-            name = "foo"
-            version = "0.0.1"
-            authors = []
-            edition = "2015"
-        "#,
-        ).file("src/lib.rs", r#" "#)
-        .build();
-
-    p.cargo("build -v")
-        .masquerade_as_nightly_cargo()
-        .with_status(101)
-        .with_stderr(
-            "\
-error: failed to parse manifest at `[..]`
-
-Caused by:
-  editions are unstable
-
-Caused by:
-  feature `edition` is required
-
-consider adding `cargo-features = [\"edition\"]` to the manifest
-",
         ).run();
 }
 
@@ -1100,16 +1034,16 @@ fn package_lockfile() {
 
     p.cargo("package")
         .masquerade_as_nightly_cargo()
-        .with_stderr(&format!(
+        .with_stderr(
             "\
 [WARNING] manifest has no documentation[..]
 See [..]
-[PACKAGING] foo v0.0.1 (CWD)
-[VERIFYING] foo v0.0.1 (CWD)
-[COMPILING] foo v0.0.1 (CWD[..])
+[PACKAGING] foo v0.0.1 ([CWD])
+[VERIFYING] foo v0.0.1 ([CWD])
+[COMPILING] foo v0.0.1 ([CWD][..])
 [FINISHED] dev [unoptimized + debuginfo] target(s) in [..]
 ",
-        )).run();
+        ).run();
     assert!(p.root().join("target/package/foo-0.0.1.crate").is_file());
     p.cargo("package -l")
         .masquerade_as_nightly_cargo()

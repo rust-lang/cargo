@@ -10,7 +10,6 @@ fn edition_works_for_build_script() {
         .file(
             "Cargo.toml",
             r#"
-                cargo-features = ['edition']
                 [package]
                 name = 'foo'
                 version = '0.1.0'

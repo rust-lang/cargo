@@ -106,7 +106,7 @@ fn transitive_minor_update() {
     p.cargo("update -p serde")
         .with_stderr(
             "\
-[UPDATING] registry `[..]`
+[UPDATING] `[..]` index
 ",
         ).run();
 }
@@ -153,7 +153,7 @@ fn conservative() {
     p.cargo("update -p serde")
         .with_stderr(
             "\
-[UPDATING] registry `[..]`
+[UPDATING] `[..]` index
 [UPDATING] serde v0.1.0 -> v0.1.1
 ",
         ).run();
@@ -369,7 +369,7 @@ fn update_precise() {
     p.cargo("update -p serde:0.2.1 --precise 0.2.0")
         .with_stderr(
             "\
-[UPDATING] registry `[..]`
+[UPDATING] `[..]` index
 [UPDATING] serde v0.2.1 -> v0.2.0
 ",
         ).run();

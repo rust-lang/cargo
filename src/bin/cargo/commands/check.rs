@@ -21,7 +21,7 @@ pub fn cli() -> App {
             "Check all tests",
             "Check only the specified bench target",
             "Check all benches",
-            "Check all targets (lib and bin targets by default)",
+            "Check all targets",
         )
         .arg_release("Check artifacts in release mode, with optimizations")
         .arg(opt("profile", "Profile to build the selected target for").value_name("PROFILE"))

@@ -14,12 +14,12 @@ fn modifying_and_moving() {
         .build();
 
     p.cargo("build")
-        .with_stderr(format!(
+        .with_stderr(
             "\
-[COMPILING] foo v0.0.1 (CWD)
+[COMPILING] foo v0.0.1 ([CWD])
 [FINISHED] dev [unoptimized + debuginfo] target(s) in [..]
 ",
-        )).run();
+        ).run();
 
     p.cargo("build").with_stdout("").run();
     p.root().move_into_the_past();
@@ -30,12 +30,12 @@ fn modifying_and_moving() {
         .write_all(b"#[allow(unused)]fn main() {}")
         .unwrap();
     p.cargo("build")
-        .with_stderr(format!(
+        .with_stderr(
             "\
-[COMPILING] foo v0.0.1 (CWD)
+[COMPILING] foo v0.0.1 ([CWD])
 [FINISHED] dev [unoptimized + debuginfo] target(s) in [..]
 ",
-        )).run();
+        ).run();
 
     fs::rename(&p.root().join("src/a.rs"), &p.root().join("src/b.rs")).unwrap();
     p.cargo("build").with_status(101).run();
@@ -52,12 +52,12 @@ fn modify_only_some_files() {
         .build();
 
     p.cargo("build")
-        .with_stderr(format!(
+        .with_stderr(
             "\
-[COMPILING] foo v0.0.1 (CWD)
+[COMPILING] foo v0.0.1 ([CWD])
 [FINISHED] dev [unoptimized + debuginfo] target(s) in [..]
 ",
-        )).run();
+        ).run();
     p.cargo("test").run();
     sleep_ms(1000);
 
@@ -78,12 +78,12 @@ fn modify_only_some_files() {
 
     // Make sure the binary is rebuilt, not the lib
     p.cargo("build")
-        .with_stderr(format!(
+        .with_stderr(
             "\
-[COMPILING] foo v0.0.1 (CWD)
+[COMPILING] foo v0.0.1 ([CWD])
 [FINISHED] dev [unoptimized + debuginfo] target(s) in [..]
 ",
-        )).run();
+        ).run();
     assert!(p.bin("foo").is_file());
 }
 
@@ -644,19 +644,19 @@ fn same_build_dir_cached_packages() {
 [COMPILING] d v0.0.1 ({dir}/d)
 [COMPILING] c v0.0.1 ({dir}/c)
 [COMPILING] b v0.0.1 ({dir}/b)
-[COMPILING] a1 v0.0.1 (CWD)
+[COMPILING] a1 v0.0.1 ([CWD])
 [FINISHED] dev [unoptimized + debuginfo] target(s) in [..]
 ",
-            dir = p.url()
+            dir = p.url().to_file_path().unwrap().to_str().unwrap()
         )).run();
     p.cargo("build")
         .cwd(p.root().join("a2"))
-        .with_stderr(&format!(
+        .with_stderr(
             "\
-[COMPILING] a2 v0.0.1 (CWD)
+[COMPILING] a2 v0.0.1 ([CWD])
 [FINISHED] dev [unoptimized + debuginfo] target(s) in [..]
 ",
-        )).run();
+        ).run();
 }
 
 #[test]
@@ -746,13 +746,13 @@ fn rebuild_if_environment_changes() {
 
     p.cargo("run")
         .with_stdout("old desc")
-        .with_stderr(&format!(
+        .with_stderr(
             "\
-[COMPILING] foo v0.0.1 (CWD)
+[COMPILING] foo v0.0.1 ([CWD])
 [FINISHED] dev [unoptimized + debuginfo] target(s) in [..]
 [RUNNING] `target/debug/foo[EXE]`
 ",
-        )).run();
+        ).run();
 
     File::create(&p.root().join("Cargo.toml"))
         .unwrap()
@@ -768,13 +768,13 @@ fn rebuild_if_environment_changes() {
 
     p.cargo("run")
         .with_stdout("new desc")
-        .with_stderr(&format!(
+        .with_stderr(
             "\
-[COMPILING] foo v0.0.1 (CWD)
+[COMPILING] foo v0.0.1 ([CWD])
 [FINISHED] dev [unoptimized + debuginfo] target(s) in [..]
 [RUNNING] `target/debug/foo[EXE]`
 ",
-        )).run();
+        ).run();
 }
 
 #[test]

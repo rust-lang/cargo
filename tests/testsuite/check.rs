@@ -521,7 +521,7 @@ fn check_filters() {
     p.root().join("target").rm_rf();
     p.cargo("check --tests -v")
         .with_stderr_contains("[..] --crate-name foo src/lib.rs [..] --test [..]")
-        .with_stderr_contains("[..] --crate-name foo src/lib.rs --crate-type lib [..]")
+        .with_stderr_contains("[..] --crate-name foo src/lib.rs [..] --crate-type lib [..]")
         .with_stderr_contains("[..] --crate-name foo src/main.rs [..] --test [..]")
         .with_stderr_contains("[..]unused_unit_lib[..]")
         .with_stderr_contains("[..]unused_unit_bin[..]")
@@ -683,4 +683,10 @@ fn proc_macro() {
             "#,
         ).build();
     p.cargo("check -v").env("RUST_LOG", "cargo=trace").run();
+}
+
+#[test]
+fn does_not_use_empty_rustc_wrapper() {
+    let p = project().file("src/lib.rs", "").build();
+    p.cargo("check").env("RUSTC_WRAPPER", "").run();
 }

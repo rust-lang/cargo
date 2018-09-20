@@ -16,7 +16,7 @@ use util::profile;
 pub fn resolve_ws<'a>(ws: &Workspace<'a>) -> CargoResult<(PackageSet<'a>, Resolve)> {
     let mut registry = PackageRegistry::new(ws.config())?;
     let resolve = resolve_with_registry(ws, &mut registry, true)?;
-    let packages = get_resolved_packages(&resolve, registry);
+    let packages = get_resolved_packages(&resolve, registry)?;
     Ok((packages, resolve))
 }
 
@@ -96,7 +96,7 @@ pub fn resolve_ws_with_method<'a>(
         true,
     )?;
 
-    let packages = get_resolved_packages(&resolved_with_overrides, registry);
+    let packages = get_resolved_packages(&resolved_with_overrides, registry)?;
 
     Ok((packages, resolved_with_overrides))
 }
@@ -374,7 +374,7 @@ pub fn add_overrides<'a>(
 pub fn get_resolved_packages<'a>(
     resolve: &Resolve,
     registry: PackageRegistry<'a>,
-) -> PackageSet<'a> {
+) -> CargoResult<PackageSet<'a>> {
     let ids: Vec<PackageId> = resolve.iter().cloned().collect();
     registry.get(&ids)
 }

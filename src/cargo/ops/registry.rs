@@ -177,6 +177,7 @@ fn transmit(
                     Kind::Development => "dev",
                 }.to_string(),
                 registry: dep_registry,
+                explicit_name_in_toml: dep.explicit_name_in_toml().map(|s| s.to_string()),
             })
         })
         .collect::<CargoResult<Vec<NewCrateDependency>>>()?;
@@ -367,8 +368,8 @@ pub fn configure_http_handle(config: &Config, handle: &mut Easy) -> CargoResult<
     // connect phase as well as a "low speed" timeout so if we don't receive
     // many bytes in a large-ish period of time then we time out.
     handle.connect_timeout(Duration::new(30, 0))?;
-    handle.low_speed_limit(10 /* bytes per second */)?;
     handle.low_speed_time(Duration::new(30, 0))?;
+    handle.low_speed_limit(http_low_speed_limit(config)?)?;
     if let Some(proxy) = http_proxy(config)? {
         handle.proxy(&proxy)?;
     }
@@ -388,6 +389,14 @@ pub fn configure_http_handle(config: &Config, handle: &mut Easy) -> CargoResult<
         handle.useragent(&version().to_string())?;
     }
     Ok(())
+}
+
+/// Find an override from config for curl low-speed-limit option, otherwise use default value
+fn http_low_speed_limit(config: &Config) -> CargoResult<u32> {
+    if let Some(s) = config.get::<Option<u32>>("http.low-speed-limit")? {
+        return Ok(s);
+    }
+    Ok(10)
 }
 
 /// Find an explicit HTTP proxy if one is available.

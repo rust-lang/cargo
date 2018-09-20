@@ -170,6 +170,7 @@ use serde_json;
 use tar::Archive;
 
 use core::dependency::{Dependency, Kind};
+use core::source::MaybePackage;
 use core::{Package, PackageId, Source, SourceId, Summary};
 use sources::PathSource;
 use util::errors::CargoResultExt;
@@ -275,6 +276,7 @@ struct RegistryDependency<'a> {
     target: Option<Cow<'a, str>>,
     kind: Option<Cow<'a, str>>,
     registry: Option<Cow<'a, str>>,
+    package: Option<Cow<'a, str>>,
 }
 
 impl<'a> RegistryDependency<'a> {
@@ -289,6 +291,7 @@ impl<'a> RegistryDependency<'a> {
             target,
             kind,
             registry,
+            package,
         } = self;
 
         let id = if let Some(registry) = registry {
@@ -297,7 +300,15 @@ impl<'a> RegistryDependency<'a> {
             default.clone()
         };
 
-        let mut dep = Dependency::parse_no_deprecated(&name, Some(&req), &id)?;
+
+        let mut dep = Dependency::parse_no_deprecated(
+            package.as_ref().unwrap_or(&name),
+            Some(&req),
+            &id,
+        )?;
+        if package.is_some() {
+            dep.set_explicit_name_in_toml(&name);
+        }
         let kind = match kind.as_ref().map(|s| &s[..]).unwrap_or("") {
             "dev" => Kind::Development,
             "build" => Kind::Build,
@@ -337,11 +348,18 @@ pub trait RegistryData {
     ) -> CargoResult<()>;
     fn config(&mut self) -> CargoResult<Option<RegistryConfig>>;
     fn update_index(&mut self) -> CargoResult<()>;
-    fn download(&mut self, pkg: &PackageId, checksum: &str) -> CargoResult<FileLock>;
+    fn download(&mut self, pkg: &PackageId, checksum: &str) -> CargoResult<MaybeLock>;
+    fn finish_download(&mut self, pkg: &PackageId, checksum: &str, data: &[u8])
+        -> CargoResult<FileLock>;
 
     fn is_crate_downloaded(&self, _pkg: &PackageId) -> bool {
         true
     }
+}
+
+pub enum MaybeLock {
+    Ready(FileLock),
+    Download { url: String, descriptor: String }
 }
 
 mod index;
@@ -452,6 +470,34 @@ impl<'cfg> RegistrySource<'cfg> {
             index::RegistryIndex::new(&self.source_id, path, self.config, self.index_locked);
         Ok(())
     }
+
+    fn get_pkg(&mut self, package: &PackageId, path: FileLock) -> CargoResult<Package> {
+        let path = self
+            .unpack_package(package, &path)
+            .chain_err(|| internal(format!("failed to unpack package `{}`", package)))?;
+        let mut src = PathSource::new(&path, &self.source_id, self.config);
+        src.update()?;
+        let pkg = match src.download(package)? {
+            MaybePackage::Ready(pkg) => pkg,
+            MaybePackage::Download { .. } => unreachable!(),
+        };
+
+        // Unfortunately the index and the actual Cargo.toml in the index can
+        // differ due to historical Cargo bugs. To paper over these we trash the
+        // *summary* loaded from the Cargo.toml we just downloaded with the one
+        // we loaded from the index.
+        let summaries = self
+            .index
+            .summaries(package.name().as_str(), &mut *self.ops)?;
+        let summary = summaries
+            .iter()
+            .map(|s| &s.0)
+            .find(|s| s.package_id() == package)
+            .expect("summary not found");
+        let mut manifest = pkg.manifest().clone();
+        manifest.set_summary(summary.clone());
+        Ok(Package::new(manifest, pkg.manifest_path()))
+    }
 }
 
 impl<'cfg> Source for RegistrySource<'cfg> {
@@ -516,31 +562,24 @@ impl<'cfg> Source for RegistrySource<'cfg> {
         Ok(())
     }
 
-    fn download(&mut self, package: &PackageId) -> CargoResult<Package> {
+    fn download(&mut self, package: &PackageId) -> CargoResult<MaybePackage> {
         let hash = self.index.hash(package, &mut *self.ops)?;
-        let path = self.ops.download(package, &hash)?;
-        let path = self
-            .unpack_package(package, &path)
-            .chain_err(|| internal(format!("failed to unpack package `{}`", package)))?;
-        let mut src = PathSource::new(&path, &self.source_id, self.config);
-        src.update()?;
-        let pkg = src.download(package)?;
+        match self.ops.download(package, &hash)? {
+            MaybeLock::Ready(file) => {
+                self.get_pkg(package, file).map(MaybePackage::Ready)
+            }
+            MaybeLock::Download { url, descriptor } => {
+                Ok(MaybePackage::Download { url, descriptor })
+            }
+        }
+    }
 
-        // Unfortunately the index and the actual Cargo.toml in the index can
-        // differ due to historical Cargo bugs. To paper over these we trash the
-        // *summary* loaded from the Cargo.toml we just downloaded with the one
-        // we loaded from the index.
-        let summaries = self
-            .index
-            .summaries(package.name().as_str(), &mut *self.ops)?;
-        let summary = summaries
-            .iter()
-            .map(|s| &s.0)
-            .find(|s| s.package_id() == package)
-            .expect("summary not found");
-        let mut manifest = pkg.manifest().clone();
-        manifest.set_summary(summary.clone());
-        Ok(Package::new(manifest, pkg.manifest_path()))
+    fn finish_download(&mut self, package: &PackageId, data: Vec<u8>)
+        -> CargoResult<Package>
+    {
+        let hash = self.index.hash(package, &mut *self.ops)?;
+        let file = self.ops.finish_download(package, &hash, &data)?;
+        self.get_pkg(package, file)
     }
 
     fn fingerprint(&self, pkg: &Package) -> CargoResult<String> {

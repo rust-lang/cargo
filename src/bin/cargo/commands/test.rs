@@ -1,6 +1,6 @@
 use command_prelude::*;
 
-use cargo::ops;
+use cargo::ops::{self, CompileFilter};
 
 pub fn cli() -> App {
     subcommand("test")
@@ -27,7 +27,7 @@ pub fn cli() -> App {
             "Test all tests",
             "Test only the specified bench target",
             "Test all benches",
-            "Test all targets (default)",
+            "Test all targets",
         )
         .arg(opt("doc", "Test only this library's documentation"))
         .arg(opt("no-run", "Compile, but don't run tests"))
@@ -92,8 +92,12 @@ pub fn exec(config: &mut Config, args: &ArgMatches) -> CliResult {
     let ws = args.workspace(config)?;
 
     let mut compile_opts = args.compile_options(config, CompileMode::Test)?;
+
     let doc = args.is_present("doc");
     if doc {
+        if let CompileFilter::Only { .. } = compile_opts.filter {
+            return Err(CliError::new(format_err!("Can't mix --doc with other target selecting options"), 101))
+        }
         compile_opts.build_config.mode = CompileMode::Doctest;
         compile_opts.filter = ops::CompileFilter::new(
             true,
@@ -112,7 +116,6 @@ pub fn exec(config: &mut Config, args: &ArgMatches) -> CliResult {
     let ops = ops::TestOptions {
         no_run: args.is_present("no-run"),
         no_fail_fast: args.is_present("no-fail-fast"),
-        only_doc: doc,
         compile_opts,
     };
 
