@@ -1,6 +1,7 @@
 # Default values: https://probot.github.io/apps/stale/#installation
 
-daysUntilStale: 180
+daysUntilStale: 1160 # ~3 yrs 2 months
+daysUntilClose: 30
 
 exemptLabels:
   - C-tracking-issue      # keep tracking issues open
@@ -10,22 +11,14 @@ exemptLabels:
 staleLabel: stale
 
 markComment: >
-  As there hasn't been any activity here in over 6 months I've marked this as
-  stale and if no further activity happens for 7 days I will close it.
-
-
-  [I'm a bot](https://github.com/probot/stale) so this may be in error!  If this
-  issue should remain open, could someone (the author, a team member, or any
-  interested party) please comment to that effect?
-
-
-  The team would be especially grateful if such a comment included details such
-  as:
+  As there hasn't been any activity here in a while would someone (the author, a
+  team member, or any interested party) be able to summarise the current state,
+  perhaps making explicit:
     * Is this still relevant?
     * If so, what is blocking it?
     * Is it known what could be done to help move this forward?
 
-  Thank you for contributing!
+  Thank you!
 
 
   (The cargo team is currently evaluating the use of Stale bot, and using #6035
@@ -38,7 +31,7 @@ markComment: >
   acceptable!
 
 closeComment: >
-  As I didn't see any updates I'm going to close this due to being stale.
+  As I didn't see any updates in 30 days I'm going to close this.
   Please see the previous comment for more information!
 
 limitPerRun: 1 # 1 per hour, so 24 per day
