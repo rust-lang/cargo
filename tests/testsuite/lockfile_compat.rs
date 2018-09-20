@@ -480,7 +480,7 @@ fn locked_correct_error() {
         .with_stderr(
             "\
 [UPDATING] `[..]` index
-error: the lock file needs to be updated but --locked was passed to prevent this
+error: the lock file [CWD]/Cargo.lock needs to be updated but --locked was passed to prevent this
 ",
         ).run();
 }
