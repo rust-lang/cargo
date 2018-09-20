@@ -140,7 +140,6 @@ impl<'cfg> Compilation<'cfg> {
     pub fn rustdoc_process(&self, pkg: &Package, target: &Target) -> CargoResult<ProcessBuilder> {
         let mut p = self.fill_env(process(&*self.config.rustdoc()?), pkg, false)?;
         if target.edition() != Edition::Edition2015 {
-            p.arg("-Zunstable-options");
             p.arg(format!("--edition={}", target.edition()));
         }
         Ok(p)
