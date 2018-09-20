@@ -284,6 +284,22 @@ fn multiple_crates_select() {
 }
 
 #[test]
+fn multiple_crates_git_all() {
+    let p = git::repo(&paths::root().join("foo"))
+        .file("Cargo.toml", r#"\
+[workspace]
+members = ["bin1", "bin2"]
+"#)
+        .file("bin1/Cargo.toml", &basic_manifest("bin1", "0.1.0"))
+        .file("bin2/Cargo.toml", &basic_manifest("bin2", "0.1.0"))
+        .file("bin1/src/main.rs", r#"fn main() { println!("Hello, world!"); }"#)
+        .file("bin2/src/main.rs", r#"fn main() { println!("Hello, world!"); }"#)
+        .build();
+
+    cargo_process(&format!("install --git {} bin1 bin2", p.url().to_string())).run();
+}
+
+#[test]
 fn multiple_crates_auto_binaries() {
     let p = project()
         .file(
