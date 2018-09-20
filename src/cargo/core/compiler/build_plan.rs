@@ -24,6 +24,7 @@ struct Invocation {
     kind: Kind,
     deps: Vec<usize>,
     outputs: Vec<PathBuf>,
+    build_script_deps: Vec<String>,
     links: BTreeMap<PathBuf, PathBuf>,
     program: String,
     args: Vec<String>,
@@ -53,6 +54,7 @@ impl Invocation {
             target_kind: unit.target.kind().clone(),
             deps,
             outputs: Vec::new(),
+            build_script_deps: Vec::new(),
             links: BTreeMap::new(),
             program: String::new(),
             args: Vec::new(),
@@ -113,7 +115,12 @@ impl BuildPlan {
             .iter()
             .map(|dep| self.invocation_map[&dep.buildkey()])
             .collect();
-        let invocation = Invocation::new(unit, deps);
+        let mut invocation = Invocation::new(unit, deps);
+        if let Some(build_deps) = cx.build_scripts.get(unit) {
+            for (pkg_id, _) in build_deps.to_link.iter() {
+                invocation.build_script_deps.push(pkg_id.name().to_string())
+            }
+        }
         self.plan.invocations.push(invocation);
         Ok(())
     }
