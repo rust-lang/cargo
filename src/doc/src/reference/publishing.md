@@ -132,7 +132,7 @@ The semantics of a yanked version are that no new dependencies can be created
 against that version, but all existing dependencies continue to work. One of the
 major goals of [crates.io] is to act as a permanent archive of crates that does
 not change over time, and allowing deletion of a version would go against this
-goal. Essentially a yank means that all projects with a `Cargo.lock` will not
+goal. Essentially a yank means that all packages with a `Cargo.lock` will not
 break, while any future `Cargo.lock` files generated will not list the yanked
 version.
 

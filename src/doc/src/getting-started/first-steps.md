@@ -1,6 +1,6 @@
 ## First Steps with Cargo
 
-To start a new project with Cargo, use `cargo new`:
+To start a new package with Cargo, use `cargo new`:
 
 ```console
 $ cargo new hello_world
@@ -32,7 +32,7 @@ authors = ["Your Name <you@example.com>"]
 ```
 
 This is called a **manifest**, and it contains all of the metadata that Cargo
-needs to compile your project.
+needs to compile your package.
 
 Here’s what’s in `src/main.rs`:
 
@@ -46,7 +46,7 @@ Cargo generated a “hello world” for us. Let’s compile it:
 
 ```console
 $ cargo build
-   Compiling hello_world v0.1.0 (file:///path/to/project/hello_world)
+   Compiling hello_world v0.1.0 (file:///path/to/package/hello_world)
 ```
 
 And then run it:
@@ -60,7 +60,7 @@ We can also use `cargo run` to compile and then run it, all in one step:
 
 ```console
 $ cargo run
-     Fresh hello_world v0.1.0 (file:///path/to/project/hello_world)
+     Fresh hello_world v0.1.0 (file:///path/to/package/hello_world)
    Running `target/hello_world`
 Hello, world!
 ```

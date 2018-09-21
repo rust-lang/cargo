@@ -1,6 +1,6 @@
-## Creating a New Project
+## Creating a New Package
 
-To start a new project with Cargo, use `cargo new`:
+To start a new package with Cargo, use `cargo new`:
 
 ```console
 $ cargo new hello_world --bin
@@ -33,7 +33,7 @@ authors = ["Your Name <you@example.com>"]
 ```
 
 This is called a **manifest**, and it contains all of the metadata that Cargo
-needs to compile your project.
+needs to compile your package.
 
 Here’s what’s in `src/main.rs`:
 
@@ -47,7 +47,7 @@ Cargo generated a “hello world” for us. Let’s compile it:
 
 ```console
 $ cargo build
-   Compiling hello_world v0.1.0 (file:///path/to/project/hello_world)
+   Compiling hello_world v0.1.0 (file:///path/to/package/hello_world)
 ```
 
 And then run it:
@@ -63,7 +63,7 @@ compiled):
 
 ```console
 $ cargo run
-   Compiling hello_world v0.1.0 (file:///path/to/project/hello_world)
+   Compiling hello_world v0.1.0 (file:///path/to/package/hello_world)
      Running `target/debug/hello_world`
 Hello, world!
 ```
@@ -76,7 +76,7 @@ your files with optimizations turned on:
 
 ```console
 $ cargo build --release
-   Compiling hello_world v0.1.0 (file:///path/to/project/hello_world)
+   Compiling hello_world v0.1.0 (file:///path/to/package/hello_world)
 ```
 
 `cargo build --release` puts the resulting binary in `target/release` instead of

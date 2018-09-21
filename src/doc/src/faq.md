@@ -13,7 +13,7 @@ even when people use the registry as the primary source of packages.
 
 We think that it’s very important to support multiple ways to download
 packages, including downloading from GitHub and copying packages into
-your project itself.
+your package itself.
 
 That said, we think that [crates.io] offers a number of important benefits, and
 will likely become the primary way that people download packages in Cargo.
@@ -46,7 +46,7 @@ languages include:
 
 Yes!
 
-Cargo handles compiling Rust code, but we know that many Rust projects
+Cargo handles compiling Rust code, but we know that many Rust packages
 link against C code. We also know that there are decades of tooling
 built up around compiling languages other than Rust.
 
@@ -58,7 +58,7 @@ functionality among packages.
 ### Can Cargo be used inside of `make` (or `ninja`, or ...)
 
 Indeed. While we intend Cargo to be useful as a standalone way to
-compile Rust projects at the top-level, we know that some people will
+compile Rust packages at the top-level, we know that some people will
 want to invoke Cargo from other build tools.
 
 We have designed Cargo to work well in those contexts, paying attention
@@ -67,7 +67,7 @@ have some work to do on those fronts, but using Cargo in the context of
 conventional scripts is something we designed for from the beginning and
 will continue to prioritize.
 
-### Does Cargo handle multi-platform projects or cross-compilation?
+### Does Cargo handle multi-platform packages or cross-compilation?
 
 Rust itself provides facilities for configuring sections of code based
 on the platform. Cargo also supports [platform-specific
@@ -77,7 +77,7 @@ configuration in `Cargo.toml` in the future.
 [target-deps]: reference/specifying-dependencies.html#platform-specific-dependencies
 
 In the longer-term, we’re looking at ways to conveniently cross-compile
-projects using Cargo.
+packages using Cargo.
 
 ### Does Cargo support environments, like `production` or `test`?
 
@@ -105,10 +105,10 @@ issue][3].
 
 The purpose of a `Cargo.lock` is to describe the state of the world at the time
 of a successful build. It is then used to provide deterministic builds across
-whatever machine is building the project by ensuring that the exact same
+whatever machine is building the package by ensuring that the exact same
 dependencies are being compiled.
 
-This property is most desirable from applications and projects which are at the
+This property is most desirable from applications and packages which are at the
 very end of the dependency chain (binaries). As a result, it is recommended that
 all binaries check in their `Cargo.lock`.
 
