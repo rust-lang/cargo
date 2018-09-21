@@ -511,7 +511,7 @@ fn no_filename() {
     cargo_process("init /")
         .with_status(101)
         .with_stderr(
-            "[ERROR] cannot auto-detect project name from path \"/\" ; use --name to override"
+            "[ERROR] cannot auto-detect package name from path \"/\" ; use --name to override"
                 .to_string(),
         ).run();
 }
