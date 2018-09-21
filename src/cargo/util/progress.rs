@@ -37,7 +37,9 @@ struct Format {
 
 impl<'cfg> Progress<'cfg> {
     pub fn with_custom_style(name: &str, cfg: &'cfg Config) -> Progress<'cfg> {
-   // @TODO: use   let format_template = cfg.get_string("TERM").unwrap().map(|s| s.val);
+        // todo: since cfg stores all the env vars, maybe we can use that one, one day
+        // cfg.get_string("CARGO_STATUS").unwrap().map(|s| s.val);
+
         let format_template: String = match env::var("CARGO_STATUS") {
             Ok(template) => template,
             // if not set, fall back to default
