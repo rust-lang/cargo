@@ -35,7 +35,7 @@ system:
 * `CARGO_CACHE_RUSTC_INFO` — If this is set to 0 then Cargo will not try to cache
   compiler version information.
 * `CARGO_STATUS` — If this is set, cargo will read it as compile progress template.
-  The default format is `[%b] %f/%t: %n` which will looke like this:
+  The default format is `[%b] %f/%t: %n` which will look like this:
   ` Building [=====>      ] 115/145: libssh2-sys(build), thread_l...`
   The following parameters are supported:
     * `%b`  progress bar `=======>`

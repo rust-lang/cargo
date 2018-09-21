@@ -124,7 +124,6 @@ impl<'cfg> Progress<'cfg> {
         }
     }
 
-
     pub fn disable(&mut self) {
         self.state = None;
     }
@@ -137,7 +136,13 @@ impl<'cfg> Progress<'cfg> {
         Self::with_custom_style(name, cfg)
     }
 
-    pub fn tick(&mut self, cur: usize, max: usize, active: usize, render_jobs: bool) -> CargoResult<()> {
+    pub fn tick(
+        &mut self,
+        cur: usize,
+        max: usize,
+        active: usize,
+        render_jobs: bool,
+    ) -> CargoResult<()> {
         let s = match &mut self.state {
             Some(s) => s,
             None => return Ok(()),
@@ -156,13 +161,19 @@ impl<'cfg> Progress<'cfg> {
         //    draw to the console every so often. Currently there's a 100ms
         //    delay between updates.
         if !s.throttle.allowed() {
-            return Ok(())
+            return Ok(());
         }
 
         s.tick(cur, max, active, "", render_jobs)
     }
 
-    pub fn tick_now(&mut self, cur: usize, max: usize, active_names: Vec<String>, render_jobs: bool) -> CargoResult<()> {
+    pub fn tick_now(
+        &mut self,
+        cur: usize,
+        max: usize,
+        active_names: Vec<String>,
+        render_jobs: bool,
+    ) -> CargoResult<()> {
         let active = active_names.len();
         let msg = &active_names.join(", ");
         match self.state {
@@ -204,12 +215,12 @@ impl Throttle {
         if self.first {
             let delay = Duration::from_millis(500);
             if self.last_update.elapsed() < delay {
-                return false
+                return false;
             }
         } else {
             let interval = Duration::from_millis(100);
             if self.last_update.elapsed() < interval {
-                return false
+                return false;
             }
         }
         self.update();
@@ -223,7 +234,14 @@ impl Throttle {
 }
 
 impl<'cfg> State<'cfg> {
-    fn tick(&mut self, cur: usize, max: usize, active: usize, msg: &str, render_jobs: bool) -> CargoResult<()> {
+    fn tick(
+        &mut self,
+        cur: usize,
+        max: usize,
+        active: usize,
+        msg: &str,
+        render_jobs: bool,
+    ) -> CargoResult<()> {
         if self.done {
             return Ok(());
         }
@@ -247,7 +265,7 @@ impl<'cfg> State<'cfg> {
 
         // make sure we have enough room for the header
         if self.format.max_width < 15 {
-            return Ok(())
+            return Ok(());
         }
         self.config.shell().status_header(&self.name)?;
         let mut line = prefix.to_string();
@@ -291,8 +309,9 @@ impl Format {
         // %n list of names of running jobs
 
         let template = &self.formatting; // what the formatting is supposed to look like
-         // what is left if we remove all dynamic parameters
-         // will be "[] /: " for default formatting of "[%b] %f/%t: %n"
+
+        // what is left if we remove all dynamic parameters
+        // will be "[] /: " for default formatting of "[%b] %f/%t: %n"
         let mut template_skelleton = template.to_string();
         for fmt in &["%b", "%f", "%t", "%p", "%P", "%%", "%n", "%r", "%s", "%u"] {
             // remove all the formatting specifiers
@@ -300,23 +319,54 @@ impl Format {
         }
         let length_of_formatters = template.len() - template_skelleton.len();
 
-        // Render the percentage at the far right and then figure how long the progress bar iscustom.compile_progress
+        // Render the percentage at the far right and then figure how long the progress bar is
         let pct = (cur as f64) / (max as f64);
         let pct = if !pct.is_finite() { 0.0 } else { pct };
-        let started_str = if template.contains("%s") { (cur + active).to_string() } else { String::new() };
-        let remaining_str = if template.contains("%s") { (max - (cur + active)).to_string() } else { String::new() };
-        let percentage = if template.contains("%p") { format!("{:6.02}", pct * 100.0) } else { String::new() };
-        let percentage_int = if template.contains("%P") { format!("{:4}", (pct * 100.0) as i8 ) } else { String::new() };
-        let percentage_char = if template.contains("%%") { "%".to_string() } else { String::new() };
-        let cur_str = if template.contains("%f") { cur.to_string() } else { String::new() };
-        let max_str = if template.contains("%t") { max.to_string() } else { String::new() };
-        let running_str = if template.contains("%r") { active.to_string() } else { String::new() };
+        let started_str = if template.contains("%s") {
+            (cur + active).to_string()
+        } else {
+            String::new()
+        };
+        let remaining_str = if template.contains("%s") {
+            (max - (cur + active)).to_string()
+        } else {
+            String::new()
+        };
+        let percentage = if template.contains("%p") {
+            format!("{:6.02}", pct * 100.0)
+        } else {
+            String::new()
+        };
+        let percentage_int = if template.contains("%P") {
+            format!("{:4}", (pct * 100.0) as i8)
+        } else {
+            String::new()
+        };
+        let percentage_char = if template.contains("%%") {
+            "%".to_string()
+        } else {
+            String::new()
+        };
+        let cur_str = if template.contains("%f") {
+            cur.to_string()
+        } else {
+            String::new()
+        };
+        let max_str = if template.contains("%t") {
+            max.to_string()
+        } else {
+            String::new()
+        };
+        let running_str = if template.contains("%r") {
+            active.to_string()
+        } else {
+            String::new()
+        };
         // compile status default looks like this
         //      Building [=====>                    ] 30/128:
         // |____________|||________________________||| ||    \_
         // status header |    progress bar          `|cur`fmt  max
         // passed via formatting          both passed via formatting
-
 
         const STATUS_HEADER_LEN: usize = 15;
         // extra_len is everything without the progress bar and without the jobs_names
@@ -346,7 +396,7 @@ impl Format {
 
             // Draw the `===>`
             if hashes > 0 {
-                progress_bar.push_str(&"=".repeat(hashes-1));
+                progress_bar.push_str(&"=".repeat(hashes - 1));
                 if cur == max {
                     progress_bar.push_str("=");
                 } else {
@@ -360,8 +410,8 @@ impl Format {
 
         let mut jobs_names = String::new();
         if template.contains("%n") {
-            let mut avail_msg_len = self.max_width - (
-                    progress_bar.len()
+            let mut avail_msg_len = self.max_width
+                - (progress_bar.len()
                     + template_skelleton.len()
                     + length_of_formatters
                     + percentage.len()
@@ -372,7 +422,7 @@ impl Format {
                     + running_str.len()
                     + started_str.len()
                     + remaining_str.len()
-                    + 7  /* ?? */);
+                    + 7);
 
             let mut ellipsis_pos = 0;
             if avail_msg_len > 3 {
@@ -392,18 +442,17 @@ impl Format {
                 }
             }
         }
-        let mut progress_line = template.clone();
-        progress_line = progress_line.replace("%f", &cur_str);
-        progress_line = progress_line.replace("%t", &max_str);
-        progress_line = progress_line.replace("%p", &percentage);
-        progress_line = progress_line.replace("%P", &percentage_int);
-        progress_line = progress_line.replace("%%", &percentage_char);
-        progress_line = progress_line.replace("%b", &progress_bar);
-        progress_line = progress_line.replace("%n", &jobs_names);
-        progress_line = progress_line.replace("%r", &running_str);
-        progress_line = progress_line.replace("%s", &started_str);
-        progress_line = progress_line.replace("%u", &remaining_str);
-
+        let progress_line = template
+            .replace("%f", &cur_str)
+            .replace("%t", &max_str)
+            .replace("%p", &percentage)
+            .replace("%P", &percentage_int)
+            .replace("%%", &percentage_char)
+            .replace("%b", &progress_bar)
+            .replace("%n", &jobs_names)
+            .replace("%r", &running_str)
+            .replace("%s", &started_str)
+            .replace("%u", &remaining_str);
 
         Some(progress_line)
     }
@@ -413,7 +462,7 @@ impl Format {
         let mut avail_msg_len = self.max_width - string.len() - 15;
         let mut ellipsis_pos = 0;
         if avail_msg_len <= 3 {
-            return
+            return;
         }
         for c in msg.chars() {
             let display_width = c.width().unwrap_or(0);
@@ -558,8 +607,5 @@ fn test_progress_status_too_short() {
         max_print: 26,
         max_width: 26,
     };
-    assert_eq!(
-        format.progress_status(1, 1, 1, ""),
-        None
-    );
+    assert_eq!(format.progress_status(1, 1, 1, ""), None);
 }
