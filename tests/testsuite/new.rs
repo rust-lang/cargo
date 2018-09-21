@@ -16,7 +16,7 @@ fn create_empty_gitconfig() {
 fn simple_lib() {
     cargo_process("new --lib foo --vcs none --edition 2015")
         .env("USER", "foo")
-        .with_stderr("[CREATED] library `foo` project")
+        .with_stderr("[CREATED] library `foo` package")
         .run();
 
     assert!(paths::root().join("foo").is_dir());
@@ -49,7 +49,7 @@ mod tests {
 fn simple_bin() {
     cargo_process("new --bin foo --edition 2015")
         .env("USER", "foo")
-        .with_stderr("[CREATED] binary (application) `foo` project")
+        .with_stderr("[CREATED] binary (application) `foo` package")
         .run();
 
     assert!(paths::root().join("foo").is_dir());
@@ -452,7 +452,7 @@ fn explicit_invalid_name_not_suggested() {
 fn explicit_project_name() {
     cargo_process("new --lib foo --name bar")
         .env("USER", "foo")
-        .with_stderr("[CREATED] library `bar` project")
+        .with_stderr("[CREATED] library `bar` package")
         .run();
 }
 

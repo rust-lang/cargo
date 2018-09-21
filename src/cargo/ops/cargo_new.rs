@@ -27,7 +27,7 @@ pub enum VersionControl {
 pub struct NewOptions {
     pub version_control: Option<VersionControl>,
     pub kind: NewProjectKind,
-    /// Absolute path to the directory for the new project
+    /// Absolute path to the directory for the new package
     pub path: PathBuf,
     pub name: Option<String>,
     pub edition: Option<String>,
@@ -109,14 +109,14 @@ fn get_name<'a>(path: &'a Path, opts: &'a NewOptions) -> CargoResult<&'a str> {
 
     let file_name = path.file_name().ok_or_else(|| {
         format_err!(
-            "cannot auto-detect project name from path {:?} ; use --name to override",
+            "cannot auto-detect package name from path {:?} ; use --name to override",
             path.as_os_str()
         )
     })?;
 
     file_name.to_str().ok_or_else(|| {
         format_err!(
-            "cannot create project with a non-unicode name: {:?}",
+            "cannot create package with a non-unicode name: {:?}",
             file_name
         )
     })
@@ -174,12 +174,12 @@ fn check_name(name: &str, opts: &NewOptions) -> CargoResult<()> {
 }
 
 fn detect_source_paths_and_types(
-    project_path: &Path,
-    project_name: &str,
+    package_path: &Path,
+    package_name: &str,
     detected_files: &mut Vec<SourceFileInformation>,
 ) -> CargoResult<()> {
-    let path = project_path;
-    let name = project_name;
+    let path = package_path;
+    let name = package_name;
 
     enum H {
         Bin,
@@ -233,12 +233,12 @@ fn detect_source_paths_and_types(
         let sfi = match i.handling {
             H::Bin => SourceFileInformation {
                 relative_path: pp,
-                target_name: project_name.to_string(),
+                target_name: package_name.to_string(),
                 bin: true,
             },
             H::Lib => SourceFileInformation {
                 relative_path: pp,
-                target_name: project_name.to_string(),
+                target_name: package_name.to_string(),
                 bin: false,
             },
             H::Detect => {
@@ -246,7 +246,7 @@ fn detect_source_paths_and_types(
                 let isbin = content.contains("fn main");
                 SourceFileInformation {
                     relative_path: pp,
-                    target_name: project_name.to_string(),
+                    target_name: package_name.to_string(),
                     bin: isbin,
                 }
             }
@@ -276,7 +276,7 @@ cannot automatically generate Cargo.toml as the main target would be ambiguous",
         } else {
             if let Some(plp) = previous_lib_relpath {
                 bail!(
-                    "cannot have a project with \
+                    "cannot have a package with \
                      multiple libraries, \
                      found both `{}` and `{}`",
                     plp,
@@ -290,17 +290,17 @@ cannot automatically generate Cargo.toml as the main target would be ambiguous",
     Ok(())
 }
 
-fn plan_new_source_file(bin: bool, project_name: String) -> SourceFileInformation {
+fn plan_new_source_file(bin: bool, package_name: String) -> SourceFileInformation {
     if bin {
         SourceFileInformation {
             relative_path: "src/main.rs".to_string(),
-            target_name: project_name,
+            target_name: package_name,
             bin: true,
         }
     } else {
         SourceFileInformation {
             relative_path: "src/lib.rs".to_string(),
-            target_name: project_name,
+            target_name: package_name,
             bin: false,
         }
     }
@@ -330,7 +330,7 @@ pub fn new(opts: &NewOptions, config: &Config) -> CargoResult<()> {
 
     mk(config, &mkopts).chain_err(|| {
         format_err!(
-            "Failed to create project `{}` at `{}`",
+            "Failed to create package `{}` at `{}`",
             name,
             path.display()
         )
@@ -342,7 +342,7 @@ pub fn init(opts: &NewOptions, config: &Config) -> CargoResult<()> {
     let path = &opts.path;
 
     if fs::metadata(&path.join("Cargo.toml")).is_ok() {
-        bail!("`cargo init` cannot be run on existing Cargo projects")
+        bail!("`cargo init` cannot be run on existing Cargo packages")
     }
 
     let name = get_name(path, opts)?;
@@ -356,7 +356,7 @@ pub fn init(opts: &NewOptions, config: &Config) -> CargoResult<()> {
         src_paths_types.push(plan_new_source_file(opts.kind.is_bin(), name.to_string()));
     } else {
         // --bin option may be ignored if lib.rs or src/lib.rs present
-        // Maybe when doing `cargo init --bin` inside a library project stub,
+        // Maybe when doing `cargo init --bin` inside a library package stub,
         // user may mean "initialize for library, but also add binary target"
     }
 
@@ -407,7 +407,7 @@ pub fn init(opts: &NewOptions, config: &Config) -> CargoResult<()> {
 
     mk(config, &mkopts).chain_err(|| {
         format_err!(
-            "Failed to create project `{}` at `{}`",
+            "Failed to create package `{}` at `{}`",
             name,
             path.display()
         )

@@ -220,7 +220,7 @@ impl<'a> JobQueue<'a> {
         // maximum number of parallel jobs we have tokens for). A local queue
         // is maintained separately from the main dependency queue as one
         // dequeue may actually dequeue quite a bit of work (e.g. 10 binaries
-        // in one project).
+        // in one package).
         //
         // After a job has finished we update our internal state if it was
         // successful and otherwise wait for pending work to finish if it failed

@@ -61,7 +61,7 @@ pub fn run(
                 )
             } else {
                 bail!(
-                    "`cargo run` requires that a project only have one \
+                    "`cargo run` requires that a package only have one \
                      executable; use the `--bin` option to specify which one \
                      to run\navailable binaries: {}",
                     names.join(", ")

@@ -22,7 +22,7 @@ pub struct CleanOptions<'a> {
     pub doc: bool,
 }
 
-/// Cleans the project from build artifacts.
+/// Cleans the package's build artifacts.
 pub fn clean(ws: &Workspace, opts: &CleanOptions) -> CargoResult<()> {
     let target_dir = ws.target_dir();
     let config = ws.config();

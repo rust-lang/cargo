@@ -47,7 +47,7 @@ To get extended information about commands, run \f[I]cargo help
 <command>\f[] or \f[I]man cargo\-command\f[]
 .TP
 .B cargo\-build(1)
-Compile the current project.
+Compile the current package.
 .RS
 .RE
 .TP
@@ -57,12 +57,12 @@ Remove the target directory with build output.
 .RE
 .TP
 .B cargo\-doc(1)
-Build this project\[aq]s and its dependencies\[aq] documentation.
+Build this package\[aq]s and its dependencies\[aq] documentation.
 .RS
 .RE
 .TP
 .B cargo\-init(1)
-Create a new cargo project in the current directory.
+Create a new cargo package in the current directory.
 .RS
 .RE
 .TP
@@ -72,7 +72,7 @@ Install a Rust binary.
 .RE
 .TP
 .B cargo\-new(1)
-Create a new cargo project.
+Create a new cargo package.
 .RS
 .RE
 .TP
@@ -97,7 +97,7 @@ Update dependencies in Cargo.lock.
 .RE
 .TP
 .B cargo\-rustc(1)
-Compile the current project, and optionally pass additional rustc parameters
+Compile the current package, and optionally pass additional rustc parameters
 .RS
 .RE
 .TP
@@ -107,7 +107,7 @@ Generate a source tarball for the current package.
 .RE
 .TP
 .B cargo\-publish(1)
-Package and upload this project to the registry.
+Package and upload this package to the registry.
 .RS
 .RE
 .TP
@@ -170,7 +170,7 @@ $\ cargo\ test\ \-\-target\ i686\-unknown\-linux\-gnu
 \f[]
 .fi
 .PP
-Create a new project that builds an executable
+Create a new package that builds an executable
 .IP
 .nf
 \f[C]
@@ -178,7 +178,7 @@ $\ cargo\ new\ \-\-bin\ foobar
 \f[]
 .fi
 .PP
-Create a project in the current directory
+Create a package in the current directory
 .IP
 .nf
 \f[C]

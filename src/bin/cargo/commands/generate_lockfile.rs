@@ -4,7 +4,7 @@ use cargo::ops;
 
 pub fn cli() -> App {
     subcommand("generate-lockfile")
-        .about("Generate the lockfile for a project")
+        .about("Generate the lockfile for a package")
         .arg_manifest_path()
 }
 

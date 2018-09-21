@@ -697,7 +697,7 @@ fn warns_if_no_vcs_detected() {
         .with_status(101)
         .with_stderr(
             "\
-             error: no VCS found for this project and `cargo fix` can potentially perform \
+             error: no VCS found for this package and `cargo fix` can potentially perform \
              destructive changes; if you'd like to suppress this error pass `--allow-no-vcs`\
              ",
         ).run();
@@ -721,7 +721,7 @@ fn warns_about_dirty_working_directory() {
         .with_status(101)
         .with_stderr(
             "\
-error: the working directory of this project has uncommitted changes, \
+error: the working directory of this package has uncommitted changes, \
 and `cargo fix` can potentially perform destructive changes; if you'd \
 like to suppress this error pass `--allow-dirty`, `--allow-staged`, or \
 commit the changes to these files:
@@ -755,7 +755,7 @@ fn warns_about_staged_working_directory() {
         .with_status(101)
         .with_stderr(
             "\
-error: the working directory of this project has uncommitted changes, \
+error: the working directory of this package has uncommitted changes, \
 and `cargo fix` can potentially perform destructive changes; if you'd \
 like to suppress this error pass `--allow-dirty`, `--allow-staged`, or \
 commit the changes to these files:
