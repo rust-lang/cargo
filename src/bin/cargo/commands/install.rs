@@ -74,11 +74,8 @@ continuous integration systems.",
 }
 
 pub fn exec(config: &mut Config, args: &ArgMatches) -> CliResult {
+    config.reload_rooted_at_cargo_home()?;
     let mut compile_opts = args.compile_options(config, CompileMode::Build)?;
-
-    // for `cargo-install` we want to use what the user specified via `--target` and ignore what's
-    // in `.cargo/config` and what the environment says
-    compile_opts.build_config.requested_target = args.target();
 
     compile_opts.build_config.release = !args.is_present("debug");
 
