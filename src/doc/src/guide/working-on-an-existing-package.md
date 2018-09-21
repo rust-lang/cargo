@@ -1,9 +1,9 @@
-## Working on an Existing Cargo Project
+## Working on an Existing Cargo Package
 
-If you download an existing project that uses Cargo, it’s really easy
+If you download an existing package that uses Cargo, it’s really easy
 to get going.
 
-First, get the project from somewhere. In this example, we’ll use `rand`
+First, get the package from somewhere. In this example, we’ll use `rand`
 cloned from its repository on GitHub:
 
 ```console
@@ -15,8 +15,8 @@ To build, use `cargo build`:
 
 ```console
 $ cargo build
-   Compiling rand v0.1.0 (file:///path/to/project/rand)
+   Compiling rand v0.1.0 (file:///path/to/package/rand)
 ```
 
 This will fetch all of the dependencies and then build them, along with the
-project.
+package.

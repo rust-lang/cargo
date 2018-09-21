@@ -8,10 +8,10 @@
 
 * [Cargo Guide](guide/index.md)
     * [Why Cargo Exists](guide/why-cargo-exists.md)
-    * [Creating a New Project](guide/creating-a-new-project.md)
-    * [Working on an Existing Project](guide/working-on-an-existing-project.md)
+    * [Creating a New Package](guide/creating-a-new-package.md)
+    * [Working on an Existing Package](guide/working-on-an-existing-package.md)
     * [Dependencies](guide/dependencies.md)
-    * [Project Layout](guide/project-layout.md)
+    * [Package Layout](guide/package-layout.md)
     * [Cargo.toml vs Cargo.lock](guide/cargo-toml-vs-cargo-lock.md)
     * [Tests](guide/tests.md)
     * [Continuous Integration](guide/continuous-integration.md)

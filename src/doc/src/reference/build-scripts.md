@@ -49,7 +49,7 @@ All the lines printed to stdout by a build script are written to a file like
 `target/debug/build/<pkg>/output` (the precise location may depend on your
 configuration). If you would like to see such output directly in your terminal,
 invoke cargo as 'very verbose' with the `-vv` flag. Note that if neither the
-build script nor project source files are modified, subsequent calls to
+build script nor package source files are modified, subsequent calls to
 cargo with `-vv` will **not** print output to the terminal because a
 new build is not executed. Run `cargo clean` before each cargo invocation
 if you want to ensure that output is always displayed on your terminal.
@@ -308,7 +308,7 @@ package. This is another excellent use case of leveraging the build script to
 build a native library before the Rust crate itself. As an example, we’ll create
 a Rust library which calls into C to print “Hello, World!”.
 
-Like above, let’s first take a look at the project layout:
+Like above, let’s first take a look at the package layout:
 
 ```
 .
