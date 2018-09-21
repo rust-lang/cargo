@@ -329,64 +329,69 @@ impl Format {
             None => return None,
         };
 
-        let mut progress_bar = String::with_capacity(self.max_width);
-        let hashes = display_width as f64 * pct;
-        let hashes = hashes as usize;
+        let mut progress_bar = String::new();
+        if template.contains("%b") {
+            progress_bar = String::with_capacity(self.max_width);
+            let hashes = display_width as f64 * pct;
+            let hashes = hashes as usize;
 
-        // Draw the `===>`
-        if hashes > 0 {
-            progress_bar.push_str(&"=".repeat(hashes-1));
-            if cur == max {
-                progress_bar.push_str("=");
-            } else {
-                progress_bar.push_str(">");
+            // Draw the `===>`
+            if hashes > 0 {
+                progress_bar.push_str(&"=".repeat(hashes-1));
+                if cur == max {
+                    progress_bar.push_str("=");
+                } else {
+                    progress_bar.push_str(">");
+                }
             }
+
+            // Draw the empty space we have left to do
+            progress_bar.push_str(&" ".repeat(display_width - hashes));
         }
 
-        // Draw the empty space we have left to do
-        progress_bar.push_str(&" ".repeat(display_width - hashes));
-
         let mut jobs_names = String::new();
-        let mut avail_msg_len = self.max_width - (
-                progress_bar.len()
-                + template_skelleton.len()
-                + length_of_formatters
-                + percentage.len()
-                + percentage_int.len()
-                + percentage_char.len()
-                + cur_str.len()
-                + max_str.len()
-                + running_str.len()
-                + 7  /* ?? */);
+        if template.contains("%n") {
+            let mut avail_msg_len = self.max_width - (
+                    progress_bar.len()
+                    + template_skelleton.len()
+                    + length_of_formatters
+                    + percentage.len()
+                    + percentage_int.len()
+                    + percentage_char.len()
+                    + cur_str.len()
+                    + max_str.len()
+                    + running_str.len()
+                    + 7  /* ?? */);
 
-        let mut ellipsis_pos = 0;
-        if avail_msg_len > 3 {
-            for c in msg.chars() {
-                let display_width = c.width().unwrap_or(0);
-                if avail_msg_len >= display_width {
-                    avail_msg_len -= display_width;
-                    jobs_names.push(c);
-                    if avail_msg_len >= 3 {
-                        ellipsis_pos = jobs_names.len();
+            let mut ellipsis_pos = 0;
+            if avail_msg_len > 3 {
+                for c in msg.chars() {
+                    let display_width = c.width().unwrap_or(0);
+                    if avail_msg_len >= display_width {
+                        avail_msg_len -= display_width;
+                        jobs_names.push(c);
+                        if avail_msg_len >= 3 {
+                            ellipsis_pos = jobs_names.len();
+                        }
+                    } else {
+                        jobs_names.truncate(ellipsis_pos);
+                        jobs_names.push_str("...");
+                        break;
                     }
-                } else {
-                    jobs_names.truncate(ellipsis_pos);
-                    jobs_names.push_str("...");
-                    break;
                 }
             }
         }
-        let mut string = template.clone();
-        string = string.replace("%s", &cur_str);
-        string = string.replace("%t", &max_str);
-        string = string.replace("%p", &percentage);
-        string = string.replace("%P", &percentage_int);
-        string = string.replace("%%", &percentage_char);
-        string = string.replace("%b", &progress_bar);
-        string = string.replace("%n", &jobs_names);
-        string = string.replace("%r", &running_str);
+        let mut progress_line = template.clone();
+        progress_line = progress_line.replace("%s", &cur_str);
+        progress_line = progress_line.replace("%t", &max_str);
+        progress_line = progress_line.replace("%p", &percentage);
+        progress_line = progress_line.replace("%P", &percentage_int);
+        progress_line = progress_line.replace("%%", &percentage_char);
+        progress_line = progress_line.replace("%b", &progress_bar);
+        progress_line = progress_line.replace("%n", &jobs_names);
+        progress_line = progress_line.replace("%r", &running_str);
 
-        Some(string)
+        Some(progress_line)
     }
 
     #[inline]
