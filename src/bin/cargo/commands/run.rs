@@ -23,7 +23,7 @@ pub fn cli() -> App {
         .arg_message_format()
         .after_help(
             "\
-If neither `--bin` nor `--example` are given, then if the project only has one
+If neither `--bin` nor `--example` are given, then if the package only has one
 bin target it will be run. Otherwise `--bin` specifies the bin target to run,
 and `--example` specifies the example target to run. At most one of `--bin` or
 `--example` can be provided.

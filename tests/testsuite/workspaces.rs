@@ -920,7 +920,7 @@ workspace: [..]
 
 this may be fixable by ensuring that this crate is depended on by the workspace \
 root: [..]
-[CREATED] library `bar` project
+[CREATED] library `bar` package
 ",
         ).run();
 }

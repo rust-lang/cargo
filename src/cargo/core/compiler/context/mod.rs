@@ -31,8 +31,8 @@ use self::compilation_files::CompilationFiles;
 /// All information needed to define a Unit.
 ///
 /// A unit is an object that has enough information so that cargo knows how to build it.
-/// For example, if your project has dependencies, then every dependency will be built as a library
-/// unit. If your project is a library, then it will be built as a library unit as well, or if it
+/// For example, if your package has dependencies, then every dependency will be built as a library
+/// unit. If your package is a library, then it will be built as a library unit as well, or if it
 /// is a binary with `main.rs`, then a binary will be output. There are also separate unit types
 /// for `test`ing and `check`ing, amongst others.
 ///
@@ -462,7 +462,7 @@ impl<'a, 'cfg> Context<'a, 'cfg> {
         //   `CARGO_INCREMENTAL`.
         // * `profile.dev.incremental` - in `Cargo.toml` specific profiles can
         //   be configured to enable/disable incremental compilation. This can
-        //   be primarily used to disable incremental when buggy for a project.
+        //   be primarily used to disable incremental when buggy for a package.
         // * Finally, each profile has a default for whether it will enable
         //   incremental compilation or not. Primarily development profiles
         //   have it enabled by default while release profiles have it disabled

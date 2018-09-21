@@ -6,7 +6,7 @@ use cargo::print_json;
 pub fn cli() -> App {
     subcommand("metadata")
         .about(
-            "Output the resolved dependencies of a project, \
+            "Output the resolved dependencies of a package, \
              the concrete used versions including overrides, \
              in machine-readable format",
         )
