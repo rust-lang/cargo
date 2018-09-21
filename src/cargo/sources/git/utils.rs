@@ -618,10 +618,10 @@ where
 }
 
 fn reset(repo: &git2::Repository, obj: &git2::Object, config: &Config) -> CargoResult<()> {
-    let mut pb = Progress::new("Checkout", config);
+    let mut pb = Progress::with_ratio("Checkout", config);
     let mut opts = git2::build::CheckoutBuilder::new();
     opts.progress(|_, cur, max| {
-        drop(pb.tick(cur, max, 1 /* active count */));
+        drop(pb.tick(cur, max, 1 /* active count */, false /* force-render jobs */));
     });
     repo.reset(obj, git2::ResetType::Hard, Some(&mut opts))?;
     Ok(())
@@ -633,7 +633,7 @@ pub fn with_fetch_options(
     config: &Config,
     cb: &mut FnMut(git2::FetchOptions) -> CargoResult<()>,
 ) -> CargoResult<()> {
-    let mut progress = Progress::new("Fetch", config);
+    let mut progress = Progress::with_percentage("Fetch", config);
     network::with_retry(config, || {
         with_authentication(url.as_str(), git_config, |f| {
             let mut rcb = git2::RemoteCallbacks::new();
@@ -641,7 +641,7 @@ pub fn with_fetch_options(
 
             rcb.transfer_progress(|stats| {
                 progress
-                    .tick(stats.indexed_objects(), stats.total_objects(), 1 /*active count*/)
+                    .tick(stats.indexed_objects(), stats.total_objects(), 1 /*active count*/, false /* force-render jobs */)
                     .is_ok()
             });
 

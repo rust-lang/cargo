@@ -36,7 +36,7 @@ struct Format {
 }
 
 impl<'cfg> Progress<'cfg> {
-    pub fn with_style(name: &str, cfg: &'cfg Config) -> Progress<'cfg> {
+    pub fn with_custom_style(name: &str, cfg: &'cfg Config) -> Progress<'cfg> {
    // @TODO: use   let format_template = cfg.get_string("TERM").unwrap().map(|s| s.val);
         let format_template: String = match env::var("CARGO_STATUS") {
             Ok(template) => template,
@@ -68,6 +68,61 @@ impl<'cfg> Progress<'cfg> {
         }
     }
 
+    pub fn with_ratio(name: &str, cfg: &'cfg Config) -> Progress<'cfg> {
+        // default compile progress, ratio style, which cannot be overridden
+
+        // report no progress when -q (for quiet) or TERM=dumb are set
+        let dumb = match env::var("TERM") {
+            Ok(term) => term == "dumb",
+            Err(_) => false,
+        };
+        if cfg.shell().verbosity() == Verbosity::Quiet || dumb {
+            return Progress { state: None };
+        }
+
+        Progress {
+            state: cfg.shell().err_width().map(|n| State {
+                config: cfg,
+                format: Format {
+                    formatting: "[%b], %s/t%n".to_string(),
+                    max_width: n,
+                    max_print: 80,
+                },
+                name: name.to_string(),
+                done: false,
+                throttle: Throttle::new(),
+            }),
+        }
+    }
+
+    pub fn with_percentage(name: &str, cfg: &'cfg Config) -> Progress<'cfg> {
+        // default compile progress, percentage style, which cannot be overridden
+
+        // report no progress when -q (for quiet) or TERM=dumb are set
+        let dumb = match env::var("TERM") {
+            Ok(term) => term == "dumb",
+            Err(_) => false,
+        };
+        if cfg.shell().verbosity() == Verbosity::Quiet || dumb {
+            return Progress { state: None };
+        }
+
+        Progress {
+            state: cfg.shell().err_width().map(|n| State {
+                config: cfg,
+                format: Format {
+                    formatting: "[%b] %p%n".to_string(),
+                    max_width: n,
+                    max_print: 80,
+                },
+                name: name.to_string(),
+                done: false,
+                throttle: Throttle::new(),
+            }),
+        }
+    }
+
+
     pub fn disable(&mut self) {
         self.state = None;
     }
@@ -77,10 +132,10 @@ impl<'cfg> Progress<'cfg> {
     }
 
     pub fn new(name: &str, cfg: &'cfg Config) -> Progress<'cfg> {
-        Self::with_style(name, cfg)
+        Self::with_custom_style(name, cfg)
     }
 
-    pub fn tick(&mut self, cur: usize, max: usize, active: usize) -> CargoResult<()> {
+    pub fn tick(&mut self, cur: usize, max: usize, active: usize, render_jobs: bool) -> CargoResult<()> {
         let s = match &mut self.state {
             Some(s) => s,
             None => return Ok(()),
@@ -102,14 +157,14 @@ impl<'cfg> Progress<'cfg> {
             return Ok(())
         }
 
-        s.tick(cur, max, active, "")
+        s.tick(cur, max, active, "", render_jobs)
     }
 
-    pub fn tick_now(&mut self, cur: usize, max: usize, active_names: Vec<String>) -> CargoResult<()> {
+    pub fn tick_now(&mut self, cur: usize, max: usize, active_names: Vec<String>, render_jobs: bool) -> CargoResult<()> {
         let active = active_names.len();
         let msg = &format!(": {}", active_names.join(", "));
         match self.state {
-            Some(ref mut s) => s.tick(cur, max, active, msg),
+            Some(ref mut s) => s.tick(cur, max, active, msg, render_jobs),
             None => Ok(()),
         }
     }
@@ -121,9 +176,9 @@ impl<'cfg> Progress<'cfg> {
         }
     }
 
-    pub fn print_now(&mut self, msg: &str) -> CargoResult<()> {
+    pub fn print_now(&mut self, msg: &str, render_jobs: bool) -> CargoResult<()> {
         match &mut self.state {
-            Some(s) => s.print("", msg),
+            Some(s) => s.print("", msg, render_jobs),
             None => Ok(()),
         }
     }
@@ -166,7 +221,7 @@ impl Throttle {
 }
 
 impl<'cfg> State<'cfg> {
-    fn tick(&mut self, cur: usize, max: usize, active: usize, msg: &str) -> CargoResult<()> {
+    fn tick(&mut self, cur: usize, max: usize, active: usize, msg: &str, render_jobs: bool) -> CargoResult<()> {
         if self.done {
             return Ok(());
         }
@@ -179,12 +234,12 @@ impl<'cfg> State<'cfg> {
         // return back to the beginning of the line for the next print.
         self.try_update_max_width();
         if let Some(pbar) = self.format.progress(cur, max, active, msg) {
-            self.print(&pbar, msg)?;
+            self.print(&pbar, msg, render_jobs)?;
         }
         Ok(())
     }
 
-    fn print(&mut self, prefix: &str, msg: &str) -> CargoResult<()> {
+    fn print(&mut self, prefix: &str, msg: &str, render_jobs: bool) -> CargoResult<()> {
         self.throttle.update();
         self.try_update_max_width();
 
@@ -194,8 +249,11 @@ impl<'cfg> State<'cfg> {
         }
         self.config.shell().status_header(&self.name)?;
         let mut line = prefix.to_string();
-        self.format.render(&mut line, msg);
-
+        if render_jobs {
+            // this is only needed for displaying download status, otherwise it will interfere
+            // with customizable compile progress
+            self.format.render(&mut line, msg);
+        }
         while line.len() < self.format.max_width - 15 {
             line.push(' ');
         }
@@ -310,8 +368,7 @@ impl Format {
         Some(string)
     }
 
-
-
+    #[inline]
     fn render(&self, string: &mut String, msg: &str) {
         let mut avail_msg_len = self.max_width - string.len() - 15;
         let mut ellipsis_pos = 0;

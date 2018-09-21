@@ -330,7 +330,7 @@ impl<'cfg> PackageSet<'cfg> {
             pending_ids: HashSet::new(),
             results: Vec::new(),
             retry: Retry::new(self.config)?,
-            progress: RefCell::new(Some(Progress::with_style(
+            progress: RefCell::new(Some(Progress::new(
                 "Downloading",
                 self.config,
             ))),
@@ -654,7 +654,7 @@ impl<'a, 'cfg> Downloads<'a, 'cfg> {
                 }
             }
         }
-        progress.print_now(&msg)
+        progress.print_now(&msg, true /*force-render jobs*/)
     }
 }
 
