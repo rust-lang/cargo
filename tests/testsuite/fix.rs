@@ -313,37 +313,6 @@ fn local_paths() {
 }
 
 #[test]
-fn local_paths_no_fix() {
-    if !is_nightly() {
-        return;
-    }
-    let p = project()
-        .file(
-            "src/lib.rs",
-            r#"
-                use test::foo;
-
-                mod test {
-                    pub fn foo() {}
-                }
-
-                pub fn f() {
-                    foo();
-                }
-            "#,
-        ).build();
-
-    let stderr = "\
-[CHECKING] foo v0.0.1 ([..])
-[FINISHED] [..]
-";
-    p.cargo("fix --edition --allow-no-vcs")
-        .with_stderr(stderr)
-        .with_stdout("")
-        .run();
-}
-
-#[test]
 fn upgrade_extern_crate() {
     if !is_nightly() {
         return;
