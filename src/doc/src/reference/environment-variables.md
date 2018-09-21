@@ -34,6 +34,20 @@ system:
   will otherwise be used.
 * `CARGO_CACHE_RUSTC_INFO` — If this is set to 0 then Cargo will not try to cache
   compiler version information.
+* `CARGO_STATUS` — If this is set, cargo will read it as compile progress template.
+  The default format is `[%b] %f/%t: %n` which will looke like this:
+  ` Building [=====>      ] 115/145: libssh2-sys(build), thread_l...`
+  The following parameters are supported:
+    * `%b`  progress bar `=======>`
+    * `%s`  number of started jobs
+    * `%f`  number of finished jobs
+    * `%t`  number of total jobs of the build
+    * `%u`  number or remaining jobs to start
+    * `%r`  number of active (currently running) jobs
+    * `%p`  progress percentage with decimals
+    * `%P`  progress percentage without decimals
+    * `%%`  plain `%` character (can be used for `%P%%` => `14%`)
+    * `%n`  (truncated) list of names of running jobs
 
 Note that Cargo will also read environment variables for `.cargo/config`
 configuration values, as described in [that documentation][config-env]

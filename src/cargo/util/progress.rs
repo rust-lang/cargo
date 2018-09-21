@@ -277,6 +277,8 @@ impl<'cfg> State<'cfg> {
 
 impl Format {
     fn progress(&self, cur: usize, max: usize, active: usize, msg: &str) -> Option<String> {
+        // if you edit this, please make sure to keep environment-variables.md up to date!
+
         // %b progress bar
         // %s the number of started jobs
         // %f number of finished jobs
