@@ -327,7 +327,7 @@ impl Format {
         } else {
             String::new()
         };
-        let remaining_str = if template.contains("%s") {
+        let remaining_str = if template.contains("%u") {
             (max - (cur + active)).to_string()
         } else {
             String::new()
@@ -338,7 +338,7 @@ impl Format {
             String::new()
         };
         let percentage_int = if template.contains("%P") {
-            format!("{:4}", (pct * 100.0) as i8)
+            format!("{:3}", (pct * 100.0) as i8)
         } else {
             String::new()
         };
@@ -363,9 +363,9 @@ impl Format {
             String::new()
         };
         // compile status default looks like this
-        //      Building [=====>                    ] 30/128:
-        // |____________|||________________________||| ||    \_
-        // status header |    progress bar          `|cur`fmt  max
+        //      Building [=====>                    ] 30/128: --,
+        // |____________|||________________________||| ||   `\_  `fmt
+        // status header |    progress bar          `|cur`fmt  `max
         // passed via formatting          both passed via formatting
 
         const STATUS_HEADER_LEN: usize = 15;
@@ -404,7 +404,7 @@ impl Format {
                 }
             }
 
-            // Draw the empty space we have left to do
+            // Draw the empty space we have left
             progress_bar.push_str(&" ".repeat(display_width - hashes));
         }
 
@@ -608,4 +608,145 @@ fn test_progress_status_too_short() {
         max_width: 26,
     };
     assert_eq!(format.progress_status(1, 1, 1, ""), None);
+}
+
+#[test]
+fn test_progress_status_format_standalone() {
+    // progress bar
+    let format = Format {
+        formatting: "%b".to_string(),
+        max_print: 42,
+        max_width: 60,
+    };
+    assert_eq!(
+        format.progress_status(5, 10, 1, ""),
+        Some("============>              ".to_string())
+    );
+    // started jobs (5 done + 1 running)
+    let format = Format {
+        formatting: "%s".to_string(),
+        max_print: 42,
+        max_width: 60,
+    };
+    assert_eq!(format.progress_status(5, 10, 1, ""), Some("6".to_string()));
+    // finished jobs (5 done)
+    let format = Format {
+        formatting: "%f".to_string(),
+        max_print: 42,
+        max_width: 60,
+    };
+    assert_eq!(
+        format.progress_status(5, 10, 1, "this is a test"),
+        Some("5".to_string())
+    );
+    // total jobs (10)
+    let format = Format {
+        formatting: "%t".to_string(),
+        max_print: 42,
+        max_width: 60,
+    };
+    assert_eq!(format.progress_status(5, 10, 1, ""), Some("10".to_string()));
+    // remaining jobs
+    let format = Format {
+        formatting: "%u".to_string(),
+        max_print: 42,
+        max_width: 60,
+    };
+    assert_eq!(format.progress_status(5, 10, 1, ""), Some("4".to_string()));
+    // running jobs (bumped to 3)
+    let format = Format {
+        formatting: "%r".to_string(),
+        max_print: 42,
+        max_width: 60,
+    };
+    assert_eq!(format.progress_status(5, 10, 3, ""), Some("3".to_string()));
+
+    // percentage with decimals
+    let format = Format {
+        formatting: "%p".to_string(),
+        max_print: 42,
+        max_width: 60,
+    };
+    assert_eq!(
+        format.progress_status(5, 10, 3, ""),
+        Some(" 50.00".to_string())
+    );
+    // percentage without decimals
+    let format = Format {
+        formatting: "%P".to_string(),
+        max_print: 42,
+        max_width: 60,
+    };
+    assert_eq!(
+        format.progress_status(5, 10, 3, ""),
+        Some(" 50".to_string())
+    );
+
+    // percentage without decimals
+    let format = Format {
+        formatting: "%%".to_string(),
+        max_print: 42,
+        max_width: 60,
+    };
+    assert_eq!(format.progress_status(5, 10, 3, ""), Some("%".to_string()));
+    // percentage with sign
+    let format = Format {
+        formatting: "%P%%".to_string(),
+        max_print: 42,
+        max_width: 60,
+    };
+    assert_eq!(
+        format.progress_status(5, 10, 3, ""),
+        Some(" 50%".to_string())
+    );
+    // this is a bit weird because we have 3x%% and one single % which is not replaced
+    // so we end up with %%%%
+    let format = Format {
+        formatting: "%%%%%%%".to_string(),
+        max_print: 42,
+        max_width: 60,
+    };
+    assert_eq!(
+        format.progress_status(5, 10, 3, ""),
+        Some("%%%%".to_string())
+    );
+    // message (%n)
+    let format = Format {
+        formatting: "%n".to_string(),
+        max_print: 42,
+        max_width: 60,
+    };
+    assert_eq!(
+        format.progress_status(5, 10, 3, "Hello world!"),
+        Some("Hello world!".to_string())
+    );
+    // message (%n) truncated
+    let format = Format {
+        formatting: "%n".to_string(),
+        max_print: 42,
+        max_width: 60,
+    };
+    assert_eq!(
+        format.progress_status(
+            5,
+            10,
+            3,
+            "Hello world, let's make this a bit longer actually..."
+        ),
+        Some("Hello world, let\'s make this a bit longer actual...".to_string())
+    );
+}
+
+#[test]
+fn test_progress_status_very_long() {
+    // test everything we got + extra stuff around it
+    let format = Format {
+        formatting: "foo [%b]  %f/%r/%t (%p%%)  || {%s,%u,%r,%P}: [%n] bar".to_string(),
+        max_print: 70,
+        max_width: 130,
+    };
+    assert_eq!(
+        format.progress_status(50, 100, 5, "This is quite a long message with many characters, will it fit?"),
+        Some("foo [=>  ]  50/5/100 ( 50.00%)  || {55,45,5, 50}: [This is quite a long message with many char...] bar".to_string())
+    );
 }
