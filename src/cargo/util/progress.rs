@@ -41,7 +41,7 @@ impl<'cfg> Progress<'cfg> {
         let format_template: String = match env::var("CARGO_STATUS") {
             Ok(template) => template,
             // if not set, fall back to default
-            Err(_) => String::from("[%b] %s/%t%n"),
+            Err(_) => String::from("[%b] %s/%t: %n"),
         };
 
         // report no progress when -q (for quiet) or TERM=dumb are set
@@ -162,7 +162,7 @@ impl<'cfg> Progress<'cfg> {
 
     pub fn tick_now(&mut self, cur: usize, max: usize, active_names: Vec<String>, render_jobs: bool) -> CargoResult<()> {
         let active = active_names.len();
-        let msg = &format!(": {}", active_names.join(", "));
+        let msg = &active_names.join(", ");
         match self.state {
             Some(ref mut s) => s.tick(cur, max, active, msg, render_jobs),
             None => Ok(()),
@@ -289,9 +289,9 @@ impl Format {
             // remove all the formatting specifiers
             template_skelleton = template_skelleton.replace(fmt, "");
         }
-        let length_of_formatters = template.len() - template_skelleton.len(); // will be 12-4 = 8 for default, "%b%s%t%n".len()
+        let length_of_formatters = template.len() - template_skelleton.len();
 
-        // Render the percentage at the far right and then figure how long the progress bar is
+        // Render the percentage at the far right and then figure how long the progress bar iscustom.compile_progress
         let pct = (cur as f64) / (max as f64);
         let pct = if !pct.is_finite() { 0.0 } else { pct };
 
@@ -411,50 +411,50 @@ impl<'cfg> Drop for State<'cfg> {
 #[test]
 fn test_progress_status() {
     let format = Format {
-        formatting: "[%b] %s/%t%n".to_string(),
-        max_print: 40,
+        formatting: "[%b] %s/%t: %n".to_string(),
+        max_print: 42,
         max_width: 60,
     };
     assert_eq!(
         format.progress_status(0, 4, 1, ""),
-        Some("[                   ] 0/4".to_string())
+        Some("[                   ] 0/4: ".to_string())
     );
     assert_eq!(
         format.progress_status(1, 4, 1, ""),
-        Some("[===>               ] 1/4".to_string())
+        Some("[===>               ] 1/4: ".to_string())
     );
     assert_eq!(
         format.progress_status(2, 4, 1, ""),
-        Some("[========>          ] 2/4".to_string())
+        Some("[========>          ] 2/4: ".to_string())
     );
     assert_eq!(
         format.progress_status(3, 4, 1, ""),
-        Some("[=============>     ] 3/4".to_string())
+        Some("[=============>     ] 3/4: ".to_string())
     );
     assert_eq!(
         format.progress_status(4, 4, 0, ""),
-        Some("[===================] 4/4".to_string())
+        Some("[===================] 4/4: ".to_string())
     );
 
     assert_eq!(
         format.progress_status(3999, 4000, 1, ""),
-        Some("[===========> ] 3999/4000".to_string())
+        Some("[===========> ] 3999/4000: ".to_string())
     );
     assert_eq!(
         format.progress_status(4000, 4000, 0, ""),
-        Some("[=============] 4000/4000".to_string())
+        Some("[=============] 4000/4000: ".to_string())
     );
 
     assert_eq!(
-        format.progress_status(3, 4, 1, ": short message"),
+        format.progress_status(3, 4, 1, "short message"),
         Some("[=============>     ] 3/4: short message".to_string())
     );
     assert_eq!(
-        format.progress_status(3, 4, 1,": msg thats just fit"),
+        format.progress_status(3, 4, 1, "msg thats just fit"),
         Some("[=============>     ] 3/4: msg thats just fit".to_string())
     );
     assert_eq!(
-        format.progress_status(3, 4, 1,": msg that's just fit"),
+        format.progress_status(3, 4, 1, "msg that's just fit"),
         Some("[=============>     ] 3/4: msg that's just...".to_string())
     );
 
@@ -462,61 +462,61 @@ fn test_progress_status() {
     let zalgo_msg = "z̸̧̢̗͉̝̦͍̱ͧͦͨ̑̅̌ͥ́͢a̢ͬͨ̽ͯ̅̑ͥ͋̏̑ͫ̄͢͏̫̝̪̤͎̱̣͍̭̞̙̱͙͍̘̭͚l̶̡̛̥̝̰̭̹̯̯̞̪͇̱̦͙͔̘̼͇͓̈ͨ͗ͧ̓͒ͦ̀̇ͣ̈ͭ͊͛̃̑͒̿̕͜g̸̷̢̩̻̻͚̠͓̞̥͐ͩ͌̑ͥ̊̽͋͐̐͌͛̐̇̑ͨ́ͅo͙̳̣͔̰̠̜͕͕̞̦̙̭̜̯̹̬̻̓͑ͦ͋̈̉͌̃ͯ̀̂͠ͅ ̸̡͎̦̲̖̤̺̜̮̱̰̥͔̯̅̏ͬ̂ͨ̋̃̽̈́̾̔̇ͣ̚͜͜h̡ͫ̐̅̿̍̀͜҉̛͇̭̹̰̠͙̞ẽ̶̙̹̳̖͉͎̦͂̋̓ͮ̔ͬ̐̀͂̌͑̒͆̚͜͠ ͓͓̟͍̮̬̝̝̰͓͎̼̻ͦ͐̾̔͒̃̓͟͟c̮̦͍̺͈͚̯͕̄̒͐̂͊̊͗͊ͤͣ̀͘̕͝͞o̶͍͚͍̣̮͌ͦ̽̑ͩ̅ͮ̐̽̏͗́͂̅ͪ͠m̷̧͖̻͔̥̪̭͉͉̤̻͖̩̤͖̘ͦ̂͌̆̂ͦ̒͊ͯͬ͊̉̌ͬ͝͡e̵̹̣͍̜̺̤̤̯̫̹̠̮͎͙̯͚̰̼͗͐̀̒͂̉̀̚͝͞s̵̲͍͙͖̪͓͓̺̱̭̩̣͖̣ͤͤ͂̎̈͗͆ͨͪ̆̈͗͝͠";
     assert_eq!(
         format.progress_status(3, 4, 1, zalgo_msg),
-        Some("[=============>     ] 3/4".to_string() + zalgo_msg)
+        Some("[=============>     ] 3/4: ".to_string() + zalgo_msg)
     );
 
     // some non-ASCII ellipsize test
     assert_eq!(
-        format.progress_status(3, 4, 1, "_123456789123456e\u{301}\u{301}8\u{301}90a"),
-        Some("[=============>     ] 3/4_123456789123456e\u{301}\u{301}...".to_string())
+        format.progress_status(3, 4, 1, "_1234567891234e\u{301}\u{301}8\u{301}90a"),
+        Some("[=============>     ] 3/4: _1234567891234e\u{301}\u{301}...".to_string())
     );
     assert_eq!(
-        format.progress_status(3, 4, 1, "：每個漢字佔據了兩個字元"),
-        Some("[=============>     ] 3/4：每個漢字佔據了...".to_string())
+        format.progress_status(3, 4, 1, "每個漢字佔據了兩個字元"),
+        Some("[=============>     ] 3/4: 每個漢字佔據了...".to_string())
     );
 }
 
 #[test]
 fn test_progress_status_percentage() {
     let format = Format {
-        formatting: "[%b] %p%n".to_string(),
-        max_print: 40,
+        formatting: "[%b] %p: %n".to_string(),
+        max_print: 42,
         max_width: 60,
     };
     assert_eq!(
-        format.progress_status(0, 77, 1,""),
-        Some("[               ]   0.00%".to_string())
+        format.progress_status(0, 77, 1, ""),
+        Some("[               ]   0.00%: ".to_string())
     );
     assert_eq!(
         format.progress_status(1, 77, 1, ""),
-        Some("[               ]   1.30%".to_string())
+        Some("[               ]   1.30%: ".to_string())
     );
     assert_eq!(
         format.progress_status(76, 77, 1, ""),
-        Some("[=============> ]  98.70%".to_string())
+        Some("[=============> ]  98.70%: ".to_string())
     );
     assert_eq!(
         format.progress_status(77, 77, 1, ""),
-        Some("[===============] 100.00%".to_string())
+        Some("[===============] 100.00%: ".to_string())
     );
 }
 
 #[test]
 fn test_progress_status_too_short() {
     let format = Format {
-        formatting: "[%b] %p%n".to_string(),
-        max_print: 25,
-        max_width: 25,
+        formatting: "[%b] %p: %n".to_string(),
+        max_print: 27,
+        max_width: 27,
     };
     assert_eq!(
         format.progress_status(1, 1, 0, ""),
-        Some("[] 100.00%".to_string())
+        Some("[] 100.00%: ".to_string())
     );
 
     let format = Format {
-         formatting: "[%b] %p%n".to_string(),
-        max_print: 24,
-        max_width: 24,
+        formatting: "[%b] %p: %n".to_string(),
+        max_print: 26,
+        max_width: 26,
     };
     assert_eq!(
         format.progress_status(1, 1, 1, ""),
