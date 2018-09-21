@@ -17,7 +17,7 @@ pub struct OutputMetadataOptions {
     pub version: u32,
 }
 
-/// Loads the manifest, resolves the dependencies of the project to the concrete
+/// Loads the manifest, resolves the dependencies of the package to the concrete
 /// used versions - considering overrides - and writes all dependencies in a JSON
 /// format to stdout.
 pub fn output_metadata(ws: &Workspace, opt: &OutputMetadataOptions) -> CargoResult<ExportInfo> {

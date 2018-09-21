@@ -7,7 +7,7 @@ use util::{process, CargoResult};
 
 // Check if we are in an existing repo. We define that to be true if either:
 //
-// 1. We are in a git repo and the path to the new project is not an ignored
+// 1. We are in a git repo and the path to the new package is not an ignored
 //    path in that repo.
 // 2. We are in an HG repo.
 pub fn existing_vcs_repo(path: &Path, cwd: &Path) -> bool {

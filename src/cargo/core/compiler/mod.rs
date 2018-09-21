@@ -658,8 +658,8 @@ fn rustdoc<'a, 'cfg>(cx: &mut Context<'a, 'cfg>, unit: &Unit<'a>) -> CargoResult
 // actually invoke rustc.
 //
 // In general users don't expect `cargo build` to cause rebuilds if you change
-// directories. That could be if you just change directories in the project or
-// if you literally move the whole project wholesale to a new directory. As a
+// directories. That could be if you just change directories in the package or
+// if you literally move the whole package wholesale to a new directory. As a
 // result we mostly don't factor in `cwd` to this calculation. Instead we try to
 // track the workspace as much as possible and we update the current directory
 // of rustc/rustdoc where appropriate.

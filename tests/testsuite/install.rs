@@ -714,7 +714,7 @@ fn installs_from_cwd_by_default() {
     p.cargo("install")
         .with_stderr_contains(
             "warning: Using `cargo install` to install the binaries for the \
-             project in current working directory is deprecated, \
+             package in current working directory is deprecated, \
              use `cargo install --path .` instead. \
              Use `cargo build` if you want to simply build the package.",
         ).run();
@@ -748,7 +748,7 @@ fn installs_from_cwd_with_2018_warnings() {
         .with_status(101)
         .with_stderr_contains(
             "error: Using `cargo install` to install the binaries for the \
-             project in current working directory is no longer supported, \
+             package in current working directory is no longer supported, \
              use `cargo install --path .` instead. \
              Use `cargo build` if you want to simply build the package.",
         ).run();

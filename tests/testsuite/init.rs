@@ -15,7 +15,7 @@ fn cargo_process(s: &str) -> Execs {
 fn simple_lib() {
     cargo_process("init --lib --vcs none --edition 2015")
         .env("USER", "foo")
-        .with_stderr("[CREATED] library project")
+        .with_stderr("[CREATED] library package")
         .run();
 
     assert!(paths::root().join("Cargo.toml").is_file());
@@ -32,7 +32,7 @@ fn simple_bin() {
     cargo_process("init --bin --vcs none --edition 2015")
         .env("USER", "foo")
         .cwd(&path)
-        .with_stderr("[CREATED] binary (application) project")
+        .with_stderr("[CREATED] binary (application) package")
         .run();
 
     assert!(paths::root().join("foo/Cargo.toml").is_file());
@@ -146,7 +146,7 @@ fn confused_by_multiple_lib_files() {
         .unwrap();
 
     cargo_process("init --vcs none").env("USER", "foo").cwd(&path).with_status(101).with_stderr(
-            "[ERROR] cannot have a project with multiple libraries, found both `src/lib.rs` and `lib.rs`",
+            "[ERROR] cannot have a package with multiple libraries, found both `src/lib.rs` and `lib.rs`",
         )
         .run();
 
@@ -511,7 +511,7 @@ fn no_filename() {
     cargo_process("init /")
         .with_status(101)
         .with_stderr(
-            "[ERROR] cannot auto-detect project name from path \"/\" ; use --name to override"
+            "[ERROR] cannot auto-detect package name from path \"/\" ; use --name to override"
                 .to_string(),
         ).run();
 }
