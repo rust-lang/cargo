@@ -41,7 +41,7 @@ impl<'cfg> Progress<'cfg> {
         let format_template: String = match env::var("CARGO_STATUS") {
             Ok(template) => template,
             // if not set, fall back to default
-            Err(_) => String::from("[%b] %s/%t: %n"),
+            Err(_) => String::from("[%b] %f/%t: %n"),
         };
 
         // report no progress when -q (for quiet) or TERM=dumb are set
@@ -84,7 +84,7 @@ impl<'cfg> Progress<'cfg> {
             state: cfg.shell().err_width().map(|n| State {
                 config: cfg,
                 format: Format {
-                    formatting: "[%b], %s/t: %n".to_string(),
+                    formatting: "[%b], %f/t: %n".to_string(),
                     max_width: n,
                     max_print: 80,
                 },
@@ -276,8 +276,10 @@ impl<'cfg> State<'cfg> {
 impl Format {
     fn progress(&self, cur: usize, max: usize, active: usize, msg: &str) -> Option<String> {
         // %b progress bar
-        // %s number of done jobs
-        // %t number of total jobs
+        // %s the number of started jobs
+        // %f number of finished jobs
+        // %t number of total
+        // %u number of remaining jobs to start
         // %r number of active (currently running) jobs
         // %p progress percentage with decimals
         // %P progress percentage without decimals
@@ -286,9 +288,9 @@ impl Format {
 
         let template = &self.formatting; // what the formatting is supposed to look like
          // what is left if we remove all dynamic parameters
-         // will be "[] /: " for default formatting of "[%b] %s/%t: %n"
+         // will be "[] /: " for default formatting of "[%b] %f/%t: %n"
         let mut template_skelleton = template.to_string();
-        for fmt in &["%b", "%s", "%t", "%p", "%P", "%%", "%n", "%r"] {
+        for fmt in &["%b", "%f", "%t", "%p", "%P", "%%", "%n", "%r", "%s", "%u"] {
             // remove all the formatting specifiers
             template_skelleton = template_skelleton.replace(fmt, "");
         }
@@ -297,11 +299,12 @@ impl Format {
         // Render the percentage at the far right and then figure how long the progress bar iscustom.compile_progress
         let pct = (cur as f64) / (max as f64);
         let pct = if !pct.is_finite() { 0.0 } else { pct };
+        let started_str = if template.contains("%s") { (cur + active).to_string() } else { String::new() };
+        let remaining_str = if template.contains("%s") { (max - (cur + active)).to_string() } else { String::new() };
         let percentage = if template.contains("%p") { format!("{:6.02}", pct * 100.0) } else { String::new() };
         let percentage_int = if template.contains("%P") { format!("{:4}", (pct * 100.0) as i8 ) } else { String::new() };
         let percentage_char = if template.contains("%%") { "%".to_string() } else { String::new() };
-
-        let cur_str = if template.contains("%s") { cur.to_string() } else { String::new() };
+        let cur_str = if template.contains("%f") { cur.to_string() } else { String::new() };
         let max_str = if template.contains("%t") { max.to_string() } else { String::new() };
         let running_str = if template.contains("%r") { active.to_string() } else { String::new() };
         // compile status default looks like this
@@ -320,6 +323,8 @@ impl Format {
                         + cur_str.len()
                         + max_str.len()
                         + running_str.len()
+                        + started_str.len()
+                        + remaining_str.len()
                         /* all other fmt chars: */
                         + template_skelleton.len();
 
@@ -361,6 +366,8 @@ impl Format {
                     + cur_str.len()
                     + max_str.len()
                     + running_str.len()
+                    + started_str.len()
+                    + remaining_str.len()
                     + 7  /* ?? */);
 
             let mut ellipsis_pos = 0;
@@ -382,7 +389,7 @@ impl Format {
             }
         }
         let mut progress_line = template.clone();
-        progress_line = progress_line.replace("%s", &cur_str);
+        progress_line = progress_line.replace("%f", &cur_str);
         progress_line = progress_line.replace("%t", &max_str);
         progress_line = progress_line.replace("%p", &percentage);
         progress_line = progress_line.replace("%P", &percentage_int);
@@ -390,6 +397,9 @@ impl Format {
         progress_line = progress_line.replace("%b", &progress_bar);
         progress_line = progress_line.replace("%n", &jobs_names);
         progress_line = progress_line.replace("%r", &running_str);
+        progress_line = progress_line.replace("%s", &started_str);
+        progress_line = progress_line.replace("%u", &remaining_str);
+
 
         Some(progress_line)
     }
@@ -437,7 +447,7 @@ impl<'cfg> Drop for State<'cfg> {
 #[test]
 fn test_progress_status() {
     let format = Format {
-        formatting: "[%b] %s/%t: %n".to_string(),
+        formatting: "[%b] %f/%t: %n".to_string(),
         max_print: 42,
         max_width: 60,
     };
