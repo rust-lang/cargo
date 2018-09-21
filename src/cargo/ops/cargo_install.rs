@@ -229,13 +229,13 @@ fn install_one(
         match pkg.manifest().edition() {
             Edition::Edition2015 => config.shell().warn(
                 "Using `cargo install` to install the binaries for the \
-                 project in current working directory is deprecated, \
+                 package in current working directory is deprecated, \
                  use `cargo install --path .` instead. \
                  Use `cargo build` if you want to simply build the package.",
             )?,
             Edition::Edition2018 => bail!(
                 "Using `cargo install` to install the binaries for the \
-                 project in current working directory is no longer supported, \
+                 package in current working directory is no longer supported, \
                  use `cargo install --path .` instead. \
                  Use `cargo build` if you want to simply build the package."
             ),

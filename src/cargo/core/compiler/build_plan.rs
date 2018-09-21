@@ -1,4 +1,4 @@
-//! A graph-like structure used to represent the rustc commands to build the project and the
+//! A graph-like structure used to represent the rustc commands to build the package and the
 //! interdependencies between them.
 //!
 //! The BuildPlan structure is used to store the dependency graph of a dry run so that it can be

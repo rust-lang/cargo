@@ -215,7 +215,7 @@ pub fn version() -> VersionInfo {
     // There are two versions at play here:
     //   - version of cargo-the-binary, which you see when you type `cargo --version`
     //   - version of cargo-the-library, which you download from crates.io for use
-    //     in your projects.
+    //     in your packages.
     //
     // We want to make the `binary` version the same as the corresponding Rust/rustc release.
     // At the same time, we want to keep the library version at `0.x`, because Cargo as

@@ -69,7 +69,7 @@ fn compile_tests<'a>(
     Ok(compilation)
 }
 
-/// Run the unit and integration tests of a project.
+/// Run the unit and integration tests of a package.
 fn run_unit_tests(
     options: &TestOptions,
     test_args: &[String],

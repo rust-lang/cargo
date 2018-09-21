@@ -85,7 +85,7 @@ fn check_version_control(opts: &FixOptions) -> CargoResult<()> {
     }
     let config = opts.compile_opts.config;
     if !existing_vcs_repo(config.cwd(), config.cwd()) {
-        bail!("no VCS found for this project and `cargo fix` can potentially \
+        bail!("no VCS found for this package and `cargo fix` can potentially \
                perform destructive changes; if you'd like to suppress this \
                error pass `--allow-no-vcs`")
     }
@@ -137,7 +137,7 @@ fn check_version_control(opts: &FixOptions) -> CargoResult<()> {
         files_list.push_str(" (staged)\n");
     }
 
-    bail!("the working directory of this project has uncommitted changes, and \
+    bail!("the working directory of this package has uncommitted changes, and \
            `cargo fix` can potentially perform destructive changes; if you'd \
            like to suppress this error pass `--allow-dirty`, `--allow-staged`, \
            or commit the changes to these files:\n\

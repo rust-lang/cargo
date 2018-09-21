@@ -389,9 +389,9 @@ impl<'cfg> Workspace<'cfg> {
             }
 
             // Don't walk across `CARGO_HOME` when we're looking for the
-            // workspace root. Sometimes a project will be organized with
+            // workspace root. Sometimes a package will be organized with
             // `CARGO_HOME` pointing inside of the workspace root or in the
-            // current project, but we don't want to mistakenly try to put
+            // current package, but we don't want to mistakenly try to put
             // crates.io crates into the workspace by accident.
             if self.config.home() == path {
                 break;

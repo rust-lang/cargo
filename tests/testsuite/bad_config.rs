@@ -93,7 +93,7 @@ fn bad4() {
         .with_status(101)
         .with_stderr(
             "\
-[ERROR] Failed to create project `foo` at `[..]`
+[ERROR] Failed to create package `foo` at `[..]`
 
 Caused by:
   error in [..]config: `cargo-new.name` expected a string, but found a boolean

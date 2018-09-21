@@ -141,7 +141,7 @@ fn too_many_bins() {
     p.cargo("run")
         .with_status(101)
         .with_stderr(
-            "[ERROR] `cargo run` requires that a project only \
+            "[ERROR] `cargo run` requires that a package only \
              have one executable; use the `--bin` option \
              to specify which one to run\navailable binaries: [..]\n",
         ).run();
@@ -990,7 +990,7 @@ fn run_workspace() {
         .with_status(101)
         .with_stderr(
             "\
-[ERROR] `cargo run` requires that a project only have one executable[..]
+[ERROR] `cargo run` requires that a package only have one executable[..]
 available binaries: a, b",
         ).run();
     p.cargo("run --bin a")

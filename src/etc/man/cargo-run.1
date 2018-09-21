@@ -2,7 +2,7 @@
 .hy
 .SH NAME
 .PP
-cargo\-run \- Run the current project
+cargo\-run \- Run the current package
 .SH SYNOPSIS
 .PP
 \f[I]cargo run\f[] [OPTIONS] [\-\-] [<ARGS>...]
@@ -11,7 +11,7 @@ cargo\-run \- Run the current project
 Run the main binary of the local package (src/main.rs).
 .PP
 If neither \f[B]\-\-bin\f[] nor \f[B]\-\-example\f[] are given, then if
-the project only has one bin target it will be run.
+the package only has one bin target it will be run.
 Otherwise \f[B]\-\-bin\f[] specifies the bin target to run, and
 \f[B]\-\-example\f[] specifies the example target to run.
 At most one of \f[B]\-\-bin\f[] or \f[B]\-\-example\f[] can be provided.
