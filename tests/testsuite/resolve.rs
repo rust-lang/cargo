@@ -2,6 +2,7 @@ use std::cmp::PartialEq;
 use std::cmp::{max, min};
 use std::collections::{BTreeMap, HashSet};
 use std::env;
+use std::fmt;
 
 use cargo::core::dependency::Kind::{self, Development};
 use cargo::core::resolver::{self, Method};
@@ -207,6 +208,57 @@ fn loc_names(names: &[(&'static str, &'static str)]) -> Vec<PackageId> {
         .collect()
 }
 
+/// By default `Summary` and `Dependency` have a very verbose `Debug` representation.
+/// This replaces with a representation that uses constructors from this file.
+///
+/// If `registry_strategy` is improved to modify more fields
+/// then this needs to update to display the corresponding constructor.
+struct PrettyPrintRegistry(Vec<Summary>);
+
+impl fmt::Debug for PrettyPrintRegistry {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        write!(f, "vec![")?;
+        for s in &self.0 {
+            if s.dependencies().is_empty() {
+                write!(f, "pkg!((\"{}\", \"{}\")),", s.name(), s.version())?;
+            } else {
+                write!(f, "pkg!((\"{}\", \"{}\") => [", s.name(), s.version())?;
+                for d in s.dependencies() {
+                    write!(
+                        f,
+                        "dep_req!(\"{}\", \"{}\"),",
+                        d.name_in_toml(),
+                        d.version_req()
+                    )?;
+                }
+                write!(f, "]),")?;
+            }
+        }
+        write!(f, "]")
+    }
+}
+
+#[test]
+fn meta_test_deep_pretty_print_registry() {
+    assert_eq!(&format!("{:?}", PrettyPrintRegistry(vec![
+        pkg!(("foo", "1.0.1") => [dep_req("bar", "1")]),
+        pkg!(("foo", "1.0.0") => [dep_req("bar", "2")]),
+        pkg!(("bar", "1.0.0") => [dep_req("baz", "=1.0.2"),
+                                  dep_req("other", "1")]),
+        pkg!(("bar", "2.0.0") => [dep_req("baz", "=1.0.1")]),
+        pkg!(("baz", "1.0.2") => [dep_req("other", "2")]),
+        pkg!(("baz", "1.0.1")),
+        pkg!(("dep_req", "1.0.0")),
+        pkg!(("dep_req", "2.0.0")),
+    ])), "vec![pkg!((\"foo\", \"1.0.1\") => [dep_req!(\"bar\", \"^1\"),]),\
+    pkg!((\"foo\", \"1.0.0\") => [dep_req!(\"bar\", \"^2\"),]),\
+    pkg!((\"bar\", \"1.0.0\") => [dep_req!(\"baz\", \"= 1.0.2\"),dep_req!(\"other\", \"^1\"),]),\
+    pkg!((\"bar\", \"2.0.0\") => [dep_req!(\"baz\", \"= 1.0.1\"),]),\
+    pkg!((\"baz\", \"1.0.2\") => [dep_req!(\"other\", \"^2\"),]),\
+    pkg!((\"baz\", \"1.0.1\")),pkg!((\"dep_req\", \"1.0.0\")),\
+    pkg!((\"dep_req\", \"2.0.0\")),]")
+}
+
 /// This attempts to make sure that CI will fail fast,
 /// but that local builds will give a small clear test case.
 fn ci_no_shrink<T: ::std::fmt::Debug>(
@@ -225,7 +277,7 @@ fn ci_no_shrink<T: ::std::fmt::Debug>(
 fn registry_strategy(
     max_crates: usize,
     max_versions: usize,
-) -> impl Strategy<Value = Vec<Summary>> {
+) -> impl Strategy<Value = PrettyPrintRegistry> {
     let name = string_regex("[A-Za-z_-][A-Za-z0-9_-]*(-sys)?").unwrap();
 
     let raw_version = [..max_versions; 3];
@@ -292,22 +344,24 @@ fn registry_strategy(
                 ))
             }
 
-            list_of_pkgid
-                .into_iter()
-                .zip(dependency_by_pkgid.into_iter())
-                .map(|(((name, ver), allow_deps), deps)| {
-                    pkg_dep(
-                        (name, ver).to_pkgid(),
-                        if !allow_deps {
-                            vec![dep_req("bad", "*")]
-                        } else {
-                            let mut deps = deps;
-                            deps.sort_by_key(|d| d.name_in_toml());
-                            deps.dedup_by_key(|d| d.name_in_toml());
-                            deps
-                        },
-                    )
-                }).collect()
+            PrettyPrintRegistry(
+                list_of_pkgid
+                    .into_iter()
+                    .zip(dependency_by_pkgid.into_iter())
+                    .map(|(((name, ver), allow_deps), deps)| {
+                        pkg_dep(
+                            (name, ver).to_pkgid(),
+                            if !allow_deps {
+                                vec![dep_req("bad", "*")]
+                            } else {
+                                let mut deps = deps;
+                                deps.sort_by_key(|d| d.name_in_toml());
+                                deps.dedup_by_key(|d| d.name_in_toml());
+                                deps
+                            },
+                        )
+                    }).collect(),
+            )
         },
     )
 }
@@ -321,7 +375,7 @@ fn meta_test_deep_trees_from_strategy() {
 
     let strategy = ci_no_shrink(registry_strategy(50, 10));
     for _ in 0..256 {
-        let input = strategy
+        let PrettyPrintRegistry(input) = strategy
             .new_tree(&mut TestRunner::default())
             .unwrap()
             .current();
@@ -370,7 +424,7 @@ proptest! {
     })]
     #[test]
     fn limited_independence_of_irrelevant_alternatives(
-        input in ci_no_shrink(registry_strategy(50, 10)),
+        PrettyPrintRegistry(input) in ci_no_shrink(registry_strategy(50, 10)),
         indexs_to_unpublish in vec(any::<prop::sample::Index>(), 10)
     )  {
         let reg = registry(input.clone());
