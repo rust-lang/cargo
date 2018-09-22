@@ -2,7 +2,7 @@
 
 ### Travis CI
 
-To test your project on Travis CI, here is a sample `.travis.yml` file:
+To test your package on Travis CI, here is a sample `.travis.yml` file:
 
 ```yaml
 language: rust
@@ -22,7 +22,7 @@ information.
 
 ### GitLab CI
 
-To test your project on GitLab CI, here is a sample `.gitlab-ci.yml` file:
+To test your package on GitLab CI, here is a sample `.gitlab-ci.yml` file:
 
 ```yaml
 stages:

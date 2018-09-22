@@ -2,8 +2,8 @@
 
 ![Cargo Logo](images/Cargo-Logo-Small.png)
 
-Cargo is the [Rust] *package manager*. Cargo downloads your Rust project’s
-dependencies, compiles your project, makes packages, and upload them to
+Cargo is the [Rust] *package manager*. Cargo downloads your Rust package’s
+dependencies, compiles your packages, makes distributable packages, and uploads them to
 [crates.io], the Rust community’s *package registry*. You can contribute
 to this book on [GitHub].
 
@@ -17,7 +17,7 @@ To get started with Cargo, install Cargo (and Rust) and set up your first crate.
 **[Cargo Guide](guide/index.html)**
 
 The guide will give you all you need to know about how to use Cargo to develop
-Rust projects.
+Rust packages.
 
 **[Cargo Reference](reference/index.html)**
 

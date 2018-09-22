@@ -4,7 +4,7 @@ One of the goals of Cargo is simple integration with third-party tools, like
 IDEs and other build systems. To make integration easier, Cargo has several
 facilities:
 
-* a `cargo metadata` command, which outputs project structure and dependencies
+* a `cargo metadata` command, which outputs package structure and dependencies
   information in JSON,
 
 * a `--message-format` flag, which outputs information about a particular build,
@@ -13,9 +13,9 @@ facilities:
 * support for custom subcommands.
 
 
-### Information about project structure
+### Information about package structure
 
-You can use `cargo metadata` command to get information about project structure
+You can use `cargo metadata` command to get information about package structure
 and dependencies. The output of the command looks like this:
 
 ```text

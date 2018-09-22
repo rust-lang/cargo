@@ -8,7 +8,7 @@ about them, here’s a summary:
 * `Cargo.lock` contains exact information about your dependencies. It is
   maintained by Cargo and should not be manually edited.
 
-If you’re building a library that other projects will depend on, put
+If you’re building a library that other packages will depend on, put
 `Cargo.lock` in your `.gitignore`. If you’re building an executable like a
 command-line tool or an application, check `Cargo.lock` into `git`. If you're
 curious about why that is, see ["Why do binaries have `Cargo.lock` in version
@@ -18,8 +18,8 @@ FAQ](faq.html#why-do-binaries-have-cargolock-in-version-control-but-not-librarie
 Let’s dig in a little bit more.
 
 `Cargo.toml` is a **manifest** file in which we can specify a bunch of
-different metadata about our project. For example, we can say that we depend
-on another project:
+different metadata about our package. For example, we can say that we depend
+on another package:
 
 ```toml
 [package]
@@ -31,13 +31,13 @@ authors = ["Your Name <you@example.com>"]
 rand = { git = "https://github.com/rust-lang-nursery/rand.git" }
 ```
 
-This project has a single dependency, on the `rand` library. We’ve stated in
+This package has a single dependency, on the `rand` library. We’ve stated in
 this case that we’re relying on a particular Git repository that lives on
 GitHub. Since we haven’t specified any other information, Cargo assumes that
-we intend to use the latest commit on the `master` branch to build our project.
+we intend to use the latest commit on the `master` branch to build our package.
 
-Sound good? Well, there’s one problem: If you build this project today, and
-then you send a copy to me, and I build this project tomorrow, something bad
+Sound good? Well, there’s one problem: If you build this package today, and
+then you send a copy to me, and I build this package tomorrow, something bad
 could happen. There could be more commits to `rand` in the meantime, and my
 build would include new commits while yours would not. Therefore, we would
 get different builds. This would be bad because we want reproducible builds.
@@ -85,7 +85,7 @@ source = "git+https://github.com/rust-lang-nursery/rand.git#9f35b8e439eeedd60b94
 ```
 
 You can see that there’s a lot more information here, including the exact
-revision we used to build. Now when you give your project to someone else,
+revision we used to build. Now when you give your package to someone else,
 they’ll use the exact same SHA, even though we didn’t specify it in our
 `Cargo.toml`.
 
