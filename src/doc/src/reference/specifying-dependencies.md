@@ -116,7 +116,7 @@ Cargo will fetch the `git` repository at this location then look for a
 (not necessarily at the root).
 
 Since we haven’t specified any other information, Cargo assumes that
-we intend to use the latest commit on the `master` branch to build our project.
+we intend to use the latest commit on the `master` branch to build our package.
 You can combine the `git` key with the `rev`, `tag`, or `branch` keys to
 specify something else. Here's an example of specifying that you want to use
 the latest commit on a branch named `next`:
@@ -128,11 +128,11 @@ rand = { git = "https://github.com/rust-lang-nursery/rand", branch = "next" }
 
 ### Specifying path dependencies
 
-Over time, our `hello_world` project from [the guide](guide/index.html) has
+Over time, our `hello_world` package from [the guide](guide/index.html) has
 grown significantly in size! It’s gotten to the point that we probably want to
 split out a separate crate for others to use. To do this Cargo supports **path
 dependencies** which are typically sub-crates that live within one repository.
-Let’s start off by making a new crate inside of our `hello_world` project:
+Let’s start off by making a new crate inside of our `hello_world` package:
 
 ```console
 # inside of hello_world/
@@ -182,7 +182,7 @@ example:
 * An upstream crate you don't work on has a new feature or a bug fix on the
   master branch of its git repository which you'd like to test out.
 * You're about to publish a new major version of your crate, but you'd like to
-  do integration testing across an entire project to ensure the new major
+  do integration testing across an entire package to ensure the new major
   version works.
 * You've submitted a fix to an upstream crate for a bug you found, but you'd
   like to immediately have your application start depending on the fixed version
@@ -230,10 +230,10 @@ uuid = { path = "../path/to/uuid" }
 
 Here we declare that we're *patching* the source `crates-io` with a new
 dependency. This will effectively add the local checked out version of `uuid` to
-the crates.io registry for our local project.
+the crates.io registry for our local package.
 
 Next up we need to ensure that our lock file is updated to use this new version
-of `uuid` so our project uses the locally checked out copy instead of one from
+of `uuid` so our package uses the locally checked out copy instead of one from
 crates.io. The way `[patch]` works is that it'll load the dependency at
 `../path/to/uuid` and then whenever crates.io is queried for versions of `uuid`
 it'll *also* return the local version.
@@ -310,7 +310,7 @@ from crates.io. Once 1.0.1 is published on crates.io the `[patch]` section can
 be deleted.
 
 It's also worth noting that `[patch]` applies *transitively*. Let's say you use
-`my-library` in a larger project, such as:
+`my-library` in a larger package, such as:
 
 ```toml
 [package]

@@ -1,13 +1,13 @@
 ## Configuration
 
 This document will explain how Cargo’s configuration system works, as well as
-available keys or configuration.  For configuration of a project through its
+available keys or configuration.  For configuration of a package through its
 manifest, see the [manifest format](reference/manifest.html).
 
 ### Hierarchical structure
 
 
-Cargo allows local configuration for a particular project as well as global
+Cargo allows local configuration for a particular package as well as global
 configuration, like git. Cargo extends this to a hierarchical strategy.
 If, for example, Cargo were invoked in `/projects/foo/bar/baz`, then the
 following configuration files would be probed for and unified in this order:
@@ -19,7 +19,7 @@ following configuration files would be probed for and unified in this order:
 * `/.cargo/config`
 * `$HOME/.cargo/config`
 
-With this structure, you can specify configuration per-project, and even
+With this structure, you can specify configuration per-package, and even
 possibly check it into version control. You can also specify personal defaults
 with a configuration file in your home directory.
 

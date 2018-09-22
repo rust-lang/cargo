@@ -59,7 +59,7 @@ $ cargo build
      Compiling memchr v0.1.5
      Compiling aho-corasick v0.3.0
      Compiling regex v0.1.41
-     Compiling hello_world v0.1.0 (file:///path/to/project/hello_world)
+     Compiling hello_world v0.1.0 (file:///path/to/package/hello_world)
 ```
 
 Our `Cargo.lock` contains the exact information about which revision of all of

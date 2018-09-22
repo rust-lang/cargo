@@ -1,7 +1,7 @@
-## Project Layout
+## Package Layout
 
 Cargo uses conventions for file placement to make it easy to dive into a new
-Cargo project:
+Cargo package:
 
 ```
 .
@@ -20,7 +20,7 @@ Cargo project:
     └── some-integration-tests.rs
 ```
 
-* `Cargo.toml` and `Cargo.lock` are stored in the root of your project (*package
+* `Cargo.toml` and `Cargo.lock` are stored in the root of your package (*package
   root*).
 * Source code goes in the `src` directory.
 * The default library file is `src/lib.rs`.

@@ -44,14 +44,14 @@ edition = '2018'
 ```
 
 The `edition` key affects which edition your package is compiled with. Cargo
-will always generate projects via `cargo new` with the `edition` key set to the
+will always generate packages via `cargo new` with the `edition` key set to the
 latest edition. Setting the `edition` key in `[package]` will affect all
 targets/crates in the package, including test suites, benchmarks, binaries,
 examples, etc.
 
 #### The `build` field (optional)
 
-This field specifies a file in the project root which is a [build script][1] for
+This field specifies a file in the package root which is a [build script][1] for
 building native code. More information can be found in the build script
 [guide][1].
 
@@ -211,7 +211,7 @@ categories = ["...", "..."]
 # operators to get more explicit semantics.
 license = "..."
 
-# If a project is using a nonstandard license, then this key may be specified in
+# If a package is using a nonstandard license, then this key may be specified in
 # lieu of the above key and must point to a file relative to this manifest
 # (similar to the readme key).
 license-file = "..."
@@ -284,7 +284,7 @@ is available [here][spdx-license-list-2.4].
 Cargo by default will warn about unused keys in `Cargo.toml` to assist in
 detecting typos and such. The `package.metadata` table, however, is completely
 ignored by Cargo and will not be warned about. This section can be used for
-tools which would like to store project configuration in `Cargo.toml`. For
+tools which would like to store package configuration in `Cargo.toml`. For
 example:
 
 ```toml
@@ -308,8 +308,8 @@ information on the `[dependencies]`, `[dev-dependencies]`,
 
 Cargo supports custom configuration of how rustc is invoked through profiles at
 the top level. Any manifest may declare a profile, but only the top level
-project’s profiles are actually read. All dependencies’ profiles will be
-overridden. This is done so the top-level project has control over how its
+package’s profiles are actually read. All dependencies’ profiles will be
+overridden. This is done so the top-level package has control over how its
 dependencies are compiled.
 
 There are four currently supported profile names, all of which have the same
@@ -464,7 +464,7 @@ features without requiring a new dependency.
 #### Usage in end products
 
 One major use-case for this feature is specifying optional features in
-end-products. For example, the Servo project may want to include optional
+end-products. For example, the Servo package may want to include optional
 features that people can enable or disable when they build it.
 
 In that case, Servo will describe features in its `Cargo.toml` and they can be
@@ -505,7 +505,7 @@ can almost certainly be expressed as a separate package.
 
 ### The `[workspace]` section
 
-Projects can define a workspace which is a set of crates that will all share the
+Packages can define a workspace which is a set of crates that will all share the
 same `Cargo.lock` and output directory. The `[workspace]` table can be defined
 as:
 
@@ -541,7 +541,7 @@ its manifest, is responsible for defining the entire workspace. All `path`
 dependencies residing in the workspace directory become members. You can add
 additional packages to the workspace by listing them in the `members` key. Note
 that members of the workspaces listed explicitly will also have their path
-dependencies included in the workspace. Sometimes a project may have a lot of
+dependencies included in the workspace. Sometimes a package may have a lot of
 workspace members and it can be onerous to keep up to date. The path dependency
 can also use [globs][globs] to match multiple paths. Finally, the `exclude`
 key can be used to blacklist paths from being included in a workspace. This can
@@ -587,7 +587,7 @@ on the command-line) for virtual workspaces.
 
 ### The project layout
 
-If your project is an executable, name the main source file `src/main.rs`. If it
+If your package is an executable, name the main source file `src/main.rs`. If it
 is a library, name the main source file `src/lib.rs`.
 
 Cargo will also treat any files located in `src/bin/*.rs` as executables. If your
@@ -599,7 +599,7 @@ below](#configuring-a-target)), Cargo will no longer automatically build files
 located in `src/bin/*.rs`.  Instead you must create a `[[bin]]` section for
 each file you want to build.
 
-Your project can optionally contain folders named `examples`, `tests`, and
+Your package can optionally contain folders named `examples`, `tests`, and
 `benches`, which Cargo will treat as containing examples,
 integration tests, and benchmarks respectively. Analogous to `bin` targets, they
 may be composed of single files or directories with a `main.rs` file.
@@ -607,7 +607,7 @@ may be composed of single files or directories with a `main.rs` file.
 ```
 ▾ src/           # directory containing source files
   lib.rs         # the main entry point for libraries and packages
-  main.rs        # the main entry point for projects producing executables
+  main.rs        # the main entry point for packages producing executables
   ▾ bin/         # (optional) directory containing additional executables
     *.rs
   ▾ */           # (optional) directories containing multi-file executables
@@ -627,7 +627,7 @@ may be composed of single files or directories with a `main.rs` file.
 ```
 
 To structure your code after you've created the files and folders for your
-project, you should remember to use Rust's module system, which you can read
+package, you should remember to use Rust's module system, which you can read
 about in [the book](https://doc.rust-lang.org/book/crates-and-modules.html).
 
 ### Examples
@@ -698,7 +698,7 @@ specified.
 
 [lib]
 # The name of a target is the name of the library that will be generated. This
-# is defaulted to the name of the package or project, with any dashes replaced
+# is defaulted to the name of the package, with any dashes replaced
 # with underscores. (Rust `extern crate` declarations reference this name;
 # therefore the value must be a valid Rust identifier to be usable.)
 name = "foo"
@@ -765,7 +765,7 @@ required-features = ["postgres", "tools"]
 
 #### Building dynamic or static libraries
 
-If your project produces a library, you can specify which kind of library to
+If your package produces a library, you can specify which kind of library to
 build by explicitly listing the library in your `Cargo.toml`:
 
 ```toml
@@ -777,8 +777,8 @@ crate-type = ["dylib"] # could be `staticlib` as well
 ```
 
 The available options are `dylib`, `rlib`, `staticlib`, `cdylib`, and
-`proc-macro`. You should only use this option in a project. Cargo will always
-compile packages (dependencies) based on the requirements of the project that
+`proc-macro`. You should only use this option in a package. Cargo will always
+compile packages (dependencies) based on the requirements of the package that
 includes them.
 
 You can read more about the different crate types in the

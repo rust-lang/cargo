@@ -43,7 +43,7 @@ replacement Cargo can express:
 
 * Vendoring - custom sources can be defined which represent crates on the local
   filesystem. These sources are subsets of the source that they're replacing and
-  can be checked into projects if necessary.
+  can be checked into packages if necessary.
 
 * Mirroring - sources can be replaced with an equivalent version which acts as a
   cache for crates.io itself.
