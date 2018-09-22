@@ -585,7 +585,7 @@ When `default-members` is not specified, the default is the root manifest
 if it is a package, or every member manifest (as if `--all` were specified
 on the command-line) for virtual workspaces.
 
-### The package layout
+### The project layout
 
 If your package is an executable, name the main source file `src/main.rs`. If it
 is a library, name the main source file `src/lib.rs`.
