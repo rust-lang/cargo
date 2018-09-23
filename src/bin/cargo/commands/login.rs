@@ -41,7 +41,7 @@ pub fn exec(config: &mut Config, args: &ArgMatches) -> CliResult {
                         .unwrap_or_else(|| config.api.unwrap())
                 }
             };
-            println!("please visit {}me and paste the API Token below", host);
+            println!("please visit {}/me and paste the API Token below", host);
             let mut line = String::new();
             let input = io::stdin();
             input
