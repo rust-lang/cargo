@@ -225,17 +225,6 @@ impl<'a> JobQueue<'a> {
         // After a job has finished we update our internal state if it was
         // successful and otherwise wait for pending work to finish if it failed
         // and then immediately return.
-        //
-        // TODO: the progress bar should be re-enabled but unfortunately it's
-        //       difficult to do so right now due to how compiler error messages
-        //       work. Cargo doesn't redirect stdout/stderr of compiler
-        //       processes so errors are not captured, and Cargo doesn't know
-        //       when an error is being printed, meaning that a progress bar
-        //       will get jumbled up in the output! To reenable this progress
-        //       bar we'll need to probably capture the stderr of rustc and
-        //       capture compiler error messages, but that also means
-        //       reproducing rustc's styling of error messages which is
-        //       currently a pretty big task. This is issue #5695.
         let mut error = None;
         let mut progress = Progress::with_style("Building", ProgressStyle::Ratio, cx.bcx.config);
         let total = self.queue.len();
