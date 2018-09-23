@@ -1,5 +1,5 @@
 use serde::ser;
-use serde_json::{self, Value};
+use serde_json::{self, value::RawValue};
 
 use core::{PackageId, Target};
 
@@ -8,16 +8,17 @@ pub trait Message: ser::Serialize {
 }
 
 pub fn emit<T: Message>(t: &T) {
-    let mut json: Value = serde_json::to_value(t).unwrap();
-    json["reason"] = json!(t.reason());
-    println!("{}", json);
+    let json = serde_json::to_string(t).unwrap();
+    assert!(json.starts_with("{\""));
+    let reason = json!(t.reason());
+    println!("{{\"reason\":{},{}", reason, &json[1..]);
 }
 
 #[derive(Serialize)]
 pub struct FromCompiler<'a> {
     pub package_id: &'a PackageId,
     pub target: &'a Target,
-    pub message: serde_json::Value,
+    pub message: Box<RawValue>,
 }
 
 impl<'a> Message for FromCompiler<'a> {
