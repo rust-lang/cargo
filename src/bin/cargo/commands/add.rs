@@ -1,13 +1,13 @@
 use command_prelude::*;
 
-use cargo::core::{GitReference, SourceId};
 use cargo::ops;
-use cargo::util::ToUrl;
+
+use super::install;
 
 pub fn cli() -> App {
     subcommand("add")
         .about("Add a new dependency")
-        .arg(Arg::with_name("crate").empty_values(false))
+        .arg(Arg::with_name("crate").empty_values(false).multiple(true))
         .arg(
             opt("version", "Specify a version to add from crates.io")
                 .alias("vers")
@@ -37,34 +37,19 @@ pub fn exec(config: &mut Config, args: &ArgMatches) -> CliResult {
 
     println!("cargo add subcommand executed");
 
-    let krate = args.value_of("crate")
-        .unwrap_or_default();
+    let krates = args.values_of("crate")
+        .unwrap_or_default()
+        .collect::<Vec<_>>();
 
-    println!("crate {:?}", krate);
+    println!("crate {:?}", krates);
 
-    let source = if let Some(url) = args.value_of("git") {
-        let url = url.to_url()?;
-        let gitref = if let Some(branch) = args.value_of("branch") {
-            GitReference::Branch(branch.to_string())
-        } else if let Some(tag) = args.value_of("tag") {
-            GitReference::Tag(tag.to_string())
-        } else if let Some(rev) = args.value_of("rev") {
-            GitReference::Rev(rev.to_string())
-        } else {
-            GitReference::Branch("master".to_string())
-        };
-        SourceId::for_git(&url, gitref)?
-    } else if let Some(path) = args.value_of_path("path", config) {
-        SourceId::for_path(&path)?
-    } else {
-        SourceId::crates_io(config)?
-    };
+    let (_from_cwd, source) = install::get_source_id(&config, &args, &krates)?;
 
     let version = args.value_of("version");
 
     ops::add(
             &ws,
-            krate,
+            krates,
             &source,
             version,
             &compile_opts,

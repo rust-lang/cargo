@@ -86,8 +86,29 @@ pub fn exec(config: &mut Config, args: &ArgMatches) -> CliResult {
         .unwrap_or_default()
         .collect::<Vec<_>>();
 
-    let mut from_cwd = false;
+    let (from_cwd, source) = get_source_id(&config, &args, &krates)?;
 
+    let version = args.value_of("version");
+    let root = args.value_of("root");
+
+    if args.is_present("list") {
+        ops::install_list(root, config)?;
+    } else {
+        ops::install(
+            root,
+            krates,
+            &source,
+            from_cwd,
+            version,
+            &compile_opts,
+            args.is_present("force"),
+        )?;
+    }
+    Ok(())
+}
+
+pub fn get_source_id(config: &Config, args: &ArgMatches, krates: &Vec<&str>) -> Result<(bool, SourceId), CliError> {
+    let mut from_cwd = false;
     let source = if let Some(url) = args.value_of("git") {
         let url = url.to_url()?;
         let gitref = if let Some(branch) = args.value_of("branch") {
@@ -108,22 +129,5 @@ pub fn exec(config: &mut Config, args: &ArgMatches) -> CliResult {
     } else {
         SourceId::crates_io(config)?
     };
-
-    let version = args.value_of("version");
-    let root = args.value_of("root");
-
-    if args.is_present("list") {
-        ops::install_list(root, config)?;
-    } else {
-        ops::install(
-            root,
-            krates,
-            &source,
-            from_cwd,
-            version,
-            &compile_opts,
-            args.is_present("force"),
-        )?;
-    }
-    Ok(())
+    Ok((from_cwd, source))
 }

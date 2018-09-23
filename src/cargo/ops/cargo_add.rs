@@ -7,7 +7,7 @@ use util::toml;
 
 pub fn add(
     ws: &Workspace,
-    krate: &str,
+    krates: Vec<&str>,
     source_id: &SourceId,
     vers: Option<&str>,
     opts: &ops::CompileOptions,
@@ -17,8 +17,38 @@ pub fn add(
 
     let map = SourceConfigMap::new(opts.config)?;
 
-    let needs_update = true;
+    let manifest_path = Some(toml::manifest::find(&Some(cwd.to_path_buf()))?);
+    let mut manifest = toml::manifest::Manifest::open(&manifest_path)?;
 
+    let mut needs_update = true;
+    for krate in krates {
+        add_one(
+            &map,
+            krate,
+            source_id,
+            vers,
+            opts,
+            needs_update,
+            &mut manifest,
+        )?;
+        needs_update = false;
+    }
+
+    let mut file = toml::manifest::Manifest::find_file(&manifest_path)?;
+    manifest.write_to_file(&mut file)?;
+    
+    Ok(())
+}
+
+fn add_one(
+    map: &SourceConfigMap,
+    krate: &str,
+    source_id: &SourceId,
+    vers: Option<&str>,
+    opts: &ops::CompileOptions,
+    needs_update: bool,
+    manifest: &mut toml::manifest::Manifest,
+    ) -> CargoResult<()> {
     let (pkg, _source) = cargo_install::select_pkg(
             map.load(source_id)?,
             Some(krate),
@@ -33,9 +63,7 @@ pub fn add(
                 )
             },
     )?;
-    println!("pkg {:?}", pkg);
-    let manifest_path = Some(toml::manifest::find(&Some(cwd.to_path_buf()))?);
-    let mut manifest = toml::manifest::Manifest::open(&manifest_path)?;
+    println!("pkg {:?}", pkg);  
 
     let dependency = toml::dependency::Dependency::new(&krate)
         .set_version(&format!("{}", pkg.version()));
@@ -44,8 +72,6 @@ pub fn add(
 
     manifest.insert_into_table(&get_section(), &dependency)?;
 
-    let mut file = toml::manifest::Manifest::find_file(&manifest_path)?;
-    manifest.write_to_file(&mut file)?;
     Ok(())
 }
 
