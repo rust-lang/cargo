@@ -167,7 +167,7 @@ impl<'a, 'cfg> Context<'a, 'cfg> {
         queue.execute(&mut self, &mut plan)?;
 
         if build_plan {
-            plan.set_inputs(self.inputs()?);
+            plan.set_inputs(self.build_plan_inputs()?);
             plan.output_plan();
         }
 
@@ -512,10 +512,14 @@ impl<'a, 'cfg> Context<'a, 'cfg> {
 
     /// Return the list of filenames read by cargo to generate the BuildContext
     /// (all Cargo.toml, etc).
-    pub fn inputs(&self) -> CargoResult<Vec<PathBuf>> {
+    pub fn build_plan_inputs(&self) -> CargoResult<Vec<PathBuf>> {
         let mut inputs = Vec::new();
-        for id in self.bcx.packages.package_ids() {
-            let pkg = self.get_package(id)?;
+        // Note that we're using the `package_cache`, which should have been
+        // populated by `build_unit_dependencies`, and only those packages are
+        // considered as all the inputs.
+        //
+        // (notably we skip dev-deps here if they aren't present)
+        for pkg in self.package_cache.values() {
             inputs.push(pkg.manifest_path().to_path_buf());
         }
         inputs.sort();
