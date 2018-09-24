@@ -515,8 +515,9 @@ impl<'a, 'cfg> Context<'a, 'cfg> {
     pub fn inputs(&self) -> CargoResult<Vec<PathBuf>> {
         let mut inputs = Vec::new();
         for id in self.bcx.packages.package_ids() {
-            let pkg = self.get_package(id)?;
-            inputs.push(pkg.manifest_path().to_path_buf());
+            if let Ok(pkg) = self.get_package(id) {
+                inputs.push(pkg.manifest_path().to_path_buf());
+            }
         }
         inputs.sort();
         Ok(inputs)

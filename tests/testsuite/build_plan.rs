@@ -109,6 +109,64 @@ fn cargo_build_plan_single_dep() {
 }
 
 #[test]
+fn cargo_build_unused_dep() {
+    let p = project()
+        .file(
+            "Cargo.toml",
+            r#"
+            [package]
+            name = "foo"
+            authors = []
+            version = "0.5.0"
+
+            [dev-dependencies]
+            bar = { path = "bar" }
+        "#,
+        ).file(
+            "src/lib.rs",
+            r#"
+            #[cfg(test)]
+            extern crate bar;
+
+            pub fn foo() { }
+
+            #[test]
+            fn test() { bar::bar(); foo(); }
+        "#,
+        ).file("bar/Cargo.toml", &basic_manifest("bar", "0.0.1"))
+        .file("bar/src/lib.rs", "pub fn bar() {}")
+        .build();
+    p.cargo("build --build-plan -Zunstable-options")
+        .masquerade_as_nightly_cargo()
+        .with_json(
+            r#"
+    {
+        "inputs": [
+            "[..]/foo/Cargo.toml"
+        ],
+        "invocations": [
+            {
+                "args": "{...}",
+                "cwd": "[..]/cit/[..]/foo",
+                "deps": [],
+                "env": "{...}",
+                "kind": "Host",
+                "links": "{...}",
+                "outputs": [
+                    "[..]/foo/target/debug/deps/libfoo-[..].rlib"
+                ],
+                "package_name": "foo",
+                "package_version": "0.5.0",
+                "program": "rustc",
+                "target_kind": ["lib"]
+            }
+        ]
+    }
+    "#,
+        ).run();
+}
+
+#[test]
 fn cargo_build_plan_build_script() {
     let p = project()
         .file(
