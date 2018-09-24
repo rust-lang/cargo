@@ -1,3 +1,5 @@
+use std::fmt::{self, Write};
+
 use glob::glob;
 use support::install::exe;
 use support::is_nightly;
@@ -689,4 +691,25 @@ fn proc_macro() {
 fn does_not_use_empty_rustc_wrapper() {
     let p = project().file("src/lib.rs", "").build();
     p.cargo("check").env("RUSTC_WRAPPER", "").run();
+}
+
+#[test]
+fn error_from_deep_recursion() -> Result<(), fmt::Error> {
+    let mut big_macro = String::new();
+    writeln!(big_macro, "macro_rules! m {{")?;
+    for i in 0..130 {
+        writeln!(big_macro, "({}) => {{ m!({}); }};", i, i + 1)?;
+    }
+    writeln!(big_macro, "}}")?;
+    writeln!(big_macro, "m!(0);")?;
+
+    let p = project().file("src/lib.rs", &big_macro).build();
+    p.cargo("check --message-format=json")
+        .with_status(101)
+        .with_stdout_contains(
+            "[..]\"message\":\"recursion limit reached while expanding the macro `m`\"[..]",
+        )
+        .run();
+
+    Ok(())
 }
