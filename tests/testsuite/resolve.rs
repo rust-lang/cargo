@@ -277,6 +277,7 @@ fn meta_test_deep_pretty_print_registry() {
 fn registry_strategy(
     max_crates: usize,
     max_versions: usize,
+    shrinkage: usize,
 ) -> impl Strategy<Value = PrettyPrintRegistry> {
     let name = string_regex("[A-Za-z_-][A-Za-z0-9_-]*(-sys)?").unwrap();
 
@@ -285,7 +286,7 @@ fn registry_strategy(
 
     // If this is false than the crate will depend on the nonexistent "bad"
     // instead of the complex set we generated for it.
-    let allow_deps = prop::bool::weighted(0.95);
+    let allow_deps = prop::bool::weighted(0.99);
 
     let list_of_versions =
         btree_set((raw_version, allow_deps), 1..=max_versions).prop_map(move |ver| {
@@ -304,8 +305,9 @@ fn registry_strategy(
             vers
         });
 
-    // each version of each crate can depend on each crate smaller then it
-    let max_deps = 1 + max_versions * (max_crates * (max_crates - 1)) / 2;
+    // each version of each crate can depend on each crate smaller then it.
+    // In theory shrinkage should be 2, but in practice we get better trees with a larger value.
+    let max_deps = max_versions * (max_crates * (max_crates - 1)) / shrinkage;
 
     let raw_version_range = (any::<Index>(), any::<Index>());
     let raw_dependency = (any::<Index>(), any::<Index>(), raw_version_range);
@@ -370,10 +372,9 @@ fn registry_strategy(
 /// that it makes registries with large dependency trees
 #[test]
 fn meta_test_deep_trees_from_strategy() {
-    let mut seen_an_error = false;
-    let mut seen_a_deep_tree = false;
+    let mut dis = [0; 21];
 
-    let strategy = registry_strategy(50, 10);
+    let strategy = registry_strategy(50, 10, 50);
     for _ in 0..256 {
         let PrettyPrintRegistry(input) = strategy
             .new_tree(&mut TestRunner::default())
@@ -386,29 +387,17 @@ fn meta_test_deep_trees_from_strategy() {
                 vec![dep_req(&this.name(), &format!("={}", this.version()))],
                 &reg,
             );
-            match res {
-                Ok(r) => {
-                    if r.len() >= 7 {
-                        seen_a_deep_tree = true;
-                    }
-                }
-                Err(_) => {
-                    seen_an_error = true;
-                }
-            }
-            if seen_a_deep_tree && seen_an_error {
+            dis[res.as_ref().map(|x| min(x.len(), dis.len()) - 1).unwrap_or(0)] += 1;
+            if dis.iter().all(|&x| x > 0) {
                 return;
             }
         }
     }
 
     assert!(
-        seen_an_error,
-        "In 2560 tries we did not see any crates that could not be built!"
-    );
-    assert!(
-        seen_a_deep_tree,
-        "In 2560 tries we did not see any crates that had more then 7 pkg in the dependency tree!"
+        dis.iter().all(|&x| x > 0),
+        "In 2560 tries we did not see a wide enough distribution of dependency trees! dis:{:?}",
+        dis
     );
 }
 
@@ -432,7 +421,7 @@ proptest! {
     })]
     #[test]
     fn limited_independence_of_irrelevant_alternatives(
-        PrettyPrintRegistry(input) in registry_strategy(50, 10),
+        PrettyPrintRegistry(input) in registry_strategy(50, 10, 50),
         indexs_to_unpublish in vec(any::<prop::sample::Index>(), 10)
     )  {
         let reg = registry(input.clone());
