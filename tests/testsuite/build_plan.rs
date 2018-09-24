@@ -1,3 +1,4 @@
+use support::registry::Package;
 use support::{basic_bin_manifest, basic_manifest, main_file, project};
 
 #[test]
@@ -179,4 +180,29 @@ fn cargo_build_plan_build_script() {
     }
     "#,
         ).run();
+}
+
+#[test]
+fn build_plan_with_dev_dep() {
+    Package::new("bar", "0.1.0").publish();
+
+    let p = project()
+        .file(
+            "Cargo.toml",
+            r#"
+                [project]
+                name = "foo"
+                version = "0.5.0"
+                authors = []
+
+                [dev-dependencies]
+                bar = "*"
+            "#,
+        )
+        .file("src/lib.rs", "")
+        .build();
+
+    p.cargo("build --build-plan -Zunstable-options")
+        .masquerade_as_nightly_cargo()
+        .run();
 }
