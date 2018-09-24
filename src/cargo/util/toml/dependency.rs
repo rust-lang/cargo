@@ -2,9 +2,11 @@ use toml_edit;
 
 #[derive(Debug, Hash, PartialEq, Eq, Clone)]
 enum DependencySource {
-    Version(String),
+    Version {
+        version: Option<String>,
+        path: Option<String>,
+    },
     Git(String),
-    Path(String),
 }
 
 /// A dependency handled by Cargo
@@ -21,7 +23,10 @@ impl Default for Dependency {
         Dependency {
             name: "".into(),
             optional: false,
-            source: DependencySource::Version("0.1.0".into()),
+            source: DependencySource::Version {
+                version: None,
+                path: None,
+            },
         }
     }
 }
@@ -37,7 +42,15 @@ impl Dependency {
 
     /// Set dependency to a given version
     pub fn set_version(mut self, version: &str) -> Dependency {
-        self.source = DependencySource::Version(version.into());
+        let old_source = self.source;
+        let old_path = match old_source {
+            DependencySource::Version { path, .. } => path,
+            _ => None,
+        };
+        self.source = DependencySource::Version {
+            version: Some(version.into()),
+            path: old_path,
+        };
         self
     }
 
@@ -49,7 +62,15 @@ impl Dependency {
 
     /// Set dependency to a given path
     pub fn set_path(mut self, path: &str) -> Dependency {
-        self.source = DependencySource::Path(path.into());
+        let old_source = self.source;
+        let old_version = match old_source {
+            DependencySource::Version { version, .. } => version,
+            _ => None,
+        };
+        self.source = DependencySource::Version {
+            version: old_version,
+            path: Some(path.into()),
+        };
         self
     }
 
@@ -61,7 +82,11 @@ impl Dependency {
 
     /// Get version of dependency
     pub fn version(&self) -> Option<&str> {
-        if let DependencySource::Version(ref version) = self.source {
+        if let DependencySource::Version {
+            version: Some(ref version),
+            ..
+        } = self.source
+        {
             Some(version)
         } else {
             None
@@ -76,20 +101,28 @@ impl Dependency {
     pub fn to_toml(&self) -> (String, toml_edit::Item) {
         let data: toml_edit::Item = match (self.optional, self.source.clone()) {
             // Extra short when version flag only
-            (false, DependencySource::Version(v)) => toml_edit::value(v),
+            (
+                false,
+                DependencySource::Version {
+                    version: Some(v),
+                    path: None,
+                },
+            ) => toml_edit::value(v),
             // Other cases are represented as an inline table
             (optional, source) => {
                 let mut data = toml_edit::InlineTable::default();
 
                 match source {
-                    DependencySource::Version(v) => {
-                        data.get_or_insert("version", v);
+                    DependencySource::Version { version, path } => {
+                        if let Some(v) = version {
+                            data.get_or_insert("version", v);
+                        }
+                        if let Some(p) = path {
+                            data.get_or_insert("path", p);
+                        }
                     }
                     DependencySource::Git(v) => {
                         data.get_or_insert("git", v);
-                    }
-                    DependencySource::Path(v) => {
-                        data.get_or_insert("path", v);
                     }
                 }
                 if self.optional {

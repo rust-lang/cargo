@@ -1,7 +1,7 @@
 use core::{SourceId, Workspace};
 
 use ops::{self, cargo_install};
-use sources::{SourceConfigMap};
+use sources::{GitSource, SourceConfigMap};
 use util::errors::{CargoResult};
 use util::toml;
 
@@ -49,7 +49,23 @@ fn add_one(
     needs_update: bool,
     manifest: &mut toml::manifest::Manifest,
     ) -> CargoResult<()> {
-    let (pkg, _source) = cargo_install::select_pkg(
+    let (pkg, _source) = if source_id.is_git() {
+        cargo_install::select_pkg(
+            GitSource::new(source_id, opts.config)?,
+            Some(krate),
+            vers,
+            opts.config,
+            needs_update,
+            &mut |_| {
+                bail!(
+                    "must specify a crate to install from \
+                     crates.io, or use --path or --git to \
+                     specify alternate source"
+                )
+            },
+        )?
+    } else {
+        cargo_install::select_pkg(
             map.load(source_id)?,
             Some(krate),
             vers,
@@ -62,12 +78,20 @@ fn add_one(
                      specify alternate source"
                 )
             },
-    )?;
-    println!("pkg {:?}", pkg);  
+        )?
+    };
+    println!("pkg {:?}", pkg);
+    let package_id = pkg.package_id();
+    println!("package_id is {:?}", package_id);
 
-    let dependency = toml::dependency::Dependency::new(&krate)
-        .set_version(&format!("{}", pkg.version()));
+    let mut dependency = toml::dependency::Dependency::new(&krate)
+        .set_version(&format!("{}", package_id.version()));
 
+    if source_id.is_git() {
+        dependency = dependency.set_path(&format!("{}", package_id.source_id()));
+    }
+
+    println!("is git {}", source_id.is_git());
     println!("dependency is {:?}", dependency);
 
     manifest.insert_into_table(&get_section(), &dependency)?;
