@@ -3,6 +3,7 @@ use std::cmp::{max, min};
 use std::collections::{BTreeMap, HashSet};
 use std::env;
 use std::fmt;
+use std::time::{Duration, Instant};
 
 use cargo::core::dependency::Kind::{self, Development};
 use cargo::core::resolver::{self, Method};
@@ -59,6 +60,7 @@ fn resolve_with_config(
         false,
     ).unwrap();
     let method = Method::Everything;
+    let start = Instant::now();
     let resolve = resolver::resolve(
         &[(summary, method)],
         &[],
@@ -67,6 +69,10 @@ fn resolve_with_config(
         config,
         false,
     )?;
+
+    // The largest test in our sweet takes less then 30 sec.
+    // So lets fail the test if we have ben running for two long.
+    assert!(start.elapsed() < Duration::from_secs(60));
     let res = resolve.iter().cloned().collect();
     Ok(res)
 }
@@ -226,7 +232,7 @@ impl fmt::Debug for PrettyPrintRegistry {
                 for d in s.dependencies() {
                     write!(
                         f,
-                        "dep_req!(\"{}\", \"{}\"),",
+                        "dep_req(\"{}\", \"{}\"),",
                         d.name_in_toml(),
                         d.version_req()
                     )?;
@@ -240,35 +246,29 @@ impl fmt::Debug for PrettyPrintRegistry {
 
 #[test]
 fn meta_test_deep_pretty_print_registry() {
-    assert_eq!(&format!("{:?}", PrettyPrintRegistry(vec![
-        pkg!(("foo", "1.0.1") => [dep_req("bar", "1")]),
-        pkg!(("foo", "1.0.0") => [dep_req("bar", "2")]),
-        pkg!(("bar", "1.0.0") => [dep_req("baz", "=1.0.2"),
+    assert_eq!(
+        &format!(
+            "{:?}",
+            PrettyPrintRegistry(vec![
+                pkg!(("foo", "1.0.1") => [dep_req("bar", "1")]),
+                pkg!(("foo", "1.0.0") => [dep_req("bar", "2")]),
+                pkg!(("bar", "1.0.0") => [dep_req("baz", "=1.0.2"),
                                   dep_req("other", "1")]),
-        pkg!(("bar", "2.0.0") => [dep_req("baz", "=1.0.1")]),
-        pkg!(("baz", "1.0.2") => [dep_req("other", "2")]),
-        pkg!(("baz", "1.0.1")),
-        pkg!(("dep_req", "1.0.0")),
-        pkg!(("dep_req", "2.0.0")),
-    ])), "vec![pkg!((\"foo\", \"1.0.1\") => [dep_req!(\"bar\", \"^1\"),]),\
-    pkg!((\"foo\", \"1.0.0\") => [dep_req!(\"bar\", \"^2\"),]),\
-    pkg!((\"bar\", \"1.0.0\") => [dep_req!(\"baz\", \"= 1.0.2\"),dep_req!(\"other\", \"^1\"),]),\
-    pkg!((\"bar\", \"2.0.0\") => [dep_req!(\"baz\", \"= 1.0.1\"),]),\
-    pkg!((\"baz\", \"1.0.2\") => [dep_req!(\"other\", \"^2\"),]),\
-    pkg!((\"baz\", \"1.0.1\")),pkg!((\"dep_req\", \"1.0.0\")),\
-    pkg!((\"dep_req\", \"2.0.0\")),]")
-}
-
-/// This attempts to make sure that CI will fail fast,
-/// but that local builds will give a small clear test case.
-fn ci_no_shrink<T: ::std::fmt::Debug>(
-    s: impl Strategy<Value = T> + 'static,
-) -> impl Strategy<Value = T> {
-    if env::var("CI").is_ok() {
-        s.no_shrink().boxed()
-    } else {
-        s.boxed()
-    }
+                pkg!(("bar", "2.0.0") => [dep_req("baz", "=1.0.1")]),
+                pkg!(("baz", "1.0.2") => [dep_req("other", "2")]),
+                pkg!(("baz", "1.0.1")),
+                pkg!(("dep_req", "1.0.0")),
+                pkg!(("dep_req", "2.0.0")),
+            ])
+        ),
+        "vec![pkg!((\"foo\", \"1.0.1\") => [dep_req(\"bar\", \"^1\"),]),\
+         pkg!((\"foo\", \"1.0.0\") => [dep_req(\"bar\", \"^2\"),]),\
+         pkg!((\"bar\", \"1.0.0\") => [dep_req(\"baz\", \"= 1.0.2\"),dep_req(\"other\", \"^1\"),]),\
+         pkg!((\"bar\", \"2.0.0\") => [dep_req(\"baz\", \"= 1.0.1\"),]),\
+         pkg!((\"baz\", \"1.0.2\") => [dep_req(\"other\", \"^2\"),]),\
+         pkg!((\"baz\", \"1.0.1\")),pkg!((\"dep_req\", \"1.0.0\")),\
+         pkg!((\"dep_req\", \"2.0.0\")),]"
+    )
 }
 
 /// This generates a random registry index.
@@ -373,7 +373,7 @@ fn meta_test_deep_trees_from_strategy() {
     let mut seen_an_error = false;
     let mut seen_a_deep_tree = false;
 
-    let strategy = ci_no_shrink(registry_strategy(50, 10));
+    let strategy = registry_strategy(50, 10);
     for _ in 0..256 {
         let PrettyPrintRegistry(input) = strategy
             .new_tree(&mut TestRunner::default())
@@ -420,11 +420,19 @@ proptest! {
             } else {
                 1024 // but locally try and find it in the one build
             },
+        max_shrink_iters:
+            if env::var("CI").is_ok() {
+                // This attempts to make sure that CI will fail fast,
+                0
+            } else {
+                // but that local builds will give a small clear test case.
+                ProptestConfig::default().max_shrink_iters
+            },
         .. ProptestConfig::default()
     })]
     #[test]
     fn limited_independence_of_irrelevant_alternatives(
-        PrettyPrintRegistry(input) in ci_no_shrink(registry_strategy(50, 10)),
+        PrettyPrintRegistry(input) in registry_strategy(50, 10),
         indexs_to_unpublish in vec(any::<prop::sample::Index>(), 10)
     )  {
         let reg = registry(input.clone());

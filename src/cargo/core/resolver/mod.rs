@@ -250,7 +250,7 @@ fn activate_deps_loop(
         // If any of them are removed then it takes more than I am willing to measure.
         // So lets fail the test fast if we have ben running for two long.
         if cfg!(debug_assertions) && (ticks % 1000 == 0) {
-            assert!(start.elapsed() - deps_time < Duration::from_secs(300));
+            assert!(start.elapsed() - deps_time < Duration::from_secs(90));
         }
 
         let just_here_for_the_error_messages = deps_frame.just_for_error_messages;
