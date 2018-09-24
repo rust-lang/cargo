@@ -540,10 +540,10 @@ impl<'a, 'cfg> Downloads<'a, 'cfg> {
         };
 
         // If the progress bar isn't enabled then we still want to provide some
-        // semblance of progress of how we're downloading crates.
-        if !self.progress.borrow().as_ref().unwrap().is_enabled() {
-            self.set.config.shell().status("Downloaded", &dl.descriptor)?;
-        }
+        // semblance of progress of how we're downloading crates, and if the
+        // progress bar is enabled this provides a good log of what's happening.
+        self.progress.borrow_mut().as_mut().unwrap().clear();
+        self.set.config.shell().status("Downloaded", &dl.descriptor)?;
 
         self.downloads_finished += 1;
         self.downloaded_bytes += dl.total.get();
