@@ -2,10 +2,7 @@ environment:
   matrix:
   - TARGET: x86_64-pc-windows-msvc
     OTHER_TARGET: i686-pc-windows-msvc
-    MAKE_TARGETS: test-unit-x86_64-pc-windows-msvc
   - TARGET: x86_64-pc-windows-msvc
-    OTHER_TARGET: i686-pc-windows-msvc
-    MAKE_TARGETS: test-unit-x86_64-pc-windows-msvc
     MINIMAL_VERSIONS: true
     CFG_DISABLE_CROSS_TESTS: 1
 
@@ -15,7 +12,7 @@ install:
   - rustup-init.exe -y --default-host x86_64-pc-windows-msvc --default-toolchain nightly
   - set PATH=%PATH%;C:\Users\appveyor\.cargo\bin
   - if defined MINIMAL_VERSIONS rustup toolchain install 1.28.0
-  - rustup target add %OTHER_TARGET%
+  - if defined OTHER_TARGET rustup target add %OTHER_TARGET%
   - rustc -V
   - cargo -V
   - git submodule update --init
@@ -28,5 +25,5 @@ test_script:
   # we don't have ci time to run the full `cargo test` with `minimal-versions` like
   # - if defined MINIMAL_VERSIONS cargo +nightly generate-lockfile -Z minimal-versions && cargo +stable test
   # so we just run `cargo check --tests` like
-  - if defined MINIMAL_VERSIONS cargo +nightly generate-lockfile -Z minimal-versions && cargo check --tests
+  - if defined MINIMAL_VERSIONS cargo +nightly generate-lockfile -Z minimal-versions && cargo +1.28.0 check --tests
   - if NOT defined MINIMAL_VERSIONS cargo test
