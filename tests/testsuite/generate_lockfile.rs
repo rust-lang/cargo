@@ -226,6 +226,6 @@ fn duplicate_entries_in_lockfile() {
         .with_stderr_contains(
             "[..]package collision in the lockfile: packages common [..] and \
              common [..] are different, but only one can be written to \
-             lockfile unambigiously",
+             lockfile unambiguously",
         ).run();
 }

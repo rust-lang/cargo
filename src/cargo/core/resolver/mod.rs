@@ -1154,7 +1154,7 @@ fn check_duplicate_pkgs_in_lockfile(resolve: &Resolve) -> CargoResult<()> {
         if let Some(prev_pkg_id) = unique_pkg_ids.insert(encodable_pkd_id, pkg_id) {
             bail!(
                 "package collision in the lockfile: packages {} and {} are different, \
-                 but only one can be written to lockfile unambigiously",
+                 but only one can be written to lockfile unambiguously",
                 prev_pkg_id,
                 pkg_id
             )
