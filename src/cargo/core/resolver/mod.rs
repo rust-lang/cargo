@@ -64,7 +64,7 @@ use util::profile;
 
 use self::context::{Activations, Context};
 use self::types::{ActivateError, ActivateResult, Candidate, ConflictReason, DepsFrame, GraphNode};
-use self::types::{RcVecIter, RegistryQueryer};
+use self::types::{RcVecIter, RegistryQueryer, ResolverProgress};
 
 pub use self::encode::{EncodableDependency, EncodablePackageId, EncodableResolve};
 pub use self::encode::{Metadata, WorkspaceResolve};
@@ -200,11 +200,7 @@ fn activate_deps_loop(
         }
     }
 
-    let mut ticks = 0u16;
-    let start = Instant::now();
-    let time_to_print = Duration::from_millis(500);
-    let mut printed = false;
-    let mut deps_time = Duration::new(0, 0);
+    let mut printed = ResolverProgress::new();
 
     // Main resolution loop, this is the workhorse of the resolution algorithm.
     //
@@ -221,37 +217,8 @@ fn activate_deps_loop(
     // attempt to continue resolving.
     while let Some(mut deps_frame) = remaining_deps.pop() {
         // If we spend a lot of time here (we shouldn't in most cases) then give
-        // a bit of a visual indicator as to what we're doing. Only enable this
-        // when stderr is a tty (a human is likely to be watching) to ensure we
-        // get deterministic output otherwise when observed by tools.
-        //
-        // Also note that we hit this loop a lot, so it's fairly performance
-        // sensitive. As a result try to defer a possibly expensive operation
-        // like `Instant::now` by only checking every N iterations of this loop
-        // to amortize the cost of the current time lookup.
-        ticks += 1;
-        if let Some(config) = config {
-            if config.shell().is_err_tty()
-                && !printed
-                && ticks % 1000 == 0
-                && start.elapsed() - deps_time > time_to_print
-            {
-                printed = true;
-                config.shell().status("Resolving", "dependency graph...")?;
-            }
-        }
-        // The largest test in our sweet takes less then 5000 ticks
-        // with all the algorithm improvements.
-        // If any of them are removed then it takes more than I am willing to measure.
-        // So lets fail the test fast if we have ben running for two long.
-        debug_assert!(ticks < 50_000);
-        // The largest test in our sweet takes less then 30 sec
-        // with all the improvements to how fast a tick can go.
-        // If any of them are removed then it takes more than I am willing to measure.
-        // So lets fail the test fast if we have ben running for two long.
-        if cfg!(debug_assertions) && (ticks % 1000 == 0) {
-            assert!(start.elapsed() - deps_time < Duration::from_secs(90));
-        }
+        // a bit of a visual indicator as to what we're doing.
+        printed.shell_status(config)?;
 
         let just_here_for_the_error_messages = deps_frame.just_for_error_messages;
 
@@ -431,7 +398,7 @@ fn activate_deps_loop(
                 // frame in the end if it looks like it's not going to end well,
                 // so figure that out here.
                 Ok(Some((mut frame, dur))) => {
-                    deps_time += dur;
+                    printed.elapsed(dur);
 
                     // Our `frame` here is a new package with its own list of
                     // dependencies. Do a sanity check here of all those
