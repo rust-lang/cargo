@@ -236,6 +236,10 @@ impl<'cfg> Compilation<'cfg> {
                 "CARGO_PKG_HOMEPAGE",
                 metadata.homepage.as_ref().unwrap_or(&String::new()),
             )
+            .env(
+                "CARGO_PKG_REPOSITORY",
+                metadata.repository.as_ref().unwrap_or(&String::new()),
+            )
             .env("CARGO_PKG_AUTHORS", &pkg.authors().join(":"))
             .cwd(pkg.root());
         Ok(cmd)

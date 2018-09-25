@@ -1338,6 +1338,7 @@ fn crate_env_vars() {
         version = "0.5.1-alpha.1"
         description = "This is foo"
         homepage = "http://example.com"
+        repository = "http://example.com/repo.git"
         authors = ["wycats@example.com"]
         "#,
         ).file(
@@ -1354,6 +1355,7 @@ fn crate_env_vars() {
             static CARGO_MANIFEST_DIR: &'static str = env!("CARGO_MANIFEST_DIR");
             static PKG_NAME: &'static str = env!("CARGO_PKG_NAME");
             static HOMEPAGE: &'static str = env!("CARGO_PKG_HOMEPAGE");
+            static REPOSITORY: &'static str = env!("CARGO_PKG_REPOSITORY");
             static DESCRIPTION: &'static str = env!("CARGO_PKG_DESCRIPTION");
 
             fn main() {
@@ -1364,6 +1366,7 @@ fn crate_env_vars() {
                  println!("{}", s);
                  assert_eq!("foo", PKG_NAME);
                  assert_eq!("http://example.com", HOMEPAGE);
+                 assert_eq!("http://example.com/repo.git", REPOSITORY);
                  assert_eq!("This is foo", DESCRIPTION);
                 let s = format!("{}.{}.{}-{}", VERSION_MAJOR,
                                 VERSION_MINOR, VERSION_PATCH, VERSION_PRE);
