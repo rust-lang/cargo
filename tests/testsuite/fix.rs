@@ -786,9 +786,6 @@ fn fix_all_targets_by_default() {
 
 #[test]
 fn prepare_for_and_enable() {
-    if !is_nightly() {
-        return;
-    }
     let p = project()
         .file(
             "Cargo.toml",
@@ -905,9 +902,6 @@ fn idioms_2015_ok() {
 
 #[test]
 fn both_edition_migrate_flags() {
-    if !is_nightly() {
-        return;
-    }
     let p = project().file("src/lib.rs", "").build();
 
     let stderr = "\
