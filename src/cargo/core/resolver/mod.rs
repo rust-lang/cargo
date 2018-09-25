@@ -200,7 +200,7 @@ fn activate_deps_loop(
         }
     }
 
-    let mut ticks = 0;
+    let mut ticks = 0u16;
     let start = Instant::now();
     let time_to_print = Duration::from_millis(500);
     let mut printed = false;
@@ -239,6 +239,18 @@ fn activate_deps_loop(
                 printed = true;
                 config.shell().status("Resolving", "dependency graph...")?;
             }
+        }
+        // The largest test in our sweet takes less then 5000 ticks
+        // with all the algorithm improvements.
+        // If any of them are removed then it takes more than I am willing to measure.
+        // So lets fail the test fast if we have ben running for two long.
+        debug_assert!(ticks < 50_000);
+        // The largest test in our sweet takes less then 30 sec
+        // with all the improvements to how fast a tick can go.
+        // If any of them are removed then it takes more than I am willing to measure.
+        // So lets fail the test fast if we have ben running for two long.
+        if cfg!(debug_assertions) && (ticks % 1000 == 0) {
+            assert!(start.elapsed() - deps_time < Duration::from_secs(90));
         }
 
         let just_here_for_the_error_messages = deps_frame.just_for_error_messages;

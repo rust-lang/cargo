@@ -1,5 +1,9 @@
 use std::cmp::PartialEq;
+use std::cmp::{max, min};
 use std::collections::{BTreeMap, HashSet};
+use std::env;
+use std::fmt;
+use std::time::{Duration, Instant};
 
 use cargo::core::dependency::Kind::{self, Development};
 use cargo::core::resolver::{self, Method};
@@ -9,6 +13,13 @@ use cargo::util::{CargoResult, Config, ToUrl};
 
 use support::project;
 use support::registry::Package;
+
+use proptest::collection::{btree_map, btree_set, vec};
+use proptest::prelude::*;
+use proptest::sample::Index;
+use proptest::strategy::ValueTree;
+use proptest::string::string_regex;
+use proptest::test_runner::TestRunner;
 
 fn resolve(
     pkg: &PackageId,
@@ -49,6 +60,7 @@ fn resolve_with_config(
         false,
     ).unwrap();
     let method = Method::Everything;
+    let start = Instant::now();
     let resolve = resolver::resolve(
         &[(summary, method)],
         &[],
@@ -57,6 +69,10 @@ fn resolve_with_config(
         config,
         false,
     )?;
+
+    // The largest test in our sweet takes less then 30 sec.
+    // So lets fail the test if we have ben running for two long.
+    assert!(start.elapsed() < Duration::from_secs(60));
     let res = resolve.iter().cloned().collect();
     Ok(res)
 }
@@ -67,9 +83,7 @@ trait ToDep {
 
 impl ToDep for &'static str {
     fn to_dep(self) -> Dependency {
-        let url = "http://example.com".to_url().unwrap();
-        let source_id = SourceId::for_registry(&url).unwrap();
-        Dependency::parse_no_deprecated(self, Some("1.0.0"), &source_id).unwrap()
+        Dependency::parse_no_deprecated(self, Some("1.0.0"), &registry_loc()).unwrap()
     }
 }
 
@@ -83,56 +97,58 @@ trait ToPkgId {
     fn to_pkgid(&self) -> PackageId;
 }
 
+impl ToPkgId for PackageId {
+    fn to_pkgid(&self) -> PackageId {
+        self.clone()
+    }
+}
+
 impl<'a> ToPkgId for &'a str {
     fn to_pkgid(&self) -> PackageId {
         PackageId::new(*self, "1.0.0", &registry_loc()).unwrap()
     }
 }
 
-impl<'a> ToPkgId for (&'a str, &'a str) {
+impl<T: AsRef<str>, U: AsRef<str>> ToPkgId for (T, U) {
     fn to_pkgid(&self) -> PackageId {
-        let (name, vers) = *self;
-        PackageId::new(name, vers, &registry_loc()).unwrap()
-    }
-}
-
-impl<'a> ToPkgId for (&'a str, String) {
-    fn to_pkgid(&self) -> PackageId {
-        let (name, ref vers) = *self;
-        PackageId::new(name, vers, &registry_loc()).unwrap()
+        let (name, vers) = self;
+        PackageId::new(name.as_ref(), vers.as_ref(), &registry_loc()).unwrap()
     }
 }
 
 macro_rules! pkg {
     ($pkgid:expr => [$($deps:expr),+ $(,)* ]) => ({
         let d: Vec<Dependency> = vec![$($deps.to_dep()),+];
-        let pkgid = $pkgid.to_pkgid();
-        let link = if pkgid.name().ends_with("-sys") {Some(pkgid.name().as_str())} else {None};
-
-        Summary::new(pkgid, d, &BTreeMap::<String, Vec<String>>::new(), link, false).unwrap()
+        pkg_dep($pkgid, d)
     });
 
     ($pkgid:expr) => ({
-        let pkgid = $pkgid.to_pkgid();
-        let link = if pkgid.name().ends_with("-sys") {Some(pkgid.name().as_str())} else {None};
-        Summary::new(pkgid, Vec::new(), &BTreeMap::<String, Vec<String>>::new(), link, false).unwrap()
+        pkg($pkgid)
     })
 }
 
 fn registry_loc() -> SourceId {
-    let remote = "http://example.com".to_url().unwrap();
-    SourceId::for_registry(&remote).unwrap()
+    lazy_static! {
+        static ref EXAMPLE_DOT_COM: SourceId =
+            SourceId::for_registry(&"http://example.com".to_url().unwrap()).unwrap();
+    }
+    EXAMPLE_DOT_COM.clone()
 }
 
-fn pkg(name: &str) -> Summary {
-    let link = if name.ends_with("-sys") {
-        Some(name)
+fn pkg<T: ToPkgId>(name: T) -> Summary {
+    pkg_dep(name, Vec::new())
+}
+
+fn pkg_dep<T: ToPkgId>(name: T, dep: Vec<Dependency>) -> Summary {
+    let pkgid = name.to_pkgid();
+    let link = if pkgid.name().ends_with("-sys") {
+        Some(pkgid.name().as_str())
     } else {
         None
     };
     Summary::new(
-        pkg_id(name),
-        Vec::new(),
+        name.to_pkgid(),
+        dep,
         &BTreeMap::<String, Vec<String>>::new(),
         link,
         false,
@@ -170,9 +186,7 @@ fn dep(name: &str) -> Dependency {
     dep_req(name, "1.0.0")
 }
 fn dep_req(name: &str, req: &str) -> Dependency {
-    let url = "http://example.com".to_url().unwrap();
-    let source_id = SourceId::for_registry(&url).unwrap();
-    Dependency::parse_no_deprecated(name, Some(req), &source_id).unwrap()
+    Dependency::parse_no_deprecated(name, Some(req), &registry_loc()).unwrap()
 }
 
 fn dep_loc(name: &str, location: &str) -> Dependency {
@@ -198,6 +212,302 @@ fn loc_names(names: &[(&'static str, &'static str)]) -> Vec<PackageId> {
         .iter()
         .map(|&(name, loc)| pkg_id_loc(name, loc))
         .collect()
+}
+
+/// By default `Summary` and `Dependency` have a very verbose `Debug` representation.
+/// This replaces with a representation that uses constructors from this file.
+///
+/// If `registry_strategy` is improved to modify more fields
+/// then this needs to update to display the corresponding constructor.
+struct PrettyPrintRegistry(Vec<Summary>);
+
+impl fmt::Debug for PrettyPrintRegistry {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        write!(f, "vec![")?;
+        for s in &self.0 {
+            if s.dependencies().is_empty() {
+                write!(f, "pkg!((\"{}\", \"{}\")),", s.name(), s.version())?;
+            } else {
+                write!(f, "pkg!((\"{}\", \"{}\") => [", s.name(), s.version())?;
+                for d in s.dependencies() {
+                    write!(
+                        f,
+                        "dep_req(\"{}\", \"{}\"),",
+                        d.name_in_toml(),
+                        d.version_req()
+                    )?;
+                }
+                write!(f, "]),")?;
+            }
+        }
+        write!(f, "]")
+    }
+}
+
+#[test]
+fn meta_test_deep_pretty_print_registry() {
+    assert_eq!(
+        &format!(
+            "{:?}",
+            PrettyPrintRegistry(vec![
+                pkg!(("foo", "1.0.1") => [dep_req("bar", "1")]),
+                pkg!(("foo", "1.0.0") => [dep_req("bar", "2")]),
+                pkg!(("bar", "1.0.0") => [dep_req("baz", "=1.0.2"),
+                                  dep_req("other", "1")]),
+                pkg!(("bar", "2.0.0") => [dep_req("baz", "=1.0.1")]),
+                pkg!(("baz", "1.0.2") => [dep_req("other", "2")]),
+                pkg!(("baz", "1.0.1")),
+                pkg!(("dep_req", "1.0.0")),
+                pkg!(("dep_req", "2.0.0")),
+            ])
+        ),
+        "vec![pkg!((\"foo\", \"1.0.1\") => [dep_req(\"bar\", \"^1\"),]),\
+         pkg!((\"foo\", \"1.0.0\") => [dep_req(\"bar\", \"^2\"),]),\
+         pkg!((\"bar\", \"1.0.0\") => [dep_req(\"baz\", \"= 1.0.2\"),dep_req(\"other\", \"^1\"),]),\
+         pkg!((\"bar\", \"2.0.0\") => [dep_req(\"baz\", \"= 1.0.1\"),]),\
+         pkg!((\"baz\", \"1.0.2\") => [dep_req(\"other\", \"^2\"),]),\
+         pkg!((\"baz\", \"1.0.1\")),pkg!((\"dep_req\", \"1.0.0\")),\
+         pkg!((\"dep_req\", \"2.0.0\")),]"
+    )
+}
+
+/// This generates a random registry index.
+/// Unlike vec((Name, Ver, vec((Name, VerRq), ..), ..)
+/// This strategy has a high probability of having valid dependencies
+fn registry_strategy(
+    max_crates: usize,
+    max_versions: usize,
+    shrinkage: usize,
+) -> impl Strategy<Value = PrettyPrintRegistry> {
+    let name = string_regex("[A-Za-z_-][A-Za-z0-9_-]*(-sys)?").unwrap();
+
+    let raw_version = [..max_versions; 3];
+    let version_from_raw = |v: &[usize; 3]| format!("{}.{}.{}", v[0], v[1], v[2]);
+
+    // If this is false than the crate will depend on the nonexistent "bad"
+    // instead of the complex set we generated for it.
+    let allow_deps = prop::bool::weighted(0.99);
+
+    let list_of_versions =
+        btree_set((raw_version, allow_deps), 1..=max_versions).prop_map(move |ver| {
+            ver.iter()
+                .map(|a| (version_from_raw(&a.0), a.1))
+                .collect::<Vec<_>>()
+        });
+
+    let list_of_crates_with_versions =
+        btree_map(name, list_of_versions, 1..=max_crates).prop_map(|mut vers| {
+            // root is the name of the thing being compiled
+            // so it would be confusing to have it in the index
+            vers.remove("root");
+            // bad is a name reserved for a dep that won't work
+            vers.remove("bad");
+            vers
+        });
+
+    // each version of each crate can depend on each crate smaller then it.
+    // In theory shrinkage should be 2, but in practice we get better trees with a larger value.
+    let max_deps = max_versions * (max_crates * (max_crates - 1)) / shrinkage;
+
+    let raw_version_range = (any::<Index>(), any::<Index>());
+    let raw_dependency = (any::<Index>(), any::<Index>(), raw_version_range);
+
+    fn order_index(a: Index, b: Index, size: usize) -> (usize, usize) {
+        let (a, b) = (a.index(size), b.index(size));
+        (min(a, b), max(a, b))
+    }
+
+    let list_of_raw_dependency = vec(raw_dependency, ..=max_deps);
+
+    (list_of_crates_with_versions, list_of_raw_dependency).prop_map(
+        |(crate_vers_by_name, raw_dependencies)| {
+            let list_of_pkgid: Vec<_> = crate_vers_by_name
+                .iter()
+                .flat_map(|(name, vers)| vers.iter().map(move |x| ((name.as_str(), &x.0), x.1)))
+                .collect();
+            let len_all_pkgid = list_of_pkgid.len();
+            let mut dependency_by_pkgid = vec![vec![]; len_all_pkgid];
+            for (a, b, (c, d)) in raw_dependencies {
+                let (a, b) = order_index(a, b, len_all_pkgid);
+                let ((dep_name, _), _) = list_of_pkgid[a];
+                if (list_of_pkgid[b].0).0 == dep_name {
+                    continue;
+                }
+                let s = &crate_vers_by_name[dep_name];
+                let (c, d) = order_index(c, d, s.len());
+
+                dependency_by_pkgid[b].push(dep_req(
+                    &dep_name,
+                    &if c == d {
+                        format!("={}", s[c].0)
+                    } else {
+                        format!(">={}, <={}", s[c].0, s[d].0)
+                    },
+                ))
+            }
+
+            PrettyPrintRegistry(
+                list_of_pkgid
+                    .into_iter()
+                    .zip(dependency_by_pkgid.into_iter())
+                    .map(|(((name, ver), allow_deps), deps)| {
+                        pkg_dep(
+                            (name, ver).to_pkgid(),
+                            if !allow_deps {
+                                vec![dep_req("bad", "*")]
+                            } else {
+                                let mut deps = deps;
+                                deps.sort_by_key(|d| d.name_in_toml());
+                                deps.dedup_by_key(|d| d.name_in_toml());
+                                deps
+                            },
+                        )
+                    }).collect(),
+            )
+        },
+    )
+}
+
+/// This test is to test the generator to ensure
+/// that it makes registries with large dependency trees
+#[test]
+fn meta_test_deep_trees_from_strategy() {
+    let mut dis = [0; 21];
+
+    let strategy = registry_strategy(50, 10, 50);
+    for _ in 0..256 {
+        let PrettyPrintRegistry(input) = strategy
+            .new_tree(&mut TestRunner::default())
+            .unwrap()
+            .current();
+        let reg = registry(input.clone());
+        for this in input.iter().rev().take(10) {
+            let res = resolve(
+                &pkg_id("root"),
+                vec![dep_req(&this.name(), &format!("={}", this.version()))],
+                &reg,
+            );
+            dis[res.as_ref().map(|x| min(x.len(), dis.len()) - 1).unwrap_or(0)] += 1;
+            if dis.iter().all(|&x| x > 0) {
+                return;
+            }
+        }
+    }
+
+    assert!(
+        dis.iter().all(|&x| x > 0),
+        "In 2560 tries we did not see a wide enough distribution of dependency trees! dis:{:?}",
+        dis
+    );
+}
+
+proptest! {
+    #![proptest_config(ProptestConfig {
+        cases:
+            if env::var("CI").is_ok() {
+                256 // we have a lot of builds in CI so one or another of them will find problems
+            } else {
+                1024 // but locally try and find it in the one build
+            },
+        max_shrink_iters:
+            if env::var("CI").is_ok() {
+                // This attempts to make sure that CI will fail fast,
+                0
+            } else {
+                // but that local builds will give a small clear test case.
+                ProptestConfig::default().max_shrink_iters
+            },
+        .. ProptestConfig::default()
+    })]
+    #[test]
+    fn limited_independence_of_irrelevant_alternatives(
+        PrettyPrintRegistry(input) in registry_strategy(50, 10, 50),
+        indexs_to_unpublish in vec(any::<prop::sample::Index>(), 10)
+    )  {
+        let reg = registry(input.clone());
+        // there is only a small chance that eny one
+        // crate will be interesting.
+        // So we try some of the most complicated.
+        for this in input.iter().rev().take(10) {
+            let res = resolve(
+                &pkg_id("root"),
+                vec![dep_req(&this.name(), &format!("={}", this.version()))],
+                &reg,
+            );
+
+            match res {
+                Ok(r) => {
+                    // If resolution was successful, then unpublishing a version of a crate
+                    // that was not selected should not change that.
+                    let not_selected: Vec<_> = input
+                        .iter()
+                        .cloned()
+                        .filter(|x| !r.contains(x.package_id()))
+                        .collect();
+                    if !not_selected.is_empty() {
+                        for index_to_unpublish in &indexs_to_unpublish {
+                            let summary_to_unpublish = index_to_unpublish.get(&not_selected);
+                            let new_reg = registry(
+                                input
+                                    .iter()
+                                    .cloned()
+                                    .filter(|x| summary_to_unpublish != x)
+                                    .collect(),
+                            );
+
+                            let res = resolve(
+                                &pkg_id("root"),
+                                vec![dep_req(&this.name(), &format!("={}", this.version()))],
+                                &new_reg,
+                            );
+
+                            // Note: that we can not assert that the two `res` are identical
+                            // as the resolver does depend on irrelevant alternatives.
+                            // It uses how constrained a dependency requirement is
+                            // to determine what order to evaluate requirements.
+
+                            prop_assert!(
+                                res.is_ok(),
+                                "unpublishing {:?} stopped `{} = \"={}\"` from working",
+                                summary_to_unpublish.package_id(),
+                                this.name(),
+                                this.version()
+                            )
+                        }
+                    }
+                }
+
+                Err(_) => {
+                    // If resolution was unsuccessful, then it should stay unsuccessful
+                    // even if any version of a crate is unpublished.
+                    for index_to_unpublish in &indexs_to_unpublish {
+                        let summary_to_unpublish = index_to_unpublish.get(&input);
+                        let new_reg = registry(
+                            input
+                                .iter()
+                                .cloned()
+                                .filter(|x| summary_to_unpublish != x)
+                                .collect(),
+                        );
+
+                        let res = resolve(
+                            &pkg_id("root"),
+                            vec![dep_req(&this.name(), &format!("={}", this.version()))],
+                            &new_reg,
+                        );
+
+                        prop_assert!(
+                            res.is_err(),
+                            "full index did not work for `{} = \"={}\"` but unpublishing {:?} fixed it!",
+                            this.name(),
+                            this.version(),
+                            summary_to_unpublish.package_id()
+                        )
+                    }
+                }
+            }
+        }
+    }
 }
 
 #[test]
@@ -228,14 +538,14 @@ fn assert_same<A: PartialEq>(a: &[A], b: &[A]) {
 
 #[test]
 fn test_resolving_only_package() {
-    let reg = registry(vec![pkg("foo")]);
+    let reg = registry(vec![pkg!("foo")]);
     let res = resolve(&pkg_id("root"), vec![dep("foo")], &reg).unwrap();
     assert_same(&res, &names(&["root", "foo"]));
 }
 
 #[test]
 fn test_resolving_one_dep() {
-    let reg = registry(vec![pkg("foo"), pkg("bar")]);
+    let reg = registry(vec![pkg!("foo"), pkg!("bar")]);
     let res = resolve(&pkg_id("root"), vec![dep("foo")], &reg).unwrap();
     assert_same(&res, &names(&["root", "foo"]));
 }
