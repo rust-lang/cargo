@@ -47,7 +47,7 @@
 //! that we're implementing something that probably shouldn't be allocating all
 //! over the place.
 
-use std::collections::{BTreeMap, BinaryHeap, HashMap, HashSet};
+use std::collections::{BTreeMap, HashMap, HashSet};
 use std::mem;
 use std::rc::Rc;
 use std::time::{Duration, Instant};
@@ -64,7 +64,7 @@ use util::profile;
 
 use self::context::{Activations, Context};
 use self::types::{ActivateError, ActivateResult, Candidate, ConflictReason, DepsFrame, GraphNode};
-use self::types::{RcVecIter, RegistryQueryer, ResolverProgress};
+use self::types::{RcVecIter, RegistryQueryer, RemainingDeps, ResolverProgress};
 
 pub use self::encode::{EncodableDependency, EncodablePackageId, EncodableResolve};
 pub use self::encode::{Metadata, WorkspaceResolve};
@@ -170,15 +170,8 @@ fn activate_deps_loop(
     summaries: &[(Summary, Method)],
     config: Option<&Config>,
 ) -> CargoResult<Context> {
-    // Note that a `BinaryHeap` is used for the remaining dependencies that need
-    // activation. This heap is sorted such that the "largest value" is the most
-    // constrained dependency, or the one with the least candidates.
-    //
-    // This helps us get through super constrained portions of the dependency
-    // graph quickly and hopefully lock down what later larger dependencies can
-    // use (those with more candidates).
     let mut backtrack_stack = Vec::new();
-    let mut remaining_deps = BinaryHeap::new();
+    let mut remaining_deps = RemainingDeps::new();
 
     // `past_conflicting_activations` is a cache of the reasons for each time we
     // backtrack.
@@ -215,26 +208,14 @@ fn activate_deps_loop(
     // its own dependencies in turn. The `backtrack_stack` is a side table of
     // backtracking states where if we hit an error we can return to in order to
     // attempt to continue resolving.
-    while let Some(mut deps_frame) = remaining_deps.pop() {
+    while let Some((just_here_for_the_error_messages, frame)) =
+        remaining_deps.pop_most_constrained()
+    {
+        let (mut parent, (mut cur, (mut dep, candidates, mut features))) = frame;
+
         // If we spend a lot of time here (we shouldn't in most cases) then give
         // a bit of a visual indicator as to what we're doing.
         printed.shell_status(config)?;
-
-        let just_here_for_the_error_messages = deps_frame.just_for_error_messages;
-
-        // Figure out what our next dependency to activate is, and if nothing is
-        // listed then we're entirely done with this frame (yay!) and we can
-        // move on to the next frame.
-        let frame = match deps_frame.remaining_siblings.next() {
-            Some(sibling) => {
-                let parent = Summary::clone(&deps_frame.parent);
-                remaining_deps.push(deps_frame);
-                (parent, sibling)
-            }
-            None => continue,
-        };
-        let (mut parent, (mut cur, (mut dep, candidates, mut features))) = frame;
-        assert!(!remaining_deps.is_empty());
 
         trace!(
             "{}[{}]>{} {} candidates",
@@ -365,7 +346,7 @@ fn activate_deps_loop(
                 Some(BacktrackFrame {
                     cur,
                     context_backup: Context::clone(&cx),
-                    deps_backup: <BinaryHeap<DepsFrame>>::clone(&remaining_deps),
+                    deps_backup: remaining_deps.clone(),
                     remaining_candidates: remaining_candidates.clone(),
                     parent: Summary::clone(&parent),
                     dep: Dependency::clone(&dep),
@@ -453,7 +434,6 @@ fn activate_deps_loop(
                         {
                             if let Some((other_parent, conflict)) = remaining_deps
                                 .iter()
-                                .flat_map(|other| other.flatten())
                                 // for deps related to us
                                 .filter(|&(_, ref other_dep)| {
                                     known_related_bad_deps.contains(other_dep)
@@ -650,7 +630,7 @@ fn activate(
 struct BacktrackFrame {
     cur: usize,
     context_backup: Context,
-    deps_backup: BinaryHeap<DepsFrame>,
+    deps_backup: RemainingDeps,
     remaining_candidates: RemainingCandidates,
     parent: Summary,
     dep: Dependency,
