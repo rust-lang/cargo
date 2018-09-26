@@ -1,11 +1,70 @@
 use std::cmp::Ordering;
-use std::collections::{HashMap, HashSet};
+use std::collections::{BinaryHeap, HashMap, HashSet};
 use std::ops::Range;
 use std::rc::Rc;
+use std::time::{Duration, Instant};
 
 use core::interning::InternedString;
 use core::{Dependency, PackageId, PackageIdSpec, Registry, Summary};
-use util::{CargoError, CargoResult};
+use util::{CargoError, CargoResult, Config};
+
+pub struct ResolverProgress {
+    ticks: u16,
+    start: Instant,
+    time_to_print: Duration,
+    printed: bool,
+    deps_time: Duration,
+}
+
+impl ResolverProgress {
+    pub fn new() -> ResolverProgress {
+        ResolverProgress {
+            ticks: 0,
+            start: Instant::now(),
+            time_to_print: Duration::from_millis(500),
+            printed: false,
+            deps_time: Duration::new(0, 0),
+        }
+    }
+    pub fn shell_status(&mut self, config: Option<&Config>) -> CargoResult<()> {
+        // If we spend a lot of time here (we shouldn't in most cases) then give
+        // a bit of a visual indicator as to what we're doing. Only enable this
+        // when stderr is a tty (a human is likely to be watching) to ensure we
+        // get deterministic output otherwise when observed by tools.
+        //
+        // Also note that we hit this loop a lot, so it's fairly performance
+        // sensitive. As a result try to defer a possibly expensive operation
+        // like `Instant::now` by only checking every N iterations of this loop
+        // to amortize the cost of the current time lookup.
+        self.ticks += 1;
+        if let Some(config) = config {
+            if config.shell().is_err_tty()
+                && !self.printed
+                && self.ticks % 1000 == 0
+                && self.start.elapsed() - self.deps_time > self.time_to_print
+            {
+                self.printed = true;
+                config.shell().status("Resolving", "dependency graph...")?;
+            }
+        }
+        // The largest test in our sweet takes less then 5000 ticks
+        // with all the algorithm improvements.
+        // If any of them are removed then it takes more than I am willing to measure.
+        // So lets fail the test fast if we have ben running for two long.
+        debug_assert!(self.ticks < 50_000);
+        // The largest test in our sweet takes less then 30 sec
+        // with all the improvements to how fast a tick can go.
+        // If any of them are removed then it takes more than I am willing to measure.
+        // So lets fail the test fast if we have ben running for two long.
+        if cfg!(debug_assertions) && (self.ticks % 1000 == 0) {
+            assert!(self.start.elapsed() - self.deps_time < Duration::from_secs(90));
+        }
+        Ok(())
+    }
+    pub fn elapsed(&mut self, dur: Duration) {
+        self.deps_time += dur;
+    }
+}
 
 pub struct RegistryQueryer<'a> {
     pub registry: &'a mut (Registry + 'a),
@@ -46,16 +105,21 @@ impl<'a> RegistryQueryer<'a> {
         }
 
         let mut ret = Vec::new();
-        self.registry.query(dep, &mut |s| {
-            ret.push(Candidate {
-                summary: s,
-                replace: None,
-            });
-        }, false)?;
+        self.registry.query(
+            dep,
+            &mut |s| {
+                ret.push(Candidate {
+                    summary: s,
+                    replace: None,
+                });
+            },
+            false,
+        )?;
         for candidate in ret.iter_mut() {
             let summary = &candidate.summary;
 
-            let mut potential_matches = self.replacements
+            let mut potential_matches = self
+                .replacements
                 .iter()
                 .filter(|&&(ref spec, _)| spec.matches(summary.package_id()));
 
@@ -63,7 +127,11 @@ impl<'a> RegistryQueryer<'a> {
                 None => continue,
                 Some(replacement) => replacement,
             };
-            debug!("found an override for {} {}", dep.package_name(), dep.version_req());
+            debug!(
+                "found an override for {} {}",
+                dep.package_name(),
+                dep.version_req()
+            );
 
             let mut summaries = self.registry.query_vec(dep, false)?.into_iter();
             let s = summaries.next().ok_or_else(|| {
@@ -204,7 +272,7 @@ impl DepsFrame {
             .unwrap_or(0)
     }
 
-    pub fn flatten<'s>(&'s self) -> impl Iterator<Item = (&PackageId, Dependency)> + 's {
+    pub fn flatten(&self) -> impl Iterator<Item = (&PackageId, Dependency)> {
         self.remaining_siblings
             .clone()
             .map(move |(_, (d, _, _))| (self.parent.package_id(), d))
@@ -235,6 +303,43 @@ impl Ord for DepsFrame {
             // needs to get bubbled up to the top of the heap we use below, so
             // reverse comparison here.
             self.min_candidates().cmp(&other.min_candidates()).reverse())
+    }
+}
+
+/// Note that a `BinaryHeap` is used for the remaining dependencies that need
+/// activation. This heap is sorted such that the "largest value" is the most
+/// constrained dependency, or the one with the least candidates.
+///
+/// This helps us get through super constrained portions of the dependency
+/// graph quickly and hopefully lock down what later larger dependencies can
+/// use (those with more candidates).
+#[derive(Clone)]
+pub struct RemainingDeps(BinaryHeap<DepsFrame>);
+
+impl RemainingDeps {
+    pub fn new() -> RemainingDeps {
+        RemainingDeps(BinaryHeap::new())
+    }
+    pub fn push(&mut self, x: DepsFrame) {
+        self.0.push(x)
+    }
+    pub fn pop_most_constrained(&mut self) -> Option<(bool, (Summary, (usize, DepInfo)))> {
+        while let Some(mut deps_frame) = self.0.pop() {
+            let just_here_for_the_error_messages = deps_frame.just_for_error_messages;
+
+            // Figure out what our next dependency to activate is, and if nothing is
+            // listed then we're entirely done with this frame (yay!) and we can
+            // move on to the next frame.
+            if let Some(sibling) = deps_frame.remaining_siblings.next() {
+                let parent = Summary::clone(&deps_frame.parent);
+                self.0.push(deps_frame);
+                return Some((just_here_for_the_error_messages, (parent, sibling)));
+            }
+        }
+        None
+    }
+    pub fn iter(&mut self) -> impl Iterator<Item = (&PackageId, Dependency)> {
+        self.0.iter().flat_map(|other| other.flatten())
     }
 }
 
