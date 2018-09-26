@@ -48,6 +48,11 @@ system:
     * `%P`  progress percentage without decimals
     * `%%`  plain `%` character (can be used for `%P%%` => `14%`)
     * `%n`  (truncated) list of names of running jobs
+    * `%e`  elapsed time in seconds
+    * `%E`  elasped time in seconds (human readable)
+    * `%o`  overall time per job
+    * `%O`  overall time per job (human readable)
+    * `%c`  jobs per second
     Note that `%%` is evaluated last so `%%s` will be evaluated as `%2` and not `%s`
 
 Note that Cargo will also read environment variables for `.cargo/config`
