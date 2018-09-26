@@ -47,12 +47,12 @@ impl ResolverProgress {
                 config.shell().status("Resolving", "dependency graph...")?;
             }
         }
-        // The largest test in our sweet takes less then 5000 ticks
+        // The largest test in our suite takes less then 5000 ticks
         // with all the algorithm improvements.
         // If any of them are removed then it takes more than I am willing to measure.
         // So lets fail the test fast if we have ben running for two long.
         debug_assert!(self.ticks < 50_000);
-        // The largest test in our sweet takes less then 30 sec
+        // The largest test in our suite takes less then 30 sec
         // with all the improvements to how fast a tick can go.
         // If any of them are removed then it takes more than I am willing to measure.
         // So lets fail the test fast if we have ben running for two long.
