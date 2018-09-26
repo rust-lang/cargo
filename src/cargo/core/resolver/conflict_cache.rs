@@ -49,10 +49,10 @@ impl ConflictCache {
         }
     }
     /// Finds any known set of conflicts, if any,
-    /// which are activated in `cx` and pass the `filter` specified?
+    /// which are activated in `context` and pass the `filter` specified?
     pub fn find_conflicting<F>(
         &self,
-        cx: &Context,
+        context: &Context,
         dep: &Dependency,
         filter: F,
     ) -> Option<&HashMap<PackageId, ConflictReason>>
@@ -63,14 +63,14 @@ impl ConflictCache {
             .get(dep)?
             .iter()
             .filter(filter)
-            .find(|conflicting| cx.is_conflicting(None, conflicting))
+            .find(|conflicting| context.is_conflicting(None, conflicting))
     }
     pub fn conflicting(
         &self,
-        cx: &Context,
+        context: &Context,
         dep: &Dependency,
     ) -> Option<&HashMap<PackageId, ConflictReason>> {
-        self.find_conflicting(cx, dep, |_| true)
+        self.find_conflicting(context, dep, |_| true)
     }
 
     /// Add to the cache a conflict of the form:

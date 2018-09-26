@@ -114,24 +114,24 @@ pub fn resolve(
     config: Option<&Config>,
     print_warnings: bool,
 ) -> CargoResult<Resolve> {
-    let cx = Context::new();
+    let context = Context::new();
     let _p = profile::start("resolving");
     let minimal_versions = match config {
         Some(config) => config.cli_unstable().minimal_versions,
         None => false,
     };
     let mut registry = RegistryQueryer::new(registry, replacements, try_to_use, minimal_versions);
-    let cx = activate_deps_loop(cx, &mut registry, summaries, config)?;
+    let context = activate_deps_loop(context, &mut registry, summaries, config)?;
 
     let mut cksums = HashMap::new();
-    for summary in cx.activations.values().flat_map(|v| v.iter()) {
+    for summary in context.activations.values().flat_map(|v| v.iter()) {
         let cksum = summary.checksum().map(|s| s.to_string());
         cksums.insert(summary.package_id().clone(), cksum);
     }
     let resolve = Resolve::new(
-        cx.graph(),
-        cx.resolve_replacements(),
-        cx.resolve_features
+        context.graph(),
+        context.resolve_replacements(),
+        context.resolve_features
             .iter()
             .map(|(k, v)| (k.clone(), v.iter().map(|x| x.to_string()).collect()))
             .collect(),
@@ -140,7 +140,7 @@ pub fn resolve(
         Vec::new(),
     );
 
-    check_cycles(&resolve, &cx.activations)?;
+    check_cycles(&resolve, &context.activations)?;
     check_duplicate_pkgs_in_lockfile(&resolve)?;
     trace!("resolved: {:?}", resolve);
 
@@ -148,7 +148,7 @@ pub fn resolve(
     if let Some(config) = config {
         if print_warnings {
             let mut shell = config.shell();
-            let mut warnings = &cx.warnings;
+            let mut warnings = &context.warnings;
             while let Some(ref head) = warnings.head {
                 shell.warn(&head.0)?;
                 warnings = &head.1;
@@ -163,9 +163,9 @@ pub fn resolve(
 /// backtracking across possible candidates for each dependency as necessary.
 ///
 /// If all dependencies can be activated and resolved to a version in the
-/// dependency graph, cx.resolve is returned.
+/// dependency graph, context.resolve is returned.
 fn activate_deps_loop(
-    mut cx: Context,
+    mut context: Context,
     registry: &mut RegistryQueryer,
     summaries: &[(Summary, Method)],
     config: Option<&Config>,
@@ -184,7 +184,7 @@ fn activate_deps_loop(
             summary: summary.clone(),
             replace: None,
         };
-        let res = activate(&mut cx, registry, None, candidate, method);
+        let res = activate(&mut context, registry, None, candidate, method);
         match res {
             Ok(Some((frame, _))) => remaining_deps.push(frame),
             Ok(None) => (),
@@ -229,12 +229,12 @@ fn activate_deps_loop(
             parent.name(),
             cur,
             dep.package_name(),
-            cx.prev_active(&dep).len()
+            context.prev_active(&dep).len()
         );
 
         let just_here_for_the_error_messages = just_here_for_the_error_messages
             && past_conflicting_activations
-                .conflicting(&cx, &dep)
+                .conflicting(&context, &dep)
                 .is_some();
 
         let mut remaining_candidates = RemainingCandidates::new(&candidates);
@@ -256,7 +256,7 @@ fn activate_deps_loop(
         let mut backtracked = false;
 
         loop {
-            let next = remaining_candidates.next(&mut conflicting_activations, &cx, &dep);
+            let next = remaining_candidates.next(&mut conflicting_activations, &context, &dep);
 
             let (candidate, has_another) = next.ok_or(()).or_else(|_| {
                 // If we get here then our `remaining_candidates` was just
@@ -300,8 +300,8 @@ fn activate_deps_loop(
                         // Reset all of our local variables used with the
                         // contents of `frame` to complete our backtrack.
                         cur = frame.cur;
-                        cx = frame.context_backup;
-                        remaining_deps = frame.deps_backup;
+                        context = frame.context;
+                        remaining_deps = frame.remaining_deps;
                         remaining_candidates = frame.remaining_candidates;
                         parent = frame.parent;
                         dep = frame.dep;
@@ -313,7 +313,7 @@ fn activate_deps_loop(
                     None => {
                         debug!("no candidates found");
                         Err(activation_error(
-                            &cx,
+                            &context,
                             registry.registry,
                             &parent,
                             &dep,
@@ -345,8 +345,8 @@ fn activate_deps_loop(
             let backtrack = if has_another {
                 Some(BacktrackFrame {
                     cur,
-                    context_backup: Context::clone(&cx),
-                    deps_backup: remaining_deps.clone(),
+                    context: Context::clone(&context),
+                    remaining_deps: remaining_deps.clone(),
                     remaining_candidates: remaining_candidates.clone(),
                     parent: Summary::clone(&parent),
                     dep: Dependency::clone(&dep),
@@ -371,7 +371,7 @@ fn activate_deps_loop(
                 dep.package_name(),
                 candidate.summary.version()
             );
-            let res = activate(&mut cx, registry, Some((&parent, &dep)), candidate, &method);
+            let res = activate(&mut context, registry, Some((&parent, &dep)), candidate, &method);
 
             let successfully_activated = match res {
                 // Success! We've now activated our `candidate` in our context
@@ -401,7 +401,7 @@ fn activate_deps_loop(
                             .remaining_siblings
                             .clone()
                             .filter_map(|(_, (ref new_dep, _, _))| {
-                                past_conflicting_activations.conflicting(&cx, new_dep)
+                                past_conflicting_activations.conflicting(&context, new_dep)
                             }).next()
                         {
                             // If one of our deps is known unresolvable
@@ -439,7 +439,7 @@ fn activate_deps_loop(
                                     known_related_bad_deps.contains(other_dep)
                                 }).filter_map(|(other_parent, other_dep)| {
                                     past_conflicting_activations
-                                        .find_conflicting(&cx, &other_dep, |con| {
+                                        .find_conflicting(&context, &other_dep, |con| {
                                             con.contains_key(&pid)
                                         }).map(|con| (other_parent, con))
                                 }).next()
@@ -548,14 +548,14 @@ fn activate_deps_loop(
             }
 
             // We've failed to activate this dependency, oh dear! Our call to
-            // `activate` above may have altered our `cx` local variable, so
+            // `activate` above may have altered our `context` local variable, so
             // restore it back if we've got a backtrack frame.
             //
-            // If we don't have a backtrack frame then we're just using the `cx`
+            // If we don't have a backtrack frame then we're just using the `context`
             // for error messages anyway so we can live with a little
             // imprecision.
             if let Some(b) = backtrack {
-                cx = b.context_backup;
+                context = b.context;
             }
         }
 
@@ -565,39 +565,39 @@ fn activate_deps_loop(
         // so loop back to the top of the function here.
     }
 
-    Ok(cx)
+    Ok(context)
 }
 
-/// Attempts to activate the summary `candidate` in the context `cx`.
+/// Attempts to activate the summary `candidate` in the context `context`.
 ///
 /// This function will pull dependency summaries from the registry provided, and
 /// the dependencies of the package will be determined by the `method` provided.
 /// If `candidate` was activated, this function returns the dependency frame to
 /// iterate through next.
 fn activate(
-    cx: &mut Context,
+    context: &mut Context,
     registry: &mut RegistryQueryer,
     parent: Option<(&Summary, &Dependency)>,
     candidate: Candidate,
     method: &Method,
 ) -> ActivateResult<Option<(DepsFrame, Duration)>> {
     if let Some((parent, dep)) = parent {
-        cx.resolve_graph.push(GraphNode::Link(
+        context.resolve_graph.push(GraphNode::Link(
             parent.package_id().clone(),
             candidate.summary.package_id().clone(),
             dep.clone(),
         ));
     }
 
-    let activated = cx.flag_activated(&candidate.summary, method)?;
+    let activated = context.flag_activated(&candidate.summary, method)?;
 
     let candidate = match candidate.replace {
         Some(replace) => {
-            cx.resolve_replacements.push((
+            context.resolve_replacements.push((
                 candidate.summary.package_id().clone(),
                 replace.package_id().clone(),
             ));
-            if cx.flag_activated(&replace, method)? && activated {
+            if context.flag_activated(&replace, method)? && activated {
                 return Ok(None);
             }
             trace!(
@@ -617,7 +617,7 @@ fn activate(
     };
 
     let now = Instant::now();
-    let deps = cx.build_deps(registry, parent.map(|p| p.0), &candidate, method)?;
+    let deps = context.build_deps(registry, parent.map(|p| p.0), &candidate, method)?;
     let frame = DepsFrame {
         parent: candidate,
         just_for_error_messages: false,
@@ -629,8 +629,8 @@ fn activate(
 #[derive(Clone)]
 struct BacktrackFrame {
     cur: usize,
-    context_backup: Context,
-    deps_backup: RemainingDeps,
+    context: Context,
+    remaining_deps: RemainingDeps,
     remaining_candidates: RemainingCandidates,
     parent: Summary,
     dep: Dependency,
@@ -780,7 +780,7 @@ fn find_candidate(
     while let Some(mut frame) = backtrack_stack.pop() {
         let next = frame.remaining_candidates.next(
             &mut frame.conflicting_activations,
-            &frame.context_backup,
+            &frame.context,
             &frame.dep,
         );
         let (candidate, has_another) = match next {
@@ -798,7 +798,7 @@ fn find_candidate(
         // completely skip this backtrack frame and move on to the next.
         if !backtracked {
             if frame
-                .context_backup
+                .context
                 .is_conflicting(Some(parent.package_id()), conflicting_activations)
             {
                 trace!(

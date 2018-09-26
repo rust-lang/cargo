@@ -70,7 +70,7 @@ fn resolve_with_config(
         false,
     )?;
 
-    // The largest test in our sweet takes less then 30 sec.
+    // The largest test in our suite takes less then 30 sec.
     // So lets fail the test if we have ben running for two long.
     assert!(start.elapsed() < Duration::from_secs(60));
     let res = resolve.iter().cloned().collect();
