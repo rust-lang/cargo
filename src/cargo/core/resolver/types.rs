@@ -1,5 +1,5 @@
 use std::cmp::Ordering;
-use std::collections::{HashMap, HashSet};
+use std::collections::{BinaryHeap, HashMap, HashSet};
 use std::ops::Range;
 use std::rc::Rc;
 use std::time::{Duration, Instant};
@@ -272,7 +272,7 @@ impl DepsFrame {
             .unwrap_or(0)
     }
 
-    pub fn flatten<'s>(&'s self) -> impl Iterator<Item = (&PackageId, Dependency)> + 's {
+    pub fn flatten(&self) -> impl Iterator<Item = (&PackageId, Dependency)> {
         self.remaining_siblings
             .clone()
             .map(move |(_, (d, _, _))| (self.parent.package_id(), d))
@@ -303,6 +303,43 @@ impl Ord for DepsFrame {
             // needs to get bubbled up to the top of the heap we use below, so
             // reverse comparison here.
             self.min_candidates().cmp(&other.min_candidates()).reverse())
+    }
+}
+
+/// Note that a `BinaryHeap` is used for the remaining dependencies that need
+/// activation. This heap is sorted such that the "largest value" is the most
+/// constrained dependency, or the one with the least candidates.
+///
+/// This helps us get through super constrained portions of the dependency
+/// graph quickly and hopefully lock down what later larger dependencies can
+/// use (those with more candidates).
+#[derive(Clone)]
+pub struct RemainingDeps(BinaryHeap<DepsFrame>);
+
+impl RemainingDeps {
+    pub fn new() -> RemainingDeps {
+        RemainingDeps(BinaryHeap::new())
+    }
+    pub fn push(&mut self, x: DepsFrame) {
+        self.0.push(x)
+    }
+    pub fn pop_most_constrained(&mut self) -> Option<(bool, (Summary, (usize, DepInfo)))> {
+        while let Some(mut deps_frame) = self.0.pop() {
+            let just_here_for_the_error_messages = deps_frame.just_for_error_messages;
+
+            // Figure out what our next dependency to activate is, and if nothing is
+            // listed then we're entirely done with this frame (yay!) and we can
+            // move on to the next frame.
+            if let Some(sibling) = deps_frame.remaining_siblings.next() {
+                let parent = Summary::clone(&deps_frame.parent);
+                self.0.push(deps_frame);
+                return Some((just_here_for_the_error_messages, (parent, sibling)));
+            }
+        }
+        None
+    }
+    pub fn iter(&mut self) -> impl Iterator<Item = (&PackageId, Dependency)> {
+        self.0.iter().flat_map(|other| other.flatten())
     }
 }
 
