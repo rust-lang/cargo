@@ -1,6 +1,131 @@
-use command_prelude::*;
+use std::env;
+use std::ffi::OsStr;
+use std::fs;
+use std::path::{Path, PathBuf};
+use std::sync::Arc;
 
+use cargo::core::compiler::{CompileMode, Executor};
+use cargo::core::manifest::TargetSourcePath;
+use cargo::core::{PackageId, Target};
 use cargo::ops;
+use command_prelude::*;
+use util::errors::CargoResult;
+use util::ProcessBuilder;
+
+/// An executor that uses a cache of pre-built artifacts to reduce unnecessary
+/// compilation.
+pub struct ChromeOSExecutor {
+    // The triple for the machine on which cargo is currently running.
+    host_triple: String,
+
+    // The triple for the target on which the crate will run.
+    target_triple: String,
+
+    // The directory where cached rlibs are stored.
+    registry_dir: Box<Path>,
+}
+
+impl ChromeOSExecutor {
+    pub fn new() -> ChromeOSExecutor {
+        let host_triple = env::var("CBUILD").expect("`CBUILD` environment variable not set");
+        let target_triple = env::var("CHOST").expect("`CHOST` environment variable not set");
+
+        let registry_dir = env::var("CARGO_CROS_REGISTRY_DIR")
+            .map(PathBuf::from)
+            .map(PathBuf::into_boxed_path)
+            .expect("`CARGO_CROS_REGISTRY_DIR` environment variable not set");
+
+        if !registry_dir.exists() {
+            panic!("Cache directory {} does not exist", registry_dir.display());
+        }
+
+        ChromeOSExecutor {
+            host_triple: host_triple,
+            target_triple: target_triple,
+            registry_dir: registry_dir,
+        }
+    }
+}
+
+impl Executor for ChromeOSExecutor {
+    fn exec(
+        &self,
+        cmd: ProcessBuilder,
+        pkg: &PackageId,
+        target: &Target,
+        mode: CompileMode,
+    ) -> CargoResult<()> {
+        if mode != CompileMode::Build {
+            // This is not a build.
+            return cmd.exec();
+        }
+
+        if !target.is_lib() {
+            // We only cache library targets.
+            return cmd.exec();
+        }
+
+        // Only look at the cache if the source path starts with the registry directory.
+        if let TargetSourcePath::Path(ref pb) = target.src_path() {
+            if !pb.starts_with(&self.registry_dir) {
+                return cmd.exec();
+            }
+        } else {
+            // This is a metabuild.  Just run the command.
+            return cmd.exec();
+        }
+
+        // This is an rlib that we should already have built.  Depending on whether we are building
+        // for the host or the target we will provide the appropriate pre-built.
+        let triple = match cmd
+            .get_args()
+            .iter()
+            .filter_map(|s| s.to_str())
+            .position(|s| s.starts_with("--target"))
+        {
+            // If `--target` is not specified assume we are building for the host machine.
+            None => &self.host_triple,
+
+            // Otherwise, check to see if the target matches our `target_triple`.
+            Some(idx) => {
+                if cmd.get_args()[idx + 1] == OsStr::new(&self.target_triple) {
+                    &self.target_triple
+                } else {
+                    &self.host_triple
+                }
+            }
+        };
+
+        let mut rlib = self.registry_dir.join(triple);
+        rlib.push(format!("{}-{}", pkg.name(), pkg.version()));
+
+        let libname = format!("lib{}.rlib", target.name());
+        rlib.push(&libname);
+
+        assert!(rlib.exists());
+        assert!(rlib.is_file());
+
+        let extra_filename = cmd
+            .get_args()
+            .iter()
+            .filter_map(|s| s.to_str())
+            .find(|s| s.starts_with("extra-filename"))
+            .map(|extra| extra.split("="))
+            .unwrap()
+            .nth(1)
+            .unwrap();
+
+        let out_dir = OsStr::new("--out-dir");
+        let out_dir_pos = cmd.get_args().iter().position(|p| p == out_dir).unwrap();
+        let mut dst = PathBuf::from(cmd.get_args()[out_dir_pos + 1].to_str().unwrap());
+        dst.push(format!("lib{}{}.rlib", target.name(), extra_filename));
+
+        // Hard link the file to avoid unnecessary copying.
+        fs::hard_link(rlib, dst).unwrap();
+
+        Ok(())
+    }
+}
 
 pub fn cli() -> App {
     subcommand("build")
@@ -29,6 +154,7 @@ pub fn cli() -> App {
         .arg_target_triple("Build for the target triple")
         .arg_target_dir()
         .arg(opt("out-dir", "Copy final artifacts to this directory").value_name("PATH"))
+        .arg(opt("chromeos-executor", "Use the Chrome OS executor"))
         .arg_manifest_path()
         .arg_message_format()
         .arg_build_plan()
@@ -59,6 +185,21 @@ pub fn exec(config: &mut Config, args: &ArgMatches) -> CliResult {
             "`--out-dir` flag is unstable, pass `-Z unstable-options` to enable it"
         ))?;
     };
-    ops::compile(&ws, &compile_opts)?;
+    if args.is_present("chromeos-executor") {
+        let executor: Arc<Executor> = Arc::new(ChromeOSExecutor::new());
+        ops::compile_with_exec(&ws, &compile_opts, &executor)?;
+    } else {
+        ops::compile(&ws, &compile_opts)?;
+    }
     Ok(())
+}
+
+#[cfg(test)]
+mod test {
+    use super::*;
+
+    #[test]
+    fn new() {
+        let _c = ChromeOSExecutor::new();
+    }
 }
