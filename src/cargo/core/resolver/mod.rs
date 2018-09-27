@@ -300,8 +300,8 @@ fn activate_deps_loop(
                         // Reset all of our local variables used with the
                         // contents of `frame` to complete our backtrack.
                         cur = frame.cur;
-                        cx = frame.context_backup;
-                        remaining_deps = frame.deps_backup;
+                        cx = frame.context;
+                        remaining_deps = frame.remaining_deps;
                         remaining_candidates = frame.remaining_candidates;
                         parent = frame.parent;
                         dep = frame.dep;
@@ -345,8 +345,8 @@ fn activate_deps_loop(
             let backtrack = if has_another {
                 Some(BacktrackFrame {
                     cur,
-                    context_backup: Context::clone(&cx),
-                    deps_backup: remaining_deps.clone(),
+                    context: Context::clone(&cx),
+                    remaining_deps: remaining_deps.clone(),
                     remaining_candidates: remaining_candidates.clone(),
                     parent: Summary::clone(&parent),
                     dep: Dependency::clone(&dep),
@@ -555,7 +555,7 @@ fn activate_deps_loop(
             // for error messages anyway so we can live with a little
             // imprecision.
             if let Some(b) = backtrack {
-                cx = b.context_backup;
+                cx = b.context;
             }
         }
 
@@ -629,8 +629,8 @@ fn activate(
 #[derive(Clone)]
 struct BacktrackFrame {
     cur: usize,
-    context_backup: Context,
-    deps_backup: RemainingDeps,
+    context: Context,
+    remaining_deps: RemainingDeps,
     remaining_candidates: RemainingCandidates,
     parent: Summary,
     dep: Dependency,
@@ -780,7 +780,7 @@ fn find_candidate(
     while let Some(mut frame) = backtrack_stack.pop() {
         let next = frame.remaining_candidates.next(
             &mut frame.conflicting_activations,
-            &frame.context_backup,
+            &frame.context,
             &frame.dep,
         );
         let (candidate, has_another) = match next {
@@ -798,7 +798,7 @@ fn find_candidate(
         // completely skip this backtrack frame and move on to the next.
         if !backtracked {
             if frame
-                .context_backup
+                .context
                 .is_conflicting(Some(parent.package_id()), conflicting_activations)
             {
                 trace!(
