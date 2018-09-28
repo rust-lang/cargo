@@ -7,7 +7,7 @@ pub fn cli() -> App {
         .alias("b")
         .about("Compile a local package and all of its dependencies")
         .arg_package_spec(
-            "Package to build",
+            "Package to build (see `cargo help pkgid`)",
             "Build all packages in the workspace",
             "Exclude packages from the build",
         )
@@ -34,11 +34,6 @@ pub fn cli() -> App {
         .arg_build_plan()
         .after_help(
             "\
-If the --package argument is given, then SPEC is a package id specification
-which indicates which package should be built. If it is not given, then the
-current package is built. For more information on SPEC and its format, see the
-`cargo help pkgid` command.
-
 All packages in the workspace are built if the `--all` flag is supplied. The
 `--all` flag is automatically assumed for a virtual manifest.
 Note that `--exclude` has to be specified in conjunction with the `--all` flag.
