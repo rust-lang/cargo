@@ -933,13 +933,13 @@ fn activation_error(
         };
 
         let mut msg = format!(
-            "no matching version `{}` found for package `{}`\n\
-             location searched: {}\n\
-             versions found: {}\n",
-            dep.version_req(),
+            "failed to select a version for the requirement `{} = \"{}\"`\n  \
+             candidate versions found which didn't match: {}\n  \
+             location searched: {}\n",
             dep.package_name(),
-            dep.source_id(),
-            versions
+            dep.version_req(),
+            versions,
+            registry.describe_source(dep.source_id()),
         );
         msg.push_str("required by ");
         msg.push_str(&describe_path(&graph.path_to_top(parent.package_id())));
@@ -952,6 +952,10 @@ fn activation_error(
                 "\nconsider running `cargo update` to update \
                  a path dependency's locked version",
             );
+        }
+
+        if registry.is_replaced(dep.source_id()) {
+            msg.push_str("\nperhaps a crate was updated and forgotten to be re-vendored?");
         }
 
         msg

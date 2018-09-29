@@ -219,9 +219,9 @@ fn wrong_version() {
         .with_status(101)
         .with_stderr_contains(
             "\
-error: no matching version `>= 1.0.0` found for package `foo`
-location searched: registry [..]
-versions found: 0.0.2, 0.0.1
+error: failed to select a version for the requirement `foo = \">= 1.0.0\"`
+  candidate versions found which didn't match: 0.0.2, 0.0.1
+  location searched: `[..]` index (which is replacing registry `[..]`)
 required by package `foo v0.0.1 ([..])`
 ",
         ).run();
@@ -233,9 +233,9 @@ required by package `foo v0.0.1 ([..])`
         .with_status(101)
         .with_stderr_contains(
             "\
-error: no matching version `>= 1.0.0` found for package `foo`
-location searched: registry [..]
-versions found: 0.0.4, 0.0.3, 0.0.2, ...
+error: failed to select a version for the requirement `foo = \">= 1.0.0\"`
+  candidate versions found which didn't match: 0.0.4, 0.0.3, 0.0.2, ...
+  location searched: `[..]` index (which is replacing registry `[..]`)
 required by package `foo v0.0.1 ([..])`
 ",
         ).run();
@@ -520,10 +520,11 @@ fn relying_on_a_yank_is_bad() {
         .with_status(101)
         .with_stderr_contains(
             "\
-error: no matching version `= 0.0.2` found for package `baz`
-location searched: registry `[..]`
-versions found: 0.0.1
+error: failed to select a version for the requirement `baz = \"= 0.0.2\"`
+  candidate versions found which didn't match: 0.0.1
+  location searched: `[..]` index (which is replacing registry `[..]`)
 required by package `bar v0.0.1`
+    ... which is depended on by `foo [..]`
 ",
         ).run();
 }

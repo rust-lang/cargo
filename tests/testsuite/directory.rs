@@ -683,3 +683,45 @@ fn workspace_different_locations() {
 ",
         ).run();
 }
+
+#[test]
+fn version_missing() {
+    setup();
+
+    VendorPackage::new("foo")
+        .file("src/lib.rs", "pub fn foo() {}")
+        .build();
+
+    VendorPackage::new("bar")
+        .file(
+            "Cargo.toml",
+            r#"
+                [package]
+                name = "bar"
+                version = "0.1.0"
+                authors = []
+
+                [dependencies]
+                foo = "2"
+            "#,
+        )
+        .file("src/main.rs", "fn main() {}")
+        .build();
+
+    cargo_process("install bar")
+        .with_stderr(
+            "\
+[INSTALLING] bar v0.1.0
+error: failed to compile [..]
+
+Caused by:
+  failed to select a version for the requirement `foo = \"^2\"`
+  candidate versions found which didn't match: 0.0.1
+  location searched: directory source `[..] (which is replacing registry `[..]`)
+required by package `bar v0.1.0`
+perhaps a crate was updated and forgotten to be re-vendored?
+",
+        )
+        .with_status(101)
+        .run();
+}
