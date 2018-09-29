@@ -212,4 +212,8 @@ impl<'cfg> Source for DirectorySource<'cfg> {
 
         Ok(())
     }
+
+    fn describe(&self) -> String {
+        format!("directory source `{}`", self.root.display())
+    }
 }

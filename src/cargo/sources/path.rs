@@ -558,4 +558,11 @@ impl<'cfg> Source for PathSource<'cfg> {
         let (max, max_path) = self.last_modified_file(pkg)?;
         Ok(format!("{} ({})", max, max_path.display()))
     }
+
+    fn describe(&self) -> String {
+        match self.source_id.url().to_file_path() {
+            Ok(path) => path.display().to_string(),
+            Err(_) => self.source_id.to_string(),
+        }
+    }
 }

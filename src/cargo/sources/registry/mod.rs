@@ -585,4 +585,8 @@ impl<'cfg> Source for RegistrySource<'cfg> {
     fn fingerprint(&self, pkg: &Package) -> CargoResult<String> {
         Ok(pkg.package_id().version().to_string())
     }
+
+    fn describe(&self) -> String {
+        self.source_id.display_registry()
+    }
 }

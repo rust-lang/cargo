@@ -46,6 +46,14 @@ pub fn resolve_with_config(
             }
             Ok(())
         }
+
+        fn describe_source(&self, _src: &SourceId) -> String {
+            String::new()
+        }
+
+        fn is_replaced(&self, _src: &SourceId) -> bool {
+            false
+        }
     }
     let mut registry = MyRegistry(registry);
     let summary = Summary::new(
