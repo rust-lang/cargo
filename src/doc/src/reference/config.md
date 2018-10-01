@@ -103,6 +103,9 @@ check-revoke = true # Indicates whether SSL certs are checked for revocation
 low-speed-limit = 5 # Lower threshold for bytes/sec (10 = default, 0 = disabled)
 multiplexing = false  # whether or not to use HTTP/2 multiplexing where possible
 
+# A list of hosts which do not use the proxy configuration, if any.
+noproxy = ['github.com']
+
 [build]
 jobs = 1                  # number of parallel jobs, defaults to # of CPUs
 rustc = "rustc"           # the rust compiler tool
