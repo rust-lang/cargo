@@ -65,7 +65,7 @@ build = "build.rs"
 
 #### The `links` field (optional)
 
-This fields specifies the name of a native library that is being linked to.
+This field specifies the name of a native library that is being linked to.
 More information can be found in the [`links`][links] section of the build
 script guide.
 
