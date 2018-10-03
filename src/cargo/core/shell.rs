@@ -358,8 +358,7 @@ mod imp {
 mod imp {
     extern crate winapi;
 
-    use std::mem;
-    use std::ptr;
+    use std::{cmp, mem, ptr};
     use self::winapi::um::fileapi::*;
     use self::winapi::um::handleapi::*;
     use self::winapi::um::processenv::*;
@@ -395,13 +394,15 @@ mod imp {
             CloseHandle(h);
             if rc != 0 {
                 let width = (csbi.srWindow.Right - csbi.srWindow.Left) as usize;
-                // Some terminals, such as mintty, always return 79 instead of
-                // the actual width. In that case, use a conservative value.
-                if width == 79 {
-                    return Some(60);
-                } else {
-                    return Some(width);
-                }
+                // Unfortunately cygwin/mintty does not set the size of the
+                // backing console to match the actual window size. This
+                // always reports a size of 80 or 120 (not sure what
+                // determines that). Use a conservative max of 60 which should
+                // work in most circumstances. ConEmu does some magic to
+                // resize the console correctly, but there's no reasonable way
+                // to detect which kind of terminal we are running in, or if
+                // GetConsoleScreenBufferInfo returns accurate information.
+                return Some(cmp::min(60, width));
             }
             return None;
         }
