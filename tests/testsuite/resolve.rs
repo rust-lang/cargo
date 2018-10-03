@@ -17,12 +17,12 @@ use proptest::prelude::*;
 
 proptest! {
     #![proptest_config(ProptestConfig {
-        cases:
-            if env::var("CI").is_ok() {
-                256 // we have a lot of builds in CI so one or another of them will find problems
-            } else {
-                1024 // but locally try and find it in the one build
-            },
+        // Note that this is a little low in terms of cases we'd like to test,
+        // but this number affects how long this function takes. It can be
+        // increased locally to execute more tests and try to find more bugs,
+        // but for now it's semi-low to run in a small-ish amount of time on CI
+        // and locally.
+        cases: 256,
         max_shrink_iters:
             if env::var("CI").is_ok() {
                 // This attempts to make sure that CI will fail fast,

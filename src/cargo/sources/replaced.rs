@@ -103,4 +103,12 @@ impl<'cfg> Source for ReplacedSource<'cfg> {
         let id = id.with_source_id(&self.replace_with);
         self.inner.verify(&id)
     }
+
+    fn describe(&self) -> String {
+        format!("{} (which is replacing {})", self.inner.describe(), self.to_replace)
+    }
+
+    fn is_replaced(&self) -> bool {
+        true
+    }
 }
