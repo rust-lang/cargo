@@ -619,7 +619,9 @@ impl<'a, 'cfg> Downloads<'a, 'cfg> {
                 break Ok(pair)
             }
             assert!(self.pending.len() > 0);
-            self.set.multi.wait(&mut [], Duration::new(60, 0))
+            let timeout = self.set.multi.get_timeout()?
+                .unwrap_or(Duration::new(5, 0));
+            self.set.multi.wait(&mut [], timeout)
                 .chain_err(|| "failed to wait on curl `Multi`")?;
         }
     }
