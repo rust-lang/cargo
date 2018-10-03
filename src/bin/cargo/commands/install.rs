@@ -34,6 +34,7 @@ pub fn cli() -> App {
         )
         .arg_target_triple("Build for the target triple")
         .arg(opt("root", "Directory to install packages into").value_name("DIR"))
+        .arg(opt("registry", "Registry to use").value_name("REGISTRY"))
         .after_help(
             "\
 This command manages Cargo's local set of installed binary crates. Only packages
@@ -102,6 +103,8 @@ pub fn exec(config: &mut Config, args: &ArgMatches) -> CliResult {
     } else if krates.is_empty() {
         from_cwd = true;
         SourceId::for_path(config.cwd())?
+    } else if let Some(registry) = args.value_of("registry") {
+        SourceId::alt_registry(config, registry)?
     } else {
         SourceId::crates_io(config)?
     };
