@@ -229,6 +229,10 @@ impl<'cfg> Source for GitSource<'cfg> {
     fn fingerprint(&self, _pkg: &Package) -> CargoResult<String> {
         Ok(self.rev.as_ref().unwrap().to_string())
     }
+
+    fn describe(&self) -> String {
+        format!("git repository {}", self.source_id)
+    }
 }
 
 #[cfg(test)]

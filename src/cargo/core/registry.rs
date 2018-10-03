@@ -21,6 +21,9 @@ pub trait Registry {
         self.query(dep, &mut |s| ret.push(s), fuzzy)?;
         Ok(ret)
     }
+
+    fn describe_source(&self, source: &SourceId) -> String;
+    fn is_replaced(&self, source: &SourceId) -> bool;
 }
 
 /// This structure represents a registry of known packages. It internally
@@ -527,6 +530,20 @@ impl<'cfg> Registry for PackageRegistry<'cfg> {
         }
         f(self.lock(override_summary));
         Ok(())
+    }
+
+    fn describe_source(&self, id: &SourceId) -> String {
+        match self.sources.get(id) {
+            Some(src) => src.describe(),
+            None => id.to_string(),
+        }
+    }
+
+    fn is_replaced(&self, id: &SourceId) -> bool {
+        match self.sources.get(id) {
+            Some(src) => src.is_replaced(),
+            None => false,
+        }
     }
 }
 

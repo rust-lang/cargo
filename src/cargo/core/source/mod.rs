@@ -75,6 +75,15 @@ pub trait Source {
     fn verify(&self, _pkg: &PackageId) -> CargoResult<()> {
         Ok(())
     }
+
+    /// Describes this source in a human readable fashion, used for display in
+    /// resolver error messages currently.
+    fn describe(&self) -> String;
+
+    /// Returns whether a source is being replaced by another here
+    fn is_replaced(&self) -> bool {
+        false
+    }
 }
 
 pub enum MaybePackage {
@@ -139,6 +148,14 @@ impl<'a, T: Source + ?Sized + 'a> Source for Box<T> {
     fn verify(&self, pkg: &PackageId) -> CargoResult<()> {
         (**self).verify(pkg)
     }
+
+    fn describe(&self) -> String {
+        (**self).describe()
+    }
+
+    fn is_replaced(&self) -> bool {
+        (**self).is_replaced()
+    }
 }
 
 impl<'a, T: Source + ?Sized + 'a> Source for &'a mut T {
@@ -184,6 +201,14 @@ impl<'a, T: Source + ?Sized + 'a> Source for &'a mut T {
 
     fn verify(&self, pkg: &PackageId) -> CargoResult<()> {
         (**self).verify(pkg)
+    }
+
+    fn describe(&self) -> String {
+        (**self).describe()
+    }
+
+    fn is_replaced(&self) -> bool {
+        (**self).is_replaced()
     }
 }
 
