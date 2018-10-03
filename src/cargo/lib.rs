@@ -22,6 +22,7 @@ extern crate core_foundation;
 extern crate crates_io as registry;
 extern crate crossbeam_utils;
 extern crate curl;
+extern crate curl_sys;
 #[macro_use]
 extern crate failure;
 extern crate filetime;
