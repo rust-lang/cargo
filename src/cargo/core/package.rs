@@ -255,11 +255,10 @@ pub struct PackageSet<'cfg> {
 
 pub struct Downloads<'a, 'cfg: 'a> {
     set: &'a PackageSet<'cfg>,
-    pending: HashMap<usize, (Download, EasyHandle)>,
+    pending: HashMap<usize, (Download<'cfg>, EasyHandle)>,
     pending_ids: HashSet<PackageId>,
     results: Vec<(usize, CargoResult<()>)>,
     next: usize,
-    retry: Retry<'cfg>,
     progress: RefCell<Option<Progress<'cfg>>>,
     downloads_finished: usize,
     downloaded_bytes: u64,
@@ -268,7 +267,7 @@ pub struct Downloads<'a, 'cfg: 'a> {
     success: bool,
 }
 
-struct Download {
+struct Download<'cfg> {
     token: usize,
     id: PackageId,
     data: RefCell<Vec<u8>>,
@@ -277,6 +276,7 @@ struct Download {
     total: Cell<u64>,
     current: Cell<u64>,
     start: Instant,
+    retry: Retry<'cfg>,
 }
 
 impl<'cfg> PackageSet<'cfg> {
@@ -329,7 +329,6 @@ impl<'cfg> PackageSet<'cfg> {
             pending: HashMap::new(),
             pending_ids: HashSet::new(),
             results: Vec::new(),
-            retry: Retry::new(self.config)?,
             progress: RefCell::new(Some(Progress::with_style(
                 "Downloading",
                 ProgressStyle::Ratio,
@@ -478,6 +477,7 @@ impl<'a, 'cfg> Downloads<'a, 'cfg> {
             total: Cell::new(0),
             current: Cell::new(0),
             start: Instant::now(),
+            retry: Retry::new(self.set.config)?,
         };
         self.enqueue(dl, handle)?;
         self.tick(WhyTick::DownloadStarted)?;
@@ -514,12 +514,13 @@ impl<'a, 'cfg> Downloads<'a, 'cfg> {
             // then we want to re-enqueue our request for another attempt and
             // then we wait for another request to finish.
             let ret = {
-                self.retry.try(|| {
+                let url = &dl.url;
+                dl.retry.try(|| {
                     result?;
 
                     let code = handle.response_code()?;
                     if code != 200 && code != 0 {
-                        let url = handle.effective_url()?.unwrap_or(&dl.url);
+                        let url = handle.effective_url()?.unwrap_or(&url);
                         return Err(HttpNot200 {
                             code,
                             url: url.to_string(),
@@ -574,7 +575,7 @@ impl<'a, 'cfg> Downloads<'a, 'cfg> {
         Ok(slot.borrow().unwrap())
     }
 
-    fn enqueue(&mut self, dl: Download, handle: Easy) -> CargoResult<()> {
+    fn enqueue(&mut self, dl: Download<'cfg>, handle: Easy) -> CargoResult<()> {
         let mut handle = self.set.multi.add(handle)?;
         handle.set_token(dl.token)?;
         self.pending.insert(dl.token, (dl, handle));
