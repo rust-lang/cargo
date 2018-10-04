@@ -75,6 +75,8 @@ continuous integration systems.",
 }
 
 pub fn exec(config: &mut Config, args: &ArgMatches) -> CliResult {
+    let registry = args.registry(config)?;
+
     config.reload_rooted_at_cargo_home()?;
     let mut compile_opts = args.compile_options(config, CompileMode::Build)?;
 
@@ -103,8 +105,8 @@ pub fn exec(config: &mut Config, args: &ArgMatches) -> CliResult {
     } else if krates.is_empty() {
         from_cwd = true;
         SourceId::for_path(config.cwd())?
-    } else if let Some(registry) = args.value_of("registry") {
-        SourceId::alt_registry(config, registry)?
+    } else if let Some(registry) = registry {
+        SourceId::alt_registry(config, &registry)?
     } else {
         SourceId::crates_io(config)?
     };
