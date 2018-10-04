@@ -54,7 +54,11 @@ impl ResolverProgress {
         // with all the algorithm improvements.
         // If any of them are removed then it takes more than I am willing to measure.
         // So lets fail the test fast if we have ben running for two long.
-        debug_assert!(self.ticks < 50_000);
+        debug_assert!(
+            self.ticks < 50_000,
+            "got to 50_000 ticks in {:?}",
+            self.start.elapsed()
+        );
         // The largest test in our suite takes less then 30 sec
         // with all the improvements to how fast a tick can go.
         // If any of them are removed then it takes more than I am willing to measure.
