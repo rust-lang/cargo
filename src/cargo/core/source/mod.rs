@@ -51,8 +51,7 @@ pub trait Source {
     /// version specified.
     fn download(&mut self, package: &PackageId) -> CargoResult<MaybePackage>;
 
-    fn finish_download(&mut self, package: &PackageId, contents: Vec<u8>)
-        -> CargoResult<Package>;
+    fn finish_download(&mut self, package: &PackageId, contents: Vec<u8>) -> CargoResult<Package>;
 
     /// Generates a unique string which represents the fingerprint of the
     /// current state of the source.
@@ -88,10 +87,7 @@ pub trait Source {
 
 pub enum MaybePackage {
     Ready(Package),
-    Download {
-        url: String,
-        descriptor: String,
-    }
+    Download { url: String, descriptor: String },
 }
 
 impl<'a, T: Source + ?Sized + 'a> Source for Box<T> {

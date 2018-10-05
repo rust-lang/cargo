@@ -5,9 +5,9 @@ use std::iter::FromIterator;
 use url::Url;
 
 use core::{Dependency, PackageId, PackageIdSpec, Summary, Target};
-use util::Graph;
 use util::errors::CargoResult;
 use util::graph::{Edges, Nodes};
+use util::Graph;
 
 use super::encode::Metadata;
 
@@ -226,16 +226,22 @@ unable to verify that `{0}` is the same as when the lockfile was generated
         };
 
         let crate_name = to_target.crate_name();
-        let mut names = deps.iter()
-            .map(|d| d.explicit_name_in_toml().map(|s| s.as_str()).unwrap_or(&crate_name));
+        let mut names = deps.iter().map(|d| {
+            d.explicit_name_in_toml()
+                .map(|s| s.as_str())
+                .unwrap_or(&crate_name)
+        });
         let name = names.next().unwrap_or(&crate_name);
         for n in names {
             if n == name {
-                continue
+                continue;
             }
-            bail!("multiple dependencies listed for the same crate must \
-                   all have the same name, but the dependency on `{}` \
-                   is listed as having different names", to);
+            bail!(
+                "multiple dependencies listed for the same crate must \
+                 all have the same name, but the dependency on `{}` \
+                 is listed as having different names",
+                to
+            );
         }
         Ok(name.to_string())
     }
