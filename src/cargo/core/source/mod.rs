@@ -1,4 +1,4 @@
-use std::collections::hash_map::{HashMap, IterMut, Values};
+use std::collections::hash_map::HashMap;
 use std::fmt;
 
 use core::{Dependency, Package, PackageId, Summary};
@@ -51,8 +51,7 @@ pub trait Source {
     /// version specified.
     fn download(&mut self, package: &PackageId) -> CargoResult<MaybePackage>;
 
-    fn finish_download(&mut self, package: &PackageId, contents: Vec<u8>)
-        -> CargoResult<Package>;
+    fn finish_download(&mut self, package: &PackageId, contents: Vec<u8>) -> CargoResult<Package>;
 
     /// Generates a unique string which represents the fingerprint of the
     /// current state of the source.
@@ -88,13 +87,20 @@ pub trait Source {
 
 pub enum MaybePackage {
     Ready(Package),
-    Download {
-        url: String,
-        descriptor: String,
-    }
+    Download { url: String, descriptor: String },
 }
 
 impl<'a, T: Source + ?Sized + 'a> Source for Box<T> {
+    /// Forwards to `Source::source_id`
+    fn source_id(&self) -> &SourceId {
+        (**self).source_id()
+    }
+
+    /// Forwards to `Source::replaced_source_id`
+    fn replaced_source_id(&self) -> &SourceId {
+        (**self).replaced_source_id()
+    }
+
     /// Forwards to `Source::supports_checksums`
     fn supports_checksums(&self) -> bool {
         (**self).supports_checksums()
@@ -113,16 +119,6 @@ impl<'a, T: Source + ?Sized + 'a> Source for Box<T> {
     /// Forwards to `Source::query`
     fn fuzzy_query(&mut self, dep: &Dependency, f: &mut FnMut(Summary)) -> CargoResult<()> {
         (**self).fuzzy_query(dep, f)
-    }
-
-    /// Forwards to `Source::source_id`
-    fn source_id(&self) -> &SourceId {
-        (**self).source_id()
-    }
-
-    /// Forwards to `Source::replaced_source_id`
-    fn replaced_source_id(&self) -> &SourceId {
-        (**self).replaced_source_id()
     }
 
     /// Forwards to `Source::update`
@@ -159,6 +155,14 @@ impl<'a, T: Source + ?Sized + 'a> Source for Box<T> {
 }
 
 impl<'a, T: Source + ?Sized + 'a> Source for &'a mut T {
+    fn source_id(&self) -> &SourceId {
+        (**self).source_id()
+    }
+
+    fn replaced_source_id(&self) -> &SourceId {
+        (**self).replaced_source_id()
+    }
+
     fn supports_checksums(&self) -> bool {
         (**self).supports_checksums()
     }
@@ -173,14 +177,6 @@ impl<'a, T: Source + ?Sized + 'a> Source for &'a mut T {
 
     fn fuzzy_query(&mut self, dep: &Dependency, f: &mut FnMut(Summary)) -> CargoResult<()> {
         (**self).fuzzy_query(dep, f)
-    }
-
-    fn source_id(&self) -> &SourceId {
-        (**self).source_id()
-    }
-
-    fn replaced_source_id(&self) -> &SourceId {
-        (**self).replaced_source_id()
     }
 
     fn update(&mut self) -> CargoResult<()> {
@@ -224,14 +220,6 @@ impl<'src> fmt::Debug for SourceMap<'src> {
         write!(f, "SourceMap ")?;
         f.debug_set().entries(self.map.keys()).finish()
     }
-}
-
-/// A `std::collection::hash_map::Values` for `SourceMap`
-pub type Sources<'a, 'src> = Values<'a, SourceId, Box<Source + 'src>>;
-
-/// A `std::collection::hash_map::IterMut` for `SourceMap`
-pub struct SourcesMut<'a, 'src: 'a> {
-    inner: IterMut<'a, SourceId, Box<Source + 'src>>,
 }
 
 impl<'src> SourceMap<'src> {
@@ -288,21 +276,14 @@ impl<'src> SourceMap<'src> {
     }
 
     /// Like `HashMap::values`
-    pub fn sources<'a>(&'a self) -> Sources<'a, 'src> {
+    pub fn sources<'a>(&'a self) -> impl Iterator<Item = &'a Box<Source + 'src>> {
         self.map.values()
     }
 
     /// Like `HashMap::iter_mut`
-    pub fn sources_mut<'a>(&'a mut self) -> SourcesMut<'a, 'src> {
-        SourcesMut {
-            inner: self.map.iter_mut(),
-        }
-    }
-}
-
-impl<'a, 'src> Iterator for SourcesMut<'a, 'src> {
-    type Item = (&'a SourceId, &'a mut (Source + 'src));
-    fn next(&mut self) -> Option<(&'a SourceId, &'a mut (Source + 'src))> {
-        self.inner.next().map(|(a, b)| (a, &mut **b))
+    pub fn sources_mut<'a>(
+        &'a mut self,
+    ) -> impl Iterator<Item = (&'a SourceId, &'a mut (Source + 'src))> {
+        self.map.iter_mut().map(|(a, b)| (a, &mut **b))
     }
 }

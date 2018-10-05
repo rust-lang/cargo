@@ -5,9 +5,8 @@ use std::iter::FromIterator;
 use url::Url;
 
 use core::{Dependency, PackageId, PackageIdSpec, Summary, Target};
-use util::Graph;
 use util::errors::CargoResult;
-use util::graph::{Edges, Nodes};
+use util::Graph;
 
 use super::encode::Metadata;
 
@@ -162,21 +161,18 @@ unable to verify that `{0}` is the same as when the lockfile was generated
         Ok(())
     }
 
-    pub fn iter(&self) -> Nodes<PackageId, Vec<Dependency>> {
+    pub fn iter(&self) -> impl Iterator<Item = &PackageId> {
         self.graph.iter()
     }
 
-    pub fn deps(&self, pkg: &PackageId) -> Deps {
-        Deps {
-            edges: self.graph.edges(pkg),
-            resolve: self,
-        }
+    pub fn deps(&self, pkg: &PackageId) -> impl Iterator<Item = (&PackageId, &[Dependency])> {
+        self.graph
+            .edges(pkg)
+            .map(move |(id, deps)| (self.replacement(id).unwrap_or(id), deps.as_slice()))
     }
 
-    pub fn deps_not_replaced(&self, pkg: &PackageId) -> DepsNotReplaced {
-        DepsNotReplaced {
-            edges: self.graph.edges(pkg),
-        }
+    pub fn deps_not_replaced(&self, pkg: &PackageId) -> impl Iterator<Item = &PackageId> {
+        self.graph.edges(pkg).map(|(id, _)| id)
     }
 
     pub fn replacement(&self, pkg: &PackageId) -> Option<&PackageId> {
@@ -226,16 +222,22 @@ unable to verify that `{0}` is the same as when the lockfile was generated
         };
 
         let crate_name = to_target.crate_name();
-        let mut names = deps.iter()
-            .map(|d| d.explicit_name_in_toml().map(|s| s.as_str()).unwrap_or(&crate_name));
+        let mut names = deps.iter().map(|d| {
+            d.explicit_name_in_toml()
+                .map(|s| s.as_str())
+                .unwrap_or(&crate_name)
+        });
         let name = names.next().unwrap_or(&crate_name);
         for n in names {
             if n == name {
-                continue
+                continue;
             }
-            bail!("multiple dependencies listed for the same crate must \
-                   all have the same name, but the dependency on `{}` \
-                   is listed as having different names", to);
+            bail!(
+                "multiple dependencies listed for the same crate must \
+                 all have the same name, but the dependency on `{}` \
+                 is listed as having different names",
+                to
+            );
         }
         Ok(name.to_string())
     }
@@ -272,48 +274,3 @@ impl fmt::Debug for Resolve {
         write!(fmt, "}}")
     }
 }
-
-pub struct Deps<'a> {
-    edges: Option<Edges<'a, PackageId, Vec<Dependency>>>,
-    resolve: &'a Resolve,
-}
-
-impl<'a> Iterator for Deps<'a> {
-    type Item = (&'a PackageId, &'a [Dependency]);
-
-    fn next(&mut self) -> Option<(&'a PackageId, &'a [Dependency])> {
-        let (id, deps) = self.edges.as_mut()?.next()?;
-        let id_ret = self.resolve.replacement(id).unwrap_or(id);
-        Some((id_ret, deps))
-    }
-
-    fn size_hint(&self) -> (usize, Option<usize>) {
-        // Note: Edges is actually a std::collections::hash_set::Iter, which
-        // is an ExactSizeIterator.
-        let len = self.edges.as_ref().map(ExactSizeIterator::len).unwrap_or(0);
-        (len, Some(len))
-    }
-}
-
-impl<'a> ExactSizeIterator for Deps<'a> {}
-
-pub struct DepsNotReplaced<'a> {
-    edges: Option<Edges<'a, PackageId, Vec<Dependency>>>,
-}
-
-impl<'a> Iterator for DepsNotReplaced<'a> {
-    type Item = &'a PackageId;
-
-    fn next(&mut self) -> Option<&'a PackageId> {
-        Some(self.edges.as_mut()?.next()?.0)
-    }
-
-    fn size_hint(&self) -> (usize, Option<usize>) {
-        // Note: Edges is actually a std::collections::hash_set::Iter, which
-        // is an ExactSizeIterator.
-        let len = self.edges.as_ref().map(ExactSizeIterator::len).unwrap_or(0);
-        (len, Some(len))
-    }
-}
-
-impl<'a> ExactSizeIterator for DepsNotReplaced<'a> {}
