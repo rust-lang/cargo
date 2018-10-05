@@ -68,7 +68,7 @@ use self::types::{RcVecIter, RegistryQueryer, RemainingDeps, ResolverProgress};
 
 pub use self::encode::{EncodableDependency, EncodablePackageId, EncodableResolve};
 pub use self::encode::{Metadata, WorkspaceResolve};
-pub use self::resolve::{Deps, DepsNotReplaced, Resolve};
+pub use self::resolve::Resolve;
 pub use self::types::Method;
 
 mod conflict_cache;
