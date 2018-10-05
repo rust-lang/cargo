@@ -7,8 +7,15 @@ use super::{fingerprint, Context, Unit};
 use util::paths;
 use util::{internal, CargoResult};
 
-fn render_filename<P: AsRef<Path>>(path: P, basedir: Option<&str>) -> CargoResult<String> {
-    let path = path.as_ref();
+fn dep_info_basedir(cx: &Context<'_, '_>) -> CargoResult<Option<String>> {
+    cx.bcx
+        .config
+        .get_string("build.dep-info-basedir")
+        .map(|option| option.map(|o| o.val))
+}
+
+fn render_filename(path: impl AsRef<Path>, basedir: Option<impl AsRef<Path>>) -> CargoResult<String> {
+    let (path, basedir) = (path.as_ref(), basedir.as_ref());
     let relpath = match basedir {
         None => path,
         Some(base) => match path.strip_prefix(base) {
@@ -69,33 +76,44 @@ fn add_deps_for_unit<'a, 'b>(
     Ok(())
 }
 
-pub fn output_depinfo<'a, 'b>(cx: &mut Context<'a, 'b>, unit: &Unit<'a>) -> CargoResult<()> {
-    let bcx = cx.bcx;
+/// Returns a list of file dependencies for a given compilation `Unit`.
+///
+/// Inner `Result` type can fail if the actual dep-info generation failed; the
+/// outer one is supposed to catch other, internal Cargo errors.
+pub fn dep_files_for_unit<'a, 'b>(
+    cx: &mut Context<'a, 'b>,
+    unit: &Unit<'a>,
+) -> CargoResult<Result<Vec<String>, ()>> {
+    let basedir = dep_info_basedir(cx)?;
+
     let mut deps = BTreeSet::new();
     let mut visited = HashSet::new();
-    let success = add_deps_for_unit(&mut deps, cx, unit, &mut visited).is_ok();
-    let basedir_string;
-    let basedir = match bcx.config.get_path("build.dep-info-basedir")? {
-        Some(value) => {
-            basedir_string = value
-                .val
-                .as_os_str()
-                .to_str()
-                .ok_or_else(|| internal("build.dep-info-basedir path not utf-8"))?
-                .to_string();
-            Some(basedir_string.as_str())
-        }
-        None => None,
+    Ok(match add_deps_for_unit(&mut deps, cx, unit, &mut visited) {
+        Ok(_) => Ok(deps
+            .iter()
+            .map(|f| render_filename(f, basedir.as_ref()))
+            .collect::<CargoResult<Vec<_>>>()?),
+        Err(_) => Err(()),
+    })
+}
+
+pub fn output_depinfo<'a, 'b>(cx: &mut Context<'a, 'b>, unit: &Unit<'a>) -> CargoResult<()> {
+    let basedir = dep_info_basedir(cx)?;
+
+    let (success, deps) = match dep_files_for_unit(cx, unit)? {
+        Ok(deps) => (true, deps),
+        _ => (false, vec![])
     };
+
     let deps = deps.iter()
-        .map(|f| render_filename(f, basedir))
+        .map(|f| render_filename(f, basedir.as_ref()))
         .collect::<CargoResult<Vec<_>>>()?;
 
     for output in cx.outputs(unit)?.iter() {
         if let Some(ref link_dst) = output.hardlink {
             let output_path = link_dst.with_extension("d");
             if success {
-                let target_fn = render_filename(link_dst, basedir)?;
+                let target_fn = render_filename(link_dst, basedir.as_ref())?;
 
                 // If nothing changed don't recreate the file which could alter
                 // its mtime
