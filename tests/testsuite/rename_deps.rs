@@ -433,3 +433,28 @@ Caused by:
 ",
         ).run();
 }
+
+#[test]
+fn rename_with_dash() {
+    let p = project()
+        .file(
+            "Cargo.toml",
+            r#"
+                cargo-features = ["rename-dependency"]
+                [package]
+                name = "qwerty"
+                version = "0.1.0"
+
+                [dependencies]
+                foo-bar = { path = 'a', package = 'a' }
+            "#,
+        )
+        .file("src/lib.rs", "extern crate foo_bar;")
+        .file("a/Cargo.toml", &basic_manifest("a", "0.1.0"))
+        .file("a/src/lib.rs", "")
+        .build();
+
+    p.cargo("build")
+        .masquerade_as_nightly_cargo()
+        .run();
+}
