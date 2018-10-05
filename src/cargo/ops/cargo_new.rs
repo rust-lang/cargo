@@ -31,6 +31,7 @@ pub struct NewOptions {
     pub path: PathBuf,
     pub name: Option<String>,
     pub edition: Option<String>,
+    pub registry: Option<String>,
 }
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
@@ -67,6 +68,7 @@ struct MkOptions<'a> {
     source_files: Vec<SourceFileInformation>,
     bin: bool,
     edition: Option<&'a str>,
+    registry: Option<&'a str>,
 }
 
 impl NewOptions {
@@ -77,6 +79,7 @@ impl NewOptions {
         path: PathBuf,
         name: Option<String>,
         edition: Option<String>,
+        registry: Option<String>,
     ) -> CargoResult<NewOptions> {
         let kind = match (bin, lib) {
             (true, true) => bail!("can't specify both lib and binary outputs"),
@@ -91,6 +94,7 @@ impl NewOptions {
             path,
             name,
             edition,
+            registry,
         };
         Ok(opts)
     }
@@ -326,6 +330,7 @@ pub fn new(opts: &NewOptions, config: &Config) -> CargoResult<()> {
         source_files: vec![plan_new_source_file(opts.kind.is_bin(), name.to_string())],
         bin: opts.kind.is_bin(),
         edition: opts.edition.as_ref().map(|s| &**s),
+        registry: opts.registry.as_ref().map(|s| &**s),
     };
 
     mk(config, &mkopts).chain_err(|| {
@@ -403,6 +408,7 @@ pub fn init(opts: &NewOptions, config: &Config) -> CargoResult<()> {
         bin: src_paths_types.iter().any(|x| x.bin),
         source_files: src_paths_types,
         edition: opts.edition.as_ref().map(|s| &**s),
+        registry: opts.registry.as_ref().map(|s| &**s),
     };
 
     mk(config, &mkopts).chain_err(|| {
@@ -537,6 +543,7 @@ name = "{}"
 version = "0.1.0"
 authors = [{}]
 edition = {}
+publish = {}
 
 [dependencies]
 {}"#,
@@ -546,6 +553,10 @@ edition = {}
                 Some(edition) => toml::Value::String(edition.to_string()),
                 None => toml::Value::String("2018".to_string()),
             },
+            match opts.registry {
+                Some(registry) => toml::Value::Array(vec!(toml::Value::String(registry.to_string()))),
+                None => toml::Value::Boolean(true),
+            }, 
             cargotoml_path_specifier
         ).as_bytes(),
     )?;
