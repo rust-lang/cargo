@@ -360,9 +360,22 @@ pub trait ArgMatchesExt {
                          requires -Zunstable-options to use."
                     ));
                 }
-                Ok(Some(registry.to_string()))
+
+                if registry == "crates.io" {
+                    // If "crates.io" is specified then we just need to return None
+                    // as that will cause cargo to use crates.io. This is required
+                    // for the case where a default alterative registry is used
+                    // but the user wants to switch back to crates.io for a single
+                    // command.
+                    Ok(None)
+                }
+                else {
+                    Ok(Some(registry.to_string()))                    
+                }
             }
-            None => Ok(None),
+            None => {
+                config.default_registry()
+            }
         }
     }
 
