@@ -91,6 +91,16 @@ pub enum MaybePackage {
 }
 
 impl<'a, T: Source + ?Sized + 'a> Source for Box<T> {
+    /// Forwards to `Source::source_id`
+    fn source_id(&self) -> &SourceId {
+        (**self).source_id()
+    }
+
+    /// Forwards to `Source::replaced_source_id`
+    fn replaced_source_id(&self) -> &SourceId {
+        (**self).replaced_source_id()
+    }
+
     /// Forwards to `Source::supports_checksums`
     fn supports_checksums(&self) -> bool {
         (**self).supports_checksums()
@@ -109,16 +119,6 @@ impl<'a, T: Source + ?Sized + 'a> Source for Box<T> {
     /// Forwards to `Source::query`
     fn fuzzy_query(&mut self, dep: &Dependency, f: &mut FnMut(Summary)) -> CargoResult<()> {
         (**self).fuzzy_query(dep, f)
-    }
-
-    /// Forwards to `Source::source_id`
-    fn source_id(&self) -> &SourceId {
-        (**self).source_id()
-    }
-
-    /// Forwards to `Source::replaced_source_id`
-    fn replaced_source_id(&self) -> &SourceId {
-        (**self).replaced_source_id()
     }
 
     /// Forwards to `Source::update`
@@ -155,6 +155,14 @@ impl<'a, T: Source + ?Sized + 'a> Source for Box<T> {
 }
 
 impl<'a, T: Source + ?Sized + 'a> Source for &'a mut T {
+    fn source_id(&self) -> &SourceId {
+        (**self).source_id()
+    }
+
+    fn replaced_source_id(&self) -> &SourceId {
+        (**self).replaced_source_id()
+    }
+
     fn supports_checksums(&self) -> bool {
         (**self).supports_checksums()
     }
@@ -169,14 +177,6 @@ impl<'a, T: Source + ?Sized + 'a> Source for &'a mut T {
 
     fn fuzzy_query(&mut self, dep: &Dependency, f: &mut FnMut(Summary)) -> CargoResult<()> {
         (**self).fuzzy_query(dep, f)
-    }
-
-    fn source_id(&self) -> &SourceId {
-        (**self).source_id()
-    }
-
-    fn replaced_source_id(&self) -> &SourceId {
-        (**self).replaced_source_id()
     }
 
     fn update(&mut self) -> CargoResult<()> {
