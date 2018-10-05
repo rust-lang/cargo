@@ -3,8 +3,8 @@ use std::ffi::{OsStr, OsString};
 use std::fs::{self, File, OpenOptions};
 use std::io;
 use std::io::prelude::*;
-use std::path::{Component, Path, PathBuf};
 use std::iter;
+use std::path::{Component, Path, PathBuf};
 
 use filetime::FileTime;
 
@@ -127,8 +127,7 @@ pub fn read_bytes(path: &Path) -> CargoResult<Vec<u8>> {
         }
         f.read_to_end(&mut ret)?;
         Ok(ret)
-    })()
-        .chain_err(|| format!("failed to read `{}`", path.display()))?;
+    })().chain_err(|| format!("failed to read `{}`", path.display()))?;
     Ok(res)
 }
 
@@ -137,8 +136,7 @@ pub fn write(path: &Path, contents: &[u8]) -> CargoResult<()> {
         let mut f = File::create(path)?;
         f.write_all(contents)?;
         Ok(())
-    })()
-        .chain_err(|| format!("failed to write `{}`", path.display()))?;
+    })().chain_err(|| format!("failed to write `{}`", path.display()))?;
     Ok(())
 }
 
@@ -158,8 +156,7 @@ pub fn write_if_changed<P: AsRef<Path>, C: AsRef<[u8]>>(path: P, contents: C) ->
             f.write_all(contents)?;
         }
         Ok(())
-    })()
-        .chain_err(|| format!("failed to write `{}`", path.as_ref().display()))?;
+    })().chain_err(|| format!("failed to write `{}`", path.as_ref().display()))?;
     Ok(())
 }
 
@@ -173,8 +170,7 @@ pub fn append(path: &Path, contents: &[u8]) -> CargoResult<()> {
 
         f.write_all(contents)?;
         Ok(())
-    })()
-        .chain_err(|| format!("failed to write `{}`", path.display()))?;
+    })().chain_err(|| format!("failed to write `{}`", path.display()))?;
     Ok(())
 }
 
@@ -198,8 +194,8 @@ pub fn path2bytes(path: &Path) -> CargoResult<&[u8]> {
 
 #[cfg(unix)]
 pub fn bytes2path(bytes: &[u8]) -> CargoResult<PathBuf> {
-    use std::os::unix::prelude::*;
     use std::ffi::OsStr;
+    use std::os::unix::prelude::*;
     Ok(PathBuf::from(OsStr::from_bytes(bytes)))
 }
 #[cfg(windows)]
@@ -258,7 +254,8 @@ fn _remove_dir_all(p: &Path) -> CargoResult<()> {
     if p.symlink_metadata()?.file_type().is_symlink() {
         return remove_file(p);
     }
-    let entries = p.read_dir()
+    let entries = p
+        .read_dir()
         .chain_err(|| format!("failed to read directory `{}`", p.display()))?;
     for entry in entries {
         let entry = entry?;

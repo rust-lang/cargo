@@ -1,18 +1,10 @@
+use std::collections::hash_map::HashMap;
 use std::fmt;
 use std::hash::Hash;
-use std::collections::hash_map::{HashMap, Iter, Keys};
 
 pub struct Graph<N, E> {
     nodes: HashMap<N, HashMap<N, E>>,
 }
-
-enum Mark {
-    InProgress,
-    Done,
-}
-
-pub type Nodes<'a, N, E> = Keys<'a, N, HashMap<N, E>>;
-pub type Edges<'a, N, E> = Iter<'a, N, E>;
 
 impl<N: Eq + Hash + Clone, E: Default> Graph<N, E> {
     pub fn new() -> Graph<N, E> {
@@ -37,37 +29,11 @@ impl<N: Eq + Hash + Clone, E: Default> Graph<N, E> {
         self.nodes.get(from)?.get(to)
     }
 
-    pub fn edges(&self, from: &N) -> Option<Edges<N, E>> {
-        self.nodes.get(from).map(|set| set.iter())
+    pub fn edges(&self, from: &N) -> impl Iterator<Item = (&N, &E)> {
+        self.nodes.get(from).into_iter().flat_map(|x| x.iter())
     }
 
-    pub fn sort(&self) -> Option<Vec<N>> {
-        let mut ret = Vec::new();
-        let mut marks = HashMap::new();
-
-        for node in self.nodes.keys() {
-            self.visit(node, &mut ret, &mut marks);
-        }
-
-        Some(ret)
-    }
-
-    fn visit(&self, node: &N, dst: &mut Vec<N>, marks: &mut HashMap<N, Mark>) {
-        if marks.contains_key(node) {
-            return;
-        }
-
-        marks.insert(node.clone(), Mark::InProgress);
-
-        for child in self.nodes[node].keys() {
-            self.visit(child, dst, marks);
-        }
-
-        dst.push(node.clone());
-        marks.insert(node.clone(), Mark::Done);
-    }
-
-    pub fn iter(&self) -> Nodes<N, E> {
+    pub fn iter(&self) -> impl Iterator<Item = &N> {
         self.nodes.keys()
     }
 
@@ -81,7 +47,7 @@ impl<N: Eq + Hash + Clone, E: Default> Graph<N, E> {
         let first_pkg_depending_on = |pkg: &N, res: &[&N]| {
             self.nodes
                 .iter()
-                .filter(|&(_node, adjacent)| adjacent.contains_key(pkg))
+                .filter(|&(_, adjacent)| adjacent.contains_key(pkg))
                 // Note that we can have "cycles" introduced through dev-dependency
                 // edges, so make sure we don't loop infinitely.
                 .find(|&(node, _)| !res.contains(&node))
