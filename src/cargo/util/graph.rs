@@ -1,6 +1,6 @@
+use std::collections::hash_map::{HashMap, Iter, Keys};
 use std::fmt;
 use std::hash::Hash;
-use std::collections::hash_map::{HashMap, Iter, Keys};
 
 pub struct Graph<N, E> {
     nodes: HashMap<N, HashMap<N, E>>,
