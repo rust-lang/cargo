@@ -174,6 +174,16 @@ impl Config {
         self.home_path.join("registry").join("src")
     }
 
+    /// The default cargo registry (`alternative-registry`)
+    pub fn default_registry(&self) -> CargoResult<Option<String>> {
+        Ok(
+            match self.get_string("registry.default")? {
+                Some(registry) => Some(registry.val),
+                None => None,
+            }
+        )
+    }
+
     /// Get a reference to the shell, for e.g. writing error messages
     pub fn shell(&self) -> RefMut<Shell> {
         self.shell.borrow_mut()
