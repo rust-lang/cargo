@@ -1,4 +1,4 @@
-use std::collections::hash_map::{HashMap, IterMut, Values};
+use std::collections::hash_map::HashMap;
 use std::fmt;
 
 use core::{Dependency, Package, PackageId, Summary};
@@ -222,14 +222,6 @@ impl<'src> fmt::Debug for SourceMap<'src> {
     }
 }
 
-/// A `std::collection::hash_map::Values` for `SourceMap`
-pub type Sources<'a, 'src> = Values<'a, SourceId, Box<Source + 'src>>;
-
-/// A `std::collection::hash_map::IterMut` for `SourceMap`
-pub struct SourcesMut<'a, 'src: 'a> {
-    inner: IterMut<'a, SourceId, Box<Source + 'src>>,
-}
-
 impl<'src> SourceMap<'src> {
     /// Create an empty map
     pub fn new() -> SourceMap<'src> {
@@ -284,21 +276,14 @@ impl<'src> SourceMap<'src> {
     }
 
     /// Like `HashMap::values`
-    pub fn sources<'a>(&'a self) -> Sources<'a, 'src> {
+    pub fn sources<'a>(&'a self) -> impl Iterator<Item = &'a Box<Source + 'src>> {
         self.map.values()
     }
 
     /// Like `HashMap::iter_mut`
-    pub fn sources_mut<'a>(&'a mut self) -> SourcesMut<'a, 'src> {
-        SourcesMut {
-            inner: self.map.iter_mut(),
-        }
-    }
-}
-
-impl<'a, 'src> Iterator for SourcesMut<'a, 'src> {
-    type Item = (&'a SourceId, &'a mut (Source + 'src));
-    fn next(&mut self) -> Option<(&'a SourceId, &'a mut (Source + 'src))> {
-        self.inner.next().map(|(a, b)| (a, &mut **b))
+    pub fn sources_mut<'a>(
+        &'a mut self,
+    ) -> impl Iterator<Item = (&'a SourceId, &'a mut (Source + 'src))> {
+        self.map.iter_mut().map(|(a, b)| (a, &mut **b))
     }
 }
