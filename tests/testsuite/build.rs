@@ -438,6 +438,36 @@ Caused by:
 }
 
 #[test]
+fn cargo_compile_with_invalid_non_numeric_dep_version() {
+    let p = project()
+        .file(
+            "Cargo.toml",
+            r#"
+            [package]
+            name = "foo"
+            version = "0.0.1"
+
+            [dependencies]
+            crossbeam = "y"
+        "#,
+        ).build();
+
+    p.cargo("build")
+        .with_status(101)
+        .with_stderr(
+            "\
+[ERROR] failed to parse manifest at `[CWD]/Cargo.toml`
+
+Caused by:
+  failed to parse the version requirement `y` for dependency `crossbeam`
+
+Caused by:
+  the given version requirement is invalid
+",
+        ).run();
+}
+
+#[test]
 fn cargo_compile_without_manifest() {
     let p = project().no_manifest().build();
 
