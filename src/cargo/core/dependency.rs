@@ -86,19 +86,18 @@ pub enum Kind {
 }
 
 fn parse_req_with_deprecated(
+    name: &str,
     req: &str,
     extra: Option<(&PackageId, &Config)>,
 ) -> CargoResult<VersionReq> {
     match VersionReq::parse(req) {
-        Err(e) => {
+        Err(ReqParseError::DeprecatedVersionRequirement(requirement)) => {
             let (inside, config) = match extra {
                 Some(pair) => pair,
-                None => return Err(e.into()),
+                None => return Err(ReqParseError::DeprecatedVersionRequirement(requirement).into()),
             };
-            match e {
-                ReqParseError::DeprecatedVersionRequirement(requirement) => {
-                    let msg = format!(
-                        "\
+            let msg = format!(
+                "\
 parsed version requirement `{}` is no longer valid
 
 Previous versions of Cargo accepted this malformed requirement,
@@ -109,18 +108,25 @@ This will soon become a hard error, so it's either recommended to
 update to a fixed version or contact the upstream maintainer about
 this warning.
 ",
-                        req,
-                        inside.name(),
-                        inside.version(),
-                        requirement
-                    );
-                    config.shell().warn(&msg)?;
+                req,
+                inside.name(),
+                inside.version(),
+                requirement
+            );
+            config.shell().warn(&msg)?;
 
-                    Ok(requirement)
-                }
-                e => Err(e.into()),
-            }
-        }
+            Ok(requirement)
+        },
+        Err(e) => {
+            let err: CargoResult<VersionReq> = Err(e.into());
+            let v: VersionReq = err.chain_err(|| {
+                format!(
+                    "failed to parse the version requirement `{}` for dependency `{}`",
+                    req, name
+                )
+            })?;
+            Ok(v)
+        },
         Ok(v) => Ok(v),
     }
 }
@@ -149,7 +155,7 @@ impl Dependency {
     ) -> CargoResult<Dependency> {
         let arg = Some((inside, config));
         let (specified_req, version_req) = match version {
-            Some(v) => (true, parse_req_with_deprecated(v, arg)?),
+            Some(v) => (true, parse_req_with_deprecated(name, v, arg)?),
             None => (false, VersionReq::any()),
         };
 
@@ -170,7 +176,7 @@ impl Dependency {
         source_id: &SourceId,
     ) -> CargoResult<Dependency> {
         let (specified_req, version_req) = match version {
-            Some(v) => (true, parse_req_with_deprecated(v, None)?),
+            Some(v) => (true, parse_req_with_deprecated(name, v, None)?),
             None => (false, VersionReq::any()),
         };
 
