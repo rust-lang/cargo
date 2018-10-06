@@ -11,7 +11,7 @@ use cargo::core::Resolve;
 use cargo::core::{Dependency, PackageId, Registry, Summary};
 use cargo::util::{CargoResult, Config, ToUrl};
 
-use proptest::collection::{btree_map, btree_set, vec};
+use proptest::collection::{btree_map, vec};
 use proptest::prelude::*;
 use proptest::sample::Index;
 use proptest::strategy::ValueTree;
@@ -40,7 +40,7 @@ pub fn resolve_and_validated(
         if used.insert(p.clone()) {
             // in the tests all `links` crates end in `-sys`
             if p.name().ends_with("-sys") {
-                 assert!(links.insert(p.name()));
+                assert!(links.insert(p.name()));
             }
             stack.extend(resolve.deps(&p).map(|(dp, deps)| {
                 for d in deps {
@@ -336,8 +336,8 @@ pub fn registry_strategy(
     let allow_deps = prop::bool::weighted(0.99);
 
     let list_of_versions =
-        btree_set((raw_version, allow_deps), 1..=max_versions).prop_map(move |ver| {
-            ver.iter()
+        btree_map(raw_version, allow_deps, 1..=max_versions).prop_map(move |ver| {
+            ver.into_iter()
                 .map(|a| (version_from_raw(&a.0), a.1))
                 .collect::<Vec<_>>()
         });
