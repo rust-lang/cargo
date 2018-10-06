@@ -8,8 +8,8 @@ use support::project;
 use support::registry::Package;
 use support::resolver::{
     assert_contains, assert_same, dep, dep_kind, dep_loc, dep_req, loc_names, names, pkg, pkg_dep,
-    pkg_id, pkg_loc, registry, registry_strategy, resolve, resolve_with_config,
-    PrettyPrintRegistry, ToDep, ToPkgId,
+    pkg_id, pkg_loc, registry, registry_strategy, resolve, resolve_and_validated,
+    resolve_with_config, PrettyPrintRegistry, ToDep, ToPkgId,
 };
 
 use proptest::collection::vec;
@@ -33,6 +33,22 @@ proptest! {
             },
         .. ProptestConfig::default()
     })]
+    #[test]
+    fn passes_validation(
+        PrettyPrintRegistry(input) in registry_strategy(50, 10, 50)
+    )  {
+        let reg = registry(input.clone());
+        // there is only a small chance that eny one
+        // crate will be interesting.
+        // So we try some of the most complicated.
+        for this in input.iter().rev().take(20) {
+            let _ = resolve_and_validated(
+                &pkg_id("root"),
+                vec![dep_req(&this.name(), &format!("={}", this.version()))],
+                &reg,
+            );
+        }
+    }
     #[test]
     fn limited_independence_of_irrelevant_alternatives(
         PrettyPrintRegistry(input) in registry_strategy(50, 10, 50),
@@ -190,7 +206,8 @@ fn test_resolving_with_same_name() {
             dep_loc("bar", "http://second.example.com"),
         ],
         &reg,
-    ).unwrap();
+    )
+    .unwrap();
 
     let mut names = loc_names(&[
         ("foo", "http://first.example.com"),
@@ -214,7 +231,8 @@ fn test_resolving_with_dev_deps() {
         &pkg_id("root"),
         vec![dep("foo"), dep_kind("baz", Development)],
         &reg,
-    ).unwrap();
+    )
+    .unwrap();
 
     assert_contains(&res, &names(&["root", "foo", "bar", "baz"]));
 }
@@ -251,7 +269,8 @@ fn test_resolving_maximum_version_with_transitive_deps() {
         &pkg_id("root"),
         vec![dep_req("foo", "1.0.0"), dep_req("bar", "1.0.0")],
         &reg,
-    ).unwrap();
+    )
+    .unwrap();
 
     assert_contains(
         &res,
@@ -291,14 +310,16 @@ fn test_resolving_minimum_version_with_transitive_deps() {
             false,
             &None,
             &["minimal-versions".to_string()],
-        ).unwrap();
+        )
+        .unwrap();
 
     let res = resolve_with_config(
         &pkg_id("root"),
         vec![dep_req("foo", "1.0.0"), dep_req("bar", "1.0.0")],
         &reg,
         Some(&config),
-    ).unwrap();
+    )
+    .unwrap();
 
     assert_contains(
         &res,
@@ -332,7 +353,8 @@ fn minimal_version_cli() {
             [dependencies]
             dep = "1.0"
         "#,
-        ).file("src/main.rs", "fn main() {}")
+        )
+        .file("src/main.rs", "fn main() {}")
         .build();
 
     p.cargo("generate-lockfile -Zminimal-versions")
@@ -357,7 +379,8 @@ fn resolving_incompat_versions() {
             &pkg_id("root"),
             vec![dep_req("foo", "=1.0.1"), dep("bar")],
             &reg
-        ).is_err()
+        )
+        .is_err()
     );
 }
 
@@ -498,7 +521,8 @@ fn resolving_with_sys_crates() {
         &pkg_id("root"),
         vec![dep_req("d", "1"), dep_req("r", "1")],
         &reg,
-    ).unwrap();
+    )
+    .unwrap();
 
     assert_contains(
         &res,
@@ -609,7 +633,8 @@ fn resolving_with_many_equivalent_backtracking() {
         &pkg_id("root"),
         vec![dep_req("level0", "*"), dep_req("constrained", "*")],
         &reg,
-    ).unwrap();
+    )
+    .unwrap();
 
     assert_contains(
         &res,
@@ -626,7 +651,8 @@ fn resolving_with_many_equivalent_backtracking() {
         &pkg_id("root"),
         vec![dep_req("level0", "1.0.1"), dep_req("constrained", "*")],
         &reg,
-    ).unwrap();
+    )
+    .unwrap();
 
     assert_contains(
         &res,
@@ -776,7 +802,8 @@ fn resolving_with_constrained_cousins_backtrack() {
         &pkg_id("root"),
         vec![dep_req("level0", "*"), dep_req("constrained", "2.0.0")],
         &reg,
-    ).unwrap();
+    )
+    .unwrap();
 
     assert_contains(
         &res,
@@ -1079,7 +1106,8 @@ fn hard_equality() {
         &pkg_id("root"),
         vec![dep_req("bar", "1"), dep_req("foo", "=1.0.0")],
         &reg,
-    ).unwrap();
+    )
+    .unwrap();
 
     assert_contains(
         &res,

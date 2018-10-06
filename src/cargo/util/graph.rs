@@ -1,3 +1,4 @@
+use std::borrow::Borrow;
 use std::collections::hash_map::HashMap;
 use std::fmt;
 use std::hash::Hash;
@@ -23,6 +24,14 @@ impl<N: Eq + Hash + Clone, E: Default> Graph<N, E> {
             .or_insert_with(HashMap::new)
             .entry(child)
             .or_insert_with(Default::default)
+    }
+
+    pub fn contains<Q: ?Sized>(&self, k: &Q) -> bool
+    where
+        N: Borrow<Q>,
+        Q: Hash + Eq,
+    {
+        self.nodes.contains_key(k)
     }
 
     pub fn edge(&self, from: &N, to: &N) -> Option<&E> {
