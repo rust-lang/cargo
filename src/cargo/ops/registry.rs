@@ -137,7 +137,7 @@ fn verify_dependencies(pkg: &Package, registry_src: &SourceId) -> CargoResult<()
                     dep.source_id()
                 );
             }
-        } else if *dep.version_req() == VersionReq::parse("*").unwrap() {
+        } else if registry_src.is_default_registry() && *dep.version_req() == VersionReq::parse("*").unwrap() {
             // crates.io rejects wildcard (`*`) dependency constraints (issue 5941)
             // https://doc.rust-lang.org/cargo/faq.html#can-libraries-use--as-a-version-for-their-dependencies
             bail!(
