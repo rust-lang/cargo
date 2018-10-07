@@ -9,6 +9,7 @@ use git2;
 use registry::{NewCrate, NewCrateDependency, Registry};
 
 use url::percent_encoding::{percent_encode, QUERY_ENCODE_SET};
+use semver::VersionReq;
 
 use core::dependency::Kind;
 use core::manifest::ManifestMetadata;
@@ -136,6 +137,15 @@ fn verify_dependencies(pkg: &Package, registry_src: &SourceId) -> CargoResult<()
                     dep.source_id()
                 );
             }
+        } else if *dep.version_req() == VersionReq::parse("*").unwrap() {
+            // crates.io rejects wildcard (`*`) dependency constraints (issue 5941)
+            // https://doc.rust-lang.org/cargo/faq.html#can-libraries-use--as-a-version-for-their-dependencies
+            bail!(
+                "the dependency `{}` used a wildcard (`*`) as a version, crates.io will not accept \
+                packages with wildcard dependency constraint\nfor more information, see the FAQ: \
+                https://doc.rust-lang.org/cargo/faq.html#can-libraries-use--as-a-version-for-their-dependencies",
+                dep.package_name()
+            )
         }
     }
     Ok(())

@@ -618,6 +618,40 @@ See [..]
 }
 
 #[test]
+fn dry_run_crates_io() {
+    publish::setup();
+
+    let p = project()
+        .file(
+            "Cargo.toml",
+            r#"
+            [project]
+            name = "foo"
+            version = "0.0.1"
+            authors = []
+            license = "MIT"
+            description = "foo"
+            [dependencies]
+            foo = "*"
+            "#,
+        ).file("src/main.rs", "fn main() {}")
+        .build();
+
+    p.cargo("publish --dry-run")
+        .with_status(101)
+        .with_stderr(
+            "    \
+    Updating crates.io index
+error: the dependency `foo` used a wildcard (`*`) as a version, crates.io will not accept packages with wildcard dependency constraint
+for more information, see the FAQ: https://doc.rust-lang.org/cargo/faq.html#can-libraries-use--as-a-version-for-their-dependencies
+",
+        ).run();
+
+    // Ensure the API request wasn't actually made
+    assert!(!publish::upload_path().join("api/v1/crates/new").exists());
+}
+
+#[test]
 fn block_publish_feature_not_enabled() {
     publish::setup();
 
