@@ -646,9 +646,6 @@ error: the dependency `foo` used a wildcard (`*`) as a version, crates.io will n
 for more information, see the FAQ: https://doc.rust-lang.org/cargo/faq.html#can-libraries-use--as-a-version-for-their-dependencies
 ",
         ).run();
-
-    // Ensure the API request wasn't actually made
-    assert!(!publish::upload_path().join("api/v1/crates/new").exists());
 }
 
 #[test]
