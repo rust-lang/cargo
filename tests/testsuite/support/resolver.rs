@@ -235,6 +235,11 @@ pub fn dep(name: &str) -> Dependency {
 pub fn dep_req(name: &str, req: &str) -> Dependency {
     Dependency::parse_no_deprecated(name, Some(req), &registry_loc()).unwrap()
 }
+pub fn dep_req_kind(name: &str, req: &str, kind: Kind) -> Dependency {
+    let mut dep = dep_req(name, req);
+    dep.set_kind(kind);
+    dep
+}
 
 pub fn dep_loc(name: &str, location: &str) -> Dependency {
     let url = location.to_url().unwrap();
@@ -277,12 +282,26 @@ impl fmt::Debug for PrettyPrintRegistry {
             } else {
                 write!(f, "pkg!((\"{}\", \"{}\") => [", s.name(), s.version())?;
                 for d in s.dependencies() {
-                    write!(
-                        f,
-                        "dep_req(\"{}\", \"{}\"),",
-                        d.name_in_toml(),
-                        d.version_req()
-                    )?;
+                    if d.kind() == Kind::Normal {
+                        write!(
+                            f,
+                            "dep_req(\"{}\", \"{}\"),",
+                            d.name_in_toml(),
+                            d.version_req()
+                        )?;
+                    } else {
+                        write!(
+                            f,
+                            "dep_req_kind(\"{}\", \"{}\", {}),",
+                            d.name_in_toml(),
+                            d.version_req(),
+                            match d.kind() {
+                                Kind::Development => "Kind::Development",
+                                Kind::Build => "Kind::Build",
+                                Kind::Normal => "Kind::Normal",
+                            }
+                        )?;
+                    }
                 }
                 write!(f, "]),")?;
             }
@@ -304,6 +323,8 @@ fn meta_test_deep_pretty_print_registry() {
                 pkg!(("bar", "2.0.0") => [dep_req("baz", "=1.0.1")]),
                 pkg!(("baz", "1.0.2") => [dep_req("other", "2")]),
                 pkg!(("baz", "1.0.1")),
+                pkg!(("cat", "1.0.2") => [dep_req_kind("other", "2", Kind::Build)]),
+                pkg!(("cat", "1.0.2") => [dep_req_kind("other", "2", Kind::Development)]),
                 pkg!(("dep_req", "1.0.0")),
                 pkg!(("dep_req", "2.0.0")),
             ])
@@ -313,7 +334,10 @@ fn meta_test_deep_pretty_print_registry() {
          pkg!((\"bar\", \"1.0.0\") => [dep_req(\"baz\", \"= 1.0.2\"),dep_req(\"other\", \"^1\"),]),\
          pkg!((\"bar\", \"2.0.0\") => [dep_req(\"baz\", \"= 1.0.1\"),]),\
          pkg!((\"baz\", \"1.0.2\") => [dep_req(\"other\", \"^2\"),]),\
-         pkg!((\"baz\", \"1.0.1\")),pkg!((\"dep_req\", \"1.0.0\")),\
+         pkg!((\"baz\", \"1.0.1\")),\
+         pkg!((\"cat\", \"1.0.2\") => [dep_req_kind(\"other\", \"^2\", Kind::Build),]),\
+         pkg!((\"cat\", \"1.0.2\") => [dep_req_kind(\"other\", \"^2\", Kind::Development),]),\
+         pkg!((\"dep_req\", \"1.0.0\")),\
          pkg!((\"dep_req\", \"2.0.0\")),]"
     )
 }
@@ -357,7 +381,7 @@ pub fn registry_strategy(
     let max_deps = max_versions * (max_crates * (max_crates - 1)) / shrinkage;
 
     let raw_version_range = (any::<Index>(), any::<Index>());
-    let raw_dependency = (any::<Index>(), any::<Index>(), raw_version_range);
+    let raw_dependency = (any::<Index>(), any::<Index>(), raw_version_range, 0..=1);
 
     fn order_index(a: Index, b: Index, size: usize) -> (usize, usize) {
         let (a, b) = (a.index(size), b.index(size));
@@ -374,7 +398,7 @@ pub fn registry_strategy(
                 .collect();
             let len_all_pkgid = list_of_pkgid.len();
             let mut dependency_by_pkgid = vec![vec![]; len_all_pkgid];
-            for (a, b, (c, d)) in raw_dependencies {
+            for (a, b, (c, d), k) in raw_dependencies {
                 let (a, b) = order_index(a, b, len_all_pkgid);
                 let ((dep_name, _), _) = list_of_pkgid[a];
                 if (list_of_pkgid[b].0).0 == dep_name {
@@ -383,12 +407,18 @@ pub fn registry_strategy(
                 let s = &crate_vers_by_name[dep_name];
                 let (c, d) = order_index(c, d, s.len());
 
-                dependency_by_pkgid[b].push(dep_req(
+                dependency_by_pkgid[b].push(dep_req_kind(
                     &dep_name,
                     &if c == d {
                         format!("={}", s[c].0)
                     } else {
                         format!(">={}, <={}", s[c].0, s[d].0)
+                    },
+                    match k {
+                        0 => Kind::Normal,
+                        1 => Kind::Build,
+                        // => Kind::Development,
+                        _ => panic!("bad index for Kind"),
                     },
                 ))
             }
