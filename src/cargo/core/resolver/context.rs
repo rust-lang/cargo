@@ -28,6 +28,10 @@ pub struct Context {
     pub resolve_features: im_rc::HashMap<PackageId, Rc<HashSet<InternedString>>>,
     pub links: im_rc::HashMap<InternedString, PackageId>,
 
+    // This is somewhat redundant with the `resolve_graph` that stores the same data,
+    //   but for querying in the opposite order.
+    pub parents: Graph<PackageId, Rc<Vec<Dependency>>>,
+
     // These are two cheaply-cloneable lists (O(1) clone) which are effectively
     // hash maps but are built up as "construction lists". We'll iterate these
     // at the very end and actually construct the map that we're making.
@@ -46,6 +50,7 @@ impl Context {
             resolve_graph: RcList::new(),
             resolve_features: im_rc::HashMap::new(),
             links: im_rc::HashMap::new(),
+            parents: Graph::new(),
             resolve_replacements: RcList::new(),
             activations: im_rc::HashMap::new(),
             warnings: RcList::new(),
