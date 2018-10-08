@@ -591,6 +591,11 @@ fn activate(
             candidate.summary.package_id(),
             dep.clone(),
         ));
+        Rc::make_mut(
+            cx.parents
+                .link(candidate.summary.package_id(), parent.package_id()),
+        )
+        .push(dep.clone());
     }
 
     let activated = cx.flag_activated(&candidate.summary, method)?;
