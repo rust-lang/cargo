@@ -180,7 +180,7 @@ fn test_resolving_transitive_deps() {
     let reg = registry(vec![pkg!("foo"), pkg!("bar" => ["foo"])]);
     let res = resolve(&pkg_id("root"), vec![dep("bar")], &reg).unwrap();
 
-    assert_contains(&res, &names(&["root", "foo", "bar"]));
+    assert_same(&res, &names(&["root", "foo", "bar"]));
 }
 
 #[test]
@@ -188,7 +188,7 @@ fn test_resolving_common_transitive_deps() {
     let reg = registry(vec![pkg!("foo" => ["bar"]), pkg!("bar")]);
     let res = resolve(&pkg_id("root"), vec![dep("foo"), dep("bar")], &reg).unwrap();
 
-    assert_contains(&res, &names(&["root", "foo", "bar"]));
+    assert_same(&res, &names(&["root", "foo", "bar"]));
 }
 
 #[test]
@@ -234,7 +234,7 @@ fn test_resolving_with_dev_deps() {
     )
     .unwrap();
 
-    assert_contains(&res, &names(&["root", "foo", "bar", "baz"]));
+    assert_same(&res, &names(&["root", "foo", "bar", "baz", "bat"]));
 }
 
 #[test]
@@ -243,7 +243,7 @@ fn resolving_with_many_versions() {
 
     let res = resolve(&pkg_id("root"), vec![dep("foo")], &reg).unwrap();
 
-    assert_contains(&res, &names(&[("root", "1.0.0"), ("foo", "1.0.2")]));
+    assert_same(&res, &names(&[("root", "1.0.0"), ("foo", "1.0.2")]));
 }
 
 #[test]
@@ -252,7 +252,7 @@ fn resolving_with_specific_version() {
 
     let res = resolve(&pkg_id("root"), vec![dep_req("foo", "=1.0.1")], &reg).unwrap();
 
-    assert_contains(&res, &names(&[("root", "1.0.0"), ("foo", "1.0.1")]));
+    assert_same(&res, &names(&[("root", "1.0.0"), ("foo", "1.0.1")]));
 }
 
 #[test]
@@ -459,7 +459,7 @@ fn resolving_allows_multiple_compatible_versions() {
 
     let res = resolve(&pkg_id("root"), vec![dep("bar")], &reg).unwrap();
 
-    assert_contains(
+    assert_same(
         &res,
         &names(&[
             ("root", "1.0.0"),
@@ -492,7 +492,7 @@ fn resolving_with_deep_backtracking() {
 
     let res = resolve(&pkg_id("root"), vec![dep_req("foo", "1")], &reg).unwrap();
 
-    assert_contains(
+    assert_same(
         &res,
         &names(&[
             ("root", "1.0.0"),
@@ -524,7 +524,7 @@ fn resolving_with_sys_crates() {
     )
     .unwrap();
 
-    assert_contains(
+    assert_same(
         &res,
         &names(&[
             ("root", "1.0.0"),
@@ -891,9 +891,10 @@ fn resolving_with_constrained_sibling_transitive_dep_effects() {
 
     let res = resolve(&pkg_id("root"), vec![dep_req("A", "1")], &reg).unwrap();
 
-    assert_contains(
+    assert_same(
         &res,
         &names(&[
+            ("root", "1.0.0"),
             ("A", "1.0.0"),
             ("B", "1.0.0"),
             ("C", "1.0.0"),
@@ -1109,7 +1110,7 @@ fn hard_equality() {
     )
     .unwrap();
 
-    assert_contains(
+    assert_same(
         &res,
         &names(&[("root", "1.0.0"), ("foo", "1.0.0"), ("bar", "1.0.0")]),
     );
