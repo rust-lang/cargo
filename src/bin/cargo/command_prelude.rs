@@ -6,6 +6,7 @@ use cargo::CargoResult;
 use cargo::core::Workspace;
 use cargo::core::compiler::{BuildConfig, MessageFormat};
 use cargo::ops::{CompileFilter, CompileOptions, NewOptions, Packages, VersionControl};
+use cargo::sources::CRATES_IO_REGISTRY;
 use cargo::util::paths;
 use cargo::util::important_paths::find_root_manifest_for_wd;
 
@@ -361,7 +362,7 @@ pub trait ArgMatchesExt {
                     ));
                 }
 
-                if registry == "crates.io" {
+                if registry == CRATES_IO_REGISTRY {
                     // If "crates.io" is specified then we just need to return None
                     // as that will cause cargo to use crates.io. This is required
                     // for the case where a default alterative registry is used

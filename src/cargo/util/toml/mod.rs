@@ -18,7 +18,7 @@ use core::profiles::Profiles;
 use core::{Dependency, Manifest, PackageId, Summary, Target};
 use core::{Edition, EitherManifest, Feature, Features, VirtualManifest};
 use core::{GitReference, PackageIdSpec, SourceId, WorkspaceConfig, WorkspaceRootConfig};
-use sources::CRATES_IO;
+use sources::{CRATES_IO_INDEX, CRATES_IO_REGISTRY};
 use util::errors::{CargoError, CargoResult, CargoResultExt};
 use util::paths;
 use util::{self, Config, ToUrl};
@@ -1140,7 +1140,7 @@ impl TomlManifest {
                 )
             })?;
             if spec.url().is_none() {
-                spec.set_url(CRATES_IO.parse().unwrap());
+                spec.set_url(CRATES_IO_INDEX.parse().unwrap());
             }
 
             let version_specified = match *replacement {
@@ -1175,7 +1175,7 @@ impl TomlManifest {
         let mut patch = HashMap::new();
         for (url, deps) in self.patch.iter().flat_map(|x| x) {
             let url = match &url[..] {
-                "crates-io" => CRATES_IO.parse().unwrap(),
+                CRATES_IO_REGISTRY => CRATES_IO_INDEX.parse().unwrap(),
                 _ => url.to_url()?,
             };
             patch.insert(
