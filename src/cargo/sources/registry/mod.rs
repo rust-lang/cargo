@@ -179,7 +179,8 @@ use util::to_url::ToUrl;
 use util::{internal, CargoResult, Config, FileLock, Filesystem};
 
 const INDEX_LOCK: &str = ".cargo-index-lock";
-pub const CRATES_IO: &str = "https://github.com/rust-lang/crates.io-index";
+pub const CRATES_IO_INDEX: &str = "https://github.com/rust-lang/crates.io-index";
+pub const CRATES_IO_REGISTRY: &str = "crates-io";
 const CRATE_TEMPLATE: &str = "{crate}";
 const VERSION_TEMPLATE: &str = "{version}";
 
