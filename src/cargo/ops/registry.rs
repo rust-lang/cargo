@@ -388,6 +388,14 @@ pub fn configure_http_handle(config: &Config, handle: &mut Easy) -> CargoResult<
     } else {
         handle.useragent(&version().to_string())?;
     }
+
+    let noproxy = env::var("NO_PROXY").ok()
+        .or_else(|| env::var("no_proxy").ok())
+        .or(config.get::<Option<Vec<String>>>("http.noproxy")?.map(|s| s.join(",")));
+    if let Some(noproxy) = noproxy {
+        handle.noproxy(&noproxy)
+            .chain_err(|| "malformed `noproxy` configuration")?;
+    }
     Ok(())
 }
 

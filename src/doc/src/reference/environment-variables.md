@@ -34,6 +34,8 @@ system:
   will otherwise be used.
 * `CARGO_CACHE_RUSTC_INFO` — If this is set to 0 then Cargo will not try to cache
   compiler version information.
+* `HTTP_PROXY`, `HTTPS_PROXY`, `NO_PROXY` - these variables are all ready by
+  Cargo and correspond to proxy configuration for HTTP trafic.
 
 Note that Cargo will also read environment variables for `.cargo/config`
 configuration values, as described in [that documentation][config-env]
