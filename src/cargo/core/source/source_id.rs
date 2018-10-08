@@ -12,7 +12,7 @@ use url::Url;
 
 use ops;
 use sources::git;
-use sources::{GitSource, PathSource, RegistrySource, CRATES_IO};
+use sources::{GitSource, PathSource, RegistrySource, CRATES_IO_INDEX};
 use sources::DirectorySource;
 use util::{CargoResult, Config, ToUrl};
 
@@ -184,7 +184,7 @@ impl SourceId {
                 }
                 &index[..]
             } else {
-                CRATES_IO
+                CRATES_IO_INDEX
             };
             let url = url.to_url()?;
             SourceId::for_registry(&url)
@@ -302,7 +302,7 @@ impl SourceId {
             Kind::Registry => {}
             _ => return false,
         }
-        self.inner.url.to_string() == CRATES_IO
+        self.inner.url.to_string() == CRATES_IO_INDEX
     }
 
     /// Hash `self`
