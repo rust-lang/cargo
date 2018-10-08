@@ -1,5 +1,7 @@
+use std::borrow::Borrow;
 use std::collections::{HashMap, HashSet};
 use std::fmt;
+use std::hash::Hash;
 use std::iter::FromIterator;
 
 use url::Url;
@@ -159,6 +161,14 @@ unable to verify that `{0}` is the same as when the lockfile was generated
         // Be sure to just copy over any unknown metadata.
         self.metadata = previous.metadata.clone();
         Ok(())
+    }
+
+    pub fn contains<Q: ?Sized>(&self, k: &Q) -> bool
+    where
+        PackageId: Borrow<Q>,
+        Q: Hash + Eq,
+    {
+        self.graph.contains(k)
     }
 
     pub fn iter(&self) -> impl Iterator<Item = &PackageId> {
