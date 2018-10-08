@@ -7,10 +7,11 @@ use std::time::{Duration, Instant};
 use cargo::core::dependency::Kind;
 use cargo::core::resolver::{self, Method};
 use cargo::core::source::{GitReference, SourceId};
+use cargo::core::Resolve;
 use cargo::core::{Dependency, PackageId, Registry, Summary};
 use cargo::util::{CargoResult, Config, ToUrl};
 
-use proptest::collection::{btree_map, btree_set, vec};
+use proptest::collection::{btree_map, vec};
 use proptest::prelude::*;
 use proptest::sample::Index;
 use proptest::strategy::ValueTree;
@@ -25,12 +26,52 @@ pub fn resolve(
     resolve_with_config(pkg, deps, registry, None)
 }
 
+pub fn resolve_and_validated(
+    pkg: &PackageId,
+    deps: Vec<Dependency>,
+    registry: &[Summary],
+) -> CargoResult<Vec<PackageId>> {
+    let resolve = resolve_with_config_raw(pkg, deps, registry, None)?;
+    let mut stack = vec![pkg.clone()];
+    let mut used = HashSet::new();
+    let mut links = HashSet::new();
+    while let Some(p) = stack.pop() {
+        assert!(resolve.contains(&p));
+        if used.insert(p.clone()) {
+            // in the tests all `links` crates end in `-sys`
+            if p.name().ends_with("-sys") {
+                assert!(links.insert(p.name()));
+            }
+            stack.extend(resolve.deps(&p).map(|(dp, deps)| {
+                for d in deps {
+                    assert!(d.matches_id(dp));
+                }
+                dp.clone()
+            }));
+        }
+    }
+    let out: Vec<PackageId> = resolve.iter().cloned().collect();
+    assert_eq!(out.len(), used.len());
+    Ok(out)
+}
+
 pub fn resolve_with_config(
     pkg: &PackageId,
     deps: Vec<Dependency>,
     registry: &[Summary],
     config: Option<&Config>,
 ) -> CargoResult<Vec<PackageId>> {
+    let resolve = resolve_with_config_raw(pkg, deps, registry, config)?;
+    let out: Vec<PackageId> = resolve.iter().cloned().collect();
+    Ok(out)
+}
+
+pub fn resolve_with_config_raw(
+    pkg: &PackageId,
+    deps: Vec<Dependency>,
+    registry: &[Summary],
+    config: Option<&Config>,
+) -> CargoResult<Resolve> {
     struct MyRegistry<'a>(&'a [Summary]);
     impl<'a> Registry for MyRegistry<'a> {
         fn query(
@@ -62,7 +103,8 @@ pub fn resolve_with_config(
         &BTreeMap::<String, Vec<String>>::new(),
         None::<String>,
         false,
-    ).unwrap();
+    )
+    .unwrap();
     let method = Method::Everything;
     let start = Instant::now();
     let resolve = resolver::resolve(
@@ -72,13 +114,12 @@ pub fn resolve_with_config(
         &HashSet::new(),
         config,
         false,
-    )?;
+    );
 
     // The largest test in our suite takes less then 30 sec.
     // So lets fail the test if we have ben running for two long.
     assert!(start.elapsed() < Duration::from_secs(60));
-    let res = resolve.iter().cloned().collect();
-    Ok(res)
+    resolve
 }
 
 pub trait ToDep {
@@ -156,7 +197,8 @@ pub fn pkg_dep<T: ToPkgId>(name: T, dep: Vec<Dependency>) -> Summary {
         &BTreeMap::<String, Vec<String>>::new(),
         link,
         false,
-    ).unwrap()
+    )
+    .unwrap()
 }
 
 pub fn pkg_id(name: &str) -> PackageId {
@@ -183,7 +225,8 @@ pub fn pkg_loc(name: &str, loc: &str) -> Summary {
         &BTreeMap::<String, Vec<String>>::new(),
         link,
         false,
-    ).unwrap()
+    )
+    .unwrap()
 }
 
 pub fn dep(name: &str) -> Dependency {
@@ -293,8 +336,8 @@ pub fn registry_strategy(
     let allow_deps = prop::bool::weighted(0.99);
 
     let list_of_versions =
-        btree_set((raw_version, allow_deps), 1..=max_versions).prop_map(move |ver| {
-            ver.iter()
+        btree_map(raw_version, allow_deps, 1..=max_versions).prop_map(move |ver| {
+            ver.into_iter()
                 .map(|a| (version_from_raw(&a.0), a.1))
                 .collect::<Vec<_>>()
         });
@@ -366,7 +409,8 @@ pub fn registry_strategy(
                                 deps
                             },
                         )
-                    }).collect(),
+                    })
+                    .collect(),
             )
         },
     )
@@ -392,9 +436,9 @@ fn meta_test_deep_trees_from_strategy() {
                 &reg,
             );
             dis[res
-                    .as_ref()
-                    .map(|x| min(x.len(), dis.len()) - 1)
-                    .unwrap_or(0)] += 1;
+                .as_ref()
+                .map(|x| min(x.len(), dis.len()) - 1)
+                .unwrap_or(0)] += 1;
             if dis.iter().all(|&x| x > 0) {
                 return;
             }
