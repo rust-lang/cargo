@@ -182,12 +182,12 @@ impl fmt::Debug for PackageId {
 mod tests {
     use super::PackageId;
     use core::source::SourceId;
-    use sources::CRATES_IO;
+    use sources::CRATES_IO_INDEX;
     use util::ToUrl;
 
     #[test]
     fn invalid_version_handled_nicely() {
-        let loc = CRATES_IO.to_url().unwrap();
+        let loc = CRATES_IO_INDEX.to_url().unwrap();
         let repo = SourceId::for_registry(&loc).unwrap();
 
         assert!(PackageId::new("foo", "1.0", &repo).is_err());

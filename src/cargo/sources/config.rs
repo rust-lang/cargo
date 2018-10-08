@@ -10,7 +10,7 @@ use std::path::{Path, PathBuf};
 use url::Url;
 
 use core::{GitReference, Source, SourceId};
-use sources::ReplacedSource;
+use sources::{ReplacedSource, CRATES_IO_REGISTRY};
 use util::{Config, ToUrl};
 use util::config::ConfigValue;
 use util::errors::{CargoResult, CargoResultExt};
@@ -59,7 +59,7 @@ impl<'cfg> SourceConfigMap<'cfg> {
             config,
         };
         base.add(
-            "crates-io",
+            CRATES_IO_REGISTRY,
             SourceConfig {
                 id: SourceId::crates_io(config)?,
                 replace_with: None,
