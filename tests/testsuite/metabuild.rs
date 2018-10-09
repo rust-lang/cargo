@@ -72,8 +72,8 @@ fn metabuild_basic() {
     let p = basic_project();
     p.cargo("build -vv")
         .masquerade_as_nightly_cargo()
-        .with_stdout_contains("Hello mb")
-        .with_stdout_contains("Hello mb-other")
+        .with_stdout_contains("[foo 0.0.1] Hello mb")
+        .with_stdout_contains("[foo 0.0.1] Hello mb-other")
         .run();
 }
 
@@ -164,12 +164,12 @@ fn metabuild_optional_dep() {
 
     p.cargo("build -vv")
         .masquerade_as_nightly_cargo()
-        .with_stdout_does_not_contain("Hello mb")
+        .with_stdout_does_not_contain("[foo 0.0.1] Hello mb")
         .run();
 
     p.cargo("build -vv --features mb")
         .masquerade_as_nightly_cargo()
-        .with_stdout_contains("Hello mb")
+        .with_stdout_contains("[foo 0.0.1] Hello mb")
         .run();
 }
 
@@ -206,7 +206,7 @@ fn metabuild_lib_name() {
 
     p.cargo("build -vv")
         .masquerade_as_nightly_cargo()
-        .with_stdout_contains("Hello mb")
+        .with_stdout_contains("[foo 0.0.1] Hello mb")
         .run();
 }
 
@@ -235,12 +235,12 @@ fn metabuild_fresh() {
 
     p.cargo("build -vv")
         .masquerade_as_nightly_cargo()
-        .with_stdout_contains("Hello mb")
+        .with_stdout_contains("[foo 0.0.1] Hello mb")
         .run();
 
     p.cargo("build -vv")
         .masquerade_as_nightly_cargo()
-        .with_stdout_does_not_contain("Hello mb")
+        .with_stdout_does_not_contain("[foo 0.0.1] Hello mb")
         .with_stderr(
             "\
 [FRESH] mb [..]
@@ -279,7 +279,7 @@ fn metabuild_links() {
 
     p.cargo("build -vv")
         .masquerade_as_nightly_cargo()
-        .with_stdout_contains("Hello mb")
+        .with_stdout_contains("[foo 0.0.1] Hello mb")
         .run();
 }
 
@@ -376,10 +376,10 @@ fn metabuild_workspace() {
 
     p.cargo("build -vv --all")
         .masquerade_as_nightly_cargo()
-        .with_stdout_contains("Hello mb1 [..]member1")
-        .with_stdout_contains("Hello mb2 [..]member1")
-        .with_stdout_contains("Hello mb1 [..]member2")
-        .with_stdout_does_not_contain("Hello mb2 [..]member2")
+        .with_stdout_contains("[member1 0.0.1] Hello mb1 [..]member1")
+        .with_stdout_contains("[member1 0.0.1] Hello mb2 [..]member1")
+        .with_stdout_contains("[member2 0.0.1] Hello mb1 [..]member2")
+        .with_stdout_does_not_contain("[member2 0.0.1] Hello mb2 [..]member2")
         .run();
 }
 
@@ -572,8 +572,8 @@ fn metabuild_two_versions() {
 
     p.cargo("build -vv --all")
         .masquerade_as_nightly_cargo()
-        .with_stdout_contains("Hello mb1 [..]member1")
-        .with_stdout_contains("Hello mb2 [..]member2")
+        .with_stdout_contains("[member1 0.0.1] Hello mb1 [..]member1")
+        .with_stdout_contains("[member2 0.0.1] Hello mb2 [..]member2")
         .run();
 
     assert_eq!(
@@ -628,7 +628,7 @@ fn metabuild_external_dependency() {
 
     p.cargo("build -vv")
         .masquerade_as_nightly_cargo()
-        .with_stdout_contains("Hello mb")
+        .with_stdout_contains("[dep 1.0.0] Hello mb")
         .run();
 
     assert_eq!(
