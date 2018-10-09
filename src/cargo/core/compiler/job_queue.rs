@@ -112,15 +112,17 @@ impl<'a> JobState<'a> {
     pub fn capture_output(
         &self,
         cmd: &ProcessBuilder,
+        prefix: Option<String>,
         print_output: bool,
     ) -> CargoResult<Output> {
+        let prefix = prefix.unwrap_or_else(|| String::new());
         cmd.exec_with_streaming(
             &mut |out| {
-                let _ = self.tx.send(Message::Stdout(out.to_string()));
+                let _ = self.tx.send(Message::Stdout(format!("{}{}", prefix, out)));
                 Ok(())
             },
             &mut |err| {
-                let _ = self.tx.send(Message::Stderr(err.to_string()));
+                let _ = self.tx.send(Message::Stderr(format!("{}{}", prefix, err)));
                 Ok(())
             },
             print_output,

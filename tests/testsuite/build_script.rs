@@ -2803,13 +2803,13 @@ fn output_shows_on_vv() {
         ).build();
 
     p.cargo("build -vv")
-        .with_stdout("stdout")
+        .with_stdout("[foo 0.5.0] stdout")
         .with_stderr(
             "\
 [COMPILING] foo v0.5.0 ([..])
 [RUNNING] `rustc [..]`
 [RUNNING] `[..]`
-stderr
+[foo 0.5.0] stderr
 [RUNNING] `rustc [..]`
 [FINISHED] dev [unoptimized + debuginfo] target(s) in [..]
 ",
