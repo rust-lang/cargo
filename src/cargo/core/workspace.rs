@@ -1,7 +1,6 @@
 use std::cell::RefCell;
 use std::collections::hash_map::{Entry, HashMap};
 use std::collections::BTreeMap;
-use std::io;
 use std::path::{Path, PathBuf};
 use std::slice;
 
@@ -496,21 +495,13 @@ impl<'cfg> Workspace<'cfg> {
         self.members.push(manifest_path.clone());
 
         let candidates = {
-            let pkg = match self.packages.load(&manifest_path) {
-                Ok(MaybePackage::Package(ref p)) => p,
-                Ok(MaybePackage::Virtual(_)) => return Ok(()),
-                Err(err) => {
-                    return Err(if err
-                        .iter_chain()
-                        .any(|e| e.downcast_ref::<io::Error>().is_some() )
-                    {
-                        // don't wrap io errors to ensure ManifestErrors
-                        // are for actual existing manifests
-                        err
-                    } else {
-                        ManifestError::new(err, manifest_path).into()
-                    });
-                }
+            let pkg = match *self
+                .packages
+                .load(&manifest_path)
+                .map_err(|err| ManifestError::new(err, manifest_path.clone()))?
+            {
+                MaybePackage::Package(ref p) => p,
+                MaybePackage::Virtual(_) => return Ok(()),
             };
             pkg.dependencies()
                 .iter()
