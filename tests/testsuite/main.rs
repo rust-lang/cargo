@@ -66,6 +66,7 @@ mod jobserver;
 mod local_registry;
 mod lockfile_compat;
 mod login;
+mod member_errors;
 mod metabuild;
 mod metadata;
 mod net_config;

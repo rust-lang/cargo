@@ -1,6 +1,7 @@
 use std::cell::RefCell;
 use std::collections::hash_map::{Entry, HashMap};
 use std::collections::BTreeMap;
+use std::io;
 use std::path::{Path, PathBuf};
 use std::slice;
 
@@ -13,7 +14,7 @@ use core::{Dependency, PackageIdSpec};
 use core::{EitherManifest, Package, SourceId, VirtualManifest};
 use ops;
 use sources::PathSource;
-use util::errors::{CargoResult, CargoResultExt};
+use util::errors::{CargoResult, CargoResultExt, ManifestError};
 use util::paths;
 use util::toml::read_manifest;
 use util::{Config, Filesystem};
@@ -495,9 +496,21 @@ impl<'cfg> Workspace<'cfg> {
         self.members.push(manifest_path.clone());
 
         let candidates = {
-            let pkg = match *self.packages.load(&manifest_path)? {
-                MaybePackage::Package(ref p) => p,
-                MaybePackage::Virtual(_) => return Ok(()),
+            let pkg = match self.packages.load(&manifest_path) {
+                Ok(MaybePackage::Package(ref p)) => p,
+                Ok(MaybePackage::Virtual(_)) => return Ok(()),
+                Err(err) => {
+                    return Err(if err
+                        .iter_chain()
+                        .any(|e| e.downcast_ref::<io::Error>().is_some() )
+                    {
+                        // don't wrap io errors to ensure ManifestErrors
+                        // are for actual existing manifests
+                        err
+                    } else {
+                        ManifestError::new(err, manifest_path).into()
+                    });
+                }
             };
             pkg.dependencies()
                 .iter()
@@ -508,7 +521,8 @@ impl<'cfg> Workspace<'cfg> {
                 .collect::<Vec<_>>()
         };
         for candidate in candidates {
-            self.find_path_deps(&candidate, root_manifest, true)?;
+            self.find_path_deps(&candidate, root_manifest, true)
+                .map_err(|err| ManifestError::new(err, manifest_path.clone()))?;
         }
         Ok(())
     }
