@@ -3,23 +3,44 @@ name: Bug report
 about: Create a report to help us improve
 ---
 
-**Describe the bug**
-A clear and concise description of what the bug is.
+<!--
+Thanks for filing a 🐛 bug report 😄!
+
+Before you submit, please search open/closed issues before submitting since
+someone might have asked the same thing before!
+-->
+
+<!-- Provide a general summary of the issue in the title above -->
+
+**Describe the 🐛 bug**
+<!-- A clear and concise description of what the bug is. -->
 
 **To Reproduce**
-Steps to reproduce the behavior:
+<!-- Steps to reproduce the behavior -->
 1.
 2.
 3.
 
-**Expected behavior**
-A clear and concise description of what you expected to happen.
+**Current behavior**
+<!-- A clear and concise description of what currently happens. -->
 
-**Technical details:**
- - OS:
- - Rust Version:
- - Cargo Version:
- - Release Channel:
+**Expected behavior**
+<!-- A clear and concise description of what you expected to happen. -->
+
+**Possible Solution(s)**
+<!-- Not obligatory, but suggest a fix/reason for the bug, -->
+<!-- or ideas how to implement the addition or change -->
 
 **Additional context**
-Add any other context about the problem here.
+<!-- How has this issue affected you? What are you trying to accomplish? -->
+<!-- Providing context helps us come up with a solution that is most useful in the real world -->
+
+**Your Environment**
+<!-- Include as many relevant details about the environment you experienced the bug in -->
+
+| Software         | Version(s) |
+| ---------------- | ---------- |
+| OS               |
+| Rust             |
+| Cargo            |
+| Release Channel  |
