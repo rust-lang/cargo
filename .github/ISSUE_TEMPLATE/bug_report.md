@@ -9,35 +9,24 @@ Thanks for filing a 🐛 bug report 😄!
 
 <!-- Provide a general summary of the issue in the title above -->
 
-**Describe the 🐛 bug**
-<!-- A clear and concise description of what the bug is. -->
-
-**To Reproduce**
-<!-- Steps to reproduce the behavior -->
+**Steps**
+<!-- The steps to reproduce the bug. -->
 1.
 2.
 3.
 
-**Current behavior**
-<!-- A clear and concise description of what currently happens. -->
-
-**Expected behavior**
-<!-- A clear and concise description of what you expected to happen. -->
+**Problem**
+<!-- A clear and concise description of what the bug is. -->
+<!-- including what currently happens and what you expected to happen. -->
 
 **Possible Solution(s)**
 <!-- Not obligatory, but suggest a fix/reason for the bug, -->
 <!-- or ideas how to implement the addition or change -->
 
-**Additional context**
-<!-- How has this issue affected you? What are you trying to accomplish? -->
-<!-- Providing context helps us come up with a solution that is most useful in the real world -->
+**Notes**
 
-**Your Environment**
-<!-- Include as many relevant details about the environment you experienced the bug in -->
+Output of `cargo version --verbose`:
+Output of `rustc --version`:
+Output of `rustup show active-toolchain`:
 
-| Software         | Version(s) |
-| ---------------- | ---------- |
-| OS               |
-| Rust             |
-| Cargo            |
-| Release Channel  |
+<!-- Also, any additional context or information you feel may be relevant to the issue. -->
