@@ -5,9 +5,6 @@ about: Create a report to help us improve
 
 <!--
 Thanks for filing a 🐛 bug report 😄!
-
-Before you submit, please search open/closed issues before submitting since
-someone might have asked the same thing before!
 -->
 
 <!-- Provide a general summary of the issue in the title above -->
