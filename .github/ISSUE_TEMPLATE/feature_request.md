@@ -15,10 +15,5 @@ Thanks for filing a 🙋 feature request 😄!
 **Describe the solution you'd like**
 <!-- A clear and concise description of what you want to happen. -->
 
-**Describe alternatives you've considered**
-<!-- A clear and concise description of any alternative solutions or features you've considered. -->
-
-**Additional context**
-<!-- How has this issue affected you? What are you trying to accomplish? -->
-<!-- Also add any other context or screenshots about the feature request here. -->
-<!-- Providing context helps us come up with a solution that is most useful in the real world -->
+**Notes**
+<!-- Any additional context or information you feel may be relevant to the issue. -->
