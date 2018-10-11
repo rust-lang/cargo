@@ -75,48 +75,13 @@ proptest! {
                         .filter(|x| !r.contains(x.package_id()))
                         .collect();
                     if !not_selected.is_empty() {
-                        for index_to_unpublish in &indexs_to_unpublish {
-                            let summary_to_unpublish = index_to_unpublish.get(&not_selected);
-                            let new_reg = registry(
-                                input
-                                    .iter()
-                                    .cloned()
-                                    .filter(|x| summary_to_unpublish != x)
-                                    .collect(),
-                            );
+                        let indexs_to_unpublish: Vec<_> = indexs_to_unpublish.iter().map(|x| x.get(&not_selected)).collect();
 
-                            let res = resolve(
-                                &pkg_id("root"),
-                                vec![dep_req(&this.name(), &format!("={}", this.version()))],
-                                &new_reg,
-                            );
-
-                            // Note: that we can not assert that the two `res` are identical
-                            // as the resolver does depend on irrelevant alternatives.
-                            // It uses how constrained a dependency requirement is
-                            // to determine what order to evaluate requirements.
-
-                            prop_assert!(
-                                res.is_ok(),
-                                "unpublishing {:?} stopped `{} = \"={}\"` from working",
-                                summary_to_unpublish.package_id(),
-                                this.name(),
-                                this.version()
-                            )
-                        }
-                    }
-                }
-
-                Err(_) => {
-                    // If resolution was unsuccessful, then it should stay unsuccessful
-                    // even if any version of a crate is unpublished.
-                    for index_to_unpublish in &indexs_to_unpublish {
-                        let summary_to_unpublish = index_to_unpublish.get(&input);
                         let new_reg = registry(
                             input
                                 .iter()
                                 .cloned()
-                                .filter(|x| summary_to_unpublish != x)
+                                .filter(|x| !indexs_to_unpublish.contains(&x))
                                 .collect(),
                         );
 
@@ -126,14 +91,47 @@ proptest! {
                             &new_reg,
                         );
 
+                        // Note: that we can not assert that the two `res` are identical
+                        // as the resolver does depend on irrelevant alternatives.
+                        // It uses how constrained a dependency requirement is
+                        // to determine what order to evaluate requirements.
+
                         prop_assert!(
-                            res.is_err(),
-                            "full index did not work for `{} = \"={}\"` but unpublishing {:?} fixed it!",
+                            res.is_ok(),
+                            "unpublishing {:?} stopped `{} = \"={}\"` from working",
+                            indexs_to_unpublish.iter().map(|x| x.package_id()).collect::<Vec<_>>(),
                             this.name(),
-                            this.version(),
-                            summary_to_unpublish.package_id()
+                            this.version()
                         )
                     }
+                }
+
+                Err(_) => {
+                    // If resolution was unsuccessful, then it should stay unsuccessful
+                    // even if any version of a crate is unpublished.
+                    let indexs_to_unpublish: Vec<_> = indexs_to_unpublish.iter().map(|x| x.get(&input)).collect();
+
+                    let new_reg = registry(
+                        input
+                            .iter()
+                            .cloned()
+                            .filter(|x| !indexs_to_unpublish.contains(&x))
+                            .collect(),
+                    );
+
+                    let res = resolve(
+                        &pkg_id("root"),
+                        vec![dep_req(&this.name(), &format!("={}", this.version()))],
+                        &new_reg,
+                    );
+
+                    prop_assert!(
+                        res.is_err(),
+                        "full index did not work for `{} = \"={}\"` but unpublishing {:?} fixed it!",
+                        this.name(),
+                        this.version(),
+                        indexs_to_unpublish.iter().map(|x| x.package_id()).collect::<Vec<_>>(),
+                    )
                 }
             }
         }
