@@ -7,15 +7,15 @@ about: Create a report to help us improve
 Thanks for filing a 🐛 bug report 😄!
 -->
 
+**Problem**
+<!-- A clear and concise description of what the bug is. -->
+<!-- including what currently happens and what you expected to happen. -->
+
 **Steps**
 <!-- The steps to reproduce the bug. -->
 1.
 2.
 3.
-
-**Problem**
-<!-- A clear and concise description of what the bug is. -->
-<!-- including what currently happens and what you expected to happen. -->
 
 **Possible Solution(s)**
 <!-- Not obligatory, but suggest a fix/reason for the bug, -->
