@@ -422,8 +422,8 @@ pub fn registry_strategy(
 fn meta_test_deep_trees_from_strategy() {
     let mut dis = [0; 21];
 
-    let strategy = registry_strategy(50, 10, 50);
-    for _ in 0..256 {
+    let strategy = registry_strategy(50, 20, 60);
+    for _ in 0..64 {
         let PrettyPrintRegistry(input) = strategy
             .new_tree(&mut TestRunner::default())
             .unwrap()
@@ -445,9 +445,44 @@ fn meta_test_deep_trees_from_strategy() {
         }
     }
 
-    assert!(
-        dis.iter().all(|&x| x > 0),
-        "In 2560 tries we did not see a wide enough distribution of dependency trees! dis:{:?}",
+    panic!(
+        "In 640 tries we did not see a wide enough distribution of dependency trees! dis: {:?}",
+        dis
+    );
+}
+
+/// This test is to test the generator to ensure
+/// that it makes registries that include multiple versions of the same library
+#[test]
+fn meta_test_multiple_versions_strategy() {
+    let mut dis = [0; 10];
+
+    let strategy = registry_strategy(50, 20, 60);
+    for _ in 0..64 {
+        let PrettyPrintRegistry(input) = strategy
+            .new_tree(&mut TestRunner::default())
+            .unwrap()
+            .current();
+        let reg = registry(input.clone());
+        for this in input.iter().rev().take(10) {
+            let mut res = resolve(
+                &pkg_id("root"),
+                vec![dep_req(&this.name(), &format!("={}", this.version()))],
+                &reg,
+            );
+            if let Ok(mut res) = res {
+                let res_len = res.len();
+                res.sort_by_key(|s| s.name());
+                res.dedup_by_key(|s| s.name());
+                dis[min(res_len - res.len(), dis.len() - 1)] += 1;
+            }
+            if dis.iter().all(|&x| x > 0) {
+                return;
+            }
+        }
+    }
+    panic!(
+        "In 640 tries we did not see a wide enough distribution of multiple versions of the same library! dis: {:?}",
         dis
     );
 }
