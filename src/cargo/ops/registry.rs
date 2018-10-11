@@ -1,10 +1,12 @@
 use std::collections::BTreeMap;
 use std::fs::{self, File};
 use std::iter::repeat;
+use std::str;
 use std::time::Duration;
 use std::{cmp, env};
 
-use curl::easy::{Easy, SslOpt};
+use log::Level;
+use curl::easy::{Easy, SslOpt, InfoType};
 use git2;
 use registry::{NewCrate, NewCrateDependency, Registry};
 
@@ -387,6 +389,32 @@ pub fn configure_http_handle(config: &Config, handle: &mut Easy) -> CargoResult<
         handle.useragent(&user_agent.val)?;
     } else {
         handle.useragent(&version().to_string())?;
+    }
+
+    if let Some(true) = config.get::<Option<bool>>("http.debug")? {
+        handle.verbose(true)?;
+        handle.debug_function(|kind, data| {
+            let (prefix, level) = match kind {
+                InfoType::Text => ("*", Level::Debug),
+                InfoType::HeaderIn => ("<", Level::Debug),
+                InfoType::HeaderOut => (">", Level::Debug),
+                InfoType::DataIn => ("{", Level::Trace),
+                InfoType::DataOut => ("}", Level::Trace),
+                InfoType::SslDataIn |
+                InfoType::SslDataOut => return,
+                _ => return,
+            };
+            match str::from_utf8(data) {
+                Ok(s) => {
+                    for line in s.lines() {
+                        log!(level, "http-debug: {} {}", prefix, line);
+                    }
+                }
+                Err(_) => {
+                    log!(level, "http-debug: {} ({} bytes of data)", prefix, data.len());
+                }
+            }
+        })?;
     }
     Ok(())
 }
