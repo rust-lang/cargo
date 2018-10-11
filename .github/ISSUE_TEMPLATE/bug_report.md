@@ -7,8 +7,6 @@ about: Create a report to help us improve
 Thanks for filing a 🐛 bug report 😄!
 -->
 
-<!-- Provide a general summary of the issue in the title above -->
-
 **Steps**
 <!-- The steps to reproduce the bug. -->
 1.
