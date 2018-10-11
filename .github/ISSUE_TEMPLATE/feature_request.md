@@ -7,8 +7,8 @@ about: Suggest an idea for this project
 Thanks for filing a 🙋 feature request 😄!
 -->
 
-**Describe the 🙋 feature request**
-<!-- A clear and concise description of what the feature request is. -->
+**Describe the problem you are trying to solve**
+<!-- A clear and concise description of the problem this feature request is trying to solve. -->
 
 **Describe the solution you'd like**
 <!-- A clear and concise description of what you want to happen. -->
