@@ -35,7 +35,7 @@ proptest! {
     })]
     #[test]
     fn passes_validation(
-        PrettyPrintRegistry(input) in registry_strategy(50, 10, 50)
+        PrettyPrintRegistry(input) in registry_strategy(50, 20, 60)
     )  {
         let reg = registry(input.clone());
         // there is only a small chance that eny one
@@ -51,7 +51,7 @@ proptest! {
     }
     #[test]
     fn limited_independence_of_irrelevant_alternatives(
-        PrettyPrintRegistry(input) in registry_strategy(50, 10, 50),
+        PrettyPrintRegistry(input) in registry_strategy(50, 20, 60),
         indexs_to_unpublish in vec(any::<prop::sample::Index>(), 10)
     )  {
         let reg = registry(input.clone());
