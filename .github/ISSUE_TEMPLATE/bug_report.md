@@ -23,8 +23,7 @@ Thanks for filing a 🐛 bug report 😄!
 
 **Notes**
 
-Output of `cargo version --verbose`:
-Output of `rustc --version`:
-Output of `rustup show active-toolchain`:
+Output of `cargo version`:
 
 <!-- Also, any additional context or information you feel may be relevant to the issue. -->
+<!-- (e.g rust version, OS platform/distribution/version, target toolchain(s), release channel.. -->
