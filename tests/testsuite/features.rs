@@ -1669,3 +1669,64 @@ fn all_features_all_crates() {
 
     p.cargo("build --all-features --all").run();
 }
+
+#[test]
+fn feature_off_dylib() {
+    let p = project()
+        .file(
+            "Cargo.toml",
+            r#"
+            [workspace]
+            members = ["bar"]
+
+            [package]
+            name = "foo"
+            version = "0.0.1"
+
+            [lib]
+            crate-type = ["dylib"]
+
+            [features]
+            f1 = []
+        "#,
+        )
+        .file(
+            "src/lib.rs",
+            r#"
+            pub fn hello() -> &'static str {
+                if cfg!(feature = "f1") {
+                    "f1"
+                } else {
+                    "no f1"
+                }
+            }
+        "#,
+        )
+        .file(
+            "bar/Cargo.toml",
+            r#"
+            [package]
+            name = "bar"
+            version = "0.0.1"
+
+            [dependencies]
+            foo = { path = ".." }
+        "#,
+        )
+        .file(
+            "bar/src/main.rs",
+            r#"
+            extern crate foo;
+
+            fn main() {
+                assert_eq!(foo::hello(), "no f1");
+            }
+        "#,
+        )
+        .build();
+
+    // Build the dylib with `f1` feature.
+    p.cargo("build --features f1").run();
+    // Check that building without `f1` uses a dylib without `f1`.
+    p.cargo("run -p bar").run();
+}
