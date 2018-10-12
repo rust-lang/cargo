@@ -599,6 +599,17 @@ fn build_script_local_fingerprints<'a, 'cfg>(
     // dependencies.
     let deps = &cx.build_explicit_deps[unit];
     let output = deps.build_script_output.clone();
+
+    // check if rerun_if_changed paths corresponds to existing files and warn if not (#6003)
+    for path in &deps.rerun_if_changed {
+        if !path.exists() {
+            cx.bcx.config.shell().warn(format!(
+                "\"cargo:rerun-if-changed\" file \"{}\" not found.",
+                path.display()
+            ))?;
+        }
+    }
+
     if deps.rerun_if_changed.is_empty() && deps.rerun_if_env_changed.is_empty() {
         debug!("old local fingerprints deps");
         let s = pkg_fingerprint(&cx.bcx, unit.pkg)?;
@@ -630,6 +641,7 @@ fn local_fingerprints_deps(
 
     for var in deps.rerun_if_env_changed.iter() {
         let val = env::var(var).ok();
+        // check if the vlu
         local.push(LocalFingerprint::EnvBased(var.clone(), val));
     }
 

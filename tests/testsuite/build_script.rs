@@ -2338,6 +2338,8 @@ fn rebuild_only_on_explicit_paths() {
     p.cargo("build -v")
         .with_stderr(
             "\
+[WARNING] \"cargo:rerun-if-changed\" file \"foo\" not found.
+[WARNING] \"cargo:rerun-if-changed\" file \"bar\" not found.
 [COMPILING] foo v0.5.0 ([..])
 [RUNNING] `[..]/build-script-build`
 [RUNNING] `rustc [..] src/lib.rs [..]`
@@ -2350,7 +2352,7 @@ fn rebuild_only_on_explicit_paths() {
     File::create(p.root().join("bar")).unwrap();
     sleep_ms(1000); // make sure the to-be-created outfile has a timestamp distinct from the infiles
 
-    // now the exist, so run once, catch the mtime, then shouldn't run again
+    // now they exist, so run once, catch the mtime, then shouldn't run again
     println!("run with");
     p.cargo("build -v")
         .with_stderr(
@@ -2403,6 +2405,7 @@ fn rebuild_only_on_explicit_paths() {
     p.cargo("build -v")
         .with_stderr(
             "\
+[WARNING] \"cargo:rerun-if-changed\" file \"bar\" not found.
 [COMPILING] foo v0.5.0 ([..])
 [RUNNING] `[..]/build-script-build`
 [RUNNING] `rustc [..] src/lib.rs [..]`
