@@ -9,7 +9,9 @@ use std::fs::{self, File};
 use std::io::prelude::*;
 use std::io::SeekFrom;
 use std::mem;
+#[cfg(unix)] use std::os::unix::fs::MetadataExt;
 use std::path::{Path, PathBuf};
+use std::process::Command;
 use std::str::FromStr;
 use std::sync::{Once, ONCE_INIT};
 use std::time::Instant;
@@ -683,18 +685,25 @@ impl Config {
     fn load_credentials(&self, cfg: &mut ConfigValue) -> CargoResult<()> {
         let home_path = self.home_path.clone().into_path_unlocked();
         let credentials = home_path.join("credentials");
-        if fs::metadata(&credentials).is_err() {
+        let metadata = fs::metadata(&credentials);
+        if metadata.is_err() {
             return Ok(());
         }
-
+        let metadata = metadata?;
         let mut contents = String::new();
-        let mut file = File::open(&credentials)?;
-        file.read_to_string(&mut contents).chain_err(|| {
-            format!(
-                "failed to read configuration file `{}`",
-                credentials.display()
-            )
-        })?;
+
+        if ! is_executable(metadata) {
+            let mut file = File::open(&credentials)?;
+            file.read_to_string(&mut contents).chain_err(|| {
+                format!(
+                    "failed to read configuration file `{}`",
+                    credentials.display()
+                )
+            })?;
+        } else {
+            let output = Command::new(credentials.clone()).output()?;
+            contents = String::from_utf8(output.stdout)?;
+        }
 
         let toml = cargo_toml::parse(&contents, &credentials, self).chain_err(|| {
             format!(
@@ -810,6 +819,18 @@ impl Config {
         T::deserialize(d).map_err(|e| e.into())
     }
 }
+
+/// Check whether the credentials file is executable
+#[cfg(unix)]
+fn is_executable(m: fs::Metadata) -> bool {
+    return m.mode() & 0o100 == 0;
+}
+
+#[cfg(not(unix))]
+fn is_executable(m: fs::Metadata) -> bool {
+    return false;
+}
+
 
 /// A segment of a config key.
 ///
