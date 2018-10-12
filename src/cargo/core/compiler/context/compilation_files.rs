@@ -427,7 +427,6 @@ fn compute_metadata<'a, 'cfg>(
     // panic=abort and panic=unwind artifacts, additionally with various
     // settings like debuginfo and whatnot.
     unit.profile.hash(&mut hasher);
-    cx.used_in_plugin.contains(unit).hash(&mut hasher);
     unit.mode.hash(&mut hasher);
     if let Some(ref args) = bcx.extra_args_for(unit) {
         args.hash(&mut hasher);

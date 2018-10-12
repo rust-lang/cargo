@@ -69,7 +69,7 @@ impl Profiles {
         &self,
         pkg_id: &PackageId,
         is_member: bool,
-        profile_for: ProfileFor,
+        unit_for: UnitFor,
         mode: CompileMode,
         release: bool,
     ) -> Profile {
@@ -98,10 +98,10 @@ impl Profiles {
             CompileMode::Bench => &self.bench,
             CompileMode::Doc { .. } => &self.doc,
         };
-        let mut profile = maker.get_profile(Some(pkg_id), is_member, profile_for);
+        let mut profile = maker.get_profile(Some(pkg_id), is_member, unit_for);
         // `panic` should not be set for tests/benches, or any of their
         // dependencies.
-        if profile_for == ProfileFor::TestDependency || mode.is_any_test() {
+        if !unit_for.is_panic_ok() || mode.is_any_test() {
             profile.panic = None;
         }
         profile
@@ -124,9 +124,9 @@ impl Profiles {
     /// select for the package that was actually built.
     pub fn base_profile(&self, release: bool) -> Profile {
         if release {
-            self.release.get_profile(None, true, ProfileFor::Any)
+            self.release.get_profile(None, true, UnitFor::new_normal())
         } else {
-            self.dev.get_profile(None, true, ProfileFor::Any)
+            self.dev.get_profile(None, true, UnitFor::new_normal())
         }
     }
 
@@ -166,14 +166,14 @@ impl ProfileMaker {
         &self,
         pkg_id: Option<&PackageId>,
         is_member: bool,
-        profile_for: ProfileFor,
+        unit_for: UnitFor,
     ) -> Profile {
         let mut profile = self.default;
         if let Some(ref toml) = self.toml {
-            merge_toml(pkg_id, is_member, profile_for, &mut profile, toml);
+            merge_toml(pkg_id, is_member, unit_for, &mut profile, toml);
         }
         if let Some(ref toml) = self.config {
-            merge_toml(pkg_id, is_member, profile_for, &mut profile, toml);
+            merge_toml(pkg_id, is_member, unit_for, &mut profile, toml);
         }
         profile
     }
@@ -293,12 +293,12 @@ impl ProfileMaker {
 fn merge_toml(
     pkg_id: Option<&PackageId>,
     is_member: bool,
-    profile_for: ProfileFor,
+    unit_for: UnitFor,
     profile: &mut Profile,
     toml: &TomlProfile,
 ) {
     merge_profile(profile, toml);
-    if profile_for == ProfileFor::CustomBuild {
+    if unit_for.is_custom_build() {
         if let Some(ref build_override) = toml.build_override {
             merge_profile(profile, build_override);
         }
@@ -532,25 +532,82 @@ pub enum Lto {
     Named(InternedString),
 }
 
-/// A flag used in `Unit` to indicate the purpose for the target.
+/// Flags used in creating `Unit`s to indicate the purpose for the target, and
+/// to ensure the target's dependencies have the correct settings.
 #[derive(Copy, Clone, Debug, Eq, PartialEq, Hash)]
-pub enum ProfileFor {
-    /// A general-purpose target.
-    Any,
+pub struct UnitFor {
     /// A target for `build.rs` or any of its dependencies.  This enables
     /// `build-override` profiles for these targets.
-    CustomBuild,
-    /// A target that is a dependency of a test or benchmark.  Currently this
-    /// enforces that the `panic` setting is not set.
-    TestDependency,
+    custom_build: bool,
+    /// This is true if it is *allowed* to set the `panic` flag. Currently
+    /// this is false for test/bench targets and all their dependencies, and
+    /// "for_host" units such as proc-macro and custom build scripts and their
+    /// dependencies.
+    panic_ok: bool,
 }
 
-impl ProfileFor {
-    pub fn all_values() -> &'static [ProfileFor] {
-        static ALL: [ProfileFor; 3] = [
-            ProfileFor::Any,
-            ProfileFor::CustomBuild,
-            ProfileFor::TestDependency,
+impl UnitFor {
+    /// A unit for a normal target/dependency (i.e. not custom build,
+    /// proc-macro/plugin, or test/bench).
+    pub fn new_normal() -> UnitFor {
+        UnitFor {
+            custom_build: false,
+            panic_ok: true,
+        }
+    }
+
+    /// A unit for a custom build script or its dependencies.
+    pub fn new_build() -> UnitFor {
+        UnitFor {
+            custom_build: true,
+            panic_ok: false,
+        }
+    }
+
+    /// A unit for a proc-macro or compiler plugin or their dependencies.
+    pub fn new_compiler() -> UnitFor {
+        UnitFor {
+            custom_build: false,
+            panic_ok: false,
+        }
+    }
+
+    /// A unit for a test/bench target or their dependencies.
+    pub fn new_test() -> UnitFor {
+        UnitFor {
+            custom_build: false,
+            panic_ok: false,
+        }
+    }
+
+    /// Create a variant based on `for_host` setting.
+    ///
+    /// When `for_host` is true, this clears `panic_ok` in a sticky fashion so
+    /// that all its dependencies also have `panic_ok=false`.
+    pub fn with_for_host(self, for_host: bool) -> UnitFor {
+        UnitFor {
+            custom_build: self.custom_build,
+            panic_ok: self.panic_ok && !for_host
+        }
+    }
+
+    /// Returns true if this unit is for a custom build script or one of its
+    /// dependencies.
+    pub fn is_custom_build(&self) -> bool {
+        self.custom_build
+    }
+
+    /// Returns true if this unit is allowed to set the `panic` compiler flag.
+    pub fn is_panic_ok(&self) -> bool {
+        self.panic_ok
+    }
+
+    /// All possible values, used by `clean`.
+    pub fn all_values() -> &'static [UnitFor] {
+        static ALL: [UnitFor; 3] = [
+            UnitFor { custom_build: false, panic_ok: true },
+            UnitFor { custom_build: true, panic_ok: false },
+            UnitFor { custom_build: false, panic_ok: false },
         ];
         &ALL
     }
