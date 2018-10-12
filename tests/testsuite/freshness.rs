@@ -1029,3 +1029,151 @@ fn reuse_workspace_lib() {
 ",
         ).run();
 }
+
+#[test]
+fn reuse_shared_build_dep() {
+    let p = project()
+        .file(
+            "Cargo.toml",
+            r#"
+            [package]
+            name = "foo"
+            version = "0.0.1"
+
+            [dependencies]
+            shared = {path = "shared"}
+
+            [workspace]
+            members = ["shared", "bar"]
+        "#,
+        )
+        .file("src/main.rs", "fn main() {}")
+        .file("shared/Cargo.toml", &basic_manifest("shared", "0.0.1"))
+        .file("shared/src/lib.rs", "")
+        .file(
+            "bar/Cargo.toml",
+            r#"
+            [package]
+            name = "bar"
+            version = "0.0.1"
+
+            [build-dependencies]
+            shared = { path = "../shared" }
+        "#,
+        )
+        .file("bar/src/lib.rs", "")
+        .file("bar/build.rs", "fn main() {}")
+        .build();
+
+    p.cargo("build --all").run();
+    // This should not recompile!
+    p.cargo("build -p foo -v")
+        .with_stderr(
+            "\
+[FRESH] shared [..]
+[FRESH] foo [..]
+[FINISHED] [..]
+",
+        )
+        .run();
+}
+
+#[test]
+fn reuse_panic_build_dep_test() {
+    let p = project()
+        .file(
+            "Cargo.toml",
+            r#"
+            [package]
+            name = "foo"
+            version = "0.0.1"
+
+            [build-dependencies]
+            bar = { path = "bar" }
+
+            [dev-dependencies]
+            bar = { path = "bar" }
+
+            [profile.dev]
+            panic = "abort"
+        "#,
+        )
+        .file("src/lib.rs", "")
+        .file("build.rs", "fn main() {}")
+        .file("bar/Cargo.toml", &basic_manifest("bar", "0.0.1"))
+        .file("bar/src/lib.rs", "")
+        .build();
+
+    // Check that `bar` is not built twice. It is only needed once (without `panic`).
+    p.cargo("test --lib --no-run -v")
+        .with_stderr(
+            "\
+[COMPILING] bar [..]
+[RUNNING] `rustc --crate-name bar [..]
+[COMPILING] foo [..]
+[RUNNING] `rustc --crate-name build_script_build [..]
+[RUNNING] [..]build-script-build`
+[RUNNING] `rustc --crate-name foo src/lib.rs [..]--test[..]
+[FINISHED] [..]
+",
+        )
+        .run();
+}
+
+#[test]
+fn reuse_panic_pm() {
+    // foo(panic) -> bar(panic)
+    // somepm(nopanic) -> bar(nopanic)
+    let p = project()
+        .file(
+            "Cargo.toml",
+            r#"
+            [package]
+            name = "foo"
+            version = "0.0.1"
+
+            [dependencies]
+            bar = { path = "bar" }
+            somepm = { path = "somepm" }
+
+            [profile.dev]
+            panic = "abort"
+        "#,
+        )
+        .file("src/lib.rs", "extern crate bar;")
+        .file("bar/Cargo.toml", &basic_manifest("bar", "0.0.1"))
+        .file("bar/src/lib.rs", "")
+        .file(
+            "somepm/Cargo.toml",
+            r#"
+            [package]
+            name = "somepm"
+            version = "0.0.1"
+
+            [lib]
+            proc-macro = true
+
+            [dependencies]
+            bar = { path = "../bar" }
+        "#,
+        )
+        .file("somepm/src/lib.rs", "extern crate bar;")
+        .build();
+
+    // bar is built once without panic (for proc-macro) and once with (for the
+    // normal dependency).
+    p.cargo("build -v")
+        .with_stderr_unordered(
+            "\
+[COMPILING] bar [..]
+[RUNNING] `rustc --crate-name bar bar/src/lib.rs [..]--crate-type lib --emit=dep-info,link -C debuginfo=2 [..]
+[RUNNING] `rustc --crate-name bar bar/src/lib.rs [..]--crate-type lib --emit=dep-info,link -C panic=abort -C debuginfo=2 [..]
+[COMPILING] somepm [..]
+[RUNNING] `rustc --crate-name somepm [..]
+[COMPILING] foo [..]
+[RUNNING] `rustc --crate-name foo src/lib.rs [..]-C panic=abort[..]
+[FINISHED] [..]
+",
+        )
+        .run();
+}
