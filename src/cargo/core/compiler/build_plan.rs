@@ -23,6 +23,7 @@ struct Invocation {
     target_kind: TargetKind,
     kind: Kind,
     deps: Vec<usize>,
+    inputs: Vec<String>,
     outputs: Vec<PathBuf>,
     links: BTreeMap<PathBuf, PathBuf>,
     program: String,
@@ -52,6 +53,7 @@ impl Invocation {
             kind: unit.kind,
             target_kind: unit.target.kind().clone(),
             deps,
+            inputs: Vec::new(),
             outputs: Vec::new(),
             links: BTreeMap::new(),
             program: String::new(),
@@ -122,6 +124,7 @@ impl BuildPlan {
         &mut self,
         invocation_name: &str,
         cmd: &ProcessBuilder,
+        inputs: &[String],
         outputs: &[OutputFile],
     ) -> CargoResult<()> {
         let id = self.invocation_map[invocation_name];
@@ -131,6 +134,7 @@ impl BuildPlan {
             .ok_or_else(|| internal(format!("couldn't find invocation for {}", invocation_name)))?;
 
         invocation.update_cmd(cmd)?;
+        invocation.inputs.extend(inputs.iter().cloned());
         for output in outputs.iter() {
             invocation.add_output(&output.path, &output.hardlink);
         }

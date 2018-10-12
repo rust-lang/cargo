@@ -24,6 +24,7 @@ fn cargo_build_plan_simple() {
                 "env": "{...}",
                 "kind": "Host",
                 "links": "{...}",
+                "inputs": [],
                 "outputs": "{...}",
                 "package_name": "foo",
                 "package_version": "0.5.0",
@@ -80,6 +81,7 @@ fn cargo_build_plan_single_dep() {
                 "env": "{...}",
                 "kind": "Host",
                 "links": "{...}",
+                "inputs": [],
                 "outputs": [
                     "[..]/foo/target/debug/deps/libbar-[..].rlib"
                 ],
@@ -95,6 +97,7 @@ fn cargo_build_plan_single_dep() {
                 "env": "{...}",
                 "kind": "Host",
                 "links": "{...}",
+                "inputs": [],
                 "outputs": [
                     "[..]/foo/target/debug/deps/libfoo-[..].rlib"
                 ],
@@ -142,6 +145,7 @@ fn cargo_build_plan_build_script() {
                 "env": "{...}",
                 "kind": "Host",
                 "links": "{...}",
+                "inputs": [],
                 "outputs": [
                     "[..]/foo/target/debug/build/[..]/build_script_build-[..]"
                 ],
@@ -157,6 +161,7 @@ fn cargo_build_plan_build_script() {
                 "env": "{...}",
                 "kind": "Host",
                 "links": "{...}",
+                "inputs": [],
                 "outputs": [],
                 "package_name": "foo",
                 "package_version": "0.5.0",
@@ -170,6 +175,7 @@ fn cargo_build_plan_build_script() {
                 "env": "{...}",
                 "kind": "Host",
                 "links": "{...}",
+                "inputs": [],
                 "outputs": "{...}",
                 "package_name": "foo",
                 "package_version": "0.5.0",
@@ -205,4 +211,54 @@ fn build_plan_with_dev_dep() {
     p.cargo("build --build-plan -Zunstable-options")
         .masquerade_as_nightly_cargo()
         .run();
+}
+
+#[test]
+fn build_plan_with_inputs() {
+    let p = project()
+        .file("Cargo.toml", &basic_bin_manifest("foo"))
+        .file("data/some.txt", "o hai there")
+        .file("src/foo.rs", "mod module1; mod module2; fn main() {}")
+        .file("src/module1.rs", "mod nested;")
+        .file("src/module1/nested.rs", "")
+        .file("src/module2/mod.rs", r#"
+            const DATA: &str = include_str!(concat!(env!("CARGO_MANIFEST_DIR"), "/data/some.txt"));"#)
+        .file("src/not_included_in_inputs.rs", "")
+        .build();
+    // Currently we need to populate .d files which are later used to include "inputs" field
+    p.cargo("build").masquerade_as_nightly_cargo().run();
+
+    p.cargo("build --build-plan -Zunstable-options")
+        .masquerade_as_nightly_cargo()
+        .with_json(
+            r#"
+    {
+        "inputs": [
+            "[..]/foo/Cargo.toml"
+        ],
+        "invocations": [
+            {
+                "args": "{...}",
+                "cwd": "[..]/cit/[..]/foo",
+                "deps": [],
+                "env": "{...}",
+                "kind": "Host",
+                "links": "{...}",
+                "inputs": [
+                    "[..]/foo/data/some.txt",
+                    "[..]/foo/src/foo.rs",
+                    "[..]/foo/src/module1/nested.rs",
+                    "[..]/foo/src/module1.rs",
+                    "[..]/foo/src/module2/mod.rs"
+                ],
+                "outputs": "{...}",
+                "package_name": "foo",
+                "package_version": "0.5.0",
+                "program": "rustc",
+                "target_kind": ["bin"]
+            }
+        ]
+    }
+    "#,
+        ).run();
 }

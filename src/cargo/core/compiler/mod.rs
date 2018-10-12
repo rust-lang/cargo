@@ -21,7 +21,7 @@ use self::build_plan::BuildPlan;
 use self::job::{Job, Work};
 use self::job_queue::JobQueue;
 
-use self::output_depinfo::output_depinfo;
+use self::output_depinfo::{dep_files_for_unit, output_depinfo};
 
 pub use self::build_context::{BuildContext, FileFlavor, TargetConfig, TargetInfo};
 pub use self::build_config::{BuildConfig, CompileMode, MessageFormat};
@@ -201,6 +201,7 @@ fn rustc<'a, 'cfg>(
 
     add_cap_lints(cx.bcx, unit, &mut rustc);
 
+    let inputs = dep_files_for_unit(cx, unit)?.unwrap_or_default();
     let outputs = cx.outputs(unit)?;
     let root = cx.files().out_dir(unit);
     let kind = unit.kind;
@@ -302,7 +303,7 @@ fn rustc<'a, 'cfg>(
             .map_err(internal_if_simple_exit_code)
             .chain_err(|| format!("Could not compile `{}`.", name))?;
         } else if build_plan {
-            state.build_plan(buildkey, rustc.clone(), outputs.clone());
+            state.build_plan(buildkey, rustc.clone(), inputs, outputs.clone());
         } else {
             exec.exec_and_capture_output(rustc, &package_id, &target, mode, state)
                 .map_err(internal_if_simple_exit_code)

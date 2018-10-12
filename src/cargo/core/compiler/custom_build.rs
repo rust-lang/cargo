@@ -322,7 +322,10 @@ fn build_work<'a, 'cfg>(cx: &mut Context<'a, 'cfg>, unit: &Unit<'a>) -> CargoRes
 
         // And now finally, run the build command itself!
         if build_plan {
-            state.build_plan(invocation_name, cmd.clone(), Arc::new(Vec::new()));
+            // NOTE: It's impossible to accurately detect file inputs/outputs for
+            // the *execution* of an arbitrary build script and so we pass empty file lists here.
+            let (inputs, outputs) = (vec![], Arc::default());
+            state.build_plan(invocation_name, cmd.clone(), inputs, outputs);
         } else {
             state.running(&cmd);
             let output = if extra_verbose {
