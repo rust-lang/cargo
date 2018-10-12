@@ -193,8 +193,8 @@ impl<'cfg> Compilation<'cfg> {
         } else {
             let mut search_path =
                 super::filter_dynamic_search_path(self.native_dirs.iter(), &self.root_output);
-            search_path.push(self.root_output.clone());
             search_path.push(self.deps_output.clone());
+            search_path.push(self.root_output.clone());
             search_path.extend(self.target_dylib_path.clone());
             search_path
         };
