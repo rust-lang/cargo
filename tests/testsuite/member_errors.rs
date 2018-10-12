@@ -44,15 +44,12 @@ fn toml_deserialize_manifest_error() {
     let error = Workspace::new(&root_manifest_path, &Config::default().unwrap()).unwrap_err();
     eprintln!("{:?}", error);
 
-    let manifest_errs: Vec<_> = error
-        .iter_chain()
-        .filter_map(|err| err.downcast_ref::<ManifestError>())
-        .map(|err| err.manifest_path())
-        .collect();
+    let manifest_err: &ManifestError = error.downcast_ref().expect("Not a ManifestError");
+    assert_eq!(manifest_err.manifest_path(), &root_manifest_path);
 
-    assert_eq!(manifest_errs.len(), 2, "{:?}", manifest_errs);
-    assert_eq!(manifest_errs[0], &root_manifest_path);
-    assert_eq!(manifest_errs[1], &member_manifest_path);
+    let causes: Vec<_> = manifest_err.manifest_causes().collect();
+    assert_eq!(causes.len(), 1, "{:?}", causes);
+    assert_eq!(causes[0].manifest_path(), &member_manifest_path);
 }
 
 /// Tests inclusion of a `ManifestError` pointing to a member manifest
@@ -97,14 +94,11 @@ fn member_manifest_path_io_error() {
     let error = Workspace::new(&root_manifest_path, &Config::default().unwrap()).unwrap_err();
     eprintln!("{:?}", error);
 
-    let manifest_errs: Vec<_> = error
-        .iter_chain()
-        .filter_map(|err| err.downcast_ref::<ManifestError>())
-        .map(|err| err.manifest_path())
-        .collect();
+    let manifest_err: &ManifestError = error.downcast_ref().expect("Not a ManifestError");
+    assert_eq!(manifest_err.manifest_path(), &root_manifest_path);
 
-    assert_eq!(manifest_errs.len(), 3, "{:?}", manifest_errs);
-    assert_eq!(manifest_errs[0], &root_manifest_path);
-    assert_eq!(manifest_errs[1], &member_manifest_path);
-    assert_eq!(manifest_errs[2], &missing_manifest_path);
+    let causes: Vec<_> = manifest_err.manifest_causes().collect();
+    assert_eq!(causes.len(), 2, "{:?}", causes);
+    assert_eq!(causes[0].manifest_path(), &member_manifest_path);
+    assert_eq!(causes[1].manifest_path(), &missing_manifest_path);
 }

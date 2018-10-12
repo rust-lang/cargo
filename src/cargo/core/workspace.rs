@@ -495,11 +495,7 @@ impl<'cfg> Workspace<'cfg> {
         self.members.push(manifest_path.clone());
 
         let candidates = {
-            let pkg = match *self
-                .packages
-                .load(&manifest_path)
-                .map_err(|err| ManifestError::new(err, manifest_path.clone()))?
-            {
+            let pkg = match *self.packages.load(&manifest_path)? {
                 MaybePackage::Package(ref p) => p,
                 MaybePackage::Virtual(_) => return Ok(()),
             };
