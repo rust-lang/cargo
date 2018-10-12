@@ -73,25 +73,37 @@ impl fmt::Display for Internal {
     }
 }
 
-/// Error related to a particular manifest and providing it's path.
+/// Error wrapper related to a particular manifest and providing it's path.
+///
+/// This error adds no displayable info of it's own.
 pub struct ManifestError {
     cause: Error,
     manifest: PathBuf,
 }
 
 impl ManifestError {
-    pub fn new(cause: Error, manifest: PathBuf) -> Self {
-        Self { cause, manifest }
+    pub fn new<E: Into<Error>>(cause: E, manifest: PathBuf) -> Self {
+        Self {
+            cause: cause.into(),
+            manifest,
+        }
     }
 
     pub fn manifest_path(&self) -> &PathBuf {
         &self.manifest
     }
+
+    /// Returns an iterator over the `ManifestError` chain of causes.
+    ///
+    /// So if this error was not caused by another `ManifestError` this will be empty.
+    pub fn manifest_causes(&self) -> ManifestCauses {
+        ManifestCauses { current: self }
+    }
 }
 
 impl Fail for ManifestError {
     fn cause(&self) -> Option<&Fail> {
-        self.cause.as_fail().into()
+        self.cause.as_fail().cause()
     }
 }
 
@@ -106,6 +118,22 @@ impl fmt::Display for ManifestError {
         self.cause.fmt(f)
     }
 }
+
+/// An iterator over the `ManifestError` chain of causes.
+pub struct ManifestCauses<'a> {
+    current: &'a ManifestError,
+}
+
+impl<'a> Iterator for ManifestCauses<'a> {
+    type Item = &'a ManifestError;
+
+    fn next(&mut self) -> Option<Self::Item> {
+        self.current = self.current.cause.downcast_ref()?;
+        Some(self.current)
+    }
+}
+
+impl<'a> ::std::iter::FusedIterator for ManifestCauses<'a> {}
 
 // =============================================================================
 // Process errors
