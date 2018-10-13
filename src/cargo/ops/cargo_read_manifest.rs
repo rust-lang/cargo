@@ -153,7 +153,7 @@ fn read_nested_packages(
                 "skipping malformed package found at `{}`",
                 path.to_string_lossy()
             );
-            errors.push(err);
+            errors.push(err.into());
             return Ok(());
         }
         Ok(tuple) => tuple,
