@@ -7,8 +7,8 @@ use cargo::util::Config;
 use crate::support::project;
 use crate::support::registry::Package;
 use crate::support::resolver::{
-    assert_contains, assert_same, dep, dep_kind, dep_loc, dep_req, loc_names, names, pkg, pkg_dep,
-    pkg_id, pkg_loc, registry, registry_strategy, remove_dep, resolve, resolve_and_validated,
+    assert_contains, assert_same, dep, dep_kind, dep_loc, dep_req, dep_req_kind, loc_names, names,
+    pkg, pkg_dep, pkg_id, pkg_loc, registry, registry_strategy, remove_dep, resolve, resolve_and_validated,
     resolve_with_config, PrettyPrintRegistry, ToDep, ToPkgId,
 };
 
@@ -233,6 +233,27 @@ proptest! {
             }
         }
     }
+}
+
+#[test]
+fn public_dependency() {
+    let reg = registry(vec![
+        pkg!(("A", "0.1.0")),
+        pkg!(("A", "0.2.0")),
+        pkg!("B" => [dep_req_kind("A", "0.1", Kind::Normal, true)]),
+        pkg!("C" => [dep_req("A", "*"), dep_req("B", "*")]),
+    ]);
+
+    let res = resolve_and_validated(&pkg_id("root"), vec![dep("C")], &reg).unwrap();
+    assert_same(
+        &res,
+        &names(&[
+            ("root", "1.0.0"),
+            ("C", "1.0.0"),
+            ("B", "1.0.0"),
+            ("A", "0.1.0"),
+        ]),
+    );
 }
 
 #[test]
