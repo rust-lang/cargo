@@ -13,7 +13,7 @@ use core::{Dependency, PackageIdSpec};
 use core::{EitherManifest, Package, SourceId, VirtualManifest};
 use ops;
 use sources::PathSource;
-use util::errors::{CargoResult, CargoResultExt};
+use util::errors::{CargoResult, CargoResultExt, ManifestError};
 use util::paths;
 use util::toml::read_manifest;
 use util::{Config, Filesystem};
@@ -508,7 +508,8 @@ impl<'cfg> Workspace<'cfg> {
                 .collect::<Vec<_>>()
         };
         for candidate in candidates {
-            self.find_path_deps(&candidate, root_manifest, true)?;
+            self.find_path_deps(&candidate, root_manifest, true)
+                .map_err(|err| ManifestError::new(err, manifest_path.clone()))?;
         }
         Ok(())
     }
