@@ -1,8 +1,6 @@
-#![allow(deprecated)] // for SipHasher
-
 use std::collections::{BTreeMap, HashMap};
 use std::fmt;
-use std::hash::{Hash, Hasher, SipHasher};
+use std::hash::{Hash, Hasher};
 use std::path::{Path, PathBuf};
 use std::rc::Rc;
 
@@ -17,7 +15,7 @@ use core::{Dependency, PackageId, PackageIdSpec, SourceId, Summary};
 use core::{Edition, Feature, Features, WorkspaceConfig};
 use util::errors::*;
 use util::toml::TomlManifest;
-use util::{Config, Filesystem};
+use util::{Config, Filesystem, short_hash};
 
 pub enum EitherManifest {
     Real(Manifest),
@@ -515,13 +513,11 @@ impl Manifest {
     }
 
     pub fn metabuild_path(&self, target_dir: Filesystem) -> PathBuf {
-        let mut hasher = SipHasher::new_with_keys(0, 0);
-        self.package_id().hash(&mut hasher);
-        let hash = hasher.finish();
+        let hash = short_hash(self.package_id());
         target_dir
             .into_path_unlocked()
             .join(".metabuild")
-            .join(format!("metabuild-{}-{:016x}.rs", self.name(), hash))
+            .join(format!("metabuild-{}-{}.rs", self.name(), hash))
     }
 }
 
