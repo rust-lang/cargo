@@ -50,7 +50,7 @@ pub fn resolve_and_validated(
             }));
         }
     }
-    let out: Vec<PackageId> = resolve.iter().cloned().collect();
+    let out = resolve.sort();
     assert_eq!(out.len(), used.len());
     Ok(out)
 }
@@ -62,8 +62,7 @@ pub fn resolve_with_config(
     config: Option<&Config>,
 ) -> CargoResult<Vec<PackageId>> {
     let resolve = resolve_with_config_raw(pkg, deps, registry, config)?;
-    let out: Vec<PackageId> = resolve.iter().cloned().collect();
-    Ok(out)
+    Ok(resolve.sort())
 }
 
 pub fn resolve_with_config_raw(
