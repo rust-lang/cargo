@@ -20,7 +20,7 @@ use std::collections::{HashMap, HashSet};
 
 use CargoResult;
 use core::dependency::Kind as DepKind;
-use core::profiles::ProfileFor;
+use core::profiles::UnitFor;
 use core::{Package, Target, PackageId};
 use core::package::Downloads;
 use super::{BuildContext, CompileMode, Kind, Unit};
@@ -59,12 +59,19 @@ pub fn build_unit_dependencies<'a, 'cfg>(
             // cleared, and avoid building the lib thrice (once with `panic`, once
             // without, once for --test).  In particular, the lib included for
             // doctests and examples are `Build` mode here.
-            let profile_for = if unit.mode.is_any_test() || bcx.build_config.test() {
-                ProfileFor::TestDependency
+            let unit_for = if unit.mode.is_any_test() || bcx.build_config.test() {
+                UnitFor::new_test()
+            } else if unit.target.is_custom_build() {
+                // This normally doesn't happen, except `clean` aggressively
+                // generates all units.
+                UnitFor::new_build()
+            } else if unit.target.for_host() {
+                // proc-macro/plugin should never have panic set.
+                UnitFor::new_compiler()
             } else {
-                ProfileFor::Any
+                UnitFor::new_normal()
             };
-            deps_of(unit, &mut state, profile_for)?;
+            deps_of(unit, &mut state, unit_for)?;
         }
 
         if state.waiting_on_download.len() > 0 {
@@ -84,20 +91,20 @@ pub fn build_unit_dependencies<'a, 'cfg>(
 fn deps_of<'a, 'cfg, 'tmp>(
     unit: &Unit<'a>,
     state: &mut State<'a, 'cfg, 'tmp>,
-    profile_for: ProfileFor,
+    unit_for: UnitFor,
 ) -> CargoResult<()> {
-    // Currently the `deps` map does not include `profile_for`.  This should
+    // Currently the `deps` map does not include `unit_for`.  This should
     // be safe for now.  `TestDependency` only exists to clear the `panic`
     // flag, and you'll never ask for a `unit` with `panic` set as a
     // `TestDependency`.  `CustomBuild` should also be fine since if the
     // requested unit's settings are the same as `Any`, `CustomBuild` can't
     // affect anything else in the hierarchy.
     if !state.deps.contains_key(unit) {
-        let unit_deps = compute_deps(unit, state, profile_for)?;
+        let unit_deps = compute_deps(unit, state, unit_for)?;
         let to_insert: Vec<_> = unit_deps.iter().map(|&(unit, _)| unit).collect();
         state.deps.insert(*unit, to_insert);
-        for (unit, profile_for) in unit_deps {
-            deps_of(&unit, state, profile_for)?;
+        for (unit, unit_for) in unit_deps {
+            deps_of(&unit, state, unit_for)?;
         }
     }
     Ok(())
@@ -105,13 +112,13 @@ fn deps_of<'a, 'cfg, 'tmp>(
 
 /// For a package, return all targets which are registered as dependencies
 /// for that package.
-/// This returns a vec of `(Unit, ProfileFor)` pairs.  The `ProfileFor`
+/// This returns a vec of `(Unit, UnitFor)` pairs.  The `UnitFor`
 /// is the profile type that should be used for dependencies of the unit.
 fn compute_deps<'a, 'cfg, 'tmp>(
     unit: &Unit<'a>,
     state: &mut State<'a, 'cfg, 'tmp>,
-    profile_for: ProfileFor,
-) -> CargoResult<Vec<(Unit<'a>, ProfileFor)>> {
+    unit_for: UnitFor,
+) -> CargoResult<Vec<(Unit<'a>, UnitFor)>> {
     if unit.mode.is_run_custom_build() {
         return compute_deps_custom_build(unit, state.bcx);
     } else if unit.mode.is_doc() && !unit.mode.is_any_test() {
@@ -173,15 +180,16 @@ fn compute_deps<'a, 'cfg, 'tmp>(
             None => continue,
         };
         let mode = check_or_build_mode(unit.mode, lib);
+        let dep_unit_for = unit_for.with_for_host(lib.for_host());
         let unit = new_unit(
             bcx,
             pkg,
             lib,
-            profile_for,
+            dep_unit_for,
             unit.kind.for_target(lib),
             mode,
         );
-        ret.push((unit, profile_for));
+        ret.push((unit, dep_unit_for));
     }
 
     // If this target is a build script, then what we've collected so far is
@@ -199,7 +207,7 @@ fn compute_deps<'a, 'cfg, 'tmp>(
     if unit.target.is_lib() && unit.mode != CompileMode::Doctest {
         return Ok(ret);
     }
-    ret.extend(maybe_lib(unit, bcx, profile_for));
+    ret.extend(maybe_lib(unit, bcx, unit_for));
 
     // If any integration tests/benches are being run, make sure that
     // binaries are built as well.
@@ -225,11 +233,11 @@ fn compute_deps<'a, 'cfg, 'tmp>(
                             bcx,
                             unit.pkg,
                             t,
-                            ProfileFor::Any,
+                            UnitFor::new_normal(),
                             unit.kind.for_target(t),
                             CompileMode::Build,
                         ),
-                        ProfileFor::Any,
+                        UnitFor::new_normal(),
                     )
                 }),
         );
@@ -245,7 +253,7 @@ fn compute_deps<'a, 'cfg, 'tmp>(
 fn compute_deps_custom_build<'a, 'cfg>(
     unit: &Unit<'a>,
     bcx: &BuildContext<'a, 'cfg>,
-) -> CargoResult<Vec<(Unit<'a>, ProfileFor)>> {
+) -> CargoResult<Vec<(Unit<'a>, UnitFor)>> {
     // When not overridden, then the dependencies to run a build script are:
     //
     // 1. Compiling the build script itself
@@ -259,20 +267,20 @@ fn compute_deps_custom_build<'a, 'cfg>(
         bcx,
         unit.pkg,
         unit.target,
-        ProfileFor::CustomBuild,
+        UnitFor::new_build(),
         Kind::Host, // build scripts always compiled for the host
         CompileMode::Build,
     );
     // All dependencies of this unit should use profiles for custom
     // builds.
-    Ok(vec![(unit, ProfileFor::CustomBuild)])
+    Ok(vec![(unit, UnitFor::new_build())])
 }
 
 /// Returns the dependencies necessary to document a package
 fn compute_deps_doc<'a, 'cfg, 'tmp>(
     unit: &Unit<'a>,
     state: &mut State<'a, 'cfg, 'tmp>,
-) -> CargoResult<Vec<(Unit<'a>, ProfileFor)>> {
+) -> CargoResult<Vec<(Unit<'a>, UnitFor)>> {
     let bcx = state.bcx;
     let deps = bcx.resolve
         .deps(unit.pkg.package_id())
@@ -299,26 +307,27 @@ fn compute_deps_doc<'a, 'cfg, 'tmp>(
         // rustdoc only needs rmeta files for regular dependencies.
         // However, for plugins/proc-macros, deps should be built like normal.
         let mode = check_or_build_mode(unit.mode, lib);
+        let dep_unit_for = UnitFor::new_normal().with_for_host(lib.for_host());
         let lib_unit = new_unit(
             bcx,
             dep,
             lib,
-            ProfileFor::Any,
+            dep_unit_for,
             unit.kind.for_target(lib),
             mode,
         );
-        ret.push((lib_unit, ProfileFor::Any));
+        ret.push((lib_unit, dep_unit_for));
         if let CompileMode::Doc { deps: true } = unit.mode {
             // Document this lib as well.
             let doc_unit = new_unit(
                 bcx,
                 dep,
                 lib,
-                ProfileFor::Any,
+                dep_unit_for,
                 unit.kind.for_target(lib),
                 unit.mode,
             );
-            ret.push((doc_unit, ProfileFor::Any));
+            ret.push((doc_unit, dep_unit_for));
         }
     }
 
@@ -327,7 +336,7 @@ fn compute_deps_doc<'a, 'cfg, 'tmp>(
 
     // If we document a binary, we need the library available
     if unit.target.is_bin() {
-        ret.extend(maybe_lib(unit, bcx, ProfileFor::Any));
+        ret.extend(maybe_lib(unit, bcx, UnitFor::new_normal()));
     }
     Ok(ret)
 }
@@ -335,19 +344,19 @@ fn compute_deps_doc<'a, 'cfg, 'tmp>(
 fn maybe_lib<'a>(
     unit: &Unit<'a>,
     bcx: &BuildContext,
-    profile_for: ProfileFor,
-) -> Option<(Unit<'a>, ProfileFor)> {
+    unit_for: UnitFor,
+) -> Option<(Unit<'a>, UnitFor)> {
     unit.pkg.targets().iter().find(|t| t.linkable()).map(|t| {
         let mode = check_or_build_mode(unit.mode, t);
         let unit = new_unit(
             bcx,
             unit.pkg,
             t,
-            profile_for,
+            unit_for,
             unit.kind.for_target(t),
             mode,
         );
-        (unit, profile_for)
+        (unit, unit_for)
     })
 }
 
@@ -358,7 +367,7 @@ fn maybe_lib<'a>(
 /// script itself doesn't have any dependencies, so even in that case a unit
 /// of work is still returned. `None` is only returned if the package has no
 /// build script.
-fn dep_build_script<'a>(unit: &Unit<'a>, bcx: &BuildContext) -> Option<(Unit<'a>, ProfileFor)> {
+fn dep_build_script<'a>(unit: &Unit<'a>, bcx: &BuildContext) -> Option<(Unit<'a>, UnitFor)> {
     unit.pkg
         .targets()
         .iter()
@@ -374,7 +383,7 @@ fn dep_build_script<'a>(unit: &Unit<'a>, bcx: &BuildContext) -> Option<(Unit<'a>
                     kind: unit.kind,
                     mode: CompileMode::RunCustomBuild,
                 },
-                ProfileFor::CustomBuild,
+                UnitFor::new_build(),
             )
         })
 }
@@ -401,14 +410,14 @@ fn new_unit<'a>(
     bcx: &BuildContext,
     pkg: &'a Package,
     target: &'a Target,
-    profile_for: ProfileFor,
+    unit_for: UnitFor,
     kind: Kind,
     mode: CompileMode,
 ) -> Unit<'a> {
     let profile = bcx.profiles.get_profile(
         &pkg.package_id(),
         bcx.ws.is_member(pkg),
-        profile_for,
+        unit_for,
         mode,
         bcx.build_config.release,
     );

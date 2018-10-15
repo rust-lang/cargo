@@ -28,7 +28,7 @@ use std::sync::Arc;
 
 use core::compiler::{BuildConfig, BuildContext, Compilation, Context, DefaultExecutor, Executor};
 use core::compiler::{CompileMode, Kind, Unit};
-use core::profiles::{ProfileFor, Profiles};
+use core::profiles::{UnitFor, Profiles};
 use core::resolver::{Method, Resolve};
 use core::{Package, Source, Target};
 use core::{PackageId, PackageIdSpec, TargetKind, Workspace};
@@ -478,11 +478,11 @@ fn generate_targets<'a>(
 ) -> CargoResult<Vec<Unit<'a>>> {
     // Helper for creating a Unit struct.
     let new_unit = |pkg: &'a Package, target: &'a Target, target_mode: CompileMode| {
-        let profile_for = if build_config.mode.is_any_test() {
-            // NOTE: The ProfileFor here is subtle.  If you have a profile
+        let unit_for = if build_config.mode.is_any_test() {
+            // NOTE: The UnitFor here is subtle.  If you have a profile
             // with `panic` set, the `panic` flag is cleared for
-            // tests/benchmarks and their dependencies.  If we left this
-            // as an "Any" profile, then the lib would get compiled three
+            // tests/benchmarks and their dependencies.  If this
+            // was `normal`, then the lib would get compiled three
             // times (once with panic, once without, and once with
             // --test).
             //
@@ -497,10 +497,15 @@ fn generate_targets<'a>(
             //
             // Forcing the lib to be compiled three times during `cargo
             // test` is probably also not desirable.
-            ProfileFor::TestDependency
+            UnitFor::new_test()
+        } else if target.for_host() {
+            // proc-macro/plugin should not have `panic` set.
+            UnitFor::new_compiler()
         } else {
-            ProfileFor::Any
+            UnitFor::new_normal()
         };
+        // Custom build units are added in `build_unit_dependencies`.
+        assert!(!target.is_custom_build());
         let target_mode = match target_mode {
             CompileMode::Test => {
                 if target.is_example() && !filter.is_specific() && !target.tested() {
@@ -527,7 +532,7 @@ fn generate_targets<'a>(
         let profile = profiles.get_profile(
             pkg.package_id(),
             ws.is_member(pkg),
-            profile_for,
+            unit_for,
             target_mode,
             build_config.release,
         );
