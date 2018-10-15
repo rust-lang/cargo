@@ -1,5 +1,5 @@
 use std::borrow::Borrow;
-use std::collections::hash_map::HashMap;
+use std::collections::{HashMap, HashSet};
 use std::fmt;
 use std::hash::Hash;
 
@@ -40,6 +40,30 @@ impl<N: Eq + Hash + Clone, E: Default> Graph<N, E> {
 
     pub fn edges(&self, from: &N) -> impl Iterator<Item = (&N, &E)> {
         self.nodes.get(from).into_iter().flat_map(|x| x.iter())
+    }
+
+    /// A topological sort of the `Graph`
+    pub fn sort(&self) -> Vec<N> {
+        let mut ret = Vec::new();
+        let mut marks = HashSet::new();
+
+        for node in self.nodes.keys() {
+            self.sort_inner_visit(node, &mut ret, &mut marks);
+        }
+
+        ret
+    }
+
+    fn sort_inner_visit(&self, node: &N, dst: &mut Vec<N>, marks: &mut HashSet<N>) {
+        if !marks.insert(node.clone()) {
+            return;
+        }
+
+        for child in self.nodes[node].keys() {
+            self.sort_inner_visit(child, dst, marks);
+        }
+
+        dst.push(node.clone());
     }
 
     pub fn iter(&self) -> impl Iterator<Item = &N> {
