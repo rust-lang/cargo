@@ -2,7 +2,7 @@ use cargo::core::{compiler::CompileMode, Workspace};
 use cargo::ops::{self, CompileOptions};
 use cargo::util::{
     config::Config,
-    errors::{ManifestError, PackageError},
+    errors::{ManifestError, ResolveError},
 };
 
 use support::project;
@@ -107,7 +107,7 @@ fn member_manifest_path_io_error() {
     assert_eq!(causes[1].manifest_path(), &missing_manifest_path);
 }
 
-/// Test dependency version errors provide which package failed via a `PackageError`.
+/// Test dependency version errors provide which package failed via a `ResolveError`.
 #[test]
 fn member_manifest_version_error() {
     let p = project()
@@ -149,6 +149,6 @@ fn member_manifest_version_error() {
     let error = ops::compile(&ws, &compile_options).map(|_| ()).unwrap_err();
     eprintln!("{:?}", error);
 
-    let package_err: &PackageError = error.downcast_ref().expect("Not a PackageError");
-    assert_eq!(package_err.package_id(), member_bar.package_id());
+    let resolve_err: &ResolveError = error.downcast_ref().expect("Not a ResolveError");
+    assert_eq!(resolve_err.parent_package_id(), member_bar.package_id());
 }
