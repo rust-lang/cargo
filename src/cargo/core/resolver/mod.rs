@@ -58,7 +58,7 @@ use core::interning::InternedString;
 use core::PackageIdSpec;
 use core::{Dependency, PackageId, Registry, Summary};
 use util::config::Config;
-use util::errors::{CargoError, CargoResult};
+use util::errors::{CargoResult, PackageError};
 use util::lev_distance::lev_distance;
 use util::profile;
 
@@ -825,7 +825,9 @@ fn activation_error(
     conflicting_activations: &HashMap<PackageId, ConflictReason>,
     candidates: &[Candidate],
     config: Option<&Config>,
-) -> CargoError {
+) -> PackageError {
+    let to_package_err = |err| PackageError::new(err, parent.package_id().clone());
+
     let graph = cx.graph();
     if !candidates.is_empty() {
         let mut msg = format!("failed to select a version for `{}`.", dep.package_name());
@@ -899,7 +901,7 @@ fn activation_error(
         msg.push_str(&*dep.package_name());
         msg.push_str("` which could resolve this conflict");
 
-        return format_err!("{}", msg);
+        return to_package_err(format_err!("{}", msg));
     }
 
     // We didn't actually find any candidates, so we need to
@@ -913,7 +915,7 @@ fn activation_error(
     new_dep.set_version_req(all_req);
     let mut candidates = match registry.query_vec(&new_dep, false) {
         Ok(candidates) => candidates,
-        Err(e) => return e,
+        Err(e) => return to_package_err(e),
     };
     candidates.sort_unstable_by(|a, b| b.version().cmp(a.version()));
 
@@ -964,7 +966,7 @@ fn activation_error(
         // was meant. So we try asking the registry for a `fuzzy` search for suggestions.
         let mut candidates = Vec::new();
         if let Err(e) = registry.query(&new_dep, &mut |s| candidates.push(s.name()), true) {
-            return e;
+            return to_package_err(e);
         };
         candidates.sort_unstable();
         candidates.dedup();
@@ -1012,7 +1014,7 @@ fn activation_error(
         }
     }
 
-    format_err!("{}", msg)
+    to_package_err(format_err!("{}", msg))
 }
 
 /// Returns String representation of dependency chain for a particular `pkgid`.

@@ -5,7 +5,7 @@ use std::process::{ExitStatus, Output};
 use std::str;
 use std::path::PathBuf;
 
-use core::{TargetKind, Workspace};
+use core::{TargetKind, Workspace, PackageId};
 use failure::{Context, Error, Fail};
 use clap;
 
@@ -134,6 +134,45 @@ impl<'a> Iterator for ManifestCauses<'a> {
 }
 
 impl<'a> ::std::iter::FusedIterator for ManifestCauses<'a> {}
+
+/// Error wrapper related to a particular package and providing it's `PackageId`.
+///
+/// This error adds no displayable info of it's own.
+pub struct PackageError {
+    cause: Error,
+    package: PackageId,
+}
+
+impl PackageError {
+    pub fn new<E: Into<Error>>(cause: E, package: PackageId) -> Self {
+        Self {
+            cause: cause.into(),
+            package,
+        }
+    }
+
+    pub fn package_id(&self) -> &PackageId {
+        &self.package
+    }
+}
+
+impl Fail for PackageError {
+    fn cause(&self) -> Option<&Fail> {
+        self.cause.as_fail().cause()
+    }
+}
+
+impl fmt::Debug for PackageError {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        self.cause.fmt(f)
+    }
+}
+
+impl fmt::Display for PackageError {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        self.cause.fmt(f)
+    }
+}
 
 // =============================================================================
 // Process errors
