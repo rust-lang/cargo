@@ -571,6 +571,9 @@ fn doc_target() {
             #![feature(no_core)]
             #![no_core]
 
+            #[lang = "sized"]
+            trait Sized {}
+
             extern {
                 pub static A: u32;
             }
