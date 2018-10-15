@@ -257,7 +257,12 @@ fn activate_deps_loop(
         let mut backtracked = false;
 
         loop {
-            let next = remaining_candidates.next(&mut conflicting_activations, &cx, &dep);
+            let next = remaining_candidates.next(
+                &mut conflicting_activations,
+                &cx,
+                &dep,
+                parent.package_id(),
+            );
 
             let (candidate, has_another) = next.ok_or(()).or_else(|_| {
                 // If we get here then our `remaining_candidates` was just
@@ -596,6 +601,33 @@ fn activate(
                 .link(candidate.summary.package_id(), parent.package_id()),
         )
         .push(dep.clone());
+        let mut stack = vec![(parent.package_id(), dep.is_public())];
+        while let Some((p, public)) = stack.pop() {
+            match cx
+                .public_dependency
+                .entry(p)
+                .or_default()
+                .entry(candidate.summary.name())
+            {
+                im_rc::hashmap::Entry::Occupied(mut o) => {
+                    assert_eq!(o.get().0, candidate.summary.package_id());
+                    if o.get().1 {
+                        continue;
+                    }
+                    if public {
+                        o.insert((candidate.summary.package_id(), public));
+                    }
+                }
+                im_rc::hashmap::Entry::Vacant(v) => {
+                    v.insert((candidate.summary.package_id(), public));
+                }
+            }
+            if public {
+                for &(grand, ref d) in cx.parents.edges(&p) {
+                    stack.push((grand, d.iter().any(|x| x.is_public())));
+                }
+            }
+        }
     }
 
     let activated = cx.flag_activated(&candidate.summary, method)?;
@@ -692,10 +724,11 @@ impl RemainingCandidates {
         conflicting_prev_active: &mut BTreeMap<PackageId, ConflictReason>,
         cx: &Context,
         dep: &Dependency,
+        parent: PackageId,
     ) -> Option<(Candidate, bool)> {
         let prev_active = cx.prev_active(dep);
 
-        for (_, b) in self.remaining.by_ref() {
+        'main: for (_, b) in self.remaining.by_ref() {
             // The `links` key in the manifest dictates that there's only one
             // package in a dependency graph, globally, with that particular
             // `links` key. If this candidate links to something that's already
@@ -728,6 +761,26 @@ impl RemainingCandidates {
                         .entry(a.package_id())
                         .or_insert(ConflictReason::Semver);
                     continue;
+                }
+            }
+
+            let mut stack = vec![(parent, dep.is_public())];
+            while let Some((p, public)) = stack.pop() {
+                // TODO: dont look at the same thing more then once
+                if let Some(o) = cx
+                    .public_dependency
+                    .get(&p)
+                    .and_then(|x| x.get(&b.summary.name()))
+                {
+                    if o.0 != b.summary.package_id() {
+                        // TODO: conflicting_prev_active
+                        continue 'main;
+                    }
+                }
+                if public {
+                    for &(grand, ref d) in cx.parents.edges(&p) {
+                        stack.push((grand, d.iter().any(|x| x.is_public())));
+                    }
                 }
             }
 
@@ -789,6 +842,7 @@ fn find_candidate(
             &mut frame.conflicting_activations,
             &frame.context,
             &frame.dep,
+            frame.parent.package_id(),
         );
         let (candidate, has_another) = match next {
             Some(pair) => pair,
