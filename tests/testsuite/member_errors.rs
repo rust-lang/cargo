@@ -1,5 +1,9 @@
-use cargo::core::Workspace;
-use cargo::util::{config::Config, errors::ManifestError};
+use cargo::core::{compiler::CompileMode, Workspace};
+use cargo::ops::{self, CompileOptions};
+use cargo::util::{
+    config::Config,
+    errors::{ManifestError, PackageError},
+};
 
 use support::project;
 
@@ -101,4 +105,50 @@ fn member_manifest_path_io_error() {
     assert_eq!(causes.len(), 2, "{:?}", causes);
     assert_eq!(causes[0].manifest_path(), &member_manifest_path);
     assert_eq!(causes[1].manifest_path(), &missing_manifest_path);
+}
+
+/// Test dependency version errors provide which package failed via a `PackageError`.
+#[test]
+fn member_manifest_version_error() {
+    let p = project()
+        .file(
+            "Cargo.toml",
+            r#"
+            [project]
+            name = "foo"
+            version = "0.1.0"
+            authors = []
+
+            [dependencies]
+            bar = { path = "bar" }
+
+            [workspace]
+        "#,
+        )
+        .file("src/main.rs", "fn main() {}")
+        .file(
+            "bar/Cargo.toml",
+            r#"
+            [project]
+            name = "bar"
+            version = "0.1.0"
+            authors = []
+
+            [dependencies]
+            i-dont-exist = "0.55"
+        "#,
+        )
+        .file("bar/src/main.rs", "fn main() {}")
+        .build();
+
+    let config = Config::default().unwrap();
+    let ws = Workspace::new(&p.root().join("Cargo.toml"), &config).unwrap();
+    let compile_options = CompileOptions::new(&config, CompileMode::Build).unwrap();
+    let member_bar = ws.members().find(|m| &*m.name() == "bar").unwrap();
+
+    let error = ops::compile(&ws, &compile_options).map(|_| ()).unwrap_err();
+    eprintln!("{:?}", error);
+
+    let package_err: &PackageError = error.downcast_ref().expect("Not a PackageError");
+    assert_eq!(package_err.package_id(), member_bar.package_id());
 }
