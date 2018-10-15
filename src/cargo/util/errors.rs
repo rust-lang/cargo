@@ -135,40 +135,42 @@ impl<'a> Iterator for ManifestCauses<'a> {
 
 impl<'a> ::std::iter::FusedIterator for ManifestCauses<'a> {}
 
-/// Error wrapper related to a particular package and providing it's `PackageId`.
+/// Error during resolution providing the `PackageId` for the package 
+/// whose requirements could not be resolved.
 ///
 /// This error adds no displayable info of it's own.
-pub struct PackageError {
+pub struct ResolveError {
     cause: Error,
-    package: PackageId,
+    parent_package: PackageId,
 }
 
-impl PackageError {
-    pub fn new<E: Into<Error>>(cause: E, package: PackageId) -> Self {
+impl ResolveError {
+    pub fn new<E: Into<Error>>(cause: E, parent_package: PackageId) -> Self {
         Self {
             cause: cause.into(),
-            package,
+            parent_package,
         }
     }
 
-    pub fn package_id(&self) -> &PackageId {
-        &self.package
+    /// Returns the id of the package whose requirements could not be resolved.
+    pub fn parent_package_id(&self) -> &PackageId {
+        &self.parent_package
     }
 }
 
-impl Fail for PackageError {
+impl Fail for ResolveError {
     fn cause(&self) -> Option<&Fail> {
         self.cause.as_fail().cause()
     }
 }
 
-impl fmt::Debug for PackageError {
+impl fmt::Debug for ResolveError {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         self.cause.fmt(f)
     }
 }
 
-impl fmt::Display for PackageError {
+impl fmt::Display for ResolveError {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         self.cause.fmt(f)
     }

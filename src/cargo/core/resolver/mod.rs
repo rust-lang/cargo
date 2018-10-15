@@ -58,7 +58,7 @@ use core::interning::InternedString;
 use core::PackageIdSpec;
 use core::{Dependency, PackageId, Registry, Summary};
 use util::config::Config;
-use util::errors::{CargoResult, PackageError};
+use util::errors::{CargoResult, ResolveError};
 use util::lev_distance::lev_distance;
 use util::profile;
 
@@ -825,8 +825,8 @@ fn activation_error(
     conflicting_activations: &HashMap<PackageId, ConflictReason>,
     candidates: &[Candidate],
     config: Option<&Config>,
-) -> PackageError {
-    let to_package_err = |err| PackageError::new(err, parent.package_id().clone());
+) -> ResolveError {
+    let to_resolve_err = |err| ResolveError::new(err, parent.package_id().clone());
 
     let graph = cx.graph();
     if !candidates.is_empty() {
@@ -901,7 +901,7 @@ fn activation_error(
         msg.push_str(&*dep.package_name());
         msg.push_str("` which could resolve this conflict");
 
-        return to_package_err(format_err!("{}", msg));
+        return to_resolve_err(format_err!("{}", msg));
     }
 
     // We didn't actually find any candidates, so we need to
@@ -915,7 +915,7 @@ fn activation_error(
     new_dep.set_version_req(all_req);
     let mut candidates = match registry.query_vec(&new_dep, false) {
         Ok(candidates) => candidates,
-        Err(e) => return to_package_err(e),
+        Err(e) => return to_resolve_err(e),
     };
     candidates.sort_unstable_by(|a, b| b.version().cmp(a.version()));
 
@@ -966,7 +966,7 @@ fn activation_error(
         // was meant. So we try asking the registry for a `fuzzy` search for suggestions.
         let mut candidates = Vec::new();
         if let Err(e) = registry.query(&new_dep, &mut |s| candidates.push(s.name()), true) {
-            return to_package_err(e);
+            return to_resolve_err(e);
         };
         candidates.sort_unstable();
         candidates.dedup();
@@ -1014,7 +1014,7 @@ fn activation_error(
         }
     }
 
-    to_package_err(format_err!("{}", msg))
+    to_resolve_err(format_err!("{}", msg))
 }
 
 /// Returns String representation of dependency chain for a particular `pkgid`.
