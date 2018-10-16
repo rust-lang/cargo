@@ -5,7 +5,7 @@ use std::process::{ExitStatus, Output};
 use std::str;
 use std::path::PathBuf;
 
-use core::{TargetKind, Workspace, PackageId};
+use core::{TargetKind, Workspace};
 use failure::{Context, Error, Fail};
 use clap;
 
@@ -134,47 +134,6 @@ impl<'a> Iterator for ManifestCauses<'a> {
 }
 
 impl<'a> ::std::iter::FusedIterator for ManifestCauses<'a> {}
-
-/// Error during resolution providing a path of `PackageId`s.
-///
-/// This error adds no displayable info of it's own.
-pub struct ResolveError {
-    cause: Error,
-    package_path: Vec<PackageId>,
-}
-
-impl ResolveError {
-    pub fn new<E: Into<Error>>(cause: E, package_path: Vec<PackageId>) -> Self {
-        Self {
-            cause: cause.into(),
-            package_path,
-        }
-    }
-
-    /// Returns a path of packages from the package whose requirements could not be resolved up to
-    /// the root.
-    pub fn package_path(&self) -> &[PackageId] {
-        &self.package_path
-    }
-}
-
-impl Fail for ResolveError {
-    fn cause(&self) -> Option<&Fail> {
-        self.cause.as_fail().cause()
-    }
-}
-
-impl fmt::Debug for ResolveError {
-    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        self.cause.fmt(f)
-    }
-}
-
-impl fmt::Display for ResolveError {
-    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        self.cause.fmt(f)
-    }
-}
 
 // =============================================================================
 // Process errors
