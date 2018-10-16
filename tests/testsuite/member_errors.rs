@@ -1,9 +1,7 @@
 use cargo::core::{compiler::CompileMode, Workspace};
 use cargo::ops::{self, CompileOptions};
-use cargo::util::{
-    config::Config,
-    errors::{ManifestError, ResolveError},
-};
+use cargo::util::{config::Config, errors::ManifestError};
+use cargo::core::resolver::ResolveError;
 
 use support::project;
 
