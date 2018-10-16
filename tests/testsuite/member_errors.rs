@@ -150,5 +150,7 @@ fn member_manifest_version_error() {
     eprintln!("{:?}", error);
 
     let resolve_err: &ResolveError = error.downcast_ref().expect("Not a ResolveError");
-    assert_eq!(resolve_err.parent_package_id(), member_bar.package_id());
+    let package_path = resolve_err.package_path();
+    assert_eq!(package_path.len(), 1, "package_path: {:?}", package_path);
+    assert_eq!(&package_path[0], member_bar.package_id());
 }

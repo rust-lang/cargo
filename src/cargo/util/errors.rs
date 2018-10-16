@@ -135,26 +135,26 @@ impl<'a> Iterator for ManifestCauses<'a> {
 
 impl<'a> ::std::iter::FusedIterator for ManifestCauses<'a> {}
 
-/// Error during resolution providing the `PackageId` for the package 
-/// whose requirements could not be resolved.
+/// Error during resolution providing a path of `PackageId`s.
 ///
 /// This error adds no displayable info of it's own.
 pub struct ResolveError {
     cause: Error,
-    parent_package: PackageId,
+    package_path: Vec<PackageId>,
 }
 
 impl ResolveError {
-    pub fn new<E: Into<Error>>(cause: E, parent_package: PackageId) -> Self {
+    pub fn new<E: Into<Error>>(cause: E, package_path: Vec<PackageId>) -> Self {
         Self {
             cause: cause.into(),
-            parent_package,
+            package_path,
         }
     }
 
-    /// Returns the id of the package whose requirements could not be resolved.
-    pub fn parent_package_id(&self) -> &PackageId {
-        &self.parent_package
+    /// Returns a path of packages from the package whose requirements could not be resolved up to
+    /// the root.
+    pub fn package_path(&self) -> &[PackageId] {
+        &self.package_path
     }
 }
 

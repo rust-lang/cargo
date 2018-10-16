@@ -826,9 +826,18 @@ fn activation_error(
     candidates: &[Candidate],
     config: Option<&Config>,
 ) -> ResolveError {
-    let to_resolve_err = |err| ResolveError::new(err, parent.package_id().clone());
-
     let graph = cx.graph();
+    let to_resolve_err = |err| {
+        ResolveError::new(
+            err,
+            graph
+                .path_to_top(parent.package_id())
+                .into_iter()
+                .cloned()
+                .collect(),
+        )
+    };
+
     if !candidates.is_empty() {
         let mut msg = format!("failed to select a version for `{}`.", dep.package_name());
         msg.push_str("\n    ... required by ");
