@@ -601,30 +601,36 @@ fn activate(
                 .link(candidate.summary.package_id(), parent.package_id()),
         )
         .push(dep.clone());
-        let mut stack = vec![(parent.package_id(), dep.is_public())];
-        while let Some((p, public)) = stack.pop() {
-            match cx
-                .public_dependency
-                .entry(p)
-                .or_default()
-                .entry(candidate.summary.name())
-            {
-                im_rc::hashmap::Entry::Occupied(mut o) => {
-                    assert_eq!(o.get().0, candidate.summary.package_id());
-                    if o.get().1 {
-                        continue;
+        let cs: Vec<PackageId> = cx
+            .public_dependency
+            .get(&candidate.summary.package_id())
+            .iter()
+            .flat_map(|x| x.values())
+            .filter_map(|x| if x.1 { Some(&x.0) } else { None })
+            .chain(Some(candidate.summary.package_id()).iter())
+            .cloned()
+            .collect();
+        for c in cs {
+            let mut stack = vec![(parent.package_id(), dep.is_public())];
+            while let Some((p, public)) = stack.pop() {
+                match cx.public_dependency.entry(p).or_default().entry(c.name()) {
+                    im_rc::hashmap::Entry::Occupied(mut o) => {
+                        assert_eq!(o.get().0, c);
+                        if o.get().1 {
+                            continue;
+                        }
+                        if public {
+                            o.insert((c, public));
+                        }
                     }
-                    if public {
-                        o.insert((candidate.summary.package_id(), public));
+                    im_rc::hashmap::Entry::Vacant(v) => {
+                        v.insert((c, public));
                     }
                 }
-                im_rc::hashmap::Entry::Vacant(v) => {
-                    v.insert((candidate.summary.package_id(), public));
-                }
-            }
-            if public {
-                for &(grand, ref d) in cx.parents.edges(&p) {
-                    stack.push((grand, d.iter().any(|x| x.is_public())));
+                if public {
+                    for &(grand, ref d) in cx.parents.edges(&p) {
+                        stack.push((grand, d.iter().any(|x| x.is_public())));
+                    }
                 }
             }
         }
@@ -763,23 +769,27 @@ impl RemainingCandidates {
                     continue;
                 }
             }
-
-            let mut stack = vec![(parent, dep.is_public())];
-            while let Some((p, public)) = stack.pop() {
-                // TODO: dont look at the same thing more then once
-                if let Some(o) = cx
-                    .public_dependency
-                    .get(&p)
-                    .and_then(|x| x.get(&b.summary.name()))
-                {
-                    if o.0 != b.summary.package_id() {
-                        // TODO: conflicting_prev_active
-                        continue 'main;
+            for &t in cx
+                .public_dependency
+                .get(&b.summary.package_id())
+                .iter()
+                .flat_map(|x| x.values())
+                .filter_map(|x| if x.1 { Some(&x.0) } else { None })
+                .chain(Some(b.summary.package_id()).iter())
+            {
+                let mut stack = vec![(parent, dep.is_public())];
+                while let Some((p, public)) = stack.pop() {
+                    // TODO: dont look at the same thing more then once
+                    if let Some(o) = cx.public_dependency.get(&p).and_then(|x| x.get(&t.name())) {
+                        if o.0 != t {
+                            // TODO: conflicting_prev_active
+                            continue 'main;
+                        }
                     }
-                }
-                if public {
-                    for &(grand, ref d) in cx.parents.edges(&p) {
-                        stack.push((grand, d.iter().any(|x| x.is_public())));
+                    if public {
+                        for &(grand, ref d) in cx.parents.edges(&p) {
+                            stack.push((grand, d.iter().any(|x| x.is_public())));
+                        }
                     }
                 }
             }

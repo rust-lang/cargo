@@ -236,12 +236,12 @@ proptest! {
 }
 
 #[test]
-fn public_dependency() {
+fn basic_public_dependency() {
     let reg = registry(vec![
         pkg!(("A", "0.1.0")),
         pkg!(("A", "0.2.0")),
         pkg!("B" => [dep_req_kind("A", "0.1", Kind::Normal, true)]),
-        pkg!("C" => [dep_req("A", "*"), dep_req("B", "*")]),
+        pkg!("C" => [dep("A"), dep("B")]),
     ]);
 
     let res = resolve_and_validated(&pkg_id("root"), vec![dep("C")], &reg).unwrap();
@@ -252,6 +252,78 @@ fn public_dependency() {
             ("C", "1.0.0"),
             ("B", "1.0.0"),
             ("A", "0.1.0"),
+        ]),
+    );
+}
+
+#[test]
+fn public_dependency_filling_in() {
+    // The resolver has an optimization where if a candidate to resolve a dependency
+    // has already bean activated then we skip looking at the candidates dependencies.
+    // However, we have to be careful as the new path may make pub dependencies invalid.
+
+    // Triggering this case requires dependencies to be resolved in a specific order.
+    // Fuzzing found this unintuitive case, that triggers this unfortunate order of operations:
+    // 1. `d`'s dep on `c` is resolved
+    // 2. `d`'s dep on `a` is resolved with `0.1.1`
+    // 3. `c`'s dep on `b` is resolved with `0.0.2`
+    // 4. `b`'s dep on `a` is resolved with `0.0.6` no pub dev conflict as `b` is private to `c`
+    // 5. `d`'s dep on `b` is resolved with `0.0.2` triggering the optimization.
+    // Do we notice that `d` has a pub dep conflict on `a`? Lets try it and see.
+    let reg = registry(vec![
+        pkg!(("a", "0.0.6")),
+        pkg!(("a", "0.1.1")),
+        pkg!(("b", "0.0.0") => [dep("bad")]),
+        pkg!(("b", "0.0.1") => [dep("bad")]),
+        pkg!(("b", "0.0.2") => [dep_req_kind("a", "=0.0.6", Kind::Normal, true)]),
+        pkg!("c" => [dep_req("b", ">=0.0.1")]),
+        pkg!("d" => [dep("c"), dep("a"), dep("b")]),
+    ]);
+
+    let res = resolve_and_validated(&pkg_id("root"), vec![dep("d")], &reg).unwrap();
+    assert_same(
+        &res,
+        &names(&[
+            ("root", "1.0.0"),
+            ("d", "1.0.0"),
+            ("c", "1.0.0"),
+            ("b", "0.0.2"),
+            ("a", "0.0.6"),
+        ]),
+    );
+}
+
+#[test]
+fn public_dependency_filling_in_and_update() {
+    // The resolver has an optimization where if a candidate to resolve a dependency
+    // has already bean activated then we skip looking at the candidates dependencies.
+    // However, we have to be careful as the new path may make pub dependencies invalid.
+
+    // Triggering this case requires dependencies to be resolved in a specific order.
+    // Fuzzing found this unintuitive case, that triggers this unfortunate order of operations:
+    // 1. `D`'s dep on `B` is resolved
+    // 2. `D`'s dep on `C` is resolved
+    // 3. `B`'s dep on `A` is resolved with `0.0.0`
+    // 4. `C`'s dep on `B` triggering the optimization.
+    // So did we add `A 0.0.0` to the deps `C` can see?
+    // Or are we going to  resolve `C`'s dep on `A` with `0.0.2`?
+    // Lets try it and see.
+    let reg = registry(vec![
+        pkg!(("A", "0.0.0")),
+        pkg!(("A", "0.0.2")),
+        pkg!("B" => [dep_req_kind("A", "=0.0.0", Kind::Normal, true),]),
+        pkg!("C" => [dep("A"),dep("B")]),
+        pkg!("D" => [dep("B"),dep("C")]),
+    ]);
+    let res = resolve_and_validated(&pkg_id("root"), vec![dep("D")], &reg).unwrap();
+    assert_same(
+        &res,
+        &names(&[
+            ("root", "1.0.0"),
+            ("D", "1.0.0"),
+            ("C", "1.0.0"),
+            ("B", "1.0.0"),
+            ("A", "0.0.0"),
         ]),
     );
 }
