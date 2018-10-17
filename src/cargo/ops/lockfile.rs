@@ -43,6 +43,15 @@ pub fn write_pkg_lockfile(ws: &Workspace, resolve: &Resolve) -> CargoResult<()> 
 
     let mut out = String::new();
 
+    if let Ok(ref orig) = orig {
+        if let Some(first_line) = orig.lines().into_iter().next() {
+            if first_line.starts_with("#") {
+                out.push_str(first_line);
+                out.push_str("\n");
+            }
+        }
+    }
+
     let deps = toml["package"].as_array().unwrap();
     for dep in deps.iter() {
         let dep = dep.as_table().unwrap();

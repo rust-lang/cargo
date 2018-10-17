@@ -1,4 +1,4 @@
-use std::fs::File;
+use std::fs::{ File, self };
 use std::io::prelude::*;
 
 use support::registry::Package;
@@ -373,4 +373,29 @@ fn update_precise() {
 [UPDATING] serde v0.2.1 -> v0.2.0
 ",
         ).run();
+}
+
+#[test]
+fn preserve_top_comment() {
+    let p = project().file("src/lib.rs", "").build();
+
+    p.cargo("update").run();
+
+    let lockfile_path = p.root().join("Cargo.lock");
+
+    let mut lockfile = String::new();
+    let mut f = File::open(&lockfile_path).unwrap();
+    lockfile.push_str("# @generated\n");
+    f.read_to_string(&mut lockfile).unwrap();
+    println!("saving Cargo.lock contents:\n{}", lockfile);
+
+    p.change_file("Cargo.lock", &lockfile);
+
+    p.cargo("update").run();
+
+    let lockfile2 = fs::read_to_string(&lockfile_path).unwrap();
+    println!("loaded Cargo.lock contents:\n{}", lockfile2);
+
+    let first_line = lockfile2.lines().into_iter().next().unwrap();
+    assert!(first_line == "# @generated");
 }
