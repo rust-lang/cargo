@@ -329,6 +329,43 @@ fn public_dependency_filling_in_and_update() {
 }
 
 #[test]
+fn public_dependency_skiping() {
+    // When backtracking due to a failed dependency, if Cargo is
+    // trying to be clever and skip irrelevant dependencies, care must
+    // the effects of pub dep must be accounted for.
+    let input = vec![
+        pkg!(("a", "0.2.0")),
+        pkg!(("a", "2.0.0")),
+        pkg!(("b", "0.0.0") => [dep("bad")]),
+        pkg!(("b", "0.2.1") => [dep_req_kind("a", "0.2.0", Kind::Normal, true)]),
+        pkg!("c" => [dep("a"),dep("b")]),
+    ];
+    let reg = registry(input.clone());
+
+    resolve(&pkg_id("root"), vec![dep("c")], &reg).unwrap();
+}
+
+#[test]
+fn public_dependency_skiping_in_backtracking() {
+    // When backtracking due to a failed dependency, if Cargo is
+    // trying to be clever and skip irrelevant dependencies, care must
+    // the effects of pub dep must be accounted for.
+    let input = vec![
+        pkg!(("A", "0.0.0") => [dep("bad")]),
+        pkg!(("A", "0.0.1") => [dep("bad")]),
+        pkg!(("A", "0.0.2") => [dep("bad")]),
+        pkg!(("A", "0.0.3") => [dep("bad")]),
+        pkg!(("A", "0.0.4")),
+        pkg!(("A", "0.0.5")),
+        pkg!("B" => [dep_req_kind("A", ">= 0.0.3", Kind::Normal, true)]),
+        pkg!("C" => [dep_req("A", "<= 0.0.4"), dep("B")]),
+    ];
+    let reg = registry(input.clone());
+
+    resolve(&pkg_id("root"), vec![dep("C")], &reg).unwrap();
+}
+
+#[test]
 #[should_panic(expected = "assertion failed: !name.is_empty()")]
 fn test_dependency_with_empty_name() {
     // Bug 5229, dependency-names must not be empty

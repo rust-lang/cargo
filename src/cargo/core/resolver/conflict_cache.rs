@@ -173,6 +173,11 @@ impl ConflictCache {
     /// `dep` is known to be unresolvable if
     /// all the `PackageId` entries are activated.
     pub fn insert(&mut self, dep: &Dependency, con: &BTreeMap<PackageId, ConflictReason>) {
+        if con.values().any(|c| *c == ConflictReason::PublicDependency) {
+            // TODO: needs more info for back jumping
+            // for now refuse to cache it.
+            return;
+        }
         self.con_from_dep
             .entry(dep.clone())
             .or_insert_with(|| ConflictStoreTrie::Node(BTreeMap::new()))
