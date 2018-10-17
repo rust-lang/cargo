@@ -1,4 +1,4 @@
-use std::fs::{ File, self };
+use std::fs::File;
 use std::io::prelude::*;
 
 use support::registry::Package;
@@ -381,19 +381,15 @@ fn preserve_top_comment() {
 
     p.cargo("update").run();
 
-    let lockfile_path = p.root().join("Cargo.lock");
-
-    let mut lockfile = String::new();
-    let mut f = File::open(&lockfile_path).unwrap();
-    lockfile.push_str("# @generated\n");
-    f.read_to_string(&mut lockfile).unwrap();
+    let mut lockfile = p.read_file("Cargo.lock");
+    lockfile.insert_str(0, "# @generated\n");
     println!("saving Cargo.lock contents:\n{}", lockfile);
 
     p.change_file("Cargo.lock", &lockfile);
 
     p.cargo("update").run();
 
-    let lockfile2 = fs::read_to_string(&lockfile_path).unwrap();
+    let lockfile2 = p.read_file("Cargo.lock");
     println!("loaded Cargo.lock contents:\n{}", lockfile2);
 
     let first_line = lockfile2.lines().into_iter().next().unwrap();
