@@ -3,9 +3,7 @@ name: Feature request
 about: Suggest an idea for this project
 ---
 
-<!--
-Thanks for filing a 🙋 feature request 😄!
--->
+<!-- Thanks for filing a 🙋 feature request 😄! -->
 
 **Describe the problem you are trying to solve**
 <!-- A clear and concise description of the problem this feature request is trying to solve. -->

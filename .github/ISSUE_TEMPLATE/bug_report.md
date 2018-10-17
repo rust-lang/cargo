@@ -3,9 +3,7 @@ name: Bug report
 about: Create a report to help us improve
 ---
 
-<!--
-Thanks for filing a 🐛 bug report 😄!
--->
+<!-- Thanks for filing a 🐛 bug report 😄! -->
 
 **Problem**
 <!-- A clear and concise description of what the bug is. -->
