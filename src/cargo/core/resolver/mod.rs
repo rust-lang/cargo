@@ -782,7 +782,7 @@ impl RemainingCandidates {
                     // TODO: dont look at the same thing more then once
                     if let Some(o) = cx.public_dependency.get(&p).and_then(|x| x.get(&t.name())) {
                         if o.0 != t {
-                            // TODO: conflicting_prev_active
+                            conflicting_prev_active.insert(p, ConflictReason::PublicDependency);
                             continue 'main;
                         }
                     }
@@ -868,6 +868,9 @@ fn find_candidate(
         // make any progress. As a result if we hit this condition we can
         // completely skip this backtrack frame and move on to the next.
         if !backtracked
+            && !conflicting_activations
+                .values()
+                .any(|c| *c == ConflictReason::PublicDependency)
             && frame
                 .context
                 .is_conflicting(Some(parent.package_id()), conflicting_activations)

@@ -402,6 +402,11 @@ pub enum ConflictReason {
     /// candidate. For example we tried to activate feature `foo` but the
     /// candidate we're activating didn't actually have the feature `foo`.
     MissingFeatures(String),
+
+    // TODO: needs more info for errors maneges
+    // TODO: needs more info for back jumping
+    /// pub dep errore
+    PublicDependency,
 }
 
 impl ConflictReason {
