@@ -43,12 +43,10 @@ pub fn write_pkg_lockfile(ws: &Workspace, resolve: &Resolve) -> CargoResult<()> 
 
     let mut out = String::new();
 
-    if let Ok(ref orig) = orig {
-        if let Some(first_line) = orig.lines().into_iter().next() {
-            if first_line.starts_with("#") {
-                out.push_str(first_line);
-                out.push_str("\n");
-            }
+    if let Ok(orig) = &orig {
+        for line in orig.lines().take_while(|line| line.starts_with("#")) {
+            out.push_str(line);
+            out.push_str("\n");
         }
     }
 
