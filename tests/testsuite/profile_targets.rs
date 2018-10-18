@@ -614,6 +614,7 @@ fn profile_selection_check_all_targets_test() {
 [RUNNING] `rustc --crate-name foo src/main.rs [..]--emit=dep-info,metadata -C codegen-units=1 -C debuginfo=2 --test [..]
 [RUNNING] `rustc --crate-name bench1 benches/bench1.rs [..]--emit=dep-info,metadata -C codegen-units=1 -C debuginfo=2 --test [..]
 [RUNNING] `rustc --crate-name ex1 examples/ex1.rs [..]--emit=dep-info,metadata -C codegen-units=1 -C debuginfo=2 --test [..]
+[FINISHED] dev [unoptimized + debuginfo] [..]
 ").run();
 
     p.cargo("check --all-targets --profile=test -vv")
