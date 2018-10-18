@@ -374,3 +374,24 @@ fn update_precise() {
 ",
         ).run();
 }
+
+#[test]
+fn preserve_top_comment() {
+    let p = project().file("src/lib.rs", "").build();
+
+    p.cargo("update").run();
+
+    let mut lockfile = p.read_file("Cargo.lock");
+    lockfile.insert_str(0, "# @generated\n");
+    lockfile.insert_str(0, "# some other comment\n");
+    println!("saving Cargo.lock contents:\n{}", lockfile);
+
+    p.change_file("Cargo.lock", &lockfile);
+
+    p.cargo("update").run();
+
+    let lockfile2 = p.read_file("Cargo.lock");
+    println!("loaded Cargo.lock contents:\n{}", lockfile2);
+
+    assert!(lockfile == lockfile2);
+}

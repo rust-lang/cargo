@@ -43,6 +43,16 @@ pub fn write_pkg_lockfile(ws: &Workspace, resolve: &Resolve) -> CargoResult<()> 
 
     let mut out = String::new();
 
+    // Preserve the top comments in the lockfile
+    // This is in preparation for marking it as generated
+    // https://github.com/rust-lang/cargo/issues/6180
+    if let Ok(orig) = &orig {
+        for line in orig.lines().take_while(|line| line.starts_with("#")) {
+            out.push_str(line);
+            out.push_str("\n");
+        }
+    }
+
     let deps = toml["package"].as_array().unwrap();
     for dep in deps.iter() {
         let dep = dep.as_table().unwrap();
