@@ -383,6 +383,7 @@ fn preserve_top_comment() {
 
     let mut lockfile = p.read_file("Cargo.lock");
     lockfile.insert_str(0, "# @generated\n");
+    lockfile.insert_str(0, "# some other comment\n");
     println!("saving Cargo.lock contents:\n{}", lockfile);
 
     p.change_file("Cargo.lock", &lockfile);
