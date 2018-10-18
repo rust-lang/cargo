@@ -392,6 +392,5 @@ fn preserve_top_comment() {
     let lockfile2 = p.read_file("Cargo.lock");
     println!("loaded Cargo.lock contents:\n{}", lockfile2);
 
-    let first_line = lockfile2.lines().into_iter().next().unwrap();
-    assert!(first_line == "# @generated");
+    assert!(lockfile == lockfile2);
 }
