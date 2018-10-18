@@ -6,8 +6,8 @@ use core::{Dependency, FeatureValue, PackageId, SourceId, Summary};
 use util::CargoResult;
 use util::Graph;
 
-use super::types::RegistryQueryer;
-use super::types::{ActivateResult, ConflictReason, DepInfo, GraphNode, Method, RcList};
+use super::types::{ConflictReason, DepInfo, GraphNode, Method, RcList, RegistryQueryer};
+use super::errors::ActivateResult;
 
 pub use super::encode::{EncodableDependency, EncodablePackageId, EncodableResolve};
 pub use super::encode::{Metadata, WorkspaceResolve};
@@ -186,11 +186,10 @@ impl Context {
             // name.
             let base = reqs.deps.get(&dep.name_in_toml()).unwrap_or(&default_dep);
             used_features.insert(dep.name_in_toml());
-            let always_required = !dep.is_optional()
-                && !s
-                    .dependencies()
-                    .iter()
-                    .any(|d| d.is_optional() && d.name_in_toml() == dep.name_in_toml());
+            let always_required = !dep.is_optional() && !s
+                .dependencies()
+                .iter()
+                .any(|d| d.is_optional() && d.name_in_toml() == dep.name_in_toml());
             if always_required && base.0 {
                 self.warnings.push(format!(
                     "Package `{}` does not have feature `{}`. It has a required dependency \
@@ -230,11 +229,13 @@ impl Context {
                     "Package `{}` does not have these features: `{}`",
                     s.package_id(),
                     features
-                ).into(),
+                )
+                .into(),
                 Some(p) => (
                     p.package_id().clone(),
                     ConflictReason::MissingFeatures(features),
-                ).into(),
+                )
+                    .into(),
             });
         }
 
