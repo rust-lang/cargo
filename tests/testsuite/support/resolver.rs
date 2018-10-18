@@ -229,7 +229,7 @@ pub fn pkg_loc(name: &str, loc: &str) -> Summary {
 }
 
 pub fn dep(name: &str) -> Dependency {
-    dep_req(name, "1.0.0")
+    dep_req(name, "*")
 }
 pub fn dep_req(name: &str, req: &str) -> Dependency {
     Dependency::parse_no_deprecated(name, Some(req), &registry_loc()).unwrap()
@@ -281,7 +281,11 @@ impl fmt::Debug for PrettyPrintRegistry {
             } else {
                 write!(f, "pkg!((\"{}\", \"{}\") => [", s.name(), s.version())?;
                 for d in s.dependencies() {
-                    if d.kind() == Kind::Normal {
+                    if d.kind() == Kind::Normal
+                        && &d.version_req().to_string() == "*"
+                    {
+                        write!(f, "dep(\"{}\"),", d.name_in_toml())?;
+                    } else if d.kind() == Kind::Normal {
                         write!(
                             f,
                             "dep_req(\"{}\", \"{}\"),",
@@ -317,6 +321,7 @@ fn meta_test_deep_pretty_print_registry() {
             PrettyPrintRegistry(vec![
                 pkg!(("foo", "1.0.1") => [dep_req("bar", "1")]),
                 pkg!(("foo", "1.0.0") => [dep_req("bar", "2")]),
+                pkg!(("foo", "2.0.0") => [dep_req("bar", "*")]),
                 pkg!(("bar", "1.0.0") => [dep_req("baz", "=1.0.2"),
                                   dep_req("other", "1")]),
                 pkg!(("bar", "2.0.0") => [dep_req("baz", "=1.0.1")]),
@@ -330,6 +335,7 @@ fn meta_test_deep_pretty_print_registry() {
         ),
         "vec![pkg!((\"foo\", \"1.0.1\") => [dep_req(\"bar\", \"^1\"),]),\
          pkg!((\"foo\", \"1.0.0\") => [dep_req(\"bar\", \"^2\"),]),\
+         pkg!((\"foo\", \"2.0.0\") => [dep(\"bar\"),]),\
          pkg!((\"bar\", \"1.0.0\") => [dep_req(\"baz\", \"= 1.0.2\"),dep_req(\"other\", \"^1\"),]),\
          pkg!((\"bar\", \"2.0.0\") => [dep_req(\"baz\", \"= 1.0.1\"),]),\
          pkg!((\"baz\", \"1.0.2\") => [dep_req(\"other\", \"^2\"),]),\
@@ -404,11 +410,18 @@ pub fn registry_strategy(
                     continue;
                 }
                 let s = &crate_vers_by_name[dep_name];
+                let s_last_index = s.len() - 1;
                 let (c, d) = order_index(c, d, s.len());
 
                 dependency_by_pkgid[b].push(dep_req_kind(
                     &dep_name,
-                    &if c == d {
+                    &if c == 0 && d == s_last_index {
+                        "*".to_string()
+                    } else if c == 0 {
+                        format!("<={}", s[d].0)
+                    } else if d == s_last_index {
+                        format!(">={}", s[c].0)
+                    } else if c == d {
                         format!("={}", s[c].0)
                     } else {
                         format!(">={}, <={}", s[c].0, s[d].0)
@@ -416,7 +429,7 @@ pub fn registry_strategy(
                     match k {
                         0 => Kind::Normal,
                         1 => Kind::Build,
-                        // => Kind::Development,
+                        // => Kind::Development, // Development has not impact so don't gen
                         _ => panic!("bad index for Kind"),
                     },
                 ))
