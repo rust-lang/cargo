@@ -29,7 +29,7 @@ mod commands;
 use command_prelude::*;
 
 fn main() {
-    env_logger::init();
+    env_logger::init_from_env("CARGO_LOG");
     cargo::core::maybe_allow_nightly_features();
 
     let mut config = match Config::default() {

@@ -2108,7 +2108,7 @@ fn simple_staticlib() {
         .build();
 
     // env var is a test for #1381
-    p.cargo("build").env("RUST_LOG", "nekoneko=trace").run();
+    p.cargo("build").env("CARGO_LOG", "nekoneko=trace").run();
 }
 
 #[test]
