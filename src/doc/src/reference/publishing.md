@@ -98,6 +98,16 @@ Be sure to check out the [metadata you can
 specify](reference/manifest.html#package-metadata) to ensure your crate can be
 discovered more easily!
 
+### Uploading crates with non-standard names
+
+Publishing crates with non-standard naming conventions will fail by default. If you're
+sure you want to publish a crate breaking these conventions, you can override the
+protection.
+
+```console
+$ cargo publish --allow-non-snake-name
+```
+
 ### Publishing a new version of an existing crate
 
 In order to release a new version, change the `version` value specified in your
