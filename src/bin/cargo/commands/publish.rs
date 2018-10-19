@@ -15,6 +15,10 @@ pub fn cli() -> App {
             "allow-dirty",
             "Allow dirty working directories to be packaged",
         ))
+        .arg(opt(
+            "allow-non-snake-name",
+            "Allow the package to be published with a non-snake-case name format"
+        ))
         .arg_target_triple("Build for the target triple")
         .arg_target_dir()
         .arg_manifest_path()
@@ -36,6 +40,7 @@ pub fn exec(config: &mut Config, args: &ArgMatches) -> CliResult {
             index,
             verify: !args.is_present("no-verify"),
             allow_dirty: args.is_present("allow-dirty"),
+            allow_non_snake_name: args.is_present("allow-non-snake-name"),
             target: args.target(),
             jobs: args.jobs()?,
             dry_run: args.is_present("dry-run"),

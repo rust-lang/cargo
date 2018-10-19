@@ -130,6 +130,51 @@ required by package `foo v0.0.1 ([..])`
 }
 
 #[test]
+fn deny_non_snake_case_package_name() {
+    let p = project()
+        .file(
+            "Cargo.toml",
+            r#"
+            [project]
+            name = "Foo"
+            version = "0.0.1"
+            authors = []
+
+            [dependencies]
+        "#,
+        ).file("src/main.rs", "#![allow(non_snake_case)] fn main() {}")
+        .build();
+
+    p.cargo("publish")
+        .with_status(101)
+        .with_stderr("error: crate names should be snake case. --allow-non-snake-name to allow this.")
+        .run();
+}
+
+#[test]
+fn allow_non_snake_case_package_name() {
+    let p = project()
+        .file(
+            "Cargo.toml",
+            r#"
+            [project]
+            name = "Foo"
+            version = "0.0.1"
+            authors = []
+
+            [dependencies]
+        "#,
+        ).file("src/main.rs", "#![allow(non_snake_case)] fn main() {}")
+        .build();
+
+    p.cargo("publish --allow-non-snake-name")
+        .with_status(101)
+        .with_stderr_does_not_contain("error: crate names should be snake case. --allow-non-snake-name to allow this.")
+        .with_stderr_contains("error: no upload token found, please run `cargo login`")
+        .run();
+}
+
+#[test]
 fn wrong_case() {
     Package::new("init", "0.0.1").publish();
 

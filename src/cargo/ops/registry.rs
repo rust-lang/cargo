@@ -8,6 +8,7 @@ use std::{cmp, env};
 use log::Level;
 use curl::easy::{Easy, SslOpt, InfoType};
 use git2;
+use inflections::case::is_snake_case;
 use registry::{NewCrate, NewCrateDependency, Registry};
 
 use url::percent_encoding::{percent_encode, QUERY_ENCODE_SET};
@@ -36,6 +37,7 @@ pub struct PublishOpts<'cfg> {
     pub index: Option<String>,
     pub verify: bool,
     pub allow_dirty: bool,
+    pub allow_non_snake_name: bool,
     pub jobs: Option<u32>,
     pub target: Option<String>,
     pub dry_run: bool,
@@ -44,6 +46,10 @@ pub struct PublishOpts<'cfg> {
 
 pub fn publish(ws: &Workspace, opts: &PublishOpts) -> CargoResult<()> {
     let pkg = ws.current()?;
+
+    if !is_snake_case(&pkg.name()) && !opts.allow_non_snake_name {
+        bail!("crate names should be snake case. --allow-non-snake-name to allow this.")
+    }
 
     if let Some(ref allowed_registries) = *pkg.publish() {
         if !match opts.registry {

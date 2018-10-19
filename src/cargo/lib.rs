@@ -34,6 +34,7 @@ extern crate glob;
 extern crate hex;
 extern crate home;
 extern crate ignore;
+extern crate inflections;
 extern crate jobserver;
 #[macro_use]
 extern crate lazy_static;
