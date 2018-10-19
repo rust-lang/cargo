@@ -83,7 +83,7 @@ fn profile_selection_build() {
 [COMPILING] foo [..]
 [RUNNING] `rustc --crate-name build_script_build build.rs [..]--crate-type bin --emit=dep-info,link -C codegen-units=1 -C debuginfo=2 [..]
 [RUNNING] `[..]/target/debug/build/foo-[..]/build-script-build`
-foo custom build PROFILE=debug DEBUG=true OPT_LEVEL=0
+[foo 0.0.1] foo custom build PROFILE=debug DEBUG=true OPT_LEVEL=0
 [RUNNING] `rustc --crate-name foo src/lib.rs [..]--crate-type lib --emit=dep-info,link -C panic=abort -C codegen-units=1 -C debuginfo=2 [..]
 [RUNNING] `rustc --crate-name foo src/main.rs [..]--crate-type bin --emit=dep-info,link -C panic=abort -C codegen-units=1 -C debuginfo=2 [..]
 [FINISHED] dev [unoptimized + debuginfo] [..]
@@ -113,7 +113,7 @@ fn profile_selection_build_release() {
 [COMPILING] foo [..]
 [RUNNING] `rustc --crate-name build_script_build build.rs [..]--crate-type bin --emit=dep-info,link -C opt-level=3 -C codegen-units=2 [..]
 [RUNNING] `[..]/target/release/build/foo-[..]/build-script-build`
-foo custom build PROFILE=release DEBUG=false OPT_LEVEL=3
+[foo 0.0.1] foo custom build PROFILE=release DEBUG=false OPT_LEVEL=3
 [RUNNING] `rustc --crate-name foo src/lib.rs [..]--crate-type lib --emit=dep-info,link -C opt-level=3 -C panic=abort -C codegen-units=2 [..]
 [RUNNING] `rustc --crate-name foo src/main.rs [..]--crate-type bin --emit=dep-info,link -C opt-level=3 -C panic=abort -C codegen-units=2 [..]
 [FINISHED] release [optimized] [..]
@@ -174,8 +174,8 @@ fn profile_selection_build_all_targets() {
 [RUNNING] `rustc --crate-name build_script_build build.rs [..]--crate-type bin --emit=dep-info,link -C codegen-units=1 -C debuginfo=2 [..]
 [RUNNING] `[..]/target/debug/build/foo-[..]/build-script-build`
 [RUNNING] `[..]/target/debug/build/foo-[..]/build-script-build`
-foo custom build PROFILE=debug DEBUG=false OPT_LEVEL=3
-foo custom build PROFILE=debug DEBUG=true OPT_LEVEL=0
+[foo 0.0.1] foo custom build PROFILE=debug DEBUG=false OPT_LEVEL=3
+[foo 0.0.1] foo custom build PROFILE=debug DEBUG=true OPT_LEVEL=0
 [RUNNING] `rustc --crate-name foo src/lib.rs [..]--crate-type lib --emit=dep-info,link -C panic=abort -C codegen-units=1 -C debuginfo=2 [..]`
 [RUNNING] `rustc --crate-name foo src/lib.rs [..]--emit=dep-info,link -C codegen-units=3 -C debuginfo=2 --test [..]`
 [RUNNING] `rustc --crate-name foo src/lib.rs [..]--crate-type lib --emit=dep-info,link -C codegen-units=1 -C debuginfo=2 [..]`
@@ -241,7 +241,7 @@ fn profile_selection_build_all_targets_release() {
 [COMPILING] foo [..]
 [RUNNING] `rustc --crate-name build_script_build build.rs [..]--crate-type bin --emit=dep-info,link -C opt-level=3 -C codegen-units=2 [..]
 [RUNNING] `[..]/target/release/build/foo-[..]/build-script-build`
-foo custom build PROFILE=release DEBUG=false OPT_LEVEL=3
+[foo 0.0.1] foo custom build PROFILE=release DEBUG=false OPT_LEVEL=3
 [RUNNING] `rustc --crate-name foo src/lib.rs [..]--crate-type lib --emit=dep-info,link -C opt-level=3 -C panic=abort -C codegen-units=2 [..]`
 [RUNNING] `rustc --crate-name foo src/lib.rs [..]--emit=dep-info,link -C opt-level=3 -C codegen-units=4 --test [..]`
 [RUNNING] `rustc --crate-name foo src/lib.rs [..]--crate-type lib --emit=dep-info,link -C opt-level=3 -C codegen-units=2 [..]`
@@ -296,7 +296,7 @@ fn profile_selection_test() {
 [COMPILING] foo [..]
 [RUNNING] `rustc --crate-name build_script_build build.rs [..]--crate-type bin --emit=dep-info,link -C codegen-units=1 -C debuginfo=2 [..]
 [RUNNING] `[..]/target/debug/build/foo-[..]/build-script-build`
-foo custom build PROFILE=debug DEBUG=true OPT_LEVEL=0
+[foo 0.0.1] foo custom build PROFILE=debug DEBUG=true OPT_LEVEL=0
 [RUNNING] `rustc --crate-name foo src/lib.rs [..]--crate-type lib --emit=dep-info,link -C panic=abort -C codegen-units=1 -C debuginfo=2 [..]
 [RUNNING] `rustc --crate-name foo src/lib.rs [..]--crate-type lib --emit=dep-info,link -C codegen-units=1 -C debuginfo=2 [..]
 [RUNNING] `rustc --crate-name foo src/lib.rs [..]--emit=dep-info,link -C codegen-units=3 -C debuginfo=2 --test [..]
@@ -360,7 +360,7 @@ fn profile_selection_test_release() {
 [COMPILING] foo [..]
 [RUNNING] `rustc --crate-name build_script_build build.rs [..]--crate-type bin --emit=dep-info,link -C opt-level=3 -C codegen-units=2 [..]
 [RUNNING] `[..]/target/release/build/foo-[..]/build-script-build`
-foo custom build PROFILE=release DEBUG=false OPT_LEVEL=3
+[foo 0.0.1] foo custom build PROFILE=release DEBUG=false OPT_LEVEL=3
 [RUNNING] `rustc --crate-name foo src/lib.rs [..]--crate-type lib --emit=dep-info,link -C opt-level=3 -C panic=abort -C codegen-units=2 [..]
 [RUNNING] `rustc --crate-name foo src/lib.rs [..]--crate-type lib --emit=dep-info,link -C opt-level=3 -C codegen-units=2 [..]
 [RUNNING] `rustc --crate-name foo src/lib.rs [..]--emit=dep-info,link -C opt-level=3 -C codegen-units=4 --test [..]
@@ -424,7 +424,7 @@ fn profile_selection_bench() {
 [COMPILING] foo [..]
 [RUNNING] `rustc --crate-name build_script_build build.rs [..]--crate-type bin --emit=dep-info,link -C opt-level=3 -C codegen-units=2 [..]
 [RUNNING] `[..]target/release/build/foo-[..]/build-script-build`
-foo custom build PROFILE=release DEBUG=false OPT_LEVEL=3
+[foo 0.0.1] foo custom build PROFILE=release DEBUG=false OPT_LEVEL=3
 [RUNNING] `rustc --crate-name foo src/lib.rs [..]--crate-type lib --emit=dep-info,link -C opt-level=3 -C panic=abort -C codegen-units=2 [..]
 [RUNNING] `rustc --crate-name foo src/lib.rs [..]--crate-type lib --emit=dep-info,link -C opt-level=3 -C codegen-units=2 [..]
 [RUNNING] `rustc --crate-name foo src/lib.rs [..]--emit=dep-info,link -C opt-level=3 -C codegen-units=4 --test [..]
@@ -493,7 +493,7 @@ fn profile_selection_check_all_targets() {
 [COMPILING] foo [..]
 [RUNNING] `rustc --crate-name build_script_build build.rs [..]--crate-type bin --emit=dep-info,link -C codegen-units=1 -C debuginfo=2 [..]
 [RUNNING] `[..]target/debug/build/foo-[..]/build-script-build`
-foo custom build PROFILE=debug DEBUG=true OPT_LEVEL=0
+[foo 0.0.1] foo custom build PROFILE=debug DEBUG=true OPT_LEVEL=0
 [RUNNING] `rustc --crate-name foo src/lib.rs [..]--crate-type lib --emit=dep-info,metadata -C panic=abort -C codegen-units=1 -C debuginfo=2 [..]
 [RUNNING] `rustc --crate-name foo src/lib.rs [..]--crate-type lib --emit=dep-info,metadata -C codegen-units=1 -C debuginfo=2 [..]
 [RUNNING] `rustc --crate-name foo src/lib.rs [..]--emit=dep-info,metadata -C codegen-units=1 -C debuginfo=2 --test [..]
@@ -543,7 +543,7 @@ fn profile_selection_check_all_targets_release() {
 [COMPILING] foo [..]
 [RUNNING] `rustc --crate-name build_script_build build.rs [..]--crate-type bin --emit=dep-info,link -C opt-level=3 -C codegen-units=2 [..]
 [RUNNING] `[..]target/release/build/foo-[..]/build-script-build`
-foo custom build PROFILE=release DEBUG=false OPT_LEVEL=3
+[foo 0.0.1] foo custom build PROFILE=release DEBUG=false OPT_LEVEL=3
 [RUNNING] `rustc --crate-name foo src/lib.rs [..]--crate-type lib --emit=dep-info,metadata -C opt-level=3 -C panic=abort -C codegen-units=2 [..]
 [RUNNING] `rustc --crate-name foo src/lib.rs [..]--crate-type lib --emit=dep-info,metadata -C opt-level=3 -C codegen-units=2 [..]
 [RUNNING] `rustc --crate-name foo src/lib.rs [..]--emit=dep-info,metadata -C opt-level=3 -C codegen-units=2 --test [..]
@@ -607,7 +607,7 @@ fn profile_selection_check_all_targets_test() {
 [COMPILING] foo [..]
 [RUNNING] `rustc --crate-name build_script_build build.rs [..]--crate-type bin --emit=dep-info,link -C codegen-units=1 -C debuginfo=2 [..]
 [RUNNING] `[..]target/debug/build/foo-[..]/build-script-build`
-foo custom build PROFILE=debug DEBUG=true OPT_LEVEL=0
+[foo 0.0.1] foo custom build PROFILE=debug DEBUG=true OPT_LEVEL=0
 [RUNNING] `rustc --crate-name foo src/lib.rs [..]--crate-type lib --emit=dep-info,metadata -C codegen-units=1 -C debuginfo=2 [..]
 [RUNNING] `rustc --crate-name foo src/lib.rs [..]--emit=dep-info,metadata -C codegen-units=1 -C debuginfo=2 --test [..]
 [RUNNING] `rustc --crate-name test1 tests/test1.rs [..]--emit=dep-info,metadata -C codegen-units=1 -C debuginfo=2 --test [..]
@@ -653,7 +653,7 @@ fn profile_selection_doc() {
 [COMPILING] foo [..]
 [RUNNING] `rustc --crate-name build_script_build build.rs [..]--crate-type bin --emit=dep-info,link -C codegen-units=1 -C debuginfo=2 [..]
 [RUNNING] `[..]target/debug/build/foo-[..]/build-script-build`
-foo custom build PROFILE=debug DEBUG=true OPT_LEVEL=0
+[foo 0.0.1] foo custom build PROFILE=debug DEBUG=true OPT_LEVEL=0
 [DOCUMENTING] foo [..]
 [RUNNING] `rustdoc --crate-name foo src/lib.rs [..]
 [FINISHED] dev [unoptimized + debuginfo] [..]
