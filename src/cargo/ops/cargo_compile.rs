@@ -255,6 +255,17 @@ pub fn compile_ws<'a>(
 
     for pkg in to_builds.iter() {
         pkg.manifest().print_teapot(ws.config());
+
+        if build_config.mode.is_any_test()
+            && !ws.is_member(pkg)
+            && pkg.dependencies().iter().any(|dep| !dep.is_transitive())
+        {
+            bail!(
+                "package `{}` cannot be tested because it requires dev-dependencies \
+                 and is not a member of the workspace",
+                pkg.name()
+            );
+        }
     }
 
     let (extra_args, extra_args_name) = match (target_rustc_args, target_rustdoc_args) {
