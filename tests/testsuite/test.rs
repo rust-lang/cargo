@@ -3182,3 +3182,43 @@ fn test_all_targets_lib() {
 ",
         ).run();
 }
+
+
+#[test]
+fn test_dep_with_dev() {
+    Package::new("devdep", "0.1.0").publish();
+    let p = project()
+        .file(
+            "Cargo.toml",
+            r#"
+            [package]
+            name = "foo"
+            version = "0.0.1"
+
+            [dependencies]
+            bar = { path = "bar" }
+        "#,
+        )
+        .file("src/lib.rs", "")
+        .file(
+            "bar/Cargo.toml",
+            r#"
+            [package]
+            name = "bar"
+            version = "0.0.1"
+
+            [dev-dependencies]
+            devdep = "0.1"
+        "#,
+        )
+        .file("bar/src/lib.rs", "")
+        .build();
+
+    p.cargo("test -p bar")
+        .with_status(101)
+        .with_stderr(
+            "[ERROR] package `bar` cannot be tested because it requires dev-dependencies \
+             and is not a member of the workspace",
+        )
+        .run();
+}
