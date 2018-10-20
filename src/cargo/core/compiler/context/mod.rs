@@ -189,13 +189,6 @@ impl<'a, 'cfg> Context<'a, 'cfg> {
                     ));
                 } else if unit.target.is_bin() || unit.target.is_bin_example() {
                     self.compilation.binaries.push(bindst.clone());
-                } else if unit.target.is_lib() {
-                    let pkgid = unit.pkg.package_id().clone();
-                    self.compilation
-                        .libraries
-                        .entry(pkgid)
-                        .or_insert_with(HashSet::new)
-                        .insert((unit.target.clone(), output.path.clone()));
                 }
             }
 
@@ -212,24 +205,6 @@ impl<'a, 'cfg> Context<'a, 'cfg> {
                         .or_insert_with(Vec::new)
                         .push(("OUT_DIR".to_string(), out_dir));
                 }
-
-                if !dep.target.is_lib() {
-                    continue;
-                }
-                if dep.mode.is_doc() {
-                    continue;
-                }
-
-                let outputs = self.outputs(dep)?;
-                self.compilation
-                    .libraries
-                    .entry(unit.pkg.package_id().clone())
-                    .or_insert_with(HashSet::new)
-                    .extend(
-                        outputs
-                            .iter()
-                            .map(|output| (dep.target.clone(), output.path.clone())),
-                    );
             }
 
             if unit.mode == CompileMode::Doctest {

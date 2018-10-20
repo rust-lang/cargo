@@ -21,11 +21,6 @@ pub struct Doctest {
 
 /// A structure returning the result of a compilation.
 pub struct Compilation<'cfg> {
-    /// A mapping from a package to the list of libraries that need to be
-    /// linked when working with that package.
-    // TODO: deprecated, remove
-    pub libraries: HashMap<PackageId, HashSet<(Target, PathBuf)>>,
-
     /// An array of all tests created during this compilation.
     pub tests: Vec<(Package, TargetKind, String, PathBuf)>,
 
@@ -106,7 +101,6 @@ impl<'cfg> Compilation<'cfg> {
             server.configure(&mut rustc);
         }
         Ok(Compilation {
-            libraries: HashMap::new(),
             native_dirs: BTreeSet::new(), // TODO: deprecated, remove
             root_output: PathBuf::from("/"),
             deps_output: PathBuf::from("/"),
