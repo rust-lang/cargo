@@ -151,7 +151,8 @@ impl BuildPlan {
                 .get_mut(id)
                 .ok_or_else(|| internal(format!("couldn't find invocation for {}", unit.buildkey())))?;
 
-            invocation.inputs = dep_files_for_unit(cx, unit)?.unwrap_or_default();
+            let dep_files = dep_files_for_unit(cx, unit)?.unwrap_or_default();
+            invocation.inputs.extend(dep_files);
         }
 
         Ok(())

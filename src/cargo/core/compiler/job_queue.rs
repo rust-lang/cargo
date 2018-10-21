@@ -21,7 +21,7 @@ use util::{Progress, ProgressStyle};
 use util::diagnostic_server::{self, DiagnosticPrinter};
 
 use super::job::Job;
-use super::{BuildContext, BuildPlan, CompileMode, Context, Kind, Unit};
+use super::{BuildContext, BuildPlan, BuildPlanMode, CompileMode, Context, Kind, Unit};
 use super::context::OutputFile;
 
 /// A management structure of the entire dependency graph to compile.
@@ -370,7 +370,7 @@ impl<'a> JobQueue<'a> {
                 "{} [{}] target(s) in {}",
                 build_type, opt_type, time_elapsed
             );
-            if !build_plan {
+            if build_plan.map_or(true, |x| x.is_detailed()) {
                 cx.bcx.config.shell().status("Finished", message)?;
             }
             Ok(())
@@ -391,7 +391,7 @@ impl<'a> JobQueue<'a> {
         job: Job,
         config: &Config,
         scope: &Scope<'a>,
-        build_plan: bool,
+        build_plan: Option<BuildPlanMode>,
     ) -> CargoResult<()> {
         info!("start: {:?}", key);
 
@@ -404,7 +404,7 @@ impl<'a> JobQueue<'a> {
             my_tx.send(Message::Finish(key, res)).unwrap();
         };
 
-        if !build_plan {
+        if build_plan.map_or(true, |x| x.is_detailed()) {
             // Print out some nice progress information
             self.note_working_on(config, &key, fresh)?;
         }

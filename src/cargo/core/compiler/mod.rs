@@ -24,7 +24,7 @@ use self::job_queue::JobQueue;
 use self::output_depinfo::{dep_files_for_unit, output_depinfo};
 
 pub use self::build_context::{BuildContext, FileFlavor, TargetConfig, TargetInfo};
-pub use self::build_config::{BuildConfig, CompileMode, MessageFormat};
+pub use self::build_config::{BuildConfig, BuildPlanMode, CompileMode, MessageFormat};
 pub use self::compilation::{Compilation, Doctest};
 pub use self::context::{Context, Unit};
 pub use self::custom_build::{BuildMap, BuildOutput, BuildScripts};
@@ -148,7 +148,7 @@ fn compile<'a, 'cfg: 'a>(
     } else if unit.mode == CompileMode::Doctest {
         // we run these targets later, so this is just a noop for now
         (Work::noop(), Work::noop(), Freshness::Fresh)
-    } else if build_plan {
+    } else if build_plan.map_or(false, |x| !x.is_detailed()) {
         (
             rustc(cx, unit, &exec.clone())?,
             Work::noop(),
@@ -156,6 +156,12 @@ fn compile<'a, 'cfg: 'a>(
         )
     } else {
         let (mut freshness, dirty, fresh) = fingerprint::prepare_target(cx, unit)?;
+        // TODO: For detailed build plan we always want to call rustc() (to
+        // prepare the command) but actually *run* it/link_targets/prep_fingerprint
+        // only when the fingerprint is missing (target is *actually* dirty)
+        // But again in rustc() we check against build_plan and as above, sometimes
+        // for detailed plan we want to execute it and sometimes we don't
+        // TODO: Pass "fresh" to rustc? that makes not that much sense...
         let work = if unit.mode.is_doc() {
             rustdoc(cx, unit)?
         } else {
@@ -178,7 +184,7 @@ fn compile<'a, 'cfg: 'a>(
     for unit in cx.dep_targets(unit).iter() {
         compile(cx, jobs, plan, unit, exec, false)?;
     }
-    if build_plan {
+    if build_plan.is_some() {
         plan.add(cx, unit)?;
     }
 
@@ -252,7 +258,7 @@ fn rustc<'a, 'cfg>(
         // previous build scripts, we include them in the rustc invocation.
         if let Some(build_deps) = build_deps {
             let build_state = build_state.outputs.lock().unwrap();
-            if !build_plan {
+            if build_plan.map_or(true, |x| x.is_detailed()) {
                 add_native_deps(
                     &mut rustc,
                     &build_state,
@@ -291,23 +297,27 @@ fn rustc<'a, 'cfg>(
         }
 
         state.running(&rustc);
-        if json_messages {
-            exec.exec_json(
-                rustc,
-                &package_id,
-                &target,
-                mode,
-                &mut assert_is_empty,
-                &mut |line| json_stderr(line, &package_id, &target),
-            )
-            .map_err(internal_if_simple_exit_code)
-            .chain_err(|| format!("Could not compile `{}`.", name))?;
-        } else if build_plan {
+
+        if build_plan.is_some() {
             state.build_plan(buildkey, rustc.clone(), inputs, outputs.clone());
-        } else {
-            exec.exec_and_capture_output(rustc, &package_id, &target, mode, state)
-                .map_err(internal_if_simple_exit_code)
+        }
+
+        if build_plan.map_or(true, |x| x.is_detailed()) {
+            if json_messages {
+                exec.exec_json(
+                    rustc,
+                    &package_id,
+                    &target,
+                    mode,
+                    &mut assert_is_empty,
+                    &mut |line| json_stderr(line, &package_id, &target),
+                ).map_err(internal_if_simple_exit_code)
                 .chain_err(|| format!("Could not compile `{}`.", name))?;
+            } else {
+                exec.exec_and_capture_output(rustc, &package_id, &target, mode, state)
+                    .map_err(internal_if_simple_exit_code)
+                    .chain_err(|| format!("Could not compile `{}`.", name))?;
+            }
         }
 
         if do_rename && real_name != crate_name {

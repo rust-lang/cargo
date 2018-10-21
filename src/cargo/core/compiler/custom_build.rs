@@ -94,7 +94,7 @@ pub fn prepare<'a, 'cfg>(
         build_work(cx, unit)?
     };
 
-    if cx.bcx.build_config.build_plan {
+    if cx.bcx.build_config.build_plan.map_or(false, |x| !x.is_detailed()) {
         Ok((work_dirty, work_fresh, Freshness::Dirty))
     } else {
         // Now that we've prep'd our work, build the work needed to manage the
@@ -296,7 +296,7 @@ fn build_work<'a, 'cfg>(cx: &mut Context<'a, 'cfg>, unit: &Unit<'a>) -> CargoRes
         // along to this custom build command. We're also careful to augment our
         // dynamic library search path in case the build script depended on any
         // native dynamic libraries.
-        if !build_plan {
+        if build_plan.map_or(true, |x| x.is_detailed()) {
             let build_state = build_state.outputs.lock().unwrap();
             for (name, id) in lib_deps {
                 let key = (id.clone(), kind);
@@ -321,7 +321,7 @@ fn build_work<'a, 'cfg>(cx: &mut Context<'a, 'cfg>, unit: &Unit<'a>) -> CargoRes
         }
 
         // And now finally, run the build command itself!
-        if build_plan {
+        if build_plan.map_or(false, |x| !x.is_detailed()) {
             // NOTE: It's impossible to accurately detect file inputs/outputs for
             // the *execution* of an arbitrary build script and so we pass empty file lists here.
             let (inputs, outputs) = (vec![], Arc::default());

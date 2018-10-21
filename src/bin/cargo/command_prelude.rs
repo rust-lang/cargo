@@ -4,7 +4,7 @@ use std::fs;
 use clap::{self, SubCommand};
 use cargo::CargoResult;
 use cargo::core::Workspace;
-use cargo::core::compiler::{BuildConfig, MessageFormat};
+use cargo::core::compiler::{BuildConfig, BuildPlanMode, MessageFormat};
 use cargo::ops::{CompileFilter, CompileOptions, NewOptions, Packages, VersionControl};
 use cargo::sources::CRATES_IO_REGISTRY;
 use cargo::util::paths;
@@ -134,7 +134,11 @@ pub trait AppExt: Sized {
     }
 
     fn arg_build_plan(self) -> Self {
-        self._arg(opt("build-plan", "Output the build plan in JSON"))
+        self._arg(
+            opt("build-plan", "Output the build plan in JSON")
+                .takes_value(true)
+                .min_values(0),
+        )
     }
 
     fn arg_new_opts(self) -> Self {
@@ -288,8 +292,19 @@ pub trait ArgMatchesExt {
         let mut build_config = BuildConfig::new(config, self.jobs()?, &self.target(), mode)?;
         build_config.message_format = message_format;
         build_config.release = self._is_present("release");
-        build_config.build_plan = self._is_present("build-plan");
-        if build_config.build_plan && !config.cli_unstable().unstable_options {
+        build_config.build_plan = match (self._is_present("build-plan"), self._value_of("build-plan")) {
+            (false, _) => None,
+            (true, Some(val)) if val.eq_ignore_ascii_case("detailed") => {
+                config.shell().warn(format!("REMOVEME: Detailed"))?;
+                Some(BuildPlanMode::Detailed)
+            },
+            (true, _) => {
+                config.shell().warn(format!("REMOVEME: Commands only"))?;
+                Some(BuildPlanMode::CommandsOnly)
+            },
+        };
+
+        if build_config.build_plan.is_some() && !config.cli_unstable().unstable_options {
             Err(format_err!(
                 "`--build-plan` flag is unstable, pass `-Z unstable-options` to enable it"
             ))?;
