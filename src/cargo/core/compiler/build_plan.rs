@@ -128,11 +128,7 @@ impl BuildPlan {
         inputs: &[String],
         outputs: &[OutputFile],
     ) -> CargoResult<()> {
-        let id = self.invocation_map[invocation_name];
-        let invocation = self.plan
-            .invocations
-            .get_mut(id)
-            .ok_or_else(|| internal(format!("couldn't find invocation for {}", invocation_name)))?;
+        let invocation = self.get_invocation_mut(invocation_name)?;
 
         invocation.update_cmd(cmd)?;
         invocation.inputs.extend(inputs.iter().cloned());
@@ -145,14 +141,15 @@ impl BuildPlan {
 
     pub fn update_file_deps<'a, 'b>(&mut self, cx: &mut Context<'a, 'b>, units: &[Unit<'a>]) -> CargoResult<()> {
         for unit in units {
-            let id = self.invocation_map[&unit.buildkey()];
-            let invocation = self.plan
-                .invocations
-                .get_mut(id)
-                .ok_or_else(|| internal(format!("couldn't find invocation for {}", unit.buildkey())))?;
+            {
+                let mut invocation = self.get_invocation_mut(&unit.buildkey())?;
+                let dep_files = dep_files_for_unit(cx, unit)?.unwrap_or_default();
+                ::log::debug!("update_file_deps: dep_files: {:#?}", dep_files);
+                invocation.inputs.extend(dep_files);
+            }
 
-            let dep_files = dep_files_for_unit(cx, unit)?.unwrap_or_default();
-            invocation.inputs.extend(dep_files);
+            let deps = cx.dep_targets(unit);
+            self.update_file_deps(cx, &deps)?;
         }
 
         Ok(())
@@ -165,6 +162,14 @@ impl BuildPlan {
     pub fn output_plan(self) {
         let encoded = serde_json::to_string(&self.plan).unwrap();
         println!("{}", encoded);
+    }
+
+    fn get_invocation_mut(&mut self, buildkey: impl AsRef<str>) -> CargoResult<&mut Invocation> {
+        let id = self.invocation_map[buildkey.as_ref()];
+        self.plan
+            .invocations
+            .get_mut(id)
+            .ok_or_else(|| internal(format!("couldn't find invocation for {}", buildkey.as_ref())))
     }
 }
 
