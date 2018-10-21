@@ -11,6 +11,7 @@ use std::collections::BTreeMap;
 use core::TargetKind;
 use super::{Context, Kind, Unit};
 use super::context::OutputFile;
+use super::output_depinfo::dep_files_for_unit;
 use util::{internal, CargoResult, ProcessBuilder};
 use std::path::PathBuf;
 use serde_json;
@@ -137,6 +138,20 @@ impl BuildPlan {
         invocation.inputs.extend(inputs.iter().cloned());
         for output in outputs.iter() {
             invocation.add_output(&output.path, &output.hardlink);
+        }
+
+        Ok(())
+    }
+
+    pub fn update_file_deps<'a, 'b>(&mut self, cx: &mut Context<'a, 'b>, units: &[Unit<'a>]) -> CargoResult<()> {
+        for unit in units {
+            let id = self.invocation_map[&unit.buildkey()];
+            let invocation = self.plan
+                .invocations
+                .get_mut(id)
+                .ok_or_else(|| internal(format!("couldn't find invocation for {}", unit.buildkey())))?;
+
+            invocation.inputs = dep_files_for_unit(cx, unit)?.unwrap_or_default();
         }
 
         Ok(())

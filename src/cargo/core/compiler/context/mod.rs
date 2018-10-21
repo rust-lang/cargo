@@ -152,11 +152,6 @@ impl<'a, 'cfg> Context<'a, 'cfg> {
         // Now that we've figured out everything that we're going to do, do it!
         queue.execute(&mut self, &mut plan)?;
 
-        if build_plan {
-            plan.set_inputs(self.build_plan_inputs()?);
-            plan.output_plan();
-        }
-
         for unit in units.iter() {
             for output in self.outputs(unit)?.iter() {
                 if output.flavor == FileFlavor::DebugInfo {
@@ -252,6 +247,12 @@ impl<'a, 'cfg> Context<'a, 'cfg> {
             }
 
             super::output_depinfo(&mut self, unit)?;
+        }
+
+        if build_plan {
+            plan.update_file_deps(&mut self, units)?;
+            plan.set_inputs(self.build_plan_inputs()?);
+            plan.output_plan();
         }
 
         for (&(ref pkg, _), output) in self.build_state.outputs.lock().unwrap().iter() {
