@@ -21,7 +21,7 @@ use self::build_plan::BuildPlan;
 use self::job::{Job, Work};
 use self::job_queue::JobQueue;
 
-use self::output_depinfo::{dep_files_for_unit, output_depinfo};
+use self::output_depinfo::output_depinfo;
 
 pub use self::build_context::{BuildContext, FileFlavor, TargetConfig, TargetInfo};
 pub use self::build_config::{BuildConfig, BuildPlanMode, CompileMode, MessageFormat};
@@ -150,7 +150,7 @@ fn compile<'a, 'cfg: 'a>(
         (Work::noop(), Work::noop(), Freshness::Fresh)
     } else if build_plan.map_or(false, |x| !x.is_detailed()) {
         (
-            rustc(cx, unit, &exec.clone())?,
+            rustc(cx, unit, &exec.clone(), false)?,
             Work::noop(),
             Freshness::Dirty,
         )
@@ -165,13 +165,13 @@ fn compile<'a, 'cfg: 'a>(
         let work = if unit.mode.is_doc() {
             rustdoc(cx, unit)?
         } else {
-            rustc(cx, unit, exec)?
+            rustc(cx, unit, exec, freshness == Freshness::Fresh)?
         };
         // Need to link targets on both the dirty and fresh
         let dirty = work.then(link_targets(cx, unit, false)?).then(dirty);
         let fresh = link_targets(cx, unit, true)?.then(fresh);
 
-        if exec.force_rebuild(unit) || force_rebuild {
+        if exec.force_rebuild(unit) || force_rebuild || build_plan.map_or(false, |x| x.is_detailed()) {
             freshness = Freshness::Dirty;
         }
 
@@ -195,6 +195,7 @@ fn rustc<'a, 'cfg>(
     cx: &mut Context<'a, 'cfg>,
     unit: &Unit<'a>,
     exec: &Arc<Executor>,
+    fresh: bool,
 ) -> CargoResult<Work> {
     let mut rustc = prepare_rustc(cx, &unit.target.rustc_crate_types(), unit)?;
     if cx.is_primary_package(unit) {
@@ -207,7 +208,6 @@ fn rustc<'a, 'cfg>(
 
     add_cap_lints(cx.bcx, unit, &mut rustc);
 
-    let inputs = dep_files_for_unit(cx, unit)?.unwrap_or_default();
     let outputs = cx.outputs(unit)?;
     let root = cx.files().out_dir(unit);
     let kind = unit.kind;
@@ -299,10 +299,10 @@ fn rustc<'a, 'cfg>(
         state.running(&rustc);
 
         if build_plan.is_some() {
-            state.build_plan(buildkey, rustc.clone(), inputs, outputs.clone());
+            state.build_plan(buildkey, rustc.clone(), vec![], outputs.clone());
         }
 
-        if build_plan.map_or(true, |x| x.is_detailed()) {
+        if build_plan.map_or(true, |x| x.is_detailed()) && !fresh {
             if json_messages {
                 exec.exec_json(
                     rustc,
