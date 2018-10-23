@@ -292,17 +292,14 @@ pub trait ArgMatchesExt {
         let mut build_config = BuildConfig::new(config, self.jobs()?, &self.target(), mode)?;
         build_config.message_format = message_format;
         build_config.release = self._is_present("release");
-        build_config.build_plan = match (self._is_present("build-plan"), self._value_of("build-plan")) {
-            (false, _) => BuildPlanMode::NoEmit,
-            (true, Some(val)) if val.eq_ignore_ascii_case("detailed") => {
-                config.shell().warn(format!("REMOVEME: Detailed"))?;
-                BuildPlanMode::Detailed
-            },
-            (true, _) => {
-                config.shell().warn(format!("REMOVEME: Commands only"))?;
-                BuildPlanMode::CommandsOnly
-            },
-        };
+        build_config.build_plan =
+            match (self._is_present("build-plan"), self._value_of("build-plan")) {
+                (false, _) => BuildPlanMode::NoEmit,
+                (true, Some(val)) if val.eq_ignore_ascii_case("detailed") => {
+                    BuildPlanMode::Detailed
+                }
+                (true, _) => BuildPlanMode::CommandsOnly,
+            };
 
         if build_config.build_plan.should_emit() && !config.cli_unstable().unstable_options {
             Err(format_err!(

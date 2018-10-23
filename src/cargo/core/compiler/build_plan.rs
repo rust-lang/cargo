@@ -139,7 +139,11 @@ impl BuildPlan {
         Ok(())
     }
 
-    pub fn update_file_deps<'a, 'b>(&mut self, cx: &mut Context<'a, 'b>, units: &[Unit<'a>]) -> CargoResult<()> {
+    pub fn update_file_deps<'a, 'b>(
+        &mut self,
+        cx: &mut Context<'a, 'b>,
+        units: &[Unit<'a>],
+    ) -> CargoResult<()> {
         for unit in units {
             {
                 let mut invocation = self.get_invocation_mut(&unit.buildkey())?;
@@ -171,10 +175,12 @@ impl BuildPlan {
 
     fn get_invocation_mut(&mut self, buildkey: impl AsRef<str>) -> CargoResult<&mut Invocation> {
         let id = self.invocation_map[buildkey.as_ref()];
-        self.plan
-            .invocations
-            .get_mut(id)
-            .ok_or_else(|| internal(format!("couldn't find invocation for {}", buildkey.as_ref())))
+        self.plan.invocations.get_mut(id).ok_or_else(|| {
+            internal(format!(
+                "couldn't find invocation for {}",
+                buildkey.as_ref()
+            ))
+        })
     }
 }
 

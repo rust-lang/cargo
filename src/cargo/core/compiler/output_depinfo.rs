@@ -14,7 +14,10 @@ fn dep_info_basedir(cx: &Context<'_, '_>) -> CargoResult<Option<String>> {
         .map(|option| option.map(|o| o.val))
 }
 
-fn render_filename(path: impl AsRef<Path>, basedir: Option<impl AsRef<Path>>) -> CargoResult<String> {
+fn render_filename(
+    path: impl AsRef<Path>,
+    basedir: Option<impl AsRef<Path>>,
+) -> CargoResult<String> {
     let (path, basedir) = (path.as_ref(), basedir.as_ref());
     let relpath = match basedir {
         None => path,
@@ -102,10 +105,11 @@ pub fn output_depinfo<'a, 'b>(cx: &mut Context<'a, 'b>, unit: &Unit<'a>) -> Carg
 
     let (success, deps) = match dep_files_for_unit(cx, unit)? {
         Ok(deps) => (true, deps),
-        _ => (false, vec![])
+        _ => (false, vec![]),
     };
 
-    let deps = deps.iter()
+    let deps = deps
+        .iter()
         .map(|f| render_filename(f, basedir.as_ref()))
         .collect::<CargoResult<Vec<_>>>()?;
 

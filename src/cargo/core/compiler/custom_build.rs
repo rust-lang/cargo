@@ -3,8 +3,8 @@ use std::collections::{BTreeSet, HashSet};
 use std::fs;
 use std::path::{Path, PathBuf};
 use std::str;
-use std::sync::{Arc, Mutex};
 use std::sync::atomic::{AtomicBool, Ordering};
+use std::sync::{Arc, Mutex};
 
 use core::PackageId;
 use util::errors::{CargoResult, CargoResultExt};
@@ -370,9 +370,12 @@ fn build_work<'a, 'cfg>(
         } else if plan_can_skip {
             let output = match prev_output_clone {
                 Some(output) => output,
-                None => {
-                    BuildOutput::parse_file(&output_file, &pkg_name, &prev_root_output_clone, &root_output)?
-                }
+                None => BuildOutput::parse_file(
+                    &output_file,
+                    &pkg_name,
+                    &prev_root_output_clone,
+                    &root_output,
+                )?,
             };
 
             if json_messages {
