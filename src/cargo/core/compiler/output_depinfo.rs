@@ -19,14 +19,10 @@ fn render_filename(
     basedir: Option<impl AsRef<Path>>,
 ) -> CargoResult<String> {
     let (path, basedir) = (path.as_ref(), basedir.as_ref());
-    let relpath = match basedir {
-        None => path,
-        Some(base) => match path.strip_prefix(base) {
-            Ok(relpath) => relpath,
-            _ => path,
-        },
-    };
-    relpath
+
+    basedir
+        .and_then(|base| path.strip_prefix(base).ok())
+        .unwrap_or(path)
         .to_str()
         .ok_or_else(|| internal("path not utf-8"))
         .map(|f| f.replace(" ", "\\ "))
