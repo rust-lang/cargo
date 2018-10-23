@@ -152,9 +152,11 @@ impl BuildPlan {
                     continue;
                 }
 
-                let mut dep_files = dep_files_for_unit(cx, unit)?.unwrap_or_default();
-                dep_files.sort();
-                invocation.inputs = dep_files;
+                let transitive = false;
+                invocation.inputs = dep_files_for_unit(cx, unit, transitive)?
+                    .unwrap_or_default()
+                    .into_iter()
+                    .collect();
             }
 
             let deps = cx.dep_targets(unit);

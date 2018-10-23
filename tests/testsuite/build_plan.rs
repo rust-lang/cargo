@@ -254,3 +254,169 @@ fn build_plan_detailed_with_inputs() {
     "#,
         ).run();
 }
+
+#[test]
+fn build_plan_detailed_build_script() {
+    let p = project()
+        .file(
+            "Cargo.toml",
+            r#"
+            [project]
+
+            name = "foo"
+            version = "0.5.0"
+            authors = ["wycats@example.com"]
+            build = "build.rs"
+        "#,
+        )
+        .file("src/main.rs", r#"fn main() {}"#)
+        .file("build.rs", r#"
+            fn main() {
+                println!("cargo:rerun-if-changed=build_script_rerun_dep.txt");
+            }
+        "#)
+        .file("build_script_rerun_dep.txt", "")
+        .build();
+
+    p.cargo("build --build-plan=detailed -Zunstable-options")
+        .masquerade_as_nightly_cargo()
+        .with_json(
+            r#"
+    {
+        "inputs": [
+            "[..]/foo/Cargo.toml"
+        ],
+        "invocations": [
+            {
+                "args": "{...}",
+                "cwd": "[..]/cit/[..]/foo",
+                "deps": [],
+                "env": "{...}",
+                "kind": "Host",
+                "links": "{...}",
+                "inputs": [
+                    "[..]/foo/build.rs"
+                ],
+                "outputs": [
+                    "[..]/foo/target/debug/build/[..]/build_script_build-[..]"
+                ],
+                "package_name": "foo",
+                "package_version": "0.5.0",
+                "program": "rustc",
+                "target_kind": ["custom-build"]
+            },
+            {
+                "args": "{...}",
+                "cwd": "[..]/cit/[..]/foo",
+                "deps": [0],
+                "env": "{...}",
+                "kind": "Host",
+                "links": "{...}",
+                "inputs": [
+                    "[..]/foo/build_script_rerun_dep.txt"
+                ],
+                "outputs": [],
+                "package_name": "foo",
+                "package_version": "0.5.0",
+                "program": "[..]/build-script-build",
+                "target_kind": ["custom-build"]
+            },
+            {
+                "args": "{...}",
+                "cwd": "[..]/cit/[..]/foo",
+                "deps": [1],
+                "env": "{...}",
+                "kind": "Host",
+                "links": "{...}",
+                "inputs": [
+                    "[..]/foo/src/main.rs"
+                ],
+                "outputs": "{...}",
+                "package_name": "foo",
+                "package_version": "0.5.0",
+                "program": "rustc",
+                "target_kind": ["bin"]
+            }
+        ]
+    }
+    "#,
+        ).run();
+}
+
+#[test]
+fn cargo_build_plan_detailed_path_dep() {
+    let p = project()
+        .file(
+            "Cargo.toml",
+            r#"
+            [package]
+            name = "foo"
+            authors = []
+            version = "0.5.0"
+
+            [dependencies]
+            bar = { path = "bar" }
+        "#,
+        ).file(
+            "src/lib.rs",
+            r#"
+            extern crate bar;
+            pub fn foo() { bar::bar(); }
+
+            #[test]
+            fn test() { foo(); }
+        "#,
+        ).file("bar/Cargo.toml", &basic_manifest("bar", "0.0.1"))
+        .file("bar/src/lib.rs", "pub fn bar() {}")
+        .build();
+    p.cargo("build --build-plan=detailed -Zunstable-options")
+        .masquerade_as_nightly_cargo()
+        .with_json(
+            r#"
+    {
+        "inputs": [
+            "[..]/foo/Cargo.toml",
+            "[..]/foo/bar/Cargo.toml"
+        ],
+        "invocations": [
+            {
+                "args": "{...}",
+                "cwd": "[..]/cit/[..]/foo",
+                "deps": [],
+                "env": "{...}",
+                "kind": "Host",
+                "links": "{...}",
+                "inputs": [
+                    "[..]/foo/bar/src/lib.rs"
+                ],
+                "outputs": [
+                    "[..]/foo/target/debug/deps/libbar-[..].rlib"
+                ],
+                "package_name": "bar",
+                "package_version": "0.0.1",
+                "program": "rustc",
+                "target_kind": ["lib"]
+            },
+            {
+                "args": "{...}",
+                "cwd": "[..]/cit/[..]/foo",
+                "deps": [0],
+                "env": "{...}",
+                "kind": "Host",
+                "links": "{...}",
+                "inputs": [
+                    "[..]/foo/src/lib.rs"
+                ],
+                "outputs": [
+                    "[..]/foo/target/debug/deps/libfoo-[..].rlib"
+                ],
+                "package_name": "foo",
+                "package_version": "0.5.0",
+                "program": "rustc",
+                "target_kind": ["lib"]
+            }
+        ]
+    }
+    "#,
+        ).run();
+}

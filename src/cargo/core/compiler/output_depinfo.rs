@@ -33,11 +33,11 @@ fn add_deps_for_unit<'a, 'b>(
     context: &mut Context<'a, 'b>,
     unit: &Unit<'a>,
     visited: &mut HashSet<Unit<'a>>,
+    transitive: bool,
 ) -> CargoResult<()> {
     if !visited.insert(*unit) {
         return Ok(());
     }
-
     // units representing the execution of a build script don't actually
     // generate a dep info file, so we just keep on going below
     if !unit.mode.is_run_custom_build() {
@@ -58,18 +58,28 @@ fn add_deps_for_unit<'a, 'b>(
     }
 
     // Add rerun-if-changed dependencies
-    let key = (unit.pkg.package_id().clone(), unit.kind);
-    if let Some(output) = context.build_state.outputs.lock().unwrap().get(&key) {
-        for path in &output.rerun_if_changed {
-            deps.insert(path.into());
+    if transitive || unit.mode.is_run_custom_build() {
+        let key = (unit.pkg.package_id().clone(), unit.kind);
+        if let Some(output) = context.build_state.outputs.lock().unwrap().get(&key) {
+            for path in &output.rerun_if_changed {
+                let path = if !path.is_absolute() {
+                    unit.pkg.root().join(path)
+                } else {
+                    path.to_owned()
+                };
+
+                deps.insert(path);
+            }
         }
     }
 
     // Recursively traverse all transitive dependencies
-    for dep_unit in context.dep_targets(unit).iter() {
-        let source_id = dep_unit.pkg.package_id().source_id();
-        if source_id.is_path() {
-            add_deps_for_unit(deps, context, dep_unit, visited)?;
+    if transitive {
+        for dep_unit in context.dep_targets(unit).iter() {
+            let source_id = dep_unit.pkg.package_id().source_id();
+            if source_id.is_path() {
+                add_deps_for_unit(deps, context, dep_unit, visited, transitive)?;
+            }
         }
     }
     Ok(())
@@ -82,16 +92,17 @@ fn add_deps_for_unit<'a, 'b>(
 pub fn dep_files_for_unit<'a, 'b>(
     cx: &mut Context<'a, 'b>,
     unit: &Unit<'a>,
-) -> CargoResult<Result<Vec<String>, ()>> {
+    transitive: bool,
+) -> CargoResult<Result<BTreeSet<String>, ()>> {
     let basedir = dep_info_basedir(cx)?;
 
     let mut deps = BTreeSet::new();
     let mut visited = HashSet::new();
-    Ok(match add_deps_for_unit(&mut deps, cx, unit, &mut visited) {
+    Ok(match add_deps_for_unit(&mut deps, cx, unit, &mut visited, transitive) {
         Ok(_) => Ok(deps
             .iter()
             .map(|f| render_filename(f, basedir.as_ref()))
-            .collect::<CargoResult<Vec<_>>>()?),
+            .collect::<CargoResult<BTreeSet<_>>>()?),
         Err(_) => Err(()),
     })
 }
@@ -99,15 +110,10 @@ pub fn dep_files_for_unit<'a, 'b>(
 pub fn output_depinfo<'a, 'b>(cx: &mut Context<'a, 'b>, unit: &Unit<'a>) -> CargoResult<()> {
     let basedir = dep_info_basedir(cx)?;
 
-    let (success, deps) = match dep_files_for_unit(cx, unit)? {
-        Ok(deps) => (true, deps),
+    let (success, deps) = match dep_files_for_unit(cx, unit, true)? {
+        Ok(deps) => (true, deps.into_iter().collect()),
         _ => (false, vec![]),
     };
-
-    let deps = deps
-        .iter()
-        .map(|f| render_filename(f, basedir.as_ref()))
-        .collect::<CargoResult<Vec<_>>>()?;
 
     for output in cx.outputs(unit)?.iter() {
         if let Some(ref link_dst) = output.hardlink {
