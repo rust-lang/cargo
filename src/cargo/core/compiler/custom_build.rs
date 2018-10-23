@@ -4,6 +4,7 @@ use std::fs;
 use std::path::{Path, PathBuf};
 use std::str;
 use std::sync::{Arc, Mutex};
+use std::sync::atomic::{AtomicBool, Ordering};
 
 use core::PackageId;
 use util::errors::{CargoResult, CargoResultExt};
@@ -86,12 +87,14 @@ pub fn prepare<'a, 'cfg>(
         unit.target.name()
     ));
 
+    let is_fresh = Arc::new(AtomicBool::new(false));
+
     let key = (unit.pkg.package_id().clone(), unit.kind);
     let overridden = cx.build_script_overridden.contains(&key);
     let (work_dirty, work_fresh) = if overridden {
         (Work::noop(), Work::noop())
     } else {
-        build_work(cx, unit)?
+        build_work(cx, unit, is_fresh.clone())?
     };
 
     if cx.bcx.build_config.build_plan.map_or(false, |x| !x.is_detailed()) {
@@ -100,7 +103,7 @@ pub fn prepare<'a, 'cfg>(
         // Now that we've prep'd our work, build the work needed to manage the
         // fingerprint and then start returning that upwards.
         let (freshness, dirty, fresh) = fingerprint::prepare_build_cmd(cx, unit)?;
-
+        is_fresh.store(freshness == Freshness::Fresh, Ordering::Relaxed);
         Ok((work_dirty.then(dirty), work_fresh.then(fresh), freshness))
     }
 }
@@ -121,7 +124,11 @@ fn emit_build_output(output: &BuildOutput, id: &PackageId) {
     });
 }
 
-fn build_work<'a, 'cfg>(cx: &mut Context<'a, 'cfg>, unit: &Unit<'a>) -> CargoResult<(Work, Work)> {
+fn build_work<'a, 'cfg>(
+    cx: &mut Context<'a, 'cfg>,
+    unit: &Unit<'a>,
+    is_fresh: Arc<AtomicBool>,
+) -> CargoResult<(Work, Work)> {
     assert!(unit.mode.is_run_custom_build());
     let bcx = &cx.bcx;
     let dependencies = cx.dep_targets(unit);
@@ -267,6 +274,8 @@ fn build_work<'a, 'cfg>(cx: &mut Context<'a, 'cfg>, unit: &Unit<'a>) -> CargoRes
         .unwrap_or_else(|_| cmd.get_cwd().unwrap().to_path_buf());
     let prev_output =
         BuildOutput::parse_file(&output_file, &pkg_name, &prev_root_output, &root_output).ok();
+    let prev_output_clone = prev_output.clone();
+    let prev_root_output_clone = prev_root_output.clone();
     let deps = BuildDeps::new(&output_file, prev_output.as_ref());
     cx.build_explicit_deps.insert(*unit, deps);
 
@@ -279,6 +288,8 @@ fn build_work<'a, 'cfg>(cx: &mut Context<'a, 'cfg>, unit: &Unit<'a>) -> CargoRes
     // Note that this has to do some extra work just before running the command
     // to determine extra environment variables and such.
     let dirty = Work::new(move |state| {
+        let is_fresh = is_fresh.load(Ordering::Relaxed);
+
         // Make sure that OUT_DIR exists.
         //
         // If we have an old build directory, then just move it into place,
@@ -296,7 +307,7 @@ fn build_work<'a, 'cfg>(cx: &mut Context<'a, 'cfg>, unit: &Unit<'a>) -> CargoRes
         // along to this custom build command. We're also careful to augment our
         // dynamic library search path in case the build script depended on any
         // native dynamic libraries.
-        if build_plan.map_or(true, |x| x.is_detailed()) {
+        if build_plan.map_or(true, |x| x.is_detailed()) && !is_fresh {
             let build_state = build_state.outputs.lock().unwrap();
             for (name, id) in lib_deps {
                 let key = (id.clone(), kind);
@@ -321,12 +332,7 @@ fn build_work<'a, 'cfg>(cx: &mut Context<'a, 'cfg>, unit: &Unit<'a>) -> CargoRes
         }
 
         // And now finally, run the build command itself!
-        if build_plan.map_or(false, |x| !x.is_detailed()) {
-            // NOTE: It's impossible to accurately detect file inputs/outputs for
-            // the *execution* of an arbitrary build script and so we pass empty file lists here.
-            let (inputs, outputs) = (vec![], Arc::default());
-            state.build_plan(invocation_name, cmd.clone(), inputs, outputs);
-        } else {
+        if build_plan.map_or(true, |x| x.is_detailed()) && !is_fresh {
             state.running(&cmd);
             let output = if extra_verbose {
                 let prefix = format!("[{} {}] ", id.name(), id.version());
@@ -358,8 +364,32 @@ fn build_work<'a, 'cfg>(cx: &mut Context<'a, 'cfg>, unit: &Unit<'a>) -> CargoRes
             if json_messages {
                 emit_build_output(&parsed_output, &id);
             }
+
             build_state.insert(id, kind, parsed_output);
+        } else if is_fresh {
+            let output = match prev_output_clone {
+                Some(output) => output,
+                None => {
+                    BuildOutput::parse_file(&output_file, &pkg_name, &prev_root_output_clone, &root_output)?
+                }
+            };
+
+            if json_messages {
+                emit_build_output(&output, &id);
+            }
+
+            build_state.insert(id, kind, output);
+        } else {
+            // Build plan is configured to emit commands only, don't run anything.
         }
+
+        if build_plan.is_some() {
+            // NOTE: It's impossible to accurately detect file inputs/outputs for
+            // the *execution* of an arbitrary build script and so we pass empty file lists here.
+            let (inputs, outputs) = (vec![], Arc::default());
+            state.build_plan(invocation_name, cmd, inputs, outputs);
+        }
+
         Ok(())
     });
 
