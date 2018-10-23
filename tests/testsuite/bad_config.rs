@@ -582,6 +582,33 @@ have a single canonical source path irrespective of build target.
 ",
         ).run();
 }
+#[test]
+fn duplicate_deps_version() {
+    let p = project()
+        .file(
+            "Cargo.toml",
+            r#"
+           [package]
+           name = "qqq"
+           version = "0.0.1"
+           authors = []
+
+           [dependencies]
+           bar = "=0.1.0"
+
+           [target.x86_64-unknown-linux-gnu.dependencies]
+           bar = "=0.2.0"
+        "#,
+        ).file("src/main.rs", r#"fn main () {}"#)
+        .build();
+
+    Package::new("bar", "0.1.0").publish();
+    Package::new("bar", "0.2.0").publish();
+
+    p.cargo("build")
+        .with_status(101)
+        .run();
+}
 
 #[test]
 fn duplicate_deps_diff_sources() {
