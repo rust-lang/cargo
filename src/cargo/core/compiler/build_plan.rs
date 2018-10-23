@@ -24,6 +24,8 @@ struct Invocation {
     target_kind: TargetKind,
     kind: Kind,
     deps: Vec<usize>,
+    // Inputs are only calculated and emitted in "detailed" build plan mode.
+    #[serde(skip_serializing_if = "Vec::is_empty")]
     inputs: Vec<String>,
     outputs: Vec<PathBuf>,
     links: BTreeMap<PathBuf, PathBuf>,
@@ -143,9 +145,15 @@ impl BuildPlan {
         for unit in units {
             {
                 let mut invocation = self.get_invocation_mut(&unit.buildkey())?;
-                let dep_files = dep_files_for_unit(cx, unit)?.unwrap_or_default();
+                let processed = !invocation.inputs.is_empty();
+                if processed {
+                    continue;
+                }
+
+                let mut dep_files = dep_files_for_unit(cx, unit)?.unwrap_or_default();
+                dep_files.sort();
                 ::log::debug!("update_file_deps: dep_files: {:#?}", dep_files);
-                invocation.inputs.extend(dep_files);
+                invocation.inputs = dep_files;
             }
 
             let deps = cx.dep_targets(unit);
