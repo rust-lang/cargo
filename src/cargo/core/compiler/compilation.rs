@@ -33,7 +33,6 @@ pub struct Compilation<'cfg> {
     /// LD_LIBRARY_PATH as appropriate.
     ///
     /// The order should be deterministic.
-    // TODO: deprecated, remove
     pub native_dirs: BTreeSet<PathBuf>,
 
     /// Root output directory (for the local package's artifacts)
