@@ -125,6 +125,12 @@ impl BuildPlanMode {
             _ => false,
         }
     }
+    pub fn is_detailed(&self) -> bool {
+        match self {
+            BuildPlanMode::Detailed => true,
+            _ => false,
+        }
+    }
 }
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]

@@ -189,7 +189,7 @@ fn rustc<'a, 'cfg>(
     cx: &mut Context<'a, 'cfg>,
     unit: &Unit<'a>,
     exec: &Arc<Executor>,
-    fresh: bool,
+    is_fresh_now: bool,
 ) -> CargoResult<Work> {
     let mut rustc = prepare_rustc(cx, &unit.target.rustc_crate_types(), unit)?;
     if cx.is_primary_package(unit) {
@@ -296,7 +296,8 @@ fn rustc<'a, 'cfg>(
             state.build_plan(buildkey, rustc.clone(), outputs.clone());
         }
 
-        if !build_plan.commands_only() && !fresh {
+        let plan_can_skip = build_plan.is_detailed() && is_fresh_now;
+        if !build_plan.commands_only() && !plan_can_skip {
             if json_messages {
                 exec.exec_json(
                     rustc,
