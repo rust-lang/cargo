@@ -694,6 +694,8 @@ impl<'a, 'cfg> Drop for Downloads<'a, 'cfg> {
                 ByteSize(self.largest.0),
             ));
         }
+        // Clear progress before displaying final summary.
+        drop(progress);
         drop(self.set.config.shell().status("Downloaded", status));
     }
 }
