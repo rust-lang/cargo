@@ -19,7 +19,7 @@ pub struct BuildConfig {
     /// Force cargo to do a full rebuild and treat each target as changed.
     pub force_rebuild: bool,
     /// Output a build plan to stdout instead of actually compiling.
-    pub build_plan: Option<BuildPlanMode>,
+    pub build_plan: BuildPlanMode,
     /// Use Cargo itself as the wrapper around rustc, only used for `cargo fix`
     pub cargo_as_rustc_wrapper: bool,
     /// Extra env vars to inject into rustc commands
@@ -82,7 +82,7 @@ impl BuildConfig {
             mode,
             message_format: MessageFormat::Human,
             force_rebuild: false,
-            build_plan: None,
+            build_plan: BuildPlanMode::NoEmit,
             cargo_as_rustc_wrapper: false,
             extra_rustc_env: Vec::new(),
             extra_rustc_args: Vec::new(),
@@ -101,6 +101,8 @@ impl BuildConfig {
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub enum BuildPlanMode {
+    /// Don't emit any build plan.
+    NoEmit,
     /// Quick mode of generating build plan (contains only commands to execute)
     CommandsOnly,
     /// In addition to containing build commands, it also includes detailed list
@@ -111,9 +113,15 @@ pub enum BuildPlanMode {
 }
 
 impl BuildPlanMode {
-    pub fn is_detailed(&self) -> bool {
+    pub fn should_emit(&self) -> bool {
         match self {
-            BuildPlanMode::Detailed => true,
+            BuildPlanMode::NoEmit => false,
+            _ => true,
+        }
+    }
+    pub fn commands_only(&self) -> bool {
+        match self {
+            BuildPlanMode::CommandsOnly => true,
             _ => false,
         }
     }

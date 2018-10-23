@@ -148,7 +148,7 @@ fn compile<'a, 'cfg: 'a>(
     } else if unit.mode == CompileMode::Doctest {
         // we run these targets later, so this is just a noop for now
         (Work::noop(), Work::noop(), Freshness::Fresh)
-    } else if build_plan.map_or(false, |x| !x.is_detailed()) {
+    } else if build_plan.commands_only() {
         (
             rustc(cx, unit, &exec.clone(), false)?,
             Work::noop(),
@@ -171,7 +171,7 @@ fn compile<'a, 'cfg: 'a>(
         let dirty = work.then(link_targets(cx, unit, false)?).then(dirty);
         let fresh = link_targets(cx, unit, true)?.then(fresh);
 
-        if exec.force_rebuild(unit) || force_rebuild || build_plan.map_or(false, |x| x.is_detailed()) {
+        if exec.force_rebuild(unit) || force_rebuild || build_plan.should_emit() {
             freshness = Freshness::Dirty;
         }
 
@@ -184,7 +184,7 @@ fn compile<'a, 'cfg: 'a>(
     for unit in cx.dep_targets(unit).iter() {
         compile(cx, jobs, plan, unit, exec, false)?;
     }
-    if build_plan.is_some() {
+    if build_plan.should_emit() {
         plan.add(cx, unit)?;
     }
 
@@ -258,7 +258,7 @@ fn rustc<'a, 'cfg>(
         // previous build scripts, we include them in the rustc invocation.
         if let Some(build_deps) = build_deps {
             let build_state = build_state.outputs.lock().unwrap();
-            if build_plan.map_or(true, |x| x.is_detailed()) {
+            if !build_plan.commands_only() {
                 add_native_deps(
                     &mut rustc,
                     &build_state,
@@ -298,11 +298,11 @@ fn rustc<'a, 'cfg>(
 
         state.running(&rustc);
 
-        if build_plan.is_some() {
+        if build_plan.should_emit() {
             state.build_plan(buildkey, rustc.clone(), vec![], outputs.clone());
         }
 
-        if build_plan.map_or(true, |x| x.is_detailed()) && !fresh {
+        if !build_plan.commands_only() && !fresh {
             if json_messages {
                 exec.exec_json(
                     rustc,

@@ -249,7 +249,7 @@ impl<'a, 'cfg> Context<'a, 'cfg> {
             super::output_depinfo(&mut self, unit)?;
         }
 
-        if build_plan.is_some() {
+        if build_plan.should_emit() {
             plan.update_file_deps(&mut self, units)?;
             plan.set_inputs(self.build_plan_inputs()?);
             plan.output_plan();

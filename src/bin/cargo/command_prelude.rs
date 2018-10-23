@@ -293,18 +293,18 @@ pub trait ArgMatchesExt {
         build_config.message_format = message_format;
         build_config.release = self._is_present("release");
         build_config.build_plan = match (self._is_present("build-plan"), self._value_of("build-plan")) {
-            (false, _) => None,
+            (false, _) => BuildPlanMode::NoEmit,
             (true, Some(val)) if val.eq_ignore_ascii_case("detailed") => {
                 config.shell().warn(format!("REMOVEME: Detailed"))?;
-                Some(BuildPlanMode::Detailed)
+                BuildPlanMode::Detailed
             },
             (true, _) => {
                 config.shell().warn(format!("REMOVEME: Commands only"))?;
-                Some(BuildPlanMode::CommandsOnly)
+                BuildPlanMode::CommandsOnly
             },
         };
 
-        if build_config.build_plan.is_some() && !config.cli_unstable().unstable_options {
+        if build_config.build_plan.should_emit() && !config.cli_unstable().unstable_options {
             Err(format_err!(
                 "`--build-plan` flag is unstable, pass `-Z unstable-options` to enable it"
             ))?;

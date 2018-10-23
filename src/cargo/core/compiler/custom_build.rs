@@ -97,7 +97,7 @@ pub fn prepare<'a, 'cfg>(
         build_work(cx, unit, is_fresh.clone())?
     };
 
-    if cx.bcx.build_config.build_plan.map_or(false, |x| !x.is_detailed()) {
+    if cx.bcx.build_config.build_plan.commands_only() {
         Ok((work_dirty, work_fresh, Freshness::Dirty))
     } else {
         // Now that we've prep'd our work, build the work needed to manage the
@@ -307,7 +307,7 @@ fn build_work<'a, 'cfg>(
         // along to this custom build command. We're also careful to augment our
         // dynamic library search path in case the build script depended on any
         // native dynamic libraries.
-        if build_plan.map_or(true, |x| x.is_detailed()) && !is_fresh {
+        if !build_plan.commands_only() && !is_fresh {
             let build_state = build_state.outputs.lock().unwrap();
             for (name, id) in lib_deps {
                 let key = (id.clone(), kind);
@@ -332,7 +332,7 @@ fn build_work<'a, 'cfg>(
         }
 
         // And now finally, run the build command itself!
-        if build_plan.map_or(true, |x| x.is_detailed()) && !is_fresh {
+        if !build_plan.commands_only() && !is_fresh {
             state.running(&cmd);
             let output = if extra_verbose {
                 let prefix = format!("[{} {}] ", id.name(), id.version());
@@ -383,7 +383,7 @@ fn build_work<'a, 'cfg>(
             // Build plan is configured to emit commands only, don't run anything.
         }
 
-        if build_plan.is_some() {
+        if build_plan.should_emit() {
             // NOTE: It's impossible to accurately detect file inputs/outputs for
             // the *execution* of an arbitrary build script and so we pass empty file lists here.
             let (inputs, outputs) = (vec![], Arc::default());

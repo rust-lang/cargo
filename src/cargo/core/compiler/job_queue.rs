@@ -370,7 +370,7 @@ impl<'a> JobQueue<'a> {
                 "{} [{}] target(s) in {}",
                 build_type, opt_type, time_elapsed
             );
-            if build_plan.map_or(true, |x| x.is_detailed()) {
+            if !build_plan.commands_only() {
                 cx.bcx.config.shell().status("Finished", message)?;
             }
             Ok(())
@@ -391,7 +391,7 @@ impl<'a> JobQueue<'a> {
         job: Job,
         config: &Config,
         scope: &Scope<'a>,
-        build_plan: Option<BuildPlanMode>,
+        build_plan: BuildPlanMode,
     ) -> CargoResult<()> {
         info!("start: {:?}", key);
 
@@ -404,7 +404,7 @@ impl<'a> JobQueue<'a> {
             my_tx.send(Message::Finish(key, res)).unwrap();
         };
 
-        if build_plan.map_or(true, |x| x.is_detailed()) {
+        if !build_plan.commands_only() {
             // Print out some nice progress information
             self.note_working_on(config, &key, fresh)?;
         }
