@@ -84,7 +84,6 @@ pub fn dep_files_for_unit<'a, 'b>(
     cx: &mut Context<'a, 'b>,
     unit: &Unit<'a>,
 ) -> CargoResult<Result<Vec<String>, ()>> {
-    ::log::debug!("dep_files_for_unit: {}", unit.buildkey());
     let basedir = dep_info_basedir(cx)?;
 
     let mut deps = BTreeSet::new();

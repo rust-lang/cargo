@@ -86,7 +86,7 @@ pub struct JobState<'a> {
 
 enum Message<'a> {
     Run(String),
-    BuildPlanMsg(String, ProcessBuilder, Vec<String>, Arc<Vec<OutputFile>>),
+    BuildPlanMsg(String, ProcessBuilder, Arc<Vec<OutputFile>>),
     Stdout(String),
     Stderr(String),
     FixDiagnostic(diagnostic_server::Message),
@@ -103,11 +103,10 @@ impl<'a> JobState<'a> {
         &self,
         module_name: String,
         cmd: ProcessBuilder,
-        inputs: Vec<String>,
         filenames: Arc<Vec<OutputFile>>,
     ) {
         let _ = self.tx
-            .send(Message::BuildPlanMsg(module_name, cmd, inputs, filenames));
+            .send(Message::BuildPlanMsg(module_name, cmd, filenames));
     }
 
     pub fn capture_output(
@@ -291,8 +290,8 @@ impl<'a> JobQueue<'a> {
                         .shell()
                         .verbose(|c| c.status("Running", &cmd))?;
                 }
-                Message::BuildPlanMsg(module_name, cmd, inputs, filenames) => {
-                    plan.update(&module_name, &cmd, &inputs, &filenames)?;
+                Message::BuildPlanMsg(module_name, cmd, filenames) => {
+                    plan.update(&module_name, &cmd, &filenames)?;
                 }
                 Message::Stdout(out) => {
                     println!("{}", out);

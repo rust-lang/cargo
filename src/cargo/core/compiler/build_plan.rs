@@ -127,13 +127,11 @@ impl BuildPlan {
         &mut self,
         invocation_name: &str,
         cmd: &ProcessBuilder,
-        inputs: &[String],
         outputs: &[OutputFile],
     ) -> CargoResult<()> {
         let invocation = self.get_invocation_mut(invocation_name)?;
 
         invocation.update_cmd(cmd)?;
-        invocation.inputs.extend(inputs.iter().cloned());
         for output in outputs.iter() {
             invocation.add_output(&output.path, &output.hardlink);
         }
@@ -152,7 +150,6 @@ impl BuildPlan {
 
                 let mut dep_files = dep_files_for_unit(cx, unit)?.unwrap_or_default();
                 dep_files.sort();
-                ::log::debug!("update_file_deps: dep_files: {:#?}", dep_files);
                 invocation.inputs = dep_files;
             }
 

@@ -384,10 +384,7 @@ fn build_work<'a, 'cfg>(
         }
 
         if build_plan.should_emit() {
-            // NOTE: It's impossible to accurately detect file inputs/outputs for
-            // the *execution* of an arbitrary build script and so we pass empty file lists here.
-            let (inputs, outputs) = (vec![], Arc::default());
-            state.build_plan(invocation_name, cmd, inputs, outputs);
+            state.build_plan(invocation_name, cmd,  Arc::default());
         }
 
         Ok(())

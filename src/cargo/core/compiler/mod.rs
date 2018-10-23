@@ -156,12 +156,6 @@ fn compile<'a, 'cfg: 'a>(
         )
     } else {
         let (mut freshness, dirty, fresh) = fingerprint::prepare_target(cx, unit)?;
-        // TODO: For detailed build plan we always want to call rustc() (to
-        // prepare the command) but actually *run* it/link_targets/prep_fingerprint
-        // only when the fingerprint is missing (target is *actually* dirty)
-        // But again in rustc() we check against build_plan and as above, sometimes
-        // for detailed plan we want to execute it and sometimes we don't
-        // TODO: Pass "fresh" to rustc? that makes not that much sense...
         let work = if unit.mode.is_doc() {
             rustdoc(cx, unit)?
         } else {
@@ -299,7 +293,7 @@ fn rustc<'a, 'cfg>(
         state.running(&rustc);
 
         if build_plan.should_emit() {
-            state.build_plan(buildkey, rustc.clone(), vec![], outputs.clone());
+            state.build_plan(buildkey, rustc.clone(), outputs.clone());
         }
 
         if !build_plan.commands_only() && !fresh {
