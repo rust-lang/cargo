@@ -38,6 +38,7 @@ fn add_deps_for_unit<'a, 'b>(
     if !visited.insert(*unit) {
         return Ok(());
     }
+
     // units representing the execution of a build script don't actually
     // generate a dep info file, so we just keep on going below
     if !unit.mode.is_run_custom_build() {

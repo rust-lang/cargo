@@ -213,7 +213,7 @@ fn build_plan_detailed_with_inputs() {
         .file("Cargo.toml", &basic_bin_manifest("foo"))
         .file("data/some.txt", "o hai there")
         .file("src/foo.rs", "mod module1; mod module2; fn main() {}")
-        .file("src/module1.rs", "mod nested;")
+        .file("src/module1/mod.rs", "mod nested;")
         .file("src/module1/nested.rs", "")
         .file("src/module2/mod.rs", r#"
             const DATA: &str = include_str!(concat!(env!("CARGO_MANIFEST_DIR"), "/data/some.txt"));"#)
@@ -239,8 +239,8 @@ fn build_plan_detailed_with_inputs() {
                 "inputs": [
                     "[..]/foo/data/some.txt",
                     "[..]/foo/src/foo.rs",
+                    "[..]/foo/src/module1/mod.rs",
                     "[..]/foo/src/module1/nested.rs",
-                    "[..]/foo/src/module1.rs",
                     "[..]/foo/src/module2/mod.rs"
                 ],
                 "outputs": "{...}",
