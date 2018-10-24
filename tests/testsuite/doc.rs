@@ -1121,12 +1121,12 @@ fn doc_edition() {
 
     p.cargo("doc -v")
         .masquerade_as_nightly_cargo()
-        .with_stderr_contains("[RUNNING] `rustdoc [..]--edition=2018[..]")
+        .with_stderr_contains("[RUNNING] `rustdoc [..]-Zunstable-options --edition=2018[..]")
         .run();
 
     p.cargo("test -v")
         .masquerade_as_nightly_cargo()
-        .with_stderr_contains("[RUNNING] `rustdoc [..]--edition=2018[..]")
+        .with_stderr_contains("[RUNNING] `rustdoc [..]-Zunstable-options --edition=2018[..]")
         .run();
 }
 
@@ -1153,12 +1153,12 @@ fn doc_target_edition() {
 
     p.cargo("doc -v")
         .masquerade_as_nightly_cargo()
-        .with_stderr_contains("[RUNNING] `rustdoc [..]--edition=2018[..]")
+        .with_stderr_contains("[RUNNING] `rustdoc [..]-Zunstable-options --edition=2018[..]")
         .run();
 
     p.cargo("test -v")
         .masquerade_as_nightly_cargo()
-        .with_stderr_contains("[RUNNING] `rustdoc [..]--edition=2018[..]")
+        .with_stderr_contains("[RUNNING] `rustdoc [..]-Zunstable-options --edition=2018[..]")
         .run();
 }
 
