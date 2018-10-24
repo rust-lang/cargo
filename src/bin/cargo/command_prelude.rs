@@ -151,11 +151,6 @@ pub trait AppExt: Sized {
             ._arg(opt("bin", "Use a binary (application) template [default]"))
             ._arg(opt("lib", "Use a library template"))
             ._arg(
-                opt("edition", "Edition to set for the crate generated")
-                    .possible_values(&["2015", "2018"])
-                    .value_name("YEAR")
-            )
-            ._arg(
                 opt(
                     "name",
                     "Set the resulting package name, defaults to the directory name",
@@ -346,7 +341,6 @@ pub trait ArgMatchesExt {
             self._is_present("lib"),
             self.value_of_path("path", config).unwrap(),
             self._value_of("name").map(|s| s.to_string()),
-            self._value_of("edition").map(|s| s.to_string()),
         )
     }
 

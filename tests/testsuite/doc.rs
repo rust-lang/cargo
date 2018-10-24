@@ -568,8 +568,11 @@ fn doc_target() {
         .file(
             "src/lib.rs",
             r#"
-            #![feature(no_core)]
+            #![feature(no_core, lang_items)]
             #![no_core]
+
+            #[lang = "sized"]
+            trait Sized {}
 
             extern {
                 pub static A: u32;
@@ -635,7 +638,7 @@ fn output_not_captured() {
         ).build();
 
     p.cargo("doc")
-        .with_status(101)
+        .without_status()
         .with_stderr_contains("1 | ☃")
         .with_stderr_contains(r"error: unknown start of token: \u{2603}")
         .run();

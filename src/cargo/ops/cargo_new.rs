@@ -30,7 +30,6 @@ pub struct NewOptions {
     /// Absolute path to the directory for the new project
     pub path: PathBuf,
     pub name: Option<String>,
-    pub edition: Option<String>,
 }
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
@@ -66,7 +65,6 @@ struct MkOptions<'a> {
     name: &'a str,
     source_files: Vec<SourceFileInformation>,
     bin: bool,
-    edition: Option<&'a str>,
 }
 
 impl NewOptions {
@@ -76,7 +74,6 @@ impl NewOptions {
         lib: bool,
         path: PathBuf,
         name: Option<String>,
-        edition: Option<String>,
     ) -> CargoResult<NewOptions> {
         let kind = match (bin, lib) {
             (true, true) => bail!("can't specify both lib and binary outputs"),
@@ -90,7 +87,6 @@ impl NewOptions {
             kind,
             path,
             name,
-            edition,
         };
         Ok(opts)
     }
@@ -325,7 +321,6 @@ pub fn new(opts: &NewOptions, config: &Config) -> CargoResult<()> {
         name,
         source_files: vec![plan_new_source_file(opts.kind.is_bin(), name.to_string())],
         bin: opts.kind.is_bin(),
-        edition: opts.edition.as_ref().map(|s| &**s),
     };
 
     mk(config, &mkopts).chain_err(|| {
@@ -402,7 +397,6 @@ pub fn init(opts: &NewOptions, config: &Config) -> CargoResult<()> {
         name,
         bin: src_paths_types.iter().any(|x| x.bin),
         source_files: src_paths_types,
-        edition: opts.edition.as_ref().map(|s| &**s),
     };
 
     mk(config, &mkopts).chain_err(|| {
@@ -536,16 +530,11 @@ path = {}
 name = "{}"
 version = "0.1.0"
 authors = [{}]
-edition = {}
 
 [dependencies]
 {}"#,
             name,
             toml::Value::String(author),
-            match opts.edition {
-                Some(edition) => toml::Value::String(edition.to_string()),
-                None => toml::Value::String("2018".to_string()),
-            },
             cargotoml_path_specifier
         ).as_bytes(),
     )?;
