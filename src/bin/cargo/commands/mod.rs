@@ -44,7 +44,7 @@ pub fn builtin_exec(cmd: &str) -> Option<BuiltinExec> {
     let exec = match cmd {
         "bench" => bench::exec,
         "build" | "b" => build::exec,
-        "check" => check::exec,
+        "check" | "c" => check::exec,
         "clean" => clean::exec,
         "doc" => doc::exec,
         "fetch" => fetch::exec,
@@ -77,6 +77,7 @@ pub fn builtin_exec(cmd: &str) -> Option<BuiltinExec> {
 
     let alias_for = match cmd {
         "b" => Some("build"),
+        "c" => Some("check"),
         "r" => Some("run"),
         "t" => Some("test"),
         _ => None,

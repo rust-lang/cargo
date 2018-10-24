@@ -4,6 +4,8 @@ use cargo::ops;
 
 pub fn cli() -> App {
     subcommand("check")
+        // subcommand aliases are handled in commands::builtin_exec() and cli::expand_aliases()
+        // .alias("c")
         .about("Check a local package and all of its dependencies for errors")
         .arg_package_spec(
             "Package(s) to check",
