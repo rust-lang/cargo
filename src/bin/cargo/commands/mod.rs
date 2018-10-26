@@ -37,14 +37,13 @@ pub fn builtin() -> Vec<App> {
 
 pub struct BuiltinExec<'a> {
     pub exec: fn(&'a mut Config, &'a ArgMatches) -> CliResult,
-    pub alias_for: Option<&'a str>,
+    pub alias_for: Option<&'static str>,
 }
 
 pub fn builtin_exec(cmd: &str) -> Option<BuiltinExec> {
     let exec = match cmd {
         "bench" => bench::exec,
-        "build" => build::exec,
-        "b" => build::exec,
+        "build" | "b" => build::exec,
         "check" => check::exec,
         "clean" => clean::exec,
         "doc" => doc::exec,
@@ -63,13 +62,11 @@ pub fn builtin_exec(cmd: &str) -> Option<BuiltinExec> {
         "pkgid" => pkgid::exec,
         "publish" => publish::exec,
         "read-manifest" => read_manifest::exec,
-        "run" => run::exec,
-        "r" => run::exec,
+        "run" | "r" => run::exec,
         "rustc" => rustc::exec,
         "rustdoc" => rustdoc::exec,
         "search" => search::exec,
-        "test" => test::exec,
-        "t" => test::exec,
+        "test" | "t" => test::exec,
         "uninstall" => uninstall::exec,
         "update" => update::exec,
         "verify-project" => verify_project::exec,
