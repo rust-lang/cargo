@@ -35,10 +35,13 @@ pub fn builtin() -> Vec<App> {
     ]
 }
 
-pub fn builtin_exec(cmd: &str) -> Option<fn(&mut Config, &ArgMatches) -> CliResult> {
+pub fn builtin_exec(
+    cmd: &str,
+) -> Option<(fn(&mut Config, &ArgMatches) -> CliResult, Option<&str>)> {
     let f = match cmd {
         "bench" => bench::exec,
         "build" => build::exec,
+        "b" => build::exec,
         "check" => check::exec,
         "clean" => clean::exec,
         "doc" => doc::exec,
@@ -58,10 +61,12 @@ pub fn builtin_exec(cmd: &str) -> Option<fn(&mut Config, &ArgMatches) -> CliResu
         "publish" => publish::exec,
         "read-manifest" => read_manifest::exec,
         "run" => run::exec,
+        "r" => run::exec,
         "rustc" => rustc::exec,
         "rustdoc" => rustdoc::exec,
         "search" => search::exec,
         "test" => test::exec,
+        "t" => test::exec,
         "uninstall" => uninstall::exec,
         "update" => update::exec,
         "verify-project" => verify_project::exec,
@@ -69,7 +74,15 @@ pub fn builtin_exec(cmd: &str) -> Option<fn(&mut Config, &ArgMatches) -> CliResu
         "yank" => yank::exec,
         _ => return None,
     };
-    Some(f)
+
+    let is_alias = match cmd {
+        "b" => Some("build"),
+        "r" => Some("run"),
+        "t" => Some("test"),
+        _ => None,
+    };
+
+    Some((f, is_alias))
 }
 
 pub mod bench;

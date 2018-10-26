@@ -118,11 +118,19 @@ fn expand_aliases(
                     .get_matches_from_safe(alias)?;
                 return expand_aliases(config, args);
             }
-            (Some(_), Some(_)) => {
-                config.shell().warn(format!(
-                    "alias `{}` is ignored, because it is shadowed by a built in command",
+            (Some((_, alias_for)), Some(_)) => {
+                let mut message = format!(
+                    "alias `{}` is ignored, because it is shadowed by a built-in ",
                     cmd
-                ))?;
+                );
+
+                if let Some(alias_for) = alias_for {
+                    message.push_str(&format!("alias for `{}`", alias_for));
+                } else {
+                    message.push_str("command");
+            }
+
+                config.shell().warn(message)?;
             }
             (_, None) => {}
         }
@@ -156,7 +164,7 @@ fn execute_subcommand(config: &mut Config, args: &ArgMatches) -> CliResult {
             .unwrap_or_default(),
     )?;
 
-    if let Some(exec) = commands::builtin_exec(cmd) {
+    if let Some((exec, _)) = commands::builtin_exec(cmd) {
         return exec(config, subcommand_args);
     }
 
