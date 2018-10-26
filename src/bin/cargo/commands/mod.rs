@@ -35,10 +35,13 @@ pub fn builtin() -> Vec<App> {
     ]
 }
 
-pub fn builtin_exec(
-    cmd: &str,
-) -> Option<(fn(&mut Config, &ArgMatches) -> CliResult, Option<&str>)> {
-    let f = match cmd {
+pub struct BuiltinExec<'a> {
+    pub exec: fn(&'a mut Config, &'a ArgMatches) -> CliResult,
+    pub alias_for: Option<&'a str>,
+}
+
+pub fn builtin_exec(cmd: &str) -> Option<BuiltinExec> {
+    let exec = match cmd {
         "bench" => bench::exec,
         "build" => build::exec,
         "b" => build::exec,
@@ -75,14 +78,14 @@ pub fn builtin_exec(
         _ => return None,
     };
 
-    let is_alias = match cmd {
+    let alias_for = match cmd {
         "b" => Some("build"),
         "r" => Some("run"),
         "t" => Some("test"),
         _ => None,
     };
 
-    Some((f, is_alias))
+    Some(BuiltinExec { exec, alias_for })
 }
 
 pub mod bench;

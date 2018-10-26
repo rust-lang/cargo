@@ -4,8 +4,8 @@ use clap::{AppSettings, Arg, ArgMatches};
 
 use cargo::{self, CliResult, Config};
 
+use super::commands::{self, BuiltinExec};
 use super::list_commands;
-use super::commands;
 use command_prelude::*;
 
 pub fn main(config: &mut Config) -> CliResult {
@@ -118,7 +118,7 @@ fn expand_aliases(
                     .get_matches_from_safe(alias)?;
                 return expand_aliases(config, args);
             }
-            (Some((_, alias_for)), Some(_)) => {
+            (Some(BuiltinExec { alias_for, .. }), Some(_)) => {
                 let mut message = format!(
                     "alias `{}` is ignored, because it is shadowed by a built-in ",
                     cmd
@@ -128,7 +128,7 @@ fn expand_aliases(
                     message.push_str(&format!("alias for `{}`", alias_for));
                 } else {
                     message.push_str("command");
-            }
+                }
 
                 config.shell().warn(message)?;
             }
@@ -160,11 +160,12 @@ fn execute_subcommand(config: &mut Config, args: &ArgMatches) -> CliResult {
         args.is_present("frozen"),
         args.is_present("locked"),
         arg_target_dir,
-        &args.values_of_lossy("unstable-features")
+        &args
+            .values_of_lossy("unstable-features")
             .unwrap_or_default(),
     )?;
 
-    if let Some((exec, _)) = commands::builtin_exec(cmd) {
+    if let Some(BuiltinExec { exec, .. }) = commands::builtin_exec(cmd) {
         return exec(config, subcommand_args);
     }
 
