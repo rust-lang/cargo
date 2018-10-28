@@ -196,9 +196,7 @@ impl<'cfg> State<'cfg> {
     }
 
     fn clear(&mut self) {
-        self.try_update_max_width();
-        let blank = " ".repeat(self.format.max_width);
-        drop(write!(self.config.shell().err(), "{}\r", blank));
+        self.config.shell().err_erase_line();
     }
 
     fn try_update_max_width(&mut self) {
