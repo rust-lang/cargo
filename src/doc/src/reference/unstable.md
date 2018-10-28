@@ -21,14 +21,14 @@ table:
 
 ```toml
 [registries]
-my-registry = { index = "https://my-intranet:8080/index" }
+my-registry = { index = "https://my-intranet:8080/git/index" }
 ```
 
 Authentication information for alternate registries can be added to
 `.cargo/credentials`:
 
 ```toml
-[my-registry]
+[registries.my-registry]
 token = "api-token"
 ```
 
