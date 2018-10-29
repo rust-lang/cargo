@@ -125,7 +125,7 @@ The options are mutually exclusive: setting `include` will override an
 `exclude`. Note that `include` must be an exhaustive list of files as otherwise
 necessary source files may not be included.
 
-[globs]: http://doc.rust-lang.org/glob/glob/struct.Pattern.html
+[globs]: https://docs.rs/glob/0.2.11/glob/struct.Pattern.html
 
 #### Migrating to `gitignore`-like pattern matching
 
