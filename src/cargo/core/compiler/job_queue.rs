@@ -400,16 +400,17 @@ impl<'a> JobQueue<'a> {
             let res = job.run(fresh, &JobState { tx: my_tx.clone() });
             my_tx.send(Message::Finish(key, res)).unwrap();
         };
+
+        if !build_plan {
+            // Print out some nice progress information
+            self.note_working_on(config, &key, fresh)?;
+        }
+
         match fresh {
             Freshness::Fresh => doit(),
             Freshness::Dirty => {
                 scope.spawn(doit);
             }
-        }
-
-        if !build_plan {
-            // Print out some nice progress information
-            self.note_working_on(config, &key, fresh)?;
         }
 
         Ok(())
