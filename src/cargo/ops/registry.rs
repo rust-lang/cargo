@@ -276,6 +276,12 @@ fn transmit(
                 config.shell().warn(&msg)?;
             }
 
+            if !warnings.other.is_empty() {
+                for msg in warnings.other {
+                    config.shell().warn(&msg)?;
+                }
+            }
+
             Ok(())
         }
         Err(e) => Err(e),
