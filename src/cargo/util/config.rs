@@ -669,8 +669,8 @@ impl Config {
             match self.get_string(&format!("registries.{}.index", registry))? {
                 Some(index) => {
                     let url = index.val.to_url()?;
-                    if url.username() != "" || url.password().is_some() {
-                        bail!("Registry URLs may not contain credentials");
+                    if url.password().is_some() {
+                        bail!("Registry URLs may not contain passwords");
                     }
                     url
                 }
