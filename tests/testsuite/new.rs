@@ -338,6 +338,23 @@ fn author_prefers_cargo() {
 }
 
 #[test]
+fn strip_angle_bracket_author_email() {
+    create_empty_gitconfig();
+    cargo_process("new foo")
+        .env("USER", "bar")
+        .env("EMAIL", "<baz>")
+        .run();
+
+    let toml = paths::root().join("foo/Cargo.toml");
+    let mut contents = String::new();
+    File::open(&toml)
+        .unwrap()
+        .read_to_string(&mut contents)
+        .unwrap();
+    assert!(contents.contains(r#"authors = ["bar <baz>"]"#));
+}
+
+#[test]
 fn git_prefers_command_line() {
     let root = paths::root();
     fs::create_dir(&root.join(".cargo")).unwrap();
