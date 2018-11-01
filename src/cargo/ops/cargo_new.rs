@@ -660,7 +660,17 @@ fn discover_author() -> CargoResult<(String, Option<String>)> {
         .or_else(|| get_environment_variable(&email_variables[3..]));
 
     let name = name.trim().to_string();
-    let email = email.map(|s| s.trim().to_string());
+    let email = email.map(|s| {
+        let mut s = s.trim();
+
+        // In some cases emails will already have <> remove them since they
+        // are already added when needed.
+        if s.starts_with("<") && s.ends_with(">") {
+            s = &s[1..s.len() - 1];
+        }
+
+        s.to_string()
+    });
 
     Ok((name, email))
 }
