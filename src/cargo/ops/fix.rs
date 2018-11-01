@@ -165,7 +165,7 @@ pub fn fix_maybe_exec_rustc() -> CargoResult<bool> {
     // not the best heuristic but matches what Cargo does today at least.
     let mut fixes = FixedCrate::default();
     if let Some(path) = &args.file {
-        if env::var("CARGO_PRIMARY_PACKAGE").is_ok() {
+        if args.primary_package {
             trace!("start rustfixing {:?}", path);
             fixes = rustfix_crate(&lock_addr, rustc.as_ref(), path, &args)?;
         }
@@ -503,6 +503,7 @@ struct FixArgs {
     idioms: bool,
     enabled_edition: Option<String>,
     other: Vec<OsString>,
+    primary_package: bool,
 }
 
 enum PrepareFor {
@@ -543,6 +544,7 @@ impl FixArgs {
             ret.prepare_for_edition = PrepareFor::Next;
         }
         ret.idioms = env::var(IDIOMS_ENV).is_ok();
+        ret.primary_package = env::var("CARGO_PRIMARY_PACKAGE").is_ok();
         ret
     }
 
@@ -554,12 +556,14 @@ impl FixArgs {
             .arg("--cap-lints=warn");
         if let Some(edition) = &self.enabled_edition {
             cmd.arg("--edition").arg(edition);
-            if self.idioms {
+            if self.idioms && self.primary_package {
                 if edition == "2018" { cmd.arg("-Wrust-2018-idioms"); }
             }
         }
-        if let Some(edition) = self.prepare_for_edition_resolve() {
-            cmd.arg("-W").arg(format!("rust-{}-compatibility", edition));
+        if self.primary_package {
+            if let Some(edition) = self.prepare_for_edition_resolve() {
+                cmd.arg("-W").arg(format!("rust-{}-compatibility", edition));
+            }
         }
     }
 
