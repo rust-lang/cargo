@@ -755,6 +755,7 @@ fn fetch_with_cli(
     cmd.arg("fetch")
         .arg("--tags") // fetch all tags
         .arg("--quiet")
+        .arg("--update-head-ok") // see discussion in #2078
         .arg(url.to_string())
         .arg(refspec)
         .cwd(repo.path());
