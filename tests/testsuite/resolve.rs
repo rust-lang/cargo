@@ -33,6 +33,7 @@ proptest! {
             },
         .. ProptestConfig::default()
     })]
+
     #[test]
     fn passes_validation(
         PrettyPrintRegistry(input) in registry_strategy(50, 20, 60)
@@ -49,6 +50,56 @@ proptest! {
             );
         }
     }
+
+    #[test]
+    fn minimum_version_errors_the_same(
+            PrettyPrintRegistry(input) in registry_strategy(50, 20, 60)
+    ) {
+        enable_nightly_features();
+
+        let mut config = Config::default().unwrap();
+        config
+            .configure(
+                1,
+                None,
+                &None,
+                false,
+                false,
+                &None,
+                &["minimal-versions".to_string()],
+            )
+            .unwrap();
+
+        let reg = registry(input.clone());
+        // there is only a small chance that eny one
+        // crate will be interesting.
+        // So we try some of the most complicated.
+        for this in input.iter().rev().take(10) {
+            // minimal-versions change what order the candidates
+            // are tried but not the existence of a solution
+            let res = resolve(
+                &pkg_id("root"),
+                vec![dep_req(&this.name(), &format!("={}", this.version()))],
+                &reg,
+            );
+
+            let mres = resolve_with_config(
+                &pkg_id("root"),
+                vec![dep_req(&this.name(), &format!("={}", this.version()))],
+                &reg,
+                Some(&config),
+            );
+
+            prop_assert_eq!(
+                res.is_ok(),
+                mres.is_ok(),
+                "minimal-versions and regular resolver disagree about weather `{} = \"={}\"` can resolve",
+                this.name(),
+                this.version()
+            )
+        }
+    }
+
     #[test]
     fn limited_independence_of_irrelevant_alternatives(
         PrettyPrintRegistry(input) in registry_strategy(50, 20, 60),
