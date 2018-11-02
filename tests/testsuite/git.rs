@@ -2625,3 +2625,48 @@ fn use_the_cli() {
 
     project.cargo("build -v").with_stderr(stderr).run();
 }
+
+#[test]
+fn templatedir_doesnt_cause_problems() {
+    let git_project2 = git::new("dep2", |project| {
+        project
+            .file("Cargo.toml", &basic_manifest("dep2", "0.5.0"))
+            .file("src/lib.rs", "")
+    }).unwrap();
+    let git_project = git::new("dep1", |project| {
+        project
+            .file("Cargo.toml", &basic_manifest("dep1", "0.5.0"))
+            .file("src/lib.rs", "")
+    }).unwrap();
+    let p = project()
+        .file(
+            "Cargo.toml",
+            &format!(r#"
+                [project]
+                name = "fo"
+                version = "0.5.0"
+                authors = []
+
+                [dependencies]
+                dep1 = {{ git = '{}' }}
+            "#, git_project.url()),
+        ).file("src/main.rs", "fn main() {}")
+        .build();
+
+    File::create(paths::home().join(".gitconfig"))
+        .unwrap()
+        .write_all(
+            &format!(r#"
+                [init]
+                templatedir = {}
+            "#, git_project2.url()
+                .to_file_path()
+                .unwrap()
+                .to_str()
+                .unwrap()
+                .replace("\\", "/")
+            ).as_bytes(),
+        ).unwrap();
+
+    p.cargo("build").run();
+}

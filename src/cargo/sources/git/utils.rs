@@ -146,7 +146,7 @@ impl GitRemote {
             paths::remove_dir_all(dst)?;
         }
         fs::create_dir_all(dst)?;
-        let mut repo = git2::Repository::init_bare(dst)?;
+        let mut repo = init(dst, true)?;
         fetch(
             &mut repo,
             &self.url,
@@ -385,7 +385,7 @@ impl<'a> GitCheckout<'a> {
                 Err(..) => {
                     let path = parent.workdir().unwrap().join(child.path());
                     let _ = paths::remove_dir_all(&path);
-                    git2::Repository::init(&path)?
+                    init(&path, false)?
                 }
             };
 
@@ -833,7 +833,7 @@ fn reinitialize(repo: &mut git2::Repository) -> CargoResult<()> {
     debug!("reinitializing git repo at {:?}", path);
     let tmp = path.join("tmp");
     let bare = !repo.path().ends_with(".git");
-    *repo = git2::Repository::init(&tmp)?;
+    *repo = init(&tmp, false)?;
     for entry in path.read_dir()? {
         let entry = entry?;
         if entry.file_name().to_str() == Some("tmp") {
@@ -842,13 +842,19 @@ fn reinitialize(repo: &mut git2::Repository) -> CargoResult<()> {
         let path = entry.path();
         drop(paths::remove_file(&path).or_else(|_| paths::remove_dir_all(&path)));
     }
-    if bare {
-        *repo = git2::Repository::init_bare(path)?;
-    } else {
-        *repo = git2::Repository::init(path)?;
-    }
+    *repo = init(&path, bare)?;
     paths::remove_dir_all(&tmp)?;
     Ok(())
+}
+
+fn init(path: &Path, bare: bool) -> CargoResult<git2::Repository> {
+    let mut opts = git2::RepositoryInitOptions::new();
+    // Skip anyting related to templates, they just call all sorts of issues as
+    // we really don't want to use them yet they insist on being used. See #6240
+    // for an example issue that comes up.
+    opts.external_template(false);
+    opts.bare(bare);
+    Ok(git2::Repository::init_opts(&path, &opts)?)
 }
 
 /// Updating the index is done pretty regularly so we want it to be as fast as
