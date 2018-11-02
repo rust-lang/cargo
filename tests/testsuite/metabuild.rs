@@ -2,7 +2,8 @@ use glob::glob;
 use serde_json;
 use std::str;
 use support::{
-    basic_lib_manifest, basic_manifest, project, registry::Package, rustc_host, Project,
+    basic_lib_manifest, basic_manifest, is_coarse_mtime, project, registry::Package, rustc_host,
+    Project,
 };
 
 #[test]
@@ -212,6 +213,14 @@ fn metabuild_lib_name() {
 
 #[test]
 fn metabuild_fresh() {
+    if is_coarse_mtime() {
+        // This test doesn't work on coarse mtimes very well. Because the
+        // metabuild script is created at build time, its mtime is almost
+        // always equal to the mtime of the output. The second call to `build`
+        // will then think it needs to be rebuilt when it should be fresh.
+        return;
+    }
+
     // Check that rebuild is fresh.
     let p = project()
         .file(
