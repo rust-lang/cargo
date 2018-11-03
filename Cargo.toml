@@ -64,6 +64,10 @@ openssl = { version = '0.10.11', optional = true }
 # for more information.
 rustc-workspace-hack = "1.0.0"
 
+# TODO: This patch will be removed before PR merge, when tar has a release containing this patch
+[patch.crates-io]
+tar = { git = "https://github.com/alexcrichton/tar-rs", rev = "f442964" }
+
 [target.'cfg(target_os = "macos")'.dependencies]
 core-foundation = { version = "0.6.0", features = ["mac_os_10_7_support"] }
 
