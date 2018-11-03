@@ -418,6 +418,9 @@ fn run_verify(ws: &Workspace, tar: &FileLock, opts: &PackageOpts) -> CargoResult
         paths::remove_dir_all(&dst)?;
     }
     let mut archive = Archive::new(f);
+    // We don't need to set the Modified Time, as it's not relevant to verification
+    // and it errors on filesystems that don't support setting a modified timestamp
+    archive.set_preserve_mtime(false);
     archive.unpack(dst.parent().unwrap())?;
 
     // Manufacture an ephemeral workspace to ensure that even if the top-level
