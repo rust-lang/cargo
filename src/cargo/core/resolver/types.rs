@@ -6,7 +6,8 @@ use std::time::{Duration, Instant};
 
 use core::interning::InternedString;
 use core::{Dependency, PackageId, PackageIdSpec, Registry, Summary};
-use util::{CargoError, CargoResult, Config};
+use util::errors::CargoResult;
+use util::Config;
 
 pub struct ResolverProgress {
     ticks: u16,
@@ -347,25 +348,6 @@ impl RemainingDeps {
 //
 // (dependency info, candidates, features activated)
 pub type DepInfo = (Dependency, Rc<Vec<Candidate>>, Rc<Vec<InternedString>>);
-
-pub type ActivateResult<T> = Result<T, ActivateError>;
-
-pub enum ActivateError {
-    Fatal(CargoError),
-    Conflict(PackageId, ConflictReason),
-}
-
-impl From<::failure::Error> for ActivateError {
-    fn from(t: ::failure::Error) -> Self {
-        ActivateError::Fatal(t)
-    }
-}
-
-impl From<(PackageId, ConflictReason)> for ActivateError {
-    fn from(t: (PackageId, ConflictReason)) -> Self {
-        ActivateError::Conflict(t.0, t.1)
-    }
-}
 
 /// All possible reasons that a package might fail to activate.
 ///

@@ -171,6 +171,10 @@ unable to verify that `{0}` is the same as when the lockfile was generated
         self.graph.contains(k)
     }
 
+    pub fn sort(&self) -> Vec<PackageId> {
+        self.graph.sort()
+    }
+
     pub fn iter(&self) -> impl Iterator<Item = &PackageId> {
         self.graph.iter()
     }

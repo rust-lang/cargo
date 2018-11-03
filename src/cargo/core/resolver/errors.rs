@@ -4,8 +4,8 @@ use std::fmt;
 use core::{Dependency, PackageId, Registry, Summary};
 use failure::{Error, Fail};
 use semver;
-use util::config::Config;
 use util::lev_distance::lev_distance;
+use util::{CargoError, Config};
 
 use super::context::Context;
 use super::types::{Candidate, ConflictReason};
@@ -46,6 +46,25 @@ impl fmt::Debug for ResolveError {
 impl fmt::Display for ResolveError {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         self.cause.fmt(f)
+    }
+}
+
+pub type ActivateResult<T> = Result<T, ActivateError>;
+
+pub enum ActivateError {
+    Fatal(CargoError),
+    Conflict(PackageId, ConflictReason),
+}
+
+impl From<::failure::Error> for ActivateError {
+    fn from(t: ::failure::Error) -> Self {
+        ActivateError::Fatal(t)
+    }
+}
+
+impl From<(PackageId, ConflictReason)> for ActivateError {
+    fn from(t: (PackageId, ConflictReason)) -> Self {
+        ActivateError::Conflict(t.0, t.1)
     }
 }
 

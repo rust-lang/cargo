@@ -377,7 +377,8 @@ impl<'a, 'cfg> ser::Serialize for WorkspaceResolve<'a, 'cfg> {
             root: None,
             metadata,
             patch,
-        }.serialize(s)
+        }
+        .serialize(s)
     }
 }
 

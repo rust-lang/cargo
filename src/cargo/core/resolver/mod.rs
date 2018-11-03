@@ -62,21 +62,21 @@ use util::errors::CargoResult;
 use util::profile;
 
 use self::context::{Activations, Context};
-use self::types::{ActivateError, ActivateResult, Candidate, ConflictReason, DepsFrame, GraphNode};
+use self::types::{Candidate, ConflictReason, DepsFrame, GraphNode};
 use self::types::{RcVecIter, RegistryQueryer, RemainingDeps, ResolverProgress};
 
 pub use self::encode::{EncodableDependency, EncodablePackageId, EncodableResolve};
 pub use self::encode::{Metadata, WorkspaceResolve};
+pub use self::errors::{ActivateError, ActivateResult, ResolveError};
 pub use self::resolve::Resolve;
 pub use self::types::Method;
-pub use self::errors::ResolveError;
 
 mod conflict_cache;
 mod context;
 mod encode;
+mod errors;
 mod resolve;
 mod types;
-mod errors;
 
 /// Builds the list of all packages required to build the first argument.
 ///
@@ -403,7 +403,8 @@ fn activate_deps_loop(
                             .clone()
                             .filter_map(|(_, (ref new_dep, _, _))| {
                                 past_conflicting_activations.conflicting(&cx, new_dep)
-                            }).next()
+                            })
+                            .next()
                         {
                             // If one of our deps is known unresolvable
                             // then we will not succeed.
@@ -438,12 +439,15 @@ fn activate_deps_loop(
                                 // for deps related to us
                                 .filter(|&(_, ref other_dep)| {
                                     known_related_bad_deps.contains(other_dep)
-                                }).filter_map(|(other_parent, other_dep)| {
+                                })
+                                .filter_map(|(other_parent, other_dep)| {
                                     past_conflicting_activations
                                         .find_conflicting(&cx, &other_dep, |con| {
                                             con.contains_key(&pid)
-                                        }).map(|con| (other_parent, con))
-                                }).next()
+                                        })
+                                        .map(|con| (other_parent, con))
+                                })
+                                .next()
                             {
                                 let rel = conflict.get(&pid).unwrap().clone();
 
@@ -485,7 +489,8 @@ fn activate_deps_loop(
                                 &parent,
                                 backtracked,
                                 &conflicting_activations,
-                            ).is_none()
+                            )
+                            .is_none()
                         }
                     };
 
