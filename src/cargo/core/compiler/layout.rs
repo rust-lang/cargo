@@ -86,13 +86,20 @@ impl Layout {
     /// adding the target triple and the profile (debug, release, ...).
     pub fn new(ws: &Workspace, triple: Option<&str>, dest: &str) -> CargoResult<Layout> {
         let mut path = ws.target_dir();
-        // Flexible target specifications often point at filenames, so interpret
+        // Flexible target specifications often point at json files, so interpret
         // the target triple as a Path and then just use the file stem as the
-        // component for the directory name.
+        // component for the directory name in that case.
         if let Some(triple) = triple {
-            path.push(Path::new(triple)
-                .file_stem()
-                .ok_or_else(|| format_err!("invalid target"))?);
+            let triple = Path::new(triple);
+            if triple.extension().and_then(|s| s.to_str()) == Some("json") {
+                path.push(
+                    triple
+                        .file_stem()
+                        .ok_or_else(|| format_err!("invalid target"))?,
+                );
+            } else {
+                path.push(triple);
+            }
         }
         path.push(dest);
         Layout::at(ws.config(), path)
