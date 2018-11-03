@@ -279,3 +279,69 @@ fn a() {
         .with_stdout_contains_n("test [..] ... ok", 2)
         .run();
 }
+
+#[test]
+fn proc_macro_crate_type() {
+    // Verify that `crate-type = ["proc-macro"]` is the same as `proc-macro = true`
+    // and that everything, including rustdoc, works correctly.
+    let foo = project()
+        .file(
+            "Cargo.toml",
+            r#"
+            [package]
+            name = "foo"
+            version = "0.1.0"
+            [dependencies]
+            pm = { path = "pm" }
+        "#,
+        )
+        .file(
+            "src/lib.rs",
+            r#"
+            //! ```
+            //! use foo::THING;
+            //! assert_eq!(THING, 123);
+            //! ```
+            #[macro_use]
+            extern crate pm;
+            #[derive(MkItem)]
+            pub struct S;
+            #[cfg(test)]
+            mod tests {
+                use super::THING;
+                #[test]
+                fn it_works() {
+                    assert_eq!(THING, 123);
+                }
+            }
+        "#,
+        )
+        .file(
+            "pm/Cargo.toml",
+            r#"
+            [package]
+            name = "pm"
+            version = "0.1.0"
+            [lib]
+            crate-type = ["proc-macro"]
+        "#,
+        )
+        .file(
+            "pm/src/lib.rs",
+            r#"
+            extern crate proc_macro;
+            use proc_macro::TokenStream;
+
+            #[proc_macro_derive(MkItem)]
+            pub fn mk_item(_input: TokenStream) -> TokenStream {
+                "pub const THING: i32 = 123;".parse().unwrap()
+            }
+        "#,
+        )
+        .build();
+
+    foo.cargo("test")
+        .with_stdout_contains("test tests::it_works ... ok")
+        .with_stdout_contains_n("test [..] ... ok", 2)
+        .run();
+}
