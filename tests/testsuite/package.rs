@@ -285,7 +285,8 @@ dependency `bar` does not specify a version.
 
 #[test]
 fn exclude() {
-    let p = project()
+    let root = paths::root().join("exclude");
+    let repo = git::repo(&root)
         .file("Cargo.toml", r#"
             [project]
             name = "foo"
@@ -348,7 +349,8 @@ fn exclude() {
         .file("some_dir/dir_deep_5/some_dir/file", "")
         .build();
 
-    p.cargo("package --no-verify -v")
+    cargo_process("package --no-verify -v")
+        .cwd(repo.root())
         .with_stdout("")
         .with_stderr(
             "\
@@ -366,7 +368,6 @@ See [..]
 See [..]
 [WARNING] [..] file `some_dir/file_deep_1` WILL be excluded [..]
 See [..]
-[WARNING] No (git) Cargo.toml found at `[..]` in workdir `[..]`
 [PACKAGING] foo v0.0.1 ([..])
 [ARCHIVING] [..]
 [ARCHIVING] [..]
@@ -386,14 +387,17 @@ See [..]
 [ARCHIVING] [..]
 [ARCHIVING] [..]
 [ARCHIVING] [..]
+[ARCHIVING] .cargo_vcs_info.json
 ",
         ).run();
 
-    assert!(p.root().join("target/package/foo-0.0.1.crate").is_file());
+    assert!(repo.root().join("target/package/foo-0.0.1.crate").is_file());
 
-    p.cargo("package -l")
+    cargo_process("package -l")
+        .cwd(repo.root())
         .with_stdout(
             "\
+.cargo_vcs_info.json
 Cargo.toml
 dir_root_1/some_dir/file
 dir_root_2/some_dir/file
@@ -418,7 +422,8 @@ src/main.rs
 
 #[test]
 fn include() {
-    let p = project()
+    let root = paths::root().join("include");
+    let repo = git::repo(&root)
         .file("Cargo.toml", r#"
             [project]
             name = "foo"
@@ -432,16 +437,17 @@ fn include() {
         .file("src/bar.txt", "") // should be ignored when packaging
         .build();
 
-    p.cargo("package --no-verify -v")
+    cargo_process("package --no-verify -v")
+        .cwd(repo.root())
         .with_stderr(
             "\
 [WARNING] manifest has no description[..]
 See http://doc.crates.io/manifest.html#package-metadata for more info.
-[WARNING] No (git) Cargo.toml found at `[..]` in workdir `[..]`
 [PACKAGING] foo v0.0.1 ([..])
 [ARCHIVING] [..]
 [ARCHIVING] [..]
 [ARCHIVING] [..]
+[ARCHIVING] .cargo_vcs_info.json
 ",
         ).run();
 }
