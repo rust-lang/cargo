@@ -23,24 +23,6 @@ expected a list, but found a integer for [..]",
 }
 
 #[test]
-fn alias_default_config_overrides_config() {
-    let p = project()
-        .file("Cargo.toml", &basic_bin_manifest("foo"))
-        .file("src/main.rs", "fn main() {}")
-        .file(
-            ".cargo/config",
-            r#"
-            [alias]
-            b = "not_build"
-        "#,
-        ).build();
-
-    p.cargo("b -v")
-        .with_stderr_contains("[COMPILING] foo v0.5.0 [..]")
-        .run();
-}
-
-#[test]
 fn alias_config() {
     let p = project()
         .file("Cargo.toml", &basic_bin_manifest("foo"))
@@ -122,7 +104,7 @@ fn alias_with_flags_config() {
 }
 
 #[test]
-fn cant_shadow_builtin() {
+fn alias_cannot_shadow_builtin_command() {
     let p = project()
         .file("Cargo.toml", &basic_bin_manifest("foo"))
         .file("src/main.rs", "fn main() {}")
@@ -137,9 +119,32 @@ fn cant_shadow_builtin() {
     p.cargo("build")
         .with_stderr(
             "\
-[WARNING] alias `build` is ignored, because it is shadowed by a built in command
+[WARNING] user-defined alias `build` is ignored, because it is shadowed by a built-in command
 [COMPILING] foo v0.5.0 ([..])
 [FINISHED] dev [unoptimized + debuginfo] target(s) in [..]
+",
+        ).run();
+}
+
+#[test]
+fn alias_override_builtin_alias() {
+    let p = project()
+        .file("Cargo.toml", &basic_bin_manifest("foo"))
+        .file("src/main.rs", "fn main() {}")
+        .file(
+            ".cargo/config",
+            r#"
+            [alias]
+            b = "run"
+         "#,
+        ).build();
+
+    p.cargo("b")
+        .with_stderr(
+            "\
+[COMPILING] foo v0.5.0 ([..])
+[FINISHED] dev [unoptimized + debuginfo] target(s) in [..]
+[RUNNING] `target/debug/foo[EXE]`
 ",
         ).run();
 }
