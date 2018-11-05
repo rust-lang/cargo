@@ -50,7 +50,7 @@ serde_derive = "1.0"
 serde_ignored = "0.0.4"
 serde_json = { version = "1.0.30", features = ["raw_value"] }
 shell-escape = "0.1.4"
-tar = { version = "0.4.15", default-features = false }
+tar = { version = "0.4.18", default-features = false }
 tempfile = "3.0"
 termcolor = "1.0"
 toml = "0.4.2"
@@ -63,10 +63,6 @@ openssl = { version = '0.10.11', optional = true }
 # See the `src/tools/rustc-workspace-hack/README.md` file in `rust-lang/rust`
 # for more information.
 rustc-workspace-hack = "1.0.0"
-
-# TODO: This patch will be removed before PR merge, when tar has a release containing this patch
-[patch.crates-io]
-tar = { git = "https://github.com/alexcrichton/tar-rs", rev = "f442964" }
 
 [target.'cfg(target_os = "macos")'.dependencies]
 core-foundation = { version = "0.6.0", features = ["mac_os_10_7_support"] }
