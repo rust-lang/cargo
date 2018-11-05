@@ -234,6 +234,8 @@ impl<'a, 'cfg> Context<'a, 'cfg> {
                         }
                     }
                 }
+                // Help with tests to get a stable order with renamed deps.
+                doctest_deps.sort();
                 self.compilation.to_doc_test.push(compilation::Doctest {
                     package: unit.pkg.clone(),
                     target: unit.target.clone(),
