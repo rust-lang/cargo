@@ -5,13 +5,14 @@ use std::io::{self, Write};
 use std::path::{self, Path, PathBuf};
 use std::sync::Arc;
 
+use failure::Error;
 use same_file::is_same_file;
 use serde_json;
 
 use core::manifest::TargetSourcePath;
 use core::profiles::{Lto, Profile};
 use core::{PackageId, Target};
-use util::errors::{CargoResult, CargoResultExt, Internal};
+use util::errors::{CargoResult, CargoResultExt, Internal, ProcessError};
 use util::paths;
 use util::{self, machine_message, Freshness, ProcessBuilder, process};
 use util::{internal, join_paths, profile};
@@ -275,6 +276,18 @@ fn rustc<'a, 'cfg>(
             }
         }
 
+        fn internal_if_simple_exit_code(err: Error) -> Error {
+            if err
+                .downcast_ref::<ProcessError>()
+                .as_ref()
+                .and_then(|perr| perr.exit.and_then(|e| e.code()))
+                .is_none()
+            {
+                return err;
+            }
+            Internal::new(err).into()
+        }
+
         state.running(&rustc);
         if json_messages {
             exec.exec_json(
@@ -284,13 +297,14 @@ fn rustc<'a, 'cfg>(
                 mode,
                 &mut assert_is_empty,
                 &mut |line| json_stderr(line, &package_id, &target),
-            ).map_err(Internal::new)
+            )
+            .map_err(internal_if_simple_exit_code)
             .chain_err(|| format!("Could not compile `{}`.", name))?;
         } else if build_plan {
             state.build_plan(buildkey, rustc.clone(), outputs.clone());
         } else {
             exec.exec_and_capture_output(rustc, &package_id, &target, mode, state)
-                .map_err(Internal::new)
+                .map_err(internal_if_simple_exit_code)
                 .chain_err(|| format!("Could not compile `{}`.", name))?;
         }
 
