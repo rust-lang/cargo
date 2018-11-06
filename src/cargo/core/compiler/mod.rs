@@ -281,7 +281,7 @@ fn rustc<'a, 'cfg>(
                 .downcast_ref::<ProcessError>()
                 .as_ref()
                 .and_then(|perr| perr.exit.and_then(|e| e.code()))
-                .is_none()
+                != Some(1)
             {
                 return err;
             }
