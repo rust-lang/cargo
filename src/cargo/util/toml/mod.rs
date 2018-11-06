@@ -1474,7 +1474,14 @@ impl TomlTarget {
     }
 
     fn proc_macro(&self) -> Option<bool> {
-        self.proc_macro.or(self.proc_macro2)
+        self.proc_macro.or(self.proc_macro2).or_else(|| {
+            if let Some(types) = self.crate_types() {
+                if types.contains(&"proc-macro".to_string()) {
+                    return Some(true);
+                }
+            }
+            None
+        })
     }
 
     fn crate_types(&self) -> Option<&Vec<String>> {
