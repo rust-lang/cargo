@@ -277,15 +277,16 @@ fn rustc<'a, 'cfg>(
         }
 
         fn internal_if_simple_exit_code(err: Error) -> Error {
-            if err
+            // If a signal on unix (code == None) or an abnormal termination
+            // on Windows (codes like 0xC0000409), don't hide the error details.
+            match err
                 .downcast_ref::<ProcessError>()
                 .as_ref()
                 .and_then(|perr| perr.exit.and_then(|e| e.code()))
-                != Some(1)
             {
-                return err;
+                Some(n) if n < 128 => Internal::new(err).into(),
+                _ => err,
             }
-            Internal::new(err).into()
         }
 
         state.running(&rustc);
