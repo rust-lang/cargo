@@ -345,3 +345,79 @@ fn proc_macro_crate_type() {
         .with_stdout_contains_n("test [..] ... ok", 2)
         .run();
 }
+
+#[test]
+fn proc_macro_crate_type_warning() {
+    let foo = project()
+        .file(
+            "Cargo.toml",
+            r#"
+            [package]
+            name = "foo"
+            version = "0.1.0"
+            [lib]
+            crate-type = ["proc-macro"]
+        "#,
+        )
+        .file("src/lib.rs", "")
+        .build();
+
+    foo.cargo("build")
+        .with_stderr_contains(
+            "[WARNING] library `foo` should only specify `proc-macro = true` instead of setting `crate-type`")
+        .run();
+}
+
+#[test]
+fn proc_macro_crate_type_warning_plugin() {
+    let foo = project()
+        .file(
+            "Cargo.toml",
+            r#"
+            [package]
+            name = "foo"
+            version = "0.1.0"
+            [lib]
+            crate-type = ["proc-macro"]
+            plugin = true
+        "#,
+        )
+        .file("src/lib.rs", "")
+        .build();
+
+    foo.cargo("build")
+        .with_stderr_contains(
+            "[WARNING] proc-macro library `foo` should not specify `plugin = true`")
+        .with_stderr_contains(
+            "[WARNING] library `foo` should only specify `proc-macro = true` instead of setting `crate-type`")
+        .run();
+}
+
+#[test]
+fn proc_macro_crate_type_multiple() {
+    let foo = project()
+        .file(
+            "Cargo.toml",
+            r#"
+            [package]
+            name = "foo"
+            version = "0.1.0"
+            [lib]
+            crate-type = ["proc-macro", "rlib"]
+        "#,
+        )
+        .file("src/lib.rs", "")
+        .build();
+
+    foo.cargo("build")
+        .with_stderr(
+            "\
+[ERROR] failed to parse manifest at `[..]/foo/Cargo.toml`
+
+Caused by:
+  cannot mix `proc-macro` crate type with others
+",
+        )
+        .with_status(101)
+        .run();
+}
