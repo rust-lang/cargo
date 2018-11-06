@@ -780,7 +780,8 @@ impl Config {
         {
             let mut http = http.borrow_mut();
             http.reset();
-            ops::configure_http_handle(self, &mut http)?;
+            let timeout = ops::configure_http_handle(self, &mut http)?;
+            timeout.configure(&mut http)?;
         }
         Ok(http)
     }
