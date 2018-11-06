@@ -183,7 +183,7 @@ fn fix_path_deps() {
     p.cargo("fix --allow-no-vcs -p foo -p bar")
         .env("__CARGO_FIX_YOLO", "1")
         .with_stdout("")
-        .with_stderr(
+        .with_stderr_unordered(
             "\
 [CHECKING] bar v0.1.0 ([..])
 [FIXING] bar/src/lib.rs (1 fix)
