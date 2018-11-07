@@ -16,6 +16,13 @@ use proptest::collection::vec;
 use proptest::prelude::*;
 
 proptest! {
+    /// NOTE: proptest is a form of fuzz testing. It generates random input and makes shore that
+    /// certain universal truths are upheld. Therefore, it can pass when there is a problem,
+    /// but if it fails then there really is something wrong. When testing something as
+    /// complicated as the resolver, the problems can be very subtle and hard to generate.
+    /// We have had a history of these tests only failing on PRs long after a bug is introduced.
+    /// If you have one of these test fail please report it on #6258,
+    /// and if you did not change the resolver then feel free to retry without concern.
     #![proptest_config(ProptestConfig {
         // Note that this is a little low in terms of cases we'd like to test,
         // but this number affects how long this function takes. It can be
@@ -34,6 +41,7 @@ proptest! {
         .. ProptestConfig::default()
     })]
 
+    /// NOTE: if you think this test has failed spuriously see the note at the top of this macro.
     #[test]
     fn passes_validation(
         PrettyPrintRegistry(input) in registry_strategy(50, 20, 60)
@@ -51,6 +59,7 @@ proptest! {
         }
     }
 
+    /// NOTE: if you think this test has failed spuriously see the note at the top of this macro.
     #[test]
     fn minimum_version_errors_the_same(
             PrettyPrintRegistry(input) in registry_strategy(50, 20, 60)
@@ -100,6 +109,7 @@ proptest! {
         }
     }
 
+    /// NOTE: if you think this test has failed spuriously see the note at the top of this macro.
     #[test]
     fn limited_independence_of_irrelevant_alternatives(
         PrettyPrintRegistry(input) in registry_strategy(50, 20, 60),
