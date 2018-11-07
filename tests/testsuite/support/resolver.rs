@@ -355,7 +355,7 @@ pub fn registry_strategy(
     max_versions: usize,
     shrinkage: usize,
 ) -> impl Strategy<Value = PrettyPrintRegistry> {
-    let name = string_regex("[A-Za-z_-][A-Za-z0-9_-]*(-sys)?").unwrap();
+    let name = string_regex("[A-Za-z][A-Za-z0-9_-]*(-sys)?").unwrap();
 
     let raw_version = [..max_versions; 3];
     let version_from_raw = |v: &[usize; 3]| format!("{}.{}.{}", v[0], v[1], v[2]);
