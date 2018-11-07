@@ -355,7 +355,7 @@ pub fn registry_strategy(
     max_versions: usize,
     shrinkage: usize,
 ) -> impl Strategy<Value = PrettyPrintRegistry> {
-    let name = string_regex("[A-Za-z_-][A-Za-z0-9_-]*(-sys)?").unwrap();
+    let name = string_regex("[A-Za-z][A-Za-z0-9_-]*(-sys)?").unwrap();
 
     let raw_version = [..max_versions; 3];
     let version_from_raw = |v: &[usize; 3]| format!("{}.{}.{}", v[0], v[1], v[2]);
@@ -460,12 +460,16 @@ pub fn registry_strategy(
 
 /// This test is to test the generator to ensure
 /// that it makes registries with large dependency trees
+///
+/// This is a form of randomized testing, if you are unlucky it can fail.
+/// A failure on it's own is not a big dael. If you did not change the
+/// `registry_strategy` then feel free to retry without concern.
 #[test]
 fn meta_test_deep_trees_from_strategy() {
     let mut dis = [0; 21];
 
     let strategy = registry_strategy(50, 20, 60);
-    for _ in 0..64 {
+    for _ in 0..128 {
         let PrettyPrintRegistry(input) = strategy
             .new_tree(&mut TestRunner::default())
             .unwrap()
@@ -488,19 +492,23 @@ fn meta_test_deep_trees_from_strategy() {
     }
 
     panic!(
-        "In 640 tries we did not see a wide enough distribution of dependency trees! dis: {:?}",
+        "In 1280 tries we did not see a wide enough distribution of dependency trees! dis: {:?}",
         dis
     );
 }
 
 /// This test is to test the generator to ensure
 /// that it makes registries that include multiple versions of the same library
+///
+/// This is a form of randomized testing, if you are unlucky it can fail.
+/// A failure on its own is not a big deal. If you did not change the
+/// `registry_strategy` then feel free to retry without concern.
 #[test]
 fn meta_test_multiple_versions_strategy() {
     let mut dis = [0; 10];
 
     let strategy = registry_strategy(50, 20, 60);
-    for _ in 0..64 {
+    for _ in 0..128 {
         let PrettyPrintRegistry(input) = strategy
             .new_tree(&mut TestRunner::default())
             .unwrap()
@@ -524,7 +532,7 @@ fn meta_test_multiple_versions_strategy() {
         }
     }
     panic!(
-        "In 640 tries we did not see a wide enough distribution of multiple versions of the same library! dis: {:?}",
+        "In 1280 tries we did not see a wide enough distribution of multiple versions of the same library! dis: {:?}",
         dis
     );
 }
