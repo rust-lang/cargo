@@ -1,4 +1,4 @@
-use std::collections::{HashMap, HashSet};
+use std::collections::{BTreeMap, BTreeSet, HashMap, HashSet};
 
 use super::types::ConflictReason;
 use core::resolver::Context;
@@ -34,7 +34,7 @@ pub(super) struct ConflictCache {
     // as a global cache which we never delete from. Any entry in this map is
     // unconditionally true regardless of our resolution history of how we got
     // here.
-    con_from_dep: HashMap<Dependency, Vec<HashMap<PackageId, ConflictReason>>>,
+    con_from_dep: HashMap<Dependency, BTreeSet<BTreeMap<PackageId, ConflictReason>>>,
     // `dep_from_pid` is an inverse-index of `con_from_dep`.
     // For every `PackageId` this lists the `Dependency`s that mention it in `dep_from_pid`.
     dep_from_pid: HashMap<PackageId, HashSet<Dependency>>,
@@ -54,9 +54,9 @@ impl ConflictCache {
         cx: &Context,
         dep: &Dependency,
         filter: F,
-    ) -> Option<&HashMap<PackageId, ConflictReason>>
+    ) -> Option<&BTreeMap<PackageId, ConflictReason>>
     where
-        for<'r> F: FnMut(&'r &HashMap<PackageId, ConflictReason>) -> bool,
+        for<'r> F: FnMut(&'r &BTreeMap<PackageId, ConflictReason>) -> bool,
     {
         self.con_from_dep
             .get(dep)?
@@ -69,18 +69,18 @@ impl ConflictCache {
         &self,
         cx: &Context,
         dep: &Dependency,
-    ) -> Option<&HashMap<PackageId, ConflictReason>> {
+    ) -> Option<&BTreeMap<PackageId, ConflictReason>> {
         self.find_conflicting(cx, dep, |_| true)
     }
 
     /// Add to the cache a conflict of the form:
     /// `dep` is known to be unresolvable if
     /// all the `PackageId` entries are activated
-    pub fn insert(&mut self, dep: &Dependency, con: &HashMap<PackageId, ConflictReason>) {
+    pub fn insert(&mut self, dep: &Dependency, con: &BTreeMap<PackageId, ConflictReason>) {
         let past = self
             .con_from_dep
             .entry(dep.clone())
-            .or_insert_with(Vec::new);
+            .or_insert_with(BTreeSet::new);
         if !past.contains(con) {
             trace!(
                 "{} = \"{}\" adding a skip {:?}",
@@ -88,7 +88,7 @@ impl ConflictCache {
                 dep.version_req(),
                 con
             );
-            past.push(con.clone());
+            past.insert(con.clone());
             for c in con.keys() {
                 self.dep_from_pid
                     .entry(c.clone())

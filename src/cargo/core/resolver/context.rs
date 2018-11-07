@@ -1,4 +1,4 @@
-use std::collections::{HashMap, HashSet};
+use std::collections::{BTreeMap, HashMap, HashSet};
 use std::rc::Rc;
 
 use core::interning::InternedString;
@@ -6,8 +6,8 @@ use core::{Dependency, FeatureValue, PackageId, SourceId, Summary};
 use util::CargoResult;
 use util::Graph;
 
-use super::types::{ConflictReason, DepInfo, GraphNode, Method, RcList, RegistryQueryer};
 use super::errors::ActivateResult;
+use super::types::{ConflictReason, DepInfo, GraphNode, Method, RcList, RegistryQueryer};
 
 pub use super::encode::{EncodableDependency, EncodablePackageId, EncodableResolve};
 pub use super::encode::{Metadata, WorkspaceResolve};
@@ -145,7 +145,7 @@ impl Context {
     pub fn is_conflicting(
         &self,
         parent: Option<&PackageId>,
-        conflicting_activations: &HashMap<PackageId, ConflictReason>,
+        conflicting_activations: &BTreeMap<PackageId, ConflictReason>,
     ) -> bool {
         conflicting_activations
             .keys()
@@ -186,10 +186,11 @@ impl Context {
             // name.
             let base = reqs.deps.get(&dep.name_in_toml()).unwrap_or(&default_dep);
             used_features.insert(dep.name_in_toml());
-            let always_required = !dep.is_optional() && !s
-                .dependencies()
-                .iter()
-                .any(|d| d.is_optional() && d.name_in_toml() == dep.name_in_toml());
+            let always_required = !dep.is_optional()
+                && !s
+                    .dependencies()
+                    .iter()
+                    .any(|d| d.is_optional() && d.name_in_toml() == dep.name_in_toml());
             if always_required && base.0 {
                 self.warnings.push(format!(
                     "Package `{}` does not have feature `{}`. It has a required dependency \
