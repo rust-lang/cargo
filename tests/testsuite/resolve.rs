@@ -1174,135 +1174,30 @@ fn hard_equality() {
 }
 
 #[test]
-fn slow_case() {
-    let reg = registry(vec![
-        pkg!(("-a-sys", "0.0.0") => [dep("bad"),]),
-        pkg!(("-a-sys", "0.0.1") => [dep("bad"),]),
-        pkg!(("-a-sys", "0.0.2") => [dep("bad"),]),
-        pkg!(("-a-sys", "0.0.3") => [dep("bad"),]),
-        pkg!(("-a-sys", "0.0.4")),
-        pkg!(("-a-sys", "0.0.5")),
-        pkg!(("-a-sys", "0.0.6")),
-        pkg!(("-a-sys", "0.0.7")),
-        pkg!(("-a-sys", "0.0.8")),
-        pkg!(("-a-sys", "0.0.9") => [dep("bad"),]),
-        pkg!(("-a-sys", "0.0.10")),
-        pkg!(("-a-sys", "0.0.11")),
-        pkg!(("-a-sys", "0.1.0")),
-        pkg!(("-a-sys", "0.1.1")),
-        pkg!(("-a-sys", "0.1.2")),
-        pkg!(("-a-sys", "0.1.3")),
-        pkg!(("-a-sys", "0.2.0")),
-        pkg!(("-a-sys", "0.2.1")),
-        pkg!(("A_-sys", "0.0.0") => [dep("bad"),]),
-        pkg!(("A_-sys", "0.0.1") => [dep("bad"),]),
-        pkg!(("A_-sys", "0.0.2") => [dep("bad"),]),
-        pkg!(("A_-sys", "0.0.3") =>[dep("bad"),]),
-        pkg!(("A_-sys", "0.0.4") => [dep("bad"),]),
-        pkg!(("A_-sys", "0.0.5") => [dep("bad"),]),
-        pkg!(("A_-sys", "0.0.6") => [dep("bad"),]),
-        pkg!(("A_-sys", "0.0.7") => [dep("bad"),]),
-        pkg!(("A_-sys", "0.1.0") => [dep("bad"),]),
-        pkg!(("A_-sys", "0.1.1") => [dep("bad"),]),
-        pkg!(("A_-sys", "0.1.2")),
-        pkg!(("A_-sys", "0.1.3")),
-        pkg!(("A_-sys", "0.1.4")),
-        pkg!(("A_-sys", "0.1.5")),
-        pkg!(("A_-sys", "0.1.6")),
-        pkg!(("A_-sys", "0.2.0")),
-        pkg!(("A_-sys", "0.2.1")),
-        pkg!(("A_-sys", "0.2.2")),
-        pkg!(("A_-sys", "0.3.0")),
-        pkg!(("A_-sys", "1.0.0")),
-        pkg!(("__-sys", "0.0.0") => [dep("bad"),]),
-        pkg!(("__-sys", "0.0.1") => [dep("bad"),]),
-        pkg!(("__-sys", "0.0.2")),
-        pkg!(("__-sys", "0.0.3")),
-        pkg!(("__-sys", "0.0.4") => [dep_req("-a-sys", ">= 0.0.1, <= 0.0.8"),]),
-        pkg!(("__-sys", "0.0.5") => [dep("bad"),]),
-        pkg!(("a-sys", "0.0.0") => [dep("bad"),]),
-        pkg!(("a-sys", "0.0.1") => [dep("bad"),]),
-        pkg!(("a-sys", "0.0.2") => [dep("bad"),]),
-        pkg!(("a-sys", "0.0.3") => [dep("bad"),]),
-        pkg!(("a-sys", "0.0.4")),
-        pkg!(("a-sys", "0.0.5") => [dep("bad"),]),
-        pkg!(("a-sys", "0.0.6")),
-        pkg!(("a-sys", "0.1.0") => [dep("bad"),]),
-        pkg!(("a-sys", "0.1.1")),
-        pkg!(("a-sys", "0.1.2")),
-        pkg!(("a-sys", "0.1.3")),
-        pkg!(("a-sys", "0.1.4")),
-        pkg!(("a-sys", "0.1.5")),
-        pkg!(("c-sys", "0.0.0")),
-        pkg!(("c-sys", "0.0.1")),
-        pkg!(("c-sys", "0.0.2")),
-        pkg!(("c-sys", "0.0.3") => [dep("bad"),]),
-        pkg!(("c-sys", "0.0.4")),
-        pkg!(("c-sys", "0.0.5") => [dep("bad"),]),
-        pkg!(("c-sys", "0.0.6")),
-        pkg!(("c-sys", "0.0.7") => [dep("bad"),]),
-        pkg!(("c-sys", "0.0.8") => [dep("bad"),]),
-        pkg!(("c-sys", "0.0.9") => [dep("bad"),]),
-        pkg!(("c-sys", "0.1.0")),
-        pkg!(("c-sys", "1.0.0") => [dep("bad"),]),
-        pkg!(("c-sys", "1.0.1")),
-        pkg!(("c-sys", "1.0.2") => [dep("bad"),]),
-        pkg!(("c-sys", "1.0.3") => [dep("bad"),]),
-        pkg!(("d-sys", "0.0.0") => [dep("bad"),]),
-        pkg!(("d-sys", "0.0.1") => [dep("bad"),]),
-        pkg!(("d-sys", "0.0.2") => [dep("bad"),]),
-        pkg!(("d-sys", "0.0.3") => [dep("bad"),]),
-        pkg!(("d-sys", "0.0.4") => [dep("bad"),]),
-        pkg!(("d-sys", "0.0.5") => [dep("bad"),]),
-        pkg!(("d-sys", "0.1.0") => [dep("bad"),]),
-        pkg!(("d-sys", "0.1.1") => [dep("bad"),]),
-        pkg!(("d-sys", "0.1.2") => [dep_req("__-sys", "<= 0.0.4"),]),
-        pkg!(("d-sys", "0.2.0") => [dep_req("__-sys", "<= 0.0.4"),]),
-        pkg!(("f", "0.0.0") => [dep("bad"),]),
-        pkg!(("f", "0.0.1") => [dep("bad"),]),
-        pkg!(("f", "0.0.2") => [dep("bad"),]),
-        pkg!(("f", "0.0.3") => [dep("bad"),]),
-        pkg!(("f", "0.0.4") => [dep("bad"),]),
-        pkg!(("f", "0.0.5") => [dep("bad"),]),
-        pkg!(("f", "0.0.6") => [dep("bad"),]),
-        pkg!(("f", "0.0.7") => [dep("bad"),]),
-        pkg!(("f", "0.0.8") => [dep("bad"),]),
-        pkg!(("f", "0.0.9") => [dep("bad"),]),
-        pkg!(("f", "0.0.10") => [dep("bad"),]),
-        pkg!(("f", "0.0.11") => [dep("bad"),]),
-        pkg!(("f", "0.1.0") => [dep("bad"),]),
-        pkg!(("f", "0.1.1") => [dep("bad"),]),
-        pkg!(("f", "0.1.2") => [dep("bad"),]),
-        pkg!(("f", "1.0.0") => [dep("bad"),]),
-        pkg!(("f", "1.0.1") => [dep_req("a-sys", "= 0.1.5"),]),
-        pkg!(("f", "1.0.2") => [dep_req("c-sys", "= 0.0.5"),]),
-        pkg!(("fa", "0.0.0") => [dep("bad"),]),
-        pkg!(("fa", "0.0.1") => [dep("bad"),]),
-        pkg!(("fa", "0.0.2") => [dep("bad"),]),
-        pkg!(("fa", "0.0.3") => [dep("bad"),]),
-        pkg!(("fa", "0.0.4") => [dep("bad"),]),
-        pkg!(("fa", "0.1.0") => [dep("bad"),]),
-        pkg!(("fa", "0.2.0") => [dep("bad"),]),
-        pkg!(("fa", "0.2.1") => [dep_req("c-sys", "<= 0.0.4"),]),
-        pkg!(("fa", "0.2.2") => [dep_req("c-sys", ">= 0.0.5, <= 0.1.0"),]),
-        pkg!(("s", "0.0.0") => [dep("bad"),]),
-        pkg!(("s", "0.0.1") => [dep("bad"),]),
-        pkg!(("s", "0.0.2") => [dep("bad"),]),
-        pkg!(("s", "0.0.3") => [dep_req("__-sys", "= 0.0.5"),]),
-        pkg!(("s", "0.0.4") => [dep("bad"),]),
-        pkg!(("s", "0.0.5") => [dep_req("d-sys", "<= 0.0.0"),]),
-        pkg!(("s", "0.1.0") => [dep("f"),]),
-        pkg!(("s", "0.1.1") => [dep_req("-a-sys", ">= 0.0.10, <= 0.0.11"),dep_req("__-sys", "= 0.0.4"),]),
-        pkg!(("s", "0.1.2") => [dep("bad"),]),
-        pkg!(("s", "0.1.3") => [dep("bad"),]),
-        pkg!(("s", "0.1.4") => [dep_req("A_-sys", "= 0.3.0"),]),
-        pkg!(("sA", "1.0.1") => [
-            dep_req("A_-sys", ">= 0.1.1, <= 0.2.2"),
-            dep_req("a-sys", ">= 0.0.4, <= 0.1.4"),
-            dep_req("d-sys", ">= 0.0.1"),
-            dep("fa"),
-            dep("s"),
-        ]),
-    ]);
-    let _ = resolve(&pkg_id("root"), vec![dep("sA")], &reg);
+fn large_conflict_cache() {
+    let mut input  = vec![
+        pkg!(("last", "0.0.0") => [dep("bad")]) // just to make sure last is less constrained
+    ];
+    let mut root_deps = vec![dep("last")];
+    const NUM_VERSIONS: u8 = 3;
+    for name in 0..=NUM_VERSIONS {
+        // a large number of conflicts can easily be generated by a sys crate.
+        let sys_name = format!("{}-sys", (b'a' + name) as char);
+        let in_len = input.len();
+        input.push(pkg!(("last", format!("{}.0.0", in_len)) => [dep_req(&sys_name, "=0.0.0")]));
+        root_deps.push(dep_req(&sys_name, ">= 0.0.1"));
+
+        // a large number of conflicts can also easily be generated by a major release version.
+        let plane_name = format!("{}", (b'a' + name) as char);
+        let in_len = input.len();
+        input.push(pkg!(("last", format!("{}.0.0", in_len)) => [dep_req(&plane_name, "=1.0.0")]));
+        root_deps.push(dep_req(&plane_name, ">= 1.0.1"));
+
+        for i in 0..=NUM_VERSIONS {
+            input.push(pkg!((&sys_name, format!("{}.0.0", i))));
+            input.push(pkg!((&plane_name, format!("1.0.{}", i))));
+        }
+    }
+    let reg = registry(input);
+    let _ = resolve(&pkg_id("root"), root_deps, &reg);
 }
