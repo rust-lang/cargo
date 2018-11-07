@@ -1879,3 +1879,93 @@ fn ws_rustc_err() {
         .with_stderr("[ERROR] [..]against an actual package[..]")
         .run();
 }
+
+#[test]
+fn ws_err_unused() {
+    for key in &[
+        "[lib]",
+        "[[bin]]",
+        "[[example]]",
+        "[[test]]",
+        "[[bench]]",
+        "[dependencies]",
+        "[dev-dependencies]",
+        "[build-dependencies]",
+        "[features]",
+        "[target]",
+        "[badges]",
+    ] {
+        let p = project()
+            .file(
+                "Cargo.toml",
+                &format!(
+                    r#"
+                    [workspace]
+                    members = ["a"]
+
+                    {}
+                    "#,
+                    key
+                ),
+            )
+            .file("a/Cargo.toml", &basic_lib_manifest("a"))
+            .file("a/src/lib.rs", "")
+            .build();
+        p.cargo("check")
+            .with_status(101)
+            .with_stderr(&format!(
+                "\
+[ERROR] failed to parse manifest at `[..]/foo/Cargo.toml`
+
+Caused by:
+  virtual manifests do not specify {}
+",
+                key
+            ))
+            .run();
+    }
+}
+
+#[test]
+fn ws_warn_unused() {
+    for (key, name) in &[
+        ("[profile.dev]\nopt-level = 1", "profiles"),
+        ("[replace]\n\"bar:0.1.0\" = { path = \"bar\" }", "replace"),
+        ("[patch.crates-io]\nbar = { path = \"bar\" }", "patch"),
+    ] {
+        let p = project()
+            .file(
+                "Cargo.toml",
+                r#"
+                [workspace]
+                members = ["a"]
+                "#,
+            )
+            .file(
+                "a/Cargo.toml",
+                &format!(
+                    r#"
+                    [package]
+                    name = "a"
+                    version = "0.1.0"
+
+                    {}
+                    "#,
+                    key
+                ),
+            )
+            .file("a/src/lib.rs", "")
+            .build();
+        p.cargo("check")
+            .with_status(0)
+            .with_stderr_contains(&format!(
+                "\
+[WARNING] {} for the non root package will be ignored, specify {} at the workspace root:
+package:   [..]/foo/a/Cargo.toml
+workspace: [..]/foo/Cargo.toml
+",
+                name, name
+            ))
+            .run();
+    }
+}

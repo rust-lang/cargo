@@ -658,18 +658,28 @@ impl<'cfg> Workspace<'cfg> {
             for pkg in self.members()
                 .filter(|p| p.manifest_path() != root_manifest)
             {
-                if pkg.manifest().original().has_profiles() {
-                    let message = &format!(
-                        "profiles for the non root package will be ignored, \
-                         specify profiles at the workspace root:\n\
+                let manifest = pkg.manifest();
+                let emit_warning = |what| -> CargoResult<()> {
+                    let msg = format!(
+                        "{} for the non root package will be ignored, \
+                         specify {} at the workspace root:\n\
                          package:   {}\n\
                          workspace: {}",
+                        what,
+                        what,
                         pkg.manifest_path().display(),
-                        root_manifest.display()
+                        root_manifest.display(),
                     );
-
-                    //TODO: remove `Eq` bound from `Profiles` when the warning is removed.
-                    self.config.shell().warn(&message)?;
+                    self.config.shell().warn(&msg)
+                };
+                if manifest.original().has_profiles() {
+                    emit_warning("profiles")?;
+                }
+                if !manifest.replace().is_empty() {
+                    emit_warning("replace")?;
+                }
+                if !manifest.patch().is_empty() {
+                    emit_warning("patch")?;
                 }
             }
         }
