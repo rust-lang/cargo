@@ -1969,3 +1969,32 @@ workspace: [..]/foo/Cargo.toml
             .run();
     }
 }
+
+#[test]
+fn ws_warn_path() {
+    // Warnings include path to manifest.
+    let p = project()
+        .file(
+            "Cargo.toml",
+            r#"
+            [workspace]
+            members = ["a"]
+            "#,
+        )
+        .file(
+            "a/Cargo.toml",
+            r#"
+            cargo-features = ["edition"]
+            [package]
+            name = "foo"
+            version = "0.1.0"
+            "#,
+        )
+        .file("a/src/lib.rs", "")
+        .build();
+
+    p.cargo("check")
+        .with_status(0)
+        .with_stderr_contains("[WARNING] [..]/foo/a/Cargo.toml: the cargo feature `edition`[..]")
+        .run();
+}

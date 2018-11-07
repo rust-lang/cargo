@@ -741,6 +741,7 @@ impl<'cfg> Workspace<'cfg> {
                 MaybePackage::Package(pkg) => pkg.manifest().warnings().warnings(),
                 MaybePackage::Virtual(vm) => vm.warnings().warnings(),
             };
+            let path = path.join("Cargo.toml");
             for warning in warnings {
                 if warning.is_critical {
                     let err = format_err!("{}", warning.message);
@@ -750,7 +751,14 @@ impl<'cfg> Workspace<'cfg> {
                     );
                     return Err(err.context(cx).into());
                 } else {
-                    self.config.shell().warn(&warning.message)?
+                    let msg = if self.root_manifest.is_none() {
+                        warning.message.to_string()
+                    } else {
+                        // In a workspace, it can be confusing where a warning
+                        // originated, so include the path.
+                        format!("{}: {}", path.display(), warning.message)
+                    };
+                    self.config.shell().warn(msg)?
                 }
             }
         }

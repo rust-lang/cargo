@@ -734,7 +734,7 @@ fn unused_keys_in_virtual_manifest() {
     p.cargo("build --all")
         .with_stderr(
             "\
-warning: unused manifest key: workspace.bulid
+[WARNING] [..]/foo/Cargo.toml: unused manifest key: workspace.bulid
 [COMPILING] bar [..]
 [FINISHED] dev [unoptimized + debuginfo] target(s) in [..]
 ",
