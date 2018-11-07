@@ -24,6 +24,7 @@ pub struct PackageOpts<'cfg> {
     pub check_metadata: bool,
     pub allow_dirty: bool,
     pub verify: bool,
+    pub use_vcs: bool,
     pub jobs: Option<u32>,
     pub target: Option<String>,
     pub registry: Option<String>,
@@ -55,8 +56,12 @@ pub fn package(ws: &Workspace, opts: &PackageOpts) -> CargoResult<Option<FileLoc
     // Check (git) repository state, getting the current commit hash if not
     // dirty. This will `bail!` if dirty, unless allow_dirty. Produce json
     // info for any sha1 (HEAD revision) returned.
-    let vcs_info = check_repo_state(pkg, &src_files, &config, opts.allow_dirty)?
-        .map(|h| json!({"git":{"sha1": h}}));
+    let vcs_info = if opts.use_vcs {
+        check_repo_state(pkg, &src_files, &config, opts.allow_dirty)?
+            .map(|h| json!({"git":{"sha1": h}}))
+    } else {
+        None
+    };
 
     if opts.list {
         let root = pkg.root();

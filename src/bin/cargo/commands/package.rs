@@ -23,6 +23,10 @@ pub fn cli() -> App {
             "allow-dirty",
             "Allow dirty working directories to be packaged",
         ))
+        .arg(opt(
+            "no-vcs",
+            "Ignore version control for packaging",
+        ))
         .arg_target_triple("Build for the target triple")
         .arg_target_dir()
         .arg_manifest_path()
@@ -39,6 +43,7 @@ pub fn exec(config: &mut Config, args: &ArgMatches) -> CliResult {
             list: args.is_present("list"),
             check_metadata: !args.is_present("no-metadata"),
             allow_dirty: args.is_present("allow-dirty"),
+            use_vcs: !args.is_present("no-vcs"),
             target: args.target(),
             jobs: args.jobs()?,
             registry: None,
