@@ -1086,6 +1086,24 @@ impl TomlManifest {
         if me.bench.is_some() {
             bail!("virtual manifests do not specify [[bench]]");
         }
+        if me.dependencies.is_some() {
+            bail!("virtual manifests do not specify [dependencies]");
+        }
+        if me.dev_dependencies.is_some() || me.dev_dependencies2.is_some() {
+            bail!("virtual manifests do not specify [dev-dependencies]");
+        }
+        if me.build_dependencies.is_some() || me.build_dependencies2.is_some() {
+            bail!("virtual manifests do not specify [build-dependencies]");
+        }
+        if me.features.is_some() {
+            bail!("virtual manifests do not specify [features]");
+        }
+        if me.target.is_some() {
+            bail!("virtual manifests do not specify [target]");
+        }
+        if me.badges.is_some() {
+            bail!("virtual manifests do not specify [badges]");
+        }
 
         let mut nested_paths = Vec::new();
         let mut warnings = Vec::new();
