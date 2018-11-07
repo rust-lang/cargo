@@ -4373,3 +4373,65 @@ fn target_filters_workspace_not_found() {
         .with_stderr("[ERROR] no library targets found in packages: a, b")
         .run();
 }
+
+#[cfg(unix)]
+#[test]
+fn signal_display() {
+    // Cause the compiler to crash with a signal.
+    let foo = project()
+        .file(
+            "Cargo.toml",
+            r#"
+            [package]
+            name = "foo"
+            version = "0.1.0"
+            [dependencies]
+            pm = { path = "pm" }
+        "#,
+        )
+        .file(
+            "src/lib.rs",
+            r#"
+            #[macro_use]
+            extern crate pm;
+
+            #[derive(Foo)]
+            pub struct S;
+        "#,
+        )
+        .file(
+            "pm/Cargo.toml",
+            r#"
+            [package]
+            name = "pm"
+            version = "0.1.0"
+            [lib]
+            proc-macro = true
+        "#,
+        )
+        .file(
+            "pm/src/lib.rs",
+            r#"
+            extern crate proc_macro;
+            use proc_macro::TokenStream;
+
+            #[proc_macro_derive(Foo)]
+            pub fn derive(_input: TokenStream) -> TokenStream {
+                std::process::abort()
+            }
+        "#,
+        )
+        .build();
+
+    foo.cargo("build")
+        .with_stderr("\
+[COMPILING] pm [..]
+[COMPILING] foo [..]
+[ERROR] Could not compile `foo`.
+
+Caused by:
+  process didn't exit successfully: `rustc [..]` (signal: 6, SIGABRT: process abort signal)
+")
+        .with_status(101)
+        .run();
+}
