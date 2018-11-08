@@ -40,6 +40,23 @@ impl ConflictStore {
             }
         }
     }
+
+    pub fn insert<'a>(
+        &mut self,
+        mut iter: impl Iterator<Item = &'a PackageId>,
+        con: BTreeMap<PackageId, ConflictReason>,
+    ) {
+        if let Some(pid) = iter.next() {
+            if let ConflictStore::Map(p) = self {
+                p.entry(pid.clone())
+                    .or_insert_with(|| ConflictStore::Map(HashMap::new()))
+                    .insert(iter, con);
+            }
+            // else, We already have a subset of this in the ConflictStore
+        } else {
+            *self = ConflictStore::Con(con)
+        }
+    }
 }
 
 pub(super) struct ConflictCache {
@@ -113,30 +130,11 @@ impl ConflictCache {
     /// `dep` is known to be unresolvable if
     /// all the `PackageId` entries are activated
     pub fn insert(&mut self, dep: &Dependency, con: &BTreeMap<PackageId, ConflictReason>) {
-        let mut past = self
-            .con_from_dep
+        self.con_from_dep
             .entry(dep.clone())
-            .or_insert_with(|| ConflictStore::Map(HashMap::new()));
+            .or_insert_with(|| ConflictStore::Map(HashMap::new()))
+            .insert(con.keys(), con.clone());
 
-        for pid in con.keys() {
-            match past {
-                ConflictStore::Con(_) => {
-                    // We already have a subset of this in the ConflictStore
-                    return;
-                }
-                ConflictStore::Map(p) => {
-                    past = p
-                        .entry(pid.clone())
-                        .or_insert_with(|| ConflictStore::Map(HashMap::new()));
-                }
-            }
-        }
-
-        if let ConflictStore::Con(_) = past {
-            // We already have this in the ConflictStore
-            return;
-        }
-        *past = ConflictStore::Con(con.clone());
         trace!(
             "{} = \"{}\" adding a skip {:?}",
             dep.package_name(),
