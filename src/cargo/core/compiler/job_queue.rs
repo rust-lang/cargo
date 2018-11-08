@@ -112,15 +112,17 @@ impl<'a> JobState<'a> {
     pub fn capture_output(
         &self,
         cmd: &ProcessBuilder,
+        prefix: Option<String>,
         print_output: bool,
     ) -> CargoResult<Output> {
+        let prefix = prefix.unwrap_or_else(|| String::new());
         cmd.exec_with_streaming(
             &mut |out| {
-                let _ = self.tx.send(Message::Stdout(out.to_string()));
+                let _ = self.tx.send(Message::Stdout(format!("{}{}", prefix, out)));
                 Ok(())
             },
             &mut |err| {
-                let _ = self.tx.send(Message::Stderr(err.to_string()));
+                let _ = self.tx.send(Message::Stderr(format!("{}{}", prefix, err)));
                 Ok(())
             },
             print_output,
@@ -398,16 +400,17 @@ impl<'a> JobQueue<'a> {
             let res = job.run(fresh, &JobState { tx: my_tx.clone() });
             my_tx.send(Message::Finish(key, res)).unwrap();
         };
+
+        if !build_plan {
+            // Print out some nice progress information
+            self.note_working_on(config, &key, fresh)?;
+        }
+
         match fresh {
             Freshness::Fresh => doit(),
             Freshness::Dirty => {
                 scope.spawn(doit);
             }
-        }
-
-        if !build_plan {
-            // Print out some nice progress information
-            self.note_working_on(config, &key, fresh)?;
         }
 
         Ok(())

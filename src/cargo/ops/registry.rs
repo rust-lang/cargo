@@ -1,10 +1,12 @@
 use std::collections::BTreeMap;
 use std::fs::{self, File};
 use std::iter::repeat;
+use std::str;
 use std::time::Duration;
 use std::{cmp, env};
 
-use curl::easy::{Easy, SslOpt};
+use log::Level;
+use curl::easy::{Easy, SslOpt, InfoType};
 use git2;
 use registry::{NewCrate, NewCrateDependency, Registry};
 
@@ -328,6 +330,12 @@ pub fn registry(
 
 /// Create a new HTTP handle with appropriate global configuration for cargo.
 pub fn http_handle(config: &Config) -> CargoResult<Easy> {
+    let (mut handle, timeout) = http_handle_and_timeout(config)?;
+    timeout.configure(&mut handle)?;
+    Ok(handle)
+}
+
+pub fn http_handle_and_timeout(config: &Config) -> CargoResult<(Easy, HttpTimeout)> {
     if config.frozen() {
         bail!(
             "attempting to make an HTTP request, but --frozen was \
@@ -343,33 +351,26 @@ pub fn http_handle(config: &Config) -> CargoResult<Easy> {
     // connect phase as well as a "low speed" timeout so if we don't receive
     // many bytes in a large-ish period of time then we time out.
     let mut handle = Easy::new();
-    configure_http_handle(config, &mut handle)?;
-    Ok(handle)
+    let timeout = configure_http_handle(config, &mut handle)?;
+    Ok((handle, timeout))
 }
 
 pub fn needs_custom_http_transport(config: &Config) -> CargoResult<bool> {
     let proxy_exists = http_proxy_exists(config)?;
-    let timeout = http_timeout(config)?;
+    let timeout = HttpTimeout::new(config)?.is_non_default();
     let cainfo = config.get_path("http.cainfo")?;
     let check_revoke = config.get_bool("http.check-revoke")?;
     let user_agent = config.get_string("http.user-agent")?;
 
     Ok(proxy_exists
-        || timeout.is_some()
+        || timeout
         || cainfo.is_some()
         || check_revoke.is_some()
         || user_agent.is_some())
 }
 
 /// Configure a libcurl http handle with the defaults options for Cargo
-pub fn configure_http_handle(config: &Config, handle: &mut Easy) -> CargoResult<()> {
-    // The timeout option for libcurl by default times out the entire transfer,
-    // but we probably don't want this. Instead we only set timeouts for the
-    // connect phase as well as a "low speed" timeout so if we don't receive
-    // many bytes in a large-ish period of time then we time out.
-    handle.connect_timeout(Duration::new(30, 0))?;
-    handle.low_speed_time(Duration::new(30, 0))?;
-    handle.low_speed_limit(http_low_speed_limit(config)?)?;
+pub fn configure_http_handle(config: &Config, handle: &mut Easy) -> CargoResult<HttpTimeout> {
     if let Some(proxy) = http_proxy(config)? {
         handle.proxy(&proxy)?;
     }
@@ -379,24 +380,75 @@ pub fn configure_http_handle(config: &Config, handle: &mut Easy) -> CargoResult<
     if let Some(check) = config.get_bool("http.check-revoke")? {
         handle.ssl_options(SslOpt::new().no_revoke(!check.val))?;
     }
-    if let Some(timeout) = http_timeout(config)? {
-        handle.connect_timeout(Duration::new(timeout as u64, 0))?;
-        handle.low_speed_time(Duration::new(timeout as u64, 0))?;
-    }
     if let Some(user_agent) = config.get_string("http.user-agent")? {
         handle.useragent(&user_agent.val)?;
     } else {
         handle.useragent(&version().to_string())?;
     }
-    Ok(())
+
+    if let Some(true) = config.get::<Option<bool>>("http.debug")? {
+        handle.verbose(true)?;
+        handle.debug_function(|kind, data| {
+            let (prefix, level) = match kind {
+                InfoType::Text => ("*", Level::Debug),
+                InfoType::HeaderIn => ("<", Level::Debug),
+                InfoType::HeaderOut => (">", Level::Debug),
+                InfoType::DataIn => ("{", Level::Trace),
+                InfoType::DataOut => ("}", Level::Trace),
+                InfoType::SslDataIn |
+                InfoType::SslDataOut => return,
+                _ => return,
+            };
+            match str::from_utf8(data) {
+                Ok(s) => {
+                    for line in s.lines() {
+                        log!(level, "http-debug: {} {}", prefix, line);
+                    }
+                }
+                Err(_) => {
+                    log!(level, "http-debug: {} ({} bytes of data)", prefix, data.len());
+                }
+            }
+        })?;
+    }
+
+    HttpTimeout::new(config)
 }
 
-/// Find an override from config for curl low-speed-limit option, otherwise use default value
-fn http_low_speed_limit(config: &Config) -> CargoResult<u32> {
-    if let Some(s) = config.get::<Option<u32>>("http.low-speed-limit")? {
-        return Ok(s);
+#[must_use]
+pub struct HttpTimeout {
+    pub dur: Duration,
+    pub low_speed_limit: u32,
+}
+
+impl HttpTimeout {
+    pub fn new(config: &Config) -> CargoResult<HttpTimeout> {
+        let low_speed_limit = config.get::<Option<u32>>("http.low-speed-limit")?
+            .unwrap_or(10);
+        let seconds = config.get::<Option<u64>>("http.timeout")?
+            .or_else(|| env::var("HTTP_TIMEOUT").ok().and_then(|s| s.parse().ok()))
+            .unwrap_or(30);
+        Ok(HttpTimeout {
+            dur: Duration::new(seconds, 0),
+            low_speed_limit,
+        })
     }
-    Ok(10)
+
+    fn is_non_default(&self) -> bool {
+        self.dur != Duration::new(30, 0) || self.low_speed_limit != 10
+    }
+
+    pub fn configure(&self, handle: &mut Easy) -> CargoResult<()> {
+        // The timeout option for libcurl by default times out the entire
+        // transfer, but we probably don't want this. Instead we only set
+        // timeouts for the connect phase as well as a "low speed" timeout so
+        // if we don't receive many bytes in a large-ish period of time then we
+        // time out.
+        handle.connect_timeout(self.dur)?;
+        handle.low_speed_time(self.dur)?;
+        handle.low_speed_limit(self.low_speed_limit)?;
+        Ok(())
+    }
 }
 
 /// Find an explicit HTTP proxy if one is available.
@@ -433,13 +485,6 @@ fn http_proxy_exists(config: &Config) -> CargoResult<bool> {
             .iter()
             .any(|v| env::var(v).is_ok()))
     }
-}
-
-fn http_timeout(config: &Config) -> CargoResult<Option<i64>> {
-    if let Some(s) = config.get_i64("http.timeout")? {
-        return Ok(Some(s.val));
-    }
-    Ok(env::var("HTTP_TIMEOUT").ok().and_then(|s| s.parse().ok()))
 }
 
 pub fn registry_login(config: &Config, token: String, registry: Option<String>) -> CargoResult<()> {

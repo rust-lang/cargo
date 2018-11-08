@@ -38,11 +38,13 @@ struct Format {
 impl<'cfg> Progress<'cfg> {
     pub fn with_style(name: &str, style: ProgressStyle, cfg: &'cfg Config) -> Progress<'cfg> {
         // report no progress when -q (for quiet) or TERM=dumb are set
+        // or if running on Continuous Integration service like Travis where the
+        // output logs get mangled.
         let dumb = match env::var("TERM") {
             Ok(term) => term == "dumb",
             Err(_) => false,
         };
-        if cfg.shell().verbosity() == Verbosity::Quiet || dumb {
+        if cfg.shell().verbosity() == Verbosity::Quiet || dumb || env::var("CI").is_ok() {
             return Progress { state: None };
         }
 
@@ -196,9 +198,7 @@ impl<'cfg> State<'cfg> {
     }
 
     fn clear(&mut self) {
-        self.try_update_max_width();
-        let blank = " ".repeat(self.format.max_width);
-        drop(write!(self.config.shell().err(), "{}\r", blank));
+        self.config.shell().err_erase_line();
     }
 
     fn try_update_max_width(&mut self) {

@@ -326,7 +326,8 @@ fn build_work<'a, 'cfg>(cx: &mut Context<'a, 'cfg>, unit: &Unit<'a>) -> CargoRes
         } else {
             state.running(&cmd);
             let output = if extra_verbose {
-                state.capture_output(&cmd, true)
+                let prefix = format!("[{} {}] ", id.name(), id.version());
+                state.capture_output(&cmd, Some(prefix), true)
             } else {
                 cmd.exec_with_output()
             };

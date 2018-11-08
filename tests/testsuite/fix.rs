@@ -183,7 +183,7 @@ fn fix_path_deps() {
     p.cargo("fix --allow-no-vcs -p foo -p bar")
         .env("__CARGO_FIX_YOLO", "1")
         .with_stdout("")
-        .with_stderr(
+        .with_stderr_unordered(
             "\
 [CHECKING] bar v0.1.0 ([..])
 [FIXING] bar/src/lib.rs (1 fix)
@@ -1070,5 +1070,49 @@ fn does_not_crash_with_rustc_wrapper() {
 
     p.cargo("fix --allow-no-vcs")
         .env("RUSTC_WRAPPER", "/usr/bin/env")
+        .run();
+}
+
+#[test]
+fn only_warn_for_relevant_crates() {
+    let p = project()
+        .file(
+            "Cargo.toml",
+            r#"
+                [package]
+                name = "foo"
+                version = "0.1.0"
+
+                [dependencies]
+                a = { path = 'a' }
+            "#,
+        )
+        .file("src/lib.rs", "")
+        .file(
+            "a/Cargo.toml",
+            r#"
+                [package]
+                name = "a"
+                version = "0.1.0"
+            "#,
+        )
+        .file(
+            "a/src/lib.rs",
+            "
+                pub fn foo() {}
+                pub mod bar {
+                    use foo;
+                    pub fn baz() { foo() }
+                }
+            ",
+        )
+        .build();
+
+    p.cargo("fix --allow-no-vcs --edition")
+        .with_stderr("\
+[CHECKING] a v0.1.0 ([..])
+[CHECKING] foo v0.1.0 ([..])
+[FINISHED] dev [unoptimized + debuginfo] target(s) in [..]
+")
         .run();
 }

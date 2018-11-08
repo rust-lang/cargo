@@ -19,7 +19,7 @@ use core::{Dependency, Manifest, PackageId, Summary, Target};
 use core::{Edition, EitherManifest, Feature, Features, VirtualManifest};
 use core::{GitReference, PackageIdSpec, SourceId, WorkspaceConfig, WorkspaceRootConfig};
 use sources::{CRATES_IO_INDEX, CRATES_IO_REGISTRY};
-use util::errors::{CargoError, CargoResult, CargoResultExt};
+use util::errors::{CargoError, CargoResult, CargoResultExt, ManifestError};
 use util::paths;
 use util::{self, Config, ToUrl, Platform};
 
@@ -30,17 +30,17 @@ pub fn read_manifest(
     path: &Path,
     source_id: &SourceId,
     config: &Config,
-) -> CargoResult<(EitherManifest, Vec<PathBuf>)> {
+) -> Result<(EitherManifest, Vec<PathBuf>), ManifestError> {
     trace!(
         "read_manifest; path={}; source-id={}",
         path.display(),
         source_id
     );
-    let contents = paths::read(path)?;
+    let contents = paths::read(path).map_err(|err| ManifestError::new(err, path.into()))?;
 
-    let ret = do_read_manifest(&contents, path, source_id, config)
-        .chain_err(|| format!("failed to parse manifest at `{}`", path.display()))?;
-    Ok(ret)
+    do_read_manifest(&contents, path, source_id, config)
+        .chain_err(|| format!("failed to parse manifest at `{}`", path.display()))
+        .map_err(|err| ManifestError::new(err, path.into()))
 }
 
 fn do_read_manifest(
@@ -1098,6 +1098,24 @@ impl TomlManifest {
         if me.bench.is_some() {
             bail!("virtual manifests do not specify [[bench]]");
         }
+        if me.dependencies.is_some() {
+            bail!("virtual manifests do not specify [dependencies]");
+        }
+        if me.dev_dependencies.is_some() || me.dev_dependencies2.is_some() {
+            bail!("virtual manifests do not specify [dev-dependencies]");
+        }
+        if me.build_dependencies.is_some() || me.build_dependencies2.is_some() {
+            bail!("virtual manifests do not specify [build-dependencies]");
+        }
+        if me.features.is_some() {
+            bail!("virtual manifests do not specify [features]");
+        }
+        if me.target.is_some() {
+            bail!("virtual manifests do not specify [target]");
+        }
+        if me.badges.is_some() {
+            bail!("virtual manifests do not specify [badges]");
+        }
 
         let mut nested_paths = Vec::new();
         let mut warnings = Vec::new();
@@ -1487,7 +1505,14 @@ impl TomlTarget {
     }
 
     fn proc_macro(&self) -> Option<bool> {
-        self.proc_macro.or(self.proc_macro2)
+        self.proc_macro.or(self.proc_macro2).or_else(|| {
+            if let Some(types) = self.crate_types() {
+                if types.contains(&"proc-macro".to_string()) {
+                    return Some(true);
+                }
+            }
+            None
+        })
     }
 
     fn crate_types(&self) -> Option<&Vec<String>> {

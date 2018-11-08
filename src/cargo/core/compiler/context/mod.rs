@@ -94,7 +94,6 @@ pub struct Context<'a, 'cfg: 'a> {
     pub compiled: HashSet<Unit<'a>>,
     pub build_scripts: HashMap<Unit<'a>, Arc<BuildScripts>>,
     pub links: Links<'a>,
-    pub used_in_plugin: HashSet<Unit<'a>>,
     pub jobserver: Client,
     primary_packages: HashSet<&'a PackageId>,
     unit_dependencies: HashMap<Unit<'a>, Vec<Unit<'a>>>,
@@ -127,7 +126,6 @@ impl<'a, 'cfg> Context<'a, 'cfg> {
             build_scripts: HashMap::new(),
             build_explicit_deps: HashMap::new(),
             links: Links::new(),
-            used_in_plugin: HashSet::new(),
             jobserver,
             build_script_overridden: HashSet::new(),
 
@@ -191,13 +189,6 @@ impl<'a, 'cfg> Context<'a, 'cfg> {
                     ));
                 } else if unit.target.is_bin() || unit.target.is_bin_example() {
                     self.compilation.binaries.push(bindst.clone());
-                } else if unit.target.is_lib() {
-                    let pkgid = unit.pkg.package_id().clone();
-                    self.compilation
-                        .libraries
-                        .entry(pkgid)
-                        .or_insert_with(HashSet::new)
-                        .insert((unit.target.clone(), output.path.clone()));
                 }
             }
 
@@ -214,24 +205,6 @@ impl<'a, 'cfg> Context<'a, 'cfg> {
                         .or_insert_with(Vec::new)
                         .push(("OUT_DIR".to_string(), out_dir));
                 }
-
-                if !dep.target.is_lib() {
-                    continue;
-                }
-                if dep.mode.is_doc() {
-                    continue;
-                }
-
-                let outputs = self.outputs(dep)?;
-                self.compilation
-                    .libraries
-                    .entry(unit.pkg.package_id().clone())
-                    .or_insert_with(HashSet::new)
-                    .extend(
-                        outputs
-                            .iter()
-                            .map(|output| (dep.target.clone(), output.path.clone())),
-                    );
             }
 
             if unit.mode == CompileMode::Doctest {
@@ -261,6 +234,8 @@ impl<'a, 'cfg> Context<'a, 'cfg> {
                         }
                     }
                 }
+                // Help with tests to get a stable order with renamed deps.
+                doctest_deps.sort();
                 self.compilation.to_doc_test.push(compilation::Doctest {
                     package: unit.pkg.clone(),
                     target: unit.target.clone(),
@@ -336,7 +311,6 @@ impl<'a, 'cfg> Context<'a, 'cfg> {
             &mut self.unit_dependencies,
             &mut self.package_cache,
         )?;
-        self.build_used_in_plugin_map(units)?;
         let files = CompilationFiles::new(
             units,
             host_layout,
@@ -370,37 +344,6 @@ impl<'a, 'cfg> Context<'a, 'cfg> {
         let layout = files.target.as_ref().unwrap_or(&files.host);
         self.compilation.root_output = layout.dest().to_path_buf();
         self.compilation.deps_output = layout.deps().to_path_buf();
-        Ok(())
-    }
-
-    /// Builds up the `used_in_plugin` internal to this context from the list of
-    /// top-level units.
-    ///
-    /// This will recursively walk `units` and all of their dependencies to
-    /// determine which crate are going to be used in plugins or not.
-    fn build_used_in_plugin_map(&mut self, units: &[Unit<'a>]) -> CargoResult<()> {
-        let mut visited = HashSet::new();
-        for unit in units {
-            self.walk_used_in_plugin_map(unit, unit.target.for_host(), &mut visited)?;
-        }
-        Ok(())
-    }
-
-    fn walk_used_in_plugin_map(
-        &mut self,
-        unit: &Unit<'a>,
-        is_plugin: bool,
-        visited: &mut HashSet<(Unit<'a>, bool)>,
-    ) -> CargoResult<()> {
-        if !visited.insert((*unit, is_plugin)) {
-            return Ok(());
-        }
-        if is_plugin {
-            self.used_in_plugin.insert(*unit);
-        }
-        for unit in self.dep_targets(unit) {
-            self.walk_used_in_plugin_map(&unit, is_plugin || unit.target.for_host(), visited)?;
-        }
         Ok(())
     }
 

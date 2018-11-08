@@ -2,7 +2,8 @@ use glob::glob;
 use serde_json;
 use std::str;
 use support::{
-    basic_lib_manifest, basic_manifest, project, registry::Package, rustc_host, Project,
+    basic_lib_manifest, basic_manifest, is_coarse_mtime, project, registry::Package, rustc_host,
+    Project,
 };
 
 #[test]
@@ -72,8 +73,8 @@ fn metabuild_basic() {
     let p = basic_project();
     p.cargo("build -vv")
         .masquerade_as_nightly_cargo()
-        .with_stdout_contains("Hello mb")
-        .with_stdout_contains("Hello mb-other")
+        .with_stdout_contains("[foo 0.0.1] Hello mb")
+        .with_stdout_contains("[foo 0.0.1] Hello mb-other")
         .run();
 }
 
@@ -164,12 +165,12 @@ fn metabuild_optional_dep() {
 
     p.cargo("build -vv")
         .masquerade_as_nightly_cargo()
-        .with_stdout_does_not_contain("Hello mb")
+        .with_stdout_does_not_contain("[foo 0.0.1] Hello mb")
         .run();
 
     p.cargo("build -vv --features mb")
         .masquerade_as_nightly_cargo()
-        .with_stdout_contains("Hello mb")
+        .with_stdout_contains("[foo 0.0.1] Hello mb")
         .run();
 }
 
@@ -206,12 +207,20 @@ fn metabuild_lib_name() {
 
     p.cargo("build -vv")
         .masquerade_as_nightly_cargo()
-        .with_stdout_contains("Hello mb")
+        .with_stdout_contains("[foo 0.0.1] Hello mb")
         .run();
 }
 
 #[test]
 fn metabuild_fresh() {
+    if is_coarse_mtime() {
+        // This test doesn't work on coarse mtimes very well. Because the
+        // metabuild script is created at build time, its mtime is almost
+        // always equal to the mtime of the output. The second call to `build`
+        // will then think it needs to be rebuilt when it should be fresh.
+        return;
+    }
+
     // Check that rebuild is fresh.
     let p = project()
         .file(
@@ -235,12 +244,12 @@ fn metabuild_fresh() {
 
     p.cargo("build -vv")
         .masquerade_as_nightly_cargo()
-        .with_stdout_contains("Hello mb")
+        .with_stdout_contains("[foo 0.0.1] Hello mb")
         .run();
 
     p.cargo("build -vv")
         .masquerade_as_nightly_cargo()
-        .with_stdout_does_not_contain("Hello mb")
+        .with_stdout_does_not_contain("[foo 0.0.1] Hello mb")
         .with_stderr(
             "\
 [FRESH] mb [..]
@@ -279,7 +288,7 @@ fn metabuild_links() {
 
     p.cargo("build -vv")
         .masquerade_as_nightly_cargo()
-        .with_stdout_contains("Hello mb")
+        .with_stdout_contains("[foo 0.0.1] Hello mb")
         .run();
 }
 
@@ -376,10 +385,10 @@ fn metabuild_workspace() {
 
     p.cargo("build -vv --all")
         .masquerade_as_nightly_cargo()
-        .with_stdout_contains("Hello mb1 [..]member1")
-        .with_stdout_contains("Hello mb2 [..]member1")
-        .with_stdout_contains("Hello mb1 [..]member2")
-        .with_stdout_does_not_contain("Hello mb2 [..]member2")
+        .with_stdout_contains("[member1 0.0.1] Hello mb1 [..]member1")
+        .with_stdout_contains("[member1 0.0.1] Hello mb2 [..]member1")
+        .with_stdout_contains("[member2 0.0.1] Hello mb1 [..]member2")
+        .with_stdout_does_not_contain("[member2 0.0.1] Hello mb2 [..]member2")
         .run();
 }
 
@@ -572,8 +581,8 @@ fn metabuild_two_versions() {
 
     p.cargo("build -vv --all")
         .masquerade_as_nightly_cargo()
-        .with_stdout_contains("Hello mb1 [..]member1")
-        .with_stdout_contains("Hello mb2 [..]member2")
+        .with_stdout_contains("[member1 0.0.1] Hello mb1 [..]member1")
+        .with_stdout_contains("[member2 0.0.1] Hello mb2 [..]member2")
         .run();
 
     assert_eq!(
@@ -628,7 +637,7 @@ fn metabuild_external_dependency() {
 
     p.cargo("build -vv")
         .masquerade_as_nightly_cargo()
-        .with_stdout_contains("Hello mb")
+        .with_stdout_contains("[dep 1.0.0] Hello mb")
         .run();
 
     assert_eq!(

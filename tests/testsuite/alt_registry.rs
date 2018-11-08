@@ -458,7 +458,7 @@ fn publish_with_crates_io_dep() {
 }
 
 #[test]
-fn credentials_in_url_forbidden() {
+fn passwords_in_url_forbidden() {
     registry::init();
 
     let config = paths::home().join(".cargo/config");
@@ -489,6 +489,6 @@ fn credentials_in_url_forbidden() {
     p.cargo("publish --registry alternative -Zunstable-options")
         .masquerade_as_nightly_cargo()
         .with_status(101)
-        .with_stderr_contains("error: Registry URLs may not contain credentials")
+        .with_stderr_contains("error: Registry URLs may not contain passwords")
         .run();
 }

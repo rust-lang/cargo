@@ -5,13 +5,14 @@ use std::io::{self, Write};
 use std::path::{self, Path, PathBuf};
 use std::sync::Arc;
 
+use failure::Error;
 use same_file::is_same_file;
 use serde_json;
 
 use core::manifest::TargetSourcePath;
 use core::profiles::{Lto, Profile};
 use core::{PackageId, Target};
-use util::errors::{CargoResult, CargoResultExt, Internal};
+use util::errors::{CargoResult, CargoResultExt, Internal, ProcessError};
 use util::paths;
 use util::{self, machine_message, Freshness, ProcessBuilder, process};
 use util::{internal, join_paths, profile};
@@ -118,7 +119,7 @@ impl Executor for DefaultExecutor {
         _mode: CompileMode,
         state: &job_queue::JobState<'_>,
     ) -> CargoResult<()> {
-        state.capture_output(&cmd, false).map(drop)
+        state.capture_output(&cmd, None, false).map(drop)
     }
 }
 
@@ -275,6 +276,19 @@ fn rustc<'a, 'cfg>(
             }
         }
 
+        fn internal_if_simple_exit_code(err: Error) -> Error {
+            // If a signal on unix (code == None) or an abnormal termination
+            // on Windows (codes like 0xC0000409), don't hide the error details.
+            match err
+                .downcast_ref::<ProcessError>()
+                .as_ref()
+                .and_then(|perr| perr.exit.and_then(|e| e.code()))
+            {
+                Some(n) if n < 128 => Internal::new(err).into(),
+                _ => err,
+            }
+        }
+
         state.running(&rustc);
         if json_messages {
             exec.exec_json(
@@ -284,13 +298,14 @@ fn rustc<'a, 'cfg>(
                 mode,
                 &mut assert_is_empty,
                 &mut |line| json_stderr(line, &package_id, &target),
-            ).map_err(Internal::new)
+            )
+            .map_err(internal_if_simple_exit_code)
             .chain_err(|| format!("Could not compile `{}`.", name))?;
         } else if build_plan {
             state.build_plan(buildkey, rustc.clone(), outputs.clone());
         } else {
             exec.exec_and_capture_output(rustc, &package_id, &target, mode, state)
-                .map_err(Internal::new)
+                .map_err(internal_if_simple_exit_code)
                 .chain_err(|| format!("Could not compile `{}`.", name))?;
         }
 
@@ -648,7 +663,7 @@ fn rustdoc<'a, 'cfg>(cx: &mut Context<'a, 'cfg>, unit: &Unit<'a>) -> CargoResult
                     false,
                 ).map(drop)
         } else {
-            state.capture_output(&rustdoc, false).map(drop)
+            state.capture_output(&rustdoc, None, false).map(drop)
         };
         exec_result.chain_err(|| format!("Could not document `{}`.", name))?;
         Ok(())
@@ -768,20 +783,8 @@ fn build_base_args<'a, 'cfg>(
         cmd.arg("-C").arg(&format!("opt-level={}", opt_level));
     }
 
-    // If a panic mode was configured *and* we're not ever going to be used in a
-    // plugin, then we can compile with that panic mode.
-    //
-    // If we're used in a plugin then we'll eventually be linked to libsyntax
-    // most likely which isn't compiled with a custom panic mode, so we'll just
-    // get an error if we actually compile with that. This fixes `panic=abort`
-    // crates which have plugin dependencies, but unfortunately means that
-    // dependencies shared between the main application and plugins must be
-    // compiled without `panic=abort`. This isn't so bad, though, as the main
-    // application will still be compiled with `panic=abort`.
     if let Some(panic) = panic.as_ref() {
-        if !cx.used_in_plugin.contains(unit) {
-            cmd.arg("-C").arg(format!("panic={}", panic));
-        }
+        cmd.arg("-C").arg(format!("panic={}", panic));
     }
 
     // Disable LTO for host builds as prefer_dynamic and it are mutually

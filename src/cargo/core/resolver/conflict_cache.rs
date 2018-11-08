@@ -35,9 +35,8 @@ pub(super) struct ConflictCache {
     // unconditionally true regardless of our resolution history of how we got
     // here.
     con_from_dep: HashMap<Dependency, Vec<HashMap<PackageId, ConflictReason>>>,
-    // `past_conflict_triggers` is an
-    // of `past_conflicting_activations`.
-    // For every `PackageId` this lists the `Dependency`s that mention it in `past_conflicting_activations`.
+    // `dep_from_pid` is an inverse-index of `con_from_dep`.
+    // For every `PackageId` this lists the `Dependency`s that mention it in `dep_from_pid`.
     dep_from_pid: HashMap<PackageId, HashSet<Dependency>>,
 }
 
@@ -62,6 +61,7 @@ impl ConflictCache {
         self.con_from_dep
             .get(dep)?
             .iter()
+            .rev() // more general cases are normally found letter. So start the search there.
             .filter(filter)
             .find(|conflicting| cx.is_conflicting(None, conflicting))
     }

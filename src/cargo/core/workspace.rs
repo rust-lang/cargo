@@ -13,7 +13,7 @@ use core::{Dependency, PackageIdSpec};
 use core::{EitherManifest, Package, SourceId, VirtualManifest};
 use ops;
 use sources::PathSource;
-use util::errors::{CargoResult, CargoResultExt};
+use util::errors::{CargoResult, CargoResultExt, ManifestError};
 use util::paths;
 use util::toml::read_manifest;
 use util::{Config, Filesystem};
@@ -508,7 +508,8 @@ impl<'cfg> Workspace<'cfg> {
                 .collect::<Vec<_>>()
         };
         for candidate in candidates {
-            self.find_path_deps(&candidate, root_manifest, true)?;
+            self.find_path_deps(&candidate, root_manifest, true)
+                .map_err(|err| ManifestError::new(err, manifest_path.clone()))?;
         }
         Ok(())
     }
@@ -657,18 +658,28 @@ impl<'cfg> Workspace<'cfg> {
             for pkg in self.members()
                 .filter(|p| p.manifest_path() != root_manifest)
             {
-                if pkg.manifest().original().has_profiles() {
-                    let message = &format!(
-                        "profiles for the non root package will be ignored, \
-                         specify profiles at the workspace root:\n\
+                let manifest = pkg.manifest();
+                let emit_warning = |what| -> CargoResult<()> {
+                    let msg = format!(
+                        "{} for the non root package will be ignored, \
+                         specify {} at the workspace root:\n\
                          package:   {}\n\
                          workspace: {}",
+                        what,
+                        what,
                         pkg.manifest_path().display(),
-                        root_manifest.display()
+                        root_manifest.display(),
                     );
-
-                    //TODO: remove `Eq` bound from `Profiles` when the warning is removed.
-                    self.config.shell().warn(&message)?;
+                    self.config.shell().warn(&msg)
+                };
+                if manifest.original().has_profiles() {
+                    emit_warning("profiles")?;
+                }
+                if !manifest.replace().is_empty() {
+                    emit_warning("replace")?;
+                }
+                if !manifest.patch().is_empty() {
+                    emit_warning("patch")?;
                 }
             }
         }
@@ -730,6 +741,7 @@ impl<'cfg> Workspace<'cfg> {
                 MaybePackage::Package(pkg) => pkg.manifest().warnings().warnings(),
                 MaybePackage::Virtual(vm) => vm.warnings().warnings(),
             };
+            let path = path.join("Cargo.toml");
             for warning in warnings {
                 if warning.is_critical {
                     let err = format_err!("{}", warning.message);
@@ -739,7 +751,14 @@ impl<'cfg> Workspace<'cfg> {
                     );
                     return Err(err.context(cx).into());
                 } else {
-                    self.config.shell().warn(&warning.message)?
+                    let msg = if self.root_manifest.is_none() {
+                        warning.message.to_string()
+                    } else {
+                        // In a workspace, it can be confusing where a warning
+                        // originated, so include the path.
+                        format!("{}: {}", path.display(), warning.message)
+                    };
+                    self.config.shell().warn(msg)?
                 }
             }
         }
