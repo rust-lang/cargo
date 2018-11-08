@@ -8,7 +8,7 @@ use serde::ser;
 
 use core::{PackageId, SourceId, Summary};
 use core::interning::InternedString;
-use util::{Cfg, CfgExpr, Config};
+use util::{Cfg, Config, Platform};
 use util::errors::{CargoError, CargoResult, CargoResultExt};
 
 /// Information about a dependency requested by a Cargo manifest.
@@ -37,12 +37,6 @@ struct Inner {
     // This dependency should be used only for this platform.
     // `None` means *all platforms*.
     platform: Option<Platform>,
-}
-
-#[derive(Eq, PartialEq, Hash, Ord, PartialOrd, Clone, Debug)]
-pub enum Platform {
-    Name(String),
-    Cfg(CfgExpr),
 }
 
 #[derive(Serialize)]

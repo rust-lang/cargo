@@ -133,7 +133,7 @@ pub fn resolve(
         cx.resolve_replacements(),
         cx.resolve_features
             .iter()
-            .map(|(k, v)| (k.clone(), v.iter().map(|x| x.to_string()).collect()))
+            .map(|(k, v)| (k.clone(), v.iter().map(|(k, v)| (k.to_string(), v.clone())).collect()))
             .collect(),
         cksums,
         BTreeMap::new(),

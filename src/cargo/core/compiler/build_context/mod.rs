@@ -7,7 +7,7 @@ use core::profiles::Profiles;
 use core::{Dependency, Workspace};
 use core::{PackageId, PackageSet, Resolve};
 use util::errors::CargoResult;
-use util::{profile, Cfg, CfgExpr, Config, Rustc};
+use util::{profile, Cfg, CfgExpr, Config, Rustc, Platform};
 
 use super::{BuildConfig, BuildOutput, Kind, Unit};
 
@@ -90,13 +90,11 @@ impl<'a, 'cfg> BuildContext<'a, 'cfg> {
     pub fn extern_crate_name(&self, unit: &Unit<'a>, dep: &Unit<'a>) -> CargoResult<String> {
         self.resolve.extern_crate_name(unit.pkg.package_id(), dep.pkg.package_id(), dep.target)
     }
-
-    /// Whether a dependency should be compiled for the host or target platform,
+    
+    /// Whether a given platform matches the host or target platform,
     /// specified by `Kind`.
-    pub fn dep_platform_activated(&self, dep: &Dependency, kind: Kind) -> bool {
-        // If this dependency is only available for certain platforms,
-        // make sure we're only enabling it for that platform.
-        let platform = match dep.platform() {
+    pub fn platform_activated(&self, platform: Option<&Platform>, kind: Kind) -> bool {
+    	let platform = match platform {
             Some(p) => p,
             None => return true,
         };
@@ -105,6 +103,14 @@ impl<'a, 'cfg> BuildContext<'a, 'cfg> {
             Kind::Target => (self.target_triple(), &self.target_info),
         };
         platform.matches(name, info.cfg())
+    }
+
+    /// Whether a dependency should be compiled for the host or target platform,
+    /// specified by `Kind`.
+    pub fn dep_platform_activated(&self, dep: &Dependency, kind: Kind) -> bool {
+        // If this dependency is only available for certain platforms,
+        // make sure we're only enabling it for that platform.
+        self.platform_activated(dep.platform(), kind)
     }
 
     /// Get the user-specified linker for a particular host or target

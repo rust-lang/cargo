@@ -41,6 +41,7 @@ mod cargo_alias_config;
 mod cargo_command;
 mod cargo_features;
 mod cfg;
+mod cfg_features;
 mod check;
 mod clean;
 mod concurrent;

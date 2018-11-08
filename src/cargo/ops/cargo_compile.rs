@@ -718,13 +718,13 @@ fn resolve_all_features(
     resolve_with_overrides: &Resolve,
     package_id: &PackageId,
 ) -> HashSet<String> {
-    let mut features = resolve_with_overrides.features(package_id).clone();
+    let mut features = resolve_with_overrides.features(package_id).keys().cloned().collect::<HashSet<_>>();
 
     // Include features enabled for use by dependencies so targets can also use them with the
     // required-features field when deciding whether to be built or skipped.
     for (dep, _) in resolve_with_overrides.deps(package_id) {
         for feature in resolve_with_overrides.features(dep) {
-            features.insert(dep.name().to_string() + "/" + feature);
+            features.insert(dep.name().to_string() + "/" + feature.0);
         }
     }
 

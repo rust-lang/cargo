@@ -150,10 +150,15 @@ fn compute_deps<'a, 'cfg, 'tmp>(
 
                 // If the dependency is optional, then we're only activating it
                 // if the corresponding feature was activated
-                if dep.is_optional() &&
-                    !bcx.resolve.features(id).contains(&*dep.name_in_toml())
-                {
-                    return false;
+                if dep.is_optional() {
+                    // Same for features this dependency is referenced
+                    if let Some(platform) = bcx.resolve.features(id).get(&*dep.name_in_toml()) {
+                        if !bcx.platform_activated(platform.as_ref(), unit.kind) {
+                            return false;
+                        }
+                    } else {
+                        return false;
+                    }                    
                 }
 
                 // If we've gotten past all that, then this dependency is
@@ -216,7 +221,7 @@ fn compute_deps<'a, 'cfg, 'tmp>(
                     t.is_bin() &&
                         // Skip binaries with required features that have not been selected.
                         t.required_features().unwrap_or(&no_required_features).iter().all(|f| {
-                            bcx.resolve.features(id).contains(f)
+                            bcx.resolve.features(id).contains_key(f) && bcx.platform_activated(bcx.resolve.features(id).get(f).unwrap().as_ref(), unit.kind)
                         })
                 })
                 .map(|t| {

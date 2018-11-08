@@ -12,7 +12,7 @@ use serde_ignored;
 use toml;
 use url::Url;
 
-use core::dependency::{Kind, Platform};
+use core::dependency::Kind;
 use core::manifest::{LibKind, ManifestMetadata, TargetSourcePath, Warnings};
 use core::profiles::Profiles;
 use core::{Dependency, Manifest, PackageId, Summary, Target};
@@ -21,7 +21,7 @@ use core::{GitReference, PackageIdSpec, SourceId, WorkspaceConfig, WorkspaceRoot
 use sources::{CRATES_IO_INDEX, CRATES_IO_REGISTRY};
 use util::errors::{CargoError, CargoResult, CargoResultExt};
 use util::paths;
-use util::{self, Config, ToUrl};
+use util::{self, Config, ToUrl, Platform};
 
 mod targets;
 use self::targets::targets;
@@ -719,6 +719,7 @@ impl TomlManifest {
                         Ok((
                             k.clone(),
                             TomlPlatform {
+                            	features: v.features.clone(),
                                 dependencies: map_deps(config, v.dependencies.as_ref())?,
                                 dev_dependencies: map_deps(
                                     config,
@@ -865,6 +866,7 @@ impl TomlManifest {
         }
 
         let mut deps = Vec::new();
+        let mut ftrs = BTreeMap::new();
         let replace;
         let patch;
 
@@ -897,6 +899,21 @@ impl TomlManifest {
 
                 Ok(())
             }
+            fn process_features(
+                ftrs: &mut BTreeMap<String, (Option<Platform>, Vec<String>)>,
+                new_ftrs: Option<&BTreeMap<String, Vec<String>>>,
+                platform: Option<&Platform>
+            ) -> CargoResult<()> {
+                let features = match new_ftrs {
+                    Some(features) => features,
+                    None => return Ok(()),
+                };
+                for (n, v) in features.iter() {
+                    ftrs.insert(n.clone(), (platform.cloned(), v.clone()));
+                }
+
+                Ok(())
+            }
 
             // Collect the deps
             process_dependencies(&mut cx, me.dependencies.as_ref(), None)?;
@@ -910,6 +927,7 @@ impl TomlManifest {
                 .as_ref()
                 .or_else(|| me.build_dependencies2.as_ref());
             process_dependencies(&mut cx, build_deps, Some(Kind::Build))?;
+			process_features(&mut ftrs, me.features.as_ref(), None)?;
 
             for (name, platform) in me.target.iter().flat_map(|t| t) {
                 cx.platform = Some(name.parse()?);
@@ -924,6 +942,7 @@ impl TomlManifest {
                     .as_ref()
                     .or_else(|| platform.dev_dependencies2.as_ref());
                 process_dependencies(&mut cx, dev_deps, Some(Kind::Development))?;
+                process_features(&mut ftrs, platform.features.as_ref(), cx.platform.as_ref())?;
             }
 
             replace = me.replace(&mut cx)?;
@@ -955,14 +974,7 @@ impl TomlManifest {
         let summary = Summary::new(
             pkgid,
             deps,
-            &me.features
-                .as_ref()
-                .map(|x| {
-                    x.iter()
-                        .map(|(k, v)| (k.as_str(), v.iter().collect()))
-                        .collect()
-                })
-                .unwrap_or_else(BTreeMap::new),
+            &ftrs,
             project.links.as_ref().map(|x| x.as_str()),
             project.namespaced_features.unwrap_or(false),
         )?;
@@ -1450,6 +1462,7 @@ impl ser::Serialize for PathValue {
 /// Corresponds to a `target` entry, but `TomlTarget` is already used.
 #[derive(Serialize, Deserialize, Debug)]
 struct TomlPlatform {
+	features: Option<BTreeMap<String, Vec<String>>>,
     dependencies: Option<BTreeMap<String, TomlDependency>>,
     #[serde(rename = "build-dependencies")]
     build_dependencies: Option<BTreeMap<String, TomlDependency>>,

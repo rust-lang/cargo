@@ -187,7 +187,7 @@ fn build_work<'a, 'cfg>(cx: &mut Context<'a, 'cfg>, unit: &Unit<'a>) -> CargoRes
     // Be sure to pass along all enabled features for this package, this is the
     // last piece of statically known information that we have.
     for feat in bcx.resolve.features(unit.pkg.package_id()).iter() {
-        cmd.env(&format!("CARGO_FEATURE_{}", super::envify(feat)), "1");
+        cmd.env(&format!("CARGO_FEATURE_{}", super::envify(feat.0)), "1");
     }
 
     let mut cfg_map = HashMap::new();

@@ -1,14 +1,13 @@
 use std::borrow::Borrow;
-use std::collections::{HashMap, HashSet};
+use std::collections::{HashMap, BTreeMap};
 use std::fmt;
 use std::hash::Hash;
-use std::iter::FromIterator;
 
 use url::Url;
 
 use core::{Dependency, PackageId, PackageIdSpec, Summary, Target};
 use util::errors::CargoResult;
-use util::Graph;
+use util::{Graph, Platform};
 
 use super::encode::Metadata;
 
@@ -25,8 +24,8 @@ pub struct Resolve {
     graph: Graph<PackageId, Vec<Dependency>>,
     replacements: HashMap<PackageId, PackageId>,
     reverse_replacements: HashMap<PackageId, PackageId>,
-    empty_features: HashSet<String>,
-    features: HashMap<PackageId, HashSet<String>>,
+    empty_features: HashMap<String, Option<Platform>>,
+    features: HashMap<PackageId, HashMap<String, Option<Platform>>>,
     checksums: HashMap<PackageId, Option<String>>,
     metadata: Metadata,
     unused_patches: Vec<PackageId>,
@@ -36,7 +35,7 @@ impl Resolve {
     pub fn new(
         graph: Graph<PackageId, Vec<Dependency>>,
         replacements: HashMap<PackageId, PackageId>,
-        features: HashMap<PackageId, HashSet<String>>,
+        features: HashMap<PackageId, HashMap<String, Option<Platform>>>,
         checksums: HashMap<PackageId, Option<String>>,
         metadata: Metadata,
         unused_patches: Vec<PackageId>,
@@ -52,7 +51,7 @@ impl Resolve {
             checksums,
             metadata,
             unused_patches,
-            empty_features: HashSet::new(),
+            empty_features: HashMap::new(),
             reverse_replacements,
         }
     }
@@ -193,14 +192,12 @@ unable to verify that `{0}` is the same as when the lockfile was generated
         &self.replacements
     }
 
-    pub fn features(&self, pkg: &PackageId) -> &HashSet<String> {
+    pub fn features(&self, pkg: &PackageId) -> &HashMap<String, Option<Platform>> {
         self.features.get(pkg).unwrap_or(&self.empty_features)
     }
 
-    pub fn features_sorted(&self, pkg: &PackageId) -> Vec<&str> {
-        let mut v = Vec::from_iter(self.features(pkg).iter().map(|s| s.as_ref()));
-        v.sort_unstable();
-        v
+    pub fn features_sorted(&self, pkg: &PackageId) -> BTreeMap<&str, Option<&Platform>> {
+        self.features(pkg).iter().map(|(k, v)| (k.as_str(), v.as_ref())).collect()
     }
 
     pub fn query(&self, spec: &str) -> CargoResult<&PackageId> {

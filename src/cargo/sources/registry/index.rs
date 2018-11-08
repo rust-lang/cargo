@@ -253,7 +253,8 @@ impl<'cfg> RegistryIndex<'cfg> {
             .into_iter()
             .map(|dep| dep.into_dep(&self.source_id))
             .collect::<CargoResult<Vec<_>>>()?;
-        let summary = Summary::new(pkgid, deps, &features, links, false)?;
+        let ftrs = features.iter().map(|(k, v)| (k.clone(), (None, v.clone()))).collect();
+        let summary = Summary::new(pkgid, deps, &ftrs, links, false)?;
         let summary = summary.set_checksum(cksum.clone());
         self.hashes
             .entry(name.as_str())

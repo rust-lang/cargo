@@ -9,7 +9,7 @@ use cargo::core::resolver::{self, Method};
 use cargo::core::source::{GitReference, SourceId};
 use cargo::core::Resolve;
 use cargo::core::{Dependency, PackageId, Registry, Summary};
-use cargo::util::{CargoResult, Config, ToUrl};
+use cargo::util::{CargoResult, Config, ToUrl, Platform};
 
 use proptest::collection::{btree_map, vec};
 use proptest::prelude::*;
@@ -100,7 +100,7 @@ pub fn resolve_with_config_raw(
     let summary = Summary::new(
         pkg.clone(),
         deps,
-        &BTreeMap::<String, Vec<String>>::new(),
+        &BTreeMap::<String, (Option<Platform>, Vec<String>)>::new(),
         None::<String>,
         false,
     )
@@ -194,7 +194,7 @@ pub fn pkg_dep<T: ToPkgId>(name: T, dep: Vec<Dependency>) -> Summary {
     Summary::new(
         name.to_pkgid(),
         dep,
-        &BTreeMap::<String, Vec<String>>::new(),
+        &BTreeMap::<String, (Option<Platform>, Vec<String>)>::new(),
         link,
         false,
     )
@@ -222,7 +222,7 @@ pub fn pkg_loc(name: &str, loc: &str) -> Summary {
     Summary::new(
         pkg_id_loc(name, loc),
         Vec::new(),
-        &BTreeMap::<String, Vec<String>>::new(),
+        &BTreeMap::<String, (Option<Platform>, Vec<String>)>::new(),
         link,
         false,
     )

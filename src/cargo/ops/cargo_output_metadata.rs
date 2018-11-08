@@ -128,6 +128,6 @@ where
                     Dep { name, pkg }
                 })
                 .collect(),
-            features: resolve.features_sorted(id),
+            features: resolve.features_sorted(id).keys().cloned().collect(),
         }))
 }

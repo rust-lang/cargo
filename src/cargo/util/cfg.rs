@@ -5,6 +5,12 @@ use std::fmt;
 use util::{CargoError, CargoResult};
 
 #[derive(Eq, PartialEq, Hash, Ord, PartialOrd, Clone, Debug)]
+pub enum Platform {
+    Name(String),
+    Cfg(CfgExpr),
+}
+
+#[derive(Eq, PartialEq, Hash, Ord, PartialOrd, Clone, Debug)]
 pub enum Cfg {
     Name(String),
     KeyPair(String, String),
