@@ -376,7 +376,7 @@ impl<'r> Requirements<'r> {
     }
 
     fn seen(&mut self, feat: InternedString, platform: Option<&Platform>) -> bool {
-        if self.visited.get(&feat).is_some() {
+        if self.visited.insert(feat, platform.cloned()).is_some() {
             true
         } else {
             self.used.insert(feat, platform.cloned());

@@ -17,7 +17,7 @@ use serde::ser;
 use toml;
 
 use core::{Dependency, Manifest, PackageId, SourceId, Target};
-use core::{FeatureMap, SourceMap, Summary};
+use core::{RefFeatureMap, SourceMap, Summary};
 use core::source::MaybePackage;
 use core::interning::InternedString;
 use ops;
@@ -49,7 +49,7 @@ struct SerializedPackage<'a> {
     source: &'a SourceId,
     dependencies: &'a [Dependency],
     targets: Vec<&'a Target>,
-    features: &'a FeatureMap,
+    features: RefFeatureMap<'a>,
     manifest_path: &'a str,
     metadata: Option<&'a toml::Value>,
     authors: &'a [String],
@@ -78,6 +78,11 @@ impl ser::Serialize for Package {
         let keywords = manmeta.keywords.as_ref();
         let readme = manmeta.readme.as_ref().map(String::as_ref);
         let repository = manmeta.repository.as_ref().map(String::as_ref);
+        let features = summary
+            .features()
+            .iter()
+            .map(|(k, (_, v))| (*k, v.as_slice()))
+            .collect::<RefFeatureMap>();
         // Filter out metabuild targets. They are an internal implementation
         // detail that is probably not relevant externally. There's also not a
         // real path to show in `src_path`, and this avoids changing the format.
@@ -98,7 +103,7 @@ impl ser::Serialize for Package {
             source: summary.source_id(),
             dependencies: summary.dependencies(),
             targets,
-            features: summary.features(),
+            features,
             manifest_path: &self.manifest_path.display().to_string(),
             metadata: self.manifest.custom_metadata(),
             authors,
