@@ -1175,8 +1175,8 @@ fn hard_equality() {
 
 #[test]
 fn large_conflict_cache() {
-    let mut input  = vec![
-        pkg!(("last", "0.0.0") => [dep("bad")]) // just to make sure last is less constrained
+    let mut input = vec![
+        pkg!(("last", "0.0.0") => [dep("bad")]), // just to make sure last is less constrained
     ];
     let mut root_deps = vec![dep("last")];
     const NUM_VERSIONS: u8 = 3;

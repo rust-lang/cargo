@@ -133,7 +133,7 @@ impl Context {
             .unwrap_or(&[])
     }
 
-    fn is_active(&self, id: &PackageId) -> bool {
+    pub fn is_active(&self, id: &PackageId) -> bool {
         self.activations
             .get(&(id.name(), id.source_id().clone()))
             .map(|v| v.iter().any(|s| s.package_id() == id))
