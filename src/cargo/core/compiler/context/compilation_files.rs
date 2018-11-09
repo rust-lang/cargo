@@ -245,16 +245,12 @@ impl<'a, 'cfg: 'a> CompilationFiles<'a, 'cfg> {
         let mut unsupported = Vec::new();
         {
             if unit.mode.is_check() {
-                // This is not quite correct for non-lib targets.  rustc
-                // currently does not emit rmeta files, so there is nothing to
-                // check for!  See #3624.
+                // This may be confusing. rustc outputs a file named `lib*.rmeta`
+                // for both libraries and binaries.
                 let path = out_dir.join(format!("lib{}.rmeta", file_stem));
-                let hardlink = link_stem
-                    .clone()
-                    .map(|(ld, ls)| ld.join(format!("lib{}.rmeta", ls)));
                 ret.push(OutputFile {
                     path,
-                    hardlink,
+                    hardlink: None,
                     flavor: FileFlavor::Linkable,
                 });
             } else {
