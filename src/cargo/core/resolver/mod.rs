@@ -247,7 +247,7 @@ fn activate_deps_loop(
         //
         // This is a map of package id to a reason why that packaged caused a
         // conflict for us.
-        let mut conflicting_activations = HashMap::new();
+        let mut conflicting_activations = BTreeMap::new();
 
         // When backtracking we don't fully update `conflicting_activations`
         // especially for the cases that we didn't make a backtrack frame in the
@@ -641,7 +641,7 @@ struct BacktrackFrame {
     parent: Summary,
     dep: Dependency,
     features: Rc<Vec<InternedString>>,
-    conflicting_activations: HashMap<PackageId, ConflictReason>,
+    conflicting_activations: BTreeMap<PackageId, ConflictReason>,
 }
 
 /// A helper "iterator" used to extract candidates within a current `Context` of
@@ -688,7 +688,7 @@ impl RemainingCandidates {
     /// original list for the reason listed.
     fn next(
         &mut self,
-        conflicting_prev_active: &mut HashMap<PackageId, ConflictReason>,
+        conflicting_prev_active: &mut BTreeMap<PackageId, ConflictReason>,
         cx: &Context,
         dep: &Dependency,
     ) -> Option<(Candidate, bool)> {
@@ -781,7 +781,7 @@ fn find_candidate(
     backtrack_stack: &mut Vec<BacktrackFrame>,
     parent: &Summary,
     backtracked: bool,
-    conflicting_activations: &HashMap<PackageId, ConflictReason>,
+    conflicting_activations: &BTreeMap<PackageId, ConflictReason>,
 ) -> Option<(Candidate, bool, BacktrackFrame)> {
     while let Some(mut frame) = backtrack_stack.pop() {
         let next = frame.remaining_candidates.next(
