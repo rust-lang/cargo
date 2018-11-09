@@ -102,7 +102,7 @@ timeout = 30        # Timeout for each HTTP request, in seconds
 cainfo = "cert.pem" # Path to Certificate Authority (CA) bundle (optional)
 check-revoke = true # Indicates whether SSL certs are checked for revocation
 low-speed-limit = 5 # Lower threshold for bytes/sec (10 = default, 0 = disabled)
-multiplexing = false  # whether or not to use HTTP/2 multiplexing where possible
+multiplexing = true # whether or not to use HTTP/2 multiplexing where possible
 
 # This setting can be used to help debug what's going on with HTTP requests made
 # by Cargo. When set to `true` then Cargo's normal debug logging will be filled

@@ -7,10 +7,11 @@ use std::path::{Path, PathBuf};
 use std::time::{Instant, Duration};
 
 use bytesize::ByteSize;
-use curl;
-use curl_sys;
 use curl::easy::{Easy, HttpVersion};
 use curl::multi::{Multi, EasyHandle};
+use curl;
+use curl_sys;
+use failure::ResultExt;
 use lazycell::LazyCell;
 use semver::Version;
 use serde::ser;
@@ -327,7 +328,7 @@ impl<'cfg> PackageSet<'cfg> {
         // proxies.
         let mut multi = Multi::new();
         let multiplexing = config.get::<Option<bool>>("http.multiplexing")?
-            .unwrap_or(false);
+            .unwrap_or(true);
         multi.pipelining(false, multiplexing)
             .chain_err(|| "failed to enable multiplexing/pipelining in curl")?;
 
@@ -451,12 +452,30 @@ impl<'a, 'cfg> Downloads<'a, 'cfg> {
         handle.follow_location(true)?; // follow redirects
 
         // Enable HTTP/2 to be used as it'll allow true multiplexing which makes
-        // downloads much faster. Currently Cargo requests the `http2` feature
-        // of the `curl` crate which means it should always be built in, so
-        // treat it as a fatal error of http/2 support isn't found.
+        // downloads much faster.
+        //
+        // Currently Cargo requests the `http2` feature of the `curl` crate
+        // which means it should always be built in. On OSX, however, we ship
+        // cargo still linked against the system libcurl. Building curl with
+        // ALPN support for HTTP/2 requires newer versions of OSX (the
+        // SecureTransport API) than we want to ship Cargo for. By linking Cargo
+        // against the system libcurl then older curl installations won't use
+        // HTTP/2 but newer ones will. All that to basically say we ignore
+        // errors here on OSX, but consider this a fatal error to not activate
+        // HTTP/2 on all other platforms.
         if self.set.multiplexing {
-            handle.http_version(HttpVersion::V2)
-                .chain_err(|| "failed to enable HTTP2, is curl not built right?")?;
+            let result = handle.http_version(HttpVersion::V2);
+            if cfg!(target_os = "macos") {
+                if let Err(e) = result {
+                    warn!("ignoring HTTP/2 activation error: {}", e)
+                }
+            } else {
+                result.with_context(|_| {
+                    "failed to enable HTTP2, is curl not built right?"
+                })?;
+            }
+        } else {
+            handle.http_version(HttpVersion::V11)?;
         }
 
         // This is an option to `libcurl` which indicates that if there's a
