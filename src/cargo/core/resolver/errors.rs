@@ -1,4 +1,4 @@
-use std::collections::HashMap;
+use std::collections::BTreeMap;
 use std::fmt;
 
 use core::{Dependency, PackageId, Registry, Summary};
@@ -73,7 +73,7 @@ pub(super) fn activation_error(
     registry: &mut Registry,
     parent: &Summary,
     dep: &Dependency,
-    conflicting_activations: &HashMap<PackageId, ConflictReason>,
+    conflicting_activations: &BTreeMap<PackageId, ConflictReason>,
     candidates: &[Candidate],
     config: Option<&Config>,
 ) -> ResolveError {
