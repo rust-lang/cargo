@@ -223,6 +223,7 @@ impl TargetConfig {
             let mut output = BuildOutput {
                 library_paths: Vec::new(),
                 library_links: Vec::new(),
+                linker_args: Vec::new(),
                 cfgs: Vec::new(),
                 env: Vec::new(),
                 metadata: Vec::new(),
@@ -257,6 +258,12 @@ impl TargetConfig {
                         output
                             .library_paths
                             .extend(list.iter().map(|v| PathBuf::from(&v.0)));
+                    }
+                    "rustc-link-arg" => {
+                        let args = value.list(k)?;
+                        output
+                            .linker_args
+                            .extend(args.iter().map(|v| v.0.clone()));
                     }
                     "rustc-cfg" => {
                         let list = value.list(k)?;

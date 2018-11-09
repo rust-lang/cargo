@@ -21,6 +21,8 @@ pub struct BuildOutput {
     pub library_paths: Vec<PathBuf>,
     /// Names and link kinds of libraries, suitable for the `-l` flag.
     pub library_links: Vec<String>,
+    /// Linker arguments suitable to be passed to `-C link-arg=<args>`
+    pub linker_args: Vec<String>,
     /// Various `--cfg` flags to pass to the compiler.
     pub cfgs: Vec<String>,
     /// Additional environment variables to run the compiler with.
@@ -437,6 +439,7 @@ impl BuildOutput {
     ) -> CargoResult<BuildOutput> {
         let mut library_paths = Vec::new();
         let mut library_links = Vec::new();
+        let mut linker_args = Vec::new();
         let mut cfgs = Vec::new();
         let mut env = Vec::new();
         let mut metadata = Vec::new();
@@ -484,6 +487,7 @@ impl BuildOutput {
                 }
                 "rustc-link-lib" => library_links.push(value.to_string()),
                 "rustc-link-search" => library_paths.push(PathBuf::from(value)),
+                "rustc-link-arg" => linker_args.push(value.to_string()),
                 "rustc-cfg" => cfgs.push(value.to_string()),
                 "rustc-env" => env.push(BuildOutput::parse_rustc_env(&value, &whence)?),
                 "warning" => warnings.push(value.to_string()),
@@ -496,6 +500,7 @@ impl BuildOutput {
         Ok(BuildOutput {
             library_paths,
             library_links,
+            linker_args,
             cfgs,
             env,
             metadata,

@@ -367,6 +367,10 @@ fn rustc<'a, 'cfg>(
                         rustc.arg("-l").arg(name);
                     }
                 }
+                for arg in output.linker_args.iter() {
+                    let link_arg = format!("link-arg={}", arg);
+                    rustc.arg("-C").arg(link_arg);
+                }
             }
         }
         Ok(())
