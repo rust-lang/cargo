@@ -4,15 +4,20 @@ use super::types::ConflictReason;
 use core::resolver::Context;
 use core::{Dependency, PackageId};
 
+/// This is a data structure for storing a large number of Sets designed to
+/// efficiently see if any of the stored Sets are a subset of a search Set.
 enum ConflictStore {
-    Con(BTreeMap<PackageId, ConflictReason>),
-    Map(HashMap<PackageId, ConflictStore>),
+    /// a Leaf is one of the stored Sets.
+    Leaf(BTreeMap<PackageId, ConflictReason>),
+    /// a Node is a map from an element to a subset of the stored data
+    /// where all the Sets in the subset contains that element.
+    Node(HashMap<PackageId, ConflictStore>),
 }
 
 impl ConflictStore {
     /// Finds any known set of conflicts, if any,
     /// which are activated in `cx` and pass the `filter` specified?
-    pub fn find_conflicting<F>(
+    fn find_conflicting<F>(
         &self,
         cx: &Context,
         filter: &F,
@@ -21,17 +26,23 @@ impl ConflictStore {
         for<'r> F: Fn(&'r &BTreeMap<PackageId, ConflictReason>) -> bool,
     {
         match self {
-            ConflictStore::Con(c) => {
+            ConflictStore::Leaf(c) => {
                 if filter(&c) {
                     Some(c)
                 } else {
                     None
                 }
             }
-            ConflictStore::Map(m) => {
+            ConflictStore::Node(m) => {
                 for (pid, store) in m {
+                    // if the key is active then we need to check all of the corresponding subset,
+                    // but if it is not active then there is no way any of the corresponding subset
+                    // will be conflicting.
                     if cx.is_active(pid) {
                         if let Some(o) = store.find_conflicting(cx, filter) {
+                            debug_assert!(cx.is_conflicting(None, o));
+                            // is_conflicting checks that all the elements are active,
+                            // but we have checked each one by the recursion of this function.
                             return Some(o);
                         }
                     }
@@ -41,20 +52,30 @@ impl ConflictStore {
         }
     }
 
-    pub fn insert<'a>(
+    fn insert<'a>(
         &mut self,
         mut iter: impl Iterator<Item = &'a PackageId>,
         con: BTreeMap<PackageId, ConflictReason>,
     ) {
         if let Some(pid) = iter.next() {
-            if let ConflictStore::Map(p) = self {
+            if let ConflictStore::Node(p) = self {
                 p.entry(pid.clone())
-                    .or_insert_with(|| ConflictStore::Map(HashMap::new()))
+                    .or_insert_with(|| ConflictStore::Node(HashMap::new()))
                     .insert(iter, con);
-            }
-            // else, We already have a subset of this in the ConflictStore
+            } // else, We already have a subset of this in the ConflictStore
         } else {
-            *self = ConflictStore::Con(con)
+            // we are at the end of the set we are adding, there are 3 cases for what to do next:
+            // 1. self is a empty dummy Node inserted by `or_insert_with`
+            //      in witch case we should replace it with `Leaf(con)`.
+            // 2. self is a Node because we previously inserted a superset of
+            //      the thing we are working on (I don't know if this happens in practice)
+            //      but the subset that we are working on will
+            //      always match any time the larger set would have
+            //      in witch case we can replace it with `Leaf(con)`.
+            // 3. self is a Leaf that is in the same spot in the structure as
+            //      the thing we are working on. So it is equivalent.
+            //      We can replace it with `Leaf(con)`.
+            *self = ConflictStore::Leaf(con)
         }
     }
 }
@@ -85,7 +106,7 @@ pub(super) struct ConflictCache {
     // This is used to make sure we don't queue work we know will fail. See the
     // discussion in https://github.com/rust-lang/cargo/pull/5168 for why this
     // is so important. The nested HashMaps act as a kind of btree, that lets us
-    // look up a witch entry's are still active without
+    // look up which entries are still active without
     // linearly scanning through the full list.
     //
     // Also, as a final note, this map is *not* ever removed from. This remains
@@ -132,7 +153,7 @@ impl ConflictCache {
     pub fn insert(&mut self, dep: &Dependency, con: &BTreeMap<PackageId, ConflictReason>) {
         self.con_from_dep
             .entry(dep.clone())
-            .or_insert_with(|| ConflictStore::Map(HashMap::new()))
+            .or_insert_with(|| ConflictStore::Node(HashMap::new()))
             .insert(con.keys(), con.clone());
 
         trace!(
