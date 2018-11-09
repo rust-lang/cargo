@@ -4,17 +4,17 @@ use super::types::ConflictReason;
 use core::resolver::Context;
 use core::{Dependency, PackageId};
 
-/// This is a data structure for storing a large number of Sets designed to
+/// This is a Trie for storing a large number of Sets designed to
 /// efficiently see if any of the stored Sets are a subset of a search Set.
-enum ConflictStore {
+enum ConflictStoreTrie {
     /// a Leaf is one of the stored Sets.
     Leaf(BTreeMap<PackageId, ConflictReason>),
-    /// a Node is a map from an element to a subset of the stored data
-    /// where all the Sets in the subset contains that element.
-    Node(HashMap<PackageId, ConflictStore>),
+    /// a Node is a map from an element to a subTrie where
+    /// all the Sets in the subTrie contains that element.
+    Node(HashMap<PackageId, ConflictStoreTrie>),
 }
 
-impl ConflictStore {
+impl ConflictStoreTrie {
     /// Finds any known set of conflicts, if any,
     /// which are activated in `cx` and pass the `filter` specified?
     fn find_conflicting<F>(
@@ -26,26 +26,25 @@ impl ConflictStore {
         for<'r> F: Fn(&'r &BTreeMap<PackageId, ConflictReason>) -> bool,
     {
         match self {
-            ConflictStore::Leaf(c) => {
+            ConflictStoreTrie::Leaf(c) => {
                 if filter(&c) {
+                    // is_conflicting checks that all the elements are active,
+                    // but we have checked each one by the recursion of this function.
+                    debug_assert!(cx.is_conflicting(None, c));
                     Some(c)
                 } else {
                     None
                 }
             }
-            ConflictStore::Node(m) => {
+            ConflictStoreTrie::Node(m) => {
                 for (pid, store) in m {
-                    // if the key is active then we need to check all of the corresponding subset,
-                    // but if it is not active then there is no way any of the corresponding subset
-                    // will be conflicting.
+                    // if the key is active then we need to check all of the corresponding subTrie.
                     if cx.is_active(pid) {
                         if let Some(o) = store.find_conflicting(cx, filter) {
-                            debug_assert!(cx.is_conflicting(None, o));
-                            // is_conflicting checks that all the elements are active,
-                            // but we have checked each one by the recursion of this function.
                             return Some(o);
                         }
-                    }
+                    } // else, if it is not active then there is no way any of the corresponding
+                    // subTrie will be conflicting.
                 }
                 None
             }
@@ -58,9 +57,9 @@ impl ConflictStore {
         con: BTreeMap<PackageId, ConflictReason>,
     ) {
         if let Some(pid) = iter.next() {
-            if let ConflictStore::Node(p) = self {
+            if let ConflictStoreTrie::Node(p) = self {
                 p.entry(pid.clone())
-                    .or_insert_with(|| ConflictStore::Node(HashMap::new()))
+                    .or_insert_with(|| ConflictStoreTrie::Node(HashMap::new()))
                     .insert(iter, con);
             } // else, We already have a subset of this in the ConflictStore
         } else {
@@ -75,7 +74,14 @@ impl ConflictStore {
             // 3. self is a Leaf that is in the same spot in the structure as
             //      the thing we are working on. So it is equivalent.
             //      We can replace it with `Leaf(con)`.
-            *self = ConflictStore::Leaf(con)
+            if cfg!(debug_assertions) {
+                if let ConflictStoreTrie::Leaf(c) = self {
+                    let a: Vec<_> = con.keys().collect();
+                    let b: Vec<_> = c.keys().collect();
+                    assert_eq!(a, b);
+                }
+            }
+            *self = ConflictStoreTrie::Leaf(con)
         }
     }
 }
@@ -113,7 +119,7 @@ pub(super) struct ConflictCache {
     // as a global cache which we never delete from. Any entry in this map is
     // unconditionally true regardless of our resolution history of how we got
     // here.
-    con_from_dep: HashMap<Dependency, ConflictStore>,
+    con_from_dep: HashMap<Dependency, ConflictStoreTrie>,
     // `dep_from_pid` is an inverse-index of `con_from_dep`.
     // For every `PackageId` this lists the `Dependency`s that mention it in `dep_from_pid`.
     dep_from_pid: HashMap<PackageId, HashSet<Dependency>>,
@@ -153,7 +159,7 @@ impl ConflictCache {
     pub fn insert(&mut self, dep: &Dependency, con: &BTreeMap<PackageId, ConflictReason>) {
         self.con_from_dep
             .entry(dep.clone())
-            .or_insert_with(|| ConflictStore::Node(HashMap::new()))
+            .or_insert_with(|| ConflictStoreTrie::Node(HashMap::new()))
             .insert(con.keys(), con.clone());
 
         trace!(
