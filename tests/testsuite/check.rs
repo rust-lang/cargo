@@ -2,7 +2,6 @@ use std::fmt::{self, Write};
 
 use glob::glob;
 use support::install::exe;
-use support::is_nightly;
 use support::paths::CargoPathExt;
 use support::registry::Package;
 use support::{basic_manifest, project};
@@ -573,39 +572,44 @@ fn check_artifacts() {
         .file("examples/ex1.rs", "fn main() {}")
         .file("benches/b1.rs", "")
         .build();
+
+    let assert_glob = |path: &str, count: usize| {
+        assert_eq!(
+            glob(&p.root().join(path).to_str().unwrap())
+                .unwrap()
+                .count(),
+            count
+        );
+    };
+
     p.cargo("check").run();
-    assert!(p.root().join("target/debug/libfoo.rmeta").is_file());
+    assert!(!p.root().join("target/debug/libfoo.rmeta").is_file());
     assert!(!p.root().join("target/debug/libfoo.rlib").is_file());
     assert!(!p.root().join("target/debug").join(exe("foo")).is_file());
+    assert_glob("target/debug/deps/libfoo-*.rmeta", 2);
 
     p.root().join("target").rm_rf();
     p.cargo("check --lib").run();
-    assert!(p.root().join("target/debug/libfoo.rmeta").is_file());
+    assert!(!p.root().join("target/debug/libfoo.rmeta").is_file());
     assert!(!p.root().join("target/debug/libfoo.rlib").is_file());
     assert!(!p.root().join("target/debug").join(exe("foo")).is_file());
+    assert_glob("target/debug/deps/libfoo-*.rmeta", 1);
 
     p.root().join("target").rm_rf();
     p.cargo("check --bin foo").run();
-    if is_nightly() {
-        // The nightly check can be removed once 1.27 is stable.
-        // Bins now generate `rmeta` files.
-        // See: https://github.com/rust-lang/rust/pull/49289
-        assert!(p.root().join("target/debug/libfoo.rmeta").is_file());
-    }
+    assert!(!p.root().join("target/debug/libfoo.rmeta").is_file());
     assert!(!p.root().join("target/debug/libfoo.rlib").is_file());
     assert!(!p.root().join("target/debug").join(exe("foo")).is_file());
+    assert_glob("target/debug/deps/libfoo-*.rmeta", 2);
 
     p.root().join("target").rm_rf();
     p.cargo("check --test t1").run();
     assert!(!p.root().join("target/debug/libfoo.rmeta").is_file());
     assert!(!p.root().join("target/debug/libfoo.rlib").is_file());
     assert!(!p.root().join("target/debug").join(exe("foo")).is_file());
-    assert_eq!(
-        glob(&p.root().join("target/debug/t1-*").to_str().unwrap())
-            .unwrap()
-            .count(),
-        0
-    );
+    assert_glob("target/debug/t1-*", 0);
+    assert_glob("target/debug/deps/libfoo-*.rmeta", 1);
+    assert_glob("target/debug/deps/libt1-*.rmeta", 1);
 
     p.root().join("target").rm_rf();
     p.cargo("check --example ex1").run();
@@ -617,18 +621,17 @@ fn check_artifacts() {
             .join(exe("ex1"))
             .is_file()
     );
+    assert_glob("target/debug/deps/libfoo-*.rmeta", 1);
+    assert_glob("target/debug/examples/libex1-*.rmeta", 1);
 
     p.root().join("target").rm_rf();
     p.cargo("check --bench b1").run();
     assert!(!p.root().join("target/debug/libfoo.rmeta").is_file());
     assert!(!p.root().join("target/debug/libfoo.rlib").is_file());
     assert!(!p.root().join("target/debug").join(exe("foo")).is_file());
-    assert_eq!(
-        glob(&p.root().join("target/debug/b1-*").to_str().unwrap())
-            .unwrap()
-            .count(),
-        0
-    );
+    assert_glob("target/debug/b1-*", 0);
+    assert_glob("target/debug/deps/libfoo-*.rmeta", 1);
+    assert_glob("target/debug/deps/libb1-*.rmeta", 1);
 }
 
 #[test]
