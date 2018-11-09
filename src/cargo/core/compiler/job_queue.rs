@@ -113,7 +113,7 @@ impl<'a> JobState<'a> {
         &self,
         cmd: &ProcessBuilder,
         prefix: Option<String>,
-        print_output: bool,
+        capture_output: bool,
     ) -> CargoResult<Output> {
         let prefix = prefix.unwrap_or_else(|| String::new());
         cmd.exec_with_streaming(
@@ -125,7 +125,7 @@ impl<'a> JobState<'a> {
                 let _ = self.tx.send(Message::Stderr(format!("{}{}", prefix, err)));
                 Ok(())
             },
-            print_output,
+            capture_output,
         )
     }
 }
