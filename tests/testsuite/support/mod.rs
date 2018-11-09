@@ -770,7 +770,7 @@ impl Execs {
             process.exec_with_streaming(
                 &mut |out| Ok(println!("{}", out)),
                 &mut |err| Ok(eprintln!("{}", err)),
-                false,
+                true,
             )
         } else {
             process.exec_with_output()
