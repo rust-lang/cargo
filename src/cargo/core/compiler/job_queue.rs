@@ -3,7 +3,7 @@ use std::collections::HashSet;
 use std::fmt;
 use std::io;
 use std::mem;
-use std::sync::mpsc::{channel, Receiver, Sender};
+use std::sync::mpsc::{sync_channel, Receiver, SyncSender};
 use std::sync::Arc;
 use std::process::Output;
 
@@ -31,7 +31,7 @@ use super::context::OutputFile;
 /// then later on the entire graph is processed and compiled.
 pub struct JobQueue<'a> {
     queue: DependencyQueue<Key<'a>, Vec<(Job, Freshness)>>,
-    tx: Sender<Message<'a>>,
+    tx: SyncSender<Message<'a>>,
     rx: Receiver<Message<'a>>,
     active: Vec<Key<'a>>,
     pending: HashMap<Key<'a>, PendingBuild>,
@@ -81,7 +81,7 @@ impl<'a> Key<'a> {
 }
 
 pub struct JobState<'a> {
-    tx: Sender<Message<'a>>,
+    tx: SyncSender<Message<'a>>,
 }
 
 enum Message<'a> {
@@ -132,7 +132,7 @@ impl<'a> JobState<'a> {
 
 impl<'a> JobQueue<'a> {
     pub fn new<'cfg>(bcx: &BuildContext<'a, 'cfg>) -> JobQueue<'a> {
-        let (tx, rx) = channel();
+        let (tx, rx) = sync_channel(4096);
         JobQueue {
             queue: DependencyQueue::new(),
             tx,
@@ -176,7 +176,7 @@ impl<'a> JobQueue<'a> {
         // though we need the handle to be `'static` as that's typically what's
         // required when spawning a thread!
         //
-        // To work around this we transmute the `Sender` to a static lifetime.
+        // To work around this we transmute the `SyncSender` to a static lifetime.
         // we're only sending "longer living" messages and we should also
         // destroy all references to the channel before this function exits as
         // the destructor for the `helper` object will ensure the associated
@@ -185,7 +185,7 @@ impl<'a> JobQueue<'a> {
         // As a result, this `transmute` to a longer lifetime should be safe in
         // practice.
         let tx = self.tx.clone();
-        let tx = unsafe { mem::transmute::<Sender<Message<'a>>, Sender<Message<'static>>>(tx) };
+        let tx = unsafe { mem::transmute::<SyncSender<Message<'a>>, SyncSender<Message<'static>>>(tx) };
         let tx2 = tx.clone();
         let helper = cx.jobserver
             .clone()
