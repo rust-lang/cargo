@@ -5,6 +5,7 @@ use std::fmt;
 use std::path::Path;
 use std::process::{Command, Output, Stdio};
 
+use failure::Fail;
 use jobserver::Client;
 use shell_escape::escape;
 
@@ -271,19 +272,20 @@ impl ProcessBuilder {
 
         {
             let to_print = if capture_output { Some(&output) } else { None };
-            if !output.status.success() {
-                return Err(process_error(
-                    &format!("process didn't exit successfully: {}", self),
-                    Some(output.status),
-                    to_print,
-                ).into());
-            } else if let Some(e) = callback_error {
+            if let Some(e) = callback_error {
                 let cx = process_error(
                     &format!("failed to parse process output: {}", self),
                     Some(output.status),
                     to_print,
                 );
-                return Err(e.context(cx).into());
+                return Err(cx.context(e).into());
+            } else if !output.status.success() {
+                return Err(process_error(
+                    &format!("process didn't exit successfully: {}", self),
+                    Some(output.status),
+                    to_print,
+                )
+                .into());
             }
         }
 
