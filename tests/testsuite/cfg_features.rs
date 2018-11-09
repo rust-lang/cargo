@@ -127,21 +127,23 @@ error[E0425]: cannot find value `BB` in this scope",
 
 #[test]
 fn dont_include_default() {
+    let other_family = if cfg!(unix) { "windows" } else { "unix" };
     let p = project()
         .file(
             "Cargo.toml",
-            r#"
-            [package]
-            name = "a"
-            version = "0.0.1"
-            authors = []
-
-            [target.'cfg(unix)'.features]
-            b = []
-            
-            [features]
-            default = ["b"]
-        "#,
+            &format!(r#"
+                [package]
+                name = "a"
+                version = "0.0.1"
+                authors = []
+    
+                [target.'cfg({})'.features]
+                b = []
+                
+                [features]
+                default = ["b"]
+            "#, 
+            other_family),
         ).file("src/lib.rs", r#"
             #[cfg(feature = "b")]
             pub const BB: usize = 0;
