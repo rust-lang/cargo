@@ -203,6 +203,37 @@ fn replaces_artifacts() {
     .run();
 }
 
+#[test]
+fn avoid_build_scripts() {
+    let p = project()
+        .file(
+            "Cargo.toml",
+            r#"
+            [workspace]
+            members = ["a", "b"]
+            "#,
+        )
+        .file("a/Cargo.toml", &basic_manifest("a", "0.0.1"))
+        .file("a/src/main.rs", "fn main() {}")
+        .file("a/build.rs", r#"fn main() { println!("hello-build-a"); }"#)
+        .file("b/Cargo.toml", &basic_manifest("b", "0.0.1"))
+        .file("b/src/main.rs", "fn main() {}")
+        .file("b/build.rs", r#"fn main() { println!("hello-build-b"); }"#)
+        .build();
+
+    p.cargo("build -Z unstable-options --out-dir out -vv")
+        .masquerade_as_nightly_cargo()
+        .with_stdout_contains("[a 0.0.1] hello-build-a")
+        .with_stdout_contains("[b 0.0.1] hello-build-b")
+        .run();
+    check_dir_contents(
+        &p.root().join("out"),
+        &["a", "b"],
+        &["a", "a.dSYM", "b", "b.dSYM"],
+        &["a.exe", "a.pdb", "b.exe", "b.pdb"],
+    );
+}
+
 fn check_dir_contents(
     out_dir: &Path,
     expected_linux: &[&str],
