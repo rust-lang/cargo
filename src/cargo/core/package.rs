@@ -1,4 +1,5 @@
 use std::cell::{Ref, RefCell, Cell};
+use std::cmp::Ordering;
 use std::collections::{HashMap, HashSet};
 use std::fmt;
 use std::hash;
@@ -36,6 +37,18 @@ pub struct Package {
     manifest: Manifest,
     /// The root of the package
     manifest_path: PathBuf,
+}
+
+impl Ord for Package {
+    fn cmp(&self, other: &Package) -> Ordering {
+        self.package_id().cmp(other.package_id())
+    }
+}
+
+impl PartialOrd for Package {
+    fn partial_cmp(&self, other: &Package) -> Option<Ordering> {
+        Some(self.cmp(other))
+    }
 }
 
 /// A Package in a form where `Serialize` can be derived.
