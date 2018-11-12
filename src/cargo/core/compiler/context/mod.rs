@@ -4,8 +4,8 @@ use std::ffi::OsStr;
 use std::fmt::Write;
 use std::path::PathBuf;
 use std::sync::Arc;
-use std::cmp::Ordering;
 
+use failure::Error;
 use jobserver::Client;
 
 use core::{Package, PackageId, Resolve, Target};
@@ -42,7 +42,7 @@ use self::compilation_files::CompilationFiles;
 /// example, it needs to know the target architecture (OS, chip arch etc.) and it needs to know
 /// whether you want a debug or release build. There is enough information in this struct to figure
 /// all that out.
-#[derive(Clone, Copy, Eq, PartialEq, Hash, Debug)]
+#[derive(Clone, Copy, Eq, PartialEq, Hash, Debug, PartialOrd, Ord)]
 pub struct Unit<'a> {
     /// Information about available targets, which files to include/exclude, etc. Basically stuff in
     /// `Cargo.toml`.
@@ -70,18 +70,6 @@ impl<'a> Unit<'a> {
     pub fn buildkey(&self) -> String {
         format!("{}-{}", self.pkg.name(), short_hash(self))
 	}
-}
-
-impl<'a> Ord for Unit<'a> {
-    fn cmp(&self, other: &Unit) -> Ordering {
-        self.buildkey().cmp(&other.buildkey())
-    }
-}
-
-impl<'a> PartialOrd for Unit<'a> {
-    fn partial_cmp(&self, other: &Unit) -> Option<Ordering> {
-        Some(self.cmp(other))
-    }
 }
 
 pub struct Context<'a, 'cfg: 'a> {
@@ -150,6 +138,7 @@ impl<'a, 'cfg> Context<'a, 'cfg> {
         self.prepare_units(export_dir, units)?;
         self.prepare()?;
         custom_build::build_map(&mut self, units)?;
+        self.check_collistions()?;
 
         for unit in units.iter() {
             // Build up a list of pending jobs, each of which represent
@@ -353,13 +342,8 @@ impl<'a, 'cfg> Context<'a, 'cfg> {
         self.files.as_mut().unwrap()
     }
 
-    /// Return the filenames that the given target for the given profile will
-    /// generate as a list of 3-tuples (filename, link_dst, linkable)
-    ///
-    ///  - filename: filename rustc compiles to. (Often has metadata suffix).
-    ///  - link_dst: Optional file to link/copy the result to (without metadata suffix)
-    ///  - linkable: Whether possible to link against file (eg it's a library)
-    pub fn outputs(&mut self, unit: &Unit<'a>) -> CargoResult<Arc<Vec<OutputFile>>> {
+    /// Return the filenames that the given unit will generate.
+    pub fn outputs(&self, unit: &Unit<'a>) -> CargoResult<Arc<Vec<OutputFile>>> {
         self.files.as_ref().unwrap().outputs(unit, self.bcx)
     }
 
@@ -467,6 +451,89 @@ impl<'a, 'cfg> Context<'a, 'cfg> {
         }
         inputs.sort();
         Ok(inputs)
+    }
+
+    fn check_collistions(&self) -> CargoResult<()> {
+        let mut output_collisions = HashMap::new();
+        let describe_collision = |unit: &Unit, other_unit: &Unit, path: &PathBuf| -> String {
+            format!(
+                "The {} target `{}` in package `{}` has the same output \
+                filename as the {} target `{}` in package `{}`.\n\
+                Colliding filename is: {}\n",
+                unit.target.kind().description(),
+                unit.target.name(),
+                unit.pkg.package_id(),
+                other_unit.target.kind().description(),
+                other_unit.target.name(),
+                other_unit.pkg.package_id(),
+                path.display()
+            )
+        };
+        let suggestion = "Consider changing their names to be unique or compiling them separately.";
+        let report_collision = |unit: &Unit, other_unit: &Unit, path: &PathBuf| -> Error {
+            if unit.target.name() == other_unit.target.name() {
+                format_err!(
+                    "output filename collision.\n\
+                    {}\
+                    The targets must have unique names.\n\
+                    {}",
+                    describe_collision(unit, other_unit, path),
+                    suggestion
+                )
+            } else {
+                format_err!(
+                    "output filename collision.\n\
+                    {}\
+                    The output filenames must be unique.\n\
+                    {}\n\
+                    If this looks unexpected, it may be a bug in Cargo. Please file a bug report at\n\
+                    https://github.com/rust-lang/cargo/issues/ with as much information as you\n\
+                    can provide.\n\
+                    {} running on `{}` target `{}`\n\
+                    First unit: {:?}\n\
+                    Second unit: {:?}",
+                    describe_collision(unit, other_unit, path),
+                    suggestion,
+                    ::version(), self.bcx.host_triple(), self.bcx.target_triple(),
+                    unit, other_unit)
+            }
+        };
+        let mut keys = self
+            .unit_dependencies
+            .keys()
+            .filter(|unit| !unit.mode.is_run_custom_build())
+            .collect::<Vec<_>>();
+        // Sort for consistent error messages.
+        keys.sort_unstable();
+        for unit in keys {
+            for output in self.outputs(unit)?.iter() {
+                if let Some(other_unit) =
+                    output_collisions.insert(output.path.clone(), unit)
+                {
+                    return Err(report_collision(unit, &other_unit, &output.path));
+                }
+                if let Some(hardlink) = output.hardlink.as_ref() {
+                    if let Some(other_unit) = output_collisions.insert(hardlink.clone(), unit)
+                    {
+                        return Err(report_collision(unit, &other_unit, hardlink));
+                    }
+                }
+                if let Some(ref export_path) = output.export_path {
+                    if let Some(other_unit) =
+                        output_collisions.insert(export_path.clone(), unit)
+                    {
+                        bail!("`--out-dir` filename collision.\n\
+                            {}\
+                            The exported filenames must be unique.\n\
+                            {}",
+                            describe_collision(unit, &other_unit, &export_path),
+                            suggestion
+                            );
+                    }
+                }
+            }
+        }
+        Ok(())
     }
 }
 

@@ -43,6 +43,7 @@ mod cargo_features;
 mod cfg;
 mod check;
 mod clean;
+mod collisions;
 mod concurrent;
 mod config;
 mod corrupt_git;
