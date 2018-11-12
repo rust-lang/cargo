@@ -74,7 +74,7 @@ impl Profiles {
         release: bool,
     ) -> Profile {
         let maker = match mode {
-            CompileMode::Test => {
+            CompileMode::Test | CompileMode::Bench => {
                 if release {
                     &self.bench
                 } else {
@@ -95,7 +95,6 @@ impl Profiles {
                     &self.dev
                 }
             }
-            CompileMode::Bench => &self.bench,
             CompileMode::Doc { .. } => &self.doc,
         };
         let mut profile = maker.get_profile(Some(pkg_id), is_member, unit_for);
