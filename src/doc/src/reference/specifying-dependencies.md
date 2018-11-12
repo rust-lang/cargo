@@ -113,7 +113,8 @@ rand = { git = "https://github.com/rust-lang-nursery/rand" }
 
 Cargo will fetch the `git` repository at this location then look for a
 `Cargo.toml` for the requested crate anywhere inside the `git` repository
-(not necessarily at the root).
+(not necessarily at the root - for example, specifying a member crate name 
+of a workspace and setting `git` to the repository containing the workspace).
 
 Since we haven’t specified any other information, Cargo assumes that
 we intend to use the latest commit on the `master` branch to build our package.
