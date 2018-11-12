@@ -4147,43 +4147,40 @@ fn build_filter_infer_profile() {
 
     p.cargo("build -v")
         .with_stderr_contains(
-            "\
-             [RUNNING] `rustc --crate-name foo src/lib.rs --color never --crate-type lib \
+            "[RUNNING] `rustc --crate-name foo src/lib.rs --color never --crate-type lib \
              --emit=dep-info,link[..]",
         ).with_stderr_contains(
-            "\
-             [RUNNING] `rustc --crate-name foo src/main.rs --color never --crate-type bin \
+            "[RUNNING] `rustc --crate-name foo src/main.rs --color never --crate-type bin \
              --emit=dep-info,link[..]",
         ).run();
 
     p.root().join("target").rm_rf();
     p.cargo("build -v --test=t1")
         .with_stderr_contains(
-            "\
-             [RUNNING] `rustc --crate-name foo src/lib.rs --color never --crate-type lib \
-             --emit=dep-info,link[..]",
+            "[RUNNING] `rustc --crate-name foo src/lib.rs --color never --crate-type lib \
+             --emit=dep-info,link -C debuginfo=2 [..]",
         ).with_stderr_contains(
-            "[RUNNING] `rustc --crate-name t1 tests/t1.rs --color never --emit=dep-info,link[..]",
+            "[RUNNING] `rustc --crate-name t1 tests/t1.rs --color never --emit=dep-info,link \
+            -C debuginfo=2 [..]",
         ).with_stderr_contains(
-            "\
-             [RUNNING] `rustc --crate-name foo src/main.rs --color never --crate-type bin \
-             --emit=dep-info,link[..]",
+            "[RUNNING] `rustc --crate-name foo src/main.rs --color never --crate-type bin \
+             --emit=dep-info,link -C debuginfo=2 [..]",
         ).run();
 
     p.root().join("target").rm_rf();
+    // Bench uses test profile without `--release`.
     p.cargo("build -v --bench=b1")
         .with_stderr_contains(
-            "\
-             [RUNNING] `rustc --crate-name foo src/lib.rs --color never --crate-type lib \
-             --emit=dep-info,link[..]",
+            "[RUNNING] `rustc --crate-name foo src/lib.rs --color never --crate-type lib \
+             --emit=dep-info,link -C debuginfo=2 [..]",
         ).with_stderr_contains(
-            "\
-             [RUNNING] `rustc --crate-name b1 benches/b1.rs --color never --emit=dep-info,link \
-             -C opt-level=3[..]",
-        ).with_stderr_contains(
-            "\
-             [RUNNING] `rustc --crate-name foo src/main.rs --color never --crate-type bin \
-             --emit=dep-info,link[..]",
+            "[RUNNING] `rustc --crate-name b1 benches/b1.rs --color never --emit=dep-info,link \
+            -C debuginfo=2 [..]",
+        )
+        .with_stderr_does_not_contain("opt-level")
+        .with_stderr_contains(
+            "[RUNNING] `rustc --crate-name foo src/main.rs --color never --crate-type bin \
+             --emit=dep-info,link -C debuginfo=2 [..]",
         ).run();
 }
 
@@ -4213,10 +4210,6 @@ fn targets_selected_all() {
         .with_stderr_contains("\
             [RUNNING] `rustc --crate-name foo src/main.rs --color never --crate-type bin \
             --emit=dep-info,link[..]")
-        // bench
-        .with_stderr_contains("\
-            [RUNNING] `rustc --crate-name foo src/main.rs --color never --emit=dep-info,link \
-            -C opt-level=3 --test [..]")
         // unit test
         .with_stderr_contains("\
             [RUNNING] `rustc --crate-name foo src/main.rs --color never --emit=dep-info,link \
@@ -4231,10 +4224,6 @@ fn all_targets_no_lib() {
         .with_stderr_contains("\
             [RUNNING] `rustc --crate-name foo src/main.rs --color never --crate-type bin \
             --emit=dep-info,link[..]")
-        // bench
-        .with_stderr_contains("\
-            [RUNNING] `rustc --crate-name foo src/main.rs --color never --emit=dep-info,link \
-            -C opt-level=3 --test [..]")
         // unit test
         .with_stderr_contains("\
             [RUNNING] `rustc --crate-name foo src/main.rs --color never --emit=dep-info,link \
