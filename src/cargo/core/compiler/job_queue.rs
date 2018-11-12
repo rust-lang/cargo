@@ -201,7 +201,9 @@ impl<'a> JobQueue<'a> {
                 srv.start(move |msg| drop(tx2.send(Message::FixDiagnostic(msg))))
             });
 
-        crossbeam_utils::thread::scope(|scope| self.drain_the_queue(cx, plan, scope, &helper))
+        crossbeam_utils::thread::scope(|scope| {
+            self.drain_the_queue(cx, plan, scope, &helper)
+        }).expect("child threads should't panic")
     }
 
     fn drain_the_queue(
@@ -409,7 +411,7 @@ impl<'a> JobQueue<'a> {
         match fresh {
             Freshness::Fresh => doit(),
             Freshness::Dirty => {
-                scope.spawn(doit);
+                scope.spawn(move |_| doit());
             }
         }
 
