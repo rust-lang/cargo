@@ -177,7 +177,7 @@ features! {
         [stable] edition: bool,
 
         // Renaming a package in the manifest via the `package` key
-        [unstable] rename_dependency: bool,
+        [stable] rename_dependency: bool,
 
         // Whether a lock file is published with this crate
         [unstable] publish_lockfile: bool,
