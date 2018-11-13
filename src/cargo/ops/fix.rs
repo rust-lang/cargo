@@ -205,9 +205,11 @@ pub fn fix_maybe_exec_rustc() -> CargoResult<bool> {
         // user's code with our changes. Back out everything and fall through
         // below to recompile again.
         if !output.status.success() {
-            for (path, file) in fixes.files.iter() {
-                fs::write(path, &file.original_code)
-                    .with_context(|_| format!("failed to write file `{}`", path))?;
+            if env::var_os(BROKEN_CODE_ENV).is_none() {
+                for (path, file) in fixes.files.iter() {
+                    fs::write(path, &file.original_code)
+                        .with_context(|_| format!("failed to write file `{}`", path))?;
+                }
             }
             log_failed_fix(&output.stderr)?;
         }
