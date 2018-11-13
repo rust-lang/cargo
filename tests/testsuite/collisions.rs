@@ -40,14 +40,14 @@ fn collision_dylib() {
         .build();
 
     p.cargo("build")
-        .with_stderr(&format!("\
-[ERROR] output filename collision.
+        .with_stderr_contains(&format!("\
+[WARNING] output filename collision.
 The lib target `a` in package `b v1.0.0 ([..]/foo/b)` has the same output filename as the lib target `a` in package `a v1.0.0 ([..]/foo/a)`.
 Colliding filename is: [..]/foo/target/debug/deps/{}a{}
-The targets must have unique names.
+The targets should have unique names.
 Consider changing their names to be unique or compiling them separately.
+This may become a hard error in the future, see https://github.com/rust-lang/cargo/issues/6313
 ", env::consts::DLL_PREFIX, env::consts::DLL_SUFFIX))
-        .with_status(101)
         .run();
 }
 
@@ -69,14 +69,14 @@ fn collision_example() {
         .build();
 
     p.cargo("build --examples")
-        .with_stderr("\
-[ERROR] output filename collision.
+        .with_stderr_contains("\
+[WARNING] output filename collision.
 The example target `ex1` in package `b v1.0.0 ([..]/foo/b)` has the same output filename as the example target `ex1` in package `a v1.0.0 ([..]/foo/a)`.
 Colliding filename is: [..]/foo/target/debug/examples/ex1[EXE]
-The targets must have unique names.
+The targets should have unique names.
 Consider changing their names to be unique or compiling them separately.
+This may become a hard error in the future, see https://github.com/rust-lang/cargo/issues/6313
 ")
-        .with_status(101)
         .run();
 }
 
@@ -91,13 +91,13 @@ fn collision_export() {
 
     p.cargo("build --out-dir=out -Z unstable-options --bins --examples")
         .masquerade_as_nightly_cargo()
-        .with_stderr("\
-[ERROR] `--out-dir` filename collision.
+        .with_stderr_contains("\
+[WARNING] `--out-dir` filename collision.
 The example target `foo` in package `foo v1.0.0 ([..]/foo)` has the same output filename as the bin target `foo` in package `foo v1.0.0 ([..]/foo)`.
 Colliding filename is: [..]/foo/out/foo[EXE]
-The exported filenames must be unique.
+The exported filenames should be unique.
 Consider changing their names to be unique or compiling them separately.
+This may become a hard error in the future, see https://github.com/rust-lang/cargo/issues/6313
 ")
-        .with_status(101)
         .run();
 }

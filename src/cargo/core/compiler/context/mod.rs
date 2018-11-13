@@ -5,7 +5,6 @@ use std::fmt::Write;
 use std::path::PathBuf;
 use std::sync::Arc;
 
-use failure::Error;
 use jobserver::Client;
 
 use core::{Package, PackageId, Resolve, Target};
@@ -469,22 +468,23 @@ impl<'a, 'cfg> Context<'a, 'cfg> {
                 path.display()
             )
         };
-        let suggestion = "Consider changing their names to be unique or compiling them separately.";
-        let report_collision = |unit: &Unit, other_unit: &Unit, path: &PathBuf| -> Error {
+        let suggestion = "Consider changing their names to be unique or compiling them separately.\n\
+            This may become a hard error in the future, see https://github.com/rust-lang/cargo/issues/6313";
+        let report_collision = |unit: &Unit, other_unit: &Unit, path: &PathBuf| -> CargoResult<()> {
             if unit.target.name() == other_unit.target.name() {
-                format_err!(
+                self.bcx.config.shell().warn(format!(
                     "output filename collision.\n\
                     {}\
-                    The targets must have unique names.\n\
+                    The targets should have unique names.\n\
                     {}",
                     describe_collision(unit, other_unit, path),
                     suggestion
-                )
+                ))
             } else {
-                format_err!(
+                self.bcx.config.shell().warn(format!(
                     "output filename collision.\n\
                     {}\
-                    The output filenames must be unique.\n\
+                    The output filenames should be unique.\n\
                     {}\n\
                     If this looks unexpected, it may be a bug in Cargo. Please file a bug report at\n\
                     https://github.com/rust-lang/cargo/issues/ with as much information as you\n\
@@ -495,7 +495,7 @@ impl<'a, 'cfg> Context<'a, 'cfg> {
                     describe_collision(unit, other_unit, path),
                     suggestion,
                     ::version(), self.bcx.host_triple(), self.bcx.target_triple(),
-                    unit, other_unit)
+                    unit, other_unit))
             }
         };
         let mut keys = self
@@ -510,25 +510,25 @@ impl<'a, 'cfg> Context<'a, 'cfg> {
                 if let Some(other_unit) =
                     output_collisions.insert(output.path.clone(), unit)
                 {
-                    return Err(report_collision(unit, &other_unit, &output.path));
+                    report_collision(unit, &other_unit, &output.path)?;
                 }
                 if let Some(hardlink) = output.hardlink.as_ref() {
                     if let Some(other_unit) = output_collisions.insert(hardlink.clone(), unit)
                     {
-                        return Err(report_collision(unit, &other_unit, hardlink));
+                        report_collision(unit, &other_unit, hardlink)?;
                     }
                 }
                 if let Some(ref export_path) = output.export_path {
                     if let Some(other_unit) =
                         output_collisions.insert(export_path.clone(), unit)
                     {
-                        bail!("`--out-dir` filename collision.\n\
+                        self.bcx.config.shell().warn(format!("`--out-dir` filename collision.\n\
                             {}\
-                            The exported filenames must be unique.\n\
+                            The exported filenames should be unique.\n\
                             {}",
                             describe_collision(unit, &other_unit, &export_path),
                             suggestion
-                            );
+                            ))?;
                     }
                 }
             }
