@@ -3191,6 +3191,24 @@ failed to select a version for `a` which could resolve this conflict
 
 #[test]
 fn rename_with_link_search_path() {
+    _rename_with_link_search_path(false);
+}
+
+#[test]
+fn rename_with_link_search_path_cross() {
+    if cross_compile::disabled() {
+        return;
+    }
+
+    _rename_with_link_search_path(true);
+}
+
+fn _rename_with_link_search_path(cross: bool) {
+    let target_arg = if cross {
+        format!(" --target={}", cross_compile::alternate())
+    } else {
+        "".to_string()
+    };
     let p = project()
         .file(
             "Cargo.toml",
@@ -3209,7 +3227,7 @@ fn rename_with_link_search_path() {
         );
     let p = p.build();
 
-    p.cargo("build").run();
+    p.cargo(&format!("build{}", target_arg)).run();
 
     let p2 = project()
         .at("bar")
@@ -3242,7 +3260,7 @@ fn rename_with_link_search_path() {
                 } else {
                     println!("cargo:rustc-link-lib=foo");
                 }
-                println!("cargo:rustc-link-search={}",
+                println!("cargo:rustc-link-search=all={}",
                          dst.parent().unwrap().display());
             }
         "#,
@@ -3265,7 +3283,11 @@ fn rename_with_link_search_path() {
     // the `p` project. On OSX the `libfoo.dylib` artifact references the
     // original path in `p` so we want to make sure that it can't find it (hence
     // the deletion).
-    let root = p.root().join("target").join("debug").join("deps");
+    let root = if cross {
+        p.root().join("target").join(cross_compile::alternate()).join("debug").join("deps")
+    } else {
+        p.root().join("target").join("debug").join("deps")
+    };
     let file = format!("{}foo{}", env::consts::DLL_PREFIX, env::consts::DLL_SUFFIX);
     let src = root.join(&file);
 
@@ -3280,7 +3302,7 @@ fn rename_with_link_search_path() {
     remove_dir_all(p.root()).unwrap();
 
     // Everything should work the first time
-    p2.cargo("run").run();
+    p2.cargo(&format!("run{}", target_arg)).run();
 
     // Now rename the root directory and rerun `cargo run`. Not only should we
     // not build anything but we also shouldn't crash.
@@ -3309,7 +3331,7 @@ fn rename_with_link_search_path() {
         thread::sleep(Duration::from_millis(100));
     }
 
-    p2.cargo("run")
+    p2.cargo(&format!("run{}", target_arg))
         .cwd(&new)
         .with_stderr(
             "\
