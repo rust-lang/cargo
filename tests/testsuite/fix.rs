@@ -1116,3 +1116,74 @@ fn only_warn_for_relevant_crates() {
 ")
         .run();
 }
+
+#[test]
+fn fix_to_broken_code() {
+    if !is_nightly() {
+        return;
+    }
+    let p = project()
+        .file(
+            "foo/Cargo.toml",
+            r#"
+                [package]
+                name = 'foo'
+                version = '0.1.0'
+                [workspace]
+            "#,
+        ).file(
+            "foo/src/main.rs",
+            r##"
+                use std::env;
+                use std::fs;
+                use std::io::Write;
+                use std::path::{Path, PathBuf};
+                use std::process::{self, Command};
+
+                fn main() {
+                    let is_lib_rs = env::args_os()
+                        .map(PathBuf::from)
+                        .any(|l| l == Path::new("src/lib.rs"));
+                    if is_lib_rs {
+                        let path = PathBuf::from(env::var_os("OUT_DIR").unwrap());
+                        let path = path.join("foo");
+                        if path.exists() {
+                            panic!()
+                        } else {
+                            fs::File::create(&path).unwrap();
+                        }
+                    }
+
+                    let status = Command::new("rustc")
+                        .args(env::args().skip(1))
+                        .status()
+                        .expect("failed to run rustc");
+                    process::exit(status.code().unwrap_or(2));
+                }
+            "##,
+        ).file(
+            "bar/Cargo.toml",
+            r#"
+                [package]
+                name = 'bar'
+                version = '0.1.0'
+                [workspace]
+            "#,
+        ).file("bar/build.rs", "fn main() {}")
+        .file(
+            "bar/src/lib.rs",
+            "pub fn foo() { let mut x = 3; drop(x); }",
+        ).build();
+
+    // Build our rustc shim
+    p.cargo("build").cwd(p.root().join("foo")).run();
+
+    // Attempt to fix code, but our shim will always fail the second compile
+    p.cargo("fix --allow-no-vcs --broken-code")
+        .cwd(p.root().join("bar"))
+        .env("RUSTC", p.root().join("foo/target/debug/foo"))
+        .with_status(101)
+        .run();
+
+    assert_eq!(p.read_file("bar/src/lib.rs"), "pub fn foo() { let x = 3; drop(x); }");
+}
