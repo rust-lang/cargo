@@ -4,68 +4,6 @@ use support::registry::Package;
 use support::{basic_manifest, project};
 
 #[test]
-fn gated() {
-    let p = project()
-        .file(
-            "Cargo.toml",
-            r#"
-            [project]
-            name = "foo"
-            version = "0.0.1"
-            authors = []
-
-            [dependencies]
-            bar = { package = "foo", version = "0.1" }
-        "#,
-        ).file("src/lib.rs", "")
-        .build();
-
-    p.cargo("build")
-        .masquerade_as_nightly_cargo()
-        .with_status(101)
-        .with_stderr(
-            "\
-error: failed to parse manifest at `[..]`
-
-Caused by:
-  feature `rename-dependency` is required
-
-consider adding `cargo-features = [\"rename-dependency\"]` to the manifest
-",
-        ).run();
-
-    let p = project()
-        .at("bar")
-        .file(
-            "Cargo.toml",
-            r#"
-            [project]
-            name = "foo"
-            version = "0.0.1"
-            authors = []
-
-            [dependencies]
-            bar = { version = "0.1", package = "baz" }
-        "#,
-        ).file("src/lib.rs", "")
-        .build();
-
-    p.cargo("build")
-        .masquerade_as_nightly_cargo()
-        .with_status(101)
-        .with_stderr(
-            "\
-error: failed to parse manifest at `[..]`
-
-Caused by:
-  feature `rename-dependency` is required
-
-consider adding `cargo-features = [\"rename-dependency\"]` to the manifest
-",
-        ).run();
-}
-
-#[test]
 fn rename_dependency() {
     Package::new("bar", "0.1.0").publish();
     Package::new("bar", "0.2.0").publish();
@@ -74,8 +12,6 @@ fn rename_dependency() {
         .file(
             "Cargo.toml",
             r#"
-            cargo-features = ["rename-dependency"]
-
             [project]
             name = "foo"
             version = "0.0.1"
@@ -88,7 +24,7 @@ fn rename_dependency() {
         ).file("src/lib.rs", "extern crate bar; extern crate baz;")
         .build();
 
-    p.cargo("build").masquerade_as_nightly_cargo().run();
+    p.cargo("build").run();
 }
 
 #[test]
@@ -97,8 +33,6 @@ fn rename_with_different_names() {
         .file(
             "Cargo.toml",
             r#"
-            cargo-features = ["rename-dependency"]
-
             [project]
             name = "foo"
             version = "0.0.1"
@@ -122,7 +56,7 @@ fn rename_with_different_names() {
         ).file("bar/src/lib.rs", "")
         .build();
 
-    p.cargo("build").masquerade_as_nightly_cargo().run();
+    p.cargo("build").run();
 }
 
 #[test]
@@ -148,8 +82,7 @@ fn lots_of_names() {
             "Cargo.toml",
             &format!(
                 r#"
-                cargo-features = ["alternative-registries", "rename-dependency"]
-
+                cargo-features = ["alternative-registries"]
                 [package]
                 name = "test"
                 version = "0.1.0"
@@ -196,8 +129,6 @@ fn rename_and_patch() {
         .file(
             "Cargo.toml",
             r#"
-                cargo-features = ["rename-dependency"]
-
                 [package]
                 name = "test"
                 version = "0.1.0"
@@ -216,7 +147,7 @@ fn rename_and_patch() {
         .file("foo/src/lib.rs", "pub fn foo() {}")
         .build();
 
-    p.cargo("build -v").masquerade_as_nightly_cargo().run();
+    p.cargo("build -v").run();
 }
 
 #[test]
@@ -227,8 +158,6 @@ fn rename_twice() {
         .file(
             "Cargo.toml",
             r#"
-                cargo-features = ["rename-dependency"]
-
                 [package]
                 name = "test"
                 version = "0.1.0"
@@ -243,7 +172,6 @@ fn rename_twice() {
         .build();
 
     p.cargo("build -v")
-        .masquerade_as_nightly_cargo()
         .with_status(101)
         .with_stderr(
             "\
@@ -264,8 +192,6 @@ fn rename_affects_fingerprint() {
         .file(
             "Cargo.toml",
             r#"
-                cargo-features = ["rename-dependency"]
-
                 [package]
                 name = "test"
                 version = "0.1.0"
@@ -277,13 +203,11 @@ fn rename_affects_fingerprint() {
         ).file("src/lib.rs", "extern crate foo;")
         .build();
 
-    p.cargo("build -v").masquerade_as_nightly_cargo().run();
+    p.cargo("build -v").run();
 
     p.change_file(
         "Cargo.toml",
         r#"
-                cargo-features = ["rename-dependency"]
-
                 [package]
                 name = "test"
                 version = "0.1.0"
@@ -295,7 +219,6 @@ fn rename_affects_fingerprint() {
     );
 
     p.cargo("build -v")
-        .masquerade_as_nightly_cargo()
         .with_status(101)
         .run();
 }
@@ -309,8 +232,6 @@ fn can_run_doc_tests() {
         .file(
             "Cargo.toml",
             r#"
-            cargo-features = ["rename-dependency"]
-
             [project]
             name = "foo"
             version = "0.0.1"
@@ -328,7 +249,6 @@ fn can_run_doc_tests() {
         ).build();
 
     foo.cargo("test -v")
-        .masquerade_as_nightly_cargo()
         .with_stderr_contains(
             "\
 [DOCTEST] foo
@@ -363,8 +283,6 @@ fn features_still_work() {
         .file(
             "a/Cargo.toml",
             r#"
-                cargo-features = ["rename-dependency"]
-
                 [package]
                 name = "p1"
                 version = "0.1.0"
@@ -377,8 +295,6 @@ fn features_still_work() {
         .file(
             "b/Cargo.toml",
             r#"
-                cargo-features = ["rename-dependency"]
-
                 [package]
                 name = "p2"
                 version = "0.1.0"
@@ -393,7 +309,7 @@ fn features_still_work() {
         ).file("b/src/lib.rs", "extern crate b;")
         .build();
 
-    p.cargo("build -v").masquerade_as_nightly_cargo().run();
+    p.cargo("build -v").run();
 }
 
 #[test]
@@ -405,7 +321,6 @@ fn features_not_working() {
         .file(
             "Cargo.toml",
             r#"
-                cargo-features = ["rename-dependency"]
                 [package]
                 name = "test"
                 version = "0.1.0"
@@ -422,7 +337,6 @@ fn features_not_working() {
         .build();
 
     p.cargo("build -v")
-        .masquerade_as_nightly_cargo()
         .with_status(101)
         .with_stderr(
             "\
@@ -440,7 +354,6 @@ fn rename_with_dash() {
         .file(
             "Cargo.toml",
             r#"
-                cargo-features = ["rename-dependency"]
                 [package]
                 name = "qwerty"
                 version = "0.1.0"
@@ -455,6 +368,5 @@ fn rename_with_dash() {
         .build();
 
     p.cargo("build")
-        .masquerade_as_nightly_cargo()
         .run();
 }
