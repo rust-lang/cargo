@@ -436,14 +436,13 @@ fn link_targets<'a, 'cfg>(
             };
             destinations.push(dst.display().to_string());
             hardlink_or_copy(src, dst)?;
-            if let Some(ref path) = export_dir {
-                if !target.is_custom_build() {
-                    if !path.exists() {
-                        fs::create_dir_all(path)?;
-                    }
-
-                    hardlink_or_copy(src, &path.join(dst.file_name().unwrap()))?;
+            if let Some(ref path) = output.export_path {
+                let export_dir = export_dir.as_ref().unwrap();
+                if !export_dir.exists() {
+                    fs::create_dir_all(export_dir)?;
                 }
+
+                hardlink_or_copy(src, path)?;
             }
         }
 

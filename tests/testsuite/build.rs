@@ -4327,8 +4327,8 @@ fn target_filters_workspace() {
         .file("a/src/lib.rs", "")
         .file("a/examples/ex1.rs", "fn main() {}")
         .file("b/Cargo.toml", &basic_bin_manifest("b"))
+        .file("b/src/lib.rs", "")
         .file("b/src/main.rs", "fn main() {}")
-        .file("b/examples/ex1.rs", "fn main() {}")
         .build();
 
     ws.cargo("build -v --example ex")
@@ -4343,12 +4343,12 @@ Did you mean `ex1`?",
     ws.cargo("build -v --lib")
         .with_status(0)
         .with_stderr_contains("[RUNNING] `rustc [..]a/src/lib.rs[..]")
+        .with_stderr_contains("[RUNNING] `rustc [..]b/src/lib.rs[..]")
         .run();
 
     ws.cargo("build -v --example ex1")
         .with_status(0)
         .with_stderr_contains("[RUNNING] `rustc [..]a/examples/ex1.rs[..]")
-        .with_stderr_contains("[RUNNING] `rustc [..]b/examples/ex1.rs[..]")
         .run();
 }
 
