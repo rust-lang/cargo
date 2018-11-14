@@ -39,7 +39,9 @@ fn collision_dylib() {
         .file("b/src/lib.rs", "")
         .build();
 
-    p.cargo("build")
+    // j=1 is required because on windows you'll get an error because
+    // two processes will be writing to the file at the same time.
+    p.cargo("build -j=1")
         .with_stderr_contains(&format!("\
 [WARNING] output filename collision.
 The lib target `a` in package `b v1.0.0 ([..]/foo/b)` has the same output filename as the lib target `a` in package `a v1.0.0 ([..]/foo/a)`.
