@@ -1,4 +1,3 @@
-use std::collections::BTreeMap;
 use std::fmt;
 
 use crate::core::{Dependency, PackageId, Registry, Summary};
@@ -8,7 +7,7 @@ use failure::{Error, Fail};
 use semver;
 
 use super::context::Context;
-use super::types::{Candidate, ConflictReason};
+use super::types::{Candidate, Conflict, ConflictReason};
 
 /// Error during resolution providing a path of `PackageId`s.
 pub struct ResolveError {
@@ -73,7 +72,7 @@ pub(super) fn activation_error(
     registry: &mut dyn Registry,
     parent: &Summary,
     dep: &Dependency,
-    conflicting_activations: &BTreeMap<PackageId, ConflictReason>,
+    conflicting_activations: &Conflict,
     candidates: &[Candidate],
     config: Option<&Config>,
 ) -> ResolveError {
