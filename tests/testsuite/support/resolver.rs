@@ -355,8 +355,13 @@ pub fn registry_strategy(
 ) -> impl Strategy<Value = PrettyPrintRegistry> {
     let name = string_regex("[A-Za-z][A-Za-z0-9_-]*(-sys)?").unwrap();
 
-    let raw_version = [..max_versions; 3];
-    let version_from_raw = |v: &[usize; 3]| format!("{}.{}.{}", v[0], v[1], v[2]);
+    let raw_version = ..max_versions.pow(3);
+    let version_from_raw = move |r: usize| {
+        let major = ((r / max_versions) / max_versions) % max_versions;
+        let minor = (r / max_versions) % max_versions;
+        let patch = r % max_versions;
+        format!("{}.{}.{}", major, minor, patch)
+    };
 
     // If this is false than the crate will depend on the nonexistent "bad"
     // instead of the complex set we generated for it.
@@ -365,7 +370,7 @@ pub fn registry_strategy(
     let list_of_versions =
         btree_map(raw_version, allow_deps, 1..=max_versions).prop_map(move |ver| {
             ver.into_iter()
-                .map(|a| (version_from_raw(&a.0), a.1))
+                .map(|a| (version_from_raw(a.0), a.1))
                 .collect::<Vec<_>>()
         });
 
