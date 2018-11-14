@@ -38,11 +38,13 @@ pub struct CompilationFiles<'a, 'cfg: 'a> {
 
 #[derive(Debug)]
 pub struct OutputFile {
-    /// File name that will be produced by the build process (in `deps`).
+    /// Absolute path to the file that will be produced by the build process.
     pub path: PathBuf,
     /// If it should be linked into `target`, and what it should be called
     /// (e.g. without metadata).
     pub hardlink: Option<PathBuf>,
+    /// If `--out-dir` is specified, the absolute path to the exported file.
+    pub export_path: Option<PathBuf>,
     /// Type of the file (library / debug symbol / else).
     pub flavor: FileFlavor,
 }
@@ -251,6 +253,7 @@ impl<'a, 'cfg: 'a> CompilationFiles<'a, 'cfg> {
                 ret.push(OutputFile {
                     path,
                     hardlink: None,
+                    export_path: None,
                     flavor: FileFlavor::Linkable,
                 });
             } else {
@@ -273,9 +276,19 @@ impl<'a, 'cfg: 'a> CompilationFiles<'a, 'cfg> {
                             let hardlink = link_stem
                                 .as_ref()
                                 .map(|&(ref ld, ref ls)| ld.join(file_type.filename(ls)));
+                            let export_path = if unit.target.is_custom_build() {
+                                None
+                            } else {
+                                self.export_dir.as_ref().and_then(|export_dir| {
+                                    hardlink.as_ref().and_then(|hardlink| {
+                                        Some(export_dir.join(hardlink.file_name().unwrap()))
+                                    })
+                                })
+                            };
                             ret.push(OutputFile {
                                 path,
                                 hardlink,
+                                export_path,
                                 flavor: file_type.flavor,
                             });
                         },

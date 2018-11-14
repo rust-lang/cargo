@@ -181,9 +181,22 @@ impl fmt::Debug for TargetKind {
     }
 }
 
+impl TargetKind {
+    pub fn description(&self) -> &'static str {
+        match self {
+            TargetKind::Lib(..) => "lib",
+            TargetKind::Bin => "bin",
+            TargetKind::Test => "integration-test",
+            TargetKind::ExampleBin | TargetKind::ExampleLib(..) => "example",
+            TargetKind::Bench => "bench",
+            TargetKind::CustomBuild => "build-script",
+        }
+    }
+}
+
 /// Information about a binary, a library, an example, etc. that is part of the
 /// package.
-#[derive(Clone, Hash, PartialEq, Eq)]
+#[derive(Clone, Hash, PartialEq, Eq, PartialOrd, Ord)]
 pub struct Target {
     kind: TargetKind,
     name: String,
@@ -202,7 +215,7 @@ pub struct Target {
     edition: Edition,
 }
 
-#[derive(Clone, PartialEq, Eq)]
+#[derive(Clone, PartialEq, Eq, PartialOrd, Ord)]
 pub enum TargetSourcePath {
     Path(PathBuf),
     Metabuild,

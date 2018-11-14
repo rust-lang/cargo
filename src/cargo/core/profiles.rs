@@ -371,7 +371,7 @@ fn merge_profile(profile: &mut Profile, toml: &TomlProfile) {
 
 /// Profile settings used to determine which compiler flags to use for a
 /// target.
-#[derive(Clone, Copy, Eq)]
+#[derive(Clone, Copy, Eq, PartialOrd, Ord)]
 pub struct Profile {
     pub name: &'static str,
     pub opt_level: InternedString,
@@ -523,7 +523,7 @@ impl Profile {
 }
 
 /// The link-time-optimization setting.
-#[derive(Clone, Copy, PartialEq, Eq, Debug, Hash)]
+#[derive(Clone, Copy, PartialEq, Eq, Debug, Hash, PartialOrd, Ord)]
 pub enum Lto {
     /// False = no LTO
     /// True = "Fat" LTO
