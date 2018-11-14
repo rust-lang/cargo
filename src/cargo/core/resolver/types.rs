@@ -1,5 +1,5 @@
 use std::cmp::Ordering;
-use std::collections::{HashMap, HashSet};
+use std::collections::{BTreeMap, HashMap, HashSet};
 use std::ops::Range;
 use std::rc::Rc;
 use std::time::{Duration, Instant};
@@ -424,6 +424,8 @@ impl ConflictReason {
         false
     }
 }
+
+pub type Conflict = BTreeMap<PackageId, ConflictReason>;
 
 pub struct RcVecIter<T> {
     vec: Rc<Vec<T>>,

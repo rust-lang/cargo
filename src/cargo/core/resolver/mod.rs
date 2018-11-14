@@ -62,7 +62,7 @@ use crate::util::errors::CargoResult;
 use crate::util::profile;
 
 use self::context::{Activations, Context};
-use self::types::{Candidate, ConflictReason, DepsFrame, GraphNode};
+use self::types::{Candidate, Conflict, ConflictReason, DepsFrame, GraphNode};
 use self::types::{RcVecIter, RegistryQueryer, RemainingDeps, ResolverProgress};
 
 pub use self::encode::{EncodableDependency, EncodablePackageId, EncodableResolve};
@@ -247,7 +247,7 @@ fn activate_deps_loop(
         //
         // This is a map of package ID to a reason why that packaged caused a
         // conflict for us.
-        let mut conflicting_activations = BTreeMap::new();
+        let mut conflicting_activations = Conflict::new();
 
         // When backtracking we don't fully update `conflicting_activations`
         // especially for the cases that we didn't make a backtrack frame in the
@@ -680,7 +680,7 @@ struct BacktrackFrame {
     parent: Summary,
     dep: Dependency,
     features: Rc<Vec<InternedString>>,
-    conflicting_activations: BTreeMap<PackageId, ConflictReason>,
+    conflicting_activations: Conflict,
 }
 
 /// A helper "iterator" used to extract candidates within a current `Context` of
@@ -727,7 +727,7 @@ impl RemainingCandidates {
     /// original list for the reason listed.
     fn next(
         &mut self,
-        conflicting_prev_active: &mut BTreeMap<PackageId, ConflictReason>,
+        conflicting_prev_active: &mut Conflict,
         cx: &Context,
         dep: &Dependency,
         parent: PackageId,
@@ -845,7 +845,7 @@ fn find_candidate(
     backtrack_stack: &mut Vec<BacktrackFrame>,
     parent: &Summary,
     backtracked: bool,
-    conflicting_activations: &BTreeMap<PackageId, ConflictReason>,
+    conflicting_activations: &Conflict,
 ) -> Option<(Candidate, bool, BacktrackFrame)> {
     while let Some(mut frame) = backtrack_stack.pop() {
         let next = frame.remaining_candidates.next(

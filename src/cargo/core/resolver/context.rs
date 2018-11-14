@@ -1,4 +1,4 @@
-use std::collections::{BTreeMap, HashMap, HashSet};
+use std::collections::{HashMap, HashSet};
 use std::rc::Rc;
 
 // "ensure" seems to require "bail" be in scope (macro hygiene issue?).
@@ -12,7 +12,7 @@ use crate::util::CargoResult;
 use crate::util::Graph;
 
 use super::errors::ActivateResult;
-use super::types::{ConflictReason, DepInfo, GraphNode, Method, RcList, RegistryQueryer};
+use super::types::{Conflict, ConflictReason, DepInfo, GraphNode, Method, RcList, RegistryQueryer};
 
 pub use super::encode::{EncodableDependency, EncodablePackageId, EncodableResolve};
 pub use super::encode::{Metadata, WorkspaceResolve};
@@ -155,7 +155,7 @@ impl Context {
     pub fn is_conflicting(
         &self,
         parent: Option<PackageId>,
-        conflicting_activations: &BTreeMap<PackageId, ConflictReason>,
+        conflicting_activations: &Conflict,
     ) -> bool {
         conflicting_activations
             .keys()
