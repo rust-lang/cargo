@@ -532,6 +532,15 @@ fn generate_targets<'a>(
                 TargetKind::Bench => CompileMode::Bench,
                 _ => CompileMode::Build,
             },
+            // CompileMode::Bench is only used to inform filter_default_targets
+            // which command is being used (`cargo bench`). Afterwards, tests
+            // and benches are treated identically. Switching the mode allows
+            // de-duplication of units that are essentially identical.  For
+            // example, `cargo build --all-targets --release` creates the units
+            // (lib profile:bench, mode:test) and (lib profile:bench, mode:bench)
+            // and since these are the same, we want them to be de-duped in
+            // `unit_dependencies`.
+            CompileMode::Bench => CompileMode::Test,
             _ => target_mode,
         };
         // Plugins or proc-macro should be built for the host.
@@ -547,17 +556,6 @@ fn generate_targets<'a>(
             target_mode,
             build_config.release,
         );
-        // Once the profile has been selected for benchmarks, we don't need to
-        // distinguish between benches and tests. Switching the mode allows
-        // de-duplication of units that are essentially identical.  For
-        // example, `cargo build --all-targets --release` creates the units
-        // (lib profile:bench, mode:test) and (lib profile:bench, mode:bench)
-        // and since these are the same, we want them to be de-duped in
-        // `unit_dependencies`.
-        let target_mode = match target_mode {
-            CompileMode::Bench => CompileMode::Test,
-            _ => target_mode,
-        };
         Unit {
             pkg,
             target,
