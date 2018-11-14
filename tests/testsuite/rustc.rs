@@ -243,10 +243,6 @@ fn targets_selected_all() {
         .with_stderr_contains("\
             [RUNNING] `rustc --crate-name foo src/main.rs --color never --crate-type bin \
             --emit=dep-info,link[..]")
-        // bench
-        .with_stderr_contains("\
-            [RUNNING] `rustc --crate-name foo src/main.rs --color never --emit=dep-info,link \
-            -C opt-level=3 --test [..]")
         // unit test
         .with_stderr_contains("\
             [RUNNING] `rustc --crate-name foo src/main.rs --color never --emit=dep-info,link \

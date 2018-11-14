@@ -137,9 +137,6 @@ fn profile_selection_build_all_targets() {
     // - bdep `panic` is not set because it thinks `build.rs` is a plugin.
     // - build_script_build is built without panic because it thinks
     //   `build.rs` is a plugin.
-    // - build_script_build is being run two times.  Once for the `dev` and
-    //   `test` targets, once for the `bench` targets.
-    //   TODO: "PROFILE" says debug both times, though!
     // - Benchmark dependencies are compiled in `dev` mode, which may be
     //   surprising.  See https://github.com/rust-lang/cargo/issues/4929.
     //
@@ -157,11 +154,9 @@ fn profile_selection_build_all_targets() {
     //   lib      dev+panic  build  (a normal lib target)
     //   lib      dev-panic  build  (used by tests/benches)
     //   lib      test       test
-    //   lib      bench      test(bench)
     //   test     test       test
-    //   bench    bench      test(bench)
+    //   bench    test       test
     //   bin      test       test
-    //   bin      bench      test(bench)
     //   bin      dev        build
     //   example  dev        build
     p.cargo("build --all-targets -vv").with_stderr_unordered("\
@@ -173,17 +168,13 @@ fn profile_selection_build_all_targets() {
 [COMPILING] foo [..]
 [RUNNING] `rustc --crate-name build_script_build build.rs [..]--crate-type bin --emit=dep-info,link -C codegen-units=1 -C debuginfo=2 [..]
 [RUNNING] `[..]/target/debug/build/foo-[..]/build-script-build`
-[RUNNING] `[..]/target/debug/build/foo-[..]/build-script-build`
-[foo 0.0.1] foo custom build PROFILE=debug DEBUG=false OPT_LEVEL=3
 [foo 0.0.1] foo custom build PROFILE=debug DEBUG=true OPT_LEVEL=0
 [RUNNING] `rustc --crate-name foo src/lib.rs [..]--crate-type lib --emit=dep-info,link -C panic=abort -C codegen-units=1 -C debuginfo=2 [..]`
 [RUNNING] `rustc --crate-name foo src/lib.rs [..]--emit=dep-info,link -C codegen-units=3 -C debuginfo=2 --test [..]`
 [RUNNING] `rustc --crate-name foo src/lib.rs [..]--crate-type lib --emit=dep-info,link -C codegen-units=1 -C debuginfo=2 [..]`
-[RUNNING] `rustc --crate-name foo src/lib.rs [..]--emit=dep-info,link -C opt-level=3 -C codegen-units=4 --test [..]`
 [RUNNING] `rustc --crate-name foo src/main.rs [..]--emit=dep-info,link -C codegen-units=3 -C debuginfo=2 --test [..]`
 [RUNNING] `rustc --crate-name test1 tests/test1.rs [..]--emit=dep-info,link -C codegen-units=3 -C debuginfo=2 --test [..]`
-[RUNNING] `rustc --crate-name bench1 benches/bench1.rs [..]--emit=dep-info,link -C opt-level=3 -C codegen-units=4 --test [..]`
-[RUNNING] `rustc --crate-name foo src/main.rs [..]--emit=dep-info,link -C opt-level=3 -C codegen-units=4 --test [..]`
+[RUNNING] `rustc --crate-name bench1 benches/bench1.rs [..]--emit=dep-info,link -C codegen-units=3 -C debuginfo=2 --test [..]`
 [RUNNING] `rustc --crate-name foo src/main.rs [..]--crate-type bin --emit=dep-info,link -C panic=abort -C codegen-units=1 -C debuginfo=2 [..]`
 [RUNNING] `rustc --crate-name ex1 examples/ex1.rs [..]--crate-type bin --emit=dep-info,link -C panic=abort -C codegen-units=1 -C debuginfo=2 [..]`
 [FINISHED] dev [unoptimized + debuginfo] [..]
