@@ -27,10 +27,9 @@ name defined in a `Cargo.toml` manifest that can be checked within source
 code.
 
 Cargo has [*unstable feature flags*][cargo-unstable] which can be used to
-enable experimental behavior of Cargo itself. The Rust compiler also has its
-own unstable feature flags (see [The Unstable Book][unstable-book]) and
-Rustdoc also has its own unstable feature flags (see [The Rustdoc
-Book][rustdoc-unstable]).
+enable experimental behavior of Cargo itself. The Rust compiler and Rustdoc
+also have their own unstable feature flags (see [The Unstable
+Book][unstable-book] and [The Rustdoc Book][rustdoc-unstable]).
 
 ### Index
 
