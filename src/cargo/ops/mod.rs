@@ -3,6 +3,7 @@ pub use self::cargo_compile::{compile, compile_with_exec, compile_ws, CompileOpt
 pub use self::cargo_compile::{CompileFilter, FilterRule, Packages};
 pub use self::cargo_doc::{doc, DocOptions};
 pub use self::cargo_fetch::{fetch, FetchOptions};
+pub use self::cargo_generate_index_metadata::generate_index_metadata;
 pub use self::cargo_generate_lockfile::generate_lockfile;
 pub use self::cargo_generate_lockfile::update_lockfile;
 pub use self::cargo_generate_lockfile::UpdateOptions;
@@ -30,6 +31,7 @@ mod cargo_clean;
 mod cargo_compile;
 mod cargo_doc;
 mod cargo_fetch;
+mod cargo_generate_index_metadata;
 mod cargo_generate_lockfile;
 mod cargo_install;
 mod cargo_new;

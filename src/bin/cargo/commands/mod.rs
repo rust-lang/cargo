@@ -9,6 +9,7 @@ pub fn builtin() -> Vec<App> {
         doc::cli(),
         fetch::cli(),
         fix::cli(),
+        generate_index_metadata::cli(),
         generate_lockfile::cli(),
         git_checkout::cli(),
         init::cli(),
@@ -44,6 +45,7 @@ pub fn builtin_exec(cmd: &str) -> Option<fn(&mut Config, &ArgMatches<'_>) -> Cli
         "doc" => doc::exec,
         "fetch" => fetch::exec,
         "fix" => fix::exec,
+        "generate-index-metadata" => generate_index_metadata::exec,
         "generate-lockfile" => generate_lockfile::exec,
         "git-checkout" => git_checkout::exec,
         "init" => init::exec,
@@ -79,6 +81,7 @@ pub mod clean;
 pub mod doc;
 pub mod fetch;
 pub mod fix;
+pub mod generate_index_metadata;
 pub mod generate_lockfile;
 pub mod git_checkout;
 pub mod init;
