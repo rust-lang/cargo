@@ -1376,18 +1376,8 @@ fn test_dev_dep_build_script() {
 
 #[test]
 fn build_script_with_dynamic_native_dependency() {
-    let _workspace = project()
-        .at("ws")
-        .file(
-            "Cargo.toml",
-            r#"
-            [workspace]
-            members = ["builder", "foo"]
-        "#,
-        ).build();
-
     let build = project()
-        .at("ws/builder")
+        .at("builder")
         .file(
             "Cargo.toml",
             r#"
@@ -1399,13 +1389,11 @@ fn build_script_with_dynamic_native_dependency() {
             [lib]
             name = "builder"
             crate-type = ["dylib"]
-            plugin = true
         "#,
         ).file("src/lib.rs", "#[no_mangle] pub extern fn foo() {}")
         .build();
 
     let foo = project()
-        .at("ws/foo")
         .file(
             "Cargo.toml",
             r#"
@@ -1433,12 +1421,23 @@ fn build_script_with_dynamic_native_dependency() {
             "bar/build.rs",
             r#"
             use std::env;
+            use std::fs;
             use std::path::PathBuf;
 
             fn main() {
-                let src = PathBuf::from(env::var("SRC").unwrap());
-                println!("cargo:rustc-link-search=native={}/target/debug/deps",
-                         src.display());
+                let out_dir = PathBuf::from(env::var("OUT_DIR").unwrap());
+                let root = PathBuf::from(env::var("BUILDER_ROOT").unwrap());
+                let file = format!("{}builder{}",
+                    env::consts::DLL_PREFIX,
+                    env::consts::DLL_SUFFIX);
+                let src = root.join(&file);
+                let dst = out_dir.join(&file);
+                fs::copy(src, dst).unwrap();
+                if cfg!(windows) {
+                    fs::copy(root.join("builder.dll.lib"),
+                             out_dir.join("builder.dll.lib")).unwrap();
+                }
+                println!("cargo:rustc-link-search=native={}", out_dir.display());
             }
         "#,
         ).file(
@@ -1458,8 +1457,9 @@ fn build_script_with_dynamic_native_dependency() {
         .env("RUST_LOG", "cargo::ops::cargo_rustc")
         .run();
 
+    let root = build.root().join("target").join("debug");
     foo.cargo("build -v")
-        .env("SRC", build.root())
+        .env("BUILDER_ROOT", root)
         .env("RUST_LOG", "cargo::ops::cargo_rustc")
         .run();
 }
