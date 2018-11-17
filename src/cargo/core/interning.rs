@@ -1,6 +1,6 @@
 use serde::{Serialize, Serializer};
 
-use std::borrow::Borrow;
+use std::borrow::{Borrow, Cow};
 use std::cmp::Ordering;
 use std::collections::HashSet;
 use std::fmt;
@@ -103,5 +103,17 @@ impl Serialize for InternedString {
         S: Serializer,
     {
         serializer.serialize_str(self.inner)
+    }
+}
+
+impl From<InternedString> for Cow<'static, str> {
+    fn from(s: InternedString) -> Self {
+        s.as_str().into()
+    }
+}
+
+impl<'a> From<&'a InternedString> for Cow<'static, str> {
+    fn from(s: &InternedString) -> Self {
+        s.as_str().into()
     }
 }

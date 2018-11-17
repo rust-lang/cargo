@@ -161,12 +161,13 @@
 use std::borrow::Cow;
 use std::collections::BTreeMap;
 use std::fs::File;
+use std::io::Read;
 use std::path::{Path, PathBuf};
 
 use flate2::read::GzDecoder;
 use log::debug;
 use semver::Version;
-use serde::Deserialize;
+use serde::{Serialize, Deserialize};
 use tar::Archive;
 
 use crate::core::dependency::{Dependency, Kind};
@@ -176,7 +177,7 @@ use crate::sources::PathSource;
 use crate::util::errors::CargoResultExt;
 use crate::util::hex;
 use crate::util::to_url::ToUrl;
-use crate::util::{internal, CargoResult, Config, FileLock, Filesystem};
+use crate::util::{internal, CargoResult, Config, FileLock, Filesystem, Sha256};
 
 const INDEX_LOCK: &str = ".cargo-index-lock";
 pub const CRATES_IO_INDEX: &str = "https://github.com/rust-lang/crates.io-index";
@@ -214,7 +215,7 @@ pub struct RegistryConfig {
     pub api: Option<String>,
 }
 
-#[derive(Deserialize)]
+#[derive(Serialize, Deserialize)]
 pub struct RegistryPackage<'a> {
     name: Cow<'a, str>,
     vers: Version,
@@ -222,6 +223,7 @@ pub struct RegistryPackage<'a> {
     features: BTreeMap<Cow<'a, str>, Vec<Cow<'a, str>>>,
     cksum: String,
     yanked: Option<bool>,
+    #[serde(skip_serializing_if = "Option::is_none")]
     links: Option<Cow<'a, str>>,
 }
 
@@ -270,7 +272,7 @@ enum Field {
     Links,
 }
 
-#[derive(Deserialize)]
+#[derive(Serialize, Deserialize)]
 struct RegistryDependency<'a> {
     name: Cow<'a, str>,
     req: Cow<'a, str>,
@@ -279,8 +281,46 @@ struct RegistryDependency<'a> {
     default_features: bool,
     target: Option<Cow<'a, str>>,
     kind: Option<Cow<'a, str>>,
+    #[serde(skip_serializing_if = "Option::is_none")]
     registry: Option<Cow<'a, str>>,
+    #[serde(skip_serializing_if = "Option::is_none")]
     package: Option<Cow<'a, str>>,
+}
+
+impl<'a> RegistryPackage<'a> {
+    pub fn from_package(pkg: &Package, mut pkg_file: FileLock) -> CargoResult<Self> {
+        let cksum = {
+            let mut c = Vec::new();
+            pkg_file.read_to_end(&mut c)?;
+
+            let mut sha = Sha256::new();
+            sha.update(&c);
+            ::hex::encode(&sha.finish())
+        };
+        let summary = pkg.summary();
+
+        Ok(
+            Self {
+                name: pkg.name().as_str().into(),
+                vers: pkg.version().clone(),
+                deps: pkg.dependencies().into_iter().map(RegistryDependency::from_dep).collect(),
+                features: summary
+                    .features()
+                    .into_iter()
+                    .map(|(name, values)| (
+                        name.as_str().into(),
+                        values
+                            .into_iter()
+                            .map(|value| value.to_string(summary).into())
+                            .collect())
+                    )
+                    .collect(),
+                cksum,
+                yanked: Some(false),
+                links: pkg.summary().links().map(|link| link.as_str().into())
+            }
+        )
+    }
 }
 
 impl<'a> RegistryDependency<'a> {
@@ -334,6 +374,25 @@ impl<'a> RegistryDependency<'a> {
             .set_kind(kind);
 
         Ok(dep)
+    }
+
+    pub fn from_dep(dep: &Dependency) -> Self {
+        let (name, package) = match dep.explicit_name_in_toml() {
+            Some(explicit) => (explicit.into(), Some(dep.package_name().into())),
+            None => (dep.package_name().into(), None),
+        };
+
+        Self {
+            name,
+            req: dep.version_req().to_string().into(),
+            features: dep.features().into_iter().map(|f| f.into()).collect(),
+            optional: dep.is_optional(),
+            default_features: dep.uses_default_features(),
+            target: dep.platform().map(|s| s.to_string().into()),
+            kind: Some(dep.kind().as_str().into()),
+            registry: dep.registry_id().map(|s| s.url().to_string().into()),
+            package
+        }
     }
 }
 

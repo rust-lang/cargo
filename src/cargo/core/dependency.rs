@@ -148,6 +148,22 @@ impl ser::Serialize for Kind {
     }
 }
 
+impl fmt::Display for Kind {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        write!(f, "{}", self.as_str())
+    }
+}
+
+impl Kind {
+    pub fn as_str(&self) -> &'static str {
+        match *self {
+            Kind::Normal => "normal",
+            Kind::Build => "build",
+            Kind::Development => "dev",
+        }
+    }
+}
+
 impl Dependency {
     /// Attempt to create a `Dependency` from an entry in the manifest.
     pub fn parse(
