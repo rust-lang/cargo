@@ -7,7 +7,7 @@ compilation process. This includes linkable libraries and executable binaries.
 
 ### Crate
 
-A *crate* is one of the targets in a package. Crates are either libraries or
+Every target in a package is a *crate*. Crates are either libraries or
 executable binaries. It may loosely refer to either the source code of the
 target, or the compiled artifact that the target produces. A crate may also
 refer to a compressed package fetched from a registry.
@@ -103,7 +103,7 @@ See [package id specification](#package).
 
 The meaning of the term *target* depends on the context:
 
-- **Target Crate** — Cargo packages consist of *targets* which correspond to
+- **Cargo Target** — Cargo packages consist of *targets* which correspond to
   artifacts that will be produced. Packages can have library, binary, example,
   test, and benchmark targets. The [list of targets][targets] are configured
   in the `Cargo.toml` manifest, often inferred automatically by the [directory
