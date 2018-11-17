@@ -1,6 +1,3 @@
-use std::env;
-use std::fs;
-
 use support::{basic_manifest, project};
 use support::{is_nightly, rustc_host};
 
@@ -103,18 +100,8 @@ fn plugin_with_dynamic_native_dependency() {
         return;
     }
 
-    let workspace = project()
-        .at("ws")
-        .file(
-            "Cargo.toml",
-            r#"
-            [workspace]
-            members = ["builder", "foo"]
-        "#,
-        ).build();
-
     let build = project()
-        .at("ws/builder")
+        .at("builder")
         .file(
             "Cargo.toml",
             r#"
@@ -131,7 +118,6 @@ fn plugin_with_dynamic_native_dependency() {
         .build();
 
     let foo = project()
-        .at("ws/foo")
         .file(
             "Cargo.toml",
             r#"
@@ -167,12 +153,24 @@ fn plugin_with_dynamic_native_dependency() {
         ).file(
             "bar/build.rs",
             r#"
-            use std::path::PathBuf;
             use std::env;
+            use std::fs;
+            use std::path::PathBuf;
 
             fn main() {
-                let src = PathBuf::from(env::var("SRC").unwrap());
-                println!("cargo:rustc-flags=-L {}/deps", src.parent().unwrap().display());
+                let out_dir = PathBuf::from(env::var("OUT_DIR").unwrap());
+                let root = PathBuf::from(env::var("BUILDER_ROOT").unwrap());
+                let file = format!("{}builder{}",
+                    env::consts::DLL_PREFIX,
+                    env::consts::DLL_SUFFIX);
+                let src = root.join(&file);
+                let dst = out_dir.join(&file);
+                fs::copy(src, dst).unwrap();
+                if cfg!(windows) {
+                    fs::copy(root.join("builder.dll.lib"),
+                             out_dir.join("builder.dll.lib")).unwrap();
+                }
+                println!("cargo:rustc-flags=-L {}", out_dir.display());
             }
         "#,
         ).file(
@@ -196,16 +194,8 @@ fn plugin_with_dynamic_native_dependency() {
 
     build.cargo("build").run();
 
-    let src = workspace.root().join("target/debug");
-    let lib = fs::read_dir(&src)
-        .unwrap()
-        .map(|s| s.unwrap().path())
-        .find(|lib| {
-            let lib = lib.file_name().unwrap().to_str().unwrap();
-            lib.starts_with(env::consts::DLL_PREFIX) && lib.ends_with(env::consts::DLL_SUFFIX)
-        }).unwrap();
-
-    foo.cargo("build -v").env("SRC", &lib).run();
+    let root = build.root().join("target").join("debug");
+    foo.cargo("build -v").env("BUILDER_ROOT", root).run();
 }
 
 #[test]
