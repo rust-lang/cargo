@@ -1,9 +1,9 @@
-use std::cmp::Ordering;
+use std::collections::HashSet;
 use std::fmt::{self, Formatter};
 use std::hash;
 use std::hash::Hash;
 use std::path::Path;
-use std::sync::Arc;
+use std::sync::Mutex;
 
 use semver;
 use serde::de;
@@ -13,17 +13,39 @@ use core::interning::InternedString;
 use core::source::SourceId;
 use util::{CargoResult, ToSemver};
 
-/// Identifier for a specific version of a package in a specific source.
-#[derive(Clone)]
-pub struct PackageId {
-    inner: Arc<PackageIdInner>,
+lazy_static! {
+    static ref PACKAGE_ID_CACHE: Mutex<HashSet<&'static PackageIdInner>> = Mutex::new(HashSet::new());
 }
 
-#[derive(PartialEq, PartialOrd, Eq, Ord)]
+/// Identifier for a specific version of a package in a specific source.
+#[derive(Clone, PartialEq, Eq, Hash, PartialOrd, Ord)]
+pub struct PackageId {
+    inner: &'static PackageIdInner,
+}
+
+#[derive(PartialOrd, Eq, Ord)]
 struct PackageIdInner {
     name: InternedString,
     version: semver::Version,
     source_id: SourceId,
+}
+
+// Custom equality that uses full equality of SourceId, rather than its custom equality.
+impl PartialEq for PackageIdInner {
+    fn eq(&self, other: &Self) -> bool {
+        self.name == other.name
+            && self.version == other.version
+            && self.source_id.full_eq(&other.source_id)
+    }
+}
+
+// Custom hash that is coherent with the custom equality above.
+impl Hash for PackageIdInner {
+    fn hash<S: hash::Hasher>(&self, into: &mut S) {
+        self.name.hash(into);
+        self.version.hash(into);
+        self.source_id.full_hash(into);
+    }
 }
 
 impl ser::Serialize for PackageId {
@@ -64,51 +86,37 @@ impl<'de> de::Deserialize<'de> for PackageId {
         };
         let source_id = SourceId::from_url(url).map_err(de::Error::custom)?;
 
-        Ok(PackageId {
-            inner: Arc::new(PackageIdInner {
+        Ok(PackageId::wrap(
+            PackageIdInner {
                 name: InternedString::new(name),
                 version,
                 source_id,
-            }),
-        })
-    }
-}
-
-impl Hash for PackageId {
-    fn hash<S: hash::Hasher>(&self, state: &mut S) {
-        self.inner.name.hash(state);
-        self.inner.version.hash(state);
-        self.inner.source_id.hash(state);
-    }
-}
-
-impl PartialEq for PackageId {
-    fn eq(&self, other: &PackageId) -> bool {
-        (*self.inner).eq(&*other.inner)
-    }
-}
-impl PartialOrd for PackageId {
-    fn partial_cmp(&self, other: &PackageId) -> Option<Ordering> {
-        (*self.inner).partial_cmp(&*other.inner)
-    }
-}
-impl Eq for PackageId {}
-impl Ord for PackageId {
-    fn cmp(&self, other: &PackageId) -> Ordering {
-        (*self.inner).cmp(&*other.inner)
+            }
+        ))
     }
 }
 
 impl PackageId {
     pub fn new<T: ToSemver>(name: &str, version: T, sid: SourceId) -> CargoResult<PackageId> {
         let v = version.to_semver()?;
-        Ok(PackageId {
-            inner: Arc::new(PackageIdInner {
+
+        Ok(PackageId::wrap(
+            PackageIdInner {
                 name: InternedString::new(name),
                 version: v,
                 source_id: sid,
-            }),
-        })
+            }
+        ))
+    }
+
+    fn wrap(inner: PackageIdInner) -> PackageId {
+        let mut cache = PACKAGE_ID_CACHE.lock().unwrap();
+        let inner = cache.get(&inner).map(|&x| x).unwrap_or_else(|| {
+            let inner = Box::leak(Box::new(inner));
+            cache.insert(inner);
+            inner
+        });
+        PackageId { inner }
     }
 
     pub fn name(&self) -> InternedString {
@@ -122,23 +130,23 @@ impl PackageId {
     }
 
     pub fn with_precise(&self, precise: Option<String>) -> PackageId {
-        PackageId {
-            inner: Arc::new(PackageIdInner {
+        PackageId::wrap(
+            PackageIdInner {
                 name: self.inner.name,
                 version: self.inner.version.clone(),
                 source_id: self.inner.source_id.with_precise(precise),
-            }),
-        }
+            }
+        )
     }
 
     pub fn with_source_id(&self, source: SourceId) -> PackageId {
-        PackageId {
-            inner: Arc::new(PackageIdInner {
+        PackageId::wrap(
+            PackageIdInner {
                 name: self.inner.name,
                 version: self.inner.version.clone(),
                 source_id: source,
-            }),
-        }
+            }
+        )
     }
 
     pub fn stable_hash<'a>(&'a self, workspace: &'a Path) -> PackageIdStableHash<'a> {
