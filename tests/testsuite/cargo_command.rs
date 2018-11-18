@@ -264,7 +264,9 @@ fn cargo_subcommand_args() {
 
     cargo_process("foo bar -v --help")
         .env("PATH", &path)
-        .with_stdout(r#"["[CWD]/cargo-foo/target/debug/cargo-foo", "foo", "bar", "-v", "--help"]"#)
+        .with_stdout(
+            r#"["[CWD]/cargo-foo/target/debug/cargo-foo[EXE]", "foo", "bar", "-v", "--help"]"#,
+        )
         .run();
 }
 
