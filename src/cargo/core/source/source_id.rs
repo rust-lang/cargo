@@ -1,8 +1,9 @@
 use std::cmp::{self, Ordering};
+use std::collections::HashSet;
 use std::fmt::{self, Formatter};
 use std::hash::{self, Hash};
 use std::path::Path;
-use std::sync::Arc;
+use std::sync::Mutex;
 use std::sync::atomic::{AtomicBool, ATOMIC_BOOL_INIT};
 use std::sync::atomic::Ordering::SeqCst;
 
@@ -16,13 +17,17 @@ use sources::{GitSource, PathSource, RegistrySource, CRATES_IO_INDEX};
 use sources::DirectorySource;
 use util::{CargoResult, Config, ToUrl};
 
+lazy_static! {
+    static ref SOURCE_ID_CACHE: Mutex<HashSet<&'static SourceIdInner>> = Mutex::new(HashSet::new());
+}
+
 /// Unique identifier for a source of packages.
 #[derive(Clone, Eq, Debug)]
 pub struct SourceId {
-    inner: Arc<SourceIdInner>,
+    inner: &'static SourceIdInner,
 }
 
-#[derive(Eq, Clone, Debug)]
+#[derive(Eq, Clone, Debug, Hash)]
 struct SourceIdInner {
     /// The source URL
     url: Url,
@@ -68,16 +73,26 @@ impl SourceId {
     ///
     /// The canonical url will be calculated, but the precise field will not
     fn new(kind: Kind, url: Url) -> CargoResult<SourceId> {
-        let source_id = SourceId {
-            inner: Arc::new(SourceIdInner {
+        let source_id = SourceId::wrap(
+            SourceIdInner {
                 kind,
                 canonical_url: git::canonicalize_url(&url)?,
                 url,
                 precise: None,
                 name: None,
-            }),
-        };
+            }
+        );
         Ok(source_id)
+    }
+
+    fn wrap(inner: SourceIdInner) -> SourceId {
+        let mut cache = SOURCE_ID_CACHE.lock().unwrap();
+        let inner = cache.get(&inner).map(|&x| x).unwrap_or_else(|| {
+            let inner = Box::leak(Box::new(inner));
+            cache.insert(inner);
+            inner
+        });
+        SourceId { inner }
     }
 
     /// Parses a source URL and returns the corresponding ID.
@@ -193,15 +208,15 @@ impl SourceId {
 
     pub fn alt_registry(config: &Config, key: &str) -> CargoResult<SourceId> {
         let url = config.get_registry_index(key)?;
-        Ok(SourceId {
-            inner: Arc::new(SourceIdInner {
+        Ok(SourceId::wrap(
+            SourceIdInner {
                 kind: Kind::Registry,
                 canonical_url: git::canonicalize_url(&url)?,
                 url,
                 precise: None,
                 name: Some(key.to_string()),
-            }),
-        })
+            }
+        ))
     }
 
     /// Get this source URL
@@ -288,12 +303,12 @@ impl SourceId {
 
     /// Create a new SourceId from this source with the given `precise`
     pub fn with_precise(&self, v: Option<String>) -> SourceId {
-        SourceId {
-            inner: Arc::new(SourceIdInner {
+        SourceId::wrap(
+            SourceIdInner {
                 precise: v,
                 ..(*self.inner).clone()
-            }),
-        }
+            }
+        )
     }
 
     /// Whether the remote registry is the standard https://crates.io
