@@ -660,7 +660,11 @@ impl Target {
         required_features: Option<Vec<String>>,
         edition: Edition,
     ) -> Target {
-        let kind = if crate_targets.is_empty() {
+        let kind = if crate_targets.is_empty()
+            || crate_targets
+                .iter()
+                .all(|t| *t == LibKind::Other("bin".into()))
+        {
             TargetKind::ExampleBin
         } else {
             TargetKind::ExampleLib(crate_targets)
