@@ -1188,6 +1188,9 @@ enum MatchKind {
 ///   See `substitute_macros` for a complete list of macros.
 pub fn lines_match(expected: &str, actual: &str) -> bool {
     // Let's not deal with / vs \ (windows...)
+    // First replace backslash-escaped backslashes with forward slashes
+    // which can occur in, for example, JSON output
+    let expected = expected.replace("\\\\", "/");
     let expected = expected.replace("\\", "/");
     let mut actual: &str = &actual.replace("\\", "/");
     let expected = substitute_macros(&expected);
