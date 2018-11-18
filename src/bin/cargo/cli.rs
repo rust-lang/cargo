@@ -4,8 +4,8 @@ use clap::{AppSettings, Arg, ArgMatches};
 
 use cargo::{self, CliResult, Config};
 
+use super::commands::{self, BuiltinExec};
 use super::list_commands;
-use super::commands;
 use command_prelude::*;
 
 pub fn main(config: &mut Config) -> CliResult {
@@ -107,26 +107,34 @@ fn expand_aliases(
             commands::builtin_exec(cmd),
             super::aliased_command(config, cmd)?,
         ) {
-            (None, Some(mut alias)) => {
-                alias.extend(
+            (
+                Some(BuiltinExec {
+                    alias_for: None, ..
+                }),
+                Some(_),
+            ) => {
+                // User alias conflicts with a built-in subcommand
+                config.shell().warn(format!(
+                    "user-defined alias `{}` is ignored, because it is shadowed by a built-in command",
+                    cmd,
+                ))?;
+            }
+            (_, Some(mut user_alias)) => {
+                // User alias takes precedence over built-in aliases
+                user_alias.extend(
                     args.values_of("")
                         .unwrap_or_default()
                         .map(|s| s.to_string()),
                 );
                 let args = cli()
                     .setting(AppSettings::NoBinaryName)
-                    .get_matches_from_safe(alias)?;
+                    .get_matches_from_safe(user_alias)?;
                 return expand_aliases(config, args);
-            }
-            (Some(_), Some(_)) => {
-                config.shell().warn(format!(
-                    "alias `{}` is ignored, because it is shadowed by a built in command",
-                    cmd
-                ))?;
             }
             (_, None) => {}
         }
     };
+
     Ok(args)
 }
 
@@ -152,11 +160,12 @@ fn execute_subcommand(config: &mut Config, args: &ArgMatches) -> CliResult {
         args.is_present("frozen"),
         args.is_present("locked"),
         arg_target_dir,
-        &args.values_of_lossy("unstable-features")
+        &args
+            .values_of_lossy("unstable-features")
             .unwrap_or_default(),
     )?;
 
-    if let Some(exec) = commands::builtin_exec(cmd) {
+    if let Some(BuiltinExec { exec, .. }) = commands::builtin_exec(cmd) {
         return exec(config, subcommand_args);
     }
 

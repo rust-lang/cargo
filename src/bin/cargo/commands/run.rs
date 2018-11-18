@@ -5,7 +5,8 @@ use cargo::ops::{self, CompileFilter};
 
 pub fn cli() -> App {
     subcommand("run")
-        .alias("r")
+        // subcommand aliases are handled in commands::builtin_exec() and cli::expand_aliases()
+        // .alias("r")
         .setting(AppSettings::TrailingVarArg)
         .about("Run the main binary of the local package (src/main.rs)")
         .arg(Arg::with_name("args").multiple(true))
