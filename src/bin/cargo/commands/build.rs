@@ -4,7 +4,8 @@ use cargo::ops;
 
 pub fn cli() -> App {
     subcommand("build")
-        .alias("b")
+        // subcommand aliases are handled in commands::builtin_exec() and cli::expand_aliases()
+        // .alias("b")
         .about("Compile a local package and all of its dependencies")
         .arg_package_spec(
             "Package to build (see `cargo help pkgid`)",
