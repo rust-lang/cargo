@@ -28,7 +28,8 @@ fn cargo_build_plan_simple() {
                 "package_name": "foo",
                 "package_version": "0.5.0",
                 "program": "rustc",
-                "target_kind": ["bin"]
+                "target_kind": ["bin"],
+                "compile_mode": "Build"
             }
         ]
     }
@@ -86,7 +87,8 @@ fn cargo_build_plan_single_dep() {
                 "package_name": "bar",
                 "package_version": "0.0.1",
                 "program": "rustc",
-                "target_kind": ["lib"]
+                "target_kind": ["lib"],
+                "compile_mode": "Build"
             },
             {
                 "args": "{...}",
@@ -101,7 +103,8 @@ fn cargo_build_plan_single_dep() {
                 "package_name": "foo",
                 "package_version": "0.5.0",
                 "program": "rustc",
-                "target_kind": ["lib"]
+                "target_kind": ["lib"],
+                "compile_mode": "Build"
             }
         ]
     }
@@ -148,7 +151,8 @@ fn cargo_build_plan_build_script() {
                 "package_name": "foo",
                 "package_version": "0.5.0",
                 "program": "rustc",
-                "target_kind": ["custom-build"]
+                "target_kind": ["custom-build"],
+                "compile_mode": "Build"
             },
             {
                 "args": "{...}",
@@ -161,7 +165,8 @@ fn cargo_build_plan_build_script() {
                 "package_name": "foo",
                 "package_version": "0.5.0",
                 "program": "[..]/build-script-build",
-                "target_kind": ["custom-build"]
+                "target_kind": ["custom-build"],
+                "compile_mode": "RunCustomBuild"
             },
             {
                 "args": "{...}",
@@ -174,7 +179,8 @@ fn cargo_build_plan_build_script() {
                 "package_name": "foo",
                 "package_version": "0.5.0",
                 "program": "rustc",
-                "target_kind": ["bin"]
+                "target_kind": ["bin"],
+                "compile_mode": "Build"
             }
         ]
     }

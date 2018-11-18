@@ -111,7 +111,7 @@ pub enum MessageFormat {
 /// `compile_ws` to tell it the general execution strategy.  This influences
 /// the default targets selected.  The other use is in the `Unit` struct
 /// to indicate what is being done with a specific target.
-#[derive(Clone, Copy, PartialEq, Debug, Eq, Hash, PartialOrd, Ord)]
+#[derive(Clone, Copy, PartialEq, Debug, Eq, Hash, PartialOrd, Ord, Serialize)]
 pub enum CompileMode {
     /// A target being built for a test.
     Test,
