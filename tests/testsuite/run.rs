@@ -464,6 +464,28 @@ fn run_example_autodiscover_2018() {
 }
 
 #[test]
+fn autobins_disables() {
+    let p = project()
+        .file(
+            "Cargo.toml",
+            r#"
+            [project]
+            name = "foo"
+            version = "0.0.1"
+            autobins = false
+            "#
+        )
+        .file("src/lib.rs", "pub mod bin;")
+        .file("src/bin/mod.rs", "// empty")
+        .build();
+
+    p.cargo("run")
+        .with_status(101)
+        .with_stderr("[ERROR] a bin target must be available for `cargo run`")
+        .run();
+}
+
+#[test]
 fn run_bins() {
     let p = project()
         .file("src/lib.rs", "")
