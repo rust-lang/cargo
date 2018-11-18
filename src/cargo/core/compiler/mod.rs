@@ -211,6 +211,7 @@ fn rustc<'a, 'cfg>(
     // If we are a binary and the package also contains a library, then we
     // don't pass the `-l` flags.
     let pass_l_flag = unit.target.is_lib() || !unit.pkg.targets().iter().any(|t| t.is_lib());
+    let pass_link_args = unit.target.is_cdylib();
     let do_rename = unit.target.allows_underscores() && !unit.mode.is_any_test();
     let real_name = unit.target.name().to_string();
     let crate_name = unit.target.crate_name();
@@ -257,6 +258,7 @@ fn rustc<'a, 'cfg>(
                     &build_state,
                     &build_deps,
                     pass_l_flag,
+                    pass_link_args,
                     current_id,
                 )?;
                 add_plugin_deps(&mut rustc, &build_state, &build_deps, &root_output)?;
@@ -346,6 +348,7 @@ fn rustc<'a, 'cfg>(
         build_state: &BuildMap,
         build_scripts: &BuildScripts,
         pass_l_flag: bool,
+        pass_link_args: bool,
         current_id: PackageId,
     ) -> CargoResult<()> {
         for key in build_scripts.to_link.iter() {
@@ -367,9 +370,11 @@ fn rustc<'a, 'cfg>(
                         rustc.arg("-l").arg(name);
                     }
                 }
-                for arg in output.linker_args.iter() {
-                    let link_arg = format!("link-arg={}", arg);
-                    rustc.arg("-C").arg(link_arg);
+                if pass_link_args {
+                    for arg in output.linker_args.iter() {
+                        let link_arg = format!("link-arg={}", arg);
+                        rustc.arg("-C").arg(link_arg);
+                    }
                 }
             }
         }
