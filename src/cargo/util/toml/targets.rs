@@ -634,7 +634,12 @@ fn toml_targets_and_inferred(
 ) -> Vec<TomlTarget> {
     let inferred_targets = inferred_to_toml_targets(inferred);
     match toml_targets {
-        None => inferred_targets,
+        None =>
+            if let Some(false) = autodiscover {
+                vec![]
+            } else {
+                inferred_targets
+            },
         Some(targets) => {
             let mut targets = targets.clone();
 
