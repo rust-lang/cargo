@@ -9,7 +9,7 @@
 use std::collections::BTreeMap;
 
 use core::TargetKind;
-use super::{Context, Kind, Unit};
+use super::{CompileMode, Context, Kind, Unit};
 use super::context::OutputFile;
 use util::{internal, CargoResult, ProcessBuilder};
 use std::path::PathBuf;
@@ -22,6 +22,7 @@ struct Invocation {
     package_version: semver::Version,
     target_kind: TargetKind,
     kind: Kind,
+    compile_mode: CompileMode,
     deps: Vec<usize>,
     outputs: Vec<PathBuf>,
     links: BTreeMap<PathBuf, PathBuf>,
@@ -51,6 +52,7 @@ impl Invocation {
             package_version: id.version().clone(),
             kind: unit.kind,
             target_kind: unit.target.kind().clone(),
+            compile_mode: unit.mode,
             deps,
             outputs: Vec::new(),
             links: BTreeMap::new(),
