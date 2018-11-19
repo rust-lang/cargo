@@ -33,7 +33,6 @@ fn pathless_tools() {
 #[test]
 fn absolute_tools() {
     let target = rustc_host();
-    let root = if cfg!(windows) { r#"C:\"# } else { "/" };
 
     // Escaped as they appear within a TOML config file
     let config = if cfg!(windows) {
@@ -62,14 +61,11 @@ fn absolute_tools() {
             ),
         ).build();
 
-    foo.cargo("build --verbose").with_stderr(&format!(
-            "\
+    foo.cargo("build --verbose").with_stderr("\
 [COMPILING] foo v0.5.0 ([CWD])
-[RUNNING] `rustc [..] -C ar={root}bogus/nonexistent-ar -C linker={root}bogus/nonexistent-linker [..]`
+[RUNNING] `rustc [..] -C ar=[ROOT]bogus/nonexistent-ar -C linker=[ROOT]bogus/nonexistent-linker [..]`
 [FINISHED] dev [unoptimized + debuginfo] target(s) in [..]
-",
-            root = root,
-        )).run();
+").run();
 }
 
 #[test]
