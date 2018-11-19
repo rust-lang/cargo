@@ -1,6 +1,8 @@
 use std::path::Path;
 use std::cell::RefCell;
 
+use serde::ser;
+
 use util::{CargoResult, CargoResultExt, Config, RustfixDiagnosticServer};
 
 /// Configuration information for a rustc build.
@@ -134,6 +136,24 @@ pub enum CompileMode {
     /// A marker for Units that represent the execution of a `build.rs`
     /// script.
     RunCustomBuild,
+}
+
+impl ser::Serialize for CompileMode {
+    fn serialize<S>(&self, s: S) -> Result<S::Ok, S::Error>
+    where
+        S: ser::Serializer,
+    {
+        use self::CompileMode::*;
+        match *self {
+            Test => "test".serialize(s),
+            Build => "build".serialize(s),
+            Check { .. } => "check".serialize(s),
+            Bench => "bench".serialize(s),
+            Doc { .. } => "doc".serialize(s),
+            Doctest => "doctest".serialize(s),
+            RunCustomBuild => "run-custom-build".serialize(s),
+        }
+    }
 }
 
 impl CompileMode {
