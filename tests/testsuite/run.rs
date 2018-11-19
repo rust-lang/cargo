@@ -349,6 +349,35 @@ fn run_library_example() {
         .run();
 }
 
+#[test]
+fn run_bin_example() {
+    let p = project()
+        .file(
+            "Cargo.toml",
+            r#"
+            [package]
+            name = "foo"
+            version = "0.0.1"
+            [[example]]
+            name = "bar"
+            crate_type = ["bin"]
+        "#,
+        )
+        .file("src/lib.rs", "")
+        .file("examples/bar.rs", r#"fn main() { println!("example"); }"#)
+        .build();
+
+    p.cargo("run --example bar")
+        .with_stderr(
+            "\
+[COMPILING] foo v0.0.1 ([CWD])
+[FINISHED] dev [unoptimized + debuginfo] target(s) in [..]
+[RUNNING] `target/debug/examples/bar[EXE]`",
+        )
+        .with_stdout("example")
+        .run();
+}
+
 fn autodiscover_examples_project(rust_edition: &str, autoexamples: Option<bool>) -> Project {
     let autoexamples = match autoexamples {
         None => "".to_string(),
