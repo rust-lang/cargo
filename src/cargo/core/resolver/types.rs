@@ -317,18 +317,29 @@ impl Ord for DepsFrame {
 /// graph quickly and hopefully lock down what later larger dependencies can
 /// use (those with more candidates).
 #[derive(Clone)]
-pub struct RemainingDeps(usize, im_rc::OrdSet<(DepsFrame, usize)>);
+pub struct RemainingDeps {
+    /// a monotonic counter, increased for each new insertion.
+    time: u32,
+    /// the data is augmented by the insertion time.
+    /// This insures that no two items will cmp eq.
+    /// Forcing the OrdSet into a multi set.
+    data: im_rc::OrdSet<(DepsFrame, u32)>,
+}
 
 impl RemainingDeps {
     pub fn new() -> RemainingDeps {
-        RemainingDeps(0, im_rc::OrdSet::new())
+        RemainingDeps {
+            time: 0,
+            data: im_rc::OrdSet::new(),
+        }
     }
     pub fn push(&mut self, x: DepsFrame) {
-        self.1.insert((x, self.0));
-        self.0 += 1;
+        let insertion_time = self.time;
+        self.data.insert((x, insertion_time));
+        self.time += 1;
     }
     pub fn pop_most_constrained(&mut self) -> Option<(bool, (Summary, (usize, DepInfo)))> {
-        while let Some((mut deps_frame, i)) = self.1.remove_min() {
+        while let Some((mut deps_frame, insertion_time)) = self.data.remove_min() {
             let just_here_for_the_error_messages = deps_frame.just_for_error_messages;
 
             // Figure out what our next dependency to activate is, and if nothing is
@@ -336,14 +347,14 @@ impl RemainingDeps {
             // move on to the next frame.
             if let Some(sibling) = deps_frame.remaining_siblings.next() {
                 let parent = Summary::clone(&deps_frame.parent);
-                self.1.insert((deps_frame, i));
+                self.data.insert((deps_frame, insertion_time));
                 return Some((just_here_for_the_error_messages, (parent, sibling)));
             }
         }
         None
     }
     pub fn iter(&mut self) -> impl Iterator<Item = (&PackageId, Dependency)> {
-        self.1.iter().flat_map(|(other, _)| other.flatten())
+        self.data.iter().flat_map(|(other, _)| other.flatten())
     }
 }
 
