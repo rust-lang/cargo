@@ -19,11 +19,10 @@ use std::path::{Path, PathBuf};
 use std::collections::BTreeSet;
 
 use cargo::core::shell::Shell;
-use cargo::util::{self, lev_distance, CargoResult, CliResult, Config};
+use cargo::util::{self, command_prelude, lev_distance, CargoResult, CliResult, Config};
 use cargo::util::{CliError, ProcessError};
 
 mod cli;
-mod command_prelude;
 mod commands;
 
 use command_prelude::*;
