@@ -38,6 +38,7 @@ pub mod profile;
 pub mod to_semver;
 pub mod to_url;
 pub mod toml;
+pub mod command_prelude;
 mod cfg;
 mod dependency_queue;
 mod rustc;
