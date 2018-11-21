@@ -1,5 +1,5 @@
 use std::cmp::Ordering;
-use std::collections::{BinaryHeap, HashMap, HashSet};
+use std::collections::{HashMap, HashSet};
 use std::ops::Range;
 use std::rc::Rc;
 use std::time::{Duration, Instant};
@@ -8,6 +8,8 @@ use core::interning::InternedString;
 use core::{Dependency, PackageId, PackageIdSpec, Registry, Summary};
 use util::errors::CargoResult;
 use util::Config;
+
+use im_rc;
 
 pub struct ResolverProgress {
     ticks: u16,
@@ -52,7 +54,11 @@ impl ResolverProgress {
         // with all the algorithm improvements.
         // If any of them are removed then it takes more than I am willing to measure.
         // So lets fail the test fast if we have ben running for two long.
-        debug_assert!(self.ticks < 50_000);
+        debug_assert!(
+            self.ticks < 50_000,
+            "got to 50_000 ticks in {:?}",
+            self.start.elapsed()
+        );
         // The largest test in our suite takes less then 30 sec
         // with all the improvements to how fast a tick can go.
         // If any of them are removed then it takes more than I am willing to measure.
@@ -299,33 +305,41 @@ impl Ord for DepsFrame {
     fn cmp(&self, other: &DepsFrame) -> Ordering {
         self.just_for_error_messages
             .cmp(&other.just_for_error_messages)
-            .then_with(||
-            // the frame with the sibling that has the least number of candidates
-            // needs to get bubbled up to the top of the heap we use below, so
-            // reverse comparison here.
-            self.min_candidates().cmp(&other.min_candidates()).reverse())
+            .reverse()
+            .then_with(|| self.min_candidates().cmp(&other.min_candidates()))
     }
 }
 
-/// Note that a `BinaryHeap` is used for the remaining dependencies that need
-/// activation. This heap is sorted such that the "largest value" is the most
-/// constrained dependency, or the one with the least candidates.
+/// Note that a `OrdSet` is used for the remaining dependencies that need
+/// activation. This set is sorted by how many candidates each dependency has.
 ///
 /// This helps us get through super constrained portions of the dependency
 /// graph quickly and hopefully lock down what later larger dependencies can
 /// use (those with more candidates).
 #[derive(Clone)]
-pub struct RemainingDeps(BinaryHeap<DepsFrame>);
+pub struct RemainingDeps {
+    /// a monotonic counter, increased for each new insertion.
+    time: u32,
+    /// the data is augmented by the insertion time.
+    /// This insures that no two items will cmp eq.
+    /// Forcing the OrdSet into a multi set.
+    data: im_rc::OrdSet<(DepsFrame, u32)>,
+}
 
 impl RemainingDeps {
     pub fn new() -> RemainingDeps {
-        RemainingDeps(BinaryHeap::new())
+        RemainingDeps {
+            time: 0,
+            data: im_rc::OrdSet::new(),
+        }
     }
     pub fn push(&mut self, x: DepsFrame) {
-        self.0.push(x)
+        let insertion_time = self.time;
+        self.data.insert((x, insertion_time));
+        self.time += 1;
     }
     pub fn pop_most_constrained(&mut self) -> Option<(bool, (Summary, (usize, DepInfo)))> {
-        while let Some(mut deps_frame) = self.0.pop() {
+        while let Some((mut deps_frame, insertion_time)) = self.data.remove_min() {
             let just_here_for_the_error_messages = deps_frame.just_for_error_messages;
 
             // Figure out what our next dependency to activate is, and if nothing is
@@ -333,14 +347,14 @@ impl RemainingDeps {
             // move on to the next frame.
             if let Some(sibling) = deps_frame.remaining_siblings.next() {
                 let parent = Summary::clone(&deps_frame.parent);
-                self.0.push(deps_frame);
+                self.data.insert((deps_frame, insertion_time));
                 return Some((just_here_for_the_error_messages, (parent, sibling)));
             }
         }
         None
     }
     pub fn iter(&mut self) -> impl Iterator<Item = (&PackageId, Dependency)> {
-        self.0.iter().flat_map(|other| other.flatten())
+        self.data.iter().flat_map(|(other, _)| other.flatten())
     }
 }
 
