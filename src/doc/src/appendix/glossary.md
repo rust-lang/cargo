@@ -119,7 +119,7 @@ The meaning of the term *target* depends on the context:
 - **Target Directory** — Cargo places all built artifacts and intermediate
   files in the *target* directory. By default this is a directory named
   `target` at the workspace root, or the package root if not using a
-  workspace. The directory be changed with the `--target` command-line option,
+  workspace. The directory be changed with the `--target-dir` command-line option,
   the `CARGO_TARGET_DIR` [environment variable], or the `build.target-dir`
   [config option].
 
