@@ -341,7 +341,7 @@ incremental = true # whether or not incremental compilation is enabled
 overflow-checks = true # use overflow checks for integer arithmetic.
                    # Passes the `-C overflow-checks=...` flag to the compiler.
 
-# The release profile, used for `cargo build --release`.
+# The release profile, used for `cargo build --release` and `cargo test --release`.
 [profile.release]
 opt-level = 3
 debug = false
@@ -365,7 +365,7 @@ panic = 'unwind'
 incremental = true
 overflow-checks = true
 
-# The benchmarking profile, used for `cargo bench` and `cargo test --release`.
+# The benchmarking profile, used for `cargo bench`.
 [profile.bench]
 opt-level = 3
 debug = false
