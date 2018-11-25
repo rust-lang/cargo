@@ -726,7 +726,7 @@ pub fn uninstall(
     let scheduled_error = if specs.len() == 1 {
         uninstall_one(&root, specs[0], bins, config)?;
         false
-    } else if specs.len() == 0 {
+    } else if specs.is_empty() {
         uninstall_cwd(&root, bins, config)?;
         false
     } else {
@@ -780,7 +780,7 @@ pub fn uninstall_one(
     let crate_metadata = metadata(config, root)?;
     let metadata = read_crate_list(&crate_metadata)?;
     let pkgid = PackageIdSpec::query_str(spec, metadata.v1.keys())?.clone();
-    uninstall_pkgid(crate_metadata, metadata, &pkgid, bins, config)
+    uninstall_pkgid(&crate_metadata, metadata, &pkgid, bins, config)
 }
 
 fn uninstall_cwd(root: &Filesystem, bins: &[String], config: &Config) -> CargoResult<()> {
@@ -792,11 +792,11 @@ fn uninstall_cwd(root: &Filesystem, bins: &[String], config: &Config) -> CargoRe
         path.read_packages()
     })?;
     let pkgid = pkg.package_id();
-    uninstall_pkgid(crate_metadata, metadata, pkgid, bins, config)
+    uninstall_pkgid(&crate_metadata, metadata, pkgid, bins, config)
 }
 
 fn uninstall_pkgid(
-    crate_metadata: FileLock,
+    crate_metadata: &FileLock,
     mut metadata: CrateListingV1,
     pkgid: &PackageId,
     bins: &[String],

@@ -1,13 +1,13 @@
-use std::io::SeekFrom;
 use std::io::prelude::*;
+use std::io::SeekFrom;
 use std::path::Path;
 
 use core::PackageId;
 use hex;
-use sources::registry::{RegistryConfig, RegistryData, MaybeLock};
-use util::paths;
-use util::{Config, Filesystem, Sha256, FileLock};
+use sources::registry::{MaybeLock, RegistryConfig, RegistryData};
 use util::errors::{CargoResult, CargoResultExt};
+use util::paths;
+use util::{Config, FileLock, Filesystem, Sha256};
 
 pub struct LocalRegistry<'cfg> {
     index_path: Filesystem,
@@ -104,9 +104,12 @@ impl<'cfg> RegistryData for LocalRegistry<'cfg> {
         Ok(MaybeLock::Ready(crate_file))
     }
 
-    fn finish_download(&mut self, _pkg: &PackageId, _checksum: &str, _data: &[u8])
-        -> CargoResult<FileLock>
-    {
+    fn finish_download(
+        &mut self,
+        _pkg: &PackageId,
+        _checksum: &str,
+        _data: &[u8],
+    ) -> CargoResult<FileLock> {
         panic!("this source doesn't download")
     }
 }

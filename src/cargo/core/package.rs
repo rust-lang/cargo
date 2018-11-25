@@ -694,7 +694,7 @@ impl<'a, 'cfg> Downloads<'a, 'cfg> {
         self.updated_at.set(now);
         self.next_speed_check.set(now + self.timeout.dur);
         self.next_speed_check_bytes_threshold
-            .set(self.timeout.low_speed_limit as u64);
+            .set(u64::from(self.timeout.low_speed_limit));
         dl.timed_out.set(None);
         dl.current.set(0);
         dl.total.set(0);
@@ -741,8 +741,12 @@ impl<'a, 'cfg> Downloads<'a, 'cfg> {
             if let Some(pair) = results.pop() {
                 break Ok(pair);
             }
-            assert!(self.pending.len() > 0);
-            let timeout = self.set.multi.get_timeout()?.unwrap_or(Duration::new(5, 0));
+            assert!(!self.pending.is_empty());
+            let timeout = self
+                .set
+                .multi
+                .get_timeout()?
+                .unwrap_or_else(|| Duration::new(5, 0));
             self.set
                 .multi
                 .wait(&mut [], timeout)
@@ -764,12 +768,12 @@ impl<'a, 'cfg> Downloads<'a, 'cfg> {
             if delta >= threshold {
                 self.next_speed_check.set(now + self.timeout.dur);
                 self.next_speed_check_bytes_threshold
-                    .set(self.timeout.low_speed_limit as u64);
+                    .set(u64::from(self.timeout.low_speed_limit));
             } else {
                 self.next_speed_check_bytes_threshold.set(threshold - delta);
             }
         }
-        if !self.tick(WhyTick::DownloadUpdate).is_ok() {
+        if self.tick(WhyTick::DownloadUpdate).is_err() {
             return false;
         }
 
@@ -841,6 +845,7 @@ impl<'a, 'cfg> Downloads<'a, 'cfg> {
     }
 }
 
+#[derive(Copy, Clone)]
 enum WhyTick<'a> {
     DownloadStarted,
     DownloadUpdate,
