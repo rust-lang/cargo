@@ -27,7 +27,7 @@ pub struct SourceId {
     inner: &'static SourceIdInner,
 }
 
-#[derive(Eq, Clone, Debug, Hash)]
+#[derive(PartialEq, Eq, Clone, Debug, Hash)]
 struct SourceIdInner {
     /// The source URL
     url: Url,
@@ -341,12 +341,6 @@ impl SourceId {
     }
 }
 
-impl PartialEq for SourceId {
-    fn eq(&self, other: &SourceId) -> bool {
-        (*self.inner).eq(&*other.inner)
-    }
-}
-
 impl PartialOrd for SourceId {
     fn partial_cmp(&self, other: &SourceId) -> Option<Ordering> {
         Some(self.cmp(other))
@@ -440,24 +434,20 @@ impl fmt::Display for SourceId {
     }
 }
 
-// This custom implementation handles situations such as when two git sources
-// point at *almost* the same URL, but not quite, even when they actually point
-// to the same repository.
-/// This method tests for self and other values to be equal, and is used by ==.
-///
-/// For git repositories, the canonical url is checked.
-impl PartialEq for SourceIdInner {
-    fn eq(&self, other: &SourceIdInner) -> bool {
-        if self.kind != other.kind {
+// Custom equality defined as canonical URL equality for git sources and
+// URL equality for other sources, ignoring the `precise` and `name` fields.
+impl PartialEq for SourceId {
+    fn eq(&self, other: &SourceId) -> bool {
+        if self.inner.kind != other.inner.kind {
             return false;
         }
-        if self.url == other.url {
+        if self.inner.url == other.inner.url {
             return true;
         }
 
-        match (&self.kind, &other.kind) {
-            (&Kind::Git(ref ref1), &Kind::Git(ref ref2)) => {
-                ref1 == ref2 && self.canonical_url == other.canonical_url
+        match (&self.inner.kind, &other.inner.kind) {
+            (Kind::Git(ref1), Kind::Git(ref2)) => {
+                ref1 == ref2 && self.inner.canonical_url == other.inner.canonical_url
             }
             _ => false,
         }
