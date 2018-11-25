@@ -3,6 +3,7 @@ use std::collections::HashSet;
 use std::fmt::{self, Formatter};
 use std::hash::{self, Hash};
 use std::path::Path;
+use std::ptr;
 use std::sync::Mutex;
 use std::sync::atomic::{AtomicBool, ATOMIC_BOOL_INIT};
 use std::sync::atomic::Ordering::SeqCst;
@@ -438,6 +439,9 @@ impl fmt::Display for SourceId {
 // URL equality for other sources, ignoring the `precise` and `name` fields.
 impl PartialEq for SourceId {
     fn eq(&self, other: &SourceId) -> bool {
+        if ptr::eq(self.inner, other.inner) {
+            return true;
+        }
         if self.inner.kind != other.inner.kind {
             return false;
         }
