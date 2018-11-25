@@ -18,7 +18,7 @@ lazy_static! {
 }
 
 /// Identifier for a specific version of a package in a specific source.
-#[derive(Clone, PartialEq, Eq, Hash, PartialOrd, Ord)]
+#[derive(Clone, Copy, PartialEq, Eq, Hash, PartialOrd, Ord)]
 pub struct PackageId {
     inner: &'static PackageIdInner,
 }
