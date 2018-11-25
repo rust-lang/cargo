@@ -205,11 +205,13 @@ impl ProfileMaker {
                 .keys()
                 .filter_map(|key| match *key {
                     ProfilePackageSpec::All => None,
-                    ProfilePackageSpec::Spec(ref spec) => if spec.matches(pkg_id) {
-                        Some(spec)
-                    } else {
-                        None
-                    },
+                    ProfilePackageSpec::Spec(ref spec) => {
+                        if spec.matches(pkg_id) {
+                            Some(spec)
+                        } else {
+                            None
+                        }
+                    }
                 })
                 .collect();
             match matches.len() {
@@ -313,11 +315,13 @@ fn merge_toml(
                 .iter()
                 .filter_map(|(key, spec_profile)| match *key {
                     ProfilePackageSpec::All => None,
-                    ProfilePackageSpec::Spec(ref s) => if s.matches(pkg_id) {
-                        Some(spec_profile)
-                    } else {
-                        None
-                    },
+                    ProfilePackageSpec::Spec(ref s) => {
+                        if s.matches(pkg_id) {
+                            Some(spec_profile)
+                        } else {
+                            None
+                        }
+                    }
                 });
             if let Some(spec_profile) = matches.next() {
                 merge_profile(profile, spec_profile);
@@ -586,7 +590,7 @@ impl UnitFor {
     pub fn with_for_host(self, for_host: bool) -> UnitFor {
         UnitFor {
             custom_build: self.custom_build,
-            panic_ok: self.panic_ok && !for_host
+            panic_ok: self.panic_ok && !for_host,
         }
     }
 
@@ -597,16 +601,25 @@ impl UnitFor {
     }
 
     /// Returns true if this unit is allowed to set the `panic` compiler flag.
-    pub fn is_panic_ok(&self) -> bool {
+    pub fn is_panic_ok(self) -> bool {
         self.panic_ok
     }
 
     /// All possible values, used by `clean`.
     pub fn all_values() -> &'static [UnitFor] {
         static ALL: [UnitFor; 3] = [
-            UnitFor { custom_build: false, panic_ok: true },
-            UnitFor { custom_build: true, panic_ok: false },
-            UnitFor { custom_build: false, panic_ok: false },
+            UnitFor {
+                custom_build: false,
+                panic_ok: true,
+            },
+            UnitFor {
+                custom_build: true,
+                panic_ok: false,
+            },
+            UnitFor {
+                custom_build: false,
+                panic_ok: false,
+            },
         ];
         &ALL
     }

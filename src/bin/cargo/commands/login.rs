@@ -3,9 +3,9 @@ use command_prelude::*;
 use std::io::{self, BufRead};
 
 use cargo::core::{Source, SourceId};
+use cargo::ops;
 use cargo::sources::RegistrySource;
 use cargo::util::{CargoError, CargoResultExt};
-use cargo::ops;
 
 pub fn cli() -> App {
     subcommand("login")
@@ -29,11 +29,12 @@ pub fn exec(config: &mut Config, args: &ArgMatches) -> CliResult {
                     return Err(format_err!(
                         "token must be provided when \
                          --registry is provided."
-                    ).into());
+                    )
+                    .into());
                 }
                 None => {
                     let src = SourceId::crates_io(config)?;
-                    let mut src = RegistrySource::remote(&src, config);
+                    let mut src = RegistrySource::remote(src, config);
                     src.update()?;
                     let config = src.config()?.unwrap();
                     args.value_of("host")

@@ -150,7 +150,7 @@ pub fn resolve_with_previous<'a, 'cfg>(
     //
     // TODO: This seems like a hokey reason to single out the registry as being
     //       different
-    let mut to_avoid_sources: HashSet<&SourceId> = HashSet::new();
+    let mut to_avoid_sources: HashSet<SourceId> = HashSet::new();
     if let Some(to_avoid) = to_avoid {
         to_avoid_sources.extend(
             to_avoid
@@ -161,10 +161,11 @@ pub fn resolve_with_previous<'a, 'cfg>(
     }
 
     let keep = |p: &&'a PackageId| {
-        !to_avoid_sources.contains(p.source_id()) && match to_avoid {
-            Some(set) => !set.contains(p),
-            None => true,
-        }
+        !to_avoid_sources.contains(&p.source_id())
+            && match to_avoid {
+                Some(set) => !set.contains(p),
+                None => true,
+            }
     };
 
     // In the case where a previous instance of resolve is available, we
@@ -214,7 +215,7 @@ pub fn resolve_with_previous<'a, 'cfg>(
     }
 
     for member in ws.members() {
-        registry.add_sources(&[member.package_id().source_id().clone()])?;
+        registry.add_sources(Some(member.package_id().source_id()))?;
     }
 
     let mut summaries = Vec::new();
@@ -357,7 +358,7 @@ pub fn add_overrides<'a>(
 
     for (path, definition) in paths {
         let id = SourceId::for_path(&path)?;
-        let mut source = PathSource::new_recursive(&path, &id, ws.config());
+        let mut source = PathSource::new_recursive(&path, id, ws.config());
         source.update().chain_err(|| {
             format!(
                 "failed to update path override `{}` \
@@ -401,7 +402,7 @@ fn register_previous_locks<'a>(
     resolve: &'a Resolve,
     keep: &Fn(&&'a PackageId) -> bool,
 ) {
-    let path_pkg = |id: &SourceId| {
+    let path_pkg = |id: SourceId| {
         if !id.is_path() {
             return None;
         }

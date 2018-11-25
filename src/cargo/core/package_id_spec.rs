@@ -6,8 +6,8 @@ use serde::{de, ser};
 use url::Url;
 
 use core::PackageId;
-use util::{ToSemver, ToUrl};
 use util::errors::{CargoResult, CargoResultExt};
+use util::{ToSemver, ToUrl};
 
 /// Some or all of the data required to identify a package:
 ///
@@ -104,7 +104,8 @@ impl PackageIdSpec {
         let frag = url.fragment().map(|s| s.to_owned());
         url.set_fragment(None);
         let (name, version) = {
-            let mut path = url.path_segments()
+            let mut path = url
+                .path_segments()
                 .ok_or_else(|| format_err!("pkgid urls must have a path: {}", url))?;
             let path_name = path.next_back().ok_or_else(|| {
                 format_err!(
@@ -275,10 +276,10 @@ impl<'de> de::Deserialize<'de> for PackageIdSpec {
 
 #[cfg(test)]
 mod tests {
-    use core::{PackageId, SourceId};
     use super::PackageIdSpec;
-    use url::Url;
+    use core::{PackageId, SourceId};
     use semver::Version;
+    use url::Url;
 
     #[test]
     fn good_parsing() {
@@ -367,8 +368,8 @@ mod tests {
     fn matching() {
         let url = Url::parse("http://example.com").unwrap();
         let sid = SourceId::for_registry(&url).unwrap();
-        let foo = PackageId::new("foo", "1.2.3", &sid).unwrap();
-        let bar = PackageId::new("bar", "1.2.3", &sid).unwrap();
+        let foo = PackageId::new("foo", "1.2.3", sid).unwrap();
+        let bar = PackageId::new("bar", "1.2.3", sid).unwrap();
 
         assert!(PackageIdSpec::parse("foo").unwrap().matches(&foo));
         assert!(!PackageIdSpec::parse("foo").unwrap().matches(&bar));
