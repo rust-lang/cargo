@@ -3,6 +3,7 @@ use std::fmt::{self, Formatter};
 use std::hash;
 use std::hash::Hash;
 use std::path::Path;
+use std::ptr;
 use std::sync::Mutex;
 
 use semver;
@@ -18,7 +19,7 @@ lazy_static! {
 }
 
 /// Identifier for a specific version of a package in a specific source.
-#[derive(Clone, Copy, PartialEq, Eq, Hash, PartialOrd, Ord)]
+#[derive(Clone, Copy, Eq, Hash, PartialOrd, Ord)]
 pub struct PackageId {
     inner: &'static PackageIdInner,
 }
@@ -93,6 +94,15 @@ impl<'de> de::Deserialize<'de> for PackageId {
                 source_id,
             }
         ))
+    }
+}
+
+impl PartialEq for PackageId {
+    fn eq(&self, other: &PackageId) -> bool {
+        if ptr::eq(self.inner, other.inner) {
+            return true;
+        }
+        (*self.inner).eq(&*other.inner)
     }
 }
 
