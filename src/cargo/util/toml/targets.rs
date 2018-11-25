@@ -10,16 +10,16 @@
 //! It is a bit tricky because we need match explicit information from `Cargo.toml`
 //! with implicit info in directory layout.
 
-use std::path::{Path, PathBuf};
-use std::fs::{self, DirEntry};
 use std::collections::HashSet;
+use std::fs::{self, DirEntry};
+use std::path::{Path, PathBuf};
 
-use core::{compiler, Edition, Feature, Features, Target};
-use util::errors::{CargoResult, CargoResultExt};
 use super::{
     LibKind, PathValue, StringOrBool, StringOrVec, TomlBenchTarget, TomlBinTarget,
     TomlExampleTarget, TomlLibTarget, TomlManifest, TomlTarget, TomlTestTarget,
 };
+use core::{compiler, Edition, Feature, Features, Target};
+use util::errors::{CargoResult, CargoResultExt};
 
 pub fn targets(
     features: &Features,
@@ -311,12 +311,8 @@ fn clean_bins(
             Err(e) => bail!("{}", e),
         };
 
-        let mut target = Target::bin_target(
-            &bin.name(),
-            path,
-            bin.required_features.clone(),
-            edition,
-        );
+        let mut target =
+            Target::bin_target(&bin.name(), path, bin.required_features.clone(), edition);
         configure(features, bin, &mut target)?;
         result.push(target);
     }
@@ -413,12 +409,8 @@ fn clean_tests(
 
     let mut result = Vec::new();
     for (path, toml) in targets {
-        let mut target = Target::test_target(
-            &toml.name(),
-            path,
-            toml.required_features.clone(),
-            edition,
-        );
+        let mut target =
+            Target::test_target(&toml.name(), path, toml.required_features.clone(), edition);
         configure(features, &toml, &mut target)?;
         result.push(target);
     }
@@ -472,12 +464,8 @@ fn clean_benches(
 
     let mut result = Vec::new();
     for (path, toml) in targets {
-        let mut target = Target::bench_target(
-            &toml.name(),
-            path,
-            toml.required_features.clone(),
-            edition,
-        );
+        let mut target =
+            Target::bench_target(&toml.name(), path, toml.required_features.clone(), edition);
         configure(features, &toml, &mut target)?;
         result.push(target);
     }
@@ -544,7 +532,14 @@ fn clean_targets_with_legacy_path(
     validate_unique_names(&toml_targets, target_kind)?;
     let mut result = Vec::new();
     for target in toml_targets {
-        let path = target_path(&target, inferred, target_kind, package_root, edition, legacy_path);
+        let path = target_path(
+            &target,
+            inferred,
+            target_kind,
+            package_root,
+            edition,
+            legacy_path,
+        );
         let path = match path {
             Ok(path) => path,
             Err(e) => {
@@ -634,12 +629,13 @@ fn toml_targets_and_inferred(
 ) -> Vec<TomlTarget> {
     let inferred_targets = inferred_to_toml_targets(inferred);
     match toml_targets {
-        None =>
+        None => {
             if let Some(false) = autodiscover {
                 vec![]
             } else {
                 inferred_targets
-            },
+            }
+        }
         Some(targets) => {
             let mut targets = targets.clone();
 
@@ -726,9 +722,11 @@ fn validate_has_name(
     target_kind: &str,
 ) -> CargoResult<()> {
     match target.name {
-        Some(ref name) => if name.trim().is_empty() {
-            bail!("{} target names cannot be empty", target_kind_human)
-        },
+        Some(ref name) => {
+            if name.trim().is_empty() {
+                bail!("{} target names cannot be empty", target_kind_human)
+            }
+        }
         None => bail!(
             "{} target {}.name is required",
             target_kind_human,
@@ -755,11 +753,7 @@ fn validate_unique_names(targets: &[TomlTarget], target_kind: &str) -> CargoResu
     Ok(())
 }
 
-fn configure(
-    features: &Features,
-    toml: &TomlTarget,
-    target: &mut Target,
-) -> CargoResult<()> {
+fn configure(features: &Features, toml: &TomlTarget, target: &mut Target) -> CargoResult<()> {
     let t2 = target.clone();
     target
         .set_tested(toml.test.unwrap_or_else(|| t2.tested()))
@@ -773,8 +767,14 @@ fn configure(
             (Some(false), _) | (_, Some(false)) => false,
         });
     if let Some(edition) = toml.edition.clone() {
-        features.require(Feature::edition()).chain_err(|| "editions are unstable")?;
-        target.set_edition(edition.parse().chain_err(|| "failed to parse the `edition` key")?);
+        features
+            .require(Feature::edition())
+            .chain_err(|| "editions are unstable")?;
+        target.set_edition(
+            edition
+                .parse()
+                .chain_err(|| "failed to parse the `edition` key")?,
+        );
     }
     Ok(())
 }

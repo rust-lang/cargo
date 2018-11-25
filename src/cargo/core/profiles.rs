@@ -596,7 +596,7 @@ impl UnitFor {
 
     /// Returns true if this unit is for a custom build script or one of its
     /// dependencies.
-    pub fn is_custom_build(&self) -> bool {
+    pub fn is_custom_build(self) -> bool {
         self.custom_build
     }
 

@@ -1,16 +1,16 @@
 use std::collections::BTreeMap;
 use std::env;
-use std::fs;
 use std::fmt;
+use std::fs;
 use std::path::{Path, PathBuf};
 
 use git2::Config as GitConfig;
 use git2::Repository as GitRepository;
 
 use core::{compiler, Workspace};
-use util::{internal, FossilRepo, GitRepo, HgRepo, PijulRepo, existing_vcs_repo};
-use util::{paths, Config};
 use util::errors::{CargoResult, CargoResultExt};
+use util::{existing_vcs_repo, internal, FossilRepo, GitRepo, HgRepo, PijulRepo};
+use util::{paths, Config};
 
 use toml;
 
@@ -51,7 +51,8 @@ impl fmt::Display for NewProjectKind {
         match *self {
             NewProjectKind::Bin => "binary (application)",
             NewProjectKind::Lib => "library",
-        }.fmt(f)
+        }
+        .fmt(f)
     }
 }
 
@@ -430,7 +431,8 @@ fn mk(config: &Config, opts: &MkOptions) -> CargoResult<()> {
         "/target\n",
         "**/*.rs.bk\n",
         if !opts.bin { "Cargo.lock\n" } else { "" },
-    ].concat();
+    ]
+    .concat();
     // Mercurial glob ignores can't be rooted, so just sticking a 'syntax: glob' at the top of the
     // file will exclude too much. Instead, use regexp-based ignores. See 'hg help ignore' for
     // more.
@@ -438,7 +440,8 @@ fn mk(config: &Config, opts: &MkOptions) -> CargoResult<()> {
         "^target/\n",
         "glob:*.rs.bk\n",
         if !opts.bin { "glob:Cargo.lock\n" } else { "" },
-    ].concat();
+    ]
+    .concat();
 
     let vcs = opts.version_control.unwrap_or_else(|| {
         let in_existing_vcs = existing_vcs_repo(path.parent().unwrap_or(path), config.cwd());
@@ -553,15 +556,15 @@ edition = {}
                 None => toml::Value::String("2018".to_string()),
             },
             match opts.registry {
-                Some(registry) => {
-                    format!("publish = {}\n",
-                        toml::Value::Array(vec!(toml::Value::String(registry.to_string())))
-                    )
-                }
+                Some(registry) => format!(
+                    "publish = {}\n",
+                    toml::Value::Array(vec!(toml::Value::String(registry.to_string())))
+                ),
                 None => "".to_string(),
-            }, 
+            },
             cargotoml_path_specifier
-        ).as_bytes(),
+        )
+        .as_bytes(),
     )?;
 
     // Create all specified source files
@@ -665,7 +668,7 @@ fn discover_author() -> CargoResult<(String, Option<String>)> {
 
         // In some cases emails will already have <> remove them since they
         // are already added when needed.
-        if s.starts_with("<") && s.ends_with(">") {
+        if s.starts_with('<') && s.ends_with('>') {
             s = &s[1..s.len() - 1];
         }
 
