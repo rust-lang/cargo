@@ -195,4 +195,27 @@ mod tests {
         assert!(PackageId::new("foo", "bar", repo).is_err());
         assert!(PackageId::new("foo", "", repo).is_err());
     }
+
+    #[test]
+    fn debug() {
+        let loc = CRATES_IO_INDEX.to_url().unwrap();
+        let pkg_id = PackageId::new("foo", "1.0.0", SourceId::for_registry(&loc).unwrap()).unwrap();
+        assert_eq!(r#"PackageId { name: "foo", version: "1.0.0", source: "registry `https://github.com/rust-lang/crates.io-index`" }"#, format!("{:?}", pkg_id));
+
+        let pretty = r#"
+PackageId {
+    name: "foo",
+    version: "1.0.0",
+    source: "registry `https://github.com/rust-lang/crates.io-index`"
+}
+"#.trim();
+        assert_eq!(pretty, format!("{:#?}", pkg_id));
+    }
+
+    #[test]
+    fn display() {
+        let loc = CRATES_IO_INDEX.to_url().unwrap();
+        let pkg_id = PackageId::new("foo", "1.0.0", SourceId::for_registry(&loc).unwrap()).unwrap();
+        assert_eq!("foo v1.0.0", pkg_id.to_string());
+    }
 }
