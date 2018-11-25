@@ -28,7 +28,7 @@ use self::targets::targets;
 
 pub fn read_manifest(
     path: &Path,
-    source_id: &SourceId,
+    source_id: SourceId,
     config: &Config,
 ) -> Result<(EitherManifest, Vec<PathBuf>), ManifestError> {
     trace!(
@@ -46,7 +46,7 @@ pub fn read_manifest(
 fn do_read_manifest(
     contents: &str,
     manifest_file: &Path,
-    source_id: &SourceId,
+    source_id: SourceId,
     config: &Config,
 ) -> CargoResult<(EitherManifest, Vec<PathBuf>)> {
     let package_root = manifest_file.parent().unwrap();
@@ -517,7 +517,6 @@ impl<'de> de::Deserialize<'de> for StringOrVec {
             {
                 let seq = de::value::SeqAccessDeserializer::new(v);
                 Vec::deserialize(seq).map(StringOrVec)
-
             }
         }
 
@@ -661,7 +660,7 @@ pub struct TomlWorkspace {
 }
 
 impl TomlProject {
-    pub fn to_package_id(&self, source_id: &SourceId) -> CargoResult<PackageId> {
+    pub fn to_package_id(&self, source_id: SourceId) -> CargoResult<PackageId> {
         PackageId::new(&self.name, self.version.clone(), source_id)
     }
 }
@@ -669,7 +668,7 @@ impl TomlProject {
 struct Context<'a, 'b> {
     pkgid: Option<&'a PackageId>,
     deps: &'a mut Vec<Dependency>,
-    source_id: &'a SourceId,
+    source_id: SourceId,
     nested_paths: &'a mut Vec<PathBuf>,
     config: &'b Config,
     warnings: &'a mut Vec<String>,
@@ -789,7 +788,7 @@ impl TomlManifest {
 
     fn to_real_manifest(
         me: &Rc<TomlManifest>,
-        source_id: &SourceId,
+        source_id: SourceId,
         package_root: &Path,
         config: &Config,
     ) -> CargoResult<(Manifest, Vec<PathBuf>)> {
@@ -817,7 +816,11 @@ impl TomlManifest {
             if c == '_' || c == '-' {
                 continue;
             }
-            bail!("Invalid character `{}` in package name: `{}`", c, package_name)
+            bail!(
+                "Invalid character `{}` in package name: `{}`",
+                c,
+                package_name
+            )
         }
 
         let pkgid = project.to_package_id(source_id)?;
@@ -1061,7 +1064,7 @@ impl TomlManifest {
 
     fn to_virtual_manifest(
         me: &Rc<TomlManifest>,
-        source_id: &SourceId,
+        source_id: SourceId,
         root: &Path,
         config: &Config,
     ) -> CargoResult<(VirtualManifest, Vec<PathBuf>)> {
@@ -1258,7 +1261,8 @@ impl TomlDependency {
             TomlDependency::Simple(ref version) => DetailedTomlDependency {
                 version: Some(version.clone()),
                 ..Default::default()
-            }.to_dependency(name, cx, kind),
+            }
+            .to_dependency(name, cx, kind),
             TomlDependency::Detailed(ref details) => details.to_dependency(name, cx, kind),
         }
     }
@@ -1376,7 +1380,7 @@ impl DetailedTomlDependency {
                     let path = util::normalize_path(&path);
                     SourceId::for_path(&path)?
                 } else {
-                    cx.source_id.clone()
+                    cx.source_id
                 }
             }
             (None, None, Some(registry), None) => SourceId::alt_registry(cx.config, registry)?,
@@ -1394,8 +1398,8 @@ impl DetailedTomlDependency {
 
         let version = self.version.as_ref().map(|v| &v[..]);
         let mut dep = match cx.pkgid {
-            Some(id) => Dependency::parse(pkg_name, version, &new_source_id, id, cx.config)?,
-            None => Dependency::parse_no_deprecated(pkg_name, version, &new_source_id)?,
+            Some(id) => Dependency::parse(pkg_name, version, new_source_id, id, cx.config)?,
+            None => Dependency::parse_no_deprecated(pkg_name, version, new_source_id)?,
         };
         dep.set_features(self.features.iter().flat_map(|x| x))
             .set_default_features(
@@ -1405,7 +1409,7 @@ impl DetailedTomlDependency {
             )
             .set_optional(self.optional.unwrap_or(false))
             .set_platform(cx.platform.clone())
-            .set_registry_id(&registry_id);
+            .set_registry_id(registry_id);
         if let Some(kind) = kind {
             dep.set_kind(kind);
         }

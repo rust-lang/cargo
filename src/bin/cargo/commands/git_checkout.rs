@@ -28,7 +28,7 @@ pub fn exec(config: &mut Config, args: &ArgMatches) -> CliResult {
     let reference = GitReference::Branch(reference.to_string());
     let source_id = SourceId::for_git(&url, reference)?;
 
-    let mut source = GitSource::new(&source_id, config)?;
+    let mut source = GitSource::new(source_id, config)?;
 
     source.update()?;
 

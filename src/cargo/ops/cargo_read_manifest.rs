@@ -4,14 +4,14 @@ use std::io;
 use std::path::{Path, PathBuf};
 
 use core::{EitherManifest, Package, PackageId, SourceId};
-use util::{self, Config};
 use util::errors::{CargoError, CargoResult};
 use util::important_paths::find_project_manifest_exact;
 use util::toml::read_manifest;
+use util::{self, Config};
 
 pub fn read_package(
     path: &Path,
-    source_id: &SourceId,
+    source_id: SourceId,
     config: &Config,
 ) -> CargoResult<(Package, Vec<PathBuf>)> {
     trace!(
@@ -34,7 +34,7 @@ pub fn read_package(
 
 pub fn read_packages(
     path: &Path,
-    source_id: &SourceId,
+    source_id: SourceId,
     config: &Config,
 ) -> CargoResult<Vec<Package>> {
     let mut all_packages = HashMap::new();
@@ -129,7 +129,7 @@ fn has_manifest(path: &Path) -> bool {
 fn read_nested_packages(
     path: &Path,
     all_packages: &mut HashMap<PackageId, Package>,
-    source_id: &SourceId,
+    source_id: SourceId,
     config: &Config,
     visited: &mut HashSet<PathBuf>,
     errors: &mut Vec<CargoError>,

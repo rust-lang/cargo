@@ -82,7 +82,8 @@ pub fn exec(config: &mut Config, args: &ArgMatches) -> CliResult {
 
     compile_opts.build_config.release = !args.is_present("debug");
 
-    let krates = args.values_of("crate")
+    let krates = args
+        .values_of("crate")
         .unwrap_or_default()
         .collect::<Vec<_>>();
 
@@ -120,7 +121,7 @@ pub fn exec(config: &mut Config, args: &ArgMatches) -> CliResult {
         ops::install(
             root,
             krates,
-            &source,
+            source,
             from_cwd,
             version,
             &compile_opts,

@@ -12,10 +12,10 @@ pub use self::source_id::{GitReference, SourceId};
 /// versions.
 pub trait Source {
     /// Returns the `SourceId` corresponding to this source
-    fn source_id(&self) -> &SourceId;
+    fn source_id(&self) -> SourceId;
 
     /// Returns the replaced `SourceId` corresponding to this source
-    fn replaced_source_id(&self) -> &SourceId {
+    fn replaced_source_id(&self) -> SourceId {
         self.source_id()
     }
 
@@ -92,12 +92,12 @@ pub enum MaybePackage {
 
 impl<'a, T: Source + ?Sized + 'a> Source for Box<T> {
     /// Forwards to `Source::source_id`
-    fn source_id(&self) -> &SourceId {
+    fn source_id(&self) -> SourceId {
         (**self).source_id()
     }
 
     /// Forwards to `Source::replaced_source_id`
-    fn replaced_source_id(&self) -> &SourceId {
+    fn replaced_source_id(&self) -> SourceId {
         (**self).replaced_source_id()
     }
 
@@ -155,11 +155,11 @@ impl<'a, T: Source + ?Sized + 'a> Source for Box<T> {
 }
 
 impl<'a, T: Source + ?Sized + 'a> Source for &'a mut T {
-    fn source_id(&self) -> &SourceId {
+    fn source_id(&self) -> SourceId {
         (**self).source_id()
     }
 
-    fn replaced_source_id(&self) -> &SourceId {
+    fn replaced_source_id(&self) -> SourceId {
         (**self).replaced_source_id()
     }
 
@@ -231,13 +231,13 @@ impl<'src> SourceMap<'src> {
     }
 
     /// Like `HashMap::contains_key`
-    pub fn contains(&self, id: &SourceId) -> bool {
-        self.map.contains_key(id)
+    pub fn contains(&self, id: SourceId) -> bool {
+        self.map.contains_key(&id)
     }
 
     /// Like `HashMap::get`
-    pub fn get(&self, id: &SourceId) -> Option<&(Source + 'src)> {
-        let source = self.map.get(id);
+    pub fn get(&self, id: SourceId) -> Option<&(Source + 'src)> {
+        let source = self.map.get(&id);
 
         source.map(|s| {
             let s: &(Source + 'src) = &**s;
@@ -246,8 +246,8 @@ impl<'src> SourceMap<'src> {
     }
 
     /// Like `HashMap::get_mut`
-    pub fn get_mut(&mut self, id: &SourceId) -> Option<&mut (Source + 'src)> {
-        self.map.get_mut(id).map(|s| {
+    pub fn get_mut(&mut self, id: SourceId) -> Option<&mut (Source + 'src)> {
+        self.map.get_mut(&id).map(|s| {
             let s: &mut (Source + 'src) = &mut **s;
             s
         })
@@ -261,7 +261,7 @@ impl<'src> SourceMap<'src> {
 
     /// Like `HashMap::insert`, but derives the SourceId key from the Source
     pub fn insert(&mut self, source: Box<Source + 'src>) {
-        let id = source.source_id().clone();
+        let id = source.source_id();
         self.map.insert(id, source);
     }
 
