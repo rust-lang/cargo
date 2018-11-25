@@ -150,7 +150,7 @@ pub fn resolve_with_previous<'a, 'cfg>(
     //
     // TODO: This seems like a hokey reason to single out the registry as being
     //       different
-    let mut to_avoid_sources = HashSet::new();
+    let mut to_avoid_sources: HashSet<&SourceId> = HashSet::new();
     if let Some(to_avoid) = to_avoid {
         to_avoid_sources.extend(
             to_avoid
@@ -161,7 +161,7 @@ pub fn resolve_with_previous<'a, 'cfg>(
     }
 
     let keep = |p: &&'a PackageId| {
-        !to_avoid_sources.contains(&p.source_id()) && match to_avoid {
+        !to_avoid_sources.contains(p.source_id()) && match to_avoid {
             Some(set) => !set.contains(p),
             None => true,
         }
