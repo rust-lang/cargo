@@ -28,10 +28,12 @@ pub struct Shell {
 impl fmt::Debug for Shell {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         match self.err {
-            ShellOut::Write(_) => f.debug_struct("Shell")
+            ShellOut::Write(_) => f
+                .debug_struct("Shell")
                 .field("verbosity", &self.verbosity)
                 .finish(),
-            ShellOut::Stream { color_choice, .. } => f.debug_struct("Shell")
+            ShellOut::Stream { color_choice, .. } => f
+                .debug_struct("Shell")
                 .field("verbosity", &self.verbosity)
                 .field("color_choice", &color_choice)
                 .finish(),
@@ -376,13 +378,13 @@ mod imp {
 mod imp {
     extern crate winapi;
 
-    use std::{cmp, mem, ptr};
     use self::winapi::um::fileapi::*;
     use self::winapi::um::handleapi::*;
     use self::winapi::um::processenv::*;
     use self::winapi::um::winbase::*;
     use self::winapi::um::wincon::*;
     use self::winapi::um::winnt::*;
+    use std::{cmp, mem, ptr};
 
     pub(super) use super::default_err_erase_line as err_erase_line;
 
@@ -391,19 +393,20 @@ mod imp {
             let stdout = GetStdHandle(STD_ERROR_HANDLE);
             let mut csbi: CONSOLE_SCREEN_BUFFER_INFO = mem::zeroed();
             if GetConsoleScreenBufferInfo(stdout, &mut csbi) != 0 {
-                return Some((csbi.srWindow.Right - csbi.srWindow.Left) as usize)
+                return Some((csbi.srWindow.Right - csbi.srWindow.Left) as usize);
             }
 
             // On mintty/msys/cygwin based terminals, the above fails with
             // INVALID_HANDLE_VALUE. Use an alternate method which works
             // in that case as well.
-            let h = CreateFileA("CONOUT$\0".as_ptr() as *const CHAR,
+            let h = CreateFileA(
+                "CONOUT$\0".as_ptr() as *const CHAR,
                 GENERIC_READ | GENERIC_WRITE,
                 FILE_SHARE_READ | FILE_SHARE_WRITE,
                 ptr::null_mut(),
                 OPEN_EXISTING,
                 0,
-                ptr::null_mut()
+                ptr::null_mut(),
             );
             if h == INVALID_HANDLE_VALUE {
                 return None;
@@ -424,15 +427,12 @@ mod imp {
                 // GetConsoleScreenBufferInfo returns accurate information.
                 return Some(cmp::min(60, width));
             }
-            return None;
+            None
         }
     }
 }
 
-#[cfg(any(
-    all(unix, not(any(target_os = "linux", target_os = "macos"))),
-    windows,
-))]
+#[cfg(any(all(unix, not(any(target_os = "linux", target_os = "macos"))), windows,))]
 fn default_err_erase_line(shell: &mut Shell) {
     if let Some(max_width) = imp::stderr_width() {
         let blank = " ".repeat(max_width);

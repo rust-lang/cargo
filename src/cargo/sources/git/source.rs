@@ -2,14 +2,14 @@ use std::fmt::{self, Debug, Formatter};
 
 use url::Url;
 
-use core::source::{Source, SourceId, MaybePackage};
+use core::source::{MaybePackage, Source, SourceId};
 use core::GitReference;
 use core::{Dependency, Package, PackageId, Summary};
-use util::Config;
+use sources::git::utils::{GitRemote, GitRevision};
+use sources::PathSource;
 use util::errors::CargoResult;
 use util::hex::short_hash;
-use sources::PathSource;
-use sources::git::utils::{GitRemote, GitRevision};
+use util::Config;
 
 pub struct GitSource<'cfg> {
     remote: GitRemote,
@@ -22,7 +22,7 @@ pub struct GitSource<'cfg> {
 }
 
 impl<'cfg> GitSource<'cfg> {
-    pub fn new(source_id: &SourceId, config: &'cfg Config) -> CargoResult<GitSource<'cfg>> {
+    pub fn new(source_id: SourceId, config: &'cfg Config) -> CargoResult<GitSource<'cfg>> {
         assert!(source_id.is_git(), "id is not git, id={}", source_id);
 
         let remote = GitRemote::new(source_id.url());
@@ -36,7 +36,7 @@ impl<'cfg> GitSource<'cfg> {
         let source = GitSource {
             remote,
             reference,
-            source_id: source_id.clone(),
+            source_id,
             path_source: None,
             rev: None,
             ident,
@@ -60,7 +60,8 @@ impl<'cfg> GitSource<'cfg> {
 
 fn ident(url: &Url) -> CargoResult<String> {
     let url = canonicalize_url(url)?;
-    let ident = url.path_segments()
+    let ident = url
+        .path_segments()
         .and_then(|mut s| s.next_back())
         .unwrap_or("");
 
@@ -124,14 +125,16 @@ impl<'cfg> Debug for GitSource<'cfg> {
 
 impl<'cfg> Source for GitSource<'cfg> {
     fn query(&mut self, dep: &Dependency, f: &mut FnMut(Summary)) -> CargoResult<()> {
-        let src = self.path_source
+        let src = self
+            .path_source
             .as_mut()
             .expect("BUG: update() must be called before query()");
         src.query(dep, f)
     }
 
     fn fuzzy_query(&mut self, dep: &Dependency, f: &mut FnMut(Summary)) -> CargoResult<()> {
-        let src = self.path_source
+        let src = self
+            .path_source
             .as_mut()
             .expect("BUG: update() must be called before query()");
         src.fuzzy_query(dep, f)
@@ -145,8 +148,8 @@ impl<'cfg> Source for GitSource<'cfg> {
         true
     }
 
-    fn source_id(&self) -> &SourceId {
-        &self.source_id
+    fn source_id(&self) -> SourceId {
+        self.source_id
     }
 
     fn update(&mut self) -> CargoResult<()> {
@@ -190,7 +193,8 @@ impl<'cfg> Source for GitSource<'cfg> {
         // https://github.com/servo/servo/pull/14397
         let short_id = db.to_short_id(&actual_rev).unwrap();
 
-        let checkout_path = lock.parent()
+        let checkout_path = lock
+            .parent()
             .join("checkouts")
             .join(&self.ident)
             .join(short_id.as_str());
@@ -203,7 +207,7 @@ impl<'cfg> Source for GitSource<'cfg> {
         db.copy_to(actual_rev.clone(), &checkout_path, self.config)?;
 
         let source_id = self.source_id.with_precise(Some(actual_rev.to_string()));
-        let path_source = PathSource::new_recursive(&checkout_path, &source_id, self.config);
+        let path_source = PathSource::new_recursive(&checkout_path, source_id, self.config);
 
         self.path_source = Some(path_source);
         self.rev = Some(actual_rev);
@@ -237,8 +241,8 @@ impl<'cfg> Source for GitSource<'cfg> {
 
 #[cfg(test)]
 mod test {
-    use url::Url;
     use super::ident;
+    use url::Url;
     use util::ToUrl;
 
     #[test]

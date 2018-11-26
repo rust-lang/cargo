@@ -81,7 +81,7 @@ Run with 'cargo -Z [FLAG] [SUBCOMMAND]'"
 
 pub fn get_version_string(is_verbose: bool) -> String {
     let version = cargo::version();
-    let mut version_string = String::from(version.to_string());
+    let mut version_string = version.to_string();
     version_string.push_str("\n");
     if is_verbose {
         version_string.push_str(&format!(
@@ -218,9 +218,10 @@ See 'cargo help <command>' for more information on a specific command.\n",
             opt(
                 "verbose",
                 "Use verbose output (-vv very verbose/build.rs output)",
-            ).short("v")
-                .multiple(true)
-                .global(true),
+            )
+            .short("v")
+            .multiple(true)
+            .global(true),
         )
         .arg(
             opt("quiet", "No output printed to stdout")

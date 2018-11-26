@@ -802,20 +802,19 @@ fn find_candidate(
         // active in this back up we know that we're guaranteed to not actually
         // make any progress. As a result if we hit this condition we can
         // completely skip this backtrack frame and move on to the next.
-        if !backtracked {
-            if frame
+        if !backtracked
+            && frame
                 .context
                 .is_conflicting(Some(parent.package_id()), conflicting_activations)
-            {
-                trace!(
-                    "{} = \"{}\" skip as not solving {}: {:?}",
-                    frame.dep.package_name(),
-                    frame.dep.version_req(),
-                    parent.package_id(),
-                    conflicting_activations
-                );
-                continue;
-            }
+        {
+            trace!(
+                "{} = \"{}\" skip as not solving {}: {:?}",
+                frame.dep.package_name(),
+                frame.dep.version_req(),
+                parent.package_id(),
+                conflicting_activations
+            );
+            continue;
         }
 
         return Some((candidate, has_another, frame));

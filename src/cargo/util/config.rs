@@ -176,12 +176,10 @@ impl Config {
 
     /// The default cargo registry (`alternative-registry`)
     pub fn default_registry(&self) -> CargoResult<Option<String>> {
-        Ok(
-            match self.get_string("registry.default")? {
-                Some(registry) => Some(registry.val),
-                None => None,
-            }
-        )
+        Ok(match self.get_string("registry.default")? {
+            Some(registry) => Some(registry.val),
+            None => None,
+        })
     }
 
     /// Get a reference to the shell, for e.g. writing error messages
@@ -245,7 +243,7 @@ impl Config {
                     let argv0 = env::args_os()
                         .map(PathBuf::from)
                         .next()
-                        .ok_or_else(||format_err!("no argv[0]"))?;
+                        .ok_or_else(|| format_err!("no argv[0]"))?;
                     paths::resolve_executable(&argv0)
                 }
 
@@ -458,10 +456,7 @@ impl Config {
         }
     }
 
-    pub fn get_path_and_args(
-        &self,
-        key: &str,
-    ) -> CargoResult<OptValue<(PathBuf, Vec<String>)>> {
+    pub fn get_path_and_args(&self, key: &str) -> CargoResult<OptValue<(PathBuf, Vec<String>)>> {
         if let Some(mut val) = self.get_list_or_split_string(key)? {
             if !val.val.is_empty() {
                 return Ok(Some(Value {
@@ -631,9 +626,7 @@ impl Config {
         self.load_values_from(&self.cwd)
     }
 
-    fn load_values_from(&self, path: &Path)
-        -> CargoResult<HashMap<String, ConfigValue>>
-    {
+    fn load_values_from(&self, path: &Path) -> CargoResult<HashMap<String, ConfigValue>> {
         let mut cfg = CV::Table(HashMap::new(), PathBuf::from("."));
         let home = self.home_path.clone().into_path_unlocked();
 
@@ -654,7 +647,8 @@ impl Config {
             cfg.merge(value)
                 .chain_err(|| format!("failed to merge configuration at `{}`", path.display()))?;
             Ok(())
-        }).chain_err(|| "could not load Cargo configuration")?;
+        })
+        .chain_err(|| "could not load Cargo configuration")?;
 
         self.load_credentials(&mut cfg)?;
         match cfg {
@@ -790,7 +784,7 @@ impl Config {
     where
         F: FnMut() -> CargoResult<SourceId>,
     {
-        Ok(self.crates_io_source_id.try_borrow_with(f)?.clone())
+        Ok(*(self.crates_io_source_id.try_borrow_with(f)?))
     }
 
     pub fn creation_time(&self) -> Instant {

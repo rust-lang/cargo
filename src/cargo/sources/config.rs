@@ -11,9 +11,9 @@ use url::Url;
 
 use core::{GitReference, Source, SourceId};
 use sources::{ReplacedSource, CRATES_IO_REGISTRY};
-use util::{Config, ToUrl};
 use util::config::ConfigValue;
 use util::errors::{CargoResult, CargoResultExt};
+use util::{Config, ToUrl};
 
 #[derive(Clone)]
 pub struct SourceConfigMap<'cfg> {
@@ -72,9 +72,9 @@ impl<'cfg> SourceConfigMap<'cfg> {
         self.config
     }
 
-    pub fn load(&self, id: &SourceId) -> CargoResult<Box<Source + 'cfg>> {
+    pub fn load(&self, id: SourceId) -> CargoResult<Box<Source + 'cfg>> {
         debug!("loading: {}", id);
-        let mut name = match self.id2name.get(id) {
+        let mut name = match self.id2name.get(&id) {
             Some(name) => name,
             None => return Ok(id.load(self.config)?),
         };
@@ -98,7 +98,7 @@ impl<'cfg> SourceConfigMap<'cfg> {
                     name = s;
                     path = p;
                 }
-                None if *id == cfg.id => return Ok(id.load(self.config)?),
+                None if id == cfg.id => return Ok(id.load(self.config)?),
                 None => {
                     new_id = cfg.id.with_precise(id.precise().map(|s| s.to_string()));
                     break;
@@ -143,11 +143,11 @@ restore the source replacement configuration to continue the build
             );
         }
 
-        Ok(Box::new(ReplacedSource::new(id, &new_id, new_src)))
+        Ok(Box::new(ReplacedSource::new(id, new_id, new_src)))
     }
 
     fn add(&mut self, name: &str, cfg: SourceConfig) {
-        self.id2name.insert(cfg.id.clone(), name.to_string());
+        self.id2name.insert(cfg.id, name.to_string());
         self.cfgs.insert(name.to_string(), cfg);
     }
 

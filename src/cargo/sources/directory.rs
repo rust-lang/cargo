@@ -8,12 +8,12 @@ use hex;
 
 use serde_json;
 
-use core::{Dependency, Package, PackageId, Source, SourceId, Summary};
 use core::source::MaybePackage;
+use core::{Dependency, Package, PackageId, Source, SourceId, Summary};
 use sources::PathSource;
-use util::{Config, Sha256};
 use util::errors::{CargoResult, CargoResultExt};
 use util::paths;
+use util::{Config, Sha256};
 
 pub struct DirectorySource<'cfg> {
     source_id: SourceId,
@@ -29,9 +29,9 @@ struct Checksum {
 }
 
 impl<'cfg> DirectorySource<'cfg> {
-    pub fn new(path: &Path, id: &SourceId, config: &'cfg Config) -> DirectorySource<'cfg> {
+    pub fn new(path: &Path, id: SourceId, config: &'cfg Config) -> DirectorySource<'cfg> {
         DirectorySource {
-            source_id: id.clone(),
+            source_id: id,
             root: path.to_path_buf(),
             config,
             packages: HashMap::new(),
@@ -71,8 +71,8 @@ impl<'cfg> Source for DirectorySource<'cfg> {
         true
     }
 
-    fn source_id(&self) -> &SourceId {
-        &self.source_id
+    fn source_id(&self) -> SourceId {
+        self.source_id
     }
 
     fn update(&mut self) -> CargoResult<()> {
@@ -116,7 +116,7 @@ impl<'cfg> Source for DirectorySource<'cfg> {
                 continue;
             }
 
-            let mut src = PathSource::new(&path, &self.source_id, self.config);
+            let mut src = PathSource::new(&path, self.source_id, self.config);
             src.update()?;
             let pkg = src.root_package()?;
 
@@ -188,7 +188,7 @@ impl<'cfg> Source for DirectorySource<'cfg> {
                     }
                 }
             })()
-                .chain_err(|| format!("failed to calculate checksum of: {}", file.display()))?;
+            .chain_err(|| format!("failed to calculate checksum of: {}", file.display()))?;
 
             let actual = hex::encode(h.finish());
             if &*actual != cksum {
