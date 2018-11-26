@@ -3,9 +3,9 @@ use std::collections::HashSet;
 use std::fmt;
 use std::io;
 use std::mem;
+use std::process::Output;
 use std::sync::mpsc::{channel, Receiver, Sender};
 use std::sync::Arc;
-use std::process::Output;
 
 use crossbeam_utils;
 use crossbeam_utils::thread::Scope;
@@ -15,14 +15,14 @@ use core::profiles::Profile;
 use core::{PackageId, Target, TargetKind};
 use handle_error;
 use util;
+use util::diagnostic_server::{self, DiagnosticPrinter};
 use util::{internal, profile, CargoResult, CargoResultExt, ProcessBuilder};
 use util::{Config, DependencyQueue, Dirty, Fresh, Freshness};
 use util::{Progress, ProgressStyle};
-use util::diagnostic_server::{self, DiagnosticPrinter};
 
+use super::context::OutputFile;
 use super::job::Job;
 use super::{BuildContext, BuildPlan, CompileMode, Context, Kind, Unit};
-use super::context::OutputFile;
 
 /// A management structure of the entire dependency graph to compile.
 ///
@@ -105,7 +105,8 @@ impl<'a> JobState<'a> {
         cmd: ProcessBuilder,
         filenames: Arc<Vec<OutputFile>>,
     ) {
-        let _ = self.tx
+        let _ = self
+            .tx
             .send(Message::BuildPlanMsg(module_name, cmd, filenames));
     }
 
@@ -115,7 +116,7 @@ impl<'a> JobState<'a> {
         prefix: Option<String>,
         capture_output: bool,
     ) -> CargoResult<Output> {
-        let prefix = prefix.unwrap_or_else(|| String::new());
+        let prefix = prefix.unwrap_or_else(String::new);
         cmd.exec_with_streaming(
             &mut |out| {
                 let _ = self.tx.send(Message::Stdout(format!("{}{}", prefix, out)));
@@ -187,23 +188,23 @@ impl<'a> JobQueue<'a> {
         let tx = self.tx.clone();
         let tx = unsafe { mem::transmute::<Sender<Message<'a>>, Sender<Message<'static>>>(tx) };
         let tx2 = tx.clone();
-        let helper = cx.jobserver
+        let helper = cx
+            .jobserver
             .clone()
             .into_helper_thread(move |token| {
                 drop(tx.send(Message::Token(token)));
             })
             .chain_err(|| "failed to create helper thread for jobserver management")?;
-        let _diagnostic_server = cx.bcx.build_config
+        let _diagnostic_server = cx
+            .bcx
+            .build_config
             .rustfix_diagnostic_server
             .borrow_mut()
             .take()
-            .map(move |srv| {
-                srv.start(move |msg| drop(tx2.send(Message::FixDiagnostic(msg))))
-            });
+            .map(move |srv| srv.start(move |msg| drop(tx2.send(Message::FixDiagnostic(msg)))));
 
-        crossbeam_utils::thread::scope(|scope| {
-            self.drain_the_queue(cx, plan, scope, &helper)
-        }).expect("child threads should't panic")
+        crossbeam_utils::thread::scope(|scope| self.drain_the_queue(cx, plan, scope, &helper))
+            .expect("child threads should't panic")
     }
 
     fn drain_the_queue(
@@ -276,7 +277,9 @@ impl<'a> JobQueue<'a> {
             tokens.truncate(self.active.len() - 1);
 
             let count = total - self.queue.len();
-            let active_names = self.active.iter()
+            let active_names = self
+                .active
+                .iter()
                 .map(Key::name_for_progress)
                 .collect::<Vec<_>>();
             drop(progress.tick_now(count, total, &format!(": {}", active_names.join(", "))));
@@ -299,7 +302,7 @@ impl<'a> JobQueue<'a> {
                 Message::Stderr(err) => {
                     let mut shell = cx.bcx.config.shell();
                     shell.print_ansi(err.as_bytes())?;
-                    shell.err().write(b"\n")?;
+                    shell.err().write_all(b"\n")?;
                 }
                 Message::FixDiagnostic(msg) => {
                     print.print(&msg)?;
