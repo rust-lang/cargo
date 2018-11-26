@@ -530,7 +530,7 @@ impl<'a, 'cfg> Downloads<'a, 'cfg> {
         // first crate finishes downloading so we inform immediately that we're
         // downloading crates here.
         if self.downloads_finished == 0
-            && self.pending.len() == 0
+            && self.pending.is_empty()
             && !self.progress.borrow().as_ref().unwrap().is_enabled()
         {
             self.set

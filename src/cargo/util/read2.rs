@@ -2,12 +2,12 @@ pub use self::imp::read2;
 
 #[cfg(unix)]
 mod imp {
-    use std::io::prelude::*;
+    use libc;
     use std::io;
+    use std::io::prelude::*;
     use std::mem;
     use std::os::unix::prelude::*;
     use std::process::{ChildStderr, ChildStdout};
-    use libc;
 
     pub fn read2(
         mut out_pipe: ChildStdout,
@@ -177,9 +177,6 @@ mod imp {
         if v.capacity() == v.len() {
             v.reserve(1);
         }
-        slice::from_raw_parts_mut(
-            v.as_mut_ptr().offset(v.len() as isize),
-            v.capacity() - v.len(),
-        )
+        slice::from_raw_parts_mut(v.as_mut_ptr().add(v.len()), v.capacity() - v.len())
     }
 }
