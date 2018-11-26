@@ -1,5 +1,5 @@
-#![cfg_attr(feature = "cargo-clippy", allow(too_many_arguments))] // large project
-#![cfg_attr(feature = "cargo-clippy", allow(redundant_closure))]  // there's a false positive
+#![cfg_attr(feature = "cargo-clippy", allow(clippy::too_many_arguments))] // large project
+#![cfg_attr(feature = "cargo-clippy", allow(clippy::redundant_closure))]  // there's a false positive
 
 extern crate cargo;
 extern crate clap;
@@ -13,10 +13,10 @@ extern crate serde_derive;
 extern crate serde_json;
 extern crate toml;
 
+use std::collections::BTreeSet;
 use std::env;
 use std::fs;
 use std::path::{Path, PathBuf};
-use std::collections::BTreeSet;
 
 use cargo::core::shell::Shell;
 use cargo::util::{self, command_prelude, lev_distance, CargoResult, CliResult, Config};
