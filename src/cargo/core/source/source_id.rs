@@ -337,11 +337,11 @@ impl SourceId {
     }
 
     pub fn full_eq(&self, other: &SourceId) -> bool {
-        self.inner == other.inner
+        ptr::eq(self.inner, other.inner)
     }
 
     pub fn full_hash<S: hash::Hasher>(&self, into: &mut S) {
-        self.inner.hash(into)
+        (self.inner as *const SourceIdInner).hash(into)
     }
 }
 
