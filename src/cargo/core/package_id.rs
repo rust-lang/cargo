@@ -19,7 +19,7 @@ lazy_static! {
 }
 
 /// Identifier for a specific version of a package in a specific source.
-#[derive(Clone, Copy, Eq, Hash, PartialOrd, Ord)]
+#[derive(Clone, Copy, Eq, PartialOrd, Ord)]
 pub struct PackageId {
     inner: &'static PackageIdInner,
 }
@@ -102,7 +102,17 @@ impl PartialEq for PackageId {
         if ptr::eq(self.inner, other.inner) {
             return true;
         }
-        (*self.inner).eq(&*other.inner)
+        self.inner.name == other.inner.name
+            && self.inner.version == other.inner.version
+            && self.inner.source_id == other.inner.source_id
+    }
+}
+
+impl<'a> Hash for PackageId {
+    fn hash<S: hash::Hasher>(&self, state: &mut S) {
+        self.inner.name.hash(state);
+        self.inner.version.hash(state);
+        self.inner.source_id.hash(state);
     }
 }
 
