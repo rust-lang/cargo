@@ -117,6 +117,9 @@ fn clean_release() {
 [FINISHED] release [optimized] target(s) in [..]
 ",
         ).run();
+
+    p.cargo("clean").arg("--release").run();
+    assert!(!p.build_dir().join("release").is_dir());
 }
 
 #[test]
