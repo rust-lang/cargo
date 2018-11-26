@@ -341,7 +341,7 @@ impl SourceId {
     }
 
     pub fn full_hash<S: hash::Hasher>(&self, into: &mut S) {
-        (self.inner as *const SourceIdInner).hash(into)
+        ptr::NonNull::from(self.inner).hash(into)
     }
 }
 
