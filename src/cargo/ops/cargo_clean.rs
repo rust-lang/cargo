@@ -24,14 +24,18 @@ pub struct CleanOptions<'a> {
 
 /// Cleans the package's build artifacts.
 pub fn clean(ws: &Workspace, opts: &CleanOptions) -> CargoResult<()> {
-    let target_dir = ws.target_dir();
+    let mut target_dir = ws.target_dir();
     let config = ws.config();
 
     // If the doc option is set, we just want to delete the doc directory.
     if opts.doc {
-        let target_dir = target_dir.join("doc");
-        let target_dir = target_dir.into_path_unlocked();
-        return rm_rf(&target_dir, config);
+        target_dir = target_dir.join("doc");
+        return rm_rf(&target_dir.into_path_unlocked(), config);
+    }
+
+    // If the release option is set, we set target to release directory
+    if opts.release {
+        target_dir = target_dir.join("release");
     }
 
     // If we have a spec, then we need to delete some packages, otherwise, just
@@ -40,8 +44,7 @@ pub fn clean(ws: &Workspace, opts: &CleanOptions) -> CargoResult<()> {
     // Note that we don't bother grabbing a lock here as we're just going to
     // blow it all away anyway.
     if opts.spec.is_empty() {
-        let target_dir = target_dir.into_path_unlocked();
-        return rm_rf(&target_dir, config);
+        return rm_rf(&target_dir.into_path_unlocked(), config);
     }
 
     let (packages, resolve) = ops::resolve_ws(ws)?;
