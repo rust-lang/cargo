@@ -11,6 +11,7 @@ use std::thread;
 use support::paths::{self, CargoPathExt};
 use support::sleep_ms;
 use support::{basic_lib_manifest, basic_manifest, git, main_file, path2url, project};
+use support::Project;
 
 #[test]
 fn cargo_compile_simple_git_dep() {
@@ -1090,6 +1091,18 @@ fn two_deps_only_update_one() {
         ).file("src/main.rs", "fn main() {}")
         .build();
 
+    fn oid_to_short_sha(oid: git2::Oid) -> String {
+        oid.to_string()[..8].to_string()
+    }
+    fn git_repo_head_sha(p: &Project) -> String {
+        let repo = git2::Repository::open(p.root()).unwrap();
+        let head = repo.head().unwrap().target().unwrap();
+        oid_to_short_sha(head)
+    }
+
+    println!("dep1 head sha: {}", git_repo_head_sha(&git1));
+    println!("dep2 head sha: {}", git_repo_head_sha(&git2));
+
     p.cargo("build")
         .with_stderr(
             "[UPDATING] git repository `[..]`\n\
@@ -1106,7 +1119,8 @@ fn two_deps_only_update_one() {
         .unwrap();
     let repo = git2::Repository::open(&git1.root()).unwrap();
     git::add(&repo);
-    git::commit(&repo);
+    let oid = git::commit(&repo);
+    println!("dep1 head sha: {}", oid_to_short_sha(oid));
 
     p.cargo("update -p dep1")
         .with_stderr(&format!(
