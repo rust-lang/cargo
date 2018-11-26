@@ -87,11 +87,11 @@ pub fn resolve_with_config_raw(
             Ok(())
         }
 
-        fn describe_source(&self, _src: &SourceId) -> String {
+        fn describe_source(&self, _src: SourceId) -> String {
             String::new()
         }
 
-        fn is_replaced(&self, _src: &SourceId) -> bool {
+        fn is_replaced(&self, _src: SourceId) -> bool {
             false
         }
     }
@@ -127,7 +127,7 @@ pub trait ToDep {
 
 impl ToDep for &'static str {
     fn to_dep(self) -> Dependency {
-        Dependency::parse_no_deprecated(self, Some("1.0.0"), &registry_loc()).unwrap()
+        Dependency::parse_no_deprecated(self, Some("1.0.0"), registry_loc()).unwrap()
     }
 }
 
@@ -149,14 +149,14 @@ impl ToPkgId for PackageId {
 
 impl<'a> ToPkgId for &'a str {
     fn to_pkgid(&self) -> PackageId {
-        PackageId::new(*self, "1.0.0", &registry_loc()).unwrap()
+        PackageId::new(*self, "1.0.0", registry_loc()).unwrap()
     }
 }
 
 impl<T: AsRef<str>, U: AsRef<str>> ToPkgId for (T, U) {
     fn to_pkgid(&self) -> PackageId {
         let (name, vers) = self;
-        PackageId::new(name.as_ref(), vers.as_ref(), &registry_loc()).unwrap()
+        PackageId::new(name.as_ref(), vers.as_ref(), registry_loc()).unwrap()
     }
 }
 
@@ -176,7 +176,7 @@ fn registry_loc() -> SourceId {
         static ref EXAMPLE_DOT_COM: SourceId =
             SourceId::for_registry(&"http://example.com".to_url().unwrap()).unwrap();
     }
-    EXAMPLE_DOT_COM.clone()
+    *EXAMPLE_DOT_COM
 }
 
 pub fn pkg<T: ToPkgId>(name: T) -> Summary {
@@ -201,7 +201,7 @@ pub fn pkg_dep<T: ToPkgId>(name: T, dep: Vec<Dependency>) -> Summary {
 }
 
 pub fn pkg_id(name: &str) -> PackageId {
-    PackageId::new(name, "1.0.0", &registry_loc()).unwrap()
+    PackageId::new(name, "1.0.0", registry_loc()).unwrap()
 }
 
 fn pkg_id_loc(name: &str, loc: &str) -> PackageId {
@@ -209,7 +209,7 @@ fn pkg_id_loc(name: &str, loc: &str) -> PackageId {
     let master = GitReference::Branch("master".to_string());
     let source_id = SourceId::for_git(&remote.unwrap(), master).unwrap();
 
-    PackageId::new(name, "1.0.0", &source_id).unwrap()
+    PackageId::new(name, "1.0.0", source_id).unwrap()
 }
 
 pub fn pkg_loc(name: &str, loc: &str) -> Summary {
@@ -232,7 +232,7 @@ pub fn dep(name: &str) -> Dependency {
     dep_req(name, "*")
 }
 pub fn dep_req(name: &str, req: &str) -> Dependency {
-    Dependency::parse_no_deprecated(name, Some(req), &registry_loc()).unwrap()
+    Dependency::parse_no_deprecated(name, Some(req), registry_loc()).unwrap()
 }
 pub fn dep_req_kind(name: &str, req: &str, kind: Kind) -> Dependency {
     let mut dep = dep_req(name, req);
@@ -244,7 +244,7 @@ pub fn dep_loc(name: &str, location: &str) -> Dependency {
     let url = location.to_url().unwrap();
     let master = GitReference::Branch("master".to_string());
     let source_id = SourceId::for_git(&url, master).unwrap();
-    Dependency::parse_no_deprecated(name, Some("1.0.0"), &source_id).unwrap()
+    Dependency::parse_no_deprecated(name, Some("1.0.0"), source_id).unwrap()
 }
 pub fn dep_kind(name: &str, kind: Kind) -> Dependency {
     dep(name).set_kind(kind).clone()
@@ -281,9 +281,7 @@ impl fmt::Debug for PrettyPrintRegistry {
             } else {
                 write!(f, "pkg!((\"{}\", \"{}\") => [", s.name(), s.version())?;
                 for d in s.dependencies() {
-                    if d.kind() == Kind::Normal
-                        && &d.version_req().to_string() == "*"
-                    {
+                    if d.kind() == Kind::Normal && &d.version_req().to_string() == "*" {
                         write!(f, "dep(\"{}\"),", d.name_in_toml())?;
                     } else if d.kind() == Kind::Normal {
                         write!(

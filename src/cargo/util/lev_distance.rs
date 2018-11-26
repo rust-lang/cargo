@@ -8,7 +8,7 @@ pub fn lev_distance(me: &str, t: &str) -> usize {
         return me.chars().count();
     }
 
-    let mut dcol = (0..t.len() + 1).collect::<Vec<_>>();
+    let mut dcol = (0..=t.len()).collect::<Vec<_>>();
     let mut t_last = 0;
 
     for (i, sc) in me.chars().enumerate() {

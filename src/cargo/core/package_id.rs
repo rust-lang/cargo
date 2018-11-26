@@ -1,7 +1,7 @@
 use std::cmp::Ordering;
 use std::fmt::{self, Formatter};
-use std::hash::Hash;
 use std::hash;
+use std::hash::Hash;
 use std::path::Path;
 use std::sync::Arc;
 
@@ -9,9 +9,9 @@ use semver;
 use serde::de;
 use serde::ser;
 
-use util::{CargoResult, ToSemver};
-use core::source::SourceId;
 use core::interning::InternedString;
+use core::source::SourceId;
+use util::{CargoResult, ToSemver};
 
 /// Identifier for a specific version of a package in a specific source.
 #[derive(Clone)]
@@ -100,13 +100,13 @@ impl Ord for PackageId {
 }
 
 impl PackageId {
-    pub fn new<T: ToSemver>(name: &str, version: T, sid: &SourceId) -> CargoResult<PackageId> {
+    pub fn new<T: ToSemver>(name: &str, version: T, sid: SourceId) -> CargoResult<PackageId> {
         let v = version.to_semver()?;
         Ok(PackageId {
             inner: Arc::new(PackageIdInner {
                 name: InternedString::new(name),
                 version: v,
-                source_id: sid.clone(),
+                source_id: sid,
             }),
         })
     }
@@ -117,8 +117,8 @@ impl PackageId {
     pub fn version(&self) -> &semver::Version {
         &self.inner.version
     }
-    pub fn source_id(&self) -> &SourceId {
-        &self.inner.source_id
+    pub fn source_id(&self) -> SourceId {
+        self.inner.source_id
     }
 
     pub fn with_precise(&self, precise: Option<String>) -> PackageId {
@@ -131,12 +131,12 @@ impl PackageId {
         }
     }
 
-    pub fn with_source_id(&self, source: &SourceId) -> PackageId {
+    pub fn with_source_id(&self, source: SourceId) -> PackageId {
         PackageId {
             inner: Arc::new(PackageIdInner {
                 name: self.inner.name,
                 version: self.inner.version.clone(),
-                source_id: source.clone(),
+                source_id: source,
             }),
         }
     }
@@ -190,9 +190,9 @@ mod tests {
         let loc = CRATES_IO_INDEX.to_url().unwrap();
         let repo = SourceId::for_registry(&loc).unwrap();
 
-        assert!(PackageId::new("foo", "1.0", &repo).is_err());
-        assert!(PackageId::new("foo", "1", &repo).is_err());
-        assert!(PackageId::new("foo", "bar", &repo).is_err());
-        assert!(PackageId::new("foo", "", &repo).is_err());
+        assert!(PackageId::new("foo", "1.0", repo).is_err());
+        assert!(PackageId::new("foo", "1", repo).is_err());
+        assert!(PackageId::new("foo", "bar", repo).is_err());
+        assert!(PackageId::new("foo", "", repo).is_err());
     }
 }

@@ -4,18 +4,18 @@ use std::fmt::{self, Formatter};
 use std::hash::{self, Hash};
 use std::path::Path;
 use std::ptr;
-use std::sync::Mutex;
-use std::sync::atomic::{AtomicBool, ATOMIC_BOOL_INIT};
 use std::sync::atomic::Ordering::SeqCst;
+use std::sync::atomic::{AtomicBool, ATOMIC_BOOL_INIT};
+use std::sync::Mutex;
 
-use serde::ser;
 use serde::de;
+use serde::ser;
 use url::Url;
 
 use ops;
 use sources::git;
-use sources::{GitSource, PathSource, RegistrySource, CRATES_IO_INDEX};
 use sources::DirectorySource;
+use sources::{GitSource, PathSource, RegistrySource, CRATES_IO_INDEX};
 use util::{CargoResult, Config, ToUrl};
 
 lazy_static! {
@@ -74,21 +74,19 @@ impl SourceId {
     ///
     /// The canonical url will be calculated, but the precise field will not
     fn new(kind: Kind, url: Url) -> CargoResult<SourceId> {
-        let source_id = SourceId::wrap(
-            SourceIdInner {
-                kind,
-                canonical_url: git::canonicalize_url(&url)?,
-                url,
-                precise: None,
-                name: None,
-            }
-        );
+        let source_id = SourceId::wrap(SourceIdInner {
+            kind,
+            canonical_url: git::canonicalize_url(&url)?,
+            url,
+            precise: None,
+            name: None,
+        });
         Ok(source_id)
     }
 
     fn wrap(inner: SourceIdInner) -> SourceId {
         let mut cache = SOURCE_ID_CACHE.lock().unwrap();
-        let inner = cache.get(&inner).map(|&x| x).unwrap_or_else(|| {
+        let inner = cache.get(&inner).cloned().unwrap_or_else(|| {
             let inner = Box::leak(Box::new(inner));
             cache.insert(inner);
             inner
@@ -209,15 +207,13 @@ impl SourceId {
 
     pub fn alt_registry(config: &Config, key: &str) -> CargoResult<SourceId> {
         let url = config.get_registry_index(key)?;
-        Ok(SourceId::wrap(
-            SourceIdInner {
-                kind: Kind::Registry,
-                canonical_url: git::canonicalize_url(&url)?,
-                url,
-                precise: None,
-                name: Some(key.to_string()),
-            }
-        ))
+        Ok(SourceId::wrap(SourceIdInner {
+            kind: Kind::Registry,
+            canonical_url: git::canonicalize_url(&url)?,
+            url,
+            precise: None,
+            name: Some(key.to_string()),
+        }))
     }
 
     /// Get this source URL
@@ -225,7 +221,7 @@ impl SourceId {
         &self.inner.url
     }
 
-    pub fn display_registry(&self) -> String {
+    pub fn display_registry(self) -> String {
         if self.is_default_registry() {
             "crates.io index".to_string()
         } else {
@@ -234,12 +230,12 @@ impl SourceId {
     }
 
     /// Is this source from a filesystem path
-    pub fn is_path(&self) -> bool {
+    pub fn is_path(self) -> bool {
         self.inner.kind == Kind::Path
     }
 
     /// Is this source from a registry (either local or not)
-    pub fn is_registry(&self) -> bool {
+    pub fn is_registry(self) -> bool {
         match self.inner.kind {
             Kind::Registry | Kind::LocalRegistry => true,
             _ => false,
@@ -247,12 +243,12 @@ impl SourceId {
     }
 
     /// Is this source from an alternative registry
-    pub fn is_alt_registry(&self) -> bool {
+    pub fn is_alt_registry(self) -> bool {
         self.is_registry() && self.inner.name.is_some()
     }
 
     /// Is this source from a git repository
-    pub fn is_git(&self) -> bool {
+    pub fn is_git(self) -> bool {
         match self.inner.kind {
             Kind::Git(_) => true,
             _ => false,
@@ -260,7 +256,7 @@ impl SourceId {
     }
 
     /// Creates an implementation of `Source` corresponding to this ID.
-    pub fn load<'a>(&self, config: &'a Config) -> CargoResult<Box<super::Source + 'a>> {
+    pub fn load<'a>(self, config: &'a Config) -> CargoResult<Box<super::Source + 'a>> {
         trace!("loading SourceId; {}", self);
         match self.inner.kind {
             Kind::Git(..) => Ok(Box::new(GitSource::new(self, config)?)),
@@ -290,12 +286,12 @@ impl SourceId {
     }
 
     /// Get the value of the precise field
-    pub fn precise(&self) -> Option<&str> {
+    pub fn precise(self) -> Option<&'static str> {
         self.inner.precise.as_ref().map(|s| &s[..])
     }
 
     /// Get the git reference if this is a git source, otherwise None.
-    pub fn git_reference(&self) -> Option<&GitReference> {
+    pub fn git_reference(self) -> Option<&'static GitReference> {
         match self.inner.kind {
             Kind::Git(ref s) => Some(s),
             _ => None,
@@ -303,17 +299,15 @@ impl SourceId {
     }
 
     /// Create a new SourceId from this source with the given `precise`
-    pub fn with_precise(&self, v: Option<String>) -> SourceId {
-        SourceId::wrap(
-            SourceIdInner {
-                precise: v,
-                ..(*self.inner).clone()
-            }
-        )
+    pub fn with_precise(self, v: Option<String>) -> SourceId {
+        SourceId::wrap(SourceIdInner {
+            precise: v,
+            ..(*self.inner).clone()
+        })
     }
 
     /// Whether the remote registry is the standard https://crates.io
-    pub fn is_default_registry(&self) -> bool {
+    pub fn is_default_registry(self) -> bool {
         match self.inner.kind {
             Kind::Registry => {}
             _ => return false,
@@ -325,9 +319,10 @@ impl SourceId {
     ///
     /// For paths, remove the workspace prefix so the same source will give the
     /// same hash in different locations.
-    pub fn stable_hash<S: hash::Hasher>(&self, workspace: &Path, into: &mut S) {
+    pub fn stable_hash<S: hash::Hasher>(self, workspace: &Path, into: &mut S) {
         if self.is_path() {
-            if let Ok(p) = self.inner
+            if let Ok(p) = self
+                .inner
                 .url
                 .to_file_path()
                 .unwrap()

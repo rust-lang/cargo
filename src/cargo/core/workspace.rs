@@ -236,7 +236,8 @@ impl<'cfg> Workspace<'cfg> {
     }
 
     pub fn profiles(&self) -> &Profiles {
-        let root = self.root_manifest
+        let root = self
+            .root_manifest
             .as_ref()
             .unwrap_or(&self.current_manifest);
         match *self.packages.get(root) {
@@ -253,8 +254,9 @@ impl<'cfg> Workspace<'cfg> {
         match self.root_manifest {
             Some(ref p) => p,
             None => &self.current_manifest,
-        }.parent()
-            .unwrap()
+        }
+        .parent()
+        .unwrap()
     }
 
     pub fn target_dir(&self) -> Filesystem {
@@ -425,8 +427,8 @@ impl<'cfg> Workspace<'cfg> {
             let root_package = self.packages.load(&root_manifest_path)?;
             match *root_package.workspace_config() {
                 WorkspaceConfig::Root(ref root_config) => {
-                    members_paths =
-                        root_config.members_paths(root_config.members.as_ref().unwrap_or(&vec![]))?;
+                    members_paths = root_config
+                        .members_paths(root_config.members.as_ref().unwrap_or(&vec![]))?;
                     default_members_paths = if let Some(ref default) = root_config.default_members {
                         Some(root_config.members_paths(default)?)
                     } else {
@@ -475,7 +477,8 @@ impl<'cfg> Workspace<'cfg> {
         if self.members.contains(&manifest_path) {
             return Ok(());
         }
-        if is_path_dep && !manifest_path.parent().unwrap().starts_with(self.root())
+        if is_path_dep
+            && !manifest_path.parent().unwrap().starts_with(self.root())
             && self.find_root(&manifest_path)? != self.root_manifest
         {
             // If `manifest_path` is a path dependency outside of the workspace,
@@ -655,7 +658,8 @@ impl<'cfg> Workspace<'cfg> {
         }
 
         if let Some(ref root_manifest) = self.root_manifest {
-            for pkg in self.members()
+            for pkg in self
+                .members()
                 .filter(|p| p.manifest_path() != root_manifest)
             {
                 let manifest = pkg.manifest();
@@ -699,7 +703,7 @@ impl<'cfg> Workspace<'cfg> {
             return Ok(p);
         }
         let source_id = SourceId::for_path(manifest_path.parent().unwrap())?;
-        let (package, _nested_paths) = ops::read_package(manifest_path, &source_id, self.config)?;
+        let (package, _nested_paths) = ops::read_package(manifest_path, source_id, self.config)?;
         loaded.insert(manifest_path.to_path_buf(), package.clone());
         Ok(package)
     }
@@ -745,10 +749,7 @@ impl<'cfg> Workspace<'cfg> {
             for warning in warnings {
                 if warning.is_critical {
                     let err = format_err!("{}", warning.message);
-                    let cx = format_err!(
-                        "failed to parse manifest at `{}`",
-                        path.display()
-                    );
+                    let cx = format_err!("failed to parse manifest at `{}`", path.display());
                     return Err(err.context(cx).into());
                 } else {
                     let msg = if self.root_manifest.is_none() {
@@ -782,7 +783,7 @@ impl<'cfg> Packages<'cfg> {
             Entry::Vacant(v) => {
                 let source_id = SourceId::for_path(key)?;
                 let (manifest, _nested_paths) =
-                    read_manifest(manifest_path, &source_id, self.config)?;
+                    read_manifest(manifest_path, source_id, self.config)?;
                 Ok(v.insert(match manifest {
                     EitherManifest::Real(manifest) => {
                         MaybePackage::Package(Package::new(manifest, manifest_path))
@@ -843,7 +844,8 @@ impl WorkspaceRootConfig {
     ///
     /// This method does NOT consider the `members` list.
     fn is_excluded(&self, manifest_path: &Path) -> bool {
-        let excluded = self.exclude
+        let excluded = self
+            .exclude
             .iter()
             .any(|ex| manifest_path.starts_with(self.root_dir.join(ex)));
 
@@ -886,9 +888,9 @@ impl WorkspaceRootConfig {
             None => return Ok(Vec::new()),
         };
         let res = glob(path).chain_err(|| format_err!("could not parse pattern `{}`", &path))?;
-        let res = res.map(|p| {
-            p.chain_err(|| format_err!("unable to match path to pattern `{}`", &path))
-        }).collect::<Result<Vec<_>, _>>()?;
+        let res = res
+            .map(|p| p.chain_err(|| format_err!("unable to match path to pattern `{}`", &path)))
+            .collect::<Result<Vec<_>, _>>()?;
         Ok(res)
     }
 }

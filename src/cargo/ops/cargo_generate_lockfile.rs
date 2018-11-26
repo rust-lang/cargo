@@ -73,13 +73,13 @@ pub fn update_lockfile(ws: &Workspace, opts: &UpdateOptions) -> CargoResult<()> 
                         } else {
                             precise.to_string()
                         };
-                        dep.source_id().clone().with_precise(Some(precise))
+                        dep.source_id().with_precise(Some(precise))
                     }
-                    None => dep.source_id().clone().with_precise(None),
+                    None => dep.source_id().with_precise(None),
                 });
             }
         }
-        registry.add_sources(&sources)?;
+        registry.add_sources(sources)?;
     }
 
     let resolve = ops::resolve_with_previous(
@@ -141,7 +141,7 @@ pub fn update_lockfile(ws: &Workspace, opts: &UpdateOptions) -> CargoResult<()> 
         previous_resolve: &'a Resolve,
         resolve: &'a Resolve,
     ) -> Vec<(Vec<&'a PackageId>, Vec<&'a PackageId>)> {
-        fn key(dep: &PackageId) -> (&str, &SourceId) {
+        fn key(dep: &PackageId) -> (&str, SourceId) {
             (dep.name().as_str(), dep.source_id())
         }
 

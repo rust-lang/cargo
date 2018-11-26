@@ -1,26 +1,26 @@
 use std::collections::btree_map::Entry;
 use std::collections::{BTreeMap, BTreeSet};
-use std::{env, fs};
 use std::io::prelude::*;
 use std::io::SeekFrom;
 use std::path::{Path, PathBuf};
 use std::sync::Arc;
+use std::{env, fs};
 
 use semver::{Version, VersionReq};
 use tempfile::Builder as TempFileBuilder;
 use toml;
 
+use core::compiler::{DefaultExecutor, Executor};
+use core::package::PackageSet;
+use core::source::SourceMap;
 use core::{Dependency, Edition, Package, PackageIdSpec, Source, SourceId};
 use core::{PackageId, Workspace};
-use core::source::SourceMap;
-use core::package::PackageSet;
-use core::compiler::{DefaultExecutor, Executor};
 use ops::{self, CompileFilter};
 use sources::{GitSource, PathSource, SourceConfigMap};
-use util::{internal, Config};
-use util::{FileLock, Filesystem};
 use util::errors::{CargoResult, CargoResultExt};
 use util::paths;
+use util::{internal, Config};
+use util::{FileLock, Filesystem};
 
 #[derive(Deserialize, Serialize)]
 #[serde(untagged)]
@@ -59,7 +59,7 @@ impl Drop for Transaction {
 pub fn install(
     root: Option<&str>,
     krates: Vec<&str>,
-    source_id: &SourceId,
+    source_id: SourceId,
     from_cwd: bool,
     vers: Option<&str>,
     opts: &ops::CompileOptions,
@@ -154,7 +154,7 @@ fn install_one(
     root: &Filesystem,
     map: &SourceConfigMap,
     krate: Option<&str>,
-    source_id: &SourceId,
+    source_id: SourceId,
     from_cwd: bool,
     vers: Option<&str>,
     opts: &ops::CompileOptions,
@@ -182,7 +182,9 @@ fn install_one(
                 src.path().display()
             )
         })?;
-        select_pkg(src, krate, vers, config, false, &mut |path| path.read_packages())?
+        select_pkg(src, krate, vers, config, false, &mut |path| {
+            path.read_packages()
+        })?
     } else {
         select_pkg(
             map.load(source_id)?,
@@ -255,20 +257,19 @@ fn install_one(
     }
 
     let exec: Arc<Executor> = Arc::new(DefaultExecutor);
-    let compile =
-        ops::compile_ws(&ws, Some(source), opts, &exec).chain_err(|| {
-            if let Some(td) = td_opt.take() {
-                // preserve the temporary directory, so the user can inspect it
-                td.into_path();
-            }
+    let compile = ops::compile_ws(&ws, Some(source), opts, &exec).chain_err(|| {
+        if let Some(td) = td_opt.take() {
+            // preserve the temporary directory, so the user can inspect it
+            td.into_path();
+        }
 
-            format_err!(
-                "failed to compile `{}`, intermediate artifacts can be \
-                 found at `{}`",
-                pkg,
-                ws.target_dir().display()
-            )
-        })?;
+        format_err!(
+            "failed to compile `{}`, intermediate artifacts can be \
+             found at `{}`",
+            pkg,
+            ws.target_dir().display()
+        )
+    })?;
     let binaries: Vec<(&str, &Path)> = compile
         .binaries
         .iter()
@@ -368,7 +369,8 @@ fn install_one(
     }
 
     // Remove empty metadata lines.
-    let pkgs = list.v1
+    let pkgs = list
+        .v1
         .iter()
         .filter_map(|(p, set)| {
             if set.is_empty() {
@@ -410,7 +412,7 @@ fn install_one(
     Ok(())
 }
 
-fn path_source<'a>(source_id: &SourceId, config: &'a Config) -> CargoResult<PathSource<'a>> {
+fn path_source<'a>(source_id: SourceId, config: &'a Config) -> CargoResult<PathSource<'a>> {
     let path = source_id
         .url()
         .to_file_path()
@@ -439,7 +441,8 @@ where
                 Some(v) => {
                     // If the version begins with character <, >, =, ^, ~ parse it as a
                     // version range, otherwise parse it as a specific version
-                    let first = v.chars()
+                    let first = v
+                        .chars()
                         .nth(0)
                         .ok_or_else(|| format_err!("no version provided for the `--vers` flag"))?;
 
@@ -495,16 +498,13 @@ where
             } else {
                 vers
             };
-            let dep = Dependency::parse_no_deprecated(
-                name,
-                vers_spec,
-                source.source_id(),
-            )?;
+            let dep = Dependency::parse_no_deprecated(name, vers_spec, source.source_id())?;
             let deps = source.query_vec(&dep)?;
             let pkgid = match deps.iter().map(|p| p.package_id()).max() {
                 Some(pkgid) => pkgid,
                 None => {
-                    let vers_info = vers.map(|v| format!(" with version `{}`", v))
+                    let vers_info = vers
+                        .map(|v| format!(" with version `{}`", v))
                         .unwrap_or_default();
                     bail!(
                         "could not find `{}` in {}{}",
@@ -624,7 +624,8 @@ fn find_duplicates(
         }
     };
     match *filter {
-        CompileFilter::Default { .. } => pkg.targets()
+        CompileFilter::Default { .. } => pkg
+            .targets()
             .iter()
             .filter(|t| t.is_bin())
             .filter_map(|t| check(t.name().to_string()))
@@ -671,7 +672,7 @@ fn read_crate_list(file: &FileLock) -> CargoResult<CrateListingV1> {
             }),
         }
     })()
-        .chain_err(|| {
+    .chain_err(|| {
         format_err!(
             "failed to parse crate metadata at `{}`",
             file.path().to_string_lossy()
@@ -689,7 +690,7 @@ fn write_crate_list(file: &FileLock, listing: CrateListingV1) -> CargoResult<()>
         file.write_all(data.as_bytes())?;
         Ok(())
     })()
-        .chain_err(|| {
+    .chain_err(|| {
         format_err!(
             "failed to write crate metadata at `{}`",
             file.path().to_string_lossy()
@@ -725,7 +726,7 @@ pub fn uninstall(
     let scheduled_error = if specs.len() == 1 {
         uninstall_one(&root, specs[0], bins, config)?;
         false
-    } else if specs.len() == 0 {
+    } else if specs.is_empty() {
         uninstall_cwd(&root, bins, config)?;
         false
     } else {
@@ -779,26 +780,23 @@ pub fn uninstall_one(
     let crate_metadata = metadata(config, root)?;
     let metadata = read_crate_list(&crate_metadata)?;
     let pkgid = PackageIdSpec::query_str(spec, metadata.v1.keys())?.clone();
-    uninstall_pkgid(crate_metadata, metadata, &pkgid, bins, config)
+    uninstall_pkgid(&crate_metadata, metadata, &pkgid, bins, config)
 }
 
-fn uninstall_cwd(
-    root: &Filesystem,
-    bins: &[String],
-    config: &Config,
-) -> CargoResult<()> {
+fn uninstall_cwd(root: &Filesystem, bins: &[String], config: &Config) -> CargoResult<()> {
     let crate_metadata = metadata(config, root)?;
     let metadata = read_crate_list(&crate_metadata)?;
     let source_id = SourceId::for_path(config.cwd())?;
-    let src = path_source(&source_id, config)?;
-    let (pkg, _source) =
-        select_pkg(src, None, None, config, true, &mut |path| path.read_packages())?;
+    let src = path_source(source_id, config)?;
+    let (pkg, _source) = select_pkg(src, None, None, config, true, &mut |path| {
+        path.read_packages()
+    })?;
     let pkgid = pkg.package_id();
-    uninstall_pkgid(crate_metadata, metadata, pkgid, bins, config)
+    uninstall_pkgid(&crate_metadata, metadata, pkgid, bins, config)
 }
 
 fn uninstall_pkgid(
-    crate_metadata: FileLock,
+    crate_metadata: &FileLock,
     mut metadata: CrateListingV1,
     pkgid: &PackageId,
     bins: &[String],
@@ -821,7 +819,8 @@ fn uninstall_pkgid(
             }
         }
 
-        let bins = bins.iter()
+        let bins = bins
+            .iter()
             .map(|s| {
                 if s.ends_with(env::consts::EXE_SUFFIX) {
                     s.to_string()
@@ -865,7 +864,8 @@ fn metadata(config: &Config, root: &Filesystem) -> CargoResult<FileLock> {
 
 fn resolve_root(flag: Option<&str>, config: &Config) -> CargoResult<Filesystem> {
     let config_root = config.get_path("install.root")?;
-    Ok(flag.map(PathBuf::from)
+    Ok(flag
+        .map(PathBuf::from)
         .or_else(|| env::var_os("CARGO_INSTALL_ROOT").map(PathBuf::from))
         .or_else(move || config_root.map(|v| v.val))
         .map(Filesystem::new)

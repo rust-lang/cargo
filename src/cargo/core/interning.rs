@@ -34,7 +34,7 @@ impl Eq for InternedString {}
 impl InternedString {
     pub fn new(str: &str) -> InternedString {
         let mut cache = STRING_CACHE.lock().unwrap();
-        let s = cache.get(str).map(|&s| s).unwrap_or_else(|| {
+        let s = cache.get(str).cloned().unwrap_or_else(|| {
             let s = leak(str.to_string());
             cache.insert(s);
             s

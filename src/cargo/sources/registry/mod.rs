@@ -228,15 +228,17 @@ pub struct RegistryPackage<'a> {
 #[test]
 fn escaped_cher_in_json() {
     let _: RegistryPackage = serde_json::from_str(
-        r#"{"name":"a","vers":"0.0.1","deps":[],"cksum":"bae3","features":{}}"#
-    ).unwrap();
+        r#"{"name":"a","vers":"0.0.1","deps":[],"cksum":"bae3","features":{}}"#,
+    )
+    .unwrap();
     let _: RegistryPackage = serde_json::from_str(
         r#"{"name":"a","vers":"0.0.1","deps":[],"cksum":"bae3","features":{"test":["k","q"]},"links":"a-sys"}"#
     ).unwrap();
 
     // Now we add escaped cher all the places they can go
     // these are not valid, but it should error later than json parsing
-    let _: RegistryPackage = serde_json::from_str(r#"{
+    let _: RegistryPackage = serde_json::from_str(
+        r#"{
         "name":"This name has a escaped cher in it \n\t\" ",
         "vers":"0.0.1",
         "deps":[{
@@ -251,8 +253,9 @@ fn escaped_cher_in_json() {
         }],
         "cksum":"bae3",
         "features":{"test \n\t\" ":["k \n\t\" ","q \n\t\" "]},
-        "links":" \n\t\" "}"#
-    ).unwrap();
+        "links":" \n\t\" "}"#,
+    )
+    .unwrap();
 }
 
 #[derive(Deserialize)]
@@ -282,7 +285,7 @@ struct RegistryDependency<'a> {
 
 impl<'a> RegistryDependency<'a> {
     /// Converts an encoded dependency in the registry to a cargo dependency
-    pub fn into_dep(self, default: &SourceId) -> CargoResult<Dependency> {
+    pub fn into_dep(self, default: SourceId) -> CargoResult<Dependency> {
         let RegistryDependency {
             name,
             req,
@@ -298,15 +301,11 @@ impl<'a> RegistryDependency<'a> {
         let id = if let Some(registry) = registry {
             SourceId::for_registry(&registry.to_url()?)?
         } else {
-            default.clone()
+            default
         };
 
-
-        let mut dep = Dependency::parse_no_deprecated(
-            package.as_ref().unwrap_or(&name),
-            Some(&req),
-            &id,
-        )?;
+        let mut dep =
+            Dependency::parse_no_deprecated(package.as_ref().unwrap_or(&name), Some(&req), id)?;
         if package.is_some() {
             dep.set_explicit_name_in_toml(&name);
         }
@@ -350,8 +349,12 @@ pub trait RegistryData {
     fn config(&mut self) -> CargoResult<Option<RegistryConfig>>;
     fn update_index(&mut self) -> CargoResult<()>;
     fn download(&mut self, pkg: &PackageId, checksum: &str) -> CargoResult<MaybeLock>;
-    fn finish_download(&mut self, pkg: &PackageId, checksum: &str, data: &[u8])
-        -> CargoResult<FileLock>;
+    fn finish_download(
+        &mut self,
+        pkg: &PackageId,
+        checksum: &str,
+        data: &[u8],
+    ) -> CargoResult<FileLock>;
 
     fn is_crate_downloaded(&self, _pkg: &PackageId) -> bool {
         true
@@ -360,34 +363,34 @@ pub trait RegistryData {
 
 pub enum MaybeLock {
     Ready(FileLock),
-    Download { url: String, descriptor: String }
+    Download { url: String, descriptor: String },
 }
 
 mod index;
 mod local;
 mod remote;
 
-fn short_name(id: &SourceId) -> String {
-    let hash = hex::short_hash(id);
+fn short_name(id: SourceId) -> String {
+    let hash = hex::short_hash(&id);
     let ident = id.url().host_str().unwrap_or("").to_string();
     format!("{}-{}", ident, hash)
 }
 
 impl<'cfg> RegistrySource<'cfg> {
-    pub fn remote(source_id: &SourceId, config: &'cfg Config) -> RegistrySource<'cfg> {
+    pub fn remote(source_id: SourceId, config: &'cfg Config) -> RegistrySource<'cfg> {
         let name = short_name(source_id);
         let ops = remote::RemoteRegistry::new(source_id, config, &name);
         RegistrySource::new(source_id, config, &name, Box::new(ops), true)
     }
 
-    pub fn local(source_id: &SourceId, path: &Path, config: &'cfg Config) -> RegistrySource<'cfg> {
+    pub fn local(source_id: SourceId, path: &Path, config: &'cfg Config) -> RegistrySource<'cfg> {
         let name = short_name(source_id);
         let ops = local::LocalRegistry::new(path, config, &name);
         RegistrySource::new(source_id, config, &name, Box::new(ops), false)
     }
 
     fn new(
-        source_id: &SourceId,
+        source_id: SourceId,
         config: &'cfg Config,
         name: &str,
         ops: Box<RegistryData + 'cfg>,
@@ -396,7 +399,7 @@ impl<'cfg> RegistrySource<'cfg> {
         RegistrySource {
             src_path: config.registry_source_path().join(name),
             config,
-            source_id: source_id.clone(),
+            source_id,
             updated: false,
             index: index::RegistryIndex::new(source_id, ops.index_path(), config, index_locked),
             index_locked,
@@ -468,15 +471,15 @@ impl<'cfg> RegistrySource<'cfg> {
         self.ops.update_index()?;
         let path = self.ops.index_path();
         self.index =
-            index::RegistryIndex::new(&self.source_id, path, self.config, self.index_locked);
+            index::RegistryIndex::new(self.source_id, path, self.config, self.index_locked);
         Ok(())
     }
 
-    fn get_pkg(&mut self, package: &PackageId, path: FileLock) -> CargoResult<Package> {
+    fn get_pkg(&mut self, package: &PackageId, path: &FileLock) -> CargoResult<Package> {
         let path = self
-            .unpack_package(package, &path)
+            .unpack_package(package, path)
             .chain_err(|| internal(format!("failed to unpack package `{}`", package)))?;
-        let mut src = PathSource::new(&path, &self.source_id, self.config);
+        let mut src = PathSource::new(&path, self.source_id, self.config);
         src.update()?;
         let pkg = match src.download(package)? {
             MaybePackage::Ready(pkg) => pkg,
@@ -543,8 +546,8 @@ impl<'cfg> Source for RegistrySource<'cfg> {
         false
     }
 
-    fn source_id(&self) -> &SourceId {
-        &self.source_id
+    fn source_id(&self) -> SourceId {
+        self.source_id
     }
 
     fn update(&mut self) -> CargoResult<()> {
@@ -566,21 +569,17 @@ impl<'cfg> Source for RegistrySource<'cfg> {
     fn download(&mut self, package: &PackageId) -> CargoResult<MaybePackage> {
         let hash = self.index.hash(package, &mut *self.ops)?;
         match self.ops.download(package, &hash)? {
-            MaybeLock::Ready(file) => {
-                self.get_pkg(package, file).map(MaybePackage::Ready)
-            }
+            MaybeLock::Ready(file) => self.get_pkg(package, &file).map(MaybePackage::Ready),
             MaybeLock::Download { url, descriptor } => {
                 Ok(MaybePackage::Download { url, descriptor })
             }
         }
     }
 
-    fn finish_download(&mut self, package: &PackageId, data: Vec<u8>)
-        -> CargoResult<Package>
-    {
+    fn finish_download(&mut self, package: &PackageId, data: Vec<u8>) -> CargoResult<Package> {
         let hash = self.index.hash(package, &mut *self.ops)?;
         let file = self.ops.finish_download(package, &hash, &data)?;
-        self.get_pkg(package, file)
+        self.get_pkg(package, &file)
     }
 
     fn fingerprint(&self, pkg: &Package) -> CargoResult<String> {

@@ -3,9 +3,9 @@ use std::rc::Rc;
 
 use core::interning::InternedString;
 use core::{Dependency, FeatureValue, PackageId, SourceId, Summary};
+use im_rc;
 use util::CargoResult;
 use util::Graph;
-use im_rc;
 
 use super::errors::ActivateResult;
 use super::types::{ConflictReason, DepInfo, GraphNode, Method, RcList, RegistryQueryer};
@@ -55,7 +55,7 @@ impl Context {
         let id = summary.package_id();
         let prev = self
             .activations
-            .entry((id.name(), id.source_id().clone()))
+            .entry((id.name(), id.source_id()))
             .or_insert_with(|| Rc::new(Vec::new()));
         if !prev.iter().any(|c| c == summary) {
             self.resolve_graph.push(GraphNode::Add(id.clone()));
@@ -126,14 +126,14 @@ impl Context {
 
     pub fn prev_active(&self, dep: &Dependency) -> &[Summary] {
         self.activations
-            .get(&(dep.package_name(), dep.source_id().clone()))
+            .get(&(dep.package_name(), dep.source_id()))
             .map(|v| &v[..])
             .unwrap_or(&[])
     }
 
     pub fn is_active(&self, id: &PackageId) -> bool {
         self.activations
-            .get(&(id.name(), id.source_id().clone()))
+            .get(&(id.name(), id.source_id()))
             .map(|v| v.iter().any(|s| s.package_id() == id))
             .unwrap_or(false)
     }

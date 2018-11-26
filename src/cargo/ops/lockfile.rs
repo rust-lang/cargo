@@ -20,12 +20,12 @@ pub fn load_pkg_lockfile(ws: &Workspace) -> CargoResult<Option<Resolve>> {
     f.read_to_string(&mut s)
         .chain_err(|| format!("failed to read file: {}", f.path().display()))?;
 
-    let resolve =
-        (|| -> CargoResult<Option<Resolve>> {
-            let resolve: toml::Value = cargo_toml::parse(&s, f.path(), ws.config())?;
-            let v: resolver::EncodableResolve = resolve.try_into()?;
-            Ok(Some(v.into_resolve(ws)?))
-        })().chain_err(|| format!("failed to parse lock file at: {}", f.path().display()))?;
+    let resolve = (|| -> CargoResult<Option<Resolve>> {
+        let resolve: toml::Value = cargo_toml::parse(&s, f.path(), ws.config())?;
+        let v: resolver::EncodableResolve = resolve.try_into()?;
+        Ok(Some(v.into_resolve(ws)?))
+    })()
+    .chain_err(|| format!("failed to parse lock file at: {}", f.path().display()))?;
     Ok(resolve)
 }
 
@@ -47,7 +47,7 @@ pub fn write_pkg_lockfile(ws: &Workspace, resolve: &Resolve) -> CargoResult<()> 
     // This is in preparation for marking it as generated
     // https://github.com/rust-lang/cargo/issues/6180
     if let Ok(orig) = &orig {
-        for line in orig.lines().take_while(|line| line.starts_with("#")) {
+        for line in orig.lines().take_while(|line| line.starts_with('#')) {
             out.push_str(line);
             out.push_str("\n");
         }

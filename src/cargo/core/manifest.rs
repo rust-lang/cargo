@@ -15,7 +15,7 @@ use core::{Dependency, PackageId, PackageIdSpec, SourceId, Summary};
 use core::{Edition, Feature, Features, WorkspaceConfig};
 use util::errors::*;
 use util::toml::TomlManifest;
-use util::{Config, Filesystem, short_hash};
+use util::{short_hash, Config, Filesystem};
 
 pub enum EitherManifest {
     Real(Manifest),
@@ -254,11 +254,7 @@ impl fmt::Debug for TargetSourcePath {
 
 impl From<PathBuf> for TargetSourcePath {
     fn from(path: PathBuf) -> Self {
-        assert!(
-            path.is_absolute(),
-            "`{}` is not absolute",
-            path.display()
-        );
+        assert!(path.is_absolute(), "`{}` is not absolute", path.display());
         TargetSourcePath::Path(path)
     }
 }
@@ -290,7 +286,8 @@ impl ser::Serialize for Target {
                 .required_features
                 .as_ref()
                 .map(|rf| rf.iter().map(|s| &**s).collect()),
-        }.serialize(s)
+        }
+        .serialize(s)
     }
 }
 
@@ -468,7 +465,7 @@ impl Manifest {
         self.summary = summary;
     }
 
-    pub fn map_source(self, to_replace: &SourceId, replace_with: &SourceId) -> Manifest {
+    pub fn map_source(self, to_replace: SourceId, replace_with: SourceId) -> Manifest {
         Manifest {
             summary: self.summary.map_source(to_replace, replace_with),
             ..self
@@ -490,11 +487,7 @@ impl Manifest {
         if self.default_run.is_some() {
             self.features
                 .require(Feature::default_run())
-                .chain_err(|| {
-                    format_err!(
-                        "the `default-run` manifest key is unstable"
-                    )
-                })?;
+                .chain_err(|| format_err!("the `default-run` manifest key is unstable"))?;
         }
 
         Ok(())
@@ -627,11 +620,7 @@ impl Target {
     }
 
     /// Builds a `Target` corresponding to the `build = "build.rs"` entry.
-    pub fn custom_build_target(
-        name: &str,
-        src_path: PathBuf,
-        edition: Edition,
-    ) -> Target {
+    pub fn custom_build_target(name: &str, src_path: PathBuf, edition: Edition) -> Target {
         Target {
             kind: TargetKind::CustomBuild,
             name: name.to_string(),
@@ -740,7 +729,9 @@ impl Target {
     pub fn for_host(&self) -> bool {
         self.for_host
     }
-    pub fn edition(&self) -> Edition { self.edition }
+    pub fn edition(&self) -> Edition {
+        self.edition
+    }
     pub fn benched(&self) -> bool {
         self.benched
     }
@@ -839,7 +830,8 @@ impl Target {
     pub fn can_lto(&self) -> bool {
         match self.kind {
             TargetKind::Lib(ref v) => {
-                !v.contains(&LibKind::Rlib) && !v.contains(&LibKind::Dylib)
+                !v.contains(&LibKind::Rlib)
+                    && !v.contains(&LibKind::Dylib)
                     && !v.contains(&LibKind::Lib)
             }
             _ => true,
