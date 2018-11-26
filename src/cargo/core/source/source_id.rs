@@ -335,6 +335,14 @@ impl SourceId {
         }
         self.hash(into)
     }
+
+    pub fn full_eq(&self, other: &SourceId) -> bool {
+        ptr::eq(self.inner, other.inner)
+    }
+
+    pub fn full_hash<S: hash::Hasher>(&self, into: &mut S) {
+        ptr::NonNull::from(self.inner).hash(into)
+    }
 }
 
 impl PartialOrd for SourceId {
