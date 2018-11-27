@@ -206,7 +206,7 @@ Some common cargo commands are (see all commands with --list):
     update      Update dependencies listed in Cargo.lock
     search      Search registry for crates
     publish     Package and upload this package to the registry
-    install     Install a Rust binary
+    install     Install a Rust binary. Default location is $HOME/.cargo/bin
     uninstall   Uninstall a Rust binary
 
 See 'cargo help <command>' for more information on a specific command.\n",
