@@ -336,11 +336,11 @@ impl SourceId {
         self.hash(into)
     }
 
-    pub fn full_eq(&self, other: &SourceId) -> bool {
+    pub fn full_eq(self, other: SourceId) -> bool {
         ptr::eq(self.inner, other.inner)
     }
 
-    pub fn full_hash<S: hash::Hasher>(&self, into: &mut S) {
+    pub fn full_hash<S: hash::Hasher>(self, into: &mut S) {
         ptr::NonNull::from(self.inner).hash(into)
     }
 }

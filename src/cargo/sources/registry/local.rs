@@ -69,7 +69,7 @@ impl<'cfg> RegistryData for LocalRegistry<'cfg> {
         Ok(())
     }
 
-    fn download(&mut self, pkg: &PackageId, checksum: &str) -> CargoResult<MaybeLock> {
+    fn download(&mut self, pkg: PackageId, checksum: &str) -> CargoResult<MaybeLock> {
         let crate_file = format!("{}-{}.crate", pkg.name(), pkg.version());
         let mut crate_file = self.root.open_ro(&crate_file, self.config, "crate file")?;
 
@@ -106,7 +106,7 @@ impl<'cfg> RegistryData for LocalRegistry<'cfg> {
 
     fn finish_download(
         &mut self,
-        _pkg: &PackageId,
+        _pkg: PackageId,
         _checksum: &str,
         _data: &[u8],
     ) -> CargoResult<FileLock> {

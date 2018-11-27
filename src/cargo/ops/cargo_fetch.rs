@@ -34,31 +34,31 @@ pub fn fetch<'a>(
                 continue;
             }
 
-            to_download.push(id.clone());
-            let deps = resolve.deps(id)
+            to_download.push(id);
+            let deps = resolve
+                .deps(id)
                 .filter(|&(_id, deps)| {
-                    deps.iter()
-                        .any(|d| {
-                            // If no target was specified then all dependencies can
-                            // be fetched.
-                            let target = match options.target {
-                                Some(ref t) => t,
-                                None => return true,
-                            };
-                            // If this dependency is only available for certain
-                            // platforms, make sure we're only fetching it for that
-                            // platform.
-                            let platform = match d.platform() {
-                                Some(p) => p,
-                                None => return true,
-                            };
-                            platform.matches(target, target_info.cfg())
-                        })
+                    deps.iter().any(|d| {
+                        // If no target was specified then all dependencies can
+                        // be fetched.
+                        let target = match options.target {
+                            Some(ref t) => t,
+                            None => return true,
+                        };
+                        // If this dependency is only available for certain
+                        // platforms, make sure we're only fetching it for that
+                        // platform.
+                        let platform = match d.platform() {
+                            Some(p) => p,
+                            None => return true,
+                        };
+                        platform.matches(target, target_info.cfg())
+                    })
                 })
                 .map(|(id, _deps)| id);
             deps_to_fetch.extend(deps);
         }
-        packages.get_many(&to_download)?;
+        packages.get_many(to_download)?;
     }
 
     Ok((resolve, packages))

@@ -4,9 +4,9 @@ use std::path::PathBuf;
 use std::str::{self, FromStr};
 
 use super::env_args;
-use util::{CargoResult, CargoResultExt, Cfg, Config, ProcessBuilder, Rustc};
-use core::TargetKind;
 use super::Kind;
+use core::TargetKind;
+use util::{CargoResult, CargoResultExt, Cfg, Config, ProcessBuilder, Rustc};
 
 #[derive(Clone)]
 pub struct TargetInfo {
@@ -173,17 +173,16 @@ impl TargetInfo {
             Some((ref prefix, ref suffix)) => (prefix, suffix),
             None => return Ok(None),
         };
-        let mut ret = vec![
-            FileType {
-                suffix: suffix.clone(),
-                prefix: prefix.clone(),
-                flavor,
-                should_replace_hyphens: false,
-            },
-        ];
+        let mut ret = vec![FileType {
+            suffix: suffix.clone(),
+            prefix: prefix.clone(),
+            flavor,
+            should_replace_hyphens: false,
+        }];
 
         // rust-lang/cargo#4500
-        if target_triple.ends_with("pc-windows-msvc") && crate_type.ends_with("dylib")
+        if target_triple.ends_with("pc-windows-msvc")
+            && crate_type.ends_with("dylib")
             && suffix == ".dll"
         {
             ret.push(FileType {

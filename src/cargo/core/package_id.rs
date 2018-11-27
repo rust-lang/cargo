@@ -15,7 +15,8 @@ use core::source::SourceId;
 use util::{CargoResult, ToSemver};
 
 lazy_static! {
-    static ref PACKAGE_ID_CACHE: Mutex<HashSet<&'static PackageIdInner>> = Mutex::new(HashSet::new());
+    static ref PACKAGE_ID_CACHE: Mutex<HashSet<&'static PackageIdInner>> =
+        Mutex::new(HashSet::new());
 }
 
 /// Identifier for a specific version of a package in a specific source.
@@ -36,7 +37,7 @@ impl PartialEq for PackageIdInner {
     fn eq(&self, other: &Self) -> bool {
         self.name == other.name
             && self.version == other.version
-            && self.source_id.full_eq(&other.source_id)
+            && self.source_id.full_eq(other.source_id)
     }
 }
 
@@ -87,13 +88,11 @@ impl<'de> de::Deserialize<'de> for PackageId {
         };
         let source_id = SourceId::from_url(url).map_err(de::Error::custom)?;
 
-        Ok(PackageId::wrap(
-            PackageIdInner {
-                name: InternedString::new(name),
-                version,
-                source_id,
-            }
-        ))
+        Ok(PackageId::wrap(PackageIdInner {
+            name: InternedString::new(name),
+            version,
+            source_id,
+        }))
     }
 }
 
@@ -120,18 +119,16 @@ impl PackageId {
     pub fn new<T: ToSemver>(name: &str, version: T, sid: SourceId) -> CargoResult<PackageId> {
         let v = version.to_semver()?;
 
-        Ok(PackageId::wrap(
-            PackageIdInner {
-                name: InternedString::new(name),
-                version: v,
-                source_id: sid,
-            }
-        ))
+        Ok(PackageId::wrap(PackageIdInner {
+            name: InternedString::new(name),
+            version: v,
+            source_id: sid,
+        }))
     }
 
     fn wrap(inner: PackageIdInner) -> PackageId {
         let mut cache = PACKAGE_ID_CACHE.lock().unwrap();
-        let inner = cache.get(&inner).map(|&x| x).unwrap_or_else(|| {
+        let inner = cache.get(&inner).cloned().unwrap_or_else(|| {
             let inner = Box::leak(Box::new(inner));
             cache.insert(inner);
             inner
@@ -139,42 +136,38 @@ impl PackageId {
         PackageId { inner }
     }
 
-    pub fn name(&self) -> InternedString {
+    pub fn name(self) -> InternedString {
         self.inner.name
     }
-    pub fn version(&self) -> &semver::Version {
+    pub fn version(self) -> &'static semver::Version {
         &self.inner.version
     }
-    pub fn source_id(&self) -> SourceId {
+    pub fn source_id(self) -> SourceId {
         self.inner.source_id
     }
 
-    pub fn with_precise(&self, precise: Option<String>) -> PackageId {
-        PackageId::wrap(
-            PackageIdInner {
-                name: self.inner.name,
-                version: self.inner.version.clone(),
-                source_id: self.inner.source_id.with_precise(precise),
-            }
-        )
+    pub fn with_precise(self, precise: Option<String>) -> PackageId {
+        PackageId::wrap(PackageIdInner {
+            name: self.inner.name,
+            version: self.inner.version.clone(),
+            source_id: self.inner.source_id.with_precise(precise),
+        })
     }
 
-    pub fn with_source_id(&self, source: SourceId) -> PackageId {
-        PackageId::wrap(
-            PackageIdInner {
-                name: self.inner.name,
-                version: self.inner.version.clone(),
-                source_id: source,
-            }
-        )
+    pub fn with_source_id(self, source: SourceId) -> PackageId {
+        PackageId::wrap(PackageIdInner {
+            name: self.inner.name,
+            version: self.inner.version.clone(),
+            source_id: source,
+        })
     }
 
-    pub fn stable_hash<'a>(&'a self, workspace: &'a Path) -> PackageIdStableHash<'a> {
+    pub fn stable_hash(self, workspace: &Path) -> PackageIdStableHash {
         PackageIdStableHash(self, workspace)
     }
 }
 
-pub struct PackageIdStableHash<'a>(&'a PackageId, &'a Path);
+pub struct PackageIdStableHash<'a>(PackageId, &'a Path);
 
 impl<'a> Hash for PackageIdStableHash<'a> {
     fn hash<S: hash::Hasher>(&self, state: &mut S) {
@@ -236,7 +229,8 @@ PackageId {
     version: "1.0.0",
     source: "registry `https://github.com/rust-lang/crates.io-index`"
 }
-"#.trim();
+"#
+        .trim();
         assert_eq!(pretty, format!("{:#?}", pkg_id));
     }
 

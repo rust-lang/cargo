@@ -413,7 +413,7 @@ impl Manifest {
     pub fn name(&self) -> InternedString {
         self.package_id().name()
     }
-    pub fn package_id(&self) -> &PackageId {
+    pub fn package_id(&self) -> PackageId {
         self.summary.package_id()
     }
     pub fn summary(&self) -> &Summary {
@@ -519,7 +519,7 @@ impl Manifest {
     }
 
     pub fn metabuild_path(&self, target_dir: Filesystem) -> PathBuf {
-        let hash = short_hash(self.package_id());
+        let hash = short_hash(&self.package_id());
         target_dir
             .into_path_unlocked()
             .join(".metabuild")

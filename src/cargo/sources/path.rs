@@ -545,7 +545,7 @@ impl<'cfg> Source for PathSource<'cfg> {
         Ok(())
     }
 
-    fn download(&mut self, id: &PackageId) -> CargoResult<MaybePackage> {
+    fn download(&mut self, id: PackageId) -> CargoResult<MaybePackage> {
         trace!("getting packages; id={}", id);
 
         let pkg = self.packages.iter().find(|pkg| pkg.package_id() == id);
@@ -554,7 +554,7 @@ impl<'cfg> Source for PathSource<'cfg> {
             .ok_or_else(|| internal(format!("failed to find {} in path source", id)))
     }
 
-    fn finish_download(&mut self, _id: &PackageId, _data: Vec<u8>) -> CargoResult<Package> {
+    fn finish_download(&mut self, _id: PackageId, _data: Vec<u8>) -> CargoResult<Package> {
         panic!("no download should have started")
     }
 

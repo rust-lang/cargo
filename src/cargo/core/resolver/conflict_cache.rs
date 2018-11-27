@@ -37,28 +37,28 @@ impl ConflictStoreTrie {
                 }
             }
             ConflictStoreTrie::Node(m) => {
-                for (pid, store) in m {
+                for (&pid, store) in m {
                     // if the key is active then we need to check all of the corresponding subTrie.
                     if cx.is_active(pid) {
                         if let Some(o) = store.find_conflicting(cx, filter) {
                             return Some(o);
                         }
                     } // else, if it is not active then there is no way any of the corresponding
-                    // subTrie will be conflicting.
+                      // subTrie will be conflicting.
                 }
                 None
             }
         }
     }
 
-    fn insert<'a>(
+    fn insert(
         &mut self,
-        mut iter: impl Iterator<Item = &'a PackageId>,
+        mut iter: impl Iterator<Item = PackageId>,
         con: BTreeMap<PackageId, ConflictReason>,
     ) {
         if let Some(pid) = iter.next() {
             if let ConflictStoreTrie::Node(p) = self {
-                p.entry(pid.clone())
+                p.entry(pid)
                     .or_insert_with(|| ConflictStoreTrie::Node(HashMap::new()))
                     .insert(iter, con);
             } // else, We already have a subset of this in the ConflictStore
@@ -160,7 +160,7 @@ impl ConflictCache {
         self.con_from_dep
             .entry(dep.clone())
             .or_insert_with(|| ConflictStoreTrie::Node(HashMap::new()))
-            .insert(con.keys(), con.clone());
+            .insert(con.keys().cloned(), con.clone());
 
         trace!(
             "{} = \"{}\" adding a skip {:?}",
@@ -176,7 +176,7 @@ impl ConflictCache {
                 .insert(dep.clone());
         }
     }
-    pub fn dependencies_conflicting_with(&self, pid: &PackageId) -> Option<&HashSet<Dependency>> {
-        self.dep_from_pid.get(pid)
+    pub fn dependencies_conflicting_with(&self, pid: PackageId) -> Option<&HashSet<Dependency>> {
+        self.dep_from_pid.get(&pid)
     }
 }

@@ -42,7 +42,7 @@ pub fn resolve_and_validated(
             if p.name().ends_with("-sys") {
                 assert!(links.insert(p.name()));
             }
-            stack.extend(resolve.deps(&p).map(|(dp, deps)| {
+            stack.extend(resolve.deps(p).map(|(dp, deps)| {
                 for d in deps {
                     assert!(d.matches_id(dp));
                 }

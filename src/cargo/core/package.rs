@@ -41,7 +41,7 @@ pub struct Package {
 
 impl Ord for Package {
     fn cmp(&self, other: &Package) -> Ordering {
-        self.package_id().cmp(other.package_id())
+        self.package_id().cmp(&other.package_id())
     }
 }
 
@@ -56,7 +56,7 @@ impl PartialOrd for Package {
 struct SerializedPackage<'a> {
     name: &'a str,
     version: &'a str,
-    id: &'a PackageId,
+    id: PackageId,
     license: Option<&'a str>,
     license_file: Option<&'a str>,
     description: Option<&'a str>,
@@ -153,7 +153,7 @@ impl Package {
         self.package_id().name()
     }
     /// Get the PackageId object for the package (fully defines a package)
-    pub fn package_id(&self) -> &PackageId {
+    pub fn package_id(&self) -> PackageId {
         self.manifest.package_id()
     }
     /// Get the root folder of the package
@@ -241,7 +241,7 @@ impl fmt::Display for Package {
 impl fmt::Debug for Package {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         f.debug_struct("Package")
-            .field("id", self.summary().package_id())
+            .field("id", &self.summary().package_id())
             .field("..", &"..")
             .finish()
     }
@@ -354,7 +354,7 @@ impl<'cfg> PackageSet<'cfg> {
         Ok(PackageSet {
             packages: package_ids
                 .iter()
-                .map(|id| (id.clone(), LazyCell::new()))
+                .map(|&id| (id, LazyCell::new()))
                 .collect(),
             sources: RefCell::new(sources),
             config,
@@ -364,8 +364,8 @@ impl<'cfg> PackageSet<'cfg> {
         })
     }
 
-    pub fn package_ids<'a>(&'a self) -> Box<Iterator<Item = &'a PackageId> + 'a> {
-        Box::new(self.packages.keys())
+    pub fn package_ids<'a>(&'a self) -> impl Iterator<Item = PackageId> + 'a {
+        self.packages.keys().cloned()
     }
 
     pub fn enable_download<'a>(&'a self) -> CargoResult<Downloads<'a, 'cfg>> {
@@ -394,14 +394,11 @@ impl<'cfg> PackageSet<'cfg> {
         })
     }
 
-    pub fn get_one(&self, id: &PackageId) -> CargoResult<&Package> {
+    pub fn get_one(&self, id: PackageId) -> CargoResult<&Package> {
         Ok(self.get_many(Some(id))?.remove(0))
     }
 
-    pub fn get_many<'a>(
-        &self,
-        ids: impl IntoIterator<Item = &'a PackageId>,
-    ) -> CargoResult<Vec<&Package>> {
+    pub fn get_many(&self, ids: impl IntoIterator<Item = PackageId>) -> CargoResult<Vec<&Package>> {
         let mut pkgs = Vec::new();
         let mut downloads = self.enable_download()?;
         for id in ids {
@@ -425,13 +422,13 @@ impl<'a, 'cfg> Downloads<'a, 'cfg> {
     /// Returns `None` if the package is queued up for download and will
     /// eventually be returned from `wait_for_download`. Returns `Some(pkg)` if
     /// the package is ready and doesn't need to be downloaded.
-    pub fn start(&mut self, id: &PackageId) -> CargoResult<Option<&'a Package>> {
+    pub fn start(&mut self, id: PackageId) -> CargoResult<Option<&'a Package>> {
         // First up see if we've already cached this package, in which case
         // there's nothing to do.
         let slot = self
             .set
             .packages
-            .get(id)
+            .get(&id)
             .ok_or_else(|| internal(format!("couldn't find `{}` in package set", id)))?;
         if let Some(pkg) = slot.borrow() {
             return Ok(Some(pkg));
@@ -463,7 +460,7 @@ impl<'a, 'cfg> Downloads<'a, 'cfg> {
         let token = self.next;
         self.next += 1;
         debug!("downloading {} as {}", id, token);
-        assert!(self.pending_ids.insert(id.clone()));
+        assert!(self.pending_ids.insert(id));
 
         let (mut handle, _timeout) = ops::http_handle_and_timeout(self.set.config)?;
         handle.get(true)?;
@@ -542,7 +539,7 @@ impl<'a, 'cfg> Downloads<'a, 'cfg> {
         let dl = Download {
             token,
             data: RefCell::new(Vec::new()),
-            id: id.clone(),
+            id,
             url,
             descriptor,
             total: Cell::new(0),
@@ -632,7 +629,7 @@ impl<'a, 'cfg> Downloads<'a, 'cfg> {
             match ret {
                 Some(()) => break (dl, data),
                 None => {
-                    self.pending_ids.insert(dl.id.clone());
+                    self.pending_ids.insert(dl.id);
                     self.enqueue(dl, handle)?
                 }
             }
@@ -671,7 +668,7 @@ impl<'a, 'cfg> Downloads<'a, 'cfg> {
             .get_mut(dl.id.source_id())
             .ok_or_else(|| internal(format!("couldn't find source for `{}`", dl.id)))?;
         let start = Instant::now();
-        let pkg = source.finish_download(&dl.id, data)?;
+        let pkg = source.finish_download(dl.id, data)?;
 
         // Assume that no time has passed while we were calling
         // `finish_download`, update all speed checks and timeout limits of all

@@ -67,7 +67,7 @@ impl Profiles {
     /// workspace.
     pub fn get_profile(
         &self,
-        pkg_id: &PackageId,
+        pkg_id: PackageId,
         is_member: bool,
         unit_for: UnitFor,
         mode: CompileMode,
@@ -163,7 +163,7 @@ struct ProfileMaker {
 impl ProfileMaker {
     fn get_profile(
         &self,
-        pkg_id: Option<&PackageId>,
+        pkg_id: Option<PackageId>,
         is_member: bool,
         unit_for: UnitFor,
     ) -> Profile {
@@ -292,7 +292,7 @@ impl ProfileMaker {
 }
 
 fn merge_toml(
-    pkg_id: Option<&PackageId>,
+    pkg_id: Option<PackageId>,
     is_member: bool,
     unit_for: UnitFor,
     profile: &mut Profile,

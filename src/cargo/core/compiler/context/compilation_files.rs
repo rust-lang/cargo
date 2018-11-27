@@ -271,27 +271,29 @@ impl<'a, 'cfg: 'a> CompilationFiles<'a, 'cfg> {
                     )?;
 
                     match file_types {
-                        Some(types) => for file_type in types {
-                            let path = out_dir.join(file_type.filename(&file_stem));
-                            let hardlink = link_stem
-                                .as_ref()
-                                .map(|&(ref ld, ref ls)| ld.join(file_type.filename(ls)));
-                            let export_path = if unit.target.is_custom_build() {
-                                None
-                            } else {
-                                self.export_dir.as_ref().and_then(|export_dir| {
-                                    hardlink.as_ref().and_then(|hardlink| {
-                                        Some(export_dir.join(hardlink.file_name().unwrap()))
+                        Some(types) => {
+                            for file_type in types {
+                                let path = out_dir.join(file_type.filename(&file_stem));
+                                let hardlink = link_stem
+                                    .as_ref()
+                                    .map(|&(ref ld, ref ls)| ld.join(file_type.filename(ls)));
+                                let export_path = if unit.target.is_custom_build() {
+                                    None
+                                } else {
+                                    self.export_dir.as_ref().and_then(|export_dir| {
+                                        hardlink.as_ref().and_then(|hardlink| {
+                                            Some(export_dir.join(hardlink.file_name().unwrap()))
+                                        })
                                     })
-                                })
-                            };
-                            ret.push(OutputFile {
-                                path,
-                                hardlink,
-                                export_path,
-                                flavor: file_type.flavor,
-                            });
-                        },
+                                };
+                                ret.push(OutputFile {
+                                    path,
+                                    hardlink,
+                                    export_path,
+                                    flavor: file_type.flavor,
+                                });
+                            }
+                        }
                         // not supported, don't worry about it
                         None => {
                             unsupported.push(crate_type.to_string());
@@ -392,7 +394,8 @@ fn compute_metadata<'a, 'cfg>(
     let bcx = &cx.bcx;
     let __cargo_default_lib_metadata = env::var("__CARGO_DEFAULT_LIB_METADATA");
     if !(unit.mode.is_any_test() || unit.mode.is_check())
-        && (unit.target.is_dylib() || unit.target.is_cdylib()
+        && (unit.target.is_dylib()
+            || unit.target.is_cdylib()
             || (unit.target.is_bin() && bcx.target_triple().starts_with("wasm32-")))
         && unit.pkg.package_id().source_id().is_path()
         && __cargo_default_lib_metadata.is_err()
@@ -433,7 +436,8 @@ fn compute_metadata<'a, 'cfg>(
 
     // Mix in the target-metadata of all the dependencies of this target
     {
-        let mut deps_metadata = cx.dep_targets(unit)
+        let mut deps_metadata = cx
+            .dep_targets(unit)
             .iter()
             .map(|dep| metadata_of(dep, cx, metas))
             .collect::<Vec<_>>();

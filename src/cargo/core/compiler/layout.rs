@@ -135,9 +135,9 @@ impl Layout {
     ///
     /// This is recommended to prevent derived/temporary files from bloating backups.
     fn exclude_from_backups(&self, path: &Path) {
-        use std::ptr;
-        use core_foundation::{number, string, url};
         use core_foundation::base::TCFType;
+        use core_foundation::{number, string, url};
+        use std::ptr;
 
         // For compatibility with 10.7 a string is used instead of global kCFURLIsExcludedFromBackupKey
         let is_excluded_key: Result<string::CFString, _> = "NSURLIsExcludedFromBackupKey".parse();

@@ -16,7 +16,7 @@ pub fn emit<T: Message>(t: &T) {
 
 #[derive(Serialize)]
 pub struct FromCompiler<'a> {
-    pub package_id: &'a PackageId,
+    pub package_id: PackageId,
     pub target: &'a Target,
     pub message: Box<RawValue>,
 }
@@ -29,7 +29,7 @@ impl<'a> Message for FromCompiler<'a> {
 
 #[derive(Serialize)]
 pub struct Artifact<'a> {
-    pub package_id: &'a PackageId,
+    pub package_id: PackageId,
     pub target: &'a Target,
     pub profile: ArtifactProfile,
     pub features: Vec<String>,
@@ -57,7 +57,7 @@ pub struct ArtifactProfile {
 
 #[derive(Serialize)]
 pub struct BuildScript<'a> {
-    pub package_id: &'a PackageId,
+    pub package_id: PackageId,
     pub linked_libs: &'a [String],
     pub linked_paths: &'a [String],
     pub cfgs: &'a [String],
