@@ -5,9 +5,9 @@ use std::path::PathBuf;
 
 use semver::Version;
 
+use super::BuildContext;
 use core::{Edition, Package, PackageId, Target, TargetKind};
 use util::{self, join_paths, process, CargoResult, CfgExpr, Config, ProcessBuilder};
-use super::BuildContext;
 
 pub struct Doctest {
     /// The package being doctested.
@@ -196,7 +196,7 @@ impl<'cfg> Compilation<'cfg> {
         let search_path = join_paths(&search_path, util::dylib_path_envvar())?;
 
         cmd.env(util::dylib_path_envvar(), &search_path);
-        if let Some(env) = self.extra_env.get(pkg.package_id()) {
+        if let Some(env) = self.extra_env.get(&pkg.package_id()) {
             for &(ref k, ref v) in env {
                 cmd.env(k, v);
             }
@@ -276,8 +276,10 @@ fn target_runner(bcx: &BuildContext) -> CargoResult<Option<(PathBuf, Vec<String>
                     if let Some(runner) = bcx.config.get_path_and_args(&key)? {
                         // more than one match, error out
                         if matching_runner.is_some() {
-                            bail!("several matching instances of `target.'cfg(..)'.runner` \
-                                   in `.cargo/config`")
+                            bail!(
+                                "several matching instances of `target.'cfg(..)'.runner` \
+                                 in `.cargo/config`"
+                            )
                         }
 
                         matching_runner = Some(runner.val);

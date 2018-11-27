@@ -1,7 +1,7 @@
+use cargo::core::resolver::ResolveError;
 use cargo::core::{compiler::CompileMode, Workspace};
 use cargo::ops::{self, CompileOptions};
 use cargo::util::{config::Config, errors::ManifestError};
-use cargo::core::resolver::ResolveError;
 
 use support::project;
 
@@ -150,5 +150,5 @@ fn member_manifest_version_error() {
     let resolve_err: &ResolveError = error.downcast_ref().expect("Not a ResolveError");
     let package_path = resolve_err.package_path();
     assert_eq!(package_path.len(), 1, "package_path: {:?}", package_path);
-    assert_eq!(&package_path[0], member_bar.package_id());
+    assert_eq!(package_path[0], member_bar.package_id());
 }

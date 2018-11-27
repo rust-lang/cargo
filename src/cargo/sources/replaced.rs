@@ -70,11 +70,11 @@ impl<'cfg> Source for ReplacedSource<'cfg> {
         Ok(())
     }
 
-    fn download(&mut self, id: &PackageId) -> CargoResult<MaybePackage> {
+    fn download(&mut self, id: PackageId) -> CargoResult<MaybePackage> {
         let id = id.with_source_id(self.replace_with);
         let pkg = self
             .inner
-            .download(&id)
+            .download(id)
             .chain_err(|| format!("failed to download replaced source {}", self.to_replace))?;
         Ok(match pkg {
             MaybePackage::Ready(pkg) => {
@@ -84,11 +84,11 @@ impl<'cfg> Source for ReplacedSource<'cfg> {
         })
     }
 
-    fn finish_download(&mut self, id: &PackageId, data: Vec<u8>) -> CargoResult<Package> {
+    fn finish_download(&mut self, id: PackageId, data: Vec<u8>) -> CargoResult<Package> {
         let id = id.with_source_id(self.replace_with);
         let pkg = self
             .inner
-            .finish_download(&id, data)
+            .finish_download(id, data)
             .chain_err(|| format!("failed to download replaced source {}", self.to_replace))?;
         Ok(pkg.map_source(self.replace_with, self.to_replace))
     }
@@ -97,9 +97,9 @@ impl<'cfg> Source for ReplacedSource<'cfg> {
         self.inner.fingerprint(id)
     }
 
-    fn verify(&self, id: &PackageId) -> CargoResult<()> {
+    fn verify(&self, id: PackageId) -> CargoResult<()> {
         let id = id.with_source_id(self.replace_with);
-        self.inner.verify(&id)
+        self.inner.verify(id)
     }
 
     fn describe(&self) -> String {

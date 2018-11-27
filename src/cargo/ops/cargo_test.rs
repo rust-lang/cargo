@@ -1,10 +1,10 @@
 use std::ffi::OsString;
 
-use ops;
 use core::compiler::{Compilation, Doctest};
-use util::{self, CargoTestError, ProcessError, Test};
-use util::errors::CargoResult;
 use core::Workspace;
+use ops;
+use util::errors::CargoResult;
+use util::{self, CargoTestError, ProcessError, Test};
 
 pub struct TestOptions<'a> {
     pub compile_opts: ops::CompileOptions<'a>,
@@ -172,7 +172,7 @@ fn run_doc_tests(
             p.arg("--test-args").arg(arg);
         }
 
-        if let Some(cfgs) = compilation.cfgs.get(package.package_id()) {
+        if let Some(cfgs) = compilation.cfgs.get(&package.package_id()) {
             for cfg in cfgs.iter() {
                 p.arg("--cfg").arg(cfg);
             }
@@ -185,7 +185,7 @@ fn run_doc_tests(
             p.arg("--extern").arg(&arg);
         }
 
-        if let Some(flags) = compilation.rustdocflags.get(package.package_id()) {
+        if let Some(flags) = compilation.rustdocflags.get(&package.package_id()) {
             p.args(flags);
         }
 

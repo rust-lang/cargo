@@ -71,8 +71,8 @@ impl Summary {
         })
     }
 
-    pub fn package_id(&self) -> &PackageId {
-        &self.inner.package_id
+    pub fn package_id(&self) -> PackageId {
+        self.inner.package_id
     }
     pub fn name(&self) -> InternedString {
         self.package_id().name()

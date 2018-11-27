@@ -38,7 +38,7 @@ pub fn output_metadata(ws: &Workspace, opt: &OutputMetadataOptions) -> CargoResu
 fn metadata_no_deps(ws: &Workspace, _opt: &OutputMetadataOptions) -> CargoResult<ExportInfo> {
     Ok(ExportInfo {
         packages: ws.members().cloned().collect(),
-        workspace_members: ws.members().map(|pkg| pkg.package_id().clone()).collect(),
+        workspace_members: ws.members().map(|pkg| pkg.package_id()).collect(),
         resolve: None,
         target_directory: ws.target_dir().display().to_string(),
         version: VERSION,
@@ -58,15 +58,15 @@ fn metadata_full(ws: &Workspace, opt: &OutputMetadataOptions) -> CargoResult<Exp
     )?;
     let mut packages = HashMap::new();
     for pkg in package_set.get_many(package_set.package_ids())? {
-        packages.insert(pkg.package_id().clone(), pkg.clone());
+        packages.insert(pkg.package_id(), pkg.clone());
     }
 
     Ok(ExportInfo {
         packages: packages.values().map(|p| (*p).clone()).collect(),
-        workspace_members: ws.members().map(|pkg| pkg.package_id().clone()).collect(),
+        workspace_members: ws.members().map(|pkg| pkg.package_id()).collect(),
         resolve: Some(MetadataResolve {
             resolve: (packages, resolve),
-            root: ws.current_opt().map(|pkg| pkg.package_id().clone()),
+            root: ws.current_opt().map(|pkg| pkg.package_id()),
         }),
         target_directory: ws.target_dir().display().to_string(),
         version: VERSION,
@@ -94,40 +94,43 @@ struct MetadataResolve {
     root: Option<PackageId>,
 }
 
-fn serialize_resolve<S>((packages, resolve): &(HashMap<PackageId, Package>, Resolve), s: S) -> Result<S::Ok, S::Error>
+fn serialize_resolve<S>(
+    (packages, resolve): &(HashMap<PackageId, Package>, Resolve),
+    s: S,
+) -> Result<S::Ok, S::Error>
 where
     S: ser::Serializer,
 {
     #[derive(Serialize)]
-    struct Dep<'a> {
+    struct Dep {
         name: Option<String>,
-        pkg: &'a PackageId
+        pkg: PackageId,
     }
 
     #[derive(Serialize)]
     struct Node<'a> {
-        id: &'a PackageId,
-        dependencies: Vec<&'a PackageId>,
-        deps: Vec<Dep<'a>>,
+        id: PackageId,
+        dependencies: Vec<PackageId>,
+        deps: Vec<Dep>,
         features: Vec<&'a str>,
     }
 
-    s.collect_seq(resolve
-        .iter()
-        .map(|id| Node {
+    s.collect_seq(resolve.iter().map(|id| {
+        Node {
             id,
             dependencies: resolve.deps(id).map(|(pkg, _deps)| pkg).collect(),
-            deps: resolve.deps(id)
+            deps: resolve
+                .deps(id)
                 .map(|(pkg, _deps)| {
-                    let name = packages.get(pkg)
+                    let name = packages
+                        .get(&pkg)
                         .and_then(|pkg| pkg.targets().iter().find(|t| t.is_lib()))
-                        .and_then(|lib_target| {
-                            resolve.extern_crate_name(id, pkg, lib_target).ok()
-                        });
+                        .and_then(|lib_target| resolve.extern_crate_name(id, pkg, lib_target).ok());
 
                     Dep { name, pkg }
                 })
                 .collect(),
             features: resolve.features_sorted(id),
-        }))
+        }
+    }))
 }

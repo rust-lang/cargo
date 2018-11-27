@@ -214,7 +214,7 @@ impl<'cfg> Source for GitSource<'cfg> {
         self.path_source.as_mut().unwrap().update()
     }
 
-    fn download(&mut self, id: &PackageId) -> CargoResult<MaybePackage> {
+    fn download(&mut self, id: PackageId) -> CargoResult<MaybePackage> {
         trace!(
             "getting packages for package id `{}` from `{:?}`",
             id,
@@ -226,7 +226,7 @@ impl<'cfg> Source for GitSource<'cfg> {
             .download(id)
     }
 
-    fn finish_download(&mut self, _id: &PackageId, _data: Vec<u8>) -> CargoResult<Package> {
+    fn finish_download(&mut self, _id: PackageId, _data: Vec<u8>) -> CargoResult<Package> {
         panic!("no download should have started")
     }
 

@@ -359,11 +359,11 @@ fn install_one(
         }
         // Failsafe to force replacing metadata for git packages
         // https://github.com/rust-lang/cargo/issues/4582
-        if let Some(set) = list.v1.remove(&pkg.package_id().clone()) {
-            list.v1.insert(pkg.package_id().clone(), set);
+        if let Some(set) = list.v1.remove(&pkg.package_id()) {
+            list.v1.insert(pkg.package_id(), set);
         }
         list.v1
-            .entry(pkg.package_id().clone())
+            .entry(pkg.package_id())
             .or_insert_with(BTreeSet::new)
             .insert(bin.to_string());
     }
@@ -372,13 +372,7 @@ fn install_one(
     let pkgs = list
         .v1
         .iter()
-        .filter_map(|(p, set)| {
-            if set.is_empty() {
-                Some(p.clone())
-            } else {
-                None
-            }
-        })
+        .filter_map(|(&p, set)| if set.is_empty() { Some(p) } else { None })
         .collect::<Vec<_>>();
     for p in pkgs.iter() {
         list.v1.remove(p);
@@ -387,7 +381,7 @@ fn install_one(
     // If installation was successful record newly installed binaries.
     if result.is_ok() {
         list.v1
-            .entry(pkg.package_id().clone())
+            .entry(pkg.package_id())
             .or_insert_with(BTreeSet::new)
             .extend(to_install.iter().map(|s| s.to_string()));
     }
@@ -518,8 +512,8 @@ where
             let pkg = {
                 let mut map = SourceMap::new();
                 map.insert(Box::new(&mut source));
-                PackageSet::new(&[pkgid.clone()], map, config)?
-                    .get_one(&pkgid)?
+                PackageSet::new(&[pkgid], map, config)?
+                    .get_one(pkgid)?
                     .clone()
             };
             Ok((pkg, Box::new(source)))
@@ -617,8 +611,8 @@ fn find_duplicates(
         let name = format!("{}{}", name, env::consts::EXE_SUFFIX);
         if fs::metadata(dst.join(&name)).is_err() {
             None
-        } else if let Some((p, _)) = prev.v1.iter().find(|&(_, v)| v.contains(&name)) {
-            Some((name, Some(p.clone())))
+        } else if let Some((&p, _)) = prev.v1.iter().find(|&(_, v)| v.contains(&name)) {
+            Some((name, Some(p)))
         } else {
             Some((name, None))
         }
@@ -779,8 +773,8 @@ pub fn uninstall_one(
 ) -> CargoResult<()> {
     let crate_metadata = metadata(config, root)?;
     let metadata = read_crate_list(&crate_metadata)?;
-    let pkgid = PackageIdSpec::query_str(spec, metadata.v1.keys())?.clone();
-    uninstall_pkgid(&crate_metadata, metadata, &pkgid, bins, config)
+    let pkgid = PackageIdSpec::query_str(spec, metadata.v1.keys().cloned())?;
+    uninstall_pkgid(&crate_metadata, metadata, pkgid, bins, config)
 }
 
 fn uninstall_cwd(root: &Filesystem, bins: &[String], config: &Config) -> CargoResult<()> {
@@ -798,13 +792,13 @@ fn uninstall_cwd(root: &Filesystem, bins: &[String], config: &Config) -> CargoRe
 fn uninstall_pkgid(
     crate_metadata: &FileLock,
     mut metadata: CrateListingV1,
-    pkgid: &PackageId,
+    pkgid: PackageId,
     bins: &[String],
     config: &Config,
 ) -> CargoResult<()> {
     let mut to_remove = Vec::new();
     {
-        let mut installed = match metadata.v1.entry(pkgid.clone()) {
+        let mut installed = match metadata.v1.entry(pkgid) {
             Entry::Occupied(e) => e,
             Entry::Vacant(..) => bail!("package `{}` is not installed", pkgid),
         };

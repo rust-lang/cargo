@@ -28,8 +28,8 @@ use CargoResult;
 struct State<'a: 'tmp, 'cfg: 'a, 'tmp> {
     bcx: &'tmp BuildContext<'a, 'cfg>,
     deps: &'tmp mut HashMap<Unit<'a>, Vec<Unit<'a>>>,
-    pkgs: RefCell<&'tmp mut HashMap<&'a PackageId, &'a Package>>,
-    waiting_on_download: HashSet<&'a PackageId>,
+    pkgs: RefCell<&'tmp mut HashMap<PackageId, &'a Package>>,
+    waiting_on_download: HashSet<PackageId>,
     downloads: Downloads<'a, 'cfg>,
 }
 
@@ -37,7 +37,7 @@ pub fn build_unit_dependencies<'a, 'cfg>(
     roots: &[Unit<'a>],
     bcx: &BuildContext<'a, 'cfg>,
     deps: &mut HashMap<Unit<'a>, Vec<Unit<'a>>>,
-    pkgs: &mut HashMap<&'a PackageId, &'a Package>,
+    pkgs: &mut HashMap<PackageId, &'a Package>,
 ) -> CargoResult<()> {
     assert!(deps.is_empty(), "can only build unit deps once");
 
@@ -393,7 +393,7 @@ fn new_unit<'a>(
     mode: CompileMode,
 ) -> Unit<'a> {
     let profile = bcx.profiles.get_profile(
-        &pkg.package_id(),
+        pkg.package_id(),
         bcx.ws.is_member(pkg),
         unit_for,
         mode,
@@ -482,9 +482,9 @@ fn connect_run_custom_build_deps(state: &mut State) {
 }
 
 impl<'a, 'cfg, 'tmp> State<'a, 'cfg, 'tmp> {
-    fn get(&mut self, id: &'a PackageId) -> CargoResult<Option<&'a Package>> {
+    fn get(&mut self, id: PackageId) -> CargoResult<Option<&'a Package>> {
         let mut pkgs = self.pkgs.borrow_mut();
-        if let Some(pkg) = pkgs.get(id) {
+        if let Some(pkg) = pkgs.get(&id) {
             return Ok(Some(pkg));
         }
         if !self.waiting_on_download.insert(id) {
@@ -492,7 +492,7 @@ impl<'a, 'cfg, 'tmp> State<'a, 'cfg, 'tmp> {
         }
         if let Some(pkg) = self.downloads.start(id)? {
             pkgs.insert(id, pkg);
-            self.waiting_on_download.remove(id);
+            self.waiting_on_download.remove(&id);
             return Ok(Some(pkg));
         }
         Ok(None)
@@ -510,7 +510,7 @@ impl<'a, 'cfg, 'tmp> State<'a, 'cfg, 'tmp> {
         assert!(self.downloads.remaining() > 0);
         loop {
             let pkg = self.downloads.wait()?;
-            self.waiting_on_download.remove(pkg.package_id());
+            self.waiting_on_download.remove(&pkg.package_id());
             self.pkgs.borrow_mut().insert(pkg.package_id(), pkg);
 
             // Arbitrarily choose that 5 or more packages concurrently download
