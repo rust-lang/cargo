@@ -180,7 +180,7 @@ impl<'a, 'cfg> BuildContext<'a, 'cfg> {
         )
     }
 
-    pub fn show_warnings(&self, pkg: &PackageId) -> bool {
+    pub fn show_warnings(&self, pkg: PackageId) -> bool {
         pkg.source_id().is_path() || self.config.extra_verbose()
     }
 

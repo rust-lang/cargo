@@ -14,7 +14,7 @@ use core::profiles::{Lto, Profile};
 use core::{PackageId, Target};
 use util::errors::{CargoResult, CargoResultExt, Internal, ProcessError};
 use util::paths;
-use util::{self, machine_message, Freshness, ProcessBuilder, process};
+use util::{self, machine_message, process, Freshness, ProcessBuilder};
 use util::{internal, join_paths, profile};
 
 use self::build_plan::BuildPlan;
@@ -23,8 +23,8 @@ use self::job_queue::JobQueue;
 
 use self::output_depinfo::output_depinfo;
 
-pub use self::build_context::{BuildContext, FileFlavor, TargetConfig, TargetInfo};
 pub use self::build_config::{BuildConfig, CompileMode, MessageFormat};
+pub use self::build_context::{BuildContext, FileFlavor, TargetConfig, TargetInfo};
 pub use self::compilation::{Compilation, Doctest};
 pub use self::context::{Context, Unit};
 pub use self::custom_build::{BuildMap, BuildOutput, BuildScripts};
@@ -65,9 +65,9 @@ pub trait Executor: Send + Sync + 'static {
     fn exec(
         &self,
         cmd: ProcessBuilder,
-        _id: &PackageId,
+        _id: PackageId,
         _target: &Target,
-        _mode: CompileMode
+        _mode: CompileMode,
     ) -> CargoResult<()> {
         cmd.exec()?;
         Ok(())
@@ -76,7 +76,7 @@ pub trait Executor: Send + Sync + 'static {
     fn exec_and_capture_output(
         &self,
         cmd: ProcessBuilder,
-        id: &PackageId,
+        id: PackageId,
         target: &Target,
         mode: CompileMode,
         _state: &job_queue::JobState<'_>,
@@ -88,7 +88,7 @@ pub trait Executor: Send + Sync + 'static {
     fn exec_json(
         &self,
         cmd: ProcessBuilder,
-        _id: &PackageId,
+        _id: PackageId,
         _target: &Target,
         _mode: CompileMode,
         handle_stdout: &mut FnMut(&str) -> CargoResult<()>,
@@ -114,7 +114,7 @@ impl Executor for DefaultExecutor {
     fn exec_and_capture_output(
         &self,
         cmd: ProcessBuilder,
-        _id: &PackageId,
+        _id: PackageId,
         _target: &Target,
         _mode: CompileMode,
         state: &job_queue::JobState<'_>,
@@ -207,7 +207,7 @@ fn rustc<'a, 'cfg>(
 
     // Prepare the native lib state (extra -L and -l flags)
     let build_state = cx.build_state.clone();
-    let current_id = unit.pkg.package_id().clone();
+    let current_id = unit.pkg.package_id();
     let build_deps = load_build_deps(cx, unit);
 
     // If we are a binary and the package also contains a library, then we
@@ -222,12 +222,13 @@ fn rustc<'a, 'cfg>(
         root.join(&crate_name)
     } else {
         root.join(&cx.files().file_stem(unit))
-    }.with_extension("d");
+    }
+    .with_extension("d");
     let dep_info_loc = fingerprint::dep_info_loc(cx, unit);
 
     rustc.args(&cx.bcx.rustflags_args(unit)?);
     let json_messages = cx.bcx.build_config.json_messages();
-    let package_id = unit.pkg.package_id().clone();
+    let package_id = unit.pkg.package_id();
     let target = unit.target.clone();
     let mode = unit.mode;
 
@@ -257,11 +258,11 @@ fn rustc<'a, 'cfg>(
                     &build_state,
                     &build_deps,
                     pass_l_flag,
-                    &current_id,
+                    current_id,
                 )?;
                 add_plugin_deps(&mut rustc, &build_state, &build_deps, &root_output)?;
             }
-            add_custom_env(&mut rustc, &build_state, &current_id, kind)?;
+            add_custom_env(&mut rustc, &build_state, current_id, kind)?;
         }
 
         for output in outputs.iter() {
@@ -293,18 +294,18 @@ fn rustc<'a, 'cfg>(
         if json_messages {
             exec.exec_json(
                 rustc,
-                &package_id,
+                package_id,
                 &target,
                 mode,
                 &mut assert_is_empty,
-                &mut |line| json_stderr(line, &package_id, &target),
+                &mut |line| json_stderr(line, package_id, &target),
             )
             .map_err(internal_if_simple_exit_code)
             .chain_err(|| format!("Could not compile `{}`.", name))?;
         } else if build_plan {
             state.build_plan(buildkey, rustc.clone(), outputs.clone());
         } else {
-            exec.exec_and_capture_output(rustc, &package_id, &target, mode, state)
+            exec.exec_and_capture_output(rustc, package_id, &target, mode, state)
                 .map_err(internal_if_simple_exit_code)
                 .chain_err(|| format!("Could not compile `{}`.", name))?;
         }
@@ -344,7 +345,7 @@ fn rustc<'a, 'cfg>(
         build_state: &BuildMap,
         build_scripts: &BuildScripts,
         pass_l_flag: bool,
-        current_id: &PackageId,
+        current_id: PackageId,
     ) -> CargoResult<()> {
         for key in build_scripts.to_link.iter() {
             let output = build_state.get(key).ok_or_else(|| {
@@ -356,7 +357,7 @@ fn rustc<'a, 'cfg>(
             for path in output.library_paths.iter() {
                 rustc.arg("-L").arg(path);
             }
-            if key.0 == *current_id {
+            if key.0 == current_id {
                 for cfg in &output.cfgs {
                     rustc.arg("--cfg").arg(cfg);
                 }
@@ -375,10 +376,10 @@ fn rustc<'a, 'cfg>(
     fn add_custom_env(
         rustc: &mut ProcessBuilder,
         build_state: &BuildMap,
-        current_id: &PackageId,
+        current_id: PackageId,
         kind: Kind,
     ) -> CargoResult<()> {
-        let key = (current_id.clone(), kind);
+        let key = (current_id, kind);
         if let Some(output) = build_state.get(&key) {
             for &(ref name, ref value) in output.env.iter() {
                 rustc.env(name, value);
@@ -398,11 +399,12 @@ fn link_targets<'a, 'cfg>(
     let bcx = cx.bcx;
     let outputs = cx.outputs(unit)?;
     let export_dir = cx.files().export_dir();
-    let package_id = unit.pkg.package_id().clone();
+    let package_id = unit.pkg.package_id();
     let profile = unit.profile;
     let unit_mode = unit.mode;
-    let features = bcx.resolve
-        .features_sorted(&package_id)
+    let features = bcx
+        .resolve
+        .features_sorted(package_id)
         .into_iter()
         .map(|s| s.to_owned())
         .collect();
@@ -456,7 +458,7 @@ fn link_targets<'a, 'cfg>(
             };
 
             machine_message::emit(&machine_message::Artifact {
-                package_id: &package_id,
+                package_id,
                 target: &target,
                 profile: art_profile,
                 features,
@@ -526,10 +528,9 @@ fn add_plugin_deps(
     let var = util::dylib_path_envvar();
     let search_path = rustc.get_env(var).unwrap_or_default();
     let mut search_path = env::split_paths(&search_path).collect::<Vec<_>>();
-    for id in build_scripts.plugins.iter() {
-        let key = (id.clone(), Kind::Host);
+    for &id in build_scripts.plugins.iter() {
         let output = build_state
-            .get(&key)
+            .get(&(id, Kind::Host))
             .ok_or_else(|| internal(format!("couldn't find libs for plugin dep {}", id)))?;
         search_path.append(&mut filter_dynamic_search_path(
             output.library_paths.iter(),
@@ -637,9 +638,9 @@ fn rustdoc<'a, 'cfg>(cx: &mut Context<'a, 'cfg>, unit: &Unit<'a>) -> CargoResult
 
     let name = unit.pkg.name().to_string();
     let build_state = cx.build_state.clone();
-    let key = (unit.pkg.package_id().clone(), unit.kind);
+    let key = (unit.pkg.package_id(), unit.kind);
     let json_messages = bcx.build_config.json_messages();
-    let package_id = unit.pkg.package_id().clone();
+    let package_id = unit.pkg.package_id();
     let target = unit.target.clone();
 
     Ok(Work::new(move |state| {
@@ -657,9 +658,10 @@ fn rustdoc<'a, 'cfg>(cx: &mut Context<'a, 'cfg>, unit: &Unit<'a>) -> CargoResult
             rustdoc
                 .exec_with_streaming(
                     &mut assert_is_empty,
-                    &mut |line| json_stderr(line, &package_id, &target),
+                    &mut |line| json_stderr(line, package_id, &target),
                     false,
-                ).map(drop)
+                )
+                .map(drop)
         } else {
             state.capture_output(&rustdoc, None, false).map(drop)
         };
@@ -719,15 +721,23 @@ fn add_cap_lints(bcx: &BuildContext, unit: &Unit, cmd: &mut ProcessBuilder) {
 
 fn add_color(bcx: &BuildContext, cmd: &mut ProcessBuilder) {
     let shell = bcx.config.shell();
-    let color = if shell.supports_color() { "always" } else { "never" };
+    let color = if shell.supports_color() {
+        "always"
+    } else {
+        "never"
+    };
     cmd.args(&["--color", color]);
 }
 
 fn add_error_format(bcx: &BuildContext, cmd: &mut ProcessBuilder) {
     match bcx.build_config.message_format {
         MessageFormat::Human => (),
-        MessageFormat::Json => { cmd.arg("--error-format").arg("json"); },
-        MessageFormat::Short => { cmd.arg("--error-format").arg("short"); },
+        MessageFormat::Json => {
+            cmd.arg("--error-format").arg("json");
+        }
+        MessageFormat::Short => {
+            cmd.arg("--error-format").arg("short");
+        }
     }
 }
 
@@ -1009,7 +1019,7 @@ fn assert_is_empty(line: &str) -> CargoResult<()> {
     }
 }
 
-fn json_stderr(line: &str, package_id: &PackageId, target: &Target) -> CargoResult<()> {
+fn json_stderr(line: &str, package_id: PackageId, target: &Target) -> CargoResult<()> {
     // stderr from rustc/rustdoc can have a mix of JSON and non-JSON output
     if line.starts_with('{') {
         // Handle JSON lines

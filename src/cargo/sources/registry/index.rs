@@ -124,7 +124,7 @@ impl<'cfg> RegistryIndex<'cfg> {
     }
 
     /// Return the hash listed for a specified PackageId.
-    pub fn hash(&mut self, pkg: &PackageId, load: &mut RegistryData) -> CargoResult<String> {
+    pub fn hash(&mut self, pkg: PackageId, load: &mut RegistryData) -> CargoResult<String> {
         let name = pkg.name().as_str();
         let version = pkg.version();
         if let Some(s) = self.hashes.get(name).and_then(|v| v.get(version)) {

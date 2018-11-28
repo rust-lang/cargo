@@ -52,7 +52,7 @@ fn add_deps_for_unit<'a, 'b>(
     }
 
     // Add rerun-if-changed dependencies
-    let key = (unit.pkg.package_id().clone(), unit.kind);
+    let key = (unit.pkg.package_id(), unit.kind);
     if let Some(output) = context.build_state.outputs.lock().unwrap().get(&key) {
         for path in &output.rerun_if_changed {
             deps.insert(path.into());
@@ -87,7 +87,8 @@ pub fn output_depinfo<'a, 'b>(cx: &mut Context<'a, 'b>, unit: &Unit<'a>) -> Carg
         }
         None => None,
     };
-    let deps = deps.iter()
+    let deps = deps
+        .iter()
         .map(|f| render_filename(f, basedir))
         .collect::<CargoResult<Vec<_>>>()?;
 

@@ -7,25 +7,25 @@ use std::sync::Arc;
 
 use jobserver::Client;
 
-use core::{Package, PackageId, Resolve, Target};
 use core::compiler::compilation;
 use core::profiles::Profile;
+use core::{Package, PackageId, Resolve, Target};
 use util::errors::{CargoResult, CargoResultExt};
-use util::{internal, profile, Config, short_hash};
+use util::{internal, profile, short_hash, Config};
 
+use super::build_plan::BuildPlan;
 use super::custom_build::{self, BuildDeps, BuildScripts, BuildState};
 use super::fingerprint::Fingerprint;
 use super::job_queue::JobQueue;
 use super::layout::Layout;
 use super::{BuildContext, Compilation, CompileMode, Executor, FileFlavor, Kind};
-use super::build_plan::BuildPlan;
 
 mod unit_dependencies;
 use self::unit_dependencies::build_unit_dependencies;
 
 mod compilation_files;
-pub use self::compilation_files::{Metadata, OutputFile};
 use self::compilation_files::CompilationFiles;
+pub use self::compilation_files::{Metadata, OutputFile};
 
 /// All information needed to define a Unit.
 ///
@@ -68,7 +68,7 @@ pub struct Unit<'a> {
 impl<'a> Unit<'a> {
     pub fn buildkey(&self) -> String {
         format!("{}-{}", self.pkg.name(), short_hash(self))
-	}
+    }
 }
 
 pub struct Context<'a, 'cfg: 'a> {
@@ -80,12 +80,12 @@ pub struct Context<'a, 'cfg: 'a> {
     pub fingerprints: HashMap<Unit<'a>, Arc<Fingerprint>>,
     pub compiled: HashSet<Unit<'a>>,
     pub build_scripts: HashMap<Unit<'a>, Arc<BuildScripts>>,
-    pub links: Links<'a>,
+    pub links: Links,
     pub jobserver: Client,
-    primary_packages: HashSet<&'a PackageId>,
+    primary_packages: HashSet<PackageId>,
     unit_dependencies: HashMap<Unit<'a>, Vec<Unit<'a>>>,
     files: Option<CompilationFiles<'a, 'cfg>>,
-    package_cache: HashMap<&'a PackageId, &'a Package>,
+    package_cache: HashMap<PackageId, &'a Package>,
 }
 
 impl<'a, 'cfg> Context<'a, 'cfg> {
@@ -189,7 +189,7 @@ impl<'a, 'cfg> Context<'a, 'cfg> {
                     let out_dir = self.files().build_script_out_dir(dep).display().to_string();
                     self.compilation
                         .extra_env
-                        .entry(dep.pkg.package_id().clone())
+                        .entry(dep.pkg.package_id())
                         .or_insert_with(Vec::new)
                         .push(("OUT_DIR".to_string(), out_dir));
                 }
@@ -235,7 +235,7 @@ impl<'a, 'cfg> Context<'a, 'cfg> {
             if !feats.is_empty() {
                 self.compilation
                     .cfgs
-                    .entry(unit.pkg.package_id().clone())
+                    .entry(unit.pkg.package_id())
                     .or_insert_with(|| {
                         feats
                             .iter()
@@ -247,7 +247,7 @@ impl<'a, 'cfg> Context<'a, 'cfg> {
             if !rustdocflags.is_empty() {
                 self.compilation
                     .rustdocflags
-                    .entry(unit.pkg.package_id().clone())
+                    .entry(unit.pkg.package_id())
                     .or_insert(rustdocflags);
             }
 
@@ -289,7 +289,8 @@ impl<'a, 'cfg> Context<'a, 'cfg> {
             Some(target) => Some(Layout::new(self.bcx.ws, Some(target), dest)?),
             None => None,
         };
-        self.primary_packages.extend(units.iter().map(|u| u.pkg.package_id()));
+        self.primary_packages
+            .extend(units.iter().map(|u| u.pkg.package_id()));
 
         build_unit_dependencies(
             units,
@@ -361,7 +362,7 @@ impl<'a, 'cfg> Context<'a, 'cfg> {
         // gets a full pre-filtered set of dependencies. This is not super
         // obvious, and clear, but it does work at the moment.
         if unit.target.is_custom_build() {
-            let key = (unit.pkg.package_id().clone(), unit.kind);
+            let key = (unit.pkg.package_id(), unit.kind);
             if self.build_script_overridden.contains(&key) {
                 return Vec::new();
             }
@@ -393,7 +394,8 @@ impl<'a, 'cfg> Context<'a, 'cfg> {
         //   incremental compilation or not. Primarily development profiles
         //   have it enabled by default while release profiles have it disabled
         //   by default.
-        let global_cfg = self.bcx
+        let global_cfg = self
+            .bcx
             .config
             .get_bool("build.incremental")?
             .map(|c| c.val);
@@ -426,12 +428,13 @@ impl<'a, 'cfg> Context<'a, 'cfg> {
     }
 
     pub fn is_primary_package(&self, unit: &Unit<'a>) -> bool {
-        self.primary_packages.contains(unit.pkg.package_id())
+        self.primary_packages.contains(&unit.pkg.package_id())
     }
 
     /// Gets a package for the given package id.
-    pub fn get_package(&self, id: &PackageId) -> CargoResult<&'a Package> {
-        self.package_cache.get(id)
+    pub fn get_package(&self, id: PackageId) -> CargoResult<&'a Package> {
+        self.package_cache
+            .get(&id)
             .cloned()
             .ok_or_else(|| format_err!("failed to find {}", id))
     }
@@ -457,8 +460,8 @@ impl<'a, 'cfg> Context<'a, 'cfg> {
         let describe_collision = |unit: &Unit, other_unit: &Unit, path: &PathBuf| -> String {
             format!(
                 "The {} target `{}` in package `{}` has the same output \
-                filename as the {} target `{}` in package `{}`.\n\
-                Colliding filename is: {}\n",
+                 filename as the {} target `{}` in package `{}`.\n\
+                 Colliding filename is: {}\n",
                 unit.target.kind().description(),
                 unit.target.name(),
                 unit.pkg.package_id(),
@@ -470,13 +473,16 @@ impl<'a, 'cfg> Context<'a, 'cfg> {
         };
         let suggestion = "Consider changing their names to be unique or compiling them separately.\n\
             This may become a hard error in the future, see https://github.com/rust-lang/cargo/issues/6313";
-        let report_collision = |unit: &Unit, other_unit: &Unit, path: &PathBuf| -> CargoResult<()> {
+        let report_collision = |unit: &Unit,
+                                other_unit: &Unit,
+                                path: &PathBuf|
+         -> CargoResult<()> {
             if unit.target.name() == other_unit.target.name() {
                 self.bcx.config.shell().warn(format!(
                     "output filename collision.\n\
-                    {}\
-                    The targets should have unique names.\n\
-                    {}",
+                     {}\
+                     The targets should have unique names.\n\
+                     {}",
                     describe_collision(unit, other_unit, path),
                     suggestion
                 ))
@@ -507,28 +513,24 @@ impl<'a, 'cfg> Context<'a, 'cfg> {
         keys.sort_unstable();
         for unit in keys {
             for output in self.outputs(unit)?.iter() {
-                if let Some(other_unit) =
-                    output_collisions.insert(output.path.clone(), unit)
-                {
+                if let Some(other_unit) = output_collisions.insert(output.path.clone(), unit) {
                     report_collision(unit, &other_unit, &output.path)?;
                 }
                 if let Some(hardlink) = output.hardlink.as_ref() {
-                    if let Some(other_unit) = output_collisions.insert(hardlink.clone(), unit)
-                    {
+                    if let Some(other_unit) = output_collisions.insert(hardlink.clone(), unit) {
                         report_collision(unit, &other_unit, hardlink)?;
                     }
                 }
                 if let Some(ref export_path) = output.export_path {
-                    if let Some(other_unit) =
-                        output_collisions.insert(export_path.clone(), unit)
-                    {
-                        self.bcx.config.shell().warn(format!("`--out-dir` filename collision.\n\
-                            {}\
-                            The exported filenames should be unique.\n\
-                            {}",
+                    if let Some(other_unit) = output_collisions.insert(export_path.clone(), unit) {
+                        self.bcx.config.shell().warn(format!(
+                            "`--out-dir` filename collision.\n\
+                             {}\
+                             The exported filenames should be unique.\n\
+                             {}",
                             describe_collision(unit, &other_unit, &export_path),
                             suggestion
-                            ))?;
+                        ))?;
                     }
                 }
             }
@@ -538,20 +540,20 @@ impl<'a, 'cfg> Context<'a, 'cfg> {
 }
 
 #[derive(Default)]
-pub struct Links<'a> {
-    validated: HashSet<&'a PackageId>,
-    links: HashMap<String, &'a PackageId>,
+pub struct Links {
+    validated: HashSet<PackageId>,
+    links: HashMap<String, PackageId>,
 }
 
-impl<'a> Links<'a> {
-    pub fn new() -> Links<'a> {
+impl Links {
+    pub fn new() -> Links {
         Links {
             validated: HashSet::new(),
             links: HashMap::new(),
         }
     }
 
-    pub fn validate(&mut self, resolve: &Resolve, unit: &Unit<'a>) -> CargoResult<()> {
+    pub fn validate(&mut self, resolve: &Resolve, unit: &Unit) -> CargoResult<()> {
         if !self.validated.insert(unit.pkg.package_id()) {
             return Ok(());
         }
@@ -559,11 +561,11 @@ impl<'a> Links<'a> {
             Some(lib) => lib,
             None => return Ok(()),
         };
-        if let Some(prev) = self.links.get(lib) {
+        if let Some(&prev) = self.links.get(lib) {
             let pkg = unit.pkg.package_id();
 
-            let describe_path = |pkgid: &PackageId| -> String {
-                let dep_path = resolve.path_to_top(pkgid);
+            let describe_path = |pkgid: PackageId| -> String {
+                let dep_path = resolve.path_to_top(&pkgid);
                 let mut dep_path_desc = format!("package `{}`", dep_path[0]);
                 for dep in dep_path.iter().skip(1) {
                     write!(dep_path_desc, "\n    ... which is depended on by `{}`", dep).unwrap();
@@ -585,7 +587,8 @@ impl<'a> Links<'a> {
                 lib
             )
         }
-        if !unit.pkg
+        if !unit
+            .pkg
             .manifest()
             .targets()
             .iter()

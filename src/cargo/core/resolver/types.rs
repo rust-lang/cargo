@@ -76,7 +76,7 @@ impl ResolverProgress {
 pub struct RegistryQueryer<'a> {
     pub registry: &'a mut (Registry + 'a),
     replacements: &'a [(PackageIdSpec, Dependency)],
-    try_to_use: &'a HashSet<&'a PackageId>,
+    try_to_use: &'a HashSet<PackageId>,
     cache: HashMap<Dependency, Rc<Vec<Candidate>>>,
     // If set the list of dependency candidates will be sorted by minimal
     // versions first. That allows `cargo update -Z minimal-versions` which will
@@ -88,7 +88,7 @@ impl<'a> RegistryQueryer<'a> {
     pub fn new(
         registry: &'a mut Registry,
         replacements: &'a [(PackageIdSpec, Dependency)],
-        try_to_use: &'a HashSet<&'a PackageId>,
+        try_to_use: &'a HashSet<PackageId>,
         minimal_versions: bool,
     ) -> Self {
         RegistryQueryer {
@@ -203,8 +203,8 @@ impl<'a> RegistryQueryer<'a> {
         // prioritized summaries (those in `try_to_use`) and failing that we
         // list everything from the maximum version to the lowest version.
         ret.sort_unstable_by(|a, b| {
-            let a_in_previous = self.try_to_use.contains(a.summary.package_id());
-            let b_in_previous = self.try_to_use.contains(b.summary.package_id());
+            let a_in_previous = self.try_to_use.contains(&a.summary.package_id());
+            let b_in_previous = self.try_to_use.contains(&b.summary.package_id());
             let previous_cmp = a_in_previous.cmp(&b_in_previous).reverse();
             match previous_cmp {
                 Ordering::Equal => {
@@ -279,7 +279,7 @@ impl DepsFrame {
             .unwrap_or(0)
     }
 
-    pub fn flatten(&self) -> impl Iterator<Item = (&PackageId, Dependency)> {
+    pub fn flatten<'a>(&'a self) -> impl Iterator<Item = (PackageId, Dependency)> + 'a {
         self.remaining_siblings
             .clone()
             .map(move |(_, (d, _, _))| (self.parent.package_id(), d))
@@ -353,7 +353,7 @@ impl RemainingDeps {
         }
         None
     }
-    pub fn iter(&mut self) -> impl Iterator<Item = (&PackageId, Dependency)> {
+    pub fn iter<'a>(&'a mut self) -> impl Iterator<Item = (PackageId, Dependency)> + 'a {
         self.data.iter().flat_map(|(other, _)| other.flatten())
     }
 }

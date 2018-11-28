@@ -1,5 +1,5 @@
-use std::path::Path;
 use std::cell::RefCell;
+use std::path::Path;
 
 use serde::ser;
 
@@ -51,9 +51,11 @@ impl BuildConfig {
                 let path = Path::new(target)
                     .canonicalize()
                     .chain_err(|| format_err!("Target path {:?} is not a valid file", target))?;
-                Some(path.into_os_string()
-                    .into_string()
-                    .map_err(|_| format_err!("Target path is not valid unicode"))?)
+                Some(
+                    path.into_os_string()
+                        .into_string()
+                        .map_err(|_| format_err!("Target path is not valid unicode"))?,
+                )
             }
             other => other.clone(),
         };

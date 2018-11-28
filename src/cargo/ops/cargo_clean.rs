@@ -134,7 +134,8 @@ fn rm_rf(path: &Path, config: &Config) -> CargoResult<()> {
         config
             .shell()
             .verbose(|shell| shell.status("Removing", path.display()))?;
-        paths::remove_dir_all(path).chain_err(|| format_err!("could not remove build directory"))?;
+        paths::remove_dir_all(path)
+            .chain_err(|| format_err!("could not remove build directory"))?;
     } else if m.is_ok() {
         config
             .shell()

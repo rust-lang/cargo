@@ -82,7 +82,7 @@ pub(super) fn activation_error(
         ResolveError::new(
             err,
             graph
-                .path_to_top(parent.package_id())
+                .path_to_top(&parent.package_id())
                 .into_iter()
                 .cloned()
                 .collect(),
@@ -92,7 +92,7 @@ pub(super) fn activation_error(
     if !candidates.is_empty() {
         let mut msg = format!("failed to select a version for `{}`.", dep.package_name());
         msg.push_str("\n    ... required by ");
-        msg.push_str(&describe_path(&graph.path_to_top(parent.package_id())));
+        msg.push_str(&describe_path(&graph.path_to_top(&parent.package_id())));
 
         msg.push_str("\nversions that meet the requirements `");
         msg.push_str(&dep.version_req().to_string());
@@ -204,7 +204,7 @@ pub(super) fn activation_error(
             registry.describe_source(dep.source_id()),
         );
         msg.push_str("required by ");
-        msg.push_str(&describe_path(&graph.path_to_top(parent.package_id())));
+        msg.push_str(&describe_path(&graph.path_to_top(&parent.package_id())));
 
         // If we have a path dependency with a locked version, then this may
         // indicate that we updated a sub-package and forgot to run `cargo
@@ -258,7 +258,7 @@ pub(super) fn activation_error(
             msg.push_str("\n");
         }
         msg.push_str("required by ");
-        msg.push_str(&describe_path(&graph.path_to_top(parent.package_id())));
+        msg.push_str(&describe_path(&graph.path_to_top(&parent.package_id())));
 
         msg
     };

@@ -126,7 +126,7 @@ impl<'cfg> RemoteRegistry<'cfg> {
         Ok(Ref::map(self.tree.borrow(), |s| s.as_ref().unwrap()))
     }
 
-    fn filename(&self, pkg: &PackageId) -> String {
+    fn filename(&self, pkg: PackageId) -> String {
         format!("{}-{}.crate", pkg.name(), pkg.version())
     }
 }
@@ -213,7 +213,7 @@ impl<'cfg> RegistryData for RemoteRegistry<'cfg> {
         Ok(())
     }
 
-    fn download(&mut self, pkg: &PackageId, _checksum: &str) -> CargoResult<MaybeLock> {
+    fn download(&mut self, pkg: PackageId, _checksum: &str) -> CargoResult<MaybeLock> {
         let filename = self.filename(pkg);
 
         // Attempt to open an read-only copy first to avoid an exclusive write
@@ -246,7 +246,7 @@ impl<'cfg> RegistryData for RemoteRegistry<'cfg> {
 
     fn finish_download(
         &mut self,
-        pkg: &PackageId,
+        pkg: PackageId,
         checksum: &str,
         data: &[u8],
     ) -> CargoResult<FileLock> {
@@ -269,7 +269,7 @@ impl<'cfg> RegistryData for RemoteRegistry<'cfg> {
         Ok(dst)
     }
 
-    fn is_crate_downloaded(&self, pkg: &PackageId) -> bool {
+    fn is_crate_downloaded(&self, pkg: PackageId) -> bool {
         let filename = format!("{}-{}.crate", pkg.name(), pkg.version());
         let path = Path::new(&filename);
 

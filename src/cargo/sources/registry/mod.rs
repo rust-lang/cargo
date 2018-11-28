@@ -348,15 +348,15 @@ pub trait RegistryData {
     ) -> CargoResult<()>;
     fn config(&mut self) -> CargoResult<Option<RegistryConfig>>;
     fn update_index(&mut self) -> CargoResult<()>;
-    fn download(&mut self, pkg: &PackageId, checksum: &str) -> CargoResult<MaybeLock>;
+    fn download(&mut self, pkg: PackageId, checksum: &str) -> CargoResult<MaybeLock>;
     fn finish_download(
         &mut self,
-        pkg: &PackageId,
+        pkg: PackageId,
         checksum: &str,
         data: &[u8],
     ) -> CargoResult<FileLock>;
 
-    fn is_crate_downloaded(&self, _pkg: &PackageId) -> bool {
+    fn is_crate_downloaded(&self, _pkg: PackageId) -> bool {
         true
     }
 }
@@ -418,7 +418,7 @@ impl<'cfg> RegistrySource<'cfg> {
     /// compiled.
     ///
     /// No action is taken if the source looks like it's already unpacked.
-    fn unpack_package(&self, pkg: &PackageId, tarball: &FileLock) -> CargoResult<PathBuf> {
+    fn unpack_package(&self, pkg: PackageId, tarball: &FileLock) -> CargoResult<PathBuf> {
         let dst = self
             .src_path
             .join(&format!("{}-{}", pkg.name(), pkg.version()));
@@ -475,7 +475,7 @@ impl<'cfg> RegistrySource<'cfg> {
         Ok(())
     }
 
-    fn get_pkg(&mut self, package: &PackageId, path: &FileLock) -> CargoResult<Package> {
+    fn get_pkg(&mut self, package: PackageId, path: &FileLock) -> CargoResult<Package> {
         let path = self
             .unpack_package(package, path)
             .chain_err(|| internal(format!("failed to unpack package `{}`", package)))?;
@@ -566,7 +566,7 @@ impl<'cfg> Source for RegistrySource<'cfg> {
         Ok(())
     }
 
-    fn download(&mut self, package: &PackageId) -> CargoResult<MaybePackage> {
+    fn download(&mut self, package: PackageId) -> CargoResult<MaybePackage> {
         let hash = self.index.hash(package, &mut *self.ops)?;
         match self.ops.download(package, &hash)? {
             MaybeLock::Ready(file) => self.get_pkg(package, &file).map(MaybePackage::Ready),
@@ -576,7 +576,7 @@ impl<'cfg> Source for RegistrySource<'cfg> {
         }
     }
 
-    fn finish_download(&mut self, package: &PackageId, data: Vec<u8>) -> CargoResult<Package> {
+    fn finish_download(&mut self, package: PackageId, data: Vec<u8>) -> CargoResult<Package> {
         let hash = self.index.hash(package, &mut *self.ops)?;
         let file = self.ops.finish_download(package, &hash, &data)?;
         self.get_pkg(package, &file)

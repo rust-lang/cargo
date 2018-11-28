@@ -31,7 +31,8 @@ pub fn doc(ws: &Workspace, options: &DocOptions) -> CargoResult<()> {
     )?;
     let (packages, resolve_with_overrides) = resolve;
 
-    let ids = specs.iter()
+    let ids = specs
+        .iter()
         .map(|s| s.query(resolve_with_overrides.iter()))
         .collect::<CargoResult<Vec<_>>>()?;
     let pkgs = packages.get_many(ids)?;

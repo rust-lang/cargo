@@ -165,7 +165,7 @@ fn read_nested_packages(
     };
     let pkg = Package::new(manifest, &manifest_path);
 
-    let pkg_id = pkg.package_id().clone();
+    let pkg_id = pkg.package_id();
     use std::collections::hash_map::Entry;
     match all_packages.entry(pkg_id) {
         Entry::Vacant(v) => {

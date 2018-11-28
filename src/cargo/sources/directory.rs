@@ -145,22 +145,22 @@ impl<'cfg> Source for DirectorySource<'cfg> {
             }
             manifest.set_summary(summary);
             let pkg = Package::new(manifest, pkg.manifest_path());
-            self.packages.insert(pkg.package_id().clone(), (pkg, cksum));
+            self.packages.insert(pkg.package_id(), (pkg, cksum));
         }
 
         Ok(())
     }
 
-    fn download(&mut self, id: &PackageId) -> CargoResult<MaybePackage> {
+    fn download(&mut self, id: PackageId) -> CargoResult<MaybePackage> {
         self.packages
-            .get(id)
+            .get(&id)
             .map(|p| &p.0)
             .cloned()
             .map(MaybePackage::Ready)
             .ok_or_else(|| format_err!("failed to find package with id: {}", id))
     }
 
-    fn finish_download(&mut self, _id: &PackageId, _data: Vec<u8>) -> CargoResult<Package> {
+    fn finish_download(&mut self, _id: PackageId, _data: Vec<u8>) -> CargoResult<Package> {
         panic!("no downloads to do")
     }
 
@@ -168,8 +168,8 @@ impl<'cfg> Source for DirectorySource<'cfg> {
         Ok(pkg.package_id().version().to_string())
     }
 
-    fn verify(&self, id: &PackageId) -> CargoResult<()> {
-        let (pkg, cksum) = match self.packages.get(id) {
+    fn verify(&self, id: PackageId) -> CargoResult<()> {
+        let (pkg, cksum) = match self.packages.get(&id) {
             Some(&(ref pkg, ref cksum)) => (pkg, cksum),
             None => bail!("failed to find entry for `{}` in directory source", id),
         };

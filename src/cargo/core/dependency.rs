@@ -89,7 +89,7 @@ pub enum Kind {
 fn parse_req_with_deprecated(
     name: &str,
     req: &str,
-    extra: Option<(&PackageId, &Config)>,
+    extra: Option<(PackageId, &Config)>,
 ) -> CargoResult<VersionReq> {
     match VersionReq::parse(req) {
         Err(ReqParseError::DeprecatedVersionRequirement(requirement)) => {
@@ -152,7 +152,7 @@ impl Dependency {
         name: &str,
         version: Option<&str>,
         source_id: SourceId,
-        inside: &PackageId,
+        inside: PackageId,
         config: &Config,
     ) -> CargoResult<Dependency> {
         let arg = Some((inside, config));
@@ -349,7 +349,7 @@ impl Dependency {
     }
 
     /// Lock this dependency to depending on the specified package id
-    pub fn lock_to(&mut self, id: &PackageId) -> &mut Dependency {
+    pub fn lock_to(&mut self, id: PackageId) -> &mut Dependency {
         assert_eq!(self.inner.source_id, id.source_id());
         assert!(self.inner.req.matches(id.version()));
         trace!(
@@ -404,12 +404,12 @@ impl Dependency {
     }
 
     /// Returns true if the package (`sum`) can fulfill this dependency request.
-    pub fn matches_ignoring_source(&self, id: &PackageId) -> bool {
+    pub fn matches_ignoring_source(&self, id: PackageId) -> bool {
         self.package_name() == id.name() && self.version_req().matches(id.version())
     }
 
     /// Returns true if the package (`id`) can fulfill this dependency request.
-    pub fn matches_id(&self, id: &PackageId) -> bool {
+    pub fn matches_id(&self, id: PackageId) -> bool {
         self.inner.name == id.name()
             && (self.inner.only_match_name
                 || (self.inner.req.matches(id.version()) && self.inner.source_id == id.source_id()))

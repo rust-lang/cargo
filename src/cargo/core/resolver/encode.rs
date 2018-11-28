@@ -72,7 +72,7 @@ impl EncodableResolve {
         };
 
         let lookup_id = |enc_id: &EncodablePackageId| -> Option<PackageId> {
-            live_pkgs.get(enc_id).map(|&(ref id, _)| id.clone())
+            live_pkgs.get(enc_id).map(|&(id, _)| id)
         };
 
         let g = {
@@ -343,8 +343,8 @@ impl<'a, 'cfg> ser::Serialize for WorkspaceResolve<'a, 'cfg> {
 
         let mut metadata = self.resolve.metadata().clone();
 
-        for id in ids.iter().filter(|id| !id.source_id().is_path()) {
-            let checksum = match self.resolve.checksums()[*id] {
+        for &id in ids.iter().filter(|id| !id.source_id().is_path()) {
+            let checksum = match self.resolve.checksums()[&id] {
                 Some(ref s) => &s[..],
                 None => "<none>",
             };
@@ -382,7 +382,7 @@ impl<'a, 'cfg> ser::Serialize for WorkspaceResolve<'a, 'cfg> {
     }
 }
 
-fn encodable_resolve_node(id: &PackageId, resolve: &Resolve) -> EncodableDependency {
+fn encodable_resolve_node(id: PackageId, resolve: &Resolve) -> EncodableDependency {
     let (replace, deps) = match resolve.replacement(id) {
         Some(id) => (Some(encodable_package_id(id)), None),
         None => {
@@ -404,7 +404,7 @@ fn encodable_resolve_node(id: &PackageId, resolve: &Resolve) -> EncodableDepende
     }
 }
 
-pub fn encodable_package_id(id: &PackageId) -> EncodablePackageId {
+pub fn encodable_package_id(id: PackageId) -> EncodablePackageId {
     EncodablePackageId {
         name: id.name().to_string(),
         version: id.version().to_string(),
