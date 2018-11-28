@@ -80,7 +80,6 @@ pub fn publish(ws: &Workspace, opts: &PublishOpts) -> CargoResult<()> {
             list: false,
             check_metadata: true,
             allow_dirty: opts.allow_dirty,
-            use_vcs: true,
             target: opts.target.clone(),
             jobs: opts.jobs,
             registry: opts.registry.clone(),
