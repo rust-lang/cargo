@@ -15,9 +15,9 @@ use util::errors::{CargoResult, CargoResultExt};
 use util::paths;
 use util::{internal, profile, Dirty, Fresh, Freshness};
 
-use super::{Context, BuildContext, FileFlavor, Unit};
 use super::custom_build::BuildDeps;
 use super::job::Work;
+use super::{BuildContext, Context, FileFlavor, Unit};
 
 /// A tuple result of the `prepare_foo` functions in this module.
 ///
@@ -88,11 +88,13 @@ pub fn prepare_target<'a, 'cfg>(
     let root = cx.files().out_dir(unit);
     let missing_outputs = {
         if unit.mode.is_doc() {
-            !root.join(unit.target.crate_name())
+            !root
+                .join(unit.target.crate_name())
                 .join("index.html")
                 .exists()
         } else {
-            match cx.outputs(unit)?
+            match cx
+                .outputs(unit)?
                 .iter()
                 .filter(|output| output.flavor != FileFlavor::DebugInfo)
                 .find(|output| !output.path.exists())
@@ -159,7 +161,10 @@ pub struct Fingerprint {
     target: u64,
     profile: u64,
     path: u64,
-    #[serde(serialize_with = "serialize_deps", deserialize_with = "deserialize_deps")]
+    #[serde(
+        serialize_with = "serialize_deps",
+        deserialize_with = "deserialize_deps"
+    )]
     deps: Vec<DepFingerprint>,
     local: Vec<LocalFingerprint>,
     #[serde(skip_serializing, skip_deserializing)]
@@ -172,8 +177,7 @@ fn serialize_deps<S>(deps: &[DepFingerprint], ser: S) -> Result<S::Ok, S::Error>
 where
     S: ser::Serializer,
 {
-    ser.collect_seq(deps.iter()
-       .map(|&(ref a, ref b, ref c)| (a, b, c.hash())))
+    ser.collect_seq(deps.iter().map(|&(ref a, ref b, ref c)| (a, b, c.hash())))
 }
 
 fn deserialize_deps<'de, D>(d: D) -> Result<Vec<DepFingerprint>, D::Error>
@@ -363,7 +367,8 @@ impl hash::Hash for Fingerprint {
         } = *self;
         (
             rustc, features, target, path, profile, local, edition, rustflags,
-        ).hash(h);
+        )
+            .hash(h);
 
         h.write_usize(deps.len());
         for &(ref pkg_id, ref name, ref fingerprint) in deps {
@@ -400,9 +405,9 @@ impl<'de> de::Deserialize<'de> for MtimeSlot {
         D: de::Deserializer<'de>,
     {
         let kind: Option<(i64, u32)> = de::Deserialize::deserialize(d)?;
-        Ok(MtimeSlot(Mutex::new(kind.map(|(s, n)| {
-            FileTime::from_unix_time(s, n)
-        }))))
+        Ok(MtimeSlot(Mutex::new(
+            kind.map(|(s, n)| FileTime::from_unix_time(s, n)),
+        )))
     }
 }
 
@@ -435,7 +440,8 @@ fn calculate<'a, 'cfg>(
     // induce a recompile, they're just dependencies in the sense that they need
     // to be built.
     let deps = cx.dep_targets(unit);
-    let deps = deps.iter()
+    let deps = deps
+        .iter()
         .filter(|u| !u.target.is_custom_build() && !u.target.is_bin())
         .map(|dep| {
             calculate(cx, dep).and_then(|fingerprint| {
@@ -548,7 +554,7 @@ pub fn prepare_build_cmd<'a, 'cfg>(
     // the kind of fingerprint by reinterpreting the dependencies output by the
     // build script.
     let state = Arc::clone(&cx.build_state);
-    let key = (unit.pkg.package_id().clone(), unit.kind);
+    let key = (unit.pkg.package_id(), unit.kind);
     let pkg_root = unit.pkg.root().to_path_buf();
     let target_root = cx.files().target_root().to_path_buf();
     let write_fingerprint = Work::new(move |_| {
@@ -581,7 +587,7 @@ fn build_script_local_fingerprints<'a, 'cfg>(
     //
     // Note that the `None` here means that we don't want to update the local
     // fingerprint afterwards because this is all just overridden.
-    if let Some(output) = state.get(&(unit.pkg.package_id().clone(), unit.kind)) {
+    if let Some(output) = state.get(&(unit.pkg.package_id(), unit.kind)) {
         debug!("override local fingerprints deps");
         let s = format!(
             "overridden build state with hash: {}",
@@ -695,7 +701,8 @@ pub fn parse_dep_info(pkg: &Package, dep_info: &Path) -> CargoResult<Option<Vec<
         Ok(data) => data,
         Err(_) => return Ok(None),
     };
-    let paths = data.split(|&x| x == 0)
+    let paths = data
+        .split(|&x| x == 0)
         .filter(|x| !x.is_empty())
         .map(|p| util::bytes2path(p).map(|p| pkg.root().join(p)))
         .collect::<Result<Vec<_>, _>>()?;

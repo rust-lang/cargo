@@ -666,7 +666,7 @@ impl TomlProject {
 }
 
 struct Context<'a, 'b> {
-    pkgid: Option<&'a PackageId>,
+    pkgid: Option<PackageId>,
     deps: &'a mut Vec<Dependency>,
     source_id: SourceId,
     nested_paths: &'a mut Vec<PathBuf>,
@@ -873,7 +873,7 @@ impl TomlManifest {
 
         {
             let mut cx = Context {
-                pkgid: Some(&pkgid),
+                pkgid: Some(pkgid),
                 deps: &mut deps,
                 source_id,
                 nested_paths: &mut nested_paths,

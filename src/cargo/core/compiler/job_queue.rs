@@ -35,9 +35,9 @@ pub struct JobQueue<'a> {
     rx: Receiver<Message<'a>>,
     active: Vec<Key<'a>>,
     pending: HashMap<Key<'a>, PendingBuild>,
-    compiled: HashSet<&'a PackageId>,
-    documented: HashSet<&'a PackageId>,
-    counts: HashMap<&'a PackageId, usize>,
+    compiled: HashSet<PackageId>,
+    documented: HashSet<PackageId>,
+    counts: HashMap<PackageId, usize>,
     is_release: bool,
 }
 
@@ -52,7 +52,7 @@ struct PendingBuild {
 
 #[derive(Clone, Copy, Eq, PartialEq, Hash)]
 struct Key<'a> {
-    pkg: &'a PackageId,
+    pkg: PackageId,
     target: &'a Target,
     profile: Profile,
     kind: Kind,
@@ -398,7 +398,7 @@ impl<'a> JobQueue<'a> {
         info!("start: {:?}", key);
 
         self.active.push(key);
-        *self.counts.get_mut(key.pkg).unwrap() -= 1;
+        *self.counts.get_mut(&key.pkg).unwrap() -= 1;
 
         let my_tx = self.tx.clone();
         let doit = move || {
@@ -424,7 +424,7 @@ impl<'a> JobQueue<'a> {
     fn emit_warnings(&self, msg: Option<&str>, key: &Key<'a>, cx: &mut Context) -> CargoResult<()> {
         let output = cx.build_state.outputs.lock().unwrap();
         let bcx = &mut cx.bcx;
-        if let Some(output) = output.get(&(key.pkg.clone(), key.kind)) {
+        if let Some(output) = output.get(&(key.pkg, key.kind)) {
             if let Some(msg) = msg {
                 if !output.warnings.is_empty() {
                     writeln!(bcx.config.shell().err(), "{}\n", msg)?;
@@ -472,8 +472,8 @@ impl<'a> JobQueue<'a> {
         key: &Key<'a>,
         fresh: Freshness,
     ) -> CargoResult<()> {
-        if (self.compiled.contains(key.pkg) && !key.mode.is_doc())
-            || (self.documented.contains(key.pkg) && key.mode.is_doc())
+        if (self.compiled.contains(&key.pkg) && !key.mode.is_doc())
+            || (self.documented.contains(&key.pkg) && key.mode.is_doc())
         {
             return Ok(());
         }
@@ -499,8 +499,8 @@ impl<'a> JobQueue<'a> {
             }
             Fresh => {
                 // If doctest is last, only print "Fresh" if nothing has been printed.
-                if self.counts[key.pkg] == 0
-                    && !(key.mode == CompileMode::Doctest && self.compiled.contains(key.pkg))
+                if self.counts[&key.pkg] == 0
+                    && !(key.mode == CompileMode::Doctest && self.compiled.contains(&key.pkg))
                 {
                     self.compiled.insert(key.pkg);
                     config.shell().verbose(|c| c.status("Fresh", key.pkg))?;

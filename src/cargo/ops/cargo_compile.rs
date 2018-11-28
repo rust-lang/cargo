@@ -28,7 +28,7 @@ use std::sync::Arc;
 
 use core::compiler::{BuildConfig, BuildContext, Compilation, Context, DefaultExecutor, Executor};
 use core::compiler::{CompileMode, Kind, Unit};
-use core::profiles::{UnitFor, Profiles};
+use core::profiles::{Profiles, UnitFor};
 use core::resolver::{Method, Resolve};
 use core::{Package, Source, Target};
 use core::{PackageId, PackageIdSpec, TargetKind, Workspace};
@@ -109,11 +109,13 @@ impl Packages {
 
     pub fn to_package_id_specs(&self, ws: &Workspace) -> CargoResult<Vec<PackageIdSpec>> {
         let specs = match *self {
-            Packages::All => ws.members()
+            Packages::All => ws
+                .members()
                 .map(Package::package_id)
                 .map(PackageIdSpec::from_package_id)
                 .collect(),
-            Packages::OptOut(ref opt_out) => ws.members()
+            Packages::OptOut(ref opt_out) => ws
+                .members()
                 .map(Package::package_id)
                 .map(PackageIdSpec::from_package_id)
                 .filter(|p| opt_out.iter().position(|x| *x == p.name()).is_none())
@@ -125,7 +127,8 @@ impl Packages {
                 .iter()
                 .map(|p| PackageIdSpec::parse(p))
                 .collect::<CargoResult<Vec<_>>>()?,
-            Packages::Default => ws.default_members()
+            Packages::Default => ws
+                .default_members()
                 .map(Package::package_id)
                 .map(PackageIdSpec::from_package_id)
                 .collect(),
@@ -159,7 +162,8 @@ impl Packages {
                         .ok_or_else(|| {
                             format_err!("package `{}` is not a member of the workspace", name)
                         })
-                }).collect::<CargoResult<Vec<_>>>()?,
+                })
+                .collect::<CargoResult<Vec<_>>>()?,
         };
         Ok(packages)
     }
@@ -243,7 +247,8 @@ pub fn compile_ws<'a>(
     let resolve = ops::resolve_ws_with_method(ws, source, method, &specs)?;
     let (packages, resolve_with_overrides) = resolve;
 
-    let to_build_ids = specs.iter()
+    let to_build_ids = specs
+        .iter()
         .map(|s| s.query(resolve_with_overrides.iter()))
         .collect::<CargoResult<Vec<_>>>()?;
     let mut to_builds = packages.get_many(to_build_ids)?;
@@ -390,8 +395,11 @@ impl CompileFilter {
                 benches: FilterRule::All,
                 tests: FilterRule::All,
             }
-        } else if lib_only || rule_bins.is_specific() || rule_tsts.is_specific()
-            || rule_exms.is_specific() || rule_bens.is_specific()
+        } else if lib_only
+            || rule_bins.is_specific()
+            || rule_tsts.is_specific()
+            || rule_exms.is_specific()
+            || rule_bens.is_specific()
         {
             CompileFilter::Only {
                 all_targets: false,
@@ -695,7 +703,13 @@ fn generate_targets<'a>(
     // features available.
     let mut features_map = HashMap::new();
     let mut units = HashSet::new();
-    for Proposal { pkg, target, requires_features, mode} in proposals {
+    for Proposal {
+        pkg,
+        target,
+        requires_features,
+        mode,
+    } in proposals
+    {
         let unavailable_features = match target.required_features() {
             Some(rf) => {
                 let features = features_map
@@ -730,7 +744,7 @@ fn generate_targets<'a>(
 
 fn resolve_all_features(
     resolve_with_overrides: &Resolve,
-    package_id: &PackageId,
+    package_id: PackageId,
 ) -> HashSet<String> {
     let mut features = resolve_with_overrides.features(package_id).clone();
 
@@ -843,7 +857,8 @@ fn find_named_targets<'a>(
                 pkg.targets()
                     .iter()
                     .filter(|target| is_expected_kind(target))
-            }).map(|target| (lev_distance(target_name, target.name()), target))
+            })
+            .map(|target| (lev_distance(target_name, target.name()), target))
             .filter(|&(d, _)| d < 4)
             .min_by_key(|t| t.0)
             .map(|t| t.1);

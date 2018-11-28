@@ -41,10 +41,7 @@ impl Resolve {
         metadata: Metadata,
         unused_patches: Vec<PackageId>,
     ) -> Resolve {
-        let reverse_replacements = replacements
-            .iter()
-            .map(|p| (p.1.clone(), p.0.clone()))
-            .collect();
+        let reverse_replacements = replacements.iter().map(|(&p, &r)| (r, p)).collect();
         Resolve {
             graph,
             replacements,
@@ -68,7 +65,7 @@ impl Resolve {
             if self.iter().any(|id| id == summary.package_id()) {
                 continue;
             }
-            self.unused_patches.push(summary.package_id().clone());
+            self.unused_patches.push(summary.package_id());
         }
     }
 
@@ -175,39 +172,39 @@ unable to verify that `{0}` is the same as when the lockfile was generated
         self.graph.sort()
     }
 
-    pub fn iter(&self) -> impl Iterator<Item = &PackageId> {
-        self.graph.iter()
+    pub fn iter<'a>(&'a self) -> impl Iterator<Item = PackageId> + 'a {
+        self.graph.iter().cloned()
     }
 
-    pub fn deps(&self, pkg: &PackageId) -> impl Iterator<Item = (&PackageId, &[Dependency])> {
+    pub fn deps(&self, pkg: PackageId) -> impl Iterator<Item = (PackageId, &[Dependency])> {
         self.graph
-            .edges(pkg)
-            .map(move |(id, deps)| (self.replacement(id).unwrap_or(id), deps.as_slice()))
+            .edges(&pkg)
+            .map(move |(&id, deps)| (self.replacement(id).unwrap_or(id), deps.as_slice()))
     }
 
-    pub fn deps_not_replaced(&self, pkg: &PackageId) -> impl Iterator<Item = &PackageId> {
-        self.graph.edges(pkg).map(|(id, _)| id)
+    pub fn deps_not_replaced<'a>(&'a self, pkg: PackageId) -> impl Iterator<Item = PackageId> + 'a {
+        self.graph.edges(&pkg).map(|(&id, _)| id)
     }
 
-    pub fn replacement(&self, pkg: &PackageId) -> Option<&PackageId> {
-        self.replacements.get(pkg)
+    pub fn replacement(&self, pkg: PackageId) -> Option<PackageId> {
+        self.replacements.get(&pkg).cloned()
     }
 
     pub fn replacements(&self) -> &HashMap<PackageId, PackageId> {
         &self.replacements
     }
 
-    pub fn features(&self, pkg: &PackageId) -> &HashSet<String> {
-        self.features.get(pkg).unwrap_or(&self.empty_features)
+    pub fn features(&self, pkg: PackageId) -> &HashSet<String> {
+        self.features.get(&pkg).unwrap_or(&self.empty_features)
     }
 
-    pub fn features_sorted(&self, pkg: &PackageId) -> Vec<&str> {
+    pub fn features_sorted(&self, pkg: PackageId) -> Vec<&str> {
         let mut v = Vec::from_iter(self.features(pkg).iter().map(|s| s.as_ref()));
         v.sort_unstable();
         v
     }
 
-    pub fn query(&self, spec: &str) -> CargoResult<&PackageId> {
+    pub fn query(&self, spec: &str) -> CargoResult<PackageId> {
         PackageIdSpec::query_str(spec, self.iter())
     }
 
@@ -225,8 +222,8 @@ unable to verify that `{0}` is the same as when the lockfile was generated
 
     pub fn extern_crate_name(
         &self,
-        from: &PackageId,
-        to: &PackageId,
+        from: PackageId,
+        to: PackageId,
         to_target: &Target,
     ) -> CargoResult<String> {
         let deps = if from == to {
@@ -256,7 +253,7 @@ unable to verify that `{0}` is the same as when the lockfile was generated
         Ok(name.to_string())
     }
 
-    fn dependencies_listed(&self, from: &PackageId, to: &PackageId) -> &[Dependency] {
+    fn dependencies_listed(&self, from: PackageId, to: PackageId) -> &[Dependency] {
         // We've got a dependency on `from` to `to`, but this dependency edge
         // may be affected by [replace]. If the `to` package is listed as the
         // target of a replacement (aka the key of a reverse replacement map)
@@ -266,12 +263,12 @@ unable to verify that `{0}` is the same as when the lockfile was generated
         // Note that we don't treat `from` as if it's been replaced because
         // that's where the dependency originates from, and we only replace
         // targets of dependencies not the originator.
-        if let Some(replace) = self.reverse_replacements.get(to) {
-            if let Some(deps) = self.graph.edge(from, replace) {
+        if let Some(replace) = self.reverse_replacements.get(&to) {
+            if let Some(deps) = self.graph.edge(&from, replace) {
                 return deps;
             }
         }
-        match self.graph.edge(from, to) {
+        match self.graph.edge(&from, &to) {
             Some(ret) => ret,
             None => panic!("no Dependency listed for `{}` => `{}`", from, to),
         }

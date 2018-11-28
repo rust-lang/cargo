@@ -264,11 +264,7 @@ impl<'cfg> PackageRegistry<'cfg> {
         // we want to fill in the `patches_available` map (later used in the
         // `lock` method) and otherwise store the unlocked summaries in
         // `patches` to get locked in a future call to `lock_patches`.
-        let ids = unlocked_summaries
-            .iter()
-            .map(|s| s.package_id())
-            .cloned()
-            .collect();
+        let ids = unlocked_summaries.iter().map(|s| s.package_id()).collect();
         self.patches_available.insert(url.clone(), ids);
         self.patches.insert(url.clone(), unlocked_summaries);
 
@@ -558,7 +554,7 @@ fn lock(locked: &LockedMap, patches: &HashMap<Url, Vec<PackageId>>, summary: Sum
     let pair = locked
         .get(&summary.source_id())
         .and_then(|map| map.get(&*summary.name()))
-        .and_then(|vec| vec.iter().find(|&&(ref id, _)| id == summary.package_id()));
+        .and_then(|vec| vec.iter().find(|&&(id, _)| id == summary.package_id()));
 
     trace!("locking summary of {}", summary.package_id());
 
@@ -595,8 +591,8 @@ fn lock(locked: &LockedMap, patches: &HashMap<Url, Vec<PackageId>>, summary: Sum
         // Cases 1/2 are handled by `matches_id` and case 3 is handled by
         // falling through to the logic below.
         if let Some(&(_, ref locked_deps)) = pair {
-            let locked = locked_deps.iter().find(|id| dep.matches_id(id));
-            if let Some(locked) = locked {
+            let locked = locked_deps.iter().find(|&&id| dep.matches_id(id));
+            if let Some(&locked) = locked {
                 trace!("\tfirst hit on {}", locked);
                 let mut dep = dep.clone();
                 dep.lock_to(locked);
@@ -610,8 +606,8 @@ fn lock(locked: &LockedMap, patches: &HashMap<Url, Vec<PackageId>>, summary: Sum
         let v = locked
             .get(&dep.source_id())
             .and_then(|map| map.get(&*dep.package_name()))
-            .and_then(|vec| vec.iter().find(|&&(ref id, _)| dep.matches_id(id)));
-        if let Some(&(ref id, _)) = v {
+            .and_then(|vec| vec.iter().find(|&&(id, _)| dep.matches_id(id)));
+        if let Some(&(id, _)) = v {
             trace!("\tsecond hit on {}", id);
             let mut dep = dep.clone();
             dep.lock_to(id);
@@ -622,7 +618,9 @@ fn lock(locked: &LockedMap, patches: &HashMap<Url, Vec<PackageId>>, summary: Sum
         // this dependency.
         let v = patches.get(dep.source_id().url()).map(|vec| {
             let dep2 = dep.clone();
-            let mut iter = vec.iter().filter(move |p| dep2.matches_ignoring_source(p));
+            let mut iter = vec
+                .iter()
+                .filter(move |&&p| dep2.matches_ignoring_source(p));
             (iter.next(), iter)
         });
         if let Some((Some(patch_id), mut remaining)) = v {

@@ -87,7 +87,7 @@ pub fn prepare<'a, 'cfg>(
         unit.target.name()
     ));
 
-    let key = (unit.pkg.package_id().clone(), unit.kind);
+    let key = (unit.pkg.package_id(), unit.kind);
     let overridden = cx.build_script_overridden.contains(&key);
     let (work_dirty, work_fresh) = if overridden {
         (Work::noop(), Work::noop())
@@ -106,7 +106,7 @@ pub fn prepare<'a, 'cfg>(
     }
 }
 
-fn emit_build_output(output: &BuildOutput, id: &PackageId) {
+fn emit_build_output(output: &BuildOutput, package_id: PackageId) {
     let library_paths = output
         .library_paths
         .iter()
@@ -114,7 +114,7 @@ fn emit_build_output(output: &BuildOutput, id: &PackageId) {
         .collect::<Vec<_>>();
 
     machine_message::emit(&machine_message::BuildScript {
-        package_id: id,
+        package_id,
         linked_libs: &output.library_links,
         linked_paths: &library_paths,
         cfgs: &output.cfgs,
@@ -230,7 +230,7 @@ fn build_work<'a, 'cfg>(cx: &mut Context<'a, 'cfg>, unit: &Unit<'a>) -> CargoRes
                 if unit.mode.is_run_custom_build() {
                     Some((
                         unit.pkg.manifest().links().unwrap().to_string(),
-                        unit.pkg.package_id().clone(),
+                        unit.pkg.package_id(),
                     ))
                 } else {
                     None
@@ -240,7 +240,7 @@ fn build_work<'a, 'cfg>(cx: &mut Context<'a, 'cfg>, unit: &Unit<'a>) -> CargoRes
     };
     let pkg_name = unit.pkg.to_string();
     let build_state = Arc::clone(&cx.build_state);
-    let id = unit.pkg.package_id().clone();
+    let id = unit.pkg.package_id();
     let (output_file, err_file, root_output_file) = {
         let build_output_parent = script_out_dir.parent().unwrap();
         let output_file = build_output_parent.join("output");
@@ -250,7 +250,7 @@ fn build_work<'a, 'cfg>(cx: &mut Context<'a, 'cfg>, unit: &Unit<'a>) -> CargoRes
     };
     let host_target_root = cx.files().target_root().to_path_buf();
     let all = (
-        id.clone(),
+        id,
         pkg_name.clone(),
         Arc::clone(&build_state),
         output_file.clone(),
@@ -267,8 +267,13 @@ fn build_work<'a, 'cfg>(cx: &mut Context<'a, 'cfg>, unit: &Unit<'a>) -> CargoRes
         .and_then(|bytes| util::bytes2path(&bytes))
         .unwrap_or_else(|_| script_out_dir.clone());
 
-    let prev_output =
-        BuildOutput::parse_file(&output_file, &pkg_name, &prev_script_out_dir, &script_out_dir).ok();
+    let prev_output = BuildOutput::parse_file(
+        &output_file,
+        &pkg_name,
+        &prev_script_out_dir,
+        &script_out_dir,
+    )
+    .ok();
     let deps = BuildDeps::new(&output_file, prev_output.as_ref());
     cx.build_explicit_deps.insert(*unit, deps);
 
@@ -301,7 +306,7 @@ fn build_work<'a, 'cfg>(cx: &mut Context<'a, 'cfg>, unit: &Unit<'a>) -> CargoRes
         if !build_plan {
             let build_state = build_state.outputs.lock().unwrap();
             for (name, id) in lib_deps {
-                let key = (id.clone(), kind);
+                let key = (id, kind);
                 let state = build_state.get(&key).ok_or_else(|| {
                     internal(format!(
                         "failed to locate build state for env \
@@ -355,7 +360,7 @@ fn build_work<'a, 'cfg>(cx: &mut Context<'a, 'cfg>, unit: &Unit<'a>) -> CargoRes
                 BuildOutput::parse(&output.stdout, &pkg_name, &script_out_dir, &script_out_dir)?;
 
             if json_messages {
-                emit_build_output(&parsed_output, &id);
+                emit_build_output(&parsed_output, id);
             }
             build_state.insert(id, kind, parsed_output);
         }
@@ -369,13 +374,16 @@ fn build_work<'a, 'cfg>(cx: &mut Context<'a, 'cfg>, unit: &Unit<'a>) -> CargoRes
         let (id, pkg_name, build_state, output_file, script_out_dir) = all;
         let output = match prev_output {
             Some(output) => output,
-            None => {
-                BuildOutput::parse_file(&output_file, &pkg_name, &prev_script_out_dir, &script_out_dir)?
-            }
+            None => BuildOutput::parse_file(
+                &output_file,
+                &pkg_name,
+                &prev_script_out_dir,
+                &script_out_dir,
+            )?,
         };
 
         if json_messages {
-            emit_build_output(&output, &id);
+            emit_build_output(&output, id);
         }
 
         build_state.insert(id, kind, output);
@@ -412,7 +420,12 @@ impl BuildOutput {
         script_out_dir: &Path,
     ) -> CargoResult<BuildOutput> {
         let contents = paths::read_bytes(path)?;
-        BuildOutput::parse(&contents, pkg_name, script_out_dir_when_generated, script_out_dir)
+        BuildOutput::parse(
+            &contents,
+            pkg_name,
+            script_out_dir_when_generated,
+            script_out_dir,
+        )
     }
 
     // Parses the output of a script.
@@ -620,14 +633,15 @@ pub fn build_map<'b, 'cfg>(cx: &mut Context<'b, 'cfg>, units: &[Unit<'b>]) -> Ca
         }
 
         {
-            let key = unit.pkg
+            let key = unit
+                .pkg
                 .manifest()
                 .links()
                 .map(|l| (l.to_string(), unit.kind));
             let build_state = &cx.build_state;
             if let Some(output) = key.and_then(|k| build_state.overrides.get(&k)) {
-                let key = (unit.pkg.package_id().clone(), unit.kind);
-                cx.build_script_overridden.insert(key.clone());
+                let key = (unit.pkg.package_id(), unit.kind);
+                cx.build_script_overridden.insert(key);
                 build_state
                     .outputs
                     .lock()
@@ -656,7 +670,7 @@ pub fn build_map<'b, 'cfg>(cx: &mut Context<'b, 'cfg>, units: &[Unit<'b>]) -> Ca
                 ret.plugins
                     .extend(dep_scripts.to_link.iter().map(|p| &p.0).cloned());
             } else if unit.target.linkable() {
-                for &(ref pkg, kind) in dep_scripts.to_link.iter() {
+                for &(pkg, kind) in dep_scripts.to_link.iter() {
                     add_to_link(&mut ret, pkg, kind);
                 }
             }
@@ -670,9 +684,9 @@ pub fn build_map<'b, 'cfg>(cx: &mut Context<'b, 'cfg>, units: &[Unit<'b>]) -> Ca
 
     // When adding an entry to 'to_link' we only actually push it on if the
     // script hasn't seen it yet (e.g. we don't push on duplicates).
-    fn add_to_link(scripts: &mut BuildScripts, pkg: &PackageId, kind: Kind) {
-        if scripts.seen_to_link.insert((pkg.clone(), kind)) {
-            scripts.to_link.push((pkg.clone(), kind));
+    fn add_to_link(scripts: &mut BuildScripts, pkg: PackageId, kind: Kind) {
+        if scripts.seen_to_link.insert((pkg, kind)) {
+            scripts.to_link.push((pkg, kind));
         }
     }
 }

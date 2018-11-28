@@ -49,9 +49,9 @@ pub trait Source {
 
     /// The download method fetches the full package for each name and
     /// version specified.
-    fn download(&mut self, package: &PackageId) -> CargoResult<MaybePackage>;
+    fn download(&mut self, package: PackageId) -> CargoResult<MaybePackage>;
 
-    fn finish_download(&mut self, package: &PackageId, contents: Vec<u8>) -> CargoResult<Package>;
+    fn finish_download(&mut self, package: PackageId, contents: Vec<u8>) -> CargoResult<Package>;
 
     /// Generates a unique string which represents the fingerprint of the
     /// current state of the source.
@@ -71,7 +71,7 @@ pub trait Source {
     /// verification during the `download` step, but this is intended to be run
     /// just before a crate is compiled so it may perform more expensive checks
     /// which may not be cacheable.
-    fn verify(&self, _pkg: &PackageId) -> CargoResult<()> {
+    fn verify(&self, _pkg: PackageId) -> CargoResult<()> {
         Ok(())
     }
 
@@ -127,11 +127,11 @@ impl<'a, T: Source + ?Sized + 'a> Source for Box<T> {
     }
 
     /// Forwards to `Source::download`
-    fn download(&mut self, id: &PackageId) -> CargoResult<MaybePackage> {
+    fn download(&mut self, id: PackageId) -> CargoResult<MaybePackage> {
         (**self).download(id)
     }
 
-    fn finish_download(&mut self, id: &PackageId, data: Vec<u8>) -> CargoResult<Package> {
+    fn finish_download(&mut self, id: PackageId, data: Vec<u8>) -> CargoResult<Package> {
         (**self).finish_download(id, data)
     }
 
@@ -141,7 +141,7 @@ impl<'a, T: Source + ?Sized + 'a> Source for Box<T> {
     }
 
     /// Forwards to `Source::verify`
-    fn verify(&self, pkg: &PackageId) -> CargoResult<()> {
+    fn verify(&self, pkg: PackageId) -> CargoResult<()> {
         (**self).verify(pkg)
     }
 
@@ -183,11 +183,11 @@ impl<'a, T: Source + ?Sized + 'a> Source for &'a mut T {
         (**self).update()
     }
 
-    fn download(&mut self, id: &PackageId) -> CargoResult<MaybePackage> {
+    fn download(&mut self, id: PackageId) -> CargoResult<MaybePackage> {
         (**self).download(id)
     }
 
-    fn finish_download(&mut self, id: &PackageId, data: Vec<u8>) -> CargoResult<Package> {
+    fn finish_download(&mut self, id: PackageId, data: Vec<u8>) -> CargoResult<Package> {
         (**self).finish_download(id, data)
     }
 
@@ -195,7 +195,7 @@ impl<'a, T: Source + ?Sized + 'a> Source for &'a mut T {
         (**self).fingerprint(pkg)
     }
 
-    fn verify(&self, pkg: &PackageId) -> CargoResult<()> {
+    fn verify(&self, pkg: PackageId) -> CargoResult<()> {
         (**self).verify(pkg)
     }
 
@@ -255,7 +255,7 @@ impl<'src> SourceMap<'src> {
 
     /// Like `HashMap::get`, but first calculates the `SourceId` from a
     /// `PackageId`
-    pub fn get_by_package_id(&self, pkg_id: &PackageId) -> Option<&(Source + 'src)> {
+    pub fn get_by_package_id(&self, pkg_id: PackageId) -> Option<&(Source + 'src)> {
         self.get(pkg_id.source_id())
     }
 

@@ -58,10 +58,10 @@ impl Context {
             .entry((id.name(), id.source_id()))
             .or_insert_with(|| Rc::new(Vec::new()));
         if !prev.iter().any(|c| c == summary) {
-            self.resolve_graph.push(GraphNode::Add(id.clone()));
+            self.resolve_graph.push(GraphNode::Add(id));
             if let Some(link) = summary.links() {
                 ensure!(
-                    self.links.insert(link, id.clone()).is_none(),
+                    self.links.insert(link, id).is_none(),
                     "Attempting to resolve a with more then one crate with the links={}. \n\
                      This will not build as is. Consider rebuilding the .lock file.",
                     &*link
@@ -84,7 +84,7 @@ impl Context {
         };
 
         let has_default_feature = summary.features().contains_key("default");
-        Ok(match self.resolve_features.get(id) {
+        Ok(match self.resolve_features.get(&id) {
             Some(prev) => {
                 features.iter().all(|f| prev.contains(f))
                     && (!use_default || prev.contains("default") || !has_default_feature)
@@ -131,7 +131,7 @@ impl Context {
             .unwrap_or(&[])
     }
 
-    pub fn is_active(&self, id: &PackageId) -> bool {
+    pub fn is_active(&self, id: PackageId) -> bool {
         self.activations
             .get(&(id.name(), id.source_id()))
             .map(|v| v.iter().any(|s| s.package_id() == id))
@@ -142,13 +142,13 @@ impl Context {
     /// are still active
     pub fn is_conflicting(
         &self,
-        parent: Option<&PackageId>,
+        parent: Option<PackageId>,
         conflicting_activations: &BTreeMap<PackageId, ConflictReason>,
     ) -> bool {
         conflicting_activations
             .keys()
-            .chain(parent)
-            .all(|id| self.is_active(id))
+            .chain(parent.as_ref())
+            .all(|&id| self.is_active(id))
     }
 
     /// Return all dependencies and the features we want from them.
@@ -230,11 +230,7 @@ impl Context {
                     features
                 )
                 .into(),
-                Some(p) => (
-                    p.package_id().clone(),
-                    ConflictReason::MissingFeatures(features),
-                )
-                    .into(),
+                Some(p) => (p.package_id(), ConflictReason::MissingFeatures(features)).into(),
             });
         }
 
@@ -244,7 +240,7 @@ impl Context {
 
             let set = Rc::make_mut(
                 self.resolve_features
-                    .entry(pkgid.clone())
+                    .entry(pkgid)
                     .or_insert_with(|| Rc::new(HashSet::new())),
             );
 
@@ -260,7 +256,7 @@ impl Context {
         let mut replacements = HashMap::new();
         let mut cur = &self.resolve_replacements;
         while let Some(ref node) = cur.head {
-            let (k, v) = node.0.clone();
+            let (k, v) = node.0;
             replacements.insert(k, v);
             cur = &node.1;
         }

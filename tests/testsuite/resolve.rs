@@ -133,7 +133,7 @@ proptest! {
                     let not_selected: Vec<_> = input
                         .iter()
                         .cloned()
-                        .filter(|x| !r.contains(x.package_id()))
+                        .filter(|x| !r.contains(&x.package_id()))
                         .collect();
                     if !not_selected.is_empty() {
                         let indexs_to_unpublish: Vec<_> = indexs_to_unpublish.iter().map(|x| x.get(&not_selected)).collect();
@@ -1001,7 +1001,7 @@ fn incomplete_information_skiping() {
         input
             .iter()
             .cloned()
-            .filter(|x| &package_to_yank != x.package_id())
+            .filter(|x| package_to_yank != x.package_id())
             .collect(),
     );
     assert_eq!(input.len(), new_reg.len() + 1);
@@ -1070,7 +1070,7 @@ fn incomplete_information_skiping_2() {
         input
             .iter()
             .cloned()
-            .filter(|x| &package_to_yank != x.package_id())
+            .filter(|x| package_to_yank != x.package_id())
             .collect(),
     );
     assert_eq!(input.len(), new_reg.len() + 1);
@@ -1120,7 +1120,7 @@ fn incomplete_information_skiping_3() {
         input
             .iter()
             .cloned()
-            .filter(|x| &package_to_yank != x.package_id())
+            .filter(|x| package_to_yank != x.package_id())
             .collect(),
     );
     assert_eq!(input.len(), new_reg.len() + 1);
