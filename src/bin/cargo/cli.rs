@@ -220,7 +220,6 @@ See 'cargo help <command>' for more information on a specific command.\n",
         .arg(
             opt("quiet", "No output printed to stdout")
                 .short("q")
-                .global(true),
         )
         .arg(
             opt("color", "Coloring: auto, always, never")
