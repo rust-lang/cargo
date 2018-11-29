@@ -8,6 +8,7 @@ pub fn cli() -> App {
             "Save an api token from the registry locally. \
              If token is not specified, it will be read from stdin.",
         )
+        .arg(opt("quiet", "No output printed to stdout").short("q"))
         .arg(Arg::with_name("token"))
         .arg(
             opt("host", "Host to set the token for")

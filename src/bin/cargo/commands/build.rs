@@ -7,6 +7,7 @@ pub fn cli() -> App {
         // subcommand aliases are handled in aliased_command()
         // .alias("b")
         .about("Compile a local package and all of its dependencies")
+        .arg(opt("quiet", "No output printed to stdout").short("q"))
         .arg_package_spec(
             "Package to build (see `cargo help pkgid`)",
             "Build all packages in the workspace",
