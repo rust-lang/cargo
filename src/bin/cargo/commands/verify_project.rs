@@ -8,6 +8,7 @@ use cargo::print_json;
 pub fn cli() -> App {
     subcommand("verify-project")
         .about("Check correctness of crate manifest")
+        .arg(opt("quiet", "No output printed to stdout").short("q"))
         .arg_manifest_path()
 }
 

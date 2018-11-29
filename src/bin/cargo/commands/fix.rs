@@ -5,6 +5,7 @@ use cargo::ops::{self, CompileFilter, FilterRule};
 pub fn cli() -> App {
     subcommand("fix")
         .about("Automatically fix lint warnings reported by rustc")
+        .arg(opt("quiet", "No output printed to stdout").short("q"))
         .arg_package_spec(
             "Package(s) to fix",
             "Fix all packages in the workspace",

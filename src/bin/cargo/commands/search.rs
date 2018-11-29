@@ -7,6 +7,7 @@ use cargo::ops;
 pub fn cli() -> App {
     subcommand("search")
         .about("Search packages in crates.io")
+        .arg(opt("quiet", "No output printed to stdout").short("q"))
         .arg(Arg::with_name("query").multiple(true))
         .arg_index()
         .arg(
