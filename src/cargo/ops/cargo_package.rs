@@ -55,8 +55,12 @@ pub fn package(ws: &Workspace, opts: &PackageOpts) -> CargoResult<Option<FileLoc
     // Check (git) repository state, getting the current commit hash if not
     // dirty. This will `bail!` if dirty, unless allow_dirty. Produce json
     // info for any sha1 (HEAD revision) returned.
-    let vcs_info = check_repo_state(pkg, &src_files, &config, opts.allow_dirty)?
-        .map(|h| json!({"git":{"sha1": h}}));
+    let vcs_info = if !opts.allow_dirty {
+        check_repo_state(pkg, &src_files, &config, opts.allow_dirty)?
+            .map(|h| json!({"git":{"sha1": h}}))
+    } else {
+        None
+    };
 
     if opts.list {
         let root = pkg.root();
