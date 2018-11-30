@@ -432,11 +432,11 @@ fn link_targets<'a, 'cfg>(
             let dst = match output.hardlink.as_ref() {
                 Some(dst) => dst,
                 None => {
-                    destinations.push(src.display().to_string());
+                    destinations.push(src.clone());
                     continue;
                 }
             };
-            destinations.push(dst.display().to_string());
+            destinations.push(dst.clone());
             hardlink_or_copy(src, dst)?;
             if let Some(ref path) = output.export_path {
                 let export_dir = export_dir.as_ref().unwrap();
