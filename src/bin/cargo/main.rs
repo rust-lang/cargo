@@ -3,6 +3,9 @@
 
 extern crate cargo;
 extern crate clap;
+#[cfg(feature = "pretty-env-logger")]
+extern crate pretty_env_logger;
+#[cfg(not(feature = "pretty-env-logger"))]
 extern crate env_logger;
 #[macro_use]
 extern crate failure;
@@ -28,6 +31,9 @@ mod commands;
 use command_prelude::*;
 
 fn main() {
+    #[cfg(feature = "pretty-env-logger")]
+    pretty_env_logger::init();
+    #[cfg(not(feature = "pretty-env-logger"))]
     env_logger::init();
     cargo::core::maybe_allow_nightly_features();
 
