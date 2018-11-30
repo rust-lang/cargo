@@ -409,6 +409,7 @@ fn link_targets<'a, 'cfg>(
         .map(|s| s.to_owned())
         .collect();
     let json_messages = bcx.build_config.json_messages();
+    let executable = cx.get_executable(unit)?;
     let mut target = unit.target.clone();
     if let TargetSourcePath::Metabuild = target.src_path() {
         // Give it something to serialize.
@@ -463,6 +464,7 @@ fn link_targets<'a, 'cfg>(
                 profile: art_profile,
                 features,
                 filenames: destinations,
+                executable,
                 fresh,
             });
         }
