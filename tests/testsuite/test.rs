@@ -3080,25 +3080,9 @@ fn json_artifact_includes_executable_for_integration_tests() {
         .file("tests/integration_test.rs", r#"#[test] fn integration_test() {}"#)
         .build();
 
-    p.cargo("test -v --no-run --message-format=json --test integration_test")
+    // Using jobs=1 to ensure that the order of messages is consistent.
+    p.cargo("test -v --no-run --message-format=json --jobs=1 --test integration_test")
         .with_json(r#"
-            {
-                "executable": "[..]/foo/target/debug/foo[EXE]",
-                "features": [],
-                "filenames": "{...}",
-                "fresh": false,
-                "package_id": "foo 0.0.1 ([..])",
-                "profile": "{...}",
-                "reason": "compiler-artifact",
-                "target": {
-                    "crate_types": [ "bin" ],
-                    "kind": [ "bin" ],
-                    "edition": "2015",
-                    "name": "foo",
-                    "src_path": "[..]/foo/src/main.rs"
-                }
-            }
-
             {
                 "executable": "[..]/foo/target/debug/integration_test-[..][EXE]",
                 "features": [],
@@ -3113,6 +3097,23 @@ fn json_artifact_includes_executable_for_integration_tests() {
                     "edition": "2015",
                     "name": "integration_test",
                     "src_path": "[..]/foo/tests/integration_test.rs"
+                }
+            }
+
+            {
+                "executable": "[..]/foo/target/debug/foo[EXE]",
+                "features": [],
+                "filenames": "{...}",
+                "fresh": false,
+                "package_id": "foo 0.0.1 ([..])",
+                "profile": "{...}",
+                "reason": "compiler-artifact",
+                "target": {
+                    "crate_types": [ "bin" ],
+                    "kind": [ "bin" ],
+                    "edition": "2015",
+                    "name": "foo",
+                    "src_path": "[..]/foo/src/main.rs"
                 }
             }
         "#)
