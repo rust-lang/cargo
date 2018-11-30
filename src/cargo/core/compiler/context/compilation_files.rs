@@ -49,6 +49,16 @@ pub struct OutputFile {
     pub flavor: FileFlavor,
 }
 
+impl OutputFile {
+    /// Gets the hardlink if present. Otherwise returns the path.
+    pub fn bindst(&self) -> &PathBuf {
+        return match self.hardlink {
+            Some(ref link_dst) => link_dst,
+            None => &self.path,
+        };
+    }
+}
+
 impl<'a, 'cfg: 'a> CompilationFiles<'a, 'cfg> {
     pub(super) fn new(
         roots: &[Unit<'a>],

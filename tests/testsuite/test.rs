@@ -3004,6 +3004,7 @@ fn json_artifact_includes_test_flag() {
             "overflow_checks": true,
             "test": false
         },
+        "executable": null,
         "features": [],
         "package_id":"foo 0.0.1 ([..])",
         "target":{
@@ -3026,6 +3027,7 @@ fn json_artifact_includes_test_flag() {
             "overflow_checks": true,
             "test": true
         },
+        "executable": "[..]/foo-[..]",
         "features": [],
         "package_id":"foo 0.0.1 ([..])",
         "target":{
@@ -3040,6 +3042,81 @@ fn json_artifact_includes_test_flag() {
     }
 "#,
         ).run();
+}
+
+#[test]
+fn json_artifact_includes_executable_for_library_tests() {
+    let p = project()
+        .file("src/main.rs", "fn main() { }")
+        .file("src/lib.rs", r#"#[test] fn lib_test() {}"#)
+        .build();
+
+    p.cargo("test --lib -v --no-run --message-format=json")
+        .with_json(r#"
+            {
+                "executable": "[..]/foo/target/debug/foo-[..][EXE]",
+                "features": [],
+                "filenames": "{...}",
+                "fresh": false,
+                "package_id": "foo 0.0.1 ([..])",
+                "profile": "{...}",
+                "reason": "compiler-artifact",
+                "target": {
+                    "crate_types": [ "lib" ],
+                    "kind": [ "lib" ],
+                    "edition": "2015",
+                    "name": "foo",
+                    "src_path": "[..]/foo/src/lib.rs"
+                }
+            }
+        "#)
+        .run();
+}
+
+#[test]
+fn json_artifact_includes_executable_for_integration_tests() {
+    let p = project()
+        .file("src/main.rs", "fn main() {}")
+        .file("tests/integration_test.rs", r#"#[test] fn integration_test() {}"#)
+        .build();
+
+    p.cargo("test -v --no-run --message-format=json --test integration_test")
+        .with_json(r#"
+            {
+                "executable": "[..]/foo/target/debug/foo[EXE]",
+                "features": [],
+                "filenames": "{...}",
+                "fresh": false,
+                "package_id": "foo 0.0.1 ([..])",
+                "profile": "{...}",
+                "reason": "compiler-artifact",
+                "target": {
+                    "crate_types": [ "bin" ],
+                    "kind": [ "bin" ],
+                    "edition": "2015",
+                    "name": "foo",
+                    "src_path": "[..]/foo/src/main.rs"
+                }
+            }
+
+            {
+                "executable": "[..]/foo/target/debug/integration_test-[..][EXE]",
+                "features": [],
+                "filenames": "{...}",
+                "fresh": false,
+                "package_id": "foo 0.0.1 ([..])",
+                "profile": "{...}",
+                "reason": "compiler-artifact",
+                "target": {
+                    "crate_types": [ "bin" ],
+                    "kind": [ "test" ],
+                    "edition": "2015",
+                    "name": "integration_test",
+                    "src_path": "[..]/foo/tests/integration_test.rs"
+                }
+            }
+        "#)
+        .run();
 }
 
 #[test]
