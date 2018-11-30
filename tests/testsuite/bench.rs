@@ -1530,7 +1530,7 @@ fn json_artifact_includes_executable_for_benchmark() {
             {
                 "executable": "[..]/foo/target/release/foo-[..][EXE]",
                 "features": [],
-                "filenames": [ "[..]/foo/target/release/foo-[..][EXE]" ],
+                "filenames": "{...}",
                 "fresh": false,
                 "package_id": "foo 0.0.1 ([..])",
                 "profile": "{...}",
