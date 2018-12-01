@@ -11,7 +11,7 @@ enum ConflictStoreTrie {
     Leaf(BTreeMap<PackageId, ConflictReason>),
     /// a Node is a map from an element to a subTrie where
     /// all the Sets in the subTrie contains that element.
-    Node(HashMap<PackageId, ConflictStoreTrie>),
+    Node(BTreeMap<PackageId, ConflictStoreTrie>),
 }
 
 impl ConflictStoreTrie {
@@ -59,7 +59,7 @@ impl ConflictStoreTrie {
         if let Some(pid) = iter.next() {
             if let ConflictStoreTrie::Node(p) = self {
                 p.entry(pid)
-                    .or_insert_with(|| ConflictStoreTrie::Node(HashMap::new()))
+                    .or_insert_with(|| ConflictStoreTrie::Node(BTreeMap::new()))
                     .insert(iter, con);
             } // else, We already have a subset of this in the ConflictStore
         } else {
@@ -159,7 +159,7 @@ impl ConflictCache {
     pub fn insert(&mut self, dep: &Dependency, con: &BTreeMap<PackageId, ConflictReason>) {
         self.con_from_dep
             .entry(dep.clone())
-            .or_insert_with(|| ConflictStoreTrie::Node(HashMap::new()))
+            .or_insert_with(|| ConflictStoreTrie::Node(BTreeMap::new()))
             .insert(con.keys().cloned(), con.clone());
 
         trace!(
