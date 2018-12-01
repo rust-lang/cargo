@@ -17,17 +17,14 @@ enum ConflictStoreTrie {
 impl ConflictStoreTrie {
     /// Finds any known set of conflicts, if any,
     /// which are activated in `cx` and pass the `filter` specified?
-    fn find_conflicting<F>(
+    fn find_conflicting(
         &self,
         cx: &Context,
-        filter: &F,
-    ) -> Option<&BTreeMap<PackageId, ConflictReason>>
-    where
-        for<'r> F: Fn(&'r &BTreeMap<PackageId, ConflictReason>) -> bool,
-    {
+        must_contain: Option<PackageId>,
+    ) -> Option<&BTreeMap<PackageId, ConflictReason>> {
         match self {
             ConflictStoreTrie::Leaf(c) => {
-                if filter(&c) {
+                if must_contain.map(|f| c.contains_key(&f)).unwrap_or(true) {
                     // is_conflicting checks that all the elements are active,
                     // but we have checked each one by the recursion of this function.
                     debug_assert!(cx.is_conflicting(None, c));
@@ -40,7 +37,7 @@ impl ConflictStoreTrie {
                 for (&pid, store) in m {
                     // if the key is active then we need to check all of the corresponding subTrie.
                     if cx.is_active(pid) {
-                        if let Some(o) = store.find_conflicting(cx, filter) {
+                        if let Some(o) = store.find_conflicting(cx, must_contain) {
                             return Some(o);
                         }
                     } // else, if it is not active then there is no way any of the corresponding
@@ -134,23 +131,22 @@ impl ConflictCache {
     }
     /// Finds any known set of conflicts, if any,
     /// which are activated in `cx` and pass the `filter` specified?
-    pub fn find_conflicting<F>(
+    pub fn find_conflicting(
         &self,
         cx: &Context,
         dep: &Dependency,
-        filter: F,
-    ) -> Option<&BTreeMap<PackageId, ConflictReason>>
-    where
-        for<'r> F: Fn(&'r &BTreeMap<PackageId, ConflictReason>) -> bool,
-    {
-        self.con_from_dep.get(dep)?.find_conflicting(cx, &filter)
+        must_contain: Option<PackageId>,
+    ) -> Option<&BTreeMap<PackageId, ConflictReason>> {
+        self.con_from_dep
+            .get(dep)?
+            .find_conflicting(cx, must_contain)
     }
     pub fn conflicting(
         &self,
         cx: &Context,
         dep: &Dependency,
     ) -> Option<&BTreeMap<PackageId, ConflictReason>> {
-        self.find_conflicting(cx, dep, |_| true)
+        self.find_conflicting(cx, dep, None)
     }
 
     /// Add to the cache a conflict of the form:
