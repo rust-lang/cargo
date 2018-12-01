@@ -682,7 +682,7 @@ impl Execs {
         self.expect_json = Some(
             expected
                 .split("\n\n")
-                .map(|obj| obj.parse().unwrap())
+                .map(|line| line.parse().expect("line to be a valid JSON value"))
                 .collect(),
         );
         self
