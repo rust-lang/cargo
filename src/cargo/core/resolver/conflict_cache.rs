@@ -24,20 +24,21 @@ impl ConflictStoreTrie {
     ) -> Option<&BTreeMap<PackageId, ConflictReason>> {
         match self {
             ConflictStoreTrie::Leaf(c) => {
-                if must_contain.map(|f| c.contains_key(&f)).unwrap_or(true) {
-                    // is_conflicting checks that all the elements are active,
-                    // but we have checked each one by the recursion of this function.
-                    debug_assert!(cx.is_conflicting(None, c));
-                    Some(c)
-                } else {
-                    None
-                }
+                // is_conflicting checks that all the elements are active,
+                // but we have checked each one by the recursion of this function.
+                debug_assert!(cx.is_conflicting(None, c));
+                Some(c)
             }
             ConflictStoreTrie::Node(m) => {
-                for (&pid, store) in m {
+                for (&pid, store) in must_contain
+                    .map(|f| m.range(..=f))
+                    .unwrap_or_else(|| m.range(..))
+                {
                     // if the key is active then we need to check all of the corresponding subTrie.
                     if cx.is_active(pid) {
-                        if let Some(o) = store.find_conflicting(cx, must_contain) {
+                        if let Some(o) =
+                            store.find_conflicting(cx, must_contain.filter(|&f| f == pid))
+                        {
                             return Some(o);
                         }
                     } // else, if it is not active then there is no way any of the corresponding
