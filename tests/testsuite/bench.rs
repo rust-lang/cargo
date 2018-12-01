@@ -1493,7 +1493,6 @@ fn json_artifact_includes_executable_for_benchmark() {
     }
 
     let p = project()
-        .file("src/main.rs", "fn main() {}")
         .file(
             "benches/benchmark.rs",
             r#"
@@ -1510,40 +1509,6 @@ fn json_artifact_includes_executable_for_benchmark() {
 
     p.cargo("bench --no-run --message-format=json")
         .with_json(r#"
-            {
-                "executable": "[..]/foo/target/release/foo[EXE]",
-                "features": [],
-                "filenames": "{...}",
-                "fresh": false,
-                "package_id": "foo 0.0.1 ([..])",
-                "profile": "{...}",
-                "reason": "compiler-artifact",
-                "target": {
-                    "crate_types": [ "bin" ],
-                    "kind": [ "bin" ],
-                    "edition": "2015",
-                    "name": "foo",
-                    "src_path": "[..]/foo/src/main.rs"
-                }
-            }
-
-            {
-                "executable": "[..]/foo/target/release/foo-[..][EXE]",
-                "features": [],
-                "filenames": "{...}",
-                "fresh": false,
-                "package_id": "foo 0.0.1 ([..])",
-                "profile": "{...}",
-                "reason": "compiler-artifact",
-                "target": {
-                    "crate_types": [ "bin" ],
-                    "kind": [ "bin" ],
-                    "edition": "2015",
-                    "name": "foo",
-                    "src_path": "[..]/foo/src/main.rs"
-                }
-            }
-
             {
                 "executable": "[..]/foo/target/release/benchmark-[..][EXE]",
                 "features": [],
