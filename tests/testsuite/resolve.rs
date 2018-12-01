@@ -1201,3 +1201,43 @@ fn large_conflict_cache() {
     let reg = registry(input);
     let _ = resolve(&pkg_id("root"), root_deps, &reg);
 }
+
+#[test]
+fn conflict_store_bug() {
+    let input = vec![
+        pkg!(("A", "0.0.3")),
+        pkg!(("A", "0.0.5")),
+        pkg!(("A", "0.0.9") => [dep("bad"),]),
+        pkg!(("A", "0.0.10") => [dep("bad"),]),
+        pkg!(("L-sys", "0.0.1") => [dep("bad"),]),
+        pkg!(("L-sys", "0.0.5")),
+        pkg!(("R", "0.0.4") => [
+            dep_req("L-sys", "= 0.0.5"),
+        ]),
+        pkg!(("R", "0.0.6")),
+        pkg!(("a-sys", "0.0.5")),
+        pkg!(("a-sys", "0.0.11")),
+        pkg!(("c", "0.0.12") => [
+            dep_req("R", ">= 0.0.3, <= 0.0.4"),
+        ]),
+        pkg!(("c", "0.0.13") => [
+            dep_req("a-sys", ">= 0.0.8, <= 0.0.11"),
+        ]),
+        pkg!(("c0", "0.0.6") => [
+            dep_req("L-sys", "<= 0.0.2"),
+        ]),
+        pkg!(("c0", "0.0.10") => [
+            dep_req("A", ">= 0.0.9, <= 0.0.10"),
+            dep_req("a-sys", "= 0.0.5"),
+        ]),
+        pkg!("j" => [
+            dep_req("A", ">= 0.0.3, <= 0.0.5"),
+            dep_req("R", ">=0.0.4, <= 0.0.6"),
+            dep_req("c", ">= 0.0.9"),
+            dep_req("c0", ">= 0.0.6"),
+        ]),
+    ];
+
+    let reg = registry(input.clone());
+    let _ = resolve_and_validated(&pkg_id("root"), vec![dep("j")], &reg);
+}
