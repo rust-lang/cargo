@@ -442,9 +442,7 @@ fn activate_deps_loop(
                                 })
                                 .filter_map(|(other_parent, other_dep)| {
                                     past_conflicting_activations
-                                        .find_conflicting(&cx, &other_dep, |con| {
-                                            con.contains_key(&pid)
-                                        })
+                                        .find_conflicting(&cx, &other_dep, Some(pid))
                                         .map(|con| (other_parent, con))
                                 })
                                 .next()
