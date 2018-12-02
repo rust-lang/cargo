@@ -11,36 +11,39 @@ enum ConflictStoreTrie {
     Leaf(BTreeMap<PackageId, ConflictReason>),
     /// a Node is a map from an element to a subTrie where
     /// all the Sets in the subTrie contains that element.
-    Node(HashMap<PackageId, ConflictStoreTrie>),
+    Node(BTreeMap<PackageId, ConflictStoreTrie>),
 }
 
 impl ConflictStoreTrie {
     /// Finds any known set of conflicts, if any,
     /// which are activated in `cx` and pass the `filter` specified?
-    fn find_conflicting<F>(
+    fn find_conflicting(
         &self,
         cx: &Context,
-        filter: &F,
-    ) -> Option<&BTreeMap<PackageId, ConflictReason>>
-    where
-        for<'r> F: Fn(&'r &BTreeMap<PackageId, ConflictReason>) -> bool,
-    {
+        must_contain: Option<PackageId>,
+    ) -> Option<&BTreeMap<PackageId, ConflictReason>> {
         match self {
             ConflictStoreTrie::Leaf(c) => {
-                if filter(&c) {
+                if must_contain.is_none() {
                     // is_conflicting checks that all the elements are active,
                     // but we have checked each one by the recursion of this function.
                     debug_assert!(cx.is_conflicting(None, c));
                     Some(c)
                 } else {
+                    // we did not find `must_contain` so we need to keep looking.
                     None
                 }
             }
             ConflictStoreTrie::Node(m) => {
-                for (&pid, store) in m {
+                for (&pid, store) in must_contain
+                    .map(|f| m.range(..=f))
+                    .unwrap_or_else(|| m.range(..))
+                {
                     // if the key is active then we need to check all of the corresponding subTrie.
                     if cx.is_active(pid) {
-                        if let Some(o) = store.find_conflicting(cx, filter) {
+                        if let Some(o) =
+                            store.find_conflicting(cx, must_contain.filter(|&f| f != pid))
+                        {
                             return Some(o);
                         }
                     } // else, if it is not active then there is no way any of the corresponding
@@ -59,7 +62,7 @@ impl ConflictStoreTrie {
         if let Some(pid) = iter.next() {
             if let ConflictStoreTrie::Node(p) = self {
                 p.entry(pid)
-                    .or_insert_with(|| ConflictStoreTrie::Node(HashMap::new()))
+                    .or_insert_with(|| ConflictStoreTrie::Node(BTreeMap::new()))
                     .insert(iter, con);
             } // else, We already have a subset of this in the ConflictStore
         } else {
@@ -134,23 +137,31 @@ impl ConflictCache {
     }
     /// Finds any known set of conflicts, if any,
     /// which are activated in `cx` and pass the `filter` specified?
-    pub fn find_conflicting<F>(
+    pub fn find_conflicting(
         &self,
         cx: &Context,
         dep: &Dependency,
-        filter: F,
-    ) -> Option<&BTreeMap<PackageId, ConflictReason>>
-    where
-        for<'r> F: Fn(&'r &BTreeMap<PackageId, ConflictReason>) -> bool,
-    {
-        self.con_from_dep.get(dep)?.find_conflicting(cx, &filter)
+        must_contain: Option<PackageId>,
+    ) -> Option<&BTreeMap<PackageId, ConflictReason>> {
+        let out = self
+            .con_from_dep
+            .get(dep)?
+            .find_conflicting(cx, must_contain);
+        if cfg!(debug_assertions) {
+            if let Some(f) = must_contain {
+                if let Some(c) = &out {
+                    assert!(c.contains_key(&f));
+                }
+            }
+        }
+        out
     }
     pub fn conflicting(
         &self,
         cx: &Context,
         dep: &Dependency,
     ) -> Option<&BTreeMap<PackageId, ConflictReason>> {
-        self.find_conflicting(cx, dep, |_| true)
+        self.find_conflicting(cx, dep, None)
     }
 
     /// Add to the cache a conflict of the form:
@@ -159,7 +170,7 @@ impl ConflictCache {
     pub fn insert(&mut self, dep: &Dependency, con: &BTreeMap<PackageId, ConflictReason>) {
         self.con_from_dep
             .entry(dep.clone())
-            .or_insert_with(|| ConflictStoreTrie::Node(HashMap::new()))
+            .or_insert_with(|| ConflictStoreTrie::Node(BTreeMap::new()))
             .insert(con.keys().cloned(), con.clone());
 
         trace!(
