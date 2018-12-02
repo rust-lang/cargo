@@ -10,6 +10,7 @@ pub fn cli() -> App {
             "aggressive",
             "Force updating all dependencies of <name> as well",
         ))
+        .arg_dry_run("Don't actually write the lockfile")
         .arg(opt("precise", "Update a single dependency to exactly PRECISE").value_name("PRECISE"))
         .arg_manifest_path()
         .after_help(
@@ -44,6 +45,7 @@ pub fn exec(config: &mut Config, args: &ArgMatches<'_>) -> CliResult {
         aggressive: args.is_present("aggressive"),
         precise: args.value_of("precise"),
         to_update: values(args, "package"),
+        dry_run: args.is_present("dry-run"),
         config,
     };
     ops::update_lockfile(&ws, &update_opts)?;
