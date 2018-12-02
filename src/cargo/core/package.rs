@@ -816,7 +816,12 @@ impl<'a, 'cfg> Downloads<'a, 'cfg> {
                 return Ok(());
             }
         }
-        let mut msg = format!("{} crates", self.pending.len());
+        let pending = self.pending.len();
+        let mut msg = if pending == 1 {
+            format!("{} crate", pending)
+        } else {
+            format!("{} crates", pending)
+        };
         match why {
             WhyTick::Extracting(krate) => {
                 msg.push_str(&format!(", extracting {} ...", krate));
