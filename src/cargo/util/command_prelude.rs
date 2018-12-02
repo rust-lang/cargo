@@ -177,6 +177,10 @@ pub trait AppExt: Sized {
                     .hidden(true),
             )
     }
+
+    fn arg_dry_run(self, dry_run: &'static str) -> Self {
+        self._arg(opt("dry-run", dry_run))
+    }
 }
 
 impl AppExt for App {

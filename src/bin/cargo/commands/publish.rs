@@ -19,7 +19,7 @@ pub fn cli() -> App {
         .arg_target_dir()
         .arg_manifest_path()
         .arg_jobs()
-        .arg(opt("dry-run", "Perform all checks without uploading"))
+        .arg_dry_run("Perform all checks without uploading")
         .arg(opt("registry", "Registry to publish to").value_name("REGISTRY"))
 }
 
