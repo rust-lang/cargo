@@ -24,10 +24,15 @@ impl ConflictStoreTrie {
     ) -> Option<&BTreeMap<PackageId, ConflictReason>> {
         match self {
             ConflictStoreTrie::Leaf(c) => {
-                // is_conflicting checks that all the elements are active,
-                // but we have checked each one by the recursion of this function.
-                debug_assert!(cx.is_conflicting(None, c));
-                Some(c)
+                if must_contain.is_none() {
+                    // is_conflicting checks that all the elements are active,
+                    // but we have checked each one by the recursion of this function.
+                    debug_assert!(cx.is_conflicting(None, c));
+                    Some(c)
+                } else {
+                    // we did not find `must_contain` so we need to keep looking.
+                    None
+                }
             }
             ConflictStoreTrie::Node(m) => {
                 for (&pid, store) in must_contain
@@ -37,7 +42,7 @@ impl ConflictStoreTrie {
                     // if the key is active then we need to check all of the corresponding subTrie.
                     if cx.is_active(pid) {
                         if let Some(o) =
-                            store.find_conflicting(cx, must_contain.filter(|&f| f == pid))
+                            store.find_conflicting(cx, must_contain.filter(|&f| f != pid))
                         {
                             return Some(o);
                         }
@@ -138,9 +143,18 @@ impl ConflictCache {
         dep: &Dependency,
         must_contain: Option<PackageId>,
     ) -> Option<&BTreeMap<PackageId, ConflictReason>> {
-        self.con_from_dep
+        let out = self
+            .con_from_dep
             .get(dep)?
-            .find_conflicting(cx, must_contain)
+            .find_conflicting(cx, must_contain);
+        if cfg!(debug_assertions) {
+            if let Some(f) = must_contain {
+                if let Some(c) = &out {
+                    assert!(c.contains_key(&f));
+                }
+            }
+        }
+        out
     }
     pub fn conflicting(
         &self,
