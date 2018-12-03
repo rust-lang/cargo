@@ -163,7 +163,7 @@ impl<'a, 'cfg> Context<'a, 'cfg> {
                     continue;
                 }
 
-                let bindst = output.bindst();
+                let bindst = output.bin_dst();
 
                 if unit.mode == CompileMode::Test {
                     self.compilation.tests.push((
@@ -282,7 +282,7 @@ impl<'a, 'cfg> Context<'a, 'cfg> {
             let is_test = unit.mode.is_any_test() && !unit.mode.is_check();
 
             if is_binary || is_test {
-                return Ok(Option::Some(output.bindst().clone()));
+                return Ok(Option::Some(output.bin_dst().clone()));
             }
         }
         return Ok(None);

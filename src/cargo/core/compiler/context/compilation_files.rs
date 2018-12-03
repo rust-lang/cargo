@@ -51,7 +51,7 @@ pub struct OutputFile {
 
 impl OutputFile {
     /// Gets the hardlink if present. Otherwise returns the path.
-    pub fn bindst(&self) -> &PathBuf {
+    pub fn bin_dst(&self) -> &PathBuf {
         return match self.hardlink {
             Some(ref link_dst) => link_dst,
             None => &self.path,
