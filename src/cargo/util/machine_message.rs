@@ -1,3 +1,5 @@
+use std::path::PathBuf;
+
 use serde::ser;
 use serde_json::{self, value::RawValue};
 
@@ -33,7 +35,8 @@ pub struct Artifact<'a> {
     pub target: &'a Target,
     pub profile: ArtifactProfile,
     pub features: Vec<String>,
-    pub filenames: Vec<String>,
+    pub filenames: Vec<PathBuf>,
+    pub executable: Option<PathBuf>,
     pub fresh: bool,
 }
 
