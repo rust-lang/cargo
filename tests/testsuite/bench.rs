@@ -1485,3 +1485,46 @@ fn bench_virtual_manifest_all_implied() {
         .with_stdout_contains("test bench_bar ... bench: [..]")
         .run();
 }
+
+#[test]
+fn json_artifact_includes_executable_for_benchmark() {
+    if !is_nightly() {
+        return;
+    }
+
+    let p = project()
+        .file(
+            "benches/benchmark.rs",
+            r#"
+            #![feature(test)]
+            extern crate test;
+
+            use test::Bencher;
+
+            #[bench]
+            fn bench_foo(_: &mut Bencher) -> () { () }
+        "#,
+        )
+        .build();
+
+    p.cargo("bench --no-run --message-format=json")
+        .with_json(r#"
+            {
+                "executable": "[..]/foo/target/release/benchmark-[..][EXE]",
+                "features": [],
+                "filenames": [ "[..]/foo/target/release/benchmark-[..][EXE]" ],
+                "fresh": false,
+                "package_id": "foo 0.0.1 ([..])",
+                "profile": "{...}",
+                "reason": "compiler-artifact",
+                "target": {
+                    "crate_types": [ "bin" ],
+                    "kind": [ "bench" ],
+                    "edition": "2015",
+                    "name": "benchmark",
+                    "src_path": "[..]/foo/benches/benchmark.rs"
+                }
+            }
+        "#)
+        .run();
+}

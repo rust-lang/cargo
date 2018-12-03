@@ -409,6 +409,7 @@ fn link_targets<'a, 'cfg>(
         .map(|s| s.to_owned())
         .collect();
     let json_messages = bcx.build_config.json_messages();
+    let executable = cx.get_executable(unit)?;
     let mut target = unit.target.clone();
     if let TargetSourcePath::Metabuild = target.src_path() {
         // Give it something to serialize.
@@ -432,11 +433,11 @@ fn link_targets<'a, 'cfg>(
             let dst = match output.hardlink.as_ref() {
                 Some(dst) => dst,
                 None => {
-                    destinations.push(src.display().to_string());
+                    destinations.push(src.clone());
                     continue;
                 }
             };
-            destinations.push(dst.display().to_string());
+            destinations.push(dst.clone());
             hardlink_or_copy(src, dst)?;
             if let Some(ref path) = output.export_path {
                 let export_dir = export_dir.as_ref().unwrap();
@@ -463,6 +464,7 @@ fn link_targets<'a, 'cfg>(
                 profile: art_profile,
                 features,
                 filenames: destinations,
+                executable,
                 fresh,
             });
         }

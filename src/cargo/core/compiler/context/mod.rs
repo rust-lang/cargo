@@ -163,10 +163,7 @@ impl<'a, 'cfg> Context<'a, 'cfg> {
                     continue;
                 }
 
-                let bindst = match output.hardlink {
-                    Some(ref link_dst) => link_dst,
-                    None => &output.path,
-                };
+                let bindst = output.bindst();
 
                 if unit.mode == CompileMode::Test {
                     self.compilation.tests.push((
@@ -272,6 +269,23 @@ impl<'a, 'cfg> Context<'a, 'cfg> {
             }
         }
         Ok(self.compilation)
+    }
+
+    /// Returns the executable for the specified unit (if any).
+    pub fn get_executable(&mut self, unit: &Unit<'a>) -> CargoResult<Option<PathBuf>> {
+        for output in self.outputs(unit)?.iter() {
+            if output.flavor == FileFlavor::DebugInfo {
+                continue;
+            }
+
+            let is_binary = unit.target.is_bin() || unit.target.is_bin_example();
+            let is_test = unit.mode.is_any_test() && !unit.mode.is_check();
+
+            if is_binary || is_test {
+                return Ok(Option::Some(output.bindst().clone()));
+            }
+        }
+        return Ok(None);
     }
 
     pub fn prepare_units(
