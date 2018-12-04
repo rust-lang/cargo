@@ -98,6 +98,10 @@ pub(super) fn activation_error(
         let mut msg = format!("failed to select a version for `{}`.", dep.package_name());
         msg.push_str("\n    ... required by ");
         msg.push_str(&describe_path(&graph, parent.package_id()));
+        msg.push_str("which requires ");
+        msg.push_str(&dep.package_name());
+        msg.push_str(" ");
+        msg.push_str(&dep.version_req().to_string());
 
         msg.push_str("\nversions that meet the requirements `");
         msg.push_str(&dep.version_req().to_string());
