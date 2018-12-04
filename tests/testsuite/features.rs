@@ -131,7 +131,7 @@ fn invalid4() {
         .with_stderr(
             "\
 error: failed to select a version for `bar`.
-    ... required by package `foo v0.0.1 ([..])`
+    ... required by package `foo v0.0.1 ([..])` which requires bar *
 versions that meet the requirements `*` are: 0.0.1
 
 the package `foo` depends on `bar`, with features: `bar` but `bar` does not have these features.

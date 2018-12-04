@@ -315,7 +315,7 @@ fn links_duplicates() {
     p.cargo("build").with_status(101)
                        .with_stderr("\
 error: failed to select a version for `a-sys`.
-    ... required by package `foo v0.5.0 ([..])`
+    ... required by package `foo v0.5.0 ([..]) which requires `
 versions that meet the requirements `*` are: 0.5.0
 
 the package `a-sys` links to the native library `a`, but it conflicts with a previous package which links to `a` as well:
@@ -378,7 +378,7 @@ fn links_duplicates_deep_dependency() {
     p.cargo("build").with_status(101)
                        .with_stderr("\
 error: failed to select a version for `a-sys`.
-    ... required by package `a v0.5.0 ([..])`
+    ... required by package `a v0.5.0 ([..]) which requires a-sys = *`
     ... selected to fulfill the requirement `a = \"*\"` from package `foo v0.5.0 ([..])`
 versions that meet the requirements `*` are: 0.5.0
 
@@ -3411,7 +3411,7 @@ fn links_duplicates_with_cycle() {
     p.cargo("build").with_status(101)
                        .with_stderr("\
 error: failed to select a version for `a`.
-    ... required by package `foo v0.5.0 ([..])`
+    ... required by package `foo v0.5.0 ([..])` which requires `a-sys *`
 versions that meet the requirements `*` are: 0.5.0
 
 the package `a` links to the native library `a`, but it conflicts with a previous package which links to `a` as well:

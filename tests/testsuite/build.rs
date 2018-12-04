@@ -1171,7 +1171,7 @@ fn incompatible_dependencies() {
         .with_stderr_contains(
             "\
 error: failed to select a version for `bad`.
-    ... required by package `qux v0.1.0`
+    ... required by package `qux v0.1.0` which requires `bad >=1.0.1`
     ... selected to fulfill the requirement `qux = \"^0.1.0\"` from package `foo v0.0.1 ([..])`
 versions that meet the requirements `>= 1.0.1` are: 1.0.2, 1.0.1
 
@@ -1217,7 +1217,7 @@ fn incompatible_dependencies_with_multi_semver() {
         .with_stderr_contains(
             "\
 error: failed to select a version for `bad`.
-    ... required by package `foo v0.0.1 ([..])`
+    ... required by package `foo v0.0.1 ([..]) which requires `bad = >=1.0.1, <=2.0.0`
 versions that meet the requirements `>= 1.0.1, <= 2.0.0` are: 2.0.0, 1.0.1
 
 all possible versions conflict with previously selected packages.
