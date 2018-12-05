@@ -148,3 +148,17 @@ fn alias_override_builtin_alias() {
 ",
         ).run();
 }
+
+#[test]
+fn builtin_alias_takes_options() {
+    // #6381
+    let p = project()
+        .file("src/lib.rs", "")
+        .file(
+            "examples/ex1.rs",
+            r#"fn main() { println!("{}", std::env::args().skip(1).next().unwrap()) }"#,
+        )
+        .build();
+
+    p.cargo("r --example ex1 -- asdf").with_stdout("asdf").run();
+}
