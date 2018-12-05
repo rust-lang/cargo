@@ -1021,7 +1021,12 @@ impl TomlManifest {
             None => false,
         };
 
-        let warn_default_feat = summary.features().contains_key("default-features");
+        if summary.features().contains_key("default-features") {
+            warnings.push(
+                "`default-features = [\"..\"]` was found in [features]. \
+                Did you mean to use `default = [\"..\"]`?".to_string()
+            )
+        }
 
         let custom_metadata = project.metadata.clone();
         let mut manifest = Manifest::new(
@@ -1057,12 +1062,6 @@ impl TomlManifest {
         }
         for error in errors {
             manifest.warnings_mut().add_critical_warning(error);
-        }
-        if warn_default_feat {
-            manifest.warnings_mut().add_warning(
-                "`default-features = [\"..\"]` was found in [features]. \
-                Did you mean to use `default = [\"..\"]`?".to_string()
-            );
         }
 
         manifest.feature_gate()?;
