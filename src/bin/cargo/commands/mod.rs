@@ -35,16 +35,11 @@ pub fn builtin() -> Vec<App> {
     ]
 }
 
-pub struct BuiltinExec<'a> {
-    pub exec: fn(&'a mut Config, &'a ArgMatches) -> CliResult,
-    pub alias_for: Option<&'static str>,
-}
-
-pub fn builtin_exec(cmd: &str) -> Option<BuiltinExec> {
-    let exec = match cmd {
+ pub fn builtin_exec(cmd: &str) -> Option<fn(&mut Config, &ArgMatches) -> CliResult> {
+     let f = match cmd {
         "bench" => bench::exec,
-        "build" | "b" => build::exec,
-        "check" | "c" => check::exec,
+        "build" => build::exec,
+        "check" => check::exec,
         "clean" => clean::exec,
         "doc" => doc::exec,
         "fetch" => fetch::exec,
@@ -62,11 +57,11 @@ pub fn builtin_exec(cmd: &str) -> Option<BuiltinExec> {
         "pkgid" => pkgid::exec,
         "publish" => publish::exec,
         "read-manifest" => read_manifest::exec,
-        "run" | "r" => run::exec,
+        "run" => run::exec,
         "rustc" => rustc::exec,
         "rustdoc" => rustdoc::exec,
         "search" => search::exec,
-        "test" | "t" => test::exec,
+        "test" => test::exec,
         "uninstall" => uninstall::exec,
         "update" => update::exec,
         "verify-project" => verify_project::exec,
@@ -74,16 +69,7 @@ pub fn builtin_exec(cmd: &str) -> Option<BuiltinExec> {
         "yank" => yank::exec,
         _ => return None,
     };
-
-    let alias_for = match cmd {
-        "b" => Some("build"),
-        "c" => Some("check"),
-        "r" => Some("run"),
-        "t" => Some("test"),
-        _ => None,
-    };
-
-    Some(BuiltinExec { exec, alias_for })
+    Some(f)
 }
 
 pub mod bench;
