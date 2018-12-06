@@ -1,4 +1,4 @@
-extern crate clap;
+use clap;
 
 use clap::{AppSettings, Arg, ArgMatches};
 
@@ -132,7 +132,7 @@ fn expand_aliases(
     Ok(args)
 }
 
-fn execute_subcommand(config: &mut Config, args: &ArgMatches) -> CliResult {
+fn execute_subcommand(config: &mut Config, args: &ArgMatches<'_>) -> CliResult {
     let (cmd, subcommand_args) = match args.subcommand() {
         (cmd, Some(args)) => (cmd, args),
         _ => {

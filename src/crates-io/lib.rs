@@ -1,13 +1,13 @@
 #![allow(unknown_lints)]
 #![cfg_attr(feature = "cargo-clippy", allow(identity_op))] // used for vertical alignment
 
-extern crate curl;
+
 #[macro_use]
 extern crate failure;
 #[macro_use]
 extern crate serde_derive;
-extern crate serde_json;
-extern crate url;
+use serde_json;
+
 
 use std::collections::BTreeMap;
 use std::fs::File;
@@ -302,7 +302,7 @@ impl Registry {
     }
 }
 
-fn handle(handle: &mut Easy, read: &mut FnMut(&mut [u8]) -> usize) -> Result<String> {
+fn handle(handle: &mut Easy, read: &mut dyn FnMut(&mut [u8]) -> usize) -> Result<String> {
     let mut headers = Vec::new();
     let mut body = Vec::new();
     {

@@ -28,7 +28,7 @@ Explicitly named owners can also modify the set of owners, so take care!
         )
 }
 
-pub fn exec(config: &mut Config, args: &ArgMatches) -> CliResult {
+pub fn exec(config: &mut Config, args: &ArgMatches<'_>) -> CliResult {
     let registry = args.registry(config)?;
     let opts = OwnersOptions {
         krate: args.value_of("crate").map(|s| s.to_string()),
