@@ -3,11 +3,11 @@ use std::collections::HashMap;
 use semver::VersionReq;
 use url::Url;
 
-use core::PackageSet;
-use core::{Dependency, PackageId, Source, SourceId, SourceMap, Summary};
-use sources::config::SourceConfigMap;
-use util::errors::{CargoResult, CargoResultExt};
-use util::{profile, Config};
+use crate::core::PackageSet;
+use crate::core::{Dependency, PackageId, Source, SourceId, SourceMap, Summary};
+use crate::sources::config::SourceConfigMap;
+use crate::util::errors::{CargoResult, CargoResultExt};
+use crate::util::{profile, Config};
 
 /// Source of information about a group of packages.
 ///

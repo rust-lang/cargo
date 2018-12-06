@@ -8,8 +8,8 @@ use std::sync::Arc;
 use lazycell::LazyCell;
 
 use super::{BuildContext, Context, FileFlavor, Kind, Layout, Unit};
-use core::{TargetKind, Workspace};
-use util::{self, CargoResult};
+use crate::core::{TargetKind, Workspace};
+use crate::util::{self, CargoResult};
 
 #[derive(Clone, Hash, Eq, PartialEq, Ord, PartialOrd)]
 pub struct Metadata(u64);

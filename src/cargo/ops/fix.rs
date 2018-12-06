@@ -12,12 +12,12 @@ use rustfix::diagnostics::Diagnostic;
 use rustfix::{self, CodeFix};
 use serde_json;
 
-use core::Workspace;
-use ops::{self, CompileOptions};
-use util::diagnostic_server::{Message, RustfixDiagnosticServer};
-use util::errors::CargoResult;
-use util::paths;
-use util::{existing_vcs_repo, LockServer, LockServerClient};
+use crate::core::Workspace;
+use crate::ops::{self, CompileOptions};
+use crate::util::diagnostic_server::{Message, RustfixDiagnosticServer};
+use crate::util::errors::CargoResult;
+use crate::util::paths;
+use crate::util::{existing_vcs_repo, LockServer, LockServerClient};
 
 const FIX_ENV: &str = "__CARGO_FIX_PLZ";
 const BROKEN_CODE_ENV: &str = "__CARGO_FIX_BROKEN_CODE";

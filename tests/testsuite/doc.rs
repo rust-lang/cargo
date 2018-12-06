@@ -1,13 +1,13 @@
 use std::fs::{self, File};
 use std::io::Read;
 use std::str;
-use support;
+use crate::support;
 
 use glob::glob;
-use support::paths::CargoPathExt;
-use support::registry::Package;
-use support::{basic_lib_manifest, basic_manifest, git, project};
-use support::{is_nightly, rustc_host};
+use crate::support::paths::CargoPathExt;
+use crate::support::registry::Package;
+use crate::support::{basic_lib_manifest, basic_manifest, git, project};
+use crate::support::{is_nightly, rustc_host};
 
 #[test]
 fn simple() {

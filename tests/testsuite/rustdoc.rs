@@ -1,4 +1,4 @@
-use support::{basic_manifest, project};
+use crate::support::{basic_manifest, project};
 
 #[test]
 fn rustdoc_simple() {

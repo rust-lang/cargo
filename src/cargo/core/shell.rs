@@ -5,7 +5,7 @@ use atty;
 use termcolor::Color::{Cyan, Green, Red, Yellow};
 use termcolor::{self, Color, ColorSpec, StandardStream, WriteColor};
 
-use util::errors::CargoResult;
+use crate::util::errors::CargoResult;
 
 /// The requested verbosity of output
 #[derive(Debug, Clone, Copy, PartialEq)]

@@ -5,7 +5,7 @@ use cargo::CargoError;
 use std::borrow::Borrow;
 use std::collections;
 use std::fs;
-use support::{lines_match, paths, project};
+use crate::support::{lines_match, paths, project};
 
 #[test]
 fn read_env_vars_for_config() {

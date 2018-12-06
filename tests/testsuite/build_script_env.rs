@@ -1,7 +1,7 @@
 use std::fs::File;
 
-use support::project;
-use support::sleep_ms;
+use crate::support::project;
+use crate::support::sleep_ms;
 
 #[test]
 fn rerun_if_env_changes() {

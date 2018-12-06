@@ -1,4 +1,4 @@
-use support::{basic_bin_manifest, main_file, project};
+use crate::support::{basic_bin_manifest, main_file, project};
 
 static MANIFEST_OUTPUT: &'static str = r#"
 {

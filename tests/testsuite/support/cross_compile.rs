@@ -3,7 +3,7 @@ use std::process::Command;
 use std::sync::atomic::{AtomicBool, Ordering, ATOMIC_BOOL_INIT};
 use std::sync::{Once, ONCE_INIT};
 
-use support::{basic_bin_manifest, main_file, project};
+use crate::support::{basic_bin_manifest, main_file, project};
 
 pub fn disabled() -> bool {
     // First, disable if ./configure requested so

@@ -1,6 +1,6 @@
-use support::is_nightly;
-use support::paths::CargoPathExt;
-use support::{basic_bin_manifest, basic_lib_manifest, basic_manifest, project};
+use crate::support::is_nightly;
+use crate::support::paths::CargoPathExt;
+use crate::support::{basic_bin_manifest, basic_lib_manifest, basic_manifest, project};
 
 #[test]
 fn cargo_bench_simple() {

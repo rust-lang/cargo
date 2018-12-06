@@ -1,6 +1,6 @@
 use std::env;
-use support::paths::CargoPathExt;
-use support::{basic_manifest, project};
+use crate::support::paths::CargoPathExt;
+use crate::support::{basic_manifest, project};
 
 #[test]
 fn rustc_info_cache() {

@@ -1,4 +1,4 @@
-use support::{basic_lib_manifest, basic_manifest, project};
+use crate::support::{basic_lib_manifest, basic_manifest, project};
 
 #[test]
 fn profile_override_gated() {

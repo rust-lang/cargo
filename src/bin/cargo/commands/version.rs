@@ -1,6 +1,6 @@
-use command_prelude::*;
+use crate::command_prelude::*;
 
-use cli;
+use crate::cli;
 
 pub fn cli() -> App {
     subcommand("version").about("Show version information")

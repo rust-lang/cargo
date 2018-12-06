@@ -54,12 +54,12 @@ use std::time::{Duration, Instant};
 
 use semver;
 
-use core::interning::InternedString;
-use core::PackageIdSpec;
-use core::{Dependency, PackageId, Registry, Summary};
-use util::config::Config;
-use util::errors::CargoResult;
-use util::profile;
+use crate::core::interning::InternedString;
+use crate::core::PackageIdSpec;
+use crate::core::{Dependency, PackageId, Registry, Summary};
+use crate::util::config::Config;
+use crate::util::errors::CargoResult;
+use crate::util::profile;
 
 use self::context::{Activations, Context};
 use self::types::{Candidate, ConflictReason, DepsFrame, GraphNode};

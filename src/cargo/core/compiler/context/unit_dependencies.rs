@@ -19,11 +19,11 @@ use std::cell::RefCell;
 use std::collections::{HashMap, HashSet};
 
 use super::{BuildContext, CompileMode, Kind, Unit};
-use core::dependency::Kind as DepKind;
-use core::package::Downloads;
-use core::profiles::UnitFor;
-use core::{Package, PackageId, Target};
-use CargoResult;
+use crate::core::dependency::Kind as DepKind;
+use crate::core::package::Downloads;
+use crate::core::profiles::UnitFor;
+use crate::core::{Package, PackageId, Target};
+use crate::CargoResult;
 
 struct State<'a: 'tmp, 'cfg: 'a, 'tmp> {
     bcx: &'tmp BuildContext<'a, 'cfg>,

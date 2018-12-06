@@ -2,13 +2,13 @@ use std::collections::{BTreeMap, HashSet};
 
 use termcolor::Color::{self, Cyan, Green, Red};
 
-use core::registry::PackageRegistry;
-use core::resolver::Method;
-use core::PackageId;
-use core::{Resolve, SourceId, Workspace};
-use ops;
-use util::config::Config;
-use util::CargoResult;
+use crate::core::registry::PackageRegistry;
+use crate::core::resolver::Method;
+use crate::core::PackageId;
+use crate::core::{Resolve, SourceId, Workspace};
+use crate::ops;
+use crate::util::config::Config;
+use crate::util::CargoResult;
 
 pub struct UpdateOptions<'a> {
     pub config: &'a Config,

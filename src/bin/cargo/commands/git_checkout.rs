@@ -1,4 +1,4 @@
-use command_prelude::*;
+use crate::command_prelude::*;
 
 use cargo::core::{GitReference, Source, SourceId};
 use cargo::sources::GitSource;

@@ -5,9 +5,9 @@ use std::str::FromStr;
 use serde::de;
 use serde::ser;
 
-use core::{Dependency, Package, PackageId, SourceId, Workspace};
-use util::errors::{CargoError, CargoResult, CargoResultExt};
-use util::{internal, Graph};
+use crate::core::{Dependency, Package, PackageId, SourceId, Workspace};
+use crate::util::errors::{CargoError, CargoResult, CargoResultExt};
+use crate::util::{internal, Graph};
 
 use super::Resolve;
 

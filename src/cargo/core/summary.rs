@@ -6,11 +6,11 @@ use std::rc::Rc;
 
 use serde::{Serialize, Serializer};
 
-use core::interning::InternedString;
-use core::{Dependency, PackageId, SourceId};
+use crate::core::interning::InternedString;
+use crate::core::{Dependency, PackageId, SourceId};
 use semver::Version;
 
-use util::CargoResult;
+use crate::util::CargoResult;
 
 /// Subset of a `Manifest`. Contains only the most important information about
 /// a package.

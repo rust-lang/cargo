@@ -3,11 +3,11 @@ use std::io::prelude::*;
 use std::path::PathBuf;
 
 use cargo::util::paths::remove_dir_all;
-use support::cargo_process;
-use support::git;
-use support::paths::{self, CargoPathExt};
-use support::registry::{self, Package, Dependency};
-use support::{basic_manifest, project};
+use crate::support::cargo_process;
+use crate::support::git;
+use crate::support::paths::{self, CargoPathExt};
+use crate::support::registry::{self, Package, Dependency};
+use crate::support::{basic_manifest, project};
 use url::Url;
 
 fn registry_path() -> PathBuf {

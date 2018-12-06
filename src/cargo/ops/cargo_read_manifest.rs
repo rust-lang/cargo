@@ -3,11 +3,11 @@ use std::fs;
 use std::io;
 use std::path::{Path, PathBuf};
 
-use core::{EitherManifest, Package, PackageId, SourceId};
-use util::errors::{CargoError, CargoResult};
-use util::important_paths::find_project_manifest_exact;
-use util::toml::read_manifest;
-use util::{self, Config};
+use crate::core::{EitherManifest, Package, PackageId, SourceId};
+use crate::util::errors::{CargoError, CargoResult};
+use crate::util::important_paths::find_project_manifest_exact;
+use crate::util::toml::read_manifest;
+use crate::util::{self, Config};
 
 pub fn read_package(
     path: &Path,

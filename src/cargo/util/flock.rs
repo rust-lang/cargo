@@ -8,9 +8,9 @@ use fs2::{lock_contended_error, FileExt};
 #[allow(unused_imports)]
 use libc;
 
-use util::Config;
-use util::paths;
-use util::errors::{CargoError, CargoResult, CargoResultExt};
+use crate::util::Config;
+use crate::util::paths;
+use crate::util::errors::{CargoError, CargoResult, CargoResultExt};
 
 pub struct FileLock {
     f: Option<File>,
@@ -270,7 +270,7 @@ fn acquire(
     config: &Config,
     msg: &str,
     path: &Path,
-    try: &Fn() -> io::Result<()>,
+    r#try: &Fn() -> io::Result<()>,
     block: &Fn() -> io::Result<()>,
 ) -> CargoResult<()> {
     // File locking on Unix is currently implemented via `flock`, which is known
@@ -287,7 +287,7 @@ fn acquire(
         return Ok(());
     }
 
-    match try() {
+    match r#try() {
         Ok(()) => return Ok(()),
 
         // In addition to ignoring NFS which is commonly not working we also

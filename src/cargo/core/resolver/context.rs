@@ -1,11 +1,11 @@
 use std::collections::{BTreeMap, HashMap, HashSet};
 use std::rc::Rc;
 
-use core::interning::InternedString;
-use core::{Dependency, FeatureValue, PackageId, SourceId, Summary};
+use crate::core::interning::InternedString;
+use crate::core::{Dependency, FeatureValue, PackageId, SourceId, Summary};
 use im_rc;
-use util::CargoResult;
-use util::Graph;
+use crate::util::CargoResult;
+use crate::util::Graph;
 
 use super::errors::ActivateResult;
 use super::types::{ConflictReason, DepInfo, GraphNode, Method, RcList, RegistryQueryer};

@@ -8,22 +8,22 @@ use std::{cmp, env};
 use curl::easy::{Easy, InfoType, SslOpt};
 use git2;
 use log::Level;
-use registry::{NewCrate, NewCrateDependency, Registry};
+use crate::registry::{NewCrate, NewCrateDependency, Registry};
 
 use url::percent_encoding::{percent_encode, QUERY_ENCODE_SET};
 
-use core::dependency::Kind;
-use core::manifest::ManifestMetadata;
-use core::source::Source;
-use core::{Package, SourceId, Workspace};
-use ops;
-use sources::{RegistrySource, SourceConfigMap};
-use util::config::{self, Config};
-use util::errors::{CargoResult, CargoResultExt};
-use util::important_paths::find_root_manifest_for_wd;
-use util::paths;
-use util::ToUrl;
-use version;
+use crate::core::dependency::Kind;
+use crate::core::manifest::ManifestMetadata;
+use crate::core::source::Source;
+use crate::core::{Package, SourceId, Workspace};
+use crate::ops;
+use crate::sources::{RegistrySource, SourceConfigMap};
+use crate::util::config::{self, Config};
+use crate::util::errors::{CargoResult, CargoResultExt};
+use crate::util::important_paths::find_root_manifest_for_wd;
+use crate::util::paths;
+use crate::util::ToUrl;
+use crate::version;
 
 pub struct RegistryConfig {
     pub index: Option<String>,

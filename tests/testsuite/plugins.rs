@@ -1,5 +1,5 @@
-use support::{basic_manifest, project};
-use support::{is_nightly, rustc_host};
+use crate::support::{basic_manifest, project};
+use crate::support::{is_nightly, rustc_host};
 
 #[test]
 fn plugin_to_the_max() {

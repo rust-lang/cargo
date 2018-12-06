@@ -1,6 +1,6 @@
 use cargo::util::paths::dylib_path_envvar;
-use support;
-use support::{basic_bin_manifest, basic_lib_manifest, project, Project};
+use crate::support;
+use crate::support::{basic_bin_manifest, basic_lib_manifest, project, Project};
 
 #[test]
 fn simple() {

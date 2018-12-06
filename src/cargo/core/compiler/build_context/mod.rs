@@ -3,11 +3,11 @@ use std::env;
 use std::path::{Path, PathBuf};
 use std::str;
 
-use core::profiles::Profiles;
-use core::{Dependency, Workspace};
-use core::{PackageId, PackageSet, Resolve};
-use util::errors::CargoResult;
-use util::{profile, Cfg, CfgExpr, Config, Rustc};
+use crate::core::profiles::Profiles;
+use crate::core::{Dependency, Workspace};
+use crate::core::{PackageId, PackageSet, Resolve};
+use crate::util::errors::CargoResult;
+use crate::util::{profile, Cfg, CfgExpr, Config, Rustc};
 
 use super::{BuildConfig, BuildOutput, Kind, Unit};
 

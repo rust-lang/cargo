@@ -1,7 +1,7 @@
 use glob::glob;
 use serde_json;
 use std::str;
-use support::{
+use crate::support::{
     basic_lib_manifest, basic_manifest, is_coarse_mtime, project, registry::Package, rustc_host,
     Project,
 };

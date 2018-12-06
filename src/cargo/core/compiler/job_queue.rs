@@ -11,14 +11,14 @@ use crossbeam_utils;
 use crossbeam_utils::thread::Scope;
 use jobserver::{Acquired, HelperThread};
 
-use core::profiles::Profile;
-use core::{PackageId, Target, TargetKind};
-use handle_error;
-use util;
-use util::diagnostic_server::{self, DiagnosticPrinter};
-use util::{internal, profile, CargoResult, CargoResultExt, ProcessBuilder};
-use util::{Config, DependencyQueue, Dirty, Fresh, Freshness};
-use util::{Progress, ProgressStyle};
+use crate::core::profiles::Profile;
+use crate::core::{PackageId, Target, TargetKind};
+use crate::handle_error;
+use crate::util;
+use crate::util::diagnostic_server::{self, DiagnosticPrinter};
+use crate::util::{internal, profile, CargoResult, CargoResultExt, ProcessBuilder};
+use crate::util::{Config, DependencyQueue, Dirty, Fresh, Freshness};
+use crate::util::{Progress, ProgressStyle};
 
 use super::context::OutputFile;
 use super::job::Job;

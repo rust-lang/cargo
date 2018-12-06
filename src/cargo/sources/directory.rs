@@ -8,12 +8,12 @@ use hex;
 
 use serde_json;
 
-use core::source::MaybePackage;
-use core::{Dependency, Package, PackageId, Source, SourceId, Summary};
-use sources::PathSource;
-use util::errors::{CargoResult, CargoResultExt};
-use util::paths;
-use util::{Config, Sha256};
+use crate::core::source::MaybePackage;
+use crate::core::{Dependency, Package, PackageId, Source, SourceId, Summary};
+use crate::sources::PathSource;
+use crate::util::errors::{CargoResult, CargoResultExt};
+use crate::util::paths;
+use crate::util::{Config, Sha256};
 
 pub struct DirectorySource<'cfg> {
     source_id: SourceId,

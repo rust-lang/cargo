@@ -6,10 +6,10 @@ use std::thread;
 use std::time::Duration;
 
 use cargo::util::paths::remove_dir_all;
-use support::paths::CargoPathExt;
-use support::registry::Package;
-use support::{basic_manifest, cross_compile, project};
-use support::{rustc_host, sleep_ms};
+use crate::support::paths::CargoPathExt;
+use crate::support::registry::Package;
+use crate::support::{basic_manifest, cross_compile, project};
+use crate::support::{rustc_host, sleep_ms};
 
 #[test]
 fn custom_build_script_failed() {

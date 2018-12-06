@@ -4,10 +4,10 @@ use std::ops::Range;
 use std::rc::Rc;
 use std::time::{Duration, Instant};
 
-use core::interning::InternedString;
-use core::{Dependency, PackageId, PackageIdSpec, Registry, Summary};
-use util::errors::CargoResult;
-use util::Config;
+use crate::core::interning::InternedString;
+use crate::core::{Dependency, PackageId, PackageIdSpec, Registry, Summary};
+use crate::util::errors::CargoResult;
+use crate::util::Config;
 
 use im_rc;
 

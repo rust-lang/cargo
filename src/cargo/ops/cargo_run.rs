@@ -1,9 +1,9 @@
 use std::iter;
 use std::path::Path;
 
-use ops;
-use util::{self, CargoResult, ProcessError};
-use core::{TargetKind, Workspace, nightly_features_allowed};
+use crate::ops;
+use crate::util::{self, CargoResult, ProcessError};
+use crate::core::{TargetKind, Workspace, nightly_features_allowed};
 
 pub fn run(
     ws: &Workspace,

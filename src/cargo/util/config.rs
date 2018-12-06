@@ -22,17 +22,17 @@ use lazycell::LazyCell;
 use serde::{de, de::IntoDeserializer};
 use toml;
 
-use core::profiles::ConfigProfiles;
-use core::shell::Verbosity;
-use core::{CliUnstable, Shell, SourceId, Workspace};
-use ops;
+use crate::core::profiles::ConfigProfiles;
+use crate::core::shell::Verbosity;
+use crate::core::{CliUnstable, Shell, SourceId, Workspace};
+use crate::ops;
 use url::Url;
-use util::errors::{internal, CargoResult, CargoResultExt};
-use util::paths;
-use util::toml as cargo_toml;
-use util::Filesystem;
-use util::Rustc;
-use util::ToUrl;
+use crate::util::errors::{internal, CargoResult, CargoResultExt};
+use crate::util::paths;
+use crate::util::toml as cargo_toml;
+use crate::util::Filesystem;
+use crate::util::Rustc;
+use crate::util::ToUrl;
 
 use self::ConfigValue as CV;
 

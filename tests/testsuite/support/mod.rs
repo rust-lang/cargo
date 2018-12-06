@@ -382,7 +382,7 @@ impl Project {
     ///             .with_stdout("bar\n")
     ///             .run();
     pub fn process<T: AsRef<OsStr>>(&self, program: T) -> Execs {
-        let mut p = ::support::process(program);
+        let mut p = crate::support::process(program);
         p.cwd(self.root());
         execs().with_process_builder(p)
     }

@@ -6,8 +6,8 @@ use std::path::PathBuf;
 use semver::Version;
 
 use super::BuildContext;
-use core::{Edition, Package, PackageId, Target, TargetKind};
-use util::{self, join_paths, process, CargoResult, CfgExpr, Config, ProcessBuilder};
+use crate::core::{Edition, Package, PackageId, Target, TargetKind};
+use crate::util::{self, join_paths, process, CargoResult, CfgExpr, Config, ProcessBuilder};
 
 pub struct Doctest {
     /// The package being doctested.
@@ -205,7 +205,7 @@ impl<'cfg> Compilation<'cfg> {
         let metadata = pkg.manifest().metadata();
 
         let cargo_exe = self.config.cargo_exe()?;
-        cmd.env(::CARGO_ENV, cargo_exe);
+        cmd.env(crate::CARGO_ENV, cargo_exe);
 
         // When adding new environment variables depending on
         // crate properties which might require rebuild upon change

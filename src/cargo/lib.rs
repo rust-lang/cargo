@@ -68,11 +68,11 @@ use std::fmt;
 use failure::Error;
 use serde::ser;
 
-use core::shell::Verbosity::Verbose;
-use core::Shell;
+use crate::core::shell::Verbosity::Verbose;
+use crate::core::Shell;
 
-pub use util::errors::Internal;
-pub use util::{CargoError, CargoResult, CliError, CliResult, Config};
+pub use crate::util::errors::Internal;
+pub use crate::util::{CargoError, CargoResult, CliError, CliResult, Config};
 
 pub const CARGO_ENV: &str = "CARGO";
 
