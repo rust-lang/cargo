@@ -63,28 +63,27 @@ fn main() {
 
 fn aliased_command(config: &Config, command: &str) -> CargoResult<Option<Vec<String>>> {
     let alias_name = format!("alias.{}", command);
-    let mut result = Ok(None);
-    match config.get_string(&alias_name) {
-        Ok(value) => {
-            if let Some(record) = value {
-                let alias_commands = record
-                    .val
-                    .split_whitespace()
-                    .map(|s| s.to_string())
-                    .collect();
-                result = Ok(Some(alias_commands));
-            }
-        }
-        Err(_) => {
-            let value = config.get_list(&alias_name)?;
-            if let Some(record) = value {
-                let alias_commands: Vec<String> =
-                    record.val.iter().map(|s| s.0.to_string()).collect();
-                result = Ok(Some(alias_commands));
-            }
-        }
-    }
-    result
+    let user_alias = match config.get_string(&alias_name) {
+        Ok(Some(record)) => Some(
+            record
+                .val
+                .split_whitespace()
+                .map(|s| s.to_string())
+                .collect(),
+        ),
+        Ok(None) => None,
+        Err(_) => config
+            .get_list(&alias_name)?
+            .map(|record| record.val.iter().map(|s| s.0.to_string()).collect()),
+    };
+    let result = user_alias.or_else(|| match command {
+        "b" => Some(vec!["build".to_string()]),
+        "c" => Some(vec!["check".to_string()]),
+        "r" => Some(vec!["run".to_string()]),
+        "t" => Some(vec!["test".to_string()]),
+        _ => None,
+    });
+    Ok(result)
 }
 
 /// List all runnable commands

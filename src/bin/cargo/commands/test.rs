@@ -4,7 +4,7 @@ use cargo::ops::{self, CompileFilter};
 
 pub fn cli() -> App {
     subcommand("test")
-        // subcommand aliases are handled in commands::builtin_exec() and cli::expand_aliases()
+        // subcommand aliases are handled in aliased_command()
         // .alias("t")
         .setting(AppSettings::TrailingVarArg)
         .about("Execute all unit and integration tests of a local package")
