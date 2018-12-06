@@ -10,9 +10,9 @@ use semver;
 use serde::de;
 use serde::ser;
 
-use core::interning::InternedString;
-use core::source::SourceId;
-use util::{CargoResult, ToSemver};
+use crate::core::interning::InternedString;
+use crate::core::source::SourceId;
+use crate::util::{CargoResult, ToSemver};
 
 lazy_static! {
     static ref PACKAGE_ID_CACHE: Mutex<HashSet<&'static PackageIdInner>> =
@@ -202,9 +202,9 @@ impl fmt::Debug for PackageId {
 #[cfg(test)]
 mod tests {
     use super::PackageId;
-    use core::source::SourceId;
-    use sources::CRATES_IO_INDEX;
-    use util::ToUrl;
+    use crate::core::source::SourceId;
+    use crate::sources::CRATES_IO_INDEX;
+    use crate::util::ToUrl;
 
     #[test]
     fn invalid_version_handled_nicely() {

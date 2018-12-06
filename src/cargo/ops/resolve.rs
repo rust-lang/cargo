@@ -1,12 +1,12 @@
 use std::collections::HashSet;
 
-use core::registry::PackageRegistry;
-use core::resolver::{self, Method, Resolve};
-use core::{PackageId, PackageIdSpec, PackageSet, Source, SourceId, Workspace};
-use ops;
-use sources::PathSource;
-use util::errors::{CargoResult, CargoResultExt};
-use util::profile;
+use crate::core::registry::PackageRegistry;
+use crate::core::resolver::{self, Method, Resolve};
+use crate::core::{PackageId, PackageIdSpec, PackageSet, Source, SourceId, Workspace};
+use crate::ops;
+use crate::sources::PathSource;
+use crate::util::errors::{CargoResult, CargoResultExt};
+use crate::util::profile;
 
 /// Resolve all dependencies for the workspace using the previous
 /// lockfile as a guide if present.

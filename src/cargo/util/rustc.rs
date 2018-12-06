@@ -9,8 +9,8 @@ use std::env;
 
 use serde_json;
 
-use util::{self, internal, profile, CargoResult, ProcessBuilder};
-use util::paths;
+use crate::util::{self, internal, profile, CargoResult, ProcessBuilder};
+use crate::util::paths;
 
 /// Information on the `rustc` executable
 #[derive(Debug)]

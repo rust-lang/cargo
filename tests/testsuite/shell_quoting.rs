@@ -2,7 +2,7 @@
 //! in the output, their arguments are quoted properly
 //! so that the command can be run in a terminal
 
-use support::project;
+use crate::support::project;
 
 #[test]
 fn features_are_quoted() {

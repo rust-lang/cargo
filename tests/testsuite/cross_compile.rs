@@ -1,5 +1,5 @@
-use support::{basic_bin_manifest, basic_manifest, cross_compile, project};
-use support::{is_nightly, rustc_host};
+use crate::support::{basic_bin_manifest, basic_manifest, cross_compile, project};
+use crate::support::{is_nightly, rustc_host};
 
 #[test]
 fn simple_cross() {

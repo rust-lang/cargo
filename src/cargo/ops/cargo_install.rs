@@ -10,17 +10,17 @@ use semver::{Version, VersionReq};
 use tempfile::Builder as TempFileBuilder;
 use toml;
 
-use core::compiler::{DefaultExecutor, Executor};
-use core::package::PackageSet;
-use core::source::SourceMap;
-use core::{Dependency, Edition, Package, PackageIdSpec, Source, SourceId};
-use core::{PackageId, Workspace};
-use ops::{self, CompileFilter};
-use sources::{GitSource, PathSource, SourceConfigMap};
-use util::errors::{CargoResult, CargoResultExt};
-use util::paths;
-use util::{internal, Config};
-use util::{FileLock, Filesystem};
+use crate::core::compiler::{DefaultExecutor, Executor};
+use crate::core::package::PackageSet;
+use crate::core::source::SourceMap;
+use crate::core::{Dependency, Edition, Package, PackageIdSpec, Source, SourceId};
+use crate::core::{PackageId, Workspace};
+use crate::ops::{self, CompileFilter};
+use crate::sources::{GitSource, PathSource, SourceConfigMap};
+use crate::util::errors::{CargoResult, CargoResultExt};
+use crate::util::paths;
+use crate::util::{internal, Config};
+use crate::util::{FileLock, Filesystem};
 
 #[derive(Deserialize, Serialize)]
 #[serde(untagged)]
@@ -101,7 +101,7 @@ pub fn install(
             ) {
                 Ok(()) => succeeded.push(krate),
                 Err(e) => {
-                    ::handle_error(&e, &mut opts.config.shell());
+                    crate::handle_error(&e, &mut opts.config.shell());
                     failed.push(krate)
                 }
             }
@@ -731,7 +731,7 @@ pub fn uninstall(
             match uninstall_one(&root, spec, bins, config) {
                 Ok(()) => succeeded.push(spec),
                 Err(e) => {
-                    ::handle_error(&e, &mut config.shell());
+                    crate::handle_error(&e, &mut config.shell());
                     failed.push(spec)
                 }
             }

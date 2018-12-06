@@ -1,5 +1,5 @@
-use support::registry::Package;
-use support::{basic_manifest, project};
+use crate::support::registry::Package;
+use crate::support::{basic_manifest, project};
 
 #[test]
 fn bad1() {

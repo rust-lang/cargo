@@ -6,7 +6,7 @@ use cargo::{self, CliResult, Config};
 
 use super::commands;
 use super::list_commands;
-use command_prelude::*;
+use crate::command_prelude::*;
 
 pub fn main(config: &mut Config) -> CliResult {
     let args = match cli().get_matches_safe() {

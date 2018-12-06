@@ -3,7 +3,7 @@ use std::path::Path;
 
 use serde::ser;
 
-use util::{CargoResult, CargoResultExt, Config, RustfixDiagnosticServer};
+use crate::util::{CargoResult, CargoResultExt, Config, RustfixDiagnosticServer};
 
 /// Configuration information for a rustc build.
 #[derive(Debug)]

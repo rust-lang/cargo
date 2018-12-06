@@ -5,9 +5,9 @@ use std::path::Path;
 use failure::Fail;
 use opener;
 
-use core::Workspace;
-use ops;
-use util::CargoResult;
+use crate::core::Workspace;
+use crate::ops;
+use crate::util::CargoResult;
 
 /// Strongly typed options for the `cargo doc` command.
 #[derive(Debug)]

@@ -1,4 +1,4 @@
-use support::{basic_bin_manifest, basic_manifest, project};
+use crate::support::{basic_bin_manifest, basic_manifest, project};
 
 #[test]
 fn build_lib_only() {

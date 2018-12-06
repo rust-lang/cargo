@@ -5,7 +5,7 @@ use std::process::{ExitStatus, Output};
 use std::str;
 use std::path::PathBuf;
 
-use core::{TargetKind, Workspace};
+use crate::core::{TargetKind, Workspace};
 use failure::{Context, Error, Fail};
 use clap;
 

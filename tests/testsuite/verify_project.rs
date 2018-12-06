@@ -1,4 +1,4 @@
-use support::{basic_bin_manifest, main_file, project};
+use crate::support::{basic_bin_manifest, main_file, project};
 
 fn verify_project_success_output() -> String {
     r#"{"success":"true"}"#.into()

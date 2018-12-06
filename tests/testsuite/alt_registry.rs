@@ -1,7 +1,7 @@
 use std::fs::File;
 use std::io::Write;
-use support::registry::{self, alt_api_path, Package};
-use support::{basic_manifest, paths, project};
+use crate::support::registry::{self, alt_api_path, Package};
+use crate::support::{basic_manifest, paths, project};
 
 #[test]
 fn is_feature_gated() {

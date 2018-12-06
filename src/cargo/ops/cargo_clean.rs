@@ -2,13 +2,13 @@ use std::collections::HashMap;
 use std::fs;
 use std::path::Path;
 
-use core::compiler::{BuildConfig, BuildContext, CompileMode, Context, Kind, Unit};
-use core::profiles::UnitFor;
-use core::Workspace;
-use ops;
-use util::errors::{CargoResult, CargoResultExt};
-use util::paths;
-use util::Config;
+use crate::core::compiler::{BuildConfig, BuildContext, CompileMode, Context, Kind, Unit};
+use crate::core::profiles::UnitFor;
+use crate::core::Workspace;
+use crate::ops;
+use crate::util::errors::{CargoResult, CargoResultExt};
+use crate::util::paths;
+use crate::util::Config;
 
 pub struct CleanOptions<'a> {
     pub config: &'a Config,

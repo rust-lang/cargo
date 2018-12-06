@@ -5,9 +5,9 @@ use semver::Version;
 use serde::{de, ser};
 use url::Url;
 
-use core::PackageId;
-use util::errors::{CargoResult, CargoResultExt};
-use util::{ToSemver, ToUrl};
+use crate::core::PackageId;
+use crate::util::errors::{CargoResult, CargoResultExt};
+use crate::util::{ToSemver, ToUrl};
 
 /// Some or all of the data required to identify a package:
 ///
@@ -277,7 +277,7 @@ impl<'de> de::Deserialize<'de> for PackageIdSpec {
 #[cfg(test)]
 mod tests {
     use super::PackageIdSpec;
-    use core::{PackageId, SourceId};
+    use crate::core::{PackageId, SourceId};
     use semver::Version;
     use url::Url;
 

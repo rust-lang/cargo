@@ -2,7 +2,7 @@ use std::path::Path;
 
 use url::Url;
 
-use util::CargoResult;
+use crate::util::CargoResult;
 
 /// A type that can be converted to a Url
 pub trait ToUrl {

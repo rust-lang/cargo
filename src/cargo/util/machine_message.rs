@@ -3,7 +3,7 @@ use std::path::PathBuf;
 use serde::ser;
 use serde_json::{self, value::RawValue};
 
-use core::{PackageId, Target};
+use crate::core::{PackageId, Target};
 
 pub trait Message: ser::Serialize {
     fn reason(&self) -> &str;

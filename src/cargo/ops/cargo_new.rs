@@ -7,10 +7,10 @@ use std::path::{Path, PathBuf};
 use git2::Config as GitConfig;
 use git2::Repository as GitRepository;
 
-use core::{compiler, Workspace};
-use util::errors::{CargoResult, CargoResultExt};
-use util::{existing_vcs_repo, internal, FossilRepo, GitRepo, HgRepo, PijulRepo};
-use util::{paths, Config};
+use crate::core::{compiler, Workspace};
+use crate::util::errors::{CargoResult, CargoResultExt};
+use crate::util::{existing_vcs_repo, internal, FossilRepo, GitRepo, HgRepo, PijulRepo};
+use crate::util::{paths, Config};
 
 use toml;
 

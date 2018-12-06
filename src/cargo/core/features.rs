@@ -52,7 +52,7 @@ use std::str::FromStr;
 
 use failure::Error;
 
-use util::errors::CargoResult;
+use crate::util::errors::CargoResult;
 
 /// The edition of the compiler (RFC 2052)
 #[derive(Clone, Copy, Debug, Hash, PartialOrd, Ord, Eq, PartialEq, Serialize, Deserialize)]
@@ -370,7 +370,7 @@ fn channel() -> String {
             return "dev".to_string();
         }
     }
-    ::version()
+    crate::version()
         .cfg_info
         .map(|c| c.release_channel)
         .unwrap_or_else(|| String::from("dev"))

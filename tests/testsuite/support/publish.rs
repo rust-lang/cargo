@@ -2,8 +2,8 @@ use std::fs::{self, File};
 use std::io::prelude::*;
 use std::path::PathBuf;
 
-use support::git::{repo, Repository};
-use support::paths;
+use crate::support::git::{repo, Repository};
+use crate::support::paths;
 
 use url::Url;
 

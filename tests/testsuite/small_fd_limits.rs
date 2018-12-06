@@ -4,10 +4,10 @@ use std::path::PathBuf;
 use std::process::Command;
 
 use git2;
-use support::git;
-use support::paths;
-use support::project;
-use support::registry::Package;
+use crate::support::git;
+use crate::support::paths;
+use crate::support::project;
+use crate::support::registry::Package;
 
 use url::Url;
 

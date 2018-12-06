@@ -1,8 +1,8 @@
 use std::fs::{self, File};
 use std::io::Write;
 
-use support::rustc_host;
-use support::{basic_lib_manifest, basic_manifest, paths, project, project_in_home};
+use crate::support::rustc_host;
+use crate::support::{basic_lib_manifest, basic_manifest, paths, project, project_in_home};
 
 #[test]
 fn env_rustflags_normal_source() {

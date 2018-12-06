@@ -1,4 +1,4 @@
-use support::{basic_bin_manifest, project};
+use crate::support::{basic_bin_manifest, project};
 
 #[test]
 fn alias_incorrect_config_type() {

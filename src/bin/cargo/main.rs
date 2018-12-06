@@ -28,7 +28,7 @@ use cargo::util::{CliError, ProcessError};
 mod cli;
 mod commands;
 
-use command_prelude::*;
+use crate::command_prelude::*;
 
 fn main() {
     #[cfg(feature = "pretty-env-logger")]

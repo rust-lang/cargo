@@ -3,7 +3,7 @@ use std::io::prelude::*;
 use std::path::PathBuf;
 
 use flate2::read::GzDecoder;
-use support::{cross_compile, project, publish};
+use crate::support::{cross_compile, project, publish};
 use tar::Archive;
 
 #[test]

@@ -3,7 +3,7 @@ use std::fs::create_dir;
 
 use git2;
 
-use util::{process, CargoResult};
+use crate::util::{process, CargoResult};
 
 // Check if we are in an existing repo. We define that to be true if either:
 //

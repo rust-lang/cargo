@@ -1,5 +1,5 @@
 use cargo;
-use support::project;
+use crate::support::project;
 
 #[test]
 fn simple() {

@@ -1,5 +1,5 @@
-use support::registry::Package;
-use support::{basic_bin_manifest, basic_lib_manifest, main_file, project};
+use crate::support::registry::Package;
+use crate::support::{basic_bin_manifest, basic_lib_manifest, main_file, project};
 
 #[test]
 fn cargo_metadata_simple() {

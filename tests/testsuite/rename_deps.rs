@@ -1,7 +1,7 @@
-use support::git;
-use support::paths;
-use support::registry::Package;
-use support::{basic_manifest, project};
+use crate::support::git;
+use crate::support::paths;
+use crate::support::registry::Package;
+use crate::support::{basic_manifest, project};
 
 #[test]
 fn rename_dependency() {

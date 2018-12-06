@@ -3,13 +3,13 @@ use std::fs::{self, File};
 use std::io::prelude::*;
 
 use cargo::util::paths::dylib_path_envvar;
-use support::paths::{root, CargoPathExt};
-use support::registry::Package;
-use support::ProjectBuilder;
-use support::{
+use crate::support::paths::{root, CargoPathExt};
+use crate::support::registry::Package;
+use crate::support::ProjectBuilder;
+use crate::support::{
     basic_bin_manifest, basic_lib_manifest, basic_manifest, is_nightly, rustc_host, sleep_ms,
 };
-use support::{main_file, project, Execs};
+use crate::support::{main_file, project, Execs};
 
 #[test]
 fn cargo_compile_simple() {

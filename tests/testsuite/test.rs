@@ -2,10 +2,10 @@ use std::fs::File;
 use std::io::prelude::*;
 
 use cargo;
-use support::paths::CargoPathExt;
-use support::registry::Package;
-use support::{basic_bin_manifest, basic_lib_manifest, basic_manifest, cargo_exe, project};
-use support::{is_nightly, rustc_host, sleep_ms};
+use crate::support::paths::CargoPathExt;
+use crate::support::registry::Package;
+use crate::support::{basic_bin_manifest, basic_lib_manifest, basic_manifest, cargo_exe, project};
+use crate::support::{is_nightly, rustc_host, sleep_ms};
 
 #[test]
 fn cargo_test_simple() {

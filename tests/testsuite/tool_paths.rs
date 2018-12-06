@@ -1,5 +1,5 @@
-use support::rustc_host;
-use support::{basic_lib_manifest, project};
+use crate::support::rustc_host;
+use crate::support::{basic_lib_manifest, project};
 
 #[test]
 fn pathless_tools() {

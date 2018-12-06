@@ -7,16 +7,16 @@ use std::slice;
 use glob::glob;
 use url::Url;
 
-use core::profiles::Profiles;
-use core::registry::PackageRegistry;
-use core::{Dependency, PackageIdSpec};
-use core::{EitherManifest, Package, SourceId, VirtualManifest};
-use ops;
-use sources::PathSource;
-use util::errors::{CargoResult, CargoResultExt, ManifestError};
-use util::paths;
-use util::toml::read_manifest;
-use util::{Config, Filesystem};
+use crate::core::profiles::Profiles;
+use crate::core::registry::PackageRegistry;
+use crate::core::{Dependency, PackageIdSpec};
+use crate::core::{EitherManifest, Package, SourceId, VirtualManifest};
+use crate::ops;
+use crate::sources::PathSource;
+use crate::util::errors::{CargoResult, CargoResultExt, ManifestError};
+use crate::util::paths;
+use crate::util::toml::read_manifest;
+use crate::util::{Config, Filesystem};
 
 /// The core abstraction in Cargo for working with a workspace of crates.
 ///

@@ -2,7 +2,7 @@ use std::str::{self, FromStr};
 use std::iter;
 use std::fmt;
 
-use util::{CargoError, CargoResult};
+use crate::util::{CargoError, CargoResult};
 
 #[derive(Eq, PartialEq, Hash, Ord, PartialOrd, Clone, Debug)]
 pub enum Cfg {
@@ -138,9 +138,9 @@ impl<'a> Parser<'a> {
                 self.t.next();
                 let mut e = Vec::new();
                 self.eat(&Token::LeftParen)?;
-                while !self.try(&Token::RightParen) {
+                while !self.r#try(&Token::RightParen) {
                     e.push(self.expr()?);
-                    if !self.try(&Token::Comma) {
+                    if !self.r#try(&Token::Comma) {
                         self.eat(&Token::RightParen)?;
                         break;
                     }
@@ -170,7 +170,7 @@ impl<'a> Parser<'a> {
     fn cfg(&mut self) -> CargoResult<Cfg> {
         match self.t.next() {
             Some(Ok(Token::Ident(name))) => {
-                let e = if self.try(&Token::Equals) {
+                let e = if self.r#try(&Token::Equals) {
                     let val = match self.t.next() {
                         Some(Ok(Token::String(s))) => s,
                         Some(Ok(t)) => bail!("expected a string, found {}", t.classify()),
@@ -189,7 +189,7 @@ impl<'a> Parser<'a> {
         }
     }
 
-    fn try(&mut self, token: &Token<'a>) -> bool {
+    fn r#try(&mut self, token: &Token<'a>) -> bool {
         match self.t.peek() {
             Some(&Ok(ref t)) if token == t => {}
             _ => return false,

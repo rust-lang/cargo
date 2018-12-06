@@ -3,9 +3,9 @@ use std::io::prelude::*;
 
 use cargo::core::Shell;
 use cargo::util::config::Config;
-use support::cargo_process;
-use support::install::cargo_home;
-use support::registry::registry;
+use crate::support::cargo_process;
+use crate::support::install::cargo_home;
+use crate::support::registry::registry;
 use toml;
 
 const TOKEN: &str = "test-token";

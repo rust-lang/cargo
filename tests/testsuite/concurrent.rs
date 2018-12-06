@@ -8,11 +8,11 @@ use std::time::Duration;
 use std::{env, str};
 
 use git2;
-use support::cargo_process;
-use support::git;
-use support::install::{cargo_home, assert_has_installed_exe};
-use support::registry::Package;
-use support::{basic_manifest, execs, project};
+use crate::support::cargo_process;
+use crate::support::git;
+use crate::support::install::{cargo_home, assert_has_installed_exe};
+use crate::support::registry::Package;
+use crate::support::{basic_manifest, execs, project};
 
 fn pkg(name: &str, vers: &str) {
     Package::new(name, vers)

@@ -1,5 +1,5 @@
-use support::is_nightly;
-use support::{basic_manifest, project};
+use crate::support::is_nightly;
+use crate::support::{basic_manifest, project};
 
 #[test]
 fn custom_target_minimal() {

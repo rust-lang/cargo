@@ -6,8 +6,8 @@ use std::thread;
 
 use bufstream::BufStream;
 use git2;
-use support::paths;
-use support::{basic_manifest, project};
+use crate::support::paths;
+use crate::support::{basic_manifest, project};
 
 // Test that HTTP auth is offered from `credential.helper`
 #[test]

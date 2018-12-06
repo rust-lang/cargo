@@ -8,10 +8,10 @@ use std::sync::atomic::{AtomicBool, Ordering};
 use std::sync::Arc;
 use std::thread;
 
-use support::paths::{self, CargoPathExt};
-use support::sleep_ms;
-use support::{basic_lib_manifest, basic_manifest, git, main_file, path2url, project};
-use support::Project;
+use crate::support::paths::{self, CargoPathExt};
+use crate::support::sleep_ms;
+use crate::support::{basic_lib_manifest, basic_manifest, git, main_file, path2url, project};
+use crate::support::Project;
 
 #[test]
 fn cargo_compile_simple_git_dep() {

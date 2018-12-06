@@ -1,6 +1,6 @@
-use support::registry::Package;
-use support::rustc_host;
-use support::{basic_manifest, cross_compile, project};
+use crate::support::registry::Package;
+use crate::support::rustc_host;
+use crate::support::{basic_manifest, cross_compile, project};
 
 #[test]
 fn no_deps() {
