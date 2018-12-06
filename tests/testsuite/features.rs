@@ -1755,10 +1755,11 @@ fn warn_if_default_features() {
         .build();
 
     p.cargo("build")
-        .with_stderr("\
-[WARNING] `default-features = [\"..\"]` was found in [features]. Did you mean to use `default = [\"..\"]`?
+        .with_stderr(
+            r#"
+[WARNING] `default-features = [".."]` was found in [features]. Did you mean to use `default = [".."]`?
 [COMPILING] foo v0.0.1 ([CWD])
 [FINISHED] dev [unoptimized + debuginfo] target(s) in [..]
-",
+            "#.trim(),
         ).run();
 }
