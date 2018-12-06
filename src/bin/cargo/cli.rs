@@ -4,7 +4,7 @@ use clap::{AppSettings, Arg, ArgMatches};
 
 use cargo::{self, CliResult, Config};
 
-use super::commands::{self, BuiltinExec};
+use super::commands;
 use super::list_commands;
 use command_prelude::*;
 
@@ -107,28 +107,22 @@ fn expand_aliases(
             commands::builtin_exec(cmd),
             super::aliased_command(config, cmd)?,
         ) {
-            (
-                Some(BuiltinExec {
-                    alias_for: None, ..
-                }),
-                Some(_),
-            ) => {
+            (Some(_), Some(_)) => {
                 // User alias conflicts with a built-in subcommand
                 config.shell().warn(format!(
                     "user-defined alias `{}` is ignored, because it is shadowed by a built-in command",
                     cmd,
                 ))?;
             }
-            (_, Some(mut user_alias)) => {
-                // User alias takes precedence over built-in aliases
-                user_alias.extend(
+            (_, Some(mut alias)) => {
+                alias.extend(
                     args.values_of("")
                         .unwrap_or_default()
                         .map(|s| s.to_string()),
                 );
                 let args = cli()
                     .setting(AppSettings::NoBinaryName)
-                    .get_matches_from_safe(user_alias)?;
+                    .get_matches_from_safe(alias)?;
                 return expand_aliases(config, args);
             }
             (_, None) => {}
@@ -165,7 +159,7 @@ fn execute_subcommand(config: &mut Config, args: &ArgMatches) -> CliResult {
             .unwrap_or_default(),
     )?;
 
-    if let Some(BuiltinExec { exec, .. }) = commands::builtin_exec(cmd) {
+    if let Some(exec) = commands::builtin_exec(cmd) {
         return exec(config, subcommand_args);
     }
 
