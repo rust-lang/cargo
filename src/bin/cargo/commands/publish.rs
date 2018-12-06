@@ -23,7 +23,7 @@ pub fn cli() -> App {
         .arg(opt("registry", "Registry to publish to").value_name("REGISTRY"))
 }
 
-pub fn exec(config: &mut Config, args: &ArgMatches) -> CliResult {
+pub fn exec(config: &mut Config, args: &ArgMatches<'_>) -> CliResult {
     let registry = args.registry(config)?;
     let ws = args.workspace(config)?;
     let index = args.index(config)?;

@@ -104,7 +104,7 @@ https://github.com/rust-lang/cargo
         )
 }
 
-pub fn exec(config: &mut Config, args: &ArgMatches) -> CliResult {
+pub fn exec(config: &mut Config, args: &ArgMatches<'_>) -> CliResult {
     let ws = args.workspace(config)?;
     let test = match args.value_of("profile") {
         Some("test") => true,

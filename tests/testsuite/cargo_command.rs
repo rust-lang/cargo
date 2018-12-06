@@ -18,7 +18,7 @@ enum FakeKind<'a> {
 
 /// Add an empty file with executable flags (and platform-dependent suffix).
 /// TODO: move this to `Project` if other cases using this emerge.
-fn fake_file(proj: Project, dir: &Path, name: &str, kind: &FakeKind) -> Project {
+fn fake_file(proj: Project, dir: &Path, name: &str, kind: &FakeKind<'_>) -> Project {
     let path = proj
         .root()
         .join(dir)

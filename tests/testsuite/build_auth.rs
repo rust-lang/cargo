@@ -15,7 +15,7 @@ fn http_auth_offered() {
     let server = TcpListener::bind("127.0.0.1:0").unwrap();
     let addr = server.local_addr().unwrap();
 
-    fn headers(rdr: &mut BufRead) -> HashSet<String> {
+    fn headers(rdr: &mut dyn BufRead) -> HashSet<String> {
         let valid = ["GET", "Authorization", "Accept"];
         rdr.lines()
             .map(|s| s.unwrap())

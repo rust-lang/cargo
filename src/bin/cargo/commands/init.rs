@@ -10,7 +10,7 @@ pub fn cli() -> App {
         .arg_new_opts()
 }
 
-pub fn exec(config: &mut Config, args: &ArgMatches) -> CliResult {
+pub fn exec(config: &mut Config, args: &ArgMatches<'_>) -> CliResult {
     let opts = args.new_options(config)?;
     ops::init(&opts, config)?;
     config
