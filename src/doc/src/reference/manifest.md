@@ -741,6 +741,12 @@ harness = true
 # 2018 edition or only compiling one unit test with the 2015 edition. By default
 # all targets are compiled with the edition specified in `[package]`.
 edition = '2015'
+
+# Here's an example of a TOML "array of tables" section, in this case specifying
+# a binary target name and path.
+[[bin]]
+name = "my-cool-binary"
+path = "src/my-cool-binary.rs"
 ```
 
 The `[package]` also includes the optional `autobins`, `autoexamples`,
