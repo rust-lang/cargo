@@ -416,6 +416,23 @@ impl<'cfg> PackageSet<'cfg> {
     }
 }
 
+// When dynamically linked against libcurl, we want to ignore some failures
+// when using old versions that don't support certain features.
+macro_rules! try_old_curl {
+    ($e:expr, $msg:expr) => {
+        let result = $e;
+        if cfg!(target_os = "macos") {
+            if let Err(e) = result {
+                warn!("ignoring libcurl {} error: {}", $msg, e);
+            }
+        } else {
+            result.with_context(|_| {
+                format_err!("failed to enable {}, is curl not built right?", $msg)
+            })?;
+        }
+    };
+}
+
 impl<'a, 'cfg> Downloads<'a, 'cfg> {
     /// Starts to download the package for the `id` specified.
     ///
@@ -480,14 +497,7 @@ impl<'a, 'cfg> Downloads<'a, 'cfg> {
         // errors here on OSX, but consider this a fatal error to not activate
         // HTTP/2 on all other platforms.
         if self.set.multiplexing {
-            let result = handle.http_version(HttpVersion::V2);
-            if cfg!(target_os = "macos") {
-                if let Err(e) = result {
-                    warn!("ignoring HTTP/2 activation error: {}", e)
-                }
-            } else {
-                result.with_context(|_| "failed to enable HTTP2, is curl not built right?")?;
-            }
+            try_old_curl!(handle.http_version(HttpVersion::V2), "HTTP2");
         } else {
             handle.http_version(HttpVersion::V11)?;
         }
@@ -499,7 +509,7 @@ impl<'a, 'cfg> Downloads<'a, 'cfg> {
         // Once the main one is opened we realized that pipelining is possible
         // and multiplexing is possible with static.crates.io. All in all this
         // reduces the number of connections done to a more manageable state.
-        handle.pipewait(true)?;
+        try_old_curl!(handle.pipewait(true), "pipewait");
 
         handle.write_function(move |buf| {
             debug!("{} - {} bytes of data", token, buf.len());
