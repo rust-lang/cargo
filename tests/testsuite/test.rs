@@ -2992,32 +2992,9 @@ fn json_artifact_includes_test_flag() {
         ).file("src/lib.rs", "")
         .build();
 
-    p.cargo("test -v --message-format=json")
+    p.cargo("test --lib -v --message-format=json")
         .with_json(
             r#"
-    {
-        "reason":"compiler-artifact",
-        "profile": {
-            "debug_assertions": true,
-            "debuginfo": 2,
-            "opt_level": "0",
-            "overflow_checks": true,
-            "test": false
-        },
-        "executable": null,
-        "features": [],
-        "package_id":"foo 0.0.1 ([..])",
-        "target":{
-            "kind":["lib"],
-            "crate_types":["lib"],
-            "edition": "2015",
-            "name":"foo",
-            "src_path":"[..]lib.rs"
-        },
-        "filenames":["[..].rlib"],
-        "fresh": false
-    }
-
     {
         "reason":"compiler-artifact",
         "profile": {
