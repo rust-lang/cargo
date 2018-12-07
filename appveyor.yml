@@ -25,5 +25,5 @@ test_script:
   # we don't have ci time to run the full `cargo test` with `minimal-versions` like
   # - if defined MINIMAL_VERSIONS cargo +nightly generate-lockfile -Z minimal-versions && cargo +stable test
   # so we just run `cargo check --tests` like
-  - if defined MINIMAL_VERSIONS cargo +nightly generate-lockfile -Z minimal-versions && cargo +1.28.0 check --tests
+  - if defined MINIMAL_VERSIONS cargo +nightly generate-lockfile -Z minimal-versions && cargo +1.31.0 check --tests
   - if NOT defined MINIMAL_VERSIONS cargo test
