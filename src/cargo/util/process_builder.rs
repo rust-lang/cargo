@@ -353,8 +353,8 @@ mod imp {
 mod imp {
     extern crate winapi;
 
-    use CargoResult;
-    use util::{process_error, ProcessBuilder};
+    use crate::CargoResult;
+    use crate::util::{process_error, ProcessBuilder};
     use self::winapi::shared::minwindef::{BOOL, DWORD, FALSE, TRUE};
     use self::winapi::um::consoleapi::SetConsoleCtrlHandler;
 
