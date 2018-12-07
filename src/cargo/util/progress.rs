@@ -49,8 +49,14 @@ impl<'cfg> Progress<'cfg> {
             return Progress { state: None };
         }
 
+        let err_width = if cfg.shell().progress_choice() {
+            Some(cfg.shell().err_width().unwrap_or(80))
+        } else {
+            cfg.shell().err_width()
+        };
+
         Progress {
-            state: cfg.shell().err_width().map(|n| State {
+            state: err_width.map(|n| State {
                 config: cfg,
                 format: Format {
                     style,

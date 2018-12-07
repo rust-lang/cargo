@@ -698,6 +698,7 @@ impl Config {
         struct TermConfig {
             verbose: Option<bool>,
             color: Option<String>,
+            progress: Option<String>,
         }
 
         // Ignore errors in the configuration files.
@@ -728,6 +729,7 @@ impl Config {
 
         self.shell().set_verbosity(verbosity);
         self.shell().set_color_choice(color)?;
+        self.shell().set_progress_choice(term.progress)?;
         self.extra_verbose = extra_verbose;
         self.frozen = frozen;
         self.locked = locked;

@@ -25,6 +25,7 @@ pub struct Shell {
     /// Flag that indicates the current line needs to be cleared before
     /// printing. Used when a progress bar is currently displayed.
     needs_clear: bool,
+    force_progress: bool,
 }
 
 impl fmt::Debug for Shell {
@@ -78,6 +79,7 @@ impl Shell {
             },
             verbosity: Verbosity::Verbose,
             needs_clear: false,
+            force_progress: false,
         }
     }
 
@@ -87,6 +89,7 @@ impl Shell {
             err: ShellOut::Write(out),
             verbosity: Verbosity::Verbose,
             needs_clear: false,
+            force_progress: false,
         }
     }
 
@@ -277,6 +280,24 @@ impl Shell {
             ShellOut::Stream { color_choice, .. } => color_choice,
             ShellOut::Write(_) => ColorChoice::Never,
         }
+    }
+
+    /// Updates the progress choice (always or auto) from a string..
+    pub fn set_progress_choice(&mut self, progress: Option<String>) -> CargoResult<()> {
+        self.force_progress = match progress.as_deref() {
+            Some("always") => true,
+            Some("auto") | None => false,
+            Some(arg) => anyhow::bail!(
+                "value for term.progress must be auto or always, \
+                 but found `{}`",
+                arg
+            ),
+        };
+        Ok(())
+    }
+
+    pub fn progress_choice(&self) -> bool {
+        self.force_progress
     }
 
     /// Whether the shell supports color.
