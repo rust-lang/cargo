@@ -1,7 +1,7 @@
 use std::fmt;
 
 use super::job_queue::JobState;
-use util::{CargoResult, Dirty, Fresh, Freshness};
+use crate::util::{CargoResult, Dirty, Fresh, Freshness};
 
 pub struct Job {
     dirty: Work,

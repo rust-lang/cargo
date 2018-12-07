@@ -5,9 +5,9 @@ use std::path::{Path, PathBuf};
 
 use flate2::read::GzDecoder;
 use git2;
-use support::registry::Package;
-use support::{basic_manifest, git, is_nightly, path2url, paths, project, registry};
-use support::{cargo_process, sleep_ms};
+use crate::support::registry::Package;
+use crate::support::{basic_manifest, git, is_nightly, path2url, paths, project, registry};
+use crate::support::{cargo_process, sleep_ms};
 use tar::Archive;
 
 #[test]

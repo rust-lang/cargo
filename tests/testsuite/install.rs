@@ -1,14 +1,14 @@
 use std::fs::{self, File, OpenOptions};
 use std::io::prelude::*;
-use support;
+use crate::support;
 
 use git2;
-use support::cross_compile;
-use support::git;
-use support::install::{assert_has_installed_exe, assert_has_not_installed_exe, cargo_home};
-use support::paths;
-use support::registry::Package;
-use support::{basic_manifest, cargo_process, project};
+use crate::support::cross_compile;
+use crate::support::git;
+use crate::support::install::{assert_has_installed_exe, assert_has_not_installed_exe, cargo_home};
+use crate::support::paths;
+use crate::support::registry::Package;
+use crate::support::{basic_manifest, cargo_process, project};
 
 fn pkg(name: &str, vers: &str) {
     Package::new(name, vers)

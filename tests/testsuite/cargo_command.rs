@@ -5,10 +5,10 @@ use std::path::{Path, PathBuf};
 use std::str;
 
 use cargo;
-use support::cargo_process;
-use support::paths::{self, CargoPathExt};
-use support::registry::Package;
-use support::{basic_bin_manifest, basic_manifest, cargo_exe, project, Project};
+use crate::support::cargo_process;
+use crate::support::paths::{self, CargoPathExt};
+use crate::support::registry::Package;
+use crate::support::{basic_bin_manifest, basic_manifest, cargo_exe, project, Project};
 
 #[cfg_attr(windows, allow(dead_code))]
 enum FakeKind<'a> {
@@ -18,7 +18,7 @@ enum FakeKind<'a> {
 
 /// Add an empty file with executable flags (and platform-dependent suffix).
 /// TODO: move this to `Project` if other cases using this emerge.
-fn fake_file(proj: Project, dir: &Path, name: &str, kind: &FakeKind) -> Project {
+fn fake_file(proj: Project, dir: &Path, name: &str, kind: &FakeKind<'_>) -> Project {
     let path = proj
         .root()
         .join(dir)

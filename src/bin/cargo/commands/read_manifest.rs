@@ -1,4 +1,4 @@
-use command_prelude::*;
+use crate::command_prelude::*;
 
 use cargo::print_json;
 
@@ -14,7 +14,7 @@ Deprecated, use `cargo metadata --no-deps` instead.\
         .arg_manifest_path()
 }
 
-pub fn exec(config: &mut Config, args: &ArgMatches) -> CliResult {
+pub fn exec(config: &mut Config, args: &ArgMatches<'_>) -> CliResult {
     let ws = args.workspace(config)?;
     print_json(&ws.current()?);
     Ok(())

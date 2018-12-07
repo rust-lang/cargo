@@ -1,4 +1,4 @@
-use support::{basic_lib_manifest, is_nightly, project};
+use crate::support::{basic_lib_manifest, is_nightly, project};
 
 #[test]
 fn edition_works_for_build_script() {

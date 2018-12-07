@@ -1,8 +1,8 @@
 use std::collections::hash_map::HashMap;
 use std::fmt;
 
-use core::{Dependency, Package, PackageId, Summary};
-use util::CargoResult;
+use crate::core::{Dependency, Package, PackageId, Summary};
+use crate::util::CargoResult;
 
 mod source_id;
 

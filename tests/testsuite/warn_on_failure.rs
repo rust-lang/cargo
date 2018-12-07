@@ -1,5 +1,5 @@
-use support::registry::Package;
-use support::{project, Project};
+use crate::support::registry::Package;
+use crate::support::{project, Project};
 
 static WARNING1: &'static str = "Hello! I'm a warning. :)";
 static WARNING2: &'static str = "And one more!";

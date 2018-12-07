@@ -2,9 +2,9 @@ use std::env;
 use std::fs::{self, File};
 use std::io::{Read, Write};
 
-use support::registry::Package;
-use support::sleep_ms;
-use support::{basic_lib_manifest, basic_manifest, git, project};
+use crate::support::registry::Package;
+use crate::support::sleep_ms;
+use crate::support::{basic_lib_manifest, basic_manifest, git, project};
 
 #[test]
 fn simple_explicit() {

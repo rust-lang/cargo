@@ -9,11 +9,11 @@ use serde::de::{self, Deserialize};
 use serde::ser;
 use serde_json;
 
-use core::{Edition, Package};
-use util;
-use util::errors::{CargoResult, CargoResultExt};
-use util::paths;
-use util::{internal, profile, Dirty, Fresh, Freshness};
+use crate::core::{Edition, Package};
+use crate::util;
+use crate::util::errors::{CargoResult, CargoResultExt};
+use crate::util::paths;
+use crate::util::{internal, profile, Dirty, Fresh, Freshness};
 
 use super::custom_build::BuildDeps;
 use super::job::Work;

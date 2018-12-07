@@ -3,9 +3,9 @@ use std::io::prelude::*;
 use std::io::SeekFrom;
 
 use flate2::read::GzDecoder;
-use support::git::repo;
-use support::paths;
-use support::{basic_manifest, project, publish};
+use crate::support::git::repo;
+use crate::support::paths;
+use crate::support::{basic_manifest, project, publish};
 use tar::Archive;
 
 #[test]

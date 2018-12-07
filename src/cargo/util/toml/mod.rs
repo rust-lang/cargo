@@ -12,16 +12,16 @@ use serde_ignored;
 use toml;
 use url::Url;
 
-use core::dependency::{Kind, Platform};
-use core::manifest::{LibKind, ManifestMetadata, TargetSourcePath, Warnings};
-use core::profiles::Profiles;
-use core::{Dependency, Manifest, PackageId, Summary, Target};
-use core::{Edition, EitherManifest, Feature, Features, VirtualManifest};
-use core::{GitReference, PackageIdSpec, SourceId, WorkspaceConfig, WorkspaceRootConfig};
-use sources::{CRATES_IO_INDEX, CRATES_IO_REGISTRY};
-use util::errors::{CargoError, CargoResult, CargoResultExt, ManifestError};
-use util::paths;
-use util::{self, Config, ToUrl};
+use crate::core::dependency::{Kind, Platform};
+use crate::core::manifest::{LibKind, ManifestMetadata, TargetSourcePath, Warnings};
+use crate::core::profiles::Profiles;
+use crate::core::{Dependency, Manifest, PackageId, Summary, Target};
+use crate::core::{Edition, EitherManifest, Feature, Features, VirtualManifest};
+use crate::core::{GitReference, PackageIdSpec, SourceId, WorkspaceConfig, WorkspaceRootConfig};
+use crate::sources::{CRATES_IO_INDEX, CRATES_IO_REGISTRY};
+use crate::util::errors::{CargoError, CargoResult, CargoResultExt, ManifestError};
+use crate::util::paths;
+use crate::util::{self, Config, ToUrl};
 
 mod targets;
 use self::targets::targets;

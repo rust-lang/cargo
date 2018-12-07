@@ -9,13 +9,13 @@ use serde::ser;
 use toml;
 use url::Url;
 
-use core::interning::InternedString;
-use core::profiles::Profiles;
-use core::{Dependency, PackageId, PackageIdSpec, SourceId, Summary};
-use core::{Edition, Feature, Features, WorkspaceConfig};
-use util::errors::*;
-use util::toml::TomlManifest;
-use util::{short_hash, Config, Filesystem};
+use crate::core::interning::InternedString;
+use crate::core::profiles::Profiles;
+use crate::core::{Dependency, PackageId, PackageIdSpec, SourceId, Summary};
+use crate::core::{Edition, Feature, Features, WorkspaceConfig};
+use crate::util::errors::*;
+use crate::util::toml::TomlManifest;
+use crate::util::{short_hash, Config, Filesystem};
 
 pub enum EitherManifest {
     Real(Manifest),

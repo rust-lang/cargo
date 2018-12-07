@@ -1,7 +1,7 @@
 use std::env;
 
-use support::is_nightly;
-use support::project;
+use crate::support::is_nightly;
+use crate::support::project;
 
 #[test]
 fn profile_overrides() {

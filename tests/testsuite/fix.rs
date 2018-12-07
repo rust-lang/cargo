@@ -2,9 +2,9 @@ use std::fs::File;
 
 use git2;
 
-use support::git;
-use support::is_nightly;
-use support::{basic_manifest, project};
+use crate::support::git;
+use crate::support::is_nightly;
+use crate::support::{basic_manifest, project};
 
 use std::io::Write;
 

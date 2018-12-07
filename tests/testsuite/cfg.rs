@@ -2,9 +2,9 @@ use std::fmt;
 use std::str::FromStr;
 
 use cargo::util::{Cfg, CfgExpr};
-use support::registry::Package;
-use support::rustc_host;
-use support::{basic_manifest, project};
+use crate::support::registry::Package;
+use crate::support::rustc_host;
+use crate::support::{basic_manifest, project};
 
 macro_rules! c {
     ($a:ident) => {

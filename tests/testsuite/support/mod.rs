@@ -382,7 +382,7 @@ impl Project {
     ///             .with_stdout("bar\n")
     ///             .run();
     pub fn process<T: AsRef<OsStr>>(&self, program: T) -> Execs {
-        let mut p = ::support::process(program);
+        let mut p = crate::support::process(program);
         p.cwd(self.root());
         execs().with_process_builder(p)
     }
@@ -1301,7 +1301,7 @@ fn zip_all<T, I1: Iterator<Item = T>, I2: Iterator<Item = T>>(a: I1, b: I2) -> Z
 }
 
 impl fmt::Debug for Execs {
-    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         write!(f, "execs")
     }
 }

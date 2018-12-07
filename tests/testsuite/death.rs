@@ -5,7 +5,7 @@ use std::process::{Child, Stdio};
 use std::thread;
 use std::time::Duration;
 
-use support::project;
+use crate::support::project;
 
 #[cfg(unix)]
 fn enabled() -> bool {

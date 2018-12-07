@@ -1,5 +1,5 @@
-use support::is_nightly;
-use support::project;
+use crate::support::is_nightly;
+use crate::support::project;
 
 #[test]
 fn probe_cfg_before_crate_type_discovery() {

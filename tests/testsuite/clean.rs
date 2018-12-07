@@ -1,7 +1,7 @@
 use std::env;
 
-use support::registry::Package;
-use support::{basic_bin_manifest, basic_manifest, git, main_file, project};
+use crate::support::registry::Package;
+use crate::support::{basic_bin_manifest, basic_manifest, git, main_file, project};
 
 #[test]
 fn cargo_clean_simple() {

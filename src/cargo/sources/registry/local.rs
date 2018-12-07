@@ -2,12 +2,12 @@ use std::io::prelude::*;
 use std::io::SeekFrom;
 use std::path::Path;
 
-use core::PackageId;
+use crate::core::PackageId;
 use hex;
-use sources::registry::{MaybeLock, RegistryConfig, RegistryData};
-use util::errors::{CargoResult, CargoResultExt};
-use util::paths;
-use util::{Config, FileLock, Filesystem, Sha256};
+use crate::sources::registry::{MaybeLock, RegistryConfig, RegistryData};
+use crate::util::errors::{CargoResult, CargoResultExt};
+use crate::util::paths;
+use crate::util::{Config, FileLock, Filesystem, Sha256};
 
 pub struct LocalRegistry<'cfg> {
     index_path: Filesystem,

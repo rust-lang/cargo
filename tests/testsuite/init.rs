@@ -1,9 +1,9 @@
 use std::env;
 use std::fs::{self, File};
 use std::io::prelude::*;
-use support;
+use crate::support;
 
-use support::{paths, Execs};
+use crate::support::{paths, Execs};
 
 fn cargo_process(s: &str) -> Execs {
     let mut execs = support::cargo_process(s);

@@ -2,8 +2,8 @@ use std::fs;
 use std::path::{Path, PathBuf};
 
 use cargo::util::paths as cargopaths;
-use support::paths;
-use support::{basic_manifest, git, project};
+use crate::support::paths;
+use crate::support::{basic_manifest, git, project};
 
 #[test]
 fn deleting_database_files() {

@@ -1,6 +1,6 @@
-use support::install::{cargo_home, assert_has_installed_exe, assert_has_not_installed_exe};
-use support::is_nightly;
-use support::project;
+use crate::support::install::{cargo_home, assert_has_installed_exe, assert_has_not_installed_exe};
+use crate::support::is_nightly;
+use crate::support::project;
 
 #[test]
 fn build_bin_default_features() {

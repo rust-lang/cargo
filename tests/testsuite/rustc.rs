@@ -1,4 +1,4 @@
-use support::{basic_bin_manifest, basic_lib_manifest, basic_manifest, project};
+use crate::support::{basic_bin_manifest, basic_lib_manifest, basic_manifest, project};
 
 const CARGO_RUSTC_ERROR: &str =
     "[ERROR] extra arguments to `rustc` can only be passed to one target, consider filtering

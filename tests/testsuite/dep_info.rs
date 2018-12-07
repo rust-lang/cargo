@@ -1,5 +1,5 @@
 use filetime::FileTime;
-use support::{basic_bin_manifest, main_file, project};
+use crate::support::{basic_bin_manifest, main_file, project};
 
 #[test]
 fn build_dep_info() {

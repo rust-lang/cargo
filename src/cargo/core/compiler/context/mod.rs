@@ -7,11 +7,11 @@ use std::sync::Arc;
 
 use jobserver::Client;
 
-use core::compiler::compilation;
-use core::profiles::Profile;
-use core::{Package, PackageId, Resolve, Target};
-use util::errors::{CargoResult, CargoResultExt};
-use util::{internal, profile, short_hash, Config};
+use crate::core::compiler::compilation;
+use crate::core::profiles::Profile;
+use crate::core::{Package, PackageId, Resolve, Target};
+use crate::util::errors::{CargoResult, CargoResultExt};
+use crate::util::{internal, profile, short_hash, Config};
 
 use super::build_plan::BuildPlan;
 use super::custom_build::{self, BuildDeps, BuildScripts, BuildState};
@@ -514,7 +514,7 @@ impl<'a, 'cfg> Context<'a, 'cfg> {
                     Second unit: {:?}",
                     describe_collision(unit, other_unit, path),
                     suggestion,
-                    ::version(), self.bcx.host_triple(), self.bcx.target_triple(),
+                    crate::version(), self.bcx.host_triple(), self.bcx.target_triple(),
                     unit, other_unit))
             }
         };

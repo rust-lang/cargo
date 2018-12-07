@@ -169,14 +169,14 @@ use semver::Version;
 use serde_json;
 use tar::Archive;
 
-use core::dependency::{Dependency, Kind};
-use core::source::MaybePackage;
-use core::{Package, PackageId, Source, SourceId, Summary};
-use sources::PathSource;
-use util::errors::CargoResultExt;
-use util::hex;
-use util::to_url::ToUrl;
-use util::{internal, CargoResult, Config, FileLock, Filesystem};
+use crate::core::dependency::{Dependency, Kind};
+use crate::core::source::MaybePackage;
+use crate::core::{Package, PackageId, Source, SourceId, Summary};
+use crate::sources::PathSource;
+use crate::util::errors::CargoResultExt;
+use crate::util::hex;
+use crate::util::to_url::ToUrl;
+use crate::util::{internal, CargoResult, Config, FileLock, Filesystem};
 
 const INDEX_LOCK: &str = ".cargo-index-lock";
 pub const CRATES_IO_INDEX: &str = "https://github.com/rust-lang/crates.io-index";

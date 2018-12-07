@@ -2,17 +2,17 @@ use std::path::PathBuf;
 use std::fs;
 
 use clap::{self, SubCommand};
-use CargoResult;
-use core::Workspace;
-use core::compiler::{BuildConfig, MessageFormat};
-use ops::{CompileFilter, CompileOptions, NewOptions, Packages, VersionControl};
-use sources::CRATES_IO_REGISTRY;
-use util::paths;
-use util::important_paths::find_root_manifest_for_wd;
+use crate::CargoResult;
+use crate::core::Workspace;
+use crate::core::compiler::{BuildConfig, MessageFormat};
+use crate::ops::{CompileFilter, CompileOptions, NewOptions, Packages, VersionControl};
+use crate::sources::CRATES_IO_REGISTRY;
+use crate::util::paths;
+use crate::util::important_paths::find_root_manifest_for_wd;
 
 pub use clap::{AppSettings, Arg, ArgMatches};
-pub use {CliError, CliResult, Config};
-pub use core::compiler::CompileMode;
+pub use crate::{CliError, CliResult, Config};
+pub use crate::core::compiler::CompileMode;
 
 pub type App = clap::App<'static, 'static>;
 

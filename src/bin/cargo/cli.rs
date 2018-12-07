@@ -1,4 +1,4 @@
-extern crate clap;
+use clap;
 
 use clap::{AppSettings, Arg, ArgMatches};
 
@@ -6,7 +6,7 @@ use cargo::{self, CliResult, Config};
 
 use super::commands;
 use super::list_commands;
-use command_prelude::*;
+use crate::command_prelude::*;
 
 pub fn main(config: &mut Config) -> CliResult {
     let args = match cli().get_matches_safe() {
@@ -132,7 +132,7 @@ fn expand_aliases(
     Ok(args)
 }
 
-fn execute_subcommand(config: &mut Config, args: &ArgMatches) -> CliResult {
+fn execute_subcommand(config: &mut Config, args: &ArgMatches<'_>) -> CliResult {
     let (cmd, subcommand_args) = match args.subcommand() {
         (cmd, Some(args)) => (cmd, args),
         _ => {

@@ -8,12 +8,12 @@ use glob::Pattern;
 use ignore::gitignore::GitignoreBuilder;
 use ignore::Match;
 
-use core::source::MaybePackage;
-use core::{Dependency, Package, PackageId, Source, SourceId, Summary};
-use ops;
-use util::paths;
-use util::Config;
-use util::{self, internal, CargoResult};
+use crate::core::source::MaybePackage;
+use crate::core::{Dependency, Package, PackageId, Source, SourceId, Summary};
+use crate::ops;
+use crate::util::paths;
+use crate::util::Config;
+use crate::util::{self, internal, CargoResult};
 
 pub struct PathSource<'cfg> {
     source_id: SourceId,

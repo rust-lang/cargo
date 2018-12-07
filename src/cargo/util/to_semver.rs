@@ -1,5 +1,5 @@
 use semver::Version;
-use util::errors::CargoResult;
+use crate::util::errors::CargoResult;
 
 pub trait ToSemver {
     fn to_semver(self) -> CargoResult<Version>;

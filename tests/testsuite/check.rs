@@ -1,10 +1,10 @@
 use std::fmt::{self, Write};
 
 use glob::glob;
-use support::install::exe;
-use support::paths::CargoPathExt;
-use support::registry::Package;
-use support::{basic_manifest, project};
+use crate::support::install::exe;
+use crate::support::paths::CargoPathExt;
+use crate::support::registry::Package;
+use crate::support::{basic_manifest, project};
 
 #[test]
 fn check_success() {

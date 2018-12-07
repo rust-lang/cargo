@@ -8,7 +8,7 @@ use std::path::{Component, Path, PathBuf};
 
 use filetime::FileTime;
 
-use util::errors::{CargoError, CargoResult, CargoResultExt, Internal};
+use crate::util::errors::{CargoError, CargoResult, CargoResultExt, Internal};
 
 pub fn join_paths<T: AsRef<OsStr>>(paths: &[T], env: &str) -> CargoResult<OsString> {
     let err = match env::join_paths(paths.iter()) {

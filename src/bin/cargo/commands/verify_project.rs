@@ -1,4 +1,4 @@
-use command_prelude::*;
+use crate::command_prelude::*;
 
 use std::collections::HashMap;
 use std::process;
@@ -11,7 +11,7 @@ pub fn cli() -> App {
         .arg_manifest_path()
 }
 
-pub fn exec(config: &mut Config, args: &ArgMatches) -> CliResult {
+pub fn exec(config: &mut Config, args: &ArgMatches<'_>) -> CliResult {
     fn fail(reason: &str, value: &str) -> ! {
         let mut h = HashMap::new();
         h.insert(reason.to_string(), value.to_string());

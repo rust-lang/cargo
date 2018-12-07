@@ -18,14 +18,14 @@ use semver::Version;
 use serde::ser;
 use toml;
 
-use core::interning::InternedString;
-use core::source::MaybePackage;
-use core::{Dependency, Manifest, PackageId, SourceId, Target};
-use core::{FeatureMap, SourceMap, Summary};
-use ops;
-use util::errors::{CargoResult, CargoResultExt, HttpNot200};
-use util::network::Retry;
-use util::{self, internal, lev_distance, Config, Progress, ProgressStyle};
+use crate::core::interning::InternedString;
+use crate::core::source::MaybePackage;
+use crate::core::{Dependency, Manifest, PackageId, SourceId, Target};
+use crate::core::{FeatureMap, SourceMap, Summary};
+use crate::ops;
+use crate::util::errors::{CargoResult, CargoResultExt, HttpNot200};
+use crate::util::network::Retry;
+use crate::util::{self, internal, lev_distance, Config, Progress, ProgressStyle};
 
 /// Information about a package that is available somewhere in the file system.
 ///
@@ -598,7 +598,7 @@ impl<'a, 'cfg> Downloads<'a, 'cfg> {
                 let timed_out = &dl.timed_out;
                 let url = &dl.url;
                 dl.retry
-                    .try(|| {
+                    .r#try(|| {
                         if let Err(e) = result {
                             // If this error is "aborted by callback" then that's
                             // probably because our progress callback aborted due to

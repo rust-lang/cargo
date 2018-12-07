@@ -1,8 +1,8 @@
 use std::collections::{BTreeMap, HashMap, HashSet};
 
 use super::types::ConflictReason;
-use core::resolver::Context;
-use core::{Dependency, PackageId};
+use crate::core::resolver::Context;
+use crate::core::{Dependency, PackageId};
 
 /// This is a Trie for storing a large number of Sets designed to
 /// efficiently see if any of the stored Sets are a subset of a search Set.
