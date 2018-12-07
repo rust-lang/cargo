@@ -65,6 +65,7 @@ proptest! {
             .configure(
                 1,
                 None,
+                None,
                 &None,
                 false,
                 false,
@@ -399,6 +400,7 @@ fn test_resolving_minimum_version_with_transitive_deps() {
     config
         .configure(
             1,
+            None,
             None,
             &None,
             false,

@@ -150,6 +150,11 @@ fn execute_subcommand(config: &mut Config, args: &ArgMatches<'_>) -> CliResult {
         } else {
             None
         },
+        if args.is_present("progress") {
+            Some(true)
+        } else {
+            None
+        },
         &args.value_of("color").map(|s| s.to_string()),
         args.is_present("frozen"),
         args.is_present("locked"),
@@ -220,6 +225,10 @@ See 'cargo help <command>' for more information on a specific command.\n",
         .arg(
             opt("quiet", "No output printed to stdout")
                 .short("q")
+                .global(true),
+        )
+        .arg(
+            opt("progress", "Force output of progress updates")
                 .global(true),
         )
         .arg(

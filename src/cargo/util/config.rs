@@ -544,6 +544,7 @@ impl Config {
         &mut self,
         verbose: u32,
         quiet: Option<bool>,
+        force_progress: Option<bool>,
         color: &Option<String>,
         frozen: bool,
         locked: bool,
@@ -588,6 +589,9 @@ impl Config {
 
         self.shell().set_verbosity(verbosity);
         self.shell().set_color_choice(color.map(|s| &s[..]))?;
+        if let Some(force_progress) = force_progress {
+            self.shell().set_force_progress(force_progress);
+        }
         self.extra_verbose = extra_verbose;
         self.frozen = frozen;
         self.locked = locked;
