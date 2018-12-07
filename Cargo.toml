@@ -25,7 +25,7 @@ crypto-hash = "0.3.1"
 curl = { version = "0.4.19", features = ['http2'] }
 curl-sys = "0.4.15"
 env_logger = "0.6.0"
-pretty_env_logger = { version = "0.2", optional = true }
+pretty_env_logger = { version = "0.3", optional = true }
 failure = "0.1.2"
 filetime = "0.2"
 flate2 = { version = "1.0.3", features = ['zlib'] }
