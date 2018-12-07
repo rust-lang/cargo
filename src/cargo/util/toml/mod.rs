@@ -1021,6 +1021,13 @@ impl TomlManifest {
             None => false,
         };
 
+        if summary.features().contains_key("default-features") {
+            warnings.push(
+                "`default-features = [\"..\"]` was found in [features]. \
+                Did you mean to use `default = [\"..\"]`?".to_string()
+            )
+        }
+
         let custom_metadata = project.metadata.clone();
         let mut manifest = Manifest::new(
             summary,

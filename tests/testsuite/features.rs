@@ -1730,3 +1730,36 @@ fn feature_off_dylib() {
     // Check that building without `f1` uses a dylib without `f1`.
     p.cargo("run -p bar").run();
 }
+
+#[test]
+fn warn_if_default_features() {
+    let p = project()
+        .file(
+            "Cargo.toml",
+            r#"
+            [project]
+            name = "foo"
+            version = "0.0.1"
+            authors = []
+
+            [dependencies.bar]
+            path = "bar"
+            optional = true
+
+            [features]
+            default-features = ["bar"]
+         "#
+        ).file("src/main.rs", "fn main() {}")
+        .file("bar/Cargo.toml",&basic_manifest("bar", "0.0.1"))
+        .file("bar/src/lib.rs", "pub fn bar() {}")
+        .build();
+
+    p.cargo("build")
+        .with_stderr(
+            r#"
+[WARNING] `default-features = [".."]` was found in [features]. Did you mean to use `default = [".."]`?
+[COMPILING] foo v0.0.1 ([CWD])
+[FINISHED] dev [unoptimized + debuginfo] target(s) in [..]
+            "#.trim(),
+        ).run();
+}
