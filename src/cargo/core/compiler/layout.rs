@@ -53,8 +53,8 @@ use std::fs;
 use std::io;
 use std::path::{Path, PathBuf};
 
-use core::Workspace;
-use util::{CargoResult, Config, FileLock, Filesystem};
+use crate::core::Workspace;
+use crate::util::{CargoResult, Config, FileLock, Filesystem};
 
 /// Contains the paths of all target output locations.
 ///

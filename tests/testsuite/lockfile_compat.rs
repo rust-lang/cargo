@@ -1,6 +1,6 @@
-use support::git;
-use support::registry::Package;
-use support::{basic_manifest, lines_match, project};
+use crate::support::git;
+use crate::support::registry::Package;
+use crate::support::{basic_manifest, lines_match, project};
 
 #[test]
 fn oldest_lockfile_still_works() {

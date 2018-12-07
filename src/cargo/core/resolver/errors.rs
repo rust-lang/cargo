@@ -1,11 +1,11 @@
 use std::collections::BTreeMap;
 use std::fmt;
 
-use core::{Dependency, PackageId, Registry, Summary};
+use crate::core::{Dependency, PackageId, Registry, Summary};
 use failure::{Error, Fail};
 use semver;
-use util::lev_distance::lev_distance;
-use util::{CargoError, Config};
+use crate::util::lev_distance::lev_distance;
+use crate::util::{CargoError, Config};
 
 use super::context::Context;
 use super::types::{Candidate, ConflictReason};

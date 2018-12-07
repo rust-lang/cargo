@@ -4,9 +4,9 @@ use cargo::core::dependency::Kind;
 use cargo::core::{enable_nightly_features, Dependency};
 use cargo::util::Config;
 
-use support::project;
-use support::registry::Package;
-use support::resolver::{
+use crate::support::project;
+use crate::support::registry::Package;
+use crate::support::resolver::{
     assert_contains, assert_same, dep, dep_kind, dep_loc, dep_req, loc_names, names, pkg, pkg_dep,
     pkg_id, pkg_loc, registry, registry_strategy, resolve, resolve_and_validated,
     resolve_with_config, PrettyPrintRegistry, ToDep, ToPkgId,

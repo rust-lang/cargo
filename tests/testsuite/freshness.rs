@@ -1,10 +1,10 @@
 use std::fs::{self, File};
 use std::io::prelude::*;
 
-use support::paths::CargoPathExt;
-use support::registry::Package;
-use support::sleep_ms;
-use support::{basic_manifest, project};
+use crate::support::paths::CargoPathExt;
+use crate::support::registry::Package;
+use crate::support::sleep_ms;
+use crate::support::{basic_manifest, project};
 
 #[test]
 fn modifying_and_moving() {

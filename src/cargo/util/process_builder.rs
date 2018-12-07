@@ -9,7 +9,7 @@ use failure::Fail;
 use jobserver::Client;
 use shell_escape::escape;
 
-use util::{process_error, CargoResult, CargoResultExt, read2};
+use crate::util::{process_error, CargoResult, CargoResultExt, read2};
 
 /// A builder object for an external process, similar to `std::process::Command`.
 #[derive(Clone, Debug)]
@@ -332,14 +332,14 @@ pub fn process<T: AsRef<OsStr>>(cmd: T) -> ProcessBuilder {
 
 #[cfg(unix)]
 mod imp {
-    use CargoResult;
+    use crate::CargoResult;
     use std::os::unix::process::CommandExt;
-    use util::{process_error, ProcessBuilder};
+    use crate::util::{process_error, ProcessBuilder};
 
     pub fn exec_replace(process_builder: &ProcessBuilder) -> CargoResult<()> {
         let mut command = process_builder.build_command();
         let error = command.exec();
-        Err(::util::CargoError::from(error)
+        Err(crate::util::CargoError::from(error)
             .context(process_error(
                 &format!("could not execute process {}", process_builder),
                 None,
@@ -353,8 +353,8 @@ mod imp {
 mod imp {
     extern crate winapi;
 
-    use CargoResult;
-    use util::{process_error, ProcessBuilder};
+    use crate::CargoResult;
+    use crate::util::{process_error, ProcessBuilder};
     use self::winapi::shared::minwindef::{BOOL, DWORD, FALSE, TRUE};
     use self::winapi::um::consoleapi::SetConsoleCtrlHandler;
 

@@ -2,10 +2,10 @@ use std::collections::HashMap;
 
 use serde::ser;
 
-use core::resolver::Resolve;
-use core::{Package, PackageId, Workspace};
-use ops::{self, Packages};
-use util::CargoResult;
+use crate::core::resolver::Resolve;
+use crate::core::{Package, PackageId, Workspace};
+use crate::ops::{self, Packages};
+use crate::util::CargoResult;
 
 const VERSION: u32 = 1;
 

@@ -12,11 +12,11 @@ use serde::de;
 use serde::ser;
 use url::Url;
 
-use ops;
-use sources::git;
-use sources::DirectorySource;
-use sources::{GitSource, PathSource, RegistrySource, CRATES_IO_INDEX};
-use util::{CargoResult, Config, ToUrl};
+use crate::ops;
+use crate::sources::git;
+use crate::sources::DirectorySource;
+use crate::sources::{GitSource, PathSource, RegistrySource, CRATES_IO_INDEX};
+use crate::util::{CargoResult, Config, ToUrl};
 
 lazy_static! {
     static ref SOURCE_ID_CACHE: Mutex<HashSet<&'static SourceIdInner>> = Mutex::new(HashSet::new());
@@ -579,7 +579,7 @@ impl<'a> fmt::Display for PrettyRef<'a> {
 #[cfg(test)]
 mod tests {
     use super::{GitReference, Kind, SourceId};
-    use util::ToUrl;
+    use crate::util::ToUrl;
 
     #[test]
     fn github_sources_equal() {

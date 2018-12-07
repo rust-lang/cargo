@@ -1,13 +1,13 @@
 use std::collections::HashSet;
 use std::{cmp, fmt, hash};
 
-use core::compiler::CompileMode;
-use core::interning::InternedString;
-use core::{Features, PackageId, PackageIdSpec, PackageSet, Shell};
-use util::errors::CargoResultExt;
-use util::lev_distance::lev_distance;
-use util::toml::{ProfilePackageSpec, StringOrBool, TomlProfile, TomlProfiles, U32OrBool};
-use util::{CargoResult, Config};
+use crate::core::compiler::CompileMode;
+use crate::core::interning::InternedString;
+use crate::core::{Features, PackageId, PackageIdSpec, PackageSet, Shell};
+use crate::util::errors::CargoResultExt;
+use crate::util::lev_distance::lev_distance;
+use crate::util::toml::{ProfilePackageSpec, StringOrBool, TomlProfile, TomlProfiles, U32OrBool};
+use crate::util::{CargoResult, Config};
 
 /// Collection of all user profiles.
 #[derive(Clone, Debug)]

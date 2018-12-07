@@ -10,13 +10,13 @@ use git2;
 use serde_json;
 use tar::{Archive, Builder, EntryType, Header};
 
-use core::compiler::{BuildConfig, CompileMode, DefaultExecutor, Executor};
-use core::{Package, Source, SourceId, Workspace};
-use ops;
-use sources::PathSource;
-use util::errors::{CargoResult, CargoResultExt};
-use util::paths;
-use util::{self, internal, Config, FileLock};
+use crate::core::compiler::{BuildConfig, CompileMode, DefaultExecutor, Executor};
+use crate::core::{Package, Source, SourceId, Workspace};
+use crate::ops;
+use crate::sources::PathSource;
+use crate::util::errors::{CargoResult, CargoResultExt};
+use crate::util::paths;
+use crate::util::{self, internal, Config, FileLock};
 
 pub struct PackageOpts<'cfg> {
     pub config: &'cfg Config,

@@ -6,10 +6,10 @@ use semver::ReqParseError;
 use semver::VersionReq;
 use serde::ser;
 
-use core::interning::InternedString;
-use core::{PackageId, SourceId, Summary};
-use util::errors::{CargoError, CargoResult, CargoResultExt};
-use util::{Cfg, CfgExpr, Config};
+use crate::core::interning::InternedString;
+use crate::core::{PackageId, SourceId, Summary};
+use crate::util::errors::{CargoError, CargoResult, CargoResultExt};
+use crate::util::{Cfg, CfgExpr, Config};
 
 /// Information about a dependency requested by a Cargo manifest.
 /// Cheap to copy.

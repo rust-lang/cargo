@@ -2,8 +2,8 @@ use std::env;
 use std::fs::{self, File};
 use std::path::Path;
 
-use support::sleep_ms;
-use support::{basic_manifest, project};
+use crate::support::sleep_ms;
+use crate::support::{basic_manifest, project};
 
 #[test]
 fn binary_with_debug() {

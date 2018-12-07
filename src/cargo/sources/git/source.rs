@@ -2,14 +2,14 @@ use std::fmt::{self, Debug, Formatter};
 
 use url::Url;
 
-use core::source::{MaybePackage, Source, SourceId};
-use core::GitReference;
-use core::{Dependency, Package, PackageId, Summary};
-use sources::git::utils::{GitRemote, GitRevision};
-use sources::PathSource;
-use util::errors::CargoResult;
-use util::hex::short_hash;
-use util::Config;
+use crate::core::source::{MaybePackage, Source, SourceId};
+use crate::core::GitReference;
+use crate::core::{Dependency, Package, PackageId, Summary};
+use crate::sources::git::utils::{GitRemote, GitRevision};
+use crate::sources::PathSource;
+use crate::util::errors::CargoResult;
+use crate::util::hex::short_hash;
+use crate::util::Config;
 
 pub struct GitSource<'cfg> {
     remote: GitRemote,
@@ -243,7 +243,7 @@ impl<'cfg> Source for GitSource<'cfg> {
 mod test {
     use super::ident;
     use url::Url;
-    use util::ToUrl;
+    use crate::util::ToUrl;
 
     #[test]
     pub fn test_url_to_path_ident_with_path() {

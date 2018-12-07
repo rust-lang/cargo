@@ -1,10 +1,10 @@
 use std::ffi::OsString;
 
-use core::compiler::{Compilation, Doctest};
-use core::Workspace;
-use ops;
-use util::errors::CargoResult;
-use util::{self, CargoTestError, ProcessError, Test};
+use crate::core::compiler::{Compilation, Doctest};
+use crate::core::Workspace;
+use crate::ops;
+use crate::util::errors::CargoResult;
+use crate::util::{self, CargoTestError, ProcessError, Test};
 
 pub struct TestOptions<'a> {
     pub compile_opts: ops::CompileOptions<'a>,

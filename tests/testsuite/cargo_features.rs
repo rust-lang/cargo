@@ -1,4 +1,4 @@
-use support::{project, publish};
+use crate::support::{project, publish};
 
 #[test]
 fn feature_required() {

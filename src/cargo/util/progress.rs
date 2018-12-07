@@ -2,8 +2,8 @@ use std::cmp;
 use std::env;
 use std::time::{Duration, Instant};
 
-use core::shell::Verbosity;
-use util::{CargoResult, Config};
+use crate::core::shell::Verbosity;
+use crate::util::{CargoResult, Config};
 
 use unicode_width::UnicodeWidthChar;
 

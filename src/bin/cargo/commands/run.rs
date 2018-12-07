@@ -1,4 +1,4 @@
-use command_prelude::*;
+use crate::command_prelude::*;
 
 use cargo::core::Verbosity;
 use cargo::ops::{self, CompileFilter};
@@ -36,7 +36,7 @@ run. If you're passing arguments to both Cargo and the binary, the ones after
         )
 }
 
-pub fn exec(config: &mut Config, args: &ArgMatches) -> CliResult {
+pub fn exec(config: &mut Config, args: &ArgMatches<'_>) -> CliResult {
     let ws = args.workspace(config)?;
 
     let mut compile_opts = args.compile_options(config, CompileMode::Build)?;

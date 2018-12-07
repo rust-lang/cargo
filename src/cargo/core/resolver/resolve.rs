@@ -6,9 +6,9 @@ use std::iter::FromIterator;
 
 use url::Url;
 
-use core::{Dependency, PackageId, PackageIdSpec, Summary, Target};
-use util::errors::CargoResult;
-use util::Graph;
+use crate::core::{Dependency, PackageId, PackageIdSpec, Summary, Target};
+use crate::util::errors::CargoResult;
+use crate::util::Graph;
 
 use super::encode::Metadata;
 

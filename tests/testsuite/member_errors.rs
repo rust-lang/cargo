@@ -3,7 +3,7 @@ use cargo::core::{compiler::CompileMode, Workspace};
 use cargo::ops::{self, CompileOptions};
 use cargo::util::{config::Config, errors::ManifestError};
 
-use support::project;
+use crate::support::project;
 
 /// Tests inclusion of a `ManifestError` pointing to a member manifest
 /// when that manifest fails to deserialize.

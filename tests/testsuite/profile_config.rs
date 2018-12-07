@@ -1,4 +1,4 @@
-use support::{basic_lib_manifest, paths, project};
+use crate::support::{basic_lib_manifest, paths, project};
 
 #[test]
 fn profile_config_gated() {

@@ -1,4 +1,4 @@
-use support::project;
+use crate::support::project;
 
 #[test]
 fn parses_env() {

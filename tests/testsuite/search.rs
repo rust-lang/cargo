@@ -2,10 +2,10 @@ use std::fs::{self, File};
 use std::io::prelude::*;
 use std::path::Path;
 
-use support::cargo_process;
-use support::git::repo;
-use support::paths;
-use support::registry::{api_path, registry as registry_url, registry_path};
+use crate::support::cargo_process;
+use crate::support::git::repo;
+use crate::support::paths;
+use crate::support::registry::{api_path, registry as registry_url, registry_path};
 use url::Url;
 
 fn api() -> Url {

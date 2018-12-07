@@ -5,11 +5,11 @@ use std::str;
 use semver::Version;
 use serde_json;
 
-use core::dependency::Dependency;
-use core::{PackageId, SourceId, Summary};
-use sources::registry::RegistryData;
-use sources::registry::{RegistryPackage, INDEX_LOCK};
-use util::{internal, CargoResult, Config, Filesystem};
+use crate::core::dependency::Dependency;
+use crate::core::{PackageId, SourceId, Summary};
+use crate::sources::registry::RegistryData;
+use crate::sources::registry::{RegistryPackage, INDEX_LOCK};
+use crate::util::{internal, CargoResult, Config, Filesystem};
 
 /// Crates.io treats hyphen and underscores as interchangeable
 /// but, the index and old cargo do not. So the index must store uncanonicalized version

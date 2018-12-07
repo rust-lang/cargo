@@ -1,4 +1,4 @@
-use command_prelude::*;
+use crate::command_prelude::*;
 
 use cargo::core::{GitReference, SourceId};
 use cargo::ops;
@@ -74,7 +74,7 @@ continuous integration systems.",
         )
 }
 
-pub fn exec(config: &mut Config, args: &ArgMatches) -> CliResult {
+pub fn exec(config: &mut Config, args: &ArgMatches<'_>) -> CliResult {
     let registry = args.registry(config)?;
 
     config.reload_rooted_at_cargo_home()?;

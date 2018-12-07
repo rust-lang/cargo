@@ -6,8 +6,8 @@ use std::thread;
 
 use bufstream::BufStream;
 use git2;
-use support::paths;
-use support::{basic_manifest, project};
+use crate::support::paths;
+use crate::support::{basic_manifest, project};
 
 // Test that HTTP auth is offered from `credential.helper`
 #[test]
@@ -15,7 +15,7 @@ fn http_auth_offered() {
     let server = TcpListener::bind("127.0.0.1:0").unwrap();
     let addr = server.local_addr().unwrap();
 
-    fn headers(rdr: &mut BufRead) -> HashSet<String> {
+    fn headers(rdr: &mut dyn BufRead) -> HashSet<String> {
         let valid = ["GET", "Authorization", "Accept"];
         rdr.lines()
             .map(|s| s.unwrap())

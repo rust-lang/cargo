@@ -5,11 +5,11 @@ use std::path::{Path, PathBuf};
 use std::str;
 use std::sync::{Arc, Mutex};
 
-use core::PackageId;
-use util::errors::{CargoResult, CargoResultExt};
-use util::machine_message;
-use util::{self, internal, paths, profile};
-use util::{Cfg, Freshness};
+use crate::core::PackageId;
+use crate::util::errors::{CargoResult, CargoResultExt};
+use crate::util::machine_message;
+use crate::util::{self, internal, paths, profile};
+use crate::util::{Cfg, Freshness};
 
 use super::job::Work;
 use super::{fingerprint, Context, Kind, TargetConfig, Unit};

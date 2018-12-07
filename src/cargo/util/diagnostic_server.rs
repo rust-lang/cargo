@@ -12,8 +12,8 @@ use std::thread::{self, JoinHandle};
 use failure::{Error, ResultExt};
 use serde_json;
 
-use util::{Config, ProcessBuilder};
-use util::errors::CargoResult;
+use crate::util::{Config, ProcessBuilder};
+use crate::util::errors::CargoResult;
 
 const DIAGNOSICS_SERVER_VAR: &str = "__CARGO_FIX_DIAGNOSTICS_SERVER";
 const PLEASE_REPORT_THIS_BUG: &str =

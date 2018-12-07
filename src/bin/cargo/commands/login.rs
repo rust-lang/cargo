@@ -1,4 +1,4 @@
-use command_prelude::*;
+use crate::command_prelude::*;
 
 use std::io::{self, BufRead};
 
@@ -18,7 +18,7 @@ pub fn cli() -> App {
         .arg(opt("registry", "Registry to use").value_name("REGISTRY"))
 }
 
-pub fn exec(config: &mut Config, args: &ArgMatches) -> CliResult {
+pub fn exec(config: &mut Config, args: &ArgMatches<'_>) -> CliResult {
     let registry = args.registry(config)?;
 
     let token = match args.value_of("token") {

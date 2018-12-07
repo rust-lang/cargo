@@ -5,8 +5,8 @@ use std::str::{self, FromStr};
 
 use super::env_args;
 use super::Kind;
-use core::TargetKind;
-use util::{CargoResult, CargoResultExt, Cfg, Config, ProcessBuilder, Rustc};
+use crate::core::TargetKind;
+use crate::util::{CargoResult, CargoResultExt, Cfg, Config, ProcessBuilder, Rustc};
 
 #[derive(Clone)]
 pub struct TargetInfo {

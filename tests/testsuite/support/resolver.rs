@@ -76,7 +76,7 @@ pub fn resolve_with_config_raw(
         fn query(
             &mut self,
             dep: &Dependency,
-            f: &mut FnMut(Summary),
+            f: &mut dyn FnMut(Summary),
             fuzzy: bool,
         ) -> CargoResult<()> {
             for summary in self.0.iter() {
@@ -273,7 +273,7 @@ pub fn loc_names(names: &[(&'static str, &'static str)]) -> Vec<PackageId> {
 pub struct PrettyPrintRegistry(pub Vec<Summary>);
 
 impl fmt::Debug for PrettyPrintRegistry {
-    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         write!(f, "vec![")?;
         for s in &self.0 {
             if s.dependencies().is_empty() {
@@ -518,7 +518,7 @@ fn meta_test_multiple_versions_strategy() {
             .current();
         let reg = registry(input.clone());
         for this in input.iter().rev().take(10) {
-            let mut res = resolve(
+            let res = resolve(
                 &pkg_id("root"),
                 vec![dep_req(&this.name(), &format!("={}", this.version()))],
                 &reg,

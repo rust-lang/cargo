@@ -2,11 +2,11 @@ use std::io::prelude::*;
 
 use toml;
 
-use core::resolver::WorkspaceResolve;
-use core::{resolver, Resolve, Workspace};
-use util::errors::{CargoResult, CargoResultExt};
-use util::toml as cargo_toml;
-use util::Filesystem;
+use crate::core::resolver::WorkspaceResolve;
+use crate::core::{resolver, Resolve, Workspace};
+use crate::util::errors::{CargoResult, CargoResultExt};
+use crate::util::toml as cargo_toml;
+use crate::util::Filesystem;
 
 pub fn load_pkg_lockfile(ws: &Workspace) -> CargoResult<Option<Resolve>> {
     if !ws.root().join("Cargo.lock").exists() {

@@ -2,25 +2,25 @@
 #![cfg_attr(feature = "cargo-clippy", allow(blacklisted_name))]
 #![cfg_attr(feature = "cargo-clippy", allow(explicit_iter_loop))]
 
-extern crate bufstream;
-extern crate cargo;
-extern crate filetime;
-extern crate flate2;
-extern crate git2;
-extern crate glob;
-extern crate hex;
+
+use cargo;
+use filetime;
+
+use git2;
+
+use hex;
 #[macro_use]
 extern crate lazy_static;
-extern crate libc;
+use libc;
 #[macro_use]
 extern crate proptest;
 #[macro_use]
 extern crate serde_derive;
 #[macro_use]
 extern crate serde_json;
-extern crate tar;
-extern crate toml;
-extern crate url;
+
+use toml;
+
 #[cfg(windows)]
 extern crate winapi;
 

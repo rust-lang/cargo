@@ -18,8 +18,8 @@ use super::{
     LibKind, PathValue, StringOrBool, StringOrVec, TomlBenchTarget, TomlBinTarget,
     TomlExampleTarget, TomlLibTarget, TomlManifest, TomlTarget, TomlTestTarget,
 };
-use core::{compiler, Edition, Feature, Features, Target};
-use util::errors::{CargoResult, CargoResultExt};
+use crate::core::{compiler, Edition, Feature, Features, Target};
+use crate::util::errors::{CargoResult, CargoResultExt};
 
 pub fn targets(
     features: &Features,

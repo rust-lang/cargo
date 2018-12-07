@@ -9,13 +9,13 @@ use failure::Error;
 use same_file::is_same_file;
 use serde_json;
 
-use core::manifest::TargetSourcePath;
-use core::profiles::{Lto, Profile};
-use core::{PackageId, Target};
-use util::errors::{CargoResult, CargoResultExt, Internal, ProcessError};
-use util::paths;
-use util::{self, machine_message, process, Freshness, ProcessBuilder};
-use util::{internal, join_paths, profile};
+use crate::core::manifest::TargetSourcePath;
+use crate::core::profiles::{Lto, Profile};
+use crate::core::{PackageId, Target};
+use crate::util::errors::{CargoResult, CargoResultExt, Internal, ProcessError};
+use crate::util::paths;
+use crate::util::{self, machine_message, process, Freshness, ProcessBuilder};
+use crate::util::{internal, join_paths, profile};
 
 use self::build_plan::BuildPlan;
 use self::job::{Job, Work};

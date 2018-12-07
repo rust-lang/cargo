@@ -26,15 +26,15 @@ use std::collections::{HashMap, HashSet};
 use std::path::PathBuf;
 use std::sync::Arc;
 
-use core::compiler::{BuildConfig, BuildContext, Compilation, Context, DefaultExecutor, Executor};
-use core::compiler::{CompileMode, Kind, Unit};
-use core::profiles::{Profiles, UnitFor};
-use core::resolver::{Method, Resolve};
-use core::{Package, Source, Target};
-use core::{PackageId, PackageIdSpec, TargetKind, Workspace};
-use ops;
-use util::config::Config;
-use util::{lev_distance, profile, CargoResult};
+use crate::core::compiler::{BuildConfig, BuildContext, Compilation, Context, DefaultExecutor, Executor};
+use crate::core::compiler::{CompileMode, Kind, Unit};
+use crate::core::profiles::{Profiles, UnitFor};
+use crate::core::resolver::{Method, Resolve};
+use crate::core::{Package, Source, Target};
+use crate::core::{PackageId, PackageIdSpec, TargetKind, Workspace};
+use crate::ops;
+use crate::util::config::Config;
+use crate::util::{lev_distance, profile, CargoResult};
 
 /// Contains information about how a package should be compiled.
 #[derive(Debug)]

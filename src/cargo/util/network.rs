@@ -3,8 +3,8 @@ use git2;
 
 use failure::Error;
 
-use util::Config;
-use util::errors::{CargoResult, HttpNot200};
+use crate::util::Config;
+use crate::util::errors::{CargoResult, HttpNot200};
 
 pub struct Retry<'a> {
     config: &'a Config,
@@ -19,7 +19,7 @@ impl<'a> Retry<'a> {
         })
     }
 
-    pub fn try<T>(&mut self, f: impl FnOnce() -> CargoResult<T>)
+    pub fn r#try<T>(&mut self, f: impl FnOnce() -> CargoResult<T>)
         -> CargoResult<Option<T>>
     {
         match f() {
@@ -84,7 +84,7 @@ where
 {
     let mut retry = Retry::new(config)?;
     loop {
-        if let Some(ret) = retry.try(&mut callback)? {
+        if let Some(ret) = retry.r#try(&mut callback)? {
             return Ok(ret)
         }
     }
@@ -108,7 +108,7 @@ fn with_retry_repeats_the_call_then_works() {
 
 #[test]
 fn with_retry_finds_nested_spurious_errors() {
-    use util::CargoError;
+    use crate::util::CargoError;
 
     //Error HTTP codes (5xx) are considered maybe_spurious and will prompt retry
     //String error messages are not considered spurious

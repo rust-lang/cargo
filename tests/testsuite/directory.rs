@@ -4,11 +4,11 @@ use std::fs::{self, File};
 use std::io::prelude::*;
 use std::str;
 
-use support::cargo_process;
-use support::git;
-use support::paths;
-use support::registry::{cksum, Package};
-use support::{basic_manifest, project, ProjectBuilder};
+use crate::support::cargo_process;
+use crate::support::git;
+use crate::support::paths;
+use crate::support::registry::{cksum, Package};
+use crate::support::{basic_manifest, project, ProjectBuilder};
 
 fn setup() {
     let root = paths::root();

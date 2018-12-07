@@ -11,15 +11,15 @@ use hex;
 use lazycell::LazyCell;
 use serde_json;
 
-use core::{PackageId, SourceId};
-use sources::git;
-use sources::registry::MaybeLock;
-use sources::registry::{
+use crate::core::{PackageId, SourceId};
+use crate::sources::git;
+use crate::sources::registry::MaybeLock;
+use crate::sources::registry::{
     RegistryConfig, RegistryData, CRATE_TEMPLATE, INDEX_LOCK, VERSION_TEMPLATE,
 };
-use util::errors::{CargoResult, CargoResultExt};
-use util::{Config, Sha256};
-use util::{FileLock, Filesystem};
+use crate::util::errors::{CargoResult, CargoResultExt};
+use crate::util::{Config, Sha256};
+use crate::util::{FileLock, Filesystem};
 
 pub struct RemoteRegistry<'cfg> {
     index_path: Filesystem,
