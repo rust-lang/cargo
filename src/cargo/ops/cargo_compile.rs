@@ -26,7 +26,9 @@ use std::collections::{HashMap, HashSet};
 use std::path::PathBuf;
 use std::sync::Arc;
 
-use crate::core::compiler::{BuildConfig, BuildContext, Compilation, Context, DefaultExecutor, Executor};
+use crate::core::compiler::{
+    BuildConfig, BuildContext, Compilation, Context, DefaultExecutor, Executor,
+};
 use crate::core::compiler::{CompileMode, Kind, Unit};
 use crate::core::profiles::{Profiles, UnitFor};
 use crate::core::resolver::{Method, Resolve};

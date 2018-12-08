@@ -13,7 +13,8 @@ pub fn cli() -> App {
             opt(
                 "limit",
                 "Limit the number of results (default: 10, max: 100)",
-            ).value_name("LIMIT"),
+            )
+            .value_name("LIMIT"),
         )
         .arg(opt("registry", "Registry to use").value_name("REGISTRY"))
 }

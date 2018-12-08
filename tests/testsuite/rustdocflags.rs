@@ -20,7 +20,8 @@ fn parses_config() {
             [build]
             rustdocflags = ["--cfg", "foo"]
         "#,
-        ).build();
+        )
+        .build();
 
     p.cargo("doc -v")
         .with_stderr_contains("[RUNNING] `rustdoc [..] --cfg foo[..]`")
@@ -53,7 +54,8 @@ fn rerun() {
 [DOCUMENTING] foo v0.0.1 ([..])
 [FINISHED] dev [unoptimized + debuginfo] target(s) in [..]
 ",
-        ).run();
+        )
+        .run();
 }
 
 #[test]
@@ -66,7 +68,8 @@ fn rustdocflags_passed_to_rustdoc_through_cargo_test() {
             //! assert!(cfg!(do_not_choke));
             //! ```
         "#,
-        ).build();
+        )
+        .build();
 
     p.cargo("test --doc")
         .env("RUSTDOCFLAGS", "--cfg do_not_choke")

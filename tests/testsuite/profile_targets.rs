@@ -38,7 +38,9 @@ fn all_target_project() -> Project {
         .file("examples/ex1.rs", "extern crate foo; fn main() {}")
         .file("tests/test1.rs", "extern crate foo;")
         .file("benches/bench1.rs", "extern crate foo;")
-        .file("build.rs", r#"
+        .file(
+            "build.rs",
+            r#"
             extern crate bdep;
             fn main() {
                 eprintln!("foo custom build PROFILE={} DEBUG={} OPT_LEVEL={}",
@@ -47,21 +49,23 @@ fn all_target_project() -> Project {
                     std::env::var("OPT_LEVEL").unwrap(),
                 );
             }
-        "#)
-
+        "#,
+        )
         // bar package
         .file("bar/Cargo.toml", &basic_manifest("bar", "0.0.1"))
         .file("bar/src/lib.rs", "")
-
         // bdep package
-        .file("bdep/Cargo.toml", r#"
+        .file(
+            "bdep/Cargo.toml",
+            r#"
             [package]
             name = "bdep"
             version = "0.0.1"
 
             [dependencies]
             bar = { path = "../bar" }
-        "#)
+        "#,
+        )
         .file("bdep/src/lib.rs", "extern crate bar;")
         .build()
 }
@@ -96,7 +100,8 @@ fn profile_selection_build() {
 [FRESH] foo [..]
 [FINISHED] dev [unoptimized + debuginfo] [..]
 ",
-        ).run();
+        )
+        .run();
 }
 
 #[test]
@@ -126,7 +131,8 @@ fn profile_selection_build_release() {
 [FRESH] foo [..]
 [FINISHED] release [optimized] [..]
 ",
-        ).run();
+        )
+        .run();
 }
 
 #[test]
@@ -187,7 +193,8 @@ fn profile_selection_build_all_targets() {
 [FRESH] foo [..]
 [FINISHED] dev [unoptimized + debuginfo] [..]
 ",
-        ).run();
+        )
+        .run();
 }
 
 #[test]
@@ -251,7 +258,8 @@ fn profile_selection_build_all_targets_release() {
 [FRESH] foo [..]
 [FINISHED] release [optimized] [..]
 ",
-        ).run();
+        )
+        .run();
 }
 
 #[test]
@@ -315,7 +323,8 @@ fn profile_selection_test() {
 [DOCTEST] foo
 [RUNNING] `rustdoc --test [..]
 ",
-        ).run();
+        )
+        .run();
 }
 
 #[test]
@@ -379,7 +388,8 @@ fn profile_selection_test_release() {
 [DOCTEST] foo
 [RUNNING] `rustdoc --test [..]
 ",
-        ).run();
+        )
+        .run();
 }
 
 #[test]
@@ -438,7 +448,8 @@ fn profile_selection_bench() {
 [RUNNING] `[..]/deps/foo-[..] --bench`
 [RUNNING] `[..]/deps/bench1-[..] --bench`
 ",
-        ).run();
+        )
+        .run();
 }
 
 #[test]
@@ -508,7 +519,8 @@ fn profile_selection_check_all_targets() {
 [FRESH] foo [..]
 [FINISHED] dev [unoptimized + debuginfo] [..]
 ",
-        ).run();
+        )
+        .run();
 }
 
 #[test]
@@ -554,7 +566,8 @@ fn profile_selection_check_all_targets_release() {
 [FRESH] foo [..]
 [FINISHED] release [optimized] [..]
 ",
-        ).run();
+        )
+        .run();
 }
 
 #[test]
@@ -616,7 +629,8 @@ fn profile_selection_check_all_targets_test() {
 [FRESH] foo [..]
 [FINISHED] dev [unoptimized + debuginfo] [..]
 ",
-        ).run();
+        )
+        .run();
 }
 
 #[test]

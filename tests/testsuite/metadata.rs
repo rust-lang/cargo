@@ -64,7 +64,8 @@ fn cargo_metadata_simple() {
         "version": 1,
         "workspace_root": "[..]/foo"
     }"#,
-        ).run();
+        )
+        .run();
 }
 
 #[test]
@@ -93,7 +94,8 @@ version = "0.5.0"
 [lib]
 crate-type = ["lib", "staticlib"]
             "#,
-        ).build();
+        )
+        .build();
 
     p.cargo("metadata")
         .with_json(
@@ -151,7 +153,8 @@ crate-type = ["lib", "staticlib"]
         "version": 1,
         "workspace_root": "[..]/foo"
     }"#,
-        ).run();
+        )
+        .run();
 }
 
 #[test]
@@ -170,7 +173,8 @@ default = ["default_feat"]
 default_feat = []
 optional_feat = []
             "#,
-        ).build();
+        )
+        .build();
 
     p.cargo("metadata")
         .with_json(
@@ -235,7 +239,8 @@ optional_feat = []
         "version": 1,
         "workspace_root": "[..]/foo"
     }"#,
-        ).run();
+        )
+        .run();
 }
 
 #[test]
@@ -258,7 +263,8 @@ fn cargo_metadata_with_deps_and_version() {
             [dependencies]
             bar = "*"
         "#,
-        ).build();
+        )
+        .build();
     Package::new("baz", "0.0.1").publish();
     Package::new("bar", "0.0.1").dep("baz", "0.0.1").publish();
 
@@ -425,7 +431,8 @@ fn cargo_metadata_with_deps_and_version() {
         "version": 1,
         "workspace_root": "[..]/foo"
     }"#,
-        ).run();
+        )
+        .run();
 }
 
 #[test]
@@ -443,7 +450,8 @@ version = "0.1.0"
 [[example]]
 name = "ex"
             "#,
-        ).build();
+        )
+        .build();
 
     p.cargo("metadata")
         .with_json(
@@ -504,7 +512,8 @@ name = "ex"
         "version": 1,
         "workspace_root": "[..]/foo"
     }"#,
-        ).run();
+        )
+        .run();
 }
 
 #[test]
@@ -523,7 +532,8 @@ version = "0.1.0"
 name = "ex"
 crate-type = ["rlib", "dylib"]
             "#,
-        ).build();
+        )
+        .build();
 
     p.cargo("metadata")
         .with_json(
@@ -584,7 +594,8 @@ crate-type = ["rlib", "dylib"]
         "version": 1,
         "workspace_root": "[..]/foo"
     }"#,
-        ).run();
+        )
+        .run();
 }
 
 #[test]
@@ -596,7 +607,8 @@ fn workspace_metadata() {
             [workspace]
             members = ["bar", "baz"]
         "#,
-        ).file("bar/Cargo.toml", &basic_lib_manifest("bar"))
+        )
+        .file("bar/Cargo.toml", &basic_lib_manifest("bar"))
         .file("bar/src/lib.rs", "")
         .file("baz/Cargo.toml", &basic_lib_manifest("baz"))
         .file("baz/src/lib.rs", "")
@@ -690,7 +702,8 @@ fn workspace_metadata() {
         "version": 1,
         "workspace_root": "[..]/foo"
     }"#,
-        ).run();
+        )
+        .run();
 }
 
 #[test]
@@ -702,7 +715,8 @@ fn workspace_metadata_no_deps() {
             [workspace]
             members = ["bar", "baz"]
         "#,
-        ).file("bar/Cargo.toml", &basic_lib_manifest("bar"))
+        )
+        .file("bar/Cargo.toml", &basic_lib_manifest("bar"))
         .file("bar/src/lib.rs", "")
         .file("baz/Cargo.toml", &basic_lib_manifest("baz"))
         .file("baz/src/lib.rs", "")
@@ -780,7 +794,8 @@ fn workspace_metadata_no_deps() {
         "version": 1,
         "workspace_root": "[..]/foo"
     }"#,
-        ).run();
+        )
+        .run();
 }
 
 #[test]
@@ -795,7 +810,8 @@ fn cargo_metadata_with_invalid_manifest() {
 
 Caused by:
   virtual manifests must be configured with [workspace]",
-        ).run();
+        )
+        .run();
 }
 
 const MANIFEST_OUTPUT: &str = r#"
@@ -875,7 +891,8 @@ fn cargo_metadata_no_deps_path_to_cargo_toml_parent_relative() {
         .with_stderr(
             "[ERROR] the manifest-path must be \
              a path to a Cargo.toml file",
-        ).run();
+        )
+        .run();
 }
 
 #[test]
@@ -892,7 +909,8 @@ fn cargo_metadata_no_deps_path_to_cargo_toml_parent_absolute() {
         .with_stderr(
             "[ERROR] the manifest-path must be \
              a path to a Cargo.toml file",
-        ).run();
+        )
+        .run();
 }
 
 #[test]
@@ -921,7 +939,8 @@ fn cargo_metadata_bad_version() {
 error: '2' isn't a valid value for '--format-version <VERSION>'
 <tab>[possible values: 1]
 ",
-        ).run();
+        )
+        .run();
 }
 
 #[test]
@@ -939,7 +958,8 @@ fn multiple_features() {
             a = []
             b = []
         "#,
-        ).file("src/lib.rs", "")
+        )
+        .file("src/lib.rs", "")
         .build();
 
     p.cargo("metadata --features").arg("a b").run();
@@ -963,7 +983,8 @@ fn package_metadata() {
             [package.metadata.bar]
             baz = "quux"
         "#,
-        ).file("src/lib.rs", "")
+        )
+        .file("src/lib.rs", "")
         .build();
 
     p.cargo("metadata --no-deps")
@@ -1010,7 +1031,8 @@ fn package_metadata() {
         "version": 1,
         "workspace_root": "[..]/foo"
     }"#,
-        ).run();
+        )
+        .run();
 }
 
 #[test]
@@ -1022,7 +1044,8 @@ fn cargo_metadata_path_to_cargo_toml_project() {
             [workspace]
             members = ["bar"]
         "#,
-        ).file("bar/Cargo.toml", &basic_lib_manifest("bar"))
+        )
+        .file("bar/Cargo.toml", &basic_lib_manifest("bar"))
         .file("bar/src/lib.rs", "")
         .build();
 
@@ -1091,7 +1114,8 @@ fn cargo_metadata_path_to_cargo_toml_project() {
             "workspace_root": "[..]"
         }
 "#,
-        ).run();
+        )
+        .run();
 }
 
 #[test]
@@ -1109,7 +1133,8 @@ fn package_edition_2018() {
             authors = ["wycats@example.com"]
             edition = "2018"
         "#,
-        ).build();
+        )
+        .build();
     p.cargo("metadata")
         .masquerade_as_nightly_cargo()
         .with_json(
@@ -1170,7 +1195,8 @@ fn package_edition_2018() {
             "workspace_root": "[..]"
         }
         "#,
-        ).run();
+        )
+        .run();
 }
 
 #[test]
@@ -1192,7 +1218,8 @@ fn target_edition_2018() {
             [lib]
             edition = "2018"
         "#,
-        ).build();
+        )
+        .build();
     p.cargo("metadata")
         .masquerade_as_nightly_cargo()
         .with_json(
@@ -1264,7 +1291,8 @@ fn target_edition_2018() {
             "workspace_root": "[..]"
         }
         "#,
-        ).run();
+        )
+        .run();
 }
 
 #[test]
@@ -1287,7 +1315,8 @@ fn rename_dependency() {
             bar = { version = "0.1.0" }
             baz = { version = "0.2.0", package = "bar" }
         "#,
-        ).file("src/lib.rs", "extern crate bar; extern crate baz;")
+        )
+        .file("src/lib.rs", "extern crate bar; extern crate baz;")
         .build();
 
     p.cargo("metadata")
@@ -1458,5 +1487,6 @@ fn rename_dependency() {
     ],
     "workspace_root": "[..]"
 }"#,
-        ).run();
+        )
+        .run();
 }

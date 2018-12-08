@@ -9,7 +9,7 @@ use failure::Fail;
 use jobserver::Client;
 use shell_escape::escape;
 
-use crate::util::{process_error, CargoResult, CargoResultExt, read2};
+use crate::util::{process_error, read2, CargoResult, CargoResultExt};
 
 /// A builder object for an external process, similar to `std::process::Command`.
 #[derive(Clone, Debug)]
@@ -133,11 +133,7 @@ impl ProcessBuilder {
     pub fn exec(&self) -> CargoResult<()> {
         let mut command = self.build_command();
         let exit = command.status().chain_err(|| {
-            process_error(
-                &format!("could not execute process {}", self),
-                None,
-                None,
-            )
+            process_error(&format!("could not execute process {}", self), None, None)
         })?;
 
         if exit.success() {
@@ -147,7 +143,8 @@ impl ProcessBuilder {
                 &format!("process didn't exit successfully: {}", self),
                 Some(exit),
                 None,
-            ).into())
+            )
+            .into())
         }
     }
 
@@ -175,11 +172,7 @@ impl ProcessBuilder {
         let mut command = self.build_command();
 
         let output = command.output().chain_err(|| {
-            process_error(
-                &format!("could not execute process {}", self),
-                None,
-                None,
-            )
+            process_error(&format!("could not execute process {}", self), None, None)
         })?;
 
         if output.status.success() {
@@ -189,7 +182,8 @@ impl ProcessBuilder {
                 &format!("process didn't exit successfully: {}", self),
                 Some(output.status),
                 Some(&output),
-            ).into())
+            )
+            .into())
         }
     }
 
@@ -227,7 +221,8 @@ impl ProcessBuilder {
                         None => return,
                     }
                 };
-                { // scope for new_lines
+                {
+                    // scope for new_lines
                     let new_lines = if capture_output {
                         let dst = if is_out { &mut stdout } else { &mut stderr };
                         let start = dst.len();
@@ -257,13 +252,7 @@ impl ProcessBuilder {
             })?;
             child.wait()
         })()
-            .chain_err(|| {
-            process_error(
-                &format!("could not execute process {}", self),
-                None,
-                None,
-            )
-        })?;
+        .chain_err(|| process_error(&format!("could not execute process {}", self), None, None))?;
         let output = Output {
             stdout,
             stderr,
@@ -332,9 +321,9 @@ pub fn process<T: AsRef<OsStr>>(cmd: T) -> ProcessBuilder {
 
 #[cfg(unix)]
 mod imp {
+    use crate::util::{process_error, ProcessBuilder};
     use crate::CargoResult;
     use std::os::unix::process::CommandExt;
-    use crate::util::{process_error, ProcessBuilder};
 
     pub fn exec_replace(process_builder: &ProcessBuilder) -> CargoResult<()> {
         let mut command = process_builder.build_command();
@@ -353,10 +342,10 @@ mod imp {
 mod imp {
     extern crate winapi;
 
-    use crate::CargoResult;
-    use crate::util::{process_error, ProcessBuilder};
     use self::winapi::shared::minwindef::{BOOL, DWORD, FALSE, TRUE};
     use self::winapi::um::consoleapi::SetConsoleCtrlHandler;
+    use crate::util::{process_error, ProcessBuilder};
+    use crate::CargoResult;
 
     unsafe extern "system" fn ctrlc_handler(_: DWORD) -> BOOL {
         // Do nothing. Let the child process handle it.
@@ -366,10 +355,7 @@ mod imp {
     pub fn exec_replace(process_builder: &ProcessBuilder) -> CargoResult<()> {
         unsafe {
             if SetConsoleCtrlHandler(Some(ctrlc_handler), TRUE) == FALSE {
-                return Err(process_error(
-                    "Could not set Ctrl-C handler.",
-                    None,
-                    None).into());
+                return Err(process_error("Could not set Ctrl-C handler.", None, None).into());
             }
         }
 

@@ -1,9 +1,9 @@
 use std::iter;
 use std::path::Path;
 
+use crate::core::{nightly_features_allowed, TargetKind, Workspace};
 use crate::ops;
 use crate::util::{self, CargoResult, ProcessError};
-use crate::core::{TargetKind, Workspace, nightly_features_allowed};
 
 pub fn run(
     ws: &Workspace,
@@ -19,13 +19,16 @@ pub fn run(
         .into_iter()
         .flat_map(|pkg| {
             iter::repeat(pkg).zip(pkg.manifest().targets().iter().filter(|target| {
-                !target.is_lib() && !target.is_custom_build() && if !options.filter.is_specific() {
-                    target.is_bin()
-                } else {
-                    options.filter.target_run(target)
-                }
+                !target.is_lib()
+                    && !target.is_custom_build()
+                    && if !options.filter.is_specific() {
+                        target.is_bin()
+                    } else {
+                        options.filter.target_run(target)
+                    }
             }))
-        }).collect();
+        })
+        .collect();
 
     if bins.is_empty() {
         if !options.filter.is_specific() {

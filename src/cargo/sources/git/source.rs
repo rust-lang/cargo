@@ -242,8 +242,8 @@ impl<'cfg> Source for GitSource<'cfg> {
 #[cfg(test)]
 mod test {
     use super::ident;
-    use url::Url;
     use crate::util::ToUrl;
+    use url::Url;
 
     #[test]
     pub fn test_url_to_path_ident_with_path() {

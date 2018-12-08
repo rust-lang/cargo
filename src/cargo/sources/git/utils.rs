@@ -109,7 +109,8 @@ impl GitRemote {
         let (repo, rev) = match repo_and_rev {
             Some(pair) => pair,
             None => {
-                let repo = self.clone_into(into, cargo_config)
+                let repo = self
+                    .clone_into(into, cargo_config)
                     .chain_err(|| format!("failed to clone into: {}", into.display()))?;
                 let rev = reference.resolve(&repo)?;
                 (repo, rev)
@@ -211,9 +212,10 @@ impl GitReference {
                 let obj = obj.peel(ObjectType::Commit)?;
                 Ok(obj.id())
             })()
-                .chain_err(|| format!("failed to find tag `{}`", s))?,
+            .chain_err(|| format!("failed to find tag `{}`", s))?,
             GitReference::Branch(ref s) => {
-                let b = repo.find_branch(s, git2::BranchType::Local)
+                let b = repo
+                    .find_branch(s, git2::BranchType::Local)
                     .chain_err(|| format!("failed to find branch `{}`", s))?;
                 b.get()
                     .target()
@@ -253,7 +255,8 @@ impl<'a> GitCheckout<'a> {
         config: &Config,
     ) -> CargoResult<GitCheckout<'a>> {
         let dirname = into.parent().unwrap();
-        fs::create_dir_all(&dirname).chain_err(|| format!("Couldn't mkdir {}", dirname.display()))?;
+        fs::create_dir_all(&dirname)
+            .chain_err(|| format!("Couldn't mkdir {}", dirname.display()))?;
         if into.exists() {
             paths::remove_dir_all(into)?;
         }
@@ -720,7 +723,8 @@ pub fn fetch(
         let mut repo_reinitialized = false;
         loop {
             debug!("initiating fetch of {} from {}", refspec, url);
-            let res = repo.remote_anonymous(url.as_str())?
+            let res = repo
+                .remote_anonymous(url.as_str())?
                 .fetch(&[refspec], Some(&mut opts), None);
             let err = match res {
                 Ok(()) => break,
@@ -759,7 +763,9 @@ fn fetch_with_cli(
         .arg(url.to_string())
         .arg(refspec)
         .cwd(repo.path());
-    config.shell().verbose(|s| s.status("Running", &cmd.to_string()))?;
+    config
+        .shell()
+        .verbose(|s| s.status("Running", &cmd.to_string()))?;
     cmd.exec()?;
     Ok(())
 }
@@ -876,10 +882,12 @@ fn init(path: &Path, bare: bool) -> CargoResult<git2::Repository> {
 /// update path above.
 fn github_up_to_date(handle: &mut Easy, url: &Url, oid: &git2::Oid) -> bool {
     macro_rules! r#try {
-        ($e:expr) => (match $e {
-            Some(e) => e,
-            None => return false,
-        })
+        ($e:expr) => {
+            match $e {
+                Some(e) => e,
+                None => return false,
+            }
+        };
     }
 
     // This expects GitHub urls in the form `github.com/user/repo` and nothing

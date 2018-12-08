@@ -54,7 +54,8 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
             [dependencies]
             bar = "0.1.0"
         "#,
-        ).file("src/lib.rs", "")
+        )
+        .file("src/lib.rs", "")
         .file("Cargo.lock", old_lockfile)
         .build();
 
@@ -103,7 +104,8 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
             [dependencies]
             bar = "0.1.0"
         "#,
-        ).file("src/lib.rs", "")
+        )
+        .file("src/lib.rs", "")
         .file("Cargo.lock", &old_lockfile)
         .build();
 
@@ -133,7 +135,8 @@ fn totally_wild_checksums_works() {
             [dependencies]
             bar = "0.1.0"
         "#,
-        ).file("src/lib.rs", "")
+        )
+        .file("src/lib.rs", "")
         .file(
             "Cargo.lock",
             r#"
@@ -160,9 +163,8 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
     p.cargo("build").run();
 
     let lock = p.read_lockfile();
-    assert!(
-        lock.starts_with(
-            r#"
+    assert!(lock.starts_with(
+        r#"
 [[package]]
 name = "bar"
 version = "0.1.0"
@@ -176,9 +178,9 @@ dependencies = [
 ]
 
 [metadata]
-"#.trim()
-        )
-    );
+"#
+        .trim()
+    ));
 }
 
 #[test]
@@ -197,7 +199,8 @@ fn wrong_checksum_is_an_error() {
             [dependencies]
             bar = "0.1.0"
         "#,
-        ).file("src/lib.rs", "")
+        )
+        .file("src/lib.rs", "")
         .file(
             "Cargo.lock",
             r#"
@@ -236,7 +239,8 @@ this could be indicative of a few possible errors:
 unable to verify that `bar v0.1.0` is the same as when the lockfile was generated
 
 ",
-        ).run();
+        )
+        .run();
 }
 
 // If the checksum is unlisted in the lockfile (e.g. <none>) yet we can
@@ -258,7 +262,8 @@ fn unlisted_checksum_is_bad_if_we_calculate() {
             [dependencies]
             bar = "0.1.0"
         "#,
-        ).file("src/lib.rs", "")
+        )
+        .file("src/lib.rs", "")
         .file(
             "Cargo.lock",
             r#"
@@ -297,7 +302,8 @@ this could be indicative of a few possible situations:
     * the lock file is corrupt
 
 ",
-        ).run();
+        )
+        .run();
 }
 
 // If the checksum is listed in the lockfile yet we cannot calculate it (e.g.
@@ -307,7 +313,8 @@ fn listed_checksum_bad_if_we_cannot_compute() {
     let git = git::new("bar", |p| {
         p.file("Cargo.toml", &basic_manifest("bar", "0.1.0"))
             .file("src/lib.rs", "")
-    }).unwrap();
+    })
+    .unwrap();
 
     let p = project()
         .file(
@@ -324,7 +331,8 @@ fn listed_checksum_bad_if_we_cannot_compute() {
         "#,
                 git.url()
             ),
-        ).file("src/lib.rs", "")
+        )
+        .file("src/lib.rs", "")
         .file(
             "Cargo.lock",
             &format!(
@@ -367,7 +375,8 @@ this could be indicative of a few possible situations:
 unable to verify that `bar v0.1.0 ([..])` is the same as when the lockfile was generated
 
 ",
-        ).run();
+        )
+        .run();
 }
 
 #[test]
@@ -386,7 +395,8 @@ fn current_lockfile_format() {
             [dependencies]
             bar = "0.1.0"
         "#,
-        ).file("src/lib.rs", "");
+        )
+        .file("src/lib.rs", "");
     let p = p.build();
 
     p.cargo("build").run();
@@ -445,7 +455,8 @@ dependencies = [
             [dependencies]
             bar = "0.1.0"
         "#,
-        ).file("src/lib.rs", "")
+        )
+        .file("src/lib.rs", "")
         .file("Cargo.lock", lockfile);
 
     let p = p.build();
@@ -472,7 +483,8 @@ fn locked_correct_error() {
             [dependencies]
             bar = "0.1.0"
         "#,
-        ).file("src/lib.rs", "");
+        )
+        .file("src/lib.rs", "");
     let p = p.build();
 
     p.cargo("build --locked")
@@ -482,5 +494,6 @@ fn locked_correct_error() {
 [UPDATING] `[..]` index
 error: the lock file [CWD]/Cargo.lock needs to be updated but --locked was passed to prevent this
 ",
-        ).run();
+        )
+        .run();
 }

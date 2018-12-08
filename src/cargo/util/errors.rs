@@ -1,13 +1,13 @@
 #![allow(unknown_lints)]
 
 use std::fmt;
+use std::path::PathBuf;
 use std::process::{ExitStatus, Output};
 use std::str;
-use std::path::PathBuf;
 
 use crate::core::{TargetKind, Workspace};
-use failure::{Context, Error, Fail};
 use clap;
+use failure::{Context, Error, Fail};
 
 pub use failure::Error as CargoError;
 pub type CargoResult<T> = Result<T, Error>;
@@ -306,8 +306,8 @@ pub fn process_error(
 
     #[cfg(unix)]
     fn status_to_string(status: ExitStatus) -> String {
-        use std::os::unix::process::*;
         use libc;
+        use std::os::unix::process::*;
 
         if let Some(signal) = status.signal() {
             let name = match signal as libc::c_int {

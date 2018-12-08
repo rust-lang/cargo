@@ -1,18 +1,18 @@
-use std::path::PathBuf;
 use std::fs;
+use std::path::PathBuf;
 
-use clap::{self, SubCommand};
-use crate::CargoResult;
-use crate::core::Workspace;
 use crate::core::compiler::{BuildConfig, MessageFormat};
+use crate::core::Workspace;
 use crate::ops::{CompileFilter, CompileOptions, NewOptions, Packages, VersionControl};
 use crate::sources::CRATES_IO_REGISTRY;
-use crate::util::paths;
 use crate::util::important_paths::find_root_manifest_for_wd;
+use crate::util::paths;
+use crate::CargoResult;
+use clap::{self, SubCommand};
 
-pub use clap::{AppSettings, Arg, ArgMatches};
-pub use crate::{CliError, CliResult, Config};
 pub use crate::core::compiler::CompileMode;
+pub use crate::{CliError, CliResult, Config};
+pub use clap::{AppSettings, Arg, ArgMatches};
 
 pub type App = clap::App<'static, 'static>;
 
@@ -96,11 +96,12 @@ pub trait AppExt: Sized {
     fn arg_features(self) -> Self {
         self._arg(
             opt("features", "Space-separated list of features to activate").value_name("FEATURES"),
-        )._arg(opt("all-features", "Activate all available features"))
-            ._arg(opt(
-                "no-default-features",
-                "Do not activate the `default` feature",
-            ))
+        )
+        ._arg(opt("all-features", "Activate all available features"))
+        ._arg(opt(
+            "no-default-features",
+            "Do not activate the `default` feature",
+        ))
     }
 
     fn arg_release(self, release: &'static str) -> Self {
@@ -116,7 +117,9 @@ pub trait AppExt: Sized {
     }
 
     fn arg_target_dir(self) -> Self {
-        self._arg(opt("target-dir", "Directory for all generated artifacts").value_name("DIRECTORY"))
+        self._arg(
+            opt("target-dir", "Directory for all generated artifacts").value_name("DIRECTORY"),
+        )
     }
 
     fn arg_manifest_path(self) -> Self {
@@ -146,22 +149,24 @@ pub trait AppExt: Sized {
                  control system (git, hg, pijul, or fossil) or do not \
                  initialize any version control at all (none), overriding \
                  a global configuration.",
-            ).value_name("VCS")
-                .possible_values(&["git", "hg", "pijul", "fossil", "none"]),
+            )
+            .value_name("VCS")
+            .possible_values(&["git", "hg", "pijul", "fossil", "none"]),
         )
-            ._arg(opt("bin", "Use a binary (application) template [default]"))
-            ._arg(opt("lib", "Use a library template"))
-            ._arg(
-                opt("edition", "Edition to set for the crate generated")
-                    .possible_values(&["2015", "2018"])
-                    .value_name("YEAR")
+        ._arg(opt("bin", "Use a binary (application) template [default]"))
+        ._arg(opt("lib", "Use a library template"))
+        ._arg(
+            opt("edition", "Edition to set for the crate generated")
+                .possible_values(&["2015", "2018"])
+                .value_name("YEAR"),
+        )
+        ._arg(
+            opt(
+                "name",
+                "Set the resulting package name, defaults to the directory name",
             )
-            ._arg(
-                opt(
-                    "name",
-                    "Set the resulting package name, defaults to the directory name",
-                ).value_name("NAME"),
-            )
+            .value_name("NAME"),
+        )
     }
 
     fn arg_index(self) -> Self {
@@ -369,14 +374,11 @@ pub trait ArgMatchesExt {
                     // but the user wants to switch back to crates.io for a single
                     // command.
                     Ok(None)
-                }
-                else {
-                    Ok(Some(registry.to_string()))                    
+                } else {
+                    Ok(Some(registry.to_string()))
                 }
             }
-            None => {
-                config.default_registry()
-            }
+            None => config.default_registry(),
         }
     }
 
@@ -439,7 +441,7 @@ pub fn values(args: &ArgMatches, name: &str) -> Vec<String> {
 
 #[derive(PartialEq, PartialOrd, Eq, Ord)]
 pub enum CommandInfo {
-    BuiltIn { name: String, about: Option<String>, },
+    BuiltIn { name: String, about: Option<String> },
     External { name: String, path: PathBuf },
 }
 

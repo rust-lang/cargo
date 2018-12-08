@@ -1,5 +1,5 @@
-use std::env;
 use crate::support::{basic_manifest, project};
+use std::env;
 
 #[test]
 fn collision_dylib() {

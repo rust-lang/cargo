@@ -1,9 +1,9 @@
 use crate::core::compiler::{BuildConfig, CompileMode, Kind, TargetInfo};
 use crate::core::{PackageSet, Resolve, Workspace};
 use crate::ops;
-use std::collections::HashSet;
 use crate::util::CargoResult;
 use crate::util::Config;
+use std::collections::HashSet;
 
 pub struct FetchOptions<'a> {
     pub config: &'a Config,

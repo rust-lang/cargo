@@ -1088,23 +1088,23 @@ fn incomplete_information_skiping_3() {
     // minimized bug found in:
     // https://github.com/rust-lang/cargo/commit/003c29b0c71e5ea28fbe8e72c148c755c9f3f8d9
     let input = vec![
-        pkg!{("to_yank", "3.0.3")},
-        pkg!{("to_yank", "3.3.0")},
-        pkg!{("to_yank", "3.3.1")},
-        pkg!{("a", "3.3.0") => [
+        pkg! {("to_yank", "3.0.3")},
+        pkg! {("to_yank", "3.3.0")},
+        pkg! {("to_yank", "3.3.1")},
+        pkg! {("a", "3.3.0") => [
             dep_req("to_yank", "=3.0.3"),
         ] },
-        pkg!{("a", "3.3.2") => [
+        pkg! {("a", "3.3.2") => [
             dep_req("to_yank", "<=3.3.0"),
         ] },
-        pkg!{("b", "0.1.3") => [
+        pkg! {("b", "0.1.3") => [
             dep_req("a", "=3.3.0"),
         ] },
-        pkg!{("b", "2.0.2") => [
+        pkg! {("b", "2.0.2") => [
             dep_req("to_yank", "3.3.0"),
             dep("a"),
         ] },
-        pkg!{("b", "2.3.3") => [
+        pkg! {("b", "2.3.3") => [
             dep_req("to_yank", "3.3.0"),
             dep_req("a", "=3.3.0"),
         ] },

@@ -1,16 +1,16 @@
 use std::fs::{self, File, OpenOptions};
-use std::io::{Read, Seek, SeekFrom, Write};
 use std::io;
+use std::io::{Read, Seek, SeekFrom, Write};
 use std::path::{Display, Path, PathBuf};
 
-use termcolor::Color::Cyan;
 use fs2::{lock_contended_error, FileExt};
 #[allow(unused_imports)]
 use libc;
+use termcolor::Color::Cyan;
 
-use crate::util::Config;
-use crate::util::paths;
 use crate::util::errors::{CargoError, CargoResult, CargoResultExt};
+use crate::util::paths;
+use crate::util::Config;
 
 pub struct FileLock {
     f: Option<File>,
@@ -208,7 +208,8 @@ impl Filesystem {
         // If we want an exclusive lock then if we fail because of NotFound it's
         // likely because an intermediate directory didn't exist, so try to
         // create the directory and then continue.
-        let f = opts.open(&path)
+        let f = opts
+            .open(&path)
             .or_else(|e| {
                 if e.kind() == io::ErrorKind::NotFound && state == State::Exclusive {
                     fs::create_dir_all(path.parent().unwrap())?;
@@ -295,16 +296,10 @@ fn acquire(
         // implement file locking. We detect that here via the return value of
         // locking (e.g. inspecting errno).
         #[cfg(unix)]
-        Err(ref e) if e.raw_os_error() == Some(libc::ENOTSUP) =>
-        {
-            return Ok(())
-        }
+        Err(ref e) if e.raw_os_error() == Some(libc::ENOTSUP) => return Ok(()),
 
         #[cfg(target_os = "linux")]
-        Err(ref e) if e.raw_os_error() == Some(libc::ENOSYS) =>
-        {
-            return Ok(())
-        }
+        Err(ref e) if e.raw_os_error() == Some(libc::ENOSYS) => return Ok(()),
 
         Err(e) => {
             if e.raw_os_error() != lock_contended_error().raw_os_error() {

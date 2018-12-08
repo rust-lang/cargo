@@ -2,27 +2,14 @@
 #![cfg_attr(feature = "cargo-clippy", allow(blacklisted_name))]
 #![cfg_attr(feature = "cargo-clippy", allow(explicit_iter_loop))]
 
-
-use cargo;
-use filetime;
-
-use git2;
-
-use hex;
 #[macro_use]
 extern crate lazy_static;
-use libc;
 #[macro_use]
 extern crate proptest;
 #[macro_use]
 extern crate serde_derive;
 #[macro_use]
 extern crate serde_json;
-
-use toml;
-
-#[cfg(windows)]
-extern crate winapi;
 
 #[macro_use]
 mod support;

@@ -9,7 +9,8 @@ pub fn cli() -> App {
             opt(
                 "list",
                 "Print files included in a package without making one",
-            ).short("l"),
+            )
+            .short("l"),
         )
         .arg(opt(
             "no-verify",
