@@ -5,15 +5,15 @@ use std::collections::HashSet;
 use std::env;
 use std::io::{BufReader, Read, Write};
 use std::net::{Shutdown, SocketAddr, TcpListener, TcpStream};
-use std::sync::Arc;
 use std::sync::atomic::{AtomicBool, Ordering};
+use std::sync::Arc;
 use std::thread::{self, JoinHandle};
 
 use failure::{Error, ResultExt};
 use serde_json;
 
-use crate::util::{Config, ProcessBuilder};
 use crate::util::errors::CargoResult;
+use crate::util::{Config, ProcessBuilder};
 
 const DIAGNOSICS_SERVER_VAR: &str = "__CARGO_FIX_DIAGNOSTICS_SERVER";
 const PLEASE_REPORT_THIS_BUG: &str =
@@ -53,8 +53,8 @@ pub enum Message {
 
 impl Message {
     pub fn post(&self) -> Result<(), Error> {
-        let addr = env::var(DIAGNOSICS_SERVER_VAR)
-            .context("diagnostics collector misconfigured")?;
+        let addr =
+            env::var(DIAGNOSICS_SERVER_VAR).context("diagnostics collector misconfigured")?;
         let mut client =
             TcpStream::connect(&addr).context("failed to connect to parent diagnostics target")?;
 
@@ -116,9 +116,9 @@ impl<'a> DiagnosticPrinter<'a> {
                         krate,
                     ))?;
                 } else {
-                    self.config.shell().warn(
-                        "failed to automatically apply fixes suggested by rustc"
-                    )?;
+                    self.config
+                        .shell()
+                        .warn("failed to automatically apply fixes suggested by rustc")?;
                 }
                 if !files.is_empty() {
                     writeln!(
@@ -137,7 +137,7 @@ impl<'a> DiagnosticPrinter<'a> {
             Message::EditionAlreadyEnabled { file, edition } => {
                 // Like above, only warn once per file
                 if !self.edition_already_enabled.insert(file.clone()) {
-                    return Ok(())
+                    return Ok(());
                 }
 
                 let msg = format!(
@@ -158,10 +158,14 @@ information about transitioning to the {0} edition see:
                 self.config.shell().error(&msg)?;
                 Ok(())
             }
-            Message::IdiomEditionMismatch { file, idioms, edition } => {
+            Message::IdiomEditionMismatch {
+                file,
+                idioms,
+                edition,
+            } => {
                 // Same as above
                 if !self.idiom_mismatch.insert(file.clone()) {
-                    return Ok(())
+                    return Ok(());
                 }
                 self.config.shell().error(&format!(
                     "\
@@ -238,7 +242,7 @@ impl RustfixDiagnosticServer {
                 Err(e) => warn!("invalid diagnostics message: {}", e),
             }
             if done.load(Ordering::SeqCst) {
-                break
+                break;
             }
         }
     }

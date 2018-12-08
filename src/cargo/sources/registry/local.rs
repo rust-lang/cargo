@@ -3,11 +3,11 @@ use std::io::SeekFrom;
 use std::path::Path;
 
 use crate::core::PackageId;
-use hex;
 use crate::sources::registry::{MaybeLock, RegistryConfig, RegistryData};
 use crate::util::errors::{CargoResult, CargoResultExt};
 use crate::util::paths;
 use crate::util::{Config, FileLock, Filesystem, Sha256};
+use hex;
 
 pub struct LocalRegistry<'cfg> {
     index_path: Filesystem,

@@ -3,8 +3,8 @@ use git2;
 
 use failure::Error;
 
-use crate::util::Config;
 use crate::util::errors::{CargoResult, HttpNot200};
+use crate::util::Config;
 
 pub struct Retry<'a> {
     config: &'a Config,
@@ -19,9 +19,7 @@ impl<'a> Retry<'a> {
         })
     }
 
-    pub fn r#try<T>(&mut self, f: impl FnOnce() -> CargoResult<T>)
-        -> CargoResult<Option<T>>
-    {
+    pub fn r#try<T>(&mut self, f: impl FnOnce() -> CargoResult<T>) -> CargoResult<Option<T>> {
         match f() {
             Err(ref e) if maybe_spurious(e) && self.remaining > 0 => {
                 let msg = format!(
@@ -85,7 +83,7 @@ where
     let mut retry = Retry::new(config)?;
     loop {
         if let Some(ret) = retry.r#try(&mut callback)? {
-            return Ok(ret)
+            return Ok(ret);
         }
     }
 }
@@ -95,11 +93,13 @@ fn with_retry_repeats_the_call_then_works() {
     let error1 = HttpNot200 {
         code: 501,
         url: "Uri".to_string(),
-    }.into();
+    }
+    .into();
     let error2 = HttpNot200 {
         code: 502,
         url: "Uri".to_string(),
-    }.into();
+    }
+    .into();
     let mut results: Vec<CargoResult<()>> = vec![Ok(()), Err(error1), Err(error2)];
     let config = Config::default().unwrap();
     let result = with_retry(&config, || results.pop().unwrap());

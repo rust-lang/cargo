@@ -15,7 +15,8 @@ fn probe_cfg_before_crate_type_discovery() {
             [target.'cfg(not(stage300))'.dependencies.noop]
             path = "../noop"
         "#,
-        ).file(
+        )
+        .file(
             "src/main.rs",
             r#"
             #[macro_use]
@@ -26,7 +27,8 @@ fn probe_cfg_before_crate_type_discovery() {
 
             fn main() {}
         "#,
-        ).build();
+        )
+        .build();
     let _noop = project()
         .at("noop")
         .file(
@@ -40,7 +42,8 @@ fn probe_cfg_before_crate_type_discovery() {
             [lib]
             proc-macro = true
         "#,
-        ).file(
+        )
+        .file(
             "src/lib.rs",
             r#"
             extern crate proc_macro;
@@ -51,7 +54,8 @@ fn probe_cfg_before_crate_type_discovery() {
                 "".parse().unwrap()
             }
         "#,
-        ).build();
+        )
+        .build();
 
     p.cargo("build").run();
 }
@@ -70,7 +74,8 @@ fn noop() {
             [dependencies.noop]
             path = "../noop"
         "#,
-        ).file(
+        )
+        .file(
             "src/main.rs",
             r#"
             #[macro_use]
@@ -81,7 +86,8 @@ fn noop() {
 
             fn main() {}
         "#,
-        ).build();
+        )
+        .build();
     let _noop = project()
         .at("noop")
         .file(
@@ -95,7 +101,8 @@ fn noop() {
             [lib]
             proc-macro = true
         "#,
-        ).file(
+        )
+        .file(
             "src/lib.rs",
             r#"
             extern crate proc_macro;
@@ -106,7 +113,8 @@ fn noop() {
                 "".parse().unwrap()
             }
         "#,
-        ).build();
+        )
+        .build();
 
     p.cargo("build").run();
     p.cargo("build").run();
@@ -126,7 +134,8 @@ fn impl_and_derive() {
             [dependencies.transmogrify]
             path = "../transmogrify"
         "#,
-        ).file(
+        )
+        .file(
             "src/main.rs",
             r#"
             #[macro_use]
@@ -145,7 +154,8 @@ fn impl_and_derive() {
                 println!("{:?}", x);
             }
         "#,
-        ).build();
+        )
+        .build();
     let _transmogrify = project()
         .at("transmogrify")
         .file(
@@ -159,7 +169,8 @@ fn impl_and_derive() {
             [lib]
             proc-macro = true
         "#,
-        ).file(
+        )
+        .file(
             "src/lib.rs",
             r#"
             extern crate proc_macro;
@@ -183,7 +194,8 @@ fn impl_and_derive() {
                 ".parse().unwrap()
             }
         "#,
-        ).build();
+        )
+        .build();
 
     p.cargo("build").run();
     p.cargo("run").with_stdout("X { success: true }").run();
@@ -208,7 +220,8 @@ fn plugin_and_proc_macro() {
             plugin = true
             proc-macro = true
         "#,
-        ).file(
+        )
+        .file(
             "src/lib.rs",
             r#"
             #![feature(plugin_registrar, rustc_private)]
@@ -228,7 +241,8 @@ fn plugin_and_proc_macro() {
                 input
             }
         "#,
-        ).build();
+        )
+        .build();
 
     let msg = "  lib.plugin and lib.proc-macro cannot both be true";
     p.cargo("build")
@@ -250,7 +264,8 @@ fn proc_macro_doctest() {
             [lib]
             proc-macro = true
         "#,
-        ).file(
+        )
+        .file(
             "src/lib.rs",
             r#"
 #![crate_type = "proc-macro"]
@@ -272,7 +287,8 @@ fn a() {
   assert!(true);
 }
 "#,
-        ).build();
+        )
+        .build();
 
     foo.cargo("test")
         .with_stdout_contains("test a ... ok")

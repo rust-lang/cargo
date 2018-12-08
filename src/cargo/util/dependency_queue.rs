@@ -93,7 +93,8 @@ impl<K: Hash + Eq + Clone, V> DependencyQueue<K, V> {
         let mut my_dependencies = HashSet::new();
         for dep in dependencies {
             my_dependencies.insert(dep.clone());
-            let rev = self.reverse_dep_map
+            let rev = self
+                .reverse_dep_map
                 .entry(dep.clone())
                 .or_insert_with(HashSet::new);
             rev.insert(key.clone());
@@ -122,13 +123,13 @@ impl<K: Hash + Eq + Clone, V> DependencyQueue<K, V> {
 
             results.insert(key.clone(), IN_PROGRESS);
 
-            let depth = 1
-                + map.get(&key)
-                    .into_iter()
-                    .flat_map(|it| it)
-                    .map(|dep| depth(dep, map, results))
-                    .max()
-                    .unwrap_or(0);
+            let depth = 1 + map
+                .get(&key)
+                .into_iter()
+                .flat_map(|it| it)
+                .map(|dep| depth(dep, map, results))
+                .max()
+                .unwrap_or(0);
 
             *results.get_mut(key).unwrap() = depth;
 
@@ -151,7 +152,8 @@ impl<K: Hash + Eq + Clone, V> DependencyQueue<K, V> {
         // TODO: it'd be best here to throw in a heuristic of crate size as
         //       well. For example how long did this crate historically take to
         //       compile? How large is its source code? etc.
-        let next = self.dep_map
+        let next = self
+            .dep_map
             .iter()
             .filter(|&(_, &(ref deps, _))| deps.is_empty())
             .map(|(key, _)| key.clone())

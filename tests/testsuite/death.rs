@@ -66,7 +66,8 @@ fn ctrl_c_kills_everyone() {
             authors = []
             build = "build.rs"
         "#,
-        ).file("src/lib.rs", "")
+        )
+        .file("src/lib.rs", "")
         .file(
             "build.rs",
             &format!(
@@ -82,7 +83,8 @@ fn ctrl_c_kills_everyone() {
         "#,
                 addr
             ),
-        ).build();
+        )
+        .build();
 
     let mut cargo = p.cargo("build").build_command();
     cargo

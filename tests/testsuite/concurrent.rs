@@ -7,12 +7,12 @@ use std::thread;
 use std::time::Duration;
 use std::{env, str};
 
-use git2;
 use crate::support::cargo_process;
 use crate::support::git;
-use crate::support::install::{cargo_home, assert_has_installed_exe};
+use crate::support::install::{assert_has_installed_exe, cargo_home};
 use crate::support::registry::Package;
 use crate::support::{basic_manifest, execs, project};
+use git2;
 
 fn pkg(name: &str, vers: &str) {
     Package::new(name, vers)
@@ -109,7 +109,8 @@ fn one_install_should_be_bad() {
         .with_status(101)
         .with_stderr_contains(
             "[ERROR] binary `foo[..]` already exists in destination as part of `[..]`",
-        ).run_output(&bad);
+        )
+        .run_output(&bad);
     execs()
         .with_stderr_contains("warning: be sure to add `[..]` to your PATH [..]")
         .run_output(&good);
@@ -140,7 +141,8 @@ fn multiple_registry_fetches() {
             [dependencies]
             bar = "*"
         "#,
-        ).file("a/src/main.rs", "fn main() {}")
+        )
+        .file("a/src/main.rs", "fn main() {}")
         .file(
             "b/Cargo.toml",
             r#"
@@ -152,7 +154,8 @@ fn multiple_registry_fetches() {
             [dependencies]
             bar = "*"
         "#,
-        ).file("b/src/main.rs", "fn main() {}");
+        )
+        .file("b/src/main.rs", "fn main() {}");
     let p = p.build();
 
     let mut a = p.cargo("build").cwd(p.root().join("a")).build_command();
@@ -171,18 +174,16 @@ fn multiple_registry_fetches() {
     execs().run_output(&b);
 
     let suffix = env::consts::EXE_SUFFIX;
-    assert!(
-        p.root()
-            .join("a/target/debug")
-            .join(format!("foo{}", suffix))
-            .is_file()
-    );
-    assert!(
-        p.root()
-            .join("b/target/debug")
-            .join(format!("bar{}", suffix))
-            .is_file()
-    );
+    assert!(p
+        .root()
+        .join("a/target/debug")
+        .join(format!("foo{}", suffix))
+        .is_file());
+    assert!(p
+        .root()
+        .join("b/target/debug")
+        .join(format!("bar{}", suffix))
+        .is_file());
 }
 
 #[test]
@@ -191,7 +192,8 @@ fn git_same_repo_different_tags() {
         project
             .file("Cargo.toml", &basic_manifest("dep", "0.5.0"))
             .file("src/lib.rs", "pub fn tag1() {}")
-    }).unwrap();
+    })
+    .unwrap();
 
     let repo = git2::Repository::open(&a.root()).unwrap();
     git::tag(&repo, "tag1");
@@ -220,10 +222,12 @@ fn git_same_repo_different_tags() {
         "#,
                 a.url()
             ),
-        ).file(
+        )
+        .file(
             "a/src/main.rs",
             "extern crate dep; fn main() { dep::tag1(); }",
-        ).file(
+        )
+        .file(
             "b/Cargo.toml",
             &format!(
                 r#"
@@ -237,7 +241,8 @@ fn git_same_repo_different_tags() {
         "#,
                 a.url()
             ),
-        ).file(
+        )
+        .file(
             "b/src/main.rs",
             "extern crate dep; fn main() { dep::tag2(); }",
         );
@@ -265,7 +270,8 @@ fn git_same_branch_different_revs() {
         project
             .file("Cargo.toml", &basic_manifest("dep", "0.5.0"))
             .file("src/lib.rs", "pub fn f1() {}")
-    }).unwrap();
+    })
+    .unwrap();
 
     let p = project()
         .no_manifest()
@@ -283,10 +289,12 @@ fn git_same_branch_different_revs() {
         "#,
                 a.url()
             ),
-        ).file(
+        )
+        .file(
             "a/src/main.rs",
             "extern crate dep; fn main() { dep::f1(); }",
-        ).file(
+        )
+        .file(
             "b/Cargo.toml",
             &format!(
                 r#"
@@ -300,7 +308,8 @@ fn git_same_branch_different_revs() {
         "#,
                 a.url()
             ),
-        ).file(
+        )
+        .file(
             "b/src/main.rs",
             "extern crate dep; fn main() { dep::f2(); }",
         );
@@ -377,7 +386,8 @@ fn killing_cargo_releases_the_lock() {
             version = "0.0.0"
             build = "build.rs"
         "#,
-        ).file("src/main.rs", "fn main() {}")
+        )
+        .file("src/main.rs", "fn main() {}")
         .file(
             "build.rs",
             r#"
@@ -449,14 +459,16 @@ fn debug_release_ok() {
 [COMPILING] foo v0.0.1 [..]
 [FINISHED] dev [unoptimized + debuginfo] target(s) in [..]
 ",
-        ).run_output(&a);
+        )
+        .run_output(&a);
     execs()
         .with_stderr(
             "\
 [COMPILING] foo v0.0.1 [..]
 [FINISHED] release [optimized] target(s) in [..]
 ",
-        ).run_output(&b);
+        )
+        .run_output(&b);
 }
 
 #[test]
@@ -465,13 +477,15 @@ fn no_deadlock_with_git_dependencies() {
         project
             .file("Cargo.toml", &basic_manifest("dep1", "0.5.0"))
             .file("src/lib.rs", "")
-    }).unwrap();
+    })
+    .unwrap();
 
     let dep2 = git::new("dep2", |project| {
         project
             .file("Cargo.toml", &basic_manifest("dep2", "0.5.0"))
             .file("src/lib.rs", "")
-    }).unwrap();
+    })
+    .unwrap();
 
     let p = project()
         .file(
@@ -490,7 +504,8 @@ fn no_deadlock_with_git_dependencies() {
                 dep1.url(),
                 dep2.url()
             ),
-        ).file("src/main.rs", "fn main() { }");
+        )
+        .file("src/main.rs", "fn main() { }");
     let p = p.build();
 
     let n_concurrent_builds = 5;

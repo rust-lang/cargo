@@ -20,7 +20,8 @@ fn minor_update_two_places() {
                 log = "0.1"
                 foo = { path = "foo" }
             "#,
-        ).file("src/lib.rs", "")
+        )
+        .file("src/lib.rs", "")
         .file(
             "foo/Cargo.toml",
             r#"
@@ -32,7 +33,8 @@ fn minor_update_two_places() {
                 [dependencies]
                 log = "0.1"
             "#,
-        ).file("foo/src/lib.rs", "")
+        )
+        .file("foo/src/lib.rs", "")
         .build();
 
     p.cargo("build").run();
@@ -50,7 +52,8 @@ fn minor_update_two_places() {
                 [dependencies]
                 log = "0.1.1"
             "#,
-        ).unwrap();
+        )
+        .unwrap();
 
     p.cargo("build").run();
 }
@@ -74,7 +77,8 @@ fn transitive_minor_update() {
                 log = "0.1"
                 foo = { path = "foo" }
             "#,
-        ).file("src/lib.rs", "")
+        )
+        .file("src/lib.rs", "")
         .file(
             "foo/Cargo.toml",
             r#"
@@ -86,7 +90,8 @@ fn transitive_minor_update() {
                 [dependencies]
                 serde = "0.1"
             "#,
-        ).file("foo/src/lib.rs", "")
+        )
+        .file("foo/src/lib.rs", "")
         .build();
 
     p.cargo("build").run();
@@ -108,7 +113,8 @@ fn transitive_minor_update() {
             "\
 [UPDATING] `[..]` index
 ",
-        ).run();
+        )
+        .run();
 }
 
 #[test]
@@ -130,7 +136,8 @@ fn conservative() {
                 log = "0.1"
                 foo = { path = "foo" }
             "#,
-        ).file("src/lib.rs", "")
+        )
+        .file("src/lib.rs", "")
         .file(
             "foo/Cargo.toml",
             r#"
@@ -142,7 +149,8 @@ fn conservative() {
                 [dependencies]
                 serde = "0.1"
             "#,
-        ).file("foo/src/lib.rs", "")
+        )
+        .file("foo/src/lib.rs", "")
         .build();
 
     p.cargo("build").run();
@@ -156,7 +164,8 @@ fn conservative() {
 [UPDATING] `[..]` index
 [UPDATING] serde v0.1.0 -> v0.1.1
 ",
-        ).run();
+        )
+        .run();
 }
 
 #[test]
@@ -175,7 +184,8 @@ fn update_via_new_dep() {
                 log = "0.1"
                 # foo = { path = "foo" }
             "#,
-        ).file("src/lib.rs", "")
+        )
+        .file("src/lib.rs", "")
         .file(
             "foo/Cargo.toml",
             r#"
@@ -187,7 +197,8 @@ fn update_via_new_dep() {
                 [dependencies]
                 log = "0.1.1"
             "#,
-        ).file("foo/src/lib.rs", "")
+        )
+        .file("foo/src/lib.rs", "")
         .build();
 
     p.cargo("build").run();
@@ -215,7 +226,8 @@ fn update_via_new_member() {
                 [dependencies]
                 log = "0.1"
             "#,
-        ).file("src/lib.rs", "")
+        )
+        .file("src/lib.rs", "")
         .file(
             "foo/Cargo.toml",
             r#"
@@ -227,7 +239,8 @@ fn update_via_new_member() {
                 [dependencies]
                 log = "0.1.1"
             "#,
-        ).file("foo/src/lib.rs", "")
+        )
+        .file("foo/src/lib.rs", "")
         .build();
 
     p.cargo("build").run();
@@ -253,7 +266,8 @@ fn add_dep_deep_new_requirement() {
                 log = "0.1"
                 # bar = "0.1"
             "#,
-        ).file("src/lib.rs", "")
+        )
+        .file("src/lib.rs", "")
         .build();
 
     p.cargo("build").run();
@@ -282,7 +296,8 @@ fn everything_real_deep() {
                 foo = "0.1"
                 # bar = "0.1"
             "#,
-        ).file("src/lib.rs", "")
+        )
+        .file("src/lib.rs", "")
         .build();
 
     p.cargo("build").run();
@@ -308,7 +323,8 @@ fn change_package_version() {
                 [dependencies]
                 bar = { path = "bar", version = "0.2.0-alpha" }
             "#,
-        ).file("src/lib.rs", "")
+        )
+        .file("src/lib.rs", "")
         .file("bar/Cargo.toml", &basic_manifest("bar", "0.2.0-alpha"))
         .file("bar/src/lib.rs", "")
         .file(
@@ -323,7 +339,8 @@ fn change_package_version() {
                 name = "bar"
                 version = "0.2.0"
             "#,
-        ).build();
+        )
+        .build();
 
     p.cargo("build").run();
 }
@@ -347,7 +364,8 @@ fn update_precise() {
                 serde = "0.2"
                 foo = { path = "foo" }
             "#,
-        ).file("src/lib.rs", "")
+        )
+        .file("src/lib.rs", "")
         .file(
             "foo/Cargo.toml",
             r#"
@@ -359,7 +377,8 @@ fn update_precise() {
                 [dependencies]
                 serde = "0.1"
             "#,
-        ).file("foo/src/lib.rs", "")
+        )
+        .file("foo/src/lib.rs", "")
         .build();
 
     p.cargo("build").run();
@@ -372,7 +391,8 @@ fn update_precise() {
 [UPDATING] `[..]` index
 [UPDATING] serde v0.2.1 -> v0.2.0
 ",
-        ).run();
+        )
+        .run();
 }
 
 #[test]

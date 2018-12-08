@@ -11,10 +11,10 @@ use std::collections::BTreeMap;
 use super::context::OutputFile;
 use super::{CompileMode, Context, Kind, Unit};
 use crate::core::TargetKind;
+use crate::util::{internal, CargoResult, ProcessBuilder};
 use semver;
 use serde_json;
 use std::path::PathBuf;
-use crate::util::{internal, CargoResult, ProcessBuilder};
 
 #[derive(Debug, Serialize)]
 struct Invocation {

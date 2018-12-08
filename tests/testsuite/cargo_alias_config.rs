@@ -11,7 +11,8 @@ fn alias_incorrect_config_type() {
             [alias]
             b-cargo-test = 5
         "#,
-        ).build();
+        )
+        .build();
 
     p.cargo("b-cargo-test -v")
         .with_status(101)
@@ -19,7 +20,8 @@ fn alias_incorrect_config_type() {
             "\
 [ERROR] invalid configuration for key `alias.b-cargo-test`
 expected a list, but found a integer for [..]",
-        ).run();
+        )
+        .run();
 }
 
 #[test]
@@ -33,14 +35,16 @@ fn alias_config() {
             [alias]
             b-cargo-test = "build"
         "#,
-        ).build();
+        )
+        .build();
 
     p.cargo("b-cargo-test -v")
         .with_stderr_contains(
             "\
 [COMPILING] foo v0.5.0 [..]
 [RUNNING] `rustc --crate-name foo [..]",
-        ).run();
+        )
+        .run();
 }
 
 #[test]
@@ -55,14 +59,16 @@ fn recursive_alias() {
             b-cargo-test = "build"
             a-cargo-test = ["b-cargo-test", "-v"]
         "#,
-        ).build();
+        )
+        .build();
 
     p.cargo("a-cargo-test")
         .with_stderr_contains(
             "\
 [COMPILING] foo v0.5.0 [..]
 [RUNNING] `rustc --crate-name foo [..]",
-        ).run();
+        )
+        .run();
 }
 
 #[test]
@@ -76,7 +82,8 @@ fn alias_list_test() {
             [alias]
             b-cargo-test = ["build", "--release"]
          "#,
-        ).build();
+        )
+        .build();
 
     p.cargo("b-cargo-test -v")
         .with_stderr_contains("[COMPILING] foo v0.5.0 [..]")
@@ -95,7 +102,8 @@ fn alias_with_flags_config() {
             [alias]
             b-cargo-test = "build --release"
          "#,
-        ).build();
+        )
+        .build();
 
     p.cargo("b-cargo-test -v")
         .with_stderr_contains("[COMPILING] foo v0.5.0 [..]")
@@ -114,7 +122,8 @@ fn alias_cannot_shadow_builtin_command() {
             [alias]
             build = "fetch"
          "#,
-        ).build();
+        )
+        .build();
 
     p.cargo("build")
         .with_stderr(
@@ -123,7 +132,8 @@ fn alias_cannot_shadow_builtin_command() {
 [COMPILING] foo v0.5.0 ([..])
 [FINISHED] dev [unoptimized + debuginfo] target(s) in [..]
 ",
-        ).run();
+        )
+        .run();
 }
 
 #[test]
@@ -137,7 +147,8 @@ fn alias_override_builtin_alias() {
             [alias]
             b = "run"
          "#,
-        ).build();
+        )
+        .build();
 
     p.cargo("b")
         .with_stderr(
@@ -146,7 +157,8 @@ fn alias_override_builtin_alias() {
 [FINISHED] dev [unoptimized + debuginfo] target(s) in [..]
 [RUNNING] `target/debug/foo[EXE]`
 ",
-        ).run();
+        )
+        .run();
 }
 
 #[test]

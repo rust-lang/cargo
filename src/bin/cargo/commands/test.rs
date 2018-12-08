@@ -97,7 +97,10 @@ pub fn exec(config: &mut Config, args: &ArgMatches<'_>) -> CliResult {
     let doc = args.is_present("doc");
     if doc {
         if let CompileFilter::Only { .. } = compile_opts.filter {
-            return Err(CliError::new(format_err!("Can't mix --doc with other target selecting options"), 101))
+            return Err(CliError::new(
+                format_err!("Can't mix --doc with other target selecting options"),
+                101,
+            ));
         }
         compile_opts.build_config.mode = CompileMode::Doctest;
         compile_opts.filter = ops::CompileFilter::new(

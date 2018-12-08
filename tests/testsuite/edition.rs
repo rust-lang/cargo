@@ -18,7 +18,8 @@ fn edition_works_for_build_script() {
                 [build-dependencies]
                 a = { path = 'a' }
             "#,
-        ).file("src/lib.rs", "")
+        )
+        .file("src/lib.rs", "")
         .file(
             "build.rs",
             r#"
@@ -26,7 +27,8 @@ fn edition_works_for_build_script() {
                     a::foo();
                 }
             "#,
-        ).file("a/Cargo.toml", &basic_lib_manifest("a"))
+        )
+        .file("a/Cargo.toml", &basic_lib_manifest("a"))
         .file("a/src/lib.rs", "pub fn foo() {}")
         .build();
 

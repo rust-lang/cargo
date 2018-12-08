@@ -26,13 +26,13 @@ use crate::core::profiles::ConfigProfiles;
 use crate::core::shell::Verbosity;
 use crate::core::{CliUnstable, Shell, SourceId, Workspace};
 use crate::ops;
-use url::Url;
 use crate::util::errors::{internal, CargoResult, CargoResultExt};
 use crate::util::paths;
 use crate::util::toml as cargo_toml;
 use crate::util::Filesystem;
 use crate::util::Rustc;
 use crate::util::ToUrl;
+use url::Url;
 
 use self::ConfigValue as CV;
 

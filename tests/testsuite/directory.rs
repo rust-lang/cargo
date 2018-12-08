@@ -93,10 +93,12 @@ fn simple() {
             [dependencies]
             bar = "0.1.0"
         "#,
-        ).file(
+        )
+        .file(
             "src/lib.rs",
             "extern crate bar; pub fn foo() { bar::bar(); }",
-        ).build();
+        )
+        .build();
 
     p.cargo("build")
         .with_stderr(
@@ -105,7 +107,8 @@ fn simple() {
 [COMPILING] foo v0.1.0 ([CWD])
 [FINISHED] [..]
 ",
-        ).run();
+        )
+        .run();
 }
 
 #[test]
@@ -128,10 +131,12 @@ fn simple_install() {
             [dependencies]
             foo = "0.0.1"
         "#,
-        ).file(
+        )
+        .file(
             "src/main.rs",
             "extern crate foo; pub fn main() { foo::foo(); }",
-        ).build();
+        )
+        .build();
 
     cargo_process("install bar")
         .with_stderr(
@@ -142,7 +147,8 @@ fn simple_install() {
   Installing [..]bar[..]
 warning: be sure to add `[..]` to your PATH to be able to run the installed binaries
 ",
-        ).run();
+        )
+        .run();
 }
 
 #[test]
@@ -166,10 +172,12 @@ fn simple_install_fail() {
             foo = "0.1.0"
             baz = "9.8.7"
         "#,
-        ).file(
+        )
+        .file(
             "src/main.rs",
             "extern crate foo; pub fn main() { foo::foo(); }",
-        ).build();
+        )
+        .build();
 
     cargo_process("install bar")
         .with_status(101)
@@ -183,7 +191,8 @@ location searched: registry `https://github.com/rust-lang/crates.io-index`
 did you mean: bar, foo
 required by package `bar v0.1.0`
 ",
-        ).run();
+        )
+        .run();
 }
 
 #[test]
@@ -210,10 +219,12 @@ fn install_without_feature_dep() {
             [features]
             wantbaz = ["baz"]
         "#,
-        ).file(
+        )
+        .file(
             "src/main.rs",
             "extern crate foo; pub fn main() { foo::foo(); }",
-        ).build();
+        )
+        .build();
 
     cargo_process("install bar")
         .with_stderr(
@@ -224,7 +235,8 @@ fn install_without_feature_dep() {
   Installing [..]bar[..]
 warning: be sure to add `[..]` to your PATH to be able to run the installed binaries
 ",
-        ).run();
+        )
+        .run();
 }
 
 #[test]
@@ -245,10 +257,12 @@ fn not_there() {
             [dependencies]
             bar = "0.1.0"
         "#,
-        ).file(
+        )
+        .file(
             "src/lib.rs",
             "extern crate bar; pub fn foo() { bar::bar(); }",
-        ).build();
+        )
+        .build();
 
     p.cargo("build")
         .with_status(101)
@@ -258,7 +272,8 @@ error: no matching package named `bar` found
 location searched: [..]
 required by package `foo v0.1.0 ([..])`
 ",
-        ).run();
+        )
+        .run();
 }
 
 #[test]
@@ -289,10 +304,12 @@ fn multiple() {
             [dependencies]
             bar = "0.1.0"
         "#,
-        ).file(
+        )
+        .file(
             "src/lib.rs",
             "extern crate bar; pub fn foo() { bar::bar(); }",
-        ).build();
+        )
+        .build();
 
     p.cargo("build")
         .with_stderr(
@@ -301,7 +318,8 @@ fn multiple() {
 [COMPILING] foo v0.1.0 ([CWD])
 [FINISHED] [..]
 ",
-        ).run();
+        )
+        .run();
 }
 
 #[test]
@@ -318,10 +336,12 @@ fn crates_io_then_directory() {
             [dependencies]
             bar = "0.1.0"
         "#,
-        ).file(
+        )
+        .file(
             "src/lib.rs",
             "extern crate bar; pub fn foo() { bar::bar(); }",
-        ).build();
+        )
+        .build();
 
     let cksum = Package::new("bar", "0.1.0")
         .file("src/lib.rs", "pub fn bar() -> u32 { 0 }")
@@ -337,7 +357,8 @@ fn crates_io_then_directory() {
 [COMPILING] foo v0.1.0 ([CWD])
 [FINISHED] [..]
 ",
-        ).run();
+        )
+        .run();
 
     setup();
 
@@ -354,7 +375,8 @@ fn crates_io_then_directory() {
 [COMPILING] foo v0.1.0 ([CWD])
 [FINISHED] [..]
 ",
-        ).run();
+        )
+        .run();
 }
 
 #[test]
@@ -371,7 +393,8 @@ fn crates_io_then_bad_checksum() {
             [dependencies]
             bar = "0.1.0"
         "#,
-        ).file("src/lib.rs", "")
+        )
+        .file("src/lib.rs", "")
         .build();
 
     Package::new("bar", "0.1.0").publish();
@@ -399,7 +422,8 @@ this could be indicative of a few possible errors:
 unable to verify that `bar v0.1.0` is the same as when the lockfile was generated
 
 ",
-        ).run();
+        )
+        .run();
 }
 
 #[test]
@@ -426,7 +450,8 @@ fn bad_file_checksum() {
             [dependencies]
             bar = "0.1.0"
         "#,
-        ).file("src/lib.rs", "")
+        )
+        .file("src/lib.rs", "")
         .build();
 
     p.cargo("build")
@@ -441,7 +466,8 @@ directory sources are not intended to be edited, if modifications are \
 required then it is recommended that [replace] is used with a forked copy of \
 the source
 ",
-        ).run();
+        )
+        .run();
 }
 
 #[test]
@@ -469,7 +495,8 @@ fn only_dot_files_ok() {
             [dependencies]
             bar = "0.1.0"
         "#,
-        ).file("src/lib.rs", "")
+        )
+        .file("src/lib.rs", "")
         .build();
 
     p.cargo("build").run();
@@ -501,7 +528,8 @@ fn random_files_ok() {
             [dependencies]
             bar = "0.1.0"
         "#,
-        ).file("src/lib.rs", "")
+        )
+        .file("src/lib.rs", "")
         .build();
 
     p.cargo("build").run();
@@ -512,7 +540,8 @@ fn git_lock_file_doesnt_change() {
     let git = git::new("git", |p| {
         p.file("Cargo.toml", &basic_manifest("git", "0.5.0"))
             .file("src/lib.rs", "")
-    }).unwrap();
+    })
+    .unwrap();
 
     VendorPackage::new("git")
         .file("Cargo.toml", &basic_manifest("git", "0.5.0"))
@@ -535,7 +564,8 @@ fn git_lock_file_doesnt_change() {
         "#,
                 git.url()
             ),
-        ).file("src/lib.rs", "")
+        )
+        .file("src/lib.rs", "")
         .build();
 
     p.cargo("build").run();
@@ -556,7 +586,8 @@ fn git_lock_file_doesnt_change() {
         directory = 'index'
     "#,
             git.url()
-        ).as_bytes()
+        )
+        .as_bytes()
     ));
 
     p.cargo("build")
@@ -566,7 +597,8 @@ fn git_lock_file_doesnt_change() {
 [COMPILING] [..]
 [FINISHED] [..]
 ",
-        ).run();
+        )
+        .run();
 
     let mut lock2 = String::new();
     t!(t!(File::open(p.root().join("Cargo.lock"))).read_to_string(&mut lock2));
@@ -593,7 +625,8 @@ fn git_override_requires_lockfile() {
             [dependencies]
             git = { git = 'https://example.com/' }
         "#,
-        ).file("src/lib.rs", "")
+        )
+        .file("src/lib.rs", "")
         .build();
 
     let root = paths::root();
@@ -626,7 +659,8 @@ remove the source replacement configuration, generate a lock file, and then
 restore the source replacement configuration to continue the build
 
 ",
-        ).run();
+        )
+        .run();
 }
 
 #[test]
@@ -643,7 +677,8 @@ fn workspace_different_locations() {
                 [dependencies]
                 baz = "*"
             "#,
-        ).file("foo/src/lib.rs", "")
+        )
+        .file("foo/src/lib.rs", "")
         .file("foo/vendor/baz/Cargo.toml", &basic_manifest("baz", "0.1.0"))
         .file("foo/vendor/baz/src/lib.rs", "")
         .file("foo/vendor/baz/.cargo-checksum.json", "{\"files\":{}}")
@@ -657,7 +692,8 @@ fn workspace_different_locations() {
                 [dependencies]
                 baz = "*"
             "#,
-        ).file("bar/src/lib.rs", "")
+        )
+        .file("bar/src/lib.rs", "")
         .file(
             ".cargo/config",
             r#"
@@ -670,7 +706,8 @@ fn workspace_different_locations() {
                 [source.my-awesome-local-registry]
                 directory = 'foo/vendor'
             "#,
-        ).build();
+        )
+        .build();
 
     p.cargo("build").cwd(p.root().join("foo")).run();
     p.cargo("build")
@@ -681,7 +718,8 @@ fn workspace_different_locations() {
 [COMPILING] bar [..]
 [FINISHED] [..]
 ",
-        ).run();
+        )
+        .run();
 }
 
 #[test]

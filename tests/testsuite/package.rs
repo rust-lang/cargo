@@ -3,17 +3,19 @@ use std::fs::File;
 use std::io::prelude::*;
 use std::path::{Path, PathBuf};
 
-use flate2::read::GzDecoder;
-use git2;
 use crate::support::registry::Package;
 use crate::support::{basic_manifest, git, is_nightly, path2url, paths, project, registry};
 use crate::support::{cargo_process, sleep_ms};
+use flate2::read::GzDecoder;
+use git2;
 use tar::Archive;
 
 #[test]
 fn simple() {
     let p = project()
-        .file("Cargo.toml", r#"
+        .file(
+            "Cargo.toml",
+            r#"
             [project]
             name = "foo"
             version = "0.0.1"
@@ -21,7 +23,8 @@ fn simple() {
             exclude = ["*.txt"]
             license = "MIT"
             description = "foo"
-        "#)
+        "#,
+        )
         .file("src/main.rs", r#"fn main() { println!("hello"); }"#)
         .file("src/bar.txt", "") // should be ignored when packaging
         .build();
@@ -36,7 +39,8 @@ See [..]
 [COMPILING] foo v0.0.1 ([CWD][..])
 [FINISHED] dev [unoptimized + debuginfo] target(s) in [..]
 ",
-        ).run();
+        )
+        .run();
     assert!(p.root().join("target/package/foo-0.0.1.crate").is_file());
     p.cargo("package -l")
         .with_stdout(
@@ -44,7 +48,8 @@ See [..]
 Cargo.toml
 src/main.rs
 ",
-        ).run();
+        )
+        .run();
     p.cargo("package").with_stdout("").run();
 
     let f = File::open(&p.root().join("target/package/foo-0.0.1.crate")).unwrap();
@@ -80,7 +85,8 @@ See http://doc.crates.io/manifest.html#package-metadata for more info.
 [COMPILING] foo v0.0.1 ([CWD][..])
 [FINISHED] dev [unoptimized + debuginfo] target(s) in [..]
 ",
-        ).run();
+        )
+        .run();
 
     let p = project()
         .file(
@@ -92,7 +98,8 @@ See http://doc.crates.io/manifest.html#package-metadata for more info.
             authors = []
             license = "MIT"
         "#,
-        ).file("src/main.rs", "fn main() {}")
+        )
+        .file("src/main.rs", "fn main() {}")
         .build();
     p.cargo("package")
         .with_stderr(
@@ -104,7 +111,8 @@ See http://doc.crates.io/manifest.html#package-metadata for more info.
 [COMPILING] foo v0.0.1 ([CWD][..])
 [FINISHED] dev [unoptimized + debuginfo] target(s) in [..]
 ",
-        ).run();
+        )
+        .run();
 
     let p = project()
         .file(
@@ -118,7 +126,8 @@ See http://doc.crates.io/manifest.html#package-metadata for more info.
             description = "foo"
             repository = "bar"
         "#,
-        ).file("src/main.rs", "fn main() {}")
+        )
+        .file("src/main.rs", "fn main() {}")
         .build();
     p.cargo("package")
         .with_stderr(
@@ -128,7 +137,8 @@ See http://doc.crates.io/manifest.html#package-metadata for more info.
 [COMPILING] foo v0.0.1 ([CWD][..])
 [FINISHED] dev [unoptimized + debuginfo] target(s) in [..]
 ",
-        ).run();
+        )
+        .run();
 }
 
 #[test]
@@ -154,7 +164,8 @@ See http://doc.crates.io/manifest.html#package-metadata for more info.
 [ARCHIVING] [..]
 [ARCHIVING] .cargo_vcs_info.json
 ",
-        ).run();
+        )
+        .run();
 
     let f = File::open(&repo.root().join("target/package/foo-0.0.1.crate")).unwrap();
     let mut rdr = GzDecoder::new(f);
@@ -194,7 +205,8 @@ See http://doc.crates.io/manifest.html#package-metadata for more info.
 [ARCHIVING] src/lib.rs
 [ARCHIVING] .cargo_vcs_info.json
 ",
-        ).run();
+        )
+        .run();
 }
 
 #[test]
@@ -211,7 +223,8 @@ See http://doc.crates.io/manifest.html#package-metadata for more info.
 [COMPILING] foo v0.0.1 ([CWD][..])
 [FINISHED] dev [unoptimized + debuginfo] target(s) in [..]
 ",
-        ).run();
+        )
+        .run();
 }
 
 #[test]
@@ -232,12 +245,14 @@ fn vcs_file_collision() {
             repository = "foo"
             exclude = ["*.no-existe"]
         "#,
-        ).file(
+        )
+        .file(
             "src/main.rs",
             r#"
             fn main() {}
         "#,
-        ).file(".cargo_vcs_info.json", "foo")
+        )
+        .file(".cargo_vcs_info.json", "foo")
         .build();
     p.cargo("package")
         .arg("--no-verify")
@@ -247,7 +262,8 @@ fn vcs_file_collision() {
 [ERROR] Invalid inclusion of reserved file name .cargo_vcs_info.json \
 in package source
 ",
-        ).run();
+        )
+        .run();
 }
 
 #[test]
@@ -266,7 +282,8 @@ fn path_dependency_no_version() {
             [dependencies.bar]
             path = "bar"
         "#,
-        ).file("src/main.rs", "fn main() {}")
+        )
+        .file("src/main.rs", "fn main() {}")
         .file("bar/Cargo.toml", &basic_manifest("bar", "0.1.0"))
         .file("bar/src/lib.rs", "")
         .build();
@@ -280,14 +297,17 @@ See http://doc.crates.io/manifest.html#package-metadata for more info.
 [ERROR] all path dependencies must have a version specified when packaging.
 dependency `bar` does not specify a version.
 ",
-        ).run();
+        )
+        .run();
 }
 
 #[test]
 fn exclude() {
     let root = paths::root().join("exclude");
     let repo = git::repo(&root)
-        .file("Cargo.toml", r#"
+        .file(
+            "Cargo.toml",
+            r#"
             [project]
             name = "foo"
             version = "0.0.1"
@@ -319,7 +339,8 @@ fn exclude() {
                 "dir_deep_4/*",      # CHANGING (packaged -> ignored)
                 "dir_deep_5/**",     # CHANGING (packaged -> ignored)
             ]
-        "#)
+        "#,
+        )
         .file("src/main.rs", r#"fn main() { println!("hello"); }"#)
         .file("bar.txt", "")
         .file("src/bar.txt", "")
@@ -389,7 +410,8 @@ See [..]
 [ARCHIVING] [..]
 [ARCHIVING] .cargo_vcs_info.json
 ",
-        ).run();
+        )
+        .run();
 
     assert!(repo.root().join("target/package/foo-0.0.1.crate").is_file());
 
@@ -417,21 +439,25 @@ some_dir/file_deep_4
 some_dir/file_deep_5
 src/main.rs
 ",
-        ).run();
+        )
+        .run();
 }
 
 #[test]
 fn include() {
     let root = paths::root().join("include");
     let repo = git::repo(&root)
-        .file("Cargo.toml", r#"
+        .file(
+            "Cargo.toml",
+            r#"
             [project]
             name = "foo"
             version = "0.0.1"
             authors = []
             exclude = ["*.txt"]
             include = ["foo.txt", "**/*.rs", "Cargo.toml"]
-        "#)
+        "#,
+        )
         .file("foo.txt", "")
         .file("src/main.rs", r#"fn main() { println!("hello"); }"#)
         .file("src/bar.txt", "") // should be ignored when packaging
@@ -449,7 +475,8 @@ See http://doc.crates.io/manifest.html#package-metadata for more info.
 [ARCHIVING] [..]
 [ARCHIVING] .cargo_vcs_info.json
 ",
-        ).run();
+        )
+        .run();
 }
 
 #[test]
@@ -477,11 +504,14 @@ fn package_git_submodule() {
                     description = "foo"
                     repository = "foo"
                 "#,
-            ).file("src/lib.rs", "pub fn foo() {}")
-    }).unwrap();
+            )
+            .file("src/lib.rs", "pub fn foo() {}")
+    })
+    .unwrap();
     let library = git::new("bar", |library| {
         library.no_manifest().file("Makefile", "all:")
-    }).unwrap();
+    })
+    .unwrap();
 
     let repository = git2::Repository::open(&project.root()).unwrap();
     let url = path2url(library.root()).to_string();
@@ -494,9 +524,11 @@ fn package_git_submodule() {
             &repository.revparse_single("HEAD").unwrap(),
             git2::ResetType::Hard,
             None,
-        ).unwrap();
+        )
+        .unwrap();
 
-    project.cargo("package --no-verify -v")
+    project
+        .cargo("package --no-verify -v")
         .with_stderr_contains("[ARCHIVING] bar/Makefile")
         .run();
 }
@@ -520,7 +552,8 @@ fn no_duplicates_from_modified_tracked_files() {
 Cargo.toml
 src/main.rs
 ",
-        ).run();
+        )
+        .run();
 }
 
 #[test]
@@ -555,7 +588,8 @@ See http://doc.crates.io/manifest.html#package-metadata for more info.
 [COMPILING] foo v0.0.1 ([CWD][..])
 [FINISHED] dev [unoptimized + debuginfo] target(s) in [..]
 ",
-        ).run();
+        )
+        .run();
     assert!(p.root().join("target/package/foo-0.0.1.crate").is_file());
     p.cargo("package -l")
         .with_stdout(
@@ -563,7 +597,8 @@ See http://doc.crates.io/manifest.html#package-metadata for more info.
 Cargo.toml
 src[..]main.rs
 ",
-        ).run();
+        )
+        .run();
     p.cargo("package").with_stdout("").run();
 
     let f = File::open(&p.root().join("target/package/foo-0.0.1.crate")).unwrap();
@@ -605,7 +640,8 @@ See [..]
 Caused by:
   cannot package a filename with a special character `:`: src/:foo
 ",
-        ).run();
+        )
+        .run();
 }
 
 #[test]
@@ -640,7 +676,8 @@ See [..]
 [COMPILING] foo v0.0.1 ([CWD][..])
 [FINISHED] dev [unoptimized + debuginfo] target(s) in [..]
 ",
-        ).run();
+        )
+        .run();
 
     // Check that the tarball contains the added file
     let f = File::open(&p.root().join("target/package/foo-0.0.1.crate")).unwrap();
@@ -674,7 +711,8 @@ fn broken_symlink() {
             homepage = 'foo'
             repository = 'foo'
         "#,
-        ).file("src/main.rs", r#"fn main() { println!("hello"); }"#)
+        )
+        .file("src/main.rs", r#"fn main() { println!("hello"); }"#)
         .build();
     t!(fs::symlink("nowhere", &p.root().join("src/foo.rs")));
 
@@ -690,7 +728,8 @@ Caused by:
 Caused by:
   [..]
 ",
-        ).run();
+        )
+        .run();
 }
 
 #[test]
@@ -711,7 +750,8 @@ fn do_not_package_if_repository_is_dirty() {
             homepage = "foo"
             repository = "foo"
         "#,
-        ).file("src/main.rs", "fn main() {}")
+        )
+        .file("src/main.rs", "fn main() {}")
         .build();
 
     // Modify Cargo.toml without committing the change.
@@ -741,7 +781,8 @@ Cargo.toml
 
 to proceed despite this, pass the `--allow-dirty` flag
 ",
-        ).run();
+        )
+        .run();
 }
 
 #[test]
@@ -775,7 +816,8 @@ fn generated_manifest() {
             ghi = "1.0"
             abc = "1.0"
         "#,
-        ).file("src/main.rs", "")
+        )
+        .file("src/main.rs", "")
         .file("bar/Cargo.toml", &basic_manifest("bar", "0.1.0"))
         .file("bar/src/lib.rs", "")
         .build();
@@ -861,7 +903,8 @@ fn ignore_workspace_specifier() {
             [dependencies]
             bar = { path = "bar", version = "0.1" }
         "#,
-        ).file("src/main.rs", "")
+        )
+        .file("src/main.rs", "")
         .file(
             "bar/Cargo.toml",
             r#"
@@ -871,7 +914,8 @@ fn ignore_workspace_specifier() {
             authors = []
             workspace = ".."
         "#,
-        ).file("bar/src/lib.rs", "")
+        )
+        .file("bar/src/lib.rs", "")
         .build();
 
     p.cargo("package --no-verify")
@@ -930,7 +974,8 @@ fn package_two_kinds_of_deps() {
             other = "1.0"
             other1 = { version = "1.0" }
         "#,
-        ).file("src/main.rs", "")
+        )
+        .file("src/main.rs", "")
         .build();
 
     p.cargo("package --no-verify").run();
@@ -949,18 +994,23 @@ fn test_edition() {
             authors = []
             edition = "2018"
         "#,
-        ).file("src/lib.rs", r#" "#)
+        )
+        .file("src/lib.rs", r#" "#)
         .build();
 
-    p.cargo("build -v").masquerade_as_nightly_cargo()
+    p.cargo("build -v")
+        .masquerade_as_nightly_cargo()
         .without_status() // passes on nightly, fails on stable, b/c --edition is nightly-only
         // --edition is still in flux and we're not passing -Zunstable-options
         // from Cargo so it will probably error. Only partially match the output
         // until stuff stabilizes
-        .with_stderr_contains("\
+        .with_stderr_contains(
+            "\
 [COMPILING] foo v0.0.1 ([..])
 [RUNNING] `rustc [..]--edition=2018 [..]
-").run();
+",
+        )
+        .run();
 }
 
 #[test]
@@ -983,7 +1033,8 @@ fn edition_with_metadata() {
                 [package.metadata.docs.rs]
                 features = ["foobar"]
             "#,
-        ).file("src/lib.rs", "")
+        )
+        .file("src/lib.rs", "")
         .build();
 
     p.cargo("package").run();
@@ -1001,7 +1052,8 @@ fn test_edition_malformed() {
                 authors = []
                 edition = "chicken"
             "#,
-        ).file("src/lib.rs", r#" "#)
+        )
+        .file("src/lib.rs", r#" "#)
         .build();
 
     p.cargo("build -v")
@@ -1015,8 +1067,10 @@ Caused by:
 
 Caused by:
   supported edition values are `2015` or `2018`, but `chicken` is unknown
-".to_string(),
-        ).run();
+"
+            .to_string(),
+        )
+        .run();
 }
 
 #[test]
@@ -1035,7 +1089,8 @@ fn package_lockfile() {
             description = "foo"
             publish-lockfile = true
         "#,
-        ).file("src/main.rs", "fn main() {}")
+        )
+        .file("src/main.rs", "fn main() {}")
         .build();
 
     p.cargo("package")
@@ -1049,7 +1104,8 @@ See [..]
 [COMPILING] foo v0.0.1 ([CWD][..])
 [FINISHED] dev [unoptimized + debuginfo] target(s) in [..]
 ",
-        ).run();
+        )
+        .run();
     assert!(p.root().join("target/package/foo-0.0.1.crate").is_file());
     p.cargo("package -l")
         .masquerade_as_nightly_cargo()
@@ -1059,7 +1115,8 @@ Cargo.lock
 Cargo.toml
 src/main.rs
 ",
-        ).run();
+        )
+        .run();
     p.cargo("package")
         .masquerade_as_nightly_cargo()
         .with_stdout("")
@@ -1106,7 +1163,8 @@ fn package_lockfile_git_repo() {
             repository = "foo"
             publish-lockfile = true
         "#,
-        ).file("src/main.rs", "fn main() {}")
+        )
+        .file("src/main.rs", "fn main() {}")
         .build();
     p.cargo("package -l")
         .masquerade_as_nightly_cargo()
@@ -1117,7 +1175,8 @@ Cargo.lock
 Cargo.toml
 src/main.rs
 ",
-        ).run();
+        )
+        .run();
 }
 
 #[test]
@@ -1136,7 +1195,8 @@ fn no_lock_file_with_library() {
             description = "foo"
             publish-lockfile = true
         "#,
-        ).file("src/lib.rs", "")
+        )
+        .file("src/lib.rs", "")
         .build();
 
     p.cargo("package").masquerade_as_nightly_cargo().run();
@@ -1162,7 +1222,8 @@ fn lock_file_and_workspace() {
             [workspace]
             members = ["foo"]
         "#,
-        ).file(
+        )
+        .file(
             "foo/Cargo.toml",
             r#"
             cargo-features = ["publish-lockfile"]
@@ -1175,7 +1236,8 @@ fn lock_file_and_workspace() {
             description = "foo"
             publish-lockfile = true
         "#,
-        ).file("foo/src/main.rs", "fn main() {}")
+        )
+        .file("foo/src/main.rs", "fn main() {}")
         .build();
 
     p.cargo("package")
@@ -1210,7 +1272,8 @@ fn do_not_package_if_src_was_modified() {
                 file.write_all(b"Hello, world of generated files.").expect("failed to write");
             }
         "#,
-        ).build();
+        )
+        .build();
 
     if cfg!(target_os = "macos") {
         // MacOS has 1s resolution filesystem.
@@ -1230,7 +1293,8 @@ Caused by:
 Build scripts should not modify anything outside of OUT_DIR. Modified file: [..]src/generated.txt
 
 To proceed despite this, pass the `--no-verify` flag.",
-        ).run();
+        )
+        .run();
 
     p.cargo("package --no-verify").run();
 }

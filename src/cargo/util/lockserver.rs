@@ -157,8 +157,8 @@ impl Drop for LockServerStarted {
 
 impl LockServerClient {
     pub fn lock(addr: &SocketAddr, name: &Path) -> Result<LockServerClient, Error> {
-        let mut client =
-            TcpStream::connect(&addr).with_context(|_| "failed to connect to parent lock server")?;
+        let mut client = TcpStream::connect(&addr)
+            .with_context(|_| "failed to connect to parent lock server")?;
         client
             .write_all(name.display().to_string().as_bytes())
             .and_then(|_| client.write_all(b"\n"))
@@ -170,4 +170,3 @@ impl LockServerClient {
         Ok(LockServerClient { _socket: client })
     }
 }
-

@@ -20,8 +20,9 @@ pub fn exec(config: &mut Config, args: &ArgMatches<'_>) -> CliResult {
     } else {
         path
     };
-    config
-        .shell()
-        .status("Created", format!("{} `{}` package", opts.kind, package_name))?;
+    config.shell().status(
+        "Created",
+        format!("{} `{}` package", opts.kind, package_name),
+    )?;
     Ok(())
 }
