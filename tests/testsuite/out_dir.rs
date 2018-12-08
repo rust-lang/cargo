@@ -36,13 +36,15 @@ fn static_library_with_debug() {
             [lib]
             crate-type = ["staticlib"]
         "#,
-        ).file(
+        )
+        .file(
             "src/lib.rs",
             r#"
             #[no_mangle]
             pub extern "C" fn foo() { println!("Hello, World!") }
         "#,
-        ).build();
+        )
+        .build();
 
     p.cargo("build -Z unstable-options --out-dir out")
         .masquerade_as_nightly_cargo()
@@ -69,13 +71,15 @@ fn dynamic_library_with_debug() {
             [lib]
             crate-type = ["cdylib"]
         "#,
-        ).file(
+        )
+        .file(
             "src/lib.rs",
             r#"
             #[no_mangle]
             pub extern "C" fn foo() { println!("Hello, World!") }
         "#,
-        ).build();
+        )
+        .build();
 
     p.cargo("build -Z unstable-options --out-dir out")
         .masquerade_as_nightly_cargo()
@@ -102,12 +106,14 @@ fn rlib_with_debug() {
             [lib]
             crate-type = ["rlib"]
         "#,
-        ).file(
+        )
+        .file(
             "src/lib.rs",
             r#"
             pub fn foo() { println!("Hello, World!") }
         "#,
-        ).build();
+        )
+        .build();
 
     p.cargo("build -Z unstable-options --out-dir out")
         .masquerade_as_nightly_cargo()
@@ -136,7 +142,8 @@ fn include_only_the_binary_from_the_current_package() {
             [dependencies]
             utils = { path = "./utils" }
         "#,
-        ).file("src/lib.rs", "extern crate utils;")
+        )
+        .file("src/lib.rs", "extern crate utils;")
         .file(
             "src/main.rs",
             r#"
@@ -146,7 +153,8 @@ fn include_only_the_binary_from_the_current_package() {
                 println!("Hello, World!")
             }
         "#,
-        ).file("utils/Cargo.toml", &basic_manifest("utils", "0.0.1"))
+        )
+        .file("utils/Cargo.toml", &basic_manifest("utils", "0.0.1"))
         .file("utils/src/lib.rs", "")
         .build();
 
@@ -187,7 +195,8 @@ fn replaces_artifacts() {
     p.process(
         &p.root()
             .join(&format!("out/foo{}", env::consts::EXE_SUFFIX)),
-    ).with_stdout("foo")
+    )
+    .with_stdout("foo")
     .run();
 
     sleep_ms(1000);
@@ -199,7 +208,8 @@ fn replaces_artifacts() {
     p.process(
         &p.root()
             .join(&format!("out/foo{}", env::consts::EXE_SUFFIX)),
-    ).with_stdout("bar")
+    )
+    .with_stdout("bar")
     .run();
 }
 

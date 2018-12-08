@@ -1024,7 +1024,8 @@ impl TomlManifest {
         if summary.features().contains_key("default-features") {
             warnings.push(
                 "`default-features = [\"..\"]` was found in [features]. \
-                Did you mean to use `default = [\"..\"]`?".to_string()
+                 Did you mean to use `default = [\"..\"]`?"
+                    .to_string(),
             )
         }
 

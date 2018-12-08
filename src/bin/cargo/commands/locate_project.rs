@@ -16,7 +16,8 @@ pub struct ProjectLocation<'a> {
 pub fn exec(config: &mut Config, args: &ArgMatches<'_>) -> CliResult {
     let root = args.root_manifest(config)?;
 
-    let root = root.to_str()
+    let root = root
+        .to_str()
         .ok_or_else(|| {
             format_err!(
                 "your package path contains characters \

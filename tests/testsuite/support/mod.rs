@@ -516,7 +516,8 @@ pub fn cargo_dir() -> PathBuf {
                 }
                 path
             })
-        }).unwrap_or_else(|| panic!("CARGO_BIN_PATH wasn't set. Cannot continue running test"))
+        })
+        .unwrap_or_else(|| panic!("CARGO_BIN_PATH wasn't set. Cannot continue running test"))
 }
 
 pub fn cargo_exe() -> PathBuf {
@@ -968,20 +969,17 @@ impl Execs {
                     None => out.to_string(),
                     Some(ref p) => match p.get_cwd() {
                         None => out.to_string(),
-                        Some(cwd) => out
-                            .replace( "[CWD]", &cwd.display().to_string())
-                        ,
+                        Some(cwd) => out.replace("[CWD]", &cwd.display().to_string()),
                     },
                 };
 
                 // On Windows, we need to use a wildcard for the drive,
                 // because we don't actually know what it will be.
-                let replaced = replaced
-                    .replace("[ROOT]",
-                             if cfg!(windows) { r#"[..]:\"# } else { "/" });
+                let replaced =
+                    replaced.replace("[ROOT]", if cfg!(windows) { r#"[..]:\"# } else { "/" });
 
                 replaced
-            },
+            }
             None => return Ok(()),
         };
 
@@ -1157,7 +1155,8 @@ impl Execs {
                 (Some(a), None) => Some(format!("{:3} -\n    + |{}|\n", i, a)),
                 (None, Some(e)) => Some(format!("{:3} - |{}|\n    +\n", i, e)),
                 (None, None) => panic!("Cannot get here"),
-            }).collect()
+            })
+            .collect()
     }
 }
 
@@ -1450,43 +1449,39 @@ pub fn process<T: AsRef<OsStr>>(t: T) -> cargo::util::ProcessBuilder {
 fn _process(t: &OsStr) -> cargo::util::ProcessBuilder {
     let mut p = cargo::util::process(t);
     p.cwd(&paths::root())
-     .env_remove("CARGO_HOME")
-     .env("HOME", paths::home())
-     .env("CARGO_HOME", paths::home().join(".cargo"))
-     .env("__CARGO_TEST_ROOT", paths::root())
-
-     // Force cargo to think it's on the stable channel for all tests, this
-     // should hopefully not surprise us as we add cargo features over time and
-     // cargo rides the trains.
-     .env("__CARGO_TEST_CHANNEL_OVERRIDE_DO_NOT_USE_THIS", "stable")
-
-     // For now disable incremental by default as support hasn't ridden to the
-     // stable channel yet. Once incremental support hits the stable compiler we
-     // can switch this to one and then fix the tests.
-     .env("CARGO_INCREMENTAL", "0")
-
-     // This env var can switch the git backend from libgit2 to git2-curl, which
-     // can tweak error messages and cause some tests to fail, so let's forcibly
-     // remove it.
-     .env_remove("CARGO_HTTP_CHECK_REVOKE")
-
-     .env_remove("__CARGO_DEFAULT_LIB_METADATA")
-     .env_remove("RUSTC")
-     .env_remove("RUSTDOC")
-     .env_remove("RUSTC_WRAPPER")
-     .env_remove("RUSTFLAGS")
-     .env_remove("XDG_CONFIG_HOME")      // see #2345
-     .env("GIT_CONFIG_NOSYSTEM", "1")    // keep trying to sandbox ourselves
-     .env_remove("EMAIL")
-     .env_remove("MFLAGS")
-     .env_remove("MAKEFLAGS")
-     .env_remove("CARGO_MAKEFLAGS")
-     .env_remove("GIT_AUTHOR_NAME")
-     .env_remove("GIT_AUTHOR_EMAIL")
-     .env_remove("GIT_COMMITTER_NAME")
-     .env_remove("GIT_COMMITTER_EMAIL")
-     .env_remove("CARGO_TARGET_DIR")     // we assume 'target'
-     .env_remove("MSYSTEM"); // assume cmd.exe everywhere on windows
+        .env_remove("CARGO_HOME")
+        .env("HOME", paths::home())
+        .env("CARGO_HOME", paths::home().join(".cargo"))
+        .env("__CARGO_TEST_ROOT", paths::root())
+        // Force cargo to think it's on the stable channel for all tests, this
+        // should hopefully not surprise us as we add cargo features over time and
+        // cargo rides the trains.
+        .env("__CARGO_TEST_CHANNEL_OVERRIDE_DO_NOT_USE_THIS", "stable")
+        // For now disable incremental by default as support hasn't ridden to the
+        // stable channel yet. Once incremental support hits the stable compiler we
+        // can switch this to one and then fix the tests.
+        .env("CARGO_INCREMENTAL", "0")
+        // This env var can switch the git backend from libgit2 to git2-curl, which
+        // can tweak error messages and cause some tests to fail, so let's forcibly
+        // remove it.
+        .env_remove("CARGO_HTTP_CHECK_REVOKE")
+        .env_remove("__CARGO_DEFAULT_LIB_METADATA")
+        .env_remove("RUSTC")
+        .env_remove("RUSTDOC")
+        .env_remove("RUSTC_WRAPPER")
+        .env_remove("RUSTFLAGS")
+        .env_remove("XDG_CONFIG_HOME") // see #2345
+        .env("GIT_CONFIG_NOSYSTEM", "1") // keep trying to sandbox ourselves
+        .env_remove("EMAIL")
+        .env_remove("MFLAGS")
+        .env_remove("MAKEFLAGS")
+        .env_remove("CARGO_MAKEFLAGS")
+        .env_remove("GIT_AUTHOR_NAME")
+        .env_remove("GIT_AUTHOR_EMAIL")
+        .env_remove("GIT_COMMITTER_NAME")
+        .env_remove("GIT_COMMITTER_EMAIL")
+        .env_remove("CARGO_TARGET_DIR") // we assume 'target'
+        .env_remove("MSYSTEM"); // assume cmd.exe everywhere on windows
     p
 }
 

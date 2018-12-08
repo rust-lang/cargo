@@ -1,17 +1,17 @@
 #![cfg_attr(test, deny(warnings))]
 // Clippy isn't enforced by CI, and know that @alexcrichton isn't a fan :)
-#![cfg_attr(feature = "cargo-clippy", allow(clippy::boxed_local))]             // bug rust-lang-nursery/rust-clippy#1123
-#![cfg_attr(feature = "cargo-clippy", allow(clippy::cyclomatic_complexity))]   // large project
-#![cfg_attr(feature = "cargo-clippy", allow(clippy::derive_hash_xor_eq))]      // there's an intentional incoherence
+#![cfg_attr(feature = "cargo-clippy", allow(clippy::boxed_local))] // bug rust-lang-nursery/rust-clippy#1123
+#![cfg_attr(feature = "cargo-clippy", allow(clippy::cyclomatic_complexity))] // large project
+#![cfg_attr(feature = "cargo-clippy", allow(clippy::derive_hash_xor_eq))] // there's an intentional incoherence
 #![cfg_attr(feature = "cargo-clippy", allow(clippy::explicit_into_iter_loop))] // explicit loops are clearer
-#![cfg_attr(feature = "cargo-clippy", allow(clippy::explicit_iter_loop))]      // explicit loops are clearer
-#![cfg_attr(feature = "cargo-clippy", allow(clippy::identity_op))]             // used for vertical alignment
-#![cfg_attr(feature = "cargo-clippy", allow(clippy::implicit_hasher))]         // large project
-#![cfg_attr(feature = "cargo-clippy", allow(clippy::large_enum_variant))]      // large project
-#![cfg_attr(feature = "cargo-clippy", allow(clippy::redundant_closure_call))]  // closures over try catch blocks
-#![cfg_attr(feature = "cargo-clippy", allow(clippy::too_many_arguments))]      // large project
-#![cfg_attr(feature = "cargo-clippy", allow(clippy::type_complexity))]         // there's an exceptionally complex type
-#![cfg_attr(feature = "cargo-clippy", allow(clippy::wrong_self_convention))]   // perhaps Rc should be special cased in Clippy?
+#![cfg_attr(feature = "cargo-clippy", allow(clippy::explicit_iter_loop))] // explicit loops are clearer
+#![cfg_attr(feature = "cargo-clippy", allow(clippy::identity_op))] // used for vertical alignment
+#![cfg_attr(feature = "cargo-clippy", allow(clippy::implicit_hasher))] // large project
+#![cfg_attr(feature = "cargo-clippy", allow(clippy::large_enum_variant))] // large project
+#![cfg_attr(feature = "cargo-clippy", allow(clippy::redundant_closure_call))] // closures over try catch blocks
+#![cfg_attr(feature = "cargo-clippy", allow(clippy::too_many_arguments))] // large project
+#![cfg_attr(feature = "cargo-clippy", allow(clippy::type_complexity))] // there's an exceptionally complex type
+#![cfg_attr(feature = "cargo-clippy", allow(clippy::wrong_self_convention))] // perhaps Rc should be special cased in Clippy?
 
 extern crate atty;
 extern crate bytesize;

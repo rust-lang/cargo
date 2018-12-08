@@ -1,10 +1,10 @@
-use glob::glob;
-use serde_json;
-use std::str;
 use crate::support::{
     basic_lib_manifest, basic_manifest, is_coarse_mtime, project, registry::Package, rustc_host,
     Project,
 };
+use glob::glob;
+use serde_json;
+use std::str;
 
 #[test]
 fn metabuild_gated() {
@@ -17,7 +17,8 @@ fn metabuild_gated() {
             version = "0.0.1"
             metabuild = ["mb"]
         "#,
-        ).file("src/lib.rs", "")
+        )
+        .file("src/lib.rs", "")
         .build();
 
     p.cargo("build")
@@ -32,7 +33,8 @@ Caused by:
 
 consider adding `cargo-features = [\"metabuild\"]` to the manifest
 ",
-        ).run();
+        )
+        .run();
 }
 
 fn basic_project() -> Project {
@@ -50,22 +52,26 @@ fn basic_project() -> Project {
             mb = {path="mb"}
             mb-other = {path="mb-other"}
         "#,
-        ).file("src/lib.rs", "")
+        )
+        .file("src/lib.rs", "")
         .file("mb/Cargo.toml", &basic_lib_manifest("mb"))
         .file(
             "mb/src/lib.rs",
             r#"pub fn metabuild() { println!("Hello mb"); }"#,
-        ).file(
+        )
+        .file(
             "mb-other/Cargo.toml",
             r#"
             [package]
             name = "mb-other"
             version = "0.0.1"
         "#,
-        ).file(
+        )
+        .file(
             "mb-other/src/lib.rs",
             r#"pub fn metabuild() { println!("Hello mb-other"); }"#,
-        ).build()
+        )
+        .build()
 }
 
 #[test]
@@ -93,13 +99,15 @@ fn metabuild_error_both() {
             [build-dependencies]
             mb = {path="mb"}
         "#,
-        ).file("src/lib.rs", "")
+        )
+        .file("src/lib.rs", "")
         .file("build.rs", r#"fn main() {}"#)
         .file("mb/Cargo.toml", &basic_lib_manifest("mb"))
         .file(
             "mb/src/lib.rs",
             r#"pub fn metabuild() { println!("Hello mb"); }"#,
-        ).build();
+        )
+        .build();
 
     p.cargo("build -vv")
         .masquerade_as_nightly_cargo()
@@ -111,7 +119,8 @@ error: failed to parse manifest at [..]
 Caused by:
   cannot specify both `metabuild` and `build`
 ",
-        ).run();
+        )
+        .run();
 }
 
 #[test]
@@ -126,7 +135,8 @@ fn metabuild_missing_dep() {
             version = "0.0.1"
             metabuild = "mb"
         "#,
-        ).file("src/lib.rs", "")
+        )
+        .file("src/lib.rs", "")
         .build();
 
     p.cargo("build -vv")
@@ -138,7 +148,8 @@ error: failed to parse manifest at [..]
 
 Caused by:
   metabuild package `mb` must be specified in `build-dependencies`",
-        ).run();
+        )
+        .run();
 }
 
 #[test]
@@ -156,12 +167,14 @@ fn metabuild_optional_dep() {
             [build-dependencies]
             mb = {path="mb", optional=true}
         "#,
-        ).file("src/lib.rs", "")
+        )
+        .file("src/lib.rs", "")
         .file("mb/Cargo.toml", &basic_lib_manifest("mb"))
         .file(
             "mb/src/lib.rs",
             r#"pub fn metabuild() { println!("Hello mb"); }"#,
-        ).build();
+        )
+        .build();
 
     p.cargo("build -vv")
         .masquerade_as_nightly_cargo()
@@ -190,7 +203,8 @@ fn metabuild_lib_name() {
             [build-dependencies]
             mb = {path="mb"}
         "#,
-        ).file("src/lib.rs", "")
+        )
+        .file("src/lib.rs", "")
         .file(
             "mb/Cargo.toml",
             r#"
@@ -200,10 +214,12 @@ fn metabuild_lib_name() {
             [lib]
             name = "other"
         "#,
-        ).file(
+        )
+        .file(
             "mb/src/lib.rs",
             r#"pub fn metabuild() { println!("Hello mb"); }"#,
-        ).build();
+        )
+        .build();
 
     p.cargo("build -vv")
         .masquerade_as_nightly_cargo()
@@ -235,12 +251,14 @@ fn metabuild_fresh() {
             [build-dependencies]
             mb = {path="mb"}
         "#,
-        ).file("src/lib.rs", "")
+        )
+        .file("src/lib.rs", "")
         .file("mb/Cargo.toml", &basic_lib_manifest("mb"))
         .file(
             "mb/src/lib.rs",
             r#"pub fn metabuild() { println!("Hello mb"); }"#,
-        ).build();
+        )
+        .build();
 
     p.cargo("build -vv")
         .masquerade_as_nightly_cargo()
@@ -256,7 +274,8 @@ fn metabuild_fresh() {
 [FRESH] foo [..]
 [FINISHED] dev [..]
 ",
-        ).run();
+        )
+        .run();
 }
 
 #[test]
@@ -275,7 +294,8 @@ fn metabuild_links() {
             [build-dependencies]
             mb = {path="mb"}
         "#,
-        ).file("src/lib.rs", "")
+        )
+        .file("src/lib.rs", "")
         .file("mb/Cargo.toml", &basic_lib_manifest("mb"))
         .file(
             "mb/src/lib.rs",
@@ -284,7 +304,8 @@ fn metabuild_links() {
                     Ok("cat".to_string()));
                 println!("Hello mb");
             }"#,
-        ).build();
+        )
+        .build();
 
     p.cargo("build -vv")
         .masquerade_as_nightly_cargo()
@@ -308,12 +329,14 @@ fn metabuild_override() {
             [build-dependencies]
             mb = {path="mb"}
         "#,
-        ).file("src/lib.rs", "")
+        )
+        .file("src/lib.rs", "")
         .file("mb/Cargo.toml", &basic_lib_manifest("mb"))
         .file(
             "mb/src/lib.rs",
             r#"pub fn metabuild() { panic!("should not run"); }"#,
-        ).file(
+        )
+        .file(
             ".cargo/config",
             &format!(
                 r#"
@@ -322,7 +345,8 @@ fn metabuild_override() {
         "#,
                 rustc_host()
             ),
-        ).build();
+        )
+        .build();
 
     p.cargo("build -vv").masquerade_as_nightly_cargo().run();
 }
@@ -336,7 +360,8 @@ fn metabuild_workspace() {
             [workspace]
             members = ["member1", "member2"]
         "#,
-        ).file(
+        )
+        .file(
             "member1/Cargo.toml",
             r#"
             cargo-features = ["metabuild"]
@@ -349,7 +374,8 @@ fn metabuild_workspace() {
             mb1 = {path="../../mb1"}
             mb2 = {path="../../mb2"}
         "#,
-        ).file("member1/src/lib.rs", "")
+        )
+        .file("member1/src/lib.rs", "")
         .file(
             "member2/Cargo.toml",
             r#"
@@ -362,7 +388,8 @@ fn metabuild_workspace() {
             [build-dependencies]
             mb1 = {path="../../mb1"}
         "#,
-        ).file("member2/src/lib.rs", "")
+        )
+        .file("member2/src/lib.rs", "")
         .build();
 
     project()
@@ -507,7 +534,8 @@ fn metabuild_build_plan() {
     ]
 }
 "#,
-        ).run();
+        )
+        .run();
 
     assert_eq!(
         glob(
@@ -515,7 +543,8 @@ fn metabuild_build_plan() {
                 .join("target/.metabuild/metabuild-foo-*.rs")
                 .to_str()
                 .unwrap()
-        ).unwrap()
+        )
+        .unwrap()
         .count(),
         1
     );
@@ -532,7 +561,8 @@ fn metabuild_two_versions() {
             [workspace]
             members = ["member1", "member2"]
         "#,
-        ).file(
+        )
+        .file(
             "member1/Cargo.toml",
             r#"
             cargo-features = ["metabuild"]
@@ -544,7 +574,8 @@ fn metabuild_two_versions() {
             [build-dependencies]
             mb = {path="../../mb1"}
         "#,
-        ).file("member1/src/lib.rs", "")
+        )
+        .file("member1/src/lib.rs", "")
         .file(
             "member2/Cargo.toml",
             r#"
@@ -557,7 +588,8 @@ fn metabuild_two_versions() {
             [build-dependencies]
             mb = {path="../../mb2"}
         "#,
-        ).file("member2/src/lib.rs", "")
+        )
+        .file("member2/src/lib.rs", "")
         .build();
 
     project().at("mb1")
@@ -596,7 +628,8 @@ fn metabuild_two_versions() {
                 .join("target/.metabuild/metabuild-member?-*.rs")
                 .to_str()
                 .unwrap()
-        ).unwrap()
+        )
+        .unwrap()
         .count(),
         2
     );
@@ -609,7 +642,8 @@ fn metabuild_external_dependency() {
         .file(
             "src/lib.rs",
             r#"pub fn metabuild() { println!("Hello mb"); }"#,
-        ).publish();
+        )
+        .publish();
     Package::new("dep", "1.0.0")
         .file(
             "Cargo.toml",
@@ -623,7 +657,8 @@ fn metabuild_external_dependency() {
             [build-dependencies]
             mb = "1.0"
         "#,
-        ).file("src/lib.rs", "")
+        )
+        .file("src/lib.rs", "")
         .build_dep("mb", "1.0.0")
         .publish();
 
@@ -637,7 +672,8 @@ fn metabuild_external_dependency() {
             [dependencies]
             dep = "1.0"
             "#,
-        ).file("src/lib.rs", "extern crate dep;")
+        )
+        .file("src/lib.rs", "extern crate dep;")
         .build();
 
     p.cargo("build -vv")
@@ -651,7 +687,8 @@ fn metabuild_external_dependency() {
                 .join("target/.metabuild/metabuild-dep-*.rs")
                 .to_str()
                 .unwrap()
-        ).unwrap()
+        )
+        .unwrap()
         .count(),
         1
     );
