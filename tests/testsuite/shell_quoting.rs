@@ -19,7 +19,8 @@ fn features_are_quoted() {
             some_feature = []
             default = ["some_feature"]
             "#,
-        ).file("src/main.rs", "fn main() {error}")
+        )
+        .file("src/main.rs", "fn main() {error}")
         .build();
 
     p.cargo("check -v")

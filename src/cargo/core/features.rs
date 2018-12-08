@@ -77,10 +77,11 @@ impl FromStr for Edition {
         match s {
             "2015" => Ok(Edition::Edition2015),
             "2018" => Ok(Edition::Edition2018),
-            s => {
-                bail!("supported edition values are `2015` or `2018`, but `{}` \
-                       is unknown", s)
-            }
+            s => bail!(
+                "supported edition values are `2015` or `2018`, but `{}` \
+                 is unknown",
+                s
+            ),
         }
     }
 }
@@ -396,9 +397,9 @@ thread_local!(
 ///       that called `masquerade_as_nightly_cargo`
 pub fn nightly_features_allowed() -> bool {
     if ENABLE_NIGHTLY_FEATURES.with(|c| c.get()) {
-        return true
+        return true;
     }
-     match &channel()[..] {
+    match &channel()[..] {
         "nightly" | "dev" => NIGHTLY_FEATURES_ALLOWED.with(|c| c.get()),
         _ => false,
     }

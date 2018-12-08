@@ -2,7 +2,6 @@
 #![cfg_attr(feature = "cargo-clippy", allow(blacklisted_name))]
 #![cfg_attr(feature = "cargo-clippy", allow(explicit_iter_loop))]
 
-
 use cargo;
 use filetime;
 

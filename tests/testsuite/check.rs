@@ -1,10 +1,10 @@
 use std::fmt::{self, Write};
 
-use glob::glob;
 use crate::support::install::exe;
 use crate::support::paths::CargoPathExt;
 use crate::support::registry::Package;
 use crate::support::{basic_manifest, project};
+use glob::glob;
 
 #[test]
 fn check_success() {
@@ -20,10 +20,12 @@ fn check_success() {
             [dependencies.bar]
             path = "../bar"
         "#,
-        ).file(
+        )
+        .file(
             "src/main.rs",
             "extern crate bar; fn main() { ::bar::baz(); }",
-        ).build();
+        )
+        .build();
     let _bar = project()
         .at("bar")
         .file("Cargo.toml", &basic_manifest("bar", "0.1.0"))
@@ -47,10 +49,12 @@ fn check_fail() {
             [dependencies.bar]
             path = "../bar"
         "#,
-        ).file(
+        )
+        .file(
             "src/main.rs",
             "extern crate bar; fn main() { ::bar::baz(42); }",
-        ).build();
+        )
+        .build();
     let _bar = project()
         .at("bar")
         .file("Cargo.toml", &basic_manifest("bar", "0.1.0"))
@@ -74,7 +78,8 @@ fn custom_derive() {
             [dependencies.bar]
             path = "../bar"
         "#,
-        ).file(
+        )
+        .file(
             "src/main.rs",
             r#"
 #[macro_use]
@@ -92,7 +97,8 @@ fn main() {
     a.b();
 }
 "#,
-        ).build();
+        )
+        .build();
     let _bar = project()
         .at("bar")
         .file(
@@ -105,7 +111,8 @@ fn main() {
             [lib]
             proc-macro = true
         "#,
-        ).file(
+        )
+        .file(
             "src/lib.rs",
             r#"
 extern crate proc_macro;
@@ -117,7 +124,8 @@ pub fn derive(_input: TokenStream) -> TokenStream {
     format!("impl B for A {{ fn b(&self) {{}} }}").parse().unwrap()
 }
 "#,
-        ).build();
+        )
+        .build();
 
     foo.cargo("check").run();
 }
@@ -136,10 +144,12 @@ fn check_build() {
             [dependencies.bar]
             path = "../bar"
         "#,
-        ).file(
+        )
+        .file(
             "src/main.rs",
             "extern crate bar; fn main() { ::bar::baz(); }",
-        ).build();
+        )
+        .build();
 
     let _bar = project()
         .at("bar")
@@ -165,10 +175,12 @@ fn build_check() {
             [dependencies.bar]
             path = "../bar"
         "#,
-        ).file(
+        )
+        .file(
             "src/main.rs",
             "extern crate bar; fn main() { ::bar::baz(); }",
-        ).build();
+        )
+        .build();
 
     let _bar = project()
         .at("bar")
@@ -210,7 +222,8 @@ fn issue_3419() {
             [dependencies]
             rustc-serialize = "*"
         "#,
-        ).file(
+        )
+        .file(
             "src/lib.rs",
             r#"
             extern crate rustc_serialize;
@@ -219,7 +232,8 @@ fn issue_3419() {
 
             pub fn take<T: Decodable>() {}
         "#,
-        ).file(
+        )
+        .file(
             "src/main.rs",
             r#"
             extern crate rustc_serialize;
@@ -233,7 +247,8 @@ fn issue_3419() {
                 foo::take::<Foo>();
             }
         "#,
-        ).build();
+        )
+        .build();
 
     Package::new("rustc-serialize", "1.0.0")
         .file(
@@ -247,7 +262,8 @@ fn issue_3419() {
                                          -> Result<T, Self::Error>
                     where F: FnOnce(&mut Self) -> Result<T, Self::Error>;
                  } "#,
-        ).publish();
+        )
+        .publish();
 
     p.cargo("check").run();
 }
@@ -269,7 +285,8 @@ fn dylib_check_preserves_build_cache() {
 
             [dependencies]
         "#,
-        ).file("src/lib.rs", "")
+        )
+        .file("src/lib.rs", "")
         .build();
 
     p.cargo("build")
@@ -278,7 +295,8 @@ fn dylib_check_preserves_build_cache() {
 [..]Compiling foo v0.1.0 ([..])
 [FINISHED] dev [unoptimized + debuginfo] target(s) in [..]
 ",
-        ).run();
+        )
+        .run();
 
     p.cargo("check").run();
 
@@ -302,10 +320,12 @@ fn rustc_check() {
             [dependencies.bar]
             path = "../bar"
         "#,
-        ).file(
+        )
+        .file(
             "src/main.rs",
             "extern crate bar; fn main() { ::bar::baz(); }",
-        ).build();
+        )
+        .build();
     let _bar = project()
         .at("bar")
         .file("Cargo.toml", &basic_manifest("bar", "0.1.0"))
@@ -329,10 +349,12 @@ fn rustc_check_err() {
             [dependencies.bar]
             path = "../bar"
         "#,
-        ).file(
+        )
+        .file(
             "src/main.rs",
             "extern crate bar; fn main() { ::bar::qux(); }",
-        ).build();
+        )
+        .build();
     let _bar = project()
         .at("bar")
         .file("Cargo.toml", &basic_manifest("bar", "0.1.0"))
@@ -359,7 +381,8 @@ fn check_all() {
             [dependencies]
             b = { path = "b" }
         "#,
-        ).file("src/main.rs", "fn main() {}")
+        )
+        .file("src/main.rs", "fn main() {}")
         .file("examples/a.rs", "fn main() {}")
         .file("tests/a.rs", "")
         .file("src/lib.rs", "")
@@ -385,7 +408,8 @@ fn check_virtual_all_implied() {
             [workspace]
             members = ["bar", "baz"]
         "#,
-        ).file("bar/Cargo.toml", &basic_manifest("bar", "0.1.0"))
+        )
+        .file("bar/Cargo.toml", &basic_manifest("bar", "0.1.0"))
         .file("bar/src/lib.rs", "pub fn bar() {}")
         .file("baz/Cargo.toml", &basic_manifest("baz", "0.1.0"))
         .file("baz/src/lib.rs", "pub fn baz() {}")
@@ -449,7 +473,8 @@ fn check_unit_test_profile() {
                 }
             }
         "#,
-        ).build();
+        )
+        .build();
 
     foo.cargo("check").run();
     foo.cargo("check --profile test")
@@ -471,7 +496,8 @@ fn check_filters() {
                 fn unused_unit_lib() {}
             }
         "#,
-        ).file(
+        )
+        .file(
             "src/main.rs",
             r#"
             fn main() {}
@@ -481,7 +507,8 @@ fn check_filters() {
                 fn unused_unit_bin() {}
             }
         "#,
-        ).file(
+        )
+        .file(
             "tests/t1.rs",
             r#"
             fn unused_normal_t1() {}
@@ -490,7 +517,8 @@ fn check_filters() {
                 fn unused_unit_t1() {}
             }
         "#,
-        ).file(
+        )
+        .file(
             "examples/ex1.rs",
             r#"
             fn main() {}
@@ -500,7 +528,8 @@ fn check_filters() {
                 fn unused_unit_ex1() {}
             }
         "#,
-        ).file(
+        )
+        .file(
             "benches/b1.rs",
             r#"
             fn unused_normal_b1() {}
@@ -509,7 +538,8 @@ fn check_filters() {
                 fn unused_unit_b1() {}
             }
         "#,
-        ).build();
+        )
+        .build();
 
     p.cargo("check")
         .with_stderr_contains("[..]unused_normal_lib[..]")
@@ -615,12 +645,11 @@ fn check_artifacts() {
     p.cargo("check --example ex1").run();
     assert!(!p.root().join("target/debug/libfoo.rmeta").is_file());
     assert!(!p.root().join("target/debug/libfoo.rlib").is_file());
-    assert!(
-        !p.root()
-            .join("target/debug/examples")
-            .join(exe("ex1"))
-            .is_file()
-    );
+    assert!(!p
+        .root()
+        .join("target/debug/examples")
+        .join(exe("ex1"))
+        .is_file());
     assert_glob("target/debug/deps/libfoo-*.rmeta", 1);
     assert_glob("target/debug/examples/libex1-*.rmeta", 1);
 
@@ -647,7 +676,8 @@ src/lib.rs:1:27: error[E0308]: mismatched types
 error: aborting due to previous error
 error: Could not compile `foo`.
 ",
-        ).run();
+        )
+        .run();
 }
 
 #[test]
@@ -663,7 +693,8 @@ fn proc_macro() {
                 [lib]
                 proc-macro = true
             "#,
-        ).file(
+        )
+        .file(
             "src/lib.rs",
             r#"
                 extern crate proc_macro;
@@ -675,7 +706,8 @@ fn proc_macro() {
                     "".parse().unwrap()
                 }
             "#,
-        ).file(
+        )
+        .file(
             "src/main.rs",
             r#"
                 #[macro_use]
@@ -686,7 +718,8 @@ fn proc_macro() {
 
                 fn main() {}
             "#,
-        ).build();
+        )
+        .build();
     p.cargo("check -v").env("RUST_LOG", "cargo=trace").run();
 }
 

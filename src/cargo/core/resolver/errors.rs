@@ -2,10 +2,10 @@ use std::collections::BTreeMap;
 use std::fmt;
 
 use crate::core::{Dependency, PackageId, Registry, Summary};
-use failure::{Error, Fail};
-use semver;
 use crate::util::lev_distance::lev_distance;
 use crate::util::{CargoError, Config};
+use failure::{Error, Fail};
+use semver;
 
 use super::context::Context;
 use super::types::{Candidate, ConflictReason};

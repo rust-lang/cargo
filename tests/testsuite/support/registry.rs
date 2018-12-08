@@ -159,7 +159,8 @@ pub fn init() {
     "#,
             reg = registry(),
             alt = alt_registry()
-        ).as_bytes()
+        )
+        .as_bytes()
     ));
 
     // Init a new registry
@@ -172,7 +173,8 @@ pub fn init() {
         "#,
                 dl_url()
             ),
-        ).build();
+        )
+        .build();
     fs::create_dir_all(dl_path().join("api/v1/crates")).unwrap();
 
     // Init an alt registry
@@ -186,7 +188,8 @@ pub fn init() {
                 alt_dl_url(),
                 alt_api_url()
             ),
-        ).build();
+        )
+        .build();
     fs::create_dir_all(alt_api_path().join("api/v1/crates")).unwrap();
 }
 
@@ -341,7 +344,8 @@ impl Package {
                     "registry": dep.registry,
                     "package": dep.package,
                 })
-            }).collect::<Vec<_>>();
+            })
+            .collect::<Vec<_>>();
         let cksum = {
             let mut c = Vec::new();
             t!(t!(File::open(&self.archive_dst())).read_to_end(&mut c));
@@ -354,7 +358,8 @@ impl Package {
             "cksum": cksum,
             "features": self.features,
             "yanked": self.yanked,
-        }).to_string();
+        })
+        .to_string();
 
         let file = match self.name.len() {
             1 => format!("1/{}", self.name),

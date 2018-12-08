@@ -46,13 +46,16 @@ fn cargo_verify_project_cwd() {
 #[test]
 fn cargo_verify_project_honours_unstable_features() {
     let p = project()
-        .file("Cargo.toml", r#"
+        .file(
+            "Cargo.toml",
+            r#"
         cargo-features = ["test-dummy-unstable"]
 
         [package]
         name = "foo"
         version = "0.0.1"
-    "#)
+    "#,
+        )
         .file("src/lib.rs", "")
         .build();
 

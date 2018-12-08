@@ -1,7 +1,7 @@
+use crate::support;
 use std::env;
 use std::fs::{self, File};
 use std::io::prelude::*;
-use crate::support;
 
 use crate::support::{paths, Execs};
 
@@ -39,11 +39,9 @@ fn simple_bin() {
     assert!(paths::root().join("foo/src/main.rs").is_file());
 
     cargo_process("build").cwd(&path).run();
-    assert!(
-        paths::root()
-            .join(&format!("foo/target/debug/foo{}", env::consts::EXE_SUFFIX))
-            .is_file()
-    );
+    assert!(paths::root()
+        .join(&format!("foo/target/debug/foo{}", env::consts::EXE_SUFFIX))
+        .is_file());
 }
 
 #[test]
@@ -183,7 +181,8 @@ fn multibin_project_name_clash() {
   foo.rs
 cannot automatically generate Cargo.toml as the main target would be ambiguous
 ",
-        ).run();
+        )
+        .run();
 
     assert!(!paths::root().join("foo/Cargo.toml").is_file());
 }
@@ -265,7 +264,8 @@ fn invalid_dir_name() {
 [ERROR] Invalid character `.` in crate name: `foo.bar`
 use --name to override crate name
 ",
-        ).run();
+        )
+        .run();
 
     assert!(!foo.join("Cargo.toml").is_file());
 }
@@ -283,7 +283,8 @@ fn reserved_name() {
 [ERROR] The name `test` cannot be used as a crate name\n\
 use --name to override crate name
 ",
-        ).run();
+        )
+        .run();
 
     assert!(!test.join("Cargo.toml").is_file());
 }
@@ -502,7 +503,8 @@ fn unknown_flags() {
         .with_status(1)
         .with_stderr_contains(
             "error: Found argument '--flag' which wasn't expected, or isn't valid in this context",
-        ).run();
+        )
+        .run();
 }
 
 #[cfg(not(windows))]
@@ -513,5 +515,6 @@ fn no_filename() {
         .with_stderr(
             "[ERROR] cannot auto-detect package name from path \"/\" ; use --name to override"
                 .to_string(),
-        ).run();
+        )
+        .run();
 }

@@ -1,10 +1,8 @@
 pub use self::dependency::Dependency;
-pub use self::features::{CliUnstable, Edition, Feature, Features};
 pub use self::features::{
-    maybe_allow_nightly_features,
-    enable_nightly_features,
-    nightly_features_allowed
+    enable_nightly_features, maybe_allow_nightly_features, nightly_features_allowed,
 };
+pub use self::features::{CliUnstable, Edition, Feature, Features};
 pub use self::manifest::{EitherManifest, VirtualManifest};
 pub use self::manifest::{LibKind, Manifest, Target, TargetKind};
 pub use self::package::{Package, PackageSet};

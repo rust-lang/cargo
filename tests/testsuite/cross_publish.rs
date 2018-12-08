@@ -2,8 +2,8 @@ use std::fs::File;
 use std::io::prelude::*;
 use std::path::PathBuf;
 
-use flate2::read::GzDecoder;
 use crate::support::{cross_compile, project, publish};
+use flate2::read::GzDecoder;
 use tar::Archive;
 
 #[test]
@@ -24,7 +24,8 @@ fn simple_cross_package() {
             description = "foo"
             repository = "bar"
         "#,
-        ).file(
+        )
+        .file(
             "src/main.rs",
             &format!(
                 r#"
@@ -35,7 +36,8 @@ fn simple_cross_package() {
         "#,
                 cross_compile::alternate_arch()
             ),
-        ).build();
+        )
+        .build();
 
     let target = cross_compile::alternate();
 
@@ -47,7 +49,8 @@ fn simple_cross_package() {
    Compiling foo v0.0.0 ([CWD]/target/package/foo-0.0.0)
     Finished dev [unoptimized + debuginfo] target(s) in [..]
 ",
-        ).run();
+        )
+        .run();
 
     // Check that the tarball contains the files
     let f = File::open(&p.root().join("target/package/foo-0.0.0.crate")).unwrap();
@@ -84,7 +87,8 @@ fn publish_with_target() {
             description = "foo"
             repository = "bar"
         "#,
-        ).file(
+        )
+        .file(
             "src/main.rs",
             &format!(
                 r#"
@@ -95,7 +99,8 @@ fn publish_with_target() {
         "#,
                 cross_compile::alternate_arch()
             ),
-        ).build();
+        )
+        .build();
 
     let target = cross_compile::alternate();
 
@@ -112,5 +117,6 @@ fn publish_with_target() {
    Uploading foo v0.0.0 ([CWD])
 ",
             registry = publish::registry_path().to_str().unwrap()
-        )).run();
+        ))
+        .run();
 }

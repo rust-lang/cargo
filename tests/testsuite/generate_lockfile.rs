@@ -30,7 +30,8 @@ fn adding_and_removing_packages() {
         [dependencies.bar]
         path = "bar"
     "#,
-        ).unwrap();
+        )
+        .unwrap();
     p.cargo("generate-lockfile").run();
     let lock2 = p.read_lockfile();
     assert_ne!(lock1, lock2);
@@ -56,7 +57,8 @@ fn adding_and_removing_packages() {
         authors = []
         version = "0.0.1"
     "#,
-        ).unwrap();
+        )
+        .unwrap();
     p.cargo("generate-lockfile").run();
     let lock4 = p.read_lockfile();
     assert_eq!(lock1, lock4);
@@ -78,7 +80,8 @@ fn no_index_update() {
             [dependencies]
             serde = "1.0"
         "#,
-        ).file("src/main.rs", "fn main() {}")
+        )
+        .file("src/main.rs", "fn main() {}")
         .build();
 
     p.cargo("generate-lockfile")
@@ -189,7 +192,8 @@ fn duplicate_entries_in_lockfile() {
             [dependencies]
             common = {path="common"}
             "#,
-        ).file("src/lib.rs", "")
+        )
+        .file("src/lib.rs", "")
         .build();
 
     let common_toml = &basic_manifest("common", "0.0.1");
@@ -212,7 +216,8 @@ fn duplicate_entries_in_lockfile() {
             common = {path="common"}
             a = {path="../a"}
             "#,
-        ).file("src/lib.rs", "")
+        )
+        .file("src/lib.rs", "")
         .build();
 
     let _common_in_b = ProjectBuilder::new(paths::root().join("b/common"))
@@ -227,5 +232,6 @@ fn duplicate_entries_in_lockfile() {
             "[..]package collision in the lockfile: packages common [..] and \
              common [..] are different, but only one can be written to \
              lockfile unambiguously",
-        ).run();
+        )
+        .run();
 }

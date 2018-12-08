@@ -5,10 +5,10 @@ use std::str;
 use std::time::Duration;
 use std::{cmp, env};
 
+use crate::registry::{NewCrate, NewCrateDependency, Registry};
 use curl::easy::{Easy, InfoType, SslOpt};
 use git2;
 use log::Level;
-use crate::registry::{NewCrate, NewCrateDependency, Registry};
 
 use url::percent_encoding::{percent_encode, QUERY_ENCODE_SET};
 

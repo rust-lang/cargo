@@ -34,7 +34,8 @@ fn cargo_build_plan_simple() {
         ]
     }
     "#,
-        ).run();
+        )
+        .run();
     assert!(!p.bin("foo").is_file());
 }
 
@@ -52,7 +53,8 @@ fn cargo_build_plan_single_dep() {
             [dependencies]
             bar = { path = "bar" }
         "#,
-        ).file(
+        )
+        .file(
             "src/lib.rs",
             r#"
             extern crate bar;
@@ -61,7 +63,8 @@ fn cargo_build_plan_single_dep() {
             #[test]
             fn test() { foo(); }
         "#,
-        ).file("bar/Cargo.toml", &basic_manifest("bar", "0.0.1"))
+        )
+        .file("bar/Cargo.toml", &basic_manifest("bar", "0.0.1"))
         .file("bar/src/lib.rs", "pub fn bar() {}")
         .build();
     p.cargo("build --build-plan -Zunstable-options")
@@ -109,7 +112,8 @@ fn cargo_build_plan_single_dep() {
         ]
     }
     "#,
-        ).run();
+        )
+        .run();
 }
 
 #[test]
@@ -125,7 +129,8 @@ fn cargo_build_plan_build_script() {
             authors = ["wycats@example.com"]
             build = "build.rs"
         "#,
-        ).file("src/main.rs", r#"fn main() {}"#)
+        )
+        .file("src/main.rs", r#"fn main() {}"#)
         .file("build.rs", r#"fn main() {}"#)
         .build();
 
@@ -185,7 +190,8 @@ fn cargo_build_plan_build_script() {
         ]
     }
     "#,
-        ).run();
+        )
+        .run();
 }
 
 #[test]

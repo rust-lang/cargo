@@ -1,6 +1,6 @@
-use std::str::{self, FromStr};
-use std::iter;
 use std::fmt;
+use std::iter;
+use std::str::{self, FromStr};
 
 use crate::util::{CargoError, CargoResult};
 
@@ -63,9 +63,12 @@ impl CfgExpr {
     /// Utility function to check if the key, "cfg(..)" matches the `target_cfg`
     pub fn matches_key(key: &str, target_cfg: &[Cfg]) -> bool {
         if key.starts_with("cfg(") && key.ends_with(')') {
-            let cfg = &key[4..key.len() - 1 ];
+            let cfg = &key[4..key.len() - 1];
 
-            CfgExpr::from_str(cfg).ok().map(|ce| ce.matches(target_cfg)).unwrap_or(false)
+            CfgExpr::from_str(cfg)
+                .ok()
+                .map(|ce| ce.matches(target_cfg))
+                .unwrap_or(false)
         } else {
             false
         }
@@ -128,7 +131,8 @@ impl<'a> Parser<'a> {
             t: Tokenizer {
                 s: s.char_indices().peekable(),
                 orig: s,
-            }.peekable(),
+            }
+            .peekable(),
         }
     }
 

@@ -94,7 +94,7 @@ impl<'cfg> Progress<'cfg> {
         //    draw to the console every so often. Currently there's a 100ms
         //    delay between updates.
         if !s.throttle.allowed() {
-            return Ok(())
+            return Ok(());
         }
 
         s.tick(cur, max, "")
@@ -140,12 +140,12 @@ impl Throttle {
         if self.first {
             let delay = Duration::from_millis(500);
             if self.last_update.elapsed() < delay {
-                return false
+                return false;
             }
         } else {
             let interval = Duration::from_millis(100);
             if self.last_update.elapsed() < interval {
-                return false
+                return false;
             }
         }
         self.update();
@@ -183,7 +183,7 @@ impl<'cfg> State<'cfg> {
 
         // make sure we have enough room for the header
         if self.format.max_width < 15 {
-            return Ok(())
+            return Ok(());
         }
         self.config.shell().status_header(&self.name)?;
         let mut line = prefix.to_string();
@@ -255,7 +255,7 @@ impl Format {
         let mut avail_msg_len = self.max_width - string.len() - 15;
         let mut ellipsis_pos = 0;
         if avail_msg_len <= 3 {
-            return
+            return;
         }
         for c in msg.chars() {
             let display_width = c.width().unwrap_or(0);
@@ -401,8 +401,5 @@ fn test_progress_status_too_short() {
         max_print: 24,
         max_width: 24,
     };
-    assert_eq!(
-        format.progress_status(1, 1, ""),
-        None
-    );
+    assert_eq!(format.progress_status(1, 1, ""), None);
 }

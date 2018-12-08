@@ -127,7 +127,8 @@ pub fn read_bytes(path: &Path) -> CargoResult<Vec<u8>> {
         }
         f.read_to_end(&mut ret)?;
         Ok(ret)
-    })().chain_err(|| format!("failed to read `{}`", path.display()))?;
+    })()
+    .chain_err(|| format!("failed to read `{}`", path.display()))?;
     Ok(res)
 }
 
@@ -136,7 +137,8 @@ pub fn write(path: &Path, contents: &[u8]) -> CargoResult<()> {
         let mut f = File::create(path)?;
         f.write_all(contents)?;
         Ok(())
-    })().chain_err(|| format!("failed to write `{}`", path.display()))?;
+    })()
+    .chain_err(|| format!("failed to write `{}`", path.display()))?;
     Ok(())
 }
 
@@ -156,7 +158,8 @@ pub fn write_if_changed<P: AsRef<Path>, C: AsRef<[u8]>>(path: P, contents: C) ->
             f.write_all(contents)?;
         }
         Ok(())
-    })().chain_err(|| format!("failed to write `{}`", path.as_ref().display()))?;
+    })()
+    .chain_err(|| format!("failed to write `{}`", path.as_ref().display()))?;
     Ok(())
 }
 
@@ -170,7 +173,8 @@ pub fn append(path: &Path, contents: &[u8]) -> CargoResult<()> {
 
         f.write_all(contents)?;
         Ok(())
-    })().chain_err(|| format!("failed to write `{}`", path.display()))?;
+    })()
+    .chain_err(|| format!("failed to write `{}`", path.display()))?;
     Ok(())
 }
 

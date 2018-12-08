@@ -3,9 +3,9 @@ use std::rc::Rc;
 
 use crate::core::interning::InternedString;
 use crate::core::{Dependency, FeatureValue, PackageId, SourceId, Summary};
-use im_rc;
 use crate::util::CargoResult;
 use crate::util::Graph;
+use im_rc;
 
 use super::errors::ActivateResult;
 use super::types::{ConflictReason, DepInfo, GraphNode, Method, RcList, RegistryQueryer};

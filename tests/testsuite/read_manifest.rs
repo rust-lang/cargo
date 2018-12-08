@@ -70,7 +70,8 @@ fn cargo_read_manifest_path_to_cargo_toml_parent_relative() {
         .with_stderr(
             "[ERROR] the manifest-path must be \
              a path to a Cargo.toml file",
-        ).run();
+        )
+        .run();
 }
 
 #[test]
@@ -87,7 +88,8 @@ fn cargo_read_manifest_path_to_cargo_toml_parent_absolute() {
         .with_stderr(
             "[ERROR] the manifest-path must be \
              a path to a Cargo.toml file",
-        ).run();
+        )
+        .run();
 }
 
 #[test]
@@ -97,7 +99,5 @@ fn cargo_read_manifest_cwd() {
         .file("src/foo.rs", &main_file(r#""i am foo""#, &[]))
         .build();
 
-    p.cargo("read-manifest")
-        .with_json(MANIFEST_OUTPUT)
-        .run();
+    p.cargo("read-manifest").with_json(MANIFEST_OUTPUT).run();
 }

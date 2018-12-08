@@ -1,7 +1,7 @@
-use std::fs::File;
-use std::io::Write;
 use crate::support::registry::{self, alt_api_path, Package};
 use crate::support::{basic_manifest, paths, project};
+use std::fs::File;
+use std::io::Write;
 
 #[test]
 fn is_feature_gated() {
@@ -18,7 +18,8 @@ fn is_feature_gated() {
             version = "0.0.1"
             registry = "alternative"
         "#,
-        ).file("src/main.rs", "fn main() {}")
+        )
+        .file("src/main.rs", "fn main() {}")
         .build();
 
     Package::new("bar", "0.0.1").alternative(true).publish();
@@ -47,7 +48,8 @@ fn depend_on_alt_registry() {
             version = "0.0.1"
             registry = "alternative"
         "#,
-        ).file("src/main.rs", "fn main() {}")
+        )
+        .file("src/main.rs", "fn main() {}")
         .build();
 
     Package::new("bar", "0.0.1").alternative(true).publish();
@@ -64,7 +66,8 @@ fn depend_on_alt_registry() {
 [FINISHED] dev [unoptimized + debuginfo] target(s) in [..]s
 ",
             reg = registry::alt_registry_path().to_str().unwrap()
-        )).run();
+        ))
+        .run();
 
     p.cargo("clean").masquerade_as_nightly_cargo().run();
 
@@ -77,7 +80,8 @@ fn depend_on_alt_registry() {
 [COMPILING] foo v0.0.1 ([CWD])
 [FINISHED] dev [unoptimized + debuginfo] target(s) in [..]s
 ",
-        ).run();
+        )
+        .run();
 }
 
 #[test]
@@ -97,7 +101,8 @@ fn depend_on_alt_registry_depends_on_same_registry_no_index() {
             version = "0.0.1"
             registry = "alternative"
         "#,
-        ).file("src/main.rs", "fn main() {}")
+        )
+        .file("src/main.rs", "fn main() {}")
         .build();
 
     Package::new("baz", "0.0.1").alternative(true).publish();
@@ -120,7 +125,8 @@ fn depend_on_alt_registry_depends_on_same_registry_no_index() {
 [FINISHED] dev [unoptimized + debuginfo] target(s) in [..]s
 ",
             reg = registry::alt_registry_path().to_str().unwrap()
-        )).run();
+        ))
+        .run();
 }
 
 #[test]
@@ -140,7 +146,8 @@ fn depend_on_alt_registry_depends_on_same_registry() {
             version = "0.0.1"
             registry = "alternative"
         "#,
-        ).file("src/main.rs", "fn main() {}")
+        )
+        .file("src/main.rs", "fn main() {}")
         .build();
 
     Package::new("baz", "0.0.1").alternative(true).publish();
@@ -163,7 +170,8 @@ fn depend_on_alt_registry_depends_on_same_registry() {
 [FINISHED] dev [unoptimized + debuginfo] target(s) in [..]s
 ",
             reg = registry::alt_registry_path().to_str().unwrap()
-        )).run();
+        ))
+        .run();
 }
 
 #[test]
@@ -183,7 +191,8 @@ fn depend_on_alt_registry_depends_on_crates_io() {
             version = "0.0.1"
             registry = "alternative"
         "#,
-        ).file("src/main.rs", "fn main() {}")
+        )
+        .file("src/main.rs", "fn main() {}")
         .build();
 
     Package::new("baz", "0.0.1").publish();
@@ -208,7 +217,8 @@ fn depend_on_alt_registry_depends_on_crates_io() {
 ",
             alt_reg = registry::alt_registry_path().to_str().unwrap(),
             reg = registry::registry_path().to_str().unwrap()
-        )).run();
+        ))
+        .run();
 }
 
 #[test]
@@ -230,7 +240,8 @@ fn registry_and_path_dep_works() {
             path = "bar"
             registry = "alternative"
         "#,
-        ).file("src/main.rs", "fn main() {}")
+        )
+        .file("src/main.rs", "fn main() {}")
         .file("bar/Cargo.toml", &basic_manifest("bar", "0.0.1"))
         .file("bar/src/lib.rs", "")
         .build();
@@ -243,7 +254,8 @@ fn registry_and_path_dep_works() {
 [COMPILING] foo v0.0.1 ([CWD])
 [FINISHED] dev [unoptimized + debuginfo] target(s) in [..]s
 ",
-        ).run();
+        )
+        .run();
 }
 
 #[test]
@@ -265,7 +277,8 @@ fn registry_incompatible_with_git() {
             git = ""
             registry = "alternative"
         "#,
-        ).file("src/main.rs", "fn main() {}")
+        )
+        .file("src/main.rs", "fn main() {}")
         .build();
 
     p.cargo("build").masquerade_as_nightly_cargo().with_status(101)
@@ -287,7 +300,8 @@ fn cannot_publish_to_crates_io_with_registry_dependency() {
             version = "0.0.1"
             registry = "alternative"
         "#,
-        ).file("src/main.rs", "fn main() {}")
+        )
+        .file("src/main.rs", "fn main() {}")
         .build();
 
     Package::new("bar", "0.0.1").alternative(true).publish();
@@ -316,7 +330,8 @@ fn publish_with_registry_dependency() {
             version = "0.0.1"
             registry = "alternative"
         "#,
-        ).file("src/main.rs", "fn main() {}")
+        )
+        .file("src/main.rs", "fn main() {}")
         .build();
 
     Package::new("bar", "0.0.1").alternative(true).publish();
@@ -351,7 +366,8 @@ fn alt_registry_and_crates_io_deps() {
             version = "0.1.0"
             registry = "alternative"
         "#,
-        ).file("src/main.rs", "fn main() {}")
+        )
+        .file("src/main.rs", "fn main() {}")
         .build();
 
     Package::new("crates_io_dep", "0.0.1").publish();
@@ -364,9 +380,11 @@ fn alt_registry_and_crates_io_deps() {
         .with_stderr_contains(format!(
             "[UPDATING] `{}` index",
             registry::alt_registry_path().to_str().unwrap()
-        )).with_stderr_contains(&format!(
+        ))
+        .with_stderr_contains(&format!(
             "[UPDATING] `{}` index",
-            registry::registry_path().to_str().unwrap()))
+            registry::registry_path().to_str().unwrap()
+        ))
         .with_stderr_contains("[DOWNLOADED] crates_io_dep v0.0.1 (registry `[ROOT][..]`)")
         .with_stderr_contains("[DOWNLOADED] alt_reg_dep v0.1.0 (registry `[ROOT][..]`)")
         .with_stderr_contains("[COMPILING] alt_reg_dep v0.1.0 (registry `[ROOT][..]`)")
@@ -404,7 +422,8 @@ fn publish_to_alt_registry() {
             version = "0.0.1"
             authors = []
         "#,
-        ).file("src/main.rs", "fn main() {}")
+        )
+        .file("src/main.rs", "fn main() {}")
         .build();
 
     // Setup the registry by publishing a package
@@ -442,7 +461,8 @@ fn publish_with_crates_io_dep() {
             [dependencies.bar]
             version = "0.0.1"
         "#,
-        ).file("src/main.rs", "fn main() {}")
+        )
+        .file("src/main.rs", "fn main() {}")
         .build();
 
     Package::new("bar", "0.0.1").publish();
@@ -470,7 +490,8 @@ fn passwords_in_url_forbidden() {
         [registries.alternative]
         index = "ssh://git:secret@foobar.com"
         "#,
-        ).unwrap();
+        )
+        .unwrap();
 
     let p = project()
         .file(
@@ -483,7 +504,8 @@ fn passwords_in_url_forbidden() {
             version = "0.0.1"
             authors = []
         "#,
-        ).file("src/main.rs", "fn main() {}")
+        )
+        .file("src/main.rs", "fn main() {}")
         .build();
 
     p.cargo("publish --registry alternative -Zunstable-options")

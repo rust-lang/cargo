@@ -1,11 +1,11 @@
 use std::fs::{self, File};
 use std::io::prelude::*;
 
-use cargo::core::Shell;
-use cargo::util::config::Config;
 use crate::support::cargo_process;
 use crate::support::install::cargo_home;
 use crate::support::registry::registry;
+use cargo::core::Shell;
+use cargo::util::config::Config;
 use toml;
 
 const TOKEN: &str = "test-token";
