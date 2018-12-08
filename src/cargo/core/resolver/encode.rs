@@ -2,8 +2,10 @@ use std::collections::{BTreeMap, HashMap, HashSet};
 use std::fmt;
 use std::str::FromStr;
 
+use log::debug;
 use serde::de;
 use serde::ser;
+use serde::{Deserialize, Serialize};
 
 use crate::core::{Dependency, Package, PackageId, SourceId, Workspace};
 use crate::util::errors::{CargoError, CargoResult, CargoResultExt};

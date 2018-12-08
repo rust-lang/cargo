@@ -52,7 +52,7 @@ use std::mem;
 use std::rc::Rc;
 use std::time::{Duration, Instant};
 
-use semver;
+use log::{debug, trace};
 
 use crate::core::interning::InternedString;
 use crate::core::PackageIdSpec;

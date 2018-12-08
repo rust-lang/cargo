@@ -7,14 +7,14 @@
 //! dependencies on other Invocations.
 
 use std::collections::BTreeMap;
+use std::path::PathBuf;
+
+use serde::Serialize;
 
 use super::context::OutputFile;
 use super::{CompileMode, Context, Kind, Unit};
 use crate::core::TargetKind;
 use crate::util::{internal, CargoResult, ProcessBuilder};
-use semver;
-use serde_json;
-use std::path::PathBuf;
 
 #[derive(Debug, Serialize)]
 struct Invocation {

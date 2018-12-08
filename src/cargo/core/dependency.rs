@@ -2,9 +2,11 @@ use std::fmt;
 use std::rc::Rc;
 use std::str::FromStr;
 
+use log::trace;
 use semver::ReqParseError;
 use semver::VersionReq;
 use serde::ser;
+use serde::Serialize;
 
 use crate::core::interning::InternedString;
 use crate::core::{PackageId, SourceId, Summary};

@@ -5,9 +5,11 @@ use std::path::PathBuf;
 use std::process::{ExitStatus, Output};
 use std::str;
 
-use crate::core::{TargetKind, Workspace};
 use clap;
 use failure::{Context, Error, Fail};
+use log::trace;
+
+use crate::core::{TargetKind, Workspace};
 
 pub use failure::Error as CargoError;
 pub type CargoResult<T> = Result<T, Error>;

@@ -1,18 +1,8 @@
-#![cfg_attr(feature = "cargo-clippy", allow(clippy::too_many_arguments))] // large project
-#![cfg_attr(feature = "cargo-clippy", allow(clippy::redundant_closure))] // there's a false positive
+#![allow(clippy::too_many_arguments)] // large project
+#![allow(clippy::redundant_closure)] // there's a false positive
 
-use cargo;
-
-#[cfg(not(feature = "pretty-env-logger"))]
-extern crate env_logger;
-#[cfg(feature = "pretty-env-logger")]
-extern crate pretty_env_logger;
 #[macro_use]
 extern crate failure;
-use git2_curl;
-
-#[macro_use]
-extern crate serde_derive;
 
 use std::collections::BTreeSet;
 use std::env;

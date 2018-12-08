@@ -3,10 +3,10 @@ use std::fs;
 use std::path::{Path, PathBuf};
 
 use filetime::FileTime;
-use git2;
 use glob::Pattern;
 use ignore::gitignore::GitignoreBuilder;
 use ignore::Match;
+use log::{trace, warn};
 
 use crate::core::source::MaybePackage;
 use crate::core::{Dependency, Package, PackageId, Source, SourceId, Summary};

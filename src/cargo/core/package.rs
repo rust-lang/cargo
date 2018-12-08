@@ -8,15 +8,14 @@ use std::path::{Path, PathBuf};
 use std::time::{Duration, Instant};
 
 use bytesize::ByteSize;
-use curl;
 use curl::easy::{Easy, HttpVersion};
 use curl::multi::{EasyHandle, Multi};
-use curl_sys;
 use failure::ResultExt;
 use lazycell::LazyCell;
+use log::{debug, warn};
 use semver::Version;
 use serde::ser;
-use toml;
+use serde::Serialize;
 
 use crate::core::interning::InternedString;
 use crate::core::source::MaybePackage;

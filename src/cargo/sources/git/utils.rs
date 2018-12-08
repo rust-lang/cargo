@@ -7,7 +7,9 @@ use std::process::Command;
 
 use curl::easy::{Easy, List};
 use git2::{self, ObjectType};
+use log::{debug, info};
 use serde::ser;
+use serde::Serialize;
 use url::Url;
 
 use crate::core::GitReference;

@@ -10,7 +10,8 @@ use std::sync::Arc;
 use std::thread::{self, JoinHandle};
 
 use failure::{Error, ResultExt};
-use serde_json;
+use log::warn;
+use serde::{Deserialize, Serialize};
 
 use crate::util::errors::CargoResult;
 use crate::util::{Config, ProcessBuilder};

@@ -7,10 +7,9 @@ use std::process::{self, Command, ExitStatus};
 use std::str;
 
 use failure::{Error, ResultExt};
-use git2;
+use log::{debug, trace, warn};
 use rustfix::diagnostics::Diagnostic;
 use rustfix::{self, CodeFix};
-use serde_json;
 
 use crate::core::Workspace;
 use crate::ops::{self, CompileOptions};
@@ -402,7 +401,9 @@ fn rustfix_and_fix(
         // Make sure we've got a file associated with this suggestion and all
         // snippets point to the same file. Right now it's not clear what
         // we would do with multiple files.
-        let file_names = suggestion.solutions.iter()
+        let file_names = suggestion
+            .solutions
+            .iter()
             .flat_map(|s| s.replacements.iter())
             .map(|r| &r.snippet.file_name);
 

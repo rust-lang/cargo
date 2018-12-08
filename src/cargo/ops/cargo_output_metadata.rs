@@ -1,6 +1,7 @@
 use std::collections::HashMap;
 
 use serde::ser;
+use serde::Serialize;
 
 use crate::core::resolver::Resolve;
 use crate::core::{Package, PackageId, Workspace};

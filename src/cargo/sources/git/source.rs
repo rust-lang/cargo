@@ -1,5 +1,6 @@
 use std::fmt::{self, Debug, Formatter};
 
+use log::trace;
 use url::Url;
 
 use crate::core::source::{MaybePackage, Source, SourceId};

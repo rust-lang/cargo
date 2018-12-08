@@ -3,6 +3,8 @@ use std::env;
 use std::path::{Path, PathBuf};
 use std::str;
 
+use log::debug;
+
 use crate::core::profiles::Profiles;
 use crate::core::{Dependency, Workspace};
 use crate::core::{PackageId, PackageSet, Resolve};

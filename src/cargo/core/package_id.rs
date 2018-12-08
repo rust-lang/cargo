@@ -14,7 +14,7 @@ use crate::core::interning::InternedString;
 use crate::core::source::SourceId;
 use crate::util::{CargoResult, ToSemver};
 
-lazy_static! {
+lazy_static::lazy_static! {
     static ref PACKAGE_ID_CACHE: Mutex<HashSet<&'static PackageIdInner>> =
         Mutex::new(HashSet::new());
 }

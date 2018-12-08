@@ -6,6 +6,7 @@ use std::path::{Path, PathBuf};
 use std::sync::Arc;
 
 use lazycell::LazyCell;
+use log::info;
 
 use super::{BuildContext, Context, FileFlavor, Kind, Layout, Unit};
 use crate::core::{TargetKind, Workspace};
