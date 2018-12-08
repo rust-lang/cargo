@@ -7,9 +7,9 @@ use std::process::Output;
 use std::sync::mpsc::{channel, Receiver, Sender};
 use std::sync::Arc;
 
-use crossbeam_utils;
 use crossbeam_utils::thread::Scope;
 use jobserver::{Acquired, HelperThread};
+use log::{debug, info, trace};
 
 use crate::core::profiles::Profile;
 use crate::core::{PackageId, Target, TargetKind};

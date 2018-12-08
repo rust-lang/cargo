@@ -18,6 +18,8 @@
 use std::cell::RefCell;
 use std::collections::{HashMap, HashSet};
 
+use log::trace;
+
 use super::{BuildContext, CompileMode, Kind, Unit};
 use crate::core::dependency::Kind as DepKind;
 use crate::core::package::Downloads;

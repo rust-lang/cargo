@@ -164,9 +164,9 @@ use std::fs::File;
 use std::path::{Path, PathBuf};
 
 use flate2::read::GzDecoder;
+use log::debug;
 use semver::Version;
-#[cfg(test)]
-use serde_json;
+use serde::Deserialize;
 use tar::Archive;
 
 use crate::core::dependency::{Dependency, Kind};

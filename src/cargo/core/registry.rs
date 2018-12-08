@@ -1,5 +1,6 @@
 use std::collections::HashMap;
 
+use log::{debug, trace};
 use semver::VersionReq;
 use url::Url;
 

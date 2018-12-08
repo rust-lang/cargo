@@ -6,8 +6,9 @@ use std::path::{self, Path, PathBuf};
 use std::sync::Arc;
 
 use failure::Error;
+use log::debug;
 use same_file::is_same_file;
-use serde_json;
+use serde::Serialize;
 
 use crate::core::manifest::TargetSourcePath;
 use crate::core::profiles::{Lto, Profile};

@@ -7,6 +7,7 @@
 use std::collections::HashMap;
 use std::path::{Path, PathBuf};
 
+use log::debug;
 use url::Url;
 
 use crate::core::{GitReference, Source, SourceId};

@@ -51,6 +51,7 @@ use std::fmt;
 use std::str::FromStr;
 
 use failure::Error;
+use serde::{Deserialize, Serialize};
 
 use crate::util::errors::CargoResult;
 

@@ -5,9 +5,10 @@ use std::path::{Path, PathBuf};
 use std::sync::{Arc, Mutex};
 
 use filetime::FileTime;
-use serde::de::{self, Deserialize};
+use log::{debug, info};
+use serde::de;
 use serde::ser;
-use serde_json;
+use serde::{Deserialize, Serialize};
 
 use crate::core::{Edition, Package};
 use crate::util;

@@ -1,4 +1,3 @@
-use std;
 use std::cell::{RefCell, RefMut};
 use std::collections::hash_map::Entry::{Occupied, Vacant};
 use std::collections::hash_map::HashMap;
@@ -16,11 +15,9 @@ use std::time::Instant;
 use std::vec;
 
 use curl::easy::Easy;
-use failure;
-use jobserver;
 use lazycell::LazyCell;
+use serde::Deserialize;
 use serde::{de, de::IntoDeserializer};
-use toml;
 
 use crate::core::profiles::ConfigProfiles;
 use crate::core::shell::Verbosity;
@@ -1140,7 +1137,7 @@ impl<'de, 'config> de::Deserializer<'de> for Deserializer<'config> {
     }
 
     // These aren't really supported, yet.
-    forward_to_deserialize_any! {
+    serde::forward_to_deserialize_any! {
         f32 f64 char str bytes
         byte_buf unit unit_struct
         enum identifier ignored_any

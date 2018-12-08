@@ -1,5 +1,6 @@
 use std::collections::{BTreeMap, HashSet};
 
+use log::debug;
 use termcolor::Color::{self, Cyan, Green, Red};
 
 use crate::core::registry::PackageRegistry;

@@ -3,6 +3,8 @@ use std::fs;
 use std::io;
 use std::path::{Path, PathBuf};
 
+use log::{info, trace};
+
 use crate::core::{EitherManifest, Package, PackageId, SourceId};
 use crate::util::errors::{CargoError, CargoResult};
 use crate::util::important_paths::find_project_manifest_exact;

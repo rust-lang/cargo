@@ -6,8 +6,8 @@ use std::sync::Arc;
 
 use flate2::read::GzDecoder;
 use flate2::{Compression, GzBuilder};
-use git2;
-use serde_json;
+use log::debug;
+use serde_json::{self, json};
 use tar::{Archive, Builder, EntryType, Header};
 
 use crate::core::compiler::{BuildConfig, CompileMode, DefaultExecutor, Executor};

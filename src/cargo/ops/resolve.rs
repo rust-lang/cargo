@@ -1,5 +1,7 @@
 use std::collections::HashSet;
 
+use log::{debug, trace};
+
 use crate::core::registry::PackageRegistry;
 use crate::core::resolver::{self, Method, Resolve};
 use crate::core::{PackageId, PackageIdSpec, PackageSet, Source, SourceId, Workspace};

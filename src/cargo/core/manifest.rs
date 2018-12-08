@@ -6,7 +6,7 @@ use std::rc::Rc;
 
 use semver::Version;
 use serde::ser;
-use toml;
+use serde::Serialize;
 use url::Url;
 
 use crate::core::interning::InternedString;

@@ -1,6 +1,8 @@
 use std::collections::HashSet;
 use std::{cmp, fmt, hash};
 
+use serde::Deserialize;
+
 use crate::core::compiler::CompileMode;
 use crate::core::interning::InternedString;
 use crate::core::{Features, PackageId, PackageIdSpec, PackageSet, Shell};

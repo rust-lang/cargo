@@ -14,7 +14,7 @@ pub fn leak(s: String) -> &'static str {
     Box::leak(s.into_boxed_str())
 }
 
-lazy_static! {
+lazy_static::lazy_static! {
     static ref STRING_CACHE: Mutex<HashSet<&'static str>> = Mutex::new(HashSet::new());
 }
 

@@ -1,5 +1,7 @@
 use std::collections::{BTreeMap, HashMap, HashSet};
 
+use log::trace;
+
 use super::types::ConflictReason;
 use crate::core::resolver::Context;
 use crate::core::{Dependency, PackageId};

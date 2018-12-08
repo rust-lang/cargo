@@ -6,10 +6,8 @@ use std::mem;
 use std::path::Path;
 use std::str;
 
-use git2;
-use hex;
 use lazycell::LazyCell;
-use serde_json;
+use log::{debug, trace};
 
 use crate::core::{PackageId, SourceId};
 use crate::sources::git;

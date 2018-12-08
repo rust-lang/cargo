@@ -7,8 +7,8 @@ use std::sync::Arc;
 use std::{env, fs};
 
 use semver::{Version, VersionReq};
+use serde::{Deserialize, Serialize};
 use tempfile::Builder as TempFileBuilder;
-use toml;
 
 use crate::core::compiler::{DefaultExecutor, Executor};
 use crate::core::package::PackageSet;

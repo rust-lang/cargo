@@ -2,8 +2,8 @@ use std::collections::HashMap;
 use std::path::Path;
 use std::str;
 
+use log::{info, trace};
 use semver::Version;
-use serde_json;
 
 use crate::core::dependency::Dependency;
 use crate::core::{PackageId, SourceId, Summary};

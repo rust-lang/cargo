@@ -8,6 +8,7 @@ use std::sync::atomic::Ordering::SeqCst;
 use std::sync::atomic::{AtomicBool, ATOMIC_BOOL_INIT};
 use std::sync::Mutex;
 
+use log::trace;
 use serde::de;
 use serde::ser;
 use url::Url;
@@ -18,7 +19,7 @@ use crate::sources::DirectorySource;
 use crate::sources::{GitSource, PathSource, RegistrySource, CRATES_IO_INDEX};
 use crate::util::{CargoResult, Config, ToUrl};
 
-lazy_static! {
+lazy_static::lazy_static! {
     static ref SOURCE_ID_CACHE: Mutex<HashSet<&'static SourceIdInner>> = Mutex::new(HashSet::new());
 }
 

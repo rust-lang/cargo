@@ -4,9 +4,7 @@ use std::fs::File;
 use std::io::Read;
 use std::path::{Path, PathBuf};
 
-use hex;
-
-use serde_json;
+use serde::Deserialize;
 
 use crate::core::source::MaybePackage;
 use crate::core::{Dependency, Package, PackageId, Source, SourceId, Summary};
