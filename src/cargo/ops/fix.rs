@@ -400,21 +400,21 @@ fn rustfix_and_fix(
     for suggestion in suggestions {
         trace!("suggestion");
         // Make sure we've got a file associated with this suggestion and all
-        // snippets point to the same location. Right now it's not clear what
-        // we would do with multiple locations.
-        let (file_name, range) = match suggestion.snippets.get(0) {
-            Some(s) => (s.file_name.clone(), s.line_range),
+        // snippets point to the same file. Right now it's not clear what
+        // we would do with multiple files.
+        let file_name = match suggestion.solutions.get(0).and_then(|sol| sol.replacements.get(0)) {
+            Some(s) => s.snippet.file_name.clone(),
             None => {
-                trace!("rejecting as it has no snippets {:?}", suggestion);
+                trace!("rejecting as it has no solutions {:?}", suggestion);
                 continue;
             }
         };
         if !suggestion
-            .snippets
+            .solutions
             .iter()
-            .all(|s| s.file_name == file_name && s.line_range == range)
+            .all(|sol| sol.replacements.iter().all(|rep| rep.snippet.file_name == file_name))
         {
-            trace!("rejecting as it spans multiple files {:?}", suggestion);
+            trace!("rejecting as it changes multiple files: {:?}", suggestion);
             continue;
         }
 
