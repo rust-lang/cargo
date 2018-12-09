@@ -121,6 +121,7 @@ rustdoc = "rustdoc"       # the doc generator tool
 target = "triple"         # build for the target triple (ignored by `cargo install`)
 target-dir = "target"     # path of where to place all generated artifacts
 rustflags = ["..", ".."]  # custom flags to pass to all compiler invocations
+rustdocflags = ["..", ".."]  # custom flags to pass to rustdoc
 incremental = true        # whether or not to enable incremental compilation
 dep-info-basedir = ".."   # full path for the base directory for targets in depfiles
 
@@ -133,10 +134,11 @@ color = 'auto'         # whether cargo colorizes output
 retry = 2 # number of times a network call will automatically retried
 git-fetch-with-cli = false  # if `true` we'll use `git`-the-CLI to fetch git repos
 
-# Alias cargo commands. The first 3 aliases are built in. If your
+# Alias cargo commands. The first 4 aliases are built in. If your
 # command requires grouped whitespace use the list format.
 [alias]
 b = "build"
+c = "check"
 t = "test"
 r = "run"
 rr = "run --release"
