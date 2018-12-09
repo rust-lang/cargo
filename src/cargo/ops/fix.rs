@@ -402,18 +402,18 @@ fn rustfix_and_fix(
         // Make sure we've got a file associated with this suggestion and all
         // snippets point to the same file. Right now it's not clear what
         // we would do with multiple files.
-        let file_name = match suggestion.solutions.get(0).and_then(|sol| sol.replacements.get(0)) {
-            Some(s) => s.snippet.file_name.clone(),
-            None => {
-                trace!("rejecting as it has no solutions {:?}", suggestion);
-                continue;
-            }
+        let file_names = suggestion.solutions.iter()
+            .flat_map(|s| s.replacements.iter())
+            .map(|r| &r.snippet.file_name);
+
+        let file_name = if let Some(file_name) = file_names.clone().next() {
+            file_name.clone()
+        } else {
+            trace!("rejecting as it has no solutions {:?}", suggestion);
+            continue;
         };
-        if !suggestion
-            .solutions
-            .iter()
-            .all(|sol| sol.replacements.iter().all(|rep| rep.snippet.file_name == file_name))
-        {
+
+        if !file_names.clone().all(|f| f == &file_name) {
             trace!("rejecting as it changes multiple files: {:?}", suggestion);
             continue;
         }
