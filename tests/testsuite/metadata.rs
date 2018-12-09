@@ -262,10 +262,13 @@ fn cargo_metadata_with_deps_and_version() {
 
             [dependencies]
             bar = "*"
+            [dev-dependencies]
+            foobar = "*"
         "#,
         )
         .build();
     Package::new("baz", "0.0.1").publish();
+    Package::new("foobar", "0.0.1").publish();
     Package::new("bar", "0.0.1").dep("baz", "0.0.1").publish();
 
     p.cargo("metadata -q --format-version 1")
@@ -278,77 +281,32 @@ fn cargo_metadata_with_deps_and_version() {
                 "categories": [],
                 "dependencies": [],
                 "description": null,
+                "edition": "2015",
                 "features": {},
                 "id": "baz 0.0.1 (registry+[..])",
                 "keywords": [],
+                "license": null,
+                "license_file": null,
                 "manifest_path": "[..]Cargo.toml",
+                "metadata": null,
                 "name": "baz",
                 "readme": null,
                 "repository": null,
                 "source": "registry+[..]",
-                "license": null,
-                "license_file": null,
-                "description": null,
-                "edition": "2015",
                 "targets": [
                     {
-                        "kind": [
-                            "lib"
-                        ],
                         "crate_types": [
                             "lib"
                         ],
                         "edition": "2015",
-                        "name": "baz",
-                        "src_path": "[..]lib.rs"
-                    }
-                ],
-                "version": "0.0.1",
-                "metadata": null
-            },
-            {
-                "authors": [],
-                "categories": [],
-                "dependencies": [
-                    {
-                        "features": [],
-                        "kind": null,
-                        "name": "baz",
-                        "optional": false,
-                        "req": "^0.0.1",
-                        "source": "registry+[..]",
-                        "target": null,
-                        "uses_default_features": true,
-                        "rename": null
-                    }
-                ],
-                "features": {},
-                "id": "bar 0.0.1 (registry+[..])",
-                "keywords": [],
-                "manifest_path": "[..]Cargo.toml",
-                "name": "bar",
-                "readme": null,
-                "repository": null,
-                "source": "registry+[..]",
-                "license": null,
-                "license_file": null,
-                "description": null,
-                "edition": "2015",
-                "targets": [
-                    {
                         "kind": [
                             "lib"
                         ],
-                        "crate_types": [
-                            "lib"
-                        ],
-                        "edition": "2015",
-                        "name": "bar",
-                        "src_path": "[..]lib.rs"
+                        "name": "baz",
+                        "src_path": "[..]src/lib.rs"
                     }
                 ],
-                "version": "0.0.1",
-                "metadata": null
+                "version": "0.0.1"
             },
             {
                 "authors": [],
@@ -359,51 +317,157 @@ fn cargo_metadata_with_deps_and_version() {
                         "kind": null,
                         "name": "bar",
                         "optional": false,
+                        "rename": null,
                         "req": "*",
                         "source": "registry+[..]",
                         "target": null,
-                        "uses_default_features": true,
-                        "rename": null
+                        "uses_default_features": true
+                    },
+                    {
+                        "features": [],
+                        "kind": "dev",
+                        "name": "foobar",
+                        "optional": false,
+                        "rename": null,
+                        "req": "*",
+                        "source": "registry+[..]",
+                        "target": null,
+                        "uses_default_features": true
                     }
                 ],
+                "description": "foo",
+                "edition": "2015",
                 "features": {},
                 "id": "foo 0.5.0 (path+file:[..]foo)",
                 "keywords": [],
+                "license": "MIT",
+                "license_file": null,
                 "manifest_path": "[..]Cargo.toml",
+                "metadata": null,
                 "name": "foo",
                 "readme": null,
                 "repository": null,
                 "source": null,
-                "license": "MIT",
-                "license_file": null,
-                "description": "foo",
-                "edition": "2015",
                 "targets": [
                     {
-                        "kind": [
-                            "bin"
-                        ],
                         "crate_types": [
                             "bin"
                         ],
                         "edition": "2015",
+                        "kind": [
+                            "bin"
+                        ],
                         "name": "foo",
-                        "src_path": "[..]foo.rs"
+                        "src_path": "[..]src/foo.rs"
                     }
                 ],
-                "version": "0.5.0",
-                "metadata": null
+                "version": "0.5.0"
+            },
+            {
+                "authors": [],
+                "categories": [],
+                "dependencies": [],
+                "description": null,
+                "edition": "2015",
+                "features": {},
+                "id": "foobar 0.0.1 (registry+[..])",
+                "keywords": [],
+                "license": null,
+                "license_file": null,
+                "manifest_path": "[..]Cargo.toml",
+                "metadata": null,
+                "name": "foobar",
+                "readme": null,
+                "repository": null,
+                "source": "registry+[..]",
+                "targets": [
+                    {
+                        "crate_types": [
+                            "lib"
+                        ],
+                        "edition": "2015",
+                        "kind": [
+                            "lib"
+                        ],
+                        "name": "foobar",
+                        "src_path": "[..]src/lib.rs"
+                    }
+                ],
+                "version": "0.0.1"
+            },
+            {
+                "authors": [],
+                "categories": [],
+                "dependencies": [
+                    {
+                        "features": [],
+                        "kind": null,
+                        "name": "baz",
+                        "optional": false,
+                        "rename": null,
+                        "req": "^0.0.1",
+                        "source": "registry+[..]",
+                        "target": null,
+                        "uses_default_features": true
+                    }
+                ],
+                "description": null,
+                "edition": "2015",
+                "features": {},
+                "id": "bar 0.0.1 (registry+[..])",
+                "keywords": [],
+                "license": null,
+                "license_file": null,
+                "manifest_path": "[..]Cargo.toml",
+                "metadata": null,
+                "name": "bar",
+                "readme": null,
+                "repository": null,
+                "source": "registry+[..]",
+                "targets": [
+                    {
+                        "crate_types": [
+                            "lib"
+                        ],
+                        "edition": "2015",
+                        "kind": [
+                            "lib"
+                        ],
+                        "name": "bar",
+                        "src_path": "[..]src/lib.rs"
+                    }
+                ],
+                "version": "0.0.1"
             }
         ],
-        "workspace_members": ["foo 0.5.0 (path+file:[..]foo)"],
         "resolve": {
             "nodes": [
                 {
+                    "dependencies": [],
+                    "deps": [],
+                    "features": [],
+                    "id": "baz 0.0.1 (registry+[..])"
+                },
+                {
+                    "dependencies": [],
+                    "deps": [],
+                    "features": [],
+                    "id": "foobar 0.0.1 (registry+[..])"
+                },
+                {
                     "dependencies": [
-                        "bar 0.0.1 (registry+[..])"
+                        "bar 0.0.1 (registry+[..])",
+                        "foobar 0.0.1 (registry+[..])"
                     ],
                     "deps": [
-                        { "name": "bar", "pkg": "bar 0.0.1 (registry+[..])" }
+                        {
+                            "name": "bar",
+                            "pkg": "bar 0.0.1 (registry+[..])"
+                        },
+                        {
+                            "name": "foobar",
+                            "pkg": "foobar 0.0.1 (registry+[..])"
+                        }
                     ],
                     "features": [],
                     "id": "foo 0.5.0 (path+file:[..]foo)"
@@ -413,22 +477,22 @@ fn cargo_metadata_with_deps_and_version() {
                         "baz 0.0.1 (registry+[..])"
                     ],
                     "deps": [
-                        { "name": "baz", "pkg": "baz 0.0.1 (registry+[..])" }
+                        {
+                            "name": "baz",
+                            "pkg": "baz 0.0.1 (registry+[..])"
+                        }
                     ],
                     "features": [],
                     "id": "bar 0.0.1 (registry+[..])"
-                },
-                {
-                    "dependencies": [],
-                    "deps": [],
-                    "features": [],
-                    "id": "baz 0.0.1 (registry+[..])"
                 }
             ],
             "root": "foo 0.5.0 (path+file:[..]foo)"
         },
         "target_directory": "[..]foo/target",
         "version": 1,
+        "workspace_members": [
+            "foo 0.5.0 (path+file:[..]foo)"
+        ],
         "workspace_root": "[..]/foo"
     }"#,
         )
@@ -1336,7 +1400,7 @@ fn rename_dependency() {
                     "optional": false,
                     "rename": null,
                     "req": "^0.1.0",
-                    "source": "registry+https://github.com/rust-lang/crates.io-index",
+                    "source": "registry+[..]",
                     "target": null,
                     "uses_default_features": true
                 },
@@ -1347,7 +1411,7 @@ fn rename_dependency() {
                     "optional": false,
                     "rename": "baz",
                     "req": "^0.2.0",
-                    "source": "registry+https://github.com/rust-lang/crates.io-index",
+                    "source": "registry+[..]",
                     "target": null,
                     "uses_default_features": true
                 }
@@ -1387,7 +1451,7 @@ fn rename_dependency() {
             "description": null,
             "edition": "2015",
             "features": {},
-            "id": "bar 0.1.0 (registry+https://github.com/rust-lang/crates.io-index)",
+            "id": "bar 0.1.0 (registry+[..])",
             "keywords": [],
             "license": null,
             "license_file": null,
@@ -1396,7 +1460,7 @@ fn rename_dependency() {
             "name": "bar",
             "readme": null,
             "repository": null,
-            "source": "registry+https://github.com/rust-lang/crates.io-index",
+            "source": "registry+[..]",
             "targets": [
                 {
                     "crate_types": [
@@ -1419,7 +1483,7 @@ fn rename_dependency() {
             "description": null,
             "edition": "2015",
             "features": {},
-            "id": "bar 0.2.0 (registry+https://github.com/rust-lang/crates.io-index)",
+            "id": "bar 0.2.0 (registry+[..])",
             "keywords": [],
             "license": null,
             "license_file": null,
@@ -1428,7 +1492,7 @@ fn rename_dependency() {
             "name": "bar",
             "readme": null,
             "repository": null,
-            "source": "registry+https://github.com/rust-lang/crates.io-index",
+            "source": "registry+[..]",
             "targets": [
                 {
                     "crate_types": [
@@ -1451,27 +1515,27 @@ fn rename_dependency() {
                 "dependencies": [],
                 "deps": [],
                 "features": [],
-                "id": "bar 0.2.0 (registry+https://github.com/rust-lang/crates.io-index)"
+                "id": "bar 0.2.0 (registry+[..])"
             },
             {
                 "dependencies": [],
                 "deps": [],
                 "features": [],
-                "id": "bar 0.1.0 (registry+https://github.com/rust-lang/crates.io-index)"
+                "id": "bar 0.1.0 (registry+[..])"
             },
             {
                 "dependencies": [
-                    "bar 0.1.0 (registry+https://github.com/rust-lang/crates.io-index)",
-                    "bar 0.2.0 (registry+https://github.com/rust-lang/crates.io-index)"
+                    "bar 0.1.0 (registry+[..])",
+                    "bar 0.2.0 (registry+[..])"
                 ],
                 "deps": [
                     {
                         "name": "bar",
-                        "pkg": "bar 0.1.0 (registry+https://github.com/rust-lang/crates.io-index)"
+                        "pkg": "bar 0.1.0 (registry+[..])"
                     },
                     {
                         "name": "baz",
-                        "pkg": "bar 0.2.0 (registry+https://github.com/rust-lang/crates.io-index)"
+                        "pkg": "bar 0.2.0 (registry+[..])"
                     }
                 ],
                 "features": [],
