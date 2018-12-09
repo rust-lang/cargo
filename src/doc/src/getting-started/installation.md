@@ -15,7 +15,7 @@ It will download a script, and start the installation. If everything goes well,
 you’ll see this appear:
 
 ```console
-Rust is installed now. Great! 
+Rust is installed now. Great!
 ```
 
 On Windows, download and run [rustup-init.exe]. It will start the installation
@@ -33,5 +33,5 @@ Alternatively, you can [build Cargo from source][compiling-from-source].
 
 [rust]: https://www.rust-lang.org/
 [rustup-init.exe]: https://win.rustup.rs/
-[install-rust]: https://www.rust-lang.org/install.html
+[install-rust]: https://www.rust-lang.org/tools/install
 [compiling-from-source]: https://github.com/rust-lang/cargo#compiling-from-source
