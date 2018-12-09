@@ -230,7 +230,7 @@ impl<'cfg> RegistryData for RemoteRegistry<'cfg> {
         }
 
         let config = self.config()?.unwrap();
-        let mut url = config.dl.clone();
+        let mut url = config.dl;
         if !url.contains(CRATE_TEMPLATE) && !url.contains(VERSION_TEMPLATE) {
             write!(url, "/{}/{}/download", CRATE_TEMPLATE, VERSION_TEMPLATE).unwrap();
         }

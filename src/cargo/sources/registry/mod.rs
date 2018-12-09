@@ -464,7 +464,7 @@ impl<'cfg> RegistrySource<'cfg> {
                 .chain_err(|| format!("failed to unpack entry at `{}`", entry_path.display()))?;
         }
         File::create(&ok)?;
-        Ok(dst.clone())
+        Ok(dst)
     }
 
     fn do_update(&mut self) -> CargoResult<()> {
