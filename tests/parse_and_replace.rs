@@ -30,6 +30,8 @@ mod fixmode {
 
 mod settings {
     // can be set as env var to debug
+    pub const CHECK_JSON: &str = "RUSTFIX_TEST_CHECK_JSON";
+    pub const RECORD_JSON: &str = "RUSTFIX_TEST_RECORD_JSON";
     pub const RECORD_FIXED_RUST: &str = "RUSTFIX_TEST_RECORD_FIXED_RUST";
 }
 
@@ -59,6 +61,20 @@ fn compile(file: &Path, mode: &str) -> Result<Output, Error> {
         .run()?;
 
     Ok(res)
+}
+
+fn compile_and_get_json_errors(file: &Path, mode: &str) -> Result<String, Error> {
+    let res = compile(file, mode)?;
+    let stderr = String::from_utf8(res.stderr)?;
+
+    match res.status.code() {
+        Some(0) | Some(1) | Some(101) => Ok(stderr),
+        _ => Err(format_err!(
+            "failed with status {:?}: {}",
+            res.status.code(),
+            stderr
+        )),
+    }
 }
 
 fn compiles_without_errors(file: &Path, mode: &str) -> Result<(), Error> {
@@ -107,8 +123,7 @@ fn diff(expected: &str, actual: &str) -> String {
             write!(
                 &mut res,
                 "differences found (+ == actual, - == expected):\n"
-            )
-            .unwrap();
+            ).unwrap();
             different = true;
         }
         for diff in diff.lines() {
@@ -135,11 +150,38 @@ fn test_rustfix_with_file<P: AsRef<Path>>(file: P, mode: &str) -> Result<(), Err
 
     debug!("next up: {:?}", file);
     let code = read_file(file).context(format!("could not read {}", file.display()))?;
-    let errors = read_file(&json_file)
-        .with_context(|_| format!("could not load json suggestions for {}", file.display()))?;
+    let errors = compile_and_get_json_errors(file, mode)
+        .context(format!("could compile {}", file.display()))?;
     let suggestions =
         rustfix::get_suggestions_from_json(&errors, &HashSet::new(), filter_suggestions)
             .context("could not load suggestions")?;
+
+    if std::env::var(settings::RECORD_JSON).is_ok() {
+        use std::io::Write;
+        let mut recorded_json = fs::File::create(&file.with_extension("recorded.json")).context(
+            format!("could not create recorded.json for {}", file.display()),
+        )?;
+        recorded_json.write_all(errors.as_bytes())?;
+    }
+
+    if std::env::var(settings::CHECK_JSON).is_ok() {
+        let expected_json = read_file(&json_file).context(format!(
+            "could not load json fixtures for {}",
+            file.display()
+        ))?;
+        let expected_suggestions =
+            rustfix::get_suggestions_from_json(&expected_json, &HashSet::new(), filter_suggestions)
+                .context("could not load expected suggesitons")?;
+
+        ensure!(
+            expected_suggestions == suggestions,
+            "got unexpected suggestions from clippy:\n{}",
+            diff(
+                &format!("{:?}", expected_suggestions),
+                &format!("{:?}", suggestions)
+            )
+        );
+    }
 
     let fixed = apply_suggestions(&code, &suggestions)
         .context(format!("could not apply suggestions to {}", file.display()))?;
