@@ -186,7 +186,7 @@ fn assert_fixtures(dir: &str, mode: &str) {
         if let Err(err) = test_rustfix_with_file(file, mode) {
             println!("failed: {}", file.display());
             warn!("{}", err);
-            for cause in err.causes().skip(1) {
+            for cause in err.iter_chain().skip(1) {
                 info!("\tcaused by: {}", cause);
             }
             failures += 1;
