@@ -250,7 +250,7 @@ unable to verify that `{0}` is the same as when the lockfile was generated
                 to
             );
         }
-        Ok(name.to_string())
+        Ok(name)
     }
 
     fn dependencies_listed(&self, from: PackageId, to: PackageId) -> &[Dependency] {

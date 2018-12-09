@@ -1269,7 +1269,7 @@ impl ConfigSeqAccess {
                 if !(v.starts_with('[') && v.ends_with(']')) {
                     return Err(ConfigError::new(
                         format!("should have TOML list syntax, found `{}`", v),
-                        def.clone(),
+                        def,
                     ));
                 }
                 let temp_key = key.last().to_env();
