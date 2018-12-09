@@ -594,7 +594,7 @@ fn lock(locked: &LockedMap, patches: &HashMap<Url, Vec<PackageId>>, summary: Sum
             let locked = locked_deps.iter().find(|&&id| dep.matches_id(id));
             if let Some(&locked) = locked {
                 trace!("\tfirst hit on {}", locked);
-                let mut dep = dep.clone();
+                let mut dep = dep;
                 dep.lock_to(locked);
                 return dep;
             }
@@ -609,7 +609,7 @@ fn lock(locked: &LockedMap, patches: &HashMap<Url, Vec<PackageId>>, summary: Sum
             .and_then(|vec| vec.iter().find(|&&(id, _)| dep.matches_id(id)));
         if let Some(&(id, _)) = v {
             trace!("\tsecond hit on {}", id);
-            let mut dep = dep.clone();
+            let mut dep = dep;
             dep.lock_to(id);
             return dep;
         }
@@ -635,7 +635,7 @@ fn lock(locked: &LockedMap, patches: &HashMap<Url, Vec<PackageId>>, summary: Sum
             if patch_locked {
                 trace!("\tthird hit on {}", patch_id);
                 let req = VersionReq::exact(patch_id.version());
-                let mut dep = dep.clone();
+                let mut dep = dep;
                 dep.set_version_req(req);
                 return dep;
             }

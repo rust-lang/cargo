@@ -83,7 +83,7 @@ pub fn run(
     let exe = &compile.binaries[0];
     let exe = match util::without_prefix(exe, config.cwd()) {
         Some(path) if path.file_name() == Some(path.as_os_str()) => {
-            Path::new(".").join(path).to_path_buf()
+            Path::new(".").join(path)
         }
         Some(path) => path.to_path_buf(),
         None => exe.to_path_buf(),

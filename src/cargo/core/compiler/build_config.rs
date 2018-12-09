@@ -65,7 +65,7 @@ impl BuildConfig {
             }
         }
         let cfg_target = config.get_string("build.target")?.map(|s| s.val);
-        let target = requested_target.clone().or(cfg_target);
+        let target = requested_target.or(cfg_target);
 
         if jobs == Some(0) {
             bail!("jobs must be at least 1")
