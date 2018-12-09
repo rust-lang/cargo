@@ -123,7 +123,7 @@ fn broken_fixes_backed_out() {
     p.cargo("build").cwd(p.root().join("foo")).run();
 
     // Attempt to fix code, but our shim will always fail the second compile
-    p.cargo("fix --allow-no-vcs")
+    p.cargo("fix --allow-no-vcs --lib")
         .cwd(p.root().join("bar"))
         .env("__CARGO_FIX_YOLO", "1")
         .env("RUSTC", p.root().join("foo/target/debug/foo"))
