@@ -1,0 +1,33 @@
+Passing target selection flags will convert:lowercase[{actionverb}] only the
+specified targets.
+
+include::options-targets-lib-bin.adoc[]
+
+*--example* _NAME_...::
+    {actionverb} the specified example. This flag may be specified multiple times.
+
+*--examples*::
+    {actionverb} all example targets.
+
+*--test* _NAME_...::
+    {actionverb} the specified integration test. This flag may be specified multiple
+    times.
+
+*--tests*::
+    {actionverb} all tests. This includes both unit tests for libraries and binaries
+    and integration tests. Targets may be disabled by setting `test = false`
+    in the manifest settings for the target. Targets (such as examples) may be
+    explicitly included by setting `test = true` in the target settings.
+
+*--bench* _NAME_...::
+    {actionverb} the specified benchmark. This flag may be specified multiple times.
+
+*--benches*::
+    {actionverb} all benchmarks. This includes both unit benchmarks for libraries and
+    binaries and bench targets. Targets may be disabled by setting `bench =
+    false` in the manifest settings for the target. Targets (such as examples)
+    may be explicitly included by setting `bench = true` in the target
+    settings.
+
+*--all-targets*::
+    {actionverb} all targets.

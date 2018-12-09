@@ -1,0 +1,7 @@
+*-h*::
+*--help*::
+    Prints help information.
+
+*-Z* _FLAG_...::
+    Unstable (nightly-only) flags to Cargo. Run `cargo -Z help` for
+    details.
