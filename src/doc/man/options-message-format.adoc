@@ -1,0 +1,6 @@
+*--message-format* _FMT_::
+    The output format for diagnostic messages. Valid values:
++
+- `human` (default): Display in a human-readable text format.
+- `json`: Emit JSON messages to stdout.
+- `short`: Emit shorter, human-readable text messages.
