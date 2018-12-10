@@ -1,4 +1,4 @@
-use command_prelude::*;
+use crate::command_prelude::*;
 
 use cargo::ops;
 
@@ -46,7 +46,7 @@ processes spawned by Cargo, use the $RUSTFLAGS environment variable or the
         )
 }
 
-pub fn exec(config: &mut Config, args: &ArgMatches) -> CliResult {
+pub fn exec(config: &mut Config, args: &ArgMatches<'_>) -> CliResult {
     let ws = args.workspace(config)?;
     let mode = match args.value_of("profile") {
         Some("dev") | None => CompileMode::Build,

@@ -1,6 +1,6 @@
+use crate::support::paths::CargoPathExt;
+use crate::support::{basic_manifest, project};
 use std::env;
-use support::paths::CargoPathExt;
-use support::{basic_manifest, project};
 
 #[test]
 fn rustc_info_cache() {
@@ -53,7 +53,8 @@ fn rustc_info_cache() {
                 std::process::exit(cmd.status().unwrap().code().unwrap());
             }
         "#,
-            ).build();
+            )
+            .build();
         p.cargo("build").run();
 
         p.root()

@@ -1,9 +1,9 @@
-use std::path::Path;
 use std::fs::create_dir;
+use std::path::Path;
 
 use git2;
 
-use util::{process, CargoResult};
+use crate::util::{process, CargoResult};
 
 // Check if we are in an existing repo. We define that to be true if either:
 //
@@ -13,8 +13,12 @@ use util::{process, CargoResult};
 pub fn existing_vcs_repo(path: &Path, cwd: &Path) -> bool {
     fn in_git_repo(path: &Path, cwd: &Path) -> bool {
         if let Ok(repo) = GitRepo::discover(path, cwd) {
-            repo.is_path_ignored(path).map(|ignored| !ignored).unwrap_or(true)
-        } else { false }
+            repo.is_path_ignored(path)
+                .map(|ignored| !ignored)
+                .unwrap_or(true)
+        } else {
+            false
+        }
     }
 
     in_git_repo(path, cwd) || HgRepo::discover(path, cwd).is_ok()
@@ -69,7 +73,11 @@ impl FossilRepo {
         db_path.push(db_fname);
 
         // then create the fossil DB in that location
-        process("fossil").cwd(cwd).arg("init").arg(&db_path).exec()?;
+        process("fossil")
+            .cwd(cwd)
+            .arg("init")
+            .arg(&db_path)
+            .exec()?;
 
         // open it in that new directory
         process("fossil")

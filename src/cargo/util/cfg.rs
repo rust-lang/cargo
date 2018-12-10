@@ -1,8 +1,8 @@
-use std::str::{self, FromStr};
-use std::iter;
 use std::fmt;
+use std::iter;
+use std::str::{self, FromStr};
 
-use util::{CargoError, CargoResult};
+use crate::util::{CargoError, CargoResult};
 
 #[derive(Eq, PartialEq, Hash, Ord, PartialOrd, Clone, Debug)]
 pub enum Platform {
@@ -69,9 +69,12 @@ impl CfgExpr {
     /// Utility function to check if the key, "cfg(..)" matches the `target_cfg`
     pub fn matches_key(key: &str, target_cfg: &[Cfg]) -> bool {
         if key.starts_with("cfg(") && key.ends_with(')') {
-            let cfg = &key[4..key.len() - 1 ];
+            let cfg = &key[4..key.len() - 1];
 
-            CfgExpr::from_str(cfg).ok().map(|ce| ce.matches(target_cfg)).unwrap_or(false)
+            CfgExpr::from_str(cfg)
+                .ok()
+                .map(|ce| ce.matches(target_cfg))
+                .unwrap_or(false)
         } else {
             false
         }
@@ -134,7 +137,8 @@ impl<'a> Parser<'a> {
             t: Tokenizer {
                 s: s.char_indices().peekable(),
                 orig: s,
-            }.peekable(),
+            }
+            .peekable(),
         }
     }
 
@@ -144,9 +148,9 @@ impl<'a> Parser<'a> {
                 self.t.next();
                 let mut e = Vec::new();
                 self.eat(&Token::LeftParen)?;
-                while !self.try(&Token::RightParen) {
+                while !self.r#try(&Token::RightParen) {
                     e.push(self.expr()?);
-                    if !self.try(&Token::Comma) {
+                    if !self.r#try(&Token::Comma) {
                         self.eat(&Token::RightParen)?;
                         break;
                     }
@@ -176,7 +180,7 @@ impl<'a> Parser<'a> {
     fn cfg(&mut self) -> CargoResult<Cfg> {
         match self.t.next() {
             Some(Ok(Token::Ident(name))) => {
-                let e = if self.try(&Token::Equals) {
+                let e = if self.r#try(&Token::Equals) {
                     let val = match self.t.next() {
                         Some(Ok(Token::String(s))) => s,
                         Some(Ok(t)) => bail!("expected a string, found {}", t.classify()),
@@ -195,7 +199,7 @@ impl<'a> Parser<'a> {
         }
     }
 
-    fn try(&mut self, token: &Token<'a>) -> bool {
+    fn r#try(&mut self, token: &Token<'a>) -> bool {
         match self.t.peek() {
             Some(&Ok(ref t)) if token == t => {}
             _ => return false,

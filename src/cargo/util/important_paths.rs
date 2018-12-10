@@ -1,7 +1,7 @@
+use crate::util::errors::CargoResult;
+use crate::util::paths;
 use std::fs;
 use std::path::{Path, PathBuf};
-use util::errors::CargoResult;
-use util::paths;
 
 /// Find the root Cargo.toml
 pub fn find_root_manifest_for_wd(cwd: &Path) -> CargoResult<PathBuf> {

@@ -42,7 +42,7 @@ pub fn resolve_and_validated(
             if p.name().ends_with("-sys") {
                 assert!(links.insert(p.name()));
             }
-            stack.extend(resolve.deps(&p).map(|(dp, deps)| {
+            stack.extend(resolve.deps(p).map(|(dp, deps)| {
                 for d in deps {
                     assert!(d.matches_id(dp));
                 }
@@ -76,7 +76,7 @@ pub fn resolve_with_config_raw(
         fn query(
             &mut self,
             dep: &Dependency,
-            f: &mut FnMut(Summary),
+            f: &mut dyn FnMut(Summary),
             fuzzy: bool,
         ) -> CargoResult<()> {
             for summary in self.0.iter() {
@@ -87,11 +87,11 @@ pub fn resolve_with_config_raw(
             Ok(())
         }
 
-        fn describe_source(&self, _src: &SourceId) -> String {
+        fn describe_source(&self, _src: SourceId) -> String {
             String::new()
         }
 
-        fn is_replaced(&self, _src: &SourceId) -> bool {
+        fn is_replaced(&self, _src: SourceId) -> bool {
             false
         }
     }
@@ -127,7 +127,7 @@ pub trait ToDep {
 
 impl ToDep for &'static str {
     fn to_dep(self) -> Dependency {
-        Dependency::parse_no_deprecated(self, Some("1.0.0"), &registry_loc()).unwrap()
+        Dependency::parse_no_deprecated(self, Some("1.0.0"), registry_loc()).unwrap()
     }
 }
 
@@ -149,14 +149,14 @@ impl ToPkgId for PackageId {
 
 impl<'a> ToPkgId for &'a str {
     fn to_pkgid(&self) -> PackageId {
-        PackageId::new(*self, "1.0.0", &registry_loc()).unwrap()
+        PackageId::new(*self, "1.0.0", registry_loc()).unwrap()
     }
 }
 
 impl<T: AsRef<str>, U: AsRef<str>> ToPkgId for (T, U) {
     fn to_pkgid(&self) -> PackageId {
         let (name, vers) = self;
-        PackageId::new(name.as_ref(), vers.as_ref(), &registry_loc()).unwrap()
+        PackageId::new(name.as_ref(), vers.as_ref(), registry_loc()).unwrap()
     }
 }
 
@@ -176,7 +176,7 @@ fn registry_loc() -> SourceId {
         static ref EXAMPLE_DOT_COM: SourceId =
             SourceId::for_registry(&"http://example.com".to_url().unwrap()).unwrap();
     }
-    EXAMPLE_DOT_COM.clone()
+    *EXAMPLE_DOT_COM
 }
 
 pub fn pkg<T: ToPkgId>(name: T) -> Summary {
@@ -201,7 +201,7 @@ pub fn pkg_dep<T: ToPkgId>(name: T, dep: Vec<Dependency>) -> Summary {
 }
 
 pub fn pkg_id(name: &str) -> PackageId {
-    PackageId::new(name, "1.0.0", &registry_loc()).unwrap()
+    PackageId::new(name, "1.0.0", registry_loc()).unwrap()
 }
 
 fn pkg_id_loc(name: &str, loc: &str) -> PackageId {
@@ -209,7 +209,7 @@ fn pkg_id_loc(name: &str, loc: &str) -> PackageId {
     let master = GitReference::Branch("master".to_string());
     let source_id = SourceId::for_git(&remote.unwrap(), master).unwrap();
 
-    PackageId::new(name, "1.0.0", &source_id).unwrap()
+    PackageId::new(name, "1.0.0", source_id).unwrap()
 }
 
 pub fn pkg_loc(name: &str, loc: &str) -> Summary {
@@ -232,7 +232,7 @@ pub fn dep(name: &str) -> Dependency {
     dep_req(name, "*")
 }
 pub fn dep_req(name: &str, req: &str) -> Dependency {
-    Dependency::parse_no_deprecated(name, Some(req), &registry_loc()).unwrap()
+    Dependency::parse_no_deprecated(name, Some(req), registry_loc()).unwrap()
 }
 pub fn dep_req_kind(name: &str, req: &str, kind: Kind) -> Dependency {
     let mut dep = dep_req(name, req);
@@ -244,7 +244,7 @@ pub fn dep_loc(name: &str, location: &str) -> Dependency {
     let url = location.to_url().unwrap();
     let master = GitReference::Branch("master".to_string());
     let source_id = SourceId::for_git(&url, master).unwrap();
-    Dependency::parse_no_deprecated(name, Some("1.0.0"), &source_id).unwrap()
+    Dependency::parse_no_deprecated(name, Some("1.0.0"), source_id).unwrap()
 }
 pub fn dep_kind(name: &str, kind: Kind) -> Dependency {
     dep(name).set_kind(kind).clone()
@@ -273,7 +273,7 @@ pub fn loc_names(names: &[(&'static str, &'static str)]) -> Vec<PackageId> {
 pub struct PrettyPrintRegistry(pub Vec<Summary>);
 
 impl fmt::Debug for PrettyPrintRegistry {
-    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         write!(f, "vec![")?;
         for s in &self.0 {
             if s.dependencies().is_empty() {
@@ -281,9 +281,7 @@ impl fmt::Debug for PrettyPrintRegistry {
             } else {
                 write!(f, "pkg!((\"{}\", \"{}\") => [", s.name(), s.version())?;
                 for d in s.dependencies() {
-                    if d.kind() == Kind::Normal
-                        && &d.version_req().to_string() == "*"
-                    {
+                    if d.kind() == Kind::Normal && &d.version_req().to_string() == "*" {
                         write!(f, "dep(\"{}\"),", d.name_in_toml())?;
                     } else if d.kind() == Kind::Normal {
                         write!(
@@ -357,8 +355,13 @@ pub fn registry_strategy(
 ) -> impl Strategy<Value = PrettyPrintRegistry> {
     let name = string_regex("[A-Za-z][A-Za-z0-9_-]*(-sys)?").unwrap();
 
-    let raw_version = [..max_versions; 3];
-    let version_from_raw = |v: &[usize; 3]| format!("{}.{}.{}", v[0], v[1], v[2]);
+    let raw_version = ..max_versions.pow(3);
+    let version_from_raw = move |r: usize| {
+        let major = ((r / max_versions) / max_versions) % max_versions;
+        let minor = (r / max_versions) % max_versions;
+        let patch = r % max_versions;
+        format!("{}.{}.{}", major, minor, patch)
+    };
 
     // If this is false than the crate will depend on the nonexistent "bad"
     // instead of the complex set we generated for it.
@@ -367,7 +370,7 @@ pub fn registry_strategy(
     let list_of_versions =
         btree_map(raw_version, allow_deps, 1..=max_versions).prop_map(move |ver| {
             ver.into_iter()
-                .map(|a| (version_from_raw(&a.0), a.1))
+                .map(|a| (version_from_raw(a.0), a.1))
                 .collect::<Vec<_>>()
         });
 
@@ -515,7 +518,7 @@ fn meta_test_multiple_versions_strategy() {
             .current();
         let reg = registry(input.clone());
         for this in input.iter().rev().take(10) {
-            let mut res = resolve(
+            let res = resolve(
                 &pkg_id("root"),
                 vec![dep_req(&this.name(), &format!("={}", this.version()))],
                 &reg,

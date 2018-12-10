@@ -22,17 +22,17 @@ use lazycell::LazyCell;
 use serde::{de, de::IntoDeserializer};
 use toml;
 
-use core::profiles::ConfigProfiles;
-use core::shell::Verbosity;
-use core::{CliUnstable, Shell, SourceId, Workspace};
-use ops;
+use crate::core::profiles::ConfigProfiles;
+use crate::core::shell::Verbosity;
+use crate::core::{CliUnstable, Shell, SourceId, Workspace};
+use crate::ops;
+use crate::util::errors::{internal, CargoResult, CargoResultExt};
+use crate::util::paths;
+use crate::util::toml as cargo_toml;
+use crate::util::Filesystem;
+use crate::util::Rustc;
+use crate::util::ToUrl;
 use url::Url;
-use util::errors::{internal, CargoResult, CargoResultExt};
-use util::paths;
-use util::toml as cargo_toml;
-use util::Filesystem;
-use util::Rustc;
-use util::ToUrl;
 
 use self::ConfigValue as CV;
 
@@ -176,12 +176,10 @@ impl Config {
 
     /// The default cargo registry (`alternative-registry`)
     pub fn default_registry(&self) -> CargoResult<Option<String>> {
-        Ok(
-            match self.get_string("registry.default")? {
-                Some(registry) => Some(registry.val),
-                None => None,
-            }
-        )
+        Ok(match self.get_string("registry.default")? {
+            Some(registry) => Some(registry.val),
+            None => None,
+        })
     }
 
     /// Get a reference to the shell, for e.g. writing error messages
@@ -245,7 +243,7 @@ impl Config {
                     let argv0 = env::args_os()
                         .map(PathBuf::from)
                         .next()
-                        .ok_or_else(||format_err!("no argv[0]"))?;
+                        .ok_or_else(|| format_err!("no argv[0]"))?;
                     paths::resolve_executable(&argv0)
                 }
 
@@ -458,10 +456,7 @@ impl Config {
         }
     }
 
-    pub fn get_path_and_args(
-        &self,
-        key: &str,
-    ) -> CargoResult<OptValue<(PathBuf, Vec<String>)>> {
+    pub fn get_path_and_args(&self, key: &str) -> CargoResult<OptValue<(PathBuf, Vec<String>)>> {
         if let Some(mut val) = self.get_list_or_split_string(key)? {
             if !val.val.is_empty() {
                 return Ok(Some(Value {
@@ -631,9 +626,7 @@ impl Config {
         self.load_values_from(&self.cwd)
     }
 
-    fn load_values_from(&self, path: &Path)
-        -> CargoResult<HashMap<String, ConfigValue>>
-    {
+    fn load_values_from(&self, path: &Path) -> CargoResult<HashMap<String, ConfigValue>> {
         let mut cfg = CV::Table(HashMap::new(), PathBuf::from("."));
         let home = self.home_path.clone().into_path_unlocked();
 
@@ -654,7 +647,8 @@ impl Config {
             cfg.merge(value)
                 .chain_err(|| format!("failed to merge configuration at `{}`", path.display()))?;
             Ok(())
-        }).chain_err(|| "could not load Cargo configuration")?;
+        })
+        .chain_err(|| "could not load Cargo configuration")?;
 
         self.load_credentials(&mut cfg)?;
         match cfg {
@@ -790,7 +784,7 @@ impl Config {
     where
         F: FnMut() -> CargoResult<SourceId>,
     {
-        Ok(self.crates_io_source_id.try_borrow_with(f)?.clone())
+        Ok(*(self.crates_io_source_id.try_borrow_with(f)?))
     }
 
     pub fn creation_time(&self) -> Instant {
@@ -1275,7 +1269,7 @@ impl ConfigSeqAccess {
                 if !(v.starts_with('[') && v.ends_with(']')) {
                     return Err(ConfigError::new(
                         format!("should have TOML list syntax, found `{}`", v),
-                        def.clone(),
+                        def,
                     ));
                 }
                 let temp_key = key.last().to_env();

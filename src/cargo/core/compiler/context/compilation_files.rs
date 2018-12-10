@@ -8,8 +8,8 @@ use std::sync::Arc;
 use lazycell::LazyCell;
 
 use super::{BuildContext, Context, FileFlavor, Kind, Layout, Unit};
-use core::{TargetKind, Workspace};
-use util::{self, CargoResult};
+use crate::core::{TargetKind, Workspace};
+use crate::util::{self, CargoResult};
 
 #[derive(Clone, Hash, Eq, PartialEq, Ord, PartialOrd)]
 pub struct Metadata(u64);
@@ -38,13 +38,25 @@ pub struct CompilationFiles<'a, 'cfg: 'a> {
 
 #[derive(Debug)]
 pub struct OutputFile {
-    /// File name that will be produced by the build process (in `deps`).
+    /// Absolute path to the file that will be produced by the build process.
     pub path: PathBuf,
     /// If it should be linked into `target`, and what it should be called
     /// (e.g. without metadata).
     pub hardlink: Option<PathBuf>,
+    /// If `--out-dir` is specified, the absolute path to the exported file.
+    pub export_path: Option<PathBuf>,
     /// Type of the file (library / debug symbol / else).
     pub flavor: FileFlavor,
+}
+
+impl OutputFile {
+    /// Gets the hardlink if present. Otherwise returns the path.
+    pub fn bin_dst(&self) -> &PathBuf {
+        return match self.hardlink {
+            Some(ref link_dst) => link_dst,
+            None => &self.path,
+        };
+    }
 }
 
 impl<'a, 'cfg: 'a> CompilationFiles<'a, 'cfg> {
@@ -245,16 +257,13 @@ impl<'a, 'cfg: 'a> CompilationFiles<'a, 'cfg> {
         let mut unsupported = Vec::new();
         {
             if unit.mode.is_check() {
-                // This is not quite correct for non-lib targets.  rustc
-                // currently does not emit rmeta files, so there is nothing to
-                // check for!  See #3624.
+                // This may be confusing. rustc outputs a file named `lib*.rmeta`
+                // for both libraries and binaries.
                 let path = out_dir.join(format!("lib{}.rmeta", file_stem));
-                let hardlink = link_stem
-                    .clone()
-                    .map(|(ld, ls)| ld.join(format!("lib{}.rmeta", ls)));
                 ret.push(OutputFile {
                     path,
-                    hardlink,
+                    hardlink: None,
+                    export_path: None,
                     flavor: FileFlavor::Linkable,
                 });
             } else {
@@ -272,17 +281,29 @@ impl<'a, 'cfg: 'a> CompilationFiles<'a, 'cfg> {
                     )?;
 
                     match file_types {
-                        Some(types) => for file_type in types {
-                            let path = out_dir.join(file_type.filename(&file_stem));
-                            let hardlink = link_stem
-                                .as_ref()
-                                .map(|&(ref ld, ref ls)| ld.join(file_type.filename(ls)));
-                            ret.push(OutputFile {
-                                path,
-                                hardlink,
-                                flavor: file_type.flavor,
-                            });
-                        },
+                        Some(types) => {
+                            for file_type in types {
+                                let path = out_dir.join(file_type.filename(&file_stem));
+                                let hardlink = link_stem
+                                    .as_ref()
+                                    .map(|&(ref ld, ref ls)| ld.join(file_type.filename(ls)));
+                                let export_path = if unit.target.is_custom_build() {
+                                    None
+                                } else {
+                                    self.export_dir.as_ref().and_then(|export_dir| {
+                                        hardlink.as_ref().and_then(|hardlink| {
+                                            Some(export_dir.join(hardlink.file_name().unwrap()))
+                                        })
+                                    })
+                                };
+                                ret.push(OutputFile {
+                                    path,
+                                    hardlink,
+                                    export_path,
+                                    flavor: file_type.flavor,
+                                });
+                            }
+                        }
                         // not supported, don't worry about it
                         None => {
                             unsupported.push(crate_type.to_string());
@@ -383,7 +404,8 @@ fn compute_metadata<'a, 'cfg>(
     let bcx = &cx.bcx;
     let __cargo_default_lib_metadata = env::var("__CARGO_DEFAULT_LIB_METADATA");
     if !(unit.mode.is_any_test() || unit.mode.is_check())
-        && (unit.target.is_dylib() || unit.target.is_cdylib()
+        && (unit.target.is_dylib()
+            || unit.target.is_cdylib()
             || (unit.target.is_bin() && bcx.target_triple().starts_with("wasm32-")))
         && unit.pkg.package_id().source_id().is_path()
         && __cargo_default_lib_metadata.is_err()
@@ -392,6 +414,15 @@ fn compute_metadata<'a, 'cfg>(
     }
 
     let mut hasher = SipHasher::new_with_keys(0, 0);
+
+    // This is a generic version number that can be changed to make
+    // backwards-incompatible changes to any file structures in the output
+    // directory. For example, the fingerprint files or the build-script
+    // output files. Normally cargo updates ship with rustc updates which will
+    // cause a new hash due to the rustc version changing, but this allows
+    // cargo to be extra careful to deal with different versions of cargo that
+    // use the same rustc version.
+    1.hash(&mut hasher);
 
     // Unique metadata per (name, source, version) triple. This'll allow us
     // to pull crates from anywhere w/o worrying about conflicts
@@ -415,7 +446,8 @@ fn compute_metadata<'a, 'cfg>(
 
     // Mix in the target-metadata of all the dependencies of this target
     {
-        let mut deps_metadata = cx.dep_targets(unit)
+        let mut deps_metadata = cx
+            .dep_targets(unit)
             .iter()
             .map(|dep| metadata_of(dep, cx, metas))
             .collect::<Vec<_>>();

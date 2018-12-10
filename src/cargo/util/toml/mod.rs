@@ -12,23 +12,23 @@ use serde_ignored;
 use toml;
 use url::Url;
 
-use core::dependency::Kind;
-use core::manifest::{LibKind, ManifestMetadata, TargetSourcePath, Warnings};
-use core::profiles::Profiles;
-use core::{Dependency, Manifest, PackageId, Summary, Target};
-use core::{Edition, EitherManifest, Feature, Features, VirtualManifest};
-use core::{GitReference, PackageIdSpec, SourceId, WorkspaceConfig, WorkspaceRootConfig};
-use sources::{CRATES_IO_INDEX, CRATES_IO_REGISTRY};
-use util::errors::{CargoError, CargoResult, CargoResultExt, ManifestError};
-use util::paths;
-use util::{self, Config, ToUrl, Platform};
+use crate::core::dependency::Kind;
+use crate::core::manifest::{LibKind, ManifestMetadata, TargetSourcePath, Warnings};
+use crate::core::profiles::Profiles;
+use crate::core::{Dependency, Manifest, PackageId, Summary, Target};
+use crate::core::{Edition, EitherManifest, Feature, Features, VirtualManifest};
+use crate::core::{GitReference, PackageIdSpec, SourceId, WorkspaceConfig, WorkspaceRootConfig};
+use crate::sources::{CRATES_IO_INDEX, CRATES_IO_REGISTRY};
+use crate::util::errors::{CargoError, CargoResult, CargoResultExt, ManifestError};
+use crate::util::paths;
+use crate::util::{self, Config, ToUrl, Platform};
 
 mod targets;
 use self::targets::targets;
 
 pub fn read_manifest(
     path: &Path,
-    source_id: &SourceId,
+    source_id: SourceId,
     config: &Config,
 ) -> Result<(EitherManifest, Vec<PathBuf>), ManifestError> {
     trace!(
@@ -46,7 +46,7 @@ pub fn read_manifest(
 fn do_read_manifest(
     contents: &str,
     manifest_file: &Path,
-    source_id: &SourceId,
+    source_id: SourceId,
     config: &Config,
 ) -> CargoResult<(EitherManifest, Vec<PathBuf>)> {
     let package_root = manifest_file.parent().unwrap();
@@ -517,7 +517,6 @@ impl<'de> de::Deserialize<'de> for StringOrVec {
             {
                 let seq = de::value::SeqAccessDeserializer::new(v);
                 Vec::deserialize(seq).map(StringOrVec)
-
             }
         }
 
@@ -661,15 +660,15 @@ pub struct TomlWorkspace {
 }
 
 impl TomlProject {
-    pub fn to_package_id(&self, source_id: &SourceId) -> CargoResult<PackageId> {
+    pub fn to_package_id(&self, source_id: SourceId) -> CargoResult<PackageId> {
         PackageId::new(&self.name, self.version.clone(), source_id)
     }
 }
 
 struct Context<'a, 'b> {
-    pkgid: Option<&'a PackageId>,
+    pkgid: Option<PackageId>,
     deps: &'a mut Vec<Dependency>,
-    source_id: &'a SourceId,
+    source_id: SourceId,
     nested_paths: &'a mut Vec<PathBuf>,
     config: &'b Config,
     warnings: &'a mut Vec<String>,
@@ -790,7 +789,7 @@ impl TomlManifest {
 
     fn to_real_manifest(
         me: &Rc<TomlManifest>,
-        source_id: &SourceId,
+        source_id: SourceId,
         package_root: &Path,
         config: &Config,
     ) -> CargoResult<(Manifest, Vec<PathBuf>)> {
@@ -818,7 +817,11 @@ impl TomlManifest {
             if c == '_' || c == '-' {
                 continue;
             }
-            bail!("Invalid character `{}` in package name: `{}`", c, package_name)
+            bail!(
+                "Invalid character `{}` in package name: `{}`",
+                c,
+                package_name
+            )
         }
 
         let pkgid = project.to_package_id(source_id)?;
@@ -872,7 +875,7 @@ impl TomlManifest {
 
         {
             let mut cx = Context {
-                pkgid: Some(&pkgid),
+                pkgid: Some(pkgid),
                 deps: &mut deps,
                 source_id,
                 nested_paths: &mut nested_paths,
@@ -1030,6 +1033,14 @@ impl TomlManifest {
             None => false,
         };
 
+        if summary.features().contains_key("default-features") {
+            warnings.push(
+                "`default-features = [\"..\"]` was found in [features]. \
+                 Did you mean to use `default = [\"..\"]`?"
+                    .to_string(),
+            )
+        }
+
         let custom_metadata = project.metadata.clone();
         let mut manifest = Manifest::new(
             summary,
@@ -1073,7 +1084,7 @@ impl TomlManifest {
 
     fn to_virtual_manifest(
         me: &Rc<TomlManifest>,
-        source_id: &SourceId,
+        source_id: SourceId,
         root: &Path,
         config: &Config,
     ) -> CargoResult<(VirtualManifest, Vec<PathBuf>)> {
@@ -1270,7 +1281,8 @@ impl TomlDependency {
             TomlDependency::Simple(ref version) => DetailedTomlDependency {
                 version: Some(version.clone()),
                 ..Default::default()
-            }.to_dependency(name, cx, kind),
+            }
+            .to_dependency(name, cx, kind),
             TomlDependency::Detailed(ref details) => details.to_dependency(name, cx, kind),
         }
     }
@@ -1388,7 +1400,7 @@ impl DetailedTomlDependency {
                     let path = util::normalize_path(&path);
                     SourceId::for_path(&path)?
                 } else {
-                    cx.source_id.clone()
+                    cx.source_id
                 }
             }
             (None, None, Some(registry), None) => SourceId::alt_registry(cx.config, registry)?,
@@ -1406,8 +1418,8 @@ impl DetailedTomlDependency {
 
         let version = self.version.as_ref().map(|v| &v[..]);
         let mut dep = match cx.pkgid {
-            Some(id) => Dependency::parse(pkg_name, version, &new_source_id, id, cx.config)?,
-            None => Dependency::parse_no_deprecated(pkg_name, version, &new_source_id)?,
+            Some(id) => Dependency::parse(pkg_name, version, new_source_id, id, cx.config)?,
+            None => Dependency::parse_no_deprecated(pkg_name, version, new_source_id)?,
         };
         dep.set_features(self.features.iter().flat_map(|x| x))
             .set_default_features(
@@ -1417,7 +1429,7 @@ impl DetailedTomlDependency {
             )
             .set_optional(self.optional.unwrap_or(false))
             .set_platform(cx.platform.clone())
-            .set_registry_id(&registry_id);
+            .set_registry_id(registry_id);
         if let Some(kind) = kind {
             dep.set_kind(kind);
         }

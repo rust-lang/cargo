@@ -1,7 +1,7 @@
-use support::git;
-use support::paths;
-use support::registry::Package;
-use support::{basic_manifest, project};
+use crate::support::git;
+use crate::support::paths;
+use crate::support::registry::Package;
+use crate::support::{basic_manifest, project};
 
 #[test]
 fn override_simple() {
@@ -30,10 +30,12 @@ fn override_simple() {
         "#,
                 bar.url()
             ),
-        ).file(
+        )
+        .file(
             "src/lib.rs",
             "extern crate bar; pub fn foo() { bar::bar(); }",
-        ).build();
+        )
+        .build();
 
     p.cargo("build")
         .with_stderr(
@@ -44,7 +46,8 @@ fn override_simple() {
 [COMPILING] foo v0.0.1 ([CWD])
 [FINISHED] dev [unoptimized + debuginfo] target(s) in [..]
 ",
-        ).run();
+        )
+        .run();
 }
 
 #[test]
@@ -64,7 +67,8 @@ fn missing_version() {
             [replace]
             bar = { git = 'https://example.com' }
         "#,
-        ).file("src/lib.rs", "")
+        )
+        .file("src/lib.rs", "")
         .build();
 
     p.cargo("build")
@@ -76,7 +80,8 @@ error: failed to parse manifest at `[..]`
 Caused by:
   replacements must specify a version to replace, but `[..]bar` does not
 ",
-        ).run();
+        )
+        .run();
 }
 
 #[test]
@@ -96,7 +101,8 @@ fn invalid_semver_version() {
             [replace]
             "bar:*" = { git = 'https://example.com' }
         "#,
-        ).file("src/lib.rs", "")
+        )
+        .file("src/lib.rs", "")
         .build();
 
     p.cargo("build")
@@ -108,7 +114,8 @@ error: failed to parse manifest at `[..]`
 Caused by:
   replacements must specify a valid semver version to replace, but `bar:*` does not
 ",
-        ).run();
+        )
+        .run();
 }
 
 #[test]
@@ -131,7 +138,8 @@ fn different_version() {
             [replace]
             "bar:0.1.0" = "0.2.0"
         "#,
-        ).file("src/lib.rs", "")
+        )
+        .file("src/lib.rs", "")
         .build();
 
     p.cargo("build")
@@ -143,7 +151,8 @@ error: failed to parse manifest at `[..]`
 Caused by:
   replacements cannot specify a version requirement, but found one for [..]
 ",
-        ).run();
+        )
+        .run();
 }
 
 #[test]
@@ -177,7 +186,8 @@ fn transitive() {
         "#,
                 foo.url()
             ),
-        ).file("src/lib.rs", "")
+        )
+        .file("src/lib.rs", "")
         .build();
 
     p.cargo("build")
@@ -192,7 +202,8 @@ fn transitive() {
 [COMPILING] foo v0.0.1 ([CWD])
 [FINISHED] dev [unoptimized + debuginfo] target(s) in [..]
 ",
-        ).run();
+        )
+        .run();
 
     p.cargo("build").with_stdout("").run();
 }
@@ -224,10 +235,12 @@ fn persists_across_rebuilds() {
         "#,
                 foo.url()
             ),
-        ).file(
+        )
+        .file(
             "src/lib.rs",
             "extern crate bar; pub fn foo() { bar::bar(); }",
-        ).build();
+        )
+        .build();
 
     p.cargo("build")
         .with_stderr(
@@ -238,7 +251,8 @@ fn persists_across_rebuilds() {
 [COMPILING] foo v0.0.1 ([CWD])
 [FINISHED] dev [unoptimized + debuginfo] target(s) in [..]
 ",
-        ).run();
+        )
+        .run();
 
     p.cargo("build").with_stdout("").run();
 }
@@ -268,10 +282,12 @@ fn replace_registry_with_path() {
             [replace]
             "bar:0.1.0" = { path = "../bar" }
         "#,
-        ).file(
+        )
+        .file(
             "src/lib.rs",
             "extern crate bar; pub fn foo() { bar::bar(); }",
-        ).build();
+        )
+        .build();
 
     p.cargo("build")
         .with_stderr(
@@ -281,7 +297,8 @@ fn replace_registry_with_path() {
 [COMPILING] foo v0.0.1 ([CWD])
 [FINISHED] dev [unoptimized + debuginfo] target(s) in [..]
 ",
-        ).run();
+        )
+        .run();
 }
 
 #[test]
@@ -295,7 +312,8 @@ fn use_a_spec_to_select() {
         .file(
             "src/lib.rs",
             "extern crate baz; pub fn bar() { baz::baz3(); }",
-        ).publish();
+        )
+        .publish();
 
     let foo = git::repo(&paths::root().join("override"))
         .file("Cargo.toml", &basic_manifest("baz", "0.2.0"))
@@ -321,7 +339,8 @@ fn use_a_spec_to_select() {
         "#,
                 foo.url()
             ),
-        ).file(
+        )
+        .file(
             "src/lib.rs",
             "
             extern crate bar;
@@ -332,7 +351,8 @@ fn use_a_spec_to_select() {
                 bar::bar();
             }
         ",
-        ).build();
+        )
+        .build();
 
     p.cargo("build")
         .with_stderr(
@@ -348,7 +368,8 @@ fn use_a_spec_to_select() {
 [COMPILING] foo v0.0.1 ([CWD])
 [FINISHED] dev [unoptimized + debuginfo] target(s) in [..]
 ",
-        ).run();
+        )
+        .run();
 }
 
 #[test]
@@ -368,7 +389,8 @@ fn override_adds_some_deps() {
             [dependencies]
             baz = "0.1"
         "#,
-        ).file("src/lib.rs", "")
+        )
+        .file("src/lib.rs", "")
         .build();
 
     let p = project()
@@ -389,7 +411,8 @@ fn override_adds_some_deps() {
         "#,
                 foo.url()
             ),
-        ).file("src/lib.rs", "")
+        )
+        .file("src/lib.rs", "")
         .build();
 
     p.cargo("build")
@@ -404,7 +427,8 @@ fn override_adds_some_deps() {
 [COMPILING] foo v0.0.1 ([CWD])
 [FINISHED] dev [unoptimized + debuginfo] target(s) in [..]
 ",
-        ).run();
+        )
+        .run();
 
     p.cargo("build").with_stdout("").run();
 
@@ -416,13 +440,15 @@ fn override_adds_some_deps() {
 [UPDATING] git repository `file://[..]`
 [UPDATING] `[ROOT][..]` index
 ",
-        ).run();
+        )
+        .run();
     p.cargo("update -p https://github.com/rust-lang/crates.io-index#bar")
         .with_stderr(
             "\
 [UPDATING] `[ROOT][..]` index
 ",
-        ).run();
+        )
+        .run();
 
     p.cargo("build").with_stdout("").run();
 }
@@ -446,7 +472,8 @@ fn locked_means_locked_yes_no_seriously_i_mean_locked() {
             [dependencies]
             baz = "*"
         "#,
-        ).file("src/lib.rs", "")
+        )
+        .file("src/lib.rs", "")
         .build();
 
     let p = project()
@@ -468,7 +495,8 @@ fn locked_means_locked_yes_no_seriously_i_mean_locked() {
         "#,
                 foo.url()
             ),
-        ).file("src/lib.rs", "")
+        )
+        .file("src/lib.rs", "")
         .build();
 
     p.cargo("build").run();
@@ -504,7 +532,8 @@ fn override_wrong_name() {
         "#,
                 foo.url()
             ),
-        ).file("src/lib.rs", "")
+        )
+        .file("src/lib.rs", "")
         .build();
 
     p.cargo("build")
@@ -517,7 +546,8 @@ error: no matching package for override `[..]baz:0.1.0` found
 location searched: file://[..]
 version required: = 0.1.0
 ",
-        ).run();
+        )
+        .run();
 }
 
 #[test]
@@ -546,7 +576,8 @@ fn override_with_nothing() {
         "#,
                 foo.url()
             ),
-        ).file("src/lib.rs", "")
+        )
+        .file("src/lib.rs", "")
         .build();
 
     p.cargo("build")
@@ -563,7 +594,8 @@ Caused by:
 Caused by:
   Could not find Cargo.toml in `[..]`
 ",
-        ).run();
+        )
+        .run();
 }
 
 #[test]
@@ -580,7 +612,8 @@ fn override_wrong_version() {
             [replace]
             "bar:0.1.0" = { git = 'https://example.com', version = '0.2.0' }
         "#,
-        ).file("src/lib.rs", "")
+        )
+        .file("src/lib.rs", "")
         .build();
 
     p.cargo("build")
@@ -592,7 +625,8 @@ error: failed to parse manifest at `[..]`
 Caused by:
   replacements cannot specify a version requirement, but found one for `[..]bar:0.1.0`
 ",
-        ).run();
+        )
+        .run();
 }
 
 #[test]
@@ -625,7 +659,8 @@ fn multiple_specs() {
         "#,
                 bar.url()
             ),
-        ).file("src/lib.rs", "")
+        )
+        .file("src/lib.rs", "")
         .build();
 
     p.cargo("build")
@@ -641,7 +676,8 @@ error: overlapping replacement specifications found:
 
 both specifications match: bar v0.1.0
 ",
-        ).run();
+        )
+        .run();
 }
 
 #[test]
@@ -671,7 +707,8 @@ fn test_override_dep() {
         "#,
                 bar.url()
             ),
-        ).file("src/lib.rs", "")
+        )
+        .file("src/lib.rs", "")
         .build();
 
     p.cargo("test -p bar")
@@ -683,7 +720,8 @@ Please re-run this command with [..]
   [..]#bar:0.1.0
   [..]#bar:0.1.0
 ",
-        ).run();
+        )
+        .run();
 }
 
 #[test]
@@ -713,7 +751,8 @@ fn update() {
         "#,
                 bar.url()
             ),
-        ).file("src/lib.rs", "")
+        )
+        .file("src/lib.rs", "")
         .build();
 
     p.cargo("generate-lockfile").run();
@@ -723,7 +762,8 @@ fn update() {
 [UPDATING] `[..]` index
 [UPDATING] git repository `[..]`
 ",
-        ).run();
+        )
+        .run();
 }
 
 // foo -> near -> far
@@ -744,7 +784,8 @@ fn no_override_self() {
             [dependencies]
             far = { path = "../far" }
         "#,
-        ).file("near/src/lib.rs", "#![no_std] pub extern crate far;")
+        )
+        .file("near/src/lib.rs", "#![no_std] pub extern crate far;")
         .build();
 
     let p = project()
@@ -765,7 +806,8 @@ fn no_override_self() {
         "#,
                 deps.url()
             ),
-        ).file("src/lib.rs", "#![no_std] pub extern crate near;")
+        )
+        .file("src/lib.rs", "#![no_std] pub extern crate near;")
         .build();
 
     p.cargo("build --verbose").run();
@@ -788,7 +830,8 @@ fn broken_path_override_warns() {
             [dependencies]
             a = { path = "a1" }
         "#,
-        ).file("src/lib.rs", "")
+        )
+        .file("src/lib.rs", "")
         .file(
             "a1/Cargo.toml",
             r#"
@@ -800,7 +843,8 @@ fn broken_path_override_warns() {
             [dependencies]
             bar = "0.1"
         "#,
-        ).file("a1/src/lib.rs", "")
+        )
+        .file("a1/src/lib.rs", "")
         .file(
             "a2/Cargo.toml",
             r#"
@@ -812,7 +856,8 @@ fn broken_path_override_warns() {
             [dependencies]
             bar = "0.2"
         "#,
-        ).file("a2/src/lib.rs", "")
+        )
+        .file("a2/src/lib.rs", "")
         .file(".cargo/config", r#"paths = ["a2"]"#)
         .build();
 
@@ -842,7 +887,8 @@ https://doc.rust-lang.org/cargo/reference/specifying-dependencies.html#overridin
 [COMPILING] [..]
 [FINISHED] [..]
 ",
-        ).run();
+        )
+        .run();
 }
 
 #[test]
@@ -874,7 +920,8 @@ fn override_an_override() {
             "chrono:0.2.0" = { path = "chrono" }
             "serde:0.8.0" = { path = "serde" }
         "#,
-        ).file(
+        )
+        .file(
             "Cargo.lock",
             r#"
             [[package]]
@@ -913,7 +960,8 @@ fn override_an_override() {
             name = "serde"
             version = "0.8.0"
         "#,
-        ).file(
+        )
+        .file(
             "src/lib.rs",
             "
             extern crate chrono;
@@ -924,7 +972,8 @@ fn override_an_override() {
                 serde::serde08_override();
             }
         ",
-        ).file(
+        )
+        .file(
             "chrono/Cargo.toml",
             r#"
             [package]
@@ -935,7 +984,8 @@ fn override_an_override() {
             [dependencies]
             serde = "< 0.9"
         "#,
-        ).file(
+        )
+        .file(
             "chrono/src/lib.rs",
             "
             extern crate serde;
@@ -943,7 +993,8 @@ fn override_an_override() {
                 serde::serde07();
             }
         ",
-        ).file("serde/Cargo.toml", &basic_manifest("serde", "0.8.0"))
+        )
+        .file("serde/Cargo.toml", &basic_manifest("serde", "0.8.0"))
         .file("serde/src/lib.rs", "pub fn serde08_override() {}")
         .build();
 
@@ -967,7 +1018,8 @@ fn overriding_nonexistent_no_spurious() {
             [dependencies]
             baz = { path = "baz" }
         "#,
-        ).file("src/lib.rs", "pub fn bar() {}")
+        )
+        .file("src/lib.rs", "pub fn bar() {}")
         .file("baz/Cargo.toml", &basic_manifest("baz", "0.1.0"))
         .file("baz/src/lib.rs", "pub fn baz() {}")
         .build();
@@ -991,7 +1043,8 @@ fn overriding_nonexistent_no_spurious() {
         "#,
                 url = bar.url()
             ),
-        ).file("src/lib.rs", "")
+        )
+        .file("src/lib.rs", "")
         .build();
 
     p.cargo("build").run();
@@ -1001,7 +1054,8 @@ fn overriding_nonexistent_no_spurious() {
 [WARNING] package replacement is not used: [..]baz:0.1.0
 [FINISHED] [..]
 ",
-        ).with_stdout("")
+        )
+        .with_stdout("")
         .run();
 }
 
@@ -1019,7 +1073,8 @@ fn no_warnings_when_replace_is_used_in_another_workspace_member() {
 
             [replace]
             "bar:0.1.0" = { path = "local_bar" }"#,
-        ).file(
+        )
+        .file(
             "first_crate/Cargo.toml",
             r#"
             [package]
@@ -1029,11 +1084,13 @@ fn no_warnings_when_replace_is_used_in_another_workspace_member() {
             [dependencies]
             bar = "0.1.0"
         "#,
-        ).file("first_crate/src/lib.rs", "")
+        )
+        .file("first_crate/src/lib.rs", "")
         .file(
             "second_crate/Cargo.toml",
             &basic_manifest("second_crate", "0.1.0"),
-        ).file("second_crate/src/lib.rs", "")
+        )
+        .file("second_crate/src/lib.rs", "")
         .file("local_bar/Cargo.toml", &basic_manifest("bar", "0.1.0"))
         .file("local_bar/src/lib.rs", "")
         .build();
@@ -1047,7 +1104,8 @@ fn no_warnings_when_replace_is_used_in_another_workspace_member() {
 [COMPILING] bar v0.1.0 ([..])
 [COMPILING] first_crate v0.1.0 ([..])
 [FINISHED] [..]",
-        ).run();
+        )
+        .run();
 
     p.cargo("build")
         .cwd(p.root().join("second_crate"))
@@ -1056,7 +1114,8 @@ fn no_warnings_when_replace_is_used_in_another_workspace_member() {
             "\
 [COMPILING] second_crate v0.1.0 ([..])
 [FINISHED] [..]",
-        ).run();
+        )
+        .run();
 }
 
 #[test]
@@ -1076,7 +1135,8 @@ fn override_to_path_dep() {
             [dependencies]
             bar = "0.1.0"
         "#,
-        ).file("src/lib.rs", "")
+        )
+        .file("src/lib.rs", "")
         .file(
             "bar/Cargo.toml",
             r#"
@@ -1088,7 +1148,8 @@ fn override_to_path_dep() {
             [dependencies]
             baz = { path = "baz" }
         "#,
-        ).file("bar/src/lib.rs", "")
+        )
+        .file("bar/src/lib.rs", "")
         .file("bar/baz/Cargo.toml", &basic_manifest("baz", "0.0.1"))
         .file("bar/baz/src/lib.rs", "")
         .file(".cargo/config", r#"paths = ["bar"]"#)
@@ -1117,7 +1178,8 @@ fn replace_to_path_dep() {
             [replace]
             "bar:0.1.0" = { path = "bar" }
         "#,
-        ).file("src/lib.rs", "extern crate bar;")
+        )
+        .file("src/lib.rs", "extern crate bar;")
         .file(
             "bar/Cargo.toml",
             r#"
@@ -1129,10 +1191,12 @@ fn replace_to_path_dep() {
             [dependencies]
             baz = { path = "baz" }
         "#,
-        ).file(
+        )
+        .file(
             "bar/src/lib.rs",
             "extern crate baz; pub fn bar() { baz::baz(); }",
-        ).file("bar/baz/Cargo.toml", &basic_manifest("baz", "0.1.0"))
+        )
+        .file("bar/baz/Cargo.toml", &basic_manifest("baz", "0.1.0"))
         .file("bar/baz/src/lib.rs", "pub fn baz() {}")
         .build();
 
@@ -1155,7 +1219,8 @@ fn paths_ok_with_optional() {
             [dependencies]
             bar = { path = "bar" }
         "#,
-        ).file("src/lib.rs", "")
+        )
+        .file("src/lib.rs", "")
         .file(
             "bar/Cargo.toml",
             r#"
@@ -1167,7 +1232,8 @@ fn paths_ok_with_optional() {
             [dependencies]
             baz = { version = "0.1", optional = true }
         "#,
-        ).file("bar/src/lib.rs", "")
+        )
+        .file("bar/src/lib.rs", "")
         .file(
             "bar2/Cargo.toml",
             r#"
@@ -1179,7 +1245,8 @@ fn paths_ok_with_optional() {
             [dependencies]
             baz = { version = "0.1", optional = true }
         "#,
-        ).file("bar2/src/lib.rs", "")
+        )
+        .file("bar2/src/lib.rs", "")
         .file(".cargo/config", r#"paths = ["bar2"]"#)
         .build();
 
@@ -1190,7 +1257,8 @@ fn paths_ok_with_optional() {
 [COMPILING] foo v0.0.1 ([..])
 [FINISHED] [..]
 ",
-        ).run();
+        )
+        .run();
 }
 
 #[test]
@@ -1209,7 +1277,8 @@ fn paths_add_optional_bad() {
             [dependencies]
             bar = { path = "bar" }
         "#,
-        ).file("src/lib.rs", "")
+        )
+        .file("src/lib.rs", "")
         .file("bar/Cargo.toml", &basic_manifest("bar", "0.1.0"))
         .file("bar/src/lib.rs", "")
         .file(
@@ -1223,7 +1292,8 @@ fn paths_add_optional_bad() {
             [dependencies]
             baz = { version = "0.1", optional = true }
         "#,
-        ).file("bar2/src/lib.rs", "")
+        )
+        .file("bar2/src/lib.rs", "")
         .file(".cargo/config", r#"paths = ["bar2"]"#)
         .build();
 
@@ -1233,7 +1303,8 @@ fn paths_add_optional_bad() {
 warning: path override for crate `bar` has altered the original list of
 dependencies; the dependency on `baz` was either added or\
 ",
-        ).run();
+        )
+        .run();
 }
 
 #[test]
@@ -1259,7 +1330,8 @@ fn override_with_default_feature() {
             [replace]
             'bar:0.1.0' = { path = "bar" }
         "#,
-        ).file("src/main.rs", "extern crate bar; fn main() { bar::bar(); }")
+        )
+        .file("src/main.rs", "extern crate bar; fn main() { bar::bar(); }")
         .file(
             "bar/Cargo.toml",
             r#"
@@ -1271,13 +1343,15 @@ fn override_with_default_feature() {
             [features]
             default = []
         "#,
-        ).file(
+        )
+        .file(
             "bar/src/lib.rs",
             r#"
             #[cfg(feature = "default")]
             pub fn bar() {}
         "#,
-        ).file(
+        )
+        .file(
             "another2/Cargo.toml",
             r#"
             [package]
@@ -1288,7 +1362,8 @@ fn override_with_default_feature() {
             [dependencies]
             bar = { version = "0.1", default-features = false }
         "#,
-        ).file("another2/src/lib.rs", "")
+        )
+        .file("another2/src/lib.rs", "")
         .build();
 
     p.cargo("run").run();
@@ -1313,7 +1388,8 @@ fn override_plus_dep() {
             [replace]
             'bar:0.1.0' = { path = "bar" }
         "#,
-        ).file("src/lib.rs", "")
+        )
+        .file("src/lib.rs", "")
         .file(
             "bar/Cargo.toml",
             r#"
@@ -1325,7 +1401,8 @@ fn override_plus_dep() {
             [dependencies]
             foo = { path = ".." }
         "#,
-        ).file("bar/src/lib.rs", "")
+        )
+        .file("bar/src/lib.rs", "")
         .build();
 
     p.cargo("build")

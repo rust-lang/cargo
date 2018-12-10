@@ -1,13 +1,13 @@
-use std::io::SeekFrom;
 use std::io::prelude::*;
+use std::io::SeekFrom;
 use std::path::Path;
 
-use core::PackageId;
+use crate::core::PackageId;
+use crate::sources::registry::{MaybeLock, RegistryConfig, RegistryData};
+use crate::util::errors::{CargoResult, CargoResultExt};
+use crate::util::paths;
+use crate::util::{Config, FileLock, Filesystem, Sha256};
 use hex;
-use sources::registry::{RegistryConfig, RegistryData, MaybeLock};
-use util::paths;
-use util::{Config, Filesystem, Sha256, FileLock};
-use util::errors::{CargoResult, CargoResultExt};
 
 pub struct LocalRegistry<'cfg> {
     index_path: Filesystem,
@@ -69,7 +69,7 @@ impl<'cfg> RegistryData for LocalRegistry<'cfg> {
         Ok(())
     }
 
-    fn download(&mut self, pkg: &PackageId, checksum: &str) -> CargoResult<MaybeLock> {
+    fn download(&mut self, pkg: PackageId, checksum: &str) -> CargoResult<MaybeLock> {
         let crate_file = format!("{}-{}.crate", pkg.name(), pkg.version());
         let mut crate_file = self.root.open_ro(&crate_file, self.config, "crate file")?;
 
@@ -104,9 +104,12 @@ impl<'cfg> RegistryData for LocalRegistry<'cfg> {
         Ok(MaybeLock::Ready(crate_file))
     }
 
-    fn finish_download(&mut self, _pkg: &PackageId, _checksum: &str, _data: &[u8])
-        -> CargoResult<FileLock>
-    {
+    fn finish_download(
+        &mut self,
+        _pkg: PackageId,
+        _checksum: &str,
+        _data: &[u8],
+    ) -> CargoResult<FileLock> {
         panic!("this source doesn't download")
     }
 }

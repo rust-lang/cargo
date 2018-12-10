@@ -1,23 +1,25 @@
 use std::cell::{Cell, Ref, RefCell};
 use std::fmt::Write as FmtWrite;
-use std::io::SeekFrom;
 use std::io::prelude::*;
+use std::io::SeekFrom;
 use std::mem;
 use std::path::Path;
 use std::str;
 
 use git2;
 use hex;
-use serde_json;
 use lazycell::LazyCell;
+use serde_json;
 
-use core::{PackageId, SourceId};
-use sources::git;
-use sources::registry::{RegistryConfig, RegistryData, CRATE_TEMPLATE, INDEX_LOCK, VERSION_TEMPLATE};
-use sources::registry::MaybeLock;
-use util::{FileLock, Filesystem};
-use util::{Config, Sha256};
-use util::errors::{CargoResult, CargoResultExt};
+use crate::core::{PackageId, SourceId};
+use crate::sources::git;
+use crate::sources::registry::MaybeLock;
+use crate::sources::registry::{
+    RegistryConfig, RegistryData, CRATE_TEMPLATE, INDEX_LOCK, VERSION_TEMPLATE,
+};
+use crate::util::errors::{CargoResult, CargoResultExt};
+use crate::util::{Config, Sha256};
+use crate::util::{FileLock, Filesystem};
 
 pub struct RemoteRegistry<'cfg> {
     index_path: Filesystem,
@@ -30,11 +32,11 @@ pub struct RemoteRegistry<'cfg> {
 }
 
 impl<'cfg> RemoteRegistry<'cfg> {
-    pub fn new(source_id: &SourceId, config: &'cfg Config, name: &str) -> RemoteRegistry<'cfg> {
+    pub fn new(source_id: SourceId, config: &'cfg Config, name: &str) -> RemoteRegistry<'cfg> {
         RemoteRegistry {
             index_path: config.registry_index_path().join(name),
             cache_path: config.registry_cache_path().join(name),
-            source_id: source_id.clone(),
+            source_id,
             config,
             tree: RefCell::new(None),
             repo: LazyCell::new(),
@@ -54,9 +56,11 @@ impl<'cfg> RemoteRegistry<'cfg> {
 
             // Ok, now we need to lock and try the whole thing over again.
             trace!("acquiring registry index lock");
-            let lock =
-                self.index_path
-                    .open_rw(Path::new(INDEX_LOCK), self.config, "the registry index")?;
+            let lock = self.index_path.open_rw(
+                Path::new(INDEX_LOCK),
+                self.config,
+                "the registry index",
+            )?;
             match git2::Repository::open(&path) {
                 Ok(repo) => Ok(repo),
                 Err(_) => {
@@ -79,9 +83,8 @@ impl<'cfg> RemoteRegistry<'cfg> {
                     // things that we don't want.
                     let mut opts = git2::RepositoryInitOptions::new();
                     opts.external_template(false);
-                    Ok(git2::Repository::init_opts(&path, &opts).chain_err(|| {
-                        "failed to initialized index git repository"
-                    })?)
+                    Ok(git2::Repository::init_opts(&path, &opts)
+                        .chain_err(|| "failed to initialized index git repository")?)
                 }
             }
         })
@@ -123,7 +126,7 @@ impl<'cfg> RemoteRegistry<'cfg> {
         Ok(Ref::map(self.tree.borrow(), |s| s.as_ref().unwrap()))
     }
 
-    fn filename(&self, pkg: &PackageId) -> String {
+    fn filename(&self, pkg: PackageId) -> String {
         format!("{}-{}.crate", pkg.name(), pkg.version())
     }
 }
@@ -210,7 +213,7 @@ impl<'cfg> RegistryData for RemoteRegistry<'cfg> {
         Ok(())
     }
 
-    fn download(&mut self, pkg: &PackageId, _checksum: &str) -> CargoResult<MaybeLock> {
+    fn download(&mut self, pkg: PackageId, _checksum: &str) -> CargoResult<MaybeLock> {
         let filename = self.filename(pkg);
 
         // Attempt to open an read-only copy first to avoid an exclusive write
@@ -227,19 +230,26 @@ impl<'cfg> RegistryData for RemoteRegistry<'cfg> {
         }
 
         let config = self.config()?.unwrap();
-        let mut url = config.dl.clone();
+        let mut url = config.dl;
         if !url.contains(CRATE_TEMPLATE) && !url.contains(VERSION_TEMPLATE) {
             write!(url, "/{}/{}/download", CRATE_TEMPLATE, VERSION_TEMPLATE).unwrap();
         }
-        let url = url.replace(CRATE_TEMPLATE, &*pkg.name())
+        let url = url
+            .replace(CRATE_TEMPLATE, &*pkg.name())
             .replace(VERSION_TEMPLATE, &pkg.version().to_string());
 
-        Ok(MaybeLock::Download { url, descriptor: pkg.to_string() })
+        Ok(MaybeLock::Download {
+            url,
+            descriptor: pkg.to_string(),
+        })
     }
 
-    fn finish_download(&mut self, pkg: &PackageId, checksum: &str, data: &[u8])
-        -> CargoResult<FileLock>
-    {
+    fn finish_download(
+        &mut self,
+        pkg: PackageId,
+        checksum: &str,
+        data: &[u8],
+    ) -> CargoResult<FileLock> {
         // Verify what we just downloaded
         let mut state = Sha256::new();
         state.update(data);
@@ -259,7 +269,7 @@ impl<'cfg> RegistryData for RemoteRegistry<'cfg> {
         Ok(dst)
     }
 
-    fn is_crate_downloaded(&self, pkg: &PackageId) -> bool {
+    fn is_crate_downloaded(&self, pkg: PackageId) -> bool {
         let filename = format!("{}-{}.crate", pkg.name(), pkg.version());
         let path = Path::new(&filename);
 

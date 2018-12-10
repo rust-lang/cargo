@@ -1,4 +1,4 @@
-use std::collections::{HashMap, HashSet, BTreeSet};
+use std::collections::{BTreeSet, HashMap, HashSet};
 use std::env;
 use std::ffi::OsString;
 use std::fs;
@@ -12,12 +12,12 @@ use rustfix::diagnostics::Diagnostic;
 use rustfix::{self, CodeFix};
 use serde_json;
 
-use core::Workspace;
-use ops::{self, CompileOptions};
-use util::errors::CargoResult;
-use util::{LockServer, LockServerClient, existing_vcs_repo};
-use util::diagnostic_server::{Message, RustfixDiagnosticServer};
-use util::paths;
+use crate::core::Workspace;
+use crate::ops::{self, CompileOptions};
+use crate::util::diagnostic_server::{Message, RustfixDiagnosticServer};
+use crate::util::errors::CargoResult;
+use crate::util::paths;
+use crate::util::{existing_vcs_repo, LockServer, LockServerClient};
 
 const FIX_ENV: &str = "__CARGO_FIX_PLZ";
 const BROKEN_CODE_ENV: &str = "__CARGO_FIX_BROKEN_CODE";
@@ -43,37 +43,46 @@ pub fn fix(ws: &Workspace, opts: &mut FixOptions) -> CargoResult<()> {
     // Spin up our lock server which our subprocesses will use to synchronize
     // fixes.
     let lock_server = LockServer::new()?;
-    opts.compile_opts.build_config.extra_rustc_env.push((
-        FIX_ENV.to_string(),
-        lock_server.addr().to_string(),
-    ));
+    opts.compile_opts
+        .build_config
+        .extra_rustc_env
+        .push((FIX_ENV.to_string(), lock_server.addr().to_string()));
     let _started = lock_server.start()?;
 
     opts.compile_opts.build_config.force_rebuild = true;
 
     if opts.broken_code {
         let key = BROKEN_CODE_ENV.to_string();
-        opts.compile_opts.build_config.extra_rustc_env.push((key, "1".to_string()));
+        opts.compile_opts
+            .build_config
+            .extra_rustc_env
+            .push((key, "1".to_string()));
     }
 
     if opts.edition {
         let key = EDITION_ENV.to_string();
-        opts.compile_opts.build_config.extra_rustc_env.push((key, "1".to_string()));
+        opts.compile_opts
+            .build_config
+            .extra_rustc_env
+            .push((key, "1".to_string()));
     } else if let Some(edition) = opts.prepare_for {
-        opts.compile_opts.build_config.extra_rustc_env.push((
-            PREPARE_FOR_ENV.to_string(),
-            edition.to_string(),
-        ));
+        opts.compile_opts
+            .build_config
+            .extra_rustc_env
+            .push((PREPARE_FOR_ENV.to_string(), edition.to_string()));
     }
     if opts.idioms {
-        opts.compile_opts.build_config.extra_rustc_env.push((
-            IDIOMS_ENV.to_string(),
-            "1".to_string(),
-        ));
+        opts.compile_opts
+            .build_config
+            .extra_rustc_env
+            .push((IDIOMS_ENV.to_string(), "1".to_string()));
     }
     opts.compile_opts.build_config.cargo_as_rustc_wrapper = true;
-    *opts.compile_opts.build_config.rustfix_diagnostic_server.borrow_mut() =
-        Some(RustfixDiagnosticServer::new()?);
+    *opts
+        .compile_opts
+        .build_config
+        .rustfix_diagnostic_server
+        .borrow_mut() = Some(RustfixDiagnosticServer::new()?);
 
     ops::compile(ws, &opts.compile_opts)?;
     Ok(())
@@ -81,17 +90,19 @@ pub fn fix(ws: &Workspace, opts: &mut FixOptions) -> CargoResult<()> {
 
 fn check_version_control(opts: &FixOptions) -> CargoResult<()> {
     if opts.allow_no_vcs {
-        return Ok(())
+        return Ok(());
     }
     let config = opts.compile_opts.config;
     if !existing_vcs_repo(config.cwd(), config.cwd()) {
-        bail!("no VCS found for this package and `cargo fix` can potentially \
-               perform destructive changes; if you'd like to suppress this \
-               error pass `--allow-no-vcs`")
+        bail!(
+            "no VCS found for this package and `cargo fix` can potentially \
+             perform destructive changes; if you'd like to suppress this \
+             error pass `--allow-no-vcs`"
+        )
     }
 
     if opts.allow_dirty && opts.allow_staged {
-        return Ok(())
+        return Ok(());
     }
 
     let mut dirty_files = Vec::new();
@@ -103,26 +114,27 @@ fn check_version_control(opts: &FixOptions) -> CargoResult<()> {
             if let Some(path) = status.path() {
                 match status.status() {
                     git2::Status::CURRENT => (),
-                    git2::Status::INDEX_NEW |
-                    git2::Status::INDEX_MODIFIED |
-                    git2::Status::INDEX_DELETED |
-                    git2::Status::INDEX_RENAMED |
-                    git2::Status::INDEX_TYPECHANGE =>
+                    git2::Status::INDEX_NEW
+                    | git2::Status::INDEX_MODIFIED
+                    | git2::Status::INDEX_DELETED
+                    | git2::Status::INDEX_RENAMED
+                    | git2::Status::INDEX_TYPECHANGE => {
                         if !opts.allow_staged {
                             staged_files.push(path.to_string())
-                        },
-                    _ =>
+                        }
+                    }
+                    _ => {
                         if !opts.allow_dirty {
                             dirty_files.push(path.to_string())
-                        },
+                        }
+                    }
                 };
             }
-
         }
     }
 
     if dirty_files.is_empty() && staged_files.is_empty() {
-        return Ok(())
+        return Ok(());
     }
 
     let mut files_list = String::new();
@@ -137,13 +149,16 @@ fn check_version_control(opts: &FixOptions) -> CargoResult<()> {
         files_list.push_str(" (staged)\n");
     }
 
-    bail!("the working directory of this package has uncommitted changes, and \
-           `cargo fix` can potentially perform destructive changes; if you'd \
-           like to suppress this error pass `--allow-dirty`, `--allow-staged`, \
-           or commit the changes to these files:\n\
-           \n\
-           {}\n\
-          ", files_list);
+    bail!(
+        "the working directory of this package has uncommitted changes, and \
+         `cargo fix` can potentially perform destructive changes; if you'd \
+         like to suppress this error pass `--allow-dirty`, `--allow-staged`, \
+         or commit the changes to these files:\n\
+         \n\
+         {}\n\
+         ",
+        files_list
+    );
 }
 
 pub fn fix_maybe_exec_rustc() -> CargoResult<bool> {
@@ -190,7 +205,8 @@ pub fn fix_maybe_exec_rustc() -> CargoResult<bool> {
                 Message::Fixing {
                     file: path.clone(),
                     fixes: file.fixes_applied,
-                }.post()?;
+                }
+                .post()?;
             }
         }
 
@@ -205,9 +221,11 @@ pub fn fix_maybe_exec_rustc() -> CargoResult<bool> {
         // user's code with our changes. Back out everything and fall through
         // below to recompile again.
         if !output.status.success() {
-            for (path, file) in fixes.files.iter() {
-                fs::write(path, &file.original_code)
-                    .with_context(|_| format!("failed to write file `{}`", path))?;
+            if env::var_os(BROKEN_CODE_ENV).is_none() {
+                for (path, file) in fixes.files.iter() {
+                    fs::write(path, &file.original_code)
+                        .with_context(|_| format!("failed to write file `{}`", path))?;
+                }
             }
             log_failed_fix(&output.stderr)?;
         }
@@ -229,9 +247,12 @@ struct FixedFile {
     original_code: String,
 }
 
-fn rustfix_crate(lock_addr: &str, rustc: &Path, filename: &Path, args: &FixArgs)
-    -> Result<FixedCrate, Error>
-{
+fn rustfix_crate(
+    lock_addr: &str,
+    rustc: &Path,
+    filename: &Path,
+    args: &FixArgs,
+) -> Result<FixedCrate, Error> {
     args.verify_not_preparing_for_enabled_edition()?;
 
     // First up we want to make sure that each crate is only checked by one
@@ -291,7 +312,7 @@ fn rustfix_crate(lock_addr: &str, rustc: &Path, filename: &Path, args: &FixArgs)
         let mut progress_yet_to_be_made = false;
         for (path, file) in fixes.files.iter_mut() {
             if file.errors_applying_fixes.is_empty() {
-                continue
+                continue;
             }
             // If anything was successfully fixed *and* there's at least one
             // error, then assume the error was spurious and we'll try again on
@@ -301,7 +322,7 @@ fn rustfix_crate(lock_addr: &str, rustc: &Path, filename: &Path, args: &FixArgs)
             }
         }
         if !progress_yet_to_be_made {
-            break
+            break;
         }
     }
 
@@ -312,7 +333,8 @@ fn rustfix_crate(lock_addr: &str, rustc: &Path, filename: &Path, args: &FixArgs)
             Message::ReplaceFailed {
                 file: path.clone(),
                 message: error,
-            }.post()?;
+            }
+            .post()?;
         }
     }
 
@@ -323,9 +345,12 @@ fn rustfix_crate(lock_addr: &str, rustc: &Path, filename: &Path, args: &FixArgs)
 ///
 /// This will fill in the `fixes` map with original code, suggestions applied,
 /// and any errors encountered while fixing files.
-fn rustfix_and_fix(fixes: &mut FixedCrate, rustc: &Path, filename: &Path, args: &FixArgs)
-    -> Result<(), Error>
-{
+fn rustfix_and_fix(
+    fixes: &mut FixedCrate,
+    rustc: &Path,
+    filename: &Path,
+    args: &FixArgs,
+) -> Result<(), Error> {
     // If not empty, filter by these lints
     //
     // TODO: Implement a way to specify this
@@ -334,7 +359,8 @@ fn rustfix_and_fix(fixes: &mut FixedCrate, rustc: &Path, filename: &Path, args: 
     let mut cmd = Command::new(rustc);
     cmd.arg("--error-format=json");
     args.apply(&mut cmd);
-    let output = cmd.output()
+    let output = cmd
+        .output()
         .with_context(|_| format!("failed to execute `{}`", rustc.display()))?;
 
     // If rustc didn't succeed for whatever reasons then we're very likely to be
@@ -359,13 +385,12 @@ fn rustfix_and_fix(fixes: &mut FixedCrate, rustc: &Path, filename: &Path, args: 
     // indicating fixes that we can apply.
     let stderr = str::from_utf8(&output.stderr).context("failed to parse rustc stderr as utf-8")?;
 
-    let suggestions = stderr.lines()
+    let suggestions = stderr
+        .lines()
         .filter(|x| !x.is_empty())
         .inspect(|y| trace!("line: {}", y))
-
         // Parse each line of stderr ignoring errors as they may not all be json
         .filter_map(|line| serde_json::from_str::<Diagnostic>(line).ok())
-
         // From each diagnostic try to extract suggestions from rustc
         .filter_map(|diag| rustfix::collect_suggestions(&diag, &only, fix_mode));
 
@@ -375,21 +400,21 @@ fn rustfix_and_fix(fixes: &mut FixedCrate, rustc: &Path, filename: &Path, args: 
     for suggestion in suggestions {
         trace!("suggestion");
         // Make sure we've got a file associated with this suggestion and all
-        // snippets point to the same location. Right now it's not clear what
-        // we would do with multiple locations.
-        let (file_name, range) = match suggestion.snippets.get(0) {
-            Some(s) => (s.file_name.clone(), s.line_range),
-            None => {
-                trace!("rejecting as it has no snippets {:?}", suggestion);
-                continue;
-            }
+        // snippets point to the same file. Right now it's not clear what
+        // we would do with multiple files.
+        let file_names = suggestion.solutions.iter()
+            .flat_map(|s| s.replacements.iter())
+            .map(|r| &r.snippet.file_name);
+
+        let file_name = if let Some(file_name) = file_names.clone().next() {
+            file_name.clone()
+        } else {
+            trace!("rejecting as it has no solutions {:?}", suggestion);
+            continue;
         };
-        if !suggestion
-            .snippets
-            .iter()
-            .all(|s| s.file_name == file_name && s.line_range == range)
-        {
-            trace!("rejecting as it spans multiple files {:?}", suggestion);
+
+        if !file_names.clone().all(|f| f == &file_name) {
+            trace!("rejecting as it changes multiple files: {:?}", suggestion);
             continue;
         }
 
@@ -424,13 +449,13 @@ fn rustfix_and_fix(fixes: &mut FixedCrate, rustc: &Path, filename: &Path, args: 
         // code, so save it. If the file already exists then the original code
         // doesn't need to be updated as we've just read an interim state with
         // some fixes but perhaps not all.
-        let fixed_file = fixes.files.entry(file.clone())
-            .or_insert_with(|| {
-                FixedFile {
-                    errors_applying_fixes: Vec::new(),
-                    fixes_applied: 0,
-                    original_code: code.clone(),
-                }
+        let fixed_file = fixes
+            .files
+            .entry(file.clone())
+            .or_insert_with(|| FixedFile {
+                errors_applying_fixes: Vec::new(),
+                fixes_applied: 0,
+                original_code: code.clone(),
             });
         let mut fixed = CodeFix::new(&code);
 
@@ -444,8 +469,7 @@ fn rustfix_and_fix(fixes: &mut FixedCrate, rustc: &Path, filename: &Path, args: 
             }
         }
         let new_code = fixed.finish()?;
-        fs::write(&file, new_code)
-            .with_context(|_| format!("failed to write file `{}`", file))?;
+        fs::write(&file, new_code).with_context(|_| format!("failed to write file `{}`", file))?;
     }
 
     Ok(())
@@ -523,17 +547,15 @@ impl FixArgs {
         let mut ret = FixArgs::default();
         for arg in env::args_os().skip(1) {
             let path = PathBuf::from(arg);
-            if path.extension().and_then(|s| s.to_str()) == Some("rs") {
-                if path.exists() {
-                    ret.file = Some(path);
-                    continue
-                }
+            if path.extension().and_then(|s| s.to_str()) == Some("rs") && path.exists() {
+                ret.file = Some(path);
+                continue;
             }
             if let Some(s) = path.to_str() {
                 let prefix = "--edition=";
                 if s.starts_with(prefix) {
                     ret.enabled_edition = Some(s[prefix.len()..].to_string());
-                    continue
+                    continue;
                 }
             }
             ret.other.push(path.into());
@@ -552,12 +574,11 @@ impl FixArgs {
         if let Some(path) = &self.file {
             cmd.arg(path);
         }
-        cmd.args(&self.other)
-            .arg("--cap-lints=warn");
+        cmd.args(&self.other).arg("--cap-lints=warn");
         if let Some(edition) = &self.enabled_edition {
             cmd.arg("--edition").arg(edition);
-            if self.idioms && self.primary_package {
-                if edition == "2018" { cmd.arg("-Wrust-2018-idioms"); }
+            if self.idioms && self.primary_package && edition == "2018" {
+                cmd.arg("-Wrust-2018-idioms");
             }
         }
         if self.primary_package {
@@ -584,7 +605,7 @@ impl FixArgs {
             None => return Ok(()),
         };
         if edition != enabled {
-            return Ok(())
+            return Ok(());
         }
         let path = match &self.file {
             Some(s) => s,
@@ -594,7 +615,8 @@ impl FixArgs {
         Message::EditionAlreadyEnabled {
             file: path.display().to_string(),
             edition: edition.to_string(),
-        }.post()?;
+        }
+        .post()?;
 
         process::exit(1);
     }

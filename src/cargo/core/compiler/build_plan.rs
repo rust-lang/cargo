@@ -8,13 +8,13 @@
 
 use std::collections::BTreeMap;
 
-use core::TargetKind;
-use super::{Context, Kind, Unit};
 use super::context::OutputFile;
-use util::{internal, CargoResult, ProcessBuilder};
-use std::path::PathBuf;
-use serde_json;
+use super::{CompileMode, Context, Kind, Unit};
+use crate::core::TargetKind;
+use crate::util::{internal, CargoResult, ProcessBuilder};
 use semver;
+use serde_json;
+use std::path::PathBuf;
 
 #[derive(Debug, Serialize)]
 struct Invocation {
@@ -22,6 +22,7 @@ struct Invocation {
     package_version: semver::Version,
     target_kind: TargetKind,
     kind: Kind,
+    compile_mode: CompileMode,
     deps: Vec<usize>,
     outputs: Vec<PathBuf>,
     links: BTreeMap<PathBuf, PathBuf>,
@@ -51,6 +52,7 @@ impl Invocation {
             package_version: id.version().clone(),
             kind: unit.kind,
             target_kind: unit.target.kind().clone(),
+            compile_mode: unit.mode,
             deps,
             outputs: Vec::new(),
             links: BTreeMap::new(),
@@ -69,7 +71,8 @@ impl Invocation {
     }
 
     pub fn update_cmd(&mut self, cmd: &ProcessBuilder) -> CargoResult<()> {
-        self.program = cmd.get_program()
+        self.program = cmd
+            .get_program()
             .to_str()
             .ok_or_else(|| format_err!("unicode program string required"))?
             .to_string();
@@ -109,7 +112,8 @@ impl BuildPlan {
     pub fn add(&mut self, cx: &Context, unit: &Unit) -> CargoResult<()> {
         let id = self.plan.invocations.len();
         self.invocation_map.insert(unit.buildkey(), id);
-        let deps = cx.dep_targets(&unit)
+        let deps = cx
+            .dep_targets(&unit)
             .iter()
             .map(|dep| self.invocation_map[&dep.buildkey()])
             .collect();
@@ -125,10 +129,10 @@ impl BuildPlan {
         outputs: &[OutputFile],
     ) -> CargoResult<()> {
         let id = self.invocation_map[invocation_name];
-        let invocation = self.plan
-            .invocations
-            .get_mut(id)
-            .ok_or_else(|| internal(format!("couldn't find invocation for {}", invocation_name)))?;
+        let invocation =
+            self.plan.invocations.get_mut(id).ok_or_else(|| {
+                internal(format!("couldn't find invocation for {}", invocation_name))
+            })?;
 
         invocation.update_cmd(cmd)?;
         for output in outputs.iter() {

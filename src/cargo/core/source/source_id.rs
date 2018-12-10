@@ -1,28 +1,34 @@
 use std::cmp::{self, Ordering};
+use std::collections::HashSet;
 use std::fmt::{self, Formatter};
 use std::hash::{self, Hash};
 use std::path::Path;
-use std::sync::Arc;
-use std::sync::atomic::{AtomicBool, ATOMIC_BOOL_INIT};
+use std::ptr;
 use std::sync::atomic::Ordering::SeqCst;
+use std::sync::atomic::{AtomicBool, ATOMIC_BOOL_INIT};
+use std::sync::Mutex;
 
-use serde::ser;
 use serde::de;
+use serde::ser;
 use url::Url;
 
-use ops;
-use sources::git;
-use sources::{GitSource, PathSource, RegistrySource, CRATES_IO_INDEX};
-use sources::DirectorySource;
-use util::{CargoResult, Config, ToUrl};
+use crate::ops;
+use crate::sources::git;
+use crate::sources::DirectorySource;
+use crate::sources::{GitSource, PathSource, RegistrySource, CRATES_IO_INDEX};
+use crate::util::{CargoResult, Config, ToUrl};
 
-/// Unique identifier for a source of packages.
-#[derive(Clone, Eq, Debug)]
-pub struct SourceId {
-    inner: Arc<SourceIdInner>,
+lazy_static! {
+    static ref SOURCE_ID_CACHE: Mutex<HashSet<&'static SourceIdInner>> = Mutex::new(HashSet::new());
 }
 
-#[derive(Eq, Clone, Debug)]
+/// Unique identifier for a source of packages.
+#[derive(Clone, Copy, Eq, Debug)]
+pub struct SourceId {
+    inner: &'static SourceIdInner,
+}
+
+#[derive(PartialEq, Eq, Clone, Debug, Hash)]
 struct SourceIdInner {
     /// The source URL
     url: Url,
@@ -68,16 +74,24 @@ impl SourceId {
     ///
     /// The canonical url will be calculated, but the precise field will not
     fn new(kind: Kind, url: Url) -> CargoResult<SourceId> {
-        let source_id = SourceId {
-            inner: Arc::new(SourceIdInner {
-                kind,
-                canonical_url: git::canonicalize_url(&url)?,
-                url,
-                precise: None,
-                name: None,
-            }),
-        };
+        let source_id = SourceId::wrap(SourceIdInner {
+            kind,
+            canonical_url: git::canonicalize_url(&url)?,
+            url,
+            precise: None,
+            name: None,
+        });
         Ok(source_id)
+    }
+
+    fn wrap(inner: SourceIdInner) -> SourceId {
+        let mut cache = SOURCE_ID_CACHE.lock().unwrap();
+        let inner = cache.get(&inner).cloned().unwrap_or_else(|| {
+            let inner = Box::leak(Box::new(inner));
+            cache.insert(inner);
+            inner
+        });
+        SourceId { inner }
     }
 
     /// Parses a source URL and returns the corresponding ID.
@@ -193,15 +207,13 @@ impl SourceId {
 
     pub fn alt_registry(config: &Config, key: &str) -> CargoResult<SourceId> {
         let url = config.get_registry_index(key)?;
-        Ok(SourceId {
-            inner: Arc::new(SourceIdInner {
-                kind: Kind::Registry,
-                canonical_url: git::canonicalize_url(&url)?,
-                url,
-                precise: None,
-                name: Some(key.to_string()),
-            }),
-        })
+        Ok(SourceId::wrap(SourceIdInner {
+            kind: Kind::Registry,
+            canonical_url: git::canonicalize_url(&url)?,
+            url,
+            precise: None,
+            name: Some(key.to_string()),
+        }))
     }
 
     /// Get this source URL
@@ -209,7 +221,7 @@ impl SourceId {
         &self.inner.url
     }
 
-    pub fn display_registry(&self) -> String {
+    pub fn display_registry(self) -> String {
         if self.is_default_registry() {
             "crates.io index".to_string()
         } else {
@@ -218,12 +230,12 @@ impl SourceId {
     }
 
     /// Is this source from a filesystem path
-    pub fn is_path(&self) -> bool {
+    pub fn is_path(self) -> bool {
         self.inner.kind == Kind::Path
     }
 
     /// Is this source from a registry (either local or not)
-    pub fn is_registry(&self) -> bool {
+    pub fn is_registry(self) -> bool {
         match self.inner.kind {
             Kind::Registry | Kind::LocalRegistry => true,
             _ => false,
@@ -231,12 +243,12 @@ impl SourceId {
     }
 
     /// Is this source from an alternative registry
-    pub fn is_alt_registry(&self) -> bool {
+    pub fn is_alt_registry(self) -> bool {
         self.is_registry() && self.inner.name.is_some()
     }
 
     /// Is this source from a git repository
-    pub fn is_git(&self) -> bool {
+    pub fn is_git(self) -> bool {
         match self.inner.kind {
             Kind::Git(_) => true,
             _ => false,
@@ -244,7 +256,7 @@ impl SourceId {
     }
 
     /// Creates an implementation of `Source` corresponding to this ID.
-    pub fn load<'a>(&self, config: &'a Config) -> CargoResult<Box<super::Source + 'a>> {
+    pub fn load<'a>(self, config: &'a Config) -> CargoResult<Box<super::Source + 'a>> {
         trace!("loading SourceId; {}", self);
         match self.inner.kind {
             Kind::Git(..) => Ok(Box::new(GitSource::new(self, config)?)),
@@ -274,12 +286,12 @@ impl SourceId {
     }
 
     /// Get the value of the precise field
-    pub fn precise(&self) -> Option<&str> {
+    pub fn precise(self) -> Option<&'static str> {
         self.inner.precise.as_ref().map(|s| &s[..])
     }
 
     /// Get the git reference if this is a git source, otherwise None.
-    pub fn git_reference(&self) -> Option<&GitReference> {
+    pub fn git_reference(self) -> Option<&'static GitReference> {
         match self.inner.kind {
             Kind::Git(ref s) => Some(s),
             _ => None,
@@ -287,17 +299,15 @@ impl SourceId {
     }
 
     /// Create a new SourceId from this source with the given `precise`
-    pub fn with_precise(&self, v: Option<String>) -> SourceId {
-        SourceId {
-            inner: Arc::new(SourceIdInner {
-                precise: v,
-                ..(*self.inner).clone()
-            }),
-        }
+    pub fn with_precise(self, v: Option<String>) -> SourceId {
+        SourceId::wrap(SourceIdInner {
+            precise: v,
+            ..(*self.inner).clone()
+        })
     }
 
     /// Whether the remote registry is the standard https://crates.io
-    pub fn is_default_registry(&self) -> bool {
+    pub fn is_default_registry(self) -> bool {
         match self.inner.kind {
             Kind::Registry => {}
             _ => return false,
@@ -309,9 +319,10 @@ impl SourceId {
     ///
     /// For paths, remove the workspace prefix so the same source will give the
     /// same hash in different locations.
-    pub fn stable_hash<S: hash::Hasher>(&self, workspace: &Path, into: &mut S) {
+    pub fn stable_hash<S: hash::Hasher>(self, workspace: &Path, into: &mut S) {
         if self.is_path() {
-            if let Ok(p) = self.inner
+            if let Ok(p) = self
+                .inner
                 .url
                 .to_file_path()
                 .unwrap()
@@ -324,11 +335,13 @@ impl SourceId {
         }
         self.hash(into)
     }
-}
 
-impl PartialEq for SourceId {
-    fn eq(&self, other: &SourceId) -> bool {
-        (*self.inner).eq(&*other.inner)
+    pub fn full_eq(self, other: SourceId) -> bool {
+        ptr::eq(self.inner, other.inner)
+    }
+
+    pub fn full_hash<S: hash::Hasher>(self, into: &mut S) {
+        ptr::NonNull::from(self.inner).hash(into)
     }
 }
 
@@ -425,24 +438,23 @@ impl fmt::Display for SourceId {
     }
 }
 
-// This custom implementation handles situations such as when two git sources
-// point at *almost* the same URL, but not quite, even when they actually point
-// to the same repository.
-/// This method tests for self and other values to be equal, and is used by ==.
-///
-/// For git repositories, the canonical url is checked.
-impl PartialEq for SourceIdInner {
-    fn eq(&self, other: &SourceIdInner) -> bool {
-        if self.kind != other.kind {
+// Custom equality defined as canonical URL equality for git sources and
+// URL equality for other sources, ignoring the `precise` and `name` fields.
+impl PartialEq for SourceId {
+    fn eq(&self, other: &SourceId) -> bool {
+        if ptr::eq(self.inner, other.inner) {
+            return true;
+        }
+        if self.inner.kind != other.inner.kind {
             return false;
         }
-        if self.url == other.url {
+        if self.inner.url == other.inner.url {
             return true;
         }
 
-        match (&self.kind, &other.kind) {
-            (&Kind::Git(ref ref1), &Kind::Git(ref ref2)) => {
-                ref1 == ref2 && self.canonical_url == other.canonical_url
+        match (&self.inner.kind, &other.inner.kind) {
+            (Kind::Git(ref1), Kind::Git(ref2)) => {
+                ref1 == ref2 && self.inner.canonical_url == other.inner.canonical_url
             }
             _ => false,
         }
@@ -567,7 +579,7 @@ impl<'a> fmt::Display for PrettyRef<'a> {
 #[cfg(test)]
 mod tests {
     use super::{GitReference, Kind, SourceId};
-    use util::ToUrl;
+    use crate::util::ToUrl;
 
     #[test]
     fn github_sources_equal() {

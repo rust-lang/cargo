@@ -30,3 +30,4 @@
     * [Unstable Features](reference/unstable.md)
 
 * [FAQ](faq.md)
+* [Appendix: Glossary](appendix/glossary.md)

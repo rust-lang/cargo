@@ -1,26 +1,26 @@
 use std::collections::btree_map::Entry;
 use std::collections::{BTreeMap, BTreeSet};
-use std::{env, fs};
 use std::io::prelude::*;
 use std::io::SeekFrom;
 use std::path::{Path, PathBuf};
 use std::sync::Arc;
+use std::{env, fs};
 
 use semver::{Version, VersionReq};
 use tempfile::Builder as TempFileBuilder;
 use toml;
 
-use core::{Dependency, Edition, Package, PackageIdSpec, Source, SourceId};
-use core::{PackageId, Workspace};
-use core::source::SourceMap;
-use core::package::PackageSet;
-use core::compiler::{DefaultExecutor, Executor};
-use ops::{self, CompileFilter};
-use sources::{GitSource, PathSource, SourceConfigMap};
-use util::{internal, Config};
-use util::{FileLock, Filesystem};
-use util::errors::{CargoResult, CargoResultExt};
-use util::paths;
+use crate::core::compiler::{DefaultExecutor, Executor};
+use crate::core::package::PackageSet;
+use crate::core::source::SourceMap;
+use crate::core::{Dependency, Edition, Package, PackageIdSpec, Source, SourceId};
+use crate::core::{PackageId, Workspace};
+use crate::ops::{self, CompileFilter};
+use crate::sources::{GitSource, PathSource, SourceConfigMap};
+use crate::util::errors::{CargoResult, CargoResultExt};
+use crate::util::paths;
+use crate::util::{internal, Config};
+use crate::util::{FileLock, Filesystem};
 
 #[derive(Deserialize, Serialize)]
 #[serde(untagged)]
@@ -59,7 +59,7 @@ impl Drop for Transaction {
 pub fn install(
     root: Option<&str>,
     krates: Vec<&str>,
-    source_id: &SourceId,
+    source_id: SourceId,
     from_cwd: bool,
     vers: Option<&str>,
     opts: &ops::CompileOptions,
@@ -101,7 +101,7 @@ pub fn install(
             ) {
                 Ok(()) => succeeded.push(krate),
                 Err(e) => {
-                    ::handle_error(&e, &mut opts.config.shell());
+                    crate::handle_error(&e, &mut opts.config.shell());
                     failed.push(krate)
                 }
             }
@@ -154,7 +154,7 @@ fn install_one(
     root: &Filesystem,
     map: &SourceConfigMap,
     krate: Option<&str>,
-    source_id: &SourceId,
+    source_id: SourceId,
     from_cwd: bool,
     vers: Option<&str>,
     opts: &ops::CompileOptions,
@@ -182,7 +182,9 @@ fn install_one(
                 src.path().display()
             )
         })?;
-        select_pkg(src, krate, vers, config, false, &mut |path| path.read_packages())?
+        select_pkg(src, krate, vers, config, false, &mut |path| {
+            path.read_packages()
+        })?
     } else {
         select_pkg(
             map.load(source_id)?,
@@ -255,20 +257,19 @@ fn install_one(
     }
 
     let exec: Arc<Executor> = Arc::new(DefaultExecutor);
-    let compile =
-        ops::compile_ws(&ws, Some(source), opts, &exec).chain_err(|| {
-            if let Some(td) = td_opt.take() {
-                // preserve the temporary directory, so the user can inspect it
-                td.into_path();
-            }
+    let compile = ops::compile_ws(&ws, Some(source), opts, &exec).chain_err(|| {
+        if let Some(td) = td_opt.take() {
+            // preserve the temporary directory, so the user can inspect it
+            td.into_path();
+        }
 
-            format_err!(
-                "failed to compile `{}`, intermediate artifacts can be \
-                 found at `{}`",
-                pkg,
-                ws.target_dir().display()
-            )
-        })?;
+        format_err!(
+            "failed to compile `{}`, intermediate artifacts can be \
+             found at `{}`",
+            pkg,
+            ws.target_dir().display()
+        )
+    })?;
     let binaries: Vec<(&str, &Path)> = compile
         .binaries
         .iter()
@@ -358,25 +359,20 @@ fn install_one(
         }
         // Failsafe to force replacing metadata for git packages
         // https://github.com/rust-lang/cargo/issues/4582
-        if let Some(set) = list.v1.remove(&pkg.package_id().clone()) {
-            list.v1.insert(pkg.package_id().clone(), set);
+        if let Some(set) = list.v1.remove(&pkg.package_id()) {
+            list.v1.insert(pkg.package_id(), set);
         }
         list.v1
-            .entry(pkg.package_id().clone())
+            .entry(pkg.package_id())
             .or_insert_with(BTreeSet::new)
             .insert(bin.to_string());
     }
 
     // Remove empty metadata lines.
-    let pkgs = list.v1
+    let pkgs = list
+        .v1
         .iter()
-        .filter_map(|(p, set)| {
-            if set.is_empty() {
-                Some(p.clone())
-            } else {
-                None
-            }
-        })
+        .filter_map(|(&p, set)| if set.is_empty() { Some(p) } else { None })
         .collect::<Vec<_>>();
     for p in pkgs.iter() {
         list.v1.remove(p);
@@ -385,7 +381,7 @@ fn install_one(
     // If installation was successful record newly installed binaries.
     if result.is_ok() {
         list.v1
-            .entry(pkg.package_id().clone())
+            .entry(pkg.package_id())
             .or_insert_with(BTreeSet::new)
             .extend(to_install.iter().map(|s| s.to_string()));
     }
@@ -410,7 +406,7 @@ fn install_one(
     Ok(())
 }
 
-fn path_source<'a>(source_id: &SourceId, config: &'a Config) -> CargoResult<PathSource<'a>> {
+fn path_source<'a>(source_id: SourceId, config: &'a Config) -> CargoResult<PathSource<'a>> {
     let path = source_id
         .url()
         .to_file_path()
@@ -439,7 +435,8 @@ where
                 Some(v) => {
                     // If the version begins with character <, >, =, ^, ~ parse it as a
                     // version range, otherwise parse it as a specific version
-                    let first = v.chars()
+                    let first = v
+                        .chars()
                         .nth(0)
                         .ok_or_else(|| format_err!("no version provided for the `--vers` flag"))?;
 
@@ -495,16 +492,13 @@ where
             } else {
                 vers
             };
-            let dep = Dependency::parse_no_deprecated(
-                name,
-                vers_spec,
-                source.source_id(),
-            )?;
+            let dep = Dependency::parse_no_deprecated(name, vers_spec, source.source_id())?;
             let deps = source.query_vec(&dep)?;
             let pkgid = match deps.iter().map(|p| p.package_id()).max() {
                 Some(pkgid) => pkgid,
                 None => {
-                    let vers_info = vers.map(|v| format!(" with version `{}`", v))
+                    let vers_info = vers
+                        .map(|v| format!(" with version `{}`", v))
                         .unwrap_or_default();
                     bail!(
                         "could not find `{}` in {}{}",
@@ -518,8 +512,8 @@ where
             let pkg = {
                 let mut map = SourceMap::new();
                 map.insert(Box::new(&mut source));
-                PackageSet::new(&[pkgid.clone()], map, config)?
-                    .get_one(&pkgid)?
+                PackageSet::new(&[pkgid], map, config)?
+                    .get_one(pkgid)?
                     .clone()
             };
             Ok((pkg, Box::new(source)))
@@ -617,14 +611,15 @@ fn find_duplicates(
         let name = format!("{}{}", name, env::consts::EXE_SUFFIX);
         if fs::metadata(dst.join(&name)).is_err() {
             None
-        } else if let Some((p, _)) = prev.v1.iter().find(|&(_, v)| v.contains(&name)) {
-            Some((name, Some(p.clone())))
+        } else if let Some((&p, _)) = prev.v1.iter().find(|&(_, v)| v.contains(&name)) {
+            Some((name, Some(p)))
         } else {
             Some((name, None))
         }
     };
     match *filter {
-        CompileFilter::Default { .. } => pkg.targets()
+        CompileFilter::Default { .. } => pkg
+            .targets()
             .iter()
             .filter(|t| t.is_bin())
             .filter_map(|t| check(t.name().to_string()))
@@ -671,7 +666,7 @@ fn read_crate_list(file: &FileLock) -> CargoResult<CrateListingV1> {
             }),
         }
     })()
-        .chain_err(|| {
+    .chain_err(|| {
         format_err!(
             "failed to parse crate metadata at `{}`",
             file.path().to_string_lossy()
@@ -689,7 +684,7 @@ fn write_crate_list(file: &FileLock, listing: CrateListingV1) -> CargoResult<()>
         file.write_all(data.as_bytes())?;
         Ok(())
     })()
-        .chain_err(|| {
+    .chain_err(|| {
         format_err!(
             "failed to write crate metadata at `{}`",
             file.path().to_string_lossy()
@@ -725,7 +720,7 @@ pub fn uninstall(
     let scheduled_error = if specs.len() == 1 {
         uninstall_one(&root, specs[0], bins, config)?;
         false
-    } else if specs.len() == 0 {
+    } else if specs.is_empty() {
         uninstall_cwd(&root, bins, config)?;
         false
     } else {
@@ -736,7 +731,7 @@ pub fn uninstall(
             match uninstall_one(&root, spec, bins, config) {
                 Ok(()) => succeeded.push(spec),
                 Err(e) => {
-                    ::handle_error(&e, &mut config.shell());
+                    crate::handle_error(&e, &mut config.shell());
                     failed.push(spec)
                 }
             }
@@ -778,35 +773,32 @@ pub fn uninstall_one(
 ) -> CargoResult<()> {
     let crate_metadata = metadata(config, root)?;
     let metadata = read_crate_list(&crate_metadata)?;
-    let pkgid = PackageIdSpec::query_str(spec, metadata.v1.keys())?.clone();
-    uninstall_pkgid(crate_metadata, metadata, &pkgid, bins, config)
+    let pkgid = PackageIdSpec::query_str(spec, metadata.v1.keys().cloned())?;
+    uninstall_pkgid(&crate_metadata, metadata, pkgid, bins, config)
 }
 
-fn uninstall_cwd(
-    root: &Filesystem,
-    bins: &[String],
-    config: &Config,
-) -> CargoResult<()> {
+fn uninstall_cwd(root: &Filesystem, bins: &[String], config: &Config) -> CargoResult<()> {
     let crate_metadata = metadata(config, root)?;
     let metadata = read_crate_list(&crate_metadata)?;
     let source_id = SourceId::for_path(config.cwd())?;
-    let src = path_source(&source_id, config)?;
-    let (pkg, _source) =
-        select_pkg(src, None, None, config, true, &mut |path| path.read_packages())?;
+    let src = path_source(source_id, config)?;
+    let (pkg, _source) = select_pkg(src, None, None, config, true, &mut |path| {
+        path.read_packages()
+    })?;
     let pkgid = pkg.package_id();
-    uninstall_pkgid(crate_metadata, metadata, pkgid, bins, config)
+    uninstall_pkgid(&crate_metadata, metadata, pkgid, bins, config)
 }
 
 fn uninstall_pkgid(
-    crate_metadata: FileLock,
+    crate_metadata: &FileLock,
     mut metadata: CrateListingV1,
-    pkgid: &PackageId,
+    pkgid: PackageId,
     bins: &[String],
     config: &Config,
 ) -> CargoResult<()> {
     let mut to_remove = Vec::new();
     {
-        let mut installed = match metadata.v1.entry(pkgid.clone()) {
+        let mut installed = match metadata.v1.entry(pkgid) {
             Entry::Occupied(e) => e,
             Entry::Vacant(..) => bail!("package `{}` is not installed", pkgid),
         };
@@ -821,7 +813,8 @@ fn uninstall_pkgid(
             }
         }
 
-        let bins = bins.iter()
+        let bins = bins
+            .iter()
             .map(|s| {
                 if s.ends_with(env::consts::EXE_SUFFIX) {
                     s.to_string()
@@ -865,7 +858,8 @@ fn metadata(config: &Config, root: &Filesystem) -> CargoResult<FileLock> {
 
 fn resolve_root(flag: Option<&str>, config: &Config) -> CargoResult<Filesystem> {
     let config_root = config.get_path("install.root")?;
-    Ok(flag.map(PathBuf::from)
+    Ok(flag
+        .map(PathBuf::from)
         .or_else(|| env::var_os("CARGO_INSTALL_ROOT").map(PathBuf::from))
         .or_else(move || config_root.map(|v| v.val))
         .map(Filesystem::new)

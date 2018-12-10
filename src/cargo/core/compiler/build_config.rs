@@ -1,7 +1,9 @@
-use std::path::Path;
 use std::cell::RefCell;
+use std::path::Path;
 
-use util::{CargoResult, CargoResultExt, Config, RustfixDiagnosticServer};
+use serde::ser;
+
+use crate::util::{CargoResult, CargoResultExt, Config, RustfixDiagnosticServer};
 
 /// Configuration information for a rustc build.
 #[derive(Debug)]
@@ -49,9 +51,11 @@ impl BuildConfig {
                 let path = Path::new(target)
                     .canonicalize()
                     .chain_err(|| format_err!("Target path {:?} is not a valid file", target))?;
-                Some(path.into_os_string()
-                    .into_string()
-                    .map_err(|_| format_err!("Target path is not valid unicode"))?)
+                Some(
+                    path.into_os_string()
+                        .into_string()
+                        .map_err(|_| format_err!("Target path is not valid unicode"))?,
+                )
             }
             other => other.clone(),
         };
@@ -61,7 +65,7 @@ impl BuildConfig {
             }
         }
         let cfg_target = config.get_string("build.target")?.map(|s| s.val);
-        let target = requested_target.clone().or(cfg_target);
+        let target = requested_target.or(cfg_target);
 
         if jobs == Some(0) {
             bail!("jobs must be at least 1")
@@ -111,7 +115,7 @@ pub enum MessageFormat {
 /// `compile_ws` to tell it the general execution strategy.  This influences
 /// the default targets selected.  The other use is in the `Unit` struct
 /// to indicate what is being done with a specific target.
-#[derive(Clone, Copy, PartialEq, Debug, Eq, Hash)]
+#[derive(Clone, Copy, PartialEq, Debug, Eq, Hash, PartialOrd, Ord)]
 pub enum CompileMode {
     /// A target being built for a test.
     Test,
@@ -134,6 +138,24 @@ pub enum CompileMode {
     /// A marker for Units that represent the execution of a `build.rs`
     /// script.
     RunCustomBuild,
+}
+
+impl ser::Serialize for CompileMode {
+    fn serialize<S>(&self, s: S) -> Result<S::Ok, S::Error>
+    where
+        S: ser::Serializer,
+    {
+        use self::CompileMode::*;
+        match *self {
+            Test => "test".serialize(s),
+            Build => "build".serialize(s),
+            Check { .. } => "check".serialize(s),
+            Bench => "bench".serialize(s),
+            Doc { .. } => "doc".serialize(s),
+            Doctest => "doctest".serialize(s),
+            RunCustomBuild => "run-custom-build".serialize(s),
+        }
+    }
 }
 
 impl CompileMode {

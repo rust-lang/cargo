@@ -1,5 +1,5 @@
-use support::is_nightly;
-use support::{basic_manifest, project};
+use crate::support::is_nightly;
+use crate::support::{basic_manifest, project};
 
 #[test]
 fn custom_target_minimal() {
@@ -27,7 +27,8 @@ fn custom_target_minimal() {
                 // Empty.
             }
         "#,
-        ).file(
+        )
+        .file(
             "custom-target.json",
             r#"
             {
@@ -41,7 +42,8 @@ fn custom_target_minimal() {
                 "linker-flavor": "ld.lld"
             }
         "#,
-        ).build();
+        )
+        .build();
 
     p.cargo("build --lib --target custom-target.json -v").run();
     p.cargo("build --lib --target src/../custom-target.json -v")
@@ -66,7 +68,8 @@ fn custom_target_dependency() {
             [dependencies]
             bar = { path = "bar" }
         "#,
-        ).file(
+        )
+        .file(
             "src/lib.rs",
             r#"
             #![feature(no_core)]
@@ -83,7 +86,8 @@ fn custom_target_dependency() {
             #[lang = "freeze"]
             unsafe auto trait Freeze {}
         "#,
-        ).file("bar/Cargo.toml", &basic_manifest("bar", "0.0.1"))
+        )
+        .file("bar/Cargo.toml", &basic_manifest("bar", "0.0.1"))
         .file(
             "bar/src/lib.rs",
             r#"
@@ -104,7 +108,8 @@ fn custom_target_dependency() {
                 // Empty.
             }
         "#,
-        ).file(
+        )
+        .file(
             "custom-target.json",
             r#"
             {
@@ -118,7 +123,8 @@ fn custom_target_dependency() {
                 "linker-flavor": "ld.lld"
             }
         "#,
-        ).build();
+        )
+        .build();
 
     p.cargo("build --lib --target custom-target.json -v").run();
 }

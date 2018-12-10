@@ -5,9 +5,9 @@ use std::str::FromStr;
 use serde::de;
 use serde::ser;
 
-use core::{Dependency, Package, PackageId, SourceId, Workspace};
-use util::errors::{CargoError, CargoResult, CargoResultExt};
-use util::{internal, Graph};
+use crate::core::{Dependency, Package, PackageId, SourceId, Workspace};
+use crate::util::errors::{CargoError, CargoResult, CargoResultExt};
+use crate::util::{internal, Graph};
 
 use super::Resolve;
 
@@ -50,7 +50,7 @@ impl EncodableResolve {
                 let enc_id = EncodablePackageId {
                     name: pkg.name.clone(),
                     version: pkg.version.clone(),
-                    source: pkg.source.clone(),
+                    source: pkg.source,
                 };
 
                 if !all_pkgs.insert(enc_id.clone()) {
@@ -63,7 +63,7 @@ impl EncodableResolve {
                         debug!("path dependency now missing {} v{}", pkg.name, pkg.version);
                         continue;
                     }
-                    Some(source) => PackageId::new(&pkg.name, &pkg.version, source)?,
+                    Some(&source) => PackageId::new(&pkg.name, &pkg.version, source)?,
                 };
 
                 assert!(live_pkgs.insert(enc_id, (id, pkg)).is_none())
@@ -72,7 +72,7 @@ impl EncodableResolve {
         };
 
         let lookup_id = |enc_id: &EncodablePackageId| -> Option<PackageId> {
-            live_pkgs.get(enc_id).map(|&(ref id, _)| id.clone())
+            live_pkgs.get(enc_id).map(|&(id, _)| id)
         };
 
         let g = {
@@ -156,7 +156,7 @@ impl EncodableResolve {
         let mut unused_patches = Vec::new();
         for pkg in self.patch.unused {
             let id = match pkg.source.as_ref().or_else(|| path_deps.get(&pkg.name)) {
-                Some(src) => PackageId::new(&pkg.name, &pkg.version, src)?,
+                Some(&src) => PackageId::new(&pkg.name, &pkg.version, src)?,
                 None => continue,
             };
             unused_patches.push(id);
@@ -188,9 +188,9 @@ fn build_path_deps(ws: &Workspace) -> HashMap<String, SourceId> {
     for member in members.iter() {
         ret.insert(
             member.package_id().name().to_string(),
-            member.package_id().source_id().clone(),
+            member.package_id().source_id(),
         );
-        visited.insert(member.package_id().source_id().clone());
+        visited.insert(member.package_id().source_id());
     }
     for member in members.iter() {
         build_pkg(member, ws, &mut ret, &mut visited);
@@ -224,7 +224,7 @@ fn build_path_deps(ws: &Workspace) -> HashMap<String, SourceId> {
         visited: &mut HashSet<SourceId>,
     ) {
         let id = dep.source_id();
-        if visited.contains(id) || !id.is_path() {
+        if visited.contains(&id) || !id.is_path() {
             return;
         }
         let path = match id.url().to_file_path() {
@@ -235,8 +235,8 @@ fn build_path_deps(ws: &Workspace) -> HashMap<String, SourceId> {
             Ok(p) => p,
             Err(_) => return,
         };
-        ret.insert(pkg.name().to_string(), pkg.package_id().source_id().clone());
-        visited.insert(pkg.package_id().source_id().clone());
+        ret.insert(pkg.name().to_string(), pkg.package_id().source_id());
+        visited.insert(pkg.package_id().source_id());
         build_pkg(&pkg, ws, ret, visited);
     }
 }
@@ -338,13 +338,13 @@ impl<'a, 'cfg> ser::Serialize for WorkspaceResolve<'a, 'cfg> {
 
         let encodable = ids
             .iter()
-            .filter_map(|&id| Some(encodable_resolve_node(id, self.resolve)))
+            .map(|&id| encodable_resolve_node(id, self.resolve))
             .collect::<Vec<_>>();
 
         let mut metadata = self.resolve.metadata().clone();
 
-        for id in ids.iter().filter(|id| !id.source_id().is_path()) {
-            let checksum = match self.resolve.checksums()[*id] {
+        for &id in ids.iter().filter(|id| !id.source_id().is_path()) {
+            let checksum = match self.resolve.checksums()[&id] {
                 Some(ref s) => &s[..],
                 None => "<none>",
             };
@@ -382,7 +382,7 @@ impl<'a, 'cfg> ser::Serialize for WorkspaceResolve<'a, 'cfg> {
     }
 }
 
-fn encodable_resolve_node(id: &PackageId, resolve: &Resolve) -> EncodableDependency {
+fn encodable_resolve_node(id: PackageId, resolve: &Resolve) -> EncodableDependency {
     let (replace, deps) = match resolve.replacement(id) {
         Some(id) => (Some(encodable_package_id(id)), None),
         None => {
@@ -404,7 +404,7 @@ fn encodable_resolve_node(id: &PackageId, resolve: &Resolve) -> EncodableDepende
     }
 }
 
-pub fn encodable_package_id(id: &PackageId) -> EncodablePackageId {
+pub fn encodable_package_id(id: PackageId) -> EncodablePackageId {
     EncodablePackageId {
         name: id.name().to_string(),
         version: id.version().to_string(),
@@ -412,10 +412,10 @@ pub fn encodable_package_id(id: &PackageId) -> EncodablePackageId {
     }
 }
 
-fn encode_source(id: &SourceId) -> Option<SourceId> {
+fn encode_source(id: SourceId) -> Option<SourceId> {
     if id.is_path() {
         None
     } else {
-        Some(id.clone())
+        Some(id)
     }
 }

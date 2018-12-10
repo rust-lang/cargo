@@ -1,5 +1,5 @@
-use support::is_nightly;
-use support::{basic_manifest, project, Project};
+use crate::support::is_nightly;
+use crate::support::{basic_manifest, project, Project};
 
 // These tests try to exercise exactly which profiles are selected for every
 // target.
@@ -38,7 +38,9 @@ fn all_target_project() -> Project {
         .file("examples/ex1.rs", "extern crate foo; fn main() {}")
         .file("tests/test1.rs", "extern crate foo;")
         .file("benches/bench1.rs", "extern crate foo;")
-        .file("build.rs", r#"
+        .file(
+            "build.rs",
+            r#"
             extern crate bdep;
             fn main() {
                 eprintln!("foo custom build PROFILE={} DEBUG={} OPT_LEVEL={}",
@@ -47,21 +49,23 @@ fn all_target_project() -> Project {
                     std::env::var("OPT_LEVEL").unwrap(),
                 );
             }
-        "#)
-
+        "#,
+        )
         // bar package
         .file("bar/Cargo.toml", &basic_manifest("bar", "0.0.1"))
         .file("bar/src/lib.rs", "")
-
         // bdep package
-        .file("bdep/Cargo.toml", r#"
+        .file(
+            "bdep/Cargo.toml",
+            r#"
             [package]
             name = "bdep"
             version = "0.0.1"
 
             [dependencies]
             bar = { path = "../bar" }
-        "#)
+        "#,
+        )
         .file("bdep/src/lib.rs", "extern crate bar;")
         .build()
 }
@@ -96,7 +100,8 @@ fn profile_selection_build() {
 [FRESH] foo [..]
 [FINISHED] dev [unoptimized + debuginfo] [..]
 ",
-        ).run();
+        )
+        .run();
 }
 
 #[test]
@@ -126,7 +131,8 @@ fn profile_selection_build_release() {
 [FRESH] foo [..]
 [FINISHED] release [optimized] [..]
 ",
-        ).run();
+        )
+        .run();
 }
 
 #[test]
@@ -137,9 +143,6 @@ fn profile_selection_build_all_targets() {
     // - bdep `panic` is not set because it thinks `build.rs` is a plugin.
     // - build_script_build is built without panic because it thinks
     //   `build.rs` is a plugin.
-    // - build_script_build is being run two times.  Once for the `dev` and
-    //   `test` targets, once for the `bench` targets.
-    //   TODO: "PROFILE" says debug both times, though!
     // - Benchmark dependencies are compiled in `dev` mode, which may be
     //   surprising.  See https://github.com/rust-lang/cargo/issues/4929.
     //
@@ -157,11 +160,9 @@ fn profile_selection_build_all_targets() {
     //   lib      dev+panic  build  (a normal lib target)
     //   lib      dev-panic  build  (used by tests/benches)
     //   lib      test       test
-    //   lib      bench      test(bench)
     //   test     test       test
-    //   bench    bench      test(bench)
+    //   bench    test       test
     //   bin      test       test
-    //   bin      bench      test(bench)
     //   bin      dev        build
     //   example  dev        build
     p.cargo("build --all-targets -vv").with_stderr_unordered("\
@@ -173,17 +174,13 @@ fn profile_selection_build_all_targets() {
 [COMPILING] foo [..]
 [RUNNING] `rustc --crate-name build_script_build build.rs [..]--crate-type bin --emit=dep-info,link -C codegen-units=1 -C debuginfo=2 [..]
 [RUNNING] `[..]/target/debug/build/foo-[..]/build-script-build`
-[RUNNING] `[..]/target/debug/build/foo-[..]/build-script-build`
-[foo 0.0.1] foo custom build PROFILE=debug DEBUG=false OPT_LEVEL=3
 [foo 0.0.1] foo custom build PROFILE=debug DEBUG=true OPT_LEVEL=0
 [RUNNING] `rustc --crate-name foo src/lib.rs [..]--crate-type lib --emit=dep-info,link -C panic=abort -C codegen-units=1 -C debuginfo=2 [..]`
 [RUNNING] `rustc --crate-name foo src/lib.rs [..]--emit=dep-info,link -C codegen-units=3 -C debuginfo=2 --test [..]`
 [RUNNING] `rustc --crate-name foo src/lib.rs [..]--crate-type lib --emit=dep-info,link -C codegen-units=1 -C debuginfo=2 [..]`
-[RUNNING] `rustc --crate-name foo src/lib.rs [..]--emit=dep-info,link -C opt-level=3 -C codegen-units=4 --test [..]`
 [RUNNING] `rustc --crate-name foo src/main.rs [..]--emit=dep-info,link -C codegen-units=3 -C debuginfo=2 --test [..]`
 [RUNNING] `rustc --crate-name test1 tests/test1.rs [..]--emit=dep-info,link -C codegen-units=3 -C debuginfo=2 --test [..]`
-[RUNNING] `rustc --crate-name bench1 benches/bench1.rs [..]--emit=dep-info,link -C opt-level=3 -C codegen-units=4 --test [..]`
-[RUNNING] `rustc --crate-name foo src/main.rs [..]--emit=dep-info,link -C opt-level=3 -C codegen-units=4 --test [..]`
+[RUNNING] `rustc --crate-name bench1 benches/bench1.rs [..]--emit=dep-info,link -C codegen-units=3 -C debuginfo=2 --test [..]`
 [RUNNING] `rustc --crate-name foo src/main.rs [..]--crate-type bin --emit=dep-info,link -C panic=abort -C codegen-units=1 -C debuginfo=2 [..]`
 [RUNNING] `rustc --crate-name ex1 examples/ex1.rs [..]--crate-type bin --emit=dep-info,link -C panic=abort -C codegen-units=1 -C debuginfo=2 [..]`
 [FINISHED] dev [unoptimized + debuginfo] [..]
@@ -196,7 +193,8 @@ fn profile_selection_build_all_targets() {
 [FRESH] foo [..]
 [FINISHED] dev [unoptimized + debuginfo] [..]
 ",
-        ).run();
+        )
+        .run();
 }
 
 #[test]
@@ -260,7 +258,8 @@ fn profile_selection_build_all_targets_release() {
 [FRESH] foo [..]
 [FINISHED] release [optimized] [..]
 ",
-        ).run();
+        )
+        .run();
 }
 
 #[test]
@@ -324,7 +323,8 @@ fn profile_selection_test() {
 [DOCTEST] foo
 [RUNNING] `rustdoc --test [..]
 ",
-        ).run();
+        )
+        .run();
 }
 
 #[test]
@@ -388,7 +388,8 @@ fn profile_selection_test_release() {
 [DOCTEST] foo
 [RUNNING] `rustdoc --test [..]
 ",
-        ).run();
+        )
+        .run();
 }
 
 #[test]
@@ -447,7 +448,8 @@ fn profile_selection_bench() {
 [RUNNING] `[..]/deps/foo-[..] --bench`
 [RUNNING] `[..]/deps/bench1-[..] --bench`
 ",
-        ).run();
+        )
+        .run();
 }
 
 #[test]
@@ -517,7 +519,8 @@ fn profile_selection_check_all_targets() {
 [FRESH] foo [..]
 [FINISHED] dev [unoptimized + debuginfo] [..]
 ",
-        ).run();
+        )
+        .run();
 }
 
 #[test]
@@ -563,7 +566,8 @@ fn profile_selection_check_all_targets_release() {
 [FRESH] foo [..]
 [FINISHED] release [optimized] [..]
 ",
-        ).run();
+        )
+        .run();
 }
 
 #[test]
@@ -625,7 +629,8 @@ fn profile_selection_check_all_targets_test() {
 [FRESH] foo [..]
 [FINISHED] dev [unoptimized + debuginfo] [..]
 ",
-        ).run();
+        )
+        .run();
 }
 
 #[test]

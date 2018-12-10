@@ -3,8 +3,8 @@ use git2;
 
 use failure::Error;
 
-use util::Config;
-use util::errors::{CargoResult, HttpNot200};
+use crate::util::errors::{CargoResult, HttpNot200};
+use crate::util::Config;
 
 pub struct Retry<'a> {
     config: &'a Config,
@@ -19,9 +19,7 @@ impl<'a> Retry<'a> {
         })
     }
 
-    pub fn try<T>(&mut self, f: impl FnOnce() -> CargoResult<T>)
-        -> CargoResult<Option<T>>
-    {
+    pub fn r#try<T>(&mut self, f: impl FnOnce() -> CargoResult<T>) -> CargoResult<Option<T>> {
         match f() {
             Err(ref e) if maybe_spurious(e) && self.remaining > 0 => {
                 let msg = format!(
@@ -84,8 +82,8 @@ where
 {
     let mut retry = Retry::new(config)?;
     loop {
-        if let Some(ret) = retry.try(&mut callback)? {
-            return Ok(ret)
+        if let Some(ret) = retry.r#try(&mut callback)? {
+            return Ok(ret);
         }
     }
 }
@@ -95,11 +93,13 @@ fn with_retry_repeats_the_call_then_works() {
     let error1 = HttpNot200 {
         code: 501,
         url: "Uri".to_string(),
-    }.into();
+    }
+    .into();
     let error2 = HttpNot200 {
         code: 502,
         url: "Uri".to_string(),
-    }.into();
+    }
+    .into();
     let mut results: Vec<CargoResult<()>> = vec![Ok(()), Err(error1), Err(error2)];
     let config = Config::default().unwrap();
     let result = with_retry(&config, || results.pop().unwrap());
@@ -108,7 +108,7 @@ fn with_retry_repeats_the_call_then_works() {
 
 #[test]
 fn with_retry_finds_nested_spurious_errors() {
-    use util::CargoError;
+    use crate::util::CargoError;
 
     //Error HTTP codes (5xx) are considered maybe_spurious and will prompt retry
     //String error messages are not considered spurious

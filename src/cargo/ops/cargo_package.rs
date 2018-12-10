@@ -10,13 +10,13 @@ use git2;
 use serde_json;
 use tar::{Archive, Builder, EntryType, Header};
 
-use core::{Package, Source, SourceId, Workspace};
-use core::compiler::{BuildConfig, CompileMode, DefaultExecutor, Executor};
-use sources::PathSource;
-use util::{self, internal, Config, FileLock};
-use util::paths;
-use util::errors::{CargoResult, CargoResultExt};
-use ops;
+use crate::core::compiler::{BuildConfig, CompileMode, DefaultExecutor, Executor};
+use crate::core::{Package, Source, SourceId, Workspace};
+use crate::ops;
+use crate::sources::PathSource;
+use crate::util::errors::{CargoResult, CargoResultExt};
+use crate::util::paths;
+use crate::util::{self, internal, Config, FileLock};
 
 pub struct PackageOpts<'cfg> {
     pub config: &'cfg Config,
@@ -55,12 +55,17 @@ pub fn package(ws: &Workspace, opts: &PackageOpts) -> CargoResult<Option<FileLoc
     // Check (git) repository state, getting the current commit hash if not
     // dirty. This will `bail!` if dirty, unless allow_dirty. Produce json
     // info for any sha1 (HEAD revision) returned.
-    let vcs_info = check_repo_state(pkg, &src_files, &config, opts.allow_dirty)?
-        .map(|h| json!({"git":{"sha1": h}}));
+    let vcs_info = if !opts.allow_dirty {
+        check_repo_state(pkg, &src_files, &config, opts.allow_dirty)?
+            .map(|h| json!({"git":{"sha1": h}}))
+    } else {
+        None
+    };
 
     if opts.list {
         let root = pkg.root();
-        let mut list: Vec<_> = src.list_files(pkg)?
+        let mut list: Vec<_> = src
+            .list_files(pkg)?
             .iter()
             .map(|file| util::without_prefix(file, root).unwrap().to_path_buf())
             .collect();
@@ -175,7 +180,7 @@ fn check_repo_state(
     p: &Package,
     src_files: &[PathBuf],
     config: &Config,
-    allow_dirty: bool
+    allow_dirty: bool,
 ) -> CargoResult<Option<String>> {
     if let Ok(repo) = git2::Repository::discover(p.root()) {
         if let Some(workdir) = repo.workdir() {
@@ -194,7 +199,8 @@ fn check_repo_state(
             config.shell().verbose(|shell| {
                 shell.warn(format!(
                     "No (git) Cargo.toml found at `{}` in workdir `{}`",
-                    path.display(), workdir.display()
+                    path.display(),
+                    workdir.display()
                 ))
             })?;
         }
@@ -212,7 +218,7 @@ fn check_repo_state(
         p: &Package,
         src_files: &[PathBuf],
         repo: &git2::Repository,
-        allow_dirty: bool
+        allow_dirty: bool,
     ) -> CargoResult<Option<String>> {
         let workdir = repo.workdir().unwrap();
         let dirty = src_files
@@ -256,12 +262,15 @@ fn check_repo_state(
 fn check_vcs_file_collision(pkg: &Package, src_files: &[PathBuf]) -> CargoResult<()> {
     let root = pkg.root();
     let vcs_info_path = Path::new(VCS_INFO_FILE);
-    let collision = src_files.iter().find(|&p| {
-        util::without_prefix(&p, root).unwrap() == vcs_info_path
-    });
+    let collision = src_files
+        .iter()
+        .find(|&p| util::without_prefix(&p, root).unwrap() == vcs_info_path);
     if collision.is_some() {
-        bail!("Invalid inclusion of reserved file name \
-               {} in package source", VCS_INFO_FILE);
+        bail!(
+            "Invalid inclusion of reserved file name \
+             {} in package source",
+            VCS_INFO_FILE
+        );
     }
     Ok(())
 }
@@ -271,7 +280,7 @@ fn tar(
     src_files: &[PathBuf],
     vcs_info: Option<&serde_json::Value>,
     dst: &File,
-    filename: &str
+    filename: &str,
 ) -> CargoResult<()> {
     // Prepare the encoder and its header
     let filename = Path::new(filename);
@@ -325,7 +334,8 @@ fn tar(
             .chain_err(|| format!("failed to add to archive: `{}`", relative))?;
         let mut file = File::open(file)
             .chain_err(|| format!("failed to open for archiving: `{}`", file.display()))?;
-        let metadata = file.metadata()
+        let metadata = file
+            .metadata()
             .chain_err(|| format!("could not learn metadata for: `{}`", relative))?;
         header.set_metadata(&metadata);
 
@@ -367,9 +377,9 @@ fn tar(
             fnd
         );
         let mut header = Header::new_ustar();
-        header.set_path(&path).chain_err(|| {
-            format!("failed to add to archive: `{}`", fnd)
-        })?;
+        header
+            .set_path(&path)
+            .chain_err(|| format!("failed to add to archive: `{}`", fnd))?;
         let json = format!("{}\n", serde_json::to_string_pretty(json)?);
         let mut header = Header::new_ustar();
         header.set_path(&path)?;
@@ -377,9 +387,8 @@ fn tar(
         header.set_mode(0o644);
         header.set_size(json.len() as u64);
         header.set_cksum();
-        ar.append(&header, json.as_bytes()).chain_err(|| {
-            internal(format!("could not archive source file `{}`", fnd))
-        })?;
+        ar.append(&header, json.as_bytes())
+            .chain_err(|| internal(format!("could not archive source file `{}`", fnd)))?;
     }
 
     if include_lockfile(pkg) {
@@ -412,7 +421,8 @@ fn run_verify(ws: &Workspace, tar: &FileLock, opts: &PackageOpts) -> CargoResult
     config.shell().status("Verifying", pkg)?;
 
     let f = GzDecoder::new(tar.file());
-    let dst = tar.parent()
+    let dst = tar
+        .parent()
         .join(&format!("{}-{}", pkg.name(), pkg.version()));
     if dst.exists() {
         paths::remove_dir_all(&dst)?;
@@ -426,7 +436,7 @@ fn run_verify(ws: &Workspace, tar: &FileLock, opts: &PackageOpts) -> CargoResult
     // Manufacture an ephemeral workspace to ensure that even if the top-level
     // package has a workspace we can still build our new crate.
     let id = SourceId::for_path(&dst)?;
-    let mut src = PathSource::new(&dst, &id, ws.config());
+    let mut src = PathSource::new(&dst, id, ws.config());
     let new_pkg = src.root_package()?;
     let pkg_fingerprint = src.last_modified_file(&new_pkg)?;
     let ws = Workspace::ephemeral(new_pkg, config, None, true)?;

@@ -1,4 +1,4 @@
-use support::project;
+use crate::support::project;
 
 #[test]
 fn net_retry_loads_from_config() {
@@ -14,7 +14,8 @@ fn net_retry_loads_from_config() {
             [dependencies.bar]
             git = "https://127.0.0.1:11/foo/bar"
         "#,
-        ).file("src/main.rs", "")
+        )
+        .file("src/main.rs", "")
         .file(
             ".cargo/config",
             r#"
@@ -23,14 +24,16 @@ fn net_retry_loads_from_config() {
         [http]
         timeout=1
          "#,
-        ).build();
+        )
+        .build();
 
     p.cargo("build -v")
         .with_status(101)
         .with_stderr_contains(
             "[WARNING] spurious network error \
              (1 tries remaining): [..]",
-        ).run();
+        )
+        .run();
 }
 
 #[test]
@@ -47,13 +50,15 @@ fn net_retry_git_outputs_warning() {
             [dependencies.bar]
             git = "https://127.0.0.1:11/foo/bar"
         "#,
-        ).file(
+        )
+        .file(
             ".cargo/config",
             r#"
         [http]
         timeout=1
          "#,
-        ).file("src/main.rs", "")
+        )
+        .file("src/main.rs", "")
         .build();
 
     p.cargo("build -v -j 1")
@@ -61,6 +66,7 @@ fn net_retry_git_outputs_warning() {
         .with_stderr_contains(
             "[WARNING] spurious network error \
              (2 tries remaining): [..]",
-        ).with_stderr_contains("[WARNING] spurious network error (1 tries remaining): [..]")
+        )
+        .with_stderr_contains("[WARNING] spurious network error (1 tries remaining): [..]")
         .run();
 }

@@ -1,5 +1,5 @@
-use support::rustc_host;
-use support::{basic_lib_manifest, project};
+use crate::support::rustc_host;
+use crate::support::{basic_lib_manifest, project};
 
 #[test]
 fn pathless_tools() {
@@ -18,7 +18,8 @@ fn pathless_tools() {
         "#,
                 target
             ),
-        ).build();
+        )
+        .build();
 
     foo.cargo("build --verbose")
         .with_stderr(
@@ -27,13 +28,13 @@ fn pathless_tools() {
 [RUNNING] `rustc [..] -C ar=nonexistent-ar -C linker=nonexistent-linker [..]`
 [FINISHED] dev [unoptimized + debuginfo] target(s) in [..]
 ",
-        ).run();
+        )
+        .run();
 }
 
 #[test]
 fn absolute_tools() {
     let target = rustc_host();
-    let root = if cfg!(windows) { r#"C:\"# } else { "/" };
 
     // Escaped as they appear within a TOML config file
     let config = if cfg!(windows) {
@@ -60,16 +61,14 @@ fn absolute_tools() {
                 ar = config.0,
                 linker = config.1
             ),
-        ).build();
+        )
+        .build();
 
-    foo.cargo("build --verbose").with_stderr(&format!(
-            "\
+    foo.cargo("build --verbose").with_stderr("\
 [COMPILING] foo v0.5.0 ([CWD])
-[RUNNING] `rustc [..] -C ar={root}bogus/nonexistent-ar -C linker={root}bogus/nonexistent-linker [..]`
+[RUNNING] `rustc [..] -C ar=[ROOT]bogus/nonexistent-ar -C linker=[ROOT]bogus/nonexistent-linker [..]`
 [FINISHED] dev [unoptimized + debuginfo] target(s) in [..]
-",
-            root = root,
-        )).run();
+").run();
 }
 
 #[test]
@@ -101,7 +100,8 @@ fn relative_tools() {
                 ar = config.0,
                 linker = config.1
             ),
-        ).build();
+        )
+        .build();
 
     let prefix = p.root().into_os_string().into_string().unwrap();
 
@@ -132,7 +132,8 @@ fn custom_runner() {
         "#,
                 target
             ),
-        ).build();
+        )
+        .build();
 
     p.cargo("run -- --param")
         .with_status(101)
@@ -142,7 +143,8 @@ fn custom_runner() {
 [FINISHED] dev [unoptimized + debuginfo] target(s) in [..]
 [RUNNING] `nonexistent-runner -r target/debug/foo[EXE] --param`
 ",
-        ).run();
+        )
+        .run();
 
     p.cargo("test --test test --verbose -- --param")
         .with_status(101)
@@ -153,7 +155,8 @@ fn custom_runner() {
 [FINISHED] dev [unoptimized + debuginfo] target(s) in [..]
 [RUNNING] `nonexistent-runner -r [..]/target/debug/deps/test-[..][EXE] --param`
 ",
-        ).run();
+        )
+        .run();
 
     p.cargo("bench --bench bench --verbose -- --param")
         .with_status(101)
@@ -165,7 +168,8 @@ fn custom_runner() {
 [FINISHED] release [optimized] target(s) in [..]
 [RUNNING] `nonexistent-runner -r [..]/target/release/deps/bench-[..][EXE] --param --bench`
 ",
-        ).run();
+        )
+        .run();
 }
 
 // can set a custom runner via `target.'cfg(..)'.runner`
@@ -179,7 +183,8 @@ fn custom_runner_cfg() {
             [target.'cfg(not(target_os = "none"))']
             runner = "nonexistent-runner -r"
             "#,
-        ).build();
+        )
+        .build();
 
     p.cargo("run -- --param")
         .with_status(101)
@@ -189,7 +194,8 @@ fn custom_runner_cfg() {
 [FINISHED] dev [unoptimized + debuginfo] target(s) in [..]
 [RUNNING] `nonexistent-runner -r target/debug/foo[EXE] --param`
 ",
-        )).run();
+        ))
+        .run();
 }
 
 // custom runner set via `target.$triple.runner` have precende over `target.'cfg(..)'.runner`
@@ -211,7 +217,8 @@ fn custom_runner_cfg_precedence() {
         "#,
                 target
             ),
-        ).build();
+        )
+        .build();
 
     p.cargo("run -- --param")
         .with_status(101)
@@ -221,7 +228,8 @@ fn custom_runner_cfg_precedence() {
 [FINISHED] dev [unoptimized + debuginfo] target(s) in [..]
 [RUNNING] `nonexistent-runner -r target/debug/foo[EXE] --param`
 ",
-        )).run();
+        ))
+        .run();
 }
 
 #[test]
@@ -237,7 +245,8 @@ fn custom_runner_cfg_collision() {
             [target.'cfg(not(target_os = "none"))']
             runner = "false"
             "#,
-        ).build();
+        )
+        .build();
 
     p.cargo("run -- --param")
         .with_status(101)
@@ -245,5 +254,6 @@ fn custom_runner_cfg_collision() {
             "\
 [ERROR] several matching instances of `target.'cfg(..)'.runner` in `.cargo/config`
 ",
-        )).run();
+        ))
+        .run();
 }

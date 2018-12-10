@@ -1,4 +1,4 @@
-use command_prelude::*;
+use crate::command_prelude::*;
 
 pub fn builtin() -> Vec<App> {
     vec![
@@ -35,7 +35,7 @@ pub fn builtin() -> Vec<App> {
     ]
 }
 
-pub fn builtin_exec(cmd: &str) -> Option<fn(&mut Config, &ArgMatches) -> CliResult> {
+pub fn builtin_exec(cmd: &str) -> Option<fn(&mut Config, &ArgMatches<'_>) -> CliResult> {
     let f = match cmd {
         "bench" => bench::exec,
         "build" => build::exec,

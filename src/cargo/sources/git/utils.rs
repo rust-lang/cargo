@@ -10,11 +10,11 @@ use git2::{self, ObjectType};
 use serde::ser;
 use url::Url;
 
-use core::GitReference;
-use util::errors::{CargoError, CargoResult, CargoResultExt};
-use util::paths;
-use util::process_builder::process;
-use util::{internal, network, Config, Progress, ToUrl};
+use crate::core::GitReference;
+use crate::util::errors::{CargoError, CargoResult, CargoResultExt};
+use crate::util::paths;
+use crate::util::process_builder::process;
+use crate::util::{internal, network, Config, Progress, ToUrl};
 
 #[derive(PartialEq, Clone, Debug)]
 pub struct GitRevision(git2::Oid);
@@ -109,7 +109,8 @@ impl GitRemote {
         let (repo, rev) = match repo_and_rev {
             Some(pair) => pair,
             None => {
-                let repo = self.clone_into(into, cargo_config)
+                let repo = self
+                    .clone_into(into, cargo_config)
                     .chain_err(|| format!("failed to clone into: {}", into.display()))?;
                 let rev = reference.resolve(&repo)?;
                 (repo, rev)
@@ -211,9 +212,10 @@ impl GitReference {
                 let obj = obj.peel(ObjectType::Commit)?;
                 Ok(obj.id())
             })()
-                .chain_err(|| format!("failed to find tag `{}`", s))?,
+            .chain_err(|| format!("failed to find tag `{}`", s))?,
             GitReference::Branch(ref s) => {
-                let b = repo.find_branch(s, git2::BranchType::Local)
+                let b = repo
+                    .find_branch(s, git2::BranchType::Local)
                     .chain_err(|| format!("failed to find branch `{}`", s))?;
                 b.get()
                     .target()
@@ -253,7 +255,8 @@ impl<'a> GitCheckout<'a> {
         config: &Config,
     ) -> CargoResult<GitCheckout<'a>> {
         let dirname = into.parent().unwrap();
-        fs::create_dir_all(&dirname).chain_err(|| format!("Couldn't mkdir {}", dirname.display()))?;
+        fs::create_dir_all(&dirname)
+            .chain_err(|| format!("Couldn't mkdir {}", dirname.display()))?;
         if into.exists() {
             paths::remove_dir_all(into)?;
         }
@@ -720,7 +723,8 @@ pub fn fetch(
         let mut repo_reinitialized = false;
         loop {
             debug!("initiating fetch of {} from {}", refspec, url);
-            let res = repo.remote_anonymous(url.as_str())?
+            let res = repo
+                .remote_anonymous(url.as_str())?
                 .fetch(&[refspec], Some(&mut opts), None);
             let err = match res {
                 Ok(()) => break,
@@ -759,7 +763,9 @@ fn fetch_with_cli(
         .arg(url.to_string())
         .arg(refspec)
         .cwd(repo.path());
-    config.shell().verbose(|s| s.status("Running", &cmd.to_string()))?;
+    config
+        .shell()
+        .verbose(|s| s.status("Running", &cmd.to_string()))?;
     cmd.exec()?;
     Ok(())
 }
@@ -875,18 +881,20 @@ fn init(path: &Path, bare: bool) -> CargoResult<git2::Repository> {
 /// just return a `bool`. Any real errors will be reported through the normal
 /// update path above.
 fn github_up_to_date(handle: &mut Easy, url: &Url, oid: &git2::Oid) -> bool {
-    macro_rules! try {
-        ($e:expr) => (match $e {
-            Some(e) => e,
-            None => return false,
-        })
+    macro_rules! r#try {
+        ($e:expr) => {
+            match $e {
+                Some(e) => e,
+                None => return false,
+            }
+        };
     }
 
     // This expects GitHub urls in the form `github.com/user/repo` and nothing
     // else
-    let mut pieces = try!(url.path_segments());
-    let username = try!(pieces.next());
-    let repo = try!(pieces.next());
+    let mut pieces = r#try!(url.path_segments());
+    let username = r#try!(pieces.next());
+    let repo = r#try!(pieces.next());
     if pieces.next().is_some() {
         return false;
     }
@@ -895,14 +903,14 @@ fn github_up_to_date(handle: &mut Easy, url: &Url, oid: &git2::Oid) -> bool {
         "https://api.github.com/repos/{}/{}/commits/master",
         username, repo
     );
-    try!(handle.get(true).ok());
-    try!(handle.url(&url).ok());
-    try!(handle.useragent("cargo").ok());
+    r#try!(handle.get(true).ok());
+    r#try!(handle.url(&url).ok());
+    r#try!(handle.useragent("cargo").ok());
     let mut headers = List::new();
-    try!(headers.append("Accept: application/vnd.github.3.sha").ok());
-    try!(headers.append(&format!("If-None-Match: \"{}\"", oid)).ok());
-    try!(handle.http_headers(headers).ok());
-    try!(handle.perform().ok());
+    r#try!(headers.append("Accept: application/vnd.github.3.sha").ok());
+    r#try!(headers.append(&format!("If-None-Match: \"{}\"", oid)).ok());
+    r#try!(handle.http_headers(headers).ok());
+    r#try!(handle.perform().ok());
 
-    try!(handle.response_code().ok()) == 304
+    r#try!(handle.response_code().ok()) == 304
 }

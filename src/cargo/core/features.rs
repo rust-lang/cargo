@@ -52,7 +52,7 @@ use std::str::FromStr;
 
 use failure::Error;
 
-use util::errors::CargoResult;
+use crate::util::errors::CargoResult;
 
 /// The edition of the compiler (RFC 2052)
 #[derive(Clone, Copy, Debug, Hash, PartialOrd, Ord, Eq, PartialEq, Serialize, Deserialize)]
@@ -77,10 +77,11 @@ impl FromStr for Edition {
         match s {
             "2015" => Ok(Edition::Edition2015),
             "2018" => Ok(Edition::Edition2018),
-            s => {
-                bail!("supported edition values are `2015` or `2018`, but `{}` \
-                       is unknown", s)
-            }
+            s => bail!(
+                "supported edition values are `2015` or `2018`, but `{}` \
+                 is unknown",
+                s
+            ),
         }
     }
 }
@@ -177,7 +178,7 @@ features! {
         [stable] edition: bool,
 
         // Renaming a package in the manifest via the `package` key
-        [unstable] rename_dependency: bool,
+        [stable] rename_dependency: bool,
 
         // Whether a lock file is published with this crate
         [unstable] publish_lockfile: bool,
@@ -370,7 +371,7 @@ fn channel() -> String {
             return "dev".to_string();
         }
     }
-    ::version()
+    crate::version()
         .cfg_info
         .map(|c| c.release_channel)
         .unwrap_or_else(|| String::from("dev"))
@@ -396,9 +397,9 @@ thread_local!(
 ///       that called `masquerade_as_nightly_cargo`
 pub fn nightly_features_allowed() -> bool {
     if ENABLE_NIGHTLY_FEATURES.with(|c| c.get()) {
-        return true
+        return true;
     }
-     match &channel()[..] {
+    match &channel()[..] {
         "nightly" | "dev" => NIGHTLY_FEATURES_ALLOWED.with(|c| c.get()),
         _ => false,
     }

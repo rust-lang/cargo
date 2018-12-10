@@ -20,9 +20,9 @@ locally you probably also have `cargo` installed locally.
 
 Cargo requires the following tools and packages to build:
 
+* `git`
 * `python`
 * `curl` (on Unix)
-* `cmake`
 * OpenSSL headers (only for Unix, this is the `libssl-dev` package on ubuntu)
 * `cargo` and `rustc`
 

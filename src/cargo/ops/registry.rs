@@ -5,25 +5,25 @@ use std::str;
 use std::time::Duration;
 use std::{cmp, env};
 
-use log::Level;
-use curl::easy::{Easy, SslOpt, InfoType};
+use crate::registry::{NewCrate, NewCrateDependency, Registry};
+use curl::easy::{Easy, InfoType, SslOpt};
 use git2;
-use registry::{NewCrate, NewCrateDependency, Registry};
+use log::Level;
 
 use url::percent_encoding::{percent_encode, QUERY_ENCODE_SET};
 
-use core::dependency::Kind;
-use core::manifest::ManifestMetadata;
-use core::source::Source;
-use core::{Package, SourceId, Workspace};
-use ops;
-use sources::{RegistrySource, SourceConfigMap};
-use util::config::{self, Config};
-use util::errors::{CargoResult, CargoResultExt};
-use util::important_paths::find_root_manifest_for_wd;
-use util::paths;
-use util::ToUrl;
-use version;
+use crate::core::dependency::Kind;
+use crate::core::manifest::ManifestMetadata;
+use crate::core::source::Source;
+use crate::core::{Package, SourceId, Workspace};
+use crate::ops;
+use crate::sources::{RegistrySource, SourceConfigMap};
+use crate::util::config::{self, Config};
+use crate::util::errors::{CargoResult, CargoResultExt};
+use crate::util::important_paths::find_root_manifest_for_wd;
+use crate::util::paths;
+use crate::util::ToUrl;
+use crate::version;
 
 pub struct RegistryConfig {
     pub index: Option<String>,
@@ -68,7 +68,7 @@ pub fn publish(ws: &Workspace, opts: &PublishOpts) -> CargoResult<()> {
         opts.index.clone(),
         opts.registry.clone(),
     )?;
-    verify_dependencies(pkg, &reg_id)?;
+    verify_dependencies(pkg, reg_id)?;
 
     // Prepare a tarball, with a non-surpressable warning if metadata
     // is missing since this is being put online.
@@ -84,7 +84,8 @@ pub fn publish(ws: &Workspace, opts: &PublishOpts) -> CargoResult<()> {
             jobs: opts.jobs,
             registry: opts.registry.clone(),
         },
-    )?.unwrap();
+    )?
+    .unwrap();
 
     // Upload said tarball to the specified destination
     opts.config
@@ -95,14 +96,14 @@ pub fn publish(ws: &Workspace, opts: &PublishOpts) -> CargoResult<()> {
         pkg,
         tarball.file(),
         &mut registry,
-        &reg_id,
+        reg_id,
         opts.dry_run,
     )?;
 
     Ok(())
 }
 
-fn verify_dependencies(pkg: &Package, registry_src: &SourceId) -> CargoResult<()> {
+fn verify_dependencies(pkg: &Package, registry_src: SourceId) -> CargoResult<()> {
     for dep in pkg.dependencies().iter() {
         if dep.source_id().is_path() {
             if !dep.specified_req() {
@@ -148,10 +149,11 @@ fn transmit(
     pkg: &Package,
     tarball: &File,
     registry: &mut Registry,
-    registry_id: &SourceId,
+    registry_id: SourceId,
     dry_run: bool,
 ) -> CargoResult<()> {
-    let deps = pkg.dependencies()
+    let deps = pkg
+        .dependencies()
         .iter()
         .map(|dep| {
             // If the dependency is from a different registry, then include the
@@ -177,7 +179,8 @@ fn transmit(
                     Kind::Normal => "normal",
                     Kind::Build => "build",
                     Kind::Development => "dev",
-                }.to_string(),
+                }
+                .to_string(),
                 registry: dep_registry,
                 explicit_name_in_toml: dep.explicit_name_in_toml().map(|s| s.to_string()),
             })
@@ -276,6 +279,12 @@ fn transmit(
                 config.shell().warn(&msg)?;
             }
 
+            if !warnings.other.is_empty() {
+                for msg in warnings.other {
+                    config.shell().warn(&msg)?;
+                }
+            }
+
             Ok(())
         }
         Err(e) => Err(e),
@@ -319,7 +328,7 @@ pub fn registry(
     let token = token.or(token_config);
     let sid = get_source_id(config, index_config.or(index), registry)?;
     let api_host = {
-        let mut src = RegistrySource::remote(&sid, config);
+        let mut src = RegistrySource::remote(sid, config);
         src.update()
             .chain_err(|| format!("failed to update {}", sid))?;
         (src.config()?).unwrap().api.unwrap()
@@ -395,8 +404,7 @@ pub fn configure_http_handle(config: &Config, handle: &mut Easy) -> CargoResult<
                 InfoType::HeaderOut => (">", Level::Debug),
                 InfoType::DataIn => ("{", Level::Trace),
                 InfoType::DataOut => ("}", Level::Trace),
-                InfoType::SslDataIn |
-                InfoType::SslDataOut => return,
+                InfoType::SslDataIn | InfoType::SslDataOut => return,
                 _ => return,
             };
             match str::from_utf8(data) {
@@ -406,7 +414,12 @@ pub fn configure_http_handle(config: &Config, handle: &mut Easy) -> CargoResult<
                     }
                 }
                 Err(_) => {
-                    log!(level, "http-debug: {} ({} bytes of data)", prefix, data.len());
+                    log!(
+                        level,
+                        "http-debug: {} ({} bytes of data)",
+                        prefix,
+                        data.len()
+                    );
                 }
             }
         })?;
@@ -423,9 +436,11 @@ pub struct HttpTimeout {
 
 impl HttpTimeout {
     pub fn new(config: &Config) -> CargoResult<HttpTimeout> {
-        let low_speed_limit = config.get::<Option<u32>>("http.low-speed-limit")?
+        let low_speed_limit = config
+            .get::<Option<u32>>("http.low-speed-limit")?
             .unwrap_or(10);
-        let seconds = config.get::<Option<u64>>("http.timeout")?
+        let seconds = config
+            .get::<Option<u64>>("http.timeout")?
             .or_else(|| env::var("HTTP_TIMEOUT").ok().and_then(|s| s.parse().ok()))
             .unwrap_or(30);
         Ok(HttpTimeout {
@@ -617,8 +632,8 @@ fn get_source_id(
         (_, Some(i)) => SourceId::for_registry(&i.to_url()?),
         _ => {
             let map = SourceConfigMap::new(config)?;
-            let src = map.load(&SourceId::crates_io(config)?)?;
-            Ok(src.replaced_source_id().clone())
+            let src = map.load(SourceId::crates_io(config)?)?;
+            Ok(src.replaced_source_id())
         }
     }
 }
@@ -644,7 +659,7 @@ pub fn search(
 
     let sid = get_source_id(config, index, reg)?;
 
-    let mut regsrc = RegistrySource::remote(&sid, config);
+    let mut regsrc = RegistrySource::remote(sid, config);
     let cfg = match regsrc.config() {
         Ok(c) => c,
         Err(_) => {

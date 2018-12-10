@@ -5,9 +5,9 @@ use std::path::Path;
 use failure::Fail;
 use opener;
 
-use core::Workspace;
-use ops;
-use util::CargoResult;
+use crate::core::Workspace;
+use crate::ops;
+use crate::util::CargoResult;
 
 /// Strongly typed options for the `cargo doc` command.
 #[derive(Debug)]
@@ -31,7 +31,8 @@ pub fn doc(ws: &Workspace, options: &DocOptions) -> CargoResult<()> {
     )?;
     let (packages, resolve_with_overrides) = resolve;
 
-    let ids = specs.iter()
+    let ids = specs
+        .iter()
         .map(|s| s.query(resolve_with_overrides.iter()))
         .collect::<CargoResult<Vec<_>>>()?;
     let pkgs = packages.get_many(ids)?;

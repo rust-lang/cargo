@@ -1,9 +1,9 @@
 use std::iter;
 use std::path::Path;
 
-use ops;
-use util::{self, CargoResult, ProcessError};
-use core::{TargetKind, Workspace, nightly_features_allowed};
+use crate::core::{nightly_features_allowed, TargetKind, Workspace};
+use crate::ops;
+use crate::util::{self, CargoResult, ProcessError};
 
 pub fn run(
     ws: &Workspace,
@@ -19,13 +19,16 @@ pub fn run(
         .into_iter()
         .flat_map(|pkg| {
             iter::repeat(pkg).zip(pkg.manifest().targets().iter().filter(|target| {
-                !target.is_lib() && !target.is_custom_build() && if !options.filter.is_specific() {
-                    target.is_bin()
-                } else {
-                    options.filter.target_run(target)
-                }
+                !target.is_lib()
+                    && !target.is_custom_build()
+                    && if !options.filter.is_specific() {
+                        target.is_bin()
+                    } else {
+                        options.filter.target_run(target)
+                    }
             }))
-        }).collect();
+        })
+        .collect();
 
     if bins.is_empty() {
         if !options.filter.is_specific() {
@@ -80,7 +83,7 @@ pub fn run(
     let exe = &compile.binaries[0];
     let exe = match util::without_prefix(exe, config.cwd()) {
         Some(path) if path.file_name() == Some(path.as_os_str()) => {
-            Path::new(".").join(path).to_path_buf()
+            Path::new(".").join(path)
         }
         Some(path) => path.to_path_buf(),
         None => exe.to_path_buf(),

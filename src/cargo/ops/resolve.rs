@@ -1,12 +1,12 @@
 use std::collections::HashSet;
 
-use core::registry::PackageRegistry;
-use core::resolver::{self, Method, Resolve};
-use core::{PackageId, PackageIdSpec, PackageSet, Source, SourceId, Workspace};
-use ops;
-use sources::PathSource;
-use util::errors::{CargoResult, CargoResultExt};
-use util::profile;
+use crate::core::registry::PackageRegistry;
+use crate::core::resolver::{self, Method, Resolve};
+use crate::core::{PackageId, PackageIdSpec, PackageSet, Source, SourceId, Workspace};
+use crate::ops;
+use crate::sources::PathSource;
+use crate::util::errors::{CargoResult, CargoResultExt};
+use crate::util::profile;
 
 /// Resolve all dependencies for the workspace using the previous
 /// lockfile as a guide if present.
@@ -133,12 +133,12 @@ fn resolve_with_registry<'cfg>(
 ///
 /// The previous resolve normally comes from a lockfile. This function does not
 /// read or write lockfiles from the filesystem.
-pub fn resolve_with_previous<'a, 'cfg>(
+pub fn resolve_with_previous<'cfg>(
     registry: &mut PackageRegistry<'cfg>,
     ws: &Workspace<'cfg>,
     method: Method,
-    previous: Option<&'a Resolve>,
-    to_avoid: Option<&HashSet<&'a PackageId>>,
+    previous: Option<&Resolve>,
+    to_avoid: Option<&HashSet<PackageId>>,
     specs: &[PackageIdSpec],
     register_patches: bool,
     warn: bool,
@@ -150,7 +150,7 @@ pub fn resolve_with_previous<'a, 'cfg>(
     //
     // TODO: This seems like a hokey reason to single out the registry as being
     //       different
-    let mut to_avoid_sources = HashSet::new();
+    let mut to_avoid_sources: HashSet<SourceId> = HashSet::new();
     if let Some(to_avoid) = to_avoid {
         to_avoid_sources.extend(
             to_avoid
@@ -160,11 +160,12 @@ pub fn resolve_with_previous<'a, 'cfg>(
         );
     }
 
-    let keep = |p: &&'a PackageId| {
-        !to_avoid_sources.contains(&p.source_id()) && match to_avoid {
-            Some(set) => !set.contains(p),
-            None => true,
-        }
+    let keep = |p: &PackageId| {
+        !to_avoid_sources.contains(&p.source_id())
+            && match to_avoid {
+                Some(set) => !set.contains(p),
+                None => true,
+            }
     };
 
     // In the case where a previous instance of resolve is available, we
@@ -195,9 +196,9 @@ pub fn resolve_with_previous<'a, 'cfg>(
             let patches = patches
                 .iter()
                 .map(|dep| {
-                    let unused = previous.unused_patches();
+                    let unused = previous.unused_patches().iter().cloned();
                     let candidates = previous.iter().chain(unused);
-                    match candidates.filter(keep).find(|id| dep.matches_id(id)) {
+                    match candidates.filter(keep).find(|&id| dep.matches_id(id)) {
                         Some(id) => {
                             let mut dep = dep.clone();
                             dep.lock_to(id);
@@ -214,7 +215,7 @@ pub fn resolve_with_previous<'a, 'cfg>(
     }
 
     for member in ws.members() {
-        registry.add_sources(&[member.package_id().source_id().clone()])?;
+        registry.add_sources(Some(member.package_id().source_id()))?;
     }
 
     let mut summaries = Vec::new();
@@ -308,7 +309,7 @@ pub fn resolve_with_previous<'a, 'cfg>(
         Some(r) => root_replace
             .iter()
             .map(|&(ref spec, ref dep)| {
-                for (key, val) in r.replacements().iter() {
+                for (&key, &val) in r.replacements().iter() {
                     if spec.matches(key) && dep.matches_id(val) && keep(&val) {
                         let mut dep = dep.clone();
                         dep.lock_to(val);
@@ -357,7 +358,7 @@ pub fn add_overrides<'a>(
 
     for (path, definition) in paths {
         let id = SourceId::for_path(&path)?;
-        let mut source = PathSource::new_recursive(&path, &id, ws.config());
+        let mut source = PathSource::new_recursive(&path, id, ws.config());
         source.update().chain_err(|| {
             format!(
                 "failed to update path override `{}` \
@@ -375,7 +376,7 @@ pub fn get_resolved_packages<'a>(
     resolve: &Resolve,
     registry: PackageRegistry<'a>,
 ) -> CargoResult<PackageSet<'a>> {
-    let ids: Vec<PackageId> = resolve.iter().cloned().collect();
+    let ids: Vec<PackageId> = resolve.iter().collect();
     registry.get(&ids)
 }
 
@@ -395,13 +396,13 @@ pub fn get_resolved_packages<'a>(
 ///
 /// Note that this function, at the time of this writing, is basically the
 /// entire fix for #4127
-fn register_previous_locks<'a>(
+fn register_previous_locks(
     ws: &Workspace,
     registry: &mut PackageRegistry,
-    resolve: &'a Resolve,
-    keep: &Fn(&&'a PackageId) -> bool,
+    resolve: &Resolve,
+    keep: &Fn(&PackageId) -> bool,
 ) {
-    let path_pkg = |id: &SourceId| {
+    let path_pkg = |id: SourceId| {
         if !id.is_path() {
             return None;
         }
@@ -488,7 +489,7 @@ fn register_previous_locks<'a>(
     let mut path_deps = ws.members().cloned().collect::<Vec<_>>();
     let mut visited = HashSet::new();
     while let Some(member) = path_deps.pop() {
-        if !visited.insert(member.package_id().clone()) {
+        if !visited.insert(member.package_id()) {
             continue;
         }
         for dep in member.dependencies() {
@@ -546,19 +547,15 @@ fn register_previous_locks<'a>(
     // function let's put it to action. Take a look at the previous lockfile,
     // filter everything by this callback, and then shove everything else into
     // the registry as a locked dependency.
-    let keep = |id: &&'a PackageId| keep(id) && !avoid_locking.contains(id);
+    let keep = |id: &PackageId| keep(id) && !avoid_locking.contains(id);
 
     for node in resolve.iter().filter(keep) {
-        let deps = resolve
-            .deps_not_replaced(node)
-            .filter(keep)
-            .cloned()
-            .collect();
-        registry.register_lock(node.clone(), deps);
+        let deps = resolve.deps_not_replaced(node).filter(keep).collect();
+        registry.register_lock(node, deps);
     }
 
     /// recursively add `node` and all its transitive dependencies to `set`
-    fn add_deps<'a>(resolve: &'a Resolve, node: &'a PackageId, set: &mut HashSet<&'a PackageId>) {
+    fn add_deps(resolve: &Resolve, node: PackageId, set: &mut HashSet<PackageId>) {
         if !set.insert(node) {
             return;
         }

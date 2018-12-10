@@ -1,4 +1,4 @@
-use command_prelude::*;
+use crate::command_prelude::*;
 
 use cargo::core::{GitReference, SourceId};
 use cargo::ops;
@@ -6,7 +6,7 @@ use cargo::util::ToUrl;
 
 pub fn cli() -> App {
     subcommand("install")
-        .about("Install a Rust binary")
+        .about("Install a Rust binary. Default location is $HOME/.cargo/bin")
         .arg(Arg::with_name("crate").empty_values(false).multiple(true))
         .arg(
             opt("version", "Specify a version to install from crates.io")
@@ -74,7 +74,7 @@ continuous integration systems.",
         )
 }
 
-pub fn exec(config: &mut Config, args: &ArgMatches) -> CliResult {
+pub fn exec(config: &mut Config, args: &ArgMatches<'_>) -> CliResult {
     let registry = args.registry(config)?;
 
     config.reload_rooted_at_cargo_home()?;
@@ -82,7 +82,8 @@ pub fn exec(config: &mut Config, args: &ArgMatches) -> CliResult {
 
     compile_opts.build_config.release = !args.is_present("debug");
 
-    let krates = args.values_of("crate")
+    let krates = args
+        .values_of("crate")
         .unwrap_or_default()
         .collect::<Vec<_>>();
 
@@ -120,7 +121,7 @@ pub fn exec(config: &mut Config, args: &ArgMatches) -> CliResult {
         ops::install(
             root,
             krates,
-            &source,
+            source,
             from_cwd,
             version,
             &compile_opts,

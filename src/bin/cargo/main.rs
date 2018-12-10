@@ -1,34 +1,37 @@
-#![cfg_attr(feature = "cargo-clippy", allow(too_many_arguments))] // large project
-#![cfg_attr(feature = "cargo-clippy", allow(redundant_closure))]  // there's a false positive
+#![cfg_attr(feature = "cargo-clippy", allow(clippy::too_many_arguments))] // large project
+#![cfg_attr(feature = "cargo-clippy", allow(clippy::redundant_closure))] // there's a false positive
 
-extern crate cargo;
-extern crate clap;
+use cargo;
+
+#[cfg(not(feature = "pretty-env-logger"))]
 extern crate env_logger;
+#[cfg(feature = "pretty-env-logger")]
+extern crate pretty_env_logger;
 #[macro_use]
 extern crate failure;
-extern crate git2_curl;
-extern crate log;
+use git2_curl;
+
 #[macro_use]
 extern crate serde_derive;
-extern crate serde_json;
-extern crate toml;
 
+use std::collections::BTreeSet;
 use std::env;
 use std::fs;
 use std::path::{Path, PathBuf};
-use std::collections::BTreeSet;
 
 use cargo::core::shell::Shell;
-use cargo::util::{self, lev_distance, CargoResult, CliResult, Config};
+use cargo::util::{self, command_prelude, lev_distance, CargoResult, CliResult, Config};
 use cargo::util::{CliError, ProcessError};
 
 mod cli;
-mod command_prelude;
 mod commands;
 
-use command_prelude::*;
+use crate::command_prelude::*;
 
 fn main() {
+    #[cfg(feature = "pretty-env-logger")]
+    pretty_env_logger::init();
+    #[cfg(not(feature = "pretty-env-logger"))]
     env_logger::init();
     cargo::core::maybe_allow_nightly_features();
 
@@ -58,28 +61,27 @@ fn main() {
 
 fn aliased_command(config: &Config, command: &str) -> CargoResult<Option<Vec<String>>> {
     let alias_name = format!("alias.{}", command);
-    let mut result = Ok(None);
-    match config.get_string(&alias_name) {
-        Ok(value) => {
-            if let Some(record) = value {
-                let alias_commands = record
-                    .val
-                    .split_whitespace()
-                    .map(|s| s.to_string())
-                    .collect();
-                result = Ok(Some(alias_commands));
-            }
-        }
-        Err(_) => {
-            let value = config.get_list(&alias_name)?;
-            if let Some(record) = value {
-                let alias_commands: Vec<String> =
-                    record.val.iter().map(|s| s.0.to_string()).collect();
-                result = Ok(Some(alias_commands));
-            }
-        }
-    }
-    result
+    let user_alias = match config.get_string(&alias_name) {
+        Ok(Some(record)) => Some(
+            record
+                .val
+                .split_whitespace()
+                .map(|s| s.to_string())
+                .collect(),
+        ),
+        Ok(None) => None,
+        Err(_) => config
+            .get_list(&alias_name)?
+            .map(|record| record.val.iter().map(|s| s.0.to_string()).collect()),
+    };
+    let result = user_alias.or_else(|| match command {
+        "b" => Some(vec!["build".to_string()]),
+        "c" => Some(vec!["check".to_string()]),
+        "r" => Some(vec!["run".to_string()]),
+        "t" => Some(vec!["test".to_string()]),
+        _ => None,
+    });
+    Ok(result)
 }
 
 /// List all runnable commands

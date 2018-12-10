@@ -1,10 +1,10 @@
 use std::fmt;
 use std::str::FromStr;
 
+use crate::support::registry::Package;
+use crate::support::rustc_host;
+use crate::support::{basic_manifest, project};
 use cargo::util::{Cfg, CfgExpr};
-use support::registry::Package;
-use support::rustc_host;
-use support::{basic_manifest, project};
 
 macro_rules! c {
     ($a:ident) => {
@@ -156,7 +156,8 @@ fn cfg_easy() {
             [target."cfg(windows)".dependencies]
             b = { path = 'b' }
         "#,
-        ).file("src/lib.rs", "extern crate b;")
+        )
+        .file("src/lib.rs", "extern crate b;")
         .file("b/Cargo.toml", &basic_manifest("b", "0.0.1"))
         .file("b/src/lib.rs", "")
         .build();
@@ -181,7 +182,8 @@ fn dont_include() {
         "#,
                 other_family
             ),
-        ).file("src/lib.rs", "")
+        )
+        .file("src/lib.rs", "")
         .file("b/Cargo.toml", &basic_manifest("b", "0.0.1"))
         .file("b/src/lib.rs", "")
         .build();
@@ -191,7 +193,8 @@ fn dont_include() {
 [COMPILING] a v0.0.1 ([..])
 [FINISHED] dev [unoptimized + debuginfo] target(s) in [..]
 ",
-        ).run();
+        )
+        .run();
 }
 
 #[test]
@@ -214,10 +217,12 @@ fn works_through_the_registry() {
             [dependencies]
             bar = "0.1.0"
         "#,
-        ).file(
+        )
+        .file(
             "src/lib.rs",
             "#[allow(unused_extern_crates)] extern crate bar;",
-        ).build();
+        )
+        .build();
 
     p.cargo("build")
         .with_stderr(
@@ -231,7 +236,8 @@ fn works_through_the_registry() {
 [COMPILING] foo v0.0.1 ([..])
 [FINISHED] dev [unoptimized + debuginfo] target(s) in [..]
 ",
-        ).run();
+        )
+        .run();
 }
 
 #[test]
@@ -259,10 +265,12 @@ fn ignore_version_from_other_platform() {
         "#,
                 this_family, other_family
             ),
-        ).file(
+        )
+        .file(
             "src/lib.rs",
             "#[allow(unused_extern_crates)] extern crate bar;",
-        ).build();
+        )
+        .build();
 
     p.cargo("build")
         .with_stderr(
@@ -274,7 +282,8 @@ fn ignore_version_from_other_platform() {
 [COMPILING] foo v0.0.1 ([..])
 [FINISHED] dev [unoptimized + debuginfo] target(s) in [..]
 ",
-        ).run();
+        )
+        .run();
 }
 
 #[test]
@@ -291,7 +300,8 @@ fn bad_target_spec() {
             [target.'cfg(4)'.dependencies]
             bar = "0.1.0"
         "#,
-        ).file("src/lib.rs", "")
+        )
+        .file("src/lib.rs", "")
         .build();
 
     p.cargo("build")
@@ -306,7 +316,8 @@ Caused by:
 Caused by:
   unexpected character in cfg `4`, [..]
 ",
-        ).run();
+        )
+        .run();
 }
 
 #[test]
@@ -323,7 +334,8 @@ fn bad_target_spec2() {
             [target.'cfg(bar =)'.dependencies]
             baz = "0.1.0"
         "#,
-        ).file("src/lib.rs", "")
+        )
+        .file("src/lib.rs", "")
         .build();
 
     p.cargo("build")
@@ -338,7 +350,8 @@ Caused by:
 Caused by:
   expected a string, found nothing
 ",
-        ).run();
+        )
+        .run();
 }
 
 #[test]
@@ -369,7 +382,8 @@ fn multiple_match_ok() {
         "#,
                 rustc_host()
             ),
-        ).file("src/lib.rs", "extern crate b;")
+        )
+        .file("src/lib.rs", "extern crate b;")
         .file("b/Cargo.toml", &basic_manifest("b", "0.0.1"))
         .file("b/src/lib.rs", "")
         .build();
@@ -390,7 +404,8 @@ fn any_ok() {
             [target."cfg(any(windows, unix))".dependencies]
             b = { path = 'b' }
         "#,
-        ).file("src/lib.rs", "extern crate b;")
+        )
+        .file("src/lib.rs", "extern crate b;")
         .file("b/Cargo.toml", &basic_manifest("b", "0.0.1"))
         .file("b/src/lib.rs", "")
         .build();
@@ -399,11 +414,7 @@ fn any_ok() {
 
 // https://github.com/rust-lang/cargo/issues/5313
 #[test]
-#[cfg(all(
-    target_arch = "x86_64",
-    target_os = "linux",
-    target_env = "gnu"
-))]
+#[cfg(all(target_arch = "x86_64", target_os = "linux", target_env = "gnu"))]
 fn cfg_looks_at_rustflags_for_target() {
     let p = project()
         .file(
@@ -417,7 +428,8 @@ fn cfg_looks_at_rustflags_for_target() {
             [target.'cfg(with_b)'.dependencies]
             b = { path = 'b' }
         "#,
-        ).file(
+        )
+        .file(
             "src/main.rs",
             r#"
             #[cfg(with_b)]
@@ -425,7 +437,8 @@ fn cfg_looks_at_rustflags_for_target() {
 
             fn main() { b::foo(); }
         "#,
-        ).file("b/Cargo.toml", &basic_manifest("b", "0.0.1"))
+        )
+        .file("b/Cargo.toml", &basic_manifest("b", "0.0.1"))
         .file("b/src/lib.rs", "pub fn foo() {}")
         .build();
 

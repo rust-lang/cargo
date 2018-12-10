@@ -341,7 +341,8 @@ incremental = true # whether or not incremental compilation is enabled
 overflow-checks = true # use overflow checks for integer arithmetic.
                    # Passes the `-C overflow-checks=...` flag to the compiler.
 
-# The release profile, used for `cargo build --release`.
+# The release profile, used for `cargo build --release` (and the dependencies
+# for `cargo test --release`,  including the local library or binary).
 [profile.release]
 opt-level = 3
 debug = false
@@ -353,7 +354,8 @@ panic = 'unwind'
 incremental = false
 overflow-checks = false
 
-# The testing profile, used for `cargo test`.
+# The testing profile, used for `cargo test` (for `cargo test --release` see
+# the `release` and `bench` profiles).
 [profile.test]
 opt-level = 0
 debug = 2
@@ -365,7 +367,8 @@ panic = 'unwind'
 incremental = true
 overflow-checks = true
 
-# The benchmarking profile, used for `cargo bench` and `cargo test --release`.
+# The benchmarking profile, used for `cargo bench` (and the test targets and
+# unit tests for `cargo test --release`).
 [profile.bench]
 opt-level = 3
 debug = false
@@ -738,6 +741,12 @@ harness = true
 # 2018 edition or only compiling one unit test with the 2015 edition. By default
 # all targets are compiled with the edition specified in `[package]`.
 edition = '2015'
+
+# Here's an example of a TOML "array of tables" section, in this case specifying
+# a binary target name and path.
+[[bin]]
+name = "my-cool-binary"
+path = "src/my-cool-binary.rs"
 ```
 
 The `[package]` also includes the optional `autobins`, `autoexamples`,

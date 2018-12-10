@@ -1,4 +1,4 @@
-use command_prelude::*;
+use crate::command_prelude::*;
 
 use cargo::ops::{self, DocOptions};
 
@@ -45,7 +45,7 @@ the `cargo help pkgid` command.
         )
 }
 
-pub fn exec(config: &mut Config, args: &ArgMatches) -> CliResult {
+pub fn exec(config: &mut Config, args: &ArgMatches<'_>) -> CliResult {
     let ws = args.workspace(config)?;
     let mode = CompileMode::Doc {
         deps: !args.is_present("no-deps"),

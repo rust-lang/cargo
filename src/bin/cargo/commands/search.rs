@@ -1,4 +1,4 @@
-use command_prelude::*;
+use crate::command_prelude::*;
 
 use std::cmp::min;
 
@@ -13,12 +13,13 @@ pub fn cli() -> App {
             opt(
                 "limit",
                 "Limit the number of results (default: 10, max: 100)",
-            ).value_name("LIMIT"),
+            )
+            .value_name("LIMIT"),
         )
         .arg(opt("registry", "Registry to use").value_name("REGISTRY"))
 }
 
-pub fn exec(config: &mut Config, args: &ArgMatches) -> CliResult {
+pub fn exec(config: &mut Config, args: &ArgMatches<'_>) -> CliResult {
     let registry = args.registry(config)?;
     let index = args.index(config)?;
     let limit = args.value_of_u32("limit")?;

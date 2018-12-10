@@ -32,7 +32,7 @@ macro_rules! compact_debug {
                 )*
 
                 if any_default {
-                    s.field("..", &::macros::DisplayAsDebug(default_name));
+                    s.field("..", &crate::macros::DisplayAsDebug(default_name));
                 }
                 s.finish()
             }

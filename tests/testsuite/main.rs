@@ -2,27 +2,14 @@
 #![cfg_attr(feature = "cargo-clippy", allow(blacklisted_name))]
 #![cfg_attr(feature = "cargo-clippy", allow(explicit_iter_loop))]
 
-extern crate bufstream;
-extern crate cargo;
-extern crate filetime;
-extern crate flate2;
-extern crate git2;
-extern crate glob;
-extern crate hex;
 #[macro_use]
 extern crate lazy_static;
-extern crate libc;
 #[macro_use]
 extern crate proptest;
 #[macro_use]
 extern crate serde_derive;
 #[macro_use]
 extern crate serde_json;
-extern crate tar;
-extern crate toml;
-extern crate url;
-#[cfg(windows)]
-extern crate winapi;
 
 #[macro_use]
 mod support;
@@ -44,6 +31,7 @@ mod cfg;
 mod cfg_features;
 mod check;
 mod clean;
+mod collisions;
 mod concurrent;
 mod config;
 mod corrupt_git;

@@ -2,13 +2,13 @@ use std::collections::{BTreeMap, HashSet};
 
 use termcolor::Color::{self, Cyan, Green, Red};
 
-use core::registry::PackageRegistry;
-use core::resolver::Method;
-use core::PackageId;
-use core::{Resolve, SourceId, Workspace};
-use ops;
-use util::config::Config;
-use util::CargoResult;
+use crate::core::registry::PackageRegistry;
+use crate::core::resolver::Method;
+use crate::core::PackageId;
+use crate::core::{Resolve, SourceId, Workspace};
+use crate::ops;
+use crate::util::config::Config;
+use crate::util::CargoResult;
 
 pub struct UpdateOptions<'a> {
     pub config: &'a Config,
@@ -73,13 +73,13 @@ pub fn update_lockfile(ws: &Workspace, opts: &UpdateOptions) -> CargoResult<()> 
                         } else {
                             precise.to_string()
                         };
-                        dep.source_id().clone().with_precise(Some(precise))
+                        dep.source_id().with_precise(Some(precise))
                     }
-                    None => dep.source_id().clone().with_precise(None),
+                    None => dep.source_id().with_precise(None),
                 });
             }
         }
-        registry.add_sources(&sources)?;
+        registry.add_sources(sources)?;
     }
 
     let resolve = ops::resolve_with_previous(
@@ -124,9 +124,9 @@ pub fn update_lockfile(ws: &Workspace, opts: &UpdateOptions) -> CargoResult<()> 
 
     fn fill_with_deps<'a>(
         resolve: &'a Resolve,
-        dep: &'a PackageId,
-        set: &mut HashSet<&'a PackageId>,
-        visited: &mut HashSet<&'a PackageId>,
+        dep: PackageId,
+        set: &mut HashSet<PackageId>,
+        visited: &mut HashSet<PackageId>,
     ) {
         if !visited.insert(dep) {
             return;
@@ -137,11 +137,11 @@ pub fn update_lockfile(ws: &Workspace, opts: &UpdateOptions) -> CargoResult<()> 
         }
     }
 
-    fn compare_dependency_graphs<'a>(
-        previous_resolve: &'a Resolve,
-        resolve: &'a Resolve,
-    ) -> Vec<(Vec<&'a PackageId>, Vec<&'a PackageId>)> {
-        fn key(dep: &PackageId) -> (&str, &SourceId) {
+    fn compare_dependency_graphs(
+        previous_resolve: &Resolve,
+        resolve: &Resolve,
+    ) -> Vec<(Vec<PackageId>, Vec<PackageId>)> {
+        fn key(dep: PackageId) -> (&'static str, SourceId) {
             (dep.name().as_str(), dep.source_id())
         }
 
@@ -149,7 +149,7 @@ pub fn update_lockfile(ws: &Workspace, opts: &UpdateOptions) -> CargoResult<()> 
         // more complicated because the equality for source ids does not take
         // precise versions into account (e.g. git shas), but we want to take
         // that into account here.
-        fn vec_subtract<'a>(a: &[&'a PackageId], b: &[&'a PackageId]) -> Vec<&'a PackageId> {
+        fn vec_subtract(a: &[PackageId], b: &[PackageId]) -> Vec<PackageId> {
             a.iter()
                 .filter(|a| {
                     // If this package id is not found in `b`, then it's definitely

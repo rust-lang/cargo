@@ -1,7 +1,9 @@
+use std::path::PathBuf;
+
 use serde::ser;
 use serde_json::{self, value::RawValue};
 
-use core::{PackageId, Target};
+use crate::core::{PackageId, Target};
 
 pub trait Message: ser::Serialize {
     fn reason(&self) -> &str;
@@ -16,7 +18,7 @@ pub fn emit<T: Message>(t: &T) {
 
 #[derive(Serialize)]
 pub struct FromCompiler<'a> {
-    pub package_id: &'a PackageId,
+    pub package_id: PackageId,
     pub target: &'a Target,
     pub message: Box<RawValue>,
 }
@@ -29,11 +31,12 @@ impl<'a> Message for FromCompiler<'a> {
 
 #[derive(Serialize)]
 pub struct Artifact<'a> {
-    pub package_id: &'a PackageId,
+    pub package_id: PackageId,
     pub target: &'a Target,
     pub profile: ArtifactProfile,
     pub features: Vec<String>,
-    pub filenames: Vec<String>,
+    pub filenames: Vec<PathBuf>,
+    pub executable: Option<PathBuf>,
     pub fresh: bool,
 }
 
@@ -57,7 +60,7 @@ pub struct ArtifactProfile {
 
 #[derive(Serialize)]
 pub struct BuildScript<'a> {
-    pub package_id: &'a PackageId,
+    pub package_id: PackageId,
     pub linked_libs: &'a [String],
     pub linked_paths: &'a [String],
     pub cfgs: &'a [String],

@@ -1,7 +1,7 @@
 use std::env;
 
-use support::is_nightly;
-use support::project;
+use crate::support::is_nightly;
+use crate::support::project;
 
 #[test]
 fn profile_overrides() {
@@ -20,7 +20,8 @@ fn profile_overrides() {
             debug = false
             rpath = true
         "#,
-        ).file("src/lib.rs", "")
+        )
+        .file("src/lib.rs", "")
         .build();
     p.cargo("build -v")
         .with_stderr(
@@ -36,7 +37,8 @@ fn profile_overrides() {
         -L dependency=[CWD]/target/debug/deps`
 [FINISHED] dev [optimized] target(s) in [..]
 ",
-        ).run();
+        )
+        .run();
 }
 
 #[test]
@@ -54,7 +56,8 @@ fn opt_level_override_0() {
             [profile.dev]
             opt-level = 0
         "#,
-        ).file("src/lib.rs", "")
+        )
+        .file("src/lib.rs", "")
         .build();
     p.cargo("build -v")
         .with_stderr(
@@ -68,7 +71,8 @@ fn opt_level_override_0() {
         -L dependency=[CWD]/target/debug/deps`
 [FINISHED] [..] target(s) in [..]
 ",
-        ).run();
+        )
+        .run();
 }
 
 #[test]
@@ -85,7 +89,8 @@ fn debug_override_1() {
             [profile.dev]
             debug = 1
         "#,
-        ).file("src/lib.rs", "")
+        )
+        .file("src/lib.rs", "")
         .build();
     p.cargo("build -v")
         .with_stderr(
@@ -99,7 +104,8 @@ fn debug_override_1() {
         -L dependency=[CWD]/target/debug/deps`
 [FINISHED] [..] target(s) in [..]
 ",
-        ).run();
+        )
+        .run();
 }
 
 fn check_opt_level_override(profile_level: &str, rustc_level: &str) {
@@ -119,7 +125,8 @@ fn check_opt_level_override(profile_level: &str, rustc_level: &str) {
         "#,
                 level = profile_level
             ),
-        ).file("src/lib.rs", "")
+        )
+        .file("src/lib.rs", "")
         .build();
     p.cargo("build -v")
         .with_stderr(&format!(
@@ -136,7 +143,8 @@ fn check_opt_level_override(profile_level: &str, rustc_level: &str) {
 [FINISHED] [..] target(s) in [..]
 ",
             level = rustc_level
-        )).run();
+        ))
+        .run();
 }
 
 #[test]
@@ -175,7 +183,8 @@ fn top_level_overrides_deps() {
             [dependencies.foo]
             path = "foo"
         "#,
-        ).file("src/lib.rs", "")
+        )
+        .file("src/lib.rs", "")
         .file(
             "foo/Cargo.toml",
             r#"
@@ -193,7 +202,8 @@ fn top_level_overrides_deps() {
             name = "foo"
             crate_type = ["dylib", "rlib"]
         "#,
-        ).file("foo/src/lib.rs", "")
+        )
+        .file("foo/src/lib.rs", "")
         .build();
     p.cargo("build -v --release")
         .with_stderr(&format!(
@@ -223,7 +233,8 @@ fn top_level_overrides_deps() {
 ",
             prefix = env::consts::DLL_PREFIX,
             suffix = env::consts::DLL_SUFFIX
-        )).run();
+        ))
+        .run();
 }
 
 #[test]
@@ -243,7 +254,8 @@ fn profile_in_non_root_manifest_triggers_a_warning() {
             [profile.dev]
             debug = false
         "#,
-        ).file("src/main.rs", "fn main() {}")
+        )
+        .file("src/main.rs", "fn main() {}")
         .file(
             "bar/Cargo.toml",
             r#"
@@ -256,7 +268,8 @@ fn profile_in_non_root_manifest_triggers_a_warning() {
             [profile.dev]
             opt-level = 1
         "#,
-        ).file("bar/src/main.rs", "fn main() {}")
+        )
+        .file("bar/src/main.rs", "fn main() {}")
         .build();
 
     p.cargo("build -v")
@@ -269,7 +282,8 @@ workspace: [..]
 [COMPILING] bar v0.1.0 ([..])
 [RUNNING] `rustc [..]`
 [FINISHED] dev [unoptimized] target(s) in [..]",
-        ).run();
+        )
+        .run();
 }
 
 #[test]
@@ -285,7 +299,8 @@ fn profile_in_virtual_manifest_works() {
             opt-level = 1
             debug = false
         "#,
-        ).file("src/main.rs", "fn main() {}")
+        )
+        .file("src/main.rs", "fn main() {}")
         .file(
             "bar/Cargo.toml",
             r#"
@@ -295,7 +310,8 @@ fn profile_in_virtual_manifest_works() {
             authors = []
             workspace = ".."
         "#,
-        ).file("bar/src/main.rs", "fn main() {}")
+        )
+        .file("bar/src/main.rs", "fn main() {}")
         .build();
 
     p.cargo("build -v")
@@ -305,7 +321,8 @@ fn profile_in_virtual_manifest_works() {
 [COMPILING] bar v0.1.0 ([..])
 [RUNNING] `rustc [..]`
 [FINISHED] dev [optimized] target(s) in [..]",
-        ).run();
+        )
+        .run();
 }
 
 #[test]
@@ -324,7 +341,8 @@ fn profile_panic_test_bench() {
             [profile.bench]
             panic = "abort"
         "#,
-        ).file("src/lib.rs", "")
+        )
+        .file("src/lib.rs", "")
         .build();
 
     p.cargo("build")
@@ -333,7 +351,8 @@ fn profile_panic_test_bench() {
 [WARNING] `panic` setting is ignored for `test` profile
 [WARNING] `panic` setting is ignored for `bench` profile
 ",
-        ).run();
+        )
+        .run();
 }
 
 #[test]
@@ -349,7 +368,8 @@ fn profile_doc_deprecated() {
             [profile.doc]
             opt-level = 0
         "#,
-        ).file("src/lib.rs", "")
+        )
+        .file("src/lib.rs", "")
         .build();
 
     p.cargo("build")

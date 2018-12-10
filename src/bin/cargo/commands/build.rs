@@ -1,10 +1,11 @@
-use command_prelude::*;
+use crate::command_prelude::*;
 
 use cargo::ops;
 
 pub fn cli() -> App {
     subcommand("build")
-        .alias("b")
+        // subcommand aliases are handled in aliased_command()
+        // .alias("b")
         .about("Compile a local package and all of its dependencies")
         .arg_package_spec(
             "Package to build (see `cargo help pkgid`)",
@@ -45,7 +46,7 @@ the --release flag will use the `release` profile instead.
         )
 }
 
-pub fn exec(config: &mut Config, args: &ArgMatches) -> CliResult {
+pub fn exec(config: &mut Config, args: &ArgMatches<'_>) -> CliResult {
     let ws = args.workspace(config)?;
     let mut compile_opts = args.compile_options(config, CompileMode::Build)?;
     compile_opts.export_dir = args.value_of_path("out-dir", config);

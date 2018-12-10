@@ -1,4 +1,4 @@
-use command_prelude::*;
+use crate::command_prelude::*;
 
 use cargo::print_json;
 
@@ -13,10 +13,11 @@ pub struct ProjectLocation<'a> {
     root: &'a str,
 }
 
-pub fn exec(config: &mut Config, args: &ArgMatches) -> CliResult {
+pub fn exec(config: &mut Config, args: &ArgMatches<'_>) -> CliResult {
     let root = args.root_manifest(config)?;
 
-    let root = root.to_str()
+    let root = root
+        .to_str()
         .ok_or_else(|| {
             format_err!(
                 "your package path contains characters \

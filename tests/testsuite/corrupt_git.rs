@@ -1,9 +1,9 @@
 use std::fs;
 use std::path::{Path, PathBuf};
 
+use crate::support::paths;
+use crate::support::{basic_manifest, git, project};
 use cargo::util::paths as cargopaths;
-use support::paths;
-use support::{basic_manifest, git, project};
 
 #[test]
 fn deleting_database_files() {
@@ -12,7 +12,8 @@ fn deleting_database_files() {
         project
             .file("Cargo.toml", &basic_manifest("bar", "0.5.0"))
             .file("src/lib.rs", "")
-    }).unwrap();
+    })
+    .unwrap();
 
     let project = project
         .file(
@@ -29,7 +30,8 @@ fn deleting_database_files() {
         "#,
                 git_project.url()
             ),
-        ).file("src/lib.rs", "")
+        )
+        .file("src/lib.rs", "")
         .build();
 
     project.cargo("build").run();
@@ -69,7 +71,8 @@ fn deleting_checkout_files() {
         project
             .file("Cargo.toml", &basic_manifest("bar", "0.5.0"))
             .file("src/lib.rs", "")
-    }).unwrap();
+    })
+    .unwrap();
 
     let project = project
         .file(
@@ -86,7 +89,8 @@ fn deleting_checkout_files() {
         "#,
                 git_project.url()
             ),
-        ).file("src/lib.rs", "")
+        )
+        .file("src/lib.rs", "")
         .build();
 
     project.cargo("build").run();

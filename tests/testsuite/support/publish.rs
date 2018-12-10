@@ -2,8 +2,8 @@ use std::fs::{self, File};
 use std::io::prelude::*;
 use std::path::PathBuf;
 
-use support::git::{repo, Repository};
-use support::paths;
+use crate::support::git::{repo, Repository};
+use crate::support::paths;
 
 use url::Url;
 
@@ -20,7 +20,8 @@ pub fn setup() -> Repository {
         index = "{registry}"
     "#,
             registry = registry().to_string()
-        ).as_bytes()
+        )
+        .as_bytes()
     ));
 
     let credentials = paths::root().join("home/.cargo/credentials");
@@ -44,7 +45,8 @@ pub fn setup() -> Repository {
         }}"#,
                 upload()
             ),
-        ).build()
+        )
+        .build()
 }
 
 pub fn registry_path() -> PathBuf {

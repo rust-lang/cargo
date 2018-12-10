@@ -1,5 +1,5 @@
+use crate::support::{basic_bin_manifest, main_file, project};
 use filetime::FileTime;
-use support::{basic_bin_manifest, main_file, project};
 
 #[test]
 fn build_dep_info() {
@@ -30,7 +30,8 @@ fn build_dep_info_lib() {
             name = "ex"
             crate-type = ["lib"]
         "#,
-        ).file("build.rs", "fn main() {}")
+        )
+        .file("build.rs", "fn main() {}")
         .file("src/lib.rs", "")
         .file("examples/ex.rs", "")
         .build();
@@ -54,7 +55,8 @@ fn build_dep_info_rlib() {
             name = "ex"
             crate-type = ["rlib"]
         "#,
-        ).file("src/lib.rs", "")
+        )
+        .file("src/lib.rs", "")
         .file("examples/ex.rs", "")
         .build();
 
@@ -77,7 +79,8 @@ fn build_dep_info_dylib() {
             name = "ex"
             crate-type = ["dylib"]
         "#,
-        ).file("src/lib.rs", "")
+        )
+        .file("src/lib.rs", "")
         .file("examples/ex.rs", "")
         .build();
 

@@ -1,4 +1,4 @@
-use support::{basic_bin_manifest, basic_manifest, project};
+use crate::support::{basic_bin_manifest, basic_manifest, project};
 
 #[test]
 fn build_lib_only() {
@@ -17,7 +17,8 @@ fn build_lib_only() {
         --out-dir [..] \
         -L dependency=[CWD]/target/debug/deps`
 [FINISHED] dev [unoptimized + debuginfo] target(s) in [..]",
-        ).run();
+        )
+        .run();
 }
 
 #[test]
@@ -49,12 +50,14 @@ fn build_with_relative_cargo_home_path() {
 
             "test-dependency" = { path = "src/test_dependency" }
         "#,
-        ).file("src/main.rs", "fn main() {}")
+        )
+        .file("src/main.rs", "fn main() {}")
         .file("src/test_dependency/src/lib.rs", r#" "#)
         .file(
             "src/test_dependency/Cargo.toml",
             &basic_manifest("test-dependency", "0.0.1"),
-        ).build();
+        )
+        .build();
 
     p.cargo("build").env("CARGO_HOME", "./cargo_home/").run();
 }

@@ -8,12 +8,12 @@ use hex;
 
 use serde_json;
 
-use core::{Dependency, Package, PackageId, Source, SourceId, Summary};
-use core::source::MaybePackage;
-use sources::PathSource;
-use util::{Config, Sha256};
-use util::errors::{CargoResult, CargoResultExt};
-use util::paths;
+use crate::core::source::MaybePackage;
+use crate::core::{Dependency, Package, PackageId, Source, SourceId, Summary};
+use crate::sources::PathSource;
+use crate::util::errors::{CargoResult, CargoResultExt};
+use crate::util::paths;
+use crate::util::{Config, Sha256};
 
 pub struct DirectorySource<'cfg> {
     source_id: SourceId,
@@ -29,9 +29,9 @@ struct Checksum {
 }
 
 impl<'cfg> DirectorySource<'cfg> {
-    pub fn new(path: &Path, id: &SourceId, config: &'cfg Config) -> DirectorySource<'cfg> {
+    pub fn new(path: &Path, id: SourceId, config: &'cfg Config) -> DirectorySource<'cfg> {
         DirectorySource {
-            source_id: id.clone(),
+            source_id: id,
             root: path.to_path_buf(),
             config,
             packages: HashMap::new(),
@@ -71,8 +71,8 @@ impl<'cfg> Source for DirectorySource<'cfg> {
         true
     }
 
-    fn source_id(&self) -> &SourceId {
-        &self.source_id
+    fn source_id(&self) -> SourceId {
+        self.source_id
     }
 
     fn update(&mut self) -> CargoResult<()> {
@@ -116,7 +116,7 @@ impl<'cfg> Source for DirectorySource<'cfg> {
                 continue;
             }
 
-            let mut src = PathSource::new(&path, &self.source_id, self.config);
+            let mut src = PathSource::new(&path, self.source_id, self.config);
             src.update()?;
             let pkg = src.root_package()?;
 
@@ -145,22 +145,22 @@ impl<'cfg> Source for DirectorySource<'cfg> {
             }
             manifest.set_summary(summary);
             let pkg = Package::new(manifest, pkg.manifest_path());
-            self.packages.insert(pkg.package_id().clone(), (pkg, cksum));
+            self.packages.insert(pkg.package_id(), (pkg, cksum));
         }
 
         Ok(())
     }
 
-    fn download(&mut self, id: &PackageId) -> CargoResult<MaybePackage> {
+    fn download(&mut self, id: PackageId) -> CargoResult<MaybePackage> {
         self.packages
-            .get(id)
+            .get(&id)
             .map(|p| &p.0)
             .cloned()
             .map(MaybePackage::Ready)
             .ok_or_else(|| format_err!("failed to find package with id: {}", id))
     }
 
-    fn finish_download(&mut self, _id: &PackageId, _data: Vec<u8>) -> CargoResult<Package> {
+    fn finish_download(&mut self, _id: PackageId, _data: Vec<u8>) -> CargoResult<Package> {
         panic!("no downloads to do")
     }
 
@@ -168,8 +168,8 @@ impl<'cfg> Source for DirectorySource<'cfg> {
         Ok(pkg.package_id().version().to_string())
     }
 
-    fn verify(&self, id: &PackageId) -> CargoResult<()> {
-        let (pkg, cksum) = match self.packages.get(id) {
+    fn verify(&self, id: PackageId) -> CargoResult<()> {
+        let (pkg, cksum) = match self.packages.get(&id) {
             Some(&(ref pkg, ref cksum)) => (pkg, cksum),
             None => bail!("failed to find entry for `{}` in directory source", id),
         };
@@ -188,7 +188,7 @@ impl<'cfg> Source for DirectorySource<'cfg> {
                     }
                 }
             })()
-                .chain_err(|| format!("failed to calculate checksum of: {}", file.display()))?;
+            .chain_err(|| format!("failed to calculate checksum of: {}", file.display()))?;
 
             let actual = hex::encode(h.finish());
             if &*actual != cksum {

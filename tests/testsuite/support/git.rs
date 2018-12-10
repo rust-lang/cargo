@@ -46,7 +46,7 @@ use cargo::util::ProcessError;
 use git2;
 use url::Url;
 
-use support::{path2url, project, Project, ProjectBuilder};
+use crate::support::{path2url, project, Project, ProjectBuilder};
 
 #[must_use]
 pub struct RepoBuilder {
