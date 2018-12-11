@@ -421,7 +421,12 @@ impl<'a> JobQueue<'a> {
         Ok(())
     }
 
-    fn emit_warnings(&self, msg: Option<&str>, key: &Key<'a>, cx: &mut Context<'_, '_>) -> CargoResult<()> {
+    fn emit_warnings(
+        &self,
+        msg: Option<&str>,
+        key: &Key<'a>,
+        cx: &mut Context<'_, '_>,
+    ) -> CargoResult<()> {
         let output = cx.build_state.outputs.lock().unwrap();
         let bcx = &mut cx.bcx;
         if let Some(output) = output.get(&(key.pkg, key.kind)) {

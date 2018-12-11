@@ -97,7 +97,7 @@ mod imp {
     pub fn read2(
         out_pipe: ChildStdout,
         err_pipe: ChildStderr,
-        data: &mut FnMut(bool, &mut Vec<u8>, bool),
+        data: &mut dyn FnMut(bool, &mut Vec<u8>, bool),
     ) -> io::Result<()> {
         let mut out = Vec::new();
         let mut err = Vec::new();

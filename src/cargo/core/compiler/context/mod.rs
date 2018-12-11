@@ -471,20 +471,21 @@ impl<'a, 'cfg> Context<'a, 'cfg> {
 
     fn check_collistions(&self) -> CargoResult<()> {
         let mut output_collisions = HashMap::new();
-        let describe_collision = |unit: &Unit<'_>, other_unit: &Unit<'_>, path: &PathBuf| -> String {
-            format!(
-                "The {} target `{}` in package `{}` has the same output \
-                 filename as the {} target `{}` in package `{}`.\n\
-                 Colliding filename is: {}\n",
-                unit.target.kind().description(),
-                unit.target.name(),
-                unit.pkg.package_id(),
-                other_unit.target.kind().description(),
-                other_unit.target.name(),
-                other_unit.pkg.package_id(),
-                path.display()
-            )
-        };
+        let describe_collision =
+            |unit: &Unit<'_>, other_unit: &Unit<'_>, path: &PathBuf| -> String {
+                format!(
+                    "The {} target `{}` in package `{}` has the same output \
+                     filename as the {} target `{}` in package `{}`.\n\
+                     Colliding filename is: {}\n",
+                    unit.target.kind().description(),
+                    unit.target.name(),
+                    unit.pkg.package_id(),
+                    other_unit.target.kind().description(),
+                    other_unit.target.name(),
+                    other_unit.pkg.package_id(),
+                    path.display()
+                )
+            };
         let suggestion = "Consider changing their names to be unique or compiling them separately.\n\
             This may become a hard error in the future, see https://github.com/rust-lang/cargo/issues/6313";
         let report_collision = |unit: &Unit<'_>,

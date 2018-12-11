@@ -15,7 +15,12 @@ use crate::util::{profile, Config};
 /// See also `core::Source`.
 pub trait Registry {
     /// Attempt to find the packages that match a dependency request.
-    fn query(&mut self, dep: &Dependency, f: &mut dyn FnMut(Summary), fuzzy: bool) -> CargoResult<()>;
+    fn query(
+        &mut self,
+        dep: &Dependency,
+        f: &mut dyn FnMut(Summary),
+        fuzzy: bool,
+    ) -> CargoResult<()>;
 
     fn query_vec(&mut self, dep: &Dependency, fuzzy: bool) -> CargoResult<Vec<Summary>> {
         let mut ret = Vec::new();
@@ -404,7 +409,12 @@ https://doc.rust-lang.org/cargo/reference/specifying-dependencies.html#overridin
 }
 
 impl<'cfg> Registry for PackageRegistry<'cfg> {
-    fn query(&mut self, dep: &Dependency, f: &mut dyn FnMut(Summary), fuzzy: bool) -> CargoResult<()> {
+    fn query(
+        &mut self,
+        dep: &Dependency,
+        f: &mut dyn FnMut(Summary),
+        fuzzy: bool,
+    ) -> CargoResult<()> {
         assert!(self.patches_locked);
         let (override_summary, n, to_warn) = {
             // Look for an override and get ready to query the real source.

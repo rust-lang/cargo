@@ -347,7 +347,10 @@ fn maybe_lib<'a>(
 /// script itself doesn't have any dependencies, so even in that case a unit
 /// of work is still returned. `None` is only returned if the package has no
 /// build script.
-fn dep_build_script<'a>(unit: &Unit<'a>, bcx: &BuildContext<'_, '_>) -> Option<(Unit<'a>, UnitFor)> {
+fn dep_build_script<'a>(
+    unit: &Unit<'a>,
+    bcx: &BuildContext<'_, '_>,
+) -> Option<(Unit<'a>, UnitFor)> {
     unit.pkg
         .targets()
         .iter()

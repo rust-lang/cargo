@@ -376,14 +376,12 @@ mod imp {
 
 #[cfg(windows)]
 mod imp {
-    extern crate winapi;
-
-    use self::winapi::um::fileapi::*;
-    use self::winapi::um::handleapi::*;
-    use self::winapi::um::processenv::*;
-    use self::winapi::um::winbase::*;
-    use self::winapi::um::wincon::*;
-    use self::winapi::um::winnt::*;
+    use winapi::um::fileapi::*;
+    use winapi::um::handleapi::*;
+    use winapi::um::processenv::*;
+    use winapi::um::winbase::*;
+    use winapi::um::wincon::*;
+    use winapi::um::winnt::*;
     use std::{cmp, mem, ptr};
 
     pub(super) use super::default_err_erase_line as err_erase_line;
