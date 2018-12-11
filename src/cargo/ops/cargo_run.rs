@@ -6,8 +6,8 @@ use crate::ops;
 use crate::util::{self, CargoResult, ProcessError};
 
 pub fn run(
-    ws: &Workspace,
-    options: &ops::CompileOptions,
+    ws: &Workspace<'_>,
+    options: &ops::CompileOptions<'_>,
     args: &[String],
 ) -> CargoResult<Option<ProcessError>> {
     let config = ws.config();
@@ -82,9 +82,7 @@ pub fn run(
     assert_eq!(compile.binaries.len(), 1);
     let exe = &compile.binaries[0];
     let exe = match util::without_prefix(exe, config.cwd()) {
-        Some(path) if path.file_name() == Some(path.as_os_str()) => {
-            Path::new(".").join(path)
-        }
+        Some(path) if path.file_name() == Some(path.as_os_str()) => Path::new(".").join(path),
         Some(path) => path.to_path_buf(),
         None => exe.to_path_buf(),
     };

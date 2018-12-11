@@ -1,4 +1,4 @@
-extern crate crypto_hash;
+use crypto_hash;
 use self::crypto_hash::{Algorithm, Hasher};
 use std::io::Write;
 

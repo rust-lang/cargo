@@ -47,7 +47,7 @@ impl NewProjectKind {
 }
 
 impl fmt::Display for NewProjectKind {
-    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         match *self {
             NewProjectKind::Bin => "binary (application)",
             NewProjectKind::Lib => "library",
@@ -422,7 +422,7 @@ pub fn init(opts: &NewOptions, config: &Config) -> CargoResult<()> {
     Ok(())
 }
 
-fn mk(config: &Config, opts: &MkOptions) -> CargoResult<()> {
+fn mk(config: &Config, opts: &MkOptions<'_>) -> CargoResult<()> {
     let path = opts.path;
     let name = opts.name;
     let cfg = global_config(config)?;

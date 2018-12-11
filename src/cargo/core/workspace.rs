@@ -5,6 +5,7 @@ use std::path::{Path, PathBuf};
 use std::slice;
 
 use glob::glob;
+use log::debug;
 use url::Url;
 
 use crate::core::profiles::Profiles;

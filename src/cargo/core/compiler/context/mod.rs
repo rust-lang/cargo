@@ -129,7 +129,7 @@ impl<'a, 'cfg> Context<'a, 'cfg> {
         mut self,
         units: &[Unit<'a>],
         export_dir: Option<PathBuf>,
-        exec: &Arc<Executor>,
+        exec: &Arc<dyn Executor>,
     ) -> CargoResult<Compilation<'cfg>> {
         let mut queue = JobQueue::new(self.bcx);
         let mut plan = BuildPlan::new();
@@ -386,7 +386,7 @@ impl<'a, 'cfg> Context<'a, 'cfg> {
         deps
     }
 
-    pub fn incremental_args(&self, unit: &Unit) -> CargoResult<Vec<String>> {
+    pub fn incremental_args(&self, unit: &Unit<'_>) -> CargoResult<Vec<String>> {
         // There's a number of ways to configure incremental compilation right
         // now. In order of descending priority (first is highest priority) we
         // have:
@@ -471,24 +471,25 @@ impl<'a, 'cfg> Context<'a, 'cfg> {
 
     fn check_collistions(&self) -> CargoResult<()> {
         let mut output_collisions = HashMap::new();
-        let describe_collision = |unit: &Unit, other_unit: &Unit, path: &PathBuf| -> String {
-            format!(
-                "The {} target `{}` in package `{}` has the same output \
-                 filename as the {} target `{}` in package `{}`.\n\
-                 Colliding filename is: {}\n",
-                unit.target.kind().description(),
-                unit.target.name(),
-                unit.pkg.package_id(),
-                other_unit.target.kind().description(),
-                other_unit.target.name(),
-                other_unit.pkg.package_id(),
-                path.display()
-            )
-        };
+        let describe_collision =
+            |unit: &Unit<'_>, other_unit: &Unit<'_>, path: &PathBuf| -> String {
+                format!(
+                    "The {} target `{}` in package `{}` has the same output \
+                     filename as the {} target `{}` in package `{}`.\n\
+                     Colliding filename is: {}\n",
+                    unit.target.kind().description(),
+                    unit.target.name(),
+                    unit.pkg.package_id(),
+                    other_unit.target.kind().description(),
+                    other_unit.target.name(),
+                    other_unit.pkg.package_id(),
+                    path.display()
+                )
+            };
         let suggestion = "Consider changing their names to be unique or compiling them separately.\n\
             This may become a hard error in the future, see https://github.com/rust-lang/cargo/issues/6313";
-        let report_collision = |unit: &Unit,
-                                other_unit: &Unit,
+        let report_collision = |unit: &Unit<'_>,
+                                other_unit: &Unit<'_>,
                                 path: &PathBuf|
          -> CargoResult<()> {
             if unit.target.name() == other_unit.target.name() {
@@ -567,7 +568,7 @@ impl Links {
         }
     }
 
-    pub fn validate(&mut self, resolve: &Resolve, unit: &Unit) -> CargoResult<()> {
+    pub fn validate(&mut self, resolve: &Resolve, unit: &Unit<'_>) -> CargoResult<()> {
         if !self.validated.insert(unit.pkg.package_id()) {
             return Ok(());
         }

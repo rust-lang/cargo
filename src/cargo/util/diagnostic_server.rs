@@ -10,7 +10,8 @@ use std::sync::Arc;
 use std::thread::{self, JoinHandle};
 
 use failure::{Error, ResultExt};
-use serde_json;
+use log::warn;
+use serde::{Deserialize, Serialize};
 
 use crate::util::errors::CargoResult;
 use crate::util::{Config, ProcessBuilder};
@@ -234,7 +235,7 @@ impl RustfixDiagnosticServer {
         })
     }
 
-    fn run(self, on_message: &Fn(Message), done: &AtomicBool) {
+    fn run(self, on_message: &dyn Fn(Message), done: &AtomicBool) {
         while let Ok((client, _)) = self.listener.accept() {
             let client = BufReader::new(client);
             match serde_json::from_reader(client) {

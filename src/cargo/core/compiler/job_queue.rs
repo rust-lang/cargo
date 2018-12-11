@@ -7,9 +7,9 @@ use std::process::Output;
 use std::sync::mpsc::{channel, Receiver, Sender};
 use std::sync::Arc;
 
-use crossbeam_utils;
 use crossbeam_utils::thread::Scope;
 use jobserver::{Acquired, HelperThread};
+use log::{debug, info, trace};
 
 use crate::core::profiles::Profile;
 use crate::core::{PackageId, Target, TargetKind};
@@ -168,7 +168,7 @@ impl<'a> JobQueue<'a> {
     /// This function will spawn off `config.jobs()` workers to build all of the
     /// necessary dependencies, in order. Freshness is propagated as far as
     /// possible along each dependency chain.
-    pub fn execute(&mut self, cx: &mut Context, plan: &mut BuildPlan) -> CargoResult<()> {
+    pub fn execute(&mut self, cx: &mut Context<'_, '_>, plan: &mut BuildPlan) -> CargoResult<()> {
         let _p = profile::start("executing the job graph");
         self.queue.queue_finished();
 
@@ -209,7 +209,7 @@ impl<'a> JobQueue<'a> {
 
     fn drain_the_queue(
         &mut self,
-        cx: &mut Context,
+        cx: &mut Context<'_, '_>,
         plan: &mut BuildPlan,
         scope: &Scope<'a>,
         jobserver_helper: &HelperThread,
@@ -421,7 +421,12 @@ impl<'a> JobQueue<'a> {
         Ok(())
     }
 
-    fn emit_warnings(&self, msg: Option<&str>, key: &Key<'a>, cx: &mut Context) -> CargoResult<()> {
+    fn emit_warnings(
+        &self,
+        msg: Option<&str>,
+        key: &Key<'a>,
+        cx: &mut Context<'_, '_>,
+    ) -> CargoResult<()> {
         let output = cx.build_state.outputs.lock().unwrap();
         let bcx = &mut cx.bcx;
         if let Some(output) = output.get(&(key.pkg, key.kind)) {
@@ -444,7 +449,7 @@ impl<'a> JobQueue<'a> {
         Ok(())
     }
 
-    fn finish(&mut self, key: Key<'a>, cx: &mut Context) -> CargoResult<()> {
+    fn finish(&mut self, key: Key<'a>, cx: &mut Context<'_, '_>) -> CargoResult<()> {
         if key.mode.is_run_custom_build() && cx.bcx.show_warnings(key.pkg) {
             self.emit_warnings(None, &key, cx)?;
         }
@@ -547,7 +552,7 @@ impl<'a> Key<'a> {
 }
 
 impl<'a> fmt::Debug for Key<'a> {
-    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         write!(
             f,
             "{} => {}/{} => {:?}",

@@ -256,7 +256,7 @@ fn pre_version_component(v: &Version) -> String {
     ret
 }
 
-fn target_runner(bcx: &BuildContext) -> CargoResult<Option<(PathBuf, Vec<String>)>> {
+fn target_runner(bcx: &BuildContext<'_, '_>) -> CargoResult<Option<(PathBuf, Vec<String>)>> {
     let target = bcx.target_triple();
 
     // try target.{}.runner

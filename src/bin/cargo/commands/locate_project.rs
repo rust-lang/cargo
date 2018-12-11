@@ -1,6 +1,7 @@
 use crate::command_prelude::*;
 
 use cargo::print_json;
+use serde::Serialize;
 
 pub fn cli() -> App {
     subcommand("locate-project")

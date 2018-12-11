@@ -510,7 +510,7 @@ fn clean_targets_with_legacy_path(
     autodiscover: Option<bool>,
     warnings: &mut Vec<String>,
     errors: &mut Vec<String>,
-    legacy_path: &mut FnMut(&TomlTarget) -> Option<PathBuf>,
+    legacy_path: &mut dyn FnMut(&TomlTarget) -> Option<PathBuf>,
     autodiscover_flag_name: &str,
 ) -> CargoResult<Vec<(PathBuf, TomlTarget)>> {
     let toml_targets = toml_targets_and_inferred(
@@ -785,7 +785,7 @@ fn target_path(
     target_kind: &str,
     package_root: &Path,
     edition: Edition,
-    legacy_path: &mut FnMut(&TomlTarget) -> Option<PathBuf>,
+    legacy_path: &mut dyn FnMut(&TomlTarget) -> Option<PathBuf>,
 ) -> Result<PathBuf, String> {
     if let Some(ref path) = target.path {
         // Should we verify that this path exists here?
