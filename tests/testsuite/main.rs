@@ -1,3 +1,4 @@
+#![warn(rust_2018_idioms)] // while we're getting used to 2018
 #![deny(warnings)]
 #![cfg_attr(feature = "cargo-clippy", allow(blacklisted_name))]
 #![cfg_attr(feature = "cargo-clippy", allow(explicit_iter_loop))]
