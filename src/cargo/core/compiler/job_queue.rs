@@ -30,7 +30,7 @@ use super::{BuildContext, BuildPlan, CompileMode, Context, Kind, Unit};
 /// actual compilation step of each package. Packages enqueue units of work and
 /// then later on the entire graph is processed and compiled.
 pub struct JobQueue<'a> {
-    queue: DependencyQueue<Key<'a>, Vec<(Job, Freshness)>>,
+    queue: DependencyQueue<Key<'a>, Vec<(Job, Freshness, bool)>>,
     tx: Sender<Message<'a>>,
     rx: Receiver<Message<'a>>,
     active: Vec<Key<'a>>,
@@ -153,12 +153,13 @@ impl<'a> JobQueue<'a> {
         unit: &Unit<'a>,
         job: Job,
         fresh: Freshness,
+        cached: bool
     ) -> CargoResult<()> {
         let key = Key::new(unit);
         let deps = key.dependencies(cx)?;
         self.queue
             .queue(Fresh, &key, Vec::new(), &deps)
-            .push((job, fresh));
+            .push((job, fresh, cached));
         *self.counts.entry(key.pkg).or_insert(0) += 1;
         Ok(())
     }
@@ -239,7 +240,7 @@ impl<'a> JobQueue<'a> {
             // start requesting job tokens. Each job after the first needs to
             // request a token.
             while let Some((fresh, key, jobs)) = self.queue.dequeue() {
-                let total_fresh = jobs.iter().fold(fresh, |fresh, &(_, f)| f.combine(fresh));
+                let total_fresh = jobs.iter().fold(fresh, |fresh, &(_, f, _)| f.combine(fresh));
                 self.pending.insert(
                     key,
                     PendingBuild {
@@ -247,8 +248,8 @@ impl<'a> JobQueue<'a> {
                         fresh: total_fresh,
                     },
                 );
-                for (job, f) in jobs {
-                    queue.push((key, job, f.combine(fresh)));
+                for (job, f, cached) in jobs {
+                    queue.push((key, job, f.combine(fresh), cached));
                     if !self.active.is_empty() || !queue.is_empty() {
                         jobserver_helper.request_token();
                     }
@@ -259,8 +260,8 @@ impl<'a> JobQueue<'a> {
             // try to spawn it so long as we've got a jobserver token which says
             // we're able to perform some parallel work.
             while error.is_none() && self.active.len() < tokens.len() + 1 && !queue.is_empty() {
-                let (key, job, fresh) = queue.remove(0);
-                self.run(key, fresh, job, cx.bcx.config, scope, build_plan)?;
+                let (key, job, fresh, cached) = queue.remove(0);
+                self.run(key, fresh, job, cx.bcx.config, scope, build_plan, cached)?;
             }
 
             // If after all that we're not actually running anything then we're
@@ -394,6 +395,7 @@ impl<'a> JobQueue<'a> {
         config: &Config,
         scope: &Scope<'a>,
         build_plan: bool,
+        cached: bool
     ) -> CargoResult<()> {
         info!("start: {:?}", key);
 
@@ -408,7 +410,7 @@ impl<'a> JobQueue<'a> {
 
         if !build_plan {
             // Print out some nice progress information
-            self.note_working_on(config, &key, fresh)?;
+            self.note_working_on(config, &key, fresh, cached)?;
         }
 
         match fresh {
@@ -471,6 +473,7 @@ impl<'a> JobQueue<'a> {
         config: &Config,
         key: &Key<'a>,
         fresh: Freshness,
+        cached: bool
     ) -> CargoResult<()> {
         if (self.compiled.contains(&key.pkg) && !key.mode.is_doc())
             || (self.documented.contains(&key.pkg) && key.mode.is_doc())
@@ -493,7 +496,12 @@ impl<'a> JobQueue<'a> {
                     if key.mode.is_check() {
                         config.shell().status("Checking", key.pkg)?;
                     } else {
-                        config.shell().status("Compiling", key.pkg)?;
+                        if cached 
+                        {
+                            config.shell().status("Cached", key.pkg)?;
+                        } else {
+                            config.shell().status("Compiling", key.pkg)?;
+                        }
                     }
                 }
             }

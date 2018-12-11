@@ -1,9 +1,12 @@
 use std::collections::HashMap;
 use std::env;
 use std::fmt;
+use std::fs::metadata;
 use std::hash::{Hash, Hasher, SipHasher};
 use std::path::{Path, PathBuf};
 use std::sync::Arc;
+
+use std::collections::HashSet;
 
 use lazycell::LazyCell;
 
@@ -30,10 +33,13 @@ pub struct CompilationFiles<'a, 'cfg: 'a> {
     /// The root targets requested by the user on the command line (does not
     /// include dependencies).
     roots: Vec<Unit<'a>>,
+    primary: HashSet<Unit<'a>>,
     ws: &'a Workspace<'cfg>,
     metas: HashMap<Unit<'a>, Option<Metadata>>,
     /// For each Unit, a list all files produced.
     outputs: HashMap<Unit<'a>, LazyCell<Arc<Vec<OutputFile>>>>,
+    /// The directory that is used as the shared targets
+    shared_target_dir: Option<PathBuf>,
 }
 
 #[derive(Debug)]
@@ -69,14 +75,23 @@ impl<'a, 'cfg: 'a> CompilationFiles<'a, 'cfg> {
         cx: &Context<'a, 'cfg>,
     ) -> CompilationFiles<'a, 'cfg> {
         let mut metas = HashMap::new();
+        let mut primary = HashSet::new();
         for unit in roots {
             metadata_of(unit, cx, &mut metas);
+            if cx.is_primary_package(unit) {
+                primary.insert(unit.clone());
+            }
         }
         let outputs = metas
             .keys()
             .cloned()
             .map(|unit| (unit, LazyCell::new()))
             .collect();
+
+        let shared_target_dir = env::var("CARGO_SHARED_TARGET_DIR")
+            .ok()
+            .map_or(None, |path| path.parse().ok());
+
         CompilationFiles {
             ws,
             host,
@@ -85,6 +100,8 @@ impl<'a, 'cfg: 'a> CompilationFiles<'a, 'cfg> {
             roots: roots.to_vec(),
             metas,
             outputs,
+            primary,
+            shared_target_dir,
         }
     }
 
@@ -121,8 +138,27 @@ impl<'a, 'cfg: 'a> CompilationFiles<'a, 'cfg> {
         } else if unit.target.is_example() {
             self.layout(unit.kind).examples().to_path_buf()
         } else {
+            if let Some(ref shared_dir) = self.shared_target_dir { 
+                if !self.primary.contains(unit) {
+                    return shared_dir.clone();
+                }
+            }
             self.deps_dir(unit).to_path_buf()
         }
+    }
+
+    /// Check if the unit is in the shared dir
+    pub fn in_shared_dir(&self, unit: &Unit<'a>, bcx: &BuildContext<'a, 'cfg>) -> bool {
+        if self.shared_target_dir.is_some() && !self.primary.contains(unit) {
+            if let Ok(outputs) = self.outputs(unit, bcx) {
+                return !outputs.iter().any(|out| !metadata(out.path.as_path()).is_ok());
+            } 
+        }
+        false
+    }
+
+    pub fn shared_dir(&self) -> Option<&Path> {
+        self.shared_target_dir.as_ref().map(|p| p.as_path())
     }
 
     pub fn export_dir(&self) -> Option<PathBuf> {
@@ -149,6 +185,11 @@ impl<'a, 'cfg: 'a> CompilationFiles<'a, 'cfg> {
     /// Returns the directories where Rust crate dependencies are found for the
     /// specified unit.
     pub fn deps_dir(&self, unit: &Unit) -> &Path {
+        if let Some(ref shared_dir) = self.shared_target_dir { 
+            if !self.primary.contains(unit) {
+                return shared_dir.as_path();
+            }
+        }
         self.layout(unit.kind).deps()
     }
 

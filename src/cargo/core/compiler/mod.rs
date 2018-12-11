@@ -48,7 +48,7 @@ mod output_depinfo;
 #[derive(PartialEq, Eq, Hash, Debug, Clone, Copy, PartialOrd, Ord, Serialize)]
 pub enum Kind {
     Host,
-    Target,
+    Target
 }
 
 /// A glorified callback for executing calls to rustc. Rather than calling rustc
@@ -143,6 +143,7 @@ fn compile<'a, 'cfg: 'a>(
     fingerprint::prepare_init(cx, unit)?;
     cx.links.validate(bcx.resolve, unit)?;
 
+    let mut cached = false;
     let (dirty, fresh, freshness) = if unit.mode.is_run_custom_build() {
         custom_build::prepare(cx, unit)?
     } else if unit.mode == CompileMode::Doctest {
@@ -150,7 +151,7 @@ fn compile<'a, 'cfg: 'a>(
         (Work::noop(), Work::noop(), Freshness::Fresh)
     } else if build_plan {
         (
-            rustc(cx, unit, &exec.clone())?,
+            rustc(cx, unit, &exec.clone())?.0,
             Work::noop(),
             Freshness::Dirty,
         )
@@ -159,7 +160,9 @@ fn compile<'a, 'cfg: 'a>(
         let work = if unit.mode.is_doc() {
             rustdoc(cx, unit)?
         } else {
-            rustc(cx, unit, exec)?
+            let temp = rustc(cx, unit, exec)?;
+            cached = temp.1;
+            temp.0
         };
         // Need to link targets on both the dirty and fresh
         let dirty = work.then(link_targets(cx, unit, false)?).then(dirty);
@@ -171,7 +174,7 @@ fn compile<'a, 'cfg: 'a>(
 
         (dirty, fresh, freshness)
     };
-    jobs.enqueue(cx, unit, Job::new(dirty, fresh), freshness)?;
+    jobs.enqueue(cx, unit, Job::new(dirty, fresh), freshness, cached)?;
     drop(p);
 
     // Be sure to compile all dependencies of this target as well.
@@ -189,7 +192,7 @@ fn rustc<'a, 'cfg>(
     cx: &mut Context<'a, 'cfg>,
     unit: &Unit<'a>,
     exec: &Arc<Executor>,
-) -> CargoResult<Work> {
+) -> CargoResult<(Work, bool)> {
     let mut rustc = prepare_rustc(cx, &unit.target.rustc_crate_types(), unit)?;
     if cx.is_primary_package(unit) {
         rustc.env("CARGO_PRIMARY_PACKAGE", "1");
@@ -242,7 +245,9 @@ fn rustc<'a, 'cfg>(
         .unwrap_or_else(|| cx.bcx.config.cwd())
         .to_path_buf();
 
-    return Ok(Work::new(move |state| {
+    let found_shared = cx.in_shared_dir(unit);
+
+    return Ok((Work::new(move |state| {
         // Only at runtime have we discovered what the extra -L and -l
         // arguments are for native libraries, so we process those here. We
         // also need to be sure to add any -L paths for our plugins to the
@@ -292,24 +297,28 @@ fn rustc<'a, 'cfg>(
 
         state.running(&rustc);
         if json_messages {
-            exec.exec_json(
-                rustc,
-                package_id,
-                &target,
-                mode,
-                &mut assert_is_empty,
-                &mut |line| json_stderr(line, package_id, &target),
-            )
-            .map_err(internal_if_simple_exit_code)
-            .chain_err(|| format!("Could not compile `{}`.", name))?;
+            if !found_shared
+            {
+                exec.exec_json(
+                    rustc,
+                    package_id,
+                    &target,
+                    mode,
+                    &mut assert_is_empty,
+                    &mut |line| json_stderr(line, package_id, &target),
+                )
+                .map_err(internal_if_simple_exit_code)
+                .chain_err(|| format!("Could not compile `{}`.", name))?;
+            }
         } else if build_plan {
             state.build_plan(buildkey, rustc.clone(), outputs.clone());
-        } else {
+        } else if !found_shared {
             exec.exec_and_capture_output(rustc, package_id, &target, mode, state)
                 .map_err(internal_if_simple_exit_code)
                 .chain_err(|| format!("Could not compile `{}`.", name))?;
         }
 
+        //TODO: handle the rename ?
         if do_rename && real_name != crate_name {
             let dst = &outputs[0].path;
             let src = dst.with_file_name(
@@ -336,7 +345,7 @@ fn rustc<'a, 'cfg>(
         }
 
         Ok(())
-    }));
+    }), found_shared));
 
     // Add all relevant -L and -l flags from dependencies (now calculated and
     // present in `state`) to the command provided
@@ -919,6 +928,14 @@ fn build_deps_args<'a, 'cfg>(
         deps.push(cx.files().deps_dir(unit));
         deps
     });
+    
+    if let Some(shared_dir) = cx.files().shared_dir() {
+        cmd.arg("-L").arg(&{
+            let mut deps = OsString::from("dependency=");
+            deps.push(shared_dir);
+            deps
+        });
+    }
 
     // Be sure that the host path is also listed. This'll ensure that proc-macro
     // dependencies are correctly found (for reexported macros).
