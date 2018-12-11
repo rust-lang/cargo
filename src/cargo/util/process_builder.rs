@@ -30,7 +30,7 @@ pub struct ProcessBuilder {
 }
 
 impl fmt::Display for ProcessBuilder {
-    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         write!(f, "`{}", self.program.to_string_lossy())?;
 
         for arg in &self.args {
@@ -195,8 +195,8 @@ impl ProcessBuilder {
     /// Optionally, output can be passed to errors using `print_output`
     pub fn exec_with_streaming(
         &self,
-        on_stdout_line: &mut FnMut(&str) -> CargoResult<()>,
-        on_stderr_line: &mut FnMut(&str) -> CargoResult<()>,
+        on_stdout_line: &mut dyn FnMut(&str) -> CargoResult<()>,
+        on_stderr_line: &mut dyn FnMut(&str) -> CargoResult<()>,
         capture_output: bool,
     ) -> CargoResult<Output> {
         let mut stdout = Vec::new();

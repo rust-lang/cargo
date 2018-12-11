@@ -1,11 +1,13 @@
+use std::borrow::Borrow;
+use std::collections;
+use std::fs;
+
 use crate::support::{lines_match, paths, project};
 use cargo::core::{enable_nightly_features, Shell};
 use cargo::util::config::{self, Config};
 use cargo::util::toml::{self, VecStringOrBool as VSOB};
 use cargo::CargoError;
-use std::borrow::Borrow;
-use std::collections;
-use std::fs;
+use serde::Deserialize;
 
 #[test]
 fn read_env_vars_for_config() {

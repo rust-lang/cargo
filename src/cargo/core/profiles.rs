@@ -132,7 +132,7 @@ impl Profiles {
     }
 
     /// Used to check for overrides for non-existing packages.
-    pub fn validate_packages(&self, shell: &mut Shell, packages: &PackageSet) -> CargoResult<()> {
+    pub fn validate_packages(&self, shell: &mut Shell, packages: &PackageSet<'_>) -> CargoResult<()> {
         self.dev.validate_packages(shell, packages)?;
         self.release.validate_packages(shell, packages)?;
         self.test.validate_packages(shell, packages)?;
@@ -179,7 +179,7 @@ impl ProfileMaker {
         profile
     }
 
-    fn validate_packages(&self, shell: &mut Shell, packages: &PackageSet) -> CargoResult<()> {
+    fn validate_packages(&self, shell: &mut Shell, packages: &PackageSet<'_>) -> CargoResult<()> {
         self.validate_packages_toml(shell, packages, &self.toml, true)?;
         self.validate_packages_toml(shell, packages, &self.config, false)?;
         Ok(())
@@ -188,7 +188,7 @@ impl ProfileMaker {
     fn validate_packages_toml(
         &self,
         shell: &mut Shell,
-        packages: &PackageSet,
+        packages: &PackageSet<'_>,
         toml: &Option<TomlProfile>,
         warn_unmatched: bool,
     ) -> CargoResult<()> {
@@ -436,7 +436,7 @@ compact_debug! {
 }
 
 impl fmt::Display for Profile {
-    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         write!(f, "Profile({})", self.name)
     }
 }

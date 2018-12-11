@@ -180,7 +180,7 @@ impl Config {
     }
 
     /// Get a reference to the shell, for e.g. writing error messages
-    pub fn shell(&self) -> RefMut<Shell> {
+    pub fn shell(&self) -> RefMut<'_, Shell> {
         self.shell.borrow_mut()
     }
 
@@ -192,7 +192,7 @@ impl Config {
     }
 
     /// Get the path to the `rustc` executable
-    pub fn rustc(&self, ws: Option<&Workspace>) -> CargoResult<Rustc> {
+    pub fn rustc(&self, ws: Option<&Workspace<'_>>) -> CargoResult<Rustc> {
         let cache_location = ws.map(|ws| {
             ws.target_dir()
                 .join(".rustc_info.json")
@@ -875,7 +875,7 @@ impl ConfigKey {
 }
 
 impl fmt::Display for ConfigKey {
-    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         self.to_config().fmt(f)
     }
 }
@@ -934,7 +934,7 @@ impl std::error::Error for ConfigError {
 // future, once this limitation is lifted, this should instead implement
 // `cause` and avoid doing the cause formatting here.
 impl fmt::Display for ConfigError {
-    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         let message = self
             .error
             .iter_chain()
@@ -1349,7 +1349,7 @@ pub enum Definition {
 }
 
 impl fmt::Debug for ConfigValue {
-    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         match *self {
             CV::Integer(i, ref path) => write!(f, "{} (from {})", i, path.display()),
             CV::Boolean(b, ref path) => write!(f, "{} (from {})", b, path.display()),
@@ -1539,7 +1539,7 @@ impl Definition {
 }
 
 impl fmt::Display for Definition {
-    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         match *self {
             Definition::Path(ref p) => p.display().fmt(f),
             Definition::Environment(ref key) => write!(f, "environment variable `{}`", key),

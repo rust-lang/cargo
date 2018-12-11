@@ -58,19 +58,19 @@ impl Internal {
 }
 
 impl Fail for Internal {
-    fn cause(&self) -> Option<&Fail> {
+    fn cause(&self) -> Option<&dyn Fail> {
         self.inner.as_fail().cause()
     }
 }
 
 impl fmt::Debug for Internal {
-    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         self.inner.fmt(f)
     }
 }
 
 impl fmt::Display for Internal {
-    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         self.inner.fmt(f)
     }
 }
@@ -98,25 +98,25 @@ impl ManifestError {
     /// Returns an iterator over the `ManifestError` chain of causes.
     ///
     /// So if this error was not caused by another `ManifestError` this will be empty.
-    pub fn manifest_causes(&self) -> ManifestCauses {
+    pub fn manifest_causes(&self) -> ManifestCauses<'_> {
         ManifestCauses { current: self }
     }
 }
 
 impl Fail for ManifestError {
-    fn cause(&self) -> Option<&Fail> {
+    fn cause(&self) -> Option<&dyn Fail> {
         self.cause.as_fail().cause()
     }
 }
 
 impl fmt::Debug for ManifestError {
-    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         self.cause.fmt(f)
     }
 }
 
 impl fmt::Display for ManifestError {
-    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         self.cause.fmt(f)
     }
 }
@@ -189,7 +189,7 @@ impl CargoTestError {
         }
     }
 
-    pub fn hint(&self, ws: &Workspace) -> String {
+    pub fn hint(&self, ws: &Workspace<'_>) -> String {
         match self.test {
             Test::UnitTest {
                 ref kind,
@@ -346,6 +346,6 @@ pub fn internal<S: fmt::Display>(error: S) -> CargoError {
     _internal(&error)
 }
 
-fn _internal(error: &fmt::Display) -> CargoError {
+fn _internal(error: &dyn fmt::Display) -> CargoError {
     Internal::new(format_err!("{}", error)).into()
 }

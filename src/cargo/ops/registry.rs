@@ -40,7 +40,7 @@ pub struct PublishOpts<'cfg> {
     pub registry: Option<String>,
 }
 
-pub fn publish(ws: &Workspace, opts: &PublishOpts) -> CargoResult<()> {
+pub fn publish(ws: &Workspace<'_>, opts: &PublishOpts<'_>) -> CargoResult<()> {
     let pkg = ws.current()?;
 
     if let Some(ref allowed_registries) = *pkg.publish() {

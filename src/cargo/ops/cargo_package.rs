@@ -31,7 +31,7 @@ pub struct PackageOpts<'cfg> {
 
 static VCS_INFO_FILE: &'static str = ".cargo_vcs_info.json";
 
-pub fn package(ws: &Workspace, opts: &PackageOpts) -> CargoResult<Option<FileLock>> {
+pub fn package(ws: &Workspace<'_>, opts: &PackageOpts<'_>) -> CargoResult<Option<FileLock>> {
     ops::resolve_ws(ws)?;
     let pkg = ws.current()?;
     let config = ws.config();
@@ -276,7 +276,7 @@ fn check_vcs_file_collision(pkg: &Package, src_files: &[PathBuf]) -> CargoResult
 }
 
 fn tar(
-    ws: &Workspace,
+    ws: &Workspace<'_>,
     src_files: &[PathBuf],
     vcs_info: Option<&serde_json::Value>,
     dst: &File,
@@ -414,7 +414,7 @@ fn tar(
     Ok(())
 }
 
-fn run_verify(ws: &Workspace, tar: &FileLock, opts: &PackageOpts) -> CargoResult<()> {
+fn run_verify(ws: &Workspace<'_>, tar: &FileLock, opts: &PackageOpts<'_>) -> CargoResult<()> {
     let config = ws.config();
     let pkg = ws.current()?;
 
@@ -441,7 +441,7 @@ fn run_verify(ws: &Workspace, tar: &FileLock, opts: &PackageOpts) -> CargoResult
     let pkg_fingerprint = src.last_modified_file(&new_pkg)?;
     let ws = Workspace::ephemeral(new_pkg, config, None, true)?;
 
-    let exec: Arc<Executor> = Arc::new(DefaultExecutor);
+    let exec: Arc<dyn Executor> = Arc::new(DefaultExecutor);
     ops::compile_ws(
         &ws,
         None,

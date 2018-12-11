@@ -76,7 +76,7 @@ impl ResolverProgress {
 }
 
 pub struct RegistryQueryer<'a> {
-    pub registry: &'a mut (Registry + 'a),
+    pub registry: &'a mut (dyn Registry + 'a),
     replacements: &'a [(PackageIdSpec, Dependency)],
     try_to_use: &'a HashSet<PackageId>,
     cache: HashMap<Dependency, Rc<Vec<Candidate>>>,
@@ -88,7 +88,7 @@ pub struct RegistryQueryer<'a> {
 
 impl<'a> RegistryQueryer<'a> {
     pub fn new(
-        registry: &'a mut Registry,
+        registry: &'a mut dyn Registry,
         replacements: &'a [(PackageIdSpec, Dependency)],
         try_to_use: &'a HashSet<PackageId>,
         minimal_versions: bool,

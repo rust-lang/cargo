@@ -15,7 +15,7 @@ use crate::util::{profile, Config};
 /// See also `core::Source`.
 pub trait Registry {
     /// Attempt to find the packages that match a dependency request.
-    fn query(&mut self, dep: &Dependency, f: &mut FnMut(Summary), fuzzy: bool) -> CargoResult<()>;
+    fn query(&mut self, dep: &Dependency, f: &mut dyn FnMut(Summary), fuzzy: bool) -> CargoResult<()>;
 
     fn query_vec(&mut self, dep: &Dependency, fuzzy: bool) -> CargoResult<Vec<Summary>> {
         let mut ret = Vec::new();
@@ -146,17 +146,17 @@ impl<'cfg> PackageRegistry<'cfg> {
         Ok(())
     }
 
-    pub fn add_preloaded(&mut self, source: Box<Source + 'cfg>) {
+    pub fn add_preloaded(&mut self, source: Box<dyn Source + 'cfg>) {
         self.add_source(source, Kind::Locked);
     }
 
-    fn add_source(&mut self, source: Box<Source + 'cfg>, kind: Kind) {
+    fn add_source(&mut self, source: Box<dyn Source + 'cfg>, kind: Kind) {
         let id = source.source_id();
         self.sources.insert(source);
         self.source_ids.insert(id, (id, kind));
     }
 
-    pub fn add_override(&mut self, source: Box<Source + 'cfg>) {
+    pub fn add_override(&mut self, source: Box<dyn Source + 'cfg>) {
         self.overrides.push(source.source_id());
         self.add_source(source, Kind::Override);
     }
@@ -404,7 +404,7 @@ https://doc.rust-lang.org/cargo/reference/specifying-dependencies.html#overridin
 }
 
 impl<'cfg> Registry for PackageRegistry<'cfg> {
-    fn query(&mut self, dep: &Dependency, f: &mut FnMut(Summary), fuzzy: bool) -> CargoResult<()> {
+    fn query(&mut self, dep: &Dependency, f: &mut dyn FnMut(Summary), fuzzy: bool) -> CargoResult<()> {
         assert!(self.patches_locked);
         let (override_summary, n, to_warn) = {
             // Look for an override and get ready to query the real source.

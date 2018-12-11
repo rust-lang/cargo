@@ -36,7 +36,7 @@ where
 }
 
 impl fmt::Display for GitRevision {
-    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         fmt::Display::fmt(&self.0, f)
     }
 }
@@ -166,7 +166,7 @@ impl GitDatabase {
         rev: GitRevision,
         dest: &Path,
         cargo_config: &Config,
-    ) -> CargoResult<GitCheckout> {
+    ) -> CargoResult<GitCheckout<'_>> {
         let mut checkout = None;
         if let Ok(repo) = git2::Repository::open(dest) {
             let mut co = GitCheckout::new(dest, self, rev.clone(), repo);
@@ -357,7 +357,7 @@ impl<'a> GitCheckout<'a> {
 
         fn update_submodule(
             parent: &git2::Repository,
-            child: &mut git2::Submodule,
+            child: &mut git2::Submodule<'_>,
             cargo_config: &Config,
         ) -> CargoResult<()> {
             child.init(false)?;
@@ -441,7 +441,7 @@ impl<'a> GitCheckout<'a> {
 /// attempted and we don't try the same ones again.
 fn with_authentication<T, F>(url: &str, cfg: &git2::Config, mut f: F) -> CargoResult<T>
 where
-    F: FnMut(&mut git2::Credentials) -> CargoResult<T>,
+    F: FnMut(&mut git2::Credentials<'_>) -> CargoResult<T>,
 {
     let mut cred_helper = git2::CredentialHelper::new(url);
     cred_helper.config(cfg);
@@ -622,7 +622,7 @@ where
     Ok(res)
 }
 
-fn reset(repo: &git2::Repository, obj: &git2::Object, config: &Config) -> CargoResult<()> {
+fn reset(repo: &git2::Repository, obj: &git2::Object<'_>, config: &Config) -> CargoResult<()> {
     let mut pb = Progress::new("Checkout", config);
     let mut opts = git2::build::CheckoutBuilder::new();
     opts.progress(|_, cur, max| {
@@ -636,7 +636,7 @@ pub fn with_fetch_options(
     git_config: &git2::Config,
     url: &Url,
     config: &Config,
-    cb: &mut FnMut(git2::FetchOptions) -> CargoResult<()>,
+    cb: &mut dyn FnMut(git2::FetchOptions<'_>) -> CargoResult<()>,
 ) -> CargoResult<()> {
     let mut progress = Progress::new("Fetch", config);
     network::with_retry(config, || {

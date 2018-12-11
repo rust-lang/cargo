@@ -23,7 +23,7 @@ pub struct CleanOptions<'a> {
 }
 
 /// Cleans the package's build artifacts.
-pub fn clean(ws: &Workspace, opts: &CleanOptions) -> CargoResult<()> {
+pub fn clean(ws: &Workspace<'_>, opts: &CleanOptions<'_>) -> CargoResult<()> {
     let mut target_dir = ws.target_dir();
     let config = ws.config();
 

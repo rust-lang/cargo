@@ -144,7 +144,7 @@ impl SourceId {
     }
 
     /// A view of the `SourceId` that can be `Display`ed as a URL
-    pub fn to_url(&self) -> SourceIdToUrl {
+    pub fn to_url(&self) -> SourceIdToUrl<'_> {
         SourceIdToUrl {
             inner: &*self.inner,
         }
@@ -257,7 +257,7 @@ impl SourceId {
     }
 
     /// Creates an implementation of `Source` corresponding to this ID.
-    pub fn load<'a>(self, config: &'a Config) -> CargoResult<Box<super::Source + 'a>> {
+    pub fn load<'a>(self, config: &'a Config) -> CargoResult<Box<dyn super::Source + 'a>> {
         trace!("loading SourceId; {}", self);
         match self.inner.kind {
             Kind::Git(..) => Ok(Box::new(GitSource::new(self, config)?)),
@@ -394,7 +394,7 @@ fn url_display(url: &Url) -> String {
 }
 
 impl fmt::Display for SourceId {
-    fn fmt(&self, f: &mut Formatter) -> fmt::Result {
+    fn fmt(&self, f: &mut Formatter<'_>) -> fmt::Result {
         match *self.inner {
             SourceIdInner {
                 kind: Kind::Path,
@@ -510,7 +510,7 @@ pub struct SourceIdToUrl<'a> {
 }
 
 impl<'a> fmt::Display for SourceIdToUrl<'a> {
-    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         match *self.inner {
             SourceIdInner {
                 kind: Kind::Path,
@@ -554,7 +554,7 @@ impl<'a> fmt::Display for SourceIdToUrl<'a> {
 impl GitReference {
     /// Returns a `Display`able view of this git reference, or None if using
     /// the head of the "master" branch
-    pub fn pretty_ref(&self) -> Option<PrettyRef> {
+    pub fn pretty_ref(&self) -> Option<PrettyRef<'_>> {
         match *self {
             GitReference::Branch(ref s) if *s == "master" => None,
             _ => Some(PrettyRef { inner: self }),
@@ -568,7 +568,7 @@ pub struct PrettyRef<'a> {
 }
 
 impl<'a> fmt::Display for PrettyRef<'a> {
-    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         match *self.inner {
             GitReference::Branch(ref b) => write!(f, "branch={}", b),
             GitReference::Tag(ref s) => write!(f, "tag={}", s),

@@ -36,7 +36,7 @@ pub struct FixOptions<'a> {
     pub broken_code: bool,
 }
 
-pub fn fix(ws: &Workspace, opts: &mut FixOptions) -> CargoResult<()> {
+pub fn fix(ws: &Workspace<'_>, opts: &mut FixOptions<'_>) -> CargoResult<()> {
     check_version_control(opts)?;
 
     // Spin up our lock server which our subprocesses will use to synchronize
@@ -87,7 +87,7 @@ pub fn fix(ws: &Workspace, opts: &mut FixOptions) -> CargoResult<()> {
     Ok(())
 }
 
-fn check_version_control(opts: &FixOptions) -> CargoResult<()> {
+fn check_version_control(opts: &FixOptions<'_>) -> CargoResult<()> {
     if opts.allow_no_vcs {
         return Ok(());
     }

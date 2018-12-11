@@ -21,7 +21,7 @@ pub struct OutputMetadataOptions {
 /// Loads the manifest, resolves the dependencies of the package to the concrete
 /// used versions - considering overrides - and writes all dependencies in a JSON
 /// format to stdout.
-pub fn output_metadata(ws: &Workspace, opt: &OutputMetadataOptions) -> CargoResult<ExportInfo> {
+pub fn output_metadata(ws: &Workspace<'_>, opt: &OutputMetadataOptions) -> CargoResult<ExportInfo> {
     if opt.version != VERSION {
         bail!(
             "metadata version {} not supported, only {} is currently supported",
@@ -36,7 +36,7 @@ pub fn output_metadata(ws: &Workspace, opt: &OutputMetadataOptions) -> CargoResu
     }
 }
 
-fn metadata_no_deps(ws: &Workspace, _opt: &OutputMetadataOptions) -> CargoResult<ExportInfo> {
+fn metadata_no_deps(ws: &Workspace<'_>, _opt: &OutputMetadataOptions) -> CargoResult<ExportInfo> {
     Ok(ExportInfo {
         packages: ws.members().cloned().collect(),
         workspace_members: ws.members().map(|pkg| pkg.package_id()).collect(),
@@ -47,7 +47,7 @@ fn metadata_no_deps(ws: &Workspace, _opt: &OutputMetadataOptions) -> CargoResult
     })
 }
 
-fn metadata_full(ws: &Workspace, opt: &OutputMetadataOptions) -> CargoResult<ExportInfo> {
+fn metadata_full(ws: &Workspace<'_>, opt: &OutputMetadataOptions) -> CargoResult<ExportInfo> {
     let specs = Packages::All.to_package_id_specs(ws)?;
     let (package_set, resolve) = ops::resolve_ws_precisely(
         ws,

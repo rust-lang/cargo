@@ -13,8 +13,8 @@ pub struct TestOptions<'a> {
 }
 
 pub fn run_tests(
-    ws: &Workspace,
-    options: &TestOptions,
+    ws: &Workspace<'_>,
+    options: &TestOptions<'_>,
     test_args: &[String],
 ) -> CargoResult<Option<CargoTestError>> {
     let compilation = compile_tests(ws, options)?;
@@ -40,8 +40,8 @@ pub fn run_tests(
 }
 
 pub fn run_benches(
-    ws: &Workspace,
-    options: &TestOptions,
+    ws: &Workspace<'_>,
+    options: &TestOptions<'_>,
     args: &[String],
 ) -> CargoResult<Option<CargoTestError>> {
     let mut args = args.to_vec();
@@ -71,9 +71,9 @@ fn compile_tests<'a>(
 
 /// Run the unit and integration tests of a package.
 fn run_unit_tests(
-    options: &TestOptions,
+    options: &TestOptions<'_>,
     test_args: &[String],
-    compilation: &Compilation,
+    compilation: &Compilation<'_>,
 ) -> CargoResult<(Test, Vec<ProcessError>)> {
     let config = options.compile_opts.config;
     let cwd = options.compile_opts.config.cwd();
@@ -127,9 +127,9 @@ fn run_unit_tests(
 }
 
 fn run_doc_tests(
-    options: &TestOptions,
+    options: &TestOptions<'_>,
     test_args: &[String],
-    compilation: &Compilation,
+    compilation: &Compilation<'_>,
 ) -> CargoResult<(Test, Vec<ProcessError>)> {
     let mut errors = Vec::new();
     let config = options.compile_opts.config;

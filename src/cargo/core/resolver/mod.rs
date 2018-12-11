@@ -108,9 +108,9 @@ mod types;
 /// * `print_warnings` - whether or not to print backwards-compatibility
 ///   warnings and such
 pub fn resolve(
-    summaries: &[(Summary, Method)],
+    summaries: &[(Summary, Method<'_>)],
     replacements: &[(PackageIdSpec, Dependency)],
-    registry: &mut Registry,
+    registry: &mut dyn Registry,
     try_to_use: &HashSet<PackageId>,
     config: Option<&Config>,
     print_warnings: bool,
@@ -167,8 +167,8 @@ pub fn resolve(
 /// dependency graph, cx.resolve is returned.
 fn activate_deps_loop(
     mut cx: Context,
-    registry: &mut RegistryQueryer,
-    summaries: &[(Summary, Method)],
+    registry: &mut RegistryQueryer<'_>,
+    summaries: &[(Summary, Method<'_>)],
     config: Option<&Config>,
 ) -> CargoResult<Context> {
     let mut backtrack_stack = Vec::new();
@@ -580,10 +580,10 @@ fn activate_deps_loop(
 /// iterate through next.
 fn activate(
     cx: &mut Context,
-    registry: &mut RegistryQueryer,
+    registry: &mut RegistryQueryer<'_>,
     parent: Option<(&Summary, &Dependency)>,
     candidate: Candidate,
-    method: &Method,
+    method: &Method<'_>,
 ) -> ActivateResult<Option<(DepsFrame, Duration)>> {
     if let Some((parent, dep)) = parent {
         cx.resolve_graph.push(GraphNode::Link(
