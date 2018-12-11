@@ -4,6 +4,8 @@ use std::ops::Range;
 use std::rc::Rc;
 use std::time::{Duration, Instant};
 
+use log::debug;
+
 use crate::core::interning::InternedString;
 use crate::core::{Dependency, PackageId, PackageIdSpec, Registry, Summary};
 use crate::util::errors::CargoResult;
@@ -74,7 +76,7 @@ impl ResolverProgress {
 }
 
 pub struct RegistryQueryer<'a> {
-    pub registry: &'a mut (Registry + 'a),
+    pub registry: &'a mut (dyn Registry + 'a),
     replacements: &'a [(PackageIdSpec, Dependency)],
     try_to_use: &'a HashSet<PackageId>,
     cache: HashMap<Dependency, Rc<Vec<Candidate>>>,
@@ -86,7 +88,7 @@ pub struct RegistryQueryer<'a> {
 
 impl<'a> RegistryQueryer<'a> {
     pub fn new(
-        registry: &'a mut Registry,
+        registry: &'a mut dyn Registry,
         replacements: &'a [(PackageIdSpec, Dependency)],
         try_to_use: &'a HashSet<PackageId>,
         minimal_versions: bool,

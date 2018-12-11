@@ -276,7 +276,7 @@ unable to verify that `{0}` is the same as when the lockfile was generated
 }
 
 impl fmt::Debug for Resolve {
-    fn fmt(&self, fmt: &mut fmt::Formatter) -> fmt::Result {
+    fn fmt(&self, fmt: &mut fmt::Formatter<'_>) -> fmt::Result {
         writeln!(fmt, "graph: {:?}", self.graph)?;
         writeln!(fmt, "\nfeatures: {{")?;
         for (pkg, features) in &self.features {

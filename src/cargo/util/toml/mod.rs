@@ -5,11 +5,11 @@ use std::path::{Path, PathBuf};
 use std::rc::Rc;
 use std::str;
 
+use log::{debug, trace};
 use semver::{self, VersionReq};
-use serde::de::{self, Deserialize};
+use serde::de;
 use serde::ser;
-use serde_ignored;
-use toml;
+use serde::{Deserialize, Serialize};
 use url::Url;
 
 use crate::core::dependency::{Kind, Platform};
@@ -92,7 +92,7 @@ fn do_read_manifest(
         Ok((EitherManifest::Virtual(m), paths))
     };
 
-    fn stringify(dst: &mut String, path: &serde_ignored::Path) {
+    fn stringify(dst: &mut String, path: &serde_ignored::Path<'_>) {
         use serde_ignored::Path;
 
         match *path {
@@ -152,7 +152,7 @@ type TomlExampleTarget = TomlTarget;
 type TomlTestTarget = TomlTarget;
 type TomlBenchTarget = TomlTarget;
 
-#[derive(Debug, Serialize)]
+#[derive(Serialize, Debug)]
 #[serde(untagged)]
 pub enum TomlDependency {
     Simple(String),
@@ -169,7 +169,7 @@ impl<'de> de::Deserialize<'de> for TomlDependency {
         impl<'de> de::Visitor<'de> for TomlDependencyVisitor {
             type Value = TomlDependency;
 
-            fn expecting(&self, formatter: &mut fmt::Formatter) -> fmt::Result {
+            fn expecting(&self, formatter: &mut fmt::Formatter<'_>) -> fmt::Result {
                 formatter.write_str(
                     "a version string like \"0.9.8\" or a \
                      detailed dependency like { version = \"0.9.8\" }",
@@ -285,7 +285,7 @@ impl<'de> de::Deserialize<'de> for TomlOptLevel {
         impl<'de> de::Visitor<'de> for Visitor {
             type Value = TomlOptLevel;
 
-            fn expecting(&self, formatter: &mut fmt::Formatter) -> fmt::Result {
+            fn expecting(&self, formatter: &mut fmt::Formatter<'_>) -> fmt::Result {
                 formatter.write_str("an optimization level")
             }
 
@@ -345,7 +345,7 @@ impl<'de> de::Deserialize<'de> for U32OrBool {
         impl<'de> de::Visitor<'de> for Visitor {
             type Value = U32OrBool;
 
-            fn expecting(&self, formatter: &mut fmt::Formatter) -> fmt::Result {
+            fn expecting(&self, formatter: &mut fmt::Formatter<'_>) -> fmt::Result {
                 formatter.write_str("a boolean or an integer")
             }
 
@@ -500,7 +500,7 @@ impl<'de> de::Deserialize<'de> for StringOrVec {
         impl<'de> de::Visitor<'de> for Visitor {
             type Value = StringOrVec;
 
-            fn expecting(&self, formatter: &mut fmt::Formatter) -> fmt::Result {
+            fn expecting(&self, formatter: &mut fmt::Formatter<'_>) -> fmt::Result {
                 formatter.write_str("string or list of strings")
             }
 
@@ -541,7 +541,7 @@ impl<'de> de::Deserialize<'de> for StringOrBool {
         impl<'de> de::Visitor<'de> for Visitor {
             type Value = StringOrBool;
 
-            fn expecting(&self, formatter: &mut fmt::Formatter) -> fmt::Result {
+            fn expecting(&self, formatter: &mut fmt::Formatter<'_>) -> fmt::Result {
                 formatter.write_str("a boolean or a string")
             }
 
@@ -581,7 +581,7 @@ impl<'de> de::Deserialize<'de> for VecStringOrBool {
         impl<'de> de::Visitor<'de> for Visitor {
             type Value = VecStringOrBool;
 
-            fn expecting(&self, formatter: &mut fmt::Formatter) -> fmt::Result {
+            fn expecting(&self, formatter: &mut fmt::Formatter<'_>) -> fmt::Result {
                 formatter.write_str("a boolean or vector of strings")
             }
 
@@ -885,7 +885,7 @@ impl TomlManifest {
             };
 
             fn process_dependencies(
-                cx: &mut Context,
+                cx: &mut Context<'_, '_>,
                 new_deps: Option<&BTreeMap<String, TomlDependency>>,
                 kind: Option<Kind>,
             ) -> CargoResult<()> {
@@ -1155,7 +1155,7 @@ impl TomlManifest {
         ))
     }
 
-    fn replace(&self, cx: &mut Context) -> CargoResult<Vec<(PackageIdSpec, Dependency)>> {
+    fn replace(&self, cx: &mut Context<'_, '_>) -> CargoResult<Vec<(PackageIdSpec, Dependency)>> {
         if self.patch.is_some() && self.replace.is_some() {
             bail!("cannot specify both [replace] and [patch]");
         }
@@ -1200,7 +1200,7 @@ impl TomlManifest {
         Ok(replace)
     }
 
-    fn patch(&self, cx: &mut Context) -> CargoResult<HashMap<Url, Vec<Dependency>>> {
+    fn patch(&self, cx: &mut Context<'_, '_>) -> CargoResult<HashMap<Url, Vec<Dependency>>> {
         let mut patch = HashMap::new();
         for (url, deps) in self.patch.iter().flat_map(|x| x) {
             let url = match &url[..] {
@@ -1262,7 +1262,7 @@ impl TomlDependency {
     fn to_dependency(
         &self,
         name: &str,
-        cx: &mut Context,
+        cx: &mut Context<'_, '_>,
         kind: Option<Kind>,
     ) -> CargoResult<Dependency> {
         match *self {
@@ -1280,7 +1280,7 @@ impl DetailedTomlDependency {
     fn to_dependency(
         &self,
         name_in_toml: &str,
-        cx: &mut Context,
+        cx: &mut Context<'_, '_>,
         kind: Option<Kind>,
     ) -> CargoResult<Dependency> {
         if self.version.is_none() && self.path.is_none() && self.git.is_none() {
@@ -1522,7 +1522,7 @@ impl TomlTarget {
 }
 
 impl fmt::Debug for PathValue {
-    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         self.0.fmt(f)
     }
 }

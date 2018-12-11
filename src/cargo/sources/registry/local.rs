@@ -40,7 +40,7 @@ impl<'cfg> RegistryData for LocalRegistry<'cfg> {
         &self,
         root: &Path,
         path: &Path,
-        data: &mut FnMut(&[u8]) -> CargoResult<()>,
+        data: &mut dyn FnMut(&[u8]) -> CargoResult<()>,
     ) -> CargoResult<()> {
         data(&paths::read_bytes(&root.join(path))?)
     }

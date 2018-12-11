@@ -164,9 +164,9 @@ use std::fs::File;
 use std::path::{Path, PathBuf};
 
 use flate2::read::GzDecoder;
+use log::debug;
 use semver::Version;
-#[cfg(test)]
-use serde_json;
+use serde::Deserialize;
 use tar::Archive;
 
 use crate::core::dependency::{Dependency, Kind};
@@ -189,7 +189,7 @@ pub struct RegistrySource<'cfg> {
     src_path: Filesystem,
     config: &'cfg Config,
     updated: bool,
-    ops: Box<RegistryData + 'cfg>,
+    ops: Box<dyn RegistryData + 'cfg>,
     index: index::RegistryIndex<'cfg>,
     index_locked: bool,
 }
@@ -227,17 +227,17 @@ pub struct RegistryPackage<'a> {
 
 #[test]
 fn escaped_cher_in_json() {
-    let _: RegistryPackage = serde_json::from_str(
+    let _: RegistryPackage<'_> = serde_json::from_str(
         r#"{"name":"a","vers":"0.0.1","deps":[],"cksum":"bae3","features":{}}"#,
     )
     .unwrap();
-    let _: RegistryPackage = serde_json::from_str(
+    let _: RegistryPackage<'_> = serde_json::from_str(
         r#"{"name":"a","vers":"0.0.1","deps":[],"cksum":"bae3","features":{"test":["k","q"]},"links":"a-sys"}"#
     ).unwrap();
 
     // Now we add escaped cher all the places they can go
     // these are not valid, but it should error later than json parsing
-    let _: RegistryPackage = serde_json::from_str(
+    let _: RegistryPackage<'_> = serde_json::from_str(
         r#"{
         "name":"This name has a escaped cher in it \n\t\" ",
         "vers":"0.0.1",
@@ -344,7 +344,7 @@ pub trait RegistryData {
         &self,
         _root: &Path,
         path: &Path,
-        data: &mut FnMut(&[u8]) -> CargoResult<()>,
+        data: &mut dyn FnMut(&[u8]) -> CargoResult<()>,
     ) -> CargoResult<()>;
     fn config(&mut self) -> CargoResult<Option<RegistryConfig>>;
     fn update_index(&mut self) -> CargoResult<()>;
@@ -393,7 +393,7 @@ impl<'cfg> RegistrySource<'cfg> {
         source_id: SourceId,
         config: &'cfg Config,
         name: &str,
-        ops: Box<RegistryData + 'cfg>,
+        ops: Box<dyn RegistryData + 'cfg>,
         index_locked: bool,
     ) -> RegistrySource<'cfg> {
         RegistrySource {
@@ -505,7 +505,7 @@ impl<'cfg> RegistrySource<'cfg> {
 }
 
 impl<'cfg> Source for RegistrySource<'cfg> {
-    fn query(&mut self, dep: &Dependency, f: &mut FnMut(Summary)) -> CargoResult<()> {
+    fn query(&mut self, dep: &Dependency, f: &mut dyn FnMut(Summary)) -> CargoResult<()> {
         // If this is a precise dependency, then it came from a lockfile and in
         // theory the registry is known to contain this version. If, however, we
         // come back with no summaries, then our registry may need to be
@@ -534,7 +534,7 @@ impl<'cfg> Source for RegistrySource<'cfg> {
         })
     }
 
-    fn fuzzy_query(&mut self, dep: &Dependency, f: &mut FnMut(Summary)) -> CargoResult<()> {
+    fn fuzzy_query(&mut self, dep: &Dependency, f: &mut dyn FnMut(Summary)) -> CargoResult<()> {
         self.index.query_inner(dep, &mut *self.ops, f)
     }
 

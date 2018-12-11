@@ -3,10 +3,10 @@ use std::fs;
 use std::path::{Path, PathBuf};
 
 use filetime::FileTime;
-use git2;
 use glob::Pattern;
 use ignore::gitignore::GitignoreBuilder;
 use ignore::Match;
+use log::{trace, warn};
 
 use crate::core::source::MaybePackage;
 use crate::core::{Dependency, Package, PackageId, Source, SourceId, Summary};
@@ -257,7 +257,7 @@ impl<'cfg> PathSource<'cfg> {
         &self,
         pkg: &Package,
         root: &Path,
-        filter: &mut FnMut(&Path) -> CargoResult<bool>,
+        filter: &mut dyn FnMut(&Path) -> CargoResult<bool>,
     ) -> Option<CargoResult<Vec<PathBuf>>> {
         // If this package is in a git repository, then we really do want to
         // query the git repository as it takes into account items such as
@@ -300,7 +300,7 @@ impl<'cfg> PathSource<'cfg> {
         &self,
         pkg: &Package,
         repo: &git2::Repository,
-        filter: &mut FnMut(&Path) -> CargoResult<bool>,
+        filter: &mut dyn FnMut(&Path) -> CargoResult<bool>,
     ) -> CargoResult<Vec<PathBuf>> {
         warn!("list_files_git {}", pkg.package_id());
         let index = repo.index()?;
@@ -422,7 +422,7 @@ impl<'cfg> PathSource<'cfg> {
     fn list_files_walk(
         &self,
         pkg: &Package,
-        filter: &mut FnMut(&Path) -> CargoResult<bool>,
+        filter: &mut dyn FnMut(&Path) -> CargoResult<bool>,
     ) -> CargoResult<Vec<PathBuf>> {
         let mut ret = Vec::new();
         PathSource::walk(pkg.root(), &mut ret, true, filter)?;
@@ -433,7 +433,7 @@ impl<'cfg> PathSource<'cfg> {
         path: &Path,
         ret: &mut Vec<PathBuf>,
         is_root: bool,
-        filter: &mut FnMut(&Path) -> CargoResult<bool>,
+        filter: &mut dyn FnMut(&Path) -> CargoResult<bool>,
     ) -> CargoResult<()> {
         if !fs::metadata(&path).map(|m| m.is_dir()).unwrap_or(false) {
             if (*filter)(path)? {
@@ -501,13 +501,13 @@ impl<'cfg> PathSource<'cfg> {
 }
 
 impl<'cfg> Debug for PathSource<'cfg> {
-    fn fmt(&self, f: &mut Formatter) -> fmt::Result {
+    fn fmt(&self, f: &mut Formatter<'_>) -> fmt::Result {
         write!(f, "the paths source")
     }
 }
 
 impl<'cfg> Source for PathSource<'cfg> {
-    fn query(&mut self, dep: &Dependency, f: &mut FnMut(Summary)) -> CargoResult<()> {
+    fn query(&mut self, dep: &Dependency, f: &mut dyn FnMut(Summary)) -> CargoResult<()> {
         for s in self.packages.iter().map(|p| p.summary()) {
             if dep.matches(s) {
                 f(s.clone())
@@ -516,7 +516,7 @@ impl<'cfg> Source for PathSource<'cfg> {
         Ok(())
     }
 
-    fn fuzzy_query(&mut self, _dep: &Dependency, f: &mut FnMut(Summary)) -> CargoResult<()> {
+    fn fuzzy_query(&mut self, _dep: &Dependency, f: &mut dyn FnMut(Summary)) -> CargoResult<()> {
         for s in self.packages.iter().map(|p| p.summary()) {
             f(s.clone())
         }

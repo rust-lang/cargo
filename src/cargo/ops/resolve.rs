@@ -1,5 +1,7 @@
 use std::collections::HashSet;
 
+use log::{debug, trace};
+
 use crate::core::registry::PackageRegistry;
 use crate::core::resolver::{self, Method, Resolve};
 use crate::core::{PackageId, PackageIdSpec, PackageSet, Source, SourceId, Workspace};
@@ -24,7 +26,7 @@ pub fn resolve_ws<'a>(ws: &Workspace<'a>) -> CargoResult<(PackageSet<'a>, Resolv
 /// taking into account `paths` overrides and activated features.
 pub fn resolve_ws_precisely<'a>(
     ws: &Workspace<'a>,
-    source: Option<Box<Source + 'a>>,
+    source: Option<Box<dyn Source + 'a>>,
     features: &[String],
     all_features: bool,
     no_default_features: bool,
@@ -46,8 +48,8 @@ pub fn resolve_ws_precisely<'a>(
 
 pub fn resolve_ws_with_method<'a>(
     ws: &Workspace<'a>,
-    source: Option<Box<Source + 'a>>,
-    method: Method,
+    source: Option<Box<dyn Source + 'a>>,
+    method: Method<'_>,
     specs: &[PackageIdSpec],
 ) -> CargoResult<(PackageSet<'a>, Resolve)> {
     let mut registry = PackageRegistry::new(ws.config())?;
@@ -136,7 +138,7 @@ fn resolve_with_registry<'cfg>(
 pub fn resolve_with_previous<'cfg>(
     registry: &mut PackageRegistry<'cfg>,
     ws: &Workspace<'cfg>,
-    method: Method,
+    method: Method<'_>,
     previous: Option<&Resolve>,
     to_avoid: Option<&HashSet<PackageId>>,
     specs: &[PackageIdSpec],
@@ -397,10 +399,10 @@ pub fn get_resolved_packages<'a>(
 /// Note that this function, at the time of this writing, is basically the
 /// entire fix for #4127
 fn register_previous_locks(
-    ws: &Workspace,
-    registry: &mut PackageRegistry,
+    ws: &Workspace<'_>,
+    registry: &mut PackageRegistry<'_>,
     resolve: &Resolve,
-    keep: &Fn(&PackageId) -> bool,
+    keep: &dyn Fn(&PackageId) -> bool,
 ) {
     let path_pkg = |id: SourceId| {
         if !id.is_path() {

@@ -12,7 +12,7 @@ mod imp {
     pub fn read2(
         mut out_pipe: ChildStdout,
         mut err_pipe: ChildStderr,
-        data: &mut FnMut(bool, &mut Vec<u8>, bool),
+        data: &mut dyn FnMut(bool, &mut Vec<u8>, bool),
     ) -> io::Result<()> {
         unsafe {
             libc::fcntl(out_pipe.as_raw_fd(), libc::F_SETFL, libc::O_NONBLOCK);
@@ -77,18 +77,15 @@ mod imp {
 
 #[cfg(windows)]
 mod imp {
-    extern crate miow;
-    extern crate winapi;
-
     use std::io;
     use std::os::windows::prelude::*;
     use std::process::{ChildStderr, ChildStdout};
     use std::slice;
 
-    use self::miow::iocp::{CompletionPort, CompletionStatus};
-    use self::miow::pipe::NamedPipe;
-    use self::miow::Overlapped;
-    use self::winapi::shared::winerror::ERROR_BROKEN_PIPE;
+    use miow::iocp::{CompletionPort, CompletionStatus};
+    use miow::pipe::NamedPipe;
+    use miow::Overlapped;
+    use winapi::shared::winerror::ERROR_BROKEN_PIPE;
 
     struct Pipe<'a> {
         dst: &'a mut Vec<u8>,
@@ -100,7 +97,7 @@ mod imp {
     pub fn read2(
         out_pipe: ChildStdout,
         err_pipe: ChildStderr,
-        data: &mut FnMut(bool, &mut Vec<u8>, bool),
+        data: &mut dyn FnMut(bool, &mut Vec<u8>, bool),
     ) -> io::Result<()> {
         let mut out = Vec::new();
         let mut err = Vec::new();

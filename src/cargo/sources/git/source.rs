@@ -1,5 +1,6 @@
 use std::fmt::{self, Debug, Formatter};
 
+use log::trace;
 use url::Url;
 
 use crate::core::source::{MaybePackage, Source, SourceId};
@@ -113,7 +114,7 @@ pub fn canonicalize_url(url: &Url) -> CargoResult<Url> {
 }
 
 impl<'cfg> Debug for GitSource<'cfg> {
-    fn fmt(&self, f: &mut Formatter) -> fmt::Result {
+    fn fmt(&self, f: &mut Formatter<'_>) -> fmt::Result {
         write!(f, "git repo at {}", self.remote.url())?;
 
         match self.reference.pretty_ref() {
@@ -124,7 +125,7 @@ impl<'cfg> Debug for GitSource<'cfg> {
 }
 
 impl<'cfg> Source for GitSource<'cfg> {
-    fn query(&mut self, dep: &Dependency, f: &mut FnMut(Summary)) -> CargoResult<()> {
+    fn query(&mut self, dep: &Dependency, f: &mut dyn FnMut(Summary)) -> CargoResult<()> {
         let src = self
             .path_source
             .as_mut()
@@ -132,7 +133,7 @@ impl<'cfg> Source for GitSource<'cfg> {
         src.query(dep, f)
     }
 
-    fn fuzzy_query(&mut self, dep: &Dependency, f: &mut FnMut(Summary)) -> CargoResult<()> {
+    fn fuzzy_query(&mut self, dep: &Dependency, f: &mut dyn FnMut(Summary)) -> CargoResult<()> {
         let src = self
             .path_source
             .as_mut()
