@@ -160,7 +160,7 @@ impl<'a, 'cfg> BuildContext<'a, 'cfg> {
         self.build_config.jobs
     }
 
-    pub fn rustflags_args(&self, unit: &Unit) -> CargoResult<Vec<String>> {
+    pub fn rustflags_args(&self, unit: &Unit<'_>) -> CargoResult<Vec<String>> {
         env_args(
             self.config,
             &self.build_config.requested_target,
@@ -171,7 +171,7 @@ impl<'a, 'cfg> BuildContext<'a, 'cfg> {
         )
     }
 
-    pub fn rustdocflags_args(&self, unit: &Unit) -> CargoResult<Vec<String>> {
+    pub fn rustdocflags_args(&self, unit: &Unit<'_>) -> CargoResult<Vec<String>> {
         env_args(
             self.config,
             &self.build_config.requested_target,

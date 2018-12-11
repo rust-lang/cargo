@@ -51,7 +51,7 @@ impl FromStr for Cfg {
 }
 
 impl fmt::Display for Cfg {
-    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         match *self {
             Cfg::Name(ref s) => s.fmt(f),
             Cfg::KeyPair(ref k, ref v) => write!(f, "{} = \"{}\"", k, v),
@@ -101,7 +101,7 @@ impl FromStr for CfgExpr {
 }
 
 impl fmt::Display for CfgExpr {
-    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         match *self {
             CfgExpr::Not(ref e) => write!(f, "not({})", e),
             CfgExpr::All(ref e) => write!(f, "all({})", CommaSep(e)),
@@ -111,10 +111,10 @@ impl fmt::Display for CfgExpr {
     }
 }
 
-struct CommaSep<'a, T: 'a>(&'a [T]);
+struct CommaSep<'a, T>(&'a [T]);
 
 impl<'a, T: fmt::Display> fmt::Display for CommaSep<'a, T> {
-    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         for (i, v) in self.0.iter().enumerate() {
             if i > 0 {
                 write!(f, ", ")?;

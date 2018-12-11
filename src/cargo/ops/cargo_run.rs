@@ -6,8 +6,8 @@ use crate::ops;
 use crate::util::{self, CargoResult, ProcessError};
 
 pub fn run(
-    ws: &Workspace,
-    options: &ops::CompileOptions,
+    ws: &Workspace<'_>,
+    options: &ops::CompileOptions<'_>,
     args: &[String],
 ) -> CargoResult<Option<ProcessError>> {
     let config = ws.config();

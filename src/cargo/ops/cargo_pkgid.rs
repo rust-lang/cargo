@@ -2,7 +2,7 @@ use crate::core::{PackageIdSpec, Workspace};
 use crate::ops;
 use crate::util::CargoResult;
 
-pub fn pkgid(ws: &Workspace, spec: Option<&str>) -> CargoResult<PackageIdSpec> {
+pub fn pkgid(ws: &Workspace<'_>, spec: Option<&str>) -> CargoResult<PackageIdSpec> {
     let resolve = match ops::load_pkg_lockfile(ws)? {
         Some(resolve) => resolve,
         None => bail!("a Cargo.lock must exist for this command"),

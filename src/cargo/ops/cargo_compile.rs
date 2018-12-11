@@ -109,7 +109,7 @@ impl Packages {
         })
     }
 
-    pub fn to_package_id_specs(&self, ws: &Workspace) -> CargoResult<Vec<PackageIdSpec>> {
+    pub fn to_package_id_specs(&self, ws: &Workspace<'_>) -> CargoResult<Vec<PackageIdSpec>> {
         let specs = match *self {
             Packages::All => ws
                 .members()
@@ -148,7 +148,7 @@ impl Packages {
         Ok(specs)
     }
 
-    pub fn get_packages<'ws>(&self, ws: &'ws Workspace) -> CargoResult<Vec<&'ws Package>> {
+    pub fn get_packages<'ws>(&self, ws: &'ws Workspace<'_>) -> CargoResult<Vec<&'ws Package>> {
         let packages: Vec<_> = match self {
             Packages::Default => ws.default_members().collect(),
             Packages::All => ws.members().collect(),
@@ -197,7 +197,7 @@ pub fn compile<'a>(
     ws: &Workspace<'a>,
     options: &CompileOptions<'a>,
 ) -> CargoResult<Compilation<'a>> {
-    let exec: Arc<Executor> = Arc::new(DefaultExecutor);
+    let exec: Arc<dyn Executor> = Arc::new(DefaultExecutor);
     compile_with_exec(ws, options, &exec)
 }
 
@@ -206,7 +206,7 @@ pub fn compile<'a>(
 pub fn compile_with_exec<'a>(
     ws: &Workspace<'a>,
     options: &CompileOptions<'a>,
-    exec: &Arc<Executor>,
+    exec: &Arc<dyn Executor>,
 ) -> CargoResult<Compilation<'a>> {
     ws.emit_warnings()?;
     compile_ws(ws, None, options, exec)
@@ -214,9 +214,9 @@ pub fn compile_with_exec<'a>(
 
 pub fn compile_ws<'a>(
     ws: &Workspace<'a>,
-    source: Option<Box<Source + 'a>>,
+    source: Option<Box<dyn Source + 'a>>,
     options: &CompileOptions<'a>,
-    exec: &Arc<Executor>,
+    exec: &Arc<dyn Executor>,
 ) -> CargoResult<Compilation<'a>> {
     let CompileOptions {
         config,
@@ -489,7 +489,7 @@ struct Proposal<'a> {
 /// compile. Dependencies for these targets are computed later in
 /// `unit_dependencies`.
 fn generate_targets<'a>(
-    ws: &Workspace,
+    ws: &Workspace<'_>,
     profiles: &Profiles,
     packages: &[&'a Package],
     filter: &CompileFilter,
@@ -576,7 +576,7 @@ fn generate_targets<'a>(
     };
 
     // Create a list of proposed targets.
-    let mut proposals: Vec<Proposal> = Vec::new();
+    let mut proposals: Vec<Proposal<'_>> = Vec::new();
 
     match *filter {
         CompileFilter::Default {

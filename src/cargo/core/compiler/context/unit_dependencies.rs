@@ -330,7 +330,7 @@ fn compute_deps_doc<'a, 'cfg, 'tmp>(
 
 fn maybe_lib<'a>(
     unit: &Unit<'a>,
-    bcx: &BuildContext,
+    bcx: &BuildContext<'_, '_>,
     unit_for: UnitFor,
 ) -> Option<(Unit<'a>, UnitFor)> {
     unit.pkg.targets().iter().find(|t| t.linkable()).map(|t| {
@@ -347,7 +347,7 @@ fn maybe_lib<'a>(
 /// script itself doesn't have any dependencies, so even in that case a unit
 /// of work is still returned. `None` is only returned if the package has no
 /// build script.
-fn dep_build_script<'a>(unit: &Unit<'a>, bcx: &BuildContext) -> Option<(Unit<'a>, UnitFor)> {
+fn dep_build_script<'a>(unit: &Unit<'a>, bcx: &BuildContext<'_, '_>) -> Option<(Unit<'a>, UnitFor)> {
     unit.pkg
         .targets()
         .iter()
@@ -387,7 +387,7 @@ fn check_or_build_mode(mode: CompileMode, target: &Target) -> CompileMode {
 }
 
 fn new_unit<'a>(
-    bcx: &BuildContext,
+    bcx: &BuildContext<'_, '_>,
     pkg: &'a Package,
     target: &'a Target,
     unit_for: UnitFor,
@@ -420,7 +420,7 @@ fn new_unit<'a>(
 ///
 /// Here we take the entire `deps` map and add more dependencies from execution
 /// of one build script to execution of another build script.
-fn connect_run_custom_build_deps(state: &mut State) {
+fn connect_run_custom_build_deps(state: &mut State<'_, '_, '_>) {
     let mut new_deps = Vec::new();
 
     {

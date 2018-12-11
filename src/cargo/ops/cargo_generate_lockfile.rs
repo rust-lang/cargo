@@ -18,7 +18,7 @@ pub struct UpdateOptions<'a> {
     pub aggressive: bool,
 }
 
-pub fn generate_lockfile(ws: &Workspace) -> CargoResult<()> {
+pub fn generate_lockfile(ws: &Workspace<'_>) -> CargoResult<()> {
     let mut registry = PackageRegistry::new(ws.config())?;
     let resolve = ops::resolve_with_previous(
         &mut registry,
@@ -34,7 +34,7 @@ pub fn generate_lockfile(ws: &Workspace) -> CargoResult<()> {
     Ok(())
 }
 
-pub fn update_lockfile(ws: &Workspace, opts: &UpdateOptions) -> CargoResult<()> {
+pub fn update_lockfile(ws: &Workspace<'_>, opts: &UpdateOptions<'_>) -> CargoResult<()> {
     if opts.aggressive && opts.precise.is_some() {
         bail!("cannot specify both aggressive and precise simultaneously")
     }

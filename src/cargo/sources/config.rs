@@ -73,7 +73,7 @@ impl<'cfg> SourceConfigMap<'cfg> {
         self.config
     }
 
-    pub fn load(&self, id: SourceId) -> CargoResult<Box<Source + 'cfg>> {
+    pub fn load(&self, id: SourceId) -> CargoResult<Box<dyn Source + 'cfg>> {
         debug!("loading: {}", id);
         let mut name = match self.id2name.get(&id) {
             Some(name) => name,

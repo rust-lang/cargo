@@ -5,14 +5,14 @@ use crate::util::errors::{CargoResult, CargoResultExt};
 pub struct ReplacedSource<'cfg> {
     to_replace: SourceId,
     replace_with: SourceId,
-    inner: Box<Source + 'cfg>,
+    inner: Box<dyn Source + 'cfg>,
 }
 
 impl<'cfg> ReplacedSource<'cfg> {
     pub fn new(
         to_replace: SourceId,
         replace_with: SourceId,
-        src: Box<Source + 'cfg>,
+        src: Box<dyn Source + 'cfg>,
     ) -> ReplacedSource<'cfg> {
         ReplacedSource {
             to_replace,
@@ -39,7 +39,7 @@ impl<'cfg> Source for ReplacedSource<'cfg> {
         self.inner.requires_precise()
     }
 
-    fn query(&mut self, dep: &Dependency, f: &mut FnMut(Summary)) -> CargoResult<()> {
+    fn query(&mut self, dep: &Dependency, f: &mut dyn FnMut(Summary)) -> CargoResult<()> {
         let (replace_with, to_replace) = (self.replace_with, self.to_replace);
         let dep = dep.clone().map_source(to_replace, replace_with);
 
@@ -51,7 +51,7 @@ impl<'cfg> Source for ReplacedSource<'cfg> {
         Ok(())
     }
 
-    fn fuzzy_query(&mut self, dep: &Dependency, f: &mut FnMut(Summary)) -> CargoResult<()> {
+    fn fuzzy_query(&mut self, dep: &Dependency, f: &mut dyn FnMut(Summary)) -> CargoResult<()> {
         let (replace_with, to_replace) = (self.replace_with, self.to_replace);
         let dep = dep.clone().map_source(to_replace, replace_with);
 

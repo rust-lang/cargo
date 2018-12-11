@@ -122,7 +122,7 @@ impl LibKind {
 }
 
 impl fmt::Debug for LibKind {
-    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         self.crate_type().fmt(f)
     }
 }
@@ -168,7 +168,7 @@ impl ser::Serialize for TargetKind {
 }
 
 impl fmt::Debug for TargetKind {
-    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         use self::TargetKind::*;
         match *self {
             Lib(ref kinds) => kinds.fmt(f),
@@ -244,7 +244,7 @@ impl Hash for TargetSourcePath {
 }
 
 impl fmt::Debug for TargetSourcePath {
-    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         match self {
             TargetSourcePath::Path(path) => path.fmt(f),
             TargetSourcePath::Metabuild => "metabuild".fmt(f),
@@ -869,7 +869,7 @@ impl Target {
 }
 
 impl fmt::Display for Target {
-    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         match self.kind {
             TargetKind::Lib(..) => write!(f, "Target(lib)"),
             TargetKind::Bin => write!(f, "Target(bin: {})", self.name),

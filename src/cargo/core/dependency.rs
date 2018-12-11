@@ -466,7 +466,7 @@ impl FromStr for Platform {
 }
 
 impl fmt::Display for Platform {
-    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         match *self {
             Platform::Name(ref n) => n.fmt(f),
             Platform::Cfg(ref e) => write!(f, "cfg({})", e),

@@ -14,6 +14,7 @@ use crate::support::resolver::{
 
 use proptest::collection::vec;
 use proptest::prelude::*;
+use proptest::*;
 
 /// NOTE: proptest is a form of fuzz testing. It generates random input and makes shore that
 /// certain universal truths are upheld. Therefore, it can pass when there is a problem,

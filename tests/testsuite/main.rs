@@ -3,15 +3,6 @@
 #![cfg_attr(feature = "cargo-clippy", allow(explicit_iter_loop))]
 
 #[macro_use]
-extern crate lazy_static;
-#[macro_use]
-extern crate proptest;
-#[macro_use]
-extern crate serde_derive;
-#[macro_use]
-extern crate serde_json;
-
-#[macro_use]
 mod support;
 
 mod alt_registry;

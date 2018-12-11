@@ -59,7 +59,7 @@ pub trait Executor: Send + Sync + 'static {
     /// Called after a rustc process invocation is prepared up-front for a given
     /// unit of work (may still be modified for runtime-known dependencies, when
     /// the work is actually executed).
-    fn init(&self, _cx: &Context, _unit: &Unit) {}
+    fn init(&self, _cx: &Context<'_, '_>, _unit: &Unit<'_>) {}
 
     /// In case of an `Err`, Cargo will not continue with the build process for
     /// this package.
@@ -92,8 +92,8 @@ pub trait Executor: Send + Sync + 'static {
         _id: PackageId,
         _target: &Target,
         _mode: CompileMode,
-        handle_stdout: &mut FnMut(&str) -> CargoResult<()>,
-        handle_stderr: &mut FnMut(&str) -> CargoResult<()>,
+        handle_stdout: &mut dyn FnMut(&str) -> CargoResult<()>,
+        handle_stderr: &mut dyn FnMut(&str) -> CargoResult<()>,
     ) -> CargoResult<()> {
         cmd.exec_with_streaming(handle_stdout, handle_stderr, false)?;
         Ok(())
@@ -101,7 +101,7 @@ pub trait Executor: Send + Sync + 'static {
 
     /// Queried when queuing each unit of work. If it returns true, then the
     /// unit will always be rebuilt, independent of whether it needs to be.
-    fn force_rebuild(&self, _unit: &Unit) -> bool {
+    fn force_rebuild(&self, _unit: &Unit<'_>) -> bool {
         false
     }
 }
@@ -129,7 +129,7 @@ fn compile<'a, 'cfg: 'a>(
     jobs: &mut JobQueue<'a>,
     plan: &mut BuildPlan,
     unit: &Unit<'a>,
-    exec: &Arc<Executor>,
+    exec: &Arc<dyn Executor>,
     force_rebuild: bool,
 ) -> CargoResult<()> {
     let bcx = cx.bcx;
@@ -189,7 +189,7 @@ fn compile<'a, 'cfg: 'a>(
 fn rustc<'a, 'cfg>(
     cx: &mut Context<'a, 'cfg>,
     unit: &Unit<'a>,
-    exec: &Arc<Executor>,
+    exec: &Arc<dyn Executor>,
 ) -> CargoResult<Work> {
     let mut rustc = prepare_rustc(cx, &unit.target.rustc_crate_types(), unit)?;
     if cx.is_primary_package(unit) {
@@ -515,7 +515,7 @@ fn hardlink_or_copy(src: &Path, dst: &Path) -> CargoResult<()> {
     Ok(())
 }
 
-fn load_build_deps(cx: &Context, unit: &Unit) -> Option<Arc<BuildScripts>> {
+fn load_build_deps(cx: &Context<'_, '_>, unit: &Unit<'_>) -> Option<Arc<BuildScripts>> {
     cx.build_scripts.get(unit).cloned()
 }
 
@@ -687,7 +687,7 @@ fn rustdoc<'a, 'cfg>(cx: &mut Context<'a, 'cfg>, unit: &Unit<'a>) -> CargoResult
 //
 // The first returned value here is the argument to pass to rustc, and the
 // second is the cwd that rustc should operate in.
-fn path_args(bcx: &BuildContext, unit: &Unit) -> (PathBuf, PathBuf) {
+fn path_args(bcx: &BuildContext<'_, '_>, unit: &Unit<'_>) -> (PathBuf, PathBuf) {
     let ws_root = bcx.ws.root();
     let src = if unit.target.is_custom_build() && unit.pkg.manifest().metabuild().is_some() {
         unit.pkg.manifest().metabuild_path(bcx.ws.target_dir())
@@ -703,13 +703,13 @@ fn path_args(bcx: &BuildContext, unit: &Unit) -> (PathBuf, PathBuf) {
     (src, unit.pkg.root().to_path_buf())
 }
 
-fn add_path_args(bcx: &BuildContext, unit: &Unit, cmd: &mut ProcessBuilder) {
+fn add_path_args(bcx: &BuildContext<'_, '_>, unit: &Unit<'_>, cmd: &mut ProcessBuilder) {
     let (arg, cwd) = path_args(bcx, unit);
     cmd.arg(arg);
     cmd.cwd(cwd);
 }
 
-fn add_cap_lints(bcx: &BuildContext, unit: &Unit, cmd: &mut ProcessBuilder) {
+fn add_cap_lints(bcx: &BuildContext<'_, '_>, unit: &Unit<'_>, cmd: &mut ProcessBuilder) {
     // If this is an upstream dep we don't want warnings from, turn off all
     // lints.
     if !bcx.show_warnings(unit.pkg.package_id()) {
@@ -722,7 +722,7 @@ fn add_cap_lints(bcx: &BuildContext, unit: &Unit, cmd: &mut ProcessBuilder) {
     }
 }
 
-fn add_color(bcx: &BuildContext, cmd: &mut ProcessBuilder) {
+fn add_color(bcx: &BuildContext<'_, '_>, cmd: &mut ProcessBuilder) {
     let shell = bcx.config.shell();
     let color = if shell.supports_color() {
         "always"
@@ -732,7 +732,7 @@ fn add_color(bcx: &BuildContext, cmd: &mut ProcessBuilder) {
     cmd.args(&["--color", color]);
 }
 
-fn add_error_format(bcx: &BuildContext, cmd: &mut ProcessBuilder) {
+fn add_error_format(bcx: &BuildContext<'_, '_>, cmd: &mut ProcessBuilder) {
     match bcx.build_config.message_format {
         MessageFormat::Human => (),
         MessageFormat::Json => {

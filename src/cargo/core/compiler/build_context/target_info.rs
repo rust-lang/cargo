@@ -259,7 +259,7 @@ impl TargetInfo {
 fn parse_crate_type(
     crate_type: &str,
     error: &str,
-    lines: &mut str::Lines,
+    lines: &mut str::Lines<'_>,
 ) -> CargoResult<Option<(String, String)>> {
     let not_supported = error.lines().any(|line| {
         (line.contains("unsupported crate type") || line.contains("unknown crate type"))

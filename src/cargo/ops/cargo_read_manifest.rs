@@ -98,7 +98,7 @@ pub fn read_packages(
     }
 }
 
-fn walk(path: &Path, callback: &mut FnMut(&Path) -> CargoResult<bool>) -> CargoResult<()> {
+fn walk(path: &Path, callback: &mut dyn FnMut(&Path) -> CargoResult<bool>) -> CargoResult<()> {
     if !callback(path)? {
         trace!("not processing {}", path.display());
         return Ok(());

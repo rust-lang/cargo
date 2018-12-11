@@ -232,13 +232,13 @@ impl Package {
 }
 
 impl fmt::Display for Package {
-    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         write!(f, "{}", self.summary().package_id())
     }
 }
 
 impl fmt::Debug for Package {
-    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         f.debug_struct("Package")
             .field("id", &self.summary().package_id())
             .field("..", &"..")
@@ -410,7 +410,7 @@ impl<'cfg> PackageSet<'cfg> {
         Ok(pkgs)
     }
 
-    pub fn sources(&self) -> Ref<SourceMap<'cfg>> {
+    pub fn sources(&self) -> Ref<'_, SourceMap<'cfg>> {
         self.sources.borrow()
     }
 }
@@ -816,7 +816,7 @@ impl<'a, 'cfg> Downloads<'a, 'cfg> {
         true
     }
 
-    fn tick(&self, why: WhyTick) -> CargoResult<()> {
+    fn tick(&self, why: WhyTick<'_>) -> CargoResult<()> {
         let mut progress = self.progress.borrow_mut();
         let progress = progress.as_mut().unwrap();
 
@@ -907,17 +907,17 @@ mod tls {
 
     thread_local!(static PTR: Cell<usize> = Cell::new(0));
 
-    pub(crate) fn with<R>(f: impl FnOnce(Option<&Downloads>) -> R) -> R {
+    pub(crate) fn with<R>(f: impl FnOnce(Option<&Downloads<'_, '_>>) -> R) -> R {
         let ptr = PTR.with(|p| p.get());
         if ptr == 0 {
             f(None)
         } else {
-            unsafe { f(Some(&*(ptr as *const Downloads))) }
+            unsafe { f(Some(&*(ptr as *const Downloads<'_, '_>))) }
         }
     }
 
-    pub(crate) fn set<R>(dl: &Downloads, f: impl FnOnce() -> R) -> R {
-        struct Reset<'a, T: Copy + 'a>(&'a Cell<T>, T);
+    pub(crate) fn set<R>(dl: &Downloads<'_, '_>, f: impl FnOnce() -> R) -> R {
+        struct Reset<'a, T: Copy>(&'a Cell<T>, T);
 
         impl<'a, T: Copy> Drop for Reset<'a, T> {
             fn drop(&mut self) {
@@ -927,7 +927,7 @@ mod tls {
 
         PTR.with(|p| {
             let _reset = Reset(p, p.get());
-            p.set(dl as *const Downloads as usize);
+            p.set(dl as *const Downloads<'_, '_> as usize);
             f()
         })
     }

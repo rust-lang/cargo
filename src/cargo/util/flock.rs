@@ -146,7 +146,7 @@ impl Filesystem {
 
     /// Returns an adaptor that can be used to print the path of this
     /// filesystem.
-    pub fn display(&self) -> Display {
+    pub fn display(&self) -> Display<'_> {
         self.root.display()
     }
 
@@ -271,8 +271,8 @@ fn acquire(
     config: &Config,
     msg: &str,
     path: &Path,
-    r#try: &Fn() -> io::Result<()>,
-    block: &Fn() -> io::Result<()>,
+    r#try: &dyn Fn() -> io::Result<()>,
+    block: &dyn Fn() -> io::Result<()>,
 ) -> CargoResult<()> {
     // File locking on Unix is currently implemented via `flock`, which is known
     // to be broken on NFS. We could in theory just ignore errors that happen on

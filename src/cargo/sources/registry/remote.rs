@@ -96,7 +96,7 @@ impl<'cfg> RemoteRegistry<'cfg> {
         Ok(self.head.get().unwrap())
     }
 
-    fn tree(&self) -> CargoResult<Ref<git2::Tree>> {
+    fn tree(&self) -> CargoResult<Ref<'_, git2::Tree<'_>>> {
         {
             let tree = self.tree.borrow();
             if tree.is_some() {
@@ -119,7 +119,7 @@ impl<'cfg> RemoteRegistry<'cfg> {
         // (`RemoteRegistry`) so we then just need to ensure that the tree is
         // destroyed first in the destructor, hence the destructor on
         // `RemoteRegistry` below.
-        let tree = unsafe { mem::transmute::<git2::Tree, git2::Tree<'static>>(tree) };
+        let tree = unsafe { mem::transmute::<git2::Tree<'_>, git2::Tree<'static>>(tree) };
         *self.tree.borrow_mut() = Some(tree);
         Ok(Ref::map(self.tree.borrow(), |s| s.as_ref().unwrap()))
     }
@@ -143,7 +143,7 @@ impl<'cfg> RegistryData for RemoteRegistry<'cfg> {
         &self,
         _root: &Path,
         path: &Path,
-        data: &mut FnMut(&[u8]) -> CargoResult<()>,
+        data: &mut dyn FnMut(&[u8]) -> CargoResult<()>,
     ) -> CargoResult<()> {
         // Note that the index calls this method and the filesystem is locked
         // in the index, so we don't need to worry about an `update_index`

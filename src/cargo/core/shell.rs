@@ -26,7 +26,7 @@ pub struct Shell {
 }
 
 impl fmt::Debug for Shell {
-    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         match self.err {
             ShellOut::Write(_) => f
                 .debug_struct("Shell")
@@ -44,7 +44,7 @@ impl fmt::Debug for Shell {
 /// A `Write`able object, either with or without color support
 enum ShellOut {
     /// A plain write object without color support
-    Write(Box<Write>),
+    Write(Box<dyn Write>),
     /// Color-enabled stdio, with information on whether color should be used
     Stream {
         stream: StandardStream,
@@ -79,7 +79,7 @@ impl Shell {
     }
 
     /// Create a shell from a plain writable object, with no color, and max verbosity.
-    pub fn from_write(out: Box<Write>) -> Shell {
+    pub fn from_write(out: Box<dyn Write>) -> Shell {
         Shell {
             err: ShellOut::Write(out),
             verbosity: Verbosity::Verbose,
@@ -90,8 +90,8 @@ impl Shell {
     /// messages follows without color.
     fn print(
         &mut self,
-        status: &fmt::Display,
-        message: Option<&fmt::Display>,
+        status: &dyn fmt::Display,
+        message: Option<&dyn fmt::Display>,
         color: Color,
         justified: bool,
     ) -> CargoResult<()> {
@@ -118,7 +118,7 @@ impl Shell {
     }
 
     /// Get a reference to the underlying writer
-    pub fn err(&mut self) -> &mut Write {
+    pub fn err(&mut self) -> &mut dyn Write {
         self.err.as_write()
     }
 
@@ -274,8 +274,8 @@ impl ShellOut {
     /// The status can be justified, in which case the max width that will right align is 12 chars.
     fn print(
         &mut self,
-        status: &fmt::Display,
-        message: Option<&fmt::Display>,
+        status: &dyn fmt::Display,
+        message: Option<&dyn fmt::Display>,
         color: Color,
         justified: bool,
     ) -> CargoResult<()> {
@@ -310,7 +310,7 @@ impl ShellOut {
     }
 
     /// Get this object as a `io::Write`.
-    fn as_write(&mut self) -> &mut Write {
+    fn as_write(&mut self) -> &mut dyn Write {
         match *self {
             ShellOut::Stream { ref mut stream, .. } => stream,
             ShellOut::Write(ref mut w) => w,
