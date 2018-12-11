@@ -132,7 +132,11 @@ impl Profiles {
     }
 
     /// Used to check for overrides for non-existing packages.
-    pub fn validate_packages(&self, shell: &mut Shell, packages: &PackageSet<'_>) -> CargoResult<()> {
+    pub fn validate_packages(
+        &self,
+        shell: &mut Shell,
+        packages: &PackageSet<'_>,
+    ) -> CargoResult<()> {
         self.dev.validate_packages(shell, packages)?;
         self.release.validate_packages(shell, packages)?;
         self.test.validate_packages(shell, packages)?;
