@@ -415,3 +415,58 @@ fn preserve_top_comment() {
 
     assert!(lockfile == lockfile2);
 }
+
+#[test]
+fn dry_run_update() {
+    Package::new("log", "0.1.0").publish();
+    Package::new("serde", "0.1.0").dep("log", "0.1").publish();
+
+    let p = project()
+        .file(
+            "Cargo.toml",
+            r#"
+                [package]
+                name = "bar"
+                version = "0.0.1"
+                authors = []
+
+                [dependencies]
+                serde = "0.1"
+                log = "0.1"
+                foo = { path = "foo" }
+            "#,
+        )
+        .file("src/lib.rs", "")
+        .file(
+            "foo/Cargo.toml",
+            r#"
+                [package]
+                name = "foo"
+                version = "0.0.1"
+                authors = []
+
+                [dependencies]
+                serde = "0.1"
+            "#,
+        )
+        .file("foo/src/lib.rs", "")
+        .build();
+
+    p.cargo("build").run();
+    let old_lockfile = p.read_file("Cargo.lock");
+
+    Package::new("log", "0.1.1").publish();
+    Package::new("serde", "0.1.1").dep("log", "0.1").publish();
+
+    p.cargo("update -p serde --dry-run")
+        .with_stderr(
+            "\
+[UPDATING] `[..]` index
+[UPDATING] serde v0.1.0 -> v0.1.1
+[WARNING] not updating lockfile due to dry run
+",
+        )
+        .run();
+    let new_lockfile = p.read_file("Cargo.lock");
+    assert_eq!(old_lockfile, new_lockfile)
+}

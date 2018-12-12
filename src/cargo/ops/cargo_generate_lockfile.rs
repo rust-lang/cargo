@@ -16,6 +16,7 @@ pub struct UpdateOptions<'a> {
     pub to_update: Vec<String>,
     pub precise: Option<&'a str>,
     pub aggressive: bool,
+    pub dry_run: bool,
 }
 
 pub fn generate_lockfile(ws: &Workspace<'_>) -> CargoResult<()> {
@@ -119,8 +120,13 @@ pub fn update_lockfile(ws: &Workspace<'_>, opts: &UpdateOptions<'_>) -> CargoRes
             }
         }
     }
-
-    ops::write_pkg_lockfile(ws, &resolve)?;
+    if opts.dry_run {
+        opts.config
+            .shell()
+            .warn("not updating lockfile due to dry run")?;
+    } else {
+        ops::write_pkg_lockfile(ws, &resolve)?;
+    }
     return Ok(());
 
     fn fill_with_deps<'a>(
