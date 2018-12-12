@@ -211,7 +211,7 @@ pub fn bytes2path(bytes: &[u8]) -> CargoResult<PathBuf> {
     }
 }
 
-pub fn ancestors(path: &Path) -> PathAncestors {
+pub fn ancestors(path: &Path) -> PathAncestors<'_> {
     PathAncestors::new(path)
 }
 
@@ -221,7 +221,7 @@ pub struct PathAncestors<'a> {
 }
 
 impl<'a> PathAncestors<'a> {
-    fn new(path: &Path) -> PathAncestors {
+    fn new(path: &Path) -> PathAncestors<'_> {
         PathAncestors {
             current: Some(path),
             //HACK: avoid reading `~/.cargo/config` when testing Cargo itself.

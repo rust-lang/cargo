@@ -101,7 +101,7 @@ impl<N: Eq + Hash + Clone, E: Default> Default for Graph<N, E> {
 }
 
 impl<N: fmt::Display + Eq + Hash, E> fmt::Debug for Graph<N, E> {
-    fn fmt(&self, fmt: &mut fmt::Formatter) -> fmt::Result {
+    fn fmt(&self, fmt: &mut fmt::Formatter<'_>) -> fmt::Result {
         writeln!(fmt, "Graph {{")?;
 
         for (n, e) in &self.nodes {

@@ -56,7 +56,7 @@ impl Drop for Profiler {
         MESSAGES.with(|msgs| msgs.borrow_mut().push(msg));
 
         if stack_len == 0 {
-            fn print(lvl: usize, msgs: &[Message], enabled: usize, stdout: &mut StdoutLock) {
+            fn print(lvl: usize, msgs: &[Message], enabled: usize, stdout: &mut StdoutLock<'_>) {
                 if lvl > enabled {
                     return;
                 }

@@ -1,6 +1,8 @@
 use std::collections::{HashMap, HashSet, BTreeMap};
 use std::rc::Rc;
 
+use log::debug;
+
 use crate::core::interning::InternedString;
 use crate::core::{Dependency, FeatureValue, PackageId, SourceId, Summary};
 use crate::util::CargoResult;
@@ -51,7 +53,7 @@ impl Context {
     /// Activate this summary by inserting it into our list of known activations.
     ///
     /// Returns true if this summary with the given method is already activated.
-    pub fn flag_activated(&mut self, summary: &Summary, method: &Method) -> CargoResult<bool> {
+    pub fn flag_activated(&mut self, summary: &Summary, method: &Method<'_>) -> CargoResult<bool> {
         let id = summary.package_id();
         let prev = self
             .activations
@@ -95,10 +97,10 @@ impl Context {
 
     pub fn build_deps(
         &mut self,
-        registry: &mut RegistryQueryer,
+        registry: &mut RegistryQueryer<'_>,
         parent: Option<&Summary>,
         candidate: &Summary,
-        method: &Method,
+        method: &Method<'_>,
     ) -> ActivateResult<Vec<DepInfo>> {
         // First, figure out our set of dependencies based on the requested set
         // of features. This also calculates what features we're going to enable
@@ -156,7 +158,7 @@ impl Context {
         &mut self,
         parent: Option<&Summary>,
         s: &'b Summary,
-        method: &'b Method,
+        method: &'b Method<'_>,
     ) -> ActivateResult<Vec<(Dependency, Vec<(InternedString, Option<Platform>)>)>> {
         let dev_deps = match *method {
             Method::Everything => true,
@@ -285,7 +287,7 @@ impl Context {
 /// dependency features in a Requirements object, returning it to the resolver.
 fn build_requirements<'a, 'b: 'a>(
     s: &'a Summary,
-    method: &'b Method,
+    method: &'b Method<'_>,
 ) -> CargoResult<Requirements<'a>> {
     let mut reqs = Requirements::new(s);
 
@@ -352,7 +354,7 @@ struct Requirements<'a> {
 }
 
 impl<'r> Requirements<'r> {
-    fn new(summary: &Summary) -> Requirements {
+    fn new(summary: &Summary) -> Requirements<'_> {
         Requirements {
             summary,
             deps: HashMap::new(),

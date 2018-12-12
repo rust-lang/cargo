@@ -466,7 +466,7 @@ impl BuildOutput {
             let key = iter.next();
             let value = iter.next();
             let (key, value) = match (key, value) {
-                (Some(a), Some(b)) => (a, b.trim_right()),
+                (Some(a), Some(b)) => (a, b.trim_end()),
                 // line started with `cargo:` but didn't match `key=value`
                 _ => bail!("Wrong output in {}: `{}`", whence, line),
             };

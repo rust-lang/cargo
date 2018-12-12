@@ -14,7 +14,7 @@ pub fn leak(s: String) -> &'static str {
     Box::leak(s.into_boxed_str())
 }
 
-lazy_static! {
+lazy_static::lazy_static! {
     static ref STRING_CACHE: Mutex<HashSet<&'static str>> = Mutex::new(HashSet::new());
 }
 
@@ -74,13 +74,13 @@ impl Borrow<str> for InternedString {
 }
 
 impl fmt::Debug for InternedString {
-    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         fmt::Debug::fmt(self.as_str(), f)
     }
 }
 
 impl fmt::Display for InternedString {
-    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         fmt::Display::fmt(self.as_str(), f)
     }
 }

@@ -32,19 +32,19 @@ impl ResolveError {
 }
 
 impl Fail for ResolveError {
-    fn cause(&self) -> Option<&Fail> {
+    fn cause(&self) -> Option<&dyn Fail> {
         self.cause.as_fail().cause()
     }
 }
 
 impl fmt::Debug for ResolveError {
-    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         self.cause.fmt(f)
     }
 }
 
 impl fmt::Display for ResolveError {
-    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         self.cause.fmt(f)
     }
 }
@@ -70,7 +70,7 @@ impl From<(PackageId, ConflictReason)> for ActivateError {
 
 pub(super) fn activation_error(
     cx: &Context,
-    registry: &mut Registry,
+    registry: &mut dyn Registry,
     parent: &Summary,
     dep: &Dependency,
     conflicting_activations: &BTreeMap<PackageId, ConflictReason>,

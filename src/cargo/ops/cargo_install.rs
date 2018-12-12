@@ -7,8 +7,8 @@ use std::sync::Arc;
 use std::{env, fs};
 
 use semver::{Version, VersionReq};
+use serde::{Deserialize, Serialize};
 use tempfile::Builder as TempFileBuilder;
-use toml;
 
 use crate::core::compiler::{DefaultExecutor, Executor};
 use crate::core::package::PackageSet;
@@ -62,7 +62,7 @@ pub fn install(
     source_id: SourceId,
     from_cwd: bool,
     vers: Option<&str>,
-    opts: &ops::CompileOptions,
+    opts: &ops::CompileOptions<'_>,
     force: bool,
 ) -> CargoResult<()> {
     let root = resolve_root(root, opts.config)?;
@@ -152,12 +152,12 @@ pub fn install(
 
 fn install_one(
     root: &Filesystem,
-    map: &SourceConfigMap,
+    map: &SourceConfigMap<'_>,
     krate: Option<&str>,
     source_id: SourceId,
     from_cwd: bool,
     vers: Option<&str>,
-    opts: &ops::CompileOptions,
+    opts: &ops::CompileOptions<'_>,
     force: bool,
     is_first_install: bool,
 ) -> CargoResult<()> {
@@ -256,7 +256,7 @@ fn install_one(
         check_overwrites(&dst, pkg, &opts.filter, &list, force)?;
     }
 
-    let exec: Arc<Executor> = Arc::new(DefaultExecutor);
+    let exec: Arc<dyn Executor> = Arc::new(DefaultExecutor);
     let compile = ops::compile_ws(&ws, Some(source), opts, &exec).chain_err(|| {
         if let Some(td) = td_opt.take() {
             // preserve the temporary directory, so the user can inspect it
@@ -420,8 +420,8 @@ fn select_pkg<'a, T>(
     vers: Option<&str>,
     config: &Config,
     needs_update: bool,
-    list_all: &mut FnMut(&mut T) -> CargoResult<Vec<Package>>,
-) -> CargoResult<(Package, Box<Source + 'a>)>
+    list_all: &mut dyn FnMut(&mut T) -> CargoResult<Vec<Package>>,
+) -> CargoResult<(Package, Box<dyn Source + 'a>)>
 where
     T: Source + 'a,
 {

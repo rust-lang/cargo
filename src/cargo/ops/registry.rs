@@ -5,11 +5,9 @@ use std::str;
 use std::time::Duration;
 use std::{cmp, env};
 
-use crate::registry::{NewCrate, NewCrateDependency, Registry};
+use crates_io::{NewCrate, NewCrateDependency, Registry};
 use curl::easy::{Easy, InfoType, SslOpt};
-use git2;
-use log::Level;
-
+use log::{log, Level};
 use url::percent_encoding::{percent_encode, QUERY_ENCODE_SET};
 
 use crate::core::dependency::Kind;
@@ -42,7 +40,7 @@ pub struct PublishOpts<'cfg> {
     pub registry: Option<String>,
 }
 
-pub fn publish(ws: &Workspace, opts: &PublishOpts) -> CargoResult<()> {
+pub fn publish(ws: &Workspace<'_>, opts: &PublishOpts<'_>) -> CargoResult<()> {
     let pkg = ws.current()?;
 
     if let Some(ref allowed_registries) = *pkg.publish() {

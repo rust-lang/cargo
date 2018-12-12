@@ -229,7 +229,7 @@ impl PackageIdSpec {
 }
 
 impl fmt::Display for PackageIdSpec {
-    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         let mut printed_name = false;
         match self.url {
             Some(ref url) => {

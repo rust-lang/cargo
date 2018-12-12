@@ -19,7 +19,7 @@ pub struct DocOptions<'a> {
 }
 
 /// Main method for `cargo doc`.
-pub fn doc(ws: &Workspace, options: &DocOptions) -> CargoResult<()> {
+pub fn doc(ws: &Workspace<'_>, options: &DocOptions<'_>) -> CargoResult<()> {
     let specs = options.compile_opts.spec.to_package_id_specs(ws)?;
     let resolve = ops::resolve_ws_precisely(
         ws,
@@ -99,7 +99,7 @@ pub fn doc(ws: &Workspace, options: &DocOptions) -> CargoResult<()> {
             shell.status("Opening", path.display())?;
             if let Err(e) = opener::open(&path) {
                 shell.warn(format!("Couldn't open docs: {}", e))?;
-                for cause in (&e as &Fail).iter_chain() {
+                for cause in (&e as &dyn Fail).iter_chain() {
                     shell.warn(format!("Caused by:\n {}", cause))?;
                 }
             }

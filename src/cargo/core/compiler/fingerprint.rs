@@ -5,9 +5,10 @@ use std::path::{Path, PathBuf};
 use std::sync::{Arc, Mutex};
 
 use filetime::FileTime;
-use serde::de::{self, Deserialize};
+use log::{debug, info};
+use serde::de;
 use serde::ser;
-use serde_json;
+use serde::{Deserialize, Serialize};
 
 use crate::core::{Edition, Package};
 use crate::util;
@@ -495,7 +496,7 @@ fn calculate<'a, 'cfg>(
 // git/registry source, then the mtime of files may fluctuate, but they won't
 // change so long as the source itself remains constant (which is the
 // responsibility of the source)
-fn use_dep_info(unit: &Unit) -> bool {
+fn use_dep_info(unit: &Unit<'_>) -> bool {
     let path = unit.pkg.summary().source_id().is_path();
     !unit.mode.is_doc() && path
 }
@@ -683,7 +684,7 @@ fn compare_old_fingerprint(loc: &Path, new_fingerprint: &Fingerprint) -> CargoRe
     new_fingerprint.compare(&old_fingerprint)
 }
 
-fn log_compare(unit: &Unit, compare: &CargoResult<()>) {
+fn log_compare(unit: &Unit<'_>, compare: &CargoResult<()>) {
     let ce = match *compare {
         Ok(..) => return,
         Err(ref e) => e,
@@ -721,7 +722,7 @@ fn dep_info_mtime_if_fresh(pkg: &Package, dep_info: &Path) -> CargoResult<Option
     }
 }
 
-fn pkg_fingerprint(bcx: &BuildContext, pkg: &Package) -> CargoResult<String> {
+fn pkg_fingerprint(bcx: &BuildContext<'_, '_>, pkg: &Package) -> CargoResult<String> {
     let source_id = pkg.package_id().source_id();
     let sources = bcx.packages.sources();
 

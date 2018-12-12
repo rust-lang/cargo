@@ -1,8 +1,9 @@
-use serde_json;
 use std::collections::HashMap;
 use std::fs::{self, File};
 use std::io::prelude::*;
 use std::str;
+
+use serde::Serialize;
 
 use crate::support::cargo_process;
 use crate::support::git;
