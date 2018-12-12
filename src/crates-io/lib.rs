@@ -1,6 +1,5 @@
 #![allow(unknown_lints)]
-#![cfg_attr(feature = "cargo-clippy", allow(identity_op))] // used for vertical alignment
-
+#![allow(clippy::identity_op)] // used for vertical alignment
 
 #[macro_use]
 extern crate failure;
