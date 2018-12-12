@@ -5,7 +5,7 @@ pub use self::config::{homedir, Config, ConfigValue};
 pub use self::dependency_queue::{DependencyQueue, Dirty, Fresh, Freshness};
 pub use self::diagnostic_server::RustfixDiagnosticServer;
 pub use self::errors::{internal, process_error};
-pub use self::errors::{CargoError, CargoResult, CargoResultExt, CliResult, Test};
+pub use self::errors::{CargoResult, CargoResultExt, CliResult, Test};
 pub use self::errors::{CargoTestError, CliError, ProcessError};
 pub use self::flock::{FileLock, Filesystem};
 pub use self::graph::Graph;

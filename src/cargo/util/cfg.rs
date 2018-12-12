@@ -2,7 +2,7 @@ use std::fmt;
 use std::iter;
 use std::str::{self, FromStr};
 
-use crate::util::{CargoError, CargoResult};
+use crate::util::CargoResult;
 
 #[derive(Eq, PartialEq, Hash, Ord, PartialOrd, Clone, Debug)]
 pub enum Cfg {
@@ -38,7 +38,7 @@ struct Parser<'a> {
 }
 
 impl FromStr for Cfg {
-    type Err = CargoError;
+    type Err = failure::Error;
 
     fn from_str(s: &str) -> CargoResult<Cfg> {
         let mut p = Parser::new(s);
@@ -85,7 +85,7 @@ impl CfgExpr {
 }
 
 impl FromStr for CfgExpr {
-    type Err = CargoError;
+    type Err = failure::Error;
 
     fn from_str(s: &str) -> CargoResult<CfgExpr> {
         let mut p = Parser::new(s);
