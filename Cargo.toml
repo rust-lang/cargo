@@ -45,7 +45,7 @@ log = "0.4.6"
 libgit2-sys = "0.7.9"
 num_cpus = "1.0"
 opener = "0.3.0"
-rustfix = "0.4.2"
+rustfix = "0.4.3"
 same-file = "1"
 semver = { version = "0.9.0", features = ["serde"] }
 serde = { version = "1.0.82", features = ['derive'] }
@@ -108,3 +108,6 @@ doc = false
 deny-warnings = []
 vendored-openssl = ['openssl/vendored']
 pretty-env-logger = ['pretty_env_logger']
+
+[patch.crates-io]
+rustfix = {git="https://github.com/ehuss/rustfix", branch="pub-rendered"}

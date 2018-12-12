@@ -496,7 +496,9 @@ fn log_failed_fix(stderr: &[u8]) -> Result<(), Error> {
         .filter(|x| !x.is_empty())
         .filter_map(|line| serde_json::from_str::<Diagnostic>(line).ok());
     let mut files = BTreeSet::new();
+    let mut errors = Vec::new();
     for diagnostic in diagnostics {
+        errors.push(diagnostic.rendered.unwrap_or(diagnostic.message));
         for span in diagnostic.spans.into_iter() {
             files.insert(span.file_name);
         }
@@ -516,7 +518,12 @@ fn log_failed_fix(stderr: &[u8]) -> Result<(), Error> {
     }
 
     let files = files.into_iter().collect();
-    Message::FixFailed { files, krate }.post()?;
+    Message::FixFailed {
+        files,
+        krate,
+        errors,
+    }
+    .post()?;
 
     Ok(())
 }
