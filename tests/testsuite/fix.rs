@@ -54,6 +54,19 @@ fn fix_broken_if_requested() {
 
 #[test]
 fn broken_fixes_backed_out() {
+    // This works as follows:
+    // - Create a `rustc` shim (the "foo" project) which will pretend that the
+    //   verification step fails.
+    // - There is an empty build script so `foo` has `OUT_DIR` to track the steps.
+    // - The first "check", `foo` creates a file in OUT_DIR, and it completes
+    //   successfully with a warning diagnostic to remove unused `mut`.
+    // - rustfix removes the `mut`.
+    // - The second "check" to verify the changes, `foo` swaps out the content
+    //   with something that fails to compile. It creates a second file so it
+    //   won't do anything in the third check.
+    // - cargo fix discovers that the fix failed, and it backs out the changes.
+    // - The third "check" is done to display the original diagnostics of the
+    //   original code.
     let p = project()
         .file(
             "foo/Cargo.toml",
@@ -74,19 +87,19 @@ fn broken_fixes_backed_out() {
                 use std::process::{self, Command};
 
                 fn main() {
+                    // Ignore calls to things like --print=file-names and compiling build.rs.
                     let is_lib_rs = env::args_os()
                         .map(PathBuf::from)
                         .any(|l| l == Path::new("src/lib.rs"));
                     if is_lib_rs {
                         let path = PathBuf::from(env::var_os("OUT_DIR").unwrap());
-                        let path = path.join("foo");
-                        if path.exists() {
-                            fs::File::create("src/lib.rs")
-                                .unwrap()
-                                .write_all(b"not rust code")
-                                .unwrap();
+                        let first = path.join("first");
+                        let second = path.join("second");
+                        if first.exists() && !second.exists() {
+                            fs::write("src/lib.rs", b"not rust code").unwrap();
+                            fs::File::create(&second).unwrap();
                         } else {
-                            fs::File::create(&path).unwrap();
+                            fs::File::create(&first).unwrap();
                         }
                     }
 
@@ -127,8 +140,6 @@ fn broken_fixes_backed_out() {
         .cwd(p.root().join("bar"))
         .env("__CARGO_FIX_YOLO", "1")
         .env("RUSTC", p.root().join("foo/target/debug/foo"))
-        .with_status(101)
-        .with_stderr_contains("[..]not rust code[..]")
         .with_stderr_contains(
             "\
              warning: failed to automatically apply fixes suggested by rustc \
@@ -144,11 +155,19 @@ fn broken_fixes_backed_out() {
              a number of compiler warnings after this message which cargo\n\
              attempted to fix but failed. If you could open an issue at\n\
              https://github.com/rust-lang/cargo/issues\n\
-             quoting the full output of this command we'd be very appreciative!\
+             quoting the full output of this command we'd be very appreciative!\n\
+             \n\
+             The following errors were reported:\n\
+             error: expected one of `!` or `::`, found `rust`\n\
              ",
         )
+        .with_stderr_contains("Original diagnostics will follow.")
+        .with_stderr_contains("[WARNING] variable does not need to be mutable")
         .with_stderr_does_not_contain("[..][FIXING][..]")
         .run();
+
+    // Make sure the fix which should have been applied was backed out
+    assert!(p.read_file("bar/src/lib.rs").contains("let mut x = 3;"));
 }
 
 #[test]
