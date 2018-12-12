@@ -571,7 +571,7 @@ fn prepare_metabuild<'a, 'cfg>(
         })
         .collect();
     for dep in &meta_deps {
-        output.push(format!("extern crate {};\n", dep));
+        output.push(format!("use {};\n", dep));
     }
     output.push("fn main() {\n".to_string());
     for dep in &meta_deps {
