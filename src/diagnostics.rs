@@ -15,7 +15,7 @@ pub struct Diagnostic {
     /// The message as rustc would render it. Currently this is only
     /// `Some` for "suggestions", but eventually it will include all
     /// snippets.
-    rendered: Option<String>,
+    pub rendered: Option<String>,
 }
 
 #[derive(Deserialize, Debug)]
