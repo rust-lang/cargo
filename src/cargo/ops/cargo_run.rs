@@ -32,7 +32,7 @@ pub fn run(
 
     if bins.is_empty() {
         if !options.filter.is_specific() {
-            bail!("a bin target must be available for `cargo run`")
+            failure::bail!("a bin target must be available for `cargo run`")
         } else {
             // this will be verified in cargo_compile
         }
@@ -41,7 +41,7 @@ pub fn run(
     if bins.len() == 1 {
         let target = bins[0].1;
         if let TargetKind::ExampleLib(..) = target.kind() {
-            bail!(
+            failure::bail!(
                 "example target `{}` is a library and cannot be executed",
                 target.name()
             )
@@ -55,7 +55,7 @@ pub fn run(
                 .map(|(_pkg, target)| target.name())
                 .collect();
             if nightly_features_allowed() {
-                bail!(
+                failure::bail!(
                     "`cargo run` could not determine which binary to run. \
                      Use the `--bin` option to specify a binary, \
                      or (on nightly) the `default-run` manifest key.\n\
@@ -63,7 +63,7 @@ pub fn run(
                     names.join(", ")
                 )
             } else {
-                bail!(
+                failure::bail!(
                     "`cargo run` requires that a package only have one \
                      executable; use the `--bin` option to specify which one \
                      to run\navailable binaries: {}",
@@ -71,7 +71,7 @@ pub fn run(
                 )
             }
         } else {
-            bail!(
+            failure::bail!(
                 "`cargo run` can run at most one executable, but \
                  multiple were specified"
             )

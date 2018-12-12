@@ -238,10 +238,10 @@ pub trait ArgMatchesExt {
             // but in this particular case we need it to fix #3586.
             let path = paths::normalize_path(&path);
             if !path.ends_with("Cargo.toml") {
-                bail!("the manifest-path must be a path to a Cargo.toml file")
+                failure::bail!("the manifest-path must be a path to a Cargo.toml file")
             }
             if fs::metadata(&path).is_err() {
-                bail!(
+                failure::bail!(
                     "manifest path `{}` does not exist",
                     self._value_of("manifest-path").unwrap()
                 )
@@ -299,7 +299,7 @@ pub trait ArgMatchesExt {
         build_config.release = self._is_present("release");
         build_config.build_plan = self._is_present("build-plan");
         if build_config.build_plan && !config.cli_unstable().unstable_options {
-            Err(format_err!(
+            Err(failure::format_err!(
                 "`--build-plan` flag is unstable, pass `-Z unstable-options` to enable it"
             ))?;
         };
@@ -365,7 +365,7 @@ pub trait ArgMatchesExt {
         match self._value_of("registry") {
             Some(registry) => {
                 if !config.cli_unstable().unstable_options {
-                    return Err(format_err!(
+                    return Err(failure::format_err!(
                         "registry option is an unstable feature and \
                          requires -Zunstable-options to use."
                     ));

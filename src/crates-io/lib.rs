@@ -1,19 +1,15 @@
 #![allow(unknown_lints)]
 #![allow(clippy::identity_op)] // used for vertical alignment
 
-#[macro_use]
-extern crate failure;
-#[macro_use]
-extern crate serde_derive;
-use serde_json;
-
-
 use std::collections::BTreeMap;
 use std::fs::File;
 use std::io::prelude::*;
 use std::io::Cursor;
 
 use curl::easy::{Easy, List};
+use failure::bail;
+use serde::{Deserialize, Serialize};
+use serde_json;
 use url::percent_encoding::{percent_encode, QUERY_ENCODE_SET};
 
 pub type Result<T> = std::result::Result<T, failure::Error>;

@@ -161,7 +161,7 @@ pub(super) fn activation_error(
         msg.push_str(&*dep.package_name());
         msg.push_str("` which could resolve this conflict");
 
-        return to_resolve_err(format_err!("{}", msg));
+        return to_resolve_err(failure::format_err!("{}", msg));
     }
 
     // We didn't actually find any candidates, so we need to
@@ -274,7 +274,7 @@ pub(super) fn activation_error(
         }
     }
 
-    to_resolve_err(format_err!("{}", msg))
+    to_resolve_err(failure::format_err!("{}", msg))
 }
 
 /// Returns String representation of dependency chain for a particular `pkgid`.

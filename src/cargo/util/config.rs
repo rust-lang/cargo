@@ -138,7 +138,7 @@ impl Config {
         let cwd =
             env::current_dir().chain_err(|| "couldn't get the current directory of the process")?;
         let homedir = homedir(&cwd).ok_or_else(|| {
-            format_err!(
+            failure::format_err!(
                 "Cargo couldn't find your home directory. \
                  This probably means that $HOME was not set."
             )
@@ -240,7 +240,7 @@ impl Config {
                     let argv0 = env::args_os()
                         .map(PathBuf::from)
                         .next()
-                        .ok_or_else(|| format_err!("no argv[0]"))?;
+                        .ok_or_else(|| failure::format_err!("no argv[0]"))?;
                     paths::resolve_executable(&argv0)
                 }
 
@@ -278,11 +278,11 @@ impl Config {
     // Note: This is used by RLS, not Cargo.
     pub fn set_values(&self, values: HashMap<String, ConfigValue>) -> CargoResult<()> {
         if self.values.borrow().is_some() {
-            bail!("config values already found")
+            failure::bail!("config values already found")
         }
         match self.values.fill(values) {
             Ok(()) => Ok(()),
-            Err(_) => bail!("could not fill values"),
+            Err(_) => failure::bail!("could not fill values"),
         }
     }
 
@@ -331,7 +331,7 @@ impl Config {
                 | CV::Boolean(_, ref path) => {
                     let idx = key.split('.').take(i).fold(0, |n, s| n + s.len()) + i - 1;
                     let key_so_far = &key[..idx];
-                    bail!(
+                    failure::bail!(
                         "expected table for configuration key `{}`, \
                          but found {} in {}",
                         key_so_far,
@@ -538,7 +538,7 @@ impl Config {
 
     fn expected<T>(&self, ty: &str, key: &str, val: &CV) -> CargoResult<T> {
         val.expected(ty, key)
-            .map_err(|e| format_err!("invalid configuration for key `{}`\n{}", key, e))
+            .map_err(|e| failure::format_err!("invalid configuration for key `{}`\n{}", key, e))
     }
 
     pub fn configure(
@@ -570,7 +570,7 @@ impl Config {
             // Can't pass both at the same time on the command line regardless
             // of configuration.
             (Some(true), _, Some(true)) => {
-                bail!("cannot set both --verbose and --quiet");
+                failure::bail!("cannot set both --verbose and --quiet");
             }
 
             // Can't actually get `Some(false)` as a value from the command
@@ -661,11 +661,11 @@ impl Config {
                 Some(index) => {
                     let url = index.val.to_url()?;
                     if url.password().is_some() {
-                        bail!("Registry URLs may not contain passwords");
+                        failure::bail!("Registry URLs may not contain passwords");
                     }
                     url
                 }
-                None => bail!("No index found for registry: `{}`", registry),
+                None => failure::bail!("No index found for registry: `{}`", registry),
             },
         )
     }
@@ -897,7 +897,7 @@ impl ConfigError {
 
     fn expected(key: &str, expected: &str, found: &ConfigValue) -> ConfigError {
         ConfigError {
-            error: format_err!(
+            error: failure::format_err!(
                 "`{}` expected {}, but found a {}",
                 key,
                 expected,
@@ -909,14 +909,14 @@ impl ConfigError {
 
     fn missing(key: &str) -> ConfigError {
         ConfigError {
-            error: format_err!("missing config key `{}`", key),
+            error: failure::format_err!("missing config key `{}`", key),
             definition: None,
         }
     }
 
     fn with_key_context(self, key: &str, definition: Definition) -> ConfigError {
         ConfigError {
-            error: format_err!("could not load config key `{}`: {}", key, self),
+            error: failure::format_err!("could not load config key `{}`: {}", key, self),
             definition: Some(definition),
         }
     }
@@ -1379,7 +1379,7 @@ impl ConfigValue {
                 val.into_iter()
                     .map(|toml| match toml {
                         toml::Value::String(val) => Ok((val, path.to_path_buf())),
-                        v => bail!("expected string but found {} in list", v.type_str()),
+                        v => failure::bail!("expected string but found {} in list", v.type_str()),
                     })
                     .collect::<CargoResult<_>>()?,
                 path.to_path_buf(),
@@ -1394,7 +1394,7 @@ impl ConfigValue {
                     .collect::<CargoResult<_>>()?,
                 path.to_path_buf(),
             )),
-            v => bail!(
+            v => failure::bail!(
                 "found TOML configuration value of unknown type `{}`",
                 v.type_str()
             ),
@@ -1455,7 +1455,7 @@ impl ConfigValue {
                     "expected {}, but found {}",
                     expected.desc(),
                     found.desc()
-                )))
+                )));
             }
             _ => {}
         }
@@ -1519,7 +1519,7 @@ impl ConfigValue {
     }
 
     fn expected<T>(&self, wanted: &str, key: &str) -> CargoResult<T> {
-        bail!(
+        failure::bail!(
             "expected a {}, but found a {} for `{}` in {}",
             wanted,
             self.desc(),

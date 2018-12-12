@@ -231,7 +231,7 @@ impl ProfileMaker {
                         .map(|spec| spec.to_string())
                         .collect::<Vec<_>>()
                         .join(", ");
-                    bail!(
+                    failure::bail!(
                         "multiple profile overrides in profile `{}` match package `{}`\n\
                          found profile override specs: {}",
                         self.default.name,
@@ -643,12 +643,14 @@ impl ConfigProfiles {
         if let Some(ref profile) = self.dev {
             profile
                 .validate("dev", features, warnings)
-                .chain_err(|| format_err!("config profile `profile.dev` is not valid"))?;
+                .chain_err(|| failure::format_err!("config profile `profile.dev` is not valid"))?;
         }
         if let Some(ref profile) = self.release {
             profile
                 .validate("release", features, warnings)
-                .chain_err(|| format_err!("config profile `profile.release` is not valid"))?;
+                .chain_err(|| {
+                    failure::format_err!("config profile `profile.release` is not valid")
+                })?;
         }
         Ok(())
     }

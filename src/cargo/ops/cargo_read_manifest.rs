@@ -24,7 +24,7 @@ pub fn read_package(
     let (manifest, nested) = read_manifest(path, source_id, config)?;
     let manifest = match manifest {
         EitherManifest::Real(manifest) => manifest,
-        EitherManifest::Virtual(..) => bail!(
+        EitherManifest::Virtual(..) => failure::bail!(
             "found a virtual manifest at `{}` instead of a package \
              manifest",
             path.display()
@@ -88,7 +88,7 @@ pub fn read_packages(
     if all_packages.is_empty() {
         match errors.pop() {
             Some(err) => Err(err),
-            None => Err(format_err!(
+            None => Err(failure::format_err!(
                 "Could not find Cargo.toml in `{}`",
                 path.display()
             )),

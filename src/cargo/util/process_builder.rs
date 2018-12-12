@@ -340,10 +340,10 @@ mod imp {
 
 #[cfg(windows)]
 mod imp {
-    use winapi::shared::minwindef::{BOOL, DWORD, FALSE, TRUE};
-    use winapi::um::consoleapi::SetConsoleCtrlHandler;
     use crate::util::{process_error, ProcessBuilder};
     use crate::CargoResult;
+    use winapi::shared::minwindef::{BOOL, DWORD, FALSE, TRUE};
+    use winapi::um::consoleapi::SetConsoleCtrlHandler;
 
     unsafe extern "system" fn ctrlc_handler(_: DWORD) -> BOOL {
         // Do nothing. Let the child process handle it.

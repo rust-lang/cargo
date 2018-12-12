@@ -450,7 +450,7 @@ impl<'a, 'cfg> Context<'a, 'cfg> {
         self.package_cache
             .get(&id)
             .cloned()
-            .ok_or_else(|| format_err!("failed to find {}", id))
+            .ok_or_else(|| failure::format_err!("failed to find {}", id))
     }
 
     /// Return the list of filenames read by cargo to generate the BuildContext
@@ -588,7 +588,7 @@ impl Links {
                 dep_path_desc
             };
 
-            bail!(
+            failure::bail!(
                 "multiple packages link to native library `{}`, \
                  but a native library can be linked only once\n\
                  \n\
@@ -609,7 +609,7 @@ impl Links {
             .iter()
             .any(|t| t.is_custom_build())
         {
-            bail!(
+            failure::bail!(
                 "package `{}` specifies that it links to `{}` but does not \
                  have a custom build script",
                 unit.pkg.package_id(),

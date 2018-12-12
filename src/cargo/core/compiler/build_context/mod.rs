@@ -276,7 +276,7 @@ impl TargetConfig {
                         }
                     }
                     "warning" | "rerun-if-changed" | "rerun-if-env-changed" => {
-                        bail!("`{}` is not supported in build script overrides", k);
+                        failure::bail!("`{}` is not supported in build script overrides", k);
                     }
                     _ => {
                         let val = value.string(k)?.0;

@@ -346,5 +346,5 @@ pub fn internal<S: fmt::Display>(error: S) -> failure::Error {
 }
 
 fn _internal(error: &dyn fmt::Display) -> failure::Error {
-    Internal::new(format_err!("{}", error)).into()
+    Internal::new(failure::format_err!("{}", error)).into()
 }

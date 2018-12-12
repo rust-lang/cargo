@@ -20,7 +20,7 @@ pub fn exec(config: &mut Config, args: &ArgMatches<'_>) -> CliResult {
     let root = root
         .to_str()
         .ok_or_else(|| {
-            format_err!(
+            failure::format_err!(
                 "your package path contains characters \
                  not representable in Unicode"
             )
