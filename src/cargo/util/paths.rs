@@ -8,7 +8,7 @@ use std::path::{Component, Path, PathBuf};
 
 use filetime::FileTime;
 
-use crate::util::errors::{CargoError, CargoResult, CargoResultExt, Internal};
+use crate::util::errors::{CargoResult, CargoResultExt, Internal};
 
 pub fn join_paths<T: AsRef<OsStr>>(paths: &[T], env: &str) -> CargoResult<OsString> {
     let err = match env::join_paths(paths.iter()) {
@@ -16,9 +16,9 @@ pub fn join_paths<T: AsRef<OsStr>>(paths: &[T], env: &str) -> CargoResult<OsStri
         Err(e) => e,
     };
     let paths = paths.iter().map(Path::new).collect::<Vec<_>>();
-    let err = CargoError::from(err);
+    let err = failure::Error::from(err);
     let explain = Internal::new(format_err!("failed to join path array: {:?}", paths));
-    let err = CargoError::from(err.context(explain));
+    let err = failure::Error::from(err.context(explain));
     let more_explain = format!(
         "failed to join search paths together\n\
          Does ${} have an unterminated quote character?",

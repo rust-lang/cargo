@@ -8,7 +8,7 @@ use serde::ser;
 use serde::{Deserialize, Serialize};
 
 use crate::core::{Dependency, Package, PackageId, SourceId, Workspace};
-use crate::util::errors::{CargoError, CargoResult, CargoResultExt};
+use crate::util::errors::{CargoResult, CargoResultExt};
 use crate::util::{internal, Graph};
 
 use super::Resolve;
@@ -276,7 +276,7 @@ impl fmt::Display for EncodablePackageId {
 }
 
 impl FromStr for EncodablePackageId {
-    type Err = CargoError;
+    type Err = failure::Error;
 
     fn from_str(s: &str) -> CargoResult<EncodablePackageId> {
         let mut s = s.splitn(3, ' ');

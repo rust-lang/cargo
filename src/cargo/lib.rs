@@ -27,7 +27,7 @@ use crate::core::shell::Verbosity::Verbose;
 use crate::core::Shell;
 
 pub use crate::util::errors::Internal;
-pub use crate::util::{CargoError, CargoResult, CliError, CliResult, Config};
+pub use crate::util::{CargoResult, CliError, CliResult, Config};
 
 pub const CARGO_ENV: &str = "CARGO";
 
@@ -126,7 +126,7 @@ pub fn exit_with_error(err: CliError, shell: &mut Shell) -> ! {
     std::process::exit(exit_code)
 }
 
-pub fn handle_error(err: &CargoError, shell: &mut Shell) {
+pub fn handle_error(err: &failure::Error, shell: &mut Shell) {
     debug!("handle_error; err={:?}", err);
 
     let _ignored_result = shell.error(err);
