@@ -78,7 +78,7 @@ pub fn canonicalize_url(url: &Url) -> CargoResult<Url> {
     // cannot-be-a-base-urls are not supported
     // eg. github.com:rust-lang-nursery/rustfmt.git
     if url.cannot_be_a_base() {
-        bail!(
+        failure::bail!(
             "invalid url `{}`: cannot-be-a-base-URLs are not supported",
             url
         )
@@ -162,7 +162,7 @@ impl<'cfg> Source for GitSource<'cfg> {
         let db_path = lock.parent().join("db").join(&self.ident);
 
         if self.config.cli_unstable().offline && !db_path.exists() {
-            bail!(
+            failure::bail!(
                 "can't checkout from '{}': you are in the offline mode (-Z offline)",
                 self.remote.url()
             );

@@ -48,7 +48,7 @@ pub fn publish(ws: &Workspace<'_>, opts: &PublishOpts<'_>) -> CargoResult<()> {
             Some(ref registry) => allowed_registries.contains(registry),
             None => false,
         } {
-            bail!(
+            failure::bail!(
                 "some crates cannot be published.\n\
                  `{}` is marked as unpublishable",
                 pkg.name()
@@ -57,7 +57,7 @@ pub fn publish(ws: &Workspace<'_>, opts: &PublishOpts<'_>) -> CargoResult<()> {
     }
 
     if !pkg.manifest().patch().is_empty() {
-        bail!("published crates cannot contain [patch] sections");
+        failure::bail!("published crates cannot contain [patch] sections");
     }
 
     let (mut registry, reg_id) = registry(
@@ -105,7 +105,7 @@ fn verify_dependencies(pkg: &Package, registry_src: SourceId) -> CargoResult<()>
     for dep in pkg.dependencies().iter() {
         if dep.source_id().is_path() {
             if !dep.specified_req() {
-                bail!(
+                failure::bail!(
                     "all path dependencies must have a version specified \
                      when publishing.\ndependency `{}` does not specify \
                      a version",
@@ -117,7 +117,7 @@ fn verify_dependencies(pkg: &Package, registry_src: SourceId) -> CargoResult<()>
                 // Block requests to send to a registry if it is not an alternative
                 // registry
                 if !registry_src.is_alt_registry() {
-                    bail!("crates cannot be published to crates.io with dependencies sourced from other\n\
+                    failure::bail!("crates cannot be published to crates.io with dependencies sourced from other\n\
                            registries either publish `{}` on crates.io or pull it into this repository\n\
                            and specify it with a path and version\n\
                            (crate `{}` is pulled from {})",
@@ -126,7 +126,7 @@ fn verify_dependencies(pkg: &Package, registry_src: SourceId) -> CargoResult<()>
                           dep.source_id());
                 }
             } else {
-                bail!(
+                failure::bail!(
                     "crates cannot be published to crates.io with dependencies sourced from \
                      a repository\neither publish `{}` as its own crate on crates.io and \
                      specify a crates.io version as a dependency or pull it into this \
@@ -158,7 +158,7 @@ fn transmit(
             // registry in the dependency.
             let dep_registry_id = match dep.registry_id() {
                 Some(id) => id,
-                None => bail!("dependency missing registry ID"),
+                None => failure::bail!("dependency missing registry ID"),
             };
             let dep_registry = if dep_registry_id != registry_id {
                 Some(dep_registry_id.url().to_string())
@@ -205,7 +205,7 @@ fn transmit(
     };
     if let Some(ref file) = *license_file {
         if fs::metadata(&pkg.root().join(file)).is_err() {
-            bail!("the license file `{}` does not exist", file)
+            failure::bail!("the license file `{}` does not exist", file)
         }
     }
 
@@ -344,13 +344,13 @@ pub fn http_handle(config: &Config) -> CargoResult<Easy> {
 
 pub fn http_handle_and_timeout(config: &Config) -> CargoResult<(Easy, HttpTimeout)> {
     if config.frozen() {
-        bail!(
+        failure::bail!(
             "attempting to make an HTTP request, but --frozen was \
              specified"
         )
     }
     if !config.network_allowed() {
-        bail!("can't make HTTP request in the offline mode")
+        failure::bail!("can't make HTTP request in the offline mode")
     }
 
     // The timeout option for libcurl by default times out the entire transfer,
@@ -543,9 +543,9 @@ pub fn modify_owners(config: &Config, opts: &OwnersOptions) -> CargoResult<()> {
 
     if let Some(ref v) = opts.to_add {
         let v = v.iter().map(|s| &s[..]).collect::<Vec<_>>();
-        let msg = registry
-            .add_owners(&name, &v)
-            .map_err(|e| format_err!("failed to invite owners to crate {}: {}", name, e))?;
+        let msg = registry.add_owners(&name, &v).map_err(|e| {
+            failure::format_err!("failed to invite owners to crate {}: {}", name, e)
+        })?;
 
         config.shell().status("Owner", msg)?;
     }
@@ -596,7 +596,7 @@ pub fn yank(
     };
     let version = match version {
         Some(v) => v,
-        None => bail!("a version must be specified to yank"),
+        None => failure::bail!("a version must be specified to yank"),
     };
 
     let (mut registry, _) = registry(config, token, index, reg)?;

@@ -259,32 +259,32 @@ impl Fingerprint {
 
     fn compare(&self, old: &Fingerprint) -> CargoResult<()> {
         if self.rustc != old.rustc {
-            bail!("rust compiler has changed")
+            failure::bail!("rust compiler has changed")
         }
         if self.features != old.features {
-            bail!(
+            failure::bail!(
                 "features have changed: {} != {}",
                 self.features,
                 old.features
             )
         }
         if self.target != old.target {
-            bail!("target configuration has changed")
+            failure::bail!("target configuration has changed")
         }
         if self.path != old.path {
-            bail!("path to the compiler has changed")
+            failure::bail!("path to the compiler has changed")
         }
         if self.profile != old.profile {
-            bail!("profile configuration has changed")
+            failure::bail!("profile configuration has changed")
         }
         if self.rustflags != old.rustflags {
-            bail!("RUSTFLAGS has changed")
+            failure::bail!("RUSTFLAGS has changed")
         }
         if self.local.len() != old.local.len() {
-            bail!("local lens changed");
+            failure::bail!("local lens changed");
         }
         if self.edition != old.edition {
-            bail!("edition changed")
+            failure::bail!("edition changed")
         }
         for (new, old) in self.local.iter().zip(&old.local) {
             match (new, old) {
@@ -293,7 +293,7 @@ impl Fingerprint {
                     &LocalFingerprint::Precalculated(ref b),
                 ) => {
                     if a != b {
-                        bail!("precalculated components have changed: {} != {}", a, b)
+                        failure::bail!("precalculated components have changed: {} != {}", a, b)
                     }
                 }
                 (
@@ -310,7 +310,7 @@ impl Fingerprint {
                     };
 
                     if should_rebuild {
-                        bail!(
+                        failure::bail!(
                             "mtime based components have changed: previously {:?} now {:?}, \
                              paths are {:?} and {:?}",
                             *previously_built_mtime,
@@ -325,10 +325,10 @@ impl Fingerprint {
                     &LocalFingerprint::EnvBased(ref bkey, ref bvalue),
                 ) => {
                     if *akey != *bkey {
-                        bail!("env vars changed: {} != {}", akey, bkey);
+                        failure::bail!("env vars changed: {} != {}", akey, bkey);
                     }
                     if *avalue != *bvalue {
-                        bail!(
+                        failure::bail!(
                             "env var `{}` changed: previously {:?} now {:?}",
                             akey,
                             bvalue,
@@ -336,16 +336,16 @@ impl Fingerprint {
                         )
                     }
                 }
-                _ => bail!("local fingerprint type has changed"),
+                _ => failure::bail!("local fingerprint type has changed"),
             }
         }
 
         if self.deps.len() != old.deps.len() {
-            bail!("number of dependencies has changed")
+            failure::bail!("number of dependencies has changed")
         }
         for (a, b) in self.deps.iter().zip(old.deps.iter()) {
             if a.1 != b.1 || a.2.hash() != b.2.hash() {
-                bail!("new ({}) != old ({})", a.0, b.0)
+                failure::bail!("new ({}) != old ({})", a.0, b.0)
             }
         }
         Ok(())

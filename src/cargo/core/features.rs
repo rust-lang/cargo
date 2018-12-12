@@ -78,7 +78,7 @@ impl FromStr for Edition {
         match s {
             "2015" => Ok(Edition::Edition2015),
             "2018" => Ok(Edition::Edition2018),
-            s => bail!(
+            s => failure::bail!(
                 "supported edition values are `2015` or `2018`, but `{}` \
                  is unknown",
                 s
@@ -216,11 +216,11 @@ impl Features {
     fn add(&mut self, feature: &str, warnings: &mut Vec<String>) -> CargoResult<()> {
         let (slot, status) = match self.status(feature) {
             Some(p) => p,
-            None => bail!("unknown cargo feature `{}`", feature),
+            None => failure::bail!("unknown cargo feature `{}`", feature),
         };
 
         if *slot {
-            bail!("the cargo feature `{}` has already been activated", feature);
+            failure::bail!("the cargo feature `{}` has already been activated", feature);
         }
 
         match status {
@@ -233,7 +233,7 @@ impl Features {
                 );
                 warnings.push(warning);
             }
-            Status::Unstable if !nightly_features_allowed() => bail!(
+            Status::Unstable if !nightly_features_allowed() => failure::bail!(
                 "the cargo feature `{}` requires a nightly version of \
                  Cargo, but this is the `{}` channel",
                 feature,
@@ -275,7 +275,7 @@ impl Features {
                 );
                 msg.push_str(&s);
             }
-            bail!("{}", msg);
+            failure::bail!("{}", msg);
         }
     }
 
@@ -325,7 +325,7 @@ pub struct CliUnstable {
 impl CliUnstable {
     pub fn parse(&mut self, flags: &[String]) -> CargoResult<()> {
         if !flags.is_empty() && !nightly_features_allowed() {
-            bail!("the `-Z` flag is only accepted on the nightly channel of Cargo")
+            failure::bail!("the `-Z` flag is only accepted on the nightly channel of Cargo")
         }
         for flag in flags {
             self.add(flag)?;
@@ -342,7 +342,7 @@ impl CliUnstable {
             match value {
                 None | Some("yes") => Ok(true),
                 Some("no") => Ok(false),
-                Some(s) => bail!("expected `no` or `yes`, found: {}", s),
+                Some(s) => failure::bail!("expected `no` or `yes`, found: {}", s),
             }
         }
 
@@ -356,7 +356,7 @@ impl CliUnstable {
             "package-features" => self.package_features = true,
             "advanced-env" => self.advanced_env = true,
             "config-profile" => self.config_profile = true,
-            _ => bail!("unknown `-Z` flag specified: {}", k),
+            _ => failure::bail!("unknown `-Z` flag specified: {}", k),
         }
 
         Ok(())

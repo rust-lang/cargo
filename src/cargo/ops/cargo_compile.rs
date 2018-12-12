@@ -103,7 +103,7 @@ impl Packages {
         Ok(match (all, exclude.len(), package.len()) {
             (false, 0, 0) => Packages::Default,
             (false, 0, _) => Packages::Packages(package),
-            (false, _, _) => bail!("--exclude can only be used together with --all"),
+            (false, _, _) => failure::bail!("--exclude can only be used together with --all"),
             (true, 0, _) => Packages::All,
             (true, _, _) => Packages::OptOut(exclude),
         })
@@ -137,13 +137,13 @@ impl Packages {
         };
         if specs.is_empty() {
             if ws.is_virtual() {
-                bail!(
+                failure::bail!(
                     "manifest path `{}` contains no package: The manifest is virtual, \
                      and the workspace has no members.",
                     ws.root().display()
                 )
             }
-            bail!("no packages to compile")
+            failure::bail!("no packages to compile")
         }
         Ok(specs)
     }
@@ -162,7 +162,10 @@ impl Packages {
                     ws.members()
                         .find(|pkg| pkg.name().as_str() == name)
                         .ok_or_else(|| {
-                            format_err!("package `{}` is not a member of the workspace", name)
+                            failure::format_err!(
+                                "package `{}` is not a member of the workspace",
+                                name
+                            )
                         })
                 })
                 .collect::<CargoResult<Vec<_>>>()?,
@@ -267,7 +270,7 @@ pub fn compile_ws<'a>(
             && !ws.is_member(pkg)
             && pkg.dependencies().iter().any(|dep| !dep.is_transitive())
         {
-            bail!(
+            failure::bail!(
                 "package `{}` cannot be tested because it requires dev-dependencies \
                  and is not a member of the workspace",
                 pkg.name()
@@ -304,7 +307,7 @@ pub fn compile_ws<'a>(
     let mut extra_compiler_args = HashMap::new();
     if let Some(args) = extra_args {
         if units.len() != 1 {
-            bail!(
+            failure::bail!(
                 "extra arguments to `{}` can only be passed to one \
                  target, consider filtering\nthe package by passing \
                  e.g. `--lib` or `--bin NAME` to specify a single target",
@@ -639,9 +642,12 @@ fn generate_targets<'a>(
                 if !all_targets && libs.is_empty() {
                     let names = packages.iter().map(|pkg| pkg.name()).collect::<Vec<_>>();
                     if names.len() == 1 {
-                        bail!("no library targets found in package `{}`", names[0]);
+                        failure::bail!("no library targets found in package `{}`", names[0]);
                     } else {
-                        bail!("no library targets found in packages: {}", names.join(", "));
+                        failure::bail!(
+                            "no library targets found in packages: {}",
+                            names.join(", ")
+                        );
                     }
                 }
                 proposals.extend(libs);
@@ -730,7 +736,7 @@ fn generate_targets<'a>(
                 .iter()
                 .map(|s| format!("`{}`", s))
                 .collect();
-            bail!(
+            failure::bail!(
                 "target `{}` in package `{}` requires the features: {}\n\
                  Consider enabling them by passing e.g. `--features=\"{}\"`",
                 target.name(),
@@ -865,13 +871,13 @@ fn find_named_targets<'a>(
             .min_by_key(|t| t.0)
             .map(|t| t.1);
         match suggestion {
-            Some(s) => bail!(
+            Some(s) => failure::bail!(
                 "no {} target named `{}`\n\nDid you mean `{}`?",
                 target_desc,
                 target_name,
                 s.name()
             ),
-            None => bail!("no {} target named `{}`", target_desc, target_name),
+            None => failure::bail!("no {} target named `{}`", target_desc, target_name),
         }
     }
     Ok(result)

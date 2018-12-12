@@ -94,7 +94,7 @@ impl Resolve {
                 // desires stronger checksum guarantees than can be afforded
                 // elsewhere.
                 if cksum.is_none() {
-                    bail!(
+                    failure::bail!(
                         "\
 checksum for `{}` was not previously calculated, but a checksum could now \
 be calculated
@@ -116,7 +116,7 @@ this could be indicative of a few possible situations:
                 // more realistically we were overridden with a source that does
                 // not have checksums.
                 } else if mine.is_none() {
-                    bail!(
+                    failure::bail!(
                         "\
 checksum for `{}` could not be calculated, but a checksum is listed in \
 the existing lock file
@@ -137,7 +137,7 @@ unable to verify that `{0}` is the same as when the lockfile was generated
                 // must both be Some, in which case the checksum now differs.
                 // That's quite bad!
                 } else {
-                    bail!(
+                    failure::bail!(
                         "\
 checksum for `{}` changed between lock files
 
@@ -243,7 +243,7 @@ unable to verify that `{0}` is the same as when the lockfile was generated
             if n == name {
                 continue;
             }
-            bail!(
+            failure::bail!(
                 "multiple dependencies listed for the same crate must \
                  all have the same name, but the dependency on `{}` \
                  is listed as having different names",

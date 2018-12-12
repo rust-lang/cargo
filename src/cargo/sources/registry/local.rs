@@ -57,11 +57,11 @@ impl<'cfg> RegistryData for LocalRegistry<'cfg> {
         // these directories exist.
         let root = self.root.clone().into_path_unlocked();
         if !root.is_dir() {
-            bail!("local registry path is not a directory: {}", root.display())
+            failure::bail!("local registry path is not a directory: {}", root.display())
         }
         let index_path = self.index_path.clone().into_path_unlocked();
         if !index_path.is_dir() {
-            bail!(
+            failure::bail!(
                 "local registry index path is not a directory: {}",
                 index_path.display()
             )
@@ -96,7 +96,7 @@ impl<'cfg> RegistryData for LocalRegistry<'cfg> {
             state.update(&buf[..n]);
         }
         if hex::encode(state.finish()) != checksum {
-            bail!("failed to verify the checksum of `{}`", pkg)
+            failure::bail!("failed to verify the checksum of `{}`", pkg)
         }
 
         crate_file.seek(SeekFrom::Start(0))?;

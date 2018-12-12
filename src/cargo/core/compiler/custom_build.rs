@@ -339,7 +339,7 @@ fn build_work<'a, 'cfg>(cx: &mut Context<'a, 'cfg>, unit: &Unit<'a>) -> CargoRes
                 cmd.exec_with_output()
             };
             let output = output.map_err(|e| {
-                format_err!(
+                failure::format_err!(
                     "failed to run custom build command for `{}`\n{}",
                     pkg_name,
                     e
@@ -468,7 +468,7 @@ impl BuildOutput {
             let (key, value) = match (key, value) {
                 (Some(a), Some(b)) => (a, b.trim_end()),
                 // line started with `cargo:` but didn't match `key=value`
-                _ => bail!("Wrong output in {}: `{}`", whence, line),
+                _ => failure::bail!("Wrong output in {}: `{}`", whence, line),
             };
 
             // This will rewrite paths if the target directory has been moved.
@@ -517,7 +517,7 @@ impl BuildOutput {
         let (mut library_paths, mut library_links) = (Vec::new(), Vec::new());
         while let Some(flag) = flags_iter.next() {
             if flag != "-l" && flag != "-L" {
-                bail!(
+                failure::bail!(
                     "Only `-l` and `-L` flags are allowed in {}: `{}`",
                     whence,
                     value
@@ -525,7 +525,7 @@ impl BuildOutput {
             }
             let value = match flags_iter.next() {
                 Some(v) => v,
-                None => bail!(
+                None => failure::bail!(
                     "Flag in rustc-flags has no value in {}: `{}`",
                     whence,
                     value
@@ -536,7 +536,7 @@ impl BuildOutput {
                 "-L" => library_paths.push(PathBuf::from(value)),
 
                 // was already checked above
-                _ => bail!("only -l and -L flags are allowed"),
+                _ => failure::bail!("only -l and -L flags are allowed"),
             };
         }
         Ok((library_paths, library_links))
@@ -548,7 +548,7 @@ impl BuildOutput {
         let val = iter.next();
         match (name, val) {
             (Some(n), Some(v)) => Ok((n.to_owned(), v.to_owned())),
-            _ => bail!("Variable rustc-env has no value in {}: {}", whence, value),
+            _ => failure::bail!("Variable rustc-env has no value in {}: {}", whence, value),
         }
     }
 }
