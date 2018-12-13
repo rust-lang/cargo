@@ -48,27 +48,27 @@ impl BuildConfig {
     ) -> CargoResult<BuildConfig> {
         let requested_target = match requested_target {
             &Some(ref target) if target.ends_with(".json") => {
-                let path = Path::new(target)
-                    .canonicalize()
-                    .chain_err(|| format_err!("Target path {:?} is not a valid file", target))?;
+                let path = Path::new(target).canonicalize().chain_err(|| {
+                    failure::format_err!("Target path {:?} is not a valid file", target)
+                })?;
                 Some(
                     path.into_os_string()
                         .into_string()
-                        .map_err(|_| format_err!("Target path is not valid unicode"))?,
+                        .map_err(|_| failure::format_err!("Target path is not valid unicode"))?,
                 )
             }
             other => other.clone(),
         };
         if let Some(ref s) = requested_target {
             if s.trim().is_empty() {
-                bail!("target was empty")
+                failure::bail!("target was empty")
             }
         }
         let cfg_target = config.get_string("build.target")?.map(|s| s.val);
         let target = requested_target.or(cfg_target);
 
         if jobs == Some(0) {
-            bail!("jobs must be at least 1")
+            failure::bail!("jobs must be at least 1")
         }
         if jobs.is_some() && config.jobserver_from_env().is_some() {
             config.shell().warn(

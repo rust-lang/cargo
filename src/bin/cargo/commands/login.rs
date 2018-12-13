@@ -26,7 +26,7 @@ pub fn exec(config: &mut Config, args: &ArgMatches<'_>) -> CliResult {
         None => {
             let host = match registry {
                 Some(ref _registry) => {
-                    return Err(format_err!(
+                    return Err(failure::format_err!(
                         "token must be provided when \
                          --registry is provided."
                     )

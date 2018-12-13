@@ -218,7 +218,7 @@ impl Shell {
 
                 Some("auto") | None => ColorChoice::CargoAuto,
 
-                Some(arg) => bail!(
+                Some(arg) => failure::bail!(
                     "argument for --color must be auto, always, or \
                      never, but found `{}`",
                     arg
@@ -376,13 +376,13 @@ mod imp {
 
 #[cfg(windows)]
 mod imp {
+    use std::{cmp, mem, ptr};
     use winapi::um::fileapi::*;
     use winapi::um::handleapi::*;
     use winapi::um::processenv::*;
     use winapi::um::winbase::*;
     use winapi::um::wincon::*;
     use winapi::um::winnt::*;
-    use std::{cmp, mem, ptr};
 
     pub(super) use super::default_err_erase_line as err_erase_line;
 

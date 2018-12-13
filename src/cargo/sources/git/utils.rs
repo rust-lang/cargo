@@ -221,7 +221,7 @@ impl GitReference {
                     .chain_err(|| format!("failed to find branch `{}`", s))?;
                 b.get()
                     .target()
-                    .ok_or_else(|| format_err!("branch `{}` did not have a target", s))?
+                    .ok_or_else(|| failure::format_err!("branch `{}` did not have a target", s))?
             }
             GitReference::Rev(ref s) => {
                 let obj = repo.revparse_single(s)?;
@@ -668,13 +668,13 @@ pub fn fetch(
     config: &Config,
 ) -> CargoResult<()> {
     if config.frozen() {
-        bail!(
+        failure::bail!(
             "attempting to update a git repository, but --frozen \
              was specified"
         )
     }
     if !config.network_allowed() {
-        bail!("can't update a git repository in the offline mode")
+        failure::bail!("can't update a git repository in the offline mode")
     }
 
     // If we're fetching from GitHub, attempt GitHub's special fast path for

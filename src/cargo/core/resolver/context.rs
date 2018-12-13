@@ -1,6 +1,8 @@
 use std::collections::{BTreeMap, HashMap, HashSet};
 use std::rc::Rc;
 
+#[allow(unused_imports)] // "ensure" seems to require "bail" be in scope (macro hygiene issue?)
+use failure::{bail, ensure};
 use log::debug;
 
 use crate::core::interning::InternedString;
@@ -204,9 +206,11 @@ impl Context {
             base.extend(dep.features().iter());
             for feature in base.iter() {
                 if feature.contains('/') {
-                    return Err(
-                        format_err!("feature names may not contain slashes: `{}`", feature).into(),
-                    );
+                    return Err(failure::format_err!(
+                        "feature names may not contain slashes: `{}`",
+                        feature
+                    )
+                    .into());
                 }
             }
             ret.push((dep.clone(), base));
@@ -225,7 +229,7 @@ impl Context {
         if !remaining.is_empty() {
             let features = remaining.join(", ");
             return Err(match parent {
-                None => format_err!(
+                None => failure::format_err!(
                     "Package `{}` does not have these features: `{}`",
                     s.package_id(),
                     features
@@ -390,7 +394,7 @@ impl<'r> Requirements<'r> {
             .expect("must be a valid feature")
         {
             match *fv {
-                FeatureValue::Feature(ref dep_feat) if **dep_feat == *feat => bail!(
+                FeatureValue::Feature(ref dep_feat) if **dep_feat == *feat => failure::bail!(
                     "Cyclic feature dependency: feature `{}` depends on itself",
                     feat
                 ),

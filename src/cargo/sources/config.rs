@@ -85,7 +85,7 @@ impl<'cfg> SourceConfigMap<'cfg> {
         loop {
             let cfg = match self.cfgs.get(name) {
                 Some(cfg) => cfg,
-                None => bail!(
+                None => failure::bail!(
                     "could not find a configured source with the \
                      name `{}` when attempting to lookup `{}` \
                      (configuration in `{}`)",
@@ -107,7 +107,7 @@ impl<'cfg> SourceConfigMap<'cfg> {
             }
             debug!("following pointer to {}", name);
             if name == orig_name {
-                bail!(
+                failure::bail!(
                     "detected a cycle of `replace-with` sources, the source \
                      `{}` is eventually replaced with itself \
                      (configuration in `{}`)",
@@ -119,7 +119,7 @@ impl<'cfg> SourceConfigMap<'cfg> {
         let new_src = new_id.load(self.config)?;
         let old_src = id.load(self.config)?;
         if !new_src.supports_checksums() && old_src.supports_checksums() {
-            bail!(
+            failure::bail!(
                 "\
 cannot replace `{orig}` with `{name}`, the source `{orig}` supports \
 checksums, but `{name}` does not
@@ -132,7 +132,7 @@ a lock file compatible with `{orig}` cannot be generated in this situation
         }
 
         if old_src.requires_precise() && id.precise().is_none() {
-            bail!(
+            failure::bail!(
                 "\
 the source {orig} requires a lock file to be present first before it can be
 used against vendored source code
@@ -203,14 +203,14 @@ restore the source replacement configuration to continue the build
 
         let mut srcs = srcs.into_iter();
         let src = srcs.next().ok_or_else(|| {
-            format_err!(
+            failure::format_err!(
                 "no source URL specified for `source.{}`, need \
                  either `registry` or `local-registry` defined",
                 name
             )
         })?;
         if srcs.next().is_some() {
-            bail!("more than one source URL specified for `source.{}`", name)
+            failure::bail!("more than one source URL specified for `source.{}`", name)
         }
 
         let mut replace_with = None;
