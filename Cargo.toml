@@ -9,7 +9,7 @@ description = "Automatically apply the suggestions made by rustc"
 repository = "https://github.com/rust-lang-nursery/rustfix"
 documentation = "https://docs.rs/rustfix"
 readme = "Readme.md"
-version = "0.4.3"
+version = "0.4.4"
 exclude = [
     "etc/*",
     "examples/*",
