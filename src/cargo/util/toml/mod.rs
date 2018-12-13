@@ -19,7 +19,7 @@ use crate::core::{Dependency, Manifest, PackageId, Summary, Target};
 use crate::core::{Edition, EitherManifest, Feature, Features, VirtualManifest};
 use crate::core::{GitReference, PackageIdSpec, SourceId, WorkspaceConfig, WorkspaceRootConfig};
 use crate::sources::{CRATES_IO_INDEX, CRATES_IO_REGISTRY};
-use crate::util::errors::{CargoError, CargoResult, CargoResultExt, ManifestError};
+use crate::util::errors::{CargoResult, CargoResultExt, ManifestError};
 use crate::util::paths;
 use crate::util::{self, Config, ToUrl};
 
@@ -142,7 +142,7 @@ in the future.",
         return Ok(ret);
     }
 
-    let first_error = CargoError::from(first_error);
+    let first_error = failure::Error::from(first_error);
     Err(first_error.context("could not parse input as TOML").into())
 }
 

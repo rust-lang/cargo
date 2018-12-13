@@ -108,20 +108,18 @@ fn with_retry_repeats_the_call_then_works() {
 
 #[test]
 fn with_retry_finds_nested_spurious_errors() {
-    use crate::util::CargoError;
-
     //Error HTTP codes (5xx) are considered maybe_spurious and will prompt retry
     //String error messages are not considered spurious
-    let error1 = CargoError::from(HttpNot200 {
+    let error1 = failure::Error::from(HttpNot200 {
         code: 501,
         url: "Uri".to_string(),
     });
-    let error1 = CargoError::from(error1.context("A non-spurious wrapping err"));
-    let error2 = CargoError::from(HttpNot200 {
+    let error1 = failure::Error::from(error1.context("A non-spurious wrapping err"));
+    let error2 = failure::Error::from(HttpNot200 {
         code: 502,
         url: "Uri".to_string(),
     });
-    let error2 = CargoError::from(error2.context("A second chained error"));
+    let error2 = failure::Error::from(error2.context("A second chained error"));
     let mut results: Vec<CargoResult<()>> = vec![Ok(()), Err(error1), Err(error2)];
     let config = Config::default().unwrap();
     let result = with_retry(&config, || results.pop().unwrap());
