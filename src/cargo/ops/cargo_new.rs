@@ -83,7 +83,7 @@ impl NewOptions {
         registry: Option<String>,
     ) -> CargoResult<NewOptions> {
         let kind = match (bin, lib) {
-            (true, true) => bail!("can't specify both lib and binary outputs"),
+            (true, true) => failure::bail!("can't specify both lib and binary outputs"),
             (false, true) => NewProjectKind::Lib,
             // default to bin
             (_, false) => NewProjectKind::Bin,
@@ -113,14 +113,14 @@ fn get_name<'a>(path: &'a Path, opts: &'a NewOptions) -> CargoResult<&'a str> {
     }
 
     let file_name = path.file_name().ok_or_else(|| {
-        format_err!(
+        failure::format_err!(
             "cannot auto-detect package name from path {:?} ; use --name to override",
             path.as_os_str()
         )
     })?;
 
     file_name.to_str().ok_or_else(|| {
-        format_err!(
+        failure::format_err!(
             "cannot create package with a non-unicode name: {:?}",
             file_name
         )
@@ -145,7 +145,7 @@ fn check_name(name: &str, opts: &NewOptions) -> CargoResult<()> {
         "true", "type", "typeof", "unsafe", "unsized", "use", "virtual", "where", "while", "yield",
     ];
     if blacklist.contains(&name) || (opts.kind.is_bin() && compiler::is_bad_artifact_name(name)) {
-        bail!(
+        failure::bail!(
             "The name `{}` cannot be used as a crate name{}",
             name,
             name_help
@@ -154,7 +154,7 @@ fn check_name(name: &str, opts: &NewOptions) -> CargoResult<()> {
 
     if let Some(ref c) = name.chars().nth(0) {
         if c.is_digit(10) {
-            bail!(
+            failure::bail!(
                 "Package names starting with a digit cannot be used as a crate name{}",
                 name_help
             )
@@ -168,7 +168,7 @@ fn check_name(name: &str, opts: &NewOptions) -> CargoResult<()> {
         if c == '_' || c == '-' {
             continue;
         }
-        bail!(
+        failure::bail!(
             "Invalid character `{}` in crate name: `{}`{}",
             c,
             name,
@@ -267,7 +267,7 @@ fn detect_source_paths_and_types(
     for i in detected_files {
         if i.bin {
             if let Some(x) = BTreeMap::get::<str>(&duplicates_checker, i.target_name.as_ref()) {
-                bail!(
+                failure::bail!(
                     "\
 multiple possible binary sources found:
   {}
@@ -280,7 +280,7 @@ cannot automatically generate Cargo.toml as the main target would be ambiguous",
             duplicates_checker.insert(i.target_name.as_ref(), i);
         } else {
             if let Some(plp) = previous_lib_relpath {
-                bail!(
+                failure::bail!(
                     "cannot have a package with \
                      multiple libraries, \
                      found both `{}` and `{}`",
@@ -314,7 +314,7 @@ fn plan_new_source_file(bin: bool, package_name: String) -> SourceFileInformatio
 pub fn new(opts: &NewOptions, config: &Config) -> CargoResult<()> {
     let path = &opts.path;
     if fs::metadata(path).is_ok() {
-        bail!(
+        failure::bail!(
             "destination `{}` already exists\n\n\
              Use `cargo init` to initialize the directory",
             path.display()
@@ -335,7 +335,7 @@ pub fn new(opts: &NewOptions, config: &Config) -> CargoResult<()> {
     };
 
     mk(config, &mkopts).chain_err(|| {
-        format_err!(
+        failure::format_err!(
             "Failed to create package `{}` at `{}`",
             name,
             path.display()
@@ -348,7 +348,7 @@ pub fn init(opts: &NewOptions, config: &Config) -> CargoResult<()> {
     let path = &opts.path;
 
     if fs::metadata(&path.join("Cargo.toml")).is_ok() {
-        bail!("`cargo init` cannot be run on existing Cargo packages")
+        failure::bail!("`cargo init` cannot be run on existing Cargo packages")
     }
 
     let name = get_name(path, opts)?;
@@ -394,7 +394,7 @@ pub fn init(opts: &NewOptions, config: &Config) -> CargoResult<()> {
         // if none exists, maybe create git, like in `cargo new`
 
         if num_detected_vsces > 1 {
-            bail!(
+            failure::bail!(
                 "more than one of .hg, .git, .pijul, .fossil configurations \
                  found and the ignore file can't be filled in as \
                  a result. specify --vcs to override detection"
@@ -413,7 +413,7 @@ pub fn init(opts: &NewOptions, config: &Config) -> CargoResult<()> {
     };
 
     mk(config, &mkopts).chain_err(|| {
-        format_err!(
+        failure::format_err!(
             "Failed to create package `{}` at `{}`",
             name,
             path.display()
@@ -646,7 +646,7 @@ fn discover_author() -> CargoResult<(String, Option<String>)> {
         Some(name) => name,
         None => {
             let username_var = if cfg!(windows) { "USERNAME" } else { "USER" };
-            bail!(
+            failure::bail!(
                 "could not determine the current user, please set ${}",
                 username_var
             )
@@ -694,7 +694,7 @@ fn global_config(config: &Config) -> CargoResult<CargoNewConfig> {
                  `cargo-new.vcs`, unknown vcs `{}` \
                  (found in {})",
                 s, p
-            )))
+            )));
         }
         None => None,
     };

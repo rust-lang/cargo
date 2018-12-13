@@ -85,7 +85,7 @@ pub fn write_pkg_lockfile(ws: &Workspace<'_>, resolve: &Resolve) -> CargoResult<
 
     if !ws.config().lock_update_allowed() {
         if ws.config().cli_unstable().offline {
-            bail!("can't update in the offline mode");
+            failure::bail!("can't update in the offline mode");
         }
 
         let flag = if ws.config().network_allowed() {
@@ -93,7 +93,7 @@ pub fn write_pkg_lockfile(ws: &Workspace<'_>, resolve: &Resolve) -> CargoResult<
         } else {
             "--frozen"
         };
-        bail!(
+        failure::bail!(
             "the lock file {} needs to be updated but {} was passed to \
              prevent this",
             ws.root().to_path_buf().join("Cargo.lock").display(),

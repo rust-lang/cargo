@@ -17,7 +17,10 @@ pub fn join_paths<T: AsRef<OsStr>>(paths: &[T], env: &str) -> CargoResult<OsStri
     };
     let paths = paths.iter().map(Path::new).collect::<Vec<_>>();
     let err = failure::Error::from(err);
-    let explain = Internal::new(format_err!("failed to join path array: {:?}", paths));
+    let explain = Internal::new(failure::format_err!(
+        "failed to join path array: {:?}",
+        paths
+    ));
     let err = failure::Error::from(err.context(explain));
     let more_explain = format!(
         "failed to join search paths together\n\
@@ -87,7 +90,7 @@ pub fn without_prefix<'a>(long_path: &'a Path, prefix: &'a Path) -> Option<&'a P
 
 pub fn resolve_executable(exec: &Path) -> CargoResult<PathBuf> {
     if exec.components().count() == 1 {
-        let paths = env::var_os("PATH").ok_or_else(|| format_err!("no PATH"))?;
+        let paths = env::var_os("PATH").ok_or_else(|| failure::format_err!("no PATH"))?;
         let candidates = env::split_paths(&paths).flat_map(|path| {
             let candidate = path.join(&exec);
             let with_exe = if env::consts::EXE_EXTENSION == "" {
@@ -105,7 +108,7 @@ pub fn resolve_executable(exec: &Path) -> CargoResult<PathBuf> {
             }
         }
 
-        bail!("no executable for `{}` found in PATH", exec.display())
+        failure::bail!("no executable for `{}` found in PATH", exec.display())
     } else {
         Ok(exec.canonicalize()?)
     }
@@ -114,7 +117,7 @@ pub fn resolve_executable(exec: &Path) -> CargoResult<PathBuf> {
 pub fn read(path: &Path) -> CargoResult<String> {
     match String::from_utf8(read_bytes(path)?) {
         Ok(s) => Ok(s),
-        Err(_) => bail!("path at `{}` was not valid utf-8", path.display()),
+        Err(_) => failure::bail!("path at `{}` was not valid utf-8", path.display()),
     }
 }
 
@@ -192,7 +195,10 @@ pub fn path2bytes(path: &Path) -> CargoResult<&[u8]> {
 pub fn path2bytes(path: &Path) -> CargoResult<&[u8]> {
     match path.as_os_str().to_str() {
         Some(s) => Ok(s.as_bytes()),
-        None => Err(format_err!("invalid non-unicode path: {}", path.display())),
+        None => Err(failure::format_err!(
+            "invalid non-unicode path: {}",
+            path.display()
+        )),
     }
 }
 
@@ -207,7 +213,7 @@ pub fn bytes2path(bytes: &[u8]) -> CargoResult<PathBuf> {
     use std::str;
     match str::from_utf8(bytes) {
         Ok(s) => Ok(PathBuf::from(s)),
-        Err(..) => Err(format_err!("invalid non-unicode path")),
+        Err(..) => Err(failure::format_err!("invalid non-unicode path")),
     }
 }
 

@@ -98,7 +98,7 @@ pub fn package(ws: &Workspace<'_>, opts: &PackageOpts<'_>) -> CargoResult<Option
         .status("Packaging", pkg.package_id().to_string())?;
     dst.file().set_len(0)?;
     tar(ws, &src_files, vcs_info.as_ref(), dst.file(), &filename)
-        .chain_err(|| format_err!("failed to prepare local package for uploading"))?;
+        .chain_err(|| failure::format_err!("failed to prepare local package for uploading"))?;
     if opts.verify {
         dst.seek(SeekFrom::Start(0))?;
         run_verify(ws, &dst, opts).chain_err(|| "failed to verify package tarball")?
@@ -161,7 +161,7 @@ fn check_metadata(pkg: &Package, config: &Config) -> CargoResult<()> {
 fn verify_dependencies(pkg: &Package) -> CargoResult<()> {
     for dep in pkg.dependencies() {
         if dep.source_id().is_path() && !dep.specified_req() {
-            bail!(
+            failure::bail!(
                 "all path dependencies must have a version specified \
                  when packaging.\ndependency `{}` does not specify \
                  a version.",
@@ -243,7 +243,7 @@ fn check_repo_state(
             Ok(Some(rev_obj.id().to_string()))
         } else {
             if !allow_dirty {
-                bail!(
+                failure::bail!(
                     "{} files in the working directory contain changes that were \
                      not yet committed into git:\n\n{}\n\n\
                      to proceed despite this, pass the `--allow-dirty` flag",
@@ -266,7 +266,7 @@ fn check_vcs_file_collision(pkg: &Package, src_files: &[PathBuf]) -> CargoResult
         .iter()
         .find(|&p| util::without_prefix(&p, root).unwrap() == vcs_info_path);
     if collision.is_some() {
-        bail!(
+        failure::bail!(
             "Invalid inclusion of reserved file name \
              {} in package source",
             VCS_INFO_FILE
@@ -297,7 +297,7 @@ fn tar(
         let relative = util::without_prefix(file, root).unwrap();
         check_filename(relative)?;
         let relative = relative.to_str().ok_or_else(|| {
-            format_err!("non-utf8 path in source directory: {}", relative.display())
+            failure::format_err!("non-utf8 path in source directory: {}", relative.display())
         })?;
         config
             .shell()
@@ -467,7 +467,7 @@ fn run_verify(ws: &Workspace<'_>, tar: &FileLock, opts: &PackageOpts<'_>) -> Car
     let ws_fingerprint = src.last_modified_file(ws.current()?)?;
     if pkg_fingerprint != ws_fingerprint {
         let (_, path) = ws_fingerprint;
-        bail!(
+        failure::bail!(
             "Source directory was modified by build.rs during cargo publish. \
              Build scripts should not modify anything outside of OUT_DIR. \
              Modified file: {}\n\n\
@@ -492,7 +492,7 @@ fn check_filename(file: &Path) -> CargoResult<()> {
     };
     let name = match name.to_str() {
         Some(name) => name,
-        None => bail!(
+        None => failure::bail!(
             "path does not have a unicode filename which may not unpack \
              on all platforms: {}",
             file.display()
@@ -500,7 +500,7 @@ fn check_filename(file: &Path) -> CargoResult<()> {
     };
     let bad_chars = ['/', '\\', '<', '>', ':', '"', '|', '?', '*'];
     if let Some(c) = bad_chars.iter().find(|c| name.contains(**c)) {
-        bail!(
+        failure::bail!(
             "cannot package a filename with a special character `{}`: {}",
             c,
             file.display()

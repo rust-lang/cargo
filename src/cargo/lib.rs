@@ -1,5 +1,6 @@
 #![cfg_attr(test, deny(warnings))]
-#![warn(rust_2018_idioms)] // while we're getting used to 2018
+#![warn(rust_2018_idioms)]
+// while we're getting used to 2018
 // Clippy isn't enforced by CI, and know that @alexcrichton isn't a fan :)
 #![allow(clippy::boxed_local)] // bug rust-lang-nursery/rust-clippy#1123
 #![allow(clippy::cyclomatic_complexity)] // large project
@@ -13,9 +14,6 @@
 #![allow(clippy::too_many_arguments)] // large project
 #![allow(clippy::type_complexity)] // there's an exceptionally complex type
 #![allow(clippy::wrong_self_convention)] // perhaps Rc should be special cased in Clippy?
-
-#[macro_use]
-extern crate failure;
 
 use std::fmt;
 

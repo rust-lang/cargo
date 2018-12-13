@@ -197,7 +197,7 @@ impl<'cfg> RegistryIndex<'cfg> {
             let err = load.load(&root, Path::new(&path), &mut |contents| {
                 hit_closure = true;
                 let contents = str::from_utf8(contents)
-                    .map_err(|_| format_err!("registry index file was not valid utf-8"))?;
+                    .map_err(|_| failure::format_err!("registry index file was not valid utf-8"))?;
                 ret.reserve(contents.lines().count());
                 let lines = contents.lines().map(|s| s.trim()).filter(|l| !l.is_empty());
 
