@@ -48,7 +48,7 @@ mod output_depinfo;
 #[derive(PartialEq, Eq, Hash, Debug, Clone, Copy, PartialOrd, Ord, Serialize)]
 pub enum Kind {
     Host,
-    Target
+    Target,
 }
 
 /// A glorified callback for executing calls to rustc. Rather than calling rustc
@@ -143,7 +143,6 @@ fn compile<'a, 'cfg: 'a>(
     fingerprint::prepare_init(cx, unit)?;
     cx.links.validate(bcx.resolve, unit)?;
 
-    let mut cached = false;
     let (dirty, fresh, freshness) = if unit.mode.is_run_custom_build() {
         custom_build::prepare(cx, unit)?
     } else if unit.mode == CompileMode::Doctest {
@@ -151,7 +150,7 @@ fn compile<'a, 'cfg: 'a>(
         (Work::noop(), Work::noop(), Freshness::Fresh)
     } else if build_plan {
         (
-            rustc(cx, unit, &exec.clone())?.0,
+            rustc(cx, unit, &exec.clone())?,
             Work::noop(),
             Freshness::Dirty,
         )
@@ -160,9 +159,7 @@ fn compile<'a, 'cfg: 'a>(
         let work = if unit.mode.is_doc() {
             rustdoc(cx, unit)?
         } else {
-            let temp = rustc(cx, unit, exec)?;
-            cached = temp.1;
-            temp.0
+            rustc(cx, unit, exec)?
         };
         // Need to link targets on both the dirty and fresh
         let dirty = work.then(link_targets(cx, unit, false)?).then(dirty);
@@ -174,7 +171,7 @@ fn compile<'a, 'cfg: 'a>(
 
         (dirty, fresh, freshness)
     };
-    jobs.enqueue(cx, unit, Job::new(dirty, fresh), freshness, cached)?;
+    jobs.enqueue(cx, unit, Job::new(dirty, fresh), freshness)?;
     drop(p);
 
     // Be sure to compile all dependencies of this target as well.
@@ -192,7 +189,7 @@ fn rustc<'a, 'cfg>(
     cx: &mut Context<'a, 'cfg>,
     unit: &Unit<'a>,
     exec: &Arc<Executor>,
-) -> CargoResult<(Work, bool)> {
+) -> CargoResult<Work> {
     let mut rustc = prepare_rustc(cx, &unit.target.rustc_crate_types(), unit)?;
     if cx.is_primary_package(unit) {
         rustc.env("CARGO_PRIMARY_PACKAGE", "1");
@@ -247,7 +244,7 @@ fn rustc<'a, 'cfg>(
 
     let found_shared = cx.in_shared_dir(unit);
 
-    return Ok((Work::new(move |state| {
+    return Ok(Work::new(move |state| {
         // Only at runtime have we discovered what the extra -L and -l
         // arguments are for native libraries, so we process those here. We
         // also need to be sure to add any -L paths for our plugins to the
@@ -345,7 +342,7 @@ fn rustc<'a, 'cfg>(
         }
 
         Ok(())
-    }), found_shared));
+    }));
 
     // Add all relevant -L and -l flags from dependencies (now calculated and
     // present in `state`) to the command provided

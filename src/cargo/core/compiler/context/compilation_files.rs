@@ -1,12 +1,10 @@
-use std::collections::HashMap;
+use std::collections::{HashMap, HashSet};
 use std::env;
 use std::fmt;
 use std::fs::metadata;
 use std::hash::{Hash, Hasher, SipHasher};
 use std::path::{Path, PathBuf};
 use std::sync::Arc;
-
-use std::collections::HashSet;
 
 use lazycell::LazyCell;
 
