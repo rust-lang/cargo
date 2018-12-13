@@ -395,46 +395,25 @@ fn url_display(url: &Url) -> String {
 
 impl fmt::Display for SourceId {
     fn fmt(&self, f: &mut Formatter<'_>) -> fmt::Result {
-        match *self.inner {
-            SourceIdInner {
-                kind: Kind::Path,
-                ref url,
-                ..
-            } => write!(f, "{}", url_display(url)),
-            SourceIdInner {
-                kind: Kind::Git(ref reference),
-                ref url,
-                ref precise,
-                ..
-            } => {
+        match self.inner.kind {
+            Kind::Git(ref reference) => {
                 // Don't replace the URL display for git references,
                 // because those are kind of expected to be URLs.
-                write!(f, "{}", url)?;
+                write!(f, "{}", self.inner.url)?;
                 if let Some(pretty) = reference.pretty_ref() {
                     write!(f, "?{}", pretty)?;
                 }
 
-                if let Some(ref s) = *precise {
+                if let Some(ref s) = self.inner.precise {
                     let len = cmp::min(s.len(), 8);
                     write!(f, "#{}", &s[..len])?;
                 }
                 Ok(())
             }
-            SourceIdInner {
-                kind: Kind::Registry,
-                ref url,
-                ..
-            }
-            | SourceIdInner {
-                kind: Kind::LocalRegistry,
-                ref url,
-                ..
-            } => write!(f, "registry `{}`", url_display(url)),
-            SourceIdInner {
-                kind: Kind::Directory,
-                ref url,
-                ..
-            } => write!(f, "dir {}", url_display(url)),
+            Kind::Path => write!(f, "{}", url_display(&self.inner.url)),
+            Kind::Registry => write!(f, "registry `{}`", url_display(&self.inner.url)),
+            Kind::LocalRegistry => write!(f, "registry `{}`", url_display(&self.inner.url)),
+            Kind::Directory => write!(f, "dir {}", url_display(&self.inner.url)),
         }
     }
 }
@@ -479,7 +458,7 @@ impl Ord for SourceIdInner {
             ord => return ord,
         }
         match (&self.kind, &other.kind) {
-            (&Kind::Git(ref ref1), &Kind::Git(ref ref2)) => {
+            (Kind::Git(ref1), Kind::Git(ref2)) => {
                 (ref1, &self.canonical_url).cmp(&(ref2, &other.canonical_url))
             }
             _ => self.kind.cmp(&other.kind),
@@ -493,12 +472,8 @@ impl Ord for SourceIdInner {
 impl Hash for SourceId {
     fn hash<S: hash::Hasher>(&self, into: &mut S) {
         self.inner.kind.hash(into);
-        match *self.inner {
-            SourceIdInner {
-                kind: Kind::Git(..),
-                ref canonical_url,
-                ..
-            } => canonical_url.as_str().hash(into),
+        match self.inner.kind {
+            Kind::Git(_) => self.inner.canonical_url.as_str().hash(into),
             _ => self.inner.url.as_str().hash(into),
         }
     }
