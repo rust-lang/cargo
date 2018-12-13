@@ -222,10 +222,10 @@ pub enum TargetSourcePath {
 }
 
 impl TargetSourcePath {
-    pub fn path(&self) -> &Path {
+    pub fn path(&self) -> Option<&Path> {
         match self {
-            TargetSourcePath::Path(path) => path.as_ref(),
-            TargetSourcePath::Metabuild => panic!("metabuild not expected"),
+            TargetSourcePath::Path(path) => Some(path.as_ref()),
+            TargetSourcePath::Metabuild => None,
         }
     }
 
@@ -276,11 +276,18 @@ struct SerializedTarget<'a> {
 
 impl ser::Serialize for Target {
     fn serialize<S: ser::Serializer>(&self, s: S) -> Result<S::Ok, S::Error> {
+        let src_path = match &self.src_path {
+            TargetSourcePath::Path(p) => p.to_path_buf(),
+            // This is a lie, to avoid changing the format of SerializedTarget.
+            // The target dir is unknown here, so the path cannot be determined.
+            // A better solution eludes me at this time.
+            TargetSourcePath::Metabuild => PathBuf::from("metabuild.rs"),
+        };
         SerializedTarget {
             kind: &self.kind,
             crate_types: self.rustc_crate_types(),
             name: &self.name,
-            src_path: &self.src_path.path().to_path_buf(),
+            src_path: &src_path,
             edition: &self.edition.to_string(),
             required_features: self
                 .required_features
@@ -301,7 +308,7 @@ compact_debug! {
                             Target::lib_target(
                                 &self.name,
                                 kinds.clone(),
-                                self.src_path().path().to_path_buf(),
+                                self.src_path().path().unwrap().to_path_buf(),
                                 self.edition,
                             ),
                             format!("lib_target({:?}, {:?}, {:?}, {:?})",
