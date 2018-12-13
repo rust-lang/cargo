@@ -1235,3 +1235,17 @@ fn fix_to_broken_code() {
         "pub fn foo() { let x = 3; drop(x); }"
     );
 }
+
+#[test]
+fn fix_with_common() {
+    let p = project()
+        .file("src/lib.rs", "")
+        .file("tests/t1.rs", "mod common; #[test] fn t1() { common::try(); }")
+        .file("tests/t2.rs", "mod common; #[test] fn t2() { common::try(); }")
+        .file("tests/common/mod.rs", "pub fn try() {}")
+        .build();
+
+    p.cargo("fix --edition --allow-no-vcs").run();
+
+    assert_eq!(p.read_file("tests/common/mod.rs"), "pub fn r#try() {}");
+}
