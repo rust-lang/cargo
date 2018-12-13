@@ -550,6 +550,7 @@ pub struct Execs {
     expect_stderr_unordered: Vec<String>,
     expect_neither_contains: Vec<String>,
     expect_json: Option<Vec<Value>>,
+    expect_json_contains_unordered: Vec<Value>,
     stream_output: bool,
 }
 
@@ -685,6 +686,24 @@ impl Execs {
                 .split("\n\n")
                 .map(|line| line.parse().expect("line to be a valid JSON value"))
                 .collect(),
+        );
+        self
+    }
+
+    /// Verify JSON output contains the given objects (in any order) somewhere
+    /// in its output.
+    ///
+    /// CAUTION: Be very careful when using this. Make sure every object is
+    /// unique (not a subset of one another). Also avoid using objects that
+    /// could possibly match multiple output lines unless you're very sure of
+    /// what you are doing.
+    ///
+    /// See `with_json` for more detail.
+    pub fn with_json_contains_unordered(&mut self, expected: &str) -> &mut Self {
+        self.expect_json_contains_unordered.extend(
+            expected
+                .split("\n\n")
+                .map(|line| line.parse().expect("line to be a valid JSON value")),
         );
         self
     }
@@ -939,6 +958,33 @@ impl Execs {
             }
             for (obj, line) in objects.iter().zip(lines) {
                 self.match_json(obj, line)?;
+            }
+        }
+
+        if !self.expect_json_contains_unordered.is_empty() {
+            let stdout = str::from_utf8(&actual.stdout)
+                .map_err(|_| "stdout was not utf8 encoded".to_owned())?;
+            let mut lines = stdout
+                .lines()
+                .filter(|line| line.starts_with('{'))
+                .collect::<Vec<_>>();
+            for obj in &self.expect_json_contains_unordered {
+                match lines
+                    .iter()
+                    .position(|line| self.match_json(obj, line).is_ok())
+                {
+                    Some(index) => lines.remove(index),
+                    None => {
+                        return Err(format!(
+                            "Did not find expected JSON:\n\
+                             {}\n\
+                             Remaining available output:\n\
+                             {}\n",
+                            serde_json::to_string_pretty(obj).unwrap(),
+                            lines.join("\n")
+                        ));
+                    }
+                };
             }
         }
         Ok(())
@@ -1322,6 +1368,7 @@ pub fn execs() -> Execs {
         expect_stderr_unordered: Vec::new(),
         expect_neither_contains: Vec::new(),
         expect_json: None,
+        expect_json_contains_unordered: Vec::new(),
         stream_output: false,
     }
 }
