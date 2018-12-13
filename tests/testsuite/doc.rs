@@ -1237,10 +1237,6 @@ fn doc_target_edition() {
 // caused `cargo doc` to fail.
 #[test]
 fn issue_5345() {
-    if !is_nightly() {
-        // This can be removed once 1.29 is stable (rustdoc --cap-lints).
-        return;
-    }
     let foo = project()
         .file(
             "Cargo.toml",
