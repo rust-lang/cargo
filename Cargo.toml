@@ -105,5 +105,6 @@ test = false
 doc = false
 
 [features]
+deny-warnings = []
 vendored-openssl = ['openssl/vendored']
 pretty-env-logger = ['pretty_env_logger']

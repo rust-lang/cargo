@@ -114,10 +114,6 @@ and run with `rustup run` (e.g `rustup run nightly
 <path-to-cargo>/target/debug/cargo <args>..`) (or set the `RUSTC` env var to point
 to nightly rustc).
 
-Because the test suite has `#![deny(warnings)]` at times you might find it
-convenient to override this with `RUSTFLAGS`, for example
-`RUSTFLAGS="--cap-lints warn" cargo build`.
-
 ## Logging
 
 Cargo uses [`env_logger`](https://docs.rs/env_logger/*/env_logger/), so you can set
