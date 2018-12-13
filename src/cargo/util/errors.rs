@@ -5,12 +5,13 @@ use std::path::PathBuf;
 use std::process::{ExitStatus, Output};
 use std::str;
 
-use crate::core::{TargetKind, Workspace};
 use clap;
 use failure::{Context, Error, Fail};
+use log::trace;
 
-pub use failure::Error as CargoError;
-pub type CargoResult<T> = Result<T, Error>;
+use crate::core::{TargetKind, Workspace};
+
+pub type CargoResult<T> = failure::Fallible<T>; // Alex's body isn't quite ready to give up "Result"
 
 pub trait CargoResultExt<T, E> {
     fn chain_err<F, D>(self, f: F) -> Result<T, Context<D>>
@@ -56,19 +57,19 @@ impl Internal {
 }
 
 impl Fail for Internal {
-    fn cause(&self) -> Option<&Fail> {
+    fn cause(&self) -> Option<&dyn Fail> {
         self.inner.as_fail().cause()
     }
 }
 
 impl fmt::Debug for Internal {
-    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         self.inner.fmt(f)
     }
 }
 
 impl fmt::Display for Internal {
-    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         self.inner.fmt(f)
     }
 }
@@ -96,25 +97,25 @@ impl ManifestError {
     /// Returns an iterator over the `ManifestError` chain of causes.
     ///
     /// So if this error was not caused by another `ManifestError` this will be empty.
-    pub fn manifest_causes(&self) -> ManifestCauses {
+    pub fn manifest_causes(&self) -> ManifestCauses<'_> {
         ManifestCauses { current: self }
     }
 }
 
 impl Fail for ManifestError {
-    fn cause(&self) -> Option<&Fail> {
+    fn cause(&self) -> Option<&dyn Fail> {
         self.cause.as_fail().cause()
     }
 }
 
 impl fmt::Debug for ManifestError {
-    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         self.cause.fmt(f)
     }
 }
 
 impl fmt::Display for ManifestError {
-    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         self.cause.fmt(f)
     }
 }
@@ -187,7 +188,7 @@ impl CargoTestError {
         }
     }
 
-    pub fn hint(&self, ws: &Workspace) -> String {
+    pub fn hint(&self, ws: &Workspace<'_>) -> String {
         match self.test {
             Test::UnitTest {
                 ref kind,
@@ -230,13 +231,13 @@ pub type CliResult = Result<(), CliError>;
 
 #[derive(Debug)]
 pub struct CliError {
-    pub error: Option<CargoError>,
+    pub error: Option<failure::Error>,
     pub unknown: bool,
     pub exit_code: i32,
 }
 
 impl CliError {
-    pub fn new(error: CargoError, code: i32) -> CliError {
+    pub fn new(error: failure::Error, code: i32) -> CliError {
         let unknown = error.downcast_ref::<Internal>().is_some();
         CliError {
             error: Some(error),
@@ -254,8 +255,8 @@ impl CliError {
     }
 }
 
-impl From<CargoError> for CliError {
-    fn from(err: CargoError) -> CliError {
+impl From<failure::Error> for CliError {
+    fn from(err: failure::Error) -> CliError {
         CliError::new(err, 101)
     }
 }
@@ -340,10 +341,10 @@ pub fn process_error(
     }
 }
 
-pub fn internal<S: fmt::Display>(error: S) -> CargoError {
+pub fn internal<S: fmt::Display>(error: S) -> failure::Error {
     _internal(&error)
 }
 
-fn _internal(error: &fmt::Display) -> CargoError {
-    Internal::new(format_err!("{}", error)).into()
+fn _internal(error: &dyn fmt::Display) -> failure::Error {
+    Internal::new(failure::format_err!("{}", error)).into()
 }

@@ -2,13 +2,15 @@ use std::fmt;
 use std::rc::Rc;
 use std::str::FromStr;
 
+use log::trace;
 use semver::ReqParseError;
 use semver::VersionReq;
 use serde::ser;
+use serde::Serialize;
 
 use crate::core::interning::InternedString;
 use crate::core::{PackageId, SourceId, Summary};
-use crate::util::errors::{CargoError, CargoResult, CargoResultExt};
+use crate::util::errors::{CargoResult, CargoResultExt};
 use crate::util::{Cfg, CfgExpr, Config};
 
 /// Information about a dependency requested by a Cargo manifest.
@@ -447,15 +449,14 @@ impl ser::Serialize for Platform {
 }
 
 impl FromStr for Platform {
-    type Err = CargoError;
+    type Err = failure::Error;
 
     fn from_str(s: &str) -> CargoResult<Platform> {
         if s.starts_with("cfg(") && s.ends_with(')') {
             let s = &s[4..s.len() - 1];
-            let p = s
-                .parse()
-                .map(Platform::Cfg)
-                .chain_err(|| format_err!("failed to parse `{}` as a cfg expression", s))?;
+            let p = s.parse().map(Platform::Cfg).chain_err(|| {
+                failure::format_err!("failed to parse `{}` as a cfg expression", s)
+            })?;
             Ok(p)
         } else {
             Ok(Platform::Name(s.to_string()))
@@ -464,7 +465,7 @@ impl FromStr for Platform {
 }
 
 impl fmt::Display for Platform {
-    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         match *self {
             Platform::Name(ref n) => n.fmt(f),
             Platform::Cfg(ref e) => write!(f, "cfg({})", e),

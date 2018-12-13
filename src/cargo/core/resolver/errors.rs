@@ -3,7 +3,7 @@ use std::fmt;
 
 use crate::core::{Dependency, PackageId, Registry, Summary};
 use crate::util::lev_distance::lev_distance;
-use crate::util::{CargoError, Config};
+use crate::util::Config;
 use failure::{Error, Fail};
 use semver;
 
@@ -32,19 +32,19 @@ impl ResolveError {
 }
 
 impl Fail for ResolveError {
-    fn cause(&self) -> Option<&Fail> {
+    fn cause(&self) -> Option<&dyn Fail> {
         self.cause.as_fail().cause()
     }
 }
 
 impl fmt::Debug for ResolveError {
-    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         self.cause.fmt(f)
     }
 }
 
 impl fmt::Display for ResolveError {
-    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         self.cause.fmt(f)
     }
 }
@@ -52,7 +52,7 @@ impl fmt::Display for ResolveError {
 pub type ActivateResult<T> = Result<T, ActivateError>;
 
 pub enum ActivateError {
-    Fatal(CargoError),
+    Fatal(failure::Error),
     Conflict(PackageId, ConflictReason),
 }
 
@@ -70,7 +70,7 @@ impl From<(PackageId, ConflictReason)> for ActivateError {
 
 pub(super) fn activation_error(
     cx: &Context,
-    registry: &mut Registry,
+    registry: &mut dyn Registry,
     parent: &Summary,
     dep: &Dependency,
     conflicting_activations: &BTreeMap<PackageId, ConflictReason>,
@@ -161,7 +161,7 @@ pub(super) fn activation_error(
         msg.push_str(&*dep.package_name());
         msg.push_str("` which could resolve this conflict");
 
-        return to_resolve_err(format_err!("{}", msg));
+        return to_resolve_err(failure::format_err!("{}", msg));
     }
 
     // We didn't actually find any candidates, so we need to
@@ -274,7 +274,7 @@ pub(super) fn activation_error(
         }
     }
 
-    to_resolve_err(format_err!("{}", msg))
+    to_resolve_err(failure::format_err!("{}", msg))
 }
 
 /// Returns String representation of dependency chain for a particular `pkgid`.

@@ -1,5 +1,5 @@
-extern crate crypto_hash;
 use self::crypto_hash::{Algorithm, Hasher};
+use crypto_hash;
 use std::io::Write;
 
 pub struct Sha256(Hasher);

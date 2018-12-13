@@ -7,7 +7,8 @@ use std::path::{Path, PathBuf};
 use std::process::Stdio;
 use std::sync::Mutex;
 
-use serde_json;
+use log::{debug, info, warn};
+use serde::{Deserialize, Serialize};
 
 use crate::util::paths;
 use crate::util::{self, internal, profile, CargoResult, ProcessBuilder};
@@ -260,7 +261,7 @@ fn rustc_fingerprint(path: &Path, rustup_rustc: &Path) -> CargoResult<u64> {
                 .with_extension(env::consts::EXE_EXTENSION);
             paths::mtime(&real_rustc)?.hash(&mut hasher);
         }
-        (true, _, _) => bail!("probably rustup rustc, but without rustup's env vars"),
+        (true, _, _) => failure::bail!("probably rustup rustc, but without rustup's env vars"),
         _ => (),
     }
 

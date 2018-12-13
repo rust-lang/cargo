@@ -8,7 +8,7 @@ use crate::util::errors::{CargoResult, CargoResultExt};
 use crate::util::toml as cargo_toml;
 use crate::util::Filesystem;
 
-pub fn load_pkg_lockfile(ws: &Workspace) -> CargoResult<Option<Resolve>> {
+pub fn load_pkg_lockfile(ws: &Workspace<'_>) -> CargoResult<Option<Resolve>> {
     if !ws.root().join("Cargo.lock").exists() {
         return Ok(None);
     }
@@ -29,7 +29,7 @@ pub fn load_pkg_lockfile(ws: &Workspace) -> CargoResult<Option<Resolve>> {
     Ok(resolve)
 }
 
-pub fn write_pkg_lockfile(ws: &Workspace, resolve: &Resolve) -> CargoResult<()> {
+pub fn write_pkg_lockfile(ws: &Workspace<'_>, resolve: &Resolve) -> CargoResult<()> {
     // Load the original lockfile if it exists.
     let ws_root = Filesystem::new(ws.root().to_path_buf());
     let orig = ws_root.open_ro("Cargo.lock", ws.config(), "Cargo.lock file");
@@ -85,7 +85,7 @@ pub fn write_pkg_lockfile(ws: &Workspace, resolve: &Resolve) -> CargoResult<()> 
 
     if !ws.config().lock_update_allowed() {
         if ws.config().cli_unstable().offline {
-            bail!("can't update in the offline mode");
+            failure::bail!("can't update in the offline mode");
         }
 
         let flag = if ws.config().network_allowed() {
@@ -93,7 +93,7 @@ pub fn write_pkg_lockfile(ws: &Workspace, resolve: &Resolve) -> CargoResult<()> 
         } else {
             "--frozen"
         };
-        bail!(
+        failure::bail!(
             "the lock file {} needs to be updated but {} was passed to \
              prevent this",
             ws.root().to_path_buf().join("Cargo.lock").display(),
@@ -113,7 +113,7 @@ pub fn write_pkg_lockfile(ws: &Workspace, resolve: &Resolve) -> CargoResult<()> 
     Ok(())
 }
 
-fn are_equal_lockfiles(mut orig: String, current: &str, ws: &Workspace) -> bool {
+fn are_equal_lockfiles(mut orig: String, current: &str, ws: &Workspace<'_>) -> bool {
     if has_crlf_line_endings(&orig) {
         orig = orig.replace("\r\n", "\n");
     }

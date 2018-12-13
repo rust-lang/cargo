@@ -7,6 +7,7 @@ use std::path::{Path, PathBuf};
 use std::sync::Arc;
 
 use lazycell::LazyCell;
+use log::info;
 
 use super::{BuildContext, Context, FileFlavor, Kind, Layout, Unit};
 use crate::core::{TargetKind, Workspace};
@@ -16,7 +17,7 @@ use crate::util::{self, CargoResult};
 pub struct Metadata(u64);
 
 impl fmt::Display for Metadata {
-    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         write!(f, "{:016x}", self.0)
     }
 }
@@ -121,7 +122,7 @@ impl<'a, 'cfg: 'a> CompilationFiles<'a, 'cfg> {
 
     /// Get the short hash based only on the PackageId
     /// Used for the metadata when target_metadata returns None
-    pub fn target_short_hash(&self, unit: &Unit) -> String {
+    pub fn target_short_hash(&self, unit: &Unit<'_>) -> String {
         let hashable = unit.pkg.package_id().stable_hash(self.ws.root());
         util::short_hash(&hashable)
     }
@@ -182,7 +183,7 @@ impl<'a, 'cfg: 'a> CompilationFiles<'a, 'cfg> {
 
     /// Returns the directories where Rust crate dependencies are found for the
     /// specified unit.
-    pub fn deps_dir(&self, unit: &Unit) -> &Path {
+    pub fn deps_dir(&self, unit: &Unit<'_>) -> &Path {
         if let Some(ref shared_dir) = self.shared_target_dir { 
             if !self.primary.contains(unit) {
                 return shared_dir.as_path();
@@ -231,7 +232,7 @@ impl<'a, 'cfg: 'a> CompilationFiles<'a, 'cfg> {
     }
 
     /// Returns the bin stem for a given target (without metadata)
-    fn bin_stem(&self, unit: &Unit) -> String {
+    fn bin_stem(&self, unit: &Unit<'_>) -> String {
         if unit.target.allows_underscores() {
             unit.target.name().to_string()
         } else {
@@ -379,7 +380,7 @@ impl<'a, 'cfg: 'a> CompilationFiles<'a, 'cfg> {
         }
         if ret.is_empty() {
             if !unsupported.is_empty() {
-                bail!(
+                failure::bail!(
                     "cannot produce {} for `{}` as the target `{}` \
                      does not support these crate types",
                     unsupported.join(", "),
@@ -387,7 +388,7 @@ impl<'a, 'cfg: 'a> CompilationFiles<'a, 'cfg> {
                     bcx.target_triple()
                 )
             }
-            bail!(
+            failure::bail!(
                 "cannot compile `{}` as the target `{}` does not \
                  support any of the output crate types",
                 unit.pkg,

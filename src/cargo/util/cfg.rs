@@ -2,7 +2,7 @@ use std::fmt;
 use std::iter;
 use std::str::{self, FromStr};
 
-use crate::util::{CargoError, CargoResult};
+use crate::util::CargoResult;
 
 #[derive(Eq, PartialEq, Hash, Ord, PartialOrd, Clone, Debug)]
 pub enum Cfg {
@@ -38,20 +38,20 @@ struct Parser<'a> {
 }
 
 impl FromStr for Cfg {
-    type Err = CargoError;
+    type Err = failure::Error;
 
     fn from_str(s: &str) -> CargoResult<Cfg> {
         let mut p = Parser::new(s);
         let e = p.cfg()?;
         if p.t.next().is_some() {
-            bail!("malformed cfg value or key/value pair: `{}`", s)
+            failure::bail!("malformed cfg value or key/value pair: `{}`", s)
         }
         Ok(e)
     }
 }
 
 impl fmt::Display for Cfg {
-    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         match *self {
             Cfg::Name(ref s) => s.fmt(f),
             Cfg::KeyPair(ref k, ref v) => write!(f, "{} = \"{}\"", k, v),
@@ -85,13 +85,13 @@ impl CfgExpr {
 }
 
 impl FromStr for CfgExpr {
-    type Err = CargoError;
+    type Err = failure::Error;
 
     fn from_str(s: &str) -> CargoResult<CfgExpr> {
         let mut p = Parser::new(s);
         let e = p.expr()?;
         if p.t.next().is_some() {
-            bail!(
+            failure::bail!(
                 "can only have one cfg-expression, consider using all() or \
                  any() explicitly"
             )
@@ -101,7 +101,7 @@ impl FromStr for CfgExpr {
 }
 
 impl fmt::Display for CfgExpr {
-    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         match *self {
             CfgExpr::Not(ref e) => write!(f, "not({})", e),
             CfgExpr::All(ref e) => write!(f, "all({})", CommaSep(e)),
@@ -111,10 +111,10 @@ impl fmt::Display for CfgExpr {
     }
 }
 
-struct CommaSep<'a, T: 'a>(&'a [T]);
+struct CommaSep<'a, T>(&'a [T]);
 
 impl<'a, T: fmt::Display> fmt::Display for CommaSep<'a, T> {
-    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         for (i, v) in self.0.iter().enumerate() {
             if i > 0 {
                 write!(f, ", ")?;
@@ -164,7 +164,7 @@ impl<'a> Parser<'a> {
             }
             Some(&Ok(..)) => self.cfg().map(CfgExpr::Value),
             Some(&Err(..)) => Err(self.t.next().unwrap().err().unwrap()),
-            None => bail!(
+            None => failure::bail!(
                 "expected start of a cfg expression, \
                  found nothing"
             ),
@@ -177,9 +177,9 @@ impl<'a> Parser<'a> {
                 let e = if self.r#try(&Token::Equals) {
                     let val = match self.t.next() {
                         Some(Ok(Token::String(s))) => s,
-                        Some(Ok(t)) => bail!("expected a string, found {}", t.classify()),
+                        Some(Ok(t)) => failure::bail!("expected a string, found {}", t.classify()),
                         Some(Err(e)) => return Err(e),
-                        None => bail!("expected a string, found nothing"),
+                        None => failure::bail!("expected a string, found nothing"),
                     };
                     Cfg::KeyPair(name.to_string(), val.to_string())
                 } else {
@@ -187,9 +187,9 @@ impl<'a> Parser<'a> {
                 };
                 Ok(e)
             }
-            Some(Ok(t)) => bail!("expected identifier, found {}", t.classify()),
+            Some(Ok(t)) => failure::bail!("expected identifier, found {}", t.classify()),
             Some(Err(e)) => Err(e),
-            None => bail!("expected identifier, found nothing"),
+            None => failure::bail!("expected identifier, found nothing"),
         }
     }
 
@@ -205,9 +205,9 @@ impl<'a> Parser<'a> {
     fn eat(&mut self, token: &Token<'a>) -> CargoResult<()> {
         match self.t.next() {
             Some(Ok(ref t)) if token == t => Ok(()),
-            Some(Ok(t)) => bail!("expected {}, found {}", token.classify(), t.classify()),
+            Some(Ok(t)) => failure::bail!("expected {}, found {}", token.classify(), t.classify()),
             Some(Err(e)) => Err(e),
-            None => bail!("expected {}, but cfg expr ended", token.classify()),
+            None => failure::bail!("expected {}, but cfg expr ended", token.classify()),
         }
     }
 }
@@ -229,7 +229,7 @@ impl<'a> Iterator for Tokenizer<'a> {
                             return Some(Ok(Token::String(&self.orig[start + 1..end])));
                         }
                     }
-                    return Some(Err(format_err!("unterminated string in cfg")));
+                    return Some(Err(failure::format_err!("unterminated string in cfg")));
                 }
                 Some((start, ch)) if is_ident_start(ch) => {
                     while let Some(&(end, ch)) = self.s.peek() {
@@ -242,13 +242,13 @@ impl<'a> Iterator for Tokenizer<'a> {
                     return Some(Ok(Token::Ident(&self.orig[start..])));
                 }
                 Some((_, ch)) => {
-                    return Some(Err(format_err!(
+                    return Some(Err(failure::format_err!(
                         "unexpected character in \
                          cfg `{}`, expected parens, \
                          a comma, an identifier, or \
                          a string",
                         ch
-                    )))
+                    )));
                 }
                 None => return None,
             }

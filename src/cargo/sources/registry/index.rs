@@ -2,8 +2,8 @@ use std::collections::HashMap;
 use std::path::Path;
 use std::str;
 
+use log::{info, trace};
 use semver::Version;
-use serde_json;
 
 use crate::core::dependency::Dependency;
 use crate::core::{PackageId, SourceId, Summary};
@@ -124,7 +124,7 @@ impl<'cfg> RegistryIndex<'cfg> {
     }
 
     /// Return the hash listed for a specified PackageId.
-    pub fn hash(&mut self, pkg: PackageId, load: &mut RegistryData) -> CargoResult<String> {
+    pub fn hash(&mut self, pkg: PackageId, load: &mut dyn RegistryData) -> CargoResult<String> {
         let name = pkg.name().as_str();
         let version = pkg.version();
         if let Some(s) = self.hashes.get(name).and_then(|v| v.get(version)) {
@@ -146,7 +146,7 @@ impl<'cfg> RegistryIndex<'cfg> {
     pub fn summaries(
         &mut self,
         name: &'static str,
-        load: &mut RegistryData,
+        load: &mut dyn RegistryData,
     ) -> CargoResult<&Vec<(Summary, bool)>> {
         if self.cache.contains_key(name) {
             return Ok(&self.cache[name]);
@@ -159,7 +159,7 @@ impl<'cfg> RegistryIndex<'cfg> {
     fn load_summaries(
         &mut self,
         name: &str,
-        load: &mut RegistryData,
+        load: &mut dyn RegistryData,
     ) -> CargoResult<Vec<(Summary, bool)>> {
         // Prepare the `RegistryData` which will lazily initialize internal data
         // structures. Note that this is also importantly needed to initialize
@@ -197,7 +197,7 @@ impl<'cfg> RegistryIndex<'cfg> {
             let err = load.load(&root, Path::new(&path), &mut |contents| {
                 hit_closure = true;
                 let contents = str::from_utf8(contents)
-                    .map_err(|_| format_err!("registry index file was not valid utf-8"))?;
+                    .map_err(|_| failure::format_err!("registry index file was not valid utf-8"))?;
                 ret.reserve(contents.lines().count());
                 let lines = contents.lines().map(|s| s.trim()).filter(|l| !l.is_empty());
 
@@ -272,8 +272,8 @@ impl<'cfg> RegistryIndex<'cfg> {
     pub fn query_inner(
         &mut self,
         dep: &Dependency,
-        load: &mut RegistryData,
-        f: &mut FnMut(Summary),
+        load: &mut dyn RegistryData,
+        f: &mut dyn FnMut(Summary),
     ) -> CargoResult<()> {
         let source_id = self.source_id;
         let name = dep.package_name().as_str();

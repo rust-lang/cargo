@@ -333,7 +333,7 @@ impl Package {
             .deps
             .iter()
             .map(|dep| {
-                json!({
+                serde_json::json!({
                     "name": dep.name,
                     "req": dep.vers,
                     "features": dep.features,
@@ -351,7 +351,7 @@ impl Package {
             t!(t!(File::open(&self.archive_dst())).read_to_end(&mut c));
             cksum(&c)
         };
-        let line = json!({
+        let line = serde_json::json!({
             "name": self.name,
             "vers": self.vers,
             "deps": deps,

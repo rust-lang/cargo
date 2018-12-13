@@ -4,6 +4,8 @@ use std::ops::Range;
 use std::rc::Rc;
 use std::time::{Duration, Instant};
 
+use log::debug;
+
 use crate::core::interning::InternedString;
 use crate::core::{Dependency, PackageId, PackageIdSpec, Registry, Summary};
 use crate::util::errors::CargoResult;
@@ -74,7 +76,7 @@ impl ResolverProgress {
 }
 
 pub struct RegistryQueryer<'a> {
-    pub registry: &'a mut (Registry + 'a),
+    pub registry: &'a mut (dyn Registry + 'a),
     replacements: &'a [(PackageIdSpec, Dependency)],
     try_to_use: &'a HashSet<PackageId>,
     cache: HashMap<Dependency, Rc<Vec<Candidate>>>,
@@ -86,7 +88,7 @@ pub struct RegistryQueryer<'a> {
 
 impl<'a> RegistryQueryer<'a> {
     pub fn new(
-        registry: &'a mut Registry,
+        registry: &'a mut dyn Registry,
         replacements: &'a [(PackageIdSpec, Dependency)],
         try_to_use: &'a HashSet<PackageId>,
         minimal_versions: bool,
@@ -142,7 +144,7 @@ impl<'a> RegistryQueryer<'a> {
 
             let mut summaries = self.registry.query_vec(dep, false)?.into_iter();
             let s = summaries.next().ok_or_else(|| {
-                format_err!(
+                failure::format_err!(
                     "no matching package for override `{}` found\n\
                      location searched: {}\n\
                      version required: {}",
@@ -157,7 +159,7 @@ impl<'a> RegistryQueryer<'a> {
                     .iter()
                     .map(|s| format!("  * {}", s.package_id()))
                     .collect::<Vec<_>>();
-                bail!(
+                failure::bail!(
                     "the replacement specification `{}` matched \
                      multiple packages:\n  * {}\n{}",
                     spec,
@@ -182,7 +184,7 @@ impl<'a> RegistryQueryer<'a> {
 
             // Make sure no duplicates
             if let Some(&(ref spec, _)) = potential_matches.next() {
-                bail!(
+                failure::bail!(
                     "overlapping replacement specifications found:\n\n  \
                      * {}\n  * {}\n\nboth specifications match: {}",
                     matched_spec,

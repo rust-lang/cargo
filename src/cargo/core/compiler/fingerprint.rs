@@ -5,9 +5,10 @@ use std::path::{Path, PathBuf};
 use std::sync::{Arc, Mutex};
 
 use filetime::FileTime;
-use serde::de::{self, Deserialize};
+use log::{debug, info};
+use serde::de;
 use serde::ser;
-use serde_json;
+use serde::{Deserialize, Serialize};
 
 use crate::core::{Edition, Package};
 use crate::util;
@@ -258,32 +259,32 @@ impl Fingerprint {
 
     fn compare(&self, old: &Fingerprint) -> CargoResult<()> {
         if self.rustc != old.rustc {
-            bail!("rust compiler has changed")
+            failure::bail!("rust compiler has changed")
         }
         if self.features != old.features {
-            bail!(
+            failure::bail!(
                 "features have changed: {} != {}",
                 self.features,
                 old.features
             )
         }
         if self.target != old.target {
-            bail!("target configuration has changed")
+            failure::bail!("target configuration has changed")
         }
         if self.path != old.path {
-            bail!("path to the compiler has changed")
+            failure::bail!("path to the compiler has changed")
         }
         if self.profile != old.profile {
-            bail!("profile configuration has changed")
+            failure::bail!("profile configuration has changed")
         }
         if self.rustflags != old.rustflags {
-            bail!("RUSTFLAGS has changed")
+            failure::bail!("RUSTFLAGS has changed")
         }
         if self.local.len() != old.local.len() {
-            bail!("local lens changed");
+            failure::bail!("local lens changed");
         }
         if self.edition != old.edition {
-            bail!("edition changed")
+            failure::bail!("edition changed")
         }
         for (new, old) in self.local.iter().zip(&old.local) {
             match (new, old) {
@@ -292,7 +293,7 @@ impl Fingerprint {
                     &LocalFingerprint::Precalculated(ref b),
                 ) => {
                     if a != b {
-                        bail!("precalculated components have changed: {} != {}", a, b)
+                        failure::bail!("precalculated components have changed: {} != {}", a, b)
                     }
                 }
                 (
@@ -309,7 +310,7 @@ impl Fingerprint {
                     };
 
                     if should_rebuild {
-                        bail!(
+                        failure::bail!(
                             "mtime based components have changed: previously {:?} now {:?}, \
                              paths are {:?} and {:?}",
                             *previously_built_mtime,
@@ -324,10 +325,10 @@ impl Fingerprint {
                     &LocalFingerprint::EnvBased(ref bkey, ref bvalue),
                 ) => {
                     if *akey != *bkey {
-                        bail!("env vars changed: {} != {}", akey, bkey);
+                        failure::bail!("env vars changed: {} != {}", akey, bkey);
                     }
                     if *avalue != *bvalue {
-                        bail!(
+                        failure::bail!(
                             "env var `{}` changed: previously {:?} now {:?}",
                             akey,
                             bvalue,
@@ -335,16 +336,16 @@ impl Fingerprint {
                         )
                     }
                 }
-                _ => bail!("local fingerprint type has changed"),
+                _ => failure::bail!("local fingerprint type has changed"),
             }
         }
 
         if self.deps.len() != old.deps.len() {
-            bail!("number of dependencies has changed")
+            failure::bail!("number of dependencies has changed")
         }
         for (a, b) in self.deps.iter().zip(old.deps.iter()) {
             if a.1 != b.1 || a.2.hash() != b.2.hash() {
-                bail!("new ({}) != old ({})", a.0, b.0)
+                failure::bail!("new ({}) != old ({})", a.0, b.0)
             }
         }
         Ok(())
@@ -495,7 +496,7 @@ fn calculate<'a, 'cfg>(
 // git/registry source, then the mtime of files may fluctuate, but they won't
 // change so long as the source itself remains constant (which is the
 // responsibility of the source)
-fn use_dep_info(unit: &Unit) -> bool {
+fn use_dep_info(unit: &Unit<'_>) -> bool {
     let path = unit.pkg.summary().source_id().is_path();
     !unit.mode.is_doc() && path
 }
@@ -683,7 +684,7 @@ fn compare_old_fingerprint(loc: &Path, new_fingerprint: &Fingerprint) -> CargoRe
     new_fingerprint.compare(&old_fingerprint)
 }
 
-fn log_compare(unit: &Unit, compare: &CargoResult<()>) {
+fn log_compare(unit: &Unit<'_>, compare: &CargoResult<()>) {
     let ce = match *compare {
         Ok(..) => return,
         Err(ref e) => e,
@@ -721,7 +722,7 @@ fn dep_info_mtime_if_fresh(pkg: &Package, dep_info: &Path) -> CargoResult<Option
     }
 }
 
-fn pkg_fingerprint(bcx: &BuildContext, pkg: &Package) -> CargoResult<String> {
+fn pkg_fingerprint(bcx: &BuildContext<'_, '_>, pkg: &Package) -> CargoResult<String> {
     let source_id = pkg.package_id().source_id();
     let sources = bcx.packages.sources();
 

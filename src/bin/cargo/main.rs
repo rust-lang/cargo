@@ -1,18 +1,6 @@
-#![cfg_attr(feature = "cargo-clippy", allow(clippy::too_many_arguments))] // large project
-#![cfg_attr(feature = "cargo-clippy", allow(clippy::redundant_closure))] // there's a false positive
-
-use cargo;
-
-#[cfg(not(feature = "pretty-env-logger"))]
-extern crate env_logger;
-#[cfg(feature = "pretty-env-logger")]
-extern crate pretty_env_logger;
-#[macro_use]
-extern crate failure;
-use git2_curl;
-
-#[macro_use]
-extern crate serde_derive;
+#![warn(rust_2018_idioms)] // while we're getting used to 2018
+#![allow(clippy::too_many_arguments)] // large project
+#![allow(clippy::redundant_closure)] // there's a false positive
 
 use std::collections::BTreeSet;
 use std::env;
@@ -145,12 +133,12 @@ fn execute_external_subcommand(config: &Config, cmd: &str, args: &[&str]) -> Cli
         Some(command) => command,
         None => {
             let err = match find_closest(config, cmd) {
-                Some(closest) => format_err!(
+                Some(closest) => failure::format_err!(
                     "no such subcommand: `{}`\n\n\tDid you mean `{}`?\n",
                     cmd,
                     closest
                 ),
-                None => format_err!("no such subcommand: `{}`", cmd),
+                None => failure::format_err!("no such subcommand: `{}`", cmd),
             };
             return Err(CliError::new(err, 101));
         }

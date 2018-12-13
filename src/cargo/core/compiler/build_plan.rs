@@ -7,14 +7,14 @@
 //! dependencies on other Invocations.
 
 use std::collections::BTreeMap;
+use std::path::PathBuf;
+
+use serde::Serialize;
 
 use super::context::OutputFile;
 use super::{CompileMode, Context, Kind, Unit};
 use crate::core::TargetKind;
 use crate::util::{internal, CargoResult, ProcessBuilder};
-use semver;
-use serde_json;
-use std::path::PathBuf;
 
 #[derive(Debug, Serialize)]
 struct Invocation {
@@ -45,7 +45,7 @@ struct SerializedBuildPlan {
 }
 
 impl Invocation {
-    pub fn new(unit: &Unit, deps: Vec<usize>) -> Invocation {
+    pub fn new(unit: &Unit<'_>, deps: Vec<usize>) -> Invocation {
         let id = unit.pkg.package_id();
         Invocation {
             package_name: id.name().to_string(),
@@ -74,13 +74,13 @@ impl Invocation {
         self.program = cmd
             .get_program()
             .to_str()
-            .ok_or_else(|| format_err!("unicode program string required"))?
+            .ok_or_else(|| failure::format_err!("unicode program string required"))?
             .to_string();
         self.cwd = Some(cmd.get_cwd().unwrap().to_path_buf());
         for arg in cmd.get_args().iter() {
             self.args.push(
                 arg.to_str()
-                    .ok_or_else(|| format_err!("unicode argument string required"))?
+                    .ok_or_else(|| failure::format_err!("unicode argument string required"))?
                     .to_string(),
             );
         }
@@ -93,7 +93,7 @@ impl Invocation {
                 var.clone(),
                 value
                     .to_str()
-                    .ok_or_else(|| format_err!("unicode environment value required"))?
+                    .ok_or_else(|| failure::format_err!("unicode environment value required"))?
                     .to_string(),
             );
         }
@@ -109,7 +109,7 @@ impl BuildPlan {
         }
     }
 
-    pub fn add(&mut self, cx: &Context, unit: &Unit) -> CargoResult<()> {
+    pub fn add(&mut self, cx: &Context<'_, '_>, unit: &Unit<'_>) -> CargoResult<()> {
         let id = self.plan.invocations.len();
         self.invocation_map.insert(unit.buildkey(), id);
         let deps = cx

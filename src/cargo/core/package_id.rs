@@ -14,7 +14,7 @@ use crate::core::interning::InternedString;
 use crate::core::source::SourceId;
 use crate::util::{CargoResult, ToSemver};
 
-lazy_static! {
+lazy_static::lazy_static! {
     static ref PACKAGE_ID_CACHE: Mutex<HashSet<&'static PackageIdInner>> =
         Mutex::new(HashSet::new());
 }
@@ -162,7 +162,7 @@ impl PackageId {
         })
     }
 
-    pub fn stable_hash(self, workspace: &Path) -> PackageIdStableHash {
+    pub fn stable_hash(self, workspace: &Path) -> PackageIdStableHash<'_> {
         PackageIdStableHash(self, workspace)
     }
 }
@@ -178,7 +178,7 @@ impl<'a> Hash for PackageIdStableHash<'a> {
 }
 
 impl fmt::Display for PackageId {
-    fn fmt(&self, f: &mut Formatter) -> fmt::Result {
+    fn fmt(&self, f: &mut Formatter<'_>) -> fmt::Result {
         write!(f, "{} v{}", self.inner.name, self.inner.version)?;
 
         if !self.inner.source_id.is_default_registry() {
@@ -190,7 +190,7 @@ impl fmt::Display for PackageId {
 }
 
 impl fmt::Debug for PackageId {
-    fn fmt(&self, f: &mut Formatter) -> fmt::Result {
+    fn fmt(&self, f: &mut Formatter<'_>) -> fmt::Result {
         f.debug_struct("PackageId")
             .field("name", &self.inner.name)
             .field("version", &self.inner.version.to_string())

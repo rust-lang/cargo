@@ -45,14 +45,14 @@ impl Summary {
         for dep in dependencies.iter() {
             let feature = dep.name_in_toml();
             if !namespaced_features && features.get(&*feature).is_some() {
-                bail!(
+                failure::bail!(
                     "Features and dependencies cannot have the \
                      same name: `{}`",
                     feature
                 )
             }
             if dep.is_optional() && !dep.is_transitive() {
-                bail!(
+                failure::bail!(
                     "Dev-dependencies are not allowed to be optional: `{}`",
                     feature
                 )
@@ -172,7 +172,7 @@ where
             match dep_map.get(feature.borrow()) {
                 Some(ref dep_data) => {
                     if !dep_data.iter().any(|d| d.is_optional()) {
-                        bail!(
+                        failure::bail!(
                             "Feature `{}` includes the dependency of the same name, but this is \
                              left implicit in the features included by this feature.\n\
                              Additionally, the dependency must be marked as optional to be \
@@ -241,7 +241,7 @@ where
                 (&Feature(feat), dep_exists, false) => {
                     if namespaced && !features.contains_key(&*feat) {
                         if dep_exists {
-                            bail!(
+                            failure::bail!(
                                 "Feature `{}` includes `{}` which is not defined as a feature.\n\
                                  A non-optional dependency of the same name is defined; consider \
                                  adding `optional = true` to its definition",
@@ -249,7 +249,7 @@ where
                                 feat
                             )
                         } else {
-                            bail!(
+                            failure::bail!(
                                 "Feature `{}` includes `{}` which is not defined as a feature",
                                 feature,
                                 feat
@@ -264,7 +264,7 @@ where
                 // just to provide the correct string for the crate dependency in the error.
                 (&Crate(ref dep), true, false) => {
                     if namespaced {
-                        bail!(
+                        failure::bail!(
                             "Feature `{}` includes `crate:{}` which is not an \
                              optional dependency.\nConsider adding \
                              `optional = true` to the dependency",
@@ -272,7 +272,7 @@ where
                             dep
                         )
                     } else {
-                        bail!(
+                        failure::bail!(
                             "Feature `{}` depends on `{}` which is not an \
                              optional dependency.\nConsider adding \
                              `optional = true` to the dependency",
@@ -287,14 +287,14 @@ where
                 // namespaced here is just to provide the correct string in the error.
                 (&Crate(ref dep), false, _) => {
                     if namespaced {
-                        bail!(
+                        failure::bail!(
                             "Feature `{}` includes `crate:{}` which is not a known \
                              dependency",
                             feature,
                             dep
                         )
                     } else {
-                        bail!(
+                        failure::bail!(
                             "Feature `{}` includes `{}` which is neither a dependency nor \
                              another feature",
                             feature,
@@ -305,7 +305,7 @@ where
                 (&Crate(_), true, true) => {}
                 // If the value is a feature for one of the dependencies, bail out if no such
                 // dependency is actually defined in the manifest.
-                (&CrateFeature(ref dep, _), false, _) => bail!(
+                (&CrateFeature(ref dep, _), false, _) => failure::bail!(
                     "Feature `{}` requires a feature of `{}` which is not a \
                      dependency",
                     feature,
@@ -319,7 +319,7 @@ where
         if !dependency_found {
             // If we have not found the dependency of the same-named feature, we should
             // bail here.
-            bail!(
+            failure::bail!(
                 "Feature `{}` includes the optional dependency of the \
                  same name, but this is left implicit in the features \
                  included by this feature.\nConsider adding \

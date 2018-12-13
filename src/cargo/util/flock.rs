@@ -8,7 +8,7 @@ use fs2::{lock_contended_error, FileExt};
 use libc;
 use termcolor::Color::Cyan;
 
-use crate::util::errors::{CargoError, CargoResult, CargoResultExt};
+use crate::util::errors::{CargoResult, CargoResultExt};
 use crate::util::paths;
 use crate::util::Config;
 
@@ -146,7 +146,7 @@ impl Filesystem {
 
     /// Returns an adaptor that can be used to print the path of this
     /// filesystem.
-    pub fn display(&self) -> Display {
+    pub fn display(&self) -> Display<'_> {
         self.root.display()
     }
 
@@ -271,8 +271,8 @@ fn acquire(
     config: &Config,
     msg: &str,
     path: &Path,
-    r#try: &Fn() -> io::Result<()>,
-    block: &Fn() -> io::Result<()>,
+    r#try: &dyn Fn() -> io::Result<()>,
+    block: &dyn Fn() -> io::Result<()>,
 ) -> CargoResult<()> {
     // File locking on Unix is currently implemented via `flock`, which is known
     // to be broken on NFS. We could in theory just ignore errors that happen on
@@ -303,7 +303,7 @@ fn acquire(
 
         Err(e) => {
             if e.raw_os_error() != lock_contended_error().raw_os_error() {
-                let e = CargoError::from(e);
+                let e = failure::Error::from(e);
                 let cx = format!("failed to lock file: {}", path.display());
                 return Err(e.context(cx).into());
             }

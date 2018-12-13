@@ -8,6 +8,7 @@ use std::sync::atomic::Ordering::SeqCst;
 use std::sync::atomic::{AtomicBool, ATOMIC_BOOL_INIT};
 use std::sync::Mutex;
 
+use log::trace;
 use serde::de;
 use serde::ser;
 use url::Url;
@@ -18,7 +19,7 @@ use crate::sources::DirectorySource;
 use crate::sources::{GitSource, PathSource, RegistrySource, CRATES_IO_INDEX};
 use crate::util::{CargoResult, Config, ToUrl};
 
-lazy_static! {
+lazy_static::lazy_static! {
     static ref SOURCE_ID_CACHE: Mutex<HashSet<&'static SourceIdInner>> = Mutex::new(HashSet::new());
 }
 
@@ -109,7 +110,7 @@ impl SourceId {
         let kind = parts.next().unwrap();
         let url = parts
             .next()
-            .ok_or_else(|| format_err!("invalid source `{}`", string))?;
+            .ok_or_else(|| failure::format_err!("invalid source `{}`", string))?;
 
         match kind {
             "git" => {
@@ -138,12 +139,15 @@ impl SourceId {
                 let url = url.to_url()?;
                 SourceId::new(Kind::Path, url)
             }
-            kind => Err(format_err!("unsupported source protocol: {}", kind)),
+            kind => Err(failure::format_err!(
+                "unsupported source protocol: {}",
+                kind
+            )),
         }
     }
 
     /// A view of the `SourceId` that can be `Display`ed as a URL
-    pub fn to_url(&self) -> SourceIdToUrl {
+    pub fn to_url(&self) -> SourceIdToUrl<'_> {
         SourceIdToUrl {
             inner: &*self.inner,
         }
@@ -256,7 +260,7 @@ impl SourceId {
     }
 
     /// Creates an implementation of `Source` corresponding to this ID.
-    pub fn load<'a>(self, config: &'a Config) -> CargoResult<Box<super::Source + 'a>> {
+    pub fn load<'a>(self, config: &'a Config) -> CargoResult<Box<dyn super::Source + 'a>> {
         trace!("loading SourceId; {}", self);
         match self.inner.kind {
             Kind::Git(..) => Ok(Box::new(GitSource::new(self, config)?)),
@@ -393,47 +397,26 @@ fn url_display(url: &Url) -> String {
 }
 
 impl fmt::Display for SourceId {
-    fn fmt(&self, f: &mut Formatter) -> fmt::Result {
-        match *self.inner {
-            SourceIdInner {
-                kind: Kind::Path,
-                ref url,
-                ..
-            } => write!(f, "{}", url_display(url)),
-            SourceIdInner {
-                kind: Kind::Git(ref reference),
-                ref url,
-                ref precise,
-                ..
-            } => {
+    fn fmt(&self, f: &mut Formatter<'_>) -> fmt::Result {
+        match self.inner.kind {
+            Kind::Git(ref reference) => {
                 // Don't replace the URL display for git references,
                 // because those are kind of expected to be URLs.
-                write!(f, "{}", url)?;
+                write!(f, "{}", self.inner.url)?;
                 if let Some(pretty) = reference.pretty_ref() {
                     write!(f, "?{}", pretty)?;
                 }
 
-                if let Some(ref s) = *precise {
+                if let Some(ref s) = self.inner.precise {
                     let len = cmp::min(s.len(), 8);
                     write!(f, "#{}", &s[..len])?;
                 }
                 Ok(())
             }
-            SourceIdInner {
-                kind: Kind::Registry,
-                ref url,
-                ..
-            }
-            | SourceIdInner {
-                kind: Kind::LocalRegistry,
-                ref url,
-                ..
-            } => write!(f, "registry `{}`", url_display(url)),
-            SourceIdInner {
-                kind: Kind::Directory,
-                ref url,
-                ..
-            } => write!(f, "dir {}", url_display(url)),
+            Kind::Path => write!(f, "{}", url_display(&self.inner.url)),
+            Kind::Registry => write!(f, "registry `{}`", url_display(&self.inner.url)),
+            Kind::LocalRegistry => write!(f, "registry `{}`", url_display(&self.inner.url)),
+            Kind::Directory => write!(f, "dir {}", url_display(&self.inner.url)),
         }
     }
 }
@@ -478,7 +461,7 @@ impl Ord for SourceIdInner {
             ord => return ord,
         }
         match (&self.kind, &other.kind) {
-            (&Kind::Git(ref ref1), &Kind::Git(ref ref2)) => {
+            (Kind::Git(ref1), Kind::Git(ref2)) => {
                 (ref1, &self.canonical_url).cmp(&(ref2, &other.canonical_url))
             }
             _ => self.kind.cmp(&other.kind),
@@ -492,12 +475,8 @@ impl Ord for SourceIdInner {
 impl Hash for SourceId {
     fn hash<S: hash::Hasher>(&self, into: &mut S) {
         self.inner.kind.hash(into);
-        match *self.inner {
-            SourceIdInner {
-                kind: Kind::Git(..),
-                ref canonical_url,
-                ..
-            } => canonical_url.as_str().hash(into),
+        match self.inner.kind {
+            Kind::Git(_) => self.inner.canonical_url.as_str().hash(into),
             _ => self.inner.url.as_str().hash(into),
         }
     }
@@ -509,7 +488,7 @@ pub struct SourceIdToUrl<'a> {
 }
 
 impl<'a> fmt::Display for SourceIdToUrl<'a> {
-    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         match *self.inner {
             SourceIdInner {
                 kind: Kind::Path,
@@ -553,7 +532,7 @@ impl<'a> fmt::Display for SourceIdToUrl<'a> {
 impl GitReference {
     /// Returns a `Display`able view of this git reference, or None if using
     /// the head of the "master" branch
-    pub fn pretty_ref(&self) -> Option<PrettyRef> {
+    pub fn pretty_ref(&self) -> Option<PrettyRef<'_>> {
         match *self {
             GitReference::Branch(ref s) if *s == "master" => None,
             _ => Some(PrettyRef { inner: self }),
@@ -567,7 +546,7 @@ pub struct PrettyRef<'a> {
 }
 
 impl<'a> fmt::Display for PrettyRef<'a> {
-    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         match *self.inner {
             GitReference::Branch(ref b) => write!(f, "branch={}", b),
             GitReference::Tag(ref s) => write!(f, "tag={}", s),

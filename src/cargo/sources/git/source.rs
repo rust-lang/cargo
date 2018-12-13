@@ -1,5 +1,6 @@
 use std::fmt::{self, Debug, Formatter};
 
+use log::trace;
 use url::Url;
 
 use crate::core::source::{MaybePackage, Source, SourceId};
@@ -77,7 +78,7 @@ pub fn canonicalize_url(url: &Url) -> CargoResult<Url> {
     // cannot-be-a-base-urls are not supported
     // eg. github.com:rust-lang-nursery/rustfmt.git
     if url.cannot_be_a_base() {
-        bail!(
+        failure::bail!(
             "invalid url `{}`: cannot-be-a-base-URLs are not supported",
             url
         )
@@ -113,7 +114,7 @@ pub fn canonicalize_url(url: &Url) -> CargoResult<Url> {
 }
 
 impl<'cfg> Debug for GitSource<'cfg> {
-    fn fmt(&self, f: &mut Formatter) -> fmt::Result {
+    fn fmt(&self, f: &mut Formatter<'_>) -> fmt::Result {
         write!(f, "git repo at {}", self.remote.url())?;
 
         match self.reference.pretty_ref() {
@@ -124,7 +125,7 @@ impl<'cfg> Debug for GitSource<'cfg> {
 }
 
 impl<'cfg> Source for GitSource<'cfg> {
-    fn query(&mut self, dep: &Dependency, f: &mut FnMut(Summary)) -> CargoResult<()> {
+    fn query(&mut self, dep: &Dependency, f: &mut dyn FnMut(Summary)) -> CargoResult<()> {
         let src = self
             .path_source
             .as_mut()
@@ -132,7 +133,7 @@ impl<'cfg> Source for GitSource<'cfg> {
         src.query(dep, f)
     }
 
-    fn fuzzy_query(&mut self, dep: &Dependency, f: &mut FnMut(Summary)) -> CargoResult<()> {
+    fn fuzzy_query(&mut self, dep: &Dependency, f: &mut dyn FnMut(Summary)) -> CargoResult<()> {
         let src = self
             .path_source
             .as_mut()
@@ -161,7 +162,7 @@ impl<'cfg> Source for GitSource<'cfg> {
         let db_path = lock.parent().join("db").join(&self.ident);
 
         if self.config.cli_unstable().offline && !db_path.exists() {
-            bail!(
+            failure::bail!(
                 "can't checkout from '{}': you are in the offline mode (-Z offline)",
                 self.remote.url()
             );

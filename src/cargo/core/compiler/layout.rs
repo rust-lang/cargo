@@ -84,7 +84,7 @@ impl Layout {
     ///
     /// Differs from `at` in that this calculates the root path from the workspace target directory,
     /// adding the target triple and the profile (debug, release, ...).
-    pub fn new(ws: &Workspace, triple: Option<&str>, dest: &str) -> CargoResult<Layout> {
+    pub fn new(ws: &Workspace<'_>, triple: Option<&str>, dest: &str) -> CargoResult<Layout> {
         let mut path = ws.target_dir();
         // Flexible target specifications often point at json files, so interpret
         // the target triple as a Path and then just use the file stem as the
@@ -95,7 +95,7 @@ impl Layout {
                 path.push(
                     triple
                         .file_stem()
-                        .ok_or_else(|| format_err!("invalid target"))?,
+                        .ok_or_else(|| failure::format_err!("invalid target"))?,
                 );
             } else {
                 path.push(triple);

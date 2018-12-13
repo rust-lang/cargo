@@ -1,15 +1,7 @@
-#![deny(warnings)]
-#![cfg_attr(feature = "cargo-clippy", allow(blacklisted_name))]
-#![cfg_attr(feature = "cargo-clippy", allow(explicit_iter_loop))]
-
-#[macro_use]
-extern crate lazy_static;
-#[macro_use]
-extern crate proptest;
-#[macro_use]
-extern crate serde_derive;
-#[macro_use]
-extern crate serde_json;
+#![warn(rust_2018_idioms)] // while we're getting used to 2018
+#![cfg_attr(feature="deny-warnings", deny(warnings))]
+#![allow(clippy::blacklisted_name)]
+#![allow(clippy::explicit_iter_loop)]
 
 #[macro_use]
 mod support;

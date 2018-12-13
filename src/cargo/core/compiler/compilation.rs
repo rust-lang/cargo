@@ -256,7 +256,7 @@ fn pre_version_component(v: &Version) -> String {
     ret
 }
 
-fn target_runner(bcx: &BuildContext) -> CargoResult<Option<(PathBuf, Vec<String>)>> {
+fn target_runner(bcx: &BuildContext<'_, '_>) -> CargoResult<Option<(PathBuf, Vec<String>)>> {
     let target = bcx.target_triple();
 
     // try target.{}.runner
@@ -276,7 +276,7 @@ fn target_runner(bcx: &BuildContext) -> CargoResult<Option<(PathBuf, Vec<String>
                     if let Some(runner) = bcx.config.get_path_and_args(&key)? {
                         // more than one match, error out
                         if matching_runner.is_some() {
-                            bail!(
+                            failure::bail!(
                                 "several matching instances of `target.'cfg(..)'.runner` \
                                  in `.cargo/config`"
                             )

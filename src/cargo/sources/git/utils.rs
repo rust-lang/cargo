@@ -7,11 +7,13 @@ use std::process::Command;
 
 use curl::easy::{Easy, List};
 use git2::{self, ObjectType};
+use log::{debug, info};
 use serde::ser;
+use serde::Serialize;
 use url::Url;
 
 use crate::core::GitReference;
-use crate::util::errors::{CargoError, CargoResult, CargoResultExt};
+use crate::util::errors::{CargoResult, CargoResultExt};
 use crate::util::paths;
 use crate::util::process_builder::process;
 use crate::util::{internal, network, Config, Progress, ToUrl};
@@ -34,7 +36,7 @@ where
 }
 
 impl fmt::Display for GitRevision {
-    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         fmt::Display::fmt(&self.0, f)
     }
 }
@@ -67,7 +69,7 @@ pub struct GitDatabase {
 
 /// `GitCheckout` is a local checkout of a particular revision. Calling
 /// `clone_into` with a reference will resolve the reference into a revision,
-/// and return a `CargoError` if no revision for that reference was found.
+/// and return a `failure::Error` if no revision for that reference was found.
 #[derive(Serialize)]
 pub struct GitCheckout<'a> {
     database: &'a GitDatabase,
@@ -164,7 +166,7 @@ impl GitDatabase {
         rev: GitRevision,
         dest: &Path,
         cargo_config: &Config,
-    ) -> CargoResult<GitCheckout> {
+    ) -> CargoResult<GitCheckout<'_>> {
         let mut checkout = None;
         if let Ok(repo) = git2::Repository::open(dest) {
             let mut co = GitCheckout::new(dest, self, rev.clone(), repo);
@@ -219,7 +221,7 @@ impl GitReference {
                     .chain_err(|| format!("failed to find branch `{}`", s))?;
                 b.get()
                     .target()
-                    .ok_or_else(|| format_err!("branch `{}` did not have a target", s))?
+                    .ok_or_else(|| failure::format_err!("branch `{}` did not have a target", s))?
             }
             GitReference::Rev(ref s) => {
                 let obj = repo.revparse_single(s)?;
@@ -355,7 +357,7 @@ impl<'a> GitCheckout<'a> {
 
         fn update_submodule(
             parent: &git2::Repository,
-            child: &mut git2::Submodule,
+            child: &mut git2::Submodule<'_>,
             cargo_config: &Config,
         ) -> CargoResult<()> {
             child.init(false)?;
@@ -439,7 +441,7 @@ impl<'a> GitCheckout<'a> {
 /// attempted and we don't try the same ones again.
 fn with_authentication<T, F>(url: &str, cfg: &git2::Config, mut f: F) -> CargoResult<T>
 where
-    F: FnMut(&mut git2::Credentials) -> CargoResult<T>,
+    F: FnMut(&mut git2::Credentials<'_>) -> CargoResult<T>,
 {
     let mut cred_helper = git2::CredentialHelper::new(url);
     cred_helper.config(cfg);
@@ -585,7 +587,7 @@ where
     // In the case of an authentication failure (where we tried something) then
     // we try to give a more helpful error message about precisely what we
     // tried.
-    let res = res.map_err(CargoError::from).chain_err(|| {
+    let res = res.map_err(failure::Error::from).chain_err(|| {
         let mut msg = "failed to authenticate when downloading \
                        repository"
             .to_string();
@@ -620,7 +622,7 @@ where
     Ok(res)
 }
 
-fn reset(repo: &git2::Repository, obj: &git2::Object, config: &Config) -> CargoResult<()> {
+fn reset(repo: &git2::Repository, obj: &git2::Object<'_>, config: &Config) -> CargoResult<()> {
     let mut pb = Progress::new("Checkout", config);
     let mut opts = git2::build::CheckoutBuilder::new();
     opts.progress(|_, cur, max| {
@@ -634,7 +636,7 @@ pub fn with_fetch_options(
     git_config: &git2::Config,
     url: &Url,
     config: &Config,
-    cb: &mut FnMut(git2::FetchOptions) -> CargoResult<()>,
+    cb: &mut dyn FnMut(git2::FetchOptions<'_>) -> CargoResult<()>,
 ) -> CargoResult<()> {
     let mut progress = Progress::new("Fetch", config);
     network::with_retry(config, || {
@@ -666,13 +668,13 @@ pub fn fetch(
     config: &Config,
 ) -> CargoResult<()> {
     if config.frozen() {
-        bail!(
+        failure::bail!(
             "attempting to update a git repository, but --frozen \
              was specified"
         )
     }
     if !config.network_allowed() {
-        bail!("can't update a git repository in the offline mode")
+        failure::bail!("can't update a git repository in the offline mode")
     }
 
     // If we're fetching from GitHub, attempt GitHub's special fast path for

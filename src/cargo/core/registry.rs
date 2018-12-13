@@ -1,5 +1,6 @@
 use std::collections::HashMap;
 
+use log::{debug, trace};
 use semver::VersionReq;
 use url::Url;
 
@@ -14,7 +15,12 @@ use crate::util::{profile, Config};
 /// See also `core::Source`.
 pub trait Registry {
     /// Attempt to find the packages that match a dependency request.
-    fn query(&mut self, dep: &Dependency, f: &mut FnMut(Summary), fuzzy: bool) -> CargoResult<()>;
+    fn query(
+        &mut self,
+        dep: &Dependency,
+        f: &mut dyn FnMut(Summary),
+        fuzzy: bool,
+    ) -> CargoResult<()>;
 
     fn query_vec(&mut self, dep: &Dependency, fuzzy: bool) -> CargoResult<Vec<Summary>> {
         let mut ret = Vec::new();
@@ -145,17 +151,17 @@ impl<'cfg> PackageRegistry<'cfg> {
         Ok(())
     }
 
-    pub fn add_preloaded(&mut self, source: Box<Source + 'cfg>) {
+    pub fn add_preloaded(&mut self, source: Box<dyn Source + 'cfg>) {
         self.add_source(source, Kind::Locked);
     }
 
-    fn add_source(&mut self, source: Box<Source + 'cfg>, kind: Kind) {
+    fn add_source(&mut self, source: Box<dyn Source + 'cfg>, kind: Kind) {
         let id = source.source_id();
         self.sources.insert(source);
         self.source_ids.insert(id, (id, kind));
     }
 
-    pub fn add_override(&mut self, source: Box<Source + 'cfg>) {
+    pub fn add_override(&mut self, source: Box<dyn Source + 'cfg>) {
         self.overrides.push(source.source_id());
         self.add_source(source, Kind::Override);
     }
@@ -215,7 +221,7 @@ impl<'cfg> PackageRegistry<'cfg> {
                 // corresponding to this `dep`.
                 self.ensure_loaded(dep.source_id(), Kind::Normal)
                     .chain_err(|| {
-                        format_err!(
+                        failure::format_err!(
                             "failed to load source for a dependency \
                              on `{}`",
                             dep.package_name()
@@ -231,7 +237,7 @@ impl<'cfg> PackageRegistry<'cfg> {
 
                 let summary = match summaries.next() {
                     Some(summary) => summary,
-                    None => bail!(
+                    None => failure::bail!(
                         "patch for `{}` in `{}` did not resolve to any crates. If this is \
                          unexpected, you may wish to consult: \
                          https://github.com/rust-lang/cargo/issues/4678",
@@ -240,14 +246,14 @@ impl<'cfg> PackageRegistry<'cfg> {
                     ),
                 };
                 if summaries.next().is_some() {
-                    bail!(
+                    failure::bail!(
                         "patch for `{}` in `{}` resolved to more than one candidate",
                         dep.package_name(),
                         url
                     )
                 }
                 if summary.package_id().source_id().url() == url {
-                    bail!(
+                    failure::bail!(
                         "patch for `{}` in `{}` points to the same source, but \
                          patches must point to different sources",
                         dep.package_name(),
@@ -257,7 +263,7 @@ impl<'cfg> PackageRegistry<'cfg> {
                 Ok(summary)
             })
             .collect::<CargoResult<Vec<_>>>()
-            .chain_err(|| format_err!("failed to resolve patches for `{}`", url))?;
+            .chain_err(|| failure::format_err!("failed to resolve patches for `{}`", url))?;
 
         // Note that we do not use `lock` here to lock summaries! That step
         // happens later once `lock_patches` is invoked. In the meantime though
@@ -307,7 +313,7 @@ impl<'cfg> PackageRegistry<'cfg> {
             let _p = profile::start(format!("updating: {}", source_id));
             self.sources.get_mut(source_id).unwrap().update()
         })()
-        .chain_err(|| format_err!("Unable to update {}", source_id))?;
+        .chain_err(|| failure::format_err!("Unable to update {}", source_id))?;
         Ok(())
     }
 
@@ -403,7 +409,12 @@ https://doc.rust-lang.org/cargo/reference/specifying-dependencies.html#overridin
 }
 
 impl<'cfg> Registry for PackageRegistry<'cfg> {
-    fn query(&mut self, dep: &Dependency, f: &mut FnMut(Summary), fuzzy: bool) -> CargoResult<()> {
+    fn query(
+        &mut self,
+        dep: &Dependency,
+        f: &mut dyn FnMut(Summary),
+        fuzzy: bool,
+    ) -> CargoResult<()> {
         assert!(self.patches_locked);
         let (override_summary, n, to_warn) = {
             // Look for an override and get ready to query the real source.
@@ -456,7 +467,7 @@ impl<'cfg> Registry for PackageRegistry<'cfg> {
                 // Ensure the requested source_id is loaded
                 self.ensure_loaded(dep.source_id(), Kind::Normal)
                     .chain_err(|| {
-                        format_err!(
+                        failure::format_err!(
                             "failed to load source for a dependency \
                              on `{}`",
                             dep.package_name()
@@ -465,7 +476,7 @@ impl<'cfg> Registry for PackageRegistry<'cfg> {
 
                 let source = self.sources.get_mut(dep.source_id());
                 match (override_summary, source) {
-                    (Some(_), None) => bail!("override found but no real ones"),
+                    (Some(_), None) => failure::bail!("override found but no real ones"),
                     (None, None) => return Ok(()),
 
                     // If we don't have an override then we just ship
@@ -505,7 +516,7 @@ impl<'cfg> Registry for PackageRegistry<'cfg> {
                     // the summaries it gives us though.
                     (Some(override_summary), Some(source)) => {
                         if !patches.is_empty() {
-                            bail!("found patches and a path override")
+                            failure::bail!("found patches and a path override")
                         }
                         let mut n = 0;
                         let mut to_warn = None;
@@ -527,7 +538,7 @@ impl<'cfg> Registry for PackageRegistry<'cfg> {
         };
 
         if n > 1 {
-            bail!("found an override with a non-locked list");
+            failure::bail!("found an override with a non-locked list");
         } else if let Some(summary) = to_warn {
             self.warn_bad_override(&override_summary, &summary)?;
         }

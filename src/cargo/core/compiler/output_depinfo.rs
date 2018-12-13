@@ -3,6 +3,8 @@ use std::fs::File;
 use std::io::{BufWriter, Write};
 use std::path::{Path, PathBuf};
 
+use log::debug;
+
 use super::{fingerprint, Context, Unit};
 use crate::util::paths;
 use crate::util::{internal, CargoResult};

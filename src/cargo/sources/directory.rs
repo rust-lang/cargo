@@ -4,9 +4,7 @@ use std::fs::File;
 use std::io::Read;
 use std::path::{Path, PathBuf};
 
-use hex;
-
-use serde_json;
+use serde::Deserialize;
 
 use crate::core::source::MaybePackage;
 use crate::core::{Dependency, Package, PackageId, Source, SourceId, Summary};
@@ -40,13 +38,13 @@ impl<'cfg> DirectorySource<'cfg> {
 }
 
 impl<'cfg> Debug for DirectorySource<'cfg> {
-    fn fmt(&self, f: &mut Formatter) -> fmt::Result {
+    fn fmt(&self, f: &mut Formatter<'_>) -> fmt::Result {
         write!(f, "DirectorySource {{ root: {:?} }}", self.root)
     }
 }
 
 impl<'cfg> Source for DirectorySource<'cfg> {
-    fn query(&mut self, dep: &Dependency, f: &mut FnMut(Summary)) -> CargoResult<()> {
+    fn query(&mut self, dep: &Dependency, f: &mut dyn FnMut(Summary)) -> CargoResult<()> {
         let packages = self.packages.values().map(|p| &p.0);
         let matches = packages.filter(|pkg| dep.matches(pkg.summary()));
         for summary in matches.map(|pkg| pkg.summary().clone()) {
@@ -55,7 +53,7 @@ impl<'cfg> Source for DirectorySource<'cfg> {
         Ok(())
     }
 
-    fn fuzzy_query(&mut self, _dep: &Dependency, f: &mut FnMut(Summary)) -> CargoResult<()> {
+    fn fuzzy_query(&mut self, _dep: &Dependency, f: &mut dyn FnMut(Summary)) -> CargoResult<()> {
         let packages = self.packages.values().map(|p| &p.0);
         for summary in packages.map(|pkg| pkg.summary().clone()) {
             f(summary);
@@ -157,7 +155,7 @@ impl<'cfg> Source for DirectorySource<'cfg> {
             .map(|p| &p.0)
             .cloned()
             .map(MaybePackage::Ready)
-            .ok_or_else(|| format_err!("failed to find package with id: {}", id))
+            .ok_or_else(|| failure::format_err!("failed to find package with id: {}", id))
     }
 
     fn finish_download(&mut self, _id: PackageId, _data: Vec<u8>) -> CargoResult<Package> {
@@ -171,7 +169,7 @@ impl<'cfg> Source for DirectorySource<'cfg> {
     fn verify(&self, id: PackageId) -> CargoResult<()> {
         let (pkg, cksum) = match self.packages.get(&id) {
             Some(&(ref pkg, ref cksum)) => (pkg, cksum),
-            None => bail!("failed to find entry for `{}` in directory source", id),
+            None => failure::bail!("failed to find entry for `{}` in directory source", id),
         };
 
         let mut buf = [0; 16 * 1024];
@@ -192,7 +190,7 @@ impl<'cfg> Source for DirectorySource<'cfg> {
 
             let actual = hex::encode(h.finish());
             if &*actual != cksum {
-                bail!(
+                failure::bail!(
                     "\
                      the listed checksum of `{}` has changed:\n\
                      expected: {}\n\

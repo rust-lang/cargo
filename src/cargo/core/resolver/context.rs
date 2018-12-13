@@ -1,11 +1,14 @@
 use std::collections::{BTreeMap, HashMap, HashSet};
 use std::rc::Rc;
 
+#[allow(unused_imports)] // "ensure" seems to require "bail" be in scope (macro hygiene issue?)
+use failure::{bail, ensure};
+use log::debug;
+
 use crate::core::interning::InternedString;
 use crate::core::{Dependency, FeatureValue, PackageId, SourceId, Summary};
 use crate::util::CargoResult;
 use crate::util::Graph;
-use im_rc;
 
 use super::errors::ActivateResult;
 use super::types::{ConflictReason, DepInfo, GraphNode, Method, RcList, RegistryQueryer};
@@ -51,7 +54,7 @@ impl Context {
     /// Activate this summary by inserting it into our list of known activations.
     ///
     /// Returns true if this summary with the given method is already activated.
-    pub fn flag_activated(&mut self, summary: &Summary, method: &Method) -> CargoResult<bool> {
+    pub fn flag_activated(&mut self, summary: &Summary, method: &Method<'_>) -> CargoResult<bool> {
         let id = summary.package_id();
         let prev = self
             .activations
@@ -95,10 +98,10 @@ impl Context {
 
     pub fn build_deps(
         &mut self,
-        registry: &mut RegistryQueryer,
+        registry: &mut RegistryQueryer<'_>,
         parent: Option<&Summary>,
         candidate: &Summary,
-        method: &Method,
+        method: &Method<'_>,
     ) -> ActivateResult<Vec<DepInfo>> {
         // First, figure out our set of dependencies based on the requested set
         // of features. This also calculates what features we're going to enable
@@ -156,7 +159,7 @@ impl Context {
         &mut self,
         parent: Option<&Summary>,
         s: &'b Summary,
-        method: &'b Method,
+        method: &'b Method<'_>,
     ) -> ActivateResult<Vec<(Dependency, Vec<InternedString>)>> {
         let dev_deps = match *method {
             Method::Everything => true,
@@ -203,9 +206,11 @@ impl Context {
             base.extend(dep.features().iter());
             for feature in base.iter() {
                 if feature.contains('/') {
-                    return Err(
-                        format_err!("feature names may not contain slashes: `{}`", feature).into(),
-                    );
+                    return Err(failure::format_err!(
+                        "feature names may not contain slashes: `{}`",
+                        feature
+                    )
+                    .into());
                 }
             }
             ret.push((dep.clone(), base));
@@ -224,7 +229,7 @@ impl Context {
         if !remaining.is_empty() {
             let features = remaining.join(", ");
             return Err(match parent {
-                None => format_err!(
+                None => failure::format_err!(
                     "Package `{}` does not have these features: `{}`",
                     s.package_id(),
                     features
@@ -284,7 +289,7 @@ impl Context {
 /// dependency features in a Requirements object, returning it to the resolver.
 fn build_requirements<'a, 'b: 'a>(
     s: &'a Summary,
-    method: &'b Method,
+    method: &'b Method<'_>,
 ) -> CargoResult<Requirements<'a>> {
     let mut reqs = Requirements::new(s);
 
@@ -344,7 +349,7 @@ struct Requirements<'a> {
 }
 
 impl<'r> Requirements<'r> {
-    fn new(summary: &Summary) -> Requirements {
+    fn new(summary: &Summary) -> Requirements<'_> {
         Requirements {
             summary,
             deps: HashMap::new(),
@@ -389,7 +394,7 @@ impl<'r> Requirements<'r> {
             .expect("must be a valid feature")
         {
             match *fv {
-                FeatureValue::Feature(ref dep_feat) if **dep_feat == *feat => bail!(
+                FeatureValue::Feature(ref dep_feat) if **dep_feat == *feat => failure::bail!(
                     "Cyclic feature dependency: feature `{}` depends on itself",
                     feat
                 ),
