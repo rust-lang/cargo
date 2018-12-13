@@ -5,7 +5,7 @@ use std::io::{self, BufRead};
 use cargo::core::{Source, SourceId};
 use cargo::ops;
 use cargo::sources::RegistrySource;
-use cargo::util::{CargoError, CargoResultExt};
+use cargo::util::CargoResultExt;
 
 pub fn cli() -> App {
     subcommand("login")
@@ -49,7 +49,7 @@ pub fn exec(config: &mut Config, args: &ArgMatches<'_>) -> CliResult {
                 .lock()
                 .read_line(&mut line)
                 .chain_err(|| "failed to read stdin")
-                .map_err(CargoError::from)?;
+                .map_err(failure::Error::from)?;
             line.trim().to_string()
         }
     };

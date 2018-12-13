@@ -6,7 +6,7 @@ use std::path::{Path, PathBuf};
 use log::{info, trace};
 
 use crate::core::{EitherManifest, Package, PackageId, SourceId};
-use crate::util::errors::{CargoError, CargoResult};
+use crate::util::errors::CargoResult;
 use crate::util::important_paths::find_project_manifest_exact;
 use crate::util::toml::read_manifest;
 use crate::util::{self, Config};
@@ -41,7 +41,7 @@ pub fn read_packages(
 ) -> CargoResult<Vec<Package>> {
     let mut all_packages = HashMap::new();
     let mut visited = HashSet::<PathBuf>::new();
-    let mut errors = Vec::<CargoError>::new();
+    let mut errors = Vec::<failure::Error>::new();
 
     trace!(
         "looking for root package: {}, source_id={}",
@@ -111,7 +111,7 @@ fn walk(path: &Path, callback: &mut dyn FnMut(&Path) -> CargoResult<bool>) -> Ca
         Err(ref e) if e.kind() == io::ErrorKind::PermissionDenied => return Ok(()),
         Err(e) => {
             let cx = format!("failed to read directory `{}`", path.display());
-            let e = CargoError::from(e);
+            let e = failure::Error::from(e);
             return Err(e.context(cx).into());
         }
     };
@@ -134,7 +134,7 @@ fn read_nested_packages(
     source_id: SourceId,
     config: &Config,
     visited: &mut HashSet<PathBuf>,
-    errors: &mut Vec<CargoError>,
+    errors: &mut Vec<failure::Error>,
 ) -> CargoResult<()> {
     if !visited.insert(path.to_path_buf()) {
         return Ok(());

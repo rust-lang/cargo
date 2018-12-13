@@ -3,7 +3,7 @@ use std::fmt;
 
 use crate::core::{Dependency, PackageId, Registry, Summary};
 use crate::util::lev_distance::lev_distance;
-use crate::util::{CargoError, Config};
+use crate::util::Config;
 use failure::{Error, Fail};
 use semver;
 
@@ -52,7 +52,7 @@ impl fmt::Display for ResolveError {
 pub type ActivateResult<T> = Result<T, ActivateError>;
 
 pub enum ActivateError {
-    Fatal(CargoError),
+    Fatal(failure::Error),
     Conflict(PackageId, ConflictReason),
 }
 

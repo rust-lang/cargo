@@ -8,7 +8,7 @@ use fs2::{lock_contended_error, FileExt};
 use libc;
 use termcolor::Color::Cyan;
 
-use crate::util::errors::{CargoError, CargoResult, CargoResultExt};
+use crate::util::errors::{CargoResult, CargoResultExt};
 use crate::util::paths;
 use crate::util::Config;
 
@@ -303,7 +303,7 @@ fn acquire(
 
         Err(e) => {
             if e.raw_os_error() != lock_contended_error().raw_os_error() {
-                let e = CargoError::from(e);
+                let e = failure::Error::from(e);
                 let cx = format!("failed to lock file: {}", path.display());
                 return Err(e.context(cx).into());
             }

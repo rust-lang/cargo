@@ -11,8 +11,7 @@ use log::trace;
 
 use crate::core::{TargetKind, Workspace};
 
-pub use failure::Error as CargoError;
-pub type CargoResult<T> = Result<T, Error>;
+pub type CargoResult<T> = failure::Fallible<T>; // Alex's body isn't quite ready to give up "Result"
 
 pub trait CargoResultExt<T, E> {
     fn chain_err<F, D>(self, f: F) -> Result<T, Context<D>>
@@ -232,13 +231,13 @@ pub type CliResult = Result<(), CliError>;
 
 #[derive(Debug)]
 pub struct CliError {
-    pub error: Option<CargoError>,
+    pub error: Option<failure::Error>,
     pub unknown: bool,
     pub exit_code: i32,
 }
 
 impl CliError {
-    pub fn new(error: CargoError, code: i32) -> CliError {
+    pub fn new(error: failure::Error, code: i32) -> CliError {
         let unknown = error.downcast_ref::<Internal>().is_some();
         CliError {
             error: Some(error),
@@ -256,8 +255,8 @@ impl CliError {
     }
 }
 
-impl From<CargoError> for CliError {
-    fn from(err: CargoError) -> CliError {
+impl From<failure::Error> for CliError {
+    fn from(err: failure::Error) -> CliError {
         CliError::new(err, 101)
     }
 }
@@ -342,10 +341,10 @@ pub fn process_error(
     }
 }
 
-pub fn internal<S: fmt::Display>(error: S) -> CargoError {
+pub fn internal<S: fmt::Display>(error: S) -> failure::Error {
     _internal(&error)
 }
 
-fn _internal(error: &dyn fmt::Display) -> CargoError {
+fn _internal(error: &dyn fmt::Display) -> failure::Error {
     Internal::new(format_err!("{}", error)).into()
 }

@@ -13,7 +13,7 @@ use serde::Serialize;
 use url::Url;
 
 use crate::core::GitReference;
-use crate::util::errors::{CargoError, CargoResult, CargoResultExt};
+use crate::util::errors::{CargoResult, CargoResultExt};
 use crate::util::paths;
 use crate::util::process_builder::process;
 use crate::util::{internal, network, Config, Progress, ToUrl};
@@ -69,7 +69,7 @@ pub struct GitDatabase {
 
 /// `GitCheckout` is a local checkout of a particular revision. Calling
 /// `clone_into` with a reference will resolve the reference into a revision,
-/// and return a `CargoError` if no revision for that reference was found.
+/// and return a `failure::Error` if no revision for that reference was found.
 #[derive(Serialize)]
 pub struct GitCheckout<'a> {
     database: &'a GitDatabase,
@@ -587,7 +587,7 @@ where
     // In the case of an authentication failure (where we tried something) then
     // we try to give a more helpful error message about precisely what we
     // tried.
-    let res = res.map_err(CargoError::from).chain_err(|| {
+    let res = res.map_err(failure::Error::from).chain_err(|| {
         let mut msg = "failed to authenticate when downloading \
                        repository"
             .to_string();

@@ -10,7 +10,7 @@ use serde::Serialize;
 
 use crate::core::interning::InternedString;
 use crate::core::{PackageId, SourceId, Summary};
-use crate::util::errors::{CargoError, CargoResult, CargoResultExt};
+use crate::util::errors::{CargoResult, CargoResultExt};
 use crate::util::{Cfg, CfgExpr, Config};
 
 /// Information about a dependency requested by a Cargo manifest.
@@ -449,7 +449,7 @@ impl ser::Serialize for Platform {
 }
 
 impl FromStr for Platform {
-    type Err = CargoError;
+    type Err = failure::Error;
 
     fn from_str(s: &str) -> CargoResult<Platform> {
         if s.starts_with("cfg(") && s.ends_with(')') {
