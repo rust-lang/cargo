@@ -1162,7 +1162,7 @@ impl Execs {
 
 impl Drop for Execs {
     fn drop(&mut self) {
-        if !self.ran {
+        if !self.ran && !std::thread::panicking() {
             panic!("forgot to run this command");
         }
     }
