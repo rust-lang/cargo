@@ -22,7 +22,6 @@ const FIX_ENV: &str = "__CARGO_FIX_PLZ";
 const BROKEN_CODE_ENV: &str = "__CARGO_FIX_BROKEN_CODE";
 const PREPARE_FOR_ENV: &str = "__CARGO_FIX_PREPARE_FOR";
 const EDITION_ENV: &str = "__CARGO_FIX_EDITION";
-
 const IDIOMS_ENV: &str = "__CARGO_FIX_IDIOMS";
 
 pub struct FixOptions<'a> {
@@ -258,9 +257,10 @@ fn rustfix_crate(
     // process at a time. If two invocations concurrently check a crate then
     // it's likely to corrupt it.
     //
-    // Currently we do this by assigning the name on our lock to the first
-    // argument that looks like a Rust file.
-    let _lock = LockServerClient::lock(&lock_addr.parse()?, filename)?;
+    // Currently we do this by assigning the name on our lock to the manifest
+    // directory.
+    let dir = env::var("CARGO_MANIFEST_DIR").expect("CARGO_MANIFEST_DIR is missing?");
+    let _lock = LockServerClient::lock(&lock_addr.parse()?, dir)?;
 
     // Next up this is a bit suspicious, but we *iteratively* execute rustc and
     // collect suggestions to feed to rustfix. Once we hit our limit of times to
