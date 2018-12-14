@@ -1,5 +1,6 @@
 use std::collections::BTreeMap;
 use std::fs::{self, File};
+use std::io::{self, BufRead};
 use std::iter::repeat;
 use std::str;
 use std::time::Duration;
@@ -80,7 +81,6 @@ pub fn publish(ws: &Workspace<'_>, opts: &PublishOpts<'_>) -> CargoResult<()> {
             allow_dirty: opts.allow_dirty,
             target: opts.target.clone(),
             jobs: opts.jobs,
-            registry: opts.registry.clone(),
         },
     )?
     .unwrap();
@@ -325,14 +325,25 @@ pub fn registry(
     } = registry_configuration(config, registry.clone())?;
     let token = token.or(token_config);
     let sid = get_source_id(config, index_config.or(index), registry)?;
-    let api_host = {
+    let (api_host, commands) = {
         let mut src = RegistrySource::remote(sid, config);
-        src.update()
-            .chain_err(|| format!("failed to update {}", sid))?;
-        (src.config()?).unwrap().api.unwrap()
+        // Only update the index if the config is not available.
+        let cfg = match src.config() {
+            Ok(c) => c,
+            Err(_) => {
+                src.update()
+                    .chain_err(|| format!("failed to update {}", sid))?;
+                src.config()?
+            }
+        }
+        .ok_or_else(|| failure::format_err!("{} does not support API commands", sid))?;
+        let api = cfg
+            .api
+            .ok_or_else(|| failure::format_err!("{} does not support API commands", sid))?;
+        (api, cfg.commands)
     };
     let handle = http_handle(config)?;
-    Ok((Registry::new_handle(api_host, token, handle), sid))
+    Ok((Registry::new_handle(api_host, commands, token, handle), sid))
 }
 
 /// Create a new HTTP handle with appropriate global configuration for cargo.
@@ -500,18 +511,52 @@ fn http_proxy_exists(config: &Config) -> CargoResult<bool> {
     }
 }
 
-pub fn registry_login(config: &Config, token: String, registry: Option<String>) -> CargoResult<()> {
+pub fn registry_login(
+    config: &Config,
+    token: Option<String>,
+    reg: Option<String>,
+) -> CargoResult<()> {
+    let (registry, _) = registry(config, token.clone(), None, reg.clone())?;
+    registry.supports_command("login", "v1")?;
+
+    let token = match token {
+        Some(token) => token,
+        None => {
+            println!(
+                "please visit {}/me and paste the API Token below",
+                registry.host()
+            );
+            let mut line = String::new();
+            let input = io::stdin();
+            input
+                .lock()
+                .read_line(&mut line)
+                .chain_err(|| "failed to read stdin")
+                .map_err(failure::Error::from)?;
+            line.trim().to_string()
+        }
+    };
+
     let RegistryConfig {
         token: old_token, ..
-    } = registry_configuration(config, registry.clone())?;
+    } = registry_configuration(config, reg.clone())?;
 
     if let Some(old_token) = old_token {
         if old_token == token {
+            config.shell().status("Login", "already logged in")?;
             return Ok(());
         }
     }
 
-    config::save_credentials(config, token, registry)
+    config::save_credentials(config, token, reg.clone())?;
+    config.shell().status(
+        "Login",
+        format!(
+            "token for `{}` saved",
+            reg.as_ref().map_or("crates.io", String::as_str)
+        ),
+    )?;
+    Ok(())
 }
 
 pub struct OwnersOptions {
@@ -655,22 +700,7 @@ pub fn search(
         prefix
     }
 
-    let sid = get_source_id(config, index, reg)?;
-
-    let mut regsrc = RegistrySource::remote(sid, config);
-    let cfg = match regsrc.config() {
-        Ok(c) => c,
-        Err(_) => {
-            regsrc
-                .update()
-                .chain_err(|| format!("failed to update {}", &sid))?;
-            regsrc.config()?
-        }
-    };
-
-    let api_host = cfg.unwrap().api.unwrap();
-    let handle = http_handle(config)?;
-    let mut registry = Registry::new_handle(api_host, None, handle);
+    let (mut registry, _) = registry(config, None, index, reg)?;
     let (crates, total_crates) = registry
         .search(query, limit)
         .chain_err(|| "failed to retrieve search results from the registry")?;

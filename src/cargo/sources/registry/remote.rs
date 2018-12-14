@@ -167,7 +167,17 @@ impl<'cfg> RegistryData for RemoteRegistry<'cfg> {
                 .open_ro(Path::new(INDEX_LOCK), self.config, "the registry index")?;
         let mut config = None;
         self.load(Path::new(""), Path::new("config.json"), &mut |json| {
-            config = Some(serde_json::from_slice(json)?);
+            let mut reg_conf: RegistryConfig = serde_json::from_slice(json)?;
+            if reg_conf.api.is_some() && reg_conf.commands.is_empty() {
+                // Default to V1 if not specified.
+                let v1 = vec!["v1".to_string()];
+                reg_conf.commands.insert("publish".to_string(), v1.clone());
+                reg_conf.commands.insert("yank".to_string(), v1.clone());
+                reg_conf.commands.insert("search".to_string(), v1.clone());
+                reg_conf.commands.insert("owner".to_string(), v1.clone());
+                reg_conf.commands.insert("login".to_string(), v1.clone());
+            }
+            config = Some(reg_conf);
             Ok(())
         })?;
         trace!("config loaded");

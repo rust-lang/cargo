@@ -14,6 +14,14 @@ use url::Url;
 use crate::support::git::repo;
 use crate::support::paths;
 
+pub const COMMANDS: &str = r#"{
+    "publish":  ["v1"],
+    "yank":     ["v1"],
+    "search":   ["v1"],
+    "owner":    ["v1"],
+    "login":    ["v1"]
+}"#;
+
 pub fn registry_path() -> PathBuf {
     paths::root().join("registry")
 }
@@ -169,9 +177,10 @@ pub fn init() {
             "config.json",
             &format!(
                 r#"
-            {{"dl":"{0}","api":"{0}"}}
+            {{"dl":"{0}","api":"{0}","commands":{1}}}
         "#,
-                dl_url()
+                dl_url(),
+                COMMANDS
             ),
         )
         .build();
@@ -183,10 +192,11 @@ pub fn init() {
             "config.json",
             &format!(
                 r#"
-            {{"dl":"{}","api":"{}"}}
+            {{"dl":"{}","api":"{}","commands":{}}}
         "#,
                 alt_dl_url(),
-                alt_api_url()
+                alt_api_url(),
+                COMMANDS
             ),
         )
         .build();

@@ -1,6 +1,6 @@
 use crate::support::registry::{self, alt_api_path, Package};
-use crate::support::{basic_manifest, paths, project};
-use std::fs::File;
+use crate::support::{basic_manifest, git, paths, project};
+use std::fs::{self, File};
 use std::io::Write;
 
 #[test]
@@ -203,13 +203,13 @@ fn depend_on_alt_registry_depends_on_crates_io() {
 
     p.cargo("build")
         .masquerade_as_nightly_cargo()
-        .with_stderr(&format!(
+        .with_stderr_unordered(&format!(
             "\
 [UPDATING] `{alt_reg}` index
 [UPDATING] `{reg}` index
 [DOWNLOADING] crates ...
-[DOWNLOADED] [..] v0.0.1 (registry `[ROOT][..]`)
-[DOWNLOADED] [..] v0.0.1 (registry `[ROOT][..]`)
+[DOWNLOADED] baz v0.0.1 (registry `[ROOT][..]`)
+[DOWNLOADED] bar v0.0.1 (registry `[ROOT][..]`)
 [COMPILING] baz v0.0.1 (registry `[ROOT][..]`)
 [COMPILING] bar v0.0.1 (registry `[ROOT][..]`)
 [COMPILING] foo v0.0.1 ([CWD])
@@ -512,5 +512,158 @@ fn passwords_in_url_forbidden() {
         .masquerade_as_nightly_cargo()
         .with_status(101)
         .with_stderr_contains("error: Registry URLs may not contain passwords")
+        .run();
+}
+
+#[test]
+fn no_api() {
+    Package::new("bar", "0.0.1").alternative(true).publish();
+    // Configure without `api`.
+    let repo = git2::Repository::open(registry::alt_registry_path()).unwrap();
+    let cfg_path = registry::alt_registry_path().join("config.json");
+    fs::write(
+        cfg_path,
+        format!(r#"{{"dl": "{}"}}"#, registry::alt_dl_url()),
+    )
+    .unwrap();
+    git::add(&repo);
+    git::commit(&repo);
+
+    // First check that a dependency works.
+    let p = project()
+        .file(
+            "Cargo.toml",
+            r#"
+            cargo-features = ["alternative-registries"]
+            [package]
+            name = "foo"
+            version = "0.0.1"
+            [dependencies.bar]
+            version = "0.0.1"
+            registry = "alternative"
+        "#,
+        )
+        .file("src/lib.rs", "")
+        .build();
+
+    p.cargo("build")
+        .masquerade_as_nightly_cargo()
+        .with_stderr(&format!(
+            "\
+[UPDATING] `{reg}` index
+[DOWNLOADING] crates ...
+[DOWNLOADED] bar v0.0.1 (registry `[ROOT][..]`)
+[COMPILING] bar v0.0.1 (registry `[ROOT][..]`)
+[COMPILING] foo v0.0.1 ([CWD])
+[FINISHED] dev [unoptimized + debuginfo] target(s) in [..]s
+",
+            reg = registry::alt_registry_path().to_str().unwrap()
+        ))
+        .run();
+
+    // Check all of the API commands.
+    let err = format!(
+        "[ERROR] registry `{}` does not support API commands",
+        registry::alt_registry_path().display()
+    );
+
+    p.cargo("login --registry alternative TOKEN -Zunstable-options")
+        .masquerade_as_nightly_cargo()
+        .with_status(101)
+        .with_stderr_contains(&err)
+        .run();
+
+    p.cargo("publish --registry alternative -Zunstable-options")
+        .masquerade_as_nightly_cargo()
+        .with_status(101)
+        .with_stderr_contains(&err)
+        .run();
+
+    p.cargo("search --registry alternative -Zunstable-options")
+        .masquerade_as_nightly_cargo()
+        .with_status(101)
+        .with_stderr_contains(&err)
+        .run();
+
+    p.cargo("owner --registry alternative -Zunstable-options --list")
+        .masquerade_as_nightly_cargo()
+        .with_status(101)
+        .with_stderr_contains(&err)
+        .run();
+
+    p.cargo("yank --registry alternative -Zunstable-options --vers=0.0.1 bar")
+        .masquerade_as_nightly_cargo()
+        .with_status(101)
+        .with_stderr_contains(&err)
+        .run();
+
+    p.cargo("yank --registry alternative -Zunstable-options --vers=0.0.1 bar")
+        .masquerade_as_nightly_cargo()
+        .with_stderr_contains(&err)
+        .with_status(101)
+        .run();
+}
+
+#[test]
+fn api_not_supported() {
+    Package::new("bar", "0.0.1").alternative(true).publish();
+
+    // Configure `commands` with incompatible versions and see what happens.
+    let repo = git2::Repository::open(registry::alt_registry_path()).unwrap();
+    let cfg_path = registry::alt_registry_path().join("config.json");
+    fs::write(
+        cfg_path,
+        format!(
+            r#"
+        {{"dl": "{}",
+          "api": "{}",
+          "commands": {{
+            "publish": []
+          }}
+        }}"#,
+            registry::alt_dl_url(),
+            registry::alt_api_url()
+        ),
+    )
+    .unwrap();
+    git::add(&repo);
+    git::commit(&repo);
+
+    let p = project().file("src/lib.rs", "").build();
+
+    p.cargo("login --registry alternative TOKEN -Zunstable-options")
+        .masquerade_as_nightly_cargo()
+        .with_status(101)
+        .with_stderr_contains("[..]registry does not support command: login v1")
+        .run();
+
+    p.cargo("publish --registry alternative -Zunstable-options")
+        .masquerade_as_nightly_cargo()
+        .with_status(101)
+        .with_stderr_contains("[..]registry does not support command: publish v1")
+        .run();
+
+    p.cargo("search --registry alternative -Zunstable-options")
+        .masquerade_as_nightly_cargo()
+        .with_status(101)
+        .with_stderr_contains("[..]registry does not support command: search v1")
+        .run();
+
+    p.cargo("owner --registry alternative -Zunstable-options --list")
+        .masquerade_as_nightly_cargo()
+        .with_status(101)
+        .with_stderr_contains("[..]registry does not support command: owner v1")
+        .run();
+
+    p.cargo("yank --registry alternative -Zunstable-options --vers=0.0.1 bar")
+        .masquerade_as_nightly_cargo()
+        .with_status(101)
+        .with_stderr_contains("[..]registry does not support command: yank v1")
+        .run();
+
+    p.cargo("yank --registry alternative -Zunstable-options --vers=0.0.1 bar")
+        .masquerade_as_nightly_cargo()
+        .with_stderr_contains("[..]registry does not support command: yank v1")
+        .with_status(101)
         .run();
 }

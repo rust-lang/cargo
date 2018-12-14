@@ -3,7 +3,7 @@ use std::io::prelude::*;
 use std::path::PathBuf;
 
 use crate::support::git::{repo, Repository};
-use crate::support::paths;
+use crate::support::{paths, registry};
 
 use url::Url;
 
@@ -41,9 +41,11 @@ pub fn setup() -> Repository {
             &format!(
                 r#"{{
             "dl": "{0}",
-            "api": "{0}"
+            "api": "{0}",
+            "commands": {1}
         }}"#,
-                upload()
+                upload(),
+                registry::COMMANDS
             ),
         )
         .build()

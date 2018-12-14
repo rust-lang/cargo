@@ -15,8 +15,16 @@ use url::percent_encoding::{percent_encode, QUERY_ENCODE_SET};
 pub type Result<T> = std::result::Result<T, failure::Error>;
 
 pub struct Registry {
+    /// The base URL for issuing API requests.
     host: String,
+    /// Map of commands this registry supports.
+    /// Maps command (ex "yank") to list of versions of the API it supports
+    /// (ex ["v1"]).
+    commands: BTreeMap<String, Vec<String>>,
+    /// Optional authorization token.
+    /// If None, commands requiring authorization will fail.
     token: Option<String>,
+    /// Curl handle for issuing requests.
     handle: Easy,
 }
 
@@ -51,7 +59,8 @@ pub struct NewCrate {
     pub license_file: Option<String>,
     pub repository: Option<String>,
     pub badges: BTreeMap<String, BTreeMap<String, String>>,
-    #[serde(default)] pub links: Option<String>,
+    #[serde(default)]
+    pub links: Option<String>,
 }
 
 #[derive(Serialize)]
@@ -119,19 +128,34 @@ struct Crates {
     meta: TotalCrates,
 }
 impl Registry {
-    pub fn new(host: String, token: Option<String>) -> Registry {
-        Registry::new_handle(host, token, Easy::new())
+    pub fn new(
+        host: String,
+        commands: BTreeMap<String, Vec<String>>,
+        token: Option<String>,
+    ) -> Registry {
+        Registry::new_handle(host, commands, token, Easy::new())
     }
 
-    pub fn new_handle(host: String, token: Option<String>, handle: Easy) -> Registry {
+    pub fn new_handle(
+        host: String,
+        commands: BTreeMap<String, Vec<String>>,
+        token: Option<String>,
+        handle: Easy,
+    ) -> Registry {
         Registry {
             host,
+            commands,
             token,
             handle,
         }
     }
 
+    pub fn host(&self) -> &str {
+        &self.host
+    }
+
     pub fn add_owners(&mut self, krate: &str, owners: &[&str]) -> Result<String> {
+        self.supports_command("owner", "v1")?;
         let body = serde_json::to_string(&OwnersReq { users: owners })?;
         let body = self.put(&format!("/crates/{}/owners", krate), body.as_bytes())?;
         assert!(serde_json::from_str::<OwnerResponse>(&body)?.ok);
@@ -139,6 +163,7 @@ impl Registry {
     }
 
     pub fn remove_owners(&mut self, krate: &str, owners: &[&str]) -> Result<()> {
+        self.supports_command("owner", "v1")?;
         let body = serde_json::to_string(&OwnersReq { users: owners })?;
         let body = self.delete(&format!("/crates/{}/owners", krate), Some(body.as_bytes()))?;
         assert!(serde_json::from_str::<OwnerResponse>(&body)?.ok);
@@ -146,11 +171,13 @@ impl Registry {
     }
 
     pub fn list_owners(&mut self, krate: &str) -> Result<Vec<User>> {
+        self.supports_command("owner", "v1")?;
         let body = self.get(&format!("/crates/{}/owners", krate))?;
         Ok(serde_json::from_str::<Users>(&body)?.users)
     }
 
     pub fn publish(&mut self, krate: &NewCrate, tarball: &File) -> Result<Warnings> {
+        self.supports_command("publish", "v1")?;
         let json = serde_json::to_string(krate)?;
         // Prepare the body. The format of the upload request is:
         //
@@ -234,6 +261,7 @@ impl Registry {
     }
 
     pub fn search(&mut self, query: &str, limit: u32) -> Result<(Vec<Crate>, u32)> {
+        self.supports_command("search", "v1")?;
         let formatted_query = percent_encode(query.as_bytes(), QUERY_ENCODE_SET);
         let body = self.req(
             &format!("/crates?q={}&per_page={}", formatted_query, limit),
@@ -246,15 +274,29 @@ impl Registry {
     }
 
     pub fn yank(&mut self, krate: &str, version: &str) -> Result<()> {
+        self.supports_command("yank", "v1")?;
         let body = self.delete(&format!("/crates/{}/{}/yank", krate, version), None)?;
         assert!(serde_json::from_str::<R>(&body)?.ok);
         Ok(())
     }
 
     pub fn unyank(&mut self, krate: &str, version: &str) -> Result<()> {
+        self.supports_command("yank", "v1")?;
         let body = self.put(&format!("/crates/{}/{}/unyank", krate, version), &[])?;
         assert!(serde_json::from_str::<R>(&body)?.ok);
         Ok(())
+    }
+
+    pub fn supports_command(&self, cmd: &str, vers: &str) -> Result<()> {
+        if self
+            .commands
+            .get(cmd)
+            .map_or(false, |vs| vs.iter().any(|v| v == vers))
+        {
+            Ok(())
+        } else {
+            bail!("registry does not support command: {} {}", cmd, vers)
+        }
     }
 
     fn put(&mut self, path: &str, b: &[u8]) -> Result<String> {

@@ -211,7 +211,15 @@ pub struct RegistryConfig {
 
     /// API endpoint for the registry. This is what's actually hit to perform
     /// operations like yanks, owner modifications, publish new crates, etc.
+    /// If this is None, the registry does not support API commands.
     pub api: Option<String>,
+
+    /// Map of commands the registry supports.
+    /// Key is the command name ("yank", "publish", etc.) and the value is a
+    /// list of versions supported for that command (["v1"]).
+    /// If not specified, but `api` is set, all commands default to v1.
+    #[serde(default)]
+    pub commands: BTreeMap<String, Vec<String>>,
 }
 
 #[derive(Deserialize)]

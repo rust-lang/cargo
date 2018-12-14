@@ -5,7 +5,7 @@ use std::path::Path;
 use crate::support::cargo_process;
 use crate::support::git::repo;
 use crate::support::paths;
-use crate::support::registry::{api_path, registry as registry_url, registry_path};
+use crate::support::registry::{api_path, registry as registry_url, registry_path, COMMANDS};
 use url::Url;
 
 fn api() -> Url {
@@ -66,7 +66,11 @@ fn setup() {
     let _ = repo(&registry_path())
         .file(
             "config.json",
-            &format!(r#"{{"dl":"{0}","api":"{0}"}}"#, api()),
+            &format!(
+                r#"{{"dl":"{0}","api":"{0}","commands":{1}}}"#,
+                api(),
+                COMMANDS
+            ),
         )
         .build();
 
