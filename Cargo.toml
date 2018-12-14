@@ -32,7 +32,7 @@ filetime = "0.2"
 flate2 = { version = "1.0.3", features = ['zlib'] }
 fs2 = "0.4"
 git2 = "0.8.0"
-git2-curl = "0.8.1"
+git2-curl = "0.9.0"
 glob = "0.2.11"
 hex = "0.3"
 home = "0.3"
