@@ -39,6 +39,8 @@ pub struct CompilationFiles<'a, 'cfg: 'a> {
     outputs: HashMap<Unit<'a>, LazyCell<Arc<Vec<OutputFile>>>>,
     /// The directory that is used as the shared targets
     shared_target_dir: Option<PathBuf>,
+    /// Flags indicates if we should use the shared dir
+    shared_dir_enabled: bool
 }
 
 #[derive(Debug)]
@@ -81,6 +83,15 @@ impl<'a, 'cfg: 'a> CompilationFiles<'a, 'cfg> {
                 primary.insert(unit.clone());
             }
         }
+
+        let has_rustflags = [Kind::Host, Kind::Target].iter()
+            .any(|kind| {
+                cx.bcx
+                    .rustflags_args_for(*kind)
+                    .ok()
+                    .map_or(true, |args| args.len() > 0)
+            });
+
         let outputs = metas
             .keys()
             .cloned()
@@ -101,6 +112,7 @@ impl<'a, 'cfg: 'a> CompilationFiles<'a, 'cfg> {
             outputs,
             primary,
             shared_target_dir,
+            shared_dir_enabled: !has_rustflags
         }
     }
 
@@ -138,7 +150,7 @@ impl<'a, 'cfg: 'a> CompilationFiles<'a, 'cfg> {
             self.layout(unit.kind).examples().to_path_buf()
         } else {
             if let Some(ref shared_dir) = self.shared_target_dir { 
-                if !self.primary.contains(unit) {
+                if self.shared_dir_enabled && !self.primary.contains(unit) {
                     return shared_dir.clone();
                 }
             }
@@ -148,7 +160,7 @@ impl<'a, 'cfg: 'a> CompilationFiles<'a, 'cfg> {
 
     /// Check if the unit is in the shared dir
     pub fn in_shared_dir(&self, unit: &Unit<'a>, bcx: &BuildContext<'a, 'cfg>) -> bool {
-        if self.shared_target_dir.is_some() && !self.primary.contains(unit) {
+        if self.shared_dir_enabled && self.shared_target_dir.is_some() && !self.primary.contains(unit) {
             if let Ok(outputs) = self.outputs(unit, bcx) {
                 return !outputs.iter().any(|out| !metadata(out.path.as_path()).is_ok());
             } 
@@ -185,7 +197,7 @@ impl<'a, 'cfg: 'a> CompilationFiles<'a, 'cfg> {
     /// specified unit.
     pub fn deps_dir(&self, unit: &Unit<'_>) -> &Path {
         if let Some(ref shared_dir) = self.shared_target_dir { 
-            if !self.primary.contains(unit) {
+            if self.shared_dir_enabled && !self.primary.contains(unit) {
                 return shared_dir.as_path();
             }
         }

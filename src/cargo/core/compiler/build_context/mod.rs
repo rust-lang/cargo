@@ -160,15 +160,20 @@ impl<'a, 'cfg> BuildContext<'a, 'cfg> {
         self.build_config.jobs
     }
 
-    pub fn rustflags_args(&self, unit: &Unit<'_>) -> CargoResult<Vec<String>> {
+    /// Get the RUSTFLAGS argument by its kind
+    pub fn rustflags_args_for(&self, kind:Kind) -> CargoResult<Vec<String>> {
         env_args(
             self.config,
             &self.build_config.requested_target,
             self.host_triple(),
-            self.info(unit.kind).cfg(),
-            unit.kind,
+            self.info(kind).cfg(),
+            kind,
             "RUSTFLAGS",
         )
+    }
+
+    pub fn rustflags_args(&self, unit: &Unit<'_>) -> CargoResult<Vec<String>> {
+        self.rustflags_args_for(unit.kind)
     }
 
     pub fn rustdocflags_args(&self, unit: &Unit<'_>) -> CargoResult<Vec<String>> {
