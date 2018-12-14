@@ -89,7 +89,7 @@ impl<'a, 'cfg: 'a> CompilationFiles<'a, 'cfg> {
 
         let shared_target_dir = env::var("CARGO_SHARED_TARGET_DIR")
             .ok()
-            .map_or(None, |path| path.parse().ok());
+            .map_or(None, |path| Some(PathBuf::from(path)));
 
         CompilationFiles {
             ws,
