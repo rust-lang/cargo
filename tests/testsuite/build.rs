@@ -4727,3 +4727,88 @@ Caused by:
         .with_status(101)
         .run();
 }
+
+
+
+#[test]
+fn cargo_compile_with_shared_dir() {
+    Package::new("bar", "0.0.1")
+        .file("bar/Cargo.toml",
+              r#"
+              [package]
+              name = "bar"
+              version = "0.0.1"
+
+              [lib]
+              name = "bar"
+              "#
+        )
+        .file("src/lib.rs", r#"pub fn bar() { println!("I'm bar") }"#)
+        .publish();
+
+    let p = project()
+        .file("Cargo.toml", 
+            r#"
+            [package]
+            name = "foo"
+            version = "0.0.1"
+
+            [[bin]]
+            name = "foo"
+
+            [dependencies]
+            bar = "*"
+            "#
+        )
+        .file("src/main.rs", r#"fn main() { bar::bar() }"#)
+        .file("cache/dummy", "")
+        .build();
+
+    let cache_dir = p.root().join("cache");
+
+    p.cargo("build").env("CARGO_SHARED_TARGET_DIR", &cache_dir).run();
+    assert!(p.bin("foo").is_file());
+
+    fn count_binary(path:&std::path::PathBuf) -> (u32, u32) {
+
+        let (mut n_bin_output, mut n_dep_output) = (0, 0);
+
+        if let Ok(dir_ent) = path.as_path().read_dir() {
+            for file in dir_ent {
+                if let Ok(entry) = file {
+                    if let Some(file_name) = entry.path().file_name().map_or(None, |x| x.to_str()) {
+                        if file_name.starts_with("libbar-") && 
+                            file_name.ends_with(".rlib") {
+                            n_bin_output += 1;
+                        }
+                        else if file_name.starts_with("bar-") &&
+                            file_name.ends_with(".d") {
+                            n_dep_output += 1;
+                        }
+                    }
+                }
+            }
+        }
+
+        (n_bin_output, n_dep_output)
+    }
+
+    let (cache_bins, cache_deps) = count_binary(&cache_dir);
+    let (target_bins, target_deps) = count_binary(&p.target_debug_dir().join("deps"));
+
+
+    assert_eq!(cache_bins, 1);
+    assert_eq!(cache_deps, 1);
+    assert_eq!(target_bins, 0);
+    assert_eq!(target_deps, 0);
+
+    p.process(&p.bin("foo")).with_stdout("I'm bar\n").run();
+
+    p.cargo("clean").run();
+    let (cache_bins, cache_deps) = count_binary(&cache_dir);
+    let (target_bins, target_deps) = count_binary(&p.target_debug_dir().join("deps"));
+    assert_eq!(cache_bins, 1);
+    assert_eq!(cache_deps, 1);
+    assert_eq!(target_bins, 0);
+    assert_eq!(target_deps, 0);
+}
