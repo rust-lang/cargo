@@ -36,6 +36,7 @@ pub enum Message {
     FixFailed {
         files: Vec<String>,
         krate: Option<String>,
+        errors: Vec<String>,
     },
     ReplaceFailed {
         file: String,
@@ -109,7 +110,11 @@ impl<'a> DiagnosticPrinter<'a> {
                 write!(self.config.shell().err(), "{}", PLEASE_REPORT_THIS_BUG)?;
                 Ok(())
             }
-            Message::FixFailed { files, krate } => {
+            Message::FixFailed {
+                files,
+                krate,
+                errors,
+            } => {
                 if let Some(ref krate) = *krate {
                     self.config.shell().warn(&format!(
                         "failed to automatically apply fixes suggested by rustc \
@@ -133,6 +138,22 @@ impl<'a> DiagnosticPrinter<'a> {
                     writeln!(self.config.shell().err())?;
                 }
                 write!(self.config.shell().err(), "{}", PLEASE_REPORT_THIS_BUG)?;
+                if !errors.is_empty() {
+                    writeln!(
+                        self.config.shell().err(),
+                        "The following errors were reported:"
+                    )?;
+                    for error in errors {
+                        write!(self.config.shell().err(), "{}", error)?;
+                        if !error.ends_with('\n') {
+                            writeln!(self.config.shell().err())?;
+                        }
+                    }
+                }
+                writeln!(
+                    self.config.shell().err(),
+                    "Original diagnostics will follow.\n"
+                )?;
                 Ok(())
             }
             Message::EditionAlreadyEnabled { file, edition } => {
