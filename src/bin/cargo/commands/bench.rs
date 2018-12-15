@@ -7,6 +7,12 @@ pub fn cli() -> App {
         .setting(AppSettings::TrailingVarArg)
         .about("Execute all benchmarks of a local package")
         .arg(
+            Arg::with_name("debug")
+                .help("Build benchmarks in debug mode, without optimizations")
+                .long("debug")
+                .short("d")
+        )
+        .arg(
             Arg::with_name("BENCHNAME")
                 .help("If specified, only run benches containing this string in their names"),
         )
@@ -73,7 +79,7 @@ Compilation can be customized with the `bench` profile in the manifest.
 pub fn exec(config: &mut Config, args: &ArgMatches<'_>) -> CliResult {
     let ws = args.workspace(config)?;
     let mut compile_opts = args.compile_options(config, CompileMode::Bench)?;
-    compile_opts.build_config.release = true;
+    compile_opts.build_config.release = !args.is_present("debug");
 
     let ops = TestOptions {
         no_run: args.is_present("no-run"),

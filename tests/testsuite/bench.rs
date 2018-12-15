@@ -210,6 +210,37 @@ fn bench_multiple_targets() {
 }
 
 #[test]
+fn cargo_bench_debug() {
+    if !is_nightly() {
+        return;
+    }
+
+    let p = project()
+        .file("Cargo.toml", &basic_bin_manifest("foo"))
+        .file(
+            "src/main.rs",
+            r#"
+            #![feature(test)]
+            #[cfg(test)]
+            extern crate test;
+            fn main() {}
+            #[bench] fn bench_hello(_b: &mut test::Bencher) {}
+        "#,
+        )
+        .build();
+
+    p.cargo("bench -d hello")
+        .with_stderr(
+            "\
+[COMPILING] foo v0.5.0 ([CWD])
+[FINISHED] dev [unoptimized + debuginfo] target(s) in [..]
+[RUNNING] target/debug/deps/foo-[..][EXE]",
+        )
+        .with_stdout_contains("test bench_hello ... bench: [..]")
+        .run();
+}
+
+#[test]
 fn cargo_bench_verbose() {
     if !is_nightly() {
         return;
