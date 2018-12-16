@@ -27,6 +27,7 @@
     * [Package ID Specifications](reference/pkgid-spec.md)
     * [Source Replacement](reference/source-replacement.md)
     * [External Tools](reference/external-tools.md)
+    * [Registries](reference/registries.md)
     * [Unstable Features](reference/unstable.md)
 
 * [Cargo Commands](commands/index.md)
