@@ -14,7 +14,20 @@ version = "0.1.0"    # the current version, obeying semver
 authors = ["Alice <a@example.com>", "Bob <b@example.com>"]
 ```
 
-All three of these fields are mandatory.
+#### The `name` field
+
+The package name is an identifier used to refer to the package. It is used
+when listed as a dependency in another package, and as the default name of
+inferred lib and bin targets.
+
+The name must not be empty, use only [alphanumeric] characters or `-` or `_`.
+Note that `cargo new` and `cargo init` impose some additional restrictions on
+the package name, such as enforcing that it is a valid Rust identifier and not
+a keyword. [crates.io][cratesio] imposes even more restrictions, such as
+enforcing only ASCII characters, not a reserved name, not a special Windows
+name such as "nul", is not too long, etc.
+
+[alphanumeric]: https://doc.rust-lang.org/std/primitive.char.html#method.is_alphanumeric
 
 #### The `version` field
 
@@ -30,6 +43,15 @@ Versioning](http://semver.org/), so make sure you follow some basic rules:
   versions. Always increment the minor version if you add any new `pub` structs,
   traits, fields, types, functions, methods or anything else.
 * Use version numbers with three numeric parts such as 1.0.0 rather than 1.0.
+
+#### The `authors` field (optional)
+
+The `authors` field lists people or organizations that are considered the
+"authors" of the package. The exact meaning is open to interpretation — it may
+list the original or primary authors, current maintainers, or owners of the
+package. These names will be listed on the crate's page on
+[crates.io][cratesio]. An optional email address may be included within angled
+brackets at the end of each author.
 
 #### The `edition` field (optional)
 
