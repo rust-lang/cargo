@@ -132,7 +132,11 @@ pub fn prepare_target<'a, 'cfg>(
 /// * its package id
 /// * its extern crate name
 /// * its calculated fingerprint for the dependency
-type DepFingerprint = (String, String, Arc<Fingerprint>);
+struct DepFingerprint {
+    pkg_id: String,
+    name: String,
+    fingerprint: Arc<Fingerprint>,
+}
 
 /// A fingerprint can be considered to be a "short string" representing the
 /// state of a world for a package.
@@ -162,10 +166,6 @@ pub struct Fingerprint {
     target: u64,
     profile: u64,
     path: u64,
-    #[serde(
-        serialize_with = "serialize_deps",
-        deserialize_with = "deserialize_deps"
-    )]
     deps: Vec<DepFingerprint>,
     local: Vec<LocalFingerprint>,
     #[serde(skip_serializing, skip_deserializing)]
@@ -174,32 +174,31 @@ pub struct Fingerprint {
     edition: Edition,
 }
 
-fn serialize_deps<S>(deps: &[DepFingerprint], ser: S) -> Result<S::Ok, S::Error>
-where
-    S: ser::Serializer,
-{
-    ser.collect_seq(deps.iter().map(|&(ref a, ref b, ref c)| (a, b, c.hash())))
+impl Serialize for DepFingerprint {
+    fn serialize<S>(&self, ser: S) -> Result<S::Ok, S::Error>
+    where
+        S: ser::Serializer,
+    {
+        (&self.pkg_id, &self.name, &self.fingerprint.hash()).serialize(ser)
+    }
 }
 
-fn deserialize_deps<'de, D>(d: D) -> Result<Vec<DepFingerprint>, D::Error>
-where
-    D: de::Deserializer<'de>,
-{
-    let decoded = <Vec<(String, String, u64)>>::deserialize(d)?;
-    Ok(decoded
-        .into_iter()
-        .map(|(pkg_id, name, hash)| {
-            (
-                pkg_id,
-                name,
-                Arc::new(Fingerprint {
-                    local: vec![LocalFingerprint::Precalculated(String::new())],
-                    memoized_hash: Mutex::new(Some(hash)),
-                    ..Fingerprint::new()
-                }),
-            )
+impl<'de> Deserialize<'de> for DepFingerprint {
+    fn deserialize<D>(d: D) -> Result<DepFingerprint, D::Error>
+    where
+        D: de::Deserializer<'de>,
+    {
+        let (pkg_id, name, hash) = <(String, String, u64)>::deserialize(d)?;
+        Ok(DepFingerprint {
+            pkg_id,
+            name,
+            fingerprint: Arc::new(Fingerprint {
+                local: vec![LocalFingerprint::Precalculated(String::new())],
+                memoized_hash: Mutex::new(Some(hash)),
+                ..Fingerprint::new()
+            }),
         })
-        .collect())
+    }
 }
 
 #[derive(Serialize, Deserialize, Hash)]
@@ -352,8 +351,8 @@ impl Fingerprint {
             failure::bail!("number of dependencies has changed")
         }
         for (a, b) in self.deps.iter().zip(old.deps.iter()) {
-            if a.1 != b.1 || a.2.hash() != b.2.hash() {
-                failure::bail!("new ({}) != old ({})", a.0, b.0)
+            if a.name != b.name || a.fingerprint.hash() != b.fingerprint.hash() {
+                failure::bail!("new ({}) != old ({})", a.pkg_id, b.pkg_id)
             }
         }
         Ok(())
@@ -380,7 +379,12 @@ impl hash::Hash for Fingerprint {
             .hash(h);
 
         h.write_usize(deps.len());
-        for &(ref pkg_id, ref name, ref fingerprint) in deps {
+        for DepFingerprint {
+            pkg_id,
+            name,
+            fingerprint,
+        } in deps
+        {
             pkg_id.hash(h);
             name.hash(h);
             // use memoized dep hashes to avoid exponential blowup
@@ -455,7 +459,11 @@ fn calculate<'a, 'cfg>(
         .map(|dep| {
             calculate(cx, dep).and_then(|fingerprint| {
                 let name = cx.bcx.extern_crate_name(unit, dep)?;
-                Ok((dep.pkg.package_id().to_string(), name, fingerprint))
+                Ok(DepFingerprint {
+                    pkg_id: dep.pkg.package_id().to_string(),
+                    name,
+                    fingerprint,
+                })
             })
         })
         .collect::<CargoResult<Vec<_>>>()?;
@@ -470,7 +478,7 @@ fn calculate<'a, 'cfg>(
         LocalFingerprint::Precalculated(fingerprint)
     };
     let mut deps = deps;
-    deps.sort_by(|&(ref a, _, _), &(ref b, _, _)| a.cmp(b));
+    deps.sort_by(|a, b| a.pkg_id.cmp(&b.pkg_id));
     let extra_flags = if unit.mode.is_doc() {
         bcx.rustdocflags_args(unit)?
     } else {
