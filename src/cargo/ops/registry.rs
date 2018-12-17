@@ -39,6 +39,8 @@ pub struct PublishOpts<'cfg> {
     pub target: Option<String>,
     pub dry_run: bool,
     pub registry: Option<String>,
+    pub features: Vec<String>,
+    pub all_features: bool
 }
 
 pub fn publish(ws: &Workspace<'_>, opts: &PublishOpts<'_>) -> CargoResult<()> {
@@ -82,6 +84,9 @@ pub fn publish(ws: &Workspace<'_>, opts: &PublishOpts<'_>) -> CargoResult<()> {
             allow_dirty: opts.allow_dirty,
             target: opts.target.clone(),
             jobs: opts.jobs,
+            registry: opts.registry.clone(),
+            features: opts.features.clone(),
+            all_features: opts.all_features,
         },
     )?
     .unwrap();
