@@ -228,19 +228,20 @@ fn install_one(
     let pkg = ws.current()?;
 
     if from_cwd {
-        match pkg.manifest().edition() {
-            Edition::Edition2015 => config.shell().warn(
+        if pkg.manifest().edition() == Edition::Edition2015 {
+            config.shell().warn(
                 "Using `cargo install` to install the binaries for the \
                  package in current working directory is deprecated, \
                  use `cargo install --path .` instead. \
                  Use `cargo build` if you want to simply build the package.",
-            )?,
-            Edition::Edition2018 => failure::bail!(
+            )?
+        } else {
+            failure::bail!(
                 "Using `cargo install` to install the binaries for the \
                  package in current working directory is no longer supported, \
                  use `cargo install --path .` instead. \
                  Use `cargo build` if you want to simply build the package."
-            ),
+            )
         }
     };
 
