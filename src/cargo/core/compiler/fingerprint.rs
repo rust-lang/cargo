@@ -193,16 +193,9 @@ where
                 pkg_id,
                 name,
                 Arc::new(Fingerprint {
-                    rustc: 0,
-                    target: 0,
-                    profile: 0,
-                    path: 0,
                     local: vec![LocalFingerprint::Precalculated(String::new())],
-                    features: String::new(),
-                    deps: Vec::new(),
                     memoized_hash: Mutex::new(Some(hash)),
-                    edition: Edition::Edition2015,
-                    rustflags: Vec::new(),
+                    ..Fingerprint::new()
                 }),
             )
         })
@@ -228,6 +221,21 @@ impl LocalFingerprint {
 struct MtimeSlot(Mutex<Option<FileTime>>);
 
 impl Fingerprint {
+    fn new() -> Fingerprint {
+        Fingerprint {
+            rustc: 0,
+            target: 0,
+            profile: 0,
+            path: 0,
+            features: String::new(),
+            deps: Vec::new(),
+            local: Vec::new(),
+            memoized_hash: Mutex::new(None),
+            edition: Edition::Edition2015,
+            rustflags: Vec::new(),
+        }
+    }
+
     fn update_local(&self, root: &Path) -> CargoResult<()> {
         let mut hash_busted = false;
         for local in self.local.iter() {
@@ -529,18 +537,7 @@ pub fn prepare_build_cmd<'a, 'cfg>(
     debug!("fingerprint at: {}", loc.display());
 
     let (local, output_path) = build_script_local_fingerprints(cx, unit)?;
-    let mut fingerprint = Fingerprint {
-        rustc: 0,
-        target: 0,
-        profile: 0,
-        path: 0,
-        features: String::new(),
-        deps: Vec::new(),
-        local,
-        memoized_hash: Mutex::new(None),
-        edition: Edition::Edition2015,
-        rustflags: Vec::new(),
-    };
+    let mut fingerprint = Fingerprint { local, ..Fingerprint::new() };
     let compare = compare_old_fingerprint(&loc, &fingerprint);
     log_compare(unit, &compare);
 
