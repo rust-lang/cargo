@@ -638,7 +638,7 @@ impl Target {
             for_host: true,
             benched: false,
             tested: false,
-            ..Target::new(TargetSourcePath::Metabuild, Edition::Edition2015)
+            ..Target::new(TargetSourcePath::Metabuild, Edition::Edition2018)
         }
     }
 
