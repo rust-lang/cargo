@@ -178,7 +178,7 @@ fn clean_lib(
         (None, Some(path)) => path,
         (None, None) => {
             let legacy_path = package_root.join("src").join(format!("{}.rs", lib.name()));
-            if edition < Edition::Edition2018 && legacy_path.exists() {
+            if edition == Edition::Edition2015 && legacy_path.exists() {
                 warnings.push(format!(
                     "path `{}` was erroneously implicitly accepted for library `{}`,\n\
                      please rename the file to `src/lib.rs` or set lib.path in Cargo.toml",
@@ -661,9 +661,8 @@ fn toml_targets_and_inferred(
 
             let autodiscover = match autodiscover {
                 Some(autodiscover) => autodiscover,
-                None => match edition {
-                    Edition::Edition2018 => true,
-                    Edition::Edition2015 => {
+                None =>
+                    if edition == Edition::Edition2015 {
                         if !rem_targets.is_empty() {
                             let mut rem_targets_str = String::new();
                             for t in rem_targets.iter() {
@@ -694,8 +693,9 @@ https://github.com/rust-lang/cargo/issues/5330",
                             ));
                         };
                         false
+                    } else {
+                        true
                     }
-                },
             };
 
             if autodiscover {
@@ -805,7 +805,7 @@ fn target_path(
     match (first, second) {
         (Some(path), None) => Ok(path),
         (None, None) | (Some(_), Some(_)) => {
-            if edition < Edition::Edition2018 {
+            if edition == Edition::Edition2015 {
                 if let Some(path) = legacy_path(target) {
                     return Ok(path);
                 }
