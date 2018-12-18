@@ -1,4 +1,5 @@
 = cargo-help(1)
+:idprefix: cargo_help_
 :doctype: manpage
 
 == NAME

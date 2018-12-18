@@ -1,3 +1,3 @@
 # cargo clean
 {{#include command-common.html}}
-{{#include generated/cargo-clean.html}}
+{{#include ../../man/generated/cargo-clean.html}}

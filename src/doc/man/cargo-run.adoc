@@ -1,4 +1,5 @@
 = cargo-run(1)
+:idprefix: cargo_run_
 :doctype: manpage
 :actionverb: Run
 

@@ -1,4 +1,5 @@
 = cargo-uninstall(1)
+:idprefix: cargo_uninstall_
 :doctype: manpage
 
 == NAME

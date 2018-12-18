@@ -1,33 +1,74 @@
-<h2 id="_name">NAME</h2>
+<h2 id="cargo_yank_name">NAME</h2>
 <div class="sectionbody">
-<p>cargo-locate-project - Print a JSON representation of a Cargo.toml file's location</p>
+<p>cargo-yank - Remove a pushed crate from the index</p>
 </div>
 <div class="sect1">
-<h2 id="_synopsis">SYNOPSIS</h2>
+<h2 id="cargo_yank_synopsis">SYNOPSIS</h2>
 <div class="sectionbody">
 <div class="paragraph">
-<p><code>cargo locate-project [<em>OPTIONS</em>]</code></p>
-</div>
-</div>
-</div>
-<div class="sect1">
-<h2 id="_description">DESCRIPTION</h2>
-<div class="sectionbody">
-<div class="paragraph">
-<p>This command will print a JSON object to stdout with the full path to the
-<code>Cargo.toml</code> manifest.</p>
-</div>
-<div class="paragraph">
-<p>See also <a href="commands/cargo-metadata.html">cargo-metadata(1)</a> which is capable of returning the path to a
-workspace root.</p>
+<p><code>cargo yank [<em>OPTIONS</em>] --vers <em>VERSION</em> [<em>CRATE</em>]</code></p>
 </div>
 </div>
 </div>
 <div class="sect1">
-<h2 id="_options">OPTIONS</h2>
+<h2 id="cargo_yank_description">DESCRIPTION</h2>
+<div class="sectionbody">
+<div class="paragraph">
+<p>The yank command removes a previously published crate&#8217;s version from the
+server&#8217;s index. This command does not delete any data, and the crate will
+still be available for download via the registry&#8217;s download link.</p>
+</div>
+<div class="paragraph">
+<p>Note that existing crates locked to a yanked version will still be able to
+download the yanked version to use it. Cargo will, however, not allow any new
+crates to be locked to any yanked version.</p>
+</div>
+<div class="paragraph">
+<p>This command requires you to be authenticated with either the <code>--token</code> option
+or using <a href="commands/cargo-login.html">cargo-login(1)</a>.</p>
+</div>
+<div class="paragraph">
+<p>If the crate name is not specified, it will use the package name from the
+current directory.</p>
+</div>
+</div>
+</div>
+<div class="sect1">
+<h2 id="cargo_yank_options">OPTIONS</h2>
 <div class="sectionbody">
 <div class="sect2">
-<h3 id="_display_options">Display Options</h3>
+<h3 id="cargo_yank_owner_options">Owner Options</h3>
+<div class="dlist">
+<dl>
+<dt class="hdlist1"><strong>--vers</strong> <em>VERSION</em></dt>
+<dd>
+<p>The version to yank or un-yank.</p>
+</dd>
+<dt class="hdlist1"><strong>--undo</strong></dt>
+<dd>
+<p>Undo a yank, putting a version back into the index.</p>
+</dd>
+<dt class="hdlist1"><strong>--token</strong> <em>TOKEN</em></dt>
+<dd>
+<p>API token to use when authenticating.</p>
+</dd>
+<dt class="hdlist1"><strong>--index</strong> <em>INDEX</em></dt>
+<dd>
+<p>The URL of the registry index to use.</p>
+</dd>
+<dt class="hdlist1"><strong>--registry</strong> <em>REGISTRY</em></dt>
+<dd>
+<p>Alternative registry to use.</p>
+<div class="paragraph">
+<p>This option is unstable and available only on the nightly channel and requires
+the <code>-Z unstable-options</code> flag to enable.</p>
+</div>
+</dd>
+</dl>
+</div>
+</div>
+<div class="sect2">
+<h3 id="cargo_yank_display_options">Display Options</h3>
 <div class="dlist">
 <dl>
 <dt class="hdlist1"><strong>-v</strong></dt>
@@ -69,19 +110,7 @@ terminal.</p>
 </div>
 </div>
 <div class="sect2">
-<h3 id="_manifest_options">Manifest Options</h3>
-<div class="dlist">
-<dl>
-<dt class="hdlist1"><strong>--manifest-path</strong> <em>PATH</em></dt>
-<dd>
-<p>Path to the <code>Cargo.toml</code> file. By default, Cargo searches in the current
-directory or any parent directory for the <code>Cargo.toml</code> file.</p>
-</dd>
-</dl>
-</div>
-</div>
-<div class="sect2">
-<h3 id="_common_options">Common Options</h3>
+<h3 id="cargo_yank_common_options">Common Options</h3>
 <div class="dlist">
 <dl>
 <dt class="hdlist1"><strong>-h</strong></dt>
@@ -100,7 +129,7 @@ details.</p>
 </div>
 </div>
 <div class="sect1">
-<h2 id="_environment">ENVIRONMENT</h2>
+<h2 id="cargo_yank_environment">ENVIRONMENT</h2>
 <div class="sectionbody">
 <div class="paragraph">
 <p>See <a href="reference/environment-variables.html">the reference</a> for
@@ -109,7 +138,7 @@ details on environment variables that Cargo reads.</p>
 </div>
 </div>
 <div class="sect1">
-<h2 id="_exit_status">Exit Status</h2>
+<h2 id="cargo_yank_exit_status">Exit Status</h2>
 <div class="sectionbody">
 <div class="dlist">
 <dl>
@@ -126,15 +155,15 @@ details on environment variables that Cargo reads.</p>
 </div>
 </div>
 <div class="sect1">
-<h2 id="_examples">EXAMPLES</h2>
+<h2 id="cargo_yank_examples">EXAMPLES</h2>
 <div class="sectionbody">
 <div class="olist arabic">
 <ol class="arabic">
 <li>
-<p>Display the path to the manifest based on the current directory:</p>
+<p>Yank a crate from the index:</p>
 <div class="literalblock">
 <div class="content">
-<pre>cargo locate-project</pre>
+<pre>cargo yank --vers 1.0.7 foo</pre>
 </div>
 </div>
 </li>
@@ -143,10 +172,10 @@ details on environment variables that Cargo reads.</p>
 </div>
 </div>
 <div class="sect1">
-<h2 id="_see_also">SEE ALSO</h2>
+<h2 id="cargo_yank_see_also">SEE ALSO</h2>
 <div class="sectionbody">
 <div class="paragraph">
-<p><a href="commands/index.html">cargo(1)</a>, <a href="commands/cargo-metadata.html">cargo-metadata(1)</a></p>
+<p><a href="commands/index.html">cargo(1)</a>, <a href="commands/cargo-login.html">cargo-login(1)</a>, <a href="commands/cargo-publish.html">cargo-publish(1)</a></p>
 </div>
 </div>
 </div>

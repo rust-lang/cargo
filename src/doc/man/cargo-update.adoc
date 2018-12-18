@@ -1,4 +1,5 @@
 = cargo-update(1)
+:idprefix: cargo_update_
 :doctype: manpage
 
 == NAME

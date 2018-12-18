@@ -4,14 +4,14 @@
 # format. See https://asciidoctor.org/ for more information.
 #
 # Just run `make` and it will generate the man pages in src/etc/man and the
-# HTML pages in src/doc/src/commands/generated.
+# HTML pages in src/doc/man/generated.
 #
 # There are some Asciidoctor extensions, see the file `asciidoc-extensions.rb`
 # for the documentation.
 
 MAN_SOURCE = $(sort $(wildcard man/cargo*.adoc))
 COMMANDS = $(notdir $(MAN_SOURCE))
-HTML = $(patsubst %.adoc,src/commands/generated/%.html,$(COMMANDS))
+HTML = $(patsubst %.adoc,man/generated/%.html,$(COMMANDS))
 MAN_LOCATION = ../etc/man
 MAN = $(patsubst %.adoc,$(MAN_LOCATION)/%.1,$(COMMANDS))
 ASCIIDOCOPTS = -r ./asciidoc-extension.rb
@@ -21,7 +21,7 @@ all: commands-html man
 commands-html: $(HTML)
 man: $(MAN)
 
-$(HTML): src/commands/generated/%.html : man/%.adoc asciidoc-extension.rb $(OTHER_DEPS)
+$(HTML): man/generated/%.html : man/%.adoc asciidoc-extension.rb $(OTHER_DEPS)
 	asciidoctor $(ASCIIDOCOPTS) -s $< -o $@
 
 $(MAN): $(MAN_LOCATION)/%.1 : man/%.adoc $(OTHER_DEPS)

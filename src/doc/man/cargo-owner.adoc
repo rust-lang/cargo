@@ -1,4 +1,5 @@
 = cargo-owner(1)
+:idprefix: cargo_owner_
 :doctype: manpage
 
 == NAME

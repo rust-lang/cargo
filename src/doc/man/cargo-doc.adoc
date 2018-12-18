@@ -1,4 +1,5 @@
 = cargo-doc(1)
+:idprefix: cargo_doc_
 :doctype: manpage
 :actionverb: Document
 

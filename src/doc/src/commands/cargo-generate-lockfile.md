@@ -1,3 +1,3 @@
 # cargo generate-lockfile
 {{#include command-common.html}}
-{{#include generated/cargo-generate-lockfile.html}}
+{{#include ../../man/generated/cargo-generate-lockfile.html}}
