@@ -735,6 +735,9 @@ fn non_crates_io() {
 error: failed to parse manifest at `[..]`
 
 Caused by:
+  [patch] entry `some-other-source` should be a URL or registry name
+
+Caused by:
   invalid url `some-other-source`: relative URL without a base
 ",
         )
