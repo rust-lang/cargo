@@ -715,7 +715,7 @@ fn metabuild_json_artifact() {
     "crate_types": [
       "bin"
     ],
-    "edition": "2015",
+    "edition": "2018",
     "kind": [
       "custom-build"
     ],
@@ -762,7 +762,7 @@ fn metabuild_failed_build_json() {
     "crate_types": [
       "bin"
     ],
-    "edition": "2015",
+    "edition": "2018",
     "kind": [
       "custom-build"
     ],
