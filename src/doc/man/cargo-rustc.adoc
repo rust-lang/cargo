@@ -1,4 +1,5 @@
 = cargo-rustc(1)
+:idprefix: cargo_rustc_
 :doctype: manpage
 :actionverb: Build
 

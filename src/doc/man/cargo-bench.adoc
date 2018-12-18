@@ -1,4 +1,5 @@
 = cargo-bench(1)
+:idprefix: cargo_bench_
 :doctype: manpage
 :actionverb: Benchmark
 :nouns: benchmarks

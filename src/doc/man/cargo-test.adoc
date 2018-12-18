@@ -1,4 +1,5 @@
 = cargo-test(1)
+:idprefix: cargo_test_
 :doctype: manpage
 :actionverb: Test
 :nouns: tests

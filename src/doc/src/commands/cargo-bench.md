@@ -1,3 +1,3 @@
 # cargo bench
 {{#include command-common.html}}
-{{#include generated/cargo-bench.html}}
+{{#include ../../man/generated/cargo-bench.html}}

@@ -1,3 +1,3 @@
 # cargo search
 {{#include command-common.html}}
-{{#include generated/cargo-search.html}}
+{{#include ../../man/generated/cargo-search.html}}

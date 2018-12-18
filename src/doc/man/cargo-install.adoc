@@ -1,4 +1,5 @@
 = cargo-install(1)
+:idprefix: cargo_install_
 :doctype: manpage
 :actionverb: Install
 

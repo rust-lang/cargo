@@ -1,3 +1,3 @@
 # cargo yank
 {{#include command-common.html}}
-{{#include generated/cargo-yank.html}}
+{{#include ../../man/generated/cargo-yank.html}}

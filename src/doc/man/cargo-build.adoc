@@ -1,4 +1,5 @@
 = cargo-build(1)
+:idprefix: cargo_build_
 :doctype: manpage
 :actionverb: Build
 

@@ -1,4 +1,5 @@
 = cargo-generate-lockfile(1)
+:idprefix: cargo_generate-lockfile_
 :doctype: manpage
 
 == NAME

@@ -1,3 +1,3 @@
 # cargo rustdoc
 {{#include command-common.html}}
-{{#include generated/cargo-rustdoc.html}}
+{{#include ../../man/generated/cargo-rustdoc.html}}
