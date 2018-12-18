@@ -689,10 +689,9 @@ fn rustdoc<'a, 'cfg>(cx: &mut Context<'a, 'cfg>, unit: &Unit<'a>) -> CargoResult
 // second is the cwd that rustc should operate in.
 fn path_args(bcx: &BuildContext<'_, '_>, unit: &Unit<'_>) -> (PathBuf, PathBuf) {
     let ws_root = bcx.ws.root();
-    let src = if unit.target.is_custom_build() && unit.pkg.manifest().metabuild().is_some() {
-        unit.pkg.manifest().metabuild_path(bcx.ws.target_dir())
-    } else {
-        unit.target.src_path().path().to_path_buf()
+    let src = match unit.target.src_path() {
+        TargetSourcePath::Path(path) => path.to_path_buf(),
+        TargetSourcePath::Metabuild => unit.pkg.manifest().metabuild_path(bcx.ws.target_dir()),
     };
     assert!(src.is_absolute());
     if unit.pkg.package_id().source_id().is_path() {
