@@ -767,7 +767,7 @@ fn metabuild_failed_build_json() {
       "custom-build"
     ],
     "name": "metabuild-foo",
-    "src_path": "metabuild.rs"
+    "src_path": null
   }
 }
 "#,
