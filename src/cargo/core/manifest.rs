@@ -268,7 +268,7 @@ struct SerializedTarget<'a> {
     /// See https://doc.rust-lang.org/reference/linkage.html
     crate_types: Vec<&'a str>,
     name: &'a str,
-    src_path: &'a PathBuf,
+    src_path: Option<&'a PathBuf>,
     edition: &'a str,
     #[serde(rename = "required-features", skip_serializing_if = "Option::is_none")]
     required_features: Option<Vec<&'a str>>,
@@ -277,17 +277,16 @@ struct SerializedTarget<'a> {
 impl ser::Serialize for Target {
     fn serialize<S: ser::Serializer>(&self, s: S) -> Result<S::Ok, S::Error> {
         let src_path = match &self.src_path {
-            TargetSourcePath::Path(p) => p.to_path_buf(),
-            // This is a lie, to avoid changing the format of SerializedTarget.
-            // The target dir is unknown here, so the path cannot be determined.
-            // A better solution eludes me at this time.
-            TargetSourcePath::Metabuild => PathBuf::from("metabuild.rs"),
+            TargetSourcePath::Path(p) => Some(p),
+            // Unfortunately getting the correct path would require access to
+            // target_dir, which is not available here.
+            TargetSourcePath::Metabuild => None,
         };
         SerializedTarget {
             kind: &self.kind,
             crate_types: self.rustc_crate_types(),
             name: &self.name,
-            src_path: &src_path,
+            src_path: src_path,
             edition: &self.edition.to_string(),
             required_features: self
                 .required_features
