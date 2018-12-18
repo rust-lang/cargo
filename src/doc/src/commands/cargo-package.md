@@ -1,3 +1,3 @@
 # cargo package
 {{#include command-common.html}}
-{{#include generated/cargo-package.html}}
+{{#include ../../man/generated/cargo-package.html}}

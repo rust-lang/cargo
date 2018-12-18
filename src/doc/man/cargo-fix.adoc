@@ -1,4 +1,5 @@
 = cargo-fix(1)
+:idprefix: cargo_fix_
 :doctype: manpage
 :actionverb: Fix
 

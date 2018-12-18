@@ -1,114 +1,64 @@
-<h2 id="_name">NAME</h2>
+<h2 id="cargo_update_name">NAME</h2>
 <div class="sectionbody">
-<p>cargo-clean - Remove generated artifacts</p>
+<p>cargo-update - Update dependencies as recorded in the local lock file</p>
 </div>
 <div class="sect1">
-<h2 id="_synopsis">SYNOPSIS</h2>
+<h2 id="cargo_update_synopsis">SYNOPSIS</h2>
 <div class="sectionbody">
 <div class="paragraph">
-<p><code>cargo clean [<em>OPTIONS</em>]</code></p>
-</div>
-</div>
-</div>
-<div class="sect1">
-<h2 id="_description">DESCRIPTION</h2>
-<div class="sectionbody">
-<div class="paragraph">
-<p>Remove artifacts from the target directory that Cargo has generated in the
-past.</p>
-</div>
-<div class="paragraph">
-<p>With no options, <code>cargo clean</code> will delete the entire target directory.</p>
+<p><code>cargo update [<em>OPTIONS</em>]</code></p>
 </div>
 </div>
 </div>
 <div class="sect1">
-<h2 id="_options">OPTIONS</h2>
+<h2 id="cargo_update_description">DESCRIPTION</h2>
+<div class="sectionbody">
+<div class="paragraph">
+<p>This command will update dependencies in the <code>Cargo.lock</code> file to the latest
+version. It requires that the <code>Cargo.lock</code> file already exists as generated
+by commands such as <a href="commands/cargo-build.html">cargo-build(1)</a> or <a href="commands/cargo-generate-lockfile.html">cargo-generate-lockfile(1)</a>.</p>
+</div>
+</div>
+</div>
+<div class="sect1">
+<h2 id="cargo_update_options">OPTIONS</h2>
 <div class="sectionbody">
 <div class="sect2">
-<h3 id="_package_selection">Package Selection</h3>
-<div class="paragraph">
-<p>When no packages are selected, all packages and all dependencies in the
-workspace are cleaned.</p>
-</div>
+<h3 id="cargo_update_update_options">Update Options</h3>
 <div class="dlist">
 <dl>
 <dt class="hdlist1"><strong>-p</strong> <em>SPEC</em>&#8230;&#8203;</dt>
 <dt class="hdlist1"><strong>--package</strong> <em>SPEC</em>&#8230;&#8203;</dt>
 <dd>
-<p>Clean only the specified packages. This flag may be specified
+<p>Update only the specified packages. This flag may be specified
 multiple times. See <a href="commands/cargo-pkgid.html">cargo-pkgid(1)</a> for the SPEC format.</p>
+<div class="paragraph">
+<p>If packages are specified with the <code>-p</code> flag, then a conservative update of
+the lockfile will be performed. This means that only the dependency specified
+by SPEC will be updated. Its transitive dependencies will be updated only if
+SPEC cannot be updated without updating dependencies.  All other dependencies
+will remain locked at their currently recorded versions.</p>
+</div>
+<div class="paragraph">
+<p>If <code>-p</code> is not specified, all dependencies are updated.</p>
+</div>
+</dd>
+<dt class="hdlist1"><strong>--aggressive</strong></dt>
+<dd>
+<p>When used with <code>-p</code>, dependencies of <em>SPEC</em> are forced to update as well.
+Cannot be used with <code>--precise</code>.</p>
+</dd>
+<dt class="hdlist1"><strong>--precise</strong> <em>PRECISE</em></dt>
+<dd>
+<p>When used with <code>-p</code>, allows you to specify a specific version number to
+set the package to. If the package comes from a git repository, this can
+be a git revision (such as a SHA hash or tag).</p>
 </dd>
 </dl>
 </div>
 </div>
 <div class="sect2">
-<h3 id="_clean_options">Clean Options</h3>
-<div class="dlist">
-<dl>
-<dt class="hdlist1"><strong>--doc</strong></dt>
-<dd>
-<p>This option will cause <code>cargo clean</code> to remove only the <code>doc</code> directory in
-the target directory.</p>
-</dd>
-<dt class="hdlist1"><strong>--release</strong></dt>
-<dd>
-<p>Clean all artifacts that were built with the <code>release</code> or <code>bench</code>
-profiles.</p>
-</dd>
-<dt class="hdlist1"><strong>--target-dir</strong> <em>DIRECTORY</em></dt>
-<dd>
-<p>Directory for all generated artifacts and intermediate files. May also be
-specified with the <code>CARGO_TARGET_DIR</code> environment variable, or the
-<code>build.target-dir</code> <a href="reference/config.html">config value</a>. Defaults
-to <code>target</code> in the root of the workspace.</p>
-</dd>
-<dt class="hdlist1"><strong>--target</strong> <em>TRIPLE</em></dt>
-<dd>
-<p>Clean for the given architecture. The default is the host architecture.</p>
-<div class="paragraph">
-<p>The general format of the triple is <code>&lt;arch&gt;&lt;sub&gt;-&lt;vendor&gt;-&lt;sys&gt;-&lt;abi&gt;</code> where:</p>
-</div>
-<div class="ulist">
-<ul>
-<li>
-<p><code>arch</code> = The base CPU architecture, for example <code>x86_64</code>, <code>i686</code>, <code>arm</code>,
-<code>thumb</code>, <code>mips</code>, etc.</p>
-</li>
-<li>
-<p><code>sub</code> = The CPU sub-architecture, for example <code>arm</code> has <code>v7</code>, <code>v7s</code>, <code>v5te</code>,
-etc.</p>
-</li>
-<li>
-<p><code>vendor</code> = The vendor, for example <code>unknown</code>, <code>apple</code>, <code>pc</code>, <code>linux</code>, etc.</p>
-</li>
-<li>
-<p><code>sys</code> = The system name, for example <code>linux</code>, <code>windows</code>, etc. <code>none</code> is
-typically used for bare-metal without an OS.</p>
-</li>
-<li>
-<p><code>abi</code> = The ABI, for example <code>gnu</code>, <code>android</code>, <code>eabi</code>, etc.</p>
-</li>
-</ul>
-</div>
-<div class="openblock">
-<div class="content">
-<div class="paragraph">
-<p>Some parameters may be omitted. Run <code>rustc --print target-list</code> for a list of
-supported targets.</p>
-</div>
-<div class="paragraph">
-<p>This may also be specified with the <code>build.target</code>
-<a href="reference/config.html">config value</a>.</p>
-</div>
-</div>
-</div>
-</dd>
-</dl>
-</div>
-</div>
-<div class="sect2">
-<h3 id="_display_options">Display Options</h3>
+<h3 id="cargo_update_display_options">Display Options</h3>
 <div class="dlist">
 <dl>
 <dt class="hdlist1"><strong>-v</strong></dt>
@@ -150,7 +100,7 @@ terminal.</p>
 </div>
 </div>
 <div class="sect2">
-<h3 id="_manifest_options">Manifest Options</h3>
+<h3 id="cargo_update_manifest_options">Manifest Options</h3>
 <div class="dlist">
 <dl>
 <dt class="hdlist1"><strong>--manifest-path</strong> <em>PATH</em></dt>
@@ -175,7 +125,7 @@ access.</p>
 </div>
 </div>
 <div class="sect2">
-<h3 id="_common_options">Common Options</h3>
+<h3 id="cargo_update_common_options">Common Options</h3>
 <div class="dlist">
 <dl>
 <dt class="hdlist1"><strong>-h</strong></dt>
@@ -194,7 +144,7 @@ details.</p>
 </div>
 </div>
 <div class="sect1">
-<h2 id="_environment">ENVIRONMENT</h2>
+<h2 id="cargo_update_environment">ENVIRONMENT</h2>
 <div class="sectionbody">
 <div class="paragraph">
 <p>See <a href="reference/environment-variables.html">the reference</a> for
@@ -203,7 +153,7 @@ details on environment variables that Cargo reads.</p>
 </div>
 </div>
 <div class="sect1">
-<h2 id="_exit_status">Exit Status</h2>
+<h2 id="cargo_update_exit_status">Exit Status</h2>
 <div class="sectionbody">
 <div class="dlist">
 <dl>
@@ -220,23 +170,31 @@ details on environment variables that Cargo reads.</p>
 </div>
 </div>
 <div class="sect1">
-<h2 id="_examples">EXAMPLES</h2>
+<h2 id="cargo_update_examples">EXAMPLES</h2>
 <div class="sectionbody">
 <div class="olist arabic">
 <ol class="arabic">
 <li>
-<p>Remove the entire target directory:</p>
+<p>Update all dependencies in the lockfile:</p>
 <div class="literalblock">
 <div class="content">
-<pre>cargo clean</pre>
+<pre>cargo update</pre>
 </div>
 </div>
 </li>
 <li>
-<p>Remove only the release artifacts:</p>
+<p>Update only specific dependencies:</p>
 <div class="literalblock">
 <div class="content">
-<pre>cargo clean --release</pre>
+<pre>cargo update -p foo -p bar</pre>
+</div>
+</div>
+</li>
+<li>
+<p>Set a specific dependency to a specific version:</p>
+<div class="literalblock">
+<div class="content">
+<pre>cargo update -p foo --precise 1.2.3</pre>
 </div>
 </div>
 </li>
@@ -245,10 +203,10 @@ details on environment variables that Cargo reads.</p>
 </div>
 </div>
 <div class="sect1">
-<h2 id="_see_also">SEE ALSO</h2>
+<h2 id="cargo_update_see_also">SEE ALSO</h2>
 <div class="sectionbody">
 <div class="paragraph">
-<p><a href="commands/index.html">cargo(1)</a>, <a href="commands/cargo-build.html">cargo-build(1)</a></p>
+<p><a href="commands/index.html">cargo(1)</a>, <a href="commands/cargo-generate-lockfile.html">cargo-generate-lockfile(1)</a></p>
 </div>
 </div>
 </div>

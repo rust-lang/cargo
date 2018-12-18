@@ -1,3 +1,3 @@
 # cargo publish
 {{#include command-common.html}}
-{{#include generated/cargo-publish.html}}
+{{#include ../../man/generated/cargo-publish.html}}

@@ -1,4 +1,5 @@
 = cargo-check(1)
+:idprefix: cargo_check_
 :doctype: manpage
 :actionverb: Check
 

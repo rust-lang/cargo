@@ -1,28 +1,72 @@
-<h2 id="_name">NAME</h2>
+<h2 id="cargo_test_name">NAME</h2>
 <div class="sectionbody">
-<p>cargo-build - Compile the current package</p>
+<p>cargo-test - Execute unit and integration tests of a package</p>
 </div>
 <div class="sect1">
-<h2 id="_synopsis">SYNOPSIS</h2>
-<div class="sectionbody">
-<div class="paragraph">
-<p><code>cargo build [<em>OPTIONS</em>]</code></p>
-</div>
-</div>
-</div>
-<div class="sect1">
-<h2 id="_description">DESCRIPTION</h2>
+<h2 id="cargo_test_synopsis">SYNOPSIS</h2>
 <div class="sectionbody">
 <div class="paragraph">
-<p>Compile local packages and all of their dependencies.</p>
+<p><code>cargo test [<em>OPTIONS</em>] [TESTNAME] [-- <em>TEST-OPTIONS</em>]</code></p>
 </div>
 </div>
 </div>
 <div class="sect1">
-<h2 id="_options">OPTIONS</h2>
+<h2 id="cargo_test_description">DESCRIPTION</h2>
+<div class="sectionbody">
+<div class="paragraph">
+<p>Compile and execute unit and integration tests.</p>
+</div>
+<div class="paragraph">
+<p>The test filtering argument <code>TESTNAME</code> and all the arguments following the two
+dashes (<code>--</code>) are passed to the test binaries and thus to <em>libtest</em> (rustc&#8217;s
+built in unit-test and micro-benchmarking framework).  If you&#8217;re passing
+arguments to both Cargo and the binary, the ones after <code>--</code> go to the binary,
+the ones before go to Cargo.  For details about libtest&#8217;s arguments see the
+output of <code>cargo test&#8201;&#8212;&#8201;--help</code>.  As an example, this will run all tests with
+<code>foo</code> in their name on 3 threads in parallel:</p>
+</div>
+<div class="literalblock">
+<div class="content">
+<pre>cargo test foo -- --test-threads 3</pre>
+</div>
+</div>
+<div class="paragraph">
+<p>Tests are built with the <code>--test</code> option to <code>rustc</code> which creates an
+executable with a <code>main</code> function that automatically runs all functions
+annotated with the <code>#[test]</code> attribute in multiple threads. The libtest
+harness may be disabled by setting <code>harness = false</code> in the target manifest
+settings, in which case your code will need to provide its own <code>main</code> function
+to handle running tests.</p>
+</div>
+<div class="paragraph">
+<p>Documentation tests are also run by default, which is handled by <code>rustdoc</code>. It
+extracts code samples from documentation comments and executes them.</p>
+</div>
+</div>
+</div>
+<div class="sect1">
+<h2 id="cargo_test_options">OPTIONS</h2>
 <div class="sectionbody">
 <div class="sect2">
-<h3 id="_package_selection">Package Selection</h3>
+<h3 id="cargo_test_test_options">Test Options</h3>
+<div class="dlist">
+<dl>
+<dt class="hdlist1"><strong>--no-run</strong></dt>
+<dd>
+<p>Compile, but don&#8217;t run tests.</p>
+</dd>
+<dt class="hdlist1"><strong>--no-fail-fast</strong></dt>
+<dd>
+<p>Run all tests regardless of failure. Without this flag, Cargo will exit
+after the first executable fails. The Rust test harness will run all
+tests within the executable to completion, this flag only applies to
+the executable as a whole.</p>
+</dd>
+</dl>
+</div>
+</div>
+<div class="sect2">
+<h3 id="cargo_test_package_selection">Package Selection</h3>
 <div class="paragraph">
 <p>By default, when no package selection options are given, the packages selected
 depend on the current working directory. In the root of a virtual workspace,
@@ -36,12 +80,12 @@ manifest.</p>
 <dt class="hdlist1"><strong>-p</strong> <em>SPEC</em>&#8230;&#8203;</dt>
 <dt class="hdlist1"><strong>--package</strong> <em>SPEC</em>&#8230;&#8203;</dt>
 <dd>
-<p>Build only the specified packages. See <a href="commands/cargo-pkgid.html">cargo-pkgid(1)</a> for the
+<p>Test only the specified packages. See <a href="commands/cargo-pkgid.html">cargo-pkgid(1)</a> for the
 SPEC format. This flag may be specified multiple times.</p>
 </dd>
 <dt class="hdlist1"><strong>--all</strong></dt>
 <dd>
-<p>Build all members in the workspace.</p>
+<p>Test all members in the workspace.</p>
 </dd>
 <dt class="hdlist1"><strong>--exclude</strong> <em>SPEC</em>&#8230;&#8203;</dt>
 <dd>
@@ -52,57 +96,93 @@ SPEC format. This flag may be specified multiple times.</p>
 </div>
 </div>
 <div class="sect2">
-<h3 id="_target_selection">Target Selection</h3>
+<h3 id="cargo_test_target_selection">Target Selection</h3>
 <div class="paragraph">
-<p>When no target selection options are given, <code>cargo build</code> will build all
-binary and library targets of the selected packages. Binaries are skipped if
-they have <code>required-features</code> that are missing.</p>
+<p>When no target selection options are given, <code>cargo test</code> will build the
+following targets of the selected packages:</p>
+</div>
+<div class="ulist">
+<ul>
+<li>
+<p>lib – used to link with binaries, examples, integration tests, and doc tests</p>
+</li>
+<li>
+<p>bins (only if integration tests are built and required features are
+available)</p>
+</li>
+<li>
+<p>examples – to ensure they compile</p>
+</li>
+<li>
+<p>lib as a unit test</p>
+</li>
+<li>
+<p>bins as unit tests</p>
+</li>
+<li>
+<p>integration tests</p>
+</li>
+<li>
+<p>doc tests for the lib target</p>
+</li>
+</ul>
 </div>
 <div class="paragraph">
-<p>Passing target selection flags will build only the
+<p>The default behavior can be changed by setting the <code>test</code> flag for the target
+in the manifest settings. Setting examples to <code>test = true</code> will build and run
+the example as a test. Setting targets to <code>test = false</code> will stop them from
+being tested by default. Target selection options that take a target by name
+ignore the <code>test</code> flag and will always test the given target.</p>
+</div>
+<div class="paragraph">
+<p>Doc tests for libraries may be disabled by setting <code>doctest = false</code> for the
+library in the manifest.</p>
+</div>
+<div class="paragraph">
+<p>Passing target selection flags will test only the
 specified targets.</p>
 </div>
 <div class="dlist">
 <dl>
 <dt class="hdlist1"><strong>--lib</strong></dt>
 <dd>
-<p>Build the package&#8217;s library.</p>
+<p>Test the package&#8217;s library.</p>
 </dd>
 <dt class="hdlist1"><strong>--bin</strong> <em>NAME</em>&#8230;&#8203;</dt>
 <dd>
-<p>Build the specified binary. This flag may be specified multiple times.</p>
+<p>Test the specified binary. This flag may be specified multiple times.</p>
 </dd>
 <dt class="hdlist1"><strong>--bins</strong></dt>
 <dd>
-<p>Build all binary targets.</p>
+<p>Test all binary targets.</p>
 </dd>
 <dt class="hdlist1"><strong>--example</strong> <em>NAME</em>&#8230;&#8203;</dt>
 <dd>
-<p>Build the specified example. This flag may be specified multiple times.</p>
+<p>Test the specified example. This flag may be specified multiple times.</p>
 </dd>
 <dt class="hdlist1"><strong>--examples</strong></dt>
 <dd>
-<p>Build all example targets.</p>
+<p>Test all example targets.</p>
 </dd>
 <dt class="hdlist1"><strong>--test</strong> <em>NAME</em>&#8230;&#8203;</dt>
 <dd>
-<p>Build the specified integration test. This flag may be specified multiple
+<p>Test the specified integration test. This flag may be specified multiple
 times.</p>
 </dd>
 <dt class="hdlist1"><strong>--tests</strong></dt>
 <dd>
-<p>Build all tests. This includes both unit tests for libraries and binaries
+<p>Test all tests. This includes both unit tests for libraries and binaries
 and integration tests. Targets may be disabled by setting <code>test = false</code>
 in the manifest settings for the target. Targets (such as examples) may be
 explicitly included by setting <code>test = true</code> in the target settings.</p>
 </dd>
 <dt class="hdlist1"><strong>--bench</strong> <em>NAME</em>&#8230;&#8203;</dt>
 <dd>
-<p>Build the specified benchmark. This flag may be specified multiple times.</p>
+<p>Test the specified benchmark. This flag may be specified multiple times.</p>
 </dd>
 <dt class="hdlist1"><strong>--benches</strong></dt>
 <dd>
-<p>Build all benchmarks. This includes both unit benchmarks for libraries and
+<p>Test all benchmarks. This includes both unit benchmarks for libraries and
 binaries and bench targets. Targets may be disabled by setting <code>bench =
 false</code> in the manifest settings for the target. Targets (such as examples)
 may be explicitly included by setting <code>bench = true</code> in the target
@@ -110,13 +190,18 @@ settings.</p>
 </dd>
 <dt class="hdlist1"><strong>--all-targets</strong></dt>
 <dd>
-<p>Build all targets.</p>
+<p>Test all targets.</p>
+</dd>
+<dt class="hdlist1"><strong>--doc</strong></dt>
+<dd>
+<p>Test only the library&#8217;s documentation. This cannot be mixed with other
+target options.</p>
 </dd>
 </dl>
 </div>
 </div>
 <div class="sect2">
-<h3 id="_feature_selection">Feature Selection</h3>
+<h3 id="cargo_test_feature_selection">Feature Selection</h3>
 <div class="paragraph">
 <p>When no feature options are given, the <code>default</code> feature is activated for
 every selected package.</p>
@@ -142,12 +227,12 @@ package.</p>
 </div>
 </div>
 <div class="sect2">
-<h3 id="_compilation_options">Compilation Options</h3>
+<h3 id="cargo_test_compilation_options">Compilation Options</h3>
 <div class="dlist">
 <dl>
 <dt class="hdlist1"><strong>--target</strong> <em>TRIPLE</em></dt>
 <dd>
-<p>Build for the given architecture. The default is the host architecture.</p>
+<p>Test for the given architecture. The default is the host architecture.</p>
 <div class="paragraph">
 <p>The general format of the triple is <code>&lt;arch&gt;&lt;sub&gt;-&lt;vendor&gt;-&lt;sys&gt;-&lt;abi&gt;</code> where:</p>
 </div>
@@ -188,14 +273,14 @@ supported targets.</p>
 </dd>
 <dt class="hdlist1"><strong>--release</strong></dt>
 <dd>
-<p>Build artifacts in release mode, with optimizations. See the
-<a href="#_profiles">PROFILES</a> section for details on how this affects profile selection.</p>
+<p>Test artifacts in release mode, with optimizations. See the
+<a href="#cargo_test_profiles">PROFILES</a> section for details on how this affects profile selection.</p>
 </dd>
 </dl>
 </div>
 </div>
 <div class="sect2">
-<h3 id="_output_options">Output Options</h3>
+<h3 id="cargo_test_output_options">Output Options</h3>
 <div class="dlist">
 <dl>
 <dt class="hdlist1"><strong>--target-dir</strong> <em>DIRECTORY</em></dt>
@@ -205,19 +290,21 @@ specified with the <code>CARGO_TARGET_DIR</code> environment variable, or the
 <code>build.target-dir</code> <a href="reference/config.html">config value</a>. Defaults
 to <code>target</code> in the root of the workspace.</p>
 </dd>
-<dt class="hdlist1"><strong>--out-dir</strong> <em>DIRECTORY</em></dt>
-<dd>
-<p>Copy final artifacts to this directory.</p>
-<div class="paragraph">
-<p>This option is unstable and available only on the nightly channel and requires
-the <code>-Z unstable-options</code> flag to enable.</p>
-</div>
-</dd>
 </dl>
 </div>
 </div>
 <div class="sect2">
-<h3 id="_display_options">Display Options</h3>
+<h3 id="cargo_test_display_options">Display Options</h3>
+<div class="paragraph">
+<p>By default the Rust test harness hides output from test execution to keep
+results readable. Test output can be recovered (e.g. for debugging) by passing
+<code>--nocapture</code> to the test binaries:</p>
+</div>
+<div class="literalblock">
+<div class="content">
+<pre>cargo test -- --nocapture</pre>
+</div>
+</div>
 <div class="dlist">
 <dl>
 <dt class="hdlist1"><strong>-v</strong></dt>
@@ -272,20 +359,11 @@ terminal.</p>
 </ul>
 </div>
 </dd>
-<dt class="hdlist1"><strong>--build-plan</strong></dt>
-<dd>
-<p>Outputs a series of JSON messages to stdout that indicate the commands to
-run the build.</p>
-<div class="paragraph">
-<p>This option is unstable and available only on the nightly channel and requires
-the <code>-Z unstable-options</code> flag to enable.</p>
-</div>
-</dd>
 </dl>
 </div>
 </div>
 <div class="sect2">
-<h3 id="_manifest_options">Manifest Options</h3>
+<h3 id="cargo_test_manifest_options">Manifest Options</h3>
 <div class="dlist">
 <dl>
 <dt class="hdlist1"><strong>--manifest-path</strong> <em>PATH</em></dt>
@@ -310,7 +388,7 @@ access.</p>
 </div>
 </div>
 <div class="sect2">
-<h3 id="_common_options">Common Options</h3>
+<h3 id="cargo_test_common_options">Common Options</h3>
 <div class="dlist">
 <dl>
 <dt class="hdlist1"><strong>-h</strong></dt>
@@ -327,7 +405,17 @@ details.</p>
 </div>
 </div>
 <div class="sect2">
-<h3 id="_miscellaneous_options">Miscellaneous Options</h3>
+<h3 id="cargo_test_miscellaneous_options">Miscellaneous Options</h3>
+<div class="paragraph">
+<p>The <code>--jobs</code> argument affects the building of the test executable but does not
+affect how many threads are used when running the tests. The Rust test harness
+includes an option to control the number of threads used:</p>
+</div>
+<div class="literalblock">
+<div class="content">
+<pre>cargo test -j 2 -- --test-threads=2</pre>
+</div>
+</div>
 <div class="dlist">
 <dl>
 <dt class="hdlist1"><strong>-j</strong> <em>N</em></dt>
@@ -343,7 +431,7 @@ the number of CPUs.</p>
 </div>
 </div>
 <div class="sect1">
-<h2 id="_profiles">PROFILES</h2>
+<h2 id="cargo_test_profiles">PROFILES</h2>
 <div class="sectionbody">
 <div class="paragraph">
 <p>Profiles may be used to configure compiler options such as optimization levels
@@ -385,10 +473,19 @@ for more details.</p>
 <div class="paragraph">
 <p>Dependencies use the <code>dev</code>/<code>release</code> profiles.</p>
 </div>
+<div class="paragraph">
+<p>Unit tests are separate executable artifacts which use the <code>test</code>/<code>bench</code>
+profiles. Example targets are built the same as with <code>cargo build</code> (using the
+<code>dev</code>/<code>release</code> profiles) unless you are building them with the test harness
+(by setting <code>test = true</code> in the manifest or using the <code>--example</code> flag) in
+which case they use the <code>test</code>/<code>bench</code> profiles. Library targets are built
+with the <code>dev</code>/<code>release</code> profiles when linked to an integration test, binary,
+or doctest.</p>
+</div>
 </div>
 </div>
 <div class="sect1">
-<h2 id="_environment">ENVIRONMENT</h2>
+<h2 id="cargo_test_environment">ENVIRONMENT</h2>
 <div class="sectionbody">
 <div class="paragraph">
 <p>See <a href="reference/environment-variables.html">the reference</a> for
@@ -397,7 +494,7 @@ details on environment variables that Cargo reads.</p>
 </div>
 </div>
 <div class="sect1">
-<h2 id="_exit_status">Exit Status</h2>
+<h2 id="cargo_test_exit_status">Exit Status</h2>
 <div class="sectionbody">
 <div class="dlist">
 <dl>
@@ -414,23 +511,23 @@ details on environment variables that Cargo reads.</p>
 </div>
 </div>
 <div class="sect1">
-<h2 id="_examples">EXAMPLES</h2>
+<h2 id="cargo_test_examples">EXAMPLES</h2>
 <div class="sectionbody">
 <div class="olist arabic">
 <ol class="arabic">
 <li>
-<p>Build the local package and all of its dependencies:</p>
+<p>Execute all the unit and integration tests of the current package:</p>
 <div class="literalblock">
 <div class="content">
-<pre>cargo build</pre>
+<pre>cargo test</pre>
 </div>
 </div>
 </li>
 <li>
-<p>Build with optimizations:</p>
+<p>Run only a specific test within a specific integration test:</p>
 <div class="literalblock">
 <div class="content">
-<pre>cargo build --release</pre>
+<pre>cargo test --test int_test_name -- modname::test_name</pre>
 </div>
 </div>
 </li>
@@ -439,10 +536,10 @@ details on environment variables that Cargo reads.</p>
 </div>
 </div>
 <div class="sect1">
-<h2 id="_see_also">SEE ALSO</h2>
+<h2 id="cargo_test_see_also">SEE ALSO</h2>
 <div class="sectionbody">
 <div class="paragraph">
-<p><a href="commands/index.html">cargo(1)</a>, <a href="commands/cargo-rustc.html">cargo-rustc(1)</a></p>
+<p><a href="commands/index.html">cargo(1)</a>, <a href="commands/cargo-bench.html">cargo-bench(1)</a></p>
 </div>
 </div>
 </div>
