@@ -1,4 +1,5 @@
 = cargo-pkgid(1)
+:idprefix: cargo_pkgid_
 :doctype: manpage
 
 == NAME

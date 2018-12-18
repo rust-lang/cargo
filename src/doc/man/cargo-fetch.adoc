@@ -1,4 +1,5 @@
 = cargo-fetch(1)
+:idprefix: cargo_fetch_
 :doctype: manpage
 :actionverb: Fetch
 

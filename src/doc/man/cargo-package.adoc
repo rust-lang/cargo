@@ -1,4 +1,5 @@
 = cargo-package(1)
+:idprefix: cargo_package_
 :doctype: manpage
 :actionverb: Package
 

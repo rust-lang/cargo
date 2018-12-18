@@ -1,68 +1,46 @@
-<h2 id="_name">NAME</h2>
+<h2 id="cargo_login_name">NAME</h2>
 <div class="sectionbody">
-<p>cargo-owner - Manage the owners of a crate on the registry</p>
+<p>cargo-login - Save an API token from the registry locally</p>
 </div>
 <div class="sect1">
-<h2 id="_synopsis">SYNOPSIS</h2>
+<h2 id="cargo_login_synopsis">SYNOPSIS</h2>
 <div class="sectionbody">
 <div class="paragraph">
-<p><code>cargo owner [<em>OPTIONS</em>] --add <em>LOGIN</em> [<em>CRATE</em>]</code><br>
-<code>cargo owner [<em>OPTIONS</em>] --remove <em>LOGIN</em> [<em>CRATE</em>]</code><br>
-<code>cargo owner [<em>OPTIONS</em>] --list [<em>CRATE</em>]</code></p>
+<p><code>cargo login [<em>OPTIONS</em>] [<em>TOKEN</em>]</code></p>
 </div>
 </div>
 </div>
 <div class="sect1">
-<h2 id="_description">DESCRIPTION</h2>
+<h2 id="cargo_login_description">DESCRIPTION</h2>
 <div class="sectionbody">
 <div class="paragraph">
-<p>This command will modify the owners for a crate on the registry. Owners of a
-crate can upload new versions and yank old versions. Non-team owners can also
-modify the set of owners, so take care!</p>
+<p>This command will save the API token to disk so that commands that require
+authentication (such as <a href="commands/cargo-publish.html">cargo-publish(1)</a>) will be automatically
+authenticated. The token is saved in <code>$CARGO_HOME/credentials</code>. <code>CARGO_HOME</code>
+defaults to <code>.cargo</code> in your home directory.</p>
 </div>
 <div class="paragraph">
-<p>This command requires you to be authenticated with either the <code>--token</code> option
-or using <a href="commands/cargo-login.html">cargo-login(1)</a>.</p>
+<p>If the <em>TOKEN</em> argument is not specified, it will be read from stdin.</p>
 </div>
 <div class="paragraph">
-<p>If the crate name is not specified, it will use the package name from the
-current directory.</p>
+<p>The API token for crates.io may be retrieved from <a href="https://crates.io/me" class="bare">https://crates.io/me</a>.</p>
 </div>
 <div class="paragraph">
-<p>See <a href="reference/publishing.html#cargo-owner">the reference</a> for more
-information about owners and publishing.</p>
+<p>Take care to keep the token secret, it should not be shared with anyone else.</p>
 </div>
 </div>
 </div>
 <div class="sect1">
-<h2 id="_options">OPTIONS</h2>
+<h2 id="cargo_login_options">OPTIONS</h2>
 <div class="sectionbody">
 <div class="sect2">
-<h3 id="_owner_options">Owner Options</h3>
+<h3 id="cargo_login_login_options">Login Options</h3>
 <div class="dlist">
 <dl>
-<dt class="hdlist1"><strong>-a</strong></dt>
-<dt class="hdlist1"><strong>--add</strong> <em>LOGIN</em>&#8230;&#8203;</dt>
+<dt class="hdlist1"><strong>--host</strong> <em>HOST</em></dt>
 <dd>
-<p>Add the given user or team as an owner.</p>
-</dd>
-<dt class="hdlist1"><strong>-r</strong></dt>
-<dt class="hdlist1"><strong>--remove</strong> <em>LOGIN</em>&#8230;&#8203;</dt>
-<dd>
-<p>Remove the given user or team as an owner.</p>
-</dd>
-<dt class="hdlist1"><strong>-l</strong></dt>
-<dt class="hdlist1"><strong>--list</strong></dt>
-<dd>
-<p>List owners of a crate.</p>
-</dd>
-<dt class="hdlist1"><strong>--token</strong> <em>TOKEN</em></dt>
-<dd>
-<p>API token to use when authenticating.</p>
-</dd>
-<dt class="hdlist1"><strong>--index</strong> <em>INDEX</em></dt>
-<dd>
-<p>The URL of the registry index to use.</p>
+<p>Host to set the token for. This option does not affect the behavior of the
+login command, and only affects the message displayed.</p>
 </dd>
 <dt class="hdlist1"><strong>--registry</strong> <em>REGISTRY</em></dt>
 <dd>
@@ -76,7 +54,7 @@ the <code>-Z unstable-options</code> flag to enable.</p>
 </div>
 </div>
 <div class="sect2">
-<h3 id="_display_options">Display Options</h3>
+<h3 id="cargo_login_display_options">Display Options</h3>
 <div class="dlist">
 <dl>
 <dt class="hdlist1"><strong>-v</strong></dt>
@@ -118,7 +96,7 @@ terminal.</p>
 </div>
 </div>
 <div class="sect2">
-<h3 id="_common_options">Common Options</h3>
+<h3 id="cargo_login_common_options">Common Options</h3>
 <div class="dlist">
 <dl>
 <dt class="hdlist1"><strong>-h</strong></dt>
@@ -137,7 +115,7 @@ details.</p>
 </div>
 </div>
 <div class="sect1">
-<h2 id="_environment">ENVIRONMENT</h2>
+<h2 id="cargo_login_environment">ENVIRONMENT</h2>
 <div class="sectionbody">
 <div class="paragraph">
 <p>See <a href="reference/environment-variables.html">the reference</a> for
@@ -146,7 +124,7 @@ details on environment variables that Cargo reads.</p>
 </div>
 </div>
 <div class="sect1">
-<h2 id="_exit_status">Exit Status</h2>
+<h2 id="cargo_login_exit_status">Exit Status</h2>
 <div class="sectionbody">
 <div class="dlist">
 <dl>
@@ -163,31 +141,15 @@ details on environment variables that Cargo reads.</p>
 </div>
 </div>
 <div class="sect1">
-<h2 id="_examples">EXAMPLES</h2>
+<h2 id="cargo_login_examples">EXAMPLES</h2>
 <div class="sectionbody">
 <div class="olist arabic">
 <ol class="arabic">
 <li>
-<p>List owners of a package:</p>
+<p>Save the API token to disk:</p>
 <div class="literalblock">
 <div class="content">
-<pre>cargo owner --list foo</pre>
-</div>
-</div>
-</li>
-<li>
-<p>Add an owner to a package:</p>
-<div class="literalblock">
-<div class="content">
-<pre>cargo owner --add username foo</pre>
-</div>
-</div>
-</li>
-<li>
-<p>Remove an owner from a package:</p>
-<div class="literalblock">
-<div class="content">
-<pre>cargo owner --remove username foo</pre>
+<pre>cargo login</pre>
 </div>
 </div>
 </li>
@@ -196,10 +158,10 @@ details on environment variables that Cargo reads.</p>
 </div>
 </div>
 <div class="sect1">
-<h2 id="_see_also">SEE ALSO</h2>
+<h2 id="cargo_login_see_also">SEE ALSO</h2>
 <div class="sectionbody">
 <div class="paragraph">
-<p><a href="commands/index.html">cargo(1)</a>, <a href="commands/cargo-login.html">cargo-login(1)</a>, <a href="commands/cargo-publish.html">cargo-publish(1)</a></p>
+<p><a href="commands/index.html">cargo(1)</a>, <a href="commands/cargo-publish.html">cargo-publish(1)</a></p>
 </div>
 </div>
 </div>

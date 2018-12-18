@@ -1,9 +1,9 @@
-<h2 id="_name">NAME</h2>
+<h2 id="cargo_doc_name">NAME</h2>
 <div class="sectionbody">
 <p>cargo-doc - Build a package's documentation</p>
 </div>
 <div class="sect1">
-<h2 id="_synopsis">SYNOPSIS</h2>
+<h2 id="cargo_doc_synopsis">SYNOPSIS</h2>
 <div class="sectionbody">
 <div class="paragraph">
 <p><code>cargo doc [<em>OPTIONS</em>]</code></p>
@@ -11,7 +11,7 @@
 </div>
 </div>
 <div class="sect1">
-<h2 id="_description">DESCRIPTION</h2>
+<h2 id="cargo_doc_description">DESCRIPTION</h2>
 <div class="sectionbody">
 <div class="paragraph">
 <p>Build the documentation for the local package and all dependencies. The output
@@ -20,10 +20,10 @@ is placed in <code>target/doc</code> in rustdoc&#8217;s usual format.</p>
 </div>
 </div>
 <div class="sect1">
-<h2 id="_options">OPTIONS</h2>
+<h2 id="cargo_doc_options">OPTIONS</h2>
 <div class="sectionbody">
 <div class="sect2">
-<h3 id="_documentation_options">Documentation Options</h3>
+<h3 id="cargo_doc_documentation_options">Documentation Options</h3>
 <div class="dlist">
 <dl>
 <dt class="hdlist1"><strong>--open</strong></dt>
@@ -42,7 +42,7 @@ is placed in <code>target/doc</code> in rustdoc&#8217;s usual format.</p>
 </div>
 </div>
 <div class="sect2">
-<h3 id="_package_selection">Package Selection</h3>
+<h3 id="cargo_doc_package_selection">Package Selection</h3>
 <div class="paragraph">
 <p>By default, when no package selection options are given, the packages selected
 depend on the current working directory. In the root of a virtual workspace,
@@ -72,7 +72,7 @@ SPEC format. This flag may be specified multiple times.</p>
 </div>
 </div>
 <div class="sect2">
-<h3 id="_target_selection">Target Selection</h3>
+<h3 id="cargo_doc_target_selection">Target Selection</h3>
 <div class="paragraph">
 <p>When no target selection options are given, <code>cargo doc</code> will document all
 binary and library targets of the selected package. The binary will be skipped
@@ -102,7 +102,7 @@ flag and will always document the given target.</p>
 </div>
 </div>
 <div class="sect2">
-<h3 id="_feature_selection">Feature Selection</h3>
+<h3 id="cargo_doc_feature_selection">Feature Selection</h3>
 <div class="paragraph">
 <p>When no feature options are given, the <code>default</code> feature is activated for
 every selected package.</p>
@@ -128,7 +128,7 @@ package.</p>
 </div>
 </div>
 <div class="sect2">
-<h3 id="_compilation_options">Compilation Options</h3>
+<h3 id="cargo_doc_compilation_options">Compilation Options</h3>
 <div class="dlist">
 <dl>
 <dt class="hdlist1"><strong>--target</strong> <em>TRIPLE</em></dt>
@@ -175,13 +175,13 @@ supported targets.</p>
 <dt class="hdlist1"><strong>--release</strong></dt>
 <dd>
 <p>Document artifacts in release mode, with optimizations. See the
-<a href="#_profiles">PROFILES</a> section for details on how this affects profile selection.</p>
+<a href="#cargo_doc_profiles">PROFILES</a> section for details on how this affects profile selection.</p>
 </dd>
 </dl>
 </div>
 </div>
 <div class="sect2">
-<h3 id="_output_options">Output Options</h3>
+<h3 id="cargo_doc_output_options">Output Options</h3>
 <div class="dlist">
 <dl>
 <dt class="hdlist1"><strong>--target-dir</strong> <em>DIRECTORY</em></dt>
@@ -195,7 +195,7 @@ to <code>target</code> in the root of the workspace.</p>
 </div>
 </div>
 <div class="sect2">
-<h3 id="_display_options">Display Options</h3>
+<h3 id="cargo_doc_display_options">Display Options</h3>
 <div class="dlist">
 <dl>
 <dt class="hdlist1"><strong>-v</strong></dt>
@@ -254,7 +254,7 @@ terminal.</p>
 </div>
 </div>
 <div class="sect2">
-<h3 id="_manifest_options">Manifest Options</h3>
+<h3 id="cargo_doc_manifest_options">Manifest Options</h3>
 <div class="dlist">
 <dl>
 <dt class="hdlist1"><strong>--manifest-path</strong> <em>PATH</em></dt>
@@ -279,7 +279,7 @@ access.</p>
 </div>
 </div>
 <div class="sect2">
-<h3 id="_common_options">Common Options</h3>
+<h3 id="cargo_doc_common_options">Common Options</h3>
 <div class="dlist">
 <dl>
 <dt class="hdlist1"><strong>-h</strong></dt>
@@ -296,7 +296,7 @@ details.</p>
 </div>
 </div>
 <div class="sect2">
-<h3 id="_miscellaneous_options">Miscellaneous Options</h3>
+<h3 id="cargo_doc_miscellaneous_options">Miscellaneous Options</h3>
 <div class="dlist">
 <dl>
 <dt class="hdlist1"><strong>-j</strong> <em>N</em></dt>
@@ -312,7 +312,7 @@ the number of CPUs.</p>
 </div>
 </div>
 <div class="sect1">
-<h2 id="_profiles">PROFILES</h2>
+<h2 id="cargo_doc_profiles">PROFILES</h2>
 <div class="sectionbody">
 <div class="paragraph">
 <p>Profiles may be used to configure compiler options such as optimization levels
@@ -357,7 +357,7 @@ for more details.</p>
 </div>
 </div>
 <div class="sect1">
-<h2 id="_environment">ENVIRONMENT</h2>
+<h2 id="cargo_doc_environment">ENVIRONMENT</h2>
 <div class="sectionbody">
 <div class="paragraph">
 <p>See <a href="reference/environment-variables.html">the reference</a> for
@@ -366,7 +366,7 @@ details on environment variables that Cargo reads.</p>
 </div>
 </div>
 <div class="sect1">
-<h2 id="_exit_status">Exit Status</h2>
+<h2 id="cargo_doc_exit_status">Exit Status</h2>
 <div class="sectionbody">
 <div class="dlist">
 <dl>
@@ -383,7 +383,7 @@ details on environment variables that Cargo reads.</p>
 </div>
 </div>
 <div class="sect1">
-<h2 id="_examples">EXAMPLES</h2>
+<h2 id="cargo_doc_examples">EXAMPLES</h2>
 <div class="sectionbody">
 <div class="olist arabic">
 <ol class="arabic">
@@ -401,7 +401,7 @@ details on environment variables that Cargo reads.</p>
 </div>
 </div>
 <div class="sect1">
-<h2 id="_see_also">SEE ALSO</h2>
+<h2 id="cargo_doc_see_also">SEE ALSO</h2>
 <div class="sectionbody">
 <div class="paragraph">
 <p><a href="commands/index.html">cargo(1)</a>, <a href="commands/cargo-rustdoc.html">cargo-rustdoc(1)</a>, <a href="https://doc.rust-lang.org/rustdoc/index.html">rustdoc(1)</a></p>

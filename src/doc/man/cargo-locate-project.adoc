@@ -1,4 +1,5 @@
 = cargo-locate-project(1)
+:idprefix: cargo_locate-project_
 :doctype: manpage
 
 == NAME

@@ -1,4 +1,5 @@
 = cargo-publish(1)
+:idprefix: cargo_publish_
 :doctype: manpage
 :actionverb: Publish
 

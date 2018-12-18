@@ -1,4 +1,5 @@
 = cargo-clean(1)
+:idprefix: cargo_clean_
 :doctype: manpage
 :actionverb: Clean
 

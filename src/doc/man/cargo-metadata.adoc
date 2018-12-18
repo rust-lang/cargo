@@ -1,4 +1,5 @@
 = cargo-metadata(1)
+:idprefix: cargo_metadata_
 :doctype: manpage
 :source-highlighter: highlightjs
 

@@ -1,4 +1,5 @@
 = cargo-version(1)
+:idprefix: cargo_version_
 :doctype: manpage
 
 == NAME
