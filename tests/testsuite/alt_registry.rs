@@ -514,3 +514,47 @@ fn passwords_in_url_forbidden() {
         .with_stderr_contains("error: Registry URLs may not contain passwords")
         .run();
 }
+
+#[test]
+fn patch_alt_reg() {
+    Package::new("bar", "0.1.0").publish();
+    let p = project()
+        .file(
+            "Cargo.toml",
+            r#"
+            cargo-features = ["alternative-registries"]
+
+            [package]
+            name = "foo"
+            version = "0.0.1"
+
+            [dependencies]
+            bar = { version = "0.1.0", registry = "alternative" }
+
+            [patch.alternative]
+            bar = { path = "bar" }
+        "#,
+        )
+        .file(
+            "src/lib.rs",
+            "
+            extern crate bar;
+            pub fn f() { bar::bar(); }
+            ",
+        )
+        .file("bar/Cargo.toml", &basic_manifest("bar", "0.1.0"))
+        .file("bar/src/lib.rs", "pub fn bar() {}")
+        .build();
+
+    p.cargo("build")
+        .masquerade_as_nightly_cargo()
+        .with_stderr(
+            "\
+[UPDATING] `[ROOT][..]` index
+[COMPILING] bar v0.1.0 ([CWD]/bar)
+[COMPILING] foo v0.0.1 ([CWD])
+[FINISHED] dev [unoptimized + debuginfo] target(s) in [..]
+",
+        )
+        .run();
+}
