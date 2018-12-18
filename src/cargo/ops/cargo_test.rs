@@ -148,7 +148,7 @@ fn run_doc_tests(
         config.shell().status("Doc-tests", target.name())?;
         let mut p = compilation.rustdoc_process(package, target)?;
         p.arg("--test")
-            .arg(target.src_path().path())
+            .arg(target.src_path().path().unwrap())
             .arg("--crate-name")
             .arg(&target.crate_name());
 
