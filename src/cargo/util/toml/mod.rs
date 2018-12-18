@@ -1205,7 +1205,13 @@ impl TomlManifest {
         for (url, deps) in self.patch.iter().flat_map(|x| x) {
             let url = match &url[..] {
                 CRATES_IO_REGISTRY => CRATES_IO_INDEX.parse().unwrap(),
-                _ => url.to_url()?,
+                _ => cx
+                    .config
+                    .get_registry_index(url)
+                    .or_else(|_| url.to_url())
+                    .chain_err(|| {
+                        format!("[patch] entry `{}` should be a URL or registry name", url)
+                    })?,
             };
             patch.insert(
                 url,
