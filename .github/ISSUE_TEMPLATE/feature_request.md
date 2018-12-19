@@ -1,6 +1,7 @@
 ---
 name: Feature request
 about: Suggest an idea for this project
+labels: C-feature-request
 ---
 
 <!-- Thanks for filing a 🙋 feature request 😄! -->
