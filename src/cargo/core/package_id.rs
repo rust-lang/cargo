@@ -76,7 +76,7 @@ impl<'de> de::Deserialize<'de> for PackageId {
             Some(s) => s,
             None => return Err(de::Error::custom("invalid serialized PackageId")),
         };
-        let version = semver::Version::parse(version).map_err(de::Error::custom)?;
+        let version = version.to_semver().map_err(de::Error::custom)?;
         let url = match s.next() {
             Some(s) => s,
             None => return Err(de::Error::custom("invalid serialized PackageId")),
