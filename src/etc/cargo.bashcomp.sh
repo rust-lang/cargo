@@ -120,7 +120,7 @@ _cargo()
 } &&
 complete -F _cargo cargo
 
-__cargo_commands=$(cargo --list 2>/dev/null | tail -n +2 | sed -E -e "s/^\s+//g" | cut -d" " -f1)
+__cargo_commands=$(cargo --list 2>/dev/null | tail -n +2 | awk 'NR>1 {print $1}')
 
 _locate_manifest(){
 	local manifest=`cargo locate-project 2>/dev/null`
