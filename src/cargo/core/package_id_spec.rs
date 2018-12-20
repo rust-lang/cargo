@@ -7,7 +7,7 @@ use url::Url;
 
 use crate::core::PackageId;
 use crate::util::errors::{CargoResult, CargoResultExt};
-use crate::util::{validate_package_name, ToSemver, ToUrl};
+use crate::util::{validate_package_name, SemVersion, ToSemver, ToUrl};
 
 /// Some or all of the data required to identify a package:
 ///
@@ -21,7 +21,7 @@ use crate::util::{validate_package_name, ToSemver, ToUrl};
 #[derive(Clone, PartialEq, Eq, Debug, Hash, Ord, PartialOrd)]
 pub struct PackageIdSpec {
     name: String,
-    version: Option<Version>,
+    version: Option<SemVersion>,
     url: Option<Url>,
 }
 
@@ -87,7 +87,7 @@ impl PackageIdSpec {
     pub fn from_package_id(package_id: PackageId) -> PackageIdSpec {
         PackageIdSpec {
             name: package_id.name().to_string(),
-            version: Some(package_id.version().clone()),
+            version: Some(package_id.sem_version()),
             url: Some(package_id.source_id().url().clone()),
         }
     }
@@ -144,7 +144,7 @@ impl PackageIdSpec {
     }
 
     pub fn version(&self) -> Option<&Version> {
-        self.version.as_ref()
+        self.version.map(|sv| sv.value())
     }
 
     pub fn url(&self) -> Option<&Url> {
@@ -162,7 +162,7 @@ impl PackageIdSpec {
         }
 
         if let Some(ref v) = self.version {
-            if v != package_id.version() {
+            if v != &package_id.sem_version() {
                 return false;
             }
         }

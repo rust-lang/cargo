@@ -3,13 +3,12 @@ use std::path::Path;
 use std::str;
 
 use log::{info, trace};
-use semver::Version;
 
 use crate::core::dependency::Dependency;
 use crate::core::{PackageId, SourceId, Summary};
 use crate::sources::registry::RegistryData;
 use crate::sources::registry::{RegistryPackage, INDEX_LOCK};
-use crate::util::{internal, CargoResult, Config, Filesystem, ToSemver};
+use crate::util::{internal, CargoResult, Config, Filesystem, SemVersion, ToSemver};
 
 /// Crates.io treats hyphen and underscores as interchangeable
 /// but, the index and old cargo do not. So the index must store uncanonicalized version
@@ -101,7 +100,7 @@ pub struct RegistryIndex<'cfg> {
     source_id: SourceId,
     path: Filesystem,
     cache: HashMap<&'static str, Vec<(Summary, bool)>>,
-    hashes: HashMap<&'static str, HashMap<Version, String>>, // (name, vers) => cksum
+    hashes: HashMap<&'static str, HashMap<SemVersion, String>>, // (name, vers) => cksum
     config: &'cfg Config,
     locked: bool,
 }
@@ -126,7 +125,7 @@ impl<'cfg> RegistryIndex<'cfg> {
     /// Return the hash listed for a specified PackageId.
     pub fn hash(&mut self, pkg: PackageId, load: &mut dyn RegistryData) -> CargoResult<String> {
         let name = pkg.name().as_str();
-        let version = pkg.version();
+        let version = &pkg.sem_version();
         if let Some(s) = self.hashes.get(name).and_then(|v| v.get(version)) {
             return Ok(s.clone());
         }
@@ -254,7 +253,8 @@ impl<'cfg> RegistryIndex<'cfg> {
             yanked,
             links,
         } = serde_json::from_str(line)?;
-        let pkgid = PackageId::new(&name, &vers, self.source_id)?;
+        let vers = SemVersion::new(vers);
+        let pkgid = PackageId::new(&name, vers, self.source_id)?;
         let name = pkgid.name();
         let deps = deps
             .into_iter()
@@ -293,7 +293,7 @@ impl<'cfg> RegistryIndex<'cfg> {
                 let mut vers = p[name.len() + 1..].splitn(2, "->");
                 if dep
                     .version_req()
-                    .matches(&vers.next().unwrap().to_semver().unwrap())
+                    .matches(vers.next().unwrap().to_semver().unwrap().value())
                 {
                     vers.next().unwrap() == s.version().to_string()
                 } else {

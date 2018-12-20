@@ -6,7 +6,6 @@ use std::rc::Rc;
 use std::str;
 
 use log::{debug, trace};
-use semver;
 use serde::de;
 use serde::ser;
 use serde::{Deserialize, Serialize};
@@ -21,7 +20,7 @@ use crate::core::{GitReference, PackageIdSpec, SourceId, WorkspaceConfig, Worksp
 use crate::sources::{CRATES_IO_INDEX, CRATES_IO_REGISTRY};
 use crate::util::errors::{CargoResult, CargoResultExt, ManifestError};
 use crate::util::paths;
-use crate::util::{self, validate_package_name, Config, ToUrl, ToSemverReqExact};
+use crate::util::{self, validate_package_name, Config, SemVersion, ToUrl, ToSemverReqExact};
 
 mod targets;
 use self::targets::targets;
@@ -615,7 +614,7 @@ impl<'de> de::Deserialize<'de> for VecStringOrBool {
 pub struct TomlProject {
     edition: Option<String>,
     name: String,
-    version: semver::Version,
+    version: SemVersion,
     authors: Option<Vec<String>>,
     build: Option<StringOrBool>,
     metabuild: Option<StringOrVec>,

@@ -12,7 +12,7 @@ use serde::ser;
 
 use crate::core::interning::InternedString;
 use crate::core::source::SourceId;
-use crate::util::{CargoResult, ToSemver};
+use crate::util::{CargoResult, SemVersion, ToSemver};
 
 lazy_static::lazy_static! {
     static ref PACKAGE_ID_CACHE: Mutex<HashSet<&'static PackageIdInner>> =
@@ -28,7 +28,7 @@ pub struct PackageId {
 #[derive(PartialOrd, Eq, Ord)]
 struct PackageIdInner {
     name: InternedString,
-    version: semver::Version,
+    version: SemVersion,
     source_id: SourceId,
 }
 
@@ -116,14 +116,10 @@ impl<'a> Hash for PackageId {
 }
 
 impl PackageId {
-    pub fn new<T: ToSemver>(name: &str, version: T, sid: SourceId) -> CargoResult<PackageId> {
-        let v = version.to_semver()?;
-
-        Ok(PackageId::wrap(PackageIdInner {
-            name: InternedString::new(name),
-            version: v,
-            source_id: sid,
-        }))
+    pub fn new<V: ToSemver>(name: &str, version: V, source_id: SourceId) -> CargoResult<PackageId> {
+        let name = InternedString::new(name);
+        let version = version.to_semver()?;
+        Ok(PackageId::wrap(PackageIdInner { name, version, source_id }))
     }
 
     fn wrap(inner: PackageIdInner) -> PackageId {
@@ -140,7 +136,10 @@ impl PackageId {
         self.inner.name
     }
     pub fn version(self) -> &'static semver::Version {
-        &self.inner.version
+        self.inner.version.value()
+    }
+    pub fn sem_version(self) -> SemVersion {
+        self.inner.version
     }
     pub fn source_id(self) -> SourceId {
         self.inner.source_id
