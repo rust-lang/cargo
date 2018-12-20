@@ -6,7 +6,7 @@ use crate::core::Workspace;
 use crate::ops::{CompileFilter, CompileOptions, NewOptions, Packages, VersionControl};
 use crate::sources::CRATES_IO_REGISTRY;
 use crate::util::important_paths::find_root_manifest_for_wd;
-use crate::util::paths;
+use crate::util::{paths, validate_package_name};
 use crate::CargoResult;
 use clap::{self, SubCommand};
 
@@ -370,11 +370,12 @@ pub trait ArgMatchesExt {
                          requires -Zunstable-options to use."
                     ));
                 }
+                validate_package_name(registry, "registry name", "")?;
 
                 if registry == CRATES_IO_REGISTRY {
                     // If "crates.io" is specified then we just need to return None
                     // as that will cause cargo to use crates.io. This is required
-                    // for the case where a default alterative registry is used
+                    // for the case where a default alternative registry is used
                     // but the user wants to switch back to crates.io for a single
                     // command.
                     Ok(None)
