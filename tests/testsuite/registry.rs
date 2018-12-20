@@ -792,19 +792,25 @@ fn dev_dependency_not_used() {
 
 #[test]
 fn login_with_no_cargo_dir() {
-    let home = paths::home().join("new-home");
-    t!(fs::create_dir(&home));
+    // Create a config in the root directory because `login` requires the
+    // index to be updated, and we don't want to hit crates.io.
+    registry::init();
+    fs::rename(paths::home().join(".cargo"), paths::root().join(".cargo")).unwrap();
+    paths::home().rm_rf();
     cargo_process("login foo -v").run();
+    let credentials = fs::read_to_string(paths::home().join(".cargo/credentials")).unwrap();
+    assert_eq!(credentials, "[registry]\ntoken = \"foo\"\n");
 }
 
 #[test]
 fn login_with_differently_sized_token() {
-    // Verify that the configuration file gets properly trunchated.
-    let home = paths::home().join("new-home");
-    t!(fs::create_dir(&home));
+    // Verify that the configuration file gets properly truncated.
+    registry::init();
     cargo_process("login lmaolmaolmao -v").run();
     cargo_process("login lmao -v").run();
     cargo_process("login lmaolmaolmao -v").run();
+    let credentials = fs::read_to_string(paths::home().join(".cargo/credentials")).unwrap();
+    assert_eq!(credentials, "[registry]\ntoken = \"lmaolmaolmao\"\n");
 }
 
 #[test]
