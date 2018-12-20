@@ -12,6 +12,8 @@ use crate::util::errors::CargoResult;
 lazy_static::lazy_static! {
     static ref SEM_VERSION_CACHE: Mutex<HashSet<&'static Version>> =
         Mutex::new(HashSet::new());
+    static ref SEM_VERSION_REQ_CACHE: Mutex<HashSet<&'static VersionReq>> =
+        Mutex::new(HashSet::new());
 }
 
 #[derive(Clone, Copy, Eq, Hash, PartialOrd, Ord)]
@@ -98,23 +100,79 @@ impl<'a> ToSemver for &'a SemVersion {
 }
 
 
+#[derive(Clone, Copy, Eq, Hash, PartialOrd, Ord)]
+pub struct SemVersionReq {
+    inner: &'static VersionReq,
+}
+
+impl SemVersionReq {
+    pub fn new(req: VersionReq) -> SemVersionReq {
+        let mut cache = SEM_VERSION_REQ_CACHE.lock().unwrap();
+        let req = cache.get(&req).cloned().unwrap_or_else(|| {
+            let req = Box::leak(Box::new(req));
+            cache.insert(req);
+            req
+        });
+        SemVersionReq { inner: req }
+    }
+
+    pub fn any() -> SemVersionReq {
+        SemVersionReq::new(VersionReq::any())
+    }
+
+    pub fn value(&self) -> &'static VersionReq {
+        self.inner
+    }
+}
+
+impl PartialEq for SemVersionReq {
+    fn eq(&self, other: &SemVersionReq) -> bool {
+        ptr::eq(self.inner, other.inner)
+    }
+}
+
+impl Serialize for SemVersionReq {
+    fn serialize<S>(&self, ser: S) -> Result<S::Ok, S::Error> where S: Serializer {
+        self.inner.serialize(ser)
+    }
+}
+
+impl<'de> Deserialize<'de> for SemVersionReq {
+    fn deserialize<D>(de: D) -> Result<SemVersionReq, D::Error> where D: Deserializer<'de> {
+        Ok(SemVersionReq::new(<VersionReq>::deserialize(de)?))
+    }
+}
+
+impl fmt::Debug for SemVersionReq {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        fmt::Debug::fmt(self.inner, f)
+    }
+}
+
+impl fmt::Display for SemVersionReq {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        fmt::Display::fmt(self.inner, f)
+    }
+}
+
+
 pub trait ToSemverReq {
-    fn to_semver_req(self) -> Result<VersionReq, ReqParseError>;
+    fn to_semver_req(self) -> Result<SemVersionReq, ReqParseError>;
 }
 
 impl<'a> ToSemverReq for &'a str {
-    fn to_semver_req(self) -> Result<VersionReq, ReqParseError> {
-        VersionReq::parse(self)
+    fn to_semver_req(self) -> Result<SemVersionReq, ReqParseError> {
+        Ok(SemVersionReq::new(VersionReq::parse(self)?))
     }
 }
 
 
 pub trait ToSemverReqExact {
-    fn to_semver_req_exact(self) -> VersionReq;
+    fn to_semver_req_exact(self) -> SemVersionReq;
 }
 
 impl<'a> ToSemverReqExact for &'a Version {
-    fn to_semver_req_exact(self) -> VersionReq {
-        VersionReq::exact(self)
+    fn to_semver_req_exact(self) -> SemVersionReq {
+        SemVersionReq::new(VersionReq::exact(self))
     }
 }

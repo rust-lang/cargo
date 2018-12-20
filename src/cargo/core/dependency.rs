@@ -11,7 +11,7 @@ use serde::Serialize;
 use crate::core::interning::InternedString;
 use crate::core::{PackageId, SourceId, Summary};
 use crate::util::errors::{CargoResult, CargoResultExt};
-use crate::util::{Cfg, CfgExpr, Config, ToSemverReq, ToSemverReqExact};
+use crate::util::{Cfg, CfgExpr, Config, SemVersionReq, ToSemverReq, ToSemverReqExact};
 
 /// Information about a dependency requested by a Cargo manifest.
 /// Cheap to copy.
@@ -26,7 +26,7 @@ struct Inner {
     name: InternedString,
     source_id: SourceId,
     registry_id: Option<SourceId>,
-    req: VersionReq,
+    req: SemVersionReq,
     specified_req: bool,
     kind: Kind,
     only_match_name: bool,
@@ -92,7 +92,7 @@ fn parse_req_with_deprecated(
     name: &str,
     req: &str,
     extra: Option<(PackageId, &Config)>,
-) -> CargoResult<VersionReq> {
+) -> CargoResult<SemVersionReq> {
     match req.to_semver_req() {
         Err(ReqParseError::DeprecatedVersionRequirement(requirement)) => {
             let (inside, config) = match extra {
@@ -118,11 +118,11 @@ this warning.
             );
             config.shell().warn(&msg)?;
 
-            Ok(requirement)
+            Ok(SemVersionReq::new(requirement))
         }
         Err(e) => {
-            let err: CargoResult<VersionReq> = Err(e.into());
-            let v: VersionReq = err.chain_err(|| {
+            let err: CargoResult<SemVersionReq> = Err(e.into());
+            let v: SemVersionReq = err.chain_err(|| {
                 format!(
                     "failed to parse the version requirement `{}` for dependency `{}`",
                     req, name
@@ -160,7 +160,7 @@ impl Dependency {
         let arg = Some((inside, config));
         let (specified_req, version_req) = match version {
             Some(v) => (true, parse_req_with_deprecated(name, v, arg)?),
-            None => (false, VersionReq::any()),
+            None => (false, SemVersionReq::any()),
         };
 
         let mut ret = Dependency::new_override(name, source_id);
@@ -181,7 +181,7 @@ impl Dependency {
     ) -> CargoResult<Dependency> {
         let (specified_req, version_req) = match version {
             Some(v) => (true, parse_req_with_deprecated(name, v, None)?),
-            None => (false, VersionReq::any()),
+            None => (false, SemVersionReq::any()),
         };
 
         let mut ret = Dependency::new_override(name, source_id);
@@ -201,7 +201,7 @@ impl Dependency {
                 name: InternedString::new(name),
                 source_id,
                 registry_id: None,
-                req: VersionReq::any(),
+                req: SemVersionReq::any(),
                 kind: Kind::Normal,
                 only_match_name: true,
                 optional: false,
@@ -215,7 +215,7 @@ impl Dependency {
     }
 
     pub fn version_req(&self) -> &VersionReq {
-        &self.inner.req
+        &self.inner.req.value()
     }
 
     /// This is the name of this `Dependency` as listed in `Cargo.toml`.
@@ -335,7 +335,7 @@ impl Dependency {
     }
 
     /// Set the version requirement for this dependency
-    pub fn set_version_req(&mut self, req: VersionReq) -> &mut Dependency {
+    pub fn set_version_req(&mut self, req: SemVersionReq) -> &mut Dependency {
         Rc::make_mut(&mut self.inner).req = req;
         self
     }
@@ -353,7 +353,7 @@ impl Dependency {
     /// Lock this dependency to depending on the specified package id
     pub fn lock_to(&mut self, id: PackageId) -> &mut Dependency {
         assert_eq!(self.inner.source_id, id.source_id());
-        assert!(self.inner.req.matches(id.version()));
+        assert!(self.inner.req.value().matches(id.version()));
         trace!(
             "locking dep from `{}` with `{}` at {} to {}",
             self.package_name(),
@@ -414,7 +414,7 @@ impl Dependency {
     pub fn matches_id(&self, id: PackageId) -> bool {
         self.inner.name == id.name()
             && (self.inner.only_match_name
-                || (self.inner.req.matches(id.version()) && self.inner.source_id == id.source_id()))
+                || (self.inner.req.value().matches(id.version()) && self.inner.source_id == id.source_id()))
     }
 
     pub fn map_source(mut self, to_replace: SourceId, replace_with: SourceId) -> Dependency {
