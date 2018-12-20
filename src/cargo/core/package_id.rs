@@ -88,11 +88,7 @@ impl<'de> de::Deserialize<'de> for PackageId {
         };
         let source_id = SourceId::from_url(url).map_err(de::Error::custom)?;
 
-        Ok(PackageId::wrap(PackageIdInner {
-            name: InternedString::new(name),
-            version,
-            source_id,
-        }))
+        Ok(PackageId::pure(InternedString::new(name), version, source_id))
     }
 }
 
@@ -117,12 +113,13 @@ impl<'a> Hash for PackageId {
 
 impl PackageId {
     pub fn new<V: ToSemver>(name: &str, version: V, source_id: SourceId) -> CargoResult<PackageId> {
-        let name = InternedString::new(name);
         let version = version.to_semver()?;
-        Ok(PackageId::wrap(PackageIdInner { name, version, source_id }))
+        let name = InternedString::new(name);
+        Ok(PackageId::pure(name, version, source_id))
     }
 
-    fn wrap(inner: PackageIdInner) -> PackageId {
+    pub fn pure(name: InternedString, version: SemVersion, source_id: SourceId) -> PackageId {
+        let inner = PackageIdInner { name, version, source_id };
         let mut cache = PACKAGE_ID_CACHE.lock().unwrap();
         let inner = cache.get(&inner).cloned().unwrap_or_else(|| {
             let inner = Box::leak(Box::new(inner));
@@ -146,19 +143,19 @@ impl PackageId {
     }
 
     pub fn with_precise(self, precise: Option<String>) -> PackageId {
-        PackageId::wrap(PackageIdInner {
-            name: self.inner.name,
-            version: self.inner.version.clone(),
-            source_id: self.inner.source_id.with_precise(precise),
-        })
+        PackageId::pure(
+            self.inner.name,
+            self.inner.version.clone(),
+            self.inner.source_id.with_precise(precise),
+        )
     }
 
     pub fn with_source_id(self, source: SourceId) -> PackageId {
-        PackageId::wrap(PackageIdInner {
-            name: self.inner.name,
-            version: self.inner.version.clone(),
-            source_id: source,
-        })
+        PackageId::pure(
+            self.inner.name,
+            self.inner.version.clone(),
+            source
+        )
     }
 
     pub fn stable_hash(self, workspace: &Path) -> PackageIdStableHash<'_> {
