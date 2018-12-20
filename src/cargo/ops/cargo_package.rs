@@ -26,7 +26,6 @@ pub struct PackageOpts<'cfg> {
     pub verify: bool,
     pub jobs: Option<u32>,
     pub target: Option<String>,
-    pub registry: Option<String>,
 }
 
 static VCS_INFO_FILE: &'static str = ".cargo_vcs_info.json";
