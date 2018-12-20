@@ -1,7 +1,6 @@
 use std::collections::HashMap;
 use std::fmt;
 
-use semver::Version;
 use serde::{de, ser};
 use url::Url;
 
@@ -143,8 +142,8 @@ impl PackageIdSpec {
         &self.name
     }
 
-    pub fn version(&self) -> Option<&Version> {
-        self.version.map(|sv| sv.value())
+    pub fn version(&self) -> Option<SemVersion> {
+        self.version
     }
 
     pub fn url(&self) -> Option<&Url> {

@@ -120,6 +120,10 @@ impl SemVersionReq {
         SemVersionReq::new(VersionReq::any())
     }
 
+    pub fn exact(version: SemVersion) -> SemVersionReq {
+        SemVersionReq::new(VersionReq::exact(version.inner))
+    }
+
     pub fn value(&self) -> &'static VersionReq {
         self.inner
     }
@@ -163,16 +167,5 @@ pub trait ToSemverReq {
 impl<'a> ToSemverReq for &'a str {
     fn to_semver_req(self) -> Result<SemVersionReq, ReqParseError> {
         Ok(SemVersionReq::new(VersionReq::parse(self)?))
-    }
-}
-
-
-pub trait ToSemverReqExact {
-    fn to_semver_req_exact(self) -> SemVersionReq;
-}
-
-impl<'a> ToSemverReqExact for &'a Version {
-    fn to_semver_req_exact(self) -> SemVersionReq {
-        SemVersionReq::new(VersionReq::exact(self))
     }
 }

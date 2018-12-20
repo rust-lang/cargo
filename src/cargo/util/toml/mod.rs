@@ -20,7 +20,7 @@ use crate::core::{GitReference, PackageIdSpec, SourceId, WorkspaceConfig, Worksp
 use crate::sources::{CRATES_IO_INDEX, CRATES_IO_REGISTRY};
 use crate::util::errors::{CargoResult, CargoResultExt, ManifestError};
 use crate::util::paths;
-use crate::util::{self, validate_package_name, Config, SemVersion, ToUrl, ToSemverReqExact};
+use crate::util::{self, validate_package_name, Config, SemVersion, SemVersionReq, ToUrl};
 
 mod targets;
 use self::targets::targets;
@@ -1180,7 +1180,7 @@ impl TomlManifest {
                         spec
                     )
                 })?;
-                dep.set_version_req(version.to_semver_req_exact());
+                dep.set_version_req(SemVersionReq::exact(version));
             }
             replace.push((spec, dep));
         }
