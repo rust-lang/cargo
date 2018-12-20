@@ -7,7 +7,7 @@ use url::Url;
 
 use crate::core::PackageId;
 use crate::util::errors::{CargoResult, CargoResultExt};
-use crate::util::{ToSemver, ToUrl};
+use crate::util::{validate_package_name, ToSemver, ToUrl};
 
 /// Some or all of the data required to identify a package:
 ///
@@ -64,11 +64,7 @@ impl PackageIdSpec {
             Some(version) => Some(Version::parse(version)?),
             None => None,
         };
-        for ch in name.chars() {
-            if !ch.is_alphanumeric() && ch != '_' && ch != '-' {
-                failure::bail!("invalid character in pkgid `{}`: `{}`", spec, ch)
-            }
-        }
+        validate_package_name(name, "pkgid", "")?;
         Ok(PackageIdSpec {
             name: name.to_string(),
             version,

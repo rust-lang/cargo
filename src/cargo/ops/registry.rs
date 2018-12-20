@@ -19,8 +19,8 @@ use crate::sources::{RegistrySource, SourceConfigMap};
 use crate::util::config::{self, Config};
 use crate::util::errors::{CargoResult, CargoResultExt};
 use crate::util::important_paths::find_root_manifest_for_wd;
-use crate::util::paths;
 use crate::util::ToUrl;
+use crate::util::{paths, validate_package_name};
 use crate::version;
 
 pub struct RegistryConfig {
@@ -294,12 +294,15 @@ pub fn registry_configuration(
     registry: Option<String>,
 ) -> CargoResult<RegistryConfig> {
     let (index, token) = match registry {
-        Some(registry) => (
-            Some(config.get_registry_index(&registry)?.to_string()),
-            config
-                .get_string(&format!("registries.{}.token", registry))?
-                .map(|p| p.val),
-        ),
+        Some(registry) => {
+            validate_package_name(&registry, "registry name", "")?;
+            (
+                Some(config.get_registry_index(&registry)?.to_string()),
+                config
+                    .get_string(&format!("registries.{}.token", registry))?
+                    .map(|p| p.val),
+            )
+        }
         None => {
             // Checking out for default index and token
             (

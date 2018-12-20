@@ -21,7 +21,7 @@ use crate::core::{GitReference, PackageIdSpec, SourceId, WorkspaceConfig, Worksp
 use crate::sources::{CRATES_IO_INDEX, CRATES_IO_REGISTRY};
 use crate::util::errors::{CargoResult, CargoResultExt, ManifestError};
 use crate::util::paths;
-use crate::util::{self, Config, ToUrl};
+use crate::util::{self, validate_package_name, Config, ToUrl};
 
 mod targets;
 use self::targets::targets;
@@ -809,19 +809,7 @@ impl TomlManifest {
             failure::bail!("package name cannot be an empty string")
         }
 
-        for c in package_name.chars() {
-            if c.is_alphanumeric() {
-                continue;
-            }
-            if c == '_' || c == '-' {
-                continue;
-            }
-            failure::bail!(
-                "Invalid character `{}` in package name: `{}`",
-                c,
-                package_name
-            )
-        }
+        validate_package_name(package_name, "package name", "")?;
 
         let pkgid = project.to_package_id(source_id)?;
 

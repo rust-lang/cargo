@@ -10,7 +10,7 @@ use git2::Repository as GitRepository;
 use crate::core::{compiler, Workspace};
 use crate::util::errors::{CargoResult, CargoResultExt};
 use crate::util::{existing_vcs_repo, internal, FossilRepo, GitRepo, HgRepo, PijulRepo};
-use crate::util::{paths, Config};
+use crate::util::{paths, validate_package_name, Config};
 
 use toml;
 
@@ -161,20 +161,7 @@ fn check_name(name: &str, opts: &NewOptions) -> CargoResult<()> {
         }
     }
 
-    for c in name.chars() {
-        if c.is_alphanumeric() {
-            continue;
-        }
-        if c == '_' || c == '-' {
-            continue;
-        }
-        failure::bail!(
-            "Invalid character `{}` in crate name: `{}`{}",
-            c,
-            name,
-            name_help
-        )
-    }
+    validate_package_name(name, "crate name", name_help)?;
     Ok(())
 }
 
