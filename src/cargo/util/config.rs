@@ -24,11 +24,11 @@ use crate::core::shell::Verbosity;
 use crate::core::{CliUnstable, Shell, SourceId, Workspace};
 use crate::ops;
 use crate::util::errors::{internal, CargoResult, CargoResultExt};
-use crate::util::paths;
 use crate::util::toml as cargo_toml;
 use crate::util::Filesystem;
 use crate::util::Rustc;
 use crate::util::ToUrl;
+use crate::util::{paths, validate_package_name};
 use url::Url;
 
 use self::ConfigValue as CV;
@@ -656,6 +656,7 @@ impl Config {
 
     /// Gets the index for a registry.
     pub fn get_registry_index(&self, registry: &str) -> CargoResult<Url> {
+        validate_package_name(registry, "registry name", "")?;
         Ok(
             match self.get_string(&format!("registries.{}.index", registry))? {
                 Some(index) => {

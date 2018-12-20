@@ -558,3 +558,50 @@ fn patch_alt_reg() {
         )
         .run();
 }
+
+#[test]
+fn bad_registry_name() {
+    let p = project()
+        .file(
+            "Cargo.toml",
+            r#"
+            cargo-features = ["alternative-registries"]
+
+            [project]
+            name = "foo"
+            version = "0.0.1"
+            authors = []
+
+            [dependencies.bar]
+            version = "0.0.1"
+            registry = "bad name"
+        "#,
+        )
+        .file("src/main.rs", "fn main() {}")
+        .build();
+
+    p.cargo("build")
+        .masquerade_as_nightly_cargo()
+        .with_status(101)
+        .with_stderr(
+            "\
+[ERROR] failed to parse manifest at `[CWD]/Cargo.toml`
+
+Caused by:
+  Invalid character ` ` in registry name: `bad name`",
+        )
+        .run();
+
+    for cmd in &[
+        "init", "install", "login", "owner", "publish", "search", "yank",
+    ] {
+        p.cargo(cmd)
+            .arg("-Zunstable-options")
+            .arg("--registry")
+            .arg("bad name")
+            .masquerade_as_nightly_cargo()
+            .with_status(101)
+            .with_stderr("[ERROR] Invalid character ` ` in registry name: `bad name`")
+            .run();
+    }
+}
