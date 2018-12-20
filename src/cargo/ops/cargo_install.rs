@@ -6,7 +6,6 @@ use std::path::{Path, PathBuf};
 use std::sync::Arc;
 use std::{env, fs};
 
-use semver::VersionReq;
 use serde::{Deserialize, Serialize};
 use tempfile::Builder as TempFileBuilder;
 
@@ -19,7 +18,7 @@ use crate::ops::{self, CompileFilter};
 use crate::sources::{GitSource, PathSource, SourceConfigMap};
 use crate::util::errors::{CargoResult, CargoResultExt};
 use crate::util::paths;
-use crate::util::{internal, Config, ToSemver};
+use crate::util::{internal, Config, ToSemver, ToSemverReq};
 use crate::util::{FileLock, Filesystem};
 
 #[derive(Deserialize, Serialize)]
@@ -445,7 +444,7 @@ where
                     })?;
 
                     match first {
-                        '<' | '>' | '=' | '^' | '~' => match v.parse::<VersionReq>() {
+                        '<' | '>' | '=' | '^' | '~' => match v.to_semver_req() {
                             Ok(v) => Some(v.to_string()),
                             Err(_) => failure::bail!(
                                 "the `--vers` provided, `{}`, is \
@@ -473,7 +472,7 @@ where
 
                                 // If it is not a valid version but it is a valid version
                                 // requirement, add a note to the warning
-                                if v.parse::<VersionReq>().is_ok() {
+                                if v.to_semver_req().is_ok() {
                                     msg.push_str(&format!(
                                         "\nif you want to specify semver range, \
                                          add an explicit qualifier, like ^{}",

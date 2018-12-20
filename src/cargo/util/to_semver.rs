@@ -1,5 +1,6 @@
 use crate::util::errors::CargoResult;
-use semver::Version;
+use semver::{Version, VersionReq};
+use semver::ReqParseError;
 
 pub trait ToSemver {
     fn to_semver(self) -> CargoResult<Version>;
@@ -29,5 +30,16 @@ impl<'a> ToSemver for &'a String {
 impl<'a> ToSemver for &'a Version {
     fn to_semver(self) -> CargoResult<Version> {
         Ok(self.clone())
+    }
+}
+
+
+pub trait ToSemverReq {
+    fn to_semver_req(self) -> Result<VersionReq, ReqParseError>;
+}
+
+impl<'a> ToSemverReq for &'a str {
+    fn to_semver_req(self) -> Result<VersionReq, ReqParseError> {
+        VersionReq::parse(self)
     }
 }

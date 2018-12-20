@@ -11,7 +11,7 @@ use serde::Serialize;
 use crate::core::interning::InternedString;
 use crate::core::{PackageId, SourceId, Summary};
 use crate::util::errors::{CargoResult, CargoResultExt};
-use crate::util::{Cfg, CfgExpr, Config};
+use crate::util::{Cfg, CfgExpr, Config, ToSemverReq};
 
 /// Information about a dependency requested by a Cargo manifest.
 /// Cheap to copy.
@@ -93,7 +93,7 @@ fn parse_req_with_deprecated(
     req: &str,
     extra: Option<(PackageId, &Config)>,
 ) -> CargoResult<VersionReq> {
-    match VersionReq::parse(req) {
+    match req.to_semver_req() {
         Err(ReqParseError::DeprecatedVersionRequirement(requirement)) => {
             let (inside, config) = match extra {
                 Some(pair) => pair,

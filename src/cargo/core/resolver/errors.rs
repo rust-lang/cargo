@@ -3,9 +3,8 @@ use std::fmt;
 
 use crate::core::{Dependency, PackageId, Registry, Summary};
 use crate::util::lev_distance::lev_distance;
-use crate::util::Config;
+use crate::util::{Config, ToSemverReq};
 use failure::{Error, Fail};
-use semver;
 
 use super::context::Context;
 use super::types::{Candidate, ConflictReason};
@@ -170,7 +169,7 @@ pub(super) fn activation_error(
     // Maybe the user mistyped the ver_req? Like `dep="2"` when `dep="0.2"`
     // was meant. So we re-query the registry with `deb="*"` so we can
     // list a few versions that were actually found.
-    let all_req = semver::VersionReq::parse("*").unwrap();
+    let all_req = "*".to_semver_req().unwrap();
     let mut new_dep = dep.clone();
     new_dep.set_version_req(all_req);
     let mut candidates = match registry.query_vec(&new_dep, false) {
