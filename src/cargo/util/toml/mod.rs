@@ -6,7 +6,7 @@ use std::rc::Rc;
 use std::str;
 
 use log::{debug, trace};
-use semver::{self, VersionReq};
+use semver;
 use serde::de;
 use serde::ser;
 use serde::{Deserialize, Serialize};
@@ -21,7 +21,7 @@ use crate::core::{GitReference, PackageIdSpec, SourceId, WorkspaceConfig, Worksp
 use crate::sources::{CRATES_IO_INDEX, CRATES_IO_REGISTRY};
 use crate::util::errors::{CargoResult, CargoResultExt, ManifestError};
 use crate::util::paths;
-use crate::util::{self, validate_package_name, Config, ToUrl};
+use crate::util::{self, validate_package_name, Config, ToUrl, ToSemverReqExact};
 
 mod targets;
 use self::targets::targets;
@@ -1181,7 +1181,7 @@ impl TomlManifest {
                         spec
                     )
                 })?;
-                dep.set_version_req(VersionReq::exact(version));
+                dep.set_version_req(version.to_semver_req_exact());
             }
             replace.push((spec, dep));
         }

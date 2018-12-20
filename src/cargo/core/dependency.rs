@@ -11,7 +11,7 @@ use serde::Serialize;
 use crate::core::interning::InternedString;
 use crate::core::{PackageId, SourceId, Summary};
 use crate::util::errors::{CargoResult, CargoResultExt};
-use crate::util::{Cfg, CfgExpr, Config, ToSemverReq};
+use crate::util::{Cfg, CfgExpr, Config, ToSemverReq, ToSemverReqExact};
 
 /// Information about a dependency requested by a Cargo manifest.
 /// Cheap to copy.
@@ -361,7 +361,7 @@ impl Dependency {
             self.source_id(),
             id
         );
-        self.set_version_req(VersionReq::exact(id.version()))
+        self.set_version_req(id.version().to_semver_req_exact())
             .set_source_id(id.source_id())
     }
 

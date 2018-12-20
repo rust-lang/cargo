@@ -43,3 +43,14 @@ impl<'a> ToSemverReq for &'a str {
         VersionReq::parse(self)
     }
 }
+
+
+pub trait ToSemverReqExact {
+    fn to_semver_req_exact(self) -> VersionReq;
+}
+
+impl<'a> ToSemverReqExact for &'a Version {
+    fn to_semver_req_exact(self) -> VersionReq {
+        VersionReq::exact(self)
+    }
+}

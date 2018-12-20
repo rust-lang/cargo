@@ -1,14 +1,13 @@
 use std::collections::HashMap;
 
 use log::{debug, trace};
-use semver::VersionReq;
 use url::Url;
 
 use crate::core::PackageSet;
 use crate::core::{Dependency, PackageId, Source, SourceId, SourceMap, Summary};
 use crate::sources::config::SourceConfigMap;
 use crate::util::errors::{CargoResult, CargoResultExt};
-use crate::util::{profile, Config};
+use crate::util::{profile, Config, ToSemverReqExact};
 
 /// Source of information about a group of packages.
 ///
@@ -645,7 +644,7 @@ fn lock(locked: &LockedMap, patches: &HashMap<Url, Vec<PackageId>>, summary: Sum
 
             if patch_locked {
                 trace!("\tthird hit on {}", patch_id);
-                let req = VersionReq::exact(patch_id.version());
+                let req = patch_id.version().to_semver_req_exact();
                 let mut dep = dep;
                 dep.set_version_req(req);
                 return dep;
