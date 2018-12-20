@@ -211,6 +211,7 @@ pub struct RegistryConfig {
 
     /// API endpoint for the registry. This is what's actually hit to perform
     /// operations like yanks, owner modifications, publish new crates, etc.
+    /// If this is None, the registry does not support API commands.
     pub api: Option<String>,
 }
 

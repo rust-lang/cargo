@@ -15,8 +15,12 @@ use url::percent_encoding::{percent_encode, QUERY_ENCODE_SET};
 pub type Result<T> = std::result::Result<T, failure::Error>;
 
 pub struct Registry {
+    /// The base URL for issuing API requests.
     host: String,
+    /// Optional authorization token.
+    /// If None, commands requiring authorization will fail.
     token: Option<String>,
+    /// Curl handle for issuing requests.
     handle: Easy,
 }
 
@@ -51,7 +55,8 @@ pub struct NewCrate {
     pub license_file: Option<String>,
     pub repository: Option<String>,
     pub badges: BTreeMap<String, BTreeMap<String, String>>,
-    #[serde(default)] pub links: Option<String>,
+    #[serde(default)]
+    pub links: Option<String>,
 }
 
 #[derive(Serialize)]
@@ -129,6 +134,10 @@ impl Registry {
             token,
             handle,
         }
+    }
+
+    pub fn host(&self) -> &str {
+        &self.host
     }
 
     pub fn add_owners(&mut self, krate: &str, owners: &[&str]) -> Result<String> {

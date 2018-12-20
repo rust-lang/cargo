@@ -1,5 +1,6 @@
 use std::collections::BTreeMap;
 use std::fs::{self, File};
+use std::io::{self, BufRead};
 use std::iter::repeat;
 use std::str;
 use std::time::Duration;
@@ -65,6 +66,7 @@ pub fn publish(ws: &Workspace<'_>, opts: &PublishOpts<'_>) -> CargoResult<()> {
         opts.token.clone(),
         opts.index.clone(),
         opts.registry.clone(),
+        true,
     )?;
     verify_dependencies(pkg, reg_id)?;
 
@@ -80,7 +82,6 @@ pub fn publish(ws: &Workspace<'_>, opts: &PublishOpts<'_>) -> CargoResult<()> {
             allow_dirty: opts.allow_dirty,
             target: opts.target.clone(),
             jobs: opts.jobs,
-            registry: opts.registry.clone(),
         },
     )?
     .unwrap();
@@ -320,6 +321,7 @@ pub fn registry(
     token: Option<String>,
     index: Option<String>,
     registry: Option<String>,
+    force_update: bool,
 ) -> CargoResult<(Registry, SourceId)> {
     // Parse all configuration options
     let RegistryConfig {
@@ -330,9 +332,17 @@ pub fn registry(
     let sid = get_source_id(config, index_config.or(index), registry)?;
     let api_host = {
         let mut src = RegistrySource::remote(sid, config);
-        src.update()
-            .chain_err(|| format!("failed to update {}", sid))?;
-        (src.config()?).unwrap().api.unwrap()
+        // Only update the index if the config is not available or `force` is set.
+        let cfg = src.config();
+        let cfg = if force_update || cfg.is_err() {
+            src.update()
+                .chain_err(|| format!("failed to update {}", sid))?;
+            cfg.or_else(|_| src.config())?
+        } else {
+            cfg.unwrap()
+        };
+        cfg.and_then(|cfg| cfg.api)
+            .ok_or_else(|| failure::format_err!("{} does not support API commands", sid))?
     };
     let handle = http_handle(config)?;
     Ok((Registry::new_handle(api_host, token, handle), sid))
@@ -503,18 +513,51 @@ fn http_proxy_exists(config: &Config) -> CargoResult<bool> {
     }
 }
 
-pub fn registry_login(config: &Config, token: String, registry: Option<String>) -> CargoResult<()> {
+pub fn registry_login(
+    config: &Config,
+    token: Option<String>,
+    reg: Option<String>,
+) -> CargoResult<()> {
+    let (registry, _) = registry(config, token.clone(), None, reg.clone(), false)?;
+
+    let token = match token {
+        Some(token) => token,
+        None => {
+            println!(
+                "please visit {}/me and paste the API Token below",
+                registry.host()
+            );
+            let mut line = String::new();
+            let input = io::stdin();
+            input
+                .lock()
+                .read_line(&mut line)
+                .chain_err(|| "failed to read stdin")
+                .map_err(failure::Error::from)?;
+            line.trim().to_string()
+        }
+    };
+
     let RegistryConfig {
         token: old_token, ..
-    } = registry_configuration(config, registry.clone())?;
+    } = registry_configuration(config, reg.clone())?;
 
     if let Some(old_token) = old_token {
         if old_token == token {
+            config.shell().status("Login", "already logged in")?;
             return Ok(());
         }
     }
 
-    config::save_credentials(config, token, registry)
+    config::save_credentials(config, token, reg.clone())?;
+    config.shell().status(
+        "Login",
+        format!(
+            "token for `{}` saved",
+            reg.as_ref().map_or("crates.io", String::as_str)
+        ),
+    )?;
+    Ok(())
 }
 
 pub struct OwnersOptions {
@@ -542,6 +585,7 @@ pub fn modify_owners(config: &Config, opts: &OwnersOptions) -> CargoResult<()> {
         opts.token.clone(),
         opts.index.clone(),
         opts.registry.clone(),
+        true,
     )?;
 
     if let Some(ref v) = opts.to_add {
@@ -602,7 +646,7 @@ pub fn yank(
         None => failure::bail!("a version must be specified to yank"),
     };
 
-    let (mut registry, _) = registry(config, token, index, reg)?;
+    let (mut registry, _) = registry(config, token, index, reg, true)?;
 
     if undo {
         config
@@ -658,22 +702,7 @@ pub fn search(
         prefix
     }
 
-    let sid = get_source_id(config, index, reg)?;
-
-    let mut regsrc = RegistrySource::remote(sid, config);
-    let cfg = match regsrc.config() {
-        Ok(c) => c,
-        Err(_) => {
-            regsrc
-                .update()
-                .chain_err(|| format!("failed to update {}", &sid))?;
-            regsrc.config()?
-        }
-    };
-
-    let api_host = cfg.unwrap().api.unwrap();
-    let handle = http_handle(config)?;
-    let mut registry = Registry::new_handle(api_host, None, handle);
+    let (mut registry, _) = registry(config, None, index, reg, false)?;
     let (crates, total_crates) = registry
         .search(query, limit)
         .chain_err(|| "failed to retrieve search results from the registry")?;

@@ -1,5 +1,5 @@
 #![warn(rust_2018_idioms)] // while we're getting used to 2018
-#![cfg_attr(feature="deny-warnings", deny(warnings))]
+#![cfg_attr(feature = "deny-warnings", deny(warnings))]
 #![allow(clippy::blacklisted_name)]
 #![allow(clippy::explicit_iter_loop)]
 
