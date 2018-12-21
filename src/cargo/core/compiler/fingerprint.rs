@@ -545,7 +545,11 @@ pub fn prepare_build_cmd<'a, 'cfg>(
     debug!("fingerprint at: {}", loc.display());
 
     let (local, output_path) = build_script_local_fingerprints(cx, unit)?;
-    let mut fingerprint = Fingerprint { local, ..Fingerprint::new() };
+    let mut fingerprint = Fingerprint {
+        local,
+        rustc: util::hash_u64(&cx.bcx.rustc.verbose_version),
+        ..Fingerprint::new()
+    };
     let compare = compare_old_fingerprint(&loc, &fingerprint);
     log_compare(unit, &compare);
 
@@ -648,6 +652,10 @@ fn local_fingerprints_deps(
 }
 
 fn write_fingerprint(loc: &Path, fingerprint: &Fingerprint) -> CargoResult<()> {
+    debug_assert_ne!(fingerprint.rustc, 0);
+    // fingerprint::new().rustc == 0, make sure it doesn't make it to the file system.
+    // This is mostly so outside tools can reliably find out what rust version this file is for,
+    // as we can use the full hash.
     let hash = fingerprint.hash();
     debug!("write fingerprint: {}", loc.display());
     paths::write(loc, util::to_hex(hash).as_bytes())?;
