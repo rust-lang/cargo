@@ -10,6 +10,12 @@ use crate::sources::PathSource;
 use crate::util::errors::{CargoResult, CargoResultExt};
 use crate::util::profile;
 
+const UNUSED_PATCH_WARNING: &str = "\
+Check that the patched package version and available features are compatible
+with the dependency requirements. If the patch has a different version from
+what is locked in the Cargo.lock file, run `cargo update` to use the new
+version. This may also occur with an optional dependency that is not enabled.";
+
 /// Resolve all dependencies for the workspace using the previous
 /// lockfile as a guide if present.
 ///
@@ -334,6 +340,24 @@ pub fn resolve_with_previous<'cfg>(
         warn,
     )?;
     resolved.register_used_patches(registry.patches());
+    if warn {
+        // It would be good if this warning was more targeted and helpful
+        // (such as showing close candidates that failed to match). However,
+        // that's not terribly easy to do, so just show a general help
+        // message.
+        let warnings: Vec<String> = resolved
+            .unused_patches()
+            .iter()
+            .map(|pkgid| format!("Patch `{}` was not used in the crate graph.", pkgid))
+            .collect();
+        if !warnings.is_empty() {
+            ws.config().shell().warn(format!(
+                "{}\n{}",
+                warnings.join("\n"),
+                UNUSED_PATCH_WARNING
+            ))?;
+        }
+    }
     if let Some(previous) = previous {
         resolved.merge_from(previous)?;
     }
