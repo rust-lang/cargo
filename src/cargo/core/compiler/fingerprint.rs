@@ -681,6 +681,10 @@ pub fn dep_info_loc<'a, 'cfg>(cx: &mut Context<'a, 'cfg>, unit: &Unit<'a>) -> Pa
 
 fn compare_old_fingerprint(loc: &Path, new_fingerprint: &Fingerprint) -> CargoResult<()> {
     let old_fingerprint_short = paths::read(loc)?;
+    let _ = paths::write(
+        &loc.with_file_name("last-used.timestamp"),
+        b"This file has an mtime of when cargo last used this fingerprint.",
+    );
     let new_hash = new_fingerprint.hash();
 
     if util::to_hex(new_hash) == old_fingerprint_short {
