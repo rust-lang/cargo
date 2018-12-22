@@ -9,7 +9,7 @@ use crate::core::dependency::Dependency;
 use crate::core::{PackageId, SourceId, Summary};
 use crate::sources::registry::RegistryData;
 use crate::sources::registry::{RegistryPackage, INDEX_LOCK};
-use crate::util::{internal, CargoResult, Config, Filesystem};
+use crate::util::{internal, CargoResult, Config, Filesystem, ToSemver};
 
 /// Crates.io treats hyphen and underscores as interchangeable
 /// but, the index and old cargo do not. So the index must store uncanonicalized version
@@ -293,7 +293,7 @@ impl<'cfg> RegistryIndex<'cfg> {
                 let mut vers = p[name.len() + 1..].splitn(2, "->");
                 if dep
                     .version_req()
-                    .matches(&Version::parse(vers.next().unwrap()).unwrap())
+                    .matches(&vers.next().unwrap().to_semver().unwrap())
                 {
                     vers.next().unwrap() == s.version().to_string()
                 } else {

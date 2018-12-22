@@ -6,7 +6,7 @@ use std::path::{Path, PathBuf};
 use std::sync::Arc;
 use std::{env, fs};
 
-use semver::{Version, VersionReq};
+use semver::VersionReq;
 use serde::{Deserialize, Serialize};
 use tempfile::Builder as TempFileBuilder;
 
@@ -19,7 +19,7 @@ use crate::ops::{self, CompileFilter};
 use crate::sources::{GitSource, PathSource, SourceConfigMap};
 use crate::util::errors::{CargoResult, CargoResultExt};
 use crate::util::paths;
-use crate::util::{internal, Config};
+use crate::util::{internal, Config, ToSemver};
 use crate::util::{FileLock, Filesystem};
 
 #[derive(Deserialize, Serialize)]
@@ -456,7 +456,7 @@ where
                                 v
                             ),
                         },
-                        _ => match v.parse::<Version>() {
+                        _ => match v.to_semver() {
                             Ok(v) => Some(format!("={}", v)),
                             Err(_) => {
                                 let mut msg = format!(
