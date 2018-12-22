@@ -61,7 +61,7 @@ impl PackageIdSpec {
         let mut parts = spec.splitn(2, ':');
         let name = parts.next().unwrap();
         let version = match parts.next() {
-            Some(version) => Some(Version::parse(version)?),
+            Some(version) => Some(version.to_semver()?),
             None => None,
         };
         validate_package_name(name, "pkgid", "")?;
@@ -274,7 +274,7 @@ impl<'de> de::Deserialize<'de> for PackageIdSpec {
 mod tests {
     use super::PackageIdSpec;
     use crate::core::{PackageId, SourceId};
-    use semver::Version;
+    use crate::util::ToSemver;
     use url::Url;
 
     #[test]
@@ -289,7 +289,7 @@ mod tests {
             "http://crates.io/foo#1.2.3",
             PackageIdSpec {
                 name: "foo".to_string(),
-                version: Some(Version::parse("1.2.3").unwrap()),
+                version: Some("1.2.3".to_semver().unwrap()),
                 url: Some(Url::parse("http://crates.io/foo").unwrap()),
             },
         );
@@ -297,7 +297,7 @@ mod tests {
             "http://crates.io/foo#bar:1.2.3",
             PackageIdSpec {
                 name: "bar".to_string(),
-                version: Some(Version::parse("1.2.3").unwrap()),
+                version: Some("1.2.3".to_semver().unwrap()),
                 url: Some(Url::parse("http://crates.io/foo").unwrap()),
             },
         );
@@ -313,7 +313,7 @@ mod tests {
             "crates.io/foo#1.2.3",
             PackageIdSpec {
                 name: "foo".to_string(),
-                version: Some(Version::parse("1.2.3").unwrap()),
+                version: Some("1.2.3".to_semver().unwrap()),
                 url: Some(Url::parse("cargo://crates.io/foo").unwrap()),
             },
         );
@@ -329,7 +329,7 @@ mod tests {
             "crates.io/foo#bar:1.2.3",
             PackageIdSpec {
                 name: "bar".to_string(),
-                version: Some(Version::parse("1.2.3").unwrap()),
+                version: Some("1.2.3".to_semver().unwrap()),
                 url: Some(Url::parse("cargo://crates.io/foo").unwrap()),
             },
         );
@@ -345,7 +345,7 @@ mod tests {
             "foo:1.2.3",
             PackageIdSpec {
                 name: "foo".to_string(),
-                version: Some(Version::parse("1.2.3").unwrap()),
+                version: Some("1.2.3".to_semver().unwrap()),
                 url: None,
             },
         );
