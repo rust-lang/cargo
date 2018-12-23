@@ -14,6 +14,7 @@ static MANIFEST_OUTPUT: &'static str = r#"
     "keywords": [],
     "license": null,
     "license_file": null,
+    "links": null,
     "description": null,
     "edition": "2015",
     "source":null,
