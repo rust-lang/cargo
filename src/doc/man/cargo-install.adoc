@@ -98,7 +98,7 @@ include::options-features.adoc[]
 include::options-target-triple.adoc[]
 
 *--debug*::
-    Build in debug mode instead of release mode.
+    Build with the `dev` profile instead the `release` profile.
 
 === Miscellaneous Options
 
