@@ -33,14 +33,20 @@ output of <code>cargo test&#8201;&#8212;&#8201;--help</code>.  As an example, th
 <div class="paragraph">
 <p>Tests are built with the <code>--test</code> option to <code>rustc</code> which creates an
 executable with a <code>main</code> function that automatically runs all functions
-annotated with the <code>#[test]</code> attribute in multiple threads. The libtest
-harness may be disabled by setting <code>harness = false</code> in the target manifest
-settings, in which case your code will need to provide its own <code>main</code> function
-to handle running tests.</p>
+annotated with the <code>#[test]</code> attribute in multiple threads. <code>#[bench]</code>
+annotated functions will also be run with one iteration to verify that they
+are functional.</p>
+</div>
+<div class="paragraph">
+<p>The libtest harness may be disabled by setting <code>harness = false</code> in the target
+manifest settings, in which case your code will need to provide its own <code>main</code>
+function to handle running tests.</p>
 </div>
 <div class="paragraph">
 <p>Documentation tests are also run by default, which is handled by <code>rustdoc</code>. It
-extracts code samples from documentation comments and executes them.</p>
+extracts code samples from documentation comments and executes them. See the
+<a href="https://doc.rust-lang.org/rustdoc/">rustdoc book</a> for more information on
+writing doc tests.</p>
 </div>
 </div>
 </div>
@@ -104,14 +110,14 @@ following targets of the selected packages:</p>
 <div class="ulist">
 <ul>
 <li>
-<p>lib – used to link with binaries, examples, integration tests, and doc tests</p>
+<p>lib — used to link with binaries, examples, integration tests, and doc tests</p>
 </li>
 <li>
 <p>bins (only if integration tests are built and required features are
 available)</p>
 </li>
 <li>
-<p>examples – to ensure they compile</p>
+<p>examples — to ensure they compile</p>
 </li>
 <li>
 <p>lib as a unit test</p>
@@ -171,10 +177,13 @@ times.</p>
 </dd>
 <dt class="hdlist1"><strong>--tests</strong></dt>
 <dd>
-<p>Test all tests. This includes both unit tests for libraries and binaries
-and integration tests. Targets may be disabled by setting <code>test = false</code>
-in the manifest settings for the target. Targets (such as examples) may be
-explicitly included by setting <code>test = true</code> in the target settings.</p>
+<p>Test all targets in test mode that have the <code>test = true</code> manifest
+flag set. By default this includes the library and binaries built as
+unittests, and integration tests. Be aware that this will also build any
+required dependencies, so the lib target may be built twice (once as a
+unittest, and once as a dependency for binaries, integration tests, etc.).
+Targets may be enabled or disabled by setting the <code>test</code> flag in the
+manifest settings for the target.</p>
 </dd>
 <dt class="hdlist1"><strong>--bench</strong> <em>NAME</em>&#8230;&#8203;</dt>
 <dd>
@@ -182,15 +191,18 @@ explicitly included by setting <code>test = true</code> in the target settings.<
 </dd>
 <dt class="hdlist1"><strong>--benches</strong></dt>
 <dd>
-<p>Test all benchmarks. This includes both unit benchmarks for libraries and
-binaries and bench targets. Targets may be disabled by setting <code>bench =
-false</code> in the manifest settings for the target. Targets (such as examples)
-may be explicitly included by setting <code>bench = true</code> in the target
-settings.</p>
+<p>Test all targets in benchmark mode that have the <code>bench = true</code>
+manifest flag set. By default this includes the library and binaries built
+as benchmarks, and bench targets. Be aware that this will also build any
+required dependencies, so the lib target may be built twice (once as a
+benchmark, and once as a dependency for binaries, benchmarks, etc.).
+Targets may be enabled or disabled by setting the <code>bench</code> flag in the
+manifest settings for the target.</p>
 </dd>
 <dt class="hdlist1"><strong>--all-targets</strong></dt>
 <dd>
-<p>Test all targets.</p>
+<p>Test all targets. This is equivalent to specifying <code>--lib --bins
+--tests --benches --examples</code>.</p>
 </dd>
 <dt class="hdlist1"><strong>--doc</strong></dt>
 <dd>
@@ -232,48 +244,18 @@ package.</p>
 <dl>
 <dt class="hdlist1"><strong>--target</strong> <em>TRIPLE</em></dt>
 <dd>
-<p>Test for the given architecture. The default is the host architecture.</p>
-<div class="paragraph">
-<p>The general format of the triple is <code>&lt;arch&gt;&lt;sub&gt;-&lt;vendor&gt;-&lt;sys&gt;-&lt;abi&gt;</code> where:</p>
-</div>
-<div class="ulist">
-<ul>
-<li>
-<p><code>arch</code> = The base CPU architecture, for example <code>x86_64</code>, <code>i686</code>, <code>arm</code>,
-<code>thumb</code>, <code>mips</code>, etc.</p>
-</li>
-<li>
-<p><code>sub</code> = The CPU sub-architecture, for example <code>arm</code> has <code>v7</code>, <code>v7s</code>, <code>v5te</code>,
-etc.</p>
-</li>
-<li>
-<p><code>vendor</code> = The vendor, for example <code>unknown</code>, <code>apple</code>, <code>pc</code>, <code>linux</code>, etc.</p>
-</li>
-<li>
-<p><code>sys</code> = The system name, for example <code>linux</code>, <code>windows</code>, etc. <code>none</code> is
-typically used for bare-metal without an OS.</p>
-</li>
-<li>
-<p><code>abi</code> = The ABI, for example <code>gnu</code>, <code>android</code>, <code>eabi</code>, etc.</p>
-</li>
-</ul>
-</div>
-<div class="openblock">
-<div class="content">
-<div class="paragraph">
-<p>Some parameters may be omitted. Run <code>rustc --print target-list</code> for a list of
-supported targets.</p>
-</div>
+<p>Test for the given architecture. The default is the host
+architecture. The general format of the triple is
+<code>&lt;arch&gt;&lt;sub&gt;-&lt;vendor&gt;-&lt;sys&gt;-&lt;abi&gt;</code>. Run <code>rustc --print target-list</code> for a
+list of supported targets.</p>
 <div class="paragraph">
 <p>This may also be specified with the <code>build.target</code>
 <a href="reference/config.html">config value</a>.</p>
 </div>
-</div>
-</div>
 </dd>
 <dt class="hdlist1"><strong>--release</strong></dt>
 <dd>
-<p>Test artifacts in release mode, with optimizations. See the
+<p>Test optimized artifacts with the <code>release</code> profile. See the
 <a href="#cargo_test_profiles">PROFILES</a> section for details on how this affects profile selection.</p>
 </dd>
 </dl>
@@ -444,11 +426,11 @@ for more details.</p>
 <code>dev</code> or <code>test</code> profiles are used. If the <code>--release</code> flag is given, then the
 <code>release</code> or <code>bench</code> profiles are used.</p>
 </div>
-<table class="tableblock frame-all grid-all stretch">
+<table class="tableblock frame-all grid-all fit-content">
 <colgroup>
-<col style="width: 33.3333%;">
-<col style="width: 33.3333%;">
-<col style="width: 33.3334%;">
+<col>
+<col>
+<col>
 </colgroup>
 <thead>
 <tr>
@@ -464,7 +446,8 @@ for more details.</p>
 <td class="tableblock halign-left valign-top"><p class="tableblock"><code>release</code></p></td>
 </tr>
 <tr>
-<td class="tableblock halign-left valign-top"><p class="tableblock">test, bench</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">test, bench, or any target<br>
+ in "test" or "bench" mode</p></td>
 <td class="tableblock halign-left valign-top"><p class="tableblock"><code>test</code></p></td>
 <td class="tableblock halign-left valign-top"><p class="tableblock"><code>bench</code></p></td>
 </tr>

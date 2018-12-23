@@ -42,6 +42,9 @@ If `-p` is not specified, all dependencies are updated.
     set the package to. If the package comes from a git repository, this can
     be a git revision (such as a SHA hash or tag).
 
+*--dry-run*::
+    Displays what would be updated, but doesn't actually write the lockfile.
+
 === Display Options
 
 include::options-display.adoc[]

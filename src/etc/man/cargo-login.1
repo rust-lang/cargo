@@ -2,12 +2,12 @@
 .\"     Title: cargo-login
 .\"    Author: [see the "AUTHOR(S)" section]
 .\" Generator: Asciidoctor 1.5.8
-.\"      Date: 2018-12-18
+.\"      Date: 2018-12-23
 .\"    Manual: \ \&
 .\"    Source: \ \&
 .\"  Language: English
 .\"
-.TH "CARGO\-LOGIN" "1" "2018-12-18" "\ \&" "\ \&"
+.TH "CARGO\-LOGIN" "1" "2018-12-23" "\ \&" "\ \&"
 .ie \n(.g .ds Aq \(aq
 .el       .ds Aq '
 .ss \n[.ss] 0
@@ -35,7 +35,7 @@ cargo\-login \- Save an API token from the registry locally
 .SH "DESCRIPTION"
 .sp
 This command will save the API token to disk so that commands that require
-authentication (such as \fBcargo\-publish\fP(1)) will be automatically
+authentication, such as \fBcargo\-publish\fP(1), will be automatically
 authenticated. The token is saved in \fB$CARGO_HOME/credentials\fP. \fBCARGO_HOME\fP
 defaults to \fB.cargo\fP in your home directory.
 .sp
@@ -47,12 +47,6 @@ The API token for crates.io may be retrieved from \c
 Take care to keep the token secret, it should not be shared with anyone else.
 .SH "OPTIONS"
 .SS "Login Options"
-.sp
-\fB\-\-host\fP \fIHOST\fP
-.RS 4
-Host to set the token for. This option does not affect the behavior of the
-login command, and only affects the message displayed.
-.RE
 .sp
 \fB\-\-registry\fP \fIREGISTRY\fP
 .RS 4

@@ -2,12 +2,12 @@
 .\"     Title: cargo-test
 .\"    Author: [see the "AUTHOR(S)" section]
 .\" Generator: Asciidoctor 1.5.8
-.\"      Date: 2018-12-18
+.\"      Date: 2018-12-23
 .\"    Manual: \ \&
 .\"    Source: \ \&
 .\"  Language: English
 .\"
-.TH "CARGO\-TEST" "1" "2018-12-18" "\ \&" "\ \&"
+.TH "CARGO\-TEST" "1" "2018-12-23" "\ \&" "\ \&"
 .ie \n(.g .ds Aq \(aq
 .el       .ds Aq '
 .ss \n[.ss] 0
@@ -52,13 +52,19 @@ cargo test foo \-\- \-\-test\-threads 3
 .sp
 Tests are built with the \fB\-\-test\fP option to \fBrustc\fP which creates an
 executable with a \fBmain\fP function that automatically runs all functions
-annotated with the \fB#[test]\fP attribute in multiple threads. The libtest
-harness may be disabled by setting \fBharness = false\fP in the target manifest
-settings, in which case your code will need to provide its own \fBmain\fP function
-to handle running tests.
+annotated with the \fB#[test]\fP attribute in multiple threads. \fB#[bench]\fP
+annotated functions will also be run with one iteration to verify that they
+are functional.
+.sp
+The libtest harness may be disabled by setting \fBharness = false\fP in the target
+manifest settings, in which case your code will need to provide its own \fBmain\fP
+function to handle running tests.
 .sp
 Documentation tests are also run by default, which is handled by \fBrustdoc\fP. It
-extracts code samples from documentation comments and executes them.
+extracts code samples from documentation comments and executes them. See the
+.URL "https://doc.rust\-lang.org/rustdoc/" "rustdoc book" " "
+for more information on
+writing doc tests.
 .SH "OPTIONS"
 .SS "Test Options"
 .sp
@@ -112,7 +118,7 @@ following targets of the selected packages:
 .  sp -1
 .  IP \(bu 2.3
 .\}
-lib – used to link with binaries, examples, integration tests, and doc tests
+lib — used to link with binaries, examples, integration tests, and doc tests
 .RE
 .sp
 .RS 4
@@ -135,7 +141,7 @@ available)
 .  sp -1
 .  IP \(bu 2.3
 .\}
-examples – to ensure they compile
+examples — to ensure they compile
 .RE
 .sp
 .RS 4
@@ -227,10 +233,13 @@ times.
 .sp
 \fB\-\-tests\fP
 .RS 4
-Test all tests. This includes both unit tests for libraries and binaries
-and integration tests. Targets may be disabled by setting \fBtest = false\fP
-in the manifest settings for the target. Targets (such as examples) may be
-explicitly included by setting \fBtest = true\fP in the target settings.
+Test all targets in test mode that have the \fBtest = true\fP manifest
+flag set. By default this includes the library and binaries built as
+unittests, and integration tests. Be aware that this will also build any
+required dependencies, so the lib target may be built twice (once as a
+unittest, and once as a dependency for binaries, integration tests, etc.).
+Targets may be enabled or disabled by setting the \fBtest\fP flag in the
+manifest settings for the target.
 .RE
 .sp
 \fB\-\-bench\fP \fINAME\fP...
@@ -240,16 +249,19 @@ Test the specified benchmark. This flag may be specified multiple times.
 .sp
 \fB\-\-benches\fP
 .RS 4
-Test all benchmarks. This includes both unit benchmarks for libraries and
-binaries and bench targets. Targets may be disabled by setting \fBbench =
-false\fP in the manifest settings for the target. Targets (such as examples)
-may be explicitly included by setting \fBbench = true\fP in the target
-settings.
+Test all targets in benchmark mode that have the \fBbench = true\fP
+manifest flag set. By default this includes the library and binaries built
+as benchmarks, and bench targets. Be aware that this will also build any
+required dependencies, so the lib target may be built twice (once as a
+benchmark, and once as a dependency for binaries, benchmarks, etc.).
+Targets may be enabled or disabled by setting the \fBbench\fP flag in the
+manifest settings for the target.
 .RE
 .sp
 \fB\-\-all\-targets\fP
 .RS 4
-Test all targets.
+Test all targets. This is equivalent to specifying \fB\-\-lib \-\-bins
+\-\-tests \-\-benches \-\-examples\fP.
 .RE
 .sp
 \fB\-\-doc\fP
@@ -283,70 +295,10 @@ package.
 .sp
 \fB\-\-target\fP \fITRIPLE\fP
 .RS 4
-Test for the given architecture. The default is the host architecture.
-.sp
-The general format of the triple is \fB<arch><sub>\-<vendor>\-<sys>\-<abi>\fP where:
-.sp
-.RS 4
-.ie n \{\
-\h'-04'\(bu\h'+03'\c
-.\}
-.el \{\
-.  sp -1
-.  IP \(bu 2.3
-.\}
-\fBarch\fP = The base CPU architecture, for example \fBx86_64\fP, \fBi686\fP, \fBarm\fP,
-\fBthumb\fP, \fBmips\fP, etc.
-.RE
-.sp
-.RS 4
-.ie n \{\
-\h'-04'\(bu\h'+03'\c
-.\}
-.el \{\
-.  sp -1
-.  IP \(bu 2.3
-.\}
-\fBsub\fP = The CPU sub\-architecture, for example \fBarm\fP has \fBv7\fP, \fBv7s\fP, \fBv5te\fP,
-etc.
-.RE
-.sp
-.RS 4
-.ie n \{\
-\h'-04'\(bu\h'+03'\c
-.\}
-.el \{\
-.  sp -1
-.  IP \(bu 2.3
-.\}
-\fBvendor\fP = The vendor, for example \fBunknown\fP, \fBapple\fP, \fBpc\fP, \fBlinux\fP, etc.
-.RE
-.sp
-.RS 4
-.ie n \{\
-\h'-04'\(bu\h'+03'\c
-.\}
-.el \{\
-.  sp -1
-.  IP \(bu 2.3
-.\}
-\fBsys\fP = The system name, for example \fBlinux\fP, \fBwindows\fP, etc. \fBnone\fP is
-typically used for bare\-metal without an OS.
-.RE
-.sp
-.RS 4
-.ie n \{\
-\h'-04'\(bu\h'+03'\c
-.\}
-.el \{\
-.  sp -1
-.  IP \(bu 2.3
-.\}
-\fBabi\fP = The ABI, for example \fBgnu\fP, \fBandroid\fP, \fBeabi\fP, etc.
-.RE
-.sp
-Some parameters may be omitted. Run \fBrustc \-\-print target\-list\fP for a list of
-supported targets.
+Test for the given architecture. The default is the host
+architecture. The general format of the triple is
+\fB<arch><sub>\-<vendor>\-<sys>\-<abi>\fP. Run \fBrustc \-\-print target\-list\fP for a
+list of supported targets.
 .sp
 This may also be specified with the \fBbuild.target\fP
 .URL "https://doc.rust\-lang.org/cargo/reference/config.html" "config value" "."
@@ -354,7 +306,7 @@ This may also be specified with the \fBbuild.target\fP
 .sp
 \fB\-\-release\fP
 .RS 4
-Test artifacts in release mode, with optimizations. See the
+Test optimized artifacts with the \fBrelease\fP profile. See the
 PROFILES section for details on how this affects profile selection.
 .RE
 .SS "Output Options"
@@ -559,7 +511,9 @@ T}:T{
 T}
 T{
 .sp
-test, bench
+test, bench, or any target
+.br
+in "test" or "bench" mode
 T}:T{
 .sp
 \fBtest\fP
