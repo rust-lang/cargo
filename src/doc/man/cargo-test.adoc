@@ -28,13 +28,18 @@ output of `cargo test -- --help`.  As an example, this will run all tests with
 
 Tests are built with the `--test` option to `rustc` which creates an
 executable with a `main` function that automatically runs all functions
-annotated with the `#[test]` attribute in multiple threads. The libtest
-harness may be disabled by setting `harness = false` in the target manifest
-settings, in which case your code will need to provide its own `main` function
-to handle running tests.
+annotated with the `\#[test]` attribute in multiple threads. `#[bench]`
+annotated functions will also be run with one iteration to verify that they
+are functional.
+
+The libtest harness may be disabled by setting `harness = false` in the target
+manifest settings, in which case your code will need to provide its own `main`
+function to handle running tests.
 
 Documentation tests are also run by default, which is handled by `rustdoc`. It
-extracts code samples from documentation comments and executes them.
+extracts code samples from documentation comments and executes them. See the
+link:https://doc.rust-lang.org/rustdoc/[rustdoc book] for more information on
+writing doc tests.
 
 == OPTIONS
 
@@ -51,10 +56,10 @@ include::options-packages.adoc[]
 When no target selection options are given, `cargo test` will build the
 following targets of the selected packages:
 
-- lib – used to link with binaries, examples, integration tests, and doc tests
+- lib — used to link with binaries, examples, integration tests, and doc tests
 - bins (only if integration tests are built and required features are
   available)
-- examples – to ensure they compile
+- examples — to ensure they compile
 - lib as a unit test
 - bins as unit tests
 - integration tests

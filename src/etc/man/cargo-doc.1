@@ -2,12 +2,12 @@
 .\"     Title: cargo-doc
 .\"    Author: [see the "AUTHOR(S)" section]
 .\" Generator: Asciidoctor 1.5.8
-.\"      Date: 2018-12-18
+.\"      Date: 2018-12-20
 .\"    Manual: \ \&
 .\"    Source: \ \&
 .\"  Language: English
 .\"
-.TH "CARGO\-DOC" "1" "2018-12-18" "\ \&" "\ \&"
+.TH "CARGO\-DOC" "1" "2018-12-20" "\ \&" "\ \&"
 .ie \n(.g .ds Aq \(aq
 .el       .ds Aq '
 .ss \n[.ss] 0
@@ -129,70 +129,10 @@ package.
 .sp
 \fB\-\-target\fP \fITRIPLE\fP
 .RS 4
-Document for the given architecture. The default is the host architecture.
-.sp
-The general format of the triple is \fB<arch><sub>\-<vendor>\-<sys>\-<abi>\fP where:
-.sp
-.RS 4
-.ie n \{\
-\h'-04'\(bu\h'+03'\c
-.\}
-.el \{\
-.  sp -1
-.  IP \(bu 2.3
-.\}
-\fBarch\fP = The base CPU architecture, for example \fBx86_64\fP, \fBi686\fP, \fBarm\fP,
-\fBthumb\fP, \fBmips\fP, etc.
-.RE
-.sp
-.RS 4
-.ie n \{\
-\h'-04'\(bu\h'+03'\c
-.\}
-.el \{\
-.  sp -1
-.  IP \(bu 2.3
-.\}
-\fBsub\fP = The CPU sub\-architecture, for example \fBarm\fP has \fBv7\fP, \fBv7s\fP, \fBv5te\fP,
-etc.
-.RE
-.sp
-.RS 4
-.ie n \{\
-\h'-04'\(bu\h'+03'\c
-.\}
-.el \{\
-.  sp -1
-.  IP \(bu 2.3
-.\}
-\fBvendor\fP = The vendor, for example \fBunknown\fP, \fBapple\fP, \fBpc\fP, \fBlinux\fP, etc.
-.RE
-.sp
-.RS 4
-.ie n \{\
-\h'-04'\(bu\h'+03'\c
-.\}
-.el \{\
-.  sp -1
-.  IP \(bu 2.3
-.\}
-\fBsys\fP = The system name, for example \fBlinux\fP, \fBwindows\fP, etc. \fBnone\fP is
-typically used for bare\-metal without an OS.
-.RE
-.sp
-.RS 4
-.ie n \{\
-\h'-04'\(bu\h'+03'\c
-.\}
-.el \{\
-.  sp -1
-.  IP \(bu 2.3
-.\}
-\fBabi\fP = The ABI, for example \fBgnu\fP, \fBandroid\fP, \fBeabi\fP, etc.
-.RE
-.sp
-Some parameters may be omitted. Run \fBrustc \-\-print target\-list\fP for a list of
-supported targets.
+Document for the given architecture. The default is the host
+architecture. The general format of the triple is
+\fB<arch><sub>\-<vendor>\-<sys>\-<abi>\fP. Run \fBrustc \-\-print target\-list\fP for a
+list of supported targets.
 .sp
 This may also be specified with the \fBbuild.target\fP
 .URL "https://doc.rust\-lang.org/cargo/reference/config.html" "config value" "."
@@ -200,7 +140,7 @@ This may also be specified with the \fBbuild.target\fP
 .sp
 \fB\-\-release\fP
 .RS 4
-Document artifacts in release mode, with optimizations. See the
+Document optimized artifacts with the \fBrelease\fP profile. See the
 PROFILES section for details on how this affects profile selection.
 .RE
 .SS "Output Options"
@@ -385,7 +325,9 @@ T}:T{
 T}
 T{
 .sp
-test, bench
+test, bench, or any target
+.br
+in "test" or "bench" mode
 T}:T{
 .sp
 \fBtest\fP
