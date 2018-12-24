@@ -2,12 +2,12 @@
 .\"     Title: cargo-metadata
 .\"    Author: [see the "AUTHOR(S)" section]
 .\" Generator: Asciidoctor 1.5.8
-.\"      Date: 2018-12-18
+.\"      Date: 2018-12-23
 .\"    Manual: \ \&
 .\"    Source: \ \&
 .\"  Language: English
 .\"
-.TH "CARGO\-METADATA" "1" "2018-12-18" "\ \&" "\ \&"
+.TH "CARGO\-METADATA" "1" "2018-12-23" "\ \&" "\ \&"
 .ie \n(.g .ds Aq \(aq
 .el       .ds Aq '
 .ss \n[.ss] 0
@@ -191,7 +191,11 @@ The output has the following format:
             /* The default edition of the package.
                Note that individual targets may have different editions.
             */
-            "edition": "2018"
+            "edition": "2018",
+            /* Optional string that is the name of a native library the package
+               is linking to.
+            */
+            "links": null,
         }
     ],
     /* Array of members of the workspace.
