@@ -29,10 +29,12 @@ like `foobar`):
 
 Benchmarks are built with the `--test` option to `rustc` which creates an
 executable with a `main` function that automatically runs all functions
-annotated with the `#[bench]` attribute. The libtest harness may be disabled
-by setting `harness = false` in the target manifest settings, in which case
-your code will need to provide its own `main` function to handle running
-benchmarks.
+annotated with the `#[bench]` attribute. Cargo passes the `--bench` flag to
+the test harness to tell it to run only benchmarks.
+
+The libtest harness may be disabled by setting `harness = false` in the target
+manifest settings, in which case your code will need to provide its own `main`
+function to handle running benchmarks.
 
 == OPTIONS
 
@@ -49,7 +51,7 @@ include::options-packages.adoc[]
 When no target selection options are given, `cargo bench` will build the
 following targets of the selected packages:
 
-- lib – used to link with binaries and benchmarks
+- lib — used to link with binaries and benchmarks
 - bins (only if benchmark targets are built and required features are
   available)
 - lib as a benchmark

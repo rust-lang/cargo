@@ -108,20 +108,33 @@ The meaning of the term *target* depends on the context:
   test, and benchmark targets. The [list of targets][targets] are configured
   in the `Cargo.toml` manifest, often inferred automatically by the [directory
   layout] of the source files.
-- **Target Architecture** — The OS and machine architecture for the built
-  artifacts are typically referred to as a *target*.
-- **Target Triple** — A triple is a specific format for specifying a target
-  architecture. See the [clang documentation] for details. Triples may be
-  referred to as a *target triple* which is the architecture for the artifact
-  produced, and the *host triple* which is the architecture that the compiler
-  is running on. The target triple can be specified with the `--target`
-  command-line option or the `build.target` [config option].
 - **Target Directory** — Cargo places all built artifacts and intermediate
   files in the *target* directory. By default this is a directory named
   `target` at the workspace root, or the package root if not using a
-  workspace. The directory be changed with the `--target-dir` command-line option,
-  the `CARGO_TARGET_DIR` [environment variable], or the `build.target-dir`
-  [config option].
+  workspace. The directory may be changed with the `--target-dir` command-line
+  option, the `CARGO_TARGET_DIR` [environment variable], or the
+  `build.target-dir` [config option].
+- **Target Architecture** — The OS and machine architecture for the built
+  artifacts are typically referred to as a *target*.
+- **Target Triple** — A triple is a specific format for specifying a target
+  architecture. Triples may be referred to as a *target triple* which is the
+  architecture for the artifact produced, and the *host triple* which is the
+  architecture that the compiler is running on. The target triple can be
+  specified with the `--target` command-line option or the `build.target`
+  [config option]. The general format of the triple is
+  `<arch><sub>-<vendor>-<sys>-<abi>` where:
+
+  - `arch` = The base CPU architecture, for example `x86_64`, `i686`, `arm`,
+    `thumb`, `mips`, etc.
+  - `sub` = The CPU sub-architecture, for example `arm` has `v7`, `v7s`,
+    `v5te`, etc.
+  - `vendor` = The vendor, for example `unknown`, `apple`, `pc`, `linux`, etc.
+  - `sys` = The system name, for example `linux`, `windows`, etc. `none` is
+    typically used for bare-metal without an OS.
+  - `abi` = The ABI, for example `gnu`, `android`, `eabi`, etc.
+
+  Some parameters may be omitted. Run `rustc --print target-list` for a list of
+  supported targets.
 
 ### Test Targets
 
@@ -157,7 +170,6 @@ manifest is located.
 [Local Registry Sources]: reference/source-replacement.html#local-registry-sources
 [Source Replacement]: reference/source-replacement.html
 [cargo-unstable]: https://doc.rust-lang.org/nightly/cargo/reference/unstable.html
-[clang documentation]: http://clang.llvm.org/docs/CrossCompilation.html#target-triple
 [config option]: reference/config.html
 [directory layout]: reference/manifest.html#the-project-layout
 [edition guide]: https://rust-lang-nursery.github.io/edition-guide/
