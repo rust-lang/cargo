@@ -71,6 +71,7 @@ struct SerializedPackage<'a> {
     readme: Option<&'a str>,
     repository: Option<&'a str>,
     edition: &'a str,
+    links: Option<&'a str>,
     #[serde(skip_serializing_if = "Option::is_none")]
     metabuild: Option<&'a Vec<String>>,
 }
@@ -120,6 +121,7 @@ impl ser::Serialize for Package {
             readme,
             repository,
             edition: &self.manifest.edition().to_string(),
+            links: self.manifest.links(),
             metabuild: self.manifest.metabuild(),
         }
         .serialize(s)

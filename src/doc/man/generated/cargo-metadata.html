@@ -177,7 +177,11 @@ for a Rust API for reading the metadata.</p>
             /* The default edition of the package.
                Note that individual targets may have different editions.
             */
-            "edition": "2018"
+            "edition": "2018",
+            /* Optional string that is the name of a native library the package
+               is linking to.
+            */
+            "links": null,
         }
     ],
     /* Array of members of the workspace.

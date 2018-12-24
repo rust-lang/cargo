@@ -27,6 +27,7 @@ fn cargo_metadata_simple() {
                 "edition": "2015",
                 "license": null,
                 "license_file": null,
+                "links": null,
                 "description": null,
                 "readme": null,
                 "repository": null,
@@ -116,6 +117,7 @@ crate-type = ["lib", "staticlib"]
                 "edition": "2015",
                 "license": null,
                 "license_file": null,
+                "links": null,
                 "description": null,
                 "targets": [
                     {
@@ -195,6 +197,7 @@ optional_feat = []
                 "edition": "2015",
                 "license": null,
                 "license_file": null,
+                "links": null,
                 "description": null,
                 "targets": [
                     {
@@ -287,6 +290,7 @@ fn cargo_metadata_with_deps_and_version() {
                 "keywords": [],
                 "license": null,
                 "license_file": null,
+                "links": null,
                 "manifest_path": "[..]Cargo.toml",
                 "metadata": null,
                 "name": "baz",
@@ -342,6 +346,7 @@ fn cargo_metadata_with_deps_and_version() {
                 "keywords": [],
                 "license": "MIT",
                 "license_file": null,
+                "links": null,
                 "manifest_path": "[..]Cargo.toml",
                 "metadata": null,
                 "name": "foo",
@@ -374,6 +379,7 @@ fn cargo_metadata_with_deps_and_version() {
                 "keywords": [],
                 "license": null,
                 "license_file": null,
+                "links": null,
                 "manifest_path": "[..]Cargo.toml",
                 "metadata": null,
                 "name": "foobar",
@@ -418,6 +424,7 @@ fn cargo_metadata_with_deps_and_version() {
                 "keywords": [],
                 "license": null,
                 "license_file": null,
+                "links": null,
                 "manifest_path": "[..]Cargo.toml",
                 "metadata": null,
                 "name": "bar",
@@ -533,6 +540,7 @@ name = "ex"
                 "keywords": [],
                 "license": null,
                 "license_file": null,
+                "links": null,
                 "description": null,
                 "edition": "2015",
                 "source": null,
@@ -615,6 +623,7 @@ crate-type = ["rlib", "dylib"]
                 "keywords": [],
                 "license": null,
                 "license_file": null,
+                "links": null,
                 "description": null,
                 "edition": "2015",
                 "source": null,
@@ -698,6 +707,7 @@ fn workspace_metadata() {
                 "dependencies": [],
                 "license": null,
                 "license_file": null,
+                "links": null,
                 "description": null,
                 "edition": "2015",
                 "targets": [
@@ -728,6 +738,7 @@ fn workspace_metadata() {
                 "dependencies": [],
                 "license": null,
                 "license_file": null,
+                "links": null,
                 "description": null,
                 "edition": "2015",
                 "targets": [
@@ -806,6 +817,7 @@ fn workspace_metadata_no_deps() {
                 "dependencies": [],
                 "license": null,
                 "license_file": null,
+                "links": null,
                 "description": null,
                 "edition": "2015",
                 "targets": [
@@ -836,6 +848,7 @@ fn workspace_metadata_no_deps() {
                 "dependencies": [],
                 "license": null,
                 "license_file": null,
+                "links": null,
                 "description": null,
                 "edition": "2015",
                 "targets": [
@@ -893,6 +906,7 @@ const MANIFEST_OUTPUT: &str = r#"
         "keywords": [],
         "license": null,
         "license_file": null,
+        "links": null,
         "description": null,
         "edition": "2015",
         "targets":[{
@@ -1070,6 +1084,7 @@ fn package_metadata() {
                 "edition": "2015",
                 "license": null,
                 "license_file": null,
+                "links": null,
                 "description": null,
                 "targets": [
                     {
@@ -1137,6 +1152,7 @@ fn cargo_metadata_path_to_cargo_toml_project() {
                 "keywords": [],
                 "license": null,
                 "license_file": null,
+                "links": null,
                 "manifest_path": "[..]Cargo.toml",
                 "metadata": null,
                 "name": "bar",
@@ -1218,6 +1234,7 @@ fn package_edition_2018() {
                     "keywords": [],
                     "license": null,
                     "license_file": null,
+                    "links": null,
                     "manifest_path": "[..]Cargo.toml",
                     "metadata": null,
                     "name": "foo",
@@ -1303,6 +1320,7 @@ fn target_edition_2018() {
                     "keywords": [],
                     "license": null,
                     "license_file": null,
+                    "links": null,
                     "manifest_path": "[..]Cargo.toml",
                     "metadata": null,
                     "name": "foo",
@@ -1423,6 +1441,7 @@ fn rename_dependency() {
             "keywords": [],
             "license": null,
             "license_file": null,
+            "links": null,
             "manifest_path": "[..]",
             "metadata": null,
             "name": "foo",
@@ -1455,6 +1474,7 @@ fn rename_dependency() {
             "keywords": [],
             "license": null,
             "license_file": null,
+            "links": null,
             "manifest_path": "[..]",
             "metadata": null,
             "name": "bar",
@@ -1487,6 +1507,7 @@ fn rename_dependency() {
             "keywords": [],
             "license": null,
             "license_file": null,
+            "links": null,
             "manifest_path": "[..]",
             "metadata": null,
             "name": "bar",
@@ -1553,4 +1574,91 @@ fn rename_dependency() {
 }"#,
         )
         .run();
+}
+
+#[test]
+fn metadata_links() {
+    let p = project()
+        .file(
+            "Cargo.toml",
+            r#"
+            [project]
+            name = "foo"
+            version = "0.5.0"
+            links = "a"
+            "#,
+        )
+        .file("src/lib.rs", "")
+        .file("build.rs", "fn main() {}")
+        .build();
+
+    p.cargo("metadata")
+        .with_json(r#"
+{
+  "packages": [
+    {
+      "authors": [],
+      "categories": [],
+      "dependencies": [],
+      "description": null,
+      "edition": "2015",
+      "features": {},
+      "id": "foo 0.5.0 [..]",
+      "keywords": [],
+      "license": null,
+      "license_file": null,
+      "links": "a",
+      "manifest_path": "[..]/foo/Cargo.toml",
+      "metadata": null,
+      "name": "foo",
+      "readme": null,
+      "repository": null,
+      "source": null,
+      "targets": [
+        {
+          "crate_types": [
+            "lib"
+          ],
+          "edition": "2015",
+          "kind": [
+            "lib"
+          ],
+          "name": "foo",
+          "src_path": "[..]/foo/src/lib.rs"
+        },
+        {
+          "crate_types": [
+            "bin"
+          ],
+          "edition": "2015",
+          "kind": [
+            "custom-build"
+          ],
+          "name": "build-script-build",
+          "src_path": "[..]/foo/build.rs"
+        }
+      ],
+      "version": "0.5.0"
+    }
+  ],
+  "resolve": {
+    "nodes": [
+      {
+        "dependencies": [],
+        "deps": [],
+        "features": [],
+        "id": "foo 0.5.0 [..]"
+      }
+    ],
+    "root": "foo 0.5.0 [..]"
+  },
+  "target_directory": "[..]/foo/target",
+  "version": 1,
+  "workspace_members": [
+    "foo 0.5.0 [..]"
+  ],
+  "workspace_root": "[..]/foo"
+}
+"#)
+        .run()
 }
