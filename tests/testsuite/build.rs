@@ -2401,7 +2401,7 @@ fn rebuild_on_mid_build_file_modification() {
     let server = TcpListener::bind("127.0.0.1:0").unwrap();
     let addr = server.local_addr().unwrap();
 
-    let p = project("p")
+    let p = project()
         .file(
             "Cargo.toml",
             r#"
@@ -2480,29 +2480,24 @@ fn rebuild_on_mid_build_file_modification() {
         drop(server.accept().unwrap());
     });
 
-    assert_that(
-        p.cargo("build"),
-        execs().stream().with_status(0)
-//            .with_stderr(&format!(
-//            "\
-//[COMPILING] proc_macro_dep v0.1.0 ({url}/proc_macro_dep)
-//[COMPILING] root v0.1.0 ({url}/root)
-//[FINISHED] dev [unoptimized + debuginfo] target(s) in [..]
-//",
-//            url = p.url()
-//        )),
-    );
-
-    assert_that(
-        p.cargo("build"),
-        execs().stream().with_status(0).with_stderr(&format!(
+    p.cargo("build")
+        .with_stderr(
             "\
-[COMPILING] root v0.1.0 ({url}/root)
+[COMPILING] proc_macro_dep v0.1.0 ([..]/proc_macro_dep)
+[COMPILING] root v0.1.0 ([..]/root)
 [FINISHED] dev [unoptimized + debuginfo] target(s) in [..]
 ",
-            url = p.url()
-        )),
-    );
+        )
+        .run();
+
+    p.cargo("build")
+        .with_stderr(
+            "\
+[COMPILING] root v0.1.0 ([..]/root)
+[FINISHED] dev [unoptimized + debuginfo] target(s) in [..]
+",
+        )
+        .run();
 
     t.join().ok().unwrap();
 }
