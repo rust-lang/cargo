@@ -292,6 +292,10 @@ fn rustc<'a, 'cfg>(
         }
 
         state.running(&rustc);
+        paths::write(
+            &dep_info_loc.with_file_name("invoked.timestamp"),
+            b"This file has an mtime of when rustc was started.",
+        )?;
         if json_messages {
             exec.exec_json(
                 rustc,

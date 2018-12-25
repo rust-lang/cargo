@@ -332,6 +332,10 @@ fn build_work<'a, 'cfg>(cx: &mut Context<'a, 'cfg>, unit: &Unit<'a>) -> CargoRes
             state.build_plan(invocation_name, cmd.clone(), Arc::new(Vec::new()));
         } else {
             state.running(&cmd);
+            paths::write(
+                &output_file.with_file_name("invoked.timestamp"),
+                b"This file has an mtime of when this build-script was started.",
+            )?;
             let output = if extra_verbose {
                 let prefix = format!("[{} {}] ", id.name(), id.version());
                 state.capture_output(&cmd, Some(prefix), true)
