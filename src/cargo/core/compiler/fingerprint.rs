@@ -239,7 +239,7 @@ impl Fingerprint {
         for local in self.local.iter() {
             match *local {
                 LocalFingerprint::MtimeBased(ref slot, ref path) => {
-                    let path = root.join(path);
+                    let path = root.join(&path.with_file_name("invoked.timestamp"));
                     let mtime = paths::mtime(&path)?;
                     *slot.0.lock().unwrap() = Some(mtime);
                 }
@@ -746,7 +746,7 @@ where
     I: IntoIterator,
     I::Item: AsRef<Path>,
 {
-    let mtime = match paths::mtime(output) {
+    let mtime = match paths::mtime(&output.with_file_name("invoked.timestamp")) {
         Ok(mtime) => mtime,
         Err(..) => return None,
     };
@@ -764,14 +764,14 @@ where
         // Note that equal mtimes are considered "stale". For filesystems with
         // not much timestamp precision like 1s this is a conservative approximation
         // to handle the case where a file is modified within the same second after
-        // a build finishes. We want to make sure that incremental rebuilds pick that up!
+        // a build starts. We want to make sure that incremental rebuilds pick that up!
         //
         // For filesystems with nanosecond precision it's been seen in the wild that
         // its "nanosecond precision" isn't really nanosecond-accurate. It turns out that
         // kernels may cache the current time so files created at different times actually
         // list the same nanosecond precision. Some digging on #5919 picked up that the
         // kernel caches the current time between timer ticks, which could mean that if
-        // a file is updated at most 10ms after a build finishes then Cargo may not
+        // a file is updated at most 10ms after a build starts then Cargo may not
         // pick up the build changes.
         //
         // All in all, the equality check here is a conservative assumption that,
