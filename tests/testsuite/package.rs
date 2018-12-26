@@ -1298,3 +1298,67 @@ To proceed despite this, pass the `--no-verify` flag.",
 
     p.cargo("package --no-verify").run();
 }
+
+#[test]
+fn package_with_select_features() {
+    let p = project()
+        .file(
+            "Cargo.toml",
+            r#"
+            cargo-features = ["alternative-registries"]
+
+            [project]
+            name = "foo"
+            version = "0.0.1"
+            authors = []
+            license = "MIT"
+            description = "foo"
+
+            [features]
+            required = []
+            optional = []
+        "#,
+        ).file(
+            "src/main.rs",
+            "#[cfg(not(feature = \"required\"))]
+             compile_error!(\"This crate requires `required` feature!\");
+             fn main() {}",
+        ).build();
+
+    p.cargo("package --features required")
+        .masquerade_as_nightly_cargo()
+        .with_status(0)
+        .run();
+}
+
+#[test]
+fn package_with_all_features() {
+    let p = project()
+        .file(
+            "Cargo.toml",
+            r#"
+            cargo-features = ["alternative-registries"]
+
+            [project]
+            name = "foo"
+            version = "0.0.1"
+            authors = []
+            license = "MIT"
+            description = "foo"
+
+            [features]
+            required = []
+            optional = []
+        "#,
+        ).file(
+            "src/main.rs",
+            "#[cfg(not(feature = \"required\"))]
+             compile_error!(\"This crate requires `required` feature!\");
+             fn main() {}",
+        ).build();
+
+    p.cargo("package --all-features")
+        .masquerade_as_nightly_cargo()
+        .with_status(0)
+        .run();
+}
