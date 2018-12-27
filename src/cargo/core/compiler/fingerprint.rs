@@ -228,7 +228,6 @@ struct MtimeSlot(Mutex<Option<FileTime>>);
 
 impl Fingerprint {
     fn update_local(&self, root: &Path) -> CargoResult<()> {
-        let mut hash_busted = false;
         for local in self.local.iter() {
             match *local {
                 LocalFingerprint::MtimeBased(ref slot, ref path) => {
@@ -238,12 +237,9 @@ impl Fingerprint {
                 }
                 LocalFingerprint::EnvBased(..) | LocalFingerprint::Precalculated(..) => continue,
             }
-            hash_busted = true;
         }
 
-        if hash_busted {
-            *self.memoized_hash.lock().unwrap() = None;
-        }
+        *self.memoized_hash.lock().unwrap() = None;
         Ok(())
     }
 
