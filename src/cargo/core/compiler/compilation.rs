@@ -89,6 +89,9 @@ impl<'cfg> Compilation<'cfg> {
         } else {
             bcx.rustc.process()
         };
+        if bcx.config.extra_verbose() {
+            rustc.display_env_vars();
+        }
         for (k, v) in bcx.build_config.extra_rustc_env.iter() {
             rustc.env(k, v);
         }

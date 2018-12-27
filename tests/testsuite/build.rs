@@ -1553,6 +1553,40 @@ fn crate_authors_env_vars() {
     p.cargo("test -v").run();
 }
 
+#[test]
+fn vv_prints_rustc_env_vars() {
+    let p = project()
+        .file(
+            "Cargo.toml",
+            r#"
+            [project]
+            name = "foo"
+            version = "0.0.1"
+            authors = ["escape='\"@example.com"]
+        "#,
+        )
+        .file("src/main.rs", "fn main() {}")
+        .build();
+
+    let mut b = p.cargo("build -vv");
+
+    if cfg!(windows) {
+        b.with_stderr_contains(
+            "[RUNNING] `[..]set CARGO_PKG_NAME=foo && [..]rustc [..]`"
+        ).with_stderr_contains(
+            r#"[RUNNING] `[..]set CARGO_PKG_AUTHORS="escape='\"@example.com" && [..]rustc [..]`"#
+        )
+    } else {
+        b.with_stderr_contains(
+            "[RUNNING] `[..]CARGO_PKG_NAME=foo [..]rustc [..]`"
+        ).with_stderr_contains(
+            r#"[RUNNING] `[..]CARGO_PKG_AUTHORS='escape='\''"@example.com' [..]rustc [..]`"#
+        )
+    };
+
+    b.run();
+}
+
 // The tester may already have LD_LIBRARY_PATH=::/foo/bar which leads to a false positive error
 fn setenv_for_removing_empty_component(mut execs: Execs) -> Execs {
     let v = dylib_path_envvar();
