@@ -40,7 +40,7 @@ impl fmt::Display for ProcessBuilder {
                 if let Some(val) = val {
                     let val = escape(val.to_string_lossy());
                     if cfg!(windows) {
-                        write!(f, "set {}={} && ", key, val)?;
+                        write!(f, "set {}={}&& ", key, val)?;
                     } else {
                         write!(f, "{}={} ", key, val)?;
                     }
