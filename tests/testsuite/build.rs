@@ -1,8 +1,6 @@
 use std::env;
-use std::fs::{self, File, OpenOptions};
+use std::fs::{self, File};
 use std::io::prelude::*;
-use std::net::TcpListener;
-use std::thread;
 
 use crate::support::paths::{root, CargoPathExt};
 use crate::support::registry::Package;
@@ -2394,112 +2392,6 @@ fn rebuild_preserves_out_dir() {
 ",
         )
         .run();
-}
-
-#[test]
-fn rebuild_on_mid_build_file_modification() {
-    let server = TcpListener::bind("127.0.0.1:0").unwrap();
-    let addr = server.local_addr().unwrap();
-
-    let p = project()
-        .file(
-            "Cargo.toml",
-            r#"
-            [workspace]
-            members = ["root", "proc_macro_dep"]
-        "#,
-        )
-        .file(
-            "root/Cargo.toml",
-            r#"
-            [project]
-            name = "root"
-            version = "0.1.0"
-            authors = []
-
-            [dependencies]
-            proc_macro_dep = { path = "../proc_macro_dep" }
-        "#,
-        )
-        .file(
-            "root/src/lib.rs",
-            r#"
-            #[macro_use]
-            extern crate proc_macro_dep;
-
-            #[derive(Noop)]
-            pub struct X;
-        "#,
-        )
-        .file(
-            "proc_macro_dep/Cargo.toml",
-            r#"
-            [project]
-            name = "proc_macro_dep"
-            version = "0.1.0"
-            authors = []
-
-            [lib]
-            proc-macro = true
-        "#,
-        )
-        .file(
-            "proc_macro_dep/src/lib.rs",
-            &format!(
-                r#"
-                extern crate proc_macro;
-
-                use std::io::Read;
-                use std::net::TcpStream;
-                use proc_macro::TokenStream;
-
-                #[proc_macro_derive(Noop)]
-                pub fn noop(_input: TokenStream) -> TokenStream {{
-                    let mut stream = TcpStream::connect("{}").unwrap();
-                    let mut v = Vec::new();
-                    stream.read_to_end(&mut v).unwrap();
-                    "".parse().unwrap()
-                }}
-            "#,
-                addr
-            ),
-        )
-        .build();
-    let root = p.root();
-
-    let t = thread::spawn(move || {
-        let socket = server.accept().unwrap().0;
-        let mut file = OpenOptions::new()
-            .write(true)
-            .append(true)
-            .open(root.join("root/src/lib.rs"))
-            .unwrap();
-        writeln!(file, "// modified").expect("Failed to append to root sources");
-        drop(file);
-        drop(socket);
-        drop(server.accept().unwrap());
-    });
-
-    p.cargo("build")
-        .with_stderr(
-            "\
-[COMPILING] proc_macro_dep v0.1.0 ([..]/proc_macro_dep)
-[COMPILING] root v0.1.0 ([..]/root)
-[FINISHED] dev [unoptimized + debuginfo] target(s) in [..]
-",
-        )
-        .run();
-
-    p.cargo("build")
-        .with_stderr(
-            "\
-[COMPILING] root v0.1.0 ([..]/root)
-[FINISHED] dev [unoptimized + debuginfo] target(s) in [..]
-",
-        )
-        .run();
-
-    t.join().ok().unwrap();
 }
 
 #[test]
