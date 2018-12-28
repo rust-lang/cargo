@@ -51,7 +51,7 @@ repository with multiple crates) the `<crate>` argument is required to indicate
 which crate should be installed.
 
 Crates from crates.io can optionally specify the version they wish to install
-via the `--vers` flags, and similarly packages from git repositories can
+via the `--version` flags, and similarly packages from git repositories can
 optionally specify the branch, tag, or revision that should be installed. If a
 crate has multiple binaries, the `--bin` argument can selectively install only
 one of them, and if you'd rather install examples the `--example` argument can
