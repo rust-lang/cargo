@@ -340,7 +340,7 @@ pub fn resolve_with_previous<'cfg>(
         warn,
     )?;
     resolved.register_used_patches(registry.patches());
-    if warn {
+    if register_patches {
         // It would be good if this warning was more targeted and helpful
         // (such as showing close candidates that failed to match). However,
         // that's not terribly easy to do, so just show a general help

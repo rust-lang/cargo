@@ -486,6 +486,50 @@ fn add_ignored_patch() {
 }
 
 #[test]
+fn no_warn_ws_patch() {
+    Package::new("c", "0.1.0").publish();
+
+    // Don't issue an unused patch warning when the patch isn't used when
+    // partially building a workspace.
+    let p = project()
+        .file(
+            "Cargo.toml",
+            r#"
+            [workspace]
+            members = ["a", "b", "c"]
+
+            [patch.crates-io]
+            c = { path = "c" }
+        "#,
+        )
+        .file("a/Cargo.toml", &basic_manifest("a", "0.1.0"))
+        .file("a/src/lib.rs", "")
+        .file(
+            "b/Cargo.toml",
+            r#"
+            [package]
+            name = "b"
+            version = "0.1.0"
+            [dependencies]
+            c = "0.1.0"
+        "#,
+        )
+        .file("b/src/lib.rs", "")
+        .file("c/Cargo.toml", &basic_manifest("c", "0.1.0"))
+        .file("c/src/lib.rs", "")
+        .build();
+
+    p.cargo("build -p a")
+        .with_stderr(
+            "\
+[UPDATING] [..]
+[COMPILING] a [..]
+[FINISHED] [..]",
+        )
+        .run();
+}
+
+#[test]
 fn new_minor() {
     Package::new("bar", "0.1.0").publish();
 
