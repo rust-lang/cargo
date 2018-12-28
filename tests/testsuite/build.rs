@@ -1572,9 +1572,9 @@ fn vv_prints_rustc_env_vars() {
 
     if cfg!(windows) {
         b.with_stderr_contains(
-            "[RUNNING] `[..]set CARGO_PKG_NAME=foo && [..]rustc [..]`"
+            "[RUNNING] `[..]set CARGO_PKG_NAME=foo&& [..]rustc [..]`"
         ).with_stderr_contains(
-            r#"[RUNNING] `[..]set CARGO_PKG_AUTHORS="escape='\"@example.com" && [..]rustc [..]`"#
+            r#"[RUNNING] `[..]set CARGO_PKG_AUTHORS="escape='\"@example.com"&& [..]rustc [..]`"#
         )
     } else {
         b.with_stderr_contains(
