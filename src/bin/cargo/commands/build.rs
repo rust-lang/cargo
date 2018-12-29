@@ -49,6 +49,9 @@ the --release flag will use the `release` profile instead.
 pub fn exec(config: &mut Config, args: &ArgMatches<'_>) -> CliResult {
     let ws = args.workspace(config)?;
     let mut compile_opts = args.compile_options(config, CompileMode::Build)?;
+
+    args.check_optional_opts_all(&ws, &compile_opts)?;
+
     compile_opts.export_dir = args.value_of_path("out-dir", config);
     if compile_opts.export_dir.is_some() && !config.cli_unstable().unstable_options {
         Err(failure::format_err!(

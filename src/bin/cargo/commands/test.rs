@@ -94,6 +94,8 @@ pub fn exec(config: &mut Config, args: &ArgMatches<'_>) -> CliResult {
 
     let mut compile_opts = args.compile_options(config, CompileMode::Test)?;
 
+    args.check_optional_opts_all(&ws, &compile_opts)?;
+
     let doc = args.is_present("doc");
     if doc {
         if let CompileFilter::Only { .. } = compile_opts.filter {
