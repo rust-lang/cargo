@@ -7,6 +7,10 @@ use crate::ops::{CompileFilter, CompileOptions, NewOptions, Packages, VersionCon
 use crate::sources::CRATES_IO_REGISTRY;
 use crate::util::important_paths::find_root_manifest_for_wd;
 use crate::util::{paths, validate_package_name};
+use crate::util::{
+    print_available_benches, print_available_binaries, print_available_examples,
+    print_available_tests,
+};
 use crate::CargoResult;
 use clap::{self, SubCommand};
 
@@ -60,18 +64,18 @@ pub trait AppExt: Sized {
         all: &'static str,
     ) -> Self {
         self.arg_targets_lib_bin(lib, bin, bins)
-            ._arg(multi_opt("example", "NAME", example))
+            ._arg(optional_multi_opt("example", "NAME", example))
             ._arg(opt("examples", examples))
-            ._arg(multi_opt("test", "NAME", test))
+            ._arg(optional_multi_opt("test", "NAME", test))
             ._arg(opt("tests", tests))
-            ._arg(multi_opt("bench", "NAME", bench))
+            ._arg(optional_multi_opt("bench", "NAME", bench))
             ._arg(opt("benches", benches))
             ._arg(opt("all-targets", all))
     }
 
     fn arg_targets_lib_bin(self, lib: &'static str, bin: &'static str, bins: &'static str) -> Self {
         self._arg(opt("lib", lib))
-            ._arg(multi_opt("bin", "NAME", bin))
+            ._arg(optional_multi_opt("bin", "NAME", bin))
             ._arg(opt("bins", bins))
     }
 
@@ -82,15 +86,15 @@ pub trait AppExt: Sized {
         example: &'static str,
         examples: &'static str,
     ) -> Self {
-        self._arg(multi_opt("bin", "NAME", bin))
+        self._arg(optional_multi_opt("bin", "NAME", bin))
             ._arg(opt("bins", bins))
-            ._arg(multi_opt("example", "NAME", example))
+            ._arg(optional_multi_opt("example", "NAME", example))
             ._arg(opt("examples", examples))
     }
 
     fn arg_targets_bin_example(self, bin: &'static str, example: &'static str) -> Self {
-        self._arg(multi_opt("bin", "NAME", bin))
-            ._arg(multi_opt("example", "NAME", example))
+        self._arg(optional_multi_opt("bin", "NAME", bin))
+            ._arg(optional_multi_opt("example", "NAME", example))
     }
 
     fn arg_features(self) -> Self {
@@ -191,6 +195,18 @@ impl AppExt for App {
 
 pub fn opt(name: &'static str, help: &'static str) -> Arg<'static, 'static> {
     Arg::with_name(name).long(name).help(help)
+}
+
+pub fn optional_multi_opt(
+    name: &'static str,
+    value_name: &'static str,
+    help: &'static str,
+) -> Arg<'static, 'static> {
+    opt(name, help)
+        .value_name(value_name)
+        .multiple(true)
+        .min_values(0)
+        .max_values(1)
 }
 
 pub fn multi_opt(
@@ -411,6 +427,50 @@ about this warning.";
             None => self._value_of("index").map(|s| s.to_string()),
         };
         Ok(index)
+    }
+
+    fn check_optional_opts_example_and_bin(
+        &self,
+        workspace: &Workspace<'_>,
+        compile_opts: &CompileOptions<'_>,
+    ) -> CliResult {
+        if self.is_present_with_zero_values("example") {
+            print_available_examples(&workspace, &compile_opts)?;
+        }
+
+        if self.is_present_with_zero_values("bin") {
+            print_available_binaries(&workspace, &compile_opts)?;
+        }
+
+        Ok(())
+    }
+
+    fn check_optional_opts_all(
+        &self,
+        workspace: &Workspace<'_>,
+        compile_opts: &CompileOptions<'_>,
+    ) -> CliResult {
+        if self.is_present_with_zero_values("example") {
+            print_available_examples(&workspace, &compile_opts)?;
+        }
+
+        if self.is_present_with_zero_values("bin") {
+            print_available_binaries(&workspace, &compile_opts)?;
+        }
+
+        if self.is_present_with_zero_values("bench") {
+            print_available_benches(&workspace, &compile_opts)?;
+        }
+
+        if self.is_present_with_zero_values("test") {
+            print_available_tests(&workspace, &compile_opts)?;
+        }
+
+        Ok(())
+    }
+
+    fn is_present_with_zero_values(&self, name: &str) -> bool {
+        self._is_present(name) && self._value_of(name).is_none()
     }
 
     fn _value_of(&self, name: &str) -> Option<&str>;

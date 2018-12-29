@@ -69,6 +69,9 @@ pub fn exec(config: &mut Config, args: &ArgMatches<'_>) -> CliResult {
     };
     let mode = CompileMode::Check { test };
     let compile_opts = args.compile_options(config, mode)?;
+
+    args.check_optional_opts_all(&ws, &compile_opts)?;
+
     ops::compile(&ws, &compile_opts)?;
     Ok(())
 }
