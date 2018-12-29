@@ -1014,7 +1014,10 @@ fn dev_dependencies_no_check() {
         .file("src/main.rs", "fn main() {}")
         .build();
 
-    p.cargo("build").with_status(101).run();
+    p.cargo("build")
+        .with_status(101)
+        .with_stderr_contains("[..] no matching package named `baz` found")
+        .run();
     p.cargo("install").run();
 }
 

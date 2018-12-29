@@ -228,7 +228,10 @@ fn rename_affects_fingerprint() {
         "#,
     );
 
-    p.cargo("build -v").with_status(101).run();
+    p.cargo("build -v")
+        .with_status(101)
+        .with_stderr_contains("[..]can't find crate for `foo`")
+        .run();
 }
 
 #[test]
