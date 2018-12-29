@@ -24,22 +24,27 @@ fn env_rustflags_normal_source() {
     p.cargo("build --lib")
         .env("RUSTFLAGS", "-Z bogus")
         .with_status(101)
+        .with_stderr_contains("[..]bogus[..]")
         .run();
     p.cargo("build --bin=a")
         .env("RUSTFLAGS", "-Z bogus")
         .with_status(101)
+        .with_stderr_contains("[..]bogus[..]")
         .run();
     p.cargo("build --example=b")
         .env("RUSTFLAGS", "-Z bogus")
         .with_status(101)
+        .with_stderr_contains("[..]bogus[..]")
         .run();
     p.cargo("test")
         .env("RUSTFLAGS", "-Z bogus")
         .with_status(101)
+        .with_stderr_contains("[..]bogus[..]")
         .run();
     p.cargo("bench")
         .env("RUSTFLAGS", "-Z bogus")
         .with_status(101)
+        .with_stderr_contains("[..]bogus[..]")
         .run();
 }
 
@@ -202,26 +207,31 @@ fn env_rustflags_normal_source_with_target() {
         .arg(host)
         .env("RUSTFLAGS", "-Z bogus")
         .with_status(101)
+        .with_stderr_contains("[..]bogus[..]")
         .run();
     p.cargo("build --bin=a --target")
         .arg(host)
         .env("RUSTFLAGS", "-Z bogus")
         .with_status(101)
+        .with_stderr_contains("[..]bogus[..]")
         .run();
     p.cargo("build --example=b --target")
         .arg(host)
         .env("RUSTFLAGS", "-Z bogus")
         .with_status(101)
+        .with_stderr_contains("[..]bogus[..]")
         .run();
     p.cargo("test --target")
         .arg(host)
         .env("RUSTFLAGS", "-Z bogus")
         .with_status(101)
+        .with_stderr_contains("[..]bogus[..]")
         .run();
     p.cargo("bench --target")
         .arg(host)
         .env("RUSTFLAGS", "-Z bogus")
         .with_status(101)
+        .with_stderr_contains("[..]bogus[..]")
         .run();
 }
 
@@ -386,6 +396,7 @@ fn env_rustflags_recompile() {
     p.cargo("build")
         .env("RUSTFLAGS", "-Z bogus")
         .with_status(101)
+        .with_stderr_contains("[..]bogus[..]")
         .run();
 }
 
@@ -398,6 +409,7 @@ fn env_rustflags_recompile2() {
     p.cargo("build")
         .env("RUSTFLAGS", "-Z bogus")
         .with_status(101)
+        .with_stderr_contains("[..]bogus[..]")
         .run();
 }
 
@@ -435,11 +447,26 @@ fn build_rustflags_normal_source() {
         )
         .build();
 
-    p.cargo("build --lib").with_status(101).run();
-    p.cargo("build --bin=a").with_status(101).run();
-    p.cargo("build --example=b").with_status(101).run();
-    p.cargo("test").with_status(101).run();
-    p.cargo("bench").with_status(101).run();
+    p.cargo("build --lib")
+        .with_status(101)
+        .with_stderr_contains("[..]bogus[..]")
+        .run();
+    p.cargo("build --bin=a")
+        .with_status(101)
+        .with_stderr_contains("[..]bogus[..]")
+        .run();
+    p.cargo("build --example=b")
+        .with_status(101)
+        .with_stderr_contains("[..]bogus[..]")
+        .run();
+    p.cargo("test")
+        .with_status(101)
+        .with_stderr_contains("[..]bogus[..]")
+        .run();
+    p.cargo("bench")
+        .with_status(101)
+        .with_stderr_contains("[..]bogus[..]")
+        .run();
 }
 
 #[test]
@@ -635,17 +662,28 @@ fn build_rustflags_normal_source_with_target() {
     p.cargo("build --lib --target")
         .arg(host)
         .with_status(101)
+        .with_stderr_contains("[..]bogus[..]")
         .run();
     p.cargo("build --bin=a --target")
         .arg(host)
         .with_status(101)
+        .with_stderr_contains("[..]bogus[..]")
         .run();
     p.cargo("build --example=b --target")
         .arg(host)
         .with_status(101)
+        .with_stderr_contains("[..]bogus[..]")
         .run();
-    p.cargo("test --target").arg(host).with_status(101).run();
-    p.cargo("bench --target").arg(host).with_status(101).run();
+    p.cargo("test --target")
+        .arg(host)
+        .with_status(101)
+        .with_stderr_contains("[..]bogus[..]")
+        .run();
+    p.cargo("bench --target")
+        .arg(host)
+        .with_status(101)
+        .with_stderr_contains("[..]bogus[..]")
+        .run();
 }
 
 #[test]
@@ -832,7 +870,10 @@ fn build_rustflags_recompile() {
     let mut config_file = File::create(config_file).unwrap();
     config_file.write_all(config.as_bytes()).unwrap();
 
-    p.cargo("build").with_status(101).run();
+    p.cargo("build")
+        .with_status(101)
+        .with_stderr_contains("[..]bogus[..]")
+        .run();
 }
 
 #[test]
@@ -851,7 +892,10 @@ fn build_rustflags_recompile2() {
     let mut config_file = File::create(config_file).unwrap();
     config_file.write_all(config.as_bytes()).unwrap();
 
-    p.cargo("build").with_status(101).run();
+    p.cargo("build")
+        .with_status(101)
+        .with_stderr_contains("[..]bogus[..]")
+        .run();
 }
 
 #[test]
@@ -923,11 +967,26 @@ fn target_rustflags_normal_source() {
         )
         .build();
 
-    p.cargo("build --lib").with_status(101).run();
-    p.cargo("build --bin=a").with_status(101).run();
-    p.cargo("build --example=b").with_status(101).run();
-    p.cargo("test").with_status(101).run();
-    p.cargo("bench").with_status(101).run();
+    p.cargo("build --lib")
+        .with_status(101)
+        .with_stderr_contains("[..]bogus[..]")
+        .run();
+    p.cargo("build --bin=a")
+        .with_status(101)
+        .with_stderr_contains("[..]bogus[..]")
+        .run();
+    p.cargo("build --example=b")
+        .with_status(101)
+        .with_stderr_contains("[..]bogus[..]")
+        .run();
+    p.cargo("test")
+        .with_status(101)
+        .with_stderr_contains("[..]bogus[..]")
+        .run();
+    p.cargo("bench")
+        .with_status(101)
+        .with_stderr_contains("[..]bogus[..]")
+        .run();
 }
 
 // target.{}.rustflags takes precedence over build.rustflags
@@ -935,6 +994,9 @@ fn target_rustflags_normal_source() {
 fn target_rustflags_precedence() {
     let p = project()
         .file("src/lib.rs", "")
+        .file("src/bin/a.rs", "fn main() {}")
+        .file("examples/b.rs", "fn main() {}")
+        .file("tests/c.rs", "#[test] fn f() { }")
         .file(
             ".cargo/config",
             &format!(
@@ -950,11 +1012,26 @@ fn target_rustflags_precedence() {
         )
         .build();
 
-    p.cargo("build --lib").with_status(101).run();
-    p.cargo("build --bin=a").with_status(101).run();
-    p.cargo("build --example=b").with_status(101).run();
-    p.cargo("test").with_status(101).run();
-    p.cargo("bench").with_status(101).run();
+    p.cargo("build --lib")
+        .with_status(101)
+        .with_stderr_contains("[..]bogus[..]")
+        .run();
+    p.cargo("build --bin=a")
+        .with_status(101)
+        .with_stderr_contains("[..]bogus[..]")
+        .run();
+    p.cargo("build --example=b")
+        .with_status(101)
+        .with_stderr_contains("[..]bogus[..]")
+        .run();
+    p.cargo("test")
+        .with_status(101)
+        .with_stderr_contains("[..]bogus[..]")
+        .run();
+    p.cargo("bench")
+        .with_status(101)
+        .with_stderr_contains("[..]bogus[..]")
+        .run();
 }
 
 #[test]

@@ -29,6 +29,7 @@ fn do_not_fix_broken_builds() {
     p.cargo("fix --allow-no-vcs")
         .env("__CARGO_FIX_YOLO", "1")
         .with_status(101)
+        .with_stderr_contains("[ERROR] Could not compile `foo`.")
         .run();
     assert!(p.read_file("src/lib.rs").contains("let mut x = 3;"));
 }
@@ -1247,6 +1248,7 @@ fn fix_to_broken_code() {
         .cwd(p.root().join("bar"))
         .env("RUSTC", p.root().join("foo/target/debug/foo"))
         .with_status(101)
+        .with_stderr_contains("[WARNING] failed to automatically apply fixes [..]")
         .run();
 
     assert_eq!(

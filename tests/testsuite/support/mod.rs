@@ -781,6 +781,32 @@ impl Execs {
         }
     }
 
+    fn verify_checks_output(&self, output: &Output) {
+        if self.expect_exit_code.unwrap_or(0) != 0
+            && self.expect_stdout.is_none()
+            && self.expect_stdin.is_none()
+            && self.expect_stderr.is_none()
+            && self.expect_stdout_contains.is_empty()
+            && self.expect_stderr_contains.is_empty()
+            && self.expect_either_contains.is_empty()
+            && self.expect_stdout_contains_n.is_empty()
+            && self.expect_stdout_not_contains.is_empty()
+            && self.expect_stderr_not_contains.is_empty()
+            && self.expect_stderr_unordered.is_empty()
+            && self.expect_neither_contains.is_empty()
+            && self.expect_json.is_none()
+            && self.expect_json_contains_unordered.is_empty()
+        {
+            panic!(
+                "`with_status()` is used, but no output is checked.\n\
+                 The test must check the output to ensure the correct error is triggered.\n\
+                 --- stdout\n{}\n--- stderr\n{}",
+                String::from_utf8_lossy(&output.stdout),
+                String::from_utf8_lossy(&output.stderr),
+            );
+        }
+    }
+
     fn match_process(&self, process: &ProcessBuilder) -> MatchResult {
         println!("running {}", process);
         let res = if self.stream_output {
@@ -817,6 +843,7 @@ impl Execs {
     }
 
     fn match_output(&self, actual: &Output) -> MatchResult {
+        self.verify_checks_output(actual);
         self.match_status(actual)
             .and(self.match_stdout(actual))
             .and(self.match_stderr(actual))
