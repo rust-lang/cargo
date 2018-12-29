@@ -285,7 +285,6 @@ impl<'a, 'cfg> Context<'a, 'cfg> {
                 return Ok(Option::Some(output.bin_dst().clone()));
             }
         }
-
         Ok(None)
     }
 
