@@ -138,7 +138,10 @@ fn cargo_compile_with_root_dev_deps() {
         )
         .build();
 
-    p.cargo("build").with_status(101).run();
+    p.cargo("build")
+        .with_status(101)
+        .with_stderr_contains("[..]can't find crate for `bar`")
+        .run();
 }
 
 #[test]

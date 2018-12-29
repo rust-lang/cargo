@@ -597,6 +597,10 @@ fn new_crate_rejected() {
     p.cargo("publish --index")
         .arg(publish::registry().to_string())
         .with_status(101)
+        .with_stderr_contains(
+            "[ERROR] 3 files in the working directory contain \
+             changes that were not yet committed into git:",
+        )
         .run();
 }
 
