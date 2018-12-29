@@ -26,7 +26,6 @@ pub struct PackageOpts<'cfg> {
     pub verify: bool,
     pub jobs: Option<u32>,
     pub target: Option<String>,
-    pub registry: Option<String>,
     pub features: Vec<String>,
     pub all_features: bool,
 }

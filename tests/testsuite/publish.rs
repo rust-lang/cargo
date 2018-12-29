@@ -23,7 +23,8 @@ fn simple() {
             license = "MIT"
             description = "foo"
         "#,
-        ).file("src/main.rs", "fn main() {}")
+        )
+        .file("src/main.rs", "fn main() {}")
         .build();
 
     p.cargo("publish --no-verify --index")
@@ -96,7 +97,8 @@ fn old_token_location() {
             license = "MIT"
             description = "foo"
         "#,
-        ).file("src/main.rs", "fn main() {}")
+        )
+        .file("src/main.rs", "fn main() {}")
         .build();
 
     p.cargo("publish --no-verify --index")
@@ -162,7 +164,8 @@ fn simple_with_host() {
             license = "MIT"
             description = "foo"
         "#,
-        ).file("src/main.rs", "fn main() {}")
+        )
+        .file("src/main.rs", "fn main() {}")
         .build();
 
     p.cargo("publish --no-verify --host")
@@ -237,7 +240,8 @@ fn simple_with_index_and_host() {
             license = "MIT"
             description = "foo"
         "#,
-        ).file("src/main.rs", "fn main() {}")
+        )
+        .file("src/main.rs", "fn main() {}")
         .build();
 
     p.cargo("publish --no-verify --index")
@@ -315,7 +319,8 @@ fn git_deps() {
             [dependencies.foo]
             git = "git://path/to/nowhere"
         "#,
-        ).file("src/main.rs", "fn main() {}")
+        )
+        .file("src/main.rs", "fn main() {}")
         .build();
 
     p.cargo("publish -v --no-verify --index")
@@ -351,7 +356,8 @@ fn path_dependency_no_version() {
             [dependencies.bar]
             path = "bar"
         "#,
-        ).file("src/main.rs", "fn main() {}")
+        )
+        .file("src/main.rs", "fn main() {}")
         .file("bar/Cargo.toml", &basic_manifest("bar", "0.0.1"))
         .file("bar/src/lib.rs", "")
         .build();
@@ -384,7 +390,8 @@ fn unpublishable_crate() {
             description = "foo"
             publish = false
         "#,
-        ).file("src/main.rs", "fn main() {}")
+        )
+        .file("src/main.rs", "fn main() {}")
         .build();
 
     p.cargo("publish --index")
@@ -417,7 +424,8 @@ fn dont_publish_dirty() {
             homepage = "foo"
             repository = "foo"
         "#,
-        ).file("src/main.rs", "fn main() {}")
+        )
+        .file("src/main.rs", "fn main() {}")
         .build();
 
     p.cargo("publish --index")
@@ -456,7 +464,8 @@ fn publish_clean() {
             homepage = "foo"
             repository = "foo"
         "#,
-        ).file("src/main.rs", "fn main() {}")
+        )
+        .file("src/main.rs", "fn main() {}")
         .build();
 
     p.cargo("publish --index")
@@ -484,7 +493,8 @@ fn publish_in_sub_repo() {
             homepage = "foo"
             repository = "foo"
         "#,
-        ).file("bar/src/main.rs", "fn main() {}")
+        )
+        .file("bar/src/main.rs", "fn main() {}")
         .build();
 
     p.cargo("publish")
@@ -514,7 +524,8 @@ fn publish_when_ignored() {
             homepage = "foo"
             repository = "foo"
         "#,
-        ).file("src/main.rs", "fn main() {}")
+        )
+        .file("src/main.rs", "fn main() {}")
         .file(".gitignore", "baz")
         .build();
 
@@ -594,7 +605,8 @@ fn dry_run() {
             license = "MIT"
             description = "foo"
         "#,
-        ).file("src/main.rs", "fn main() {}")
+        )
+        .file("src/main.rs", "fn main() {}")
         .build();
 
     p.cargo("publish --dry-run --index")
@@ -635,7 +647,8 @@ fn block_publish_feature_not_enabled() {
                 "test"
             ]
         "#,
-        ).file("src/main.rs", "fn main() {}")
+        )
+        .file("src/main.rs", "fn main() {}")
         .build();
 
     p.cargo("publish --registry alternative -Zunstable-options")
@@ -676,7 +689,8 @@ fn registry_not_in_publish_list() {
                 "test"
             ]
         "#,
-        ).file("src/main.rs", "fn main() {}")
+        )
+        .file("src/main.rs", "fn main() {}")
         .build();
 
     p.cargo("publish")
@@ -711,7 +725,8 @@ fn publish_empty_list() {
             description = "foo"
             publish = []
         "#,
-        ).file("src/main.rs", "fn main() {}")
+        )
+        .file("src/main.rs", "fn main() {}")
         .build();
 
     p.cargo("publish --registry alternative -Zunstable-options")
@@ -747,7 +762,8 @@ fn publish_allowed_registry() {
             homepage = "foo"
             publish = ["alternative"]
         "#,
-        ).file("src/main.rs", "fn main() {}")
+        )
+        .file("src/main.rs", "fn main() {}")
         .build();
 
     p.cargo("publish --registry alternative -Zunstable-options")
@@ -773,7 +789,8 @@ fn block_publish_no_registry() {
             description = "foo"
             publish = []
         "#,
-        ).file("src/main.rs", "fn main() {}")
+        )
+        .file("src/main.rs", "fn main() {}")
         .build();
 
     p.cargo("publish --registry alternative -Zunstable-options")
@@ -809,7 +826,8 @@ fn publish_with_select_features() {
             required = []
             optional = []
         "#,
-        ).file(
+        )
+        .file(
             "src/main.rs",
             "#[cfg(not(required))]
              compile_error!(\"This crate requires `required` feature!\");
@@ -849,7 +867,8 @@ fn publish_with_all_features() {
             required = []
             optional = []
         "#,
-        ).file(
+        )
+        .file(
             "src/main.rs",
             "#[cfg(not(required))]
              compile_error!(\"This crate requires `required` feature!\");

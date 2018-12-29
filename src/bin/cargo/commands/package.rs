@@ -43,7 +43,6 @@ pub fn exec(config: &mut Config, args: &ArgMatches<'_>) -> CliResult {
             allow_dirty: args.is_present("allow-dirty"),
             target: args.target(),
             jobs: args.jobs()?,
-            registry: None,
             features: args._values_of("features"),
             all_features: args.is_present("all-features"),
         },
