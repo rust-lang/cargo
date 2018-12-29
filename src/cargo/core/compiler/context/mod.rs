@@ -285,7 +285,8 @@ impl<'a, 'cfg> Context<'a, 'cfg> {
                 return Ok(Option::Some(output.bin_dst().clone()));
             }
         }
-        return Ok(None);
+
+        Ok(None)
     }
 
     pub fn prepare_units(
