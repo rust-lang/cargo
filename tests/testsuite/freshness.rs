@@ -40,7 +40,10 @@ fn modifying_and_moving() {
         .run();
 
     fs::rename(&p.root().join("src/a.rs"), &p.root().join("src/b.rs")).unwrap();
-    p.cargo("build").with_status(101).run();
+    p.cargo("build")
+        .with_status(101)
+        .with_stderr_contains("[..]file not found[..]")
+        .run();
 }
 
 #[test]
@@ -513,7 +516,10 @@ fn rebuild_tests_if_lib_changes() {
     File::create(&p.root().join("src/lib.rs")).unwrap();
 
     p.cargo("build -v").run();
-    p.cargo("test -v").with_status(101).run();
+    p.cargo("test -v")
+        .with_status(101)
+        .with_stderr_contains("[..]cannot find function `foo`[..]")
+        .run();
 }
 
 #[test]

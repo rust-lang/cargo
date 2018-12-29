@@ -310,6 +310,7 @@ fn cannot_publish_to_crates_io_with_registry_dependency() {
         .arg(registry::registry().to_string())
         .masquerade_as_nightly_cargo()
         .with_status(101)
+        .with_stderr_contains("[ERROR] crates cannot be published to crates.io[..]")
         .run();
 }
 

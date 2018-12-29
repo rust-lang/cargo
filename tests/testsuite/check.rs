@@ -61,7 +61,10 @@ fn check_fail() {
         .file("src/lib.rs", "pub fn baz() {}")
         .build();
 
-    foo.cargo("check").with_status(101).run();
+    foo.cargo("check")
+        .with_status(101)
+        .with_stderr_contains("[..]this function takes 0 parameters but 1 parameter was supplied")
+        .run();
 }
 
 #[test]
@@ -363,6 +366,9 @@ fn rustc_check_err() {
 
     foo.cargo("rustc --profile check -- --emit=metadata")
         .with_status(101)
+        .with_stderr_contains("[CHECKING] bar [..]")
+        .with_stderr_contains("[CHECKING] foo [..]")
+        .with_stderr_contains("[..]cannot find function `qux` in module `bar`")
         .run();
 }
 

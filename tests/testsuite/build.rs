@@ -542,15 +542,19 @@ fn cargo_compile_with_invalid_code_in_deps() {
         .build();
     let _bar = project()
         .at("bar")
-        .file("Cargo.toml", &basic_bin_manifest("bar"))
+        .file("Cargo.toml", &basic_manifest("bar", "0.1.0"))
         .file("src/lib.rs", "invalid rust code!")
         .build();
     let _baz = project()
         .at("baz")
-        .file("Cargo.toml", &basic_bin_manifest("baz"))
+        .file("Cargo.toml", &basic_manifest("baz", "0.1.0"))
         .file("src/lib.rs", "invalid rust code!")
         .build();
-    p.cargo("build").with_status(101).run();
+    p.cargo("build")
+        .with_status(101)
+        .with_stderr_contains("[..]invalid rust code[..]")
+        .with_stderr_contains("[ERROR] Could not compile [..]")
+        .run();
 }
 
 #[test]
@@ -1266,7 +1270,10 @@ fn compile_offline_while_transitive_dep_not_cached() {
         .build();
 
     // simulate download bar, but fail to download baz
-    p.cargo("build").with_status(101).run();
+    p.cargo("build")
+        .with_status(101)
+        .with_stderr_contains("[..]failed to verify the checksum of `baz[..]")
+        .run();
 
     drop(File::create(baz_path).ok().unwrap().write_all(&content));
 
@@ -2169,7 +2176,10 @@ fn deletion_causes_failure() {
 
     p.cargo("build").run();
     p.change_file("Cargo.toml", &basic_manifest("foo", "0.0.1"));
-    p.cargo("build").with_status(101).run();
+    p.cargo("build")
+        .with_status(101)
+        .with_stderr_contains("[..]can't find crate for `bar`")
+        .run();
 }
 
 #[test]
@@ -2541,11 +2551,14 @@ fn bad_platform_specific_dependency() {
         .file("bar/Cargo.toml", &basic_manifest("bar", "0.5.0"))
         .file(
             "bar/src/lib.rs",
-            r#"extern crate baz; pub fn gimme() -> String { format!("") }"#,
+            r#"pub fn gimme() -> String { format!("") }"#,
         )
         .build();
 
-    p.cargo("build").with_status(101).run();
+    p.cargo("build")
+        .with_status(101)
+        .with_stderr_contains("[..]can't find crate for `bar`")
+        .run();
 }
 
 #[test]
@@ -2858,7 +2871,17 @@ fn dashes_in_crate_name_bad() {
         .file("src/main.rs", "extern crate foo_bar; fn main() {}")
         .build();
 
-    p.cargo("build -v").with_status(101).run();
+    p.cargo("build -v")
+        .with_status(101)
+        .with_stderr(
+            "\
+[ERROR] failed to parse manifest at `[..]/foo/Cargo.toml`
+
+Caused by:
+  library target names cannot contain hyphens: foo-bar
+",
+        )
+        .run();
 }
 
 #[test]
@@ -4513,7 +4536,17 @@ fn avoid_dev_deps() {
         .file("src/main.rs", "fn main() {}")
         .build();
 
-    p.cargo("build").with_status(101).run();
+    p.cargo("build")
+        .with_status(101)
+        .with_stderr(
+            "\
+[UPDATING] [..]
+[ERROR] no matching package named `baz` found
+location searched: registry `https://github.com/rust-lang/crates.io-index`
+required by package `bar v0.1.0 ([..]/foo)`
+",
+        )
+        .run();
     p.cargo("build -Zavoid-dev-deps")
         .masquerade_as_nightly_cargo()
         .run();

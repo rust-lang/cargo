@@ -545,7 +545,12 @@ fn cycle() {
         .file("bar/src/main.rs", "fn main() {}");
     let p = p.build();
 
-    p.cargo("build").with_status(101).run();
+    p.cargo("build")
+        .with_status(101)
+        .with_stderr(
+            "[ERROR] root of a workspace inferred but wasn't a root: [..]/foo/bar/Cargo.toml",
+        )
+        .run();
 }
 
 #[test]
@@ -1082,6 +1087,7 @@ fn rebuild_please() {
     p.cargo("run")
         .cwd(p.root().join("bin"))
         .with_status(101)
+        .with_stderr_contains("[..]assertion[..]")
         .run();
 }
 

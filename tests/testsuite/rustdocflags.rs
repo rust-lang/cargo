@@ -35,6 +35,7 @@ fn bad_flags() {
     p.cargo("doc")
         .env("RUSTDOCFLAGS", "--bogus")
         .with_status(101)
+        .with_stderr_contains("[..]bogus[..]")
         .run();
 }
 
