@@ -159,8 +159,10 @@ fn transmit(
             // registry in the dependency.
             let dep_registry_id = match dep.registry_id() {
                 Some(id) => id,
-                None => failure::bail!("dependency missing registry ID"),
+                None => SourceId::crates_io(config)?,
             };
+            // In the index and Web API, None means "from the same registry"
+            // whereas in Cargo.toml, it means "from crates.io".
             let dep_registry = if dep_registry_id != registry_id {
                 Some(dep_registry_id.url().to_string())
             } else {

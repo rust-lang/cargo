@@ -1192,16 +1192,7 @@ impl Execs {
             Ok(actual) => actual,
         };
 
-        match find_mismatch(expected, &actual) {
-            Some((expected_part, actual_part)) => Err(format!(
-                "JSON mismatch\nExpected:\n{}\nWas:\n{}\nExpected part:\n{}\nActual part:\n{}\n",
-                serde_json::to_string_pretty(expected).unwrap(),
-                serde_json::to_string_pretty(&actual).unwrap(),
-                serde_json::to_string_pretty(expected_part).unwrap(),
-                serde_json::to_string_pretty(actual_part).unwrap(),
-            )),
-            None => Ok(()),
-        }
+        find_json_mismatch(expected, &actual)
     }
 
     fn diff_lines<'a>(
@@ -1292,12 +1283,28 @@ fn lines_match_works() {
     assert!(!lines_match("b", "cb"));
 }
 
-// Compares JSON object for approximate equality.
-// You can use `[..]` wildcard in strings (useful for OS dependent things such
-// as paths).  You can use a `"{...}"` string literal as a wildcard for
-// arbitrary nested JSON (useful for parts of object emitted by other programs
-// (e.g. rustc) rather than Cargo itself).  Arrays are sorted before comparison.
-fn find_mismatch<'a>(expected: &'a Value, actual: &'a Value) -> Option<(&'a Value, &'a Value)> {
+/// Compares JSON object for approximate equality.
+/// You can use `[..]` wildcard in strings (useful for OS dependent things such
+/// as paths).  You can use a `"{...}"` string literal as a wildcard for
+/// arbitrary nested JSON (useful for parts of object emitted by other programs
+/// (e.g. rustc) rather than Cargo itself).  Arrays are sorted before comparison.
+pub fn find_json_mismatch(expected: &Value, actual: &Value) -> Result<(), String> {
+    match find_json_mismatch_r(expected, &actual) {
+        Some((expected_part, actual_part)) => Err(format!(
+            "JSON mismatch\nExpected:\n{}\nWas:\n{}\nExpected part:\n{}\nActual part:\n{}\n",
+            serde_json::to_string_pretty(expected).unwrap(),
+            serde_json::to_string_pretty(&actual).unwrap(),
+            serde_json::to_string_pretty(expected_part).unwrap(),
+            serde_json::to_string_pretty(actual_part).unwrap(),
+        )),
+        None => Ok(()),
+    }
+}
+
+fn find_json_mismatch_r<'a>(
+    expected: &'a Value,
+    actual: &'a Value,
+) -> Option<(&'a Value, &'a Value)> {
     use serde_json::Value::*;
     match (expected, actual) {
         (&Number(ref l), &Number(ref r)) if l == r => None,
@@ -1312,7 +1319,7 @@ fn find_mismatch<'a>(expected: &'a Value, actual: &'a Value) -> Option<(&'a Valu
             let mut r = r.iter().collect::<Vec<_>>();
 
             l.retain(
-                |l| match r.iter().position(|r| find_mismatch(l, r).is_none()) {
+                |l| match r.iter().position(|r| find_json_mismatch_r(l, r).is_none()) {
                     Some(i) => {
                         r.remove(i);
                         false
@@ -1337,7 +1344,7 @@ fn find_mismatch<'a>(expected: &'a Value, actual: &'a Value) -> Option<(&'a Valu
 
             l.values()
                 .zip(r.values())
-                .filter_map(|(l, r)| find_mismatch(l, r))
+                .filter_map(|(l, r)| find_json_mismatch_r(l, r))
                 .nth(0)
         }
         (&Null, &Null) => None,

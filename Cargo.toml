@@ -19,6 +19,7 @@ path = "src/cargo/lib.rs"
 
 [dependencies]
 atty = "0.2"
+byteorder = "1.2"
 bytesize = "1.0"
 crates-io = { path = "src/crates-io", version = "0.22" }
 crossbeam-utils = "0.6"
@@ -57,6 +58,7 @@ tempfile = "3.0"
 termcolor = "1.0"
 toml = "0.4.2"
 url = "1.1"
+url_serde = "0.2.0"
 clap = "2.31.2"
 unicode-width = "0.1.5"
 openssl = { version = '0.10.11', optional = true }

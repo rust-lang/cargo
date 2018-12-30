@@ -1,12 +1,72 @@
 use std::fs::{self, File};
 use std::io::prelude::*;
-use std::io::SeekFrom;
 
 use crate::support::git::repo;
 use crate::support::paths;
 use crate::support::{basic_manifest, project, publish};
-use flate2::read::GzDecoder;
-use tar::Archive;
+
+const CLEAN_FOO_JSON: &str = r#"
+    {
+        "authors": [],
+        "badges": {},
+        "categories": [],
+        "deps": [],
+        "description": "foo",
+        "documentation": "foo",
+        "features": {},
+        "homepage": "foo",
+        "keywords": [],
+        "license": "MIT",
+        "license_file": null,
+        "links": null,
+        "name": "foo",
+        "readme": null,
+        "readme_file": null,
+        "repository": "foo",
+        "vers": "0.0.1"
+    }
+"#;
+
+fn validate_upload_foo() {
+    publish::validate_upload(
+        r#"
+        {
+          "authors": [],
+          "badges": {},
+          "categories": [],
+          "deps": [],
+          "description": "foo",
+          "documentation": null,
+          "features": {},
+          "homepage": null,
+          "keywords": [],
+          "license": "MIT",
+          "license_file": null,
+          "links": null,
+          "name": "foo",
+          "readme": null,
+          "readme_file": null,
+          "repository": null,
+          "vers": "0.0.1"
+          }
+        "#,
+        "foo-0.0.1.crate",
+        &["Cargo.toml", "Cargo.toml.orig", "src/main.rs"],
+    );
+}
+
+fn validate_upload_foo_clean() {
+    publish::validate_upload(
+        CLEAN_FOO_JSON,
+        "foo-0.0.1.crate",
+        &[
+            "Cargo.toml",
+            "Cargo.toml.orig",
+            "src/main.rs",
+            ".cargo_vcs_info.json",
+        ],
+    );
+}
 
 #[test]
 fn simple() {
@@ -41,37 +101,7 @@ See [..]
         ))
         .run();
 
-    let mut f = File::open(&publish::upload_path().join("api/v1/crates/new")).unwrap();
-    // Skip the metadata payload and the size of the tarball
-    let mut sz = [0; 4];
-    assert_eq!(f.read(&mut sz).unwrap(), 4);
-    let sz = (u32::from(sz[0]) << 0)
-        | (u32::from(sz[1]) << 8)
-        | (u32::from(sz[2]) << 16)
-        | (u32::from(sz[3]) << 24);
-    f.seek(SeekFrom::Current(i64::from(sz) + 4)).unwrap();
-
-    // Verify the tarball
-    let mut rdr = GzDecoder::new(f);
-    assert_eq!(
-        rdr.header().unwrap().filename().unwrap(),
-        b"foo-0.0.1.crate"
-    );
-    let mut contents = Vec::new();
-    rdr.read_to_end(&mut contents).unwrap();
-    let mut ar = Archive::new(&contents[..]);
-    for file in ar.entries().unwrap() {
-        let file = file.unwrap();
-        let fname = file.header().path_bytes();
-        let fname = &*fname;
-        assert!(
-            fname == b"foo-0.0.1/Cargo.toml"
-                || fname == b"foo-0.0.1/Cargo.toml.orig"
-                || fname == b"foo-0.0.1/src/main.rs",
-            "unexpected filename: {:?}",
-            file.header().path()
-        );
-    }
+    validate_upload_foo();
 }
 
 #[test]
@@ -116,37 +146,7 @@ See [..]
         ))
         .run();
 
-    let mut f = File::open(&publish::upload_path().join("api/v1/crates/new")).unwrap();
-    // Skip the metadata payload and the size of the tarball
-    let mut sz = [0; 4];
-    assert_eq!(f.read(&mut sz).unwrap(), 4);
-    let sz = (u32::from(sz[0]) << 0)
-        | (u32::from(sz[1]) << 8)
-        | (u32::from(sz[2]) << 16)
-        | (u32::from(sz[3]) << 24);
-    f.seek(SeekFrom::Current(i64::from(sz) + 4)).unwrap();
-
-    // Verify the tarball
-    let mut rdr = GzDecoder::new(f);
-    assert_eq!(
-        rdr.header().unwrap().filename().unwrap(),
-        b"foo-0.0.1.crate"
-    );
-    let mut contents = Vec::new();
-    rdr.read_to_end(&mut contents).unwrap();
-    let mut ar = Archive::new(&contents[..]);
-    for file in ar.entries().unwrap() {
-        let file = file.unwrap();
-        let fname = file.header().path_bytes();
-        let fname = &*fname;
-        assert!(
-            fname == b"foo-0.0.1/Cargo.toml"
-                || fname == b"foo-0.0.1/Cargo.toml.orig"
-                || fname == b"foo-0.0.1/src/main.rs",
-            "unexpected filename: {:?}",
-            file.header().path()
-        );
-    }
+    validate_upload_foo();
 }
 
 // TODO: Deprecated
@@ -193,37 +193,7 @@ See [..]
         ))
         .run();
 
-    let mut f = File::open(&publish::upload_path().join("api/v1/crates/new")).unwrap();
-    // Skip the metadata payload and the size of the tarball
-    let mut sz = [0; 4];
-    assert_eq!(f.read(&mut sz).unwrap(), 4);
-    let sz = (u32::from(sz[0]) << 0)
-        | (u32::from(sz[1]) << 8)
-        | (u32::from(sz[2]) << 16)
-        | (u32::from(sz[3]) << 24);
-    f.seek(SeekFrom::Current(i64::from(sz) + 4)).unwrap();
-
-    // Verify the tarball
-    let mut rdr = GzDecoder::new(f);
-    assert_eq!(
-        rdr.header().unwrap().filename().unwrap(),
-        b"foo-0.0.1.crate"
-    );
-    let mut contents = Vec::new();
-    rdr.read_to_end(&mut contents).unwrap();
-    let mut ar = Archive::new(&contents[..]);
-    for file in ar.entries().unwrap() {
-        let file = file.unwrap();
-        let fname = file.header().path_bytes();
-        let fname = &*fname;
-        assert!(
-            fname == b"foo-0.0.1/Cargo.toml"
-                || fname == b"foo-0.0.1/Cargo.toml.orig"
-                || fname == b"foo-0.0.1/src/main.rs",
-            "unexpected filename: {:?}",
-            file.header().path()
-        );
-    }
+    validate_upload_foo();
 }
 
 // TODO: Deprecated
@@ -272,37 +242,7 @@ See [..]
         ))
         .run();
 
-    let mut f = File::open(&publish::upload_path().join("api/v1/crates/new")).unwrap();
-    // Skip the metadata payload and the size of the tarball
-    let mut sz = [0; 4];
-    assert_eq!(f.read(&mut sz).unwrap(), 4);
-    let sz = (u32::from(sz[0]) << 0)
-        | (u32::from(sz[1]) << 8)
-        | (u32::from(sz[2]) << 16)
-        | (u32::from(sz[3]) << 24);
-    f.seek(SeekFrom::Current(i64::from(sz) + 4)).unwrap();
-
-    // Verify the tarball
-    let mut rdr = GzDecoder::new(f);
-    assert_eq!(
-        rdr.header().unwrap().filename().unwrap(),
-        b"foo-0.0.1.crate"
-    );
-    let mut contents = Vec::new();
-    rdr.read_to_end(&mut contents).unwrap();
-    let mut ar = Archive::new(&contents[..]);
-    for file in ar.entries().unwrap() {
-        let file = file.unwrap();
-        let fname = file.header().path_bytes();
-        let fname = &*fname;
-        assert!(
-            fname == b"foo-0.0.1/Cargo.toml"
-                || fname == b"foo-0.0.1/Cargo.toml.orig"
-                || fname == b"foo-0.0.1/src/main.rs",
-            "unexpected filename: {:?}",
-            file.header().path()
-        );
-    }
+    validate_upload_foo();
 }
 
 #[test]
@@ -479,6 +419,8 @@ fn publish_clean() {
     p.cargo("publish --index")
         .arg(publish::registry().to_string())
         .run();
+
+    validate_upload_foo_clean();
 }
 
 #[test]
@@ -510,6 +452,8 @@ fn publish_in_sub_repo() {
         .arg("--index")
         .arg(publish::registry().to_string())
         .run();
+
+    validate_upload_foo_clean();
 }
 
 #[test]
@@ -540,6 +484,18 @@ fn publish_when_ignored() {
     p.cargo("publish --index")
         .arg(publish::registry().to_string())
         .run();
+
+    publish::validate_upload(
+        CLEAN_FOO_JSON,
+        "foo-0.0.1.crate",
+        &[
+            "Cargo.toml",
+            "Cargo.toml.orig",
+            "src/main.rs",
+            ".gitignore",
+            ".cargo_vcs_info.json",
+        ],
+    );
 }
 
 #[test]
@@ -570,6 +526,12 @@ fn ignore_when_crate_ignored() {
         .arg("--index")
         .arg(publish::registry().to_string())
         .run();
+
+    publish::validate_upload(
+        CLEAN_FOO_JSON,
+        "foo-0.0.1.crate",
+        &["Cargo.toml", "Cargo.toml.orig", "src/main.rs", "baz"],
+    );
 }
 
 #[test]
@@ -778,6 +740,7 @@ fn publish_allowed_registry() {
             description = "foo"
             documentation = "foo"
             homepage = "foo"
+            repository = "foo"
             publish = ["alternative"]
         "#,
         )
@@ -787,6 +750,8 @@ fn publish_allowed_registry() {
     p.cargo("publish --registry alternative -Zunstable-options")
         .masquerade_as_nightly_cargo()
         .run();
+
+    validate_upload_foo_clean();
 }
 
 #[test]
