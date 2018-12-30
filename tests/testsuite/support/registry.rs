@@ -3,6 +3,7 @@ use std::fs::{self, File};
 use std::io::prelude::*;
 use std::path::{Path, PathBuf};
 
+use cargo::sources::CRATES_IO_INDEX;
 use cargo::util::Sha256;
 use flate2::write::GzEncoder;
 use flate2::Compression;
@@ -277,10 +278,9 @@ impl Package {
         self.add_dep(Dependency::new(name, vers).target(target))
     }
 
-    /// Add a dependency to an alternative registry.
-    /// The given registry should be a URI to the alternative registry.
-    pub fn registry_dep(&mut self, name: &str, vers: &str, registry: &str) -> &mut Package {
-        self.add_dep(Dependency::new(name, vers).registry(registry))
+    /// Add a dependency to the alternative registry.
+    pub fn registry_dep(&mut self, name: &str, vers: &str) -> &mut Package {
+        self.add_dep(Dependency::new(name, vers).registry("alternative"))
     }
 
     /// Add a dev-dependency. Example:
@@ -333,6 +333,16 @@ impl Package {
             .deps
             .iter()
             .map(|dep| {
+                // In the index, the `registry` is null if it is from the same registry.
+                // In Cargo.toml, it is None if it is from crates.io.
+                let registry_url =
+                    match (self.alternative, dep.registry.as_ref().map(|s| s.as_ref())) {
+                        (false, None) => None,
+                        (false, Some("alternative")) => Some(alt_registry().to_string()),
+                        (true, None) => Some(CRATES_IO_INDEX.to_string()),
+                        (true, Some("alternative")) => None,
+                        _ => panic!("registry_dep currently only supports `alternative`"),
+                    };
                 serde_json::json!({
                     "name": dep.name,
                     "req": dep.vers,
@@ -341,7 +351,7 @@ impl Package {
                     "target": dep.target,
                     "optional": dep.optional,
                     "kind": dep.kind,
-                    "registry": dep.registry,
+                    "registry": registry_url,
                     "package": dep.package,
                 })
             })
@@ -412,14 +422,19 @@ impl Package {
     }
 
     fn make_archive(&self) {
+        let features = if self.deps.iter().any(|dep| dep.registry.is_some()) {
+            "cargo-features = [\"alternative-registries\"]\n"
+        } else {
+            ""
+        };
         let mut manifest = format!(
             r#"
-            [package]
+            {}[package]
             name = "{}"
             version = "{}"
             authors = []
         "#,
-            self.name, self.vers
+            features, self.name, self.vers
         );
         for dep in self.deps.iter() {
             let target = match dep.target {
@@ -438,6 +453,9 @@ impl Package {
             "#,
                 target, kind, dep.name, dep.vers
             ));
+            if let Some(registry) = &dep.registry {
+                manifest.push_str(&format!("registry = \"{}\"", registry));
+            }
         }
 
         let dst = self.archive_dst();

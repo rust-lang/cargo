@@ -1307,14 +1307,6 @@ impl DetailedTomlDependency {
             }
         }
 
-        let registry_id = match self.registry {
-            Some(ref registry) => {
-                cx.features.require(Feature::alternative_registries())?;
-                SourceId::alt_registry(cx.config, registry)?
-            }
-            None => SourceId::crates_io(cx.config)?,
-        };
-
         let new_source_id = match (
             self.git.as_ref(),
             self.path.as_ref(),
@@ -1410,8 +1402,13 @@ impl DetailedTomlDependency {
                     .unwrap_or(true),
             )
             .set_optional(self.optional.unwrap_or(false))
-            .set_platform(cx.platform.clone())
-            .set_registry_id(registry_id);
+            .set_platform(cx.platform.clone());
+        if let Some(registry) = &self.registry {
+            cx.features.require(Feature::alternative_registries())?;
+            let registry_id = SourceId::alt_registry(cx.config, registry)?;
+            dep.set_registry_id(registry_id);
+        }
+
         if let Some(kind) = kind {
             dep.set_kind(kind);
         }
