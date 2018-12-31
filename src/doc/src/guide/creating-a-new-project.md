@@ -30,6 +30,10 @@ Let’s take a closer look at `Cargo.toml`:
 name = "hello_world"
 version = "0.1.0"
 authors = ["Your Name <you@example.com>"]
+edition = "2018"
+
+[dependencies]
+
 ```
 
 This is called a **manifest**, and it contains all of the metadata that Cargo
