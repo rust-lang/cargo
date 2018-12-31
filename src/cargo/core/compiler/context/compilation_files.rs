@@ -465,6 +465,15 @@ fn compute_metadata<'a, 'cfg>(
         args.hash(&mut hasher);
     }
 
+    // Throw in the rustflags we're compiling with.
+    // This helps when the target directory is a shared cache for projects with different cargo configs,
+    // or if the user is experimenting with different rustflags manually.
+    if unit.mode.is_doc() {
+        cx.bcx.rustdocflags_args(unit).hash(&mut hasher);
+    } else {
+        cx.bcx.rustflags_args(unit).hash(&mut hasher);
+    }
+
     // Artifacts compiled for the host should have a different metadata
     // piece than those compiled for the target, so make sure we throw in
     // the unit's `kind` as well
