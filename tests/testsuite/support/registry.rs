@@ -454,7 +454,8 @@ impl Package {
                 target, kind, dep.name, dep.vers
             ));
             if let Some(registry) = &dep.registry {
-                manifest.push_str(&format!("registry = \"{}\"", registry));
+                assert_eq!(registry, "alternative");
+                manifest.push_str(&format!("registry-index = \"{}\"", alt_registry()));
             }
         }
 

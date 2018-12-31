@@ -1063,3 +1063,155 @@ fn alt_reg_metadata() {
         )
         .run();
 }
+
+#[test]
+fn unknown_registry() {
+    // A known registry refers to an unknown registry.
+    // foo -> bar(crates.io) -> baz(alt)
+    let p = project()
+        .file(
+            "Cargo.toml",
+            r#"
+            cargo-features = ["alternative-registries"]
+
+            [project]
+            name = "foo"
+            version = "0.0.1"
+            authors = []
+
+            [dependencies.bar]
+            version = "0.0.1"
+        "#,
+        )
+        .file("src/main.rs", "fn main() {}")
+        .build();
+
+    Package::new("baz", "0.0.1")
+        .alternative(true)
+        .publish();
+    Package::new("bar", "0.0.1")
+        .registry_dep("baz", "0.0.1")
+        .publish();
+
+    // Remove "alternative" from config.
+    let cfg_path = paths::home().join(".cargo/config");
+    let mut config = fs::read_to_string(&cfg_path).unwrap();
+    let start = config.find("[registries.alternative]").unwrap();
+    config.insert(start, '#');
+    let start_index = &config[start..].find("index =").unwrap();
+    config.insert(start + start_index, '#');
+    fs::write(&cfg_path, config).unwrap();
+
+    p.cargo("build")
+        .masquerade_as_nightly_cargo()
+        .run();
+
+    // Important parts:
+    // foo -> bar registry = null
+    // bar -> baz registry = alternate
+    p.cargo("metadata --format-version=1")
+        .masquerade_as_nightly_cargo()
+        .with_json(r#"
+            {
+              "packages": [
+                {
+                  "name": "baz",
+                  "version": "0.0.1",
+                  "id": "baz 0.0.1 (registry+file://[..]/alternative-registry)",
+                  "license": null,
+                  "license_file": null,
+                  "description": null,
+                  "source": "registry+file://[..]/alternative-registry",
+                  "dependencies": [],
+                  "targets": "{...}",
+                  "features": {},
+                  "manifest_path": "[..]",
+                  "metadata": null,
+                  "authors": [],
+                  "categories": [],
+                  "keywords": [],
+                  "readme": null,
+                  "repository": null,
+                  "edition": "2015",
+                  "links": null
+                },
+                {
+                  "name": "foo",
+                  "version": "0.0.1",
+                  "id": "foo 0.0.1 (path+file://[..]/foo)",
+                  "license": null,
+                  "license_file": null,
+                  "description": null,
+                  "source": null,
+                  "dependencies": [
+                    {
+                      "name": "bar",
+                      "source": "registry+https://github.com/rust-lang/crates.io-index",
+                      "req": "^0.0.1",
+                      "kind": null,
+                      "rename": null,
+                      "optional": false,
+                      "uses_default_features": true,
+                      "features": [],
+                      "target": null,
+                      "registry": null
+                    }
+                  ],
+                  "targets": "{...}",
+                  "features": {},
+                  "manifest_path": "[..]/foo/Cargo.toml",
+                  "metadata": null,
+                  "authors": [],
+                  "categories": [],
+                  "keywords": [],
+                  "readme": null,
+                  "repository": null,
+                  "edition": "2015",
+                  "links": null
+                },
+                {
+                  "name": "bar",
+                  "version": "0.0.1",
+                  "id": "bar 0.0.1 (registry+https://github.com/rust-lang/crates.io-index)",
+                  "license": null,
+                  "license_file": null,
+                  "description": null,
+                  "source": "registry+https://github.com/rust-lang/crates.io-index",
+                  "dependencies": [
+                    {
+                      "name": "baz",
+                      "source": "registry+file://[..]/alternative-registry",
+                      "req": "^0.0.1",
+                      "kind": null,
+                      "rename": null,
+                      "optional": false,
+                      "uses_default_features": true,
+                      "features": [],
+                      "target": null,
+                      "registry": "file:[..]/alternative-registry"
+                    }
+                  ],
+                  "targets": "{...}",
+                  "features": {},
+                  "manifest_path": "[..]",
+                  "metadata": null,
+                  "authors": [],
+                  "categories": [],
+                  "keywords": [],
+                  "readme": null,
+                  "repository": null,
+                  "edition": "2015",
+                  "links": null
+                }
+              ],
+              "workspace_members": [
+                "foo 0.0.1 (path+file://[..]/foo)"
+              ],
+              "resolve": "{...}",
+              "target_directory": "[..]/foo/target",
+              "version": 1,
+              "workspace_root": "[..]/foo"
+            }
+            "#)
+        .run();
+}
