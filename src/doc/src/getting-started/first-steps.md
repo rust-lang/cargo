@@ -29,6 +29,9 @@ This is all we need to get started. First, let’s check out `Cargo.toml`:
 name = "hello_world"
 version = "0.1.0"
 authors = ["Your Name <you@example.com>"]
+edition = "2018"
+
+[dependencies]
 ```
 
 This is called a **manifest**, and it contains all of the metadata that Cargo
