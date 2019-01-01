@@ -206,7 +206,7 @@ pub fn optional_multi_opt(
         .value_name(value_name)
         .multiple(true)
         .min_values(0)
-        .max_values(1)
+        .number_of_values(1)
 }
 
 pub fn multi_opt(
