@@ -4,7 +4,7 @@ use std::io::prelude::*;
 use crate::support::paths::CargoPathExt;
 use crate::support::registry::Package;
 use crate::support::sleep_ms;
-use crate::support::{basic_manifest, project};
+use crate::support::{basic_manifest, is_coarse_mtime, project};
 
 #[test]
 fn modifying_and_moving() {
@@ -1247,6 +1247,63 @@ fn reuse_panic_pm() {
 [RUNNING] `rustc --crate-name somepm [..]
 [COMPILING] foo [..]
 [RUNNING] `rustc --crate-name foo src/lib.rs [..]-C panic=abort[..]
+[FINISHED] [..]
+",
+        )
+        .run();
+}
+
+#[test]
+fn bust_patched_dep() {
+    Package::new("registry1", "0.1.0").publish();
+    Package::new("registry2", "0.1.0")
+        .dep("registry1", "0.1.0")
+        .publish();
+
+    let p = project()
+        .file(
+            "Cargo.toml",
+            r#"
+            [package]
+            name = "foo"
+            version = "0.0.1"
+
+            [dependencies]
+            registry2 = "0.1.0"
+
+            [patch.crates-io]
+            registry1 = { path = "reg1new" }
+        "#,
+        )
+        .file("src/lib.rs", "")
+        .file("reg1new/Cargo.toml", &basic_manifest("registry1", "0.1.0"))
+        .file("reg1new/src/lib.rs", "")
+        .build();
+
+    p.cargo("build").run();
+
+    File::create(&p.root().join("reg1new/src/lib.rs")).unwrap();
+    if is_coarse_mtime() {
+        sleep_ms(1000);
+    }
+
+    p.cargo("build")
+        .with_stderr(
+            "\
+[COMPILING] registry1 v0.1.0 ([..])
+[COMPILING] registry2 v0.1.0
+[COMPILING] foo v0.0.1 ([..])
+[FINISHED] [..]
+",
+        )
+        .run();
+
+    p.cargo("build -v")
+        .with_stderr(
+            "\
+[FRESH] registry1 v0.1.0 ([..])
+[FRESH] registry2 v0.1.0
+[FRESH] foo v0.0.1 ([..])
 [FINISHED] [..]
 ",
         )
