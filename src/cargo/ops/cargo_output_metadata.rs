@@ -1,4 +1,5 @@
 use std::collections::HashMap;
+use std::path::PathBuf;
 
 use serde::ser;
 use serde::Serialize;
@@ -41,9 +42,9 @@ fn metadata_no_deps(ws: &Workspace<'_>, _opt: &OutputMetadataOptions) -> CargoRe
         packages: ws.members().cloned().collect(),
         workspace_members: ws.members().map(|pkg| pkg.package_id()).collect(),
         resolve: None,
-        target_directory: ws.target_dir().display().to_string(),
+        target_directory: ws.target_dir().clone().into_path_unlocked(),
         version: VERSION,
-        workspace_root: ws.root().display().to_string(),
+        workspace_root: ws.root().to_path_buf(),
     })
 }
 
@@ -69,9 +70,9 @@ fn metadata_full(ws: &Workspace<'_>, opt: &OutputMetadataOptions) -> CargoResult
             resolve: (packages, resolve),
             root: ws.current_opt().map(|pkg| pkg.package_id()),
         }),
-        target_directory: ws.target_dir().display().to_string(),
+        target_directory: ws.target_dir().clone().into_path_unlocked(),
         version: VERSION,
-        workspace_root: ws.root().display().to_string(),
+        workspace_root: ws.root().to_path_buf(),
     })
 }
 
@@ -80,9 +81,9 @@ pub struct ExportInfo {
     packages: Vec<Package>,
     workspace_members: Vec<PackageId>,
     resolve: Option<MetadataResolve>,
-    target_directory: String,
+    target_directory: PathBuf,
     version: u32,
-    workspace_root: String,
+    workspace_root: PathBuf,
 }
 
 /// Newtype wrapper to provide a custom `Serialize` implementation.
