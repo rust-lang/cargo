@@ -25,12 +25,12 @@ use crate::util::{self, CargoResult};
 ///
 /// This also acts as the main layer of caching provided by Cargo.
 /// For example, we want to cache `cargo build` and `cargo doc` separately, so that running one
-/// does not invalidate the artifacts for the other. We do this by including `profile` in the hash,
-/// thus the artifacts go in different folders and do not override each other.
+/// does not invalidate the artifacts for the other. We do this by including `CompileMode` in the
+/// hash, thus the artifacts go in different folders and do not override each other.
 /// If we don't add something that we should have, for this reason, we get the
 /// correct output but rebuild more than is needed.
 ///
-/// Some things that need to be tract to ensure the correct output should definitely *not*
+/// Some things that need to be tracked to ensure the correct output should definitely *not*
 /// go in the `Metadata`. For example, the modification time of a file, should be tracked to make a
 /// rebuild when the file changes. However, it would be wasteful to include in the `Metadata`. The
 /// old artifacts are never going to be needed again. We can save space by just overwriting them.
