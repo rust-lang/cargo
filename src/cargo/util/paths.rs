@@ -34,7 +34,18 @@ pub fn dylib_path_envvar() -> &'static str {
     if cfg!(windows) {
         "PATH"
     } else if cfg!(target_os = "macos") {
-        "DYLD_LIBRARY_PATH"
+        // When loading and linking a dynamic library or bundle, dlopen
+        // searches in LD_LIBRARY_PATH, DYLD_LIBRARY_PATH, PWD, and
+        // DYLD_FALLBACK_LIBRARY_PATH.
+        // In the Mach-O format, a dynamic library has an "install path."
+        // Clients linking against the library record this path, and the
+        // dynamic linker, dyld, uses it to locate the library.
+        // dyld searches DYLD_LIBRARY_PATH *before* the install path.
+        // dyld searches DYLD_FALLBACK_LIBRARY_PATH only if it cannot
+        // find the library in the install path.
+        // Setting DYLD_LIBRARY_PATH can easily have unintended
+        // consequences.
+        "DYLD_FALLBACK_LIBRARY_PATH"
     } else {
         "LD_LIBRARY_PATH"
     }
