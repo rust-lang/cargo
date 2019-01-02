@@ -65,8 +65,8 @@ impl Context {
             if let Some(link) = summary.links() {
                 ensure!(
                     self.links.insert(link, id).is_none(),
-                    "Attempting to resolve a with more then one crate with the links={}. \n\
-                     This will not build as is. Consider rebuilding the .lock file.",
+                    "Attempting to resolve a dependency with more then one crate with the \
+                     links={}.\nThis will not build as is. Consider rebuilding the .lock file.",
                     &*link
                 );
             }
