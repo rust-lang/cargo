@@ -1155,37 +1155,7 @@ fn reuse_shared_build_dep() {
 
 #[test]
 fn changing_rustflags_is_cached() {
-    let p = project()
-        .file(
-            "Cargo.toml",
-            r#"
-            [package]
-            name = "foo"
-            authors = []
-            version = "0.0.1"
-
-            [dependencies.a]
-            path = "a"
-            [dependencies.b]
-            path = "b"
-        "#,
-        )
-        .file("src/lib.rs", "extern crate a; extern crate b;")
-        .file(
-            "a/Cargo.toml",
-            r#"
-            [package]
-            name = "a"
-            authors = []
-            version = "0.0.1"
-            [dependencies.b]
-            path = "../b"
-        "#,
-        )
-        .file("a/src/lib.rs", "extern crate b;")
-        .file("b/Cargo.toml", &basic_manifest("b", "0.0.1"))
-        .file("b/src/lib.rs", "")
-        .build();
+    let p = project().file("src/lib.rs", "").build();
 
     p.cargo("build").run();
     p.cargo("build")
