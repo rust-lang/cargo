@@ -1,14 +1,15 @@
 use std;
 use std::fs::File;
 use std::io::prelude::*;
-use std::path::{Path, PathBuf};
+use std::path::Path;
 
 use crate::support::registry::Package;
-use crate::support::{basic_manifest, git, is_nightly, path2url, paths, project, registry};
+use crate::support::{
+    basic_manifest, git, is_nightly, path2url, paths, project, publish::validate_crate_contents,
+    registry,
+};
 use crate::support::{cargo_process, sleep_ms};
-use flate2::read::GzDecoder;
 use git2;
-use tar::Archive;
 
 #[test]
 fn simple() {
@@ -53,22 +54,12 @@ src/main.rs
     p.cargo("package").with_stdout("").run();
 
     let f = File::open(&p.root().join("target/package/foo-0.0.1.crate")).unwrap();
-    let mut rdr = GzDecoder::new(f);
-    let mut contents = Vec::new();
-    rdr.read_to_end(&mut contents).unwrap();
-    let mut ar = Archive::new(&contents[..]);
-    for f in ar.entries().unwrap() {
-        let f = f.unwrap();
-        let fname = f.header().path_bytes();
-        let fname = &*fname;
-        assert!(
-            fname == b"foo-0.0.1/Cargo.toml"
-                || fname == b"foo-0.0.1/Cargo.toml.orig"
-                || fname == b"foo-0.0.1/src/main.rs",
-            "unexpected filename: {:?}",
-            f.header().path()
-        )
-    }
+    validate_crate_contents(
+        f,
+        "foo-0.0.1.crate",
+        &["Cargo.toml", "Cargo.toml.orig", "src/main.rs"],
+        &[],
+    );
 }
 
 #[test]
@@ -168,29 +159,25 @@ See http://doc.crates.io/manifest.html#package-metadata for more info.
         .run();
 
     let f = File::open(&repo.root().join("target/package/foo-0.0.1.crate")).unwrap();
-    let mut rdr = GzDecoder::new(f);
-    let mut contents = Vec::new();
-    rdr.read_to_end(&mut contents).unwrap();
-    let mut ar = Archive::new(&contents[..]);
-    let mut entry = ar
-        .entries()
-        .unwrap()
-        .map(|f| f.unwrap())
-        .find(|e| e.path().unwrap().ends_with(".cargo_vcs_info.json"))
-        .unwrap();
-    let mut contents = String::new();
-    entry.read_to_string(&mut contents).unwrap();
-    assert_eq!(
-        &contents[..],
-        &*format!(
-            r#"{{
+    let vcs_contents = format!(
+        r#"{{
   "git": {{
     "sha1": "{}"
   }}
 }}
 "#,
-            repo.revparse_head()
-        )
+        repo.revparse_head()
+    );
+    validate_crate_contents(
+        f,
+        "foo-0.0.1.crate",
+        &[
+            "Cargo.toml",
+            "Cargo.toml.orig",
+            "src/main.rs",
+            ".cargo_vcs_info.json",
+        ],
+        &[(".cargo_vcs_info.json", &vcs_contents)],
     );
 
     println!("package sub-repo");
@@ -602,22 +589,12 @@ src[..]main.rs
     p.cargo("package").with_stdout("").run();
 
     let f = File::open(&p.root().join("target/package/foo-0.0.1.crate")).unwrap();
-    let mut rdr = GzDecoder::new(f);
-    let mut contents = Vec::new();
-    rdr.read_to_end(&mut contents).unwrap();
-    let mut ar = Archive::new(&contents[..]);
-    for f in ar.entries().unwrap() {
-        let f = f.unwrap();
-        let fname = f.header().path_bytes();
-        let fname = &*fname;
-        assert!(
-            fname == b"foo-0.0.1/Cargo.toml"
-                || fname == b"foo-0.0.1/Cargo.toml.orig"
-                || fname == b"foo-0.0.1/src/main.rs",
-            "unexpected filename: {:?}",
-            f.header().path()
-        )
-    }
+    validate_crate_contents(
+        f,
+        "foo-0.0.1.crate",
+        &["Cargo.toml", "Cargo.toml.orig", "src/main.rs"],
+        &[],
+    );
 }
 
 #[cfg(unix)] // windows doesn't allow these characters in filenames
@@ -681,15 +658,12 @@ See [..]
 
     // Check that the tarball contains the added file
     let f = File::open(&p.root().join("target/package/foo-0.0.1.crate")).unwrap();
-    let mut rdr = GzDecoder::new(f);
-    let mut contents = Vec::new();
-    rdr.read_to_end(&mut contents).unwrap();
-    let mut ar = Archive::new(&contents[..]);
-    let entries = ar.entries().unwrap();
-    let entry_paths = entries
-        .map(|entry| entry.unwrap().path().unwrap().into_owned())
-        .collect::<Vec<PathBuf>>();
-    assert!(entry_paths.contains(&PathBuf::from("foo-0.0.1/src/foo.rs")));
+    validate_crate_contents(
+        f,
+        "foo-0.0.1.crate",
+        &["Cargo.toml", "Cargo.toml.orig", "src/main.rs", "src/foo.rs"],
+        &[],
+    );
 }
 
 #[test]
@@ -827,24 +801,8 @@ fn generated_manifest() {
         .run();
 
     let f = File::open(&p.root().join("target/package/foo-0.0.1.crate")).unwrap();
-    let mut rdr = GzDecoder::new(f);
-    let mut contents = Vec::new();
-    rdr.read_to_end(&mut contents).unwrap();
-    let mut ar = Archive::new(&contents[..]);
-    let mut entry = ar
-        .entries()
-        .unwrap()
-        .map(|f| f.unwrap())
-        .find(|e| e.path().unwrap().ends_with("Cargo.toml"))
-        .unwrap();
-    let mut contents = String::new();
-    entry.read_to_string(&mut contents).unwrap();
-    // BTreeMap makes the order of dependencies in the generated file deterministic
-    // by sorting alphabetically
-    assert_eq!(
-        &contents[..],
-        &*format!(
-            r#"# THIS FILE IS AUTOMATICALLY GENERATED BY CARGO
+    let rewritten_toml = format!(
+        r#"# THIS FILE IS AUTOMATICALLY GENERATED BY CARGO
 #
 # When uploading crates to the registry Cargo will automatically
 # "normalize" Cargo.toml files for maximal compatibility
@@ -881,8 +839,14 @@ registry-index = "{}"
 [dependencies.ghi]
 version = "1.0"
 "#,
-            registry::alt_registry()
-        )
+        registry::alt_registry()
+    );
+
+    validate_crate_contents(
+        f,
+        "foo-0.0.1.crate",
+        &["Cargo.toml", "Cargo.toml.orig", "src/main.rs"],
+        &[("Cargo.toml", &rewritten_toml)],
     );
 }
 
@@ -923,21 +887,7 @@ fn ignore_workspace_specifier() {
         .run();
 
     let f = File::open(&p.root().join("target/package/bar-0.1.0.crate")).unwrap();
-    let mut rdr = GzDecoder::new(f);
-    let mut contents = Vec::new();
-    rdr.read_to_end(&mut contents).unwrap();
-    let mut ar = Archive::new(&contents[..]);
-    let mut entry = ar
-        .entries()
-        .unwrap()
-        .map(|f| f.unwrap())
-        .find(|e| e.path().unwrap().ends_with("Cargo.toml"))
-        .unwrap();
-    let mut contents = String::new();
-    entry.read_to_string(&mut contents).unwrap();
-    assert_eq!(
-        &contents[..],
-        r#"# THIS FILE IS AUTOMATICALLY GENERATED BY CARGO
+    let rewritten_toml = r#"# THIS FILE IS AUTOMATICALLY GENERATED BY CARGO
 #
 # When uploading crates to the registry Cargo will automatically
 # "normalize" Cargo.toml files for maximal compatibility
@@ -953,7 +903,12 @@ fn ignore_workspace_specifier() {
 name = "bar"
 version = "0.1.0"
 authors = []
-"#
+"#;
+    validate_crate_contents(
+        f,
+        "bar-0.1.0.crate",
+        &["Cargo.toml", "Cargo.toml.orig", "src/lib.rs"],
+        &[("Cargo.toml", &rewritten_toml)],
     );
 }
 
@@ -1123,23 +1078,12 @@ src/main.rs
         .run();
 
     let f = File::open(&p.root().join("target/package/foo-0.0.1.crate")).unwrap();
-    let mut rdr = GzDecoder::new(f);
-    let mut contents = Vec::new();
-    rdr.read_to_end(&mut contents).unwrap();
-    let mut ar = Archive::new(&contents[..]);
-    for f in ar.entries().unwrap() {
-        let f = f.unwrap();
-        let fname = f.header().path_bytes();
-        let fname = &*fname;
-        assert!(
-            fname == b"foo-0.0.1/Cargo.toml"
-                || fname == b"foo-0.0.1/Cargo.toml.orig"
-                || fname == b"foo-0.0.1/Cargo.lock"
-                || fname == b"foo-0.0.1/src/main.rs",
-            "unexpected filename: {:?}",
-            f.header().path()
-        )
-    }
+    validate_crate_contents(
+        f,
+        "foo-0.0.1.crate",
+        &["Cargo.toml", "Cargo.toml.orig", "Cargo.lock", "src/main.rs"],
+        &[],
+    );
 }
 
 #[test]
@@ -1202,15 +1146,12 @@ fn no_lock_file_with_library() {
     p.cargo("package").masquerade_as_nightly_cargo().run();
 
     let f = File::open(&p.root().join("target/package/foo-0.0.1.crate")).unwrap();
-    let mut rdr = GzDecoder::new(f);
-    let mut contents = Vec::new();
-    rdr.read_to_end(&mut contents).unwrap();
-    let mut ar = Archive::new(&contents[..]);
-    for f in ar.entries().unwrap() {
-        let f = f.unwrap();
-        let fname = f.header().path().unwrap();
-        assert!(!fname.ends_with("Cargo.lock"));
-    }
+    validate_crate_contents(
+        f,
+        "foo-0.0.1.crate",
+        &["Cargo.toml", "Cargo.toml.orig", "src/lib.rs"],
+        &[],
+    );
 }
 
 #[test]
@@ -1246,15 +1187,12 @@ fn lock_file_and_workspace() {
         .run();
 
     let f = File::open(&p.root().join("target/package/foo-0.0.1.crate")).unwrap();
-    let mut rdr = GzDecoder::new(f);
-    let mut contents = Vec::new();
-    rdr.read_to_end(&mut contents).unwrap();
-    let mut ar = Archive::new(&contents[..]);
-    assert!(ar.entries().unwrap().into_iter().any(|f| {
-        let f = f.unwrap();
-        let fname = f.header().path().unwrap();
-        fname.ends_with("Cargo.lock")
-    }));
+    validate_crate_contents(
+        f,
+        "foo-0.0.1.crate",
+        &["Cargo.toml", "Cargo.toml.orig", "src/main.rs", "Cargo.lock"],
+        &[],
+    );
 }
 
 #[test]

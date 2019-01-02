@@ -201,6 +201,12 @@ impl<'de> de::Deserialize<'de> for TomlDependency {
 pub struct DetailedTomlDependency {
     version: Option<String>,
     registry: Option<String>,
+    /// The URL of the `registry` field.
+    /// This is an internal implementation detail. When Cargo creates a
+    /// package, it replaces `registry` with `registry-index` so that the
+    /// manifest contains the correct URL. All users won't have the same
+    /// registry names configured, so Cargo can't rely on just the name for
+    /// crates published by other users.
     registry_index: Option<String>,
     path: Option<String>,
     git: Option<String>,
@@ -1307,14 +1313,6 @@ impl DetailedTomlDependency {
             }
         }
 
-        let registry_id = match self.registry {
-            Some(ref registry) => {
-                cx.features.require(Feature::alternative_registries())?;
-                SourceId::alt_registry(cx.config, registry)?
-            }
-            None => SourceId::crates_io(cx.config)?,
-        };
-
         let new_source_id = match (
             self.git.as_ref(),
             self.path.as_ref(),
@@ -1410,8 +1408,19 @@ impl DetailedTomlDependency {
                     .unwrap_or(true),
             )
             .set_optional(self.optional.unwrap_or(false))
-            .set_platform(cx.platform.clone())
-            .set_registry_id(registry_id);
+            .set_platform(cx.platform.clone());
+        if let Some(registry) = &self.registry {
+            cx.features.require(Feature::alternative_registries())?;
+            let registry_id = SourceId::alt_registry(cx.config, registry)?;
+            dep.set_registry_id(registry_id);
+        }
+        if let Some(registry_index) = &self.registry_index {
+            cx.features.require(Feature::alternative_registries())?;
+            let url = registry_index.to_url()?;
+            let registry_id = SourceId::for_registry(&url)?;
+            dep.set_registry_id(registry_id);
+        }
+
         if let Some(kind) = kind {
             dep.set_kind(kind);
         }

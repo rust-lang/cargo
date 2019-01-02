@@ -1,4 +1,5 @@
-use crate::support::registry::{self, alt_api_path, Package};
+use crate::support::publish::validate_alt_upload;
+use crate::support::registry::{self, Package};
 use crate::support::{basic_manifest, git, paths, project};
 use std::fs::{self, File};
 use std::io::Write;
@@ -107,7 +108,7 @@ fn depend_on_alt_registry_depends_on_same_registry_no_index() {
 
     Package::new("baz", "0.0.1").alternative(true).publish();
     Package::new("bar", "0.0.1")
-        .dep("baz", "0.0.1")
+        .registry_dep("baz", "0.0.1")
         .alternative(true)
         .publish();
 
@@ -152,7 +153,7 @@ fn depend_on_alt_registry_depends_on_same_registry() {
 
     Package::new("baz", "0.0.1").alternative(true).publish();
     Package::new("bar", "0.0.1")
-        .registry_dep("baz", "0.0.1", registry::alt_registry().as_str())
+        .registry_dep("baz", "0.0.1")
         .alternative(true)
         .publish();
 
@@ -197,7 +198,7 @@ fn depend_on_alt_registry_depends_on_crates_io() {
 
     Package::new("baz", "0.0.1").publish();
     Package::new("bar", "0.0.1")
-        .registry_dep("baz", "0.0.1", registry::registry().as_str())
+        .dep("baz", "0.0.1")
         .alternative(true)
         .publish();
 
@@ -210,7 +211,7 @@ fn depend_on_alt_registry_depends_on_crates_io() {
 [DOWNLOADING] crates ...
 [DOWNLOADED] baz v0.0.1 (registry `[ROOT][..]`)
 [DOWNLOADED] bar v0.0.1 (registry `[ROOT][..]`)
-[COMPILING] baz v0.0.1 (registry `[ROOT][..]`)
+[COMPILING] baz v0.0.1
 [COMPILING] bar v0.0.1 (registry `[ROOT][..]`)
 [COMPILING] foo v0.0.1 ([CWD])
 [FINISHED] dev [unoptimized + debuginfo] target(s) in [..]s
@@ -345,6 +346,40 @@ fn publish_with_registry_dependency() {
     p.cargo("publish --registry alternative -Zunstable-options")
         .masquerade_as_nightly_cargo()
         .run();
+
+    validate_alt_upload(
+        r#"{
+            "authors": [],
+            "badges": {},
+            "categories": [],
+            "deps": [
+              {
+                "default_features": true,
+                "features": [],
+                "kind": "normal",
+                "name": "bar",
+                "optional": false,
+                "target": null,
+                "version_req": "^0.0.1"
+              }
+            ],
+            "description": null,
+            "documentation": null,
+            "features": {},
+            "homepage": null,
+            "keywords": [],
+            "license": null,
+            "license_file": null,
+            "links": null,
+            "name": "foo",
+            "readme": null,
+            "readme_file": null,
+            "repository": null,
+            "vers": "0.0.1"
+        }"#,
+        "foo-0.0.1.crate",
+        &["Cargo.toml", "Cargo.toml.orig", "src/main.rs"],
+    );
 }
 
 #[test]
@@ -440,8 +475,29 @@ fn publish_to_alt_registry() {
         .masquerade_as_nightly_cargo()
         .run();
 
-    // Ensure that the crate is uploaded
-    assert!(alt_api_path().join("api/v1/crates/new").exists());
+    validate_alt_upload(
+        r#"{
+            "authors": [],
+            "badges": {},
+            "categories": [],
+            "deps": [],
+            "description": null,
+            "documentation": null,
+            "features": {},
+            "homepage": null,
+            "keywords": [],
+            "license": null,
+            "license_file": null,
+            "links": null,
+            "name": "foo",
+            "readme": null,
+            "readme_file": null,
+            "repository": null,
+            "vers": "0.0.1"
+        }"#,
+        "foo-0.0.1.crate",
+        &["Cargo.toml", "Cargo.toml.orig", "src/main.rs"],
+    );
 }
 
 #[test]
@@ -476,6 +532,41 @@ fn publish_with_crates_io_dep() {
     p.cargo("publish --registry alternative -Zunstable-options")
         .masquerade_as_nightly_cargo()
         .run();
+
+    validate_alt_upload(
+        r#"{
+            "authors": ["me"],
+            "badges": {},
+            "categories": [],
+            "deps": [
+              {
+                "default_features": true,
+                "features": [],
+                "kind": "normal",
+                "name": "bar",
+                "optional": false,
+                "registry": "https://github.com/rust-lang/crates.io-index",
+                "target": null,
+                "version_req": "^0.0.1"
+              }
+            ],
+            "description": "foo",
+            "documentation": null,
+            "features": {},
+            "homepage": null,
+            "keywords": [],
+            "license": "MIT",
+            "license_file": null,
+            "links": null,
+            "name": "foo",
+            "readme": null,
+            "readme_file": null,
+            "repository": null,
+            "vers": "0.0.1"
+        }"#,
+        "foo-0.0.1.crate",
+        &["Cargo.toml", "Cargo.toml.orig", "src/main.rs"],
+    );
 }
 
 #[test]
@@ -694,5 +785,433 @@ fn no_api() {
         .masquerade_as_nightly_cargo()
         .with_stderr_contains(&err)
         .with_status(101)
+        .run();
+}
+
+#[test]
+fn alt_reg_metadata() {
+    // Check for "registry" entries in `cargo metadata` with alternative registries.
+    let p = project()
+        .file(
+            "Cargo.toml",
+            r#"
+             cargo-features = ["alternative-registries"]
+             [package]
+             name = "foo"
+             version = "0.0.1"
+
+             [dependencies]
+             altdep = { version = "0.0.1", registry = "alternative" }
+             iodep = { version = "0.0.1" }
+         "#,
+        )
+        .file("src/lib.rs", "")
+        .build();
+
+    Package::new("bar", "0.0.1").publish();
+    Package::new("altdep", "0.0.1")
+        .dep("bar", "0.0.1")
+        .alternative(true)
+        .publish();
+    Package::new("altdep2", "0.0.1").alternative(true).publish();
+    Package::new("iodep", "0.0.1")
+        .registry_dep("altdep2", "0.0.1")
+        .publish();
+
+    // The important thing to check here is the "registry" value in `deps`.
+    // They should be:
+    // foo -> altdep: alternative-registry
+    // foo -> iodep: null (because it is in crates.io)
+    // altdep -> bar: null (because it is in crates.io)
+    // iodep -> altdep2: alternative-registry
+    p.cargo("metadata --format-version=1 --no-deps")
+        .masquerade_as_nightly_cargo()
+        .with_json(
+            r#"
+            {
+                "packages": [
+                    {
+                        "name": "foo",
+                        "version": "0.0.1",
+                        "id": "foo 0.0.1 (path+file:[..]/foo)",
+                        "license": null,
+                        "license_file": null,
+                        "description": null,
+                        "source": null,
+                        "dependencies": [
+                            {
+                                "name": "altdep",
+                                "source": "registry+file:[..]/alternative-registry",
+                                "req": "^0.0.1",
+                                "kind": null,
+                                "rename": null,
+                                "optional": false,
+                                "uses_default_features": true,
+                                "features": [],
+                                "target": null,
+                                "registry": "file:[..]/alternative-registry"
+                            },
+                            {
+                                "name": "iodep",
+                                "source": "registry+https://github.com/rust-lang/crates.io-index",
+                                "req": "^0.0.1",
+                                "kind": null,
+                                "rename": null,
+                                "optional": false,
+                                "uses_default_features": true,
+                                "features": [],
+                                "target": null,
+                                "registry": null
+                            }
+                        ],
+                        "targets": "{...}",
+                        "features": {},
+                        "manifest_path": "[..]/foo/Cargo.toml",
+                        "metadata": null,
+                        "authors": [],
+                        "categories": [],
+                        "keywords": [],
+                        "readme": null,
+                        "repository": null,
+                        "edition": "2015",
+                        "links": null
+                    }
+                ],
+                "workspace_members": [
+                    "foo 0.0.1 (path+file:[..]/foo)"
+                ],
+                "resolve": null,
+                "target_directory": "[..]/foo/target",
+                "version": 1,
+                "workspace_root": "[..]/foo"
+            }"#,
+        )
+        .run();
+
+    // --no-deps uses a different code path, make sure both work.
+    p.cargo("metadata --format-version=1")
+        .masquerade_as_nightly_cargo()
+        .with_json(
+            r#"
+             {
+                "packages": [
+                    {
+                        "name": "altdep2",
+                        "version": "0.0.1",
+                        "id": "altdep2 0.0.1 (registry+file:[..]/alternative-registry)",
+                        "license": null,
+                        "license_file": null,
+                        "description": null,
+                        "source": "registry+file:[..]/alternative-registry",
+                        "dependencies": [],
+                        "targets": "{...}",
+                        "features": {},
+                        "manifest_path": "[..]/altdep2-0.0.1/Cargo.toml",
+                        "metadata": null,
+                        "authors": [],
+                        "categories": [],
+                        "keywords": [],
+                        "readme": null,
+                        "repository": null,
+                        "edition": "2015",
+                        "links": null
+                    },
+                    {
+                        "name": "altdep",
+                        "version": "0.0.1",
+                        "id": "altdep 0.0.1 (registry+file:[..]/alternative-registry)",
+                        "license": null,
+                        "license_file": null,
+                        "description": null,
+                        "source": "registry+file:[..]/alternative-registry",
+                        "dependencies": [
+                            {
+                                "name": "bar",
+                                "source": "registry+https://github.com/rust-lang/crates.io-index",
+                                "req": "^0.0.1",
+                                "kind": null,
+                                "rename": null,
+                                "optional": false,
+                                "uses_default_features": true,
+                                "features": [],
+                                "target": null,
+                                "registry": null
+                            }
+                        ],
+                        "targets": "{...}",
+                        "features": {},
+                        "manifest_path": "[..]/altdep-0.0.1/Cargo.toml",
+                        "metadata": null,
+                        "authors": [],
+                        "categories": [],
+                        "keywords": [],
+                        "readme": null,
+                        "repository": null,
+                        "edition": "2015",
+                        "links": null
+                    },
+                    {
+                        "name": "foo",
+                        "version": "0.0.1",
+                        "id": "foo 0.0.1 (path+file:[..]/foo)",
+                        "license": null,
+                        "license_file": null,
+                        "description": null,
+                        "source": null,
+                        "dependencies": [
+                            {
+                                "name": "altdep",
+                                "source": "registry+file:[..]/alternative-registry",
+                                "req": "^0.0.1",
+                                "kind": null,
+                                "rename": null,
+                                "optional": false,
+                                "uses_default_features": true,
+                                "features": [],
+                                "target": null,
+                                "registry": "file:[..]/alternative-registry"
+                            },
+                            {
+                                "name": "iodep",
+                                "source": "registry+https://github.com/rust-lang/crates.io-index",
+                                "req": "^0.0.1",
+                                "kind": null,
+                                "rename": null,
+                                "optional": false,
+                                "uses_default_features": true,
+                                "features": [],
+                                "target": null,
+                                "registry": null
+                            }
+                        ],
+                        "targets": "{...}",
+                        "features": {},
+                        "manifest_path": "[..]/foo/Cargo.toml",
+                        "metadata": null,
+                        "authors": [],
+                        "categories": [],
+                        "keywords": [],
+                        "readme": null,
+                        "repository": null,
+                        "edition": "2015",
+                        "links": null
+                    },
+                    {
+                        "name": "iodep",
+                        "version": "0.0.1",
+                        "id": "iodep 0.0.1 (registry+https://github.com/rust-lang/crates.io-index)",
+                        "license": null,
+                        "license_file": null,
+                        "description": null,
+                        "source": "registry+https://github.com/rust-lang/crates.io-index",
+                        "dependencies": [
+                            {
+                                "name": "altdep2",
+                                "source": "registry+file:[..]/alternative-registry",
+                                "req": "^0.0.1",
+                                "kind": null,
+                                "rename": null,
+                                "optional": false,
+                                "uses_default_features": true,
+                                "features": [],
+                                "target": null,
+                                "registry": "file:[..]/alternative-registry"
+                            }
+                        ],
+                        "targets": "{...}",
+                        "features": {},
+                        "manifest_path": "[..]/iodep-0.0.1/Cargo.toml",
+                        "metadata": null,
+                        "authors": [],
+                        "categories": [],
+                        "keywords": [],
+                        "readme": null,
+                        "repository": null,
+                        "edition": "2015",
+                        "links": null
+                    },
+                    {
+                        "name": "bar",
+                        "version": "0.0.1",
+                        "id": "bar 0.0.1 (registry+https://github.com/rust-lang/crates.io-index)",
+                        "license": null,
+                        "license_file": null,
+                        "description": null,
+                        "source": "registry+https://github.com/rust-lang/crates.io-index",
+                        "dependencies": [],
+                        "targets": "{...}",
+                        "features": {},
+                        "manifest_path": "[..]/bar-0.0.1/Cargo.toml",
+                        "metadata": null,
+                        "authors": [],
+                        "categories": [],
+                        "keywords": [],
+                        "readme": null,
+                        "repository": null,
+                        "edition": "2015",
+                        "links": null
+                    }
+                ],
+                "workspace_members": [
+                    "foo 0.0.1 (path+file:[..]/foo)"
+                ],
+                "resolve": "{...}",
+                "target_directory": "[..]/foo/target",
+                "version": 1,
+                "workspace_root": "[..]/foo"
+            }"#,
+        )
+        .run();
+}
+
+#[test]
+fn unknown_registry() {
+    // A known registry refers to an unknown registry.
+    // foo -> bar(crates.io) -> baz(alt)
+    let p = project()
+        .file(
+            "Cargo.toml",
+            r#"
+            cargo-features = ["alternative-registries"]
+
+            [project]
+            name = "foo"
+            version = "0.0.1"
+            authors = []
+
+            [dependencies.bar]
+            version = "0.0.1"
+        "#,
+        )
+        .file("src/main.rs", "fn main() {}")
+        .build();
+
+    Package::new("baz", "0.0.1")
+        .alternative(true)
+        .publish();
+    Package::new("bar", "0.0.1")
+        .registry_dep("baz", "0.0.1")
+        .publish();
+
+    // Remove "alternative" from config.
+    let cfg_path = paths::home().join(".cargo/config");
+    let mut config = fs::read_to_string(&cfg_path).unwrap();
+    let start = config.find("[registries.alternative]").unwrap();
+    config.insert(start, '#');
+    let start_index = &config[start..].find("index =").unwrap();
+    config.insert(start + start_index, '#');
+    fs::write(&cfg_path, config).unwrap();
+
+    p.cargo("build")
+        .masquerade_as_nightly_cargo()
+        .run();
+
+    // Important parts:
+    // foo -> bar registry = null
+    // bar -> baz registry = alternate
+    p.cargo("metadata --format-version=1")
+        .masquerade_as_nightly_cargo()
+        .with_json(r#"
+            {
+              "packages": [
+                {
+                  "name": "baz",
+                  "version": "0.0.1",
+                  "id": "baz 0.0.1 (registry+file://[..]/alternative-registry)",
+                  "license": null,
+                  "license_file": null,
+                  "description": null,
+                  "source": "registry+file://[..]/alternative-registry",
+                  "dependencies": [],
+                  "targets": "{...}",
+                  "features": {},
+                  "manifest_path": "[..]",
+                  "metadata": null,
+                  "authors": [],
+                  "categories": [],
+                  "keywords": [],
+                  "readme": null,
+                  "repository": null,
+                  "edition": "2015",
+                  "links": null
+                },
+                {
+                  "name": "foo",
+                  "version": "0.0.1",
+                  "id": "foo 0.0.1 (path+file://[..]/foo)",
+                  "license": null,
+                  "license_file": null,
+                  "description": null,
+                  "source": null,
+                  "dependencies": [
+                    {
+                      "name": "bar",
+                      "source": "registry+https://github.com/rust-lang/crates.io-index",
+                      "req": "^0.0.1",
+                      "kind": null,
+                      "rename": null,
+                      "optional": false,
+                      "uses_default_features": true,
+                      "features": [],
+                      "target": null,
+                      "registry": null
+                    }
+                  ],
+                  "targets": "{...}",
+                  "features": {},
+                  "manifest_path": "[..]/foo/Cargo.toml",
+                  "metadata": null,
+                  "authors": [],
+                  "categories": [],
+                  "keywords": [],
+                  "readme": null,
+                  "repository": null,
+                  "edition": "2015",
+                  "links": null
+                },
+                {
+                  "name": "bar",
+                  "version": "0.0.1",
+                  "id": "bar 0.0.1 (registry+https://github.com/rust-lang/crates.io-index)",
+                  "license": null,
+                  "license_file": null,
+                  "description": null,
+                  "source": "registry+https://github.com/rust-lang/crates.io-index",
+                  "dependencies": [
+                    {
+                      "name": "baz",
+                      "source": "registry+file://[..]/alternative-registry",
+                      "req": "^0.0.1",
+                      "kind": null,
+                      "rename": null,
+                      "optional": false,
+                      "uses_default_features": true,
+                      "features": [],
+                      "target": null,
+                      "registry": "file:[..]/alternative-registry"
+                    }
+                  ],
+                  "targets": "{...}",
+                  "features": {},
+                  "manifest_path": "[..]",
+                  "metadata": null,
+                  "authors": [],
+                  "categories": [],
+                  "keywords": [],
+                  "readme": null,
+                  "repository": null,
+                  "edition": "2015",
+                  "links": null
+                }
+              ],
+              "workspace_members": [
+                "foo 0.0.1 (path+file://[..]/foo)"
+              ],
+              "resolve": "{...}",
+              "target_directory": "[..]/foo/target",
+              "version": 1,
+              "workspace_root": "[..]/foo"
+            }
+            "#)
         .run();
 }
