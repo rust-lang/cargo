@@ -239,7 +239,7 @@ impl Fingerprint {
         for local in self.local.iter() {
             match *local {
                 LocalFingerprint::MtimeBased(ref slot, ref path) => {
-                    let path = root.join(&path.with_file_name("invoked.timestamp"));
+                    let path = root.join(path);
                     let mtime = paths::mtime(&path)?;
                     *slot.0.lock().unwrap() = Some(mtime);
                 }
@@ -746,7 +746,7 @@ where
     I: IntoIterator,
     I::Item: AsRef<Path>,
 {
-    let mtime = match paths::mtime(&output.with_file_name("invoked.timestamp")) {
+    let mtime = match paths::mtime(output) {
         Ok(mtime) => mtime,
         Err(..) => return None,
     };
