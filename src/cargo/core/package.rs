@@ -54,7 +54,7 @@ impl PartialOrd for Package {
 #[derive(Serialize)]
 struct SerializedPackage<'a> {
     name: &'a str,
-    version: &'a str,
+    version: &'a Version,
     id: PackageId,
     license: Option<&'a str>,
     license_file: Option<&'a str>,
@@ -104,7 +104,7 @@ impl ser::Serialize for Package {
 
         SerializedPackage {
             name: &*package_id.name(),
-            version: &package_id.version().to_string(),
+            version: &package_id.version(),
             id: package_id,
             license,
             license_file,
