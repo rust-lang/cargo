@@ -1160,6 +1160,11 @@ fn changing_rustflags_is_cached() {
     p.cargo("build").run();
     p.cargo("build")
         .env("RUSTFLAGS", "-C target-cpu=native")
+        .with_stderr(
+            "\
+[COMPILING] foo v0.0.1 ([..])
+[FINISHED] dev [unoptimized + debuginfo] target(s) in [..]",
+        )
         .run();
     // This should not recompile!
     p.cargo("build")
