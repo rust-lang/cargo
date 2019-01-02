@@ -299,7 +299,7 @@ impl<'a> RegistryDependency<'a> {
             package,
         } = self;
 
-        let id = if let Some(registry) = registry {
+        let id = if let Some(registry) = &registry {
             SourceId::for_registry(&registry.to_url()?)?
         } else {
             default
@@ -327,6 +327,12 @@ impl<'a> RegistryDependency<'a> {
         // later on and these features aren't actually valid, so filter them all
         // out here.
         features.retain(|s| !s.is_empty());
+
+        // In index, "registry" is null if it is from the same index.
+        // In Cargo.toml, "registry" is None if it is from the default
+        if !id.is_default_registry() {
+            dep.set_registry_id(id);
+        }
 
         dep.set_optional(optional)
             .set_default_features(default_features)
@@ -486,22 +492,7 @@ impl<'cfg> RegistrySource<'cfg> {
             MaybePackage::Ready(pkg) => pkg,
             MaybePackage::Download { .. } => unreachable!(),
         };
-
-        // Unfortunately the index and the actual Cargo.toml in the index can
-        // differ due to historical Cargo bugs. To paper over these we trash the
-        // *summary* loaded from the Cargo.toml we just downloaded with the one
-        // we loaded from the index.
-        let summaries = self
-            .index
-            .summaries(package.name().as_str(), &mut *self.ops)?;
-        let summary = summaries
-            .iter()
-            .map(|s| &s.0)
-            .find(|s| s.package_id() == package)
-            .expect("summary not found");
-        let mut manifest = pkg.manifest().clone();
-        manifest.set_summary(summary.clone());
-        Ok(Package::new(manifest, pkg.manifest_path()))
+        Ok(pkg)
     }
 }
 

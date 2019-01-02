@@ -40,6 +40,8 @@ struct SourceIdInner {
     // e.g. the exact git revision of the specified branch for a Git Source
     precise: Option<String>,
     /// Name of the registry source for alternative registries
+    /// WARNING: This is not always set for alt-registries when the name is
+    /// not known.
     name: Option<String>,
 }
 
@@ -247,6 +249,8 @@ impl SourceId {
     }
 
     /// Is this source from an alternative registry
+    /// DEPRECATED: This is not correct if the registry name is not known
+    /// (for example when loaded from an index).
     pub fn is_alt_registry(self) -> bool {
         self.is_registry() && self.inner.name.is_some()
     }

@@ -1,10 +1,6 @@
 use std::fs::File;
-use std::io::prelude::*;
-use std::path::PathBuf;
 
 use crate::support::{cross_compile, project, publish};
-use flate2::read::GzDecoder;
-use tar::Archive;
 
 #[test]
 fn simple_cross_package() {
@@ -54,17 +50,12 @@ fn simple_cross_package() {
 
     // Check that the tarball contains the files
     let f = File::open(&p.root().join("target/package/foo-0.0.0.crate")).unwrap();
-    let mut rdr = GzDecoder::new(f);
-    let mut contents = Vec::new();
-    rdr.read_to_end(&mut contents).unwrap();
-    let mut ar = Archive::new(&contents[..]);
-    let entries = ar.entries().unwrap();
-    let entry_paths = entries
-        .map(|entry| entry.unwrap().path().unwrap().into_owned())
-        .collect::<Vec<PathBuf>>();
-    assert!(entry_paths.contains(&PathBuf::from("foo-0.0.0/Cargo.toml")));
-    assert!(entry_paths.contains(&PathBuf::from("foo-0.0.0/Cargo.toml.orig")));
-    assert!(entry_paths.contains(&PathBuf::from("foo-0.0.0/src/main.rs")));
+    publish::validate_crate_contents(
+        f,
+        "foo-0.0.0.crate",
+        &["Cargo.toml", "Cargo.toml.orig", "src/main.rs"],
+        &[],
+    );
 }
 
 #[test]
