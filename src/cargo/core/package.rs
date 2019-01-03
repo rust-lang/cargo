@@ -95,7 +95,7 @@ impl ser::Serialize for Package {
             .features()
             .iter()
             .map(|(k, (_, v))| (*k, v.as_slice()))
-            .collect::<RefFeatureMap>();
+            .collect::<RefFeatureMap<'_>>();
         // Filter out metabuild targets. They are an internal implementation
         // detail that is probably not relevant externally. There's also not a
         // real path to show in `src_path`, and this avoids changing the format.
