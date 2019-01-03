@@ -27,11 +27,28 @@ pub struct ProcessBuilder {
     ///
     /// [jobserver_docs]: https://docs.rs/jobserver/0.1.6/jobserver/
     jobserver: Option<Client>,
+    /// Whether to include environment variable in display
+    display_env_vars: bool
 }
 
 impl fmt::Display for ProcessBuilder {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        write!(f, "`{}", self.program.to_string_lossy())?;
+        write!(f, "`")?;
+
+        if self.display_env_vars {
+            for (key, val) in self.env.iter() {
+                if let Some(val) = val {
+                    let val = escape(val.to_string_lossy());
+                    if cfg!(windows) {
+                        write!(f, "set {}={}&& ", key, val)?;
+                    } else {
+                        write!(f, "{}={} ", key, val)?;
+                    }
+                }
+            }
+        }
+
+        write!(f, "{}", self.program.to_string_lossy())?;
 
         for arg in &self.args {
             write!(f, " {}", escape(arg.to_string_lossy()))?;
@@ -126,6 +143,12 @@ impl ProcessBuilder {
     /// [jobserver_docs]: https://docs.rs/jobserver/0.1.6/jobserver/
     pub fn inherit_jobserver(&mut self, jobserver: &Client) -> &mut Self {
         self.jobserver = Some(jobserver.clone());
+        self
+    }
+
+    /// Enable environment variable display
+    pub fn display_env_vars(&mut self) -> &mut Self {
+        self.display_env_vars = true;
         self
     }
 
@@ -316,6 +339,7 @@ pub fn process<T: AsRef<OsStr>>(cmd: T) -> ProcessBuilder {
         cwd: None,
         env: HashMap::new(),
         jobserver: None,
+        display_env_vars: false,
     }
 }
 

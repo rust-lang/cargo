@@ -2965,13 +2965,13 @@ fn warnings_printed_on_vv() {
 [DOWNLOADING] crates ...
 [DOWNLOADED] bar v0.1.0 ([..])
 [COMPILING] bar v0.1.0
-[RUNNING] `rustc [..]`
+[RUNNING] `[..] rustc [..]`
 [RUNNING] `[..]`
 warning: foo
 warning: bar
-[RUNNING] `rustc [..]`
+[RUNNING] `[..] rustc [..]`
 [COMPILING] foo v0.5.0 ([..])
-[RUNNING] `rustc [..]`
+[RUNNING] `[..] rustc [..]`
 [FINISHED] dev [unoptimized + debuginfo] target(s) in [..]
 ",
         )
@@ -3010,10 +3010,10 @@ fn output_shows_on_vv() {
         .with_stderr(
             "\
 [COMPILING] foo v0.5.0 ([..])
-[RUNNING] `rustc [..]`
+[RUNNING] `[..] rustc [..]`
 [RUNNING] `[..]`
 [foo 0.5.0] stderr
-[RUNNING] `rustc [..]`
+[RUNNING] `[..] rustc [..]`
 [FINISHED] dev [unoptimized + debuginfo] target(s) in [..]
 ",
         )
