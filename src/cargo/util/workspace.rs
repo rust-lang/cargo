@@ -11,7 +11,7 @@ fn get_available_targets<'a>(
 ) -> CargoResult<Vec<&'a Target>> {
     let packages = options.spec.get_packages(ws)?;
 
-    let targets: Vec<_> = packages
+    let mut targets: Vec<_> = packages
         .into_iter()
         .flat_map(|pkg| {
             pkg.manifest()
@@ -20,6 +20,9 @@ fn get_available_targets<'a>(
                 .filter(|target| filter_fn(target))
         })
         .collect();
+
+    targets.sort();
+
     Ok(targets)
 }
 
