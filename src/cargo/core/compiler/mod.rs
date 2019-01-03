@@ -292,14 +292,7 @@ fn rustc<'a, 'cfg>(
         }
 
         state.running(&rustc);
-        // `invoked.timestamp` is used to get `FileTime::from_system_time(SystemTime::now());`
-        // using the exact clock that this file system is using.
-        let timestamp = dep_info_loc.with_file_name("invoked.timestamp");
-        paths::write(
-            &timestamp,
-            b"This file has an mtime of when rustc was started.",
-        )?;
-        let timestamp = paths::mtime(&timestamp)?;
+        let timestamp = paths::get_current_filesystem_time(&dep_info_loc)?;
         if json_messages {
             exec.exec_json(
                 rustc,
