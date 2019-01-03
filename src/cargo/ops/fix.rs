@@ -1,7 +1,7 @@
 //! High-level overview of how `fix` works:
 //!
 //! The main goal is to run `cargo check` to get rustc to emit JSON
-//! diagnostics with suggested fixes that can be applied to the files an the
+//! diagnostics with suggested fixes that can be applied to the files on the
 //! filesystem, and validate that those changes didn't break anything.
 //!
 //! Cargo begins by launching a `LockServer` thread in the background to
