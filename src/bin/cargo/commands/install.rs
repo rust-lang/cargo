@@ -78,11 +78,9 @@ pub fn exec(config: &mut Config, args: &ArgMatches<'_>) -> CliResult {
     let registry = args.registry(config)?;
 
     config.reload_rooted_at_cargo_home()?;
-    let mut compile_opts = args.compile_options(config, CompileMode::Build)?;
-    
-    if let Ok(ws) = args.workspace(config) {
-        args.check_optional_opts_example_and_bin(&ws, &compile_opts)?;
-    }
+
+    let workspace = args.workspace(config).ok();
+    let mut compile_opts = args.compile_options(config, CompileMode::Build, workspace.as_ref())?;
 
     compile_opts.build_config.release = !args.is_present("debug");
 

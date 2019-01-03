@@ -288,6 +288,7 @@ pub trait ArgMatchesExt {
         &self,
         config: &'a Config,
         mode: CompileMode,
+        workspace: Option<&Workspace<'a>>,
     ) -> CargoResult<CompileOptions<'a>> {
         let spec = Packages::from_flags(
             self._is_present("all"),
@@ -344,6 +345,11 @@ pub trait ArgMatchesExt {
             local_rustdoc_args: None,
             export_dir: None,
         };
+
+        if let Some(ws) = workspace {
+            self.check_optional_opts(ws, &opts)?;
+        }
+
         Ok(opts)
     }
 
@@ -351,8 +357,9 @@ pub trait ArgMatchesExt {
         &self,
         config: &'a Config,
         mode: CompileMode,
+        workspace: Option<&Workspace<'a>>,
     ) -> CargoResult<CompileOptions<'a>> {
-        let mut compile_opts = self.compile_options(config, mode)?;
+        let mut compile_opts = self.compile_options(config, mode, workspace)?;
         compile_opts.spec = Packages::Packages(self._values_of("package"));
         Ok(compile_opts)
     }
@@ -429,27 +436,11 @@ about this warning.";
         Ok(index)
     }
 
-    fn check_optional_opts_example_and_bin(
+    fn check_optional_opts(
         &self,
         workspace: &Workspace<'_>,
         compile_opts: &CompileOptions<'_>,
-    ) -> CliResult {
-        if self.is_present_with_zero_values("example") {
-            print_available_examples(&workspace, &compile_opts)?;
-        }
-
-        if self.is_present_with_zero_values("bin") {
-            print_available_binaries(&workspace, &compile_opts)?;
-        }
-
-        Ok(())
-    }
-
-    fn check_optional_opts_all(
-        &self,
-        workspace: &Workspace<'_>,
-        compile_opts: &CompileOptions<'_>,
-    ) -> CliResult {
+    ) -> CargoResult<()> {
         if self.is_present_with_zero_values("example") {
             print_available_examples(&workspace, &compile_opts)?;
         }

@@ -122,9 +122,7 @@ pub fn exec(config: &mut Config, args: &ArgMatches<'_>) -> CliResult {
 
     // Unlike other commands default `cargo fix` to all targets to fix as much
     // code as we can.
-    let mut opts = args.compile_options(config, mode)?;
-
-    args.check_optional_opts_all(&ws, &opts)?;
+    let mut opts = args.compile_options(config, mode, Some(&ws))?;
 
     if let CompileFilter::Default { .. } = opts.filter {
         opts.filter = CompileFilter::Only {

@@ -39,9 +39,7 @@ run. If you're passing arguments to both Cargo and the binary, the ones after
 pub fn exec(config: &mut Config, args: &ArgMatches<'_>) -> CliResult {
     let ws = args.workspace(config)?;
 
-    let mut compile_opts = args.compile_options(config, CompileMode::Build)?;
-
-    args.check_optional_opts_example_and_bin(&ws, &compile_opts)?;
+    let mut compile_opts = args.compile_options(config, CompileMode::Build, Some(&ws))?;
 
     if !args.is_present("example") && !args.is_present("bin") {
         let default_runs: Vec<_> = compile_opts
