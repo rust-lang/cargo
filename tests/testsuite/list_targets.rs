@@ -1,69 +1,12 @@
 use crate::support::project;
 
-// cargo {run,install} only support --example and --bin
-// cargo {build,check,fix,test} support --example, --bin, --bench and --test
+const EXAMPLE: u8 = 0x1;
+const BIN: u8 = 0x2;
+const TEST: u8 = 0x4;
+const BENCH: u8 = 0x8;
 
-fn test_list_targets_example_and_bin_only(command: &str) {
-    let p = project()
-        .file("examples/a.rs", "fn main() { }")
-        .file("examples/b.rs", "fn main() { }")
-        .file("src/main.rs", "fn main() { }")
-        .build();
-
-    p.cargo(&format!("{} --example", command))
-        .with_stderr(
-            "\
-error: \"--example\" takes one argument.
-Available examples:
-    a
-    b
-
-",
-        )
-        .with_status(101)
-        .run();
-
-    p.cargo(&format!("{} --bin", command))
-        .with_stderr(
-            "\
-error: \"--bin\" takes one argument.
-Available binaries:
-    foo
-
-",
-        )
-        .with_status(101)
-        .run();
-}
-
-fn test_empty_list_targets_example_and_bin_only(command: &str) {
-    let p = project().file("src/lib.rs", "").build();
-
-    p.cargo(&format!("{} --example", command))
-        .with_stderr(
-            "\
-error: \"--example\" takes one argument.
-No examples available.
-
-",
-        )
-        .with_status(101)
-        .run();
-
-    p.cargo(&format!("{} --bin", command))
-        .with_stderr(
-            "\
-error: \"--bin\" takes one argument.
-No binaries available.
-
-",
-        )
-        .with_status(101)
-        .run();
-}
-
-fn test_list_targets_full(command: &str) {
-    let p = project()
+fn list_targets_test(command: &str, targets: u8) {
+    let full_project = project()
         .file("examples/a.rs", "fn main() { }")
         .file("examples/b.rs", "fn main() { }")
         .file("benches/bench1.rs", "")
@@ -73,165 +16,174 @@ fn test_list_targets_full(command: &str) {
         .file("src/main.rs", "fn main() { }")
         .build();
 
-    p.cargo(&format!("{} --example", command))
-        .with_stderr(
-            "\
+    if targets & EXAMPLE != 0 {
+        full_project
+            .cargo(&format!("{} --example", command))
+            .with_stderr(
+                "\
 error: \"--example\" takes one argument.
 Available examples:
     a
     b
 
 ",
-        )
-        .with_status(101)
-        .run();
+            )
+            .with_status(101)
+            .run();
+    }
 
-    p.cargo(&format!("{} --bin", command))
-        .with_stderr(
-            "\
+    if targets & BIN != 0 {
+        full_project
+            .cargo(&format!("{} --bin", command))
+            .with_stderr(
+                "\
 error: \"--bin\" takes one argument.
 Available binaries:
     foo
 
 ",
-        )
-        .with_status(101)
-        .run();
+            )
+            .with_status(101)
+            .run();
+    }
 
-    p.cargo(&format!("{} --bench", command))
-        .with_stderr(
-            "\
+    if targets & BENCH != 0 {
+        full_project
+            .cargo(&format!("{} --bench", command))
+            .with_stderr(
+                "\
 error: \"--bench\" takes one argument.
 Available benches:
     bench1
     bench2
 
 ",
-        )
-        .with_status(101)
-        .run();
+            )
+            .with_status(101)
+            .run();
+    }
 
-    p.cargo(&format!("{} --test", command))
-        .with_stderr(
-            "\
+    if targets & TEST != 0 {
+        full_project
+            .cargo(&format!("{} --test", command))
+            .with_stderr(
+                "\
 error: \"--test\" takes one argument.
 Available tests:
     test1
     test2
 
 ",
-        )
-        .with_status(101)
-        .run();
-}
+            )
+            .with_status(101)
+            .run();
+    }
 
-fn test_empty_list_targets_full(command: &str) {
-    let p = project().file("src/lib.rs", "").build();
+    let empty_project = project().file("src/lib.rs", "").build();
 
-    p.cargo(&format!("{} --example", command))
-        .with_stderr(
-            "\
+    if targets & EXAMPLE != 0 {
+        empty_project
+            .cargo(&format!("{} --example", command))
+            .with_stderr(
+                "\
 error: \"--example\" takes one argument.
 No examples available.
 
 ",
-        )
-        .with_status(101)
-        .run();
+            )
+            .with_status(101)
+            .run();
+    }
 
-    p.cargo(&format!("{} --bin", command))
-        .with_stderr(
-            "\
+    if targets & BIN != 0 {
+        empty_project
+            .cargo(&format!("{} --bin", command))
+            .with_stderr(
+                "\
 error: \"--bin\" takes one argument.
 No binaries available.
 
 ",
-        )
-        .with_status(101)
-        .run();
+            )
+            .with_status(101)
+            .run();
+    }
 
-    p.cargo(&format!("{} --bench", command))
-        .with_stderr(
-            "\
+    if targets & BENCH != 0 {
+        empty_project
+            .cargo(&format!("{} --bench", command))
+            .with_stderr(
+                "\
 error: \"--bench\" takes one argument.
 No benches available.
 
 ",
-        )
-        .with_status(101)
-        .run();
+            )
+            .with_status(101)
+            .run();
+    }
 
-    p.cargo(&format!("{} --test", command))
-        .with_stderr(
-            "\
+    if targets & TEST != 0 {
+        empty_project
+            .cargo(&format!("{} --test", command))
+            .with_stderr(
+                "\
 error: \"--test\" takes one argument.
 No tests available.
 
 ",
-        )
-        .with_status(101)
-        .run();
+            )
+            .with_status(101)
+            .run();
+    }
 }
 
 #[test]
 fn build_list_targets() {
-    test_list_targets_full("build");
-}
-#[test]
-fn build_list_targets_empty() {
-    test_empty_list_targets_full("build");
+    list_targets_test("build", EXAMPLE | BIN | TEST | BENCH);
 }
 
 #[test]
 fn check_list_targets() {
-    test_list_targets_full("check");
+    list_targets_test("check", EXAMPLE | BIN | TEST | BENCH);
 }
+
 #[test]
-fn check_list_targets_empty() {
-    test_empty_list_targets_full("check");
+fn doc_list_targets() {
+    list_targets_test("doc", BIN);
 }
 
 #[test]
 fn fix_list_targets() {
-    test_list_targets_full("fix");
-}
-#[test]
-fn fix_list_targets_empty() {
-    test_empty_list_targets_full("fix");
+    list_targets_test("fix", EXAMPLE | BIN | TEST | BENCH);
 }
 
 #[test]
 fn run_list_targets() {
-    test_list_targets_example_and_bin_only("run");
-}
-#[test]
-fn run_list_targets_empty() {
-    test_empty_list_targets_example_and_bin_only("run");
+    list_targets_test("run", EXAMPLE | BIN);
 }
 
 #[test]
 fn test_list_targets() {
-    test_list_targets_full("test");
-}
-#[test]
-fn test_list_targets_empty() {
-    test_empty_list_targets_full("test");
+    list_targets_test("test", EXAMPLE | BIN | TEST | BENCH);
 }
 
 #[test]
 fn bench_list_targets() {
-    test_list_targets_full("bench");
-}
-#[test]
-fn bench_list_targets_empty() {
-    test_empty_list_targets_full("bench");
+    list_targets_test("bench", EXAMPLE | BIN | TEST | BENCH);
 }
 
 #[test]
 fn install_list_targets() {
-    test_list_targets_example_and_bin_only("install");
+    list_targets_test("install", EXAMPLE | BIN);
 }
+
 #[test]
-fn install_list_targets_empty() {
-    test_empty_list_targets_example_and_bin_only("install");
+fn rustdoc_list_targets() {
+    list_targets_test("rustdoc", EXAMPLE | BIN | TEST | BENCH);
+}
+
+#[test]
+fn rustc_list_targets() {
+    list_targets_test("rustc", EXAMPLE | BIN | TEST | BENCH);
 }
