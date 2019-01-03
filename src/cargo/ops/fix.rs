@@ -1,3 +1,44 @@
+//! High-level overview of how `fix` works:
+//!
+//! The main goal is to run `cargo check` to get rustc to emit JSON
+//! diagnostics with suggested fixes that can be applied to the files on the
+//! filesystem, and validate that those changes didn't break anything.
+//!
+//! Cargo begins by launching a `LockServer` thread in the background to
+//! listen for network connections to coordinate locking when multiple targets
+//! are built simultaneously. It ensures each package has only one fix running
+//! at once.
+//!
+//! The `RustfixDiagnosticServer` is launched in a background thread (in
+//! `JobQueue`) to listen for network connections to coordinate displaying
+//! messages to the user on the console (so that multiple processes don't try
+//! to print at the same time).
+//!
+//! Cargo begins a normal `cargo check` operation with itself set as a proxy
+//! for rustc by setting `cargo_as_rustc_wrapper` in the build config. When
+//! cargo launches rustc to check a crate, it is actually launching itself.
+//! The `FIX_ENV` environment variable is set so that cargo knows it is in
+//! fix-proxy-mode. It also sets the `RUSTC` environment variable to the
+//! actual rustc so Cargo knows what to execute.
+//!
+//! Each proxied cargo-as-rustc detects it is in fix-proxy-mode (via `FIX_ENV`
+//! environment variable in `main`) and does the following:
+//!
+//! - Acquire a lock from the `LockServer` from the master cargo process.
+//! - Launches the real rustc (`rustfix_and_fix`), looking at the JSON output
+//!   for suggested fixes.
+//! - Uses the `rustfix` crate to apply the suggestions to the files on the
+//!   file system.
+//! - If rustfix fails to apply any suggestions (for example, they are
+//!   overlapping), but at least some suggestions succeeded, it will try the
+//!   previous two steps up to 4 times as long as some suggestions succeed.
+//! - Assuming there's at least one suggestion applied, and the suggestions
+//!   applied cleanly, rustc is run again to verify the suggestions didn't
+//!   break anything. The change will be backed out if it fails (unless
+//!   `--broken-code` is used).
+//! - If there are any warnings or errors, rustc will be run one last time to
+//!   show them to the user.
+
 use std::collections::{BTreeSet, HashMap, HashSet};
 use std::env;
 use std::ffi::OsString;
