@@ -332,14 +332,7 @@ fn build_work<'a, 'cfg>(cx: &mut Context<'a, 'cfg>, unit: &Unit<'a>) -> CargoRes
             state.build_plan(invocation_name, cmd.clone(), Arc::new(Vec::new()));
         } else {
             state.running(&cmd);
-            // `invoked.timestamp` is used to get `FileTime::from_system_time(SystemTime::now());`
-            // using the exact clock that this file system is using.
-            let timestamp = output_file.with_file_name("invoked.timestamp");
-            paths::write(
-                &timestamp,
-                b"This file has an mtime of when this build-script was started.",
-            )?;
-            let timestamp = paths::mtime(&timestamp)?;
+            let timestamp = paths::get_current_filesystem_time(&output_file)?;
             let output = if extra_verbose {
                 let prefix = format!("[{} {}] ", id.name(), id.version());
                 state.capture_output(&cmd, Some(prefix), true)
