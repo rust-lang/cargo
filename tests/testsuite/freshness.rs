@@ -1283,6 +1283,9 @@ fn bust_patched_dep() {
         .build();
 
     p.cargo("build").run();
+    if is_coarse_mtime() {
+        sleep_ms(1000);
+    }
 
     File::create(&p.root().join("reg1new/src/lib.rs")).unwrap();
     if is_coarse_mtime() {
@@ -1385,6 +1388,7 @@ fn rebuild_on_mid_build_file_modification() {
 
     let t = thread::spawn(move || {
         let socket = server.accept().unwrap().0;
+        sleep_ms(1000);
         let mut file = OpenOptions::new()
             .write(true)
             .append(true)
