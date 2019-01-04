@@ -7,11 +7,12 @@ use semver::ReqParseError;
 use semver::VersionReq;
 use serde::ser;
 use serde::Serialize;
+use url::Url;
 
 use crate::core::interning::InternedString;
 use crate::core::{PackageId, SourceId, Summary};
-use crate::util::errors::{CargoError, CargoResult, CargoResultExt};
-use crate::util::{Cfg, Config, Platform};
+use crate::util::errors::{CargoResult, CargoResultExt};
+use crate::util::{Cfg, CfgExpr, Config};
 
 /// Information about a dependency requested by a Cargo manifest.
 /// Cheap to copy.
@@ -25,6 +26,12 @@ pub struct Dependency {
 struct Inner {
     name: InternedString,
     source_id: SourceId,
+    /// Source ID for the registry as specified in the manifest.
+    ///
+    /// This will be None if it is not specified (crates.io dependency).
+    /// This is different from `source_id` for example when both a `path` and
+    /// `registry` is specified. Or in the case of a crates.io dependency,
+    /// `source_id` will be crates.io and this will be None.
     registry_id: Option<SourceId>,
     req: VersionReq,
     specified_req: bool,
@@ -53,6 +60,10 @@ struct SerializedDependency<'a> {
     uses_default_features: bool,
     features: &'a [InternedString],
     target: Option<&'a Platform>,
+    /// The registry URL this dependency is from.
+    /// If None, then it comes from the default registry (crates.io).
+    #[serde(with = "url_serde")]
+    registry: Option<Url>,
 }
 
 impl ser::Serialize for Dependency {
@@ -70,6 +81,7 @@ impl ser::Serialize for Dependency {
             features: self.features(),
             target: self.platform(),
             rename: self.explicit_name_in_toml().map(|s| s.as_str()),
+            registry: self.registry_id().map(|sid| sid.url().clone()),
         }
         .serialize(s)
     }
@@ -443,15 +455,14 @@ impl ser::Serialize for Platform {
 }
 
 impl FromStr for Platform {
-    type Err = CargoError;
+    type Err = failure::Error;
 
     fn from_str(s: &str) -> CargoResult<Platform> {
         if s.starts_with("cfg(") && s.ends_with(')') {
             let s = &s[4..s.len() - 1];
-            let p = s
-                .parse()
-                .map(Platform::Cfg)
-                .chain_err(|| format_err!("failed to parse `{}` as a cfg expression", s))?;
+            let p = s.parse().map(Platform::Cfg).chain_err(|| {
+                failure::format_err!("failed to parse `{}` as a cfg expression", s)
+            })?;
             Ok(p)
         } else {
             Ok(Platform::Name(s.to_string()))

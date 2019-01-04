@@ -1,0 +1,152 @@
+<h2 id="cargo_locate_project_name">NAME</h2>
+<div class="sectionbody">
+<p>cargo-locate-project - Print a JSON representation of a Cargo.toml file's location</p>
+</div>
+<div class="sect1">
+<h2 id="cargo_locate_project_synopsis">SYNOPSIS</h2>
+<div class="sectionbody">
+<div class="paragraph">
+<p><code>cargo locate-project [<em>OPTIONS</em>]</code></p>
+</div>
+</div>
+</div>
+<div class="sect1">
+<h2 id="cargo_locate_project_description">DESCRIPTION</h2>
+<div class="sectionbody">
+<div class="paragraph">
+<p>This command will print a JSON object to stdout with the full path to the
+<code>Cargo.toml</code> manifest.</p>
+</div>
+<div class="paragraph">
+<p>See also <a href="commands/cargo-metadata.html">cargo-metadata(1)</a> which is capable of returning the path to a
+workspace root.</p>
+</div>
+</div>
+</div>
+<div class="sect1">
+<h2 id="cargo_locate_project_options">OPTIONS</h2>
+<div class="sectionbody">
+<div class="sect2">
+<h3 id="cargo_locate_project_display_options">Display Options</h3>
+<div class="dlist">
+<dl>
+<dt class="hdlist1"><strong>-v</strong></dt>
+<dt class="hdlist1"><strong>--verbose</strong></dt>
+<dd>
+<p>Use verbose output. May be specified twice for "very verbose" output which
+includes extra output such as dependency warnings and build script output.
+May also be specified with the <code>term.verbose</code>
+<a href="reference/config.html">config value</a>.</p>
+</dd>
+<dt class="hdlist1"><strong>-q</strong></dt>
+<dt class="hdlist1"><strong>--quiet</strong></dt>
+<dd>
+<p>No output printed to stdout.</p>
+</dd>
+<dt class="hdlist1"><strong>--color</strong> <em>WHEN</em></dt>
+<dd>
+<p>Control when colored output is used. Valid values:</p>
+<div class="ulist">
+<ul>
+<li>
+<p><code>auto</code> (default): Automatically detect if color support is available on the
+terminal.</p>
+</li>
+<li>
+<p><code>always</code>: Always display colors.</p>
+</li>
+<li>
+<p><code>never</code>: Never display colors.</p>
+</li>
+</ul>
+</div>
+<div class="paragraph">
+<p>May also be specified with the <code>term.color</code>
+<a href="reference/config.html">config value</a>.</p>
+</div>
+</dd>
+</dl>
+</div>
+</div>
+<div class="sect2">
+<h3 id="cargo_locate_project_manifest_options">Manifest Options</h3>
+<div class="dlist">
+<dl>
+<dt class="hdlist1"><strong>--manifest-path</strong> <em>PATH</em></dt>
+<dd>
+<p>Path to the <code>Cargo.toml</code> file. By default, Cargo searches in the current
+directory or any parent directory for the <code>Cargo.toml</code> file.</p>
+</dd>
+</dl>
+</div>
+</div>
+<div class="sect2">
+<h3 id="cargo_locate_project_common_options">Common Options</h3>
+<div class="dlist">
+<dl>
+<dt class="hdlist1"><strong>-h</strong></dt>
+<dt class="hdlist1"><strong>--help</strong></dt>
+<dd>
+<p>Prints help information.</p>
+</dd>
+<dt class="hdlist1"><strong>-Z</strong> <em>FLAG</em>&#8230;&#8203;</dt>
+<dd>
+<p>Unstable (nightly-only) flags to Cargo. Run <code>cargo -Z help</code> for
+details.</p>
+</dd>
+</dl>
+</div>
+</div>
+</div>
+</div>
+<div class="sect1">
+<h2 id="cargo_locate_project_environment">ENVIRONMENT</h2>
+<div class="sectionbody">
+<div class="paragraph">
+<p>See <a href="reference/environment-variables.html">the reference</a> for
+details on environment variables that Cargo reads.</p>
+</div>
+</div>
+</div>
+<div class="sect1">
+<h2 id="cargo_locate_project_exit_status">Exit Status</h2>
+<div class="sectionbody">
+<div class="dlist">
+<dl>
+<dt class="hdlist1">0</dt>
+<dd>
+<p>Cargo succeeded.</p>
+</dd>
+<dt class="hdlist1">101</dt>
+<dd>
+<p>Cargo failed to complete.</p>
+</dd>
+</dl>
+</div>
+</div>
+</div>
+<div class="sect1">
+<h2 id="cargo_locate_project_examples">EXAMPLES</h2>
+<div class="sectionbody">
+<div class="olist arabic">
+<ol class="arabic">
+<li>
+<p>Display the path to the manifest based on the current directory:</p>
+<div class="literalblock">
+<div class="content">
+<pre>cargo locate-project</pre>
+</div>
+</div>
+</li>
+</ol>
+</div>
+</div>
+</div>
+<div class="sect1">
+<h2 id="cargo_locate_project_see_also">SEE ALSO</h2>
+<div class="sectionbody">
+<div class="paragraph">
+<p><a href="commands/index.html">cargo(1)</a>, <a href="commands/cargo-metadata.html">cargo-metadata(1)</a></p>
+</div>
+</div>
+</div>

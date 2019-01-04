@@ -89,6 +89,9 @@ impl<'cfg> Compilation<'cfg> {
         } else {
             bcx.rustc.process()
         };
+        if bcx.config.extra_verbose() {
+            rustc.display_env_vars();
+        }
         for (k, v) in bcx.build_config.extra_rustc_env.iter() {
             rustc.env(k, v);
         }
@@ -276,7 +279,7 @@ fn target_runner(bcx: &BuildContext<'_, '_>) -> CargoResult<Option<(PathBuf, Vec
                     if let Some(runner) = bcx.config.get_path_and_args(&key)? {
                         // more than one match, error out
                         if matching_runner.is_some() {
-                            bail!(
+                            failure::bail!(
                                 "several matching instances of `target.'cfg(..)'.runner` \
                                  in `.cargo/config`"
                             )

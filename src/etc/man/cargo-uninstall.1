@@ -1,56 +1,223 @@
-.TH "CARGO\-UNINSTALL" "1" "May 2016" "The Rust package manager" "Cargo Manual"
-.hy
-.SH NAME
-.PP
+'\" t
+.\"     Title: cargo-uninstall
+.\"    Author: [see the "AUTHOR(S)" section]
+.\" Generator: Asciidoctor 1.5.8
+.\"      Date: 2018-12-20
+.\"    Manual: \ \&
+.\"    Source: \ \&
+.\"  Language: English
+.\"
+.TH "CARGO\-UNINSTALL" "1" "2018-12-20" "\ \&" "\ \&"
+.ie \n(.g .ds Aq \(aq
+.el       .ds Aq '
+.ss \n[.ss] 0
+.nh
+.ad l
+.de URL
+\fI\\$2\fP <\\$1>\\$3
+..
+.als MTO URL
+.if \n[.g] \{\
+.  mso www.tmac
+.  am URL
+.    ad l
+.  .
+.  am MTO
+.    ad l
+.  .
+.  LINKSTYLE blue R < >
+.\}
+.SH "NAME"
 cargo\-uninstall \- Remove a Rust binary
-.SH SYNOPSIS
-.PP
-\f[I]cargo uninstall\f[] [OPTIONS] <SPEC>
-.PP
-\f[I]cargo uninstall\f[] (\-h | \-\-help)
-.SH DESCRIPTION
-.PP
-The argument SPEC is a package id specification (see
-\f[C]cargo\ help\ pkgid\f[]) to specify which crate should be
-uninstalled.
-By default all binaries are uninstalled for a crate but the
-\f[C]\-\-bin\f[] and \f[C]\-\-example\f[] flags can be used to only
-uninstall particular binaries.
-.SH OPTIONS
-.TP
-.B \-h, \-\-help
-Print this message.
-.RS
+.SH "SYNOPSIS"
+.sp
+\fBcargo uninstall [\fIOPTIONS\fP] [\fISPEC\fP...]\fP
+.SH "DESCRIPTION"
+.sp
+This command removes a package installed with \fBcargo\-install\fP(1). The \fISPEC\fP
+argument is a package ID specification of the package to remove (see
+\fBcargo\-pkgid\fP(1)).
+.sp
+By default all binaries are removed for a crate but the \fB\-\-bin\fP and
+\fB\-\-example\fP flags can be used to only remove particular binaries.
+.sp
+The installation root is determined, in order of precedence:
+.sp
+.RS 4
+.ie n \{\
+\h'-04'\(bu\h'+03'\c
+.\}
+.el \{\
+.  sp -1
+.  IP \(bu 2.3
+.\}
+\fB\-\-root\fP option
 .RE
-.TP
-.B \-\-root \f[I]DIR\f[]
+.sp
+.RS 4
+.ie n \{\
+\h'-04'\(bu\h'+03'\c
+.\}
+.el \{\
+.  sp -1
+.  IP \(bu 2.3
+.\}
+\fBCARGO_INSTALL_ROOT\fP environment variable
+.RE
+.sp
+.RS 4
+.ie n \{\
+\h'-04'\(bu\h'+03'\c
+.\}
+.el \{\
+.  sp -1
+.  IP \(bu 2.3
+.\}
+\fBinstall.root\fP Cargo \c
+.URL "https://doc.rust\-lang.org/cargo/reference/config.html" "config value" ""
+.RE
+.sp
+.RS 4
+.ie n \{\
+\h'-04'\(bu\h'+03'\c
+.\}
+.el \{\
+.  sp -1
+.  IP \(bu 2.3
+.\}
+\fBCARGO_HOME\fP environment variable
+.RE
+.sp
+.RS 4
+.ie n \{\
+\h'-04'\(bu\h'+03'\c
+.\}
+.el \{\
+.  sp -1
+.  IP \(bu 2.3
+.\}
+\fB$HOME/.cargo\fP
+.RE
+.SH "OPTIONS"
+.SS "Install Options"
+.sp
+\fB\-p\fP, \fB\-\-package\fP \fISPEC\fP...
+.RS 4
+Package to uninstall.
+.RE
+.sp
+\fB\-\-bin\fP \fINAME\fP...
+.RS 4
+Only uninstall the binary \fINAME\fP.
+.RE
+.sp
+\fB\-\-root\fP \fIDIR\fP
+.RS 4
 Directory to uninstall packages from.
-.RS
 .RE
-.TP
-.B \-\-bin \f[I]NAME\f[]
-Only uninstall the binary NAME.
-.RS
+.SS "Display Options"
+.sp
+\fB\-v\fP, \fB\-\-verbose\fP
+.RS 4
+Use verbose output. May be specified twice for "very verbose" output which
+includes extra output such as dependency warnings and build script output.
+May also be specified with the \fBterm.verbose\fP
+.URL "https://doc.rust\-lang.org/cargo/reference/config.html" "config value" "."
 .RE
-.TP
-.B \-v, \-\-verbose
-Use verbose output.
-.RS
-.RE
-.TP
-.B \-q, \-\-quiet
+.sp
+\fB\-q\fP, \fB\-\-quiet\fP
+.RS 4
 No output printed to stdout.
-.RS
 .RE
-.TP
-.B \-\-color \f[I]WHEN\f[]
-Coloring: auto, always, never.
-.RS
+.sp
+\fB\-\-color\fP \fIWHEN\fP
+.RS 4
+Control when colored output is used. Valid values:
+.sp
+.RS 4
+.ie n \{\
+\h'-04'\(bu\h'+03'\c
+.\}
+.el \{\
+.  sp -1
+.  IP \(bu 2.3
+.\}
+\fBauto\fP (default): Automatically detect if color support is available on the
+terminal.
 .RE
-.SH SEE ALSO
-.PP
-cargo(1), cargo-install(1)
-.SH COPYRIGHT
-.PP
-This work is dual\-licensed under Apache 2.0 and MIT terms.
-See \f[I]COPYRIGHT\f[] file in the cargo source distribution.
+.sp
+.RS 4
+.ie n \{\
+\h'-04'\(bu\h'+03'\c
+.\}
+.el \{\
+.  sp -1
+.  IP \(bu 2.3
+.\}
+\fBalways\fP: Always display colors.
+.RE
+.sp
+.RS 4
+.ie n \{\
+\h'-04'\(bu\h'+03'\c
+.\}
+.el \{\
+.  sp -1
+.  IP \(bu 2.3
+.\}
+\fBnever\fP: Never display colors.
+.RE
+.sp
+May also be specified with the \fBterm.color\fP
+.URL "https://doc.rust\-lang.org/cargo/reference/config.html" "config value" "."
+.RE
+.SS "Common Options"
+.sp
+\fB\-h\fP, \fB\-\-help\fP
+.RS 4
+Prints help information.
+.RE
+.sp
+\fB\-Z\fP \fIFLAG\fP...
+.RS 4
+Unstable (nightly\-only) flags to Cargo. Run \fBcargo \-Z help\fP for
+details.
+.RE
+.SH "ENVIRONMENT"
+.sp
+See \c
+.URL "https://doc.rust\-lang.org/cargo/reference/environment\-variables.html" "the reference" " "
+for
+details on environment variables that Cargo reads.
+.SH "EXIT STATUS"
+.sp
+0
+.RS 4
+Cargo succeeded.
+.RE
+.sp
+101
+.RS 4
+Cargo failed to complete.
+.RE
+.SH "EXAMPLES"
+.sp
+.RS 4
+.ie n \{\
+\h'-04' 1.\h'+01'\c
+.\}
+.el \{\
+.  sp -1
+.  IP " 1." 4.2
+.\}
+Uninstall a previously installed package.
+.sp
+.if n .RS 4
+.nf
+cargo uninstall ripgrep
+.fi
+.if n .RE
+.RE
+.SH "SEE ALSO"
+.sp
+\fBcargo\fP(1), \fBcargo\-install\fP(1)

@@ -7,7 +7,7 @@ use url::Url;
 
 use crate::core::PackageId;
 use crate::util::errors::{CargoResult, CargoResultExt};
-use crate::util::{ToSemver, ToUrl};
+use crate::util::{validate_package_name, ToSemver, ToUrl};
 
 /// Some or all of the data required to identify a package:
 ///
@@ -61,14 +61,10 @@ impl PackageIdSpec {
         let mut parts = spec.splitn(2, ':');
         let name = parts.next().unwrap();
         let version = match parts.next() {
-            Some(version) => Some(Version::parse(version)?),
+            Some(version) => Some(version.to_semver()?),
             None => None,
         };
-        for ch in name.chars() {
-            if !ch.is_alphanumeric() && ch != '_' && ch != '-' {
-                bail!("invalid character in pkgid `{}`: `{}`", spec, ch)
-            }
-        }
+        validate_package_name(name, "pkgid", "")?;
         Ok(PackageIdSpec {
             name: name.to_string(),
             version,
@@ -82,7 +78,7 @@ impl PackageIdSpec {
         I: IntoIterator<Item = PackageId>,
     {
         let spec = PackageIdSpec::parse(spec)
-            .chain_err(|| format_err!("invalid package id specification: `{}`", spec))?;
+            .chain_err(|| failure::format_err!("invalid package id specification: `{}`", spec))?;
         spec.query(i)
     }
 
@@ -99,16 +95,16 @@ impl PackageIdSpec {
     /// Tries to convert a valid `Url` to a `PackageIdSpec`.
     fn from_url(mut url: Url) -> CargoResult<PackageIdSpec> {
         if url.query().is_some() {
-            bail!("cannot have a query string in a pkgid: {}", url)
+            failure::bail!("cannot have a query string in a pkgid: {}", url)
         }
         let frag = url.fragment().map(|s| s.to_owned());
         url.set_fragment(None);
         let (name, version) = {
             let mut path = url
                 .path_segments()
-                .ok_or_else(|| format_err!("pkgid urls must have a path: {}", url))?;
+                .ok_or_else(|| failure::format_err!("pkgid urls must have a path: {}", url))?;
             let path_name = path.next_back().ok_or_else(|| {
-                format_err!(
+                failure::format_err!(
                     "pkgid urls must have at least one path \
                      component: {}",
                     url
@@ -186,7 +182,7 @@ impl PackageIdSpec {
         let mut ids = i.into_iter().filter(|p| self.matches(*p));
         let ret = match ids.next() {
             Some(id) => id,
-            None => bail!(
+            None => failure::bail!(
                 "package id specification `{}` \
                  matched no packages",
                 self
@@ -207,7 +203,7 @@ impl PackageIdSpec {
                 let mut vec = vec![ret, other];
                 vec.extend(ids);
                 minimize(&mut msg, &vec, self);
-                Err(format_err!("{}", msg))
+                Err(failure::format_err!("{}", msg))
             }
             None => Ok(ret),
         };
@@ -278,7 +274,7 @@ impl<'de> de::Deserialize<'de> for PackageIdSpec {
 mod tests {
     use super::PackageIdSpec;
     use crate::core::{PackageId, SourceId};
-    use semver::Version;
+    use crate::util::ToSemver;
     use url::Url;
 
     #[test]
@@ -293,7 +289,7 @@ mod tests {
             "http://crates.io/foo#1.2.3",
             PackageIdSpec {
                 name: "foo".to_string(),
-                version: Some(Version::parse("1.2.3").unwrap()),
+                version: Some("1.2.3".to_semver().unwrap()),
                 url: Some(Url::parse("http://crates.io/foo").unwrap()),
             },
         );
@@ -301,7 +297,7 @@ mod tests {
             "http://crates.io/foo#bar:1.2.3",
             PackageIdSpec {
                 name: "bar".to_string(),
-                version: Some(Version::parse("1.2.3").unwrap()),
+                version: Some("1.2.3".to_semver().unwrap()),
                 url: Some(Url::parse("http://crates.io/foo").unwrap()),
             },
         );
@@ -317,7 +313,7 @@ mod tests {
             "crates.io/foo#1.2.3",
             PackageIdSpec {
                 name: "foo".to_string(),
-                version: Some(Version::parse("1.2.3").unwrap()),
+                version: Some("1.2.3".to_semver().unwrap()),
                 url: Some(Url::parse("cargo://crates.io/foo").unwrap()),
             },
         );
@@ -333,7 +329,7 @@ mod tests {
             "crates.io/foo#bar:1.2.3",
             PackageIdSpec {
                 name: "bar".to_string(),
-                version: Some(Version::parse("1.2.3").unwrap()),
+                version: Some("1.2.3".to_semver().unwrap()),
                 url: Some(Url::parse("cargo://crates.io/foo").unwrap()),
             },
         );
@@ -349,7 +345,7 @@ mod tests {
             "foo:1.2.3",
             PackageIdSpec {
                 name: "foo".to_string(),
-                version: Some(Version::parse("1.2.3").unwrap()),
+                version: Some("1.2.3".to_semver().unwrap()),
                 url: None,
             },
         );

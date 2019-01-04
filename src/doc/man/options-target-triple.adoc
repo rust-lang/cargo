@@ -1,0 +1,8 @@
+*--target* _TRIPLE_::
+    {actionverb} for the given architecture. The default is the host
+    architecture. The general format of the triple is
+    `<arch><sub>-<vendor>-<sys>-<abi>`. Run `rustc --print target-list` for a
+    list of supported targets.
++
+This may also be specified with the `build.target`
+linkcargo:reference/config.html[config value].

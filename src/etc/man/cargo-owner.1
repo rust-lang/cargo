@@ -1,88 +1,229 @@
-.TH "CARGO\-OWNER" "1" "July 2016" "The Rust package manager" "Cargo Manual"
-.hy
-.SH NAME
-.PP
-cargo\-owner \- Manage the owners of a crate of the registry
-.SH SYNOPSIS
-.PP
-\f[I]cargo owner\f[] [OPTIONS] [<CRATE>]
-.SH DESCRIPTION
-.PP
-This command will modify the owners for a package on the specified
-registry (or default). Note that owners of a package can upload new
-versions, and yank old versions. Explicitly named owners can also modify
-the set of owners, so take caution!
-.PP
-.SH OPTIONS
-.TP
-.B \-h, \-\-help
-Print this message.
-.RS
+'\" t
+.\"     Title: cargo-owner
+.\"    Author: [see the "AUTHOR(S)" section]
+.\" Generator: Asciidoctor 1.5.8
+.\"      Date: 2018-12-20
+.\"    Manual: \ \&
+.\"    Source: \ \&
+.\"  Language: English
+.\"
+.TH "CARGO\-OWNER" "1" "2018-12-20" "\ \&" "\ \&"
+.ie \n(.g .ds Aq \(aq
+.el       .ds Aq '
+.ss \n[.ss] 0
+.nh
+.ad l
+.de URL
+\fI\\$2\fP <\\$1>\\$3
+..
+.als MTO URL
+.if \n[.g] \{\
+.  mso www.tmac
+.  am URL
+.    ad l
+.  .
+.  am MTO
+.    ad l
+.  .
+.  LINKSTYLE blue R < >
+.\}
+.SH "NAME"
+cargo\-owner \- Manage the owners of a crate on the registry
+.SH "SYNOPSIS"
+.sp
+\fBcargo owner [\fIOPTIONS\fP] \-\-add \fILOGIN\fP [\fICRATE\fP]\fP
+.br
+\fBcargo owner [\fIOPTIONS\fP] \-\-remove \fILOGIN\fP [\fICRATE\fP]\fP
+.br
+\fBcargo owner [\fIOPTIONS\fP] \-\-list [\fICRATE\fP]\fP
+.SH "DESCRIPTION"
+.sp
+This command will modify the owners for a crate on the registry. Owners of a
+crate can upload new versions and yank old versions. Non\-team owners can also
+modify the set of owners, so take care!
+.sp
+This command requires you to be authenticated with either the \fB\-\-token\fP option
+or using \fBcargo\-login\fP(1).
+.sp
+If the crate name is not specified, it will use the package name from the
+current directory.
+.sp
+See \c
+.URL "https://doc.rust\-lang.org/cargo/reference/publishing.html#cargo\-owner" "the reference" " "
+for more
+information about owners and publishing.
+.SH "OPTIONS"
+.SS "Owner Options"
+.sp
+\fB\-a\fP, \fB\-\-add\fP \fILOGIN\fP...
+.RS 4
+Add the given user or team as an owner.
 .RE
-.TP
-.B \-a, \-\-add \f[I]LOGIN\f[]
-Name of a user or team to add as an owner.
-.RS
+.sp
+\fB\-r\fP, \fB\-\-remove\fP \fILOGIN\fP...
+.RS 4
+Remove the given user or team as an owner.
 .RE
-.TP
-.B \-r, \-\-remove \f[I]LOGIN\f[]
-Name of a user or team to remove as an owner.
-.RS
-.RE
-.TP
-.B \-l, \-\-list
+.sp
+\fB\-l\fP, \fB\-\-list\fP
+.RS 4
 List owners of a crate.
-.RS
 .RE
-.TP
-.B \-\-index \f[I]INDEX\f[]
-Registry index to modify owners for.
-.RS
+.sp
+\fB\-\-token\fP \fITOKEN\fP
+.RS 4
+API token to use when authenticating.
 .RE
-.TP
-.B \-v, \-\-verbose
-Use verbose output.
-.RS
+.sp
+\fB\-\-index\fP \fIINDEX\fP
+.RS 4
+The URL of the registry index to use.
 .RE
-.TP
-.B \-q, \-\-quiet
+.sp
+\fB\-\-registry\fP \fIREGISTRY\fP
+.RS 4
+Alternative registry to use.
+.sp
+This option is unstable and available only on the nightly channel and requires
+the \fB\-Z unstable\-options\fP flag to enable.
+.RE
+.SS "Display Options"
+.sp
+\fB\-v\fP, \fB\-\-verbose\fP
+.RS 4
+Use verbose output. May be specified twice for "very verbose" output which
+includes extra output such as dependency warnings and build script output.
+May also be specified with the \fBterm.verbose\fP
+.URL "https://doc.rust\-lang.org/cargo/reference/config.html" "config value" "."
+.RE
+.sp
+\fB\-q\fP, \fB\-\-quiet\fP
+.RS 4
 No output printed to stdout.
-.RS
 .RE
-.TP
-.B \-\-color \f[I]WHEN\f[]
-Coloring: auto, always, never.
-.RS
+.sp
+\fB\-\-color\fP \fIWHEN\fP
+.RS 4
+Control when colored output is used. Valid values:
+.sp
+.RS 4
+.ie n \{\
+\h'-04'\(bu\h'+03'\c
+.\}
+.el \{\
+.  sp -1
+.  IP \(bu 2.3
+.\}
+\fBauto\fP (default): Automatically detect if color support is available on the
+terminal.
 .RE
-.SH EXAMPLES
-.PP
-Add user as an owner of the current package
-.IP
+.sp
+.RS 4
+.ie n \{\
+\h'-04'\(bu\h'+03'\c
+.\}
+.el \{\
+.  sp -1
+.  IP \(bu 2.3
+.\}
+\fBalways\fP: Always display colors.
+.RE
+.sp
+.RS 4
+.ie n \{\
+\h'-04'\(bu\h'+03'\c
+.\}
+.el \{\
+.  sp -1
+.  IP \(bu 2.3
+.\}
+\fBnever\fP: Never display colors.
+.RE
+.sp
+May also be specified with the \fBterm.color\fP
+.URL "https://doc.rust\-lang.org/cargo/reference/config.html" "config value" "."
+.RE
+.SS "Common Options"
+.sp
+\fB\-h\fP, \fB\-\-help\fP
+.RS 4
+Prints help information.
+.RE
+.sp
+\fB\-Z\fP \fIFLAG\fP...
+.RS 4
+Unstable (nightly\-only) flags to Cargo. Run \fBcargo \-Z help\fP for
+details.
+.RE
+.SH "ENVIRONMENT"
+.sp
+See \c
+.URL "https://doc.rust\-lang.org/cargo/reference/environment\-variables.html" "the reference" " "
+for
+details on environment variables that Cargo reads.
+.SH "EXIT STATUS"
+.sp
+0
+.RS 4
+Cargo succeeded.
+.RE
+.sp
+101
+.RS 4
+Cargo failed to complete.
+.RE
+.SH "EXAMPLES"
+.sp
+.RS 4
+.ie n \{\
+\h'-04' 1.\h'+01'\c
+.\}
+.el \{\
+.  sp -1
+.  IP " 1." 4.2
+.\}
+List owners of a package:
+.sp
+.if n .RS 4
 .nf
-\f[C]
-$\ cargo\ owner\ \-\-add\ user
-\f[]
+cargo owner \-\-list foo
 .fi
-.PP
-Remove user as an owner of the current package
-.IP
+.if n .RE
+.RE
+.sp
+.RS 4
+.ie n \{\
+\h'-04' 2.\h'+01'\c
+.\}
+.el \{\
+.  sp -1
+.  IP " 2." 4.2
+.\}
+Add an owner to a package:
+.sp
+.if n .RS 4
 .nf
-\f[C]
-$\ cargo\ owner\ \-\-remove\ user
-\f[]
+cargo owner \-\-add username foo
 .fi
-.PP
-Use a certain API token to authenticate with
-.IP
+.if n .RE
+.RE
+.sp
+.RS 4
+.ie n \{\
+\h'-04' 3.\h'+01'\c
+.\}
+.el \{\
+.  sp -1
+.  IP " 3." 4.2
+.\}
+Remove an owner from a package:
+.sp
+.if n .RS 4
 .nf
-\f[C]
-$\ cargo\ owner\ \-\-token\ U6WHXacP3Qqwd5kze1fohr4JEOmGCuRK2
-\f[]
+cargo owner \-\-remove username foo
 .fi
-.SH SEE ALSO
-.PP
-cargo(1), cargo\-publish(1), cargo\-login(1)
-.SH COPYRIGHT
-.PP
-This work is dual\-licensed under Apache 2.0 and MIT terms.
-See \f[I]COPYRIGHT\f[] file in the cargo source distribution.
+.if n .RE
+.RE
+.SH "SEE ALSO"
+.sp
+\fBcargo\fP(1), \fBcargo\-login\fP(1), \fBcargo\-publish\fP(1)

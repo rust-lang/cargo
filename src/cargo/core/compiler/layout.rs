@@ -95,7 +95,7 @@ impl Layout {
                 path.push(
                     triple
                         .file_stem()
-                        .ok_or_else(|| format_err!("invalid target"))?,
+                        .ok_or_else(|| failure::format_err!("invalid target"))?,
                 );
             } else {
                 path.push(triple);

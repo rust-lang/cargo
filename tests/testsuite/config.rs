@@ -6,7 +6,6 @@ use crate::support::{lines_match, paths, project};
 use cargo::core::{enable_nightly_features, Shell};
 use cargo::util::config::{self, Config};
 use cargo::util::toml::{self, VecStringOrBool as VSOB};
-use cargo::CargoError;
 use serde::Deserialize;
 
 #[test]
@@ -69,7 +68,7 @@ fn new_config(env: &[(&str, &str)]) -> Config {
     config
 }
 
-fn assert_error<E: Borrow<CargoError>>(error: E, msgs: &str) {
+fn assert_error<E: Borrow<failure::Error>>(error: E, msgs: &str) {
     let causes = error
         .borrow()
         .iter_chain()

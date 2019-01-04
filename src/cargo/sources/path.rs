@@ -124,7 +124,7 @@ impl<'cfg> PathSource<'cfg> {
                 p
             };
             Pattern::new(pattern)
-                .map_err(|e| format_err!("could not parse glob pattern `{}`: {}", p, e))
+                .map_err(|e| failure::format_err!("could not parse glob pattern `{}`: {}", p, e))
         };
 
         let glob_exclude = pkg
@@ -178,7 +178,7 @@ impl<'cfg> PathSource<'cfg> {
                 {
                     Match::None => Ok(true),
                     Match::Ignore(_) => Ok(false),
-                    Match::Whitelist(pattern) => Err(format_err!(
+                    Match::Whitelist(pattern) => Err(failure::format_err!(
                         "exclude rules cannot start with `!`: {}",
                         pattern.original()
                     )),
@@ -189,7 +189,7 @@ impl<'cfg> PathSource<'cfg> {
                 {
                     Match::None => Ok(false),
                     Match::Ignore(_) => Ok(true),
-                    Match::Whitelist(pattern) => Err(format_err!(
+                    Match::Whitelist(pattern) => Err(failure::format_err!(
                         "include rules cannot start with `!`: {}",
                         pattern.original()
                     )),
@@ -377,9 +377,9 @@ impl<'cfg> PathSource<'cfg> {
             if is_dir.unwrap_or_else(|| file_path.is_dir()) {
                 warn!("  found submodule {}", file_path.display());
                 let rel = util::without_prefix(&file_path, root).unwrap();
-                let rel = rel
-                    .to_str()
-                    .ok_or_else(|| format_err!("invalid utf-8 filename: {}", rel.display()))?;
+                let rel = rel.to_str().ok_or_else(|| {
+                    failure::format_err!("invalid utf-8 filename: {}", rel.display())
+                })?;
                 // Git submodules are currently only named through `/` path
                 // separators, explicitly not `\` which windows uses. Who knew?
                 let rel = rel.replace(r"\", "/");

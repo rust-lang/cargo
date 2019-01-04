@@ -1,0 +1,5 @@
+*--registry* _REGISTRY_::
+    Alternative registry to use.
++
+This option is unstable and available only on the nightly channel and requires
+the `-Z unstable-options` flag to enable.

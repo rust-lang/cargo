@@ -1,5 +1,6 @@
 use std::collections::BTreeMap;
 use std::fs::{self, File};
+use std::io::{self, BufRead};
 use std::iter::repeat;
 use std::str;
 use std::time::Duration;
@@ -19,8 +20,8 @@ use crate::sources::{RegistrySource, SourceConfigMap};
 use crate::util::config::{self, Config};
 use crate::util::errors::{CargoResult, CargoResultExt};
 use crate::util::important_paths::find_root_manifest_for_wd;
-use crate::util::paths;
 use crate::util::ToUrl;
+use crate::util::{paths, validate_package_name};
 use crate::version;
 
 pub struct RegistryConfig {
@@ -48,7 +49,7 @@ pub fn publish(ws: &Workspace<'_>, opts: &PublishOpts<'_>) -> CargoResult<()> {
             Some(ref registry) => allowed_registries.contains(registry),
             None => false,
         } {
-            bail!(
+            failure::bail!(
                 "some crates cannot be published.\n\
                  `{}` is marked as unpublishable",
                 pkg.name()
@@ -57,7 +58,7 @@ pub fn publish(ws: &Workspace<'_>, opts: &PublishOpts<'_>) -> CargoResult<()> {
     }
 
     if !pkg.manifest().patch().is_empty() {
-        bail!("published crates cannot contain [patch] sections");
+        failure::bail!("published crates cannot contain [patch] sections");
     }
 
     let (mut registry, reg_id) = registry(
@@ -65,6 +66,7 @@ pub fn publish(ws: &Workspace<'_>, opts: &PublishOpts<'_>) -> CargoResult<()> {
         opts.token.clone(),
         opts.index.clone(),
         opts.registry.clone(),
+        true,
     )?;
     verify_dependencies(pkg, reg_id)?;
 
@@ -80,7 +82,6 @@ pub fn publish(ws: &Workspace<'_>, opts: &PublishOpts<'_>) -> CargoResult<()> {
             allow_dirty: opts.allow_dirty,
             target: opts.target.clone(),
             jobs: opts.jobs,
-            registry: opts.registry.clone(),
         },
     )?
     .unwrap();
@@ -105,7 +106,7 @@ fn verify_dependencies(pkg: &Package, registry_src: SourceId) -> CargoResult<()>
     for dep in pkg.dependencies().iter() {
         if dep.source_id().is_path() {
             if !dep.specified_req() {
-                bail!(
+                failure::bail!(
                     "all path dependencies must have a version specified \
                      when publishing.\ndependency `{}` does not specify \
                      a version",
@@ -117,7 +118,7 @@ fn verify_dependencies(pkg: &Package, registry_src: SourceId) -> CargoResult<()>
                 // Block requests to send to a registry if it is not an alternative
                 // registry
                 if !registry_src.is_alt_registry() {
-                    bail!("crates cannot be published to crates.io with dependencies sourced from other\n\
+                    failure::bail!("crates cannot be published to crates.io with dependencies sourced from other\n\
                            registries either publish `{}` on crates.io or pull it into this repository\n\
                            and specify it with a path and version\n\
                            (crate `{}` is pulled from {})",
@@ -126,7 +127,7 @@ fn verify_dependencies(pkg: &Package, registry_src: SourceId) -> CargoResult<()>
                           dep.source_id());
                 }
             } else {
-                bail!(
+                failure::bail!(
                     "crates cannot be published to crates.io with dependencies sourced from \
                      a repository\neither publish `{}` as its own crate on crates.io and \
                      specify a crates.io version as a dependency or pull it into this \
@@ -158,8 +159,10 @@ fn transmit(
             // registry in the dependency.
             let dep_registry_id = match dep.registry_id() {
                 Some(id) => id,
-                None => bail!("dependency missing registry ID"),
+                None => SourceId::crates_io(config)?,
             };
+            // In the index and Web API, None means "from the same registry"
+            // whereas in Cargo.toml, it means "from crates.io".
             let dep_registry = if dep_registry_id != registry_id {
                 Some(dep_registry_id.url().to_string())
             } else {
@@ -205,7 +208,7 @@ fn transmit(
     };
     if let Some(ref file) = *license_file {
         if fs::metadata(&pkg.root().join(file)).is_err() {
-            bail!("the license file `{}` does not exist", file)
+            failure::bail!("the license file `{}` does not exist", file)
         }
     }
 
@@ -294,12 +297,15 @@ pub fn registry_configuration(
     registry: Option<String>,
 ) -> CargoResult<RegistryConfig> {
     let (index, token) = match registry {
-        Some(registry) => (
-            Some(config.get_registry_index(&registry)?.to_string()),
-            config
-                .get_string(&format!("registries.{}.token", registry))?
-                .map(|p| p.val),
-        ),
+        Some(registry) => {
+            validate_package_name(&registry, "registry name", "")?;
+            (
+                Some(config.get_registry_index(&registry)?.to_string()),
+                config
+                    .get_string(&format!("registries.{}.token", registry))?
+                    .map(|p| p.val),
+            )
+        }
         None => {
             // Checking out for default index and token
             (
@@ -317,6 +323,7 @@ pub fn registry(
     token: Option<String>,
     index: Option<String>,
     registry: Option<String>,
+    force_update: bool,
 ) -> CargoResult<(Registry, SourceId)> {
     // Parse all configuration options
     let RegistryConfig {
@@ -327,9 +334,17 @@ pub fn registry(
     let sid = get_source_id(config, index_config.or(index), registry)?;
     let api_host = {
         let mut src = RegistrySource::remote(sid, config);
-        src.update()
-            .chain_err(|| format!("failed to update {}", sid))?;
-        (src.config()?).unwrap().api.unwrap()
+        // Only update the index if the config is not available or `force` is set.
+        let cfg = src.config();
+        let cfg = if force_update || cfg.is_err() {
+            src.update()
+                .chain_err(|| format!("failed to update {}", sid))?;
+            cfg.or_else(|_| src.config())?
+        } else {
+            cfg.unwrap()
+        };
+        cfg.and_then(|cfg| cfg.api)
+            .ok_or_else(|| failure::format_err!("{} does not support API commands", sid))?
     };
     let handle = http_handle(config)?;
     Ok((Registry::new_handle(api_host, token, handle), sid))
@@ -344,13 +359,13 @@ pub fn http_handle(config: &Config) -> CargoResult<Easy> {
 
 pub fn http_handle_and_timeout(config: &Config) -> CargoResult<(Easy, HttpTimeout)> {
     if config.frozen() {
-        bail!(
+        failure::bail!(
             "attempting to make an HTTP request, but --frozen was \
              specified"
         )
     }
     if !config.network_allowed() {
-        bail!("can't make HTTP request in the offline mode")
+        failure::bail!("can't make HTTP request in the offline mode")
     }
 
     // The timeout option for libcurl by default times out the entire transfer,
@@ -500,18 +515,51 @@ fn http_proxy_exists(config: &Config) -> CargoResult<bool> {
     }
 }
 
-pub fn registry_login(config: &Config, token: String, registry: Option<String>) -> CargoResult<()> {
+pub fn registry_login(
+    config: &Config,
+    token: Option<String>,
+    reg: Option<String>,
+) -> CargoResult<()> {
+    let (registry, _) = registry(config, token.clone(), None, reg.clone(), false)?;
+
+    let token = match token {
+        Some(token) => token,
+        None => {
+            println!(
+                "please visit {}/me and paste the API Token below",
+                registry.host()
+            );
+            let mut line = String::new();
+            let input = io::stdin();
+            input
+                .lock()
+                .read_line(&mut line)
+                .chain_err(|| "failed to read stdin")
+                .map_err(failure::Error::from)?;
+            line.trim().to_string()
+        }
+    };
+
     let RegistryConfig {
         token: old_token, ..
-    } = registry_configuration(config, registry.clone())?;
+    } = registry_configuration(config, reg.clone())?;
 
     if let Some(old_token) = old_token {
         if old_token == token {
+            config.shell().status("Login", "already logged in")?;
             return Ok(());
         }
     }
 
-    config::save_credentials(config, token, registry)
+    config::save_credentials(config, token, reg.clone())?;
+    config.shell().status(
+        "Login",
+        format!(
+            "token for `{}` saved",
+            reg.as_ref().map_or("crates.io", String::as_str)
+        ),
+    )?;
+    Ok(())
 }
 
 pub struct OwnersOptions {
@@ -539,13 +587,14 @@ pub fn modify_owners(config: &Config, opts: &OwnersOptions) -> CargoResult<()> {
         opts.token.clone(),
         opts.index.clone(),
         opts.registry.clone(),
+        true,
     )?;
 
     if let Some(ref v) = opts.to_add {
         let v = v.iter().map(|s| &s[..]).collect::<Vec<_>>();
-        let msg = registry
-            .add_owners(&name, &v)
-            .map_err(|e| format_err!("failed to invite owners to crate {}: {}", name, e))?;
+        let msg = registry.add_owners(&name, &v).map_err(|e| {
+            failure::format_err!("failed to invite owners to crate {}: {}", name, e)
+        })?;
 
         config.shell().status("Owner", msg)?;
     }
@@ -596,10 +645,10 @@ pub fn yank(
     };
     let version = match version {
         Some(v) => v,
-        None => bail!("a version must be specified to yank"),
+        None => failure::bail!("a version must be specified to yank"),
     };
 
-    let (mut registry, _) = registry(config, token, index, reg)?;
+    let (mut registry, _) = registry(config, token, index, reg, true)?;
 
     if undo {
         config
@@ -655,22 +704,7 @@ pub fn search(
         prefix
     }
 
-    let sid = get_source_id(config, index, reg)?;
-
-    let mut regsrc = RegistrySource::remote(sid, config);
-    let cfg = match regsrc.config() {
-        Ok(c) => c,
-        Err(_) => {
-            regsrc
-                .update()
-                .chain_err(|| format!("failed to update {}", &sid))?;
-            regsrc.config()?
-        }
-    };
-
-    let api_host = cfg.unwrap().api.unwrap();
-    let handle = http_handle(config)?;
-    let mut registry = Registry::new_handle(api_host, None, handle);
+    let (mut registry, _) = registry(config, None, index, reg, false)?;
     let (crates, total_crates) = registry
         .search(query, limit)
         .chain_err(|| "failed to retrieve search results from the registry")?;

@@ -72,11 +72,12 @@ impl<'de> de::Deserialize<'de> for PackageId {
         let string = String::deserialize(d)?;
         let mut s = string.splitn(3, ' ');
         let name = s.next().unwrap();
+        let name = InternedString::new(name);
         let version = match s.next() {
             Some(s) => s,
             None => return Err(de::Error::custom("invalid serialized PackageId")),
         };
-        let version = semver::Version::parse(version).map_err(de::Error::custom)?;
+        let version = version.to_semver().map_err(de::Error::custom)?;
         let url = match s.next() {
             Some(s) => s,
             None => return Err(de::Error::custom("invalid serialized PackageId")),
@@ -88,11 +89,7 @@ impl<'de> de::Deserialize<'de> for PackageId {
         };
         let source_id = SourceId::from_url(url).map_err(de::Error::custom)?;
 
-        Ok(PackageId::wrap(PackageIdInner {
-            name: InternedString::new(name),
-            version,
-            source_id,
-        }))
+        Ok(PackageId::pure(name, version, source_id))
     }
 }
 
@@ -118,15 +115,15 @@ impl<'a> Hash for PackageId {
 impl PackageId {
     pub fn new<T: ToSemver>(name: &str, version: T, sid: SourceId) -> CargoResult<PackageId> {
         let v = version.to_semver()?;
-
-        Ok(PackageId::wrap(PackageIdInner {
-            name: InternedString::new(name),
-            version: v,
-            source_id: sid,
-        }))
+        Ok(PackageId::pure(InternedString::new(name), v, sid))
     }
 
-    fn wrap(inner: PackageIdInner) -> PackageId {
+    pub fn pure(name: InternedString, version: semver::Version, source_id: SourceId) -> PackageId {
+        let inner = PackageIdInner {
+            name,
+            version,
+            source_id,
+        };
         let mut cache = PACKAGE_ID_CACHE.lock().unwrap();
         let inner = cache.get(&inner).cloned().unwrap_or_else(|| {
             let inner = Box::leak(Box::new(inner));
@@ -147,19 +144,15 @@ impl PackageId {
     }
 
     pub fn with_precise(self, precise: Option<String>) -> PackageId {
-        PackageId::wrap(PackageIdInner {
-            name: self.inner.name,
-            version: self.inner.version.clone(),
-            source_id: self.inner.source_id.with_precise(precise),
-        })
+        PackageId::pure(
+            self.inner.name,
+            self.inner.version.clone(),
+            self.inner.source_id.with_precise(precise),
+        )
     }
 
     pub fn with_source_id(self, source: SourceId) -> PackageId {
-        PackageId::wrap(PackageIdInner {
-            name: self.inner.name,
-            version: self.inner.version.clone(),
-            source_id: source,
-        })
+        PackageId::pure(self.inner.name, self.inner.version.clone(), source)
     }
 
     pub fn stable_hash(self, workspace: &Path) -> PackageIdStableHash<'_> {

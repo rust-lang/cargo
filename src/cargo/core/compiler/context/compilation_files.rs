@@ -53,10 +53,10 @@ pub struct OutputFile {
 impl OutputFile {
     /// Gets the hardlink if present. Otherwise returns the path.
     pub fn bin_dst(&self) -> &PathBuf {
-        return match self.hardlink {
+        match self.hardlink {
             Some(ref link_dst) => link_dst,
             None => &self.path,
-        };
+        }
     }
 }
 
@@ -341,7 +341,7 @@ impl<'a, 'cfg: 'a> CompilationFiles<'a, 'cfg> {
         }
         if ret.is_empty() {
             if !unsupported.is_empty() {
-                bail!(
+                failure::bail!(
                     "cannot produce {} for `{}` as the target `{}` \
                      does not support these crate types",
                     unsupported.join(", "),
@@ -349,7 +349,7 @@ impl<'a, 'cfg: 'a> CompilationFiles<'a, 'cfg> {
                     bcx.target_triple()
                 )
             }
-            bail!(
+            failure::bail!(
                 "cannot compile `{}` as the target `{}` does not \
                  support any of the output crate types",
                 unit.pkg,

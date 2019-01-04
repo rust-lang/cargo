@@ -1,0 +1,130 @@
+= cargo-install(1)
+:idprefix: cargo_install_
+:doctype: manpage
+:actionverb: Install
+
+== NAME
+
+cargo-install - Build and install a Rust binary
+
+== SYNOPSIS
+
+[%hardbreaks]
+`cargo install [_OPTIONS_] _CRATE_...`
+`cargo install [_OPTIONS_] --path _PATH_`
+`cargo install [_OPTIONS_] --git _URL_ [_CRATE_...]`
+`cargo install [_OPTIONS_] --list`
+
+== DESCRIPTION
+
+This command manages Cargo's local set of installed binary crates. Only packages
+which have `\[[bin]]` targets can be installed, and all binaries are installed into
+the installation root's `bin` folder.
+
+include::description-install-root.adoc[]
+
+There are multiple sources from which a crate can be installed. The default
+location is crates.io but the `--git` and `--path` flags can change this
+source. If the source contains more than one package (such as crates.io or a
+git repository with multiple crates) the _CRATE_ argument is required to
+indicate which crate should be installed.
+
+Crates from crates.io can optionally specify the version they wish to install
+via the `--version` flags, and similarly packages from git repositories can
+optionally specify the branch, tag, or revision that should be installed. If a
+crate has multiple binaries, the `--bin` argument can selectively install only
+one of them, and if you'd rather install examples the `--example` argument can
+be used as well.
+
+If the source is crates.io or `--git` then by default the crate will be built
+in a temporary target directory. To avoid this, the target directory can be
+specified by setting the `CARGO_TARGET_DIR` environment variable to a relative
+path. In particular, this can be useful for caching build artifacts on
+continuous integration systems.
+
+== OPTIONS
+
+=== Install Options
+
+*--vers* _VERSION_::
+*--version* _VERSION_::
+    Specify a version to install from crates.io.
+
+*--git* _URL_::
+    Git URL to install the specified crate from.
+
+*--branch* _BRANCH_::
+    Branch to use when installing from git.
+
+*--tag* _TAG_::
+    Tag to use when installing from git.
+
+*--rev* _SHA_::
+    Specific commit to use when installing from git.
+
+*--path* _PATH_::
+    Filesystem path to local crate to install.
+
+*--list*::
+    List all installed packages and their versions.
+
+*-f*::
+*--force*::
+    Force overwriting existing crates or binaries. This can be used to
+    reinstall or upgrade a crate.
+
+
+*--bin* _NAME_...::
+    Install only the specified binary.
+
+*--bins*::
+    Install all binaries.
+
+*--example* _NAME_...::
+    Install only the specified example.
+
+*--examples*::
+    Install all examples.
+
+*--root* _DIR_::
+    Directory to install packages into.
+
+include::options-registry.adoc[]
+
+include::options-features.adoc[]
+
+=== Compilation Options
+
+include::options-target-triple.adoc[]
+
+*--debug*::
+    Build with the `dev` profile instead the `release` profile.
+
+=== Miscellaneous Options
+
+include::options-jobs.adoc[]
+
+=== Display Options
+
+include::options-display.adoc[]
+
+=== Common Options
+
+include::options-common.adoc[]
+
+include::section-environment.adoc[]
+
+include::section-exit-status.adoc[]
+
+== EXAMPLES
+
+. Install a package from crates.io:
+
+    cargo install ripgrep
+
+. Reinstall or upgrade a package:
+
+    cargo install ripgrep --force
+
+== SEE ALSO
+man:cargo[1], man:cargo-uninstall[1], man:cargo-search[1], man:cargo-publish[1]

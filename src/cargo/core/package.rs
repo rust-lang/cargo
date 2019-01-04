@@ -54,7 +54,7 @@ impl PartialOrd for Package {
 #[derive(Serialize)]
 struct SerializedPackage<'a> {
     name: &'a str,
-    version: &'a str,
+    version: &'a Version,
     id: PackageId,
     license: Option<&'a str>,
     license_file: Option<&'a str>,
@@ -71,6 +71,7 @@ struct SerializedPackage<'a> {
     readme: Option<&'a str>,
     repository: Option<&'a str>,
     edition: &'a str,
+    links: Option<&'a str>,
     #[serde(skip_serializing_if = "Option::is_none")]
     metabuild: Option<&'a Vec<String>>,
 }
@@ -108,7 +109,7 @@ impl ser::Serialize for Package {
 
         SerializedPackage {
             name: &*package_id.name(),
-            version: &package_id.version().to_string(),
+            version: &package_id.version(),
             id: package_id,
             license,
             license_file,
@@ -116,8 +117,8 @@ impl ser::Serialize for Package {
             source: summary.source_id(),
             dependencies: summary.dependencies(),
             targets,
-            features,
-            manifest_path: &self.manifest_path.display().to_string(),
+            features: summary.features(),
+            manifest_path: &self.manifest_path,
             metadata: self.manifest.custom_metadata(),
             authors,
             categories,
@@ -125,6 +126,7 @@ impl ser::Serialize for Package {
             readme,
             repository,
             edition: &self.manifest.edition().to_string(),
+            links: self.manifest.links(),
             metabuild: self.manifest.metabuild(),
         }
         .serialize(s)
@@ -431,7 +433,7 @@ macro_rules! try_old_curl {
             }
         } else {
             result.with_context(|_| {
-                format_err!("failed to enable {}, is curl not built right?", $msg)
+                failure::format_err!("failed to enable {}, is curl not built right?", $msg)
             })?;
         }
     };
@@ -464,7 +466,7 @@ impl<'a, 'cfg> Downloads<'a, 'cfg> {
             .ok_or_else(|| internal(format!("couldn't find source for `{}`", id)))?;
         let pkg = source
             .download(id)
-            .chain_err(|| format_err!("unable to get packages from source"))?;
+            .chain_err(|| failure::format_err!("unable to get packages from source"))?;
         let (url, descriptor) = match pkg {
             MaybePackage::Ready(pkg) => {
                 debug!("{} doesn't need a download", id);

@@ -1,3 +1,44 @@
+//! High-level overview of how `fix` works:
+//!
+//! The main goal is to run `cargo check` to get rustc to emit JSON
+//! diagnostics with suggested fixes that can be applied to the files on the
+//! filesystem, and validate that those changes didn't break anything.
+//!
+//! Cargo begins by launching a `LockServer` thread in the background to
+//! listen for network connections to coordinate locking when multiple targets
+//! are built simultaneously. It ensures each package has only one fix running
+//! at once.
+//!
+//! The `RustfixDiagnosticServer` is launched in a background thread (in
+//! `JobQueue`) to listen for network connections to coordinate displaying
+//! messages to the user on the console (so that multiple processes don't try
+//! to print at the same time).
+//!
+//! Cargo begins a normal `cargo check` operation with itself set as a proxy
+//! for rustc by setting `cargo_as_rustc_wrapper` in the build config. When
+//! cargo launches rustc to check a crate, it is actually launching itself.
+//! The `FIX_ENV` environment variable is set so that cargo knows it is in
+//! fix-proxy-mode. It also sets the `RUSTC` environment variable to the
+//! actual rustc so Cargo knows what to execute.
+//!
+//! Each proxied cargo-as-rustc detects it is in fix-proxy-mode (via `FIX_ENV`
+//! environment variable in `main`) and does the following:
+//!
+//! - Acquire a lock from the `LockServer` from the master cargo process.
+//! - Launches the real rustc (`rustfix_and_fix`), looking at the JSON output
+//!   for suggested fixes.
+//! - Uses the `rustfix` crate to apply the suggestions to the files on the
+//!   file system.
+//! - If rustfix fails to apply any suggestions (for example, they are
+//!   overlapping), but at least some suggestions succeeded, it will try the
+//!   previous two steps up to 4 times as long as some suggestions succeed.
+//! - Assuming there's at least one suggestion applied, and the suggestions
+//!   applied cleanly, rustc is run again to verify the suggestions didn't
+//!   break anything. The change will be backed out if it fails (unless
+//!   `--broken-code` is used).
+//! - If there are any warnings or errors, rustc will be run one last time to
+//!   show them to the user.
+
 use std::collections::{BTreeSet, HashMap, HashSet};
 use std::env;
 use std::ffi::OsString;
@@ -22,7 +63,6 @@ const FIX_ENV: &str = "__CARGO_FIX_PLZ";
 const BROKEN_CODE_ENV: &str = "__CARGO_FIX_BROKEN_CODE";
 const PREPARE_FOR_ENV: &str = "__CARGO_FIX_PREPARE_FOR";
 const EDITION_ENV: &str = "__CARGO_FIX_EDITION";
-
 const IDIOMS_ENV: &str = "__CARGO_FIX_IDIOMS";
 
 pub struct FixOptions<'a> {
@@ -93,7 +133,7 @@ fn check_version_control(opts: &FixOptions<'_>) -> CargoResult<()> {
     }
     let config = opts.compile_opts.config;
     if !existing_vcs_repo(config.cwd(), config.cwd()) {
-        bail!(
+        failure::bail!(
             "no VCS found for this package and `cargo fix` can potentially \
              perform destructive changes; if you'd like to suppress this \
              error pass `--allow-no-vcs`"
@@ -148,7 +188,7 @@ fn check_version_control(opts: &FixOptions<'_>) -> CargoResult<()> {
         files_list.push_str(" (staged)\n");
     }
 
-    bail!(
+    failure::bail!(
         "the working directory of this package has uncommitted changes, and \
          `cargo fix` can potentially perform destructive changes; if you'd \
          like to suppress this error pass `--allow-dirty`, `--allow-staged`, \
@@ -258,9 +298,10 @@ fn rustfix_crate(
     // process at a time. If two invocations concurrently check a crate then
     // it's likely to corrupt it.
     //
-    // Currently we do this by assigning the name on our lock to the first
-    // argument that looks like a Rust file.
-    let _lock = LockServerClient::lock(&lock_addr.parse()?, filename)?;
+    // Currently we do this by assigning the name on our lock to the manifest
+    // directory.
+    let dir = env::var("CARGO_MANIFEST_DIR").expect("CARGO_MANIFEST_DIR is missing?");
+    let _lock = LockServerClient::lock(&lock_addr.parse()?, dir)?;
 
     // Next up this is a bit suspicious, but we *iteratively* execute rustc and
     // collect suggestions to feed to rustfix. Once we hit our limit of times to
@@ -496,7 +537,9 @@ fn log_failed_fix(stderr: &[u8]) -> Result<(), Error> {
         .filter(|x| !x.is_empty())
         .filter_map(|line| serde_json::from_str::<Diagnostic>(line).ok());
     let mut files = BTreeSet::new();
+    let mut errors = Vec::new();
     for diagnostic in diagnostics {
+        errors.push(diagnostic.rendered.unwrap_or(diagnostic.message));
         for span in diagnostic.spans.into_iter() {
             files.insert(span.file_name);
         }
@@ -516,7 +559,12 @@ fn log_failed_fix(stderr: &[u8]) -> Result<(), Error> {
     }
 
     let files = files.into_iter().collect();
-    Message::FixFailed { files, krate }.post()?;
+    Message::FixFailed {
+        files,
+        krate,
+        errors,
+    }
+    .post()?;
 
     Ok(())
 }

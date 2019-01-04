@@ -16,6 +16,7 @@ pub struct UpdateOptions<'a> {
     pub to_update: Vec<String>,
     pub precise: Option<&'a str>,
     pub aggressive: bool,
+    pub dry_run: bool,
 }
 
 pub fn generate_lockfile(ws: &Workspace<'_>) -> CargoResult<()> {
@@ -36,15 +37,15 @@ pub fn generate_lockfile(ws: &Workspace<'_>) -> CargoResult<()> {
 
 pub fn update_lockfile(ws: &Workspace<'_>, opts: &UpdateOptions<'_>) -> CargoResult<()> {
     if opts.aggressive && opts.precise.is_some() {
-        bail!("cannot specify both aggressive and precise simultaneously")
+        failure::bail!("cannot specify both aggressive and precise simultaneously")
     }
 
     if ws.members().count() == 0 {
-        bail!("you can't generate a lockfile for an empty workspace.")
+        failure::bail!("you can't generate a lockfile for an empty workspace.")
     }
 
     if opts.config.cli_unstable().offline {
-        bail!("you can't update in the offline mode");
+        failure::bail!("you can't update in the offline mode");
     }
 
     let previous_resolve = match ops::load_pkg_lockfile(ws)? {
@@ -119,8 +120,13 @@ pub fn update_lockfile(ws: &Workspace<'_>, opts: &UpdateOptions<'_>) -> CargoRes
             }
         }
     }
-
-    ops::write_pkg_lockfile(ws, &resolve)?;
+    if opts.dry_run {
+        opts.config
+            .shell()
+            .warn("not updating lockfile due to dry run")?;
+    } else {
+        ops::write_pkg_lockfile(ws, &resolve)?;
+    }
     return Ok(());
 
     fn fill_with_deps<'a>(

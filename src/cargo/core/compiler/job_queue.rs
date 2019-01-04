@@ -328,7 +328,7 @@ impl<'a> JobQueue<'a> {
                             self.emit_warnings(Some(msg), &key, cx)?;
 
                             if !self.active.is_empty() {
-                                error = Some(format_err!("build failed"));
+                                error = Some(failure::format_err!("build failed"));
                                 handle_error(&e, &mut *cx.bcx.config.shell());
                                 cx.bcx.config.shell().warn(
                                     "build failed, waiting for other \

@@ -6,7 +6,7 @@ use std::path::{Path, PathBuf};
 use std::sync::Arc;
 use std::{env, fs};
 
-use semver::{Version, VersionReq};
+use semver::VersionReq;
 use serde::{Deserialize, Serialize};
 use tempfile::Builder as TempFileBuilder;
 
@@ -19,7 +19,7 @@ use crate::ops::{self, CompileFilter};
 use crate::sources::{GitSource, PathSource, SourceConfigMap};
 use crate::util::errors::{CargoResult, CargoResultExt};
 use crate::util::paths;
-use crate::util::{internal, Config};
+use crate::util::{internal, Config, ToSemver};
 use crate::util::{FileLock, Filesystem};
 
 #[derive(Deserialize, Serialize)]
@@ -144,7 +144,7 @@ pub fn install(
     }
 
     if scheduled_error {
-        bail!("some crates failed to install");
+        failure::bail!("some crates failed to install");
     }
 
     Ok(())
@@ -175,7 +175,7 @@ fn install_one(
     } else if source_id.is_path() {
         let mut src = path_source(source_id, config)?;
         src.update().chain_err(|| {
-            format_err!(
+            failure::format_err!(
                 "`{}` is not a crate root; specify a crate to \
                  install from crates.io, or use --path or --git to \
                  specify an alternate source",
@@ -193,7 +193,7 @@ fn install_one(
             config,
             is_first_install,
             &mut |_| {
-                bail!(
+                failure::bail!(
                     "must specify a crate to install from \
                      crates.io, or use --path or --git to \
                      specify alternate source"
@@ -228,19 +228,20 @@ fn install_one(
     let pkg = ws.current()?;
 
     if from_cwd {
-        match pkg.manifest().edition() {
-            Edition::Edition2015 => config.shell().warn(
+        if pkg.manifest().edition() == Edition::Edition2015 {
+            config.shell().warn(
                 "Using `cargo install` to install the binaries for the \
                  package in current working directory is deprecated, \
                  use `cargo install --path .` instead. \
                  Use `cargo build` if you want to simply build the package.",
-            )?,
-            Edition::Edition2018 => bail!(
+            )?
+        } else {
+            failure::bail!(
                 "Using `cargo install` to install the binaries for the \
                  package in current working directory is no longer supported, \
                  use `cargo install --path .` instead. \
                  Use `cargo build` if you want to simply build the package."
-            ),
+            )
         }
     };
 
@@ -263,7 +264,7 @@ fn install_one(
             td.into_path();
         }
 
-        format_err!(
+        failure::format_err!(
             "failed to compile `{}`, intermediate artifacts can be \
              found at `{}`",
             pkg,
@@ -278,12 +279,12 @@ fn install_one(
             if let Some(s) = name.to_str() {
                 Ok((s, bin.as_ref()))
             } else {
-                bail!("Binary `{:?}` name can't be serialized into string", name)
+                failure::bail!("Binary `{:?}` name can't be serialized into string", name)
             }
         })
         .collect::<CargoResult<_>>()?;
     if binaries.is_empty() {
-        bail!(
+        failure::bail!(
             "no binaries are available for install using the selected \
              features"
         );
@@ -309,7 +310,7 @@ fn install_one(
             continue;
         }
         fs::copy(src, &dst).chain_err(|| {
-            format_err!("failed to copy `{}` to `{}`", src.display(), dst.display())
+            failure::format_err!("failed to copy `{}` to `{}`", src.display(), dst.display())
         })?;
     }
 
@@ -326,7 +327,7 @@ fn install_one(
         let dst = dst.join(bin);
         config.shell().status("Installing", dst.display())?;
         fs::rename(&src, &dst).chain_err(|| {
-            format_err!("failed to move `{}` to `{}`", src.display(), dst.display())
+            failure::format_err!("failed to move `{}` to `{}`", src.display(), dst.display())
         })?;
         installed.bins.push(dst);
     }
@@ -341,7 +342,11 @@ fn install_one(
                 let dst = dst.join(bin);
                 config.shell().status("Replacing", dst.display())?;
                 fs::rename(&src, &dst).chain_err(|| {
-                    format_err!("failed to move `{}` to `{}`", src.display(), dst.display())
+                    failure::format_err!(
+                        "failed to move `{}` to `{}`",
+                        src.display(),
+                        dst.display()
+                    )
                 })?;
                 replaced_names.push(bin);
             }
@@ -410,7 +415,7 @@ fn path_source<'a>(source_id: SourceId, config: &'a Config) -> CargoResult<PathS
     let path = source_id
         .url()
         .to_file_path()
-        .map_err(|()| format_err!("path sources must have a valid path"))?;
+        .map_err(|()| failure::format_err!("path sources must have a valid path"))?;
     Ok(PathSource::new(&path, source_id, config))
 }
 
@@ -435,15 +440,14 @@ where
                 Some(v) => {
                     // If the version begins with character <, >, =, ^, ~ parse it as a
                     // version range, otherwise parse it as a specific version
-                    let first = v
-                        .chars()
-                        .nth(0)
-                        .ok_or_else(|| format_err!("no version provided for the `--vers` flag"))?;
+                    let first = v.chars().nth(0).ok_or_else(|| {
+                        failure::format_err!("no version provided for the `--vers` flag")
+                    })?;
 
                     match first {
                         '<' | '>' | '=' | '^' | '~' => match v.parse::<VersionReq>() {
                             Ok(v) => Some(v.to_string()),
-                            Err(_) => bail!(
+                            Err(_) => failure::bail!(
                                 "the `--vers` provided, `{}`, is \
                                        not a valid semver version requirement\n\n
                                        Please have a look at \
@@ -452,7 +456,7 @@ where
                                 v
                             ),
                         },
-                        _ => match v.parse::<Version>() {
+                        _ => match v.to_semver() {
                             Ok(v) => Some(format!("={}", v)),
                             Err(_) => {
                                 let mut msg = format!(
@@ -500,7 +504,7 @@ where
                     let vers_info = vers
                         .map(|v| format!(" with version `{}`", v))
                         .unwrap_or_default();
-                    bail!(
+                    failure::bail!(
                         "could not find `{}` in {}{}",
                         name,
                         source.source_id(),
@@ -530,7 +534,7 @@ where
                 Some(p) => p,
                 None => match one(examples, |v| multi_err("examples", v))? {
                     Some(p) => p,
-                    None => bail!(
+                    None => failure::bail!(
                         "no packages found with binaries or \
                          examples"
                     ),
@@ -562,7 +566,7 @@ where
         (Some(i1), Some(i2)) => {
             let mut v = vec![i1, i2];
             v.extend(i);
-            Err(format_err!("{}", f(v)))
+            Err(failure::format_err!("{}", f(v)))
         }
         (Some(i), None) => Ok(Some(i)),
         (None, _) => Ok(None),
@@ -580,7 +584,7 @@ fn check_overwrites(
     // get checked during cargo_compile, we only care about the "build
     // everything" case here
     if !filter.is_specific() && !pkg.targets().iter().any(|t| t.is_bin()) {
-        bail!("specified package has no binaries")
+        failure::bail!("specified package has no binaries")
     }
     let duplicates = find_duplicates(dst, pkg, filter, prev);
     if force || duplicates.is_empty() {
@@ -597,7 +601,7 @@ fn check_overwrites(
         }
     }
     msg.push_str("Add --force to overwrite");
-    Err(format_err!("{}", msg))
+    Err(failure::format_err!("{}", msg))
 }
 
 fn find_duplicates(
@@ -667,7 +671,7 @@ fn read_crate_list(file: &FileLock) -> CargoResult<CrateListingV1> {
         }
     })()
     .chain_err(|| {
-        format_err!(
+        failure::format_err!(
             "failed to parse crate metadata at `{}`",
             file.path().to_string_lossy()
         )
@@ -685,7 +689,7 @@ fn write_crate_list(file: &FileLock, listing: CrateListingV1) -> CargoResult<()>
         Ok(())
     })()
     .chain_err(|| {
-        format_err!(
+        failure::format_err!(
             "failed to write crate metadata at `{}`",
             file.path().to_string_lossy()
         )
@@ -713,7 +717,7 @@ pub fn uninstall(
     config: &Config,
 ) -> CargoResult<()> {
     if specs.len() > 1 && !bins.is_empty() {
-        bail!("A binary can only be associated with a single installed package, specifying multiple specs with --bin is redundant.");
+        failure::bail!("A binary can only be associated with a single installed package, specifying multiple specs with --bin is redundant.");
     }
 
     let root = resolve_root(root, config)?;
@@ -759,7 +763,7 @@ pub fn uninstall(
     };
 
     if scheduled_error {
-        bail!("some packages failed to uninstall");
+        failure::bail!("some packages failed to uninstall");
     }
 
     Ok(())
@@ -800,13 +804,13 @@ fn uninstall_pkgid(
     {
         let mut installed = match metadata.v1.entry(pkgid) {
             Entry::Occupied(e) => e,
-            Entry::Vacant(..) => bail!("package `{}` is not installed", pkgid),
+            Entry::Vacant(..) => failure::bail!("package `{}` is not installed", pkgid),
         };
         let dst = crate_metadata.parent().join("bin");
         for bin in installed.get() {
             let bin = dst.join(bin);
             if fs::metadata(&bin).is_err() {
-                bail!(
+                failure::bail!(
                     "corrupt metadata, `{}` does not exist when it should",
                     bin.display()
                 )
@@ -826,7 +830,7 @@ fn uninstall_pkgid(
 
         for bin in bins.iter() {
             if !installed.get().contains(bin) {
-                bail!("binary `{}` not installed as part of `{}`", bin, pkgid)
+                failure::bail!("binary `{}` not installed as part of `{}`", bin, pkgid)
             }
         }
 

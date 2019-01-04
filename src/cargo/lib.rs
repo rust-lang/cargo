@@ -1,5 +1,6 @@
 #![cfg_attr(test, deny(warnings))]
-#![warn(rust_2018_idioms)] // while we're getting used to 2018
+#![warn(rust_2018_idioms)]
+// while we're getting used to 2018
 // Clippy isn't enforced by CI, and know that @alexcrichton isn't a fan :)
 #![allow(clippy::boxed_local)] // bug rust-lang-nursery/rust-clippy#1123
 #![allow(clippy::cyclomatic_complexity)] // large project
@@ -14,9 +15,6 @@
 #![allow(clippy::type_complexity)] // there's an exceptionally complex type
 #![allow(clippy::wrong_self_convention)] // perhaps Rc should be special cased in Clippy?
 
-#[macro_use]
-extern crate failure;
-
 use std::fmt;
 
 use failure::Error;
@@ -27,7 +25,7 @@ use crate::core::shell::Verbosity::Verbose;
 use crate::core::Shell;
 
 pub use crate::util::errors::Internal;
-pub use crate::util::{CargoError, CargoResult, CliError, CliResult, Config};
+pub use crate::util::{CargoResult, CliError, CliResult, Config};
 
 pub const CARGO_ENV: &str = "CARGO";
 
@@ -126,7 +124,7 @@ pub fn exit_with_error(err: CliError, shell: &mut Shell) -> ! {
     std::process::exit(exit_code)
 }
 
-pub fn handle_error(err: &CargoError, shell: &mut Shell) {
+pub fn handle_error(err: &failure::Error, shell: &mut Shell) {
     debug!("handle_error; err={:?}", err);
 
     let _ignored_result = shell.error(err);

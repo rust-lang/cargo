@@ -2,9 +2,6 @@
 #![allow(clippy::too_many_arguments)] // large project
 #![allow(clippy::redundant_closure)] // there's a false positive
 
-#[macro_use]
-extern crate failure;
-
 use std::collections::BTreeSet;
 use std::env;
 use std::fs;
@@ -136,12 +133,12 @@ fn execute_external_subcommand(config: &Config, cmd: &str, args: &[&str]) -> Cli
         Some(command) => command,
         None => {
             let err = match find_closest(config, cmd) {
-                Some(closest) => format_err!(
+                Some(closest) => failure::format_err!(
                     "no such subcommand: `{}`\n\n\tDid you mean `{}`?\n",
                     cmd,
                     closest
                 ),
-                None => format_err!("no such subcommand: `{}`", cmd),
+                None => failure::format_err!("no such subcommand: `{}`", cmd),
             };
             return Err(CliError::new(err, 101));
         }

@@ -132,7 +132,11 @@ pub fn prepare_target<'a, 'cfg>(
 /// * its package id
 /// * its extern crate name
 /// * its calculated fingerprint for the dependency
-type DepFingerprint = (String, String, Arc<Fingerprint>);
+struct DepFingerprint {
+    pkg_id: String,
+    name: String,
+    fingerprint: Arc<Fingerprint>,
+}
 
 /// A fingerprint can be considered to be a "short string" representing the
 /// state of a world for a package.
@@ -162,10 +166,6 @@ pub struct Fingerprint {
     target: u64,
     profile: u64,
     path: u64,
-    #[serde(
-        serialize_with = "serialize_deps",
-        deserialize_with = "deserialize_deps"
-    )]
     deps: Vec<DepFingerprint>,
     local: Vec<LocalFingerprint>,
     #[serde(skip_serializing, skip_deserializing)]
@@ -174,39 +174,31 @@ pub struct Fingerprint {
     edition: Edition,
 }
 
-fn serialize_deps<S>(deps: &[DepFingerprint], ser: S) -> Result<S::Ok, S::Error>
-where
-    S: ser::Serializer,
-{
-    ser.collect_seq(deps.iter().map(|&(ref a, ref b, ref c)| (a, b, c.hash())))
+impl Serialize for DepFingerprint {
+    fn serialize<S>(&self, ser: S) -> Result<S::Ok, S::Error>
+    where
+        S: ser::Serializer,
+    {
+        (&self.pkg_id, &self.name, &self.fingerprint.hash()).serialize(ser)
+    }
 }
 
-fn deserialize_deps<'de, D>(d: D) -> Result<Vec<DepFingerprint>, D::Error>
-where
-    D: de::Deserializer<'de>,
-{
-    let decoded = <Vec<(String, String, u64)>>::deserialize(d)?;
-    Ok(decoded
-        .into_iter()
-        .map(|(pkg_id, name, hash)| {
-            (
-                pkg_id,
-                name,
-                Arc::new(Fingerprint {
-                    rustc: 0,
-                    target: 0,
-                    profile: 0,
-                    path: 0,
-                    local: vec![LocalFingerprint::Precalculated(String::new())],
-                    features: String::new(),
-                    deps: Vec::new(),
-                    memoized_hash: Mutex::new(Some(hash)),
-                    edition: Edition::Edition2015,
-                    rustflags: Vec::new(),
-                }),
-            )
+impl<'de> Deserialize<'de> for DepFingerprint {
+    fn deserialize<D>(d: D) -> Result<DepFingerprint, D::Error>
+    where
+        D: de::Deserializer<'de>,
+    {
+        let (pkg_id, name, hash) = <(String, String, u64)>::deserialize(d)?;
+        Ok(DepFingerprint {
+            pkg_id,
+            name,
+            fingerprint: Arc::new(Fingerprint {
+                local: vec![LocalFingerprint::Precalculated(String::new())],
+                memoized_hash: Mutex::new(Some(hash)),
+                ..Fingerprint::new()
+            }),
         })
-        .collect())
+    }
 }
 
 #[derive(Serialize, Deserialize, Hash)]
@@ -228,8 +220,22 @@ impl LocalFingerprint {
 struct MtimeSlot(Mutex<Option<FileTime>>);
 
 impl Fingerprint {
+    fn new() -> Fingerprint {
+        Fingerprint {
+            rustc: 0,
+            target: 0,
+            profile: 0,
+            path: 0,
+            features: String::new(),
+            deps: Vec::new(),
+            local: Vec::new(),
+            memoized_hash: Mutex::new(None),
+            edition: Edition::Edition2015,
+            rustflags: Vec::new(),
+        }
+    }
+
     fn update_local(&self, root: &Path) -> CargoResult<()> {
-        let mut hash_busted = false;
         for local in self.local.iter() {
             match *local {
                 LocalFingerprint::MtimeBased(ref slot, ref path) => {
@@ -239,12 +245,9 @@ impl Fingerprint {
                 }
                 LocalFingerprint::EnvBased(..) | LocalFingerprint::Precalculated(..) => continue,
             }
-            hash_busted = true;
         }
 
-        if hash_busted {
-            *self.memoized_hash.lock().unwrap() = None;
-        }
+        *self.memoized_hash.lock().unwrap() = None;
         Ok(())
     }
 
@@ -259,32 +262,32 @@ impl Fingerprint {
 
     fn compare(&self, old: &Fingerprint) -> CargoResult<()> {
         if self.rustc != old.rustc {
-            bail!("rust compiler has changed")
+            failure::bail!("rust compiler has changed")
         }
         if self.features != old.features {
-            bail!(
+            failure::bail!(
                 "features have changed: {} != {}",
                 self.features,
                 old.features
             )
         }
         if self.target != old.target {
-            bail!("target configuration has changed")
+            failure::bail!("target configuration has changed")
         }
         if self.path != old.path {
-            bail!("path to the compiler has changed")
+            failure::bail!("path to the compiler has changed")
         }
         if self.profile != old.profile {
-            bail!("profile configuration has changed")
+            failure::bail!("profile configuration has changed")
         }
         if self.rustflags != old.rustflags {
-            bail!("RUSTFLAGS has changed")
+            failure::bail!("RUSTFLAGS has changed")
         }
         if self.local.len() != old.local.len() {
-            bail!("local lens changed");
+            failure::bail!("local lens changed");
         }
         if self.edition != old.edition {
-            bail!("edition changed")
+            failure::bail!("edition changed")
         }
         for (new, old) in self.local.iter().zip(&old.local) {
             match (new, old) {
@@ -293,7 +296,7 @@ impl Fingerprint {
                     &LocalFingerprint::Precalculated(ref b),
                 ) => {
                     if a != b {
-                        bail!("precalculated components have changed: {} != {}", a, b)
+                        failure::bail!("precalculated components have changed: {} != {}", a, b)
                     }
                 }
                 (
@@ -310,7 +313,7 @@ impl Fingerprint {
                     };
 
                     if should_rebuild {
-                        bail!(
+                        failure::bail!(
                             "mtime based components have changed: previously {:?} now {:?}, \
                              paths are {:?} and {:?}",
                             *previously_built_mtime,
@@ -325,10 +328,10 @@ impl Fingerprint {
                     &LocalFingerprint::EnvBased(ref bkey, ref bvalue),
                 ) => {
                     if *akey != *bkey {
-                        bail!("env vars changed: {} != {}", akey, bkey);
+                        failure::bail!("env vars changed: {} != {}", akey, bkey);
                     }
                     if *avalue != *bvalue {
-                        bail!(
+                        failure::bail!(
                             "env var `{}` changed: previously {:?} now {:?}",
                             akey,
                             bvalue,
@@ -336,16 +339,16 @@ impl Fingerprint {
                         )
                     }
                 }
-                _ => bail!("local fingerprint type has changed"),
+                _ => failure::bail!("local fingerprint type has changed"),
             }
         }
 
         if self.deps.len() != old.deps.len() {
-            bail!("number of dependencies has changed")
+            failure::bail!("number of dependencies has changed")
         }
         for (a, b) in self.deps.iter().zip(old.deps.iter()) {
-            if a.1 != b.1 || a.2.hash() != b.2.hash() {
-                bail!("new ({}) != old ({})", a.0, b.0)
+            if a.name != b.name || a.fingerprint.hash() != b.fingerprint.hash() {
+                failure::bail!("new ({}) != old ({})", a.pkg_id, b.pkg_id)
             }
         }
         Ok(())
@@ -372,7 +375,12 @@ impl hash::Hash for Fingerprint {
             .hash(h);
 
         h.write_usize(deps.len());
-        for &(ref pkg_id, ref name, ref fingerprint) in deps {
+        for DepFingerprint {
+            pkg_id,
+            name,
+            fingerprint,
+        } in deps
+        {
             pkg_id.hash(h);
             name.hash(h);
             // use memoized dep hashes to avoid exponential blowup
@@ -447,7 +455,11 @@ fn calculate<'a, 'cfg>(
         .map(|dep| {
             calculate(cx, dep).and_then(|fingerprint| {
                 let name = cx.bcx.extern_crate_name(unit, dep)?;
-                Ok((dep.pkg.package_id().to_string(), name, fingerprint))
+                Ok(DepFingerprint {
+                    pkg_id: dep.pkg.package_id().to_string(),
+                    name,
+                    fingerprint,
+                })
             })
         })
         .collect::<CargoResult<Vec<_>>>()?;
@@ -462,7 +474,7 @@ fn calculate<'a, 'cfg>(
         LocalFingerprint::Precalculated(fingerprint)
     };
     let mut deps = deps;
-    deps.sort_by(|&(ref a, _, _), &(ref b, _, _)| a.cmp(b));
+    deps.sort_by(|a, b| a.pkg_id.cmp(&b.pkg_id));
     let extra_flags = if unit.mode.is_doc() {
         bcx.rustdocflags_args(unit)?
     } else {
@@ -530,16 +542,9 @@ pub fn prepare_build_cmd<'a, 'cfg>(
 
     let (local, output_path) = build_script_local_fingerprints(cx, unit)?;
     let mut fingerprint = Fingerprint {
-        rustc: 0,
-        target: 0,
-        profile: 0,
-        path: 0,
-        features: String::new(),
-        deps: Vec::new(),
         local,
-        memoized_hash: Mutex::new(None),
-        edition: Edition::Edition2015,
-        rustflags: Vec::new(),
+        rustc: util::hash_u64(&cx.bcx.rustc.verbose_version),
+        ..Fingerprint::new()
     };
     let compare = compare_old_fingerprint(&loc, &fingerprint);
     log_compare(unit, &compare);
@@ -643,6 +648,10 @@ fn local_fingerprints_deps(
 }
 
 fn write_fingerprint(loc: &Path, fingerprint: &Fingerprint) -> CargoResult<()> {
+    debug_assert_ne!(fingerprint.rustc, 0);
+    // fingerprint::new().rustc == 0, make sure it doesn't make it to the file system.
+    // This is mostly so outside tools can reliably find out what rust version this file is for,
+    // as we can use the full hash.
     let hash = fingerprint.hash();
     debug!("write fingerprint: {}", loc.display());
     paths::write(loc, util::to_hex(hash).as_bytes())?;

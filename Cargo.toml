@@ -19,6 +19,7 @@ path = "src/cargo/lib.rs"
 
 [dependencies]
 atty = "0.2"
+byteorder = "1.2"
 bytesize = "1.0"
 crates-io = { path = "src/crates-io", version = "0.22" }
 crossbeam-utils = "0.6"
@@ -31,8 +32,8 @@ failure = "0.1.2"
 filetime = "0.2"
 flate2 = { version = "1.0.3", features = ['zlib'] }
 fs2 = "0.4"
-git2 = "0.7.5"
-git2-curl = "0.8.1"
+git2 = "0.8.0"
+git2-curl = "0.9.0"
 glob = "0.2.11"
 hex = "0.3"
 home = "0.3"
@@ -45,7 +46,7 @@ log = "0.4.6"
 libgit2-sys = "0.7.9"
 num_cpus = "1.0"
 opener = "0.3.0"
-rustfix = "0.4.2"
+rustfix = "0.4.4"
 same-file = "1"
 semver = { version = "0.9.0", features = ["serde"] }
 serde = { version = "1.0.82", features = ['derive'] }
@@ -57,6 +58,7 @@ tempfile = "3.0"
 termcolor = "1.0"
 toml = "0.4.2"
 url = "1.1"
+url_serde = "0.2.0"
 clap = "2.31.2"
 unicode-width = "0.1.5"
 openssl = { version = '0.10.11', optional = true }
@@ -105,5 +107,6 @@ test = false
 doc = false
 
 [features]
+deny-warnings = []
 vendored-openssl = ['openssl/vendored']
 pretty-env-logger = ['pretty_env_logger']

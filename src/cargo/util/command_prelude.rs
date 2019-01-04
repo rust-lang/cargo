@@ -6,7 +6,7 @@ use crate::core::Workspace;
 use crate::ops::{CompileFilter, CompileOptions, NewOptions, Packages, VersionControl};
 use crate::sources::CRATES_IO_REGISTRY;
 use crate::util::important_paths::find_root_manifest_for_wd;
-use crate::util::paths;
+use crate::util::{paths, validate_package_name};
 use crate::CargoResult;
 use clap::{self, SubCommand};
 
@@ -177,6 +177,10 @@ pub trait AppExt: Sized {
                     .hidden(true),
             )
     }
+
+    fn arg_dry_run(self, dry_run: &'static str) -> Self {
+        self._arg(opt("dry-run", dry_run))
+    }
 }
 
 impl AppExt for App {
@@ -234,10 +238,10 @@ pub trait ArgMatchesExt {
             // but in this particular case we need it to fix #3586.
             let path = paths::normalize_path(&path);
             if !path.ends_with("Cargo.toml") {
-                bail!("the manifest-path must be a path to a Cargo.toml file")
+                failure::bail!("the manifest-path must be a path to a Cargo.toml file")
             }
             if fs::metadata(&path).is_err() {
-                bail!(
+                failure::bail!(
                     "manifest path `{}` does not exist",
                     self._value_of("manifest-path").unwrap()
                 )
@@ -295,7 +299,7 @@ pub trait ArgMatchesExt {
         build_config.release = self._is_present("release");
         build_config.build_plan = self._is_present("build-plan");
         if build_config.build_plan && !config.cli_unstable().unstable_options {
-            Err(format_err!(
+            Err(failure::format_err!(
                 "`--build-plan` flag is unstable, pass `-Z unstable-options` to enable it"
             ))?;
         };
@@ -361,16 +365,17 @@ pub trait ArgMatchesExt {
         match self._value_of("registry") {
             Some(registry) => {
                 if !config.cli_unstable().unstable_options {
-                    return Err(format_err!(
+                    return Err(failure::format_err!(
                         "registry option is an unstable feature and \
                          requires -Zunstable-options to use."
                     ));
                 }
+                validate_package_name(registry, "registry name", "")?;
 
                 if registry == CRATES_IO_REGISTRY {
                     // If "crates.io" is specified then we just need to return None
                     // as that will cause cargo to use crates.io. This is required
-                    // for the case where a default alterative registry is used
+                    // for the case where a default alternative registry is used
                     // but the user wants to switch back to crates.io for a single
                     // command.
                     Ok(None)

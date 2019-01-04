@@ -1,0 +1,178 @@
+'\" t
+.\"     Title: cargo-verify-project
+.\"    Author: [see the "AUTHOR(S)" section]
+.\" Generator: Asciidoctor 1.5.8
+.\"      Date: 2018-12-20
+.\"    Manual: \ \&
+.\"    Source: \ \&
+.\"  Language: English
+.\"
+.TH "CARGO\-VERIFY\-PROJECT" "1" "2018-12-20" "\ \&" "\ \&"
+.ie \n(.g .ds Aq \(aq
+.el       .ds Aq '
+.ss \n[.ss] 0
+.nh
+.ad l
+.de URL
+\fI\\$2\fP <\\$1>\\$3
+..
+.als MTO URL
+.if \n[.g] \{\
+.  mso www.tmac
+.  am URL
+.    ad l
+.  .
+.  am MTO
+.    ad l
+.  .
+.  LINKSTYLE blue R < >
+.\}
+.SH "NAME"
+cargo\-verify\-project \- Check correctness of crate manifest
+.SH "SYNOPSIS"
+.sp
+\fBcargo verify\-project [\fIOPTIONS\fP]\fP
+.SH "DESCRIPTION"
+.sp
+This command will parse the local manifest and check its validity. It emits a
+JSON object with the result. A successful validation will display:
+.sp
+.if n .RS 4
+.nf
+{"success":"true"}
+.fi
+.if n .RE
+.sp
+An invalid workspace will display:
+.sp
+.if n .RS 4
+.nf
+{"invalid":"human\-readable error message"}
+.fi
+.if n .RE
+.SH "OPTIONS"
+.SS "Display Options"
+.sp
+\fB\-v\fP, \fB\-\-verbose\fP
+.RS 4
+Use verbose output. May be specified twice for "very verbose" output which
+includes extra output such as dependency warnings and build script output.
+May also be specified with the \fBterm.verbose\fP
+.URL "https://doc.rust\-lang.org/cargo/reference/config.html" "config value" "."
+.RE
+.sp
+\fB\-q\fP, \fB\-\-quiet\fP
+.RS 4
+No output printed to stdout.
+.RE
+.sp
+\fB\-\-color\fP \fIWHEN\fP
+.RS 4
+Control when colored output is used. Valid values:
+.sp
+.RS 4
+.ie n \{\
+\h'-04'\(bu\h'+03'\c
+.\}
+.el \{\
+.  sp -1
+.  IP \(bu 2.3
+.\}
+\fBauto\fP (default): Automatically detect if color support is available on the
+terminal.
+.RE
+.sp
+.RS 4
+.ie n \{\
+\h'-04'\(bu\h'+03'\c
+.\}
+.el \{\
+.  sp -1
+.  IP \(bu 2.3
+.\}
+\fBalways\fP: Always display colors.
+.RE
+.sp
+.RS 4
+.ie n \{\
+\h'-04'\(bu\h'+03'\c
+.\}
+.el \{\
+.  sp -1
+.  IP \(bu 2.3
+.\}
+\fBnever\fP: Never display colors.
+.RE
+.sp
+May also be specified with the \fBterm.color\fP
+.URL "https://doc.rust\-lang.org/cargo/reference/config.html" "config value" "."
+.RE
+.SS "Manifest Options"
+.sp
+\fB\-\-manifest\-path\fP \fIPATH\fP
+.RS 4
+Path to the \fBCargo.toml\fP file. By default, Cargo searches in the current
+directory or any parent directory for the \fBCargo.toml\fP file.
+.RE
+.sp
+\fB\-\-frozen\fP, \fB\-\-locked\fP
+.RS 4
+Either of these flags requires that the \fBCargo.lock\fP file is
+up\-to\-date. If the lock file is missing, or it needs to be updated, Cargo will
+exit with an error. The \fB\-\-frozen\fP flag also prevents Cargo from
+attempting to access the network to determine if it is out\-of\-date.
+.sp
+These may be used in environments where you want to assert that the
+\fBCargo.lock\fP file is up\-to\-date (such as a CI build) or want to avoid network
+access.
+.RE
+.SS "Common Options"
+.sp
+\fB\-h\fP, \fB\-\-help\fP
+.RS 4
+Prints help information.
+.RE
+.sp
+\fB\-Z\fP \fIFLAG\fP...
+.RS 4
+Unstable (nightly\-only) flags to Cargo. Run \fBcargo \-Z help\fP for
+details.
+.RE
+.SH "ENVIRONMENT"
+.sp
+See \c
+.URL "https://doc.rust\-lang.org/cargo/reference/environment\-variables.html" "the reference" " "
+for
+details on environment variables that Cargo reads.
+.SH "EXIT STATUS"
+.sp
+0
+.RS 4
+The workspace is OK.
+.RE
+.sp
+1
+.RS 4
+The workspace is invalid.
+.RE
+.SH "EXAMPLES"
+.sp
+.RS 4
+.ie n \{\
+\h'-04' 1.\h'+01'\c
+.\}
+.el \{\
+.  sp -1
+.  IP " 1." 4.2
+.\}
+Check the current workspace for errors:
+.sp
+.if n .RS 4
+.nf
+cargo verify\-project
+.fi
+.if n .RE
+.RE
+.SH "SEE ALSO"
+.sp
+\fBcargo\fP(1), \fBcargo\-package\fP(1)

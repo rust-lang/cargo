@@ -13,7 +13,7 @@ pub fn find_root_manifest_for_wd(cwd: &Path) -> CargoResult<PathBuf> {
         }
     }
 
-    bail!(
+    failure::bail!(
         "could not find `{}` in `{}` or any parent directory",
         file,
         cwd.display()
@@ -27,6 +27,6 @@ pub fn find_project_manifest_exact(pwd: &Path, file: &str) -> CargoResult<PathBu
     if manifest.exists() {
         Ok(manifest)
     } else {
-        bail!("Could not find `{}` in `{}`", file, pwd.display())
+        failure::bail!("Could not find `{}` in `{}`", file, pwd.display())
     }
 }

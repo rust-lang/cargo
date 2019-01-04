@@ -8,7 +8,7 @@ use serde::ser;
 use serde::{Deserialize, Serialize};
 
 use crate::core::{Dependency, Package, PackageId, SourceId, Workspace};
-use crate::util::errors::{CargoError, CargoResult, CargoResultExt};
+use crate::util::errors::{CargoResult, CargoResultExt};
 use crate::util::{internal, Graph};
 
 use super::Resolve;
@@ -56,7 +56,7 @@ impl EncodableResolve {
                 };
 
                 if !all_pkgs.insert(enc_id.clone()) {
-                    bail!("package `{}` is specified twice in the lockfile", pkg.name);
+                    failure::bail!("package `{}` is specified twice in the lockfile", pkg.name);
                 }
                 let id = match pkg.source.as_ref().or_else(|| path_deps.get(&pkg.name)) {
                     // We failed to find a local package in the workspace.
@@ -276,7 +276,7 @@ impl fmt::Display for EncodablePackageId {
 }
 
 impl FromStr for EncodablePackageId {
-    type Err = CargoError;
+    type Err = failure::Error;
 
     fn from_str(s: &str) -> CargoResult<EncodablePackageId> {
         let mut s = s.splitn(3, ' ');
@@ -289,7 +289,7 @@ impl FromStr for EncodablePackageId {
                 if s.starts_with('(') && s.ends_with(')') {
                     Some(SourceId::from_url(&s[1..s.len() - 1])?)
                 } else {
-                    bail!("invalid serialized PackageId")
+                    failure::bail!("invalid serialized PackageId")
                 }
             }
             None => None,

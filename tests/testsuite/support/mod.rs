@@ -550,6 +550,7 @@ pub struct Execs {
     expect_stderr_unordered: Vec<String>,
     expect_neither_contains: Vec<String>,
     expect_json: Option<Vec<Value>>,
+    expect_json_contains_unordered: Vec<Value>,
     stream_output: bool,
 }
 
@@ -689,6 +690,24 @@ impl Execs {
         self
     }
 
+    /// Verify JSON output contains the given objects (in any order) somewhere
+    /// in its output.
+    ///
+    /// CAUTION: Be very careful when using this. Make sure every object is
+    /// unique (not a subset of one another). Also avoid using objects that
+    /// could possibly match multiple output lines unless you're very sure of
+    /// what you are doing.
+    ///
+    /// See `with_json` for more detail.
+    pub fn with_json_contains_unordered(&mut self, expected: &str) -> &mut Self {
+        self.expect_json_contains_unordered.extend(
+            expected
+                .split("\n\n")
+                .map(|line| line.parse().expect("line to be a valid JSON value")),
+        );
+        self
+    }
+
     /// Forward subordinate process stdout/stderr to the terminal.
     /// Useful for printf debugging of the tests.
     /// CAUTION: CI will fail if you leave this in your test!
@@ -762,6 +781,32 @@ impl Execs {
         }
     }
 
+    fn verify_checks_output(&self, output: &Output) {
+        if self.expect_exit_code.unwrap_or(0) != 0
+            && self.expect_stdout.is_none()
+            && self.expect_stdin.is_none()
+            && self.expect_stderr.is_none()
+            && self.expect_stdout_contains.is_empty()
+            && self.expect_stderr_contains.is_empty()
+            && self.expect_either_contains.is_empty()
+            && self.expect_stdout_contains_n.is_empty()
+            && self.expect_stdout_not_contains.is_empty()
+            && self.expect_stderr_not_contains.is_empty()
+            && self.expect_stderr_unordered.is_empty()
+            && self.expect_neither_contains.is_empty()
+            && self.expect_json.is_none()
+            && self.expect_json_contains_unordered.is_empty()
+        {
+            panic!(
+                "`with_status()` is used, but no output is checked.\n\
+                 The test must check the output to ensure the correct error is triggered.\n\
+                 --- stdout\n{}\n--- stderr\n{}",
+                String::from_utf8_lossy(&output.stdout),
+                String::from_utf8_lossy(&output.stderr),
+            );
+        }
+    }
+
     fn match_process(&self, process: &ProcessBuilder) -> MatchResult {
         println!("running {}", process);
         let res = if self.stream_output {
@@ -798,6 +843,7 @@ impl Execs {
     }
 
     fn match_output(&self, actual: &Output) -> MatchResult {
+        self.verify_checks_output(actual);
         self.match_status(actual)
             .and(self.match_stdout(actual))
             .and(self.match_stderr(actual))
@@ -939,6 +985,33 @@ impl Execs {
             }
             for (obj, line) in objects.iter().zip(lines) {
                 self.match_json(obj, line)?;
+            }
+        }
+
+        if !self.expect_json_contains_unordered.is_empty() {
+            let stdout = str::from_utf8(&actual.stdout)
+                .map_err(|_| "stdout was not utf8 encoded".to_owned())?;
+            let mut lines = stdout
+                .lines()
+                .filter(|line| line.starts_with('{'))
+                .collect::<Vec<_>>();
+            for obj in &self.expect_json_contains_unordered {
+                match lines
+                    .iter()
+                    .position(|line| self.match_json(obj, line).is_ok())
+                {
+                    Some(index) => lines.remove(index),
+                    None => {
+                        return Err(format!(
+                            "Did not find expected JSON:\n\
+                             {}\n\
+                             Remaining available output:\n\
+                             {}\n",
+                            serde_json::to_string_pretty(obj).unwrap(),
+                            lines.join("\n")
+                        ));
+                    }
+                };
             }
         }
         Ok(())
@@ -1096,7 +1169,7 @@ impl Execs {
                                  {}\n",
                                 e_line,
                                 a.join("\n")
-                            ))
+                            ));
                         }
                     };
                 }
@@ -1119,16 +1192,7 @@ impl Execs {
             Ok(actual) => actual,
         };
 
-        match find_mismatch(expected, &actual) {
-            Some((expected_part, actual_part)) => Err(format!(
-                "JSON mismatch\nExpected:\n{}\nWas:\n{}\nExpected part:\n{}\nActual part:\n{}\n",
-                serde_json::to_string_pretty(expected).unwrap(),
-                serde_json::to_string_pretty(&actual).unwrap(),
-                serde_json::to_string_pretty(expected_part).unwrap(),
-                serde_json::to_string_pretty(actual_part).unwrap(),
-            )),
-            None => Ok(()),
-        }
+        find_json_mismatch(expected, &actual)
     }
 
     fn diff_lines<'a>(
@@ -1162,7 +1226,7 @@ impl Execs {
 
 impl Drop for Execs {
     fn drop(&mut self) {
-        if !self.ran {
+        if !self.ran && !std::thread::panicking() {
             panic!("forgot to run this command");
         }
     }
@@ -1219,12 +1283,28 @@ fn lines_match_works() {
     assert!(!lines_match("b", "cb"));
 }
 
-// Compares JSON object for approximate equality.
-// You can use `[..]` wildcard in strings (useful for OS dependent things such
-// as paths).  You can use a `"{...}"` string literal as a wildcard for
-// arbitrary nested JSON (useful for parts of object emitted by other programs
-// (e.g. rustc) rather than Cargo itself).  Arrays are sorted before comparison.
-fn find_mismatch<'a>(expected: &'a Value, actual: &'a Value) -> Option<(&'a Value, &'a Value)> {
+/// Compares JSON object for approximate equality.
+/// You can use `[..]` wildcard in strings (useful for OS dependent things such
+/// as paths).  You can use a `"{...}"` string literal as a wildcard for
+/// arbitrary nested JSON (useful for parts of object emitted by other programs
+/// (e.g. rustc) rather than Cargo itself).  Arrays are sorted before comparison.
+pub fn find_json_mismatch(expected: &Value, actual: &Value) -> Result<(), String> {
+    match find_json_mismatch_r(expected, &actual) {
+        Some((expected_part, actual_part)) => Err(format!(
+            "JSON mismatch\nExpected:\n{}\nWas:\n{}\nExpected part:\n{}\nActual part:\n{}\n",
+            serde_json::to_string_pretty(expected).unwrap(),
+            serde_json::to_string_pretty(&actual).unwrap(),
+            serde_json::to_string_pretty(expected_part).unwrap(),
+            serde_json::to_string_pretty(actual_part).unwrap(),
+        )),
+        None => Ok(()),
+    }
+}
+
+fn find_json_mismatch_r<'a>(
+    expected: &'a Value,
+    actual: &'a Value,
+) -> Option<(&'a Value, &'a Value)> {
     use serde_json::Value::*;
     match (expected, actual) {
         (&Number(ref l), &Number(ref r)) if l == r => None,
@@ -1239,7 +1319,7 @@ fn find_mismatch<'a>(expected: &'a Value, actual: &'a Value) -> Option<(&'a Valu
             let mut r = r.iter().collect::<Vec<_>>();
 
             l.retain(
-                |l| match r.iter().position(|r| find_mismatch(l, r).is_none()) {
+                |l| match r.iter().position(|r| find_json_mismatch_r(l, r).is_none()) {
                     Some(i) => {
                         r.remove(i);
                         false
@@ -1264,7 +1344,7 @@ fn find_mismatch<'a>(expected: &'a Value, actual: &'a Value) -> Option<(&'a Valu
 
             l.values()
                 .zip(r.values())
-                .filter_map(|(l, r)| find_mismatch(l, r))
+                .filter_map(|(l, r)| find_json_mismatch_r(l, r))
                 .nth(0)
         }
         (&Null, &Null) => None,
@@ -1322,6 +1402,7 @@ pub fn execs() -> Execs {
         expect_stderr_unordered: Vec::new(),
         expect_neither_contains: Vec::new(),
         expect_json: None,
+        expect_json_contains_unordered: Vec::new(),
         stream_output: false,
     }
 }

@@ -232,6 +232,11 @@ fn unused() {
         .with_stderr(
             "\
 [UPDATING] `[ROOT][..]` index
+[WARNING] Patch `bar v0.2.0 ([CWD]/bar)` was not used in the crate graph.
+[..]
+[..]
+[..]
+[..]
 [DOWNLOADING] crates ...
 [DOWNLOADED] bar v0.1.0 [..]
 [COMPILING] bar v0.1.0
@@ -240,7 +245,18 @@ fn unused() {
 ",
         )
         .run();
-    p.cargo("build").with_stderr("[FINISHED] [..]").run();
+    p.cargo("build")
+        .with_stderr(
+            "\
+[WARNING] Patch `bar v0.2.0 ([CWD]/bar)` was not used in the crate graph.
+[..]
+[..]
+[..]
+[..]
+[FINISHED] [..]
+",
+        )
+        .run();
 
     // unused patch should be in the lock file
     let mut lock = String::new();
@@ -293,6 +309,11 @@ fn unused_git() {
             "\
 [UPDATING] git repository `file://[..]`
 [UPDATING] `[ROOT][..]` index
+[WARNING] Patch `bar v0.2.0 ([..])` was not used in the crate graph.
+[..]
+[..]
+[..]
+[..]
 [DOWNLOADING] crates ...
 [DOWNLOADED] bar v0.1.0 [..]
 [COMPILING] bar v0.1.0
@@ -301,7 +322,18 @@ fn unused_git() {
 ",
         )
         .run();
-    p.cargo("build").with_stderr("[FINISHED] [..]").run();
+    p.cargo("build")
+        .with_stderr(
+            "\
+[WARNING] Patch `bar v0.2.0 ([..])` was not used in the crate graph.
+[..]
+[..]
+[..]
+[..]
+[FINISHED] [..]
+",
+        )
+        .run();
 }
 
 #[test]
@@ -419,9 +451,82 @@ fn add_ignored_patch() {
     ));
 
     p.cargo("build")
-        .with_stderr("[FINISHED] dev [unoptimized + debuginfo] target(s) in [..]")
+        .with_stderr(
+            "\
+[WARNING] Patch `bar v0.1.1 ([CWD]/bar)` was not used in the crate graph.
+[..]
+[..]
+[..]
+[..]
+[FINISHED] dev [unoptimized + debuginfo] target(s) in [..]",
+        )
         .run();
-    p.cargo("build").with_stderr("[FINISHED] [..]").run();
+    p.cargo("build")
+        .with_stderr(
+            "\
+[WARNING] Patch `bar v0.1.1 ([CWD]/bar)` was not used in the crate graph.
+[..]
+[..]
+[..]
+[..]
+[FINISHED] [..]",
+        )
+        .run();
+
+    p.cargo("update").run();
+    p.cargo("build")
+        .with_stderr(
+            "\
+[COMPILING] bar v0.1.1 ([CWD]/bar)
+[COMPILING] foo v0.0.1 ([CWD])
+[FINISHED] dev [..]
+",
+        )
+        .run();
+}
+
+#[test]
+fn no_warn_ws_patch() {
+    Package::new("c", "0.1.0").publish();
+
+    // Don't issue an unused patch warning when the patch isn't used when
+    // partially building a workspace.
+    let p = project()
+        .file(
+            "Cargo.toml",
+            r#"
+            [workspace]
+            members = ["a", "b", "c"]
+
+            [patch.crates-io]
+            c = { path = "c" }
+        "#,
+        )
+        .file("a/Cargo.toml", &basic_manifest("a", "0.1.0"))
+        .file("a/src/lib.rs", "")
+        .file(
+            "b/Cargo.toml",
+            r#"
+            [package]
+            name = "b"
+            version = "0.1.0"
+            [dependencies]
+            c = "0.1.0"
+        "#,
+        )
+        .file("b/src/lib.rs", "")
+        .file("c/Cargo.toml", &basic_manifest("c", "0.1.0"))
+        .file("c/src/lib.rs", "")
+        .build();
+
+    p.cargo("build -p a")
+        .with_stderr(
+            "\
+[UPDATING] [..]
+[COMPILING] a [..]
+[FINISHED] [..]",
+        )
+        .run();
 }
 
 #[test]
@@ -733,6 +838,9 @@ fn non_crates_io() {
         .with_stderr(
             "\
 error: failed to parse manifest at `[..]`
+
+Caused by:
+  [patch] entry `some-other-source` should be a URL or registry name
 
 Caused by:
   invalid url `some-other-source`: relative URL without a base

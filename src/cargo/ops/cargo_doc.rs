@@ -43,7 +43,7 @@ pub fn doc(ws: &Workspace<'_>, options: &DocOptions<'_>) -> CargoResult<()> {
         for target in package.targets().iter().filter(|t| t.documented()) {
             if target.is_lib() {
                 if let Some(prev) = lib_names.insert(target.crate_name(), package) {
-                    bail!(
+                    failure::bail!(
                         "The library `{}` is specified by packages `{}` and \
                          `{}` but can only be documented once. Consider renaming \
                          or marking one of the targets as `doc = false`.",
@@ -53,7 +53,7 @@ pub fn doc(ws: &Workspace<'_>, options: &DocOptions<'_>) -> CargoResult<()> {
                     );
                 }
             } else if let Some(prev) = bin_names.insert(target.crate_name(), package) {
-                bail!(
+                failure::bail!(
                     "The binary `{}` is specified by packages `{}` and \
                      `{}` but can be documented only once. Consider renaming \
                      or marking one of the targets as `doc = false`.",
@@ -69,7 +69,7 @@ pub fn doc(ws: &Workspace<'_>, options: &DocOptions<'_>) -> CargoResult<()> {
 
     if options.open_result {
         let name = if pkgs.len() > 1 {
-            bail!(
+            failure::bail!(
                 "Passing multiple packages and `open` is not supported.\n\
                  Please re-run this command with `-p <spec>` where `<spec>` \
                  is one of the following:\n  {}",

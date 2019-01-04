@@ -36,6 +36,7 @@ pub enum Message {
     FixFailed {
         files: Vec<String>,
         krate: Option<String>,
+        errors: Vec<String>,
     },
     ReplaceFailed {
         file: String,
@@ -109,7 +110,11 @@ impl<'a> DiagnosticPrinter<'a> {
                 write!(self.config.shell().err(), "{}", PLEASE_REPORT_THIS_BUG)?;
                 Ok(())
             }
-            Message::FixFailed { files, krate } => {
+            Message::FixFailed {
+                files,
+                krate,
+                errors,
+            } => {
                 if let Some(ref krate) = *krate {
                     self.config.shell().warn(&format!(
                         "failed to automatically apply fixes suggested by rustc \
@@ -133,6 +138,22 @@ impl<'a> DiagnosticPrinter<'a> {
                     writeln!(self.config.shell().err())?;
                 }
                 write!(self.config.shell().err(), "{}", PLEASE_REPORT_THIS_BUG)?;
+                if !errors.is_empty() {
+                    writeln!(
+                        self.config.shell().err(),
+                        "The following errors were reported:"
+                    )?;
+                    for error in errors {
+                        write!(self.config.shell().err(), "{}", error)?;
+                        if !error.ends_with('\n') {
+                            writeln!(self.config.shell().err())?;
+                        }
+                    }
+                }
+                writeln!(
+                    self.config.shell().err(),
+                    "Original diagnostics will follow.\n"
+                )?;
                 Ok(())
             }
             Message::EditionAlreadyEnabled { file, edition } => {
@@ -237,14 +258,23 @@ impl RustfixDiagnosticServer {
 
     fn run(self, on_message: &dyn Fn(Message), done: &AtomicBool) {
         while let Ok((client, _)) = self.listener.accept() {
-            let client = BufReader::new(client);
-            match serde_json::from_reader(client) {
-                Ok(message) => on_message(message),
-                Err(e) => warn!("invalid diagnostics message: {}", e),
-            }
             if done.load(Ordering::SeqCst) {
                 break;
             }
+            let mut client = BufReader::new(client);
+            let mut s = String::new();
+            if let Err(e) = client.read_to_string(&mut s) {
+                warn!("diagnostic server failed to read: {}", e);
+            } else {
+                match serde_json::from_str(&s) {
+                    Ok(message) => on_message(message),
+                    Err(e) => warn!("invalid diagnostics message: {}", e),
+                }
+            }
+            // The client should be kept alive until after `on_message` is
+            // called to ensure that the client doesn't exit too soon (and
+            // Message::Finish getting posted before Message::FixDiagnostic).
+            drop(client);
         }
     }
 }

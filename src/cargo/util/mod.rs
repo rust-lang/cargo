@@ -5,7 +5,7 @@ pub use self::config::{homedir, Config, ConfigValue};
 pub use self::dependency_queue::{DependencyQueue, Dirty, Fresh, Freshness};
 pub use self::diagnostic_server::RustfixDiagnosticServer;
 pub use self::errors::{internal, process_error};
-pub use self::errors::{CargoError, CargoResult, CargoResultExt, CliResult, Test};
+pub use self::errors::{CargoResult, CargoResultExt, CliResult, Test};
 pub use self::errors::{CargoTestError, CliError, ProcessError};
 pub use self::flock::{FileLock, Filesystem};
 pub use self::graph::Graph;
@@ -58,4 +58,20 @@ pub fn elapsed(duration: Duration) -> String {
     } else {
         format!("{}.{:02}s", secs, duration.subsec_nanos() / 10_000_000)
     }
+}
+
+/// Check the base requirements for a package name.
+///
+/// This can be used for other things than package names, to enforce some
+/// level of sanity. Note that package names have other restrictions
+/// elsewhere. `cargo new` has a few restrictions, such as checking for
+/// reserved names. crates.io has even more restrictions.
+pub fn validate_package_name(name: &str, what: &str, help: &str) -> CargoResult<()> {
+    if let Some(ch) = name
+        .chars()
+        .find(|ch| !ch.is_alphanumeric() && *ch != '_' && *ch != '-')
+    {
+        failure::bail!("Invalid character `{}` in {}: `{}`{}", ch, what, name, help);
+    }
+    Ok(())
 }
