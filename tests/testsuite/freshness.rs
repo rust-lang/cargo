@@ -1154,6 +1154,29 @@ fn reuse_shared_build_dep() {
 }
 
 #[test]
+fn changing_rustflags_is_cached() {
+    let p = project().file("src/lib.rs", "").build();
+
+    p.cargo("build").run();
+    p.cargo("build")
+        .env("RUSTFLAGS", "-C target-cpu=native")
+        .with_stderr(
+            "\
+[COMPILING] foo v0.0.1 ([..])
+[FINISHED] dev [unoptimized + debuginfo] target(s) in [..]",
+        )
+        .run();
+    // This should not recompile!
+    p.cargo("build")
+        .with_stderr("[FINISHED] dev [unoptimized + debuginfo] target(s) in [..]")
+        .run();
+    p.cargo("build")
+        .env("RUSTFLAGS", "-C target-cpu=native")
+        .with_stderr("[FINISHED] dev [unoptimized + debuginfo] target(s) in [..]")
+        .run();
+}
+
+#[test]
 fn reuse_panic_build_dep_test() {
     let p = project()
         .file(

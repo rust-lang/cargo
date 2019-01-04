@@ -12,6 +12,34 @@ use super::{BuildContext, Context, FileFlavor, Kind, Layout, Unit};
 use crate::core::{TargetKind, Workspace};
 use crate::util::{self, CargoResult};
 
+/// The `Metadata` is a hash used to make unique file names for each unit in a build.
+/// For example:
+/// - A project may depend on crate `A` and crate `B`, so the package name must be in the file name.
+/// - Similarly a project may depend on two versions of `A`, so the version must be in the file name.
+/// In general this must include all things that need to be distinguished in different parts of
+/// the same build. This is absolutely required or we override things before
+/// we get chance to use them.
+///
+/// We use a hash because it is an easy way to guarantee
+/// that all the inputs can be converted to a valid path.
+///
+/// This also acts as the main layer of caching provided by Cargo.
+/// For example, we want to cache `cargo build` and `cargo doc` separately, so that running one
+/// does not invalidate the artifacts for the other. We do this by including `CompileMode` in the
+/// hash, thus the artifacts go in different folders and do not override each other.
+/// If we don't add something that we should have, for this reason, we get the
+/// correct output but rebuild more than is needed.
+///
+/// Some things that need to be tracked to ensure the correct output should definitely *not*
+/// go in the `Metadata`. For example, the modification time of a file, should be tracked to make a
+/// rebuild when the file changes. However, it would be wasteful to include in the `Metadata`. The
+/// old artifacts are never going to be needed again. We can save space by just overwriting them.
+/// If we add something that we should not have, for this reason, we get the correct output but take
+/// more space than needed. This makes not including something in `Metadata`
+/// a form of cache invalidation.
+///
+/// Note that the `Fingerprint` is in charge of tracking everything needed to determine if a
+/// rebuild is needed.
 #[derive(Clone, Hash, Eq, PartialEq, Ord, PartialOrd)]
 pub struct Metadata(u64);
 
@@ -463,6 +491,15 @@ fn compute_metadata<'a, 'cfg>(
     unit.mode.hash(&mut hasher);
     if let Some(ref args) = bcx.extra_args_for(unit) {
         args.hash(&mut hasher);
+    }
+
+    // Throw in the rustflags we're compiling with.
+    // This helps when the target directory is a shared cache for projects with different cargo configs,
+    // or if the user is experimenting with different rustflags manually.
+    if unit.mode.is_doc() {
+        cx.bcx.rustdocflags_args(unit).ok().hash(&mut hasher);
+    } else {
+        cx.bcx.rustflags_args(unit).ok().hash(&mut hasher);
     }
 
     // Artifacts compiled for the host should have a different metadata
