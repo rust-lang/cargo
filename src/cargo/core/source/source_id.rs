@@ -248,13 +248,6 @@ impl SourceId {
         }
     }
 
-    /// Is this source from an alternative registry
-    /// DEPRECATED: This is not correct if the registry name is not known
-    /// (for example when loaded from an index).
-    pub fn is_alt_registry(self) -> bool {
-        self.is_registry() && self.inner.name.is_some()
-    }
-
     /// Is this source from a git repository
     pub fn is_git(self) -> bool {
         match self.inner.kind {

@@ -273,9 +273,9 @@ fn git_deps() {
         .with_stderr(
             "\
 [UPDATING] [..] index
-[ERROR] crates cannot be published to crates.io with dependencies sourced from \
-a repository\neither publish `foo` as its own crate on crates.io and \
-specify a crates.io version as a dependency or pull it into this \
+[ERROR] crates cannot be published with dependencies sourced from \
+a repository\neither publish `foo` as its own crate and \
+specify a version as a dependency or pull it into this \
 repository and specify it with a path and version\n\
 (crate `foo` has repository path `git://path/to/nowhere`)\
 ",
