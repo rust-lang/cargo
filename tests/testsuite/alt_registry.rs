@@ -1,6 +1,7 @@
 use crate::support::publish::validate_alt_upload;
 use crate::support::registry::{self, Package};
 use crate::support::{basic_manifest, git, paths, project};
+use cargo::util::ToUrl;
 use std::fs::{self, File};
 use std::io::Write;
 
@@ -288,6 +289,8 @@ fn registry_incompatible_with_git() {
 
 #[test]
 fn cannot_publish_to_crates_io_with_registry_dependency() {
+    let fakeio_path = paths::root().join("fake.io");
+    let fakeio_url = fakeio_path.to_url().unwrap();
     let p = project()
         .file(
             "Cargo.toml",
@@ -303,12 +306,39 @@ fn cannot_publish_to_crates_io_with_registry_dependency() {
         "#,
         )
         .file("src/main.rs", "fn main() {}")
+        .file(
+            ".cargo/config",
+            &format!(
+                r#"
+            [registries.fakeio]
+            index = "{}"
+        "#,
+                fakeio_url
+            ),
+        )
         .build();
 
     Package::new("bar", "0.0.1").alternative(true).publish();
 
+    // Since this can't really call plain `publish` without fetching the real
+    // crates.io index, create a fake one that points to the real crates.io.
+    git::repo(&fakeio_path)
+        .file(
+            "config.json",
+            r#"
+            {"dl": "https://crates.io/api/v1/crates", "api": "https://crates.io"}
+        "#,
+        )
+        .build();
+
+    p.cargo("publish --registry fakeio -Z unstable-options")
+        .masquerade_as_nightly_cargo()
+        .with_status(101)
+        .with_stderr_contains("[ERROR] crates cannot be published to crates.io[..]")
+        .run();
+
     p.cargo("publish --index")
-        .arg(registry::registry().to_string())
+        .arg(fakeio_url.to_string())
         .masquerade_as_nightly_cargo()
         .with_status(101)
         .with_stderr_contains("[ERROR] crates cannot be published to crates.io[..]")
