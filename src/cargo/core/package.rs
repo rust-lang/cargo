@@ -20,7 +20,7 @@ use serde::Serialize;
 use crate::core::interning::InternedString;
 use crate::core::source::MaybePackage;
 use crate::core::{Dependency, Manifest, PackageId, SourceId, Target};
-use crate::core::{RefFeatureMap, SourceMap, Summary};
+use crate::core::{FeatureMap, SourceMap, Summary};
 use crate::ops;
 use crate::util::errors::{CargoResult, CargoResultExt, HttpNot200};
 use crate::util::network::Retry;
@@ -62,8 +62,8 @@ struct SerializedPackage<'a> {
     source: SourceId,
     dependencies: &'a [Dependency],
     targets: Vec<&'a Target>,
-    features: RefFeatureMap<'a>,
-    manifest_path: &'a str,
+    features: &'a FeatureMap,
+    manifest_path: &'a Path,
     metadata: Option<&'a toml::Value>,
     authors: &'a [String],
     categories: &'a [String],
@@ -92,11 +92,6 @@ impl ser::Serialize for Package {
         let keywords = manmeta.keywords.as_ref();
         let readme = manmeta.readme.as_ref().map(String::as_ref);
         let repository = manmeta.repository.as_ref().map(String::as_ref);
-        let features = summary
-            .features()
-            .iter()
-            .map(|(k, (_, v))| (*k, v.as_slice()))
-            .collect::<RefFeatureMap<'_>>();
         // Filter out metabuild targets. They are an internal implementation
         // detail that is probably not relevant externally. There's also not a
         // real path to show in `src_path`, and this avoids changing the format.

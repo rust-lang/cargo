@@ -21,7 +21,7 @@ use crate::core::{GitReference, PackageIdSpec, SourceId, WorkspaceConfig, Worksp
 use crate::sources::{CRATES_IO_INDEX, CRATES_IO_REGISTRY};
 use crate::util::errors::{CargoResult, CargoResultExt, ManifestError};
 use crate::util::paths;
-use crate::util::{self, validate_package_name, Config, ToUrl};
+use crate::util::{self, validate_package_name, Config, ToUrl, Platform};
 
 mod targets;
 use self::targets::targets;
