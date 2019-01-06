@@ -68,7 +68,7 @@ pub fn publish(ws: &Workspace<'_>, opts: &PublishOpts<'_>) -> CargoResult<()> {
         opts.registry.clone(),
         true,
     )?;
-    verify_dependencies(pkg, reg_id)?;
+    verify_dependencies(pkg, &registry, reg_id)?;
 
     // Prepare a tarball, with a non-surpressable warning if metadata
     // is missing since this is being put online.
@@ -102,7 +102,11 @@ pub fn publish(ws: &Workspace<'_>, opts: &PublishOpts<'_>) -> CargoResult<()> {
     Ok(())
 }
 
-fn verify_dependencies(pkg: &Package, registry_src: SourceId) -> CargoResult<()> {
+fn verify_dependencies(
+    pkg: &Package,
+    registry: &Registry,
+    registry_src: SourceId,
+) -> CargoResult<()> {
     for dep in pkg.dependencies().iter() {
         if dep.source_id().is_path() {
             if !dep.specified_req() {
@@ -115,9 +119,16 @@ fn verify_dependencies(pkg: &Package, registry_src: SourceId) -> CargoResult<()>
             }
         } else if dep.source_id() != registry_src {
             if dep.source_id().is_registry() {
-                // Block requests to send to a registry if it is not an alternative
-                // registry
-                if !registry_src.is_alt_registry() {
+                // Block requests to send to crates.io with alt-registry deps.
+                // This extra hostname check is mostly to assist with testing,
+                // but also prevents someone using `--index` to specify
+                // something that points to crates.io.
+                let is_crates_io = registry
+                    .host()
+                    .to_url()
+                    .map(|u| u.host_str() == Some("crates.io"))
+                    .unwrap_or(false);
+                if registry_src.is_default_registry() || is_crates_io {
                     failure::bail!("crates cannot be published to crates.io with dependencies sourced from other\n\
                            registries either publish `{}` on crates.io or pull it into this repository\n\
                            and specify it with a path and version\n\
@@ -128,9 +139,9 @@ fn verify_dependencies(pkg: &Package, registry_src: SourceId) -> CargoResult<()>
                 }
             } else {
                 failure::bail!(
-                    "crates cannot be published to crates.io with dependencies sourced from \
-                     a repository\neither publish `{}` as its own crate on crates.io and \
-                     specify a crates.io version as a dependency or pull it into this \
+                    "crates cannot be published with dependencies sourced from \
+                     a repository\neither publish `{}` as its own crate and \
+                     specify a version as a dependency or pull it into this \
                      repository and specify it with a path and version\n(crate `{}` has \
                      repository path `{}`)",
                     dep.package_name(),
