@@ -197,6 +197,18 @@ pub fn mtime(path: &Path) -> CargoResult<FileTime> {
     Ok(FileTime::from_last_modification_time(&meta))
 }
 
+/// get `FileTime::from_system_time(SystemTime::now());` using the exact clock that this file system is using.
+pub fn get_current_filesystem_time(path: &Path) -> CargoResult<FileTime> {
+    // note that if `FileTime::from_system_time(SystemTime::now());` is determined to be sufficient,
+    // then this can be removed.
+    let timestamp = path.with_file_name("invoked.timestamp");
+    write(
+        &timestamp,
+        b"This file has an mtime of when this was started.",
+    )?;
+    Ok(mtime(&timestamp)?)
+}
+
 #[cfg(unix)]
 pub fn path2bytes(path: &Path) -> CargoResult<&[u8]> {
     use std::os::unix::prelude::*;

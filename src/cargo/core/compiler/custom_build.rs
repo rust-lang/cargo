@@ -332,6 +332,7 @@ fn build_work<'a, 'cfg>(cx: &mut Context<'a, 'cfg>, unit: &Unit<'a>) -> CargoRes
             state.build_plan(invocation_name, cmd.clone(), Arc::new(Vec::new()));
         } else {
             state.running(&cmd);
+            let timestamp = paths::get_current_filesystem_time(&output_file)?;
             let output = if extra_verbose {
                 let prefix = format!("[{} {}] ", id.name(), id.version());
                 state.capture_output(&cmd, Some(prefix), true)
@@ -354,6 +355,7 @@ fn build_work<'a, 'cfg>(cx: &mut Context<'a, 'cfg>, unit: &Unit<'a>) -> CargoRes
             // state informing what variables were discovered via our script as
             // well.
             paths::write(&output_file, &output.stdout)?;
+            filetime::set_file_times(output_file, timestamp, timestamp)?;
             paths::write(&err_file, &output.stderr)?;
             paths::write(&root_output_file, util::path2bytes(&script_out_dir)?)?;
             let parsed_output =
