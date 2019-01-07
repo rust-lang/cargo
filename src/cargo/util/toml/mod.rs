@@ -152,7 +152,7 @@ type TomlExampleTarget = TomlTarget;
 type TomlTestTarget = TomlTarget;
 type TomlBenchTarget = TomlTarget;
 
-#[derive(Serialize, Debug)]
+#[derive(Clone, Debug, Serialize)]
 #[serde(untagged)]
 pub enum TomlDependency {
     Simple(String),
