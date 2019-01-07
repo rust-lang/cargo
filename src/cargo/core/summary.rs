@@ -409,3 +409,4 @@ impl Serialize for FeatureValue {
 }
 
 pub type FeatureMap = BTreeMap<InternedString, (Option<Platform>, Vec<FeatureValue>)>;
+pub type RefFeatureMap<'a> = BTreeMap<InternedString, &'a [FeatureValue]>;
