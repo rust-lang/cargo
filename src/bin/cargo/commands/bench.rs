@@ -72,7 +72,8 @@ Compilation can be customized with the `bench` profile in the manifest.
 
 pub fn exec(config: &mut Config, args: &ArgMatches<'_>) -> CliResult {
     let ws = args.workspace(config)?;
-    let mut compile_opts = args.compile_options(config, CompileMode::Bench)?;
+    let mut compile_opts = args.compile_options(config, CompileMode::Bench, Some(&ws))?;
+
     compile_opts.build_config.release = true;
 
     let ops = TestOptions {
