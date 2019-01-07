@@ -292,6 +292,7 @@ fn rustc<'a, 'cfg>(
         }
 
         state.running(&rustc);
+        let timestamp = paths::get_current_filesystem_time(&dep_info_loc)?;
         if json_messages {
             exec.exec_json(
                 rustc,
@@ -334,6 +335,7 @@ fn rustc<'a, 'cfg>(
                         rustc_dep_info_loc.display()
                     ))
                 })?;
+            filetime::set_file_times(dep_info_loc, timestamp, timestamp)?;
         }
 
         Ok(())
