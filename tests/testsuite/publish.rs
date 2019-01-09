@@ -812,15 +812,12 @@ fn publish_with_select_features() {
         .file(
             "Cargo.toml",
             r#"
-            cargo-features = ["alternative-registries"]
-
             [project]
             name = "foo"
             version = "0.0.1"
             authors = []
             license = "MIT"
             description = "foo"
-            publish = []
 
             [features]
             required = []
@@ -829,20 +826,16 @@ fn publish_with_select_features() {
         )
         .file(
             "src/main.rs",
-            "#[cfg(not(required))]
+            "#[cfg(not(feature = \"required\"))]
              compile_error!(\"This crate requires `required` feature!\");
              fn main() {}",
-        ).build();
+        )
+        .build();
 
-    p.cargo("publish --registry alternative -Zunstable-options --features required")
-        .masquerade_as_nightly_cargo()
-        .with_status(101)
-        .with_stderr(
-            "\
-[ERROR] some crates cannot be published.
-`foo` is marked as unpublishable
-",
-        ).run();
+    p.cargo("publish --features required --index")
+        .arg(publish::registry().to_string())
+        .with_stderr_contains("[UPLOADING] foo v0.0.1 ([CWD])")
+        .run();
 }
 
 #[test]
@@ -853,15 +846,12 @@ fn publish_with_all_features() {
         .file(
             "Cargo.toml",
             r#"
-            cargo-features = ["alternative-registries"]
-
             [project]
             name = "foo"
             version = "0.0.1"
             authors = []
             license = "MIT"
             description = "foo"
-            publish = []
 
             [features]
             required = []
@@ -870,18 +860,14 @@ fn publish_with_all_features() {
         )
         .file(
             "src/main.rs",
-            "#[cfg(not(required))]
+            "#[cfg(not(feature = \"required\"))]
              compile_error!(\"This crate requires `required` feature!\");
              fn main() {}",
-        ).build();
+        )
+        .build();
 
-    p.cargo("publish --registry alternative -Zunstable-options --all-features")
-        .masquerade_as_nightly_cargo()
-        .with_status(101)
-        .with_stderr(
-            "\
-[ERROR] some crates cannot be published.
-`foo` is marked as unpublishable
-",
-        ).run();
+    p.cargo("publish --all-features --index")
+        .arg(publish::registry().to_string())
+        .with_stderr_contains("[UPLOADING] foo v0.0.1 ([CWD])")
+        .run();
 }
