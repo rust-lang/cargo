@@ -40,7 +40,8 @@ pub struct PublishOpts<'cfg> {
     pub dry_run: bool,
     pub registry: Option<String>,
     pub features: Vec<String>,
-    pub all_features: bool
+    pub all_features: bool,
+    pub no_default_features: bool,
 }
 
 pub fn publish(ws: &Workspace<'_>, opts: &PublishOpts<'_>) -> CargoResult<()> {
@@ -86,6 +87,7 @@ pub fn publish(ws: &Workspace<'_>, opts: &PublishOpts<'_>) -> CargoResult<()> {
             jobs: opts.jobs,
             features: opts.features.clone(),
             all_features: opts.all_features,
+            no_default_features: opts.no_default_features,
         },
     )?
     .unwrap();

@@ -38,7 +38,8 @@ See [..]
 [UPLOADING] foo v0.0.1 ([CWD])
 ",
             reg = publish::registry_path().to_str().unwrap()
-        )).run();
+        ))
+        .run();
 
     let mut f = File::open(&publish::upload_path().join("api/v1/crates/new")).unwrap();
     // Skip the metadata payload and the size of the tarball
@@ -112,7 +113,8 @@ See [..]
 [UPLOADING] foo v0.0.1 ([CWD])
 ",
             reg = publish::registry_path().to_str().unwrap()
-        )).run();
+        ))
+        .run();
 
     let mut f = File::open(&publish::upload_path().join("api/v1/crates/new")).unwrap();
     // Skip the metadata payload and the size of the tarball
@@ -188,7 +190,8 @@ See [..]
 [UPLOADING] foo v0.0.1 ([CWD])
 ",
             reg = publish::registry_path().to_str().unwrap()
-        )).run();
+        ))
+        .run();
 
     let mut f = File::open(&publish::upload_path().join("api/v1/crates/new")).unwrap();
     // Skip the metadata payload and the size of the tarball
@@ -266,7 +269,8 @@ See [..]
 [UPLOADING] foo v0.0.1 ([CWD])
 ",
             reg = publish::registry_path().to_str().unwrap()
-        )).run();
+        ))
+        .run();
 
     let mut f = File::open(&publish::upload_path().join("api/v1/crates/new")).unwrap();
     // Skip the metadata payload and the size of the tarball
@@ -335,7 +339,8 @@ specify a crates.io version as a dependency or pull it into this \
 repository and specify it with a path and version\n\
 (crate `foo` has repository path `git://path/to/nowhere`)\
 ",
-        ).run();
+        )
+        .run();
 }
 
 #[test]
@@ -371,7 +376,8 @@ fn path_dependency_no_version() {
 [ERROR] all path dependencies must have a version specified when publishing.
 dependency `bar` does not specify a version
 ",
-        ).run();
+        )
+        .run();
 }
 
 #[test]
@@ -402,7 +408,8 @@ fn unpublishable_crate() {
 [ERROR] some crates cannot be published.
 `foo` is marked as unpublishable
 ",
-        ).run();
+        )
+        .run();
 }
 
 #[test]
@@ -441,7 +448,8 @@ bar
 
 to proceed despite this, pass the `--allow-dirty` flag
 ",
-        ).run();
+        )
+        .run();
 }
 
 #[test]
@@ -555,7 +563,8 @@ fn ignore_when_crate_ignored() {
             homepage = "foo"
             repository = "foo"
         "#,
-        ).nocommit_file("bar/src/main.rs", "fn main() {}");
+        )
+        .nocommit_file("bar/src/main.rs", "fn main() {}");
     p.cargo("publish")
         .cwd(p.root().join("bar"))
         .arg("--index")
@@ -583,7 +592,8 @@ fn new_crate_rejected() {
             homepage = "foo"
             repository = "foo"
         "#,
-        ).nocommit_file("src/main.rs", "fn main() {}");
+        )
+        .nocommit_file("src/main.rs", "fn main() {}");
     p.cargo("publish --index")
         .arg(publish::registry().to_string())
         .with_status(101)
@@ -623,7 +633,8 @@ See [..]
 [UPLOADING] foo v0.0.1 ([CWD])
 [WARNING] aborting upload due to dry run
 ",
-        ).run();
+        )
+        .run();
 
     // Ensure the API request wasn't actually made
     assert!(!publish::upload_path().join("api/v1/crates/new").exists());
@@ -666,7 +677,8 @@ Caused by:
 
 consider adding `cargo-features = [\"alternative-registries\"]` to the manifest
 ",
-        ).run();
+        )
+        .run();
 }
 
 #[test]
@@ -704,7 +716,8 @@ fn registry_not_in_publish_list() {
 [ERROR] some crates cannot be published.
 `foo` is marked as unpublishable
 ",
-        ).run();
+        )
+        .run();
 }
 
 #[test]
@@ -737,7 +750,8 @@ fn publish_empty_list() {
 [ERROR] some crates cannot be published.
 `foo` is marked as unpublishable
 ",
-        ).run();
+        )
+        .run();
 }
 
 #[test]
@@ -801,7 +815,8 @@ fn block_publish_no_registry() {
 [ERROR] some crates cannot be published.
 `foo` is marked as unpublishable
 ",
-        ).run();
+        )
+        .run();
 }
 
 #[test]
@@ -869,5 +884,40 @@ fn publish_with_all_features() {
     p.cargo("publish --all-features --index")
         .arg(publish::registry().to_string())
         .with_stderr_contains("[UPLOADING] foo v0.0.1 ([CWD])")
+        .run();
+}
+
+#[test]
+fn publish_with_no_default_features() {
+    publish::setup();
+
+    let p = project()
+        .file(
+            "Cargo.toml",
+            r#"
+            [project]
+            name = "foo"
+            version = "0.0.1"
+            authors = []
+            license = "MIT"
+            description = "foo"
+
+            [features]
+            default = ["required"]
+            required = []
+        "#,
+        )
+        .file(
+            "src/main.rs",
+            "#[cfg(not(feature = \"required\"))]
+             compile_error!(\"This crate requires `required` feature!\");
+             fn main() {}",
+        )
+        .build();
+
+    p.cargo("publish --no-default-features --index")
+        .arg(publish::registry().to_string())
+        .with_stderr_contains("error: This crate requires `required` feature!")
+        .with_status(101)
         .run();
 }

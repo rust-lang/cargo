@@ -1358,3 +1358,34 @@ fn package_with_all_features() {
         .with_status(0)
         .run();
 }
+
+#[test]
+fn package_no_default_features() {
+    let p = project()
+        .file(
+            "Cargo.toml",
+            r#"
+            [project]
+            name = "foo"
+            version = "0.0.1"
+            authors = []
+            license = "MIT"
+            description = "foo"
+
+            [features]
+            default = ["required"]
+            required = []
+        "#,
+        ).file(
+            "src/main.rs",
+            "#[cfg(not(feature = \"required\"))]
+             compile_error!(\"This crate requires `required` feature!\");
+             fn main() {}",
+        ).build();
+
+    p.cargo("package --no-default-features")
+        .masquerade_as_nightly_cargo()
+        .with_stderr_contains("error: This crate requires `required` feature!")
+        .with_status(101)
+        .run();
+}

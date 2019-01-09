@@ -28,6 +28,7 @@ pub struct PackageOpts<'cfg> {
     pub target: Option<String>,
     pub features: Vec<String>,
     pub all_features: bool,
+    pub no_default_features: bool,
 }
 
 static VCS_INFO_FILE: &'static str = ".cargo_vcs_info.json";
@@ -450,7 +451,7 @@ fn run_verify(ws: &Workspace<'_>, tar: &FileLock, opts: &PackageOpts<'_>) -> Car
             config,
             build_config: BuildConfig::new(config, opts.jobs, &opts.target, CompileMode::Build)?,
             features: opts.features.clone(),
-            no_default_features: false,
+            no_default_features: opts.no_default_features,
             all_features: opts.all_features,
             spec: ops::Packages::Packages(Vec::new()),
             filter: ops::CompileFilter::Default {
