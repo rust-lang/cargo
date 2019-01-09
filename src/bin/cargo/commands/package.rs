@@ -45,6 +45,7 @@ pub fn exec(config: &mut Config, args: &ArgMatches<'_>) -> CliResult {
             jobs: args.jobs()?,
             features: args._values_of("features"),
             all_features: args.is_present("all-features"),
+            no_default_features: args.is_present("no-default-features"),
         },
     )?;
     Ok(())
