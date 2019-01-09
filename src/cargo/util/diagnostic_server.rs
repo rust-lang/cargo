@@ -23,8 +23,10 @@ const PLEASE_REPORT_THIS_BUG: &str =
      and we would appreciate a bug report! You're likely to see \n\
      a number of compiler warnings after this message which cargo\n\
      attempted to fix but failed. If you could open an issue at\n\
-     https://github.com/rust-lang/cargo/issues\n\
-     quoting the full output of this command we'd be very appreciative!\n\n\
+     https://github.com/rust-lang/rust/issues\n\
+     quoting the full output of this command we'd be very appreciative!\n\
+     Note that you may be able to make some more progress in the near-term\n\
+     fixing code with the `--broken-code` flag\n\n\
      ";
 
 #[derive(Deserialize, Serialize)]
