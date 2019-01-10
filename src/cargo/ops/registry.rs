@@ -60,10 +60,6 @@ pub fn publish(ws: &Workspace<'_>, opts: &PublishOpts<'_>) -> CargoResult<()> {
         }
     }
 
-    if !pkg.manifest().patch().is_empty() {
-        failure::bail!("published crates cannot contain [patch] sections");
-    }
-
     let (mut registry, reg_id) = registry(
         opts.config,
         opts.token.clone(),
