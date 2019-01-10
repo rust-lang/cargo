@@ -1669,3 +1669,32 @@ fn metadata_links() {
         )
         .run()
 }
+
+#[test]
+fn deps_with_bin_only() {
+    let p = project()
+        .file(
+            "Cargo.toml",
+            r#"
+            [package]
+            name = "foo"
+            version = "0.1.0"
+            [dependencies]
+            bdep = { path = "bdep" }
+        "#,
+        )
+        .file("src/lib.rs", "")
+        .file("bdep/Cargo.toml", &basic_bin_manifest("bdep"))
+        .file("bdep/src/main.rs", "fn main() {}")
+        .build();
+
+    let output = p
+        .cargo("metadata")
+        .exec_with_output()
+        .expect("cargo metadata failed");
+    let stdout = std::str::from_utf8(&output.stdout).unwrap();
+    let meta: serde_json::Value = serde_json::from_str(stdout).expect("failed to parse json");
+    let nodes = &meta["resolve"]["nodes"];
+    assert!(nodes[0]["deps"].as_array().unwrap().is_empty());
+    assert!(nodes[1]["deps"].as_array().unwrap().is_empty());
+}
