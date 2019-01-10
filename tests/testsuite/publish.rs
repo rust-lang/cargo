@@ -787,3 +787,106 @@ fn block_publish_no_registry() {
         )
         .run();
 }
+
+#[test]
+fn publish_with_select_features() {
+    publish::setup();
+
+    let p = project()
+        .file(
+            "Cargo.toml",
+            r#"
+            [project]
+            name = "foo"
+            version = "0.0.1"
+            authors = []
+            license = "MIT"
+            description = "foo"
+
+            [features]
+            required = []
+            optional = []
+        "#,
+        )
+        .file(
+            "src/main.rs",
+            "#[cfg(not(feature = \"required\"))]
+             compile_error!(\"This crate requires `required` feature!\");
+             fn main() {}",
+        )
+        .build();
+
+    p.cargo("publish --features required --index")
+        .arg(publish::registry().to_string())
+        .with_stderr_contains("[UPLOADING] foo v0.0.1 ([CWD])")
+        .run();
+}
+
+#[test]
+fn publish_with_all_features() {
+    publish::setup();
+
+    let p = project()
+        .file(
+            "Cargo.toml",
+            r#"
+            [project]
+            name = "foo"
+            version = "0.0.1"
+            authors = []
+            license = "MIT"
+            description = "foo"
+
+            [features]
+            required = []
+            optional = []
+        "#,
+        )
+        .file(
+            "src/main.rs",
+            "#[cfg(not(feature = \"required\"))]
+             compile_error!(\"This crate requires `required` feature!\");
+             fn main() {}",
+        )
+        .build();
+
+    p.cargo("publish --all-features --index")
+        .arg(publish::registry().to_string())
+        .with_stderr_contains("[UPLOADING] foo v0.0.1 ([CWD])")
+        .run();
+}
+
+#[test]
+fn publish_with_no_default_features() {
+    publish::setup();
+
+    let p = project()
+        .file(
+            "Cargo.toml",
+            r#"
+            [project]
+            name = "foo"
+            version = "0.0.1"
+            authors = []
+            license = "MIT"
+            description = "foo"
+
+            [features]
+            default = ["required"]
+            required = []
+        "#,
+        )
+        .file(
+            "src/main.rs",
+            "#[cfg(not(feature = \"required\"))]
+             compile_error!(\"This crate requires `required` feature!\");
+             fn main() {}",
+        )
+        .build();
+
+    p.cargo("publish --no-default-features --index")
+        .arg(publish::registry().to_string())
+        .with_stderr_contains("error: This crate requires `required` feature!")
+        .with_status(101)
+        .run();
+}
