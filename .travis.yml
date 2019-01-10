@@ -10,7 +10,7 @@ matrix:
   include:
     - env: TARGET=x86_64-unknown-linux-gnu
            ALT=i686-unknown-linux-gnu
-      if: branch != master OR type = pull_request
+
     - env: TARGET=x86_64-apple-darwin
            ALT=i686-apple-darwin
       os: osx
@@ -30,21 +30,21 @@ matrix:
            ALT=i686-unknown-linux-gnu
       rust: 1.31.0
       script:
-        - rustup toolchain install nightly
-        - cargo +nightly generate-lockfile -Z minimal-versions
-        - cargo -V
-        - cargo test --features=deny-warnings
+        - rustup toolchain install nightly-2019-01-09 || travis_terminate 1
+        - cargo +nightly-2019-01-09 generate-lockfile -Z minimal-versions || travis_terminate 1
+        - cargo -V || travis_terminate 1
+        - cargo test --features=deny-warnings || travis_terminate 1
       if: branch != master OR type = pull_request
 
     - env: TARGET=x86_64-unknown-linux-gnu
            ALT=i686-unknown-linux-gnu
-      rust: nightly
+      rust: nightly-2019-01-09
       install:
         - travis_retry curl -Lf https://github.com/rust-lang-nursery/mdBook/releases/download/v0.1.7/mdbook-v0.1.7-x86_64-unknown-linux-gnu.tar.gz | tar -xz --directory=$HOME/.cargo/bin
       script:
-        - cargo test --features=deny-warnings
-        - cargo doc --no-deps
-        - (cd src/doc && mdbook build --dest-dir ../../target/doc)
+        - cargo test --features=deny-warnings || travis_terminate 1
+        - cargo doc --no-deps || travis_terminate 1
+        - (cd src/doc && mdbook build --dest-dir ../../target/doc) || travis_terminate 1
       if: branch != master OR type = pull_request
 
   exclude:
