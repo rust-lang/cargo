@@ -105,7 +105,7 @@ where
 {
     #[derive(Serialize)]
     struct Dep {
-        name: Option<String>,
+        name: String,
         pkg: PackageId,
     }
 
@@ -123,13 +123,12 @@ where
             dependencies: resolve.deps(id).map(|(pkg, _deps)| pkg).collect(),
             deps: resolve
                 .deps(id)
-                .map(|(pkg, _deps)| {
-                    let name = packages
+                .filter_map(|(pkg, _deps)| {
+                    packages
                         .get(&pkg)
                         .and_then(|pkg| pkg.targets().iter().find(|t| t.is_lib()))
-                        .and_then(|lib_target| resolve.extern_crate_name(id, pkg, lib_target).ok());
-
-                    Dep { name, pkg }
+                        .and_then(|lib_target| resolve.extern_crate_name(id, pkg, lib_target).ok())
+                        .map(|name| Dep { name, pkg })
                 })
                 .collect(),
             features: resolve.features_sorted(id),
