@@ -37,7 +37,7 @@ pub fn get_suggestions_from_json<S: ::std::hash::BuildHasher>(
     Ok(result)
 }
 
-#[derive(Debug, Copy, Clone, Hash, PartialEq)]
+#[derive(Debug, Copy, Clone, Hash, PartialEq, Eq)]
 pub struct LinePosition {
     pub line: usize,
     pub column: usize,
@@ -49,7 +49,7 @@ impl std::fmt::Display for LinePosition {
     }
 }
 
-#[derive(Debug, Copy, Clone, Hash, PartialEq)]
+#[derive(Debug, Copy, Clone, Hash, PartialEq, Eq)]
 pub struct LineRange {
     pub start: LinePosition,
     pub end: LinePosition,
@@ -61,7 +61,7 @@ impl std::fmt::Display for LineRange {
     }
 }
 
-#[derive(Debug, Clone, Hash, PartialEq)]
+#[derive(Debug, Clone, Hash, PartialEq, Eq)]
 /// An error/warning and possible solutions for fixing it
 pub struct Suggestion {
     pub message: String,
@@ -69,13 +69,13 @@ pub struct Suggestion {
     pub solutions: Vec<Solution>,
 }
 
-#[derive(Debug, Clone, Hash, PartialEq)]
+#[derive(Debug, Clone, Hash, PartialEq, Eq)]
 pub struct Solution {
     pub message: String,
     pub replacements: Vec<Replacement>,
 }
 
-#[derive(Debug, Clone, Hash, PartialEq)]
+#[derive(Debug, Clone, Hash, PartialEq, Eq)]
 pub struct Snippet {
     pub file_name: String,
     pub line_range: LineRange,
@@ -86,7 +86,7 @@ pub struct Snippet {
     pub text: (String, String, String),
 }
 
-#[derive(Debug, Clone, Hash, PartialEq)]
+#[derive(Debug, Clone, Hash, PartialEq, Eq)]
 pub struct Replacement {
     pub snippet: Snippet,
     pub replacement: String,
