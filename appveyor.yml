@@ -9,7 +9,7 @@ environment:
 install:
   - if NOT defined APPVEYOR_PULL_REQUEST_NUMBER if "%APPVEYOR_REPO_BRANCH%" == "master" appveyor exit
   - appveyor-retry appveyor DownloadFile https://win.rustup.rs/ -FileName rustup-init.exe
-  - rustup-init.exe -y --default-host x86_64-pc-windows-msvc --default-toolchain nightly-2019-01-09
+  - rustup-init.exe -y --default-host x86_64-pc-windows-msvc --default-toolchain nightly
   - set PATH=%PATH%;C:\Users\appveyor\.cargo\bin
   - if defined MINIMAL_VERSIONS rustup toolchain install 1.31.0
   - if defined OTHER_TARGET rustup target add %OTHER_TARGET%
@@ -25,5 +25,5 @@ test_script:
   # we don't have ci time to run the full `cargo test` with `minimal-versions` like
   # - if defined MINIMAL_VERSIONS cargo +nightly generate-lockfile -Z minimal-versions && cargo +stable test
   # so we just run `cargo check --tests` like
-  - if defined MINIMAL_VERSIONS cargo +nightly-2019-01-09 generate-lockfile -Z minimal-versions && cargo +1.31.0 check --tests --features=deny-warnings
+  - if defined MINIMAL_VERSIONS cargo +nightly generate-lockfile -Z minimal-versions && cargo +1.31.0 check --tests --features=deny-warnings
   - if NOT defined MINIMAL_VERSIONS cargo test --features=deny-warnings
