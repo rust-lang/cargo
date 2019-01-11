@@ -7,7 +7,7 @@ use std::process::{Command, Output, Stdio};
 
 use failure::Fail;
 use jobserver::Client;
-use shell_escape::escape;
+use v_shellescape::escape;
 
 use crate::util::{process_error, read2, CargoResult, CargoResultExt};
 
@@ -38,11 +38,10 @@ impl fmt::Display for ProcessBuilder {
         if self.display_env_vars {
             for (key, val) in self.env.iter() {
                 if let Some(val) = val {
-                    let val = escape(val.to_string_lossy());
                     if cfg!(windows) {
-                        write!(f, "set {}={}&& ", key, val)?;
+                        write!(f, "set {}={}&& ", key, escape(&val.to_string_lossy()))?;
                     } else {
-                        write!(f, "{}={} ", key, val)?;
+                        write!(f, "{}={} ", key, escape(&val.to_string_lossy()))?;
                     }
                 }
             }
@@ -51,7 +50,7 @@ impl fmt::Display for ProcessBuilder {
         write!(f, "{}", self.program.to_string_lossy())?;
 
         for arg in &self.args {
-            write!(f, " {}", escape(arg.to_string_lossy()))?;
+            write!(f, " {}", escape(&arg.to_string_lossy()))?;
         }
 
         write!(f, "`")

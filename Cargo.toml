@@ -52,13 +52,13 @@ semver = { version = "0.9.0", features = ["serde"] }
 serde = { version = "1.0.82", features = ['derive'] }
 serde_ignored = "0.0.4"
 serde_json = { version = "1.0.30", features = ["raw_value"] }
-shell-escape = "0.1.4"
 tar = { version = "0.4.18", default-features = false }
 tempfile = "3.0"
 termcolor = "1.0"
 toml = "0.4.2"
 url = "1.1"
 url_serde = "0.2.0"
+v_shellescape = "0.3"
 clap = "2.31.2"
 unicode-width = "0.1.5"
 openssl = { version = '0.10.11', optional = true }
