@@ -2,7 +2,7 @@
 //!
 //! The following data types are copied from [rust-lang/rust](https://github.com/rust-lang/rust/blob/de78655bca47cac8e783dbb563e7e5c25c1fae40/src/libsyntax/json.rs)
 
-#[derive(Deserialize, Debug)]
+#[derive(Clone, Deserialize, Debug, Hash, Eq, PartialEq)]
 pub struct Diagnostic {
     /// The primary error message.
     pub message: String,
@@ -18,7 +18,7 @@ pub struct Diagnostic {
     pub rendered: Option<String>,
 }
 
-#[derive(Deserialize, Debug)]
+#[derive(Clone, Deserialize, Debug, Hash, Eq, PartialEq)]
 pub struct DiagnosticSpan {
     pub file_name: String,
     pub byte_start: u32,
@@ -46,7 +46,7 @@ pub struct DiagnosticSpan {
     expansion: Option<Box<DiagnosticSpanMacroExpansion>>,
 }
 
-#[derive(Copy, Clone, Debug, PartialEq, Deserialize)]
+#[derive(Copy, Clone, Debug, PartialEq, Deserialize, Hash, Eq)]
 pub enum Applicability {
     MachineApplicable,
     HasPlaceholders,
@@ -54,7 +54,7 @@ pub enum Applicability {
     Unspecified,
 }
 
-#[derive(Deserialize, Debug)]
+#[derive(Clone, Deserialize, Debug, Eq, PartialEq, Hash)]
 pub struct DiagnosticSpanLine {
     pub text: String,
 
@@ -64,7 +64,7 @@ pub struct DiagnosticSpanLine {
     pub highlight_end: usize,
 }
 
-#[derive(Deserialize, Debug)]
+#[derive(Clone, Deserialize, Debug, Eq, PartialEq, Hash)]
 struct DiagnosticSpanMacroExpansion {
     /// span where macro was applied to generate this code; note that
     /// this may itself derive from a macro (if
@@ -78,7 +78,7 @@ struct DiagnosticSpanMacroExpansion {
     def_site_span: Option<DiagnosticSpan>,
 }
 
-#[derive(Deserialize, Debug)]
+#[derive(Clone, Deserialize, Debug, Eq, PartialEq, Hash)]
 pub struct DiagnosticCode {
     /// The code itself.
     pub code: String,
