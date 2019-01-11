@@ -3,6 +3,7 @@ use std::io::prelude::*;
 
 use crate::support::git::repo;
 use crate::support::paths;
+use crate::support::registry::{self, registry_path, registry_url, Package};
 use crate::support::{basic_manifest, project, publish};
 
 const CLEAN_FOO_JSON: &str = r#"
@@ -70,7 +71,7 @@ fn validate_upload_foo_clean() {
 
 #[test]
 fn simple() {
-    publish::setup();
+    registry::init();
 
     let p = project()
         .file(
@@ -88,7 +89,7 @@ fn simple() {
         .build();
 
     p.cargo("publish --no-verify --index")
-        .arg(publish::registry().to_string())
+        .arg(registry_url().to_string())
         .with_stderr(&format!(
             "\
 [UPDATING] `{reg}` index
@@ -97,7 +98,7 @@ See [..]
 [PACKAGING] foo v0.0.1 ([CWD])
 [UPLOADING] foo v0.0.1 ([CWD])
 ",
-            reg = publish::registry_path().to_str().unwrap()
+            reg = registry::registry_path().to_str().unwrap()
         ))
         .run();
 
@@ -106,16 +107,9 @@ See [..]
 
 #[test]
 fn old_token_location() {
-    publish::setup();
-
-    // publish::setup puts a token in this file.
-    fs::remove_file(paths::root().join(".cargo/config")).unwrap();
-
-    let credentials = paths::root().join("home/.cargo/credentials");
-    File::create(credentials)
-        .unwrap()
-        .write_all(br#"token = "api-token""#)
-        .unwrap();
+    // Check that the `token` key works at the root instead of under a
+    // `[registry]` table.
+    registry::init();
 
     let p = project()
         .file(
@@ -132,8 +126,23 @@ fn old_token_location() {
         .file("src/main.rs", "fn main() {}")
         .build();
 
+    let credentials = paths::home().join(".cargo/credentials");
+    fs::remove_file(&credentials).unwrap();
+
+    // Verify can't publish without a token.
     p.cargo("publish --no-verify --index")
-        .arg(publish::registry().to_string())
+        .arg(registry_url().to_string())
+        .with_status(101)
+        .with_stderr_contains("[ERROR] no upload token found, please run `cargo login`")
+        .run();
+
+    File::create(&credentials)
+        .unwrap()
+        .write_all(br#"token = "api-token""#)
+        .unwrap();
+
+    p.cargo("publish --no-verify --index")
+        .arg(registry_url().to_string())
         .with_stderr(&format!(
             "\
 [UPDATING] `{reg}` index
@@ -142,7 +151,7 @@ See [..]
 [PACKAGING] foo v0.0.1 ([CWD])
 [UPLOADING] foo v0.0.1 ([CWD])
 ",
-            reg = publish::registry_path().to_str().unwrap()
+            reg = registry_path().to_str().unwrap()
         ))
         .run();
 
@@ -153,7 +162,7 @@ See [..]
 // remove once it has been decided --host can be removed
 #[test]
 fn simple_with_host() {
-    publish::setup();
+    registry::init();
 
     let p = project()
         .file(
@@ -171,7 +180,7 @@ fn simple_with_host() {
         .build();
 
     p.cargo("publish --no-verify --host")
-        .arg(publish::registry().to_string())
+        .arg(registry_url().to_string())
         .with_stderr(&format!(
             "\
 [WARNING] The flag '--host' is no longer valid.
@@ -189,7 +198,7 @@ See [..]
 [PACKAGING] foo v0.0.1 ([CWD])
 [UPLOADING] foo v0.0.1 ([CWD])
 ",
-            reg = publish::registry_path().to_str().unwrap()
+            reg = registry_path().to_str().unwrap()
         ))
         .run();
 
@@ -200,7 +209,7 @@ See [..]
 // remove once it has been decided --host can be removed
 #[test]
 fn simple_with_index_and_host() {
-    publish::setup();
+    registry::init();
 
     let p = project()
         .file(
@@ -218,9 +227,9 @@ fn simple_with_index_and_host() {
         .build();
 
     p.cargo("publish --no-verify --index")
-        .arg(publish::registry().to_string())
+        .arg(registry_url().to_string())
         .arg("--host")
-        .arg(publish::registry().to_string())
+        .arg(registry_url().to_string())
         .with_stderr(&format!(
             "\
 [WARNING] The flag '--host' is no longer valid.
@@ -238,7 +247,7 @@ See [..]
 [PACKAGING] foo v0.0.1 ([CWD])
 [UPLOADING] foo v0.0.1 ([CWD])
 ",
-            reg = publish::registry_path().to_str().unwrap()
+            reg = registry_path().to_str().unwrap()
         ))
         .run();
 
@@ -247,7 +256,7 @@ See [..]
 
 #[test]
 fn git_deps() {
-    publish::setup();
+    registry::init();
 
     let p = project()
         .file(
@@ -268,7 +277,7 @@ fn git_deps() {
         .build();
 
     p.cargo("publish -v --no-verify --index")
-        .arg(publish::registry().to_string())
+        .arg(registry_url().to_string())
         .with_status(101)
         .with_stderr(
             "\
@@ -285,7 +294,7 @@ repository and specify it with a path and version\n\
 
 #[test]
 fn path_dependency_no_version() {
-    publish::setup();
+    registry::init();
 
     let p = project()
         .file(
@@ -308,7 +317,7 @@ fn path_dependency_no_version() {
         .build();
 
     p.cargo("publish --index")
-        .arg(publish::registry().to_string())
+        .arg(registry_url().to_string())
         .with_status(101)
         .with_stderr(
             "\
@@ -322,7 +331,7 @@ dependency `bar` does not specify a version
 
 #[test]
 fn unpublishable_crate() {
-    publish::setup();
+    registry::init();
 
     let p = project()
         .file(
@@ -341,7 +350,7 @@ fn unpublishable_crate() {
         .build();
 
     p.cargo("publish --index")
-        .arg(publish::registry().to_string())
+        .arg(registry_url().to_string())
         .with_status(101)
         .with_stderr(
             "\
@@ -354,7 +363,7 @@ fn unpublishable_crate() {
 
 #[test]
 fn dont_publish_dirty() {
-    publish::setup();
+    registry::init();
     let p = project().file("bar", "").build();
 
     let _ = repo(&paths::root().join("foo"))
@@ -376,7 +385,7 @@ fn dont_publish_dirty() {
         .build();
 
     p.cargo("publish --index")
-        .arg(publish::registry().to_string())
+        .arg(registry_url().to_string())
         .with_status(101)
         .with_stderr(
             "\
@@ -394,7 +403,7 @@ to proceed despite this, pass the `--allow-dirty` flag
 
 #[test]
 fn publish_clean() {
-    publish::setup();
+    registry::init();
 
     let p = project().build();
 
@@ -417,7 +426,7 @@ fn publish_clean() {
         .build();
 
     p.cargo("publish --index")
-        .arg(publish::registry().to_string())
+        .arg(registry_url().to_string())
         .run();
 
     validate_upload_foo_clean();
@@ -425,7 +434,7 @@ fn publish_clean() {
 
 #[test]
 fn publish_in_sub_repo() {
-    publish::setup();
+    registry::init();
 
     let p = project().no_manifest().file("baz", "").build();
 
@@ -450,7 +459,7 @@ fn publish_in_sub_repo() {
     p.cargo("publish")
         .cwd(p.root().join("bar"))
         .arg("--index")
-        .arg(publish::registry().to_string())
+        .arg(registry_url().to_string())
         .run();
 
     validate_upload_foo_clean();
@@ -458,7 +467,7 @@ fn publish_in_sub_repo() {
 
 #[test]
 fn publish_when_ignored() {
-    publish::setup();
+    registry::init();
 
     let p = project().file("baz", "").build();
 
@@ -482,7 +491,7 @@ fn publish_when_ignored() {
         .build();
 
     p.cargo("publish --index")
-        .arg(publish::registry().to_string())
+        .arg(registry_url().to_string())
         .run();
 
     publish::validate_upload(
@@ -500,7 +509,7 @@ fn publish_when_ignored() {
 
 #[test]
 fn ignore_when_crate_ignored() {
-    publish::setup();
+    registry::init();
 
     let p = project().no_manifest().file("bar/baz", "").build();
 
@@ -524,7 +533,7 @@ fn ignore_when_crate_ignored() {
     p.cargo("publish")
         .cwd(p.root().join("bar"))
         .arg("--index")
-        .arg(publish::registry().to_string())
+        .arg(registry_url().to_string())
         .run();
 
     publish::validate_upload(
@@ -536,7 +545,7 @@ fn ignore_when_crate_ignored() {
 
 #[test]
 fn new_crate_rejected() {
-    publish::setup();
+    registry::init();
 
     let p = project().file("baz", "").build();
 
@@ -557,7 +566,7 @@ fn new_crate_rejected() {
         )
         .nocommit_file("src/main.rs", "fn main() {}");
     p.cargo("publish --index")
-        .arg(publish::registry().to_string())
+        .arg(registry_url().to_string())
         .with_status(101)
         .with_stderr_contains(
             "[ERROR] 3 files in the working directory contain \
@@ -568,7 +577,7 @@ fn new_crate_rejected() {
 
 #[test]
 fn dry_run() {
-    publish::setup();
+    registry::init();
 
     let p = project()
         .file(
@@ -586,7 +595,7 @@ fn dry_run() {
         .build();
 
     p.cargo("publish --dry-run --index")
-        .arg(publish::registry().to_string())
+        .arg(registry_url().to_string())
         .with_stderr(
             "\
 [UPDATING] `[..]` index
@@ -603,12 +612,13 @@ See [..]
         .run();
 
     // Ensure the API request wasn't actually made
-    assert!(!publish::upload_path().join("api/v1/crates/new").exists());
+    assert!(registry::api_path().join("api/v1/crates").exists());
+    assert!(!registry::api_path().join("api/v1/crates/new").exists());
 }
 
 #[test]
 fn block_publish_feature_not_enabled() {
-    publish::setup();
+    registry::init();
 
     let p = project()
         .file(
@@ -649,7 +659,7 @@ consider adding `cargo-features = [\"alternative-registries\"]` to the manifest
 
 #[test]
 fn registry_not_in_publish_list() {
-    publish::setup();
+    registry::init();
 
     let p = project()
         .file(
@@ -688,7 +698,7 @@ fn registry_not_in_publish_list() {
 
 #[test]
 fn publish_empty_list() {
-    publish::setup();
+    registry::init();
 
     let p = project()
         .file(
@@ -722,7 +732,7 @@ fn publish_empty_list() {
 
 #[test]
 fn publish_allowed_registry() {
-    publish::setup();
+    registry::init();
 
     let p = project().build();
 
@@ -751,12 +761,21 @@ fn publish_allowed_registry() {
         .masquerade_as_nightly_cargo()
         .run();
 
-    validate_upload_foo_clean();
+    publish::validate_alt_upload(
+        CLEAN_FOO_JSON,
+        "foo-0.0.1.crate",
+        &[
+            "Cargo.toml",
+            "Cargo.toml.orig",
+            "src/main.rs",
+            ".cargo_vcs_info.json",
+        ],
+    );
 }
 
 #[test]
 fn block_publish_no_registry() {
-    publish::setup();
+    registry::init();
 
     let p = project()
         .file(
@@ -790,7 +809,7 @@ fn block_publish_no_registry() {
 
 #[test]
 fn publish_with_select_features() {
-    publish::setup();
+    registry::init();
 
     let p = project()
         .file(
@@ -817,14 +836,14 @@ fn publish_with_select_features() {
         .build();
 
     p.cargo("publish --features required --index")
-        .arg(publish::registry().to_string())
+        .arg(registry_url().to_string())
         .with_stderr_contains("[UPLOADING] foo v0.0.1 ([CWD])")
         .run();
 }
 
 #[test]
 fn publish_with_all_features() {
-    publish::setup();
+    registry::init();
 
     let p = project()
         .file(
@@ -851,14 +870,14 @@ fn publish_with_all_features() {
         .build();
 
     p.cargo("publish --all-features --index")
-        .arg(publish::registry().to_string())
+        .arg(registry_url().to_string())
         .with_stderr_contains("[UPLOADING] foo v0.0.1 ([CWD])")
         .run();
 }
 
 #[test]
 fn publish_with_no_default_features() {
-    publish::setup();
+    registry::init();
 
     let p = project()
         .file(
@@ -885,8 +904,43 @@ fn publish_with_no_default_features() {
         .build();
 
     p.cargo("publish --no-default-features --index")
-        .arg(publish::registry().to_string())
+        .arg(registry_url().to_string())
         .with_stderr_contains("error: This crate requires `required` feature!")
         .with_status(101)
+        .run();
+}
+
+#[test]
+fn publish_with_patch() {
+    Package::new("bar", "1.0.0").publish();
+
+    let p = project()
+        .file(
+            "Cargo.toml",
+            r#"
+            [project]
+            name = "foo"
+            version = "0.0.1"
+            authors = []
+            license = "MIT"
+            description = "foo"
+            [dependencies]
+            bar = "1.0"
+            [patch.crates-io]
+            bar = { path = "bar" }
+        "#,
+        )
+        .file("src/main.rs", "extern crate bar; fn main() {}")
+        .file("bar/Cargo.toml", &basic_manifest("bar", "1.0.0"))
+        .file("bar/src/lib.rs", "")
+        .build();
+
+    // Check that it works with the patched crate.
+    p.cargo("build").run();
+
+    p.cargo("publish --index")
+        .arg(registry_url().to_string())
+        .with_status(101)
+        .with_stderr_contains("[ERROR] published crates cannot contain [patch] sections")
         .run();
 }

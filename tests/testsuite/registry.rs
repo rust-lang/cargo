@@ -1,21 +1,12 @@
 use std::fs::{self, File};
 use std::io::prelude::*;
-use std::path::PathBuf;
 
 use crate::support::cargo_process;
 use crate::support::git;
 use crate::support::paths::{self, CargoPathExt};
-use crate::support::registry::{self, Dependency, Package};
+use crate::support::registry::{self, registry_path, registry_url, Dependency, Package};
 use crate::support::{basic_manifest, project};
 use cargo::util::paths::remove_dir_all;
-use url::Url;
-
-fn registry_path() -> PathBuf {
-    paths::root().join("registry")
-}
-fn registry() -> Url {
-    Url::from_file_path(&*registry_path()).ok().unwrap()
-}
 
 #[test]
 fn simple() {
@@ -47,7 +38,7 @@ fn simple() {
 [COMPILING] foo v0.0.1 ([CWD])
 [FINISHED] dev [unoptimized + debuginfo] target(s) in [..]s
 ",
-            reg = registry::registry_path().to_str().unwrap()
+            reg = registry_path().to_str().unwrap()
         ))
         .run();
 
@@ -98,7 +89,7 @@ fn deps() {
 [COMPILING] foo v0.0.1 ([CWD])
 [FINISHED] dev [unoptimized + debuginfo] target(s) in [..]s
 ",
-            reg = registry::registry_path().to_str().unwrap()
+            reg = registry_path().to_str().unwrap()
         ))
         .run();
 }
@@ -336,7 +327,7 @@ required by package `foo v0.0.1 ([..])`
 [COMPILING] foo v0.0.1 ([CWD])
 [FINISHED] dev [unoptimized + debuginfo] target(s) in [..]s
 ",
-            reg = registry::registry_path().to_str().unwrap()
+            reg = registry_path().to_str().unwrap()
         ))
         .run();
 }
@@ -581,7 +572,7 @@ fn yanks_in_lockfiles_are_ok() {
 
     p.cargo("build").run();
 
-    registry::registry_path().join("3").rm_rf();
+    registry_path().join("3").rm_rf();
 
     Package::new("bar", "0.0.1").yanked(true).publish();
 
@@ -806,10 +797,12 @@ fn login_with_no_cargo_dir() {
 fn login_with_differently_sized_token() {
     // Verify that the configuration file gets properly truncated.
     registry::init();
+    let credentials = paths::home().join(".cargo/credentials");
+    fs::remove_file(&credentials).unwrap();
     cargo_process("login lmaolmaolmao -v").run();
     cargo_process("login lmao -v").run();
     cargo_process("login lmaolmaolmao -v").run();
-    let credentials = fs::read_to_string(paths::home().join(".cargo/credentials")).unwrap();
+    let credentials = fs::read_to_string(&credentials).unwrap();
     assert_eq!(credentials, "[registry]\ntoken = \"lmaolmaolmao\"\n");
 }
 
@@ -832,7 +825,7 @@ fn bad_license_file() {
         .file("src/main.rs", "fn main() {}")
         .build();
     p.cargo("publish -v --index")
-        .arg(registry().to_string())
+        .arg(registry_url().to_string())
         .with_status(101)
         .with_stderr_contains("[ERROR] the license file `foo` does not exist")
         .run();
