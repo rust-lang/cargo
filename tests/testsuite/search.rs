@@ -5,7 +5,7 @@ use std::path::Path;
 use crate::support::cargo_process;
 use crate::support::git::repo;
 use crate::support::paths;
-use crate::support::registry::{api_path, registry as registry_url, registry_path};
+use crate::support::registry::{api_path, registry_path, registry_url};
 use url::Url;
 
 fn api() -> Url {

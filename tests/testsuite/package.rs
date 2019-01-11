@@ -839,7 +839,7 @@ registry-index = "{}"
 [dependencies.ghi]
 version = "1.0"
 "#,
-        registry::alt_registry()
+        registry::alt_registry_url()
     );
 
     validate_crate_contents(

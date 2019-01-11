@@ -1,4 +1,4 @@
-use crate::support::{project, publish};
+use crate::support::{project, registry};
 
 #[test]
 fn feature_required() {
@@ -295,7 +295,7 @@ fn z_flags_rejected() {
 
 #[test]
 fn publish_allowed() {
-    publish::setup();
+    registry::init();
 
     let p = project()
         .file(
@@ -312,7 +312,7 @@ fn publish_allowed() {
         .file("src/lib.rs", "")
         .build();
     p.cargo("publish --index")
-        .arg(publish::registry().to_string())
+        .arg(registry::registry_url().to_string())
         .masquerade_as_nightly_cargo()
         .run();
 }
