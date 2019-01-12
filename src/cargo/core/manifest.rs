@@ -212,6 +212,7 @@ pub struct Target {
     doctest: bool,
     harness: bool, // whether to use the test harness (--test)
     for_host: bool,
+    proc_macro: bool,
     edition: Edition,
 }
 
@@ -352,6 +353,7 @@ compact_debug! {
                 doctest
                 harness
                 for_host
+                proc_macro
                 edition
             )]
         }
@@ -585,6 +587,7 @@ impl Target {
             doctest: false,
             harness: true,
             for_host: false,
+            proc_macro: false,
             edition,
             tested: true,
             benched: true,
@@ -735,6 +738,9 @@ impl Target {
     pub fn for_host(&self) -> bool {
         self.for_host
     }
+    pub fn proc_macro(&self) -> bool {
+        self.proc_macro
+    }
     pub fn edition(&self) -> Edition {
         self.edition
     }
@@ -858,6 +864,10 @@ impl Target {
     }
     pub fn set_for_host(&mut self, for_host: bool) -> &mut Target {
         self.for_host = for_host;
+        self
+    }
+    pub fn set_proc_macro(&mut self, proc_macro: bool) -> &mut Target {
+        self.proc_macro = proc_macro;
         self
     }
     pub fn set_edition(&mut self, edition: Edition) -> &mut Target {
