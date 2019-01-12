@@ -180,8 +180,19 @@ fn compute_deps<'a, 'cfg, 'tmp>(
         };
         let mode = check_or_build_mode(unit.mode, lib);
         let dep_unit_for = unit_for.with_for_host(lib.for_host());
-        let unit = new_unit(bcx, pkg, lib, dep_unit_for, unit.kind.for_target(lib), mode);
-        ret.push((unit, dep_unit_for));
+
+        if bcx.config.cli_unstable().dual_proc_macros
+            && lib.proc_macro()
+            && unit.kind == Kind::Target
+        {
+            let unit = new_unit(bcx, pkg, lib, dep_unit_for, Kind::Target, mode);
+            ret.push((unit, dep_unit_for));
+            let unit = new_unit(bcx, pkg, lib, dep_unit_for, Kind::Host, mode);
+            ret.push((unit, dep_unit_for));
+        } else {
+            let unit = new_unit(bcx, pkg, lib, dep_unit_for, unit.kind.for_target(lib), mode);
+            ret.push((unit, dep_unit_for));
+        }
     }
 
     // If this target is a build script, then what we've collected so far is
