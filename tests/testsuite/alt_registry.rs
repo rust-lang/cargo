@@ -467,6 +467,8 @@ fn block_publish_due_to_no_token() {
     // Setup the registry by publishing a package
     Package::new("bar", "0.0.1").alternative(true).publish();
 
+    fs::remove_file(paths::home().join(".cargo/credentials")).unwrap();
+
     // Now perform the actual publish
     p.cargo("publish --registry alternative -Zunstable-options")
         .masquerade_as_nightly_cargo()

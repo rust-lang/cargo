@@ -1,75 +1,18 @@
 use std::collections::{HashMap, HashSet};
-use std::fs::{self, File};
+use std::fs::File;
 use std::io::{prelude::*, SeekFrom};
 use std::path::{Path, PathBuf};
 
-use crate::support::git::{repo, Repository};
-use crate::support::registry::alt_api_path;
-use crate::support::{find_json_mismatch, paths};
+use crate::support::registry::{self, alt_api_path};
+use crate::support::find_json_mismatch;
 
 use byteorder::{LittleEndian, ReadBytesExt};
 use flate2::read::GzDecoder;
 use tar::Archive;
-use url::Url;
-
-pub fn setup() -> Repository {
-    let config = paths::root().join(".cargo/config");
-    t!(fs::create_dir_all(config.parent().unwrap()));
-    t!(t!(File::create(&config)).write_all(
-        format!(
-            r#"
-        [registry]
-        token = "api-token"
-
-        [registries.alternative]
-        index = "{registry}"
-    "#,
-            registry = registry().to_string()
-        )
-        .as_bytes()
-    ));
-
-    let credentials = paths::root().join("home/.cargo/credentials");
-    t!(fs::create_dir_all(credentials.parent().unwrap()));
-    t!(t!(File::create(&credentials)).write_all(
-        br#"
-        [registries.alternative]
-        token = "api-token"
-    "#
-    ));
-
-    t!(fs::create_dir_all(&upload_path().join("api/v1/crates")));
-
-    repo(&registry_path())
-        .file(
-            "config.json",
-            &format!(
-                r#"{{
-            "dl": "{0}",
-            "api": "{0}"
-        }}"#,
-                upload()
-            ),
-        )
-        .build()
-}
-
-pub fn registry_path() -> PathBuf {
-    paths::root().join("registry")
-}
-pub fn registry() -> Url {
-    Url::from_file_path(&*registry_path()).ok().unwrap()
-}
-pub fn upload_path() -> PathBuf {
-    paths::root().join("upload")
-}
-fn upload() -> Url {
-    Url::from_file_path(&*upload_path()).ok().unwrap()
-}
 
 /// Check the result of a crate publish.
 pub fn validate_upload(expected_json: &str, expected_crate_name: &str, expected_files: &[&str]) {
-    let new_path = upload_path().join("api/v1/crates/new");
+    let new_path = registry::api_path().join("api/v1/crates/new");
     _validate_upload(
         &new_path,
         expected_json,
