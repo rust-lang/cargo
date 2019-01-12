@@ -422,8 +422,8 @@ struct IgnoreList {
 impl IgnoreList {
     /// constructor to build a new ignore file
     fn new() -> IgnoreList {
-        return IgnoreList{
-            ignore: Vec::new(), 
+        IgnoreList {
+            ignore: Vec::new(),
             hg_ignore: Vec::new(),
         }
     }
@@ -440,9 +440,9 @@ impl IgnoreList {
     /// version control system as `String`.
     fn format_new(&self, vcs: VersionControl) -> String {
         match vcs {
-            VersionControl::Hg => return self.hg_ignore.join("\n"),
-            _ => return self.ignore.join("\n"),
-        };
+            VersionControl::Hg => self.hg_ignore.join("\n"),
+            _ => self.ignore.join("\n"),
+        }
     }
 
     /// format_existing is used to format the IgnoreList when the ignore file
@@ -501,7 +501,7 @@ fn write_ignore_file(base_path: &Path, list: &IgnoreList, vcs: VersionControl) -
 
     paths::append(&fp_ignore, ignore.as_bytes())?;
 
-    return Ok(ignore)
+    Ok(ignore)
 }
 
 /// initialize the correct vcs system based on the provided config
