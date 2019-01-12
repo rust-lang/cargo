@@ -286,7 +286,7 @@ impl ser::Serialize for Target {
             kind: &self.kind,
             crate_types: self.rustc_crate_types(),
             name: &self.name,
-            src_path: src_path,
+            src_path,
             edition: &self.edition.to_string(),
             required_features: self
                 .required_features
