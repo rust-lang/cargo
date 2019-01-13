@@ -1193,6 +1193,7 @@ fn simple_deps_cleaner(mut dir: PathBuf, timestamp: filetime::FileTime) {
         let dep = dep.unwrap();
         if filetime::FileTime::from_last_modification_time(&dep.metadata().unwrap()) <= timestamp {
             fs::remove_file(dep.path()).unwrap();
+            println!("remove: {:?}", dep.path());
             cleand = true;
         }
     }
@@ -1235,6 +1236,9 @@ fn simple_deps_cleaner_dose_not_rebuild() {
         sleep_ms(1000);
     }
     let timestamp = filetime::FileTime::from_system_time(SystemTime::now());
+    if is_coarse_mtime() {
+        sleep_ms(1000);
+    }
     // This dose not make new files, but it dose update the mtime.
     p.cargo("build")
         .env("RUSTFLAGS", "-C target-cpu=native")
@@ -1275,6 +1279,7 @@ fn fingerprint_cleaner(mut dir: PathBuf, timestamp: filetime::FileTime) {
                 <= timestamp
         }) {
             fs::remove_dir_all(fing.path()).unwrap();
+            println!("remove: {:?}", fing.path());
             // a real cleaner would remove the big files in deps and build as well
             // but fingerprint is sufficient for our tests
             cleand = true;
@@ -1320,6 +1325,9 @@ fn fingerprint_cleaner_dose_not_rebuild() {
         sleep_ms(1000);
     }
     let timestamp = filetime::FileTime::from_system_time(SystemTime::now());
+    if is_coarse_mtime() {
+        sleep_ms(1000);
+    }
     // This dose not make new files, but it dose update the mtime.
     p.cargo("build")
         .env("RUSTFLAGS", "-C target-cpu=native")

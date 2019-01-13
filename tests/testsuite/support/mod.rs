@@ -1603,6 +1603,9 @@ pub fn sleep_ms(ms: u64) {
 
 /// Returns true if the local filesystem has low-resolution mtimes.
 pub fn is_coarse_mtime() -> bool {
+    // If the filetime crate is being used to emulate HFS then
+    // return true, without looking at the actual hardware.
+    cfg!(emulate_second_only_system) ||
     // This should actually be a test that $CARGO_TARGET_DIR is on an HFS
     // filesystem, (or any filesystem with low-resolution mtimes). However,
     // that's tricky to detect, so for now just deal with CI.
