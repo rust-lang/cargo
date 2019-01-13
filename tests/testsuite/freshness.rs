@@ -1257,6 +1257,91 @@ fn simple_deps_cleaner_dose_not_rebuild() {
         .run();
 }
 
+fn fingerprint_cleaner(mut dir: PathBuf, timestamp: filetime::FileTime) {
+    // Cargo is experimenting with letting outside projects develop some
+    // limited forms of GC for target_dir. This is one of the forms.
+    // Specifically, Cargo is updating the mtime of a file in
+    // target/profile/.fingerprint each time it uses the fingerprint.
+    // So a cleaner can remove files associated with a fingerprint
+    // if all the files in the fingerprint's folder are older then a time stamp without
+    // effecting any builds that happened since that time stamp.
+    let mut cleand = false;
+    dir.push(".fingerprint");
+    for fing in fs::read_dir(&dir).unwrap() {
+        let fing = fing.unwrap();
+
+        if fs::read_dir(fing.path()).unwrap().all(|f| {
+            filetime::FileTime::from_last_modification_time(&f.unwrap().metadata().unwrap())
+                <= timestamp
+        }) {
+            fs::remove_dir_all(fing.path()).unwrap();
+            // a real cleaner would remove the big files in deps and build as well
+            // but fingerprint is sufficient for our tests
+            cleand = true;
+        } else {
+        }
+    }
+    assert!(
+        cleand,
+        "called fingerprint_cleaner, but there was nothing to remove"
+    );
+}
+
+#[test]
+fn fingerprint_cleaner_dose_not_rebuild() {
+    let p = project()
+        .file(
+            "Cargo.toml",
+            r#"
+            [package]
+            name = "foo"
+            version = "0.0.1"
+
+            [dependencies]
+            bar = { path = "bar" }
+        "#,
+        )
+        .file("src/lib.rs", "")
+        .file("bar/Cargo.toml", &basic_manifest("bar", "0.0.1"))
+        .file("bar/src/lib.rs", "")
+        .build();
+
+    p.cargo("build").run();
+    p.cargo("build")
+        .env("RUSTFLAGS", "-C target-cpu=native")
+        .with_stderr(
+            "\
+[COMPILING] bar v0.0.1 ([..])
+[COMPILING] foo v0.0.1 ([..])
+[FINISHED] dev [unoptimized + debuginfo] target(s) in [..]",
+        )
+        .run();
+    if is_coarse_mtime() {
+        sleep_ms(1000);
+    }
+    let timestamp = filetime::FileTime::from_system_time(SystemTime::now());
+    // This dose not make new files, but it dose update the mtime.
+    p.cargo("build")
+        .env("RUSTFLAGS", "-C target-cpu=native")
+        .with_stderr("[FINISHED] dev [unoptimized + debuginfo] target(s) in [..]")
+        .run();
+    fingerprint_cleaner(p.target_debug_dir(), timestamp);
+    // This should not recompile!
+    p.cargo("build")
+        .env("RUSTFLAGS", "-C target-cpu=native")
+        .with_stderr("[FINISHED] dev [unoptimized + debuginfo] target(s) in [..]")
+        .run();
+    // But this should be cleaned and so need a rebuild
+    p.cargo("build")
+        .with_stderr(
+            "\
+[COMPILING] bar v0.0.1 ([..])
+[COMPILING] foo v0.0.1 ([..])
+[FINISHED] dev [unoptimized + debuginfo] target(s) in [..]",
+        )
+        .run();
+}
+
 #[test]
 fn reuse_panic_build_dep_test() {
     let p = project()
