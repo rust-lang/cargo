@@ -268,7 +268,7 @@ pub(super) fn activation_error(
             msg.push_str(
                 "\nAs a reminder, you're using offline mode (-Z offline) \
                  which can sometimes cause surprising resolution failures, \
-                 if this error is too confusing you may with to retry \
+                 if this error is too confusing you may wish to retry \
                  without the offline flag.",
             );
         }
