@@ -155,7 +155,7 @@ fn wrong_case() {
 [UPDATING] [..] index
 error: no matching package named `Init` found
 location searched: registry [..]
-did you mean: init
+perhaps you meant: init
 required by package `foo v0.0.1 ([..])`
 ",
         )
@@ -190,7 +190,7 @@ fn mis_hyphenated() {
 [UPDATING] [..] index
 error: no matching package named `mis_hyphenated` found
 location searched: registry [..]
-did you mean: mis-hyphenated
+perhaps you meant: mis-hyphenated
 required by package `foo v0.0.1 ([..])`
 ",
         )
