@@ -1062,7 +1062,7 @@ location searched: registry `[..]`
 required by package `bar v0.1.0 ([..])`
 As a reminder, you're using offline mode (-Z offline) \
 which can sometimes cause surprising resolution failures, \
-if this error is too confusing you may with to retry \
+if this error is too confusing you may wish to retry \
 without the offline flag.",
         )
         .run();
@@ -1288,7 +1288,7 @@ required by package `bar v0.1.0`
     ... which is depended on by `foo v0.0.1 ([CWD])`
 As a reminder, you're using offline mode (-Z offline) \
 which can sometimes cause surprising resolution failures, \
-if this error is too confusing you may with to retry \
+if this error is too confusing you may wish to retry \
 without the offline flag.",
         )
         .run();
