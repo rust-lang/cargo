@@ -253,8 +253,15 @@ pub(super) fn activation_error(
                 names.push("...");
             }
 
-            msg.push_str("did you mean: ");
-            msg.push_str(&names.join(", "));
+            msg.push_str("perhaps you meant: ");
+            msg.push_str(&names.iter().enumerate().fold(
+                String::default(),
+                |acc, (i, el)| match i {
+                    0 => acc + el,
+                    i if names.len() - 1 == i && candidates.len() <= 3 => acc + " or " + el,
+                    _ => acc + ", " + el,
+                },
+            ));
             msg.push_str("\n");
         }
         msg.push_str("required by ");
