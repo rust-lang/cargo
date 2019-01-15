@@ -59,6 +59,8 @@ include::options-target-triple.adoc[]
 
 include::options-target-dir.adoc[]
 
+include::options-features.adoc[]
+
 === Manifest Options
 
 include::options-manifest-path.adoc[]
