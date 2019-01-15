@@ -119,6 +119,32 @@ to <code>target</code> in the root of the workspace.</p>
 </div>
 </div>
 <div class="sect2">
+<h3 id="cargo_package_feature_selection">Feature Selection</h3>
+<div class="paragraph">
+<p>When no feature options are given, the <code>default</code> feature is activated for
+every selected package.</p>
+</div>
+<div class="dlist">
+<dl>
+<dt class="hdlist1"><strong>--features</strong> <em>FEATURES</em></dt>
+<dd>
+<p>Space or comma separated list of features to activate. These features only
+apply to the current directory&#8217;s package. Features of direct dependencies
+may be enabled with <code>&lt;dep-name&gt;/&lt;feature-name&gt;</code> syntax.</p>
+</dd>
+<dt class="hdlist1"><strong>--all-features</strong></dt>
+<dd>
+<p>Activate all available features of all selected packages.</p>
+</dd>
+<dt class="hdlist1"><strong>--no-default-features</strong></dt>
+<dd>
+<p>Do not activate the <code>default</code> feature of the current directory&#8217;s
+package.</p>
+</dd>
+</dl>
+</div>
+</div>
+<div class="sect2">
 <h3 id="cargo_package_manifest_options">Manifest Options</h3>
 <div class="dlist">
 <dl>
