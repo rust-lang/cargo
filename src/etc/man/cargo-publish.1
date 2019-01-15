@@ -2,12 +2,12 @@
 .\"     Title: cargo-publish
 .\"    Author: [see the "AUTHOR(S)" section]
 .\" Generator: Asciidoctor 1.5.8
-.\"      Date: 2018-12-20
+.\"      Date: 2019-01-14
 .\"    Manual: \ \&
 .\"    Source: \ \&
 .\"  Language: English
 .\"
-.TH "CARGO\-PUBLISH" "1" "2018-12-20" "\ \&" "\ \&"
+.TH "CARGO\-PUBLISH" "1" "2019-01-14" "\ \&" "\ \&"
 .ie \n(.g .ds Aq \(aq
 .el       .ds Aq '
 .ss \n[.ss] 0
@@ -161,6 +161,28 @@ specified with the \fBCARGO_TARGET_DIR\fP environment variable, or the
 .URL "https://doc.rust\-lang.org/cargo/reference/config.html" "config value" "."
 Defaults
 to \fBtarget\fP in the root of the workspace.
+.RE
+.SS "Feature Selection"
+.sp
+When no feature options are given, the \fBdefault\fP feature is activated for
+every selected package.
+.sp
+\fB\-\-features\fP \fIFEATURES\fP
+.RS 4
+Space or comma separated list of features to activate. These features only
+apply to the current directory\(cqs package. Features of direct dependencies
+may be enabled with \fB<dep\-name>/<feature\-name>\fP syntax.
+.RE
+.sp
+\fB\-\-all\-features\fP
+.RS 4
+Activate all available features of all selected packages.
+.RE
+.sp
+\fB\-\-no\-default\-features\fP
+.RS 4
+Do not activate the \fBdefault\fP feature of the current directory\(cqs
+package.
 .RE
 .SS "Manifest Options"
 .sp
