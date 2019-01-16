@@ -3,6 +3,7 @@ use std::fs;
 use std::hash::{self, Hasher};
 use std::path::{Path, PathBuf};
 use std::sync::{Arc, Mutex};
+use std::time::SystemTime;
 
 use filetime::FileTime;
 use log::{debug, info};
@@ -88,6 +89,7 @@ pub fn prepare_target<'a, 'cfg>(
 
     let root = cx.files().out_dir(unit);
     let missing_outputs = {
+        let t = FileTime::from_system_time(SystemTime::now());
         if unit.mode.is_doc() {
             !root
                 .join(unit.target.crate_name())
@@ -98,8 +100,15 @@ pub fn prepare_target<'a, 'cfg>(
                 .outputs(unit)?
                 .iter()
                 .filter(|output| output.flavor != FileFlavor::DebugInfo)
-                .find(|output| !output.path.exists())
-            {
+                .find(|output| {
+                    if output.path.exists() {
+                        // update the mtime so other cleaners know we used it
+                        let _ = filetime::set_file_times(&output.path, t, t);
+                        false
+                    } else {
+                        true
+                    }
+                }) {
                 None => false,
                 Some(output) => {
                     info!("missing output path {:?}", output.path);
@@ -681,6 +690,11 @@ pub fn dep_info_loc<'a, 'cfg>(cx: &mut Context<'a, 'cfg>, unit: &Unit<'a>) -> Pa
 
 fn compare_old_fingerprint(loc: &Path, new_fingerprint: &Fingerprint) -> CargoResult<()> {
     let old_fingerprint_short = paths::read(loc)?;
+
+    // update the mtime so other cleaners know we used it
+    let t = FileTime::from_system_time(SystemTime::now());
+    filetime::set_file_times(loc, t, t)?;
+
     let new_hash = new_fingerprint.hash();
 
     if util::to_hex(new_hash) == old_fingerprint_short {
