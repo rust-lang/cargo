@@ -1249,6 +1249,8 @@ enum MatchKind {
 /// - There is a wide range of macros (such as `[COMPILING]` or `[WARNING]`)
 ///   to match cargo's "status" output and allows you to ignore the alignment.
 ///   See `substitute_macros` for a complete list of macros.
+/// - `[ROOT]` is `/` or `[..]:\` on Windows.
+/// - `[CWD]` is the working directory of the process that was run.
 pub fn lines_match(expected: &str, actual: &str) -> bool {
     // Let's not deal with / vs \ (windows...)
     // First replace backslash-escaped backslashes with forward slashes
