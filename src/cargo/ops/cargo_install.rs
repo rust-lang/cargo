@@ -174,14 +174,30 @@ fn install_one(
         )?
     } else if source_id.is_path() {
         let mut src = path_source(source_id, config)?;
-        src.update().chain_err(|| {
-            failure::format_err!(
-                "`{}` is not a crate root; specify a crate to \
-                 install from crates.io, or use --path or --git to \
-                 specify an alternate source",
+        if !src.path().is_dir() {
+            failure::bail!(
+                "`{}` is not a directory. \
+                 --path must point to a directory containing a Cargo.toml file.",
                 src.path().display()
             )
-        })?;
+        }
+        if !src.path().join("Cargo.toml").exists() {
+            if from_cwd {
+                failure::bail!(
+                    "`{}` is not a crate root; specify a crate to \
+                     install from crates.io, or use --path or --git to \
+                     specify an alternate source",
+                    src.path().display()
+                );
+            } else {
+                failure::bail!(
+                    "`{}` does not contain a Cargo.toml file. \
+                     --path must point to a directory containing a Cargo.toml file.",
+                    src.path().display()
+                )
+            }
+        }
+        src.update()?;
         select_pkg(src, krate, vers, config, false, &mut |path| {
             path.read_packages()
         })?

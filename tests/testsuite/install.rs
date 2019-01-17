@@ -160,20 +160,27 @@ fn bad_version() {
 }
 
 #[test]
-fn no_crate() {
+fn bad_paths() {
     cargo_process("install")
         .with_status(101)
-        .with_stderr(
-            "\
-[ERROR] `[..]` is not a crate root; specify a crate to install [..]
+        .with_stderr("[ERROR] `[CWD]` is not a crate root; specify a crate to install [..]")
+        .run();
 
-Caused by:
-  failed to read `[..]Cargo.toml`
+    cargo_process("install --path .")
+        .with_status(101)
+        .with_stderr("[ERROR] `[CWD]` does not contain a Cargo.toml file[..]")
+        .run();
 
-Caused by:
-  [..] (os error [..])
-",
-        )
+    let toml = paths::root().join("Cargo.toml");
+    fs::write(toml, "").unwrap();
+    cargo_process("install --path Cargo.toml")
+        .with_status(101)
+        .with_stderr("[ERROR] `[CWD]/Cargo.toml` is not a directory[..]")
+        .run();
+
+    cargo_process("install --path .")
+        .with_status(101)
+        .with_stderr_contains("[ERROR] failed to parse manifest at `[CWD]/Cargo.toml`")
         .run();
 }
 
