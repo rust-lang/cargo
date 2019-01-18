@@ -455,7 +455,7 @@ fn changing_bin_features_caches_targets() {
 ",
         )
         .run();
-    p.safely_rename_run("foo", "off1").with_stdout("feature off").run();
+    p.rename_run("foo", "off1").with_stdout("feature off").run();
 
     p.cargo("build --features foo")
         .with_stderr(
@@ -465,7 +465,7 @@ fn changing_bin_features_caches_targets() {
 ",
         )
         .run();
-    p.safely_rename_run("foo", "on1").with_stdout("feature on").run();
+    p.rename_run("foo", "on1").with_stdout("feature on").run();
 
     /* Targets should be cached from the first build */
 
@@ -476,7 +476,7 @@ fn changing_bin_features_caches_targets() {
 ",
         )
         .run();
-    p.safely_rename_run("foo", "off2").with_stdout("feature off").run();
+    p.rename_run("foo", "off2").with_stdout("feature off").run();
 
     p.cargo("build --features foo")
         .with_stderr(
@@ -485,7 +485,7 @@ fn changing_bin_features_caches_targets() {
 ",
         )
         .run();
-    p.safely_rename_run("foo", "on2").with_stdout("feature on").run();
+    p.rename_run("foo", "on2").with_stdout("feature on").run();
 }
 
 #[test]
