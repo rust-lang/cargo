@@ -10,6 +10,7 @@ matrix:
   include:
     - env: TARGET=x86_64-unknown-linux-gnu
            ALT=i686-unknown-linux-gnu
+      if: branch != master OR type = pull_request
 
     - env: TARGET=x86_64-apple-darwin
            ALT=i686-apple-darwin
