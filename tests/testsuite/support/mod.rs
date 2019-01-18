@@ -399,6 +399,27 @@ impl Project {
         execs
     }
 
+    /// Safely run a process after `cargo build`.
+    ///
+    /// Windows has a problem where a process cannot be reliably
+    /// be replaced, removed, or renamed immediately after executing it.
+    /// The action may fail (with errors like Access is denied), or
+    /// it may succeed, but future attempts to use the same filename
+    /// will fail with "Already Exists".
+    ///
+    /// If you have a test that needs to do `cargo run` multiple
+    /// times, you should instead use `cargo build` and use this
+    /// method to run the executable. Each time you call this,
+    /// use a new name for `dst`.
+    /// See https://github.com/rust-lang/cargo/issues/5481
+    pub fn rename_run(&self, src: &str, dst: &str) -> Execs {
+        let src = self.bin(src);
+        let dst = self.bin(dst);
+        fs::rename(&src, &dst)
+            .unwrap_or_else(|e| panic!("Failed to rename `{:?}` to `{:?}`: {}", src, dst, e));
+        self.process(dst)
+    }
+
     /// Returns the contents of `Cargo.lock`.
     pub fn read_lockfile(&self) -> String {
         self.read_file("Cargo.lock")
