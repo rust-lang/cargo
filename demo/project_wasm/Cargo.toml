@@ -1,0 +1,8 @@
+[package]
+name = "project_wasm"
+version = "0.1.0"
+authors = ["Rett Berg <rett@google.com>"]
+edition = "2018"
+
+[dependencies]
+project_lib = {path="../project_lib"}

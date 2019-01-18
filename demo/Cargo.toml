@@ -1,0 +1,7 @@
+[workspace]
+
+members = [
+    "project_lib",
+    "project_main",
+    "project_wasm",
+]
