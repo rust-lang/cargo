@@ -447,17 +447,6 @@ fn changing_bin_features_caches_targets() {
         )
         .build();
 
-    // Windows has a problem with replacing a binary that was just executed.
-    // Unlinking it will succeed, but then attempting to immediately replace
-    // it will sometimes fail with "Already Exists".
-    // See https://github.com/rust-lang/cargo/issues/5481
-    let foo_proc = |name: &str| {
-        let src = p.bin("foo");
-        let dst = p.bin(name);
-        fs::rename(&src, &dst).expect("Failed to rename foo");
-        p.process(dst)
-    };
-
     p.cargo("build")
         .with_stderr(
             "\
@@ -466,7 +455,7 @@ fn changing_bin_features_caches_targets() {
 ",
         )
         .run();
-    foo_proc("off1").with_stdout("feature off").run();
+    p.rename_run("foo", "off1").with_stdout("feature off").run();
 
     p.cargo("build --features foo")
         .with_stderr(
@@ -476,7 +465,7 @@ fn changing_bin_features_caches_targets() {
 ",
         )
         .run();
-    foo_proc("on1").with_stdout("feature on").run();
+    p.rename_run("foo", "on1").with_stdout("feature on").run();
 
     /* Targets should be cached from the first build */
 
@@ -487,7 +476,7 @@ fn changing_bin_features_caches_targets() {
 ",
         )
         .run();
-    foo_proc("off2").with_stdout("feature off").run();
+    p.rename_run("foo", "off2").with_stdout("feature off").run();
 
     p.cargo("build --features foo")
         .with_stderr(
@@ -496,7 +485,7 @@ fn changing_bin_features_caches_targets() {
 ",
         )
         .run();
-    foo_proc("on2").with_stdout("feature on").run();
+    p.rename_run("foo", "on2").with_stdout("feature on").run();
 }
 
 #[test]
