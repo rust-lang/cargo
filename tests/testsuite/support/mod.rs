@@ -412,7 +412,7 @@ impl Project {
     /// method to run the executable. Each time you call this,
     /// use a new name for `dst`.
     /// See https://github.com/rust-lang/cargo/issues/5481
-    pub fn safely_rename_run(&self, src: &str, dst: &str) -> Execs {
+    pub fn rename_run(&self, src: &str, dst: &str) -> Execs {
         let src = self.bin(src);
         let dst = self.bin(dst);
         fs::rename(&src, &dst)
