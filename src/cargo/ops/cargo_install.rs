@@ -336,16 +336,16 @@ fn install_one(
     // Update records of replaced binaries.
     for &bin in replaced_names.iter() {
         if let Some(&Some(ref p)) = duplicates.get(bin) {
-            if let Some(set) = list.v1.get_mut(p) {
+            if let Some(set) = list.v1_mut().get_mut(p) {
                 set.remove(bin);
             }
         }
         // Failsafe to force replacing metadata for git packages
         // https://github.com/rust-lang/cargo/issues/4582
-        if let Some(set) = list.v1.remove(&pkg.package_id()) {
-            list.v1.insert(pkg.package_id(), set);
+        if let Some(set) = list.v1_mut().remove(&pkg.package_id()) {
+            list.v1_mut().insert(pkg.package_id(), set);
         }
-        list.v1
+        list.v1_mut()
             .entry(pkg.package_id())
             .or_insert_with(BTreeSet::new)
             .insert(bin.to_string());
@@ -353,17 +353,17 @@ fn install_one(
 
     // Remove empty metadata lines.
     let pkgs = list
-        .v1
+        .v1()
         .iter()
         .filter_map(|(&p, set)| if set.is_empty() { Some(p) } else { None })
         .collect::<Vec<_>>();
     for p in pkgs.iter() {
-        list.v1.remove(p);
+        list.v1_mut().remove(p);
     }
 
     // If installation was successful record newly installed binaries.
     if result.is_ok() {
-        list.v1
+        list.v1_mut()
             .entry(pkg.package_id())
             .or_insert_with(BTreeSet::new)
             .extend(to_install.iter().map(|s| s.to_string()));
@@ -431,7 +431,7 @@ fn find_duplicates(
         let name = format!("{}{}", name, env::consts::EXE_SUFFIX);
         if fs::metadata(dst.join(&name)).is_err() {
             None
-        } else if let Some((&p, _)) = prev.v1.iter().find(|&(_, v)| v.contains(&name)) {
+        } else if let Some((&p, _)) = prev.v1().iter().find(|&(_, v)| v.contains(&name)) {
             Some((name, Some(p)))
         } else {
             Some((name, None))
@@ -477,7 +477,7 @@ pub fn install_list(dst: Option<&str>, config: &Config) -> CargoResult<()> {
     let dst = resolve_root(dst, config)?;
     let dst = metadata(config, &dst)?;
     let list = read_crate_list(&dst)?;
-    for (k, v) in list.v1.iter() {
+    for (k, v) in list.v1().iter() {
         println!("{}:", k);
         for bin in v {
             println!("    {}", bin);
