@@ -449,7 +449,12 @@ fn run_verify(ws: &Workspace<'_>, tar: &FileLock, opts: &PackageOpts<'_>) -> Car
         None,
         &ops::CompileOptions {
             config,
-            build_config: BuildConfig::new(config, opts.jobs, &opts.target, CompileMode::Build)?,
+            build_config: BuildConfig::new(
+                config,
+                opts.jobs,
+                &opts.target,
+                CompileMode::Check { test: false }
+            )?,
             features: opts.features.clone(),
             no_default_features: opts.no_default_features,
             all_features: opts.all_features,

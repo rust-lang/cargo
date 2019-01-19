@@ -382,8 +382,8 @@ required by package `foo v0.0.1 ([..])`
 [UPDATING] `[..]` index
 [DOWNLOADING] crates ...
 [DOWNLOADED] notyet v0.0.1 (registry `[ROOT][..]`)
-[COMPILING] notyet v0.0.1
-[COMPILING] foo v0.0.1 ([CWD][..])
+[CHECKING] notyet v0.0.1
+[CHECKING] foo v0.0.1 ([CWD][..])
 [FINISHED] dev [unoptimized + debuginfo] target(s) in [..]s
 ",
         )

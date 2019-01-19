@@ -37,7 +37,7 @@ fn simple() {
 See [..]
 [PACKAGING] foo v0.0.1 ([CWD])
 [VERIFYING] foo v0.0.1 ([CWD])
-[COMPILING] foo v0.0.1 ([CWD][..])
+[CHECKING] foo v0.0.1 ([CWD][..])
 [FINISHED] dev [unoptimized + debuginfo] target(s) in [..]
 ",
         )
@@ -73,7 +73,7 @@ homepage or repository.
 See http://doc.crates.io/manifest.html#package-metadata for more info.
 [PACKAGING] foo v0.0.1 ([CWD])
 [VERIFYING] foo v0.0.1 ([CWD])
-[COMPILING] foo v0.0.1 ([CWD][..])
+[CHECKING] foo v0.0.1 ([CWD][..])
 [FINISHED] dev [unoptimized + debuginfo] target(s) in [..]
 ",
         )
@@ -99,7 +99,7 @@ warning: manifest has no description, documentation, homepage or repository.
 See http://doc.crates.io/manifest.html#package-metadata for more info.
 [PACKAGING] foo v0.0.1 ([CWD])
 [VERIFYING] foo v0.0.1 ([CWD])
-[COMPILING] foo v0.0.1 ([CWD][..])
+[CHECKING] foo v0.0.1 ([CWD][..])
 [FINISHED] dev [unoptimized + debuginfo] target(s) in [..]
 ",
         )
@@ -125,7 +125,7 @@ See http://doc.crates.io/manifest.html#package-metadata for more info.
             "\
 [PACKAGING] foo v0.0.1 ([CWD])
 [VERIFYING] foo v0.0.1 ([CWD])
-[COMPILING] foo v0.0.1 ([CWD][..])
+[CHECKING] foo v0.0.1 ([CWD][..])
 [FINISHED] dev [unoptimized + debuginfo] target(s) in [..]
 ",
         )
@@ -207,7 +207,7 @@ fn package_verification() {
 See http://doc.crates.io/manifest.html#package-metadata for more info.
 [PACKAGING] foo v0.0.1 ([CWD])
 [VERIFYING] foo v0.0.1 ([CWD])
-[COMPILING] foo v0.0.1 ([CWD][..])
+[CHECKING] foo v0.0.1 ([CWD][..])
 [FINISHED] dev [unoptimized + debuginfo] target(s) in [..]
 ",
         )
@@ -572,7 +572,7 @@ fn ignore_nested() {
 See http://doc.crates.io/manifest.html#package-metadata for more info.
 [PACKAGING] foo v0.0.1 ([CWD])
 [VERIFYING] foo v0.0.1 ([CWD])
-[COMPILING] foo v0.0.1 ([CWD][..])
+[CHECKING] foo v0.0.1 ([CWD][..])
 [FINISHED] dev [unoptimized + debuginfo] target(s) in [..]
 ",
         )
@@ -650,7 +650,7 @@ fn repackage_on_source_change() {
 See [..]
 [PACKAGING] foo v0.0.1 ([CWD])
 [VERIFYING] foo v0.0.1 ([CWD])
-[COMPILING] foo v0.0.1 ([CWD][..])
+[CHECKING] foo v0.0.1 ([CWD][..])
 [FINISHED] dev [unoptimized + debuginfo] target(s) in [..]
 ",
         )
@@ -1056,7 +1056,7 @@ fn package_lockfile() {
 See [..]
 [PACKAGING] foo v0.0.1 ([CWD])
 [VERIFYING] foo v0.0.1 ([CWD])
-[COMPILING] foo v0.0.1 ([CWD][..])
+[CHECKING] foo v0.0.1 ([CWD][..])
 [FINISHED] dev [unoptimized + debuginfo] target(s) in [..]
 ",
         )
