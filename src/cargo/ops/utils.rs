@@ -36,6 +36,10 @@ impl CrateListingV1 {
     pub fn v1(&self) -> &BTreeMap<PackageId, BTreeSet<String>> {
         &self.v1
     }
+
+    pub fn v1_mut(&mut self) -> &mut BTreeMap<PackageId, BTreeSet<String>> {
+        &mut self.v1
+    }
 }
 
 pub fn resolve_root(flag: Option<&str>, config: &Config) -> CargoResult<Filesystem> {
