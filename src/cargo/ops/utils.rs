@@ -32,6 +32,12 @@ pub struct CrateListingV1 {
     v1: BTreeMap<PackageId, BTreeSet<String>>,
 }
 
+impl CrateListingV1 {
+    pub fn v1(&self) -> &BTreeMap<PackageId, BTreeSet<String>> {
+        &self.v1
+    }
+}
+
 pub fn resolve_root(flag: Option<&str>, config: &Config) -> CargoResult<Filesystem> {
     let config_root = config.get_path("install.root")?;
     Ok(flag
