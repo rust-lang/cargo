@@ -8,7 +8,7 @@ use tempfile::Builder as TempFileBuilder;
 use crate::core::compiler::{DefaultExecutor, Executor};
 use crate::core::{Edition, Package, Source, SourceId};
 use crate::core::{PackageId, Workspace};
-use crate::ops::utils::*;
+use crate::ops::common_for_install_and_uninstall::*;
 use crate::ops::{self, CompileFilter};
 use crate::sources::{GitSource, SourceConfigMap};
 use crate::util::errors::{CargoResult, CargoResultExt};
