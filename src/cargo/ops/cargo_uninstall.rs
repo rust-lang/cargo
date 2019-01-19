@@ -3,7 +3,7 @@ use std::{env, fs};
 
 use crate::core::PackageId;
 use crate::core::{PackageIdSpec, SourceId};
-use crate::ops::utils::*;
+use crate::ops::common_for_install_and_uninstall::*;
 use crate::util::errors::CargoResult;
 use crate::util::paths;
 use crate::util::Config;
