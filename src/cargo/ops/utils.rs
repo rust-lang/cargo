@@ -29,7 +29,7 @@ pub struct Empty {}
 
 #[derive(Deserialize, Serialize)]
 pub struct CrateListingV1 {
-    pub v1: BTreeMap<PackageId, BTreeSet<String>>,
+    v1: BTreeMap<PackageId, BTreeSet<String>>,
 }
 
 pub fn resolve_root(flag: Option<&str>, config: &Config) -> CargoResult<Filesystem> {
