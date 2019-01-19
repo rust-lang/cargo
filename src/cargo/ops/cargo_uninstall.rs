@@ -76,7 +76,7 @@ pub fn uninstall_one(
 ) -> CargoResult<()> {
     let crate_metadata = metadata(config, root)?;
     let metadata = read_crate_list(&crate_metadata)?;
-    let pkgid = PackageIdSpec::query_str(spec, metadata.v1.keys().cloned())?;
+    let pkgid = PackageIdSpec::query_str(spec, metadata.v1().keys().cloned())?;
     uninstall_pkgid(&crate_metadata, metadata, pkgid, bins, config)
 }
 
@@ -101,10 +101,11 @@ fn uninstall_pkgid(
 ) -> CargoResult<()> {
     let mut to_remove = Vec::new();
     {
-        let mut installed = match metadata.v1.entry(pkgid) {
+        let mut installed = match metadata.v1_mut().entry(pkgid) {
             Entry::Occupied(e) => e,
             Entry::Vacant(..) => failure::bail!("package `{}` is not installed", pkgid),
         };
+
         let dst = crate_metadata.parent().join("bin");
         for bin in installed.get() {
             let bin = dst.join(bin);
