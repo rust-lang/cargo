@@ -981,7 +981,7 @@ fn invalid_path_dep_in_workspace_with_lockfile() {
             "\
 error: no matching package named `bar` found
 location searched: [..]
-did you mean: foo
+perhaps you meant: foo
 required by package `foo v0.5.0 ([..])`
 ",
         )
