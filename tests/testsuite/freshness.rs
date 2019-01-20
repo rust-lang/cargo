@@ -1204,7 +1204,7 @@ fn simple_deps_cleaner(mut dir: PathBuf, timestamp: filetime::FileTime) {
 }
 
 #[test]
-fn simple_deps_cleaner_dose_not_rebuild() {
+fn simple_deps_cleaner_does_not_rebuild() {
     let p = project()
         .file(
             "Cargo.toml",
@@ -1222,8 +1222,11 @@ fn simple_deps_cleaner_dose_not_rebuild() {
         .file("bar/src/lib.rs", "")
         .build();
 
-    p.cargo("build").run();
-    p.cargo("build")
+    p.cargo("build -Z mtime-on-use")
+        .masquerade_as_nightly_cargo()
+        .run();
+    p.cargo("build -Z mtime-on-use")
+        .masquerade_as_nightly_cargo()
         .env("RUSTFLAGS", "-C target-cpu=native")
         .with_stderr(
             "\
@@ -1239,19 +1242,22 @@ fn simple_deps_cleaner_dose_not_rebuild() {
     if is_coarse_mtime() {
         sleep_ms(1000);
     }
-    // This dose not make new files, but it dose update the mtime.
-    p.cargo("build")
+    // This does not make new files, but it does update the mtime.
+    p.cargo("build -Z mtime-on-use")
+        .masquerade_as_nightly_cargo()
         .env("RUSTFLAGS", "-C target-cpu=native")
         .with_stderr("[FINISHED] dev [unoptimized + debuginfo] target(s) in [..]")
         .run();
     simple_deps_cleaner(p.target_debug_dir(), timestamp);
     // This should not recompile!
-    p.cargo("build")
+    p.cargo("build -Z mtime-on-use")
+        .masquerade_as_nightly_cargo()
         .env("RUSTFLAGS", "-C target-cpu=native")
         .with_stderr("[FINISHED] dev [unoptimized + debuginfo] target(s) in [..]")
         .run();
     // But this should be cleaned and so need a rebuild
-    p.cargo("build")
+    p.cargo("build -Z mtime-on-use")
+        .masquerade_as_nightly_cargo()
         .with_stderr(
             "\
 [COMPILING] bar v0.0.1 ([..])
@@ -1293,7 +1299,7 @@ fn fingerprint_cleaner(mut dir: PathBuf, timestamp: filetime::FileTime) {
 }
 
 #[test]
-fn fingerprint_cleaner_dose_not_rebuild() {
+fn fingerprint_cleaner_does_not_rebuild() {
     let p = project()
         .file(
             "Cargo.toml",
@@ -1311,8 +1317,11 @@ fn fingerprint_cleaner_dose_not_rebuild() {
         .file("bar/src/lib.rs", "")
         .build();
 
-    p.cargo("build").run();
-    p.cargo("build")
+    p.cargo("build -Z mtime-on-use")
+        .masquerade_as_nightly_cargo()
+        .run();
+    p.cargo("build -Z mtime-on-use")
+        .masquerade_as_nightly_cargo()
         .env("RUSTFLAGS", "-C target-cpu=native")
         .with_stderr(
             "\
@@ -1328,19 +1337,22 @@ fn fingerprint_cleaner_dose_not_rebuild() {
     if is_coarse_mtime() {
         sleep_ms(1000);
     }
-    // This dose not make new files, but it dose update the mtime.
-    p.cargo("build")
+    // This does not make new files, but it does update the mtime.
+    p.cargo("build -Z mtime-on-use")
+        .masquerade_as_nightly_cargo()
         .env("RUSTFLAGS", "-C target-cpu=native")
         .with_stderr("[FINISHED] dev [unoptimized + debuginfo] target(s) in [..]")
         .run();
     fingerprint_cleaner(p.target_debug_dir(), timestamp);
     // This should not recompile!
-    p.cargo("build")
+    p.cargo("build -Z mtime-on-use")
+        .masquerade_as_nightly_cargo()
         .env("RUSTFLAGS", "-C target-cpu=native")
         .with_stderr("[FINISHED] dev [unoptimized + debuginfo] target(s) in [..]")
         .run();
     // But this should be cleaned and so need a rebuild
-    p.cargo("build")
+    p.cargo("build -Z mtime-on-use")
+        .masquerade_as_nightly_cargo()
         .with_stderr(
             "\
 [COMPILING] bar v0.0.1 ([..])
