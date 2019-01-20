@@ -261,9 +261,9 @@ a `build.rs` script, you specify a list of build dependencies in the
 that runs each build dependency in order.  Metabuild packages can then read
 metadata from `Cargo.toml` to specify their behavior.
 
-Include `cargo-features` at the top of `Cargo.toml`, a `metadata` key in the
+Include `cargo-features` at the top of `Cargo.toml`, a `metabuild` key in the
 `package`, list the dependencies in `build-dependencies`, and add any metadata
-that the metabuild packages require.  Example:
+that the metabuild packages require under `package.metadata`.  Example:
 
 ```toml
 cargo-features = ["metabuild"]
