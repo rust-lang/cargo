@@ -65,7 +65,8 @@ pub fn prepare_target<'a, 'cfg>(
     debug!("fingerprint at: {}", loc.display());
 
     let fingerprint = calculate(cx, unit)?;
-    let compare = compare_old_fingerprint(&loc, &*fingerprint);
+    let mtime_on_use = cx.bcx.config.cli_unstable().mtime_on_use;
+    let compare = compare_old_fingerprint(&loc, &*fingerprint, mtime_on_use);
     log_compare(unit, &compare);
 
     // If our comparison failed (e.g. we're going to trigger a rebuild of this
@@ -102,8 +103,10 @@ pub fn prepare_target<'a, 'cfg>(
                 .filter(|output| output.flavor != FileFlavor::DebugInfo)
                 .find(|output| {
                     if output.path.exists() {
-                        // update the mtime so other cleaners know we used it
-                        let _ = filetime::set_file_times(&output.path, t, t);
+                        if mtime_on_use {
+                            // update the mtime so other cleaners know we used it
+                            let _ = filetime::set_file_times(&output.path, t, t);
+                        }
                         false
                     } else {
                         true
@@ -555,7 +558,8 @@ pub fn prepare_build_cmd<'a, 'cfg>(
         rustc: util::hash_u64(&cx.bcx.rustc.verbose_version),
         ..Fingerprint::new()
     };
-    let compare = compare_old_fingerprint(&loc, &fingerprint);
+    let mtime_on_use = cx.bcx.config.cli_unstable().mtime_on_use;
+    let compare = compare_old_fingerprint(&loc, &fingerprint, mtime_on_use);
     log_compare(unit, &compare);
 
     // When we write out the fingerprint, we may want to actually change the
@@ -688,12 +692,18 @@ pub fn dep_info_loc<'a, 'cfg>(cx: &mut Context<'a, 'cfg>, unit: &Unit<'a>) -> Pa
         .join(&format!("dep-{}", filename(cx, unit)))
 }
 
-fn compare_old_fingerprint(loc: &Path, new_fingerprint: &Fingerprint) -> CargoResult<()> {
+fn compare_old_fingerprint(
+    loc: &Path,
+    new_fingerprint: &Fingerprint,
+    mtime_on_use: bool,
+) -> CargoResult<()> {
     let old_fingerprint_short = paths::read(loc)?;
 
-    // update the mtime so other cleaners know we used it
-    let t = FileTime::from_system_time(SystemTime::now());
-    filetime::set_file_times(loc, t, t)?;
+    if mtime_on_use {
+        // update the mtime so other cleaners know we used it
+        let t = FileTime::from_system_time(SystemTime::now());
+        filetime::set_file_times(loc, t, t)?;
+    }
 
     let new_hash = new_fingerprint.hash();
 
