@@ -1,11 +1,12 @@
 use std::collections::HashSet;
+use std::path::Path;
 use std::{cmp, env, fmt, hash};
 
 use serde::Deserialize;
 
 use crate::core::compiler::CompileMode;
 use crate::core::interning::InternedString;
-use crate::core::{Features, PackageId, PackageIdSpec, PackageSet, Shell};
+use crate::core::{Feature, Features, PackageId, PackageIdSpec, PackageSet, Shell};
 use crate::util::errors::CargoResultExt;
 use crate::util::lev_distance::lev_distance;
 use crate::util::toml::{ProfilePackageSpec, StringOrBool, TomlProfile, TomlProfiles, U32OrBool};
@@ -19,10 +20,13 @@ pub struct Profiles {
     test: ProfileMaker,
     bench: ProfileMaker,
     doc: ProfileMaker,
+    build: ProfileMaker,
     /// Incremental compilation can be overridden globally via:
     /// - `CARGO_INCREMENTAL` environment variable.
     /// - `build.incremental` config value.
     incremental: Option<bool>,
+    // Temporary flag to detect if unstable feature is enabled.
+    build_enabled: bool,
 }
 
 impl Profiles {
@@ -31,9 +35,13 @@ impl Profiles {
         config: &Config,
         features: &Features,
         warnings: &mut Vec<String>,
+        manifest_path: &Path,
     ) -> CargoResult<Profiles> {
         if let Some(profiles) = profiles {
             profiles.validate(features, warnings)?;
+            if profiles.build.is_some() {
+                features.require(Feature::build_profile())?;
+            }
         }
 
         let config_profiles = config.profiles()?;
@@ -42,6 +50,18 @@ impl Profiles {
             Some(v) => Some(v == "1"),
             None => config.get::<Option<bool>>("build.incremental")?,
         };
+
+        let config_build_profile =
+            if !features.is_enabled(Feature::build_profile()) && config_profiles.build.is_some() {
+                warnings.push(format!(
+                    "profile `build` in config file will be ignored for \
+                     manifest `{}` because \"build-profile\" feature is not enabled",
+                    manifest_path.display()
+                ));
+                None
+            } else {
+                config_profiles.build.clone()
+            };
 
         Ok(Profiles {
             dev: ProfileMaker {
@@ -69,7 +89,13 @@ impl Profiles {
                 toml: profiles.and_then(|p| p.doc.clone()),
                 config: None,
             },
+            build: ProfileMaker {
+                default: Profile::default_build(),
+                toml: profiles.and_then(|p| p.build.clone()),
+                config: config_build_profile,
+            },
             incremental,
+            build_enabled: features.is_enabled(Feature::build_profile()),
         })
     }
 
@@ -100,10 +126,14 @@ impl Profiles {
                 // `build_unit_profiles` normally ensures that it selects the
                 // ancestor's profile. However, `cargo clean -p` can hit this
                 // path.
-                if release {
-                    &self.release
+                let maker = if release { &self.release } else { &self.dev };
+                if (unit_for.build)
+                    && self.build_enabled
+                    && !maker.has_build_override()
+                {
+                    &self.build
                 } else {
-                    &self.dev
+                    maker
                 }
             }
             CompileMode::Doc { .. } => &self.doc,
@@ -148,9 +178,11 @@ impl Profiles {
     /// select for the package that was actually built.
     pub fn base_profile(&self, release: bool) -> Profile {
         if release {
-            self.release.get_profile(None, true, UnitFor::new_normal())
+            self.release
+                .get_profile(None, true, UnitFor::new_normal())
         } else {
-            self.dev.get_profile(None, true, UnitFor::new_normal())
+            self.dev
+                .get_profile(None, true, UnitFor::new_normal())
         }
     }
 
@@ -165,6 +197,7 @@ impl Profiles {
         self.test.validate_packages(shell, packages)?;
         self.bench.validate_packages(shell, packages)?;
         self.doc.validate_packages(shell, packages)?;
+        self.build.validate_packages(shell, packages)?;
         Ok(())
     }
 }
@@ -198,10 +231,22 @@ impl ProfileMaker {
     ) -> Profile {
         let mut profile = self.default;
         if let Some(ref toml) = self.toml {
-            merge_toml(pkg_id, is_member, unit_for, &mut profile, toml);
+            merge_toml(
+                pkg_id,
+                is_member,
+                unit_for,
+                &mut profile,
+                toml,
+            );
         }
         if let Some(ref toml) = self.config {
-            merge_toml(pkg_id, is_member, unit_for, &mut profile, toml);
+            merge_toml(
+                pkg_id,
+                is_member,
+                unit_for,
+                &mut profile,
+                toml,
+            );
         }
         profile
     }
@@ -317,6 +362,13 @@ impl ProfileMaker {
             }
         }
         Ok(())
+    }
+
+    fn has_build_override(&self) -> bool {
+        self.toml
+            .as_ref()
+            .map(|tp| tp.build_override.is_some())
+            .unwrap_or(false)
     }
 }
 
@@ -449,6 +501,7 @@ compact_debug! {
                 "test" => (Profile::default_test(), "default_test()"),
                 "bench" => (Profile::default_bench(), "default_bench()"),
                 "doc" => (Profile::default_doc(), "default_doc()"),
+                "build" => (Profile::default_build(), "default_build()"),
                 _ => (Profile::default(), "default()"),
             };
             [debug_the_fields(
@@ -529,6 +582,13 @@ impl Profile {
         }
     }
 
+    fn default_build() -> Profile {
+        Profile {
+            name: "build",
+            ..Profile::default()
+        }
+    }
+
     /// Compares all fields except `name`, which doesn't affect compilation.
     /// This is necessary for `Unit` deduplication for things like "test" and
     /// "dev" which are essentially the same.
@@ -604,7 +664,7 @@ pub struct UnitFor {
 impl UnitFor {
     /// A unit for a normal target/dependency (i.e., not custom build,
     /// proc macro/plugin, or test/bench).
-    pub fn new_normal() -> UnitFor {
+    pub const fn new_normal() -> UnitFor {
         UnitFor {
             build: false,
             panic_abort_ok: true,
@@ -612,7 +672,7 @@ impl UnitFor {
     }
 
     /// A unit for a custom build script or its dependencies.
-    pub fn new_build() -> UnitFor {
+    pub const fn new_build() -> UnitFor {
         UnitFor {
             build: true,
             panic_abort_ok: false,
@@ -620,15 +680,17 @@ impl UnitFor {
     }
 
     /// A unit for a proc macro or compiler plugin or their dependencies.
-    pub fn new_compiler() -> UnitFor {
+    pub const fn new_compiler() -> UnitFor {
+        // Note: This is currently the same as `new_build`, but keeping it
+        // separate for now in case it is useful in the future.
         UnitFor {
-            build: false,
+            build: true,
             panic_abort_ok: false,
         }
     }
 
     /// A unit for a test/bench target or their dependencies.
-    pub fn new_test() -> UnitFor {
+    pub const fn new_test() -> UnitFor {
         UnitFor {
             build: false,
             panic_abort_ok: false,
@@ -660,18 +722,9 @@ impl UnitFor {
     /// All possible values, used by `clean`.
     pub fn all_values() -> &'static [UnitFor] {
         static ALL: [UnitFor; 3] = [
-            UnitFor {
-                build: false,
-                panic_abort_ok: true,
-            },
-            UnitFor {
-                build: true,
-                panic_abort_ok: false,
-            },
-            UnitFor {
-                build: false,
-                panic_abort_ok: false,
-            },
+            UnitFor::new_normal(),
+            UnitFor::new_build(),
+            UnitFor::new_test(),
         ];
         &ALL
     }
@@ -682,22 +735,29 @@ impl UnitFor {
 pub struct ConfigProfiles {
     dev: Option<TomlProfile>,
     release: Option<TomlProfile>,
+    build: Option<TomlProfile>,
 }
 
 impl ConfigProfiles {
     pub fn validate(&self, features: &Features, warnings: &mut Vec<String>) -> CargoResult<()> {
-        if let Some(ref profile) = self.dev {
-            profile
-                .validate("dev", features, warnings)
-                .chain_err(|| failure::format_err!("config profile `profile.dev` is not valid"))?;
+        macro_rules! check_profile {
+            ($name:ident) => {
+                if let Some(ref profile) = self.$name {
+                    profile
+                        .validate(stringify!($name), features, warnings)
+                        .chain_err(|| {
+                            failure::format_err!(
+                                "config profile `profile.{}` is not valid",
+                                stringify!($name)
+                            )
+                        })?;
+                }
+            };
         }
-        if let Some(ref profile) = self.release {
-            profile
-                .validate("release", features, warnings)
-                .chain_err(|| {
-                    failure::format_err!("config profile `profile.release` is not valid")
-                })?;
-        }
+
+        check_profile!(dev);
+        check_profile!(release);
+        check_profile!(build);
         Ok(())
     }
 }

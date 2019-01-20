@@ -275,6 +275,7 @@ pub struct TomlProfiles {
     pub bench: Option<TomlProfile>,
     pub dev: Option<TomlProfile>,
     pub release: Option<TomlProfile>,
+    pub build: Option<TomlProfile>,
 }
 
 impl TomlProfiles {
@@ -293,6 +294,9 @@ impl TomlProfiles {
         }
         if let Some(ref release) = self.release {
             release.validate("release", features, warnings)?;
+        }
+        if let Some(ref build) = self.build {
+            build.validate("build", features, warnings)?;
         }
         Ok(())
     }
@@ -470,7 +474,7 @@ impl TomlProfile {
         }
 
         match name {
-            "dev" | "release" => {}
+            "dev" | "release" | "build" => {}
             _ => {
                 if self.overrides.is_some() || self.build_override.is_some() {
                     bail!(
@@ -489,6 +493,11 @@ impl TomlProfile {
             "test" | "bench" => {
                 if self.panic.is_some() {
                     warnings.push(format!("`panic` setting is ignored for `{}` profile", name))
+                }
+            }
+            "build" => {
+                if self.build_override.is_some() {
+                    failure::bail!("`build` profile cannot specify build overrides.")
                 }
             }
             _ => {}
@@ -1023,7 +1032,13 @@ impl TomlManifest {
                  `[workspace]`, only one can be specified"
             ),
         };
-        let profiles = Profiles::new(me.profile.as_ref(), config, &features, &mut warnings)?;
+        let profiles = Profiles::new(
+            me.profile.as_ref(),
+            config,
+            &features,
+            &mut warnings,
+            &package_root.join("Cargo.toml"),
+        )?;
         let publish = match project.publish {
             Some(VecStringOrBool::VecString(ref vecstring)) => Some(vecstring.clone()),
             Some(VecStringOrBool::Bool(false)) => Some(vec![]),
@@ -1154,7 +1169,13 @@ impl TomlManifest {
             };
             (me.replace(&mut cx)?, me.patch(&mut cx)?)
         };
-        let profiles = Profiles::new(me.profile.as_ref(), config, &features, &mut warnings)?;
+        let profiles = Profiles::new(
+            me.profile.as_ref(),
+            config,
+            &features,
+            &mut warnings,
+            &root.join("Cargo.toml"),
+        )?;
         let workspace_config = match me.workspace {
             Some(ref config) => WorkspaceConfig::Root(WorkspaceRootConfig::new(
                 root,

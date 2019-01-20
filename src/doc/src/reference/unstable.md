@@ -148,6 +148,36 @@ cargo +nightly build -Z config-profile
 ```
 
 
+### Build Profile
+* Tracking Issue: [rust-lang/rust#48683](https://github.com/rust-lang/rust/issues/48683)
+
+The `build` profile controls the build settings for build scripts,
+proc-macros, compiler plugins, and all of their dependencies. It requires the
+`build-profile` feature to be enabled.
+
+```toml
+cargo-features = ["build-profile"]
+
+[profile.build]
+# The following illustrates the defaults.
+opt-level = 0
+debug = false
+rpath = false
+lto = false
+debug-assertions = false
+codegen-units = 16
+panic = 'unwind'
+incremental = false
+overflow-checks = false
+```
+
+It is compatible with [Profile Overrides](#profile-overrides) and [Config
+Profiles](#config-profiles). If `build-override` is specified in a dev or
+release profile, that takes precedence over the `build` profile. Enabling
+`build-profile` will cause `build-override` to also affect proc-macros and
+plugins (normally it only affects build scripts).
+
+
 ### Namespaced features
 * Original issue: [#1286](https://github.com/rust-lang/cargo/issues/1286)
 * Tracking Issue: [#5565](https://github.com/rust-lang/cargo/issues/5565)

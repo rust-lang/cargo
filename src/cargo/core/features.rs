@@ -191,6 +191,9 @@ features! {
         // Overriding profiles for dependencies.
         [unstable] profile_overrides: bool,
 
+        // Build profile.
+        [unstable] build_profile: bool,
+
         // Separating the namespaces for features and dependencies
         [unstable] namespaced_features: bool,
 

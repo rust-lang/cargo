@@ -16,6 +16,7 @@ mod build;
 mod build_auth;
 mod build_lib;
 mod build_plan;
+mod build_profile;
 mod build_script;
 mod build_script_env;
 mod cargo_alias_config;
