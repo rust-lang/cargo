@@ -184,7 +184,10 @@ _benchmark_names()
 }
 
 _get_examples(){
-	local files=($(dirname $(_locate_manifest))/examples/*.rs)
+	local manifest=$(_locate_manifest)
+	[ -z "$manifest" ] && return 0
+
+	local files=("${manifest%/*}"/examples/*.rs)
 	local names=("${files[@]##*/}")
 	local names=("${names[@]%.*}")
 	# "*" means no examples found
