@@ -166,7 +166,8 @@ migration.
 #### The `publish`  field (optional)
 
 The `publish` field can be used to prevent a package from being published to a
-package registry (like *crates.io*) by mistake.
+package registry (like *crates.io*) by mistake, for instance to keep a package
+private in a company.
 
 ```toml
 [package]
