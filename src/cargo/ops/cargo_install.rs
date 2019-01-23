@@ -252,7 +252,7 @@ fn install_one(
         let metadata = metadata(config, root)?;
         let list = read_crate_list(&metadata)?;
         let dst = metadata.parent().join("bin");
-        check_overwrites(&dst, pkg, &opts.filter, &list, force)?;
+        check_overwrites(&dst, pkg, &opts.filter, &list, force, ensure)?;
     }
 
     let exec: Arc<dyn Executor> = Arc::new(DefaultExecutor);
@@ -291,7 +291,7 @@ fn install_one(
     let metadata = metadata(config, root)?;
     let mut list = read_crate_list(&metadata)?;
     let dst = metadata.parent().join("bin");
-    let duplicates = check_overwrites(&dst, pkg, &opts.filter, &list, force)?;
+    let duplicates = check_overwrites(&dst, pkg, &opts.filter, &list, force, ensure)?;
 
     fs::create_dir_all(&dst)?;
 
@@ -415,6 +415,7 @@ fn check_overwrites(
     filter: &ops::CompileFilter,
     prev: &CrateListingV1,
     force: bool,
+    ensure: bool,
 ) -> CargoResult<BTreeMap<String, Option<PackageId>>> {
     // If explicit --bin or --example flags were passed then those'll
     // get checked during cargo_compile, we only care about the "build
@@ -437,6 +438,12 @@ fn check_overwrites(
         }
     }
     msg.push_str("Add --force to overwrite");
+
+    if ensure {
+        eprintln!("{}", msg);
+        std::process::exit(0)
+    };
+
     Err(failure::format_err!("{}", msg))
 }
 
