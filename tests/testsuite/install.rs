@@ -505,6 +505,27 @@ foo v0.2.0 ([..]):
 }
 
 #[test]
+fn install_ensure() {
+    let p = project()
+        .file("src/bin/foo-bin1.rs", "fn main() {}")
+        .file("src/bin/foo-bin2.rs", "fn main() {}")
+        .build();
+
+    cargo_process("install --ensure --path").arg(p.root()).run();
+    cargo_process("install --ensure --path")
+        .arg(p.root())
+        .with_stderr(
+            "\
+[INSTALLING] foo v0.0.1 [..]
+binary `foo-bin1[..]` already exists in destination as part of `foo v0.0.1 ([..])`
+binary `foo-bin2[..]` already exists in destination as part of `foo v0.0.1 ([..])`
+Add --force to overwrite
+",
+        )
+        .run();
+}
+
+#[test]
 fn install_force_partial_overlap() {
     let p = project()
         .file("src/bin/foo-bin1.rs", "fn main() {}")
