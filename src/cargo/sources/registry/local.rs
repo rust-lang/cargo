@@ -11,15 +11,15 @@ use hex;
 
 pub struct LocalRegistry<'cfg> {
     index_path: Filesystem,
+    cache_path: Filesystem,
     root: Filesystem,
-    src_path: Filesystem,
     config: &'cfg Config,
 }
 
 impl<'cfg> LocalRegistry<'cfg> {
     pub fn new(root: &Path, config: &'cfg Config, name: &str) -> LocalRegistry<'cfg> {
         LocalRegistry {
-            src_path: config.registry_source_path().join(name),
+            cache_path: config.registry_cache_path().join(name),
             index_path: Filesystem::new(root.join("index")),
             root: Filesystem::new(root.to_path_buf()),
             config,
@@ -70,38 +70,39 @@ impl<'cfg> RegistryData for LocalRegistry<'cfg> {
     }
 
     fn download(&mut self, pkg: PackageId, checksum: &str) -> CargoResult<MaybeLock> {
-        let crate_file = format!("{}-{}.crate", pkg.name(), pkg.version());
-        let mut crate_file = self.root.open_ro(&crate_file, self.config, "crate file")?;
+        let filename = format!("{}-{}.crate", pkg.name(), pkg.version());
 
-        // If we've already got an unpacked version of this crate, then skip the
-        // checksum below as it is in theory already verified.
-        let dst = format!("{}-{}", pkg.name(), pkg.version());
-        if self.src_path.join(dst).into_path_unlocked().exists() {
-            return Ok(MaybeLock::Ready(crate_file));
+        // Attempt to open an read-only lock first to avoid an exclusive write lock.
+        //
+        // If this fails then we fall through to the exclusive path where we copy
+        // the file.
+        if let Ok(dst) = self.cache_path.open_ro(&filename, self.config, &filename) {
+            let meta = dst.file().metadata()?;
+            if meta.len() > 0 {
+                return Ok(MaybeLock::Ready(dst));
+            }
         }
 
         self.config.shell().status("Unpacking", pkg)?;
 
-        // We don't actually need to download anything per-se, we just need to
-        // verify the checksum matches the .crate file itself.
+        // Verify the checksum and copy over the .crate.
+        let mut buf = Vec::new();
+        let mut crate_file_source = self.root.open_ro(&filename, self.config, "crate file")?;
+        let _ = crate_file_source
+            .read_to_end(&mut buf)
+            .chain_err(|| format!("failed to read `{}`", crate_file_source.path().display()))?;
+
         let mut state = Sha256::new();
-        let mut buf = [0; 64 * 1024];
-        loop {
-            let n = crate_file
-                .read(&mut buf)
-                .chain_err(|| format!("failed to read `{}`", crate_file.path().display()))?;
-            if n == 0 {
-                break;
-            }
-            state.update(&buf[..n]);
-        }
+        state.update(&buf);
         if hex::encode(state.finish()) != checksum {
             failure::bail!("failed to verify the checksum of `{}`", pkg)
         }
 
-        crate_file.seek(SeekFrom::Start(0))?;
+        let mut dst = self.cache_path.open_rw(&filename, self.config, &filename)?;
+        dst.write_all(&buf)?;
+        dst.seek(SeekFrom::Start(0))?;
 
-        Ok(MaybeLock::Ready(crate_file))
+        Ok(MaybeLock::Ready(dst))
     }
 
     fn finish_download(
