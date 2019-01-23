@@ -24,6 +24,13 @@ pub fn cli() -> App {
         ))
         .arg_jobs()
         .arg(opt("force", "Force overwriting existing crates or binaries").short("f"))
+        .arg(
+            opt(
+                "ensure",
+                "Simply leaves it as-is when  you already have a suitable version",
+            )
+            .short("e"),
+        )
         .arg_features()
         .arg(opt("debug", "Build in debug mode instead of release mode"))
         .arg_targets_bins_examples(
