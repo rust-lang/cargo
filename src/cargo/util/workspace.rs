@@ -16,7 +16,7 @@ fn get_available_targets<'a>(
         .flat_map(|pkg| {
             pkg.manifest()
                 .targets()
-                .into_iter()
+                .iter()
                 .filter(|target| filter_fn(target))
         })
         .collect();
