@@ -42,6 +42,7 @@ pub fn install(
     vers: Option<&str>,
     opts: &ops::CompileOptions<'_>,
     force: bool,
+    ensure: bool,
 ) -> CargoResult<()> {
     let root = resolve_root(root, opts.config)?;
     let map = SourceConfigMap::new(opts.config)?;
@@ -56,6 +57,7 @@ pub fn install(
             vers,
             opts,
             force,
+            ensure,
             true,
         )?;
         (true, false)
@@ -75,6 +77,7 @@ pub fn install(
                 vers,
                 opts,
                 force,
+                ensure,
                 first,
             ) {
                 Ok(()) => succeeded.push(krate),
@@ -137,6 +140,7 @@ fn install_one(
     vers: Option<&str>,
     opts: &ops::CompileOptions<'_>,
     force: bool,
+    ensure: bool,
     is_first_install: bool,
 ) -> CargoResult<()> {
     let config = opts.config;

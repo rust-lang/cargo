@@ -135,6 +135,7 @@ pub fn exec(config: &mut Config, args: &ArgMatches<'_>) -> CliResult {
             version,
             &compile_opts,
             args.is_present("force"),
+            args.is_present("ensure"),
         )?;
     }
     Ok(())
