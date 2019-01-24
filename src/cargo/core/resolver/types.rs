@@ -66,7 +66,17 @@ impl ResolverProgress {
         // If any of them are removed then it takes more than I am willing to measure.
         // So lets fail the test fast if we have ben running for two long.
         if cfg!(debug_assertions) && (self.ticks % 1000 == 0) {
-            assert!(self.start.elapsed() - self.deps_time < Duration::from_secs(90));
+            // Some CI setups are much slower then the equipment used by Cargo itself.
+            // Architectures that do not have a modern processor, hardware emulation, ect.
+            // In the test code we have `slow_cpu_multiplier`, but that is not accessible here.
+            lazy_static::lazy_static! {
+                static ref SLOW_CPU_MULTIPLIER: u64 =
+                    env::var("CARGO_TEST_SLOW_CPU_MULTIPLIER").ok().and_then(|m| m.parse().ok()).unwrap_or(1);
+            }
+            assert!(
+                self.start.elapsed() - self.deps_time
+                    < Duration::from_secs(*SLOW_CPU_MULTIPLIER * 90)
+            );
         }
         Ok(())
     }

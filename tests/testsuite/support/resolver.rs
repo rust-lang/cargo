@@ -2,7 +2,9 @@ use std::cmp::PartialEq;
 use std::cmp::{max, min};
 use std::collections::{BTreeMap, HashSet};
 use std::fmt;
-use std::time::{Duration, Instant};
+use std::time::Instant;
+
+use crate::support::slow_cpu_multiplier;
 
 use cargo::core::dependency::Kind;
 use cargo::core::resolver::{self, Method};
@@ -117,7 +119,7 @@ pub fn resolve_with_config_raw(
 
     // The largest test in our suite takes less then 30 sec.
     // So lets fail the test if we have ben running for two long.
-    assert!(start.elapsed() < Duration::from_secs(60));
+    assert!(start.elapsed() < slow_cpu_multiplier(60));
     resolve
 }
 
