@@ -160,7 +160,7 @@
 
 use std::borrow::Cow;
 use std::collections::BTreeMap;
-use std::fs::File;
+use std::io::Write;
 use std::path::{Path, PathBuf};
 
 use flate2::read::GzDecoder;
@@ -426,23 +426,28 @@ impl<'cfg> RegistrySource<'cfg> {
     ///
     /// No action is taken if the source looks like it's already unpacked.
     fn unpack_package(&self, pkg: PackageId, tarball: &FileLock) -> CargoResult<PathBuf> {
-        let dst = self
-            .src_path
-            .join(&format!("{}-{}", pkg.name(), pkg.version()));
-        dst.create_dir()?;
-        // Note that we've already got the `tarball` locked above, and that
-        // implies a lock on the unpacked destination as well, so this access
-        // via `into_path_unlocked` should be ok.
-        let dst = dst.into_path_unlocked();
-        let ok = dst.join(".cargo-ok");
-        if ok.exists() {
-            return Ok(dst);
+        // The `.cargo-ok` file is used to track if the source is already
+        // unpacked and to lock the directory for unpacking.
+        let mut ok = {
+            let package_dir = format!("{}-{}", pkg.name(), pkg.version());
+            let dst = self
+                .src_path
+                .join(&package_dir);
+            dst.create_dir()?;
+            dst.open_rw(".cargo-ok", self.config, &package_dir)?
+        };
+        let unpack_dir = ok.parent().to_path_buf();
+
+        // If the file has any data, assume the source is already unpacked.
+        let meta = ok.file().metadata()?;
+        if meta.len() > 0 {
+            return Ok(unpack_dir);
         }
 
         let gz = GzDecoder::new(tarball.file());
         let mut tar = Archive::new(gz);
-        let prefix = dst.file_name().unwrap();
-        let parent = dst.parent().unwrap();
+        let prefix = unpack_dir.file_name().unwrap();
+        let parent = unpack_dir.parent().unwrap();
         for entry in tar.entries()? {
             let mut entry = entry.chain_err(|| "failed to iterate over archive")?;
             let entry_path = entry
@@ -470,8 +475,11 @@ impl<'cfg> RegistrySource<'cfg> {
                 .unpack_in(parent)
                 .chain_err(|| format!("failed to unpack entry at `{}`", entry_path.display()))?;
         }
-        File::create(&ok)?;
-        Ok(dst)
+
+        // Write to the lock file to indicate that unpacking was successful.
+        write!(ok, "ok")?;
+
+        Ok(unpack_dir)
     }
 
     fn do_update(&mut self) -> CargoResult<()> {
