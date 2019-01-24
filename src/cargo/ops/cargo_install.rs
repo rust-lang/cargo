@@ -42,6 +42,7 @@ pub fn install(
     vers: Option<&str>,
     opts: &ops::CompileOptions<'_>,
     force: bool,
+    ensure: bool,
 ) -> CargoResult<()> {
     let root = resolve_root(root, opts.config)?;
     let map = SourceConfigMap::new(opts.config)?;
@@ -56,6 +57,7 @@ pub fn install(
             vers,
             opts,
             force,
+            ensure,
             true,
         )?;
         (true, false)
@@ -75,6 +77,7 @@ pub fn install(
                 vers,
                 opts,
                 force,
+                ensure,
                 first,
             ) {
                 Ok(()) => succeeded.push(krate),
@@ -137,6 +140,7 @@ fn install_one(
     vers: Option<&str>,
     opts: &ops::CompileOptions<'_>,
     force: bool,
+    ensure: bool,
     is_first_install: bool,
 ) -> CargoResult<()> {
     let config = opts.config;
@@ -248,7 +252,7 @@ fn install_one(
         let metadata = metadata(config, root)?;
         let list = read_crate_list(&metadata)?;
         let dst = metadata.parent().join("bin");
-        check_overwrites(&dst, pkg, &opts.filter, &list, force)?;
+        check_overwrites(&dst, pkg, &opts.filter, &list, force, ensure)?;
     }
 
     let exec: Arc<dyn Executor> = Arc::new(DefaultExecutor);
@@ -287,7 +291,7 @@ fn install_one(
     let metadata = metadata(config, root)?;
     let mut list = read_crate_list(&metadata)?;
     let dst = metadata.parent().join("bin");
-    let duplicates = check_overwrites(&dst, pkg, &opts.filter, &list, force)?;
+    let duplicates = check_overwrites(&dst, pkg, &opts.filter, &list, force, ensure)?;
 
     fs::create_dir_all(&dst)?;
 
@@ -411,6 +415,7 @@ fn check_overwrites(
     filter: &ops::CompileFilter,
     prev: &CrateListingV1,
     force: bool,
+    ensure: bool,
 ) -> CargoResult<BTreeMap<String, Option<PackageId>>> {
     // If explicit --bin or --example flags were passed then those'll
     // get checked during cargo_compile, we only care about the "build
