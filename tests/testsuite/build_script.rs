@@ -3,12 +3,11 @@ use std::fs::{self, File};
 use std::io;
 use std::io::prelude::*;
 use std::thread;
-use std::time::Duration;
 
 use crate::support::paths::CargoPathExt;
 use crate::support::registry::Package;
 use crate::support::{basic_manifest, cross_compile, project};
-use crate::support::{rustc_host, sleep_ms};
+use crate::support::{rustc_host, sleep_ms, slow_cpu_multiplier};
 use cargo::util::paths::remove_dir_all;
 
 #[test]
@@ -3174,7 +3173,9 @@ fn switch_features_rerun() {
     p.cargo("build -v --features=foo").run();
     p.rename_run("foo", "with_foo").with_stdout("foo\n").run();
     p.cargo("build -v").run();
-    p.rename_run("foo", "without_foo").with_stdout("bar\n").run();
+    p.rename_run("foo", "without_foo")
+        .with_stdout("bar\n")
+        .run();
     p.cargo("build -v --features=foo").run();
     p.rename_run("foo", "with_foo2").with_stdout("foo\n").run();
 }
@@ -3569,7 +3570,7 @@ fn _rename_with_link_search_path(cross: bool) {
             panic!("failed to rename: {}", error);
         }
         println!("assuming {} is spurious, waiting to try again", error);
-        thread::sleep(Duration::from_millis(100));
+        thread::sleep(slow_cpu_multiplier(100));
     }
 
     p2.cargo(&format!("run{}", target_arg))

@@ -4,14 +4,13 @@ use std::net::TcpListener;
 use std::process::Stdio;
 use std::sync::mpsc::channel;
 use std::thread;
-use std::time::Duration;
 use std::{env, str};
 
 use crate::support::cargo_process;
 use crate::support::git;
 use crate::support::install::{assert_has_installed_exe, cargo_home};
 use crate::support::registry::Package;
-use crate::support::{basic_manifest, execs, project};
+use crate::support::{basic_manifest, execs, project, slow_cpu_multiplier};
 use git2;
 
 fn pkg(name: &str, vers: &str) {
@@ -526,7 +525,7 @@ fn no_deadlock_with_git_dependencies() {
     }
 
     for _ in 0..n_concurrent_builds {
-        let result = rx.recv_timeout(Duration::from_secs(30)).expect("Deadlock!");
+        let result = rx.recv_timeout(slow_cpu_multiplier(30)).expect("Deadlock!");
         execs().run_output(&result);
     }
 }
