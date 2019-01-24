@@ -19,6 +19,8 @@ pub struct ResolverProgress {
     time_to_print: Duration,
     printed: bool,
     deps_time: Duration,
+    #[cfg(debug_assertions)]
+    slow_cpu_multiplier: u64,
 }
 
 impl ResolverProgress {
@@ -29,6 +31,14 @@ impl ResolverProgress {
             time_to_print: Duration::from_millis(500),
             printed: false,
             deps_time: Duration::new(0, 0),
+            // Some CI setups are much slower then the equipment used by Cargo itself.
+            // Architectures that do not have a modern processor, hardware emulation, ect.
+            // In the test code we have `slow_cpu_multiplier`, but that is not accessible here.
+            #[cfg(debug_assertions)]
+            slow_cpu_multiplier: std::env::var("CARGO_TEST_SLOW_CPU_MULTIPLIER")
+                .ok()
+                .and_then(|m| m.parse().ok())
+                .unwrap_or(1),
         }
     }
     pub fn shell_status(&mut self, config: Option<&Config>) -> CargoResult<()> {
@@ -52,21 +62,27 @@ impl ResolverProgress {
                 config.shell().status("Resolving", "dependency graph...")?;
             }
         }
-        // The largest test in our suite takes less then 5000 ticks
-        // with all the algorithm improvements.
-        // If any of them are removed then it takes more than I am willing to measure.
-        // So lets fail the test fast if we have ben running for two long.
-        debug_assert!(
-            self.ticks < 50_000,
-            "got to 50_000 ticks in {:?}",
-            self.start.elapsed()
-        );
-        // The largest test in our suite takes less then 30 sec
-        // with all the improvements to how fast a tick can go.
-        // If any of them are removed then it takes more than I am willing to measure.
-        // So lets fail the test fast if we have ben running for two long.
-        if cfg!(debug_assertions) && (self.ticks % 1000 == 0) {
-            assert!(self.start.elapsed() - self.deps_time < Duration::from_secs(90));
+        #[cfg(debug_assertions)]
+        {
+            // The largest test in our suite takes less then 5000 ticks
+            // with all the algorithm improvements.
+            // If any of them are removed then it takes more than I am willing to measure.
+            // So lets fail the test fast if we have ben running for two long.
+            assert!(
+                self.ticks < 50_000,
+                "got to 50_000 ticks in {:?}",
+                self.start.elapsed()
+            );
+            // The largest test in our suite takes less then 30 sec
+            // with all the improvements to how fast a tick can go.
+            // If any of them are removed then it takes more than I am willing to measure.
+            // So lets fail the test fast if we have ben running for two long.
+            if self.ticks % 1000 == 0 {
+                assert!(
+                    self.start.elapsed() - self.deps_time
+                        < Duration::from_secs(self.slow_cpu_multiplier * 90)
+                );
+            }
         }
         Ok(())
     }

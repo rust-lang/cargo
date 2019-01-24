@@ -1634,3 +1634,14 @@ pub fn is_coarse_mtime() -> bool {
     // that's tricky to detect, so for now just deal with CI.
     cfg!(target_os = "macos") && env::var("CI").is_ok()
 }
+
+/// Some CI setups are much slower then the equipment used by Cargo itself.
+/// Architectures that do not have a modern processor, hardware emulation, ect.
+/// This provides a way for those setups to increase the cut off for all the time based test.
+pub fn slow_cpu_multiplier(main: u64) -> Duration {
+    lazy_static::lazy_static! {
+        static ref SLOW_CPU_MULTIPLIER: u64 =
+            env::var("CARGO_TEST_SLOW_CPU_MULTIPLIER").ok().and_then(|m| m.parse().ok()).unwrap_or(1);
+    }
+    Duration::from_secs(*SLOW_CPU_MULTIPLIER * main)
+}
