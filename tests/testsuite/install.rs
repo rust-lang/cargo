@@ -491,6 +491,41 @@ Add --force to overwrite
 }
 
 #[test]
+fn install_ensure_force() {
+    let p = project()
+        .at("foo1")
+        .file("Cargo.toml", &basic_manifest("foo", "0.1.0"))
+        .file("src/main.rs", "fn main() {}")
+        .build();
+
+    cargo_process("install --path").arg(p.root()).run();
+    cargo_process("install --list")
+        .with_stdout(
+            "\
+foo v0.1.0 ([..]):
+    foo[..]
+",
+        )
+        .run();
+
+    let p = project()
+        .at("foo2")
+        .file("Cargo.toml", &basic_manifest("foo", "0.2.0"))
+        .file("src/main.rs", "fn main() {}")
+        .build();
+
+    cargo_process("install --ensure --path").arg(p.root()).run();
+    cargo_process("install --list")
+        .with_stdout(
+            "\
+foo v0.2.0 ([..]):
+    foo[..]
+",
+        )
+        .run();
+}
+
+#[test]
 fn install_force() {
     let p = project().file("src/main.rs", "fn main() {}").build();
 
