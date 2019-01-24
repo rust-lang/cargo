@@ -419,11 +419,20 @@ fn check_overwrites(
         failure::bail!("specified package has no binaries")
     }
     let duplicates = find_duplicates(dst, pkg, filter, prev);
+
     if force || duplicates.is_empty() {
         return Ok(duplicates);
     }
-    // Format the error message.
+
+    let msg = check_overwrites_format_error_message(&duplicates);
+    Err(failure::format_err!("{}", msg))
+}
+
+fn check_overwrites_format_error_message(
+    duplicates: &BTreeMap<String, Option<PackageId>>,
+) -> String {
     let mut msg = String::new();
+
     for (bin, p) in duplicates.iter() {
         msg.push_str(&format!("binary `{}` already exists in destination", bin));
         if let Some(p) = p.as_ref() {
@@ -433,7 +442,8 @@ fn check_overwrites(
         }
     }
     msg.push_str("Add --force to overwrite");
-    Err(failure::format_err!("{}", msg))
+
+    msg
 }
 
 fn find_duplicates(
