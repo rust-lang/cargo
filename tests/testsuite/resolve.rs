@@ -32,7 +32,7 @@ proptest! {
         // and locally.
         cases: 256,
         max_shrink_iters:
-            if env::var("CI").is_ok() {
+            if env::var("CI").is_ok() || !atty::is(atty::Stream::Stderr) {
                 // This attempts to make sure that CI will fail fast,
                 0
             } else {
