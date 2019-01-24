@@ -430,6 +430,21 @@ fn check_overwrites(
     }
 
     let msg = check_overwrites_format_error_message(&duplicates);
+
+    if ensure {
+        let is_installed_old = duplicates
+            .iter()
+            .filter(|(_, v)| v.is_some())
+            .all(|(_, v)| v.unwrap().version() < pkg.version());
+
+        if is_installed_old {
+            return Ok(duplicates);
+        }
+
+        eprintln!("{}", msg);
+        std::process::exit(0)
+    }
+
     Err(failure::format_err!("{}", msg))
 }
 
