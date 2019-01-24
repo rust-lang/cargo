@@ -400,67 +400,78 @@ pub fn registry_strategy(
 
     let list_of_raw_dependency = vec(raw_dependency, ..=max_deps);
 
-    (list_of_crates_with_versions, list_of_raw_dependency).prop_map(
-        |(crate_vers_by_name, raw_dependencies)| {
-            let list_of_pkgid: Vec<_> = crate_vers_by_name
-                .iter()
-                .flat_map(|(name, vers)| vers.iter().map(move |x| ((name.as_str(), &x.0), x.1)))
-                .collect();
-            let len_all_pkgid = list_of_pkgid.len();
-            let mut dependency_by_pkgid = vec![vec![]; len_all_pkgid];
-            for (a, b, (c, d), k) in raw_dependencies {
-                let (a, b) = order_index(a, b, len_all_pkgid);
-                let ((dep_name, _), _) = list_of_pkgid[a];
-                if (list_of_pkgid[b].0).0 == dep_name {
-                    continue;
-                }
-                let s = &crate_vers_by_name[dep_name];
-                let s_last_index = s.len() - 1;
-                let (c, d) = order_index(c, d, s.len());
+    // By default a package depends only on other packages that have a smaller name,
+    // this helps make sure that all things in the resulting index are DAGs.
+    // If this is true then the DAG is maintained with grater instead.
+    let reverse_alphabetical = any::<bool>();
 
-                dependency_by_pkgid[b].push(dep_req_kind(
-                    &dep_name,
-                    &if c == 0 && d == s_last_index {
-                        "*".to_string()
-                    } else if c == 0 {
-                        format!("<={}", s[d].0)
-                    } else if d == s_last_index {
-                        format!(">={}", s[c].0)
-                    } else if c == d {
-                        format!("={}", s[c].0)
-                    } else {
-                        format!(">={}, <={}", s[c].0, s[d].0)
-                    },
-                    match k {
-                        0 => Kind::Normal,
-                        1 => Kind::Build,
-                        // => Kind::Development, // Development has not impact so don't gen
-                        _ => panic!("bad index for Kind"),
-                    },
-                ))
-            }
-
-            PrettyPrintRegistry(
-                list_of_pkgid
-                    .into_iter()
-                    .zip(dependency_by_pkgid.into_iter())
-                    .map(|(((name, ver), allow_deps), deps)| {
-                        pkg_dep(
-                            (name, ver).to_pkgid(),
-                            if !allow_deps {
-                                vec![dep_req("bad", "*")]
-                            } else {
-                                let mut deps = deps;
-                                deps.sort_by_key(|d| d.name_in_toml());
-                                deps.dedup_by_key(|d| d.name_in_toml());
-                                deps
-                            },
-                        )
-                    })
-                    .collect(),
-            )
-        },
+    (
+        list_of_crates_with_versions,
+        list_of_raw_dependency,
+        reverse_alphabetical,
     )
+        .prop_map(
+            |(crate_vers_by_name, raw_dependencies, reverse_alphabetical)| {
+                let list_of_pkgid: Vec<_> = crate_vers_by_name
+                    .iter()
+                    .flat_map(|(name, vers)| vers.iter().map(move |x| ((name.as_str(), &x.0), x.1)))
+                    .collect();
+                let len_all_pkgid = list_of_pkgid.len();
+                let mut dependency_by_pkgid = vec![vec![]; len_all_pkgid];
+                for (a, b, (c, d), k) in raw_dependencies {
+                    let (a, b) = order_index(a, b, len_all_pkgid);
+                    let (a, b) = if reverse_alphabetical { (b, a) } else { (a, b) };
+                    let ((dep_name, _), _) = list_of_pkgid[a];
+                    if (list_of_pkgid[b].0).0 == dep_name {
+                        continue;
+                    }
+                    let s = &crate_vers_by_name[dep_name];
+                    let s_last_index = s.len() - 1;
+                    let (c, d) = order_index(c, d, s.len());
+
+                    dependency_by_pkgid[b].push(dep_req_kind(
+                        &dep_name,
+                        &if c == 0 && d == s_last_index {
+                            "*".to_string()
+                        } else if c == 0 {
+                            format!("<={}", s[d].0)
+                        } else if d == s_last_index {
+                            format!(">={}", s[c].0)
+                        } else if c == d {
+                            format!("={}", s[c].0)
+                        } else {
+                            format!(">={}, <={}", s[c].0, s[d].0)
+                        },
+                        match k {
+                            0 => Kind::Normal,
+                            1 => Kind::Build,
+                            // => Kind::Development, // Development has not impact so don't gen
+                            _ => panic!("bad index for Kind"),
+                        },
+                    ))
+                }
+
+                PrettyPrintRegistry(
+                    list_of_pkgid
+                        .into_iter()
+                        .zip(dependency_by_pkgid.into_iter())
+                        .map(|(((name, ver), allow_deps), deps)| {
+                            pkg_dep(
+                                (name, ver).to_pkgid(),
+                                if !allow_deps {
+                                    vec![dep_req("bad", "*")]
+                                } else {
+                                    let mut deps = deps;
+                                    deps.sort_by_key(|d| d.name_in_toml());
+                                    deps.dedup_by_key(|d| d.name_in_toml());
+                                    deps
+                                },
+                            )
+                        })
+                        .collect(),
+                )
+            },
+        )
 }
 
 /// This test is to test the generator to ensure

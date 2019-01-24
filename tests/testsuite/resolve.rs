@@ -12,9 +12,7 @@ use crate::support::resolver::{
     resolve_with_config, PrettyPrintRegistry, ToDep, ToPkgId,
 };
 
-use proptest::collection::vec;
-use proptest::prelude::*;
-use proptest::*;
+use proptest::{prelude::*, *};
 
 /// NOTE: proptest is a form of fuzz testing. It generates random input and makes shore that
 /// certain universal truths are upheld. Therefore, it can pass when there is a problem,
@@ -114,7 +112,7 @@ proptest! {
     #[test]
     fn limited_independence_of_irrelevant_alternatives(
         PrettyPrintRegistry(input) in registry_strategy(50, 20, 60),
-        indexs_to_unpublish in vec(any::<prop::sample::Index>(), 10)
+        indexs_to_unpublish in collection::vec(any::<prop::sample::Index>(), 10)
     )  {
         let reg = registry(input.clone());
         // there is only a small chance that eny one
