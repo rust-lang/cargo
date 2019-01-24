@@ -8,7 +8,7 @@ use crate::support::project;
 use crate::support::registry::Package;
 use crate::support::resolver::{
     assert_contains, assert_same, dep, dep_kind, dep_loc, dep_req, loc_names, names, pkg, pkg_dep,
-    pkg_id, pkg_loc, registry, registry_strategy, resolve, resolve_and_validated,
+    pkg_id, pkg_loc, registry, registry_strategy, remove_dep, resolve, resolve_and_validated,
     resolve_with_config, PrettyPrintRegistry, ToDep, ToPkgId,
 };
 
@@ -110,9 +110,51 @@ proptest! {
 
     /// NOTE: if you think this test has failed spuriously see the note at the top of this macro.
     #[test]
+    fn removing_a_dep_cant_brake(
+            PrettyPrintRegistry(input) in registry_strategy(50, 20, 60),
+            indexs_to_remove in collection::vec((any::<prop::sample::Index>(), any::<prop::sample::Index>()), ..10)
+    ) {
+        let reg = registry(input.clone());
+        let mut removed_input = input.clone();
+        for (summery_idx, dep_idx) in indexs_to_remove {
+            if removed_input.len() > 0 {
+                let summery_idx = summery_idx.index(removed_input.len());
+                let deps = removed_input[summery_idx].dependencies();
+                if deps.len() > 0 {
+                    let new = remove_dep(&removed_input[summery_idx], dep_idx.index(deps.len()));
+                    removed_input[summery_idx] = new;
+                }
+            }
+        }
+        let removed_reg = registry(removed_input);
+        // there is only a small chance that eny one
+        // crate will be interesting.
+        // So we try some of the most complicated.
+        for this in input.iter().rev().take(10) {
+            if resolve(
+                &pkg_id("root"),
+                vec![dep_req(&this.name(), &format!("={}", this.version()))],
+                &reg,
+            ).is_ok() {
+                prop_assert!(
+                    resolve(
+                        &pkg_id("root"),
+                        vec![dep_req(&this.name(), &format!("={}", this.version()))],
+                        &removed_reg,
+                    ).is_ok(),
+                    "full index worked for `{} = \"={}\"` but removing some deps broke it!",
+                    this.name(),
+                    this.version(),
+                )
+            }
+        }
+    }
+
+    /// NOTE: if you think this test has failed spuriously see the note at the top of this macro.
+    #[test]
     fn limited_independence_of_irrelevant_alternatives(
         PrettyPrintRegistry(input) in registry_strategy(50, 20, 60),
-        indexs_to_unpublish in collection::vec(any::<prop::sample::Index>(), 10)
+        indexs_to_unpublish in collection::vec(any::<prop::sample::Index>(), ..10)
     )  {
         let reg = registry(input.clone());
         // there is only a small chance that eny one

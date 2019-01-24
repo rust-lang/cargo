@@ -230,6 +230,20 @@ pub fn pkg_loc(name: &str, loc: &str) -> Summary {
     .unwrap()
 }
 
+pub fn remove_dep(sum: &Summary, ind: usize) -> Summary {
+    let mut deps = sum.dependencies().to_vec();
+    deps.remove(ind);
+    // note: more things will need to be copied over in the future, but it works for now.
+    Summary::new(
+        sum.package_id(),
+        deps,
+        &BTreeMap::<String, Vec<String>>::new(),
+        sum.links().map(|a| a.as_str()),
+        sum.namespaced_features(),
+    )
+    .unwrap()
+}
+
 pub fn dep(name: &str) -> Dependency {
     dep_req(name, "*")
 }
