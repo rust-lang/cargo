@@ -374,7 +374,7 @@ lto = false
 debug-assertions = false
 codegen-units = 16
 panic = 'unwind'
-incremental = false
+incremental = true
 overflow-checks = false
 
 # The testing profile, used for `cargo test` (for `cargo test --release` see
@@ -400,7 +400,7 @@ lto = false
 debug-assertions = false
 codegen-units = 16
 panic = 'unwind'
-incremental = false
+incremental = true
 overflow-checks = false
 ```
 
