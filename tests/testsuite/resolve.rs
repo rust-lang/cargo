@@ -8,13 +8,11 @@ use crate::support::project;
 use crate::support::registry::Package;
 use crate::support::resolver::{
     assert_contains, assert_same, dep, dep_kind, dep_loc, dep_req, loc_names, names, pkg, pkg_dep,
-    pkg_id, pkg_loc, registry, registry_strategy, resolve, resolve_and_validated,
+    pkg_id, pkg_loc, registry, registry_strategy, remove_dep, resolve, resolve_and_validated,
     resolve_with_config, PrettyPrintRegistry, ToDep, ToPkgId,
 };
 
-use proptest::collection::vec;
-use proptest::prelude::*;
-use proptest::*;
+use proptest::{prelude::*, *};
 
 /// NOTE: proptest is a form of fuzz testing. It generates random input and makes shore that
 /// certain universal truths are upheld. Therefore, it can pass when there is a problem,
@@ -25,20 +23,15 @@ use proptest::*;
 /// and if you did not change the resolver then feel free to retry without concern.
 proptest! {
     #![proptest_config(ProptestConfig {
-        // Note that this is a little low in terms of cases we'd like to test,
-        // but this number affects how long this function takes. It can be
-        // increased locally to execute more tests and try to find more bugs,
-        // but for now it's semi-low to run in a small-ish amount of time on CI
-        // and locally.
-        cases: 256,
         max_shrink_iters:
             if env::var("CI").is_ok() || !atty::is(atty::Stream::Stderr) {
                 // This attempts to make sure that CI will fail fast,
                 0
             } else {
                 // but that local builds will give a small clear test case.
-                ProptestConfig::default().max_shrink_iters
+                std::u32::MAX
             },
+        result_cache: prop::test_runner::basic_result_cache,
         .. ProptestConfig::default()
     })]
 
@@ -112,9 +105,51 @@ proptest! {
 
     /// NOTE: if you think this test has failed spuriously see the note at the top of this macro.
     #[test]
+    fn removing_a_dep_cant_brake(
+            PrettyPrintRegistry(input) in registry_strategy(50, 20, 60),
+            indexs_to_remove in collection::vec((any::<prop::sample::Index>(), any::<prop::sample::Index>()), ..10)
+    ) {
+        let reg = registry(input.clone());
+        let mut removed_input = input.clone();
+        for (summery_idx, dep_idx) in indexs_to_remove {
+            if removed_input.len() > 0 {
+                let summery_idx = summery_idx.index(removed_input.len());
+                let deps = removed_input[summery_idx].dependencies();
+                if deps.len() > 0 {
+                    let new = remove_dep(&removed_input[summery_idx], dep_idx.index(deps.len()));
+                    removed_input[summery_idx] = new;
+                }
+            }
+        }
+        let removed_reg = registry(removed_input);
+        // there is only a small chance that eny one
+        // crate will be interesting.
+        // So we try some of the most complicated.
+        for this in input.iter().rev().take(10) {
+            if resolve(
+                &pkg_id("root"),
+                vec![dep_req(&this.name(), &format!("={}", this.version()))],
+                &reg,
+            ).is_ok() {
+                prop_assert!(
+                    resolve(
+                        &pkg_id("root"),
+                        vec![dep_req(&this.name(), &format!("={}", this.version()))],
+                        &removed_reg,
+                    ).is_ok(),
+                    "full index worked for `{} = \"={}\"` but removing some deps broke it!",
+                    this.name(),
+                    this.version(),
+                )
+            }
+        }
+    }
+
+    /// NOTE: if you think this test has failed spuriously see the note at the top of this macro.
+    #[test]
     fn limited_independence_of_irrelevant_alternatives(
         PrettyPrintRegistry(input) in registry_strategy(50, 20, 60),
-        indexs_to_unpublish in vec(any::<prop::sample::Index>(), 10)
+        indexs_to_unpublish in collection::vec(any::<prop::sample::Index>(), ..10)
     )  {
         let reg = registry(input.clone());
         // there is only a small chance that eny one
