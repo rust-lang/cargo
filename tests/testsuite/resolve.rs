@@ -23,20 +23,15 @@ use proptest::{prelude::*, *};
 /// and if you did not change the resolver then feel free to retry without concern.
 proptest! {
     #![proptest_config(ProptestConfig {
-        // Note that this is a little low in terms of cases we'd like to test,
-        // but this number affects how long this function takes. It can be
-        // increased locally to execute more tests and try to find more bugs,
-        // but for now it's semi-low to run in a small-ish amount of time on CI
-        // and locally.
-        cases: 256,
         max_shrink_iters:
             if env::var("CI").is_ok() || !atty::is(atty::Stream::Stderr) {
                 // This attempts to make sure that CI will fail fast,
                 0
             } else {
                 // but that local builds will give a small clear test case.
-                ProptestConfig::default().max_shrink_iters
+                std::u32::MAX
             },
+        result_cache: prop::test_runner::basic_result_cache,
         .. ProptestConfig::default()
     })]
 

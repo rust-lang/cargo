@@ -417,7 +417,7 @@ pub fn registry_strategy(
     // By default a package depends only on other packages that have a smaller name,
     // this helps make sure that all things in the resulting index are DAGs.
     // If this is true then the DAG is maintained with grater instead.
-    let reverse_alphabetical = any::<bool>();
+    let reverse_alphabetical = any::<bool>().no_shrink();
 
     (
         list_of_crates_with_versions,
