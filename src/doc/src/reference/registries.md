@@ -3,17 +3,16 @@
 Cargo installs crates and fetches dependencies from a "registry". The default
 registry is [crates.io]. A registry contains an "index" which contains a
 searchable list of available crates. A registry may also provide a web API to
-support publishing new crates directly from Cargo. The registry provides
-permanent access to all versions of a package that have been published to it.
+support publishing new crates directly from Cargo.
 
 > Note: If you are interested in mirroring or vendoring an existing registry,
 > take a look at [Source Replacement].
 
 ### Using an Alternate Registry
 
-To use a registry other than [crates.io], the name and URL of the registry
-must be added to a [`.cargo/config` file][config]. The `registries` table
-has a key for each registry, for example:
+To use a registry other than [crates.io], the name and index URL of the
+registry must be added to a [`.cargo/config` file][config]. The `registries`
+table has a key for each registry, for example:
 
 ```toml
 [registries]
@@ -21,8 +20,9 @@ my-registry = { index = "https://my-intranet:8080/git/index" }
 ```
 
 The `index` key should be a URL to a git repository with the registry's index.
-Dependencies in a manifest can then refer to the name of the registry with the
-`registry` key to tell Cargo to fetch from that registry:
+A crate can then depend on a crate from another registry by specifying the
+`registry` key and a value of the registry's name in that dependency's entry
+in `Cargo.toml`:
 
 ```toml
 # Sample Cargo.toml
@@ -42,7 +42,8 @@ environment variable will accomplish the same thing as defining a config file:
 CARGO_REGISTRIES_MY_REGISTRY_INDEX=https://my-intranet:8080/git/index
 ```
 
-> Note: [crates.io] does not accept packages that use other registries.
+> Note: [crates.io] does not accept packages that depend on crates from other
+> registries.
 
 ### Publishing to an Alternate Registry
 
@@ -56,7 +57,7 @@ registry to use. For example, to publish the package in the current directory:
     This only needs to be done once. You must enter the secret API token
     retrieved from the registry's website. Alternatively the token may be
     passed directly to the `publish` command with the `--token` command-line
-    flag or and environment variable with the name of the registry such as
+    flag or an environment variable with the name of the registry such as
     `CARGO_REGISTRIES_MY_REGISTRY_TOKEN`.
 
 2. `cargo publish --registry=my-registry`
@@ -65,7 +66,7 @@ Instead of always passing the `--registry` command-line option, the default
 registry may be set in [`.cargo/config`][config] with the `registry.default`
 key.
 
-Setting the `package.publish` key in `Cargo.toml` manifest restricts which
+Setting the `package.publish` key in the `Cargo.toml` manifest restricts which
 registries the package is allowed to be published to. This is useful to
 prevent accidentally publishing a closed-source package to [crates.io]. The
 value may be a list of registry names, for example:
@@ -139,19 +140,27 @@ filename is the name of the package in lowercase. Each version of the package
 has a separate line in the file. The files are organized in a tier of
 directories:
 
-- Packages with 1 letter names are placed in a directory named `1`.
-- Packages with 2 letter names are placed in a directory named `2`.
-- Packages with 3 letter names are placed in the directory `3/{first-letter}`
-  where `{first-letter}` is the first letter of the package name.
+- Packages with 1 character names are placed in a directory named `1`.
+- Packages with 2 character names are placed in a directory named `2`.
+- Packages with 3 character names are placed in the directory
+  `3/{first-character}` where `{first-character}` is the first character of
+  the package name.
 - All other packages are stored in directories named
-  `{first-two}/{second-two}` where the top directory is the first two letters
-  of the package name, and the next subdirectory is the third and fourth
-  letters of the package name. For example, `cargo` would be stored in a file
-  named `ca/rg/cargo`.
+  `{first-two}/{second-two}` where the top directory is the first two
+  characters of the package name, and the next subdirectory is the third and
+  fourth characters of the package name. For example, `cargo` would be stored
+  in a file named `ca/rg/cargo`.
 
-> Note: Although the index filenames are in lowercase, the fields in
-> `Cargo.toml` manifests and the index JSON data are case-sensitive and may
-> contain upper and lower case characters.
+> Note: Although the index filenames are in lowercase, the fields that contain
+> package names in `Cargo.toml` and the index JSON data are case-sensitive and
+> may contain upper and lower case characters.
+
+Registries may want to consider enforcing limitations on package names added
+to their index. Cargo itself allows names with any [alphanumeric], `-`, or `_`
+character. For example, [crates.io] imposes relatively strict limitations,
+such as requiring it to be a valid Rust identifier, only allowing ASCII
+characters, under a specific length, and rejects reserved names such as
+Windows special filenames like "nul".
 
 Each line in a package file contains a JSON object that describes a published
 version of the package. The following is a pretty-printed example with comments
@@ -160,9 +169,11 @@ explaining the format of the entry.
 ```javascript
 {
     // The name of the package.
-    // This must contain alphanumeric, `-`, or `_` characters.
+    // This must only contain alphanumeric, `-`, or `_` characters.
     "name": "foo",
     // The version of the package this row is describing.
+    // This must be a valid version number according to the Semantic
+    // Versioning 2.0.0 spec at https://semver.org/.
     "vers": "0.1.0",
     // Array of direct dependencies of the package.
     "deps": [
@@ -173,6 +184,8 @@ explaining the format of the entry.
             // the `package` field.
             "name": "rand",
             // The semver requirement for this dependency.
+            // This must be a valid version requirement defined at
+            // https://github.com/steveklabnik/semver#requirements.
             "req": "^0.6",
             // Array of features (as strings) enabled for this dependency.
             "features": ["i128_support"],
@@ -217,13 +230,6 @@ explaining the format of the entry.
 
 The JSON objects should not be modified after they are added except for the
 `yanked` field whose value may change at any time.
-
-Registries may want to consider enforcing limitations on package names added
-to their index. Cargo itself allows names with any [alphanumeric], `-`, or `_`
-character. For example, [crates.io] imposes relatively strict limitations,
-such as requiring it to be a valid Rust identifier, only allowing ASCII
-characters, under a specific length, and rejects reserved names such as
-Windows special filenames like "nul".
 
 ### Web API
 
@@ -286,7 +292,7 @@ The body of the data sent by Cargo is:
 - 32-bit unsigned little-endian integer of the length of JSON data.
 - Metadata of the package as a JSON object.
 - 32-bit unsigned little-endian integer of the length of the `.crate` file.
-- The `.crate` fle.
+- The `.crate` file.
 
 The following is a commented example of the JSON object. Some notes of some
 restrictions imposed by [crates.io] are included only to illustrate some
@@ -526,7 +532,7 @@ A successful response includes the JSON object:
 
 #### Search
 
-- Endpoint: `/api/v1/crates/crates`
+- Endpoint: `/api/v1/crates`
 - Method: GET
 - Query Parameters:
     - `q`: The search query string.
