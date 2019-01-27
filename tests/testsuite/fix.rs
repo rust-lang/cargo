@@ -1263,8 +1263,14 @@ fn fix_to_broken_code() {
 fn fix_with_common() {
     let p = project()
         .file("src/lib.rs", "")
-        .file("tests/t1.rs", "mod common; #[test] fn t1() { common::try(); }")
-        .file("tests/t2.rs", "mod common; #[test] fn t2() { common::try(); }")
+        .file(
+            "tests/t1.rs",
+            "mod common; #[test] fn t1() { common::try(); }",
+        )
+        .file(
+            "tests/t2.rs",
+            "mod common; #[test] fn t2() { common::try(); }",
+        )
         .file("tests/common/mod.rs", "pub fn try() {}")
         .build();
 

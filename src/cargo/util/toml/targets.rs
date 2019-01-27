@@ -661,7 +661,7 @@ fn toml_targets_and_inferred(
 
             let autodiscover = match autodiscover {
                 Some(autodiscover) => autodiscover,
-                None =>
+                None => {
                     if edition == Edition::Edition2015 {
                         if !rem_targets.is_empty() {
                             let mut rem_targets_str = String::new();
@@ -696,6 +696,7 @@ https://github.com/rust-lang/cargo/issues/5330",
                     } else {
                         true
                     }
+                }
             };
 
             if autodiscover {

@@ -186,7 +186,6 @@ pub fn init() {
     "#
     ));
 
-
     // Init a new registry
     let _ = repo(&registry_path())
         .file(
