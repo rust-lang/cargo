@@ -484,8 +484,12 @@ A successful response includes the JSON object:
 - Method: PUT
 - Authorization: Included
 
-A PUT request will add a new owner to a crate. The request should include the
-following JSON object:
+A PUT request will send a request to the registry to add a new owner to a
+crate. It is up to the registry how to handle the request. For example,
+[crates.io] sends an invite to the user that they must accept before being
+added.
+
+The request should include the following JSON object:
 
 ```javascript
 {
