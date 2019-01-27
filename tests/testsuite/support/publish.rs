@@ -3,8 +3,8 @@ use std::fs::File;
 use std::io::{prelude::*, SeekFrom};
 use std::path::{Path, PathBuf};
 
-use crate::support::registry::{self, alt_api_path};
 use crate::support::find_json_mismatch;
+use crate::support::registry::{self, alt_api_path};
 
 use byteorder::{LittleEndian, ReadBytesExt};
 use flate2::read::GzDecoder;
