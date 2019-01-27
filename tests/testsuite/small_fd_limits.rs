@@ -73,7 +73,7 @@ fn run_test(path_env: Option<&OsStr>) {
     if let Some(path) = path_env {
         cmd.env("PATH", path);
     }
-    cmd.env("RUST_LOG", "trace");
+    cmd.env("CARGO_LOG", "trace");
     cmd.run();
     let after = find_index()
         .join(".git/objects/pack")

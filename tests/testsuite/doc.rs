@@ -132,7 +132,7 @@ fn doc_deps() {
     );
 
     p.cargo("doc")
-        .env("RUST_LOG", "cargo::ops::cargo_rustc::fingerprint")
+        .env("CARGO_LOG", "cargo::ops::cargo_rustc::fingerprint")
         .with_stdout("")
         .run();
 

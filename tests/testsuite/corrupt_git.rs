@@ -47,7 +47,7 @@ fn deleting_database_files() {
         }
         println!("deleting {}", file.display());
         cargopaths::remove_file(&file).unwrap();
-        project.cargo("build -v").env("RUST_LOG", log).run();
+        project.cargo("build -v").env("CARGO_LOG", log).run();
 
         if !file.exists() {
             continue;
@@ -60,7 +60,7 @@ fn deleting_database_files() {
             .unwrap()
             .set_len(2)
             .unwrap();
-        project.cargo("build -v").env("RUST_LOG", log).run();
+        project.cargo("build -v").env("CARGO_LOG", log).run();
     }
 }
 
@@ -124,7 +124,7 @@ fn deleting_checkout_files() {
         }
         println!("deleting {}", file.display());
         cargopaths::remove_file(&file).unwrap();
-        project.cargo("build -v").env("RUST_LOG", log).run();
+        project.cargo("build -v").env("CARGO_LOG", log).run();
 
         if !file.exists() {
             continue;
@@ -137,7 +137,7 @@ fn deleting_checkout_files() {
             .unwrap()
             .set_len(2)
             .unwrap();
-        project.cargo("build -v").env("RUST_LOG", log).run();
+        project.cargo("build -v").env("CARGO_LOG", log).run();
     }
 }
 

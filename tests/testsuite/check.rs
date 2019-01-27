@@ -726,7 +726,7 @@ fn proc_macro() {
             "#,
         )
         .build();
-    p.cargo("check -v").env("RUST_LOG", "cargo=trace").run();
+    p.cargo("check -v").env("CARGO_LOG", "cargo=trace").run();
 }
 
 #[test]

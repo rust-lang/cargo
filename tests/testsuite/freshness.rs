@@ -760,7 +760,7 @@ fn rebuild_if_build_artifacts_move_forward_in_time() {
     p.root().move_into_the_future();
 
     p.cargo("build")
-        .env("RUST_LOG", "")
+        .env("CARGO_LOG", "")
         .with_stdout("")
         .with_stderr(
             "\
