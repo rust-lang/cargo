@@ -151,21 +151,21 @@ $ cargo owner --remove github:rust-lang:owners
 
 The owner IDs given to these commands must be GitHub user names or GitHub teams.
 
-If a user name is given to `--add`, that user becomes a “named” owner, with
+If a user name is given to `--add`, that user is invited as a “named” owner, with
 full rights to the crate. In addition to being able to publish or yank versions
 of the crate, they have the ability to add or remove owners, *including* the
 owner that made *them* an owner. Needless to say, you shouldn’t make people you
 don’t fully trust into a named owner. In order to become a named owner, a user
 must have logged into [crates.io] previously.
 
-If a team name is given to `--add`, that team becomes a “team” owner, with
+If a team name is given to `--add`, that team is invited as a “team” owner, with
 restricted right to the crate. While they have permission to publish or yank
 versions of the crate, they *do not* have the ability to add or remove owners.
 In addition to being more convenient for managing groups of owners, teams are
 just a bit more secure against owners becoming malicious.
 
 The syntax for teams is currently `github:org:team` (see examples above).
-In order to add a team as an owner one must be a member of that team. No
+In order to invite a team as an owner one must be a member of that team. No
 such restriction applies to removing a team as an owner.
 
 ### GitHub permissions
