@@ -49,7 +49,9 @@ fn simple_git_ignore_exists() {
     // write a .gitignore file with one entry
     fs::create_dir_all(paths::root().join("foo")).unwrap();
     let mut ignore_file = File::create(paths::root().join("foo/.gitignore")).unwrap();
-    ignore_file.write("/target\n**/some.file".as_bytes()).unwrap();
+    ignore_file
+        .write("/target\n**/some.file".as_bytes())
+        .unwrap();
 
     cargo_process("init --lib foo --edition 2015")
         .env("USER", "foo")
@@ -70,14 +72,14 @@ fn simple_git_ignore_exists() {
     assert_eq!(
         contents,
         "/target\n\
-        **/some.file\n\n\
-        #Added by cargo\n\
-        #\n\
-        #already existing elements are commented out\n\
-        \n\
-        #/target\n\
-        **/*.rs.bk\n\
-        Cargo.lock",
+         **/some.file\n\n\
+         #Added by cargo\n\
+         #\n\
+         #already existing elements are commented out\n\
+         \n\
+         #/target\n\
+         **/*.rs.bk\n\
+         Cargo.lock",
     );
 
     cargo_process("build").cwd(&paths::root().join("foo")).run();

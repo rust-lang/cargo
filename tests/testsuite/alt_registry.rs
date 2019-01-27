@@ -1118,9 +1118,7 @@ fn unknown_registry() {
         .file("src/main.rs", "fn main() {}")
         .build();
 
-    Package::new("baz", "0.0.1")
-        .alternative(true)
-        .publish();
+    Package::new("baz", "0.0.1").alternative(true).publish();
     Package::new("bar", "0.0.1")
         .registry_dep("baz", "0.0.1")
         .publish();
@@ -1134,16 +1132,15 @@ fn unknown_registry() {
     config.insert(start + start_index, '#');
     fs::write(&cfg_path, config).unwrap();
 
-    p.cargo("build")
-        .masquerade_as_nightly_cargo()
-        .run();
+    p.cargo("build").masquerade_as_nightly_cargo().run();
 
     // Important parts:
     // foo -> bar registry = null
     // bar -> baz registry = alternate
     p.cargo("metadata --format-version=1")
         .masquerade_as_nightly_cargo()
-        .with_json(r#"
+        .with_json(
+            r#"
             {
               "packages": [
                 {
@@ -1244,6 +1241,7 @@ fn unknown_registry() {
               "version": 1,
               "workspace_root": "[..]/foo"
             }
-            "#)
+            "#,
+        )
         .run();
 }

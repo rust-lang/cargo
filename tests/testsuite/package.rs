@@ -1254,12 +1254,14 @@ fn package_with_select_features() {
             required = []
             optional = []
         "#,
-        ).file(
+        )
+        .file(
             "src/main.rs",
             "#[cfg(not(feature = \"required\"))]
              compile_error!(\"This crate requires `required` feature!\");
              fn main() {}",
-        ).build();
+        )
+        .build();
 
     p.cargo("package --features required")
         .masquerade_as_nightly_cargo()
@@ -1284,12 +1286,14 @@ fn package_with_all_features() {
             required = []
             optional = []
         "#,
-        ).file(
+        )
+        .file(
             "src/main.rs",
             "#[cfg(not(feature = \"required\"))]
              compile_error!(\"This crate requires `required` feature!\");
              fn main() {}",
-        ).build();
+        )
+        .build();
 
     p.cargo("package --all-features")
         .masquerade_as_nightly_cargo()
@@ -1314,12 +1318,14 @@ fn package_no_default_features() {
             default = ["required"]
             required = []
         "#,
-        ).file(
+        )
+        .file(
             "src/main.rs",
             "#[cfg(not(feature = \"required\"))]
              compile_error!(\"This crate requires `required` feature!\");
              fn main() {}",
-        ).build();
+        )
+        .build();
 
     p.cargo("package --no-default-features")
         .masquerade_as_nightly_cargo()
