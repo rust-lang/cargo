@@ -809,9 +809,7 @@ crate-type = ["dylib"] # could be `staticlib` as well
 ```
 
 The available options are `dylib`, `rlib`, `staticlib`, `cdylib`, and
-`proc-macro`. You should only use this option in a package. Cargo will always
-compile packages (dependencies) based on the requirements of the package that
-includes them.
+`proc-macro`.
 
 You can read more about the different crate types in the
 [Rust Reference Manual](https://doc.rust-lang.org/reference/linkage.html)
