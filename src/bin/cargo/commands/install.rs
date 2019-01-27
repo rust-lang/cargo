@@ -24,13 +24,6 @@ pub fn cli() -> App {
         ))
         .arg_jobs()
         .arg(opt("force", "Force overwriting existing crates or binaries").short("f"))
-        .arg(
-            opt(
-                "ensure",
-                "If you already have a suitable version, simply leaves it as-is.",
-            )
-            .short("e"),
-        )
         .arg_features()
         .arg(opt("debug", "Build in debug mode instead of release mode"))
         .arg_targets_bins_examples(
@@ -135,7 +128,6 @@ pub fn exec(config: &mut Config, args: &ArgMatches<'_>) -> CliResult {
             version,
             &compile_opts,
             args.is_present("force"),
-            args.is_present("ensure"),
         )?;
     }
     Ok(())

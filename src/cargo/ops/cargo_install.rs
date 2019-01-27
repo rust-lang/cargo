@@ -42,7 +42,6 @@ pub fn install(
     vers: Option<&str>,
     opts: &ops::CompileOptions<'_>,
     force: bool,
-    ensure: bool,
 ) -> CargoResult<()> {
     let root = resolve_root(root, opts.config)?;
     let map = SourceConfigMap::new(opts.config)?;
@@ -57,7 +56,6 @@ pub fn install(
             vers,
             opts,
             force,
-            ensure,
             true,
         )?;
         (true, false)
@@ -77,7 +75,6 @@ pub fn install(
                 vers,
                 opts,
                 force,
-                ensure,
                 first,
             ) {
                 Ok(()) => succeeded.push(krate),
@@ -140,7 +137,6 @@ fn install_one(
     vers: Option<&str>,
     opts: &ops::CompileOptions<'_>,
     force: bool,
-    ensure: bool,
     is_first_install: bool,
 ) -> CargoResult<()> {
     let config = opts.config;
@@ -252,7 +248,7 @@ fn install_one(
         let metadata = metadata(config, root)?;
         let list = read_crate_list(&metadata)?;
         let dst = metadata.parent().join("bin");
-        check_overwrites(&dst, pkg, &opts.filter, &list, force, ensure)?;
+        check_overwrites(&dst, pkg, &opts.filter, &list, force)?;
     }
 
     let exec: Arc<dyn Executor> = Arc::new(DefaultExecutor);
@@ -291,7 +287,7 @@ fn install_one(
     let metadata = metadata(config, root)?;
     let mut list = read_crate_list(&metadata)?;
     let dst = metadata.parent().join("bin");
-    let duplicates = check_overwrites(&dst, pkg, &opts.filter, &list, force, ensure)?;
+    let duplicates = check_overwrites(&dst, pkg, &opts.filter, &list, force)?;
 
     fs::create_dir_all(&dst)?;
 
@@ -415,7 +411,6 @@ fn check_overwrites(
     filter: &ops::CompileFilter,
     prev: &CrateListingV1,
     force: bool,
-    ensure: bool,
 ) -> CargoResult<BTreeMap<String, Option<PackageId>>> {
     // If explicit --bin or --example flags were passed then those'll
     // get checked during cargo_compile, we only care about the "build
@@ -431,28 +426,23 @@ fn check_overwrites(
 
     let msg = check_overwrites_format_error_message(&duplicates);
 
-    if ensure {
-        let is_installed_old = duplicates
-            .iter()
-            .filter(|(_, v)| v.is_some())
-            .all(|(_, v)| v.unwrap().version() < pkg.version());
+    let is_installed_old = duplicates
+        .iter()
+        .filter(|(_, v)| v.is_some())
+        .all(|(_, v)| v.unwrap().version() < pkg.version());
 
-        if is_installed_old {
-            return Ok(duplicates);
-        }
-
-        eprintln!("{}", msg);
-        std::process::exit(0)
+    if is_installed_old {
+        return Ok(duplicates);
     }
 
-    Err(failure::format_err!("{}", msg))
+    eprintln!("{}", msg);
+    std::process::exit(0)
 }
 
 fn check_overwrites_format_error_message(
     duplicates: &BTreeMap<String, Option<PackageId>>,
 ) -> String {
     let mut msg = String::new();
-
     for (bin, p) in duplicates.iter() {
         msg.push_str(&format!("binary `{}` already exists in destination", bin));
         if let Some(p) = p.as_ref() {
