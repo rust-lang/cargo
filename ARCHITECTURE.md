@@ -132,16 +132,16 @@ to nightly rustc).
 ## Logging
 
 Cargo uses [`env_logger`], so you can set
-`RUST_LOG` environment variable to get the logs. This is useful both for diagnosing
+`CARGO_LOG` environment variable to get the logs. This is useful both for diagnosing
 bugs in stable Cargo and for local development. Cargo also has internal hierarchical
 profiling infrastructure, which is activated via `CARGO_PROFILE` variable
 
 ```
 # Outputs all logs with levels debug and higher
-$ RUST_LOG=debug cargo generate-lockfile
+$ CARGO_LOG=debug cargo generate-lockfile
 
 # Don't forget that you can filter by module as well
-$ RUST_LOG=cargo::core::resolver=trace cargo generate-lockfile
+$ CARGO_LOG=cargo::core::resolver=trace cargo generate-lockfile
 
 # Output first three levels of profiling info
 $ CARGO_PROFILE=3 cargo generate-lockfile
