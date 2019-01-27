@@ -807,6 +807,30 @@ fn login_with_differently_sized_token() {
 }
 
 #[test]
+fn escaping_readme_file() {
+    registry::init();
+    let p = project()
+        .file(
+            "Cargo.toml",
+            r#"
+            [project]
+            name = "foo"
+            version = "0.0.1"
+            readme = "../README.md"
+        "#,
+        )
+        .file("src/main.rs", "fn main() {}")
+        .build();
+    fs::write(paths::root().join("README.md"), "I iz readme").unwrap();
+    p.cargo("publish -v --index")
+        .arg(registry_url().to_string())
+        .with_status(101)
+        .with_stderr_contains("[ERROR] Readme path ../README.md escapes the crate's root [CWD]")
+        .stream()
+        .run();
+}
+
+#[test]
 fn bad_license_file() {
     Package::new("foo", "1.0.0").publish();
     let p = project()

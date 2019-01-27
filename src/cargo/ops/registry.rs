@@ -73,7 +73,7 @@ pub fn publish(ws: &Workspace<'_>, opts: &PublishOpts<'_>) -> CargoResult<()> {
     )?;
     verify_dependencies(pkg, &registry, reg_id)?;
 
-    // Prepare a tarball, with a non-surpressable warning if metadata
+    // Prepare a tarball, with a non-suppressible warning if metadata
     // is missing since this is being put online.
     let tarball = ops::package(
         ws,
@@ -219,10 +219,22 @@ fn transmit(
         ref badges,
         ref links,
     } = *manifest.metadata();
+
     let readme_content = match *readme {
-        Some(ref readme) => Some(paths::read(&pkg.root().join(readme))?),
+        Some(ref readme) => {
+            let readme_path = pkg.root().join(readme);
+            use failure::bail; // WORKAROUND https://github.com/rust-lang-nursery/failure/issues/299
+            failure::ensure!(
+                std::fs::canonicalize(&readme_path)?.strip_prefix(pkg.root()).is_ok(),
+                "Readme path {} escapes the crate's root {}",
+                readme,
+                pkg.root().display(),
+            );
+            Some(paths::read(&readme_path)?)
+        },
         None => None,
     };
+
     if let Some(ref file) = *license_file {
         if fs::metadata(&pkg.root().join(file)).is_err() {
             failure::bail!("the license file `{}` does not exist", file)
