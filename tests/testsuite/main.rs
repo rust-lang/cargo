@@ -1,28 +1,7 @@
-#![deny(warnings)]
-#![cfg_attr(feature = "cargo-clippy", allow(blacklisted_name))]
-#![cfg_attr(feature = "cargo-clippy", allow(explicit_iter_loop))]
-
-extern crate bufstream;
-extern crate cargo;
-extern crate filetime;
-extern crate flate2;
-extern crate git2;
-extern crate glob;
-extern crate hex;
-#[macro_use]
-extern crate lazy_static;
-extern crate libc;
-#[macro_use]
-extern crate proptest;
-#[macro_use]
-extern crate serde_derive;
-#[macro_use]
-extern crate serde_json;
-extern crate tar;
-extern crate toml;
-extern crate url;
-#[cfg(windows)]
-extern crate winapi;
+#![warn(rust_2018_idioms)] // while we're getting used to 2018
+#![cfg_attr(feature = "deny-warnings", deny(warnings))]
+#![allow(clippy::blacklisted_name)]
+#![allow(clippy::explicit_iter_loop)]
 
 #[macro_use]
 mod support;
@@ -43,6 +22,7 @@ mod cargo_features;
 mod cfg;
 mod check;
 mod clean;
+mod collisions;
 mod concurrent;
 mod config;
 mod corrupt_git;
@@ -63,6 +43,7 @@ mod git;
 mod init;
 mod install;
 mod jobserver;
+mod list_targets;
 mod local_registry;
 mod lockfile_compat;
 mod login;

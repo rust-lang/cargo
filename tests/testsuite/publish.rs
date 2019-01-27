@@ -1,16 +1,77 @@
 use std::fs::{self, File};
 use std::io::prelude::*;
-use std::io::SeekFrom;
 
-use flate2::read::GzDecoder;
-use support::git::repo;
-use support::paths;
-use support::{basic_manifest, project, publish};
-use tar::Archive;
+use crate::support::git::repo;
+use crate::support::paths;
+use crate::support::registry::{self, registry_path, registry_url, Package};
+use crate::support::{basic_manifest, project, publish};
+
+const CLEAN_FOO_JSON: &str = r#"
+    {
+        "authors": [],
+        "badges": {},
+        "categories": [],
+        "deps": [],
+        "description": "foo",
+        "documentation": "foo",
+        "features": {},
+        "homepage": "foo",
+        "keywords": [],
+        "license": "MIT",
+        "license_file": null,
+        "links": null,
+        "name": "foo",
+        "readme": null,
+        "readme_file": null,
+        "repository": "foo",
+        "vers": "0.0.1"
+    }
+"#;
+
+fn validate_upload_foo() {
+    publish::validate_upload(
+        r#"
+        {
+          "authors": [],
+          "badges": {},
+          "categories": [],
+          "deps": [],
+          "description": "foo",
+          "documentation": null,
+          "features": {},
+          "homepage": null,
+          "keywords": [],
+          "license": "MIT",
+          "license_file": null,
+          "links": null,
+          "name": "foo",
+          "readme": null,
+          "readme_file": null,
+          "repository": null,
+          "vers": "0.0.1"
+          }
+        "#,
+        "foo-0.0.1.crate",
+        &["Cargo.toml", "Cargo.toml.orig", "src/main.rs"],
+    );
+}
+
+fn validate_upload_foo_clean() {
+    publish::validate_upload(
+        CLEAN_FOO_JSON,
+        "foo-0.0.1.crate",
+        &[
+            "Cargo.toml",
+            "Cargo.toml.orig",
+            "src/main.rs",
+            ".cargo_vcs_info.json",
+        ],
+    );
+}
 
 #[test]
 fn simple() {
-    publish::setup();
+    registry::init();
 
     let p = project()
         .file(
@@ -23,11 +84,12 @@ fn simple() {
             license = "MIT"
             description = "foo"
         "#,
-        ).file("src/main.rs", "fn main() {}")
+        )
+        .file("src/main.rs", "fn main() {}")
         .build();
 
     p.cargo("publish --no-verify --index")
-        .arg(publish::registry().to_string())
+        .arg(registry_url().to_string())
         .with_stderr(&format!(
             "\
 [UPDATING] `{reg}` index
@@ -36,54 +98,18 @@ See [..]
 [PACKAGING] foo v0.0.1 ([CWD])
 [UPLOADING] foo v0.0.1 ([CWD])
 ",
-            reg = publish::registry_path().to_str().unwrap()
-        )).run();
+            reg = registry::registry_path().to_str().unwrap()
+        ))
+        .run();
 
-    let mut f = File::open(&publish::upload_path().join("api/v1/crates/new")).unwrap();
-    // Skip the metadata payload and the size of the tarball
-    let mut sz = [0; 4];
-    assert_eq!(f.read(&mut sz).unwrap(), 4);
-    let sz = (u32::from(sz[0]) << 0)
-        | (u32::from(sz[1]) << 8)
-        | (u32::from(sz[2]) << 16)
-        | (u32::from(sz[3]) << 24);
-    f.seek(SeekFrom::Current(i64::from(sz) + 4)).unwrap();
-
-    // Verify the tarball
-    let mut rdr = GzDecoder::new(f);
-    assert_eq!(
-        rdr.header().unwrap().filename().unwrap(),
-        b"foo-0.0.1.crate"
-    );
-    let mut contents = Vec::new();
-    rdr.read_to_end(&mut contents).unwrap();
-    let mut ar = Archive::new(&contents[..]);
-    for file in ar.entries().unwrap() {
-        let file = file.unwrap();
-        let fname = file.header().path_bytes();
-        let fname = &*fname;
-        assert!(
-            fname == b"foo-0.0.1/Cargo.toml"
-                || fname == b"foo-0.0.1/Cargo.toml.orig"
-                || fname == b"foo-0.0.1/src/main.rs",
-            "unexpected filename: {:?}",
-            file.header().path()
-        );
-    }
+    validate_upload_foo();
 }
 
 #[test]
 fn old_token_location() {
-    publish::setup();
-
-    // publish::setup puts a token in this file.
-    fs::remove_file(paths::root().join(".cargo/config")).unwrap();
-
-    let credentials = paths::root().join("home/.cargo/credentials");
-    File::create(credentials)
-        .unwrap()
-        .write_all(br#"token = "api-token""#)
-        .unwrap();
+    // Check that the `token` key works at the root instead of under a
+    // `[registry]` table.
+    registry::init();
 
     let p = project()
         .file(
@@ -96,11 +122,27 @@ fn old_token_location() {
             license = "MIT"
             description = "foo"
         "#,
-        ).file("src/main.rs", "fn main() {}")
+        )
+        .file("src/main.rs", "fn main() {}")
         .build();
 
+    let credentials = paths::home().join(".cargo/credentials");
+    fs::remove_file(&credentials).unwrap();
+
+    // Verify can't publish without a token.
     p.cargo("publish --no-verify --index")
-        .arg(publish::registry().to_string())
+        .arg(registry_url().to_string())
+        .with_status(101)
+        .with_stderr_contains("[ERROR] no upload token found, please run `cargo login`")
+        .run();
+
+    File::create(&credentials)
+        .unwrap()
+        .write_all(br#"token = "api-token""#)
+        .unwrap();
+
+    p.cargo("publish --no-verify --index")
+        .arg(registry_url().to_string())
         .with_stderr(&format!(
             "\
 [UPDATING] `{reg}` index
@@ -109,47 +151,18 @@ See [..]
 [PACKAGING] foo v0.0.1 ([CWD])
 [UPLOADING] foo v0.0.1 ([CWD])
 ",
-            reg = publish::registry_path().to_str().unwrap()
-        )).run();
+            reg = registry_path().to_str().unwrap()
+        ))
+        .run();
 
-    let mut f = File::open(&publish::upload_path().join("api/v1/crates/new")).unwrap();
-    // Skip the metadata payload and the size of the tarball
-    let mut sz = [0; 4];
-    assert_eq!(f.read(&mut sz).unwrap(), 4);
-    let sz = (u32::from(sz[0]) << 0)
-        | (u32::from(sz[1]) << 8)
-        | (u32::from(sz[2]) << 16)
-        | (u32::from(sz[3]) << 24);
-    f.seek(SeekFrom::Current(i64::from(sz) + 4)).unwrap();
-
-    // Verify the tarball
-    let mut rdr = GzDecoder::new(f);
-    assert_eq!(
-        rdr.header().unwrap().filename().unwrap(),
-        b"foo-0.0.1.crate"
-    );
-    let mut contents = Vec::new();
-    rdr.read_to_end(&mut contents).unwrap();
-    let mut ar = Archive::new(&contents[..]);
-    for file in ar.entries().unwrap() {
-        let file = file.unwrap();
-        let fname = file.header().path_bytes();
-        let fname = &*fname;
-        assert!(
-            fname == b"foo-0.0.1/Cargo.toml"
-                || fname == b"foo-0.0.1/Cargo.toml.orig"
-                || fname == b"foo-0.0.1/src/main.rs",
-            "unexpected filename: {:?}",
-            file.header().path()
-        );
-    }
+    validate_upload_foo();
 }
 
 // TODO: Deprecated
 // remove once it has been decided --host can be removed
 #[test]
 fn simple_with_host() {
-    publish::setup();
+    registry::init();
 
     let p = project()
         .file(
@@ -162,11 +175,12 @@ fn simple_with_host() {
             license = "MIT"
             description = "foo"
         "#,
-        ).file("src/main.rs", "fn main() {}")
+        )
+        .file("src/main.rs", "fn main() {}")
         .build();
 
     p.cargo("publish --no-verify --host")
-        .arg(publish::registry().to_string())
+        .arg(registry_url().to_string())
         .with_stderr(&format!(
             "\
 [WARNING] The flag '--host' is no longer valid.
@@ -184,47 +198,18 @@ See [..]
 [PACKAGING] foo v0.0.1 ([CWD])
 [UPLOADING] foo v0.0.1 ([CWD])
 ",
-            reg = publish::registry_path().to_str().unwrap()
-        )).run();
+            reg = registry_path().to_str().unwrap()
+        ))
+        .run();
 
-    let mut f = File::open(&publish::upload_path().join("api/v1/crates/new")).unwrap();
-    // Skip the metadata payload and the size of the tarball
-    let mut sz = [0; 4];
-    assert_eq!(f.read(&mut sz).unwrap(), 4);
-    let sz = (u32::from(sz[0]) << 0)
-        | (u32::from(sz[1]) << 8)
-        | (u32::from(sz[2]) << 16)
-        | (u32::from(sz[3]) << 24);
-    f.seek(SeekFrom::Current(i64::from(sz) + 4)).unwrap();
-
-    // Verify the tarball
-    let mut rdr = GzDecoder::new(f);
-    assert_eq!(
-        rdr.header().unwrap().filename().unwrap(),
-        b"foo-0.0.1.crate"
-    );
-    let mut contents = Vec::new();
-    rdr.read_to_end(&mut contents).unwrap();
-    let mut ar = Archive::new(&contents[..]);
-    for file in ar.entries().unwrap() {
-        let file = file.unwrap();
-        let fname = file.header().path_bytes();
-        let fname = &*fname;
-        assert!(
-            fname == b"foo-0.0.1/Cargo.toml"
-                || fname == b"foo-0.0.1/Cargo.toml.orig"
-                || fname == b"foo-0.0.1/src/main.rs",
-            "unexpected filename: {:?}",
-            file.header().path()
-        );
-    }
+    validate_upload_foo();
 }
 
 // TODO: Deprecated
 // remove once it has been decided --host can be removed
 #[test]
 fn simple_with_index_and_host() {
-    publish::setup();
+    registry::init();
 
     let p = project()
         .file(
@@ -237,13 +222,14 @@ fn simple_with_index_and_host() {
             license = "MIT"
             description = "foo"
         "#,
-        ).file("src/main.rs", "fn main() {}")
+        )
+        .file("src/main.rs", "fn main() {}")
         .build();
 
     p.cargo("publish --no-verify --index")
-        .arg(publish::registry().to_string())
+        .arg(registry_url().to_string())
         .arg("--host")
-        .arg(publish::registry().to_string())
+        .arg(registry_url().to_string())
         .with_stderr(&format!(
             "\
 [WARNING] The flag '--host' is no longer valid.
@@ -261,45 +247,16 @@ See [..]
 [PACKAGING] foo v0.0.1 ([CWD])
 [UPLOADING] foo v0.0.1 ([CWD])
 ",
-            reg = publish::registry_path().to_str().unwrap()
-        )).run();
+            reg = registry_path().to_str().unwrap()
+        ))
+        .run();
 
-    let mut f = File::open(&publish::upload_path().join("api/v1/crates/new")).unwrap();
-    // Skip the metadata payload and the size of the tarball
-    let mut sz = [0; 4];
-    assert_eq!(f.read(&mut sz).unwrap(), 4);
-    let sz = (u32::from(sz[0]) << 0)
-        | (u32::from(sz[1]) << 8)
-        | (u32::from(sz[2]) << 16)
-        | (u32::from(sz[3]) << 24);
-    f.seek(SeekFrom::Current(i64::from(sz) + 4)).unwrap();
-
-    // Verify the tarball
-    let mut rdr = GzDecoder::new(f);
-    assert_eq!(
-        rdr.header().unwrap().filename().unwrap(),
-        b"foo-0.0.1.crate"
-    );
-    let mut contents = Vec::new();
-    rdr.read_to_end(&mut contents).unwrap();
-    let mut ar = Archive::new(&contents[..]);
-    for file in ar.entries().unwrap() {
-        let file = file.unwrap();
-        let fname = file.header().path_bytes();
-        let fname = &*fname;
-        assert!(
-            fname == b"foo-0.0.1/Cargo.toml"
-                || fname == b"foo-0.0.1/Cargo.toml.orig"
-                || fname == b"foo-0.0.1/src/main.rs",
-            "unexpected filename: {:?}",
-            file.header().path()
-        );
-    }
+    validate_upload_foo();
 }
 
 #[test]
 fn git_deps() {
-    publish::setup();
+    registry::init();
 
     let p = project()
         .file(
@@ -315,27 +272,29 @@ fn git_deps() {
             [dependencies.foo]
             git = "git://path/to/nowhere"
         "#,
-        ).file("src/main.rs", "fn main() {}")
+        )
+        .file("src/main.rs", "fn main() {}")
         .build();
 
     p.cargo("publish -v --no-verify --index")
-        .arg(publish::registry().to_string())
+        .arg(registry_url().to_string())
         .with_status(101)
         .with_stderr(
             "\
 [UPDATING] [..] index
-[ERROR] crates cannot be published to crates.io with dependencies sourced from \
-a repository\neither publish `foo` as its own crate on crates.io and \
-specify a crates.io version as a dependency or pull it into this \
+[ERROR] crates cannot be published with dependencies sourced from \
+a repository\neither publish `foo` as its own crate and \
+specify a version as a dependency or pull it into this \
 repository and specify it with a path and version\n\
 (crate `foo` has repository path `git://path/to/nowhere`)\
 ",
-        ).run();
+        )
+        .run();
 }
 
 #[test]
 fn path_dependency_no_version() {
-    publish::setup();
+    registry::init();
 
     let p = project()
         .file(
@@ -351,13 +310,14 @@ fn path_dependency_no_version() {
             [dependencies.bar]
             path = "bar"
         "#,
-        ).file("src/main.rs", "fn main() {}")
+        )
+        .file("src/main.rs", "fn main() {}")
         .file("bar/Cargo.toml", &basic_manifest("bar", "0.0.1"))
         .file("bar/src/lib.rs", "")
         .build();
 
     p.cargo("publish --index")
-        .arg(publish::registry().to_string())
+        .arg(registry_url().to_string())
         .with_status(101)
         .with_stderr(
             "\
@@ -365,12 +325,13 @@ fn path_dependency_no_version() {
 [ERROR] all path dependencies must have a version specified when publishing.
 dependency `bar` does not specify a version
 ",
-        ).run();
+        )
+        .run();
 }
 
 #[test]
 fn unpublishable_crate() {
-    publish::setup();
+    registry::init();
 
     let p = project()
         .file(
@@ -384,23 +345,25 @@ fn unpublishable_crate() {
             description = "foo"
             publish = false
         "#,
-        ).file("src/main.rs", "fn main() {}")
+        )
+        .file("src/main.rs", "fn main() {}")
         .build();
 
     p.cargo("publish --index")
-        .arg(publish::registry().to_string())
+        .arg(registry_url().to_string())
         .with_status(101)
         .with_stderr(
             "\
 [ERROR] some crates cannot be published.
 `foo` is marked as unpublishable
 ",
-        ).run();
+        )
+        .run();
 }
 
 #[test]
 fn dont_publish_dirty() {
-    publish::setup();
+    registry::init();
     let p = project().file("bar", "").build();
 
     let _ = repo(&paths::root().join("foo"))
@@ -417,11 +380,12 @@ fn dont_publish_dirty() {
             homepage = "foo"
             repository = "foo"
         "#,
-        ).file("src/main.rs", "fn main() {}")
+        )
+        .file("src/main.rs", "fn main() {}")
         .build();
 
     p.cargo("publish --index")
-        .arg(publish::registry().to_string())
+        .arg(registry_url().to_string())
         .with_status(101)
         .with_stderr(
             "\
@@ -433,12 +397,13 @@ bar
 
 to proceed despite this, pass the `--allow-dirty` flag
 ",
-        ).run();
+        )
+        .run();
 }
 
 #[test]
 fn publish_clean() {
-    publish::setup();
+    registry::init();
 
     let p = project().build();
 
@@ -456,17 +421,20 @@ fn publish_clean() {
             homepage = "foo"
             repository = "foo"
         "#,
-        ).file("src/main.rs", "fn main() {}")
+        )
+        .file("src/main.rs", "fn main() {}")
         .build();
 
     p.cargo("publish --index")
-        .arg(publish::registry().to_string())
+        .arg(registry_url().to_string())
         .run();
+
+    validate_upload_foo_clean();
 }
 
 #[test]
 fn publish_in_sub_repo() {
-    publish::setup();
+    registry::init();
 
     let p = project().no_manifest().file("baz", "").build();
 
@@ -484,19 +452,22 @@ fn publish_in_sub_repo() {
             homepage = "foo"
             repository = "foo"
         "#,
-        ).file("bar/src/main.rs", "fn main() {}")
+        )
+        .file("bar/src/main.rs", "fn main() {}")
         .build();
 
     p.cargo("publish")
         .cwd(p.root().join("bar"))
         .arg("--index")
-        .arg(publish::registry().to_string())
+        .arg(registry_url().to_string())
         .run();
+
+    validate_upload_foo_clean();
 }
 
 #[test]
 fn publish_when_ignored() {
-    publish::setup();
+    registry::init();
 
     let p = project().file("baz", "").build();
 
@@ -514,18 +485,31 @@ fn publish_when_ignored() {
             homepage = "foo"
             repository = "foo"
         "#,
-        ).file("src/main.rs", "fn main() {}")
+        )
+        .file("src/main.rs", "fn main() {}")
         .file(".gitignore", "baz")
         .build();
 
     p.cargo("publish --index")
-        .arg(publish::registry().to_string())
+        .arg(registry_url().to_string())
         .run();
+
+    publish::validate_upload(
+        CLEAN_FOO_JSON,
+        "foo-0.0.1.crate",
+        &[
+            "Cargo.toml",
+            "Cargo.toml.orig",
+            "src/main.rs",
+            ".gitignore",
+            ".cargo_vcs_info.json",
+        ],
+    );
 }
 
 #[test]
 fn ignore_when_crate_ignored() {
-    publish::setup();
+    registry::init();
 
     let p = project().no_manifest().file("bar/baz", "").build();
 
@@ -544,17 +528,24 @@ fn ignore_when_crate_ignored() {
             homepage = "foo"
             repository = "foo"
         "#,
-        ).nocommit_file("bar/src/main.rs", "fn main() {}");
+        )
+        .nocommit_file("bar/src/main.rs", "fn main() {}");
     p.cargo("publish")
         .cwd(p.root().join("bar"))
         .arg("--index")
-        .arg(publish::registry().to_string())
+        .arg(registry_url().to_string())
         .run();
+
+    publish::validate_upload(
+        CLEAN_FOO_JSON,
+        "foo-0.0.1.crate",
+        &["Cargo.toml", "Cargo.toml.orig", "src/main.rs", "baz"],
+    );
 }
 
 #[test]
 fn new_crate_rejected() {
-    publish::setup();
+    registry::init();
 
     let p = project().file("baz", "").build();
 
@@ -572,16 +563,21 @@ fn new_crate_rejected() {
             homepage = "foo"
             repository = "foo"
         "#,
-        ).nocommit_file("src/main.rs", "fn main() {}");
+        )
+        .nocommit_file("src/main.rs", "fn main() {}");
     p.cargo("publish --index")
-        .arg(publish::registry().to_string())
+        .arg(registry_url().to_string())
         .with_status(101)
+        .with_stderr_contains(
+            "[ERROR] 3 files in the working directory contain \
+             changes that were not yet committed into git:",
+        )
         .run();
 }
 
 #[test]
 fn dry_run() {
-    publish::setup();
+    registry::init();
 
     let p = project()
         .file(
@@ -594,11 +590,12 @@ fn dry_run() {
             license = "MIT"
             description = "foo"
         "#,
-        ).file("src/main.rs", "fn main() {}")
+        )
+        .file("src/main.rs", "fn main() {}")
         .build();
 
     p.cargo("publish --dry-run --index")
-        .arg(publish::registry().to_string())
+        .arg(registry_url().to_string())
         .with_stderr(
             "\
 [UPDATING] `[..]` index
@@ -611,15 +608,17 @@ See [..]
 [UPLOADING] foo v0.0.1 ([CWD])
 [WARNING] aborting upload due to dry run
 ",
-        ).run();
+        )
+        .run();
 
     // Ensure the API request wasn't actually made
-    assert!(!publish::upload_path().join("api/v1/crates/new").exists());
+    assert!(registry::api_path().join("api/v1/crates").exists());
+    assert!(!registry::api_path().join("api/v1/crates/new").exists());
 }
 
 #[test]
 fn block_publish_feature_not_enabled() {
-    publish::setup();
+    registry::init();
 
     let p = project()
         .file(
@@ -635,7 +634,8 @@ fn block_publish_feature_not_enabled() {
                 "test"
             ]
         "#,
-        ).file("src/main.rs", "fn main() {}")
+        )
+        .file("src/main.rs", "fn main() {}")
         .build();
 
     p.cargo("publish --registry alternative -Zunstable-options")
@@ -653,12 +653,13 @@ Caused by:
 
 consider adding `cargo-features = [\"alternative-registries\"]` to the manifest
 ",
-        ).run();
+        )
+        .run();
 }
 
 #[test]
 fn registry_not_in_publish_list() {
-    publish::setup();
+    registry::init();
 
     let p = project()
         .file(
@@ -676,7 +677,8 @@ fn registry_not_in_publish_list() {
                 "test"
             ]
         "#,
-        ).file("src/main.rs", "fn main() {}")
+        )
+        .file("src/main.rs", "fn main() {}")
         .build();
 
     p.cargo("publish")
@@ -690,12 +692,13 @@ fn registry_not_in_publish_list() {
 [ERROR] some crates cannot be published.
 `foo` is marked as unpublishable
 ",
-        ).run();
+        )
+        .run();
 }
 
 #[test]
 fn publish_empty_list() {
-    publish::setup();
+    registry::init();
 
     let p = project()
         .file(
@@ -711,7 +714,8 @@ fn publish_empty_list() {
             description = "foo"
             publish = []
         "#,
-        ).file("src/main.rs", "fn main() {}")
+        )
+        .file("src/main.rs", "fn main() {}")
         .build();
 
     p.cargo("publish --registry alternative -Zunstable-options")
@@ -722,12 +726,13 @@ fn publish_empty_list() {
 [ERROR] some crates cannot be published.
 `foo` is marked as unpublishable
 ",
-        ).run();
+        )
+        .run();
 }
 
 #[test]
 fn publish_allowed_registry() {
-    publish::setup();
+    registry::init();
 
     let p = project().build();
 
@@ -745,19 +750,32 @@ fn publish_allowed_registry() {
             description = "foo"
             documentation = "foo"
             homepage = "foo"
+            repository = "foo"
             publish = ["alternative"]
         "#,
-        ).file("src/main.rs", "fn main() {}")
+        )
+        .file("src/main.rs", "fn main() {}")
         .build();
 
     p.cargo("publish --registry alternative -Zunstable-options")
         .masquerade_as_nightly_cargo()
         .run();
+
+    publish::validate_alt_upload(
+        CLEAN_FOO_JSON,
+        "foo-0.0.1.crate",
+        &[
+            "Cargo.toml",
+            "Cargo.toml.orig",
+            "src/main.rs",
+            ".cargo_vcs_info.json",
+        ],
+    );
 }
 
 #[test]
 fn block_publish_no_registry() {
-    publish::setup();
+    registry::init();
 
     let p = project()
         .file(
@@ -773,7 +791,8 @@ fn block_publish_no_registry() {
             description = "foo"
             publish = []
         "#,
-        ).file("src/main.rs", "fn main() {}")
+        )
+        .file("src/main.rs", "fn main() {}")
         .build();
 
     p.cargo("publish --registry alternative -Zunstable-options")
@@ -784,5 +803,144 @@ fn block_publish_no_registry() {
 [ERROR] some crates cannot be published.
 `foo` is marked as unpublishable
 ",
-        ).run();
+        )
+        .run();
+}
+
+#[test]
+fn publish_with_select_features() {
+    registry::init();
+
+    let p = project()
+        .file(
+            "Cargo.toml",
+            r#"
+            [project]
+            name = "foo"
+            version = "0.0.1"
+            authors = []
+            license = "MIT"
+            description = "foo"
+
+            [features]
+            required = []
+            optional = []
+        "#,
+        )
+        .file(
+            "src/main.rs",
+            "#[cfg(not(feature = \"required\"))]
+             compile_error!(\"This crate requires `required` feature!\");
+             fn main() {}",
+        )
+        .build();
+
+    p.cargo("publish --features required --index")
+        .arg(registry_url().to_string())
+        .with_stderr_contains("[UPLOADING] foo v0.0.1 ([CWD])")
+        .run();
+}
+
+#[test]
+fn publish_with_all_features() {
+    registry::init();
+
+    let p = project()
+        .file(
+            "Cargo.toml",
+            r#"
+            [project]
+            name = "foo"
+            version = "0.0.1"
+            authors = []
+            license = "MIT"
+            description = "foo"
+
+            [features]
+            required = []
+            optional = []
+        "#,
+        )
+        .file(
+            "src/main.rs",
+            "#[cfg(not(feature = \"required\"))]
+             compile_error!(\"This crate requires `required` feature!\");
+             fn main() {}",
+        )
+        .build();
+
+    p.cargo("publish --all-features --index")
+        .arg(registry_url().to_string())
+        .with_stderr_contains("[UPLOADING] foo v0.0.1 ([CWD])")
+        .run();
+}
+
+#[test]
+fn publish_with_no_default_features() {
+    registry::init();
+
+    let p = project()
+        .file(
+            "Cargo.toml",
+            r#"
+            [project]
+            name = "foo"
+            version = "0.0.1"
+            authors = []
+            license = "MIT"
+            description = "foo"
+
+            [features]
+            default = ["required"]
+            required = []
+        "#,
+        )
+        .file(
+            "src/main.rs",
+            "#[cfg(not(feature = \"required\"))]
+             compile_error!(\"This crate requires `required` feature!\");
+             fn main() {}",
+        )
+        .build();
+
+    p.cargo("publish --no-default-features --index")
+        .arg(registry_url().to_string())
+        .with_stderr_contains("error: This crate requires `required` feature!")
+        .with_status(101)
+        .run();
+}
+
+#[test]
+fn publish_with_patch() {
+    Package::new("bar", "1.0.0").publish();
+
+    let p = project()
+        .file(
+            "Cargo.toml",
+            r#"
+            [project]
+            name = "foo"
+            version = "0.0.1"
+            authors = []
+            license = "MIT"
+            description = "foo"
+            [dependencies]
+            bar = "1.0"
+            [patch.crates-io]
+            bar = { path = "bar" }
+        "#,
+        )
+        .file("src/main.rs", "extern crate bar; fn main() {}")
+        .file("bar/Cargo.toml", &basic_manifest("bar", "1.0.0"))
+        .file("bar/src/lib.rs", "")
+        .build();
+
+    // Check that it works with the patched crate.
+    p.cargo("build").run();
+
+    p.cargo("publish --index")
+        .arg(registry_url().to_string())
+        .with_status(101)
+        .with_stderr_contains("[ERROR] published crates cannot contain [patch] sections")
+        .run();
 }

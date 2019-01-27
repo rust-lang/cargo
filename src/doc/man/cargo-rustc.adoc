@@ -1,0 +1,94 @@
+= cargo-rustc(1)
+:idprefix: cargo_rustc_
+:doctype: manpage
+:actionverb: Build
+
+== NAME
+
+cargo-rustc - Compile the current package, and pass extra options to the compiler
+
+== SYNOPSIS
+
+`cargo rustc [_OPTIONS_] [-- _ARGS_]`
+
+== DESCRIPTION
+
+The specified target for the current package (or package specified by `-p` if
+provided) will be compiled along with all of its dependencies. The specified
+_ARGS_ will all be passed to the final compiler invocation, not any of the
+dependencies. Note that the compiler will still unconditionally receive
+arguments such as `-L`, `--extern`, and `--crate-type`, and the specified
+_ARGS_ will simply be added to the compiler invocation.
+
+See https://doc.rust-lang.org/rustc/index.html for documentation on rustc
+flags.
+
+include::description-one-target.adoc[]
+To pass flags to all compiler processes spawned by Cargo, use the `RUSTFLAGS`
+environment variable or the `build.rustflags`
+linkcargo:reference/config.html[config value].
+
+== OPTIONS
+
+=== Package Selection
+
+include::options-package.adoc[]
+
+=== Target Selection
+
+When no target selection options are given, `cargo rustc` will build all
+binary and library targets of the selected package.
+
+include::options-targets.adoc[]
+
+include::options-features.adoc[]
+
+=== Compilation Options
+
+include::options-target-triple.adoc[]
+
+include::options-release.adoc[]
+
+=== Output Options
+
+include::options-target-dir.adoc[]
+
+=== Display Options
+
+include::options-display.adoc[]
+
+include::options-message-format.adoc[]
+
+=== Manifest Options
+
+include::options-manifest-path.adoc[]
+
+include::options-locked.adoc[]
+
+=== Common Options
+
+include::options-common.adoc[]
+
+=== Miscellaneous Options
+
+include::options-jobs.adoc[]
+
+include::section-profiles.adoc[]
+
+include::section-environment.adoc[]
+
+include::section-exit-status.adoc[]
+
+== EXAMPLES
+
+. Check if your package (not including dependencies) uses unsafe code:
+
+    cargo rustc --lib -- -D unsafe-code
+
+. Try an experimental flag on the nightly compiler, such as this which prints
+  the size of every type:
+
+    cargo rustc --lib -- -Z print-type-sizes
+
+== SEE ALSO
+man:cargo[1], man:cargo-build[1], man:rustc[1]

@@ -1,7 +1,7 @@
 use std::env;
 
-use support::registry::Package;
-use support::{basic_bin_manifest, basic_manifest, git, main_file, project};
+use crate::support::registry::Package;
+use crate::support::{basic_bin_manifest, basic_manifest, git, main_file, project};
 
 #[test]
 fn cargo_clean_simple() {
@@ -54,7 +54,8 @@ fn clean_multiple_packages() {
             [[bin]]
                 name = "foo"
         "#,
-        ).file("src/foo.rs", &main_file(r#""i am foo""#, &[]))
+        )
+        .file("src/foo.rs", &main_file(r#""i am foo""#, &[]))
         .file("d1/Cargo.toml", &basic_bin_manifest("d1"))
         .file("d1/src/main.rs", "fn main() { println!(\"d1\"); }")
         .file("d2/Cargo.toml", &basic_bin_manifest("d2"))
@@ -99,7 +100,8 @@ fn clean_release() {
             [dependencies]
             a = { path = "a" }
         "#,
-        ).file("src/main.rs", "fn main() {}")
+        )
+        .file("src/main.rs", "fn main() {}")
         .file("a/Cargo.toml", &basic_manifest("a", "0.0.1"))
         .file("a/src/lib.rs", "")
         .build();
@@ -116,7 +118,15 @@ fn clean_release() {
 [COMPILING] foo v0.0.1 ([..])
 [FINISHED] release [optimized] target(s) in [..]
 ",
-        ).run();
+        )
+        .run();
+
+    p.cargo("build").run();
+
+    p.cargo("clean").arg("--release").run();
+    assert!(p.build_dir().is_dir());
+    assert!(p.build_dir().join("debug").is_dir());
+    assert!(!p.build_dir().join("release").is_dir());
 }
 
 #[test]
@@ -133,7 +143,8 @@ fn clean_doc() {
             [dependencies]
             a = { path = "a" }
         "#,
-        ).file("src/main.rs", "fn main() {}")
+        )
+        .file("src/main.rs", "fn main() {}")
         .file("a/Cargo.toml", &basic_manifest("a", "0.0.1"))
         .file("a/src/lib.rs", "")
         .build();
@@ -162,7 +173,8 @@ fn build_script() {
             authors = []
             build = "build.rs"
         "#,
-        ).file("src/main.rs", "fn main() {}")
+        )
+        .file("src/main.rs", "fn main() {}")
         .file(
             "build.rs",
             r#"
@@ -178,7 +190,8 @@ fn build_script() {
                 }
             }
         "#,
-        ).file("a/src/lib.rs", "")
+        )
+        .file("a/src/lib.rs", "")
         .build();
 
     p.cargo("build").env("FIRST", "1").run();
@@ -192,7 +205,8 @@ fn build_script() {
 [RUNNING] `rustc [..] src/main.rs [..]`
 [FINISHED] dev [unoptimized + debuginfo] target(s) in [..]
 ",
-        ).run();
+        )
+        .run();
 }
 
 #[test]
@@ -201,7 +215,8 @@ fn clean_git() {
         project
             .file("Cargo.toml", &basic_manifest("dep", "0.5.0"))
             .file("src/lib.rs", "")
-    }).unwrap();
+    })
+    .unwrap();
 
     let p = project()
         .file(
@@ -218,7 +233,8 @@ fn clean_git() {
         "#,
                 git.url()
             ),
-        ).file("src/main.rs", "fn main() {}")
+        )
+        .file("src/main.rs", "fn main() {}")
         .build();
 
     p.cargo("build").run();
@@ -240,7 +256,8 @@ fn registry() {
             [dependencies]
             bar = "0.1"
         "#,
-        ).file("src/main.rs", "fn main() {}")
+        )
+        .file("src/main.rs", "fn main() {}")
         .build();
 
     Package::new("bar", "0.1.0").publish();
@@ -263,7 +280,8 @@ fn clean_verbose() {
         [dependencies]
         bar = "0.1"
     "#,
-        ).file("src/main.rs", "fn main() {}")
+        )
+        .file("src/main.rs", "fn main() {}")
         .build();
 
     Package::new("bar", "0.1.0").publish();
@@ -275,6 +293,7 @@ fn clean_verbose() {
 [REMOVING] [..]
 [REMOVING] [..]
 ",
-        ).run();
+        )
+        .run();
     p.cargo("build").run();
 }

@@ -53,8 +53,8 @@ use std::fs;
 use std::io;
 use std::path::{Path, PathBuf};
 
-use core::Workspace;
-use util::{CargoResult, Config, FileLock, Filesystem};
+use crate::core::Workspace;
+use crate::util::{CargoResult, Config, FileLock, Filesystem};
 
 /// Contains the paths of all target output locations.
 ///
@@ -84,15 +84,22 @@ impl Layout {
     ///
     /// Differs from `at` in that this calculates the root path from the workspace target directory,
     /// adding the target triple and the profile (debug, release, ...).
-    pub fn new(ws: &Workspace, triple: Option<&str>, dest: &str) -> CargoResult<Layout> {
+    pub fn new(ws: &Workspace<'_>, triple: Option<&str>, dest: &str) -> CargoResult<Layout> {
         let mut path = ws.target_dir();
-        // Flexible target specifications often point at filenames, so interpret
+        // Flexible target specifications often point at json files, so interpret
         // the target triple as a Path and then just use the file stem as the
-        // component for the directory name.
+        // component for the directory name in that case.
         if let Some(triple) = triple {
-            path.push(Path::new(triple)
-                .file_stem()
-                .ok_or_else(|| format_err!("invalid target"))?);
+            let triple = Path::new(triple);
+            if triple.extension().and_then(|s| s.to_str()) == Some("json") {
+                path.push(
+                    triple
+                        .file_stem()
+                        .ok_or_else(|| failure::format_err!("invalid target"))?,
+                );
+            } else {
+                path.push(triple);
+            }
         }
         path.push(dest);
         Layout::at(ws.config(), path)
@@ -128,9 +135,9 @@ impl Layout {
     ///
     /// This is recommended to prevent derived/temporary files from bloating backups.
     fn exclude_from_backups(&self, path: &Path) {
-        use std::ptr;
-        use core_foundation::{number, string, url};
         use core_foundation::base::TCFType;
+        use core_foundation::{number, string, url};
+        use std::ptr;
 
         // For compatibility with 10.7 a string is used instead of global kCFURLIsExcludedFromBackupKey
         let is_excluded_key: Result<string::CFString, _> = "NSURLIsExcludedFromBackupKey".parse();

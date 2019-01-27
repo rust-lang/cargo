@@ -6,7 +6,7 @@ Learn more at https://doc.rust-lang.org/cargo/
 
 ## Code Status
 
-[![Build Status](https://travis-ci.org/rust-lang/cargo.svg?branch=master)](https://travis-ci.org/rust-lang/cargo)
+[![Build Status](https://travis-ci.com/rust-lang/cargo.svg?branch=master)](https://travis-ci.com/rust-lang/cargo)
 [![Build Status](https://ci.appveyor.com/api/projects/status/github/rust-lang/cargo?branch=master&svg=true)](https://ci.appveyor.com/project/rust-lang-libs/cargo)
 
 Code documentation: https://docs.rs/cargo/
@@ -20,9 +20,9 @@ locally you probably also have `cargo` installed locally.
 
 Cargo requires the following tools and packages to build:
 
+* `git`
 * `python`
 * `curl` (on Unix)
-* `cmake`
 * OpenSSL headers (only for Unix, this is the `libssl-dev` package on ubuntu)
 * `cargo` and `rustc`
 

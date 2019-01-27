@@ -1,4 +1,3 @@
-use std;
 use std::cell::{RefCell, RefMut};
 use std::collections::hash_map::Entry::{Occupied, Vacant};
 use std::collections::hash_map::HashMap;
@@ -16,23 +15,21 @@ use std::time::Instant;
 use std::vec;
 
 use curl::easy::Easy;
-use failure;
-use jobserver;
 use lazycell::LazyCell;
+use serde::Deserialize;
 use serde::{de, de::IntoDeserializer};
-use toml;
 
-use core::profiles::ConfigProfiles;
-use core::shell::Verbosity;
-use core::{CliUnstable, Shell, SourceId, Workspace};
-use ops;
+use crate::core::profiles::ConfigProfiles;
+use crate::core::shell::Verbosity;
+use crate::core::{CliUnstable, Shell, SourceId, Workspace};
+use crate::ops;
+use crate::util::errors::{internal, CargoResult, CargoResultExt};
+use crate::util::toml as cargo_toml;
+use crate::util::Filesystem;
+use crate::util::Rustc;
+use crate::util::ToUrl;
+use crate::util::{paths, validate_package_name};
 use url::Url;
-use util::errors::{internal, CargoResult, CargoResultExt};
-use util::paths;
-use util::toml as cargo_toml;
-use util::Filesystem;
-use util::Rustc;
-use util::ToUrl;
 
 use self::ConfigValue as CV;
 
@@ -141,7 +138,7 @@ impl Config {
         let cwd =
             env::current_dir().chain_err(|| "couldn't get the current directory of the process")?;
         let homedir = homedir(&cwd).ok_or_else(|| {
-            format_err!(
+            failure::format_err!(
                 "Cargo couldn't find your home directory. \
                  This probably means that $HOME was not set."
             )
@@ -176,16 +173,14 @@ impl Config {
 
     /// The default cargo registry (`alternative-registry`)
     pub fn default_registry(&self) -> CargoResult<Option<String>> {
-        Ok(
-            match self.get_string("registry.default")? {
-                Some(registry) => Some(registry.val),
-                None => None,
-            }
-        )
+        Ok(match self.get_string("registry.default")? {
+            Some(registry) => Some(registry.val),
+            None => None,
+        })
     }
 
     /// Get a reference to the shell, for e.g. writing error messages
-    pub fn shell(&self) -> RefMut<Shell> {
+    pub fn shell(&self) -> RefMut<'_, Shell> {
         self.shell.borrow_mut()
     }
 
@@ -197,7 +192,7 @@ impl Config {
     }
 
     /// Get the path to the `rustc` executable
-    pub fn rustc(&self, ws: Option<&Workspace>) -> CargoResult<Rustc> {
+    pub fn rustc(&self, ws: Option<&Workspace<'_>>) -> CargoResult<Rustc> {
         let cache_location = ws.map(|ws| {
             ws.target_dir()
                 .join(".rustc_info.json")
@@ -245,7 +240,7 @@ impl Config {
                     let argv0 = env::args_os()
                         .map(PathBuf::from)
                         .next()
-                        .ok_or_else(||format_err!("no argv[0]"))?;
+                        .ok_or_else(|| failure::format_err!("no argv[0]"))?;
                     paths::resolve_executable(&argv0)
                 }
 
@@ -283,11 +278,11 @@ impl Config {
     // Note: This is used by RLS, not Cargo.
     pub fn set_values(&self, values: HashMap<String, ConfigValue>) -> CargoResult<()> {
         if self.values.borrow().is_some() {
-            bail!("config values already found")
+            failure::bail!("config values already found")
         }
         match self.values.fill(values) {
             Ok(()) => Ok(()),
-            Err(_) => bail!("could not fill values"),
+            Err(_) => failure::bail!("could not fill values"),
         }
     }
 
@@ -336,7 +331,7 @@ impl Config {
                 | CV::Boolean(_, ref path) => {
                     let idx = key.split('.').take(i).fold(0, |n, s| n + s.len()) + i - 1;
                     let key_so_far = &key[..idx];
-                    bail!(
+                    failure::bail!(
                         "expected table for configuration key `{}`, \
                          but found {} in {}",
                         key_so_far,
@@ -458,10 +453,7 @@ impl Config {
         }
     }
 
-    pub fn get_path_and_args(
-        &self,
-        key: &str,
-    ) -> CargoResult<OptValue<(PathBuf, Vec<String>)>> {
+    pub fn get_path_and_args(&self, key: &str) -> CargoResult<OptValue<(PathBuf, Vec<String>)>> {
         if let Some(mut val) = self.get_list_or_split_string(key)? {
             if !val.val.is_empty() {
                 return Ok(Some(Value {
@@ -546,7 +538,7 @@ impl Config {
 
     fn expected<T>(&self, ty: &str, key: &str, val: &CV) -> CargoResult<T> {
         val.expected(ty, key)
-            .map_err(|e| format_err!("invalid configuration for key `{}`\n{}", key, e))
+            .map_err(|e| failure::format_err!("invalid configuration for key `{}`\n{}", key, e))
     }
 
     pub fn configure(
@@ -578,7 +570,7 @@ impl Config {
             // Can't pass both at the same time on the command line regardless
             // of configuration.
             (Some(true), _, Some(true)) => {
-                bail!("cannot set both --verbose and --quiet");
+                failure::bail!("cannot set both --verbose and --quiet");
             }
 
             // Can't actually get `Some(false)` as a value from the command
@@ -631,9 +623,7 @@ impl Config {
         self.load_values_from(&self.cwd)
     }
 
-    fn load_values_from(&self, path: &Path)
-        -> CargoResult<HashMap<String, ConfigValue>>
-    {
+    fn load_values_from(&self, path: &Path) -> CargoResult<HashMap<String, ConfigValue>> {
         let mut cfg = CV::Table(HashMap::new(), PathBuf::from("."));
         let home = self.home_path.clone().into_path_unlocked();
 
@@ -654,7 +644,8 @@ impl Config {
             cfg.merge(value)
                 .chain_err(|| format!("failed to merge configuration at `{}`", path.display()))?;
             Ok(())
-        }).chain_err(|| "could not load Cargo configuration")?;
+        })
+        .chain_err(|| "could not load Cargo configuration")?;
 
         self.load_credentials(&mut cfg)?;
         match cfg {
@@ -665,16 +656,17 @@ impl Config {
 
     /// Gets the index for a registry.
     pub fn get_registry_index(&self, registry: &str) -> CargoResult<Url> {
+        validate_package_name(registry, "registry name", "")?;
         Ok(
             match self.get_string(&format!("registries.{}.index", registry))? {
                 Some(index) => {
                     let url = index.val.to_url()?;
-                    if url.username() != "" || url.password().is_some() {
-                        bail!("Registry URLs may not contain credentials");
+                    if url.password().is_some() {
+                        failure::bail!("Registry URLs may not contain passwords");
                     }
                     url
                 }
-                None => bail!("No index found for registry: `{}`", registry),
+                None => failure::bail!("No index found for registry: `{}`", registry),
             },
         )
     }
@@ -780,7 +772,8 @@ impl Config {
         {
             let mut http = http.borrow_mut();
             http.reset();
-            ops::configure_http_handle(self, &mut http)?;
+            let timeout = ops::configure_http_handle(self, &mut http)?;
+            timeout.configure(&mut http)?;
         }
         Ok(http)
     }
@@ -789,7 +782,7 @@ impl Config {
     where
         F: FnMut() -> CargoResult<SourceId>,
     {
-        Ok(self.crates_io_source_id.try_borrow_with(f)?.clone())
+        Ok(*(self.crates_io_source_id.try_borrow_with(f)?))
     }
 
     pub fn creation_time(&self) -> Instant {
@@ -883,7 +876,7 @@ impl ConfigKey {
 }
 
 impl fmt::Display for ConfigKey {
-    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         self.to_config().fmt(f)
     }
 }
@@ -905,7 +898,7 @@ impl ConfigError {
 
     fn expected(key: &str, expected: &str, found: &ConfigValue) -> ConfigError {
         ConfigError {
-            error: format_err!(
+            error: failure::format_err!(
                 "`{}` expected {}, but found a {}",
                 key,
                 expected,
@@ -917,14 +910,14 @@ impl ConfigError {
 
     fn missing(key: &str) -> ConfigError {
         ConfigError {
-            error: format_err!("missing config key `{}`", key),
+            error: failure::format_err!("missing config key `{}`", key),
             definition: None,
         }
     }
 
     fn with_key_context(self, key: &str, definition: Definition) -> ConfigError {
         ConfigError {
-            error: format_err!("could not load config key `{}`: {}", key, self),
+            error: failure::format_err!("could not load config key `{}`: {}", key, self),
             definition: Some(definition),
         }
     }
@@ -942,7 +935,7 @@ impl std::error::Error for ConfigError {
 // future, once this limitation is lifted, this should instead implement
 // `cause` and avoid doing the cause formatting here.
 impl fmt::Display for ConfigError {
-    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         let message = self
             .error
             .iter_chain()
@@ -1145,7 +1138,7 @@ impl<'de, 'config> de::Deserializer<'de> for Deserializer<'config> {
     }
 
     // These aren't really supported, yet.
-    forward_to_deserialize_any! {
+    serde::forward_to_deserialize_any! {
         f32 f64 char str bytes
         byte_buf unit unit_struct
         enum identifier ignored_any
@@ -1274,7 +1267,7 @@ impl ConfigSeqAccess {
                 if !(v.starts_with('[') && v.ends_with(']')) {
                     return Err(ConfigError::new(
                         format!("should have TOML list syntax, found `{}`", v),
-                        def.clone(),
+                        def,
                     ));
                 }
                 let temp_key = key.last().to_env();
@@ -1357,7 +1350,7 @@ pub enum Definition {
 }
 
 impl fmt::Debug for ConfigValue {
-    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         match *self {
             CV::Integer(i, ref path) => write!(f, "{} (from {})", i, path.display()),
             CV::Boolean(b, ref path) => write!(f, "{} (from {})", b, path.display()),
@@ -1387,7 +1380,7 @@ impl ConfigValue {
                 val.into_iter()
                     .map(|toml| match toml {
                         toml::Value::String(val) => Ok((val, path.to_path_buf())),
-                        v => bail!("expected string but found {} in list", v.type_str()),
+                        v => failure::bail!("expected string but found {} in list", v.type_str()),
                     })
                     .collect::<CargoResult<_>>()?,
                 path.to_path_buf(),
@@ -1402,7 +1395,7 @@ impl ConfigValue {
                     .collect::<CargoResult<_>>()?,
                 path.to_path_buf(),
             )),
-            v => bail!(
+            v => failure::bail!(
                 "found TOML configuration value of unknown type `{}`",
                 v.type_str()
             ),
@@ -1463,7 +1456,7 @@ impl ConfigValue {
                     "expected {}, but found {}",
                     expected.desc(),
                     found.desc()
-                )))
+                )));
             }
             _ => {}
         }
@@ -1527,7 +1520,7 @@ impl ConfigValue {
     }
 
     fn expected<T>(&self, wanted: &str, key: &str) -> CargoResult<T> {
-        bail!(
+        failure::bail!(
             "expected a {}, but found a {} for `{}` in {}",
             wanted,
             self.desc(),
@@ -1547,7 +1540,7 @@ impl Definition {
 }
 
 impl fmt::Display for Definition {
-    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         match *self {
             Definition::Path(ref p) => p.display().fmt(f),
             Definition::Environment(ref key) => write!(f, "environment variable `{}`", key),

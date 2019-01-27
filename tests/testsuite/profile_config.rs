@@ -1,4 +1,4 @@
-use support::{basic_lib_manifest, paths, project};
+use crate::support::{basic_lib_manifest, paths, project};
 
 #[test]
 fn profile_config_gated() {
@@ -11,14 +11,16 @@ fn profile_config_gated() {
             [profile.dev]
             debug = 1
         "#,
-        ).build();
+        )
+        .build();
 
     p.cargo("build -v")
         .with_stderr_contains(
             "\
 [WARNING] profiles in config files require `-Z config-profile` command-line option
 ",
-        ).with_stderr_contains("[..]-C debuginfo=2[..]")
+        )
+        .with_stderr_contains("[..]-C debuginfo=2[..]")
         .run();
 }
 
@@ -34,7 +36,8 @@ fn profile_config_validate_warnings() {
             name = "foo"
             version = "0.0.1"
             "#,
-        ).file("src/lib.rs", "")
+        )
+        .file("src/lib.rs", "")
         .file(
             ".cargo/config",
             r#"
@@ -53,7 +56,8 @@ fn profile_config_validate_warnings() {
             [profile.dev.overrides.bar]
             bad-key-bar = true
         "#,
-        ).build();
+        )
+        .build();
 
     p.cargo("build -Z config-profile")
         .masquerade_as_nightly_cargo()
@@ -67,7 +71,8 @@ fn profile_config_validate_warnings() {
 [COMPILING] foo [..]
 [FINISHED] [..]
 ",
-        ).run();
+        )
+        .run();
 }
 
 #[test]
@@ -81,13 +86,15 @@ fn profile_config_error_paths() {
             [profile.dev]
             opt-level = 3
         "#,
-        ).file(
+        )
+        .file(
             paths::home().join(".cargo/config"),
             r#"
             [profile.dev]
             rpath = "foo"
             "#,
-        ).build();
+        )
+        .build();
 
     p.cargo("build -Z config-profile")
         .masquerade_as_nightly_cargo()
@@ -99,7 +106,8 @@ fn profile_config_error_paths() {
 Caused by:
   error in [..].cargo/config: `profile.dev.rpath` expected true/false, but found a string
 ",
-        ).run();
+        )
+        .run();
 }
 
 #[test]
@@ -114,14 +122,16 @@ fn profile_config_validate_errors() {
             name = "foo"
             version = "0.0.1"
             "#,
-        ).file("src/lib.rs", "")
+        )
+        .file("src/lib.rs", "")
         .file(
             ".cargo/config",
             r#"
             [profile.dev.overrides.foo]
             panic = "abort"
         "#,
-        ).build();
+        )
+        .build();
 
     p.cargo("build -Z config-profile")
         .masquerade_as_nightly_cargo()
@@ -136,7 +146,8 @@ Caused by:
 Caused by:
   `panic` may not be specified in a profile override.
 ",
-        ).run();
+        )
+        .run();
 }
 
 #[test]
@@ -150,7 +161,8 @@ fn profile_config_syntax_errors() {
             [profile.dev]
             codegen-units = "foo"
         "#,
-        ).build();
+        )
+        .build();
 
     p.cargo("build -Z config-profile")
         .masquerade_as_nightly_cargo()
@@ -162,7 +174,8 @@ fn profile_config_syntax_errors() {
 Caused by:
   error in [..].cargo/config: `profile.dev.codegen-units` expected an integer, but found a string
 ",
-        ).run();
+        )
+        .run();
 }
 
 #[test]
@@ -180,7 +193,8 @@ fn profile_config_override_spec_multiple() {
             [dependencies]
             bar = { path = "bar" }
             "#,
-        ).file(
+        )
+        .file(
             ".cargo/config",
             r#"
             [profile.dev.overrides.bar]
@@ -189,7 +203,8 @@ fn profile_config_override_spec_multiple() {
             [profile.dev.overrides."bar:0.5.0"]
             opt-level = 3
         "#,
-        ).file("src/lib.rs", "")
+        )
+        .file("src/lib.rs", "")
         .file(
             "bar/Cargo.toml",
             r#"
@@ -199,7 +214,8 @@ fn profile_config_override_spec_multiple() {
             name = "bar"
             version = "0.5.0"
         "#,
-        ).file("bar/src/lib.rs", "")
+        )
+        .file("bar/src/lib.rs", "")
         .build();
 
     // Unfortunately this doesn't tell you which file, hopefully it's not too
@@ -211,7 +227,8 @@ fn profile_config_override_spec_multiple() {
             "\
 [ERROR] multiple profile overrides in profile `dev` match package `bar v0.5.0 ([..])`
 found profile override specs: bar, bar:0.5.0",
-        ).run();
+        )
+        .run();
 }
 
 #[test]
@@ -234,7 +251,8 @@ fn profile_config_all_options() {
         panic = "abort"
         incremental = true
         "#,
-        ).build();
+        )
+        .build();
 
     p.cargo("build --release -v -Z config-profile")
         .masquerade_as_nightly_cargo()
@@ -251,7 +269,8 @@ fn profile_config_all_options() {
             -C rpath [..]
 [FINISHED] release [optimized + debuginfo] [..]
 ",
-        ).run();
+        )
+        .run();
 }
 
 #[test]
@@ -276,7 +295,8 @@ fn profile_config_override_precedence() {
             [profile.dev.overrides.bar]
             opt-level = 3
         "#,
-        ).file("src/lib.rs", "")
+        )
+        .file("src/lib.rs", "")
         .file(
             "bar/Cargo.toml",
             r#"
@@ -286,14 +306,16 @@ fn profile_config_override_precedence() {
             name = "bar"
             version = "0.0.1"
             "#,
-        ).file("bar/src/lib.rs", "")
+        )
+        .file("bar/src/lib.rs", "")
         .file(
             ".cargo/config",
             r#"
             [profile.dev.overrides.bar]
             opt-level = 2
         "#,
-        ).build();
+        )
+        .build();
 
     p.cargo("build -v -Z config-profile")
         .masquerade_as_nightly_cargo()
@@ -304,7 +326,8 @@ fn profile_config_override_precedence() {
 [COMPILING] foo [..]
 [RUNNING] `rustc --crate-name foo [..]-C codegen-units=2 [..]
 [FINISHED] dev [unoptimized + debuginfo] target(s) in [..]",
-        ).run();
+        )
+        .run();
 }
 
 #[test]
@@ -319,14 +342,16 @@ fn profile_config_no_warn_unknown_override() {
             name = "foo"
             version = "0.0.1"
             "#,
-        ).file("src/lib.rs", "")
+        )
+        .file("src/lib.rs", "")
         .file(
             ".cargo/config",
             r#"
             [profile.dev.overrides.bar]
             codegen-units = 4
         "#,
-        ).build();
+        )
+        .build();
 
     p.cargo("build -Z config-profile")
         .masquerade_as_nightly_cargo()
@@ -345,13 +370,15 @@ fn profile_config_mixed_types() {
             [profile.dev]
             opt-level = 3
         "#,
-        ).file(
+        )
+        .file(
             paths::home().join(".cargo/config"),
             r#"
             [profile.dev]
             opt-level = 's'
             "#,
-        ).build();
+        )
+        .build();
 
     p.cargo("build -v -Z config-profile")
         .masquerade_as_nightly_cargo()

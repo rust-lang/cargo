@@ -1,77 +1,31 @@
 #![cfg_attr(test, deny(warnings))]
-
+#![warn(rust_2018_idioms)]
+// while we're getting used to 2018
 // Clippy isn't enforced by CI, and know that @alexcrichton isn't a fan :)
-#![cfg_attr(feature = "cargo-clippy", allow(boxed_local))]             // bug rust-lang-nursery/rust-clippy#1123
-#![cfg_attr(feature = "cargo-clippy", allow(cyclomatic_complexity))]   // large project
-#![cfg_attr(feature = "cargo-clippy", allow(derive_hash_xor_eq))]      // there's an intentional incoherence
-#![cfg_attr(feature = "cargo-clippy", allow(explicit_into_iter_loop))] // explicit loops are clearer
-#![cfg_attr(feature = "cargo-clippy", allow(explicit_iter_loop))]      // explicit loops are clearer
-#![cfg_attr(feature = "cargo-clippy", allow(identity_op))]             // used for vertical alignment
-#![cfg_attr(feature = "cargo-clippy", allow(implicit_hasher))]         // large project
-#![cfg_attr(feature = "cargo-clippy", allow(large_enum_variant))]      // large project
-#![cfg_attr(feature = "cargo-clippy", allow(redundant_closure_call))]  // closures over try catch blocks
-#![cfg_attr(feature = "cargo-clippy", allow(too_many_arguments))]      // large project
-#![cfg_attr(feature = "cargo-clippy", allow(type_complexity))]         // there's an exceptionally complex type
-#![cfg_attr(feature = "cargo-clippy", allow(wrong_self_convention))]   // perhaps Rc should be special cased in Clippy?
-
-extern crate atty;
-extern crate bytesize;
-extern crate clap;
-#[cfg(target_os = "macos")]
-extern crate core_foundation;
-extern crate crates_io as registry;
-extern crate crossbeam_utils;
-extern crate curl;
-#[macro_use]
-extern crate failure;
-extern crate filetime;
-extern crate flate2;
-extern crate fs2;
-#[cfg(windows)]
-extern crate fwdansi;
-extern crate git2;
-extern crate glob;
-extern crate hex;
-extern crate home;
-extern crate ignore;
-extern crate jobserver;
-#[macro_use]
-extern crate lazy_static;
-extern crate lazycell;
-extern crate libc;
-extern crate libgit2_sys;
-#[macro_use]
-extern crate log;
-extern crate num_cpus;
-extern crate opener;
-extern crate rustfix;
-extern crate same_file;
-extern crate semver;
-#[macro_use]
-extern crate serde;
-#[macro_use]
-extern crate serde_derive;
-extern crate serde_ignored;
-#[macro_use]
-extern crate serde_json;
-extern crate shell_escape;
-extern crate tar;
-extern crate tempfile;
-extern crate termcolor;
-extern crate toml;
-extern crate unicode_width;
-extern crate url;
+#![allow(clippy::boxed_local)] // bug rust-lang-nursery/rust-clippy#1123
+#![allow(clippy::cyclomatic_complexity)] // large project
+#![allow(clippy::derive_hash_xor_eq)] // there's an intentional incoherence
+#![allow(clippy::explicit_into_iter_loop)] // explicit loops are clearer
+#![allow(clippy::explicit_iter_loop)] // explicit loops are clearer
+#![allow(clippy::identity_op)] // used for vertical alignment
+#![allow(clippy::implicit_hasher)] // large project
+#![allow(clippy::large_enum_variant)] // large project
+#![allow(clippy::redundant_closure_call)] // closures over try catch blocks
+#![allow(clippy::too_many_arguments)] // large project
+#![allow(clippy::type_complexity)] // there's an exceptionally complex type
+#![allow(clippy::wrong_self_convention)] // perhaps Rc should be special cased in Clippy?
 
 use std::fmt;
 
-use serde::ser;
 use failure::Error;
+use log::debug;
+use serde::ser;
 
-use core::Shell;
-use core::shell::Verbosity::Verbose;
+use crate::core::shell::Verbosity::Verbose;
+use crate::core::Shell;
 
-pub use util::{CargoError, CargoResult, CliError, CliResult, Config};
-pub use util::errors::Internal;
+pub use crate::util::errors::Internal;
+pub use crate::util::{CargoResult, CliError, CliResult, Config};
 
 pub const CARGO_ENV: &str = "CARGO";
 
@@ -107,7 +61,7 @@ pub struct VersionInfo {
 }
 
 impl fmt::Display for VersionInfo {
-    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         write!(f, "cargo {}.{}.{}", self.major, self.minor, self.patch)?;
         if let Some(channel) = self.cfg_info.as_ref().map(|ci| &ci.release_channel) {
             if channel != "stable" {
@@ -170,7 +124,7 @@ pub fn exit_with_error(err: CliError, shell: &mut Shell) -> ! {
     std::process::exit(exit_code)
 }
 
-pub fn handle_error(err: &CargoError, shell: &mut Shell) {
+pub fn handle_error(err: &failure::Error, shell: &mut Shell) {
     debug!("handle_error; err={:?}", err);
 
     let _ignored_result = shell.error(err);
@@ -208,7 +162,9 @@ fn handle_cause(cargo_err: &Error, shell: &mut Shell) -> bool {
 
 pub fn version() -> VersionInfo {
     macro_rules! option_env_str {
-        ($name:expr) => { option_env!($name).map(|s| s.to_string()) }
+        ($name:expr) => {
+            option_env!($name).map(|s| s.to_string())
+        };
     }
 
     // So this is pretty horrible...

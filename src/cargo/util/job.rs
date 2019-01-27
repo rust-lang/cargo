@@ -23,8 +23,8 @@ pub fn setup() -> Option<Setup> {
 
 #[cfg(unix)]
 mod imp {
-    use std::env;
     use libc;
+    use std::env;
 
     pub type Setup = ();
 
@@ -42,18 +42,18 @@ mod imp {
 
 #[cfg(windows)]
 mod imp {
-    extern crate winapi;
-
     use std::io;
     use std::mem;
     use std::ptr;
 
-    use self::winapi::shared::minwindef::*;
-    use self::winapi::um::handleapi::*;
-    use self::winapi::um::jobapi2::*;
-    use self::winapi::um::processthreadsapi::*;
-    use self::winapi::um::winnt::*;
-    use self::winapi::um::winnt::HANDLE;
+    use log::info;
+
+    use winapi::shared::minwindef::*;
+    use winapi::um::handleapi::*;
+    use winapi::um::jobapi2::*;
+    use winapi::um::processthreadsapi::*;
+    use winapi::um::winnt::HANDLE;
+    use winapi::um::winnt::*;
 
     pub struct Setup {
         job: Handle,

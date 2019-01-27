@@ -51,8 +51,9 @@ use std::fmt;
 use std::str::FromStr;
 
 use failure::Error;
+use serde::{Deserialize, Serialize};
 
-use util::errors::CargoResult;
+use crate::util::errors::CargoResult;
 
 /// The edition of the compiler (RFC 2052)
 #[derive(Clone, Copy, Debug, Hash, PartialOrd, Ord, Eq, PartialEq, Serialize, Deserialize)]
@@ -64,7 +65,7 @@ pub enum Edition {
 }
 
 impl fmt::Display for Edition {
-    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         match *self {
             Edition::Edition2015 => f.write_str("2015"),
             Edition::Edition2018 => f.write_str("2018"),
@@ -77,10 +78,11 @@ impl FromStr for Edition {
         match s {
             "2015" => Ok(Edition::Edition2015),
             "2018" => Ok(Edition::Edition2018),
-            s => {
-                bail!("supported edition values are `2015` or `2018`, but `{}` \
-                       is unknown", s)
-            }
+            s => failure::bail!(
+                "supported edition values are `2015` or `2018`, but `{}` \
+                 is unknown",
+                s
+            ),
         }
     }
 }
@@ -177,7 +179,7 @@ features! {
         [stable] edition: bool,
 
         // Renaming a package in the manifest via the `package` key
-        [unstable] rename_dependency: bool,
+        [stable] rename_dependency: bool,
 
         // Whether a lock file is published with this crate
         [unstable] publish_lockfile: bool,
@@ -214,11 +216,11 @@ impl Features {
     fn add(&mut self, feature: &str, warnings: &mut Vec<String>) -> CargoResult<()> {
         let (slot, status) = match self.status(feature) {
             Some(p) => p,
-            None => bail!("unknown cargo feature `{}`", feature),
+            None => failure::bail!("unknown cargo feature `{}`", feature),
         };
 
         if *slot {
-            bail!("the cargo feature `{}` has already been activated", feature);
+            failure::bail!("the cargo feature `{}` has already been activated", feature);
         }
 
         match status {
@@ -231,7 +233,7 @@ impl Features {
                 );
                 warnings.push(warning);
             }
-            Status::Unstable if !nightly_features_allowed() => bail!(
+            Status::Unstable if !nightly_features_allowed() => failure::bail!(
                 "the cargo feature `{}` requires a nightly version of \
                  Cargo, but this is the `{}` channel",
                 feature,
@@ -273,7 +275,7 @@ impl Features {
                 );
                 msg.push_str(&s);
             }
-            bail!("{}", msg);
+            failure::bail!("{}", msg);
         }
     }
 
@@ -318,12 +320,13 @@ pub struct CliUnstable {
     pub package_features: bool,
     pub advanced_env: bool,
     pub config_profile: bool,
+    pub mtime_on_use: bool,
 }
 
 impl CliUnstable {
     pub fn parse(&mut self, flags: &[String]) -> CargoResult<()> {
         if !flags.is_empty() && !nightly_features_allowed() {
-            bail!("the `-Z` flag is only accepted on the nightly channel of Cargo")
+            failure::bail!("the `-Z` flag is only accepted on the nightly channel of Cargo")
         }
         for flag in flags {
             self.add(flag)?;
@@ -340,7 +343,7 @@ impl CliUnstable {
             match value {
                 None | Some("yes") => Ok(true),
                 Some("no") => Ok(false),
-                Some(s) => bail!("expected `no` or `yes`, found: {}", s),
+                Some(s) => failure::bail!("expected `no` or `yes`, found: {}", s),
             }
         }
 
@@ -354,7 +357,8 @@ impl CliUnstable {
             "package-features" => self.package_features = true,
             "advanced-env" => self.advanced_env = true,
             "config-profile" => self.config_profile = true,
-            _ => bail!("unknown `-Z` flag specified: {}", k),
+            "mtime-on-use" => self.mtime_on_use = true,
+            _ => failure::bail!("unknown `-Z` flag specified: {}", k),
         }
 
         Ok(())
@@ -370,7 +374,7 @@ fn channel() -> String {
             return "dev".to_string();
         }
     }
-    ::version()
+    crate::version()
         .cfg_info
         .map(|c| c.release_channel)
         .unwrap_or_else(|| String::from("dev"))
@@ -396,9 +400,9 @@ thread_local!(
 ///       that called `masquerade_as_nightly_cargo`
 pub fn nightly_features_allowed() -> bool {
     if ENABLE_NIGHTLY_FEATURES.with(|c| c.get()) {
-        return true
+        return true;
     }
-     match &channel()[..] {
+    match &channel()[..] {
         "nightly" | "dev" => NIGHTLY_FEATURES_ALLOWED.with(|c| c.get()),
         _ => false,
     }

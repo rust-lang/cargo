@@ -1,10 +1,10 @@
 use std::fs::{self, File};
 use std::io::prelude::*;
 
-use support::paths::{self, CargoPathExt};
-use support::registry::Package;
-use support::sleep_ms;
-use support::{basic_lib_manifest, basic_manifest, main_file, project};
+use crate::support::paths::{self, CargoPathExt};
+use crate::support::registry::Package;
+use crate::support::sleep_ms;
+use crate::support::{basic_lib_manifest, basic_manifest, main_file, project};
 
 #[test]
 #[cfg(not(windows))] // I have no idea why this is failing spuriously on
@@ -25,7 +25,8 @@ fn cargo_compile_with_nested_deps_shorthand() {
             version = "0.5.0"
             path = "bar"
         "#,
-        ).file("src/main.rs", &main_file(r#""{}", bar::gimme()"#, &["bar"]))
+        )
+        .file("src/main.rs", &main_file(r#""{}", bar::gimme()"#, &["bar"]))
         .file(
             "bar/Cargo.toml",
             r#"
@@ -44,7 +45,8 @@ fn cargo_compile_with_nested_deps_shorthand() {
 
             name = "bar"
         "#,
-        ).file(
+        )
+        .file(
             "bar/src/bar.rs",
             r#"
             extern crate baz;
@@ -53,7 +55,8 @@ fn cargo_compile_with_nested_deps_shorthand() {
                 baz::gimme()
             }
         "#,
-        ).file("bar/baz/Cargo.toml", &basic_lib_manifest("baz"))
+        )
+        .file("bar/baz/Cargo.toml", &basic_lib_manifest("baz"))
         .file(
             "bar/baz/src/baz.rs",
             r#"
@@ -61,7 +64,8 @@ fn cargo_compile_with_nested_deps_shorthand() {
                 "test passed".to_string()
             }
         "#,
-        ).build();
+        )
+        .build();
 
     p.cargo("build")
         .with_stderr(
@@ -70,7 +74,8 @@ fn cargo_compile_with_nested_deps_shorthand() {
              [COMPILING] foo v0.5.0 ([CWD])\n\
              [FINISHED] dev [unoptimized + debuginfo] target(s) \
              in [..]\n",
-        ).run();
+        )
+        .run();
 
     assert!(p.bin("foo").is_file());
 
@@ -84,7 +89,8 @@ fn cargo_compile_with_nested_deps_shorthand() {
             "[COMPILING] baz v0.5.0 ([CWD]/bar/baz)\n\
              [FINISHED] dev [unoptimized + debuginfo] target(s) \
              in [..]\n",
-        ).run();
+        )
+        .run();
     println!("building foo");
     p.cargo("build -p foo")
         .with_stderr(
@@ -92,7 +98,8 @@ fn cargo_compile_with_nested_deps_shorthand() {
              [COMPILING] foo v0.5.0 ([CWD])\n\
              [FINISHED] dev [unoptimized + debuginfo] target(s) \
              in [..]\n",
-        ).run();
+        )
+        .run();
 }
 
 #[test]
@@ -115,7 +122,8 @@ fn cargo_compile_with_root_dev_deps() {
             [[bin]]
             name = "foo"
         "#,
-        ).file("src/main.rs", &main_file(r#""{}", bar::gimme()"#, &["bar"]))
+        )
+        .file("src/main.rs", &main_file(r#""{}", bar::gimme()"#, &["bar"]))
         .build();
     let _p2 = project()
         .at("bar")
@@ -127,9 +135,13 @@ fn cargo_compile_with_root_dev_deps() {
                 "zoidberg"
             }
         "#,
-        ).build();
+        )
+        .build();
 
-    p.cargo("build").with_status(101).run();
+    p.cargo("build")
+        .with_status(101)
+        .with_stderr_contains("[..]can't find crate for `bar`")
+        .run();
 }
 
 #[test]
@@ -152,7 +164,8 @@ fn cargo_compile_with_root_dev_deps_with_testing() {
             [[bin]]
             name = "foo"
         "#,
-        ).file("src/main.rs", &main_file(r#""{}", bar::gimme()"#, &["bar"]))
+        )
+        .file("src/main.rs", &main_file(r#""{}", bar::gimme()"#, &["bar"]))
         .build();
     let _p2 = project()
         .at("bar")
@@ -164,7 +177,8 @@ fn cargo_compile_with_root_dev_deps_with_testing() {
                 "zoidberg"
             }
         "#,
-        ).build();
+        )
+        .build();
 
     p.cargo("test")
         .with_stderr(
@@ -173,7 +187,8 @@ fn cargo_compile_with_root_dev_deps_with_testing() {
 [COMPILING] [..] v0.5.0 ([..])
 [FINISHED] dev [unoptimized + debuginfo] target(s) in [..]
 [RUNNING] target/debug/deps/foo-[..][EXE]",
-        ).with_stdout_contains("running 0 tests")
+        )
+        .with_stdout_contains("running 0 tests")
         .run();
 }
 
@@ -194,7 +209,8 @@ fn cargo_compile_with_transitive_dev_deps() {
             version = "0.5.0"
             path = "bar"
         "#,
-        ).file("src/main.rs", &main_file(r#""{}", bar::gimme()"#, &["bar"]))
+        )
+        .file("src/main.rs", &main_file(r#""{}", bar::gimme()"#, &["bar"]))
         .file(
             "bar/Cargo.toml",
             r#"
@@ -212,14 +228,16 @@ fn cargo_compile_with_transitive_dev_deps() {
 
             name = "bar"
         "#,
-        ).file(
+        )
+        .file(
             "bar/src/bar.rs",
             r#"
             pub fn gimme() -> &'static str {
                 "zoidberg"
             }
         "#,
-        ).build();
+        )
+        .build();
 
     p.cargo("build")
         .with_stderr(
@@ -227,7 +245,8 @@ fn cargo_compile_with_transitive_dev_deps() {
              [COMPILING] foo v0.5.0 ([CWD])\n\
              [FINISHED] dev [unoptimized + debuginfo] target(s) in \
              [..]\n",
-        ).run();
+        )
+        .run();
 
     assert!(p.bin("foo").is_file());
 
@@ -249,7 +268,8 @@ fn no_rebuild_dependency() {
             [dependencies.bar]
             path = "bar"
         "#,
-        ).file("src/main.rs", "extern crate bar; fn main() { bar::bar() }")
+        )
+        .file("src/main.rs", "extern crate bar; fn main() { bar::bar() }")
         .file("bar/Cargo.toml", &basic_lib_manifest("bar"))
         .file("bar/src/bar.rs", "pub fn bar() {}")
         .build();
@@ -260,7 +280,8 @@ fn no_rebuild_dependency() {
              [COMPILING] foo v0.5.0 ([CWD])\n\
              [FINISHED] dev [unoptimized + debuginfo] target(s) \
              in [..]\n",
-        ).run();
+        )
+        .run();
 
     sleep_ms(1000);
     p.change_file(
@@ -277,7 +298,8 @@ fn no_rebuild_dependency() {
              [COMPILING] foo v0.5.0 ([..])\n\
              [FINISHED] dev [unoptimized + debuginfo] target(s) \
              in [..]\n",
-        ).run();
+        )
+        .run();
 }
 
 #[test]
@@ -295,7 +317,8 @@ fn deep_dependencies_trigger_rebuild() {
             [dependencies.bar]
             path = "bar"
         "#,
-        ).file("src/main.rs", "extern crate bar; fn main() { bar::bar() }")
+        )
+        .file("src/main.rs", "extern crate bar; fn main() { bar::bar() }")
         .file(
             "bar/Cargo.toml",
             r#"
@@ -310,10 +333,12 @@ fn deep_dependencies_trigger_rebuild() {
             [dependencies.baz]
             path = "../baz"
         "#,
-        ).file(
+        )
+        .file(
             "bar/src/bar.rs",
             "extern crate baz; pub fn bar() { baz::baz() }",
-        ).file("baz/Cargo.toml", &basic_lib_manifest("baz"))
+        )
+        .file("baz/Cargo.toml", &basic_lib_manifest("baz"))
         .file("baz/src/baz.rs", "pub fn baz() {}")
         .build();
     p.cargo("build")
@@ -323,13 +348,15 @@ fn deep_dependencies_trigger_rebuild() {
              [COMPILING] foo v0.5.0 ([CWD])\n\
              [FINISHED] dev [unoptimized + debuginfo] target(s) \
              in [..]\n",
-        ).run();
+        )
+        .run();
     p.cargo("build").with_stdout("").run();
 
     // Make sure an update to baz triggers a rebuild of bar
     //
     // We base recompilation off mtime, so sleep for at least a second to ensure
     // that this write will change the mtime.
+    sleep_ms(1000);
     File::create(&p.root().join("baz/src/baz.rs"))
         .unwrap()
         .write_all(br#"pub fn baz() { println!("hello!"); }"#)
@@ -342,9 +369,11 @@ fn deep_dependencies_trigger_rebuild() {
              [COMPILING] foo v0.5.0 ([CWD])\n\
              [FINISHED] dev [unoptimized + debuginfo] target(s) \
              in [..]\n",
-        ).run();
+        )
+        .run();
 
     // Make sure an update to bar doesn't trigger baz
+    sleep_ms(1000);
     File::create(&p.root().join("bar/src/bar.rs"))
         .unwrap()
         .write_all(
@@ -352,7 +381,8 @@ fn deep_dependencies_trigger_rebuild() {
         extern crate baz;
         pub fn bar() { println!("hello!"); baz::baz(); }
     "#,
-        ).unwrap();
+        )
+        .unwrap();
     sleep_ms(1000);
     p.cargo("build")
         .with_stderr(
@@ -360,7 +390,8 @@ fn deep_dependencies_trigger_rebuild() {
              [COMPILING] foo v0.5.0 ([CWD])\n\
              [FINISHED] dev [unoptimized + debuginfo] target(s) \
              in [..]\n",
-        ).run();
+        )
+        .run();
 }
 
 #[test]
@@ -380,7 +411,8 @@ fn no_rebuild_two_deps() {
             [dependencies.baz]
             path = "baz"
         "#,
-        ).file("src/main.rs", "extern crate bar; fn main() { bar::bar() }")
+        )
+        .file("src/main.rs", "extern crate bar; fn main() { bar::bar() }")
         .file(
             "bar/Cargo.toml",
             r#"
@@ -395,7 +427,8 @@ fn no_rebuild_two_deps() {
             [dependencies.baz]
             path = "../baz"
         "#,
-        ).file("bar/src/bar.rs", "pub fn bar() {}")
+        )
+        .file("bar/src/bar.rs", "pub fn bar() {}")
         .file("baz/Cargo.toml", &basic_lib_manifest("baz"))
         .file("baz/src/baz.rs", "pub fn baz() {}")
         .build();
@@ -406,7 +439,8 @@ fn no_rebuild_two_deps() {
              [COMPILING] foo v0.5.0 ([CWD])\n\
              [FINISHED] dev [unoptimized + debuginfo] target(s) \
              in [..]\n",
-        ).run();
+        )
+        .run();
     assert!(p.bin("foo").is_file());
     p.cargo("build").with_stdout("").run();
     assert!(p.bin("foo").is_file());
@@ -429,7 +463,8 @@ fn nested_deps_recompile() {
             version = "0.5.0"
             path = "src/bar"
         "#,
-        ).file("src/main.rs", &main_file(r#""{}", bar::gimme()"#, &["bar"]))
+        )
+        .file("src/main.rs", &main_file(r#""{}", bar::gimme()"#, &["bar"]))
         .file("src/bar/Cargo.toml", &basic_lib_manifest("bar"))
         .file("src/bar/src/bar.rs", "pub fn gimme() -> i32 { 92 }")
         .build();
@@ -440,7 +475,8 @@ fn nested_deps_recompile() {
              [COMPILING] foo v0.5.0 ([CWD])\n\
              [FINISHED] dev [unoptimized + debuginfo] target(s) \
              in [..]\n",
-        ).run();
+        )
+        .run();
     sleep_ms(1000);
 
     File::create(&p.root().join("src/main.rs"))
@@ -454,7 +490,8 @@ fn nested_deps_recompile() {
             "[COMPILING] foo v0.5.0 ([CWD])\n\
              [FINISHED] dev [unoptimized + debuginfo] target(s) \
              in [..]\n",
-        ).run();
+        )
+        .run();
 }
 
 #[test]
@@ -473,7 +510,8 @@ fn error_message_for_missing_manifest() {
 
             path = "src/bar"
         "#,
-        ).file("src/lib.rs", "")
+        )
+        .file("src/lib.rs", "")
         .file("src/bar/not-a-manifest", "")
         .build();
 
@@ -492,7 +530,8 @@ Caused by:
 Caused by:
   [..] (os error [..])
 ",
-        ).run();
+        )
+        .run();
 }
 
 #[test]
@@ -525,7 +564,8 @@ fn override_relative() {
         "#,
                 bar.root().display()
             ),
-        ).file("src/lib.rs", "")
+        )
+        .file("src/lib.rs", "")
         .build();
     p.cargo("build -v").run();
 }
@@ -558,7 +598,8 @@ fn override_self() {
         "#,
                 bar.root().display()
             ),
-        ).file("src/lib.rs", "")
+        )
+        .file("src/lib.rs", "")
         .file("src/main.rs", "fn main() {}")
         .build();
 
@@ -580,7 +621,8 @@ fn override_path_dep() {
             [dependencies.p2]
             path = "../p2"
        "#,
-        ).file("p1/src/lib.rs", "")
+        )
+        .file("p1/src/lib.rs", "")
         .file("p2/Cargo.toml", &basic_manifest("p2", "0.5.0"))
         .file("p2/src/lib.rs", "")
         .build();
@@ -593,7 +635,8 @@ fn override_path_dep() {
                 bar.root().join("p1").display(),
                 bar.root().join("p2").display()
             ),
-        ).file(
+        )
+        .file(
             "Cargo.toml",
             &format!(
                 r#"
@@ -609,7 +652,8 @@ fn override_path_dep() {
         "#,
                 bar.root().join("p2").display()
             ),
-        ).file("src/lib.rs", "")
+        )
+        .file("src/lib.rs", "")
         .build();
 
     p.cargo("build -v").run();
@@ -632,7 +676,8 @@ fn path_dep_build_cmd() {
             version = "0.5.0"
             path = "bar"
         "#,
-        ).file("src/main.rs", &main_file(r#""{}", bar::gimme()"#, &["bar"]))
+        )
+        .file("src/main.rs", &main_file(r#""{}", bar::gimme()"#, &["bar"]))
         .file(
             "bar/Cargo.toml",
             r#"
@@ -647,7 +692,8 @@ fn path_dep_build_cmd() {
             name = "bar"
             path = "src/bar.rs"
         "#,
-        ).file(
+        )
+        .file(
             "bar/build.rs",
             r#"
             use std::fs;
@@ -655,7 +701,8 @@ fn path_dep_build_cmd() {
                 fs::copy("src/bar.rs.in", "src/bar.rs").unwrap();
             }
         "#,
-        ).file("bar/src/bar.rs.in", "pub fn gimme() -> i32 { 0 }")
+        )
+        .file("bar/src/bar.rs.in", "pub fn gimme() -> i32 { 0 }")
         .build();
     p.root().join("bar").move_into_the_past();
 
@@ -665,7 +712,8 @@ fn path_dep_build_cmd() {
              [COMPILING] foo v0.5.0 ([CWD])\n\
              [FINISHED] dev [unoptimized + debuginfo] target(s) in \
              [..]\n",
-        ).run();
+        )
+        .run();
 
     assert!(p.bin("foo").is_file());
 
@@ -685,7 +733,8 @@ fn path_dep_build_cmd() {
              [COMPILING] foo v0.5.0 ([CWD])\n\
              [FINISHED] dev [unoptimized + debuginfo] target(s) in \
              [..]\n",
-        ).run();
+        )
+        .run();
 
     p.process(&p.bin("foo")).with_stdout("1\n").run();
 }
@@ -708,13 +757,15 @@ fn dev_deps_no_rebuild_lib() {
                 name = "foo"
                 doctest = false
         "#,
-        ).file(
+        )
+        .file(
             "src/lib.rs",
             r#"
             #[cfg(test)] #[allow(unused_extern_crates)] extern crate bar;
             #[cfg(not(test))] pub fn foo() { env!("FOO"); }
         "#,
-        ).file("bar/Cargo.toml", &basic_manifest("bar", "0.5.0"))
+        )
+        .file("bar/Cargo.toml", &basic_manifest("bar", "0.5.0"))
         .file("bar/src/lib.rs", "pub fn bar() {}")
         .build();
     p.cargo("build")
@@ -723,7 +774,8 @@ fn dev_deps_no_rebuild_lib() {
             "[COMPILING] foo v0.5.0 ([CWD])\n\
              [FINISHED] dev [unoptimized + debuginfo] target(s) \
              in [..]\n",
-        ).run();
+        )
+        .run();
 
     p.cargo("test")
         .with_stderr(
@@ -732,7 +784,8 @@ fn dev_deps_no_rebuild_lib() {
 [COMPILING] [..] v0.5.0 ([CWD][..])
 [FINISHED] dev [unoptimized + debuginfo] target(s) in [..]
 [RUNNING] target/debug/deps/foo-[..][EXE]",
-        ).with_stdout_contains("running 0 tests")
+        )
+        .with_stdout_contains("running 0 tests")
         .run();
 }
 
@@ -751,7 +804,8 @@ fn custom_target_no_rebuild() {
             [workspace]
             members = ["a", "b"]
         "#,
-        ).file("src/lib.rs", "")
+        )
+        .file("src/lib.rs", "")
         .file("a/Cargo.toml", &basic_manifest("a", "0.5.0"))
         .file("a/src/lib.rs", "")
         .file(
@@ -764,7 +818,8 @@ fn custom_target_no_rebuild() {
             [dependencies]
             a = { path = "../a" }
         "#,
-        ).file("b/src/lib.rs", "")
+        )
+        .file("b/src/lib.rs", "")
         .build();
     p.cargo("build")
         .with_stderr(
@@ -773,7 +828,8 @@ fn custom_target_no_rebuild() {
 [COMPILING] foo v0.5.0 ([..])
 [FINISHED] dev [unoptimized + debuginfo] target(s) in [..]
 ",
-        ).run();
+        )
+        .run();
 
     t!(fs::rename(
         p.root().join("target"),
@@ -786,7 +842,8 @@ fn custom_target_no_rebuild() {
 [COMPILING] b v0.5.0 ([..])
 [FINISHED] dev [unoptimized + debuginfo] target(s) in [..]
 ",
-        ).run();
+        )
+        .run();
 }
 
 #[test]
@@ -803,7 +860,8 @@ fn override_and_depend() {
             [dependencies]
             a2 = { path = "../a2" }
         "#,
-        ).file("a/a1/src/lib.rs", "")
+        )
+        .file("a/a1/src/lib.rs", "")
         .file("a/a2/Cargo.toml", &basic_manifest("a2", "0.5.0"))
         .file("a/a2/src/lib.rs", "")
         .file(
@@ -817,7 +875,8 @@ fn override_and_depend() {
             a1 = { path = "../a/a1" }
             a2 = { path = "../a/a2" }
         "#,
-        ).file("b/src/lib.rs", "")
+        )
+        .file("b/src/lib.rs", "")
         .file("b/.cargo/config", r#"paths = ["../a"]"#)
         .build();
     p.cargo("build")
@@ -829,7 +888,8 @@ fn override_and_depend() {
 [COMPILING] b v0.5.0 ([..])
 [FINISHED] dev [unoptimized + debuginfo] target(s) in [..]
 ",
-        ).run();
+        )
+        .run();
 }
 
 #[test]
@@ -840,7 +900,8 @@ fn missing_path_dependency() {
         .file(
             ".cargo/config",
             r#"paths = ["../whoa-this-does-not-exist"]"#,
-        ).build();
+        )
+        .build();
     p.cargo("build")
         .with_status(101)
         .with_stderr(
@@ -854,7 +915,8 @@ Caused by:
 Caused by:
   [..] (os error [..])
 ",
-        ).run();
+        )
+        .run();
 }
 
 #[test]
@@ -875,7 +937,8 @@ fn invalid_path_dep_in_workspace_with_lockfile() {
             [dependencies]
             foo = { path = "foo" }
         "#,
-        ).file("src/lib.rs", "")
+        )
+        .file("src/lib.rs", "")
         .file(
             "foo/Cargo.toml",
             r#"
@@ -887,7 +950,8 @@ fn invalid_path_dep_in_workspace_with_lockfile() {
             [dependencies]
             bar = "*"
         "#,
-        ).file("foo/src/lib.rs", "")
+        )
+        .file("foo/src/lib.rs", "")
         .build();
 
     // Generate a lock file
@@ -906,7 +970,8 @@ fn invalid_path_dep_in_workspace_with_lockfile() {
         [dependencies]
         bar = { path = "" }
     "#,
-        ).unwrap();
+        )
+        .unwrap();
 
     // Make sure we get a nice error. In the past this actually stack
     // overflowed!
@@ -916,10 +981,11 @@ fn invalid_path_dep_in_workspace_with_lockfile() {
             "\
 error: no matching package named `bar` found
 location searched: [..]
-did you mean: foo
+perhaps you meant: foo
 required by package `foo v0.5.0 ([..])`
 ",
-        ).run();
+        )
+        .run();
 }
 
 #[test]
@@ -938,7 +1004,8 @@ fn workspace_produces_rlib() {
             [dependencies]
             foo = { path = "foo" }
         "#,
-        ).file("src/lib.rs", "")
+        )
+        .file("src/lib.rs", "")
         .file("foo/Cargo.toml", &basic_manifest("foo", "0.5.0"))
         .file("foo/src/lib.rs", "")
         .build();
@@ -963,7 +1030,8 @@ fn thin_lto_works() {
             [profile.release]
             lto = 'thin'
         "#,
-        ).file("src/main.rs", "fn main() {}")
+        )
+        .file("src/main.rs", "fn main() {}")
         .build();
 
     p.cargo("build --release -v")
@@ -973,5 +1041,6 @@ fn thin_lto_works() {
 [RUNNING] `rustc [..] -C lto=thin [..]`
 [FINISHED] [..]
 ",
-        ).run();
+        )
+        .run();
 }

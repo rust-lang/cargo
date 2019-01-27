@@ -53,9 +53,9 @@ paths = ["/path/to/override"]
 name = "..."
 email = "..."
 
-# By default `cargo new` will initialize a new Git repository. This key can be
-# set to `hg` to create a Mercurial repository, or `none` to disable this
-# behavior.
+# By default `cargo new` will initialize a new Git repository. This key can
+# be set to change the version control system used. Valid values are `git`,
+# `hg` (for Mecurial), `pijul`, `fossil`, or `none` to disable this behavior.
 vcs = "none"
 
 # For the following sections, $triple refers to any valid target triple, not the
@@ -102,7 +102,7 @@ timeout = 30        # Timeout for each HTTP request, in seconds
 cainfo = "cert.pem" # Path to Certificate Authority (CA) bundle (optional)
 check-revoke = true # Indicates whether SSL certs are checked for revocation
 low-speed-limit = 5 # Lower threshold for bytes/sec (10 = default, 0 = disabled)
-multiplexing = false  # whether or not to use HTTP/2 multiplexing where possible
+multiplexing = true # whether or not to use HTTP/2 multiplexing where possible
 
 # This setting can be used to help debug what's going on with HTTP requests made
 # by Cargo. When set to `true` then Cargo's normal debug logging will be filled
@@ -121,6 +121,7 @@ rustdoc = "rustdoc"       # the doc generator tool
 target = "triple"         # build for the target triple (ignored by `cargo install`)
 target-dir = "target"     # path of where to place all generated artifacts
 rustflags = ["..", ".."]  # custom flags to pass to all compiler invocations
+rustdocflags = ["..", ".."]  # custom flags to pass to rustdoc
 incremental = true        # whether or not to enable incremental compilation
 dep-info-basedir = ".."   # full path for the base directory for targets in depfiles
 
@@ -133,10 +134,11 @@ color = 'auto'         # whether cargo colorizes output
 retry = 2 # number of times a network call will automatically retried
 git-fetch-with-cli = false  # if `true` we'll use `git`-the-CLI to fetch git repos
 
-# Alias cargo commands. The first 3 aliases are built in. If your
+# Alias cargo commands. The first 4 aliases are built in. If your
 # command requires grouped whitespace use the list format.
 [alias]
 b = "build"
+c = "check"
 t = "test"
 r = "run"
 rr = "run --release"

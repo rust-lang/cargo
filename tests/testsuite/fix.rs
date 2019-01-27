@@ -2,9 +2,9 @@ use std::fs::File;
 
 use git2;
 
-use support::git;
-use support::is_nightly;
-use support::{basic_manifest, project};
+use crate::support::git;
+use crate::support::is_nightly;
+use crate::support::{basic_manifest, project};
 
 use std::io::Write;
 
@@ -23,11 +23,13 @@ fn do_not_fix_broken_builds() {
                     let _x: u32 = "a";
                 }
             "#,
-        ).build();
+        )
+        .build();
 
     p.cargo("fix --allow-no-vcs")
         .env("__CARGO_FIX_YOLO", "1")
         .with_status(101)
+        .with_stderr_contains("[ERROR] Could not compile `foo`.")
         .run();
     assert!(p.read_file("src/lib.rs").contains("let mut x = 3;"));
 }
@@ -43,7 +45,8 @@ fn fix_broken_if_requested() {
                     foo(1);
                 }
             "#,
-        ).build();
+        )
+        .build();
 
     p.cargo("fix --allow-no-vcs --broken-code")
         .env("__CARGO_FIX_YOLO", "1")
@@ -52,6 +55,19 @@ fn fix_broken_if_requested() {
 
 #[test]
 fn broken_fixes_backed_out() {
+    // This works as follows:
+    // - Create a `rustc` shim (the "foo" project) which will pretend that the
+    //   verification step fails.
+    // - There is an empty build script so `foo` has `OUT_DIR` to track the steps.
+    // - The first "check", `foo` creates a file in OUT_DIR, and it completes
+    //   successfully with a warning diagnostic to remove unused `mut`.
+    // - rustfix removes the `mut`.
+    // - The second "check" to verify the changes, `foo` swaps out the content
+    //   with something that fails to compile. It creates a second file so it
+    //   won't do anything in the third check.
+    // - cargo fix discovers that the fix failed, and it backs out the changes.
+    // - The third "check" is done to display the original diagnostics of the
+    //   original code.
     let p = project()
         .file(
             "foo/Cargo.toml",
@@ -61,7 +77,8 @@ fn broken_fixes_backed_out() {
                 version = '0.1.0'
                 [workspace]
             "#,
-        ).file(
+        )
+        .file(
             "foo/src/main.rs",
             r##"
                 use std::env;
@@ -71,19 +88,19 @@ fn broken_fixes_backed_out() {
                 use std::process::{self, Command};
 
                 fn main() {
+                    // Ignore calls to things like --print=file-names and compiling build.rs.
                     let is_lib_rs = env::args_os()
                         .map(PathBuf::from)
                         .any(|l| l == Path::new("src/lib.rs"));
                     if is_lib_rs {
                         let path = PathBuf::from(env::var_os("OUT_DIR").unwrap());
-                        let path = path.join("foo");
-                        if path.exists() {
-                            fs::File::create("src/lib.rs")
-                                .unwrap()
-                                .write_all(b"not rust code")
-                                .unwrap();
+                        let first = path.join("first");
+                        let second = path.join("second");
+                        if first.exists() && !second.exists() {
+                            fs::write("src/lib.rs", b"not rust code").unwrap();
+                            fs::File::create(&second).unwrap();
                         } else {
-                            fs::File::create(&path).unwrap();
+                            fs::File::create(&first).unwrap();
                         }
                     }
 
@@ -94,7 +111,8 @@ fn broken_fixes_backed_out() {
                     process::exit(status.code().unwrap_or(2));
                 }
             "##,
-        ).file(
+        )
+        .file(
             "bar/Cargo.toml",
             r#"
                 [package]
@@ -102,7 +120,8 @@ fn broken_fixes_backed_out() {
                 version = '0.1.0'
                 [workspace]
             "#,
-        ).file("bar/build.rs", "fn main() {}")
+        )
+        .file("bar/build.rs", "fn main() {}")
         .file(
             "bar/src/lib.rs",
             r#"
@@ -111,18 +130,17 @@ fn broken_fixes_backed_out() {
                     drop(x);
                 }
             "#,
-        ).build();
+        )
+        .build();
 
     // Build our rustc shim
     p.cargo("build").cwd(p.root().join("foo")).run();
 
     // Attempt to fix code, but our shim will always fail the second compile
-    p.cargo("fix --allow-no-vcs")
+    p.cargo("fix --allow-no-vcs --lib")
         .cwd(p.root().join("bar"))
         .env("__CARGO_FIX_YOLO", "1")
         .env("RUSTC", p.root().join("foo/target/debug/foo"))
-        .with_status(101)
-        .with_stderr_contains("[..]not rust code[..]")
         .with_stderr_contains(
             "\
              warning: failed to automatically apply fixes suggested by rustc \
@@ -137,11 +155,22 @@ fn broken_fixes_backed_out() {
              and we would appreciate a bug report! You're likely to see \n\
              a number of compiler warnings after this message which cargo\n\
              attempted to fix but failed. If you could open an issue at\n\
-             https://github.com/rust-lang/cargo/issues\n\
-             quoting the full output of this command we'd be very appreciative!\
+             [..]\n\
+             quoting the full output of this command we'd be very appreciative!\n\
+             Note that you may be able to make some more progress in the near-term\n\
+             fixing code with the `--broken-code` flag\n\
+             \n\
+             The following errors were reported:\n\
+             error: expected one of `!` or `::`, found `rust`\n\
              ",
-        ).with_stderr_does_not_contain("[..][FIXING][..]")
+        )
+        .with_stderr_contains("Original diagnostics will follow.")
+        .with_stderr_contains("[WARNING] variable does not need to be mutable")
+        .with_stderr_does_not_contain("[..][FIXING][..]")
         .run();
+
+    // Make sure the fix which should have been applied was backed out
+    assert!(p.read_file("bar/src/lib.rs").contains("let mut x = 3;"));
 }
 
 #[test]
@@ -159,7 +188,8 @@ fn fix_path_deps() {
 
                 [workspace]
             "#,
-        ).file(
+        )
+        .file(
             "src/lib.rs",
             r#"
                 extern crate bar;
@@ -169,7 +199,8 @@ fn fix_path_deps() {
                     x
                 }
             "#,
-        ).file("bar/Cargo.toml", &basic_manifest("bar", "0.1.0"))
+        )
+        .file("bar/Cargo.toml", &basic_manifest("bar", "0.1.0"))
         .file(
             "bar/src/lib.rs",
             r#"
@@ -178,12 +209,13 @@ fn fix_path_deps() {
                     x
                 }
             "#,
-        ).build();
+        )
+        .build();
 
     p.cargo("fix --allow-no-vcs -p foo -p bar")
         .env("__CARGO_FIX_YOLO", "1")
         .with_stdout("")
-        .with_stderr(
+        .with_stderr_unordered(
             "\
 [CHECKING] bar v0.1.0 ([..])
 [FIXING] bar/src/lib.rs (1 fix)
@@ -191,7 +223,8 @@ fn fix_path_deps() {
 [FIXING] src/lib.rs (1 fix)
 [FINISHED] [..]
 ",
-        ).run();
+        )
+        .run();
 }
 
 #[test]
@@ -210,7 +243,8 @@ fn do_not_fix_non_relevant_deps() {
 
                 [workspace]
             "#,
-        ).file("foo/src/lib.rs", "")
+        )
+        .file("foo/src/lib.rs", "")
         .file("bar/Cargo.toml", &basic_manifest("bar", "0.1.0"))
         .file(
             "bar/src/lib.rs",
@@ -220,7 +254,8 @@ fn do_not_fix_non_relevant_deps() {
                     x
                 }
             "#,
-        ).build();
+        )
+        .build();
 
     p.cargo("fix --allow-no-vcs")
         .env("__CARGO_FIX_YOLO", "1")
@@ -254,7 +289,8 @@ fn prepare_for_2018() {
                     let x = ::foo::FOO;
                 }
             "#,
-        ).build();
+        )
+        .build();
 
     let stderr = "\
 [CHECKING] foo v0.0.1 ([..])
@@ -268,10 +304,9 @@ fn prepare_for_2018() {
 
     println!("{}", p.read_file("src/lib.rs"));
     assert!(p.read_file("src/lib.rs").contains("use crate::foo::FOO;"));
-    assert!(
-        p.read_file("src/lib.rs")
-            .contains("let x = crate::foo::FOO;")
-    );
+    assert!(p
+        .read_file("src/lib.rs")
+        .contains("let x = crate::foo::FOO;"));
 }
 
 #[test]
@@ -295,7 +330,8 @@ fn local_paths() {
                     foo();
                 }
             "#,
-        ).build();
+        )
+        .build();
 
     let stderr = "\
 [CHECKING] foo v0.0.1 ([..])
@@ -331,7 +367,8 @@ fn upgrade_extern_crate() {
                 [dependencies]
                 bar = { path = 'bar' }
             "#,
-        ).file(
+        )
+        .file(
             "src/lib.rs",
             r#"
                 #![warn(rust_2018_idioms)]
@@ -344,7 +381,8 @@ fn upgrade_extern_crate() {
                     bar();
                 }
             "#,
-        ).file("bar/Cargo.toml", &basic_manifest("bar", "0.1.0"))
+        )
+        .file("bar/Cargo.toml", &basic_manifest("bar", "0.1.0"))
         .file("bar/src/lib.rs", "pub fn bar() {}")
         .build();
 
@@ -383,7 +421,8 @@ fn specify_rustflags() {
                     let x = ::foo::FOO;
                 }
             "#,
-        ).build();
+        )
+        .build();
 
     let stderr = "\
 [CHECKING] foo v0.0.1 ([..])
@@ -422,7 +461,8 @@ fn fixes_extra_mut() {
                     x
                 }
             "#,
-        ).build();
+        )
+        .build();
 
     let stderr = "\
 [CHECKING] foo v0.0.1 ([..])
@@ -448,7 +488,8 @@ fn fixes_two_missing_ampersands() {
                     x + y
                 }
             "#,
-        ).build();
+        )
+        .build();
 
     let stderr = "\
 [CHECKING] foo v0.0.1 ([..])
@@ -473,7 +514,8 @@ fn tricky() {
                     x + y
                 }
             "#,
-        ).build();
+        )
+        .build();
 
     let stderr = "\
 [CHECKING] foo v0.0.1 ([..])
@@ -496,7 +538,8 @@ fn preserve_line_endings() {
              fn add(a: &u32) -> u32 { a + 1 }\r\n\
              pub fn foo() -> u32 { let mut x = 3; add(&x) }\r\n\
              ",
-        ).build();
+        )
+        .build();
 
     p.cargo("fix --allow-no-vcs")
         .env("__CARGO_FIX_YOLO", "1")
@@ -513,7 +556,8 @@ fn fix_deny_warnings() {
                 #![deny(warnings)]
                 pub fn foo() { let mut x = 3; drop(x); }
             ",
-        ).build();
+        )
+        .build();
 
     p.cargo("fix --allow-no-vcs")
         .env("__CARGO_FIX_YOLO", "1")
@@ -535,7 +579,8 @@ fn fix_deny_warnings_but_not_others() {
 
                 fn bar() {}
             ",
-        ).build();
+        )
+        .build();
 
     p.cargo("fix --allow-no-vcs")
         .env("__CARGO_FIX_YOLO", "1")
@@ -557,7 +602,8 @@ fn fix_two_files() {
                     x
                 }
             ",
-        ).file(
+        )
+        .file(
             "src/bar.rs",
             "
                 pub fn foo() -> u32 {
@@ -566,7 +612,8 @@ fn fix_two_files() {
                 }
 
             ",
-        ).build();
+        )
+        .build();
 
     p.cargo("fix --allow-no-vcs")
         .env("__CARGO_FIX_YOLO", "1")
@@ -589,31 +636,34 @@ fn fixes_missing_ampersand() {
                 #[test]
                 pub fn foo2() { let mut x = 3; drop(x); }
             "#,
-        ).file(
+        )
+        .file(
             "tests/a.rs",
             r#"
                 #[test]
                 pub fn foo() { let mut x = 3; drop(x); }
             "#,
-        ).file("examples/foo.rs", "fn main() { let mut x = 3; drop(x); }")
+        )
+        .file("examples/foo.rs", "fn main() { let mut x = 3; drop(x); }")
         .file("build.rs", "fn main() { let mut x = 3; drop(x); }")
         .build();
 
     p.cargo("fix --all-targets --allow-no-vcs")
-            .env("__CARGO_FIX_YOLO", "1")
-            .with_stdout("")
-            .with_stderr_contains("[COMPILING] foo v0.0.1 ([..])")
-            .with_stderr_contains("[FIXING] build.rs (1 fix)")
-            // Don't assert number of fixes for this one, as we don't know if we're
-            // fixing it once or twice! We run this all concurrently, and if we
-            // compile (and fix) in `--test` mode first, we get two fixes. Otherwise
-            // we'll fix one non-test thing, and then fix another one later in
-            // test mode.
-            .with_stderr_contains("[FIXING] src/lib.rs[..]")
-            .with_stderr_contains("[FIXING] src/main.rs (1 fix)")
-            .with_stderr_contains("[FIXING] examples/foo.rs (1 fix)")
-            .with_stderr_contains("[FIXING] tests/a.rs (1 fix)")
-            .with_stderr_contains("[FINISHED] [..]").run();
+        .env("__CARGO_FIX_YOLO", "1")
+        .with_stdout("")
+        .with_stderr_contains("[COMPILING] foo v0.0.1 ([..])")
+        .with_stderr_contains("[FIXING] build.rs (1 fix)")
+        // Don't assert number of fixes for this one, as we don't know if we're
+        // fixing it once or twice! We run this all concurrently, and if we
+        // compile (and fix) in `--test` mode first, we get two fixes. Otherwise
+        // we'll fix one non-test thing, and then fix another one later in
+        // test mode.
+        .with_stderr_contains("[FIXING] src/lib.rs[..]")
+        .with_stderr_contains("[FIXING] src/main.rs (1 fix)")
+        .with_stderr_contains("[FIXING] examples/foo.rs (1 fix)")
+        .with_stderr_contains("[FIXING] tests/a.rs (1 fix)")
+        .with_stderr_contains("[FINISHED] [..]")
+        .run();
     p.cargo("build").run();
     p.cargo("test").run();
 }
@@ -633,13 +683,15 @@ fn fix_features() {
 
                 [workspace]
             "#,
-        ).file(
+        )
+        .file(
             "src/lib.rs",
             r#"
             #[cfg(feature = "bar")]
             pub fn foo() -> u32 { let mut x = 3; x }
         "#,
-        ).build();
+        )
+        .build();
 
     p.cargo("fix --allow-no-vcs").run();
     p.cargo("build").run();
@@ -669,7 +721,8 @@ fn warns_if_no_vcs_detected() {
              error: no VCS found for this package and `cargo fix` can potentially perform \
              destructive changes; if you'd like to suppress this error pass `--allow-no-vcs`\
              ",
-        ).run();
+        )
+        .run();
     p.cargo("fix --allow-no-vcs").run();
 }
 
@@ -699,7 +752,8 @@ commit the changes to these files:
 
 
 ",
-        ).run();
+        )
+        .run();
     p.cargo("fix --allow-dirty").run();
 }
 
@@ -733,7 +787,8 @@ commit the changes to these files:
 
 
 ",
-        ).run();
+        )
+        .run();
     p.cargo("fix --allow-staged").run();
 }
 
@@ -795,7 +850,8 @@ fn prepare_for_and_enable() {
                 version = '0.1.0'
                 edition = '2018'
             "#,
-        ).file("src/lib.rs", "")
+        )
+        .file("src/lib.rs", "")
         .build();
 
     let stderr = "\
@@ -836,7 +892,8 @@ fn fix_overlapping() {
                     }
                 }
             "#,
-        ).build();
+        )
+        .build();
 
     let stderr = "\
 [CHECKING] foo [..]
@@ -867,7 +924,8 @@ fn fix_idioms() {
                 version = '0.1.0'
                 edition = '2018'
             "#,
-        ).file(
+        )
+        .file(
             "src/lib.rs",
             r#"
                 use std::any::Any;
@@ -875,7 +933,8 @@ fn fix_idioms() {
                     let _x: Box<Any> = Box::new(3);
                 }
             "#,
-        ).build();
+        )
+        .build();
 
     let stderr = "\
 [CHECKING] foo [..]
@@ -1025,7 +1084,8 @@ fn doesnt_rebuild_dependencies() {
 
                 [workspace]
             "#,
-        ).file("src/lib.rs", "extern crate bar;")
+        )
+        .file("src/lib.rs", "extern crate bar;")
         .file("bar/Cargo.toml", &basic_manifest("bar", "0.1.0"))
         .file("bar/src/lib.rs", "")
         .build();
@@ -1033,20 +1093,24 @@ fn doesnt_rebuild_dependencies() {
     p.cargo("fix --allow-no-vcs -p foo")
         .env("__CARGO_FIX_YOLO", "1")
         .with_stdout("")
-        .with_stderr("\
+        .with_stderr(
+            "\
 [CHECKING] bar v0.1.0 ([..])
 [CHECKING] foo v0.1.0 ([..])
 [FINISHED] dev [unoptimized + debuginfo] target(s) in [..]
-")
+",
+        )
         .run();
 
     p.cargo("fix --allow-no-vcs -p foo")
         .env("__CARGO_FIX_YOLO", "1")
         .with_stdout("")
-        .with_stderr("\
+        .with_stderr(
+            "\
 [CHECKING] foo v0.1.0 ([..])
 [FINISHED] dev [unoptimized + debuginfo] target(s) in [..]
-")
+",
+        )
         .run();
 }
 
@@ -1071,4 +1135,146 @@ fn does_not_crash_with_rustc_wrapper() {
     p.cargo("fix --allow-no-vcs")
         .env("RUSTC_WRAPPER", "/usr/bin/env")
         .run();
+}
+
+#[test]
+fn only_warn_for_relevant_crates() {
+    let p = project()
+        .file(
+            "Cargo.toml",
+            r#"
+                [package]
+                name = "foo"
+                version = "0.1.0"
+
+                [dependencies]
+                a = { path = 'a' }
+            "#,
+        )
+        .file("src/lib.rs", "")
+        .file(
+            "a/Cargo.toml",
+            r#"
+                [package]
+                name = "a"
+                version = "0.1.0"
+            "#,
+        )
+        .file(
+            "a/src/lib.rs",
+            "
+                pub fn foo() {}
+                pub mod bar {
+                    use foo;
+                    pub fn baz() { foo() }
+                }
+            ",
+        )
+        .build();
+
+    p.cargo("fix --allow-no-vcs --edition")
+        .with_stderr(
+            "\
+[CHECKING] a v0.1.0 ([..])
+[CHECKING] foo v0.1.0 ([..])
+[FINISHED] dev [unoptimized + debuginfo] target(s) in [..]
+",
+        )
+        .run();
+}
+
+#[test]
+fn fix_to_broken_code() {
+    if !is_nightly() {
+        return;
+    }
+    let p = project()
+        .file(
+            "foo/Cargo.toml",
+            r#"
+                [package]
+                name = 'foo'
+                version = '0.1.0'
+                [workspace]
+            "#,
+        )
+        .file(
+            "foo/src/main.rs",
+            r##"
+                use std::env;
+                use std::fs;
+                use std::io::Write;
+                use std::path::{Path, PathBuf};
+                use std::process::{self, Command};
+
+                fn main() {
+                    let is_lib_rs = env::args_os()
+                        .map(PathBuf::from)
+                        .any(|l| l == Path::new("src/lib.rs"));
+                    if is_lib_rs {
+                        let path = PathBuf::from(env::var_os("OUT_DIR").unwrap());
+                        let path = path.join("foo");
+                        if path.exists() {
+                            panic!()
+                        } else {
+                            fs::File::create(&path).unwrap();
+                        }
+                    }
+
+                    let status = Command::new("rustc")
+                        .args(env::args().skip(1))
+                        .status()
+                        .expect("failed to run rustc");
+                    process::exit(status.code().unwrap_or(2));
+                }
+            "##,
+        )
+        .file(
+            "bar/Cargo.toml",
+            r#"
+                [package]
+                name = 'bar'
+                version = '0.1.0'
+                [workspace]
+            "#,
+        )
+        .file("bar/build.rs", "fn main() {}")
+        .file("bar/src/lib.rs", "pub fn foo() { let mut x = 3; drop(x); }")
+        .build();
+
+    // Build our rustc shim
+    p.cargo("build").cwd(p.root().join("foo")).run();
+
+    // Attempt to fix code, but our shim will always fail the second compile
+    p.cargo("fix --allow-no-vcs --broken-code")
+        .cwd(p.root().join("bar"))
+        .env("RUSTC", p.root().join("foo/target/debug/foo"))
+        .with_status(101)
+        .with_stderr_contains("[WARNING] failed to automatically apply fixes [..]")
+        .run();
+
+    assert_eq!(
+        p.read_file("bar/src/lib.rs"),
+        "pub fn foo() { let x = 3; drop(x); }"
+    );
+}
+
+#[test]
+fn fix_with_common() {
+    let p = project()
+        .file("src/lib.rs", "")
+        .file(
+            "tests/t1.rs",
+            "mod common; #[test] fn t1() { common::try(); }",
+        )
+        .file(
+            "tests/t2.rs",
+            "mod common; #[test] fn t2() { common::try(); }",
+        )
+        .file("tests/common/mod.rs", "pub fn try() {}")
+        .build();
+
+    p.cargo("fix --edition --allow-no-vcs").run();
+
+    assert_eq!(p.read_file("tests/common/mod.rs"), "pub fn r#try() {}");
 }

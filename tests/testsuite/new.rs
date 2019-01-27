@@ -2,8 +2,8 @@ use std::env;
 use std::fs::{self, File};
 use std::io::prelude::*;
 
-use support::paths;
-use support::{cargo_process, git_process};
+use crate::support::paths;
+use crate::support::{cargo_process, git_process};
 
 fn create_empty_gitconfig() {
     // This helps on Windows where libgit2 is very aggressive in attempting to
@@ -57,11 +57,9 @@ fn simple_bin() {
     assert!(paths::root().join("foo/src/main.rs").is_file());
 
     cargo_process("build").cwd(&paths::root().join("foo")).run();
-    assert!(
-        paths::root()
-            .join(&format!("foo/target/debug/foo{}", env::consts::EXE_SUFFIX))
-            .is_file()
-    );
+    assert!(paths::root()
+        .join(&format!("foo/target/debug/foo{}", env::consts::EXE_SUFFIX))
+        .is_file());
 }
 
 #[test]
@@ -75,13 +73,23 @@ fn both_lib_and_bin() {
 
 #[test]
 fn simple_git() {
-    cargo_process("new --lib foo --edition 2015").env("USER", "foo").run();
+    cargo_process("new --lib foo --edition 2015")
+        .env("USER", "foo")
+        .run();
 
     assert!(paths::root().is_dir());
     assert!(paths::root().join("foo/Cargo.toml").is_file());
     assert!(paths::root().join("foo/src/lib.rs").is_file());
     assert!(paths::root().join("foo/.git").is_dir());
     assert!(paths::root().join("foo/.gitignore").is_file());
+
+    let fp = paths::root().join("foo/.gitignore");
+    let mut contents = String::new();
+    File::open(&fp)
+        .unwrap()
+        .read_to_string(&mut contents)
+        .unwrap();
+    assert_eq!(contents, "/target\n**/*.rs.bk\nCargo.lock",);
 
     cargo_process("build").cwd(&paths::root().join("foo")).run();
 }
@@ -95,7 +103,8 @@ fn no_argument() {
 error: The following required arguments were not provided:
     <path>
 ",
-        ).run();
+        )
+        .run();
 }
 
 #[test]
@@ -107,7 +116,8 @@ fn existing() {
         .with_stderr(
             "[ERROR] destination `[CWD]/foo` already exists\n\n\
              Use `cargo init` to initialize the directory",
-        ).run();
+        )
+        .run();
 }
 
 #[test]
@@ -118,7 +128,8 @@ fn invalid_characters() {
             "\
 [ERROR] Invalid character `.` in crate name: `foo.rs`
 use --name to override crate name",
-        ).run();
+        )
+        .run();
 }
 
 #[test]
@@ -129,7 +140,8 @@ fn reserved_name() {
             "\
              [ERROR] The name `test` cannot be used as a crate name\n\
              use --name to override crate name",
-        ).run();
+        )
+        .run();
 }
 
 #[test]
@@ -140,7 +152,8 @@ fn reserved_binary_name() {
             "\
              [ERROR] The name `incremental` cannot be used as a crate name\n\
              use --name to override crate name",
-        ).run();
+        )
+        .run();
 }
 
 #[test]
@@ -151,7 +164,8 @@ fn keyword_name() {
             "\
              [ERROR] The name `pub` cannot be used as a crate name\n\
              use --name to override crate name",
-        ).run();
+        )
+        .run();
 }
 
 #[test]
@@ -323,7 +337,8 @@ fn author_prefers_cargo() {
         email = "new-bar"
         vcs = "none"
     "#,
-        ).unwrap();
+        )
+        .unwrap();
 
     cargo_process("new foo").env("USER", "foo").run();
 
@@ -335,6 +350,23 @@ fn author_prefers_cargo() {
         .unwrap();
     assert!(contents.contains(r#"authors = ["new-foo <new-bar>"]"#));
     assert!(!root.join("foo/.gitignore").exists());
+}
+
+#[test]
+fn strip_angle_bracket_author_email() {
+    create_empty_gitconfig();
+    cargo_process("new foo")
+        .env("USER", "bar")
+        .env("EMAIL", "<baz>")
+        .run();
+
+    let toml = paths::root().join("foo/Cargo.toml");
+    let mut contents = String::new();
+    File::open(&toml)
+        .unwrap()
+        .read_to_string(&mut contents)
+        .unwrap();
+    assert!(contents.contains(r#"authors = ["bar <baz>"]"#));
 }
 
 #[test]
@@ -350,7 +382,8 @@ fn git_prefers_command_line() {
         name = "foo"
         email = "bar"
     "#,
-        ).unwrap();
+        )
+        .unwrap();
 
     cargo_process("new foo --vcs git").env("USER", "foo").run();
     assert!(paths::root().join("foo/.gitignore").exists());
@@ -369,16 +402,12 @@ fn subpackage_no_git() {
         .env("USER", "foo")
         .run();
 
-    assert!(
-        !paths::root()
-            .join("foo/components/subcomponent/.git")
-            .is_file()
-    );
-    assert!(
-        !paths::root()
-            .join("foo/components/subcomponent/.gitignore")
-            .is_file()
-    );
+    assert!(!paths::root()
+        .join("foo/components/subcomponent/.git")
+        .is_file());
+    assert!(!paths::root()
+        .join("foo/components/subcomponent/.gitignore")
+        .is_file());
 }
 
 #[test]
@@ -397,16 +426,12 @@ fn subpackage_git_with_gitignore() {
         .env("USER", "foo")
         .run();
 
-    assert!(
-        paths::root()
-            .join("foo/components/subcomponent/.git")
-            .is_dir()
-    );
-    assert!(
-        paths::root()
-            .join("foo/components/subcomponent/.gitignore")
-            .is_file()
-    );
+    assert!(paths::root()
+        .join("foo/components/subcomponent/.git")
+        .is_dir());
+    assert!(paths::root()
+        .join("foo/components/subcomponent/.gitignore")
+        .is_file());
 }
 
 #[test]
@@ -419,16 +444,12 @@ fn subpackage_git_with_vcs_arg() {
         .env("USER", "foo")
         .run();
 
-    assert!(
-        paths::root()
-            .join("foo/components/subcomponent/.git")
-            .is_dir()
-    );
-    assert!(
-        paths::root()
-            .join("foo/components/subcomponent/.gitignore")
-            .is_file()
-    );
+    assert!(paths::root()
+        .join("foo/components/subcomponent/.git")
+        .is_dir());
+    assert!(paths::root()
+        .join("foo/components/subcomponent/.gitignore")
+        .is_file());
 }
 
 #[test]
@@ -437,7 +458,8 @@ fn unknown_flags() {
         .with_status(1)
         .with_stderr_contains(
             "error: Found argument '--flag' which wasn't expected, or isn't valid in this context",
-        ).run();
+        )
+        .run();
 }
 
 #[test]
@@ -476,9 +498,7 @@ fn new_with_edition_2018() {
 
 #[test]
 fn new_default_edition() {
-    cargo_process("new foo")
-        .env("USER", "foo")
-        .run();
+    cargo_process("new foo").env("USER", "foo").run();
     let manifest = fs::read_to_string(paths::root().join("foo/Cargo.toml")).unwrap();
     assert!(manifest.contains("edition = \"2018\""));
 }

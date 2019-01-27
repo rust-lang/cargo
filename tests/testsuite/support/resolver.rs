@@ -2,7 +2,9 @@ use std::cmp::PartialEq;
 use std::cmp::{max, min};
 use std::collections::{BTreeMap, HashSet};
 use std::fmt;
-use std::time::{Duration, Instant};
+use std::time::Instant;
+
+use crate::support::slow_cpu_multiplier;
 
 use cargo::core::dependency::Kind;
 use cargo::core::resolver::{self, Method};
@@ -42,7 +44,7 @@ pub fn resolve_and_validated(
             if p.name().ends_with("-sys") {
                 assert!(links.insert(p.name()));
             }
-            stack.extend(resolve.deps(&p).map(|(dp, deps)| {
+            stack.extend(resolve.deps(p).map(|(dp, deps)| {
                 for d in deps {
                     assert!(d.matches_id(dp));
                 }
@@ -50,7 +52,7 @@ pub fn resolve_and_validated(
             }));
         }
     }
-    let out: Vec<PackageId> = resolve.iter().cloned().collect();
+    let out = resolve.sort();
     assert_eq!(out.len(), used.len());
     Ok(out)
 }
@@ -62,8 +64,7 @@ pub fn resolve_with_config(
     config: Option<&Config>,
 ) -> CargoResult<Vec<PackageId>> {
     let resolve = resolve_with_config_raw(pkg, deps, registry, config)?;
-    let out: Vec<PackageId> = resolve.iter().cloned().collect();
-    Ok(out)
+    Ok(resolve.sort())
 }
 
 pub fn resolve_with_config_raw(
@@ -77,7 +78,7 @@ pub fn resolve_with_config_raw(
         fn query(
             &mut self,
             dep: &Dependency,
-            f: &mut FnMut(Summary),
+            f: &mut dyn FnMut(Summary),
             fuzzy: bool,
         ) -> CargoResult<()> {
             for summary in self.0.iter() {
@@ -88,11 +89,11 @@ pub fn resolve_with_config_raw(
             Ok(())
         }
 
-        fn describe_source(&self, _src: &SourceId) -> String {
+        fn describe_source(&self, _src: SourceId) -> String {
             String::new()
         }
 
-        fn is_replaced(&self, _src: &SourceId) -> bool {
+        fn is_replaced(&self, _src: SourceId) -> bool {
             false
         }
     }
@@ -118,7 +119,7 @@ pub fn resolve_with_config_raw(
 
     // The largest test in our suite takes less then 30 sec.
     // So lets fail the test if we have ben running for two long.
-    assert!(start.elapsed() < Duration::from_secs(60));
+    assert!(start.elapsed() < slow_cpu_multiplier(60));
     resolve
 }
 
@@ -128,7 +129,7 @@ pub trait ToDep {
 
 impl ToDep for &'static str {
     fn to_dep(self) -> Dependency {
-        Dependency::parse_no_deprecated(self, Some("1.0.0"), &registry_loc()).unwrap()
+        Dependency::parse_no_deprecated(self, Some("1.0.0"), registry_loc()).unwrap()
     }
 }
 
@@ -150,14 +151,14 @@ impl ToPkgId for PackageId {
 
 impl<'a> ToPkgId for &'a str {
     fn to_pkgid(&self) -> PackageId {
-        PackageId::new(*self, "1.0.0", &registry_loc()).unwrap()
+        PackageId::new(*self, "1.0.0", registry_loc()).unwrap()
     }
 }
 
 impl<T: AsRef<str>, U: AsRef<str>> ToPkgId for (T, U) {
     fn to_pkgid(&self) -> PackageId {
         let (name, vers) = self;
-        PackageId::new(name.as_ref(), vers.as_ref(), &registry_loc()).unwrap()
+        PackageId::new(name.as_ref(), vers.as_ref(), registry_loc()).unwrap()
     }
 }
 
@@ -173,11 +174,11 @@ macro_rules! pkg {
 }
 
 fn registry_loc() -> SourceId {
-    lazy_static! {
+    lazy_static::lazy_static! {
         static ref EXAMPLE_DOT_COM: SourceId =
             SourceId::for_registry(&"http://example.com".to_url().unwrap()).unwrap();
     }
-    EXAMPLE_DOT_COM.clone()
+    *EXAMPLE_DOT_COM
 }
 
 pub fn pkg<T: ToPkgId>(name: T) -> Summary {
@@ -202,7 +203,7 @@ pub fn pkg_dep<T: ToPkgId>(name: T, dep: Vec<Dependency>) -> Summary {
 }
 
 pub fn pkg_id(name: &str) -> PackageId {
-    PackageId::new(name, "1.0.0", &registry_loc()).unwrap()
+    PackageId::new(name, "1.0.0", registry_loc()).unwrap()
 }
 
 fn pkg_id_loc(name: &str, loc: &str) -> PackageId {
@@ -210,7 +211,7 @@ fn pkg_id_loc(name: &str, loc: &str) -> PackageId {
     let master = GitReference::Branch("master".to_string());
     let source_id = SourceId::for_git(&remote.unwrap(), master).unwrap();
 
-    PackageId::new(name, "1.0.0", &source_id).unwrap()
+    PackageId::new(name, "1.0.0", source_id).unwrap()
 }
 
 pub fn pkg_loc(name: &str, loc: &str) -> Summary {
@@ -229,18 +230,37 @@ pub fn pkg_loc(name: &str, loc: &str) -> Summary {
     .unwrap()
 }
 
+pub fn remove_dep(sum: &Summary, ind: usize) -> Summary {
+    let mut deps = sum.dependencies().to_vec();
+    deps.remove(ind);
+    // note: more things will need to be copied over in the future, but it works for now.
+    Summary::new(
+        sum.package_id(),
+        deps,
+        &BTreeMap::<String, Vec<String>>::new(),
+        sum.links().map(|a| a.as_str()),
+        sum.namespaced_features(),
+    )
+    .unwrap()
+}
+
 pub fn dep(name: &str) -> Dependency {
-    dep_req(name, "1.0.0")
+    dep_req(name, "*")
 }
 pub fn dep_req(name: &str, req: &str) -> Dependency {
-    Dependency::parse_no_deprecated(name, Some(req), &registry_loc()).unwrap()
+    Dependency::parse_no_deprecated(name, Some(req), registry_loc()).unwrap()
+}
+pub fn dep_req_kind(name: &str, req: &str, kind: Kind) -> Dependency {
+    let mut dep = dep_req(name, req);
+    dep.set_kind(kind);
+    dep
 }
 
 pub fn dep_loc(name: &str, location: &str) -> Dependency {
     let url = location.to_url().unwrap();
     let master = GitReference::Branch("master".to_string());
     let source_id = SourceId::for_git(&url, master).unwrap();
-    Dependency::parse_no_deprecated(name, Some("1.0.0"), &source_id).unwrap()
+    Dependency::parse_no_deprecated(name, Some("1.0.0"), source_id).unwrap()
 }
 pub fn dep_kind(name: &str, kind: Kind) -> Dependency {
     dep(name).set_kind(kind).clone()
@@ -269,7 +289,7 @@ pub fn loc_names(names: &[(&'static str, &'static str)]) -> Vec<PackageId> {
 pub struct PrettyPrintRegistry(pub Vec<Summary>);
 
 impl fmt::Debug for PrettyPrintRegistry {
-    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         write!(f, "vec![")?;
         for s in &self.0 {
             if s.dependencies().is_empty() {
@@ -277,12 +297,28 @@ impl fmt::Debug for PrettyPrintRegistry {
             } else {
                 write!(f, "pkg!((\"{}\", \"{}\") => [", s.name(), s.version())?;
                 for d in s.dependencies() {
-                    write!(
-                        f,
-                        "dep_req(\"{}\", \"{}\"),",
-                        d.name_in_toml(),
-                        d.version_req()
-                    )?;
+                    if d.kind() == Kind::Normal && &d.version_req().to_string() == "*" {
+                        write!(f, "dep(\"{}\"),", d.name_in_toml())?;
+                    } else if d.kind() == Kind::Normal {
+                        write!(
+                            f,
+                            "dep_req(\"{}\", \"{}\"),",
+                            d.name_in_toml(),
+                            d.version_req()
+                        )?;
+                    } else {
+                        write!(
+                            f,
+                            "dep_req_kind(\"{}\", \"{}\", {}),",
+                            d.name_in_toml(),
+                            d.version_req(),
+                            match d.kind() {
+                                Kind::Development => "Kind::Development",
+                                Kind::Build => "Kind::Build",
+                                Kind::Normal => "Kind::Normal",
+                            }
+                        )?;
+                    }
                 }
                 write!(f, "]),")?;
             }
@@ -299,21 +335,28 @@ fn meta_test_deep_pretty_print_registry() {
             PrettyPrintRegistry(vec![
                 pkg!(("foo", "1.0.1") => [dep_req("bar", "1")]),
                 pkg!(("foo", "1.0.0") => [dep_req("bar", "2")]),
+                pkg!(("foo", "2.0.0") => [dep_req("bar", "*")]),
                 pkg!(("bar", "1.0.0") => [dep_req("baz", "=1.0.2"),
                                   dep_req("other", "1")]),
                 pkg!(("bar", "2.0.0") => [dep_req("baz", "=1.0.1")]),
                 pkg!(("baz", "1.0.2") => [dep_req("other", "2")]),
                 pkg!(("baz", "1.0.1")),
+                pkg!(("cat", "1.0.2") => [dep_req_kind("other", "2", Kind::Build)]),
+                pkg!(("cat", "1.0.2") => [dep_req_kind("other", "2", Kind::Development)]),
                 pkg!(("dep_req", "1.0.0")),
                 pkg!(("dep_req", "2.0.0")),
             ])
         ),
         "vec![pkg!((\"foo\", \"1.0.1\") => [dep_req(\"bar\", \"^1\"),]),\
          pkg!((\"foo\", \"1.0.0\") => [dep_req(\"bar\", \"^2\"),]),\
+         pkg!((\"foo\", \"2.0.0\") => [dep(\"bar\"),]),\
          pkg!((\"bar\", \"1.0.0\") => [dep_req(\"baz\", \"= 1.0.2\"),dep_req(\"other\", \"^1\"),]),\
          pkg!((\"bar\", \"2.0.0\") => [dep_req(\"baz\", \"= 1.0.1\"),]),\
          pkg!((\"baz\", \"1.0.2\") => [dep_req(\"other\", \"^2\"),]),\
-         pkg!((\"baz\", \"1.0.1\")),pkg!((\"dep_req\", \"1.0.0\")),\
+         pkg!((\"baz\", \"1.0.1\")),\
+         pkg!((\"cat\", \"1.0.2\") => [dep_req_kind(\"other\", \"^2\", Kind::Build),]),\
+         pkg!((\"cat\", \"1.0.2\") => [dep_req_kind(\"other\", \"^2\", Kind::Development),]),\
+         pkg!((\"dep_req\", \"1.0.0\")),\
          pkg!((\"dep_req\", \"2.0.0\")),]"
     )
 }
@@ -326,10 +369,15 @@ pub fn registry_strategy(
     max_versions: usize,
     shrinkage: usize,
 ) -> impl Strategy<Value = PrettyPrintRegistry> {
-    let name = string_regex("[A-Za-z_-][A-Za-z0-9_-]*(-sys)?").unwrap();
+    let name = string_regex("[A-Za-z][A-Za-z0-9_-]*(-sys)?").unwrap();
 
-    let raw_version = [..max_versions; 3];
-    let version_from_raw = |v: &[usize; 3]| format!("{}.{}.{}", v[0], v[1], v[2]);
+    let raw_version = ..max_versions.pow(3);
+    let version_from_raw = move |r: usize| {
+        let major = ((r / max_versions) / max_versions) % max_versions;
+        let minor = (r / max_versions) % max_versions;
+        let patch = r % max_versions;
+        format!("{}.{}.{}", major, minor, patch)
+    };
 
     // If this is false than the crate will depend on the nonexistent "bad"
     // instead of the complex set we generated for it.
@@ -338,7 +386,7 @@ pub fn registry_strategy(
     let list_of_versions =
         btree_map(raw_version, allow_deps, 1..=max_versions).prop_map(move |ver| {
             ver.into_iter()
-                .map(|a| (version_from_raw(&a.0), a.1))
+                .map(|a| (version_from_raw(a.0), a.1))
                 .collect::<Vec<_>>()
         });
 
@@ -357,7 +405,7 @@ pub fn registry_strategy(
     let max_deps = max_versions * (max_crates * (max_crates - 1)) / shrinkage;
 
     let raw_version_range = (any::<Index>(), any::<Index>());
-    let raw_dependency = (any::<Index>(), any::<Index>(), raw_version_range);
+    let raw_dependency = (any::<Index>(), any::<Index>(), raw_version_range, 0..=1);
 
     fn order_index(a: Index, b: Index, size: usize) -> (usize, usize) {
         let (a, b) = (a.index(size), b.index(size));
@@ -366,64 +414,92 @@ pub fn registry_strategy(
 
     let list_of_raw_dependency = vec(raw_dependency, ..=max_deps);
 
-    (list_of_crates_with_versions, list_of_raw_dependency).prop_map(
-        |(crate_vers_by_name, raw_dependencies)| {
-            let list_of_pkgid: Vec<_> = crate_vers_by_name
-                .iter()
-                .flat_map(|(name, vers)| vers.iter().map(move |x| ((name.as_str(), &x.0), x.1)))
-                .collect();
-            let len_all_pkgid = list_of_pkgid.len();
-            let mut dependency_by_pkgid = vec![vec![]; len_all_pkgid];
-            for (a, b, (c, d)) in raw_dependencies {
-                let (a, b) = order_index(a, b, len_all_pkgid);
-                let ((dep_name, _), _) = list_of_pkgid[a];
-                if (list_of_pkgid[b].0).0 == dep_name {
-                    continue;
-                }
-                let s = &crate_vers_by_name[dep_name];
-                let (c, d) = order_index(c, d, s.len());
+    // By default a package depends only on other packages that have a smaller name,
+    // this helps make sure that all things in the resulting index are DAGs.
+    // If this is true then the DAG is maintained with grater instead.
+    let reverse_alphabetical = any::<bool>().no_shrink();
 
-                dependency_by_pkgid[b].push(dep_req(
-                    &dep_name,
-                    &if c == d {
-                        format!("={}", s[c].0)
-                    } else {
-                        format!(">={}, <={}", s[c].0, s[d].0)
-                    },
-                ))
-            }
-
-            PrettyPrintRegistry(
-                list_of_pkgid
-                    .into_iter()
-                    .zip(dependency_by_pkgid.into_iter())
-                    .map(|(((name, ver), allow_deps), deps)| {
-                        pkg_dep(
-                            (name, ver).to_pkgid(),
-                            if !allow_deps {
-                                vec![dep_req("bad", "*")]
-                            } else {
-                                let mut deps = deps;
-                                deps.sort_by_key(|d| d.name_in_toml());
-                                deps.dedup_by_key(|d| d.name_in_toml());
-                                deps
-                            },
-                        )
-                    })
-                    .collect(),
-            )
-        },
+    (
+        list_of_crates_with_versions,
+        list_of_raw_dependency,
+        reverse_alphabetical,
     )
+        .prop_map(
+            |(crate_vers_by_name, raw_dependencies, reverse_alphabetical)| {
+                let list_of_pkgid: Vec<_> = crate_vers_by_name
+                    .iter()
+                    .flat_map(|(name, vers)| vers.iter().map(move |x| ((name.as_str(), &x.0), x.1)))
+                    .collect();
+                let len_all_pkgid = list_of_pkgid.len();
+                let mut dependency_by_pkgid = vec![vec![]; len_all_pkgid];
+                for (a, b, (c, d), k) in raw_dependencies {
+                    let (a, b) = order_index(a, b, len_all_pkgid);
+                    let (a, b) = if reverse_alphabetical { (b, a) } else { (a, b) };
+                    let ((dep_name, _), _) = list_of_pkgid[a];
+                    if (list_of_pkgid[b].0).0 == dep_name {
+                        continue;
+                    }
+                    let s = &crate_vers_by_name[dep_name];
+                    let s_last_index = s.len() - 1;
+                    let (c, d) = order_index(c, d, s.len());
+
+                    dependency_by_pkgid[b].push(dep_req_kind(
+                        &dep_name,
+                        &if c == 0 && d == s_last_index {
+                            "*".to_string()
+                        } else if c == 0 {
+                            format!("<={}", s[d].0)
+                        } else if d == s_last_index {
+                            format!(">={}", s[c].0)
+                        } else if c == d {
+                            format!("={}", s[c].0)
+                        } else {
+                            format!(">={}, <={}", s[c].0, s[d].0)
+                        },
+                        match k {
+                            0 => Kind::Normal,
+                            1 => Kind::Build,
+                            // => Kind::Development, // Development has not impact so don't gen
+                            _ => panic!("bad index for Kind"),
+                        },
+                    ))
+                }
+
+                PrettyPrintRegistry(
+                    list_of_pkgid
+                        .into_iter()
+                        .zip(dependency_by_pkgid.into_iter())
+                        .map(|(((name, ver), allow_deps), deps)| {
+                            pkg_dep(
+                                (name, ver).to_pkgid(),
+                                if !allow_deps {
+                                    vec![dep_req("bad", "*")]
+                                } else {
+                                    let mut deps = deps;
+                                    deps.sort_by_key(|d| d.name_in_toml());
+                                    deps.dedup_by_key(|d| d.name_in_toml());
+                                    deps
+                                },
+                            )
+                        })
+                        .collect(),
+                )
+            },
+        )
 }
 
 /// This test is to test the generator to ensure
 /// that it makes registries with large dependency trees
+///
+/// This is a form of randomized testing, if you are unlucky it can fail.
+/// A failure on it's own is not a big dael. If you did not change the
+/// `registry_strategy` then feel free to retry without concern.
 #[test]
 fn meta_test_deep_trees_from_strategy() {
     let mut dis = [0; 21];
 
     let strategy = registry_strategy(50, 20, 60);
-    for _ in 0..64 {
+    for _ in 0..128 {
         let PrettyPrintRegistry(input) = strategy
             .new_tree(&mut TestRunner::default())
             .unwrap()
@@ -446,26 +522,30 @@ fn meta_test_deep_trees_from_strategy() {
     }
 
     panic!(
-        "In 640 tries we did not see a wide enough distribution of dependency trees! dis: {:?}",
+        "In 1280 tries we did not see a wide enough distribution of dependency trees! dis: {:?}",
         dis
     );
 }
 
 /// This test is to test the generator to ensure
 /// that it makes registries that include multiple versions of the same library
+///
+/// This is a form of randomized testing, if you are unlucky it can fail.
+/// A failure on its own is not a big deal. If you did not change the
+/// `registry_strategy` then feel free to retry without concern.
 #[test]
 fn meta_test_multiple_versions_strategy() {
     let mut dis = [0; 10];
 
     let strategy = registry_strategy(50, 20, 60);
-    for _ in 0..64 {
+    for _ in 0..128 {
         let PrettyPrintRegistry(input) = strategy
             .new_tree(&mut TestRunner::default())
             .unwrap()
             .current();
         let reg = registry(input.clone());
         for this in input.iter().rev().take(10) {
-            let mut res = resolve(
+            let res = resolve(
                 &pkg_id("root"),
                 vec![dep_req(&this.name(), &format!("={}", this.version()))],
                 &reg,
@@ -482,7 +562,7 @@ fn meta_test_multiple_versions_strategy() {
         }
     }
     panic!(
-        "In 640 tries we did not see a wide enough distribution of multiple versions of the same library! dis: {:?}",
+        "In 1280 tries we did not see a wide enough distribution of multiple versions of the same library! dis: {:?}",
         dis
     );
 }

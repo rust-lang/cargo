@@ -4,9 +4,9 @@ use std::path::PathBuf;
 use std::str::{self, FromStr};
 
 use super::env_args;
-use util::{CargoResult, CargoResultExt, Cfg, Config, ProcessBuilder, Rustc};
-use core::TargetKind;
 use super::Kind;
+use crate::core::TargetKind;
+use crate::util::{CargoResult, CargoResultExt, Cfg, Config, ProcessBuilder, Rustc};
 
 #[derive(Clone)]
 pub struct TargetInfo {
@@ -113,7 +113,7 @@ impl TargetInfo {
         if has_cfg_and_sysroot {
             let line = match lines.next() {
                 Some(line) => line,
-                None => bail!(
+                None => failure::bail!(
                     "output of --print=sysroot missing when learning about \
                      target-specific information from rustc"
                 ),
@@ -173,17 +173,16 @@ impl TargetInfo {
             Some((ref prefix, ref suffix)) => (prefix, suffix),
             None => return Ok(None),
         };
-        let mut ret = vec![
-            FileType {
-                suffix: suffix.clone(),
-                prefix: prefix.clone(),
-                flavor,
-                should_replace_hyphens: false,
-            },
-        ];
+        let mut ret = vec![FileType {
+            suffix: suffix.clone(),
+            prefix: prefix.clone(),
+            flavor,
+            should_replace_hyphens: false,
+        }];
 
         // rust-lang/cargo#4500
-        if target_triple.ends_with("pc-windows-msvc") && crate_type.ends_with("dylib")
+        if target_triple.ends_with("pc-windows-msvc")
+            && crate_type.ends_with("dylib")
             && suffix == ".dll"
         {
             ret.push(FileType {
@@ -260,7 +259,7 @@ impl TargetInfo {
 fn parse_crate_type(
     crate_type: &str,
     error: &str,
-    lines: &mut str::Lines,
+    lines: &mut str::Lines<'_>,
 ) -> CargoResult<Option<(String, String)>> {
     let not_supported = error.lines().any(|line| {
         (line.contains("unsupported crate type") || line.contains("unknown crate type"))
@@ -271,7 +270,7 @@ fn parse_crate_type(
     }
     let line = match lines.next() {
         Some(line) => line,
-        None => bail!(
+        None => failure::bail!(
             "malformed output when learning about \
              crate-type {} information",
             crate_type
@@ -281,7 +280,7 @@ fn parse_crate_type(
     let prefix = parts.next().unwrap();
     let suffix = match parts.next() {
         Some(part) => part,
-        None => bail!(
+        None => failure::bail!(
             "output of --print=file-names has changed in \
              the compiler, cannot parse"
         ),

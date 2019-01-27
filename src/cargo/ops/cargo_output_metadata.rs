@@ -1,11 +1,13 @@
 use std::collections::HashMap;
+use std::path::PathBuf;
 
 use serde::ser;
+use serde::Serialize;
 
-use core::resolver::Resolve;
-use core::{Package, PackageId, Workspace};
-use ops::{self, Packages};
-use util::CargoResult;
+use crate::core::resolver::Resolve;
+use crate::core::{Package, PackageId, Workspace};
+use crate::ops::{self, Packages};
+use crate::util::CargoResult;
 
 const VERSION: u32 = 1;
 
@@ -20,9 +22,9 @@ pub struct OutputMetadataOptions {
 /// Loads the manifest, resolves the dependencies of the package to the concrete
 /// used versions - considering overrides - and writes all dependencies in a JSON
 /// format to stdout.
-pub fn output_metadata(ws: &Workspace, opt: &OutputMetadataOptions) -> CargoResult<ExportInfo> {
+pub fn output_metadata(ws: &Workspace<'_>, opt: &OutputMetadataOptions) -> CargoResult<ExportInfo> {
     if opt.version != VERSION {
-        bail!(
+        failure::bail!(
             "metadata version {} not supported, only {} is currently supported",
             opt.version,
             VERSION
@@ -35,18 +37,18 @@ pub fn output_metadata(ws: &Workspace, opt: &OutputMetadataOptions) -> CargoResu
     }
 }
 
-fn metadata_no_deps(ws: &Workspace, _opt: &OutputMetadataOptions) -> CargoResult<ExportInfo> {
+fn metadata_no_deps(ws: &Workspace<'_>, _opt: &OutputMetadataOptions) -> CargoResult<ExportInfo> {
     Ok(ExportInfo {
         packages: ws.members().cloned().collect(),
-        workspace_members: ws.members().map(|pkg| pkg.package_id().clone()).collect(),
+        workspace_members: ws.members().map(|pkg| pkg.package_id()).collect(),
         resolve: None,
-        target_directory: ws.target_dir().display().to_string(),
+        target_directory: ws.target_dir().clone().into_path_unlocked(),
         version: VERSION,
-        workspace_root: ws.root().display().to_string(),
+        workspace_root: ws.root().to_path_buf(),
     })
 }
 
-fn metadata_full(ws: &Workspace, opt: &OutputMetadataOptions) -> CargoResult<ExportInfo> {
+fn metadata_full(ws: &Workspace<'_>, opt: &OutputMetadataOptions) -> CargoResult<ExportInfo> {
     let specs = Packages::All.to_package_id_specs(ws)?;
     let (package_set, resolve) = ops::resolve_ws_precisely(
         ws,
@@ -58,19 +60,19 @@ fn metadata_full(ws: &Workspace, opt: &OutputMetadataOptions) -> CargoResult<Exp
     )?;
     let mut packages = HashMap::new();
     for pkg in package_set.get_many(package_set.package_ids())? {
-        packages.insert(pkg.package_id().clone(), pkg.clone());
+        packages.insert(pkg.package_id(), pkg.clone());
     }
 
     Ok(ExportInfo {
         packages: packages.values().map(|p| (*p).clone()).collect(),
-        workspace_members: ws.members().map(|pkg| pkg.package_id().clone()).collect(),
+        workspace_members: ws.members().map(|pkg| pkg.package_id()).collect(),
         resolve: Some(MetadataResolve {
             resolve: (packages, resolve),
-            root: ws.current_opt().map(|pkg| pkg.package_id().clone()),
+            root: ws.current_opt().map(|pkg| pkg.package_id()),
         }),
-        target_directory: ws.target_dir().display().to_string(),
+        target_directory: ws.target_dir().clone().into_path_unlocked(),
         version: VERSION,
-        workspace_root: ws.root().display().to_string(),
+        workspace_root: ws.root().to_path_buf(),
     })
 }
 
@@ -79,9 +81,9 @@ pub struct ExportInfo {
     packages: Vec<Package>,
     workspace_members: Vec<PackageId>,
     resolve: Option<MetadataResolve>,
-    target_directory: String,
+    target_directory: PathBuf,
     version: u32,
-    workspace_root: String,
+    workspace_root: PathBuf,
 }
 
 /// Newtype wrapper to provide a custom `Serialize` implementation.
@@ -94,40 +96,43 @@ struct MetadataResolve {
     root: Option<PackageId>,
 }
 
-fn serialize_resolve<S>((packages, resolve): &(HashMap<PackageId, Package>, Resolve), s: S) -> Result<S::Ok, S::Error>
+fn serialize_resolve<S>(
+    (packages, resolve): &(HashMap<PackageId, Package>, Resolve),
+    s: S,
+) -> Result<S::Ok, S::Error>
 where
     S: ser::Serializer,
 {
     #[derive(Serialize)]
-    struct Dep<'a> {
+    struct Dep {
         name: Option<String>,
-        pkg: &'a PackageId
+        pkg: PackageId,
     }
 
     #[derive(Serialize)]
     struct Node<'a> {
-        id: &'a PackageId,
-        dependencies: Vec<&'a PackageId>,
-        deps: Vec<Dep<'a>>,
+        id: PackageId,
+        dependencies: Vec<PackageId>,
+        deps: Vec<Dep>,
         features: Vec<&'a str>,
     }
 
-    s.collect_seq(resolve
-        .iter()
-        .map(|id| Node {
+    s.collect_seq(resolve.iter().map(|id| {
+        Node {
             id,
             dependencies: resolve.deps(id).map(|(pkg, _deps)| pkg).collect(),
-            deps: resolve.deps(id)
+            deps: resolve
+                .deps(id)
                 .map(|(pkg, _deps)| {
-                    let name = packages.get(pkg)
+                    let name = packages
+                        .get(&pkg)
                         .and_then(|pkg| pkg.targets().iter().find(|t| t.is_lib()))
-                        .and_then(|lib_target| {
-                            resolve.extern_crate_name(id, pkg, lib_target).ok()
-                        });
+                        .and_then(|lib_target| resolve.extern_crate_name(id, pkg, lib_target).ok());
 
                     Dep { name, pkg }
                 })
                 .collect(),
             features: resolve.features_sorted(id),
-        }))
+        }
+    }))
 }

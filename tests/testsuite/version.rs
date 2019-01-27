@@ -1,5 +1,5 @@
+use crate::support::project;
 use cargo;
-use support::project;
 
 #[test]
 fn simple() {
@@ -36,6 +36,7 @@ fn version_works_with_bad_target_dir() {
             [build]
             target-dir = 4
         "#,
-        ).build();
+        )
+        .build();
     p.cargo("version").run();
 }

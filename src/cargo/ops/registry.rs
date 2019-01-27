@@ -1,29 +1,28 @@
 use std::collections::BTreeMap;
 use std::fs::{self, File};
+use std::io::{self, BufRead};
 use std::iter::repeat;
 use std::str;
 use std::time::Duration;
 use std::{cmp, env};
 
-use log::Level;
-use curl::easy::{Easy, SslOpt, InfoType};
-use git2;
-use registry::{NewCrate, NewCrateDependency, Registry};
-
+use crates_io::{NewCrate, NewCrateDependency, Registry};
+use curl::easy::{Easy, InfoType, SslOpt};
+use log::{log, Level};
 use url::percent_encoding::{percent_encode, QUERY_ENCODE_SET};
 
-use core::dependency::Kind;
-use core::manifest::ManifestMetadata;
-use core::source::Source;
-use core::{Package, SourceId, Workspace};
-use ops;
-use sources::{RegistrySource, SourceConfigMap};
-use util::config::{self, Config};
-use util::errors::{CargoResult, CargoResultExt};
-use util::important_paths::find_root_manifest_for_wd;
-use util::paths;
-use util::ToUrl;
-use version;
+use crate::core::dependency::Kind;
+use crate::core::manifest::ManifestMetadata;
+use crate::core::source::Source;
+use crate::core::{Package, SourceId, Workspace};
+use crate::ops;
+use crate::sources::{RegistrySource, SourceConfigMap};
+use crate::util::config::{self, Config};
+use crate::util::errors::{CargoResult, CargoResultExt};
+use crate::util::important_paths::find_root_manifest_for_wd;
+use crate::util::ToUrl;
+use crate::util::{paths, validate_package_name};
+use crate::version;
 
 pub struct RegistryConfig {
     pub index: Option<String>,
@@ -40,9 +39,12 @@ pub struct PublishOpts<'cfg> {
     pub target: Option<String>,
     pub dry_run: bool,
     pub registry: Option<String>,
+    pub features: Vec<String>,
+    pub all_features: bool,
+    pub no_default_features: bool,
 }
 
-pub fn publish(ws: &Workspace, opts: &PublishOpts) -> CargoResult<()> {
+pub fn publish(ws: &Workspace<'_>, opts: &PublishOpts<'_>) -> CargoResult<()> {
     let pkg = ws.current()?;
 
     if let Some(ref allowed_registries) = *pkg.publish() {
@@ -50,7 +52,7 @@ pub fn publish(ws: &Workspace, opts: &PublishOpts) -> CargoResult<()> {
             Some(ref registry) => allowed_registries.contains(registry),
             None => false,
         } {
-            bail!(
+            failure::bail!(
                 "some crates cannot be published.\n\
                  `{}` is marked as unpublishable",
                 pkg.name()
@@ -59,7 +61,7 @@ pub fn publish(ws: &Workspace, opts: &PublishOpts) -> CargoResult<()> {
     }
 
     if !pkg.manifest().patch().is_empty() {
-        bail!("published crates cannot contain [patch] sections");
+        failure::bail!("published crates cannot contain [patch] sections");
     }
 
     let (mut registry, reg_id) = registry(
@@ -67,8 +69,9 @@ pub fn publish(ws: &Workspace, opts: &PublishOpts) -> CargoResult<()> {
         opts.token.clone(),
         opts.index.clone(),
         opts.registry.clone(),
+        true,
     )?;
-    verify_dependencies(pkg, &reg_id)?;
+    verify_dependencies(pkg, &registry, reg_id)?;
 
     // Prepare a tarball, with a non-surpressable warning if metadata
     // is missing since this is being put online.
@@ -82,9 +85,12 @@ pub fn publish(ws: &Workspace, opts: &PublishOpts) -> CargoResult<()> {
             allow_dirty: opts.allow_dirty,
             target: opts.target.clone(),
             jobs: opts.jobs,
-            registry: opts.registry.clone(),
+            features: opts.features.clone(),
+            all_features: opts.all_features,
+            no_default_features: opts.no_default_features,
         },
-    )?.unwrap();
+    )?
+    .unwrap();
 
     // Upload said tarball to the specified destination
     opts.config
@@ -95,18 +101,22 @@ pub fn publish(ws: &Workspace, opts: &PublishOpts) -> CargoResult<()> {
         pkg,
         tarball.file(),
         &mut registry,
-        &reg_id,
+        reg_id,
         opts.dry_run,
     )?;
 
     Ok(())
 }
 
-fn verify_dependencies(pkg: &Package, registry_src: &SourceId) -> CargoResult<()> {
+fn verify_dependencies(
+    pkg: &Package,
+    registry: &Registry,
+    registry_src: SourceId,
+) -> CargoResult<()> {
     for dep in pkg.dependencies().iter() {
         if dep.source_id().is_path() {
             if !dep.specified_req() {
-                bail!(
+                failure::bail!(
                     "all path dependencies must have a version specified \
                      when publishing.\ndependency `{}` does not specify \
                      a version",
@@ -115,10 +125,17 @@ fn verify_dependencies(pkg: &Package, registry_src: &SourceId) -> CargoResult<()
             }
         } else if dep.source_id() != registry_src {
             if dep.source_id().is_registry() {
-                // Block requests to send to a registry if it is not an alternative
-                // registry
-                if !registry_src.is_alt_registry() {
-                    bail!("crates cannot be published to crates.io with dependencies sourced from other\n\
+                // Block requests to send to crates.io with alt-registry deps.
+                // This extra hostname check is mostly to assist with testing,
+                // but also prevents someone using `--index` to specify
+                // something that points to crates.io.
+                let is_crates_io = registry
+                    .host()
+                    .to_url()
+                    .map(|u| u.host_str() == Some("crates.io"))
+                    .unwrap_or(false);
+                if registry_src.is_default_registry() || is_crates_io {
+                    failure::bail!("crates cannot be published to crates.io with dependencies sourced from other\n\
                            registries either publish `{}` on crates.io or pull it into this repository\n\
                            and specify it with a path and version\n\
                            (crate `{}` is pulled from {})",
@@ -127,10 +144,10 @@ fn verify_dependencies(pkg: &Package, registry_src: &SourceId) -> CargoResult<()
                           dep.source_id());
                 }
             } else {
-                bail!(
-                    "crates cannot be published to crates.io with dependencies sourced from \
-                     a repository\neither publish `{}` as its own crate on crates.io and \
-                     specify a crates.io version as a dependency or pull it into this \
+                failure::bail!(
+                    "crates cannot be published with dependencies sourced from \
+                     a repository\neither publish `{}` as its own crate and \
+                     specify a version as a dependency or pull it into this \
                      repository and specify it with a path and version\n(crate `{}` has \
                      repository path `{}`)",
                     dep.package_name(),
@@ -148,18 +165,21 @@ fn transmit(
     pkg: &Package,
     tarball: &File,
     registry: &mut Registry,
-    registry_id: &SourceId,
+    registry_id: SourceId,
     dry_run: bool,
 ) -> CargoResult<()> {
-    let deps = pkg.dependencies()
+    let deps = pkg
+        .dependencies()
         .iter()
         .map(|dep| {
             // If the dependency is from a different registry, then include the
             // registry in the dependency.
             let dep_registry_id = match dep.registry_id() {
                 Some(id) => id,
-                None => bail!("dependency missing registry ID"),
+                None => SourceId::crates_io(config)?,
             };
+            // In the index and Web API, None means "from the same registry"
+            // whereas in Cargo.toml, it means "from crates.io".
             let dep_registry = if dep_registry_id != registry_id {
                 Some(dep_registry_id.url().to_string())
             } else {
@@ -177,7 +197,8 @@ fn transmit(
                     Kind::Normal => "normal",
                     Kind::Build => "build",
                     Kind::Development => "dev",
-                }.to_string(),
+                }
+                .to_string(),
                 registry: dep_registry,
                 explicit_name_in_toml: dep.explicit_name_in_toml().map(|s| s.to_string()),
             })
@@ -204,7 +225,7 @@ fn transmit(
     };
     if let Some(ref file) = *license_file {
         if fs::metadata(&pkg.root().join(file)).is_err() {
-            bail!("the license file `{}` does not exist", file)
+            failure::bail!("the license file `{}` does not exist", file)
         }
     }
 
@@ -276,6 +297,12 @@ fn transmit(
                 config.shell().warn(&msg)?;
             }
 
+            if !warnings.other.is_empty() {
+                for msg in warnings.other {
+                    config.shell().warn(&msg)?;
+                }
+            }
+
             Ok(())
         }
         Err(e) => Err(e),
@@ -287,12 +314,15 @@ pub fn registry_configuration(
     registry: Option<String>,
 ) -> CargoResult<RegistryConfig> {
     let (index, token) = match registry {
-        Some(registry) => (
-            Some(config.get_registry_index(&registry)?.to_string()),
-            config
-                .get_string(&format!("registries.{}.token", registry))?
-                .map(|p| p.val),
-        ),
+        Some(registry) => {
+            validate_package_name(&registry, "registry name", "")?;
+            (
+                Some(config.get_registry_index(&registry)?.to_string()),
+                config
+                    .get_string(&format!("registries.{}.token", registry))?
+                    .map(|p| p.val),
+            )
+        }
         None => {
             // Checking out for default index and token
             (
@@ -310,6 +340,7 @@ pub fn registry(
     token: Option<String>,
     index: Option<String>,
     registry: Option<String>,
+    force_update: bool,
 ) -> CargoResult<(Registry, SourceId)> {
     // Parse all configuration options
     let RegistryConfig {
@@ -319,10 +350,18 @@ pub fn registry(
     let token = token.or(token_config);
     let sid = get_source_id(config, index_config.or(index), registry)?;
     let api_host = {
-        let mut src = RegistrySource::remote(&sid, config);
-        src.update()
-            .chain_err(|| format!("failed to update {}", sid))?;
-        (src.config()?).unwrap().api.unwrap()
+        let mut src = RegistrySource::remote(sid, config);
+        // Only update the index if the config is not available or `force` is set.
+        let cfg = src.config();
+        let cfg = if force_update || cfg.is_err() {
+            src.update()
+                .chain_err(|| format!("failed to update {}", sid))?;
+            cfg.or_else(|_| src.config())?
+        } else {
+            cfg.unwrap()
+        };
+        cfg.and_then(|cfg| cfg.api)
+            .ok_or_else(|| failure::format_err!("{} does not support API commands", sid))?
     };
     let handle = http_handle(config)?;
     Ok((Registry::new_handle(api_host, token, handle), sid))
@@ -330,14 +369,20 @@ pub fn registry(
 
 /// Create a new HTTP handle with appropriate global configuration for cargo.
 pub fn http_handle(config: &Config) -> CargoResult<Easy> {
+    let (mut handle, timeout) = http_handle_and_timeout(config)?;
+    timeout.configure(&mut handle)?;
+    Ok(handle)
+}
+
+pub fn http_handle_and_timeout(config: &Config) -> CargoResult<(Easy, HttpTimeout)> {
     if config.frozen() {
-        bail!(
+        failure::bail!(
             "attempting to make an HTTP request, but --frozen was \
              specified"
         )
     }
     if !config.network_allowed() {
-        bail!("can't make HTTP request in the offline mode")
+        failure::bail!("can't make HTTP request in the offline mode")
     }
 
     // The timeout option for libcurl by default times out the entire transfer,
@@ -345,33 +390,26 @@ pub fn http_handle(config: &Config) -> CargoResult<Easy> {
     // connect phase as well as a "low speed" timeout so if we don't receive
     // many bytes in a large-ish period of time then we time out.
     let mut handle = Easy::new();
-    configure_http_handle(config, &mut handle)?;
-    Ok(handle)
+    let timeout = configure_http_handle(config, &mut handle)?;
+    Ok((handle, timeout))
 }
 
 pub fn needs_custom_http_transport(config: &Config) -> CargoResult<bool> {
     let proxy_exists = http_proxy_exists(config)?;
-    let timeout = http_timeout(config)?;
+    let timeout = HttpTimeout::new(config)?.is_non_default();
     let cainfo = config.get_path("http.cainfo")?;
     let check_revoke = config.get_bool("http.check-revoke")?;
     let user_agent = config.get_string("http.user-agent")?;
 
     Ok(proxy_exists
-        || timeout.is_some()
+        || timeout
         || cainfo.is_some()
         || check_revoke.is_some()
         || user_agent.is_some())
 }
 
 /// Configure a libcurl http handle with the defaults options for Cargo
-pub fn configure_http_handle(config: &Config, handle: &mut Easy) -> CargoResult<()> {
-    // The timeout option for libcurl by default times out the entire transfer,
-    // but we probably don't want this. Instead we only set timeouts for the
-    // connect phase as well as a "low speed" timeout so if we don't receive
-    // many bytes in a large-ish period of time then we time out.
-    handle.connect_timeout(Duration::new(30, 0))?;
-    handle.low_speed_time(Duration::new(30, 0))?;
-    handle.low_speed_limit(http_low_speed_limit(config)?)?;
+pub fn configure_http_handle(config: &Config, handle: &mut Easy) -> CargoResult<HttpTimeout> {
     if let Some(proxy) = http_proxy(config)? {
         handle.proxy(&proxy)?;
     }
@@ -380,10 +418,6 @@ pub fn configure_http_handle(config: &Config, handle: &mut Easy) -> CargoResult<
     }
     if let Some(check) = config.get_bool("http.check-revoke")? {
         handle.ssl_options(SslOpt::new().no_revoke(!check.val))?;
-    }
-    if let Some(timeout) = http_timeout(config)? {
-        handle.connect_timeout(Duration::new(timeout as u64, 0))?;
-        handle.low_speed_time(Duration::new(timeout as u64, 0))?;
     }
     if let Some(user_agent) = config.get_string("http.user-agent")? {
         handle.useragent(&user_agent.val)?;
@@ -400,8 +434,7 @@ pub fn configure_http_handle(config: &Config, handle: &mut Easy) -> CargoResult<
                 InfoType::HeaderOut => (">", Level::Debug),
                 InfoType::DataIn => ("{", Level::Trace),
                 InfoType::DataOut => ("}", Level::Trace),
-                InfoType::SslDataIn |
-                InfoType::SslDataOut => return,
+                InfoType::SslDataIn | InfoType::SslDataOut => return,
                 _ => return,
             };
             match str::from_utf8(data) {
@@ -411,20 +444,56 @@ pub fn configure_http_handle(config: &Config, handle: &mut Easy) -> CargoResult<
                     }
                 }
                 Err(_) => {
-                    log!(level, "http-debug: {} ({} bytes of data)", prefix, data.len());
+                    log!(
+                        level,
+                        "http-debug: {} ({} bytes of data)",
+                        prefix,
+                        data.len()
+                    );
                 }
             }
         })?;
     }
-    Ok(())
+
+    HttpTimeout::new(config)
 }
 
-/// Find an override from config for curl low-speed-limit option, otherwise use default value
-fn http_low_speed_limit(config: &Config) -> CargoResult<u32> {
-    if let Some(s) = config.get::<Option<u32>>("http.low-speed-limit")? {
-        return Ok(s);
+#[must_use]
+pub struct HttpTimeout {
+    pub dur: Duration,
+    pub low_speed_limit: u32,
+}
+
+impl HttpTimeout {
+    pub fn new(config: &Config) -> CargoResult<HttpTimeout> {
+        let low_speed_limit = config
+            .get::<Option<u32>>("http.low-speed-limit")?
+            .unwrap_or(10);
+        let seconds = config
+            .get::<Option<u64>>("http.timeout")?
+            .or_else(|| env::var("HTTP_TIMEOUT").ok().and_then(|s| s.parse().ok()))
+            .unwrap_or(30);
+        Ok(HttpTimeout {
+            dur: Duration::new(seconds, 0),
+            low_speed_limit,
+        })
     }
-    Ok(10)
+
+    fn is_non_default(&self) -> bool {
+        self.dur != Duration::new(30, 0) || self.low_speed_limit != 10
+    }
+
+    pub fn configure(&self, handle: &mut Easy) -> CargoResult<()> {
+        // The timeout option for libcurl by default times out the entire
+        // transfer, but we probably don't want this. Instead we only set
+        // timeouts for the connect phase as well as a "low speed" timeout so
+        // if we don't receive many bytes in a large-ish period of time then we
+        // time out.
+        handle.connect_timeout(self.dur)?;
+        handle.low_speed_time(self.dur)?;
+        handle.low_speed_limit(self.low_speed_limit)?;
+        Ok(())
+    }
 }
 
 /// Find an explicit HTTP proxy if one is available.
@@ -463,25 +532,51 @@ fn http_proxy_exists(config: &Config) -> CargoResult<bool> {
     }
 }
 
-fn http_timeout(config: &Config) -> CargoResult<Option<i64>> {
-    if let Some(s) = config.get_i64("http.timeout")? {
-        return Ok(Some(s.val));
-    }
-    Ok(env::var("HTTP_TIMEOUT").ok().and_then(|s| s.parse().ok()))
-}
+pub fn registry_login(
+    config: &Config,
+    token: Option<String>,
+    reg: Option<String>,
+) -> CargoResult<()> {
+    let (registry, _) = registry(config, token.clone(), None, reg.clone(), false)?;
 
-pub fn registry_login(config: &Config, token: String, registry: Option<String>) -> CargoResult<()> {
+    let token = match token {
+        Some(token) => token,
+        None => {
+            println!(
+                "please visit {}/me and paste the API Token below",
+                registry.host()
+            );
+            let mut line = String::new();
+            let input = io::stdin();
+            input
+                .lock()
+                .read_line(&mut line)
+                .chain_err(|| "failed to read stdin")
+                .map_err(failure::Error::from)?;
+            line.trim().to_string()
+        }
+    };
+
     let RegistryConfig {
         token: old_token, ..
-    } = registry_configuration(config, registry.clone())?;
+    } = registry_configuration(config, reg.clone())?;
 
     if let Some(old_token) = old_token {
         if old_token == token {
+            config.shell().status("Login", "already logged in")?;
             return Ok(());
         }
     }
 
-    config::save_credentials(config, token, registry)
+    config::save_credentials(config, token, reg.clone())?;
+    config.shell().status(
+        "Login",
+        format!(
+            "token for `{}` saved",
+            reg.as_ref().map_or("crates.io", String::as_str)
+        ),
+    )?;
+    Ok(())
 }
 
 pub struct OwnersOptions {
@@ -509,13 +604,14 @@ pub fn modify_owners(config: &Config, opts: &OwnersOptions) -> CargoResult<()> {
         opts.token.clone(),
         opts.index.clone(),
         opts.registry.clone(),
+        true,
     )?;
 
     if let Some(ref v) = opts.to_add {
         let v = v.iter().map(|s| &s[..]).collect::<Vec<_>>();
-        let msg = registry
-            .add_owners(&name, &v)
-            .map_err(|e| format_err!("failed to invite owners to crate {}: {}", name, e))?;
+        let msg = registry.add_owners(&name, &v).map_err(|e| {
+            failure::format_err!("failed to invite owners to crate {}: {}", name, e)
+        })?;
 
         config.shell().status("Owner", msg)?;
     }
@@ -566,10 +662,10 @@ pub fn yank(
     };
     let version = match version {
         Some(v) => v,
-        None => bail!("a version must be specified to yank"),
+        None => failure::bail!("a version must be specified to yank"),
     };
 
-    let (mut registry, _) = registry(config, token, index, reg)?;
+    let (mut registry, _) = registry(config, token, index, reg, true)?;
 
     if undo {
         config
@@ -600,8 +696,8 @@ fn get_source_id(
         (_, Some(i)) => SourceId::for_registry(&i.to_url()?),
         _ => {
             let map = SourceConfigMap::new(config)?;
-            let src = map.load(&SourceId::crates_io(config)?)?;
-            Ok(src.replaced_source_id().clone())
+            let src = map.load(SourceId::crates_io(config)?)?;
+            Ok(src.replaced_source_id())
         }
     }
 }
@@ -625,22 +721,7 @@ pub fn search(
         prefix
     }
 
-    let sid = get_source_id(config, index, reg)?;
-
-    let mut regsrc = RegistrySource::remote(&sid, config);
-    let cfg = match regsrc.config() {
-        Ok(c) => c,
-        Err(_) => {
-            regsrc
-                .update()
-                .chain_err(|| format!("failed to update {}", &sid))?;
-            regsrc.config()?
-        }
-    };
-
-    let api_host = cfg.unwrap().api.unwrap();
-    let handle = http_handle(config)?;
-    let mut registry = Registry::new_handle(api_host, None, handle);
+    let (mut registry, _) = registry(config, None, index, reg, false)?;
     let (crates, total_crates) = registry
         .search(query, limit)
         .chain_err(|| "failed to retrieve search results from the registry")?;

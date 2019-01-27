@@ -1,4 +1,4 @@
-use support::{basic_lib_manifest, basic_manifest, project};
+use crate::support::{basic_lib_manifest, basic_manifest, project};
 
 #[test]
 fn profile_override_gated() {
@@ -14,7 +14,8 @@ fn profile_override_gated() {
             [profile.dev.build-override]
             opt-level = 3
         "#,
-        ).file("src/lib.rs", "")
+        )
+        .file("src/lib.rs", "")
         .build();
 
     p.cargo("build")
@@ -29,7 +30,8 @@ Caused by:
 
 consider adding `cargo-features = [\"profile-overrides\"]` to the manifest
 ",
-        ).run();
+        )
+        .run();
 
     let p = project()
         .file(
@@ -43,7 +45,8 @@ consider adding `cargo-features = [\"profile-overrides\"]` to the manifest
             [profile.dev.overrides."*"]
             opt-level = 3
         "#,
-        ).file("src/lib.rs", "")
+        )
+        .file("src/lib.rs", "")
         .build();
 
     p.cargo("build")
@@ -58,7 +61,8 @@ Caused by:
 
 consider adding `cargo-features = [\"profile-overrides\"]` to the manifest
 ",
-        ).run();
+        )
+        .run();
 }
 
 #[test]
@@ -83,7 +87,8 @@ fn profile_override_basic() {
             [profile.dev.overrides.bar]
             opt-level = 3
         "#,
-        ).file("src/lib.rs", "")
+        )
+        .file("src/lib.rs", "")
         .file("bar/Cargo.toml", &basic_lib_manifest("bar"))
         .file("bar/src/lib.rs", "")
         .build();
@@ -96,7 +101,8 @@ fn profile_override_basic() {
 [COMPILING] foo [..]
 [RUNNING] `rustc --crate-name foo [..] -C opt-level=1 [..]`
 [FINISHED] dev [optimized + debuginfo] target(s) in [..]",
-        ).run();
+        )
+        .run();
 }
 
 #[test]
@@ -123,7 +129,8 @@ fn profile_override_warnings() {
             [profile.dev.overrides."bar:1.2.3"]
             opt-level = 3
         "#,
-        ).file("src/lib.rs", "")
+        )
+        .file("src/lib.rs", "")
         .file("bar/Cargo.toml", &basic_lib_manifest("bar"))
         .file("bar/src/lib.rs", "")
         .build();
@@ -159,7 +166,8 @@ fn profile_override_dev_release_only() {
             [profile.test.overrides.bar]
             opt-level = 3
         "#,
-        ).file("src/lib.rs", "")
+        )
+        .file("src/lib.rs", "")
         .file("bar/Cargo.toml", &basic_lib_manifest("bar"))
         .file("bar/src/lib.rs", "")
         .build();
@@ -172,7 +180,8 @@ fn profile_override_dev_release_only() {
 Caused by:
   Profile overrides may only be specified for `dev` or `release` profile, not `test`.
 ",
-        ).run();
+        )
+        .run();
 }
 
 #[test]
@@ -212,7 +221,8 @@ fn profile_override_bad_settings() {
             "#,
                     snippet
                 ),
-            ).file("src/lib.rs", "")
+            )
+            .file("src/lib.rs", "")
             .file("bar/Cargo.toml", &basic_lib_manifest("bar"))
             .file("bar/src/lib.rs", "")
             .build();
@@ -248,10 +258,11 @@ fn profile_override_hierarchy() {
 
             [profile.dev.build-override]
             codegen-units = 4
-            "#)
-
+            "#,
+        )
         // m1
-        .file("m1/Cargo.toml",
+        .file(
+            "m1/Cargo.toml",
             r#"
             [package]
             name = "m1"
@@ -260,12 +271,13 @@ fn profile_override_hierarchy() {
             [dependencies]
             m2 = { path = "../m2" }
             dep = { path = "../../dep" }
-            "#)
+            "#,
+        )
         .file("m1/src/lib.rs", "extern crate m2; extern crate dep;")
         .file("m1/build.rs", "fn main() {}")
-
         // m2
-        .file("m2/Cargo.toml",
+        .file(
+            "m2/Cargo.toml",
             r#"
             [package]
             name = "m2"
@@ -277,10 +289,13 @@ fn profile_override_hierarchy() {
             [build-dependencies]
             m3 = { path = "../m3" }
             dep = { path = "../../dep" }
-            "#)
+            "#,
+        )
         .file("m2/src/lib.rs", "extern crate m3;")
-        .file("m2/build.rs", "extern crate m3; extern crate dep; fn main() {}")
-
+        .file(
+            "m2/build.rs",
+            "extern crate m3; extern crate dep; fn main() {}",
+        )
         // m3
         .file("m3/Cargo.toml", &basic_lib_manifest("m3"))
         .file("m3/src/lib.rs", "")
@@ -343,7 +358,8 @@ fn profile_override_spec_multiple() {
             [profile.dev.overrides."bar:0.5.0"]
             opt-level = 3
             "#,
-        ).file("src/lib.rs", "")
+        )
+        .file("src/lib.rs", "")
         .file("bar/Cargo.toml", &basic_lib_manifest("bar"))
         .file("bar/src/lib.rs", "")
         .build();
@@ -355,7 +371,8 @@ fn profile_override_spec_multiple() {
             "\
 [ERROR] multiple profile overrides in profile `dev` match package `bar v0.5.0 ([..])`
 found profile override specs: bar, bar:0.5.0",
-        ).run();
+        )
+        .run();
 }
 
 #[test]
@@ -374,10 +391,11 @@ fn profile_override_spec() {
 
             [profile.dev.overrides."dep:2.0.0"]
             codegen-units = 2
-            "#)
-
+            "#,
+        )
         // m1
-        .file("m1/Cargo.toml",
+        .file(
+            "m1/Cargo.toml",
             r#"
             [package]
             name = "m1"
@@ -385,11 +403,12 @@ fn profile_override_spec() {
 
             [dependencies]
             dep = { path = "../../dep1" }
-            "#)
+            "#,
+        )
         .file("m1/src/lib.rs", "extern crate dep;")
-
         // m2
-        .file("m2/Cargo.toml",
+        .file(
+            "m2/Cargo.toml",
             r#"
             [package]
             name = "m2"
@@ -397,9 +416,9 @@ fn profile_override_spec() {
 
             [dependencies]
             dep = {path = "../../dep2" }
-            "#)
+            "#,
+        )
         .file("m2/src/lib.rs", "extern crate dep;")
-
         .build();
 
     project()

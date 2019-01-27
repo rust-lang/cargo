@@ -2,14 +2,17 @@ use std::fmt;
 use std::rc::Rc;
 use std::str::FromStr;
 
-use semver::VersionReq;
+use log::trace;
 use semver::ReqParseError;
+use semver::VersionReq;
 use serde::ser;
+use serde::Serialize;
+use url::Url;
 
-use core::{PackageId, SourceId, Summary};
-use core::interning::InternedString;
-use util::{Cfg, CfgExpr, Config};
-use util::errors::{CargoError, CargoResult, CargoResultExt};
+use crate::core::interning::InternedString;
+use crate::core::{PackageId, SourceId, Summary};
+use crate::util::errors::{CargoResult, CargoResultExt};
+use crate::util::{Cfg, CfgExpr, Config};
 
 /// Information about a dependency requested by a Cargo manifest.
 /// Cheap to copy.
@@ -23,6 +26,12 @@ pub struct Dependency {
 struct Inner {
     name: InternedString,
     source_id: SourceId,
+    /// Source ID for the registry as specified in the manifest.
+    ///
+    /// This will be None if it is not specified (crates.io dependency).
+    /// This is different from `source_id` for example when both a `path` and
+    /// `registry` is specified. Or in the case of a crates.io dependency,
+    /// `source_id` will be crates.io and this will be None.
     registry_id: Option<SourceId>,
     req: VersionReq,
     specified_req: bool,
@@ -48,7 +57,7 @@ pub enum Platform {
 #[derive(Serialize)]
 struct SerializedDependency<'a> {
     name: &'a str,
-    source: &'a SourceId,
+    source: SourceId,
     req: String,
     kind: Kind,
     rename: Option<&'a str>,
@@ -57,6 +66,10 @@ struct SerializedDependency<'a> {
     uses_default_features: bool,
     features: &'a [InternedString],
     target: Option<&'a Platform>,
+    /// The registry URL this dependency is from.
+    /// If None, then it comes from the default registry (crates.io).
+    #[serde(with = "url_serde")]
+    registry: Option<Url>,
 }
 
 impl ser::Serialize for Dependency {
@@ -74,7 +87,9 @@ impl ser::Serialize for Dependency {
             features: self.features(),
             target: self.platform(),
             rename: self.explicit_name_in_toml().map(|s| s.as_str()),
-        }.serialize(s)
+            registry: self.registry_id().map(|sid| sid.url().clone()),
+        }
+        .serialize(s)
     }
 }
 
@@ -88,7 +103,7 @@ pub enum Kind {
 fn parse_req_with_deprecated(
     name: &str,
     req: &str,
-    extra: Option<(&PackageId, &Config)>,
+    extra: Option<(PackageId, &Config)>,
 ) -> CargoResult<VersionReq> {
     match VersionReq::parse(req) {
         Err(ReqParseError::DeprecatedVersionRequirement(requirement)) => {
@@ -116,7 +131,7 @@ this warning.
             config.shell().warn(&msg)?;
 
             Ok(requirement)
-        },
+        }
         Err(e) => {
             let err: CargoResult<VersionReq> = Err(e.into());
             let v: VersionReq = err.chain_err(|| {
@@ -126,7 +141,7 @@ this warning.
                 )
             })?;
             Ok(v)
-        },
+        }
         Ok(v) => Ok(v),
     }
 }
@@ -140,7 +155,8 @@ impl ser::Serialize for Kind {
             Kind::Normal => None,
             Kind::Development => Some("dev"),
             Kind::Build => Some("build"),
-        }.serialize(s)
+        }
+        .serialize(s)
     }
 }
 
@@ -149,8 +165,8 @@ impl Dependency {
     pub fn parse(
         name: &str,
         version: Option<&str>,
-        source_id: &SourceId,
-        inside: &PackageId,
+        source_id: SourceId,
+        inside: PackageId,
         config: &Config,
     ) -> CargoResult<Dependency> {
         let arg = Some((inside, config));
@@ -173,7 +189,7 @@ impl Dependency {
     pub fn parse_no_deprecated(
         name: &str,
         version: Option<&str>,
-        source_id: &SourceId,
+        source_id: SourceId,
     ) -> CargoResult<Dependency> {
         let (specified_req, version_req) = match version {
             Some(v) => (true, parse_req_with_deprecated(name, v, None)?),
@@ -190,12 +206,12 @@ impl Dependency {
         Ok(ret)
     }
 
-    pub fn new_override(name: &str, source_id: &SourceId) -> Dependency {
+    pub fn new_override(name: &str, source_id: SourceId) -> Dependency {
         assert!(!name.is_empty());
         Dependency {
             inner: Rc::new(Inner {
                 name: InternedString::new(name),
-                source_id: source_id.clone(),
+                source_id,
                 registry_id: None,
                 req: VersionReq::any(),
                 kind: Kind::Normal,
@@ -260,16 +276,16 @@ impl Dependency {
         self.inner.name
     }
 
-    pub fn source_id(&self) -> &SourceId {
-        &self.inner.source_id
+    pub fn source_id(&self) -> SourceId {
+        self.inner.source_id
     }
 
-    pub fn registry_id(&self) -> Option<&SourceId> {
-        self.inner.registry_id.as_ref()
+    pub fn registry_id(&self) -> Option<SourceId> {
+        self.inner.registry_id
     }
 
-    pub fn set_registry_id(&mut self, registry_id: &SourceId) -> &mut Dependency {
-        Rc::make_mut(&mut self.inner).registry_id = Some(registry_id.clone());
+    pub fn set_registry_id(&mut self, registry_id: SourceId) -> &mut Dependency {
+        Rc::make_mut(&mut self.inner).registry_id = Some(registry_id);
         self
     }
 
@@ -301,9 +317,14 @@ impl Dependency {
     }
 
     /// Sets the list of features requested for the package.
-    pub fn set_features(&mut self, features: impl IntoIterator<Item=impl AsRef<str>>) -> &mut Dependency {
-        Rc::make_mut(&mut self.inner).features =
-            features.into_iter().map(|s| InternedString::new(s.as_ref())).collect();
+    pub fn set_features(
+        &mut self,
+        features: impl IntoIterator<Item = impl AsRef<str>>,
+    ) -> &mut Dependency {
+        Rc::make_mut(&mut self.inner).features = features
+            .into_iter()
+            .map(|s| InternedString::new(s.as_ref()))
+            .collect();
         self
     }
 
@@ -342,8 +363,8 @@ impl Dependency {
     }
 
     /// Lock this dependency to depending on the specified package id
-    pub fn lock_to(&mut self, id: &PackageId) -> &mut Dependency {
-        assert_eq!(self.inner.source_id, *id.source_id());
+    pub fn lock_to(&mut self, id: PackageId) -> &mut Dependency {
+        assert_eq!(self.inner.source_id, id.source_id());
         assert!(self.inner.req.matches(id.version()));
         trace!(
             "locking dep from `{}` with `{}` at {} to {}",
@@ -353,7 +374,7 @@ impl Dependency {
             id
         );
         self.set_version_req(VersionReq::exact(id.version()))
-            .set_source_id(id.source_id().clone())
+            .set_source_id(id.source_id())
     }
 
     /// Returns whether this is a "locked" dependency, basically whether it has
@@ -397,23 +418,22 @@ impl Dependency {
     }
 
     /// Returns true if the package (`sum`) can fulfill this dependency request.
-    pub fn matches_ignoring_source(&self, id: &PackageId) -> bool {
+    pub fn matches_ignoring_source(&self, id: PackageId) -> bool {
         self.package_name() == id.name() && self.version_req().matches(id.version())
     }
 
     /// Returns true if the package (`id`) can fulfill this dependency request.
-    pub fn matches_id(&self, id: &PackageId) -> bool {
+    pub fn matches_id(&self, id: PackageId) -> bool {
         self.inner.name == id.name()
             && (self.inner.only_match_name
-                || (self.inner.req.matches(id.version())
-                    && &self.inner.source_id == id.source_id()))
+                || (self.inner.req.matches(id.version()) && self.inner.source_id == id.source_id()))
     }
 
-    pub fn map_source(mut self, to_replace: &SourceId, replace_with: &SourceId) -> Dependency {
+    pub fn map_source(mut self, to_replace: SourceId, replace_with: SourceId) -> Dependency {
         if self.source_id() != to_replace {
             self
         } else {
-            self.set_source_id(replace_with.clone());
+            self.set_source_id(replace_with);
             self
         }
     }
@@ -441,14 +461,14 @@ impl ser::Serialize for Platform {
 }
 
 impl FromStr for Platform {
-    type Err = CargoError;
+    type Err = failure::Error;
 
     fn from_str(s: &str) -> CargoResult<Platform> {
         if s.starts_with("cfg(") && s.ends_with(')') {
             let s = &s[4..s.len() - 1];
-            let p = s.parse()
-                .map(Platform::Cfg)
-                .chain_err(|| format_err!("failed to parse `{}` as a cfg expression", s))?;
+            let p = s.parse().map(Platform::Cfg).chain_err(|| {
+                failure::format_err!("failed to parse `{}` as a cfg expression", s)
+            })?;
             Ok(p)
         } else {
             Ok(Platform::Name(s.to_string()))
@@ -457,7 +477,7 @@ impl FromStr for Platform {
 }
 
 impl fmt::Display for Platform {
-    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         match *self {
             Platform::Name(ref n) => n.fmt(f),
             Platform::Cfg(ref e) => write!(f, "cfg({})", e),

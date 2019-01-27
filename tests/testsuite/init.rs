@@ -1,9 +1,9 @@
+use crate::support;
 use std::env;
 use std::fs::{self, File};
 use std::io::prelude::*;
-use support;
 
-use support::{paths, Execs};
+use crate::support::{paths, Execs};
 
 fn cargo_process(s: &str) -> Execs {
     let mut execs = support::cargo_process(s);
@@ -39,11 +39,50 @@ fn simple_bin() {
     assert!(paths::root().join("foo/src/main.rs").is_file());
 
     cargo_process("build").cwd(&path).run();
-    assert!(
-        paths::root()
-            .join(&format!("foo/target/debug/foo{}", env::consts::EXE_SUFFIX))
-            .is_file()
+    assert!(paths::root()
+        .join(&format!("foo/target/debug/foo{}", env::consts::EXE_SUFFIX))
+        .is_file());
+}
+
+#[test]
+fn simple_git_ignore_exists() {
+    // write a .gitignore file with one entry
+    fs::create_dir_all(paths::root().join("foo")).unwrap();
+    let mut ignore_file = File::create(paths::root().join("foo/.gitignore")).unwrap();
+    ignore_file
+        .write("/target\n**/some.file".as_bytes())
+        .unwrap();
+
+    cargo_process("init --lib foo --edition 2015")
+        .env("USER", "foo")
+        .run();
+
+    assert!(paths::root().is_dir());
+    assert!(paths::root().join("foo/Cargo.toml").is_file());
+    assert!(paths::root().join("foo/src/lib.rs").is_file());
+    assert!(paths::root().join("foo/.git").is_dir());
+    assert!(paths::root().join("foo/.gitignore").is_file());
+
+    let fp = paths::root().join("foo/.gitignore");
+    let mut contents = String::new();
+    File::open(&fp)
+        .unwrap()
+        .read_to_string(&mut contents)
+        .unwrap();
+    assert_eq!(
+        contents,
+        "/target\n\
+         **/some.file\n\n\
+         #Added by cargo\n\
+         #\n\
+         #already existing elements are commented out\n\
+         \n\
+         #/target\n\
+         **/*.rs.bk\n\
+         Cargo.lock",
     );
+
+    cargo_process("build").cwd(&paths::root().join("foo")).run();
 }
 
 #[test]
@@ -183,7 +222,8 @@ fn multibin_project_name_clash() {
   foo.rs
 cannot automatically generate Cargo.toml as the main target would be ambiguous
 ",
-        ).run();
+        )
+        .run();
 
     assert!(!paths::root().join("foo/Cargo.toml").is_file());
 }
@@ -265,7 +305,8 @@ fn invalid_dir_name() {
 [ERROR] Invalid character `.` in crate name: `foo.bar`
 use --name to override crate name
 ",
-        ).run();
+        )
+        .run();
 
     assert!(!foo.join("Cargo.toml").is_file());
 }
@@ -283,7 +324,8 @@ fn reserved_name() {
 [ERROR] The name `test` cannot be used as a crate name\n\
 use --name to override crate name
 ",
-        ).run();
+        )
+        .run();
 
     assert!(!test.join("Cargo.toml").is_file());
 }
@@ -502,7 +544,8 @@ fn unknown_flags() {
         .with_status(1)
         .with_stderr_contains(
             "error: Found argument '--flag' which wasn't expected, or isn't valid in this context",
-        ).run();
+        )
+        .run();
 }
 
 #[cfg(not(windows))]
@@ -513,5 +556,6 @@ fn no_filename() {
         .with_stderr(
             "[ERROR] cannot auto-detect package name from path \"/\" ; use --name to override"
                 .to_string(),
-        ).run();
+        )
+        .run();
 }

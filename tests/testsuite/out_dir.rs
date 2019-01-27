@@ -2,8 +2,8 @@ use std::env;
 use std::fs::{self, File};
 use std::path::Path;
 
-use support::sleep_ms;
-use support::{basic_manifest, project};
+use crate::support::sleep_ms;
+use crate::support::{basic_manifest, project};
 
 #[test]
 fn binary_with_debug() {
@@ -36,13 +36,15 @@ fn static_library_with_debug() {
             [lib]
             crate-type = ["staticlib"]
         "#,
-        ).file(
+        )
+        .file(
             "src/lib.rs",
             r#"
             #[no_mangle]
             pub extern "C" fn foo() { println!("Hello, World!") }
         "#,
-        ).build();
+        )
+        .build();
 
     p.cargo("build -Z unstable-options --out-dir out")
         .masquerade_as_nightly_cargo()
@@ -69,13 +71,15 @@ fn dynamic_library_with_debug() {
             [lib]
             crate-type = ["cdylib"]
         "#,
-        ).file(
+        )
+        .file(
             "src/lib.rs",
             r#"
             #[no_mangle]
             pub extern "C" fn foo() { println!("Hello, World!") }
         "#,
-        ).build();
+        )
+        .build();
 
     p.cargo("build -Z unstable-options --out-dir out")
         .masquerade_as_nightly_cargo()
@@ -102,12 +106,14 @@ fn rlib_with_debug() {
             [lib]
             crate-type = ["rlib"]
         "#,
-        ).file(
+        )
+        .file(
             "src/lib.rs",
             r#"
             pub fn foo() { println!("Hello, World!") }
         "#,
-        ).build();
+        )
+        .build();
 
     p.cargo("build -Z unstable-options --out-dir out")
         .masquerade_as_nightly_cargo()
@@ -136,7 +142,8 @@ fn include_only_the_binary_from_the_current_package() {
             [dependencies]
             utils = { path = "./utils" }
         "#,
-        ).file("src/lib.rs", "extern crate utils;")
+        )
+        .file("src/lib.rs", "extern crate utils;")
         .file(
             "src/main.rs",
             r#"
@@ -146,7 +153,8 @@ fn include_only_the_binary_from_the_current_package() {
                 println!("Hello, World!")
             }
         "#,
-        ).file("utils/Cargo.toml", &basic_manifest("utils", "0.0.1"))
+        )
+        .file("utils/Cargo.toml", &basic_manifest("utils", "0.0.1"))
         .file("utils/src/lib.rs", "")
         .build();
 
@@ -187,7 +195,8 @@ fn replaces_artifacts() {
     p.process(
         &p.root()
             .join(&format!("out/foo{}", env::consts::EXE_SUFFIX)),
-    ).with_stdout("foo")
+    )
+    .with_stdout("foo")
     .run();
 
     sleep_ms(1000);
@@ -199,8 +208,40 @@ fn replaces_artifacts() {
     p.process(
         &p.root()
             .join(&format!("out/foo{}", env::consts::EXE_SUFFIX)),
-    ).with_stdout("bar")
+    )
+    .with_stdout("bar")
     .run();
+}
+
+#[test]
+fn avoid_build_scripts() {
+    let p = project()
+        .file(
+            "Cargo.toml",
+            r#"
+            [workspace]
+            members = ["a", "b"]
+            "#,
+        )
+        .file("a/Cargo.toml", &basic_manifest("a", "0.0.1"))
+        .file("a/src/main.rs", "fn main() {}")
+        .file("a/build.rs", r#"fn main() { println!("hello-build-a"); }"#)
+        .file("b/Cargo.toml", &basic_manifest("b", "0.0.1"))
+        .file("b/src/main.rs", "fn main() {}")
+        .file("b/build.rs", r#"fn main() { println!("hello-build-b"); }"#)
+        .build();
+
+    p.cargo("build -Z unstable-options --out-dir out -vv")
+        .masquerade_as_nightly_cargo()
+        .with_stdout_contains("[a 0.0.1] hello-build-a")
+        .with_stdout_contains("[b 0.0.1] hello-build-b")
+        .run();
+    check_dir_contents(
+        &p.root().join("out"),
+        &["a", "b"],
+        &["a", "a.dSYM", "b", "b.dSYM"],
+        &["a.exe", "a.pdb", "b.exe", "b.pdb"],
+    );
 }
 
 fn check_dir_contents(

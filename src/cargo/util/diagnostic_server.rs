@@ -5,15 +5,16 @@ use std::collections::HashSet;
 use std::env;
 use std::io::{BufReader, Read, Write};
 use std::net::{Shutdown, SocketAddr, TcpListener, TcpStream};
-use std::sync::Arc;
 use std::sync::atomic::{AtomicBool, Ordering};
+use std::sync::Arc;
 use std::thread::{self, JoinHandle};
 
 use failure::{Error, ResultExt};
-use serde_json;
+use log::warn;
+use serde::{Deserialize, Serialize};
 
-use util::{Config, ProcessBuilder};
-use util::errors::CargoResult;
+use crate::util::errors::CargoResult;
+use crate::util::{Config, ProcessBuilder};
 
 const DIAGNOSICS_SERVER_VAR: &str = "__CARGO_FIX_DIAGNOSTICS_SERVER";
 const PLEASE_REPORT_THIS_BUG: &str =
@@ -22,8 +23,10 @@ const PLEASE_REPORT_THIS_BUG: &str =
      and we would appreciate a bug report! You're likely to see \n\
      a number of compiler warnings after this message which cargo\n\
      attempted to fix but failed. If you could open an issue at\n\
-     https://github.com/rust-lang/cargo/issues\n\
-     quoting the full output of this command we'd be very appreciative!\n\n\
+     https://github.com/rust-lang/rust/issues\n\
+     quoting the full output of this command we'd be very appreciative!\n\
+     Note that you may be able to make some more progress in the near-term\n\
+     fixing code with the `--broken-code` flag\n\n\
      ";
 
 #[derive(Deserialize, Serialize)]
@@ -35,6 +38,7 @@ pub enum Message {
     FixFailed {
         files: Vec<String>,
         krate: Option<String>,
+        errors: Vec<String>,
     },
     ReplaceFailed {
         file: String,
@@ -53,8 +57,8 @@ pub enum Message {
 
 impl Message {
     pub fn post(&self) -> Result<(), Error> {
-        let addr = env::var(DIAGNOSICS_SERVER_VAR)
-            .context("diagnostics collector misconfigured")?;
+        let addr =
+            env::var(DIAGNOSICS_SERVER_VAR).context("diagnostics collector misconfigured")?;
         let mut client =
             TcpStream::connect(&addr).context("failed to connect to parent diagnostics target")?;
 
@@ -108,7 +112,11 @@ impl<'a> DiagnosticPrinter<'a> {
                 write!(self.config.shell().err(), "{}", PLEASE_REPORT_THIS_BUG)?;
                 Ok(())
             }
-            Message::FixFailed { files, krate } => {
+            Message::FixFailed {
+                files,
+                krate,
+                errors,
+            } => {
                 if let Some(ref krate) = *krate {
                     self.config.shell().warn(&format!(
                         "failed to automatically apply fixes suggested by rustc \
@@ -116,9 +124,9 @@ impl<'a> DiagnosticPrinter<'a> {
                         krate,
                     ))?;
                 } else {
-                    self.config.shell().warn(
-                        "failed to automatically apply fixes suggested by rustc"
-                    )?;
+                    self.config
+                        .shell()
+                        .warn("failed to automatically apply fixes suggested by rustc")?;
                 }
                 if !files.is_empty() {
                     writeln!(
@@ -132,12 +140,28 @@ impl<'a> DiagnosticPrinter<'a> {
                     writeln!(self.config.shell().err())?;
                 }
                 write!(self.config.shell().err(), "{}", PLEASE_REPORT_THIS_BUG)?;
+                if !errors.is_empty() {
+                    writeln!(
+                        self.config.shell().err(),
+                        "The following errors were reported:"
+                    )?;
+                    for error in errors {
+                        write!(self.config.shell().err(), "{}", error)?;
+                        if !error.ends_with('\n') {
+                            writeln!(self.config.shell().err())?;
+                        }
+                    }
+                }
+                writeln!(
+                    self.config.shell().err(),
+                    "Original diagnostics will follow.\n"
+                )?;
                 Ok(())
             }
             Message::EditionAlreadyEnabled { file, edition } => {
                 // Like above, only warn once per file
                 if !self.edition_already_enabled.insert(file.clone()) {
-                    return Ok(())
+                    return Ok(());
                 }
 
                 let msg = format!(
@@ -158,10 +182,14 @@ information about transitioning to the {0} edition see:
                 self.config.shell().error(&msg)?;
                 Ok(())
             }
-            Message::IdiomEditionMismatch { file, idioms, edition } => {
+            Message::IdiomEditionMismatch {
+                file,
+                idioms,
+                edition,
+            } => {
                 // Same as above
                 if !self.idiom_mismatch.insert(file.clone()) {
-                    return Ok(())
+                    return Ok(());
                 }
                 self.config.shell().error(&format!(
                     "\
@@ -230,16 +258,25 @@ impl RustfixDiagnosticServer {
         })
     }
 
-    fn run(self, on_message: &Fn(Message), done: &AtomicBool) {
+    fn run(self, on_message: &dyn Fn(Message), done: &AtomicBool) {
         while let Ok((client, _)) = self.listener.accept() {
-            let client = BufReader::new(client);
-            match serde_json::from_reader(client) {
-                Ok(message) => on_message(message),
-                Err(e) => warn!("invalid diagnostics message: {}", e),
-            }
             if done.load(Ordering::SeqCst) {
-                break
+                break;
             }
+            let mut client = BufReader::new(client);
+            let mut s = String::new();
+            if let Err(e) = client.read_to_string(&mut s) {
+                warn!("diagnostic server failed to read: {}", e);
+            } else {
+                match serde_json::from_str(&s) {
+                    Ok(message) => on_message(message),
+                    Err(e) => warn!("invalid diagnostics message: {}", e),
+                }
+            }
+            // The client should be kept alive until after `on_message` is
+            // called to ensure that the client doesn't exit too soon (and
+            // Message::Finish getting posted before Message::FixDiagnostic).
+            drop(client);
         }
     }
 }

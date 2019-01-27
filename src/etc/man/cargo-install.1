@@ -1,161 +1,370 @@
-.TH "CARGO\-INSTALL" "1" "May 2016" "The Rust package manager" "Cargo Manual"
-.hy
-.SH NAME
-.PP
-cargo\-install \- Install a Rust binary
-.SH SYNOPSIS
-.PP
-\f[I]cargo install\f[] [OPTIONS] <CRATE>
-.PP
-\f[I]cargo install\f[] [OPTIONS] \-\-list
-.SH DESCRIPTION
-.PP
-Install a Rust binary
-.PP
-This command manages Cargo\[aq]s local set of install binary crates.
-Only packages which have [[bin]] targets can be installed, and all
-binaries are installed into the installation root\[aq]s \f[I]bin\f[]
-folder.
-The installation root is determined, in order of precedence, by
-\f[B]\-\-root\f[], \f[I]$CARGO_INSTALL_ROOT\f[], the
-\f[I]install.root\f[] configuration key, and finally the home directory
-(which is either \f[I]$CARGO_HOME\f[] if set or \f[I]$HOME/.cargo\f[] by
-default).
-.PP
-There are multiple sources from which a crate can be installed.
-The default location is crates.io but the \f[B]\-\-git\f[] and
-\f[B]\-\-path\f[] flags can change this source.
-If the source contains more than one package (such as \f[I]crates.io\f[]
-or a git repository with multiple crates) the \f[B]\f[] argument is
-required to indicate which crate should be installed.
-.PP
-Crates from crates.io can optionally specify the version they wish to
-install via the \f[B]\-\-vers\f[] flags, and similarly packages from git
-repositories can optionally specify the branch, tag, or revision that
-should be installed.
-If a crate has multiple binaries, the \f[B]\-\-bin\f[] argument can
-selectively install only one of them, and if you\[aq]d rather install
-examples the \f[B]\-\-example\f[] argument can be used as well.
-.PP
-As a special convenience, omitting the <crate> specification entirely
-will install the crate in the current directory.
-That is, \f[I]install\f[] is equivalent to the more explicit "install
-\-\-path .".
-.PP
-If the source is crates.io or \f[B]\-\-git\f[] then by default the crate will be built in a temporary target directory.
-To avoid this, the target directory can be specified by setting the \f[B]CARGO_TARGET_DIR\f[] environment variable to a relative path.
-In particular, this can be useful for caching build artifacts on continuous integration systems.
-.PP
-The \f[B]\-\-list\f[] option will list all installed packages (and their
-versions).
-.SH OPTIONS
-.SS Query options
-.TP
-.B \-\-list
-List all installed packages (and their versions).
-.RS
+'\" t
+.\"     Title: cargo-install
+.\"    Author: [see the "AUTHOR(S)" section]
+.\" Generator: Asciidoctor 1.5.8
+.\"      Date: 2018-12-23
+.\"    Manual: \ \&
+.\"    Source: \ \&
+.\"  Language: English
+.\"
+.TH "CARGO\-INSTALL" "1" "2018-12-23" "\ \&" "\ \&"
+.ie \n(.g .ds Aq \(aq
+.el       .ds Aq '
+.ss \n[.ss] 0
+.nh
+.ad l
+.de URL
+\fI\\$2\fP <\\$1>\\$3
+..
+.als MTO URL
+.if \n[.g] \{\
+.  mso www.tmac
+.  am URL
+.    ad l
+.  .
+.  am MTO
+.    ad l
+.  .
+.  LINKSTYLE blue R < >
+.\}
+.SH "NAME"
+cargo\-install \- Build and install a Rust binary
+.SH "SYNOPSIS"
+.sp
+\fBcargo install [\fIOPTIONS\fP] \fICRATE\fP...\fP
+.br
+\fBcargo install [\fIOPTIONS\fP] \-\-path \fIPATH\fP\fP
+.br
+\fBcargo install [\fIOPTIONS\fP] \-\-git \fIURL\fP [\fICRATE\fP...]\fP
+.br
+\fBcargo install [\fIOPTIONS\fP] \-\-list\fP
+.SH "DESCRIPTION"
+.sp
+This command manages Cargo\(cqs local set of installed binary crates. Only packages
+which have \fB[[bin]]\fP targets can be installed, and all binaries are installed into
+the installation root\(cqs \fBbin\fP folder.
+.sp
+The installation root is determined, in order of precedence:
+.sp
+.RS 4
+.ie n \{\
+\h'-04'\(bu\h'+03'\c
+.\}
+.el \{\
+.  sp -1
+.  IP \(bu 2.3
+.\}
+\fB\-\-root\fP option
 .RE
-.SS Specifying what crate to install
-.TP
-.B \-\-vers \f[I]VERS\f[]
+.sp
+.RS 4
+.ie n \{\
+\h'-04'\(bu\h'+03'\c
+.\}
+.el \{\
+.  sp -1
+.  IP \(bu 2.3
+.\}
+\fBCARGO_INSTALL_ROOT\fP environment variable
+.RE
+.sp
+.RS 4
+.ie n \{\
+\h'-04'\(bu\h'+03'\c
+.\}
+.el \{\
+.  sp -1
+.  IP \(bu 2.3
+.\}
+\fBinstall.root\fP Cargo \c
+.URL "https://doc.rust\-lang.org/cargo/reference/config.html" "config value" ""
+.RE
+.sp
+.RS 4
+.ie n \{\
+\h'-04'\(bu\h'+03'\c
+.\}
+.el \{\
+.  sp -1
+.  IP \(bu 2.3
+.\}
+\fBCARGO_HOME\fP environment variable
+.RE
+.sp
+.RS 4
+.ie n \{\
+\h'-04'\(bu\h'+03'\c
+.\}
+.el \{\
+.  sp -1
+.  IP \(bu 2.3
+.\}
+\fB$HOME/.cargo\fP
+.RE
+.sp
+There are multiple sources from which a crate can be installed. The default
+location is crates.io but the \fB\-\-git\fP and \fB\-\-path\fP flags can change this
+source. If the source contains more than one package (such as crates.io or a
+git repository with multiple crates) the \fICRATE\fP argument is required to
+indicate which crate should be installed.
+.sp
+Crates from crates.io can optionally specify the version they wish to install
+via the \fB\-\-version\fP flags, and similarly packages from git repositories can
+optionally specify the branch, tag, or revision that should be installed. If a
+crate has multiple binaries, the \fB\-\-bin\fP argument can selectively install only
+one of them, and if you\(cqd rather install examples the \fB\-\-example\fP argument can
+be used as well.
+.sp
+If the source is crates.io or \fB\-\-git\fP then by default the crate will be built
+in a temporary target directory. To avoid this, the target directory can be
+specified by setting the \fBCARGO_TARGET_DIR\fP environment variable to a relative
+path. In particular, this can be useful for caching build artifacts on
+continuous integration systems.
+.SH "OPTIONS"
+.SS "Install Options"
+.sp
+\fB\-\-vers\fP \fIVERSION\fP, \fB\-\-version\fP \fIVERSION\fP
+.RS 4
 Specify a version to install from crates.io.
-.RS
 .RE
-.TP
-.B \-\-git \f[I]URL\f[]
+.sp
+\fB\-\-git\fP \fIURL\fP
+.RS 4
 Git URL to install the specified crate from.
-.RS
 .RE
-.TP
-.B \-\-branch \f[I]BRANCH\f[]
+.sp
+\fB\-\-branch\fP \fIBRANCH\fP
+.RS 4
 Branch to use when installing from git.
-.RS
 .RE
-.TP
-.B \-\-tag \f[I]TAG\f[]
+.sp
+\fB\-\-tag\fP \fITAG\fP
+.RS 4
 Tag to use when installing from git.
-.RS
 .RE
-.TP
-.B \-\-rev \f[I]SHA\f[]
+.sp
+\fB\-\-rev\fP \fISHA\fP
+.RS 4
 Specific commit to use when installing from git.
-.RS
 .RE
-.TP
-.B \-\-path \f[I]PATH\f[]
+.sp
+\fB\-\-path\fP \fIPATH\fP
+.RS 4
 Filesystem path to local crate to install.
-.RS
 .RE
-.SS Built and install options
-.TP
-.B \-h, \-\-help
-Print this message.
-.RS
+.sp
+\fB\-\-list\fP
+.RS 4
+List all installed packages and their versions.
 .RE
-.TP
-.B \-j \f[I]N\f[], \-\-jobs \f[I]N\f[]
-Number of parallel jobs, defaults to # of CPUs.
-.RS
+.sp
+\fB\-f\fP, \fB\-\-force\fP
+.RS 4
+Force overwriting existing crates or binaries. This can be used to
+reinstall or upgrade a crate.
 .RE
-.TP
-.B \-\-features \f[I]FEATURES\f[]
-Space\-separated list of features to activate.
-.RS
+.sp
+\fB\-\-bin\fP \fINAME\fP...
+.RS 4
+Install only the specified binary.
 .RE
-.TP
-.B \-\-all\-features
-Build all available features.
-.RS
+.sp
+\fB\-\-bins\fP
+.RS 4
+Install all binaries.
 .RE
-.TP
-.B \-f, \-\-force
-Force overwriting existing crates or binaries
-.RS
+.sp
+\fB\-\-example\fP \fINAME\fP...
+.RS 4
+Install only the specified example.
 .RE
-.TP
-.B \-\-no\-default\-features
-Do not build the \f[C]default\f[] feature.
-.RS
+.sp
+\fB\-\-examples\fP
+.RS 4
+Install all examples.
 .RE
-.TP
-.B \-\-debug
-Build in debug mode instead of release mode.
-.RS
-.RE
-.TP
-.B \-\-bin \f[I]NAME\f[]
-Only install the binary NAME.
-.RS
-.RE
-.TP
-.B \-\-example \f[I]EXAMPLE\f[]
-Install the example EXAMPLE instead of binaries.
-.RS
-.RE
-.TP
-.B \-\-root \f[I]DIR\f[]
+.sp
+\fB\-\-root\fP \fIDIR\fP
+.RS 4
 Directory to install packages into.
-.RS
 .RE
-.TP
-.B \-v, \-\-verbose
-Use verbose output.
-.RS
+.sp
+\fB\-\-registry\fP \fIREGISTRY\fP
+.RS 4
+Alternative registry to use.
+.sp
+This option is unstable and available only on the nightly channel and requires
+the \fB\-Z unstable\-options\fP flag to enable.
 .RE
-.TP
-.B \-q, \-\-quiet
+.SS "Feature Selection"
+.sp
+When no feature options are given, the \fBdefault\fP feature is activated for
+every selected package.
+.sp
+\fB\-\-features\fP \fIFEATURES\fP
+.RS 4
+Space or comma separated list of features to activate. These features only
+apply to the current directory\(cqs package. Features of direct dependencies
+may be enabled with \fB<dep\-name>/<feature\-name>\fP syntax.
+.RE
+.sp
+\fB\-\-all\-features\fP
+.RS 4
+Activate all available features of all selected packages.
+.RE
+.sp
+\fB\-\-no\-default\-features\fP
+.RS 4
+Do not activate the \fBdefault\fP feature of the current directory\(cqs
+package.
+.RE
+.SS "Compilation Options"
+.sp
+\fB\-\-target\fP \fITRIPLE\fP
+.RS 4
+Install for the given architecture. The default is the host
+architecture. The general format of the triple is
+\fB<arch><sub>\-<vendor>\-<sys>\-<abi>\fP. Run \fBrustc \-\-print target\-list\fP for a
+list of supported targets.
+.sp
+This may also be specified with the \fBbuild.target\fP
+.URL "https://doc.rust\-lang.org/cargo/reference/config.html" "config value" "."
+.RE
+.sp
+\fB\-\-debug\fP
+.RS 4
+Build with the \fBdev\fP profile instead the \fBrelease\fP profile.
+.RE
+.SS "Miscellaneous Options"
+.sp
+\fB\-j\fP \fIN\fP, \fB\-\-jobs\fP \fIN\fP
+.RS 4
+Number of parallel jobs to run. May also be specified with the
+\fBbuild.jobs\fP \c
+.URL "https://doc.rust\-lang.org/cargo/reference/config.html" "config value" "."
+Defaults to
+the number of CPUs.
+.RE
+.SS "Display Options"
+.sp
+\fB\-v\fP, \fB\-\-verbose\fP
+.RS 4
+Use verbose output. May be specified twice for "very verbose" output which
+includes extra output such as dependency warnings and build script output.
+May also be specified with the \fBterm.verbose\fP
+.URL "https://doc.rust\-lang.org/cargo/reference/config.html" "config value" "."
+.RE
+.sp
+\fB\-q\fP, \fB\-\-quiet\fP
+.RS 4
 No output printed to stdout.
-.RS
 .RE
-.TP
-.B \-\-color \f[I]WHEN\f[]
-Coloring: auto, always, never.
-.RS
+.sp
+\fB\-\-color\fP \fIWHEN\fP
+.RS 4
+Control when colored output is used. Valid values:
+.sp
+.RS 4
+.ie n \{\
+\h'-04'\(bu\h'+03'\c
+.\}
+.el \{\
+.  sp -1
+.  IP \(bu 2.3
+.\}
+\fBauto\fP (default): Automatically detect if color support is available on the
+terminal.
 .RE
-.SH SEE ALSO
-.PP
-cargo(1), cargo\-search(1), cargo\-publish(1)
-.SH COPYRIGHT
-.PP
-This work is dual\-licensed under Apache 2.0 and MIT terms.
-See \f[I]COPYRIGHT\f[] file in the cargo source distribution.
+.sp
+.RS 4
+.ie n \{\
+\h'-04'\(bu\h'+03'\c
+.\}
+.el \{\
+.  sp -1
+.  IP \(bu 2.3
+.\}
+\fBalways\fP: Always display colors.
+.RE
+.sp
+.RS 4
+.ie n \{\
+\h'-04'\(bu\h'+03'\c
+.\}
+.el \{\
+.  sp -1
+.  IP \(bu 2.3
+.\}
+\fBnever\fP: Never display colors.
+.RE
+.sp
+May also be specified with the \fBterm.color\fP
+.URL "https://doc.rust\-lang.org/cargo/reference/config.html" "config value" "."
+.RE
+.SS "Common Options"
+.sp
+\fB\-h\fP, \fB\-\-help\fP
+.RS 4
+Prints help information.
+.RE
+.sp
+\fB\-Z\fP \fIFLAG\fP...
+.RS 4
+Unstable (nightly\-only) flags to Cargo. Run \fBcargo \-Z help\fP for
+details.
+.RE
+.SH "ENVIRONMENT"
+.sp
+See \c
+.URL "https://doc.rust\-lang.org/cargo/reference/environment\-variables.html" "the reference" " "
+for
+details on environment variables that Cargo reads.
+.SH "EXIT STATUS"
+.sp
+0
+.RS 4
+Cargo succeeded.
+.RE
+.sp
+101
+.RS 4
+Cargo failed to complete.
+.RE
+.SH "EXAMPLES"
+.sp
+.RS 4
+.ie n \{\
+\h'-04' 1.\h'+01'\c
+.\}
+.el \{\
+.  sp -1
+.  IP " 1." 4.2
+.\}
+Install a package from crates.io:
+.sp
+.if n .RS 4
+.nf
+cargo install ripgrep
+.fi
+.if n .RE
+.RE
+.sp
+.RS 4
+.ie n \{\
+\h'-04' 2.\h'+01'\c
+.\}
+.el \{\
+.  sp -1
+.  IP " 2." 4.2
+.\}
+Reinstall or upgrade a package:
+.sp
+.if n .RS 4
+.nf
+cargo install ripgrep \-\-force
+.fi
+.if n .RE
+.RE
+.SH "SEE ALSO"
+.sp
+\fBcargo\fP(1), \fBcargo\-uninstall\fP(1), \fBcargo\-search\fP(1), \fBcargo\-publish\fP(1)

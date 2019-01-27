@@ -1,6 +1,7 @@
 [package]
 name = "cargo"
-version = "0.32.0"
+version = "0.35.0"
+edition = "2018"
 authors = ["Yehuda Katz <wycats@gmail.com>",
            "Carl Lerche <me@carllerche.com>",
            "Alex Crichton <alex@alexcrichton.com>"]
@@ -18,46 +19,50 @@ path = "src/cargo/lib.rs"
 
 [dependencies]
 atty = "0.2"
+byteorder = "1.2"
 bytesize = "1.0"
-crates-io = { path = "src/crates-io", version = "0.20" }
-crossbeam-utils = "0.5"
+crates-io = { path = "src/crates-io", version = "0.23" }
+crossbeam-utils = "0.6"
 crypto-hash = "0.3.1"
-curl = { version = "0.4.17", features = ['http2'] }
-env_logger = "0.5.11"
+curl = { version = "0.4.19", features = ['http2'] }
+curl-sys = "0.4.15"
+env_logger = "0.6.0"
+pretty_env_logger = { version = "0.3", optional = true }
 failure = "0.1.2"
 filetime = "0.2"
-flate2 = "1.0.3"
+flate2 = { version = "1.0.3", features = ['zlib'] }
 fs2 = "0.4"
-git2 = "0.7.5"
-git2-curl = "0.8.1"
+git2 = "0.8.0"
+git2-curl = "0.9.0"
 glob = "0.2.11"
 hex = "0.3"
 home = "0.3"
 ignore = "0.4"
-lazy_static = "1.0.0"
+lazy_static = "1.2.0"
 jobserver = "0.1.11"
 lazycell = "1.2.0"
 libc = "0.2"
-log = "0.4"
+log = "0.4.6"
 libgit2-sys = "0.7.9"
 num_cpus = "1.0"
 opener = "0.3.0"
-rustfix = "0.4.2"
+rustfix = "0.4.4"
 same-file = "1"
 semver = { version = "0.9.0", features = ["serde"] }
-serde = "1.0"
-serde_derive = "1.0"
+serde = { version = "1.0.82", features = ['derive'] }
 serde_ignored = "0.0.4"
 serde_json = { version = "1.0.30", features = ["raw_value"] }
 shell-escape = "0.1.4"
-tar = { version = "0.4.15", default-features = false }
+tar = { version = "0.4.18", default-features = false }
 tempfile = "3.0"
 termcolor = "1.0"
 toml = "0.4.2"
 url = "1.1"
+url_serde = "0.2.0"
 clap = "2.31.2"
 unicode-width = "0.1.5"
 openssl = { version = '0.10.11', optional = true }
+im-rc = "12.1.0"
 
 # A noop dependency that changes in the Rust repository, it's a bit of a hack.
 # See the `src/tools/rustc-workspace-hack/README.md` file in `rust-lang/rust`
@@ -102,4 +107,6 @@ test = false
 doc = false
 
 [features]
+deny-warnings = []
 vendored-openssl = ['openssl/vendored']
+pretty-env-logger = ['pretty_env_logger']

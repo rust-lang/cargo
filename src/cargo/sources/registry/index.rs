@@ -2,14 +2,14 @@ use std::collections::HashMap;
 use std::path::Path;
 use std::str;
 
+use log::{info, trace};
 use semver::Version;
-use serde_json;
 
-use core::dependency::Dependency;
-use core::{PackageId, SourceId, Summary};
-use sources::registry::RegistryData;
-use sources::registry::{RegistryPackage, INDEX_LOCK};
-use util::{internal, CargoResult, Config, Filesystem};
+use crate::core::dependency::Dependency;
+use crate::core::{PackageId, SourceId, Summary};
+use crate::sources::registry::RegistryData;
+use crate::sources::registry::{RegistryPackage, INDEX_LOCK};
+use crate::util::{internal, CargoResult, Config, Filesystem, ToSemver};
 
 /// Crates.io treats hyphen and underscores as interchangeable
 /// but, the index and old cargo do not. So the index must store uncanonicalized version
@@ -38,29 +38,29 @@ impl<'s> Iterator for UncanonicalizedIter<'s> {
     type Item = String;
 
     fn next(&mut self) -> Option<Self::Item> {
-        if self.hyphen_combination_num > 0 && self.hyphen_combination_num.trailing_zeros() >= self.num_hyphen_underscore {
+        if self.hyphen_combination_num > 0
+            && self.hyphen_combination_num.trailing_zeros() >= self.num_hyphen_underscore
+        {
             return None;
         }
 
-        let ret = Some(self.input
-            .chars()
-            .scan(0u16, |s, c| {
-                // the check against 15 here's to prevent
-                // shift overflow on inputs with more then 15 hyphens
-                if (c == '_' || c == '-') && *s <= 15 {
-                    let switch = (self.hyphen_combination_num & (1u16 << *s)) > 0;
-                    let out = if (c == '_') ^ switch {
-                        '_'
+        let ret = Some(
+            self.input
+                .chars()
+                .scan(0u16, |s, c| {
+                    // the check against 15 here's to prevent
+                    // shift overflow on inputs with more then 15 hyphens
+                    if (c == '_' || c == '-') && *s <= 15 {
+                        let switch = (self.hyphen_combination_num & (1u16 << *s)) > 0;
+                        let out = if (c == '_') ^ switch { '_' } else { '-' };
+                        *s += 1;
+                        Some(out)
                     } else {
-                        '-'
-                    };
-                    *s += 1;
-                    Some(out)
-                } else {
-                    Some(c)
-                }
-            })
-            .collect());
+                        Some(c)
+                    }
+                })
+                .collect(),
+        );
         self.hyphen_combination_num += 1;
         ret
     }
@@ -78,14 +78,21 @@ fn no_hyphen() {
 fn two_hyphen() {
     assert_eq!(
         UncanonicalizedIter::new("te-_st").collect::<Vec<_>>(),
-        vec!["te-_st".to_string(), "te__st".to_string(), "te--st".to_string(), "te_-st".to_string()]
+        vec![
+            "te-_st".to_string(),
+            "te__st".to_string(),
+            "te--st".to_string(),
+            "te_-st".to_string()
+        ]
     )
 }
 
 #[test]
 fn overflow_hyphen() {
     assert_eq!(
-        UncanonicalizedIter::new("te-_-_-_-_-_-_-_-_-st").take(100).count(),
+        UncanonicalizedIter::new("te-_-_-_-_-_-_-_-_-st")
+            .take(100)
+            .count(),
         100
     )
 }
@@ -101,13 +108,13 @@ pub struct RegistryIndex<'cfg> {
 
 impl<'cfg> RegistryIndex<'cfg> {
     pub fn new(
-        id: &SourceId,
+        source_id: SourceId,
         path: &Filesystem,
         config: &'cfg Config,
         locked: bool,
     ) -> RegistryIndex<'cfg> {
         RegistryIndex {
-            source_id: id.clone(),
+            source_id,
             path: path.clone(),
             cache: HashMap::new(),
             hashes: HashMap::new(),
@@ -117,7 +124,7 @@ impl<'cfg> RegistryIndex<'cfg> {
     }
 
     /// Return the hash listed for a specified PackageId.
-    pub fn hash(&mut self, pkg: &PackageId, load: &mut RegistryData) -> CargoResult<String> {
+    pub fn hash(&mut self, pkg: PackageId, load: &mut dyn RegistryData) -> CargoResult<String> {
         let name = pkg.name().as_str();
         let version = pkg.version();
         if let Some(s) = self.hashes.get(name).and_then(|v| v.get(version)) {
@@ -139,7 +146,7 @@ impl<'cfg> RegistryIndex<'cfg> {
     pub fn summaries(
         &mut self,
         name: &'static str,
-        load: &mut RegistryData,
+        load: &mut dyn RegistryData,
     ) -> CargoResult<&Vec<(Summary, bool)>> {
         if self.cache.contains_key(name) {
             return Ok(&self.cache[name]);
@@ -152,7 +159,7 @@ impl<'cfg> RegistryIndex<'cfg> {
     fn load_summaries(
         &mut self,
         name: &str,
-        load: &mut RegistryData,
+        load: &mut dyn RegistryData,
     ) -> CargoResult<Vec<(Summary, bool)>> {
         // Prepare the `RegistryData` which will lazily initialize internal data
         // structures. Note that this is also importantly needed to initialize
@@ -185,12 +192,12 @@ impl<'cfg> RegistryIndex<'cfg> {
             _ => format!("{}/{}/{}", &fs_name[0..2], &fs_name[2..4], fs_name),
         };
         let mut ret = Vec::new();
-         for path in UncanonicalizedIter::new(&raw_path).take(1024) {
+        for path in UncanonicalizedIter::new(&raw_path).take(1024) {
             let mut hit_closure = false;
             let err = load.load(&root, Path::new(&path), &mut |contents| {
                 hit_closure = true;
                 let contents = str::from_utf8(contents)
-                    .map_err(|_| format_err!("registry index file was not valid utf-8"))?;
+                    .map_err(|_| failure::format_err!("registry index file was not valid utf-8"))?;
                 ret.reserve(contents.lines().count());
                 let lines = contents.lines().map(|s| s.trim()).filter(|l| !l.is_empty());
 
@@ -247,11 +254,11 @@ impl<'cfg> RegistryIndex<'cfg> {
             yanked,
             links,
         } = serde_json::from_str(line)?;
-        let pkgid = PackageId::new(&name, &vers, &self.source_id)?;
+        let pkgid = PackageId::new(&name, &vers, self.source_id)?;
         let name = pkgid.name();
         let deps = deps
             .into_iter()
-            .map(|dep| dep.into_dep(&self.source_id))
+            .map(|dep| dep.into_dep(self.source_id))
             .collect::<CargoResult<Vec<_>>>()?;
         let summary = Summary::new(pkgid, deps, &features, links, false)?;
         let summary = summary.set_checksum(cksum.clone());
@@ -265,10 +272,10 @@ impl<'cfg> RegistryIndex<'cfg> {
     pub fn query_inner(
         &mut self,
         dep: &Dependency,
-        load: &mut RegistryData,
-        f: &mut FnMut(Summary),
+        load: &mut dyn RegistryData,
+        f: &mut dyn FnMut(Summary),
     ) -> CargoResult<()> {
-        let source_id = self.source_id.clone();
+        let source_id = self.source_id;
         let name = dep.package_name().as_str();
         let summaries = self.summaries(name, load)?;
         let summaries = summaries
@@ -286,7 +293,7 @@ impl<'cfg> RegistryIndex<'cfg> {
                 let mut vers = p[name.len() + 1..].splitn(2, "->");
                 if dep
                     .version_req()
-                    .matches(&Version::parse(vers.next().unwrap()).unwrap())
+                    .matches(&vers.next().unwrap().to_semver().unwrap())
                 {
                     vers.next().unwrap() == s.version().to_string()
                 } else {

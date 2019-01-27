@@ -1,10 +1,10 @@
+use std::cell::RefCell;
 use std::env;
 use std::fmt;
+use std::io::{stdout, StdoutLock, Write};
+use std::iter::repeat;
 use std::mem;
 use std::time;
-use std::iter::repeat;
-use std::cell::RefCell;
-use std::io::{stdout, StdoutLock, Write};
 
 thread_local!(static PROFILE_STACK: RefCell<Vec<time::Instant>> = RefCell::new(Vec::new()));
 thread_local!(static MESSAGES: RefCell<Vec<Message>> = RefCell::new(Vec::new()));
@@ -46,8 +46,7 @@ impl Drop for Profiler {
             (start, stack.len())
         });
         let duration = start.elapsed();
-        let duration_ms =
-            duration.as_secs() * 1000 + u64::from(duration.subsec_millis());
+        let duration_ms = duration.as_secs() * 1000 + u64::from(duration.subsec_millis());
 
         let msg = (
             stack_len,
@@ -57,7 +56,7 @@ impl Drop for Profiler {
         MESSAGES.with(|msgs| msgs.borrow_mut().push(msg));
 
         if stack_len == 0 {
-            fn print(lvl: usize, msgs: &[Message], enabled: usize, stdout: &mut StdoutLock) {
+            fn print(lvl: usize, msgs: &[Message], enabled: usize, stdout: &mut StdoutLock<'_>) {
                 if lvl > enabled {
                     return;
                 }
@@ -72,7 +71,8 @@ impl Drop for Profiler {
                         repeat("    ").take(lvl + 1).collect::<String>(),
                         time,
                         msg
-                    ).expect("printing profiling info to stdout");
+                    )
+                    .expect("printing profiling info to stdout");
 
                     print(lvl + 1, &msgs[last..i], enabled, stdout);
                     last = i;

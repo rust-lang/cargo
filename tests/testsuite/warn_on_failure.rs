@@ -1,5 +1,5 @@
-use support::registry::Package;
-use support::{project, Project};
+use crate::support::registry::Package;
+use crate::support::{project, Project};
 
 static WARNING1: &'static str = "Hello! I'm a warning. :)";
 static WARNING2: &'static str = "And one more!";
@@ -15,7 +15,8 @@ fn make_lib(lib_src: &str) {
             version = "0.0.1"
             build = "build.rs"
         "#,
-        ).file(
+        )
+        .file(
             "build.rs",
             &format!(
                 r#"
@@ -29,7 +30,8 @@ fn make_lib(lib_src: &str) {
         "#,
                 WARNING1, WARNING2
             ),
-        ).file("src/lib.rs", &format!("fn f() {{ {} }}", lib_src))
+        )
+        .file("src/lib.rs", &format!("fn f() {{ {} }}", lib_src))
         .publish();
 }
 
@@ -46,7 +48,8 @@ fn make_upstream(main_src: &str) -> Project {
             [dependencies]
             bar = "*"
         "#,
-        ).file("src/main.rs", &format!("fn main() {{ {} }}", main_src))
+        )
+        .file("src/main.rs", &format!("fn main() {{ {} }}", main_src))
         .build()
 }
 
@@ -65,7 +68,8 @@ fn no_warning_on_success() {
 [COMPILING] foo v0.0.1 ([..])
 [FINISHED] dev [unoptimized + debuginfo] target(s) in [..]
 ",
-        ).run();
+        )
+        .run();
 }
 
 #[test]

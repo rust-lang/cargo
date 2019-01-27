@@ -1,9 +1,9 @@
 use std::fs::File;
 use std::io::prelude::*;
 
-use support::paths::CargoPathExt;
-use support::registry::Package;
-use support::{basic_manifest, project};
+use crate::support::paths::CargoPathExt;
+use crate::support::registry::Package;
+use crate::support::{basic_manifest, project};
 
 #[test]
 fn invalid1() {
@@ -19,7 +19,8 @@ fn invalid1() {
             [features]
             bar = ["baz"]
         "#,
-        ).file("src/main.rs", "")
+        )
+        .file("src/main.rs", "")
         .build();
 
     p.cargo("build")
@@ -31,7 +32,8 @@ fn invalid1() {
 Caused by:
   Feature `bar` includes `baz` which is neither a dependency nor another feature
 ",
-        ).run();
+        )
+        .run();
 }
 
 #[test]
@@ -51,7 +53,8 @@ fn invalid2() {
             [dependencies.bar]
             path = "foo"
         "#,
-        ).file("src/main.rs", "")
+        )
+        .file("src/main.rs", "")
         .build();
 
     p.cargo("build")
@@ -63,7 +66,8 @@ fn invalid2() {
 Caused by:
   Features and dependencies cannot have the same name: `bar`
 ",
-        ).run();
+        )
+        .run();
 }
 
 #[test]
@@ -83,7 +87,8 @@ fn invalid3() {
             [dependencies.baz]
             path = "foo"
         "#,
-        ).file("src/main.rs", "")
+        )
+        .file("src/main.rs", "")
         .build();
 
     p.cargo("build")
@@ -96,7 +101,8 @@ Caused by:
   Feature `bar` depends on `baz` which is not an optional dependency.
 Consider adding `optional = true` to the dependency
 ",
-        ).run();
+        )
+        .run();
 }
 
 #[test]
@@ -114,7 +120,8 @@ fn invalid4() {
             path = "bar"
             features = ["bar"]
         "#,
-        ).file("src/main.rs", "")
+        )
+        .file("src/main.rs", "")
         .file("bar/Cargo.toml", &basic_manifest("bar", "0.0.1"))
         .file("bar/src/lib.rs", "")
         .build();
@@ -131,7 +138,8 @@ the package `foo` depends on `bar`, with features: `bar` but `bar` does not have
 
 
 failed to select a version for `bar` which could resolve this conflict",
-        ).run();
+        )
+        .run();
 
     p.change_file("Cargo.toml", &basic_manifest("foo", "0.0.1"));
 
@@ -156,7 +164,8 @@ fn invalid5() {
             path = "bar"
             optional = true
         "#,
-        ).file("src/main.rs", "")
+        )
+        .file("src/main.rs", "")
         .build();
 
     p.cargo("build")
@@ -168,7 +177,8 @@ fn invalid5() {
 Caused by:
   Dev-dependencies are not allowed to be optional: `bar`
 ",
-        ).run();
+        )
+        .run();
 }
 
 #[test]
@@ -185,7 +195,8 @@ fn invalid6() {
             [features]
             foo = ["bar/baz"]
         "#,
-        ).file("src/main.rs", "")
+        )
+        .file("src/main.rs", "")
         .build();
 
     p.cargo("build --features foo")
@@ -197,7 +208,8 @@ fn invalid6() {
 Caused by:
   Feature `foo` requires a feature of `bar` which is not a dependency
 ",
-        ).run();
+        )
+        .run();
 }
 
 #[test]
@@ -215,7 +227,8 @@ fn invalid7() {
             foo = ["bar/baz"]
             bar = []
         "#,
-        ).file("src/main.rs", "")
+        )
+        .file("src/main.rs", "")
         .build();
 
     p.cargo("build --features foo")
@@ -227,7 +240,8 @@ fn invalid7() {
 Caused by:
   Feature `foo` requires a feature of `bar` which is not a dependency
 ",
-        ).run();
+        )
+        .run();
 }
 
 #[test]
@@ -245,7 +259,8 @@ fn invalid8() {
             path = "bar"
             features = ["foo/bar"]
         "#,
-        ).file("src/main.rs", "")
+        )
+        .file("src/main.rs", "")
         .file("bar/Cargo.toml", &basic_manifest("bar", "0.0.1"))
         .file("bar/src/lib.rs", "")
         .build();
@@ -270,7 +285,8 @@ fn invalid9() {
             [dependencies.bar]
             path = "bar"
         "#,
-        ).file("src/main.rs", "fn main() {}")
+        )
+        .file("src/main.rs", "fn main() {}")
         .file("bar/Cargo.toml", &basic_manifest("bar", "0.0.1"))
         .file("bar/src/lib.rs", "")
         .build();
@@ -299,7 +315,8 @@ fn invalid10() {
             path = "bar"
             features = ["baz"]
         "#,
-        ).file("src/main.rs", "fn main() {}")
+        )
+        .file("src/main.rs", "fn main() {}")
         .file(
             "bar/Cargo.toml",
             r#"
@@ -311,7 +328,8 @@ fn invalid10() {
             [dependencies.baz]
             path = "baz"
         "#,
-        ).file("bar/src/lib.rs", "")
+        )
+        .file("bar/src/lib.rs", "")
         .file("bar/baz/Cargo.toml", &basic_manifest("baz", "0.0.1"))
         .file("bar/baz/src/lib.rs", "")
         .build();
@@ -343,13 +361,15 @@ fn no_transitive_dep_feature_requirement() {
             [features]
             default = ["derived/bar/qux"]
         "#,
-        ).file(
+        )
+        .file(
             "src/main.rs",
             r#"
             extern crate derived;
             fn main() { derived::test(); }
         "#,
-        ).file(
+        )
+        .file(
             "derived/Cargo.toml",
             r#"
             [package]
@@ -360,7 +380,8 @@ fn no_transitive_dep_feature_requirement() {
             [dependencies.bar]
             path = "../bar"
         "#,
-        ).file("derived/src/lib.rs", "extern crate bar; pub use bar::test;")
+        )
+        .file("derived/src/lib.rs", "extern crate bar; pub use bar::test;")
         .file(
             "bar/Cargo.toml",
             r#"
@@ -372,13 +393,15 @@ fn no_transitive_dep_feature_requirement() {
             [features]
             qux = []
         "#,
-        ).file(
+        )
+        .file(
             "bar/src/lib.rs",
             r#"
             #[cfg(feature = "qux")]
             pub fn test() { print!("test"); }
         "#,
-        ).build();
+        )
+        .build();
     p.cargo("build")
         .with_status(101)
         .with_stderr("[ERROR] feature names may not contain slashes: `bar/qux`")
@@ -400,7 +423,8 @@ fn no_feature_doesnt_build() {
             path = "bar"
             optional = true
         "#,
-        ).file(
+        )
+        .file(
             "src/main.rs",
             r#"
             #[cfg(feature = "bar")]
@@ -410,7 +434,8 @@ fn no_feature_doesnt_build() {
             #[cfg(not(feature = "bar"))]
             fn main() {}
         "#,
-        ).file("bar/Cargo.toml", &basic_manifest("bar", "0.0.1"))
+        )
+        .file("bar/Cargo.toml", &basic_manifest("bar", "0.0.1"))
         .file("bar/src/lib.rs", "pub fn bar() {}")
         .build();
 
@@ -420,7 +445,8 @@ fn no_feature_doesnt_build() {
 [COMPILING] foo v0.0.1 ([CWD])
 [FINISHED] dev [unoptimized + debuginfo] target(s) in [..]
 ",
-        ).run();
+        )
+        .run();
     p.process(&p.bin("foo")).with_stdout("").run();
 
     p.cargo("build --features bar")
@@ -430,7 +456,8 @@ fn no_feature_doesnt_build() {
 [COMPILING] foo v0.0.1 ([CWD])
 [FINISHED] dev [unoptimized + debuginfo] target(s) in [..]
 ",
-        ).run();
+        )
+        .run();
     p.process(&p.bin("foo")).with_stdout("bar\n").run();
 }
 
@@ -452,7 +479,8 @@ fn default_feature_pulled_in() {
             path = "bar"
             optional = true
         "#,
-        ).file(
+        )
+        .file(
             "src/main.rs",
             r#"
             #[cfg(feature = "bar")]
@@ -462,7 +490,8 @@ fn default_feature_pulled_in() {
             #[cfg(not(feature = "bar"))]
             fn main() {}
         "#,
-        ).file("bar/Cargo.toml", &basic_manifest("bar", "0.0.1"))
+        )
+        .file("bar/Cargo.toml", &basic_manifest("bar", "0.0.1"))
         .file("bar/src/lib.rs", "pub fn bar() {}")
         .build();
 
@@ -473,7 +502,8 @@ fn default_feature_pulled_in() {
 [COMPILING] foo v0.0.1 ([CWD])
 [FINISHED] dev [unoptimized + debuginfo] target(s) in [..]
 ",
-        ).run();
+        )
+        .run();
     p.process(&p.bin("foo")).with_stdout("bar\n").run();
 
     p.cargo("build --no-default-features")
@@ -482,7 +512,8 @@ fn default_feature_pulled_in() {
 [COMPILING] foo v0.0.1 ([CWD])
 [FINISHED] dev [unoptimized + debuginfo] target(s) in [..]
 ",
-        ).run();
+        )
+        .run();
     p.process(&p.bin("foo")).with_stdout("").run();
 }
 
@@ -500,7 +531,8 @@ fn cyclic_feature() {
             [features]
             default = ["default"]
         "#,
-        ).file("src/main.rs", "")
+        )
+        .file("src/main.rs", "")
         .build();
 
     p.cargo("build")
@@ -524,7 +556,8 @@ fn cyclic_feature2() {
             foo = ["bar"]
             bar = ["foo"]
         "#,
-        ).file("src/main.rs", "fn main() {}")
+        )
+        .file("src/main.rs", "fn main() {}")
         .build();
 
     p.cargo("build").with_stdout("").run();
@@ -559,7 +592,8 @@ fn groups_on_groups_on_groups() {
             path = "baz"
             optional = true
         "#,
-        ).file(
+        )
+        .file(
             "src/main.rs",
             r#"
             #[allow(unused_extern_crates)]
@@ -568,7 +602,8 @@ fn groups_on_groups_on_groups() {
             extern crate baz;
             fn main() {}
         "#,
-        ).file("bar/Cargo.toml", &basic_manifest("bar", "0.0.1"))
+        )
+        .file("bar/Cargo.toml", &basic_manifest("bar", "0.0.1"))
         .file("bar/src/lib.rs", "pub fn bar() {}")
         .file("baz/Cargo.toml", &basic_manifest("baz", "0.0.1"))
         .file("baz/src/lib.rs", "pub fn baz() {}")
@@ -582,7 +617,8 @@ fn groups_on_groups_on_groups() {
 [COMPILING] foo v0.0.1 ([CWD])
 [FINISHED] dev [unoptimized + debuginfo] target(s) in [..]
 ",
-        ).run();
+        )
+        .run();
 }
 
 #[test]
@@ -604,7 +640,8 @@ fn many_cli_features() {
             path = "baz"
             optional = true
         "#,
-        ).file(
+        )
+        .file(
             "src/main.rs",
             r#"
             #[allow(unused_extern_crates)]
@@ -613,7 +650,8 @@ fn many_cli_features() {
             extern crate baz;
             fn main() {}
         "#,
-        ).file("bar/Cargo.toml", &basic_manifest("bar", "0.0.1"))
+        )
+        .file("bar/Cargo.toml", &basic_manifest("bar", "0.0.1"))
         .file("bar/src/lib.rs", "pub fn bar() {}")
         .file("baz/Cargo.toml", &basic_manifest("baz", "0.0.1"))
         .file("baz/src/lib.rs", "pub fn baz() {}")
@@ -628,7 +666,8 @@ fn many_cli_features() {
 [COMPILING] foo v0.0.1 ([CWD])
 [FINISHED] dev [unoptimized + debuginfo] target(s) in [..]
 ",
-        ).run();
+        )
+        .run();
 }
 
 #[test]
@@ -649,7 +688,8 @@ fn union_features() {
             path = "d2"
             features = ["f2"]
         "#,
-        ).file(
+        )
+        .file(
             "src/main.rs",
             r#"
             #[allow(unused_extern_crates)]
@@ -660,7 +700,8 @@ fn union_features() {
                 d2::f2();
             }
         "#,
-        ).file(
+        )
+        .file(
             "d1/Cargo.toml",
             r#"
             [package]
@@ -676,7 +717,8 @@ fn union_features() {
             features = ["f1"]
             optional = true
         "#,
-        ).file("d1/src/lib.rs", "")
+        )
+        .file("d1/src/lib.rs", "")
         .file(
             "d2/Cargo.toml",
             r#"
@@ -689,13 +731,15 @@ fn union_features() {
             f1 = []
             f2 = []
         "#,
-        ).file(
+        )
+        .file(
             "d2/src/lib.rs",
             r#"
             #[cfg(feature = "f1")] pub fn f1() {}
             #[cfg(feature = "f2")] pub fn f2() {}
         "#,
-        ).build();
+        )
+        .build();
 
     p.cargo("build")
         .with_stderr(
@@ -705,7 +749,8 @@ fn union_features() {
 [COMPILING] foo v0.0.1 ([CWD])
 [FINISHED] dev [unoptimized + debuginfo] target(s) in [..]
 ",
-        ).run();
+        )
+        .run();
 }
 
 #[test]
@@ -723,7 +768,8 @@ fn many_features_no_rebuilds() {
             path = "a"
             features = ["fall"]
         "#,
-        ).file("src/main.rs", "fn main() {}")
+        )
+        .file("src/main.rs", "fn main() {}")
         .file(
             "a/Cargo.toml",
             r#"
@@ -737,7 +783,8 @@ fn many_features_no_rebuilds() {
             ftest2 = []
             fall   = ["ftest", "ftest2"]
         "#,
-        ).file("a/src/lib.rs", "")
+        )
+        .file("a/src/lib.rs", "")
         .build();
 
     p.cargo("build")
@@ -747,7 +794,8 @@ fn many_features_no_rebuilds() {
 [COMPILING] b v0.1.0 ([CWD])
 [FINISHED] dev [unoptimized + debuginfo] target(s) in [..]
 ",
-        ).run();
+        )
+        .run();
     p.root().move_into_the_past();
 
     p.cargo("build -v")
@@ -757,7 +805,8 @@ fn many_features_no_rebuilds() {
 [FRESH] b v0.1.0 ([..])
 [FINISHED] dev [unoptimized + debuginfo] target(s) in [..]
 ",
-        ).run();
+        )
+        .run();
 }
 
 // Tests that all cmd lines work with `--features ""`
@@ -786,7 +835,8 @@ fn transitive_features() {
             [dependencies.bar]
             path = "bar"
         "#,
-        ).file("src/main.rs", "extern crate bar; fn main() { bar::baz(); }")
+        )
+        .file("src/main.rs", "extern crate bar; fn main() { bar::baz(); }")
         .file(
             "bar/Cargo.toml",
             r#"
@@ -798,10 +848,12 @@ fn transitive_features() {
             [features]
             baz = []
         "#,
-        ).file(
+        )
+        .file(
             "bar/src/lib.rs",
             r#"#[cfg(feature = "baz")] pub fn baz() {}"#,
-        ).build();
+        )
+        .build();
 
     p.cargo("build --features foo").run();
 }
@@ -830,7 +882,8 @@ fn everything_in_the_lockfile() {
             path = "d3"
             optional = true
         "#,
-        ).file("src/main.rs", "fn main() {}")
+        )
+        .file("src/main.rs", "fn main() {}")
         .file(
             "d1/Cargo.toml",
             r#"
@@ -842,7 +895,8 @@ fn everything_in_the_lockfile() {
             [features]
             f1 = []
         "#,
-        ).file("d1/src/lib.rs", "")
+        )
+        .file("d1/src/lib.rs", "")
         .file("d2/Cargo.toml", &basic_manifest("d2", "0.0.2"))
         .file("d2/src/lib.rs", "")
         .file(
@@ -856,7 +910,8 @@ fn everything_in_the_lockfile() {
             [features]
             f3 = []
         "#,
-        ).file("d3/src/lib.rs", "")
+        )
+        .file("d3/src/lib.rs", "")
         .build();
 
     p.cargo("fetch").run();
@@ -895,7 +950,8 @@ fn no_rebuild_when_frobbing_default_feature() {
             a = { path = "a" }
             b = { path = "b" }
         "#,
-        ).file("src/lib.rs", "")
+        )
+        .file("src/lib.rs", "")
         .file(
             "b/Cargo.toml",
             r#"
@@ -907,7 +963,8 @@ fn no_rebuild_when_frobbing_default_feature() {
             [dependencies]
             a = { path = "../a", features = ["f1"], default-features = false }
         "#,
-        ).file("b/src/lib.rs", "")
+        )
+        .file("b/src/lib.rs", "")
         .file(
             "a/Cargo.toml",
             r#"
@@ -920,7 +977,8 @@ fn no_rebuild_when_frobbing_default_feature() {
             default = ["f1"]
             f1 = []
         "#,
-        ).file("a/src/lib.rs", "")
+        )
+        .file("a/src/lib.rs", "")
         .build();
 
     p.cargo("build").run();
@@ -943,7 +1001,8 @@ fn unions_work_with_no_default_features() {
             a = { path = "a" }
             b = { path = "b" }
         "#,
-        ).file("src/lib.rs", "extern crate a; pub fn foo() { a::a(); }")
+        )
+        .file("src/lib.rs", "extern crate a; pub fn foo() { a::a(); }")
         .file(
             "b/Cargo.toml",
             r#"
@@ -955,7 +1014,8 @@ fn unions_work_with_no_default_features() {
             [dependencies]
             a = { path = "../a", features = [], default-features = false }
         "#,
-        ).file("b/src/lib.rs", "")
+        )
+        .file("b/src/lib.rs", "")
         .file(
             "a/Cargo.toml",
             r#"
@@ -968,7 +1028,8 @@ fn unions_work_with_no_default_features() {
             default = ["f1"]
             f1 = []
         "#,
-        ).file("a/src/lib.rs", r#"#[cfg(feature = "f1")] pub fn a() {}"#)
+        )
+        .file("a/src/lib.rs", r#"#[cfg(feature = "f1")] pub fn a() {}"#)
         .build();
 
     p.cargo("build").run();
@@ -992,7 +1053,8 @@ fn optional_and_dev_dep() {
             [dev-dependencies]
             foo = { path = "foo" }
         "#,
-        ).file("src/lib.rs", "")
+        )
+        .file("src/lib.rs", "")
         .file("foo/Cargo.toml", &basic_manifest("foo", "0.1.0"))
         .file("foo/src/lib.rs", "")
         .build();
@@ -1003,7 +1065,8 @@ fn optional_and_dev_dep() {
 [COMPILING] test v0.1.0 ([..])
 [FINISHED] dev [unoptimized + debuginfo] target(s) in [..]
 ",
-        ).run();
+        )
+        .run();
 }
 
 #[test]
@@ -1023,10 +1086,12 @@ fn activating_feature_activates_dep() {
             [features]
             a = ["foo/a"]
         "#,
-        ).file(
+        )
+        .file(
             "src/lib.rs",
             "extern crate foo; pub fn bar() { foo::bar(); }",
-        ).file(
+        )
+        .file(
             "foo/Cargo.toml",
             r#"
             [package]
@@ -1037,7 +1102,8 @@ fn activating_feature_activates_dep() {
             [features]
             a = []
         "#,
-        ).file("foo/src/lib.rs", r#"#[cfg(feature = "a")] pub fn bar() {}"#)
+        )
+        .file("foo/src/lib.rs", r#"#[cfg(feature = "a")] pub fn bar() {}"#)
         .build();
 
     p.cargo("build --features a -v").run();
@@ -1057,13 +1123,15 @@ fn dep_feature_in_cmd_line() {
             [dependencies.derived]
             path = "derived"
         "#,
-        ).file(
+        )
+        .file(
             "src/main.rs",
             r#"
             extern crate derived;
             fn main() { derived::test(); }
         "#,
-        ).file(
+        )
+        .file(
             "derived/Cargo.toml",
             r#"
             [package]
@@ -1078,7 +1146,8 @@ fn dep_feature_in_cmd_line() {
             default = []
             derived-feat = ["bar/some-feat"]
         "#,
-        ).file("derived/src/lib.rs", "extern crate bar; pub use bar::test;")
+        )
+        .file("derived/src/lib.rs", "extern crate bar; pub use bar::test;")
         .file(
             "bar/Cargo.toml",
             r#"
@@ -1090,17 +1159,22 @@ fn dep_feature_in_cmd_line() {
             [features]
             some-feat = []
         "#,
-        ).file(
+        )
+        .file(
             "bar/src/lib.rs",
             r#"
             #[cfg(feature = "some-feat")]
             pub fn test() { print!("test"); }
         "#,
-        ).build();
+        )
+        .build();
 
     // The foo project requires that feature "some-feat" in "bar" is enabled.
     // Building without any features enabled should fail:
-    p.cargo("build").with_status(101).run();
+    p.cargo("build")
+        .with_status(101)
+        .with_stderr_contains("[..]unresolved import `bar::test`")
+        .run();
 
     // We should be able to enable the feature "derived-feat", which enables "some-feat",
     // on the command line. The feature is enabled, thus building should be successful:
@@ -1138,7 +1212,8 @@ fn all_features_flag_enables_all_features() {
             path = "baz"
             optional = true
         "#,
-        ).file(
+        )
+        .file(
             "src/main.rs",
             r#"
             #[cfg(feature = "foo")]
@@ -1155,7 +1230,8 @@ fn all_features_flag_enables_all_features() {
                 bar();
             }
         "#,
-        ).file("baz/Cargo.toml", &basic_manifest("baz", "0.0.1"))
+        )
+        .file("baz/Cargo.toml", &basic_manifest("baz", "0.0.1"))
         .file("baz/src/lib.rs", "pub fn baz() {}")
         .build();
 
@@ -1181,7 +1257,8 @@ fn many_cli_features_comma_delimited() {
             path = "baz"
             optional = true
         "#,
-        ).file(
+        )
+        .file(
             "src/main.rs",
             r#"
             #[allow(unused_extern_crates)]
@@ -1190,7 +1267,8 @@ fn many_cli_features_comma_delimited() {
             extern crate baz;
             fn main() {}
         "#,
-        ).file("bar/Cargo.toml", &basic_manifest("bar", "0.0.1"))
+        )
+        .file("bar/Cargo.toml", &basic_manifest("bar", "0.0.1"))
         .file("bar/src/lib.rs", "pub fn bar() {}")
         .file("baz/Cargo.toml", &basic_manifest("baz", "0.0.1"))
         .file("baz/src/lib.rs", "pub fn baz() {}")
@@ -1204,7 +1282,8 @@ fn many_cli_features_comma_delimited() {
 [COMPILING] foo v0.0.1 ([CWD])
 [FINISHED] dev [unoptimized + debuginfo] target(s) in [..]
 ",
-        ).run();
+        )
+        .run();
 }
 
 #[test]
@@ -1234,7 +1313,8 @@ fn many_cli_features_comma_and_space_delimited() {
             path = "bap"
             optional = true
         "#,
-        ).file(
+        )
+        .file(
             "src/main.rs",
             r#"
             #[allow(unused_extern_crates)]
@@ -1247,7 +1327,8 @@ fn many_cli_features_comma_and_space_delimited() {
             extern crate bap;
             fn main() {}
         "#,
-        ).file("bar/Cargo.toml", &basic_manifest("bar", "0.0.1"))
+        )
+        .file("bar/Cargo.toml", &basic_manifest("bar", "0.0.1"))
         .file("bar/src/lib.rs", "pub fn bar() {}")
         .file("baz/Cargo.toml", &basic_manifest("baz", "0.0.1"))
         .file("baz/src/lib.rs", "pub fn baz() {}")
@@ -1268,7 +1349,8 @@ fn many_cli_features_comma_and_space_delimited() {
 [COMPILING] foo v0.0.1 ([CWD])
 [FINISHED] dev [unoptimized + debuginfo] target(s) in [..]
 ",
-        ).run();
+        )
+        .run();
 }
 
 #[test]
@@ -1290,7 +1372,8 @@ fn combining_features_and_package() {
             [dependencies]
             dep = "1"
         "#,
-        ).file("src/lib.rs", "")
+        )
+        .file("src/lib.rs", "")
         .file(
             "bar/Cargo.toml",
             r#"
@@ -1301,13 +1384,15 @@ fn combining_features_and_package() {
             [features]
             main = []
         "#,
-        ).file(
+        )
+        .file(
             "bar/src/main.rs",
             r#"
             #[cfg(feature = "main")]
             fn main() {}
         "#,
-        ).build();
+        )
+        .build();
 
     p.cargo("build -Z package-features --all --features main")
         .masquerade_as_nightly_cargo()
@@ -1315,7 +1400,8 @@ fn combining_features_and_package() {
         .with_stderr_contains(
             "\
              [ERROR] cannot specify features for more than one package",
-        ).run();
+        )
+        .run();
 
     p.cargo("build -Z package-features --package dep --features main")
         .masquerade_as_nightly_cargo()
@@ -1323,21 +1409,24 @@ fn combining_features_and_package() {
         .with_stderr_contains(
             "\
              [ERROR] cannot specify features for packages outside of workspace",
-        ).run();
+        )
+        .run();
     p.cargo("build -Z package-features --package dep --all-features")
         .masquerade_as_nightly_cargo()
         .with_status(101)
         .with_stderr_contains(
             "\
              [ERROR] cannot specify features for packages outside of workspace",
-        ).run();
+        )
+        .run();
     p.cargo("build -Z package-features --package dep --no-default-features")
         .masquerade_as_nightly_cargo()
         .with_status(101)
         .with_stderr_contains(
             "\
              [ERROR] cannot specify features for packages outside of workspace",
-        ).run();
+        )
+        .run();
 
     p.cargo("build -Z package-features --all --all-features")
         .masquerade_as_nightly_cargo()
@@ -1364,7 +1453,8 @@ fn namespaced_invalid_feature() {
             [features]
             bar = ["baz"]
         "#,
-        ).file("src/main.rs", "")
+        )
+        .file("src/main.rs", "")
         .build();
 
     p.cargo("build")
@@ -1377,7 +1467,8 @@ fn namespaced_invalid_feature() {
 Caused by:
   Feature `bar` includes `baz` which is not defined as a feature
 ",
-        ).run();
+        )
+        .run();
 }
 
 #[test]
@@ -1397,7 +1488,8 @@ fn namespaced_invalid_dependency() {
             [features]
             bar = ["crate:baz"]
         "#,
-        ).file("src/main.rs", "")
+        )
+        .file("src/main.rs", "")
         .build();
 
     p.cargo("build")
@@ -1410,7 +1502,8 @@ fn namespaced_invalid_dependency() {
 Caused by:
   Feature `bar` includes `crate:baz` which is not a known dependency
 ",
-        ).run();
+        )
+        .run();
 }
 
 #[test]
@@ -1433,7 +1526,8 @@ fn namespaced_non_optional_dependency() {
             [dependencies]
             baz = "0.1"
         "#,
-        ).file("src/main.rs", "")
+        )
+        .file("src/main.rs", "")
         .build();
 
     p.cargo("build")
@@ -1447,7 +1541,8 @@ Caused by:
   Feature `bar` includes `crate:baz` which is not an optional dependency.
 Consider adding `optional = true` to the dependency
 ",
-        ).run();
+        )
+        .run();
 }
 
 #[test]
@@ -1470,7 +1565,8 @@ fn namespaced_implicit_feature() {
             [dependencies]
             baz = { version = "0.1", optional = true }
         "#,
-        ).file("src/main.rs", "fn main() {}")
+        )
+        .file("src/main.rs", "fn main() {}")
         .build();
 
     p.cargo("build").masquerade_as_nightly_cargo().run();
@@ -1496,7 +1592,8 @@ fn namespaced_shadowed_dep() {
             [dependencies]
             baz = { version = "0.1", optional = true }
         "#,
-        ).file("src/main.rs", "fn main() {}")
+        )
+        .file("src/main.rs", "fn main() {}")
         .build();
 
     p.cargo("build").masquerade_as_nightly_cargo().with_status(101).with_stderr(
@@ -1531,7 +1628,8 @@ fn namespaced_shadowed_non_optional() {
             [dependencies]
             baz = "0.1"
         "#,
-        ).file("src/main.rs", "fn main() {}")
+        )
+        .file("src/main.rs", "fn main() {}")
         .build();
 
     p.cargo("build").masquerade_as_nightly_cargo().with_status(101).with_stderr(
@@ -1567,7 +1665,8 @@ fn namespaced_implicit_non_optional() {
             [dependencies]
             baz = "0.1"
         "#,
-        ).file("src/main.rs", "fn main() {}")
+        )
+        .file("src/main.rs", "fn main() {}")
         .build();
 
     p.cargo("build").masquerade_as_nightly_cargo().with_status(101).with_stderr(
@@ -1602,7 +1701,8 @@ fn namespaced_same_name() {
             [dependencies]
             baz = { version = "0.1", optional = true }
         "#,
-        ).file("src/main.rs", "fn main() {}")
+        )
+        .file("src/main.rs", "fn main() {}")
         .build();
 
     p.cargo("build").masquerade_as_nightly_cargo().run();
@@ -1630,7 +1730,8 @@ fn only_dep_is_optional() {
                 [dev-dependencies]
                 bar = "0.1"
             "#,
-        ).file("src/main.rs", "fn main() {}")
+        )
+        .file("src/main.rs", "fn main() {}")
         .build();
 
     p.cargo("build").run();
@@ -1652,7 +1753,8 @@ fn all_features_all_crates() {
                 [workspace]
                 members = ['bar']
             "#,
-        ).file("src/main.rs", "fn main() {}")
+        )
+        .file("src/main.rs", "fn main() {}")
         .file(
             "bar/Cargo.toml",
             r#"
@@ -1664,7 +1766,8 @@ fn all_features_all_crates() {
                 [features]
                 foo = []
             "#,
-        ).file("bar/src/main.rs", "#[cfg(feature = \"foo\")] fn main() {}")
+        )
+        .file("bar/src/main.rs", "#[cfg(feature = \"foo\")] fn main() {}")
         .build();
 
     p.cargo("build --all-features --all").run();
@@ -1729,4 +1832,38 @@ fn feature_off_dylib() {
     p.cargo("build --features f1").run();
     // Check that building without `f1` uses a dylib without `f1`.
     p.cargo("run -p bar").run();
+}
+
+#[test]
+fn warn_if_default_features() {
+    let p = project()
+        .file(
+            "Cargo.toml",
+            r#"
+            [project]
+            name = "foo"
+            version = "0.0.1"
+            authors = []
+
+            [dependencies.bar]
+            path = "bar"
+            optional = true
+
+            [features]
+            default-features = ["bar"]
+         "#,
+        )
+        .file("src/main.rs", "fn main() {}")
+        .file("bar/Cargo.toml", &basic_manifest("bar", "0.0.1"))
+        .file("bar/src/lib.rs", "pub fn bar() {}")
+        .build();
+
+    p.cargo("build")
+        .with_stderr(
+            r#"
+[WARNING] `default-features = [".."]` was found in [features]. Did you mean to use `default = [".."]`?
+[COMPILING] foo v0.0.1 ([CWD])
+[FINISHED] dev [unoptimized + debuginfo] target(s) in [..]
+            "#.trim(),
+        ).run();
 }

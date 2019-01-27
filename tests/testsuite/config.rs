@@ -1,11 +1,12 @@
-use cargo::core::{enable_nightly_features, Shell};
-use cargo::util::config::{self, Config};
-use cargo::util::toml::{self, VecStringOrBool as VSOB};
-use cargo::CargoError;
 use std::borrow::Borrow;
 use std::collections;
 use std::fs;
-use support::{lines_match, paths, project};
+
+use crate::support::{lines_match, paths, project};
+use cargo::core::{enable_nightly_features, Shell};
+use cargo::util::config::{self, Config};
+use cargo::util::toml::{self, VecStringOrBool as VSOB};
+use serde::Deserialize;
 
 #[test]
 fn read_env_vars_for_config() {
@@ -19,7 +20,8 @@ fn read_env_vars_for_config() {
             version = "0.0.0"
             build = "build.rs"
         "#,
-        ).file("src/lib.rs", "")
+        )
+        .file("src/lib.rs", "")
         .file(
             "build.rs",
             r#"
@@ -28,7 +30,8 @@ fn read_env_vars_for_config() {
                 assert_eq!(env::var("NUM_JOBS").unwrap(), "100");
             }
         "#,
-        ).build();
+        )
+        .build();
 
     p.cargo("build").env("CARGO_BUILD_JOBS", "100").run();
 }
@@ -60,11 +63,12 @@ fn new_config(env: &[(&str, &str)]) -> Config {
             false,
             &None,
             &["advanced-env".into()],
-        ).unwrap();
+        )
+        .unwrap();
     config
 }
 
-fn assert_error<E: Borrow<CargoError>>(error: E, msgs: &str) {
+fn assert_error<E: Borrow<failure::Error>>(error: E, msgs: &str) {
     let causes = error
         .borrow()
         .iter_chain()

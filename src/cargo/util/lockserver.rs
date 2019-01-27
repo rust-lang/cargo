@@ -14,7 +14,6 @@
 use std::collections::HashMap;
 use std::io::{BufRead, BufReader, Read, Write};
 use std::net::{SocketAddr, TcpListener, TcpStream};
-use std::path::Path;
 use std::sync::atomic::{AtomicBool, Ordering};
 use std::sync::{Arc, Mutex};
 use std::thread::{self, JoinHandle};
@@ -156,11 +155,11 @@ impl Drop for LockServerStarted {
 }
 
 impl LockServerClient {
-    pub fn lock(addr: &SocketAddr, name: &Path) -> Result<LockServerClient, Error> {
-        let mut client =
-            TcpStream::connect(&addr).with_context(|_| "failed to connect to parent lock server")?;
+    pub fn lock(addr: &SocketAddr, name: impl AsRef<[u8]>) -> Result<LockServerClient, Error> {
+        let mut client = TcpStream::connect(&addr)
+            .with_context(|_| "failed to connect to parent lock server")?;
         client
-            .write_all(name.display().to_string().as_bytes())
+            .write_all(name.as_ref())
             .and_then(|_| client.write_all(b"\n"))
             .with_context(|_| "failed to write to lock server")?;
         let mut buf = [0];
@@ -170,4 +169,3 @@ impl LockServerClient {
         Ok(LockServerClient { _socket: client })
     }
 }
-

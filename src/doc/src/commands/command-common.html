@@ -1,0 +1,18 @@
+<style>
+    /* Include some space between definition elements. */
+    dd {
+        margin-bottom: 1em;
+    }
+    /* asciidoctor includes extra <p> tags which causes too much spacing. */
+    dd p {
+        margin-top: 0;
+    }
+    li p {
+        margin: 0;
+    }
+    /* asciidoctor uses a content class which conflicts with mdbook's content
+    class which causes too much spacing. */
+    .content {
+        padding-bottom: 0;
+    }
+</style>

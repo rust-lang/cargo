@@ -3,15 +3,17 @@ use std::fs;
 use std::io;
 use std::path::{Path, PathBuf};
 
-use core::{EitherManifest, Package, PackageId, SourceId};
-use util::{self, Config};
-use util::errors::{CargoError, CargoResult};
-use util::important_paths::find_project_manifest_exact;
-use util::toml::read_manifest;
+use log::{info, trace};
+
+use crate::core::{EitherManifest, Package, PackageId, SourceId};
+use crate::util::errors::CargoResult;
+use crate::util::important_paths::find_project_manifest_exact;
+use crate::util::toml::read_manifest;
+use crate::util::{self, Config};
 
 pub fn read_package(
     path: &Path,
-    source_id: &SourceId,
+    source_id: SourceId,
     config: &Config,
 ) -> CargoResult<(Package, Vec<PathBuf>)> {
     trace!(
@@ -22,7 +24,7 @@ pub fn read_package(
     let (manifest, nested) = read_manifest(path, source_id, config)?;
     let manifest = match manifest {
         EitherManifest::Real(manifest) => manifest,
-        EitherManifest::Virtual(..) => bail!(
+        EitherManifest::Virtual(..) => failure::bail!(
             "found a virtual manifest at `{}` instead of a package \
              manifest",
             path.display()
@@ -34,12 +36,12 @@ pub fn read_package(
 
 pub fn read_packages(
     path: &Path,
-    source_id: &SourceId,
+    source_id: SourceId,
     config: &Config,
 ) -> CargoResult<Vec<Package>> {
     let mut all_packages = HashMap::new();
     let mut visited = HashSet::<PathBuf>::new();
-    let mut errors = Vec::<CargoError>::new();
+    let mut errors = Vec::<failure::Error>::new();
 
     trace!(
         "looking for root package: {}, source_id={}",
@@ -86,7 +88,7 @@ pub fn read_packages(
     if all_packages.is_empty() {
         match errors.pop() {
             Some(err) => Err(err),
-            None => Err(format_err!(
+            None => Err(failure::format_err!(
                 "Could not find Cargo.toml in `{}`",
                 path.display()
             )),
@@ -96,7 +98,7 @@ pub fn read_packages(
     }
 }
 
-fn walk(path: &Path, callback: &mut FnMut(&Path) -> CargoResult<bool>) -> CargoResult<()> {
+fn walk(path: &Path, callback: &mut dyn FnMut(&Path) -> CargoResult<bool>) -> CargoResult<()> {
     if !callback(path)? {
         trace!("not processing {}", path.display());
         return Ok(());
@@ -109,7 +111,7 @@ fn walk(path: &Path, callback: &mut FnMut(&Path) -> CargoResult<bool>) -> CargoR
         Err(ref e) if e.kind() == io::ErrorKind::PermissionDenied => return Ok(()),
         Err(e) => {
             let cx = format!("failed to read directory `{}`", path.display());
-            let e = CargoError::from(e);
+            let e = failure::Error::from(e);
             return Err(e.context(cx).into());
         }
     };
@@ -129,10 +131,10 @@ fn has_manifest(path: &Path) -> bool {
 fn read_nested_packages(
     path: &Path,
     all_packages: &mut HashMap<PackageId, Package>,
-    source_id: &SourceId,
+    source_id: SourceId,
     config: &Config,
     visited: &mut HashSet<PathBuf>,
-    errors: &mut Vec<CargoError>,
+    errors: &mut Vec<failure::Error>,
 ) -> CargoResult<()> {
     if !visited.insert(path.to_path_buf()) {
         return Ok(());
@@ -165,7 +167,7 @@ fn read_nested_packages(
     };
     let pkg = Package::new(manifest, &manifest_path);
 
-    let pkg_id = pkg.package_id().clone();
+    let pkg_id = pkg.package_id();
     use std::collections::hash_map::Entry;
     match all_packages.entry(pkg_id) {
         Entry::Vacant(v) => {

@@ -1,10 +1,6 @@
 use std::fs::File;
-use std::io::prelude::*;
-use std::path::PathBuf;
 
-use flate2::read::GzDecoder;
-use support::{cross_compile, project, publish};
-use tar::Archive;
+use crate::support::{cross_compile, project, publish, registry};
 
 #[test]
 fn simple_cross_package() {
@@ -24,7 +20,8 @@ fn simple_cross_package() {
             description = "foo"
             repository = "bar"
         "#,
-        ).file(
+        )
+        .file(
             "src/main.rs",
             &format!(
                 r#"
@@ -35,7 +32,8 @@ fn simple_cross_package() {
         "#,
                 cross_compile::alternate_arch()
             ),
-        ).build();
+        )
+        .build();
 
     let target = cross_compile::alternate();
 
@@ -47,21 +45,17 @@ fn simple_cross_package() {
    Compiling foo v0.0.0 ([CWD]/target/package/foo-0.0.0)
     Finished dev [unoptimized + debuginfo] target(s) in [..]
 ",
-        ).run();
+        )
+        .run();
 
     // Check that the tarball contains the files
     let f = File::open(&p.root().join("target/package/foo-0.0.0.crate")).unwrap();
-    let mut rdr = GzDecoder::new(f);
-    let mut contents = Vec::new();
-    rdr.read_to_end(&mut contents).unwrap();
-    let mut ar = Archive::new(&contents[..]);
-    let entries = ar.entries().unwrap();
-    let entry_paths = entries
-        .map(|entry| entry.unwrap().path().unwrap().into_owned())
-        .collect::<Vec<PathBuf>>();
-    assert!(entry_paths.contains(&PathBuf::from("foo-0.0.0/Cargo.toml")));
-    assert!(entry_paths.contains(&PathBuf::from("foo-0.0.0/Cargo.toml.orig")));
-    assert!(entry_paths.contains(&PathBuf::from("foo-0.0.0/src/main.rs")));
+    publish::validate_crate_contents(
+        f,
+        "foo-0.0.0.crate",
+        &["Cargo.toml", "Cargo.toml.orig", "src/main.rs"],
+        &[],
+    );
 }
 
 #[test]
@@ -70,7 +64,7 @@ fn publish_with_target() {
         return;
     }
 
-    publish::setup();
+    registry::init();
 
     let p = project()
         .file(
@@ -84,7 +78,8 @@ fn publish_with_target() {
             description = "foo"
             repository = "bar"
         "#,
-        ).file(
+        )
+        .file(
             "src/main.rs",
             &format!(
                 r#"
@@ -95,12 +90,13 @@ fn publish_with_target() {
         "#,
                 cross_compile::alternate_arch()
             ),
-        ).build();
+        )
+        .build();
 
     let target = cross_compile::alternate();
 
     p.cargo("publish --index")
-        .arg(publish::registry().to_string())
+        .arg(registry::registry_url().to_string())
         .arg("--target")
         .arg(&target)
         .with_stderr(&format!(
@@ -111,6 +107,7 @@ fn publish_with_target() {
     Finished dev [unoptimized + debuginfo] target(s) in [..]
    Uploading foo v0.0.0 ([CWD])
 ",
-            registry = publish::registry_path().to_str().unwrap()
-        )).run();
+            registry = registry::registry_path().to_str().unwrap()
+        ))
+        .run();
 }

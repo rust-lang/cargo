@@ -52,31 +52,31 @@ use std::mem;
 use std::rc::Rc;
 use std::time::{Duration, Instant};
 
-use semver;
+use log::{debug, trace};
 
-use core::interning::InternedString;
-use core::PackageIdSpec;
-use core::{Dependency, PackageId, Registry, Summary};
-use util::config::Config;
-use util::errors::CargoResult;
-use util::profile;
+use crate::core::interning::InternedString;
+use crate::core::PackageIdSpec;
+use crate::core::{Dependency, PackageId, Registry, Summary};
+use crate::util::config::Config;
+use crate::util::errors::CargoResult;
+use crate::util::profile;
 
 use self::context::{Activations, Context};
-use self::types::{ActivateError, ActivateResult, Candidate, ConflictReason, DepsFrame, GraphNode};
+use self::types::{Candidate, ConflictReason, DepsFrame, GraphNode};
 use self::types::{RcVecIter, RegistryQueryer, RemainingDeps, ResolverProgress};
 
 pub use self::encode::{EncodableDependency, EncodablePackageId, EncodableResolve};
 pub use self::encode::{Metadata, WorkspaceResolve};
+pub use self::errors::{ActivateError, ActivateResult, ResolveError};
 pub use self::resolve::Resolve;
 pub use self::types::Method;
-pub use self::errors::ResolveError;
 
 mod conflict_cache;
 mod context;
 mod encode;
+mod errors;
 mod resolve;
 mod types;
-mod errors;
 
 /// Builds the list of all packages required to build the first argument.
 ///
@@ -108,10 +108,10 @@ mod errors;
 /// * `print_warnings` - whether or not to print backwards-compatibility
 ///   warnings and such
 pub fn resolve(
-    summaries: &[(Summary, Method)],
+    summaries: &[(Summary, Method<'_>)],
     replacements: &[(PackageIdSpec, Dependency)],
-    registry: &mut Registry,
-    try_to_use: &HashSet<&PackageId>,
+    registry: &mut dyn Registry,
+    try_to_use: &HashSet<PackageId>,
     config: Option<&Config>,
     print_warnings: bool,
 ) -> CargoResult<Resolve> {
@@ -127,14 +127,14 @@ pub fn resolve(
     let mut cksums = HashMap::new();
     for summary in cx.activations.values().flat_map(|v| v.iter()) {
         let cksum = summary.checksum().map(|s| s.to_string());
-        cksums.insert(summary.package_id().clone(), cksum);
+        cksums.insert(summary.package_id(), cksum);
     }
     let resolve = Resolve::new(
         cx.graph(),
         cx.resolve_replacements(),
         cx.resolve_features
             .iter()
-            .map(|(k, v)| (k.clone(), v.iter().map(|x| x.to_string()).collect()))
+            .map(|(k, v)| (*k, v.iter().map(|x| x.to_string()).collect()))
             .collect(),
         cksums,
         BTreeMap::new(),
@@ -167,8 +167,8 @@ pub fn resolve(
 /// dependency graph, cx.resolve is returned.
 fn activate_deps_loop(
     mut cx: Context,
-    registry: &mut RegistryQueryer,
-    summaries: &[(Summary, Method)],
+    registry: &mut RegistryQueryer<'_>,
+    summaries: &[(Summary, Method<'_>)],
     config: Option<&Config>,
 ) -> CargoResult<Context> {
     let mut backtrack_stack = Vec::new();
@@ -247,7 +247,7 @@ fn activate_deps_loop(
         //
         // This is a map of package id to a reason why that packaged caused a
         // conflict for us.
-        let mut conflicting_activations = HashMap::new();
+        let mut conflicting_activations = BTreeMap::new();
 
         // When backtracking we don't fully update `conflicting_activations`
         // especially for the cases that we didn't make a backtrack frame in the
@@ -358,7 +358,7 @@ fn activate_deps_loop(
                 None
             };
 
-            let pid = candidate.summary.package_id().clone();
+            let pid = candidate.summary.package_id();
             let method = Method::Required {
                 dev_deps: false,
                 features: &features,
@@ -403,7 +403,8 @@ fn activate_deps_loop(
                             .clone()
                             .filter_map(|(_, (ref new_dep, _, _))| {
                                 past_conflicting_activations.conflicting(&cx, new_dep)
-                            }).next()
+                            })
+                            .next()
                         {
                             // If one of our deps is known unresolvable
                             // then we will not succeed.
@@ -416,7 +417,7 @@ fn activate_deps_loop(
                                 conflicting
                                     .iter()
                                     .filter(|&(p, _)| p != &pid)
-                                    .map(|(p, r)| (p.clone(), r.clone())),
+                                    .map(|(&p, r)| (p, r.clone())),
                             );
 
                             has_past_conflicting_dep = true;
@@ -431,19 +432,20 @@ fn activate_deps_loop(
                     // parent conflict with us.
                     if !has_past_conflicting_dep {
                         if let Some(known_related_bad_deps) =
-                            past_conflicting_activations.dependencies_conflicting_with(&pid)
+                            past_conflicting_activations.dependencies_conflicting_with(pid)
                         {
                             if let Some((other_parent, conflict)) = remaining_deps
                                 .iter()
                                 // for deps related to us
                                 .filter(|&(_, ref other_dep)| {
                                     known_related_bad_deps.contains(other_dep)
-                                }).filter_map(|(other_parent, other_dep)| {
+                                })
+                                .filter_map(|(other_parent, other_dep)| {
                                     past_conflicting_activations
-                                        .find_conflicting(&cx, &other_dep, |con| {
-                                            con.contains_key(&pid)
-                                        }).map(|con| (other_parent, con))
-                                }).next()
+                                        .find_conflicting(&cx, &other_dep, Some(pid))
+                                        .map(|con| (other_parent, con))
+                                })
+                                .next()
                             {
                                 let rel = conflict.get(&pid).unwrap().clone();
 
@@ -458,9 +460,9 @@ fn activate_deps_loop(
                                     conflict
                                         .iter()
                                         .filter(|&(p, _)| p != &pid)
-                                        .map(|(p, r)| (p.clone(), r.clone())),
+                                        .map(|(&p, r)| (p, r.clone())),
                                 );
-                                conflicting_activations.insert(other_parent.clone(), rel);
+                                conflicting_activations.insert(other_parent, rel);
                                 has_past_conflicting_dep = true;
                             }
                         }
@@ -485,7 +487,8 @@ fn activate_deps_loop(
                                 &parent,
                                 backtracked,
                                 &conflicting_activations,
-                            ).is_none()
+                            )
+                            .is_none()
                         }
                     };
 
@@ -577,15 +580,15 @@ fn activate_deps_loop(
 /// iterate through next.
 fn activate(
     cx: &mut Context,
-    registry: &mut RegistryQueryer,
+    registry: &mut RegistryQueryer<'_>,
     parent: Option<(&Summary, &Dependency)>,
     candidate: Candidate,
-    method: &Method,
+    method: &Method<'_>,
 ) -> ActivateResult<Option<(DepsFrame, Duration)>> {
     if let Some((parent, dep)) = parent {
         cx.resolve_graph.push(GraphNode::Link(
-            parent.package_id().clone(),
-            candidate.summary.package_id().clone(),
+            parent.package_id(),
+            candidate.summary.package_id(),
             dep.clone(),
         ));
     }
@@ -594,10 +597,8 @@ fn activate(
 
     let candidate = match candidate.replace {
         Some(replace) => {
-            cx.resolve_replacements.push((
-                candidate.summary.package_id().clone(),
-                replace.package_id().clone(),
-            ));
+            cx.resolve_replacements
+                .push((candidate.summary.package_id(), replace.package_id()));
             if cx.flag_activated(&replace, method)? && activated {
                 return Ok(None);
             }
@@ -636,7 +637,7 @@ struct BacktrackFrame {
     parent: Summary,
     dep: Dependency,
     features: Rc<Vec<InternedString>>,
-    conflicting_activations: HashMap<PackageId, ConflictReason>,
+    conflicting_activations: BTreeMap<PackageId, ConflictReason>,
 }
 
 /// A helper "iterator" used to extract candidates within a current `Context` of
@@ -683,7 +684,7 @@ impl RemainingCandidates {
     /// original list for the reason listed.
     fn next(
         &mut self,
-        conflicting_prev_active: &mut HashMap<PackageId, ConflictReason>,
+        conflicting_prev_active: &mut BTreeMap<PackageId, ConflictReason>,
         cx: &Context,
         dep: &Dependency,
     ) -> Option<(Candidate, bool)> {
@@ -695,10 +696,10 @@ impl RemainingCandidates {
             // `links` key. If this candidate links to something that's already
             // linked to by a different package then we've gotta skip this.
             if let Some(link) = b.summary.links() {
-                if let Some(a) = cx.links.get(&link) {
+                if let Some(&a) = cx.links.get(&link) {
                     if a != b.summary.package_id() {
                         conflicting_prev_active
-                            .entry(a.clone())
+                            .entry(a)
                             .or_insert_with(|| ConflictReason::Links(link));
                         continue;
                     }
@@ -719,7 +720,7 @@ impl RemainingCandidates {
             {
                 if *a != b.summary {
                     conflicting_prev_active
-                        .entry(a.package_id().clone())
+                        .entry(a.package_id())
                         .or_insert(ConflictReason::Semver);
                     continue;
                 }
@@ -776,7 +777,7 @@ fn find_candidate(
     backtrack_stack: &mut Vec<BacktrackFrame>,
     parent: &Summary,
     backtracked: bool,
-    conflicting_activations: &HashMap<PackageId, ConflictReason>,
+    conflicting_activations: &BTreeMap<PackageId, ConflictReason>,
 ) -> Option<(Candidate, bool, BacktrackFrame)> {
     while let Some(mut frame) = backtrack_stack.pop() {
         let next = frame.remaining_candidates.next(
@@ -797,20 +798,19 @@ fn find_candidate(
         // active in this back up we know that we're guaranteed to not actually
         // make any progress. As a result if we hit this condition we can
         // completely skip this backtrack frame and move on to the next.
-        if !backtracked {
-            if frame
+        if !backtracked
+            && frame
                 .context
                 .is_conflicting(Some(parent.package_id()), conflicting_activations)
-            {
-                trace!(
-                    "{} = \"{}\" skip as not solving {}: {:?}",
-                    frame.dep.package_name(),
-                    frame.dep.version_req(),
-                    parent.package_id(),
-                    conflicting_activations
-                );
-                continue;
-            }
+        {
+            trace!(
+                "{} = \"{}\" skip as not solving {}: {:?}",
+                frame.dep.package_name(),
+                frame.dep.version_req(),
+                parent.package_id(),
+                conflicting_activations
+            );
+            continue;
         }
 
         return Some((candidate, has_another, frame));
@@ -819,7 +819,7 @@ fn find_candidate(
 }
 
 fn check_cycles(resolve: &Resolve, activations: &Activations) -> CargoResult<()> {
-    let summaries: HashMap<&PackageId, &Summary> = activations
+    let summaries: HashMap<PackageId, &Summary> = activations
         .values()
         .flat_map(|v| v.iter())
         .map(|s| (s.package_id(), s))
@@ -830,25 +830,25 @@ fn check_cycles(resolve: &Resolve, activations: &Activations) -> CargoResult<()>
     all_packages.sort_unstable();
     let mut checked = HashSet::new();
     for pkg in all_packages {
-        if !checked.contains(pkg) {
+        if !checked.contains(&pkg) {
             visit(resolve, pkg, &summaries, &mut HashSet::new(), &mut checked)?
         }
     }
     return Ok(());
 
-    fn visit<'a>(
-        resolve: &'a Resolve,
-        id: &'a PackageId,
-        summaries: &HashMap<&'a PackageId, &Summary>,
-        visited: &mut HashSet<&'a PackageId>,
-        checked: &mut HashSet<&'a PackageId>,
+    fn visit(
+        resolve: &Resolve,
+        id: PackageId,
+        summaries: &HashMap<PackageId, &Summary>,
+        visited: &mut HashSet<PackageId>,
+        checked: &mut HashSet<PackageId>,
     ) -> CargoResult<()> {
         // See if we visited ourselves
         if !visited.insert(id) {
-            bail!(
+            failure::bail!(
                 "cyclic package dependency: package `{}` depends on itself. Cycle:\n{}",
                 id,
-                errors::describe_path(&resolve.path_to_top(id))
+                errors::describe_path(&resolve.path_to_top(&id))
             );
         }
 
@@ -860,7 +860,7 @@ fn check_cycles(resolve: &Resolve, activations: &Activations) -> CargoResult<()>
         // visitation list as we can't induce a cycle through transitive
         // dependencies.
         if checked.insert(id) {
-            let summary = summaries[id];
+            let summary = summaries[&id];
             for dep in resolve.deps_not_replaced(id) {
                 let is_transitive = summary
                     .dependencies()
@@ -881,7 +881,7 @@ fn check_cycles(resolve: &Resolve, activations: &Activations) -> CargoResult<()>
         }
 
         // Ok, we're done, no longer visiting our node any more
-        visited.remove(id);
+        visited.remove(&id);
         Ok(())
     }
 }
@@ -896,7 +896,7 @@ fn check_duplicate_pkgs_in_lockfile(resolve: &Resolve) -> CargoResult<()> {
     for pkg_id in resolve.iter() {
         let encodable_pkd_id = encode::encodable_package_id(pkg_id);
         if let Some(prev_pkg_id) = unique_pkg_ids.insert(encodable_pkd_id, pkg_id) {
-            bail!(
+            failure::bail!(
                 "package collision in the lockfile: packages {} and {} are different, \
                  but only one can be written to lockfile unambiguously",
                 prev_pkg_id,

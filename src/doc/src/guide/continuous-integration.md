@@ -48,3 +48,41 @@ This will test on the stable channel and nightly channel, but any
 breakage in nightly will not fail your overall build. Please see the
 [GitLab CI](https://docs.gitlab.com/ce/ci/yaml/README.html) for more
 information.
+
+### builds.sr.ht
+
+To test your package on sr.ht, here is a sample `.build.yml` file.
+Be sure to change `<your repo>` and `<your project>` to the repo to clone and
+the directory where it was cloned.
+
+```yaml
+image: archlinux
+packages:
+  - rustup
+sources:
+  - <your repo>
+tasks:
+  - setup: |
+      rustup toolchain install nightly stable
+      cd <your project>/
+      rustup run stable cargo fetch
+  - stable: |
+      rustup default stable
+      cd <your project>/
+      cargo build --verbose
+      cargo test --verbose
+  - nightly: |
+      rustup default nightly
+      cd <your project>/
+      cargo build --verbose ||:
+      cargo test --verbose  ||:
+  - docs: |
+      cd <your project>/
+      rustup run stable cargo doc --no-deps
+      rustup run nightly cargo doc --no-deps ||:
+```
+
+This will test and build documentation on the stable channel and nightly
+channel, but any breakage in nightly will not fail your overall build. Please
+see the [builds.sr.ht documentation](https://man.sr.ht/builds.sr.ht/) for more
+information.

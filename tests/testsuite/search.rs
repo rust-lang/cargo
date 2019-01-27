@@ -2,10 +2,10 @@ use std::fs::{self, File};
 use std::io::prelude::*;
 use std::path::Path;
 
-use support::cargo_process;
-use support::git::repo;
-use support::paths;
-use support::registry::{api_path, registry as registry_url, registry_path};
+use crate::support::cargo_process;
+use crate::support::git::repo;
+use crate::support::paths;
+use crate::support::registry::{api_path, registry_path, registry_url};
 use url::Url;
 
 fn api() -> Url {
@@ -67,7 +67,8 @@ fn setup() {
         .file(
             "config.json",
             &format!(r#"{{"dl":"{0}","api":"{0}"}}"#, api()),
-        ).build();
+        )
+        .build();
 
     let base = api_path().join("api/v1/crates");
     write_crates(&base);
@@ -89,8 +90,10 @@ replace-with = 'dummy-registry'
 registry = '{reg}'
 "#,
                 reg = registry_url(),
-            ).as_bytes(),
-        ).unwrap();
+            )
+            .as_bytes(),
+        )
+        .unwrap();
 }
 
 #[test]
@@ -104,7 +107,7 @@ fn not_update() {
 
     let sid = SourceId::for_registry(&registry_url()).unwrap();
     let cfg = Config::new(Shell::new(), paths::root(), paths::home().join(".cargo"));
-    let mut regsrc = RegistrySource::remote(&sid, &cfg);
+    let mut regsrc = RegistrySource::remote(sid, &cfg);
     regsrc.update().unwrap();
 
     cargo_process("search postgres")
@@ -142,9 +145,10 @@ fn simple() {
 fn simple_with_host() {
     setup();
 
-    cargo_process("search postgres --host").arg(registry_url().to_string())
-            .with_stderr(
-                "\
+    cargo_process("search postgres --host")
+        .arg(registry_url().to_string())
+        .with_stderr(
+            "\
 [WARNING] The flag '--host' is no longer valid.
 
 Previous versions of Cargo accepted this flag, but it is being
@@ -156,10 +160,8 @@ to update to a fixed version or contact the upstream maintainer
 about this warning.
 [UPDATING] `[CWD]/registry` index
 ",
-            )
-            .with_stdout_contains(
-                "hoare = \"0.1.1\"    # Design by contract style assertions for Rust",
-            )
+        )
+        .with_stdout_contains("hoare = \"0.1.1\"    # Design by contract style assertions for Rust")
         .run();
 }
 
@@ -169,9 +171,12 @@ about this warning.
 fn simple_with_index_and_host() {
     setup();
 
-    cargo_process("search postgres --index").arg(registry_url().to_string()).arg("--host").arg(registry_url().to_string())
-            .with_stderr(
-                "\
+    cargo_process("search postgres --index")
+        .arg(registry_url().to_string())
+        .arg("--host")
+        .arg(registry_url().to_string())
+        .with_stderr(
+            "\
 [WARNING] The flag '--host' is no longer valid.
 
 Previous versions of Cargo accepted this flag, but it is being
@@ -183,10 +188,8 @@ to update to a fixed version or contact the upstream maintainer
 about this warning.
 [UPDATING] `[CWD]/registry` index
 ",
-            )
-            .with_stdout_contains(
-                "hoare = \"0.1.1\"    # Design by contract style assertions for Rust",
-            )
+        )
+        .with_stdout_contains("hoare = \"0.1.1\"    # Design by contract style assertions for Rust")
         .run();
 }
 

@@ -1,206 +1,473 @@
-.TH "CARGO" "1" "May 2016" "The Rust package manager" "Cargo Manual"
-.hy
-.SH NAME
-.PP
+'\" t
+.\"     Title: cargo
+.\"    Author: [see the "AUTHOR(S)" section]
+.\" Generator: Asciidoctor 1.5.8
+.\"      Date: 2018-12-20
+.\"    Manual: \ \&
+.\"    Source: \ \&
+.\"  Language: English
+.\"
+.TH "CARGO" "1" "2018-12-20" "\ \&" "\ \&"
+.ie \n(.g .ds Aq \(aq
+.el       .ds Aq '
+.ss \n[.ss] 0
+.nh
+.ad l
+.de URL
+\fI\\$2\fP <\\$1>\\$3
+..
+.als MTO URL
+.if \n[.g] \{\
+.  mso www.tmac
+.  am URL
+.    ad l
+.  .
+.  am MTO
+.    ad l
+.  .
+.  LINKSTYLE blue R < >
+.\}
+.SH "NAME"
 cargo \- The Rust package manager
-.SH SYNOPSIS
-.PP
-\f[I]cargo\f[] <COMMAND> [<ARGS>...]
-.SH DESCRIPTION
-.PP
-This program is a package manager for the Rust language, available at
-<http://rust-lang.org>.
-.SH OPTIONS
-.TP
-.B \-h, \-\-help
-Display a help message.
-.RS
+.SH "SYNOPSIS"
+.sp
+\fBcargo [\fIOPTIONS\fP] \fICOMMAND\fP [\fIARGS\fP]\fP
+.br
+\fBcargo [\fIOPTIONS\fP] \-\-version\fP
+.br
+\fBcargo [\fIOPTIONS\fP] \-\-list\fP
+.br
+\fBcargo [\fIOPTIONS\fP] \-\-help\fP
+.br
+\fBcargo [\fIOPTIONS\fP] \-\-explain \fICODE\fP\fP
+.SH "DESCRIPTION"
+.sp
+This program is a package manager and build tool for the Rust language,
+available at \c
+.URL "http://rust\-lang.org" "" "."
+.SH "COMMANDS"
+.SS "Build Commands"
+.sp
+\fBcargo\-bench\fP(1)
+.RS 4
+Execute benchmarks of a package.
 .RE
-.TP
-.B \-V, \-\-version
-Print version information and exit.
-.RS
+.sp
+\fBcargo\-build\fP(1)
+.RS 4
+Compile a package.
 .RE
-.TP
-.B \-\-list
-List all available cargo commands.
-.RS
+.sp
+\fBcargo\-check\fP(1)
+.RS 4
+Check a local package and all of its dependencies for errors.
 .RE
-.TP
-.B \-\-explain CODE
-Run \f[C]rustc\ \-\-explain\ CODE\f[]
-.RS
+.sp
+\fBcargo\-clean\fP(1)
+.RS 4
+Remove artifacts that Cargo has generated in the past.
 .RE
-.TP
-.B \-v, \-\-verbose
-Use verbose output.
-.RS
+.sp
+\fBcargo\-doc\fP(1)
+.RS 4
+Build a package\(cqs documentation.
 .RE
-.TP
-.B \-\-color
-Configure coloring of output.
-.RS
+.sp
+\fBcargo\-fetch\fP(1)
+.RS 4
+Fetch dependencies of a package from the network.
 .RE
-.SH COMMANDS
-.PP
-To get extended information about commands, run \f[I]cargo help
-<command>\f[] or \f[I]man cargo\-command\f[]
-.TP
-.B cargo\-build(1)
-Compile the current package.
-.RS
+.sp
+\fBcargo\-fix\fP(1)
+.RS 4
+Automatically fix lint warnings reported by rustc.
 .RE
-.TP
-.B cargo\-clean(1)
-Remove the target directory with build output.
-.RS
+.sp
+\fBcargo\-run\fP(1)
+.RS 4
+Run a binary of the local package.
 .RE
-.TP
-.B cargo\-doc(1)
-Build this package\[aq]s and its dependencies\[aq] documentation.
-.RS
+.sp
+\fBcargo\-rustc\fP(1)
+.RS 4
+Compile a package, and pass extra options to the compiler.
 .RE
-.TP
-.B cargo\-init(1)
-Create a new cargo package in the current directory.
-.RS
+.sp
+\fBcargo\-rustdoc\fP(1)
+.RS 4
+Build a package\(cqs documentation, using specified custom flags.
 .RE
-.TP
-.B cargo\-install(1)
-Install a Rust binary.
-.RS
+.sp
+\fBcargo\-test\fP(1)
+.RS 4
+Execute unit and integration tests of a package.
 .RE
-.TP
-.B cargo\-new(1)
-Create a new cargo package.
-.RS
+.SS "Manifest Commands"
+.sp
+\fBcargo\-generate\-lockfile\fP(1)
+.RS 4
+Generate \fBCargo.lock\fP for a project.
 .RE
-.TP
-.B cargo\-run(1)
-Build and execute src/main.rs.
-.RS
+.sp
+\fBcargo\-locate\-project\fP(1)
+.RS 4
+Print a JSON representation of a \fBCargo.toml\fP file\(cqs location.
 .RE
-.TP
-.B cargo\-test(1)
-Run the tests for the package.
-.RS
+.sp
+\fBcargo\-metadata\fP(1)
+.RS 4
+Output the resolved dependencies of a package, the concrete used versions
+including overrides, in machine\-readable format.
 .RE
-.TP
-.B cargo\-bench(1)
-Run the benchmarks for the package.
-.RS
+.sp
+\fBcargo\-pkgid\fP(1)
+.RS 4
+Print a fully qualified package specification.
 .RE
-.TP
-.B cargo\-update(1)
-Update dependencies in Cargo.lock.
-.RS
+.sp
+\fBcargo\-update\fP(1)
+.RS 4
+Update dependencies as recorded in the local lock file.
 .RE
-.TP
-.B cargo\-rustc(1)
-Compile the current package, and optionally pass additional rustc parameters
-.RS
+.sp
+\fBcargo\-verify\-project\fP(1)
+.RS 4
+Check correctness of crate manifest.
 .RE
-.TP
-.B cargo\-package(1)
-Generate a source tarball for the current package.
-.RS
+.SS "Package Commands"
+.sp
+\fBcargo\-init\fP(1)
+.RS 4
+Create a new Cargo package in an existing directory.
 .RE
-.TP
-.B cargo\-publish(1)
-Package and upload this package to the registry.
-.RS
+.sp
+\fBcargo\-install\fP(1)
+.RS 4
+Build and install a Rust binary.
 .RE
-.TP
-.B cargo\-owner(1)
-Manage the owners of a crate on the registry.
-.RS
+.sp
+\fBcargo\-new\fP(1)
+.RS 4
+Create a new Cargo package.
 .RE
-.TP
-.B cargo\-uninstall(1)
+.sp
+\fBcargo\-search\fP(1)
+.RS 4
+Search packages in crates.io.
+.RE
+.sp
+\fBcargo\-uninstall\fP(1)
+.RS 4
 Remove a Rust binary.
-.RS
 .RE
-.TP
-.B cargo\-search(1)
-Search registry for crates.
-.RS
+.SS "Publishing Commands"
+.sp
+\fBcargo\-login\fP(1)
+.RS 4
+Save an API token from the registry locally.
 .RE
-.TP
-.B cargo\-help(1)
-Display help for a cargo command
-.RS
+.sp
+\fBcargo\-owner\fP(1)
+.RS 4
+Manage the owners of a crate on the registry.
 .RE
-.TP
-.B cargo\-version(1)
-Print cargo\[aq]s version and exit.
-.RS
+.sp
+\fBcargo\-package\fP(1)
+.RS 4
+Assemble the local package into a distributable tarball.
 .RE
-.SH FILES
-.TP
-.B ~/.cargo
-Directory in which Cargo stores repository data.
-Cargo can be instructed to use a \f[I]\&.cargo\f[] subdirectory in a
-different location by setting the \f[B]CARGO_HOME\f[] environment
+.sp
+\fBcargo\-publish\fP(1)
+.RS 4
+Upload a package to the registry.
+.RE
+.sp
+\fBcargo\-yank\fP(1)
+.RS 4
+Remove a pushed crate from the index.
+.RE
+.SS "General Commands"
+.sp
+\fBcargo\-help\fP(1)
+.RS 4
+Display help information about Cargo.
+.RE
+.sp
+\fBcargo\-version\fP(1)
+.RS 4
+Show version information.
+.RE
+.SH "OPTIONS"
+.SS "Special Options"
+.sp
+\fB\-V\fP, \fB\-\-version\fP
+.RS 4
+Print version info and exit. If used with \fB\-\-verbose\fP, prints extra
+information.
+.RE
+.sp
+\fB\-\-list\fP
+.RS 4
+List all installed Cargo subcommands. If used with \fB\-\-verbose\fP, prints
+extra information.
+.RE
+.sp
+\fB\-\-explain \fICODE\fP\fP
+.RS 4
+Run \fBrustc \-\-explain CODE\fP which will print out a detailed explanation of
+an error message (for example, \fBE0004\fP).
+.RE
+.SS "Display Options"
+.sp
+\fB\-v\fP, \fB\-\-verbose\fP
+.RS 4
+Use verbose output. May be specified twice for "very verbose" output which
+includes extra output such as dependency warnings and build script output.
+May also be specified with the \fBterm.verbose\fP
+.URL "https://doc.rust\-lang.org/cargo/reference/config.html" "config value" "."
+.RE
+.sp
+\fB\-q\fP, \fB\-\-quiet\fP
+.RS 4
+No output printed to stdout.
+.RE
+.sp
+\fB\-\-color\fP \fIWHEN\fP
+.RS 4
+Control when colored output is used. Valid values:
+.sp
+.RS 4
+.ie n \{\
+\h'-04'\(bu\h'+03'\c
+.\}
+.el \{\
+.  sp -1
+.  IP \(bu 2.3
+.\}
+\fBauto\fP (default): Automatically detect if color support is available on the
+terminal.
+.RE
+.sp
+.RS 4
+.ie n \{\
+\h'-04'\(bu\h'+03'\c
+.\}
+.el \{\
+.  sp -1
+.  IP \(bu 2.3
+.\}
+\fBalways\fP: Always display colors.
+.RE
+.sp
+.RS 4
+.ie n \{\
+\h'-04'\(bu\h'+03'\c
+.\}
+.el \{\
+.  sp -1
+.  IP \(bu 2.3
+.\}
+\fBnever\fP: Never display colors.
+.RE
+.sp
+May also be specified with the \fBterm.color\fP
+.URL "https://doc.rust\-lang.org/cargo/reference/config.html" "config value" "."
+.RE
+.SS "Manifest Options"
+.sp
+\fB\-\-frozen\fP, \fB\-\-locked\fP
+.RS 4
+Either of these flags requires that the \fBCargo.lock\fP file is
+up\-to\-date. If the lock file is missing, or it needs to be updated, Cargo will
+exit with an error. The \fB\-\-frozen\fP flag also prevents Cargo from
+attempting to access the network to determine if it is out\-of\-date.
+.sp
+These may be used in environments where you want to assert that the
+\fBCargo.lock\fP file is up\-to\-date (such as a CI build) or want to avoid network
+access.
+.RE
+.SS "Common Options"
+.sp
+\fB\-h\fP, \fB\-\-help\fP
+.RS 4
+Prints help information.
+.RE
+.sp
+\fB\-Z\fP \fIFLAG\fP...
+.RS 4
+Unstable (nightly\-only) flags to Cargo. Run \fBcargo \-Z help\fP for
+details.
+.RE
+.SH "ENVIRONMENT"
+.sp
+See \c
+.URL "https://doc.rust\-lang.org/cargo/reference/environment\-variables.html" "the reference" " "
+for
+details on environment variables that Cargo reads.
+.SH "EXIT STATUS"
+.sp
+0
+.RS 4
+Cargo succeeded.
+.RE
+.sp
+101
+.RS 4
+Cargo failed to complete.
+.RE
+.SH "FILES"
+.sp
+\fB~/.cargo/\fP
+.RS 4
+Default location for Cargo\(cqs "home" directory where it stores various
+files. The location can be changed with the \fBCARGO_HOME\fP environment
 variable.
-.RS
 .RE
-.SH EXAMPLES
-.PP
-Build a local package and all of its dependencies
-.IP
+.sp
+\fB$CARGO_HOME/bin/\fP
+.RS 4
+Binaries installed by \fBcargo\-install\fP(1) will be located here. If using
+rustup, executables distributed with Rust are also located here.
+.RE
+.sp
+\fB$CARGO_HOME/config\fP
+.RS 4
+The global configuration file. See \c
+.URL "https://doc.rust\-lang.org/cargo/reference/config.html" "the reference"
+for more information about configuration files.
+.RE
+.sp
+\fB.cargo/config\fP
+.RS 4
+Cargo automatically searches for a file named \fB.cargo/config\fP in the
+current directory, and all parent directories. These configuration files
+will be merged with the global configuration file.
+.RE
+.sp
+\fB$CARGO_HOME/credentials\fP
+.RS 4
+Private authentication information for logging in to a registry.
+.RE
+.sp
+\fB$CARGO_HOME/registry/\fP
+.RS 4
+This directory contains cached downloads of the registry index and any
+downloaded dependencies.
+.RE
+.sp
+\fB$CARGO_HOME/git/\fP
+.RS 4
+This directory contains cached downloads of git dependencies.
+.RE
+.SH "EXAMPLES"
+.sp
+.RS 4
+.ie n \{\
+\h'-04' 1.\h'+01'\c
+.\}
+.el \{\
+.  sp -1
+.  IP " 1." 4.2
+.\}
+Build a local package and all of its dependencies:
+.sp
+.if n .RS 4
 .nf
-\f[C]
-$\ cargo\ build
-\f[]
+cargo build
 .fi
-.PP
-Build a package with optimizations
-.IP
+.if n .RE
+.RE
+.sp
+.RS 4
+.ie n \{\
+\h'-04' 2.\h'+01'\c
+.\}
+.el \{\
+.  sp -1
+.  IP " 2." 4.2
+.\}
+Build a package with optimizations:
+.sp
+.if n .RS 4
 .nf
-\f[C]
-$\ cargo\ build\ \-\-release
-\f[]
+cargo build \-\-release
 .fi
-.PP
-Run tests for a cross\-compiled target
-.IP
+.if n .RE
+.RE
+.sp
+.RS 4
+.ie n \{\
+\h'-04' 3.\h'+01'\c
+.\}
+.el \{\
+.  sp -1
+.  IP " 3." 4.2
+.\}
+Run tests for a cross\-compiled target:
+.sp
+.if n .RS 4
 .nf
-\f[C]
-$\ cargo\ test\ \-\-target\ i686\-unknown\-linux\-gnu
-\f[]
+cargo test \-\-target i686\-unknown\-linux\-gnu
 .fi
-.PP
-Create a new package that builds an executable
-.IP
+.if n .RE
+.RE
+.sp
+.RS 4
+.ie n \{\
+\h'-04' 4.\h'+01'\c
+.\}
+.el \{\
+.  sp -1
+.  IP " 4." 4.2
+.\}
+Create a new package that builds an executable:
+.sp
+.if n .RS 4
 .nf
-\f[C]
-$\ cargo\ new\ \-\-bin\ foobar
-\f[]
+cargo new foobar
 .fi
-.PP
-Create a package in the current directory
-.IP
+.if n .RE
+.RE
+.sp
+.RS 4
+.ie n \{\
+\h'-04' 5.\h'+01'\c
+.\}
+.el \{\
+.  sp -1
+.  IP " 5." 4.2
+.\}
+Create a package in the current directory:
+.sp
+.if n .RS 4
 .nf
-\f[C]
-$\ mkdir\ foo\ &&\ cd\ foo
-$\ cargo\ init\ .
-\f[]
+mkdir foo && cd foo
+cargo init .
 .fi
-.PP
-Learn about a command\[aq]s options and usage
-.IP
+.if n .RE
+.RE
+.sp
+.RS 4
+.ie n \{\
+\h'-04' 6.\h'+01'\c
+.\}
+.el \{\
+.  sp -1
+.  IP " 6." 4.2
+.\}
+Learn about a command\(cqs options and usage:
+.sp
+.if n .RS 4
 .nf
-\f[C]
-$\ cargo\ help\ clean
-\f[]
+cargo help clean
 .fi
-.SH SEE ALSO
-.PP
-rustc(1), rustdoc(1)
-.SH BUGS
-.PP
-See <https://github.com/rust-lang/cargo/issues> for issues.
-.SH COPYRIGHT
-.PP
-This work is dual\-licensed under Apache 2.0 and MIT terms.
-See \f[I]COPYRIGHT\f[] file in the cargo source distribution.
+.if n .RE
+.RE
+.SH "BUGS"
+.sp
+See \c
+.URL "https://github.com/rust\-lang/cargo/issues" "" " "
+for issues.
+.SH "SEE ALSO"
+.sp
+\fBrustc\fP(1), \fBrustdoc\fP(1)

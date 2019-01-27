@@ -7,14 +7,14 @@
 //! dependencies on other Invocations.
 
 use std::collections::BTreeMap;
-
-use core::TargetKind;
-use super::{Context, Kind, Unit};
-use super::context::OutputFile;
-use util::{internal, CargoResult, ProcessBuilder};
 use std::path::PathBuf;
-use serde_json;
-use semver;
+
+use serde::Serialize;
+
+use super::context::OutputFile;
+use super::{CompileMode, Context, Kind, Unit};
+use crate::core::TargetKind;
+use crate::util::{internal, CargoResult, ProcessBuilder};
 
 #[derive(Debug, Serialize)]
 struct Invocation {
@@ -22,6 +22,7 @@ struct Invocation {
     package_version: semver::Version,
     target_kind: TargetKind,
     kind: Kind,
+    compile_mode: CompileMode,
     deps: Vec<usize>,
     outputs: Vec<PathBuf>,
     links: BTreeMap<PathBuf, PathBuf>,
@@ -44,13 +45,14 @@ struct SerializedBuildPlan {
 }
 
 impl Invocation {
-    pub fn new(unit: &Unit, deps: Vec<usize>) -> Invocation {
+    pub fn new(unit: &Unit<'_>, deps: Vec<usize>) -> Invocation {
         let id = unit.pkg.package_id();
         Invocation {
             package_name: id.name().to_string(),
             package_version: id.version().clone(),
             kind: unit.kind,
             target_kind: unit.target.kind().clone(),
+            compile_mode: unit.mode,
             deps,
             outputs: Vec::new(),
             links: BTreeMap::new(),
@@ -69,15 +71,16 @@ impl Invocation {
     }
 
     pub fn update_cmd(&mut self, cmd: &ProcessBuilder) -> CargoResult<()> {
-        self.program = cmd.get_program()
+        self.program = cmd
+            .get_program()
             .to_str()
-            .ok_or_else(|| format_err!("unicode program string required"))?
+            .ok_or_else(|| failure::format_err!("unicode program string required"))?
             .to_string();
         self.cwd = Some(cmd.get_cwd().unwrap().to_path_buf());
         for arg in cmd.get_args().iter() {
             self.args.push(
                 arg.to_str()
-                    .ok_or_else(|| format_err!("unicode argument string required"))?
+                    .ok_or_else(|| failure::format_err!("unicode argument string required"))?
                     .to_string(),
             );
         }
@@ -90,7 +93,7 @@ impl Invocation {
                 var.clone(),
                 value
                     .to_str()
-                    .ok_or_else(|| format_err!("unicode environment value required"))?
+                    .ok_or_else(|| failure::format_err!("unicode environment value required"))?
                     .to_string(),
             );
         }
@@ -106,10 +109,11 @@ impl BuildPlan {
         }
     }
 
-    pub fn add(&mut self, cx: &Context, unit: &Unit) -> CargoResult<()> {
+    pub fn add(&mut self, cx: &Context<'_, '_>, unit: &Unit<'_>) -> CargoResult<()> {
         let id = self.plan.invocations.len();
         self.invocation_map.insert(unit.buildkey(), id);
-        let deps = cx.dep_targets(&unit)
+        let deps = cx
+            .dep_targets(&unit)
             .iter()
             .map(|dep| self.invocation_map[&dep.buildkey()])
             .collect();
@@ -125,10 +129,10 @@ impl BuildPlan {
         outputs: &[OutputFile],
     ) -> CargoResult<()> {
         let id = self.invocation_map[invocation_name];
-        let invocation = self.plan
-            .invocations
-            .get_mut(id)
-            .ok_or_else(|| internal(format!("couldn't find invocation for {}", invocation_name)))?;
+        let invocation =
+            self.plan.invocations.get_mut(id).ok_or_else(|| {
+                internal(format!("couldn't find invocation for {}", invocation_name))
+            })?;
 
         invocation.update_cmd(cmd)?;
         for output in outputs.iter() {

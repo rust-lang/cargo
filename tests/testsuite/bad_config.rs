@@ -1,5 +1,5 @@
-use support::registry::Package;
-use support::{basic_manifest, project};
+use crate::support::registry::Package;
+use crate::support::{basic_manifest, project};
 
 #[test]
 fn bad1() {
@@ -11,7 +11,8 @@ fn bad1() {
               [target]
               nonexistent-target = "foo"
         "#,
-        ).build();
+        )
+        .build();
     p.cargo("build -v --target=nonexistent-target")
         .with_status(101)
         .with_stderr(
@@ -19,7 +20,8 @@ fn bad1() {
 [ERROR] expected table for configuration key `target.nonexistent-target`, \
 but found string in [..]config
 ",
-        ).run();
+        )
+        .run();
 }
 
 #[test]
@@ -32,7 +34,8 @@ fn bad2() {
               [http]
                 proxy = 3.0
         "#,
-        ).build();
+        )
+        .build();
     p.cargo("publish -v")
         .with_status(101)
         .with_stderr(
@@ -51,7 +54,8 @@ Caused by:
 Caused by:
   found TOML configuration value of unknown type `float`
 ",
-        ).run();
+        )
+        .run();
 }
 
 #[test]
@@ -64,7 +68,8 @@ fn bad3() {
             [http]
               proxy = true
         "#,
-        ).build();
+        )
+        .build();
     Package::new("foo", "1.0.0").publish();
 
     p.cargo("publish -v")
@@ -76,7 +81,8 @@ error: failed to update registry [..]
 Caused by:
   error in [..]config: `http.proxy` expected a string, but found a boolean
 ",
-        ).run();
+        )
+        .run();
 }
 
 #[test]
@@ -88,7 +94,8 @@ fn bad4() {
             [cargo-new]
               name = false
         "#,
-        ).build();
+        )
+        .build();
     p.cargo("new -v foo")
         .with_status(101)
         .with_stderr(
@@ -98,7 +105,8 @@ fn bad4() {
 Caused by:
   error in [..]config: `cargo-new.name` expected a string, but found a boolean
 ",
-        ).run();
+        )
+        .run();
 }
 
 #[test]
@@ -111,7 +119,8 @@ fn bad6() {
             [http]
               user-agent = true
         "#,
-        ).build();
+        )
+        .build();
     Package::new("foo", "1.0.0").publish();
 
     p.cargo("publish -v")
@@ -123,7 +132,8 @@ error: failed to update registry [..]
 Caused by:
   error in [..]config: `http.user-agent` expected a string, but found a boolean
 ",
-        ).run();
+        )
+        .run();
 }
 
 #[test]
@@ -136,7 +146,8 @@ fn bad_cargo_config_jobs() {
             [build]
             jobs = -1
         "#,
-        ).build();
+        )
+        .build();
     p.cargo("build -v")
         .with_status(101)
         .with_stderr(
@@ -145,7 +156,8 @@ fn bad_cargo_config_jobs() {
 could not load config key `build.jobs`: \
 invalid value: integer `-1`, expected u32
 ",
-        ).run();
+        )
+        .run();
 }
 
 #[test]
@@ -158,7 +170,8 @@ fn default_cargo_config_jobs() {
             [build]
             jobs = 1
         "#,
-        ).build();
+        )
+        .build();
     p.cargo("build -v").run();
 }
 
@@ -172,7 +185,8 @@ fn good_cargo_config_jobs() {
             [build]
             jobs = 4
         "#,
-        ).build();
+        )
+        .build();
     p.cargo("build -v").run();
 }
 
@@ -190,7 +204,8 @@ fn invalid_global_config() {
             [dependencies]
             foo = "0.1.0"
         "#,
-        ).file(".cargo/config", "4")
+        )
+        .file(".cargo/config", "4")
         .file("src/lib.rs", "")
         .build();
 
@@ -209,7 +224,8 @@ Caused by:
 Caused by:
   expected an equals, found eof at line 1
 ",
-        ).run();
+        )
+        .run();
 }
 
 #[test]
@@ -228,7 +244,8 @@ fn bad_cargo_lock() {
 Caused by:
   missing field `name` for key `package`
 ",
-        ).run();
+        )
+        .run();
 }
 
 #[test]
@@ -247,7 +264,8 @@ fn duplicate_packages_in_cargo_lock() {
             [dependencies]
             bar = "0.1.0"
         "#,
-        ).file("src/lib.rs", "")
+        )
+        .file("src/lib.rs", "")
         .file(
             "Cargo.lock",
             r#"
@@ -268,7 +286,8 @@ fn duplicate_packages_in_cargo_lock() {
             version = "0.1.0"
             source = "registry+https://github.com/rust-lang/crates.io-index"
         "#,
-        ).build();
+        )
+        .build();
 
     p.cargo("build")
         .with_status(101)
@@ -279,7 +298,8 @@ fn duplicate_packages_in_cargo_lock() {
 Caused by:
   package `bar` is specified twice in the lockfile
 ",
-        ).run();
+        )
+        .run();
 }
 
 #[test]
@@ -298,7 +318,8 @@ fn bad_source_in_cargo_lock() {
             [dependencies]
             bar = "0.1.0"
         "#,
-        ).file("src/lib.rs", "")
+        )
+        .file("src/lib.rs", "")
         .file(
             "Cargo.lock",
             r#"
@@ -314,7 +335,8 @@ fn bad_source_in_cargo_lock() {
             version = "0.1.0"
             source = "You shall not parse"
         "#,
-        ).build();
+        )
+        .build();
 
     p.cargo("build --verbose")
         .with_status(101)
@@ -325,7 +347,8 @@ fn bad_source_in_cargo_lock() {
 Caused by:
   invalid source `You shall not parse` for key `package.source`
 ",
-        ).run();
+        )
+        .run();
 }
 
 #[test]
@@ -342,7 +365,8 @@ fn bad_dependency_in_lockfile() {
              "bar 0.1.0 (registry+https://github.com/rust-lang/crates.io-index)",
             ]
         "#,
-        ).build();
+        )
+        .build();
 
     p.cargo("build").run();
 }
@@ -361,7 +385,8 @@ fn bad_git_dependency() {
             [dependencies]
             foo = { git = "file:.." }
         "#,
-        ).file("src/lib.rs", "")
+        )
+        .file("src/lib.rs", "")
         .build();
 
     p.cargo("build -v")
@@ -380,7 +405,8 @@ Caused by:
 Caused by:
   [..]'file:///' is not a valid local file URI[..]
 ",
-        ).run();
+        )
+        .run();
 }
 
 #[test]
@@ -397,14 +423,16 @@ fn bad_crate_type() {
             [lib]
             crate-type = ["bad_type", "rlib"]
         "#,
-        ).file("src/lib.rs", "")
+        )
+        .file("src/lib.rs", "")
         .build();
 
     p.cargo("build -v")
         .with_status(101)
         .with_stderr_contains(
             "error: failed to run `rustc` to learn about crate-type bad_type information",
-        ).run();
+        )
+        .run();
 }
 
 #[test]
@@ -423,7 +451,8 @@ fn malformed_override() {
               foo: "bar"
             }
         "#,
-        ).file("src/lib.rs", "")
+        )
+        .file("src/lib.rs", "")
         .build();
 
     p.cargo("build")
@@ -438,7 +467,8 @@ Caused by:
 Caused by:
   expected a table key, found a newline at line 8
 ",
-        ).run();
+        )
+        .run();
 }
 
 #[test]
@@ -460,7 +490,8 @@ fn duplicate_binary_names() {
            name = "e"
            path = "b.rs"
         "#,
-        ).file("a.rs", r#"fn main() -> () {}"#)
+        )
+        .file("a.rs", r#"fn main() -> () {}"#)
         .file("b.rs", r#"fn main() -> () {}"#)
         .build();
 
@@ -473,7 +504,8 @@ fn duplicate_binary_names() {
 Caused by:
   found duplicate binary name e, but all binary targets must have a unique name
 ",
-        ).run();
+        )
+        .run();
 }
 
 #[test]
@@ -495,7 +527,8 @@ fn duplicate_example_names() {
            name = "ex"
            path = "examples/ex2.rs"
         "#,
-        ).file("examples/ex.rs", r#"fn main () -> () {}"#)
+        )
+        .file("examples/ex.rs", r#"fn main () -> () {}"#)
         .file("examples/ex2.rs", r#"fn main () -> () {}"#)
         .build();
 
@@ -508,7 +541,8 @@ fn duplicate_example_names() {
 Caused by:
   found duplicate example name ex, but all example targets must have a unique name
 ",
-        ).run();
+        )
+        .run();
 }
 
 #[test]
@@ -530,7 +564,8 @@ fn duplicate_bench_names() {
            name = "ex"
            path = "benches/ex2.rs"
         "#,
-        ).file("benches/ex.rs", r#"fn main () {}"#)
+        )
+        .file("benches/ex.rs", r#"fn main () {}"#)
         .file("benches/ex2.rs", r#"fn main () {}"#)
         .build();
 
@@ -543,7 +578,8 @@ fn duplicate_bench_names() {
 Caused by:
   found duplicate bench name ex, but all bench targets must have a unique name
 ",
-        ).run();
+        )
+        .run();
 }
 
 #[test]
@@ -567,7 +603,8 @@ fn duplicate_deps() {
            [target.x86_64-unknown-linux-gnu.dependencies]
            bar = { path = "linux-bar" }
         "#,
-        ).file("src/main.rs", r#"fn main () {}"#)
+        )
+        .file("src/main.rs", r#"fn main () {}"#)
         .build();
 
     p.cargo("build")
@@ -580,7 +617,8 @@ Caused by:
   Dependency 'bar' has different source paths depending on the build target. Each dependency must \
 have a single canonical source path irrespective of build target.
 ",
-        ).run();
+        )
+        .run();
 }
 
 #[test]
@@ -604,7 +642,8 @@ fn duplicate_deps_diff_sources() {
            [target.x86_64-unknown-linux-gnu.dependencies]
            bar = { path = "linux-bar" }
         "#,
-        ).file("src/main.rs", r#"fn main () {}"#)
+        )
+        .file("src/main.rs", r#"fn main () {}"#)
         .build();
 
     p.cargo("build")
@@ -617,7 +656,8 @@ Caused by:
   Dependency 'bar' has different source paths depending on the build target. Each dependency must \
 have a single canonical source path irrespective of build target.
 ",
-        ).run();
+        )
+        .run();
 }
 
 #[test]
@@ -634,7 +674,8 @@ fn unused_keys() {
            [target.foo]
            bar = "3"
         "#,
-        ).file("src/lib.rs", "")
+        )
+        .file("src/lib.rs", "")
         .build();
 
     p.cargo("build")
@@ -644,7 +685,8 @@ warning: unused manifest key: target.foo.bar
 [COMPILING] foo v0.1.0 ([CWD])
 [FINISHED] dev [unoptimized + debuginfo] target(s) in [..]
 ",
-        ).run();
+        )
+        .run();
 
     let p = project()
         .file(
@@ -658,7 +700,8 @@ warning: unused manifest key: target.foo.bar
            [profile.debug]
            debug = 1
         "#,
-        ).file("src/lib.rs", "")
+        )
+        .file("src/lib.rs", "")
         .build();
 
     p.cargo("build")
@@ -668,7 +711,8 @@ warning: unused manifest key: profile.debug
 warning: use `[profile.dev]` to configure debug builds
 [..]
 [..]",
-        ).run();
+        )
+        .run();
 
     let p = project()
         .file(
@@ -681,7 +725,8 @@ warning: use `[profile.dev]` to configure debug builds
             authors = ["wycats@example.com"]
             bulid = "foo"
         "#,
-        ).file("src/lib.rs", "pub fn foo() {}")
+        )
+        .file("src/lib.rs", "pub fn foo() {}")
         .build();
     p.cargo("build")
         .with_stderr(
@@ -690,7 +735,8 @@ warning: unused manifest key: project.bulid
 [COMPILING] foo [..]
 [FINISHED] dev [unoptimized + debuginfo] target(s) in [..]
 ",
-        ).run();
+        )
+        .run();
 
     let p = project()
         .at("bar")
@@ -706,7 +752,8 @@ warning: unused manifest key: project.bulid
             [lib]
             build = "foo"
         "#,
-        ).file("src/lib.rs", "pub fn foo() {}")
+        )
+        .file("src/lib.rs", "pub fn foo() {}")
         .build();
     p.cargo("build")
         .with_stderr(
@@ -715,7 +762,8 @@ warning: unused manifest key: lib.build
 [COMPILING] foo [..]
 [FINISHED] dev [unoptimized + debuginfo] target(s) in [..]
 ",
-        ).run();
+        )
+        .run();
 }
 
 #[test]
@@ -728,17 +776,19 @@ fn unused_keys_in_virtual_manifest() {
             members = ["bar"]
             bulid = "foo"
         "#,
-        ).file("bar/Cargo.toml", &basic_manifest("bar", "0.0.1"))
+        )
+        .file("bar/Cargo.toml", &basic_manifest("bar", "0.0.1"))
         .file("bar/src/lib.rs", r"")
         .build();
     p.cargo("build --all")
         .with_stderr(
             "\
-warning: unused manifest key: workspace.bulid
+[WARNING] [..]/foo/Cargo.toml: unused manifest key: workspace.bulid
 [COMPILING] bar [..]
 [FINISHED] dev [unoptimized + debuginfo] target(s) in [..]
 ",
-        ).run();
+        )
+        .run();
 }
 
 #[test]
@@ -755,7 +805,8 @@ fn empty_dependencies() {
             [dependencies]
             bar = {}
         "#,
-        ).file("src/main.rs", "fn main() {}")
+        )
+        .file("src/main.rs", "fn main() {}")
         .build();
 
     Package::new("bar", "0.0.1").publish();
@@ -766,7 +817,8 @@ fn empty_dependencies() {
 warning: dependency (bar) specified without providing a local path, Git repository, or version \
 to use. This will be considered an error in future versions
 ",
-        ).run();
+        )
+        .run();
 }
 
 #[test]
@@ -789,7 +841,8 @@ in the future.
 [COMPILING] foo v0.0.1 ([..])
 [FINISHED] dev [unoptimized + debuginfo] target(s) in [..]
 ",
-        ).run();
+        )
+        .run();
 }
 
 #[test]
@@ -808,7 +861,8 @@ fn ambiguous_git_reference() {
             branch = "master"
             tag = "some-tag"
         "#,
-        ).file("src/lib.rs", "")
+        )
+        .file("src/lib.rs", "")
         .build();
 
     p.cargo("build -v")
@@ -819,7 +873,8 @@ fn ambiguous_git_reference() {
 Only one of `branch`, `tag` or `rev` is allowed. \
 This will be considered an error in future versions
 ",
-        ).run();
+        )
+        .run();
 }
 
 #[test]
@@ -849,7 +904,8 @@ fn bad_source_config2() {
             [dependencies]
             bar = "*"
         "#,
-        ).file("src/lib.rs", "")
+        )
+        .file("src/lib.rs", "")
         .file(
             ".cargo/config",
             r#"
@@ -857,7 +913,8 @@ fn bad_source_config2() {
             registry = 'http://example.com'
             replace-with = 'bar'
         "#,
-        ).build();
+        )
+        .build();
 
     p.cargo("build")
         .with_status(101)
@@ -872,7 +929,8 @@ Caused by:
   could not find a configured source with the name `bar` \
     when attempting to lookup `crates-io` (configuration in [..])
 ",
-        ).run();
+        )
+        .run();
 }
 
 #[test]
@@ -889,7 +947,8 @@ fn bad_source_config3() {
             [dependencies]
             bar = "*"
         "#,
-        ).file("src/lib.rs", "")
+        )
+        .file("src/lib.rs", "")
         .file(
             ".cargo/config",
             r#"
@@ -897,7 +956,8 @@ fn bad_source_config3() {
             registry = 'http://example.com'
             replace-with = 'crates-io'
         "#,
-        ).build();
+        )
+        .build();
 
     p.cargo("build")
         .with_status(101)
@@ -911,7 +971,8 @@ Caused by:
 Caused by:
   detected a cycle of `replace-with` sources, [..]
 ",
-        ).run();
+        )
+        .run();
 }
 
 #[test]
@@ -928,7 +989,8 @@ fn bad_source_config4() {
             [dependencies]
             bar = "*"
         "#,
-        ).file("src/lib.rs", "")
+        )
+        .file("src/lib.rs", "")
         .file(
             ".cargo/config",
             r#"
@@ -940,7 +1002,8 @@ fn bad_source_config4() {
             registry = 'http://example.com'
             replace-with = 'crates-io'
         "#,
-        ).build();
+        )
+        .build();
 
     p.cargo("build")
         .with_status(101)
@@ -955,7 +1018,8 @@ Caused by:
   detected a cycle of `replace-with` sources, the source `crates-io` is \
     eventually replaced with itself (configuration in [..])
 ",
-        ).run();
+        )
+        .run();
 }
 
 #[test]
@@ -972,7 +1036,8 @@ fn bad_source_config5() {
             [dependencies]
             bar = "*"
         "#,
-        ).file("src/lib.rs", "")
+        )
+        .file("src/lib.rs", "")
         .file(
             ".cargo/config",
             r#"
@@ -983,7 +1048,8 @@ fn bad_source_config5() {
             [source.bar]
             registry = 'not a url'
         "#,
-        ).build();
+        )
+        .build();
 
     p.cargo("build")
         .with_status(101)
@@ -994,7 +1060,8 @@ error: configuration key `source.bar.registry` specified an invalid URL (in [..]
 Caused by:
   invalid url `not a url`: [..]
 ",
-        ).run();
+        )
+        .run();
 }
 
 #[test]
@@ -1012,7 +1079,8 @@ fn both_git_and_path_specified() {
         git = "https://127.0.0.1"
         path = "bar"
     "#,
-        ).file("src/lib.rs", "")
+        )
+        .file("src/lib.rs", "")
         .build();
 
     foo.cargo("build -v")
@@ -1023,7 +1091,8 @@ fn both_git_and_path_specified() {
 Only one of `git` or `path` is allowed. \
 This will be considered an error in future versions
 ",
-        ).run();
+        )
+        .run();
 }
 
 #[test]
@@ -1040,7 +1109,8 @@ fn bad_source_config6() {
             [dependencies]
             bar = "*"
         "#,
-        ).file("src/lib.rs", "")
+        )
+        .file("src/lib.rs", "")
         .file(
             ".cargo/config",
             r#"
@@ -1048,7 +1118,8 @@ fn bad_source_config6() {
             registry = 'http://example.com'
             replace-with = ['not', 'a', 'string']
         "#,
-        ).build();
+        )
+        .build();
 
     p.cargo("build").with_status(101).with_stderr(
             "error: expected a string, but found a array for `source.crates-io.replace-with` in [..]",
@@ -1071,7 +1142,8 @@ fn ignored_git_revision() {
         path = "bar"
         branch = "spam"
     "#,
-        ).file("src/lib.rs", "")
+        )
+        .file("src/lib.rs", "")
         .build();
 
     foo.cargo("build -v")
@@ -1080,7 +1152,8 @@ fn ignored_git_revision() {
             "\
              [WARNING] key `branch` is ignored for dependency (bar). \
              This will be considered an error in future versions",
-        ).run();
+        )
+        .run();
 }
 
 #[test]
@@ -1097,7 +1170,8 @@ fn bad_source_config7() {
             [dependencies]
             bar = "*"
         "#,
-        ).file("src/lib.rs", "")
+        )
+        .file("src/lib.rs", "")
         .file(
             ".cargo/config",
             r#"
@@ -1105,7 +1179,8 @@ fn bad_source_config7() {
             registry = 'http://example.com'
             local-registry = 'file:///another/file'
         "#,
-        ).build();
+        )
+        .build();
 
     Package::new("bar", "0.1.0").publish();
 
@@ -1129,7 +1204,8 @@ fn bad_dependency() {
             [dependencies]
             bar = 3
         "#,
-        ).file("src/lib.rs", "")
+        )
+        .file("src/lib.rs", "")
         .build();
 
     p.cargo("build")
@@ -1141,7 +1217,8 @@ error: failed to parse manifest at `[..]`
 Caused by:
   invalid type: integer `3`, expected a version string like [..]
 ",
-        ).run();
+        )
+        .run();
 }
 
 #[test]
@@ -1158,7 +1235,8 @@ fn bad_debuginfo() {
             [profile.dev]
             debug = 'a'
         "#,
-        ).file("src/lib.rs", "")
+        )
+        .file("src/lib.rs", "")
         .build();
 
     p.cargo("build")
@@ -1170,7 +1248,8 @@ error: failed to parse manifest at `[..]`
 Caused by:
   invalid type: string \"a\", expected a boolean or an integer for [..]
 ",
-        ).run();
+        )
+        .run();
 }
 
 #[test]
@@ -1185,7 +1264,8 @@ fn bad_opt_level() {
             authors = []
             build = 3
         "#,
-        ).file("src/lib.rs", "")
+        )
+        .file("src/lib.rs", "")
         .build();
 
     p.cargo("build")
@@ -1197,5 +1277,6 @@ error: failed to parse manifest at `[..]`
 Caused by:
   invalid type: integer `3`, expected a boolean or a string for key [..]
 ",
-        ).run();
+        )
+        .run();
 }

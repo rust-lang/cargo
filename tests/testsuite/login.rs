@@ -1,28 +1,15 @@
 use std::fs::{self, File};
 use std::io::prelude::*;
 
+use crate::support::cargo_process;
+use crate::support::install::cargo_home;
+use crate::support::registry::{self, registry_url};
 use cargo::core::Shell;
 use cargo::util::config::Config;
-use support::cargo_process;
-use support::install::cargo_home;
-use support::registry::registry;
 use toml;
 
 const TOKEN: &str = "test-token";
 const ORIGINAL_TOKEN: &str = "api-token";
-const CONFIG_FILE: &str = r#"
-    [registry]
-    token = "api-token"
-
-    [registries.test-reg]
-    index = "http://dummy_index/"
-"#;
-
-fn setup_old_credentials() {
-    let config = cargo_home().join("config");
-    t!(fs::create_dir_all(config.parent().unwrap()));
-    t!(t!(File::create(&config)).write_all(CONFIG_FILE.as_bytes()));
-}
 
 fn setup_new_credentials() {
     let config = cargo_home().join("credentials");
@@ -72,22 +59,12 @@ fn check_token(expected_token: &str, registry: Option<&str>) -> bool {
 
 #[test]
 fn login_with_old_credentials() {
-    setup_old_credentials();
+    registry::init();
 
     cargo_process("login --host")
-        .arg(registry().to_string())
+        .arg(registry_url().to_string())
         .arg(TOKEN)
         .run();
-
-    let config = cargo_home().join("config");
-    assert!(config.is_file());
-
-    let mut contents = String::new();
-    File::open(&config)
-        .unwrap()
-        .read_to_string(&mut contents)
-        .unwrap();
-    assert_eq!(CONFIG_FILE, contents);
 
     // Ensure that we get the new token for the registry
     assert!(check_token(TOKEN, None));
@@ -95,15 +72,13 @@ fn login_with_old_credentials() {
 
 #[test]
 fn login_with_new_credentials() {
+    registry::init();
     setup_new_credentials();
 
     cargo_process("login --host")
-        .arg(registry().to_string())
+        .arg(registry_url().to_string())
         .arg(TOKEN)
         .run();
-
-    let config = cargo_home().join("config");
-    assert!(!config.is_file());
 
     // Ensure that we get the new token for the registry
     assert!(check_token(TOKEN, None));
@@ -117,13 +92,11 @@ fn login_with_old_and_new_credentials() {
 
 #[test]
 fn login_without_credentials() {
+    registry::init();
     cargo_process("login --host")
-        .arg(registry().to_string())
+        .arg(registry_url().to_string())
         .arg(TOKEN)
         .run();
-
-    let config = cargo_home().join("config");
-    assert!(!config.is_file());
 
     // Ensure that we get the new token for the registry
     assert!(check_token(TOKEN, None));
@@ -131,11 +104,11 @@ fn login_without_credentials() {
 
 #[test]
 fn new_credentials_is_used_instead_old() {
-    setup_old_credentials();
+    registry::init();
     setup_new_credentials();
 
     cargo_process("login --host")
-        .arg(registry().to_string())
+        .arg(registry_url().to_string())
         .arg(TOKEN)
         .run();
 
@@ -147,10 +120,10 @@ fn new_credentials_is_used_instead_old() {
 
 #[test]
 fn registry_credentials() {
-    setup_old_credentials();
+    registry::init();
     setup_new_credentials();
 
-    let reg = "test-reg";
+    let reg = "alternative";
 
     cargo_process("login --registry")
         .arg(reg)

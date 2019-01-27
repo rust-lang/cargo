@@ -2,8 +2,8 @@ use std::cmp;
 use std::env;
 use std::time::{Duration, Instant};
 
-use core::shell::Verbosity;
-use util::{CargoResult, Config};
+use crate::core::shell::Verbosity;
+use crate::util::{CargoResult, Config};
 
 use unicode_width::UnicodeWidthChar;
 
@@ -38,11 +38,13 @@ struct Format {
 impl<'cfg> Progress<'cfg> {
     pub fn with_style(name: &str, style: ProgressStyle, cfg: &'cfg Config) -> Progress<'cfg> {
         // report no progress when -q (for quiet) or TERM=dumb are set
+        // or if running on Continuous Integration service like Travis where the
+        // output logs get mangled.
         let dumb = match env::var("TERM") {
             Ok(term) => term == "dumb",
             Err(_) => false,
         };
-        if cfg.shell().verbosity() == Verbosity::Quiet || dumb {
+        if cfg.shell().verbosity() == Verbosity::Quiet || dumb || env::var("CI").is_ok() {
             return Progress { state: None };
         }
 
@@ -92,7 +94,7 @@ impl<'cfg> Progress<'cfg> {
         //    draw to the console every so often. Currently there's a 100ms
         //    delay between updates.
         if !s.throttle.allowed() {
-            return Ok(())
+            return Ok(());
         }
 
         s.tick(cur, max, "")
@@ -138,12 +140,12 @@ impl Throttle {
         if self.first {
             let delay = Duration::from_millis(500);
             if self.last_update.elapsed() < delay {
-                return false
+                return false;
             }
         } else {
             let interval = Duration::from_millis(100);
             if self.last_update.elapsed() < interval {
-                return false
+                return false;
             }
         }
         self.update();
@@ -181,7 +183,7 @@ impl<'cfg> State<'cfg> {
 
         // make sure we have enough room for the header
         if self.format.max_width < 15 {
-            return Ok(())
+            return Ok(());
         }
         self.config.shell().status_header(&self.name)?;
         let mut line = prefix.to_string();
@@ -196,9 +198,7 @@ impl<'cfg> State<'cfg> {
     }
 
     fn clear(&mut self) {
-        self.try_update_max_width();
-        let blank = " ".repeat(self.format.max_width);
-        drop(write!(self.config.shell().err(), "{}\r", blank));
+        self.config.shell().err_erase_line();
     }
 
     fn try_update_max_width(&mut self) {
@@ -255,7 +255,7 @@ impl Format {
         let mut avail_msg_len = self.max_width - string.len() - 15;
         let mut ellipsis_pos = 0;
         if avail_msg_len <= 3 {
-            return
+            return;
         }
         for c in msg.chars() {
             let display_width = c.width().unwrap_or(0);
@@ -401,8 +401,5 @@ fn test_progress_status_too_short() {
         max_print: 24,
         max_width: 24,
     };
-    assert_eq!(
-        format.progress_status(1, 1, ""),
-        None
-    );
+    assert_eq!(format.progress_status(1, 1, ""), None);
 }

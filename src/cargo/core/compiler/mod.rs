@@ -5,16 +5,18 @@ use std::io::{self, Write};
 use std::path::{self, Path, PathBuf};
 use std::sync::Arc;
 
+use failure::Error;
+use log::debug;
 use same_file::is_same_file;
-use serde_json;
+use serde::Serialize;
 
-use core::manifest::TargetSourcePath;
-use core::profiles::{Lto, Profile};
-use core::{PackageId, Target};
-use util::errors::{CargoResult, CargoResultExt, Internal};
-use util::paths;
-use util::{self, machine_message, Freshness, ProcessBuilder, process};
-use util::{internal, join_paths, profile};
+use crate::core::manifest::TargetSourcePath;
+use crate::core::profiles::{Lto, Profile};
+use crate::core::{PackageId, Target};
+use crate::util::errors::{CargoResult, CargoResultExt, Internal, ProcessError};
+use crate::util::paths;
+use crate::util::{self, machine_message, process, Freshness, ProcessBuilder};
+use crate::util::{internal, join_paths, profile};
 
 use self::build_plan::BuildPlan;
 use self::job::{Job, Work};
@@ -22,8 +24,8 @@ use self::job_queue::JobQueue;
 
 use self::output_depinfo::output_depinfo;
 
-pub use self::build_context::{BuildContext, FileFlavor, TargetConfig, TargetInfo};
 pub use self::build_config::{BuildConfig, CompileMode, MessageFormat};
+pub use self::build_context::{BuildContext, FileFlavor, TargetConfig, TargetInfo};
 pub use self::compilation::{Compilation, Doctest};
 pub use self::context::{Context, Unit};
 pub use self::custom_build::{BuildMap, BuildOutput, BuildScripts};
@@ -57,16 +59,16 @@ pub trait Executor: Send + Sync + 'static {
     /// Called after a rustc process invocation is prepared up-front for a given
     /// unit of work (may still be modified for runtime-known dependencies, when
     /// the work is actually executed).
-    fn init(&self, _cx: &Context, _unit: &Unit) {}
+    fn init(&self, _cx: &Context<'_, '_>, _unit: &Unit<'_>) {}
 
     /// In case of an `Err`, Cargo will not continue with the build process for
     /// this package.
     fn exec(
         &self,
         cmd: ProcessBuilder,
-        _id: &PackageId,
+        _id: PackageId,
         _target: &Target,
-        _mode: CompileMode
+        _mode: CompileMode,
     ) -> CargoResult<()> {
         cmd.exec()?;
         Ok(())
@@ -75,7 +77,7 @@ pub trait Executor: Send + Sync + 'static {
     fn exec_and_capture_output(
         &self,
         cmd: ProcessBuilder,
-        id: &PackageId,
+        id: PackageId,
         target: &Target,
         mode: CompileMode,
         _state: &job_queue::JobState<'_>,
@@ -87,11 +89,11 @@ pub trait Executor: Send + Sync + 'static {
     fn exec_json(
         &self,
         cmd: ProcessBuilder,
-        _id: &PackageId,
+        _id: PackageId,
         _target: &Target,
         _mode: CompileMode,
-        handle_stdout: &mut FnMut(&str) -> CargoResult<()>,
-        handle_stderr: &mut FnMut(&str) -> CargoResult<()>,
+        handle_stdout: &mut dyn FnMut(&str) -> CargoResult<()>,
+        handle_stderr: &mut dyn FnMut(&str) -> CargoResult<()>,
     ) -> CargoResult<()> {
         cmd.exec_with_streaming(handle_stdout, handle_stderr, false)?;
         Ok(())
@@ -99,7 +101,7 @@ pub trait Executor: Send + Sync + 'static {
 
     /// Queried when queuing each unit of work. If it returns true, then the
     /// unit will always be rebuilt, independent of whether it needs to be.
-    fn force_rebuild(&self, _unit: &Unit) -> bool {
+    fn force_rebuild(&self, _unit: &Unit<'_>) -> bool {
         false
     }
 }
@@ -113,7 +115,7 @@ impl Executor for DefaultExecutor {
     fn exec_and_capture_output(
         &self,
         cmd: ProcessBuilder,
-        _id: &PackageId,
+        _id: PackageId,
         _target: &Target,
         _mode: CompileMode,
         state: &job_queue::JobState<'_>,
@@ -127,7 +129,7 @@ fn compile<'a, 'cfg: 'a>(
     jobs: &mut JobQueue<'a>,
     plan: &mut BuildPlan,
     unit: &Unit<'a>,
-    exec: &Arc<Executor>,
+    exec: &Arc<dyn Executor>,
     force_rebuild: bool,
 ) -> CargoResult<()> {
     let bcx = cx.bcx;
@@ -187,7 +189,7 @@ fn compile<'a, 'cfg: 'a>(
 fn rustc<'a, 'cfg>(
     cx: &mut Context<'a, 'cfg>,
     unit: &Unit<'a>,
-    exec: &Arc<Executor>,
+    exec: &Arc<dyn Executor>,
 ) -> CargoResult<Work> {
     let mut rustc = prepare_rustc(cx, &unit.target.rustc_crate_types(), unit)?;
     if cx.is_primary_package(unit) {
@@ -206,7 +208,7 @@ fn rustc<'a, 'cfg>(
 
     // Prepare the native lib state (extra -L and -l flags)
     let build_state = cx.build_state.clone();
-    let current_id = unit.pkg.package_id().clone();
+    let current_id = unit.pkg.package_id();
     let build_deps = load_build_deps(cx, unit);
 
     // If we are a binary and the package also contains a library, then we
@@ -221,12 +223,13 @@ fn rustc<'a, 'cfg>(
         root.join(&crate_name)
     } else {
         root.join(&cx.files().file_stem(unit))
-    }.with_extension("d");
+    }
+    .with_extension("d");
     let dep_info_loc = fingerprint::dep_info_loc(cx, unit);
 
     rustc.args(&cx.bcx.rustflags_args(unit)?);
     let json_messages = cx.bcx.build_config.json_messages();
-    let package_id = unit.pkg.package_id().clone();
+    let package_id = unit.pkg.package_id();
     let target = unit.target.clone();
     let mode = unit.mode;
 
@@ -256,11 +259,11 @@ fn rustc<'a, 'cfg>(
                     &build_state,
                     &build_deps,
                     pass_l_flag,
-                    &current_id,
+                    current_id,
                 )?;
                 add_plugin_deps(&mut rustc, &build_state, &build_deps, &root_output)?;
             }
-            add_custom_env(&mut rustc, &build_state, &current_id, kind)?;
+            add_custom_env(&mut rustc, &build_state, current_id, kind)?;
         }
 
         for output in outputs.iter() {
@@ -275,22 +278,37 @@ fn rustc<'a, 'cfg>(
             }
         }
 
+        fn internal_if_simple_exit_code(err: Error) -> Error {
+            // If a signal on unix (code == None) or an abnormal termination
+            // on Windows (codes like 0xC0000409), don't hide the error details.
+            match err
+                .downcast_ref::<ProcessError>()
+                .as_ref()
+                .and_then(|perr| perr.exit.and_then(|e| e.code()))
+            {
+                Some(n) if n < 128 => Internal::new(err).into(),
+                _ => err,
+            }
+        }
+
         state.running(&rustc);
+        let timestamp = paths::get_current_filesystem_time(&dep_info_loc)?;
         if json_messages {
             exec.exec_json(
                 rustc,
-                &package_id,
+                package_id,
                 &target,
                 mode,
                 &mut assert_is_empty,
-                &mut |line| json_stderr(line, &package_id, &target),
-            ).map_err(Internal::new)
+                &mut |line| json_stderr(line, package_id, &target),
+            )
+            .map_err(internal_if_simple_exit_code)
             .chain_err(|| format!("Could not compile `{}`.", name))?;
         } else if build_plan {
             state.build_plan(buildkey, rustc.clone(), outputs.clone());
         } else {
-            exec.exec_and_capture_output(rustc, &package_id, &target, mode, state)
-                .map_err(Internal::new)
+            exec.exec_and_capture_output(rustc, package_id, &target, mode, state)
+                .map_err(internal_if_simple_exit_code)
                 .chain_err(|| format!("Could not compile `{}`.", name))?;
         }
 
@@ -317,6 +335,7 @@ fn rustc<'a, 'cfg>(
                         rustc_dep_info_loc.display()
                     ))
                 })?;
+            filetime::set_file_times(dep_info_loc, timestamp, timestamp)?;
         }
 
         Ok(())
@@ -329,7 +348,7 @@ fn rustc<'a, 'cfg>(
         build_state: &BuildMap,
         build_scripts: &BuildScripts,
         pass_l_flag: bool,
-        current_id: &PackageId,
+        current_id: PackageId,
     ) -> CargoResult<()> {
         for key in build_scripts.to_link.iter() {
             let output = build_state.get(key).ok_or_else(|| {
@@ -341,7 +360,7 @@ fn rustc<'a, 'cfg>(
             for path in output.library_paths.iter() {
                 rustc.arg("-L").arg(path);
             }
-            if key.0 == *current_id {
+            if key.0 == current_id {
                 for cfg in &output.cfgs {
                     rustc.arg("--cfg").arg(cfg);
                 }
@@ -360,10 +379,10 @@ fn rustc<'a, 'cfg>(
     fn add_custom_env(
         rustc: &mut ProcessBuilder,
         build_state: &BuildMap,
-        current_id: &PackageId,
+        current_id: PackageId,
         kind: Kind,
     ) -> CargoResult<()> {
-        let key = (current_id.clone(), kind);
+        let key = (current_id, kind);
         if let Some(output) = build_state.get(&key) {
             for &(ref name, ref value) in output.env.iter() {
                 rustc.env(name, value);
@@ -383,15 +402,17 @@ fn link_targets<'a, 'cfg>(
     let bcx = cx.bcx;
     let outputs = cx.outputs(unit)?;
     let export_dir = cx.files().export_dir();
-    let package_id = unit.pkg.package_id().clone();
+    let package_id = unit.pkg.package_id();
     let profile = unit.profile;
     let unit_mode = unit.mode;
-    let features = bcx.resolve
-        .features_sorted(&package_id)
+    let features = bcx
+        .resolve
+        .features_sorted(package_id)
         .into_iter()
         .map(|s| s.to_owned())
         .collect();
     let json_messages = bcx.build_config.json_messages();
+    let executable = cx.get_executable(unit)?;
     let mut target = unit.target.clone();
     if let TargetSourcePath::Metabuild = target.src_path() {
         // Give it something to serialize.
@@ -415,18 +436,19 @@ fn link_targets<'a, 'cfg>(
             let dst = match output.hardlink.as_ref() {
                 Some(dst) => dst,
                 None => {
-                    destinations.push(src.display().to_string());
+                    destinations.push(src.clone());
                     continue;
                 }
             };
-            destinations.push(dst.display().to_string());
+            destinations.push(dst.clone());
             hardlink_or_copy(src, dst)?;
-            if let Some(ref path) = export_dir {
-                if !path.exists() {
-                    fs::create_dir_all(path)?;
+            if let Some(ref path) = output.export_path {
+                let export_dir = export_dir.as_ref().unwrap();
+                if !export_dir.exists() {
+                    fs::create_dir_all(export_dir)?;
                 }
 
-                hardlink_or_copy(src, &path.join(dst.file_name().unwrap()))?;
+                hardlink_or_copy(src, path)?;
             }
         }
 
@@ -440,11 +462,12 @@ fn link_targets<'a, 'cfg>(
             };
 
             machine_message::emit(&machine_message::Artifact {
-                package_id: &package_id,
+                package_id,
                 target: &target,
                 profile: art_profile,
                 features,
                 filenames: destinations,
+                executable,
                 fresh,
             });
         }
@@ -494,7 +517,7 @@ fn hardlink_or_copy(src: &Path, dst: &Path) -> CargoResult<()> {
     Ok(())
 }
 
-fn load_build_deps(cx: &Context, unit: &Unit) -> Option<Arc<BuildScripts>> {
+fn load_build_deps(cx: &Context<'_, '_>, unit: &Unit<'_>) -> Option<Arc<BuildScripts>> {
     cx.build_scripts.get(unit).cloned()
 }
 
@@ -510,10 +533,9 @@ fn add_plugin_deps(
     let var = util::dylib_path_envvar();
     let search_path = rustc.get_env(var).unwrap_or_default();
     let mut search_path = env::split_paths(&search_path).collect::<Vec<_>>();
-    for id in build_scripts.plugins.iter() {
-        let key = (id.clone(), Kind::Host);
+    for &id in build_scripts.plugins.iter() {
         let output = build_state
-            .get(&key)
+            .get(&(id, Kind::Host))
             .ok_or_else(|| internal(format!("couldn't find libs for plugin dep {}", id)))?;
         search_path.append(&mut filter_dynamic_search_path(
             output.library_paths.iter(),
@@ -621,9 +643,9 @@ fn rustdoc<'a, 'cfg>(cx: &mut Context<'a, 'cfg>, unit: &Unit<'a>) -> CargoResult
 
     let name = unit.pkg.name().to_string();
     let build_state = cx.build_state.clone();
-    let key = (unit.pkg.package_id().clone(), unit.kind);
+    let key = (unit.pkg.package_id(), unit.kind);
     let json_messages = bcx.build_config.json_messages();
-    let package_id = unit.pkg.package_id().clone();
+    let package_id = unit.pkg.package_id();
     let target = unit.target.clone();
 
     Ok(Work::new(move |state| {
@@ -641,9 +663,10 @@ fn rustdoc<'a, 'cfg>(cx: &mut Context<'a, 'cfg>, unit: &Unit<'a>) -> CargoResult
             rustdoc
                 .exec_with_streaming(
                     &mut assert_is_empty,
-                    &mut |line| json_stderr(line, &package_id, &target),
+                    &mut |line| json_stderr(line, package_id, &target),
                     false,
-                ).map(drop)
+                )
+                .map(drop)
         } else {
             state.capture_output(&rustdoc, None, false).map(drop)
         };
@@ -666,12 +689,11 @@ fn rustdoc<'a, 'cfg>(cx: &mut Context<'a, 'cfg>, unit: &Unit<'a>) -> CargoResult
 //
 // The first returned value here is the argument to pass to rustc, and the
 // second is the cwd that rustc should operate in.
-fn path_args(bcx: &BuildContext, unit: &Unit) -> (PathBuf, PathBuf) {
+fn path_args(bcx: &BuildContext<'_, '_>, unit: &Unit<'_>) -> (PathBuf, PathBuf) {
     let ws_root = bcx.ws.root();
-    let src = if unit.target.is_custom_build() && unit.pkg.manifest().metabuild().is_some() {
-        unit.pkg.manifest().metabuild_path(bcx.ws.target_dir())
-    } else {
-        unit.target.src_path().path().to_path_buf()
+    let src = match unit.target.src_path() {
+        TargetSourcePath::Path(path) => path.to_path_buf(),
+        TargetSourcePath::Metabuild => unit.pkg.manifest().metabuild_path(bcx.ws.target_dir()),
     };
     assert!(src.is_absolute());
     if unit.pkg.package_id().source_id().is_path() {
@@ -682,13 +704,13 @@ fn path_args(bcx: &BuildContext, unit: &Unit) -> (PathBuf, PathBuf) {
     (src, unit.pkg.root().to_path_buf())
 }
 
-fn add_path_args(bcx: &BuildContext, unit: &Unit, cmd: &mut ProcessBuilder) {
+fn add_path_args(bcx: &BuildContext<'_, '_>, unit: &Unit<'_>, cmd: &mut ProcessBuilder) {
     let (arg, cwd) = path_args(bcx, unit);
     cmd.arg(arg);
     cmd.cwd(cwd);
 }
 
-fn add_cap_lints(bcx: &BuildContext, unit: &Unit, cmd: &mut ProcessBuilder) {
+fn add_cap_lints(bcx: &BuildContext<'_, '_>, unit: &Unit<'_>, cmd: &mut ProcessBuilder) {
     // If this is an upstream dep we don't want warnings from, turn off all
     // lints.
     if !bcx.show_warnings(unit.pkg.package_id()) {
@@ -701,17 +723,25 @@ fn add_cap_lints(bcx: &BuildContext, unit: &Unit, cmd: &mut ProcessBuilder) {
     }
 }
 
-fn add_color(bcx: &BuildContext, cmd: &mut ProcessBuilder) {
+fn add_color(bcx: &BuildContext<'_, '_>, cmd: &mut ProcessBuilder) {
     let shell = bcx.config.shell();
-    let color = if shell.supports_color() { "always" } else { "never" };
+    let color = if shell.supports_color() {
+        "always"
+    } else {
+        "never"
+    };
     cmd.args(&["--color", color]);
 }
 
-fn add_error_format(bcx: &BuildContext, cmd: &mut ProcessBuilder) {
+fn add_error_format(bcx: &BuildContext<'_, '_>, cmd: &mut ProcessBuilder) {
     match bcx.build_config.message_format {
         MessageFormat::Human => (),
-        MessageFormat::Json => { cmd.arg("--error-format").arg("json"); },
-        MessageFormat::Short => { cmd.arg("--error-format").arg("short"); },
+        MessageFormat::Json => {
+            cmd.arg("--error-format").arg("json");
+        }
+        MessageFormat::Short => {
+            cmd.arg("--error-format").arg("short");
+        }
     }
 }
 
@@ -993,7 +1023,7 @@ fn assert_is_empty(line: &str) -> CargoResult<()> {
     }
 }
 
-fn json_stderr(line: &str, package_id: &PackageId, target: &Target) -> CargoResult<()> {
+fn json_stderr(line: &str, package_id: PackageId, target: &Target) -> CargoResult<()> {
     // stderr from rustc/rustdoc can have a mix of JSON and non-JSON output
     if line.starts_with('{') {
         // Handle JSON lines

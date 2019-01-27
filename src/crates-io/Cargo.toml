@@ -1,6 +1,7 @@
 [package]
 name = "crates-io"
-version = "0.20.0"
+version = "0.23.0"
+edition = "2018"
 authors = ["Alex Crichton <alex@alexcrichton.com>"]
 license = "MIT OR Apache-2.0"
 repository = "https://github.com/rust-lang/cargo"
@@ -15,7 +16,7 @@ path = "lib.rs"
 [dependencies]
 curl = "0.4"
 failure = "0.1.1"
-serde = "1.0"
+serde = { version = "1.0", features = ['derive'] }
 serde_derive = "1.0"
 serde_json = "1.0"
 url = "1.0"

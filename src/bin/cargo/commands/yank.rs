@@ -1,4 +1,4 @@
-use command_prelude::*;
+use crate::command_prelude::*;
 
 use cargo::ops;
 
@@ -27,7 +27,7 @@ crates to be locked to any yanked version.
         )
 }
 
-pub fn exec(config: &mut Config, args: &ArgMatches) -> CliResult {
+pub fn exec(config: &mut Config, args: &ArgMatches<'_>) -> CliResult {
     let registry = args.registry(config)?;
 
     ops::yank(

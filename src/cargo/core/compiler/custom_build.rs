@@ -5,11 +5,11 @@ use std::path::{Path, PathBuf};
 use std::str;
 use std::sync::{Arc, Mutex};
 
-use core::PackageId;
-use util::errors::{CargoResult, CargoResultExt};
-use util::machine_message;
-use util::{self, internal, paths, profile};
-use util::{Cfg, Freshness};
+use crate::core::PackageId;
+use crate::util::errors::{CargoResult, CargoResultExt};
+use crate::util::machine_message;
+use crate::util::{self, internal, paths, profile};
+use crate::util::{Cfg, Freshness};
 
 use super::job::Work;
 use super::{fingerprint, Context, Kind, TargetConfig, Unit};
@@ -28,6 +28,7 @@ pub struct BuildOutput {
     /// Metadata to pass to the immediate dependencies
     pub metadata: Vec<(String, String)>,
     /// Paths to trigger a rerun of this build script.
+    /// May be absolute or relative paths (relative to package root).
     pub rerun_if_changed: Vec<PathBuf>,
     /// Environment variables which, when changed, will cause a rebuild.
     pub rerun_if_env_changed: Vec<String>,
@@ -86,7 +87,7 @@ pub fn prepare<'a, 'cfg>(
         unit.target.name()
     ));
 
-    let key = (unit.pkg.package_id().clone(), unit.kind);
+    let key = (unit.pkg.package_id(), unit.kind);
     let overridden = cx.build_script_overridden.contains(&key);
     let (work_dirty, work_fresh) = if overridden {
         (Work::noop(), Work::noop())
@@ -105,7 +106,7 @@ pub fn prepare<'a, 'cfg>(
     }
 }
 
-fn emit_build_output(output: &BuildOutput, id: &PackageId) {
+fn emit_build_output(output: &BuildOutput, package_id: PackageId) {
     let library_paths = output
         .library_paths
         .iter()
@@ -113,7 +114,7 @@ fn emit_build_output(output: &BuildOutput, id: &PackageId) {
         .collect::<Vec<_>>();
 
     machine_message::emit(&machine_message::BuildScript {
-        package_id: id,
+        package_id,
         linked_libs: &output.library_links,
         linked_paths: &library_paths,
         cfgs: &output.cfgs,
@@ -129,8 +130,8 @@ fn build_work<'a, 'cfg>(cx: &mut Context<'a, 'cfg>, unit: &Unit<'a>) -> CargoRes
         .iter()
         .find(|d| !d.mode.is_run_custom_build() && d.target.is_custom_build())
         .expect("running a script not depending on an actual script");
-    let script_output = cx.files().build_script_dir(build_script_unit);
-    let build_output = cx.files().build_script_out_dir(unit);
+    let script_dir = cx.files().build_script_dir(build_script_unit);
+    let script_out_dir = cx.files().build_script_out_dir(unit);
     let build_plan = bcx.build_config.build_plan;
     let invocation_name = unit.buildkey();
 
@@ -139,7 +140,7 @@ fn build_work<'a, 'cfg>(cx: &mut Context<'a, 'cfg>, unit: &Unit<'a>) -> CargoRes
     }
 
     // Building the command to execute
-    let to_exec = script_output.join(unit.target.name());
+    let to_exec = script_dir.join(unit.target.name());
 
     // Start preparing the process to execute, starting out with some
     // environment variables. Note that the profile-related environment
@@ -151,7 +152,7 @@ fn build_work<'a, 'cfg>(cx: &mut Context<'a, 'cfg>, unit: &Unit<'a>) -> CargoRes
     let to_exec = to_exec.into_os_string();
     let mut cmd = cx.compilation.host_process(to_exec, unit.pkg)?;
     let debug = unit.profile.debuginfo.unwrap_or(0) != 0;
-    cmd.env("OUT_DIR", &build_output)
+    cmd.env("OUT_DIR", &script_out_dir)
         .env("CARGO_MANIFEST_DIR", unit.pkg.root())
         .env("NUM_JOBS", &bcx.jobs().to_string())
         .env(
@@ -229,7 +230,7 @@ fn build_work<'a, 'cfg>(cx: &mut Context<'a, 'cfg>, unit: &Unit<'a>) -> CargoRes
                 if unit.mode.is_run_custom_build() {
                     Some((
                         unit.pkg.manifest().links().unwrap().to_string(),
-                        unit.pkg.package_id().clone(),
+                        unit.pkg.package_id(),
                     ))
                 } else {
                     None
@@ -239,21 +240,21 @@ fn build_work<'a, 'cfg>(cx: &mut Context<'a, 'cfg>, unit: &Unit<'a>) -> CargoRes
     };
     let pkg_name = unit.pkg.to_string();
     let build_state = Arc::clone(&cx.build_state);
-    let id = unit.pkg.package_id().clone();
+    let id = unit.pkg.package_id();
     let (output_file, err_file, root_output_file) = {
-        let build_output_parent = build_output.parent().unwrap();
+        let build_output_parent = script_out_dir.parent().unwrap();
         let output_file = build_output_parent.join("output");
         let err_file = build_output_parent.join("stderr");
         let root_output_file = build_output_parent.join("root-output");
         (output_file, err_file, root_output_file)
     };
-    let root_output = cx.files().target_root().to_path_buf();
+    let host_target_root = cx.files().target_root().to_path_buf();
     let all = (
-        id.clone(),
+        id,
         pkg_name.clone(),
         Arc::clone(&build_state),
         output_file.clone(),
-        root_output.clone(),
+        script_out_dir.clone(),
     );
     let build_scripts = super::load_build_deps(cx, unit);
     let kind = unit.kind;
@@ -262,16 +263,22 @@ fn build_work<'a, 'cfg>(cx: &mut Context<'a, 'cfg>, unit: &Unit<'a>) -> CargoRes
 
     // Check to see if the build script has already run, and if it has keep
     // track of whether it has told us about some explicit dependencies
-    let prev_root_output = paths::read_bytes(&root_output_file)
+    let prev_script_out_dir = paths::read_bytes(&root_output_file)
         .and_then(|bytes| util::bytes2path(&bytes))
-        .unwrap_or_else(|_| cmd.get_cwd().unwrap().to_path_buf());
-    let prev_output =
-        BuildOutput::parse_file(&output_file, &pkg_name, &prev_root_output, &root_output).ok();
+        .unwrap_or_else(|_| script_out_dir.clone());
+
+    let prev_output = BuildOutput::parse_file(
+        &output_file,
+        &pkg_name,
+        &prev_script_out_dir,
+        &script_out_dir,
+    )
+    .ok();
     let deps = BuildDeps::new(&output_file, prev_output.as_ref());
     cx.build_explicit_deps.insert(*unit, deps);
 
-    fs::create_dir_all(&script_output)?;
-    fs::create_dir_all(&build_output)?;
+    fs::create_dir_all(&script_dir)?;
+    fs::create_dir_all(&script_out_dir)?;
 
     // Prepare the unit of "dirty work" which will actually run the custom build
     // command.
@@ -283,8 +290,8 @@ fn build_work<'a, 'cfg>(cx: &mut Context<'a, 'cfg>, unit: &Unit<'a>) -> CargoRes
         //
         // If we have an old build directory, then just move it into place,
         // otherwise create it!
-        if fs::metadata(&build_output).is_err() {
-            fs::create_dir(&build_output).chain_err(|| {
+        if fs::metadata(&script_out_dir).is_err() {
+            fs::create_dir(&script_out_dir).chain_err(|| {
                 internal(
                     "failed to create script output directory for \
                      build command",
@@ -299,7 +306,7 @@ fn build_work<'a, 'cfg>(cx: &mut Context<'a, 'cfg>, unit: &Unit<'a>) -> CargoRes
         if !build_plan {
             let build_state = build_state.outputs.lock().unwrap();
             for (name, id) in lib_deps {
-                let key = (id.clone(), kind);
+                let key = (id, kind);
                 let state = build_state.get(&key).ok_or_else(|| {
                     internal(format!(
                         "failed to locate build state for env \
@@ -316,7 +323,7 @@ fn build_work<'a, 'cfg>(cx: &mut Context<'a, 'cfg>, unit: &Unit<'a>) -> CargoRes
                 }
             }
             if let Some(build_scripts) = build_scripts {
-                super::add_plugin_deps(&mut cmd, &build_state, &build_scripts, &root_output)?;
+                super::add_plugin_deps(&mut cmd, &build_state, &build_scripts, &host_target_root)?;
             }
         }
 
@@ -325,6 +332,7 @@ fn build_work<'a, 'cfg>(cx: &mut Context<'a, 'cfg>, unit: &Unit<'a>) -> CargoRes
             state.build_plan(invocation_name, cmd.clone(), Arc::new(Vec::new()));
         } else {
             state.running(&cmd);
+            let timestamp = paths::get_current_filesystem_time(&output_file)?;
             let output = if extra_verbose {
                 let prefix = format!("[{} {}] ", id.name(), id.version());
                 state.capture_output(&cmd, Some(prefix), true)
@@ -332,7 +340,7 @@ fn build_work<'a, 'cfg>(cx: &mut Context<'a, 'cfg>, unit: &Unit<'a>) -> CargoRes
                 cmd.exec_with_output()
             };
             let output = output.map_err(|e| {
-                format_err!(
+                failure::format_err!(
                     "failed to run custom build command for `{}`\n{}",
                     pkg_name,
                     e
@@ -347,13 +355,14 @@ fn build_work<'a, 'cfg>(cx: &mut Context<'a, 'cfg>, unit: &Unit<'a>) -> CargoRes
             // state informing what variables were discovered via our script as
             // well.
             paths::write(&output_file, &output.stdout)?;
+            filetime::set_file_times(output_file, timestamp, timestamp)?;
             paths::write(&err_file, &output.stderr)?;
-            paths::write(&root_output_file, util::path2bytes(&root_output)?)?;
+            paths::write(&root_output_file, util::path2bytes(&script_out_dir)?)?;
             let parsed_output =
-                BuildOutput::parse(&output.stdout, &pkg_name, &root_output, &root_output)?;
+                BuildOutput::parse(&output.stdout, &pkg_name, &script_out_dir, &script_out_dir)?;
 
             if json_messages {
-                emit_build_output(&parsed_output, &id);
+                emit_build_output(&parsed_output, id);
             }
             build_state.insert(id, kind, parsed_output);
         }
@@ -364,16 +373,19 @@ fn build_work<'a, 'cfg>(cx: &mut Context<'a, 'cfg>, unit: &Unit<'a>) -> CargoRes
     // itself to run when we actually end up just discarding what we calculated
     // above.
     let fresh = Work::new(move |_tx| {
-        let (id, pkg_name, build_state, output_file, root_output) = all;
+        let (id, pkg_name, build_state, output_file, script_out_dir) = all;
         let output = match prev_output {
             Some(output) => output,
-            None => {
-                BuildOutput::parse_file(&output_file, &pkg_name, &prev_root_output, &root_output)?
-            }
+            None => BuildOutput::parse_file(
+                &output_file,
+                &pkg_name,
+                &prev_script_out_dir,
+                &script_out_dir,
+            )?,
         };
 
         if json_messages {
-            emit_build_output(&output, &id);
+            emit_build_output(&output, id);
         }
 
         build_state.insert(id, kind, output);
@@ -406,11 +418,16 @@ impl BuildOutput {
     pub fn parse_file(
         path: &Path,
         pkg_name: &str,
-        root_output_when_generated: &Path,
-        root_output: &Path,
+        script_out_dir_when_generated: &Path,
+        script_out_dir: &Path,
     ) -> CargoResult<BuildOutput> {
         let contents = paths::read_bytes(path)?;
-        BuildOutput::parse(&contents, pkg_name, root_output_when_generated, root_output)
+        BuildOutput::parse(
+            &contents,
+            pkg_name,
+            script_out_dir_when_generated,
+            script_out_dir,
+        )
     }
 
     // Parses the output of a script.
@@ -418,8 +435,8 @@ impl BuildOutput {
     pub fn parse(
         input: &[u8],
         pkg_name: &str,
-        root_output_when_generated: &Path,
-        root_output: &Path,
+        script_out_dir_when_generated: &Path,
+        script_out_dir: &Path,
     ) -> CargoResult<BuildOutput> {
         let mut library_paths = Vec::new();
         let mut library_links = Vec::new();
@@ -451,28 +468,29 @@ impl BuildOutput {
             let key = iter.next();
             let value = iter.next();
             let (key, value) = match (key, value) {
-                (Some(a), Some(b)) => (a, b.trim_right()),
+                (Some(a), Some(b)) => (a, b.trim_end()),
                 // line started with `cargo:` but didn't match `key=value`
-                _ => bail!("Wrong output in {}: `{}`", whence, line),
+                _ => failure::bail!("Wrong output in {}: `{}`", whence, line),
             };
 
-            let path = |val: &str| match Path::new(val).strip_prefix(root_output_when_generated) {
-                Ok(path) => root_output.join(path),
-                Err(_) => PathBuf::from(val),
-            };
+            // This will rewrite paths if the target directory has been moved.
+            let value = value.replace(
+                script_out_dir_when_generated.to_str().unwrap(),
+                script_out_dir.to_str().unwrap(),
+            );
 
             match key {
                 "rustc-flags" => {
-                    let (paths, links) = BuildOutput::parse_rustc_flags(value, &whence)?;
+                    let (paths, links) = BuildOutput::parse_rustc_flags(&value, &whence)?;
                     library_links.extend(links.into_iter());
                     library_paths.extend(paths.into_iter());
                 }
                 "rustc-link-lib" => library_links.push(value.to_string()),
-                "rustc-link-search" => library_paths.push(path(value)),
+                "rustc-link-search" => library_paths.push(PathBuf::from(value)),
                 "rustc-cfg" => cfgs.push(value.to_string()),
-                "rustc-env" => env.push(BuildOutput::parse_rustc_env(value, &whence)?),
+                "rustc-env" => env.push(BuildOutput::parse_rustc_env(&value, &whence)?),
                 "warning" => warnings.push(value.to_string()),
-                "rerun-if-changed" => rerun_if_changed.push(path(value)),
+                "rerun-if-changed" => rerun_if_changed.push(PathBuf::from(value)),
                 "rerun-if-env-changed" => rerun_if_env_changed.push(value.to_string()),
                 _ => metadata.push((key.to_string(), value.to_string())),
             }
@@ -501,7 +519,7 @@ impl BuildOutput {
         let (mut library_paths, mut library_links) = (Vec::new(), Vec::new());
         while let Some(flag) = flags_iter.next() {
             if flag != "-l" && flag != "-L" {
-                bail!(
+                failure::bail!(
                     "Only `-l` and `-L` flags are allowed in {}: `{}`",
                     whence,
                     value
@@ -509,7 +527,7 @@ impl BuildOutput {
             }
             let value = match flags_iter.next() {
                 Some(v) => v,
-                None => bail!(
+                None => failure::bail!(
                     "Flag in rustc-flags has no value in {}: `{}`",
                     whence,
                     value
@@ -520,7 +538,7 @@ impl BuildOutput {
                 "-L" => library_paths.push(PathBuf::from(value)),
 
                 // was already checked above
-                _ => bail!("only -l and -L flags are allowed"),
+                _ => failure::bail!("only -l and -L flags are allowed"),
             };
         }
         Ok((library_paths, library_links))
@@ -532,7 +550,7 @@ impl BuildOutput {
         let val = iter.next();
         match (name, val) {
             (Some(n), Some(v)) => Ok((n.to_owned(), v.to_owned())),
-            _ => bail!("Variable rustc-env has no value in {}: {}", whence, value),
+            _ => failure::bail!("Variable rustc-env has no value in {}: {}", whence, value),
         }
     }
 }
@@ -555,7 +573,7 @@ fn prepare_metabuild<'a, 'cfg>(
         })
         .collect();
     for dep in &meta_deps {
-        output.push(format!("extern crate {};\n", dep));
+        output.push(format!("use {};\n", dep));
     }
     output.push("fn main() {\n".to_string());
     for dep in &meta_deps {
@@ -617,14 +635,15 @@ pub fn build_map<'b, 'cfg>(cx: &mut Context<'b, 'cfg>, units: &[Unit<'b>]) -> Ca
         }
 
         {
-            let key = unit.pkg
+            let key = unit
+                .pkg
                 .manifest()
                 .links()
                 .map(|l| (l.to_string(), unit.kind));
             let build_state = &cx.build_state;
             if let Some(output) = key.and_then(|k| build_state.overrides.get(&k)) {
-                let key = (unit.pkg.package_id().clone(), unit.kind);
-                cx.build_script_overridden.insert(key.clone());
+                let key = (unit.pkg.package_id(), unit.kind);
+                cx.build_script_overridden.insert(key);
                 build_state
                     .outputs
                     .lock()
@@ -653,7 +672,7 @@ pub fn build_map<'b, 'cfg>(cx: &mut Context<'b, 'cfg>, units: &[Unit<'b>]) -> Ca
                 ret.plugins
                     .extend(dep_scripts.to_link.iter().map(|p| &p.0).cloned());
             } else if unit.target.linkable() {
-                for &(ref pkg, kind) in dep_scripts.to_link.iter() {
+                for &(pkg, kind) in dep_scripts.to_link.iter() {
                     add_to_link(&mut ret, pkg, kind);
                 }
             }
@@ -667,9 +686,9 @@ pub fn build_map<'b, 'cfg>(cx: &mut Context<'b, 'cfg>, units: &[Unit<'b>]) -> Ca
 
     // When adding an entry to 'to_link' we only actually push it on if the
     // script hasn't seen it yet (e.g. we don't push on duplicates).
-    fn add_to_link(scripts: &mut BuildScripts, pkg: &PackageId, kind: Kind) {
-        if scripts.seen_to_link.insert((pkg.clone(), kind)) {
-            scripts.to_link.push((pkg.clone(), kind));
+    fn add_to_link(scripts: &mut BuildScripts, pkg: PackageId, kind: Kind) {
+        if scripts.seen_to_link.insert((pkg, kind)) {
+            scripts.to_link.push((pkg, kind));
         }
     }
 }

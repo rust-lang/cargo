@@ -113,7 +113,8 @@ rand = { git = "https://github.com/rust-lang-nursery/rand" }
 
 Cargo will fetch the `git` repository at this location then look for a
 `Cargo.toml` for the requested crate anywhere inside the `git` repository
-(not necessarily at the root).
+(not necessarily at the root - for example, specifying a member crate name
+of a workspace and setting `git` to the repository containing the workspace).
 
 Since we haven’t specified any other information, Cargo assumes that
 we intend to use the latest commit on the `master` branch to build our package.
@@ -198,11 +199,11 @@ section here.
 
 ### Testing a bugfix
 
-Let's say you're working with the [`uuid`] crate but while you're working on it
+Let's say you're working with the [`uuid` crate] but while you're working on it
 you discover a bug. You are, however, quite enterprising so you decide to also
-try out to fix the bug! Originally your manifest will look like:
+try to fix the bug! Originally your manifest will look like:
 
-[`uuid`](https://crates.io/crates/uuid)
+[`uuid` crate]: https://crates.io/crates/uuid
 
 ```toml
 [package]
@@ -534,3 +535,62 @@ features = ["secure-password", "civet"]
 
 More information about features can be found in the
 [manifest documentation](reference/manifest.html#the-features-section).
+
+### Renaming dependencies in `Cargo.toml`
+
+When writing a `[dependencies]` section in `Cargo.toml` the key you write for a
+dependency typically matches up to the name of the crate you import from in the
+code. For some projects, though, you may wish to reference the crate with a
+different name in the code regardless of how it's published on crates.io. For
+example you may wish to:
+
+* Avoid the need to  `use foo as bar` in Rust source.
+* Depend on multiple versions of a crate.
+* Depend on crates with the same name from different registries.
+
+To support this Cargo supports a `package` key in the `[dependencies]` section
+of which package should be depended on:
+
+```toml
+[package]
+name = "mypackage"
+version = "0.0.1"
+
+[dependencies]
+foo = "0.1"
+bar = { git = "https://github.com/example/project", package = "foo" }
+baz = { version = "0.1", registry = "custom", package = "foo" }
+```
+
+In this example, three crates are now available in your Rust code:
+
+```rust
+extern crate foo; // crates.io
+extern crate bar; // git repository
+extern crate baz; // registry `custom`
+```
+
+All three of these crates have the package name of `foo` in their own
+`Cargo.toml`, so we're explicitly using the `package` key to inform Cargo that
+we want the `foo` package even though we're calling it something else locally.
+The `package` key, if not specified, defaults to the name of the dependency
+being requested.
+
+Note that if you have an optional dependency like:
+
+```toml
+[dependencies]
+foo = { version = "0.1", package = 'bar', optional = true }
+```
+
+you're depending on the crate `bar` from crates.io, but your crate has a `foo`
+feature instead of a `bar` feature. That is, names of features take after the
+name of the dependency, not the package name, when renamed.
+
+Enabling transitive dependencies works similarly, for example we could add the
+following to the above manifest:
+
+```toml
+[features]
+log-debug = ['foo/log-debug'] # using 'bar/log-debug' would be an error!
+```

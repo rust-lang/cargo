@@ -1,10 +1,10 @@
 use std::ffi::OsString;
 
-use ops;
-use core::compiler::{Compilation, Doctest};
-use util::{self, CargoTestError, ProcessError, Test};
-use util::errors::CargoResult;
-use core::Workspace;
+use crate::core::compiler::{Compilation, Doctest};
+use crate::core::Workspace;
+use crate::ops;
+use crate::util::errors::CargoResult;
+use crate::util::{self, CargoTestError, ProcessError, Test};
 
 pub struct TestOptions<'a> {
     pub compile_opts: ops::CompileOptions<'a>,
@@ -13,8 +13,8 @@ pub struct TestOptions<'a> {
 }
 
 pub fn run_tests(
-    ws: &Workspace,
-    options: &TestOptions,
+    ws: &Workspace<'_>,
+    options: &TestOptions<'_>,
     test_args: &[String],
 ) -> CargoResult<Option<CargoTestError>> {
     let compilation = compile_tests(ws, options)?;
@@ -40,8 +40,8 @@ pub fn run_tests(
 }
 
 pub fn run_benches(
-    ws: &Workspace,
-    options: &TestOptions,
+    ws: &Workspace<'_>,
+    options: &TestOptions<'_>,
     args: &[String],
 ) -> CargoResult<Option<CargoTestError>> {
     let mut args = args.to_vec();
@@ -71,9 +71,9 @@ fn compile_tests<'a>(
 
 /// Run the unit and integration tests of a package.
 fn run_unit_tests(
-    options: &TestOptions,
+    options: &TestOptions<'_>,
     test_args: &[String],
-    compilation: &Compilation,
+    compilation: &Compilation<'_>,
 ) -> CargoResult<(Test, Vec<ProcessError>)> {
     let config = options.compile_opts.config;
     let cwd = options.compile_opts.config.cwd();
@@ -127,9 +127,9 @@ fn run_unit_tests(
 }
 
 fn run_doc_tests(
-    options: &TestOptions,
+    options: &TestOptions<'_>,
     test_args: &[String],
-    compilation: &Compilation,
+    compilation: &Compilation<'_>,
 ) -> CargoResult<(Test, Vec<ProcessError>)> {
     let mut errors = Vec::new();
     let config = options.compile_opts.config;
@@ -148,7 +148,7 @@ fn run_doc_tests(
         config.shell().status("Doc-tests", target.name())?;
         let mut p = compilation.rustdoc_process(package, target)?;
         p.arg("--test")
-            .arg(target.src_path().path())
+            .arg(target.src_path().path().unwrap())
             .arg("--crate-name")
             .arg(&target.crate_name());
 
@@ -172,7 +172,7 @@ fn run_doc_tests(
             p.arg("--test-args").arg(arg);
         }
 
-        if let Some(cfgs) = compilation.cfgs.get(package.package_id()) {
+        if let Some(cfgs) = compilation.cfgs.get(&package.package_id()) {
             for cfg in cfgs.iter() {
                 p.arg("--cfg").arg(cfg);
             }
@@ -185,7 +185,7 @@ fn run_doc_tests(
             p.arg("--extern").arg(&arg);
         }
 
-        if let Some(flags) = compilation.rustdocflags.get(package.package_id()) {
+        if let Some(flags) = compilation.rustdocflags.get(&package.package_id()) {
             p.args(flags);
         }
 

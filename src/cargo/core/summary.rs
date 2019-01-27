@@ -6,11 +6,11 @@ use std::rc::Rc;
 
 use serde::{Serialize, Serializer};
 
-use core::interning::InternedString;
-use core::{Dependency, PackageId, SourceId};
+use crate::core::interning::InternedString;
+use crate::core::{Dependency, PackageId, SourceId};
 use semver::Version;
 
-use util::CargoResult;
+use crate::util::CargoResult;
 
 /// Subset of a `Manifest`. Contains only the most important information about
 /// a package.
@@ -39,18 +39,20 @@ impl Summary {
         links: Option<impl AsRef<str>>,
         namespaced_features: bool,
     ) -> CargoResult<Summary>
-    where K: Borrow<str> + Ord + Display {
+    where
+        K: Borrow<str> + Ord + Display,
+    {
         for dep in dependencies.iter() {
             let feature = dep.name_in_toml();
             if !namespaced_features && features.get(&*feature).is_some() {
-                bail!(
+                failure::bail!(
                     "Features and dependencies cannot have the \
                      same name: `{}`",
                     feature
                 )
             }
             if dep.is_optional() && !dep.is_transitive() {
-                bail!(
+                failure::bail!(
                     "Dev-dependencies are not allowed to be optional: `{}`",
                     feature
                 )
@@ -69,8 +71,8 @@ impl Summary {
         })
     }
 
-    pub fn package_id(&self) -> &PackageId {
-        &self.inner.package_id
+    pub fn package_id(&self) -> PackageId {
+        self.inner.package_id
     }
     pub fn name(&self) -> InternedString {
         self.package_id().name()
@@ -78,7 +80,7 @@ impl Summary {
     pub fn version(&self) -> &Version {
         self.package_id().version()
     }
-    pub fn source_id(&self) -> &SourceId {
+    pub fn source_id(&self) -> SourceId {
         self.package_id().source_id()
     }
     pub fn dependencies(&self) -> &[Dependency] {
@@ -119,7 +121,7 @@ impl Summary {
         self
     }
 
-    pub fn map_source(self, to_replace: &SourceId, replace_with: &SourceId) -> Summary {
+    pub fn map_source(self, to_replace: SourceId, replace_with: SourceId) -> Summary {
         let me = if self.package_id().source_id() == to_replace {
             let new_id = self.package_id().with_source_id(replace_with);
             self.override_id(new_id)
@@ -143,7 +145,9 @@ fn build_feature_map<K>(
     dependencies: &[Dependency],
     namespaced: bool,
 ) -> CargoResult<FeatureMap>
-where K: Borrow<str> + Ord + Display {
+where
+    K: Borrow<str> + Ord + Display,
+{
     use self::FeatureValue::*;
     let mut dep_map = HashMap::new();
     for dep in dependencies.iter() {
@@ -168,7 +172,7 @@ where K: Borrow<str> + Ord + Display {
             match dep_map.get(feature.borrow()) {
                 Some(ref dep_data) => {
                     if !dep_data.iter().any(|d| d.is_optional()) {
-                        bail!(
+                        failure::bail!(
                             "Feature `{}` includes the dependency of the same name, but this is \
                              left implicit in the features included by this feature.\n\
                              Additionally, the dependency must be marked as optional to be \
@@ -237,7 +241,7 @@ where K: Borrow<str> + Ord + Display {
                 (&Feature(feat), dep_exists, false) => {
                     if namespaced && !features.contains_key(&*feat) {
                         if dep_exists {
-                            bail!(
+                            failure::bail!(
                                 "Feature `{}` includes `{}` which is not defined as a feature.\n\
                                  A non-optional dependency of the same name is defined; consider \
                                  adding `optional = true` to its definition",
@@ -245,7 +249,7 @@ where K: Borrow<str> + Ord + Display {
                                 feat
                             )
                         } else {
-                            bail!(
+                            failure::bail!(
                                 "Feature `{}` includes `{}` which is not defined as a feature",
                                 feature,
                                 feat
@@ -258,46 +262,50 @@ where K: Borrow<str> + Ord + Display {
                 // not recognized as a feature is pegged as a `Crate`. Here we handle the case
                 // where the dependency exists but is non-optional. It branches on namespaced
                 // just to provide the correct string for the crate dependency in the error.
-                (&Crate(ref dep), true, false) => if namespaced {
-                    bail!(
-                        "Feature `{}` includes `crate:{}` which is not an \
-                         optional dependency.\nConsider adding \
-                         `optional = true` to the dependency",
-                        feature,
-                        dep
-                    )
-                } else {
-                    bail!(
-                        "Feature `{}` depends on `{}` which is not an \
-                         optional dependency.\nConsider adding \
-                         `optional = true` to the dependency",
-                        feature,
-                        dep
-                    )
-                },
+                (&Crate(ref dep), true, false) => {
+                    if namespaced {
+                        failure::bail!(
+                            "Feature `{}` includes `crate:{}` which is not an \
+                             optional dependency.\nConsider adding \
+                             `optional = true` to the dependency",
+                            feature,
+                            dep
+                        )
+                    } else {
+                        failure::bail!(
+                            "Feature `{}` depends on `{}` which is not an \
+                             optional dependency.\nConsider adding \
+                             `optional = true` to the dependency",
+                            feature,
+                            dep
+                        )
+                    }
+                }
                 // If namespaced, the value was tagged as a dependency; if not namespaced,
                 // this could be anything not defined as a feature. This handles the case
                 // where no such dependency is actually defined; again, the branch on
                 // namespaced here is just to provide the correct string in the error.
-                (&Crate(ref dep), false, _) => if namespaced {
-                    bail!(
-                        "Feature `{}` includes `crate:{}` which is not a known \
-                         dependency",
-                        feature,
-                        dep
-                    )
-                } else {
-                    bail!(
-                        "Feature `{}` includes `{}` which is neither a dependency nor \
-                         another feature",
-                        feature,
-                        dep
-                    )
-                },
+                (&Crate(ref dep), false, _) => {
+                    if namespaced {
+                        failure::bail!(
+                            "Feature `{}` includes `crate:{}` which is not a known \
+                             dependency",
+                            feature,
+                            dep
+                        )
+                    } else {
+                        failure::bail!(
+                            "Feature `{}` includes `{}` which is neither a dependency nor \
+                             another feature",
+                            feature,
+                            dep
+                        )
+                    }
+                }
                 (&Crate(_), true, true) => {}
                 // If the value is a feature for one of the dependencies, bail out if no such
                 // dependency is actually defined in the manifest.
-                (&CrateFeature(ref dep, _), false, _) => bail!(
+                (&CrateFeature(ref dep, _), false, _) => failure::bail!(
                     "Feature `{}` requires a feature of `{}` which is not a \
                      dependency",
                     feature,
@@ -311,7 +319,7 @@ where K: Borrow<str> + Ord + Display {
         if !dependency_found {
             // If we have not found the dependency of the same-named feature, we should
             // bail here.
-            bail!(
+            failure::bail!(
                 "Feature `{}` includes the optional dependency of the \
                  same name, but this is left implicit in the features \
                  included by this feature.\nConsider adding \
@@ -372,11 +380,13 @@ impl FeatureValue {
         use self::FeatureValue::*;
         match *self {
             Feature(ref f) => f.to_string(),
-            Crate(ref c) => if s.namespaced_features() {
-                format!("crate:{}", &c)
-            } else {
-                c.to_string()
-            },
+            Crate(ref c) => {
+                if s.namespaced_features() {
+                    format!("crate:{}", &c)
+                } else {
+                    c.to_string()
+                }
+            }
             CrateFeature(ref c, ref f) => [c.as_ref(), f.as_ref()].join("/"),
         }
     }

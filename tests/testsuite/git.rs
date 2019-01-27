@@ -8,9 +8,10 @@ use std::sync::atomic::{AtomicBool, Ordering};
 use std::sync::Arc;
 use std::thread;
 
-use support::paths::{self, CargoPathExt};
-use support::sleep_ms;
-use support::{basic_lib_manifest, basic_manifest, git, main_file, path2url, project};
+use crate::support::paths::{self, CargoPathExt};
+use crate::support::sleep_ms;
+use crate::support::Project;
+use crate::support::{basic_lib_manifest, basic_manifest, git, main_file, path2url, project};
 
 #[test]
 fn cargo_compile_simple_git_dep() {
@@ -26,7 +27,8 @@ fn cargo_compile_simple_git_dep() {
                 }
             "#,
             )
-    }).unwrap();
+    })
+    .unwrap();
 
     let project = project
         .file(
@@ -45,10 +47,12 @@ fn cargo_compile_simple_git_dep() {
         "#,
                 git_project.url()
             ),
-        ).file(
+        )
+        .file(
             "src/main.rs",
             &main_file(r#""{}", dep1::hello()"#, &["dep1"]),
-        ).build();
+        )
+        .build();
 
     let git_root = git_project.root();
 
@@ -61,7 +65,8 @@ fn cargo_compile_simple_git_dep() {
              [FINISHED] dev [unoptimized + debuginfo] target(s) in [..]\n",
             path2url(&git_root),
             path2url(&git_root),
-        )).run();
+        ))
+        .run();
 
     assert!(project.bin("foo").is_file());
 
@@ -86,7 +91,8 @@ fn cargo_compile_forbird_git_httpsrepo_offline() {
             [dependencies.dep1]
             git = 'https://github.com/some_user/dep1.git'
         "#,
-        ).file("src/main.rs", "")
+        )
+        .file("src/main.rs", "")
         .build();
 
     p.cargo("build -Zoffline").masquerade_as_nightly_cargo().with_status(101).
@@ -111,7 +117,8 @@ fn cargo_compile_offline_with_cached_git_dep() {
                 pub static COOL_STR:&str = "cached git repo rev1";
             "#,
             )
-    }).unwrap();
+    })
+    .unwrap();
 
     let repo = git2::Repository::open(&git_project.root()).unwrap();
     let rev1 = repo.revparse_single("HEAD").unwrap().id();
@@ -143,7 +150,8 @@ fn cargo_compile_offline_with_cached_git_dep() {
                     git_project.url(),
                     rev1
                 ),
-            ).file("src/main.rs", "fn main(){}")
+            )
+            .file("src/main.rs", "fn main(){}")
             .build();
         prj.cargo("build").run();
 
@@ -162,8 +170,10 @@ fn cargo_compile_offline_with_cached_git_dep() {
             "#,
                     git_project.url(),
                     rev2
-                ).as_bytes(),
-            ).unwrap();
+                )
+                .as_bytes(),
+            )
+            .unwrap();
         prj.cargo("build").run();
     }
 
@@ -181,10 +191,12 @@ fn cargo_compile_offline_with_cached_git_dep() {
         "#,
                 git_project.url()
             ),
-        ).file(
+        )
+        .file(
             "src/main.rs",
             &main_file(r#""hello from {}", dep1::COOL_STR"#, &["dep1"]),
-        ).build();
+        )
+        .build();
 
     let git_root = git_project.root();
 
@@ -196,7 +208,8 @@ fn cargo_compile_offline_with_cached_git_dep() {
 [COMPILING] foo v0.5.0 ([CWD])
 [FINISHED] dev [unoptimized + debuginfo] target(s) in [..]",
             path2url(git_root),
-        )).run();
+        ))
+        .run();
 
     assert!(p.bin("foo").is_file());
 
@@ -219,10 +232,14 @@ fn cargo_compile_offline_with_cached_git_dep() {
     "#,
                 git_project.url(),
                 rev1
-            ).as_bytes(),
-        ).unwrap();
+            )
+            .as_bytes(),
+        )
+        .unwrap();
 
-    p.cargo("build -Zoffline").masquerade_as_nightly_cargo().run();
+    p.cargo("build -Zoffline")
+        .masquerade_as_nightly_cargo()
+        .run();
     p.process(&p.bin("foo"))
         .with_stdout("hello from cached git repo rev1\n")
         .run();
@@ -242,7 +259,8 @@ fn cargo_compile_git_dep_branch() {
                 }
             "#,
             )
-    }).unwrap();
+    })
+    .unwrap();
 
     // Make a new branch based on the current HEAD commit
     let repo = git2::Repository::open(&git_project.root()).unwrap();
@@ -269,10 +287,12 @@ fn cargo_compile_git_dep_branch() {
         "#,
                 git_project.url()
             ),
-        ).file(
+        )
+        .file(
             "src/main.rs",
             &main_file(r#""{}", dep1::hello()"#, &["dep1"]),
-        ).build();
+        )
+        .build();
 
     let git_root = git_project.root();
 
@@ -285,7 +305,8 @@ fn cargo_compile_git_dep_branch() {
              [FINISHED] dev [unoptimized + debuginfo] target(s) in [..]\n",
             path2url(&git_root),
             path2url(&git_root),
-        )).run();
+        ))
+        .run();
 
     assert!(project.bin("foo").is_file());
 
@@ -309,7 +330,8 @@ fn cargo_compile_git_dep_tag() {
                 }
             "#,
             )
-    }).unwrap();
+    })
+    .unwrap();
 
     // Make a tag corresponding to the current HEAD
     let repo = git2::Repository::open(&git_project.root()).unwrap();
@@ -320,7 +342,8 @@ fn cargo_compile_git_dep_tag() {
         &repo.signature().unwrap(),
         "make a new tag",
         false,
-    ).unwrap();
+    )
+    .unwrap();
 
     let project = project
         .file(
@@ -340,10 +363,12 @@ fn cargo_compile_git_dep_tag() {
         "#,
                 git_project.url()
             ),
-        ).file(
+        )
+        .file(
             "src/main.rs",
             &main_file(r#""{}", dep1::hello()"#, &["dep1"]),
-        ).build();
+        )
+        .build();
 
     let git_root = git_project.root();
 
@@ -356,7 +381,8 @@ fn cargo_compile_git_dep_tag() {
              [FINISHED] dev [unoptimized + debuginfo] target(s) in [..]\n",
             path2url(&git_root),
             path2url(&git_root),
-        )).run();
+        ))
+        .run();
 
     assert!(project.bin("foo").is_file());
 
@@ -390,7 +416,8 @@ fn cargo_compile_with_nested_paths() {
 
                 name = "dep1"
             "#,
-            ).file(
+            )
+            .file(
                 "src/dep1.rs",
                 r#"
                 extern crate dep2;
@@ -399,7 +426,8 @@ fn cargo_compile_with_nested_paths() {
                     dep2::hello()
                 }
             "#,
-            ).file("vendor/dep2/Cargo.toml", &basic_lib_manifest("dep2"))
+            )
+            .file("vendor/dep2/Cargo.toml", &basic_lib_manifest("dep2"))
             .file(
                 "vendor/dep2/src/dep2.rs",
                 r#"
@@ -408,7 +436,8 @@ fn cargo_compile_with_nested_paths() {
                 }
             "#,
             )
-    }).unwrap();
+    })
+    .unwrap();
 
     let p = project()
         .file(
@@ -432,10 +461,12 @@ fn cargo_compile_with_nested_paths() {
         "#,
                 git_project.url()
             ),
-        ).file(
+        )
+        .file(
             "src/foo.rs",
             &main_file(r#""{}", dep1::hello()"#, &["dep1"]),
-        ).build();
+        )
+        .build();
 
     p.cargo("build").run();
 
@@ -456,8 +487,10 @@ fn cargo_compile_with_malformed_nested_paths() {
                     "hello world"
                 }
             "#,
-            ).file("vendor/dep2/Cargo.toml", "!INVALID!")
-    }).unwrap();
+            )
+            .file("vendor/dep2/Cargo.toml", "!INVALID!")
+    })
+    .unwrap();
 
     let p = project()
         .file(
@@ -481,10 +514,12 @@ fn cargo_compile_with_malformed_nested_paths() {
         "#,
                 git_project.url()
             ),
-        ).file(
+        )
+        .file(
             "src/foo.rs",
             &main_file(r#""{}", dep1::hello()"#, &["dep1"]),
-        ).build();
+        )
+        .build();
 
     p.cargo("build").run();
 
@@ -505,7 +540,8 @@ fn cargo_compile_with_meta_package() {
                     "this is dep1"
                 }
             "#,
-            ).file("dep2/Cargo.toml", &basic_lib_manifest("dep2"))
+            )
+            .file("dep2/Cargo.toml", &basic_lib_manifest("dep2"))
             .file(
                 "dep2/src/dep2.rs",
                 r#"
@@ -514,7 +550,8 @@ fn cargo_compile_with_meta_package() {
                 }
             "#,
             )
-    }).unwrap();
+    })
+    .unwrap();
 
     let p = project()
         .file(
@@ -544,13 +581,15 @@ fn cargo_compile_with_meta_package() {
                 git_project.url(),
                 git_project.url()
             ),
-        ).file(
+        )
+        .file(
             "src/foo.rs",
             &main_file(
                 r#""{} {}", dep1::hello(), dep2::hello()"#,
                 &["dep1", "dep2"],
             ),
-        ).build();
+        )
+        .build();
 
     p.cargo("build").run();
 
@@ -586,10 +625,12 @@ fn cargo_compile_with_short_ssh_git() {
         "#,
                 url
             ),
-        ).file(
+        )
+        .file(
             "src/foo.rs",
             &main_file(r#""{}", dep1::hello()"#, &["dep1"]),
-        ).build();
+        )
+        .build();
 
     p.cargo("build")
         .with_status(101)
@@ -602,7 +643,8 @@ Caused by:
   invalid url `{}`: relative URL without a base
 ",
             url
-        )).run();
+        ))
+        .run();
 }
 
 #[test]
@@ -611,7 +653,8 @@ fn two_revs_same_deps() {
         project
             .file("Cargo.toml", &basic_manifest("bar", "0.0.0"))
             .file("src/lib.rs", "pub fn bar() -> i32 { 1 }")
-    }).unwrap();
+    })
+    .unwrap();
 
     let repo = git2::Repository::open(&bar.root()).unwrap();
     let rev1 = repo.revparse_single("HEAD").unwrap().id();
@@ -644,7 +687,8 @@ fn two_revs_same_deps() {
                 bar.url(),
                 rev1
             ),
-        ).file(
+        )
+        .file(
             "src/main.rs",
             r#"
             extern crate bar;
@@ -655,7 +699,8 @@ fn two_revs_same_deps() {
                 assert_eq!(baz::baz(), 2);
             }
         "#,
-        ).build();
+        )
+        .build();
 
     let _baz = project()
         .at("baz")
@@ -675,13 +720,15 @@ fn two_revs_same_deps() {
                 bar.url(),
                 rev2
             ),
-        ).file(
+        )
+        .file(
             "src/lib.rs",
             r#"
             extern crate bar;
             pub fn baz() -> i32 { bar::bar() }
         "#,
-        ).build();
+        )
+        .build();
 
     foo.cargo("build -v").run();
     assert!(foo.bin("foo").is_file());
@@ -694,7 +741,8 @@ fn recompilation() {
         project
             .file("Cargo.toml", &basic_lib_manifest("bar"))
             .file("src/bar.rs", "pub fn bar() {}")
-    }).unwrap();
+    })
+    .unwrap();
 
     let p = project()
         .file(
@@ -714,7 +762,8 @@ fn recompilation() {
         "#,
                 git_project.url()
             ),
-        ).file("src/main.rs", &main_file(r#""{:?}", bar::bar()"#, &["bar"]))
+        )
+        .file("src/main.rs", &main_file(r#""{:?}", bar::bar()"#, &["bar"]))
         .build();
 
     // First time around we should compile both foo and bar
@@ -727,7 +776,8 @@ fn recompilation() {
              in [..]\n",
             git_project.url(),
             git_project.url(),
-        )).run();
+        ))
+        .run();
 
     // Don't recompile the second time
     p.cargo("build").with_stdout("").run();
@@ -744,7 +794,8 @@ fn recompilation() {
         .with_stderr(&format!(
             "[UPDATING] git repository `{}`",
             git_project.url()
-        )).run();
+        ))
+        .run();
 
     p.cargo("build").with_stdout("").run();
 
@@ -765,7 +816,8 @@ fn recompilation() {
              [UPDATING] bar v0.5.0 ([..]) -> #[..]\n\
              ",
             git_project.url()
-        )).run();
+        ))
+        .run();
     println!("going for the last compile");
     p.cargo("build")
         .with_stderr(&format!(
@@ -774,7 +826,8 @@ fn recompilation() {
              [FINISHED] dev [unoptimized + debuginfo] target(s) \
              in [..]\n",
             git_project.url(),
-        )).run();
+        ))
+        .run();
 
     // Make sure clean only cleans one dep
     p.cargo("clean -p foo").with_stdout("").run();
@@ -782,8 +835,9 @@ fn recompilation() {
         .with_stderr(
             "[COMPILING] foo v0.5.0 ([CWD])\n\
              [FINISHED] dev [unoptimized + debuginfo] target(s) \
-             in [..]"
-        ).run();
+             in [..]",
+        )
+        .run();
 }
 
 #[test]
@@ -792,7 +846,8 @@ fn update_with_shared_deps() {
         project
             .file("Cargo.toml", &basic_lib_manifest("bar"))
             .file("src/bar.rs", "pub fn bar() {}")
-    }).unwrap();
+    })
+    .unwrap();
 
     let p = project()
         .file(
@@ -808,7 +863,8 @@ fn update_with_shared_deps() {
             [dependencies.dep2]
             path = "dep2"
         "#,
-        ).file(
+        )
+        .file(
             "src/main.rs",
             r#"
             #[allow(unused_extern_crates)]
@@ -817,7 +873,8 @@ fn update_with_shared_deps() {
             extern crate dep2;
             fn main() {}
         "#,
-        ).file(
+        )
+        .file(
             "dep1/Cargo.toml",
             &format!(
                 r#"
@@ -832,7 +889,8 @@ fn update_with_shared_deps() {
         "#,
                 git_project.url()
             ),
-        ).file("dep1/src/lib.rs", "")
+        )
+        .file("dep1/src/lib.rs", "")
         .file(
             "dep2/Cargo.toml",
             &format!(
@@ -848,7 +906,8 @@ fn update_with_shared_deps() {
         "#,
                 git_project.url()
             ),
-        ).file("dep2/src/lib.rs", "")
+        )
+        .file("dep2/src/lib.rs", "")
         .build();
 
     // First time around we should compile both foo and bar
@@ -862,7 +921,8 @@ fn update_with_shared_deps() {
 [COMPILING] foo v0.5.0 ([CWD])
 [FINISHED] dev [unoptimized + debuginfo] target(s) in [..]\n",
             git = git_project.url(),
-        )).run();
+        ))
+        .run();
 
     // Modify a file manually, and commit it
     File::create(&git_project.root().join("src/bar.rs"))
@@ -892,7 +952,8 @@ fn update_with_shared_deps() {
 Caused by:
   revspec '0.1.2' not found; [..]
 ",
-        ).run();
+        )
+        .run();
 
     // Specifying a precise rev to the old rev shouldn't actually update
     // anything because we already have the rev in the db.
@@ -910,7 +971,8 @@ Caused by:
              [UPDATING] bar v0.5.0 ([..]) -> #[..]\n\
              ",
             git_project.url()
-        )).run();
+        ))
+        .run();
 
     // Make sure we still only compile one version of the git repo
     println!("build");
@@ -923,14 +985,16 @@ Caused by:
 [COMPILING] foo v0.5.0 ([CWD])
 [FINISHED] dev [unoptimized + debuginfo] target(s) in [..]\n",
             git = git_project.url(),
-        )).run();
+        ))
+        .run();
 
     // We should be able to update transitive deps
     p.cargo("update -p bar")
         .with_stderr(&format!(
             "[UPDATING] git repository `{}`",
             git_project.url()
-        )).run();
+        ))
+        .run();
 }
 
 #[test]
@@ -938,7 +1002,8 @@ fn dep_with_submodule() {
     let project = project();
     let git_project = git::new("dep1", |project| {
         project.file("Cargo.toml", &basic_manifest("dep1", "0.5.0"))
-    }).unwrap();
+    })
+    .unwrap();
     let git_project2 =
         git::new("dep2", |project| project.file("lib.rs", "pub fn dep() {}")).unwrap();
 
@@ -964,10 +1029,12 @@ fn dep_with_submodule() {
         "#,
                 git_project.url()
             ),
-        ).file(
+        )
+        .file(
             "src/lib.rs",
             "extern crate dep1; pub fn foo() { dep1::dep() }",
-        ).build();
+        )
+        .build();
 
     project
         .cargo("build")
@@ -977,7 +1044,8 @@ fn dep_with_submodule() {
 [COMPILING] dep1 [..]
 [COMPILING] foo [..]
 [FINISHED] dev [unoptimized + debuginfo] target(s) in [..]\n",
-        ).run();
+        )
+        .run();
 }
 
 #[test]
@@ -985,7 +1053,8 @@ fn dep_with_bad_submodule() {
     let project = project();
     let git_project = git::new("dep1", |project| {
         project.file("Cargo.toml", &basic_manifest("dep1", "0.5.0"))
-    }).unwrap();
+    })
+    .unwrap();
     let git_project2 =
         git::new("dep2", |project| project.file("lib.rs", "pub fn dep() {}")).unwrap();
 
@@ -1007,7 +1076,8 @@ fn dep_with_bad_submodule() {
             None,
             Some("something something"),
             None,
-        ).unwrap();
+        )
+        .unwrap();
 
     let p = project
         .file(
@@ -1026,10 +1096,12 @@ fn dep_with_bad_submodule() {
         "#,
                 git_project.url()
             ),
-        ).file(
+        )
+        .file(
             "src/lib.rs",
             "extern crate dep1; pub fn foo() { dep1::dep() }",
-        ).build();
+        )
+        .build();
 
     let expected = format!(
         "\
@@ -1061,12 +1133,14 @@ fn two_deps_only_update_one() {
         project
             .file("Cargo.toml", &basic_manifest("dep1", "0.5.0"))
             .file("src/lib.rs", "")
-    }).unwrap();
+    })
+    .unwrap();
     let git2 = git::new("dep2", |project| {
         project
             .file("Cargo.toml", &basic_manifest("dep2", "0.5.0"))
             .file("src/lib.rs", "")
-    }).unwrap();
+    })
+    .unwrap();
 
     let p = project
         .file(
@@ -1087,8 +1161,21 @@ fn two_deps_only_update_one() {
                 git1.url(),
                 git2.url()
             ),
-        ).file("src/main.rs", "fn main() {}")
+        )
+        .file("src/main.rs", "fn main() {}")
         .build();
+
+    fn oid_to_short_sha(oid: git2::Oid) -> String {
+        oid.to_string()[..8].to_string()
+    }
+    fn git_repo_head_sha(p: &Project) -> String {
+        let repo = git2::Repository::open(p.root()).unwrap();
+        let head = repo.head().unwrap().target().unwrap();
+        oid_to_short_sha(head)
+    }
+
+    println!("dep1 head sha: {}", git_repo_head_sha(&git1));
+    println!("dep2 head sha: {}", git_repo_head_sha(&git2));
 
     p.cargo("build")
         .with_stderr(
@@ -1098,7 +1185,8 @@ fn two_deps_only_update_one() {
              [COMPILING] [..] v0.5.0 ([..])\n\
              [COMPILING] foo v0.5.0 ([CWD])\n\
              [FINISHED] dev [unoptimized + debuginfo] target(s) in [..]\n",
-        ).run();
+        )
+        .run();
 
     File::create(&git1.root().join("src/lib.rs"))
         .unwrap()
@@ -1106,7 +1194,8 @@ fn two_deps_only_update_one() {
         .unwrap();
     let repo = git2::Repository::open(&git1.root()).unwrap();
     git::add(&repo);
-    git::commit(&repo);
+    let oid = git::commit(&repo);
+    println!("dep1 head sha: {}", oid_to_short_sha(oid));
 
     p.cargo("update -p dep1")
         .with_stderr(&format!(
@@ -1114,7 +1203,8 @@ fn two_deps_only_update_one() {
              [UPDATING] dep1 v0.5.0 ([..]) -> #[..]\n\
              ",
             git1.url()
-        )).run();
+        ))
+        .run();
 }
 
 #[test]
@@ -1123,7 +1213,8 @@ fn stale_cached_version() {
         project
             .file("Cargo.toml", &basic_manifest("bar", "0.0.0"))
             .file("src/lib.rs", "pub fn bar() -> i32 { 1 }")
-    }).unwrap();
+    })
+    .unwrap();
 
     // Update the git database in the cache with the current state of the git
     // repo
@@ -1142,14 +1233,16 @@ fn stale_cached_version() {
         "#,
                 bar.url()
             ),
-        ).file(
+        )
+        .file(
             "src/main.rs",
             r#"
             extern crate bar;
 
             fn main() { assert_eq!(bar::bar(), 1) }
         "#,
-        ).build();
+        )
+        .build();
 
     foo.cargo("build").run();
     foo.process(&foo.bin("foo")).run();
@@ -1187,8 +1280,10 @@ fn stale_cached_version() {
     "#,
                 url = bar.url(),
                 hash = rev
-            ).as_bytes(),
-        ).unwrap();
+            )
+            .as_bytes(),
+        )
+        .unwrap();
 
     // Now build!
     foo.cargo("build")
@@ -1200,7 +1295,8 @@ fn stale_cached_version() {
 [FINISHED] dev [unoptimized + debuginfo] target(s) in [..]
 ",
             bar = bar.url(),
-        )).run();
+        ))
+        .run();
     foo.process(&foo.bin("foo")).run();
 }
 
@@ -1209,15 +1305,18 @@ fn dep_with_changed_submodule() {
     let project = project();
     let git_project = git::new("dep1", |project| {
         project.file("Cargo.toml", &basic_manifest("dep1", "0.5.0"))
-    }).unwrap();
+    })
+    .unwrap();
 
     let git_project2 = git::new("dep2", |project| {
         project.file("lib.rs", "pub fn dep() -> &'static str { \"project2\" }")
-    }).unwrap();
+    })
+    .unwrap();
 
     let git_project3 = git::new("dep3", |project| {
         project.file("lib.rs", "pub fn dep() -> &'static str { \"project3\" }")
-    }).unwrap();
+    })
+    .unwrap();
 
     let repo = git2::Repository::open(&git_project.root()).unwrap();
     let mut sub = git::add_submodule(&repo, &git_project2.url().to_string(), Path::new("src"));
@@ -1237,13 +1336,15 @@ fn dep_with_changed_submodule() {
         "#,
                 git_project.url()
             ),
-        ).file(
+        )
+        .file(
             "src/main.rs",
             "
             extern crate dep1;
             pub fn main() { println!(\"{}\", dep1::dep()) }
         ",
-        ).build();
+        )
+        .build();
 
     println!("first run");
     p.cargo("run")
@@ -1254,7 +1355,8 @@ fn dep_with_changed_submodule() {
              [FINISHED] dev [unoptimized + debuginfo] target(s) in \
              [..]\n\
              [RUNNING] `target/debug/foo[EXE]`\n",
-        ).with_stdout("project2\n")
+        )
+        .with_stdout("project2\n")
         .run();
 
     File::create(&git_project.root().join(".gitmodules"))
@@ -1263,8 +1365,10 @@ fn dep_with_changed_submodule() {
             format!(
                 "[submodule \"src\"]\n\tpath = src\n\turl={}",
                 git_project3.url()
-            ).as_bytes(),
-        ).unwrap();
+            )
+            .as_bytes(),
+        )
+        .unwrap();
 
     // Sync the submodule and reset it to the new remote.
     sub.sync().unwrap();
@@ -1296,7 +1400,8 @@ fn dep_with_changed_submodule() {
              [UPDATING] dep1 v0.5.0 ([..]) -> #[..]\n\
              ",
             git_project.url()
-        )).run();
+        ))
+        .run();
 
     println!("last run");
     p.cargo("run")
@@ -1306,7 +1411,8 @@ fn dep_with_changed_submodule() {
              [FINISHED] dev [unoptimized + debuginfo] target(s) in \
              [..]\n\
              [RUNNING] `target/debug/foo[EXE]`\n",
-        ).with_stdout("project3\n")
+        )
+        .with_stdout("project3\n")
         .run();
 }
 
@@ -1321,7 +1427,8 @@ fn dev_deps_with_testing() {
             pub fn gimme() -> &'static str { "zoidberg" }
         "#,
             )
-    }).unwrap();
+    })
+    .unwrap();
 
     let p = project()
         .file(
@@ -1340,7 +1447,8 @@ fn dev_deps_with_testing() {
         "#,
                 p2.url()
             ),
-        ).file(
+        )
+        .file(
             "src/main.rs",
             r#"
             fn main() {}
@@ -1351,7 +1459,8 @@ fn dev_deps_with_testing() {
                 #[test] fn foo() { bar::gimme(); }
             }
         "#,
-        ).build();
+        )
+        .build();
 
     // Generate a lockfile which did not use `bar` to compile, but had to update
     // `bar` to generate the lockfile
@@ -1363,7 +1472,8 @@ fn dev_deps_with_testing() {
 [FINISHED] dev [unoptimized + debuginfo] target(s) in [..]
 ",
             bar = p2.url()
-        )).run();
+        ))
+        .run();
 
     // Make sure we use the previous resolution of `bar` instead of updating it
     // a second time.
@@ -1374,7 +1484,8 @@ fn dev_deps_with_testing() {
 [COMPILING] [..] v0.5.0 ([..]
 [FINISHED] dev [unoptimized + debuginfo] target(s) in [..]
 [RUNNING] target/debug/deps/foo-[..][EXE]",
-        ).with_stdout_contains("test tests::foo ... ok")
+        )
+        .with_stdout_contains("test tests::foo ... ok")
         .run();
 }
 
@@ -1391,10 +1502,12 @@ fn git_build_cmd_freshness() {
             authors = []
             build = "build.rs"
         "#,
-            ).file("build.rs", "fn main() {}")
+            )
+            .file("build.rs", "fn main() {}")
             .file("src/lib.rs", "pub fn bar() -> i32 { 1 }")
             .file(".gitignore", "src/bar.rs")
-    }).unwrap();
+    })
+    .unwrap();
     foo.root().move_into_the_past();
 
     sleep_ms(1000);
@@ -1405,7 +1518,8 @@ fn git_build_cmd_freshness() {
 [COMPILING] foo v0.0.0 ([CWD])
 [FINISHED] dev [unoptimized + debuginfo] target(s) in [..]
 ",
-        ).run();
+        )
+        .run();
 
     // Smoke test to make sure it doesn't compile again
     println!("first pass");
@@ -1428,7 +1542,8 @@ fn git_name_not_always_needed() {
             pub fn gimme() -> &'static str { "zoidberg" }
         "#,
             )
-    }).unwrap();
+    })
+    .unwrap();
 
     let repo = git2::Repository::open(&p2.root()).unwrap();
     let mut cfg = repo.config().unwrap();
@@ -1450,7 +1565,8 @@ fn git_name_not_always_needed() {
         "#,
                 p2.url()
             ),
-        ).file("src/main.rs", "fn main() {}")
+        )
+        .file("src/main.rs", "fn main() {}")
         .build();
 
     // Generate a lockfile which did not use `bar` to compile, but had to update
@@ -1463,7 +1579,8 @@ fn git_name_not_always_needed() {
 [FINISHED] dev [unoptimized + debuginfo] target(s) in [..]
 ",
             bar = p2.url()
-        )).run();
+        ))
+        .run();
 }
 
 #[test]
@@ -1472,7 +1589,8 @@ fn git_repo_changing_no_rebuild() {
         project
             .file("Cargo.toml", &basic_manifest("bar", "0.5.0"))
             .file("src/lib.rs", "pub fn bar() -> i32 { 1 }")
-    }).unwrap();
+    })
+    .unwrap();
 
     // Lock p1 to the first rev in the git repo
     let p1 = project()
@@ -1491,7 +1609,8 @@ fn git_repo_changing_no_rebuild() {
         "#,
                 bar.url()
             ),
-        ).file("src/main.rs", "fn main() {}")
+        )
+        .file("src/main.rs", "fn main() {}")
         .file("build.rs", "fn main() {}")
         .build();
     p1.root().move_into_the_past();
@@ -1504,7 +1623,8 @@ fn git_repo_changing_no_rebuild() {
 [FINISHED] dev [unoptimized + debuginfo] target(s) in [..]
 ",
             bar = bar.url()
-        )).run();
+        ))
+        .run();
 
     // Make a commit to lock p2 to a different rev
     File::create(&bar.root().join("src/lib.rs"))
@@ -1531,7 +1651,8 @@ fn git_repo_changing_no_rebuild() {
         "#,
                 bar.url()
             ),
-        ).file("src/main.rs", "fn main() {}")
+        )
+        .file("src/main.rs", "fn main() {}")
         .build();
     p2.cargo("build")
         .with_stderr(&format!(
@@ -1542,7 +1663,8 @@ fn git_repo_changing_no_rebuild() {
 [FINISHED] dev [unoptimized + debuginfo] target(s) in [..]
 ",
             bar = bar.url()
-        )).run();
+        ))
+        .run();
 
     // And now for the real test! Make sure that p1 doesn't get rebuilt
     // even though the git repo has changed.
@@ -1571,7 +1693,8 @@ fn git_dep_build_cmd() {
 
             name = "foo"
         "#,
-            ).file("src/foo.rs", &main_file(r#""{}", bar::gimme()"#, &["bar"]))
+            )
+            .file("src/foo.rs", &main_file(r#""{}", bar::gimme()"#, &["bar"]))
             .file(
                 "bar/Cargo.toml",
                 r#"
@@ -1586,12 +1709,14 @@ fn git_dep_build_cmd() {
             name = "bar"
             path = "src/bar.rs"
         "#,
-            ).file(
+            )
+            .file(
                 "bar/src/bar.rs.in",
                 r#"
             pub fn gimme() -> i32 { 0 }
         "#,
-            ).file(
+            )
+            .file(
                 "bar/build.rs",
                 r#"
             use std::fs;
@@ -1600,7 +1725,8 @@ fn git_dep_build_cmd() {
             }
         "#,
             )
-    }).unwrap();
+    })
+    .unwrap();
 
     p.root().join("bar").move_into_the_past();
 
@@ -1625,7 +1751,8 @@ fn fetch_downloads() {
         project
             .file("Cargo.toml", &basic_manifest("bar", "0.5.0"))
             .file("src/lib.rs", "pub fn bar() -> i32 { 1 }")
-    }).unwrap();
+    })
+    .unwrap();
 
     let p = project()
         .file(
@@ -1641,13 +1768,15 @@ fn fetch_downloads() {
         "#,
                 bar.url()
             ),
-        ).file("src/main.rs", "fn main() {}")
+        )
+        .file("src/main.rs", "fn main() {}")
         .build();
     p.cargo("fetch")
         .with_stderr(&format!(
             "[UPDATING] git repository `{url}`",
             url = bar.url()
-        )).run();
+        ))
+        .run();
 
     p.cargo("fetch").with_stdout("").run();
 }
@@ -1658,7 +1787,8 @@ fn warnings_in_git_dep() {
         project
             .file("Cargo.toml", &basic_manifest("bar", "0.5.0"))
             .file("src/lib.rs", "fn unused() {}")
-    }).unwrap();
+    })
+    .unwrap();
 
     let p = project()
         .file(
@@ -1674,7 +1804,8 @@ fn warnings_in_git_dep() {
         "#,
                 bar.url()
             ),
-        ).file("src/main.rs", "fn main() {}")
+        )
+        .file("src/main.rs", "fn main() {}")
         .build();
 
     p.cargo("build")
@@ -1685,7 +1816,8 @@ fn warnings_in_git_dep() {
              [FINISHED] dev [unoptimized + debuginfo] target(s) in [..]\n",
             bar.url(),
             bar.url(),
-        )).run();
+        ))
+        .run();
 }
 
 #[test]
@@ -1694,12 +1826,14 @@ fn update_ambiguous() {
         project
             .file("Cargo.toml", &basic_manifest("bar", "0.5.0"))
             .file("src/lib.rs", "")
-    }).unwrap();
+    })
+    .unwrap();
     let bar2 = git::new("bar2", |project| {
         project
             .file("Cargo.toml", &basic_manifest("bar", "0.6.0"))
             .file("src/lib.rs", "")
-    }).unwrap();
+    })
+    .unwrap();
     let baz = git::new("baz", |project| {
         project
             .file(
@@ -1716,8 +1850,10 @@ fn update_ambiguous() {
         "#,
                     bar2.url()
                 ),
-            ).file("src/lib.rs", "")
-    }).unwrap();
+            )
+            .file("src/lib.rs", "")
+    })
+    .unwrap();
 
     let p = project()
         .file(
@@ -1736,7 +1872,8 @@ fn update_ambiguous() {
                 bar1.url(),
                 baz.url()
             ),
-        ).file("src/main.rs", "fn main() {}")
+        )
+        .file("src/main.rs", "fn main() {}")
         .build();
 
     p.cargo("generate-lockfile").run();
@@ -1751,7 +1888,8 @@ following:
   bar:0.[..].0
   bar:0.[..].0
 ",
-        ).run();
+        )
+        .run();
 }
 
 #[test]
@@ -1762,7 +1900,8 @@ fn update_one_dep_in_repo_with_many_deps() {
             .file("src/lib.rs", "")
             .file("a/Cargo.toml", &basic_manifest("a", "0.5.0"))
             .file("a/src/lib.rs", "")
-    }).unwrap();
+    })
+    .unwrap();
 
     let p = project()
         .file(
@@ -1781,7 +1920,8 @@ fn update_one_dep_in_repo_with_many_deps() {
                 bar.url(),
                 bar.url()
             ),
-        ).file("src/main.rs", "fn main() {}")
+        )
+        .file("src/main.rs", "fn main() {}")
         .build();
 
     p.cargo("generate-lockfile").run();
@@ -1796,7 +1936,8 @@ fn switch_deps_does_not_update_transitive() {
         project
             .file("Cargo.toml", &basic_manifest("transitive", "0.5.0"))
             .file("src/lib.rs", "")
-    }).unwrap();
+    })
+    .unwrap();
     let dep1 = git::new("dep1", |project| {
         project
             .file(
@@ -1813,8 +1954,10 @@ fn switch_deps_does_not_update_transitive() {
         "#,
                     transitive.url()
                 ),
-            ).file("src/lib.rs", "")
-    }).unwrap();
+            )
+            .file("src/lib.rs", "")
+    })
+    .unwrap();
     let dep2 = git::new("dep2", |project| {
         project
             .file(
@@ -1831,8 +1974,10 @@ fn switch_deps_does_not_update_transitive() {
         "#,
                     transitive.url()
                 ),
-            ).file("src/lib.rs", "")
-    }).unwrap();
+            )
+            .file("src/lib.rs", "")
+    })
+    .unwrap();
 
     let p = project()
         .file(
@@ -1848,7 +1993,8 @@ fn switch_deps_does_not_update_transitive() {
         "#,
                 dep1.url()
             ),
-        ).file("src/main.rs", "fn main() {}")
+        )
+        .file("src/main.rs", "fn main() {}")
         .build();
 
     p.cargo("build")
@@ -1863,7 +2009,8 @@ fn switch_deps_does_not_update_transitive() {
 ",
             dep1.url(),
             transitive.url()
-        )).run();
+        ))
+        .run();
 
     // Update the dependency to point to the second repository, but this
     // shouldn't update the transitive dependency which is the same.
@@ -1880,8 +2027,10 @@ fn switch_deps_does_not_update_transitive() {
             git = '{}'
     "#,
                 dep2.url()
-            ).as_bytes(),
-        ).unwrap();
+            )
+            .as_bytes(),
+        )
+        .unwrap();
 
     p.cargo("build")
         .with_stderr(&format!(
@@ -1892,7 +2041,8 @@ fn switch_deps_does_not_update_transitive() {
 [FINISHED] dev [unoptimized + debuginfo] target(s) in [..]
 ",
             dep2.url()
-        )).run();
+        ))
+        .run();
 }
 
 #[test]
@@ -1910,10 +2060,12 @@ fn update_one_source_updates_all_packages_in_that_git_source() {
             [dependencies.a]
             path = "a"
         "#,
-            ).file("src/lib.rs", "")
+            )
+            .file("src/lib.rs", "")
             .file("a/Cargo.toml", &basic_manifest("a", "0.5.0"))
             .file("a/src/lib.rs", "")
-    }).unwrap();
+    })
+    .unwrap();
 
     let p = project()
         .file(
@@ -1929,7 +2081,8 @@ fn update_one_source_updates_all_packages_in_that_git_source() {
         "#,
                 dep.url()
             ),
-        ).file("src/main.rs", "fn main() {}")
+        )
+        .file("src/main.rs", "fn main() {}")
         .build();
 
     p.cargo("build").run();
@@ -1965,12 +2118,14 @@ fn switch_sources() {
         project
             .file("Cargo.toml", &basic_manifest("a", "0.5.0"))
             .file("src/lib.rs", "")
-    }).unwrap();
+    })
+    .unwrap();
     let a2 = git::new("a2", |project| {
         project
             .file("Cargo.toml", &basic_manifest("a", "0.5.1"))
             .file("src/lib.rs", "")
-    }).unwrap();
+    })
+    .unwrap();
 
     let p = project()
         .file(
@@ -1983,7 +2138,8 @@ fn switch_sources() {
             [dependencies.b]
             path = "b"
         "#,
-        ).file("src/main.rs", "fn main() {}")
+        )
+        .file("src/main.rs", "fn main() {}")
         .file(
             "b/Cargo.toml",
             &format!(
@@ -1997,7 +2153,8 @@ fn switch_sources() {
         "#,
                 a1.url()
             ),
-        ).file("b/src/lib.rs", "pub fn main() {}")
+        )
+        .file("b/src/lib.rs", "pub fn main() {}")
         .build();
 
     p.cargo("build")
@@ -2009,7 +2166,8 @@ fn switch_sources() {
 [COMPILING] foo v0.5.0 ([..])
 [FINISHED] dev [unoptimized + debuginfo] target(s) in [..]
 ",
-        ).run();
+        )
+        .run();
 
     File::create(&p.root().join("b/Cargo.toml"))
         .unwrap()
@@ -2024,8 +2182,10 @@ fn switch_sources() {
         git = '{}'
     "#,
                 a2.url()
-            ).as_bytes(),
-        ).unwrap();
+            )
+            .as_bytes(),
+        )
+        .unwrap();
 
     p.cargo("build")
         .with_stderr(
@@ -2036,7 +2196,8 @@ fn switch_sources() {
 [COMPILING] foo v0.5.0 ([..])
 [FINISHED] dev [unoptimized + debuginfo] target(s) in [..]
 ",
-        ).run();
+        )
+        .run();
 }
 
 #[test]
@@ -2052,10 +2213,12 @@ fn dont_require_submodules_are_checked_out() {
             authors = []
             build = "build.rs"
         "#,
-        ).file("build.rs", "fn main() {}")
+        )
+        .file("build.rs", "fn main() {}")
         .file("src/lib.rs", "")
         .file("a/foo", "")
-    }).unwrap();
+    })
+    .unwrap();
     let git2 = git::new("dep2", |p| p).unwrap();
 
     let repo = git2::Repository::open(&git1.root()).unwrap();
@@ -2076,7 +2239,8 @@ fn doctest_same_name() {
     let a2 = git::new("a2", |p| {
         p.file("Cargo.toml", &basic_manifest("a", "0.5.0"))
             .file("src/lib.rs", "pub fn a2() {}")
-    }).unwrap();
+    })
+    .unwrap();
 
     let a1 = git::new("a1", |p| {
         p.file(
@@ -2092,8 +2256,10 @@ fn doctest_same_name() {
         "#,
                 a2.url()
             ),
-        ).file("src/lib.rs", "extern crate a; pub fn a1() {}")
-    }).unwrap();
+        )
+        .file("src/lib.rs", "extern crate a; pub fn a1() {}")
+    })
+    .unwrap();
 
     let p = project()
         .file(
@@ -2110,13 +2276,15 @@ fn doctest_same_name() {
         "#,
                 a1.url()
             ),
-        ).file(
+        )
+        .file(
             "src/lib.rs",
             r#"
             #[macro_use]
             extern crate a;
         "#,
-        ).build();
+        )
+        .build();
 
     p.cargo("test -v").run();
 }
@@ -2130,7 +2298,8 @@ fn lints_are_suppressed() {
             use std::option;
         ",
         )
-    }).unwrap();
+    })
+    .unwrap();
 
     let p = project()
         .file(
@@ -2147,7 +2316,8 @@ fn lints_are_suppressed() {
         "#,
                 a.url()
             ),
-        ).file("src/lib.rs", "")
+        )
+        .file("src/lib.rs", "")
         .build();
 
     p.cargo("build")
@@ -2158,7 +2328,8 @@ fn lints_are_suppressed() {
 [COMPILING] foo v0.0.1 ([..])
 [FINISHED] dev [unoptimized + debuginfo] target(s) in [..]
 ",
-        ).run();
+        )
+        .run();
 }
 
 #[test]
@@ -2171,7 +2342,8 @@ fn denied_lints_are_allowed() {
             use std::option;
         ",
         )
-    }).unwrap();
+    })
+    .unwrap();
 
     let p = project()
         .file(
@@ -2188,7 +2360,8 @@ fn denied_lints_are_allowed() {
         "#,
                 a.url()
             ),
-        ).file("src/lib.rs", "")
+        )
+        .file("src/lib.rs", "")
         .build();
 
     p.cargo("build")
@@ -2199,7 +2372,8 @@ fn denied_lints_are_allowed() {
 [COMPILING] foo v0.0.1 ([..])
 [FINISHED] dev [unoptimized + debuginfo] target(s) in [..]
 ",
-        ).run();
+        )
+        .run();
 }
 
 #[test]
@@ -2207,7 +2381,8 @@ fn add_a_git_dep() {
     let git = git::new("git", |p| {
         p.file("Cargo.toml", &basic_manifest("git", "0.5.0"))
             .file("src/lib.rs", "")
-    }).unwrap();
+    })
+    .unwrap();
 
     let p = project()
         .file(
@@ -2225,7 +2400,8 @@ fn add_a_git_dep() {
         "#,
                 git.url()
             ),
-        ).file("src/lib.rs", "")
+        )
+        .file("src/lib.rs", "")
         .file("a/Cargo.toml", &basic_manifest("a", "0.0.1"))
         .file("a/src/lib.rs", "")
         .build();
@@ -2246,8 +2422,10 @@ fn add_a_git_dep() {
         git = {{ git = '{}' }}
     "#,
                 git.url()
-            ).as_bytes(),
-        ).unwrap();
+            )
+            .as_bytes(),
+        )
+        .unwrap();
 
     p.cargo("build").run();
 }
@@ -2259,7 +2437,8 @@ fn two_at_rev_instead_of_tag() {
             .file("src/lib.rs", "")
             .file("a/Cargo.toml", &basic_manifest("git2", "0.5.0"))
             .file("a/src/lib.rs", "")
-    }).unwrap();
+    })
+    .unwrap();
 
     // Make a tag corresponding to the current HEAD
     let repo = git2::Repository::open(&git.root()).unwrap();
@@ -2270,7 +2449,8 @@ fn two_at_rev_instead_of_tag() {
         &repo.signature().unwrap(),
         "make a new tag",
         false,
-    ).unwrap();
+    )
+    .unwrap();
 
     let p = project()
         .file(
@@ -2288,7 +2468,8 @@ fn two_at_rev_instead_of_tag() {
         "#,
                 git.url()
             ),
-        ).file("src/lib.rs", "")
+        )
+        .file("src/lib.rs", "")
         .build();
 
     p.cargo("generate-lockfile").run();
@@ -2312,7 +2493,8 @@ fn include_overrides_gitignore() {
             [build-dependencies]
             filetime = "0.1"
         "#,
-        ).file(
+        )
+        .file(
             ".gitignore",
             r#"
             target
@@ -2321,7 +2503,8 @@ fn include_overrides_gitignore() {
             src/incl.rs
             src/not_incl.rs
         "#,
-        ).file(
+        )
+        .file(
             "tango-build.rs",
             r#"
             extern crate filetime;
@@ -2345,14 +2528,16 @@ fn include_overrides_gitignore() {
                 }
             }
         "#,
-        ).file("src/lib.rs", "mod not_incl; mod incl;")
+        )
+        .file("src/lib.rs", "mod not_incl; mod incl;")
         .file(
             "src/mod.md",
             r#"
             (The content of this file does not matter since we are not doing real codegen.)
         "#,
         )
-    }).unwrap();
+    })
+    .unwrap();
 
     println!("build 1: all is new");
     p.cargo("build -v")
@@ -2371,7 +2556,8 @@ fn include_overrides_gitignore() {
 [RUNNING] `rustc --crate-name reduction src/lib.rs --crate-type lib [..]`
 [FINISHED] dev [unoptimized + debuginfo] target(s) in [..]
 ",
-        ).run();
+        )
+        .run();
 
     println!("build 2: nothing changed; file timestamps reset by build script");
     p.cargo("build -v")
@@ -2382,7 +2568,8 @@ fn include_overrides_gitignore() {
 [FRESH] reduction [..]
 [FINISHED] dev [unoptimized + debuginfo] target(s) in [..]
 ",
-        ).run();
+        )
+        .run();
 
     println!("build 3: touch `src/not_incl.rs`; expect build script *not* re-run");
     sleep_ms(1000);
@@ -2397,7 +2584,8 @@ fn include_overrides_gitignore() {
 [RUNNING] `rustc --crate-name reduction src/lib.rs --crate-type lib [..]`
 [FINISHED] dev [unoptimized + debuginfo] target(s) in [..]
 ",
-        ).run();
+        )
+        .run();
 
     // This final case models the bug from rust-lang/cargo#4135: an
     // explicitly included file should cause a build-script re-run,
@@ -2416,7 +2604,8 @@ fn include_overrides_gitignore() {
 [RUNNING] `rustc --crate-name reduction src/lib.rs --crate-type lib [..]`
 [FINISHED] dev [unoptimized + debuginfo] target(s) in [..]
 ",
-        ).run();
+        )
+        .run();
 }
 
 #[test]
@@ -2439,7 +2628,8 @@ fn invalid_git_dependency_manifest() {
 
                 name = "dep1"
             "#,
-            ).file(
+            )
+            .file(
                 "src/dep1.rs",
                 r#"
                 pub fn hello() -> &'static str {
@@ -2447,7 +2637,8 @@ fn invalid_git_dependency_manifest() {
                 }
             "#,
             )
-    }).unwrap();
+    })
+    .unwrap();
 
     let project = project
         .file(
@@ -2466,10 +2657,12 @@ fn invalid_git_dependency_manifest() {
         "#,
                 git_project.url()
             ),
-        ).file(
+        )
+        .file(
             "src/main.rs",
             &main_file(r#""{}", dep1::hello()"#, &["dep1"]),
-        ).build();
+        )
+        .build();
 
     let git_root = git_project.root();
 
@@ -2493,7 +2686,8 @@ fn invalid_git_dependency_manifest() {
              duplicate key: `categories` for key `project`",
             path2url(&git_root),
             path2url(&git_root),
-        )).run();
+        ))
+        .run();
 }
 
 #[test]
@@ -2501,7 +2695,8 @@ fn failed_submodule_checkout() {
     let project = project();
     let git_project = git::new("dep1", |project| {
         project.file("Cargo.toml", &basic_manifest("dep1", "0.5.0"))
-    }).unwrap();
+    })
+    .unwrap();
 
     let git_project2 = git::new("dep2", |project| project.file("lib.rs", "")).unwrap();
 
@@ -2553,7 +2748,8 @@ fn failed_submodule_checkout() {
         "#,
                 git_project.url()
             ),
-        ).file("src/lib.rs", "")
+        )
+        .file("src/lib.rs", "")
         .build();
 
     project
@@ -2587,7 +2783,8 @@ fn use_the_cli() {
         project
             .file("Cargo.toml", &basic_manifest("dep1", "0.5.0"))
             .file("src/lib.rs", "")
-    }).unwrap();
+    })
+    .unwrap();
 
     let project = project
         .file(
@@ -2604,14 +2801,16 @@ fn use_the_cli() {
                 "#,
                 git_project.url()
             ),
-        ).file("src/lib.rs", "")
+        )
+        .file("src/lib.rs", "")
         .file(
             ".cargo/config",
             "
                 [net]
                 git-fetch-with-cli = true
             ",
-        ).build();
+        )
+        .build();
 
     let stderr = "\
 [UPDATING] git repository `[..]`
@@ -2624,4 +2823,60 @@ fn use_the_cli() {
 ";
 
     project.cargo("build -v").with_stderr(stderr).run();
+}
+
+#[test]
+fn templatedir_doesnt_cause_problems() {
+    let git_project2 = git::new("dep2", |project| {
+        project
+            .file("Cargo.toml", &basic_manifest("dep2", "0.5.0"))
+            .file("src/lib.rs", "")
+    })
+    .unwrap();
+    let git_project = git::new("dep1", |project| {
+        project
+            .file("Cargo.toml", &basic_manifest("dep1", "0.5.0"))
+            .file("src/lib.rs", "")
+    })
+    .unwrap();
+    let p = project()
+        .file(
+            "Cargo.toml",
+            &format!(
+                r#"
+                [project]
+                name = "fo"
+                version = "0.5.0"
+                authors = []
+
+                [dependencies]
+                dep1 = {{ git = '{}' }}
+            "#,
+                git_project.url()
+            ),
+        )
+        .file("src/main.rs", "fn main() {}")
+        .build();
+
+    File::create(paths::home().join(".gitconfig"))
+        .unwrap()
+        .write_all(
+            &format!(
+                r#"
+                [init]
+                templatedir = {}
+            "#,
+                git_project2
+                    .url()
+                    .to_file_path()
+                    .unwrap()
+                    .to_str()
+                    .unwrap()
+                    .replace("\\", "/")
+            )
+            .as_bytes(),
+        )
+        .unwrap();
+
+    p.cargo("build").run();
 }

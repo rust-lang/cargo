@@ -1,41 +1,163 @@
-.TH "CARGO\-LOGIN" "1" "July 2016" "The Rust package manager" "Cargo Manual"
-.hy
-.SH NAME
-.PP
+'\" t
+.\"     Title: cargo-login
+.\"    Author: [see the "AUTHOR(S)" section]
+.\" Generator: Asciidoctor 1.5.8
+.\"      Date: 2018-12-23
+.\"    Manual: \ \&
+.\"    Source: \ \&
+.\"  Language: English
+.\"
+.TH "CARGO\-LOGIN" "1" "2018-12-23" "\ \&" "\ \&"
+.ie \n(.g .ds Aq \(aq
+.el       .ds Aq '
+.ss \n[.ss] 0
+.nh
+.ad l
+.de URL
+\fI\\$2\fP <\\$1>\\$3
+..
+.als MTO URL
+.if \n[.g] \{\
+.  mso www.tmac
+.  am URL
+.    ad l
+.  .
+.  am MTO
+.    ad l
+.  .
+.  LINKSTYLE blue R < >
+.\}
+.SH "NAME"
 cargo\-login \- Save an API token from the registry locally
-.SH SYNOPSIS
-.PP
-\f[I]cargo login\f[] [OPTIONS] [<TOKEN>]
-.SH OPTIONS
-.TP
-.B \-h, \-\-help
-Print this message.
-.RS
+.SH "SYNOPSIS"
+.sp
+\fBcargo login [\fIOPTIONS\fP] [\fITOKEN\fP]\fP
+.SH "DESCRIPTION"
+.sp
+This command will save the API token to disk so that commands that require
+authentication, such as \fBcargo\-publish\fP(1), will be automatically
+authenticated. The token is saved in \fB$CARGO_HOME/credentials\fP. \fBCARGO_HOME\fP
+defaults to \fB.cargo\fP in your home directory.
+.sp
+If the \fITOKEN\fP argument is not specified, it will be read from stdin.
+.sp
+The API token for crates.io may be retrieved from \c
+.URL "https://crates.io/me" "" "."
+.sp
+Take care to keep the token secret, it should not be shared with anyone else.
+.SH "OPTIONS"
+.SS "Login Options"
+.sp
+\fB\-\-registry\fP \fIREGISTRY\fP
+.RS 4
+Alternative registry to use.
+.sp
+This option is unstable and available only on the nightly channel and requires
+the \fB\-Z unstable\-options\fP flag to enable.
 .RE
-.TP
-.B \-\-host \f[I]HOST\f[]
-Host to set the token for
-.RS
+.SS "Display Options"
+.sp
+\fB\-v\fP, \fB\-\-verbose\fP
+.RS 4
+Use verbose output. May be specified twice for "very verbose" output which
+includes extra output such as dependency warnings and build script output.
+May also be specified with the \fBterm.verbose\fP
+.URL "https://doc.rust\-lang.org/cargo/reference/config.html" "config value" "."
 .RE
-.TP
-.B \-v, \-\-verbose
-Use verbose output.
-.RS
-.RE
-.TP
-.B \-q, \-\-quiet
+.sp
+\fB\-q\fP, \fB\-\-quiet\fP
+.RS 4
 No output printed to stdout.
-.RS
 .RE
-.TP
-.B \-\-color \f[I]WHEN\f[]
-Coloring: auto, always, never.
-.RS
+.sp
+\fB\-\-color\fP \fIWHEN\fP
+.RS 4
+Control when colored output is used. Valid values:
+.sp
+.RS 4
+.ie n \{\
+\h'-04'\(bu\h'+03'\c
+.\}
+.el \{\
+.  sp -1
+.  IP \(bu 2.3
+.\}
+\fBauto\fP (default): Automatically detect if color support is available on the
+terminal.
 .RE
-.SH SEE ALSO
-.PP
-cargo(1), cargo\-publish(1)
-.SH COPYRIGHT
-.PP
-This work is dual\-licensed under Apache 2.0 and MIT terms.
-See \f[I]COPYRIGHT\f[] file in the cargo source distribution.
+.sp
+.RS 4
+.ie n \{\
+\h'-04'\(bu\h'+03'\c
+.\}
+.el \{\
+.  sp -1
+.  IP \(bu 2.3
+.\}
+\fBalways\fP: Always display colors.
+.RE
+.sp
+.RS 4
+.ie n \{\
+\h'-04'\(bu\h'+03'\c
+.\}
+.el \{\
+.  sp -1
+.  IP \(bu 2.3
+.\}
+\fBnever\fP: Never display colors.
+.RE
+.sp
+May also be specified with the \fBterm.color\fP
+.URL "https://doc.rust\-lang.org/cargo/reference/config.html" "config value" "."
+.RE
+.SS "Common Options"
+.sp
+\fB\-h\fP, \fB\-\-help\fP
+.RS 4
+Prints help information.
+.RE
+.sp
+\fB\-Z\fP \fIFLAG\fP...
+.RS 4
+Unstable (nightly\-only) flags to Cargo. Run \fBcargo \-Z help\fP for
+details.
+.RE
+.SH "ENVIRONMENT"
+.sp
+See \c
+.URL "https://doc.rust\-lang.org/cargo/reference/environment\-variables.html" "the reference" " "
+for
+details on environment variables that Cargo reads.
+.SH "EXIT STATUS"
+.sp
+0
+.RS 4
+Cargo succeeded.
+.RE
+.sp
+101
+.RS 4
+Cargo failed to complete.
+.RE
+.SH "EXAMPLES"
+.sp
+.RS 4
+.ie n \{\
+\h'-04' 1.\h'+01'\c
+.\}
+.el \{\
+.  sp -1
+.  IP " 1." 4.2
+.\}
+Save the API token to disk:
+.sp
+.if n .RS 4
+.nf
+cargo login
+.fi
+.if n .RE
+.RE
+.SH "SEE ALSO"
+.sp
+\fBcargo\fP(1), \fBcargo\-publish\fP(1)

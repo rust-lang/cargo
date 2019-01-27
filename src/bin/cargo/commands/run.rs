@@ -1,11 +1,12 @@
-use command_prelude::*;
+use crate::command_prelude::*;
 
 use cargo::core::Verbosity;
 use cargo::ops::{self, CompileFilter};
 
 pub fn cli() -> App {
     subcommand("run")
-        .alias("r")
+        // subcommand aliases are handled in aliased_command()
+        // .alias("r")
         .setting(AppSettings::TrailingVarArg)
         .about("Run the main binary of the local package (src/main.rs)")
         .arg(Arg::with_name("args").multiple(true))
@@ -35,10 +36,11 @@ run. If you're passing arguments to both Cargo and the binary, the ones after
         )
 }
 
-pub fn exec(config: &mut Config, args: &ArgMatches) -> CliResult {
+pub fn exec(config: &mut Config, args: &ArgMatches<'_>) -> CliResult {
     let ws = args.workspace(config)?;
 
-    let mut compile_opts = args.compile_options(config, CompileMode::Build)?;
+    let mut compile_opts = args.compile_options(config, CompileMode::Build, Some(&ws))?;
+
     if !args.is_present("example") && !args.is_present("bin") {
         let default_runs: Vec<_> = compile_opts
             .spec

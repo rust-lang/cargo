@@ -1,0 +1,324 @@
+<h2 id="cargo_install_name">NAME</h2>
+<div class="sectionbody">
+<p>cargo-install - Build and install a Rust binary</p>
+</div>
+<div class="sect1">
+<h2 id="cargo_install_synopsis">SYNOPSIS</h2>
+<div class="sectionbody">
+<div class="paragraph">
+<p><code>cargo install [<em>OPTIONS</em>] <em>CRATE</em>&#8230;&#8203;</code><br>
+<code>cargo install [<em>OPTIONS</em>] --path <em>PATH</em></code><br>
+<code>cargo install [<em>OPTIONS</em>] --git <em>URL</em> [<em>CRATE</em>&#8230;&#8203;]</code><br>
+<code>cargo install [<em>OPTIONS</em>] --list</code></p>
+</div>
+</div>
+</div>
+<div class="sect1">
+<h2 id="cargo_install_description">DESCRIPTION</h2>
+<div class="sectionbody">
+<div class="paragraph">
+<p>This command manages Cargo&#8217;s local set of installed binary crates. Only packages
+which have <code>[[bin]]</code> targets can be installed, and all binaries are installed into
+the installation root&#8217;s <code>bin</code> folder.</p>
+</div>
+<div class="paragraph">
+<p>The installation root is determined, in order of precedence:</p>
+</div>
+<div class="ulist">
+<ul>
+<li>
+<p><code>--root</code> option</p>
+</li>
+<li>
+<p><code>CARGO_INSTALL_ROOT</code> environment variable</p>
+</li>
+<li>
+<p><code>install.root</code> Cargo <a href="reference/config.html">config value</a></p>
+</li>
+<li>
+<p><code>CARGO_HOME</code> environment variable</p>
+</li>
+<li>
+<p><code>$HOME/.cargo</code></p>
+</li>
+</ul>
+</div>
+<div class="paragraph">
+<p>There are multiple sources from which a crate can be installed. The default
+location is crates.io but the <code>--git</code> and <code>--path</code> flags can change this
+source. If the source contains more than one package (such as crates.io or a
+git repository with multiple crates) the <em>CRATE</em> argument is required to
+indicate which crate should be installed.</p>
+</div>
+<div class="paragraph">
+<p>Crates from crates.io can optionally specify the version they wish to install
+via the <code>--version</code> flags, and similarly packages from git repositories can
+optionally specify the branch, tag, or revision that should be installed. If a
+crate has multiple binaries, the <code>--bin</code> argument can selectively install only
+one of them, and if you&#8217;d rather install examples the <code>--example</code> argument can
+be used as well.</p>
+</div>
+<div class="paragraph">
+<p>If the source is crates.io or <code>--git</code> then by default the crate will be built
+in a temporary target directory. To avoid this, the target directory can be
+specified by setting the <code>CARGO_TARGET_DIR</code> environment variable to a relative
+path. In particular, this can be useful for caching build artifacts on
+continuous integration systems.</p>
+</div>
+</div>
+</div>
+<div class="sect1">
+<h2 id="cargo_install_options">OPTIONS</h2>
+<div class="sectionbody">
+<div class="sect2">
+<h3 id="cargo_install_install_options">Install Options</h3>
+<div class="dlist">
+<dl>
+<dt class="hdlist1"><strong>--vers</strong> <em>VERSION</em></dt>
+<dt class="hdlist1"><strong>--version</strong> <em>VERSION</em></dt>
+<dd>
+<p>Specify a version to install from crates.io.</p>
+</dd>
+<dt class="hdlist1"><strong>--git</strong> <em>URL</em></dt>
+<dd>
+<p>Git URL to install the specified crate from.</p>
+</dd>
+<dt class="hdlist1"><strong>--branch</strong> <em>BRANCH</em></dt>
+<dd>
+<p>Branch to use when installing from git.</p>
+</dd>
+<dt class="hdlist1"><strong>--tag</strong> <em>TAG</em></dt>
+<dd>
+<p>Tag to use when installing from git.</p>
+</dd>
+<dt class="hdlist1"><strong>--rev</strong> <em>SHA</em></dt>
+<dd>
+<p>Specific commit to use when installing from git.</p>
+</dd>
+<dt class="hdlist1"><strong>--path</strong> <em>PATH</em></dt>
+<dd>
+<p>Filesystem path to local crate to install.</p>
+</dd>
+<dt class="hdlist1"><strong>--list</strong></dt>
+<dd>
+<p>List all installed packages and their versions.</p>
+</dd>
+<dt class="hdlist1"><strong>-f</strong></dt>
+<dt class="hdlist1"><strong>--force</strong></dt>
+<dd>
+<p>Force overwriting existing crates or binaries. This can be used to
+reinstall or upgrade a crate.</p>
+</dd>
+<dt class="hdlist1"><strong>--bin</strong> <em>NAME</em>&#8230;&#8203;</dt>
+<dd>
+<p>Install only the specified binary.</p>
+</dd>
+<dt class="hdlist1"><strong>--bins</strong></dt>
+<dd>
+<p>Install all binaries.</p>
+</dd>
+<dt class="hdlist1"><strong>--example</strong> <em>NAME</em>&#8230;&#8203;</dt>
+<dd>
+<p>Install only the specified example.</p>
+</dd>
+<dt class="hdlist1"><strong>--examples</strong></dt>
+<dd>
+<p>Install all examples.</p>
+</dd>
+<dt class="hdlist1"><strong>--root</strong> <em>DIR</em></dt>
+<dd>
+<p>Directory to install packages into.</p>
+</dd>
+<dt class="hdlist1"><strong>--registry</strong> <em>REGISTRY</em></dt>
+<dd>
+<p>Alternative registry to use.</p>
+<div class="paragraph">
+<p>This option is unstable and available only on the nightly channel and requires
+the <code>-Z unstable-options</code> flag to enable.</p>
+</div>
+</dd>
+</dl>
+</div>
+</div>
+<div class="sect2">
+<h3 id="cargo_install_feature_selection">Feature Selection</h3>
+<div class="paragraph">
+<p>When no feature options are given, the <code>default</code> feature is activated for
+every selected package.</p>
+</div>
+<div class="dlist">
+<dl>
+<dt class="hdlist1"><strong>--features</strong> <em>FEATURES</em></dt>
+<dd>
+<p>Space or comma separated list of features to activate. These features only
+apply to the current directory&#8217;s package. Features of direct dependencies
+may be enabled with <code>&lt;dep-name&gt;/&lt;feature-name&gt;</code> syntax.</p>
+</dd>
+<dt class="hdlist1"><strong>--all-features</strong></dt>
+<dd>
+<p>Activate all available features of all selected packages.</p>
+</dd>
+<dt class="hdlist1"><strong>--no-default-features</strong></dt>
+<dd>
+<p>Do not activate the <code>default</code> feature of the current directory&#8217;s
+package.</p>
+</dd>
+</dl>
+</div>
+</div>
+<div class="sect2">
+<h3 id="cargo_install_compilation_options">Compilation Options</h3>
+<div class="dlist">
+<dl>
+<dt class="hdlist1"><strong>--target</strong> <em>TRIPLE</em></dt>
+<dd>
+<p>Install for the given architecture. The default is the host
+architecture. The general format of the triple is
+<code>&lt;arch&gt;&lt;sub&gt;-&lt;vendor&gt;-&lt;sys&gt;-&lt;abi&gt;</code>. Run <code>rustc --print target-list</code> for a
+list of supported targets.</p>
+<div class="paragraph">
+<p>This may also be specified with the <code>build.target</code>
+<a href="reference/config.html">config value</a>.</p>
+</div>
+</dd>
+<dt class="hdlist1"><strong>--debug</strong></dt>
+<dd>
+<p>Build with the <code>dev</code> profile instead the <code>release</code> profile.</p>
+</dd>
+</dl>
+</div>
+</div>
+<div class="sect2">
+<h3 id="cargo_install_miscellaneous_options">Miscellaneous Options</h3>
+<div class="dlist">
+<dl>
+<dt class="hdlist1"><strong>-j</strong> <em>N</em></dt>
+<dt class="hdlist1"><strong>--jobs</strong> <em>N</em></dt>
+<dd>
+<p>Number of parallel jobs to run. May also be specified with the
+<code>build.jobs</code> <a href="reference/config.html">config value</a>. Defaults to
+the number of CPUs.</p>
+</dd>
+</dl>
+</div>
+</div>
+<div class="sect2">
+<h3 id="cargo_install_display_options">Display Options</h3>
+<div class="dlist">
+<dl>
+<dt class="hdlist1"><strong>-v</strong></dt>
+<dt class="hdlist1"><strong>--verbose</strong></dt>
+<dd>
+<p>Use verbose output. May be specified twice for "very verbose" output which
+includes extra output such as dependency warnings and build script output.
+May also be specified with the <code>term.verbose</code>
+<a href="reference/config.html">config value</a>.</p>
+</dd>
+<dt class="hdlist1"><strong>-q</strong></dt>
+<dt class="hdlist1"><strong>--quiet</strong></dt>
+<dd>
+<p>No output printed to stdout.</p>
+</dd>
+<dt class="hdlist1"><strong>--color</strong> <em>WHEN</em></dt>
+<dd>
+<p>Control when colored output is used. Valid values:</p>
+<div class="ulist">
+<ul>
+<li>
+<p><code>auto</code> (default): Automatically detect if color support is available on the
+terminal.</p>
+</li>
+<li>
+<p><code>always</code>: Always display colors.</p>
+</li>
+<li>
+<p><code>never</code>: Never display colors.</p>
+</li>
+</ul>
+</div>
+<div class="paragraph">
+<p>May also be specified with the <code>term.color</code>
+<a href="reference/config.html">config value</a>.</p>
+</div>
+</dd>
+</dl>
+</div>
+</div>
+<div class="sect2">
+<h3 id="cargo_install_common_options">Common Options</h3>
+<div class="dlist">
+<dl>
+<dt class="hdlist1"><strong>-h</strong></dt>
+<dt class="hdlist1"><strong>--help</strong></dt>
+<dd>
+<p>Prints help information.</p>
+</dd>
+<dt class="hdlist1"><strong>-Z</strong> <em>FLAG</em>&#8230;&#8203;</dt>
+<dd>
+<p>Unstable (nightly-only) flags to Cargo. Run <code>cargo -Z help</code> for
+details.</p>
+</dd>
+</dl>
+</div>
+</div>
+</div>
+</div>
+<div class="sect1">
+<h2 id="cargo_install_environment">ENVIRONMENT</h2>
+<div class="sectionbody">
+<div class="paragraph">
+<p>See <a href="reference/environment-variables.html">the reference</a> for
+details on environment variables that Cargo reads.</p>
+</div>
+</div>
+</div>
+<div class="sect1">
+<h2 id="cargo_install_exit_status">Exit Status</h2>
+<div class="sectionbody">
+<div class="dlist">
+<dl>
+<dt class="hdlist1">0</dt>
+<dd>
+<p>Cargo succeeded.</p>
+</dd>
+<dt class="hdlist1">101</dt>
+<dd>
+<p>Cargo failed to complete.</p>
+</dd>
+</dl>
+</div>
+</div>
+</div>
+<div class="sect1">
+<h2 id="cargo_install_examples">EXAMPLES</h2>
+<div class="sectionbody">
+<div class="olist arabic">
+<ol class="arabic">
+<li>
+<p>Install a package from crates.io:</p>
+<div class="literalblock">
+<div class="content">
+<pre>cargo install ripgrep</pre>
+</div>
+</div>
+</li>
+<li>
+<p>Reinstall or upgrade a package:</p>
+<div class="literalblock">
+<div class="content">
+<pre>cargo install ripgrep --force</pre>
+</div>
+</div>
+</li>
+</ol>
+</div>
+</div>
+</div>
+<div class="sect1">
+<h2 id="cargo_install_see_also">SEE ALSO</h2>
+<div class="sectionbody">
+<div class="paragraph">
+<p><a href="commands/index.html">cargo(1)</a>, <a href="commands/cargo-uninstall.html">cargo-uninstall(1)</a>, <a href="commands/cargo-search.html">cargo-search(1)</a>, <a href="commands/cargo-publish.html">cargo-publish(1)</a></p>
+</div>
+</div>
+</div>

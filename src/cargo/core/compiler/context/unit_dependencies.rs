@@ -18,18 +18,20 @@
 use std::cell::RefCell;
 use std::collections::{HashMap, HashSet};
 
-use CargoResult;
-use core::dependency::Kind as DepKind;
-use core::profiles::UnitFor;
-use core::{Package, Target, PackageId};
-use core::package::Downloads;
+use log::trace;
+
 use super::{BuildContext, CompileMode, Kind, Unit};
+use crate::core::dependency::Kind as DepKind;
+use crate::core::package::Downloads;
+use crate::core::profiles::UnitFor;
+use crate::core::{Package, PackageId, Target};
+use crate::CargoResult;
 
 struct State<'a: 'tmp, 'cfg: 'a, 'tmp> {
     bcx: &'tmp BuildContext<'a, 'cfg>,
     deps: &'tmp mut HashMap<Unit<'a>, Vec<Unit<'a>>>,
-    pkgs: RefCell<&'tmp mut HashMap<&'a PackageId, &'a Package>>,
-    waiting_on_download: HashSet<&'a PackageId>,
+    pkgs: RefCell<&'tmp mut HashMap<PackageId, &'a Package>>,
+    waiting_on_download: HashSet<PackageId>,
     downloads: Downloads<'a, 'cfg>,
 }
 
@@ -37,7 +39,7 @@ pub fn build_unit_dependencies<'a, 'cfg>(
     roots: &[Unit<'a>],
     bcx: &BuildContext<'a, 'cfg>,
     deps: &mut HashMap<Unit<'a>, Vec<Unit<'a>>>,
-    pkgs: &mut HashMap<&'a PackageId, &'a Package>,
+    pkgs: &mut HashMap<PackageId, &'a Package>,
 ) -> CargoResult<()> {
     assert!(deps.is_empty(), "can only build unit deps once");
 
@@ -74,11 +76,11 @@ pub fn build_unit_dependencies<'a, 'cfg>(
             deps_of(unit, &mut state, unit_for)?;
         }
 
-        if state.waiting_on_download.len() > 0 {
+        if !state.waiting_on_download.is_empty() {
             state.finish_some_downloads()?;
             state.deps.clear();
         } else {
-            break
+            break;
         }
     }
     trace!("ALL UNIT DEPENDENCIES {:#?}", state.deps);
@@ -128,46 +130,43 @@ fn compute_deps<'a, 'cfg, 'tmp>(
 
     let bcx = state.bcx;
     let id = unit.pkg.package_id();
-    let deps = bcx.resolve.deps(id)
-        .filter(|&(_id, deps)| {
-            assert!(!deps.is_empty());
-            deps.iter().any(|dep| {
-                // If this target is a build command, then we only want build
-                // dependencies, otherwise we want everything *other than* build
-                // dependencies.
-                if unit.target.is_custom_build() != dep.is_build() {
-                    return false;
-                }
+    let deps = bcx.resolve.deps(id).filter(|&(_id, deps)| {
+        assert!(!deps.is_empty());
+        deps.iter().any(|dep| {
+            // If this target is a build command, then we only want build
+            // dependencies, otherwise we want everything *other than* build
+            // dependencies.
+            if unit.target.is_custom_build() != dep.is_build() {
+                return false;
+            }
 
-                // If this dependency is *not* a transitive dependency, then it
-                // only applies to test/example targets
-                if !dep.is_transitive() &&
-                    !unit.target.is_test() &&
-                    !unit.target.is_example() &&
-                    !unit.mode.is_any_test()
-                {
-                    return false;
-                }
+            // If this dependency is *not* a transitive dependency, then it
+            // only applies to test/example targets
+            if !dep.is_transitive()
+                && !unit.target.is_test()
+                && !unit.target.is_example()
+                && !unit.mode.is_any_test()
+            {
+                return false;
+            }
 
-                // If this dependency is only available for certain platforms,
-                // make sure we're only enabling it for that platform.
-                if !bcx.dep_platform_activated(dep, unit.kind) {
-                    return false;
-                }
+            // If this dependency is only available for certain platforms,
+            // make sure we're only enabling it for that platform.
+            if !bcx.dep_platform_activated(dep, unit.kind) {
+                return false;
+            }
 
-                // If the dependency is optional, then we're only activating it
-                // if the corresponding feature was activated
-                if dep.is_optional() &&
-                    !bcx.resolve.features(id).contains(&*dep.name_in_toml())
-                {
-                    return false;
-                }
+            // If the dependency is optional, then we're only activating it
+            // if the corresponding feature was activated
+            if dep.is_optional() && !bcx.resolve.features(id).contains(&*dep.name_in_toml()) {
+                return false;
+            }
 
-                // If we've gotten past all that, then this dependency is
-                // actually used!
-                true
-            })
-        });
+            // If we've gotten past all that, then this dependency is
+            // actually used!
+            true
+        })
+    });
 
     let mut ret = Vec::new();
     for (id, _) in deps {
@@ -181,14 +180,7 @@ fn compute_deps<'a, 'cfg, 'tmp>(
         };
         let mode = check_or_build_mode(unit.mode, lib);
         let dep_unit_for = unit_for.with_for_host(lib.for_host());
-        let unit = new_unit(
-            bcx,
-            pkg,
-            lib,
-            dep_unit_for,
-            unit.kind.for_target(lib),
-            mode,
-        );
+        let unit = new_unit(bcx, pkg, lib, dep_unit_for, unit.kind.for_target(lib), mode);
         ret.push((unit, dep_unit_for));
     }
 
@@ -211,7 +203,8 @@ fn compute_deps<'a, 'cfg, 'tmp>(
 
     // If any integration tests/benches are being run, make sure that
     // binaries are built as well.
-    if !unit.mode.is_check() && unit.mode.is_any_test()
+    if !unit.mode.is_check()
+        && unit.mode.is_any_test()
         && (unit.target.is_test() || unit.target.is_bench())
     {
         ret.extend(
@@ -282,7 +275,8 @@ fn compute_deps_doc<'a, 'cfg, 'tmp>(
     state: &mut State<'a, 'cfg, 'tmp>,
 ) -> CargoResult<Vec<(Unit<'a>, UnitFor)>> {
     let bcx = state.bcx;
-    let deps = bcx.resolve
+    let deps = bcx
+        .resolve
         .deps(unit.pkg.package_id())
         .filter(|&(_id, deps)| {
             deps.iter().any(|dep| match dep.kind() {
@@ -308,14 +302,7 @@ fn compute_deps_doc<'a, 'cfg, 'tmp>(
         // However, for plugins/proc-macros, deps should be built like normal.
         let mode = check_or_build_mode(unit.mode, lib);
         let dep_unit_for = UnitFor::new_normal().with_for_host(lib.for_host());
-        let lib_unit = new_unit(
-            bcx,
-            dep,
-            lib,
-            dep_unit_for,
-            unit.kind.for_target(lib),
-            mode,
-        );
+        let lib_unit = new_unit(bcx, dep, lib, dep_unit_for, unit.kind.for_target(lib), mode);
         ret.push((lib_unit, dep_unit_for));
         if let CompileMode::Doc { deps: true } = unit.mode {
             // Document this lib as well.
@@ -343,19 +330,12 @@ fn compute_deps_doc<'a, 'cfg, 'tmp>(
 
 fn maybe_lib<'a>(
     unit: &Unit<'a>,
-    bcx: &BuildContext,
+    bcx: &BuildContext<'_, '_>,
     unit_for: UnitFor,
 ) -> Option<(Unit<'a>, UnitFor)> {
     unit.pkg.targets().iter().find(|t| t.linkable()).map(|t| {
         let mode = check_or_build_mode(unit.mode, t);
-        let unit = new_unit(
-            bcx,
-            unit.pkg,
-            t,
-            unit_for,
-            unit.kind.for_target(t),
-            mode,
-        );
+        let unit = new_unit(bcx, unit.pkg, t, unit_for, unit.kind.for_target(t), mode);
         (unit, unit_for)
     })
 }
@@ -367,7 +347,10 @@ fn maybe_lib<'a>(
 /// script itself doesn't have any dependencies, so even in that case a unit
 /// of work is still returned. `None` is only returned if the package has no
 /// build script.
-fn dep_build_script<'a>(unit: &Unit<'a>, bcx: &BuildContext) -> Option<(Unit<'a>, UnitFor)> {
+fn dep_build_script<'a>(
+    unit: &Unit<'a>,
+    bcx: &BuildContext<'_, '_>,
+) -> Option<(Unit<'a>, UnitFor)> {
     unit.pkg
         .targets()
         .iter()
@@ -407,7 +390,7 @@ fn check_or_build_mode(mode: CompileMode, target: &Target) -> CompileMode {
 }
 
 fn new_unit<'a>(
-    bcx: &BuildContext,
+    bcx: &BuildContext<'_, '_>,
     pkg: &'a Package,
     target: &'a Target,
     unit_for: UnitFor,
@@ -415,7 +398,7 @@ fn new_unit<'a>(
     mode: CompileMode,
 ) -> Unit<'a> {
     let profile = bcx.profiles.get_profile(
-        &pkg.package_id(),
+        pkg.package_id(),
         bcx.ws.is_member(pkg),
         unit_for,
         mode,
@@ -440,7 +423,7 @@ fn new_unit<'a>(
 ///
 /// Here we take the entire `deps` map and add more dependencies from execution
 /// of one build script to execution of another build script.
-fn connect_run_custom_build_deps(state: &mut State) {
+fn connect_run_custom_build_deps(state: &mut State<'_, '_, '_>) {
     let mut new_deps = Vec::new();
 
     {
@@ -453,7 +436,8 @@ fn connect_run_custom_build_deps(state: &mut State) {
         for (unit, deps) in state.deps.iter() {
             for dep in deps {
                 if dep.mode == CompileMode::RunCustomBuild {
-                    reverse_deps.entry(dep)
+                    reverse_deps
+                        .entry(dep)
                         .or_insert_with(HashSet::new)
                         .insert(unit);
                 }
@@ -469,7 +453,11 @@ fn connect_run_custom_build_deps(state: &mut State) {
         // `links`, then we depend on that package's build script! Here we use
         // `dep_build_script` to manufacture an appropriate build script unit to
         // depend on.
-        for unit in state.deps.keys().filter(|k| k.mode == CompileMode::RunCustomBuild) {
+        for unit in state
+            .deps
+            .keys()
+            .filter(|k| k.mode == CompileMode::RunCustomBuild)
+        {
             let reverse_deps = match reverse_deps.get(unit) {
                 Some(set) => set,
                 None => continue,
@@ -479,9 +467,9 @@ fn connect_run_custom_build_deps(state: &mut State) {
                 .iter()
                 .flat_map(|reverse_dep| state.deps[reverse_dep].iter())
                 .filter(|other| {
-                    other.pkg != unit.pkg &&
-                        other.target.linkable() &&
-                        other.pkg.manifest().links().is_some()
+                    other.pkg != unit.pkg
+                        && other.target.linkable()
+                        && other.pkg.manifest().links().is_some()
                 })
                 .filter_map(|other| dep_build_script(other, state.bcx).map(|p| p.0))
                 .collect::<HashSet<_>>();
@@ -499,18 +487,18 @@ fn connect_run_custom_build_deps(state: &mut State) {
 }
 
 impl<'a, 'cfg, 'tmp> State<'a, 'cfg, 'tmp> {
-    fn get(&mut self, id: &'a PackageId) -> CargoResult<Option<&'a Package>> {
+    fn get(&mut self, id: PackageId) -> CargoResult<Option<&'a Package>> {
         let mut pkgs = self.pkgs.borrow_mut();
-        if let Some(pkg) = pkgs.get(id) {
-            return Ok(Some(pkg))
+        if let Some(pkg) = pkgs.get(&id) {
+            return Ok(Some(pkg));
         }
         if !self.waiting_on_download.insert(id) {
-            return Ok(None)
+            return Ok(None);
         }
         if let Some(pkg) = self.downloads.start(id)? {
             pkgs.insert(id, pkg);
-            self.waiting_on_download.remove(id);
-            return Ok(Some(pkg))
+            self.waiting_on_download.remove(&id);
+            return Ok(Some(pkg));
         }
         Ok(None)
     }
@@ -527,7 +515,7 @@ impl<'a, 'cfg, 'tmp> State<'a, 'cfg, 'tmp> {
         assert!(self.downloads.remaining() > 0);
         loop {
             let pkg = self.downloads.wait()?;
-            self.waiting_on_download.remove(pkg.package_id());
+            self.waiting_on_download.remove(&pkg.package_id());
             self.pkgs.borrow_mut().insert(pkg.package_id(), pkg);
 
             // Arbitrarily choose that 5 or more packages concurrently download
@@ -535,7 +523,7 @@ impl<'a, 'cfg, 'tmp> State<'a, 'cfg, 'tmp> {
             // less than this let's recompute the whole unit dependency graph
             // again and try to find some more packages to download.
             if self.downloads.remaining() < 5 {
-                break
+                break;
             }
         }
         Ok(())

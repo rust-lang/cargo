@@ -1,13 +1,15 @@
 use std::collections::HashSet;
 use std::{cmp, fmt, hash};
 
-use core::compiler::CompileMode;
-use core::interning::InternedString;
-use core::{Features, PackageId, PackageIdSpec, PackageSet, Shell};
-use util::errors::CargoResultExt;
-use util::lev_distance::lev_distance;
-use util::toml::{ProfilePackageSpec, StringOrBool, TomlProfile, TomlProfiles, U32OrBool};
-use util::{CargoResult, Config};
+use serde::Deserialize;
+
+use crate::core::compiler::CompileMode;
+use crate::core::interning::InternedString;
+use crate::core::{Features, PackageId, PackageIdSpec, PackageSet, Shell};
+use crate::util::errors::CargoResultExt;
+use crate::util::lev_distance::lev_distance;
+use crate::util::toml::{ProfilePackageSpec, StringOrBool, TomlProfile, TomlProfiles, U32OrBool};
+use crate::util::{CargoResult, Config};
 
 /// Collection of all user profiles.
 #[derive(Clone, Debug)]
@@ -67,14 +69,14 @@ impl Profiles {
     /// workspace.
     pub fn get_profile(
         &self,
-        pkg_id: &PackageId,
+        pkg_id: PackageId,
         is_member: bool,
         unit_for: UnitFor,
         mode: CompileMode,
         release: bool,
     ) -> Profile {
         let maker = match mode {
-            CompileMode::Test => {
+            CompileMode::Test | CompileMode::Bench => {
                 if release {
                     &self.bench
                 } else {
@@ -95,7 +97,6 @@ impl Profiles {
                     &self.dev
                 }
             }
-            CompileMode::Bench => &self.bench,
             CompileMode::Doc { .. } => &self.doc,
         };
         let mut profile = maker.get_profile(Some(pkg_id), is_member, unit_for);
@@ -131,7 +132,11 @@ impl Profiles {
     }
 
     /// Used to check for overrides for non-existing packages.
-    pub fn validate_packages(&self, shell: &mut Shell, packages: &PackageSet) -> CargoResult<()> {
+    pub fn validate_packages(
+        &self,
+        shell: &mut Shell,
+        packages: &PackageSet<'_>,
+    ) -> CargoResult<()> {
         self.dev.validate_packages(shell, packages)?;
         self.release.validate_packages(shell, packages)?;
         self.test.validate_packages(shell, packages)?;
@@ -164,7 +169,7 @@ struct ProfileMaker {
 impl ProfileMaker {
     fn get_profile(
         &self,
-        pkg_id: Option<&PackageId>,
+        pkg_id: Option<PackageId>,
         is_member: bool,
         unit_for: UnitFor,
     ) -> Profile {
@@ -178,7 +183,7 @@ impl ProfileMaker {
         profile
     }
 
-    fn validate_packages(&self, shell: &mut Shell, packages: &PackageSet) -> CargoResult<()> {
+    fn validate_packages(&self, shell: &mut Shell, packages: &PackageSet<'_>) -> CargoResult<()> {
         self.validate_packages_toml(shell, packages, &self.toml, true)?;
         self.validate_packages_toml(shell, packages, &self.config, false)?;
         Ok(())
@@ -187,7 +192,7 @@ impl ProfileMaker {
     fn validate_packages_toml(
         &self,
         shell: &mut Shell,
-        packages: &PackageSet,
+        packages: &PackageSet<'_>,
         toml: &Option<TomlProfile>,
         warn_unmatched: bool,
     ) -> CargoResult<()> {
@@ -206,11 +211,13 @@ impl ProfileMaker {
                 .keys()
                 .filter_map(|key| match *key {
                     ProfilePackageSpec::All => None,
-                    ProfilePackageSpec::Spec(ref spec) => if spec.matches(pkg_id) {
-                        Some(spec)
-                    } else {
-                        None
-                    },
+                    ProfilePackageSpec::Spec(ref spec) => {
+                        if spec.matches(pkg_id) {
+                            Some(spec)
+                        } else {
+                            None
+                        }
+                    }
                 })
                 .collect();
             match matches.len() {
@@ -224,7 +231,7 @@ impl ProfileMaker {
                         .map(|spec| spec.to_string())
                         .collect::<Vec<_>>()
                         .join(", ");
-                    bail!(
+                    failure::bail!(
                         "multiple profile overrides in profile `{}` match package `{}`\n\
                          found profile override specs: {}",
                         self.default.name,
@@ -291,7 +298,7 @@ impl ProfileMaker {
 }
 
 fn merge_toml(
-    pkg_id: Option<&PackageId>,
+    pkg_id: Option<PackageId>,
     is_member: bool,
     unit_for: UnitFor,
     profile: &mut Profile,
@@ -314,11 +321,13 @@ fn merge_toml(
                 .iter()
                 .filter_map(|(key, spec_profile)| match *key {
                     ProfilePackageSpec::All => None,
-                    ProfilePackageSpec::Spec(ref s) => if s.matches(pkg_id) {
-                        Some(spec_profile)
-                    } else {
-                        None
-                    },
+                    ProfilePackageSpec::Spec(ref s) => {
+                        if s.matches(pkg_id) {
+                            Some(spec_profile)
+                        } else {
+                            None
+                        }
+                    }
                 });
             if let Some(spec_profile) = matches.next() {
                 merge_profile(profile, spec_profile);
@@ -371,7 +380,7 @@ fn merge_profile(profile: &mut Profile, toml: &TomlProfile) {
 
 /// Profile settings used to determine which compiler flags to use for a
 /// target.
-#[derive(Clone, Copy, Eq)]
+#[derive(Clone, Copy, Eq, PartialOrd, Ord)]
 pub struct Profile {
     pub name: &'static str,
     pub opt_level: InternedString,
@@ -397,7 +406,7 @@ impl Default for Profile {
             debug_assertions: false,
             overflow_checks: false,
             rpath: false,
-            incremental: false,
+            incremental: true,
             panic: None,
         }
     }
@@ -431,7 +440,7 @@ compact_debug! {
 }
 
 impl fmt::Display for Profile {
-    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         write!(f, "Profile({})", self.name)
     }
 }
@@ -458,7 +467,6 @@ impl Profile {
             debuginfo: Some(2),
             debug_assertions: true,
             overflow_checks: true,
-            incremental: true,
             ..Profile::default()
         }
     }
@@ -523,7 +531,7 @@ impl Profile {
 }
 
 /// The link-time-optimization setting.
-#[derive(Clone, Copy, PartialEq, Eq, Debug, Hash)]
+#[derive(Clone, Copy, PartialEq, Eq, Debug, Hash, PartialOrd, Ord)]
 pub enum Lto {
     /// False = no LTO
     /// True = "Fat" LTO
@@ -587,27 +595,36 @@ impl UnitFor {
     pub fn with_for_host(self, for_host: bool) -> UnitFor {
         UnitFor {
             custom_build: self.custom_build,
-            panic_ok: self.panic_ok && !for_host
+            panic_ok: self.panic_ok && !for_host,
         }
     }
 
     /// Returns true if this unit is for a custom build script or one of its
     /// dependencies.
-    pub fn is_custom_build(&self) -> bool {
+    pub fn is_custom_build(self) -> bool {
         self.custom_build
     }
 
     /// Returns true if this unit is allowed to set the `panic` compiler flag.
-    pub fn is_panic_ok(&self) -> bool {
+    pub fn is_panic_ok(self) -> bool {
         self.panic_ok
     }
 
     /// All possible values, used by `clean`.
     pub fn all_values() -> &'static [UnitFor] {
         static ALL: [UnitFor; 3] = [
-            UnitFor { custom_build: false, panic_ok: true },
-            UnitFor { custom_build: true, panic_ok: false },
-            UnitFor { custom_build: false, panic_ok: false },
+            UnitFor {
+                custom_build: false,
+                panic_ok: true,
+            },
+            UnitFor {
+                custom_build: true,
+                panic_ok: false,
+            },
+            UnitFor {
+                custom_build: false,
+                panic_ok: false,
+            },
         ];
         &ALL
     }
@@ -625,12 +642,14 @@ impl ConfigProfiles {
         if let Some(ref profile) = self.dev {
             profile
                 .validate("dev", features, warnings)
-                .chain_err(|| format_err!("config profile `profile.dev` is not valid"))?;
+                .chain_err(|| failure::format_err!("config profile `profile.dev` is not valid"))?;
         }
         if let Some(ref profile) = self.release {
             profile
                 .validate("release", features, warnings)
-                .chain_err(|| format_err!("config profile `profile.release` is not valid"))?;
+                .chain_err(|| {
+                    failure::format_err!("config profile `profile.release` is not valid")
+                })?;
         }
         Ok(())
     }

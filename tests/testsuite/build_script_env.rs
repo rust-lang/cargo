@@ -1,7 +1,7 @@
 use std::fs::File;
 
-use support::project;
-use support::sleep_ms;
+use crate::support::project;
+use crate::support::sleep_ms;
 
 #[test]
 fn rerun_if_env_changes() {
@@ -14,7 +14,8 @@ fn rerun_if_env_changes() {
                 println!("cargo:rerun-if-env-changed=FOO");
             }
         "#,
-        ).build();
+        )
+        .build();
 
     p.cargo("build")
         .with_stderr(
@@ -22,7 +23,8 @@ fn rerun_if_env_changes() {
 [COMPILING] foo v0.0.1 ([..])
 [FINISHED] [..]
 ",
-        ).run();
+        )
+        .run();
     p.cargo("build")
         .env("FOO", "bar")
         .with_stderr(
@@ -30,7 +32,8 @@ fn rerun_if_env_changes() {
 [COMPILING] foo v0.0.1 ([..])
 [FINISHED] [..]
 ",
-        ).run();
+        )
+        .run();
     p.cargo("build")
         .env("FOO", "baz")
         .with_stderr(
@@ -38,7 +41,8 @@ fn rerun_if_env_changes() {
 [COMPILING] foo v0.0.1 ([..])
 [FINISHED] [..]
 ",
-        ).run();
+        )
+        .run();
     p.cargo("build")
         .env("FOO", "baz")
         .with_stderr("[FINISHED] [..]")
@@ -49,7 +53,8 @@ fn rerun_if_env_changes() {
 [COMPILING] foo v0.0.1 ([..])
 [FINISHED] [..]
 ",
-        ).run();
+        )
+        .run();
 }
 
 #[test]
@@ -64,7 +69,8 @@ fn rerun_if_env_or_file_changes() {
                 println!("cargo:rerun-if-changed=foo");
             }
         "#,
-        ).file("foo", "")
+        )
+        .file("foo", "")
         .build();
 
     p.cargo("build")
@@ -73,7 +79,8 @@ fn rerun_if_env_or_file_changes() {
 [COMPILING] foo v0.0.1 ([..])
 [FINISHED] [..]
 ",
-        ).run();
+        )
+        .run();
     p.cargo("build")
         .env("FOO", "bar")
         .with_stderr(
@@ -81,7 +88,8 @@ fn rerun_if_env_or_file_changes() {
 [COMPILING] foo v0.0.1 ([..])
 [FINISHED] [..]
 ",
-        ).run();
+        )
+        .run();
     p.cargo("build")
         .env("FOO", "bar")
         .with_stderr("[FINISHED] [..]")
@@ -95,5 +103,6 @@ fn rerun_if_env_or_file_changes() {
 [COMPILING] foo v0.0.1 ([..])
 [FINISHED] [..]
 ",
-        ).run();
+        )
+        .run();
 }

@@ -3,17 +3,17 @@ use std::fs;
 use std::path::{Path, PathBuf};
 
 use filetime::FileTime;
-use git2;
 use glob::Pattern;
-use ignore::Match;
 use ignore::gitignore::GitignoreBuilder;
+use ignore::Match;
+use log::{trace, warn};
 
-use core::{Dependency, Package, PackageId, Source, SourceId, Summary};
-use core::source::MaybePackage;
-use ops;
-use util::{self, internal, CargoResult};
-use util::paths;
-use util::Config;
+use crate::core::source::MaybePackage;
+use crate::core::{Dependency, Package, PackageId, Source, SourceId, Summary};
+use crate::ops;
+use crate::util::paths;
+use crate::util::Config;
+use crate::util::{self, internal, CargoResult};
 
 pub struct PathSource<'cfg> {
     source_id: SourceId,
@@ -29,9 +29,9 @@ impl<'cfg> PathSource<'cfg> {
     ///
     /// This source will only return the package at precisely the `path`
     /// specified, and it will be an error if there's not a package at `path`.
-    pub fn new(path: &Path, id: &SourceId, config: &'cfg Config) -> PathSource<'cfg> {
+    pub fn new(path: &Path, source_id: SourceId, config: &'cfg Config) -> PathSource<'cfg> {
         PathSource {
-            source_id: id.clone(),
+            source_id,
             path: path.to_path_buf(),
             updated: false,
             packages: Vec::new(),
@@ -48,7 +48,7 @@ impl<'cfg> PathSource<'cfg> {
     ///
     /// Note that this should be used with care and likely shouldn't be chosen
     /// by default!
-    pub fn new_recursive(root: &Path, id: &SourceId, config: &'cfg Config) -> PathSource<'cfg> {
+    pub fn new_recursive(root: &Path, id: SourceId, config: &'cfg Config) -> PathSource<'cfg> {
         PathSource {
             recursive: true,
             ..PathSource::new(root, id, config)
@@ -78,10 +78,10 @@ impl<'cfg> PathSource<'cfg> {
         if self.updated {
             Ok(self.packages.clone())
         } else if self.recursive {
-            ops::read_packages(&self.path, &self.source_id, self.config)
+            ops::read_packages(&self.path, self.source_id, self.config)
         } else {
             let path = self.path.join("Cargo.toml");
-            let (pkg, _) = ops::read_package(&path, &self.source_id, self.config)?;
+            let (pkg, _) = ops::read_package(&path, self.source_id, self.config)?;
             Ok(vec![pkg])
         }
     }
@@ -124,16 +124,18 @@ impl<'cfg> PathSource<'cfg> {
                 p
             };
             Pattern::new(pattern)
-                .map_err(|e| format_err!("could not parse glob pattern `{}`: {}", p, e))
+                .map_err(|e| failure::format_err!("could not parse glob pattern `{}`: {}", p, e))
         };
 
-        let glob_exclude = pkg.manifest()
+        let glob_exclude = pkg
+            .manifest()
             .exclude()
             .iter()
             .map(|p| glob_parse(p))
             .collect::<Result<Vec<_>, _>>()?;
 
-        let glob_include = pkg.manifest()
+        let glob_include = pkg
+            .manifest()
             .include()
             .iter()
             .map(|p| glob_parse(p))
@@ -176,7 +178,7 @@ impl<'cfg> PathSource<'cfg> {
                 {
                     Match::None => Ok(true),
                     Match::Ignore(_) => Ok(false),
-                    Match::Whitelist(pattern) => Err(format_err!(
+                    Match::Whitelist(pattern) => Err(failure::format_err!(
                         "exclude rules cannot start with `!`: {}",
                         pattern.original()
                     )),
@@ -187,7 +189,7 @@ impl<'cfg> PathSource<'cfg> {
                 {
                     Match::None => Ok(false),
                     Match::Ignore(_) => Ok(true),
-                    Match::Whitelist(pattern) => Err(format_err!(
+                    Match::Whitelist(pattern) => Err(failure::format_err!(
                         "include rules cannot start with `!`: {}",
                         pattern.original()
                     )),
@@ -255,7 +257,7 @@ impl<'cfg> PathSource<'cfg> {
         &self,
         pkg: &Package,
         root: &Path,
-        filter: &mut FnMut(&Path) -> CargoResult<bool>,
+        filter: &mut dyn FnMut(&Path) -> CargoResult<bool>,
     ) -> Option<CargoResult<Vec<PathBuf>>> {
         // If this package is in a git repository, then we really do want to
         // query the git repository as it takes into account items such as
@@ -298,11 +300,12 @@ impl<'cfg> PathSource<'cfg> {
         &self,
         pkg: &Package,
         repo: &git2::Repository,
-        filter: &mut FnMut(&Path) -> CargoResult<bool>,
+        filter: &mut dyn FnMut(&Path) -> CargoResult<bool>,
     ) -> CargoResult<Vec<PathBuf>> {
         warn!("list_files_git {}", pkg.package_id());
         let index = repo.index()?;
-        let root = repo.workdir()
+        let root = repo
+            .workdir()
             .ok_or_else(|| internal("Can't list files on a bare repository."))?;
         let pkg_path = pkg.root();
 
@@ -374,8 +377,9 @@ impl<'cfg> PathSource<'cfg> {
             if is_dir.unwrap_or_else(|| file_path.is_dir()) {
                 warn!("  found submodule {}", file_path.display());
                 let rel = util::without_prefix(&file_path, root).unwrap();
-                let rel = rel.to_str()
-                    .ok_or_else(|| format_err!("invalid utf-8 filename: {}", rel.display()))?;
+                let rel = rel.to_str().ok_or_else(|| {
+                    failure::format_err!("invalid utf-8 filename: {}", rel.display())
+                })?;
                 // Git submodules are currently only named through `/` path
                 // separators, explicitly not `\` which windows uses. Who knew?
                 let rel = rel.replace(r"\", "/");
@@ -398,8 +402,8 @@ impl<'cfg> PathSource<'cfg> {
 
         #[cfg(unix)]
         fn join(path: &Path, data: &[u8]) -> CargoResult<PathBuf> {
-            use std::os::unix::prelude::*;
             use std::ffi::OsStr;
+            use std::os::unix::prelude::*;
             Ok(path.join(<OsStr as OsStrExt>::from_bytes(data)))
         }
         #[cfg(windows)]
@@ -418,7 +422,7 @@ impl<'cfg> PathSource<'cfg> {
     fn list_files_walk(
         &self,
         pkg: &Package,
-        filter: &mut FnMut(&Path) -> CargoResult<bool>,
+        filter: &mut dyn FnMut(&Path) -> CargoResult<bool>,
     ) -> CargoResult<Vec<PathBuf>> {
         let mut ret = Vec::new();
         PathSource::walk(pkg.root(), &mut ret, true, filter)?;
@@ -429,7 +433,7 @@ impl<'cfg> PathSource<'cfg> {
         path: &Path,
         ret: &mut Vec<PathBuf>,
         is_root: bool,
-        filter: &mut FnMut(&Path) -> CargoResult<bool>,
+        filter: &mut dyn FnMut(&Path) -> CargoResult<bool>,
     ) -> CargoResult<()> {
         if !fs::metadata(&path).map(|m| m.is_dir()).unwrap_or(false) {
             if (*filter)(path)? {
@@ -497,13 +501,13 @@ impl<'cfg> PathSource<'cfg> {
 }
 
 impl<'cfg> Debug for PathSource<'cfg> {
-    fn fmt(&self, f: &mut Formatter) -> fmt::Result {
+    fn fmt(&self, f: &mut Formatter<'_>) -> fmt::Result {
         write!(f, "the paths source")
     }
 }
 
 impl<'cfg> Source for PathSource<'cfg> {
-    fn query(&mut self, dep: &Dependency, f: &mut FnMut(Summary)) -> CargoResult<()> {
+    fn query(&mut self, dep: &Dependency, f: &mut dyn FnMut(Summary)) -> CargoResult<()> {
         for s in self.packages.iter().map(|p| p.summary()) {
             if dep.matches(s) {
                 f(s.clone())
@@ -512,7 +516,7 @@ impl<'cfg> Source for PathSource<'cfg> {
         Ok(())
     }
 
-    fn fuzzy_query(&mut self, _dep: &Dependency, f: &mut FnMut(Summary)) -> CargoResult<()> {
+    fn fuzzy_query(&mut self, _dep: &Dependency, f: &mut dyn FnMut(Summary)) -> CargoResult<()> {
         for s in self.packages.iter().map(|p| p.summary()) {
             f(s.clone())
         }
@@ -527,8 +531,8 @@ impl<'cfg> Source for PathSource<'cfg> {
         false
     }
 
-    fn source_id(&self) -> &SourceId {
-        &self.source_id
+    fn source_id(&self) -> SourceId {
+        self.source_id
     }
 
     fn update(&mut self) -> CargoResult<()> {
@@ -541,7 +545,7 @@ impl<'cfg> Source for PathSource<'cfg> {
         Ok(())
     }
 
-    fn download(&mut self, id: &PackageId) -> CargoResult<MaybePackage> {
+    fn download(&mut self, id: PackageId) -> CargoResult<MaybePackage> {
         trace!("getting packages; id={}", id);
 
         let pkg = self.packages.iter().find(|pkg| pkg.package_id() == id);
@@ -550,7 +554,7 @@ impl<'cfg> Source for PathSource<'cfg> {
             .ok_or_else(|| internal(format!("failed to find {} in path source", id)))
     }
 
-    fn finish_download(&mut self, _id: &PackageId, _data: Vec<u8>) -> CargoResult<Package> {
+    fn finish_download(&mut self, _id: PackageId, _data: Vec<u8>) -> CargoResult<Package> {
         panic!("no download should have started")
     }
 

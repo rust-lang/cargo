@@ -1,18 +1,22 @@
-use std::path::PathBuf;
 use std::fs;
+use std::path::PathBuf;
 
+use crate::core::compiler::{BuildConfig, MessageFormat};
+use crate::core::Workspace;
+use crate::ops::{CompileFilter, CompileOptions, NewOptions, Packages, VersionControl};
+use crate::sources::CRATES_IO_REGISTRY;
+use crate::util::important_paths::find_root_manifest_for_wd;
+use crate::util::{paths, validate_package_name};
+use crate::util::{
+    print_available_benches, print_available_binaries, print_available_examples,
+    print_available_tests,
+};
+use crate::CargoResult;
 use clap::{self, SubCommand};
-use cargo::CargoResult;
-use cargo::core::Workspace;
-use cargo::core::compiler::{BuildConfig, MessageFormat};
-use cargo::ops::{CompileFilter, CompileOptions, NewOptions, Packages, VersionControl};
-use cargo::sources::CRATES_IO_REGISTRY;
-use cargo::util::paths;
-use cargo::util::important_paths::find_root_manifest_for_wd;
 
+pub use crate::core::compiler::CompileMode;
+pub use crate::{CliError, CliResult, Config};
 pub use clap::{AppSettings, Arg, ArgMatches};
-pub use cargo::{CliError, CliResult, Config};
-pub use cargo::core::compiler::CompileMode;
 
 pub type App = clap::App<'static, 'static>;
 
@@ -60,18 +64,18 @@ pub trait AppExt: Sized {
         all: &'static str,
     ) -> Self {
         self.arg_targets_lib_bin(lib, bin, bins)
-            ._arg(multi_opt("example", "NAME", example))
+            ._arg(optional_multi_opt("example", "NAME", example))
             ._arg(opt("examples", examples))
-            ._arg(multi_opt("test", "NAME", test))
+            ._arg(optional_multi_opt("test", "NAME", test))
             ._arg(opt("tests", tests))
-            ._arg(multi_opt("bench", "NAME", bench))
+            ._arg(optional_multi_opt("bench", "NAME", bench))
             ._arg(opt("benches", benches))
             ._arg(opt("all-targets", all))
     }
 
     fn arg_targets_lib_bin(self, lib: &'static str, bin: &'static str, bins: &'static str) -> Self {
         self._arg(opt("lib", lib))
-            ._arg(multi_opt("bin", "NAME", bin))
+            ._arg(optional_multi_opt("bin", "NAME", bin))
             ._arg(opt("bins", bins))
     }
 
@@ -82,25 +86,26 @@ pub trait AppExt: Sized {
         example: &'static str,
         examples: &'static str,
     ) -> Self {
-        self._arg(multi_opt("bin", "NAME", bin))
+        self._arg(optional_multi_opt("bin", "NAME", bin))
             ._arg(opt("bins", bins))
-            ._arg(multi_opt("example", "NAME", example))
+            ._arg(optional_multi_opt("example", "NAME", example))
             ._arg(opt("examples", examples))
     }
 
     fn arg_targets_bin_example(self, bin: &'static str, example: &'static str) -> Self {
-        self._arg(multi_opt("bin", "NAME", bin))
-            ._arg(multi_opt("example", "NAME", example))
+        self._arg(optional_multi_opt("bin", "NAME", bin))
+            ._arg(optional_multi_opt("example", "NAME", example))
     }
 
     fn arg_features(self) -> Self {
         self._arg(
             opt("features", "Space-separated list of features to activate").value_name("FEATURES"),
-        )._arg(opt("all-features", "Activate all available features"))
-            ._arg(opt(
-                "no-default-features",
-                "Do not activate the `default` feature",
-            ))
+        )
+        ._arg(opt("all-features", "Activate all available features"))
+        ._arg(opt(
+            "no-default-features",
+            "Do not activate the `default` feature",
+        ))
     }
 
     fn arg_release(self, release: &'static str) -> Self {
@@ -116,7 +121,9 @@ pub trait AppExt: Sized {
     }
 
     fn arg_target_dir(self) -> Self {
-        self._arg(opt("target-dir", "Directory for all generated artifacts").value_name("DIRECTORY"))
+        self._arg(
+            opt("target-dir", "Directory for all generated artifacts").value_name("DIRECTORY"),
+        )
     }
 
     fn arg_manifest_path(self) -> Self {
@@ -146,22 +153,24 @@ pub trait AppExt: Sized {
                  control system (git, hg, pijul, or fossil) or do not \
                  initialize any version control at all (none), overriding \
                  a global configuration.",
-            ).value_name("VCS")
-                .possible_values(&["git", "hg", "pijul", "fossil", "none"]),
+            )
+            .value_name("VCS")
+            .possible_values(&["git", "hg", "pijul", "fossil", "none"]),
         )
-            ._arg(opt("bin", "Use a binary (application) template [default]"))
-            ._arg(opt("lib", "Use a library template"))
-            ._arg(
-                opt("edition", "Edition to set for the crate generated")
-                    .possible_values(&["2015", "2018"])
-                    .value_name("YEAR")
+        ._arg(opt("bin", "Use a binary (application) template [default]"))
+        ._arg(opt("lib", "Use a library template"))
+        ._arg(
+            opt("edition", "Edition to set for the crate generated")
+                .possible_values(&["2015", "2018"])
+                .value_name("YEAR"),
+        )
+        ._arg(
+            opt(
+                "name",
+                "Set the resulting package name, defaults to the directory name",
             )
-            ._arg(
-                opt(
-                    "name",
-                    "Set the resulting package name, defaults to the directory name",
-                ).value_name("NAME"),
-            )
+            .value_name("NAME"),
+        )
     }
 
     fn arg_index(self) -> Self {
@@ -171,6 +180,10 @@ pub trait AppExt: Sized {
                     .value_name("HOST")
                     .hidden(true),
             )
+    }
+
+    fn arg_dry_run(self, dry_run: &'static str) -> Self {
+        self._arg(opt("dry-run", dry_run))
     }
 }
 
@@ -182,6 +195,18 @@ impl AppExt for App {
 
 pub fn opt(name: &'static str, help: &'static str) -> Arg<'static, 'static> {
     Arg::with_name(name).long(name).help(help)
+}
+
+pub fn optional_multi_opt(
+    name: &'static str,
+    value_name: &'static str,
+    help: &'static str,
+) -> Arg<'static, 'static> {
+    opt(name, help)
+        .value_name(value_name)
+        .multiple(true)
+        .min_values(0)
+        .number_of_values(1)
 }
 
 pub fn multi_opt(
@@ -229,10 +254,10 @@ pub trait ArgMatchesExt {
             // but in this particular case we need it to fix #3586.
             let path = paths::normalize_path(&path);
             if !path.ends_with("Cargo.toml") {
-                bail!("the manifest-path must be a path to a Cargo.toml file")
+                failure::bail!("the manifest-path must be a path to a Cargo.toml file")
             }
             if fs::metadata(&path).is_err() {
-                bail!(
+                failure::bail!(
                     "manifest path `{}` does not exist",
                     self._value_of("manifest-path").unwrap()
                 )
@@ -263,6 +288,7 @@ pub trait ArgMatchesExt {
         &self,
         config: &'a Config,
         mode: CompileMode,
+        workspace: Option<&Workspace<'a>>,
     ) -> CargoResult<CompileOptions<'a>> {
         let spec = Packages::from_flags(
             self._is_present("all"),
@@ -290,7 +316,7 @@ pub trait ArgMatchesExt {
         build_config.release = self._is_present("release");
         build_config.build_plan = self._is_present("build-plan");
         if build_config.build_plan && !config.cli_unstable().unstable_options {
-            Err(format_err!(
+            Err(failure::format_err!(
                 "`--build-plan` flag is unstable, pass `-Z unstable-options` to enable it"
             ))?;
         };
@@ -319,6 +345,11 @@ pub trait ArgMatchesExt {
             local_rustdoc_args: None,
             export_dir: None,
         };
+
+        if let Some(ws) = workspace {
+            self.check_optional_opts(ws, &opts)?;
+        }
+
         Ok(opts)
     }
 
@@ -326,8 +357,9 @@ pub trait ArgMatchesExt {
         &self,
         config: &'a Config,
         mode: CompileMode,
+        workspace: Option<&Workspace<'a>>,
     ) -> CargoResult<CompileOptions<'a>> {
-        let mut compile_opts = self.compile_options(config, mode)?;
+        let mut compile_opts = self.compile_options(config, mode, workspace)?;
         compile_opts.spec = Packages::Packages(self._values_of("package"));
         Ok(compile_opts)
     }
@@ -356,27 +388,25 @@ pub trait ArgMatchesExt {
         match self._value_of("registry") {
             Some(registry) => {
                 if !config.cli_unstable().unstable_options {
-                    return Err(format_err!(
+                    return Err(failure::format_err!(
                         "registry option is an unstable feature and \
                          requires -Zunstable-options to use."
                     ));
                 }
+                validate_package_name(registry, "registry name", "")?;
 
                 if registry == CRATES_IO_REGISTRY {
                     // If "crates.io" is specified then we just need to return None
                     // as that will cause cargo to use crates.io. This is required
-                    // for the case where a default alterative registry is used
+                    // for the case where a default alternative registry is used
                     // but the user wants to switch back to crates.io for a single
                     // command.
                     Ok(None)
-                }
-                else {
-                    Ok(Some(registry.to_string()))                    
+                } else {
+                    Ok(Some(registry.to_string()))
                 }
             }
-            None => {
-                config.default_registry()
-            }
+            None => config.default_registry(),
         }
     }
 
@@ -406,6 +436,34 @@ about this warning.";
         Ok(index)
     }
 
+    fn check_optional_opts(
+        &self,
+        workspace: &Workspace<'_>,
+        compile_opts: &CompileOptions<'_>,
+    ) -> CargoResult<()> {
+        if self.is_present_with_zero_values("example") {
+            print_available_examples(&workspace, &compile_opts)?;
+        }
+
+        if self.is_present_with_zero_values("bin") {
+            print_available_binaries(&workspace, &compile_opts)?;
+        }
+
+        if self.is_present_with_zero_values("bench") {
+            print_available_benches(&workspace, &compile_opts)?;
+        }
+
+        if self.is_present_with_zero_values("test") {
+            print_available_tests(&workspace, &compile_opts)?;
+        }
+
+        Ok(())
+    }
+
+    fn is_present_with_zero_values(&self, name: &str) -> bool {
+        self._is_present(name) && self._value_of(name).is_none()
+    }
+
     fn _value_of(&self, name: &str) -> Option<&str>;
 
     fn _values_of(&self, name: &str) -> Vec<String>;
@@ -430,7 +488,7 @@ impl<'a> ArgMatchesExt for ArgMatches<'a> {
     }
 }
 
-pub fn values(args: &ArgMatches, name: &str) -> Vec<String> {
+pub fn values(args: &ArgMatches<'_>, name: &str) -> Vec<String> {
     args.values_of(name)
         .unwrap_or_default()
         .map(|s| s.to_string())
@@ -439,7 +497,7 @@ pub fn values(args: &ArgMatches, name: &str) -> Vec<String> {
 
 #[derive(PartialEq, PartialOrd, Eq, Ord)]
 pub enum CommandInfo {
-    BuiltIn { name: String, about: Option<String>, },
+    BuiltIn { name: String, about: Option<String> },
     External { name: String, path: PathBuf },
 }
 

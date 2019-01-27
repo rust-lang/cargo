@@ -1,4 +1,4 @@
-use command_prelude::*;
+use crate::command_prelude::*;
 
 use cargo::ops;
 
@@ -32,7 +32,7 @@ Example Package IDs
         )
 }
 
-pub fn exec(config: &mut Config, args: &ArgMatches) -> CliResult {
+pub fn exec(config: &mut Config, args: &ArgMatches<'_>) -> CliResult {
     let ws = args.workspace(config)?;
     let spec = args.value_of("spec").or_else(|| args.value_of("package"));
     let spec = ops::pkgid(&ws, spec)?;

@@ -4,10 +4,10 @@ use std::io::prelude::*;
 use std::net::TcpListener;
 use std::thread;
 
+use crate::support::paths;
+use crate::support::{basic_manifest, project};
 use bufstream::BufStream;
 use git2;
-use support::paths;
-use support::{basic_manifest, project};
 
 // Test that HTTP auth is offered from `credential.helper`
 #[test]
@@ -15,7 +15,7 @@ fn http_auth_offered() {
     let server = TcpListener::bind("127.0.0.1:0").unwrap();
     let addr = server.local_addr().unwrap();
 
-    fn headers(rdr: &mut BufRead) -> HashSet<String> {
+    fn headers(rdr: &mut dyn BufRead) -> HashSet<String> {
         let valid = ["GET", "Authorization", "Accept"];
         rdr.lines()
             .map(|s| s.unwrap())
@@ -34,13 +34,15 @@ fn http_auth_offered() {
             WWW-Authenticate: Basic realm=\"wheee\"\r\n
             \r\n\
         ",
-        ).unwrap();
+        )
+        .unwrap();
         assert_eq!(
             req,
             vec![
                 "GET /foo/bar/info/refs?service=git-upload-pack HTTP/1.1",
                 "Accept: */*",
-            ].into_iter()
+            ]
+            .into_iter()
             .map(|s| s.to_string())
             .collect()
         );
@@ -54,14 +56,16 @@ fn http_auth_offered() {
             WWW-Authenticate: Basic realm=\"wheee\"\r\n
             \r\n\
         ",
-        ).unwrap();
+        )
+        .unwrap();
         assert_eq!(
             req,
             vec![
                 "GET /foo/bar/info/refs?service=git-upload-pack HTTP/1.1",
                 "Authorization: Basic Zm9vOmJhcg==",
                 "Accept: */*",
-            ].into_iter()
+            ]
+            .into_iter()
             .map(|s| s.to_string())
             .collect()
         );
@@ -78,7 +82,8 @@ fn http_auth_offered() {
                 println!("password=bar");
             }
         "#,
-        ).build();
+        )
+        .build();
 
     script.cargo("build -v").run();
     let script = script.bin("script");
@@ -104,14 +109,16 @@ fn http_auth_offered() {
         "#,
                 addr.port()
             ),
-        ).file("src/main.rs", "")
+        )
+        .file("src/main.rs", "")
         .file(
             ".cargo/config",
             "\
         [net]
         retry = 0
         ",
-        ).build();
+        )
+        .build();
 
     // This is a "contains" check because the last error differs by platform,
     // may span multiple lines, and isn't relevant to this test.
@@ -135,7 +142,8 @@ attempted to find username/password via `credential.helper`, but [..]
 Caused by:
 ",
             addr = addr
-        )).run();
+        ))
+        .run();
 
     t.join().ok().unwrap();
 }
@@ -167,21 +175,24 @@ fn https_something_happens() {
         "#,
                 addr.port()
             ),
-        ).file("src/main.rs", "")
+        )
+        .file("src/main.rs", "")
         .file(
             ".cargo/config",
             "\
         [net]
         retry = 0
         ",
-        ).build();
+        )
+        .build();
 
     p.cargo("build -v")
         .with_status(101)
         .with_stderr_contains(&format!(
             "[UPDATING] git repository `https://{addr}/foo/bar`",
             addr = addr
-        )).with_stderr_contains(&format!(
+        ))
+        .with_stderr_contains(&format!(
             "\
 Caused by:
   {errmsg}
@@ -196,7 +207,8 @@ Caused by:
             } else {
                 "[..]SSL error: [..]"
             }
-        )).run();
+        ))
+        .run();
 
     t.join().ok().unwrap();
 }
@@ -225,7 +237,8 @@ fn ssh_something_happens() {
         "#,
                 addr.port()
             ),
-        ).file("src/main.rs", "")
+        )
+        .file("src/main.rs", "")
         .build();
 
     p.cargo("build -v")
@@ -233,11 +246,13 @@ fn ssh_something_happens() {
         .with_stderr_contains(&format!(
             "[UPDATING] git repository `ssh://{addr}/foo/bar`",
             addr = addr
-        )).with_stderr_contains(
+        ))
+        .with_stderr_contains(
             "\
 Caused by:
   [..]failed to start SSH session: Failed getting banner[..]
 ",
-        ).run();
+        )
+        .run();
     t.join().ok().unwrap();
 }

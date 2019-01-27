@@ -1,21 +1,12 @@
 use std::fs::{self, File};
 use std::io::prelude::*;
-use std::path::PathBuf;
 
+use crate::support::cargo_process;
+use crate::support::git;
+use crate::support::paths::{self, CargoPathExt};
+use crate::support::registry::{self, registry_path, registry_url, Dependency, Package};
+use crate::support::{basic_manifest, project};
 use cargo::util::paths::remove_dir_all;
-use support::cargo_process;
-use support::git;
-use support::paths::{self, CargoPathExt};
-use support::registry::{self, Package, Dependency};
-use support::{basic_manifest, project};
-use url::Url;
-
-fn registry_path() -> PathBuf {
-    paths::root().join("registry")
-}
-fn registry() -> Url {
-    Url::from_file_path(&*registry_path()).ok().unwrap()
-}
 
 #[test]
 fn simple() {
@@ -31,7 +22,8 @@ fn simple() {
             [dependencies]
             bar = ">= 0.0.0"
         "#,
-        ).file("src/main.rs", "fn main() {}")
+        )
+        .file("src/main.rs", "fn main() {}")
         .build();
 
     Package::new("bar", "0.0.1").publish();
@@ -46,8 +38,9 @@ fn simple() {
 [COMPILING] foo v0.0.1 ([CWD])
 [FINISHED] dev [unoptimized + debuginfo] target(s) in [..]s
 ",
-            reg = registry::registry_path().to_str().unwrap()
-        )).run();
+            reg = registry_path().to_str().unwrap()
+        ))
+        .run();
 
     p.cargo("clean").run();
 
@@ -59,7 +52,8 @@ fn simple() {
 [COMPILING] foo v0.0.1 ([CWD])
 [FINISHED] dev [unoptimized + debuginfo] target(s) in [..]s
 ",
-        ).run();
+        )
+        .run();
 }
 
 #[test]
@@ -76,7 +70,8 @@ fn deps() {
             [dependencies]
             bar = ">= 0.0.0"
         "#,
-        ).file("src/main.rs", "fn main() {}")
+        )
+        .file("src/main.rs", "fn main() {}")
         .build();
 
     Package::new("baz", "0.0.1").publish();
@@ -94,8 +89,9 @@ fn deps() {
 [COMPILING] foo v0.0.1 ([CWD])
 [FINISHED] dev [unoptimized + debuginfo] target(s) in [..]s
 ",
-            reg = registry::registry_path().to_str().unwrap()
-        )).run();
+            reg = registry_path().to_str().unwrap()
+        ))
+        .run();
 }
 
 #[test]
@@ -114,7 +110,8 @@ fn nonexistent() {
             [dependencies]
             nonexistent = ">= 0.0.0"
         "#,
-        ).file("src/main.rs", "fn main() {}")
+        )
+        .file("src/main.rs", "fn main() {}")
         .build();
 
     p.cargo("build")
@@ -126,7 +123,8 @@ error: no matching package named `nonexistent` found
 location searched: registry [..]
 required by package `foo v0.0.1 ([..])`
 ",
-        ).run();
+        )
+        .run();
 }
 
 #[test]
@@ -145,7 +143,8 @@ fn wrong_case() {
             [dependencies]
             Init = ">= 0.0.0"
         "#,
-        ).file("src/main.rs", "fn main() {}")
+        )
+        .file("src/main.rs", "fn main() {}")
         .build();
 
     // #5678 to make this work
@@ -156,10 +155,11 @@ fn wrong_case() {
 [UPDATING] [..] index
 error: no matching package named `Init` found
 location searched: registry [..]
-did you mean: init
+perhaps you meant: init
 required by package `foo v0.0.1 ([..])`
 ",
-        ).run();
+        )
+        .run();
 }
 
 #[test]
@@ -178,7 +178,8 @@ fn mis_hyphenated() {
             [dependencies]
             mis_hyphenated = ">= 0.0.0"
         "#,
-        ).file("src/main.rs", "fn main() {}")
+        )
+        .file("src/main.rs", "fn main() {}")
         .build();
 
     // #2775 to make this work
@@ -189,10 +190,11 @@ fn mis_hyphenated() {
 [UPDATING] [..] index
 error: no matching package named `mis_hyphenated` found
 location searched: registry [..]
-did you mean: mis-hyphenated
+perhaps you meant: mis-hyphenated
 required by package `foo v0.0.1 ([..])`
 ",
-        ).run();
+        )
+        .run();
 }
 
 #[test]
@@ -209,7 +211,8 @@ fn wrong_version() {
             [dependencies]
             foo = ">= 1.0.0"
         "#,
-        ).file("src/main.rs", "fn main() {}")
+        )
+        .file("src/main.rs", "fn main() {}")
         .build();
 
     Package::new("foo", "0.0.1").publish();
@@ -224,7 +227,8 @@ error: failed to select a version for the requirement `foo = \">= 1.0.0\"`
   location searched: `[..]` index (which is replacing registry `[..]`)
 required by package `foo v0.0.1 ([..])`
 ",
-        ).run();
+        )
+        .run();
 
     Package::new("foo", "0.0.3").publish();
     Package::new("foo", "0.0.4").publish();
@@ -238,7 +242,8 @@ error: failed to select a version for the requirement `foo = \">= 1.0.0\"`
   location searched: `[..]` index (which is replacing registry `[..]`)
 required by package `foo v0.0.1 ([..])`
 ",
-        ).run();
+        )
+        .run();
 }
 
 #[test]
@@ -255,7 +260,8 @@ fn bad_cksum() {
             [dependencies]
             bad-cksum = ">= 0.0.0"
         "#,
-        ).file("src/main.rs", "fn main() {}")
+        )
+        .file("src/main.rs", "fn main() {}")
         .build();
 
     let pkg = Package::new("bad-cksum", "0.0.1");
@@ -274,7 +280,8 @@ fn bad_cksum() {
 Caused by:
   failed to verify the checksum of `bad-cksum v0.0.1 (registry `[ROOT][..]`)`
 ",
-        ).run();
+        )
+        .run();
 }
 
 #[test]
@@ -293,7 +300,8 @@ fn update_registry() {
             [dependencies]
             notyet = ">= 0.0.0"
         "#,
-        ).file("src/main.rs", "fn main() {}")
+        )
+        .file("src/main.rs", "fn main() {}")
         .build();
 
     p.cargo("build")
@@ -304,7 +312,8 @@ error: no matching package named `notyet` found
 location searched: registry `[..]`
 required by package `foo v0.0.1 ([..])`
 ",
-        ).run();
+        )
+        .run();
 
     Package::new("notyet", "0.0.1").publish();
 
@@ -318,8 +327,9 @@ required by package `foo v0.0.1 ([..])`
 [COMPILING] foo v0.0.1 ([CWD])
 [FINISHED] dev [unoptimized + debuginfo] target(s) in [..]s
 ",
-            reg = registry::registry_path().to_str().unwrap()
-        )).run();
+            reg = registry_path().to_str().unwrap()
+        ))
+        .run();
 }
 
 #[test]
@@ -342,7 +352,8 @@ fn package_with_path_deps() {
             version = "0.0.1"
             path = "notyet"
         "#,
-        ).file("src/main.rs", "fn main() {}")
+        )
+        .file("src/main.rs", "fn main() {}")
         .file("notyet/Cargo.toml", &basic_manifest("notyet", "0.0.1"))
         .file("notyet/src/lib.rs", "")
         .build();
@@ -358,7 +369,8 @@ Caused by:
 location searched: registry [..]
 required by package `foo v0.0.1 ([..])`
 ",
-        ).run();
+        )
+        .run();
 
     Package::new("notyet", "0.0.1").publish();
 
@@ -374,7 +386,8 @@ required by package `foo v0.0.1 ([..])`
 [COMPILING] foo v0.0.1 ([CWD][..])
 [FINISHED] dev [unoptimized + debuginfo] target(s) in [..]s
 ",
-        ).run();
+        )
+        .run();
 }
 
 #[test]
@@ -391,7 +404,8 @@ fn lockfile_locks() {
             [dependencies]
             bar = "*"
         "#,
-        ).file("src/main.rs", "fn main() {}")
+        )
+        .file("src/main.rs", "fn main() {}")
         .build();
 
     Package::new("bar", "0.0.1").publish();
@@ -406,7 +420,8 @@ fn lockfile_locks() {
 [COMPILING] foo v0.0.1 ([CWD])
 [FINISHED] dev [unoptimized + debuginfo] target(s) in [..]s
 ",
-        ).run();
+        )
+        .run();
 
     p.root().move_into_the_past();
     Package::new("bar", "0.0.2").publish();
@@ -428,7 +443,8 @@ fn lockfile_locks_transitively() {
             [dependencies]
             bar = "*"
         "#,
-        ).file("src/main.rs", "fn main() {}")
+        )
+        .file("src/main.rs", "fn main() {}")
         .build();
 
     Package::new("baz", "0.0.1").publish();
@@ -446,7 +462,8 @@ fn lockfile_locks_transitively() {
 [COMPILING] foo v0.0.1 ([CWD])
 [FINISHED] dev [unoptimized + debuginfo] target(s) in [..]s
 ",
-        ).run();
+        )
+        .run();
 
     p.root().move_into_the_past();
     Package::new("baz", "0.0.2").publish();
@@ -469,7 +486,8 @@ fn yanks_are_not_used() {
             [dependencies]
             bar = "*"
         "#,
-        ).file("src/main.rs", "fn main() {}")
+        )
+        .file("src/main.rs", "fn main() {}")
         .build();
 
     Package::new("baz", "0.0.1").publish();
@@ -492,7 +510,8 @@ fn yanks_are_not_used() {
 [COMPILING] foo v0.0.1 ([CWD])
 [FINISHED] dev [unoptimized + debuginfo] target(s) in [..]s
 ",
-        ).run();
+        )
+        .run();
 }
 
 #[test]
@@ -509,7 +528,8 @@ fn relying_on_a_yank_is_bad() {
             [dependencies]
             bar = "*"
         "#,
-        ).file("src/main.rs", "fn main() {}")
+        )
+        .file("src/main.rs", "fn main() {}")
         .build();
 
     Package::new("baz", "0.0.1").publish();
@@ -526,7 +546,8 @@ error: failed to select a version for the requirement `baz = \"= 0.0.2\"`
 required by package `bar v0.0.1`
     ... which is depended on by `foo [..]`
 ",
-        ).run();
+        )
+        .run();
 }
 
 #[test]
@@ -543,14 +564,15 @@ fn yanks_in_lockfiles_are_ok() {
             [dependencies]
             bar = "*"
         "#,
-        ).file("src/main.rs", "fn main() {}")
+        )
+        .file("src/main.rs", "fn main() {}")
         .build();
 
     Package::new("bar", "0.0.1").publish();
 
     p.cargo("build").run();
 
-    registry::registry_path().join("3").rm_rf();
+    registry_path().join("3").rm_rf();
 
     Package::new("bar", "0.0.1").yanked(true).publish();
 
@@ -564,7 +586,8 @@ error: no matching package named `bar` found
 location searched: registry [..]
 required by package `foo v0.0.1 ([..])`
 ",
-        ).run();
+        )
+        .run();
 }
 
 #[test]
@@ -581,7 +604,8 @@ fn update_with_lockfile_if_packages_missing() {
             [dependencies]
             bar = "*"
         "#,
-        ).file("src/main.rs", "fn main() {}")
+        )
+        .file("src/main.rs", "fn main() {}")
         .build();
 
     Package::new("bar", "0.0.1").publish();
@@ -597,7 +621,8 @@ fn update_with_lockfile_if_packages_missing() {
 [DOWNLOADED] bar v0.0.1 (registry `[ROOT][..]`)
 [FINISHED] dev [unoptimized + debuginfo] target(s) in [..]s
 ",
-        ).run();
+        )
+        .run();
 }
 
 #[test]
@@ -614,7 +639,8 @@ fn update_lockfile() {
             [dependencies]
             bar = "*"
         "#,
-        ).file("src/main.rs", "fn main() {}")
+        )
+        .file("src/main.rs", "fn main() {}")
         .build();
 
     println!("0.0.1");
@@ -631,7 +657,8 @@ fn update_lockfile() {
 [UPDATING] `[..]` index
 [UPDATING] bar v0.0.1 -> v0.0.2
 ",
-        ).run();
+        )
+        .run();
 
     println!("0.0.2 build");
     p.cargo("build")
@@ -643,7 +670,8 @@ fn update_lockfile() {
 [COMPILING] foo v0.0.1 ([CWD])
 [FINISHED] dev [unoptimized + debuginfo] target(s) in [..]s
 ",
-        ).run();
+        )
+        .run();
 
     println!("0.0.3 update");
     p.cargo("update -p bar")
@@ -652,7 +680,8 @@ fn update_lockfile() {
 [UPDATING] `[..]` index
 [UPDATING] bar v0.0.2 -> v0.0.3
 ",
-        ).run();
+        )
+        .run();
 
     println!("0.0.3 build");
     p.cargo("build")
@@ -664,7 +693,8 @@ fn update_lockfile() {
 [COMPILING] foo v0.0.1 ([CWD])
 [FINISHED] dev [unoptimized + debuginfo] target(s) in [..]s
 ",
-        ).run();
+        )
+        .run();
 
     println!("new dependencies update");
     Package::new("bar", "0.0.4").dep("spam", "0.2.5").publish();
@@ -676,7 +706,8 @@ fn update_lockfile() {
 [UPDATING] bar v0.0.3 -> v0.0.4
 [ADDING] spam v0.2.5
 ",
-        ).run();
+        )
+        .run();
 
     println!("new dependencies update");
     Package::new("bar", "0.0.5").publish();
@@ -687,7 +718,8 @@ fn update_lockfile() {
 [UPDATING] bar v0.0.4 -> v0.0.5
 [REMOVING] spam v0.2.5
 ",
-        ).run();
+        )
+        .run();
 }
 
 #[test]
@@ -704,7 +736,8 @@ fn update_offline() {
             [dependencies]
             bar = "*"
         "#,
-        ).file("src/main.rs", "fn main() {}")
+        )
+        .file("src/main.rs", "fn main() {}")
         .build();
     p.cargo("update -Zoffline")
         .masquerade_as_nightly_cargo()
@@ -727,7 +760,8 @@ fn dev_dependency_not_used() {
             [dependencies]
             bar = "*"
         "#,
-        ).file("src/main.rs", "fn main() {}")
+        )
+        .file("src/main.rs", "fn main() {}")
         .build();
 
     Package::new("baz", "0.0.1").publish();
@@ -743,24 +777,33 @@ fn dev_dependency_not_used() {
 [COMPILING] foo v0.0.1 ([CWD])
 [FINISHED] dev [unoptimized + debuginfo] target(s) in [..]s
 ",
-        ).run();
+        )
+        .run();
 }
 
 #[test]
 fn login_with_no_cargo_dir() {
-    let home = paths::home().join("new-home");
-    t!(fs::create_dir(&home));
+    // Create a config in the root directory because `login` requires the
+    // index to be updated, and we don't want to hit crates.io.
+    registry::init();
+    fs::rename(paths::home().join(".cargo"), paths::root().join(".cargo")).unwrap();
+    paths::home().rm_rf();
     cargo_process("login foo -v").run();
+    let credentials = fs::read_to_string(paths::home().join(".cargo/credentials")).unwrap();
+    assert_eq!(credentials, "[registry]\ntoken = \"foo\"\n");
 }
 
 #[test]
 fn login_with_differently_sized_token() {
-    // Verify that the configuration file gets properly trunchated.
-    let home = paths::home().join("new-home");
-    t!(fs::create_dir(&home));
+    // Verify that the configuration file gets properly truncated.
+    registry::init();
+    let credentials = paths::home().join(".cargo/credentials");
+    fs::remove_file(&credentials).unwrap();
     cargo_process("login lmaolmaolmao -v").run();
     cargo_process("login lmao -v").run();
     cargo_process("login lmaolmaolmao -v").run();
+    let credentials = fs::read_to_string(&credentials).unwrap();
+    assert_eq!(credentials, "[registry]\ntoken = \"lmaolmaolmao\"\n");
 }
 
 #[test]
@@ -778,10 +821,11 @@ fn bad_license_file() {
             description = "bar"
             repository = "baz"
         "#,
-        ).file("src/main.rs", "fn main() {}")
+        )
+        .file("src/main.rs", "fn main() {}")
         .build();
     p.cargo("publish -v --index")
-        .arg(registry().to_string())
+        .arg(registry_url().to_string())
         .with_status(101)
         .with_stderr_contains("[ERROR] the license file `foo` does not exist")
         .run();
@@ -801,7 +845,8 @@ fn updating_a_dep() {
             [dependencies.a]
             path = "a"
         "#,
-        ).file("src/main.rs", "fn main() {}")
+        )
+        .file("src/main.rs", "fn main() {}")
         .file(
             "a/Cargo.toml",
             r#"
@@ -813,7 +858,8 @@ fn updating_a_dep() {
             [dependencies]
             bar = "*"
         "#,
-        ).file("a/src/lib.rs", "")
+        )
+        .file("a/src/lib.rs", "")
         .build();
 
     Package::new("bar", "0.0.1").publish();
@@ -829,7 +875,8 @@ fn updating_a_dep() {
 [COMPILING] foo v0.0.1 ([CWD])
 [FINISHED] dev [unoptimized + debuginfo] target(s) in [..]s
 ",
-        ).run();
+        )
+        .run();
 
     t!(t!(File::create(&p.root().join("a/Cargo.toml"))).write_all(
         br#"
@@ -856,7 +903,8 @@ fn updating_a_dep() {
 [COMPILING] foo v0.0.1 ([CWD])
 [FINISHED] dev [unoptimized + debuginfo] target(s) in [..]s
 ",
-        ).run();
+        )
+        .run();
 }
 
 #[test]
@@ -873,7 +921,8 @@ fn git_and_registry_dep() {
             [dependencies]
             a = "0.0.1"
         "#,
-        ).file("src/lib.rs", "")
+        )
+        .file("src/lib.rs", "")
         .build();
     let p = project()
         .file(
@@ -893,7 +942,8 @@ fn git_and_registry_dep() {
         "#,
                 b.url()
             ),
-        ).file("src/main.rs", "fn main() {}")
+        )
+        .file("src/main.rs", "fn main() {}")
         .build();
 
     Package::new("a", "0.0.1").publish();
@@ -911,7 +961,8 @@ fn git_and_registry_dep() {
 [COMPILING] foo v0.0.1 ([CWD])
 [FINISHED] dev [unoptimized + debuginfo] target(s) in [..]s
 ",
-        ).run();
+        )
+        .run();
     p.root().move_into_the_past();
 
     println!("second");
@@ -934,7 +985,8 @@ fn update_publish_then_update() {
             [dependencies]
             a = "0.1.0"
         "#,
-        ).file("src/main.rs", "fn main() {}")
+        )
+        .file("src/main.rs", "fn main() {}")
         .build();
     Package::new("a", "0.1.0").publish();
     p.cargo("build").run();
@@ -961,7 +1013,8 @@ fn update_publish_then_update() {
             [dependencies]
             a = "0.1.1"
         "#,
-        ).file("src/main.rs", "fn main() {}")
+        )
+        .file("src/main.rs", "fn main() {}")
         .build();
     p2.cargo("build").run();
     registry.rm_rf();
@@ -984,7 +1037,8 @@ fn update_publish_then_update() {
 [COMPILING] foo v0.5.0 ([CWD])
 [FINISHED] dev [unoptimized + debuginfo] target(s) in [..]s
 ",
-        ).run();
+        )
+        .run();
 }
 
 #[test]
@@ -1001,7 +1055,8 @@ fn fetch_downloads() {
             [dependencies]
             a = "0.1.0"
         "#,
-        ).file("src/main.rs", "fn main() {}")
+        )
+        .file("src/main.rs", "fn main() {}")
         .build();
 
     Package::new("a", "0.1.0").publish();
@@ -1013,7 +1068,8 @@ fn fetch_downloads() {
 [DOWNLOADING] crates ...
 [DOWNLOADED] a v0.1.0 (registry [..])
 ",
-        ).run();
+        )
+        .run();
 }
 
 #[test]
@@ -1030,7 +1086,8 @@ fn update_transitive_dependency() {
             [dependencies]
             a = "0.1.0"
         "#,
-        ).file("src/main.rs", "fn main() {}")
+        )
+        .file("src/main.rs", "fn main() {}")
         .build();
 
     Package::new("a", "0.1.0").dep("b", "*").publish();
@@ -1046,7 +1103,8 @@ fn update_transitive_dependency() {
 [UPDATING] `[..]` index
 [UPDATING] b v0.1.0 -> v0.1.1
 ",
-        ).run();
+        )
+        .run();
 
     p.cargo("build")
         .with_stderr(
@@ -1058,7 +1116,8 @@ fn update_transitive_dependency() {
 [COMPILING] foo v0.5.0 ([..])
 [FINISHED] dev [unoptimized + debuginfo] target(s) in [..]s
 ",
-        ).run();
+        )
+        .run();
 }
 
 #[test]
@@ -1075,7 +1134,8 @@ fn update_backtracking_ok() {
             [dependencies]
             webdriver = "0.1"
         "#,
-        ).file("src/main.rs", "fn main() {}")
+        )
+        .file("src/main.rs", "fn main() {}")
         .build();
 
     Package::new("webdriver", "0.1.0")
@@ -1105,7 +1165,8 @@ fn update_backtracking_ok() {
 [UPDATING] hyper v0.6.5 -> v0.6.6
 [UPDATING] openssl v0.1.0 -> v0.1.1
 ",
-        ).run();
+        )
+        .run();
 }
 
 #[test]
@@ -1124,7 +1185,8 @@ fn update_multiple_packages() {
             b = "*"
             c = "*"
         "#,
-        ).file("src/main.rs", "fn main() {}")
+        )
+        .file("src/main.rs", "fn main() {}")
         .build();
 
     Package::new("a", "0.1.0").publish();
@@ -1144,7 +1206,8 @@ fn update_multiple_packages() {
 [UPDATING] a v0.1.0 -> v0.1.1
 [UPDATING] b v0.1.0 -> v0.1.1
 ",
-        ).run();
+        )
+        .run();
 
     p.cargo("update -pb -pc")
         .with_stderr(
@@ -1152,7 +1215,8 @@ fn update_multiple_packages() {
 [UPDATING] `[..]` index
 [UPDATING] c v0.1.0 -> v0.1.1
 ",
-        ).run();
+        )
+        .run();
 
     p.cargo("build")
         .with_stderr_contains("[DOWNLOADED] a v0.1.1 (registry `[ROOT][..]`)")
@@ -1180,7 +1244,8 @@ fn bundled_crate_in_registry() {
             bar = "0.1"
             baz = "0.1"
         "#,
-        ).file("src/main.rs", "fn main() {}")
+        )
+        .file("src/main.rs", "fn main() {}")
         .build();
 
     Package::new("bar", "0.1.0").publish();
@@ -1197,7 +1262,8 @@ fn bundled_crate_in_registry() {
             [dependencies]
             bar = { path = "bar", version = "0.1.0" }
         "#,
-        ).file("src/lib.rs", "")
+        )
+        .file("src/lib.rs", "")
         .file("bar/Cargo.toml", &basic_manifest("bar", "0.1.0"))
         .file("bar/src/lib.rs", "")
         .publish();
@@ -1219,7 +1285,8 @@ fn update_same_prefix_oh_my_how_was_this_a_bug() {
             [dependencies]
             foo = "0.1"
         "#,
-        ).file("src/main.rs", "fn main() {}")
+        )
+        .file("src/main.rs", "fn main() {}")
         .build();
 
     Package::new("foobar", "0.2.0").publish();
@@ -1245,7 +1312,8 @@ fn use_semver() {
             [dependencies]
             foo = "1.2.3-alpha.0"
         "#,
-        ).file("src/main.rs", "fn main() {}")
+        )
+        .file("src/main.rs", "fn main() {}")
         .build();
 
     Package::new("foo", "1.2.3-alpha.0").publish();
@@ -1271,7 +1339,8 @@ fn only_download_relevant() {
             [dependencies]
             baz = "*"
         "#,
-        ).file("src/main.rs", "fn main() {}")
+        )
+        .file("src/main.rs", "fn main() {}")
         .build();
 
     Package::new("foo", "0.1.0").publish();
@@ -1288,7 +1357,8 @@ fn only_download_relevant() {
 [COMPILING] bar v0.5.0 ([..])
 [FINISHED] dev [unoptimized + debuginfo] target(s) in [..]s
 ",
-        ).run();
+        )
+        .run();
 }
 
 #[test]
@@ -1305,7 +1375,8 @@ fn resolve_and_backtracking() {
             [dependencies]
             foo = "*"
         "#,
-        ).file("src/main.rs", "fn main() {}")
+        )
+        .file("src/main.rs", "fn main() {}")
         .build();
 
     Package::new("foo", "0.1.1")
@@ -1330,7 +1401,8 @@ fn upstream_warnings_on_extra_verbose() {
             [dependencies]
             foo = "*"
         "#,
-        ).file("src/main.rs", "fn main() {}")
+        )
+        .file("src/main.rs", "fn main() {}")
         .build();
 
     Package::new("foo", "0.1.0")
@@ -1356,7 +1428,8 @@ fn disallow_network() {
             [dependencies]
             foo = "*"
         "#,
-        ).file("src/main.rs", "fn main() {}")
+        )
+        .file("src/main.rs", "fn main() {}")
         .build();
 
     p.cargo("build --frozen")
@@ -1371,7 +1444,8 @@ Caused by:
 Caused by:
   attempting to make an HTTP request, but --frozen was specified
 ",
-        ).run();
+        )
+        .run();
 }
 
 #[test]
@@ -1388,7 +1462,8 @@ fn add_dep_dont_update_registry() {
             [dependencies]
             baz = { path = "baz" }
         "#,
-        ).file("src/main.rs", "fn main() {}")
+        )
+        .file("src/main.rs", "fn main() {}")
         .file(
             "baz/Cargo.toml",
             r#"
@@ -1400,7 +1475,8 @@ fn add_dep_dont_update_registry() {
             [dependencies]
             remote = "0.3"
         "#,
-        ).file("baz/src/lib.rs", "")
+        )
+        .file("baz/src/lib.rs", "")
         .build();
 
     Package::new("remote", "0.3.4").publish();
@@ -1426,7 +1502,8 @@ fn add_dep_dont_update_registry() {
 [COMPILING] bar v0.5.0 ([..])
 [FINISHED] [..]
 ",
-        ).run();
+        )
+        .run();
 }
 
 #[test]
@@ -1443,7 +1520,8 @@ fn bump_version_dont_update_registry() {
             [dependencies]
             baz = { path = "baz" }
         "#,
-        ).file("src/main.rs", "fn main() {}")
+        )
+        .file("src/main.rs", "fn main() {}")
         .file(
             "baz/Cargo.toml",
             r#"
@@ -1455,7 +1533,8 @@ fn bump_version_dont_update_registry() {
             [dependencies]
             remote = "0.3"
         "#,
-        ).file("baz/src/lib.rs", "")
+        )
+        .file("baz/src/lib.rs", "")
         .build();
 
     Package::new("remote", "0.3.4").publish();
@@ -1480,7 +1559,8 @@ fn bump_version_dont_update_registry() {
 [COMPILING] bar v0.6.0 ([..])
 [FINISHED] [..]
 ",
-        ).run();
+        )
+        .run();
 }
 
 #[test]
@@ -1497,7 +1577,8 @@ fn old_version_req() {
             [dependencies]
             remote = "0.2*"
         "#,
-        ).file("src/main.rs", "fn main() {}")
+        )
+        .file("src/main.rs", "fn main() {}")
         .build();
 
     Package::new("remote", "0.2.0").publish();
@@ -1532,7 +1613,8 @@ this warning.
 [COMPILING] [..]
 [FINISHED] [..]
 ",
-        ).run();
+        )
+        .run();
 }
 
 #[test]
@@ -1549,7 +1631,8 @@ fn old_version_req_upstream() {
             [dependencies]
             remote = "0.3"
         "#,
-        ).file("src/main.rs", "fn main() {}")
+        )
+        .file("src/main.rs", "fn main() {}")
         .build();
 
     Package::new("remote", "0.3.0")
@@ -1564,7 +1647,8 @@ fn old_version_req_upstream() {
                 [dependencies]
                 bar = "0.2*"
             "#,
-        ).file("src/lib.rs", "")
+        )
+        .file("src/lib.rs", "")
         .publish();
     Package::new("bar", "0.2.0").publish();
 
@@ -1588,7 +1672,8 @@ this warning.
 [COMPILING] [..]
 [FINISHED] [..]
 ",
-        ).run();
+        )
+        .run();
 }
 
 #[test]
@@ -1607,7 +1692,8 @@ fn toml_lies_but_index_is_truth() {
                 [dependencies]
                 foo = "0.1.0"
             "#,
-        ).file("src/lib.rs", "extern crate foo;")
+        )
+        .file("src/lib.rs", "extern crate foo;")
         .publish();
 
     let p = project()
@@ -1622,7 +1708,8 @@ fn toml_lies_but_index_is_truth() {
             [dependencies]
             bar = "0.3"
         "#,
-        ).file("src/main.rs", "fn main() {}")
+        )
+        .file("src/main.rs", "fn main() {}")
         .build();
 
     p.cargo("build -v").run();
@@ -1634,7 +1721,8 @@ fn vv_prints_warnings() {
         .file(
             "src/lib.rs",
             "#![deny(warnings)] fn foo() {} // unused function",
-        ).publish();
+        )
+        .publish();
 
     let p = project()
         .file(
@@ -1648,7 +1736,8 @@ fn vv_prints_warnings() {
             [dependencies]
             foo = "0.2"
         "#,
-        ).file("src/main.rs", "fn main() {}")
+        )
+        .file("src/main.rs", "fn main() {}")
         .build();
 
     p.cargo("build -vv").run();
@@ -1672,7 +1761,8 @@ fn bad_and_or_malicious_packages_rejected() {
             [dependencies]
             foo = "0.2"
         "#,
-        ).file("src/main.rs", "fn main() {}")
+        )
+        .file("src/main.rs", "fn main() {}")
         .build();
 
     p.cargo("build -vv")
@@ -1690,7 +1780,8 @@ Caused by:
 Caused by:
   [..] contains a file at \"foo-0.1.0/src/lib.rs\" which isn't under \"foo-0.2.0\"
 ",
-        ).run();
+        )
+        .run();
 }
 
 #[test]
@@ -1710,7 +1801,8 @@ fn git_init_templatedir_missing() {
                 [dependencies]
                 foo = "0.2"
             "#,
-        ).file("src/main.rs", "fn main() {}")
+        )
+        .file("src/main.rs", "fn main() {}")
         .build();
 
     p.cargo("build").run();
@@ -1723,7 +1815,8 @@ fn git_init_templatedir_missing() {
             [init]
             templatedir = nowhere
         "#,
-        ).unwrap();
+        )
+        .unwrap();
 
     p.cargo("build").run();
     p.cargo("build").run();
@@ -1738,7 +1831,11 @@ fn rename_deps_and_features() {
         .file("src/lib.rs", "pub fn f2() {}")
         .publish();
     Package::new("bar", "0.2.0")
-        .add_dep(Dependency::new("foo01", "0.1.0").package("foo").optional(true))
+        .add_dep(
+            Dependency::new("foo01", "0.1.0")
+                .package("foo")
+                .optional(true),
+        )
         .add_dep(Dependency::new("foo02", "0.2.0").package("foo"))
         .feature("another", &["foo01"])
         .file(
@@ -1769,7 +1866,8 @@ fn rename_deps_and_features() {
                 [dependencies]
                 bar = "0.2"
             "#,
-        ).file(
+        )
+        .file(
             "src/main.rs",
             "
                 extern crate bar;

@@ -1,4 +1,4 @@
-use command_prelude::*;
+use crate::command_prelude::*;
 
 use cargo::ops::{self, PackageOpts};
 
@@ -9,7 +9,8 @@ pub fn cli() -> App {
             opt(
                 "list",
                 "Print files included in a package without making one",
-            ).short("l"),
+            )
+            .short("l"),
         )
         .arg(opt(
             "no-verify",
@@ -25,11 +26,12 @@ pub fn cli() -> App {
         ))
         .arg_target_triple("Build for the target triple")
         .arg_target_dir()
+        .arg_features()
         .arg_manifest_path()
         .arg_jobs()
 }
 
-pub fn exec(config: &mut Config, args: &ArgMatches) -> CliResult {
+pub fn exec(config: &mut Config, args: &ArgMatches<'_>) -> CliResult {
     let ws = args.workspace(config)?;
     ops::package(
         &ws,
@@ -41,7 +43,9 @@ pub fn exec(config: &mut Config, args: &ArgMatches) -> CliResult {
             allow_dirty: args.is_present("allow-dirty"),
             target: args.target(),
             jobs: args.jobs()?,
-            registry: None,
+            features: args._values_of("features"),
+            all_features: args.is_present("all-features"),
+            no_default_features: args.is_present("no-default-features"),
         },
     )?;
     Ok(())

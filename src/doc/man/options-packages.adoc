@@ -1,0 +1,18 @@
+By default, when no package selection options are given, the packages selected
+depend on the current working directory. In the root of a virtual workspace,
+all workspace members are selected (`--all` is implied). Otherwise, only the
+package in the current directory will be selected. The default packages may be
+overridden with the `workspace.default-members` key in the root `Cargo.toml`
+manifest.
+
+*-p* _SPEC_...::
+*--package* _SPEC_...::
+    {actionverb} only the specified packages. See man:cargo-pkgid[1] for the
+    SPEC format. This flag may be specified multiple times.
+
+*--all*::
+    {actionverb} all members in the workspace.
+
+*--exclude* _SPEC_...::
+    Exclude the specified packages. Must be used in conjunction with the
+    `--all` flag. This flag may be specified multiple times.

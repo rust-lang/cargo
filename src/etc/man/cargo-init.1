@@ -1,68 +1,360 @@
-.TH "CARGO\-INIT" "1" "May 2016" "The Rust package manager" "Cargo Manual"
-.hy
-.SH NAME
-.PP
-cargo\-init \- Create a new cargo package in the current directory
-.SH SYNOPSIS
-.PP
-\f[I]cargo init\f[] [OPTIONS]
-.SH DESCRIPTION
-.PP
-Create a new cargo package in the current directory.
-.PP
-Use the \f[B]\-\-vcs\f[] option to control the version control system to
-use.
-.SH OPTIONS
-.TP
-.B \-h, \-\-help
-Print this message.
-.RS
+'\" t
+.\"     Title: cargo-init
+.\"    Author: [see the "AUTHOR(S)" section]
+.\" Generator: Asciidoctor 1.5.8
+.\"      Date: 2018-12-20
+.\"    Manual: \ \&
+.\"    Source: \ \&
+.\"  Language: English
+.\"
+.TH "CARGO\-INIT" "1" "2018-12-20" "\ \&" "\ \&"
+.ie \n(.g .ds Aq \(aq
+.el       .ds Aq '
+.ss \n[.ss] 0
+.nh
+.ad l
+.de URL
+\fI\\$2\fP <\\$1>\\$3
+..
+.als MTO URL
+.if \n[.g] \{\
+.  mso www.tmac
+.  am URL
+.    ad l
+.  .
+.  am MTO
+.    ad l
+.  .
+.  LINKSTYLE blue R < >
+.\}
+.SH "NAME"
+cargo\-init \- Create a new Cargo package in an existing directory
+.SH "SYNOPSIS"
+.sp
+\fBcargo init [\fIOPTIONS\fP] [\fIPATH\fP]\fP
+.SH "DESCRIPTION"
+.sp
+This command will create a new Cargo manifest in the current directory. Give a
+path as an argument to create in the given directory.
+.sp
+If there are typically\-named Rust source files already in the directory, those
+will be used. If not, then a sample \fBsrc/main.rs\fP file will be created, or
+\fBsrc/lib.rs\fP if \fB\-\-lib\fP is passed.
+.sp
+If the directory is not already in a VCS repository, then a new repository
+is created (see \fB\-\-vcs\fP below).
+.sp
+The "authors" field in the manifest is determined from the environment or
+configuration settings. A name is required and is determined from (first match
+wins):
+.sp
+.RS 4
+.ie n \{\
+\h'-04'\(bu\h'+03'\c
+.\}
+.el \{\
+.  sp -1
+.  IP \(bu 2.3
+.\}
+\fBcargo\-new.name\fP Cargo config value
 .RE
-.TP
-.B \-\-vcs \f[I]VCS\f[]
-Initialize a new repository for the given version control system (git or
-hg) or do not initialize any version control at all (none) overriding a
-global configuration.
-.RS
+.sp
+.RS 4
+.ie n \{\
+\h'-04'\(bu\h'+03'\c
+.\}
+.el \{\
+.  sp -1
+.  IP \(bu 2.3
+.\}
+\fBCARGO_NAME\fP environment variable
 .RE
-.TP
-.B \-\-bin
-Use a binary instead of a library template.
-.RS
+.sp
+.RS 4
+.ie n \{\
+\h'-04'\(bu\h'+03'\c
+.\}
+.el \{\
+.  sp -1
+.  IP \(bu 2.3
+.\}
+\fBGIT_AUTHOR_NAME\fP environment variable
 .RE
-.TP
-.B \-\-name \f[I]NAME\f[]
-Set the resulting package name.
-.RS
+.sp
+.RS 4
+.ie n \{\
+\h'-04'\(bu\h'+03'\c
+.\}
+.el \{\
+.  sp -1
+.  IP \(bu 2.3
+.\}
+\fBGIT_COMMITTER_NAME\fP environment variable
 .RE
-.TP
-.B \-v, \-\-verbose
-Use verbose output.
-.RS
+.sp
+.RS 4
+.ie n \{\
+\h'-04'\(bu\h'+03'\c
+.\}
+.el \{\
+.  sp -1
+.  IP \(bu 2.3
+.\}
+\fBuser.name\fP git configuration value
 .RE
-.TP
-.B \-q, \-\-quiet
+.sp
+.RS 4
+.ie n \{\
+\h'-04'\(bu\h'+03'\c
+.\}
+.el \{\
+.  sp -1
+.  IP \(bu 2.3
+.\}
+\fBUSER\fP environment variable
+.RE
+.sp
+.RS 4
+.ie n \{\
+\h'-04'\(bu\h'+03'\c
+.\}
+.el \{\
+.  sp -1
+.  IP \(bu 2.3
+.\}
+\fBUSERNAME\fP environment variable
+.RE
+.sp
+.RS 4
+.ie n \{\
+\h'-04'\(bu\h'+03'\c
+.\}
+.el \{\
+.  sp -1
+.  IP \(bu 2.3
+.\}
+\fBNAME\fP environment variable
+.RE
+.sp
+The email address is optional and is determined from:
+.sp
+.RS 4
+.ie n \{\
+\h'-04'\(bu\h'+03'\c
+.\}
+.el \{\
+.  sp -1
+.  IP \(bu 2.3
+.\}
+\fBcargo\-new.email\fP Cargo config value
+.RE
+.sp
+.RS 4
+.ie n \{\
+\h'-04'\(bu\h'+03'\c
+.\}
+.el \{\
+.  sp -1
+.  IP \(bu 2.3
+.\}
+\fBCARGO_EMAIL\fP environment variable
+.RE
+.sp
+.RS 4
+.ie n \{\
+\h'-04'\(bu\h'+03'\c
+.\}
+.el \{\
+.  sp -1
+.  IP \(bu 2.3
+.\}
+\fBGIT_AUTHOR_EMAIL\fP environment variable
+.RE
+.sp
+.RS 4
+.ie n \{\
+\h'-04'\(bu\h'+03'\c
+.\}
+.el \{\
+.  sp -1
+.  IP \(bu 2.3
+.\}
+\fBGIT_COMMITTER_EMAIL\fP environment variable
+.RE
+.sp
+.RS 4
+.ie n \{\
+\h'-04'\(bu\h'+03'\c
+.\}
+.el \{\
+.  sp -1
+.  IP \(bu 2.3
+.\}
+\fBuser.email\fP git configuration value
+.RE
+.sp
+.RS 4
+.ie n \{\
+\h'-04'\(bu\h'+03'\c
+.\}
+.el \{\
+.  sp -1
+.  IP \(bu 2.3
+.\}
+\fBEMAIL\fP environment variable
+.RE
+.sp
+See \c
+.URL "https://doc.rust\-lang.org/cargo/reference/config.html" "the reference" " "
+for more information about
+configuration files.
+.sp
+See \fBcargo\-new\fP(1) for a similar command which will create a new package in
+a new directory.
+.SH "OPTIONS"
+.SS "Init Options"
+.sp
+\fB\-\-bin\fP
+.RS 4
+Create a package with a binary target (\fBsrc/main.rs\fP).
+This is the default behavior.
+.RE
+.sp
+\fB\-\-lib\fP
+.RS 4
+Create a package with a library target (\fBsrc/lib.rs\fP).
+.RE
+.sp
+\fB\-\-edition\fP \fIEDITION\fP
+.RS 4
+Specify the Rust edition to use. Default is 2018.
+Possible values: 2015, 2018
+.RE
+.sp
+\fB\-\-name\fP \fINAME\fP
+.RS 4
+Set the package name. Defaults to the directory name.
+.RE
+.sp
+\fB\-\-vcs\fP \fIVCS\fP
+.RS 4
+Initialize a new VCS repository for the given version control system (git,
+hg, pijul, or fossil) or do not initialize any version control at all
+(none). If not specified, defaults to \fBgit\fP or the configuration value
+\fBcargo\-new.vcs\fP, or \fBnone\fP if already inside a VCS repository.
+.RE
+.sp
+\fB\-\-registry\fP \fIREGISTRY\fP
+.RS 4
+Alternative registry to use. This sets the \fBpublish\fP field which will
+restrict publishing only to the given registry name.
+.sp
+This option is unstable and available only on the nightly channel and requires
+the \fB\-Z unstable\-options\fP flag to enable.
+.RE
+.SS "Display Options"
+.sp
+\fB\-v\fP, \fB\-\-verbose\fP
+.RS 4
+Use verbose output. May be specified twice for "very verbose" output which
+includes extra output such as dependency warnings and build script output.
+May also be specified with the \fBterm.verbose\fP
+.URL "https://doc.rust\-lang.org/cargo/reference/config.html" "config value" "."
+.RE
+.sp
+\fB\-q\fP, \fB\-\-quiet\fP
+.RS 4
 No output printed to stdout.
-.RS
 .RE
-.TP
-.B \-\-color \f[I]WHEN\f[]
-Coloring: auto, always, never.
-.RS
+.sp
+\fB\-\-color\fP \fIWHEN\fP
+.RS 4
+Control when colored output is used. Valid values:
+.sp
+.RS 4
+.ie n \{\
+\h'-04'\(bu\h'+03'\c
+.\}
+.el \{\
+.  sp -1
+.  IP \(bu 2.3
+.\}
+\fBauto\fP (default): Automatically detect if color support is available on the
+terminal.
 .RE
-.SH EXAMPLES
-.PP
-Initialize a binary cargo package in the current directory
-.IP
+.sp
+.RS 4
+.ie n \{\
+\h'-04'\(bu\h'+03'\c
+.\}
+.el \{\
+.  sp -1
+.  IP \(bu 2.3
+.\}
+\fBalways\fP: Always display colors.
+.RE
+.sp
+.RS 4
+.ie n \{\
+\h'-04'\(bu\h'+03'\c
+.\}
+.el \{\
+.  sp -1
+.  IP \(bu 2.3
+.\}
+\fBnever\fP: Never display colors.
+.RE
+.sp
+May also be specified with the \fBterm.color\fP
+.URL "https://doc.rust\-lang.org/cargo/reference/config.html" "config value" "."
+.RE
+.SS "Common Options"
+.sp
+\fB\-h\fP, \fB\-\-help\fP
+.RS 4
+Prints help information.
+.RE
+.sp
+\fB\-Z\fP \fIFLAG\fP...
+.RS 4
+Unstable (nightly\-only) flags to Cargo. Run \fBcargo \-Z help\fP for
+details.
+.RE
+.SH "ENVIRONMENT"
+.sp
+See \c
+.URL "https://doc.rust\-lang.org/cargo/reference/environment\-variables.html" "the reference" " "
+for
+details on environment variables that Cargo reads.
+.SH "EXIT STATUS"
+.sp
+0
+.RS 4
+Cargo succeeded.
+.RE
+.sp
+101
+.RS 4
+Cargo failed to complete.
+.RE
+.SH "EXAMPLES"
+.sp
+.RS 4
+.ie n \{\
+\h'-04' 1.\h'+01'\c
+.\}
+.el \{\
+.  sp -1
+.  IP " 1." 4.2
+.\}
+Create a binary Cargo package in the current directory:
+.sp
+.if n .RS 4
 .nf
-\f[C]
-$\ cargo\ init\ \-\-bin
-\f[]
+cargo init
 .fi
-.SH SEE ALSO
-.PP
-cargo(1), cargo\-new(1)
-.SH COPYRIGHT
-.PP
-This work is dual\-licensed under Apache 2.0 and MIT terms.
-See \f[I]COPYRIGHT\f[] file in the cargo source distribution.
+.if n .RE
+.RE
+.SH "SEE ALSO"
+.sp
+\fBcargo\fP(1), \fBcargo\-new\fP(1)

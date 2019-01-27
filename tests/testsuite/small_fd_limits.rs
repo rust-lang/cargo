@@ -3,11 +3,11 @@ use std::ffi::OsStr;
 use std::path::PathBuf;
 use std::process::Command;
 
+use crate::support::git;
+use crate::support::paths;
+use crate::support::project;
+use crate::support::registry::Package;
 use git2;
-use support::git;
-use support::paths;
-use support::project;
-use support::registry::Package;
 
 use url::Url;
 
@@ -31,7 +31,8 @@ fn run_test(path_env: Option<&OsStr>) {
             [dependencies]
             bar = "*"
         "#,
-        ).file("src/lib.rs", "")
+        )
+        .file("src/lib.rs", "")
         .build();
     Package::new("bar", "0.1.0").publish();
 

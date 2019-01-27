@@ -1,6 +1,6 @@
-use support::registry::Package;
-use support::rustc_host;
-use support::{basic_manifest, cross_compile, project};
+use crate::support::registry::Package;
+use crate::support::rustc_host;
+use crate::support::{basic_manifest, cross_compile, project};
 
 #[test]
 fn no_deps() {
@@ -49,7 +49,8 @@ fn fetch_all_platform_dependencies_when_no_target_is_given() {
                 host = host,
                 target = target
             ),
-        ).file("src/lib.rs", "")
+        )
+        .file("src/lib.rs", "")
         .build();
 
     p.cargo("fetch")
@@ -95,7 +96,8 @@ fn fetch_platform_specific_dependencies() {
                 host = host,
                 target = target
             ),
-        ).file("src/lib.rs", "")
+        )
+        .file("src/lib.rs", "")
         .build();
 
     p.cargo("fetch --target")

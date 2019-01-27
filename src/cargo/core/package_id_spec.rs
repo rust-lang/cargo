@@ -5,9 +5,9 @@ use semver::Version;
 use serde::{de, ser};
 use url::Url;
 
-use core::PackageId;
-use util::{ToSemver, ToUrl};
-use util::errors::{CargoResult, CargoResultExt};
+use crate::core::PackageId;
+use crate::util::errors::{CargoResult, CargoResultExt};
+use crate::util::{validate_package_name, ToSemver, ToUrl};
 
 /// Some or all of the data required to identify a package:
 ///
@@ -61,14 +61,10 @@ impl PackageIdSpec {
         let mut parts = spec.splitn(2, ':');
         let name = parts.next().unwrap();
         let version = match parts.next() {
-            Some(version) => Some(Version::parse(version)?),
+            Some(version) => Some(version.to_semver()?),
             None => None,
         };
-        for ch in name.chars() {
-            if !ch.is_alphanumeric() && ch != '_' && ch != '-' {
-                bail!("invalid character in pkgid `{}`: `{}`", spec, ch)
-            }
-        }
+        validate_package_name(name, "pkgid", "")?;
         Ok(PackageIdSpec {
             name: name.to_string(),
             version,
@@ -77,18 +73,18 @@ impl PackageIdSpec {
     }
 
     /// Roughly equivalent to `PackageIdSpec::parse(spec)?.query(i)`
-    pub fn query_str<'a, I>(spec: &str, i: I) -> CargoResult<&'a PackageId>
+    pub fn query_str<I>(spec: &str, i: I) -> CargoResult<PackageId>
     where
-        I: IntoIterator<Item = &'a PackageId>,
+        I: IntoIterator<Item = PackageId>,
     {
         let spec = PackageIdSpec::parse(spec)
-            .chain_err(|| format_err!("invalid package id specification: `{}`", spec))?;
+            .chain_err(|| failure::format_err!("invalid package id specification: `{}`", spec))?;
         spec.query(i)
     }
 
     /// Convert a `PackageId` to a `PackageIdSpec`, which will have both the `Version` and `Url`
     /// fields filled in.
-    pub fn from_package_id(package_id: &PackageId) -> PackageIdSpec {
+    pub fn from_package_id(package_id: PackageId) -> PackageIdSpec {
         PackageIdSpec {
             name: package_id.name().to_string(),
             version: Some(package_id.version().clone()),
@@ -99,15 +95,16 @@ impl PackageIdSpec {
     /// Tries to convert a valid `Url` to a `PackageIdSpec`.
     fn from_url(mut url: Url) -> CargoResult<PackageIdSpec> {
         if url.query().is_some() {
-            bail!("cannot have a query string in a pkgid: {}", url)
+            failure::bail!("cannot have a query string in a pkgid: {}", url)
         }
         let frag = url.fragment().map(|s| s.to_owned());
         url.set_fragment(None);
         let (name, version) = {
-            let mut path = url.path_segments()
-                .ok_or_else(|| format_err!("pkgid urls must have a path: {}", url))?;
+            let mut path = url
+                .path_segments()
+                .ok_or_else(|| failure::format_err!("pkgid urls must have a path: {}", url))?;
             let path_name = path.next_back().ok_or_else(|| {
-                format_err!(
+                failure::format_err!(
                     "pkgid urls must have at least one path \
                      component: {}",
                     url
@@ -159,7 +156,7 @@ impl PackageIdSpec {
     }
 
     /// Checks whether the given `PackageId` matches the `PackageIdSpec`.
-    pub fn matches(&self, package_id: &PackageId) -> bool {
+    pub fn matches(&self, package_id: PackageId) -> bool {
         if self.name() != &*package_id.name() {
             return false;
         }
@@ -178,14 +175,14 @@ impl PackageIdSpec {
 
     /// Checks a list of `PackageId`s to find 1 that matches this `PackageIdSpec`. If 0, 2, or
     /// more are found, then this returns an error.
-    pub fn query<'a, I>(&self, i: I) -> CargoResult<&'a PackageId>
+    pub fn query<I>(&self, i: I) -> CargoResult<PackageId>
     where
-        I: IntoIterator<Item = &'a PackageId>,
+        I: IntoIterator<Item = PackageId>,
     {
         let mut ids = i.into_iter().filter(|p| self.matches(*p));
         let ret = match ids.next() {
             Some(id) => id,
-            None => bail!(
+            None => failure::bail!(
                 "package id specification `{}` \
                  matched no packages",
                 self
@@ -206,12 +203,12 @@ impl PackageIdSpec {
                 let mut vec = vec![ret, other];
                 vec.extend(ids);
                 minimize(&mut msg, &vec, self);
-                Err(format_err!("{}", msg))
+                Err(failure::format_err!("{}", msg))
             }
             None => Ok(ret),
         };
 
-        fn minimize(msg: &mut String, ids: &[&PackageId], spec: &PackageIdSpec) {
+        fn minimize(msg: &mut String, ids: &[PackageId], spec: &PackageIdSpec) {
             let mut version_cnt = HashMap::new();
             for id in ids {
                 *version_cnt.entry(id.version()).or_insert(0) += 1;
@@ -228,7 +225,7 @@ impl PackageIdSpec {
 }
 
 impl fmt::Display for PackageIdSpec {
-    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         let mut printed_name = false;
         match self.url {
             Some(ref url) => {
@@ -275,10 +272,10 @@ impl<'de> de::Deserialize<'de> for PackageIdSpec {
 
 #[cfg(test)]
 mod tests {
-    use core::{PackageId, SourceId};
     use super::PackageIdSpec;
+    use crate::core::{PackageId, SourceId};
+    use crate::util::ToSemver;
     use url::Url;
-    use semver::Version;
 
     #[test]
     fn good_parsing() {
@@ -292,7 +289,7 @@ mod tests {
             "http://crates.io/foo#1.2.3",
             PackageIdSpec {
                 name: "foo".to_string(),
-                version: Some(Version::parse("1.2.3").unwrap()),
+                version: Some("1.2.3".to_semver().unwrap()),
                 url: Some(Url::parse("http://crates.io/foo").unwrap()),
             },
         );
@@ -300,7 +297,7 @@ mod tests {
             "http://crates.io/foo#bar:1.2.3",
             PackageIdSpec {
                 name: "bar".to_string(),
-                version: Some(Version::parse("1.2.3").unwrap()),
+                version: Some("1.2.3".to_semver().unwrap()),
                 url: Some(Url::parse("http://crates.io/foo").unwrap()),
             },
         );
@@ -316,7 +313,7 @@ mod tests {
             "crates.io/foo#1.2.3",
             PackageIdSpec {
                 name: "foo".to_string(),
-                version: Some(Version::parse("1.2.3").unwrap()),
+                version: Some("1.2.3".to_semver().unwrap()),
                 url: Some(Url::parse("cargo://crates.io/foo").unwrap()),
             },
         );
@@ -332,7 +329,7 @@ mod tests {
             "crates.io/foo#bar:1.2.3",
             PackageIdSpec {
                 name: "bar".to_string(),
-                version: Some(Version::parse("1.2.3").unwrap()),
+                version: Some("1.2.3".to_semver().unwrap()),
                 url: Some(Url::parse("cargo://crates.io/foo").unwrap()),
             },
         );
@@ -348,7 +345,7 @@ mod tests {
             "foo:1.2.3",
             PackageIdSpec {
                 name: "foo".to_string(),
-                version: Some(Version::parse("1.2.3").unwrap()),
+                version: Some("1.2.3".to_semver().unwrap()),
                 url: None,
             },
         );
@@ -367,12 +364,12 @@ mod tests {
     fn matching() {
         let url = Url::parse("http://example.com").unwrap();
         let sid = SourceId::for_registry(&url).unwrap();
-        let foo = PackageId::new("foo", "1.2.3", &sid).unwrap();
-        let bar = PackageId::new("bar", "1.2.3", &sid).unwrap();
+        let foo = PackageId::new("foo", "1.2.3", sid).unwrap();
+        let bar = PackageId::new("bar", "1.2.3", sid).unwrap();
 
-        assert!(PackageIdSpec::parse("foo").unwrap().matches(&foo));
-        assert!(!PackageIdSpec::parse("foo").unwrap().matches(&bar));
-        assert!(PackageIdSpec::parse("foo:1.2.3").unwrap().matches(&foo));
-        assert!(!PackageIdSpec::parse("foo:1.2.2").unwrap().matches(&foo));
+        assert!(PackageIdSpec::parse("foo").unwrap().matches(foo));
+        assert!(!PackageIdSpec::parse("foo").unwrap().matches(bar));
+        assert!(PackageIdSpec::parse("foo:1.2.3").unwrap().matches(foo));
+        assert!(!PackageIdSpec::parse("foo:1.2.2").unwrap().matches(foo));
     }
 }

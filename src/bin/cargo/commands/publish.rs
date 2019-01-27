@@ -1,4 +1,4 @@
-use command_prelude::*;
+use crate::command_prelude::*;
 
 use cargo::ops::{self, PublishOpts};
 
@@ -18,12 +18,13 @@ pub fn cli() -> App {
         .arg_target_triple("Build for the target triple")
         .arg_target_dir()
         .arg_manifest_path()
+        .arg_features()
         .arg_jobs()
-        .arg(opt("dry-run", "Perform all checks without uploading"))
+        .arg_dry_run("Perform all checks without uploading")
         .arg(opt("registry", "Registry to publish to").value_name("REGISTRY"))
 }
 
-pub fn exec(config: &mut Config, args: &ArgMatches) -> CliResult {
+pub fn exec(config: &mut Config, args: &ArgMatches<'_>) -> CliResult {
     let registry = args.registry(config)?;
     let ws = args.workspace(config)?;
     let index = args.index(config)?;
@@ -40,6 +41,9 @@ pub fn exec(config: &mut Config, args: &ArgMatches) -> CliResult {
             jobs: args.jobs()?,
             dry_run: args.is_present("dry-run"),
             registry,
+            features: args._values_of("features"),
+            all_features: args.is_present("all-features"),
+            no_default_features: args.is_present("no-default-features"),
         },
     )?;
     Ok(())

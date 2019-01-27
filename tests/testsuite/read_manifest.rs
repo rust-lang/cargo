@@ -1,4 +1,4 @@
-use support::{basic_bin_manifest, main_file, project};
+use crate::support::{basic_bin_manifest, main_file, project};
 
 static MANIFEST_OUTPUT: &'static str = r#"
 {
@@ -14,6 +14,7 @@ static MANIFEST_OUTPUT: &'static str = r#"
     "keywords": [],
     "license": null,
     "license_file": null,
+    "links": null,
     "description": null,
     "edition": "2015",
     "source":null,
@@ -70,7 +71,8 @@ fn cargo_read_manifest_path_to_cargo_toml_parent_relative() {
         .with_stderr(
             "[ERROR] the manifest-path must be \
              a path to a Cargo.toml file",
-        ).run();
+        )
+        .run();
 }
 
 #[test]
@@ -87,7 +89,8 @@ fn cargo_read_manifest_path_to_cargo_toml_parent_absolute() {
         .with_stderr(
             "[ERROR] the manifest-path must be \
              a path to a Cargo.toml file",
-        ).run();
+        )
+        .run();
 }
 
 #[test]
@@ -97,7 +100,5 @@ fn cargo_read_manifest_cwd() {
         .file("src/foo.rs", &main_file(r#""i am foo""#, &[]))
         .build();
 
-    p.cargo("read-manifest")
-        .with_json(MANIFEST_OUTPUT)
-        .run();
+    p.cargo("read-manifest").with_json(MANIFEST_OUTPUT).run();
 }

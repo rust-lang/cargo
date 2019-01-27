@@ -3,9 +3,8 @@ use std::io::{self, Read};
 use std::net::TcpListener;
 use std::process::{Child, Stdio};
 use std::thread;
-use std::time::Duration;
 
-use support::project;
+use crate::{support::project, support::slow_cpu_multiplier};
 
 #[cfg(unix)]
 fn enabled() -> bool {
@@ -66,7 +65,8 @@ fn ctrl_c_kills_everyone() {
             authors = []
             build = "build.rs"
         "#,
-        ).file("src/lib.rs", "")
+        )
+        .file("src/lib.rs", "")
         .file(
             "build.rs",
             &format!(
@@ -82,7 +82,8 @@ fn ctrl_c_kills_everyone() {
         "#,
                 addr
             ),
-        ).build();
+        )
+        .build();
 
     let mut cargo = p.cargo("build").build_command();
     cargo
@@ -119,7 +120,7 @@ fn ctrl_c_kills_everyone() {
             Ok(()) => return,
             Err(e) => println!("attempt {}: {}", i, e),
         }
-        thread::sleep(Duration::from_millis(100));
+        thread::sleep(slow_cpu_multiplier(100));
     }
 
     panic!(

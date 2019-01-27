@@ -1,13 +1,5 @@
 #![allow(unknown_lints)]
-#![cfg_attr(feature = "cargo-clippy", allow(identity_op))] // used for vertical alignment
-
-extern crate curl;
-#[macro_use]
-extern crate failure;
-#[macro_use]
-extern crate serde_derive;
-extern crate serde_json;
-extern crate url;
+#![allow(clippy::identity_op)] // used for vertical alignment
 
 use std::collections::BTreeMap;
 use std::fs::File;
@@ -15,13 +7,20 @@ use std::io::prelude::*;
 use std::io::Cursor;
 
 use curl::easy::{Easy, List};
+use failure::bail;
+use serde::{Deserialize, Serialize};
+use serde_json;
 use url::percent_encoding::{percent_encode, QUERY_ENCODE_SET};
 
 pub type Result<T> = std::result::Result<T, failure::Error>;
 
 pub struct Registry {
+    /// The base URL for issuing API requests.
     host: String,
+    /// Optional authorization token.
+    /// If None, commands requiring authorization will fail.
     token: Option<String>,
+    /// Curl handle for issuing requests.
     handle: Easy,
 }
 
@@ -56,7 +55,8 @@ pub struct NewCrate {
     pub license_file: Option<String>,
     pub repository: Option<String>,
     pub badges: BTreeMap<String, BTreeMap<String, String>>,
-    #[serde(default)] pub links: Option<String>,
+    #[serde(default)]
+    pub links: Option<String>,
 }
 
 #[derive(Serialize)]
@@ -86,6 +86,7 @@ pub struct User {
 pub struct Warnings {
     pub invalid_categories: Vec<String>,
     pub invalid_badges: Vec<String>,
+    pub other: Vec<String>,
 }
 
 #[derive(Deserialize)]
@@ -133,6 +134,10 @@ impl Registry {
             token,
             handle,
         }
+    }
+
+    pub fn host(&self) -> &str {
+        &self.host
     }
 
     pub fn add_owners(&mut self, krate: &str, owners: &[&str]) -> Result<String> {
@@ -223,9 +228,17 @@ impl Registry {
             .map(|x| x.iter().flat_map(|j| j.as_str()).map(Into::into).collect())
             .unwrap_or_else(Vec::new);
 
+        let other: Vec<String> = response
+            .get("warnings")
+            .and_then(|j| j.get("other"))
+            .and_then(|j| j.as_array())
+            .map(|x| x.iter().flat_map(|j| j.as_str()).map(Into::into).collect())
+            .unwrap_or_else(Vec::new);
+
         Ok(Warnings {
             invalid_categories,
             invalid_badges,
+            other,
         })
     }
 
@@ -293,7 +306,7 @@ impl Registry {
     }
 }
 
-fn handle(handle: &mut Easy, read: &mut FnMut(&mut [u8]) -> usize) -> Result<String> {
+fn handle(handle: &mut Easy, read: &mut dyn FnMut(&mut [u8]) -> usize) -> Result<String> {
     let mut headers = Vec::new();
     let mut body = Vec::new();
     {

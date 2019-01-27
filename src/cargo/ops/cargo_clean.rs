@@ -2,13 +2,13 @@ use std::collections::HashMap;
 use std::fs;
 use std::path::Path;
 
-use core::compiler::{BuildConfig, BuildContext, CompileMode, Context, Kind, Unit};
-use core::profiles::UnitFor;
-use core::Workspace;
-use ops;
-use util::errors::{CargoResult, CargoResultExt};
-use util::paths;
-use util::Config;
+use crate::core::compiler::{BuildConfig, BuildContext, CompileMode, Context, Kind, Unit};
+use crate::core::profiles::UnitFor;
+use crate::core::Workspace;
+use crate::ops;
+use crate::util::errors::{CargoResult, CargoResultExt};
+use crate::util::paths;
+use crate::util::Config;
 
 pub struct CleanOptions<'a> {
     pub config: &'a Config,
@@ -23,15 +23,19 @@ pub struct CleanOptions<'a> {
 }
 
 /// Cleans the package's build artifacts.
-pub fn clean(ws: &Workspace, opts: &CleanOptions) -> CargoResult<()> {
-    let target_dir = ws.target_dir();
+pub fn clean(ws: &Workspace<'_>, opts: &CleanOptions<'_>) -> CargoResult<()> {
+    let mut target_dir = ws.target_dir();
     let config = ws.config();
 
     // If the doc option is set, we just want to delete the doc directory.
     if opts.doc {
-        let target_dir = target_dir.join("doc");
-        let target_dir = target_dir.into_path_unlocked();
-        return rm_rf(&target_dir, config);
+        target_dir = target_dir.join("doc");
+        return rm_rf(&target_dir.into_path_unlocked(), config);
+    }
+
+    // If the release option is set, we set target to release directory
+    if opts.release {
+        target_dir = target_dir.join("release");
     }
 
     // If we have a spec, then we need to delete some packages, otherwise, just
@@ -40,8 +44,7 @@ pub fn clean(ws: &Workspace, opts: &CleanOptions) -> CargoResult<()> {
     // Note that we don't bother grabbing a lock here as we're just going to
     // blow it all away anyway.
     if opts.spec.is_empty() {
-        let target_dir = target_dir.into_path_unlocked();
-        return rm_rf(&target_dir, config);
+        return rm_rf(&target_dir.into_path_unlocked(), config);
     }
 
     let (packages, resolve) = ops::resolve_ws(ws)?;
@@ -131,12 +134,14 @@ fn rm_rf(path: &Path, config: &Config) -> CargoResult<()> {
         config
             .shell()
             .verbose(|shell| shell.status("Removing", path.display()))?;
-        paths::remove_dir_all(path).chain_err(|| format_err!("could not remove build directory"))?;
+        paths::remove_dir_all(path)
+            .chain_err(|| failure::format_err!("could not remove build directory"))?;
     } else if m.is_ok() {
         config
             .shell()
             .verbose(|shell| shell.status("Removing", path.display()))?;
-        paths::remove_file(path).chain_err(|| format_err!("failed to remove build artifact"))?;
+        paths::remove_file(path)
+            .chain_err(|| failure::format_err!("failed to remove build artifact"))?;
     }
     Ok(())
 }

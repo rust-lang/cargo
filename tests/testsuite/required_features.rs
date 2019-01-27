@@ -1,6 +1,6 @@
-use support::install::{cargo_home, assert_has_installed_exe, assert_has_not_installed_exe};
-use support::is_nightly;
-use support::project;
+use crate::support::install::{assert_has_installed_exe, assert_has_not_installed_exe, cargo_home};
+use crate::support::is_nightly;
+use crate::support::project;
 
 #[test]
 fn build_bin_default_features() {
@@ -21,7 +21,8 @@ fn build_bin_default_features() {
             name = "foo"
             required-features = ["a"]
         "#,
-        ).file(
+        )
+        .file(
             "src/main.rs",
             r#"
             extern crate foo;
@@ -33,7 +34,8 @@ fn build_bin_default_features() {
 
             fn main() {}
         "#,
-        ).file("src/lib.rs", r#"#[cfg(feature = "a")] pub fn foo() {}"#)
+        )
+        .file("src/lib.rs", r#"#[cfg(feature = "a")] pub fn foo() {}"#)
         .build();
 
     p.cargo("build").run();
@@ -51,7 +53,8 @@ fn build_bin_default_features() {
 error: target `foo` in package `foo` requires the features: `a`
 Consider enabling them by passing e.g. `--features=\"a\"`
 ",
-        ).run();
+        )
+        .run();
 }
 
 #[test]
@@ -72,7 +75,8 @@ fn build_bin_arg_features() {
             name = "foo"
             required-features = ["a"]
         "#,
-        ).file("src/main.rs", "fn main() {}")
+        )
+        .file("src/main.rs", "fn main() {}")
         .build();
 
     p.cargo("build --features a").run();
@@ -106,7 +110,8 @@ fn build_bin_multiple_required_features() {
             path = "src/foo_2.rs"
             required-features = ["a"]
         "#,
-        ).file("src/foo_1.rs", "fn main() {}")
+        )
+        .file("src/foo_1.rs", "fn main() {}")
         .file("src/foo_2.rs", "fn main() {}")
         .build();
 
@@ -142,7 +147,8 @@ fn build_example_default_features() {
             name = "foo"
             required-features = ["a"]
         "#,
-        ).file("examples/foo.rs", "fn main() {}")
+        )
+        .file("examples/foo.rs", "fn main() {}")
         .build();
 
     p.cargo("build --example=foo").run();
@@ -155,7 +161,8 @@ fn build_example_default_features() {
 error: target `foo` in package `foo` requires the features: `a`
 Consider enabling them by passing e.g. `--features=\"a\"`
 ",
-        ).run();
+        )
+        .run();
 }
 
 #[test]
@@ -176,7 +183,8 @@ fn build_example_arg_features() {
             name = "foo"
             required-features = ["a"]
         "#,
-        ).file("examples/foo.rs", "fn main() {}")
+        )
+        .file("examples/foo.rs", "fn main() {}")
         .build();
 
     p.cargo("build --example=foo --features a").run();
@@ -208,7 +216,8 @@ fn build_example_multiple_required_features() {
             name = "foo_2"
             required-features = ["a"]
         "#,
-        ).file("examples/foo_1.rs", "fn main() {}")
+        )
+        .file("examples/foo_1.rs", "fn main() {}")
         .file("examples/foo_2.rs", "fn main() {}")
         .build();
 
@@ -219,7 +228,8 @@ fn build_example_multiple_required_features() {
 error: target `foo_1` in package `foo` requires the features: `b`, `c`
 Consider enabling them by passing e.g. `--features=\"b c\"`
 ",
-        ).run();
+        )
+        .run();
     p.cargo("build --example=foo_2").run();
 
     assert!(!p.bin("examples/foo_1").is_file());
@@ -238,7 +248,8 @@ Consider enabling them by passing e.g. `--features=\"b c\"`
 error: target `foo_1` in package `foo` requires the features: `b`, `c`
 Consider enabling them by passing e.g. `--features=\"b c\"`
 ",
-        ).run();
+        )
+        .run();
     p.cargo("build --example=foo_2 --no-default-features")
         .with_status(101)
         .with_stderr(
@@ -246,7 +257,8 @@ Consider enabling them by passing e.g. `--features=\"b c\"`
 error: target `foo_2` in package `foo` requires the features: `a`
 Consider enabling them by passing e.g. `--features=\"a\"`
 ",
-        ).run();
+        )
+        .run();
 }
 
 #[test]
@@ -268,7 +280,8 @@ fn test_default_features() {
             name = "foo"
             required-features = ["a"]
         "#,
-        ).file("tests/foo.rs", "#[test]\nfn test() {}")
+        )
+        .file("tests/foo.rs", "#[test]\nfn test() {}")
         .build();
 
     p.cargo("test")
@@ -277,7 +290,8 @@ fn test_default_features() {
 [COMPILING] foo v0.0.1 ([CWD])
 [FINISHED] dev [unoptimized + debuginfo] target(s) in [..]
 [RUNNING] target/debug/deps/foo-[..][EXE]",
-        ).with_stdout_contains("test test ... ok")
+        )
+        .with_stdout_contains("test test ... ok")
         .run();
 
     p.cargo("test --no-default-features")
@@ -290,7 +304,8 @@ fn test_default_features() {
             "\
 [FINISHED] dev [unoptimized + debuginfo] target(s) in [..]
 [RUNNING] target/debug/deps/foo-[..][EXE]",
-        ).with_stdout_contains("test test ... ok")
+        )
+        .with_stdout_contains("test test ... ok")
         .run();
 
     p.cargo("test --test=foo --no-default-features")
@@ -300,7 +315,8 @@ fn test_default_features() {
 error: target `foo` in package `foo` requires the features: `a`
 Consider enabling them by passing e.g. `--features=\"a\"`
 ",
-        ).run();
+        )
+        .run();
 }
 
 #[test]
@@ -321,7 +337,8 @@ fn test_arg_features() {
             name = "foo"
             required-features = ["a"]
         "#,
-        ).file("tests/foo.rs", "#[test]\nfn test() {}")
+        )
+        .file("tests/foo.rs", "#[test]\nfn test() {}")
         .build();
 
     p.cargo("test --features a")
@@ -330,7 +347,8 @@ fn test_arg_features() {
 [COMPILING] foo v0.0.1 ([CWD])
 [FINISHED] dev [unoptimized + debuginfo] target(s) in [..]
 [RUNNING] target/debug/deps/foo-[..][EXE]",
-        ).with_stdout_contains("test test ... ok")
+        )
+        .with_stdout_contains("test test ... ok")
         .run();
 }
 
@@ -359,7 +377,8 @@ fn test_multiple_required_features() {
             name = "foo_2"
             required-features = ["a"]
         "#,
-        ).file("tests/foo_1.rs", "#[test]\nfn test() {}")
+        )
+        .file("tests/foo_1.rs", "#[test]\nfn test() {}")
         .file("tests/foo_2.rs", "#[test]\nfn test() {}")
         .build();
 
@@ -369,7 +388,8 @@ fn test_multiple_required_features() {
 [COMPILING] foo v0.0.1 ([CWD])
 [FINISHED] dev [unoptimized + debuginfo] target(s) in [..]
 [RUNNING] target/debug/deps/foo_2-[..][EXE]",
-        ).with_stdout_contains("test test ... ok")
+        )
+        .with_stdout_contains("test test ... ok")
         .run();
 
     p.cargo("test --features c")
@@ -379,7 +399,8 @@ fn test_multiple_required_features() {
 [FINISHED] dev [unoptimized + debuginfo] target(s) in [..]
 [RUNNING] target/debug/deps/foo_1-[..][EXE]
 [RUNNING] target/debug/deps/foo_2-[..][EXE]",
-        ).with_stdout_contains_n("test test ... ok", 2)
+        )
+        .with_stdout_contains_n("test test ... ok", 2)
         .run();
 
     p.cargo("test --no-default-features")
@@ -411,7 +432,8 @@ fn bench_default_features() {
             name = "foo"
             required-features = ["a"]
         "#,
-        ).file(
+        )
+        .file(
             "benches/foo.rs",
             r#"
             #![feature(test)]
@@ -420,7 +442,8 @@ fn bench_default_features() {
             #[bench]
             fn bench(_: &mut test::Bencher) {
             }"#,
-        ).build();
+        )
+        .build();
 
     p.cargo("bench")
         .with_stderr(
@@ -428,7 +451,8 @@ fn bench_default_features() {
 [COMPILING] foo v0.0.1 ([CWD])
 [FINISHED] release [optimized] target(s) in [..]
 [RUNNING] target/release/deps/foo-[..][EXE]",
-        ).with_stdout_contains("test bench ... bench: [..]")
+        )
+        .with_stdout_contains("test bench ... bench: [..]")
         .run();
 
     p.cargo("bench --no-default-features")
@@ -441,7 +465,8 @@ fn bench_default_features() {
             "\
 [FINISHED] release [optimized] target(s) in [..]
 [RUNNING] target/release/deps/foo-[..][EXE]",
-        ).with_stdout_contains("test bench ... bench: [..]")
+        )
+        .with_stdout_contains("test bench ... bench: [..]")
         .run();
 
     p.cargo("bench --bench=foo --no-default-features")
@@ -451,7 +476,8 @@ fn bench_default_features() {
 error: target `foo` in package `foo` requires the features: `a`
 Consider enabling them by passing e.g. `--features=\"a\"`
 ",
-        ).run();
+        )
+        .run();
 }
 
 #[test]
@@ -476,7 +502,8 @@ fn bench_arg_features() {
             name = "foo"
             required-features = ["a"]
         "#,
-        ).file(
+        )
+        .file(
             "benches/foo.rs",
             r#"
             #![feature(test)]
@@ -485,7 +512,8 @@ fn bench_arg_features() {
             #[bench]
             fn bench(_: &mut test::Bencher) {
             }"#,
-        ).build();
+        )
+        .build();
 
     p.cargo("bench --features a")
         .with_stderr(
@@ -493,7 +521,8 @@ fn bench_arg_features() {
 [COMPILING] foo v0.0.1 ([CWD])
 [FINISHED] release [optimized] target(s) in [..]
 [RUNNING] target/release/deps/foo-[..][EXE]",
-        ).with_stdout_contains("test bench ... bench: [..]")
+        )
+        .with_stdout_contains("test bench ... bench: [..]")
         .run();
 }
 
@@ -526,7 +555,8 @@ fn bench_multiple_required_features() {
             name = "foo_2"
             required-features = ["a"]
         "#,
-        ).file(
+        )
+        .file(
             "benches/foo_1.rs",
             r#"
             #![feature(test)]
@@ -535,7 +565,8 @@ fn bench_multiple_required_features() {
             #[bench]
             fn bench(_: &mut test::Bencher) {
             }"#,
-        ).file(
+        )
+        .file(
             "benches/foo_2.rs",
             r#"
             #![feature(test)]
@@ -544,7 +575,8 @@ fn bench_multiple_required_features() {
             #[bench]
             fn bench(_: &mut test::Bencher) {
             }"#,
-        ).build();
+        )
+        .build();
 
     p.cargo("bench")
         .with_stderr(
@@ -552,7 +584,8 @@ fn bench_multiple_required_features() {
 [COMPILING] foo v0.0.1 ([CWD])
 [FINISHED] release [optimized] target(s) in [..]
 [RUNNING] target/release/deps/foo_2-[..][EXE]",
-        ).with_stdout_contains("test bench ... bench: [..]")
+        )
+        .with_stdout_contains("test bench ... bench: [..]")
         .run();
 
     p.cargo("bench --features c")
@@ -562,7 +595,8 @@ fn bench_multiple_required_features() {
 [FINISHED] release [optimized] target(s) in [..]
 [RUNNING] target/release/deps/foo_1-[..][EXE]
 [RUNNING] target/release/deps/foo_2-[..][EXE]",
-        ).with_stdout_contains_n("test bench ... bench: [..]", 2)
+        )
+        .with_stdout_contains_n("test bench ... bench: [..]", 2)
         .run();
 
     p.cargo("bench --no-default-features")
@@ -594,7 +628,8 @@ fn install_default_features() {
             name = "foo"
             required-features = ["a"]
         "#,
-        ).file("src/main.rs", "fn main() {}")
+        )
+        .file("src/main.rs", "fn main() {}")
         .file("examples/foo.rs", "fn main() {}")
         .build();
 
@@ -610,7 +645,8 @@ fn install_default_features() {
 [FINISHED] release [optimized] target(s) in [..]
 [ERROR] no binaries are available for install using the selected features
 ",
-        ).run();
+        )
+        .run();
     assert_has_not_installed_exe(cargo_home(), "foo");
 
     p.cargo("install --path . --bin=foo").run();
@@ -629,7 +665,8 @@ Caused by:
   target `foo` in package `foo` requires the features: `a`
 Consider enabling them by passing e.g. `--features=\"a\"`
 ",
-        ).run();
+        )
+        .run();
     assert_has_not_installed_exe(cargo_home(), "foo");
 
     p.cargo("install --path . --example=foo").run();
@@ -648,7 +685,8 @@ Caused by:
   target `foo` in package `foo` requires the features: `a`
 Consider enabling them by passing e.g. `--features=\"a\"`
 ",
-        ).run();
+        )
+        .run();
     assert_has_not_installed_exe(cargo_home(), "foo");
 }
 
@@ -670,7 +708,8 @@ fn install_arg_features() {
             name = "foo"
             required-features = ["a"]
         "#,
-        ).file("src/main.rs", "fn main() {}")
+        )
+        .file("src/main.rs", "fn main() {}")
         .build();
 
     p.cargo("install --features a").run();
@@ -705,7 +744,8 @@ fn install_multiple_required_features() {
             path = "src/foo_2.rs"
             required-features = ["a"]
         "#,
-        ).file("src/foo_1.rs", "fn main() {}")
+        )
+        .file("src/foo_1.rs", "fn main() {}")
         .file("src/foo_2.rs", "fn main() {}")
         .build();
 
@@ -727,7 +767,8 @@ fn install_multiple_required_features() {
 [FINISHED] release [optimized] target(s) in [..]
 [ERROR] no binaries are available for install using the selected features
 ",
-        ).run();
+        )
+        .run();
     assert_has_not_installed_exe(cargo_home(), "foo_1");
     assert_has_not_installed_exe(cargo_home(), "foo_2");
 }
@@ -762,7 +803,8 @@ fn dep_feature_in_toml() {
             name = "foo"
             required-features = ["bar/a"]
         "#,
-        ).file("src/main.rs", "fn main() {}")
+        )
+        .file("src/main.rs", "fn main() {}")
         .file("examples/foo.rs", "fn main() {}")
         .file("tests/foo.rs", "#[test]\nfn test() {}")
         .file(
@@ -774,7 +816,8 @@ fn dep_feature_in_toml() {
             #[bench]
             fn bench(_: &mut test::Bencher) {
             }"#,
-        ).file(
+        )
+        .file(
             "bar/Cargo.toml",
             r#"
             [project]
@@ -785,7 +828,8 @@ fn dep_feature_in_toml() {
             [features]
             a = []
         "#,
-        ).file("bar/src/lib.rs", "")
+        )
+        .file("bar/src/lib.rs", "")
         .build();
 
     p.cargo("build").run();
@@ -805,7 +849,8 @@ fn dep_feature_in_toml() {
 [COMPILING] foo v0.0.1 ([CWD])
 [FINISHED] dev [unoptimized + debuginfo] target(s) in [..]
 [RUNNING] target/debug/deps/foo-[..][EXE]",
-        ).with_stdout_contains("test test ... ok")
+        )
+        .with_stdout_contains("test test ... ok")
         .run();
 
     // bench
@@ -817,7 +862,8 @@ fn dep_feature_in_toml() {
 [COMPILING] foo v0.0.1 ([CWD])
 [FINISHED] release [optimized] target(s) in [..]
 [RUNNING] target/release/deps/foo-[..][EXE]",
-            ).with_stdout_contains("test bench ... bench: [..]")
+            )
+            .with_stdout_contains("test bench ... bench: [..]")
             .run();
     }
 
@@ -857,7 +903,8 @@ fn dep_feature_in_cmd_line() {
             name = "foo"
             required-features = ["bar/a"]
         "#,
-        ).file("src/main.rs", "fn main() {}")
+        )
+        .file("src/main.rs", "fn main() {}")
         .file("examples/foo.rs", "fn main() {}")
         .file("tests/foo.rs", "#[test]\nfn test() {}")
         .file(
@@ -869,7 +916,8 @@ fn dep_feature_in_cmd_line() {
             #[bench]
             fn bench(_: &mut test::Bencher) {
             }"#,
-        ).file(
+        )
+        .file(
             "bar/Cargo.toml",
             r#"
             [project]
@@ -880,7 +928,8 @@ fn dep_feature_in_cmd_line() {
             [features]
             a = []
         "#,
-        ).file("bar/src/lib.rs", "")
+        )
+        .file("bar/src/lib.rs", "")
         .build();
 
     p.cargo("build").run();
@@ -893,7 +942,8 @@ fn dep_feature_in_cmd_line() {
 error: target `foo` in package `foo` requires the features: `bar/a`
 Consider enabling them by passing e.g. `--features=\"bar/a\"`
 ",
-        ).run();
+        )
+        .run();
 
     p.cargo("build --bin=foo --features bar/a").run();
     assert!(p.bin("foo").is_file());
@@ -906,7 +956,8 @@ Consider enabling them by passing e.g. `--features=\"bar/a\"`
 error: target `foo` in package `foo` requires the features: `bar/a`
 Consider enabling them by passing e.g. `--features=\"bar/a\"`
 ",
-        ).run();
+        )
+        .run();
 
     p.cargo("build --example=foo --features bar/a").run();
     assert!(p.bin("examples/foo").is_file());
@@ -923,7 +974,8 @@ Consider enabling them by passing e.g. `--features=\"bar/a\"`
 [COMPILING] foo v0.0.1 ([CWD])
 [FINISHED] dev [unoptimized + debuginfo] target(s) in [..]
 [RUNNING] target/debug/deps/foo-[..][EXE]",
-        ).with_stdout_contains("test test ... ok")
+        )
+        .with_stdout_contains("test test ... ok")
         .run();
 
     // bench
@@ -940,7 +992,8 @@ Consider enabling them by passing e.g. `--features=\"bar/a\"`
 [COMPILING] foo v0.0.1 ([CWD])
 [FINISHED] release [optimized] target(s) in [..]
 [RUNNING] target/release/deps/foo-[..][EXE]",
-            ).with_stdout_contains("test bench ... bench: [..]")
+            )
+            .with_stdout_contains("test bench ... bench: [..]")
             .run();
     }
 
@@ -953,7 +1006,8 @@ Consider enabling them by passing e.g. `--features=\"bar/a\"`
 [FINISHED] release [optimized] target(s) in [..]
 [ERROR] no binaries are available for install using the selected features
 ",
-        ).run();
+        )
+        .run();
     assert_has_not_installed_exe(cargo_home(), "foo");
 
     p.cargo("install --features bar/a").run();
@@ -980,7 +1034,8 @@ fn test_skips_compiling_bin_with_missing_required_features() {
             path = "src/bin/foo.rs"
             required-features = ["a"]
         "#,
-        ).file("src/bin/foo.rs", "extern crate bar; fn main() {}")
+        )
+        .file("src/bin/foo.rs", "extern crate bar; fn main() {}")
         .file("tests/foo.rs", "")
         .file("benches/foo.rs", "")
         .build();
@@ -991,7 +1046,8 @@ fn test_skips_compiling_bin_with_missing_required_features() {
 [COMPILING] foo v0.0.1 ([CWD])
 [FINISHED] dev [unoptimized + debuginfo] target(s) in [..]
 [RUNNING] target/debug/deps/foo-[..][EXE]",
-        ).with_stdout_contains("running 0 tests")
+        )
+        .with_stdout_contains("running 0 tests")
         .run();
 
     p.cargo("test --features a -j 1")
@@ -1000,7 +1056,8 @@ fn test_skips_compiling_bin_with_missing_required_features() {
             "\
 [COMPILING] foo v0.0.1 ([CWD])
 error[E0463]: can't find crate for `bar`",
-        ).run();
+        )
+        .run();
 
     if is_nightly() {
         p.cargo("bench")
@@ -1009,7 +1066,8 @@ error[E0463]: can't find crate for `bar`",
 [COMPILING] foo v0.0.1 ([CWD])
 [FINISHED] release [optimized] target(s) in [..]
 [RUNNING] target/release/deps/foo-[..][EXE]",
-            ).with_stdout_contains("running 0 tests")
+            )
+            .with_stdout_contains("running 0 tests")
             .run();
 
         p.cargo("bench --features a -j 1")
@@ -1018,7 +1076,8 @@ error[E0463]: can't find crate for `bar`",
                 "\
 [COMPILING] foo v0.0.1 ([CWD])
 error[E0463]: can't find crate for `bar`",
-            ).run();
+            )
+            .run();
     }
 }
 
@@ -1041,7 +1100,8 @@ fn run_default() {
             name = "foo"
             required-features = ["a"]
         "#,
-        ).file("src/lib.rs", "")
+        )
+        .file("src/lib.rs", "")
         .file("src/main.rs", "extern crate foo; fn main() {}")
         .build();
 
@@ -1052,7 +1112,8 @@ fn run_default() {
 error: target `foo` in package `foo` requires the features: `a`
 Consider enabling them by passing e.g. `--features=\"a\"`
 ",
-        ).run();
+        )
+        .run();
 
     p.cargo("run --features a").run();
 }
@@ -1083,7 +1144,8 @@ fn run_default_multiple_required_features() {
             path = "src/foo2.rs"
             required-features = ["b"]
         "#,
-        ).file("src/lib.rs", "")
+        )
+        .file("src/lib.rs", "")
         .file("src/foo1.rs", "extern crate foo; fn main() {}")
         .file("src/foo2.rs", "extern crate foo; fn main() {}")
         .build();
@@ -1094,5 +1156,6 @@ fn run_default_multiple_required_features() {
             "\
              error: `cargo run` requires that a package only have one executable; \
              use the `--bin` option to specify which one to run\navailable binaries: foo1, foo2",
-        ).run();
+        )
+        .run();
 }

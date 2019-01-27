@@ -1,4 +1,4 @@
-use support::{basic_bin_manifest, main_file, project};
+use crate::support::{basic_bin_manifest, main_file, project};
 
 fn verify_project_success_output() -> String {
     r#"{"success":"true"}"#.into()
@@ -40,5 +40,32 @@ fn cargo_verify_project_cwd() {
 
     p.cargo("verify-project")
         .with_stdout(verify_project_success_output())
+        .run();
+}
+
+#[test]
+fn cargo_verify_project_honours_unstable_features() {
+    let p = project()
+        .file(
+            "Cargo.toml",
+            r#"
+        cargo-features = ["test-dummy-unstable"]
+
+        [package]
+        name = "foo"
+        version = "0.0.1"
+    "#,
+        )
+        .file("src/lib.rs", "")
+        .build();
+
+    p.cargo("verify-project")
+        .masquerade_as_nightly_cargo()
+        .with_stdout(verify_project_success_output())
+        .run();
+
+    p.cargo("verify-project")
+        .with_status(1)
+        .with_stdout(r#"{"invalid":"failed to parse manifest at `[CWD]/Cargo.toml`"}"#)
         .run();
 }

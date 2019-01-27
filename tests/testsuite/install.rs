@@ -1,14 +1,14 @@
+use crate::support;
 use std::fs::{self, File, OpenOptions};
 use std::io::prelude::*;
-use support;
 
+use crate::support::cross_compile;
+use crate::support::git;
+use crate::support::install::{assert_has_installed_exe, assert_has_not_installed_exe, cargo_home};
+use crate::support::paths;
+use crate::support::registry::Package;
+use crate::support::{basic_manifest, cargo_process, project};
 use git2;
-use support::cross_compile;
-use support::git;
-use support::install::{assert_has_installed_exe, assert_has_not_installed_exe, cargo_home};
-use support::paths;
-use support::registry::Package;
-use support::{basic_manifest, cargo_process, project};
 
 fn pkg(name: &str, vers: &str) {
     Package::new(name, vers)
@@ -16,7 +16,8 @@ fn pkg(name: &str, vers: &str) {
         .file(
             "src/main.rs",
             &format!("extern crate {}; fn main() {{}}", name),
-        ).publish();
+        )
+        .publish();
 }
 
 #[test]
@@ -35,7 +36,8 @@ fn simple() {
 [INSTALLING] [CWD]/home/.cargo/bin/foo[EXE]
 warning: be sure to add `[..]` to your PATH to be able to run the installed binaries
 ",
-        ).run();
+        )
+        .run();
     assert_has_installed_exe(cargo_home(), "foo");
 
     cargo_process("uninstall foo")
@@ -71,7 +73,8 @@ error: could not find `baz` in registry `[..]`
 warning: be sure to add `[..]` to your PATH to be able to run the installed binaries
 error: some crates failed to install
 ",
-        ).run();
+        )
+        .run();
     assert_has_installed_exe(cargo_home(), "foo");
     assert_has_installed_exe(cargo_home(), "bar");
 
@@ -82,7 +85,8 @@ error: some crates failed to install
 [REMOVING] [CWD]/home/.cargo/bin/bar[EXE]
 [SUMMARY] Successfully uninstalled foo, bar!
 ",
-        ).run();
+        )
+        .run();
 
     assert_has_not_installed_exe(cargo_home(), "foo");
     assert_has_not_installed_exe(cargo_home(), "bar");
@@ -108,7 +112,8 @@ fn pick_max_version() {
 [INSTALLING] [CWD]/home/.cargo/bin/foo[EXE]
 warning: be sure to add `[..]` to your PATH to be able to run the installed binaries
 ",
-        ).run();
+        )
+        .run();
     assert_has_installed_exe(cargo_home(), "foo");
 }
 
@@ -136,7 +141,8 @@ fn missing() {
 [UPDATING] [..] index
 [ERROR] could not find `bar` in registry `[..]`
 ",
-        ).run();
+        )
+        .run();
 }
 
 #[test]
@@ -149,24 +155,33 @@ fn bad_version() {
 [UPDATING] [..] index
 [ERROR] could not find `foo` in registry `[..]` with version `=0.2.0`
 ",
-        ).run();
+        )
+        .run();
 }
 
 #[test]
-fn no_crate() {
+fn bad_paths() {
     cargo_process("install")
         .with_status(101)
-        .with_stderr(
-            "\
-[ERROR] `[..]` is not a crate root; specify a crate to install [..]
+        .with_stderr("[ERROR] `[CWD]` is not a crate root; specify a crate to install [..]")
+        .run();
 
-Caused by:
-  failed to read `[..]Cargo.toml`
+    cargo_process("install --path .")
+        .with_status(101)
+        .with_stderr("[ERROR] `[CWD]` does not contain a Cargo.toml file[..]")
+        .run();
 
-Caused by:
-  [..] (os error [..])
-",
-        ).run();
+    let toml = paths::root().join("Cargo.toml");
+    fs::write(toml, "").unwrap();
+    cargo_process("install --path Cargo.toml")
+        .with_status(101)
+        .with_stderr("[ERROR] `[CWD]/Cargo.toml` is not a directory[..]")
+        .run();
+
+    cargo_process("install --path .")
+        .with_status(101)
+        .with_stderr_contains("[ERROR] failed to parse manifest at `[CWD]/Cargo.toml`")
+        .run();
 }
 
 #[test]
@@ -189,8 +204,10 @@ fn install_location_precedence() {
         root = '{}'
     ",
                 t3.display()
-            ).as_bytes(),
-        ).unwrap();
+            )
+            .as_bytes(),
+        )
+        .unwrap();
 
     println!("install --root");
 
@@ -237,7 +254,8 @@ fn install_path() {
 [ERROR] binary `foo[..]` already exists in destination as part of `foo v0.0.1 [..]`
 Add --force to overwrite
 ",
-        ).run();
+        )
+        .run();
 }
 
 #[test]
@@ -257,7 +275,8 @@ fn multiple_crates_error() {
 [UPDATING] git repository [..]
 [ERROR] multiple packages with binaries found: bar, foo
 ",
-        ).run();
+        )
+        .run();
 }
 
 #[test]
@@ -286,14 +305,23 @@ fn multiple_crates_select() {
 #[test]
 fn multiple_crates_git_all() {
     let p = git::repo(&paths::root().join("foo"))
-        .file("Cargo.toml", r#"\
+        .file(
+            "Cargo.toml",
+            r#"\
 [workspace]
 members = ["bin1", "bin2"]
-"#)
+"#,
+        )
         .file("bin1/Cargo.toml", &basic_manifest("bin1", "0.1.0"))
         .file("bin2/Cargo.toml", &basic_manifest("bin2", "0.1.0"))
-        .file("bin1/src/main.rs", r#"fn main() { println!("Hello, world!"); }"#)
-        .file("bin2/src/main.rs", r#"fn main() { println!("Hello, world!"); }"#)
+        .file(
+            "bin1/src/main.rs",
+            r#"fn main() { println!("Hello, world!"); }"#,
+        )
+        .file(
+            "bin2/src/main.rs",
+            r#"fn main() { println!("Hello, world!"); }"#,
+        )
         .build();
 
     cargo_process(&format!("install --git {} bin1 bin2", p.url().to_string())).run();
@@ -313,7 +341,8 @@ fn multiple_crates_auto_binaries() {
             [dependencies]
             bar = { path = "a" }
         "#,
-        ).file("src/main.rs", "extern crate bar; fn main() {}")
+        )
+        .file("src/main.rs", "extern crate bar; fn main() {}")
         .file("a/Cargo.toml", &basic_manifest("bar", "0.1.0"))
         .file("a/src/lib.rs", "")
         .build();
@@ -336,7 +365,8 @@ fn multiple_crates_auto_examples() {
             [dependencies]
             bar = { path = "a" }
         "#,
-        ).file("src/lib.rs", "extern crate bar;")
+        )
+        .file("src/lib.rs", "extern crate bar;")
         .file(
             "examples/foo.rs",
             "
@@ -344,7 +374,8 @@ fn multiple_crates_auto_examples() {
             extern crate foo;
             fn main() {}
         ",
-        ).file("a/Cargo.toml", &basic_manifest("bar", "0.1.0"))
+        )
+        .file("a/Cargo.toml", &basic_manifest("bar", "0.1.0"))
         .file("a/src/lib.rs", "")
         .build();
 
@@ -369,7 +400,8 @@ fn no_binaries_or_examples() {
             [dependencies]
             bar = { path = "a" }
         "#,
-        ).file("src/lib.rs", "")
+        )
+        .file("src/lib.rs", "")
         .file("a/Cargo.toml", &basic_manifest("bar", "0.1.0"))
         .file("a/src/lib.rs", "")
         .build();
@@ -397,7 +429,8 @@ fn no_binaries() {
 [INSTALLING] foo [..]
 [ERROR] specified package has no binaries
 ",
-        ).run();
+        )
+        .run();
 }
 
 #[test]
@@ -432,7 +465,8 @@ fn install_twice() {
 binary `foo-bin2[..]` already exists in destination as part of `foo v0.0.1 ([..])`
 Add --force to overwrite
 ",
-        ).run();
+        )
+        .run();
 }
 
 #[test]
@@ -457,7 +491,8 @@ fn install_force() {
 [REPLACING] [CWD]/home/.cargo/bin/foo[EXE]
 warning: be sure to add `[..]` to your PATH to be able to run the installed binaries
 ",
-        ).run();
+        )
+        .run();
 
     cargo_process("install --list")
         .with_stdout(
@@ -465,7 +500,8 @@ warning: be sure to add `[..]` to your PATH to be able to run the installed bina
 foo v0.2.0 ([..]):
     foo[..]
 ",
-        ).run();
+        )
+        .run();
 }
 
 #[test]
@@ -495,7 +531,8 @@ fn install_force_partial_overlap() {
 [REPLACING] [CWD]/home/.cargo/bin/foo-bin2[EXE]
 warning: be sure to add `[..]` to your PATH to be able to run the installed binaries
 ",
-        ).run();
+        )
+        .run();
 
     cargo_process("install --list")
         .with_stdout(
@@ -506,7 +543,8 @@ foo v0.2.0 ([..]):
     foo-bin2[..]
     foo-bin3[..]
 ",
-        ).run();
+        )
+        .run();
 }
 
 #[test]
@@ -535,7 +573,8 @@ fn install_force_bin() {
 [REPLACING] [CWD]/home/.cargo/bin/foo-bin2[EXE]
 warning: be sure to add `[..]` to your PATH to be able to run the installed binaries
 ",
-        ).run();
+        )
+        .run();
 
     cargo_process("install --list")
         .with_stdout(
@@ -545,7 +584,8 @@ foo v0.0.1 ([..]):
 foo v0.2.0 ([..]):
     foo-bin2[..]
 ",
-        ).run();
+        )
+        .run();
 }
 
 #[test]
@@ -565,7 +605,8 @@ Caused by:
 
 To learn more, run the command again with --verbose.
 ",
-        ).run();
+        )
+        .run();
 }
 
 #[test]
@@ -587,7 +628,8 @@ fn git_repo() {
 [INSTALLING] [CWD]/home/.cargo/bin/foo[EXE]
 warning: be sure to add `[..]` to your PATH to be able to run the installed binaries
 ",
-        ).run();
+        )
+        .run();
     assert_has_installed_exe(cargo_home(), "foo");
     assert_has_installed_exe(cargo_home(), "foo");
 }
@@ -610,7 +652,8 @@ bar v0.2.1:
 foo v0.0.1:
     foo[..]
 ",
-        ).run();
+        )
+        .run();
 }
 
 #[test]
@@ -623,7 +666,8 @@ fn list_error() {
 foo v0.0.1:
     foo[..]
 ",
-        ).run();
+        )
+        .run();
     let mut worldfile_path = cargo_home();
     worldfile_path.push(".crates.toml");
     let mut worldfile = OpenOptions::new()
@@ -644,7 +688,8 @@ Caused by:
 Caused by:
   unexpected character[..]
 ",
-        ).run();
+        )
+        .run();
 }
 
 #[test]
@@ -717,7 +762,8 @@ fn installs_from_cwd_by_default() {
              package in current working directory is deprecated, \
              use `cargo install --path .` instead. \
              Use `cargo build` if you want to simply build the package.",
-        ).run();
+        )
+        .run();
     assert_has_installed_exe(cargo_home(), "foo");
 }
 
@@ -740,7 +786,8 @@ fn installs_from_cwd_with_2018_warnings() {
             authors = []
             edition = "2018"
         "#,
-        ).file("src/main.rs", "fn main() {}")
+        )
+        .file("src/main.rs", "fn main() {}")
         .build();
 
     p.cargo("install")
@@ -751,7 +798,8 @@ fn installs_from_cwd_with_2018_warnings() {
              package in current working directory is no longer supported, \
              use `cargo install --path .` instead. \
              Use `cargo build` if you want to simply build the package.",
-        ).run();
+        )
+        .run();
     assert_has_not_installed_exe(cargo_home(), "foo");
 }
 
@@ -767,7 +815,8 @@ fn uninstall_cwd() {
 [INSTALLING] {home}/bin/foo[EXE]
 warning: be sure to add `{home}/bin` to your PATH to be able to run the installed binaries",
             home = cargo_home().display(),
-        )).run();
+        ))
+        .run();
     assert_has_installed_exe(cargo_home(), "foo");
 
     p.cargo("uninstall")
@@ -776,7 +825,8 @@ warning: be sure to add `{home}/bin` to your PATH to be able to run the installe
             "\
              [REMOVING] {home}/bin/foo[EXE]",
             home = cargo_home().display()
-        )).run();
+        ))
+        .run();
     assert_has_not_installed_exe(cargo_home(), "foo");
 }
 
@@ -789,7 +839,8 @@ fn uninstall_cwd_not_installed() {
         .with_stderr(
             "\
              error: package `foo v0.0.1 ([CWD])` is not installed",
-        ).run();
+        )
+        .run();
 }
 
 #[test]
@@ -809,7 +860,8 @@ fn uninstall_cwd_no_project() {
 Caused by:
   {err_msg} (os error 2)",
             err_msg = err_msg,
-        )).run();
+        ))
+        .run();
 }
 
 #[test]
@@ -825,7 +877,8 @@ fn do_not_rebuilds_on_local_install() {
 [INSTALLING] [..]
 warning: be sure to add `[..]` to your PATH to be able to run the installed binaries
 ",
-        ).run();
+        )
+        .run();
 
     assert!(p.build_dir().exists());
     assert!(p.release_bin("foo").exists());
@@ -861,7 +914,8 @@ fn git_with_lockfile() {
             [dependencies]
             bar = { path = "bar" }
         "#,
-        ).file("src/main.rs", "fn main() {}")
+        )
+        .file("src/main.rs", "fn main() {}")
         .file("bar/Cargo.toml", &basic_manifest("bar", "0.1.0"))
         .file("bar/src/lib.rs", "fn main() {}")
         .file(
@@ -876,7 +930,8 @@ fn git_with_lockfile() {
             name = "bar"
             version = "0.1.0"
         "#,
-        ).build();
+        )
+        .build();
 
     cargo_process("install --git")
         .arg(p.url().to_string())
@@ -923,7 +978,8 @@ fn use_path_workspace() {
             [workspace]
             members = ["baz"]
         "#,
-        ).file("src/main.rs", "fn main() {}")
+        )
+        .file("src/main.rs", "fn main() {}")
         .file(
             "baz/Cargo.toml",
             r#"
@@ -935,7 +991,8 @@ fn use_path_workspace() {
             [dependencies]
             foo = "1"
         "#,
-        ).file("baz/src/lib.rs", "")
+        )
+        .file("baz/src/lib.rs", "")
         .build();
 
     p.cargo("build").run();
@@ -960,10 +1017,14 @@ fn dev_dependencies_no_check() {
             [dev-dependencies]
             baz = "1.0.0"
         "#,
-        ).file("src/main.rs", "fn main() {}")
+        )
+        .file("src/main.rs", "fn main() {}")
         .build();
 
-    p.cargo("build").with_status(101).run();
+    p.cargo("build")
+        .with_status(101)
+        .with_stderr_contains("[..] no matching package named `baz` found")
+        .run();
     p.cargo("install").run();
 }
 
@@ -982,7 +1043,8 @@ fn dev_dependencies_lock_file_untouched() {
             [dev-dependencies]
             bar = { path = "a" }
         "#,
-        ).file("src/main.rs", "fn main() {}")
+        )
+        .file("src/main.rs", "fn main() {}")
         .file("a/Cargo.toml", &basic_manifest("bar", "0.1.0"))
         .file("a/src/lib.rs", "")
         .build();
@@ -1050,7 +1112,8 @@ fn not_both_vers_and_version() {
 error: The argument '--version <VERSION>' was provided more than once, \
 but cannot be used multiple times
 ",
-        ).run();
+        )
+        .run();
 }
 
 #[test]
@@ -1065,7 +1128,8 @@ warning: the `--vers` provided, `0.1`, is not a valid semver version
 historically Cargo treated this as a semver version requirement accidentally
 and will continue to do so, but this behavior will be removed eventually
 ",
-        ).run();
+        )
+        .run();
 }
 
 #[test]
@@ -1093,7 +1157,8 @@ error: package id specification `bar` matched no packages
 [SUMMARY] Successfully uninstalled foo! Failed to uninstall bar (see error(s) above).
 error: some packages failed to uninstall
 ",
-        ).run();
+        )
+        .run();
 
     assert_has_not_installed_exe(cargo_home(), "foo");
     assert_has_not_installed_exe(cargo_home(), "bar");
@@ -1130,7 +1195,8 @@ fn install_respects_lock_file() {
         .file(
             "src/main.rs",
             "extern crate foo; extern crate bar; fn main() {}",
-        ).file(
+        )
+        .file(
             "Cargo.lock",
             r#"
 [[package]]
@@ -1145,7 +1211,8 @@ dependencies = [
  "bar 0.1.0 (registry+https://github.com/rust-lang/crates.io-index)",
 ]
 "#,
-        ).publish();
+        )
+        .publish();
 
     cargo_process("install foo").run();
 }
@@ -1160,7 +1227,8 @@ fn lock_file_path_deps_ok() {
         .file(
             "src/main.rs",
             "extern crate foo; extern crate bar; fn main() {}",
-        ).file(
+        )
+        .file(
             "Cargo.lock",
             r#"
 [[package]]
@@ -1174,7 +1242,8 @@ dependencies = [
  "bar 0.1.0",
 ]
 "#,
-        ).publish();
+        )
+        .publish();
 
     cargo_process("install foo").run();
 }
@@ -1187,7 +1256,8 @@ fn install_empty_argument() {
         .with_status(1)
         .with_stderr_contains(
             "[ERROR] The argument '<crate>...' requires a value but none was supplied",
-        ).run();
+        )
+        .run();
 }
 
 #[test]
@@ -1207,19 +1277,15 @@ fn git_repo_replace() {
     path.push(".cargo/.crates.toml");
 
     assert_ne!(old_rev, new_rev);
-    assert!(
-        fs::read_to_string(path.clone())
-            .unwrap()
-            .contains(&format!("{}", old_rev))
-    );
+    assert!(fs::read_to_string(path.clone())
+        .unwrap()
+        .contains(&format!("{}", old_rev)));
     cargo_process("install --force --git")
         .arg(p.url().to_string())
         .run();
-    assert!(
-        fs::read_to_string(path)
-            .unwrap()
-            .contains(&format!("{}", new_rev))
-    );
+    assert!(fs::read_to_string(path)
+        .unwrap()
+        .contains(&format!("{}", new_rev)));
 }
 
 #[test]
@@ -1238,7 +1304,8 @@ fn workspace_uses_workspace_target_dir() {
                 [dependencies]
                 bar = { path = 'bar' }
             "#,
-        ).file("src/main.rs", "fn main() {}")
+        )
+        .file("src/main.rs", "fn main() {}")
         .file("bar/Cargo.toml", &basic_manifest("bar", "0.1.0"))
         .file("bar/src/main.rs", "fn main() {}")
         .build();
@@ -1252,7 +1319,8 @@ fn workspace_uses_workspace_target_dir() {
 [INSTALLING] [..]
 warning: be sure to add `[..]` to your PATH to be able to run the installed binaries
 ",
-        ).run();
+        )
+        .run();
 }
 
 #[test]
@@ -1281,10 +1349,12 @@ fn install_global_cargo_config() {
     let config = cargo_home().join("config");
     let mut toml = fs::read_to_string(&config).unwrap_or(String::new());
 
-    toml.push_str(r#"
+    toml.push_str(
+        r#"
         [build]
         target = 'nonexistent'
-    "#);
+    "#,
+    );
     fs::write(&config, toml).unwrap();
 
     cargo_process("install bar")

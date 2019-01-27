@@ -1,0 +1,16 @@
+=== Feature Selection
+
+When no feature options are given, the `default` feature is activated for
+every selected package.
+
+*--features* _FEATURES_::
+    Space or comma separated list of features to activate. These features only
+    apply to the current directory's package. Features of direct dependencies
+    may be enabled with `<dep-name>/<feature-name>` syntax.
+
+*--all-features*::
+    Activate all available features of all selected packages.
+
+*--no-default-features*::
+    Do not activate the `default` feature of the current directory's
+    package.

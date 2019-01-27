@@ -1,7 +1,7 @@
 use std::fmt;
 
-use util::{CargoResult, Dirty, Fresh, Freshness};
 use super::job_queue::JobState;
+use crate::util::{CargoResult, Dirty, Fresh, Freshness};
 
 pub struct Job {
     dirty: Work,
@@ -11,7 +11,7 @@ pub struct Job {
 /// Each proc should send its description before starting.
 /// It should send either once or close immediately.
 pub struct Work {
-    inner: Box<for<'a, 'b> FnBox<&'a JobState<'b>, CargoResult<()>> + Send>,
+    inner: Box<dyn for<'a, 'b> FnBox<&'a JobState<'b>, CargoResult<()>> + Send>,
 }
 
 trait FnBox<A, R> {
@@ -27,7 +27,7 @@ impl<A, R, F: FnOnce(A) -> R> FnBox<A, R> for F {
 impl Work {
     pub fn new<F>(f: F) -> Work
     where
-        F: FnOnce(&JobState) -> CargoResult<()> + Send + 'static,
+        F: FnOnce(&JobState<'_>) -> CargoResult<()> + Send + 'static,
     {
         Work { inner: Box::new(f) }
     }
@@ -36,7 +36,7 @@ impl Work {
         Work::new(|_| Ok(()))
     }
 
-    pub fn call(self, tx: &JobState) -> CargoResult<()> {
+    pub fn call(self, tx: &JobState<'_>) -> CargoResult<()> {
         self.inner.call_box(tx)
     }
 
@@ -56,7 +56,7 @@ impl Job {
 
     /// Consumes this job by running it, returning the result of the
     /// computation.
-    pub fn run(self, fresh: Freshness, state: &JobState) -> CargoResult<()> {
+    pub fn run(self, fresh: Freshness, state: &JobState<'_>) -> CargoResult<()> {
         match fresh {
             Fresh => self.fresh.call(state),
             Dirty => self.dirty.call(state),
@@ -65,7 +65,7 @@ impl Job {
 }
 
 impl fmt::Debug for Job {
-    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         write!(f, "Job {{ ... }}")
     }
 }

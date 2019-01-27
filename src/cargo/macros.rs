@@ -11,7 +11,7 @@ macro_rules! compact_debug {
     ) => (
 
         impl fmt::Debug for $ty {
-            fn fmt(&$this, f: &mut fmt::Formatter) -> fmt::Result {
+            fn fmt(&$this, f: &mut fmt::Formatter<'_>) -> fmt::Result {
                 // Try printing a pretty version where we collapse as many fields as
                 // possible, indicating that they're equivalent to a function call
                 // that's hopefully enough to indicate what each value is without
@@ -32,7 +32,7 @@ macro_rules! compact_debug {
                 )*
 
                 if any_default {
-                    s.field("..", &::macros::DisplayAsDebug(default_name));
+                    s.field("..", &crate::macros::DisplayAsDebug(default_name));
                 }
                 s.finish()
             }
@@ -43,7 +43,7 @@ macro_rules! compact_debug {
 pub struct DisplayAsDebug<T>(pub T);
 
 impl<T: fmt::Display> fmt::Debug for DisplayAsDebug<T> {
-    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         fmt::Display::fmt(&self.0, f)
     }
 }

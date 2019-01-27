@@ -1,13 +1,13 @@
-use std::io::SeekFrom;
 use std::io::prelude::*;
+use std::io::SeekFrom;
 use std::path::Path;
 
-use core::PackageId;
+use crate::core::PackageId;
+use crate::sources::registry::{MaybeLock, RegistryConfig, RegistryData};
+use crate::util::errors::{CargoResult, CargoResultExt};
+use crate::util::paths;
+use crate::util::{Config, FileLock, Filesystem, Sha256};
 use hex;
-use sources::registry::{RegistryConfig, RegistryData, MaybeLock};
-use util::paths;
-use util::{Config, Filesystem, Sha256, FileLock};
-use util::errors::{CargoResult, CargoResultExt};
 
 pub struct LocalRegistry<'cfg> {
     index_path: Filesystem,
@@ -40,7 +40,7 @@ impl<'cfg> RegistryData for LocalRegistry<'cfg> {
         &self,
         root: &Path,
         path: &Path,
-        data: &mut FnMut(&[u8]) -> CargoResult<()>,
+        data: &mut dyn FnMut(&[u8]) -> CargoResult<()>,
     ) -> CargoResult<()> {
         data(&paths::read_bytes(&root.join(path))?)
     }
@@ -57,11 +57,11 @@ impl<'cfg> RegistryData for LocalRegistry<'cfg> {
         // these directories exist.
         let root = self.root.clone().into_path_unlocked();
         if !root.is_dir() {
-            bail!("local registry path is not a directory: {}", root.display())
+            failure::bail!("local registry path is not a directory: {}", root.display())
         }
         let index_path = self.index_path.clone().into_path_unlocked();
         if !index_path.is_dir() {
-            bail!(
+            failure::bail!(
                 "local registry index path is not a directory: {}",
                 index_path.display()
             )
@@ -69,7 +69,7 @@ impl<'cfg> RegistryData for LocalRegistry<'cfg> {
         Ok(())
     }
 
-    fn download(&mut self, pkg: &PackageId, checksum: &str) -> CargoResult<MaybeLock> {
+    fn download(&mut self, pkg: PackageId, checksum: &str) -> CargoResult<MaybeLock> {
         let crate_file = format!("{}-{}.crate", pkg.name(), pkg.version());
         let mut crate_file = self.root.open_ro(&crate_file, self.config, "crate file")?;
 
@@ -96,7 +96,7 @@ impl<'cfg> RegistryData for LocalRegistry<'cfg> {
             state.update(&buf[..n]);
         }
         if hex::encode(state.finish()) != checksum {
-            bail!("failed to verify the checksum of `{}`", pkg)
+            failure::bail!("failed to verify the checksum of `{}`", pkg)
         }
 
         crate_file.seek(SeekFrom::Start(0))?;
@@ -104,9 +104,12 @@ impl<'cfg> RegistryData for LocalRegistry<'cfg> {
         Ok(MaybeLock::Ready(crate_file))
     }
 
-    fn finish_download(&mut self, _pkg: &PackageId, _checksum: &str, _data: &[u8])
-        -> CargoResult<FileLock>
-    {
+    fn finish_download(
+        &mut self,
+        _pkg: PackageId,
+        _checksum: &str,
+        _data: &[u8],
+    ) -> CargoResult<FileLock> {
         panic!("this source doesn't download")
     }
 }

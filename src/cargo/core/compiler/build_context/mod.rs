@@ -3,11 +3,13 @@ use std::env;
 use std::path::{Path, PathBuf};
 use std::str;
 
-use core::profiles::Profiles;
-use core::{Dependency, Workspace};
-use core::{PackageId, PackageSet, Resolve};
-use util::errors::CargoResult;
-use util::{profile, Cfg, CfgExpr, Config, Rustc};
+use log::debug;
+
+use crate::core::profiles::Profiles;
+use crate::core::{Dependency, Workspace};
+use crate::core::{PackageId, PackageSet, Resolve};
+use crate::util::errors::CargoResult;
+use crate::util::{profile, Cfg, CfgExpr, Config, Rustc};
 
 use super::{BuildConfig, BuildOutput, Kind, Unit};
 
@@ -88,7 +90,8 @@ impl<'a, 'cfg> BuildContext<'a, 'cfg> {
     }
 
     pub fn extern_crate_name(&self, unit: &Unit<'a>, dep: &Unit<'a>) -> CargoResult<String> {
-        self.resolve.extern_crate_name(unit.pkg.package_id(), dep.pkg.package_id(), dep.target)
+        self.resolve
+            .extern_crate_name(unit.pkg.package_id(), dep.pkg.package_id(), dep.target)
     }
 
     /// Whether a dependency should be compiled for the host or target platform,
@@ -157,7 +160,7 @@ impl<'a, 'cfg> BuildContext<'a, 'cfg> {
         self.build_config.jobs
     }
 
-    pub fn rustflags_args(&self, unit: &Unit) -> CargoResult<Vec<String>> {
+    pub fn rustflags_args(&self, unit: &Unit<'_>) -> CargoResult<Vec<String>> {
         env_args(
             self.config,
             &self.build_config.requested_target,
@@ -168,7 +171,7 @@ impl<'a, 'cfg> BuildContext<'a, 'cfg> {
         )
     }
 
-    pub fn rustdocflags_args(&self, unit: &Unit) -> CargoResult<Vec<String>> {
+    pub fn rustdocflags_args(&self, unit: &Unit<'_>) -> CargoResult<Vec<String>> {
         env_args(
             self.config,
             &self.build_config.requested_target,
@@ -179,7 +182,7 @@ impl<'a, 'cfg> BuildContext<'a, 'cfg> {
         )
     }
 
-    pub fn show_warnings(&self, pkg: &PackageId) -> bool {
+    pub fn show_warnings(&self, pkg: PackageId) -> bool {
         pkg.source_id().is_path() || self.config.extra_verbose()
     }
 
@@ -266,12 +269,14 @@ impl TargetConfig {
                         let list = value.list(k)?;
                         output.cfgs.extend(list.iter().map(|v| v.0.clone()));
                     }
-                    "rustc-env" => for (name, val) in value.table(k)?.0 {
-                        let val = val.string(name)?.0;
-                        output.env.push((name.clone(), val.to_string()));
-                    },
+                    "rustc-env" => {
+                        for (name, val) in value.table(k)?.0 {
+                            let val = val.string(name)?.0;
+                            output.env.push((name.clone(), val.to_string()));
+                        }
+                    }
                     "warning" | "rerun-if-changed" | "rerun-if-env-changed" => {
-                        bail!("`{}` is not supported in build script overrides", k);
+                        failure::bail!("`{}` is not supported in build script overrides", k);
                     }
                     _ => {
                         let val = value.string(k)?.0;
@@ -342,7 +347,8 @@ fn env_args(
 
     // First try RUSTFLAGS from the environment
     if let Ok(a) = env::var(name) {
-        let args = a.split(' ')
+        let args = a
+            .split(' ')
             .map(str::trim)
             .filter(|s| !s.is_empty())
             .map(str::to_string);
@@ -351,7 +357,8 @@ fn env_args(
 
     let mut rustflags = Vec::new();
 
-    let name = name.chars()
+    let name = name
+        .chars()
         .flat_map(|c| c.to_lowercase())
         .collect::<String>();
     // Then the target.*.rustflags value...
@@ -367,13 +374,10 @@ fn env_args(
     // ...including target.'cfg(...)'.rustflags
     if let Some(target_cfg) = target_cfg {
         if let Some(table) = config.get_table("target")? {
-            let cfgs = table.val.keys().filter_map(|key| {
-                if CfgExpr::matches_key(key, target_cfg) {
-                    Some(key)
-                } else {
-                    None
-                }
-            });
+            let cfgs = table
+                .val
+                .keys()
+                .filter(|key| CfgExpr::matches_key(key, target_cfg));
 
             // Note that we may have multiple matching `[target]` sections and
             // because we're passing flags to the compiler this can affect

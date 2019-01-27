@@ -1,4 +1,4 @@
-use command_prelude::*;
+use crate::command_prelude::*;
 
 use cargo::ops::{self, CompileFilter, FilterRule};
 
@@ -54,7 +54,7 @@ pub fn cli() -> App {
         .arg(
             Arg::with_name("idioms")
                 .long("edition-idioms")
-                .help("Fix warnings to migrate to the idioms of an edition")
+                .help("Fix warnings to migrate to the idioms of an edition"),
         )
         .arg(
             Arg::with_name("allow-no-vcs")
@@ -104,13 +104,13 @@ https://github.com/rust-lang/cargo
         )
 }
 
-pub fn exec(config: &mut Config, args: &ArgMatches) -> CliResult {
+pub fn exec(config: &mut Config, args: &ArgMatches<'_>) -> CliResult {
     let ws = args.workspace(config)?;
     let test = match args.value_of("profile") {
         Some("test") => true,
         None => false,
         Some(profile) => {
-            let err = format_err!(
+            let err = failure::format_err!(
                 "unknown profile: `{}`, only `test` is \
                  currently supported",
                 profile
@@ -122,7 +122,8 @@ pub fn exec(config: &mut Config, args: &ArgMatches) -> CliResult {
 
     // Unlike other commands default `cargo fix` to all targets to fix as much
     // code as we can.
-    let mut opts = args.compile_options(config, mode)?;
+    let mut opts = args.compile_options(config, mode, Some(&ws))?;
+
     if let CompileFilter::Default { .. } = opts.filter {
         opts.filter = CompileFilter::Only {
             all_targets: true,
@@ -133,15 +134,18 @@ pub fn exec(config: &mut Config, args: &ArgMatches) -> CliResult {
             tests: FilterRule::All,
         }
     }
-    ops::fix(&ws, &mut ops::FixOptions {
-        edition: args.is_present("edition"),
-        prepare_for: args.value_of("prepare-for"),
-        idioms: args.is_present("idioms"),
-        compile_opts: opts,
-        allow_dirty: args.is_present("allow-dirty"),
-        allow_no_vcs: args.is_present("allow-no-vcs"),
-        allow_staged: args.is_present("allow-staged"),
-        broken_code: args.is_present("broken-code"),
-    })?;
+    ops::fix(
+        &ws,
+        &mut ops::FixOptions {
+            edition: args.is_present("edition"),
+            prepare_for: args.value_of("prepare-for"),
+            idioms: args.is_present("idioms"),
+            compile_opts: opts,
+            allow_dirty: args.is_present("allow-dirty"),
+            allow_no_vcs: args.is_present("allow-no-vcs"),
+            allow_staged: args.is_present("allow-staged"),
+            broken_code: args.is_present("broken-code"),
+        },
+    )?;
     Ok(())
 }

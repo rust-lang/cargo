@@ -1,68 +1,185 @@
-.TH "CARGO\-YANK" "1" "July 2016" "The Rust package manager" "Cargo Manual"
-.hy
-.SH NAME
-.PP
+'\" t
+.\"     Title: cargo-yank
+.\"    Author: [see the "AUTHOR(S)" section]
+.\" Generator: Asciidoctor 1.5.8
+.\"      Date: 2018-12-20
+.\"    Manual: \ \&
+.\"    Source: \ \&
+.\"  Language: English
+.\"
+.TH "CARGO\-YANK" "1" "2018-12-20" "\ \&" "\ \&"
+.ie \n(.g .ds Aq \(aq
+.el       .ds Aq '
+.ss \n[.ss] 0
+.nh
+.ad l
+.de URL
+\fI\\$2\fP <\\$1>\\$3
+..
+.als MTO URL
+.if \n[.g] \{\
+.  mso www.tmac
+.  am URL
+.    ad l
+.  .
+.  am MTO
+.    ad l
+.  .
+.  LINKSTYLE blue R < >
+.\}
+.SH "NAME"
 cargo\-yank \- Remove a pushed crate from the index
-.SH SYNOPSIS
-.PP
-\f[I]cargo yank\f[] [OPTIONS] [<CRATE>]
-.SH DESCRIPTION
-.PP
-The yank command removes a previously pushed crate\[aq]s version from
-the server\[aq]s index.
-This command does not delete any data, and the crate will still be
-available for download via the registry\[aq]s download link.
-.PP
-Note that existing crates locked to a yanked version will still be able
-to download the yanked version to use it.
-Cargo will, however, not allow any new crates to be locked to any yanked
-version.
-.PP
-.SH OPTIONS
-.TP
-.B \-h, \-\-help
-Print this message.
-.RS
+.SH "SYNOPSIS"
+.sp
+\fBcargo yank [\fIOPTIONS\fP] \-\-vers \fIVERSION\fP [\fICRATE\fP]\fP
+.SH "DESCRIPTION"
+.sp
+The yank command removes a previously published crate\(cqs version from the
+server\(cqs index. This command does not delete any data, and the crate will
+still be available for download via the registry\(cqs download link.
+.sp
+Note that existing crates locked to a yanked version will still be able to
+download the yanked version to use it. Cargo will, however, not allow any new
+crates to be locked to any yanked version.
+.sp
+This command requires you to be authenticated with either the \fB\-\-token\fP option
+or using \fBcargo\-login\fP(1).
+.sp
+If the crate name is not specified, it will use the package name from the
+current directory.
+.SH "OPTIONS"
+.SS "Owner Options"
+.sp
+\fB\-\-vers\fP \fIVERSION\fP
+.RS 4
+The version to yank or un\-yank.
 .RE
-.TP
-.B \-\-vers \f[I]VERSION\f[]
-The version to yank or un-yank.
-.RS
-.RE
-.TP
-.B \-\-undo
+.sp
+\fB\-\-undo\fP
+.RS 4
 Undo a yank, putting a version back into the index.
-.RS
 .RE
-.TP
-.B \-\-index \f[I]INDEX\f[]
-Registry index to yank from.
-.RS
-.RE
-.TP
-.B \-\-token \f[I]TOKEN\f[]
+.sp
+\fB\-\-token\fP \fITOKEN\fP
+.RS 4
 API token to use when authenticating.
-.RS
 .RE
-.TP
-.B \-v, \-\-verbose
-Use verbose output.
-.RS
+.sp
+\fB\-\-index\fP \fIINDEX\fP
+.RS 4
+The URL of the registry index to use.
 .RE
-.TP
-.B \-q, \-\-quiet
+.sp
+\fB\-\-registry\fP \fIREGISTRY\fP
+.RS 4
+Alternative registry to use.
+.sp
+This option is unstable and available only on the nightly channel and requires
+the \fB\-Z unstable\-options\fP flag to enable.
+.RE
+.SS "Display Options"
+.sp
+\fB\-v\fP, \fB\-\-verbose\fP
+.RS 4
+Use verbose output. May be specified twice for "very verbose" output which
+includes extra output such as dependency warnings and build script output.
+May also be specified with the \fBterm.verbose\fP
+.URL "https://doc.rust\-lang.org/cargo/reference/config.html" "config value" "."
+.RE
+.sp
+\fB\-q\fP, \fB\-\-quiet\fP
+.RS 4
 No output printed to stdout.
-.RS
 .RE
-.TP
-.B \-\-color \f[I]WHEN\f[]
-Coloring: auto, always, never.
-.RS
+.sp
+\fB\-\-color\fP \fIWHEN\fP
+.RS 4
+Control when colored output is used. Valid values:
+.sp
+.RS 4
+.ie n \{\
+\h'-04'\(bu\h'+03'\c
+.\}
+.el \{\
+.  sp -1
+.  IP \(bu 2.3
+.\}
+\fBauto\fP (default): Automatically detect if color support is available on the
+terminal.
 .RE
-.SH SEE ALSO
-.PP
-cargo(1), cargo\-owner(1), cargo\-version(1)
-.SH COPYRIGHT
-.PP
-This work is dual\-licensed under Apache 2.0 and MIT terms.
-See \f[I]COPYRIGHT\f[] file in the cargo source distribution.
+.sp
+.RS 4
+.ie n \{\
+\h'-04'\(bu\h'+03'\c
+.\}
+.el \{\
+.  sp -1
+.  IP \(bu 2.3
+.\}
+\fBalways\fP: Always display colors.
+.RE
+.sp
+.RS 4
+.ie n \{\
+\h'-04'\(bu\h'+03'\c
+.\}
+.el \{\
+.  sp -1
+.  IP \(bu 2.3
+.\}
+\fBnever\fP: Never display colors.
+.RE
+.sp
+May also be specified with the \fBterm.color\fP
+.URL "https://doc.rust\-lang.org/cargo/reference/config.html" "config value" "."
+.RE
+.SS "Common Options"
+.sp
+\fB\-h\fP, \fB\-\-help\fP
+.RS 4
+Prints help information.
+.RE
+.sp
+\fB\-Z\fP \fIFLAG\fP...
+.RS 4
+Unstable (nightly\-only) flags to Cargo. Run \fBcargo \-Z help\fP for
+details.
+.RE
+.SH "ENVIRONMENT"
+.sp
+See \c
+.URL "https://doc.rust\-lang.org/cargo/reference/environment\-variables.html" "the reference" " "
+for
+details on environment variables that Cargo reads.
+.SH "EXIT STATUS"
+.sp
+0
+.RS 4
+Cargo succeeded.
+.RE
+.sp
+101
+.RS 4
+Cargo failed to complete.
+.RE
+.SH "EXAMPLES"
+.sp
+.RS 4
+.ie n \{\
+\h'-04' 1.\h'+01'\c
+.\}
+.el \{\
+.  sp -1
+.  IP " 1." 4.2
+.\}
+Yank a crate from the index:
+.sp
+.if n .RS 4
+.nf
+cargo yank \-\-vers 1.0.7 foo
+.fi
+.if n .RE
+.RE
+.SH "SEE ALSO"
+.sp
+\fBcargo\fP(1), \fBcargo\-login\fP(1), \fBcargo\-publish\fP(1)

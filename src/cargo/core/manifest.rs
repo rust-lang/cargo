@@ -6,16 +6,16 @@ use std::rc::Rc;
 
 use semver::Version;
 use serde::ser;
-use toml;
+use serde::Serialize;
 use url::Url;
 
-use core::interning::InternedString;
-use core::profiles::Profiles;
-use core::{Dependency, PackageId, PackageIdSpec, SourceId, Summary};
-use core::{Edition, Feature, Features, WorkspaceConfig};
-use util::errors::*;
-use util::toml::TomlManifest;
-use util::{Config, Filesystem, short_hash};
+use crate::core::interning::InternedString;
+use crate::core::profiles::Profiles;
+use crate::core::{Dependency, PackageId, PackageIdSpec, SourceId, Summary};
+use crate::core::{Edition, Feature, Features, WorkspaceConfig};
+use crate::util::errors::*;
+use crate::util::toml::TomlManifest;
+use crate::util::{short_hash, Config, Filesystem};
 
 pub enum EitherManifest {
     Real(Manifest),
@@ -122,7 +122,7 @@ impl LibKind {
 }
 
 impl fmt::Debug for LibKind {
-    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         self.crate_type().fmt(f)
     }
 }
@@ -168,7 +168,7 @@ impl ser::Serialize for TargetKind {
 }
 
 impl fmt::Debug for TargetKind {
-    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         use self::TargetKind::*;
         match *self {
             Lib(ref kinds) => kinds.fmt(f),
@@ -181,9 +181,22 @@ impl fmt::Debug for TargetKind {
     }
 }
 
+impl TargetKind {
+    pub fn description(&self) -> &'static str {
+        match self {
+            TargetKind::Lib(..) => "lib",
+            TargetKind::Bin => "bin",
+            TargetKind::Test => "integration-test",
+            TargetKind::ExampleBin | TargetKind::ExampleLib(..) => "example",
+            TargetKind::Bench => "bench",
+            TargetKind::CustomBuild => "build-script",
+        }
+    }
+}
+
 /// Information about a binary, a library, an example, etc. that is part of the
 /// package.
-#[derive(Clone, Hash, PartialEq, Eq)]
+#[derive(Clone, Hash, PartialEq, Eq, PartialOrd, Ord)]
 pub struct Target {
     kind: TargetKind,
     name: String,
@@ -202,17 +215,17 @@ pub struct Target {
     edition: Edition,
 }
 
-#[derive(Clone, PartialEq, Eq)]
+#[derive(Clone, PartialEq, Eq, PartialOrd, Ord)]
 pub enum TargetSourcePath {
     Path(PathBuf),
     Metabuild,
 }
 
 impl TargetSourcePath {
-    pub fn path(&self) -> &Path {
+    pub fn path(&self) -> Option<&Path> {
         match self {
-            TargetSourcePath::Path(path) => path.as_ref(),
-            TargetSourcePath::Metabuild => panic!("metabuild not expected"),
+            TargetSourcePath::Path(path) => Some(path.as_ref()),
+            TargetSourcePath::Metabuild => None,
         }
     }
 
@@ -231,7 +244,7 @@ impl Hash for TargetSourcePath {
 }
 
 impl fmt::Debug for TargetSourcePath {
-    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         match self {
             TargetSourcePath::Path(path) => path.fmt(f),
             TargetSourcePath::Metabuild => "metabuild".fmt(f),
@@ -241,11 +254,7 @@ impl fmt::Debug for TargetSourcePath {
 
 impl From<PathBuf> for TargetSourcePath {
     fn from(path: PathBuf) -> Self {
-        assert!(
-            path.is_absolute(),
-            "`{}` is not absolute",
-            path.display()
-        );
+        assert!(path.is_absolute(), "`{}` is not absolute", path.display());
         TargetSourcePath::Path(path)
     }
 }
@@ -259,7 +268,7 @@ struct SerializedTarget<'a> {
     /// See https://doc.rust-lang.org/reference/linkage.html
     crate_types: Vec<&'a str>,
     name: &'a str,
-    src_path: &'a PathBuf,
+    src_path: Option<&'a PathBuf>,
     edition: &'a str,
     #[serde(rename = "required-features", skip_serializing_if = "Option::is_none")]
     required_features: Option<Vec<&'a str>>,
@@ -267,17 +276,24 @@ struct SerializedTarget<'a> {
 
 impl ser::Serialize for Target {
     fn serialize<S: ser::Serializer>(&self, s: S) -> Result<S::Ok, S::Error> {
+        let src_path = match &self.src_path {
+            TargetSourcePath::Path(p) => Some(p),
+            // Unfortunately getting the correct path would require access to
+            // target_dir, which is not available here.
+            TargetSourcePath::Metabuild => None,
+        };
         SerializedTarget {
             kind: &self.kind,
             crate_types: self.rustc_crate_types(),
             name: &self.name,
-            src_path: &self.src_path.path().to_path_buf(),
+            src_path,
             edition: &self.edition.to_string(),
             required_features: self
                 .required_features
                 .as_ref()
                 .map(|rf| rf.iter().map(|s| &**s).collect()),
-        }.serialize(s)
+        }
+        .serialize(s)
     }
 }
 
@@ -291,7 +307,7 @@ compact_debug! {
                             Target::lib_target(
                                 &self.name,
                                 kinds.clone(),
-                                self.src_path().path().to_path_buf(),
+                                self.src_path().path().unwrap().to_path_buf(),
                                 self.edition,
                             ),
                             format!("lib_target({:?}, {:?}, {:?}, {:?})",
@@ -403,7 +419,7 @@ impl Manifest {
     pub fn name(&self) -> InternedString {
         self.package_id().name()
     }
-    pub fn package_id(&self) -> &PackageId {
+    pub fn package_id(&self) -> PackageId {
         self.summary.package_id()
     }
     pub fn summary(&self) -> &Summary {
@@ -455,7 +471,7 @@ impl Manifest {
         self.summary = summary;
     }
 
-    pub fn map_source(self, to_replace: &SourceId, replace_with: &SourceId) -> Manifest {
+    pub fn map_source(self, to_replace: SourceId, replace_with: SourceId) -> Manifest {
         Manifest {
             summary: self.summary.map_source(to_replace, replace_with),
             ..self
@@ -467,7 +483,7 @@ impl Manifest {
             self.features
                 .require(Feature::test_dummy_unstable())
                 .chain_err(|| {
-                    format_err!(
+                    failure::format_err!(
                         "the `im-a-teapot` manifest key is unstable and may \
                          not work properly in England"
                     )
@@ -477,11 +493,7 @@ impl Manifest {
         if self.default_run.is_some() {
             self.features
                 .require(Feature::default_run())
-                .chain_err(|| {
-                    format_err!(
-                        "the `default-run` manifest key is unstable"
-                    )
-                })?;
+                .chain_err(|| failure::format_err!("the `default-run` manifest key is unstable"))?;
         }
 
         Ok(())
@@ -513,7 +525,7 @@ impl Manifest {
     }
 
     pub fn metabuild_path(&self, target_dir: Filesystem) -> PathBuf {
-        let hash = short_hash(self.package_id());
+        let hash = short_hash(&self.package_id());
         target_dir
             .into_path_unlocked()
             .join(".metabuild")
@@ -614,11 +626,7 @@ impl Target {
     }
 
     /// Builds a `Target` corresponding to the `build = "build.rs"` entry.
-    pub fn custom_build_target(
-        name: &str,
-        src_path: PathBuf,
-        edition: Edition,
-    ) -> Target {
+    pub fn custom_build_target(name: &str, src_path: PathBuf, edition: Edition) -> Target {
         Target {
             kind: TargetKind::CustomBuild,
             name: name.to_string(),
@@ -636,7 +644,7 @@ impl Target {
             for_host: true,
             benched: false,
             tested: false,
-            ..Target::new(TargetSourcePath::Metabuild, Edition::Edition2015)
+            ..Target::new(TargetSourcePath::Metabuild, Edition::Edition2018)
         }
     }
 
@@ -647,7 +655,11 @@ impl Target {
         required_features: Option<Vec<String>>,
         edition: Edition,
     ) -> Target {
-        let kind = if crate_targets.is_empty() {
+        let kind = if crate_targets.is_empty()
+            || crate_targets
+                .iter()
+                .all(|t| *t == LibKind::Other("bin".into()))
+        {
             TargetKind::ExampleBin
         } else {
             TargetKind::ExampleLib(crate_targets)
@@ -723,7 +735,9 @@ impl Target {
     pub fn for_host(&self) -> bool {
         self.for_host
     }
-    pub fn edition(&self) -> Edition { self.edition }
+    pub fn edition(&self) -> Edition {
+        self.edition
+    }
     pub fn benched(&self) -> bool {
         self.benched
     }
@@ -822,7 +836,8 @@ impl Target {
     pub fn can_lto(&self) -> bool {
         match self.kind {
             TargetKind::Lib(ref v) => {
-                !v.contains(&LibKind::Rlib) && !v.contains(&LibKind::Dylib)
+                !v.contains(&LibKind::Rlib)
+                    && !v.contains(&LibKind::Dylib)
                     && !v.contains(&LibKind::Lib)
             }
             _ => true,
@@ -860,7 +875,7 @@ impl Target {
 }
 
 impl fmt::Display for Target {
-    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         match self.kind {
             TargetKind::Lib(..) => write!(f, "Target(lib)"),
             TargetKind::Bin => write!(f, "Target(bin: {})", self.name),

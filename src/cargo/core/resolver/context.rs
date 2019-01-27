@@ -1,13 +1,17 @@
-use std::collections::{HashMap, HashSet};
+use std::collections::{BTreeMap, HashMap, HashSet};
 use std::rc::Rc;
 
-use core::interning::InternedString;
-use core::{Dependency, FeatureValue, PackageId, SourceId, Summary};
-use util::CargoResult;
-use util::Graph;
+#[allow(unused_imports)] // "ensure" seems to require "bail" be in scope (macro hygiene issue?)
+use failure::{bail, ensure};
+use log::debug;
 
-use super::types::RegistryQueryer;
-use super::types::{ActivateResult, ConflictReason, DepInfo, GraphNode, Method, RcList};
+use crate::core::interning::InternedString;
+use crate::core::{Dependency, FeatureValue, PackageId, SourceId, Summary};
+use crate::util::CargoResult;
+use crate::util::Graph;
+
+use super::errors::ActivateResult;
+use super::types::{ConflictReason, DepInfo, GraphNode, Method, RcList, RegistryQueryer};
 
 pub use super::encode::{EncodableDependency, EncodablePackageId, EncodableResolve};
 pub use super::encode::{Metadata, WorkspaceResolve};
@@ -19,12 +23,9 @@ pub use super::resolve::Resolve;
 // possible.
 #[derive(Clone)]
 pub struct Context {
-    // TODO: Both this and the two maps below are super expensive to clone. We should
-    //       switch to persistent hash maps if we can at some point or otherwise
-    //       make these much cheaper to clone in general.
     pub activations: Activations,
-    pub resolve_features: HashMap<PackageId, Rc<HashSet<InternedString>>>,
-    pub links: HashMap<InternedString, PackageId>,
+    pub resolve_features: im_rc::HashMap<PackageId, Rc<HashSet<InternedString>>>,
+    pub links: im_rc::HashMap<InternedString, PackageId>,
 
     // These are two cheaply-cloneable lists (O(1) clone) which are effectively
     // hash maps but are built up as "construction lists". We'll iterate these
@@ -36,16 +37,16 @@ pub struct Context {
     pub warnings: RcList<String>,
 }
 
-pub type Activations = HashMap<(InternedString, SourceId), Rc<Vec<Summary>>>;
+pub type Activations = im_rc::HashMap<(InternedString, SourceId), Rc<Vec<Summary>>>;
 
 impl Context {
     pub fn new() -> Context {
         Context {
             resolve_graph: RcList::new(),
-            resolve_features: HashMap::new(),
-            links: HashMap::new(),
+            resolve_features: im_rc::HashMap::new(),
+            links: im_rc::HashMap::new(),
             resolve_replacements: RcList::new(),
-            activations: HashMap::new(),
+            activations: im_rc::HashMap::new(),
             warnings: RcList::new(),
         }
     }
@@ -53,19 +54,19 @@ impl Context {
     /// Activate this summary by inserting it into our list of known activations.
     ///
     /// Returns true if this summary with the given method is already activated.
-    pub fn flag_activated(&mut self, summary: &Summary, method: &Method) -> CargoResult<bool> {
+    pub fn flag_activated(&mut self, summary: &Summary, method: &Method<'_>) -> CargoResult<bool> {
         let id = summary.package_id();
         let prev = self
             .activations
-            .entry((id.name(), id.source_id().clone()))
+            .entry((id.name(), id.source_id()))
             .or_insert_with(|| Rc::new(Vec::new()));
         if !prev.iter().any(|c| c == summary) {
-            self.resolve_graph.push(GraphNode::Add(id.clone()));
+            self.resolve_graph.push(GraphNode::Add(id));
             if let Some(link) = summary.links() {
                 ensure!(
-                    self.links.insert(link, id.clone()).is_none(),
-                    "Attempting to resolve a with more then one crate with the links={}. \n\
-                     This will not build as is. Consider rebuilding the .lock file.",
+                    self.links.insert(link, id).is_none(),
+                    "Attempting to resolve a dependency with more then one crate with the \
+                     links={}.\nThis will not build as is. Consider rebuilding the .lock file.",
                     &*link
                 );
             }
@@ -86,7 +87,7 @@ impl Context {
         };
 
         let has_default_feature = summary.features().contains_key("default");
-        Ok(match self.resolve_features.get(id) {
+        Ok(match self.resolve_features.get(&id) {
             Some(prev) => {
                 features.iter().all(|f| prev.contains(f))
                     && (!use_default || prev.contains("default") || !has_default_feature)
@@ -97,10 +98,10 @@ impl Context {
 
     pub fn build_deps(
         &mut self,
-        registry: &mut RegistryQueryer,
+        registry: &mut RegistryQueryer<'_>,
         parent: Option<&Summary>,
         candidate: &Summary,
-        method: &Method,
+        method: &Method<'_>,
     ) -> ActivateResult<Vec<DepInfo>> {
         // First, figure out our set of dependencies based on the requested set
         // of features. This also calculates what features we're going to enable
@@ -128,14 +129,14 @@ impl Context {
 
     pub fn prev_active(&self, dep: &Dependency) -> &[Summary] {
         self.activations
-            .get(&(dep.package_name(), dep.source_id().clone()))
+            .get(&(dep.package_name(), dep.source_id()))
             .map(|v| &v[..])
             .unwrap_or(&[])
     }
 
-    fn is_active(&self, id: &PackageId) -> bool {
+    pub fn is_active(&self, id: PackageId) -> bool {
         self.activations
-            .get(&(id.name(), id.source_id().clone()))
+            .get(&(id.name(), id.source_id()))
             .map(|v| v.iter().any(|s| s.package_id() == id))
             .unwrap_or(false)
     }
@@ -144,13 +145,13 @@ impl Context {
     /// are still active
     pub fn is_conflicting(
         &self,
-        parent: Option<&PackageId>,
-        conflicting_activations: &HashMap<PackageId, ConflictReason>,
+        parent: Option<PackageId>,
+        conflicting_activations: &BTreeMap<PackageId, ConflictReason>,
     ) -> bool {
         conflicting_activations
             .keys()
-            .chain(parent)
-            .all(|id| self.is_active(id))
+            .chain(parent.as_ref())
+            .all(|&id| self.is_active(id))
     }
 
     /// Return all dependencies and the features we want from them.
@@ -158,7 +159,7 @@ impl Context {
         &mut self,
         parent: Option<&Summary>,
         s: &'b Summary,
-        method: &'b Method,
+        method: &'b Method<'_>,
     ) -> ActivateResult<Vec<(Dependency, Vec<InternedString>)>> {
         let dev_deps = match *method {
             Method::Everything => true,
@@ -205,9 +206,11 @@ impl Context {
             base.extend(dep.features().iter());
             for feature in base.iter() {
                 if feature.contains('/') {
-                    return Err(
-                        format_err!("feature names may not contain slashes: `{}`", feature).into(),
-                    );
+                    return Err(failure::format_err!(
+                        "feature names may not contain slashes: `{}`",
+                        feature
+                    )
+                    .into());
                 }
             }
             ret.push((dep.clone(), base));
@@ -226,15 +229,13 @@ impl Context {
         if !remaining.is_empty() {
             let features = remaining.join(", ");
             return Err(match parent {
-                None => format_err!(
+                None => failure::format_err!(
                     "Package `{}` does not have these features: `{}`",
                     s.package_id(),
                     features
-                ).into(),
-                Some(p) => (
-                    p.package_id().clone(),
-                    ConflictReason::MissingFeatures(features),
-                ).into(),
+                )
+                .into(),
+                Some(p) => (p.package_id(), ConflictReason::MissingFeatures(features)).into(),
             });
         }
 
@@ -244,7 +245,7 @@ impl Context {
 
             let set = Rc::make_mut(
                 self.resolve_features
-                    .entry(pkgid.clone())
+                    .entry(pkgid)
                     .or_insert_with(|| Rc::new(HashSet::new())),
             );
 
@@ -260,7 +261,7 @@ impl Context {
         let mut replacements = HashMap::new();
         let mut cur = &self.resolve_replacements;
         while let Some(ref node) = cur.head {
-            let (k, v) = node.0.clone();
+            let (k, v) = node.0;
             replacements.insert(k, v);
             cur = &node.1;
         }
@@ -288,7 +289,7 @@ impl Context {
 /// dependency features in a Requirements object, returning it to the resolver.
 fn build_requirements<'a, 'b: 'a>(
     s: &'a Summary,
-    method: &'b Method,
+    method: &'b Method<'_>,
 ) -> CargoResult<Requirements<'a>> {
     let mut reqs = Requirements::new(s);
 
@@ -348,7 +349,7 @@ struct Requirements<'a> {
 }
 
 impl<'r> Requirements<'r> {
-    fn new(summary: &Summary) -> Requirements {
+    fn new(summary: &Summary) -> Requirements<'_> {
         Requirements {
             summary,
             deps: HashMap::new(),
@@ -393,7 +394,7 @@ impl<'r> Requirements<'r> {
             .expect("must be a valid feature")
         {
             match *fv {
-                FeatureValue::Feature(ref dep_feat) if **dep_feat == *feat => bail!(
+                FeatureValue::Feature(ref dep_feat) if **dep_feat == *feat => failure::bail!(
                     "Cyclic feature dependency: feature `{}` depends on itself",
                     feat
                 ),

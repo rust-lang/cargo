@@ -1,8 +1,8 @@
 use std::fs::File;
 use std::io::prelude::*;
 
-use support::registry::Package;
-use support::{basic_manifest, project};
+use crate::support::registry::Package;
+use crate::support::{basic_manifest, project};
 
 #[test]
 fn minor_update_two_places() {
@@ -20,7 +20,8 @@ fn minor_update_two_places() {
                 log = "0.1"
                 foo = { path = "foo" }
             "#,
-        ).file("src/lib.rs", "")
+        )
+        .file("src/lib.rs", "")
         .file(
             "foo/Cargo.toml",
             r#"
@@ -32,7 +33,8 @@ fn minor_update_two_places() {
                 [dependencies]
                 log = "0.1"
             "#,
-        ).file("foo/src/lib.rs", "")
+        )
+        .file("foo/src/lib.rs", "")
         .build();
 
     p.cargo("build").run();
@@ -50,7 +52,8 @@ fn minor_update_two_places() {
                 [dependencies]
                 log = "0.1.1"
             "#,
-        ).unwrap();
+        )
+        .unwrap();
 
     p.cargo("build").run();
 }
@@ -74,7 +77,8 @@ fn transitive_minor_update() {
                 log = "0.1"
                 foo = { path = "foo" }
             "#,
-        ).file("src/lib.rs", "")
+        )
+        .file("src/lib.rs", "")
         .file(
             "foo/Cargo.toml",
             r#"
@@ -86,7 +90,8 @@ fn transitive_minor_update() {
                 [dependencies]
                 serde = "0.1"
             "#,
-        ).file("foo/src/lib.rs", "")
+        )
+        .file("foo/src/lib.rs", "")
         .build();
 
     p.cargo("build").run();
@@ -108,7 +113,8 @@ fn transitive_minor_update() {
             "\
 [UPDATING] `[..]` index
 ",
-        ).run();
+        )
+        .run();
 }
 
 #[test]
@@ -130,7 +136,8 @@ fn conservative() {
                 log = "0.1"
                 foo = { path = "foo" }
             "#,
-        ).file("src/lib.rs", "")
+        )
+        .file("src/lib.rs", "")
         .file(
             "foo/Cargo.toml",
             r#"
@@ -142,7 +149,8 @@ fn conservative() {
                 [dependencies]
                 serde = "0.1"
             "#,
-        ).file("foo/src/lib.rs", "")
+        )
+        .file("foo/src/lib.rs", "")
         .build();
 
     p.cargo("build").run();
@@ -156,7 +164,8 @@ fn conservative() {
 [UPDATING] `[..]` index
 [UPDATING] serde v0.1.0 -> v0.1.1
 ",
-        ).run();
+        )
+        .run();
 }
 
 #[test]
@@ -175,7 +184,8 @@ fn update_via_new_dep() {
                 log = "0.1"
                 # foo = { path = "foo" }
             "#,
-        ).file("src/lib.rs", "")
+        )
+        .file("src/lib.rs", "")
         .file(
             "foo/Cargo.toml",
             r#"
@@ -187,7 +197,8 @@ fn update_via_new_dep() {
                 [dependencies]
                 log = "0.1.1"
             "#,
-        ).file("foo/src/lib.rs", "")
+        )
+        .file("foo/src/lib.rs", "")
         .build();
 
     p.cargo("build").run();
@@ -215,7 +226,8 @@ fn update_via_new_member() {
                 [dependencies]
                 log = "0.1"
             "#,
-        ).file("src/lib.rs", "")
+        )
+        .file("src/lib.rs", "")
         .file(
             "foo/Cargo.toml",
             r#"
@@ -227,7 +239,8 @@ fn update_via_new_member() {
                 [dependencies]
                 log = "0.1.1"
             "#,
-        ).file("foo/src/lib.rs", "")
+        )
+        .file("foo/src/lib.rs", "")
         .build();
 
     p.cargo("build").run();
@@ -253,7 +266,8 @@ fn add_dep_deep_new_requirement() {
                 log = "0.1"
                 # bar = "0.1"
             "#,
-        ).file("src/lib.rs", "")
+        )
+        .file("src/lib.rs", "")
         .build();
 
     p.cargo("build").run();
@@ -282,7 +296,8 @@ fn everything_real_deep() {
                 foo = "0.1"
                 # bar = "0.1"
             "#,
-        ).file("src/lib.rs", "")
+        )
+        .file("src/lib.rs", "")
         .build();
 
     p.cargo("build").run();
@@ -308,7 +323,8 @@ fn change_package_version() {
                 [dependencies]
                 bar = { path = "bar", version = "0.2.0-alpha" }
             "#,
-        ).file("src/lib.rs", "")
+        )
+        .file("src/lib.rs", "")
         .file("bar/Cargo.toml", &basic_manifest("bar", "0.2.0-alpha"))
         .file("bar/src/lib.rs", "")
         .file(
@@ -323,7 +339,8 @@ fn change_package_version() {
                 name = "bar"
                 version = "0.2.0"
             "#,
-        ).build();
+        )
+        .build();
 
     p.cargo("build").run();
 }
@@ -347,7 +364,8 @@ fn update_precise() {
                 serde = "0.2"
                 foo = { path = "foo" }
             "#,
-        ).file("src/lib.rs", "")
+        )
+        .file("src/lib.rs", "")
         .file(
             "foo/Cargo.toml",
             r#"
@@ -359,7 +377,8 @@ fn update_precise() {
                 [dependencies]
                 serde = "0.1"
             "#,
-        ).file("foo/src/lib.rs", "")
+        )
+        .file("foo/src/lib.rs", "")
         .build();
 
     p.cargo("build").run();
@@ -372,7 +391,8 @@ fn update_precise() {
 [UPDATING] `[..]` index
 [UPDATING] serde v0.2.1 -> v0.2.0
 ",
-        ).run();
+        )
+        .run();
 }
 
 #[test]
@@ -381,17 +401,76 @@ fn preserve_top_comment() {
 
     p.cargo("update").run();
 
-    let mut lockfile = p.read_file("Cargo.lock");
-    lockfile.insert_str(0, "# @generated\n");
-    lockfile.insert_str(0, "# some other comment\n");
+    let lockfile = p.read_lockfile();
+    assert!(lockfile.starts_with("# This file is automatically @generated by Cargo.\n# It is not intended for manual editing.\n"));
+
+    let mut lines = lockfile.lines().collect::<Vec<_>>();
+    lines.insert(2, "# some other comment");
+    let mut lockfile = lines.join("\n");
+    lockfile.push_str("\n"); // .lines/.join loses the last newline
     println!("saving Cargo.lock contents:\n{}", lockfile);
 
     p.change_file("Cargo.lock", &lockfile);
 
     p.cargo("update").run();
 
-    let lockfile2 = p.read_file("Cargo.lock");
+    let lockfile2 = p.read_lockfile();
     println!("loaded Cargo.lock contents:\n{}", lockfile2);
 
-    assert!(lockfile == lockfile2);
+    assert_eq!(lockfile, lockfile2);
+}
+
+#[test]
+fn dry_run_update() {
+    Package::new("log", "0.1.0").publish();
+    Package::new("serde", "0.1.0").dep("log", "0.1").publish();
+
+    let p = project()
+        .file(
+            "Cargo.toml",
+            r#"
+                [package]
+                name = "bar"
+                version = "0.0.1"
+                authors = []
+
+                [dependencies]
+                serde = "0.1"
+                log = "0.1"
+                foo = { path = "foo" }
+            "#,
+        )
+        .file("src/lib.rs", "")
+        .file(
+            "foo/Cargo.toml",
+            r#"
+                [package]
+                name = "foo"
+                version = "0.0.1"
+                authors = []
+
+                [dependencies]
+                serde = "0.1"
+            "#,
+        )
+        .file("foo/src/lib.rs", "")
+        .build();
+
+    p.cargo("build").run();
+    let old_lockfile = p.read_file("Cargo.lock");
+
+    Package::new("log", "0.1.1").publish();
+    Package::new("serde", "0.1.1").dep("log", "0.1").publish();
+
+    p.cargo("update -p serde --dry-run")
+        .with_stderr(
+            "\
+[UPDATING] `[..]` index
+[UPDATING] serde v0.1.0 -> v0.1.1
+[WARNING] not updating lockfile due to dry run
+",
+        )
+        .run();
+    let new_lockfile = p.read_file("Cargo.lock");
+    assert_eq!(old_lockfile, new_lockfile)
 }

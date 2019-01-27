@@ -1,4 +1,4 @@
-use command_prelude::*;
+use crate::command_prelude::*;
 
 use cargo::ops::{self, DocOptions};
 
@@ -45,12 +45,12 @@ the `cargo help pkgid` command.
         )
 }
 
-pub fn exec(config: &mut Config, args: &ArgMatches) -> CliResult {
+pub fn exec(config: &mut Config, args: &ArgMatches<'_>) -> CliResult {
     let ws = args.workspace(config)?;
     let mode = CompileMode::Doc {
         deps: !args.is_present("no-deps"),
     };
-    let mut compile_opts = args.compile_options(config, mode)?;
+    let mut compile_opts = args.compile_options(config, mode, Some(&ws))?;
     compile_opts.local_rustdoc_args = if args.is_present("document-private-items") {
         Some(vec!["--document-private-items".to_string()])
     } else {

@@ -1,4 +1,4 @@
-use command_prelude::*;
+use crate::command_prelude::*;
 
 use cargo::ops;
 
@@ -46,7 +46,7 @@ processes spawned by Cargo, use the $RUSTFLAGS environment variable or the
         )
 }
 
-pub fn exec(config: &mut Config, args: &ArgMatches) -> CliResult {
+pub fn exec(config: &mut Config, args: &ArgMatches<'_>) -> CliResult {
     let ws = args.workspace(config)?;
     let mode = match args.value_of("profile") {
         Some("dev") | None => CompileMode::Build,
@@ -54,7 +54,7 @@ pub fn exec(config: &mut Config, args: &ArgMatches) -> CliResult {
         Some("bench") => CompileMode::Bench,
         Some("check") => CompileMode::Check { test: false },
         Some(mode) => {
-            let err = format_err!(
+            let err = failure::format_err!(
                 "unknown profile: `{}`, use dev,
                                    test, or bench",
                 mode
@@ -62,7 +62,7 @@ pub fn exec(config: &mut Config, args: &ArgMatches) -> CliResult {
             return Err(CliError::new(err, 101));
         }
     };
-    let mut compile_opts = args.compile_options_for_single_package(config, mode)?;
+    let mut compile_opts = args.compile_options_for_single_package(config, mode, Some(&ws))?;
     let target_args = values(args, "args");
     compile_opts.target_rustc_args = if target_args.is_empty() {
         None

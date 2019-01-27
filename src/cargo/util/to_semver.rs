@@ -1,5 +1,5 @@
+use crate::util::errors::CargoResult;
 use semver::Version;
-use util::errors::CargoResult;
 
 pub trait ToSemver {
     fn to_semver(self) -> CargoResult<Version>;
@@ -15,7 +15,7 @@ impl<'a> ToSemver for &'a str {
     fn to_semver(self) -> CargoResult<Version> {
         match Version::parse(self) {
             Ok(v) => Ok(v),
-            Err(..) => Err(format_err!("cannot parse '{}' as a semver", self)),
+            Err(..) => Err(failure::format_err!("cannot parse '{}' as a semver", self)),
         }
     }
 }

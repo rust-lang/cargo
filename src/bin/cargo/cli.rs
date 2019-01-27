@@ -1,12 +1,12 @@
-extern crate clap;
+use clap;
 
 use clap::{AppSettings, Arg, ArgMatches};
 
 use cargo::{self, CliResult, Config};
 
-use super::list_commands;
 use super::commands;
-use command_prelude::*;
+use super::list_commands;
+use crate::command_prelude::*;
 
 pub fn main(config: &mut Config) -> CliResult {
     let args = match cli().get_matches_safe() {
@@ -81,7 +81,7 @@ Run with 'cargo -Z [FLAG] [SUBCOMMAND]'"
 
 pub fn get_version_string(is_verbose: bool) -> String {
     let version = cargo::version();
-    let mut version_string = String::from(version.to_string());
+    let mut version_string = version.to_string();
     version_string.push_str("\n");
     if is_verbose {
         version_string.push_str(&format!(
@@ -107,7 +107,14 @@ fn expand_aliases(
             commands::builtin_exec(cmd),
             super::aliased_command(config, cmd)?,
         ) {
-            (None, Some(mut alias)) => {
+            (Some(_), Some(_)) => {
+                // User alias conflicts with a built-in subcommand
+                config.shell().warn(format!(
+                    "user-defined alias `{}` is ignored, because it is shadowed by a built-in command",
+                    cmd,
+                ))?;
+            }
+            (_, Some(mut alias)) => {
                 alias.extend(
                     args.values_of("")
                         .unwrap_or_default()
@@ -118,19 +125,14 @@ fn expand_aliases(
                     .get_matches_from_safe(alias)?;
                 return expand_aliases(config, args);
             }
-            (Some(_), Some(_)) => {
-                config.shell().warn(format!(
-                    "alias `{}` is ignored, because it is shadowed by a built in command",
-                    cmd
-                ))?;
-            }
             (_, None) => {}
         }
     };
+
     Ok(args)
 }
 
-fn execute_subcommand(config: &mut Config, args: &ArgMatches) -> CliResult {
+fn execute_subcommand(config: &mut Config, args: &ArgMatches<'_>) -> CliResult {
     let (cmd, subcommand_args) = match args.subcommand() {
         (cmd, Some(args)) => (cmd, args),
         _ => {
@@ -152,7 +154,8 @@ fn execute_subcommand(config: &mut Config, args: &ArgMatches) -> CliResult {
         args.is_present("frozen"),
         args.is_present("locked"),
         arg_target_dir,
-        &args.values_of_lossy("unstable-features")
+        &args
+            .values_of_lossy("unstable-features")
             .unwrap_or_default(),
     )?;
 
@@ -197,7 +200,7 @@ Some common cargo commands are (see all commands with --list):
     update      Update dependencies listed in Cargo.lock
     search      Search registry for crates
     publish     Package and upload this package to the registry
-    install     Install a Rust binary
+    install     Install a Rust binary. Default location is $HOME/.cargo/bin
     uninstall   Uninstall a Rust binary
 
 See 'cargo help <command>' for more information on a specific command.\n",
@@ -209,9 +212,10 @@ See 'cargo help <command>' for more information on a specific command.\n",
             opt(
                 "verbose",
                 "Use verbose output (-vv very verbose/build.rs output)",
-            ).short("v")
-                .multiple(true)
-                .global(true),
+            )
+            .short("v")
+            .multiple(true)
+            .global(true),
         )
         .arg(
             opt("quiet", "No output printed to stdout")

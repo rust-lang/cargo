@@ -1,16 +1,17 @@
 use std::collections::BTreeMap;
 use std::env;
-use std::fs;
 use std::fmt;
+use std::fs;
+use std::io::{BufRead, BufReader, ErrorKind};
 use std::path::{Path, PathBuf};
 
 use git2::Config as GitConfig;
 use git2::Repository as GitRepository;
 
-use core::{compiler, Workspace};
-use util::{internal, FossilRepo, GitRepo, HgRepo, PijulRepo, existing_vcs_repo};
-use util::{paths, Config};
-use util::errors::{CargoResult, CargoResultExt};
+use crate::core::{compiler, Workspace};
+use crate::util::errors::{CargoResult, CargoResultExt};
+use crate::util::{existing_vcs_repo, internal, FossilRepo, GitRepo, HgRepo, PijulRepo};
+use crate::util::{paths, validate_package_name, Config};
 
 use toml;
 
@@ -47,11 +48,12 @@ impl NewProjectKind {
 }
 
 impl fmt::Display for NewProjectKind {
-    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         match *self {
             NewProjectKind::Bin => "binary (application)",
             NewProjectKind::Lib => "library",
-        }.fmt(f)
+        }
+        .fmt(f)
     }
 }
 
@@ -82,7 +84,7 @@ impl NewOptions {
         registry: Option<String>,
     ) -> CargoResult<NewOptions> {
         let kind = match (bin, lib) {
-            (true, true) => bail!("can't specify both lib and binary outputs"),
+            (true, true) => failure::bail!("can't specify both lib and binary outputs"),
             (false, true) => NewProjectKind::Lib,
             // default to bin
             (_, false) => NewProjectKind::Bin,
@@ -112,14 +114,14 @@ fn get_name<'a>(path: &'a Path, opts: &'a NewOptions) -> CargoResult<&'a str> {
     }
 
     let file_name = path.file_name().ok_or_else(|| {
-        format_err!(
+        failure::format_err!(
             "cannot auto-detect package name from path {:?} ; use --name to override",
             path.as_os_str()
         )
     })?;
 
     file_name.to_str().ok_or_else(|| {
-        format_err!(
+        failure::format_err!(
             "cannot create package with a non-unicode name: {:?}",
             file_name
         )
@@ -144,7 +146,7 @@ fn check_name(name: &str, opts: &NewOptions) -> CargoResult<()> {
         "true", "type", "typeof", "unsafe", "unsized", "use", "virtual", "where", "while", "yield",
     ];
     if blacklist.contains(&name) || (opts.kind.is_bin() && compiler::is_bad_artifact_name(name)) {
-        bail!(
+        failure::bail!(
             "The name `{}` cannot be used as a crate name{}",
             name,
             name_help
@@ -153,27 +155,14 @@ fn check_name(name: &str, opts: &NewOptions) -> CargoResult<()> {
 
     if let Some(ref c) = name.chars().nth(0) {
         if c.is_digit(10) {
-            bail!(
+            failure::bail!(
                 "Package names starting with a digit cannot be used as a crate name{}",
                 name_help
             )
         }
     }
 
-    for c in name.chars() {
-        if c.is_alphanumeric() {
-            continue;
-        }
-        if c == '_' || c == '-' {
-            continue;
-        }
-        bail!(
-            "Invalid character `{}` in crate name: `{}`{}",
-            c,
-            name,
-            name_help
-        )
-    }
+    validate_package_name(name, "crate name", name_help)?;
     Ok(())
 }
 
@@ -266,7 +255,7 @@ fn detect_source_paths_and_types(
     for i in detected_files {
         if i.bin {
             if let Some(x) = BTreeMap::get::<str>(&duplicates_checker, i.target_name.as_ref()) {
-                bail!(
+                failure::bail!(
                     "\
 multiple possible binary sources found:
   {}
@@ -279,7 +268,7 @@ cannot automatically generate Cargo.toml as the main target would be ambiguous",
             duplicates_checker.insert(i.target_name.as_ref(), i);
         } else {
             if let Some(plp) = previous_lib_relpath {
-                bail!(
+                failure::bail!(
                     "cannot have a package with \
                      multiple libraries, \
                      found both `{}` and `{}`",
@@ -313,7 +302,7 @@ fn plan_new_source_file(bin: bool, package_name: String) -> SourceFileInformatio
 pub fn new(opts: &NewOptions, config: &Config) -> CargoResult<()> {
     let path = &opts.path;
     if fs::metadata(path).is_ok() {
-        bail!(
+        failure::bail!(
             "destination `{}` already exists\n\n\
              Use `cargo init` to initialize the directory",
             path.display()
@@ -334,7 +323,7 @@ pub fn new(opts: &NewOptions, config: &Config) -> CargoResult<()> {
     };
 
     mk(config, &mkopts).chain_err(|| {
-        format_err!(
+        failure::format_err!(
             "Failed to create package `{}` at `{}`",
             name,
             path.display()
@@ -347,7 +336,7 @@ pub fn init(opts: &NewOptions, config: &Config) -> CargoResult<()> {
     let path = &opts.path;
 
     if fs::metadata(&path.join("Cargo.toml")).is_ok() {
-        bail!("`cargo init` cannot be run on existing Cargo packages")
+        failure::bail!("`cargo init` cannot be run on existing Cargo packages")
     }
 
     let name = get_name(path, opts)?;
@@ -393,7 +382,7 @@ pub fn init(opts: &NewOptions, config: &Config) -> CargoResult<()> {
         // if none exists, maybe create git, like in `cargo new`
 
         if num_detected_vsces > 1 {
-            bail!(
+            failure::bail!(
                 "more than one of .hg, .git, .pijul, .fossil configurations \
                  found and the ignore file can't be filled in as \
                  a result. specify --vcs to override detection"
@@ -412,7 +401,7 @@ pub fn init(opts: &NewOptions, config: &Config) -> CargoResult<()> {
     };
 
     mk(config, &mkopts).chain_err(|| {
-        format_err!(
+        failure::format_err!(
             "Failed to create package `{}` at `{}`",
             name,
             path.display()
@@ -421,67 +410,116 @@ pub fn init(opts: &NewOptions, config: &Config) -> CargoResult<()> {
     Ok(())
 }
 
-fn mk(config: &Config, opts: &MkOptions) -> CargoResult<()> {
-    let path = opts.path;
-    let name = opts.name;
-    let cfg = global_config(config)?;
-    // Please ensure that ignore and hgignore are in sync.
-    let ignore = [
-        "/target\n",
-        "**/*.rs.bk\n",
-        if !opts.bin { "Cargo.lock\n" } else { "" },
-    ].concat();
-    // Mercurial glob ignores can't be rooted, so just sticking a 'syntax: glob' at the top of the
-    // file will exclude too much. Instead, use regexp-based ignores. See 'hg help ignore' for
-    // more.
-    let hgignore = [
-        "^target/\n",
-        "glob:*.rs.bk\n",
-        if !opts.bin { "glob:Cargo.lock\n" } else { "" },
-    ].concat();
+/// IgnoreList
+struct IgnoreList {
+    /// git like formatted entries
+    ignore: Vec<String>,
+    /// mercurial formatted entries
+    hg_ignore: Vec<String>,
+}
 
-    let vcs = opts.version_control.unwrap_or_else(|| {
-        let in_existing_vcs = existing_vcs_repo(path.parent().unwrap_or(path), config.cwd());
-        match (cfg.version_control, in_existing_vcs) {
-            (None, false) => VersionControl::Git,
-            (Some(opt), false) => opt,
-            (_, true) => VersionControl::NoVcs,
+impl IgnoreList {
+    /// constructor to build a new ignore file
+    fn new() -> IgnoreList {
+        IgnoreList {
+            ignore: Vec::new(),
+            hg_ignore: Vec::new(),
         }
-    });
+    }
 
+    /// add a new entry to the ignore list. Requires two arguments with the
+    /// entry in two different formats. One for "git style" entries and one for
+    /// "mercurial like" entries.
+    fn push(&mut self, ignore: &str, hg_ignore: &str) {
+        self.ignore.push(ignore.to_string());
+        self.hg_ignore.push(hg_ignore.to_string());
+    }
+
+    /// Return the correctly formatted content of the ignore file for the given
+    /// version control system as `String`.
+    fn format_new(&self, vcs: VersionControl) -> String {
+        match vcs {
+            VersionControl::Hg => self.hg_ignore.join("\n"),
+            _ => self.ignore.join("\n"),
+        }
+    }
+
+    /// format_existing is used to format the IgnoreList when the ignore file
+    /// already exists. It reads the contents of the given `BufRead` and
+    /// checks if the contents of the ignore list are already existing in the
+    /// file.
+    fn format_existing<T: BufRead>(&self, existing: T, vcs: VersionControl) -> String {
+        // TODO: is unwrap safe?
+        let existing_items = existing.lines().collect::<Result<Vec<_>, _>>().unwrap();
+
+        let ignore_items = match vcs {
+            VersionControl::Hg => &self.hg_ignore,
+            _ => &self.ignore,
+        };
+
+        let mut out = "\n\n#Added by cargo\n\
+                       #\n\
+                       #already existing elements are commented out\n"
+            .to_string();
+
+        for item in ignore_items {
+            out.push('\n');
+            if existing_items.contains(item) {
+                out.push('#');
+            }
+            out.push_str(item)
+        }
+
+        out
+    }
+}
+
+/// write the ignore file to the given directory. If the ignore file for the
+/// given vcs system already exists, its content is read and duplicate ignore
+/// file entries are filtered out.
+fn write_ignore_file(
+    base_path: &Path,
+    list: &IgnoreList,
+    vcs: VersionControl,
+) -> CargoResult<String> {
+    let fp_ignore = match vcs {
+        VersionControl::Git => base_path.join(".gitignore"),
+        VersionControl::Hg => base_path.join(".hgignore"),
+        VersionControl::Pijul => base_path.join(".ignore"),
+        VersionControl::Fossil => return Ok("".to_string()),
+        VersionControl::NoVcs => return Ok("".to_string()),
+    };
+
+    let ignore: String = match fs::File::open(&fp_ignore) {
+        Err(why) => match why.kind() {
+            ErrorKind::NotFound => list.format_new(vcs),
+            _ => return Err(failure::format_err!("{}", why)),
+        },
+        Ok(file) => list.format_existing(BufReader::new(file), vcs),
+    };
+
+    paths::append(&fp_ignore, ignore.as_bytes())?;
+
+    Ok(ignore)
+}
+
+/// initialize the correct vcs system based on the provided config
+fn init_vcs(path: &Path, vcs: VersionControl, config: &Config) -> CargoResult<()> {
     match vcs {
         VersionControl::Git => {
             if !path.join(".git").exists() {
                 GitRepo::init(path, config.cwd())?;
             }
-            let ignore = if path.join(".gitignore").exists() {
-                format!("\n{}", ignore)
-            } else {
-                ignore
-            };
-            paths::append(&path.join(".gitignore"), ignore.as_bytes())?;
         }
         VersionControl::Hg => {
             if !path.join(".hg").exists() {
                 HgRepo::init(path, config.cwd())?;
             }
-            let hgignore = if path.join(".hgignore").exists() {
-                format!("\n{}", hgignore)
-            } else {
-                hgignore
-            };
-            paths::append(&path.join(".hgignore"), hgignore.as_bytes())?;
         }
         VersionControl::Pijul => {
             if !path.join(".pijul").exists() {
                 PijulRepo::init(path, config.cwd())?;
             }
-            let ignore = if path.join(".ignore").exists() {
-                format!("\n{}", ignore)
-            } else {
-                ignore
-            };
-            paths::append(&path.join(".ignore"), ignore.as_bytes())?;
         }
         VersionControl::Fossil => {
             if path.join(".fossil").exists() {
@@ -492,6 +530,35 @@ fn mk(config: &Config, opts: &MkOptions) -> CargoResult<()> {
             fs::create_dir_all(path)?;
         }
     };
+
+    Ok(())
+}
+
+fn mk(config: &Config, opts: &MkOptions<'_>) -> CargoResult<()> {
+    let path = opts.path;
+    let name = opts.name;
+    let cfg = global_config(config)?;
+
+    // using the push method with two arguments ensures that the entries for
+    // both ignore and hgignore are in sync.
+    let mut ignore = IgnoreList::new();
+    ignore.push("/target", "^target/");
+    ignore.push("**/*.rs.bk", "glob:*.rs.bk\n");
+    if !opts.bin {
+        ignore.push("Cargo.lock", "glob:Cargo.lock");
+    }
+
+    let vcs = opts.version_control.unwrap_or_else(|| {
+        let in_existing_vcs = existing_vcs_repo(path.parent().unwrap_or(path), config.cwd());
+        match (cfg.version_control, in_existing_vcs) {
+            (None, false) => VersionControl::Git,
+            (Some(opt), false) => opt,
+            (_, true) => VersionControl::NoVcs,
+        }
+    });
+
+    init_vcs(path, vcs, config)?;
+    write_ignore_file(path, &ignore, vcs)?;
 
     let (author_name, email) = discover_author()?;
     // Hoo boy, sure glad we've got exhaustiveness checking behind us.
@@ -553,15 +620,15 @@ edition = {}
                 None => toml::Value::String("2018".to_string()),
             },
             match opts.registry {
-                Some(registry) => {
-                    format!("publish = {}\n",
-                        toml::Value::Array(vec!(toml::Value::String(registry.to_string())))
-                    )
-                }
+                Some(registry) => format!(
+                    "publish = {}\n",
+                    toml::Value::Array(vec!(toml::Value::String(registry.to_string())))
+                ),
                 None => "".to_string(),
-            }, 
+            },
             cargotoml_path_specifier
-        ).as_bytes(),
+        )
+        .as_bytes(),
     )?;
 
     // Create all specified source files
@@ -643,7 +710,7 @@ fn discover_author() -> CargoResult<(String, Option<String>)> {
         Some(name) => name,
         None => {
             let username_var = if cfg!(windows) { "USERNAME" } else { "USER" };
-            bail!(
+            failure::bail!(
                 "could not determine the current user, please set ${}",
                 username_var
             )
@@ -660,7 +727,17 @@ fn discover_author() -> CargoResult<(String, Option<String>)> {
         .or_else(|| get_environment_variable(&email_variables[3..]));
 
     let name = name.trim().to_string();
-    let email = email.map(|s| s.trim().to_string());
+    let email = email.map(|s| {
+        let mut s = s.trim();
+
+        // In some cases emails will already have <> remove them since they
+        // are already added when needed.
+        if s.starts_with('<') && s.ends_with('>') {
+            s = &s[1..s.len() - 1];
+        }
+
+        s.to_string()
+    });
 
     Ok((name, email))
 }
@@ -681,7 +758,7 @@ fn global_config(config: &Config) -> CargoResult<CargoNewConfig> {
                  `cargo-new.vcs`, unknown vcs `{}` \
                  (found in {})",
                 s, p
-            )))
+            )));
         }
         None => None,
     };

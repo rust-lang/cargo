@@ -1,8 +1,8 @@
 use std::collections::hash_map::HashMap;
 use std::fmt;
 
-use core::{Dependency, Package, PackageId, Summary};
-use util::CargoResult;
+use crate::core::{Dependency, Package, PackageId, Summary};
+use crate::util::CargoResult;
 
 mod source_id;
 
@@ -12,10 +12,10 @@ pub use self::source_id::{GitReference, SourceId};
 /// versions.
 pub trait Source {
     /// Returns the `SourceId` corresponding to this source
-    fn source_id(&self) -> &SourceId;
+    fn source_id(&self) -> SourceId;
 
     /// Returns the replaced `SourceId` corresponding to this source
-    fn replaced_source_id(&self) -> &SourceId {
+    fn replaced_source_id(&self) -> SourceId {
         self.source_id()
     }
 
@@ -28,13 +28,13 @@ pub trait Source {
     fn requires_precise(&self) -> bool;
 
     /// Attempt to find the packages that match a dependency request.
-    fn query(&mut self, dep: &Dependency, f: &mut FnMut(Summary)) -> CargoResult<()>;
+    fn query(&mut self, dep: &Dependency, f: &mut dyn FnMut(Summary)) -> CargoResult<()>;
 
     /// Attempt to find the packages that are close to a dependency request.
     /// Each source gets to define what `close` means for it.
     /// path/git sources may return all dependencies that are at that uri.
     /// where as an Index source may return dependencies that have the same canonicalization.
-    fn fuzzy_query(&mut self, dep: &Dependency, f: &mut FnMut(Summary)) -> CargoResult<()>;
+    fn fuzzy_query(&mut self, dep: &Dependency, f: &mut dyn FnMut(Summary)) -> CargoResult<()>;
 
     fn query_vec(&mut self, dep: &Dependency) -> CargoResult<Vec<Summary>> {
         let mut ret = Vec::new();
@@ -49,9 +49,9 @@ pub trait Source {
 
     /// The download method fetches the full package for each name and
     /// version specified.
-    fn download(&mut self, package: &PackageId) -> CargoResult<MaybePackage>;
+    fn download(&mut self, package: PackageId) -> CargoResult<MaybePackage>;
 
-    fn finish_download(&mut self, package: &PackageId, contents: Vec<u8>) -> CargoResult<Package>;
+    fn finish_download(&mut self, package: PackageId, contents: Vec<u8>) -> CargoResult<Package>;
 
     /// Generates a unique string which represents the fingerprint of the
     /// current state of the source.
@@ -71,7 +71,7 @@ pub trait Source {
     /// verification during the `download` step, but this is intended to be run
     /// just before a crate is compiled so it may perform more expensive checks
     /// which may not be cacheable.
-    fn verify(&self, _pkg: &PackageId) -> CargoResult<()> {
+    fn verify(&self, _pkg: PackageId) -> CargoResult<()> {
         Ok(())
     }
 
@@ -92,12 +92,12 @@ pub enum MaybePackage {
 
 impl<'a, T: Source + ?Sized + 'a> Source for Box<T> {
     /// Forwards to `Source::source_id`
-    fn source_id(&self) -> &SourceId {
+    fn source_id(&self) -> SourceId {
         (**self).source_id()
     }
 
     /// Forwards to `Source::replaced_source_id`
-    fn replaced_source_id(&self) -> &SourceId {
+    fn replaced_source_id(&self) -> SourceId {
         (**self).replaced_source_id()
     }
 
@@ -112,12 +112,12 @@ impl<'a, T: Source + ?Sized + 'a> Source for Box<T> {
     }
 
     /// Forwards to `Source::query`
-    fn query(&mut self, dep: &Dependency, f: &mut FnMut(Summary)) -> CargoResult<()> {
+    fn query(&mut self, dep: &Dependency, f: &mut dyn FnMut(Summary)) -> CargoResult<()> {
         (**self).query(dep, f)
     }
 
     /// Forwards to `Source::query`
-    fn fuzzy_query(&mut self, dep: &Dependency, f: &mut FnMut(Summary)) -> CargoResult<()> {
+    fn fuzzy_query(&mut self, dep: &Dependency, f: &mut dyn FnMut(Summary)) -> CargoResult<()> {
         (**self).fuzzy_query(dep, f)
     }
 
@@ -127,11 +127,11 @@ impl<'a, T: Source + ?Sized + 'a> Source for Box<T> {
     }
 
     /// Forwards to `Source::download`
-    fn download(&mut self, id: &PackageId) -> CargoResult<MaybePackage> {
+    fn download(&mut self, id: PackageId) -> CargoResult<MaybePackage> {
         (**self).download(id)
     }
 
-    fn finish_download(&mut self, id: &PackageId, data: Vec<u8>) -> CargoResult<Package> {
+    fn finish_download(&mut self, id: PackageId, data: Vec<u8>) -> CargoResult<Package> {
         (**self).finish_download(id, data)
     }
 
@@ -141,7 +141,7 @@ impl<'a, T: Source + ?Sized + 'a> Source for Box<T> {
     }
 
     /// Forwards to `Source::verify`
-    fn verify(&self, pkg: &PackageId) -> CargoResult<()> {
+    fn verify(&self, pkg: PackageId) -> CargoResult<()> {
         (**self).verify(pkg)
     }
 
@@ -155,11 +155,11 @@ impl<'a, T: Source + ?Sized + 'a> Source for Box<T> {
 }
 
 impl<'a, T: Source + ?Sized + 'a> Source for &'a mut T {
-    fn source_id(&self) -> &SourceId {
+    fn source_id(&self) -> SourceId {
         (**self).source_id()
     }
 
-    fn replaced_source_id(&self) -> &SourceId {
+    fn replaced_source_id(&self) -> SourceId {
         (**self).replaced_source_id()
     }
 
@@ -171,11 +171,11 @@ impl<'a, T: Source + ?Sized + 'a> Source for &'a mut T {
         (**self).requires_precise()
     }
 
-    fn query(&mut self, dep: &Dependency, f: &mut FnMut(Summary)) -> CargoResult<()> {
+    fn query(&mut self, dep: &Dependency, f: &mut dyn FnMut(Summary)) -> CargoResult<()> {
         (**self).query(dep, f)
     }
 
-    fn fuzzy_query(&mut self, dep: &Dependency, f: &mut FnMut(Summary)) -> CargoResult<()> {
+    fn fuzzy_query(&mut self, dep: &Dependency, f: &mut dyn FnMut(Summary)) -> CargoResult<()> {
         (**self).fuzzy_query(dep, f)
     }
 
@@ -183,11 +183,11 @@ impl<'a, T: Source + ?Sized + 'a> Source for &'a mut T {
         (**self).update()
     }
 
-    fn download(&mut self, id: &PackageId) -> CargoResult<MaybePackage> {
+    fn download(&mut self, id: PackageId) -> CargoResult<MaybePackage> {
         (**self).download(id)
     }
 
-    fn finish_download(&mut self, id: &PackageId, data: Vec<u8>) -> CargoResult<Package> {
+    fn finish_download(&mut self, id: PackageId, data: Vec<u8>) -> CargoResult<Package> {
         (**self).finish_download(id, data)
     }
 
@@ -195,7 +195,7 @@ impl<'a, T: Source + ?Sized + 'a> Source for &'a mut T {
         (**self).fingerprint(pkg)
     }
 
-    fn verify(&self, pkg: &PackageId) -> CargoResult<()> {
+    fn verify(&self, pkg: PackageId) -> CargoResult<()> {
         (**self).verify(pkg)
     }
 
@@ -211,12 +211,12 @@ impl<'a, T: Source + ?Sized + 'a> Source for &'a mut T {
 /// A `HashMap` of `SourceId` -> `Box<Source>`
 #[derive(Default)]
 pub struct SourceMap<'src> {
-    map: HashMap<SourceId, Box<Source + 'src>>,
+    map: HashMap<SourceId, Box<dyn Source + 'src>>,
 }
 
 // impl debug on source requires specialization, if even desirable at all
 impl<'src> fmt::Debug for SourceMap<'src> {
-    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         write!(f, "SourceMap ")?;
         f.debug_set().entries(self.map.keys()).finish()
     }
@@ -231,37 +231,37 @@ impl<'src> SourceMap<'src> {
     }
 
     /// Like `HashMap::contains_key`
-    pub fn contains(&self, id: &SourceId) -> bool {
-        self.map.contains_key(id)
+    pub fn contains(&self, id: SourceId) -> bool {
+        self.map.contains_key(&id)
     }
 
     /// Like `HashMap::get`
-    pub fn get(&self, id: &SourceId) -> Option<&(Source + 'src)> {
-        let source = self.map.get(id);
+    pub fn get(&self, id: SourceId) -> Option<&(dyn Source + 'src)> {
+        let source = self.map.get(&id);
 
         source.map(|s| {
-            let s: &(Source + 'src) = &**s;
+            let s: &(dyn Source + 'src) = &**s;
             s
         })
     }
 
     /// Like `HashMap::get_mut`
-    pub fn get_mut(&mut self, id: &SourceId) -> Option<&mut (Source + 'src)> {
-        self.map.get_mut(id).map(|s| {
-            let s: &mut (Source + 'src) = &mut **s;
+    pub fn get_mut(&mut self, id: SourceId) -> Option<&mut (dyn Source + 'src)> {
+        self.map.get_mut(&id).map(|s| {
+            let s: &mut (dyn Source + 'src) = &mut **s;
             s
         })
     }
 
     /// Like `HashMap::get`, but first calculates the `SourceId` from a
     /// `PackageId`
-    pub fn get_by_package_id(&self, pkg_id: &PackageId) -> Option<&(Source + 'src)> {
+    pub fn get_by_package_id(&self, pkg_id: PackageId) -> Option<&(dyn Source + 'src)> {
         self.get(pkg_id.source_id())
     }
 
     /// Like `HashMap::insert`, but derives the SourceId key from the Source
-    pub fn insert(&mut self, source: Box<Source + 'src>) {
-        let id = source.source_id().clone();
+    pub fn insert(&mut self, source: Box<dyn Source + 'src>) {
+        let id = source.source_id();
         self.map.insert(id, source);
     }
 
@@ -276,14 +276,14 @@ impl<'src> SourceMap<'src> {
     }
 
     /// Like `HashMap::values`
-    pub fn sources<'a>(&'a self) -> impl Iterator<Item = &'a Box<Source + 'src>> {
+    pub fn sources<'a>(&'a self) -> impl Iterator<Item = &'a Box<dyn Source + 'src>> {
         self.map.values()
     }
 
     /// Like `HashMap::iter_mut`
     pub fn sources_mut<'a>(
         &'a mut self,
-    ) -> impl Iterator<Item = (&'a SourceId, &'a mut (Source + 'src))> {
+    ) -> impl Iterator<Item = (&'a SourceId, &'a mut (dyn Source + 'src))> {
         self.map.iter_mut().map(|(a, b)| (a, &mut **b))
     }
 }

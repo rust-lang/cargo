@@ -1,9 +1,9 @@
 use std::env;
 use std::process::Command;
-use std::sync::atomic::{AtomicBool, Ordering, ATOMIC_BOOL_INIT};
+use std::sync::atomic::{AtomicBool, Ordering};
 use std::sync::{Once, ONCE_INIT};
 
-use support::{basic_bin_manifest, main_file, project};
+use crate::support::{basic_bin_manifest, main_file, project};
 
 pub fn disabled() -> bool {
     // First, disable if ./configure requested so
@@ -22,7 +22,7 @@ pub fn disabled() -> bool {
     // It's not particularly common to have a cross-compilation setup, so
     // try to detect that before we fail a bunch of tests through no fault
     // of the user.
-    static CAN_RUN_CROSS_TESTS: AtomicBool = ATOMIC_BOOL_INIT;
+    static CAN_RUN_CROSS_TESTS: AtomicBool = AtomicBool::new(false);
     static CHECK: Once = ONCE_INIT;
 
     let cross_target = alternate();
@@ -56,7 +56,7 @@ pub fn disabled() -> bool {
     // pass.  We don't use std::sync::Once here because panicing inside its
     // call_once method would poison the Once instance, which is not what
     // we want.
-    static HAVE_WARNED: AtomicBool = ATOMIC_BOOL_INIT;
+    static HAVE_WARNED: AtomicBool = AtomicBool::new(false);
 
     if HAVE_WARNED.swap(true, Ordering::SeqCst) {
         // We are some other test and somebody else is handling the warning.

@@ -1,4 +1,4 @@
-use support::{project, publish};
+use crate::support::{project, registry};
 
 #[test]
 fn feature_required() {
@@ -12,7 +12,8 @@ fn feature_required() {
             authors = []
             im-a-teapot = true
         "#,
-        ).file("src/lib.rs", "")
+        )
+        .file("src/lib.rs", "")
         .build();
     p.cargo("build")
         .masquerade_as_nightly_cargo()
@@ -29,7 +30,8 @@ Caused by:
 
 consider adding `cargo-features = [\"test-dummy-unstable\"]` to the manifest
 ",
-        ).run();
+        )
+        .run();
 
     p.cargo("build")
         .with_status(101)
@@ -47,7 +49,8 @@ this Cargo does not support nightly features, but if you
 switch to nightly channel you can add
 `cargo-features = [\"test-dummy-unstable\"]` to enable this feature
 ",
-        ).run();
+        )
+        .run();
 }
 
 #[test]
@@ -63,7 +66,8 @@ fn unknown_feature() {
             version = "0.0.1"
             authors = []
         "#,
-        ).file("src/lib.rs", "")
+        )
+        .file("src/lib.rs", "")
         .build();
     p.cargo("build")
         .with_status(101)
@@ -74,7 +78,8 @@ error: failed to parse manifest at `[..]`
 Caused by:
   unknown cargo feature `foo`
 ",
-        ).run();
+        )
+        .run();
 }
 
 #[test]
@@ -90,7 +95,8 @@ fn stable_feature_warns() {
             version = "0.0.1"
             authors = []
         "#,
-        ).file("src/lib.rs", "")
+        )
+        .file("src/lib.rs", "")
         .build();
     p.cargo("build")
         .with_stderr(
@@ -100,7 +106,8 @@ necessary to be listed in the manifest
 [COMPILING] a [..]
 [FINISHED] [..]
 ",
-        ).run();
+        )
+        .run();
 }
 
 #[test]
@@ -117,7 +124,8 @@ fn nightly_feature_requires_nightly() {
             authors = []
             im-a-teapot = true
         "#,
-        ).file("src/lib.rs", "")
+        )
+        .file("src/lib.rs", "")
         .build();
     p.cargo("build")
         .masquerade_as_nightly_cargo()
@@ -126,7 +134,8 @@ fn nightly_feature_requires_nightly() {
 [COMPILING] a [..]
 [FINISHED] [..]
 ",
-        ).run();
+        )
+        .run();
 
     p.cargo("build")
         .with_status(101)
@@ -138,7 +147,8 @@ Caused by:
   the cargo feature `test-dummy-unstable` requires a nightly version of Cargo, \
   but this is the `stable` channel
 ",
-        ).run();
+        )
+        .run();
 }
 
 #[test]
@@ -155,7 +165,8 @@ fn nightly_feature_requires_nightly_in_dep() {
             [dependencies]
             a = { path = "a" }
         "#,
-        ).file("src/lib.rs", "")
+        )
+        .file("src/lib.rs", "")
         .file(
             "a/Cargo.toml",
             r#"
@@ -167,7 +178,8 @@ fn nightly_feature_requires_nightly_in_dep() {
             authors = []
             im-a-teapot = true
         "#,
-        ).file("a/src/lib.rs", "")
+        )
+        .file("a/src/lib.rs", "")
         .build();
     p.cargo("build")
         .masquerade_as_nightly_cargo()
@@ -177,7 +189,8 @@ fn nightly_feature_requires_nightly_in_dep() {
 [COMPILING] b [..]
 [FINISHED] [..]
 ",
-        ).run();
+        )
+        .run();
 
     p.cargo("build")
         .with_status(101)
@@ -195,7 +208,8 @@ Caused by:
   the cargo feature `test-dummy-unstable` requires a nightly version of Cargo, \
   but this is the `stable` channel
 ",
-        ).run();
+        )
+        .run();
 }
 
 #[test]
@@ -212,7 +226,8 @@ fn cant_publish() {
             authors = []
             im-a-teapot = true
         "#,
-        ).file("src/lib.rs", "")
+        )
+        .file("src/lib.rs", "")
         .build();
     p.cargo("build")
         .masquerade_as_nightly_cargo()
@@ -221,7 +236,8 @@ fn cant_publish() {
 [COMPILING] a [..]
 [FINISHED] [..]
 ",
-        ).run();
+        )
+        .run();
 
     p.cargo("build")
         .with_status(101)
@@ -233,7 +249,8 @@ Caused by:
   the cargo feature `test-dummy-unstable` requires a nightly version of Cargo, \
   but this is the `stable` channel
 ",
-        ).run();
+        )
+        .run();
 }
 
 #[test]
@@ -250,7 +267,8 @@ fn z_flags_rejected() {
             authors = []
             im-a-teapot = true
         "#,
-        ).file("src/lib.rs", "")
+        )
+        .file("src/lib.rs", "")
         .build();
     p.cargo("build -Zprint-im-a-teapot")
         .with_status(101)
@@ -271,12 +289,13 @@ fn z_flags_rejected() {
 [COMPILING] a [..]
 [FINISHED] [..]
 ",
-        ).run();
+        )
+        .run();
 }
 
 #[test]
 fn publish_allowed() {
-    publish::setup();
+    registry::init();
 
     let p = project()
         .file(
@@ -289,10 +308,11 @@ fn publish_allowed() {
             version = "0.0.1"
             authors = []
         "#,
-        ).file("src/lib.rs", "")
+        )
+        .file("src/lib.rs", "")
         .build();
     p.cargo("publish --index")
-        .arg(publish::registry().to_string())
+        .arg(registry::registry_url().to_string())
         .masquerade_as_nightly_cargo()
         .run();
 }

@@ -14,7 +14,20 @@ version = "0.1.0"    # the current version, obeying semver
 authors = ["Alice <a@example.com>", "Bob <b@example.com>"]
 ```
 
-All three of these fields are mandatory.
+#### The `name` field
+
+The package name is an identifier used to refer to the package. It is used
+when listed as a dependency in another package, and as the default name of
+inferred lib and bin targets.
+
+The name must not be empty, use only [alphanumeric] characters or `-` or `_`.
+Note that `cargo new` and `cargo init` impose some additional restrictions on
+the package name, such as enforcing that it is a valid Rust identifier and not
+a keyword. [crates.io][cratesio] imposes even more restrictions, such as
+enforcing only ASCII characters, not a reserved name, not a special Windows
+name such as "nul", is not too long, etc.
+
+[alphanumeric]: https://doc.rust-lang.org/std/primitive.char.html#method.is_alphanumeric
 
 #### The `version` field
 
@@ -30,6 +43,15 @@ Versioning](http://semver.org/), so make sure you follow some basic rules:
   versions. Always increment the minor version if you add any new `pub` structs,
   traits, fields, types, functions, methods or anything else.
 * Use version numbers with three numeric parts such as 1.0.0 rather than 1.0.
+
+#### The `authors` field (optional)
+
+The `authors` field lists people or organizations that are considered the
+"authors" of the package. The exact meaning is open to interpretation — it may
+list the original or primary authors, current maintainers, or owners of the
+package. These names will be listed on the crate's page on
+[crates.io][cratesio]. An optional email address may be included within angled
+brackets at the end of each author.
 
 #### The `edition` field (optional)
 
@@ -125,7 +147,7 @@ The options are mutually exclusive: setting `include` will override an
 `exclude`. Note that `include` must be an exhaustive list of files as otherwise
 necessary source files may not be included.
 
-[globs]: http://doc.rust-lang.org/glob/glob/struct.Pattern.html
+[globs]: https://docs.rs/glob/0.2.11/glob/struct.Pattern.html
 
 #### Migrating to `gitignore`-like pattern matching
 
@@ -144,7 +166,8 @@ migration.
 #### The `publish`  field (optional)
 
 The `publish` field can be used to prevent a package from being published to a
-package registry (like *crates.io*) by mistake.
+package registry (like *crates.io*) by mistake, for instance to keep a package
+private in a company.
 
 ```toml
 [package]
@@ -341,7 +364,8 @@ incremental = true # whether or not incremental compilation is enabled
 overflow-checks = true # use overflow checks for integer arithmetic.
                    # Passes the `-C overflow-checks=...` flag to the compiler.
 
-# The release profile, used for `cargo build --release`.
+# The release profile, used for `cargo build --release` (and the dependencies
+# for `cargo test --release`,  including the local library or binary).
 [profile.release]
 opt-level = 3
 debug = false
@@ -353,7 +377,8 @@ panic = 'unwind'
 incremental = false
 overflow-checks = false
 
-# The testing profile, used for `cargo test`.
+# The testing profile, used for `cargo test` (for `cargo test --release` see
+# the `release` and `bench` profiles).
 [profile.test]
 opt-level = 0
 debug = 2
@@ -365,7 +390,8 @@ panic = 'unwind'
 incremental = true
 overflow-checks = true
 
-# The benchmarking profile, used for `cargo bench` and `cargo test --release`.
+# The benchmarking profile, used for `cargo bench` (and the test targets and
+# unit tests for `cargo test --release`).
 [profile.bench]
 opt-level = 3
 debug = false
@@ -738,6 +764,12 @@ harness = true
 # 2018 edition or only compiling one unit test with the 2015 edition. By default
 # all targets are compiled with the edition specified in `[package]`.
 edition = '2015'
+
+# Here's an example of a TOML "array of tables" section, in this case specifying
+# a binary target name and path.
+[[bin]]
+name = "my-cool-binary"
+path = "src/my-cool-binary.rs"
 ```
 
 The `[package]` also includes the optional `autobins`, `autoexamples`,

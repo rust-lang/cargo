@@ -1,15 +1,16 @@
 use std::fmt::{self, Debug, Formatter};
 
+use log::trace;
 use url::Url;
 
-use core::source::{Source, SourceId, MaybePackage};
-use core::GitReference;
-use core::{Dependency, Package, PackageId, Summary};
-use util::Config;
-use util::errors::CargoResult;
-use util::hex::short_hash;
-use sources::PathSource;
-use sources::git::utils::{GitRemote, GitRevision};
+use crate::core::source::{MaybePackage, Source, SourceId};
+use crate::core::GitReference;
+use crate::core::{Dependency, Package, PackageId, Summary};
+use crate::sources::git::utils::{GitRemote, GitRevision};
+use crate::sources::PathSource;
+use crate::util::errors::CargoResult;
+use crate::util::hex::short_hash;
+use crate::util::Config;
 
 pub struct GitSource<'cfg> {
     remote: GitRemote,
@@ -22,7 +23,7 @@ pub struct GitSource<'cfg> {
 }
 
 impl<'cfg> GitSource<'cfg> {
-    pub fn new(source_id: &SourceId, config: &'cfg Config) -> CargoResult<GitSource<'cfg>> {
+    pub fn new(source_id: SourceId, config: &'cfg Config) -> CargoResult<GitSource<'cfg>> {
         assert!(source_id.is_git(), "id is not git, id={}", source_id);
 
         let remote = GitRemote::new(source_id.url());
@@ -36,7 +37,7 @@ impl<'cfg> GitSource<'cfg> {
         let source = GitSource {
             remote,
             reference,
-            source_id: source_id.clone(),
+            source_id,
             path_source: None,
             rev: None,
             ident,
@@ -60,7 +61,8 @@ impl<'cfg> GitSource<'cfg> {
 
 fn ident(url: &Url) -> CargoResult<String> {
     let url = canonicalize_url(url)?;
-    let ident = url.path_segments()
+    let ident = url
+        .path_segments()
         .and_then(|mut s| s.next_back())
         .unwrap_or("");
 
@@ -76,7 +78,7 @@ pub fn canonicalize_url(url: &Url) -> CargoResult<Url> {
     // cannot-be-a-base-urls are not supported
     // eg. github.com:rust-lang-nursery/rustfmt.git
     if url.cannot_be_a_base() {
-        bail!(
+        failure::bail!(
             "invalid url `{}`: cannot-be-a-base-URLs are not supported",
             url
         )
@@ -112,7 +114,7 @@ pub fn canonicalize_url(url: &Url) -> CargoResult<Url> {
 }
 
 impl<'cfg> Debug for GitSource<'cfg> {
-    fn fmt(&self, f: &mut Formatter) -> fmt::Result {
+    fn fmt(&self, f: &mut Formatter<'_>) -> fmt::Result {
         write!(f, "git repo at {}", self.remote.url())?;
 
         match self.reference.pretty_ref() {
@@ -123,15 +125,17 @@ impl<'cfg> Debug for GitSource<'cfg> {
 }
 
 impl<'cfg> Source for GitSource<'cfg> {
-    fn query(&mut self, dep: &Dependency, f: &mut FnMut(Summary)) -> CargoResult<()> {
-        let src = self.path_source
+    fn query(&mut self, dep: &Dependency, f: &mut dyn FnMut(Summary)) -> CargoResult<()> {
+        let src = self
+            .path_source
             .as_mut()
             .expect("BUG: update() must be called before query()");
         src.query(dep, f)
     }
 
-    fn fuzzy_query(&mut self, dep: &Dependency, f: &mut FnMut(Summary)) -> CargoResult<()> {
-        let src = self.path_source
+    fn fuzzy_query(&mut self, dep: &Dependency, f: &mut dyn FnMut(Summary)) -> CargoResult<()> {
+        let src = self
+            .path_source
             .as_mut()
             .expect("BUG: update() must be called before query()");
         src.fuzzy_query(dep, f)
@@ -145,8 +149,8 @@ impl<'cfg> Source for GitSource<'cfg> {
         true
     }
 
-    fn source_id(&self) -> &SourceId {
-        &self.source_id
+    fn source_id(&self) -> SourceId {
+        self.source_id
     }
 
     fn update(&mut self) -> CargoResult<()> {
@@ -158,7 +162,7 @@ impl<'cfg> Source for GitSource<'cfg> {
         let db_path = lock.parent().join("db").join(&self.ident);
 
         if self.config.cli_unstable().offline && !db_path.exists() {
-            bail!(
+            failure::bail!(
                 "can't checkout from '{}': you are in the offline mode (-Z offline)",
                 self.remote.url()
             );
@@ -190,7 +194,8 @@ impl<'cfg> Source for GitSource<'cfg> {
         // https://github.com/servo/servo/pull/14397
         let short_id = db.to_short_id(&actual_rev).unwrap();
 
-        let checkout_path = lock.parent()
+        let checkout_path = lock
+            .parent()
             .join("checkouts")
             .join(&self.ident)
             .join(short_id.as_str());
@@ -203,14 +208,14 @@ impl<'cfg> Source for GitSource<'cfg> {
         db.copy_to(actual_rev.clone(), &checkout_path, self.config)?;
 
         let source_id = self.source_id.with_precise(Some(actual_rev.to_string()));
-        let path_source = PathSource::new_recursive(&checkout_path, &source_id, self.config);
+        let path_source = PathSource::new_recursive(&checkout_path, source_id, self.config);
 
         self.path_source = Some(path_source);
         self.rev = Some(actual_rev);
         self.path_source.as_mut().unwrap().update()
     }
 
-    fn download(&mut self, id: &PackageId) -> CargoResult<MaybePackage> {
+    fn download(&mut self, id: PackageId) -> CargoResult<MaybePackage> {
         trace!(
             "getting packages for package id `{}` from `{:?}`",
             id,
@@ -222,7 +227,7 @@ impl<'cfg> Source for GitSource<'cfg> {
             .download(id)
     }
 
-    fn finish_download(&mut self, _id: &PackageId, _data: Vec<u8>) -> CargoResult<Package> {
+    fn finish_download(&mut self, _id: PackageId, _data: Vec<u8>) -> CargoResult<Package> {
         panic!("no download should have started")
     }
 
@@ -237,9 +242,9 @@ impl<'cfg> Source for GitSource<'cfg> {
 
 #[cfg(test)]
 mod test {
-    use url::Url;
     use super::ident;
-    use util::ToUrl;
+    use crate::util::ToUrl;
+    use url::Url;
 
     #[test]
     pub fn test_url_to_path_ident_with_path() {

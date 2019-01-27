@@ -1,4 +1,4 @@
-use command_prelude::*;
+use crate::command_prelude::*;
 
 use cargo::core::{GitReference, SourceId};
 use cargo::ops;
@@ -6,7 +6,7 @@ use cargo::util::ToUrl;
 
 pub fn cli() -> App {
     subcommand("install")
-        .about("Install a Rust binary")
+        .about("Install a Rust binary. Default location is $HOME/.cargo/bin")
         .arg(Arg::with_name("crate").empty_values(false).multiple(true))
         .arg(
             opt("version", "Specify a version to install from crates.io")
@@ -51,7 +51,7 @@ repository with multiple crates) the `<crate>` argument is required to indicate
 which crate should be installed.
 
 Crates from crates.io can optionally specify the version they wish to install
-via the `--vers` flags, and similarly packages from git repositories can
+via the `--version` flags, and similarly packages from git repositories can
 optionally specify the branch, tag, or revision that should be installed. If a
 crate has multiple binaries, the `--bin` argument can selectively install only
 one of them, and if you'd rather install examples the `--example` argument can
@@ -74,15 +74,18 @@ continuous integration systems.",
         )
 }
 
-pub fn exec(config: &mut Config, args: &ArgMatches) -> CliResult {
+pub fn exec(config: &mut Config, args: &ArgMatches<'_>) -> CliResult {
     let registry = args.registry(config)?;
 
     config.reload_rooted_at_cargo_home()?;
-    let mut compile_opts = args.compile_options(config, CompileMode::Build)?;
+
+    let workspace = args.workspace(config).ok();
+    let mut compile_opts = args.compile_options(config, CompileMode::Build, workspace.as_ref())?;
 
     compile_opts.build_config.release = !args.is_present("debug");
 
-    let krates = args.values_of("crate")
+    let krates = args
+        .values_of("crate")
         .unwrap_or_default()
         .collect::<Vec<_>>();
 
@@ -120,7 +123,7 @@ pub fn exec(config: &mut Config, args: &ArgMatches) -> CliResult {
         ops::install(
             root,
             krates,
-            &source,
+            source,
             from_cwd,
             version,
             &compile_opts,

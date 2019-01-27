@@ -5,9 +5,9 @@ use std::path::Path;
 use failure::Fail;
 use opener;
 
-use core::Workspace;
-use ops;
-use util::CargoResult;
+use crate::core::Workspace;
+use crate::ops;
+use crate::util::CargoResult;
 
 /// Strongly typed options for the `cargo doc` command.
 #[derive(Debug)]
@@ -19,7 +19,7 @@ pub struct DocOptions<'a> {
 }
 
 /// Main method for `cargo doc`.
-pub fn doc(ws: &Workspace, options: &DocOptions) -> CargoResult<()> {
+pub fn doc(ws: &Workspace<'_>, options: &DocOptions<'_>) -> CargoResult<()> {
     let specs = options.compile_opts.spec.to_package_id_specs(ws)?;
     let resolve = ops::resolve_ws_precisely(
         ws,
@@ -31,7 +31,8 @@ pub fn doc(ws: &Workspace, options: &DocOptions) -> CargoResult<()> {
     )?;
     let (packages, resolve_with_overrides) = resolve;
 
-    let ids = specs.iter()
+    let ids = specs
+        .iter()
         .map(|s| s.query(resolve_with_overrides.iter()))
         .collect::<CargoResult<Vec<_>>>()?;
     let pkgs = packages.get_many(ids)?;
@@ -42,7 +43,7 @@ pub fn doc(ws: &Workspace, options: &DocOptions) -> CargoResult<()> {
         for target in package.targets().iter().filter(|t| t.documented()) {
             if target.is_lib() {
                 if let Some(prev) = lib_names.insert(target.crate_name(), package) {
-                    bail!(
+                    failure::bail!(
                         "The library `{}` is specified by packages `{}` and \
                          `{}` but can only be documented once. Consider renaming \
                          or marking one of the targets as `doc = false`.",
@@ -52,7 +53,7 @@ pub fn doc(ws: &Workspace, options: &DocOptions) -> CargoResult<()> {
                     );
                 }
             } else if let Some(prev) = bin_names.insert(target.crate_name(), package) {
-                bail!(
+                failure::bail!(
                     "The binary `{}` is specified by packages `{}` and \
                      `{}` but can be documented only once. Consider renaming \
                      or marking one of the targets as `doc = false`.",
@@ -68,7 +69,7 @@ pub fn doc(ws: &Workspace, options: &DocOptions) -> CargoResult<()> {
 
     if options.open_result {
         let name = if pkgs.len() > 1 {
-            bail!(
+            failure::bail!(
                 "Passing multiple packages and `open` is not supported.\n\
                  Please re-run this command with `-p <spec>` where `<spec>` \
                  is one of the following:\n  {}",
@@ -98,7 +99,7 @@ pub fn doc(ws: &Workspace, options: &DocOptions) -> CargoResult<()> {
             shell.status("Opening", path.display())?;
             if let Err(e) = opener::open(&path) {
                 shell.warn(format!("Couldn't open docs: {}", e))?;
-                for cause in (&e as &Fail).iter_chain() {
+                for cause in (&e as &dyn Fail).iter_chain() {
                     shell.warn(format!("Caused by:\n {}", cause))?;
                 }
             }

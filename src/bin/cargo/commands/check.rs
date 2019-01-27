@@ -1,9 +1,11 @@
-use command_prelude::*;
+use crate::command_prelude::*;
 
 use cargo::ops;
 
 pub fn cli() -> App {
     subcommand("check")
+        // subcommand aliases are handled in aliased_command()
+        // .alias("c")
         .about("Check a local package and all of its dependencies for errors")
         .arg_package_spec(
             "Package(s) to check",
@@ -51,13 +53,13 @@ The `--profile test` flag can be used to check unit tests with the
         )
 }
 
-pub fn exec(config: &mut Config, args: &ArgMatches) -> CliResult {
+pub fn exec(config: &mut Config, args: &ArgMatches<'_>) -> CliResult {
     let ws = args.workspace(config)?;
     let test = match args.value_of("profile") {
         Some("test") => true,
         None => false,
         Some(profile) => {
-            let err = format_err!(
+            let err = failure::format_err!(
                 "unknown profile: `{}`, only `test` is \
                  currently supported",
                 profile
@@ -66,7 +68,8 @@ pub fn exec(config: &mut Config, args: &ArgMatches) -> CliResult {
         }
     };
     let mode = CompileMode::Check { test };
-    let compile_opts = args.compile_options(config, mode)?;
+    let compile_opts = args.compile_options(config, mode, Some(&ws))?;
+
     ops::compile(&ws, &compile_opts)?;
     Ok(())
 }

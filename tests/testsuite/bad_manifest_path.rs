@@ -1,4 +1,4 @@
-use support::{basic_bin_manifest, main_file, project};
+use crate::support::{basic_bin_manifest, main_file, project};
 
 fn assert_not_a_cargo_toml(command: &str, manifest_path_argument: &str) {
     let p = project()
@@ -14,7 +14,8 @@ fn assert_not_a_cargo_toml(command: &str, manifest_path_argument: &str) {
         .with_stderr(
             "[ERROR] the manifest-path must be a path \
              to a Cargo.toml file",
-        ).run();
+        )
+        .run();
 }
 
 fn assert_cargo_toml_doesnt_exist(command: &str, manifest_path_argument: &str) {
@@ -32,7 +33,8 @@ fn assert_cargo_toml_doesnt_exist(command: &str, manifest_path_argument: &str) {
         .with_stderr(format!(
             "[ERROR] manifest path `{}` does not exist",
             expected_path
-        )).run();
+        ))
+        .run();
 }
 
 #[test]
@@ -328,7 +330,8 @@ fn verify_project_dir_containing_cargo_toml() {
         .with_stdout(
             "{\"invalid\":\"the manifest-path must be a path to a Cargo.toml file\"}\
              ",
-        ).run();
+        )
+        .run();
 }
 
 #[test]
@@ -344,7 +347,8 @@ fn verify_project_dir_plus_file() {
         .with_stdout(
             "{\"invalid\":\"the manifest-path must be a path to a Cargo.toml file\"}\
              ",
-        ).run();
+        )
+        .run();
 }
 
 #[test]
@@ -360,7 +364,8 @@ fn verify_project_dir_plus_path() {
         .with_stdout(
             "{\"invalid\":\"the manifest-path must be a path to a Cargo.toml file\"}\
              ",
-        ).run();
+        )
+        .run();
 }
 
 #[test]
@@ -372,5 +377,6 @@ fn verify_project_dir_to_nonexistent_cargo_toml() {
         .with_stdout(
             "{\"invalid\":\"manifest path `foo[..]bar[..]baz[..]Cargo.toml` does not exist\"}\
              ",
-        ).run();
+        )
+        .run();
 }

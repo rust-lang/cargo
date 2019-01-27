@@ -1,4 +1,4 @@
-use support::{basic_manifest, project};
+use crate::support::{basic_manifest, project};
 
 #[test]
 fn rustdoc_simple() {
@@ -13,7 +13,8 @@ fn rustdoc_simple() {
         -L dependency=[CWD]/target/debug/deps`
 [FINISHED] dev [unoptimized + debuginfo] target(s) in [..]
 ",
-        ).run();
+        )
+        .run();
 }
 
 #[test]
@@ -30,7 +31,8 @@ fn rustdoc_args() {
         -L dependency=[CWD]/target/debug/deps`
 [FINISHED] dev [unoptimized + debuginfo] target(s) in [..]
 ",
-        ).run();
+        )
+        .run();
 }
 
 #[test]
@@ -47,7 +49,8 @@ fn rustdoc_foo_with_bar_dependency() {
             [dependencies.bar]
             path = "../bar"
         "#,
-        ).file("src/lib.rs", "extern crate bar; pub fn foo() {}")
+        )
+        .file("src/lib.rs", "extern crate bar; pub fn foo() {}")
         .build();
     let _bar = project()
         .at("bar")
@@ -68,7 +71,8 @@ fn rustdoc_foo_with_bar_dependency() {
         --extern [..]`
 [FINISHED] dev [unoptimized + debuginfo] target(s) in [..]
 ",
-        ).run();
+        )
+        .run();
 }
 
 #[test]
@@ -85,7 +89,8 @@ fn rustdoc_only_bar_dependency() {
             [dependencies.bar]
             path = "../bar"
         "#,
-        ).file("src/main.rs", "extern crate bar; fn main() { bar::baz() }")
+        )
+        .file("src/main.rs", "extern crate bar; fn main() { bar::baz() }")
         .build();
     let _bar = project()
         .at("bar")
@@ -103,7 +108,8 @@ fn rustdoc_only_bar_dependency() {
         -L dependency=[CWD]/target/debug/deps`
 [FINISHED] dev [unoptimized + debuginfo] target(s) in [..]
 ",
-        ).run();
+        )
+        .run();
 }
 
 #[test]
@@ -123,7 +129,8 @@ fn rustdoc_same_name_documents_lib() {
         -L dependency=[CWD]/target/debug/deps`
 [FINISHED] dev [unoptimized + debuginfo] target(s) in [..]
 ",
-        ).run();
+        )
+        .run();
 }
 
 #[test]
@@ -140,7 +147,8 @@ fn features() {
             [features]
             quux = []
         "#,
-        ).file("src/lib.rs", "")
+        )
+        .file("src/lib.rs", "")
         .build();
 
     p.cargo("rustdoc --verbose --features quux")
@@ -149,11 +157,7 @@ fn features() {
 }
 
 #[test]
-#[cfg(all(
-    target_arch = "x86_64",
-    target_os = "linux",
-    target_env = "gnu"
-))]
+#[cfg(all(target_arch = "x86_64", target_os = "linux", target_env = "gnu"))]
 fn rustdoc_target() {
     let p = project().file("src/lib.rs", "").build();
 
@@ -167,5 +171,6 @@ fn rustdoc_target() {
     -L dependency=[CWD]/target/x86_64-unknown-linux-gnu/debug/deps \
     -L dependency=[CWD]/target/debug/deps`
 [FINISHED] dev [unoptimized + debuginfo] target(s) in [..]",
-        ).run();
+        )
+        .run();
 }

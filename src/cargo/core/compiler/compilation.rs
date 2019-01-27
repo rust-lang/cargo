@@ -5,9 +5,9 @@ use std::path::PathBuf;
 
 use semver::Version;
 
-use core::{Edition, Package, PackageId, Target, TargetKind};
-use util::{self, join_paths, process, CargoResult, CfgExpr, Config, ProcessBuilder};
 use super::BuildContext;
+use crate::core::{Edition, Package, PackageId, Target, TargetKind};
+use crate::util::{self, join_paths, process, CargoResult, CfgExpr, Config, ProcessBuilder};
 
 pub struct Doctest {
     /// The package being doctested.
@@ -21,11 +21,6 @@ pub struct Doctest {
 
 /// A structure returning the result of a compilation.
 pub struct Compilation<'cfg> {
-    /// A mapping from a package to the list of libraries that need to be
-    /// linked when working with that package.
-    // TODO: deprecated, remove
-    pub libraries: HashMap<PackageId, HashSet<(Target, PathBuf)>>,
-
     /// An array of all tests created during this compilation.
     pub tests: Vec<(Package, TargetKind, String, PathBuf)>,
 
@@ -38,7 +33,6 @@ pub struct Compilation<'cfg> {
     /// LD_LIBRARY_PATH as appropriate.
     ///
     /// The order should be deterministic.
-    // TODO: deprecated, remove
     pub native_dirs: BTreeSet<PathBuf>,
 
     /// Root output directory (for the local package's artifacts)
@@ -95,6 +89,9 @@ impl<'cfg> Compilation<'cfg> {
         } else {
             bcx.rustc.process()
         };
+        if bcx.config.extra_verbose() {
+            rustc.display_env_vars();
+        }
         for (k, v) in bcx.build_config.extra_rustc_env.iter() {
             rustc.env(k, v);
         }
@@ -106,7 +103,6 @@ impl<'cfg> Compilation<'cfg> {
             server.configure(&mut rustc);
         }
         Ok(Compilation {
-            libraries: HashMap::new(),
             native_dirs: BTreeSet::new(), // TODO: deprecated, remove
             root_output: PathBuf::from("/"),
             deps_output: PathBuf::from("/"),
@@ -203,7 +199,7 @@ impl<'cfg> Compilation<'cfg> {
         let search_path = join_paths(&search_path, util::dylib_path_envvar())?;
 
         cmd.env(util::dylib_path_envvar(), &search_path);
-        if let Some(env) = self.extra_env.get(pkg.package_id()) {
+        if let Some(env) = self.extra_env.get(&pkg.package_id()) {
             for &(ref k, ref v) in env {
                 cmd.env(k, v);
             }
@@ -212,7 +208,7 @@ impl<'cfg> Compilation<'cfg> {
         let metadata = pkg.manifest().metadata();
 
         let cargo_exe = self.config.cargo_exe()?;
-        cmd.env(::CARGO_ENV, cargo_exe);
+        cmd.env(crate::CARGO_ENV, cargo_exe);
 
         // When adding new environment variables depending on
         // crate properties which might require rebuild upon change
@@ -263,7 +259,7 @@ fn pre_version_component(v: &Version) -> String {
     ret
 }
 
-fn target_runner(bcx: &BuildContext) -> CargoResult<Option<(PathBuf, Vec<String>)>> {
+fn target_runner(bcx: &BuildContext<'_, '_>) -> CargoResult<Option<(PathBuf, Vec<String>)>> {
     let target = bcx.target_triple();
 
     // try target.{}.runner
@@ -283,8 +279,10 @@ fn target_runner(bcx: &BuildContext) -> CargoResult<Option<(PathBuf, Vec<String>
                     if let Some(runner) = bcx.config.get_path_and_args(&key)? {
                         // more than one match, error out
                         if matching_runner.is_some() {
-                            bail!("several matching instances of `target.'cfg(..)'.runner` \
-                                   in `.cargo/config`")
+                            failure::bail!(
+                                "several matching instances of `target.'cfg(..)'.runner` \
+                                 in `.cargo/config`"
+                            )
                         }
 
                         matching_runner = Some(runner.val);

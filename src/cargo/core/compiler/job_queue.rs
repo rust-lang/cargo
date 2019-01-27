@@ -3,26 +3,26 @@ use std::collections::HashSet;
 use std::fmt;
 use std::io;
 use std::mem;
+use std::process::Output;
 use std::sync::mpsc::{channel, Receiver, Sender};
 use std::sync::Arc;
-use std::process::Output;
 
-use crossbeam_utils;
 use crossbeam_utils::thread::Scope;
 use jobserver::{Acquired, HelperThread};
+use log::{debug, info, trace};
 
-use core::profiles::Profile;
-use core::{PackageId, Target, TargetKind};
-use handle_error;
-use util;
-use util::{internal, profile, CargoResult, CargoResultExt, ProcessBuilder};
-use util::{Config, DependencyQueue, Dirty, Fresh, Freshness};
-use util::{Progress, ProgressStyle};
-use util::diagnostic_server::{self, DiagnosticPrinter};
+use crate::core::profiles::Profile;
+use crate::core::{PackageId, Target, TargetKind};
+use crate::handle_error;
+use crate::util;
+use crate::util::diagnostic_server::{self, DiagnosticPrinter};
+use crate::util::{internal, profile, CargoResult, CargoResultExt, ProcessBuilder};
+use crate::util::{Config, DependencyQueue, Dirty, Fresh, Freshness};
+use crate::util::{Progress, ProgressStyle};
 
+use super::context::OutputFile;
 use super::job::Job;
 use super::{BuildContext, BuildPlan, CompileMode, Context, Kind, Unit};
-use super::context::OutputFile;
 
 /// A management structure of the entire dependency graph to compile.
 ///
@@ -35,9 +35,9 @@ pub struct JobQueue<'a> {
     rx: Receiver<Message<'a>>,
     active: Vec<Key<'a>>,
     pending: HashMap<Key<'a>, PendingBuild>,
-    compiled: HashSet<&'a PackageId>,
-    documented: HashSet<&'a PackageId>,
-    counts: HashMap<&'a PackageId, usize>,
+    compiled: HashSet<PackageId>,
+    documented: HashSet<PackageId>,
+    counts: HashMap<PackageId, usize>,
     is_release: bool,
 }
 
@@ -52,7 +52,7 @@ struct PendingBuild {
 
 #[derive(Clone, Copy, Eq, PartialEq, Hash)]
 struct Key<'a> {
-    pkg: &'a PackageId,
+    pkg: PackageId,
     target: &'a Target,
     profile: Profile,
     kind: Kind,
@@ -105,7 +105,8 @@ impl<'a> JobState<'a> {
         cmd: ProcessBuilder,
         filenames: Arc<Vec<OutputFile>>,
     ) {
-        let _ = self.tx
+        let _ = self
+            .tx
             .send(Message::BuildPlanMsg(module_name, cmd, filenames));
     }
 
@@ -113,9 +114,9 @@ impl<'a> JobState<'a> {
         &self,
         cmd: &ProcessBuilder,
         prefix: Option<String>,
-        print_output: bool,
+        capture_output: bool,
     ) -> CargoResult<Output> {
-        let prefix = prefix.unwrap_or_else(|| String::new());
+        let prefix = prefix.unwrap_or_else(String::new);
         cmd.exec_with_streaming(
             &mut |out| {
                 let _ = self.tx.send(Message::Stdout(format!("{}{}", prefix, out)));
@@ -125,7 +126,7 @@ impl<'a> JobState<'a> {
                 let _ = self.tx.send(Message::Stderr(format!("{}{}", prefix, err)));
                 Ok(())
             },
-            print_output,
+            capture_output,
         )
     }
 }
@@ -167,7 +168,7 @@ impl<'a> JobQueue<'a> {
     /// This function will spawn off `config.jobs()` workers to build all of the
     /// necessary dependencies, in order. Freshness is propagated as far as
     /// possible along each dependency chain.
-    pub fn execute(&mut self, cx: &mut Context, plan: &mut BuildPlan) -> CargoResult<()> {
+    pub fn execute(&mut self, cx: &mut Context<'_, '_>, plan: &mut BuildPlan) -> CargoResult<()> {
         let _p = profile::start("executing the job graph");
         self.queue.queue_finished();
 
@@ -187,26 +188,28 @@ impl<'a> JobQueue<'a> {
         let tx = self.tx.clone();
         let tx = unsafe { mem::transmute::<Sender<Message<'a>>, Sender<Message<'static>>>(tx) };
         let tx2 = tx.clone();
-        let helper = cx.jobserver
+        let helper = cx
+            .jobserver
             .clone()
             .into_helper_thread(move |token| {
                 drop(tx.send(Message::Token(token)));
             })
             .chain_err(|| "failed to create helper thread for jobserver management")?;
-        let _diagnostic_server = cx.bcx.build_config
+        let _diagnostic_server = cx
+            .bcx
+            .build_config
             .rustfix_diagnostic_server
             .borrow_mut()
             .take()
-            .map(move |srv| {
-                srv.start(move |msg| drop(tx2.send(Message::FixDiagnostic(msg))))
-            });
+            .map(move |srv| srv.start(move |msg| drop(tx2.send(Message::FixDiagnostic(msg)))));
 
         crossbeam_utils::thread::scope(|scope| self.drain_the_queue(cx, plan, scope, &helper))
+            .expect("child threads should't panic")
     }
 
     fn drain_the_queue(
         &mut self,
-        cx: &mut Context,
+        cx: &mut Context<'_, '_>,
         plan: &mut BuildPlan,
         scope: &Scope<'a>,
         jobserver_helper: &HelperThread,
@@ -274,7 +277,9 @@ impl<'a> JobQueue<'a> {
             tokens.truncate(self.active.len() - 1);
 
             let count = total - self.queue.len();
-            let active_names = self.active.iter()
+            let active_names = self
+                .active
+                .iter()
                 .map(Key::name_for_progress)
                 .collect::<Vec<_>>();
             drop(progress.tick_now(count, total, &format!(": {}", active_names.join(", "))));
@@ -297,7 +302,7 @@ impl<'a> JobQueue<'a> {
                 Message::Stderr(err) => {
                     let mut shell = cx.bcx.config.shell();
                     shell.print_ansi(err.as_bytes())?;
-                    shell.err().write(b"\n")?;
+                    shell.err().write_all(b"\n")?;
                 }
                 Message::FixDiagnostic(msg) => {
                     print.print(&msg)?;
@@ -323,7 +328,7 @@ impl<'a> JobQueue<'a> {
                             self.emit_warnings(Some(msg), &key, cx)?;
 
                             if !self.active.is_empty() {
-                                error = Some(format_err!("build failed"));
+                                error = Some(failure::format_err!("build failed"));
                                 handle_error(&e, &mut *cx.bcx.config.shell());
                                 cx.bcx.config.shell().warn(
                                     "build failed, waiting for other \
@@ -393,32 +398,38 @@ impl<'a> JobQueue<'a> {
         info!("start: {:?}", key);
 
         self.active.push(key);
-        *self.counts.get_mut(key.pkg).unwrap() -= 1;
+        *self.counts.get_mut(&key.pkg).unwrap() -= 1;
 
         let my_tx = self.tx.clone();
         let doit = move || {
             let res = job.run(fresh, &JobState { tx: my_tx.clone() });
             my_tx.send(Message::Finish(key, res)).unwrap();
         };
-        match fresh {
-            Freshness::Fresh => doit(),
-            Freshness::Dirty => {
-                scope.spawn(doit);
-            }
-        }
 
         if !build_plan {
             // Print out some nice progress information
             self.note_working_on(config, &key, fresh)?;
         }
 
+        match fresh {
+            Freshness::Fresh => doit(),
+            Freshness::Dirty => {
+                scope.spawn(move |_| doit());
+            }
+        }
+
         Ok(())
     }
 
-    fn emit_warnings(&self, msg: Option<&str>, key: &Key<'a>, cx: &mut Context) -> CargoResult<()> {
+    fn emit_warnings(
+        &self,
+        msg: Option<&str>,
+        key: &Key<'a>,
+        cx: &mut Context<'_, '_>,
+    ) -> CargoResult<()> {
         let output = cx.build_state.outputs.lock().unwrap();
         let bcx = &mut cx.bcx;
-        if let Some(output) = output.get(&(key.pkg.clone(), key.kind)) {
+        if let Some(output) = output.get(&(key.pkg, key.kind)) {
             if let Some(msg) = msg {
                 if !output.warnings.is_empty() {
                     writeln!(bcx.config.shell().err(), "{}\n", msg)?;
@@ -438,7 +449,7 @@ impl<'a> JobQueue<'a> {
         Ok(())
     }
 
-    fn finish(&mut self, key: Key<'a>, cx: &mut Context) -> CargoResult<()> {
+    fn finish(&mut self, key: Key<'a>, cx: &mut Context<'_, '_>) -> CargoResult<()> {
         if key.mode.is_run_custom_build() && cx.bcx.show_warnings(key.pkg) {
             self.emit_warnings(None, &key, cx)?;
         }
@@ -466,8 +477,8 @@ impl<'a> JobQueue<'a> {
         key: &Key<'a>,
         fresh: Freshness,
     ) -> CargoResult<()> {
-        if (self.compiled.contains(key.pkg) && !key.mode.is_doc())
-            || (self.documented.contains(key.pkg) && key.mode.is_doc())
+        if (self.compiled.contains(&key.pkg) && !key.mode.is_doc())
+            || (self.documented.contains(&key.pkg) && key.mode.is_doc())
         {
             return Ok(());
         }
@@ -493,8 +504,8 @@ impl<'a> JobQueue<'a> {
             }
             Fresh => {
                 // If doctest is last, only print "Fresh" if nothing has been printed.
-                if self.counts[key.pkg] == 0
-                    && !(key.mode == CompileMode::Doctest && self.compiled.contains(key.pkg))
+                if self.counts[&key.pkg] == 0
+                    && !(key.mode == CompileMode::Doctest && self.compiled.contains(&key.pkg))
                 {
                     self.compiled.insert(key.pkg);
                     config.shell().verbose(|c| c.status("Fresh", key.pkg))?;
@@ -541,7 +552,7 @@ impl<'a> Key<'a> {
 }
 
 impl<'a> fmt::Debug for Key<'a> {
-    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         write!(
             f,
             "{} => {}/{} => {:?}",

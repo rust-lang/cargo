@@ -4,29 +4,28 @@ use std::ffi::OsStr;
 use std::fmt::Write;
 use std::path::PathBuf;
 use std::sync::Arc;
-use std::cmp::Ordering;
 
 use jobserver::Client;
 
-use core::{Package, PackageId, Resolve, Target};
-use core::compiler::compilation;
-use core::profiles::Profile;
-use util::errors::{CargoResult, CargoResultExt};
-use util::{internal, profile, Config, short_hash};
+use crate::core::compiler::compilation;
+use crate::core::profiles::Profile;
+use crate::core::{Package, PackageId, Resolve, Target};
+use crate::util::errors::{CargoResult, CargoResultExt};
+use crate::util::{internal, profile, short_hash, Config};
 
+use super::build_plan::BuildPlan;
 use super::custom_build::{self, BuildDeps, BuildScripts, BuildState};
 use super::fingerprint::Fingerprint;
 use super::job_queue::JobQueue;
 use super::layout::Layout;
 use super::{BuildContext, Compilation, CompileMode, Executor, FileFlavor, Kind};
-use super::build_plan::BuildPlan;
 
 mod unit_dependencies;
 use self::unit_dependencies::build_unit_dependencies;
 
 mod compilation_files;
-pub use self::compilation_files::{Metadata, OutputFile};
 use self::compilation_files::CompilationFiles;
+pub use self::compilation_files::{Metadata, OutputFile};
 
 /// All information needed to define a Unit.
 ///
@@ -42,7 +41,7 @@ use self::compilation_files::CompilationFiles;
 /// example, it needs to know the target architecture (OS, chip arch etc.) and it needs to know
 /// whether you want a debug or release build. There is enough information in this struct to figure
 /// all that out.
-#[derive(Clone, Copy, Eq, PartialEq, Hash, Debug)]
+#[derive(Clone, Copy, Eq, PartialEq, Hash, Debug, PartialOrd, Ord)]
 pub struct Unit<'a> {
     /// Information about available targets, which files to include/exclude, etc. Basically stuff in
     /// `Cargo.toml`.
@@ -69,18 +68,6 @@ pub struct Unit<'a> {
 impl<'a> Unit<'a> {
     pub fn buildkey(&self) -> String {
         format!("{}-{}", self.pkg.name(), short_hash(self))
-	}
-}
-
-impl<'a> Ord for Unit<'a> {
-    fn cmp(&self, other: &Unit) -> Ordering {
-        self.buildkey().cmp(&other.buildkey())
-    }
-}
-
-impl<'a> PartialOrd for Unit<'a> {
-    fn partial_cmp(&self, other: &Unit) -> Option<Ordering> {
-        Some(self.cmp(other))
     }
 }
 
@@ -93,12 +80,12 @@ pub struct Context<'a, 'cfg: 'a> {
     pub fingerprints: HashMap<Unit<'a>, Arc<Fingerprint>>,
     pub compiled: HashSet<Unit<'a>>,
     pub build_scripts: HashMap<Unit<'a>, Arc<BuildScripts>>,
-    pub links: Links<'a>,
+    pub links: Links,
     pub jobserver: Client,
-    primary_packages: HashSet<&'a PackageId>,
+    primary_packages: HashSet<PackageId>,
     unit_dependencies: HashMap<Unit<'a>, Vec<Unit<'a>>>,
     files: Option<CompilationFiles<'a, 'cfg>>,
-    package_cache: HashMap<&'a PackageId, &'a Package>,
+    package_cache: HashMap<PackageId, &'a Package>,
 }
 
 impl<'a, 'cfg> Context<'a, 'cfg> {
@@ -142,7 +129,7 @@ impl<'a, 'cfg> Context<'a, 'cfg> {
         mut self,
         units: &[Unit<'a>],
         export_dir: Option<PathBuf>,
-        exec: &Arc<Executor>,
+        exec: &Arc<dyn Executor>,
     ) -> CargoResult<Compilation<'cfg>> {
         let mut queue = JobQueue::new(self.bcx);
         let mut plan = BuildPlan::new();
@@ -150,6 +137,7 @@ impl<'a, 'cfg> Context<'a, 'cfg> {
         self.prepare_units(export_dir, units)?;
         self.prepare()?;
         custom_build::build_map(&mut self, units)?;
+        self.check_collistions()?;
 
         for unit in units.iter() {
             // Build up a list of pending jobs, each of which represent
@@ -175,10 +163,7 @@ impl<'a, 'cfg> Context<'a, 'cfg> {
                     continue;
                 }
 
-                let bindst = match output.hardlink {
-                    Some(ref link_dst) => link_dst,
-                    None => &output.path,
-                };
+                let bindst = output.bin_dst();
 
                 if unit.mode == CompileMode::Test {
                     self.compilation.tests.push((
@@ -189,13 +174,6 @@ impl<'a, 'cfg> Context<'a, 'cfg> {
                     ));
                 } else if unit.target.is_bin() || unit.target.is_bin_example() {
                     self.compilation.binaries.push(bindst.clone());
-                } else if unit.target.is_lib() {
-                    let pkgid = unit.pkg.package_id().clone();
-                    self.compilation
-                        .libraries
-                        .entry(pkgid)
-                        .or_insert_with(HashSet::new)
-                        .insert((unit.target.clone(), output.path.clone()));
                 }
             }
 
@@ -208,28 +186,10 @@ impl<'a, 'cfg> Context<'a, 'cfg> {
                     let out_dir = self.files().build_script_out_dir(dep).display().to_string();
                     self.compilation
                         .extra_env
-                        .entry(dep.pkg.package_id().clone())
+                        .entry(dep.pkg.package_id())
                         .or_insert_with(Vec::new)
                         .push(("OUT_DIR".to_string(), out_dir));
                 }
-
-                if !dep.target.is_lib() {
-                    continue;
-                }
-                if dep.mode.is_doc() {
-                    continue;
-                }
-
-                let outputs = self.outputs(dep)?;
-                self.compilation
-                    .libraries
-                    .entry(unit.pkg.package_id().clone())
-                    .or_insert_with(HashSet::new)
-                    .extend(
-                        outputs
-                            .iter()
-                            .map(|output| (dep.target.clone(), output.path.clone())),
-                    );
             }
 
             if unit.mode == CompileMode::Doctest {
@@ -259,6 +219,8 @@ impl<'a, 'cfg> Context<'a, 'cfg> {
                         }
                     }
                 }
+                // Help with tests to get a stable order with renamed deps.
+                doctest_deps.sort();
                 self.compilation.to_doc_test.push(compilation::Doctest {
                     package: unit.pkg.clone(),
                     target: unit.target.clone(),
@@ -270,7 +232,7 @@ impl<'a, 'cfg> Context<'a, 'cfg> {
             if !feats.is_empty() {
                 self.compilation
                     .cfgs
-                    .entry(unit.pkg.package_id().clone())
+                    .entry(unit.pkg.package_id())
                     .or_insert_with(|| {
                         feats
                             .iter()
@@ -282,7 +244,7 @@ impl<'a, 'cfg> Context<'a, 'cfg> {
             if !rustdocflags.is_empty() {
                 self.compilation
                     .rustdocflags
-                    .entry(unit.pkg.package_id().clone())
+                    .entry(unit.pkg.package_id())
                     .or_insert(rustdocflags);
             }
 
@@ -309,6 +271,23 @@ impl<'a, 'cfg> Context<'a, 'cfg> {
         Ok(self.compilation)
     }
 
+    /// Returns the executable for the specified unit (if any).
+    pub fn get_executable(&mut self, unit: &Unit<'a>) -> CargoResult<Option<PathBuf>> {
+        for output in self.outputs(unit)?.iter() {
+            if output.flavor == FileFlavor::DebugInfo {
+                continue;
+            }
+
+            let is_binary = unit.target.is_bin() || unit.target.is_bin_example();
+            let is_test = unit.mode.is_any_test() && !unit.mode.is_check();
+
+            if is_binary || is_test {
+                return Ok(Option::Some(output.bin_dst().clone()));
+            }
+        }
+        Ok(None)
+    }
+
     pub fn prepare_units(
         &mut self,
         export_dir: Option<PathBuf>,
@@ -324,7 +303,8 @@ impl<'a, 'cfg> Context<'a, 'cfg> {
             Some(target) => Some(Layout::new(self.bcx.ws, Some(target), dest)?),
             None => None,
         };
-        self.primary_packages.extend(units.iter().map(|u| u.pkg.package_id()));
+        self.primary_packages
+            .extend(units.iter().map(|u| u.pkg.package_id()));
 
         build_unit_dependencies(
             units,
@@ -376,13 +356,8 @@ impl<'a, 'cfg> Context<'a, 'cfg> {
         self.files.as_mut().unwrap()
     }
 
-    /// Return the filenames that the given target for the given profile will
-    /// generate as a list of 3-tuples (filename, link_dst, linkable)
-    ///
-    ///  - filename: filename rustc compiles to. (Often has metadata suffix).
-    ///  - link_dst: Optional file to link/copy the result to (without metadata suffix)
-    ///  - linkable: Whether possible to link against file (eg it's a library)
-    pub fn outputs(&mut self, unit: &Unit<'a>) -> CargoResult<Arc<Vec<OutputFile>>> {
+    /// Return the filenames that the given unit will generate.
+    pub fn outputs(&self, unit: &Unit<'a>) -> CargoResult<Arc<Vec<OutputFile>>> {
         self.files.as_ref().unwrap().outputs(unit, self.bcx)
     }
 
@@ -401,7 +376,7 @@ impl<'a, 'cfg> Context<'a, 'cfg> {
         // gets a full pre-filtered set of dependencies. This is not super
         // obvious, and clear, but it does work at the moment.
         if unit.target.is_custom_build() {
-            let key = (unit.pkg.package_id().clone(), unit.kind);
+            let key = (unit.pkg.package_id(), unit.kind);
             if self.build_script_overridden.contains(&key) {
                 return Vec::new();
             }
@@ -411,7 +386,7 @@ impl<'a, 'cfg> Context<'a, 'cfg> {
         deps
     }
 
-    pub fn incremental_args(&self, unit: &Unit) -> CargoResult<Vec<String>> {
+    pub fn incremental_args(&self, unit: &Unit<'_>) -> CargoResult<Vec<String>> {
         // There's a number of ways to configure incremental compilation right
         // now. In order of descending priority (first is highest priority) we
         // have:
@@ -433,7 +408,8 @@ impl<'a, 'cfg> Context<'a, 'cfg> {
         //   incremental compilation or not. Primarily development profiles
         //   have it enabled by default while release profiles have it disabled
         //   by default.
-        let global_cfg = self.bcx
+        let global_cfg = self
+            .bcx
             .config
             .get_bool("build.incremental")?
             .map(|c| c.val);
@@ -466,14 +442,15 @@ impl<'a, 'cfg> Context<'a, 'cfg> {
     }
 
     pub fn is_primary_package(&self, unit: &Unit<'a>) -> bool {
-        self.primary_packages.contains(unit.pkg.package_id())
+        self.primary_packages.contains(&unit.pkg.package_id())
     }
 
     /// Gets a package for the given package id.
-    pub fn get_package(&self, id: &PackageId) -> CargoResult<&'a Package> {
-        self.package_cache.get(id)
+    pub fn get_package(&self, id: PackageId) -> CargoResult<&'a Package> {
+        self.package_cache
+            .get(&id)
             .cloned()
-            .ok_or_else(|| format_err!("failed to find {}", id))
+            .ok_or_else(|| failure::format_err!("failed to find {}", id))
     }
 
     /// Return the list of filenames read by cargo to generate the BuildContext
@@ -491,23 +468,107 @@ impl<'a, 'cfg> Context<'a, 'cfg> {
         inputs.sort();
         Ok(inputs)
     }
+
+    fn check_collistions(&self) -> CargoResult<()> {
+        let mut output_collisions = HashMap::new();
+        let describe_collision =
+            |unit: &Unit<'_>, other_unit: &Unit<'_>, path: &PathBuf| -> String {
+                format!(
+                    "The {} target `{}` in package `{}` has the same output \
+                     filename as the {} target `{}` in package `{}`.\n\
+                     Colliding filename is: {}\n",
+                    unit.target.kind().description(),
+                    unit.target.name(),
+                    unit.pkg.package_id(),
+                    other_unit.target.kind().description(),
+                    other_unit.target.name(),
+                    other_unit.pkg.package_id(),
+                    path.display()
+                )
+            };
+        let suggestion = "Consider changing their names to be unique or compiling them separately.\n\
+            This may become a hard error in the future, see https://github.com/rust-lang/cargo/issues/6313";
+        let report_collision = |unit: &Unit<'_>,
+                                other_unit: &Unit<'_>,
+                                path: &PathBuf|
+         -> CargoResult<()> {
+            if unit.target.name() == other_unit.target.name() {
+                self.bcx.config.shell().warn(format!(
+                    "output filename collision.\n\
+                     {}\
+                     The targets should have unique names.\n\
+                     {}",
+                    describe_collision(unit, other_unit, path),
+                    suggestion
+                ))
+            } else {
+                self.bcx.config.shell().warn(format!(
+                    "output filename collision.\n\
+                    {}\
+                    The output filenames should be unique.\n\
+                    {}\n\
+                    If this looks unexpected, it may be a bug in Cargo. Please file a bug report at\n\
+                    https://github.com/rust-lang/cargo/issues/ with as much information as you\n\
+                    can provide.\n\
+                    {} running on `{}` target `{}`\n\
+                    First unit: {:?}\n\
+                    Second unit: {:?}",
+                    describe_collision(unit, other_unit, path),
+                    suggestion,
+                    crate::version(), self.bcx.host_triple(), self.bcx.target_triple(),
+                    unit, other_unit))
+            }
+        };
+        let mut keys = self
+            .unit_dependencies
+            .keys()
+            .filter(|unit| !unit.mode.is_run_custom_build())
+            .collect::<Vec<_>>();
+        // Sort for consistent error messages.
+        keys.sort_unstable();
+        for unit in keys {
+            for output in self.outputs(unit)?.iter() {
+                if let Some(other_unit) = output_collisions.insert(output.path.clone(), unit) {
+                    report_collision(unit, &other_unit, &output.path)?;
+                }
+                if let Some(hardlink) = output.hardlink.as_ref() {
+                    if let Some(other_unit) = output_collisions.insert(hardlink.clone(), unit) {
+                        report_collision(unit, &other_unit, hardlink)?;
+                    }
+                }
+                if let Some(ref export_path) = output.export_path {
+                    if let Some(other_unit) = output_collisions.insert(export_path.clone(), unit) {
+                        self.bcx.config.shell().warn(format!(
+                            "`--out-dir` filename collision.\n\
+                             {}\
+                             The exported filenames should be unique.\n\
+                             {}",
+                            describe_collision(unit, &other_unit, &export_path),
+                            suggestion
+                        ))?;
+                    }
+                }
+            }
+        }
+        Ok(())
+    }
 }
 
 #[derive(Default)]
-pub struct Links<'a> {
-    validated: HashSet<&'a PackageId>,
-    links: HashMap<String, &'a PackageId>,
+pub struct Links {
+    validated: HashSet<PackageId>,
+    links: HashMap<String, PackageId>,
 }
 
-impl<'a> Links<'a> {
-    pub fn new() -> Links<'a> {
+impl Links {
+    pub fn new() -> Links {
         Links {
             validated: HashSet::new(),
             links: HashMap::new(),
         }
     }
 
-    pub fn validate(&mut self, resolve: &Resolve, unit: &Unit<'a>) -> CargoResult<()> {
+    pub fn validate(&mut self, resolve: &Resolve, unit: &Unit<'_>) -> CargoResult<()> {
         if !self.validated.insert(unit.pkg.package_id()) {
             return Ok(());
         }
@@ -515,11 +576,11 @@ impl<'a> Links<'a> {
             Some(lib) => lib,
             None => return Ok(()),
         };
-        if let Some(prev) = self.links.get(lib) {
+        if let Some(&prev) = self.links.get(lib) {
             let pkg = unit.pkg.package_id();
 
-            let describe_path = |pkgid: &PackageId| -> String {
-                let dep_path = resolve.path_to_top(pkgid);
+            let describe_path = |pkgid: PackageId| -> String {
+                let dep_path = resolve.path_to_top(&pkgid);
                 let mut dep_path_desc = format!("package `{}`", dep_path[0]);
                 for dep in dep_path.iter().skip(1) {
                     write!(dep_path_desc, "\n    ... which is depended on by `{}`", dep).unwrap();
@@ -527,7 +588,7 @@ impl<'a> Links<'a> {
                 dep_path_desc
             };
 
-            bail!(
+            failure::bail!(
                 "multiple packages link to native library `{}`, \
                  but a native library can be linked only once\n\
                  \n\
@@ -541,13 +602,14 @@ impl<'a> Links<'a> {
                 lib
             )
         }
-        if !unit.pkg
+        if !unit
+            .pkg
             .manifest()
             .targets()
             .iter()
             .any(|t| t.is_custom_build())
         {
-            bail!(
+            failure::bail!(
                 "package `{}` specifies that it links to `{}` but does not \
                  have a custom build script",
                 unit.pkg.package_id(),
