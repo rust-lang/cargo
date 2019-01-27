@@ -240,14 +240,11 @@ unable to verify that `{0}` is the same as when the lockfile was generated
         });
         let name = names.next().unwrap_or_else(|| crate_name.clone());
         for n in names {
-            if n == name {
-                continue;
-            }
-            failure::bail!(
-                "multiple dependencies listed for the same crate must \
-                 all have the same name, but the dependency on `{}` \
-                 is listed as having different names",
-                to
+            failure::ensure!(
+                n == name,
+                "the crate `{}` depends on crate `{}` multiple times with different names",
+                from,
+                to,
             );
         }
         Ok(name)
