@@ -4,8 +4,8 @@ use std::fmt::{self, Formatter};
 use std::hash::{self, Hash};
 use std::path::Path;
 use std::ptr;
-use std::sync::atomic::Ordering::SeqCst;
 use std::sync::atomic::AtomicBool;
+use std::sync::atomic::Ordering::SeqCst;
 use std::sync::Mutex;
 
 use log::trace;

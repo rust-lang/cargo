@@ -2,7 +2,7 @@ use std::collections::BTreeMap;
 use std::env;
 use std::fmt;
 use std::fs;
-use std::io::{BufReader, BufRead, ErrorKind};
+use std::io::{BufRead, BufReader, ErrorKind};
 use std::path::{Path, PathBuf};
 
 use git2::Config as GitConfig;
@@ -410,7 +410,6 @@ pub fn init(opts: &NewOptions, config: &Config) -> CargoResult<()> {
     Ok(())
 }
 
-
 /// IgnoreList
 struct IgnoreList {
     /// git like formatted entries
@@ -428,7 +427,7 @@ impl IgnoreList {
         }
     }
 
-    /// add a new entry to the ignore list. Requires two arguments with the 
+    /// add a new entry to the ignore list. Requires two arguments with the
     /// entry in two different formats. One for "git style" entries and one for
     /// "mercurial like" entries.
     fn push(&mut self, ignore: &str, hg_ignore: &str) {
@@ -451,23 +450,23 @@ impl IgnoreList {
     /// file.
     fn format_existing<T: BufRead>(&self, existing: T, vcs: VersionControl) -> String {
         // TODO: is unwrap safe?
-        let existing_items = existing.lines().collect::<Result<Vec<_>, _>>().unwrap(); 
+        let existing_items = existing.lines().collect::<Result<Vec<_>, _>>().unwrap();
 
-        let ignore_items = match vcs { 
-            VersionControl::Hg =>  &self.hg_ignore,
-            _ =>  &self.ignore,
+        let ignore_items = match vcs {
+            VersionControl::Hg => &self.hg_ignore,
+            _ => &self.ignore,
         };
 
         let mut out = "\n\n#Added by cargo\n\
-                      #\n\
-                      #already existing elements are commented out\n".
-                      to_string();
+                       #\n\
+                       #already existing elements are commented out\n"
+            .to_string();
 
         for item in ignore_items {
             out.push('\n');
             if existing_items.contains(item) {
                 out.push('#');
-            } 
+            }
             out.push_str(item)
         }
 
@@ -478,25 +477,25 @@ impl IgnoreList {
 /// write the ignore file to the given directory. If the ignore file for the
 /// given vcs system already exists, its content is read and duplicate ignore
 /// file entries are filtered out.
-fn write_ignore_file(base_path: &Path, list: &IgnoreList, vcs: VersionControl) -> CargoResult<String>{
+fn write_ignore_file(
+    base_path: &Path,
+    list: &IgnoreList,
+    vcs: VersionControl,
+) -> CargoResult<String> {
     let fp_ignore = match vcs {
         VersionControl::Git => base_path.join(".gitignore"),
-        VersionControl::Hg =>  base_path.join(".hgignore"),
-        VersionControl::Pijul =>  base_path.join(".ignore"),
+        VersionControl::Hg => base_path.join(".hgignore"),
+        VersionControl::Pijul => base_path.join(".ignore"),
         VersionControl::Fossil => return Ok("".to_string()),
-        VersionControl::NoVcs =>  return Ok("".to_string()),
+        VersionControl::NoVcs => return Ok("".to_string()),
     };
 
     let ignore: String = match fs::File::open(&fp_ignore) {
-        Err(why) => {
-            match why.kind() {
-                ErrorKind::NotFound => list.format_new(vcs),
-                _ => return Err(failure::format_err!("{}", why)),
-            }
+        Err(why) => match why.kind() {
+            ErrorKind::NotFound => list.format_new(vcs),
+            _ => return Err(failure::format_err!("{}", why)),
         },
-        Ok(file) => {
-            list.format_existing(BufReader::new(file), vcs)
-        },
+        Ok(file) => list.format_existing(BufReader::new(file), vcs),
     };
 
     paths::append(&fp_ignore, ignore.as_bytes())?;
@@ -540,7 +539,6 @@ fn mk(config: &Config, opts: &MkOptions<'_>) -> CargoResult<()> {
     let name = opts.name;
     let cfg = global_config(config)?;
 
-
     // using the push method with two arguments ensures that the entries for
     // both ignore and hgignore are in sync.
     let mut ignore = IgnoreList::new();
@@ -561,7 +559,6 @@ fn mk(config: &Config, opts: &MkOptions<'_>) -> CargoResult<()> {
 
     init_vcs(path, vcs, config)?;
     write_ignore_file(path, &ignore, vcs)?;
-
 
     let (author_name, email) = discover_author()?;
     // Hoo boy, sure glad we've got exhaustiveness checking behind us.

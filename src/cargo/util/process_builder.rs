@@ -28,7 +28,7 @@ pub struct ProcessBuilder {
     /// [jobserver_docs]: https://docs.rs/jobserver/0.1.6/jobserver/
     jobserver: Option<Client>,
     /// Whether to include environment variable in display
-    display_env_vars: bool
+    display_env_vars: bool,
 }
 
 impl fmt::Display for ProcessBuilder {

@@ -337,8 +337,8 @@ pub fn process_error(
 
     #[cfg(windows)]
     fn status_to_string(status: ExitStatus) -> String {
-        use winapi::um::winnt::*;
         use winapi::shared::minwindef::DWORD;
+        use winapi::um::winnt::*;
 
         let mut base = status.to_string();
         let extra = match status.code().unwrap() as DWORD {
