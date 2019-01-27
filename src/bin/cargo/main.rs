@@ -20,9 +20,9 @@ use crate::command_prelude::*;
 
 fn main() {
     #[cfg(feature = "pretty-env-logger")]
-    pretty_env_logger::init();
+    pretty_env_logger::init_custom_env("CARGO_LOG");
     #[cfg(not(feature = "pretty-env-logger"))]
-    env_logger::init();
+    env_logger::init_from_env("CARGO_LOG");
     cargo::core::maybe_allow_nightly_features();
 
     let mut config = match Config::default() {

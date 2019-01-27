@@ -1547,13 +1547,13 @@ fn build_script_with_dynamic_native_dependency() {
 
     build
         .cargo("build -v")
-        .env("RUST_LOG", "cargo::ops::cargo_rustc")
+        .env("CARGO_LOG", "cargo::ops::cargo_rustc")
         .run();
 
     let root = build.root().join("target").join("debug");
     foo.cargo("build -v")
         .env("BUILDER_ROOT", root)
-        .env("RUST_LOG", "cargo::ops::cargo_rustc")
+        .env("CARGO_LOG", "cargo::ops::cargo_rustc")
         .run();
 }
 
@@ -2460,7 +2460,7 @@ fn fresh_builds_possible_with_multiple_metadata_overrides() {
         .run();
 
     p.cargo("build -v")
-        .env("RUST_LOG", "cargo::ops::cargo_rustc::fingerprint=info")
+        .env("CARGO_LOG", "cargo::ops::cargo_rustc::fingerprint=info")
         .with_stderr(
             "\
 [FRESH] foo v0.5.0 ([..])
