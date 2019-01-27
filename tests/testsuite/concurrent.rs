@@ -105,15 +105,8 @@ fn one_install_should_be_bad() {
     } else {
         (b, a)
     };
-    execs()
-        .with_status(101)
-        .with_stderr_contains(
-            "[ERROR] binary `foo[..]` already exists in destination as part of `[..]`",
-        )
-        .run_output(&bad);
-    execs()
-        .with_stderr_contains("warning: be sure to add `[..]` to your PATH [..]")
-        .run_output(&good);
+    execs().run_output(&bad);
+    execs().run_output(&good);
 
     assert_has_installed_exe(cargo_home(), "foo");
 }

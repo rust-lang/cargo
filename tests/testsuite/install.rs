@@ -247,11 +247,10 @@ fn install_path() {
     cargo_process("install --path").arg(p.root()).run();
     assert_has_installed_exe(cargo_home(), "foo");
     p.cargo("install --path .")
-        .with_status(101)
         .with_stderr(
             "\
 [INSTALLING] foo v0.0.1 [..]
-[ERROR] binary `foo[..]` already exists in destination as part of `foo v0.0.1 [..]`
+binary `foo[..]` already exists in destination as part of `foo v0.0.1 [..]`
 Add --force to overwrite
 ",
         )
@@ -457,28 +456,6 @@ fn install_twice() {
     cargo_process("install --path").arg(p.root()).run();
     cargo_process("install --path")
         .arg(p.root())
-        .with_status(101)
-        .with_stderr(
-            "\
-[INSTALLING] foo v0.0.1 [..]
-[ERROR] binary `foo-bin1[..]` already exists in destination as part of `foo v0.0.1 ([..])`
-binary `foo-bin2[..]` already exists in destination as part of `foo v0.0.1 ([..])`
-Add --force to overwrite
-",
-        )
-        .run();
-}
-
-#[test]
-fn install_ensure() {
-    let p = project()
-        .file("src/bin/foo-bin1.rs", "fn main() {}")
-        .file("src/bin/foo-bin2.rs", "fn main() {}")
-        .build();
-
-    cargo_process("install --ensure --path").arg(p.root()).run();
-    cargo_process("install --ensure --path")
-        .arg(p.root())
         .with_stderr(
             "\
 [INSTALLING] foo v0.0.1 [..]
@@ -491,7 +468,7 @@ Add --force to overwrite
 }
 
 #[test]
-fn install_ensure_force() {
+fn install_version_update() {
     let p = project()
         .at("foo1")
         .file("Cargo.toml", &basic_manifest("foo", "0.1.0"))
@@ -514,7 +491,7 @@ foo v0.1.0 ([..]):
         .file("src/main.rs", "fn main() {}")
         .build();
 
-    cargo_process("install --ensure --path").arg(p.root()).run();
+    cargo_process("install --path").arg(p.root()).run();
     cargo_process("install --list")
         .with_stdout(
             "\
