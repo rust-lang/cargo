@@ -5,7 +5,7 @@ use std::hash::{self, Hash};
 use std::path::Path;
 use std::ptr;
 use std::sync::atomic::Ordering::SeqCst;
-use std::sync::atomic::{AtomicBool, ATOMIC_BOOL_INIT};
+use std::sync::atomic::AtomicBool;
 use std::sync::Mutex;
 
 use log::trace;
@@ -193,7 +193,7 @@ impl SourceId {
         config.crates_io_source_id(|| {
             let cfg = ops::registry_configuration(config, None)?;
             let url = if let Some(ref index) = cfg.index {
-                static WARNED: AtomicBool = ATOMIC_BOOL_INIT;
+                static WARNED: AtomicBool = AtomicBool::new(false);
                 if !WARNED.swap(true, SeqCst) {
                     config.shell().warn(
                         "custom registry support via \
