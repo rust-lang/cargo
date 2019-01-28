@@ -179,6 +179,7 @@ use crate::util::to_url::ToUrl;
 use crate::util::{internal, CargoResult, Config, FileLock, Filesystem};
 
 const INDEX_LOCK: &str = ".cargo-index-lock";
+const PACKAGE_SOURCE_LOCK: &str = ".cargo-ok";
 pub const CRATES_IO_INDEX: &str = "https://github.com/rust-lang/crates.io-index";
 pub const CRATES_IO_REGISTRY: &str = "crates-io";
 const CRATE_TEMPLATE: &str = "{crate}";
@@ -434,7 +435,19 @@ impl<'cfg> RegistrySource<'cfg> {
                 .src_path
                 .join(&package_dir);
             dst.create_dir()?;
-            dst.open_rw(".cargo-ok", self.config, &package_dir)?
+
+            // Attempt to open a read-only copy first to avoid an exclusive write
+            // lock and also work with read-only filesystems. If the file has
+            // any data, assume the source is already unpacked.
+            if let Ok(ok) = dst.open_ro(PACKAGE_SOURCE_LOCK, self.config, &package_dir) {
+                let meta = ok.file().metadata()?;
+                if meta.len() > 0 {
+                    let unpack_dir = ok.parent().to_path_buf();
+                    return Ok(unpack_dir);
+                }
+            }
+
+            dst.open_rw(PACKAGE_SOURCE_LOCK, self.config, &package_dir)?
         };
         let unpack_dir = ok.parent().to_path_buf();
 
