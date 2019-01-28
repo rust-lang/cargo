@@ -549,6 +549,9 @@ impl BuildOutput {
         let name = iter.next();
         let val = iter.next();
         match (name, val) {
+            (Some("RUSTC_BOOTSTRAP"), _) => {
+                failure::bail!("Build scripts are forbidden from setting RUSTC_BOOTSTRAP")
+            }
             (Some(n), Some(v)) => Ok((n.to_owned(), v.to_owned())),
             _ => failure::bail!("Variable rustc-env has no value in {}: {}", whence, value),
         }

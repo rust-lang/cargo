@@ -3696,3 +3696,35 @@ fn optional_build_dep_and_required_normal_dep() {
         )
         .run();
 }
+
+#[test]
+fn say_no_to_bootstrap() {
+    project()
+        .file(
+            "Cargo.toml",
+            r#"
+                [project]
+                name = "foo"
+                version = "0.0.0"
+            "#,
+        )
+        .file(
+            "build.rs",
+            r#"
+            fn main() {
+                println!("cargo:rustc-env=RUSTC_BOOTSTRAP=1");
+            }
+        "#,
+        )
+        .file("src/lib.rs", "")
+        .build()
+        .cargo("build -v")
+        .with_status(101)
+        .with_stderr("\
+[COMPILING] foo v0.0.0 ([..])
+[RUNNING] `rustc --crate-name build_script_build build.rs --color never --crate-type bin [..]`
+[RUNNING] `[..]/build-script-build`
+error: Build scripts are forbidden from setting RUSTC_BOOTSTRAP",
+        )
+        .run();
+}
