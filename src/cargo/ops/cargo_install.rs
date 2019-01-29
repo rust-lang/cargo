@@ -1,5 +1,5 @@
 use std::collections::btree_map::Entry;
-use std::collections::{BTreeMap, BTreeSet};
+use std::collections::{BTreeMap, BTreeSet, HashSet};
 use std::io::prelude::*;
 use std::io::SeekFrom;
 use std::path::{Path, PathBuf};
@@ -187,7 +187,7 @@ fn install_one(
         })?
     } else {
         select_pkg(
-            map.load(source_id)?,
+            map.load(source_id, HashSet::new())?,
             krate,
             vers,
             config,

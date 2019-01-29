@@ -1,3 +1,4 @@
+use std::collections::HashSet;
 use std::fs::{self, File};
 use std::io::prelude::*;
 use std::path::Path;
@@ -107,7 +108,7 @@ fn not_update() {
 
     let sid = SourceId::for_registry(&registry_url()).unwrap();
     let cfg = Config::new(Shell::new(), paths::root(), paths::home().join(".cargo"));
-    let mut regsrc = RegistrySource::remote(sid, &cfg);
+    let mut regsrc = RegistrySource::remote(sid, HashSet::new(), &cfg);
     regsrc.update().unwrap();
 
     cargo_process("search postgres")
