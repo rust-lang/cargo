@@ -76,7 +76,7 @@ impl<'cfg> SourceConfigMap<'cfg> {
     pub fn load(
         &self,
         id: SourceId,
-        yanked_whitelist: HashSet<PackageId>,
+        yanked_whitelist: &HashSet<PackageId>,
     ) -> CargoResult<Box<dyn Source + 'cfg>> {
         debug!("loading: {}", id);
         let mut name = match self.id2name.get(&id) {
@@ -120,8 +120,8 @@ impl<'cfg> SourceConfigMap<'cfg> {
                 )
             }
         }
-        let new_src = new_id.load(self.config, yanked_whitelist.clone())?;
-        let old_src = id.load(self.config, yanked_whitelist.clone())?;
+        let new_src = new_id.load(self.config, yanked_whitelist)?;
+        let old_src = id.load(self.config, yanked_whitelist)?;
         if !new_src.supports_checksums() && old_src.supports_checksums() {
             failure::bail!(
                 "\

@@ -261,7 +261,7 @@ impl SourceId {
     pub fn load<'a>(
         self,
         config: &'a Config,
-        yanked_whitelist: HashSet<PackageId>,
+        yanked_whitelist: &HashSet<PackageId>,
     ) -> CargoResult<Box<dyn super::Source + 'a>> {
         trace!("loading SourceId; {}", self);
         match self.inner.kind {

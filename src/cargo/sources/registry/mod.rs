@@ -389,7 +389,7 @@ fn short_name(id: SourceId) -> String {
 impl<'cfg> RegistrySource<'cfg> {
     pub fn remote(
         source_id: SourceId,
-        yanked_whitelist: HashSet<PackageId>,
+        yanked_whitelist: &HashSet<PackageId>,
         config: &'cfg Config,
     ) -> RegistrySource<'cfg> {
         let name = short_name(source_id);
@@ -412,7 +412,7 @@ impl<'cfg> RegistrySource<'cfg> {
             config,
             &name,
             Box::new(ops),
-            HashSet::new(),
+            &HashSet::new(),
             false,
         )
     }
@@ -422,7 +422,7 @@ impl<'cfg> RegistrySource<'cfg> {
         config: &'cfg Config,
         name: &str,
         ops: Box<dyn RegistryData + 'cfg>,
-        yanked_whitelist: HashSet<PackageId>,
+        yanked_whitelist: &HashSet<PackageId>,
         index_locked: bool,
     ) -> RegistrySource<'cfg> {
         RegistrySource {
@@ -431,7 +431,7 @@ impl<'cfg> RegistrySource<'cfg> {
             source_id,
             updated: false,
             index: index::RegistryIndex::new(source_id, ops.index_path(), config, index_locked),
-            yanked_whitelist,
+            yanked_whitelist: yanked_whitelist.clone(),
             index_locked,
             ops,
         }

@@ -181,7 +181,7 @@ fn install_one(
         })?
     } else {
         select_pkg(
-            map.load(source_id, HashSet::new())?,
+            map.load(source_id, &HashSet::new())?,
             krate,
             vers,
             config,
