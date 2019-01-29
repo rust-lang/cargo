@@ -1,4 +1,4 @@
-use std::collections::HashMap;
+use std::collections::{HashMap, HashSet};
 
 use log::{debug, trace};
 use semver::VersionReq;
@@ -71,6 +71,7 @@ pub struct PackageRegistry<'cfg> {
     source_ids: HashMap<SourceId, (SourceId, Kind)>,
 
     locked: LockedMap,
+    yanked_whitelist: HashSet<PackageId>,
     source_config: SourceConfigMap<'cfg>,
 
     patches: HashMap<Url, Vec<Summary>>,
@@ -97,6 +98,7 @@ impl<'cfg> PackageRegistry<'cfg> {
             overrides: Vec::new(),
             source_config,
             locked: HashMap::new(),
+            yanked_whitelist: HashSet::new(),
             patches: HashMap::new(),
             patches_locked: false,
             patches_available: HashMap::new(),
@@ -164,6 +166,10 @@ impl<'cfg> PackageRegistry<'cfg> {
     pub fn add_override(&mut self, source: Box<dyn Source + 'cfg>) {
         self.overrides.push(source.source_id());
         self.add_source(source, Kind::Override);
+    }
+
+    pub fn add_to_yanked_whitelist(&mut self, iter: impl Iterator<Item = PackageId>) {
+        self.yanked_whitelist.extend(iter)
     }
 
     pub fn register_lock(&mut self, id: PackageId, deps: Vec<PackageId>) {
@@ -301,7 +307,9 @@ impl<'cfg> PackageRegistry<'cfg> {
     fn load(&mut self, source_id: SourceId, kind: Kind) -> CargoResult<()> {
         (|| {
             debug!("loading source {}", source_id);
-            let source = self.source_config.load(source_id)?;
+            let source = self
+                .source_config
+                .load(source_id, self.yanked_whitelist.clone())?;
             assert_eq!(source.source_id(), source_id);
 
             if kind == Kind::Override {

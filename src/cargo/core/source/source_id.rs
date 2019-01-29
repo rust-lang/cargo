@@ -13,6 +13,7 @@ use serde::de;
 use serde::ser;
 use url::Url;
 
+use crate::core::PackageId;
 use crate::ops;
 use crate::sources::git;
 use crate::sources::DirectorySource;
@@ -257,7 +258,11 @@ impl SourceId {
     }
 
     /// Creates an implementation of `Source` corresponding to this ID.
-    pub fn load<'a>(self, config: &'a Config) -> CargoResult<Box<dyn super::Source + 'a>> {
+    pub fn load<'a>(
+        self,
+        config: &'a Config,
+        yanked_whitelist: HashSet<PackageId>,
+    ) -> CargoResult<Box<dyn super::Source + 'a>> {
         trace!("loading SourceId; {}", self);
         match self.inner.kind {
             Kind::Git(..) => Ok(Box::new(GitSource::new(self, config)?)),
@@ -268,7 +273,11 @@ impl SourceId {
                 };
                 Ok(Box::new(PathSource::new(&path, self, config)))
             }
-            Kind::Registry => Ok(Box::new(RegistrySource::remote(self, config))),
+            Kind::Registry => Ok(Box::new(RegistrySource::remote(
+                self,
+                yanked_whitelist,
+                config,
+            ))),
             Kind::LocalRegistry => {
                 let path = match self.inner.url.to_file_path() {
                     Ok(p) => p,

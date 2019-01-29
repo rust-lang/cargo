@@ -160,6 +160,7 @@
 
 use std::borrow::Cow;
 use std::collections::BTreeMap;
+use std::collections::HashSet;
 use std::io::Write;
 use std::path::{Path, PathBuf};
 
@@ -192,6 +193,7 @@ pub struct RegistrySource<'cfg> {
     updated: bool,
     ops: Box<dyn RegistryData + 'cfg>,
     index: index::RegistryIndex<'cfg>,
+    yanked_whitelist: HashSet<PackageId>,
     index_locked: bool,
 }
 
@@ -385,16 +387,34 @@ fn short_name(id: SourceId) -> String {
 }
 
 impl<'cfg> RegistrySource<'cfg> {
-    pub fn remote(source_id: SourceId, config: &'cfg Config) -> RegistrySource<'cfg> {
+    pub fn remote(
+        source_id: SourceId,
+        yanked_whitelist: HashSet<PackageId>,
+        config: &'cfg Config,
+    ) -> RegistrySource<'cfg> {
         let name = short_name(source_id);
         let ops = remote::RemoteRegistry::new(source_id, config, &name);
-        RegistrySource::new(source_id, config, &name, Box::new(ops), true)
+        RegistrySource::new(
+            source_id,
+            config,
+            &name,
+            Box::new(ops),
+            yanked_whitelist,
+            true,
+        )
     }
 
     pub fn local(source_id: SourceId, path: &Path, config: &'cfg Config) -> RegistrySource<'cfg> {
         let name = short_name(source_id);
         let ops = local::LocalRegistry::new(path, config, &name);
-        RegistrySource::new(source_id, config, &name, Box::new(ops), false)
+        RegistrySource::new(
+            source_id,
+            config,
+            &name,
+            Box::new(ops),
+            HashSet::new(),
+            false,
+        )
     }
 
     fn new(
@@ -402,6 +422,7 @@ impl<'cfg> RegistrySource<'cfg> {
         config: &'cfg Config,
         name: &str,
         ops: Box<dyn RegistryData + 'cfg>,
+        yanked_whitelist: HashSet<PackageId>,
         index_locked: bool,
     ) -> RegistrySource<'cfg> {
         RegistrySource {
@@ -410,6 +431,7 @@ impl<'cfg> RegistrySource<'cfg> {
             source_id,
             updated: false,
             index: index::RegistryIndex::new(source_id, ops.index_path(), config, index_locked),
+            yanked_whitelist,
             index_locked,
             ops,
         }
@@ -431,9 +453,7 @@ impl<'cfg> RegistrySource<'cfg> {
         // unpacked and to lock the directory for unpacking.
         let mut ok = {
             let package_dir = format!("{}-{}", pkg.name(), pkg.version());
-            let dst = self
-                .src_path
-                .join(&package_dir);
+            let dst = self.src_path.join(&package_dir);
             dst.create_dir()?;
 
             // Attempt to open a read-only copy first to avoid an exclusive write
@@ -526,12 +546,13 @@ impl<'cfg> Source for RegistrySource<'cfg> {
         if dep.source_id().precise().is_some() && !self.updated {
             debug!("attempting query without update");
             let mut called = false;
-            self.index.query_inner(dep, &mut *self.ops, &mut |s| {
-                if dep.matches(&s) {
-                    called = true;
-                    f(s);
-                }
-            })?;
+            self.index
+                .query_inner(dep, &mut *self.ops, &self.yanked_whitelist, &mut |s| {
+                    if dep.matches(&s) {
+                        called = true;
+                        f(s);
+                    }
+                })?;
             if called {
                 return Ok(());
             } else {
@@ -540,15 +561,17 @@ impl<'cfg> Source for RegistrySource<'cfg> {
             }
         }
 
-        self.index.query_inner(dep, &mut *self.ops, &mut |s| {
-            if dep.matches(&s) {
-                f(s);
-            }
-        })
+        self.index
+            .query_inner(dep, &mut *self.ops, &self.yanked_whitelist, &mut |s| {
+                if dep.matches(&s) {
+                    f(s);
+                }
+            })
     }
 
     fn fuzzy_query(&mut self, dep: &Dependency, f: &mut dyn FnMut(Summary)) -> CargoResult<()> {
-        self.index.query_inner(dep, &mut *self.ops, f)
+        self.index
+            .query_inner(dep, &mut *self.ops, &self.yanked_whitelist, f)
     }
 
     fn supports_checksums(&self) -> bool {
