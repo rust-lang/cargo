@@ -1,4 +1,4 @@
-use std::collections::BTreeMap;
+use std::collections::{BTreeMap, HashSet};
 use std::fs::{self, File};
 use std::io::{self, BufRead};
 use std::iter::repeat;
@@ -350,7 +350,7 @@ pub fn registry(
     let token = token.or(token_config);
     let sid = get_source_id(config, index_config.or(index), registry)?;
     let api_host = {
-        let mut src = RegistrySource::remote(sid, config);
+        let mut src = RegistrySource::remote(sid, HashSet::new(), config);
         // Only update the index if the config is not available or `force` is set.
         let cfg = src.config();
         let cfg = if force_update || cfg.is_err() {
@@ -696,7 +696,7 @@ fn get_source_id(
         (_, Some(i)) => SourceId::for_registry(&i.to_url()?),
         _ => {
             let map = SourceConfigMap::new(config)?;
-            let src = map.load(SourceId::crates_io(config)?)?;
+            let src = map.load(SourceId::crates_io(config)?, HashSet::new())?;
             Ok(src.replaced_source_id())
         }
     }
