@@ -27,7 +27,7 @@ Example Package IDs
      crates.io/foo                | foo    | *         | *://crates.io/foo
      crates.io/foo#1.2.3          | foo    | 1.2.3     | *://crates.io/foo
      crates.io/bar#foo:1.2.3      | foo    | 1.2.3     | *://crates.io/bar
-     https://crates.io/foo#1.2.3  | foo    | 1.2.3    | https://crates.io/foo
+     https://crates.io/foo#1.2.3  | foo    | 1.2.3     | https://crates.io/foo
 ",
         )
 }
