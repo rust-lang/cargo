@@ -289,24 +289,24 @@ fn test_resolving_common_transitive_deps() {
 #[test]
 fn test_resolving_with_same_name() {
     let list = vec![
-        pkg_loc("foo", "http://first.example.com"),
-        pkg_loc("bar", "http://second.example.com"),
+        pkg_loc("foo", "https://first.example.com"),
+        pkg_loc("bar", "https://second.example.com"),
     ];
 
     let reg = registry(list);
     let res = resolve(
         &pkg_id("root"),
         vec![
-            dep_loc("foo", "http://first.example.com"),
-            dep_loc("bar", "http://second.example.com"),
+            dep_loc("foo", "https://first.example.com"),
+            dep_loc("bar", "https://second.example.com"),
         ],
         &reg,
     )
     .unwrap();
 
     let mut names = loc_names(&[
-        ("foo", "http://first.example.com"),
-        ("bar", "http://second.example.com"),
+        ("foo", "https://first.example.com"),
+        ("bar", "https://second.example.com"),
     ]);
 
     names.push(pkg_id("root"));
@@ -1175,8 +1175,8 @@ fn resolving_but_no_exists() {
         res.err().unwrap().to_string(),
         "\
          no matching package named `foo` found\n\
-         location searched: registry `http://example.com/`\n\
-         required by package `root v1.0.0 (registry `http://example.com/`)`\
+         location searched: registry `https://example.com/`\n\
+         required by package `root v1.0.0 (registry `https://example.com/`)`\
          "
     );
 }

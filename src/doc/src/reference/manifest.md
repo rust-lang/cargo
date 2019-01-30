@@ -32,7 +32,7 @@ name such as "nul", is not too long, etc.
 #### The `version` field
 
 Cargo bakes in the concept of [Semantic
-Versioning](http://semver.org/), so make sure you follow some basic rules:
+Versioning](https://semver.org/), so make sure you follow some basic rules:
 
 * Before you reach 1.0.0, anything goes, but if you make breaking changes,
   increment the minor version. In Rust, breaking changes include adding fields to

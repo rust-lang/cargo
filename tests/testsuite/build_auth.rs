@@ -105,7 +105,7 @@ fn http_auth_offered() {
             authors = []
 
             [dependencies.bar]
-            git = "http://127.0.0.1:{}/foo/bar"
+            git = "https://127.0.0.1:{}/foo/bar"
         "#,
                 addr.port()
             ),
@@ -126,11 +126,11 @@ fn http_auth_offered() {
         .with_status(101)
         .with_stderr_contains(&format!(
             "\
-[UPDATING] git repository `http://{addr}/foo/bar`
+[UPDATING] git repository `https://{addr}/foo/bar`
 [ERROR] failed to load source for a dependency on `bar`
 
 Caused by:
-  Unable to update http://{addr}/foo/bar
+  Unable to update https://{addr}/foo/bar
 
 Caused by:
   failed to clone into: [..]

@@ -70,7 +70,7 @@ fn metadata_warning() {
             "\
 warning: manifest has no description, license, license-file, documentation, \
 homepage or repository.
-See http://doc.crates.io/manifest.html#package-metadata for more info.
+See https://doc.rust-lang.org/cargo/reference/manifest.html#package-metadata for more info.
 [PACKAGING] foo v0.0.1 ([CWD])
 [VERIFYING] foo v0.0.1 ([CWD])
 [COMPILING] foo v0.0.1 ([CWD][..])
@@ -96,7 +96,7 @@ See http://doc.crates.io/manifest.html#package-metadata for more info.
         .with_stderr(
             "\
 warning: manifest has no description, documentation, homepage or repository.
-See http://doc.crates.io/manifest.html#package-metadata for more info.
+See https://doc.rust-lang.org/cargo/reference/manifest.html#package-metadata for more info.
 [PACKAGING] foo v0.0.1 ([CWD])
 [VERIFYING] foo v0.0.1 ([CWD])
 [COMPILING] foo v0.0.1 ([CWD][..])
@@ -149,7 +149,7 @@ fn package_verbose() {
         .with_stderr(
             "\
 [WARNING] manifest has no description[..]
-See http://doc.crates.io/manifest.html#package-metadata for more info.
+See https://doc.rust-lang.org/cargo/reference/manifest.html#package-metadata for more info.
 [PACKAGING] foo v0.0.1 ([..])
 [ARCHIVING] [..]
 [ARCHIVING] [..]
@@ -186,7 +186,7 @@ See http://doc.crates.io/manifest.html#package-metadata for more info.
         .with_stderr(
             "\
 [WARNING] manifest has no description[..]
-See http://doc.crates.io/manifest.html#package-metadata for more info.
+See https://doc.rust-lang.org/cargo/reference/manifest.html#package-metadata for more info.
 [PACKAGING] a v0.0.1 ([..])
 [ARCHIVING] Cargo.toml
 [ARCHIVING] src/lib.rs
@@ -204,7 +204,7 @@ fn package_verification() {
         .with_stderr(
             "\
 [WARNING] manifest has no description[..]
-See http://doc.crates.io/manifest.html#package-metadata for more info.
+See https://doc.rust-lang.org/cargo/reference/manifest.html#package-metadata for more info.
 [PACKAGING] foo v0.0.1 ([CWD])
 [VERIFYING] foo v0.0.1 ([CWD])
 [COMPILING] foo v0.0.1 ([CWD][..])
@@ -280,7 +280,7 @@ fn path_dependency_no_version() {
         .with_stderr(
             "\
 [WARNING] manifest has no documentation, homepage or repository.
-See http://doc.crates.io/manifest.html#package-metadata for more info.
+See https://doc.rust-lang.org/cargo/reference/manifest.html#package-metadata for more info.
 [ERROR] all path dependencies must have a version specified when packaging.
 dependency `bar` does not specify a version.
 ",
@@ -363,7 +363,7 @@ fn exclude() {
         .with_stderr(
             "\
 [WARNING] manifest has no description[..]
-See http://doc.crates.io/manifest.html#package-metadata for more info.
+See https://doc.rust-lang.org/cargo/reference/manifest.html#package-metadata for more info.
 [WARNING] [..] file `dir_root_1/some_dir/file` WILL be excluded [..]
 See [..]
 [WARNING] [..] file `dir_root_2/some_dir/file` WILL be excluded [..]
@@ -455,7 +455,7 @@ fn include() {
         .with_stderr(
             "\
 [WARNING] manifest has no description[..]
-See http://doc.crates.io/manifest.html#package-metadata for more info.
+See https://doc.rust-lang.org/cargo/reference/manifest.html#package-metadata for more info.
 [PACKAGING] foo v0.0.1 ([..])
 [ARCHIVING] [..]
 [ARCHIVING] [..]
@@ -569,7 +569,7 @@ fn ignore_nested() {
         .with_stderr(
             "\
 [WARNING] manifest has no documentation[..]
-See http://doc.crates.io/manifest.html#package-metadata for more info.
+See https://doc.rust-lang.org/cargo/reference/manifest.html#package-metadata for more info.
 [PACKAGING] foo v0.0.1 ([CWD])
 [VERIFYING] foo v0.0.1 ([CWD])
 [COMPILING] foo v0.0.1 ([CWD][..])

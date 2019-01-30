@@ -176,7 +176,7 @@ macro_rules! pkg {
 fn registry_loc() -> SourceId {
     lazy_static::lazy_static! {
         static ref EXAMPLE_DOT_COM: SourceId =
-            SourceId::for_registry(&"http://example.com".to_url().unwrap()).unwrap();
+            SourceId::for_registry(&"https://example.com".to_url().unwrap()).unwrap();
     }
     *EXAMPLE_DOT_COM
 }
