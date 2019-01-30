@@ -290,7 +290,7 @@ fn transmit(
                      the following are not valid badges and were ignored: {}. \
                      Either the badge type specified is unknown or a required \
                      attribute is missing. Please see \
-                     http://doc.crates.io/manifest.html#package-metadata \
+                     https://doc.rust-lang.org/cargo/reference/manifest.html \
                      for valid badge types and their required attributes.",
                     warnings.invalid_badges.join(", ")
                 );
@@ -763,7 +763,7 @@ pub fn search(
         );
     } else if total_crates > limit && limit >= search_max_limit {
         println!(
-            "... and {} crates more (go to http://crates.io/search?q={} to see more)",
+            "... and {} crates more (go to https://crates.io/search?q={} to see more)",
             total_crates - limit,
             percent_encode(query.as_bytes(), QUERY_ENCODE_SET)
         );
