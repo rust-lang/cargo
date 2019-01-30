@@ -120,7 +120,14 @@ impl<'cfg> SourceConfigMap<'cfg> {
                 )
             }
         }
-        let new_src = new_id.load(self.config, yanked_whitelist)?;
+
+        let new_src = new_id.load(
+            self.config,
+            &yanked_whitelist
+                .iter()
+                .map(|p| p.map_source(id, new_id))
+                .collect(),
+        )?;
         let old_src = id.load(self.config, yanked_whitelist)?;
         if !new_src.supports_checksums() && old_src.supports_checksums() {
             failure::bail!(
