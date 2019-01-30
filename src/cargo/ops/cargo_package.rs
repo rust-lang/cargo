@@ -152,7 +152,7 @@ fn check_metadata(pkg: &Package, config: &Config) -> CargoResult<()> {
 
         config.shell().warn(&format!(
             "manifest has no {things}.\n\
-             See https://doc.rust-lang.org/cargo/reference/manifest.html for more info.",
+             See https://doc.rust-lang.org/cargo/reference/manifest.html#package-metadata for more info.",
             things = things
         ))?
     }

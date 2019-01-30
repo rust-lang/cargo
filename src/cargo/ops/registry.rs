@@ -290,7 +290,7 @@ fn transmit(
                      the following are not valid badges and were ignored: {}. \
                      Either the badge type specified is unknown or a required \
                      attribute is missing. Please see \
-                     https://doc.rust-lang.org/cargo/reference/manifest.html \
+                     https://doc.rust-lang.org/cargo/reference/manifest.html#package-metadata \
                      for valid badge types and their required attributes.",
                     warnings.invalid_badges.join(", ")
                 );
