@@ -168,12 +168,15 @@ impl<'cfg> PackageRegistry<'cfg> {
         self.add_source(source, Kind::Override);
     }
 
+    pub fn add_to_yanked_whitelist(&mut self, iter: impl Iterator<Item = PackageId>) {
+        self.yanked_whitelist.extend(iter)
+    }
+
     pub fn register_lock(&mut self, id: PackageId, deps: Vec<PackageId>) {
         trace!("register_lock: {}", id);
         for dep in deps.iter() {
             trace!("\t-> {}", dep);
         }
-        self.yanked_whitelist.insert(id);
         let sub_map = self
             .locked
             .entry(id.source_id())
