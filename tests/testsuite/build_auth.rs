@@ -171,7 +171,7 @@ fn https_something_happens() {
             authors = []
 
             [dependencies.bar]
-            git = "https://127.0.0.1:{}/foo/bar"
+            git = "http://127.0.0.1:{}/foo/bar"
         "#,
                 addr.port()
             ),

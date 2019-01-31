@@ -857,7 +857,7 @@ fn ambiguous_git_reference() {
             authors = []
 
             [dependencies.bar]
-            git = "https://127.0.0.1"
+            git = "http://127.0.0.1"
             branch = "master"
             tag = "some-tag"
         "#,
@@ -910,7 +910,7 @@ fn bad_source_config2() {
             ".cargo/config",
             r#"
             [source.crates-io]
-            registry = 'https://example.com'
+            registry = 'http://example.com'
             replace-with = 'bar'
         "#,
         )
@@ -1076,7 +1076,7 @@ fn both_git_and_path_specified() {
         authors = []
 
         [dependencies.bar]
-        git = "https://127.0.0.1"
+        git = "http://127.0.0.1"
         path = "bar"
     "#,
         )
