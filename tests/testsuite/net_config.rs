@@ -12,7 +12,7 @@ fn net_retry_loads_from_config() {
             authors = []
 
             [dependencies.bar]
-            git = "https://127.0.0.1:11/foo/bar"
+            git = "http://127.0.0.1:11/foo/bar"
         "#,
         )
         .file("src/main.rs", "")
@@ -48,7 +48,7 @@ fn net_retry_git_outputs_warning() {
             authors = []
 
             [dependencies.bar]
-            git = "https://127.0.0.1:11/foo/bar"
+            git = "http://127.0.0.1:11/foo/bar"
         "#,
         )
         .file(
