@@ -126,7 +126,7 @@ impl Executor for DefaultExecutor {
 
 fn compile<'a, 'cfg: 'a>(
     cx: &mut Context<'a, 'cfg>,
-    jobs: &mut JobQueue<'a>,
+    jobs: &mut JobQueue<'a, 'cfg>,
     plan: &mut BuildPlan,
     unit: &Unit<'a>,
     exec: &Arc<dyn Executor>,
