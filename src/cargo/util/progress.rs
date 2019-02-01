@@ -195,10 +195,13 @@ impl<'cfg> State<'cfg> {
         }
 
         // Only update if the line has changed.
-        if self.last_line.as_ref() != Some(&line) {
-            self.config.shell().status_header(&self.name)?;
-            write!(self.config.shell().err(), "{}\r", line)?;
+        if self.config.shell().is_cleared() || self.last_line.as_ref() != Some(&line) {
+            let mut shell = self.config.shell();
+            shell.set_needs_clear(false);
+            shell.status_header(&self.name)?;
+            write!(shell.err(), "{}\r", line)?;
             self.last_line = Some(line);
+            shell.set_needs_clear(true);
         }
 
         Ok(())
@@ -206,7 +209,7 @@ impl<'cfg> State<'cfg> {
 
     fn clear(&mut self) {
         // No need to clear if the progress is not currently being displayed.
-        if self.last_line.is_some() {
+        if self.last_line.is_some() && !self.config.shell().is_cleared() {
             self.config.shell().err_erase_line();
             self.last_line = None;
         }
