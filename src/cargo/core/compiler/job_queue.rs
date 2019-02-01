@@ -12,7 +12,7 @@ use jobserver::{Acquired, HelperThread};
 use log::{debug, info, trace};
 
 use crate::core::profiles::Profile;
-use crate::core::{PackageId, Target, TargetKind, Verbosity};
+use crate::core::{PackageId, Target, TargetKind};
 use crate::handle_error;
 use crate::util;
 use crate::util::diagnostic_server::{self, DiagnosticPrinter};
@@ -289,14 +289,8 @@ impl<'a, 'cfg> JobQueue<'a, 'cfg> {
             };
 
             for event in events {
-                // CAUTION: Care must be taken to clear the progress bar if a
-                // message is to be actually displayed. Try to avoid
-                // unnecessarily clearing it to avoid flickering.
                 match event {
                     Message::Run(cmd) => {
-                        if cx.bcx.config.shell().verbosity() == Verbosity::Verbose {
-                            self.progress.clear();
-                        }
                         cx.bcx
                             .config
                             .shell()
@@ -306,17 +300,14 @@ impl<'a, 'cfg> JobQueue<'a, 'cfg> {
                         plan.update(&module_name, &cmd, &filenames)?;
                     }
                     Message::Stdout(out) => {
-                        self.progress.clear();
                         println!("{}", out);
                     }
                     Message::Stderr(err) => {
-                        self.progress.clear();
                         let mut shell = cx.bcx.config.shell();
                         shell.print_ansi(err.as_bytes())?;
                         shell.err().write_all(b"\n")?;
                     }
                     Message::FixDiagnostic(msg) => {
-                        self.progress.clear();
                         print.print(&msg)?;
                     }
                     Message::Finish(key, result) => {
@@ -336,7 +327,6 @@ impl<'a, 'cfg> JobQueue<'a, 'cfg> {
                         match result {
                             Ok(()) => self.finish(key, cx)?,
                             Err(e) => {
-                                self.progress.clear();
                                 let msg = "The following warnings were emitted during compilation:";
                                 self.emit_warnings(Some(msg), &key, cx)?;
 
@@ -460,7 +450,6 @@ impl<'a, 'cfg> JobQueue<'a, 'cfg> {
         let bcx = &mut cx.bcx;
         if let Some(output) = output.get(&(key.pkg, key.kind)) {
             if !output.warnings.is_empty() {
-                self.progress.clear();
                 if let Some(msg) = msg {
                     writeln!(bcx.config.shell().err(), "{}\n", msg)?;
                 }
@@ -521,12 +510,10 @@ impl<'a, 'cfg> JobQueue<'a, 'cfg> {
                     // Skip Doctest
                     if !key.mode.is_any_test() {
                         self.documented.insert(key.pkg);
-                        self.progress.clear();
                         config.shell().status("Documenting", key.pkg)?;
                     }
                 } else {
                     self.compiled.insert(key.pkg);
-                    self.progress.clear();
                     if key.mode.is_check() {
                         config.shell().status("Checking", key.pkg)?;
                     } else {
@@ -540,9 +527,6 @@ impl<'a, 'cfg> JobQueue<'a, 'cfg> {
                     && !(key.mode == CompileMode::Doctest && self.compiled.contains(&key.pkg))
                 {
                     self.compiled.insert(key.pkg);
-                    if config.shell().verbosity() == Verbosity::Verbose {
-                        self.progress.clear();
-                    }
                     config.shell().verbose(|c| c.status("Fresh", key.pkg))?;
                 }
             }
