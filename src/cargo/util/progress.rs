@@ -27,6 +27,7 @@ struct State<'cfg> {
     name: String,
     done: bool,
     throttle: Throttle,
+    last_line: Option<String>,
 }
 
 struct Format {
@@ -59,6 +60,7 @@ impl<'cfg> Progress<'cfg> {
                 name: name.to_string(),
                 done: false,
                 throttle: Throttle::new(),
+                last_line: None,
             }),
         }
     }
@@ -185,20 +187,29 @@ impl<'cfg> State<'cfg> {
         if self.format.max_width < 15 {
             return Ok(());
         }
-        self.config.shell().status_header(&self.name)?;
+
         let mut line = prefix.to_string();
         self.format.render(&mut line, msg);
-
         while line.len() < self.format.max_width - 15 {
             line.push(' ');
         }
 
-        write!(self.config.shell().err(), "{}\r", line)?;
+        // Only update if the line has changed.
+        if self.last_line.as_ref() != Some(&line) {
+            self.config.shell().status_header(&self.name)?;
+            write!(self.config.shell().err(), "{}\r", line)?;
+            self.last_line = Some(line);
+        }
+
         Ok(())
     }
 
     fn clear(&mut self) {
-        self.config.shell().err_erase_line();
+        // No need to clear if the progress is not currently being displayed.
+        if self.last_line.is_some() {
+            self.config.shell().err_erase_line();
+            self.last_line = None;
+        }
     }
 
     fn try_update_max_width(&mut self) {
