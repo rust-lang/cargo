@@ -471,7 +471,7 @@ fn register_previous_locks(
     // package's dependencies here as that'll be covered below to poison those
     // if they changed.
     let mut avoid_locking = HashSet::new();
-    registry.add_to_yanked_whitelist(resolve.iter());
+    registry.add_to_yanked_whitelist(resolve.iter().filter(keep));
     for node in resolve.iter() {
         if !keep(&node) {
             add_deps(resolve, node, &mut avoid_locking);
