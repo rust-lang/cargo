@@ -23,6 +23,9 @@ pub struct Shell {
     err: ShellOut,
     /// How verbose messages should be
     verbosity: Verbosity,
+    /// Flag that indicates the current line needs to be cleared before
+    /// printing. Used when a progress bar is currently displayed.
+    needs_clear: bool,
 }
 
 impl fmt::Debug for Shell {
@@ -75,6 +78,7 @@ impl Shell {
                 tty: atty::is(atty::Stream::Stderr),
             },
             verbosity: Verbosity::Verbose,
+            needs_clear: false,
         }
     }
 
@@ -83,6 +87,7 @@ impl Shell {
         Shell {
             err: ShellOut::Write(out),
             verbosity: Verbosity::Verbose,
+            needs_clear: false,
         }
     }
 
@@ -97,8 +102,23 @@ impl Shell {
     ) -> CargoResult<()> {
         match self.verbosity {
             Verbosity::Quiet => Ok(()),
-            _ => self.err.print(status, message, color, justified),
+            _ => {
+                if self.needs_clear {
+                    self.err_erase_line();
+                }
+                self.err.print(status, message, color, justified)
+            }
         }
+    }
+
+    /// Set whether or not the next print should clear the current line.
+    pub fn set_needs_clear(&mut self, needs_clear: bool) {
+        self.needs_clear = needs_clear;
+    }
+
+    /// True if the `needs_clear` flag is not set.
+    pub fn is_cleared(&self) -> bool {
+        !self.needs_clear
     }
 
     /// Returns the width of the terminal in spaces, if any
@@ -119,6 +139,9 @@ impl Shell {
 
     /// Get a reference to the underlying writer
     pub fn err(&mut self) -> &mut dyn Write {
+        if self.needs_clear {
+            self.err_erase_line();
+        }
         self.err.as_write()
     }
 
@@ -126,6 +149,7 @@ impl Shell {
     pub fn err_erase_line(&mut self) {
         if let ShellOut::Stream { tty: true, .. } = self.err {
             imp::err_erase_line(self);
+            self.needs_clear = false;
         }
     }
 
@@ -251,6 +275,9 @@ impl Shell {
 
     /// Prints a message and translates ANSI escape code into console colors.
     pub fn print_ansi(&mut self, message: &[u8]) -> CargoResult<()> {
+        if self.needs_clear {
+            self.err_erase_line();
+        }
         #[cfg(windows)]
         {
             if let ShellOut::Stream { stream, .. } = &mut self.err {
@@ -361,7 +388,7 @@ mod imp {
         // This is the "EL - Erase in Line" sequence. It clears from the cursor
         // to the end of line.
         // https://en.wikipedia.org/wiki/ANSI_escape_code#CSI_sequences
-        let _ = shell.err().write_all(b"\x1B[K");
+        let _ = shell.err.as_write().write_all(b"\x1B[K");
     }
 }
 
@@ -434,6 +461,6 @@ mod imp {
 fn default_err_erase_line(shell: &mut Shell) {
     if let Some(max_width) = imp::stderr_width() {
         let blank = " ".repeat(max_width);
-        drop(write!(shell.err(), "{}\r", blank));
+        drop(write!(shell.err.as_write(), "{}\r", blank));
     }
 }
