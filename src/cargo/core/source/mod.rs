@@ -83,6 +83,11 @@ pub trait Source {
     fn is_replaced(&self) -> bool {
         false
     }
+
+    /// Add a number of crates that should be whitelisted for showing up during
+    /// queries, even if they are yanked. Currently only applies to registry
+    /// sources.
+    fn add_to_yanked_whitelist(&mut self, pkgs: &[PackageId]);
 }
 
 pub enum MaybePackage {
@@ -152,6 +157,10 @@ impl<'a, T: Source + ?Sized + 'a> Source for Box<T> {
     fn is_replaced(&self) -> bool {
         (**self).is_replaced()
     }
+
+    fn add_to_yanked_whitelist(&mut self, pkgs: &[PackageId]) {
+        (**self).add_to_yanked_whitelist(pkgs);
+    }
 }
 
 impl<'a, T: Source + ?Sized + 'a> Source for &'a mut T {
@@ -205,6 +214,10 @@ impl<'a, T: Source + ?Sized + 'a> Source for &'a mut T {
 
     fn is_replaced(&self) -> bool {
         (**self).is_replaced()
+    }
+
+    fn add_to_yanked_whitelist(&mut self, pkgs: &[PackageId]) {
+        (**self).add_to_yanked_whitelist(pkgs);
     }
 }
 

@@ -606,4 +606,8 @@ impl<'cfg> Source for RegistrySource<'cfg> {
     fn describe(&self) -> String {
         self.source_id.display_registry()
     }
+
+    fn add_to_yanked_whitelist(&mut self, pkgs: &[PackageId]) {
+        self.yanked_whitelist.extend(pkgs);
+    }
 }

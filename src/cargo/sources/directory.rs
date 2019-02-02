@@ -214,4 +214,6 @@ impl<'cfg> Source for DirectorySource<'cfg> {
     fn describe(&self) -> String {
         format!("directory source `{}`", self.root.display())
     }
+
+    fn add_to_yanked_whitelist(&mut self, _pkgs: &[PackageId]) {}
 }
