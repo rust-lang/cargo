@@ -4,7 +4,7 @@ use crate::core::compiler::{Compilation, Doctest};
 use crate::core::Workspace;
 use crate::ops;
 use crate::util::errors::CargoResult;
-use crate::util::{self, CargoTestError, ProcessError, Test};
+use crate::util::{CargoTestError, ProcessError, Test};
 
 pub struct TestOptions<'a> {
     pub compile_opts: ops::CompileOptions<'a>,
@@ -81,18 +81,15 @@ fn run_unit_tests(
     let mut errors = Vec::new();
 
     for &(ref pkg, ref kind, ref test, ref exe) in &compilation.tests {
-        let to_display = match util::without_prefix(exe, cwd) {
-            Some(path) => path,
-            None => &**exe,
-        };
+        let exe_display = exe.strip_prefix(cwd).unwrap_or(exe).display();
         let mut cmd = compilation.target_process(exe, pkg)?;
         cmd.args(test_args);
         config
             .shell()
-            .concise(|shell| shell.status("Running", to_display.display().to_string()))?;
+            .concise(|shell| shell.status("Running", &exe_display))?;
         config
             .shell()
-            .verbose(|shell| shell.status("Running", cmd.to_string()))?;
+            .verbose(|shell| shell.status("Running", &cmd))?;
 
         let result = cmd.exec();
 

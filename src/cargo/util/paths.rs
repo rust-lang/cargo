@@ -85,20 +85,6 @@ pub fn normalize_path(path: &Path) -> PathBuf {
     ret
 }
 
-pub fn without_prefix<'a>(long_path: &'a Path, prefix: &'a Path) -> Option<&'a Path> {
-    let mut a = long_path.components();
-    let mut b = prefix.components();
-    loop {
-        match b.next() {
-            Some(y) => match a.next() {
-                Some(x) if x == y => continue,
-                _ => return None,
-            },
-            None => return Some(a.as_path()),
-        }
-    }
-}
-
 pub fn resolve_executable(exec: &Path) -> CargoResult<PathBuf> {
     if exec.components().count() == 1 {
         let paths = env::var_os("PATH").ok_or_else(|| failure::format_err!("no PATH"))?;

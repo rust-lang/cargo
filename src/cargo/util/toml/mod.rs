@@ -53,7 +53,7 @@ fn do_read_manifest(
 
     let toml = {
         let pretty_filename =
-            util::without_prefix(manifest_file, config.cwd()).unwrap_or(manifest_file);
+            manifest_file.strip_prefix(config.cwd()).unwrap_or(manifest_file);
         parse(contents, pretty_filename, config)?
     };
 
