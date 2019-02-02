@@ -300,6 +300,7 @@ impl<'a, 'cfg> JobQueue<'a, 'cfg> {
                         plan.update(&module_name, &cmd, &filenames)?;
                     }
                     Message::Stdout(out) => {
+                        self.progress.clear();
                         println!("{}", out);
                     }
                     Message::Stderr(err) => {
