@@ -169,7 +169,11 @@ impl<'cfg> PackageRegistry<'cfg> {
     }
 
     pub fn add_to_yanked_whitelist(&mut self, iter: impl Iterator<Item = PackageId>) {
-        self.yanked_whitelist.extend(iter)
+        let pkgs = iter.collect::<Vec<_>>();
+        for (_, source) in self.sources.sources_mut() {
+            source.add_to_yanked_whitelist(&pkgs);
+        }
+        self.yanked_whitelist.extend(pkgs);
     }
 
     pub fn register_lock(&mut self, id: PackageId, deps: Vec<PackageId>) {

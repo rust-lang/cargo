@@ -282,7 +282,11 @@ impl<'cfg> RegistryIndex<'cfg> {
         let summaries = summaries
             .iter()
             .filter(|&(summary, yanked)| {
-                !yanked || yanked_whitelist.contains(&summary.package_id())
+                !yanked || {
+                    log::debug!("{:?}", yanked_whitelist);
+                    log::debug!("{:?}", summary.package_id());
+                    yanked_whitelist.contains(&summary.package_id())
+                }
             })
             .map(|s| s.0.clone());
 
