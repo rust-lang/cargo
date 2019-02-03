@@ -153,8 +153,8 @@ where
 
 /// Add all files in the working directory to the git index.
 pub fn add(repo: &git2::Repository) {
-    // FIXME(libgit2/libgit2#2514): apparently add_all will add all submodules
-    // as well, and then fail b/c they're a directory. As a stopgap, we just
+    // FIXME(libgit2/libgit2#2514): apparently, `add_all` will add all submodules
+    // as well, and then fail because they're directories. As a stop-gap, we just
     // ignore all submodules.
     let mut s = t!(repo.submodules());
     for submodule in s.iter_mut() {

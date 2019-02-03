@@ -15,7 +15,7 @@ use url::Url;
 use crate::support::git::repo;
 use crate::support::paths;
 
-/// Path to the local index pretending to be crates.io. This is a git repo
+/// Gets the path to the local index pretending to be crates.io. This is a Git repo
 /// initialized with a `config.json` file pointing to `dl_path` for downloads
 /// and `api_path` for uploads.
 pub fn registry_path() -> PathBuf {
@@ -24,16 +24,15 @@ pub fn registry_path() -> PathBuf {
 pub fn registry_url() -> Url {
     Url::from_file_path(registry_path()).ok().unwrap()
 }
-/// Path for local web API uploads. Cargo will place the contents of a web API
-/// request here, for example `api/v1/crates/new` is the result of publishing
-/// a crate.
+/// Gets the path for local web API uploads. Cargo will place the contents of a web API
+/// request here. E.g., `api/v1/crates/new` is the result of publishing a crate.
 pub fn api_path() -> PathBuf {
     paths::root().join("api")
 }
 pub fn api_url() -> Url {
     Url::from_file_path(api_path()).ok().unwrap()
 }
-/// Path where crates can be downloaded using the web API endpoint. Crates
+/// Gets the path where crates can be downloaded using the web API endpoint. Crates
 /// should be organized as `{name}/{version}/download` to match the web API
 /// endpoint. This is rarely used and must be manually set up.
 pub fn dl_path() -> PathBuf {
@@ -42,14 +41,14 @@ pub fn dl_path() -> PathBuf {
 pub fn dl_url() -> Url {
     Url::from_file_path(dl_path()).ok().unwrap()
 }
-/// Alternative-registry version of `registry_path`.
+/// Gets the alternative-registry version of `registry_path`.
 pub fn alt_registry_path() -> PathBuf {
     paths::root().join("alternative-registry")
 }
 pub fn alt_registry_url() -> Url {
     Url::from_file_path(alt_registry_path()).ok().unwrap()
 }
-/// Alternative-registry version of `dl_path`.
+/// Gets the alternative-registry version of `dl_path`.
 pub fn alt_dl_path() -> PathBuf {
     paths::root().join("alt_dl")
 }
@@ -57,7 +56,7 @@ pub fn alt_dl_url() -> String {
     let base = Url::from_file_path(alt_dl_path()).ok().unwrap();
     format!("{}/{{crate}}/{{version}}/{{crate}}-{{version}}.crate", base)
 }
-/// Alternative-registry version of `api_path`.
+/// Gets the alternative-registry version of `api_path`.
 pub fn alt_api_path() -> PathBuf {
     paths::root().join("alt_api")
 }
@@ -186,7 +185,7 @@ pub fn init() {
     "#
     ));
 
-    // Init a new registry
+    // Initialize a new registry.
     let _ = repo(&registry_path())
         .file(
             "config.json",
@@ -201,7 +200,7 @@ pub fn init() {
         .build();
     fs::create_dir_all(api_path().join("api/v1/crates")).unwrap();
 
-    // Init an alt registry
+    // Initialize an alternative registry.
     repo(&alt_registry_path())
         .file(
             "config.json",
@@ -218,7 +217,7 @@ pub fn init() {
 }
 
 impl Package {
-    /// Create a new package builder.
+    /// Creates a new package builder.
     /// Call `publish()` to finalize and build the package.
     pub fn new(name: &str, vers: &str) -> Package {
         init();
@@ -257,13 +256,13 @@ impl Package {
         self
     }
 
-    /// Add a file to the package.
+    /// Adds a file to the package.
     pub fn file(&mut self, name: &str, contents: &str) -> &mut Package {
         self.files.push((name.to_string(), contents.to_string()));
         self
     }
 
-    /// Add an "extra" file that is not rooted within the package.
+    /// Adds an "extra" file that is not rooted within the package.
     ///
     /// Normal files are automatically placed within a directory named
     /// `$PACKAGE-$VERSION`. This allows you to override that behavior,
@@ -274,7 +273,7 @@ impl Package {
         self
     }
 
-    /// Add a normal dependency. Example:
+    /// Adds a normal dependency. Example:
     /// ```
     /// [dependencies]
     /// foo = {version = "1.0"}
@@ -283,7 +282,7 @@ impl Package {
         self.add_dep(&Dependency::new(name, vers))
     }
 
-    /// Add a dependency with the given feature. Example:
+    /// Adds a dependency with the given feature. Example:
     /// ```
     /// [dependencies]
     /// foo = {version = "1.0", "features": ["feat1", "feat2"]}
@@ -292,7 +291,7 @@ impl Package {
         self.add_dep(Dependency::new(name, vers).enable_features(features))
     }
 
-    /// Add a platform-specific dependency. Example:
+    /// Adds a platform-specific dependency. Example:
     /// ```
     /// [target.'cfg(windows)'.dependencies]
     /// foo = {version = "1.0"}
@@ -301,12 +300,12 @@ impl Package {
         self.add_dep(Dependency::new(name, vers).target(target))
     }
 
-    /// Add a dependency to the alternative registry.
+    /// Adds a dependency to the alternative registry.
     pub fn registry_dep(&mut self, name: &str, vers: &str) -> &mut Package {
         self.add_dep(Dependency::new(name, vers).registry("alternative"))
     }
 
-    /// Add a dev-dependency. Example:
+    /// Adds a dev-dependency. Example:
     /// ```
     /// [dev-dependencies]
     /// foo = {version = "1.0"}
@@ -315,7 +314,7 @@ impl Package {
         self.add_dep(Dependency::new(name, vers).dev())
     }
 
-    /// Add a build-dependency. Example:
+    /// Adds a build-dependency. Example:
     /// ```
     /// [build-dependencies]
     /// foo = {version = "1.0"}
@@ -329,20 +328,20 @@ impl Package {
         self
     }
 
-    /// Specify whether or not the package is "yanked".
+    /// Specifies whether or not the package is "yanked".
     pub fn yanked(&mut self, yanked: bool) -> &mut Package {
         self.yanked = yanked;
         self
     }
 
-    /// Add an entry in the `[features]` section
+    /// Adds an entry in the `[features]` section.
     pub fn feature(&mut self, name: &str, deps: &[&str]) -> &mut Package {
         let deps = deps.iter().map(|s| s.to_string()).collect();
         self.features.insert(name.to_string(), deps);
         self
     }
 
-    /// Create the package and place it in the registry.
+    /// Creates the package and place it in the registry.
     ///
     /// This does not actually use Cargo's publishing system, but instead
     /// manually creates the entry in the registry on the filesystem.
@@ -351,7 +350,7 @@ impl Package {
     pub fn publish(&self) -> String {
         self.make_archive();
 
-        // Figure out what we're going to write into the index
+        // Figure out what we're going to write into the index.
         let deps = self
             .deps
             .iter()
@@ -407,7 +406,7 @@ impl Package {
             registry_path()
         };
 
-        // Write file/line in the index
+        // Write file/line in the index.
         let dst = if self.local {
             registry_path.join("index").join(&file)
         } else {
@@ -418,7 +417,7 @@ impl Package {
         t!(fs::create_dir_all(dst.parent().unwrap()));
         t!(t!(File::create(&dst)).write_all((prev + &line[..] + "\n").as_bytes()));
 
-        // Add the new file to the index
+        // Add the new file to the index.
         if !self.local {
             let repo = t!(git2::Repository::open(&registry_path));
             let mut index = t!(repo.index());
@@ -426,7 +425,7 @@ impl Package {
             t!(index.write());
             let id = t!(index.write_tree());
 
-            // Commit this change
+            // Commit this change.
             let tree = t!(repo.find_tree(id));
             let sig = t!(repo.signature());
             let parent = t!(repo.refname_to_id("refs/heads/master"));
@@ -550,43 +549,43 @@ impl Dependency {
         }
     }
 
-    /// Change this to `[build-dependencies]`
+    /// Changes this to `[build-dependencies]`.
     pub fn build(&mut self) -> &mut Self {
         self.kind = "build".to_string();
         self
     }
 
-    /// Change this to `[dev-dependencies]`
+    /// Changes this to `[dev-dependencies]`.
     pub fn dev(&mut self) -> &mut Self {
         self.kind = "dev".to_string();
         self
     }
 
-    /// Change this to `[target.$target.dependencies]`
+    /// Changes this to `[target.$target.dependencies]`.
     pub fn target(&mut self, target: &str) -> &mut Self {
         self.target = Some(target.to_string());
         self
     }
 
-    /// Add `registry = $registry` to this dependency
+    /// Adds `registry = $registry` to this dependency.
     pub fn registry(&mut self, registry: &str) -> &mut Self {
         self.registry = Some(registry.to_string());
         self
     }
 
-    /// Add `features = [ ... ]` to this dependency
+    /// Adds `features = [ ... ]` to this dependency.
     pub fn enable_features(&mut self, features: &[&str]) -> &mut Self {
         self.features.extend(features.iter().map(|s| s.to_string()));
         self
     }
 
-    /// Add `package = ...` to this dependency
+    /// Adds `package = ...` to this dependency.
     pub fn package(&mut self, pkg: &str) -> &mut Self {
         self.package = Some(pkg.to_string());
         self
     }
 
-    /// Change this to an optional dependency
+    /// Changes this to an optional dependency.
     pub fn optional(&mut self, optional: bool) -> &mut Self {
         self.optional = optional;
         self

@@ -1,7 +1,7 @@
 #![cfg_attr(test, deny(warnings))]
 #![warn(rust_2018_idioms)]
-// while we're getting used to 2018
-// Clippy isn't enforced by CI, and know that @alexcrichton isn't a fan :)
+// While we're getting used to 2018:
+// Clippy isn't enforced by CI, and I know that @alexcrichton isn't a fan.
 #![allow(clippy::boxed_local)] // bug rust-lang-nursery/rust-clippy#1123
 #![allow(clippy::cyclomatic_complexity)] // large project
 #![allow(clippy::derive_hash_xor_eq)] // there's an intentional incoherence
@@ -98,7 +98,7 @@ pub fn exit_with_error(err: CliError, shell: &mut Shell) -> ! {
         exit_code,
         unknown,
     } = err;
-    // exit_code == 0 is non-fatal error, e.g. docopt version info
+    // `exit_code` of 0 means non-fatal error, e.g., docopt version info.
     let fatal = exit_code != 0;
 
     let hide = unknown && shell.verbosity() != Verbose;
@@ -140,14 +140,14 @@ fn handle_cause(cargo_err: &Error, shell: &mut Shell) -> bool {
     let verbose = shell.verbosity();
 
     if verbose == Verbose {
-        // The first error has already been printed to the shell
-        // Print all remaining errors
+        // The first error has already been printed to the shell.
+        // Print all remaining errors.
         for err in cargo_err.iter_causes() {
             print(&err.to_string(), shell);
         }
     } else {
-        // The first error has already been printed to the shell
-        // Print remaining errors until one marked as Internal appears
+        // The first error has already been printed to the shell.
+        // Print remaining errors until one marked as `Internal` appears.
         for err in cargo_err.iter_causes() {
             if err.downcast_ref::<Internal>().is_some() {
                 return false;

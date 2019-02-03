@@ -10,7 +10,7 @@ use crate::core::{Edition, Package, PackageId, Target, TargetKind};
 use crate::util::{self, join_paths, process, CargoResult, CfgExpr, Config, ProcessBuilder};
 
 pub struct Doctest {
-    /// The package being doctested.
+    /// The package being doc-tested.
     pub package: Package,
     /// The target being tested (currently always the package's lib).
     pub target: Target,

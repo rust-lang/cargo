@@ -51,7 +51,7 @@ fn build_bin_default_features() {
         .with_stderr(
             "\
 error: target `foo` in package `foo` requires the features: `a`
-Consider enabling them by passing e.g. `--features=\"a\"`
+Consider enabling them by passing e.g., `--features=\"a\"`
 ",
         )
         .run();
@@ -159,7 +159,7 @@ fn build_example_default_features() {
         .with_stderr(
             "\
 error: target `foo` in package `foo` requires the features: `a`
-Consider enabling them by passing e.g. `--features=\"a\"`
+Consider enabling them by passing e.g., `--features=\"a\"`
 ",
         )
         .run();
@@ -226,7 +226,7 @@ fn build_example_multiple_required_features() {
         .with_stderr(
             "\
 error: target `foo_1` in package `foo` requires the features: `b`, `c`
-Consider enabling them by passing e.g. `--features=\"b c\"`
+Consider enabling them by passing e.g., `--features=\"b c\"`
 ",
         )
         .run();
@@ -246,7 +246,7 @@ Consider enabling them by passing e.g. `--features=\"b c\"`
         .with_stderr(
             "\
 error: target `foo_1` in package `foo` requires the features: `b`, `c`
-Consider enabling them by passing e.g. `--features=\"b c\"`
+Consider enabling them by passing e.g., `--features=\"b c\"`
 ",
         )
         .run();
@@ -255,7 +255,7 @@ Consider enabling them by passing e.g. `--features=\"b c\"`
         .with_stderr(
             "\
 error: target `foo_2` in package `foo` requires the features: `a`
-Consider enabling them by passing e.g. `--features=\"a\"`
+Consider enabling them by passing e.g., `--features=\"a\"`
 ",
         )
         .run();
@@ -313,7 +313,7 @@ fn test_default_features() {
         .with_stderr(
             "\
 error: target `foo` in package `foo` requires the features: `a`
-Consider enabling them by passing e.g. `--features=\"a\"`
+Consider enabling them by passing e.g., `--features=\"a\"`
 ",
         )
         .run();
@@ -474,7 +474,7 @@ fn bench_default_features() {
         .with_stderr(
             "\
 error: target `foo` in package `foo` requires the features: `a`
-Consider enabling them by passing e.g. `--features=\"a\"`
+Consider enabling them by passing e.g., `--features=\"a\"`
 ",
         )
         .run();
@@ -663,7 +663,7 @@ fn install_default_features() {
 
 Caused by:
   target `foo` in package `foo` requires the features: `a`
-Consider enabling them by passing e.g. `--features=\"a\"`
+Consider enabling them by passing e.g., `--features=\"a\"`
 ",
         )
         .run();
@@ -683,7 +683,7 @@ Consider enabling them by passing e.g. `--features=\"a\"`
 
 Caused by:
   target `foo` in package `foo` requires the features: `a`
-Consider enabling them by passing e.g. `--features=\"a\"`
+Consider enabling them by passing e.g., `--features=\"a\"`
 ",
         )
         .run();
@@ -940,7 +940,7 @@ fn dep_feature_in_cmd_line() {
         .with_stderr(
             "\
 error: target `foo` in package `foo` requires the features: `bar/a`
-Consider enabling them by passing e.g. `--features=\"bar/a\"`
+Consider enabling them by passing e.g., `--features=\"bar/a\"`
 ",
         )
         .run();
@@ -954,7 +954,7 @@ Consider enabling them by passing e.g. `--features=\"bar/a\"`
         .with_stderr(
             "\
 error: target `foo` in package `foo` requires the features: `bar/a`
-Consider enabling them by passing e.g. `--features=\"bar/a\"`
+Consider enabling them by passing e.g., `--features=\"bar/a\"`
 ",
         )
         .run();
@@ -1110,7 +1110,7 @@ fn run_default() {
         .with_stderr(
             "\
 error: target `foo` in package `foo` requires the features: `a`
-Consider enabling them by passing e.g. `--features=\"a\"`
+Consider enabling them by passing e.g., `--features=\"a\"`
 ",
         )
         .run();

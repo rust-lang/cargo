@@ -69,7 +69,7 @@ pub fn prepare_target<'a, 'cfg>(
     let compare = compare_old_fingerprint(&loc, &*fingerprint, mtime_on_use);
     log_compare(unit, &compare);
 
-    // If our comparison failed (e.g. we're going to trigger a rebuild of this
+    // If our comparison failed (e.g., we're going to trigger a rebuild of this
     // crate), then we also ensure the source of the crate passes all
     // verification checks before we build it.
     //
@@ -141,7 +141,7 @@ pub fn prepare_target<'a, 'cfg>(
 }
 
 /// A compilation unit dependency has a fingerprint that is comprised of:
-/// * its package id
+/// * its package ID
 /// * its extern crate name
 /// * its calculated fingerprint for the dependency
 struct DepFingerprint {
@@ -440,7 +440,7 @@ impl<'de> de::Deserialize<'de> for MtimeSlot {
 /// * Any dependency changes
 /// * The compiler changes
 /// * The set of features a package is built with changes
-/// * The profile a target is compiled with changes (e.g. opt-level changes)
+/// * The profile a target is compiled with changes (e.g., opt-level changes)
 ///
 /// Information like file modification time is only calculated for path
 /// dependencies and is calculated in `calculate_target_fresh`.

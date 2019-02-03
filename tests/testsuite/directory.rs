@@ -417,10 +417,10 @@ error: checksum for `bar v0.1.0` changed between lock files
 this could be indicative of a few possible errors:
 
     * the lock file is corrupt
-    * a replacement source in use (e.g. a mirror) returned a different checksum
+    * a replacement source in use (e.g., a mirror) returned a different checksum
     * the source itself may be corrupt in one way or another
 
-unable to verify that `bar v0.1.0` is the same as when the lockfile was generated
+unable to verify that `bar v0.1.0` is the same as when the lock file was generated
 
 ",
         )

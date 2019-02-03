@@ -1,13 +1,14 @@
-use crate::support;
 use std::fs::{self, File};
 use std::io::Read;
 use std::str;
 
+use glob::glob;
+
+use crate::support;
 use crate::support::paths::CargoPathExt;
 use crate::support::registry::Package;
 use crate::support::{basic_lib_manifest, basic_manifest, git, project};
-use crate::support::{is_nightly, rustc_host};
-use glob::glob;
+use crate::support::rustc_host;
 
 #[test]
 fn simple() {
@@ -1001,10 +1002,6 @@ fn doc_virtual_manifest_all_implied() {
 
 #[test]
 fn doc_all_member_dependency_same_name() {
-    if !is_nightly() {
-        // This can be removed once 1.29 is stable (rustdoc --cap-lints).
-        return;
-    }
     let p = project()
         .file(
             "Cargo.toml",
@@ -1170,7 +1167,7 @@ fn doc_workspace_open_binary_and_library() {
 #[test]
 fn doc_edition() {
     if !support::is_nightly() {
-        // Stable rustdoc won't have the edition option.  Remove this once it
+        // Stable rustdoc won't have the edition option. Remove this once it
         // is stabilized.
         return;
     }
@@ -1314,10 +1311,6 @@ pub fn foo() {}
 
 #[test]
 fn doc_cap_lints() {
-    if !is_nightly() {
-        // This can be removed once 1.29 is stable (rustdoc --cap-lints).
-        return;
-    }
     let a = git::new("a", |p| {
         p.file("Cargo.toml", &basic_lib_manifest("a"))
             .file("src/lib.rs", BAD_INTRA_LINK_LIB)
@@ -1368,10 +1361,6 @@ fn doc_cap_lints() {
 
 #[test]
 fn doc_message_format() {
-    if !is_nightly() {
-        // This can be removed once 1.30 is stable (rustdoc --error-format stabilized).
-        return;
-    }
     let p = project().file("src/lib.rs", BAD_INTRA_LINK_LIB).build();
 
     p.cargo("doc --message-format=json")
@@ -1398,10 +1387,6 @@ fn doc_message_format() {
 
 #[test]
 fn short_message_format() {
-    if !is_nightly() {
-        // This can be removed once 1.30 is stable (rustdoc --error-format stabilized).
-        return;
-    }
     let p = project().file("src/lib.rs", BAD_INTRA_LINK_LIB).build();
     p.cargo("doc --message-format=short")
         .with_status(101)

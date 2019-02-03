@@ -80,7 +80,7 @@ include::options-target-dir.adoc[]
 === Display Options
 
 By default the Rust test harness hides output from benchmark execution to keep
-results readable. Benchmark output can be recovered (e.g. for debugging) by
+results readable. Benchmark output can be recovered (e.g., for debugging) by
 passing `--nocapture` to the benchmark binaries:
 
     cargo bench -- --nocapture

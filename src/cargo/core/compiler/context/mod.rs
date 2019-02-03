@@ -27,7 +27,7 @@ mod compilation_files;
 use self::compilation_files::CompilationFiles;
 pub use self::compilation_files::{Metadata, OutputFile};
 
-/// All information needed to define a Unit.
+/// All information needed to define a unit.
 ///
 /// A unit is an object that has enough information so that cargo knows how to build it.
 /// For example, if your package has dependencies, then every dependency will be built as a library
@@ -60,8 +60,7 @@ pub struct Unit<'a> {
     /// the host architecture so the host rustc can use it (when compiling to the target
     /// architecture).
     pub kind: Kind,
-    /// The "mode" this unit is being compiled for.  See `CompileMode` for
-    /// more details.
+    /// The "mode" this unit is being compiled for. See [`CompileMode`] for more details.
     pub mode: CompileMode,
 }
 
@@ -193,7 +192,7 @@ impl<'a, 'cfg> Context<'a, 'cfg> {
             }
 
             if unit.mode == CompileMode::Doctest {
-                // Note that we can *only* doctest rlib outputs here.  A
+                // Note that we can *only* doctest rlib outputs here. A
                 // staticlib output cannot be linked by the compiler (it just
                 // doesn't do that). A dylib output, however, can be linked by
                 // the compiler, but will always fail. Currently all dylibs are
@@ -356,13 +355,14 @@ impl<'a, 'cfg> Context<'a, 'cfg> {
         self.files.as_mut().unwrap()
     }
 
-    /// Return the filenames that the given unit will generate.
+    /// Returns the filenames that the given unit will generate.
     pub fn outputs(&self, unit: &Unit<'a>) -> CargoResult<Arc<Vec<OutputFile>>> {
         self.files.as_ref().unwrap().outputs(unit, self.bcx)
     }
 
     /// For a package, return all targets which are registered as dependencies
     /// for that package.
+    //
     // TODO: this ideally should be `-> &[Unit<'a>]`
     pub fn dep_targets(&self, unit: &Unit<'a>) -> Vec<Unit<'a>> {
         // If this build script's execution has been overridden then we don't
@@ -445,7 +445,7 @@ impl<'a, 'cfg> Context<'a, 'cfg> {
         self.primary_packages.contains(&unit.pkg.package_id())
     }
 
-    /// Gets a package for the given package id.
+    /// Gets a package for the given package ID.
     pub fn get_package(&self, id: PackageId) -> CargoResult<&'a Package> {
         self.package_cache
             .get(&id)
@@ -453,15 +453,15 @@ impl<'a, 'cfg> Context<'a, 'cfg> {
             .ok_or_else(|| failure::format_err!("failed to find {}", id))
     }
 
-    /// Return the list of filenames read by cargo to generate the BuildContext
-    /// (all Cargo.toml, etc).
+    /// Returns the list of filenames read by cargo to generate the `BuildContext`
+    /// (all `Cargo.toml`, etc.).
     pub fn build_plan_inputs(&self) -> CargoResult<Vec<PathBuf>> {
         let mut inputs = Vec::new();
         // Note that we're using the `package_cache`, which should have been
         // populated by `build_unit_dependencies`, and only those packages are
         // considered as all the inputs.
         //
-        // (notably we skip dev-deps here if they aren't present)
+        // (Notably, we skip dev-deps here if they aren't present.)
         for pkg in self.package_cache.values() {
             inputs.push(pkg.manifest_path().to_path_buf());
         }
@@ -487,7 +487,8 @@ impl<'a, 'cfg> Context<'a, 'cfg> {
                 )
             };
         let suggestion = "Consider changing their names to be unique or compiling them separately.\n\
-            This may become a hard error in the future, see https://github.com/rust-lang/cargo/issues/6313";
+            This may become a hard error in the future; see\
+            <https://github.com/rust-lang/cargo/issues/6313>.";
         let report_collision = |unit: &Unit<'_>,
                                 other_unit: &Unit<'_>,
                                 path: &PathBuf|

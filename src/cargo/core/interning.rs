@@ -57,7 +57,7 @@ impl Deref for InternedString {
 }
 
 impl Hash for InternedString {
-    // NB: we can't implement this as `identity(self).hash(state)`,
+    // N.B., we can't implement this as `identity(self).hash(state)`,
     // because we use this for on-disk fingerprints and so need
     // stability across Cargo invocations.
     fn hash<H: Hasher>(&self, state: &mut H) {
@@ -66,7 +66,7 @@ impl Hash for InternedString {
 }
 
 impl Borrow<str> for InternedString {
-    // if we implement Hash as `identity(self).hash(state)`,
+    // If we implement Hash as `identity(self).hash(state)`,
     // then this will nead to be removed.
     fn borrow(&self) -> &str {
         self.as_str()

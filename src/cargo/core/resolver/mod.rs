@@ -1,4 +1,4 @@
-//! Resolution of the entire dependency graph for a crate
+//! Resolution of the entire dependency graph for a crate.
 //!
 //! This module implements the core logic in taking the world of crates and
 //! constraints and creating a resolved graph with locked versions for all
@@ -12,7 +12,7 @@
 //!
 //! 1. Each crate can have any number of dependencies. Each dependency can
 //!    declare a version range that it is compatible with.
-//! 2. Crates can be activated with multiple version (e.g. show up in the
+//! 2. Crates can be activated with multiple version (e.g., show up in the
 //!    dependency graph twice) so long as each pairwise instance have
 //!    semver-incompatible versions.
 //!
@@ -27,7 +27,7 @@
 //!   that has the same links attribute as something else
 //!   activated.
 //! * Always try to activate the highest version crate first. The default
-//!   dependency in Cargo (e.g. when you write `foo = "0.1.2"`) is
+//!   dependency in Cargo (e.g., when you write `foo = "0.1.2"`) is
 //!   semver-compatible, so selecting the highest version possible will allow us
 //!   to hopefully satisfy as many dependencies at once.
 //!
@@ -41,7 +41,7 @@
 //!
 //! Note that this is a relatively performance-critical portion of Cargo. The
 //! data that we're processing is proportional to the size of the dependency
-//! graph, which can often be quite large (e.g. take a look at Servo). To make
+//! graph, which can often be quite large (e.g., take a look at Servo). To make
 //! matters worse the DFS algorithm we're implemented is inherently quite
 //! inefficient. When we add the requirement of backtracking on top it means
 //! that we're implementing something that probably shouldn't be allocating all
@@ -97,7 +97,7 @@ mod types;
 ///   for the same query every time). Typically this is an instance of a
 ///   `PackageRegistry`.
 ///
-/// * `try_to_use` - this is a list of package ids which were previously found
+/// * `try_to_use` - this is a list of package IDs which were previously found
 ///   in the lock file. We heuristically prefer the ids listed in `try_to_use`
 ///   when sorting candidates to activate, but otherwise this isn't used
 ///   anywhere else.
@@ -245,13 +245,13 @@ fn activate_deps_loop(
         // backtracking to find a place to restart. It is also the list of
         // things to explain in the error message if we fail to resolve.
         //
-        // This is a map of package id to a reason why that packaged caused a
+        // This is a map of package ID to a reason why that packaged caused a
         // conflict for us.
         let mut conflicting_activations = BTreeMap::new();
 
         // When backtracking we don't fully update `conflicting_activations`
         // especially for the cases that we didn't make a backtrack frame in the
-        // first place.  This `backtracked` var stores whether we are continuing
+        // first place. This `backtracked` var stores whether we are continuing
         // from a restored backtrack frame so that we can skip caching
         // `conflicting_activations` in `past_conflicting_activations`
         let mut backtracked = false;
@@ -679,8 +679,8 @@ impl RemainingCandidates {
     /// we've reached the end of iteration.
     ///
     /// If we've reached the end of the iterator here then `Err` will be
-    /// returned. The error will contain a map of package id to conflict reason,
-    /// where each package id caused a candidate to be filtered out from the
+    /// returned. The error will contain a map of package ID to conflict reason,
+    /// where each package ID caused a candidate to be filtered out from the
     /// original list for the reason listed.
     fn next(
         &mut self,
@@ -886,11 +886,11 @@ fn check_cycles(resolve: &Resolve, activations: &Activations) -> CargoResult<()>
     }
 }
 
-/// Checks that packages are unique when written to lockfile.
+/// Checks that packages are unique when written to lock file.
 ///
-/// When writing package id's to lockfile, we apply lossy encoding. In
+/// When writing package ID's to lock file, we apply lossy encoding. In
 /// particular, we don't store paths of path dependencies. That means that
-/// *different* packages may collide in the lockfile, hence this check.
+/// *different* packages may collide in the lock file, hence this check.
 fn check_duplicate_pkgs_in_lockfile(resolve: &Resolve) -> CargoResult<()> {
     let mut unique_pkg_ids = HashMap::new();
     for pkg_id in resolve.iter() {

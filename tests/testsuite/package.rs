@@ -70,7 +70,7 @@ fn metadata_warning() {
             "\
 warning: manifest has no description, license, license-file, documentation, \
 homepage or repository.
-See http://doc.crates.io/manifest.html#package-metadata for more info.
+See <http://doc.crates.io/manifest.html#package-metadata> for more infofo.
 [PACKAGING] foo v0.0.1 ([CWD])
 [VERIFYING] foo v0.0.1 ([CWD])
 [COMPILING] foo v0.0.1 ([CWD][..])
@@ -95,8 +95,7 @@ See http://doc.crates.io/manifest.html#package-metadata for more info.
     p.cargo("package")
         .with_stderr(
             "\
-warning: manifest has no description, documentation, homepage or repository.
-See http://doc.crates.io/manifest.html#package-metadata for more info.
+warning: manifest has no description, documentation, homepage or repositorySee <http://doc.crates.io/manifest.html#package-metadata> for more infofo.
 [PACKAGING] foo v0.0.1 ([CWD])
 [VERIFYING] foo v0.0.1 ([CWD])
 [COMPILING] foo v0.0.1 ([CWD][..])
@@ -148,8 +147,7 @@ fn package_verbose() {
         .cwd(repo.root())
         .with_stderr(
             "\
-[WARNING] manifest has no description[..]
-See http://doc.crates.io/manifest.html#package-metadata for more info.
+[WARNING] manifest has no description[..See <http://doc.crates.io/manifest.html#package-metadata> for more infofo.
 [PACKAGING] foo v0.0.1 ([..])
 [ARCHIVING] [..]
 [ARCHIVING] [..]
@@ -185,8 +183,7 @@ See http://doc.crates.io/manifest.html#package-metadata for more info.
         .cwd(repo.root().join("a"))
         .with_stderr(
             "\
-[WARNING] manifest has no description[..]
-See http://doc.crates.io/manifest.html#package-metadata for more info.
+[WARNING] manifest has no description[..See <http://doc.crates.io/manifest.html#package-metadata> for more infofo.
 [PACKAGING] a v0.0.1 ([..])
 [ARCHIVING] Cargo.toml
 [ARCHIVING] src/lib.rs
@@ -203,8 +200,7 @@ fn package_verification() {
     p.cargo("package")
         .with_stderr(
             "\
-[WARNING] manifest has no description[..]
-See http://doc.crates.io/manifest.html#package-metadata for more info.
+[WARNING] manifest has no description[..See <http://doc.crates.io/manifest.html#package-metadata> for more infofo.
 [PACKAGING] foo v0.0.1 ([CWD])
 [VERIFYING] foo v0.0.1 ([CWD])
 [COMPILING] foo v0.0.1 ([CWD][..])
@@ -279,8 +275,7 @@ fn path_dependency_no_version() {
         .with_status(101)
         .with_stderr(
             "\
-[WARNING] manifest has no documentation, homepage or repository.
-See http://doc.crates.io/manifest.html#package-metadata for more info.
+[WARNING] manifest has no documentation, homepage or repositorySee <http://doc.crates.io/manifest.html#package-metadata> for more infofo.
 [ERROR] all path dependencies must have a version specified when packaging.
 dependency `bar` does not specify a version.
 ",
@@ -362,8 +357,7 @@ fn exclude() {
         .with_stdout("")
         .with_stderr(
             "\
-[WARNING] manifest has no description[..]
-See http://doc.crates.io/manifest.html#package-metadata for more info.
+[WARNING] manifest has no description[..See <http://doc.crates.io/manifest.html#package-metadata> for more infofo.
 [WARNING] [..] file `dir_root_1/some_dir/file` WILL be excluded [..]
 See [..]
 [WARNING] [..] file `dir_root_2/some_dir/file` WILL be excluded [..]
@@ -454,8 +448,7 @@ fn include() {
         .cwd(repo.root())
         .with_stderr(
             "\
-[WARNING] manifest has no description[..]
-See http://doc.crates.io/manifest.html#package-metadata for more info.
+[WARNING] manifest has no description[..See <http://doc.crates.io/manifest.html#package-metadata> for more infofo.
 [PACKAGING] foo v0.0.1 ([..])
 [ARCHIVING] [..]
 [ARCHIVING] [..]
@@ -568,8 +561,7 @@ fn ignore_nested() {
     p.cargo("package")
         .with_stderr(
             "\
-[WARNING] manifest has no documentation[..]
-See http://doc.crates.io/manifest.html#package-metadata for more info.
+[WARNING] manifest has no documentation[..See <http://doc.crates.io/manifest.html#package-metadata> for more infofo.
 [PACKAGING] foo v0.0.1 ([CWD])
 [VERIFYING] foo v0.0.1 ([CWD])
 [COMPILING] foo v0.0.1 ([CWD][..])
@@ -807,7 +799,7 @@ fn generated_manifest() {
 # When uploading crates to the registry Cargo will automatically
 # "normalize" Cargo.toml files for maximal compatibility
 # with all versions of Cargo and also rewrite `path` dependencies
-# to registry (e.g. crates.io) dependencies
+# to registry (e.g., crates.io) dependencies
 #
 # If you believe there's an error in this file please file an
 # issue against the rust-lang/cargo repository. If you're
@@ -892,7 +884,7 @@ fn ignore_workspace_specifier() {
 # When uploading crates to the registry Cargo will automatically
 # "normalize" Cargo.toml files for maximal compatibility
 # with all versions of Cargo and also rewrite `path` dependencies
-# to registry (e.g. crates.io) dependencies
+# to registry (e.g., crates.io) dependencies
 #
 # If you believe there's an error in this file please file an
 # issue against the rust-lang/cargo repository. If you're
