@@ -7,7 +7,7 @@ pub fn cli() -> App {
         // subcommand aliases are handled in aliased_command()
         // .alias("t")
         .setting(AppSettings::TrailingVarArg)
-        .about("Execute all unit and integration tests of a local package")
+        .about("Execute all unit and integration tests and build examples of a local package")
         .arg(
             Arg::with_name("TESTNAME")
                 .help("If specified, only run tests containing this string in their names"),
@@ -19,7 +19,7 @@ pub fn cli() -> App {
                 .last(true),
         )
         .arg_targets_all(
-            "Test only this package's library",
+            "Test only this package's library unit tests",
             "Test only the specified binary",
             "Test all binaries",
             "Test only the specified example",
