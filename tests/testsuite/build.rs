@@ -36,7 +36,7 @@ fn cargo_fail_with_no_stderr() {
         .run();
 }
 
-/// Check that the `CARGO_INCREMENTAL` environment variable results in
+/// Checks that the `CARGO_INCREMENTAL` environment variable results in
 /// `rustc` getting `-Zincremental` passed to it.
 #[test]
 fn cargo_compile_incremental() {
@@ -3178,12 +3178,12 @@ fn invalid_spec() {
 
     p.cargo("build -p notAValidDep")
         .with_status(101)
-        .with_stderr("[ERROR] package id specification `notAValidDep` matched no packages")
+        .with_stderr("[ERROR] package ID specification `notAValidDep` matched no packages")
         .run();
 
     p.cargo("build -p d1 -p notAValidDep")
         .with_status(101)
-        .with_stderr("[ERROR] package id specification `notAValidDep` matched no packages")
+        .with_stderr("[ERROR] package ID specification `notAValidDep` matched no packages")
         .run();
 }
 
@@ -3274,7 +3274,7 @@ fn compiler_json_error_format() {
         .file("bar/src/lib.rs", r#"fn dead() {}"#)
         .build();
 
-    // Using jobs=1 to ensure that the order of messages is consistent.
+    // Use `jobs=1` to ensure that the order of messages is consistent.
     p.cargo("build -v --message-format=json --jobs=1")
         .with_json(
             r#"
@@ -3732,7 +3732,7 @@ fn build_virtual_manifest_all_implied() {
         .file("baz/src/lib.rs", "pub fn baz() {}")
         .build();
 
-    // The order in which bar and baz are built is not guaranteed
+    // The order in which `bar` and `baz` are built is not guaranteed.
     p.cargo("build")
         .with_stderr_contains("[..] Compiling baz v0.1.0 ([..])")
         .with_stderr_contains("[..] Compiling bar v0.1.0 ([..])")
@@ -3954,7 +3954,8 @@ fn run_proper_binary_main_rs_as_foo() {
 }
 
 #[test]
-#[cfg(not(windows))] // We don't have /usr/bin/env on Windows.
+// NOTE: we don't have `/usr/bin/env` on Windows.
+#[cfg(not(windows))]
 fn rustc_wrapper() {
     let p = project().file("src/lib.rs", "").build();
     p.cargo("build -v")
@@ -4055,7 +4056,7 @@ fn cdylib_final_outputs() {
 
 #[test]
 fn deterministic_cfg_flags() {
-    // This bug is non-deterministic
+    // This bug is non-deterministic.
 
     let p = project()
         .file(
@@ -4256,7 +4257,8 @@ fn target_edition() {
         .build();
 
     p.cargo("build -v")
-        .without_status() // passes on nightly, fails on stable, b/c --edition is nightly-only
+        // Passes on nightly, fails on stable, since `--edition` is nightly-only.
+        .without_status()
         .with_stderr_contains(
             "\
 [COMPILING] foo v0.0.1 ([..])
@@ -4405,8 +4407,8 @@ fn uplift_pdb_of_bin_on_windows() {
     assert!(!p.target_debug_dir().join("d.pdb").is_file());
 }
 
-// Make sure that `cargo build` chooses the correct profile for building
-// targets based on filters (assuming --profile is not specified).
+// Ensure that `cargo build` chooses the correct profile for building
+// targets based on filters (assuming `--profile` is not specified).
 #[test]
 fn build_filter_infer_profile() {
     let p = project()
@@ -4467,19 +4469,19 @@ fn build_filter_infer_profile() {
 fn targets_selected_default() {
     let p = project().file("src/main.rs", "fn main() {}").build();
     p.cargo("build -v")
-        // bin
+        // Binaries.
         .with_stderr_contains(
             "\
              [RUNNING] `rustc --crate-name foo src/main.rs --color never --crate-type bin \
              --emit=dep-info,link[..]",
         )
-        // bench
+        // Benchmarks.
         .with_stderr_does_not_contain(
             "\
              [RUNNING] `rustc --crate-name foo src/main.rs --color never --emit=dep-info,link \
              -C opt-level=3 --test [..]",
         )
-        // unit test
+        // Unit tests.
         .with_stderr_does_not_contain(
             "\
              [RUNNING] `rustc --crate-name foo src/main.rs --color never --emit=dep-info,link \
@@ -4492,13 +4494,13 @@ fn targets_selected_default() {
 fn targets_selected_all() {
     let p = project().file("src/main.rs", "fn main() {}").build();
     p.cargo("build -v --all-targets")
-        // bin
+        // Binaries.
         .with_stderr_contains(
             "\
              [RUNNING] `rustc --crate-name foo src/main.rs --color never --crate-type bin \
              --emit=dep-info,link[..]",
         )
-        // unit test
+        // Unit tests.
         .with_stderr_contains(
             "\
              [RUNNING] `rustc --crate-name foo src/main.rs --color never --emit=dep-info,link \
@@ -4511,13 +4513,13 @@ fn targets_selected_all() {
 fn all_targets_no_lib() {
     let p = project().file("src/main.rs", "fn main() {}").build();
     p.cargo("build -v --all-targets")
-        // bin
+        // Binaries.
         .with_stderr_contains(
             "\
              [RUNNING] `rustc --crate-name foo src/main.rs --color never --crate-type bin \
              --emit=dep-info,link[..]",
         )
-        // unit test
+        // Unit tests.
         .with_stderr_contains(
             "\
              [RUNNING] `rustc --crate-name foo src/main.rs --color never --emit=dep-info,link \
@@ -4528,7 +4530,7 @@ fn all_targets_no_lib() {
 
 #[test]
 fn no_linkable_target() {
-    // Issue 3169. This is currently not an error as per discussion in PR #4797
+    // Issue 3169: this is currently not an error as per discussion in PR #4797.
     let p = project()
         .file(
             "Cargo.toml",
@@ -4740,8 +4742,8 @@ Caused by:
 
 #[test]
 fn json_parse_fail() {
-    // Ensure when json parsing fails, and rustc exits with non-zero exit
-    // code, that a useful error message is displayed.
+    // Ensure when JSON parsing fails, and rustc exits with non-zero exit
+    // code, a useful error message is displayed.
     let foo = project()
         .file(
             "Cargo.toml",

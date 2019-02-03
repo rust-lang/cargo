@@ -172,7 +172,7 @@ impl<K: Hash + Eq + Clone, V> DependencyQueue<K, V> {
         Some((fresh, key, data))
     }
 
-    /// Returns whether there are remaining packages to be built.
+    /// Returns `true` if there are remaining packages to be built.
     pub fn is_empty(&self) -> bool {
         self.dep_map.is_empty() && self.pending.is_empty()
     }

@@ -1,11 +1,12 @@
 use std::fs::File;
 use std::io::prelude::*;
 
+use cargo;
+
 use crate::support::paths::CargoPathExt;
 use crate::support::registry::Package;
 use crate::support::{basic_bin_manifest, basic_lib_manifest, basic_manifest, cargo_exe, project};
 use crate::support::{is_nightly, rustc_host, sleep_ms};
-use cargo;
 
 #[test]
 fn cargo_test_simple() {
@@ -2055,7 +2056,7 @@ fn dylib_doctest() {
 
 #[test]
 fn dylib_doctest2() {
-    // can't doctest dylibs as they're statically linked together
+    // Can't doc-test dylibs, as they're statically linked together.
     let p = project()
         .file(
             "Cargo.toml",

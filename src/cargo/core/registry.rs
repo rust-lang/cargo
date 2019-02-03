@@ -38,7 +38,7 @@ pub trait Registry {
 ///
 /// The resolution phase of Cargo uses this to drive knowledge about new
 /// packages as well as querying for lists of new packages. It is here that
-/// sources are updated (e.g. network operations) and overrides are
+/// sources are updated (e.g., network operations) and overrides are
 /// handled.
 ///
 /// The general idea behind this registry is that it is centered around the
@@ -201,7 +201,7 @@ impl<'cfg> PackageRegistry<'cfg> {
     ///
     /// Here the `deps` will be resolved to a precise version and stored
     /// internally for future calls to `query` below. It's expected that `deps`
-    /// have had `lock_to` call already, if applicable. (e.g. if a lock file was
+    /// have had `lock_to` call already, if applicable. (e.g., if a lock file was
     /// already present).
     ///
     /// Note that the patch list specified here *will not* be available to
@@ -340,16 +340,16 @@ impl<'cfg> PackageRegistry<'cfg> {
     }
 
     /// This function is used to transform a summary to another locked summary
-    /// if possible. This is where the concept of a lockfile comes into play.
+    /// if possible. This is where the concept of a lock file comes into play.
     ///
-    /// If a summary points at a package id which was previously locked, then we
-    /// override the summary's id itself, as well as all dependencies, to be
+    /// If a summary points at a package ID which was previously locked, then we
+    /// override the summary's ID itself, as well as all dependencies, to be
     /// rewritten to the locked versions. This will transform the summary's
     /// source to a precise source (listed in the locked version) as well as
     /// transforming all of the dependencies from range requirements on
     /// imprecise sources to exact requirements on precise sources.
     ///
-    /// If a summary does not point at a package id which was previously locked,
+    /// If a summary does not point at a package ID which was previously locked,
     /// or if any dependencies were added and don't have a previously listed
     /// version, we still want to avoid updating as many dependencies as
     /// possible to keep the graph stable. In this case we map all of the
@@ -579,7 +579,7 @@ fn lock(locked: &LockedMap, patches: &HashMap<Url, Vec<PackageId>>, summary: Sum
 
     trace!("locking summary of {}", summary.package_id());
 
-    // Lock the summary's id if possible
+    // Lock the summary's ID if possible
     let summary = match pair {
         Some(&(ref precise, _)) => summary.override_id(precise.clone()),
         None => summary,
@@ -597,7 +597,7 @@ fn lock(locked: &LockedMap, patches: &HashMap<Url, Vec<PackageId>>, summary: Sum
         //
         // 1. We have a lock entry for this dependency from the same
         //    source as it's listed as coming from. In this case we make
-        //    sure to lock to precisely the given package id.
+        //    sure to lock to precisely the given package ID.
         //
         // 2. We have a lock entry for this dependency, but it's from a
         //    different source than what's listed, or the version

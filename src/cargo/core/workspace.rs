@@ -64,11 +64,11 @@ pub struct Workspace<'cfg> {
     // or only the root package for non-virtual workspaces.
     default_members: Vec<PathBuf>,
 
-    // True, if this is a temporary workspace created for the purposes of
-    // cargo install or cargo package.
+    // `true` if this is a temporary workspace created for the purposes of the
+    // `cargo install` or `cargo package` commands.
     is_ephemeral: bool,
 
-    // True if this workspace should enforce optional dependencies even when
+    // `true` if this workspace should enforce optional dependencies even when
     // not needed; false if this workspace should only enforce dependencies
     // needed by the current configuration (such as in cargo install). In some
     // cases `false` also results in the non-enforcement of dev-dependencies.
@@ -827,7 +827,7 @@ impl MaybePackage {
 }
 
 impl WorkspaceRootConfig {
-    /// Create a new Intermediate Workspace Root configuration.
+    /// Creates a new Intermediate Workspace Root configuration.
     pub fn new(
         root_dir: &Path,
         members: &Option<Vec<String>>,
@@ -844,7 +844,7 @@ impl WorkspaceRootConfig {
 
     /// Checks the path against the `excluded` list.
     ///
-    /// This method does NOT consider the `members` list.
+    /// This method does **not** consider the `members` list.
     fn is_excluded(&self, manifest_path: &Path) -> bool {
         let excluded = self
             .exclude

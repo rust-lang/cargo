@@ -292,7 +292,7 @@ fn install_one(
     fs::create_dir_all(&dst)?;
 
     // Copy all binaries to a temporary directory under `dst` first, catching
-    // some failure modes (e.g. out of space) before touching the existing
+    // some failure modes (e.g., out of space) before touching the existing
     // binaries. This directory will get cleaned up via RAII.
     let staging_dir = TempFileBuilder::new()
         .prefix("cargo-install")

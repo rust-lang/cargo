@@ -539,7 +539,7 @@ impl<'cfg> RegistrySource<'cfg> {
 
 impl<'cfg> Source for RegistrySource<'cfg> {
     fn query(&mut self, dep: &Dependency, f: &mut dyn FnMut(Summary)) -> CargoResult<()> {
-        // If this is a precise dependency, then it came from a lockfile and in
+        // If this is a precise dependency, then it came from a lock file and in
         // theory the registry is known to contain this version. If, however, we
         // come back with no summaries, then our registry may need to be
         // updated, so we fall back to performing a lazy update.
