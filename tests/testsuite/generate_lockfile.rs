@@ -225,7 +225,7 @@ fn duplicate_entries_in_lockfile() {
         .file("src/lib.rs", "")
         .build();
 
-    // should fail due to a duplicate package `common` in the lockfile
+    // should fail due to a duplicate package `common` in the lock file
     b.cargo("build")
         .with_status(101)
         .with_stderr_contains(

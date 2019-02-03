@@ -834,7 +834,7 @@ fn invalid_toml_historically_allowed_is_warned() {
 warning: TOML file found which contains invalid syntax and will soon not parse
 at `[..]config`.
 
-The TOML spec requires newlines after table definitions (e.g. `[a] b = 1` is
+The TOML spec requires newlines after table definitions (e.g., `[a] b = 1` is
 invalid), but this file has a table header which does not have a newline after
 it. A newline needs to be added and this warning will soon become a hard error
 in the future.

@@ -1,7 +1,7 @@
 #![cfg_attr(test, deny(warnings))]
 #![warn(rust_2018_idioms)]
-// while we're getting used to 2018
-// Clippy isn't enforced by CI, and know that @alexcrichton isn't a fan :)
+// While we're getting used to 2018:
+// Clippy isn't enforced by CI (@alexcrichton isn't a fan).
 #![allow(clippy::boxed_local)] // bug rust-lang-nursery/rust-clippy#1123
 #![allow(clippy::cyclomatic_complexity)] // large project
 #![allow(clippy::derive_hash_xor_eq)] // there's an intentional incoherence
@@ -13,7 +13,7 @@
 #![allow(clippy::redundant_closure_call)] // closures over try catch blocks
 #![allow(clippy::too_many_arguments)] // large project
 #![allow(clippy::type_complexity)] // there's an exceptionally complex type
-#![allow(clippy::wrong_self_convention)] // perhaps Rc should be special cased in Clippy?
+#![allow(clippy::wrong_self_convention)] // perhaps `Rc` should be special-cased in Clippy?
 
 use std::fmt;
 
@@ -44,7 +44,7 @@ pub struct CommitInfo {
 }
 
 pub struct CfgInfo {
-    // Information about the git repository we may have been built from.
+    // Information about the Git repository we may have been built from.
     pub commit_info: Option<CommitInfo>,
     // The release channel we were built for.
     pub release_channel: String,
@@ -56,7 +56,7 @@ pub struct VersionInfo {
     pub patch: u8,
     pub pre_release: Option<String>,
     // Information that's only available when we were built with
-    // configure/make, rather than cargo itself.
+    // configure/make, rather than Cargo itself.
     pub cfg_info: Option<CfgInfo>,
 }
 
@@ -98,7 +98,7 @@ pub fn exit_with_error(err: CliError, shell: &mut Shell) -> ! {
         exit_code,
         unknown,
     } = err;
-    // exit_code == 0 is non-fatal error, e.g. docopt version info
+    // `exit_code` of 0 means non-fatal error (e.g., docopt version info).
     let fatal = exit_code != 0;
 
     let hide = unknown && shell.verbosity() != Verbose;
@@ -140,14 +140,14 @@ fn handle_cause(cargo_err: &Error, shell: &mut Shell) -> bool {
     let verbose = shell.verbosity();
 
     if verbose == Verbose {
-        // The first error has already been printed to the shell
-        // Print all remaining errors
+        // The first error has already been printed to the shell.
+        // Print all remaining errors.
         for err in cargo_err.iter_causes() {
             print(&err.to_string(), shell);
         }
     } else {
-        // The first error has already been printed to the shell
-        // Print remaining errors until one marked as Internal appears
+        // The first error has already been printed to the shell.
+        // Print remaining errors until one marked as `Internal` appears.
         for err in cargo_err.iter_causes() {
             if err.downcast_ref::<Internal>().is_some() {
                 return false;

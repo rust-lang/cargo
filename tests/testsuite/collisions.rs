@@ -39,8 +39,8 @@ fn collision_dylib() {
         .file("b/src/lib.rs", "")
         .build();
 
-    // j=1 is required because on windows you'll get an error because
-    // two processes will be writing to the file at the same time.
+    // `j=1` is required because on Windows you'll get an error due to
+    // two processes writing to the file at the same time.
     p.cargo("build -j=1")
         .with_stderr_contains(&format!("\
 [WARNING] output filename collision.
@@ -48,7 +48,7 @@ The lib target `a` in package `b v1.0.0 ([..]/foo/b)` has the same output filena
 Colliding filename is: [..]/foo/target/debug/deps/{}a{}
 The targets should have unique names.
 Consider changing their names to be unique or compiling them separately.
-This may become a hard error in the future, see https://github.com/rust-lang/cargo/issues/6313
+This may become a hard error in the future; see <https://github.com/rust-lang/cargo/issues/6313>.
 ", env::consts::DLL_PREFIX, env::consts::DLL_SUFFIX))
         .run();
 }
@@ -77,14 +77,14 @@ The example target `ex1` in package `b v1.0.0 ([..]/foo/b)` has the same output 
 Colliding filename is: [..]/foo/target/debug/examples/ex1[EXE]
 The targets should have unique names.
 Consider changing their names to be unique or compiling them separately.
-This may become a hard error in the future, see https://github.com/rust-lang/cargo/issues/6313
+This may become a hard error in the future; see <https://github.com/rust-lang/cargo/issues/6313>.
 ")
         .run();
 }
 
 #[test]
 fn collision_export() {
-    // --out-dir combines some things which can cause conflicts.
+    // `--out-dir` combines some things which can cause conflicts.
     let p = project()
         .file("Cargo.toml", &basic_manifest("foo", "1.0.0"))
         .file("examples/foo.rs", "fn main() {}")
@@ -99,7 +99,7 @@ The example target `foo` in package `foo v1.0.0 ([..]/foo)` has the same output 
 Colliding filename is: [..]/foo/out/foo[EXE]
 The exported filenames should be unique.
 Consider changing their names to be unique or compiling them separately.
-This may become a hard error in the future, see https://github.com/rust-lang/cargo/issues/6313
+This may become a hard error in the future; see <https://github.com/rust-lang/cargo/issues/6313>.
 ")
         .run();
 }

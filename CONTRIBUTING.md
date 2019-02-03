@@ -86,7 +86,7 @@ working on.
 * Include tests that cover all non-trivial code. The existing tests
 in `test/` provide templates on how to test Cargo's behavior in a
 sandbox-environment. The internal module `testsuite/support` provides a vast amount
-of helpers to minimize boilerplate.  See [`testsuite/support/mod.rs`] for an
+of helpers to minimize boilerplate. See [`testsuite/support/mod.rs`] for an
 introduction to writing tests.
 * Make sure `cargo test` passes. If you do not have the cross-compilers
 installed locally, install them using the instructions returned by
@@ -110,7 +110,7 @@ weekends. If you don't get a reply, you may poke the core developers on [Discord
 
 A merge of Cargo's master-branch and your changes is immediately queued
 to be tested after the pull request is made. In case unforeseen
-problems are discovered during this step (e.g. a failure on a platform you
+problems are discovered during this step (e.g., a failure on a platform you
 originally did not develop on), you may ask for guidance. Push additional
 commits to your branch to tackle these problems.
 

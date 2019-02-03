@@ -49,7 +49,7 @@ impl Work {
 }
 
 impl Job {
-    /// Create a new job representing a unit of work.
+    /// Creates a new job representing a unit of work.
     pub fn new(dirty: Work, fresh: Work) -> Job {
         Job { dirty, fresh }
     }

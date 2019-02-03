@@ -21,7 +21,7 @@ pub struct Dependency {
     inner: Rc<Inner>,
 }
 
-/// The data underlying a Dependency.
+/// The data underlying a `Dependency`.
 #[derive(PartialEq, Eq, Hash, Ord, PartialOrd, Clone, Debug)]
 struct Inner {
     name: InternedString,
@@ -233,7 +233,7 @@ impl Dependency {
     /// This is the name of this `Dependency` as listed in `Cargo.toml`.
     ///
     /// Or in other words, this is what shows up in the `[dependencies]` section
-    /// on the left hand side. This is **not** the name of the package that's
+    /// on the left hand side. This is *not* the name of the package that's
     /// being depended on as the dependency can be renamed. For that use
     /// `package_name` below.
     ///
@@ -340,13 +340,13 @@ impl Dependency {
         self
     }
 
-    /// Set the source id for this dependency
+    /// Sets the source ID for this dependency.
     pub fn set_source_id(&mut self, id: SourceId) -> &mut Dependency {
         Rc::make_mut(&mut self.inner).source_id = id;
         self
     }
 
-    /// Set the version requirement for this dependency
+    /// Sets the version requirement for this dependency.
     pub fn set_version_req(&mut self, req: VersionReq) -> &mut Dependency {
         Rc::make_mut(&mut self.inner).req = req;
         self
@@ -362,7 +362,7 @@ impl Dependency {
         self
     }
 
-    /// Lock this dependency to depending on the specified package id
+    /// Locks this dependency to depending on the specified package ID.
     pub fn lock_to(&mut self, id: PackageId) -> &mut Dependency {
         assert_eq!(self.inner.source_id, id.source_id());
         assert!(self.inner.req.matches(id.version()));
@@ -377,14 +377,14 @@ impl Dependency {
             .set_source_id(id.source_id())
     }
 
-    /// Returns whether this is a "locked" dependency, basically whether it has
+    /// Returns `true` if this is a "locked" dependency, basically whether it has
     /// an exact version req.
     pub fn is_locked(&self) -> bool {
         // Kind of a hack to figure this out, but it works!
         self.inner.req.to_string().starts_with('=')
     }
 
-    /// Returns false if the dependency is only used to build the local package.
+    /// Returns `false` if the dependency is only used to build the local package.
     pub fn is_transitive(&self) -> bool {
         match self.inner.kind {
             Kind::Normal | Kind::Build => true,
@@ -403,7 +403,7 @@ impl Dependency {
         self.inner.optional
     }
 
-    /// Returns true if the default features of the dependency are requested.
+    /// Returns `true` if the default features of the dependency are requested.
     pub fn uses_default_features(&self) -> bool {
         self.inner.default_features
     }
@@ -412,17 +412,17 @@ impl Dependency {
         &self.inner.features
     }
 
-    /// Returns true if the package (`sum`) can fulfill this dependency request.
+    /// Returns `true` if the package (`sum`) can fulfill this dependency request.
     pub fn matches(&self, sum: &Summary) -> bool {
         self.matches_id(sum.package_id())
     }
 
-    /// Returns true if the package (`sum`) can fulfill this dependency request.
+    /// Returns `true` if the package (`sum`) can fulfill this dependency request.
     pub fn matches_ignoring_source(&self, id: PackageId) -> bool {
         self.package_name() == id.name() && self.version_req().matches(id.version())
     }
 
-    /// Returns true if the package (`id`) can fulfill this dependency request.
+    /// Returns `true` if the package (`id`) can fulfill this dependency request.
     pub fn matches_id(&self, id: PackageId) -> bool {
         self.inner.name == id.name()
             && (self.inner.only_match_name

@@ -1,13 +1,13 @@
-use crate::support;
 use std::fs::{self, File};
 use std::io::Read;
 use std::str;
+
+use glob::glob;
 
 use crate::support::paths::CargoPathExt;
 use crate::support::registry::Package;
 use crate::support::{basic_lib_manifest, basic_manifest, git, project};
 use crate::support::{is_nightly, rustc_host};
-use glob::glob;
 
 #[test]
 fn simple() {
@@ -903,7 +903,7 @@ fn document_only_lib() {
 
 #[test]
 fn plugins_no_use_target() {
-    if !support::is_nightly() {
+    if !is_nightly() {
         return;
     }
     let p = project()
@@ -1001,10 +1001,6 @@ fn doc_virtual_manifest_all_implied() {
 
 #[test]
 fn doc_all_member_dependency_same_name() {
-    if !is_nightly() {
-        // This can be removed once 1.29 is stable (rustdoc --cap-lints).
-        return;
-    }
     let p = project()
         .file(
             "Cargo.toml",
@@ -1169,8 +1165,8 @@ fn doc_workspace_open_binary_and_library() {
 
 #[test]
 fn doc_edition() {
-    if !support::is_nightly() {
-        // Stable rustdoc won't have the edition option.  Remove this once it
+    if !is_nightly() {
+        // Stable rustdoc won't have the edition option. Remove this once it
         // is stabilized.
         return;
     }
@@ -1202,7 +1198,7 @@ fn doc_edition() {
 
 #[test]
 fn doc_target_edition() {
-    if !support::is_nightly() {
+    if !is_nightly() {
         return;
     }
     let p = project()
@@ -1315,7 +1311,7 @@ pub fn foo() {}
 #[test]
 fn doc_cap_lints() {
     if !is_nightly() {
-        // This can be removed once 1.29 is stable (rustdoc --cap-lints).
+        // This can be removed once intra_doc_link_resolution_failure fails on stable.
         return;
     }
     let a = git::new("a", |p| {
@@ -1369,7 +1365,7 @@ fn doc_cap_lints() {
 #[test]
 fn doc_message_format() {
     if !is_nightly() {
-        // This can be removed once 1.30 is stable (rustdoc --error-format stabilized).
+        // This can be removed once intra_doc_link_resolution_failure fails on stable.
         return;
     }
     let p = project().file("src/lib.rs", BAD_INTRA_LINK_LIB).build();
@@ -1399,7 +1395,7 @@ fn doc_message_format() {
 #[test]
 fn short_message_format() {
     if !is_nightly() {
-        // This can be removed once 1.30 is stable (rustdoc --error-format stabilized).
+        // This can be removed once intra_doc_link_resolution_failure fails on stable.
         return;
     }
     let p = project().file("src/lib.rs", BAD_INTRA_LINK_LIB).build();

@@ -216,7 +216,7 @@ pub fn multi_opt(
 ) -> Arg<'static, 'static> {
     // Note that all `.multiple(true)` arguments in Cargo should specify
     // `.number_of_values(1)` as well, so that `--foo val1 val2` is
-    // **not** parsed as `foo` with values ["val1", "val2"].
+    // *not* parsed as `foo` with values ["val1", "val2"].
     // `number_of_values` should become the default in clap 3.
     opt(name, help)
         .value_name(value_name)
@@ -390,7 +390,7 @@ pub trait ArgMatchesExt {
                 validate_package_name(registry, "registry name", "")?;
 
                 if registry == CRATES_IO_REGISTRY {
-                    // If "crates.io" is specified then we just need to return None
+                    // If "crates.io" is specified, then we just need to return `None`,
                     // as that will cause cargo to use crates.io. This is required
                     // for the case where a default alternative registry is used
                     // but the user wants to switch back to crates.io for a single
@@ -405,11 +405,9 @@ pub trait ArgMatchesExt {
     }
 
     fn index(&self, config: &Config) -> CargoResult<Option<String>> {
-        // TODO: Deprecated
-        // remove once it has been decided --host can be removed
-        // We may instead want to repurpose the host flag, as
-        // mentioned in this issue
-        // https://github.com/rust-lang/cargo/issues/4208
+        // TODO: deprecated. Remove once it has been decided `--host` can be removed
+        // We may instead want to repurpose the host flag, as mentioned in issue
+        // rust-lang/cargo#4208.
         let msg = "The flag '--host' is no longer valid.
 
 Previous versions of Cargo accepted this flag, but it is being

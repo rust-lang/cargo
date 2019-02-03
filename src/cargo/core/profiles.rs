@@ -64,7 +64,7 @@ impl Profiles {
         })
     }
 
-    /// Retrieve the profile for a target.
+    /// Retrieves the profile for a target.
     /// `is_member` is whether or not this package is a member of the
     /// workspace.
     pub fn get_profile(
@@ -87,9 +87,9 @@ impl Profiles {
             | CompileMode::Check { .. }
             | CompileMode::Doctest
             | CompileMode::RunCustomBuild => {
-                // Note: RunCustomBuild doesn't normally use this code path.
+                // Note: `RunCustomBuild` doesn't normally use this code path.
                 // `build_unit_profiles` normally ensures that it selects the
-                // ancestor's profile.  However `cargo clean -p` can hit this
+                // ancestor's profile. However, `cargo clean -p` can hit this
                 // path.
                 if release {
                     &self.release
@@ -100,8 +100,7 @@ impl Profiles {
             CompileMode::Doc { .. } => &self.doc,
         };
         let mut profile = maker.get_profile(Some(pkg_id), is_member, unit_for);
-        // `panic` should not be set for tests/benches, or any of their
-        // dependencies.
+        // `panic` should not be set for tests/benches, or any of their dependencies.
         if !unit_for.is_panic_ok() || mode.is_any_test() {
             profile.panic = None;
         }
@@ -109,7 +108,7 @@ impl Profiles {
     }
 
     /// The profile for *running* a `build.rs` script is only used for setting
-    /// a few environment variables.  To ensure proper de-duplication of the
+    /// a few environment variables. To ensure proper de-duplication of the
     /// running `Unit`, this uses a stripped-down profile (so that unrelated
     /// profile flags don't cause `build.rs` to needlessly run multiple
     /// times).
@@ -121,7 +120,7 @@ impl Profiles {
     }
 
     /// This returns a generic base profile. This is currently used for the
-    /// `[Finished]` line.  It is not entirely accurate, since it doesn't
+    /// `[Finished]` line. It is not entirely accurate, since it doesn't
     /// select for the package that was actually built.
     pub fn base_profile(&self, release: bool) -> Profile {
         if release {
@@ -149,10 +148,10 @@ impl Profiles {
 /// An object used for handling the profile override hierarchy.
 ///
 /// The precedence of profiles are (first one wins):
-/// - Profiles in .cargo/config files (using same order as below).
-/// - [profile.dev.overrides.name] - A named package.
-/// - [profile.dev.overrides."*"] - This cannot apply to workspace members.
-/// - [profile.dev.build-override] - This can only apply to `build.rs` scripts
+/// - Profiles in `.cargo/config` files (using same order as below).
+/// - [profile.dev.overrides.name] -- a named package.
+/// - [profile.dev.overrides."*"] -- this cannot apply to workspace members.
+/// - [profile.dev.build-override] -- this can only apply to `build.rs` scripts
 ///   and their dependencies.
 /// - [profile.dev]
 /// - Default (hard-coded) values.
@@ -385,7 +384,7 @@ pub struct Profile {
     pub name: &'static str,
     pub opt_level: InternedString,
     pub lto: Lto,
-    // None = use rustc default
+    // `None` means use rustc default.
     pub codegen_units: Option<u32>,
     pub debuginfo: Option<u32>,
     pub debug_assertions: bool,
@@ -501,7 +500,7 @@ impl Profile {
         }
     }
 
-    /// Compare all fields except `name`, which doesn't affect compilation.
+    /// Compares all fields except `name`, which doesn't affect compilation.
     /// This is necessary for `Unit` deduplication for things like "test" and
     /// "dev" which are essentially the same.
     fn comparable(
@@ -545,19 +544,19 @@ pub enum Lto {
 /// to ensure the target's dependencies have the correct settings.
 #[derive(Copy, Clone, Debug, Eq, PartialEq, Hash)]
 pub struct UnitFor {
-    /// A target for `build.rs` or any of its dependencies.  This enables
+    /// A target for `build.rs` or any of its dependencies. This enables
     /// `build-override` profiles for these targets.
     custom_build: bool,
     /// This is true if it is *allowed* to set the `panic` flag. Currently
     /// this is false for test/bench targets and all their dependencies, and
-    /// "for_host" units such as proc-macro and custom build scripts and their
+    /// "for_host" units such as proc macro and custom build scripts and their
     /// dependencies.
     panic_ok: bool,
 }
 
 impl UnitFor {
-    /// A unit for a normal target/dependency (i.e. not custom build,
-    /// proc-macro/plugin, or test/bench).
+    /// A unit for a normal target/dependency (i.e., not custom build,
+    /// proc macro/plugin, or test/bench).
     pub fn new_normal() -> UnitFor {
         UnitFor {
             custom_build: false,
@@ -573,7 +572,7 @@ impl UnitFor {
         }
     }
 
-    /// A unit for a proc-macro or compiler plugin or their dependencies.
+    /// A unit for a proc macro or compiler plugin or their dependencies.
     pub fn new_compiler() -> UnitFor {
         UnitFor {
             custom_build: false,
@@ -589,7 +588,7 @@ impl UnitFor {
         }
     }
 
-    /// Create a variant based on `for_host` setting.
+    /// Creates a variant based on `for_host` setting.
     ///
     /// When `for_host` is true, this clears `panic_ok` in a sticky fashion so
     /// that all its dependencies also have `panic_ok=false`.
@@ -600,13 +599,13 @@ impl UnitFor {
         }
     }
 
-    /// Returns true if this unit is for a custom build script or one of its
+    /// Returns `true` if this unit is for a custom build script or one of its
     /// dependencies.
     pub fn is_custom_build(self) -> bool {
         self.custom_build
     }
 
-    /// Returns true if this unit is allowed to set the `panic` compiler flag.
+    /// Returns `true` if this unit is allowed to set the `panic` compiler flag.
     pub fn is_panic_ok(self) -> bool {
         self.panic_ok
     }
@@ -631,7 +630,7 @@ impl UnitFor {
     }
 }
 
-/// Profiles loaded from .cargo/config files.
+/// Profiles loaded from `.cargo/config` files.
 #[derive(Clone, Debug, Deserialize, Default)]
 pub struct ConfigProfiles {
     dev: Option<TomlProfile>,

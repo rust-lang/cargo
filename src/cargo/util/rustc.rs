@@ -29,7 +29,7 @@ pub struct Rustc {
 }
 
 impl Rustc {
-    /// Run the compiler at `path` to learn various pieces of information about
+    /// Runs the compiler at `path` to learn various pieces of information about
     /// it, with an optional wrapper.
     ///
     /// If successful this function returns a description of the compiler along
@@ -66,7 +66,7 @@ impl Rustc {
         })
     }
 
-    /// Get a process builder set up to use the found rustc version, with a wrapper if Some
+    /// Gets a process builder set up to use the found rustc version, with a wrapper if `Some`.
     pub fn process(&self) -> ProcessBuilder {
         match self.wrapper {
             Some(ref wrapper) if !wrapper.as_os_str().is_empty() => {

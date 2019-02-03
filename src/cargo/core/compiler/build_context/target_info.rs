@@ -21,9 +21,9 @@ pub struct TargetInfo {
 pub enum FileFlavor {
     /// Not a special file type.
     Normal,
-    /// It is something you can link against (e.g. a library)
+    /// Something you can link against (e.g., a library).
     Linkable,
-    /// It is a piece of external debug information (e.g. *.dSYM and *.pdb)
+    /// Piece of external debug information (e.g., `.dSYM`/`.pdb` file).
     DebugInfo,
 }
 
@@ -31,7 +31,7 @@ pub struct FileType {
     pub flavor: FileFlavor,
     suffix: String,
     prefix: String,
-    // wasm bin target will generate two files in deps such as
+    // Wasm bin target will generate two files in deps such as
     // "web-stuff.js" and "web_stuff.wasm". Note the different usages of
     // "-" and "_". should_replace_hyphens is a flag to indicate that
     // we need to convert the stem "web-stuff" to "web_stuff", so we
@@ -180,7 +180,7 @@ impl TargetInfo {
             should_replace_hyphens: false,
         }];
 
-        // rust-lang/cargo#4500
+        // See rust-lang/cargo#4500.
         if target_triple.ends_with("pc-windows-msvc")
             && crate_type.ends_with("dylib")
             && suffix == ".dll"
@@ -193,7 +193,7 @@ impl TargetInfo {
             })
         }
 
-        // rust-lang/cargo#4535
+        // See rust-lang/cargo#4535.
         if target_triple.starts_with("wasm32-") && crate_type == "bin" && suffix == ".js" {
             ret.push(FileType {
                 suffix: ".wasm".to_string(),
@@ -203,10 +203,10 @@ impl TargetInfo {
             })
         }
 
-        // rust-lang/cargo#4490, rust-lang/cargo#4960
-        //  - only uplift debuginfo for binaries.
-        //    tests are run directly from target/debug/deps/
-        //    and examples are inside target/debug/examples/ which already have symbols next to them
+        // See rust-lang/cargo#4490, rust-lang/cargo#4960.
+        //  - Only uplift debuginfo for binaries.
+        //    Tests are run directly from `target/debug/deps/`
+        //    and examples are inside target/debug/examples/ which already have symbols next to them,
         //    so no need to do anything.
         if *kind == TargetKind::Bin {
             if target_triple.contains("-apple-") {
@@ -249,13 +249,14 @@ impl TargetInfo {
 }
 
 /// Takes rustc output (using specialized command line args), and calculates the file prefix and
-/// suffix for the given crate type, or returns None if the type is not supported. (e.g. for a
-/// rust library like libcargo.rlib, prefix = "lib", suffix = "rlib").
+/// suffix for the given crate type, or returns `None` if the type is not supported. (e.g., for a
+/// Rust library like `libcargo.rlib`, we have prefix "lib" and suffix "rlib").
 ///
 /// The caller needs to ensure that the lines object is at the correct line for the given crate
 /// type: this is not checked.
-// This function can not handle more than 1 file per type (with wasm32-unknown-emscripten, there
-// are 2 files for bin (.wasm and .js))
+//
+// This function can not handle more than one file per type (with wasm32-unknown-emscripten, there
+// are two files for bin (`.wasm` and `.js`)).
 fn parse_crate_type(
     crate_type: &str,
     error: &str,

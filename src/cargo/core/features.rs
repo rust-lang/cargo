@@ -1,4 +1,4 @@
-//! Support for nightly features in Cargo itself
+//! Support for nightly features in Cargo itself.
 //!
 //! This file is the version of `feature_gate.rs` in upstream Rust for Cargo
 //! itself and is intended to be the avenue for which new features in Cargo are
@@ -37,7 +37,7 @@
 //!
 //! 4. Update the unstable documentation at
 //!    `src/doc/src/reference/unstable.md` to include a short description of
-//!    how to use your new feature.  When the feature is stabilized, be sure
+//!    how to use your new feature. When the feature is stabilized, be sure
 //!    that the Cargo Guide or Reference is updated to fully document the
 //!    feature and remove the entry from the Unstable section.
 //!

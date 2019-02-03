@@ -18,6 +18,7 @@ use curl::easy::Easy;
 use lazycell::LazyCell;
 use serde::Deserialize;
 use serde::{de, de::IntoDeserializer};
+use url::Url;
 
 use crate::core::profiles::ConfigProfiles;
 use crate::core::shell::Verbosity;
@@ -29,8 +30,6 @@ use crate::util::Filesystem;
 use crate::util::Rustc;
 use crate::util::ToUrl;
 use crate::util::{paths, validate_package_name};
-use url::Url;
-
 use self::ConfigValue as CV;
 
 /// Configuration information for cargo. This is not specific to a build, it is information
@@ -146,32 +145,32 @@ impl Config {
         Ok(Config::new(shell, cwd, homedir))
     }
 
-    /// The user's cargo home directory (OS-dependent)
+    /// Gets the user's Cargo home directory (OS-dependent).
     pub fn home(&self) -> &Filesystem {
         &self.home_path
     }
 
-    /// The cargo git directory (`<cargo_home>/git`)
+    /// Gets the Cargo Git directory (`<cargo_home>/git`).
     pub fn git_path(&self) -> Filesystem {
         self.home_path.join("git")
     }
 
-    /// The cargo registry index directory (`<cargo_home>/registry/index`)
+    /// Gets the Cargo registry index directory (`<cargo_home>/registry/index`).
     pub fn registry_index_path(&self) -> Filesystem {
         self.home_path.join("registry").join("index")
     }
 
-    /// The cargo registry cache directory (`<cargo_home>/registry/path`)
+    /// Gets the Cargo registry cache directory (`<cargo_home>/registry/path`).
     pub fn registry_cache_path(&self) -> Filesystem {
         self.home_path.join("registry").join("cache")
     }
 
-    /// The cargo registry source directory (`<cargo_home>/registry/src`)
+    /// Gets the Cargo registry source directory (`<cargo_home>/registry/src`).
     pub fn registry_source_path(&self) -> Filesystem {
         self.home_path.join("registry").join("src")
     }
 
-    /// The default cargo registry (`alternative-registry`)
+    /// Gets the default Cargo registry.
     pub fn default_registry(&self) -> CargoResult<Option<String>> {
         Ok(match self.get_string("registry.default")? {
             Some(registry) => Some(registry.val),
@@ -179,19 +178,19 @@ impl Config {
         })
     }
 
-    /// Get a reference to the shell, for e.g. writing error messages
+    /// Gets a reference to the shell, e.g., for writing error messages.
     pub fn shell(&self) -> RefMut<'_, Shell> {
         self.shell.borrow_mut()
     }
 
-    /// Get the path to the `rustdoc` executable
+    /// Gets the path to the `rustdoc` executable.
     pub fn rustdoc(&self) -> CargoResult<&Path> {
         self.rustdoc
             .try_borrow_with(|| self.get_tool("rustdoc"))
             .map(AsRef::as_ref)
     }
 
-    /// Get the path to the `rustc` executable
+    /// Gets the path to the `rustc` executable.
     pub fn rustc(&self, ws: Option<&Workspace<'_>>) -> CargoResult<Rustc> {
         let cache_location = ws.map(|ws| {
             ws.target_dir()
@@ -215,28 +214,28 @@ impl Config {
         )
     }
 
-    /// Get the path to the `cargo` executable
+    /// Gets the path to the `cargo` executable.
     pub fn cargo_exe(&self) -> CargoResult<&Path> {
         self.cargo_exe
             .try_borrow_with(|| {
                 fn from_current_exe() -> CargoResult<PathBuf> {
-                    // Try fetching the path to `cargo` using env::current_exe().
+                    // Try fetching the path to `cargo` using `env::current_exe()`.
                     // The method varies per operating system and might fail; in particular,
-                    // it depends on /proc being mounted on Linux, and some environments
+                    // it depends on `/proc` being mounted on Linux, and some environments
                     // (like containers or chroots) may not have that available.
                     let exe = env::current_exe()?.canonicalize()?;
                     Ok(exe)
                 }
 
                 fn from_argv() -> CargoResult<PathBuf> {
-                    // Grab argv[0] and attempt to resolve it to an absolute path.
-                    // If argv[0] has one component, it must have come from a PATH lookup,
-                    // so probe PATH in that case.
+                    // Grab `argv[0]` and attempt to resolve it to an absolute path.
+                    // If `argv[0]` has one component, it must have come from a `PATH` lookup,
+                    // so probe `PATH` in that case.
                     // Otherwise, it has multiple components and is either:
-                    // - a relative path (e.g. `./cargo`, `target/debug/cargo`), or
-                    // - an absolute path (e.g. `/usr/local/bin/cargo`).
-                    // In either case, Path::canonicalize will return the full absolute path
-                    // to the target if it exists
+                    // - a relative path (e.g., `./cargo`, `target/debug/cargo`), or
+                    // - an absolute path (e.g., `/usr/local/bin/cargo`).
+                    // In either case, `Path::canonicalize` will return the full absolute path
+                    // to the target if it exists.
                     let argv0 = env::args_os()
                         .map(PathBuf::from)
                         .next()
@@ -275,7 +274,7 @@ impl Config {
         self.values.try_borrow_with(|| self.load_values())
     }
 
-    // Note: This is used by RLS, not Cargo.
+    // Note: this is used by RLS, not Cargo.
     pub fn set_values(&self, values: HashMap<String, ConfigValue>) -> CargoResult<()> {
         if self.values.borrow().is_some() {
             failure::bail!("config values already found")
@@ -437,7 +436,7 @@ impl Config {
         if is_path {
             definition.root(self).join(value)
         } else {
-            // A pathless name
+            // A pathless name.
             PathBuf::from(value)
         }
     }
@@ -468,7 +467,7 @@ impl Config {
         Ok(None)
     }
 
-    // NOTE: This does *not* support environment variables.  Use `get` instead
+    // NOTE: this does **not** support environment variables. Use `get` instead
     // if you want that.
     pub fn get_list(&self, key: &str) -> CargoResult<OptValue<Vec<(String, PathBuf)>>> {
         match self.get_cv(key)? {
@@ -514,8 +513,8 @@ impl Config {
         }
     }
 
-    // Recommend use `get` if you want a specific type, such as an unsigned value.
-    // Example:  config.get::<Option<u32>>("some.key")?
+    // Recommended to use `get` if you want a specific type, such as an unsigned value.
+    // Example: `config.get::<Option<u32>>("some.key")?`.
     pub fn get_i64(&self, key: &str) -> CargoResult<OptValue<i64>> {
         self.get_integer(&ConfigKey::from_str(key))
             .map_err(|e| e.into())
@@ -563,8 +562,8 @@ impl Config {
         let verbosity = match (verbose, cfg_verbose, quiet) {
             (Some(true), _, None) | (None, Some(true), None) => Verbosity::Verbose,
 
-            // command line takes precedence over configuration, so ignore the
-            // configuration.
+            // Command line takes precedence over configuration, so ignore the
+            // configuration..
             (None, _, Some(true)) => Verbosity::Quiet,
 
             // Can't pass both at the same time on the command line regardless
@@ -618,7 +617,7 @@ impl Config {
         !self.frozen && !self.locked
     }
 
-    /// Loads configuration from the filesystem
+    /// Loads configuration from the filesystem.
     pub fn load_values(&self) -> CargoResult<HashMap<String, ConfigValue>> {
         self.load_values_from(&self.cwd)
     }
@@ -671,7 +670,8 @@ impl Config {
         )
     }
 
-    /// Loads credentials config from the credentials file into the ConfigValue object, if present.
+    /// Loads credentials config from the credentials file into the `ConfigValue` object, if
+    /// present.
     fn load_credentials(&self, cfg: &mut ConfigValue) -> CargoResult<()> {
         let home_path = self.home_path.clone().into_path_unlocked();
         let credentials = home_path.join("credentials");
@@ -702,7 +702,7 @@ impl Config {
             )
         })?;
 
-        // backwards compatibility for old .cargo/credentials layout
+        // Backwards compatibility for old `.cargo/credentials` layout.
         {
             let value = match value {
                 CV::Table(ref mut value, _) => value,
@@ -719,14 +719,14 @@ impl Config {
             }
         }
 
-        // we want value to override cfg, so swap these
+        // We want value to override `cfg`, so swap these.
         mem::swap(cfg, &mut value);
         cfg.merge(value)?;
 
         Ok(())
     }
 
-    /// Look for a path for `tool` in an environment variable or config path, but return `None`
+    /// Looks for a path for `tool` in an environment variable or config path, and returns `None`
     /// if it's not present.
     fn maybe_get_tool(&self, tool: &str) -> CargoResult<Option<PathBuf>> {
         let var = tool
@@ -754,7 +754,7 @@ impl Config {
         Ok(None)
     }
 
-    /// Look for a path for `tool` in an environment variable or config path, defaulting to `tool`
+    /// Looks for a path for `tool` in an environment variable or config path, defaulting to `tool`
     /// as a path.
     fn get_tool(&self, tool: &str) -> CargoResult<PathBuf> {
         self.maybe_get_tool(tool)
@@ -789,9 +789,10 @@ impl Config {
         self.creation_time
     }
 
-    // Retrieve a config variable.
+    // Retrieves a config variable.
     //
-    // This supports most serde `Deserialize` types.  Examples:
+    // This supports most serde `Deserialize` types. Examples:
+    //
     //     let v: Option<u32> = config.get("some.nested.key")?;
     //     let v: Option<MyStruct> = config.get("some.key")?;
     //     let v: Option<HashMap<String, MyStruct>> = config.get("foo")?;
@@ -924,13 +925,9 @@ impl ConfigError {
 }
 
 impl std::error::Error for ConfigError {
-    // This can be removed once 1.27 is stable.
-    fn description(&self) -> &str {
-        "An error has occurred."
-    }
 }
 
-// Future Note: Currently we cannot override Fail::cause (due to
+// Future note: currently, we cannot override `Fail::cause` (due to
 // specialization) so we have no way to return the underlying causes. In the
 // future, once this limitation is lifted, this should instead implement
 // `cause` and avoid doing the cause formatting here.
@@ -1061,7 +1058,7 @@ impl<'de, 'config> de::Deserializer<'de> for Deserializer<'config> {
         if self.config.has_key(&self.key) {
             visitor.visit_some(self)
         } else {
-            // Treat missing values as None.
+            // Treat missing values as `None`.
             visitor.visit_none()
         }
     }
@@ -1159,21 +1156,21 @@ impl<'config> ConfigMapAccess<'config> {
     ) -> Result<ConfigMapAccess<'config>, ConfigError> {
         let mut set = HashSet::new();
         if let Some(mut v) = config.get_table(&key.to_config())? {
-            // v: Value<HashMap<String, CV>>
+            // `v: Value<HashMap<String, CV>>`
             for (key, _value) in v.val.drain() {
                 set.insert(ConfigKeyPart::CasePart(key));
             }
         }
         if config.cli_unstable().advanced_env {
-            // CARGO_PROFILE_DEV_OVERRIDES_
+            // `CARGO_PROFILE_DEV_OVERRIDES_`
             let env_pattern = format!("{}_", key.to_env());
             for env_key in config.env.keys() {
                 if env_key.starts_with(&env_pattern) {
-                    // CARGO_PROFILE_DEV_OVERRIDES_bar_OPT_LEVEL = 3
+                    // `CARGO_PROFILE_DEV_OVERRIDES_bar_OPT_LEVEL = 3`
                     let rest = &env_key[env_pattern.len()..];
-                    // rest = bar_OPT_LEVEL
+                    // `rest = bar_OPT_LEVEL`
                     let part = rest.splitn(2, '_').next().unwrap();
-                    // part = "bar"
+                    // `part = "bar"`
                     set.insert(ConfigKeyPart::CasePart(part.to_string()));
                 }
             }
@@ -1283,7 +1280,7 @@ impl ConfigSeqAccess {
                     .as_array()
                     .expect("env var was not array");
                 for value in values {
-                    // TODO: support other types
+                    // TODO: support other types.
                     let s = value.as_str().ok_or_else(|| {
                         ConfigError::new(
                             format!("expected string, found {}", value.type_str()),
@@ -1308,7 +1305,7 @@ impl<'de> de::SeqAccess<'de> for ConfigSeqAccess {
         T: de::DeserializeSeed<'de>,
     {
         match self.list_iter.next() {
-            // TODO: Add def to err?
+            // TODO: add `def` to error?
             Some((value, _def)) => seed.deserialize(value.into_deserializer()).map(Some),
             None => Ok(None),
         }
@@ -1316,7 +1313,7 @@ impl<'de> de::SeqAccess<'de> for ConfigSeqAccess {
 }
 
 /// Use with the `get` API to fetch a string that will be converted to a
-/// `PathBuf`.  Relative paths are converted to absolute paths based on the
+/// `PathBuf`. Relative paths are converted to absolute paths based on the
 /// location of the config file.
 #[derive(Debug, Eq, PartialEq, Clone, Deserialize)]
 pub struct ConfigRelativePath(PathBuf);
@@ -1613,7 +1610,7 @@ pub fn save_credentials(cfg: &Config, token: String, registry: Option<String>) -
 
     let mut toml = cargo_toml::parse(&contents, file.path(), cfg)?;
 
-    // move the old token location to the new one
+    // Move the old token location to the new one.
     if let Some(token) = toml.as_table_mut().unwrap().remove("token") {
         let mut map = HashMap::new();
         map.insert("token".to_string(), token);
