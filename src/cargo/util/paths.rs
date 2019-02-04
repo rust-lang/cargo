@@ -45,6 +45,10 @@ pub fn dylib_path_envvar() -> &'static str {
         // find the library in the install path.
         // Setting DYLD_LIBRARY_PATH can easily have unintended
         // consequences.
+        //
+        // Also, DYLD_LIBRARY_PATH appears to have significant performance
+        // penalty starting in 10.13. Cargo's testsuite ran more than twice as
+        // slow with it on CI.
         "DYLD_FALLBACK_LIBRARY_PATH"
     } else {
         "LD_LIBRARY_PATH"
