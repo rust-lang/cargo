@@ -13,7 +13,7 @@ cargo-run - Run the current package
 
 == DESCRIPTION
 
-Build the the main binary of the local package (`src/main.rs`) and run it.
+Run a binary or example of the local package.
 
 All the arguments following the two dashes (`--`) are passed to the binary to
 run. If you're passing arguments to both Cargo and the binary, the ones after
@@ -77,7 +77,7 @@ include::section-exit-status.adoc[]
 
 == EXAMPLES
 
-. Build the local package and run its main target:
+. Build the local package and run its main target (assuming only one binary):
 
     cargo run
 

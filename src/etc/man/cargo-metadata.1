@@ -2,12 +2,12 @@
 .\"     Title: cargo-metadata
 .\"    Author: [see the "AUTHOR(S)" section]
 .\" Generator: Asciidoctor 1.5.8
-.\"      Date: 2018-12-23
+.\"      Date: 2019-01-05
 .\"    Manual: \ \&
 .\"    Source: \ \&
 .\"  Language: English
 .\"
-.TH "CARGO\-METADATA" "1" "2018-12-23" "\ \&" "\ \&"
+.TH "CARGO\-METADATA" "1" "2019-01-05" "\ \&" "\ \&"
 .ie \n(.g .ds Aq \(aq
 .el       .ds Aq '
 .ss \n[.ss] 0
@@ -82,7 +82,9 @@ The output has the following format:
                 {
                     /* The name of the dependency. */
                     "name": "bitflags",
-                    /* The source ID of the dependency. */
+                    /* The source ID of the dependency. May be null, see
+                       description for the package source.
+                    */
                     "source": "registry+https://github.com/rust\-lang/crates.io\-index",
                     /* The version requirement for the dependency.
                        Dependencies without a version requirement have a value of "*".
@@ -105,7 +107,12 @@ The output has the following format:
                     /* The target platform for the dependency.
                        null if not a target dependency.
                     */
-                    "target": "cfg(windows)"
+                    "target": "cfg(windows)",
+                    /* A string of the URL of the registry this dependency is from.
+                       If not specified or null, the dependency is from the default
+                       registry (crates.io).
+                    */
+                    "registry": null
                 }
             ],
             /* Array of Cargo targets. */
