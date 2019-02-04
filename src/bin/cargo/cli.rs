@@ -54,16 +54,25 @@ Run with 'cargo -Z [FLAG] [SUBCOMMAND]'"
     }
 
     if args.is_present("list") {
-        println!("Installed Commands:");
+        let is_quiet = args.is_present("quiet");
+        if !is_quiet {
+            println!("Installed Commands:");
+        }
         for command in list_commands(config) {
             match command {
                 CommandInfo::BuiltIn { name, about } => {
-                    let summary = about.unwrap_or_default();
-                    let summary = summary.lines().next().unwrap_or(&summary); // display only the first line
-                    println!("    {:<20} {}", name, summary)
+                    if is_quiet {
+                        println!("{}", name);
+                    } else {
+                        let summary = about.unwrap_or_default();
+                        let summary = summary.lines().next().unwrap_or(&summary); // display only the first line
+                        println!("    {:<20} {}", name, summary)
+                    }
                 }
                 CommandInfo::External { name, path } => {
-                    if is_verbose {
+                    if is_quiet {
+                        println!("{}", name);
+                    } else if is_verbose {
                         println!("    {:<20} {}", name, path.display())
                     } else {
                         println!("    {}", name)
