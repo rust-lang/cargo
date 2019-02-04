@@ -194,7 +194,7 @@ Some common cargo commands are (see all commands with --list):
     doc         Build this package's and its dependencies' documentation
     new         Create a new cargo package
     init        Create a new cargo package in an existing directory
-    run         Build and execute src/main.rs
+    run         Run a binary or example of the local package
     test        Run the tests
     bench       Run the benchmarks
     update      Update dependencies listed in Cargo.lock
