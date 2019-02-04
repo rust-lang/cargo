@@ -3450,6 +3450,26 @@ test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out
 }
 
 #[test]
+fn can_not_no_run_doc_tests() {
+    let p = project()
+        .file(
+            "src/lib.rs",
+            r#"
+/// ```
+/// let _x = 1 + "foo";
+/// ```
+pub fn foo() -> u8 { 1 }
+"#,
+        )
+        .build();
+
+    p.cargo("test --doc --no-run")
+        .with_status(101)
+        .with_stderr("[ERROR] Can't skip running doc tests with --no-run")
+        .run();
+}
+
+#[test]
 fn test_all_targets_lib() {
     let p = project().file("src/lib.rs", "").build();
 
