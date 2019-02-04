@@ -196,6 +196,17 @@ impl<'cfg> Compilation<'cfg> {
         };
 
         search_path.extend(util::dylib_path().into_iter());
+        if cfg!(target_os = "macos") {
+            // These are the defaults when DYLD_FALLBACK_LIBRARY_PATH isn't
+            // set. Since Cargo is explicitly setting the value, make sure the
+            // defaults still work.
+            if let Ok(home) = env::var("HOME") {
+                search_path.push(PathBuf::from(home).join("lib"));
+            }
+            search_path.push(PathBuf::from("/usr/local/lib"));
+            search_path.push(PathBuf::from("/lib"));
+            search_path.push(PathBuf::from("/usr/lib"));
+        }
         let search_path = join_paths(&search_path, util::dylib_path_envvar())?;
 
         cmd.env(util::dylib_path_envvar(), &search_path);
