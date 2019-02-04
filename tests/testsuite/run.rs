@@ -1136,3 +1136,88 @@ fn default_run_workspace() {
         .with_stdout("run-a")
         .run();
 }
+
+#[test]
+#[cfg(target_os = "macos")]
+fn run_link_system_path_macos() {
+    use crate::support::paths::{self, CargoPathExt};
+    use std::fs;
+    // Check that the default system library path is honored.
+    // First, build a shared library that will be accessed from
+    // DYLD_FALLBACK_LIBRARY_PATH.
+    let p = project()
+        .file(
+            "Cargo.toml",
+            r#"
+            [project]
+            name = "foo"
+            version = "0.0.1"
+            [lib]
+            crate-type = ["cdylib"]
+            "#,
+        )
+        .file(
+            "src/lib.rs",
+            "#[no_mangle] pub extern fn something_shared() {}",
+        )
+        .build();
+    p.cargo("build").run();
+
+    // This is convoluted. Since this test can't modify things in /usr,
+    // this needs to dance around to check that things work.
+    //
+    // The default DYLD_FALLBACK_LIBRARY_PATH is:
+    //      $(HOME)/lib:/usr/local/lib:/lib:/usr/lib
+    //
+    // This will make use of ~/lib in the path, but the default cc link
+    // path is /usr/lib:/usr/local/lib. So first need to build in one
+    // location, and then move it to ~/lib.
+    //
+    // 1. Build with rustc-link-search pointing to libfoo so the initial
+    //    binary can be linked.
+    // 2. Move the library to ~/lib
+    // 3. Run `cargo run` to make sure it can still find the library in
+    //    ~/lib.
+    //
+    // This should be equivalent to having the library in /usr/local/lib.
+    let p2 = project()
+        .at("bar")
+        .file("Cargo.toml", &basic_bin_manifest("bar"))
+        .file(
+            "src/main.rs",
+            r#"
+            extern {
+                fn something_shared();
+            }
+            fn main() {
+                unsafe { something_shared(); }
+            }
+            "#,
+        )
+        .file(
+            "build.rs",
+            &format!(
+                r#"
+            fn main() {{
+                println!("cargo:rustc-link-lib=foo");
+                println!("cargo:rustc-link-search={}");
+            }}
+            "#,
+                p.target_debug_dir().display()
+            ),
+        )
+        .build();
+    p2.cargo("build").run();
+    p2.cargo("test").run();
+
+    let libdir = paths::home().join("lib");
+    fs::create_dir(&libdir).unwrap();
+    fs::rename(
+        p.target_debug_dir().join("libfoo.dylib"),
+        libdir.join("libfoo.dylib"),
+    )
+    .unwrap();
+    p.root().rm_rf();
+    p2.cargo("run").run();
+    p2.cargo("test").run();
+}
