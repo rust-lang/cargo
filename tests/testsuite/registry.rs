@@ -635,7 +635,6 @@ required by package `foo v0.0.1 ([..])`
         .run();
 
     p.cargo("update -p baz")
-        .with_status(0)
         .with_stderr_contains(
             "\
 [UPDATING] `[..]` index

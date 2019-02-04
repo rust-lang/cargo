@@ -1098,10 +1098,7 @@ fn run_workspace() {
 available binaries: a, b",
         )
         .run();
-    p.cargo("run --bin a")
-        .with_status(0)
-        .with_stdout("run-a")
-        .run();
+    p.cargo("run --bin a").with_stdout("run-a").run();
 }
 
 #[test]
@@ -1130,11 +1127,7 @@ fn default_run_workspace() {
         .file("b/src/main.rs", r#"fn main() {println!("run-b");}"#)
         .build();
 
-    p.cargo("run")
-        .masquerade_as_nightly_cargo()
-        .with_status(0)
-        .with_stdout("run-a")
-        .run();
+    p.cargo("run").masquerade_as_nightly_cargo().with_stdout("run-a").run();
 }
 
 #[test]

@@ -713,7 +713,6 @@ fn workspace_different_locations() {
     p.cargo("build").cwd(p.root().join("foo")).run();
     p.cargo("build")
         .cwd(p.root().join("bar"))
-        .with_status(0)
         .with_stderr(
             "\
 [COMPILING] bar [..]
