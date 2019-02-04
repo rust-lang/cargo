@@ -13,7 +13,7 @@ use crate::core::{Dependency, Package, PackageId, Source, SourceId, Summary};
 use crate::ops;
 use crate::util::paths;
 use crate::util::Config;
-use crate::util::{self, internal, CargoResult};
+use crate::util::{internal, CargoResult};
 
 pub struct PathSource<'cfg> {
     source_id: SourceId,
@@ -200,7 +200,7 @@ impl<'cfg> PathSource<'cfg> {
         // matching to paths
 
         let mut filter = |path: &Path| -> CargoResult<bool> {
-            let relative_path = util::without_prefix(path, root).unwrap();
+            let relative_path = path.strip_prefix(root)?;
             let glob_should_package = glob_should_package(relative_path);
             let ignore_should_package = ignore_should_package(relative_path)?;
 
@@ -278,7 +278,7 @@ impl<'cfg> PathSource<'cfg> {
                         Ok(index) => index,
                         Err(err) => return Some(Err(err.into())),
                     };
-                    let path = util::without_prefix(root, cur).unwrap().join("Cargo.toml");
+                    let path = root.strip_prefix(cur).unwrap().join("Cargo.toml");
                     if index.get_path(&path, 0).is_some() {
                         return Some(self.list_files_git(pkg, &repo, filter));
                     }
@@ -325,7 +325,7 @@ impl<'cfg> PathSource<'cfg> {
         });
         let mut opts = git2::StatusOptions::new();
         opts.include_untracked(true);
-        if let Some(suffix) = util::without_prefix(pkg_path, root) {
+        if let Ok(suffix) = pkg_path.strip_prefix(root) {
             opts.pathspec(suffix);
         }
         let statuses = repo.statuses(Some(&mut opts))?;
@@ -376,7 +376,7 @@ impl<'cfg> PathSource<'cfg> {
 
             if is_dir.unwrap_or_else(|| file_path.is_dir()) {
                 warn!("  found submodule {}", file_path.display());
-                let rel = util::without_prefix(&file_path, root).unwrap();
+                let rel = file_path.strip_prefix(root)?;
                 let rel = rel.to_str().ok_or_else(|| {
                     failure::format_err!("invalid utf-8 filename: {}", rel.display())
                 })?;
