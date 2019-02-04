@@ -2074,7 +2074,6 @@ fn ws_warn_unused() {
             .file("a/src/lib.rs", "")
             .build();
         p.cargo("check")
-            .with_status(0)
             .with_stderr_contains(&format!(
                 "\
 [WARNING] {} for the non root package will be ignored, specify {} at the workspace root:
@@ -2111,7 +2110,6 @@ fn ws_warn_path() {
         .build();
 
     p.cargo("check")
-        .with_status(0)
         .with_stderr_contains("[WARNING] [..]/foo/a/Cargo.toml: the cargo feature `edition`[..]")
         .run();
 }

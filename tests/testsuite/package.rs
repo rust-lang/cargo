@@ -1263,10 +1263,7 @@ fn package_with_select_features() {
         )
         .build();
 
-    p.cargo("package --features required")
-        .masquerade_as_nightly_cargo()
-        .with_status(0)
-        .run();
+    p.cargo("package --features required").masquerade_as_nightly_cargo().run();
 }
 
 #[test]
@@ -1295,10 +1292,7 @@ fn package_with_all_features() {
         )
         .build();
 
-    p.cargo("package --all-features")
-        .masquerade_as_nightly_cargo()
-        .with_status(0)
-        .run();
+    p.cargo("package --all-features").masquerade_as_nightly_cargo().run();
 }
 
 #[test]
