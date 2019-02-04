@@ -4628,13 +4628,11 @@ Did you mean `ex1`?",
         .run();
 
     ws.cargo("build -v --lib")
-        .with_status(0)
         .with_stderr_contains("[RUNNING] `rustc [..]a/src/lib.rs[..]")
         .with_stderr_contains("[RUNNING] `rustc [..]b/src/lib.rs[..]")
         .run();
 
     ws.cargo("build -v --example ex1")
-        .with_status(0)
         .with_stderr_contains("[RUNNING] `rustc [..]a/examples/ex1.rs[..]")
         .run();
 }

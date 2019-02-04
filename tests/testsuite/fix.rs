@@ -943,7 +943,6 @@ fn fix_idioms() {
 ";
     p.cargo("fix --edition-idioms --allow-no-vcs")
         .with_stderr(stderr)
-        .with_status(0)
         .run();
 
     assert!(p.read_file("src/lib.rs").contains("Box<dyn Any>"));
@@ -955,7 +954,6 @@ fn idioms_2015_ok() {
 
     p.cargo("fix --edition-idioms --allow-no-vcs")
         .masquerade_as_nightly_cargo()
-        .with_status(0)
         .run();
 }
 
