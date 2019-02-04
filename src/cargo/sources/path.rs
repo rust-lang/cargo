@@ -569,4 +569,6 @@ impl<'cfg> Source for PathSource<'cfg> {
             Err(_) => self.source_id.to_string(),
         }
     }
+
+    fn add_to_yanked_whitelist(&mut self, _pkgs: &[PackageId]) {}
 }

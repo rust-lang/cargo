@@ -238,6 +238,8 @@ impl<'cfg> Source for GitSource<'cfg> {
     fn describe(&self) -> String {
         format!("git repository {}", self.source_id)
     }
+
+    fn add_to_yanked_whitelist(&mut self, _pkgs: &[PackageId]) {}
 }
 
 #[cfg(test)]
