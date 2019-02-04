@@ -69,7 +69,7 @@ pub fn package(ws: &Workspace<'_>, opts: &PackageOpts<'_>) -> CargoResult<Option
         let mut list: Vec<_> = src
             .list_files(pkg)?
             .iter()
-            .map(|file| util::without_prefix(file, root).unwrap().to_path_buf())
+            .map(|file| file.strip_prefix(root).unwrap().to_path_buf())
             .collect();
         if include_lockfile(pkg) {
             list.push("Cargo.lock".into());
@@ -266,7 +266,7 @@ fn check_vcs_file_collision(pkg: &Package, src_files: &[PathBuf]) -> CargoResult
     let vcs_info_path = Path::new(VCS_INFO_FILE);
     let collision = src_files
         .iter()
-        .find(|&p| util::without_prefix(&p, root).unwrap() == vcs_info_path);
+        .find(|&p| p.strip_prefix(root).unwrap() == vcs_info_path);
     if collision.is_some() {
         failure::bail!(
             "Invalid inclusion of reserved file name \
@@ -296,7 +296,7 @@ fn tar(
     let config = ws.config();
     let root = pkg.root();
     for file in src_files.iter() {
-        let relative = util::without_prefix(file, root).unwrap();
+        let relative = file.strip_prefix(root)?;
         check_filename(relative)?;
         let relative = relative.to_str().ok_or_else(|| {
             failure::format_err!("non-utf8 path in source directory: {}", relative.display())

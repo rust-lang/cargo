@@ -13,7 +13,7 @@ pub use self::hex::{hash_u64, short_hash, to_hex};
 pub use self::lev_distance::lev_distance;
 pub use self::lockserver::{LockServer, LockServerClient, LockServerStarted};
 pub use self::paths::{bytes2path, dylib_path, join_paths, path2bytes};
-pub use self::paths::{dylib_path_envvar, normalize_path, without_prefix};
+pub use self::paths::{dylib_path_envvar, normalize_path};
 pub use self::process_builder::{process, ProcessBuilder};
 pub use self::progress::{Progress, ProgressStyle};
 pub use self::read2::read2;
