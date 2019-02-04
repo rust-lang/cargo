@@ -94,11 +94,18 @@ pub fn exec(config: &mut Config, args: &ArgMatches<'_>) -> CliResult {
 
     let mut compile_opts = args.compile_options(config, CompileMode::Test, Some(&ws))?;
 
+    let no_run = args.is_present("no-run");
     let doc = args.is_present("doc");
     if doc {
         if let CompileFilter::Only { .. } = compile_opts.filter {
             return Err(CliError::new(
                 failure::format_err!("Can't mix --doc with other target selecting options"),
+                101,
+            ));
+        }
+        if no_run {
+            return Err(CliError::new(
+                failure::format_err!("Can't skip running doc tests with --no-run"),
                 101,
             ));
         }
@@ -118,7 +125,7 @@ pub fn exec(config: &mut Config, args: &ArgMatches<'_>) -> CliResult {
     }
 
     let ops = ops::TestOptions {
-        no_run: args.is_present("no-run"),
+        no_run,
         no_fail_fast: args.is_present("no-fail-fast"),
         compile_opts,
     };
