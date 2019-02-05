@@ -29,7 +29,7 @@ matrix:
     # increased every 6 weeks or so when the first PR to use a new feature.
     - env: TARGET=x86_64-unknown-linux-gnu
            ALT=i686-unknown-linux-gnu
-      rust: 1.31.0
+      rust: 1.32.0
       script:
         - rustup toolchain install nightly || travis_terminate 1
         - cargo +nightly generate-lockfile -Z minimal-versions || travis_terminate 1
