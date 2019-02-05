@@ -45,7 +45,7 @@ man:cargo-fix[1]::
     Automatically fix lint warnings reported by rustc.
 
 man:cargo-run[1]::
-    Run a binary of the local package.
+    Run a binary or example of the local package.
 
 man:cargo-rustc[1]::
     Compile a package, and pass extra options to the compiler.
