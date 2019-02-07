@@ -386,61 +386,6 @@ impl<'a, 'cfg> Context<'a, 'cfg> {
         deps
     }
 
-    pub fn incremental_args(&self, unit: &Unit<'_>) -> CargoResult<Vec<String>> {
-        // There's a number of ways to configure incremental compilation right
-        // now. In order of descending priority (first is highest priority) we
-        // have:
-        //
-        // * `CARGO_INCREMENTAL` - this is blanket used unconditionally to turn
-        //   on/off incremental compilation for any cargo subcommand. We'll
-        //   respect this if set.
-        // * `build.incremental` - in `.cargo/config` this blanket key can
-        //   globally for a system configure whether incremental compilation is
-        //   enabled. Note that setting this to `true` will not actually affect
-        //   all builds though. For example a `true` value doesn't enable
-        //   release incremental builds, only dev incremental builds. This can
-        //   be useful to globally disable incremental compilation like
-        //   `CARGO_INCREMENTAL`.
-        // * `profile.dev.incremental` - in `Cargo.toml` specific profiles can
-        //   be configured to enable/disable incremental compilation. This can
-        //   be primarily used to disable incremental when buggy for a package.
-        // * Finally, each profile has a default for whether it will enable
-        //   incremental compilation or not. Primarily development profiles
-        //   have it enabled by default while release profiles have it disabled
-        //   by default.
-        let global_cfg = self
-            .bcx
-            .config
-            .get_bool("build.incremental")?
-            .map(|c| c.val);
-        let incremental = match (
-            self.bcx.incremental_env,
-            global_cfg,
-            unit.profile.incremental,
-        ) {
-            (Some(v), _, _) => v,
-            (None, Some(false), _) => false,
-            (None, _, other) => other,
-        };
-
-        if !incremental {
-            return Ok(Vec::new());
-        }
-
-        // Only enable incremental compilation for sources the user can
-        // modify (aka path sources). For things that change infrequently,
-        // non-incremental builds yield better performance in the compiler
-        // itself (aka crates.io / git dependencies)
-        //
-        // (see also https://github.com/rust-lang/cargo/issues/3972)
-        if !unit.pkg.package_id().source_id().is_path() {
-            return Ok(Vec::new());
-        }
-
-        let dir = self.files().layout(unit.kind).incremental().display();
-        Ok(vec!["-C".to_string(), format!("incremental={}", dir)])
-    }
-
     pub fn is_primary_package(&self, unit: &Unit<'a>) -> bool {
         self.primary_packages.contains(&unit.pkg.package_id())
     }

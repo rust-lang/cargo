@@ -123,6 +123,8 @@ target-dir = "target"     # path of where to place all generated artifacts
 rustflags = ["..", ".."]  # custom flags to pass to all compiler invocations
 rustdocflags = ["..", ".."]  # custom flags to pass to rustdoc
 incremental = true        # whether or not to enable incremental compilation
+                          # If `incremental` is not set, then the value from
+                          # the profile is used.
 dep-info-basedir = ".."   # full path for the base directory for targets in depfiles
 
 [term]

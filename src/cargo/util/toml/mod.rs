@@ -473,6 +473,16 @@ impl TomlProfile {
             }
             _ => {}
         }
+
+        if self.incremental == Some(true)
+            && self.lto != None
+            && self.lto != Some(StringOrBool::Bool(false))
+        {
+            warnings.push(format!(
+                "`incremental` setting is ignored for the `{}` profile when `lto` is enabled",
+                name
+            ));
+        }
         Ok(())
     }
 
@@ -1144,7 +1154,7 @@ impl TomlManifest {
             }
         };
         Ok((
-            VirtualManifest::new(replace, patch, workspace_config, profiles),
+            VirtualManifest::new(replace, patch, workspace_config, profiles, features),
             nested_paths,
         ))
     }

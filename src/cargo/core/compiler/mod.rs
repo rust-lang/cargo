@@ -763,6 +763,7 @@ fn build_base_args<'a, 'cfg>(
         overflow_checks,
         rpath,
         ref panic,
+        incremental,
         ..
     } = unit.profile;
     let test = unit.mode.is_any_test();
@@ -905,8 +906,10 @@ fn build_base_args<'a, 'cfg>(
         "linker=",
         bcx.linker(unit.kind).map(|s| s.as_ref()),
     );
-    cmd.args(&cx.incremental_args(unit)?);
-
+    if incremental {
+        let dir = cx.files().layout(unit.kind).incremental().as_os_str();
+        opt(cmd, "-C", "incremental=", Some(dir));
+    }
     Ok(())
 }
 

@@ -37,7 +37,7 @@ fn cargo_fail_with_no_stderr() {
 }
 
 /// Check that the `CARGO_INCREMENTAL` environment variable results in
-/// `rustc` getting `-Zincremental` passed to it.
+/// `rustc` getting `-C incremental` passed to it.
 #[test]
 fn cargo_compile_incremental() {
     let p = project()
@@ -99,6 +99,34 @@ fn incremental_profile() {
     p.cargo("build --release -v")
         .env("CARGO_INCREMENTAL", "0")
         .with_stderr_does_not_contain("[..]C incremental=[..]")
+        .run();
+}
+
+#[test]
+fn incremental_profile_lto() {
+    let p = project()
+        .file(
+            "Cargo.toml",
+            r#"
+            [package]
+            name = "foo"
+            version = "0.1.0"
+            authors = []
+
+            [profile.release]
+            incremental = true
+            lto = true
+        "#,
+        )
+        .file("src/main.rs", "fn main() {}")
+        .build();
+
+    p.cargo("build --release -v")
+        .env_remove("CARGO_INCREMENTAL")
+        .with_stderr_does_not_contain("[..]C incremental=[..]")
+        .with_stderr_contains(
+            "[WARNING] `incremental` setting is ignored for the `release` profile when `lto` is enabled"
+        )
         .run();
 }
 

@@ -138,10 +138,7 @@ fn profile_config_validate_errors() {
         .with_status(101)
         .with_stderr(
             "\
-[ERROR] failed to parse manifest at `[CWD]/Cargo.toml`
-
-Caused by:
-  config profile `profile.dev` is not valid
+[ERROR] config profile `profile.dev` is not valid
 
 Caused by:
   `panic` may not be specified in a profile override.
@@ -235,8 +232,7 @@ found profile override specs: bar, bar:0.5.0",
 fn profile_config_all_options() {
     // Ensure all profile options are supported.
     let p = project()
-        .file("Cargo.toml", &basic_lib_manifest("foo"))
-        .file("src/lib.rs", "")
+        .file("src/main.rs", "fn main() {}")
         .file(
             ".cargo/config",
             r#"
@@ -258,10 +254,12 @@ fn profile_config_all_options() {
         .masquerade_as_nightly_cargo()
         .with_stderr(
             "\
+[WARNING] `incremental` setting is ignored [..]
 [COMPILING] foo [..]
 [RUNNING] `rustc --crate-name foo [..] \
             -C opt-level=1 \
             -C panic=abort \
+            -C lto \
             -C codegen-units=2 \
             -C debuginfo=2 \
             -C debug-assertions=on \

@@ -361,6 +361,10 @@ codegen-units = 16 # if > 1 enables parallel code generation which improves
                    # Passes `-C codegen-units`.
 panic = 'unwind'   # panic strategy (`-C panic=...`), can also be 'abort'
 incremental = true # whether or not incremental compilation is enabled
+                   # This can be overridden globally with CARGO_INCREMENTAL
+                   # environment variable or `build.incremental` config
+                   # variable. Incremental cannot be used with `lto`.
+                   # Incremental is only used for path sources.
 overflow-checks = true # use overflow checks for integer arithmetic.
                    # Passes the `-C overflow-checks=...` flag to the compiler.
 
