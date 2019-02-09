@@ -2,7 +2,8 @@ use std::collections::hash_map::HashMap;
 use std::fmt;
 
 use crate::core::{Dependency, Package, PackageId, Summary};
-use crate::util::CargoResult;
+use crate::core::package::PackageSet;
+use crate::util::{CargoResult, Config};
 
 mod source_id;
 
@@ -50,6 +51,16 @@ pub trait Source {
     /// The download method fetches the full package for each name and
     /// version specified.
     fn download(&mut self, package: PackageId) -> CargoResult<MaybePackage>;
+
+    fn download_now(self: Box<Self>, package: PackageId, config: &Config) -> CargoResult<Package>
+    where
+        Self: std::marker::Sized,
+    {
+        let mut sources = SourceMap::new();
+        sources.insert(self);
+        let pkg_set = PackageSet::new(&[package], sources, config)?;
+        Ok(pkg_set.get_one(package)?.clone())
+    }
 
     fn finish_download(&mut self, package: PackageId, contents: Vec<u8>) -> CargoResult<Package>;
 
