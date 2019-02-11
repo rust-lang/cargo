@@ -721,7 +721,7 @@ pub fn search(
         prefix
     }
 
-    let (mut registry, _) = registry(config, None, index, reg, false)?;
+    let (mut registry, source_id) = registry(config, None, index, reg, false)?;
     let (crates, total_crates) = registry
         .search(query, limit)
         .chain_err(|| "failed to retrieve search results from the registry")?;
@@ -762,11 +762,15 @@ pub fn search(
             total_crates - limit
         );
     } else if total_crates > limit && limit >= search_max_limit {
-        println!(
-            "... and {} crates more (go to http://crates.io/search?q={} to see more)",
-            total_crates - limit,
-            percent_encode(query.as_bytes(), QUERY_ENCODE_SET)
-        );
+        let extra = if source_id.is_default_registry() {
+            format!(
+                " (go to http://crates.io/search?q={} to see more)",
+                percent_encode(query.as_bytes(), QUERY_ENCODE_SET)
+            )
+        } else {
+            String::new()
+        };
+        println!("... and {} crates more{}", total_crates - limit, extra);
     }
 
     Ok(())

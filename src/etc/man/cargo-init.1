@@ -2,12 +2,12 @@
 .\"     Title: cargo-init
 .\"    Author: [see the "AUTHOR(S)" section]
 .\" Generator: Asciidoctor 1.5.8
-.\"      Date: 2018-12-20
+.\"      Date: 2019-01-23
 .\"    Manual: \ \&
 .\"    Source: \ \&
 .\"  Language: English
 .\"
-.TH "CARGO\-INIT" "1" "2018-12-20" "\ \&" "\ \&"
+.TH "CARGO\-INIT" "1" "2019-01-23" "\ \&" "\ \&"
 .ie \n(.g .ds Aq \(aq
 .el       .ds Aq '
 .ss \n[.ss] 0
@@ -246,11 +246,15 @@ hg, pijul, or fossil) or do not initialize any version control at all
 .sp
 \fB\-\-registry\fP \fIREGISTRY\fP
 .RS 4
-Alternative registry to use. This sets the \fBpublish\fP field which will
-restrict publishing only to the given registry name.
+This sets the \fBpublish\fP field in \fBCargo.toml\fP to the given registry name
+which will restrict publishing only to that registry.
 .sp
-This option is unstable and available only on the nightly channel and requires
-the \fB\-Z unstable\-options\fP flag to enable.
+Registry names are defined in \c
+.URL "https://doc.rust\-lang.org/cargo/reference/config.html" "Cargo config files" "."
+If not specified, the default registry defined by the \fBregistry.default\fP
+config key is used. If the default registry is not set and \fB\-\-registry\fP is not
+used, the \fBpublish\fP field will not be set which means that publishing will not
+be restricted.
 .RE
 .SS "Display Options"
 .sp

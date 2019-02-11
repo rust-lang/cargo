@@ -49,7 +49,7 @@ CARGO_REGISTRIES_MY_REGISTRY_INDEX=https://my-intranet:8080/git/index
 
 If the registry supports web API access, then packages can be published
 directly to the registry from Cargo. Several of Cargo's commands such as
-`cargo publish` take a `--registry` command-line flag to indicate which
+[`cargo publish`] take a `--registry` command-line flag to indicate which
 registry to use. For example, to publish the package in the current directory:
 
 1. `cargo login --registry=my-registry`
@@ -80,7 +80,7 @@ publish = ["my-registry"]
 The `publish` value may also be `false` to restrict all publishing, which is
 the same as an empty list.
 
-The authentication information saved by `cargo login` is stored in the
+The authentication information saved by [`cargo login`] is stored in the
 `credentials` file in the Cargo home directory (default `$HOME/.cargo`). It
 has a separate table for each registry, for example:
 
@@ -93,7 +93,7 @@ token = "854DvwSlUwEHtIo3kWy6x7UCPKHfzCmy"
 
 A minimal registry can be implemented by having a git repository that contains
 an index, and a server that contains the compressed `.crate` files created by
-`cargo package`. Users won't be able to use Cargo to publish to it, but this
+[`cargo package`]. Users won't be able to use Cargo to publish to it, but this
 may be sufficient for closed environments.
 
 A full-featured registry that supports publishing will additionally need to
@@ -127,8 +127,8 @@ The keys are:
   name and version of the crate to download. If the markers are not present,
   then the value `/{crate}/{version}/download` is appended to the end.
 - `api`: This is the base URL for the web API. This key is optional, and if it
-  is not specified, commands such as `cargo publish` will not work. The web API
-  is described below.
+  is not specified, commands such as [`cargo publish`] will not work. The web
+  API is described below.
 
 The download endpoint should send the `.crate` file for the requested package.
 Cargo supports https, http, and file URLs, HTTP redirects, HTTP1 and HTTP2.
@@ -240,7 +240,8 @@ Cargo includes the `Authorization` header for requests that require
 authentication. The header value is the API token. The server should respond
 with a 403 response code if the token is not valid. Users are expected to
 visit the registry's website to obtain a token, and Cargo can store the token
-using the `cargo login` command, or by passing the token on the command-line.
+using the [`cargo login`] command, or by passing the token on the
+command-line.
 
 Responses use a 200 response code for both success and errors. Cargo looks at
 the JSON response to determine if there was success or failure. Failure
@@ -572,10 +573,13 @@ A successful response includes the JSON object:
 - Endpoint: `/me`
 
 The "login" endpoint is not an actual API request. It exists solely for the
-`cargo login` command to display a URL to instruct a user to visit in a web
+[`cargo login`] command to display a URL to instruct a user to visit in a web
 browser to log in and retrieve an API token.
 
 [Source Replacement]: reference/source-replacement.html
+[`cargo login`]: commands/cargo-login.html
+[`cargo package`]: commands/cargo-package.html
+[`cargo publish`]: commands/cargo-publish.html
 [alphanumeric]: https://doc.rust-lang.org/std/primitive.char.html#method.is_alphanumeric
 [config]: reference/config.html
 [crates.io]: https://crates.io/
