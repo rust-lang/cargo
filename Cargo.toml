@@ -99,7 +99,7 @@ features = [
 
 [dev-dependencies]
 bufstream = "0.1"
-proptest = "0.8.7"
+proptest = "0.9.1"
 
 [[bin]]
 name = "cargo"
