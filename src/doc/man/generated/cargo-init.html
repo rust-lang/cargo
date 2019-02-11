@@ -128,11 +128,14 @@ hg, pijul, or fossil) or do not initialize any version control at all
 </dd>
 <dt class="hdlist1"><strong>--registry</strong> <em>REGISTRY</em></dt>
 <dd>
-<p>Alternative registry to use. This sets the <code>publish</code> field which will
-restrict publishing only to the given registry name.</p>
+<p>This sets the <code>publish</code> field in <code>Cargo.toml</code> to the given registry name
+which will restrict publishing only to that registry.</p>
 <div class="paragraph">
-<p>This option is unstable and available only on the nightly channel and requires
-the <code>-Z unstable-options</code> flag to enable.</p>
+<p>Registry names are defined in <a href="reference/config.html">Cargo config files</a>.
+If not specified, the default registry defined by the <code>registry.default</code>
+config key is used. If the default registry is not set and <code>--registry</code> is not
+used, the <code>publish</code> field will not be set which means that publishing will not
+be restricted.</p>
 </div>
 </dd>
 </dl>

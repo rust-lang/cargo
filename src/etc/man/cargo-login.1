@@ -2,12 +2,12 @@
 .\"     Title: cargo-login
 .\"    Author: [see the "AUTHOR(S)" section]
 .\" Generator: Asciidoctor 1.5.8
-.\"      Date: 2018-12-23
+.\"      Date: 2019-01-23
 .\"    Manual: \ \&
 .\"    Source: \ \&
 .\"  Language: English
 .\"
-.TH "CARGO\-LOGIN" "1" "2018-12-23" "\ \&" "\ \&"
+.TH "CARGO\-LOGIN" "1" "2019-01-23" "\ \&" "\ \&"
 .ie \n(.g .ds Aq \(aq
 .el       .ds Aq '
 .ss \n[.ss] 0
@@ -50,10 +50,10 @@ Take care to keep the token secret, it should not be shared with anyone else.
 .sp
 \fB\-\-registry\fP \fIREGISTRY\fP
 .RS 4
-Alternative registry to use.
-.sp
-This option is unstable and available only on the nightly channel and requires
-the \fB\-Z unstable\-options\fP flag to enable.
+Name of the registry to use. Registry names are defined in \c
+.URL "https://doc.rust\-lang.org/cargo/reference/config.html" "Cargo config files" "."
+If not specified, the default registry is used, which is defined by the
+\fBregistry.default\fP config key which defaults to \fBcrates\-io\fP.
 .RE
 .SS "Display Options"
 .sp

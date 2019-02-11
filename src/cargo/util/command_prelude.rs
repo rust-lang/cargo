@@ -174,7 +174,7 @@ pub trait AppExt: Sized {
     }
 
     fn arg_index(self) -> Self {
-        self._arg(opt("index", "Registry index to upload the package to").value_name("INDEX"))
+        self._arg(opt("index", "Registry index URL to upload the package to").value_name("INDEX"))
             ._arg(
                 opt("host", "DEPRECATED, renamed to '--index'")
                     .value_name("HOST")
@@ -387,12 +387,6 @@ pub trait ArgMatchesExt {
     fn registry(&self, config: &Config) -> CargoResult<Option<String>> {
         match self._value_of("registry") {
             Some(registry) => {
-                if !config.cli_unstable().unstable_options {
-                    return Err(failure::format_err!(
-                        "registry option is an unstable feature and \
-                         requires -Zunstable-options to use."
-                    ));
-                }
                 validate_package_name(registry, "registry name", "")?;
 
                 if registry == CRATES_IO_REGISTRY {

@@ -175,6 +175,15 @@ private in a company.
 publish = false
 ```
 
+The value many also be an array of strings which are registry names that are
+allowed to be published to.
+
+```toml
+[package]
+# ...
+publish = ["some-registry-name"]
+```
+
 #### The `workspace`  field (optional)
 
 The `workspace` field can be used to configure the workspace that this package
@@ -832,11 +841,10 @@ baz = { git = 'https://github.com/example/patched-baz', branch = 'my-branch' }
 ```
 
 The `[patch]` table is made of dependency-like sub-tables. Each key after
-`[patch]` is a URL of the source that's being patched, or `crates-io` if
-you're modifying the https://crates.io registry. In the example above
-`crates-io` could be replaced with a git URL such as
-`https://github.com/rust-lang-nursery/log`; the second `[patch]`
-section in the example uses this to specify a source called `baz`.
+`[patch]` is a URL of the source that is being patched, or the name of a
+registry. The name `crates-io` may be used to override the default registry
+[crates.io]. The first `[patch]` in the example above demonstrates overriding
+[crates.io], and the second `[patch]` demonstrates overriding a git source.
 
 Each entry in these tables is a normal dependency specification, the same as
 found in the `[dependencies]` section of the manifest. The dependencies listed
@@ -856,6 +864,7 @@ dependencies][replace] section of the documentation and [RFC 1969] for the
 technical specification of this feature.
 
 [RFC 1969]: https://github.com/rust-lang/rfcs/pull/1969
+[crates.io]: https://crates.io/
 [replace]: reference/specifying-dependencies.html#overriding-dependencies
 
 ### The `[replace]` Section
