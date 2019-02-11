@@ -419,7 +419,8 @@ pub fn registry_strategy(
         any::<Index>(),
         raw_version_range,
         0..=1,
-        any::<bool>(),
+        Just(false),
+        // TODO: ^ this needs to be set back to `any::<bool>()` and work before public & private dependencies can stabilize
     );
 
     fn order_index(a: Index, b: Index, size: usize) -> (usize, usize) {
@@ -458,28 +459,28 @@ pub fn registry_strategy(
                     let s_last_index = s.len() - 1;
                     let (c, d) = order_index(c, d, s.len());
 
-                dependency_by_pkgid[b].push(dep_req_kind(
-                    &dep_name,
-                    &if c == 0 && d == s_last_index {
-                        "*".to_string()
-                    } else if c == 0 {
-                        format!("<={}", s[d].0)
-                    } else if d == s_last_index {
-                        format!(">={}", s[c].0)
-                    } else if c == d {
-                        format!("={}", s[c].0)
-                    } else {
-                        format!(">={}, <={}", s[c].0, s[d].0)
-                    },
-                    match k {
-                        0 => Kind::Normal,
-                        1 => Kind::Build,
-                        // => Kind::Development, // Development has not impact so don't gen
-                        _ => panic!("bad index for Kind"),
-                    },
-                    p,
-                ))
-            }
+                    dependency_by_pkgid[b].push(dep_req_kind(
+                        &dep_name,
+                        &if c == 0 && d == s_last_index {
+                            "*".to_string()
+                        } else if c == 0 {
+                            format!("<={}", s[d].0)
+                        } else if d == s_last_index {
+                            format!(">={}", s[c].0)
+                        } else if c == d {
+                            format!("={}", s[c].0)
+                        } else {
+                            format!(">={}, <={}", s[c].0, s[d].0)
+                        },
+                        match k {
+                            0 => Kind::Normal,
+                            1 => Kind::Build,
+                            // => Kind::Development, // Development has no impact so don't gen
+                            _ => panic!("bad index for Kind"),
+                        },
+                        p,
+                    ))
+                }
 
                 PrettyPrintRegistry(
                     list_of_pkgid
