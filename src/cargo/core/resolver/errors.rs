@@ -7,7 +7,7 @@ use failure::{Error, Fail};
 use semver;
 
 use super::context::Context;
-use super::types::{Candidate, Conflict, ConflictReason};
+use super::types::{Candidate, ConflictMap, ConflictReason};
 
 /// Error during resolution providing a path of `PackageId`s.
 pub struct ResolveError {
@@ -72,7 +72,7 @@ pub(super) fn activation_error(
     registry: &mut dyn Registry,
     parent: &Summary,
     dep: &Dependency,
-    conflicting_activations: &Conflict,
+    conflicting_activations: &ConflictMap,
     candidates: &[Candidate],
     config: Option<&Config>,
 ) -> ResolveError {

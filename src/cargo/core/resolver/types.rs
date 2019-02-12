@@ -425,7 +425,7 @@ impl ConflictReason {
     }
 }
 
-pub type Conflict = BTreeMap<PackageId, ConflictReason>;
+pub type ConflictMap = BTreeMap<PackageId, ConflictReason>;
 
 pub struct RcVecIter<T> {
     vec: Rc<Vec<T>>,

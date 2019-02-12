@@ -62,7 +62,7 @@ use crate::util::errors::CargoResult;
 use crate::util::profile;
 
 use self::context::{Activations, Context};
-use self::types::{Candidate, Conflict, ConflictReason, DepsFrame, GraphNode};
+use self::types::{Candidate, ConflictMap, ConflictReason, DepsFrame, GraphNode};
 use self::types::{RcVecIter, RegistryQueryer, RemainingDeps, ResolverProgress};
 
 pub use self::encode::{EncodableDependency, EncodablePackageId, EncodableResolve};
@@ -247,7 +247,7 @@ fn activate_deps_loop(
         //
         // This is a map of package ID to a reason why that packaged caused a
         // conflict for us.
-        let mut conflicting_activations = Conflict::new();
+        let mut conflicting_activations = ConflictMap::new();
 
         // When backtracking we don't fully update `conflicting_activations`
         // especially for the cases that we didn't make a backtrack frame in the
@@ -590,28 +590,28 @@ fn activate(
     candidate: Candidate,
     method: &Method<'_>,
 ) -> ActivateResult<Option<(DepsFrame, Duration)>> {
+    let candidate_pid = candidate.summary.package_id();
     if let Some((parent, dep)) = parent {
-        cx.resolve_graph.push(GraphNode::Link(
-            parent.package_id(),
-            candidate.summary.package_id(),
-            dep.clone(),
-        ));
+        let parent_pid = parent.package_id();
+        cx.resolve_graph
+            .push(GraphNode::Link(parent_pid, candidate_pid, dep.clone()));
         Rc::make_mut(
-            cx.parents
-                .link(candidate.summary.package_id(), parent.package_id()),
+            // add a edge from candidate to parent in the parents graph
+            cx.parents.link(candidate_pid, parent_pid),
         )
+        // and associate dep with that edge
         .push(dep.clone());
         let cs: Vec<PackageId> = cx
             .public_dependency
-            .get(&candidate.summary.package_id())
+            .get(&candidate_pid)
             .iter()
             .flat_map(|x| x.values())
             .filter_map(|x| if x.1 { Some(&x.0) } else { None })
-            .chain(Some(candidate.summary.package_id()).iter())
+            .chain(&Some(candidate_pid))
             .cloned()
             .collect();
         for c in cs {
-            let mut stack = vec![(parent.package_id(), dep.is_public())];
+            let mut stack = vec![(parent_pid, dep.is_public())];
             while let Some((p, public)) = stack.pop() {
                 match cx.public_dependency.entry(p).or_default().entry(c.name()) {
                     im_rc::hashmap::Entry::Occupied(mut o) => {
@@ -641,14 +641,14 @@ fn activate(
     let candidate = match candidate.replace {
         Some(replace) => {
             cx.resolve_replacements
-                .push((candidate.summary.package_id(), replace.package_id()));
+                .push((candidate_pid, replace.package_id()));
             if cx.flag_activated(&replace, method)? && activated {
                 return Ok(None);
             }
             trace!(
                 "activating {} (replacing {})",
                 replace.package_id(),
-                candidate.summary.package_id()
+                candidate_pid
             );
             replace
         }
@@ -656,7 +656,7 @@ fn activate(
             if activated {
                 return Ok(None);
             }
-            trace!("activating {}", candidate.summary.package_id());
+            trace!("activating {}", candidate_pid);
             candidate.summary
         }
     };
@@ -680,7 +680,7 @@ struct BacktrackFrame {
     parent: Summary,
     dep: Dependency,
     features: Rc<Vec<InternedString>>,
-    conflicting_activations: Conflict,
+    conflicting_activations: ConflictMap,
 }
 
 /// A helper "iterator" used to extract candidates within a current `Context` of
@@ -727,7 +727,7 @@ impl RemainingCandidates {
     /// original list for the reason listed.
     fn next(
         &mut self,
-        conflicting_prev_active: &mut Conflict,
+        conflicting_prev_active: &mut ConflictMap,
         cx: &Context,
         dep: &Dependency,
         parent: PackageId,
@@ -769,13 +769,18 @@ impl RemainingCandidates {
                     continue;
                 }
             }
+            // We may still have to reject do to a public dependency conflict. If one of any of our
+            // ancestors that can see us already knows about a different crate with this name then
+            // we have to reject this candidate. Additionally this candidate may already have been
+            // activated and have public dependants of its own,
+            // all of witch also need to be checked the same way.
             for &t in cx
                 .public_dependency
                 .get(&b.summary.package_id())
                 .iter()
                 .flat_map(|x| x.values())
                 .filter_map(|x| if x.1 { Some(&x.0) } else { None })
-                .chain(Some(b.summary.package_id()).iter())
+                .chain(&Some(b.summary.package_id()))
             {
                 let mut stack = vec![(parent, dep.is_public())];
                 while let Some((p, public)) = stack.pop() {
@@ -845,7 +850,7 @@ fn find_candidate(
     backtrack_stack: &mut Vec<BacktrackFrame>,
     parent: &Summary,
     backtracked: bool,
-    conflicting_activations: &Conflict,
+    conflicting_activations: &ConflictMap,
 ) -> Option<(Candidate, bool, BacktrackFrame)> {
     while let Some(mut frame) = backtrack_stack.pop() {
         let next = frame.remaining_candidates.next(
@@ -860,13 +865,19 @@ fn find_candidate(
         };
         // When we're calling this method we know that `parent` failed to
         // activate. That means that some dependency failed to get resolved for
-        // whatever reason, and all of those reasons (plus maybe some extras)
-        // are listed in `conflicting_activations`.
+        // whatever reason. Normally, that means that all of those reasons
+        // (plus maybe some extras) are listed in `conflicting_activations`.
         //
         // This means that if all members of `conflicting_activations` are still
         // active in this back up we know that we're guaranteed to not actually
         // make any progress. As a result if we hit this condition we can
         // completely skip this backtrack frame and move on to the next.
+        //
+        // The abnormal situations are things that do not put all of the reasons in `conflicting_activations`:
+        // If we backtracked we do not know how our `conflicting_activations` related to
+        // the cause of that backtrack, so we do not update it.
+        // If we had a PublicDependency conflict, then we do not yet have a compact way to
+        // represent all the parts of the problem, so `conflicting_activations` is incomplete.
         if !backtracked
             && !conflicting_activations
                 .values()

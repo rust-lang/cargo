@@ -12,7 +12,9 @@ use crate::util::CargoResult;
 use crate::util::Graph;
 
 use super::errors::ActivateResult;
-use super::types::{Conflict, ConflictReason, DepInfo, GraphNode, Method, RcList, RegistryQueryer};
+use super::types::{
+    ConflictMap, ConflictReason, DepInfo, GraphNode, Method, RcList, RegistryQueryer,
+};
 
 pub use super::encode::{EncodableDependency, EncodablePackageId, EncodableResolve};
 pub use super::encode::{Metadata, WorkspaceResolve};
@@ -25,13 +27,19 @@ pub use super::resolve::Resolve;
 #[derive(Clone)]
 pub struct Context {
     pub activations: Activations,
+    /// list the features that are activated for each package
     pub resolve_features: im_rc::HashMap<PackageId, Rc<HashSet<InternedString>>>,
+    /// get the package that will be linking to a native library by its links attribute
     pub links: im_rc::HashMap<InternedString, PackageId>,
+    /// for each package the list of names it can see,
+    /// then for each name the exact version that name represents and weather the name is public.
     pub public_dependency:
         im_rc::HashMap<PackageId, im_rc::HashMap<InternedString, (PackageId, bool)>>,
 
     // This is somewhat redundant with the `resolve_graph` that stores the same data,
     //   but for querying in the opposite order.
+    /// a way to look up for a package in activations what packages required it
+    /// and all of the exact deps that it fulfilled.
     pub parents: Graph<PackageId, Rc<Vec<Dependency>>>,
 
     // These are two cheaply-cloneable lists (O(1) clone) which are effectively
@@ -44,6 +52,7 @@ pub struct Context {
     pub warnings: RcList<String>,
 }
 
+/// list all the activated versions of a particular crate name from a source
 pub type Activations = im_rc::HashMap<(InternedString, SourceId), Rc<Vec<Summary>>>;
 
 impl Context {
@@ -155,7 +164,7 @@ impl Context {
     pub fn is_conflicting(
         &self,
         parent: Option<PackageId>,
-        conflicting_activations: &Conflict,
+        conflicting_activations: &ConflictMap,
     ) -> bool {
         conflicting_activations
             .keys()

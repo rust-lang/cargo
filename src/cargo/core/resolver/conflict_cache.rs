@@ -2,7 +2,7 @@ use std::collections::{BTreeMap, HashMap, HashSet};
 
 use log::trace;
 
-use super::types::{Conflict, ConflictReason};
+use super::types::{ConflictMap, ConflictReason};
 use crate::core::resolver::Context;
 use crate::core::{Dependency, PackageId};
 
@@ -10,7 +10,7 @@ use crate::core::{Dependency, PackageId};
 /// efficiently see if any of the stored sets are a subset of a search set.
 enum ConflictStoreTrie {
     /// One of the stored sets.
-    Leaf(Conflict),
+    Leaf(ConflictMap),
     /// A map from an element to a subtrie where
     /// all the sets in the subtrie contains that element.
     Node(BTreeMap<PackageId, ConflictStoreTrie>),
@@ -19,7 +19,11 @@ enum ConflictStoreTrie {
 impl ConflictStoreTrie {
     /// Finds any known set of conflicts, if any,
     /// which are activated in `cx` and pass the `filter` specified?
-    fn find_conflicting(&self, cx: &Context, must_contain: Option<PackageId>) -> Option<&Conflict> {
+    fn find_conflicting(
+        &self,
+        cx: &Context,
+        must_contain: Option<PackageId>,
+    ) -> Option<&ConflictMap> {
         match self {
             ConflictStoreTrie::Leaf(c) => {
                 if must_contain.is_none() {
@@ -53,7 +57,7 @@ impl ConflictStoreTrie {
         }
     }
 
-    fn insert(&mut self, mut iter: impl Iterator<Item = PackageId>, con: Conflict) {
+    fn insert(&mut self, mut iter: impl Iterator<Item = PackageId>, con: ConflictMap) {
         if let Some(pid) = iter.next() {
             if let ConflictStoreTrie::Node(p) = self {
                 p.entry(pid)
@@ -139,7 +143,7 @@ impl ConflictCache {
         cx: &Context,
         dep: &Dependency,
         must_contain: Option<PackageId>,
-    ) -> Option<&Conflict> {
+    ) -> Option<&ConflictMap> {
         let out = self
             .con_from_dep
             .get(dep)?
@@ -153,14 +157,14 @@ impl ConflictCache {
         }
         out
     }
-    pub fn conflicting(&self, cx: &Context, dep: &Dependency) -> Option<&Conflict> {
+    pub fn conflicting(&self, cx: &Context, dep: &Dependency) -> Option<&ConflictMap> {
         self.find_conflicting(cx, dep, None)
     }
 
     /// Adds to the cache a conflict of the form:
     /// `dep` is known to be unresolvable if
     /// all the `PackageId` entries are activated.
-    pub fn insert(&mut self, dep: &Dependency, con: &Conflict) {
+    pub fn insert(&mut self, dep: &Dependency, con: &ConflictMap) {
         if con.values().any(|c| *c == ConflictReason::PublicDependency) {
             // TODO: needs more info for back jumping
             // for now refuse to cache it.
