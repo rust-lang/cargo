@@ -1,6 +1,7 @@
 use crate::command_prelude::*;
 
 use cargo::core::{GitReference, SourceId};
+use cargo::core::compiler::LintLevel;
 use cargo::ops;
 use cargo::util::ToUrl;
 
@@ -83,6 +84,9 @@ pub fn exec(config: &mut Config, args: &ArgMatches<'_>) -> CliResult {
     let mut compile_opts = args.compile_options(config, CompileMode::Build, workspace.as_ref())?;
 
     compile_opts.build_config.release = !args.is_present("debug");
+
+    // Cap lints at warn, so crates with deny or forbid clauses can be installed
+    compile_opts.build_config.cap_lints = Some(LintLevel::Warn);
 
     let krates = args
         .values_of("crate")

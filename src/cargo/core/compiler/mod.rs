@@ -29,7 +29,7 @@ use crate::util::errors::{CargoResult, CargoResultExt, Internal, ProcessError};
 use crate::util::paths;
 use crate::util::{self, machine_message, process, Freshness, ProcessBuilder};
 use crate::util::{internal, join_paths, profile};
-pub use self::build_config::{BuildConfig, CompileMode, MessageFormat};
+pub use self::build_config::{BuildConfig, CompileMode, LintLevel, MessageFormat};
 pub use self::build_context::{BuildContext, FileFlavor, TargetConfig, TargetInfo};
 use self::build_plan::BuildPlan;
 pub use self::compilation::{Compilation, Doctest};
@@ -717,6 +717,15 @@ fn add_cap_lints(bcx: &BuildContext<'_, '_>, unit: &Unit<'_>, cmd: &mut ProcessB
     // don't fail compilation.
     } else if !unit.pkg.package_id().source_id().is_path() {
         cmd.arg("--cap-lints").arg("warn");
+
+    // If we have a BuildConfig-wide lint cap set, use that.
+    } else if let Some(cap_lints) = &bcx.build_config.cap_lints {
+        cmd.arg("--cap-lints").arg(match cap_lints {
+            LintLevel::Allow => "allow",
+            LintLevel::Warn => "warn",
+            LintLevel::Deny => "deny",
+            LintLevel::Forbid => "forbid",
+        });
     }
 }
 

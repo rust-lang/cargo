@@ -29,6 +29,7 @@ pub struct BuildConfig {
     pub extra_rustc_env: Vec<(String, String)>,
     /// Extra args to inject into rustc commands.
     pub extra_rustc_args: Vec<String>,
+    pub cap_lints: Option<LintLevel>,
     pub rustfix_diagnostic_server: RefCell<Option<RustfixDiagnosticServer>>,
 }
 
@@ -91,6 +92,7 @@ impl BuildConfig {
             cargo_as_rustc_wrapper: false,
             extra_rustc_env: Vec::new(),
             extra_rustc_args: Vec::new(),
+            cap_lints: None,
             rustfix_diagnostic_server: RefCell::new(None),
         })
     }
@@ -210,4 +212,9 @@ impl CompileMode {
         ];
         &ALL
     }
+}
+
+#[derive(Debug)]
+pub enum LintLevel {
+    Allow, Warn, Deny, Forbid,
 }
