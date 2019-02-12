@@ -930,17 +930,71 @@ fn publish_with_patch() {
             bar = { path = "bar" }
         "#,
         )
-        .file("src/main.rs", "extern crate bar; fn main() {}")
+        .file(
+            "src/main.rs",
+            "extern crate bar;
+             fn main() {
+                 bar::newfunc();
+             }",
+        )
         .file("bar/Cargo.toml", &basic_manifest("bar", "1.0.0"))
-        .file("bar/src/lib.rs", "")
+        .file("bar/src/lib.rs", "pub fn newfunc() {}")
         .build();
 
     // Check that it works with the patched crate.
     p.cargo("build").run();
 
+    // Check that verify fails with patched crate which has new functionality.
     p.cargo("publish --index")
         .arg(registry_url().to_string())
+        .with_stderr_contains("[..]newfunc[..]")
         .with_status(101)
-        .with_stderr_contains("[ERROR] published crates cannot contain [patch] sections")
         .run();
+
+    // Remove the usage of new functionality and try again.
+    p.change_file("src/main.rs", "extern crate bar; pub fn main() {}");
+
+    p.cargo("publish --index")
+        .arg(registry_url().to_string())
+        .run();
+
+    // Note, use of `registry` in the deps here is an artifact that this
+    // publishes to a fake, local registry that is pretending to be crates.io.
+    // Normal publishes would set it to null.
+    publish::validate_upload(
+        r#"
+        {
+          "authors": [],
+          "badges": {},
+          "categories": [],
+          "deps": [
+            {
+              "default_features": true,
+              "features": [],
+              "kind": "normal",
+              "name": "bar",
+              "optional": false,
+              "registry": "https://github.com/rust-lang/crates.io-index",
+              "target": null,
+              "version_req": "^1.0"
+            }
+          ],
+          "description": "foo",
+          "documentation": null,
+          "features": {},
+          "homepage": null,
+          "keywords": [],
+          "license": "MIT",
+          "license_file": null,
+          "links": null,
+          "name": "foo",
+          "readme": null,
+          "readme_file": null,
+          "repository": null,
+          "vers": "0.0.1"
+          }
+        "#,
+        "foo-0.0.1.crate",
+        &["Cargo.toml", "Cargo.toml.orig", "src/main.rs"],
+    );
 }

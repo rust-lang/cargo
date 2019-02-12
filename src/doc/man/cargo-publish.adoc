@@ -19,7 +19,6 @@ registry. The default registry is https://crates.io. This performs the
 following steps:
 
 . Performs a few checks, including:
-  - No `[patch]` sections are allowed in the manifest.
   - Checks the `package.publish` key in the manifest for restrictions on which
     registries you are allowed to publish to.
 . Create a `.crate` file by following the steps in man:cargo-package[1].
