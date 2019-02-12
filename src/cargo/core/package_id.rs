@@ -155,6 +155,14 @@ impl PackageId {
         PackageId::pure(self.inner.name, self.inner.version.clone(), source)
     }
 
+    pub fn map_source(self, to_replace: SourceId, replace_with: SourceId) -> Self {
+        if self.source_id() == to_replace {
+            self.with_source_id(replace_with)
+        } else {
+            self
+        }
+    }
+
     pub fn stable_hash(self, workspace: &Path) -> PackageIdStableHash<'_> {
         PackageIdStableHash(self, workspace)
     }

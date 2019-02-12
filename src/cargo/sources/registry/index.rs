@@ -1,4 +1,4 @@
-use std::collections::HashMap;
+use std::collections::{HashMap, HashSet};
 use std::path::Path;
 use std::str;
 
@@ -273,6 +273,7 @@ impl<'cfg> RegistryIndex<'cfg> {
         &mut self,
         dep: &Dependency,
         load: &mut dyn RegistryData,
+        yanked_whitelist: &HashSet<PackageId>,
         f: &mut dyn FnMut(Summary),
     ) -> CargoResult<()> {
         let source_id = self.source_id;
@@ -280,7 +281,13 @@ impl<'cfg> RegistryIndex<'cfg> {
         let summaries = self.summaries(name, load)?;
         let summaries = summaries
             .iter()
-            .filter(|&&(_, yanked)| dep.source_id().precise().is_some() || !yanked)
+            .filter(|&(summary, yanked)| {
+                !yanked || {
+                    log::debug!("{:?}", yanked_whitelist);
+                    log::debug!("{:?}", summary.package_id());
+                    yanked_whitelist.contains(&summary.package_id())
+                }
+            })
             .map(|s| s.0.clone());
 
         // Handle `cargo update --precise` here. If specified, our own source
