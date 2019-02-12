@@ -100,6 +100,10 @@ A full-featured registry that supports publishing will additionally need to
 have a web API service that conforms to the API used by Cargo. The web API is
 documented below.
 
+At this time, there is no widely used software for running a custom registry.
+There is interest in documenting projects that implement registry support, or
+existing package caches that add support for Cargo.
+
 ### Index Format
 
 The following defines the format of the index. New features are occasionally
