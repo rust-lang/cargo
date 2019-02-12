@@ -10,59 +10,6 @@ command-line flags.  Options requiring this will be called out below.
 Some unstable features will require you to specify the `cargo-features` key in
 `Cargo.toml`.
 
-### Alternate Registries
-* RFC: [#2141](https://github.com/rust-lang/rfcs/blob/master/text/2141-alternative-registries.md)
-* Tracking Issue: [rust-lang/rust#44931](https://github.com/rust-lang/rust/issues/44931)
-
-Alternate registries allow you to use registries other than crates.io.
-
-The name of a registry is defined in `.cargo/config` under the `registries`
-table:
-
-```toml
-[registries]
-my-registry = { index = "https://my-intranet:8080/git/index" }
-```
-
-Authentication information for alternate registries can be added to
-`.cargo/credentials`:
-
-```toml
-[registries.my-registry]
-token = "api-token"
-```
-
-Inside `Cargo.toml` you can specify which registry a dependency comes from
-using the `registry` key. First you need to include the appropriate
-`cargo-features` at the top of the file:
-
-```toml
-cargo-features = ["alternative-registries"]
-
-[package]
-...
-
-[dependencies]
-other-create = { version = "1.0", registry = "my-registry"}
-```
-
-A `--registry` flag has been added to commands that interact with registries
-such as `publish`, `login`, etc.  Example:
-
-```
-cargo +nightly publish -Z unstable-options --registry my-registry
-```
-
-The `publish` field in `Cargo.toml` has been extended to accept a list of
-registries that will restrict publishing only to those registries.
-
-```toml
-[package]
-...
-publish = ["my-registry"]
-```
-
-
 ### publish-lockfile
 * Original Issue: [#2263](https://github.com/rust-lang/cargo/issues/2263)
 * PR: [#5093](https://github.com/rust-lang/cargo/pull/5093)
