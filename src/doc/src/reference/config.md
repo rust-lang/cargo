@@ -6,7 +6,6 @@ manifest, see the [manifest format](reference/manifest.html).
 
 ### Hierarchical structure
 
-
 Cargo allows local configuration for a particular package as well as global
 configuration, like git. Cargo extends this to a hierarchical strategy.
 If, for example, Cargo were invoked in `/projects/foo/bar/baz`, then the
@@ -17,7 +16,7 @@ following configuration files would be probed for and unified in this order:
 * `/projects/foo/.cargo/config`
 * `/projects/.cargo/config`
 * `/.cargo/config`
-* `$HOME/.cargo/config`
+* `$CARGO_HOME/config` (`$CARGO_HOME` defaults to `$HOME/.cargo`)
 
 With this structure, you can specify configuration per-package, and even
 possibly check it into version control. You can also specify personal defaults
@@ -91,9 +90,16 @@ runner = ".."
 
 # Configuration keys related to the registry
 [registry]
-index = "..."   # URL of the registry index (defaults to the central repository)
-token = "..."   # Access token (found on the central repo’s website)
-default = "..." # Default alternative registry to use (can be overriden with --registry)
+index = "..."   # URL of the registry index (defaults to the index of crates.io)
+default = "..." # Name of the default registry to use (can be overridden with
+                # --registry)
+
+# Configuration keys for registries other than crates.io.
+# `$name` should be the name of the registry, which will be used for
+# dependencies in `Cargo.toml` files and the `--registry` command-line flag.
+# Registry names should only contain alphanumeric characters, `-`, or `_`.
+[registries.$name]
+index = "..."   # URL of the registry index
 
 [http]
 proxy = "host:port" # HTTP proxy to use for HTTP requests (defaults to none)
@@ -160,5 +166,34 @@ tables, cannot be configured through environment variables.
 In addition to the system above, Cargo recognizes a few other specific
 [environment variables][env].
 
+### Credentials
+
+Configuration values with sensitive information are stored in the
+`$CARGO_HOME/credentials` file. This file is automatically created and updated
+by [`cargo login`]. It follows the same format as Cargo config files.
+
+```toml
+[registry]
+token = "..."   # Access token for crates.io
+
+# `$name` should be a registry name (see above for more information about
+# configuring registries).
+[registries.$name]
+token = "..."   # Access token for the named registry
+```
+
+Tokens are used by some Cargo commands such as [`cargo publish`] for
+authenticating with remote registries. Care should be taken to protect the
+tokens and to keep them secret.
+
+As with most other config values, tokens may be specified with environment
+variables. The token for crates.io may be specified with the
+`CARGO_REGISTRY_TOKEN` environment variable. Tokens for other registries may
+be specified with environment variables of the form
+`CARGO_REGISTRIES_NAME_TOKEN` where `NAME` is the name of the registry in all
+capital letters.
+
+[`cargo login`]: commands/cargo-login.html
+[`cargo publish`]: commands/cargo-publish.html
 [env]: reference/environment-variables.html
 [source]: reference/source-replacement.html

@@ -2,12 +2,12 @@
 .\"     Title: cargo-owner
 .\"    Author: [see the "AUTHOR(S)" section]
 .\" Generator: Asciidoctor 1.5.8
-.\"      Date: 2018-12-20
+.\"      Date: 2019-02-05
 .\"    Manual: \ \&
 .\"    Source: \ \&
 .\"  Language: English
 .\"
-.TH "CARGO\-OWNER" "1" "2018-12-20" "\ \&" "\ \&"
+.TH "CARGO\-OWNER" "1" "2019-02-05" "\ \&" "\ \&"
 .ie \n(.g .ds Aq \(aq
 .el       .ds Aq '
 .ss \n[.ss] 0
@@ -72,7 +72,16 @@ List owners of a crate.
 .sp
 \fB\-\-token\fP \fITOKEN\fP
 .RS 4
-API token to use when authenticating.
+API token to use when authenticating. This overrides the token stored in
+the credentials file (which is created by \fBcargo\-login\fP(1)).
+.sp
+.URL "https://doc.rust\-lang.org/cargo/reference/config.html" "Cargo config" " "
+environment variables can be
+used to override the tokens stored in the credentials file. The token for
+crates.io may be specified with the \fBCARGO_REGISTRY_TOKEN\fP environment
+variable. Tokens for other registries may be specified with environment
+variables of the form \fBCARGO_REGISTRIES_NAME_TOKEN\fP where \fBNAME\fP is the name
+of the registry in all capital letters.
 .RE
 .sp
 \fB\-\-index\fP \fIINDEX\fP
@@ -82,10 +91,10 @@ The URL of the registry index to use.
 .sp
 \fB\-\-registry\fP \fIREGISTRY\fP
 .RS 4
-Alternative registry to use.
-.sp
-This option is unstable and available only on the nightly channel and requires
-the \fB\-Z unstable\-options\fP flag to enable.
+Name of the registry to use. Registry names are defined in \c
+.URL "https://doc.rust\-lang.org/cargo/reference/config.html" "Cargo config files" "."
+If not specified, the default registry is used, which is defined by the
+\fBregistry.default\fP config key which defaults to \fBcrates\-io\fP.
 .RE
 .SS "Display Options"
 .sp

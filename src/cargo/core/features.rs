@@ -173,7 +173,7 @@ features! {
         [unstable] test_dummy_unstable: bool,
 
         // Downloading packages from alternative registry indexes.
-        [unstable] alternative_registries: bool,
+        [stable] alternative_registries: bool,
 
         // Using editions
         [stable] edition: bool,

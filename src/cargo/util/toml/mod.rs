@@ -995,14 +995,7 @@ impl TomlManifest {
         };
         let profiles = Profiles::new(me.profile.as_ref(), config, &features, &mut warnings)?;
         let publish = match project.publish {
-            Some(VecStringOrBool::VecString(ref vecstring)) => {
-                features
-                    .require(Feature::alternative_registries())
-                    .chain_err(|| {
-                        "the `publish` manifest key is unstable for anything other than a value of true or false"
-                    })?;
-                Some(vecstring.clone())
-            }
+            Some(VecStringOrBool::VecString(ref vecstring)) => Some(vecstring.clone()),
             Some(VecStringOrBool::Bool(false)) => Some(vec![]),
             None | Some(VecStringOrBool::Bool(true)) => None,
         };
@@ -1410,12 +1403,10 @@ impl DetailedTomlDependency {
             .set_optional(self.optional.unwrap_or(false))
             .set_platform(cx.platform.clone());
         if let Some(registry) = &self.registry {
-            cx.features.require(Feature::alternative_registries())?;
             let registry_id = SourceId::alt_registry(cx.config, registry)?;
             dep.set_registry_id(registry_id);
         }
         if let Some(registry_index) = &self.registry_index {
-            cx.features.require(Feature::alternative_registries())?;
             let url = registry_index.to_url()?;
             let registry_id = SourceId::for_registry(&url)?;
             dep.set_registry_id(registry_id);
