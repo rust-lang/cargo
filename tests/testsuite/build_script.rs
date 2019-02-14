@@ -116,11 +116,7 @@ fn custom_build_env_vars() {
                 assert!(env::var("RUSTC_LINKER").is_err());
             }}
         "#,
-        p.root()
-            .join("target")
-            .join("debug")
-            .join("build")
-            .display()
+        p.root().join("target").join("build").display()
     );
 
     let p = p.file("bar/build.rs", &file_content).build();
@@ -1017,20 +1013,20 @@ fn build_cmd_with_a_build_cmd() {
 [RUNNING] `rustc --crate-name a [..]lib.rs --color never --crate-type lib \
     --emit=dep-info,link -C debuginfo=2 \
     -C metadata=[..] \
-    --out-dir [..]target/debug/deps \
-    -L [..]target/debug/deps`
+    --out-dir [..]target/deps \
+    -L [..]target/deps`
 [COMPILING] foo v0.5.0 ([CWD])
 [RUNNING] `rustc --crate-name build_script_build build.rs --color never --crate-type bin \
     --emit=dep-info,link \
     -C debuginfo=2 -C metadata=[..] --out-dir [..] \
-    -L [..]target/debug/deps \
+    -L [..]target/deps \
     --extern a=[..]liba[..].rlib`
 [RUNNING] `[..]/foo-[..]/build-script-build`
 [RUNNING] `rustc --crate-name foo [..]lib.rs --color never --crate-type lib \
     --emit=dep-info,link -C debuginfo=2 \
     -C metadata=[..] \
     --out-dir [..] \
-    -L [..]target/debug/deps`
+    -L [..]target/deps`
 [FINISHED] dev [unoptimized + debuginfo] target(s) in [..]
 ",
         )
@@ -3525,10 +3521,9 @@ fn _rename_with_link_search_path(cross: bool) {
         p.root()
             .join("target")
             .join(cross_compile::alternate())
-            .join("debug")
             .join("deps")
     } else {
-        p.root().join("target").join("debug").join("deps")
+        p.root().join("target").join("deps")
     };
     let file = format!("{}foo{}", env::consts::DLL_PREFIX, env::consts::DLL_SUFFIX);
     let src = root.join(&file);

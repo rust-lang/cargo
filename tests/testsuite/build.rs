@@ -47,16 +47,12 @@ fn cargo_compile_incremental() {
 
     p.cargo("build -v")
         .env("CARGO_INCREMENTAL", "1")
-        .with_stderr_contains(
-            "[RUNNING] `rustc [..] -C incremental=[..]/target/debug/incremental[..]`\n",
-        )
+        .with_stderr_contains("[RUNNING] `rustc [..] -C incremental=[..]/target/incremental[..]`\n")
         .run();
 
     p.cargo("test -v")
         .env("CARGO_INCREMENTAL", "1")
-        .with_stderr_contains(
-            "[RUNNING] `rustc [..] -C incremental=[..]/target/debug/incremental[..]`\n",
-        )
+        .with_stderr_contains("[RUNNING] `rustc [..] -C incremental=[..]/target/incremental[..]`\n")
         .run();
 }
 
@@ -347,7 +343,7 @@ fn cargo_compile_with_forbidden_bin_target_name() {
             version = "0.0.0"
 
             [[bin]]
-            name = "build"
+            name = "examples"
         "#,
         )
         .build();
@@ -359,7 +355,7 @@ fn cargo_compile_with_forbidden_bin_target_name() {
 [ERROR] failed to parse manifest at `[..]`
 
 Caused by:
-  the binary target name `build` is forbidden
+  the binary target name `examples` is forbidden
 ",
         )
         .run();
@@ -1391,15 +1387,15 @@ fn cargo_default_env_metadata_env_var() {
         -C prefer-dynamic -C debuginfo=2 \
         -C metadata=[..] \
         --out-dir [..] \
-        -L dependency=[CWD]/target/debug/deps`
+        -L dependency=[CWD]/target/deps`
 [COMPILING] foo v0.0.1 ([CWD])
 [RUNNING] `rustc --crate-name foo src/lib.rs --color never --crate-type lib \
         --emit=dep-info,link -C debuginfo=2 \
         -C metadata=[..] \
         -C extra-filename=[..] \
         --out-dir [..] \
-        -L dependency=[CWD]/target/debug/deps \
-        --extern bar=[CWD]/target/debug/deps/{prefix}bar{suffix}`
+        -L dependency=[CWD]/target/deps \
+        --extern bar=[CWD]/target/deps/{prefix}bar{suffix}`
 [FINISHED] dev [unoptimized + debuginfo] target(s) in [..]",
             prefix = env::consts::DLL_PREFIX,
             suffix = env::consts::DLL_SUFFIX,
@@ -1419,15 +1415,15 @@ fn cargo_default_env_metadata_env_var() {
         -C prefer-dynamic -C debuginfo=2 \
         -C metadata=[..] \
         --out-dir [..] \
-        -L dependency=[CWD]/target/debug/deps`
+        -L dependency=[CWD]/target/deps`
 [COMPILING] foo v0.0.1 ([CWD])
 [RUNNING] `rustc --crate-name foo src/lib.rs --color never --crate-type lib \
         --emit=dep-info,link -C debuginfo=2 \
         -C metadata=[..] \
         -C extra-filename=[..] \
         --out-dir [..] \
-        -L dependency=[CWD]/target/debug/deps \
-        --extern bar=[CWD]/target/debug/deps/{prefix}bar-[..]{suffix}`
+        -L dependency=[CWD]/target/deps \
+        --extern bar=[CWD]/target/deps/{prefix}bar-[..]{suffix}`
 [FINISHED] dev [unoptimized + debuginfo] target(s) in [..]
 ",
             prefix = env::consts::DLL_PREFIX,
@@ -1800,8 +1796,8 @@ fn lto_build() {
         -C opt-level=3 \
         -C lto \
         -C metadata=[..] \
-        --out-dir [CWD]/target/release/deps \
-        -L dependency=[CWD]/target/release/deps`
+        --out-dir [CWD]/target/deps \
+        -L dependency=[CWD]/target/deps`
 [FINISHED] release [optimized] target(s) in [..]
 ",
         )
@@ -1819,7 +1815,7 @@ fn verbose_build() {
         --emit=dep-info,link -C debuginfo=2 \
         -C metadata=[..] \
         --out-dir [..] \
-        -L dependency=[CWD]/target/debug/deps`
+        -L dependency=[CWD]/target/deps`
 [FINISHED] dev [unoptimized + debuginfo] target(s) in [..]
 ",
         )
@@ -1838,7 +1834,7 @@ fn verbose_release_build() {
         -C opt-level=3 \
         -C metadata=[..] \
         --out-dir [..] \
-        -L dependency=[CWD]/target/release/deps`
+        -L dependency=[CWD]/target/deps`
 [FINISHED] release [optimized] target(s) in [..]
 ",
         )
@@ -1889,16 +1885,16 @@ fn verbose_release_build_deps() {
         -C opt-level=3 \
         -C metadata=[..] \
         --out-dir [..] \
-        -L dependency=[CWD]/target/release/deps`
+        -L dependency=[CWD]/target/deps`
 [COMPILING] test v0.0.0 ([CWD])
 [RUNNING] `rustc --crate-name test src/lib.rs --color never --crate-type lib \
         --emit=dep-info,link \
         -C opt-level=3 \
         -C metadata=[..] \
         --out-dir [..] \
-        -L dependency=[CWD]/target/release/deps \
-        --extern foo=[CWD]/target/release/deps/{prefix}foo{suffix} \
-        --extern foo=[CWD]/target/release/deps/libfoo.rlib`
+        -L dependency=[CWD]/target/deps \
+        --extern foo=[CWD]/target/deps/{prefix}foo{suffix} \
+        --extern foo=[CWD]/target/deps/libfoo.rlib`
 [FINISHED] release [optimized] target(s) in [..]
 ",
             prefix = env::consts::DLL_PREFIX,
@@ -4001,7 +3997,7 @@ fn cdylib_not_lifted() {
 
     for file in files {
         println!("checking: {}", file);
-        assert!(p.root().join("target/debug/deps").join(&file).is_file());
+        assert!(p.root().join("target/deps").join(&file).is_file());
     }
 }
 

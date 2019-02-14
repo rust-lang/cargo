@@ -19,7 +19,7 @@ fn build_lib_for_foo() {
         --emit=dep-info,link -C debuginfo=2 \
         -C metadata=[..] \
         --out-dir [..] \
-        -L dependency=[CWD]/target/debug/deps`
+        -L dependency=[CWD]/target/deps`
 [FINISHED] dev [unoptimized + debuginfo] target(s) in [..]
 ",
         )
@@ -42,7 +42,7 @@ fn lib() {
         -C debug-assertions=off \
         -C metadata=[..] \
         --out-dir [..] \
-        -L dependency=[CWD]/target/debug/deps`
+        -L dependency=[CWD]/target/deps`
 [FINISHED] dev [unoptimized + debuginfo] target(s) in [..]
 ",
         )
@@ -64,14 +64,14 @@ fn build_main_and_allow_unstable_options() {
         --emit=dep-info,link -C debuginfo=2 \
         -C metadata=[..] \
         --out-dir [..] \
-        -L dependency=[CWD]/target/debug/deps`
+        -L dependency=[CWD]/target/deps`
 [RUNNING] `rustc --crate-name {name} src/main.rs --color never --crate-type bin \
         --emit=dep-info,link -C debuginfo=2 \
         -C debug-assertions \
         -C metadata=[..] \
         --out-dir [..] \
-        -L dependency=[CWD]/target/debug/deps \
-        --extern {name}=[CWD]/target/debug/deps/lib{name}-[..].rlib`
+        -L dependency=[CWD]/target/deps \
+        --extern {name}=[CWD]/target/deps/lib{name}-[..].rlib`
 [FINISHED] dev [unoptimized + debuginfo] target(s) in [..]
 ",
             name = "foo",

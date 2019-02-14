@@ -343,7 +343,7 @@ impl<'a, 'cfg> Context<'a, 'cfg> {
 
         let files = self.files.as_ref().unwrap();
         let layout = files.target.as_ref().unwrap_or(&files.host);
-        self.compilation.root_output = layout.dest().to_path_buf();
+        self.compilation.root_output = layout.root().to_path_buf();
         self.compilation.deps_output = layout.deps().to_path_buf();
         Ok(())
     }

@@ -691,16 +691,16 @@ fn example_with_release_flag() {
         --emit=dep-info,link \
         -C opt-level=3 \
         -C metadata=[..] \
-        --out-dir [CWD]/target/release/deps \
-        -L dependency=[CWD]/target/release/deps`
+        --out-dir [CWD]/target/deps \
+        -L dependency=[CWD]/target/deps`
 [COMPILING] foo v0.0.1 ([CWD])
 [RUNNING] `rustc --crate-name a examples/a.rs --color never --crate-type bin \
         --emit=dep-info,link \
         -C opt-level=3 \
         -C metadata=[..] \
         --out-dir [CWD]/target/release/examples \
-        -L dependency=[CWD]/target/release/deps \
-         --extern bar=[CWD]/target/release/deps/libbar-[..].rlib`
+        -L dependency=[CWD]/target/deps \
+         --extern bar=[CWD]/target/deps/libbar-[..].rlib`
 [FINISHED] release [optimized] target(s) in [..]
 [RUNNING] `target/release/examples/a[EXE]`
 ",
@@ -720,16 +720,16 @@ fast2",
         --emit=dep-info,link \
         -C debuginfo=2 \
         -C metadata=[..] \
-        --out-dir [CWD]/target/debug/deps \
-        -L dependency=[CWD]/target/debug/deps`
+        --out-dir [CWD]/target/deps \
+        -L dependency=[CWD]/target/deps`
 [COMPILING] foo v0.0.1 ([CWD])
 [RUNNING] `rustc --crate-name a examples/a.rs --color never --crate-type bin \
         --emit=dep-info,link \
         -C debuginfo=2 \
         -C metadata=[..] \
         --out-dir [CWD]/target/debug/examples \
-        -L dependency=[CWD]/target/debug/deps \
-         --extern bar=[CWD]/target/debug/deps/libbar-[..].rlib`
+        -L dependency=[CWD]/target/deps \
+         --extern bar=[CWD]/target/deps/libbar-[..].rlib`
 [FINISHED] dev [unoptimized + debuginfo] target(s) in [..]
 [RUNNING] `target/debug/examples/a[EXE]`
 ",

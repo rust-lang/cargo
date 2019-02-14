@@ -22,6 +22,7 @@ pub struct Doctest {
 /// A structure returning the result of a compilation.
 pub struct Compilation<'cfg> {
     /// An array of all tests created during this compilation.
+    /// (package, target_kind, test_name, path_to_test_exe)
     pub tests: Vec<(Package, TargetKind, String, PathBuf)>,
 
     /// An array of all binaries created.

@@ -10,7 +10,7 @@ fn rustdoc_simple() {
 [DOCUMENTING] foo v0.0.1 ([CWD])
 [RUNNING] `rustdoc --crate-name foo src/lib.rs [..]\
         -o [CWD]/target/doc \
-        -L dependency=[CWD]/target/debug/deps`
+        -L dependency=[CWD]/target/deps`
 [FINISHED] dev [unoptimized + debuginfo] target(s) in [..]
 ",
         )
@@ -28,7 +28,7 @@ fn rustdoc_args() {
 [RUNNING] `rustdoc --crate-name foo src/lib.rs [..]\
         -o [CWD]/target/doc \
         --cfg=foo \
-        -L dependency=[CWD]/target/debug/deps`
+        -L dependency=[CWD]/target/deps`
 [FINISHED] dev [unoptimized + debuginfo] target(s) in [..]
 ",
         )
@@ -67,7 +67,7 @@ fn rustdoc_foo_with_bar_dependency() {
 [RUNNING] `rustdoc --crate-name foo src/lib.rs [..]\
         -o [CWD]/target/doc \
         --cfg=foo \
-        -L dependency=[CWD]/target/debug/deps \
+        -L dependency=[CWD]/target/deps \
         --extern [..]`
 [FINISHED] dev [unoptimized + debuginfo] target(s) in [..]
 ",
@@ -105,7 +105,7 @@ fn rustdoc_only_bar_dependency() {
 [RUNNING] `rustdoc --crate-name bar [..]bar/src/lib.rs [..]\
         -o [CWD]/target/doc \
         --cfg=foo \
-        -L dependency=[CWD]/target/debug/deps`
+        -L dependency=[CWD]/target/deps`
 [FINISHED] dev [unoptimized + debuginfo] target(s) in [..]
 ",
         )
@@ -126,7 +126,7 @@ fn rustdoc_same_name_documents_lib() {
 [RUNNING] `rustdoc --crate-name foo src/lib.rs [..]\
         -o [CWD]/target/doc \
         --cfg=foo \
-        -L dependency=[CWD]/target/debug/deps`
+        -L dependency=[CWD]/target/deps`
 [FINISHED] dev [unoptimized + debuginfo] target(s) in [..]
 ",
         )
@@ -168,8 +168,8 @@ fn rustdoc_target() {
 [RUNNING] `rustdoc --crate-name foo src/lib.rs [..]\
     --target x86_64-unknown-linux-gnu \
     -o [CWD]/target/x86_64-unknown-linux-gnu/doc \
-    -L dependency=[CWD]/target/x86_64-unknown-linux-gnu/debug/deps \
-    -L dependency=[CWD]/target/debug/deps`
+    -L dependency=[CWD]/target/x86_64-unknown-linux-gnu/deps \
+    -L dependency=[CWD]/target/deps`
 [FINISHED] dev [unoptimized + debuginfo] target(s) in [..]",
         )
         .run();

@@ -622,21 +622,21 @@ fn check_artifacts() {
     assert!(!p.root().join("target/debug/libfoo.rmeta").is_file());
     assert!(!p.root().join("target/debug/libfoo.rlib").is_file());
     assert!(!p.root().join("target/debug").join(exe("foo")).is_file());
-    assert_glob("target/debug/deps/libfoo-*.rmeta", 2);
+    assert_glob("target/deps/libfoo-*.rmeta", 2);
 
     p.root().join("target").rm_rf();
     p.cargo("check --lib").run();
     assert!(!p.root().join("target/debug/libfoo.rmeta").is_file());
     assert!(!p.root().join("target/debug/libfoo.rlib").is_file());
     assert!(!p.root().join("target/debug").join(exe("foo")).is_file());
-    assert_glob("target/debug/deps/libfoo-*.rmeta", 1);
+    assert_glob("target/deps/libfoo-*.rmeta", 1);
 
     p.root().join("target").rm_rf();
     p.cargo("check --bin foo").run();
     assert!(!p.root().join("target/debug/libfoo.rmeta").is_file());
     assert!(!p.root().join("target/debug/libfoo.rlib").is_file());
     assert!(!p.root().join("target/debug").join(exe("foo")).is_file());
-    assert_glob("target/debug/deps/libfoo-*.rmeta", 2);
+    assert_glob("target/deps/libfoo-*.rmeta", 2);
 
     p.root().join("target").rm_rf();
     p.cargo("check --test t1").run();
@@ -644,8 +644,8 @@ fn check_artifacts() {
     assert!(!p.root().join("target/debug/libfoo.rlib").is_file());
     assert!(!p.root().join("target/debug").join(exe("foo")).is_file());
     assert_glob("target/debug/t1-*", 0);
-    assert_glob("target/debug/deps/libfoo-*.rmeta", 1);
-    assert_glob("target/debug/deps/libt1-*.rmeta", 1);
+    assert_glob("target/deps/libfoo-*.rmeta", 1);
+    assert_glob("target/deps/libt1-*.rmeta", 1);
 
     p.root().join("target").rm_rf();
     p.cargo("check --example ex1").run();
@@ -656,7 +656,7 @@ fn check_artifacts() {
         .join("target/debug/examples")
         .join(exe("ex1"))
         .is_file());
-    assert_glob("target/debug/deps/libfoo-*.rmeta", 1);
+    assert_glob("target/deps/libfoo-*.rmeta", 1);
     assert_glob("target/debug/examples/libex1-*.rmeta", 1);
 
     p.root().join("target").rm_rf();
@@ -665,8 +665,8 @@ fn check_artifacts() {
     assert!(!p.root().join("target/debug/libfoo.rlib").is_file());
     assert!(!p.root().join("target/debug").join(exe("foo")).is_file());
     assert_glob("target/debug/b1-*", 0);
-    assert_glob("target/debug/deps/libfoo-*.rmeta", 1);
-    assert_glob("target/debug/deps/libb1-*.rmeta", 1);
+    assert_glob("target/deps/libfoo-*.rmeta", 1);
+    assert_glob("target/deps/libb1-*.rmeta", 1);
 }
 
 #[test]

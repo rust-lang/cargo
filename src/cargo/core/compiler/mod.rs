@@ -419,6 +419,7 @@ fn link_targets<'a, 'cfg>(
         let path = unit.pkg.manifest().metabuild_path(cx.bcx.ws.target_dir());
         target.set_src_path(TargetSourcePath::Path(path));
     }
+    let workspace_root = bcx.ws.root().to_path_buf();
 
     Ok(Work::new(move |_| {
         // If we're a "root crate", e.g. the target of this compilation, then we
@@ -441,14 +442,14 @@ fn link_targets<'a, 'cfg>(
                 }
             };
             destinations.push(dst.clone());
-            hardlink_or_copy(src, dst)?;
+            hardlink_or_copy(src, dst, &workspace_root)?;
             if let Some(ref path) = output.export_path {
                 let export_dir = export_dir.as_ref().unwrap();
                 if !export_dir.exists() {
                     fs::create_dir_all(export_dir)?;
                 }
 
-                hardlink_or_copy(src, path)?;
+                hardlink_or_copy(src, path, &workspace_root)?;
             }
         }
 
@@ -475,12 +476,15 @@ fn link_targets<'a, 'cfg>(
     }))
 }
 
-fn hardlink_or_copy(src: &Path, dst: &Path) -> CargoResult<()> {
+/// Hardlink (file) or symlink (dir) src to dst if possible, otherwise copy it.
+/// `root` is the workspace root.
+fn hardlink_or_copy(src: &Path, dst: &Path, root: &Path) -> CargoResult<()> {
     debug!("linking {} to {}", src.display(), dst.display());
     if is_same_file(src, dst).unwrap_or(false) {
         return Ok(());
     }
-    if dst.exists() {
+    // Check if file exists. Don't follow symlinks.
+    if dst.symlink_metadata().is_ok() {
         paths::remove_file(&dst)?;
     }
 
@@ -492,9 +496,11 @@ fn hardlink_or_copy(src: &Path, dst: &Path) -> CargoResult<()> {
         #[cfg(windows)]
         use std::os::windows::fs::symlink_dir as symlink;
 
-        let dst_dir = dst.parent().unwrap();
-        let src = if src.starts_with(dst_dir) {
-            src.strip_prefix(dst_dir).unwrap()
+        let src = src.to_path_buf();
+        let src = if src.starts_with(root) && dst.starts_with(root) {
+            // Keep paths within the workspace relative.
+            let dst_dir = dst.parent().unwrap();
+            pathdiff::diff_paths(&src, dst_dir).unwrap_or(src)
         } else {
             src
         };

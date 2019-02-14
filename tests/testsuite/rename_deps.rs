@@ -266,8 +266,8 @@ fn can_run_doc_tests() {
 [DOCTEST] foo
 [RUNNING] `rustdoc --test [CWD]/src/lib.rs \
         [..] \
-        --extern bar=[CWD]/target/debug/deps/libbar-[..].rlib \
-        --extern baz=[CWD]/target/debug/deps/libbar-[..].rlib \
+        --extern bar=[CWD]/target/deps/libbar-[..].rlib \
+        --extern baz=[CWD]/target/deps/libbar-[..].rlib \
         [..]`
 ",
         )

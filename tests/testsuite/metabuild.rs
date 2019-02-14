@@ -463,7 +463,7 @@ fn metabuild_build_plan() {
             "compile_mode": "build",
             "kind": "Host",
             "deps": [],
-            "outputs": ["[..]/target/debug/deps/libmb-[..].rlib"],
+            "outputs": ["[..]/target/deps/libmb-[..].rlib"],
             "links": {},
             "program": "rustc",
             "args": "{...}",
@@ -477,7 +477,7 @@ fn metabuild_build_plan() {
             "compile_mode": "build",
             "kind": "Host",
             "deps": [],
-            "outputs": ["[..]/target/debug/deps/libmb_other-[..].rlib"],
+            "outputs": ["[..]/target/deps/libmb_other-[..].rlib"],
             "links": {},
             "program": "rustc",
             "args": "{...}",
@@ -491,7 +491,7 @@ fn metabuild_build_plan() {
             "compile_mode": "build",
             "kind": "Host",
             "deps": [0, 1],
-            "outputs": ["[..]/target/debug/build/foo-[..]/metabuild_foo-[..][EXE]"],
+            "outputs": ["[..]/target/build/foo-[..]/metabuild_foo-[..][EXE]"],
             "links": "{...}",
             "program": "rustc",
             "args": "{...}",
@@ -507,7 +507,7 @@ fn metabuild_build_plan() {
             "deps": [2],
             "outputs": [],
             "links": {},
-            "program": "[..]/foo/target/debug/build/foo-[..]/metabuild-foo",
+            "program": "[..]/foo/target/build/foo-[..]/metabuild-foo",
             "args": [],
             "env": "{...}",
             "cwd": "[..]"
@@ -519,7 +519,7 @@ fn metabuild_build_plan() {
             "compile_mode": "build",
             "kind": "Host",
             "deps": [3],
-            "outputs": ["[..]/foo/target/debug/deps/libfoo-[..].rlib"],
+            "outputs": ["[..]/foo/target/deps/libfoo-[..].rlib"],
             "links": "{...}",
             "program": "rustc",
             "args": "{...}",
@@ -705,7 +705,7 @@ fn metabuild_json_artifact() {
   "executable": null,
   "features": [],
   "filenames": [
-    "[..]/foo/target/debug/build/foo-[..]/metabuild-foo[EXE]"
+    "[..]/foo/target/build/foo-[..]/metabuild-foo[EXE]"
   ],
   "fresh": false,
   "package_id": "foo [..]",

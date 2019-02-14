@@ -114,7 +114,7 @@ fn doc_deps() {
 
     // Verify that it only emits rmeta for the dependency.
     assert_eq!(
-        glob(&p.root().join("target/debug/**/*.rlib").to_str().unwrap())
+        glob(&p.root().join("target/**/*.rlib").to_str().unwrap())
             .unwrap()
             .count(),
         0
@@ -122,7 +122,7 @@ fn doc_deps() {
     assert_eq!(
         glob(
             &p.root()
-                .join("target/debug/deps/libbar-*.rmeta")
+                .join("target/deps/libbar-*.rmeta")
                 .to_str()
                 .unwrap()
         )

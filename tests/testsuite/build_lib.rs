@@ -15,7 +15,7 @@ fn build_lib_only() {
         --emit=dep-info,link -C debuginfo=2 \
         -C metadata=[..] \
         --out-dir [..] \
-        -L dependency=[CWD]/target/debug/deps`
+        -L dependency=[CWD]/target/deps`
 [FINISHED] dev [unoptimized + debuginfo] target(s) in [..]",
         )
         .run();

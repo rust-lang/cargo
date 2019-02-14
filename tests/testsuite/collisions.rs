@@ -45,7 +45,7 @@ fn collision_dylib() {
         .with_stderr_contains(&format!("\
 [WARNING] output filename collision.
 The lib target `a` in package `b v1.0.0 ([..]/foo/b)` has the same output filename as the lib target `a` in package `a v1.0.0 ([..]/foo/a)`.
-Colliding filename is: [..]/foo/target/debug/deps/{}a{}
+Colliding filename is: [..]/foo/target/deps/{}a{}
 The targets should have unique names.
 Consider changing their names to be unique or compiling them separately.
 This may become a hard error in the future, see https://github.com/rust-lang/cargo/issues/6313

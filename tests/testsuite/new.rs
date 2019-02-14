@@ -146,11 +146,11 @@ fn reserved_name() {
 
 #[test]
 fn reserved_binary_name() {
-    cargo_process("new --bin incremental")
+    cargo_process("new --bin examples")
         .with_status(101)
         .with_stderr(
             "\
-             [ERROR] The name `incremental` cannot be used as a crate name\n\
+             [ERROR] The name `examples` cannot be used as a crate name\n\
              use --name to override crate name",
         )
         .run();

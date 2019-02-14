@@ -230,7 +230,7 @@ fn changing_profiles_caches_targets() {
             "\
 [..]Compiling foo v0.0.1 ([..])
 [FINISHED] dev [unoptimized + debuginfo] target(s) in [..]
-[RUNNING] target[..]debug[..]deps[..]foo-[..][EXE]
+[RUNNING] target/debug/deps/foo-[..][EXE]
 [DOCTEST] foo
 ",
         )
@@ -246,7 +246,7 @@ fn changing_profiles_caches_targets() {
         .with_stderr(
             "\
 [FINISHED] dev [unoptimized + debuginfo] target(s) in [..]
-[RUNNING] target[..]debug[..]deps[..]foo-[..][EXE]
+[RUNNING] target/debug/deps/foo-[..][EXE]
 [DOCTEST] foo
 ",
         )
@@ -1237,7 +1237,7 @@ fn simple_deps_cleaner_does_not_rebuild() {
         .env("RUSTFLAGS", "-C target-cpu=native")
         .with_stderr("[FINISHED] dev [unoptimized + debuginfo] target(s) in [..]")
         .run();
-    simple_deps_cleaner(p.target_debug_dir(), timestamp);
+    simple_deps_cleaner(p.build_dir(), timestamp);
     // This should not recompile!
     p.cargo("build -Z mtime-on-use")
         .masquerade_as_nightly_cargo()
@@ -1332,7 +1332,7 @@ fn fingerprint_cleaner_does_not_rebuild() {
         .env("RUSTFLAGS", "-C target-cpu=native")
         .with_stderr("[FINISHED] dev [unoptimized + debuginfo] target(s) in [..]")
         .run();
-    fingerprint_cleaner(p.target_debug_dir(), timestamp);
+    fingerprint_cleaner(p.build_dir(), timestamp);
     // This should not recompile!
     p.cargo("build -Z mtime-on-use")
         .masquerade_as_nightly_cargo()
