@@ -251,7 +251,7 @@ license-file = "..."
 # Optional specification of badges to be displayed on crates.io.
 #
 # - The badges pertaining to build status that are currently available are
-#   Appveyor, CircleCI, GitLab, and TravisCI.
+#   Appveyor, CircleCI, GitLab, Azure DevOps and TravisCI.
 # - Available badges pertaining to code test coverage are Codecov and
 #   Coveralls.
 # - There are also maintenance-related badges based on isitmaintained.com
@@ -274,6 +274,10 @@ circle-ci = { repository = "...", branch = "master" }
 
 # GitLab: `repository` is required. `branch` is optional; default is `master`
 gitlab = { repository = "...", branch = "master" }
+
+# Azure DevOps: `project` is required. `pipeline` is required. `build` is optional; default is `1`
+# Note: project = `organization/project`, pipeline = `name_of_pipeline`, build = `definitionId`
+azure-devops = { project = "...", pipeline = "...", build="2" }
 
 # Travis CI: `repository` in format "<user>/<project>" is required.
 # `branch` is optional; default is `master`
