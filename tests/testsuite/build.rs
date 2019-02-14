@@ -3954,20 +3954,34 @@ fn run_proper_binary_main_rs_as_foo() {
 }
 
 #[test]
+#[cfg(not(windows))] // We don't have /usr/bin/env on Windows.
 fn rustc_wrapper() {
-    // We don't have /usr/bin/env on Windows.
-    if cfg!(windows) {
-        return;
-    }
-
-    let p = project()
-        .file("Cargo.toml", &basic_bin_manifest("foo"))
-        .file("src/foo.rs", &main_file(r#""i am foo""#, &[]))
-        .build();
-
+    let p = project().file("src/lib.rs", "").build();
     p.cargo("build -v")
         .env("RUSTC_WRAPPER", "/usr/bin/env")
         .with_stderr_contains("[RUNNING] `/usr/bin/env rustc --crate-name foo [..]")
+        .run();
+}
+
+#[test]
+#[cfg(not(windows))]
+fn rustc_wrapper_relative() {
+    let p = project().file("src/lib.rs", "").build();
+    p.cargo("build -v")
+        .env("RUSTC_WRAPPER", "./sccache")
+        .with_status(101)
+        .with_stderr_contains("[..]/foo/./sccache rustc[..]")
+        .run();
+}
+
+#[test]
+#[cfg(not(windows))]
+fn rustc_wrapper_from_path() {
+    let p = project().file("src/lib.rs", "").build();
+    p.cargo("build -v")
+        .env("RUSTC_WRAPPER", "wannabe_sccache")
+        .with_status(101)
+        .with_stderr_contains("[..]`wannabe_sccache rustc [..]")
         .run();
 }
 
