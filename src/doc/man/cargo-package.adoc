@@ -23,6 +23,8 @@ steps:
       will ignore the path key for dependencies in published packages.
 . Create the compressed `.crate` file.
     - The original `Cargo.toml` file is rewritten and normalized.
+    - `[patch]`, `[replace]`, and `[workspace]` sections are removed from the
+      manifest.
     - A `.cargo_vcs_info.json` file is included that contains information
       about the current VCS checkout hash if available (not included with
       `--allow-dirty`).

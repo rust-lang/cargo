@@ -40,6 +40,10 @@ will ignore the path key for dependencies in published packages.</p>
 <p>The original <code>Cargo.toml</code> file is rewritten and normalized.</p>
 </li>
 <li>
+<p><code>[patch]</code>, <code>[replace]</code>, and <code>[workspace]</code> sections are removed from the
+manifest.</p>
+</li>
+<li>
 <p>A <code>.cargo_vcs_info.json</code> file is included that contains information
 about the current VCS checkout hash if available (not included with
 <code>--allow-dirty</code>).</p>

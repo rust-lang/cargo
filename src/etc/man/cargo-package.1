@@ -2,12 +2,12 @@
 .\"     Title: cargo-package
 .\"    Author: [see the "AUTHOR(S)" section]
 .\" Generator: Asciidoctor 1.5.8
-.\"      Date: 2019-01-14
+.\"      Date: 2019-02-13
 .\"    Manual: \ \&
 .\"    Source: \ \&
 .\"  Language: English
 .\"
-.TH "CARGO\-PACKAGE" "1" "2019-01-14" "\ \&" "\ \&"
+.TH "CARGO\-PACKAGE" "1" "2019-02-13" "\ \&" "\ \&"
 .ie \n(.g .ds Aq \(aq
 .el       .ds Aq '
 .ss \n[.ss] 0
@@ -81,6 +81,18 @@ Create the compressed \fB.crate\fP file.
 .  IP \(bu 2.3
 .\}
 The original \fBCargo.toml\fP file is rewritten and normalized.
+.RE
+.sp
+.RS 4
+.ie n \{\
+\h'-04'\(bu\h'+03'\c
+.\}
+.el \{\
+.  sp -1
+.  IP \(bu 2.3
+.\}
+\fB[patch]\fP, \fB[replace]\fP, and \fB[workspace]\fP sections are removed from the
+manifest.
 .RE
 .sp
 .RS 4
