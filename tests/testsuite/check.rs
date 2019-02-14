@@ -195,6 +195,34 @@ fn build_check() {
     foo.cargo("check").run();
 }
 
+// Checks that warnings are displayed even if the project has not changed since the last check/build
+#[test]
+fn build_check_displays_error() {
+    let foo = project()
+        .file(
+            "Cargo.toml",
+            r#"
+            [package]
+            name = "foo"
+            version = "0.0.1"
+            authors = []
+        "#,
+        )
+        .file(
+            "src/main.rs",
+            "use std::default::Default; fn main() {}",
+        )
+        .build();
+
+    foo.cargo("check")
+        .with_stderr_contains("[..]warning: unused import[..]")
+        .run();
+
+    foo.cargo("check")
+        .with_stderr_contains("[..]warning: unused import[..]")
+        .run();
+}
+
 // Checks that where a project has both a lib and a bin, the lib is only checked
 // not built.
 #[test]

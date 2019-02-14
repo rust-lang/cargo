@@ -68,7 +68,11 @@ pub fn exec(config: &mut Config, args: &ArgMatches<'_>) -> CliResult {
         }
     };
     let mode = CompileMode::Check { test };
-    let compile_opts = args.compile_options(config, mode, Some(&ws))?;
+    let mut compile_opts = args.compile_options(config, mode, Some(&ws))?;
+
+    // force rebuild of this module
+    //     in order to show warnings even if the project was previously checked / built
+    compile_opts.build_config.force_rebuild = true;
 
     ops::compile(&ws, &compile_opts)?;
     Ok(())
