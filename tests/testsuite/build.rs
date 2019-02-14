@@ -1172,14 +1172,14 @@ fn incompatible_dependencies() {
             "\
 error: failed to select a version for `bad`.
     ... required by package `qux v0.1.0` which requires `bad >=1.0.1`
-    ... selected to fulfill the requirement `qux = \"^0.1.0\"` from package `foo v0.0.1 ([..])`
+    ... selected to satisfy the requirement `qux = \"^0.1.0\"` from package `foo v0.0.1 ([..])`
 versions that meet the requirements `>= 1.0.1` are: 1.0.2, 1.0.1
 
 all possible versions conflict with previously selected packages.
 
   previously selected package `bad v1.0.0`
-    ... selected to fulfill the requirement `bad = \"= 1.0.0\"` from package `baz v0.1.0`
-    ... selected to fulfill the requirement `baz = \"^0.1.0\"` from package `foo v0.0.1 ([..])`
+    ... selected to satisfy the requirement `bad = \"= 1.0.0\"` from package `baz v0.1.0`
+    ... selected to satisfy the requirement `baz = \"^0.1.0\"` from package `foo v0.0.1 ([..])`
 
 failed to select a version for `bad` which could resolve this conflict",
         )
@@ -1223,12 +1223,12 @@ versions that meet the requirements `>= 1.0.1, <= 2.0.0` are: 2.0.0, 1.0.1
 all possible versions conflict with previously selected packages.
 
   previously selected package `bad v2.0.1`
-    ... selected to fulfill the requirement `bad = \">= 2.0.1\"` from package `baz v0.1.0`
-    ... selected to fulfill the requirement `baz = \"^0.1.0\"` from package `foo v0.0.1 ([..])`
+    ... selected to satisfy the requirement `bad = \">= 2.0.1\"` from package `baz v0.1.0`
+    ... selected to satisfy the requirement `baz = \"^0.1.0\"` from package `foo v0.0.1 ([..])`
 
   previously selected package `bad v1.0.0`
-    ... selected to fulfill the requirement `bad = \"= 1.0.0\"` from package `bar v0.1.0`
-    ... selected to fulfill the requirement `bar = \"^0.1.0\"` from package `foo v0.0.1 ([..])`
+    ... selected to satisfy the requirement `bad = \"= 1.0.0\"` from package `bar v0.1.0`
+    ... selected to satisfy the requirement `bar = \"^0.1.0\"` from package `foo v0.0.1 ([..])`
 
 failed to select a version for `bad` which could resolve this conflict",
         )
@@ -1278,7 +1278,7 @@ fn compile_offline_while_transitive_dep_not_cached() {
 error: no matching package named `baz` found
 location searched: registry `[..]`
 required by package `bar v0.1.0`
-    ... selected to fulfill the requirement `bar = \"= 0.1.0\"` \
+    ... selected to satisfy the requirement `bar = \"= 0.1.0\"` \
 from package `foo v0.0.1 ([CWD])`
 As a reminder, you're using offline mode (-Z offline) \
 which can sometimes cause surprising resolution failures, \
@@ -1690,7 +1690,7 @@ fn self_dependency() {
             "\
 [ERROR] cyclic package dependency: package `test v0.0.0 ([CWD])` depends on itself. Cycle:
 package `test v0.0.0 ([CWD])`
-    ... selected to fulfill the requirement `test = \"*\"` from package `test v0.0.0 ([..]foo)`",
+    ... selected to satisfy the requirement `test = \"*\"` from package `test v0.0.0 ([..]foo)`",
         )
         .run();
 }
@@ -2800,8 +2800,8 @@ fn cyclic_deps_rejected() {
         .with_stderr(
 "[ERROR] cyclic package dependency: package `a v0.0.1 ([CWD]/a)` depends on itself. Cycle:
 package `a v0.0.1 ([CWD]/a)`
-    ... selected to fulfill the requirement `a = \"*\"` from package `foo v0.0.1 ([..]foo)`
-    ... selected to fulfill the requirement `foo = \"*\"` from package `a v0.0.1 ([..]a)`",
+    ... selected to satisfy the requirement `a = \"*\"` from package `foo v0.0.1 ([..]foo)`
+    ... selected to satisfy the requirement `foo = \"*\"` from package `a v0.0.1 ([..]a)`",
         ).run();
 }
 

@@ -586,7 +586,7 @@ impl Links {
                     let req = req.first().unwrap();
                     write!(
                         dep_path_desc,
-                        "\n    ... selected to fulfill the requirement \
+                        "\n    ... selected to satisfy the requirement \
                          `{} = \"{}\"` from package `{}`",
                         req.name_in_toml(),
                         req.version_req(),
