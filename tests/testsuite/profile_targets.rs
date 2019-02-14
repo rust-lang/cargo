@@ -1,4 +1,3 @@
-use crate::support::is_nightly;
 use crate::support::{basic_manifest, project, Project};
 
 // These tests try to exercise exactly which profiles are selected for every
@@ -454,11 +453,6 @@ fn profile_selection_bench() {
 
 #[test]
 fn profile_selection_check_all_targets() {
-    if !is_nightly() {
-        // This can be removed once 1.27 is stable, see below.
-        return;
-    }
-
     let p = all_target_project();
     // check
     // NOTES:
@@ -512,24 +506,15 @@ fn profile_selection_check_all_targets() {
     // See https://github.com/rust-lang/rust/pull/49289 and
     // https://github.com/rust-lang/cargo/issues/3624
     p.cargo("check --all-targets -vv")
-        .with_stderr_unordered(
-            "\
-[FRESH] bar [..]
-[FRESH] bdep [..]
-[FRESH] foo [..]
-[FINISHED] dev [unoptimized + debuginfo] [..]
-",
-        )
+        .with_stderr_contains("[FRESH] bar [..]")
+        .with_stderr_contains("[FRESH] bdep [..]")
+        .with_stderr_contains("[CHECKING] foo [..]")
+        .with_stderr_contains("[FINISHED] dev [unoptimized + debuginfo] [..]")
         .run();
 }
 
 #[test]
 fn profile_selection_check_all_targets_release() {
-    if !is_nightly() {
-        // See note in profile_selection_check_all_targets.
-        return;
-    }
-
     let p = all_target_project();
     // check --release
     // https://github.com/rust-lang/cargo/issues/5218
@@ -559,24 +544,15 @@ fn profile_selection_check_all_targets_release() {
 ").run();
 
     p.cargo("check --all-targets --release -vv")
-        .with_stderr_unordered(
-            "\
-[FRESH] bar [..]
-[FRESH] bdep [..]
-[FRESH] foo [..]
-[FINISHED] release [optimized] [..]
-",
-        )
+        .with_stderr_contains("[FRESH] bar [..]")
+        .with_stderr_contains("[FRESH] bdep [..]")
+        .with_stderr_contains("[CHECKING] foo [..]")
+        .with_stderr_contains("[FINISHED] release [optimized] [..]")
         .run();
 }
 
 #[test]
 fn profile_selection_check_all_targets_test() {
-    if !is_nightly() {
-        // See note in profile_selection_check_all_targets.
-        return;
-    }
-
     let p = all_target_project();
     // check --profile=test
     // NOTES:
@@ -622,14 +598,10 @@ fn profile_selection_check_all_targets_test() {
 ").run();
 
     p.cargo("check --all-targets --profile=test -vv")
-        .with_stderr_unordered(
-            "\
-[FRESH] bar [..]
-[FRESH] bdep [..]
-[FRESH] foo [..]
-[FINISHED] dev [unoptimized + debuginfo] [..]
-",
-        )
+        .with_stderr_contains("[FRESH] bar [..]")
+        .with_stderr_contains("[FRESH] bdep [..]")
+        .with_stderr_contains("[CHECKING] foo [..]")
+        .with_stderr_contains("[FINISHED] dev [unoptimized + debuginfo] [..]")
         .run();
 }
 
