@@ -451,6 +451,7 @@ where
     let mut ssh_agent_attempts = Vec::new();
     let mut any_attempts = false;
     let mut tried_sshkey = false;
+    let mut tried_cred_helper = false;
 
     let mut res = f(&mut |url, username, allowed| {
         any_attempts = true;
@@ -503,7 +504,8 @@ where
         // but we currently don't! Right now the only way we support fetching a
         // plaintext password is through the `credential.helper` support, so
         // fetch that here.
-        if allowed.contains(git2::CredentialType::USER_PASS_PLAINTEXT) {
+        if allowed.contains(git2::CredentialType::USER_PASS_PLAINTEXT) && !tried_cred_helper {
+            tried_cred_helper = true;
             let r = git2::Cred::credential_helper(cfg, url, username);
             cred_helper_bad = Some(r.is_err());
             return r;
