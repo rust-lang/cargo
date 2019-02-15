@@ -593,21 +593,8 @@ fn generate_targets<'a>(
                     requires_features: !required_features_filterable,
                     mode: build_config.mode,
                 }));
-                if build_config.mode == CompileMode::Test {
-                    if let Some(t) = pkg
-                        .targets()
-                        .iter()
-                        .find(|t| t.is_lib() && t.doctested() && t.doctestable())
-                    {
-                        proposals.push(Proposal {
-                            pkg,
-                            target: t,
-                            requires_features: false,
-                            mode: CompileMode::Doctest,
-                        });
-                    }
-                }
             }
+            proposals.extend(list_doc_test_targets(packages, build_config));
         }
         CompileFilter::Only {
             all_targets,
@@ -696,6 +683,9 @@ fn generate_targets<'a>(
                 bench_filter,
                 bench_mode,
             )?);
+            if all_targets {
+                proposals.extend(list_doc_test_targets(packages, build_config))
+            }
         }
     }
 
@@ -785,6 +775,30 @@ fn filter_default_targets(targets: &[Target], mode: CompileMode) -> Vec<&Target>
         }
         CompileMode::Doctest | CompileMode::RunCustomBuild => panic!("Invalid mode {:?}", mode),
     }
+}
+
+fn list_doc_test_targets<'a>(
+    packages: &[&'a Package],
+    build_config: &BuildConfig,
+) -> Vec<Proposal<'a>> {
+    let mut proposals = Vec::new();
+    if build_config.mode == CompileMode::Test {
+        for pkg in packages {
+            if let Some(t) = pkg
+                .targets()
+                .iter()
+                .find(|t| t.is_lib() && t.doctested() && t.doctestable())
+            {
+                proposals.push(Proposal {
+                    pkg,
+                    target: t,
+                    requires_features: false,
+                    mode: CompileMode::Doctest,
+                });
+            }
+        }
+    }
+    proposals
 }
 
 /// Returns a list of proposed targets based on command-line target selection flags.

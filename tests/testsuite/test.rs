@@ -3470,6 +3470,46 @@ pub fn foo() -> u8 { 1 }
 }
 
 #[test]
+fn all_targets_includes_doc_tests() {
+    let p = project()
+        .file(
+            "src/lib.rs",
+            "
+/// ```
+/// assert_eq!(1, 1)
+/// ```
+pub fn foo() -> u8 { 1 }
+",
+        )
+        .build();
+
+    p.cargo("test --all-targets")
+        .with_stderr(
+            "\
+[COMPILING] foo v0.0.1 ([CWD])
+[FINISHED] dev [unoptimized + debuginfo] target(s) in [..]
+[RUNNING] target/debug/deps/foo-[..]
+[DOCTEST] foo
+",
+        )
+        .with_stdout(
+            "
+running 0 tests
+
+test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out
+
+
+running 1 test
+test src/lib.rs - foo (line 2) ... ok
+
+test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out
+
+",
+        )
+        .run();
+}
+
+#[test]
 fn test_all_targets_lib() {
     let p = project().file("src/lib.rs", "").build();
 
@@ -3479,6 +3519,7 @@ fn test_all_targets_lib() {
 [COMPILING] foo [..]
 [FINISHED] dev [..]
 [RUNNING] [..]foo[..]
+[DOCTEST] foo
 ",
         )
         .run();
