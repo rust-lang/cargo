@@ -74,7 +74,7 @@
 //!         $pkgname-$META/
 //!             # Set of source filenames for this package.
 //!             dep-lib-$pkgname-$META
-//!             # Timestamp when this package was last used.
+//!             # Timestamp when this package was last built.
 //!             invoked.timestamp
 //!             # The fingerprint hash.
 //!             lib-$pkgname-$META
