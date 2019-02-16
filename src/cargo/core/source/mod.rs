@@ -104,7 +104,7 @@ pub enum MaybePackage {
 }
 
 impl<'a, T: Source + ?Sized + 'a> Source for Box<T> {
-    /// Forwardss to `Source::source_id`.
+    /// Forwards to `Source::source_id`.
     fn source_id(&self) -> SourceId {
         (**self).source_id()
     }

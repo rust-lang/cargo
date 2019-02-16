@@ -25,7 +25,7 @@ pub fn registry_url() -> Url {
     Url::from_file_path(registry_path()).ok().unwrap()
 }
 /// Gets the path for local web API uploads. Cargo will place the contents of a web API
-/// request here. E.g., `api/v1/crates/new` is the result of publishing a crate.
+/// request here. For example, `api/v1/crates/new` is the result of publishing a crate.
 pub fn api_path() -> PathBuf {
     paths::root().join("api")
 }

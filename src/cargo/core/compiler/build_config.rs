@@ -177,8 +177,8 @@ impl CompileMode {
         }
     }
 
-    /// Returns `true` if this is any type of test (test, benchmark, doctest, or
-    /// check-test).
+    /// Returns `true` if this is any type of test (test, benchmark, doc test, or
+    /// check test).
     pub fn is_any_test(self) -> bool {
         match self {
             CompileMode::Test

@@ -1,3 +1,15 @@
+mod build_config;
+mod build_context;
+mod build_plan;
+mod compilation;
+mod context;
+mod custom_build;
+mod fingerprint;
+mod job;
+mod job_queue;
+mod layout;
+mod output_depinfo;
+
 use std::env;
 use std::ffi::{OsStr, OsString};
 use std::fs;
@@ -17,33 +29,18 @@ use crate::util::errors::{CargoResult, CargoResultExt, Internal, ProcessError};
 use crate::util::paths;
 use crate::util::{self, machine_message, process, Freshness, ProcessBuilder};
 use crate::util::{internal, join_paths, profile};
-
-use self::build_plan::BuildPlan;
-use self::job::{Job, Work};
-use self::job_queue::JobQueue;
-
-use self::output_depinfo::output_depinfo;
-
 pub use self::build_config::{BuildConfig, CompileMode, MessageFormat};
 pub use self::build_context::{BuildContext, FileFlavor, TargetConfig, TargetInfo};
+use self::build_plan::BuildPlan;
 pub use self::compilation::{Compilation, Doctest};
 pub use self::context::{Context, Unit};
 pub use self::custom_build::{BuildMap, BuildOutput, BuildScripts};
+use self::job::{Job, Work};
+use self::job_queue::JobQueue;
 pub use self::layout::is_bad_artifact_name;
+use self::output_depinfo::output_depinfo;
 
-mod build_config;
-mod build_context;
-mod build_plan;
-mod compilation;
-mod context;
-mod custom_build;
-mod fingerprint;
-mod job;
-mod job_queue;
-mod layout;
-mod output_depinfo;
-
-/// Whether an object is for the host arch, or the target arch.
+/// Indicates whether an object is for the host architcture or the target architecture.
 ///
 /// These will be the same unless cross-compiling.
 #[derive(PartialEq, Eq, Hash, Debug, Clone, Copy, PartialOrd, Ord, Serialize)]
@@ -53,7 +50,7 @@ pub enum Kind {
 }
 
 /// A glorified callback for executing calls to rustc. Rather than calling rustc
-/// directly, we'll use an Executor, giving clients an opportunity to intercept
+/// directly, we'll use an `Executor`, giving clients an opportunity to intercept
 /// the build calls.
 pub trait Executor: Send + Sync + 'static {
     /// Called after a rustc process invocation is prepared up-front for a given
@@ -126,7 +123,7 @@ impl Executor for DefaultExecutor {
 
 fn compile<'a, 'cfg: 'a>(
     cx: &mut Context<'a, 'cfg>,
-    jobs: &mut JobQueue<'a>,
+    jobs: &mut JobQueue<'a, 'cfg>,
     plan: &mut BuildPlan,
     unit: &Unit<'a>,
     exec: &Arc<dyn Executor>,

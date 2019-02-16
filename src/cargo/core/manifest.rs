@@ -83,9 +83,9 @@ pub struct ManifestMetadata {
     pub categories: Vec<String>,
     pub license: Option<String>,
     pub license_file: Option<String>,
-    pub description: Option<String>,   // not Markdown
-    pub readme: Option<String>,        // file, not contents
-    pub homepage: Option<String>,      // UEL
+    pub description: Option<String>,   // Not in Markdown
+    pub readme: Option<String>,        // File, not contents
+    pub homepage: Option<String>,      // URL
     pub repository: Option<String>,    // URL
     pub documentation: Option<String>, // URL
     pub badges: BTreeMap<String, BTreeMap<String, String>>,

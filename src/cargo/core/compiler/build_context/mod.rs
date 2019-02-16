@@ -131,7 +131,7 @@ impl<'a, 'cfg> BuildContext<'a, 'cfg> {
 
     /// Gets the host architecture triple.
     ///
-    /// E.g., x86_64-unknown-linux-gnu, would be
+    /// For example, x86_64-unknown-linux-gnu, would be
     /// - machine: x86_64,
     /// - hardware-platform: unknown,
     /// - operating system: linux-gnu.

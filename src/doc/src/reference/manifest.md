@@ -567,7 +567,7 @@ properties:
 * The *root crate*'s `Cargo.toml` contains the `[workspace]` table, but is not
   required to have other configuration.
 * Whenever any crate in the workspace is compiled, output is placed in the
-  *workspace root*. I.e., next to the *root crate*'s `Cargo.toml`.
+  *workspace root* (i.e., next to the *root crate*'s `Cargo.toml`).
 * The lock file for all crates in the workspace resides in the *workspace root*.
 * The `[patch]`, `[replace]` and `[profile.*]` sections in `Cargo.toml`
   are only recognized

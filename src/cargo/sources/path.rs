@@ -210,7 +210,7 @@ impl<'cfg> PathSource<'cfg> {
                         self.config.shell().warn(format!(
                             "Pattern matching for Cargo's include/exclude fields is changing and \
                              file `{}` WILL be excluded in a future Cargo version.\n\
-                             See <https://github.com/rust-lang/cargo/issues/4268> for more\
+                             See <https://github.com/rust-lang/cargo/issues/4268> for more \
                              information.",
                             relative_path.display()
                         ))?;
@@ -218,7 +218,7 @@ impl<'cfg> PathSource<'cfg> {
                         self.config.shell().warn(format!(
                             "Pattern matching for Cargo's include/exclude fields is changing and \
                              file `{}` WILL NOT be included in a future Cargo version.\n\
-                             See <https://github.com/rust-lang/cargo/issues/4268> for more\
+                             See <https://github.com/rust-lang/cargo/issues/4268> for more \
                              information.",
                             relative_path.display()
                         ))?;
@@ -227,7 +227,7 @@ impl<'cfg> PathSource<'cfg> {
                     self.config.shell().warn(format!(
                         "Pattern matching for Cargo's include/exclude fields is changing and \
                          file `{}` WILL NOT be excluded in a future Cargo version.\n\
-                         See <https://github.com/rust-lang/cargo/issues/4268> for more\
+                         See <https://github.com/rust-lang/cargo/issues/4268> for more \
                          information.",
                         relative_path.display()
                     ))?;
@@ -235,7 +235,7 @@ impl<'cfg> PathSource<'cfg> {
                     self.config.shell().warn(format!(
                         "Pattern matching for Cargo's include/exclude fields is changing and \
                          file `{}` WILL be included in a future Cargo version.\n\
-                         See <https://github.com/rust-lang/cargo/issues/4268> for more\
+                         See <https://github.com/rust-lang/cargo/issues/4268> for more \
                          information.",
                         relative_path.display()
                     ))?;

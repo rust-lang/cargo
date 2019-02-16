@@ -231,7 +231,7 @@ fn custom_build_script_rustc_flags() {
         "#,
         ).build();
 
-    // TODO: TEST FAILS BECAUSE OF WRONG STDOUT (but otherwise, the build works)
+    // TODO: TEST FAILS BECAUSE OF WRONG STDOUT (but otherwise, the build works).
     p.cargo("build --verbose")
         .with_status(101)
         .with_stderr(

@@ -103,7 +103,8 @@ impl<'cfg> Compilation<'cfg> {
             server.configure(&mut rustc);
         }
         Ok(Compilation {
-            native_dirs: BTreeSet::new(), // TODO: deprecated, remove
+            // TODO: deprecated; remove.
+            native_dirs: BTreeSet::new(),
             root_output: PathBuf::from("/"),
             deps_output: PathBuf::from("/"),
             host_deps_output: PathBuf::from("/"),

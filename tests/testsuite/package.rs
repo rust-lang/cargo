@@ -70,7 +70,7 @@ fn metadata_warning() {
             "\
 warning: manifest has no description, license, license-file, documentation, \
 homepage or repository.
-See <http://doc.crates.io/manifest.html#package-metadata> for more infofo.
+See <http://doc.crates.io/manifest.html#package-metadata> for more info.
 [PACKAGING] foo v0.0.1 ([CWD])
 [VERIFYING] foo v0.0.1 ([CWD])
 [COMPILING] foo v0.0.1 ([CWD][..])
@@ -95,7 +95,8 @@ See <http://doc.crates.io/manifest.html#package-metadata> for more infofo.
     p.cargo("package")
         .with_stderr(
             "\
-warning: manifest has no description, documentation, homepage or repositorySee <http://doc.crates.io/manifest.html#package-metadata> for more infofo.
+warning: manifest has no description, documentation, homepage or repository.
+See <http://doc.crates.io/manifest.html#package-metadata> for more info.
 [PACKAGING] foo v0.0.1 ([CWD])
 [VERIFYING] foo v0.0.1 ([CWD])
 [COMPILING] foo v0.0.1 ([CWD][..])
@@ -147,7 +148,8 @@ fn package_verbose() {
         .cwd(repo.root())
         .with_stderr(
             "\
-[WARNING] manifest has no description[..See <http://doc.crates.io/manifest.html#package-metadata> for more infofo.
+[WARNING] manifest has no description[..]
+See <http://doc.crates.io/manifest.html#package-metadata> for more info.
 [PACKAGING] foo v0.0.1 ([..])
 [ARCHIVING] [..]
 [ARCHIVING] [..]
@@ -183,7 +185,8 @@ fn package_verbose() {
         .cwd(repo.root().join("a"))
         .with_stderr(
             "\
-[WARNING] manifest has no description[..See <http://doc.crates.io/manifest.html#package-metadata> for more infofo.
+[WARNING] manifest has no description[..]
+See <http://doc.crates.io/manifest.html#package-metadata> for more info.
 [PACKAGING] a v0.0.1 ([..])
 [ARCHIVING] Cargo.toml
 [ARCHIVING] src/lib.rs
@@ -200,7 +203,8 @@ fn package_verification() {
     p.cargo("package")
         .with_stderr(
             "\
-[WARNING] manifest has no description[..See <http://doc.crates.io/manifest.html#package-metadata> for more infofo.
+[WARNING] manifest has no description[..]
+See <http://doc.crates.io/manifest.html#package-metadata> for more info.
 [PACKAGING] foo v0.0.1 ([CWD])
 [VERIFYING] foo v0.0.1 ([CWD])
 [COMPILING] foo v0.0.1 ([CWD][..])
@@ -275,7 +279,8 @@ fn path_dependency_no_version() {
         .with_status(101)
         .with_stderr(
             "\
-[WARNING] manifest has no documentation, homepage or repositorySee <http://doc.crates.io/manifest.html#package-metadata> for more infofo.
+[WARNING] manifest has no description[..]
+See <http://doc.crates.io/manifest.html#package-metadata> for more info.
 [ERROR] all path dependencies must have a version specified when packaging.
 dependency `bar` does not specify a version.
 ",
@@ -326,25 +331,25 @@ fn exclude() {
         .file("src/main.rs", r#"fn main() { println!("hello"); }"#)
         .file("bar.txt", "")
         .file("src/bar.txt", "")
-        // file in root
+        // File in root.
         .file("file_root_1", "")
         .file("file_root_2", "")
         .file("file_root_3", "")
         .file("file_root_4", "")
         .file("file_root_5", "")
-        // file in sub-dir
+        // File in sub-dir.
         .file("some_dir/file_deep_1", "")
         .file("some_dir/file_deep_2", "")
         .file("some_dir/file_deep_3", "")
         .file("some_dir/file_deep_4", "")
         .file("some_dir/file_deep_5", "")
-        // dir in root
+        // Dir in root.
         .file("dir_root_1/some_dir/file", "")
         .file("dir_root_2/some_dir/file", "")
         .file("dir_root_3/some_dir/file", "")
         .file("dir_root_4/some_dir/file", "")
         .file("dir_root_5/some_dir/file", "")
-        // dir in sub-dir
+        // Dir in sub-dir.
         .file("some_dir/dir_deep_1/some_dir/file", "")
         .file("some_dir/dir_deep_2/some_dir/file", "")
         .file("some_dir/dir_deep_3/some_dir/file", "")
@@ -357,7 +362,8 @@ fn exclude() {
         .with_stdout("")
         .with_stderr(
             "\
-[WARNING] manifest has no description[..See <http://doc.crates.io/manifest.html#package-metadata> for more infofo.
+[WARNING] manifest has no description[..]
+See <http://doc.crates.io/manifest.html#package-metadata> for more info.
 [WARNING] [..] file `dir_root_1/some_dir/file` WILL be excluded [..]
 See [..]
 [WARNING] [..] file `dir_root_2/some_dir/file` WILL be excluded [..]
@@ -441,14 +447,16 @@ fn include() {
         )
         .file("foo.txt", "")
         .file("src/main.rs", r#"fn main() { println!("hello"); }"#)
-        .file("src/bar.txt", "") // should be ignored when packaging
+        // Should be ignored when packaging.
+        .file("src/bar.txt", "")
         .build();
 
     cargo_process("package --no-verify -v")
         .cwd(repo.root())
         .with_stderr(
             "\
-[WARNING] manifest has no description[..See <http://doc.crates.io/manifest.html#package-metadata> for more infofo.
+[WARNING] manifest has no description[..]
+See <http://doc.crates.io/manifest.html#package-metadata> for more info.
 [PACKAGING] foo v0.0.1 ([..])
 [ARCHIVING] [..]
 [ARCHIVING] [..]
@@ -561,7 +569,8 @@ fn ignore_nested() {
     p.cargo("package")
         .with_stderr(
             "\
-[WARNING] manifest has no documentation[..See <http://doc.crates.io/manifest.html#package-metadata> for more infofo.
+[WARNING] manifest has no description[..]
+See <http://doc.crates.io/manifest.html#package-metadata> for more info.
 [PACKAGING] foo v0.0.1 ([CWD])
 [VERIFYING] foo v0.0.1 ([CWD])
 [COMPILING] foo v0.0.1 ([CWD][..])
@@ -589,7 +598,8 @@ src[..]main.rs
     );
 }
 
-#[cfg(unix)] // windows doesn't allow these characters in filenames
+// Windows doesn't allow these characters in filenames.
+#[cfg(unix)]
 #[test]
 fn package_weird_characters() {
     let p = project()

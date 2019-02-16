@@ -3953,9 +3953,8 @@ fn run_proper_binary_main_rs_as_foo() {
     p.cargo("run --bin foo").run();
 }
 
-// NOTE: we don't have `/usr/bin/env` on Windows.
-
 #[test]
+// NOTE: we don't have `/usr/bin/env` on Windows.
 #[cfg(not(windows))]
 fn rustc_wrapper() {
     let p = project().file("src/lib.rs", "").build();

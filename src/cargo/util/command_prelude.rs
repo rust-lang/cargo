@@ -390,7 +390,7 @@ pub trait ArgMatchesExt {
                 validate_package_name(registry, "registry name", "")?;
 
                 if registry == CRATES_IO_REGISTRY {
-                    // If "crates.io" is specified, then we just need to return `None`
+                    // If "crates.io" is specified, then we just need to return `None`,
                     // as that will cause cargo to use crates.io. This is required
                     // for the case where a default alternative registry is used
                     // but the user wants to switch back to crates.io for a single
@@ -405,7 +405,7 @@ pub trait ArgMatchesExt {
     }
 
     fn index(&self, config: &Config) -> CargoResult<Option<String>> {
-        // FIXME: deprecated. Remove once it has been decided `--host` can be removed
+        // TODO: deprecated. Remove once it has been decided `--host` can be removed
         // We may instead want to repurpose the host flag, as mentioned in issue
         // rust-lang/cargo#4208.
         let msg = "The flag '--host' is no longer valid.

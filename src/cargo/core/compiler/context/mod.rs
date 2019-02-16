@@ -192,7 +192,7 @@ impl<'a, 'cfg> Context<'a, 'cfg> {
             }
 
             if unit.mode == CompileMode::Doctest {
-                // Note that we can *only* doctest rlib outputs here. A
+                // Note that we can *only* doc-test rlib outputs here. A
                 // staticlib output cannot be linked by the compiler (it just
                 // doesn't do that). A dylib output, however, can be linked by
                 // the compiler, but will always fail. Currently all dylibs are
@@ -363,7 +363,7 @@ impl<'a, 'cfg> Context<'a, 'cfg> {
     /// For a package, return all targets which are registered as dependencies
     /// for that package.
     //
-    // TODO: this ideally should be `-> &[Unit<'a>]`
+    // TODO: this ideally should be `-> &[Unit<'a>]`.
     pub fn dep_targets(&self, unit: &Unit<'a>) -> Vec<Unit<'a>> {
         // If this build script's execution has been overridden then we don't
         // actually depend on anything, we've reached the end of the dependency
@@ -487,7 +487,7 @@ impl<'a, 'cfg> Context<'a, 'cfg> {
                 )
             };
         let suggestion = "Consider changing their names to be unique or compiling them separately.\n\
-            This may become a hard error in the future; see\
+            This may become a hard error in the future; see \
             <https://github.com/rust-lang/cargo/issues/6313>.";
         let report_collision = |unit: &Unit<'_>,
                                 other_unit: &Unit<'_>,

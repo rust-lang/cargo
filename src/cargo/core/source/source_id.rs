@@ -34,14 +34,14 @@ pub struct SourceId {
 struct SourceIdInner {
     /// The source URL.
     url: Url,
-    /// `git::canonicalize_url(url)` for the URL field.
+    /// The result of `git::canonicalize_url()` on `url` field.
     canonical_url: Url,
-    /// The source kind
+    /// The source kind.
     kind: Kind,
-    // E.g., the exact git revision of the specified branch for a Git Source.
+    /// For example, the exact Git revision of the specified branch for a Git Source.
     precise: Option<String>,
     /// Name of the registry source for alternative registries
-    /// WARNING: This is not always set for alt-registries when the name is
+    /// WARNING: this is not always set for alt-registries when the name is
     /// not known.
     name: Option<String>,
 }

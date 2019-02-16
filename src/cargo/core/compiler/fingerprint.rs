@@ -785,7 +785,7 @@ where
             }
         };
 
-        // TODO: fix #5918
+        // TODO: fix #5918.
         // Note that equal mtimes should be considered "stale". For filesystems with
         // not much timestamp precision like 1s this is would be a conservative approximation
         // to handle the case where a file is modified within the same second after

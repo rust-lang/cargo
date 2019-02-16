@@ -405,7 +405,7 @@ impl Default for Profile {
             debug_assertions: false,
             overflow_checks: false,
             rpath: false,
-            incremental: true,
+            incremental: false,
             panic: None,
         }
     }
@@ -466,6 +466,7 @@ impl Profile {
             debuginfo: Some(2),
             debug_assertions: true,
             overflow_checks: true,
+            incremental: true,
             ..Profile::default()
         }
     }
