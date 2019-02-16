@@ -299,7 +299,11 @@ fn rustc<'a, 'cfg>(
                 package_id,
                 &target,
                 mode,
-                &mut assert_is_empty,
+                &mut |line| {
+                    // Forward compiler stdout to stderr
+                    writeln!(io::stderr(), "{}", line)?;
+                    Ok(())
+                },
                 &mut |line| json_stderr(line, package_id, &target),
             )
             .map_err(internal_if_simple_exit_code)
