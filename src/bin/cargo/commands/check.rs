@@ -26,6 +26,7 @@ pub fn cli() -> App {
             "Check all targets",
         )
         .arg_release("Check artifacts in release mode, with optimizations")
+        .arg_force_rebuild("Force rebuild of this crate")
         .arg(opt("profile", "Profile to build the selected target for").value_name("PROFILE"))
         .arg_features()
         .arg_target_triple("Check for the target triple")
@@ -68,11 +69,7 @@ pub fn exec(config: &mut Config, args: &ArgMatches<'_>) -> CliResult {
         }
     };
     let mode = CompileMode::Check { test };
-    let mut compile_opts = args.compile_options(config, mode, Some(&ws))?;
-
-    // force rebuild of this module
-    //     in order to show warnings even if the project was previously checked / built
-    compile_opts.build_config.force_rebuild = true;
+    let compile_opts = args.compile_options(config, mode, Some(&ws))?;
 
     ops::compile(&ws, &compile_opts)?;
     Ok(())

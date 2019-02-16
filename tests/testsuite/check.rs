@@ -195,9 +195,10 @@ fn build_check() {
     foo.cargo("check").run();
 }
 
-// Checks that warnings are displayed even if the project has not changed since the last check/build
+// Checks that --force-rebuild displays warnings even if the project has not changed
+//     since the last check/build
 #[test]
-fn build_check_displays_error() {
+fn force_rebuild_displays_error() {
     let foo = project()
         .file(
             "Cargo.toml",
@@ -218,7 +219,7 @@ fn build_check_displays_error() {
         .with_stderr_contains("[..]warning: unused import[..]")
         .run();
 
-    foo.cargo("check")
+    foo.cargo("check --force-rebuild")
         .with_stderr_contains("[..]warning: unused import[..]")
         .run();
 }

@@ -1,3 +1,4 @@
+use crate::support::is_nightly;
 use crate::support::{basic_manifest, project, Project};
 
 // These tests try to exercise exactly which profiles are selected for every
@@ -506,10 +507,14 @@ fn profile_selection_check_all_targets() {
     // See https://github.com/rust-lang/rust/pull/49289 and
     // https://github.com/rust-lang/cargo/issues/3624
     p.cargo("check --all-targets -vv")
-        .with_stderr_contains("[FRESH] bar [..]")
-        .with_stderr_contains("[FRESH] bdep [..]")
-        .with_stderr_contains("[CHECKING] foo [..]")
-        .with_stderr_contains("[FINISHED] dev [unoptimized + debuginfo] [..]")
+        .with_stderr_unordered(
+            "\
+[FRESH] bar [..]
+[FRESH] bdep [..]
+[FRESH] foo [..]
+[FINISHED] dev [unoptimized + debuginfo] [..]
+",
+        )
         .run();
 }
 
@@ -544,10 +549,14 @@ fn profile_selection_check_all_targets_release() {
 ").run();
 
     p.cargo("check --all-targets --release -vv")
-        .with_stderr_contains("[FRESH] bar [..]")
-        .with_stderr_contains("[FRESH] bdep [..]")
-        .with_stderr_contains("[CHECKING] foo [..]")
-        .with_stderr_contains("[FINISHED] release [optimized] [..]")
+        .with_stderr_unordered(
+            "\
+[FRESH] bar [..]
+[FRESH] bdep [..]
+[FRESH] foo [..]
+[FINISHED] release [optimized] [..]
+",
+        )
         .run();
 }
 
@@ -598,10 +607,14 @@ fn profile_selection_check_all_targets_test() {
 ").run();
 
     p.cargo("check --all-targets --profile=test -vv")
-        .with_stderr_contains("[FRESH] bar [..]")
-        .with_stderr_contains("[FRESH] bdep [..]")
-        .with_stderr_contains("[CHECKING] foo [..]")
-        .with_stderr_contains("[FINISHED] dev [unoptimized + debuginfo] [..]")
+        .with_stderr_unordered(
+            "\
+[FRESH] bar [..]
+[FRESH] bdep [..]
+[FRESH] foo [..]
+[FINISHED] dev [unoptimized + debuginfo] [..]
+",
+        )
         .run();
 }
 
