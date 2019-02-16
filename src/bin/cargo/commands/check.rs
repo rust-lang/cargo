@@ -26,7 +26,7 @@ pub fn cli() -> App {
             "Check all targets",
         )
         .arg_release("Check artifacts in release mode, with optimizations")
-        .arg_force_rebuild("Force rebuild of this crate")
+        .arg_force_rebuild("Force rebuild of the selected target(s)")
         .arg(opt("profile", "Profile to build the selected target for").value_name("PROFILE"))
         .arg_features()
         .arg_target_triple("Check for the target triple")
