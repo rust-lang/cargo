@@ -201,15 +201,6 @@ fn build_check() {
 fn force_rebuild_displays_error() {
     let foo = project()
         .file(
-            "Cargo.toml",
-            r#"
-            [package]
-            name = "foo"
-            version = "0.0.1"
-            authors = []
-        "#,
-        )
-        .file(
             "src/main.rs",
             "use std::default::Default; fn main() {}",
         )
