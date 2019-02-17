@@ -764,10 +764,7 @@ fn resolve_all_features(
 fn filter_default_targets(targets: &[Target], mode: CompileMode) -> Vec<&Target> {
     match mode {
         CompileMode::Bench => targets.iter().filter(|t| t.benched()).collect(),
-        CompileMode::Test => targets
-            .iter()
-            .filter(|t| t.tested() || t.is_example())
-            .collect(),
+        CompileMode::Test => targets.iter().filter(|t| t.tested()).collect(),
         CompileMode::Build | CompileMode::Check { .. } => targets
             .iter()
             .filter(|t| t.is_bin() || t.is_lib())

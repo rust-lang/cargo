@@ -300,7 +300,6 @@ fn profile_selection_test() {
 [RUNNING] `[..] rustc --crate-name foo src/lib.rs [..]--crate-type lib --emit=dep-info,link -C codegen-units=1 -C debuginfo=2 [..]
 [RUNNING] `[..] rustc --crate-name foo src/lib.rs [..]--emit=dep-info,link -C codegen-units=3 -C debuginfo=2 --test [..]
 [RUNNING] `[..] rustc --crate-name test1 tests/test1.rs [..]--emit=dep-info,link -C codegen-units=3 -C debuginfo=2 --test [..]
-[RUNNING] `[..] rustc --crate-name ex1 examples/ex1.rs [..]--crate-type bin --emit=dep-info,link -C codegen-units=1 -C debuginfo=2 [..]
 [RUNNING] `[..] rustc --crate-name foo src/main.rs [..]--emit=dep-info,link -C codegen-units=3 -C debuginfo=2 --test [..]
 [RUNNING] `[..] rustc --crate-name foo src/main.rs [..]--crate-type bin --emit=dep-info,link -C panic=abort -C codegen-units=1 -C debuginfo=2 [..]
 [FINISHED] dev [unoptimized + debuginfo] [..]
@@ -366,7 +365,6 @@ fn profile_selection_test_release() {
 [RUNNING] `[..] rustc --crate-name foo src/lib.rs [..]--emit=dep-info,link -C opt-level=3 -C codegen-units=4 --test [..]
 [RUNNING] `[..] rustc --crate-name test1 tests/test1.rs [..]--emit=dep-info,link -C opt-level=3 -C codegen-units=4 --test [..]
 [RUNNING] `[..] rustc --crate-name foo src/main.rs [..]--emit=dep-info,link -C opt-level=3 -C codegen-units=4 --test [..]
-[RUNNING] `[..] rustc --crate-name ex1 examples/ex1.rs [..]--crate-type bin --emit=dep-info,link -C opt-level=3 -C codegen-units=2 [..]
 [RUNNING] `[..] rustc --crate-name foo src/main.rs [..]--crate-type bin --emit=dep-info,link -C opt-level=3 -C panic=abort -C codegen-units=2 [..]
 [FINISHED] release [optimized] [..]
 [RUNNING] `[..]/deps/foo-[..]`

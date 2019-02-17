@@ -1429,9 +1429,7 @@ fn test_run_implicit_example_target() {
         )
         .build();
 
-    // Compiles myexm1 as normal, but does not run it.
     prj.cargo("test -v")
-        .with_stderr_contains("[RUNNING] `rustc [..]myexm1.rs [..]--crate-type bin[..]")
         .with_stderr_contains("[RUNNING] `rustc [..]myexm2.rs [..]--test[..]")
         .with_stderr_does_not_contain("[RUNNING] [..]myexm1-[..]")
         .with_stderr_contains("[RUNNING] [..]target/debug/examples/myexm2-[..]")
@@ -1787,18 +1785,13 @@ fn example_bin_same_name() {
             "\
 [COMPILING] foo v0.0.1 ([CWD])
 [RUNNING] `rustc [..]`
-[RUNNING] `rustc [..]`
 [FINISHED] dev [unoptimized + debuginfo] target(s) in [..]
 ",
         )
         .run();
 
     assert!(!p.bin("foo").is_file());
-    assert!(p.bin("examples/foo").is_file());
-
-    p.process(&p.bin("examples/foo"))
-        .with_stdout("example\n")
-        .run();
+    assert!(!p.bin("examples/foo").is_file());
 
     p.cargo("run")
         .with_stderr(
@@ -1810,64 +1803,6 @@ fn example_bin_same_name() {
         .with_stdout("bin")
         .run();
     assert!(p.bin("foo").is_file());
-}
-
-#[test]
-fn test_with_example_twice() {
-    let p = project()
-        .file("src/bin/foo.rs", r#"fn main() { println!("bin"); }"#)
-        .file("examples/foo.rs", r#"fn main() { println!("example"); }"#)
-        .build();
-
-    println!("first");
-    p.cargo("test -v").run();
-    assert!(p.bin("examples/foo").is_file());
-    println!("second");
-    p.cargo("test -v").run();
-    assert!(p.bin("examples/foo").is_file());
-}
-
-#[test]
-fn example_with_dev_dep() {
-    let p = project()
-        .file(
-            "Cargo.toml",
-            r#"
-            [package]
-            name = "foo"
-            version = "0.0.1"
-            authors = []
-
-            [lib]
-            name = "foo"
-            test = false
-            doctest = false
-
-            [dev-dependencies.a]
-            path = "a"
-        "#,
-        )
-        .file("src/lib.rs", "")
-        .file(
-            "examples/ex.rs",
-            "#[allow(unused_extern_crates)] extern crate a; fn main() {}",
-        )
-        .file("a/Cargo.toml", &basic_manifest("a", "0.0.1"))
-        .file("a/src/lib.rs", "")
-        .build();
-
-    p.cargo("test -v")
-        .with_stderr(
-            "\
-[..]
-[..]
-[..]
-[..]
-[RUNNING] `rustc --crate-name ex [..] --extern a=[..]`
-[FINISHED] dev [unoptimized + debuginfo] target(s) in [..]
-",
-        )
-        .run();
 }
 
 #[test]
