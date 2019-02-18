@@ -601,35 +601,42 @@ fn activate(
         )
         // and associate dep with that edge
         .push(dep.clone());
-        let cs: Vec<PackageId> = cx
-            .public_dependency
-            .get(&candidate_pid)
-            .iter()
-            .flat_map(|x| x.values())
-            .filter_map(|x| if x.1 { Some(&x.0) } else { None })
-            .chain(&Some(candidate_pid))
-            .cloned()
-            .collect();
-        for c in cs {
-            let mut stack = vec![(parent_pid, dep.is_public())];
-            while let Some((p, public)) = stack.pop() {
-                match cx.public_dependency.entry(p).or_default().entry(c.name()) {
-                    im_rc::hashmap::Entry::Occupied(mut o) => {
-                        assert_eq!(o.get().0, c);
-                        if o.get().1 {
-                            continue;
+        // For now the interaction of public dependency conflicts with renamed and
+        // 'cfg({})' dependencies is not clear. So we disable public checks if the
+        // other functionality is used.
+        // TODO: this disable is not a long term solution.
+        //       This needs to be removed before public dependencies are stabilized!
+        if dep.platform().is_none() && dep.explicit_name_in_toml().is_none() {
+            let cs: Vec<PackageId> = cx
+                .public_dependency
+                .get(&candidate_pid)
+                .iter()
+                .flat_map(|x| x.values())
+                .filter_map(|x| if x.1 { Some(&x.0) } else { None })
+                .chain(&Some(candidate_pid))
+                .cloned()
+                .collect();
+            for c in cs {
+                let mut stack = vec![(parent_pid, dep.is_public())];
+                while let Some((p, public)) = stack.pop() {
+                    match cx.public_dependency.entry(p).or_default().entry(c.name()) {
+                        im_rc::hashmap::Entry::Occupied(mut o) => {
+                            assert_eq!(o.get().0, c);
+                            if o.get().1 {
+                                continue;
+                            }
+                            if public {
+                                o.insert((c, public));
+                            }
                         }
-                        if public {
-                            o.insert((c, public));
+                        im_rc::hashmap::Entry::Vacant(v) => {
+                            v.insert((c, public));
                         }
                     }
-                    im_rc::hashmap::Entry::Vacant(v) => {
-                        v.insert((c, public));
-                    }
-                }
-                if public {
-                    for &(grand, ref d) in cx.parents.edges(&p) {
-                        stack.push((grand, d.iter().any(|x| x.is_public())));
+                    if public {
+                        for &(grand, ref d) in cx.parents.edges(&p) {
+                            stack.push((grand, d.iter().any(|x| x.is_public())));
+                        }
                     }
                 }
             }
@@ -774,26 +781,35 @@ impl RemainingCandidates {
             // we have to reject this candidate. Additionally this candidate may already have been
             // activated and have public dependants of its own,
             // all of witch also need to be checked the same way.
-            for &t in cx
-                .public_dependency
-                .get(&b.summary.package_id())
-                .iter()
-                .flat_map(|x| x.values())
-                .filter_map(|x| if x.1 { Some(&x.0) } else { None })
-                .chain(&Some(b.summary.package_id()))
-            {
-                let mut stack = vec![(parent, dep.is_public())];
-                while let Some((p, public)) = stack.pop() {
-                    // TODO: dont look at the same thing more then once
-                    if let Some(o) = cx.public_dependency.get(&p).and_then(|x| x.get(&t.name())) {
-                        if o.0 != t {
-                            conflicting_prev_active.insert(p, ConflictReason::PublicDependency);
-                            continue 'main;
+
+            // For now the interaction of public dependency conflicts with renamed and
+            // 'cfg({})' dependencies is not clear. So we disable public checks if the
+            // other functionality is used.
+            // TODO: this disable is not a long term solution.
+            //       This needs to be removed before public dependencies are stabilized!
+            if dep.platform().is_none() && dep.explicit_name_in_toml().is_none() {
+                for &t in cx
+                    .public_dependency
+                    .get(&b.summary.package_id())
+                    .iter()
+                    .flat_map(|x| x.values())
+                    .filter_map(|x| if x.1 { Some(&x.0) } else { None })
+                    .chain(&Some(b.summary.package_id()))
+                {
+                    let mut stack = vec![(parent, dep.is_public())];
+                    while let Some((p, public)) = stack.pop() {
+                        // TODO: dont look at the same thing more then once
+                        if let Some(o) = cx.public_dependency.get(&p).and_then(|x| x.get(&t.name()))
+                        {
+                            if o.0 != t {
+                                conflicting_prev_active.insert(p, ConflictReason::PublicDependency);
+                                continue 'main;
+                            }
                         }
-                    }
-                    if public {
-                        for &(grand, ref d) in cx.parents.edges(&p) {
-                            stack.push((grand, d.iter().any(|x| x.is_public())));
+                        if public {
+                            for &(grand, ref d) in cx.parents.edges(&p) {
+                                stack.push((grand, d.iter().any(|x| x.is_public())));
+                            }
                         }
                     }
                 }
