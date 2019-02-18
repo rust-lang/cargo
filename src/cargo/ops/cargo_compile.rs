@@ -22,7 +22,8 @@
 //!       previously compiled dependency
 //!
 
-use std::collections::{HashMap, HashSet};
+use std::collections::{BTreeSet, HashMap, HashSet};
+use std::iter::FromIterator;
 use std::path::PathBuf;
 use std::sync::Arc;
 
@@ -116,12 +117,23 @@ impl Packages {
                 .map(Package::package_id)
                 .map(PackageIdSpec::from_package_id)
                 .collect(),
-            Packages::OptOut(opt_out) => ws
-                .members()
-                .filter(|pkg| !opt_out.iter().any(|name| pkg.name().as_str() == name))
-                .map(Package::package_id)
-                .map(PackageIdSpec::from_package_id)
-                .collect(),
+            Packages::OptOut(opt_out) => {
+                let mut opt_out = BTreeSet::from_iter(opt_out.iter().cloned());
+                let packages = ws
+                    .members()
+                    .filter(|pkg| !opt_out.remove(pkg.name().as_str()))
+                    .map(Package::package_id)
+                    .map(PackageIdSpec::from_package_id)
+                    .collect();
+                if !opt_out.is_empty() {
+                    ws.config().shell().warn(format!(
+                        "excluded package(s) {} not found in workspace `{}`",
+                        opt_out.iter().map(|x| x.as_ref()).collect::<Vec<_>>().join(", "),
+                        ws.root().display(),
+                    ))?;
+                }
+                packages
+            },
             Packages::Packages(packages) if packages.is_empty() => {
                 vec![PackageIdSpec::from_package_id(ws.current()?.package_id())]
             }
