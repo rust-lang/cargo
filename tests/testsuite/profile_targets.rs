@@ -1,4 +1,3 @@
-use crate::support::is_nightly;
 use crate::support::{basic_manifest, project, Project};
 
 // These tests try to exercise exactly which profiles are selected for every target.
