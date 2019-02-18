@@ -288,7 +288,7 @@ pub(super) fn activation_error(
 
 /// Returns String representation of dependency chain for a particular `pkgid`.
 pub(super) fn describe_path(
-    graph: &::util::graph::Graph<PackageId, Vec<Dependency>>,
+    graph: &crate::util::graph::Graph<PackageId, Vec<Dependency>>,
     this: PackageId,
 ) -> String {
     use std::fmt::Write;
@@ -298,7 +298,7 @@ pub(super) fn describe_path(
         let req = req.first().unwrap();
         write!(
             dep_path_desc,
-            "\n    ... selected to fulfill the requirement `{} = \"{}\"` from package `{}`",
+            "\n    ... selected to satisfy the requirement `{} = \"{}\"` from package `{}`",
             req.name_in_toml(),
             req.version_req(),
             dep
