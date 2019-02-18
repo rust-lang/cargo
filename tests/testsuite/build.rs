@@ -3183,7 +3183,7 @@ fn invalid_spec() {
 
     p.cargo("build -p d1 -p notAValidDep")
         .with_status(101)
-        .with_stderr("[ERROR] package Id specification `notAValidDep` matched no packages")
+        .with_stderr("[ERROR] package ID specification `notAValidDep` matched no packages")
         .run();
 }
 

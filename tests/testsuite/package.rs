@@ -279,7 +279,7 @@ fn path_dependency_no_version() {
         .with_status(101)
         .with_stderr(
             "\
-[WARNING] manifest has no description[..]
+[WARNING] manifest has no documentation, homepage or repository.
 See <http://doc.crates.io/manifest.html#package-metadata> for more info.
 [ERROR] all path dependencies must have a version specified when packaging.
 dependency `bar` does not specify a version.
@@ -569,7 +569,7 @@ fn ignore_nested() {
     p.cargo("package")
         .with_stderr(
             "\
-[WARNING] manifest has no description[..]
+[WARNING] manifest has no documentation[..]
 See <http://doc.crates.io/manifest.html#package-metadata> for more info.
 [PACKAGING] foo v0.0.1 ([CWD])
 [VERIFYING] foo v0.0.1 ([CWD])
