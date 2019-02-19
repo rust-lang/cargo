@@ -503,7 +503,12 @@ where
         // but we currently don't! Right now the only way we support fetching a
         // plaintext password is through the `credential.helper` support, so
         // fetch that here.
-        if allowed.contains(git2::CredentialType::USER_PASS_PLAINTEXT) {
+        //
+        // If ssh-agent authentication fails, libgit2 will keep calling this
+        // callback asking for other authentication methods to try. Check
+        // cred_helper_bad to make sure we only try the git credentail helper
+        // once, to avoid looping forever.
+        if allowed.contains(git2::CredentialType::USER_PASS_PLAINTEXT) && cred_helper_bad.is_none() {
             let r = git2::Cred::credential_helper(cfg, url, username);
             cred_helper_bad = Some(r.is_err());
             return r;
