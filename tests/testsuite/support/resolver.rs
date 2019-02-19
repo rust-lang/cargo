@@ -492,7 +492,7 @@ pub fn registry_strategy(
 /// that it makes registries with large dependency trees
 ///
 /// This is a form of randomized testing, if you are unlucky it can fail.
-/// A failure on it's own is not a big dael. If you did not change the
+/// A failure on its own is not a big deal. If you did not change the
 /// `registry_strategy` then feel free to retry without concern.
 #[test]
 fn meta_test_deep_trees_from_strategy() {
