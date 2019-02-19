@@ -1,6 +1,6 @@
 pub use self::cargo_clean::{clean, CleanOptions};
 pub use self::cargo_compile::{compile, compile_with_exec, compile_ws, CompileOptions};
-pub use self::cargo_compile::{CompileFilter, FilterRule, Packages};
+pub use self::cargo_compile::{CompileFilter, FilterRule, LibRule, Packages};
 pub use self::cargo_doc::{doc, DocOptions};
 pub use self::cargo_fetch::{fetch, FetchOptions};
 pub use self::cargo_generate_lockfile::generate_lockfile;
