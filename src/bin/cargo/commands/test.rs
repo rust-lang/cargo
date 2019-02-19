@@ -1,4 +1,4 @@
-use cargo::ops::{self, CompileFilter};
+use cargo::ops::{self, CompileFilter, FilterRule};
 
 use crate::command_prelude::*;
 
@@ -112,15 +112,10 @@ pub fn exec(config: &mut Config, args: &ArgMatches<'_>) -> CliResult {
         compile_opts.build_config.mode = CompileMode::Doctest;
         compile_opts.filter = ops::CompileFilter::new(
             true,
-            Vec::new(),
-            false,
-            Vec::new(),
-            false,
-            Vec::new(),
-            false,
-            Vec::new(),
-            false,
-            false,
+            FilterRule::none(),
+            FilterRule::none(),
+            FilterRule::none(),
+            FilterRule::none(),
         );
     }
 

@@ -49,7 +49,7 @@ pub fn exec(config: &mut Config, args: &ArgMatches<'_>) -> CliResult {
             .filter_map(|pkg| pkg.manifest().default_run())
             .collect();
         if default_runs.len() == 1 {
-            compile_opts.filter = CompileFilter::new(
+            compile_opts.filter = CompileFilter::from_raw_arguments(
                 false,
                 vec![default_runs[0].to_owned()],
                 false,
