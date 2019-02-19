@@ -1,4 +1,4 @@
-use cargo::ops::{self, CompileFilter, FilterRule};
+use cargo::ops::{self, CompileFilter, FilterRule, LibRule};
 
 use crate::command_prelude::*;
 
@@ -111,7 +111,7 @@ pub fn exec(config: &mut Config, args: &ArgMatches<'_>) -> CliResult {
         }
         compile_opts.build_config.mode = CompileMode::Doctest;
         compile_opts.filter = ops::CompileFilter::new(
-            true,
+            LibRule::True,
             FilterRule::none(),
             FilterRule::none(),
             FilterRule::none(),

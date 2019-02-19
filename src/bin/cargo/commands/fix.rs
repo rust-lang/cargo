@@ -1,6 +1,6 @@
 use crate::command_prelude::*;
 
-use cargo::ops::{self, CompileFilter, FilterRule};
+use cargo::ops::{self, CompileFilter, FilterRule, LibRule};
 
 pub fn cli() -> App {
     subcommand("fix")
@@ -127,7 +127,7 @@ pub fn exec(config: &mut Config, args: &ArgMatches<'_>) -> CliResult {
     if let CompileFilter::Default { .. } = opts.filter {
         opts.filter = CompileFilter::Only {
             all_targets: true,
-            lib: true,
+            lib: LibRule::Default,
             bins: FilterRule::All,
             examples: FilterRule::All,
             benches: FilterRule::All,
