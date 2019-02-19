@@ -94,6 +94,17 @@ pub fn exec(config: &mut Config, args: &ArgMatches<'_>) -> CliResult {
 
     let mut compile_opts = args.compile_options(config, CompileMode::Test, Some(&ws))?;
 
+    // `TESTNAME` is actually an argument of the test binary, but it's
+    // important, so we explicitly mention it and reconfigure.
+    let test_name: Option<&str> = args.value_of("TESTNAME");
+    let mut test_args = vec![];
+    test_args.extend(test_name.into_iter().map(|s| s.to_string()));
+    test_args.extend(
+        args.values_of("args")
+            .unwrap_or_default()
+            .map(|s| s.to_string()),
+    );
+
     let no_run = args.is_present("no-run");
     let doc = args.is_present("doc");
     if doc {
@@ -117,6 +128,16 @@ pub fn exec(config: &mut Config, args: &ArgMatches<'_>) -> CliResult {
             FilterRule::none(),
             FilterRule::none(),
         );
+    } else if test_name.is_some() {
+        if let CompileFilter::Default { .. } = compile_opts.filter {
+            compile_opts.filter = ops::CompileFilter::new(
+                LibRule::Default, // compile the library, so the unit tests can be run filtered
+                FilterRule::All,    // compile the binaries, so the unit tests in binaries can be run filtered
+                FilterRule::All,    // compile the tests, so the integration tests can be run filtered
+                FilterRule::none(), // specify --examples to unit test binaries filtered
+                FilterRule::none(), // specify --benches to unit test benchmarks filtered
+            ); // also, specify --doc to run doc tests filtered
+        }
     }
 
     let ops = ops::TestOptions {
@@ -124,16 +145,6 @@ pub fn exec(config: &mut Config, args: &ArgMatches<'_>) -> CliResult {
         no_fail_fast: args.is_present("no-fail-fast"),
         compile_opts,
     };
-
-    // `TESTNAME` is actually an argument of the test binary, but it's
-    // important, so we explicitly mention it and reconfigure.
-    let mut test_args = vec![];
-    test_args.extend(args.value_of("TESTNAME").into_iter().map(|s| s.to_string()));
-    test_args.extend(
-        args.values_of("args")
-            .unwrap_or_default()
-            .map(|s| s.to_string()),
-    );
 
     let err = ops::run_tests(&ws, &ops, &test_args)?;
     match err {
