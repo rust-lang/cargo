@@ -349,6 +349,10 @@ impl FilterRule {
         }
     }
 
+    pub fn none() -> FilterRule {
+        FilterRule::Just(Vec::new())
+    }
+
     fn matches(&self, target: &Target) -> bool {
         match *self {
             FilterRule::All => true,
@@ -372,7 +376,8 @@ impl FilterRule {
 }
 
 impl CompileFilter {
-    pub fn new(
+    /// Construct a CompileFilter from raw command line arguments.
+    pub fn from_raw_arguments(
         lib_only: bool,
         bins: Vec<String>,
         all_bins: bool,
@@ -398,7 +403,20 @@ impl CompileFilter {
                 benches: FilterRule::All,
                 tests: FilterRule::All,
             }
-        } else if lib_only
+        } else {
+            CompileFilter::new(lib_only, rule_bins, rule_tsts, rule_exms, rule_bens)
+        }
+    }
+
+    /// Construct a CompileFilter from underlying primitives.
+    pub fn new(
+        lib_only: bool,
+        rule_bins: FilterRule,
+        rule_tsts: FilterRule,
+        rule_exms: FilterRule,
+        rule_bens: FilterRule,
+    ) -> CompileFilter {
+        if lib_only
             || rule_bins.is_specific()
             || rule_tsts.is_specific()
             || rule_exms.is_specific()

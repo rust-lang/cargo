@@ -328,7 +328,7 @@ pub trait ArgMatchesExt {
             all_features: self._is_present("all-features"),
             no_default_features: self._is_present("no-default-features"),
             spec,
-            filter: CompileFilter::new(
+            filter: CompileFilter::from_raw_arguments(
                 self._is_present("lib"),
                 self._values_of("bin"),
                 self._is_present("bins"),
