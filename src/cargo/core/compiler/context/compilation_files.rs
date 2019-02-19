@@ -276,7 +276,7 @@ impl<'a, 'cfg: 'a> CompilationFiles<'a, 'cfg> {
         let out_dir = self.out_dir(unit);
         let file_stem = self.file_stem(unit);
         let link_stem = self.link_stem(unit);
-        let info = if unit.target.for_host() {
+        let info = if unit.kind == Kind::Host {
             &bcx.host_info
         } else {
             &bcx.target_info
