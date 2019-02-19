@@ -1955,7 +1955,7 @@ fn explicit_examples() {
         )
         .build();
 
-    p.cargo("test -v").run();
+    p.cargo("build --examples").run();
     p.process(&p.bin("examples/hello"))
         .with_stdout("Hello, World!\n")
         .run();
@@ -2126,7 +2126,7 @@ fn implicit_examples() {
         )
         .build();
 
-    p.cargo("test").run();
+    p.cargo("build --examples").run();
     p.process(&p.bin("examples/hello"))
         .with_stdout("Hello, World!\n")
         .run();
@@ -2739,13 +2739,13 @@ fn example_bin_same_name() {
         .file("examples/foo.rs", "fn main() {}")
         .build();
 
-    p.cargo("test --no-run -v").run();
+    p.cargo("build --examples").run();
 
     assert!(!p.bin("foo").is_file());
     // We expect a file of the form bin/foo-{metadata_hash}
     assert!(p.bin("examples/foo").is_file());
 
-    p.cargo("test --no-run -v").run();
+    p.cargo("build --examples").run();
 
     assert!(!p.bin("foo").is_file());
     // We expect a file of the form bin/foo-{metadata_hash}
@@ -4212,7 +4212,7 @@ fn inferred_examples() {
         .file("examples/baz/main.rs", "fn main() {}")
         .build();
 
-    p.cargo("test").run();
+    p.cargo("build --examples").run();
     assert!(p.bin("examples/bar").is_file());
     assert!(p.bin("examples/baz").is_file());
 }
