@@ -1,4 +1,4 @@
-use crate::support::{basic_lib_manifest, paths, project};
+use crate::support::{basic_lib_manifest, is_nightly, paths, project};
 
 #[test]
 fn profile_config_gated() {
@@ -138,10 +138,7 @@ fn profile_config_validate_errors() {
         .with_status(101)
         .with_stderr(
             "\
-[ERROR] failed to parse manifest at `[CWD]/Cargo.toml`
-
-Caused by:
-  config profile `profile.dev` is not valid
+[ERROR] config profile `profile.dev` is not valid
 
 Caused by:
   `panic` may not be specified in a profile override.
@@ -233,10 +230,14 @@ found profile override specs: bar, bar:0.5.0",
 
 #[test]
 fn profile_config_all_options() {
+    if !is_nightly() {
+        // May be removed once 1.34 is stable (added support for incremental-LTO).
+        return;
+    }
+
     // Ensure all profile options are supported.
     let p = project()
-        .file("Cargo.toml", &basic_lib_manifest("foo"))
-        .file("src/lib.rs", "")
+        .file("src/main.rs", "fn main() {}")
         .file(
             ".cargo/config",
             r#"
@@ -256,17 +257,20 @@ fn profile_config_all_options() {
 
     p.cargo("build --release -v -Z config-profile")
         .masquerade_as_nightly_cargo()
+        .env_remove("CARGO_INCREMENTAL")
         .with_stderr(
             "\
 [COMPILING] foo [..]
 [RUNNING] `rustc --crate-name foo [..] \
             -C opt-level=1 \
             -C panic=abort \
+            -C lto \
             -C codegen-units=2 \
             -C debuginfo=2 \
             -C debug-assertions=on \
             -C overflow-checks=off [..]\
-            -C rpath [..]
+            -C rpath [..]\
+            -C incremental=[..]
 [FINISHED] release [optimized + debuginfo] [..]
 ",
         )

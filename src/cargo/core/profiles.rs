@@ -1,5 +1,5 @@
 use std::collections::HashSet;
-use std::{cmp, fmt, hash};
+use std::{cmp, env, fmt, hash};
 
 use serde::Deserialize;
 
@@ -19,6 +19,10 @@ pub struct Profiles {
     test: ProfileMaker,
     bench: ProfileMaker,
     doc: ProfileMaker,
+    /// Incremental compilation can be overridden globally via:
+    /// - `CARGO_INCREMENTAL` environment variable.
+    /// - `build.incremental` config value.
+    incremental: Option<bool>,
 }
 
 impl Profiles {
@@ -33,7 +37,11 @@ impl Profiles {
         }
 
         let config_profiles = config.profiles()?;
-        config_profiles.validate(features, warnings)?;
+
+        let incremental = match env::var_os("CARGO_INCREMENTAL") {
+            Some(v) => Some(v == "1"),
+            None => config.get::<Option<bool>>("build.incremental")?,
+        };
 
         Ok(Profiles {
             dev: ProfileMaker {
@@ -61,6 +69,7 @@ impl Profiles {
                 toml: profiles.and_then(|p| p.doc.clone()),
                 config: None,
             },
+            incremental,
         })
     }
 
@@ -100,9 +109,24 @@ impl Profiles {
             CompileMode::Doc { .. } => &self.doc,
         };
         let mut profile = maker.get_profile(Some(pkg_id), is_member, unit_for);
-        // `panic` should not be set for tests/benches, or any of their dependencies.
+        // `panic` should not be set for tests/benches, or any of their
+        // dependencies.
         if !unit_for.is_panic_ok() || mode.is_any_test() {
             profile.panic = None;
+        }
+
+        // Incremental can be globally overridden.
+        if let Some(v) = self.incremental {
+            profile.incremental = v;
+        }
+        // Only enable incremental compilation for sources the user can
+        // modify (aka path sources). For things that change infrequently,
+        // non-incremental builds yield better performance in the compiler
+        // itself (aka crates.io / git dependencies)
+        //
+        // (see also https://github.com/rust-lang/cargo/issues/3972)
+        if !pkg_id.source_id().is_path() {
+            profile.incremental = false;
         }
         profile
     }

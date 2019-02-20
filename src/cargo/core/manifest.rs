@@ -66,6 +66,7 @@ pub struct VirtualManifest {
     workspace: WorkspaceConfig,
     profiles: Profiles,
     warnings: Warnings,
+    features: Features,
 }
 
 /// General metadata about a package which is just blindly uploaded to the
@@ -541,6 +542,7 @@ impl VirtualManifest {
         patch: HashMap<Url, Vec<Dependency>>,
         workspace: WorkspaceConfig,
         profiles: Profiles,
+        features: Features,
     ) -> VirtualManifest {
         VirtualManifest {
             replace,
@@ -548,6 +550,7 @@ impl VirtualManifest {
             workspace,
             profiles,
             warnings: Warnings::new(),
+            features,
         }
     }
 
@@ -573,6 +576,10 @@ impl VirtualManifest {
 
     pub fn warnings(&self) -> &Warnings {
         &self.warnings
+    }
+
+    pub fn features(&self) -> &Features {
+        &self.features
     }
 }
 

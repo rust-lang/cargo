@@ -237,13 +237,9 @@ impl<'cfg> Workspace<'cfg> {
     }
 
     pub fn profiles(&self) -> &Profiles {
-        let root = self
-            .root_manifest
-            .as_ref()
-            .unwrap_or(&self.current_manifest);
-        match *self.packages.get(root) {
-            MaybePackage::Package(ref p) => p.manifest().profiles(),
-            MaybePackage::Virtual(ref vm) => vm.profiles(),
+        match self.root_maybe() {
+            MaybePackage::Package(p) => p.manifest().profiles(),
+            MaybePackage::Virtual(vm) => vm.profiles(),
         }
     }
 
@@ -260,6 +256,15 @@ impl<'cfg> Workspace<'cfg> {
         .unwrap()
     }
 
+    /// Returns the root Package or VirtualManifest.
+    fn root_maybe(&self) -> &MaybePackage {
+        let root = self
+            .root_manifest
+            .as_ref()
+            .unwrap_or(&self.current_manifest);
+        self.packages.get(root)
+    }
+
     pub fn target_dir(&self) -> Filesystem {
         self.target_dir
             .clone()
@@ -270,13 +275,9 @@ impl<'cfg> Workspace<'cfg> {
     ///
     /// This may be from a virtual crate or an actual crate.
     pub fn root_replace(&self) -> &[(PackageIdSpec, Dependency)] {
-        let path = match self.root_manifest {
-            Some(ref p) => p,
-            None => &self.current_manifest,
-        };
-        match *self.packages.get(path) {
-            MaybePackage::Package(ref p) => p.manifest().replace(),
-            MaybePackage::Virtual(ref vm) => vm.replace(),
+        match self.root_maybe() {
+            MaybePackage::Package(p) => p.manifest().replace(),
+            MaybePackage::Virtual(vm) => vm.replace(),
         }
     }
 
@@ -284,13 +285,9 @@ impl<'cfg> Workspace<'cfg> {
     ///
     /// This may be from a virtual crate or an actual crate.
     pub fn root_patch(&self) -> &HashMap<Url, Vec<Dependency>> {
-        let path = match self.root_manifest {
-            Some(ref p) => p,
-            None => &self.current_manifest,
-        };
-        match *self.packages.get(path) {
-            MaybePackage::Package(ref p) => p.manifest().patch(),
-            MaybePackage::Virtual(ref vm) => vm.patch(),
+        match self.root_maybe() {
+            MaybePackage::Package(p) => p.manifest().patch(),
+            MaybePackage::Virtual(vm) => vm.patch(),
         }
     }
 
@@ -524,6 +521,18 @@ impl<'cfg> Workspace<'cfg> {
     /// 2. All workspace members agree on this one root as the root.
     /// 3. The current crate is a member of this workspace.
     fn validate(&mut self) -> CargoResult<()> {
+        // Validate config profiles only once per workspace.
+        let features = match self.root_maybe() {
+            MaybePackage::Package(p) => p.manifest().features(),
+            MaybePackage::Virtual(vm) => vm.features(),
+        };
+        let mut warnings = Vec::new();
+        self.config.profiles()?.validate(features, &mut warnings)?;
+        for warning in warnings {
+            self.config.shell().warn(&warning)?;
+        }
+
+        // The rest of the checks require a VirtualManifest or multiple members.
         if self.root_manifest.is_none() {
             return Ok(());
         }
