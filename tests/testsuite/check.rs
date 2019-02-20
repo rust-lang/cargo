@@ -210,7 +210,13 @@ fn force_rebuild_displays_error() {
         .with_stderr_contains("[..]warning: unused import[..]")
         .run();
 
-    foo.cargo("check --force-rebuild")
+    // for now this requires the unstable feature flag, so expect an error here
+    let output = foo.cargo("check --force-rebuild")
+        .exec_with_output();
+    assert!(output.is_err());
+
+    foo.cargo("check -Z unstable-options --force-rebuild")
+        .masquerade_as_nightly_cargo() // remove this when `-Z unstable-options` is no longer required
         .with_stderr_contains("[..]warning: unused import[..]")
         .run();
 }

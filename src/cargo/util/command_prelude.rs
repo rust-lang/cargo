@@ -318,8 +318,13 @@ pub trait ArgMatchesExt {
         let mut build_config = BuildConfig::new(config, self.jobs()?, &self.target(), mode)?;
         build_config.message_format = message_format;
         build_config.release = self._is_present("release");
-        build_config.build_plan = self._is_present("build-plan");
         build_config.force_rebuild = self._is_present("force-rebuild");
+        if build_config.force_rebuild && !config.cli_unstable().unstable_options {
+            Err(failure::format_err!(
+                "`--force-rebuild` flag is unstable, pass `-Z unstable-options` to enable it"
+            ))?;
+        };
+        build_config.build_plan = self._is_present("build-plan");
         if build_config.build_plan && !config.cli_unstable().unstable_options {
             Err(failure::format_err!(
                 "`--build-plan` flag is unstable, pass `-Z unstable-options` to enable it"
