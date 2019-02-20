@@ -59,8 +59,8 @@ pub fn build_unit_dependencies<'a, 'cfg>(
             // We check the global test mode to see if we are running in `cargo
             // test` in which case we ensure all dependencies have `panic`
             // cleared, and avoid building the lib thrice (once with `panic`, once
-            // without, once for --test).  In particular, the lib included for
-            // doctests and examples are `Build` mode here.
+            // without, once for `--test`). In particular, the lib included for
+            // Doc tests and examples are `Build` mode here.
             let unit_for = if unit.mode.is_any_test() || bcx.build_config.test() {
                 UnitFor::new_test()
             } else if unit.target.is_custom_build() {
@@ -68,7 +68,7 @@ pub fn build_unit_dependencies<'a, 'cfg>(
                 // generates all units.
                 UnitFor::new_build()
             } else if unit.target.for_host() {
-                // proc-macro/plugin should never have panic set.
+                // Proc macro / plugin should never have panic set.
                 UnitFor::new_compiler()
             } else {
                 UnitFor::new_normal()
@@ -95,10 +95,10 @@ fn deps_of<'a, 'cfg, 'tmp>(
     state: &mut State<'a, 'cfg, 'tmp>,
     unit_for: UnitFor,
 ) -> CargoResult<()> {
-    // Currently the `deps` map does not include `unit_for`.  This should
-    // be safe for now.  `TestDependency` only exists to clear the `panic`
+    // Currently the `deps` map does not include `unit_for`. This should
+    // be safe for now. `TestDependency` only exists to clear the `panic`
     // flag, and you'll never ask for a `unit` with `panic` set as a
-    // `TestDependency`.  `CustomBuild` should also be fine since if the
+    // `TestDependency`. `CustomBuild` should also be fine since if the
     // requested unit's settings are the same as `Any`, `CustomBuild` can't
     // affect anything else in the hierarchy.
     if !state.deps.contains_key(unit) {
@@ -112,9 +112,9 @@ fn deps_of<'a, 'cfg, 'tmp>(
     Ok(())
 }
 
-/// For a package, return all targets which are registered as dependencies
+/// For a package, returns all targets that are registered as dependencies
 /// for that package.
-/// This returns a vec of `(Unit, UnitFor)` pairs.  The `UnitFor`
+/// This returns a `Vec` of `(Unit, UnitFor)` pairs. The `UnitFor`
 /// is the profile type that should be used for dependencies of the unit.
 fn compute_deps<'a, 'cfg, 'tmp>(
     unit: &Unit<'a>,
@@ -124,7 +124,7 @@ fn compute_deps<'a, 'cfg, 'tmp>(
     if unit.mode.is_run_custom_build() {
         return compute_deps_custom_build(unit, state.bcx);
     } else if unit.mode.is_doc() && !unit.mode.is_any_test() {
-        // Note: This does not include Doctest.
+        // Note: this does not include doc test.
         return compute_deps_doc(unit, state);
     }
 
@@ -140,8 +140,8 @@ fn compute_deps<'a, 'cfg, 'tmp>(
                 return false;
             }
 
-            // If this dependency is *not* a transitive dependency, then it
-            // only applies to test/example targets
+            // If this dependency is **not** a transitive dependency, then it
+            // only applies to test/example targets.
             if !dep.is_transitive()
                 && !unit.target.is_test()
                 && !unit.target.is_example()
@@ -260,7 +260,7 @@ fn compute_deps_custom_build<'a, 'cfg>(
 ) -> CargoResult<Vec<(Unit<'a>, UnitFor)>> {
     // When not overridden, then the dependencies to run a build script are:
     //
-    // 1. Compiling the build script itself
+    // 1. Compiling the build script itself.
     // 2. For each immediate dependency of our package which has a `links`
     //    key, the execution of that build script.
     //
@@ -272,7 +272,8 @@ fn compute_deps_custom_build<'a, 'cfg>(
         unit.pkg,
         unit.target,
         UnitFor::new_build(),
-        Kind::Host, // build scripts always compiled for the host
+        // Build scripts always compiled for the host.
+        Kind::Host,
         CompileMode::Build,
     );
     // All dependencies of this unit should use profiles for custom
@@ -280,7 +281,7 @@ fn compute_deps_custom_build<'a, 'cfg>(
     Ok(vec![(unit, UnitFor::new_build())])
 }
 
-/// Returns the dependencies necessary to document a package
+/// Returns the dependencies necessary to document a package.
 fn compute_deps_doc<'a, 'cfg, 'tmp>(
     unit: &Unit<'a>,
     state: &mut State<'a, 'cfg, 'tmp>,
@@ -309,8 +310,8 @@ fn compute_deps_doc<'a, 'cfg, 'tmp>(
             Some(lib) => lib,
             None => continue,
         };
-        // rustdoc only needs rmeta files for regular dependencies.
-        // However, for plugins/proc-macros, deps should be built like normal.
+        // Rustdoc only needs rmeta files for regular dependencies.
+        // However, for plugins/proc macros, deps should be built like normal.
         let mode = check_or_build_mode(unit.mode, lib);
         let dep_unit_for = UnitFor::new_normal().with_for_host(lib.for_host());
         let lib_unit = new_unit(bcx, dep, lib, dep_unit_for, unit.kind.for_target(lib), mode);
@@ -329,10 +330,10 @@ fn compute_deps_doc<'a, 'cfg, 'tmp>(
         }
     }
 
-    // Be sure to build/run the build script for documented libraries as
+    // Be sure to build/run the build script for documented libraries.
     ret.extend(dep_build_script(unit, bcx));
 
-    // If we document a binary, we need the library available
+    // If we document a binary, we need the library available.
     if unit.target.is_bin() {
         ret.extend(maybe_lib(unit, bcx, UnitFor::new_normal()));
     }
@@ -387,7 +388,7 @@ fn check_or_build_mode(mode: CompileMode, target: &Target) -> CompileMode {
     match mode {
         CompileMode::Check { .. } | CompileMode::Doc { .. } => {
             if target.for_host() {
-                // Plugin and proc-macro targets should be compiled like
+                // Plugin and proc macro targets should be compiled like
                 // normal.
                 CompileMode::Build
             } else {
@@ -455,7 +456,7 @@ fn connect_run_custom_build_deps(state: &mut State<'_, '_, '_>) {
             }
         }
 
-        // And next we take a look at all build scripts executions listed in the
+        // Next, we take a look at all build scripts executions listed in the
         // dependency map. Our job here is to take everything that depends on
         // this build script (from our reverse map above) and look at the other
         // package dependencies of these parents.

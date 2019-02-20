@@ -7,8 +7,9 @@ use crate::support::sleep_ms;
 use crate::support::{basic_lib_manifest, basic_manifest, main_file, project};
 
 #[test]
-#[cfg(not(windows))] // I have no idea why this is failing spuriously on
-                     // Windows, for more info see #3466.
+// I have no idea why this is failing spuriously on Windows;
+// for more info, see #3466.
+#[cfg(not(windows))]
 fn cargo_compile_with_nested_deps_shorthand() {
     let p = project()
         .file(

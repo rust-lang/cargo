@@ -22,7 +22,7 @@ pub enum EitherManifest {
     Virtual(VirtualManifest),
 }
 
-/// Contains all the information about a package, as loaded from a Cargo.toml.
+/// Contains all the information about a package, as loaded from a `Cargo.toml`.
 #[derive(Clone, Debug)]
 pub struct Manifest {
     summary: Summary,
@@ -83,11 +83,11 @@ pub struct ManifestMetadata {
     pub categories: Vec<String>,
     pub license: Option<String>,
     pub license_file: Option<String>,
-    pub description: Option<String>,   // not markdown
-    pub readme: Option<String>,        // file, not contents
-    pub homepage: Option<String>,      // url
-    pub repository: Option<String>,    // url
-    pub documentation: Option<String>, // url
+    pub description: Option<String>,   // Not in Markdown
+    pub readme: Option<String>,        // File, not contents
+    pub homepage: Option<String>,      // URL
+    pub repository: Option<String>,    // URL
+    pub documentation: Option<String>, // URL
     pub badges: BTreeMap<String, BTreeMap<String, String>>,
     pub links: Option<String>,
 }

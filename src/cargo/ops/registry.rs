@@ -363,7 +363,7 @@ pub fn registry(
     Ok((Registry::new_handle(api_host, token, handle), sid))
 }
 
-/// Create a new HTTP handle with appropriate global configuration for cargo.
+/// Creates a new HTTP handle with appropriate global configuration for cargo.
 pub fn http_handle(config: &Config) -> CargoResult<Easy> {
     let (mut handle, timeout) = http_handle_and_timeout(config)?;
     timeout.configure(&mut handle)?;
@@ -492,7 +492,7 @@ impl HttpTimeout {
     }
 }
 
-/// Find an explicit HTTP proxy if one is available.
+/// Finds an explicit HTTP proxy if one is available.
 ///
 /// Favor cargo's `http.proxy`, then git's `http.proxy`. Proxies specified
 /// via environment variables are picked up by libcurl.

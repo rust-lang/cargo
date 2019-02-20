@@ -24,7 +24,7 @@ pub fn run_tests(
     }
     let (test, mut errors) = run_unit_tests(options, test_args, &compilation)?;
 
-    // If we have an error and want to fail fast, return
+    // If we have an error and want to fail fast, then return.
     if !errors.is_empty() && !options.no_fail_fast {
         return Ok(Some(CargoTestError::new(test, errors)));
     }
@@ -69,7 +69,7 @@ fn compile_tests<'a>(
     Ok(compilation)
 }
 
-/// Run the unit and integration tests of a package.
+/// Runs the unit and integration tests of a package.
 fn run_unit_tests(
     options: &TestOptions<'_>,
     test_args: &[String],
@@ -131,7 +131,7 @@ fn run_doc_tests(
     let mut errors = Vec::new();
     let config = options.compile_opts.config;
 
-    // We don't build/rust doctests if target != host
+    // We don't build/run doc tests if `target` does not equal `host`.
     if compilation.host != compilation.target {
         return Ok((Test::Doc, errors));
     }

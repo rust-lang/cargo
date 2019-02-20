@@ -1,7 +1,7 @@
 ## Configuration
 
 This document will explain how Cargo’s configuration system works, as well as
-available keys or configuration.  For configuration of a package through its
+available keys or configuration. For configuration of a package through its
 manifest, see the [manifest format](reference/manifest.html).
 
 ### Hierarchical structure
@@ -103,7 +103,7 @@ index = "..."   # URL of the registry index
 
 [http]
 proxy = "host:port" # HTTP proxy to use for HTTP requests (defaults to none)
-                    # in libcurl format, e.g. "socks5h://host:port"
+                    # in libcurl format, e.g., "socks5h://host:port"
 timeout = 30        # Timeout for each HTTP request, in seconds
 cainfo = "cert.pem" # Path to Certificate Authority (CA) bundle (optional)
 check-revoke = true # Indicates whether SSL certs are checked for revocation

@@ -12,7 +12,7 @@ pub fn run(
 ) -> CargoResult<Option<ProcessError>> {
     let config = ws.config();
 
-    // We compute the `bins` here *just for diagnosis*.  The actual set of
+    // We compute the `bins` here *just for diagnosis*. The actual set of
     // packages to be run is determined by the `ops::compile` call below.
     let packages = options.spec.get_packages(ws)?;
     let bins: Vec<_> = packages
@@ -34,7 +34,7 @@ pub fn run(
         if !options.filter.is_specific() {
             failure::bail!("a bin target must be available for `cargo run`")
         } else {
-            // this will be verified in cargo_compile
+            // This will be verified in `cargo_compile`.
         }
     }
 
