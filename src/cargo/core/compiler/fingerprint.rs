@@ -492,12 +492,7 @@ fn calculate<'a, 'cfg>(
     } else {
         bcx.rustflags_args(unit)?
     };
-    let profile_hash = util::hash_u64(&(
-        &unit.profile,
-        unit.mode,
-        bcx.extra_args_for(unit),
-        cx.incremental_args(unit)?,
-    ));
+    let profile_hash = util::hash_u64(&(&unit.profile, unit.mode, bcx.extra_args_for(unit)));
     let fingerprint = Arc::new(Fingerprint {
         rustc: util::hash_u64(&bcx.rustc.verbose_version),
         target: util::hash_u64(&unit.target),

@@ -37,7 +37,7 @@ fn cargo_fail_with_no_stderr() {
 }
 
 /// Checks that the `CARGO_INCREMENTAL` environment variable results in
-/// `rustc` getting `-Zincremental` passed to it.
+/// `rustc` getting `-C incremental` passed to it.
 #[test]
 fn cargo_compile_incremental() {
     let p = project()
