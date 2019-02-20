@@ -38,7 +38,6 @@ pub struct BuildContext<'a, 'cfg: 'a> {
     pub target_config: TargetConfig,
     pub target_info: TargetInfo,
     pub host_info: TargetInfo,
-    pub incremental_env: Option<bool>,
 }
 
 impl<'a, 'cfg> BuildContext<'a, 'cfg> {
@@ -51,11 +50,6 @@ impl<'a, 'cfg> BuildContext<'a, 'cfg> {
         profiles: &'a Profiles,
         extra_compiler_args: HashMap<Unit<'a>, Vec<String>>,
     ) -> CargoResult<BuildContext<'a, 'cfg>> {
-        let incremental_env = match env::var("CARGO_INCREMENTAL") {
-            Ok(v) => Some(v == "1"),
-            Err(_) => None,
-        };
-
         let rustc = config.rustc(Some(ws))?;
         let host_config = TargetConfig::new(config, &rustc.host)?;
         let target_config = match build_config.requested_target.as_ref() {
@@ -84,7 +78,6 @@ impl<'a, 'cfg> BuildContext<'a, 'cfg> {
             host_info,
             build_config,
             profiles,
-            incremental_env,
             extra_compiler_args,
         })
     }
