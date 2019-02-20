@@ -20,7 +20,8 @@
 //!    b. Compile each dependency in order, passing in the -L's pointing at each
 //!       previously compiled dependency.
 
-use std::collections::{HashMap, HashSet};
+use std::collections::{BTreeSet, HashMap, HashSet};
+use std::iter::FromIterator;
 use std::path::PathBuf;
 use std::sync::Arc;
 
@@ -108,22 +109,33 @@ impl Packages {
     }
 
     pub fn to_package_id_specs(&self, ws: &Workspace<'_>) -> CargoResult<Vec<PackageIdSpec>> {
-        let specs = match *self {
+        let specs = match self {
             Packages::All => ws
                 .members()
                 .map(Package::package_id)
                 .map(PackageIdSpec::from_package_id)
                 .collect(),
-            Packages::OptOut(ref opt_out) => ws
-                .members()
-                .map(Package::package_id)
-                .map(PackageIdSpec::from_package_id)
-                .filter(|p| opt_out.iter().position(|x| *x == p.name()).is_none())
-                .collect(),
-            Packages::Packages(ref packages) if packages.is_empty() => {
+            Packages::OptOut(opt_out) => {
+                let mut opt_out = BTreeSet::from_iter(opt_out.iter().cloned());
+                let packages = ws
+                    .members()
+                    .filter(|pkg| !opt_out.remove(pkg.name().as_str()))
+                    .map(Package::package_id)
+                    .map(PackageIdSpec::from_package_id)
+                    .collect();
+                if !opt_out.is_empty() {
+                    ws.config().shell().warn(format!(
+                        "excluded package(s) {} not found in workspace `{}`",
+                        opt_out.iter().map(|x| x.as_ref()).collect::<Vec<_>>().join(", "),
+                        ws.root().display(),
+                    ))?;
+                }
+                packages
+            },
+            Packages::Packages(packages) if packages.is_empty() => {
                 vec![PackageIdSpec::from_package_id(ws.current()?.package_id())]
             }
-            Packages::Packages(ref packages) => packages
+            Packages::Packages(packages) => packages
                 .iter()
                 .map(|p| PackageIdSpec::parse(p))
                 .collect::<CargoResult<Vec<_>>>()?,
@@ -150,11 +162,11 @@ impl Packages {
         let packages: Vec<_> = match self {
             Packages::Default => ws.default_members().collect(),
             Packages::All => ws.members().collect(),
-            Packages::OptOut(ref opt_out) => ws
+            Packages::OptOut(opt_out) => ws
                 .members()
                 .filter(|pkg| !opt_out.iter().any(|name| pkg.name().as_str() == name))
                 .collect(),
-            Packages::Packages(ref pkgs) => pkgs
+            Packages::Packages(packages) => packages
                 .iter()
                 .map(|name| {
                     ws.members()
