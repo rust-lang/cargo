@@ -79,8 +79,7 @@ pub struct FixOptions<'a> {
 pub fn fix(ws: &Workspace<'_>, opts: &mut FixOptions<'_>) -> CargoResult<()> {
     check_version_control(opts)?;
 
-    // Spin up our lock server which our subprocesses will use to synchronize
-    // fixes.
+    // Spin up our lock server, which our subprocesses will use to synchronize fixes.
     let lock_server = LockServer::new()?;
     opts.compile_opts
         .build_config
@@ -230,7 +229,7 @@ pub fn fix_maybe_exec_rustc() -> CargoResult<bool> {
     // *stop* compiling then we want to back them out and continue to print
     // warnings to the user.
     //
-    // If we didn't actually make any changes then we can immediately exec the
+    // If we didn't actually make any changes then we can immediately execute the
     // new rustc, and otherwise we capture the output to hide it in the scenario
     // that we have to back it all out.
     if !fixes.files.is_empty() {
@@ -256,7 +255,7 @@ pub fn fix_maybe_exec_rustc() -> CargoResult<bool> {
             return Ok(true);
         }
 
-        // Otherwise if our rustc just failed then that means that we broke the
+        // Otherwise, if our rustc just failed, then that means that we broke the
         // user's code with our changes. Back out everything and fall through
         // below to recompile again.
         if !output.status.success() {
@@ -294,16 +293,16 @@ fn rustfix_crate(
 ) -> Result<FixedCrate, Error> {
     args.verify_not_preparing_for_enabled_edition()?;
 
-    // First up we want to make sure that each crate is only checked by one
+    // First up, we want to make sure that each crate is only checked by one
     // process at a time. If two invocations concurrently check a crate then
     // it's likely to corrupt it.
     //
-    // Currently we do this by assigning the name on our lock to the manifest
+    // We currently do this by assigning the name on our lock to the manifest
     // directory.
     let dir = env::var("CARGO_MANIFEST_DIR").expect("CARGO_MANIFEST_DIR is missing?");
     let _lock = LockServerClient::lock(&lock_addr.parse()?, dir)?;
 
-    // Next up this is a bit suspicious, but we *iteratively* execute rustc and
+    // Next up, this is a bit suspicious, but we *iteratively* execute rustc and
     // collect suggestions to feed to rustfix. Once we hit our limit of times to
     // execute rustc or we appear to be reaching a fixed point we stop running
     // rustc.
@@ -314,7 +313,7 @@ fn rustfix_crate(
     //
     // where there are two fixes to happen here: `crate::foo::<crate::Bar>()`.
     // The spans for these two suggestions are overlapping and its difficult in
-    // the compiler to *not* have overlapping spans here. As a result, a naive
+    // the compiler to **not** have overlapping spans here. As a result, a naive
     // implementation would feed the two compiler suggestions for the above fix
     // into `rustfix`, but one would be rejected because it overlaps with the
     // other.
@@ -325,7 +324,7 @@ fn rustfix_crate(
     // failed to apply, assuming that they can be fixed the next time we run
     // rustc.
     //
-    // Naturally we want a few protections in place here though to avoid looping
+    // Naturally, we want a few protections in place here though to avoid looping
     // forever or otherwise losing data. To that end we have a few termination
     // conditions:
     //
@@ -346,7 +345,8 @@ fn rustfix_crate(
         last_fix_counts.clear();
         for (path, file) in fixes.files.iter_mut() {
             last_fix_counts.insert(path.clone(), file.fixes_applied);
-            file.errors_applying_fixes.clear(); // we'll generate new errors below
+            // We'll generate new errors below.
+            file.errors_applying_fixes.clear();
         }
         rustfix_and_fix(&mut fixes, rustc, filename, args)?;
         let mut progress_yet_to_be_made = false;
@@ -381,7 +381,7 @@ fn rustfix_crate(
     Ok(fixes)
 }
 
-/// Execute `rustc` to apply one round of suggestions to the crate in question.
+/// Executes `rustc` to apply one round of suggestions to the crate in question.
 ///
 /// This will fill in the `fixes` map with original code, suggestions applied,
 /// and any errors encountered while fixing files.
@@ -391,9 +391,8 @@ fn rustfix_and_fix(
     filename: &Path,
     args: &FixArgs,
 ) -> Result<(), Error> {
-    // If not empty, filter by these lints
-    //
-    // TODO: Implement a way to specify this
+    // If not empty, filter by these lints.
+    // TODO: implement a way to specify this.
     let only = HashSet::new();
 
     let mut cmd = Command::new(rustc);
@@ -421,17 +420,17 @@ fn rustfix_and_fix(
         .map(|_| rustfix::Filter::Everything)
         .unwrap_or(rustfix::Filter::MachineApplicableOnly);
 
-    // Sift through the output of the compiler to look for JSON messages
+    // Sift through the output of the compiler to look for JSON messages.
     // indicating fixes that we can apply.
-    let stderr = str::from_utf8(&output.stderr).context("failed to parse rustc stderr as utf-8")?;
+    let stderr = str::from_utf8(&output.stderr).context("failed to parse rustc stderr as UTF-8")?;
 
     let suggestions = stderr
         .lines()
         .filter(|x| !x.is_empty())
         .inspect(|y| trace!("line: {}", y))
-        // Parse each line of stderr ignoring errors as they may not all be json
+        // Parse each line of stderr, ignoring errors, as they may not all be JSON.
         .filter_map(|line| serde_json::from_str::<Diagnostic>(line).ok())
-        // From each diagnostic try to extract suggestions from rustc
+        // From each diagnostic, try to extract suggestions from rustc.
         .filter_map(|diag| rustfix::collect_suggestions(&diag, &only, fix_mode));
 
     // Collect suggestions by file so we can apply them one at a time later.
@@ -637,7 +636,7 @@ impl FixArgs {
         }
     }
 
-    /// Verify that we're not both preparing for an enabled edition and enabling
+    /// Verifies that we're not both preparing for an enabled edition and enabling
     /// the edition.
     ///
     /// This indicates that `cargo fix --prepare-for` is being executed out of

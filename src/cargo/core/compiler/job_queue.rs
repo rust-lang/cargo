@@ -19,7 +19,6 @@ use crate::util::diagnostic_server::{self, DiagnosticPrinter};
 use crate::util::{internal, profile, CargoResult, CargoResultExt, ProcessBuilder};
 use crate::util::{Config, DependencyQueue, Dirty, Fresh, Freshness};
 use crate::util::{Progress, ProgressStyle};
-
 use super::context::OutputFile;
 use super::job::Job;
 use super::{BuildContext, BuildPlan, CompileMode, Context, Kind, Unit};
@@ -44,9 +43,9 @@ pub struct JobQueue<'a, 'cfg> {
 
 /// A helper structure for metadata about the state of a building package.
 struct PendingBuild {
-    /// Number of jobs currently active
+    /// The number of jobs currently active.
     amt: usize,
-    /// Current freshness state of this package. Any dirty target within a
+    /// The current freshness state of this package. Any dirty target within a
     /// package will cause the entire package to become dirty.
     fresh: Freshness,
 }
@@ -166,7 +165,7 @@ impl<'a, 'cfg> JobQueue<'a, 'cfg> {
         Ok(())
     }
 
-    /// Execute all jobs necessary to build the dependency graph.
+    /// Executes all jobs necessary to build the dependency graph.
     ///
     /// This function will spawn off `config.jobs()` workers to build all of the
     /// necessary dependencies, in order. Freshness is propagated as far as
@@ -227,7 +226,7 @@ impl<'a, 'cfg> JobQueue<'a, 'cfg> {
         // loop starts out by scheduling as much work as possible (up to the
         // maximum number of parallel jobs we have tokens for). A local queue
         // is maintained separately from the main dependency queue as one
-        // dequeue may actually dequeue quite a bit of work (e.g. 10 binaries
+        // dequeue may actually dequeue quite a bit of work (e.g., 10 binaries
         // in one package).
         //
         // After a job has finished we update our internal state if it was
@@ -314,7 +313,8 @@ impl<'a, 'cfg> JobQueue<'a, 'cfg> {
                     Message::Finish(key, result) => {
                         info!("end: {:?}", key);
 
-                        // self.active.remove_item(&key); // <- switch to this when stabilized.
+                        // FIXME: switch to this when stabilized.
+                        // self.active.remove_item(&key);
                         let pos = self
                             .active
                             .iter()
@@ -355,12 +355,12 @@ impl<'a, 'cfg> JobQueue<'a, 'cfg> {
         self.progress.clear();
 
         let build_type = if self.is_release { "release" } else { "dev" };
-        // NOTE: This may be a bit inaccurate, since this may not display the
-        // profile for what was actually built.  Profile overrides can change
+        // NOTE: this may be a bit inaccurate, since this may not display the
+        // profile for what was actually built. Profile overrides can change
         // these settings, and in some cases different targets are built with
-        // different profiles.  To be accurate, it would need to collect a
+        // different profiles. To be accurate, it would need to collect a
         // list of Units built, and maybe display a list of the different
-        // profiles used.  However, to keep it simple and compatible with old
+        // profiles used. However, to keep it simple and compatible with old
         // behavior, we just display what the base profile is.
         let profile = cx.bcx.profiles.base_profile(self.is_release);
         let mut opt_type = String::from(if profile.opt_level.as_str() == "0" {
@@ -427,7 +427,7 @@ impl<'a, 'cfg> JobQueue<'a, 'cfg> {
         };
 
         if !build_plan {
-            // Print out some nice progress information
+            // Print out some nice progress information.
             self.note_working_on(config, &key, fresh)?;
         }
 
@@ -505,10 +505,10 @@ impl<'a, 'cfg> JobQueue<'a, 'cfg> {
 
         match fresh {
             // Any dirty stage which runs at least one command gets printed as
-            // being a compiled package
+            // being a compiled package.
             Dirty => {
                 if key.mode.is_doc() {
-                    // Skip Doctest
+                    // Skip doc test.
                     if !key.mode.is_any_test() {
                         self.documented.insert(key.pkg);
                         config.shell().status("Documenting", key.pkg)?;
@@ -523,7 +523,7 @@ impl<'a, 'cfg> JobQueue<'a, 'cfg> {
                 }
             }
             Fresh => {
-                // If doctest is last, only print "Fresh" if nothing has been printed.
+                // If doc test are last, only print "Fresh" if nothing has been printed.
                 if self.counts[&key.pkg] == 0
                     && !(key.mode == CompileMode::Doctest && self.compiled.contains(&key.pkg))
                 {

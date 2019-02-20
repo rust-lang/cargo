@@ -37,7 +37,7 @@ All packages in the workspace are documented if the `--all` flag is supplied. Th
 `--all` flag is automatically assumed for a virtual manifest.
 Note that `--exclude` has to be specified in conjunction with the `--all` flag.
 
-If the --package argument is given, then SPEC is a package id specification
+If the `--package` argument is given, then SPEC is a package ID specification
 which indicates which package should be documented. If it is not given, then the
 current package is documented. For more information on SPEC and its format, see
 the `cargo help pkgid` command.

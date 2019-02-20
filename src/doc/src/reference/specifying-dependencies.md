@@ -99,7 +99,7 @@ Here are some examples of inequality requirements:
 
 ### Multiple requirements
 
-Multiple version requirements can also be separated with a comma, e.g. `>= 1.2,
+Multiple version requirements can also be separated with a comma, e.g., `>= 1.2,
 < 1.5`.
 
 ### Specifying dependencies from other registries

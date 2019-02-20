@@ -56,7 +56,7 @@ brackets at the end of each author.
 #### The `edition` field (optional)
 
 You can opt in to a specific Rust Edition for your package with the
-`edition` key in `Cargo.toml`.  If you don't specify the edition, it will
+`edition` key in `Cargo.toml`. If you don't specify the edition, it will
 default to 2015.
 
 ```toml
@@ -108,7 +108,7 @@ automatically link your crate to the corresponding [docs.rs][docsrs] page.
 
 Documentation links from specific hosts are blacklisted. Hosts are added
 to the blacklist if they are known to not be hosting documentation and are
-possibly of malicious intent e.g. ad tracking networks. URLs from the
+possibly of malicious intent e.g., ad tracking networks. URLs from the
 following hosts are blacklisted:
 
 * rust-ci.org
@@ -233,13 +233,13 @@ keywords = ["...", "..."]
 # they must match exactly.
 categories = ["...", "..."]
 
-# This is an SPDX 2.1 license expression for this package.  Currently
+# This is an SPDX 2.1 license expression for this package. Currently
 # crates.io will validate the license provided against a whitelist of
 # known license and exception identifiers from the SPDX license list
-# 2.4.  Parentheses are not currently supported.
+# 2.4. Parentheses are not currently supported.
 #
 # Multiple licenses can be separated with a `/`, although that usage
-# is deprecated.  Instead, use a license expression with AND and OR
+# is deprecated. Instead, use a license expression with AND and OR
 # operators to get more explicit semantics.
 license = "..."
 
@@ -311,7 +311,7 @@ search ranking of a crate. It is highly discouraged to omit everything in a
 published crate.
 
 SPDX 2.1 license expressions are documented
-[here][spdx-2.1-license-expressions].  The current version of the
+[here][spdx-2.1-license-expressions]. The current version of the
 license list is available [here][spdx-license-list], and version 2.4
 is available [here][spdx-license-list-2.4].
 
@@ -368,7 +368,7 @@ lto = false        # Link Time Optimization usually reduces size of binaries
                    # string is specified like 'thin' then `-C lto=thin` will
                    # be passed.
 debug-assertions = true # controls whether debug assertions are enabled
-                   # (e.g. debug_assert!() and arithmetic overflow checks)
+                   # (e.g., debug_assert!() and arithmetic overflow checks)
 codegen-units = 16 # if > 1 enables parallel code generation which improves
                    # compile times, but prevents some optimizations.
                    # Passes `-C codegen-units`.
@@ -378,7 +378,7 @@ overflow-checks = true # use overflow checks for integer arithmetic.
                    # Passes the `-C overflow-checks=...` flag to the compiler.
 
 # The release profile, used for `cargo build --release` (and the dependencies
-# for `cargo test --release`,  including the local library or binary).
+# for `cargo test --release`, including the local library or binary).
 [profile.release]
 opt-level = 3
 debug = false
@@ -567,7 +567,7 @@ properties:
 * The *root crate*'s `Cargo.toml` contains the `[workspace]` table, but is not
   required to have other configuration.
 * Whenever any crate in the workspace is compiled, output is placed in the
-  *workspace root*. i.e. next to the *root crate*'s `Cargo.toml`.
+  *workspace root* (i.e., next to the *root crate*'s `Cargo.toml`).
 * The lock file for all crates in the workspace resides in the *workspace root*.
 * The `[patch]`, `[replace]` and `[profile.*]` sections in `Cargo.toml`
   are only recognized
@@ -635,7 +635,7 @@ inside `src/bin` containing a `main.rs` file which will be treated as an executa
 with a name of the parent directory.
 Do note, however, once you add a `[[bin]]` section ([see
 below](#configuring-a-target)), Cargo will no longer automatically build files
-located in `src/bin/*.rs`.  Instead you must create a `[[bin]]` section for
+located in `src/bin/*.rs`. Instead you must create a `[[bin]]` section for
 each file you want to build.
 
 Your package can optionally contain folders named `examples`, `tests`, and
@@ -882,13 +882,13 @@ other copies. The syntax is similar to the `[dependencies]` section:
 "bar:1.0.2" = { path = 'my/local/bar' }
 ```
 
-Each key in the `[replace]` table is a [package id
-specification](reference/pkgid-spec.html) which allows arbitrarily choosing a node in the
+Each key in the `[replace]` table is a [package ID
+specification](reference/pkgid-spec.html), which allows arbitrarily choosing a node in the
 dependency graph to override. The value of each key is the same as the
 `[dependencies]` syntax for specifying dependencies, except that you can't
 specify features. Note that when a crate is overridden the copy it's overridden
 with must have both the same name and version, but it can come from a different
-source (e.g. git or a local path).
+source (e.g., git or a local path).
 
 More information about overriding dependencies can be found in the [overriding
 dependencies][replace] section of the documentation.

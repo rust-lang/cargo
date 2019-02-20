@@ -1,13 +1,13 @@
 /*
-# Introduction To `support`
+# Introduction to `support`.
 
 Cargo has a wide variety of integration tests that execute the `cargo` binary
-and verify its behavior.  The `support` module contains many helpers to make
+and verify its behavior. The `support` module contains many helpers to make
 this process easy.
 
 The general form of a test involves creating a "project", running cargo, and
-checking the result.  Projects are created with the `ProjectBuilder` where you
-specify some files to create.  The general form looks like this:
+checking the result. Projects are created with the `ProjectBuilder` where you
+specify some files to create. The general form looks like this:
 
 ```
 let p = project()
@@ -35,8 +35,8 @@ p.cargo("run --bin foo")
 
 The project creates a mini sandbox under the "cargo integration test"
 directory with each test getting a separate directory such as
-`/path/to/cargo/target/cit/t123/`.  Each project appears as a separate
-directory.  There is also an empty `home` directory created that will be used
+`/path/to/cargo/target/cit/t123/`. Each project appears as a separate
+directory. There is also an empty `home` directory created that will be used
 as a home directory instead of your normal home directory.
 
 See `support::lines_match` for an explanation of the string pattern matching.
@@ -69,8 +69,8 @@ if !is_nightly() {
 When checking output, use `/` for paths even on Windows: the actual output
 of `\` on Windows will be replaced with `/`.
 
-Be careful when executing binaries on Windows.  You should not rename, delete,
-or overwrite a binary immediately after running it.  Under some conditions
+Be careful when executing binaries on Windows. You should not rename, delete,
+or overwrite a binary immediately after running it. Under some conditions
 Windows will fail with errors like "directory not empty" or "failed to remove"
 or "access is denied".
 
@@ -242,7 +242,7 @@ impl ProjectBuilder {
         self
     }
 
-    /// Add a file to the project.
+    /// Adds a file to the project.
     pub fn file<B: AsRef<Path>>(mut self, path: B, body: &str) -> Self {
         self._file(path.as_ref(), body);
         self
@@ -253,7 +253,7 @@ impl ProjectBuilder {
             .push(FileBuilder::new(self.root.root().join(path), body));
     }
 
-    /// Add a symlink to the project.
+    /// Adds a symlink to the project.
     pub fn symlink<T: AsRef<Path>>(mut self, dst: T, src: T) -> Self {
         self.symlinks.push(SymlinkBuilder::new(
             self.root.root().join(dst),
@@ -267,7 +267,7 @@ impl ProjectBuilder {
         self
     }
 
-    /// Create the project.
+    /// Creates the project.
     pub fn build(mut self) -> Project {
         // First, clean the directory if it already exists
         self.rm_root();
@@ -370,12 +370,12 @@ impl Project {
         ))
     }
 
-    /// Change the contents of an existing file.
+    /// Changes the contents of an existing file.
     pub fn change_file(&self, path: &str, body: &str) {
         FileBuilder::new(self.root().join(path), body).mk()
     }
 
-    /// Create a `ProcessBuilder` to run a program in the project
+    /// Creates a `ProcessBuilder` to run a program in the project
     /// and wrap it in an Execs to assert on the execution.
     /// Example:
     ///         p.process(&p.bin("foo"))
@@ -387,7 +387,7 @@ impl Project {
         execs().with_process_builder(p)
     }
 
-    /// Create a `ProcessBuilder` to run cargo.
+    /// Creates a `ProcessBuilder` to run cargo.
     /// Arguments can be separated by spaces.
     /// Example:
     ///     p.cargo("build --bin foo").run();
@@ -411,7 +411,7 @@ impl Project {
     /// times, you should instead use `cargo build` and use this
     /// method to run the executable. Each time you call this,
     /// use a new name for `dst`.
-    /// See https://github.com/rust-lang/cargo/issues/5481
+    /// See rust-lang/cargo#5481.
     pub fn rename_run(&self, src: &str, dst: &str) -> Execs {
         let src = self.bin(src);
         let dst = self.bin(dst);
@@ -581,21 +581,21 @@ impl Execs {
         self
     }
 
-    /// Verify that stdout is equal to the given lines.
+    /// Verifies that stdout is equal to the given lines.
     /// See `lines_match` for supported patterns.
     pub fn with_stdout<S: ToString>(&mut self, expected: S) -> &mut Self {
         self.expect_stdout = Some(expected.to_string());
         self
     }
 
-    /// Verify that stderr is equal to the given lines.
+    /// Verifies that stderr is equal to the given lines.
     /// See `lines_match` for supported patterns.
     pub fn with_stderr<S: ToString>(&mut self, expected: S) -> &mut Self {
         self.expect_stderr = Some(expected.to_string());
         self
     }
 
-    /// Verify the exit code from the process.
+    /// Verifies the exit code from the process.
     ///
     /// This is not necessary if the expected exit code is `0`.
     pub fn with_status(&mut self, expected: i32) -> &mut Self {
@@ -603,7 +603,7 @@ impl Execs {
         self
     }
 
-    /// Remove exit code check for the process.
+    /// Removes exit code check for the process.
     ///
     /// By default, the expected exit code is `0`.
     pub fn without_status(&mut self) -> &mut Self {
@@ -611,7 +611,7 @@ impl Execs {
         self
     }
 
-    /// Verify that stdout contains the given contiguous lines somewhere in
+    /// Verifies that stdout contains the given contiguous lines somewhere in
     /// its output.
     /// See `lines_match` for supported patterns.
     pub fn with_stdout_contains<S: ToString>(&mut self, expected: S) -> &mut Self {
@@ -619,7 +619,7 @@ impl Execs {
         self
     }
 
-    /// Verify that stderr contains the given contiguous lines somewhere in
+    /// Verifies that stderr contains the given contiguous lines somewhere in
     /// its output.
     /// See `lines_match` for supported patterns.
     pub fn with_stderr_contains<S: ToString>(&mut self, expected: S) -> &mut Self {
@@ -627,7 +627,7 @@ impl Execs {
         self
     }
 
-    /// Verify that either stdout or stderr contains the given contiguous
+    /// Verifies that either stdout or stderr contains the given contiguous
     /// lines somewhere in its output.
     /// See `lines_match` for supported patterns.
     pub fn with_either_contains<S: ToString>(&mut self, expected: S) -> &mut Self {
@@ -635,7 +635,7 @@ impl Execs {
         self
     }
 
-    /// Verify that stdout contains the given contiguous lines somewhere in
+    /// Verifies that stdout contains the given contiguous lines somewhere in
     /// its output, and should be repeated `number` times.
     /// See `lines_match` for supported patterns.
     pub fn with_stdout_contains_n<S: ToString>(&mut self, expected: S, number: usize) -> &mut Self {
@@ -644,7 +644,7 @@ impl Execs {
         self
     }
 
-    /// Verify that stdout does not contain the given contiguous lines.
+    /// Verifies that stdout does not contain the given contiguous lines.
     /// See `lines_match` for supported patterns.
     /// See note on `with_stderr_does_not_contain`.
     pub fn with_stdout_does_not_contain<S: ToString>(&mut self, expected: S) -> &mut Self {
@@ -652,11 +652,11 @@ impl Execs {
         self
     }
 
-    /// Verify that stderr does not contain the given contiguous lines.
+    /// Verifies that stderr does not contain the given contiguous lines.
     /// See `lines_match` for supported patterns.
     ///
     /// Care should be taken when using this method because there is a
-    /// limitless number of possible things that *won't* appear.  A typo means
+    /// limitless number of possible things that *won't* appear. A typo means
     /// your test will pass without verifying the correct behavior. If
     /// possible, write the test first so that it fails, and then implement
     /// your fix/feature to make it pass.
@@ -665,7 +665,7 @@ impl Execs {
         self
     }
 
-    /// Verify that all of the stderr output is equal to the given lines,
+    /// Verifies that all of the stderr output is equal to the given lines,
     /// ignoring the order of the lines.
     /// See `lines_match` for supported patterns.
     /// This is useful when checking the output of `cargo build -v` since
@@ -675,9 +675,11 @@ impl Execs {
     ///
     /// Be careful when using patterns such as `[..]`, because you may end up
     /// with multiple lines that might match, and this is not smart enough to
-    /// do anything like longest-match.  For example, avoid something like:
+    /// do anything like longest-match. For example, avoid something like:
+    ///
     ///     [RUNNING] `rustc [..]
     ///     [RUNNING] `rustc --crate-name foo [..]
+    ///
     /// This will randomly fail if the other crate name is `bar`, and the
     /// order changes.
     pub fn with_stderr_unordered<S: ToString>(&mut self, expected: S) -> &mut Self {
@@ -685,7 +687,7 @@ impl Execs {
         self
     }
 
-    /// Verify the JSON output matches the given JSON.
+    /// Verifies the JSON output matches the given JSON.
     /// Typically used when testing cargo commands that emit JSON.
     /// Each separate JSON object should be separated by a blank line.
     /// Example:
@@ -711,7 +713,7 @@ impl Execs {
         self
     }
 
-    /// Verify JSON output contains the given objects (in any order) somewhere
+    /// Verifies JSON output contains the given objects (in any order) somewhere
     /// in its output.
     ///
     /// CAUTION: Be very careful when using this. Make sure every object is
@@ -1081,7 +1083,7 @@ impl Execs {
             Err(..) => return Err(format!("{} was not utf8 encoded", description)),
             Ok(actual) => actual,
         };
-        // Let's not deal with \r\n vs \n on windows...
+        // Let's not deal with `\r\n` vs `\n` on Windows.
         let actual = actual.replace("\r", "");
         let actual = actual.replace("\t", "<tab>");
 
@@ -1262,7 +1264,7 @@ enum MatchKind {
     Unordered,
 }
 
-/// Compare a line with an expected pattern.
+/// Compares a line with an expected pattern.
 /// - Use `[..]` as a wildcard to match 0 or more characters on the same line
 ///   (similar to `.*` in a regex).
 /// - Use `[EXE]` to optionally add `.exe` on Windows (empty string on other
@@ -1307,10 +1309,10 @@ fn lines_match_works() {
 }
 
 /// Compares JSON object for approximate equality.
-/// You can use `[..]` wildcard in strings (useful for OS dependent things such
-/// as paths).  You can use a `"{...}"` string literal as a wildcard for
+/// You can use `[..]` wildcard in strings (useful for OS-dependent things such
+/// as paths). You can use a `"{...}"` string literal as a wildcard for
 /// arbitrary nested JSON (useful for parts of object emitted by other programs
-/// (e.g. rustc) rather than Cargo itself).  Arrays are sorted before comparison.
+/// (e.g., rustc) rather than Cargo itself). Arrays are sorted before comparison.
 pub fn find_json_mismatch(expected: &Value, actual: &Value) -> Result<(), String> {
     match find_json_mismatch_r(expected, &actual) {
         Some((expected_part, actual_part)) => Err(format!(
@@ -1371,7 +1373,7 @@ fn find_json_mismatch_r<'a>(
                 .nth(0)
         }
         (&Null, &Null) => None,
-        // magic string literal "{...}" acts as wildcard for any sub-JSON
+        // Magic string literal `"{...}"` acts as wildcard for any sub-JSON.
         (&String(ref l), _) if l == "{...}" => None,
         _ => Some((expected, actual)),
     }
@@ -1557,7 +1559,7 @@ fn _process(t: &OsStr) -> cargo::util::ProcessBuilder {
         .env("HOME", paths::home())
         .env("CARGO_HOME", paths::home().join(".cargo"))
         .env("__CARGO_TEST_ROOT", paths::root())
-        // Force cargo to think it's on the stable channel for all tests, this
+        // Force Cargo to think it's on the stable channel for all tests, this
         // should hopefully not surprise us as we add cargo features over time and
         // cargo rides the trains.
         .env("__CARGO_TEST_CHANNEL_OVERRIDE_DO_NOT_USE_THIS", "stable")
@@ -1624,12 +1626,12 @@ pub fn sleep_ms(ms: u64) {
     ::std::thread::sleep(Duration::from_millis(ms));
 }
 
-/// Returns true if the local filesystem has low-resolution mtimes.
+/// Returns `true` if the local filesystem has low-resolution mtimes.
 pub fn is_coarse_mtime() -> bool {
     // If the filetime crate is being used to emulate HFS then
-    // return true, without looking at the actual hardware.
+    // return `true`, without looking at the actual hardware.
     cfg!(emulate_second_only_system) ||
-    // This should actually be a test that $CARGO_TARGET_DIR is on an HFS
+    // This should actually be a test that `$CARGO_TARGET_DIR` is on an HFS
     // filesystem, (or any filesystem with low-resolution mtimes). However,
     // that's tricky to detect, so for now just deal with CI.
     cfg!(target_os = "macos") && env::var("CI").is_ok()

@@ -277,7 +277,7 @@ fn acquire(
     // File locking on Unix is currently implemented via `flock`, which is known
     // to be broken on NFS. We could in theory just ignore errors that happen on
     // NFS, but apparently the failure mode [1] for `flock` on NFS is **blocking
-    // forever**, even if the nonblocking flag is passed!
+    // forever**, even if the "non-blocking" flag is passed!
     //
     // As a result, we just skip all file locks entirely on NFS mounts. That
     // should avoid calling any `flock` functions at all, and it wouldn't work
@@ -294,7 +294,7 @@ fn acquire(
         // In addition to ignoring NFS which is commonly not working we also
         // just ignore locking on filesystems that look like they don't
         // implement file locking. We detect that here via the return value of
-        // locking (e.g. inspecting errno).
+        // locking (e.g., inspecting errno).
         #[cfg(unix)]
         Err(ref e) if e.raw_os_error() == Some(libc::ENOTSUP) => return Ok(()),
 
