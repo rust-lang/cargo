@@ -1,6 +1,6 @@
-use crate::command_prelude::*;
-
 use cargo::ops::{self, DocOptions};
+
+use crate::command_prelude::*;
 
 pub fn cli() -> App {
     subcommand("rustdoc")
@@ -34,13 +34,13 @@ pub fn cli() -> App {
         .after_help(
             "\
 The specified target for the current package (or package specified by SPEC if
-provided) will be documented with the specified <opts>... being passed to the
+provided) will be documented with the specified `<opts>...` being passed to the
 final rustdoc invocation. Dependencies will not be documented as part of this
-command.  Note that rustdoc will still unconditionally receive arguments such
-as -L, --extern, and --crate-type, and the specified <opts>...  will simply be
-added to the rustdoc invocation.
+command. Note that rustdoc will still unconditionally receive arguments such
+as `-L`, `--extern`, and `--crate-type`, and the specified `<opts>...` will
+simply be added to the rustdoc invocation.
 
-If the --package argument is given, then SPEC is a package id specification
+If the `--package` argument is given, then SPEC is a package ID specification
 which indicates which package should be documented. If it is not given, then the
 current package is documented. For more information on SPEC and its format, see
 the `cargo help pkgid` command.

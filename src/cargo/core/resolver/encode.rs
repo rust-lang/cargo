@@ -44,7 +44,7 @@ impl EncodableResolve {
         };
 
         // `PackageId`s in the lock file don't include the `source` part
-        // for workspace members, so we reconstruct proper ids.
+        // for workspace members, so we reconstruct proper IDs.
         let live_pkgs = {
             let mut live_pkgs = HashMap::new();
             let mut all_pkgs = HashSet::new();
@@ -176,7 +176,7 @@ impl EncodableResolve {
 }
 
 fn build_path_deps(ws: &Workspace<'_>) -> HashMap<String, SourceId> {
-    // If a crate is *not* a path source, then we're probably in a situation
+    // If a crate is **not** a path source, then we're probably in a situation
     // such as `cargo install` with a lock file from a remote dependency. In
     // that case we don't need to fixup any path dependencies (as they're not
     // actually path dependencies any more), so we ignore them.

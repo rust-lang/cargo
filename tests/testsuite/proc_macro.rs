@@ -244,7 +244,7 @@ fn plugin_and_proc_macro() {
         )
         .build();
 
-    let msg = "  lib.plugin and lib.proc-macro cannot both be true";
+    let msg = "  `lib.plugin` and `lib.proc-macro` cannot both be `true`";
     p.cargo("build")
         .with_status(101)
         .with_stderr_contains(msg)

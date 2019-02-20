@@ -1,4 +1,4 @@
-use std::collections::BTreeMap;
+use std::collections::{BTreeMap, HashSet};
 use std::fs::{self, File};
 use std::io::{self, BufRead};
 use std::iter::repeat;
@@ -58,10 +58,6 @@ pub fn publish(ws: &Workspace<'_>, opts: &PublishOpts<'_>) -> CargoResult<()> {
                 pkg.name()
             );
         }
-    }
-
-    if !pkg.manifest().patch().is_empty() {
-        failure::bail!("published crates cannot contain [patch] sections");
     }
 
     let (mut registry, reg_id) = registry(
@@ -350,7 +346,7 @@ pub fn registry(
     let token = token.or(token_config);
     let sid = get_source_id(config, index_config.or(index), registry)?;
     let api_host = {
-        let mut src = RegistrySource::remote(sid, config);
+        let mut src = RegistrySource::remote(sid, &HashSet::new(), config);
         // Only update the index if the config is not available or `force` is set.
         let cfg = src.config();
         let cfg = if force_update || cfg.is_err() {
@@ -367,7 +363,7 @@ pub fn registry(
     Ok((Registry::new_handle(api_host, token, handle), sid))
 }
 
-/// Create a new HTTP handle with appropriate global configuration for cargo.
+/// Creates a new HTTP handle with appropriate global configuration for cargo.
 pub fn http_handle(config: &Config) -> CargoResult<Easy> {
     let (mut handle, timeout) = http_handle_and_timeout(config)?;
     timeout.configure(&mut handle)?;
@@ -496,7 +492,7 @@ impl HttpTimeout {
     }
 }
 
-/// Find an explicit HTTP proxy if one is available.
+/// Finds an explicit HTTP proxy if one is available.
 ///
 /// Favor cargo's `http.proxy`, then git's `http.proxy`. Proxies specified
 /// via environment variables are picked up by libcurl.
@@ -696,7 +692,7 @@ fn get_source_id(
         (_, Some(i)) => SourceId::for_registry(&i.to_url()?),
         _ => {
             let map = SourceConfigMap::new(config)?;
-            let src = map.load(SourceId::crates_io(config)?)?;
+            let src = map.load(SourceId::crates_io(config)?, &HashSet::new())?;
             Ok(src.replaced_source_id())
         }
     }
@@ -721,7 +717,7 @@ pub fn search(
         prefix
     }
 
-    let (mut registry, _) = registry(config, None, index, reg, false)?;
+    let (mut registry, source_id) = registry(config, None, index, reg, false)?;
     let (crates, total_crates) = registry
         .search(query, limit)
         .chain_err(|| "failed to retrieve search results from the registry")?;
@@ -762,11 +758,15 @@ pub fn search(
             total_crates - limit
         );
     } else if total_crates > limit && limit >= search_max_limit {
-        println!(
-            "... and {} crates more (go to http://crates.io/search?q={} to see more)",
-            total_crates - limit,
-            percent_encode(query.as_bytes(), QUERY_ENCODE_SET)
-        );
+        let extra = if source_id.is_default_registry() {
+            format!(
+                " (go to http://crates.io/search?q={} to see more)",
+                percent_encode(query.as_bytes(), QUERY_ENCODE_SET)
+            )
+        } else {
+            String::new()
+        };
+        println!("... and {} crates more{}", total_crates - limit, extra);
     }
 
     Ok(())

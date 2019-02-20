@@ -16,8 +16,9 @@ enum FakeKind<'a> {
     Symlink { target: &'a Path },
 }
 
-/// Add an empty file with executable flags (and platform-dependent suffix).
-/// TODO: move this to `Project` if other cases using this emerge.
+/// Adds an empty file with executable flags (and platform-dependent suffix).
+//
+// TODO: move this to `Project` if other cases using this emerge.
 fn fake_file(proj: Project, dir: &Path, name: &str, kind: &FakeKind<'_>) -> Project {
     let path = proj
         .root()
@@ -67,7 +68,8 @@ fn list_commands_with_descriptions() {
         .with_stdout_contains(
             "    build                Compile a local package and all of its dependencies",
         )
-        // assert read-manifest prints the right one-line description followed by another command, indented.
+        // Assert that `read-manifest` prints the right one-line description followed by another
+        // command, indented.
         .with_stdout_contains(
             "    read-manifest        Print a JSON representation of a Cargo.toml manifest.",
         )
@@ -99,7 +101,7 @@ fn list_command_looks_at_path() {
     );
 }
 
-// windows and symlinks don't currently agree that well
+// Windows and symlinks don't currently mix well.
 #[cfg(unix)]
 #[test]
 fn list_command_resolves_symlinks() {
@@ -166,7 +168,7 @@ error: no such subcommand: `biuld`
         .run();
 }
 
-// if a subcommand is more than 3 edit distance away, we don't make a suggestion
+// If a subcommand is more than an edit distance of 3 away, we don't make a suggestion.
 #[test]
 fn find_closest_dont_correct_nonsense() {
     cargo_process("there-is-no-way-that-there-is-a-command-close-to-this")
@@ -324,8 +326,8 @@ fn explain() {
         .run();
 }
 
-// Test that the output of 'cargo -Z help' shows a different help screen with
-// all the -Z flags.
+// Test that the output of `cargo -Z help` shows a different help screen with
+// all the `-Z` flags.
 #[test]
 fn z_flags_help() {
     cargo_process("-Z help")

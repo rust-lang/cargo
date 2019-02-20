@@ -231,7 +231,7 @@ fn custom_build_script_rustc_flags() {
         "#,
         ).build();
 
-    // TODO: TEST FAILS BECAUSE OF WRONG STDOUT (but otherwise, the build works)
+    // TODO: TEST FAILS BECAUSE OF WRONG STDOUT (but otherwise, the build works).
     p.cargo("build --verbose")
         .with_status(101)
         .with_stderr(
@@ -3518,7 +3518,7 @@ fn _rename_with_link_search_path(cross: bool) {
     let p2 = p2.build();
 
     // Move the output `libfoo.so` into the directory of `p2`, and then delete
-    // the `p` project. On OSX the `libfoo.dylib` artifact references the
+    // the `p` project. On macOS, the `libfoo.dylib` artifact references the
     // original path in `p` so we want to make sure that it can't find it (hence
     // the deletion).
     let root = if cross {

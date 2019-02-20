@@ -1,7 +1,8 @@
 use std::collections::{BTreeMap, HashMap, HashSet};
 use std::rc::Rc;
 
-#[allow(unused_imports)] // "ensure" seems to require "bail" be in scope (macro hygiene issue?)
+// "ensure" seems to require "bail" be in scope (macro hygiene issue?).
+#[allow(unused_imports)]
 use failure::{bail, ensure};
 use log::debug;
 
@@ -53,7 +54,7 @@ impl Context {
 
     /// Activate this summary by inserting it into our list of known activations.
     ///
-    /// Returns true if this summary with the given method is already activated.
+    /// Returns `true` if this summary with the given method is already activated.
     pub fn flag_activated(&mut self, summary: &Summary, method: &Method<'_>) -> CargoResult<bool> {
         let id = summary.package_id();
         let prev = self
@@ -119,7 +120,7 @@ impl Context {
             .collect::<CargoResult<Vec<DepInfo>>>()?;
 
         // Attempt to resolve dependencies with fewer candidates before trying
-        // dependencies with more candidates.  This way if the dependency with
+        // dependencies with more candidates. This way if the dependency with
         // only one candidate can't be resolved we don't have to do a bunch of
         // work before we figure that out.
         deps.sort_by_key(|&(_, ref a, _)| a.len());
@@ -141,8 +142,8 @@ impl Context {
             .unwrap_or(false)
     }
 
-    /// checks whether all of `parent` and the keys of `conflicting activations`
-    /// are still active
+    /// Checks whether all of `parent` and the keys of `conflicting activations`
+    /// are still active.
     pub fn is_conflicting(
         &self,
         parent: Option<PackageId>,
@@ -154,7 +155,7 @@ impl Context {
             .all(|&id| self.is_active(id))
     }
 
-    /// Return all dependencies and the features we want from them.
+    /// Returns all dependencies and the features we want from them.
     fn resolve_features<'b>(
         &mut self,
         parent: Option<&Summary>,
@@ -166,7 +167,7 @@ impl Context {
             Method::Required { dev_deps, .. } => dev_deps,
         };
 
-        // First, filter by dev-dependencies
+        // First, filter by dev-dependencies.
         let deps = s.dependencies();
         let deps = deps.iter().filter(|d| d.is_transitive() || dev_deps);
 
@@ -284,9 +285,9 @@ impl Context {
     }
 }
 
-/// Takes requested features for a single package from the input Method and
+/// Takes requested features for a single package from the input `Method` and
 /// recurses to find all requested features, dependencies and requested
-/// dependency features in a Requirements object, returning it to the resolver.
+/// dependency features in a `Requirements` object, returning it to the resolver.
 fn build_requirements<'a, 'b: 'a>(
     s: &'a Summary,
     method: &'b Method<'_>,
@@ -395,7 +396,7 @@ impl<'r> Requirements<'r> {
         {
             match *fv {
                 FeatureValue::Feature(ref dep_feat) if **dep_feat == *feat => failure::bail!(
-                    "Cyclic feature dependency: feature `{}` depends on itself",
+                    "cyclic feature dependency: feature `{}` depends on itself",
                     feat
                 ),
                 _ => {}

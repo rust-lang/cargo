@@ -1,4 +1,4 @@
-//! Support for nightly features in Cargo itself
+//! Support for nightly features in Cargo itself.
 //!
 //! This file is the version of `feature_gate.rs` in upstream Rust for Cargo
 //! itself and is intended to be the avenue for which new features in Cargo are
@@ -37,7 +37,7 @@
 //!
 //! 4. Update the unstable documentation at
 //!    `src/doc/src/reference/unstable.md` to include a short description of
-//!    how to use your new feature.  When the feature is stabilized, be sure
+//!    how to use your new feature. When the feature is stabilized, be sure
 //!    that the Cargo Guide or Reference is updated to fully document the
 //!    feature and remove the entry from the Unstable section.
 //!
@@ -173,7 +173,7 @@ features! {
         [unstable] test_dummy_unstable: bool,
 
         // Downloading packages from alternative registry indexes.
-        [unstable] alternative_registries: bool,
+        [stable] alternative_registries: bool,
 
         // Using editions
         [stable] edition: bool,
@@ -320,6 +320,7 @@ pub struct CliUnstable {
     pub package_features: bool,
     pub advanced_env: bool,
     pub config_profile: bool,
+    pub dual_proc_macros: bool,
     pub mtime_on_use: bool,
 }
 
@@ -357,6 +358,7 @@ impl CliUnstable {
             "package-features" => self.package_features = true,
             "advanced-env" => self.advanced_env = true,
             "config-profile" => self.config_profile = true,
+            "dual-proc-macros" => self.dual_proc_macros = true,
             "mtime-on-use" => self.mtime_on_use = true,
             _ => failure::bail!("unknown `-Z` flag specified: {}", k),
         }

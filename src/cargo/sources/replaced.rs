@@ -113,4 +113,10 @@ impl<'cfg> Source for ReplacedSource<'cfg> {
     fn is_replaced(&self) -> bool {
         true
     }
+
+    fn add_to_yanked_whitelist(&mut self, pkgs: &[PackageId]) {
+        let pkgs = pkgs.iter().map(|id| id.with_source_id(self.replace_with))
+            .collect::<Vec<_>>();
+        self.inner.add_to_yanked_whitelist(&pkgs);
+    }
 }

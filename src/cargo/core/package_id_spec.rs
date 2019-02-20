@@ -15,9 +15,9 @@ use crate::util::{validate_package_name, ToSemver, ToUrl};
 ///  2. the package version (a `Version`, optional)
 ///  3. the package source (a `Url`, optional)
 ///
-/// If any of the optional fields are omitted, then the package id may be ambiguous, there may be
+/// If any of the optional fields are omitted, then the package ID may be ambiguous, there may be
 /// more than one package/version/url combo that will match. However, often just the name is
-/// sufficient to uniquely define a package id.
+/// sufficient to uniquely define a package ID.
 #[derive(Clone, PartialEq, Eq, Debug, Hash, Ord, PartialOrd)]
 pub struct PackageIdSpec {
     name: String,
@@ -78,7 +78,7 @@ impl PackageIdSpec {
         I: IntoIterator<Item = PackageId>,
     {
         let spec = PackageIdSpec::parse(spec)
-            .chain_err(|| failure::format_err!("invalid package id specification: `{}`", spec))?;
+            .chain_err(|| failure::format_err!("invalid package ID specification: `{}`", spec))?;
         spec.query(i)
     }
 
@@ -183,7 +183,7 @@ impl PackageIdSpec {
         let ret = match ids.next() {
             Some(id) => id,
             None => failure::bail!(
-                "package id specification `{}` \
+                "package ID specification `{}` \
                  matched no packages",
                 self
             ),

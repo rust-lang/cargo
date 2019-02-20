@@ -34,7 +34,7 @@ information about owners and publishing.
 
 *-a*::
 *--add* _LOGIN_...::
-    Add the given user or team as an owner.
+    Invite the given user or team as an owner.
 
 *-r*::
 *--remove* _LOGIN_...::
@@ -68,7 +68,7 @@ include::section-exit-status.adoc[]
 
     cargo owner --list foo
 
-. Add an owner to a package:
+. Invite an owner to a package:
 
     cargo owner --add username foo
 

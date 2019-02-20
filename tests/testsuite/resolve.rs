@@ -14,7 +14,7 @@ use crate::support::resolver::{
 
 use proptest::{prelude::*, *};
 
-/// NOTE: proptest is a form of fuzz testing. It generates random input and makes shore that
+/// NOTE: proptest is a form of fuzz testing. It generates random input and makes sure that
 /// certain universal truths are upheld. Therefore, it can pass when there is a problem,
 /// but if it fails then there really is something wrong. When testing something as
 /// complicated as the resolver, the problems can be very subtle and hard to generate.
@@ -41,7 +41,7 @@ proptest! {
         PrettyPrintRegistry(input) in registry_strategy(50, 20, 60)
     )  {
         let reg = registry(input.clone());
-        // there is only a small chance that eny one
+        // there is only a small chance that any one
         // crate will be interesting.
         // So we try some of the most complicated.
         for this in input.iter().rev().take(20) {
@@ -74,7 +74,7 @@ proptest! {
             .unwrap();
 
         let reg = registry(input.clone());
-        // there is only a small chance that eny one
+        // there is only a small chance that any one
         // crate will be interesting.
         // So we try some of the most complicated.
         for this in input.iter().rev().take(10) {
@@ -105,13 +105,13 @@ proptest! {
 
     /// NOTE: if you think this test has failed spuriously see the note at the top of this macro.
     #[test]
-    fn removing_a_dep_cant_brake(
+    fn removing_a_dep_cant_break(
             PrettyPrintRegistry(input) in registry_strategy(50, 20, 60),
-            indexs_to_remove in collection::vec((any::<prop::sample::Index>(), any::<prop::sample::Index>()), ..10)
+            indexes_to_remove in collection::vec((any::<prop::sample::Index>(), any::<prop::sample::Index>()), ..10)
     ) {
         let reg = registry(input.clone());
         let mut removed_input = input.clone();
-        for (summery_idx, dep_idx) in indexs_to_remove {
+        for (summery_idx, dep_idx) in indexes_to_remove {
             if removed_input.len() > 0 {
                 let summery_idx = summery_idx.index(removed_input.len());
                 let deps = removed_input[summery_idx].dependencies();
@@ -122,7 +122,7 @@ proptest! {
             }
         }
         let removed_reg = registry(removed_input);
-        // there is only a small chance that eny one
+        // there is only a small chance that any one
         // crate will be interesting.
         // So we try some of the most complicated.
         for this in input.iter().rev().take(10) {
@@ -149,10 +149,10 @@ proptest! {
     #[test]
     fn limited_independence_of_irrelevant_alternatives(
         PrettyPrintRegistry(input) in registry_strategy(50, 20, 60),
-        indexs_to_unpublish in collection::vec(any::<prop::sample::Index>(), ..10)
+        indexes_to_unpublish in collection::vec(any::<prop::sample::Index>(), ..10)
     )  {
         let reg = registry(input.clone());
-        // there is only a small chance that eny one
+        // there is only a small chance that any one
         // crate will be interesting.
         // So we try some of the most complicated.
         for this in input.iter().rev().take(10) {
@@ -172,13 +172,13 @@ proptest! {
                         .filter(|x| !r.contains(&x.package_id()))
                         .collect();
                     if !not_selected.is_empty() {
-                        let indexs_to_unpublish: Vec<_> = indexs_to_unpublish.iter().map(|x| x.get(&not_selected)).collect();
+                        let indexes_to_unpublish: Vec<_> = indexes_to_unpublish.iter().map(|x| x.get(&not_selected)).collect();
 
                         let new_reg = registry(
                             input
                                 .iter()
                                 .cloned()
-                                .filter(|x| !indexs_to_unpublish.contains(&x))
+                                .filter(|x| !indexes_to_unpublish.contains(&x))
                                 .collect(),
                         );
 
@@ -196,7 +196,7 @@ proptest! {
                         prop_assert!(
                             res.is_ok(),
                             "unpublishing {:?} stopped `{} = \"={}\"` from working",
-                            indexs_to_unpublish.iter().map(|x| x.package_id()).collect::<Vec<_>>(),
+                            indexes_to_unpublish.iter().map(|x| x.package_id()).collect::<Vec<_>>(),
                             this.name(),
                             this.version()
                         )
@@ -206,13 +206,13 @@ proptest! {
                 Err(_) => {
                     // If resolution was unsuccessful, then it should stay unsuccessful
                     // even if any version of a crate is unpublished.
-                    let indexs_to_unpublish: Vec<_> = indexs_to_unpublish.iter().map(|x| x.get(&input)).collect();
+                    let indexes_to_unpublish: Vec<_> = indexes_to_unpublish.iter().map(|x| x.get(&input)).collect();
 
                     let new_reg = registry(
                         input
                             .iter()
                             .cloned()
-                            .filter(|x| !indexs_to_unpublish.contains(&x))
+                            .filter(|x| !indexes_to_unpublish.contains(&x))
                             .collect(),
                     );
 
@@ -227,7 +227,7 @@ proptest! {
                         "full index did not work for `{} = \"={}\"` but unpublishing {:?} fixed it!",
                         this.name(),
                         this.version(),
-                        indexs_to_unpublish.iter().map(|x| x.package_id()).collect::<Vec<_>>(),
+                        indexes_to_unpublish.iter().map(|x| x.package_id()).collect::<Vec<_>>(),
                     )
                 }
             }

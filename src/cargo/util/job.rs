@@ -115,7 +115,7 @@ mod imp {
         fn drop(&mut self) {
             // On normal exits (not ctrl-c), we don't want to kill any child
             // processes. The destructor here configures our job object to
-            // *not* kill everything on close, then closes the job object.
+            // **not** kill everything on close, then closes the job object.
             unsafe {
                 let mut info: JOBOBJECT_EXTENDED_LIMIT_INFORMATION;
                 info = mem::zeroed();

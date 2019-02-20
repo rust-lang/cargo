@@ -7,8 +7,6 @@ use std::path::{Path, PathBuf};
 use semver::VersionReq;
 use serde::{Deserialize, Serialize};
 
-use crate::core::package::PackageSet;
-use crate::core::source::SourceMap;
 use crate::core::PackageId;
 use crate::core::{Dependency, Package, Source, SourceId};
 use crate::sources::PathSource;
@@ -139,8 +137,11 @@ where
             };
             let dep = Dependency::parse_no_deprecated(name, vers_spec, source.source_id())?;
             let deps = source.query_vec(&dep)?;
-            let pkgid = match deps.iter().map(|p| p.package_id()).max() {
-                Some(pkgid) => pkgid,
+            match deps.iter().map(|p| p.package_id()).max() {
+                Some(pkgid) => {
+                    let pkg = Box::new(&mut source).download_now(pkgid, config)?;
+                    Ok((pkg, Box::new(source)))
+                },
                 None => {
                     let vers_info = vers
                         .map(|v| format!(" with version `{}`", v))
@@ -152,16 +153,7 @@ where
                         vers_info
                     )
                 }
-            };
-
-            let pkg = {
-                let mut map = SourceMap::new();
-                map.insert(Box::new(&mut source));
-                PackageSet::new(&[pkgid], map, config)?
-                    .get_one(pkgid)?
-                    .clone()
-            };
-            Ok((pkg, Box::new(source)))
+            }
         }
         None => {
             let candidates = list_all(&mut source)?;

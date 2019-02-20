@@ -13,7 +13,7 @@ use crate::core::{Dependency, Package, PackageId, Source, SourceId, Summary};
 use crate::ops;
 use crate::util::paths;
 use crate::util::Config;
-use crate::util::{self, internal, CargoResult};
+use crate::util::{internal, CargoResult};
 
 pub struct PathSource<'cfg> {
     source_id: SourceId,
@@ -25,7 +25,7 @@ pub struct PathSource<'cfg> {
 }
 
 impl<'cfg> PathSource<'cfg> {
-    /// Invoked with an absolute path to a directory that contains a Cargo.toml.
+    /// Invoked with an absolute path to a directory that contains a `Cargo.toml`.
     ///
     /// This source will only return the package at precisely the `path`
     /// specified, and it will be an error if there's not a package at `path`.
@@ -103,19 +103,19 @@ impl<'cfg> PathSource<'cfg> {
     /// stages are:
     ///
     /// 1) Only warn users about the future change iff their matching rules are
-    ///    affected.  (CURRENT STAGE)
+    ///    affected. (CURRENT STAGE)
     ///
     /// 2) Switch to the new strategy and update documents. Still keep warning
     ///    affected users.
     ///
     /// 3) Drop the old strategy and no more warnings.
     ///
-    /// See <https://github.com/rust-lang/cargo/issues/4268> for more info.
+    /// See rust-lang/cargo#4268 for more info.
     pub fn list_files(&self, pkg: &Package) -> CargoResult<Vec<PathBuf>> {
         let root = pkg.root();
         let no_include_option = pkg.manifest().include().is_empty();
 
-        // glob-like matching rules
+        // Glob-like matching rules.
 
         let glob_parse = |p: &String| {
             let pattern: &str = if p.starts_with('/') {
@@ -148,7 +148,7 @@ impl<'cfg> PathSource<'cfg> {
                     .any(|pattern| pattern.matches_path(relative_path))
             }
 
-            // include and exclude options are mutually exclusive.
+            // "Include" and "exclude" options are mutually exclusive.
             if no_include_option {
                 !glob_match(&glob_exclude, relative_path)
             } else {
@@ -156,7 +156,7 @@ impl<'cfg> PathSource<'cfg> {
             }
         };
 
-        // ignore-like matching rules
+        // Ignore-like matching rules.
 
         let mut exclude_builder = GitignoreBuilder::new(root);
         for rule in pkg.manifest().exclude() {
@@ -171,7 +171,7 @@ impl<'cfg> PathSource<'cfg> {
         let ignore_include = include_builder.build()?;
 
         let ignore_should_package = |relative_path: &Path| -> CargoResult<bool> {
-            // include and exclude options are mutually exclusive.
+            // "Include" and "exclude" options are mutually exclusive.
             if no_include_option {
                 match ignore_exclude
                     .matched_path_or_any_parents(relative_path, /* is_dir */ false)
@@ -197,10 +197,10 @@ impl<'cfg> PathSource<'cfg> {
             }
         };
 
-        // matching to paths
+        // Matching to paths.
 
         let mut filter = |path: &Path| -> CargoResult<bool> {
-            let relative_path = util::without_prefix(path, root).unwrap();
+            let relative_path = path.strip_prefix(root)?;
             let glob_should_package = glob_should_package(relative_path);
             let ignore_should_package = ignore_should_package(relative_path)?;
 
@@ -210,14 +210,16 @@ impl<'cfg> PathSource<'cfg> {
                         self.config.shell().warn(format!(
                             "Pattern matching for Cargo's include/exclude fields is changing and \
                              file `{}` WILL be excluded in a future Cargo version.\n\
-                             See https://github.com/rust-lang/cargo/issues/4268 for more info",
+                             See <https://github.com/rust-lang/cargo/issues/4268> for more \
+                             information.",
                             relative_path.display()
                         ))?;
                     } else {
                         self.config.shell().warn(format!(
                             "Pattern matching for Cargo's include/exclude fields is changing and \
                              file `{}` WILL NOT be included in a future Cargo version.\n\
-                             See https://github.com/rust-lang/cargo/issues/4268 for more info",
+                             See <https://github.com/rust-lang/cargo/issues/4268> for more \
+                             information.",
                             relative_path.display()
                         ))?;
                     }
@@ -225,24 +227,26 @@ impl<'cfg> PathSource<'cfg> {
                     self.config.shell().warn(format!(
                         "Pattern matching for Cargo's include/exclude fields is changing and \
                          file `{}` WILL NOT be excluded in a future Cargo version.\n\
-                         See https://github.com/rust-lang/cargo/issues/4268 for more info",
+                         See <https://github.com/rust-lang/cargo/issues/4268> for more \
+                         information.",
                         relative_path.display()
                     ))?;
                 } else {
                     self.config.shell().warn(format!(
                         "Pattern matching for Cargo's include/exclude fields is changing and \
                          file `{}` WILL be included in a future Cargo version.\n\
-                         See https://github.com/rust-lang/cargo/issues/4268 for more info",
+                         See <https://github.com/rust-lang/cargo/issues/4268> for more \
+                         information.",
                         relative_path.display()
                     ))?;
                 }
             }
 
-            // Update to ignore_should_package for Stage 2
+            // Update to `ignore_should_package` for Stage 2.
             Ok(glob_should_package)
         };
 
-        // attempt git-prepopulate only if no `include` (rust-lang/cargo#4135)
+        // Attempt Git-prepopulate only if no `include` (see rust-lang/cargo#4135).
         if no_include_option {
             if let Some(result) = self.discover_git_and_list_files(pkg, root, &mut filter) {
                 return result;
@@ -251,40 +255,40 @@ impl<'cfg> PathSource<'cfg> {
         self.list_files_walk(pkg, &mut filter)
     }
 
-    // Returns Some(_) if found sibling Cargo.toml and .git folder;
-    // otherwise caller should fall back on full file list.
+    // Returns `Some(_)` if found sibling `Cargo.toml` and `.git` directory;
+    // otherwise, caller should fall back on full file list.
     fn discover_git_and_list_files(
         &self,
         pkg: &Package,
         root: &Path,
         filter: &mut dyn FnMut(&Path) -> CargoResult<bool>,
     ) -> Option<CargoResult<Vec<PathBuf>>> {
-        // If this package is in a git repository, then we really do want to
-        // query the git repository as it takes into account items such as
-        // .gitignore. We're not quite sure where the git repository is,
+        // If this package is in a Git repository, then we really do want to
+        // query the Git repository as it takes into account items such as
+        // `.gitignore`. We're not quite sure where the Git repository is,
         // however, so we do a bit of a probe.
         //
         // We walk this package's path upwards and look for a sibling
-        // Cargo.toml and .git folder. If we find one then we assume that we're
-        // part of that repository.
+        // `Cargo.toml` and `.git` directory. If we find one then we assume that
+        // we're part of that repository.
         let mut cur = root;
         loop {
             if cur.join("Cargo.toml").is_file() {
-                // If we find a git repository next to this Cargo.toml, we still
+                // If we find a Git repository next to this `Cargo.toml`, we still
                 // check to see if we are indeed part of the index. If not, then
-                // this is likely an unrelated git repo, so keep going.
+                // this is likely an unrelated Git repo, so keep going.
                 if let Ok(repo) = git2::Repository::open(cur) {
                     let index = match repo.index() {
                         Ok(index) => index,
                         Err(err) => return Some(Err(err.into())),
                     };
-                    let path = util::without_prefix(root, cur).unwrap().join("Cargo.toml");
+                    let path = root.strip_prefix(cur).unwrap().join("Cargo.toml");
                     if index.get_path(&path, 0).is_some() {
                         return Some(self.list_files_git(pkg, &repo, filter));
                     }
                 }
             }
-            // don't cross submodule boundaries
+            // Don't cross submodule boundaries.
             if cur.join(".git").is_dir() {
                 break;
             }
@@ -311,9 +315,9 @@ impl<'cfg> PathSource<'cfg> {
 
         let mut ret = Vec::<PathBuf>::new();
 
-        // We use information from the git repository to guide us in traversing
+        // We use information from the Git repository to guide us in traversing
         // its tree. The primary purpose of this is to take advantage of the
-        // .gitignore and auto-ignore files that don't matter.
+        // `.gitignore` and auto-ignore files that don't matter.
         //
         // Here we're also careful to look at both tracked and untracked files as
         // the untracked files are often part of a build and may become relevant
@@ -325,7 +329,7 @@ impl<'cfg> PathSource<'cfg> {
         });
         let mut opts = git2::StatusOptions::new();
         opts.include_untracked(true);
-        if let Some(suffix) = util::without_prefix(pkg_path, root) {
+        if let Ok(suffix) = pkg_path.strip_prefix(root) {
             opts.pathspec(suffix);
         }
         let statuses = repo.statuses(Some(&mut opts))?;
@@ -347,14 +351,14 @@ impl<'cfg> PathSource<'cfg> {
             }
 
             match file_path.file_name().and_then(|s| s.to_str()) {
-                // Filter out Cargo.lock and target always, we don't want to
+                // Filter out `Cargo.lock` and `target` always; we don't want to
                 // package a lock file no one will ever read and we also avoid
-                // build artifacts
+                // build artifacts.
                 Some("Cargo.lock") | Some("target") => continue,
 
                 // Keep track of all sub-packages found and also strip out all
                 // matches we've found so far. Note, though, that if we find
-                // our own `Cargo.toml` we keep going.
+                // our own `Cargo.toml`, we keep going.
                 Some("Cargo.toml") => {
                     let path = file_path.parent().unwrap();
                     if path != pkg_path {
@@ -376,7 +380,7 @@ impl<'cfg> PathSource<'cfg> {
 
             if is_dir.unwrap_or_else(|| file_path.is_dir()) {
                 warn!("  found submodule {}", file_path.display());
-                let rel = util::without_prefix(&file_path, root).unwrap();
+                let rel = file_path.strip_prefix(root)?;
                 let rel = rel.to_str().ok_or_else(|| {
                     failure::format_err!("invalid utf-8 filename: {}", rel.display())
                 })?;
@@ -441,7 +445,7 @@ impl<'cfg> PathSource<'cfg> {
             }
             return Ok(());
         }
-        // Don't recurse into any sub-packages that we have
+        // Don't recurse into any sub-packages that we have.
         if !is_root && fs::metadata(&path.join("Cargo.toml")).is_ok() {
             return Ok(());
         }
@@ -449,19 +453,18 @@ impl<'cfg> PathSource<'cfg> {
         // For package integration tests, we need to sort the paths in a deterministic order to
         // be able to match stdout warnings in the same order.
         //
-        // TODO: Drop collect and sort after transition period and dropping warning tests.
-        // See <https://github.com/rust-lang/cargo/issues/4268>
-        // and <https://github.com/rust-lang/cargo/pull/4270>
+        // TODO: drop `collect` and sort after transition period and dropping warning tests.
+        // See rust-lang/cargo#4268 and rust-lang/cargo#4270.
         let mut entries: Vec<PathBuf> = fs::read_dir(path)?.map(|e| e.unwrap().path()).collect();
         entries.sort_unstable_by(|a, b| a.as_os_str().cmp(b.as_os_str()));
         for path in entries {
             let name = path.file_name().and_then(|s| s.to_str());
-            // Skip dotfile directories
+            // Skip dotfile directories.
             if name.map(|s| s.starts_with('.')) == Some(true) {
                 continue;
             }
             if is_root {
-                // Skip cargo artifacts
+                // Skip Cargo artifacts.
                 match name {
                     Some("target") | Some("Cargo.lock") => continue,
                     _ => {}
@@ -480,11 +483,11 @@ impl<'cfg> PathSource<'cfg> {
         let mut max = FileTime::zero();
         let mut max_path = PathBuf::new();
         for file in self.list_files(pkg)? {
-            // An fs::stat error here is either because path is a
+            // An `fs::stat` error here is either because path is a
             // broken symlink, a permissions error, or a race
-            // condition where this path was rm'ed - either way,
-            // we can ignore the error and treat the path's mtime
-            // as 0.
+            // condition where this path was `rm`-ed -- either way,
+            // we can ignore the error and treat the path's `mtime`
+            // as `0`.
             let mtime = paths::mtime(&file).unwrap_or_else(|_| FileTime::zero());
             if mtime > max {
                 max = mtime;
@@ -569,4 +572,6 @@ impl<'cfg> Source for PathSource<'cfg> {
             Err(_) => self.source_id.to_string(),
         }
     }
+
+    fn add_to_yanked_whitelist(&mut self, _pkgs: &[PackageId]) {}
 }

@@ -1,13 +1,13 @@
-use crate::command_prelude::*;
-
 use cargo::ops::{self, CompileFilter};
+
+use crate::command_prelude::*;
 
 pub fn cli() -> App {
     subcommand("test")
-        // subcommand aliases are handled in aliased_command()
+        // Subcommand aliases are handled in `aliased_command()`.
         // .alias("t")
         .setting(AppSettings::TrailingVarArg)
-        .about("Execute all unit and integration tests of a local package")
+        .about("Execute all unit and integration tests and build examples of a local package")
         .arg(
             Arg::with_name("TESTNAME")
                 .help("If specified, only run tests containing this string in their names"),
@@ -19,7 +19,7 @@ pub fn cli() -> App {
                 .last(true),
         )
         .arg_targets_all(
-            "Test only this package's library",
+            "Test only this package's library unit tests",
             "Test only the specified binary",
             "Test all binaries",
             "Test only the specified example",
@@ -47,17 +47,17 @@ pub fn cli() -> App {
         .arg_message_format()
         .after_help(
             "\
-The test filtering argument `TESTNAME` and all the arguments following the
+The test filtering argument TESTNAME and all the arguments following the
 two dashes (`--`) are passed to the test binaries and thus to libtest
-(rustc's built in unit-test and micro-benchmarking framework).  If you're
+(rustc's built in unit-test and micro-benchmarking framework). If you're
 passing arguments to both Cargo and the binary, the ones after `--` go to the
-binary, the ones before go to Cargo.  For details about libtest's arguments see
-the output of `cargo test -- --help`.  As an example, this will run all
+binary, the ones before go to Cargo. For details about libtest's arguments see
+the output of `cargo test -- --help`. As an example, this will run all
 tests with `foo` in their name on 3 threads in parallel:
 
     cargo test foo -- --test-threads 3
 
-If the --package argument is given, then SPEC is a package id specification
+If the `--package` argument is given, then SPEC is a package ID specification
 which indicates which package should be tested. If it is not given, then the
 current package is tested. For more information on SPEC and its format, see the
 `cargo help pkgid` command.
@@ -66,9 +66,9 @@ All packages in the workspace are tested if the `--all` flag is supplied. The
 `--all` flag is automatically assumed for a virtual manifest.
 Note that `--exclude` has to be specified in conjunction with the `--all` flag.
 
-The --jobs argument affects the building of the test executable but does
+The `--jobs` argument affects the building of the test executable but does
 not affect how many jobs are used when running the tests. The default value
-for the --jobs argument is the number of CPUs. If you want to control the
+for the `--jobs` argument is the number of CPUs. If you want to control the
 number of simultaneous running test cases, pass the `--test-threads` option
 to the test binaries:
 
@@ -77,7 +77,7 @@ to the test binaries:
 Compilation can be configured via the `test` profile in the manifest.
 
 By default the rust test harness hides output from test execution to
-keep results readable. Test output can be recovered (e.g. for debugging)
+keep results readable. Test output can be recovered (e.g., for debugging)
 by passing `--nocapture` to the test binaries:
 
     cargo test -- --nocapture
@@ -94,11 +94,18 @@ pub fn exec(config: &mut Config, args: &ArgMatches<'_>) -> CliResult {
 
     let mut compile_opts = args.compile_options(config, CompileMode::Test, Some(&ws))?;
 
+    let no_run = args.is_present("no-run");
     let doc = args.is_present("doc");
     if doc {
         if let CompileFilter::Only { .. } = compile_opts.filter {
             return Err(CliError::new(
                 failure::format_err!("Can't mix --doc with other target selecting options"),
+                101,
+            ));
+        }
+        if no_run {
+            return Err(CliError::new(
+                failure::format_err!("Can't skip running doc tests with --no-run"),
                 101,
             ));
         }
@@ -118,13 +125,13 @@ pub fn exec(config: &mut Config, args: &ArgMatches<'_>) -> CliResult {
     }
 
     let ops = ops::TestOptions {
-        no_run: args.is_present("no-run"),
+        no_run,
         no_fail_fast: args.is_present("no-fail-fast"),
         compile_opts,
     };
 
-    // TESTNAME is actually an argument of the test binary, but it's
-    // important so we explicitly mention it and reconfigure
+    // `TESTNAME` is actually an argument of the test binary, but it's
+    // important, so we explicitly mention it and reconfigure.
     let mut test_args = vec![];
     test_args.extend(args.value_of("TESTNAME").into_iter().map(|s| s.to_string()));
     test_args.extend(
