@@ -167,8 +167,7 @@ impl<'a, 'cfg> Context<'a, 'cfg> {
                 if unit.mode == CompileMode::Test {
                     self.compilation.tests.push((
                         unit.pkg.clone(),
-                        unit.target.kind().clone(),
-                        unit.target.name().to_string(),
+                        unit.target.clone(),
                         output.path.clone(),
                     ));
                 } else if unit.target.is_bin() || unit.target.is_bin_example() {

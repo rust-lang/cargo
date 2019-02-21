@@ -144,10 +144,6 @@ pub fn exec(config: &mut Config, args: &ArgMatches<'_>) -> CliResult {
             .map(|s| s.to_string()),
     );
 
-    if args.is_present("quiet") {
-        test_args.push("-q".to_string())
-    }
-
     let err = ops::run_tests(&ws, &ops, &test_args)?;
     match err {
         None => Ok(()),
