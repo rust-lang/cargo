@@ -14,13 +14,13 @@ use crate::support::resolver::{
 
 use proptest::{prelude::*, *};
 
-/// NOTE: proptest is a form of fuzz testing. It generates random input and makes sure that
-/// certain universal truths are upheld. Therefore, it can pass when there is a problem,
-/// but if it fails then there really is something wrong. When testing something as
-/// complicated as the resolver, the problems can be very subtle and hard to generate.
-/// We have had a history of these tests only failing on PRs long after a bug is introduced.
-/// If you have one of these test fail please report it on #6258,
-/// and if you did not change the resolver then feel free to retry without concern.
+// NOTE: proptest is a form of fuzz testing. It generates random input and makes sure that
+// certain universal truths are upheld. Therefore, it can pass when there is a problem,
+// but if it fails then there really is something wrong. When testing something as
+// complicated as the resolver, the problems can be very subtle and hard to generate.
+// We have had a history of these tests only failing on PRs long after a bug is introduced.
+// If you have one of these test fail please report it on #6258,
+// and if you did not change the resolver then feel free to retry without concern.
 proptest! {
     #![proptest_config(ProptestConfig {
         max_shrink_iters:
