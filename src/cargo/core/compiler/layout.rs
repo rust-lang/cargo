@@ -67,7 +67,7 @@ pub struct Layout {
     incremental: PathBuf,
     fingerprint: PathBuf,
     examples: PathBuf,
-    /// The lockfile for a build, will be unlocked when this struct is `drop`ped.
+    /// The lock file for a build, will be unlocked when this struct is `drop`ped.
     _lock: FileLock,
 }
 
@@ -156,7 +156,7 @@ impl Layout {
         // doesn't prevent Cargo from working
     }
 
-    /// Make sure all directories stored in the Layout exist on the filesystem.
+    /// Makes sure all directories stored in the Layout exist on the filesystem.
     pub fn prepare(&mut self) -> io::Result<()> {
         if fs::metadata(&self.root).is_err() {
             fs::create_dir_all(&self.root)?;

@@ -1,4 +1,4 @@
-use std::collections::HashMap;
+use std::collections::{HashMap, HashSet};
 use std::path::Path;
 use std::str;
 
@@ -11,12 +11,11 @@ use crate::sources::registry::RegistryData;
 use crate::sources::registry::{RegistryPackage, INDEX_LOCK};
 use crate::util::{internal, CargoResult, Config, Filesystem, ToSemver};
 
-/// Crates.io treats hyphen and underscores as interchangeable
-/// but, the index and old cargo do not. So the index must store uncanonicalized version
-/// of the name so old cargos can find it.
-/// This loop tries all possible combinations of switching
-/// hyphen and underscores to find the uncanonicalized one.
-/// As all stored inputs have the correct spelling, we start with the spelling as provided.
+/// Crates.io treats hyphen and underscores as interchangeable, but the index and old Cargo do not.
+/// Therefore, the index must store uncanonicalized version of the name so old Cargo's can find it.
+/// This loop tries all possible combinations of switching hyphen and underscores to find the
+/// uncanonicalized one. As all stored inputs have the correct spelling, we start with the spelling
+/// as-provided.
 struct UncanonicalizedIter<'s> {
     input: &'s str,
     num_hyphen_underscore: u32,
@@ -101,7 +100,8 @@ pub struct RegistryIndex<'cfg> {
     source_id: SourceId,
     path: Filesystem,
     cache: HashMap<&'static str, Vec<(Summary, bool)>>,
-    hashes: HashMap<&'static str, HashMap<Version, String>>, // (name, vers) => cksum
+    // `(name, vers)` -> `checksum`
+    hashes: HashMap<&'static str, HashMap<Version, String>>,
     config: &'cfg Config,
     locked: bool,
 }
@@ -123,7 +123,7 @@ impl<'cfg> RegistryIndex<'cfg> {
         }
     }
 
-    /// Return the hash listed for a specified PackageId.
+    /// Returns the hash listed for a specified `PackageId`.
     pub fn hash(&mut self, pkg: PackageId, load: &mut dyn RegistryData) -> CargoResult<String> {
         let name = pkg.name().as_str();
         let version = pkg.version();
@@ -139,10 +139,9 @@ impl<'cfg> RegistryIndex<'cfg> {
             .map(|s| s.clone())
     }
 
-    /// Parse the on-disk metadata for the package provided
+    /// Parses the on-disk metadata for the package provided.
     ///
-    /// Returns a list of pairs of (summary, yanked) for the package name
-    /// specified.
+    /// Returns a list of pairs of `(summary, yanked)` for the package name specified.
     pub fn summaries(
         &mut self,
         name: &'static str,
@@ -184,7 +183,7 @@ impl<'cfg> RegistryIndex<'cfg> {
             .flat_map(|c| c.to_lowercase())
             .collect::<String>();
 
-        // see module comment for why this is structured the way it is
+        // See module comment for why this is structured the way it is.
         let raw_path = match fs_name.len() {
             1 => format!("1/{}", fs_name),
             2 => format!("2/{}", fs_name),
@@ -240,8 +239,7 @@ impl<'cfg> RegistryIndex<'cfg> {
         Ok(ret)
     }
 
-    /// Parse a line from the registry's index file into a Summary for a
-    /// package.
+    /// Parses a line from the registry's index file into a `Summary` for a package.
     ///
     /// The returned boolean is whether or not the summary has been yanked.
     fn parse_registry_package(&mut self, line: &str) -> CargoResult<(Summary, bool)> {
@@ -273,6 +271,7 @@ impl<'cfg> RegistryIndex<'cfg> {
         &mut self,
         dep: &Dependency,
         load: &mut dyn RegistryData,
+        yanked_whitelist: &HashSet<PackageId>,
         f: &mut dyn FnMut(Summary),
     ) -> CargoResult<()> {
         let source_id = self.source_id;
@@ -280,7 +279,13 @@ impl<'cfg> RegistryIndex<'cfg> {
         let summaries = self.summaries(name, load)?;
         let summaries = summaries
             .iter()
-            .filter(|&&(_, yanked)| dep.source_id().precise().is_some() || !yanked)
+            .filter(|&(summary, yanked)| {
+                !yanked || {
+                    log::debug!("{:?}", yanked_whitelist);
+                    log::debug!("{:?}", summary.package_id());
+                    yanked_whitelist.contains(&summary.package_id())
+                }
+            })
             .map(|s| s.0.clone());
 
         // Handle `cargo update --precise` here. If specified, our own source

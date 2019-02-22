@@ -591,6 +591,103 @@ required by package `foo v0.0.1 ([..])`
 }
 
 #[test]
+fn yanks_in_lockfiles_are_ok_for_other_update() {
+    let p = project()
+        .file(
+            "Cargo.toml",
+            r#"
+            [project]
+            name = "foo"
+            version = "0.0.1"
+            authors = []
+
+            [dependencies]
+            bar = "*"
+            baz = "*"
+        "#,
+        )
+        .file("src/main.rs", "fn main() {}")
+        .build();
+
+    Package::new("bar", "0.0.1").publish();
+    Package::new("baz", "0.0.1").publish();
+
+    p.cargo("build").run();
+
+    registry_path().join("3").rm_rf();
+
+    Package::new("bar", "0.0.1").yanked(true).publish();
+    Package::new("baz", "0.0.1").publish();
+
+    p.cargo("build").with_stdout("").run();
+
+    Package::new("baz", "0.0.2").publish();
+
+    p.cargo("update")
+        .with_status(101)
+        .with_stderr_contains(
+            "\
+error: no matching package named `bar` found
+location searched: registry [..]
+required by package `foo v0.0.1 ([..])`
+",
+        )
+        .run();
+
+    p.cargo("update -p baz")
+        .with_stderr_contains(
+            "\
+[UPDATING] `[..]` index
+[UPDATING] baz v0.0.1 -> v0.0.2
+",
+        )
+        .run();
+}
+
+#[test]
+fn yanks_in_lockfiles_are_ok_with_new_dep() {
+    let p = project()
+        .file(
+            "Cargo.toml",
+            r#"
+            [project]
+            name = "foo"
+            version = "0.0.1"
+            authors = []
+
+            [dependencies]
+            bar = "*"
+        "#,
+        )
+        .file("src/main.rs", "fn main() {}")
+        .build();
+
+    Package::new("bar", "0.0.1").publish();
+
+    p.cargo("build").run();
+
+    registry_path().join("3").rm_rf();
+
+    Package::new("bar", "0.0.1").yanked(true).publish();
+    Package::new("baz", "0.0.1").publish();
+
+    t!(t!(File::create(p.root().join("Cargo.toml"))).write_all(
+        br#"
+            [project]
+            name = "foo"
+            version = "0.0.1"
+            authors = []
+
+            [dependencies]
+            bar = "*"
+            baz = "*"
+    "#
+    ));
+
+    p.cargo("build").with_stdout("").run();
+}
+
+#[test]
 fn update_with_lockfile_if_packages_missing() {
     let p = project()
         .file(

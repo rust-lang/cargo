@@ -21,7 +21,7 @@ $ cargo login abcdefghijklmnopqrstuvwxyz012345
 ```
 
 This command will inform Cargo of your API token and store it locally in your
-`~/.cargo/credentials` (previously it was `~/.cargo/config`).  Note that this
+`~/.cargo/credentials` (previously it was `~/.cargo/config`). Note that this
 token is a **secret** and should not be shared with anyone else. If it leaks for
 any reason, you should regenerate it immediately.
 
@@ -49,7 +49,7 @@ are there for the build to succeed. This behavior can be disabled with the
 
 Now’s a good time to take a look at the `*.crate` file to make sure you didn’t
 accidentally package up that 2GB video asset, or large data files used for code
-generation, integration tests, or benchmarking.  There is currently a 10MB
+generation, integration tests, or benchmarking. There is currently a 10MB
 upload size limit on `*.crate` files. So, if the size of `tests` and `benches`
 directories and their dependencies are up to a couple of MBs, you can keep them
 in your package; otherwise, better to exclude them.
@@ -203,7 +203,7 @@ actively denying third party access. To check this, you can go to:
 
     https://github.com/organizations/:org/settings/oauth_application_policy
 
-where `:org` is the name of the organization (e.g. rust-lang). You may see
+where `:org` is the name of the organization (e.g., `rust-lang`). You may see
 something like:
 
 ![Organization Access Control](images/org-level-acl.png)

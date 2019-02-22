@@ -9,7 +9,7 @@ use crate::support::{basic_manifest, project};
 use bufstream::BufStream;
 use git2;
 
-// Test that HTTP auth is offered from `credential.helper`
+// Tests that HTTP auth is offered from `credential.helper`.
 #[test]
 fn http_auth_offered() {
     let server = TcpListener::bind("127.0.0.1:0").unwrap();
@@ -200,9 +200,9 @@ Caused by:
             errmsg = if cfg!(windows) {
                 "[..]failed to send request: [..]"
             } else if cfg!(target_os = "macos") {
-                // OSX is difficult to tests as some builds may use
-                // Security.framework and others may use OpenSSL. In that case let's
-                // just not verify the error message here.
+                // macOS is difficult to tests as some builds may use Security.framework,
+                // while others may use OpenSSL. In that case, let's just not verify the error
+                // message here.
                 "[..]"
             } else {
                 "[..]SSL error: [..]"
@@ -213,7 +213,7 @@ Caused by:
     t.join().ok().unwrap();
 }
 
-// Boy, sure would be nice to have an SSH implementation in rust!
+// It would sure be nice to have an SSH implementation in Rust!
 #[test]
 fn ssh_something_happens() {
     let server = TcpListener::bind("127.0.0.1:0").unwrap();

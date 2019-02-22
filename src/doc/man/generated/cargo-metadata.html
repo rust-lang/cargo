@@ -68,7 +68,9 @@ for a Rust API for reading the metadata.</p>
                 {
                     /* The name of the dependency. */
                     "name": "bitflags",
-                    /* The source ID of the dependency. */
+                    /* The source ID of the dependency. May be null, see
+                       description for the package source.
+                    */
                     "source": "registry+https://github.com/rust-lang/crates.io-index",
                     /* The version requirement for the dependency.
                        Dependencies without a version requirement have a value of "*".
@@ -91,7 +93,12 @@ for a Rust API for reading the metadata.</p>
                     /* The target platform for the dependency.
                        null if not a target dependency.
                     */
-                    "target": "cfg(windows)"
+                    "target": "cfg(windows)",
+                    /* A string of the URL of the registry this dependency is from.
+                       If not specified or null, the dependency is from the default
+                       registry (crates.io).
+                    */
+                    "registry": null
                 }
             ],
             /* Array of Cargo targets. */

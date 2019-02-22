@@ -1,67 +1,14 @@
 ## Unstable Features
 
-Experimental Cargo features are only available on the nightly channel.  You
-typically use one of the `-Z` flags to enable them.  Run `cargo -Z help` to
+Experimental Cargo features are only available on the nightly channel. You
+typically use one of the `-Z` flags to enable them. Run `cargo -Z help` to
 see a list of flags available.
 
 `-Z unstable-options` is a generic flag for enabling other unstable
-command-line flags.  Options requiring this will be called out below.
+command-line flags. Options requiring this will be called out below.
 
 Some unstable features will require you to specify the `cargo-features` key in
 `Cargo.toml`.
-
-### Alternate Registries
-* RFC: [#2141](https://github.com/rust-lang/rfcs/blob/master/text/2141-alternative-registries.md)
-* Tracking Issue: [rust-lang/rust#44931](https://github.com/rust-lang/rust/issues/44931)
-
-Alternate registries allow you to use registries other than crates.io.
-
-The name of a registry is defined in `.cargo/config` under the `registries`
-table:
-
-```toml
-[registries]
-my-registry = { index = "https://my-intranet:8080/git/index" }
-```
-
-Authentication information for alternate registries can be added to
-`.cargo/credentials`:
-
-```toml
-[registries.my-registry]
-token = "api-token"
-```
-
-Inside `Cargo.toml` you can specify which registry a dependency comes from
-using the `registry` key. First you need to include the appropriate
-`cargo-features` at the top of the file:
-
-```toml
-cargo-features = ["alternative-registries"]
-
-[package]
-...
-
-[dependencies]
-other-create = { version = "1.0", registry = "my-registry"}
-```
-
-A `--registry` flag has been added to commands that interact with registries
-such as `publish`, `login`, etc.  Example:
-
-```
-cargo +nightly publish -Z unstable-options --registry my-registry
-```
-
-The `publish` field in `Cargo.toml` has been extended to accept a list of
-registries that will restrict publishing only to those registries.
-
-```toml
-[package]
-...
-publish = ["my-registry"]
-```
-
 
 ### publish-lockfile
 * Original Issue: [#2263](https://github.com/rust-lang/cargo/issues/2263)
@@ -69,10 +16,10 @@ publish = ["my-registry"]
 * Tracking Issue: [#5654](https://github.com/rust-lang/cargo/issues/5654)
 
 When creating a `.crate` file for distribution, Cargo has historically
-not included the `Cargo.lock` file.  This can cause problems with
-using `cargo install` with a binary.  You can specify that your package
+not included the `Cargo.lock` file. This can cause problems with
+using `cargo install` with a binary. You can specify that your package
 should include the `Cargo.lock` file when using `cargo package` or `cargo publish`
-by specifying the `publish-lockfile` key in `Cargo.toml`.  This also requires the
+by specifying the `publish-lockfile` key in `Cargo.toml`. This also requires the
 appropriate `cargo-features`:
 
 ```toml
@@ -89,18 +36,18 @@ publish-lockfile = true
 * Tracking Issue: [#5655](https://github.com/rust-lang/cargo/issues/5655)
 
 The `-Z offline` flag prevents Cargo from attempting to access the network for
-any reason.  Typically Cargo will stop with an error if it wants to access the
+any reason. Typically Cargo will stop with an error if it wants to access the
 network and it is not available.
 
 Beware that this may result in different dependency resolution than online
-mode.  Cargo will restrict itself to crates that are available locally, even
+mode. Cargo will restrict itself to crates that are available locally, even
 if there might be a newer version as indicated in the local copy of the index.
 
 ### no-index-update
 * Original Issue: [#3479](https://github.com/rust-lang/cargo/issues/3479)
 
 The `-Z no-index-update` flag ensures that Cargo does not attempt to update
-the registry index.  This is intended for tools such as Crater that issue many
+the registry index. This is intended for tools such as Crater that issue many
 Cargo commands, and you want to avoid the network latency for updating the
 index each time.
 
@@ -110,8 +57,8 @@ index each time.
 
 When running commands such as `cargo install` or `cargo build`, Cargo
 currently requires dev-dependencies to be downloaded, even if they are not
-used.  The `-Z avoid-dev-deps` flag allows Cargo to avoid downloading
-dev-dependencies if they are not needed.  The `Cargo.lock` file will not be
+used. The `-Z avoid-dev-deps` flag allows Cargo to avoid downloading
+dev-dependencies if they are not needed. The `Cargo.lock` file will not be
 generated if dev-dependencies are skipped.
 
 ### minimal-versions
@@ -132,12 +79,12 @@ minimum versions that you are actually using. That is, if Cargo.toml says
 * Original Issue: [#4875](https://github.com/rust-lang/cargo/issues/4875)
 
 This feature allows you to specify the directory where artifacts will be
-copied to after they are built.  Typically artifacts are only written to the
-`target/release` or `target/debug` directories.  However, determining the
+copied to after they are built. Typically artifacts are only written to the
+`target/release` or `target/debug` directories. However, determining the
 exact filename can be tricky since you need to parse JSON output. The
 `--out-dir` flag makes it easier to predictably access the artifacts. Note
 that the artifacts are copied, so the originals are still in the `target`
-directory.  Example:
+directory. Example:
 
 ```
 cargo +nightly build --out-dir=out -Z unstable-options
@@ -183,9 +130,9 @@ Overrides can only be specified for dev and release profiles.
 * Tracking Issue: [rust-lang/rust#48683](https://github.com/rust-lang/rust/issues/48683)
 * RFC: [#2282](https://github.com/rust-lang/rfcs/blob/master/text/2282-profile-dependencies.md)
 
-Profiles can be specified in `.cargo/config` files.  The `-Z config-profile`
-command-line flag is required to use this feature.  The format is the same as
-in a `Cargo.toml` manifest.  If found in multiple config files, settings will
+Profiles can be specified in `.cargo/config` files. The `-Z config-profile`
+command-line flag is required to use this feature. The format is the same as
+in a `Cargo.toml` manifest. If found in multiple config files, settings will
 be merged using the regular [config hierarchy](reference/config.html#hierarchical-structure).
 Config settings take precedence over manifest settings.
 
@@ -255,15 +202,15 @@ default-run = "a"
 * Tracking Issue: [rust-lang/rust#49803](https://github.com/rust-lang/rust/issues/49803)
 * RFC: [#2196](https://github.com/rust-lang/rfcs/blob/master/text/2196-metabuild.md)
 
-Metabuild is a feature to have declarative build scripts.  Instead of writing
+Metabuild is a feature to have declarative build scripts. Instead of writing
 a `build.rs` script, you specify a list of build dependencies in the
-`metabuild` key in `Cargo.toml`.  A build script is automatically generated
-that runs each build dependency in order.  Metabuild packages can then read
+`metabuild` key in `Cargo.toml`. A build script is automatically generated
+that runs each build dependency in order. Metabuild packages can then read
 metadata from `Cargo.toml` to specify their behavior.
 
 Include `cargo-features` at the top of `Cargo.toml`, a `metabuild` key in the
 `package`, list the dependencies in `build-dependencies`, and add any metadata
-that the metabuild packages require under `package.metadata`.  Example:
+that the metabuild packages require under `package.metadata`. Example:
 
 ```toml
 cargo-features = ["metabuild"]

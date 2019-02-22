@@ -45,6 +45,10 @@ pub fn dylib_path_envvar() -> &'static str {
         // find the library in the install path.
         // Setting DYLD_LIBRARY_PATH can easily have unintended
         // consequences.
+        //
+        // Also, DYLD_LIBRARY_PATH appears to have significant performance
+        // penalty starting in 10.13. Cargo's testsuite ran more than twice as
+        // slow with it on CI.
         "DYLD_FALLBACK_LIBRARY_PATH"
     } else {
         "LD_LIBRARY_PATH"
@@ -83,20 +87,6 @@ pub fn normalize_path(path: &Path) -> PathBuf {
         }
     }
     ret
-}
-
-pub fn without_prefix<'a>(long_path: &'a Path, prefix: &'a Path) -> Option<&'a Path> {
-    let mut a = long_path.components();
-    let mut b = prefix.components();
-    loop {
-        match b.next() {
-            Some(y) => match a.next() {
-                Some(x) if x == y => continue,
-                _ => return None,
-            },
-            None => return Some(a.as_path()),
-        }
-    }
 }
 
 pub fn resolve_executable(exec: &Path) -> CargoResult<PathBuf> {

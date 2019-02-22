@@ -173,7 +173,7 @@ codegen-units = 9
         ("CARGO_PROFILE_DEV_OVERRIDES_bar_OPT_LEVEL", "2"),
     ]);
 
-    // TODO: don't use actual tomlprofile
+    // TODO: don't use actual `tomlprofile`.
     let p: toml::TomlProfile = config.get("profile.dev").unwrap();
     let mut overrides = collections::BTreeMap::new();
     let key = toml::ProfilePackageSpec::Spec(::cargo::core::PackageIdSpec::parse("bar").unwrap());

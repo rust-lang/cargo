@@ -1,3 +1,15 @@
+mod build_config;
+mod build_context;
+mod build_plan;
+mod compilation;
+mod context;
+mod custom_build;
+mod fingerprint;
+mod job;
+mod job_queue;
+mod layout;
+mod output_depinfo;
+
 use std::env;
 use std::ffi::{OsStr, OsString};
 use std::fs;
@@ -17,33 +29,18 @@ use crate::util::errors::{CargoResult, CargoResultExt, Internal, ProcessError};
 use crate::util::paths;
 use crate::util::{self, machine_message, process, Freshness, ProcessBuilder};
 use crate::util::{internal, join_paths, profile};
-
-use self::build_plan::BuildPlan;
-use self::job::{Job, Work};
-use self::job_queue::JobQueue;
-
-use self::output_depinfo::output_depinfo;
-
 pub use self::build_config::{BuildConfig, CompileMode, MessageFormat};
 pub use self::build_context::{BuildContext, FileFlavor, TargetConfig, TargetInfo};
+use self::build_plan::BuildPlan;
 pub use self::compilation::{Compilation, Doctest};
 pub use self::context::{Context, Unit};
 pub use self::custom_build::{BuildMap, BuildOutput, BuildScripts};
+use self::job::{Job, Work};
+use self::job_queue::JobQueue;
 pub use self::layout::is_bad_artifact_name;
+use self::output_depinfo::output_depinfo;
 
-mod build_config;
-mod build_context;
-mod build_plan;
-mod compilation;
-mod context;
-mod custom_build;
-mod fingerprint;
-mod job;
-mod job_queue;
-mod layout;
-mod output_depinfo;
-
-/// Whether an object is for the host arch, or the target arch.
+/// Indicates whether an object is for the host architcture or the target architecture.
 ///
 /// These will be the same unless cross-compiling.
 #[derive(PartialEq, Eq, Hash, Debug, Clone, Copy, PartialOrd, Ord, Serialize)]
@@ -53,7 +50,7 @@ pub enum Kind {
 }
 
 /// A glorified callback for executing calls to rustc. Rather than calling rustc
-/// directly, we'll use an Executor, giving clients an opportunity to intercept
+/// directly, we'll use an `Executor`, giving clients an opportunity to intercept
 /// the build calls.
 pub trait Executor: Send + Sync + 'static {
     /// Called after a rustc process invocation is prepared up-front for a given
@@ -82,7 +79,7 @@ pub trait Executor: Send + Sync + 'static {
         mode: CompileMode,
         _state: &job_queue::JobState<'_>,
     ) -> CargoResult<()> {
-        // we forward to exec() to keep RLS working.
+        // We forward to `exec()` to keep RLS working.
         self.exec(cmd, id, target, mode)
     }
 
@@ -126,7 +123,7 @@ impl Executor for DefaultExecutor {
 
 fn compile<'a, 'cfg: 'a>(
     cx: &mut Context<'a, 'cfg>,
-    jobs: &mut JobQueue<'a>,
+    jobs: &mut JobQueue<'a, 'cfg>,
     plan: &mut BuildPlan,
     unit: &Unit<'a>,
     exec: &Arc<dyn Executor>,
@@ -147,7 +144,7 @@ fn compile<'a, 'cfg: 'a>(
     let (dirty, fresh, freshness) = if unit.mode.is_run_custom_build() {
         custom_build::prepare(cx, unit)?
     } else if unit.mode == CompileMode::Doctest {
-        // we run these targets later, so this is just a noop for now
+        // We run these targets later, so this is just a no-op for now.
         (Work::noop(), Work::noop(), Freshness::Fresh)
     } else if build_plan {
         (
@@ -162,7 +159,7 @@ fn compile<'a, 'cfg: 'a>(
         } else {
             rustc(cx, unit, exec)?
         };
-        // Need to link targets on both the dirty and fresh
+        // Need to link targets on both the dirty and fresh.
         let dirty = work.then(link_targets(cx, unit, false)?).then(dirty);
         let fresh = link_targets(cx, unit, true)?.then(fresh);
 
@@ -206,7 +203,7 @@ fn rustc<'a, 'cfg>(
     let root = cx.files().out_dir(unit);
     let kind = unit.kind;
 
-    // Prepare the native lib state (extra -L and -l flags)
+    // Prepare the native lib state (extra `-L` and `-l` flags).
     let build_state = cx.build_state.clone();
     let current_id = unit.pkg.package_id();
     let build_deps = load_build_deps(cx, unit);
@@ -218,7 +215,7 @@ fn rustc<'a, 'cfg>(
     let real_name = unit.target.name().to_string();
     let crate_name = unit.target.crate_name();
 
-    // XXX(Rely on target_filenames iterator as source of truth rather than rederiving filestem)
+    // Rely on `target_filenames` iterator as source of truth rather than rederiving filestem.
     let rustc_dep_info_loc = if do_rename && cx.files().metadata(unit).is_none() {
         root.join(&crate_name)
     } else {
@@ -279,8 +276,8 @@ fn rustc<'a, 'cfg>(
         }
 
         fn internal_if_simple_exit_code(err: Error) -> Error {
-            // If a signal on unix (code == None) or an abnormal termination
-            // on Windows (codes like 0xC0000409), don't hide the error details.
+            // If a signal on unix (`code == None`) or an abnormal termination
+            // on Windows (codes like `0xC0000409`), don't hide the error details.
             match err
                 .downcast_ref::<ProcessError>()
                 .as_ref()
@@ -341,8 +338,8 @@ fn rustc<'a, 'cfg>(
         Ok(())
     }));
 
-    // Add all relevant -L and -l flags from dependencies (now calculated and
-    // present in `state`) to the command provided
+    // Add all relevant `-L` and `-l` flags from dependencies (now calculated and
+    // present in `state`) to the command provided.
     fn add_native_deps(
         rustc: &mut ProcessBuilder,
         build_state: &BuildMap,
@@ -393,7 +390,7 @@ fn rustc<'a, 'cfg>(
 }
 
 /// Link the compiled target (often of form `foo-{metadata_hash}`) to the
-/// final target. This must happen during both "Fresh" and "Compile"
+/// final target. This must happen during both "Fresh" and "Compile".
 fn link_targets<'a, 'cfg>(
     cx: &mut Context<'a, 'cfg>,
     unit: &Unit<'a>,
@@ -421,7 +418,7 @@ fn link_targets<'a, 'cfg>(
     }
 
     Ok(Work::new(move |_| {
-        // If we're a "root crate", e.g. the target of this compilation, then we
+        // If we're a "root crate", e.g., the target of this compilation, then we
         // hard link our outputs out of the `deps` directory into the directory
         // above. This means that `cargo build` will produce binaries in
         // `target/debug` which one probably expects.
@@ -550,7 +547,7 @@ fn add_plugin_deps(
 // Determine paths to add to the dynamic search path from -L entries
 //
 // Strip off prefixes like "native=" or "framework=" and filter out directories
-// *not* inside our output directory since they are likely spurious and can cause
+// **not** inside our output directory since they are likely spurious and can cause
 // clashes with system shared libraries (issue #3366).
 fn filter_dynamic_search_path<'a, I>(paths: I, root_output: &PathBuf) -> Vec<PathBuf>
 where
@@ -763,6 +760,7 @@ fn build_base_args<'a, 'cfg>(
         overflow_checks,
         rpath,
         ref panic,
+        incremental,
         ..
     } = unit.profile;
     let test = unit.mode.is_any_test();
@@ -827,9 +825,9 @@ fn build_base_args<'a, 'cfg>(
         cmd.args(args);
     }
 
-    // -C overflow-checks is implied by the setting of -C debug-assertions,
-    // so we only need to provide -C overflow-checks if it differs from
-    // the value of -C debug-assertions we would provide.
+    // `-C overflow-checks` is implied by the setting of `-C debug-assertions`,
+    // so we only need to provide `-C overflow-checks` if it differs from
+    // the value of `-C debug-assertions` we would provide.
     if opt_level.as_str() != "0" {
         if debug_assertions {
             cmd.args(&["-C", "debug-assertions=on"]);
@@ -905,8 +903,10 @@ fn build_base_args<'a, 'cfg>(
         "linker=",
         bcx.linker(unit.kind).map(|s| s.as_ref()),
     );
-    cmd.args(&cx.incremental_args(unit)?);
-
+    if incremental {
+        let dir = cx.files().layout(unit.kind).incremental().as_os_str();
+        opt(cmd, "-C", "incremental=", Some(dir));
+    }
     Ok(())
 }
 
@@ -922,7 +922,7 @@ fn build_deps_args<'a, 'cfg>(
         deps
     });
 
-    // Be sure that the host path is also listed. This'll ensure that proc-macro
+    // Be sure that the host path is also listed. This'll ensure that proc macro
     // dependencies are correctly found (for reexported macros).
     if let Kind::Target = unit.kind {
         cmd.arg("-L").arg(&{
@@ -936,7 +936,7 @@ fn build_deps_args<'a, 'cfg>(
 
     // If there is not one linkable target but should, rustc fails later
     // on if there is an `extern crate` for it. This may turn into a hard
-    // error in the future, see PR #4797
+    // error in the future (see PR #4797).
     if !dep_targets
         .iter()
         .any(|u| !u.mode.is_doc() && u.target.linkable())
@@ -1003,7 +1003,7 @@ impl Kind {
     fn for_target(self, target: &Target) -> Kind {
         // Once we start compiling for the `Host` kind we continue doing so, but
         // if we are a `Target` kind and then we start compiling for a target
-        // that needs to be on the host we lift ourselves up to `Host`
+        // that needs to be on the host we lift ourselves up to `Host`.
         match self {
             Kind::Host => Kind::Host,
             Kind::Target if target.for_host() => Kind::Host,
@@ -1024,9 +1024,9 @@ fn assert_is_empty(line: &str) -> CargoResult<()> {
 }
 
 fn json_stderr(line: &str, package_id: PackageId, target: &Target) -> CargoResult<()> {
-    // stderr from rustc/rustdoc can have a mix of JSON and non-JSON output
+    // Stderr from rustc/rustdoc can have a mix of JSON and non-JSON output.
     if line.starts_with('{') {
-        // Handle JSON lines
+        // Handle JSON lines.
         let compiler_message = serde_json::from_str(line)
             .map_err(|_| internal(&format!("compiler produced invalid json: `{}`", line)))?;
 
@@ -1036,7 +1036,7 @@ fn json_stderr(line: &str, package_id: PackageId, target: &Target) -> CargoResul
             message: compiler_message,
         });
     } else {
-        // Forward non-JSON to stderr
+        // Forward non-JSON to stderr.
         writeln!(io::stderr(), "{}", line)?;
     }
     Ok(())

@@ -19,7 +19,6 @@ use crate::util::diagnostic_server::{self, DiagnosticPrinter};
 use crate::util::{internal, profile, CargoResult, CargoResultExt, ProcessBuilder};
 use crate::util::{Config, DependencyQueue, Dirty, Fresh, Freshness};
 use crate::util::{Progress, ProgressStyle};
-
 use super::context::OutputFile;
 use super::job::Job;
 use super::{BuildContext, BuildPlan, CompileMode, Context, Kind, Unit};
@@ -29,7 +28,7 @@ use super::{BuildContext, BuildPlan, CompileMode, Context, Kind, Unit};
 /// This structure is backed by the `DependencyQueue` type and manages the
 /// actual compilation step of each package. Packages enqueue units of work and
 /// then later on the entire graph is processed and compiled.
-pub struct JobQueue<'a> {
+pub struct JobQueue<'a, 'cfg> {
     queue: DependencyQueue<Key<'a>, Vec<(Job, Freshness)>>,
     tx: Sender<Message<'a>>,
     rx: Receiver<Message<'a>>,
@@ -39,13 +38,14 @@ pub struct JobQueue<'a> {
     documented: HashSet<PackageId>,
     counts: HashMap<PackageId, usize>,
     is_release: bool,
+    progress: Progress<'cfg>,
 }
 
 /// A helper structure for metadata about the state of a building package.
 struct PendingBuild {
-    /// Number of jobs currently active
+    /// The number of jobs currently active.
     amt: usize,
-    /// Current freshness state of this package. Any dirty target within a
+    /// The current freshness state of this package. Any dirty target within a
     /// package will cause the entire package to become dirty.
     fresh: Freshness,
 }
@@ -131,9 +131,10 @@ impl<'a> JobState<'a> {
     }
 }
 
-impl<'a> JobQueue<'a> {
-    pub fn new<'cfg>(bcx: &BuildContext<'a, 'cfg>) -> JobQueue<'a> {
+impl<'a, 'cfg> JobQueue<'a, 'cfg> {
+    pub fn new(bcx: &BuildContext<'a, 'cfg>) -> JobQueue<'a, 'cfg> {
         let (tx, rx) = channel();
+        let progress = Progress::with_style("Building", ProgressStyle::Ratio, bcx.config);
         JobQueue {
             queue: DependencyQueue::new(),
             tx,
@@ -144,10 +145,11 @@ impl<'a> JobQueue<'a> {
             documented: HashSet::new(),
             counts: HashMap::new(),
             is_release: bcx.build_config.release,
+            progress,
         }
     }
 
-    pub fn enqueue<'cfg>(
+    pub fn enqueue(
         &mut self,
         cx: &Context<'a, 'cfg>,
         unit: &Unit<'a>,
@@ -163,7 +165,7 @@ impl<'a> JobQueue<'a> {
         Ok(())
     }
 
-    /// Execute all jobs necessary to build the dependency graph.
+    /// Executes all jobs necessary to build the dependency graph.
     ///
     /// This function will spawn off `config.jobs()` workers to build all of the
     /// necessary dependencies, in order. Freshness is propagated as far as
@@ -224,14 +226,13 @@ impl<'a> JobQueue<'a> {
         // loop starts out by scheduling as much work as possible (up to the
         // maximum number of parallel jobs we have tokens for). A local queue
         // is maintained separately from the main dependency queue as one
-        // dequeue may actually dequeue quite a bit of work (e.g. 10 binaries
+        // dequeue may actually dequeue quite a bit of work (e.g., 10 binaries
         // in one package).
         //
         // After a job has finished we update our internal state if it was
         // successful and otherwise wait for pending work to finish if it failed
         // and then immediately return.
         let mut error = None;
-        let mut progress = Progress::with_style("Building", ProgressStyle::Ratio, cx.bcx.config);
         let total = self.queue.len();
         loop {
             // Dequeue as much work as we can, learning about everything
@@ -276,84 +277,90 @@ impl<'a> JobQueue<'a> {
             // to the jobserver itself.
             tokens.truncate(self.active.len() - 1);
 
-            let count = total - self.queue.len();
-            let active_names = self
-                .active
-                .iter()
-                .map(Key::name_for_progress)
-                .collect::<Vec<_>>();
-            drop(progress.tick_now(count, total, &format!(": {}", active_names.join(", "))));
-            let event = self.rx.recv().unwrap();
-            progress.clear();
+            // Drain all events at once to avoid displaying the progress bar
+            // unnecessarily.
+            let events: Vec<_> = self.rx.try_iter().collect();
+            let events = if events.is_empty() {
+                self.show_progress(total);
+                vec![self.rx.recv().unwrap()]
+            } else {
+                events
+            };
 
-            match event {
-                Message::Run(cmd) => {
-                    cx.bcx
-                        .config
-                        .shell()
-                        .verbose(|c| c.status("Running", &cmd))?;
-                }
-                Message::BuildPlanMsg(module_name, cmd, filenames) => {
-                    plan.update(&module_name, &cmd, &filenames)?;
-                }
-                Message::Stdout(out) => {
-                    println!("{}", out);
-                }
-                Message::Stderr(err) => {
-                    let mut shell = cx.bcx.config.shell();
-                    shell.print_ansi(err.as_bytes())?;
-                    shell.err().write_all(b"\n")?;
-                }
-                Message::FixDiagnostic(msg) => {
-                    print.print(&msg)?;
-                }
-                Message::Finish(key, result) => {
-                    info!("end: {:?}", key);
-
-                    // self.active.remove_item(&key); // <- switch to this when stabilized.
-                    let pos = self
-                        .active
-                        .iter()
-                        .position(|k| *k == key)
-                        .expect("an unrecorded package has finished compiling");
-                    self.active.remove(pos);
-                    if !self.active.is_empty() {
-                        assert!(!tokens.is_empty());
-                        drop(tokens.pop());
+            for event in events {
+                match event {
+                    Message::Run(cmd) => {
+                        cx.bcx
+                            .config
+                            .shell()
+                            .verbose(|c| c.status("Running", &cmd))?;
                     }
-                    match result {
-                        Ok(()) => self.finish(key, cx)?,
-                        Err(e) => {
-                            let msg = "The following warnings were emitted during compilation:";
-                            self.emit_warnings(Some(msg), &key, cx)?;
+                    Message::BuildPlanMsg(module_name, cmd, filenames) => {
+                        plan.update(&module_name, &cmd, &filenames)?;
+                    }
+                    Message::Stdout(out) => {
+                        self.progress.clear();
+                        println!("{}", out);
+                    }
+                    Message::Stderr(err) => {
+                        let mut shell = cx.bcx.config.shell();
+                        shell.print_ansi(err.as_bytes())?;
+                        shell.err().write_all(b"\n")?;
+                    }
+                    Message::FixDiagnostic(msg) => {
+                        print.print(&msg)?;
+                    }
+                    Message::Finish(key, result) => {
+                        info!("end: {:?}", key);
 
-                            if !self.active.is_empty() {
-                                error = Some(failure::format_err!("build failed"));
-                                handle_error(&e, &mut *cx.bcx.config.shell());
-                                cx.bcx.config.shell().warn(
-                                    "build failed, waiting for other \
-                                     jobs to finish...",
-                                )?;
-                            } else {
-                                error = Some(e);
+                        // FIXME: switch to this when stabilized.
+                        // self.active.remove_item(&key);
+                        let pos = self
+                            .active
+                            .iter()
+                            .position(|k| *k == key)
+                            .expect("an unrecorded package has finished compiling");
+                        self.active.remove(pos);
+                        if !self.active.is_empty() {
+                            assert!(!tokens.is_empty());
+                            drop(tokens.pop());
+                        }
+                        match result {
+                            Ok(()) => self.finish(key, cx)?,
+                            Err(e) => {
+                                let msg = "The following warnings were emitted during compilation:";
+                                self.emit_warnings(Some(msg), &key, cx)?;
+
+                                if !self.active.is_empty() {
+                                    error = Some(failure::format_err!("build failed"));
+                                    handle_error(&e, &mut *cx.bcx.config.shell());
+                                    cx.bcx.config.shell().warn(
+                                        "build failed, waiting for other \
+                                         jobs to finish...",
+                                    )?;
+                                } else {
+                                    error = Some(e);
+                                }
                             }
                         }
                     }
-                }
-                Message::Token(acquired_token) => {
-                    tokens.push(acquired_token.chain_err(|| "failed to acquire jobserver token")?);
+                    Message::Token(acquired_token) => {
+                        tokens.push(
+                            acquired_token.chain_err(|| "failed to acquire jobserver token")?,
+                        );
+                    }
                 }
             }
         }
-        drop(progress);
+        self.progress.clear();
 
         let build_type = if self.is_release { "release" } else { "dev" };
-        // NOTE: This may be a bit inaccurate, since this may not display the
-        // profile for what was actually built.  Profile overrides can change
+        // NOTE: this may be a bit inaccurate, since this may not display the
+        // profile for what was actually built. Profile overrides can change
         // these settings, and in some cases different targets are built with
-        // different profiles.  To be accurate, it would need to collect a
+        // different profiles. To be accurate, it would need to collect a
         // list of Units built, and maybe display a list of the different
-        // profiles used.  However, to keep it simple and compatible with old
+        // profiles used. However, to keep it simple and compatible with old
         // behavior, we just display what the base profile is.
         let profile = cx.bcx.profiles.base_profile(self.is_release);
         let mut opt_type = String::from(if profile.opt_level.as_str() == "0" {
@@ -384,6 +391,19 @@ impl<'a> JobQueue<'a> {
         }
     }
 
+    fn show_progress(&mut self, total: usize) {
+        let count = total - self.queue.len();
+        let active_names = self
+            .active
+            .iter()
+            .map(Key::name_for_progress)
+            .collect::<Vec<_>>();
+        drop(
+            self.progress
+                .tick_now(count, total, &format!(": {}", active_names.join(", "))),
+        );
+    }
+
     /// Executes a job in the `scope` given, pushing the spawned thread's
     /// handled onto `threads`.
     fn run(
@@ -407,7 +427,7 @@ impl<'a> JobQueue<'a> {
         };
 
         if !build_plan {
-            // Print out some nice progress information
+            // Print out some nice progress information.
             self.note_working_on(config, &key, fresh)?;
         }
 
@@ -422,7 +442,7 @@ impl<'a> JobQueue<'a> {
     }
 
     fn emit_warnings(
-        &self,
+        &mut self,
         msg: Option<&str>,
         key: &Key<'a>,
         cx: &mut Context<'_, '_>,
@@ -430,19 +450,19 @@ impl<'a> JobQueue<'a> {
         let output = cx.build_state.outputs.lock().unwrap();
         let bcx = &mut cx.bcx;
         if let Some(output) = output.get(&(key.pkg, key.kind)) {
-            if let Some(msg) = msg {
-                if !output.warnings.is_empty() {
+            if !output.warnings.is_empty() {
+                if let Some(msg) = msg {
                     writeln!(bcx.config.shell().err(), "{}\n", msg)?;
                 }
-            }
 
-            for warning in output.warnings.iter() {
-                bcx.config.shell().warn(warning)?;
-            }
+                for warning in output.warnings.iter() {
+                    bcx.config.shell().warn(warning)?;
+                }
 
-            if !output.warnings.is_empty() && msg.is_some() {
-                // Output an empty line.
-                writeln!(bcx.config.shell().err())?;
+                if msg.is_some() {
+                    // Output an empty line.
+                    writeln!(bcx.config.shell().err())?;
+                }
             }
         }
 
@@ -485,10 +505,10 @@ impl<'a> JobQueue<'a> {
 
         match fresh {
             // Any dirty stage which runs at least one command gets printed as
-            // being a compiled package
+            // being a compiled package.
             Dirty => {
                 if key.mode.is_doc() {
-                    // Skip Doctest
+                    // Skip doc test.
                     if !key.mode.is_any_test() {
                         self.documented.insert(key.pkg);
                         config.shell().status("Documenting", key.pkg)?;
@@ -503,7 +523,7 @@ impl<'a> JobQueue<'a> {
                 }
             }
             Fresh => {
-                // If doctest is last, only print "Fresh" if nothing has been printed.
+                // If doc test are last, only print "Fresh" if nothing has been printed.
                 if self.counts[&key.pkg] == 0
                     && !(key.mode == CompileMode::Doctest && self.compiled.contains(&key.pkg))
                 {

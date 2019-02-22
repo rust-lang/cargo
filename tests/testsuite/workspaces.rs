@@ -1714,14 +1714,14 @@ Caused by:
         .run();
 }
 
-/// This is a freshness test for feature use with workspaces
+/// This is a freshness test for feature use with workspaces.
 ///
-/// feat_lib is used by caller1 and caller2, but with different features enabled.
-/// This test ensures that alternating building caller1, caller2 doesn't force
-/// recompile of feat_lib.
+/// `feat_lib` is used by `caller1` and `caller2`, but with different features enabled.
+/// This test ensures that alternating building `caller1`, `caller2` doesn't force
+/// recompile of `feat_lib`.
 ///
-/// Ideally once we solve https://github.com/rust-lang/cargo/issues/3620, then
-/// a single cargo build at the top level will be enough.
+/// Ideally, once we solve rust-lang/cargo#3620, then a single Cargo build at the top level
+/// will be enough.
 #[test]
 fn dep_used_with_separate_features() {
     let p = project()
@@ -1776,7 +1776,7 @@ fn dep_used_with_separate_features() {
         .file("caller2/src/lib.rs", "");
     let p = p.build();
 
-    // Build the entire workspace
+    // Build the entire workspace.
     p.cargo("build --all")
         .with_stderr(
             "\
@@ -1790,10 +1790,10 @@ fn dep_used_with_separate_features() {
     assert!(p.bin("caller1").is_file());
     assert!(p.bin("caller2").is_file());
 
-    // Build caller1. should build the dep library. Because the features
+    // Build `caller1`. Should build the dep library. Because the features
     // are different than the full workspace, it rebuilds.
-    // Ideally once we solve https://github.com/rust-lang/cargo/issues/3620, then
-    // a single cargo build at the top level will be enough.
+    // Ideally once we solve rust-lang/cargo#3620, then a single Cargo build at the top level
+    // will be enough.
     p.cargo("build")
         .cwd(p.root().join("caller1"))
         .with_stderr(
@@ -1805,8 +1805,8 @@ fn dep_used_with_separate_features() {
         )
         .run();
 
-    // Alternate building caller2/caller1 a few times, just to make sure
-    // features are being built separately.  Should not rebuild anything
+    // Alternate building `caller2`/`caller1` a few times, just to make sure
+    // features are being built separately. Should not rebuild anything.
     p.cargo("build")
         .cwd(p.root().join("caller2"))
         .with_stderr("[FINISHED] dev [unoptimized + debuginfo] target(s) in [..]")
@@ -1876,7 +1876,8 @@ fn dont_recurse_out_of_cargo_home() {
         .run();
 }
 
-/*FIXME: This fails because of how workspace.exclude and workspace.members are working.
+// FIXME: this fails because of how workspace.exclude and workspace.members are working.
+/*
 #[test]
 fn include_and_exclude() {
     let p = project()
@@ -2074,7 +2075,6 @@ fn ws_warn_unused() {
             .file("a/src/lib.rs", "")
             .build();
         p.cargo("check")
-            .with_status(0)
             .with_stderr_contains(&format!(
                 "\
 [WARNING] {} for the non root package will be ignored, specify {} at the workspace root:
@@ -2111,7 +2111,6 @@ fn ws_warn_path() {
         .build();
 
     p.cargo("check")
-        .with_status(0)
         .with_stderr_contains("[WARNING] [..]/foo/a/Cargo.toml: the cargo feature `edition`[..]")
         .run();
 }

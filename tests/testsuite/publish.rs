@@ -617,47 +617,6 @@ See [..]
 }
 
 #[test]
-fn block_publish_feature_not_enabled() {
-    registry::init();
-
-    let p = project()
-        .file(
-            "Cargo.toml",
-            r#"
-            [project]
-            name = "foo"
-            version = "0.0.1"
-            authors = []
-            license = "MIT"
-            description = "foo"
-            publish = [
-                "test"
-            ]
-        "#,
-        )
-        .file("src/main.rs", "fn main() {}")
-        .build();
-
-    p.cargo("publish --registry alternative -Zunstable-options")
-        .masquerade_as_nightly_cargo()
-        .with_status(101)
-        .with_stderr(
-            "\
-error: failed to parse manifest at `[..]`
-
-Caused by:
-  the `publish` manifest key is unstable for anything other than a value of true or false
-
-Caused by:
-  feature `alternative-registries` is required
-
-consider adding `cargo-features = [\"alternative-registries\"]` to the manifest
-",
-        )
-        .run();
-}
-
-#[test]
 fn registry_not_in_publish_list() {
     registry::init();
 
@@ -665,8 +624,6 @@ fn registry_not_in_publish_list() {
         .file(
             "Cargo.toml",
             r#"
-            cargo-features = ["alternative-registries"]
-
             [project]
             name = "foo"
             version = "0.0.1"
@@ -682,10 +639,8 @@ fn registry_not_in_publish_list() {
         .build();
 
     p.cargo("publish")
-        .masquerade_as_nightly_cargo()
         .arg("--registry")
         .arg("alternative")
-        .arg("-Zunstable-options")
         .with_status(101)
         .with_stderr(
             "\
@@ -704,8 +659,6 @@ fn publish_empty_list() {
         .file(
             "Cargo.toml",
             r#"
-            cargo-features = ["alternative-registries"]
-
             [project]
             name = "foo"
             version = "0.0.1"
@@ -718,8 +671,7 @@ fn publish_empty_list() {
         .file("src/main.rs", "fn main() {}")
         .build();
 
-    p.cargo("publish --registry alternative -Zunstable-options")
-        .masquerade_as_nightly_cargo()
+    p.cargo("publish --registry alternative")
         .with_status(101)
         .with_stderr(
             "\
@@ -740,8 +692,6 @@ fn publish_allowed_registry() {
         .file(
             "Cargo.toml",
             r#"
-            cargo-features = ["alternative-registries"]
-
             [project]
             name = "foo"
             version = "0.0.1"
@@ -757,9 +707,7 @@ fn publish_allowed_registry() {
         .file("src/main.rs", "fn main() {}")
         .build();
 
-    p.cargo("publish --registry alternative -Zunstable-options")
-        .masquerade_as_nightly_cargo()
-        .run();
+    p.cargo("publish --registry alternative").run();
 
     publish::validate_alt_upload(
         CLEAN_FOO_JSON,
@@ -781,8 +729,6 @@ fn block_publish_no_registry() {
         .file(
             "Cargo.toml",
             r#"
-            cargo-features = ["alternative-registries"]
-
             [project]
             name = "foo"
             version = "0.0.1"
@@ -795,8 +741,7 @@ fn block_publish_no_registry() {
         .file("src/main.rs", "fn main() {}")
         .build();
 
-    p.cargo("publish --registry alternative -Zunstable-options")
-        .masquerade_as_nightly_cargo()
+    p.cargo("publish --registry alternative")
         .with_status(101)
         .with_stderr(
             "\
@@ -930,17 +875,71 @@ fn publish_with_patch() {
             bar = { path = "bar" }
         "#,
         )
-        .file("src/main.rs", "extern crate bar; fn main() {}")
+        .file(
+            "src/main.rs",
+            "extern crate bar;
+             fn main() {
+                 bar::newfunc();
+             }",
+        )
         .file("bar/Cargo.toml", &basic_manifest("bar", "1.0.0"))
-        .file("bar/src/lib.rs", "")
+        .file("bar/src/lib.rs", "pub fn newfunc() {}")
         .build();
 
     // Check that it works with the patched crate.
     p.cargo("build").run();
 
+    // Check that verify fails with patched crate which has new functionality.
     p.cargo("publish --index")
         .arg(registry_url().to_string())
+        .with_stderr_contains("[..]newfunc[..]")
         .with_status(101)
-        .with_stderr_contains("[ERROR] published crates cannot contain [patch] sections")
         .run();
+
+    // Remove the usage of new functionality and try again.
+    p.change_file("src/main.rs", "extern crate bar; pub fn main() {}");
+
+    p.cargo("publish --index")
+        .arg(registry_url().to_string())
+        .run();
+
+    // Note, use of `registry` in the deps here is an artifact that this
+    // publishes to a fake, local registry that is pretending to be crates.io.
+    // Normal publishes would set it to null.
+    publish::validate_upload(
+        r#"
+        {
+          "authors": [],
+          "badges": {},
+          "categories": [],
+          "deps": [
+            {
+              "default_features": true,
+              "features": [],
+              "kind": "normal",
+              "name": "bar",
+              "optional": false,
+              "registry": "https://github.com/rust-lang/crates.io-index",
+              "target": null,
+              "version_req": "^1.0"
+            }
+          ],
+          "description": "foo",
+          "documentation": null,
+          "features": {},
+          "homepage": null,
+          "keywords": [],
+          "license": "MIT",
+          "license_file": null,
+          "links": null,
+          "name": "foo",
+          "readme": null,
+          "readme_file": null,
+          "repository": null,
+          "vers": "0.0.1"
+          }
+        "#,
+        "foo-0.0.1.crate",
+        &["Cargo.toml", "Cargo.toml.orig", "src/main.rs"],
+    );
 }

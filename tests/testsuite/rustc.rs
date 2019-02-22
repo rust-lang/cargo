@@ -2,7 +2,7 @@ use crate::support::{basic_bin_manifest, basic_lib_manifest, basic_manifest, pro
 
 const CARGO_RUSTC_ERROR: &str =
     "[ERROR] extra arguments to `rustc` can only be passed to one target, consider filtering
-the package by passing e.g. `--lib` or `--bin NAME` to specify a single target";
+the package by passing, e.g., `--lib` or `--bin NAME` to specify a single target";
 
 #[test]
 fn build_lib_for_foo() {

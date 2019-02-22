@@ -4,7 +4,7 @@ use crate::core::compiler::{Compilation, Doctest};
 use crate::core::Workspace;
 use crate::ops;
 use crate::util::errors::CargoResult;
-use crate::util::{self, CargoTestError, ProcessError, Test};
+use crate::util::{CargoTestError, ProcessError, Test};
 
 pub struct TestOptions<'a> {
     pub compile_opts: ops::CompileOptions<'a>,
@@ -24,7 +24,7 @@ pub fn run_tests(
     }
     let (test, mut errors) = run_unit_tests(options, test_args, &compilation)?;
 
-    // If we have an error and want to fail fast, return
+    // If we have an error and want to fail fast, then return.
     if !errors.is_empty() && !options.no_fail_fast {
         return Ok(Some(CargoTestError::new(test, errors)));
     }
@@ -69,7 +69,7 @@ fn compile_tests<'a>(
     Ok(compilation)
 }
 
-/// Run the unit and integration tests of a package.
+/// Runs the unit and integration tests of a package.
 fn run_unit_tests(
     options: &TestOptions<'_>,
     test_args: &[String],
@@ -81,18 +81,15 @@ fn run_unit_tests(
     let mut errors = Vec::new();
 
     for &(ref pkg, ref kind, ref test, ref exe) in &compilation.tests {
-        let to_display = match util::without_prefix(exe, cwd) {
-            Some(path) => path,
-            None => &**exe,
-        };
+        let exe_display = exe.strip_prefix(cwd).unwrap_or(exe).display();
         let mut cmd = compilation.target_process(exe, pkg)?;
         cmd.args(test_args);
         config
             .shell()
-            .concise(|shell| shell.status("Running", to_display.display().to_string()))?;
+            .concise(|shell| shell.status("Running", &exe_display))?;
         config
             .shell()
-            .verbose(|shell| shell.status("Running", cmd.to_string()))?;
+            .verbose(|shell| shell.status("Running", &cmd))?;
 
         let result = cmd.exec();
 
@@ -134,7 +131,7 @@ fn run_doc_tests(
     let mut errors = Vec::new();
     let config = options.compile_opts.config;
 
-    // We don't build/rust doctests if target != host
+    // We don't build/run doc tests if `target` does not equal `host`.
     if compilation.host != compilation.target {
         return Ok((Test::Doc, errors));
     }

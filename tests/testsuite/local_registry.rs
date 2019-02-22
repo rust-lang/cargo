@@ -383,7 +383,7 @@ fn different_directory_replacing_the_registry_is_bad() {
 this could be indicative of a few possible errors:
 
     * the lock file is corrupt
-    * a replacement source in use (e.g. a mirror) returned a different checksum
+    * a replacement source in use (e.g., a mirror) returned a different checksum
     * the source itself may be corrupt in one way or another
 
 unable to verify that `bar v0.0.1` is the same as when the lockfile was generated

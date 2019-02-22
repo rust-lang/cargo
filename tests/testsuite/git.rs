@@ -800,7 +800,7 @@ fn recompilation() {
     p.cargo("build").with_stdout("").run();
 
     // Commit the changes and make sure we don't trigger a recompile because the
-    // lockfile says not to change
+    // lock file says not to change
     let repo = git2::Repository::open(&git_project.root()).unwrap();
     git::add(&repo);
     git::commit(&repo);
@@ -1247,7 +1247,7 @@ fn stale_cached_version() {
     foo.cargo("build").run();
     foo.process(&foo.bin("foo")).run();
 
-    // Update the repo, and simulate someone else updating the lockfile and then
+    // Update the repo, and simulate someone else updating the lock file and then
     // us pulling it down.
     File::create(&bar.root().join("src/lib.rs"))
         .unwrap()
@@ -1462,8 +1462,8 @@ fn dev_deps_with_testing() {
         )
         .build();
 
-    // Generate a lockfile which did not use `bar` to compile, but had to update
-    // `bar` to generate the lockfile
+    // Generate a lock file which did not use `bar` to compile, but had to update
+    // `bar` to generate the lock file
     p.cargo("build")
         .with_stderr(&format!(
             "\
@@ -1569,8 +1569,8 @@ fn git_name_not_always_needed() {
         .file("src/main.rs", "fn main() {}")
         .build();
 
-    // Generate a lockfile which did not use `bar` to compile, but had to update
-    // `bar` to generate the lockfile
+    // Generate a lock file which did not use `bar` to compile, but had to update
+    // `bar` to generate the lock file
     p.cargo("build")
         .with_stderr(&format!(
             "\
@@ -2571,7 +2571,7 @@ fn include_overrides_gitignore() {
         )
         .run();
 
-    println!("build 3: touch `src/not_incl.rs`; expect build script *not* re-run");
+    println!("build 3: touch `src/not_incl.rs`; expect build script **not** re-run");
     sleep_ms(1000);
     File::create(p.root().join("src").join("not_incl.rs")).unwrap();
 

@@ -6,41 +6,11 @@ use std::fs::{self, File};
 use std::io::Write;
 
 #[test]
-fn is_feature_gated() {
-    let p = project()
-        .file(
-            "Cargo.toml",
-            r#"
-            [project]
-            name = "foo"
-            version = "0.0.1"
-            authors = []
-
-            [dependencies.bar]
-            version = "0.0.1"
-            registry = "alternative"
-        "#,
-        )
-        .file("src/main.rs", "fn main() {}")
-        .build();
-
-    Package::new("bar", "0.0.1").alternative(true).publish();
-
-    p.cargo("build")
-        .masquerade_as_nightly_cargo()
-        .with_status(101)
-        .with_stderr_contains("  feature `alternative-registries` is required")
-        .run();
-}
-
-#[test]
 fn depend_on_alt_registry() {
     let p = project()
         .file(
             "Cargo.toml",
             r#"
-            cargo-features = ["alternative-registries"]
-
             [project]
             name = "foo"
             version = "0.0.1"
@@ -57,7 +27,6 @@ fn depend_on_alt_registry() {
     Package::new("bar", "0.0.1").alternative(true).publish();
 
     p.cargo("build")
-        .masquerade_as_nightly_cargo()
         .with_stderr(&format!(
             "\
 [UPDATING] `{reg}` index
@@ -71,11 +40,10 @@ fn depend_on_alt_registry() {
         ))
         .run();
 
-    p.cargo("clean").masquerade_as_nightly_cargo().run();
+    p.cargo("clean").run();
 
     // Don't download a second time
     p.cargo("build")
-        .masquerade_as_nightly_cargo()
         .with_stderr(
             "\
 [COMPILING] bar v0.0.1 (registry `[ROOT][..]`)
@@ -92,8 +60,6 @@ fn depend_on_alt_registry_depends_on_same_registry_no_index() {
         .file(
             "Cargo.toml",
             r#"
-            cargo-features = ["alternative-registries"]
-
             [project]
             name = "foo"
             version = "0.0.1"
@@ -114,7 +80,6 @@ fn depend_on_alt_registry_depends_on_same_registry_no_index() {
         .publish();
 
     p.cargo("build")
-        .masquerade_as_nightly_cargo()
         .with_stderr(&format!(
             "\
 [UPDATING] `{reg}` index
@@ -137,8 +102,6 @@ fn depend_on_alt_registry_depends_on_same_registry() {
         .file(
             "Cargo.toml",
             r#"
-            cargo-features = ["alternative-registries"]
-
             [project]
             name = "foo"
             version = "0.0.1"
@@ -159,7 +122,6 @@ fn depend_on_alt_registry_depends_on_same_registry() {
         .publish();
 
     p.cargo("build")
-        .masquerade_as_nightly_cargo()
         .with_stderr(&format!(
             "\
 [UPDATING] `{reg}` index
@@ -182,8 +144,6 @@ fn depend_on_alt_registry_depends_on_crates_io() {
         .file(
             "Cargo.toml",
             r#"
-            cargo-features = ["alternative-registries"]
-
             [project]
             name = "foo"
             version = "0.0.1"
@@ -204,7 +164,6 @@ fn depend_on_alt_registry_depends_on_crates_io() {
         .publish();
 
     p.cargo("build")
-        .masquerade_as_nightly_cargo()
         .with_stderr_unordered(&format!(
             "\
 [UPDATING] `{alt_reg}` index
@@ -231,8 +190,6 @@ fn registry_and_path_dep_works() {
         .file(
             "Cargo.toml",
             r#"
-            cargo-features = ["alternative-registries"]
-
             [project]
             name = "foo"
             version = "0.0.1"
@@ -249,7 +206,6 @@ fn registry_and_path_dep_works() {
         .build();
 
     p.cargo("build")
-        .masquerade_as_nightly_cargo()
         .with_stderr(
             "\
 [COMPILING] bar v0.0.1 ([CWD]/bar)
@@ -268,8 +224,6 @@ fn registry_incompatible_with_git() {
         .file(
             "Cargo.toml",
             r#"
-            cargo-features = ["alternative-registries"]
-
             [project]
             name = "foo"
             version = "0.0.1"
@@ -283,8 +237,13 @@ fn registry_incompatible_with_git() {
         .file("src/main.rs", "fn main() {}")
         .build();
 
-    p.cargo("build").masquerade_as_nightly_cargo().with_status(101)
-                .with_stderr_contains("  dependency (bar) specification is ambiguous. Only one of `git` or `registry` is allowed.").run();
+    p.cargo("build")
+        .with_status(101)
+        .with_stderr_contains(
+            "  dependency (bar) specification is ambiguous. \
+             Only one of `git` or `registry` is allowed.",
+        )
+        .run();
 }
 
 #[test]
@@ -295,7 +254,6 @@ fn cannot_publish_to_crates_io_with_registry_dependency() {
         .file(
             "Cargo.toml",
             r#"
-            cargo-features = ["alternative-registries"]
             [project]
             name = "foo"
             version = "0.0.1"
@@ -331,15 +289,13 @@ fn cannot_publish_to_crates_io_with_registry_dependency() {
         )
         .build();
 
-    p.cargo("publish --registry fakeio -Z unstable-options")
-        .masquerade_as_nightly_cargo()
+    p.cargo("publish --registry fakeio")
         .with_status(101)
         .with_stderr_contains("[ERROR] crates cannot be published to crates.io[..]")
         .run();
 
     p.cargo("publish --index")
         .arg(fakeio_url.to_string())
-        .masquerade_as_nightly_cargo()
         .with_status(101)
         .with_stderr_contains("[ERROR] crates cannot be published to crates.io[..]")
         .run();
@@ -351,8 +307,6 @@ fn publish_with_registry_dependency() {
         .file(
             "Cargo.toml",
             r#"
-            cargo-features = ["alternative-registries"]
-
             [project]
             name = "foo"
             version = "0.0.1"
@@ -369,13 +323,9 @@ fn publish_with_registry_dependency() {
     Package::new("bar", "0.0.1").alternative(true).publish();
 
     // Login so that we have the token available
-    p.cargo("login --registry alternative TOKEN -Zunstable-options")
-        .masquerade_as_nightly_cargo()
-        .run();
+    p.cargo("login --registry alternative TOKEN").run();
 
-    p.cargo("publish --registry alternative -Zunstable-options")
-        .masquerade_as_nightly_cargo()
-        .run();
+    p.cargo("publish --registry alternative").run();
 
     validate_alt_upload(
         r#"{
@@ -418,8 +368,6 @@ fn alt_registry_and_crates_io_deps() {
         .file(
             "Cargo.toml",
             r#"
-            cargo-features = ["alternative-registries"]
-
             [project]
             name = "foo"
             version = "0.0.1"
@@ -442,7 +390,6 @@ fn alt_registry_and_crates_io_deps() {
         .publish();
 
     p.cargo("build")
-        .masquerade_as_nightly_cargo()
         .with_stderr_contains(format!(
             "[UPDATING] `{}` index",
             registry::alt_registry_path().to_str().unwrap()
@@ -470,8 +417,7 @@ fn block_publish_due_to_no_token() {
     fs::remove_file(paths::home().join(".cargo/credentials")).unwrap();
 
     // Now perform the actual publish
-    p.cargo("publish --registry alternative -Zunstable-options")
-        .masquerade_as_nightly_cargo()
+    p.cargo("publish --registry alternative")
         .with_status(101)
         .with_stderr_contains("error: no upload token found, please run `cargo login`")
         .run();
@@ -479,33 +425,16 @@ fn block_publish_due_to_no_token() {
 
 #[test]
 fn publish_to_alt_registry() {
-    let p = project()
-        .file(
-            "Cargo.toml",
-            r#"
-            cargo-features = ["alternative-registries"]
-
-            [project]
-            name = "foo"
-            version = "0.0.1"
-            authors = []
-        "#,
-        )
-        .file("src/main.rs", "fn main() {}")
-        .build();
+    let p = project().file("src/main.rs", "fn main() {}").build();
 
     // Setup the registry by publishing a package
     Package::new("bar", "0.0.1").alternative(true).publish();
 
     // Login so that we have the token available
-    p.cargo("login --registry alternative TOKEN -Zunstable-options")
-        .masquerade_as_nightly_cargo()
-        .run();
+    p.cargo("login --registry alternative TOKEN").run();
 
     // Now perform the actual publish
-    p.cargo("publish --registry alternative -Zunstable-options")
-        .masquerade_as_nightly_cargo()
-        .run();
+    p.cargo("publish --registry alternative").run();
 
     validate_alt_upload(
         r#"{
@@ -538,8 +467,6 @@ fn publish_with_crates_io_dep() {
         .file(
             "Cargo.toml",
             r#"
-            cargo-features = ["alternative-registries"]
-
             [project]
             name = "foo"
             version = "0.0.1"
@@ -557,13 +484,9 @@ fn publish_with_crates_io_dep() {
     Package::new("bar", "0.0.1").publish();
 
     // Login so that we have the token available
-    p.cargo("login --registry alternative TOKEN -Zunstable-options")
-        .masquerade_as_nightly_cargo()
-        .run();
+    p.cargo("login --registry alternative TOKEN").run();
 
-    p.cargo("publish --registry alternative -Zunstable-options")
-        .masquerade_as_nightly_cargo()
-        .run();
+    p.cargo("publish --registry alternative").run();
 
     validate_alt_upload(
         r#"{
@@ -617,23 +540,9 @@ fn passwords_in_url_forbidden() {
         )
         .unwrap();
 
-    let p = project()
-        .file(
-            "Cargo.toml",
-            r#"
-            cargo-features = ["alternative-registries"]
+    let p = project().file("src/main.rs", "fn main() {}").build();
 
-            [project]
-            name = "foo"
-            version = "0.0.1"
-            authors = []
-        "#,
-        )
-        .file("src/main.rs", "fn main() {}")
-        .build();
-
-    p.cargo("publish --registry alternative -Zunstable-options")
-        .masquerade_as_nightly_cargo()
+    p.cargo("publish --registry alternative")
         .with_status(101)
         .with_stderr_contains("error: Registry URLs may not contain passwords")
         .run();
@@ -646,8 +555,6 @@ fn patch_alt_reg() {
         .file(
             "Cargo.toml",
             r#"
-            cargo-features = ["alternative-registries"]
-
             [package]
             name = "foo"
             version = "0.0.1"
@@ -671,7 +578,6 @@ fn patch_alt_reg() {
         .build();
 
     p.cargo("build")
-        .masquerade_as_nightly_cargo()
         .with_stderr(
             "\
 [UPDATING] `[ROOT][..]` index
@@ -689,8 +595,6 @@ fn bad_registry_name() {
         .file(
             "Cargo.toml",
             r#"
-            cargo-features = ["alternative-registries"]
-
             [project]
             name = "foo"
             version = "0.0.1"
@@ -705,7 +609,6 @@ fn bad_registry_name() {
         .build();
 
     p.cargo("build")
-        .masquerade_as_nightly_cargo()
         .with_status(101)
         .with_stderr(
             "\
@@ -720,10 +623,8 @@ Caused by:
         "init", "install", "login", "owner", "publish", "search", "yank",
     ] {
         p.cargo(cmd)
-            .arg("-Zunstable-options")
             .arg("--registry")
             .arg("bad name")
-            .masquerade_as_nightly_cargo()
             .with_status(101)
             .with_stderr("[ERROR] Invalid character ` ` in registry name: `bad name`")
             .run();
@@ -749,7 +650,6 @@ fn no_api() {
         .file(
             "Cargo.toml",
             r#"
-             cargo-features = ["alternative-registries"]
              [package]
              name = "foo"
              version = "0.0.1"
@@ -763,7 +663,6 @@ fn no_api() {
         .build();
 
     p.cargo("build")
-        .masquerade_as_nightly_cargo()
         .with_stderr(&format!(
             "\
 [UPDATING] `{reg}` index
@@ -783,38 +682,32 @@ fn no_api() {
         registry::alt_registry_path().display()
     );
 
-    p.cargo("login --registry alternative TOKEN -Zunstable-options")
-        .masquerade_as_nightly_cargo()
+    p.cargo("login --registry alternative TOKEN")
         .with_status(101)
         .with_stderr_contains(&err)
         .run();
 
-    p.cargo("publish --registry alternative -Zunstable-options")
-        .masquerade_as_nightly_cargo()
+    p.cargo("publish --registry alternative")
         .with_status(101)
         .with_stderr_contains(&err)
         .run();
 
-    p.cargo("search --registry alternative -Zunstable-options")
-        .masquerade_as_nightly_cargo()
+    p.cargo("search --registry alternative")
         .with_status(101)
         .with_stderr_contains(&err)
         .run();
 
-    p.cargo("owner --registry alternative -Zunstable-options --list")
-        .masquerade_as_nightly_cargo()
+    p.cargo("owner --registry alternative --list")
         .with_status(101)
         .with_stderr_contains(&err)
         .run();
 
-    p.cargo("yank --registry alternative -Zunstable-options --vers=0.0.1 bar")
-        .masquerade_as_nightly_cargo()
+    p.cargo("yank --registry alternative --vers=0.0.1 bar")
         .with_status(101)
         .with_stderr_contains(&err)
         .run();
 
-    p.cargo("yank --registry alternative -Zunstable-options --vers=0.0.1 bar")
-        .masquerade_as_nightly_cargo()
+    p.cargo("yank --registry alternative --vers=0.0.1 bar")
         .with_stderr_contains(&err)
         .with_status(101)
         .run();
@@ -827,7 +720,6 @@ fn alt_reg_metadata() {
         .file(
             "Cargo.toml",
             r#"
-             cargo-features = ["alternative-registries"]
              [package]
              name = "foo"
              version = "0.0.1"
@@ -857,7 +749,6 @@ fn alt_reg_metadata() {
     // altdep -> bar: null (because it is in crates.io)
     // iodep -> altdep2: alternative-registry
     p.cargo("metadata --format-version=1 --no-deps")
-        .masquerade_as_nightly_cargo()
         .with_json(
             r#"
             {
@@ -922,7 +813,6 @@ fn alt_reg_metadata() {
 
     // --no-deps uses a different code path, make sure both work.
     p.cargo("metadata --format-version=1")
-        .masquerade_as_nightly_cargo()
         .with_json(
             r#"
              {
@@ -1104,8 +994,6 @@ fn unknown_registry() {
         .file(
             "Cargo.toml",
             r#"
-            cargo-features = ["alternative-registries"]
-
             [project]
             name = "foo"
             version = "0.0.1"
@@ -1132,13 +1020,12 @@ fn unknown_registry() {
     config.insert(start + start_index, '#');
     fs::write(&cfg_path, config).unwrap();
 
-    p.cargo("build").masquerade_as_nightly_cargo().run();
+    p.cargo("build").run();
 
     // Important parts:
     // foo -> bar registry = null
     // bar -> baz registry = alternate
     p.cargo("metadata --format-version=1")
-        .masquerade_as_nightly_cargo()
         .with_json(
             r#"
             {

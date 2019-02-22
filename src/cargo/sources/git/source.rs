@@ -71,12 +71,12 @@ fn ident(url: &Url) -> CargoResult<String> {
     Ok(format!("{}-{}", ident, short_hash(&url)))
 }
 
-// Some hacks and heuristics for making equivalent URLs hash the same
+// Some hacks and heuristics for making equivalent URLs hash the same.
 pub fn canonicalize_url(url: &Url) -> CargoResult<Url> {
     let mut url = url.clone();
 
-    // cannot-be-a-base-urls are not supported
-    // eg. github.com:rust-lang-nursery/rustfmt.git
+    // cannot-be-a-base-urls (e.g., `github.com:rust-lang-nursery/rustfmt.git`)
+    // are not supported.
     if url.cannot_be_a_base() {
         failure::bail!(
             "invalid url `{}`: cannot-be-a-base-URLs are not supported",
@@ -84,23 +84,23 @@ pub fn canonicalize_url(url: &Url) -> CargoResult<Url> {
         )
     }
 
-    // Strip a trailing slash
+    // Strip a trailing slash.
     if url.path().ends_with('/') {
         url.path_segments_mut().unwrap().pop_if_empty();
     }
 
-    // HACKHACK: For GitHub URL's specifically just lowercase
-    // everything.  GitHub treats both the same, but they hash
+    // HACK: for GitHub URLs specifically, just lower-case
+    // everything. GitHub treats both the same, but they hash
     // differently, and we're gonna be hashing them. This wants a more
     // general solution, and also we're almost certainly not using the
-    // same case conversion rules that GitHub does. (#84)
+    // same case conversion rules that GitHub does. (See issue #84.)
     if url.host_str() == Some("github.com") {
         url.set_scheme("https").unwrap();
         let path = url.path().to_lowercase();
         url.set_path(&path);
     }
 
-    // Repos generally can be accessed with or w/o '.git'
+    // Repos can generally be accessed with or without `.git` extension.
     let needs_chopping = url.path().ends_with(".git");
     if needs_chopping {
         let last = {
@@ -129,7 +129,7 @@ impl<'cfg> Source for GitSource<'cfg> {
         let src = self
             .path_source
             .as_mut()
-            .expect("BUG: update() must be called before query()");
+            .expect("BUG: `update()` must be called before `query()`");
         src.query(dep, f)
     }
 
@@ -137,7 +137,7 @@ impl<'cfg> Source for GitSource<'cfg> {
         let src = self
             .path_source
             .as_mut()
-            .expect("BUG: update() must be called before query()");
+            .expect("BUG: `update()` must be called before `query()`");
         src.fuzzy_query(dep, f)
     }
 
@@ -189,9 +189,8 @@ impl<'cfg> Source for GitSource<'cfg> {
             (self.remote.db_at(&db_path)?, actual_rev.unwrap())
         };
 
-        // Don’t use the full hash,
-        // to contribute less to reaching the path length limit on Windows:
-        // https://github.com/servo/servo/pull/14397
+        // Don’t use the full hash, in order to contribute less to reaching the path length limit
+        // on Windows. See <https://github.com/servo/servo/pull/14397>.
         let short_id = db.to_short_id(&actual_rev).unwrap();
 
         let checkout_path = lock
@@ -217,13 +216,13 @@ impl<'cfg> Source for GitSource<'cfg> {
 
     fn download(&mut self, id: PackageId) -> CargoResult<MaybePackage> {
         trace!(
-            "getting packages for package id `{}` from `{:?}`",
+            "getting packages for package ID `{}` from `{:?}`",
             id,
             self.remote
         );
         self.path_source
             .as_mut()
-            .expect("BUG: update() must be called before get()")
+            .expect("BUG: `update()` must be called before `get()`")
             .download(id)
     }
 
@@ -236,8 +235,10 @@ impl<'cfg> Source for GitSource<'cfg> {
     }
 
     fn describe(&self) -> String {
-        format!("git repository {}", self.source_id)
+        format!("Git repository {}", self.source_id)
     }
+
+    fn add_to_yanked_whitelist(&mut self, _pkgs: &[PackageId]) {}
 }
 
 #[cfg(test)]

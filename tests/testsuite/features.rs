@@ -537,7 +537,7 @@ fn cyclic_feature() {
 
     p.cargo("build")
         .with_status(101)
-        .with_stderr("[ERROR] Cyclic feature dependency: feature `default` depends on itself")
+        .with_stderr("[ERROR] cyclic feature dependency: feature `default` depends on itself")
         .run();
 }
 

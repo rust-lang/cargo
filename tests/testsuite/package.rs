@@ -331,25 +331,25 @@ fn exclude() {
         .file("src/main.rs", r#"fn main() { println!("hello"); }"#)
         .file("bar.txt", "")
         .file("src/bar.txt", "")
-        // file in root
+        // File in root.
         .file("file_root_1", "")
         .file("file_root_2", "")
         .file("file_root_3", "")
         .file("file_root_4", "")
         .file("file_root_5", "")
-        // file in sub-dir
+        // File in sub-dir.
         .file("some_dir/file_deep_1", "")
         .file("some_dir/file_deep_2", "")
         .file("some_dir/file_deep_3", "")
         .file("some_dir/file_deep_4", "")
         .file("some_dir/file_deep_5", "")
-        // dir in root
+        // Dir in root.
         .file("dir_root_1/some_dir/file", "")
         .file("dir_root_2/some_dir/file", "")
         .file("dir_root_3/some_dir/file", "")
         .file("dir_root_4/some_dir/file", "")
         .file("dir_root_5/some_dir/file", "")
-        // dir in sub-dir
+        // Dir in sub-dir.
         .file("some_dir/dir_deep_1/some_dir/file", "")
         .file("some_dir/dir_deep_2/some_dir/file", "")
         .file("some_dir/dir_deep_3/some_dir/file", "")
@@ -447,7 +447,8 @@ fn include() {
         )
         .file("foo.txt", "")
         .file("src/main.rs", r#"fn main() { println!("hello"); }"#)
-        .file("src/bar.txt", "") // should be ignored when packaging
+        // Should be ignored when packaging.
+        .file("src/bar.txt", "")
         .build();
 
     cargo_process("package --no-verify -v")
@@ -597,7 +598,8 @@ src[..]main.rs
     );
 }
 
-#[cfg(unix)] // windows doesn't allow these characters in filenames
+// Windows doesn't allow these characters in filenames.
+#[cfg(unix)]
 #[test]
 fn package_weird_characters() {
     let p = project()
@@ -807,7 +809,7 @@ fn generated_manifest() {
 # When uploading crates to the registry Cargo will automatically
 # "normalize" Cargo.toml files for maximal compatibility
 # with all versions of Cargo and also rewrite `path` dependencies
-# to registry (e.g. crates.io) dependencies
+# to registry (e.g., crates.io) dependencies
 #
 # If you believe there's an error in this file please file an
 # issue against the rust-lang/cargo repository. If you're
@@ -892,7 +894,7 @@ fn ignore_workspace_specifier() {
 # When uploading crates to the registry Cargo will automatically
 # "normalize" Cargo.toml files for maximal compatibility
 # with all versions of Cargo and also rewrite `path` dependencies
-# to registry (e.g. crates.io) dependencies
+# to registry (e.g., crates.io) dependencies
 #
 # If you believe there's an error in this file please file an
 # issue against the rust-lang/cargo repository. If you're
@@ -1263,10 +1265,7 @@ fn package_with_select_features() {
         )
         .build();
 
-    p.cargo("package --features required")
-        .masquerade_as_nightly_cargo()
-        .with_status(0)
-        .run();
+    p.cargo("package --features required").masquerade_as_nightly_cargo().run();
 }
 
 #[test]
@@ -1295,10 +1294,7 @@ fn package_with_all_features() {
         )
         .build();
 
-    p.cargo("package --all-features")
-        .masquerade_as_nightly_cargo()
-        .with_status(0)
-        .run();
+    p.cargo("package --all-features").masquerade_as_nightly_cargo().run();
 }
 
 #[test]

@@ -39,11 +39,9 @@ defaults to <code>.cargo</code> in your home directory.</p>
 <dl>
 <dt class="hdlist1"><strong>--registry</strong> <em>REGISTRY</em></dt>
 <dd>
-<p>Alternative registry to use.</p>
-<div class="paragraph">
-<p>This option is unstable and available only on the nightly channel and requires
-the <code>-Z unstable-options</code> flag to enable.</p>
-</div>
+<p>Name of the registry to use. Registry names are defined in <a href="reference/config.html">Cargo config files</a>.
+If not specified, the default registry is used, which is defined by the
+<code>registry.default</code> config key which defaults to <code>crates-io</code>.</p>
 </dd>
 </dl>
 </div>

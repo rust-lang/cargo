@@ -10,13 +10,13 @@ pub fn cli() -> App {
         .arg_target_triple("Fetch dependencies for the target triple")
         .after_help(
             "\
-If a lockfile is available, this command will ensure that all of the git
+If a lock file is available, this command will ensure that all of the Git
 dependencies and/or registries dependencies are downloaded and locally
 available. The network is never touched after a `cargo fetch` unless
-the lockfile changes.
+the lock file changes.
 
-If the lockfile is not available, then this is the equivalent of
-`cargo generate-lockfile`. A lockfile is generated and dependencies are also
+If the lock file is not available, then this is the equivalent of
+`cargo generate-lockfile`. A lock file is generated and dependencies are also
 all updated.
 ",
         )

@@ -10,7 +10,7 @@ You can override these environment variables to change Cargo's behavior on your
 system:
 
 * `CARGO_HOME` — Cargo maintains a local cache of the registry index and of git
-  checkouts of crates.  By default these are stored under `$HOME/.cargo`, but
+  checkouts of crates. By default these are stored under `$HOME/.cargo`, but
   this variable overrides the location of this directory. Once a crate is cached
   it is not removed by the clean command.
 * `CARGO_TARGET_DIR` — Location of where to place all generated artifacts,
@@ -65,7 +65,7 @@ let version = env!("CARGO_PKG_VERSION");
 * `CARGO_PKG_HOMEPAGE` - The home page from the manifest of your package.
 * `CARGO_PKG_REPOSITORY` - The repository from the manifest of your package.
 * `OUT_DIR` - If the package has a build script, this is set to the folder where the build
-              script should place its output.  See below for more information.
+              script should place its output. See below for more information.
 
 ### Environment variables Cargo sets for build scripts
 
