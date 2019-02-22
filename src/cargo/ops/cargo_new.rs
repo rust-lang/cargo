@@ -474,7 +474,7 @@ impl IgnoreList {
     }
 }
 
-/// write the ignore file to the given directory. If the ignore file for the
+/// Writes the ignore file to the given directory. If the ignore file for the
 /// given vcs system already exists, its content is read and duplicate ignore
 /// file entries are filtered out.
 fn write_ignore_file(
@@ -503,7 +503,7 @@ fn write_ignore_file(
     Ok(ignore)
 }
 
-/// initialize the correct vcs system based on the provided config
+/// Initializes the correct VCS system based on the provided config.
 fn init_vcs(path: &Path, vcs: VersionControl, config: &Config) -> CargoResult<()> {
     match vcs {
         VersionControl::Git => {
@@ -539,8 +539,8 @@ fn mk(config: &Config, opts: &MkOptions<'_>) -> CargoResult<()> {
     let name = opts.name;
     let cfg = global_config(config)?;
 
-    // using the push method with two arguments ensures that the entries for
-    // both ignore and hgignore are in sync.
+    // Using the push method with two arguments ensures that the entries for
+    // both `ignore` and `hgignore` are in sync.
     let mut ignore = IgnoreList::new();
     ignore.push("/target", "^target/");
     ignore.push("**/*.rs.bk", "glob:*.rs.bk\n");
@@ -561,7 +561,6 @@ fn mk(config: &Config, opts: &MkOptions<'_>) -> CargoResult<()> {
     write_ignore_file(path, &ignore, vcs)?;
 
     let (author_name, email) = discover_author()?;
-    // Hoo boy, sure glad we've got exhaustiveness checking behind us.
     let author = match (cfg.name, cfg.email, author_name, email) {
         (Some(name), Some(email), _, _)
         | (Some(name), None, _, Some(email))
@@ -572,7 +571,7 @@ fn mk(config: &Config, opts: &MkOptions<'_>) -> CargoResult<()> {
 
     let mut cargotoml_path_specifier = String::new();
 
-    // Calculate what [lib] and [[bin]]s do we need to append to Cargo.toml
+    // Calculate what `[lib]` and `[[bin]]`s we need to append to `Cargo.toml`.
 
     for i in &opts.source_files {
         if i.bin {
@@ -600,7 +599,7 @@ path = {}
         }
     }
 
-    // Create Cargo.toml file with necessary [lib] and [[bin]] sections, if needed
+    // Create `Cargo.toml` file with necessary `[lib]` and `[[bin]]` sections, if needed.
 
     paths::write(
         &path.join("Cargo.toml"),
@@ -631,9 +630,7 @@ edition = {}
         .as_bytes(),
     )?;
 
-    // Create all specified source files
-    // (with respective parent directories)
-    // if they are don't exist
+    // Create all specified source files (with respective parent directories) if they don't exist.
 
     for i in &opts.source_files {
         let path_of_source_file = path.join(i.relative_path.clone());

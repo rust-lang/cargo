@@ -30,7 +30,7 @@ pub fn load_pkg_lockfile(ws: &Workspace<'_>) -> CargoResult<Option<Resolve>> {
 }
 
 pub fn write_pkg_lockfile(ws: &Workspace<'_>, resolve: &Resolve) -> CargoResult<()> {
-    // Load the original lockfile if it exists.
+    // Load the original lock file if it exists.
     let ws_root = Filesystem::new(ws.root().to_path_buf());
     let orig = ws_root.open_ro("Cargo.lock", ws.config(), "Cargo.lock file");
     let orig = orig.and_then(|mut f| {
@@ -94,7 +94,7 @@ pub fn write_pkg_lockfile(ws: &Workspace<'_>, resolve: &Resolve) -> CargoResult<
         out.push_str(&meta.to_string());
     }
 
-    // If the lockfile contents haven't changed so don't rewrite it. This is
+    // If the lock file contents haven't changed so don't rewrite it. This is
     // helpful on read-only filesystems.
     if let Ok(orig) = orig {
         if are_equal_lockfiles(orig, &out, ws) {
@@ -137,9 +137,9 @@ fn are_equal_lockfiles(mut orig: String, current: &str, ws: &Workspace<'_>) -> b
         orig = orig.replace("\r\n", "\n");
     }
 
-    // If we want to try and avoid updating the lockfile, parse both and
+    // If we want to try and avoid updating the lock file, parse both and
     // compare them; since this is somewhat expensive, don't do it in the
-    // common case where we can update lockfiles.
+    // common case where we can update lock files.
     if !ws.config().lock_update_allowed() {
         let res: CargoResult<bool> = (|| {
             let old: resolver::EncodableResolve = toml::from_str(&orig)?;

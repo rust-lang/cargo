@@ -4,13 +4,13 @@
 //! structure usable by Cargo itself. Currently this is primarily used to map
 //! sources to one another via the `replace-with` key in `.cargo/config`.
 
-use std::collections::HashMap;
+use std::collections::{HashMap, HashSet};
 use std::path::{Path, PathBuf};
 
 use log::debug;
 use url::Url;
 
-use crate::core::{GitReference, Source, SourceId};
+use crate::core::{GitReference, PackageId, Source, SourceId};
 use crate::sources::{ReplacedSource, CRATES_IO_REGISTRY};
 use crate::util::config::ConfigValue;
 use crate::util::errors::{CargoResult, CargoResultExt};
@@ -73,11 +73,15 @@ impl<'cfg> SourceConfigMap<'cfg> {
         self.config
     }
 
-    pub fn load(&self, id: SourceId) -> CargoResult<Box<dyn Source + 'cfg>> {
+    pub fn load(
+        &self,
+        id: SourceId,
+        yanked_whitelist: &HashSet<PackageId>,
+    ) -> CargoResult<Box<dyn Source + 'cfg>> {
         debug!("loading: {}", id);
         let mut name = match self.id2name.get(&id) {
             Some(name) => name,
-            None => return Ok(id.load(self.config)?),
+            None => return Ok(id.load(self.config, yanked_whitelist)?),
         };
         let mut path = Path::new("/");
         let orig_name = name;
@@ -99,7 +103,7 @@ impl<'cfg> SourceConfigMap<'cfg> {
                     name = s;
                     path = p;
                 }
-                None if id == cfg.id => return Ok(id.load(self.config)?),
+                None if id == cfg.id => return Ok(id.load(self.config, yanked_whitelist)?),
                 None => {
                     new_id = cfg.id.with_precise(id.precise().map(|s| s.to_string()));
                     break;
@@ -116,8 +120,15 @@ impl<'cfg> SourceConfigMap<'cfg> {
                 )
             }
         }
-        let new_src = new_id.load(self.config)?;
-        let old_src = id.load(self.config)?;
+
+        let new_src = new_id.load(
+            self.config,
+            &yanked_whitelist
+                .iter()
+                .map(|p| p.map_source(id, new_id))
+                .collect(),
+        )?;
+        let old_src = id.load(self.config, yanked_whitelist)?;
         if !new_src.supports_checksums() && old_src.supports_checksums() {
             failure::bail!(
                 "\

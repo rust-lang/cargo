@@ -87,7 +87,7 @@ pub struct ExportInfo {
 }
 
 /// Newtype wrapper to provide a custom `Serialize` implementation.
-/// The one from lockfile does not fit because it uses a non-standard
+/// The one from lock file does not fit because it uses a non-standard
 /// format for `PackageId`s
 #[derive(Serialize)]
 struct MetadataResolve {

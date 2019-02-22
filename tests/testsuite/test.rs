@@ -1,11 +1,12 @@
 use std::fs::File;
 use std::io::prelude::*;
 
+use cargo;
+
 use crate::support::paths::CargoPathExt;
 use crate::support::registry::Package;
 use crate::support::{basic_bin_manifest, basic_lib_manifest, basic_manifest, cargo_exe, project};
 use crate::support::{is_nightly, rustc_host, sleep_ms};
-use cargo;
 
 #[test]
 fn cargo_test_simple() {
@@ -2055,7 +2056,7 @@ fn dylib_doctest() {
 
 #[test]
 fn dylib_doctest2() {
-    // can't doctest dylibs as they're statically linked together
+    // Can't doc-test dylibs, as they're statically linked together.
     let p = project()
         .file(
             "Cargo.toml",
@@ -3446,6 +3447,26 @@ test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out
     p.cargo("test --lib --doc")
         .with_status(101)
         .with_stderr("[ERROR] Can't mix --doc with other target selecting options\n")
+        .run();
+}
+
+#[test]
+fn can_not_no_run_doc_tests() {
+    let p = project()
+        .file(
+            "src/lib.rs",
+            r#"
+/// ```
+/// let _x = 1 + "foo";
+/// ```
+pub fn foo() -> u8 { 1 }
+"#,
+        )
+        .build();
+
+    p.cargo("test --doc --no-run")
+        .with_status(101)
+        .with_stderr("[ERROR] Can't skip running doc tests with --no-run")
         .run();
 }
 

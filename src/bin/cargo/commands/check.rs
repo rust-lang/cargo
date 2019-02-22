@@ -34,7 +34,7 @@ pub fn cli() -> App {
         .arg_message_format()
         .after_help(
             "\
-If the --package argument is given, then SPEC is a package id specification
+If the `--package` argument is given, then SPEC is a package ID specification
 which indicates which package should be built. If it is not given, then the
 current package is built. For more information on SPEC and its format, see the
 `cargo help pkgid` command.
@@ -45,7 +45,7 @@ Note that `--exclude` has to be specified in conjunction with the `--all` flag.
 
 Compilation can be configured via the use of profiles which are configured in
 the manifest. The default profile for this command is `dev`, but passing
-the --release flag will use the `release` profile instead.
+the `--release` flag will use the `release` profile instead.
 
 The `--profile test` flag can be used to check unit tests with the
 `#[cfg(test)]` attribute.

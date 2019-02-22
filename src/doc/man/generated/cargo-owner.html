@@ -58,7 +58,16 @@ information about owners and publishing.</p>
 </dd>
 <dt class="hdlist1"><strong>--token</strong> <em>TOKEN</em></dt>
 <dd>
-<p>API token to use when authenticating.</p>
+<p>API token to use when authenticating. This overrides the token stored in
+the credentials file (which is created by <a href="commands/cargo-login.html">cargo-login(1)</a>).</p>
+<div class="paragraph">
+<p><a href="reference/config.html">Cargo config</a> environment variables can be
+used to override the tokens stored in the credentials file. The token for
+crates.io may be specified with the <code>CARGO_REGISTRY_TOKEN</code> environment
+variable. Tokens for other registries may be specified with environment
+variables of the form <code>CARGO_REGISTRIES_NAME_TOKEN</code> where <code>NAME</code> is the name
+of the registry in all capital letters.</p>
+</div>
 </dd>
 <dt class="hdlist1"><strong>--index</strong> <em>INDEX</em></dt>
 <dd>
@@ -66,11 +75,9 @@ information about owners and publishing.</p>
 </dd>
 <dt class="hdlist1"><strong>--registry</strong> <em>REGISTRY</em></dt>
 <dd>
-<p>Alternative registry to use.</p>
-<div class="paragraph">
-<p>This option is unstable and available only on the nightly channel and requires
-the <code>-Z unstable-options</code> flag to enable.</p>
-</div>
+<p>Name of the registry to use. Registry names are defined in <a href="reference/config.html">Cargo config files</a>.
+If not specified, the default registry is used, which is defined by the
+<code>registry.default</code> config key which defaults to <code>crates-io</code>.</p>
 </dd>
 </dl>
 </div>

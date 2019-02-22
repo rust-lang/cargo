@@ -1,11 +1,12 @@
 ## Specifying Dependencies
 
-Your crates can depend on other libraries from [crates.io], `git` repositories, or
-subdirectories on your local file system. You can also temporarily override the
-location of a dependency— for example, to be able to test out a bug fix in the
-dependency that you are working on locally. You can have different
-dependencies for different platforms, and dependencies that are only used during
-development. Let's take a look at how to do each of these.
+Your crates can depend on other libraries from [crates.io] or other
+registries, `git` repositories, or subdirectories on your local file system.
+You can also temporarily override the location of a dependency — for example,
+to be able to test out a bug fix in the dependency that you are working on
+locally. You can have different dependencies for different platforms, and
+dependencies that are only used during development. Let's take a look at how
+to do each of these.
 
 ### Specifying dependencies from crates.io
 
@@ -98,8 +99,22 @@ Here are some examples of inequality requirements:
 
 ### Multiple requirements
 
-Multiple version requirements can also be separated with a comma, e.g. `>= 1.2,
+Multiple version requirements can also be separated with a comma, e.g., `>= 1.2,
 < 1.5`.
+
+### Specifying dependencies from other registries
+
+To specify a dependency from a registry other than [crates.io], first the
+registry must be configured in a `.cargo/config` file. See the [registries
+documentation] for more information. In the dependency, set the `registry` key
+to the name of the registry to use.
+
+```toml
+[dependencies]
+some-crate = { version = "1.0", registry = "my-registry" }
+```
+
+[registries documentation]: reference/registries.html
 
 ### Specifying dependencies from `git` repositories
 

@@ -105,7 +105,7 @@ fn member_manifest_path_io_error() {
     assert_eq!(causes[1].manifest_path(), &missing_manifest_path);
 }
 
-/// Test dependency version errors provide which package failed via a `ResolveError`.
+/// Tests dependency version errors provide which package failed via a `ResolveError`.
 #[test]
 fn member_manifest_version_error() {
     let p = project()

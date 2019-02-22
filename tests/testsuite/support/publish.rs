@@ -10,7 +10,7 @@ use byteorder::{LittleEndian, ReadBytesExt};
 use flate2::read::GzDecoder;
 use tar::Archive;
 
-/// Check the result of a crate publish.
+/// Checks the result of a crate publish.
 pub fn validate_upload(expected_json: &str, expected_crate_name: &str, expected_files: &[&str]) {
     let new_path = registry::api_path().join("api/v1/crates/new");
     _validate_upload(
@@ -21,7 +21,7 @@ pub fn validate_upload(expected_json: &str, expected_crate_name: &str, expected_
     );
 }
 
-/// Check the result of a crate publish to an alternative registry.
+/// Checks the result of a crate publish to an alternative registry.
 pub fn validate_alt_upload(
     expected_json: &str,
     expected_crate_name: &str,
@@ -60,11 +60,11 @@ fn _validate_upload(
     let current = f.seek(SeekFrom::Current(0)).unwrap();
     assert_eq!(f.seek(SeekFrom::End(0)).unwrap(), current);
 
-    // Verify the tarball
+    // Verify the tarball.
     validate_crate_contents(&krate_bytes[..], expected_crate_name, expected_files, &[]);
 }
 
-/// Check the contents of a `.crate` file.
+/// Checks the contents of a `.crate` file.
 ///
 /// - `expected_crate_name` should be something like `foo-0.0.1.crate`.
 /// - `expected_files` should be a complete list of files in the crate

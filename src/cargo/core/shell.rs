@@ -7,7 +7,7 @@ use termcolor::{self, Color, ColorSpec, StandardStream, WriteColor};
 
 use crate::util::errors::CargoResult;
 
-/// The requested verbosity of output
+/// The requested verbosity of output.
 #[derive(Debug, Clone, Copy, PartialEq)]
 pub enum Verbosity {
     Verbose,
@@ -23,6 +23,9 @@ pub struct Shell {
     err: ShellOut,
     /// How verbose messages should be
     verbosity: Verbosity,
+    /// Flag that indicates the current line needs to be cleared before
+    /// printing. Used when a progress bar is currently displayed.
+    needs_clear: bool,
 }
 
 impl fmt::Debug for Shell {
@@ -65,7 +68,7 @@ pub enum ColorChoice {
 }
 
 impl Shell {
-    /// Create a new shell (color choice and verbosity), defaulting to 'auto' color and verbose
+    /// Creates a new shell (color choice and verbosity), defaulting to 'auto' color and verbose
     /// output.
     pub fn new() -> Shell {
         Shell {
@@ -75,18 +78,20 @@ impl Shell {
                 tty: atty::is(atty::Stream::Stderr),
             },
             verbosity: Verbosity::Verbose,
+            needs_clear: false,
         }
     }
 
-    /// Create a shell from a plain writable object, with no color, and max verbosity.
+    /// Creates a shell from a plain writable object, with no color, and max verbosity.
     pub fn from_write(out: Box<dyn Write>) -> Shell {
         Shell {
             err: ShellOut::Write(out),
             verbosity: Verbosity::Verbose,
+            needs_clear: false,
         }
     }
 
-    /// Print a message, where the status will have `color` color, and can be justified. The
+    /// Prints a message, where the status will have `color` color, and can be justified. The
     /// messages follows without color.
     fn print(
         &mut self,
@@ -97,11 +102,26 @@ impl Shell {
     ) -> CargoResult<()> {
         match self.verbosity {
             Verbosity::Quiet => Ok(()),
-            _ => self.err.print(status, message, color, justified),
+            _ => {
+                if self.needs_clear {
+                    self.err_erase_line();
+                }
+                self.err.print(status, message, color, justified)
+            }
         }
     }
 
-    /// Returns the width of the terminal in spaces, if any
+    /// Sets whether the next print should clear the current line.
+    pub fn set_needs_clear(&mut self, needs_clear: bool) {
+        self.needs_clear = needs_clear;
+    }
+
+    /// Returns `true` if the `needs_clear` flag is unset.
+    pub fn is_cleared(&self) -> bool {
+        !self.needs_clear
+    }
+
+    /// Returns the width of the terminal in spaces, if any.
     pub fn err_width(&self) -> Option<usize> {
         match self.err {
             ShellOut::Stream { tty: true, .. } => imp::stderr_width(),
@@ -109,7 +129,7 @@ impl Shell {
         }
     }
 
-    /// Returns whether stderr is a tty
+    /// Returns `true` if stderr is a tty.
     pub fn is_err_tty(&self) -> bool {
         match self.err {
             ShellOut::Stream { tty, .. } => tty,
@@ -117,8 +137,11 @@ impl Shell {
         }
     }
 
-    /// Get a reference to the underlying writer
+    /// Gets a reference to the underlying writer.
     pub fn err(&mut self) -> &mut dyn Write {
+        if self.needs_clear {
+            self.err_erase_line();
+        }
         self.err.as_write()
     }
 
@@ -126,6 +149,7 @@ impl Shell {
     pub fn err_erase_line(&mut self) {
         if let ShellOut::Stream { tty: true, .. } = self.err {
             imp::err_erase_line(self);
+            self.needs_clear = false;
         }
     }
 
@@ -159,7 +183,7 @@ impl Shell {
         self.print(&status, Some(&message), color, true)
     }
 
-    /// Run the callback only if we are in verbose mode
+    /// Runs the callback only if we are in verbose mode.
     pub fn verbose<F>(&mut self, mut callback: F) -> CargoResult<()>
     where
         F: FnMut(&mut Shell) -> CargoResult<()>,
@@ -170,7 +194,7 @@ impl Shell {
         }
     }
 
-    /// Run the callback if we are not in verbose mode.
+    /// Runs the callback if we are not in verbose mode.
     pub fn concise<F>(&mut self, mut callback: F) -> CargoResult<()>
     where
         F: FnMut(&mut Shell) -> CargoResult<()>,
@@ -181,12 +205,12 @@ impl Shell {
         }
     }
 
-    /// Print a red 'error' message
+    /// Prints a red 'error' message.
     pub fn error<T: fmt::Display>(&mut self, message: T) -> CargoResult<()> {
         self.print(&"error:", Some(&message), Red, false)
     }
 
-    /// Print an amber 'warning' message
+    /// Prints an amber 'warning' message.
     pub fn warn<T: fmt::Display>(&mut self, message: T) -> CargoResult<()> {
         match self.verbosity {
             Verbosity::Quiet => Ok(()),
@@ -194,17 +218,17 @@ impl Shell {
         }
     }
 
-    /// Update the verbosity of the shell
+    /// Updates the verbosity of the shell.
     pub fn set_verbosity(&mut self, verbosity: Verbosity) {
         self.verbosity = verbosity;
     }
 
-    /// Get the verbosity of the shell
+    /// Gets the verbosity of the shell.
     pub fn verbosity(&self) -> Verbosity {
         self.verbosity
     }
 
-    /// Update the color choice (always, never, or auto) from a string.
+    /// Updates the color choice (always, never, or auto) from a string..
     pub fn set_color_choice(&mut self, color: Option<&str>) -> CargoResult<()> {
         if let ShellOut::Stream {
             ref mut stream,
@@ -230,10 +254,10 @@ impl Shell {
         Ok(())
     }
 
-    /// Get the current color choice
+    /// Gets the current color choice.
     ///
-    /// If we are not using a color stream, this will always return Never, even if the color choice
-    /// has been set to something else.
+    /// If we are not using a color stream, this will always return `Never`, even if the color
+    /// choice has been set to something else.
     pub fn color_choice(&self) -> ColorChoice {
         match self.err {
             ShellOut::Stream { color_choice, .. } => color_choice,
@@ -251,6 +275,9 @@ impl Shell {
 
     /// Prints a message and translates ANSI escape code into console colors.
     pub fn print_ansi(&mut self, message: &[u8]) -> CargoResult<()> {
+        if self.needs_clear {
+            self.err_erase_line();
+        }
         #[cfg(windows)]
         {
             if let ShellOut::Stream { stream, .. } = &mut self.err {
@@ -270,8 +297,9 @@ impl Default for Shell {
 }
 
 impl ShellOut {
-    /// Print out a message with a status. The status comes first and is bold + the given color.
-    /// The status can be justified, in which case the max width that will right align is 12 chars.
+    /// Prints out a message with a status. The status comes first, and is bold plus the given
+    /// color. The status can be justified, in which case the max width that will right align is
+    /// 12 chars.
     fn print(
         &mut self,
         status: &dyn fmt::Display,
@@ -309,7 +337,7 @@ impl ShellOut {
         Ok(())
     }
 
-    /// Get this object as a `io::Write`.
+    /// Gets this object as a `io::Write`.
     fn as_write(&mut self) -> &mut dyn Write {
         match *self {
             ShellOut::Stream { ref mut stream, .. } => stream,
@@ -319,7 +347,7 @@ impl ShellOut {
 }
 
 impl ColorChoice {
-    /// Convert our color choice to termcolor's version
+    /// Converts our color choice to termcolor's version.
     fn to_termcolor_color_choice(self) -> termcolor::ColorChoice {
         match self {
             ColorChoice::Always => termcolor::ColorChoice::Always,
@@ -361,7 +389,7 @@ mod imp {
         // This is the "EL - Erase in Line" sequence. It clears from the cursor
         // to the end of line.
         // https://en.wikipedia.org/wiki/ANSI_escape_code#CSI_sequences
-        let _ = shell.err().write_all(b"\x1B[K");
+        let _ = shell.err.as_write().write_all(b"\x1B[K");
     }
 }
 
@@ -434,6 +462,6 @@ mod imp {
 fn default_err_erase_line(shell: &mut Shell) {
     if let Some(max_width) = imp::stderr_width() {
         let blank = " ".repeat(max_width);
-        drop(write!(shell.err(), "{}\r", blank));
+        drop(write!(shell.err.as_write(), "{}\r", blank));
     }
 }

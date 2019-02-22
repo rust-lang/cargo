@@ -152,15 +152,15 @@ pub fn update_lockfile(ws: &Workspace<'_>, opts: &UpdateOptions<'_>) -> CargoRes
             (dep.name().as_str(), dep.source_id())
         }
 
-        // Removes all package ids in `b` from `a`. Note that this is somewhat
-        // more complicated because the equality for source ids does not take
-        // precise versions into account (e.g. git shas), but we want to take
+        // Removes all package IDs in `b` from `a`. Note that this is somewhat
+        // more complicated because the equality for source IDs does not take
+        // precise versions into account (e.g., git shas), but we want to take
         // that into account here.
         fn vec_subtract(a: &[PackageId], b: &[PackageId]) -> Vec<PackageId> {
             a.iter()
                 .filter(|a| {
-                    // If this package id is not found in `b`, then it's definitely
-                    // in the subtracted set
+                    // If this package ID is not found in `b`, then it's definitely
+                    // in the subtracted set.
                     let i = match b.binary_search(a) {
                         Ok(i) => i,
                         Err(..) => return true,
@@ -173,7 +173,7 @@ pub fn update_lockfile(ws: &Workspace<'_>, opts: &UpdateOptions<'_>) -> CargoRes
                     //
                     // Note that we only check this for non-registry sources,
                     // however, as registries contain enough version information in
-                    // the package id to disambiguate
+                    // the package ID to disambiguate.
                     if a.source_id().is_registry() {
                         return false;
                     }
@@ -186,7 +186,7 @@ pub fn update_lockfile(ws: &Workspace<'_>, opts: &UpdateOptions<'_>) -> CargoRes
                 .collect()
         }
 
-        // Map (package name, package source) to (removed versions, added versions).
+        // Map `(package name, package source)` to `(removed versions, added versions)`.
         let mut changes = BTreeMap::new();
         let empty = (Vec::new(), Vec::new());
         for dep in previous_resolve.iter() {

@@ -238,7 +238,7 @@ error: checksum for `bar v0.1.0` changed between lock files
 this could be indicative of a few possible errors:
 
     * the lock file is corrupt
-    * a replacement source in use (e.g. a mirror) returned a different checksum
+    * a replacement source in use (e.g., a mirror) returned a different checksum
     * the source itself may be corrupt in one way or another
 
 unable to verify that `bar v0.1.0` is the same as when the lockfile was generated
@@ -248,8 +248,8 @@ unable to verify that `bar v0.1.0` is the same as when the lockfile was generate
         .run();
 }
 
-// If the checksum is unlisted in the lockfile (e.g. <none>) yet we can
-// calculate it (e.g. it's a registry dep), then we should in theory just fill
+// If the checksum is unlisted in the lock file (e.g., <none>) yet we can
+// calculate it (e.g., it's a registry dep), then we should in theory just fill
 // it in.
 #[test]
 fn unlisted_checksum_is_bad_if_we_calculate() {
@@ -311,8 +311,8 @@ this could be indicative of a few possible situations:
         .run();
 }
 
-// If the checksum is listed in the lockfile yet we cannot calculate it (e.g.
-// git dependencies as of today), then make sure we choke.
+// If the checksum is listed in the lock file yet we cannot calculate it (e.g.,
+// Git dependencies as of today), then make sure we choke.
 #[test]
 fn listed_checksum_bad_if_we_cannot_compute() {
     let git = git::new("bar", |p| {
