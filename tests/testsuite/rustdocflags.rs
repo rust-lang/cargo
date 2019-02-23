@@ -85,3 +85,13 @@ fn rustdocflags_passed_to_rustdoc_through_cargo_test_only_once() {
         .env("RUSTDOCFLAGS", "--markdown-no-toc")
         .run();
 }
+
+#[test]
+fn rustdocflags_misspelled() {
+    let p = project().file("src/main.rs", "fn main() { }").build();
+
+    p.cargo("doc")
+        .env("RUSTDOC_FLAGS", "foo")
+        .with_stderr_contains("[WARNING] Cargo does not read `RUSTDOC_FLAGS` environment variable. Did you mean `RUSTDOCFLAGS`?")
+        .run();
+}
