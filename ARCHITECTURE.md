@@ -25,8 +25,8 @@ Subcommands are designed to pipe to one another, and custom subcommands make
 Cargo easy to extend and attach tools to.
 
 [`clap`]: https://clap.rs/
-[`src/bin/cargo/commands/build.rs`]: https://github.com/rust-lang/cargo/blob/master/src/bin/cargo/commands/build.rs
-[`src/cargo/ops/mod.rs`]: https://github.com/rust-lang/cargo/blob/master/src/cargo/ops/mod.rs
+[`src/bin/cargo/commands/build.rs`]: src/bin/cargo/commands/build.rs
+[`src/cargo/ops/mod.rs`]: src/cargo/ops/mod.rs
 
 
 ## Important Data Structures
@@ -83,7 +83,7 @@ of packages downloaded from crates.io, usually located at
 `~/.cargo/registry`. See [`src/cargo/sources/registry`] for the specifics of
 the registry storage format.
 
-[`src/cargo/sources/registry`]: https://github.com/rust-lang/cargo/tree/master/src/cargo/sources/registry
+[`src/cargo/sources/registry`]: src/cargo/sources/registry
 
 
 ## Concurrency
