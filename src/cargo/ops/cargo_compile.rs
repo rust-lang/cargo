@@ -245,6 +245,27 @@ pub fn compile_ws<'a>(
         ref export_dir,
     } = *options;
 
+    match build_config.mode {
+        CompileMode::Test
+        | CompileMode::Build
+        | CompileMode::Check { .. }
+        | CompileMode::Bench
+        | CompileMode::RunCustomBuild => {
+            if std::env::var("RUST_FLAGS").is_ok() {
+                config.shell().warn(
+                    "Cargo does not read `RUST_FLAGS` environment variable. Did you mean `RUSTFLAGS`?",
+                )?;
+            }
+        }
+        CompileMode::Doc { .. } | CompileMode::Doctest => {
+            if std::env::var("RUSTDOC_FLAGS").is_ok() {
+                config.shell().warn(
+                    "Cargo does not read `RUSTDOC_FLAGS` environment variable. Did you mean `RUSTDOCFLAGS`?"
+                )?;
+            }
+        }
+    }
+
     let default_arch_kind = if build_config.requested_target.is_some() {
         Kind::Target
     } else {
