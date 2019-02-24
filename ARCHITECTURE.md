@@ -64,13 +64,13 @@ structure that is saved to the lock file. If there is no lock file,
 Cargo constructs a resolve by finding a graph of packages which
 matches declared dependency specification according to semver.
 
-[`Config`]: https://docs.rs/cargo/0.33.0/cargo/util/config/struct.Config.html
-[`shell`]: https://docs.rs/cargo/0.33.0/cargo/util/config/struct.Config.html#method.shell
-[`Workspace`]: https://docs.rs/cargo/0.33.0/cargo/core/struct.Workspace.html
-[`Package`]: https://docs.rs/cargo/0.33.0/cargo/core/package/struct.Package.html
-[`Target`]: https://docs.rs/cargo/0.33.0/cargo/core/manifest/struct.Target.html
-[`PackageId`]: https://docs.rs/cargo/0.33.0/cargo/core/package_id/struct.PackageId.html
-[`Resolve`]: https://docs.rs/cargo/0.33.0/cargo/core/struct.Resolve.html
+[`Config`]: https://docs.rs/cargo/latest/cargo/util/config/struct.Config.html
+[`shell`]: https://docs.rs/cargo/latest/cargo/util/config/struct.Config.html#method.shell
+[`Workspace`]: https://docs.rs/cargo/latest/cargo/core/struct.Workspace.html
+[`Package`]: https://docs.rs/cargo/latest/cargo/core/package/struct.Package.html
+[`Target`]: https://docs.rs/cargo/latest/cargo/core/manifest/struct.Target.html
+[`PackageId`]: https://docs.rs/cargo/latest/cargo/core/package_id/struct.PackageId.html
+[`Resolve`]: https://docs.rs/cargo/latest/cargo/core/struct.Resolve.html
 
 
 ## Persistence
