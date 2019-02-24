@@ -1332,9 +1332,9 @@ fn env_rustflags_misspelled() {
 
     for cmd in &["check", "build", "run", "test", "bench"] {
         p.cargo(cmd)
-        .env("RUST_FLAGS", "foo")
-        .with_stderr_contains("[WARNING] Cargo does not read `RUST_FLAGS` environment variable. Did you mean `RUSTFLAGS`?")
-        .run();
+            .env("RUST_FLAGS", "foo")
+            .with_stderr_contains("[WARNING] Cargo does not read `RUST_FLAGS` environment variable. Did you mean `RUSTFLAGS`?")
+            .run();
     }
 }
 
