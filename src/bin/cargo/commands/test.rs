@@ -10,7 +10,8 @@ pub fn cli() -> App {
         .about("Execute all unit and integration tests and build examples of a local package")
         .arg(
             Arg::with_name("TESTNAME")
-                .help("If specified, only run tests containing this string in their names"),
+                .help("If specified, only run tests containing this string in their names")
+                .multiple(true),
         )
         .arg(
             Arg::with_name("args")
@@ -96,10 +97,8 @@ pub fn exec(config: &mut Config, args: &ArgMatches<'_>) -> CliResult {
 
     // `TESTNAME` is actually an argument of the test binary, but it's
     // important, so we explicitly mention it and reconfigure.
-    let test_name: Option<&str> = args.value_of("TESTNAME");
-    let test_args = args.value_of("TESTNAME").into_iter();
-    let test_args = test_args.chain(args.values_of("args").unwrap_or_default());
-    let test_args = test_args.collect::<Vec<_>>();
+    let test_names = args.values_of("TESTNAME").unwrap_or_default().collect::<Vec<_>>();
+    let test_args = args.values_of("args").unwrap_or_default().collect::<Vec<_>>();
 
     let no_run = args.is_present("no-run");
     let doc = args.is_present("doc");
@@ -124,7 +123,7 @@ pub fn exec(config: &mut Config, args: &ArgMatches<'_>) -> CliResult {
             FilterRule::none(),
             FilterRule::none(),
         );
-    } else if test_name.is_some() {
+    } else if !test_names.is_empty() {
         if let CompileFilter::Default { .. } = compile_opts.filter {
             compile_opts.filter = ops::CompileFilter::new(
                 LibRule::Default, // compile the library, so the unit tests can be run filtered
@@ -142,7 +141,7 @@ pub fn exec(config: &mut Config, args: &ArgMatches<'_>) -> CliResult {
         compile_opts,
     };
 
-    let err = ops::run_tests(&ws, &ops, &test_args)?;
+    let err = ops::run_tests(&ws, &ops, &test_names, &test_args)?;
     match err {
         None => Ok(()),
         Some(err) => Err(match err.exit.as_ref().and_then(|e| e.code()) {

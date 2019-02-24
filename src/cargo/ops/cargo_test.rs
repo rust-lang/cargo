@@ -15,6 +15,7 @@ pub struct TestOptions<'a> {
 pub fn run_tests(
     ws: &Workspace<'_>,
     options: &TestOptions<'_>,
+    test_names: &[&str],
     test_args: &[&str],
 ) -> CargoResult<Option<CargoTestError>> {
     let compilation = compile_tests(ws, options)?;
@@ -22,16 +23,47 @@ pub fn run_tests(
     if options.no_run {
         return Ok(None);
     }
-    let (test, mut errors) = run_unit_tests(options, test_args, &compilation)?;
 
-    // If we have an error and want to fail fast, then return.
-    if !errors.is_empty() && !options.no_fail_fast {
-        return Ok(Some(CargoTestError::new(test, errors)));
+    let test_names = if test_names.is_empty() {
+        vec![None]
+    } else {
+        test_names.iter().map(|test_name| Some(test_name)).collect()
+    };
+
+    let mut test = Test::Multiple;
+    let mut errors = Vec::new();
+
+    for test_name in &test_names {
+        let mut test_args = test_args.to_vec();
+        if let Some(test_name) = test_name {
+            test_args.insert(0, test_name)
+        }
+
+        let (test1, errors1) = run_unit_tests(options, &test_args, &compilation)?;
+        test = if errors.is_empty() { test1 } else { Test::Multiple };
+        errors.extend(errors1);
+
+        // If we have an error and want to fail fast, then return.
+        if !errors.is_empty() && !options.no_fail_fast {
+            return Ok(Some(CargoTestError::new(test, errors)));
+        }
     }
 
-    let (doctest, docerrors) = run_doc_tests(options, test_args, &compilation)?;
-    let test = if docerrors.is_empty() { test } else { doctest };
-    errors.extend(docerrors);
+    for test_name in &test_names {
+        let mut test_args = test_args.to_vec();
+        if let Some(test_name) = test_name {
+            test_args.insert(0, test_name)
+        }
+
+        let (doctest, docerrors) = run_doc_tests(options, &test_args, &compilation)?;
+        test = if docerrors.is_empty() { test } else { doctest };
+        errors.extend(docerrors);
+
+        if !errors.is_empty() && !options.no_fail_fast {
+            return Ok(Some(CargoTestError::new(test, errors)))
+        }
+    }
+
     if errors.is_empty() {
         Ok(None)
     } else {
@@ -42,6 +74,7 @@ pub fn run_tests(
 pub fn run_benches(
     ws: &Workspace<'_>,
     options: &TestOptions<'_>,
+    bench_names: &[&str],
     args: &[&str],
 ) -> CargoResult<Option<CargoTestError>> {
     let compilation = compile_tests(ws, options)?;
@@ -50,10 +83,26 @@ pub fn run_benches(
         return Ok(None);
     }
 
-    let mut args = args.to_vec();
-    args.push("--bench");
+    let bench_names = if bench_names.is_empty() {
+        vec![None]
+    } else {
+        bench_names.iter().map(|bench_name| Some(bench_name)).collect()
+    };
 
-    let (test, errors) = run_unit_tests(options, &args, &compilation)?;
+    let mut test = Test::Multiple;
+    let mut errors = Vec::new();
+
+    for bench_name in bench_names {
+        let mut args = args.to_vec();
+        if let Some(bench_name) = bench_name {
+            args.insert(0, bench_name)
+        }
+        args.push("--bench");
+
+        let (test1, errors1) = run_unit_tests(options, &args, &compilation)?;
+        test = if errors.is_empty() { test1 } else { Test::Multiple };
+        errors.extend(errors1);
+    }
 
     match errors.len() {
         0 => Ok(None),

@@ -10,7 +10,7 @@ cargo-test - Execute unit and integration tests of a package
 
 == SYNOPSIS
 
-`cargo test [_OPTIONS_] [TESTNAME] [-- _TEST-OPTIONS_]`
+`cargo test [_OPTIONS_] [TESTNAME]... [-- _TEST-OPTIONS_]`
 
 == DESCRIPTION
 

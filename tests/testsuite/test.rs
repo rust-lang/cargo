@@ -620,10 +620,43 @@ fn pass_through_command_line() {
         .run();
 }
 
-// Regression test for running cargo-test twice with
-// tests in an rlib
+#[test]
+fn specify_multiple_tests() {
+    let p = project()
+        .file("src/lib.rs", "#[test] fn foo() {} #[test] fn bar() {}")
+        .build();
+
+    p.cargo("test foo bar")
+        .with_stderr(
+            "\
+[COMPILING] foo v0.0.1 ([CWD])
+[FINISHED] dev [unoptimized + debuginfo] target(s) in [..]
+[RUNNING] target/debug/deps/foo-[..][EXE]
+[RUNNING] target/debug/deps/foo-[..][EXE]
+",
+        )
+        .with_stdout(
+            "
+running 1 test
+test foo ... ok
+
+test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 1 filtered out
+
+
+running 1 test
+test bar ... ok
+
+test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 1 filtered out
+
+",
+        )
+        .run();
+}
+
 #[test]
 fn cargo_test_twice() {
+    // Regression test for running cargo-test twice with
+    // tests in an rlib
     let p = project()
         .file("Cargo.toml", &basic_lib_manifest("foo"))
         .file(

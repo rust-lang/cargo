@@ -8,7 +8,8 @@ pub fn cli() -> App {
         .about("Execute all benchmarks of a local package")
         .arg(
             Arg::with_name("BENCHNAME")
-                .help("If specified, only run benches containing this string in their names"),
+                .help("If specified, only run benches containing this string in their names")
+                .multiple(true),
         )
         .arg(
             Arg::with_name("args")
@@ -82,11 +83,10 @@ pub fn exec(config: &mut Config, args: &ArgMatches<'_>) -> CliResult {
         compile_opts,
     };
 
-    let bench_args = args.value_of("BENCHNAME").into_iter();
-    let bench_args = bench_args.chain(args.values_of("args").unwrap_or_default());
-    let bench_args = bench_args.collect::<Vec<_>>();
+    let bench_names = args.values_of("BENCHNAME").unwrap_or_default().collect::<Vec<_>>();
+    let bench_args = args.values_of("args").unwrap_or_default().collect::<Vec<_>>();
 
-    let err = ops::run_benches(&ws, &ops, &bench_args)?;
+    let err = ops::run_benches(&ws, &ops, &bench_names, &bench_args)?;
     match err {
         None => Ok(()),
         Some(err) => Err(match err.exit.as_ref().and_then(|e| e.code()) {

@@ -10,7 +10,7 @@ cargo-bench - Execute benchmarks of a package
 
 == SYNOPSIS
 
-`cargo bench [_OPTIONS_] [BENCHNAME] [-- _BENCH-OPTIONS_]`
+`cargo bench [_OPTIONS_] [BENCHNAME]... [-- _BENCH-OPTIONS_]`
 
 == DESCRIPTION
 
