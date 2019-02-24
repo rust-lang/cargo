@@ -481,10 +481,7 @@ impl<'a> ArgMatchesExt for ArgMatches<'a> {
 }
 
 pub fn values(args: &ArgMatches<'_>, name: &str) -> Vec<String> {
-    args.values_of(name)
-        .unwrap_or_default()
-        .map(|s| s.to_string())
-        .collect()
+    args._values_of(name)
 }
 
 #[derive(PartialEq, PartialOrd, Eq, Ord)]
