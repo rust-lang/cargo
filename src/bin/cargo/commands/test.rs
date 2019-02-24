@@ -97,13 +97,9 @@ pub fn exec(config: &mut Config, args: &ArgMatches<'_>) -> CliResult {
     // `TESTNAME` is actually an argument of the test binary, but it's
     // important, so we explicitly mention it and reconfigure.
     let test_name: Option<&str> = args.value_of("TESTNAME");
-    let mut test_args = vec![];
-    test_args.extend(test_name.into_iter().map(|s| s.to_string()));
-    test_args.extend(
-        args.values_of("args")
-            .unwrap_or_default()
-            .map(|s| s.to_string()),
-    );
+    let test_args = args.value_of("TESTNAME").into_iter();
+    let test_args = test_args.chain(args.values_of("args").unwrap_or_default());
+    let test_args = test_args.collect::<Vec<_>>();
 
     let no_run = args.is_present("no-run");
     let doc = args.is_present("doc");
