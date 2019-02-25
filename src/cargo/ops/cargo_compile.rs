@@ -184,6 +184,16 @@ impl Packages {
     }
 }
 
+#[derive(Debug, PartialEq, Eq)]
+pub enum LibRule {
+    /// Include the library, fail if not present
+    True,
+    /// Include the library if present
+    Default,
+    /// Exclude the library
+    False,
+}
+
 #[derive(Debug)]
 pub enum FilterRule {
     All,
@@ -198,7 +208,7 @@ pub enum CompileFilter {
     },
     Only {
         all_targets: bool,
-        lib: bool,
+        lib: LibRule,
         bins: FilterRule,
         examples: FilterRule,
         tests: FilterRule,
@@ -361,6 +371,10 @@ impl FilterRule {
         }
     }
 
+    pub fn none() -> FilterRule {
+        FilterRule::Just(Vec::new())
+    }
+
     fn matches(&self, target: &Target) -> bool {
         match *self {
             FilterRule::All => true,
@@ -384,7 +398,8 @@ impl FilterRule {
 }
 
 impl CompileFilter {
-    pub fn new(
+    /// Construct a CompileFilter from raw command line arguments.
+    pub fn from_raw_arguments(
         lib_only: bool,
         bins: Vec<String>,
         all_bins: bool,
@@ -396,6 +411,7 @@ impl CompileFilter {
         all_bens: bool,
         all_targets: bool,
     ) -> CompileFilter {
+        let rule_lib = if lib_only { LibRule::True } else { LibRule::False };
         let rule_bins = FilterRule::new(bins, all_bins);
         let rule_tsts = FilterRule::new(tsts, all_tsts);
         let rule_exms = FilterRule::new(exms, all_exms);
@@ -404,13 +420,26 @@ impl CompileFilter {
         if all_targets {
             CompileFilter::Only {
                 all_targets: true,
-                lib: true,
+                lib: LibRule::Default,
                 bins: FilterRule::All,
                 examples: FilterRule::All,
                 benches: FilterRule::All,
                 tests: FilterRule::All,
             }
-        } else if lib_only
+        } else {
+            CompileFilter::new(rule_lib, rule_bins, rule_tsts, rule_exms, rule_bens)
+        }
+    }
+
+    /// Construct a CompileFilter from underlying primitives.
+    pub fn new(
+        rule_lib: LibRule,
+        rule_bins: FilterRule,
+        rule_tsts: FilterRule,
+        rule_exms: FilterRule,
+        rule_bens: FilterRule,
+    ) -> CompileFilter {
+        if rule_lib == LibRule::True
             || rule_bins.is_specific()
             || rule_tsts.is_specific()
             || rule_exms.is_specific()
@@ -418,7 +447,7 @@ impl CompileFilter {
         {
             CompileFilter::Only {
                 all_targets: false,
-                lib: lib_only,
+                lib: rule_lib,
                 bins: rule_bins,
                 examples: rule_exms,
                 benches: rule_bens,
@@ -454,7 +483,7 @@ impl CompileFilter {
         match *self {
             CompileFilter::Default { .. } => true,
             CompileFilter::Only {
-                lib,
+                ref lib,
                 ref bins,
                 ref examples,
                 ref tests,
@@ -466,7 +495,11 @@ impl CompileFilter {
                     TargetKind::Test => tests,
                     TargetKind::Bench => benches,
                     TargetKind::ExampleBin | TargetKind::ExampleLib(..) => examples,
-                    TargetKind::Lib(..) => return lib,
+                    TargetKind::Lib(..) => return match *lib {
+                        LibRule::True => true,
+                        LibRule::Default => true,
+                        LibRule::False => false,
+                    },
                     TargetKind::CustomBuild => return false,
                 };
                 rule.matches(target)
@@ -620,13 +653,13 @@ fn generate_targets<'a>(
         }
         CompileFilter::Only {
             all_targets,
-            lib,
+            ref lib,
             ref bins,
             ref examples,
             ref tests,
             ref benches,
         } => {
-            if lib {
+            if *lib != LibRule::False {
                 let mut libs = Vec::new();
                 for proposal in filter_targets(packages, Target::is_lib, false, build_config.mode) {
                     let Proposal { target, pkg, .. } = proposal;
@@ -640,7 +673,7 @@ fn generate_targets<'a>(
                         libs.push(proposal)
                     }
                 }
-                if !all_targets && libs.is_empty() {
+                if !all_targets && libs.is_empty() && *lib == LibRule::True {
                     let names = packages.iter().map(|pkg| pkg.name()).collect::<Vec<_>>();
                     if names.len() == 1 {
                         failure::bail!("no library targets found in package `{}`", names[0]);

@@ -247,7 +247,6 @@ fn changing_profiles_caches_targets() {
             "\
 [FINISHED] dev [unoptimized + debuginfo] target(s) in [..]
 [RUNNING] target[..]debug[..]deps[..]foo-[..][EXE]
-[DOCTEST] foo
 ",
         )
         .run();
