@@ -8,7 +8,7 @@ pub fn cli() -> App {
         // subcommand aliases are handled in aliased_command()
         // .alias("r")
         .setting(AppSettings::TrailingVarArg)
-        .about("Run the main binary of the local package (src/main.rs)")
+        .about("Run a binary or example of the local package")
         .arg(Arg::with_name("args").multiple(true))
         .arg_targets_bin_example(
             "Name of the bin target to run",
@@ -39,7 +39,8 @@ run. If you're passing arguments to both Cargo and the binary, the ones after
 pub fn exec(config: &mut Config, args: &ArgMatches<'_>) -> CliResult {
     let ws = args.workspace(config)?;
 
-    let mut compile_opts = args.compile_options(config, CompileMode::Build)?;
+    let mut compile_opts = args.compile_options(config, CompileMode::Build, Some(&ws))?;
+
     if !args.is_present("example") && !args.is_present("bin") {
         let default_runs: Vec<_> = compile_opts
             .spec
@@ -48,7 +49,7 @@ pub fn exec(config: &mut Config, args: &ArgMatches<'_>) -> CliResult {
             .filter_map(|pkg| pkg.manifest().default_run())
             .collect();
         if default_runs.len() == 1 {
-            compile_opts.filter = CompileFilter::new(
+            compile_opts.filter = CompileFilter::from_raw_arguments(
                 false,
                 vec![default_runs[0].to_owned()],
                 false,

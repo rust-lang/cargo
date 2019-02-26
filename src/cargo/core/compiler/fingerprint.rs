@@ -3,6 +3,7 @@ use std::fs;
 use std::hash::{self, Hasher};
 use std::path::{Path, PathBuf};
 use std::sync::{Arc, Mutex};
+use std::time::SystemTime;
 
 use filetime::FileTime;
 use log::{debug, info};
@@ -64,10 +65,11 @@ pub fn prepare_target<'a, 'cfg>(
     debug!("fingerprint at: {}", loc.display());
 
     let fingerprint = calculate(cx, unit)?;
-    let compare = compare_old_fingerprint(&loc, &*fingerprint);
+    let mtime_on_use = cx.bcx.config.cli_unstable().mtime_on_use;
+    let compare = compare_old_fingerprint(&loc, &*fingerprint, mtime_on_use);
     log_compare(unit, &compare);
 
-    // If our comparison failed (e.g. we're going to trigger a rebuild of this
+    // If our comparison failed (e.g., we're going to trigger a rebuild of this
     // crate), then we also ensure the source of the crate passes all
     // verification checks before we build it.
     //
@@ -88,6 +90,7 @@ pub fn prepare_target<'a, 'cfg>(
 
     let root = cx.files().out_dir(unit);
     let missing_outputs = {
+        let t = FileTime::from_system_time(SystemTime::now());
         if unit.mode.is_doc() {
             !root
                 .join(unit.target.crate_name())
@@ -98,8 +101,17 @@ pub fn prepare_target<'a, 'cfg>(
                 .outputs(unit)?
                 .iter()
                 .filter(|output| output.flavor != FileFlavor::DebugInfo)
-                .find(|output| !output.path.exists())
-            {
+                .find(|output| {
+                    if output.path.exists() {
+                        if mtime_on_use {
+                            // update the mtime so other cleaners know we used it
+                            let _ = filetime::set_file_times(&output.path, t, t);
+                        }
+                        false
+                    } else {
+                        true
+                    }
+                }) {
                 None => false,
                 Some(output) => {
                     info!("missing output path {:?}", output.path);
@@ -129,7 +141,7 @@ pub fn prepare_target<'a, 'cfg>(
 }
 
 /// A compilation unit dependency has a fingerprint that is comprised of:
-/// * its package id
+/// * its package ID
 /// * its extern crate name
 /// * its calculated fingerprint for the dependency
 struct DepFingerprint {
@@ -428,7 +440,7 @@ impl<'de> de::Deserialize<'de> for MtimeSlot {
 /// * Any dependency changes
 /// * The compiler changes
 /// * The set of features a package is built with changes
-/// * The profile a target is compiled with changes (e.g. opt-level changes)
+/// * The profile a target is compiled with changes (e.g., opt-level changes)
 ///
 /// Information like file modification time is only calculated for path
 /// dependencies and is calculated in `calculate_target_fresh`.
@@ -480,12 +492,7 @@ fn calculate<'a, 'cfg>(
     } else {
         bcx.rustflags_args(unit)?
     };
-    let profile_hash = util::hash_u64(&(
-        &unit.profile,
-        unit.mode,
-        bcx.extra_args_for(unit),
-        cx.incremental_args(unit)?,
-    ));
+    let profile_hash = util::hash_u64(&(&unit.profile, unit.mode, bcx.extra_args_for(unit)));
     let fingerprint = Arc::new(Fingerprint {
         rustc: util::hash_u64(&bcx.rustc.verbose_version),
         target: util::hash_u64(&unit.target),
@@ -546,7 +553,8 @@ pub fn prepare_build_cmd<'a, 'cfg>(
         rustc: util::hash_u64(&cx.bcx.rustc.verbose_version),
         ..Fingerprint::new()
     };
-    let compare = compare_old_fingerprint(&loc, &fingerprint);
+    let mtime_on_use = cx.bcx.config.cli_unstable().mtime_on_use;
+    let compare = compare_old_fingerprint(&loc, &fingerprint, mtime_on_use);
     log_compare(unit, &compare);
 
     // When we write out the fingerprint, we may want to actually change the
@@ -679,8 +687,19 @@ pub fn dep_info_loc<'a, 'cfg>(cx: &mut Context<'a, 'cfg>, unit: &Unit<'a>) -> Pa
         .join(&format!("dep-{}", filename(cx, unit)))
 }
 
-fn compare_old_fingerprint(loc: &Path, new_fingerprint: &Fingerprint) -> CargoResult<()> {
+fn compare_old_fingerprint(
+    loc: &Path,
+    new_fingerprint: &Fingerprint,
+    mtime_on_use: bool,
+) -> CargoResult<()> {
     let old_fingerprint_short = paths::read(loc)?;
+
+    if mtime_on_use {
+        // update the mtime so other cleaners know we used it
+        let t = FileTime::from_system_time(SystemTime::now());
+        filetime::set_file_times(loc, t, t)?;
+    }
+
     let new_hash = new_fingerprint.hash();
 
     if util::to_hex(new_hash) == old_fingerprint_short {
@@ -761,23 +780,25 @@ where
             }
         };
 
-        // Note that equal mtimes are considered "stale". For filesystems with
-        // not much timestamp precision like 1s this is a conservative approximation
+        // TODO: fix #5918.
+        // Note that equal mtimes should be considered "stale". For filesystems with
+        // not much timestamp precision like 1s this is would be a conservative approximation
         // to handle the case where a file is modified within the same second after
-        // a build finishes. We want to make sure that incremental rebuilds pick that up!
+        // a build starts. We want to make sure that incremental rebuilds pick that up!
         //
         // For filesystems with nanosecond precision it's been seen in the wild that
         // its "nanosecond precision" isn't really nanosecond-accurate. It turns out that
         // kernels may cache the current time so files created at different times actually
         // list the same nanosecond precision. Some digging on #5919 picked up that the
         // kernel caches the current time between timer ticks, which could mean that if
-        // a file is updated at most 10ms after a build finishes then Cargo may not
+        // a file is updated at most 10ms after a build starts then Cargo may not
         // pick up the build changes.
         //
-        // All in all, the equality check here is a conservative assumption that,
+        // All in all, an equality check here would be a conservative assumption that,
         // if equal, files were changed just after a previous build finished.
-        // It's hoped this doesn't cause too many issues in practice!
-        if mtime2 >= mtime {
+        // Unfortunately this became problematic when (in #6484) cargo switch to more accurately
+        // measuring the start time of builds.
+        if mtime2 > mtime {
             info!("stale: {} -- {} vs {}", path.display(), mtime2, mtime);
             true
         } else {

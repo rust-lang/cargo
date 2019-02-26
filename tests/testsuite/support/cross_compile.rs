@@ -1,20 +1,20 @@
 use std::env;
 use std::process::Command;
-use std::sync::atomic::{AtomicBool, Ordering, ATOMIC_BOOL_INIT};
+use std::sync::atomic::{AtomicBool, Ordering};
 use std::sync::{Once, ONCE_INIT};
 
 use crate::support::{basic_bin_manifest, main_file, project};
 
 pub fn disabled() -> bool {
-    // First, disable if ./configure requested so
+    // First, disable if `./configure` requested so.
     match env::var("CFG_DISABLE_CROSS_TESTS") {
         Ok(ref s) if *s == "1" => return true,
         _ => {}
     }
 
-    // Right now the windows bots cannot cross compile due to the mingw setup,
-    // so we disable ourselves on all but macos/linux setups where the rustc
-    // install script ensures we have both architectures
+    // Right now, the Windows bots cannot cross compile due to the Mingw setup,
+    // so we disable ourselves on all but macOS/Linux setups where the rustc
+    // install script ensures we have both architectures.
     if !(cfg!(target_os = "macos") || cfg!(target_os = "linux") || cfg!(target_env = "msvc")) {
         return true;
     }
@@ -22,7 +22,7 @@ pub fn disabled() -> bool {
     // It's not particularly common to have a cross-compilation setup, so
     // try to detect that before we fail a bunch of tests through no fault
     // of the user.
-    static CAN_RUN_CROSS_TESTS: AtomicBool = ATOMIC_BOOL_INIT;
+    static CAN_RUN_CROSS_TESTS: AtomicBool = AtomicBool::new(false);
     static CHECK: Once = ONCE_INIT;
 
     let cross_target = alternate();
@@ -46,17 +46,17 @@ pub fn disabled() -> bool {
 
     if CAN_RUN_CROSS_TESTS.load(Ordering::SeqCst) {
         // We were able to compile a simple project, so the user has the
-        // necessary std:: bits installed.  Therefore, tests should not
+        // necessary `std::` bits installed. Therefore, tests should not
         // be disabled.
         return false;
     }
 
-    // We can't compile a simple cross project.  We want to warn the user
+    // We can't compile a simple cross project. We want to warn the user
     // by failing a single test and having the remainder of the cross tests
-    // pass.  We don't use std::sync::Once here because panicing inside its
-    // call_once method would poison the Once instance, which is not what
+    // pass. We don't use `std::sync::Once` here because panicking inside its
+    // `call_once` method would poison the `Once` instance, which is not what
     // we want.
-    static HAVE_WARNED: AtomicBool = ATOMIC_BOOL_INIT;
+    static HAVE_WARNED: AtomicBool = AtomicBool::new(false);
 
     if HAVE_WARNED.swap(true, Ordering::SeqCst) {
         // We are some other test and somebody else is handling the warning.
@@ -64,7 +64,7 @@ pub fn disabled() -> bool {
         return true;
     }
 
-    // We are responsible for warning the user, which we do by panicing.
+    // We are responsible for warning the user, which we do by panicking.
     let rustup_available = Command::new("rustup").output().is_ok();
 
     let linux_help = if cfg!(target_os = "linux") {

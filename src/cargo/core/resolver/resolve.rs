@@ -11,7 +11,7 @@ use crate::util::{Graph, Platform};
 
 use super::encode::Metadata;
 
-/// Represents a fully resolved package dependency graph. Each node in the graph
+/// Represents a fully-resolved package dependency graph. Each node in the graph
 /// is a package and edges represent dependencies between packages.
 ///
 /// Each instance of `Resolve` also understands the full set of features used
@@ -19,7 +19,7 @@ use super::encode::Metadata;
 #[derive(PartialEq)]
 pub struct Resolve {
     /// A graph, whose vertices are packages and edges are dependency specifications
-    /// from Cargo.toml. We need a `Vec` here because the same package
+    /// from `Cargo.toml`. We need a `Vec` here because the same package
     /// might be present in both `[dependencies]` and `[build-dependencies]`.
     graph: Graph<PackageId, Vec<Dependency>>,
     replacements: HashMap<PackageId, PackageId>,
@@ -70,7 +70,7 @@ impl Resolve {
 
     pub fn merge_from(&mut self, previous: &Resolve) -> CargoResult<()> {
         // Given a previous instance of resolve, it should be forbidden to ever
-        // have a checksums which *differ*. If the same package id has differing
+        // have a checksums which *differ*. If the same package ID has differing
         // checksums, then something has gone wrong such as:
         //
         // * Something got seriously corrupted
@@ -143,7 +143,7 @@ checksum for `{}` changed between lock files
 this could be indicative of a few possible errors:
 
     * the lock file is corrupt
-    * a replacement source in use (e.g. a mirror) returned a different checksum
+    * a replacement source in use (e.g., a mirror) returned a different checksum
     * the source itself may be corrupt in one way or another
 
 unable to verify that `{0}` is the same as when the lockfile was generated
@@ -237,14 +237,11 @@ unable to verify that `{0}` is the same as when the lockfile was generated
         });
         let name = names.next().unwrap_or_else(|| crate_name.clone());
         for n in names {
-            if n == name {
-                continue;
-            }
-            failure::bail!(
-                "multiple dependencies listed for the same crate must \
-                 all have the same name, but the dependency on `{}` \
-                 is listed as having different names",
-                to
+            failure::ensure!(
+                n == name,
+                "the crate `{}` depends on crate `{}` multiple times with different names",
+                from,
+                to,
             );
         }
         Ok(name)

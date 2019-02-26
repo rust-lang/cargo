@@ -63,13 +63,13 @@ enables overwriting existing binaries. Thus you can reinstall a crate with
 
 Omitting the <crate> specification entirely will
 install the crate in the current directory. That is, `install` is equivalent to
-the more explicit `install --path .`.  This behaviour is deprecated, and no
+the more explicit `install --path .`. This behaviour is deprecated, and no
 longer supported as of the Rust 2018 edition.
 
 If the source is crates.io or `--git` then by default the crate will be built
-in a temporary target directory.  To avoid this, the target directory can be
+in a temporary target directory. To avoid this, the target directory can be
 specified by setting the `CARGO_TARGET_DIR` environment variable to a relative
-path.  In particular, this can be useful for caching build artifacts on
+path. In particular, this can be useful for caching build artifacts on
 continuous integration systems.",
         )
 }
@@ -78,7 +78,9 @@ pub fn exec(config: &mut Config, args: &ArgMatches<'_>) -> CliResult {
     let registry = args.registry(config)?;
 
     config.reload_rooted_at_cargo_home()?;
-    let mut compile_opts = args.compile_options(config, CompileMode::Build)?;
+
+    let workspace = args.workspace(config).ok();
+    let mut compile_opts = args.compile_options(config, CompileMode::Build, workspace.as_ref())?;
 
     compile_opts.build_config.release = !args.is_present("debug");
 

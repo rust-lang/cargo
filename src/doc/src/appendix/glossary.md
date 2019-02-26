@@ -63,7 +63,7 @@ which are either libraries or executable binaries.
 The *package root* is the directory where the package's `Cargo.toml` manifest
 is located.
 
-The [*package id specification*][pkgid-spec], or *SPEC*, is a string used to
+The [*package ID specification*][pkgid-spec], or *SPEC*, is a string used to
 uniquely reference a specific version of a package from a specific source.
 
 ### Project
@@ -97,7 +97,7 @@ See [Source Replacement] for more information.
 
 ### Spec
 
-See [package id specification](#package).
+See [package ID specification](#package).
 
 ### Target
 

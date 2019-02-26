@@ -2,12 +2,12 @@
 .\"     Title: cargo-run
 .\"    Author: [see the "AUTHOR(S)" section]
 .\" Generator: Asciidoctor 1.5.8
-.\"      Date: 2018-12-20
+.\"      Date: 2019-02-05
 .\"    Manual: \ \&
 .\"    Source: \ \&
 .\"  Language: English
 .\"
-.TH "CARGO\-RUN" "1" "2018-12-20" "\ \&" "\ \&"
+.TH "CARGO\-RUN" "1" "2019-02-05" "\ \&" "\ \&"
 .ie \n(.g .ds Aq \(aq
 .el       .ds Aq '
 .ss \n[.ss] 0
@@ -34,7 +34,7 @@ cargo\-run \- Run the current package
 \fBcargo run [\fIOPTIONS\fP] [\-\- \fIARGS\fP]\fP
 .SH "DESCRIPTION"
 .sp
-Build the the main binary of the local package (\fBsrc/main.rs\fP) and run it.
+Run a binary or example of the local package.
 .sp
 All the arguments following the two dashes (\fB\-\-\fP) are passed to the binary to
 run. If you\(cqre passing arguments to both Cargo and the binary, the ones after
@@ -328,7 +328,7 @@ Cargo failed to complete.
 .  sp -1
 .  IP " 1." 4.2
 .\}
-Build the local package and run its main target:
+Build the local package and run its main target (assuming only one binary):
 .sp
 .if n .RS 4
 .nf

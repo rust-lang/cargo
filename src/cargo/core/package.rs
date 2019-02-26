@@ -29,12 +29,13 @@ use crate::util::{self, internal, lev_distance, Config, Progress, ProgressStyle}
 /// Information about a package that is available somewhere in the file system.
 ///
 /// A package is a `Cargo.toml` file plus all the files that are part of it.
-// TODO: Is manifest_path a relic?
+//
+// TODO: is `manifest_path` a relic?
 #[derive(Clone)]
 pub struct Package {
-    /// The package's manifest
+    /// The package's manifest.
     manifest: Manifest,
-    /// The root of the package
+    /// The root of the package.
     manifest_path: PathBuf,
 }
 
@@ -134,7 +135,7 @@ impl ser::Serialize for Package {
 }
 
 impl Package {
-    /// Create a package from a manifest and its location
+    /// Creates a package from a manifest and its location.
     pub fn new(manifest: Manifest, manifest_path: &Path) -> Package {
         Package {
             manifest,
@@ -142,52 +143,52 @@ impl Package {
         }
     }
 
-    /// Get the manifest dependencies
+    /// Gets the manifest dependencies.
     pub fn dependencies(&self) -> &[Dependency] {
         self.manifest.dependencies()
     }
-    /// Get the manifest
+    /// Gets the manifest.
     pub fn manifest(&self) -> &Manifest {
         &self.manifest
     }
-    /// Get the path to the manifest
+    /// Gets the path to the manifest.
     pub fn manifest_path(&self) -> &Path {
         &self.manifest_path
     }
-    /// Get the name of the package
+    /// Gets the name of the package.
     pub fn name(&self) -> InternedString {
         self.package_id().name()
     }
-    /// Get the PackageId object for the package (fully defines a package)
+    /// Gets the `PackageId` object for the package (fully defines a package).
     pub fn package_id(&self) -> PackageId {
         self.manifest.package_id()
     }
-    /// Get the root folder of the package
+    /// Gets the root folder of the package.
     pub fn root(&self) -> &Path {
         self.manifest_path.parent().unwrap()
     }
-    /// Get the summary for the package
+    /// Gets the summary for the package.
     pub fn summary(&self) -> &Summary {
         self.manifest.summary()
     }
-    /// Get the targets specified in the manifest
+    /// Gets the targets specified in the manifest.
     pub fn targets(&self) -> &[Target] {
         self.manifest.targets()
     }
-    /// Get the current package version
+    /// Gets the current package version.
     pub fn version(&self) -> &Version {
         self.package_id().version()
     }
-    /// Get the package authors
+    /// Gets the package authors.
     pub fn authors(&self) -> &Vec<String> {
         &self.manifest.metadata().authors
     }
-    /// Whether the package is set to publish
+    /// Returns `true` if the package is set to publish.
     pub fn publish(&self) -> &Option<Vec<String>> {
         self.manifest.publish()
     }
 
-    /// Whether the package uses a custom build script for any target
+    /// Returns `true` if the package uses a custom build script for any target.
     pub fn has_custom_build(&self) -> bool {
         self.targets().iter().any(|t| t.is_custom_build())
     }
@@ -224,7 +225,7 @@ impl Package {
              # When uploading crates to the registry Cargo will automatically\n\
              # \"normalize\" Cargo.toml files for maximal compatibility\n\
              # with all versions of Cargo and also rewrite `path` dependencies\n\
-             # to registry (e.g. crates.io) dependencies\n\
+             # to registry (e.g., crates.io) dependencies\n\
              #\n\
              # If you believe there's an error in this file please file an\n\
              # issue against the rust-lang/cargo repository. If you're\n\
@@ -294,36 +295,36 @@ pub struct Downloads<'a, 'cfg: 'a> {
     ///
     /// Note that timeout management is done manually here instead of in libcurl
     /// because we want to apply timeouts to an entire batch of operations, not
-    /// any one particular single operatino
-    timeout: ops::HttpTimeout, // timeout configuration
+    /// any one particular single operation.
+    timeout: ops::HttpTimeout,      // timeout configuration
     updated_at: Cell<Instant>,       // last time we received bytes
     next_speed_check: Cell<Instant>, // if threshold isn't 0 by this time, error
     next_speed_check_bytes_threshold: Cell<u64>, // decremented when we receive bytes
 }
 
 struct Download<'cfg> {
-    /// Token for this download, used as the key of the `Downloads::pending` map
+    /// The token for this download, used as the key of the `Downloads::pending` map
     /// and stored in `EasyHandle` as well.
     token: usize,
 
-    /// Package that we're downloading
+    /// The package that we're downloading.
     id: PackageId,
 
-    /// Actual downloaded data, updated throughout the lifetime of this download
+    /// Actual downloaded data, updated throughout the lifetime of this download.
     data: RefCell<Vec<u8>>,
 
     /// The URL that we're downloading from, cached here for error messages and
     /// reenqueuing.
     url: String,
 
-    /// A descriptive string to print when we've finished downloading this crate
+    /// A descriptive string to print when we've finished downloading this crate.
     descriptor: String,
 
-    /// Statistics updated from the progress callback in libcurl
+    /// Statistics updated from the progress callback in libcurl.
     total: Cell<u64>,
     current: Cell<u64>,
 
-    /// The moment we started this transfer at
+    /// The moment we started this transfer at.
     start: Instant,
     timed_out: Cell<Option<String>>,
 
@@ -570,7 +571,7 @@ impl<'a, 'cfg> Downloads<'a, 'cfg> {
         Ok(None)
     }
 
-    /// Returns the number of crates that are still downloading
+    /// Returns the number of crates that are still downloading.
     pub fn remaining(&self) -> usize {
         self.pending.len()
     }
@@ -722,7 +723,7 @@ impl<'a, 'cfg> Downloads<'a, 'cfg> {
         // a few anyway.
         //
         // Here we start off by asking the `multi` handle to do some work via
-        // the `perform` method. This will actually do I/O work (nonblocking)
+        // the `perform` method. This will actually do I/O work (non-blocking)
         // and attempt to make progress. Afterwards we ask about the `messages`
         // contained in the handle which will inform us if anything has finished
         // transferring.
@@ -880,11 +881,11 @@ impl<'a, 'cfg> Drop for Downloads<'a, 'cfg> {
         if !progress.is_enabled() {
             return;
         }
-        // If we didn't download anything, no need for a summary
+        // If we didn't download anything, no need for a summary.
         if self.downloads_finished == 0 {
             return;
         }
-        // If an error happened, let's not clutter up the output
+        // If an error happened, let's not clutter up the output.
         if !self.success {
             return;
         }

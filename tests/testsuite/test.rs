@@ -1,11 +1,12 @@
 use std::fs::File;
 use std::io::prelude::*;
 
+use cargo;
+
 use crate::support::paths::CargoPathExt;
 use crate::support::registry::Package;
 use crate::support::{basic_bin_manifest, basic_lib_manifest, basic_manifest, cargo_exe, project};
 use crate::support::{is_nightly, rustc_host, sleep_ms};
-use cargo;
 
 #[test]
 fn cargo_test_simple() {
@@ -162,7 +163,8 @@ fn cargo_test_verbose() {
 [COMPILING] foo v0.5.0 ([CWD])
 [RUNNING] `rustc [..] src/main.rs [..]`
 [FINISHED] dev [unoptimized + debuginfo] target(s) in [..]
-[RUNNING] `[..]target/debug/deps/foo-[..][EXE] hello`",
+[RUNNING] `[CWD]/target/debug/deps/foo-[..] hello`
+",
         )
         .with_stdout_contains("test test_hello ... ok")
         .run();
@@ -600,10 +602,10 @@ fn pass_through_command_line() {
 [COMPILING] foo v0.0.1 ([CWD])
 [FINISHED] dev [unoptimized + debuginfo] target(s) in [..]
 [RUNNING] target/debug/deps/foo-[..][EXE]
-[DOCTEST] foo",
+",
         )
+        .with_stdout_contains("running 1 test")
         .with_stdout_contains("test bar ... ok")
-        .with_stdout_contains("running 0 tests")
         .run();
 
     p.cargo("test foo")
@@ -611,10 +613,10 @@ fn pass_through_command_line() {
             "\
 [FINISHED] dev [unoptimized + debuginfo] target(s) in [..]
 [RUNNING] target/debug/deps/foo-[..][EXE]
-[DOCTEST] foo",
+",
         )
+        .with_stdout_contains("running 1 test")
         .with_stdout_contains("test foo ... ok")
-        .with_stdout_contains("running 0 tests")
         .run();
 }
 
@@ -1462,6 +1464,37 @@ fn test_run_implicit_example_target() {
 }
 
 #[test]
+fn test_filtered_excludes_compiling_examples() {
+    let p = project()
+        .file(
+            "src/lib.rs",
+            "#[cfg(test)] mod tests { #[test] fn foo() { assert!(true); } }",
+        )
+        .file("examples/ex1.rs", "fn main() {}")
+        .build();
+
+    p.cargo("test -v foo")
+        .with_stdout(
+            "
+running 1 test
+test tests::foo ... ok
+
+test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out
+
+",
+        )
+        .with_stderr("\
+[COMPILING] foo v0.0.1 ([CWD])
+[RUNNING] `rustc --crate-name foo src/lib.rs [..] --test [..]`
+[FINISHED] dev [unoptimized + debuginfo] target(s) in [..]
+[RUNNING] `[CWD]/target/debug/deps/foo-[..] foo`
+",
+        )
+        .with_stderr_does_not_contain("[RUNNING][..]rustc[..]ex1[..]")
+        .run();
+}
+
+#[test]
 fn test_no_harness() {
     let p = project()
         .file(
@@ -2055,7 +2088,7 @@ fn dylib_doctest() {
 
 #[test]
 fn dylib_doctest2() {
-    // can't doctest dylibs as they're statically linked together
+    // Can't doc-test dylibs, as they're statically linked together.
     let p = project()
         .file(
             "Cargo.toml",
@@ -3446,6 +3479,26 @@ test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out
     p.cargo("test --lib --doc")
         .with_status(101)
         .with_stderr("[ERROR] Can't mix --doc with other target selecting options\n")
+        .run();
+}
+
+#[test]
+fn can_not_no_run_doc_tests() {
+    let p = project()
+        .file(
+            "src/lib.rs",
+            r#"
+/// ```
+/// let _x = 1 + "foo";
+/// ```
+pub fn foo() -> u8 { 1 }
+"#,
+        )
+        .build();
+
+    p.cargo("test --doc --no-run")
+        .with_status(101)
+        .with_stderr("[ERROR] Can't skip running doc tests with --no-run")
         .run();
 }
 

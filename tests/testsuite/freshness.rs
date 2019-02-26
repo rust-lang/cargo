@@ -1,5 +1,9 @@
-use std::fs::{self, File};
+use std::fs::{self, File, OpenOptions};
 use std::io::prelude::*;
+use std::net::TcpListener;
+use std::path::PathBuf;
+use std::thread;
+use std::time::SystemTime;
 
 use crate::support::paths::CargoPathExt;
 use crate::support::registry::Package;
@@ -243,7 +247,6 @@ fn changing_profiles_caches_targets() {
             "\
 [FINISHED] dev [unoptimized + debuginfo] target(s) in [..]
 [RUNNING] target[..]debug[..]deps[..]foo-[..][EXE]
-[DOCTEST] foo
 ",
         )
         .run();
@@ -443,17 +446,6 @@ fn changing_bin_features_caches_targets() {
         )
         .build();
 
-    // Windows has a problem with replacing a binary that was just executed.
-    // Unlinking it will succeed, but then attempting to immediately replace
-    // it will sometimes fail with "Already Exists".
-    // See https://github.com/rust-lang/cargo/issues/5481
-    let foo_proc = |name: &str| {
-        let src = p.bin("foo");
-        let dst = p.bin(name);
-        fs::rename(&src, &dst).expect("Failed to rename foo");
-        p.process(dst)
-    };
-
     p.cargo("build")
         .with_stderr(
             "\
@@ -462,7 +454,7 @@ fn changing_bin_features_caches_targets() {
 ",
         )
         .run();
-    foo_proc("off1").with_stdout("feature off").run();
+    p.rename_run("foo", "off1").with_stdout("feature off").run();
 
     p.cargo("build --features foo")
         .with_stderr(
@@ -472,7 +464,7 @@ fn changing_bin_features_caches_targets() {
 ",
         )
         .run();
-    foo_proc("on1").with_stdout("feature on").run();
+    p.rename_run("foo", "on1").with_stdout("feature on").run();
 
     /* Targets should be cached from the first build */
 
@@ -483,7 +475,7 @@ fn changing_bin_features_caches_targets() {
 ",
         )
         .run();
-    foo_proc("off2").with_stdout("feature off").run();
+    p.rename_run("foo", "off2").with_stdout("feature off").run();
 
     p.cargo("build --features foo")
         .with_stderr(
@@ -492,7 +484,7 @@ fn changing_bin_features_caches_targets() {
 ",
         )
         .run();
-    foo_proc("on2").with_stdout("feature on").run();
+    p.rename_run("foo", "on2").with_stdout("feature on").run();
 }
 
 #[test]
@@ -1154,6 +1146,211 @@ fn reuse_shared_build_dep() {
 }
 
 #[test]
+fn changing_rustflags_is_cached() {
+    let p = project().file("src/lib.rs", "").build();
+
+    p.cargo("build").run();
+    p.cargo("build")
+        .env("RUSTFLAGS", "-C target-cpu=native")
+        .with_stderr(
+            "\
+[COMPILING] foo v0.0.1 ([..])
+[FINISHED] dev [unoptimized + debuginfo] target(s) in [..]",
+        )
+        .run();
+    // This should not recompile!
+    p.cargo("build")
+        .with_stderr("[FINISHED] dev [unoptimized + debuginfo] target(s) in [..]")
+        .run();
+    p.cargo("build")
+        .env("RUSTFLAGS", "-C target-cpu=native")
+        .with_stderr("[FINISHED] dev [unoptimized + debuginfo] target(s) in [..]")
+        .run();
+}
+
+fn simple_deps_cleaner(mut dir: PathBuf, timestamp: filetime::FileTime) {
+    // Cargo is experimenting with letting outside projects develop some
+    // limited forms of GC for target_dir. This is one of the forms.
+    // Specifically, Cargo is updating the mtime of files in
+    // target/profile/deps each time it uses the file.
+    // So a cleaner can remove files older then a time stamp without
+    // effecting any builds that happened since that time stamp.
+    let mut cleand = false;
+    dir.push("deps");
+    for dep in fs::read_dir(&dir).unwrap() {
+        let dep = dep.unwrap();
+        if filetime::FileTime::from_last_modification_time(&dep.metadata().unwrap()) <= timestamp {
+            fs::remove_file(dep.path()).unwrap();
+            println!("remove: {:?}", dep.path());
+            cleand = true;
+        }
+    }
+    assert!(
+        cleand,
+        "called simple_deps_cleaner, but there was nothing to remove"
+    );
+}
+
+#[test]
+fn simple_deps_cleaner_does_not_rebuild() {
+    let p = project()
+        .file(
+            "Cargo.toml",
+            r#"
+            [package]
+            name = "foo"
+            version = "0.0.1"
+
+            [dependencies]
+            bar = { path = "bar" }
+        "#,
+        )
+        .file("src/lib.rs", "")
+        .file("bar/Cargo.toml", &basic_manifest("bar", "0.0.1"))
+        .file("bar/src/lib.rs", "")
+        .build();
+
+    p.cargo("build -Z mtime-on-use")
+        .masquerade_as_nightly_cargo()
+        .run();
+    p.cargo("build -Z mtime-on-use")
+        .masquerade_as_nightly_cargo()
+        .env("RUSTFLAGS", "-C target-cpu=native")
+        .with_stderr(
+            "\
+[COMPILING] bar v0.0.1 ([..])
+[COMPILING] foo v0.0.1 ([..])
+[FINISHED] dev [unoptimized + debuginfo] target(s) in [..]",
+        )
+        .run();
+    if is_coarse_mtime() {
+        sleep_ms(1000);
+    }
+    let timestamp = filetime::FileTime::from_system_time(SystemTime::now());
+    if is_coarse_mtime() {
+        sleep_ms(1000);
+    }
+    // This does not make new files, but it does update the mtime.
+    p.cargo("build -Z mtime-on-use")
+        .masquerade_as_nightly_cargo()
+        .env("RUSTFLAGS", "-C target-cpu=native")
+        .with_stderr("[FINISHED] dev [unoptimized + debuginfo] target(s) in [..]")
+        .run();
+    simple_deps_cleaner(p.target_debug_dir(), timestamp);
+    // This should not recompile!
+    p.cargo("build -Z mtime-on-use")
+        .masquerade_as_nightly_cargo()
+        .env("RUSTFLAGS", "-C target-cpu=native")
+        .with_stderr("[FINISHED] dev [unoptimized + debuginfo] target(s) in [..]")
+        .run();
+    // But this should be cleaned and so need a rebuild
+    p.cargo("build -Z mtime-on-use")
+        .masquerade_as_nightly_cargo()
+        .with_stderr(
+            "\
+[COMPILING] bar v0.0.1 ([..])
+[COMPILING] foo v0.0.1 ([..])
+[FINISHED] dev [unoptimized + debuginfo] target(s) in [..]",
+        )
+        .run();
+}
+
+fn fingerprint_cleaner(mut dir: PathBuf, timestamp: filetime::FileTime) {
+    // Cargo is experimenting with letting outside projects develop some
+    // limited forms of GC for target_dir. This is one of the forms.
+    // Specifically, Cargo is updating the mtime of a file in
+    // target/profile/.fingerprint each time it uses the fingerprint.
+    // So a cleaner can remove files associated with a fingerprint
+    // if all the files in the fingerprint's folder are older then a time stamp without
+    // effecting any builds that happened since that time stamp.
+    let mut cleand = false;
+    dir.push(".fingerprint");
+    for fing in fs::read_dir(&dir).unwrap() {
+        let fing = fing.unwrap();
+
+        if fs::read_dir(fing.path()).unwrap().all(|f| {
+            filetime::FileTime::from_last_modification_time(&f.unwrap().metadata().unwrap())
+                <= timestamp
+        }) {
+            fs::remove_dir_all(fing.path()).unwrap();
+            println!("remove: {:?}", fing.path());
+            // a real cleaner would remove the big files in deps and build as well
+            // but fingerprint is sufficient for our tests
+            cleand = true;
+        } else {
+        }
+    }
+    assert!(
+        cleand,
+        "called fingerprint_cleaner, but there was nothing to remove"
+    );
+}
+
+#[test]
+fn fingerprint_cleaner_does_not_rebuild() {
+    let p = project()
+        .file(
+            "Cargo.toml",
+            r#"
+            [package]
+            name = "foo"
+            version = "0.0.1"
+
+            [dependencies]
+            bar = { path = "bar" }
+        "#,
+        )
+        .file("src/lib.rs", "")
+        .file("bar/Cargo.toml", &basic_manifest("bar", "0.0.1"))
+        .file("bar/src/lib.rs", "")
+        .build();
+
+    p.cargo("build -Z mtime-on-use")
+        .masquerade_as_nightly_cargo()
+        .run();
+    p.cargo("build -Z mtime-on-use")
+        .masquerade_as_nightly_cargo()
+        .env("RUSTFLAGS", "-C target-cpu=native")
+        .with_stderr(
+            "\
+[COMPILING] bar v0.0.1 ([..])
+[COMPILING] foo v0.0.1 ([..])
+[FINISHED] dev [unoptimized + debuginfo] target(s) in [..]",
+        )
+        .run();
+    if is_coarse_mtime() {
+        sleep_ms(1000);
+    }
+    let timestamp = filetime::FileTime::from_system_time(SystemTime::now());
+    if is_coarse_mtime() {
+        sleep_ms(1000);
+    }
+    // This does not make new files, but it does update the mtime.
+    p.cargo("build -Z mtime-on-use")
+        .masquerade_as_nightly_cargo()
+        .env("RUSTFLAGS", "-C target-cpu=native")
+        .with_stderr("[FINISHED] dev [unoptimized + debuginfo] target(s) in [..]")
+        .run();
+    fingerprint_cleaner(p.target_debug_dir(), timestamp);
+    // This should not recompile!
+    p.cargo("build -Z mtime-on-use")
+        .masquerade_as_nightly_cargo()
+        .env("RUSTFLAGS", "-C target-cpu=native")
+        .with_stderr("[FINISHED] dev [unoptimized + debuginfo] target(s) in [..]")
+        .run();
+    // But this should be cleaned and so need a rebuild
+    p.cargo("build -Z mtime-on-use")
+        .masquerade_as_nightly_cargo()
+        .with_stderr(
+            "\
+[COMPILING] bar v0.0.1 ([..])
+[COMPILING] foo v0.0.1 ([..])
+[FINISHED] dev [unoptimized + debuginfo] target(s) in [..]",
+        )
+        .run();
+}
+
+#[test]
 fn reuse_panic_build_dep_test() {
     let p = project()
         .file(
@@ -1281,6 +1478,9 @@ fn bust_patched_dep() {
         .build();
 
     p.cargo("build").run();
+    if is_coarse_mtime() {
+        sleep_ms(1000);
+    }
 
     File::create(&p.root().join("reg1new/src/lib.rs")).unwrap();
     if is_coarse_mtime() {
@@ -1308,4 +1508,111 @@ fn bust_patched_dep() {
 ",
         )
         .run();
+}
+
+#[test]
+fn rebuild_on_mid_build_file_modification() {
+    let server = TcpListener::bind("127.0.0.1:0").unwrap();
+    let addr = server.local_addr().unwrap();
+
+    let p = project()
+        .file(
+            "Cargo.toml",
+            r#"
+            [workspace]
+            members = ["root", "proc_macro_dep"]
+        "#,
+        )
+        .file(
+            "root/Cargo.toml",
+            r#"
+            [project]
+            name = "root"
+            version = "0.1.0"
+            authors = []
+
+            [dependencies]
+            proc_macro_dep = { path = "../proc_macro_dep" }
+        "#,
+        )
+        .file(
+            "root/src/lib.rs",
+            r#"
+            #[macro_use]
+            extern crate proc_macro_dep;
+
+            #[derive(Noop)]
+            pub struct X;
+        "#,
+        )
+        .file(
+            "proc_macro_dep/Cargo.toml",
+            r#"
+            [project]
+            name = "proc_macro_dep"
+            version = "0.1.0"
+            authors = []
+
+            [lib]
+            proc-macro = true
+        "#,
+        )
+        .file(
+            "proc_macro_dep/src/lib.rs",
+            &format!(
+                r#"
+                extern crate proc_macro;
+
+                use std::io::Read;
+                use std::net::TcpStream;
+                use proc_macro::TokenStream;
+
+                #[proc_macro_derive(Noop)]
+                pub fn noop(_input: TokenStream) -> TokenStream {{
+                    let mut stream = TcpStream::connect("{}").unwrap();
+                    let mut v = Vec::new();
+                    stream.read_to_end(&mut v).unwrap();
+                    "".parse().unwrap()
+                }}
+            "#,
+                addr
+            ),
+        )
+        .build();
+    let root = p.root();
+
+    let t = thread::spawn(move || {
+        let socket = server.accept().unwrap().0;
+        sleep_ms(1000);
+        let mut file = OpenOptions::new()
+            .write(true)
+            .append(true)
+            .open(root.join("root/src/lib.rs"))
+            .unwrap();
+        writeln!(file, "// modified").expect("Failed to append to root sources");
+        drop(file);
+        drop(socket);
+        drop(server.accept().unwrap());
+    });
+
+    p.cargo("build")
+        .with_stderr(
+            "\
+[COMPILING] proc_macro_dep v0.1.0 ([..]/proc_macro_dep)
+[COMPILING] root v0.1.0 ([..]/root)
+[FINISHED] dev [unoptimized + debuginfo] target(s) in [..]
+",
+        )
+        .run();
+
+    p.cargo("build")
+        .with_stderr(
+            "\
+[COMPILING] root v0.1.0 ([..]/root)
+[FINISHED] dev [unoptimized + debuginfo] target(s) in [..]
+",
+        )
+        .run();
+
+    t.join().ok().unwrap();
 }

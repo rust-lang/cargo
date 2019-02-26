@@ -22,7 +22,7 @@ pub enum EitherManifest {
     Virtual(VirtualManifest),
 }
 
-/// Contains all the information about a package, as loaded from a Cargo.toml.
+/// Contains all the information about a package, as loaded from a `Cargo.toml`.
 #[derive(Clone, Debug)]
 pub struct Manifest {
     summary: Summary,
@@ -66,6 +66,7 @@ pub struct VirtualManifest {
     workspace: WorkspaceConfig,
     profiles: Profiles,
     warnings: Warnings,
+    features: Features,
 }
 
 /// General metadata about a package which is just blindly uploaded to the
@@ -83,11 +84,11 @@ pub struct ManifestMetadata {
     pub categories: Vec<String>,
     pub license: Option<String>,
     pub license_file: Option<String>,
-    pub description: Option<String>,   // not markdown
-    pub readme: Option<String>,        // file, not contents
-    pub homepage: Option<String>,      // url
-    pub repository: Option<String>,    // url
-    pub documentation: Option<String>, // url
+    pub description: Option<String>,   // Not in Markdown
+    pub readme: Option<String>,        // File, not contents
+    pub homepage: Option<String>,      // URL
+    pub repository: Option<String>,    // URL
+    pub documentation: Option<String>, // URL
     pub badges: BTreeMap<String, BTreeMap<String, String>>,
     pub links: Option<String>,
 }
@@ -212,6 +213,7 @@ pub struct Target {
     doctest: bool,
     harness: bool, // whether to use the test harness (--test)
     for_host: bool,
+    proc_macro: bool,
     edition: Edition,
 }
 
@@ -286,7 +288,7 @@ impl ser::Serialize for Target {
             kind: &self.kind,
             crate_types: self.rustc_crate_types(),
             name: &self.name,
-            src_path: src_path,
+            src_path,
             edition: &self.edition.to_string(),
             required_features: self
                 .required_features
@@ -352,6 +354,7 @@ compact_debug! {
                 doctest
                 harness
                 for_host
+                proc_macro
                 edition
             )]
         }
@@ -539,6 +542,7 @@ impl VirtualManifest {
         patch: HashMap<Url, Vec<Dependency>>,
         workspace: WorkspaceConfig,
         profiles: Profiles,
+        features: Features,
     ) -> VirtualManifest {
         VirtualManifest {
             replace,
@@ -546,6 +550,7 @@ impl VirtualManifest {
             workspace,
             profiles,
             warnings: Warnings::new(),
+            features,
         }
     }
 
@@ -572,6 +577,10 @@ impl VirtualManifest {
     pub fn warnings(&self) -> &Warnings {
         &self.warnings
     }
+
+    pub fn features(&self) -> &Features {
+        &self.features
+    }
 }
 
 impl Target {
@@ -585,6 +594,7 @@ impl Target {
             doctest: false,
             harness: true,
             for_host: false,
+            proc_macro: false,
             edition,
             tested: true,
             benched: true,
@@ -735,6 +745,9 @@ impl Target {
     pub fn for_host(&self) -> bool {
         self.for_host
     }
+    pub fn proc_macro(&self) -> bool {
+        self.proc_macro
+    }
     pub fn edition(&self) -> Edition {
         self.edition
     }
@@ -858,6 +871,10 @@ impl Target {
     }
     pub fn set_for_host(&mut self, for_host: bool) -> &mut Target {
         self.for_host = for_host;
+        self
+    }
+    pub fn set_proc_macro(&mut self, proc_macro: bool) -> &mut Target {
+        self.proc_macro = proc_macro;
         self
     }
     pub fn set_edition(&mut self, edition: Edition) -> &mut Target {

@@ -155,8 +155,10 @@ fn broken_fixes_backed_out() {
              and we would appreciate a bug report! You're likely to see \n\
              a number of compiler warnings after this message which cargo\n\
              attempted to fix but failed. If you could open an issue at\n\
-             https://github.com/rust-lang/cargo/issues\n\
+             [..]\n\
              quoting the full output of this command we'd be very appreciative!\n\
+             Note that you may be able to make some more progress in the near-term\n\
+             fixing code with the `--broken-code` flag\n\
              \n\
              The following errors were reported:\n\
              error: expected one of `!` or `::`, found `rust`\n\
@@ -700,11 +702,11 @@ fn fix_features() {
 #[test]
 fn shows_warnings() {
     let p = project()
-        .file("src/lib.rs", "use std::default::Default; pub fn foo() {}")
+        .file("src/lib.rs", "#[deprecated] fn bar() {} pub fn foo() { let _ = bar(); }")
         .build();
 
     p.cargo("fix --allow-no-vcs")
-        .with_stderr_contains("[..]warning: unused import[..]")
+        .with_stderr_contains("[..]warning: use of deprecated item[..]")
         .run();
 }
 
@@ -941,7 +943,6 @@ fn fix_idioms() {
 ";
     p.cargo("fix --edition-idioms --allow-no-vcs")
         .with_stderr(stderr)
-        .with_status(0)
         .run();
 
     assert!(p.read_file("src/lib.rs").contains("Box<dyn Any>"));
@@ -953,7 +954,6 @@ fn idioms_2015_ok() {
 
     p.cargo("fix --edition-idioms --allow-no-vcs")
         .masquerade_as_nightly_cargo()
-        .with_status(0)
         .run();
 }
 
@@ -982,20 +982,22 @@ fn shows_warnings_on_second_run_without_changes() {
         .file(
             "src/lib.rs",
             r#"
-                use std::default::Default;
+                #[deprecated]
+                fn bar() {}
 
                 pub fn foo() {
+                    let _ = bar();
                 }
             "#,
         )
         .build();
 
     p.cargo("fix --allow-no-vcs")
-        .with_stderr_contains("[..]warning: unused import[..]")
+        .with_stderr_contains("[..]warning: use of deprecated item[..]")
         .run();
 
     p.cargo("fix --allow-no-vcs")
-        .with_stderr_contains("[..]warning: unused import[..]")
+        .with_stderr_contains("[..]warning: use of deprecated item[..]")
         .run();
 }
 
@@ -1005,65 +1007,76 @@ fn shows_warnings_on_second_run_without_changes_on_multiple_targets() {
         .file(
             "src/lib.rs",
             r#"
-                use std::default::Default;
+                #[deprecated]
+                fn bar() {}
 
-                pub fn a() -> u32 { 3 }
+                pub fn foo() {
+                    let _ = bar();
+                }
             "#,
         )
         .file(
             "src/main.rs",
             r#"
-                use std::default::Default;
-                fn main() { println!("3"); }
+                #[deprecated]
+                fn bar() {}
+
+                fn main() {
+                    let _ = bar();
+                }
             "#,
         )
         .file(
             "tests/foo.rs",
             r#"
-                use std::default::Default;
+                #[deprecated]
+                fn bar() {}
+
                 #[test]
                 fn foo_test() {
-                    println!("3");
+                    let _ = bar();
                 }
             "#,
         )
         .file(
             "tests/bar.rs",
             r#"
-                use std::default::Default;
+                #[deprecated]
+                fn bar() {}
 
                 #[test]
                 fn foo_test() {
-                    println!("3");
+                    let _ = bar();
                 }
             "#,
         )
         .file(
             "examples/fooxample.rs",
             r#"
-                use std::default::Default;
+                #[deprecated]
+                fn bar() {}
 
                 fn main() {
-                    println!("3");
+                    let _ = bar();
                 }
             "#,
         )
         .build();
 
     p.cargo("fix --allow-no-vcs --all-targets")
-        .with_stderr_contains(" --> examples/fooxample.rs:2:21")
-        .with_stderr_contains(" --> src/lib.rs:2:21")
-        .with_stderr_contains(" --> src/main.rs:2:21")
-        .with_stderr_contains(" --> tests/bar.rs:2:21")
-        .with_stderr_contains(" --> tests/foo.rs:2:21")
+        .with_stderr_contains(" --> examples/fooxample.rs:6:29")
+        .with_stderr_contains(" --> src/lib.rs:6:29")
+        .with_stderr_contains(" --> src/main.rs:6:29")
+        .with_stderr_contains(" --> tests/bar.rs:7:29")
+        .with_stderr_contains(" --> tests/foo.rs:7:29")
         .run();
 
     p.cargo("fix --allow-no-vcs --all-targets")
-        .with_stderr_contains(" --> examples/fooxample.rs:2:21")
-        .with_stderr_contains(" --> src/lib.rs:2:21")
-        .with_stderr_contains(" --> src/main.rs:2:21")
-        .with_stderr_contains(" --> tests/bar.rs:2:21")
-        .with_stderr_contains(" --> tests/foo.rs:2:21")
+        .with_stderr_contains(" --> examples/fooxample.rs:6:29")
+        .with_stderr_contains(" --> src/lib.rs:6:29")
+        .with_stderr_contains(" --> src/main.rs:6:29")
+        .with_stderr_contains(" --> tests/bar.rs:7:29")
+        .with_stderr_contains(" --> tests/foo.rs:7:29")
         .run();
 }
 
@@ -1261,8 +1274,14 @@ fn fix_to_broken_code() {
 fn fix_with_common() {
     let p = project()
         .file("src/lib.rs", "")
-        .file("tests/t1.rs", "mod common; #[test] fn t1() { common::try(); }")
-        .file("tests/t2.rs", "mod common; #[test] fn t2() { common::try(); }")
+        .file(
+            "tests/t1.rs",
+            "mod common; #[test] fn t1() { common::try(); }",
+        )
+        .file(
+            "tests/t2.rs",
+            "mod common; #[test] fn t2() { common::try(); }",
+        )
         .file("tests/common/mod.rs", "pub fn try() {}")
         .build();
 

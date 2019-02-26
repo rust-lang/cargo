@@ -13,7 +13,7 @@ pub use self::hex::{hash_u64, short_hash, to_hex};
 pub use self::lev_distance::lev_distance;
 pub use self::lockserver::{LockServer, LockServerClient, LockServerStarted};
 pub use self::paths::{bytes2path, dylib_path, join_paths, path2bytes};
-pub use self::paths::{dylib_path_envvar, normalize_path, without_prefix};
+pub use self::paths::{dylib_path_envvar, normalize_path};
 pub use self::process_builder::{process, ProcessBuilder};
 pub use self::progress::{Progress, ProgressStyle};
 pub use self::read2::read2;
@@ -22,6 +22,10 @@ pub use self::sha256::Sha256;
 pub use self::to_semver::ToSemver;
 pub use self::to_url::ToUrl;
 pub use self::vcs::{existing_vcs_repo, FossilRepo, GitRepo, HgRepo, PijulRepo};
+pub use self::workspace::{
+    print_available_benches, print_available_binaries, print_available_examples,
+    print_available_tests,
+};
 
 mod cfg;
 pub mod command_prelude;
@@ -49,6 +53,7 @@ pub mod to_semver;
 pub mod to_url;
 pub mod toml;
 mod vcs;
+mod workspace;
 
 pub fn elapsed(duration: Duration) -> String {
     let secs = duration.as_secs();

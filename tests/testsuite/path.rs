@@ -7,8 +7,9 @@ use crate::support::sleep_ms;
 use crate::support::{basic_lib_manifest, basic_manifest, main_file, project};
 
 #[test]
-#[cfg(not(windows))] // I have no idea why this is failing spuriously on
-                     // Windows, for more info see #3466.
+// I have no idea why this is failing spuriously on Windows;
+// for more info, see #3466.
+#[cfg(not(windows))]
 fn cargo_compile_with_nested_deps_shorthand() {
     let p = project()
         .file(
@@ -356,6 +357,7 @@ fn deep_dependencies_trigger_rebuild() {
     //
     // We base recompilation off mtime, so sleep for at least a second to ensure
     // that this write will change the mtime.
+    sleep_ms(1000);
     File::create(&p.root().join("baz/src/baz.rs"))
         .unwrap()
         .write_all(br#"pub fn baz() { println!("hello!"); }"#)
@@ -372,6 +374,7 @@ fn deep_dependencies_trigger_rebuild() {
         .run();
 
     // Make sure an update to bar doesn't trigger baz
+    sleep_ms(1000);
     File::create(&p.root().join("bar/src/bar.rs"))
         .unwrap()
         .write_all(
@@ -979,7 +982,7 @@ fn invalid_path_dep_in_workspace_with_lockfile() {
             "\
 error: no matching package named `bar` found
 location searched: [..]
-did you mean: foo
+perhaps you meant: foo
 required by package `foo v0.5.0 ([..])`
 ",
         )

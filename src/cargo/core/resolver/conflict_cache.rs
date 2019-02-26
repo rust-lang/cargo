@@ -6,13 +6,13 @@ use super::types::ConflictReason;
 use crate::core::resolver::Context;
 use crate::core::{Dependency, PackageId};
 
-/// This is a Trie for storing a large number of Sets designed to
-/// efficiently see if any of the stored Sets are a subset of a search Set.
+/// This is a trie for storing a large number of sets designed to
+/// efficiently see if any of the stored sets are a subset of a search set.
 enum ConflictStoreTrie {
-    /// a Leaf is one of the stored Sets.
+    /// One of the stored sets.
     Leaf(BTreeMap<PackageId, ConflictReason>),
-    /// a Node is a map from an element to a subTrie where
-    /// all the Sets in the subTrie contains that element.
+    /// A map from an element to a subtrie where
+    /// all the sets in the subtrie contains that element.
     Node(BTreeMap<PackageId, ConflictStoreTrie>),
 }
 
@@ -27,12 +27,12 @@ impl ConflictStoreTrie {
         match self {
             ConflictStoreTrie::Leaf(c) => {
                 if must_contain.is_none() {
-                    // is_conflicting checks that all the elements are active,
+                    // `is_conflicting` checks that all the elements are active,
                     // but we have checked each one by the recursion of this function.
                     debug_assert!(cx.is_conflicting(None, c));
                     Some(c)
                 } else {
-                    // we did not find `must_contain` so we need to keep looking.
+                    // We did not find `must_contain`, so we need to keep looking.
                     None
                 }
             }
@@ -41,15 +41,16 @@ impl ConflictStoreTrie {
                     .map(|f| m.range(..=f))
                     .unwrap_or_else(|| m.range(..))
                 {
-                    // if the key is active then we need to check all of the corresponding subTrie.
+                    // If the key is active, then we need to check all of the corresponding subtrie.
                     if cx.is_active(pid) {
                         if let Some(o) =
                             store.find_conflicting(cx, must_contain.filter(|&f| f != pid))
                         {
                             return Some(o);
                         }
-                    } // else, if it is not active then there is no way any of the corresponding
-                      // subTrie will be conflicting.
+                    }
+                    // Else, if it is not active then there is no way any of the corresponding
+                    // subtrie will be conflicting.
                 }
                 None
             }
@@ -66,17 +67,19 @@ impl ConflictStoreTrie {
                 p.entry(pid)
                     .or_insert_with(|| ConflictStoreTrie::Node(BTreeMap::new()))
                     .insert(iter, con);
-            } // else, We already have a subset of this in the ConflictStore
+            }
+            // Else, we already have a subset of this in the `ConflictStore`.
         } else {
-            // we are at the end of the set we are adding, there are 3 cases for what to do next:
-            // 1. self is a empty dummy Node inserted by `or_insert_with`
+            // We are at the end of the set we are adding, there are three cases for what to do
+            // next:
+            // 1. `self` is a empty dummy Node inserted by `or_insert_with`
             //      in witch case we should replace it with `Leaf(con)`.
-            // 2. self is a Node because we previously inserted a superset of
+            // 2. `self` is a `Node` because we previously inserted a superset of
             //      the thing we are working on (I don't know if this happens in practice)
             //      but the subset that we are working on will
             //      always match any time the larger set would have
             //      in witch case we can replace it with `Leaf(con)`.
-            // 3. self is a Leaf that is in the same spot in the structure as
+            // 3. `self` is a `Leaf` that is in the same spot in the structure as
             //      the thing we are working on. So it is equivalent.
             //      We can replace it with `Leaf(con)`.
             if cfg!(debug_assertions) {
@@ -120,7 +123,7 @@ pub(super) struct ConflictCache {
     // look up which entries are still active without
     // linearly scanning through the full list.
     //
-    // Also, as a final note, this map is *not* ever removed from. This remains
+    // Also, as a final note, this map is **not** ever removed from. This remains
     // as a global cache which we never delete from. Any entry in this map is
     // unconditionally true regardless of our resolution history of how we got
     // here.
@@ -166,9 +169,9 @@ impl ConflictCache {
         self.find_conflicting(cx, dep, None)
     }
 
-    /// Add to the cache a conflict of the form:
+    /// Adds to the cache a conflict of the form:
     /// `dep` is known to be unresolvable if
-    /// all the `PackageId` entries are activated
+    /// all the `PackageId` entries are activated.
     pub fn insert(&mut self, dep: &Dependency, con: &BTreeMap<PackageId, ConflictReason>) {
         self.con_from_dep
             .entry(dep.clone())

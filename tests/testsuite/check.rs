@@ -428,6 +428,20 @@ fn check_virtual_all_implied() {
 }
 
 #[test]
+fn exclude_warns_on_non_existing_package() {
+    let p = project().file("src/lib.rs", "").build();
+    p.cargo("check --all --exclude bar")
+        .with_stdout("")
+        .with_stderr(
+            r#"[WARNING] excluded package(s) bar not found in workspace `[CWD]`
+[CHECKING] foo v0.0.1 ([CWD])
+[FINISHED] dev [unoptimized + debuginfo] target(s) in [..]
+"#,
+        )
+        .run();
+}
+
+#[test]
 fn targets_selected_default() {
     let foo = project()
         .file("src/main.rs", "fn main() {}")

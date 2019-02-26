@@ -53,7 +53,7 @@ fn do_read_manifest(
 
     let toml = {
         let pretty_filename =
-            util::without_prefix(manifest_file, config.cwd()).unwrap_or(manifest_file);
+            manifest_file.strip_prefix(config.cwd()).unwrap_or(manifest_file);
         parse(contents, pretty_filename, config)?
     };
 
@@ -132,7 +132,7 @@ pub fn parse(toml: &str, file: &Path, config: &Config) -> CargoResult<toml::Valu
 TOML file found which contains invalid syntax and will soon not parse
 at `{}`.
 
-The TOML spec requires newlines after table definitions (e.g. `[a] b = 1` is
+The TOML spec requires newlines after table definitions (e.g., `[a] b = 1` is
 invalid), but this file has a table header which does not have a newline after
 it. A newline needs to be added and this warning will soon become a hard error
 in the future.",
@@ -152,7 +152,7 @@ type TomlExampleTarget = TomlTarget;
 type TomlTestTarget = TomlTarget;
 type TomlBenchTarget = TomlTarget;
 
-#[derive(Serialize, Debug)]
+#[derive(Clone, Debug, Serialize)]
 #[serde(untagged)]
 pub enum TomlDependency {
     Simple(String),
@@ -614,7 +614,7 @@ impl<'de> de::Deserialize<'de> for VecStringOrBool {
 /// Represents the `package`/`project` sections of a `Cargo.toml`.
 ///
 /// Note that the order of the fields matters, since this is the order they
-/// are serialized to a TOML file.  For example, you cannot have values after
+/// are serialized to a TOML file. For example, you cannot have values after
 /// the field `metadata`, since it is a table and values cannot appear after
 /// tables.
 #[derive(Deserialize, Serialize, Clone, Debug)]
@@ -643,7 +643,7 @@ pub struct TomlProject {
     #[serde(rename = "default-run")]
     default_run: Option<String>,
 
-    // package metadata
+    // Package metadata.
     description: Option<String>,
     homepage: Option<String>,
     documentation: Option<String>,
@@ -803,7 +803,7 @@ impl TomlManifest {
         let mut warnings = vec![];
         let mut errors = vec![];
 
-        // Parse features first so they will be available when parsing other parts of the toml
+        // Parse features first so they will be available when parsing other parts of the TOML.
         let empty = Vec::new();
         let cargo_features = me.cargo_features.as_ref().unwrap_or(&empty);
         let features = Features::new(&cargo_features, &mut warnings)?;
@@ -835,9 +835,9 @@ impl TomlManifest {
             features.require(Feature::metabuild())?;
         }
 
-        // If we have no lib at all, use the inferred lib if available
-        // If we have a lib with a path, we're done
-        // If we have a lib with no path, use the inferred lib or_else package name
+        // If we have no lib at all, use the inferred lib, if available.
+        // If we have a lib with a path, we're done.
+        // If we have a lib with no path, use the inferred lib or else the package name.
         let targets = targets(
             &features,
             me,
@@ -912,7 +912,7 @@ impl TomlManifest {
                 Ok(())
             }
 
-            // Collect the deps
+            // Collect the dependencies.
             process_dependencies(&mut cx, me.dependencies.as_ref(), None)?;
             let dev_deps = me
                 .dev_dependencies
@@ -1007,14 +1007,7 @@ impl TomlManifest {
         };
         let profiles = Profiles::new(me.profile.as_ref(), config, &features, &mut warnings)?;
         let publish = match project.publish {
-            Some(VecStringOrBool::VecString(ref vecstring)) => {
-                features
-                    .require(Feature::alternative_registries())
-                    .chain_err(|| {
-                        "the `publish` manifest key is unstable for anything other than a value of true or false"
-                    })?;
-                Some(vecstring.clone())
-            }
+            Some(VecStringOrBool::VecString(ref vecstring)) => Some(vecstring.clone()),
             Some(VecStringOrBool::Bool(false)) => Some(vec![]),
             None | Some(VecStringOrBool::Bool(true)) => None,
         };
@@ -1156,7 +1149,7 @@ impl TomlManifest {
             }
         };
         Ok((
-            VirtualManifest::new(replace, patch, workspace_config, profiles),
+            VirtualManifest::new(replace, patch, workspace_config, profiles, features),
             nested_paths,
         ))
     }
@@ -1236,13 +1229,14 @@ impl TomlManifest {
     ) -> Option<PathBuf> {
         let build_rs = package_root.join("build.rs");
         match *build {
-            Some(StringOrBool::Bool(false)) => None, // explicitly no build script
+            // Explicitly no build script.
+            Some(StringOrBool::Bool(false)) => None,
             Some(StringOrBool::Bool(true)) => Some(build_rs),
             Some(StringOrBool::String(ref s)) => Some(PathBuf::from(s)),
             None => {
                 match fs::metadata(&build_rs) {
-                    // If there is a build.rs file next to the Cargo.toml, assume it is
-                    // a build script
+                    // If there is a `build.rs` file next to the `Cargo.toml`, assume it is
+                    // a build script.
                     Ok(ref e) if e.is_file() => Some(build_rs),
                     Ok(_) | Err(_) => None,
                 }
@@ -1255,7 +1249,7 @@ impl TomlManifest {
     }
 }
 
-/// Will check a list of build targets, and make sure the target names are unique within a vector.
+/// Checks a list of build targets, and ensures the target names are unique within a vector.
 /// If not, the name of the offending build target is returned.
 fn unique_build_targets(targets: &[Target], package_root: &Path) -> Result<(), String> {
     let mut seen = HashSet::new();
@@ -1379,11 +1373,11 @@ impl DetailedTomlDependency {
             }
             (None, Some(path), _, _) => {
                 cx.nested_paths.push(PathBuf::from(path));
-                // If the source id for the package we're parsing is a path
+                // If the source ID for the package we're parsing is a path
                 // source, then we normalize the path here to get rid of
                 // components like `..`.
                 //
-                // The purpose of this is to get a canonical id for the package
+                // The purpose of this is to get a canonical ID for the package
                 // that we're depending on to ensure that builds of this package
                 // always end up hashing to the same value no matter where it's
                 // built from.
@@ -1422,12 +1416,10 @@ impl DetailedTomlDependency {
             .set_optional(self.optional.unwrap_or(false))
             .set_platform(cx.platform.clone());
         if let Some(registry) = &self.registry {
-            cx.features.require(Feature::alternative_registries())?;
             let registry_id = SourceId::alt_registry(cx.config, registry)?;
             dep.set_registry_id(registry_id);
         }
         if let Some(registry_index) = &self.registry_index {
-            cx.features.require(Feature::alternative_registries())?;
             let url = registry_index.to_url()?;
             let registry_id = SourceId::for_registry(&url)?;
             dep.set_registry_id(registry_id);

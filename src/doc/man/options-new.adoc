@@ -19,8 +19,11 @@
     `cargo-new.vcs`, or `none` if already inside a VCS repository.
 
 *--registry* _REGISTRY_::
-    Alternative registry to use. This sets the `publish` field which will
-    restrict publishing only to the given registry name.
+    This sets the `publish` field in `Cargo.toml` to the given registry name
+    which will restrict publishing only to that registry.
 +
-This option is unstable and available only on the nightly channel and requires
-the `-Z unstable-options` flag to enable.
+Registry names are defined in linkcargo:reference/config.html[Cargo config files].
+If not specified, the default registry defined by the `registry.default`
+config key is used. If the default registry is not set and `--registry` is not
+used, the `publish` field will not be set which means that publishing will not
+be restricted.

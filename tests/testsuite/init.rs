@@ -45,6 +45,47 @@ fn simple_bin() {
 }
 
 #[test]
+fn simple_git_ignore_exists() {
+    // write a .gitignore file with one entry
+    fs::create_dir_all(paths::root().join("foo")).unwrap();
+    let mut ignore_file = File::create(paths::root().join("foo/.gitignore")).unwrap();
+    ignore_file
+        .write("/target\n**/some.file".as_bytes())
+        .unwrap();
+
+    cargo_process("init --lib foo --edition 2015")
+        .env("USER", "foo")
+        .run();
+
+    assert!(paths::root().is_dir());
+    assert!(paths::root().join("foo/Cargo.toml").is_file());
+    assert!(paths::root().join("foo/src/lib.rs").is_file());
+    assert!(paths::root().join("foo/.git").is_dir());
+    assert!(paths::root().join("foo/.gitignore").is_file());
+
+    let fp = paths::root().join("foo/.gitignore");
+    let mut contents = String::new();
+    File::open(&fp)
+        .unwrap()
+        .read_to_string(&mut contents)
+        .unwrap();
+    assert_eq!(
+        contents,
+        "/target\n\
+         **/some.file\n\n\
+         #Added by cargo\n\
+         #\n\
+         #already existing elements are commented out\n\
+         \n\
+         #/target\n\
+         **/*.rs.bk\n\
+         Cargo.lock",
+    );
+
+    cargo_process("build").cwd(&paths::root().join("foo")).run();
+}
+
+#[test]
 fn both_lib_and_bin() {
     cargo_process("init --lib --bin")
         .env("USER", "foo")

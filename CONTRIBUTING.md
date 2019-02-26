@@ -6,7 +6,7 @@ describes the high-level structure of Cargo and [E-easy] bugs on the
 issue tracker.
 
 If you have a general question about Cargo or it's internals, feel free to ask
-on [IRC].
+on [Discord].
 
 ## Code of Conduct
 
@@ -54,7 +54,7 @@ a working solution faster as it can iterate outside of cargo's release cadence.
 If you're looking for somewhere to start, check out the [E-easy][E-Easy] and
 [E-mentor][E-mentor] tags.
 
-Feel free to ask for guidelines on how to tackle a problem on [IRC] or open a
+Feel free to ask for guidelines on how to tackle a problem on [Discord] or open a
 [new issue][new-issues]. This is especially important if you want to add new
 features to Cargo or make large changes to the already existing code-base.
 Cargo's core developers will do their best to provide help.
@@ -86,7 +86,7 @@ working on.
 * Include tests that cover all non-trivial code. The existing tests
 in `test/` provide templates on how to test Cargo's behavior in a
 sandbox-environment. The internal module `testsuite/support` provides a vast amount
-of helpers to minimize boilerplate.  See [`testsuite/support/mod.rs`] for an
+of helpers to minimize boilerplate. See [`testsuite/support/mod.rs`] for an
 introduction to writing tests.
 * Make sure `cargo test` passes. If you do not have the cross-compilers
 installed locally, install them using the instructions returned by
@@ -96,7 +96,7 @@ ignore the cross-compile test failures or disable them by
 using `CFG_DISABLE_CROSS_TESTS=1 cargo test`. Note that some tests are enabled
 only on `nightly` toolchain. If you can, test both toolchains.
 * All code changes are expected to comply with the formatting suggested by `rustfmt`.
-You can use `rustup component add --toolchain nightly rustfmt-preview` to install `rustfmt` and use
+You can use `rustup component add --toolchain nightly rustfmt` to install `rustfmt` and use
 `rustfmt +nightly --unstable-features --skip-children` on the changed files to automatically format your code.
 * Push your commits to GitHub and create a pull request against Cargo's
 `master` branch.
@@ -106,11 +106,11 @@ You can use `rustup component add --toolchain nightly rustfmt-preview` to instal
 After the pull request is made, a friendly bot will automatically assign a
 reviewer; the review-process will make sure that the proposed changes are
 sound. Please give the assigned reviewer sufficient time, especially during
-weekends. If you don't get a reply, you may poke the core developers on [IRC].
+weekends. If you don't get a reply, you may poke the core developers on [Discord].
 
 A merge of Cargo's master-branch and your changes is immediately queued
 to be tested after the pull request is made. In case unforeseen
-problems are discovered during this step (e.g. a failure on a platform you
+problems are discovered during this step (e.g., a failure on a platform you
 originally did not develop on), you may ask for guidance. Push additional
 commits to your branch to tackle these problems.
 
@@ -196,7 +196,7 @@ adding labels to triage issues:
 [E-mentor]: https://github.com/rust-lang/cargo/labels/E-mentor
 [I-nominated]: https://github.com/rust-lang/cargo/labels/I-nominated
 [Code of Conduct]: https://www.rust-lang.org/conduct.html
-[IRC]: https://kiwiirc.com/client/irc.mozilla.org/cargo
+[Discord]: https://discordapp.com/invite/rust-lang
 [`testsuite/support/mod.rs`]: https://github.com/rust-lang/cargo/blob/master/tests/testsuite/support/mod.rs
 [irlo]: https://internals.rust-lang.org/
 [subcommands]: https://doc.rust-lang.org/cargo/reference/external-tools.html#custom-subcommands

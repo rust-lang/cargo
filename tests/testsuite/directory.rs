@@ -189,7 +189,7 @@ error: failed to compile `bar v0.1.0`, intermediate artifacts can be found at `[
 Caused by:
   no matching package named `baz` found
 location searched: registry `https://github.com/rust-lang/crates.io-index`
-did you mean: bar, foo
+perhaps you meant: bar or foo
 required by package `bar v0.1.0`
 ",
         )
@@ -417,7 +417,7 @@ error: checksum for `bar v0.1.0` changed between lock files
 this could be indicative of a few possible errors:
 
     * the lock file is corrupt
-    * a replacement source in use (e.g. a mirror) returned a different checksum
+    * a replacement source in use (e.g., a mirror) returned a different checksum
     * the source itself may be corrupt in one way or another
 
 unable to verify that `bar v0.1.0` is the same as when the lockfile was generated
@@ -713,7 +713,6 @@ fn workspace_different_locations() {
     p.cargo("build").cwd(p.root().join("foo")).run();
     p.cargo("build")
         .cwd(p.root().join("bar"))
-        .with_status(0)
         .with_stderr(
             "\
 [COMPILING] bar [..]

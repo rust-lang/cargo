@@ -186,8 +186,7 @@ fn rename_twice() {
 [UPDATING] `[..]` index
 [DOWNLOADING] crates ...
 [DOWNLOADED] foo v0.1.0 (registry [..])
-error: multiple dependencies listed for the same crate must all have the same \
-name, but the dependency on `foo v0.1.0` is listed as having different names
+error: the crate `test v0.1.0 ([CWD])` depends on crate `foo v0.1.0` multiple times with different names
 ",
         )
         .run();

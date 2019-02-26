@@ -1,14 +1,15 @@
-use crate::support;
 use std::fs::{self, File, OpenOptions};
 use std::io::prelude::*;
 
+use git2;
+
+use crate::support;
 use crate::support::cross_compile;
 use crate::support::git;
 use crate::support::install::{assert_has_installed_exe, assert_has_not_installed_exe, cargo_home};
 use crate::support::paths;
 use crate::support::registry::Package;
 use crate::support::{basic_manifest, cargo_process, project};
-use git2;
 
 fn pkg(name: &str, vers: &str) {
     Package::new(name, vers)
@@ -160,20 +161,27 @@ fn bad_version() {
 }
 
 #[test]
-fn no_crate() {
+fn bad_paths() {
     cargo_process("install")
         .with_status(101)
-        .with_stderr(
-            "\
-[ERROR] `[..]` is not a crate root; specify a crate to install [..]
+        .with_stderr("[ERROR] `[CWD]` is not a crate root; specify a crate to install [..]")
+        .run();
 
-Caused by:
-  failed to read `[..]Cargo.toml`
+    cargo_process("install --path .")
+        .with_status(101)
+        .with_stderr("[ERROR] `[CWD]` does not contain a Cargo.toml file[..]")
+        .run();
 
-Caused by:
-  [..] (os error [..])
-",
-        )
+    let toml = paths::root().join("Cargo.toml");
+    fs::write(toml, "").unwrap();
+    cargo_process("install --path Cargo.toml")
+        .with_status(101)
+        .with_stderr("[ERROR] `[CWD]/Cargo.toml` is not a directory[..]")
+        .run();
+
+    cargo_process("install --path .")
+        .with_status(101)
+        .with_stderr_contains("[ERROR] failed to parse manifest at `[CWD]/Cargo.toml`")
         .run();
 }
 
@@ -609,7 +617,7 @@ fn git_repo() {
         .file("src/main.rs", "fn main() {}")
         .build();
 
-    // use `--locked` to test that we don't even try to write a lockfile
+    // Use `--locked` to test that we don't even try to write a lock file.
     cargo_process("install --locked --git")
         .arg(p.url().to_string())
         .with_stderr(
@@ -689,7 +697,7 @@ Caused by:
 fn uninstall_pkg_does_not_exist() {
     cargo_process("uninstall foo")
         .with_status(101)
-        .with_stderr("[ERROR] package id specification `foo` matched no packages")
+        .with_stderr("[ERROR] package ID specification `foo` matched no packages")
         .run();
 }
 
@@ -729,7 +737,7 @@ fn uninstall_piecemeal() {
 
     cargo_process("uninstall foo")
         .with_status(101)
-        .with_stderr("[ERROR] package id specification `foo` matched no packages")
+        .with_stderr("[ERROR] package ID specification `foo` matched no packages")
         .run();
 }
 
@@ -763,7 +771,7 @@ fn installs_from_cwd_by_default() {
 #[test]
 fn installs_from_cwd_with_2018_warnings() {
     if !support::is_nightly() {
-        // Stable rust won't have the edition option.  Remove this once it
+        // Stable rust won't have the edition option. Remove this once it
         // is stabilized.
         return;
     }
@@ -1146,7 +1154,7 @@ fn uninstall_multiple_and_some_pkg_does_not_exist() {
         .with_stderr(
             "\
 [REMOVING] [CWD]/home/.cargo/bin/foo[EXE]
-error: package id specification `bar` matched no packages
+error: package ID specification `bar` matched no packages
 [SUMMARY] Successfully uninstalled foo! Failed to uninstall bar (see error(s) above).
 error: some packages failed to uninstall
 ",

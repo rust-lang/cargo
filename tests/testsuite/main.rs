@@ -44,6 +44,7 @@ mod git;
 mod init;
 mod install;
 mod jobserver;
+mod list_targets;
 mod local_registry;
 mod lockfile_compat;
 mod login;

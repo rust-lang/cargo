@@ -26,6 +26,9 @@ pub struct PackageOpts<'cfg> {
     pub verify: bool,
     pub jobs: Option<u32>,
     pub target: Option<String>,
+    pub features: Vec<String>,
+    pub all_features: bool,
+    pub no_default_features: bool,
 }
 
 static VCS_INFO_FILE: &'static str = ".cargo_vcs_info.json";
@@ -66,7 +69,7 @@ pub fn package(ws: &Workspace<'_>, opts: &PackageOpts<'_>) -> CargoResult<Option
         let mut list: Vec<_> = src
             .list_files(pkg)?
             .iter()
-            .map(|file| util::without_prefix(file, root).unwrap().to_path_buf())
+            .map(|file| file.strip_prefix(root).unwrap().to_path_buf())
             .collect();
         if include_lockfile(pkg) {
             list.push("Cargo.lock".into());
@@ -116,7 +119,7 @@ fn include_lockfile(pkg: &Package) -> bool {
     pkg.manifest().publish_lockfile() && pkg.targets().iter().any(|t| t.is_example() || t.is_bin())
 }
 
-// check that the package has some piece of metadata that a human can
+// Checks that the package has some piece of metadata that a human can
 // use to tell what the package is about.
 fn check_metadata(pkg: &Package, config: &Config) -> CargoResult<()> {
     let md = pkg.manifest().metadata();
@@ -140,7 +143,7 @@ fn check_metadata(pkg: &Package, config: &Config) -> CargoResult<()> {
 
     if !missing.is_empty() {
         let mut things = missing[..missing.len() - 1].join(", ");
-        // things will be empty if and only if length == 1 (i.e. the only case
+        // `things` will be empty if and only if its length is 1 (i.e., the only case
         // to have no `or`).
         if !things.is_empty() {
             things.push_str(" or ");
@@ -149,14 +152,14 @@ fn check_metadata(pkg: &Package, config: &Config) -> CargoResult<()> {
 
         config.shell().warn(&format!(
             "manifest has no {things}.\n\
-             See http://doc.crates.io/manifest.html#package-metadata for more info.",
+             See <http://doc.crates.io/manifest.html#package-metadata> for more info.",
             things = things
         ))?
     }
     Ok(())
 }
 
-// check that the package dependencies are safe to deploy.
+// Checks that the package dependencies are safe to deploy.
 fn verify_dependencies(pkg: &Package) -> CargoResult<()> {
     for dep in pkg.dependencies() {
         if dep.source_id().is_path() && !dep.specified_req() {
@@ -171,8 +174,8 @@ fn verify_dependencies(pkg: &Package) -> CargoResult<()> {
     Ok(())
 }
 
-// Check if the package source is in a *git* DVCS repository. If *git*, and
-// the source is *dirty* (e.g. has uncommited changes) and not `allow_dirty`
+// Checks if the package source is in a *git* DVCS repository. If *git*, and
+// the source is *dirty* (e.g., has uncommited changes) and not `allow_dirty`
 // then `bail!` with an informative message. Otherwise return the sha1 hash of
 // the current *HEAD* commit, or `None` if *dirty*.
 fn check_repo_state(
@@ -209,8 +212,8 @@ fn check_repo_state(
         })?;
     }
 
-    // No VCS with a checked in Cargo.toml found. so we don't know if the
-    // directory is dirty or not, so we have to assume that it's clean.
+    // No VCS with a checked in `Cargo.toml` found, so we don't know if the
+    // directory is dirty or not, thus we have to assume that it's clean.
     return Ok(None);
 
     fn git(
@@ -255,15 +258,14 @@ fn check_repo_state(
     }
 }
 
-// Check for and `bail!` if a source file matches ROOT/VCS_INFO_FILE, since
-// this is now a cargo reserved file name, and we don't want to allow
-// forgery.
+// Checks for and `bail!` if a source file matches `ROOT/VCS_INFO_FILE`, since
+// this is now a Cargo reserved file name, and we don't want to allow forgery.
 fn check_vcs_file_collision(pkg: &Package, src_files: &[PathBuf]) -> CargoResult<()> {
     let root = pkg.root();
     let vcs_info_path = Path::new(VCS_INFO_FILE);
     let collision = src_files
         .iter()
-        .find(|&p| util::without_prefix(&p, root).unwrap() == vcs_info_path);
+        .find(|&p| p.strip_prefix(root).unwrap() == vcs_info_path);
     if collision.is_some() {
         failure::bail!(
             "Invalid inclusion of reserved file name \
@@ -281,19 +283,19 @@ fn tar(
     dst: &File,
     filename: &str,
 ) -> CargoResult<()> {
-    // Prepare the encoder and its header
+    // Prepare the encoder and its header.
     let filename = Path::new(filename);
     let encoder = GzBuilder::new()
         .filename(util::path2bytes(filename)?)
         .write(dst, Compression::best());
 
-    // Put all package files into a compressed archive
+    // Put all package files into a compressed archive.
     let mut ar = Builder::new(encoder);
     let pkg = ws.current()?;
     let config = ws.config();
     let root = pkg.root();
     for file in src_files.iter() {
-        let relative = util::without_prefix(file, root).unwrap();
+        let relative = file.strip_prefix(root)?;
         check_filename(relative)?;
         let relative = relative.to_str().ok_or_else(|| {
             failure::format_err!("non-utf8 path in source directory: {}", relative.display())
@@ -309,7 +311,7 @@ fn tar(
             relative
         );
 
-        // The tar::Builder type by default will build GNU archives, but
+        // The `tar::Builder` type by default will build GNU archives, but
         // unfortunately we force it here to use UStar archives instead. The
         // UStar format has more limitations on the length of path name that it
         // can encode, so it's not quite as nice to use.
@@ -326,7 +328,7 @@ fn tar(
         //
         // For an instance of this in the wild, use the tar-rs 0.3.3 library to
         // unpack the selectors 0.4.0 crate on crates.io. Either that or take a
-        // look at rust-lang/cargo#2326
+        // look at rust-lang/cargo#2326.
         let mut header = Header::new_ustar();
         header
             .set_path(&path)
@@ -447,9 +449,9 @@ fn run_verify(ws: &Workspace<'_>, tar: &FileLock, opts: &PackageOpts<'_>) -> Car
         &ops::CompileOptions {
             config,
             build_config: BuildConfig::new(config, opts.jobs, &opts.target, CompileMode::Build)?,
-            features: Vec::new(),
-            no_default_features: false,
-            all_features: false,
+            features: opts.features.clone(),
+            no_default_features: opts.no_default_features,
+            all_features: opts.all_features,
             spec: ops::Packages::Packages(Vec::new()),
             filter: ops::CompileFilter::Default {
                 required_features_filterable: true,
@@ -462,7 +464,7 @@ fn run_verify(ws: &Workspace<'_>, tar: &FileLock, opts: &PackageOpts<'_>) -> Car
         &exec,
     )?;
 
-    // Check that build.rs didn't modify any files in the src directory.
+    // Check that `build.rs` didn't modify any files in the `src` directory.
     let ws_fingerprint = src.last_modified_file(ws.current()?)?;
     if pkg_fingerprint != ws_fingerprint {
         let (_, path) = ws_fingerprint;

@@ -1,21 +1,12 @@
 use std::fs::{self, File};
 use std::io::prelude::*;
-use std::path::PathBuf;
 
 use crate::support::cargo_process;
 use crate::support::git;
 use crate::support::paths::{self, CargoPathExt};
-use crate::support::registry::{self, Dependency, Package};
+use crate::support::registry::{self, registry_path, registry_url, Dependency, Package};
 use crate::support::{basic_manifest, project};
 use cargo::util::paths::remove_dir_all;
-use url::Url;
-
-fn registry_path() -> PathBuf {
-    paths::root().join("registry")
-}
-fn registry() -> Url {
-    Url::from_file_path(&*registry_path()).ok().unwrap()
-}
 
 #[test]
 fn simple() {
@@ -47,7 +38,7 @@ fn simple() {
 [COMPILING] foo v0.0.1 ([CWD])
 [FINISHED] dev [unoptimized + debuginfo] target(s) in [..]s
 ",
-            reg = registry::registry_path().to_str().unwrap()
+            reg = registry_path().to_str().unwrap()
         ))
         .run();
 
@@ -98,7 +89,7 @@ fn deps() {
 [COMPILING] foo v0.0.1 ([CWD])
 [FINISHED] dev [unoptimized + debuginfo] target(s) in [..]s
 ",
-            reg = registry::registry_path().to_str().unwrap()
+            reg = registry_path().to_str().unwrap()
         ))
         .run();
 }
@@ -164,7 +155,7 @@ fn wrong_case() {
 [UPDATING] [..] index
 error: no matching package named `Init` found
 location searched: registry [..]
-did you mean: init
+perhaps you meant: init
 required by package `foo v0.0.1 ([..])`
 ",
         )
@@ -199,7 +190,7 @@ fn mis_hyphenated() {
 [UPDATING] [..] index
 error: no matching package named `mis_hyphenated` found
 location searched: registry [..]
-did you mean: mis-hyphenated
+perhaps you meant: mis-hyphenated
 required by package `foo v0.0.1 ([..])`
 ",
         )
@@ -336,7 +327,7 @@ required by package `foo v0.0.1 ([..])`
 [COMPILING] foo v0.0.1 ([CWD])
 [FINISHED] dev [unoptimized + debuginfo] target(s) in [..]s
 ",
-            reg = registry::registry_path().to_str().unwrap()
+            reg = registry_path().to_str().unwrap()
         ))
         .run();
 }
@@ -581,7 +572,7 @@ fn yanks_in_lockfiles_are_ok() {
 
     p.cargo("build").run();
 
-    registry::registry_path().join("3").rm_rf();
+    registry_path().join("3").rm_rf();
 
     Package::new("bar", "0.0.1").yanked(true).publish();
 
@@ -597,6 +588,103 @@ required by package `foo v0.0.1 ([..])`
 ",
         )
         .run();
+}
+
+#[test]
+fn yanks_in_lockfiles_are_ok_for_other_update() {
+    let p = project()
+        .file(
+            "Cargo.toml",
+            r#"
+            [project]
+            name = "foo"
+            version = "0.0.1"
+            authors = []
+
+            [dependencies]
+            bar = "*"
+            baz = "*"
+        "#,
+        )
+        .file("src/main.rs", "fn main() {}")
+        .build();
+
+    Package::new("bar", "0.0.1").publish();
+    Package::new("baz", "0.0.1").publish();
+
+    p.cargo("build").run();
+
+    registry_path().join("3").rm_rf();
+
+    Package::new("bar", "0.0.1").yanked(true).publish();
+    Package::new("baz", "0.0.1").publish();
+
+    p.cargo("build").with_stdout("").run();
+
+    Package::new("baz", "0.0.2").publish();
+
+    p.cargo("update")
+        .with_status(101)
+        .with_stderr_contains(
+            "\
+error: no matching package named `bar` found
+location searched: registry [..]
+required by package `foo v0.0.1 ([..])`
+",
+        )
+        .run();
+
+    p.cargo("update -p baz")
+        .with_stderr_contains(
+            "\
+[UPDATING] `[..]` index
+[UPDATING] baz v0.0.1 -> v0.0.2
+",
+        )
+        .run();
+}
+
+#[test]
+fn yanks_in_lockfiles_are_ok_with_new_dep() {
+    let p = project()
+        .file(
+            "Cargo.toml",
+            r#"
+            [project]
+            name = "foo"
+            version = "0.0.1"
+            authors = []
+
+            [dependencies]
+            bar = "*"
+        "#,
+        )
+        .file("src/main.rs", "fn main() {}")
+        .build();
+
+    Package::new("bar", "0.0.1").publish();
+
+    p.cargo("build").run();
+
+    registry_path().join("3").rm_rf();
+
+    Package::new("bar", "0.0.1").yanked(true).publish();
+    Package::new("baz", "0.0.1").publish();
+
+    t!(t!(File::create(p.root().join("Cargo.toml"))).write_all(
+        br#"
+            [project]
+            name = "foo"
+            version = "0.0.1"
+            authors = []
+
+            [dependencies]
+            bar = "*"
+            baz = "*"
+    "#
+    ));
+
+    p.cargo("build").with_stdout("").run();
 }
 
 #[test]
@@ -806,10 +894,12 @@ fn login_with_no_cargo_dir() {
 fn login_with_differently_sized_token() {
     // Verify that the configuration file gets properly truncated.
     registry::init();
+    let credentials = paths::home().join(".cargo/credentials");
+    fs::remove_file(&credentials).unwrap();
     cargo_process("login lmaolmaolmao -v").run();
     cargo_process("login lmao -v").run();
     cargo_process("login lmaolmaolmao -v").run();
-    let credentials = fs::read_to_string(paths::home().join(".cargo/credentials")).unwrap();
+    let credentials = fs::read_to_string(&credentials).unwrap();
     assert_eq!(credentials, "[registry]\ntoken = \"lmaolmaolmao\"\n");
 }
 
@@ -832,7 +922,7 @@ fn bad_license_file() {
         .file("src/main.rs", "fn main() {}")
         .build();
     p.cargo("publish -v --index")
-        .arg(registry().to_string())
+        .arg(registry_url().to_string())
         .with_status(101)
         .with_stderr_contains("[ERROR] the license file `foo` does not exist")
         .run();

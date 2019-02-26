@@ -2,6 +2,7 @@ use std::collections::BTreeMap;
 use std::env;
 use std::fmt;
 use std::fs;
+use std::io::{BufRead, BufReader, ErrorKind};
 use std::path::{Path, PathBuf};
 
 use git2::Config as GitConfig;
@@ -409,69 +410,116 @@ pub fn init(opts: &NewOptions, config: &Config) -> CargoResult<()> {
     Ok(())
 }
 
-fn mk(config: &Config, opts: &MkOptions<'_>) -> CargoResult<()> {
-    let path = opts.path;
-    let name = opts.name;
-    let cfg = global_config(config)?;
-    // Please ensure that ignore and hgignore are in sync.
-    let ignore = [
-        "/target\n",
-        "**/*.rs.bk\n",
-        if !opts.bin { "Cargo.lock\n" } else { "" },
-    ]
-    .concat();
-    // Mercurial glob ignores can't be rooted, so just sticking a 'syntax: glob' at the top of the
-    // file will exclude too much. Instead, use regexp-based ignores. See 'hg help ignore' for
-    // more.
-    let hgignore = [
-        "^target/\n",
-        "glob:*.rs.bk\n",
-        if !opts.bin { "glob:Cargo.lock\n" } else { "" },
-    ]
-    .concat();
+/// IgnoreList
+struct IgnoreList {
+    /// git like formatted entries
+    ignore: Vec<String>,
+    /// mercurial formatted entries
+    hg_ignore: Vec<String>,
+}
 
-    let vcs = opts.version_control.unwrap_or_else(|| {
-        let in_existing_vcs = existing_vcs_repo(path.parent().unwrap_or(path), config.cwd());
-        match (cfg.version_control, in_existing_vcs) {
-            (None, false) => VersionControl::Git,
-            (Some(opt), false) => opt,
-            (_, true) => VersionControl::NoVcs,
+impl IgnoreList {
+    /// constructor to build a new ignore file
+    fn new() -> IgnoreList {
+        IgnoreList {
+            ignore: Vec::new(),
+            hg_ignore: Vec::new(),
         }
-    });
+    }
 
+    /// add a new entry to the ignore list. Requires two arguments with the
+    /// entry in two different formats. One for "git style" entries and one for
+    /// "mercurial like" entries.
+    fn push(&mut self, ignore: &str, hg_ignore: &str) {
+        self.ignore.push(ignore.to_string());
+        self.hg_ignore.push(hg_ignore.to_string());
+    }
+
+    /// Return the correctly formatted content of the ignore file for the given
+    /// version control system as `String`.
+    fn format_new(&self, vcs: VersionControl) -> String {
+        match vcs {
+            VersionControl::Hg => self.hg_ignore.join("\n"),
+            _ => self.ignore.join("\n"),
+        }
+    }
+
+    /// format_existing is used to format the IgnoreList when the ignore file
+    /// already exists. It reads the contents of the given `BufRead` and
+    /// checks if the contents of the ignore list are already existing in the
+    /// file.
+    fn format_existing<T: BufRead>(&self, existing: T, vcs: VersionControl) -> String {
+        // TODO: is unwrap safe?
+        let existing_items = existing.lines().collect::<Result<Vec<_>, _>>().unwrap();
+
+        let ignore_items = match vcs {
+            VersionControl::Hg => &self.hg_ignore,
+            _ => &self.ignore,
+        };
+
+        let mut out = "\n\n#Added by cargo\n\
+                       #\n\
+                       #already existing elements are commented out\n"
+            .to_string();
+
+        for item in ignore_items {
+            out.push('\n');
+            if existing_items.contains(item) {
+                out.push('#');
+            }
+            out.push_str(item)
+        }
+
+        out
+    }
+}
+
+/// Writes the ignore file to the given directory. If the ignore file for the
+/// given vcs system already exists, its content is read and duplicate ignore
+/// file entries are filtered out.
+fn write_ignore_file(
+    base_path: &Path,
+    list: &IgnoreList,
+    vcs: VersionControl,
+) -> CargoResult<String> {
+    let fp_ignore = match vcs {
+        VersionControl::Git => base_path.join(".gitignore"),
+        VersionControl::Hg => base_path.join(".hgignore"),
+        VersionControl::Pijul => base_path.join(".ignore"),
+        VersionControl::Fossil => return Ok("".to_string()),
+        VersionControl::NoVcs => return Ok("".to_string()),
+    };
+
+    let ignore: String = match fs::File::open(&fp_ignore) {
+        Err(why) => match why.kind() {
+            ErrorKind::NotFound => list.format_new(vcs),
+            _ => return Err(failure::format_err!("{}", why)),
+        },
+        Ok(file) => list.format_existing(BufReader::new(file), vcs),
+    };
+
+    paths::append(&fp_ignore, ignore.as_bytes())?;
+
+    Ok(ignore)
+}
+
+/// Initializes the correct VCS system based on the provided config.
+fn init_vcs(path: &Path, vcs: VersionControl, config: &Config) -> CargoResult<()> {
     match vcs {
         VersionControl::Git => {
             if !path.join(".git").exists() {
                 GitRepo::init(path, config.cwd())?;
             }
-            let ignore = if path.join(".gitignore").exists() {
-                format!("\n{}", ignore)
-            } else {
-                ignore
-            };
-            paths::append(&path.join(".gitignore"), ignore.as_bytes())?;
         }
         VersionControl::Hg => {
             if !path.join(".hg").exists() {
                 HgRepo::init(path, config.cwd())?;
             }
-            let hgignore = if path.join(".hgignore").exists() {
-                format!("\n{}", hgignore)
-            } else {
-                hgignore
-            };
-            paths::append(&path.join(".hgignore"), hgignore.as_bytes())?;
         }
         VersionControl::Pijul => {
             if !path.join(".pijul").exists() {
                 PijulRepo::init(path, config.cwd())?;
             }
-            let ignore = if path.join(".ignore").exists() {
-                format!("\n{}", ignore)
-            } else {
-                ignore
-            };
-            paths::append(&path.join(".ignore"), ignore.as_bytes())?;
         }
         VersionControl::Fossil => {
             if path.join(".fossil").exists() {
@@ -483,8 +531,36 @@ fn mk(config: &Config, opts: &MkOptions<'_>) -> CargoResult<()> {
         }
     };
 
+    Ok(())
+}
+
+fn mk(config: &Config, opts: &MkOptions<'_>) -> CargoResult<()> {
+    let path = opts.path;
+    let name = opts.name;
+    let cfg = global_config(config)?;
+
+    // Using the push method with two arguments ensures that the entries for
+    // both `ignore` and `hgignore` are in sync.
+    let mut ignore = IgnoreList::new();
+    ignore.push("/target", "^target/");
+    ignore.push("**/*.rs.bk", "glob:*.rs.bk\n");
+    if !opts.bin {
+        ignore.push("Cargo.lock", "glob:Cargo.lock");
+    }
+
+    let vcs = opts.version_control.unwrap_or_else(|| {
+        let in_existing_vcs = existing_vcs_repo(path.parent().unwrap_or(path), config.cwd());
+        match (cfg.version_control, in_existing_vcs) {
+            (None, false) => VersionControl::Git,
+            (Some(opt), false) => opt,
+            (_, true) => VersionControl::NoVcs,
+        }
+    });
+
+    init_vcs(path, vcs, config)?;
+    write_ignore_file(path, &ignore, vcs)?;
+
     let (author_name, email) = discover_author()?;
-    // Hoo boy, sure glad we've got exhaustiveness checking behind us.
     let author = match (cfg.name, cfg.email, author_name, email) {
         (Some(name), Some(email), _, _)
         | (Some(name), None, _, Some(email))
@@ -495,7 +571,7 @@ fn mk(config: &Config, opts: &MkOptions<'_>) -> CargoResult<()> {
 
     let mut cargotoml_path_specifier = String::new();
 
-    // Calculate what [lib] and [[bin]]s do we need to append to Cargo.toml
+    // Calculate what `[lib]` and `[[bin]]`s we need to append to `Cargo.toml`.
 
     for i in &opts.source_files {
         if i.bin {
@@ -523,7 +599,7 @@ path = {}
         }
     }
 
-    // Create Cargo.toml file with necessary [lib] and [[bin]] sections, if needed
+    // Create `Cargo.toml` file with necessary `[lib]` and `[[bin]]` sections, if needed.
 
     paths::write(
         &path.join("Cargo.toml"),
@@ -554,9 +630,7 @@ edition = {}
         .as_bytes(),
     )?;
 
-    // Create all specified source files
-    // (with respective parent directories)
-    // if they are don't exist
+    // Create all specified source files (with respective parent directories) if they don't exist.
 
     for i in &opts.source_files {
         let path_of_source_file = path.join(i.relative_path.clone());

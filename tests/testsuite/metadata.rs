@@ -1598,7 +1598,8 @@ fn metadata_links() {
         .build();
 
     p.cargo("metadata")
-        .with_json(r#"
+        .with_json(
+            r#"
 {
   "packages": [
     {
@@ -1664,6 +1665,7 @@ fn metadata_links() {
   ],
   "workspace_root": "[..]/foo"
 }
-"#)
+"#,
+        )
         .run()
 }

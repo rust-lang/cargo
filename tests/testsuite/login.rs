@@ -3,7 +3,7 @@ use std::io::prelude::*;
 
 use crate::support::cargo_process;
 use crate::support::install::cargo_home;
-use crate::support::registry::{self, registry};
+use crate::support::registry::{self, registry_url};
 use cargo::core::Shell;
 use cargo::util::config::Config;
 use toml;
@@ -62,7 +62,7 @@ fn login_with_old_credentials() {
     registry::init();
 
     cargo_process("login --host")
-        .arg(registry().to_string())
+        .arg(registry_url().to_string())
         .arg(TOKEN)
         .run();
 
@@ -76,7 +76,7 @@ fn login_with_new_credentials() {
     setup_new_credentials();
 
     cargo_process("login --host")
-        .arg(registry().to_string())
+        .arg(registry_url().to_string())
         .arg(TOKEN)
         .run();
 
@@ -94,7 +94,7 @@ fn login_with_old_and_new_credentials() {
 fn login_without_credentials() {
     registry::init();
     cargo_process("login --host")
-        .arg(registry().to_string())
+        .arg(registry_url().to_string())
         .arg(TOKEN)
         .run();
 
@@ -108,7 +108,7 @@ fn new_credentials_is_used_instead_old() {
     setup_new_credentials();
 
     cargo_process("login --host")
-        .arg(registry().to_string())
+        .arg(registry_url().to_string())
         .arg(TOKEN)
         .run();
 

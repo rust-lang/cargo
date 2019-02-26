@@ -1,3 +1,4 @@
+use std::collections::HashSet;
 use std::fs::{self, File};
 use std::io::prelude::*;
 use std::path::Path;
@@ -5,7 +6,7 @@ use std::path::Path;
 use crate::support::cargo_process;
 use crate::support::git::repo;
 use crate::support::paths;
-use crate::support::registry::{api_path, registry as registry_url, registry_path};
+use crate::support::registry::{api_path, registry_path, registry_url};
 use url::Url;
 
 fn api() -> Url {
@@ -107,7 +108,7 @@ fn not_update() {
 
     let sid = SourceId::for_registry(&registry_url()).unwrap();
     let cfg = Config::new(Shell::new(), paths::root(), paths::home().join(".cargo"));
-    let mut regsrc = RegistrySource::remote(sid, &cfg);
+    let mut regsrc = RegistrySource::remote(sid, &HashSet::new(), &cfg);
     regsrc.update().unwrap();
 
     cargo_process("search postgres")

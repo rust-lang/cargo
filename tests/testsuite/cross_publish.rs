@@ -1,6 +1,6 @@
 use std::fs::File;
 
-use crate::support::{cross_compile, project, publish};
+use crate::support::{cross_compile, project, publish, registry};
 
 #[test]
 fn simple_cross_package() {
@@ -64,7 +64,7 @@ fn publish_with_target() {
         return;
     }
 
-    publish::setup();
+    registry::init();
 
     let p = project()
         .file(
@@ -96,7 +96,7 @@ fn publish_with_target() {
     let target = cross_compile::alternate();
 
     p.cargo("publish --index")
-        .arg(publish::registry().to_string())
+        .arg(registry::registry_url().to_string())
         .arg("--target")
         .arg(&target)
         .with_stderr(&format!(
@@ -107,7 +107,7 @@ fn publish_with_target() {
     Finished dev [unoptimized + debuginfo] target(s) in [..]
    Uploading foo v0.0.0 ([CWD])
 ",
-            registry = publish::registry_path().to_str().unwrap()
+            registry = registry::registry_path().to_str().unwrap()
         ))
         .run();
 }

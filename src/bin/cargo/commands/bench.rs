@@ -46,14 +46,14 @@ pub fn cli() -> App {
         ))
         .after_help(
             "\
-The benchmark filtering argument `BENCHNAME` and all the arguments following the
+The benchmark filtering argument BENCHNAME and all the arguments following the
 two dashes (`--`) are passed to the benchmark binaries and thus to libtest
-(rustc's built in unit-test and micro-benchmarking framework).  If you're
+(rustc's built in unit-test and micro-benchmarking framework). If you're
 passing arguments to both Cargo and the binary, the ones after `--` go to the
-binary, the ones before go to Cargo.  For details about libtest's arguments see
+binary, the ones before go to Cargo. For details about libtest's arguments see
 the output of `cargo bench -- --help`.
 
-If the --package argument is given, then SPEC is a package id specification
+If the `--package` argument is given, then SPEC is a package ID specification
 which indicates which package should be benchmarked. If it is not given, then
 the current package is benchmarked. For more information on SPEC and its format,
 see the `cargo help pkgid` command.
@@ -62,7 +62,7 @@ All packages in the workspace are benchmarked if the `--all` flag is supplied. T
 `--all` flag is automatically assumed for a virtual manifest.
 Note that `--exclude` has to be specified in conjunction with the `--all` flag.
 
-The --jobs argument affects the building of the benchmark executable but does
+The `--jobs` argument affects the building of the benchmark executable but does
 not affect how many jobs are used when running the benchmarks.
 
 Compilation can be customized with the `bench` profile in the manifest.
@@ -72,7 +72,8 @@ Compilation can be customized with the `bench` profile in the manifest.
 
 pub fn exec(config: &mut Config, args: &ArgMatches<'_>) -> CliResult {
     let ws = args.workspace(config)?;
-    let mut compile_opts = args.compile_options(config, CompileMode::Bench)?;
+    let mut compile_opts = args.compile_options(config, CompileMode::Bench, Some(&ws))?;
+
     compile_opts.build_config.release = true;
 
     let ops = TestOptions {

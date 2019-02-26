@@ -18,6 +18,7 @@ pub fn cli() -> App {
         .arg_target_triple("Build for the target triple")
         .arg_target_dir()
         .arg_manifest_path()
+        .arg_features()
         .arg_jobs()
         .arg_dry_run("Perform all checks without uploading")
         .arg(opt("registry", "Registry to publish to").value_name("REGISTRY"))
@@ -40,6 +41,9 @@ pub fn exec(config: &mut Config, args: &ArgMatches<'_>) -> CliResult {
             jobs: args.jobs()?,
             dry_run: args.is_present("dry-run"),
             registry,
+            features: args._values_of("features"),
+            all_features: args.is_present("all-features"),
+            no_default_features: args.is_present("no-default-features"),
         },
     )?;
     Ok(())

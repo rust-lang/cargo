@@ -198,7 +198,7 @@ fn clean_lib(
 
     // Per the Macros 1.1 RFC:
     //
-    // > Initially if a crate is compiled with the proc-macro crate type
+    // > Initially if a crate is compiled with the `proc-macro` crate type
     // > (and possibly others) it will forbid exporting any items in the
     // > crate other than those functions tagged #[proc_macro_derive] and
     // > those functions must also be placed at the crate root.
@@ -224,7 +224,7 @@ fn clean_lib(
             vec![LibKind::ProcMacro]
         }
         (_, Some(true), Some(true)) => {
-            failure::bail!("lib.plugin and lib.proc-macro cannot both be true")
+            failure::bail!("`lib.plugin` and `lib.proc-macro` cannot both be `true`")
         }
         (Some(kinds), _, _) => kinds.iter().map(|s| s.into()).collect(),
         (None, Some(true), _) => vec![LibKind::Dylib],
@@ -661,7 +661,7 @@ fn toml_targets_and_inferred(
 
             let autodiscover = match autodiscover {
                 Some(autodiscover) => autodiscover,
-                None =>
+                None => {
                     if edition == Edition::Edition2015 {
                         if !rem_targets.is_empty() {
                             let mut rem_targets_str = String::new();
@@ -696,6 +696,7 @@ https://github.com/rust-lang/cargo/issues/5330",
                     } else {
                         true
                     }
+                }
             };
 
             if autodiscover {
@@ -763,6 +764,7 @@ fn configure(features: &Features, toml: &TomlTarget, target: &mut Target) -> Car
         .set_doctest(toml.doctest.unwrap_or_else(|| t2.doctested()))
         .set_benched(toml.bench.unwrap_or_else(|| t2.benched()))
         .set_harness(toml.harness.unwrap_or_else(|| t2.harness()))
+        .set_proc_macro(toml.proc_macro.unwrap_or_else(|| t2.proc_macro()))
         .set_for_host(match (toml.plugin, toml.proc_macro()) {
             (None, None) => t2.for_host(),
             (Some(true), _) | (_, Some(true)) => true,
