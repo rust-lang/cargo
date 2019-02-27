@@ -2714,7 +2714,7 @@ fn failed_submodule_checkout() {
     });
 
     let repo = git2::Repository::open(&git_project2.root()).unwrap();
-    let url = format!("http://{}:{}/", addr.ip(), addr.port());
+    let url = format!("https://{}:{}/", addr.ip(), addr.port());
     {
         let mut s = repo.submodule(&url, Path::new("bar"), false).unwrap();
         let subrepo = s.open().unwrap();

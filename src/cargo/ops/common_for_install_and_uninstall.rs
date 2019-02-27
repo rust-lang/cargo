@@ -90,7 +90,7 @@ where
                                 "the `--vers` provided, `{}`, is \
                                        not a valid semver version requirement\n\n
                                        Please have a look at \
-                                       http://doc.crates.io/specifying-dependencies.html \
+                                       https://doc.rust-lang.org/cargo/reference/specifying-dependencies.html \
                                        for the correct format",
                                 v
                             ),

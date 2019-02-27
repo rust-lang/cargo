@@ -34,7 +34,7 @@ registry at `crates.io`
 | `crates.io/foo`              | `foo` | `*`     | `*://crates.io/foo`    |
 | `crates.io/foo#1.2.3`        | `foo` | `1.2.3` | `*://crates.io/foo`    |
 | `crates.io/bar#foo:1.2.3`    | `foo` | `1.2.3` | `*://crates.io/bar`    |
-| `http://crates.io/foo#1.2.3` | `foo` | `1.2.3` | `http://crates.io/foo` |
+| `https://crates.io/foo#1.2.3`| `foo` | `1.2.3` | `https://crates.io/foo` |
 
 #### Brevity of specifications
 

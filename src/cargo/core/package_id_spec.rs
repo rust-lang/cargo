@@ -35,8 +35,8 @@ impl PackageIdSpec {
     /// use cargo::core::PackageIdSpec;
     ///
     /// let specs = vec![
-    ///     "http://crates.io/foo#1.2.3",
-    ///     "http://crates.io/foo#bar:1.2.3",
+    ///     "https://crates.io/foo#1.2.3",
+    ///     "https://crates.io/foo#bar:1.2.3",
     ///     "crates.io/foo",
     ///     "crates.io/foo#1.2.3",
     ///     "crates.io/foo#bar",
@@ -286,19 +286,19 @@ mod tests {
         }
 
         ok(
-            "http://crates.io/foo#1.2.3",
+            "https://crates.io/foo#1.2.3",
             PackageIdSpec {
                 name: "foo".to_string(),
                 version: Some("1.2.3".to_semver().unwrap()),
-                url: Some(Url::parse("http://crates.io/foo").unwrap()),
+                url: Some(Url::parse("https://crates.io/foo").unwrap()),
             },
         );
         ok(
-            "http://crates.io/foo#bar:1.2.3",
+            "https://crates.io/foo#bar:1.2.3",
             PackageIdSpec {
                 name: "bar".to_string(),
                 version: Some("1.2.3".to_semver().unwrap()),
-                url: Some(Url::parse("http://crates.io/foo").unwrap()),
+                url: Some(Url::parse("https://crates.io/foo").unwrap()),
             },
         );
         ok(
@@ -356,13 +356,13 @@ mod tests {
         assert!(PackageIdSpec::parse("baz:").is_err());
         assert!(PackageIdSpec::parse("baz:*").is_err());
         assert!(PackageIdSpec::parse("baz:1.0").is_err());
-        assert!(PackageIdSpec::parse("http://baz:1.0").is_err());
-        assert!(PackageIdSpec::parse("http://#baz:1.0").is_err());
+        assert!(PackageIdSpec::parse("https://baz:1.0").is_err());
+        assert!(PackageIdSpec::parse("https://#baz:1.0").is_err());
     }
 
     #[test]
     fn matching() {
-        let url = Url::parse("http://example.com").unwrap();
+        let url = Url::parse("https://example.com").unwrap();
         let sid = SourceId::for_registry(&url).unwrap();
         let foo = PackageId::new("foo", "1.2.3", sid).unwrap();
         let bar = PackageId::new("bar", "1.2.3", sid).unwrap();
