@@ -237,7 +237,7 @@ pub fn remove_dep(sum: &Summary, ind: usize) -> Summary {
     Summary::new(
         sum.package_id(),
         deps,
-        &BTreeMap::<String, Vec<String>>::new(),
+        &BTreeMap::<String, (Option<Platform>, Vec<String>)>::new(),
         sum.links().map(|a| a.as_str()),
         sum.namespaced_features(),
     )
