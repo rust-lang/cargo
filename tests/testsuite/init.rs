@@ -8,13 +8,13 @@ use crate::support::{paths, Execs};
 fn cargo_process(s: &str) -> Execs {
     let mut execs = support::cargo_process(s);
     execs.cwd(&paths::root()).env("HOME", &paths::home());
+    execs.env("USER", "foo");
     execs
 }
 
 #[test]
 fn simple_lib() {
     cargo_process("init --lib --vcs none --edition 2015")
-        .env("USER", "foo")
         .with_stderr("[CREATED] library package")
         .run();
 
@@ -30,7 +30,6 @@ fn simple_bin() {
     let path = paths::root().join("foo");
     fs::create_dir(&path).unwrap();
     cargo_process("init --bin --vcs none --edition 2015")
-        .env("USER", "foo")
         .cwd(&path)
         .with_stderr("[CREATED] binary (application) package")
         .run();
@@ -53,9 +52,7 @@ fn simple_git_ignore_exists() {
         .write("/target\n**/some.file".as_bytes())
         .unwrap();
 
-    cargo_process("init --lib foo --edition 2015")
-        .env("USER", "foo")
-        .run();
+    cargo_process("init --lib foo --edition 2015").run();
 
     assert!(paths::root().is_dir());
     assert!(paths::root().join("foo/Cargo.toml").is_file());
@@ -88,7 +85,6 @@ fn simple_git_ignore_exists() {
 #[test]
 fn both_lib_and_bin() {
     cargo_process("init --lib --bin")
-        .env("USER", "foo")
         .with_status(101)
         .with_stderr("[ERROR] can't specify both lib and binary outputs")
         .run();
@@ -112,15 +108,9 @@ fn bin_already_exists(explicit: bool, rellocation: &str) {
         .unwrap();
 
     if explicit {
-        cargo_process("init --bin --vcs none")
-            .env("USER", "foo")
-            .cwd(&path)
-            .run();
+        cargo_process("init --bin --vcs none").cwd(&path).run();
     } else {
-        cargo_process("init --vcs none")
-            .env("USER", "foo")
-            .cwd(&path)
-            .run();
+        cargo_process("init --vcs none").cwd(&path).run();
     }
 
     assert!(paths::root().join("foo/Cargo.toml").is_file());
@@ -184,7 +174,7 @@ fn confused_by_multiple_lib_files() {
         .write_all(br#" fn qqq () { println!("Hello, world 3!"); }"#)
         .unwrap();
 
-    cargo_process("init --vcs none").env("USER", "foo").cwd(&path).with_status(101).with_stderr(
+    cargo_process("init --vcs none").cwd(&path).with_status(101).with_stderr(
             "[ERROR] cannot have a package with multiple libraries, found both `src/lib.rs` and `lib.rs`",
         )
         .run();
@@ -212,7 +202,6 @@ fn multibin_project_name_clash() {
         .unwrap();
 
     cargo_process("init --lib --vcs none")
-        .env("USER", "foo")
         .cwd(&path)
         .with_status(101)
         .with_stderr(
@@ -243,10 +232,7 @@ fn lib_already_exists(rellocation: &str) {
         .write_all(content)
         .unwrap();
 
-    cargo_process("init --vcs none")
-        .env("USER", "foo")
-        .cwd(&path)
-        .run();
+    cargo_process("init --vcs none").cwd(&path).run();
 
     assert!(paths::root().join("foo/Cargo.toml").is_file());
     assert!(!paths::root().join("foo/src/main.rs").is_file());
@@ -272,9 +258,7 @@ fn lib_already_exists_nosrc() {
 
 #[test]
 fn simple_git() {
-    cargo_process("init --lib --vcs git")
-        .env("USER", "foo")
-        .run();
+    cargo_process("init --lib --vcs git").run();
 
     assert!(paths::root().join("Cargo.toml").is_file());
     assert!(paths::root().join("src/lib.rs").is_file());
@@ -284,7 +268,7 @@ fn simple_git() {
 
 #[test]
 fn auto_git() {
-    cargo_process("init --lib").env("USER", "foo").run();
+    cargo_process("init --lib").run();
 
     assert!(paths::root().join("Cargo.toml").is_file());
     assert!(paths::root().join("src/lib.rs").is_file());
@@ -298,7 +282,6 @@ fn invalid_dir_name() {
     fs::create_dir_all(&foo).unwrap();
     cargo_process("init")
         .cwd(foo.clone())
-        .env("USER", "foo")
         .with_status(101)
         .with_stderr(
             "\
@@ -317,7 +300,6 @@ fn reserved_name() {
     fs::create_dir_all(&test).unwrap();
     cargo_process("init")
         .cwd(test.clone())
-        .env("USER", "foo")
         .with_status(101)
         .with_stderr(
             "\
@@ -334,7 +316,7 @@ use --name to override crate name
 fn git_autodetect() {
     fs::create_dir(&paths::root().join(".git")).unwrap();
 
-    cargo_process("init --lib").env("USER", "foo").run();
+    cargo_process("init --lib").run();
 
     assert!(paths::root().join("Cargo.toml").is_file());
     assert!(paths::root().join("src/lib.rs").is_file());
@@ -346,7 +328,7 @@ fn git_autodetect() {
 fn mercurial_autodetect() {
     fs::create_dir(&paths::root().join(".hg")).unwrap();
 
-    cargo_process("init --lib").env("USER", "foo").run();
+    cargo_process("init --lib").run();
 
     assert!(paths::root().join("Cargo.toml").is_file());
     assert!(paths::root().join("src/lib.rs").is_file());
@@ -363,7 +345,7 @@ fn gitignore_appended_not_replaced() {
         .write_all(b"qqqqqq\n")
         .unwrap();
 
-    cargo_process("init --lib").env("USER", "foo").run();
+    cargo_process("init --lib").run();
 
     assert!(paths::root().join("Cargo.toml").is_file());
     assert!(paths::root().join("src/lib.rs").is_file());
@@ -387,7 +369,7 @@ fn gitignore_added_newline_in_existing() {
         .write_all(b"first")
         .unwrap();
 
-    cargo_process("init --lib").env("USER", "foo").run();
+    cargo_process("init --lib").run();
 
     assert!(paths::root().join(".gitignore").is_file());
 
@@ -403,7 +385,7 @@ fn gitignore_added_newline_in_existing() {
 fn gitignore_no_newline_in_new() {
     fs::create_dir(&paths::root().join(".git")).unwrap();
 
-    cargo_process("init --lib").env("USER", "foo").run();
+    cargo_process("init --lib").run();
 
     assert!(paths::root().join(".gitignore").is_file());
 
@@ -424,7 +406,7 @@ fn mercurial_added_newline_in_existing() {
         .write_all(b"first")
         .unwrap();
 
-    cargo_process("init --lib").env("USER", "foo").run();
+    cargo_process("init --lib").run();
 
     assert!(paths::root().join(".hgignore").is_file());
 
@@ -440,7 +422,7 @@ fn mercurial_added_newline_in_existing() {
 fn mercurial_no_newline_in_new() {
     fs::create_dir(&paths::root().join(".hg")).unwrap();
 
-    cargo_process("init --lib").env("USER", "foo").run();
+    cargo_process("init --lib").run();
 
     assert!(paths::root().join(".hgignore").is_file());
 
@@ -456,9 +438,7 @@ fn mercurial_no_newline_in_new() {
 fn cargo_lock_gitignored_if_lib1() {
     fs::create_dir(&paths::root().join(".git")).unwrap();
 
-    cargo_process("init --lib --vcs git")
-        .env("USER", "foo")
-        .run();
+    cargo_process("init --lib --vcs git").run();
 
     assert!(paths::root().join(".gitignore").is_file());
 
@@ -479,7 +459,7 @@ fn cargo_lock_gitignored_if_lib2() {
         .write_all(br#""#)
         .unwrap();
 
-    cargo_process("init --vcs git").env("USER", "foo").run();
+    cargo_process("init --vcs git").run();
 
     assert!(paths::root().join(".gitignore").is_file());
 
@@ -495,9 +475,7 @@ fn cargo_lock_gitignored_if_lib2() {
 fn cargo_lock_not_gitignored_if_bin1() {
     fs::create_dir(&paths::root().join(".git")).unwrap();
 
-    cargo_process("init --vcs git --bin")
-        .env("USER", "foo")
-        .run();
+    cargo_process("init --vcs git --bin").run();
 
     assert!(paths::root().join(".gitignore").is_file());
 
@@ -518,7 +496,7 @@ fn cargo_lock_not_gitignored_if_bin2() {
         .write_all(br#""#)
         .unwrap();
 
-    cargo_process("init --vcs git").env("USER", "foo").run();
+    cargo_process("init --vcs git").run();
 
     assert!(paths::root().join(".gitignore").is_file());
 
@@ -532,9 +510,7 @@ fn cargo_lock_not_gitignored_if_bin2() {
 
 #[test]
 fn with_argument() {
-    cargo_process("init foo --vcs none")
-        .env("USER", "foo")
-        .run();
+    cargo_process("init foo --vcs none").run();
     assert!(paths::root().join("foo/Cargo.toml").is_file());
 }
 
