@@ -12,13 +12,7 @@ pub fn cli() -> App {
 pub fn exec(config: &mut Config, args: &ArgMatches<'_>) -> CliResult {
     let opts = args.new_options(config)?;
 
-    ops::new(&opts, config)?;
-    let path = args.value_of("path").unwrap();
-    let package_name = if let Some(name) = args.value_of("name") {
-        name
-    } else {
-        path
-    };
+    let package_name = ops::new(&opts, config)?;
     config.shell().status(
         "Created",
         format!("{} `{}` package", opts.kind, package_name),

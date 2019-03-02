@@ -299,7 +299,7 @@ fn plan_new_source_file(bin: bool, package_name: String) -> SourceFileInformatio
     }
 }
 
-pub fn new(opts: &NewOptions, config: &Config) -> CargoResult<()> {
+pub fn new<'a>(opts: &'a NewOptions, config: &Config) -> CargoResult<&'a str> {
     let path = &opts.path;
     if fs::metadata(path).is_ok() {
         failure::bail!(
@@ -329,7 +329,7 @@ pub fn new(opts: &NewOptions, config: &Config) -> CargoResult<()> {
             path.display()
         )
     })?;
-    Ok(())
+    Ok(name)
 }
 
 pub fn init(opts: &NewOptions, config: &Config) -> CargoResult<()> {
