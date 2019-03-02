@@ -121,6 +121,12 @@ fn existing() {
 }
 
 #[test]
+fn force() {
+    fs::create_dir(paths::root().join("foo")).unwrap();
+    cargo_process("new --force foo").run();
+}
+
+#[test]
 fn invalid_characters() {
     cargo_process("new foo.rs")
         .with_status(101)

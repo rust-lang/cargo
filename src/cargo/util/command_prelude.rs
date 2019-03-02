@@ -171,6 +171,7 @@ pub trait AppExt: Sized {
             )
             .value_name("NAME"),
         )
+        ._arg(opt("force", "Force initialising over existing files").short("f"))
         ._arg(opt("registry", "Registry to use").value_name("REGISTRY"))
     }
 
@@ -381,6 +382,7 @@ pub trait ArgMatchesExt {
             self.value_of_path("path", config).unwrap(),
             self._value_of("name").map(|s| s.to_string()),
             self._value_of("edition").map(|s| s.to_string()),
+            self._is_present("force"),
             self.registry(config)?,
         )
     }

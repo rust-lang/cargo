@@ -32,6 +32,7 @@ pub struct NewOptions {
     pub path: PathBuf,
     pub name: Option<String>,
     pub edition: Option<String>,
+    pub force: bool,
     pub registry: Option<String>,
 }
 
@@ -81,6 +82,7 @@ impl NewOptions {
         path: PathBuf,
         name: Option<String>,
         edition: Option<String>,
+        force: bool,
         registry: Option<String>,
     ) -> CargoResult<NewOptions> {
         let kind = match (bin, lib) {
@@ -96,6 +98,7 @@ impl NewOptions {
             path,
             name,
             edition,
+            force,
             registry,
         };
         Ok(opts)
@@ -301,7 +304,7 @@ fn plan_new_source_file(bin: bool, package_name: String) -> SourceFileInformatio
 
 pub fn new<'a>(opts: &'a NewOptions, config: &Config) -> CargoResult<&'a str> {
     let path = &opts.path;
-    if fs::metadata(path).is_ok() {
+    if fs::metadata(path).is_ok() && !opts.force {
         failure::bail!(
             "destination `{}` already exists\n\n\
              Use `cargo init` to initialize the directory",
@@ -335,7 +338,7 @@ pub fn new<'a>(opts: &'a NewOptions, config: &Config) -> CargoResult<&'a str> {
 pub fn init(opts: &NewOptions, config: &Config) -> CargoResult<()> {
     let path = &opts.path;
 
-    if fs::metadata(&path.join("Cargo.toml")).is_ok() {
+    if fs::metadata(&path.join("Cargo.toml")).is_ok() && !opts.force {
         failure::bail!("`cargo init` cannot be run on existing Cargo packages")
     }
 

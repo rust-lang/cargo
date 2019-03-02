@@ -277,6 +277,16 @@ fn auto_git() {
 }
 
 #[test]
+fn force() {
+    cargo_process("init").run();
+    cargo_process("init")
+        .with_status(101)
+        .with_stderr("[ERROR] `cargo init` cannot be run on existing Cargo packages")
+        .run();
+    cargo_process("init --force").run();
+}
+
+#[test]
 fn invalid_dir_name() {
     let foo = &paths::root().join("foo.bar");
     fs::create_dir_all(&foo).unwrap();
