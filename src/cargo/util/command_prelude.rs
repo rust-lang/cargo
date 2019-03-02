@@ -171,6 +171,7 @@ pub trait AppExt: Sized {
             )
             .value_name("NAME"),
         )
+        ._arg(opt("registry", "Registry to use").value_name("REGISTRY"))
     }
 
     fn arg_index(self) -> Self {
