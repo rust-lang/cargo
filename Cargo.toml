@@ -1,6 +1,6 @@
 [package]
 name = "cargo"
-version = "0.35.0"
+version = "0.36.0"
 edition = "2018"
 authors = ["Yehuda Katz <wycats@gmail.com>",
            "Carl Lerche <me@carllerche.com>",
@@ -21,7 +21,7 @@ path = "src/cargo/lib.rs"
 atty = "0.2"
 byteorder = "1.2"
 bytesize = "1.0"
-crates-io = { path = "src/crates-io", version = "0.23" }
+crates-io = { path = "src/crates-io", version = "0.24" }
 crossbeam-utils = "0.6"
 crypto-hash = "0.3.1"
 curl = { version = "0.4.19", features = ['http2'] }
