@@ -64,7 +64,7 @@ impl ConflictStoreTrie {
                     .or_insert_with(|| ConflictStoreTrie::Node(BTreeMap::new()))
                     .insert(iter, con);
             }
-            // Else, we already have a subset of this in the `ConflictStore`.
+        // Else, we already have a subset of this in the `ConflictStore`.
         } else {
             // We are at the end of the set we are adding, there are three cases for what to do
             // next:

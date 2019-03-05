@@ -127,20 +127,14 @@ pub fn resolve(
     print_warnings: bool,
     check_public_visible_dependencies: bool,
 ) -> CargoResult<Resolve> {
-    let cx = Context::new();
+    let cx = Context::new(check_public_visible_dependencies);
     let _p = profile::start("resolving");
     let minimal_versions = match config {
         Some(config) => config.cli_unstable().minimal_versions,
         None => false,
     };
     let mut registry = RegistryQueryer::new(registry, replacements, try_to_use, minimal_versions);
-    let cx = activate_deps_loop(
-        cx,
-        &mut registry,
-        summaries,
-        config,
-        check_public_visible_dependencies,
-    )?;
+    let cx = activate_deps_loop(cx, &mut registry, summaries, config)?;
 
     let mut cksums = HashMap::new();
     for summary in cx.activations.values().flat_map(|v| v.iter()) {
@@ -188,7 +182,6 @@ fn activate_deps_loop(
     registry: &mut RegistryQueryer<'_>,
     summaries: &[(Summary, Method<'_>)],
     config: Option<&Config>,
-    check_public_visible_dependencies: bool,
 ) -> CargoResult<Context> {
     let mut backtrack_stack = Vec::new();
     let mut remaining_deps = RemainingDeps::new();
@@ -204,14 +197,7 @@ fn activate_deps_loop(
             summary: summary.clone(),
             replace: None,
         };
-        let res = activate(
-            &mut cx,
-            registry,
-            None,
-            candidate,
-            method,
-            check_public_visible_dependencies,
-        );
+        let res = activate(&mut cx, registry, None, candidate, method);
         match res {
             Ok(Some((frame, _))) => remaining_deps.push(frame),
             Ok(None) => (),
@@ -288,7 +274,6 @@ fn activate_deps_loop(
                 &cx,
                 &dep,
                 parent.package_id(),
-                check_public_visible_dependencies,
             );
 
             let (candidate, has_another) = next.ok_or(()).or_else(|_| {
@@ -328,7 +313,6 @@ fn activate_deps_loop(
                     &parent,
                     backtracked,
                     &conflicting_activations,
-                    check_public_visible_dependencies,
                 ) {
                     Some((candidate, has_another, frame)) => {
                         // Reset all of our local variables used with the
@@ -405,14 +389,7 @@ fn activate_deps_loop(
                 dep.package_name(),
                 candidate.summary.version()
             );
-            let res = activate(
-                &mut cx,
-                registry,
-                Some((&parent, &dep)),
-                candidate,
-                &method,
-                check_public_visible_dependencies,
-            );
+            let res = activate(&mut cx, registry, Some((&parent, &dep)), candidate, &method);
 
             let successfully_activated = match res {
                 // Success! We've now activated our `candidate` in our context
@@ -527,7 +504,6 @@ fn activate_deps_loop(
                                 &parent,
                                 backtracked,
                                 &conflicting_activations,
-                                check_public_visible_dependencies,
                             )
                             .is_none()
                         }
@@ -625,7 +601,6 @@ fn activate(
     parent: Option<(&Summary, &Dependency)>,
     candidate: Candidate,
     method: &Method<'_>,
-    check_public_visible_dependencies: bool,
 ) -> ActivateResult<Option<(DepsFrame, Duration)>> {
     let candidate_pid = candidate.summary.package_id();
     if let Some((parent, dep)) = parent {
@@ -638,13 +613,12 @@ fn activate(
         )
         // and associate dep with that edge
         .push(dep.clone());
-        if check_public_visible_dependencies {
+        if let Some(public_dependency) = cx.public_dependency.as_mut() {
             // one tricky part is that `candidate_pid` may already be active and
             // have public dependencies of its own. So we not only need to mark
             // `candidate_pid` as visible to its parents but also all of its existing
             // public dependencies.
-            let existing_public_deps: Vec<PackageId> = cx
-                .public_dependency
+            let existing_public_deps: Vec<PackageId> = public_dependency
                 .get(&candidate_pid)
                 .iter()
                 .flat_map(|x| x.values())
@@ -656,7 +630,7 @@ fn activate(
                 // for each (transitive) parent that can newly see `t`
                 let mut stack = vec![(parent_pid, dep.is_public())];
                 while let Some((p, public)) = stack.pop() {
-                    match cx.public_dependency.entry(p).or_default().entry(c.name()) {
+                    match public_dependency.entry(p).or_default().entry(c.name()) {
                         im_rc::hashmap::Entry::Occupied(mut o) => {
                             // the (transitive) parent can already see something by `c`s name, it had better be `c`.
                             assert_eq!(o.get().0, c);
@@ -784,7 +758,6 @@ impl RemainingCandidates {
         cx: &Context,
         dep: &Dependency,
         parent: PackageId,
-        check_public_visible_dependencies: bool,
     ) -> Option<(Candidate, bool)> {
         let prev_active = cx.prev_active(dep);
 
@@ -828,9 +801,8 @@ impl RemainingCandidates {
             // we have to reject this candidate. Additionally this candidate may already have been
             // activated and have public dependants of its own,
             // all of witch also need to be checked the same way.
-            if check_public_visible_dependencies {
-                let existing_public_deps: Vec<PackageId> = cx
-                    .public_dependency
+            if let Some(public_dependency) = cx.public_dependency.as_ref() {
+                let existing_public_deps: Vec<PackageId> = public_dependency
                     .get(&b.summary.package_id())
                     .iter()
                     .flat_map(|x| x.values())
@@ -843,8 +815,7 @@ impl RemainingCandidates {
                     let mut stack = vec![(parent, dep.is_public())];
                     while let Some((p, public)) = stack.pop() {
                         // TODO: dont look at the same thing more then once
-                        if let Some(o) = cx.public_dependency.get(&p).and_then(|x| x.get(&t.name()))
-                        {
+                        if let Some(o) = public_dependency.get(&p).and_then(|x| x.get(&t.name())) {
                             if o.0 != t {
                                 // the (transitive) parent can already see a different version by `t`s name.
                                 // So, adding `b` will cause `p` to have a public dependency conflict on `t`.
@@ -915,7 +886,6 @@ fn find_candidate(
     parent: &Summary,
     backtracked: bool,
     conflicting_activations: &ConflictMap,
-    check_public_visible_dependencies: bool,
 ) -> Option<(Candidate, bool, BacktrackFrame)> {
     while let Some(mut frame) = backtrack_stack.pop() {
         let next = frame.remaining_candidates.next(
@@ -923,7 +893,6 @@ fn find_candidate(
             &frame.context,
             &frame.dep,
             frame.parent.package_id(),
-            check_public_visible_dependencies,
         );
         let (candidate, has_another) = match next {
             Some(pair) => pair,

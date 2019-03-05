@@ -34,7 +34,7 @@ pub struct Context {
     /// for each package the list of names it can see,
     /// then for each name the exact version that name represents and weather the name is public.
     pub public_dependency:
-        im_rc::HashMap<PackageId, im_rc::HashMap<InternedString, (PackageId, bool)>>,
+        Option<im_rc::HashMap<PackageId, im_rc::HashMap<InternedString, (PackageId, bool)>>>,
 
     // This is somewhat redundant with the `resolve_graph` that stores the same data,
     //   but for querying in the opposite order.
@@ -56,12 +56,16 @@ pub struct Context {
 pub type Activations = im_rc::HashMap<(InternedString, SourceId), Rc<Vec<Summary>>>;
 
 impl Context {
-    pub fn new() -> Context {
+    pub fn new(check_public_visible_dependencies: bool) -> Context {
         Context {
             resolve_graph: RcList::new(),
             resolve_features: im_rc::HashMap::new(),
             links: im_rc::HashMap::new(),
-            public_dependency: im_rc::HashMap::new(),
+            public_dependency: if check_public_visible_dependencies {
+                Some(im_rc::HashMap::new())
+            } else {
+                None
+            },
             parents: Graph::new(),
             resolve_replacements: RcList::new(),
             activations: im_rc::HashMap::new(),
