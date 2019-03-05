@@ -1233,7 +1233,7 @@ fn workspace_with_transitive_dev_deps() {
 }
 
 #[test]
-fn error_if_parent_cargo_toml_is_invalid() {
+fn warn_if_parent_cargo_toml_is_invalid() {
     let p = project()
         .file("Cargo.toml", "Totally not a TOML file")
         .file("bar/Cargo.toml", &basic_manifest("bar", "0.1.0"))
@@ -1242,8 +1242,7 @@ fn error_if_parent_cargo_toml_is_invalid() {
 
     p.cargo("build")
         .cwd(p.root().join("bar"))
-        .with_status(101)
-        .with_stderr_contains("[ERROR] failed to parse manifest at `[..]`")
+        .with_stderr_contains("[WARNING] Ignoring [..]foo/Cargo.toml[..]")
         .run();
 }
 

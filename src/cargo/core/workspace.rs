@@ -370,21 +370,28 @@ impl<'cfg> Workspace<'cfg> {
             let ances_manifest_path = path.join("Cargo.toml");
             debug!("find_root - trying {}", ances_manifest_path.display());
             if ances_manifest_path.exists() {
-                match *self.packages.load(&ances_manifest_path)?.workspace_config() {
-                    WorkspaceConfig::Root(ref ances_root_config) => {
+                match self.packages.load(&ances_manifest_path).map(|p| p.workspace_config()) {
+                    Ok(WorkspaceConfig::Root(ref ances_root_config)) => {
                         debug!("find_root - found a root checking exclusion");
                         if !ances_root_config.is_excluded(manifest_path) {
                             debug!("find_root - found!");
                             return Ok(Some(ances_manifest_path));
                         }
                     }
-                    WorkspaceConfig::Member {
+                    Ok(WorkspaceConfig::Member {
                         root: Some(ref path_to_root),
-                    } => {
+                    }) => {
                         debug!("find_root - found pointer");
                         return Ok(Some(read_root_pointer(&ances_manifest_path, path_to_root)?));
                     }
-                    WorkspaceConfig::Member { .. } => {}
+                    Ok(WorkspaceConfig::Member { .. }) => {},
+                    Err(e) => {
+                        let msg = format!("Ignoring possible workspace-root \
+                                         at `{}` because of error `{}`.",
+                                         ances_manifest_path.display(),
+                                         e);
+                        self.config.shell().warn(&msg)?;
+                    }
                 }
             }
 
