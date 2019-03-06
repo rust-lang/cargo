@@ -1372,7 +1372,7 @@ fn doc_message_format() {
 
     p.cargo("doc --message-format=json")
         .with_status(101)
-        .with_json(
+        .with_json_contains_unordered(
             r#"
             {
                 "message": {
@@ -1402,10 +1402,7 @@ fn short_message_format() {
     p.cargo("doc --message-format=short")
         .with_status(101)
         .with_stderr_contains(
-            "\
-src/lib.rs:4:6: error: `[bad_link]` cannot be resolved, ignoring it...
-error: Could not document `foo`.
-",
+            "src/lib.rs:4:6: error: `[bad_link]` cannot be resolved, ignoring it...",
         )
         .run();
 }
