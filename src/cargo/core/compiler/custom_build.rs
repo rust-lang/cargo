@@ -132,6 +132,7 @@ fn build_work<'a, 'cfg>(cx: &mut Context<'a, 'cfg>, unit: &Unit<'a>) -> CargoRes
         .expect("running a script not depending on an actual script");
     let script_dir = cx.files().build_script_dir(build_script_unit);
     let script_out_dir = cx.files().build_script_out_dir(unit);
+    let script_run_dir = cx.files().build_script_run_dir(unit);
     let build_plan = bcx.build_config.build_plan;
     let invocation_name = unit.buildkey();
 
@@ -241,13 +242,9 @@ fn build_work<'a, 'cfg>(cx: &mut Context<'a, 'cfg>, unit: &Unit<'a>) -> CargoRes
     let pkg_name = unit.pkg.to_string();
     let build_state = Arc::clone(&cx.build_state);
     let id = unit.pkg.package_id();
-    let (output_file, err_file, root_output_file) = {
-        let build_output_parent = script_out_dir.parent().unwrap();
-        let output_file = build_output_parent.join("output");
-        let err_file = build_output_parent.join("stderr");
-        let root_output_file = build_output_parent.join("root-output");
-        (output_file, err_file, root_output_file)
-    };
+    let output_file = script_run_dir.join("output");
+    let err_file = script_run_dir.join("stderr");
+    let root_output_file = script_run_dir.join("root-output");
     let host_target_root = cx.files().target_root().to_path_buf();
     let all = (
         id,
@@ -332,7 +329,7 @@ fn build_work<'a, 'cfg>(cx: &mut Context<'a, 'cfg>, unit: &Unit<'a>) -> CargoRes
             state.build_plan(invocation_name, cmd.clone(), Arc::new(Vec::new()));
         } else {
             state.running(&cmd);
-            let timestamp = paths::get_current_filesystem_time(&output_file)?;
+            let timestamp = paths::set_invocation_time(&script_run_dir)?;
             let output = if extra_verbose {
                 let prefix = format!("[{} {}] ", id.name(), id.version());
                 state.capture_output(&cmd, Some(prefix), true)
