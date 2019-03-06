@@ -186,7 +186,8 @@ impl<'a, 'cfg: 'a> CompilationFiles<'a, 'cfg> {
         self.layout(unit.kind).fingerprint().join(dir)
     }
 
-    /// Returns the appropriate directory layout for either a plugin or not.
+    /// Returns the directory where a compiled build script is stored.
+    /// `/path/to/target/{debug,release}/build/PKG-HASH`
     pub fn build_script_dir(&self, unit: &Unit<'a>) -> PathBuf {
         assert!(unit.target.is_custom_build());
         assert!(!unit.mode.is_run_custom_build());
@@ -194,12 +195,20 @@ impl<'a, 'cfg: 'a> CompilationFiles<'a, 'cfg> {
         self.layout(Kind::Host).build().join(dir)
     }
 
-    /// Returns the appropriate directory layout for either a plugin or not.
-    pub fn build_script_out_dir(&self, unit: &Unit<'a>) -> PathBuf {
+    /// Returns the directory where information about running a build script
+    /// is stored.
+    /// `/path/to/target/{debug,release}/build/PKG-HASH`
+    pub fn build_script_run_dir(&self, unit: &Unit<'a>) -> PathBuf {
         assert!(unit.target.is_custom_build());
         assert!(unit.mode.is_run_custom_build());
         let dir = self.pkg_dir(unit);
-        self.layout(unit.kind).build().join(dir).join("out")
+        self.layout(unit.kind).build().join(dir)
+    }
+
+    /// Returns the "OUT_DIR" directory for running a build script.
+    /// `/path/to/target/{debug,release}/build/PKG-HASH/out`
+    pub fn build_script_out_dir(&self, unit: &Unit<'a>) -> PathBuf {
+        self.build_script_run_dir(unit).join("out")
     }
 
     /// Returns the file stem for a given target/profile combo (with metadata).
