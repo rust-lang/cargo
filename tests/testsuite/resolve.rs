@@ -7,8 +7,8 @@ use cargo::util::Config;
 use crate::support::project;
 use crate::support::registry::Package;
 use crate::support::resolver::{
-    assert_contains, assert_same, dep, dep_kind, dep_loc, dep_req, loc_names, names, pkg, pkg_dep,
-    pkg_id, pkg_loc, registry, registry_strategy, remove_dep, resolve, resolve_and_validated,
+    assert_contains, assert_same, dep, dep_kind, dep_loc, dep_req, dep_req_kind, loc_names, names,
+    pkg, pkg_dep, pkg_id, pkg_loc, registry, registry_strategy, remove_dep, resolve, resolve_and_validated,
     resolve_with_config, PrettyPrintRegistry, ToDep, ToPkgId,
 };
 
@@ -233,6 +233,136 @@ proptest! {
             }
         }
     }
+}
+
+#[test]
+fn basic_public_dependency() {
+    let reg = registry(vec![
+        pkg!(("A", "0.1.0")),
+        pkg!(("A", "0.2.0")),
+        pkg!("B" => [dep_req_kind("A", "0.1", Kind::Normal, true)]),
+        pkg!("C" => [dep("A"), dep("B")]),
+    ]);
+
+    let res = resolve_and_validated(&pkg_id("root"), vec![dep("C")], &reg).unwrap();
+    assert_same(
+        &res,
+        &names(&[
+            ("root", "1.0.0"),
+            ("C", "1.0.0"),
+            ("B", "1.0.0"),
+            ("A", "0.1.0"),
+        ]),
+    );
+}
+
+#[test]
+fn public_dependency_filling_in() {
+    // The resolver has an optimization where if a candidate to resolve a dependency
+    // has already bean activated then we skip looking at the candidates dependencies.
+    // However, we have to be careful as the new path may make pub dependencies invalid.
+
+    // Triggering this case requires dependencies to be resolved in a specific order.
+    // Fuzzing found this unintuitive case, that triggers this unfortunate order of operations:
+    // 1. `d`'s dep on `c` is resolved
+    // 2. `d`'s dep on `a` is resolved with `0.1.1`
+    // 3. `c`'s dep on `b` is resolved with `0.0.2`
+    // 4. `b`'s dep on `a` is resolved with `0.0.6` no pub dev conflict as `b` is private to `c`
+    // 5. `d`'s dep on `b` is resolved with `0.0.2` triggering the optimization.
+    // Do we notice that `d` has a pub dep conflict on `a`? Lets try it and see.
+    let reg = registry(vec![
+        pkg!(("a", "0.0.6")),
+        pkg!(("a", "0.1.1")),
+        pkg!(("b", "0.0.0") => [dep("bad")]),
+        pkg!(("b", "0.0.1") => [dep("bad")]),
+        pkg!(("b", "0.0.2") => [dep_req_kind("a", "=0.0.6", Kind::Normal, true)]),
+        pkg!("c" => [dep_req("b", ">=0.0.1")]),
+        pkg!("d" => [dep("c"), dep("a"), dep("b")]),
+    ]);
+
+    let res = resolve_and_validated(&pkg_id("root"), vec![dep("d")], &reg).unwrap();
+    assert_same(
+        &res,
+        &names(&[
+            ("root", "1.0.0"),
+            ("d", "1.0.0"),
+            ("c", "1.0.0"),
+            ("b", "0.0.2"),
+            ("a", "0.0.6"),
+        ]),
+    );
+}
+
+#[test]
+fn public_dependency_filling_in_and_update() {
+    // The resolver has an optimization where if a candidate to resolve a dependency
+    // has already bean activated then we skip looking at the candidates dependencies.
+    // However, we have to be careful as the new path may make pub dependencies invalid.
+
+    // Triggering this case requires dependencies to be resolved in a specific order.
+    // Fuzzing found this unintuitive case, that triggers this unfortunate order of operations:
+    // 1. `D`'s dep on `B` is resolved
+    // 2. `D`'s dep on `C` is resolved
+    // 3. `B`'s dep on `A` is resolved with `0.0.0`
+    // 4. `C`'s dep on `B` triggering the optimization.
+    // So did we add `A 0.0.0` to the deps `C` can see?
+    // Or are we going to  resolve `C`'s dep on `A` with `0.0.2`?
+    // Lets try it and see.
+    let reg = registry(vec![
+        pkg!(("A", "0.0.0")),
+        pkg!(("A", "0.0.2")),
+        pkg!("B" => [dep_req_kind("A", "=0.0.0", Kind::Normal, true),]),
+        pkg!("C" => [dep("A"),dep("B")]),
+        pkg!("D" => [dep("B"),dep("C")]),
+    ]);
+    let res = resolve_and_validated(&pkg_id("root"), vec![dep("D")], &reg).unwrap();
+    assert_same(
+        &res,
+        &names(&[
+            ("root", "1.0.0"),
+            ("D", "1.0.0"),
+            ("C", "1.0.0"),
+            ("B", "1.0.0"),
+            ("A", "0.0.0"),
+        ]),
+    );
+}
+
+#[test]
+fn public_dependency_skiping() {
+    // When backtracking due to a failed dependency, if Cargo is
+    // trying to be clever and skip irrelevant dependencies, care must
+    // the effects of pub dep must be accounted for.
+    let input = vec![
+        pkg!(("a", "0.2.0")),
+        pkg!(("a", "2.0.0")),
+        pkg!(("b", "0.0.0") => [dep("bad")]),
+        pkg!(("b", "0.2.1") => [dep_req_kind("a", "0.2.0", Kind::Normal, true)]),
+        pkg!("c" => [dep("a"),dep("b")]),
+    ];
+    let reg = registry(input.clone());
+
+    resolve(&pkg_id("root"), vec![dep("c")], &reg).unwrap();
+}
+
+#[test]
+fn public_dependency_skiping_in_backtracking() {
+    // When backtracking due to a failed dependency, if Cargo is
+    // trying to be clever and skip irrelevant dependencies, care must
+    // the effects of pub dep must be accounted for.
+    let input = vec![
+        pkg!(("A", "0.0.0") => [dep("bad")]),
+        pkg!(("A", "0.0.1") => [dep("bad")]),
+        pkg!(("A", "0.0.2") => [dep("bad")]),
+        pkg!(("A", "0.0.3") => [dep("bad")]),
+        pkg!(("A", "0.0.4")),
+        pkg!(("A", "0.0.5")),
+        pkg!("B" => [dep_req_kind("A", ">= 0.0.3", Kind::Normal, true)]),
+        pkg!("C" => [dep_req("A", "<= 0.0.4"), dep("B")]),
+    ];
+    let reg = registry(input.clone());
+
+    resolve(&pkg_id("root"), vec![dep("C")], &reg).unwrap();
 }
 
 #[test]

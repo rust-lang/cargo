@@ -62,7 +62,7 @@ use crate::util::errors::CargoResult;
 use crate::util::profile;
 
 use self::context::{Activations, Context};
-use self::types::{Candidate, ConflictReason, DepsFrame, GraphNode};
+use self::types::{Candidate, ConflictMap, ConflictReason, DepsFrame, GraphNode};
 use self::types::{RcVecIter, RegistryQueryer, RemainingDeps, ResolverProgress};
 
 pub use self::encode::{EncodableDependency, EncodablePackageId, EncodableResolve};
@@ -107,6 +107,17 @@ mod types;
 ///
 /// * `print_warnings` - whether or not to print backwards-compatibility
 ///   warnings and such
+///
+/// * `check_public_visible_dependencies` - a flag for whether to enforce the restrictions
+///     introduced in the "public & private dependencies" RFC (1977). The current implementation
+///     makes sure that there is only one version of each name visible to each package.
+///
+///     But there are 2 stable ways to directly depend on different versions of the same name.
+///     1. Use the renamed dependencies functionality
+///     2. Use 'cfg({})' dependencies functionality
+///
+///     When we have a decision for how to implement is without breaking existing functionality
+///     this flag can be removed.
 pub fn resolve(
     summaries: &[(Summary, Method<'_>)],
     replacements: &[(PackageIdSpec, Dependency)],
@@ -114,8 +125,9 @@ pub fn resolve(
     try_to_use: &HashSet<PackageId>,
     config: Option<&Config>,
     print_warnings: bool,
+    check_public_visible_dependencies: bool,
 ) -> CargoResult<Resolve> {
-    let cx = Context::new();
+    let cx = Context::new(check_public_visible_dependencies);
     let _p = profile::start("resolving");
     let minimal_versions = match config {
         Some(config) => config.cli_unstable().minimal_versions,
@@ -247,7 +259,7 @@ fn activate_deps_loop(
         //
         // This is a map of package ID to a reason why that packaged caused a
         // conflict for us.
-        let mut conflicting_activations = BTreeMap::new();
+        let mut conflicting_activations = ConflictMap::new();
 
         // When backtracking we don't fully update `conflicting_activations`
         // especially for the cases that we didn't make a backtrack frame in the
@@ -257,7 +269,12 @@ fn activate_deps_loop(
         let mut backtracked = false;
 
         loop {
-            let next = remaining_candidates.next(&mut conflicting_activations, &cx, &dep);
+            let next = remaining_candidates.next(
+                &mut conflicting_activations,
+                &cx,
+                &dep,
+                parent.package_id(),
+            );
 
             let (candidate, has_another) = next.ok_or(()).or_else(|_| {
                 // If we get here then our `remaining_candidates` was just
@@ -585,12 +602,65 @@ fn activate(
     candidate: Candidate,
     method: &Method<'_>,
 ) -> ActivateResult<Option<(DepsFrame, Duration)>> {
+    let candidate_pid = candidate.summary.package_id();
     if let Some((parent, dep)) = parent {
-        cx.resolve_graph.push(GraphNode::Link(
-            parent.package_id(),
-            candidate.summary.package_id(),
-            dep.clone(),
-        ));
+        let parent_pid = parent.package_id();
+        cx.resolve_graph
+            .push(GraphNode::Link(parent_pid, candidate_pid, dep.clone()));
+        Rc::make_mut(
+            // add a edge from candidate to parent in the parents graph
+            cx.parents.link(candidate_pid, parent_pid),
+        )
+        // and associate dep with that edge
+        .push(dep.clone());
+        if let Some(public_dependency) = cx.public_dependency.as_mut() {
+            // one tricky part is that `candidate_pid` may already be active and
+            // have public dependencies of its own. So we not only need to mark
+            // `candidate_pid` as visible to its parents but also all of its existing
+            // public dependencies.
+            let existing_public_deps: Vec<PackageId> = public_dependency
+                .get(&candidate_pid)
+                .iter()
+                .flat_map(|x| x.values())
+                .filter_map(|x| if x.1 { Some(&x.0) } else { None })
+                .chain(&Some(candidate_pid))
+                .cloned()
+                .collect();
+            for c in existing_public_deps {
+                // for each (transitive) parent that can newly see `t`
+                let mut stack = vec![(parent_pid, dep.is_public())];
+                while let Some((p, public)) = stack.pop() {
+                    match public_dependency.entry(p).or_default().entry(c.name()) {
+                        im_rc::hashmap::Entry::Occupied(mut o) => {
+                            // the (transitive) parent can already see something by `c`s name, it had better be `c`.
+                            assert_eq!(o.get().0, c);
+                            if o.get().1 {
+                                // The previous time the parent saw `c`, it was a public dependency.
+                                // So all of its parents already know about `c`
+                                // and we can save some time by stopping now.
+                                continue;
+                            }
+                            if public {
+                                // Mark that `c` has now bean seen publicly
+                                o.insert((c, public));
+                            }
+                        }
+                        im_rc::hashmap::Entry::Vacant(v) => {
+                            // The (transitive) parent does not have anything by `c`s name,
+                            // so we add `c`.
+                            v.insert((c, public));
+                        }
+                    }
+                    // if `candidate_pid` was a private dependency of `p` then `p` parents can't see `c` thru `p`
+                    if public {
+                        // if it was public, then we add all of `p`s parents to be checked
+                        for &(grand, ref d) in cx.parents.edges(&p) {
+                            stack.push((grand, d.iter().any(|x| x.is_public())));
+                        }
+                    }
+                }
+            }
+        }
     }
 
     let activated = cx.flag_activated(&candidate.summary, method)?;
@@ -598,14 +668,14 @@ fn activate(
     let candidate = match candidate.replace {
         Some(replace) => {
             cx.resolve_replacements
-                .push((candidate.summary.package_id(), replace.package_id()));
+                .push((candidate_pid, replace.package_id()));
             if cx.flag_activated(&replace, method)? && activated {
                 return Ok(None);
             }
             trace!(
                 "activating {} (replacing {})",
                 replace.package_id(),
-                candidate.summary.package_id()
+                candidate_pid
             );
             replace
         }
@@ -613,7 +683,7 @@ fn activate(
             if activated {
                 return Ok(None);
             }
-            trace!("activating {}", candidate.summary.package_id());
+            trace!("activating {}", candidate_pid);
             candidate.summary
         }
     };
@@ -637,7 +707,7 @@ struct BacktrackFrame {
     parent: Summary,
     dep: Dependency,
     features: Rc<Vec<InternedString>>,
-    conflicting_activations: BTreeMap<PackageId, ConflictReason>,
+    conflicting_activations: ConflictMap,
 }
 
 /// A helper "iterator" used to extract candidates within a current `Context` of
@@ -684,13 +754,14 @@ impl RemainingCandidates {
     /// original list for the reason listed.
     fn next(
         &mut self,
-        conflicting_prev_active: &mut BTreeMap<PackageId, ConflictReason>,
+        conflicting_prev_active: &mut ConflictMap,
         cx: &Context,
         dep: &Dependency,
+        parent: PackageId,
     ) -> Option<(Candidate, bool)> {
         let prev_active = cx.prev_active(dep);
 
-        for (_, b) in self.remaining.by_ref() {
+        'main: for (_, b) in self.remaining.by_ref() {
             // The `links` key in the manifest dictates that there's only one
             // package in a dependency graph, globally, with that particular
             // `links` key. If this candidate links to something that's already
@@ -723,6 +794,43 @@ impl RemainingCandidates {
                         .entry(a.package_id())
                         .or_insert(ConflictReason::Semver);
                     continue;
+                }
+            }
+            // We may still have to reject do to a public dependency conflict. If one of any of our
+            // ancestors that can see us already knows about a different crate with this name then
+            // we have to reject this candidate. Additionally this candidate may already have been
+            // activated and have public dependants of its own,
+            // all of witch also need to be checked the same way.
+            if let Some(public_dependency) = cx.public_dependency.as_ref() {
+                let existing_public_deps: Vec<PackageId> = public_dependency
+                    .get(&b.summary.package_id())
+                    .iter()
+                    .flat_map(|x| x.values())
+                    .filter_map(|x| if x.1 { Some(&x.0) } else { None })
+                    .chain(&Some(b.summary.package_id()))
+                    .cloned()
+                    .collect();
+                for t in existing_public_deps {
+                    // for each (transitive) parent that can newly see `t`
+                    let mut stack = vec![(parent, dep.is_public())];
+                    while let Some((p, public)) = stack.pop() {
+                        // TODO: dont look at the same thing more then once
+                        if let Some(o) = public_dependency.get(&p).and_then(|x| x.get(&t.name())) {
+                            if o.0 != t {
+                                // the (transitive) parent can already see a different version by `t`s name.
+                                // So, adding `b` will cause `p` to have a public dependency conflict on `t`.
+                                conflicting_prev_active.insert(p, ConflictReason::PublicDependency);
+                                continue 'main;
+                            }
+                        }
+                        // if `b` was a private dependency of `p` then `p` parents can't see `t` thru `p`
+                        if public {
+                            // if it was public, then we add all of `p`s parents to be checked
+                            for &(grand, ref d) in cx.parents.edges(&p) {
+                                stack.push((grand, d.iter().any(|x| x.is_public())));
+                            }
+                        }
+                    }
                 }
             }
 
@@ -777,13 +885,14 @@ fn find_candidate(
     backtrack_stack: &mut Vec<BacktrackFrame>,
     parent: &Summary,
     backtracked: bool,
-    conflicting_activations: &BTreeMap<PackageId, ConflictReason>,
+    conflicting_activations: &ConflictMap,
 ) -> Option<(Candidate, bool, BacktrackFrame)> {
     while let Some(mut frame) = backtrack_stack.pop() {
         let next = frame.remaining_candidates.next(
             &mut frame.conflicting_activations,
             &frame.context,
             &frame.dep,
+            frame.parent.package_id(),
         );
         let (candidate, has_another) = match next {
             Some(pair) => pair,
@@ -791,14 +900,23 @@ fn find_candidate(
         };
         // When we're calling this method we know that `parent` failed to
         // activate. That means that some dependency failed to get resolved for
-        // whatever reason, and all of those reasons (plus maybe some extras)
-        // are listed in `conflicting_activations`.
+        // whatever reason. Normally, that means that all of those reasons
+        // (plus maybe some extras) are listed in `conflicting_activations`.
         //
         // This means that if all members of `conflicting_activations` are still
         // active in this back up we know that we're guaranteed to not actually
         // make any progress. As a result if we hit this condition we can
         // completely skip this backtrack frame and move on to the next.
+        //
+        // The abnormal situations are things that do not put all of the reasons in `conflicting_activations`:
+        // If we backtracked we do not know how our `conflicting_activations` related to
+        // the cause of that backtrack, so we do not update it.
+        // If we had a PublicDependency conflict, then we do not yet have a compact way to
+        // represent all the parts of the problem, so `conflicting_activations` is incomplete.
         if !backtracked
+            && !conflicting_activations
+                .values()
+                .any(|c| *c == ConflictReason::PublicDependency)
             && frame
                 .context
                 .is_conflicting(Some(parent.package_id()), conflicting_activations)

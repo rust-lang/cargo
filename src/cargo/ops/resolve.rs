@@ -338,6 +338,7 @@ pub fn resolve_with_previous<'cfg>(
         &try_to_use,
         Some(ws.config()),
         warn,
+        false, // TODO: use "public and private dependencies" feature flag
     )?;
     resolved.register_used_patches(registry.patches());
     if register_patches {

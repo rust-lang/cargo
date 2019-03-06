@@ -1,7 +1,6 @@
 use std::borrow::Borrow;
 use std::collections::{HashMap, HashSet};
 use std::fmt;
-use std::hash::Hash;
 use std::iter::FromIterator;
 
 use url::Url;
@@ -163,7 +162,7 @@ unable to verify that `{0}` is the same as when the lockfile was generated
     pub fn contains<Q: ?Sized>(&self, k: &Q) -> bool
     where
         PackageId: Borrow<Q>,
-        Q: Hash + Eq,
+        Q: Ord + Eq,
     {
         self.graph.contains(k)
     }
@@ -179,11 +178,11 @@ unable to verify that `{0}` is the same as when the lockfile was generated
     pub fn deps(&self, pkg: PackageId) -> impl Iterator<Item = (PackageId, &[Dependency])> {
         self.graph
             .edges(&pkg)
-            .map(move |(&id, deps)| (self.replacement(id).unwrap_or(id), deps.as_slice()))
+            .map(move |&(id, ref deps)| (self.replacement(id).unwrap_or(id), deps.as_slice()))
     }
 
     pub fn deps_not_replaced<'a>(&'a self, pkg: PackageId) -> impl Iterator<Item = PackageId> + 'a {
-        self.graph.edges(&pkg).map(|(&id, _)| id)
+        self.graph.edges(&pkg).map(|&(id, _)| id)
     }
 
     pub fn replacement(&self, pkg: PackageId) -> Option<PackageId> {
