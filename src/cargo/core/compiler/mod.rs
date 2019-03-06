@@ -239,6 +239,7 @@ fn rustc<'a, 'cfg>(
         .get_cwd()
         .unwrap_or_else(|| cx.bcx.config.cwd())
         .to_path_buf();
+    let fingerprint_dir = cx.files().fingerprint_dir(unit);
 
     return Ok(Work::new(move |state| {
         // Only at runtime have we discovered what the extra -L and -l
@@ -289,7 +290,7 @@ fn rustc<'a, 'cfg>(
         }
 
         state.running(&rustc);
-        let timestamp = paths::get_current_filesystem_time(&dep_info_loc)?;
+        let timestamp = paths::set_invocation_time(&fingerprint_dir)?;
         if json_messages {
             exec.exec_json(
                 rustc,
