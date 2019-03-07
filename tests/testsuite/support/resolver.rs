@@ -115,6 +115,7 @@ pub fn resolve_with_config_raw(
         &HashSet::new(),
         config,
         false,
+        true,
     );
 
     // The largest test in our suite takes less then 30 sec.
@@ -176,7 +177,7 @@ macro_rules! pkg {
 fn registry_loc() -> SourceId {
     lazy_static::lazy_static! {
         static ref EXAMPLE_DOT_COM: SourceId =
-            SourceId::for_registry(&"http://example.com".to_url().unwrap()).unwrap();
+            SourceId::for_registry(&"https://example.com".to_url().unwrap()).unwrap();
     }
     *EXAMPLE_DOT_COM
 }
@@ -250,9 +251,10 @@ pub fn dep(name: &str) -> Dependency {
 pub fn dep_req(name: &str, req: &str) -> Dependency {
     Dependency::parse_no_deprecated(name, Some(req), registry_loc()).unwrap()
 }
-pub fn dep_req_kind(name: &str, req: &str, kind: Kind) -> Dependency {
+pub fn dep_req_kind(name: &str, req: &str, kind: Kind, public: bool) -> Dependency {
     let mut dep = dep_req(name, req);
     dep.set_kind(kind);
+    dep.set_public(public);
     dep
 }
 
@@ -297,9 +299,12 @@ impl fmt::Debug for PrettyPrintRegistry {
             } else {
                 write!(f, "pkg!((\"{}\", \"{}\") => [", s.name(), s.version())?;
                 for d in s.dependencies() {
-                    if d.kind() == Kind::Normal && &d.version_req().to_string() == "*" {
+                    if d.kind() == Kind::Normal
+                        && &d.version_req().to_string() == "*"
+                        && !d.is_public()
+                    {
                         write!(f, "dep(\"{}\"),", d.name_in_toml())?;
-                    } else if d.kind() == Kind::Normal {
+                    } else if d.kind() == Kind::Normal && !d.is_public() {
                         write!(
                             f,
                             "dep_req(\"{}\", \"{}\"),",
@@ -309,14 +314,15 @@ impl fmt::Debug for PrettyPrintRegistry {
                     } else {
                         write!(
                             f,
-                            "dep_req_kind(\"{}\", \"{}\", {}),",
+                            "dep_req_kind(\"{}\", \"{}\", {}, {}),",
                             d.name_in_toml(),
                             d.version_req(),
                             match d.kind() {
                                 Kind::Development => "Kind::Development",
                                 Kind::Build => "Kind::Build",
                                 Kind::Normal => "Kind::Normal",
-                            }
+                            },
+                            d.is_public()
                         )?;
                     }
                 }
@@ -341,8 +347,10 @@ fn meta_test_deep_pretty_print_registry() {
                 pkg!(("bar", "2.0.0") => [dep_req("baz", "=1.0.1")]),
                 pkg!(("baz", "1.0.2") => [dep_req("other", "2")]),
                 pkg!(("baz", "1.0.1")),
-                pkg!(("cat", "1.0.2") => [dep_req_kind("other", "2", Kind::Build)]),
-                pkg!(("cat", "1.0.2") => [dep_req_kind("other", "2", Kind::Development)]),
+                pkg!(("cat", "1.0.2") => [dep_req_kind("other", "2", Kind::Build, false)]),
+                pkg!(("cat", "1.0.3") => [dep_req_kind("other", "2", Kind::Development, false)]),
+                pkg!(("cat", "1.0.4") => [dep_req_kind("other", "2", Kind::Build, true)]),
+                pkg!(("cat", "1.0.5") => [dep_req_kind("other", "2", Kind::Development, true)]),
                 pkg!(("dep_req", "1.0.0")),
                 pkg!(("dep_req", "2.0.0")),
             ])
@@ -354,8 +362,10 @@ fn meta_test_deep_pretty_print_registry() {
          pkg!((\"bar\", \"2.0.0\") => [dep_req(\"baz\", \"= 1.0.1\"),]),\
          pkg!((\"baz\", \"1.0.2\") => [dep_req(\"other\", \"^2\"),]),\
          pkg!((\"baz\", \"1.0.1\")),\
-         pkg!((\"cat\", \"1.0.2\") => [dep_req_kind(\"other\", \"^2\", Kind::Build),]),\
-         pkg!((\"cat\", \"1.0.2\") => [dep_req_kind(\"other\", \"^2\", Kind::Development),]),\
+         pkg!((\"cat\", \"1.0.2\") => [dep_req_kind(\"other\", \"^2\", Kind::Build, false),]),\
+         pkg!((\"cat\", \"1.0.3\") => [dep_req_kind(\"other\", \"^2\", Kind::Development, false),]),\
+         pkg!((\"cat\", \"1.0.4\") => [dep_req_kind(\"other\", \"^2\", Kind::Build, true),]),\
+         pkg!((\"cat\", \"1.0.5\") => [dep_req_kind(\"other\", \"^2\", Kind::Development, true),]),\
          pkg!((\"dep_req\", \"1.0.0\")),\
          pkg!((\"dep_req\", \"2.0.0\")),]"
     )
@@ -405,7 +415,14 @@ pub fn registry_strategy(
     let max_deps = max_versions * (max_crates * (max_crates - 1)) / shrinkage;
 
     let raw_version_range = (any::<Index>(), any::<Index>());
-    let raw_dependency = (any::<Index>(), any::<Index>(), raw_version_range, 0..=1);
+    let raw_dependency = (
+        any::<Index>(),
+        any::<Index>(),
+        raw_version_range,
+        0..=1,
+        Just(false),
+        // TODO: ^ this needs to be set back to `any::<bool>()` and work before public & private dependencies can stabilize
+    );
 
     fn order_index(a: Index, b: Index, size: usize) -> (usize, usize) {
         let (a, b) = (a.index(size), b.index(size));
@@ -432,7 +449,7 @@ pub fn registry_strategy(
                     .collect();
                 let len_all_pkgid = list_of_pkgid.len();
                 let mut dependency_by_pkgid = vec![vec![]; len_all_pkgid];
-                for (a, b, (c, d), k) in raw_dependencies {
+                for (a, b, (c, d), k, p) in raw_dependencies {
                     let (a, b) = order_index(a, b, len_all_pkgid);
                     let (a, b) = if reverse_alphabetical { (b, a) } else { (a, b) };
                     let ((dep_name, _), _) = list_of_pkgid[a];
@@ -459,9 +476,10 @@ pub fn registry_strategy(
                         match k {
                             0 => Kind::Normal,
                             1 => Kind::Build,
-                            // => Kind::Development, // Development has not impact so don't gen
+                            // => Kind::Development, // Development has no impact so don't gen
                             _ => panic!("bad index for Kind"),
                         },
+                        p,
                     ))
                 }
 

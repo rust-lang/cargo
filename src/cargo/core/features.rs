@@ -150,17 +150,17 @@ macro_rules! stab {
     };
 }
 
-/// A listing of all features in Cargo
-///
-/// "look here"
-///
-/// This is the macro that lists all stable and unstable features in Cargo.
-/// You'll want to add to this macro whenever you add a feature to Cargo, also
-/// following the directions above.
-///
-/// Note that all feature names here are valid Rust identifiers, but the `_`
-/// character is translated to `-` when specified in the `cargo-features`
-/// manifest entry in `Cargo.toml`.
+// A listing of all features in Cargo.
+//
+// "look here"
+//
+// This is the macro that lists all stable and unstable features in Cargo.
+// You'll want to add to this macro whenever you add a feature to Cargo, also
+// following the directions above.
+//
+// Note that all feature names here are valid Rust identifiers, but the `_`
+// character is translated to `-` when specified in the `cargo-features`
+// manifest entry in `Cargo.toml`.
 features! {
     pub struct Features {
 

@@ -1446,8 +1446,8 @@ fn crate_env_vars() {
         name = "foo"
         version = "0.5.1-alpha.1"
         description = "This is foo"
-        homepage = "http://example.com"
-        repository = "http://example.com/repo.git"
+        homepage = "https://example.com"
+        repository = "https://example.com/repo.git"
         authors = ["wycats@example.com"]
         "#,
         )
@@ -1475,8 +1475,8 @@ fn crate_env_vars() {
                  assert_eq!(s, foo::version());
                  println!("{}", s);
                  assert_eq!("foo", PKG_NAME);
-                 assert_eq!("http://example.com", HOMEPAGE);
-                 assert_eq!("http://example.com/repo.git", REPOSITORY);
+                 assert_eq!("https://example.com", HOMEPAGE);
+                 assert_eq!("https://example.com/repo.git", REPOSITORY);
                  assert_eq!("This is foo", DESCRIPTION);
                 let s = format!("{}.{}.{}-{}", VERSION_MAJOR,
                                 VERSION_MINOR, VERSION_PATCH, VERSION_PRE);
@@ -1955,7 +1955,7 @@ fn explicit_examples() {
         )
         .build();
 
-    p.cargo("test -v").run();
+    p.cargo("build --examples").run();
     p.process(&p.bin("examples/hello"))
         .with_stdout("Hello, World!\n")
         .run();
@@ -2126,7 +2126,7 @@ fn implicit_examples() {
         )
         .build();
 
-    p.cargo("test").run();
+    p.cargo("build --examples").run();
     p.process(&p.bin("examples/hello"))
         .with_stdout("Hello, World!\n")
         .run();
@@ -2739,13 +2739,13 @@ fn example_bin_same_name() {
         .file("examples/foo.rs", "fn main() {}")
         .build();
 
-    p.cargo("test --no-run -v").run();
+    p.cargo("build --examples").run();
 
     assert!(!p.bin("foo").is_file());
     // We expect a file of the form bin/foo-{metadata_hash}
     assert!(p.bin("examples/foo").is_file());
 
-    p.cargo("test --no-run -v").run();
+    p.cargo("build --examples").run();
 
     assert!(!p.bin("foo").is_file());
     // We expect a file of the form bin/foo-{metadata_hash}
@@ -4212,7 +4212,7 @@ fn inferred_examples() {
         .file("examples/baz/main.rs", "fn main() {}")
         .build();
 
-    p.cargo("test").run();
+    p.cargo("build --examples").run();
     assert!(p.bin("examples/bar").is_file());
     assert!(p.bin("examples/baz").is_file());
 }

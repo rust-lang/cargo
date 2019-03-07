@@ -1325,3 +1325,37 @@ fn two_matching_in_config() {
     p1.cargo("run").run();
     p1.cargo("build").with_stderr("[FINISHED] [..]").run();
 }
+
+#[test]
+fn env_rustflags_misspelled() {
+    let p = project().file("src/main.rs", "fn main() { }").build();
+
+    for cmd in &["check", "build", "run", "test", "bench"] {
+        p.cargo(cmd)
+            .env("RUST_FLAGS", "foo")
+            .with_stderr_contains("[WARNING] Cargo does not read `RUST_FLAGS` environment variable. Did you mean `RUSTFLAGS`?")
+            .run();
+    }
+}
+
+#[test]
+fn env_rustflags_misspelled_build_script() {
+    let p = project()
+        .file(
+            "Cargo.toml",
+            r#"
+            [package]
+            name = "foo"
+            version = "0.0.1"
+            build = "build.rs"
+        "#,
+        )
+        .file("src/lib.rs", "")
+        .file("build.rs", "fn main() { }")
+        .build();
+
+    p.cargo("build")
+        .env("RUST_FLAGS", "foo")
+        .with_stderr_contains("[WARNING] Cargo does not read `RUST_FLAGS` environment variable. Did you mean `RUSTFLAGS`?")
+        .run();
+}

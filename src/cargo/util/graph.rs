@@ -1,27 +1,28 @@
 use std::borrow::Borrow;
-use std::collections::{HashMap, HashSet};
+use std::collections::BTreeSet;
 use std::fmt;
-use std::hash::Hash;
 
-pub struct Graph<N, E> {
-    nodes: HashMap<N, HashMap<N, E>>,
+use im_rc;
+
+pub struct Graph<N: Clone, E: Clone> {
+    nodes: im_rc::OrdMap<N, im_rc::OrdMap<N, E>>,
 }
 
-impl<N: Eq + Hash + Clone, E: Default> Graph<N, E> {
+impl<N: Eq + Ord + Clone, E: Default + Clone> Graph<N, E> {
     pub fn new() -> Graph<N, E> {
         Graph {
-            nodes: HashMap::new(),
+            nodes: im_rc::OrdMap::new(),
         }
     }
 
     pub fn add(&mut self, node: N) {
-        self.nodes.entry(node).or_insert_with(HashMap::new);
+        self.nodes.entry(node).or_insert_with(im_rc::OrdMap::new);
     }
 
     pub fn link(&mut self, node: N, child: N) -> &mut E {
         self.nodes
             .entry(node)
-            .or_insert_with(HashMap::new)
+            .or_insert_with(im_rc::OrdMap::new)
             .entry(child)
             .or_insert_with(Default::default)
     }
@@ -29,7 +30,7 @@ impl<N: Eq + Hash + Clone, E: Default> Graph<N, E> {
     pub fn contains<Q: ?Sized>(&self, k: &Q) -> bool
     where
         N: Borrow<Q>,
-        Q: Hash + Eq,
+        Q: Ord + Eq,
     {
         self.nodes.contains_key(k)
     }
@@ -38,14 +39,14 @@ impl<N: Eq + Hash + Clone, E: Default> Graph<N, E> {
         self.nodes.get(from)?.get(to)
     }
 
-    pub fn edges(&self, from: &N) -> impl Iterator<Item = (&N, &E)> {
+    pub fn edges(&self, from: &N) -> impl Iterator<Item = &(N, E)> {
         self.nodes.get(from).into_iter().flat_map(|x| x.iter())
     }
 
     /// A topological sort of the `Graph`
     pub fn sort(&self) -> Vec<N> {
         let mut ret = Vec::new();
-        let mut marks = HashSet::new();
+        let mut marks = BTreeSet::new();
 
         for node in self.nodes.keys() {
             self.sort_inner_visit(node, &mut ret, &mut marks);
@@ -54,7 +55,7 @@ impl<N: Eq + Hash + Clone, E: Default> Graph<N, E> {
         ret
     }
 
-    fn sort_inner_visit(&self, node: &N, dst: &mut Vec<N>, marks: &mut HashSet<N>) {
+    fn sort_inner_visit(&self, node: &N, dst: &mut Vec<N>, marks: &mut BTreeSet<N>) {
         if !marks.insert(node.clone()) {
             return;
         }
@@ -68,6 +69,23 @@ impl<N: Eq + Hash + Clone, E: Default> Graph<N, E> {
 
     pub fn iter(&self) -> impl Iterator<Item = &N> {
         self.nodes.keys()
+    }
+
+    /// Resolves one of the paths from the given dependent package down to
+    /// a leaf.
+    pub fn path_to_bottom<'a>(&'a self, mut pkg: &'a N) -> Vec<&'a N> {
+        let mut result = vec![pkg];
+        while let Some(p) = self.nodes.get(pkg).and_then(|p| {
+            p.iter()
+                // Note that we can have "cycles" introduced through dev-dependency
+                // edges, so make sure we don't loop infinitely.
+                .find(|&(node, _)| !result.contains(&node))
+                .map(|(ref p, _)| p)
+        }) {
+            result.push(p);
+            pkg = p;
+        }
+        result
     }
 
     /// Resolves one of the paths from the given dependent package up to
@@ -84,7 +102,7 @@ impl<N: Eq + Hash + Clone, E: Default> Graph<N, E> {
                 // Note that we can have "cycles" introduced through dev-dependency
                 // edges, so make sure we don't loop infinitely.
                 .find(|&(node, _)| !res.contains(&node))
-                .map(|p| p.0)
+                .map(|(ref p, _)| p)
         };
         while let Some(p) = first_pkg_depending_on(pkg, &result) {
             result.push(p);
@@ -94,13 +112,13 @@ impl<N: Eq + Hash + Clone, E: Default> Graph<N, E> {
     }
 }
 
-impl<N: Eq + Hash + Clone, E: Default> Default for Graph<N, E> {
+impl<N: Eq + Ord + Clone, E: Default + Clone> Default for Graph<N, E> {
     fn default() -> Graph<N, E> {
         Graph::new()
     }
 }
 
-impl<N: fmt::Display + Eq + Hash, E> fmt::Debug for Graph<N, E> {
+impl<N: fmt::Display + Eq + Ord + Clone, E: Clone> fmt::Debug for Graph<N, E> {
     fn fmt(&self, fmt: &mut fmt::Formatter<'_>) -> fmt::Result {
         writeln!(fmt, "Graph {{")?;
 
@@ -118,14 +136,14 @@ impl<N: fmt::Display + Eq + Hash, E> fmt::Debug for Graph<N, E> {
     }
 }
 
-impl<N: Eq + Hash, E: Eq> PartialEq for Graph<N, E> {
+impl<N: Eq + Ord + Clone, E: Eq + Clone> PartialEq for Graph<N, E> {
     fn eq(&self, other: &Graph<N, E>) -> bool {
         self.nodes.eq(&other.nodes)
     }
 }
-impl<N: Eq + Hash, E: Eq> Eq for Graph<N, E> {}
+impl<N: Eq + Ord + Clone, E: Eq + Clone> Eq for Graph<N, E> {}
 
-impl<N: Eq + Hash + Clone, E: Clone> Clone for Graph<N, E> {
+impl<N: Eq + Ord + Clone, E: Clone> Clone for Graph<N, E> {
     fn clone(&self) -> Graph<N, E> {
         Graph {
             nodes: self.nodes.clone(),

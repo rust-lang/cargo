@@ -78,7 +78,7 @@ See LICENSE-APACHE and LICENSE-MIT for details.
 ### Third party software
 
 This product includes software developed by the OpenSSL Project
-for use in the OpenSSL Toolkit (http://www.openssl.org/).
+for use in the OpenSSL Toolkit (https://www.openssl.org/).
 
 In binary form, this product includes software that is licensed under the
 terms of the GNU General Public License, version 2, with a linking exception,

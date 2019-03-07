@@ -455,13 +455,12 @@ fn calculate<'a, 'cfg>(
 
     // Next, recursively calculate the fingerprint for all of our dependencies.
     //
-    // Skip the fingerprints of build scripts as they may not always be
-    // available and the dirtiness propagation for modification is tracked
-    // elsewhere. Also skip fingerprints of binaries because they don't actually
-    // induce a recompile, they're just dependencies in the sense that they need
-    // to be built.
-    let deps = cx.dep_targets(unit);
-    let deps = deps
+    // Skip the fingerprints of build scripts, they are included below in the
+    // `local` vec. Also skip fingerprints of binaries because they don't
+    // actually induce a recompile, they're just dependencies in the sense
+    // that they need to be built.
+    let mut deps = cx
+        .dep_targets(unit)
         .iter()
         .filter(|u| !u.target.is_custom_build() && !u.target.is_bin())
         .map(|dep| {
@@ -475,8 +474,9 @@ fn calculate<'a, 'cfg>(
             })
         })
         .collect::<CargoResult<Vec<_>>>()?;
+    deps.sort_by(|a, b| a.pkg_id.cmp(&b.pkg_id));
 
-    // And finally, calculate what our own local fingerprint is
+    // And finally, calculate what our own local fingerprint is.
     let local = if use_dep_info(unit) {
         let dep_info = dep_info_loc(cx, unit);
         let mtime = dep_info_mtime_if_fresh(unit.pkg, &dep_info)?;
@@ -485,8 +485,32 @@ fn calculate<'a, 'cfg>(
         let fingerprint = pkg_fingerprint(&cx.bcx, unit.pkg)?;
         LocalFingerprint::Precalculated(fingerprint)
     };
-    let mut deps = deps;
-    deps.sort_by(|a, b| a.pkg_id.cmp(&b.pkg_id));
+    let mut local = vec![local];
+    // Include fingerprint for any build scripts this unit requires.
+    local.extend(
+        cx.dep_targets(unit)
+            .iter()
+            .filter(|u| u.mode.is_run_custom_build())
+            .map(|dep| {
+                // If the build script is overridden, use the override info as
+                // the override. Otherwise, use the last invocation time of
+                // the build script. If the build script re-runs during this
+                // run, dirty propagation within the JobQueue will ensure that
+                // this gets invalidated. This is only here to catch the
+                // situation when cargo is run a second time for another
+                // target that wasn't built previously (such as `cargo build`
+                // then `cargo test`).
+                build_script_override_fingerprint(cx, unit).unwrap_or_else(|| {
+                    let ts_path = cx
+                        .files()
+                        .build_script_run_dir(dep)
+                        .join("invoked.timestamp");
+                    let ts_path_mtime = paths::mtime(&ts_path).ok();
+                    LocalFingerprint::mtime(cx.files().target_root(), ts_path_mtime, &ts_path)
+                })
+            }),
+    );
+
     let extra_flags = if unit.mode.is_doc() {
         bcx.rustdocflags_args(unit)?
     } else {
@@ -502,7 +526,7 @@ fn calculate<'a, 'cfg>(
         path: util::hash_u64(&super::path_args(&cx.bcx, unit).0),
         features: format!("{:?}", bcx.resolve.features_sorted(unit.pkg.package_id())),
         deps,
-        local: vec![local],
+        local,
         memoized_hash: Mutex::new(None),
         edition: unit.target.edition(),
         rustflags: extra_flags,
@@ -595,19 +619,13 @@ fn build_script_local_fingerprints<'a, 'cfg>(
     cx: &mut Context<'a, 'cfg>,
     unit: &Unit<'a>,
 ) -> CargoResult<(Vec<LocalFingerprint>, Option<PathBuf>)> {
-    let state = cx.build_state.outputs.lock().unwrap();
     // First up, if this build script is entirely overridden, then we just
     // return the hash of what we overrode it with.
-    //
-    // Note that the `None` here means that we don't want to update the local
-    // fingerprint afterwards because this is all just overridden.
-    if let Some(output) = state.get(&(unit.pkg.package_id(), unit.kind)) {
+    if let Some(fingerprint) = build_script_override_fingerprint(cx, unit) {
         debug!("override local fingerprints deps");
-        let s = format!(
-            "overridden build state with hash: {}",
-            util::hash_u64(output)
-        );
-        return Ok((vec![LocalFingerprint::Precalculated(s)], None));
+        // Note that the `None` here means that we don't want to update the local
+        // fingerprint afterwards because this is all just overridden.
+        return Ok((vec![fingerprint], None));
     }
 
     // Next up we look at the previously listed dependencies for the build
@@ -631,6 +649,24 @@ fn build_script_local_fingerprints<'a, 'cfg>(
         local_fingerprints_deps(deps, cx.files().target_root(), unit.pkg.root()),
         Some(output),
     ))
+}
+
+/// Create a local fingerprint for an overridden build script.
+/// Returns None if it is not overridden.
+fn build_script_override_fingerprint<'a, 'cfg>(
+    cx: &mut Context<'a, 'cfg>,
+    unit: &Unit<'a>,
+) -> Option<LocalFingerprint> {
+    let state = cx.build_state.outputs.lock().unwrap();
+    state
+        .get(&(unit.pkg.package_id(), unit.kind))
+        .map(|output| {
+            let s = format!(
+                "overridden build state with hash: {}",
+                util::hash_u64(output)
+            );
+            LocalFingerprint::Precalculated(s)
+        })
 }
 
 fn local_fingerprints_deps(

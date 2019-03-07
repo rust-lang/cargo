@@ -1,4 +1,3 @@
-use std::collections::BTreeMap;
 use std::fmt;
 
 use crate::core::{Dependency, PackageId, Registry, Summary};
@@ -8,7 +7,7 @@ use failure::{Error, Fail};
 use semver;
 
 use super::context::Context;
-use super::types::{Candidate, ConflictReason};
+use super::types::{Candidate, ConflictMap, ConflictReason};
 
 /// Error during resolution providing a path of `PackageId`s.
 pub struct ResolveError {
@@ -73,16 +72,15 @@ pub(super) fn activation_error(
     registry: &mut dyn Registry,
     parent: &Summary,
     dep: &Dependency,
-    conflicting_activations: &BTreeMap<PackageId, ConflictReason>,
+    conflicting_activations: &ConflictMap,
     candidates: &[Candidate],
     config: Option<&Config>,
 ) -> ResolveError {
-    let graph = cx.graph();
     let to_resolve_err = |err| {
         ResolveError::new(
             err,
-            graph
-                .path_to_top(&parent.package_id())
+            cx.parents
+                .path_to_bottom(&parent.package_id())
                 .into_iter()
                 .cloned()
                 .collect(),
@@ -92,7 +90,9 @@ pub(super) fn activation_error(
     if !candidates.is_empty() {
         let mut msg = format!("failed to select a version for `{}`.", dep.package_name());
         msg.push_str("\n    ... required by ");
-        msg.push_str(&describe_path(&graph.path_to_top(&parent.package_id())));
+        msg.push_str(&describe_path(
+            &cx.parents.path_to_bottom(&parent.package_id()),
+        ));
 
         msg.push_str("\nversions that meet the requirements `");
         msg.push_str(&dep.version_req().to_string());
@@ -123,7 +123,7 @@ pub(super) fn activation_error(
                 msg.push_str(link);
                 msg.push_str("` as well:\n");
             }
-            msg.push_str(&describe_path(&graph.path_to_top(p)));
+            msg.push_str(&describe_path(&cx.parents.path_to_bottom(p)));
         }
 
         let (features_errors, other_errors): (Vec<_>, Vec<_>) = other_errors
@@ -154,7 +154,7 @@ pub(super) fn activation_error(
 
         for &(p, _) in other_errors.iter() {
             msg.push_str("\n\n  previously selected ");
-            msg.push_str(&describe_path(&graph.path_to_top(p)));
+            msg.push_str(&describe_path(&cx.parents.path_to_bottom(p)));
         }
 
         msg.push_str("\n\nfailed to select a version for `");
@@ -204,7 +204,9 @@ pub(super) fn activation_error(
             registry.describe_source(dep.source_id()),
         );
         msg.push_str("required by ");
-        msg.push_str(&describe_path(&graph.path_to_top(&parent.package_id())));
+        msg.push_str(&describe_path(
+            &cx.parents.path_to_bottom(&parent.package_id()),
+        ));
 
         // If we have a path dependency with a locked version, then this may
         // indicate that we updated a sub-package and forgot to run `cargo
@@ -265,7 +267,9 @@ pub(super) fn activation_error(
             msg.push_str("\n");
         }
         msg.push_str("required by ");
-        msg.push_str(&describe_path(&graph.path_to_top(&parent.package_id())));
+        msg.push_str(&describe_path(
+            &cx.parents.path_to_bottom(&parent.package_id()),
+        ));
 
         msg
     };

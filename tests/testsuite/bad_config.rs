@@ -857,7 +857,7 @@ fn ambiguous_git_reference() {
             authors = []
 
             [dependencies.bar]
-            git = "https://127.0.0.1"
+            git = "http://127.0.0.1"
             branch = "master"
             tag = "some-tag"
         "#,
@@ -953,7 +953,7 @@ fn bad_source_config3() {
             ".cargo/config",
             r#"
             [source.crates-io]
-            registry = 'http://example.com'
+            registry = 'https://example.com'
             replace-with = 'crates-io'
         "#,
         )
@@ -995,11 +995,11 @@ fn bad_source_config4() {
             ".cargo/config",
             r#"
             [source.crates-io]
-            registry = 'http://example.com'
+            registry = 'https://example.com'
             replace-with = 'bar'
 
             [source.bar]
-            registry = 'http://example.com'
+            registry = 'https://example.com'
             replace-with = 'crates-io'
         "#,
         )
@@ -1042,7 +1042,7 @@ fn bad_source_config5() {
             ".cargo/config",
             r#"
             [source.crates-io]
-            registry = 'http://example.com'
+            registry = 'https://example.com'
             replace-with = 'bar'
 
             [source.bar]
@@ -1076,7 +1076,7 @@ fn both_git_and_path_specified() {
         authors = []
 
         [dependencies.bar]
-        git = "https://127.0.0.1"
+        git = "http://127.0.0.1"
         path = "bar"
     "#,
         )
@@ -1115,7 +1115,7 @@ fn bad_source_config6() {
             ".cargo/config",
             r#"
             [source.crates-io]
-            registry = 'http://example.com'
+            registry = 'https://example.com'
             replace-with = ['not', 'a', 'string']
         "#,
         )
@@ -1176,7 +1176,7 @@ fn bad_source_config7() {
             ".cargo/config",
             r#"
             [source.foo]
-            registry = 'http://example.com'
+            registry = 'https://example.com'
             local-registry = 'file:///another/file'
         "#,
         )

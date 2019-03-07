@@ -328,7 +328,7 @@ pub trait ArgMatchesExt {
             all_features: self._is_present("all-features"),
             no_default_features: self._is_present("no-default-features"),
             spec,
-            filter: CompileFilter::new(
+            filter: CompileFilter::from_raw_arguments(
                 self._is_present("lib"),
                 self._values_of("bin"),
                 self._is_present("bins"),
@@ -481,10 +481,7 @@ impl<'a> ArgMatchesExt for ArgMatches<'a> {
 }
 
 pub fn values(args: &ArgMatches<'_>, name: &str) -> Vec<String> {
-    args.values_of(name)
-        .unwrap_or_default()
-        .map(|s| s.to_string())
-        .collect()
+    args._values_of(name)
 }
 
 #[derive(PartialEq, PartialOrd, Eq, Ord)]

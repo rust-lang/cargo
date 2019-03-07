@@ -20,7 +20,8 @@
 //!    b. Compile each dependency in order, passing in the -L's pointing at each
 //!       previously compiled dependency.
 
-use std::collections::{HashMap, HashSet};
+use std::collections::{BTreeSet, HashMap, HashSet};
+use std::iter::FromIterator;
 use std::path::PathBuf;
 use std::sync::Arc;
 
@@ -108,22 +109,33 @@ impl Packages {
     }
 
     pub fn to_package_id_specs(&self, ws: &Workspace<'_>) -> CargoResult<Vec<PackageIdSpec>> {
-        let specs = match *self {
+        let specs = match self {
             Packages::All => ws
                 .members()
                 .map(Package::package_id)
                 .map(PackageIdSpec::from_package_id)
                 .collect(),
-            Packages::OptOut(ref opt_out) => ws
-                .members()
-                .map(Package::package_id)
-                .map(PackageIdSpec::from_package_id)
-                .filter(|p| opt_out.iter().position(|x| *x == p.name()).is_none())
-                .collect(),
-            Packages::Packages(ref packages) if packages.is_empty() => {
+            Packages::OptOut(opt_out) => {
+                let mut opt_out = BTreeSet::from_iter(opt_out.iter().cloned());
+                let packages = ws
+                    .members()
+                    .filter(|pkg| !opt_out.remove(pkg.name().as_str()))
+                    .map(Package::package_id)
+                    .map(PackageIdSpec::from_package_id)
+                    .collect();
+                if !opt_out.is_empty() {
+                    ws.config().shell().warn(format!(
+                        "excluded package(s) {} not found in workspace `{}`",
+                        opt_out.iter().map(|x| x.as_ref()).collect::<Vec<_>>().join(", "),
+                        ws.root().display(),
+                    ))?;
+                }
+                packages
+            },
+            Packages::Packages(packages) if packages.is_empty() => {
                 vec![PackageIdSpec::from_package_id(ws.current()?.package_id())]
             }
-            Packages::Packages(ref packages) => packages
+            Packages::Packages(packages) => packages
                 .iter()
                 .map(|p| PackageIdSpec::parse(p))
                 .collect::<CargoResult<Vec<_>>>()?,
@@ -150,11 +162,11 @@ impl Packages {
         let packages: Vec<_> = match self {
             Packages::Default => ws.default_members().collect(),
             Packages::All => ws.members().collect(),
-            Packages::OptOut(ref opt_out) => ws
+            Packages::OptOut(opt_out) => ws
                 .members()
                 .filter(|pkg| !opt_out.iter().any(|name| pkg.name().as_str() == name))
                 .collect(),
-            Packages::Packages(ref pkgs) => pkgs
+            Packages::Packages(packages) => packages
                 .iter()
                 .map(|name| {
                     ws.members()
@@ -172,6 +184,16 @@ impl Packages {
     }
 }
 
+#[derive(Debug, PartialEq, Eq)]
+pub enum LibRule {
+    /// Include the library, fail if not present
+    True,
+    /// Include the library if present
+    Default,
+    /// Exclude the library
+    False,
+}
+
 #[derive(Debug)]
 pub enum FilterRule {
     All,
@@ -186,7 +208,7 @@ pub enum CompileFilter {
     },
     Only {
         all_targets: bool,
-        lib: bool,
+        lib: LibRule,
         bins: FilterRule,
         examples: FilterRule,
         tests: FilterRule,
@@ -232,6 +254,27 @@ pub fn compile_ws<'a>(
         ref local_rustdoc_args,
         ref export_dir,
     } = *options;
+
+    match build_config.mode {
+        CompileMode::Test
+        | CompileMode::Build
+        | CompileMode::Check { .. }
+        | CompileMode::Bench
+        | CompileMode::RunCustomBuild => {
+            if std::env::var("RUST_FLAGS").is_ok() {
+                config.shell().warn(
+                    "Cargo does not read `RUST_FLAGS` environment variable. Did you mean `RUSTFLAGS`?",
+                )?;
+            }
+        }
+        CompileMode::Doc { .. } | CompileMode::Doctest => {
+            if std::env::var("RUSTDOC_FLAGS").is_ok() {
+                config.shell().warn(
+                    "Cargo does not read `RUSTDOC_FLAGS` environment variable. Did you mean `RUSTDOCFLAGS`?"
+                )?;
+            }
+        }
+    }
 
     let default_arch_kind = if build_config.requested_target.is_some() {
         Kind::Target
@@ -349,6 +392,10 @@ impl FilterRule {
         }
     }
 
+    pub fn none() -> FilterRule {
+        FilterRule::Just(Vec::new())
+    }
+
     fn matches(&self, target: &Target) -> bool {
         match *self {
             FilterRule::All => true,
@@ -372,7 +419,8 @@ impl FilterRule {
 }
 
 impl CompileFilter {
-    pub fn new(
+    /// Construct a CompileFilter from raw command line arguments.
+    pub fn from_raw_arguments(
         lib_only: bool,
         bins: Vec<String>,
         all_bins: bool,
@@ -384,6 +432,7 @@ impl CompileFilter {
         all_bens: bool,
         all_targets: bool,
     ) -> CompileFilter {
+        let rule_lib = if lib_only { LibRule::True } else { LibRule::False };
         let rule_bins = FilterRule::new(bins, all_bins);
         let rule_tsts = FilterRule::new(tsts, all_tsts);
         let rule_exms = FilterRule::new(exms, all_exms);
@@ -392,13 +441,26 @@ impl CompileFilter {
         if all_targets {
             CompileFilter::Only {
                 all_targets: true,
-                lib: true,
+                lib: LibRule::Default,
                 bins: FilterRule::All,
                 examples: FilterRule::All,
                 benches: FilterRule::All,
                 tests: FilterRule::All,
             }
-        } else if lib_only
+        } else {
+            CompileFilter::new(rule_lib, rule_bins, rule_tsts, rule_exms, rule_bens)
+        }
+    }
+
+    /// Construct a CompileFilter from underlying primitives.
+    pub fn new(
+        rule_lib: LibRule,
+        rule_bins: FilterRule,
+        rule_tsts: FilterRule,
+        rule_exms: FilterRule,
+        rule_bens: FilterRule,
+    ) -> CompileFilter {
+        if rule_lib == LibRule::True
             || rule_bins.is_specific()
             || rule_tsts.is_specific()
             || rule_exms.is_specific()
@@ -406,7 +468,7 @@ impl CompileFilter {
         {
             CompileFilter::Only {
                 all_targets: false,
-                lib: lib_only,
+                lib: rule_lib,
                 bins: rule_bins,
                 examples: rule_exms,
                 benches: rule_bens,
@@ -442,7 +504,7 @@ impl CompileFilter {
         match *self {
             CompileFilter::Default { .. } => true,
             CompileFilter::Only {
-                lib,
+                ref lib,
                 ref bins,
                 ref examples,
                 ref tests,
@@ -454,7 +516,11 @@ impl CompileFilter {
                     TargetKind::Test => tests,
                     TargetKind::Bench => benches,
                     TargetKind::ExampleBin | TargetKind::ExampleLib(..) => examples,
-                    TargetKind::Lib(..) => return lib,
+                    TargetKind::Lib(..) => return match *lib {
+                        LibRule::True => true,
+                        LibRule::Default => true,
+                        LibRule::False => false,
+                    },
                     TargetKind::CustomBuild => return false,
                 };
                 rule.matches(target)
@@ -608,13 +674,13 @@ fn generate_targets<'a>(
         }
         CompileFilter::Only {
             all_targets,
-            lib,
+            ref lib,
             ref bins,
             ref examples,
             ref tests,
             ref benches,
         } => {
-            if lib {
+            if *lib != LibRule::False {
                 let mut libs = Vec::new();
                 for proposal in filter_targets(packages, Target::is_lib, false, build_config.mode) {
                     let Proposal { target, pkg, .. } = proposal;
@@ -628,7 +694,7 @@ fn generate_targets<'a>(
                         libs.push(proposal)
                     }
                 }
-                if !all_targets && libs.is_empty() {
+                if !all_targets && libs.is_empty() && *lib == LibRule::True {
                     let names = packages.iter().map(|pkg| pkg.name()).collect::<Vec<_>>();
                     if names.len() == 1 {
                         failure::bail!("no library targets found in package `{}`", names[0]);

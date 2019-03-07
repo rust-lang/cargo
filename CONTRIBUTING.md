@@ -96,7 +96,7 @@ ignore the cross-compile test failures or disable them by
 using `CFG_DISABLE_CROSS_TESTS=1 cargo test`. Note that some tests are enabled
 only on `nightly` toolchain. If you can, test both toolchains.
 * All code changes are expected to comply with the formatting suggested by `rustfmt`.
-You can use `rustup component add --toolchain nightly rustfmt-preview` to install `rustfmt` and use
+You can use `rustup component add --toolchain nightly rustfmt` to install `rustfmt` and use
 `rustfmt +nightly --unstable-features --skip-children` on the changed files to automatically format your code.
 * Push your commits to GitHub and create a pull request against Cargo's
 `master` branch.
