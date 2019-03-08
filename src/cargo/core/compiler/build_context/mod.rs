@@ -345,7 +345,12 @@ fn env_args(
             .map(str::trim)
             .filter(|s| !s.is_empty())
             .map(str::to_string);
-        return Ok(args.collect());
+
+        let rustflags: Vec<_> = args.collect();
+
+        if rustflags.len() > 0 {
+            return Ok(rustflags);
+        }
     }
 
     let mut rustflags = Vec::new();
