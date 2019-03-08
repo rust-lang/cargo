@@ -259,7 +259,7 @@ impl TargetConfig {
                             .library_paths
                             .extend(list.iter().map(|v| PathBuf::from(&v.0)));
                     }
-                    "rustc-link-arg" => {
+                    "rustc-cdylib-link-arg" => {
                         let args = value.list(k)?;
                         output
                             .linker_args
