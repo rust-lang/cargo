@@ -1359,3 +1359,68 @@ fn env_rustflags_misspelled_build_script() {
         .with_stderr_contains("[WARNING] Cargo does not read `RUST_FLAGS` environment variable. Did you mean `RUSTFLAGS`?")
         .run();
 }
+
+#[test]
+fn env_rustflags_with_crt_static_sets_env_var() {
+    // The CARGO_CFG_TARGET_FEATURE should be set when passing this flag.
+    let p = project()
+        .file(
+            "Cargo.toml",
+            r#"
+            [package]
+            name = "foo"
+            version = "0.0.1"
+            build = "build.rs"
+        "#,
+        )
+        .file("src/lib.rs", "")
+        .file(
+            "build.rs",
+            r#"
+            fn main() {
+                assert!(std::env::var("CARGO_CFG_TARGET_FEATURE").unwrap().contains("crt-static"));
+            }
+        "#,
+        )
+        .build();
+
+    p.cargo("build")
+        .env("RUSTFLAGS", "-Ctarget-feature=+crt-static")
+        .run();
+}
+
+#[test]
+fn config_rustflags_with_crt_static_sets_env_var() {
+    // The CARGO_CFG_TARGET_FEATURE should be set when passing this flag.
+    let p = project()
+        .file(
+            "Cargo.toml",
+            r#"
+            [package]
+            name = "foo"
+            version = "0.0.1"
+            build = "build.rs"
+        "#,
+        )
+        .file(
+            ".cargo/config",
+            r#"
+            [build]
+            rustflags = ["-Ctarget-feature=+crt-static"]
+            "#,
+        )
+        .file("src/lib.rs", "")
+        .file(
+            "build.rs",
+            r#"
+            fn main() {
+                assert!(std::env::var("CARGO_CFG_TARGET_FEATURE").unwrap().contains("crt-static"));
+            }
+        "#,
+        )
+        .build();
+
+    p.cargo("build")
+        .env("RUSTFLAGS", "")
+        .run();
+}
