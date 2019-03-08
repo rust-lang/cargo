@@ -487,7 +487,7 @@ impl BuildOutput {
                 }
                 "rustc-link-lib" => library_links.push(value.to_string()),
                 "rustc-link-search" => library_paths.push(PathBuf::from(value)),
-                "rustc-link-arg" => linker_args.push(value.to_string()),
+                "rustc-cdylib-link-arg" => linker_args.push(value.to_string()),
                 "rustc-cfg" => cfgs.push(value.to_string()),
                 "rustc-env" => env.push(BuildOutput::parse_rustc_env(&value, &whence)?),
                 "warning" => warnings.push(value.to_string()),
