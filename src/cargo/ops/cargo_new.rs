@@ -438,10 +438,12 @@ impl IgnoreList {
     /// Return the correctly formatted content of the ignore file for the given
     /// version control system as `String`.
     fn format_new(&self, vcs: VersionControl) -> String {
-        match vcs {
-            VersionControl::Hg => self.hg_ignore.join("\n"),
-            _ => self.ignore.join("\n"),
-        }
+        let ignore_items = match vcs {
+            VersionControl::Hg => &self.hg_ignore,
+            _ => &self.ignore,
+        };
+
+        ignore_items.join("\n") + "\n"
     }
 
     /// format_existing is used to format the IgnoreList when the ignore file
@@ -459,15 +461,15 @@ impl IgnoreList {
 
         let mut out = "\n\n#Added by cargo\n\
                        #\n\
-                       #already existing elements are commented out\n"
+                       #already existing elements are commented out\n\n"
             .to_string();
 
         for item in ignore_items {
-            out.push('\n');
             if existing_items.contains(item) {
                 out.push('#');
             }
-            out.push_str(item)
+            out.push_str(item);
+            out.push('\n');
         }
 
         out
@@ -543,7 +545,7 @@ fn mk(config: &Config, opts: &MkOptions<'_>) -> CargoResult<()> {
     // both `ignore` and `hgignore` are in sync.
     let mut ignore = IgnoreList::new();
     ignore.push("/target", "^target/");
-    ignore.push("**/*.rs.bk", "glob:*.rs.bk\n");
+    ignore.push("**/*.rs.bk", "glob:*.rs.bk");
     if !opts.bin {
         ignore.push("Cargo.lock", "glob:Cargo.lock");
     }
