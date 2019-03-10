@@ -79,7 +79,7 @@ fn simple_git_ignore_exists() {
          \n\
          #/target\n\
          **/*.rs.bk\n\
-         Cargo.lock",
+         Cargo.lock\n",
     );
 
     cargo_process("build").cwd(&paths::root().join("foo")).run();
@@ -450,6 +450,60 @@ fn mercurial_no_newline_in_new() {
         .read_to_string(&mut contents)
         .unwrap();
     assert!(!contents.starts_with('\n'));
+}
+
+#[test]
+fn terminating_newline_in_new_git_ignore() {
+    cargo_process("init --vcs git --lib")
+        .env("USER", "foo")
+        .run();
+
+    let content = fs::read_to_string(&paths::root().join(".gitignore")).unwrap();
+
+    let mut last_chars = content.chars().rev();
+    assert_eq!(last_chars.next(), Some('\n'));
+    assert_ne!(last_chars.next(), Some('\n'));
+}
+
+#[test]
+fn terminating_newline_in_new_mercurial_ignore() {
+    cargo_process("init --vcs hg --lib")
+        .env("USER", "foo")
+        .run();
+
+    let content = fs::read_to_string(&paths::root().join(".hgignore")).unwrap();
+
+    let mut last_chars = content.chars().rev();
+    assert_eq!(last_chars.next(), Some('\n'));
+    assert_ne!(last_chars.next(), Some('\n'));
+}
+
+#[test]
+fn terminating_newline_in_existing_git_ignore() {
+    fs::create_dir(&paths::root().join(".git")).unwrap();
+    fs::write(&paths::root().join(".gitignore"), b"first").unwrap();
+
+    cargo_process("init --lib").env("USER", "foo").run();
+
+    let content = fs::read_to_string(&paths::root().join(".gitignore")).unwrap();
+
+    let mut last_chars = content.chars().rev();
+    assert_eq!(last_chars.next(), Some('\n'));
+    assert_ne!(last_chars.next(), Some('\n'));
+}
+
+#[test]
+fn terminating_newline_in_existing_mercurial_ignore() {
+    fs::create_dir(&paths::root().join(".hg")).unwrap();
+    fs::write(&paths::root().join(".hgignore"), b"first").unwrap();
+
+    cargo_process("init --lib").env("USER", "foo").run();
+
+    let content = fs::read_to_string(&paths::root().join(".hgignore")).unwrap();
+
+    let mut last_chars = content.chars().rev();
+    assert_eq!(last_chars.next(), Some('\n'));
+    assert_ne!(last_chars.next(), Some('\n'));
 }
 
 #[test]
