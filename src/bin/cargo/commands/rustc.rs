@@ -6,6 +6,7 @@ pub fn cli() -> App {
     subcommand("rustc")
         .setting(AppSettings::TrailingVarArg)
         .about("Compile a package and all of its dependencies")
+        .arg(opt("quiet", "No output printed to stdout").short("q"))
         .arg(Arg::with_name("args").multiple(true))
         .arg_package("Package to build")
         .arg_jobs()

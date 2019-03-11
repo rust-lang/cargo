@@ -5,6 +5,7 @@ use cargo::ops;
 pub fn cli() -> App {
     subcommand("yank")
         .about("Remove a pushed crate from the index")
+        .arg(opt("quiet", "No output printed to stdout").short("q"))
         .arg(Arg::with_name("crate"))
         .arg(opt("vers", "The version to yank or un-yank").value_name("VERSION"))
         .arg(opt(

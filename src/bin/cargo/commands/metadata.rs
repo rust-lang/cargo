@@ -10,6 +10,7 @@ pub fn cli() -> App {
              the concrete used versions including overrides, \
              in machine-readable format",
         )
+        .arg(opt("quiet", "No output printed to stdout").short("q"))
         .arg_features()
         .arg(opt(
             "no-deps",

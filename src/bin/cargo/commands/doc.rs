@@ -5,6 +5,7 @@ use cargo::ops::{self, DocOptions};
 pub fn cli() -> App {
     subcommand("doc")
         .about("Build a package's documentation")
+        .arg(opt("quiet", "No output printed to stdout").short("q"))
         .arg(opt(
             "open",
             "Opens the docs in a browser after the operation",

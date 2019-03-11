@@ -6,7 +6,7 @@ use std::path::PathBuf;
 use semver::Version;
 
 use super::BuildContext;
-use crate::core::{Edition, Package, PackageId, Target, TargetKind};
+use crate::core::{Edition, Package, PackageId, Target};
 use crate::util::{self, join_paths, process, CargoResult, CfgExpr, Config, ProcessBuilder};
 
 pub struct Doctest {
@@ -22,7 +22,7 @@ pub struct Doctest {
 /// A structure returning the result of a compilation.
 pub struct Compilation<'cfg> {
     /// An array of all tests created during this compilation.
-    pub tests: Vec<(Package, TargetKind, String, PathBuf)>,
+    pub tests: Vec<(Package, Target, PathBuf)>,
 
     /// An array of all binaries created.
     pub binaries: Vec<PathBuf>,

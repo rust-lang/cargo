@@ -5,6 +5,7 @@ use cargo::ops;
 pub fn cli() -> App {
     subcommand("uninstall")
         .about("Remove a Rust binary")
+        .arg(opt("quiet", "No output printed to stdout").short("q"))
         .arg(Arg::with_name("spec").multiple(true))
         .arg_package_spec_simple("Package to uninstall")
         .arg(multi_opt("bin", "NAME", "Only uninstall the binary NAME"))

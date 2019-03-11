@@ -5,6 +5,7 @@ use cargo::ops::{self, CleanOptions};
 pub fn cli() -> App {
     subcommand("clean")
         .about("Remove artifacts that cargo has generated in the past")
+        .arg(opt("quiet", "No output printed to stdout").short("q"))
         .arg_package_spec_simple("Package to clean artifacts for")
         .arg_manifest_path()
         .arg_target_triple("Target triple to clean output for")

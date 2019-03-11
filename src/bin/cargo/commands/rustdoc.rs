@@ -6,6 +6,7 @@ pub fn cli() -> App {
     subcommand("rustdoc")
         .setting(AppSettings::TrailingVarArg)
         .about("Build a package's documentation, using specified custom flags.")
+        .arg(opt("quiet", "No output printed to stdout").short("q"))
         .arg(Arg::with_name("args").multiple(true))
         .arg(opt(
             "open",
