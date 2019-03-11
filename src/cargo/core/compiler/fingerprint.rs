@@ -480,36 +480,49 @@ fn calculate<'a, 'cfg>(
     let local = if use_dep_info(unit) {
         let dep_info = dep_info_loc(cx, unit);
         let mtime = dep_info_mtime_if_fresh(unit.pkg, &dep_info)?;
-        LocalFingerprint::mtime(cx.files().target_root(), mtime, &dep_info)
+        let mut local = vec![LocalFingerprint::mtime(
+            cx.files().target_root(),
+            mtime,
+            &dep_info,
+        )];
+        // Include the fingerprint of the build script.
+        //
+        // This is not included for dependencies (Precalculated below) because
+        // Docker zeros the nanosecond part of the mtime when the image is
+        // saved, which prevents built dependencies from being cached.
+        // This has the consequence that if a dependency needs to be rebuilt
+        // (such as an environment variable tracked via rerun-if-env-changed),
+        // and you run two separate commands (`build` then `test`), the second
+        // command will erroneously think it is fresh.
+        // See: https://github.com/rust-lang/cargo/issues/6733
+        local.extend(
+            cx.dep_targets(unit)
+                .iter()
+                .filter(|u| u.mode.is_run_custom_build())
+                .map(|dep| {
+                    // If the build script is overridden, use the override info as
+                    // the override. Otherwise, use the last invocation time of
+                    // the build script. If the build script re-runs during this
+                    // run, dirty propagation within the JobQueue will ensure that
+                    // this gets invalidated. This is only here to catch the
+                    // situation when cargo is run a second time for another
+                    // target that wasn't built previously (such as `cargo build`
+                    // then `cargo test`).
+                    build_script_override_fingerprint(cx, unit).unwrap_or_else(|| {
+                        let ts_path = cx
+                            .files()
+                            .build_script_run_dir(dep)
+                            .join("invoked.timestamp");
+                        let ts_path_mtime = paths::mtime(&ts_path).ok();
+                        LocalFingerprint::mtime(cx.files().target_root(), ts_path_mtime, &ts_path)
+                    })
+                }),
+        );
+        local
     } else {
         let fingerprint = pkg_fingerprint(&cx.bcx, unit.pkg)?;
-        LocalFingerprint::Precalculated(fingerprint)
+        vec![LocalFingerprint::Precalculated(fingerprint)]
     };
-    let mut local = vec![local];
-    // Include fingerprint for any build scripts this unit requires.
-    local.extend(
-        cx.dep_targets(unit)
-            .iter()
-            .filter(|u| u.mode.is_run_custom_build())
-            .map(|dep| {
-                // If the build script is overridden, use the override info as
-                // the override. Otherwise, use the last invocation time of
-                // the build script. If the build script re-runs during this
-                // run, dirty propagation within the JobQueue will ensure that
-                // this gets invalidated. This is only here to catch the
-                // situation when cargo is run a second time for another
-                // target that wasn't built previously (such as `cargo build`
-                // then `cargo test`).
-                build_script_override_fingerprint(cx, unit).unwrap_or_else(|| {
-                    let ts_path = cx
-                        .files()
-                        .build_script_run_dir(dep)
-                        .join("invoked.timestamp");
-                    let ts_path_mtime = paths::mtime(&ts_path).ok();
-                    LocalFingerprint::mtime(cx.files().target_root(), ts_path_mtime, &ts_path)
-                })
-            }),
-    );
 
     let extra_flags = if unit.mode.is_doc() {
         bcx.rustdocflags_args(unit)?
