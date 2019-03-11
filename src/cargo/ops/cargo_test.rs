@@ -2,6 +2,7 @@ use std::ffi::OsString;
 
 use crate::core::compiler::{Compilation, Doctest};
 use crate::core::Workspace;
+use crate::core::shell::Verbosity;
 use crate::ops;
 use crate::util::errors::CargoResult;
 use crate::util::{CargoTestError, ProcessError, Test};
@@ -83,10 +84,15 @@ fn run_unit_tests(
 
     let mut errors = Vec::new();
 
-    for &(ref pkg, ref kind, ref test, ref exe) in &compilation.tests {
+    for &(ref pkg, ref target, ref exe) in &compilation.tests {
+        let kind = target.kind();
+        let test = target.name().to_string();
         let exe_display = exe.strip_prefix(cwd).unwrap_or(exe).display();
         let mut cmd = compilation.target_process(exe, pkg)?;
         cmd.args(test_args);
+        if target.harness() && config.shell().verbosity() == Verbosity::Quiet {
+            cmd.arg("--quiet");
+        }
         config
             .shell()
             .concise(|shell| shell.status("Running", &exe_display))?;

@@ -18,6 +18,10 @@ pub fn cli() -> App {
                 .multiple(true)
                 .last(true),
         )
+        .arg(
+            opt("quiet", "Display one character per test instead of one line")
+            .short("q")
+        )
         .arg_targets_all(
             "Test only this package's library unit tests",
             "Test only the specified binary",

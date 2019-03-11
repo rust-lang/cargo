@@ -145,6 +145,79 @@ fn cargo_test_overflow_checks() {
 }
 
 #[test]
+fn cargo_test_quiet_with_harness() {
+    let p = project()
+        .file(
+            "Cargo.toml",
+            r#"
+            [package]
+            name = "foo"
+            version = "0.1.0"
+            authors = []
+
+            [[test]]
+            name = "foo"
+            path = "src/foo.rs"
+            harness = true
+        "#,
+        )
+        .file(
+            "src/foo.rs",
+            r#"
+            fn main() {}
+            #[test] fn test_hello() {}
+        "#,
+        ).build();
+
+        p.cargo("test -q")
+            .with_stdout(
+                "
+running 1 test
+.
+test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out
+
+"
+            ).with_stderr("")
+            .run();
+}
+
+#[test]
+fn cargo_test_quiet_no_harness() {
+    let p = project()
+        .file(
+            "Cargo.toml",
+            r#"
+            [package]
+            name = "foo"
+            version = "0.1.0"
+            authors = []
+
+            [[bin]]
+            name = "foo"
+            test = false
+
+            [[test]]
+            name = "foo"
+            path = "src/main.rs"
+            harness = false
+        "#,
+        )
+        .file(
+            "src/main.rs",
+            r#"
+            fn main() {}
+            #[test] fn test_hello() {}
+        "#,
+        ).build();
+
+        p.cargo("test -q")
+            .with_stdout(
+                ""
+            ).with_stderr("")
+            .run();
+}
+
+#[test]
 fn cargo_test_verbose() {
     let p = project()
         .file("Cargo.toml", &basic_bin_manifest("foo"))

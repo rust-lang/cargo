@@ -145,7 +145,7 @@ fn execute_subcommand(config: &mut Config, args: &ArgMatches<'_>) -> CliResult {
 
     config.configure(
         args.occurrences_of("verbose") as u32,
-        if args.is_present("quiet") {
+        if args.is_present("quiet") || subcommand_args.is_present("quiet") {
             Some(true)
         } else {
             None
@@ -217,11 +217,7 @@ See 'cargo help <command>' for more information on a specific command.\n",
             .multiple(true)
             .global(true),
         )
-        .arg(
-            opt("quiet", "No output printed to stdout")
-                .short("q")
-                .global(true),
-        )
+        .arg(opt("quiet", "No output printed to stdout").short("q"))
         .arg(
             opt("color", "Coloring: auto, always, never")
                 .value_name("WHEN")
@@ -240,3 +236,4 @@ See 'cargo help <command>' for more information on a specific command.\n",
         )
         .subcommands(commands::builtin())
 }
+

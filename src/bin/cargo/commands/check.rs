@@ -7,6 +7,7 @@ pub fn cli() -> App {
         // subcommand aliases are handled in aliased_command()
         // .alias("c")
         .about("Check a local package and all of its dependencies for errors")
+        .arg(opt("quiet", "No output printed to stdout").short("q"))
         .arg_package_spec(
             "Package(s) to check",
             "Check all packages in the workspace",

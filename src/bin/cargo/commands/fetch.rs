@@ -6,6 +6,7 @@ use cargo::ops::FetchOptions;
 pub fn cli() -> App {
     subcommand("fetch")
         .about("Fetch dependencies of a package from the network")
+        .arg(opt("quiet", "No output printed to stdout").short("q"))
         .arg_manifest_path()
         .arg_target_triple("Fetch dependencies for the target triple")
         .after_help(
