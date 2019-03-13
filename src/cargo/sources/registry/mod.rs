@@ -404,7 +404,12 @@ impl<'cfg> RegistrySource<'cfg> {
         )
     }
 
-    pub fn local(source_id: SourceId, path: &Path, config: &'cfg Config) -> RegistrySource<'cfg> {
+    pub fn local(
+        source_id: SourceId,
+        path: &Path,
+        yanked_whitelist: &HashSet<PackageId>,
+        config: &'cfg Config,
+    ) -> RegistrySource<'cfg> {
         let name = short_name(source_id);
         let ops = local::LocalRegistry::new(path, config, &name);
         RegistrySource::new(
@@ -412,7 +417,7 @@ impl<'cfg> RegistrySource<'cfg> {
             config,
             &name,
             Box::new(ops),
-            &HashSet::new(),
+            yanked_whitelist,
             false,
         )
     }
