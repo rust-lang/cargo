@@ -3,12 +3,12 @@ use std::fs::File;
 use std::io::prelude::*;
 use std::path::Path;
 
+use crate::support::cargo_process;
 use crate::support::registry::Package;
 use crate::support::{
     basic_manifest, git, is_nightly, path2url, paths, project, publish::validate_crate_contents,
     registry,
 };
-use crate::support::{cargo_process, sleep_ms};
 use git2;
 
 #[test]
@@ -1201,26 +1201,23 @@ fn lock_file_and_workspace() {
 fn do_not_package_if_src_was_modified() {
     let p = project()
         .file("src/main.rs", r#"fn main() { println!("hello"); }"#)
+        .file("foo.txt", "")
+        .file("bar.txt", "")
         .file(
             "build.rs",
             r#"
-            use std::fs::File;
-            use std::io::Write;
+            use std::fs;
 
             fn main() {
-                let mut file = File::create("src/generated.txt").expect("failed to create file");
-                file.write_all(b"Hello, world of generated files.").expect("failed to write");
+                fs::write("src/generated.txt",
+                    "Hello, world of generated files."
+                ).expect("failed to create file");
+                fs::remove_file("foo.txt").expect("failed to remove");
+                fs::write("bar.txt", "updated content").expect("failed to update");
             }
         "#,
         )
         .build();
-
-    if cfg!(target_os = "macos") {
-        // MacOS has 1s resolution filesystem.
-        // If src/main.rs is created within 1s of src/generated.txt, then it
-        // won't trigger the modification check.
-        sleep_ms(1000);
-    }
 
     p.cargo("package")
         .with_status(101)
@@ -1230,7 +1227,10 @@ error: failed to verify package tarball
 
 Caused by:
   Source directory was modified by build.rs during cargo publish. \
-Build scripts should not modify anything outside of OUT_DIR. Modified file: [..]src/generated.txt
+Build scripts should not modify anything outside of OUT_DIR.
+Changed: [CWD]/target/package/foo-0.0.1/bar.txt
+Added: [CWD]/target/package/foo-0.0.1/src/generated.txt
+Removed: [CWD]/target/package/foo-0.0.1/foo.txt
 
 To proceed despite this, pass the `--no-verify` flag.",
         )
