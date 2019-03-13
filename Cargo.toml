@@ -59,6 +59,7 @@ termcolor = "1.0"
 toml = "0.4.2"
 url = "1.1"
 url_serde = "0.2.0"
+walkdir = "2.2"
 clap = "2.31.2"
 unicode-width = "0.1.5"
 openssl = { version = '0.10.11', optional = true }
