@@ -2,6 +2,7 @@ use crate::support;
 use std::env;
 use std::fs::{self, File};
 use std::io::prelude::*;
+use std::process::Command;
 
 use crate::support::{paths, Execs};
 
@@ -9,6 +10,18 @@ fn cargo_process(s: &str) -> Execs {
     let mut execs = support::cargo_process(s);
     execs.cwd(&paths::root()).env("HOME", &paths::home());
     execs
+}
+
+fn mercurial_available() -> bool {
+    let result = Command::new("hg")
+        .arg("--version")
+        .output()
+        .map(|o| o.status.success())
+        .unwrap_or(false);
+    if !result {
+        println!("`hg` not available, skipping test");
+    }
+    result
 }
 
 #[test]
@@ -467,6 +480,9 @@ fn terminating_newline_in_new_git_ignore() {
 
 #[test]
 fn terminating_newline_in_new_mercurial_ignore() {
+    if !mercurial_available() {
+        return;
+    }
     cargo_process("init --vcs hg --lib")
         .env("USER", "foo")
         .run();
