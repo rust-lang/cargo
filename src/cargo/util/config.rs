@@ -74,6 +74,8 @@ pub struct Config {
     env: HashMap<String, String>,
     /// Profiles loaded from config.
     profiles: LazyCell<ConfigProfiles>,
+    /// Use `clippy-driver` instead of `rustc`
+    clippy_override: bool,
 }
 
 impl Config {
@@ -129,6 +131,7 @@ impl Config {
             target_dir: None,
             env,
             profiles: LazyCell::new(),
+            clippy_override: false,
         }
     }
 
@@ -190,6 +193,11 @@ impl Config {
             .map(AsRef::as_ref)
     }
 
+    /// Sets the clippy override. If this is true, clippy-driver is invoked instead of rustc.
+    pub fn set_clippy_override(&mut self, val: bool) {
+        self.clippy_override = val;
+    }
+
     /// Gets the path to the `rustc` executable.
     pub fn rustc(&self, ws: Option<&Workspace<'_>>) -> CargoResult<Rustc> {
         let cache_location = ws.map(|ws| {
@@ -197,9 +205,14 @@ impl Config {
                 .join(".rustc_info.json")
                 .into_path_unlocked()
         });
+        let wrapper = if self.clippy_override {
+            Some(self.get_tool("clippy-driver")?)
+        } else {
+            self.maybe_get_tool("rustc-wrapper")?
+        };
         Rustc::new(
             self.get_tool("rustc")?,
-            self.maybe_get_tool("rustc_wrapper")?,
+            wrapper,
             &self
                 .home()
                 .join("bin")
@@ -743,14 +756,17 @@ impl Config {
             } else {
                 PathBuf::from(tool_path)
             };
+            println!("some tool {}", tool);
             return Ok(Some(path));
         }
 
         let var = format!("build.{}", tool);
         if let Some(tool_path) = self.get_path(&var)? {
+            println!("some tool {}", tool);
             return Ok(Some(tool_path.val));
         }
 
+        println!("NO TOOL {}", tool);
         Ok(None)
     }
 
