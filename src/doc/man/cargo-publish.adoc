@@ -9,7 +9,7 @@ cargo-publish - Upload a package to the registry
 
 == SYNOPSIS
 
-`cargo package [_OPTIONS_]`
+`cargo publish [_OPTIONS_]`
 
 == DESCRIPTION
 
