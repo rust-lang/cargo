@@ -2,7 +2,7 @@ use std::fs::{self, File};
 use std::io::prelude::*;
 
 use crate::support::paths::{self, CargoPathExt};
-use crate::support::registry::Package;
+use crate::support::registry::{registry_path, Package};
 use crate::support::{basic_manifest, project};
 
 fn setup() {
@@ -59,6 +59,45 @@ fn simple() {
         .run();
     p.cargo("build").with_stderr("[FINISHED] [..]").run();
     p.cargo("test").run();
+}
+
+#[test]
+fn depend_on_yanked() {
+    setup();
+    Package::new("bar", "0.0.1").local(true).publish();
+
+    let p = project()
+        .file(
+            "Cargo.toml",
+            r#"
+            [project]
+            name = "foo"
+            version = "0.0.1"
+            authors = []
+
+            [dependencies]
+            bar = "0.0.1"
+        "#,
+        )
+        .file("src/lib.rs", "")
+        .build();
+
+    // Run cargo to create lock file.
+    p.cargo("check").run();
+
+    registry_path().join("index").join("3").rm_rf();
+    Package::new("bar", "0.0.1")
+        .local(true)
+        .yanked(true)
+        .publish();
+
+    p.cargo("check")
+        .with_stderr(
+            "\
+[FINISHED] [..]
+",
+        )
+        .run();
 }
 
 #[test]
