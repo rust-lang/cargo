@@ -6,7 +6,7 @@ pub fn cli() -> App {
     subcommand("clippy-preview")
         // subcommand aliases are handled in aliased_command()
         // .alias("c")
-        .about("Check a local package and all of its dependencies for errors")
+        .about("Checks a package to catch common mistakes and improve your Rust code.")
         .arg_package_spec(
             "Package(s) to check",
             "Check all packages in the workspace",
@@ -49,6 +49,18 @@ the `--release` flag will use the `release` profile instead.
 
 The `--profile test` flag can be used to check unit tests with the
 `#[cfg(test)]` attribute.
+
+To allow or deny a lint from the command line you can use `cargo clippy --`
+with:
+
+    -W --warn OPT       Set lint warnings
+    -A --allow OPT      Set lint allowed
+    -D --deny OPT       Set lint denied
+    -F --forbid OPT     Set lint forbidden
+
+You can use tool lints to allow or deny lints from your code, eg.:
+
+    #[allow(clippy::needless_lifetimes)]
 ",
         )
 }

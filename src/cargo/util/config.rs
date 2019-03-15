@@ -20,6 +20,7 @@ use serde::Deserialize;
 use serde::{de, de::IntoDeserializer};
 use url::Url;
 
+use self::ConfigValue as CV;
 use crate::core::profiles::ConfigProfiles;
 use crate::core::shell::Verbosity;
 use crate::core::{CliUnstable, Shell, SourceId, Workspace};
@@ -30,7 +31,6 @@ use crate::util::Filesystem;
 use crate::util::Rustc;
 use crate::util::ToUrl;
 use crate::util::{paths, validate_package_name};
-use self::ConfigValue as CV;
 
 /// Configuration information for cargo. This is not specific to a build, it is information
 /// relating to cargo itself.
@@ -206,7 +206,16 @@ impl Config {
                 .into_path_unlocked()
         });
         let wrapper = if self.clippy_override {
-            Some(self.get_tool("clippy-driver")?)
+            let tool = self.get_tool("clippy-driver")?;
+            let tool = paths::resolve_executable(&tool).map_err(|e| {
+                failure::format_err!("{}: please run `rustup component add clippy`", e)
+            })?;
+            if !paths::is_executable(&tool) {
+                return Err(failure::format_err!(
+                    "found file for `clippy-driver` but its not an executable. what the heck is going on !? please run `rustup component add clippy`"
+                ));
+            }
+            Some(tool)
         } else {
             self.maybe_get_tool("rustc-wrapper")?
         };
@@ -407,6 +416,7 @@ impl Config {
         match self.get_env(key)? {
             Some(v) => Ok(Some(v)),
             None => {
+                // println!("{:#?}", self);
                 let config_key = key.to_config();
                 let o_cv = self.get_cv(&config_key)?;
                 match o_cv {
@@ -756,17 +766,14 @@ impl Config {
             } else {
                 PathBuf::from(tool_path)
             };
-            println!("some tool {}", tool);
             return Ok(Some(path));
         }
 
         let var = format!("build.{}", tool);
         if let Some(tool_path) = self.get_path(&var)? {
-            println!("some tool {}", tool);
             return Ok(Some(tool_path.val));
         }
 
-        println!("NO TOOL {}", tool);
         Ok(None)
     }
 
@@ -940,8 +947,7 @@ impl ConfigError {
     }
 }
 
-impl std::error::Error for ConfigError {
-}
+impl std::error::Error for ConfigError {}
 
 // Future note: currently, we cannot override `Fail::cause` (due to
 // specialization) so we have no way to return the underlying causes. In the
