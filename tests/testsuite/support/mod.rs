@@ -1519,7 +1519,7 @@ fn substitute_macros(input: &str) -> String {
         ("[UNPACKING]", "   Unpacking"),
         ("[SUMMARY]", "     Summary"),
         ("[FIXING]", "      Fixing"),
-        ("[EXE]", if cfg!(windows) { ".exe" } else { "" }),
+        ("[EXE]",           env::consts::EXE_SUFFIX),
     ];
     let mut result = input.to_owned();
     for &(pat, subst) in &macros {
