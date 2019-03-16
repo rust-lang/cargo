@@ -23,20 +23,6 @@ matrix:
       rust: beta
       if: branch != master OR type = pull_request
 
-    # Minimum Rust supported channel. We enable these to make sure we
-    # continue to work on the advertised minimum Rust version.
-    # However cargo only supports the latest stable so this will get
-    # increased every 6 weeks or so when the first PR to use a new feature.
-    - env: TARGET=x86_64-unknown-linux-gnu
-           ALT=i686-unknown-linux-gnu
-      rust: 1.32.0
-      script:
-        - rustup toolchain install nightly || travis_terminate 1
-        - cargo +nightly generate-lockfile -Z minimal-versions || travis_terminate 1
-        - cargo -V || travis_terminate 1
-        - cargo test --features=deny-warnings || travis_terminate 1
-      if: branch != master OR type = pull_request
-
     - env: TARGET=x86_64-unknown-linux-gnu
            ALT=i686-unknown-linux-gnu
       rust: nightly
