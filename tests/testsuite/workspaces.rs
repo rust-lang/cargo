@@ -83,6 +83,44 @@ fn simple_explicit_default_members() {
 }
 
 #[test]
+fn non_virtual_default_members_build_other_member() {
+    let p = project()
+        .file(
+            "Cargo.toml",
+            r#"
+            [project]
+            name = "foo"
+            version = "0.1.0"
+            authors = []
+
+            [workspace]
+            members = [".", "bar", "baz"]
+            default-members = ["baz"]
+        "#,
+        )
+        .file("src/main.rs", "fn main() {}")
+        .file("bar/Cargo.toml", &basic_manifest("bar", "0.1.0"))
+        .file("bar/src/lib.rs", "pub fn bar() {}")
+        .file("baz/Cargo.toml", &basic_manifest("baz", "0.1.0"))
+        .file("baz/src/lib.rs", "pub fn baz() {}")
+        .build();
+
+    p.cargo("build")
+        .with_stderr(
+            "[..] Compiling baz v0.1.0 ([..])\n\
+             [..] Finished dev [unoptimized + debuginfo] target(s) in [..]\n",
+        )
+        .run();
+
+    p.cargo("build --manifest-path bar/Cargo.toml")
+        .with_stderr(
+            "[..] Compiling bar v0.1.0 ([..])\n\
+             [..] Finished dev [unoptimized + debuginfo] target(s) in [..]\n",
+        )
+        .run();
+}
+
+#[test]
 fn inferred_root() {
     let p = project()
         .file(
@@ -842,6 +880,31 @@ fn virtual_default_member_is_not_a_member() {
 error: package `[..]something-else` is listed in workspace’s default-members \
 but is not a member.
 ",
+        )
+        .run();
+}
+
+#[test]
+fn virtual_default_members_build_other_member() {
+    let p = project()
+        .file(
+            "Cargo.toml",
+            r#"
+            [workspace]
+            members = ["bar", "baz"]
+            default-members = ["baz"]
+        "#,
+        )
+        .file("bar/Cargo.toml", &basic_manifest("bar", "0.1.0"))
+        .file("bar/src/lib.rs", "pub fn bar() {}")
+        .file("baz/Cargo.toml", &basic_manifest("baz", "0.1.0"))
+        .file("baz/src/lib.rs", "pub fn baz() {}")
+        .build();
+
+    p.cargo("build --manifest-path bar/Cargo.toml")
+        .with_stderr(
+            "[..] Compiling bar v0.1.0 ([..])\n\
+             [..] Finished dev [unoptimized + debuginfo] target(s) in [..]\n",
         )
         .run();
 }
