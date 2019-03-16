@@ -1407,3 +1407,31 @@ fn conflict_store_bug() {
     let reg = registry(input);
     let _ = resolve_and_validated(pkg_id("root"), vec![dep("j")], &reg);
 }
+
+#[test]
+fn conflict_store_more_then_one_match() {
+    let input = vec![
+        pkg!(("A", "0.0.0")),
+        pkg!(("A", "0.0.1")),
+        pkg!(("A-sys", "0.0.0")),
+        pkg!(("A-sys", "0.0.1")),
+        pkg!(("A-sys", "0.0.2")),
+        pkg!(("A-sys", "0.0.3")),
+        pkg!(("A-sys", "0.0.12")),
+        pkg!(("A-sys", "0.0.16")),
+        pkg!(("B-sys", "0.0.0")),
+        pkg!(("B-sys", "0.0.1")),
+        pkg!(("B-sys", "0.0.2") => [dep_req("A-sys", "= 0.0.12"),]),
+        pkg!(("BA-sys", "0.0.0") => [dep_req("A-sys","= 0.0.16"),]),
+        pkg!(("BA-sys", "0.0.1") => [dep("bad"),]),
+        pkg!(("BA-sys", "0.0.2") => [dep("bad"),]),
+        pkg!("nA" => [
+            dep("A"),
+            dep_req("A-sys", "<= 0.0.3"),
+            dep("B-sys"),
+            dep("BA-sys"),
+        ]),
+    ];
+    let reg = registry(input);
+    let _ = resolve_and_validated(pkg_id("root"), vec![dep("nA")], &reg);
+}
