@@ -29,7 +29,7 @@ impl ConflictStoreTrie {
                 if must_contain.is_none() {
                     // `is_conflicting` checks that all the elements are active,
                     // but we have checked each one by the recursion of this function.
-                    debug_assert!(cx.is_conflicting(None, c));
+                    debug_assert!(cx.is_conflicting(None, c).is_some());
                     Some(c)
                 } else {
                     // We did not find `must_contain`, so we need to keep looking.
@@ -42,7 +42,7 @@ impl ConflictStoreTrie {
                     .unwrap_or_else(|| m.range(..))
                 {
                     // If the key is active, then we need to check all of the corresponding subtrie.
-                    if cx.is_active(pid) {
+                    if cx.is_active(pid).is_some() {
                         if let Some(o) =
                             store.find_conflicting(cx, must_contain.filter(|&f| f != pid))
                         {
