@@ -508,18 +508,18 @@ pub fn registry_strategy(
 
 /// This test is to test the generator to ensure
 /// that it makes registries with large dependency trees
-///
-/// This is a form of randomized testing, if you are unlucky it can fail.
-/// A failure on its own is not a big deal. If you did not change the
-/// `registry_strategy` then feel free to retry without concern.
 #[test]
 fn meta_test_deep_trees_from_strategy() {
     let mut dis = [0; 21];
 
     let strategy = registry_strategy(50, 20, 60);
+    let mut test_runner = TestRunner::deterministic();
     for _ in 0..128 {
         let PrettyPrintRegistry(input) = strategy
-            .new_tree(&mut TestRunner::default())
+            .new_tree(&mut TestRunner::new_with_rng(
+                Default::default(),
+                test_runner.new_rng(),
+            ))
             .unwrap()
             .current();
         let reg = registry(input.clone());
@@ -547,18 +547,18 @@ fn meta_test_deep_trees_from_strategy() {
 
 /// This test is to test the generator to ensure
 /// that it makes registries that include multiple versions of the same library
-///
-/// This is a form of randomized testing, if you are unlucky it can fail.
-/// A failure on its own is not a big deal. If you did not change the
-/// `registry_strategy` then feel free to retry without concern.
 #[test]
 fn meta_test_multiple_versions_strategy() {
     let mut dis = [0; 10];
 
     let strategy = registry_strategy(50, 20, 60);
+    let mut test_runner = TestRunner::deterministic();
     for _ in 0..128 {
         let PrettyPrintRegistry(input) = strategy
-            .new_tree(&mut TestRunner::default())
+            .new_tree(&mut TestRunner::new_with_rng(
+                Default::default(),
+                test_runner.new_rng(),
+            ))
             .unwrap()
             .current();
         let reg = registry(input.clone());
