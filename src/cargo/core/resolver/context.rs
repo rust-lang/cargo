@@ -1,4 +1,5 @@
 use std::collections::{HashMap, HashSet};
+use std::num::NonZeroU64;
 use std::rc::Rc;
 
 // "ensure" seems to require "bail" be in scope (macro hygiene issue?).
@@ -52,8 +53,36 @@ pub struct Context {
     pub warnings: RcList<String>,
 }
 
-/// list all the activated versions of a particular crate name from a source
-pub type Activations = im_rc::HashMap<(InternedString, SourceId), Rc<Vec<Summary>>>;
+/// find the activated version of a crate based on the name, source, and semver compatibility
+pub type Activations = im_rc::HashMap<(InternedString, SourceId, SemverCompatibility), Summary>;
+
+/// A type that represents when cargo treats two Versions as compatible.
+/// Versions `a` and `b` are compatible if their left-most nonzero digit is the
+/// same.
+#[derive(Clone, Copy, Eq, PartialEq, Hash)]
+pub enum SemverCompatibility {
+    Major(NonZeroU64),
+    Minor(NonZeroU64),
+    Patch(u64),
+}
+
+impl From<&semver::Version> for SemverCompatibility {
+    fn from(ver: &semver::Version) -> Self {
+        if let Some(m) = NonZeroU64::new(ver.major) {
+            return SemverCompatibility::Major(m);
+        }
+        if let Some(m) = NonZeroU64::new(ver.minor) {
+            return SemverCompatibility::Minor(m);
+        }
+        SemverCompatibility::Patch(ver.patch)
+    }
+}
+
+impl PackageId {
+    pub fn as_activations_key(&self) -> (InternedString, SourceId, SemverCompatibility) {
+        (self.name(), self.source_id(), self.version().into())
+    }
+}
 
 impl Context {
     pub fn new(check_public_visible_dependencies: bool) -> Context {
@@ -78,22 +107,27 @@ impl Context {
     /// Returns `true` if this summary with the given method is already activated.
     pub fn flag_activated(&mut self, summary: &Summary, method: &Method<'_>) -> CargoResult<bool> {
         let id = summary.package_id();
-        let prev = self
-            .activations
-            .entry((id.name(), id.source_id()))
-            .or_insert_with(|| Rc::new(Vec::new()));
-        if !prev.iter().any(|c| c == summary) {
-            self.resolve_graph.push(GraphNode::Add(id));
-            if let Some(link) = summary.links() {
-                ensure!(
-                    self.links.insert(link, id).is_none(),
-                    "Attempting to resolve a dependency with more then one crate with the \
-                     links={}.\nThis will not build as is. Consider rebuilding the .lock file.",
-                    &*link
+        match self.activations.entry(id.as_activations_key()) {
+            im_rc::hashmap::Entry::Occupied(o) => {
+                debug_assert_eq!(
+                    o.get(),
+                    summary,
+                    "cargo does not allow two semver compatible versions"
                 );
             }
-            Rc::make_mut(prev).push(summary.clone());
-            return Ok(false);
+            im_rc::hashmap::Entry::Vacant(v) => {
+                self.resolve_graph.push(GraphNode::Add(id));
+                if let Some(link) = summary.links() {
+                    ensure!(
+                        self.links.insert(link, id).is_none(),
+                        "Attempting to resolve a dependency with more then one crate with the \
+                         links={}.\nThis will not build as is. Consider rebuilding the .lock file.",
+                        &*link
+                    );
+                }
+                v.insert(summary.clone());
+                return Ok(false);
+            }
         }
         debug!("checking if {} is already activated", summary.package_id());
         let (features, use_default) = match *method {
@@ -149,17 +183,10 @@ impl Context {
         Ok(deps)
     }
 
-    pub fn prev_active(&self, dep: &Dependency) -> &[Summary] {
-        self.activations
-            .get(&(dep.package_name(), dep.source_id()))
-            .map(|v| &v[..])
-            .unwrap_or(&[])
-    }
-
     pub fn is_active(&self, id: PackageId) -> bool {
         self.activations
-            .get(&(id.name(), id.source_id()))
-            .map(|v| v.iter().any(|s| s.package_id() == id))
+            .get(&id.as_activations_key())
+            .map(|s| s.package_id() == id)
             .unwrap_or(false)
     }
 

@@ -137,7 +137,7 @@ pub fn resolve(
     let cx = activate_deps_loop(cx, &mut registry, summaries, config)?;
 
     let mut cksums = HashMap::new();
-    for summary in cx.activations.values().flat_map(|v| v.iter()) {
+    for summary in cx.activations.values() {
         let cksum = summary.checksum().map(|s| s.to_string());
         cksums.insert(summary.package_id(), cksum);
     }
@@ -236,13 +236,6 @@ fn activate_deps_loop(
             cur,
             dep.package_name(),
             candidates.len()
-        );
-        trace!(
-            "{}[{}]>{} {} prev activations",
-            parent.name(),
-            cur,
-            dep.package_name(),
-            cx.prev_active(&dep).len()
         );
 
         let just_here_for_the_error_messages = just_here_for_the_error_messages
@@ -759,16 +752,15 @@ impl RemainingCandidates {
         dep: &Dependency,
         parent: PackageId,
     ) -> Option<(Candidate, bool)> {
-        let prev_active = cx.prev_active(dep);
-
         'main: for (_, b) in self.remaining.by_ref() {
+            let b_id = b.summary.package_id();
             // The `links` key in the manifest dictates that there's only one
             // package in a dependency graph, globally, with that particular
             // `links` key. If this candidate links to something that's already
             // linked to by a different package then we've gotta skip this.
             if let Some(link) = b.summary.links() {
                 if let Some(&a) = cx.links.get(&link) {
-                    if a != b.summary.package_id() {
+                    if a != b_id {
                         conflicting_prev_active
                             .entry(a)
                             .or_insert_with(|| ConflictReason::Links(link));
@@ -785,10 +777,7 @@ impl RemainingCandidates {
             //
             // Here we throw out our candidate if it's *compatible*, yet not
             // equal, to all previously activated versions.
-            if let Some(a) = prev_active
-                .iter()
-                .find(|a| compatible(a.version(), b.summary.version()))
-            {
+            if let Some(a) = cx.activations.get(&b_id.as_activations_key()) {
                 if *a != b.summary {
                     conflicting_prev_active
                         .entry(a.package_id())
@@ -803,11 +792,11 @@ impl RemainingCandidates {
             // all of witch also need to be checked the same way.
             if let Some(public_dependency) = cx.public_dependency.as_ref() {
                 let existing_public_deps: Vec<PackageId> = public_dependency
-                    .get(&b.summary.package_id())
+                    .get(&b_id)
                     .iter()
                     .flat_map(|x| x.values())
                     .filter_map(|x| if x.1 { Some(&x.0) } else { None })
-                    .chain(&Some(b.summary.package_id()))
+                    .chain(&Some(b_id))
                     .cloned()
                     .collect();
                 for t in existing_public_deps {
@@ -849,27 +838,6 @@ impl RemainingCandidates {
         // nothing else).
         self.has_another.take().map(|r| (r, false))
     }
-}
-
-// Returns if `a` and `b` are compatible in the semver sense. This is a
-// commutative operation.
-//
-// Versions `a` and `b` are compatible if their left-most nonzero digit is the
-// same.
-fn compatible(a: &semver::Version, b: &semver::Version) -> bool {
-    if a.major != b.major {
-        return false;
-    }
-    if a.major != 0 {
-        return true;
-    }
-    if a.minor != b.minor {
-        return false;
-    }
-    if a.minor != 0 {
-        return true;
-    }
-    a.patch == b.patch
 }
 
 /// Looks through the states in `backtrack_stack` for dependencies with
@@ -937,11 +905,8 @@ fn find_candidate(
 }
 
 fn check_cycles(resolve: &Resolve, activations: &Activations) -> CargoResult<()> {
-    let summaries: HashMap<PackageId, &Summary> = activations
-        .values()
-        .flat_map(|v| v.iter())
-        .map(|s| (s.package_id(), s))
-        .collect();
+    let summaries: HashMap<PackageId, &Summary> =
+        activations.values().map(|s| (s.package_id(), s)).collect();
 
     // Sort packages to produce user friendly deterministic errors.
     let mut all_packages: Vec<_> = resolve.iter().collect();
