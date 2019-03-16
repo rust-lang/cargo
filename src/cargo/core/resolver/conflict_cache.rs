@@ -18,19 +18,21 @@ enum ConflictStoreTrie {
 
 impl ConflictStoreTrie {
     /// Finds any known set of conflicts, if any,
-    /// which are activated in `cx` and pass the `filter` specified?
+    /// which are activated in `cx` and contain `PackageId` specified.
+    /// If more then one are activated, then it will return
+    /// one that will allow for the most jump-back.
     fn find_conflicting(
         &self,
         cx: &Context,
         must_contain: Option<PackageId>,
-    ) -> Option<&ConflictMap> {
+    ) -> Option<(&ConflictMap, usize)> {
         match self {
             ConflictStoreTrie::Leaf(c) => {
                 if must_contain.is_none() {
                     // `is_conflicting` checks that all the elements are active,
                     // but we have checked each one by the recursion of this function.
                     debug_assert!(cx.is_conflicting(None, c).is_some());
-                    Some(c)
+                    Some((c, 0))
                 } else {
                     // We did not find `must_contain`, so we need to keep looking.
                     None
@@ -43,11 +45,22 @@ impl ConflictStoreTrie {
                     .unwrap_or_else(|| m.range(..))
                 {
                     // If the key is active, then we need to check all of the corresponding subtrie.
-                    if cx.is_active(pid).is_some() {
-                        if let Some(o) =
+                    if let Some(age_this) = cx.is_active(pid) {
+                        if let Some((o, age_o)) =
                             store.find_conflicting(cx, must_contain.filter(|&f| f != pid))
                         {
-                            assert!(out.replace(o).is_none());
+                            let age = if must_contain == Some(pid) {
+                                // all the results will include `must_contain`
+                                // so the age of must_contain is not relevant to find the best result.
+                                age_o
+                            } else {
+                                std::cmp::max(age_this, age_o)
+                            };
+                            let out_age = out.get_or_insert((o, age)).1;
+                            if out_age > age {
+                                // we found one that can jump-back further so replace the out.
+                                out = Some((o, age));
+                            }
                         }
                     }
                     // Else, if it is not active then there is no way any of the corresponding
@@ -138,7 +151,9 @@ impl ConflictCache {
         }
     }
     /// Finds any known set of conflicts, if any,
-    /// which are activated in `cx` and pass the `filter` specified?
+    /// which are activated in `cx` and contain `PackageId` specified.
+    /// If more then one are activated, then it will return
+    /// one that will allow for the most jump-back.
     pub fn find_conflicting(
         &self,
         cx: &Context,
@@ -148,7 +163,8 @@ impl ConflictCache {
         let out = self
             .con_from_dep
             .get(dep)?
-            .find_conflicting(cx, must_contain);
+            .find_conflicting(cx, must_contain)
+            .map(|(c, _)| c);
         if cfg!(debug_assertions) {
             if let Some(f) = must_contain {
                 if let Some(c) = &out {
