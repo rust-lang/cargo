@@ -37,6 +37,7 @@ impl ConflictStoreTrie {
                 }
             }
             ConflictStoreTrie::Node(m) => {
+                let mut out = None;
                 for (&pid, store) in must_contain
                     .map(|f| m.range(..=f))
                     .unwrap_or_else(|| m.range(..))
@@ -46,13 +47,13 @@ impl ConflictStoreTrie {
                         if let Some(o) =
                             store.find_conflicting(cx, must_contain.filter(|&f| f != pid))
                         {
-                            return Some(o);
+                            assert!(out.replace(o).is_none());
                         }
                     }
                     // Else, if it is not active then there is no way any of the corresponding
                     // subtrie will be conflicting.
                 }
-                None
+                out
             }
         }
     }
