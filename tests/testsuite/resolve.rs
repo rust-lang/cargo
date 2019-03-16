@@ -8,11 +8,11 @@ use crate::support::project;
 use crate::support::registry::Package;
 use crate::support::resolver::{
     assert_contains, assert_same, dep, dep_kind, dep_loc, dep_req, dep_req_kind, loc_names, names,
-    pkg, pkg_dep, pkg_id, pkg_loc, registry, registry_strategy, remove_dep, resolve, resolve_and_validated,
-    resolve_with_config, PrettyPrintRegistry, ToDep, ToPkgId,
+    pkg, pkg_dep, pkg_id, pkg_loc, registry, registry_strategy, remove_dep, resolve,
+    resolve_and_validated, resolve_with_config, PrettyPrintRegistry, ToDep, ToPkgId,
 };
 
-use proptest::{prelude::*, *};
+use proptest::prelude::*;
 
 // NOTE: proptest is a form of fuzz testing. It generates random input and makes sure that
 // certain universal truths are upheld. Therefore, it can pass when there is a problem,
@@ -107,7 +107,7 @@ proptest! {
     #[test]
     fn removing_a_dep_cant_break(
             PrettyPrintRegistry(input) in registry_strategy(50, 20, 60),
-            indexes_to_remove in collection::vec((any::<prop::sample::Index>(), any::<prop::sample::Index>()), ..10)
+            indexes_to_remove in prop::collection::vec((any::<prop::sample::Index>(), any::<prop::sample::Index>()), ..10)
     ) {
         let reg = registry(input.clone());
         let mut removed_input = input.clone();
@@ -149,7 +149,7 @@ proptest! {
     #[test]
     fn limited_independence_of_irrelevant_alternatives(
         PrettyPrintRegistry(input) in registry_strategy(50, 20, 60),
-        indexes_to_unpublish in collection::vec(any::<prop::sample::Index>(), ..10)
+        indexes_to_unpublish in prop::collection::vec(any::<prop::sample::Index>(), ..10)
     )  {
         let reg = registry(input.clone());
         // there is only a small chance that any one
