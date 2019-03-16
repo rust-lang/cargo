@@ -54,7 +54,10 @@ pub struct Context {
 }
 
 /// find the activated version of a crate based on the name, source, and semver compatibility
-pub type Activations = im_rc::HashMap<(InternedString, SourceId, SemverCompatibility), Summary>;
+/// This all so stores the size of `Activations` when that version was add as an "age".
+/// This is used to speed up backtracking.
+pub type Activations =
+    im_rc::HashMap<(InternedString, SourceId, SemverCompatibility), (Summary, usize)>;
 
 /// A type that represents when cargo treats two Versions as compatible.
 /// Versions `a` and `b` are compatible if their left-most nonzero digit is the
@@ -107,10 +110,11 @@ impl Context {
     /// Returns `true` if this summary with the given method is already activated.
     pub fn flag_activated(&mut self, summary: &Summary, method: &Method<'_>) -> CargoResult<bool> {
         let id = summary.package_id();
+        let activations_len = self.activations.len();
         match self.activations.entry(id.as_activations_key()) {
             im_rc::hashmap::Entry::Occupied(o) => {
                 debug_assert_eq!(
-                    o.get(),
+                    &o.get().0,
                     summary,
                     "cargo does not allow two semver compatible versions"
                 );
@@ -125,7 +129,7 @@ impl Context {
                         &*link
                     );
                 }
-                v.insert(summary.clone());
+                v.insert((summary.clone(), activations_len));
                 return Ok(false);
             }
         }
@@ -183,24 +187,30 @@ impl Context {
         Ok(deps)
     }
 
-    pub fn is_active(&self, id: PackageId) -> bool {
+    /// If the package is active returns the "age" (len of activations) when it was added
+    pub fn is_active(&self, id: PackageId) -> Option<usize> {
         self.activations
             .get(&id.as_activations_key())
-            .map(|s| s.package_id() == id)
-            .unwrap_or(false)
+            .and_then(|(s, l)| if s.package_id() == id { Some(*l) } else { None })
     }
 
     /// Checks whether all of `parent` and the keys of `conflicting activations`
     /// are still active.
+    /// If so returns the "age" (len of activations) when the newest one was added.
     pub fn is_conflicting(
         &self,
         parent: Option<PackageId>,
         conflicting_activations: &ConflictMap,
-    ) -> bool {
-        conflicting_activations
-            .keys()
-            .chain(parent.as_ref())
-            .all(|&id| self.is_active(id))
+    ) -> Option<usize> {
+        let mut max = 0;
+        for &id in conflicting_activations.keys().chain(parent.as_ref()) {
+            if let Some(age) = self.is_active(id) {
+                max = std::cmp::max(max, age);
+            } else {
+                return None;
+            }
+        }
+        Some(max)
     }
 
     /// Returns all dependencies and the features we want from them.
