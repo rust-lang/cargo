@@ -1,3 +1,4 @@
+use std::env::consts::EXE_SUFFIX;
 use std::path::{Path, PathBuf};
 
 use crate::support::paths;
@@ -23,9 +24,5 @@ pub fn cargo_home() -> PathBuf {
 }
 
 pub fn exe(name: &str) -> String {
-    if cfg!(windows) {
-        format!("{}.exe", name)
-    } else {
-        name.to_string()
-    }
+    format!("{}{}", name, EXE_SUFFIX)
 }
