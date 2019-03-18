@@ -299,6 +299,15 @@ fn activate_deps_loop(
                 // not be right, so we can't push into our global cache.
                 if !just_here_for_the_error_messages && !backtracked {
                     past_conflicting_activations.insert(&dep, &conflicting_activations);
+                    if let Some(c) = generalize_conflicting(
+                        &cx,
+                        registry,
+                        &mut past_conflicting_activations,
+                        &dep,
+                        &conflicting_activations,
+                    ) {
+                        conflicting_activations = c;
+                    }
                 }
 
                 match find_candidate(
@@ -840,6 +849,62 @@ impl RemainingCandidates {
         // nothing else).
         self.has_another.take().map(|r| (r, false))
     }
+}
+
+/// Attempts to find a new conflict that allows a bigger backjump then the input one.
+/// It will add the new conflict to the cache if one is found.
+///
+/// Panics if the input conflict is not all active in `cx`.
+fn generalize_conflicting(
+    cx: &Context,
+    registry: &mut RegistryQueryer<'_>,
+    past_conflicting_activations: &mut conflict_cache::ConflictCache,
+    dep: &Dependency,
+    conflicting_activations: &ConflictMap,
+) -> Option<ConflictMap> {
+    if conflicting_activations.is_empty() {
+        return None;
+    }
+    // We need to determine the "age" that this `conflicting_activations` will jump to, and why.
+    let (jumpback_critical_age, jumpback_critical_id) = conflicting_activations
+        .keys()
+        .map(|&c| (cx.is_active(c).expect("not currently active!?"), c))
+        .max()
+        .unwrap();
+    let jumpback_critical_reason: ConflictReason =
+        conflicting_activations[&jumpback_critical_id].clone();
+    // What parents dose that critical activation have
+    for (critical_parent, critical_parents_deps) in
+        cx.parents.edges(&jumpback_critical_id).filter(|(p, _)| {
+            // it will only help backjump further if it is older then the critical_age
+            cx.is_active(*p).expect("parent not currently active!?") < jumpback_critical_age
+        })
+    {
+        for critical_parents_dep in critical_parents_deps.iter() {
+            // A dep is equivalent to one of the things it can resolve to.
+            // Thus, if all the things it can resolve to have already ben determined
+            // to be conflicting, then we can just say that we conflict with the parent.
+            if registry
+                .query(&critical_parents_dep)
+                .expect("an already used dep now error!?")
+                .iter()
+                .rev() // the last one to be tried is the least likely to be in the cache, so start with that.
+                .all(|other| {
+                    let mut con = conflicting_activations.clone();
+                    con.remove(&jumpback_critical_id);
+                    con.insert(other.summary.package_id(), jumpback_critical_reason.clone());
+                    past_conflicting_activations.contains(&dep, &con)
+                })
+            {
+                let mut con = conflicting_activations.clone();
+                con.remove(&jumpback_critical_id);
+                con.insert(*critical_parent, jumpback_critical_reason);
+                past_conflicting_activations.insert(&dep, &con);
+                return Some(con);
+            }
+        }
+    }
+    None
 }
 
 /// Looks through the states in `backtrack_stack` for dependencies with

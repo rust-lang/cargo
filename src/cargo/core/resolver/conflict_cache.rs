@@ -102,6 +102,28 @@ impl ConflictStoreTrie {
             *self = ConflictStoreTrie::Leaf(con)
         }
     }
+
+    fn contains(&self, mut iter: impl Iterator<Item = PackageId>, con: &ConflictMap) -> bool {
+        match (self, iter.next()) {
+            (ConflictStoreTrie::Leaf(c), None) => {
+                if cfg!(debug_assertions) {
+                    let a: Vec<_> = con.keys().collect();
+                    let b: Vec<_> = c.keys().collect();
+                    assert_eq!(a, b);
+                }
+                true
+            }
+            (ConflictStoreTrie::Leaf(_), Some(_)) => false,
+            (ConflictStoreTrie::Node(_), None) => false,
+            (ConflictStoreTrie::Node(m), Some(n)) => {
+                if let Some(next) = m.get(&n) {
+                    next.contains(iter, con)
+                } else {
+                    false
+                }
+            }
+        }
+    }
 }
 
 pub(super) struct ConflictCache {
@@ -206,6 +228,18 @@ impl ConflictCache {
                 .insert(dep.clone());
         }
     }
+
+    /// Check if a conflict was previously added of the form:
+    /// `dep` is known to be unresolvable if
+    /// all the `PackageId` entries are activated.
+    pub fn contains(&self, dep: &Dependency, con: &ConflictMap) -> bool {
+        if let Some(cst) = self.con_from_dep.get(dep) {
+            cst.contains(con.keys().cloned(), &con)
+        } else {
+            false
+        }
+    }
+
     pub fn dependencies_conflicting_with(&self, pid: PackageId) -> Option<&HashSet<Dependency>> {
         self.dep_from_pid.get(&pid)
     }
