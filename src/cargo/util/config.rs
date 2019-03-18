@@ -208,13 +208,17 @@ impl Config {
         let wrapper = if self.clippy_override {
             let tool = self.get_tool("clippy-driver")?;
             let tool = paths::resolve_executable(&tool).map_err(|e| {
-                failure::format_err!("{}: please run `rustup component add clippy`", e)
+                let rustup_in_path = self
+                    .get_tool("rustup")
+                    .and_then(|tool| paths::resolve_executable(&tool))
+                    .is_ok();
+                let has_rustup_env = std::env::var("RUSTUP_TOOLCHAIN").is_ok();
+                if dbg!(rustup_in_path) || dbg!(has_rustup_env) {
+                    failure::format_err!("{}: please run `rustup component add clippy`", e)
+                } else {
+                    failure::format_err!("{}: please install clippy component", e)
+                }
             })?;
-            if !paths::is_executable(&tool) {
-                return Err(failure::format_err!(
-                    "found file for `clippy-driver` but its not an executable. what the heck is going on !? please run `rustup component add clippy`"
-                ));
-            }
             Some(tool)
         } else {
             self.maybe_get_tool("rustc-wrapper")?
