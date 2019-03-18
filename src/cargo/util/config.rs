@@ -213,7 +213,7 @@ impl Config {
                     .and_then(|tool| paths::resolve_executable(&tool))
                     .is_ok();
                 let has_rustup_env = std::env::var("RUSTUP_TOOLCHAIN").is_ok();
-                if dbg!(rustup_in_path) || dbg!(has_rustup_env) {
+                if rustup_in_path || has_rustup_env {
                     failure::format_err!("{}: please run `rustup component add clippy`", e)
                 } else {
                     failure::format_err!("{}: please install clippy component", e)
