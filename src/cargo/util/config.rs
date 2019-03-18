@@ -416,7 +416,6 @@ impl Config {
         match self.get_env(key)? {
             Some(v) => Ok(Some(v)),
             None => {
-                // println!("{:#?}", self);
                 let config_key = key.to_config();
                 let o_cv = self.get_cv(&config_key)?;
                 match o_cv {

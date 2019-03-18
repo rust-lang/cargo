@@ -80,8 +80,16 @@ pub fn exec(config: &mut Config, args: &ArgMatches<'_>) -> CliResult {
             return Err(CliError::new(err, 101));
         }
     };
+
     let mode = CompileMode::Check { test };
     let compile_opts = args.compile_options(config, mode, Some(&ws))?;
+
+    if !config.cli_unstable().unstable_options {
+        return Err(failure::format_err!(
+            "`clippy-preview` is unstable, pass `-Z unstable-options` to enable it"
+        )
+        .into());
+    }
 
     ops::compile(&ws, &compile_opts)?;
     Ok(())
