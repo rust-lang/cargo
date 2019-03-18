@@ -89,20 +89,6 @@ pub fn normalize_path(path: &Path) -> PathBuf {
     ret
 }
 
-#[cfg(unix)]
-pub fn is_executable<P: AsRef<Path>>(path: P) -> bool {
-    use std::os::unix::prelude::*;
-    fs::metadata(path)
-        .map(|metadata| metadata.is_file() && metadata.permissions().mode() & 0o111 != 0)
-        .unwrap_or(false)
-}
-#[cfg(windows)]
-pub fn is_executable<P: AsRef<Path>>(path: P) -> bool {
-    fs::metadata(path)
-        .map(|metadata| metadata.is_file())
-        .unwrap_or(false)
-}
-
 pub fn resolve_executable(exec: &Path) -> CargoResult<PathBuf> {
     if exec.components().count() == 1 {
         let paths = env::var_os("PATH").ok_or_else(|| failure::format_err!("no PATH"))?;

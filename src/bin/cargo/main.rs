@@ -7,10 +7,9 @@
 use std::collections::BTreeSet;
 use std::env;
 use std::fs;
-use std::path::PathBuf;
+use std::path::{Path, PathBuf};
 
 use cargo::core::shell::Shell;
-use cargo::util::paths::is_executable;
 use cargo::util::{self, command_prelude, lev_distance, CargoResult, CliResult, Config};
 use cargo::util::{CliError, ProcessError};
 
@@ -163,6 +162,20 @@ fn execute_external_subcommand(config: &Config, cmd: &str, args: &[&str]) -> Cli
         }
     }
     Err(CliError::new(err, 101))
+}
+
+#[cfg(unix)]
+fn is_executable<P: AsRef<Path>>(path: P) -> bool {
+    use std::os::unix::prelude::*;
+    fs::metadata(path)
+        .map(|metadata| metadata.is_file() && metadata.permissions().mode() & 0o111 != 0)
+        .unwrap_or(false)
+}
+#[cfg(windows)]
+fn is_executable<P: AsRef<Path>>(path: P) -> bool {
+    fs::metadata(path)
+        .map(|metadata| metadata.is_file())
+        .unwrap_or(false)
 }
 
 fn search_directories(config: &Config) -> Vec<PathBuf> {
