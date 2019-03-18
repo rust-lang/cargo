@@ -216,7 +216,7 @@ impl Config {
                 if rustup_in_path || has_rustup_env {
                     failure::format_err!("{}: please run `rustup component add clippy`", e)
                 } else {
-                    failure::format_err!("{}: please install clippy component", e)
+                    failure::format_err!("{}: please install clippy", e)
                 }
             })?;
             Some(tool)
