@@ -142,6 +142,24 @@ in the future.",
         return Ok(ret);
     }
 
+    let mut third_parser = toml::de::Deserializer::new(toml);
+    third_parser.set_allow_duplicate_after_longer_table(true);
+    if let Ok(ret) = toml::Value::deserialize(&mut third_parser) {
+        let msg = format!(
+            "\
+TOML file found which contains invalid syntax and will soon not parse
+at `{}`.
+
+The TOML spec requires that each table header is defined at most once, but
+historical versions of Cargo have erroneously accepted this file. The table
+definitions will need to be merged together with one table header to proceed,
+and this will become a hard error in the future.",
+            file.display()
+        );
+        config.shell().warn(&msg)?;
+        return Ok(ret);
+    }
+
     let first_error = failure::Error::from(first_error);
     Err(first_error.context("could not parse input as TOML").into())
 }
