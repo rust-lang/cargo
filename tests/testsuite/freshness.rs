@@ -1697,6 +1697,10 @@ fn dirty_both_lib_and_test() {
         .with_stdout_contains("[..]doit assert failure[..]")
         .run();
 
+    if is_coarse_mtime() {
+        // #5918
+        sleep_ms(1000);
+    }
     // Fix the mistake.
     p.change_file("slib.rs", &slib(1));
 
