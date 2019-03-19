@@ -218,7 +218,6 @@ pub fn path2bytes(path: &Path) -> CargoResult<&[u8]> {
 
 #[cfg(unix)]
 pub fn bytes2path(bytes: &[u8]) -> CargoResult<PathBuf> {
-    use std::ffi::OsStr;
     use std::os::unix::prelude::*;
     Ok(PathBuf::from(OsStr::from_bytes(bytes)))
 }
