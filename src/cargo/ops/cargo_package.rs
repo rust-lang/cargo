@@ -18,6 +18,7 @@ use crate::core::resolver::Method;
 use crate::core::{
     Package, PackageId, PackageIdSpec, PackageSet, Resolve, Source, SourceId, Verbosity, Workspace,
 };
+use crate::core::Feature;
 use crate::ops;
 use crate::sources::PathSource;
 use crate::util::errors::{CargoResult, CargoResultExt};
@@ -590,6 +591,14 @@ fn run_verify(ws: &Workspace<'_>, tar: &FileLock, opts: &PackageOpts<'_>) -> Car
     let pkg_fingerprint = hash_all(&dst)?;
     let ws = Workspace::ephemeral(new_pkg, config, None, true)?;
 
+    let rustc_args = if pkg.manifest().features().require(Feature::public_dependency()).is_ok() {
+        // FIXME: Turn this on at some point in the future
+        //Some(vec!["-D exported_private_dependencies".to_string()])
+        None
+    } else {
+        None
+    };
+
     let exec: Arc<dyn Executor> = Arc::new(DefaultExecutor);
     ops::compile_ws(
         &ws,
@@ -604,7 +613,7 @@ fn run_verify(ws: &Workspace<'_>, tar: &FileLock, opts: &PackageOpts<'_>) -> Car
                 required_features_filterable: true,
             },
             target_rustdoc_args: None,
-            target_rustc_args: None,
+            target_rustc_args: rustc_args,
             local_rustdoc_args: None,
             export_dir: None,
         },
