@@ -1362,7 +1362,7 @@ fn env_rustflags_misspelled_build_script() {
 
 #[test]
 fn env_rustflags_with_crt_static_sets_env_var() {
-    // The CARGO_CFG_TARGET_FEATURE should be set when passing this flag.
+    // The CARGO_CFG_TARGET_FEATURE env var should be set when passing this flag.
     let p = project()
         .file(
             "Cargo.toml",
@@ -1378,6 +1378,10 @@ fn env_rustflags_with_crt_static_sets_env_var() {
             "build.rs",
             r#"
             fn main() {
+                // The crt-static feature should be enabled.
+                #[cfg(not(target_feature = "crt-static"))]
+                assert!(false);
+
                 assert!(std::env::var("CARGO_CFG_TARGET_FEATURE").unwrap().contains("crt-static"));
             }
         "#,
@@ -1391,7 +1395,7 @@ fn env_rustflags_with_crt_static_sets_env_var() {
 
 #[test]
 fn config_rustflags_with_crt_static_sets_env_var() {
-    // The CARGO_CFG_TARGET_FEATURE should be set when passing this flag.
+    // The CARGO_CFG_TARGET_FEATURE env var should be set when passing this flag using a config file.
     let p = project()
         .file(
             "Cargo.toml",
@@ -1406,7 +1410,9 @@ fn config_rustflags_with_crt_static_sets_env_var() {
             ".cargo/config",
             r#"
             [build]
-            rustflags = ["-Ctarget-feature=+crt-static"]
+            rustflags = [
+                "-Ctarget-feature=+crt-static",
+            ]
             "#,
         )
         .file("src/lib.rs", "")
@@ -1414,6 +1420,10 @@ fn config_rustflags_with_crt_static_sets_env_var() {
             "build.rs",
             r#"
             fn main() {
+                // The crt-static feature should be enabled.
+                #[cfg(not(target_feature = "crt-static"))]
+                assert!(false);
+
                 assert!(std::env::var("CARGO_CFG_TARGET_FEATURE").unwrap().contains("crt-static"));
             }
         "#,
@@ -1423,4 +1433,48 @@ fn config_rustflags_with_crt_static_sets_env_var() {
     p.cargo("build")
         .env("RUSTFLAGS", "")
         .run();
+}
+
+#[test]
+fn config_rustflags_with_target_filter_with_crt_static_sets_env_var() {
+    // The CARGO_CFG_TARGET_FEATURE env var should be set when passing this flag using a config file.
+    let p = project()
+        .file(
+            "Cargo.toml",
+            r#"
+            [package]
+            name = "foo"
+            version = "0.0.1"
+            edition = "2018"
+            build = "build.rs"
+        "#,
+        )
+        .file(
+            ".cargo/config",
+            r#"
+            [target.'cfg(target_arch="x86_64")']
+            rustflags = [
+                "-Ctarget-feature=+crt-static",
+            ]
+            "#,
+        )
+        .file(
+            "src/main.rs",
+            r#"fn main() {}"#,
+        )
+        .file(
+            "build.rs",
+            r#"use std::env;
+            fn main() {
+                // The crt-static feature should be enabled.
+                #[cfg(not(target_feature = "crt-static"))]
+                assert!(false);
+
+                assert!(std::env::var("CARGO_CFG_TARGET_FEATURE").unwrap().contains("crt-static"));
+            }
+        "#,
+        )
+        .build();
+
+    p.cargo("build").run();
 }
