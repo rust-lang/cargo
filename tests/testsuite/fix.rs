@@ -1289,3 +1289,26 @@ fn fix_with_common() {
 
     assert_eq!(p.read_file("tests/common/mod.rs"), "pub fn r#try() {}");
 }
+
+#[test]
+fn fix_in_existing_repo_weird_ignore() {
+    // Check that ignore doesn't ignore the repo itself.
+    let p = git::new("foo", |project| {
+        project
+            .file("src/lib.rs", "")
+            .file(".gitignore", "foo\ninner\n")
+            .file("inner/file", "")
+    })
+    .unwrap();
+
+    p.cargo("fix").run();
+    // This is questionable about whether it is the right behavior. It should
+    // probably be checking if any source file for the current project is
+    // ignored.
+    p.cargo("fix")
+        .cwd(p.root().join("inner"))
+        .with_stderr_contains("[ERROR] no VCS found[..]")
+        .with_status(101)
+        .run();
+    p.cargo("fix").cwd(p.root().join("src")).run();
+}

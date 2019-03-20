@@ -13,9 +13,12 @@ use crate::util::{process, CargoResult};
 pub fn existing_vcs_repo(path: &Path, cwd: &Path) -> bool {
     fn in_git_repo(path: &Path, cwd: &Path) -> bool {
         if let Ok(repo) = GitRepo::discover(path, cwd) {
-            repo.is_path_ignored(path)
-                .map(|ignored| !ignored)
-                .unwrap_or(true)
+            // Don't check if the working directory itself is ignored.
+            if repo.workdir().map_or(false, |workdir| workdir == path) {
+                true
+            } else {
+                !repo.is_path_ignored(path).unwrap_or(false)
+            }
         } else {
             false
         }
