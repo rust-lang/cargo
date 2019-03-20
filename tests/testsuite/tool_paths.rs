@@ -105,7 +105,7 @@ fn relative_tools() {
 
     let prefix = p.root().into_os_string().into_string().unwrap();
 
-    p.cargo("build --verbose").cwd(p.root().join("bar")).with_stderr(&format!(
+    p.cargo("build --verbose").cwd("bar").with_stderr(&format!(
             "\
 [COMPILING] bar v0.5.0 ([CWD])
 [RUNNING] `rustc [..] -C ar={prefix}/./nonexistent-ar -C linker={prefix}/./tools/nonexistent-linker [..]`

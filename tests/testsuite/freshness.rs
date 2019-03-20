@@ -339,7 +339,7 @@ fn changing_bin_paths_common_target_features_caches_targets() {
 
     /* Build and rebuild a/. Ensure dep_crate only builds once */
     p.cargo("run")
-        .cwd(p.root().join("a"))
+        .cwd("a")
         .with_stdout("ftest off")
         .with_stderr(
             "\
@@ -350,9 +350,9 @@ fn changing_bin_paths_common_target_features_caches_targets() {
 ",
         )
         .run();
-    p.cargo("clean -p a").cwd(p.root().join("a")).run();
+    p.cargo("clean -p a").cwd("a").run();
     p.cargo("run")
-        .cwd(p.root().join("a"))
+        .cwd("a")
         .with_stdout("ftest off")
         .with_stderr(
             "\
@@ -365,7 +365,7 @@ fn changing_bin_paths_common_target_features_caches_targets() {
 
     /* Build and rebuild b/. Ensure dep_crate only builds once */
     p.cargo("run")
-        .cwd(p.root().join("b"))
+        .cwd("b")
         .with_stdout("ftest on")
         .with_stderr(
             "\
@@ -376,9 +376,9 @@ fn changing_bin_paths_common_target_features_caches_targets() {
 ",
         )
         .run();
-    p.cargo("clean -p b").cwd(p.root().join("b")).run();
+    p.cargo("clean -p b").cwd("b").run();
     p.cargo("run")
-        .cwd(p.root().join("b"))
+        .cwd("b")
         .with_stdout("ftest on")
         .with_stderr(
             "\
@@ -391,9 +391,9 @@ fn changing_bin_paths_common_target_features_caches_targets() {
 
     /* Build a/ package again. If we cache different feature dep builds correctly,
      * this should not cause a rebuild of dep_crate */
-    p.cargo("clean -p a").cwd(p.root().join("a")).run();
+    p.cargo("clean -p a").cwd("a").run();
     p.cargo("run")
-        .cwd(p.root().join("a"))
+        .cwd("a")
         .with_stdout("ftest off")
         .with_stderr(
             "\
@@ -406,9 +406,9 @@ fn changing_bin_paths_common_target_features_caches_targets() {
 
     /* Build b/ package again. If we cache different feature dep builds correctly,
      * this should not cause a rebuild */
-    p.cargo("clean -p b").cwd(p.root().join("b")).run();
+    p.cargo("clean -p b").cwd("b").run();
     p.cargo("run")
-        .cwd(p.root().join("b"))
+        .cwd("b")
         .with_stdout("ftest on")
         .with_stderr(
             "\
@@ -681,7 +681,7 @@ fn same_build_dir_cached_packages() {
         .build();
 
     p.cargo("build")
-        .cwd(p.root().join("a1"))
+        .cwd("a1")
         .with_stderr(&format!(
             "\
 [COMPILING] d v0.0.1 ({dir}/d)
@@ -694,7 +694,7 @@ fn same_build_dir_cached_packages() {
         ))
         .run();
     p.cargo("build")
-        .cwd(p.root().join("a2"))
+        .cwd("a2")
         .with_stderr(
             "\
 [COMPILING] a2 v0.0.1 ([CWD])

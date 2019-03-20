@@ -39,7 +39,7 @@ fn simple_explicit() {
     assert!(p.bin("foo").is_file());
     assert!(!p.bin("bar").is_file());
 
-    p.cargo("build").cwd(p.root().join("bar")).run();
+    p.cargo("build").cwd("bar").run();
     assert!(p.bin("foo").is_file());
     assert!(p.bin("bar").is_file());
 
@@ -106,7 +106,7 @@ fn inferred_root() {
     assert!(p.bin("foo").is_file());
     assert!(!p.bin("bar").is_file());
 
-    p.cargo("build").cwd(p.root().join("bar")).run();
+    p.cargo("build").cwd("bar").run();
     assert!(p.bin("foo").is_file());
     assert!(p.bin("bar").is_file());
 
@@ -141,7 +141,7 @@ fn inferred_path_dep() {
     assert!(p.bin("foo").is_file());
     assert!(!p.bin("bar").is_file());
 
-    p.cargo("build").cwd(p.root().join("bar")).run();
+    p.cargo("build").cwd("bar").run();
     assert!(p.bin("foo").is_file());
     assert!(p.bin("bar").is_file());
 
@@ -191,12 +191,12 @@ fn transitive_path_dep() {
     assert!(!p.bin("bar").is_file());
     assert!(!p.bin("baz").is_file());
 
-    p.cargo("build").cwd(p.root().join("bar")).run();
+    p.cargo("build").cwd("bar").run();
     assert!(p.bin("foo").is_file());
     assert!(p.bin("bar").is_file());
     assert!(!p.bin("baz").is_file());
 
-    p.cargo("build").cwd(p.root().join("baz")).run();
+    p.cargo("build").cwd("baz").run();
     assert!(p.bin("foo").is_file());
     assert!(p.bin("bar").is_file());
     assert!(p.bin("baz").is_file());
@@ -238,8 +238,8 @@ fn parent_pointer_works() {
         .file("bar/src/lib.rs", "");
     let p = p.build();
 
-    p.cargo("build").cwd(p.root().join("foo")).run();
-    p.cargo("build").cwd(p.root().join("bar")).run();
+    p.cargo("build").cwd("foo").run();
+    p.cargo("build").cwd("bar").run();
     assert!(p.root().join("foo/Cargo.lock").is_file());
     assert!(!p.root().join("bar/Cargo.lock").is_file());
 }
@@ -305,7 +305,7 @@ fn parent_doesnt_point_to_child() {
     let p = p.build();
 
     p.cargo("build")
-        .cwd(p.root().join("bar"))
+        .cwd("bar")
         .with_status(101)
         .with_stderr(
             "\
@@ -705,7 +705,7 @@ fn lock_works_for_everyone() {
         .run();
 
     p.cargo("build")
-        .cwd(p.root().join("bar"))
+        .cwd("bar")
         .with_stderr(
             "\
 [DOWNLOADING] crates ...
@@ -731,7 +731,7 @@ fn virtual_works() {
         .file("bar/Cargo.toml", &basic_manifest("bar", "0.1.0"))
         .file("bar/src/main.rs", "fn main() {}");
     let p = p.build();
-    p.cargo("build").cwd(p.root().join("bar")).run();
+    p.cargo("build").cwd("bar").run();
     assert!(p.root().join("Cargo.lock").is_file());
     assert!(p.bin("bar").is_file());
     assert!(!p.root().join("bar/Cargo.lock").is_file());
@@ -769,7 +769,7 @@ fn virtual_misconfigure() {
         .file("bar/src/main.rs", "fn main() {}");
     let p = p.build();
     p.cargo("build")
-        .cwd(p.root().join("bar"))
+        .cwd("bar")
         .with_status(101)
         .with_stderr(
             "\
@@ -938,9 +938,9 @@ fn members_include_path_deps() {
         .file("p3/src/lib.rs", "");
     let p = p.build();
 
-    p.cargo("build").cwd(p.root().join("p1")).run();
-    p.cargo("build").cwd(p.root().join("p2")).run();
-    p.cargo("build").cwd(p.root().join("p3")).run();
+    p.cargo("build").cwd("p1").run();
+    p.cargo("build").cwd("p2").run();
+    p.cargo("build").cwd("p3").run();
     p.cargo("build").run();
 
     assert!(p.root().join("target").is_dir());
@@ -1027,7 +1027,7 @@ fn lock_doesnt_change_depending_on_crate() {
     let mut lockfile = String::new();
     t!(t!(File::open(p.root().join("Cargo.lock"))).read_to_string(&mut lockfile));
 
-    p.cargo("build").cwd(p.root().join("baz")).run();
+    p.cargo("build").cwd("baz").run();
 
     let mut lockfile2 = String::new();
     t!(t!(File::open(p.root().join("Cargo.lock"))).read_to_string(&mut lockfile2));
@@ -1075,17 +1075,17 @@ fn rebuild_please() {
         );
     let p = p.build();
 
-    p.cargo("run").cwd(p.root().join("bin")).run();
+    p.cargo("run").cwd("bin").run();
 
     sleep_ms(1000);
 
     t!(t!(File::create(p.root().join("lib/src/lib.rs")))
         .write_all(br#"pub fn foo() -> u32 { 1 }"#));
 
-    p.cargo("build").cwd(p.root().join("lib")).run();
+    p.cargo("build").cwd("lib").run();
 
     p.cargo("run")
-        .cwd(p.root().join("bin"))
+        .cwd("bin")
         .with_status(101)
         .with_stderr_contains("[..]assertion[..]")
         .run();
@@ -1159,7 +1159,7 @@ fn lockfile_can_specify_nonexistant_members() {
 
     let p = p.build();
 
-    p.cargo("build").cwd(p.root().join("a")).run();
+    p.cargo("build").cwd("a").run();
 }
 
 #[test]
@@ -1241,7 +1241,7 @@ fn error_if_parent_cargo_toml_is_invalid() {
     let p = p.build();
 
     p.cargo("build")
-        .cwd(p.root().join("bar"))
+        .cwd("bar")
         .with_status(101)
         .with_stderr_contains("[ERROR] failed to parse manifest at `[..]`")
         .run();
@@ -1276,8 +1276,8 @@ fn relative_path_for_member_works() {
         .file("bar/src/main.rs", "fn main() {}");
     let p = p.build();
 
-    p.cargo("build").cwd(p.root().join("foo")).run();
-    p.cargo("build").cwd(p.root().join("bar")).run();
+    p.cargo("build").cwd("foo").run();
+    p.cargo("build").cwd("bar").run();
 }
 
 #[test]
@@ -1305,7 +1305,7 @@ fn relative_path_for_root_works() {
     p.cargo("build --manifest-path ./Cargo.toml").run();
 
     p.cargo("build --manifest-path ../Cargo.toml")
-        .cwd(p.root().join("subproj"))
+        .cwd("subproj")
         .run();
 }
 
@@ -1332,7 +1332,7 @@ fn path_dep_outside_workspace_is_not_member() {
         .file("foo/src/lib.rs", "");
     let p = p.build();
 
-    p.cargo("build").cwd(p.root().join("ws")).run();
+    p.cargo("build").cwd("ws").run();
 }
 
 #[test]
@@ -1387,7 +1387,7 @@ fn test_in_and_out_of_workspace() {
         .file("bar/src/lib.rs", "pub fn f() { }");
     let p = p.build();
 
-    p.cargo("build").cwd(p.root().join("ws")).run();
+    p.cargo("build").cwd("ws").run();
 
     assert!(p.root().join("ws/Cargo.lock").is_file());
     assert!(p.root().join("ws/target").is_dir());
@@ -1396,7 +1396,7 @@ fn test_in_and_out_of_workspace() {
     assert!(!p.root().join("bar/Cargo.lock").is_file());
     assert!(!p.root().join("bar/target").is_dir());
 
-    p.cargo("build").cwd(p.root().join("foo")).run();
+    p.cargo("build").cwd("foo").run();
     assert!(p.root().join("foo/Cargo.lock").is_file());
     assert!(p.root().join("foo/target").is_dir());
     assert!(!p.root().join("bar/Cargo.lock").is_file());
@@ -1445,12 +1445,12 @@ fn test_path_dependency_under_member() {
         .file("foo/bar/src/lib.rs", "pub fn f() { }");
     let p = p.build();
 
-    p.cargo("build").cwd(p.root().join("ws")).run();
+    p.cargo("build").cwd("ws").run();
 
     assert!(!p.root().join("foo/bar/Cargo.lock").is_file());
     assert!(!p.root().join("foo/bar/target").is_dir());
 
-    p.cargo("build").cwd(p.root().join("foo/bar")).run();
+    p.cargo("build").cwd("foo/bar").run();
 
     assert!(!p.root().join("foo/bar/Cargo.lock").is_file());
     assert!(!p.root().join("foo/bar/target").is_dir());
@@ -1478,7 +1478,7 @@ fn excluded_simple() {
 
     p.cargo("build").run();
     assert!(p.root().join("target").is_dir());
-    p.cargo("build").cwd(p.root().join("foo")).run();
+    p.cargo("build").cwd("foo").run();
     assert!(p.root().join("foo/target").is_dir());
 }
 
@@ -1507,9 +1507,9 @@ fn exclude_members_preferred() {
 
     p.cargo("build").run();
     assert!(p.root().join("target").is_dir());
-    p.cargo("build").cwd(p.root().join("foo")).run();
+    p.cargo("build").cwd("foo").run();
     assert!(p.root().join("foo/target").is_dir());
-    p.cargo("build").cwd(p.root().join("foo/bar")).run();
+    p.cargo("build").cwd("foo/bar").run();
     assert!(!p.root().join("foo/bar/target").is_dir());
 }
 
@@ -1540,9 +1540,9 @@ fn exclude_but_also_depend() {
 
     p.cargo("build").run();
     assert!(p.root().join("target").is_dir());
-    p.cargo("build").cwd(p.root().join("foo")).run();
+    p.cargo("build").cwd("foo").run();
     assert!(p.root().join("foo/target").is_dir());
-    p.cargo("build").cwd(p.root().join("foo/bar")).run();
+    p.cargo("build").cwd("foo/bar").run();
     assert!(p.root().join("foo/bar/target").is_dir());
 }
 
@@ -1602,15 +1602,15 @@ fn glob_syntax() {
     assert!(!p.bin("bar").is_file());
     assert!(!p.bin("baz").is_file());
 
-    p.cargo("build").cwd(p.root().join("crates/bar")).run();
+    p.cargo("build").cwd("crates/bar").run();
     assert!(p.bin("foo").is_file());
     assert!(p.bin("bar").is_file());
 
-    p.cargo("build").cwd(p.root().join("crates/baz")).run();
+    p.cargo("build").cwd("crates/baz").run();
     assert!(p.bin("foo").is_file());
     assert!(p.bin("baz").is_file());
 
-    p.cargo("build").cwd(p.root().join("crates/qux")).run();
+    p.cargo("build").cwd("crates/qux").run();
     assert!(!p.bin("qux").is_file());
 
     assert!(p.root().join("Cargo.lock").is_file());
@@ -1664,15 +1664,15 @@ fn glob_syntax_2() {
     assert!(!p.bin("bar").is_file());
     assert!(!p.bin("baz").is_file());
 
-    p.cargo("build").cwd(p.root().join("crates/bar")).run();
+    p.cargo("build").cwd("crates/bar").run();
     assert!(p.bin("foo").is_file());
     assert!(p.bin("bar").is_file());
 
-    p.cargo("build").cwd(p.root().join("crates/baz")).run();
+    p.cargo("build").cwd("crates/baz").run();
     assert!(p.bin("foo").is_file());
     assert!(p.bin("baz").is_file());
 
-    p.cargo("build").cwd(p.root().join("crates/qux")).run();
+    p.cargo("build").cwd("crates/qux").run();
     assert!(!p.bin("qux").is_file());
 
     assert!(p.root().join("Cargo.lock").is_file());
@@ -1795,7 +1795,7 @@ fn dep_used_with_separate_features() {
     // Ideally once we solve rust-lang/cargo#3620, then a single Cargo build at the top level
     // will be enough.
     p.cargo("build")
-        .cwd(p.root().join("caller1"))
+        .cwd("caller1")
         .with_stderr(
             "\
 [..]Compiling feat_lib v0.1.0 ([..])
@@ -1808,15 +1808,15 @@ fn dep_used_with_separate_features() {
     // Alternate building `caller2`/`caller1` a few times, just to make sure
     // features are being built separately. Should not rebuild anything.
     p.cargo("build")
-        .cwd(p.root().join("caller2"))
+        .cwd("caller2")
         .with_stderr("[FINISHED] dev [unoptimized + debuginfo] target(s) in [..]")
         .run();
     p.cargo("build")
-        .cwd(p.root().join("caller1"))
+        .cwd("caller1")
         .with_stderr("[FINISHED] dev [unoptimized + debuginfo] target(s) in [..]")
         .run();
     p.cargo("build")
-        .cwd(p.root().join("caller2"))
+        .cwd("caller2")
         .with_stderr("[FINISHED] dev [unoptimized + debuginfo] target(s) in [..]")
         .run();
 }
@@ -1892,10 +1892,10 @@ fn include_and_exclude() {
         .file("foo/bar/src/lib.rs", "");
     p.build();
 
-    p.cargo("build").cwd(p.root().join("foo")).run();
+    p.cargo("build").cwd("foo").run();
     assert!(p.root().join("target").is_dir());
     assert!(!p.root().join("foo/target").is_dir());
-    p.cargo("build").cwd(p.root().join("foo/bar")).run();
+    p.cargo("build").cwd("foo/bar").run();
     assert!(p.root().join("foo/bar/target").is_dir());
 }
 */
