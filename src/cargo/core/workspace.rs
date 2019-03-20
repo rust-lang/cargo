@@ -8,6 +8,7 @@ use glob::glob;
 use log::debug;
 use url::Url;
 
+use crate::core::features::Features;
 use crate::core::profiles::Profiles;
 use crate::core::registry::PackageRegistry;
 use crate::core::{Dependency, PackageIdSpec, PackageId};
@@ -540,6 +541,13 @@ impl<'cfg> Workspace<'cfg> {
         Ok(())
     }
 
+    pub fn features(&self) -> &Features {
+        match self.root_maybe() {
+            MaybePackage::Package(p) => p.manifest().features(),
+            MaybePackage::Virtual(vm) => vm.features(),
+        }
+    }
+
     /// Validates a workspace, ensuring that a number of invariants are upheld:
     ///
     /// 1. A workspace only has one root.
@@ -547,10 +555,7 @@ impl<'cfg> Workspace<'cfg> {
     /// 3. The current crate is a member of this workspace.
     fn validate(&mut self) -> CargoResult<()> {
         // Validate config profiles only once per workspace.
-        let features = match self.root_maybe() {
-            MaybePackage::Package(p) => p.manifest().features(),
-            MaybePackage::Virtual(vm) => vm.features(),
-        };
+        let features = self.features();
         let mut warnings = Vec::new();
         self.config.profiles()?.validate(features, &mut warnings)?;
         for warning in warnings {

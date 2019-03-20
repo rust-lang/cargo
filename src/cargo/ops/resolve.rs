@@ -2,6 +2,7 @@ use std::collections::HashSet;
 
 use log::{debug, trace};
 
+use crate::core::Feature;
 use crate::core::registry::PackageRegistry;
 use crate::core::resolver::{self, Method, Resolve};
 use crate::core::{PackageId, PackageIdSpec, PackageSet, Source, SourceId, Workspace};
@@ -330,7 +331,7 @@ pub fn resolve_with_previous<'cfg>(
         registry,
         &try_to_use,
         Some(ws.config()),
-        false, // TODO: use "public and private dependencies" feature flag
+        ws.features().require(Feature::public_dependency()).is_ok(),
     )?;
     resolved.register_used_patches(registry.patches());
     if register_patches {

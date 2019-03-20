@@ -199,6 +199,9 @@ features! {
 
         // Declarative build scripts.
         [unstable] metabuild: bool,
+
+        // Specifying the 'public' attribute on dependencies
+        [unstable] public_dependency: bool,
     }
 }
 

@@ -285,6 +285,7 @@ struct RegistryDependency<'a> {
     kind: Option<Cow<'a, str>>,
     registry: Option<Cow<'a, str>>,
     package: Option<Cow<'a, str>>,
+    public: Option<bool>
 }
 
 impl<'a> RegistryDependency<'a> {
@@ -300,6 +301,7 @@ impl<'a> RegistryDependency<'a> {
             kind,
             registry,
             package,
+            public
         } = self;
 
         let id = if let Some(registry) = &registry {
@@ -324,6 +326,9 @@ impl<'a> RegistryDependency<'a> {
             None => None,
         };
 
+        // All dependencies are private by default
+        let public = public.unwrap_or(false);
+
         // Unfortunately older versions of cargo and/or the registry ended up
         // publishing lots of entries where the features array contained the
         // empty feature, "", inside. This confuses the resolution process much
@@ -341,7 +346,8 @@ impl<'a> RegistryDependency<'a> {
             .set_default_features(default_features)
             .set_features(features)
             .set_platform(platform)
-            .set_kind(kind);
+            .set_kind(kind)
+            .set_public(public);
 
         Ok(dep)
     }

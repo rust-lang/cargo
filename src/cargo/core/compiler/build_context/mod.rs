@@ -93,6 +93,11 @@ impl<'a, 'cfg> BuildContext<'a, 'cfg> {
             .extern_crate_name(unit.pkg.package_id(), dep.pkg.package_id(), dep.target)
     }
 
+    pub fn is_public_dependency(&self, unit: &Unit<'a>, dep: &Unit<'a>) -> bool {
+        self.resolve
+            .is_public_dep(unit.pkg.package_id(), dep.pkg.package_id())
+    }
+
     /// Whether a dependency should be compiled for the host or target platform,
     /// specified by `Kind`.
     pub fn dep_platform_activated(&self, dep: &Dependency, kind: Kind) -> bool {
