@@ -29,7 +29,7 @@ fn different_dir() {
     assert!(p.build_dir().is_dir());
 
     p.cargo("clean")
-        .cwd(&p.root().join("src"))
+        .cwd("src")
         .with_stdout("")
         .run();
     assert!(!p.build_dir().is_dir());
@@ -78,7 +78,7 @@ fn clean_multiple_packages() {
     assert!(d2_path.is_file());
 
     p.cargo("clean -p d1 -p d2")
-        .cwd(&p.root().join("src"))
+        .cwd("src")
         .with_stdout("")
         .run();
     assert!(p.bin("foo").is_file());

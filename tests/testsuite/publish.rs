@@ -457,7 +457,7 @@ fn publish_in_sub_repo() {
         .build();
 
     p.cargo("publish")
-        .cwd(p.root().join("bar"))
+        .cwd("bar")
         .arg("--index")
         .arg(registry_url().to_string())
         .run();
@@ -531,7 +531,7 @@ fn ignore_when_crate_ignored() {
         )
         .nocommit_file("bar/src/main.rs", "fn main() {}");
     p.cargo("publish")
-        .cwd(p.root().join("bar"))
+        .cwd("bar")
         .arg("--index")
         .arg(registry_url().to_string())
         .run();

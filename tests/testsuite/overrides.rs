@@ -1096,7 +1096,7 @@ fn no_warnings_when_replace_is_used_in_another_workspace_member() {
         .build();
 
     p.cargo("build")
-        .cwd(p.root().join("first_crate"))
+        .cwd("first_crate")
         .with_stdout("")
         .with_stderr(
             "\
@@ -1108,7 +1108,7 @@ fn no_warnings_when_replace_is_used_in_another_workspace_member() {
         .run();
 
     p.cargo("build")
-        .cwd(p.root().join("second_crate"))
+        .cwd("second_crate")
         .with_stdout("")
         .with_stderr(
             "\
