@@ -8,6 +8,7 @@ use std::io::Cursor;
 
 use curl::easy::{Easy, List};
 use failure::bail;
+use http::status::StatusCode;
 use serde::{Deserialize, Serialize};
 use serde_json;
 use url::percent_encoding::{percent_encode, QUERY_ENCODE_SET};
@@ -323,30 +324,31 @@ fn handle(handle: &mut Easy, read: &mut dyn FnMut(&mut [u8]) -> usize) -> Result
         handle.perform()?;
     }
 
-    match handle.response_code()? {
-        0 => {} // file upload url sometimes
-        200 => {}
-        403 => bail!("received 403 unauthorized response code"),
-        404 => bail!("received 404 not found response code"),
-        code => bail!(
+    let body = match String::from_utf8(body) {
+        Ok(body) => body,
+        Err(..) => bail!("response body was not valid utf-8"),
+    };
+    let errors = serde_json::from_str::<ApiErrorList>(&body).ok().map(|s| {
+        s.errors.into_iter().map(|s| s.detail).collect::<Vec<_>>()
+    });
+
+    match (handle.response_code()?, errors) {
+        (0, None) | (200, None) => {},
+        (code, Some(errors)) => {
+            let code = StatusCode::from_u16(code as _)?;
+            bail!("api errors (status {}): {}", code, errors.join(", "))
+        }
+        (code, None) => bail!(
             "failed to get a 200 OK response, got {}\n\
              headers:\n\
              \t{}\n\
              body:\n\
              {}",
-            code,
-            headers.join("\n\t"),
-            String::from_utf8_lossy(&body)
+             code,
+             headers.join("\n\t"),
+             body,
         ),
     }
 
-    let body = match String::from_utf8(body) {
-        Ok(body) => body,
-        Err(..) => bail!("response body was not valid utf-8"),
-    };
-    if let Ok(errors) = serde_json::from_str::<ApiErrorList>(&body) {
-        let errors = errors.errors.into_iter().map(|s| s.detail);
-        bail!("api errors: {}", errors.collect::<Vec<_>>().join(", "));
-    }
     Ok(body)
 }
