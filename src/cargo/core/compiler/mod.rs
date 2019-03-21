@@ -22,13 +22,6 @@ use log::debug;
 use same_file::is_same_file;
 use serde::Serialize;
 
-use crate::core::manifest::TargetSourcePath;
-use crate::core::profiles::{Lto, PanicStrategy, Profile};
-use crate::core::{PackageId, Target};
-use crate::util::errors::{CargoResult, CargoResultExt, Internal, ProcessError};
-use crate::util::paths;
-use crate::util::{self, machine_message, process, Freshness, ProcessBuilder};
-use crate::util::{internal, join_paths, profile};
 pub use self::build_config::{BuildConfig, CompileMode, MessageFormat};
 pub use self::build_context::{BuildContext, FileFlavor, TargetConfig, TargetInfo};
 use self::build_plan::BuildPlan;
@@ -39,6 +32,13 @@ use self::job::{Job, Work};
 use self::job_queue::JobQueue;
 pub use self::layout::is_bad_artifact_name;
 use self::output_depinfo::output_depinfo;
+use crate::core::manifest::TargetSourcePath;
+use crate::core::profiles::{Lto, PanicStrategy, Profile};
+use crate::core::{PackageId, Target};
+use crate::util::errors::{CargoResult, CargoResultExt, Internal, ProcessError};
+use crate::util::paths;
+use crate::util::{self, machine_message, process, Freshness, ProcessBuilder};
+use crate::util::{internal, join_paths, profile};
 
 /// Indicates whether an object is for the host architcture or the target architecture.
 ///

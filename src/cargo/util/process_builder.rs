@@ -80,10 +80,7 @@ impl ProcessBuilder {
 
     /// (chainable) Replaces the args list with the given `args`.
     pub fn args_replace<T: AsRef<OsStr>>(&mut self, args: &[T]) -> &mut ProcessBuilder {
-        self.args = args
-            .iter()
-            .map(|t| t.as_ref().to_os_string())
-            .collect();
+        self.args = args.iter().map(|t| t.as_ref().to_os_string()).collect();
         self
     }
 

@@ -74,8 +74,6 @@ pub struct Config {
     env: HashMap<String, String>,
     /// Profiles loaded from config.
     profiles: LazyCell<ConfigProfiles>,
-    /// Use `clippy-driver` instead of `rustc`
-    clippy_override: bool,
 }
 
 impl Config {
@@ -131,7 +129,6 @@ impl Config {
             target_dir: None,
             env,
             profiles: LazyCell::new(),
-            clippy_override: false,
         }
     }
 
@@ -193,36 +190,14 @@ impl Config {
             .map(AsRef::as_ref)
     }
 
-    /// Sets the clippy override. If this is true, clippy-driver is invoked instead of rustc.
-    pub fn set_clippy_override(&mut self, val: bool) {
-        self.clippy_override = val;
-    }
-
     /// Gets the path to the `rustc` executable.
-    pub fn rustc(&self, ws: Option<&Workspace<'_>>) -> CargoResult<Rustc> {
+    pub fn load_global_rustc(&self, ws: Option<&Workspace<'_>>) -> CargoResult<Rustc> {
         let cache_location = ws.map(|ws| {
             ws.target_dir()
                 .join(".rustc_info.json")
                 .into_path_unlocked()
         });
-        let wrapper = if self.clippy_override {
-            let tool = self.get_tool("clippy-driver")?;
-            let tool = paths::resolve_executable(&tool).map_err(|e| {
-                let rustup_in_path = self
-                    .get_tool("rustup")
-                    .and_then(|tool| paths::resolve_executable(&tool))
-                    .is_ok();
-                let has_rustup_env = std::env::var("RUSTUP_TOOLCHAIN").is_ok();
-                if rustup_in_path || has_rustup_env {
-                    failure::format_err!("{}: please run `rustup component add clippy`", e)
-                } else {
-                    failure::format_err!("{}: please install clippy", e)
-                }
-            })?;
-            Some(tool)
-        } else {
-            self.maybe_get_tool("rustc-wrapper")?
-        };
+        let wrapper = self.maybe_get_tool("rustc-wrapper")?;
         Rustc::new(
             self.get_tool("rustc")?,
             wrapper,
@@ -782,7 +757,7 @@ impl Config {
 
     /// Looks for a path for `tool` in an environment variable or config path, defaulting to `tool`
     /// as a path.
-    fn get_tool(&self, tool: &str) -> CargoResult<PathBuf> {
+    pub fn get_tool(&self, tool: &str) -> CargoResult<PathBuf> {
         self.maybe_get_tool(tool)
             .map(|t| t.unwrap_or_else(|| PathBuf::from(tool)))
     }
