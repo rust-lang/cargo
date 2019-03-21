@@ -29,8 +29,8 @@ fn multiple_installs() {
         .file("b/src/main.rs", "fn main() {}");
     let p = p.build();
 
-    let mut a = p.cargo("install").cwd(p.root().join("a")).build_command();
-    let mut b = p.cargo("install").cwd(p.root().join("b")).build_command();
+    let mut a = p.cargo("install").cwd("a").build_command();
+    let mut b = p.cargo("install").cwd("b").build_command();
 
     a.stdout(Stdio::piped()).stderr(Stdio::piped());
     b.stdout(Stdio::piped()).stderr(Stdio::piped());
@@ -87,8 +87,8 @@ fn one_install_should_be_bad() {
         .file("b/src/main.rs", "fn main() {}");
     let p = p.build();
 
-    let mut a = p.cargo("install").cwd(p.root().join("a")).build_command();
-    let mut b = p.cargo("install").cwd(p.root().join("b")).build_command();
+    let mut a = p.cargo("install").cwd("a").build_command();
+    let mut b = p.cargo("install").cwd("b").build_command();
 
     a.stdout(Stdio::piped()).stderr(Stdio::piped());
     b.stdout(Stdio::piped()).stderr(Stdio::piped());
@@ -157,8 +157,8 @@ fn multiple_registry_fetches() {
         .file("b/src/main.rs", "fn main() {}");
     let p = p.build();
 
-    let mut a = p.cargo("build").cwd(p.root().join("a")).build_command();
-    let mut b = p.cargo("build").cwd(p.root().join("b")).build_command();
+    let mut a = p.cargo("build").cwd("a").build_command();
+    let mut b = p.cargo("build").cwd("b").build_command();
 
     a.stdout(Stdio::piped()).stderr(Stdio::piped());
     b.stdout(Stdio::piped()).stderr(Stdio::piped());
@@ -247,8 +247,8 @@ fn git_same_repo_different_tags() {
         );
     let p = p.build();
 
-    let mut a = p.cargo("build -v").cwd(p.root().join("a")).build_command();
-    let mut b = p.cargo("build -v").cwd(p.root().join("b")).build_command();
+    let mut a = p.cargo("build -v").cwd("a").build_command();
+    let mut b = p.cargo("build -v").cwd("b").build_command();
 
     a.stdout(Stdio::piped()).stderr(Stdio::piped());
     b.stdout(Stdio::piped()).stderr(Stdio::piped());
@@ -316,7 +316,7 @@ fn git_same_branch_different_revs() {
 
     // Generate a Cargo.lock pointing at the current rev, then clear out the
     // target directory
-    p.cargo("build").cwd(p.root().join("a")).run();
+    p.cargo("build").cwd("a").run();
     fs::remove_dir_all(p.root().join("a/target")).unwrap();
 
     // Make a new commit on the master branch
@@ -330,8 +330,8 @@ fn git_same_branch_different_revs() {
 
     // Now run both builds in parallel. The build of `b` should pick up the
     // newest commit while the build of `a` should use the locked old commit.
-    let mut a = p.cargo("build").cwd(p.root().join("a")).build_command();
-    let mut b = p.cargo("build").cwd(p.root().join("b")).build_command();
+    let mut a = p.cargo("build").cwd("a").build_command();
+    let mut b = p.cargo("build").cwd("b").build_command();
 
     a.stdout(Stdio::piped()).stderr(Stdio::piped());
     b.stdout(Stdio::piped()).stderr(Stdio::piped());

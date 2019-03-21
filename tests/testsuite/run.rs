@@ -1029,7 +1029,7 @@ fn run_multiple_packages() {
 
     let cargo = || {
         let mut process_builder = p.cargo("run");
-        process_builder.cwd(p.root().join("foo"));
+        process_builder.cwd("foo");
         process_builder
     };
 

@@ -885,7 +885,7 @@ fn ignore_workspace_specifier() {
         .build();
 
     p.cargo("package --no-verify")
-        .cwd(p.root().join("bar"))
+        .cwd("bar")
         .run();
 
     let f = File::open(&p.root().join("target/package/bar-0.1.0.crate")).unwrap();
@@ -1184,7 +1184,7 @@ fn lock_file_and_workspace() {
         .build();
 
     p.cargo("package")
-        .cwd(p.root().join("foo"))
+        .cwd("foo")
         .masquerade_as_nightly_cargo()
         .run();
 

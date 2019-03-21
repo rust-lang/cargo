@@ -881,7 +881,7 @@ fn override_and_depend() {
         .file("b/.cargo/config", r#"paths = ["../a"]"#)
         .build();
     p.cargo("build")
-        .cwd(p.root().join("b"))
+        .cwd("b")
         .with_stderr(
             "\
 [COMPILING] a2 v0.5.0 ([..])
