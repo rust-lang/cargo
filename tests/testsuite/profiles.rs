@@ -273,7 +273,7 @@ fn profile_in_non_root_manifest_triggers_a_warning() {
         .build();
 
     p.cargo("build -v")
-        .cwd(p.root().join("bar"))
+        .cwd("bar")
         .with_stderr(
             "\
 [WARNING] profiles for the non root package will be ignored, specify profiles at the workspace root:
@@ -315,7 +315,7 @@ fn profile_in_virtual_manifest_works() {
         .build();
 
     p.cargo("build -v")
-        .cwd(p.root().join("bar"))
+        .cwd("bar")
         .with_stderr(
             "\
 [COMPILING] bar v0.1.0 ([..])

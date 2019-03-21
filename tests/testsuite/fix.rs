@@ -134,11 +134,11 @@ fn broken_fixes_backed_out() {
         .build();
 
     // Build our rustc shim
-    p.cargo("build").cwd(p.root().join("foo")).run();
+    p.cargo("build").cwd("foo").run();
 
     // Attempt to fix code, but our shim will always fail the second compile
     p.cargo("fix --allow-no-vcs --lib")
-        .cwd(p.root().join("bar"))
+        .cwd("bar")
         .env("__CARGO_FIX_YOLO", "1")
         .env("RUSTC", p.root().join("foo/target/debug/foo"))
         .with_stderr_contains(
@@ -259,7 +259,7 @@ fn do_not_fix_non_relevant_deps() {
 
     p.cargo("fix --allow-no-vcs")
         .env("__CARGO_FIX_YOLO", "1")
-        .cwd(p.root().join("foo"))
+        .cwd("foo")
         .run();
 
     assert!(p.read_file("bar/src/lib.rs").contains("mut"));
@@ -1254,11 +1254,11 @@ fn fix_to_broken_code() {
         .build();
 
     // Build our rustc shim
-    p.cargo("build").cwd(p.root().join("foo")).run();
+    p.cargo("build").cwd("foo").run();
 
     // Attempt to fix code, but our shim will always fail the second compile
     p.cargo("fix --allow-no-vcs --broken-code")
-        .cwd(p.root().join("bar"))
+        .cwd("bar")
         .env("RUSTC", p.root().join("foo/target/debug/foo"))
         .with_status(101)
         .with_stderr_contains("[WARNING] failed to automatically apply fixes [..]")
@@ -1306,9 +1306,9 @@ fn fix_in_existing_repo_weird_ignore() {
     // probably be checking if any source file for the current project is
     // ignored.
     p.cargo("fix")
-        .cwd(p.root().join("inner"))
+        .cwd("inner")
         .with_stderr_contains("[ERROR] no VCS found[..]")
         .with_status(101)
         .run();
-    p.cargo("fix").cwd(p.root().join("src")).run();
+    p.cargo("fix").cwd("src").run();
 }

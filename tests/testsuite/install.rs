@@ -1311,7 +1311,7 @@ fn workspace_uses_workspace_target_dir() {
         .file("bar/src/main.rs", "fn main() {}")
         .build();
 
-    p.cargo("build --release").cwd(p.root().join("bar")).run();
+    p.cargo("build --release").cwd("bar").run();
     cargo_process("install --path")
         .arg(p.root().join("bar"))
         .with_stderr(
