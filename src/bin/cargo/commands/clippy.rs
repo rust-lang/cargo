@@ -56,11 +56,11 @@ You can use tool lints to allow or deny lints from your code, eg.:
 }
 
 pub fn exec(config: &mut Config, args: &ArgMatches<'_>) -> CliResult {
-    config.set_clippy_override(true);
     let ws = args.workspace(config)?;
 
     let mode = CompileMode::Check { test: false };
-    let compile_opts = args.compile_options(config, mode, Some(&ws))?;
+    let mut compile_opts = args.compile_options(config, mode, Some(&ws))?;
+    compile_opts.build_config.set_clippy_override(true);
 
     if !config.cli_unstable().unstable_options {
         return Err(failure::format_err!(

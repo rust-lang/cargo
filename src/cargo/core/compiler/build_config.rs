@@ -30,6 +30,8 @@ pub struct BuildConfig {
     /// Extra args to inject into rustc commands.
     pub extra_rustc_args: Vec<String>,
     pub rustfix_diagnostic_server: RefCell<Option<RustfixDiagnosticServer>>,
+    /// Use `clippy-driver` instead of `rustc`
+    pub clippy_override: bool,
 }
 
 impl BuildConfig {
@@ -102,6 +104,7 @@ impl BuildConfig {
             extra_rustc_env: Vec::new(),
             extra_rustc_args: Vec::new(),
             rustfix_diagnostic_server: RefCell::new(None),
+            clippy_override: false,
         })
     }
 
@@ -111,6 +114,11 @@ impl BuildConfig {
 
     pub fn test(&self) -> bool {
         self.mode == CompileMode::Test || self.mode == CompileMode::Bench
+    }
+
+    /// Sets the clippy override. If this is true, clippy-driver is invoked instead of rustc.
+    pub fn set_clippy_override(&mut self, val: bool) {
+        self.clippy_override = val;
     }
 }
 
