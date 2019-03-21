@@ -110,7 +110,7 @@ impl Rustc {
 
         Ok(Rustc {
             path,
-            wrapper: wrapper.map(|w| RustcWrapper::new(w)),
+            wrapper: wrapper.map(RustcWrapper::new),
             verbose_version,
             host,
             cache: Mutex::new(cache),
@@ -141,8 +141,8 @@ impl Rustc {
         self.cache.lock().unwrap().cached_success(cmd)
     }
 
-    pub fn push_wrapper(&mut self, wrapper: RustcWrapper) {
-        self.wrapper = Some(wrapper);
+    pub fn push_wrapper<T: Into<Option<RustcWrapper>>>(&mut self, wrapper: T) {
+        self.wrapper = wrapper.into();
     }
 }
 
