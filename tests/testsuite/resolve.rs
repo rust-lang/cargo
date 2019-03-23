@@ -37,7 +37,7 @@ proptest! {
 
     /// NOTE: if you think this test has failed spuriously see the note at the top of this macro.
     #[test]
-    fn passes_validation(
+    fn prop_passes_validation(
         PrettyPrintRegistry(input) in registry_strategy(50, 20, 60)
     )  {
         let reg = registry(input.clone());
@@ -55,7 +55,7 @@ proptest! {
 
     /// NOTE: if you think this test has failed spuriously see the note at the top of this macro.
     #[test]
-    fn minimum_version_errors_the_same(
+    fn prop_minimum_version_errors_the_same(
             PrettyPrintRegistry(input) in registry_strategy(50, 20, 60)
     ) {
         enable_nightly_features();
@@ -105,7 +105,7 @@ proptest! {
 
     /// NOTE: if you think this test has failed spuriously see the note at the top of this macro.
     #[test]
-    fn removing_a_dep_cant_break(
+    fn prop_removing_a_dep_cant_break(
             PrettyPrintRegistry(input) in registry_strategy(50, 20, 60),
             indexes_to_remove in prop::collection::vec((any::<prop::sample::Index>(), any::<prop::sample::Index>()), ..10)
     ) {
@@ -147,7 +147,7 @@ proptest! {
 
     /// NOTE: if you think this test has failed spuriously see the note at the top of this macro.
     #[test]
-    fn limited_independence_of_irrelevant_alternatives(
+    fn prop_limited_independence_of_irrelevant_alternatives(
         PrettyPrintRegistry(input) in registry_strategy(50, 20, 60),
         indexes_to_unpublish in prop::collection::vec(any::<prop::sample::Index>(), ..10)
     )  {
