@@ -376,3 +376,40 @@ fn profile_doc_deprecated() {
         .with_stderr_contains("[WARNING] profile `doc` is deprecated and has no effect")
         .run();
 }
+
+#[test]
+fn panic_unwind_does_not_build_twice() {
+    // Check for a bug where `lib` was built twice, once with panic set and
+    // once without. Since "unwind" is the default, they are the same and
+    // should only be built once.
+    let p = project()
+        .file(
+            "Cargo.toml",
+            r#"
+            [package]
+            name = "foo"
+            version = "0.1.0"
+
+            [profile.dev]
+            panic = "unwind"
+            "#,
+        )
+        .file("src/lib.rs", "")
+        .file("src/main.rs", "fn main() {}")
+        .file("tests/t1.rs", "")
+        .build();
+
+    p.cargo("test -v --tests --no-run")
+        .with_stderr_unordered(
+            "\
+[COMPILING] foo [..]
+[RUNNING] `rustc --crate-name foo src/lib.rs [..]--crate-type lib [..]
+[RUNNING] `rustc --crate-name foo src/lib.rs [..] --test [..]
+[RUNNING] `rustc --crate-name foo src/main.rs [..]--crate-type bin [..]
+[RUNNING] `rustc --crate-name foo src/main.rs [..] --test [..]
+[RUNNING] `rustc --crate-name t1 tests/t1.rs [..]
+[FINISHED] [..]
+",
+        )
+        .run();
+}

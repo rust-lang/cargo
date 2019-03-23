@@ -23,7 +23,7 @@ use same_file::is_same_file;
 use serde::Serialize;
 
 use crate::core::manifest::TargetSourcePath;
-use crate::core::profiles::{Lto, Profile};
+use crate::core::profiles::{Lto, PanicStrategy, Profile};
 use crate::core::{PackageId, Target};
 use crate::util::errors::{CargoResult, CargoResultExt, Internal, ProcessError};
 use crate::util::paths;
@@ -794,7 +794,7 @@ fn build_base_args<'a, 'cfg>(
         cmd.arg("-C").arg(&format!("opt-level={}", opt_level));
     }
 
-    if let Some(panic) = panic.as_ref() {
+    if *panic != PanicStrategy::Unwind {
         cmd.arg("-C").arg(format!("panic={}", panic));
     }
 
