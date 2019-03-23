@@ -111,8 +111,8 @@ impl Profiles {
         let mut profile = maker.get_profile(Some(pkg_id), is_member, unit_for);
         // `panic` should not be set for tests/benches, or any of their
         // dependencies.
-        if !unit_for.is_panic_ok() || mode.is_any_test() {
-            profile.panic = None;
+        if !unit_for.is_panic_abort_ok() || mode.is_any_test() {
+            profile.panic = PanicStrategy::Unwind;
         }
 
         // Incremental can be globally overridden.
@@ -390,8 +390,13 @@ fn merge_profile(profile: &mut Profile, toml: &TomlProfile) {
     if let Some(rpath) = toml.rpath {
         profile.rpath = rpath;
     }
-    if let Some(ref panic) = toml.panic {
-        profile.panic = Some(InternedString::new(panic));
+    if let Some(panic) = &toml.panic {
+        profile.panic = match panic.as_str() {
+            "unwind" => PanicStrategy::Unwind,
+            "abort" => PanicStrategy::Abort,
+            // This should be validated in TomlProfile::validate
+            _ => panic!("Unexpected panic setting `{}`", panic),
+        };
     }
     if let Some(overflow_checks) = toml.overflow_checks {
         profile.overflow_checks = overflow_checks;
@@ -415,7 +420,7 @@ pub struct Profile {
     pub overflow_checks: bool,
     pub rpath: bool,
     pub incremental: bool,
-    pub panic: Option<InternedString>,
+    pub panic: PanicStrategy,
 }
 
 impl Default for Profile {
@@ -430,7 +435,7 @@ impl Default for Profile {
             overflow_checks: false,
             rpath: false,
             incremental: false,
-            panic: None,
+            panic: PanicStrategy::Unwind,
         }
     }
 }
@@ -530,26 +535,26 @@ impl Profile {
     fn comparable(
         &self,
     ) -> (
-        &InternedString,
-        &Lto,
-        &Option<u32>,
-        &Option<u32>,
-        &bool,
-        &bool,
-        &bool,
-        &bool,
-        &Option<InternedString>,
+        InternedString,
+        Lto,
+        Option<u32>,
+        Option<u32>,
+        bool,
+        bool,
+        bool,
+        bool,
+        PanicStrategy,
     ) {
         (
-            &self.opt_level,
-            &self.lto,
-            &self.codegen_units,
-            &self.debuginfo,
-            &self.debug_assertions,
-            &self.overflow_checks,
-            &self.rpath,
-            &self.incremental,
-            &self.panic,
+            self.opt_level,
+            self.lto,
+            self.codegen_units,
+            self.debuginfo,
+            self.debug_assertions,
+            self.overflow_checks,
+            self.rpath,
+            self.incremental,
+            self.panic,
         )
     }
 }
@@ -564,6 +569,23 @@ pub enum Lto {
     Named(InternedString),
 }
 
+/// The `panic` setting.
+#[derive(Clone, Copy, PartialEq, Eq, Debug, Hash, PartialOrd, Ord)]
+pub enum PanicStrategy {
+    Unwind,
+    Abort,
+}
+
+impl fmt::Display for PanicStrategy {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        match *self {
+            PanicStrategy::Unwind => "unwind",
+            PanicStrategy::Abort => "abort",
+        }
+        .fmt(f)
+    }
+}
+
 /// Flags used in creating `Unit`s to indicate the purpose for the target, and
 /// to ensure the target's dependencies have the correct settings.
 #[derive(Copy, Clone, Debug, Eq, PartialEq, Hash)]
@@ -571,11 +593,11 @@ pub struct UnitFor {
     /// A target for `build.rs` or any of its dependencies. This enables
     /// `build-override` profiles for these targets.
     custom_build: bool,
-    /// This is true if it is *allowed* to set the `panic` flag. Currently
+    /// This is true if it is *allowed* to set the `panic=abort` flag. Currently
     /// this is false for test/bench targets and all their dependencies, and
     /// "for_host" units such as proc macro and custom build scripts and their
     /// dependencies.
-    panic_ok: bool,
+    panic_abort_ok: bool,
 }
 
 impl UnitFor {
@@ -584,7 +606,7 @@ impl UnitFor {
     pub fn new_normal() -> UnitFor {
         UnitFor {
             custom_build: false,
-            panic_ok: true,
+            panic_abort_ok: true,
         }
     }
 
@@ -592,7 +614,7 @@ impl UnitFor {
     pub fn new_build() -> UnitFor {
         UnitFor {
             custom_build: true,
-            panic_ok: false,
+            panic_abort_ok: false,
         }
     }
 
@@ -600,7 +622,7 @@ impl UnitFor {
     pub fn new_compiler() -> UnitFor {
         UnitFor {
             custom_build: false,
-            panic_ok: false,
+            panic_abort_ok: false,
         }
     }
 
@@ -608,18 +630,18 @@ impl UnitFor {
     pub fn new_test() -> UnitFor {
         UnitFor {
             custom_build: false,
-            panic_ok: false,
+            panic_abort_ok: false,
         }
     }
 
     /// Creates a variant based on `for_host` setting.
     ///
-    /// When `for_host` is true, this clears `panic_ok` in a sticky fashion so
-    /// that all its dependencies also have `panic_ok=false`.
+    /// When `for_host` is true, this clears `panic_abort_ok` in a sticky fashion so
+    /// that all its dependencies also have `panic_abort_ok=false`.
     pub fn with_for_host(self, for_host: bool) -> UnitFor {
         UnitFor {
             custom_build: self.custom_build,
-            panic_ok: self.panic_ok && !for_host,
+            panic_abort_ok: self.panic_abort_ok && !for_host,
         }
     }
 
@@ -630,8 +652,8 @@ impl UnitFor {
     }
 
     /// Returns `true` if this unit is allowed to set the `panic` compiler flag.
-    pub fn is_panic_ok(self) -> bool {
-        self.panic_ok
+    pub fn is_panic_abort_ok(self) -> bool {
+        self.panic_abort_ok
     }
 
     /// All possible values, used by `clean`.
@@ -639,15 +661,15 @@ impl UnitFor {
         static ALL: [UnitFor; 3] = [
             UnitFor {
                 custom_build: false,
-                panic_ok: true,
+                panic_abort_ok: true,
             },
             UnitFor {
                 custom_build: true,
-                panic_ok: false,
+                panic_abort_ok: false,
             },
             UnitFor {
                 custom_build: false,
-                panic_ok: false,
+                panic_abort_ok: false,
             },
         ];
         &ALL
