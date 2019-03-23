@@ -1,11 +1,12 @@
+use filetime::FileTime;
 use std::fs::{self, File, OpenOptions};
 use std::io::prelude::*;
 use std::net::TcpListener;
-use std::path::PathBuf;
+use std::path::{Path, PathBuf};
 use std::thread;
 use std::time::SystemTime;
 
-use crate::support::paths::CargoPathExt;
+use crate::support::paths::{self, CargoPathExt};
 use crate::support::registry::Package;
 use crate::support::sleep_ms;
 use crate::support::{basic_manifest, is_coarse_mtime, project};
@@ -1526,7 +1527,7 @@ fn rebuild_on_mid_build_file_modification() {
         .file(
             "root/Cargo.toml",
             r#"
-            [project]
+            [package]
             name = "root"
             version = "0.1.0"
             authors = []
@@ -1548,7 +1549,7 @@ fn rebuild_on_mid_build_file_modification() {
         .file(
             "proc_macro_dep/Cargo.toml",
             r#"
-            [project]
+            [package]
             name = "proc_macro_dep"
             version = "0.1.0"
             authors = []
@@ -1707,4 +1708,180 @@ fn dirty_both_lib_and_test() {
     p.cargo("build").run();
     // This should recompile with the new static lib, and the test should pass.
     p.cargo("test --lib").run();
+}
+
+#[test]
+fn script_fails_stay_dirty() {
+    // Check if a script is aborted (such as hitting Ctrl-C) that it will re-run.
+    // Steps:
+    // 1. Build to establish fingerprints.
+    // 2. Make a change that triggers the build script to re-run. Abort the
+    //    script while it is running.
+    // 3. Run the build again and make sure it re-runs the script.
+    let p = project()
+        .file(
+            "build.rs",
+            r#"
+                mod helper;
+                fn main() {
+                    println!("cargo:rerun-if-changed=build.rs");
+                    helper::doit();
+                }
+            "#,
+        )
+        .file("helper.rs", "pub fn doit() {}")
+        .file("src/lib.rs", "")
+        .build();
+
+    p.cargo("build").run();
+    if is_coarse_mtime() {
+        sleep_ms(1000);
+    }
+    p.change_file("helper.rs", r#"pub fn doit() {panic!("Crash!");}"#);
+    p.cargo("build")
+        .with_stderr_contains("[..]Crash![..]")
+        .with_status(101)
+        .run();
+    // There was a bug where this second call would be "fresh".
+    p.cargo("build")
+        .with_stderr_contains("[..]Crash![..]")
+        .with_status(101)
+        .run();
+}
+
+#[test]
+fn simulated_docker_deps_stay_cached() {
+    // Test what happens in docker where the nanoseconds are zeroed out.
+    Package::new("regdep", "1.0.0").publish();
+    Package::new("regdep_old_style", "1.0.0")
+        .file("build.rs", "fn main() {}")
+        .file("src/lib.rs", "")
+        .publish();
+    Package::new("regdep_env", "1.0.0")
+        .file(
+            "build.rs",
+            r#"
+            fn main() {
+                println!("cargo:rerun-if-env-changed=SOMEVAR");
+            }
+            "#,
+        )
+        .file("src/lib.rs", "")
+        .publish();
+    Package::new("regdep_rerun", "1.0.0")
+        .file(
+            "build.rs",
+            r#"
+            fn main() {
+                println!("cargo:rerun-if-changed=build.rs");
+            }
+            "#,
+        )
+        .file("src/lib.rs", "")
+        .publish();
+
+    let p = project()
+        .file(
+            "Cargo.toml",
+            r#"
+            [package]
+            name = "foo"
+            version = "0.1.0"
+
+            [dependencies]
+            pathdep = { path = "pathdep" }
+            regdep = "1.0"
+            regdep_old_style = "1.0"
+            regdep_env = "1.0"
+            regdep_rerun = "1.0"
+            "#,
+        )
+        .file(
+            "src/lib.rs",
+            "
+            extern crate pathdep;
+            extern crate regdep;
+            extern crate regdep_old_style;
+            extern crate regdep_env;
+            extern crate regdep_rerun;
+            ",
+        )
+        .file("build.rs", "fn main() {}")
+        .file("pathdep/Cargo.toml", &basic_manifest("pathdep", "1.0.0"))
+        .file("pathdep/src/lib.rs", "")
+        .build();
+
+    p.cargo("build").run();
+
+    let already_zero = {
+        // This happens on HFS with 1-second timestamp resolution,
+        // or other filesystems where it just so happens to write exactly on a
+        // 1-second boundary.
+        let metadata = fs::metadata(p.root().join("src/lib.rs")).unwrap();
+        let mtime = FileTime::from_last_modification_time(&metadata);
+        mtime.nanoseconds() == 0
+    };
+
+    // Recursively remove `nanoseconds` from every path.
+    fn zeropath(path: &Path) {
+        for entry in walkdir::WalkDir::new(path)
+            .into_iter()
+            .filter_map(|e| e.ok())
+        {
+            let metadata = fs::metadata(entry.path()).unwrap();
+            let mtime = metadata.modified().unwrap();
+            let mtime_duration = mtime.duration_since(SystemTime::UNIX_EPOCH).unwrap();
+            let trunc_mtime = FileTime::from_unix_time(mtime_duration.as_secs() as i64, 0);
+            let atime = metadata.accessed().unwrap();
+            let atime_duration = atime.duration_since(SystemTime::UNIX_EPOCH).unwrap();
+            let trunc_atime = FileTime::from_unix_time(atime_duration.as_secs() as i64, 0);
+            if let Err(e) = filetime::set_file_times(entry.path(), trunc_atime, trunc_mtime) {
+                // Windows doesn't allow changing filetimes on some things
+                // (directories, other random things I'm not sure why). Just
+                // ignore them.
+                if e.kind() == std::io::ErrorKind::PermissionDenied {
+                    println!("PermissionDenied filetime on {:?}", entry.path());
+                } else {
+                    panic!("FileTime error on {:?}: {:?}", entry.path(), e);
+                }
+            }
+        }
+    }
+    zeropath(&p.root());
+    zeropath(&paths::home());
+
+    if already_zero {
+        // If it was already truncated, then everything stays fresh.
+        p.cargo("build -v")
+            .with_stderr_unordered(
+                "\
+[FRESH] pathdep [..]
+[FRESH] regdep [..]
+[FRESH] regdep_env [..]
+[FRESH] regdep_old_style [..]
+[FRESH] regdep_rerun [..]
+[FRESH] foo [..]
+[FINISHED] [..]
+",
+            )
+            .run();
+    } else {
+        // It is not ideal that `foo` gets recompiled, but that is the current
+        // behavior. Currently mtimes are ignored for registry deps.
+        p.cargo("build -v")
+            .with_stderr_unordered(
+                "\
+[FRESH] pathdep [..]
+[FRESH] regdep [..]
+[FRESH] regdep_env [..]
+[FRESH] regdep_old_style [..]
+[FRESH] regdep_rerun [..]
+[COMPILING] foo [..]
+[RUNNING] [..]/foo-[..]/build-script-build[..]
+[RUNNING] `rustc --crate-name foo[..]
+[FINISHED] [..]
+",
+            )
+            .run();
+    }
 }
