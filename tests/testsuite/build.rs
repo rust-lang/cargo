@@ -4807,3 +4807,10 @@ Caused by:
         .with_status(101)
         .run();
 }
+
+#[test]
+fn host_target() {
+    let p = project().file("src/lib.rs", "").build();
+    p.cargo("build -v --target HOST").with_status(0).run();
+    p.cargo("build -v --target=HOST").with_status(0).run();
+}
