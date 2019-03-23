@@ -71,6 +71,24 @@ impl<N: Eq + Ord + Clone, E: Default + Clone> Graph<N, E> {
         self.nodes.keys()
     }
 
+    /// Checks if there is a path from `from` to `to`.
+    pub fn is_path_from_to<'a>(&'a self, from: &'a N, to: &'a N) -> bool {
+        let mut stack = vec![from];
+        let mut seen = BTreeSet::new();
+        seen.insert(from);
+        while let Some(iter) = stack.pop().and_then(|p| self.nodes.get(p)) {
+            for p in iter.keys() {
+                if p == to {
+                    return true;
+                }
+                if seen.insert(p) {
+                    stack.push(p);
+                }
+            }
+        }
+        false
+    }
+
     /// Resolves one of the paths from the given dependent package down to
     /// a leaf.
     pub fn path_to_bottom<'a>(&'a self, mut pkg: &'a N) -> Vec<&'a N> {

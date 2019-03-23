@@ -303,6 +303,7 @@ fn activate_deps_loop(
                         &cx,
                         registry,
                         &mut past_conflicting_activations,
+                        &parent,
                         &dep,
                         &conflicting_activations,
                     ) {
@@ -859,6 +860,7 @@ fn generalize_conflicting(
     cx: &Context,
     registry: &mut RegistryQueryer<'_>,
     past_conflicting_activations: &mut conflict_cache::ConflictCache,
+    parent: &Summary,
     dep: &Dependency,
     conflicting_activations: &ConflictMap,
 ) -> Option<ConflictMap> {
@@ -873,6 +875,16 @@ fn generalize_conflicting(
         .unwrap();
     let jumpback_critical_reason: ConflictReason =
         conflicting_activations[&jumpback_critical_id].clone();
+
+    if cx
+        .parents
+        .is_path_from_to(&parent.package_id(), &jumpback_critical_id)
+    {
+        // We are a descendant of the trigger of the problem.
+        // The best generalization of this is to let things bubble up
+        // and let `jumpback_critical_id` figure this out.
+        return None;
+    }
     // What parents dose that critical activation have
     for (critical_parent, critical_parents_deps) in
         cx.parents.edges(&jumpback_critical_id).filter(|(p, _)| {
