@@ -68,6 +68,13 @@ impl BuildConfig {
         let cfg_target = config.get_string("build.target")?.map(|s| s.val);
         let target = requested_target.or(cfg_target);
 
+        let target = if target.as_ref().map(|t| t.as_str()) == Some("HOST") {
+            // Reset target to `None` so that the default host target is used.
+            None
+        } else {
+            target
+        };
+
         if jobs == Some(0) {
             failure::bail!("jobs must be at least 1")
         }
