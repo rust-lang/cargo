@@ -197,7 +197,7 @@ impl Config {
                 .join(".rustc_info.json")
                 .into_path_unlocked()
         });
-        let wrapper = self.maybe_get_tool("rustc-wrapper")?;
+        let wrapper = self.maybe_get_tool("rustc_wrapper")?;
         Rustc::new(
             self.get_tool("rustc")?,
             wrapper,
