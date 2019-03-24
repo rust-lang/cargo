@@ -114,11 +114,20 @@ fn parse_snippet(span: &DiagnosticSpan) -> Option<Snippet> {
     }
     let mut tail = String::new();
     let last = &span.text[span.text.len() - 1];
+
+    // If we get a DiagnosticSpanLine where highlight_end > text.len(), we prevent an 'out of
+    // bounds' access by using text.len() - 1 instead.
+    let last_tail_index = if (last.highlight_end - 1) > last.text.len() {
+        last.text.len() - 1
+    } else {
+        last.highlight_end - 1
+    };
+
     if span.text.len() > 1 {
         body.push('\n');
-        body.push_str(&last.text[indent..last.highlight_end - 1]);
+        body.push_str(&last.text[indent..last_tail_index]);
     }
-    tail.push_str(&last.text[last.highlight_end - 1..]);
+    tail.push_str(&last.text[last_tail_index..]);
     Some(Snippet {
         file_name: span.file_name.clone(),
         line_range: LineRange {
