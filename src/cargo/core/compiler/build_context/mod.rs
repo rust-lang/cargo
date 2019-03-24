@@ -69,11 +69,11 @@ impl<'a, 'cfg> BuildContext<'a, 'cfg> {
                 }
             })?;
             rustc.push_wrapper(RustcWrapper::new(tool));
-        } else if build_config.cargo_as_rustc_wrapper {
-            let mut wrapper = RustcWrapper::new(env::current_exe()?);
-            let prog = rustc.path.as_os_str().to_owned();
-            wrapper.env("RUSTC", prog);
-            rustc.push_wrapper(wrapper);
+            // } else if build_config.cargo_as_rustc_wrapper {
+            //     let mut wrapper = RustcWrapper::new(env::current_exe()?);
+            //     let prog = dbg!(rustc.path.as_os_str().to_owned());
+            //     wrapper.env("RUSTC", prog);
+            //     rustc.push_wrapper(wrapper);
         }
 
         let host_config = TargetConfig::new(config, &rustc.host)?;
