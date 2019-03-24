@@ -207,7 +207,7 @@ pub fn fix_maybe_exec_rustc() -> CargoResult<bool> {
 
     let args = FixArgs::get();
     trace!("cargo-fix as rustc got file {:?}", args.file);
-    let rustc = env::var_os("RUSTC").expect("failed to find RUSTC env var");
+    let rustc = args.rustc.as_ref().expect("fix wrapper rustc was not set");
 
     // Our goal is to fix only the crates that the end user is interested in.
     // That's very likely to only mean the crates in the workspace the user is
@@ -576,6 +576,7 @@ struct FixArgs {
     enabled_edition: Option<String>,
     other: Vec<OsString>,
     primary_package: bool,
+    rustc: Option<PathBuf>,
 }
 
 enum PrepareFor {
@@ -593,6 +594,7 @@ impl Default for PrepareFor {
 impl FixArgs {
     fn get() -> FixArgs {
         let mut ret = FixArgs::default();
+        ret.rustc = env::args_os().nth(1).map(PathBuf::from);
         for arg in env::args_os().skip(2) {
             let path = PathBuf::from(arg);
             if path.extension().and_then(|s| s.to_str()) == Some("rs") && path.exists() {
