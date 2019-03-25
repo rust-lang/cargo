@@ -84,9 +84,9 @@
 //!   `RUST_LOG=cargo::core::compiler::fingerprint=trace cargo build` can be
 //!   used to display this log information.
 //! - A "dep-info" file which contains a list of source filenames for the
-//!   target. This is produced by `rustc`'s `--emit=dep-info` flag. Cargo uses
-//!   this to check the mtime of every file to see if any of them have
-//!   changed.
+//!   target. This is produced by reading the output of `rustc
+//!   --emit=dep-info` and packing it into a condensed format. Cargo uses this
+//!   to check the mtime of every file to see if any of them have changed.
 //! - An `invoked.timestamp` file whose filesystem mtime is updated every time
 //!   the Unit is built. This is an experimental feature used for cleaning
 //!   unused artifacts.
@@ -735,7 +735,7 @@ pub fn prepare_build_cmd<'a, 'cfg>(
     // again. This should only find 1 dependency (for the build script) or 0
     // (if it is overridden).
     //
-    // Note that this filters out `RunCustomBuild` units. These are `links`
+    // FIXME: This filters out `RunCustomBuild` units. These are `links`
     // build scripts. Unfortunately, for many reasons, those would be very
     // difficult to include, so for now this is slightly wrong. Reasons:
     // Fingerprint::locals has to be rebuilt in the closure, LocalFingerprint
@@ -796,7 +796,7 @@ pub fn prepare_build_cmd<'a, 'cfg>(
                 fingerprint.local = local_fingerprints_deps(&deps, &target_root, &pkg_root);
                 fingerprint.update_local(&target_root)?;
             }
-            // Note: If a build script switches from new style to old style,
+            // FIXME: If a build script switches from new style to old style,
             // this is bugged. It should recompute Fingerprint::local, but
             // requires access to Context which we don't have here.
             // See https://github.com/rust-lang/cargo/issues/6779
