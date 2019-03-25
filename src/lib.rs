@@ -116,12 +116,8 @@ fn parse_snippet(span: &DiagnosticSpan) -> Option<Snippet> {
     let last = &span.text[span.text.len() - 1];
 
     // If we get a DiagnosticSpanLine where highlight_end > text.len(), we prevent an 'out of
-    // bounds' access by using text.len() - 1 instead.
-    let last_tail_index = if (last.highlight_end - 1) > last.text.len() {
-        last.text.len() - 1
-    } else {
-        last.highlight_end - 1
-    };
+    // bounds' access by making sure the index is within the array bounds.
+    let last_tail_index = last.highlight_end.min(last.text.len()) - 1;
 
     if span.text.len() > 1 {
         body.push('\n');
