@@ -6,7 +6,7 @@ use crate::support::paths::{root, CargoPathExt};
 use crate::support::registry::Package;
 use crate::support::ProjectBuilder;
 use crate::support::{
-    basic_bin_manifest, basic_lib_manifest, basic_manifest, is_nightly, rustc_host, sleep_ms,
+    basic_bin_manifest, basic_lib_manifest, basic_manifest, rustc_host, sleep_ms,
 };
 use crate::support::{main_file, project, Execs};
 use cargo::util::paths::dylib_path_envvar;
@@ -2706,10 +2706,6 @@ fn example_as_dylib() {
 
 #[test]
 fn example_as_proc_macro() {
-    if !is_nightly() {
-        return;
-    }
-
     let p = project()
         .file(
             "Cargo.toml",
@@ -2725,7 +2721,18 @@ fn example_as_proc_macro() {
         "#,
         )
         .file("src/lib.rs", "")
-        .file("examples/ex.rs", "#![feature(proc_macro)]")
+        .file(
+            "examples/ex.rs",
+            r#"
+            extern crate proc_macro;
+            use proc_macro::TokenStream;
+
+            #[proc_macro]
+            pub fn eat(_item: TokenStream) -> TokenStream {
+                "".parse().unwrap()
+            }
+            "#,
+        )
         .build();
 
     p.cargo("build --example=ex").run();

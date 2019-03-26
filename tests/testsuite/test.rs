@@ -6,7 +6,7 @@ use cargo;
 use crate::support::paths::CargoPathExt;
 use crate::support::registry::Package;
 use crate::support::{basic_bin_manifest, basic_lib_manifest, basic_manifest, cargo_exe, project};
-use crate::support::{is_nightly, rustc_host, sleep_ms};
+use crate::support::{rustc_host, sleep_ms};
 
 #[test]
 fn cargo_test_simple() {
@@ -106,9 +106,6 @@ fn cargo_test_release() {
 
 #[test]
 fn cargo_test_overflow_checks() {
-    if !is_nightly() {
-        return;
-    }
     let p = project()
         .file(
             "Cargo.toml",
