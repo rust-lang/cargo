@@ -51,19 +51,16 @@
 //! Immediate dependency’s hashes              | ✓[^1]       | ✓
 //! Target or Host mode                        |             | ✓
 //! __CARGO_DEFAULT_LIB_METADATA[^4]           |             | ✓
-//! authors, description, homepage             |             | ✓[^2]
 //! package_id                                 |             | ✓
+//! authors, description, homepage, repo       | ✓           |
 //! Target src path                            | ✓           |
 //! Target path relative to ws                 | ✓           |
 //! Target flags (test/bench/for_host/edition) | ✓           |
-//! Edition                                    | ✓           |
 //! -C incremental=… flag                      | ✓           |
 //! mtime of sources                           | ✓[^3]       |
 //! RUSTFLAGS/RUSTDOCFLAGS                     | ✓           |
 //!
 //! [^1]: Build script and bin dependencies are not included.
-//!
-//! [^2]: This is a bug, see https://github.com/rust-lang/cargo/issues/6208
 //!
 //! [^3]: The mtime is only tracked for workspace members and path
 //!       dependencies. Git dependencies track the git revision.
@@ -175,7 +172,7 @@ use serde::de;
 use serde::ser;
 use serde::{Deserialize, Serialize};
 
-use crate::core::{Edition, Package};
+use crate::core::Package;
 use crate::util;
 use crate::util::errors::{CargoResult, CargoResultExt};
 use crate::util::paths;
@@ -337,17 +334,34 @@ struct DepFingerprint {
 /// graph.
 #[derive(Serialize, Deserialize)]
 pub struct Fingerprint {
+    /// Hash of the version of `rustc` used.
     rustc: u64,
+    /// Sorted list of cfg features enabled.
     features: String,
+    /// Hash of the `Target` struct, including the target name,
+    /// package-relative source path, edition, etc.
     target: u64,
+    /// Hash of the `Profile`, `CompileMode`, and any extra flags passed via
+    /// `cargo rustc` or `cargo rustdoc`.
     profile: u64,
+    /// Hash of the path to the base source file. This is relative to the
+    /// workspace root for path members, or absolute for other sources.
     path: u64,
+    /// Fingerprints of dependencies.
     deps: Vec<DepFingerprint>,
+    /// Information about the inputs that affect this Unit (such as source
+    /// file mtimes or build script environment variables).
     local: Vec<LocalFingerprint>,
+    /// Cached hash of the `Fingerprint` struct. Used to improve performance
+    /// for hashing.
     #[serde(skip_serializing, skip_deserializing)]
     memoized_hash: Mutex<Option<u64>>,
+    /// RUSTFLAGS/RUSTDOCFLAGS environment variable value (or config value).
     rustflags: Vec<String>,
-    edition: Edition,
+    /// Hash of some metadata from the manifest, such as "authors", or
+    /// "description", which are exposed as environment variables during
+    /// compilation.
+    metadata: u64,
 }
 
 impl Serialize for DepFingerprint {
@@ -407,8 +421,8 @@ impl Fingerprint {
             deps: Vec::new(),
             local: Vec::new(),
             memoized_hash: Mutex::new(None),
-            edition: Edition::Edition2015,
             rustflags: Vec::new(),
+            metadata: 0,
         }
     }
 
@@ -463,8 +477,8 @@ impl Fingerprint {
         if self.local.len() != old.local.len() {
             bail!("local lens changed");
         }
-        if self.edition != old.edition {
-            bail!("edition changed")
+        if self.metadata != old.metadata {
+            bail!("metadata changed")
         }
         for (new, old) in self.local.iter().zip(&old.local) {
             match (new, old) {
@@ -546,12 +560,12 @@ impl hash::Hash for Fingerprint {
             profile,
             ref deps,
             ref local,
-            edition,
+            metadata,
             ref rustflags,
             ..
         } = *self;
         (
-            rustc, features, target, path, profile, local, edition, rustflags,
+            rustc, features, target, path, profile, local, metadata, rustflags,
         )
             .hash(h);
 
@@ -678,6 +692,9 @@ fn calculate<'a, 'cfg>(
         bcx.rustflags_args(unit)?
     };
     let profile_hash = util::hash_u64(&(&unit.profile, unit.mode, bcx.extra_args_for(unit)));
+    // Include metadata since it is exposed as environment variables.
+    let m = unit.pkg.manifest().metadata();
+    let metadata = util::hash_u64(&(&m.authors, &m.description, &m.homepage, &m.repository));
     let fingerprint = Arc::new(Fingerprint {
         rustc: util::hash_u64(&bcx.rustc.verbose_version),
         target: util::hash_u64(&unit.target),
@@ -689,7 +706,7 @@ fn calculate<'a, 'cfg>(
         deps,
         local,
         memoized_hash: Mutex::new(None),
-        edition: unit.target.edition(),
+        metadata,
         rustflags: extra_flags,
     });
     cx.fingerprints.insert(*unit, Arc::clone(&fingerprint));
