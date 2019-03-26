@@ -903,9 +903,6 @@ fn document_only_lib() {
 
 #[test]
 fn plugins_no_use_target() {
-    if !is_nightly() {
-        return;
-    }
     let p = project()
         .file(
             "Cargo.toml",
@@ -1165,11 +1162,6 @@ fn doc_workspace_open_binary_and_library() {
 
 #[test]
 fn doc_edition() {
-    if !is_nightly() {
-        // Stable rustdoc won't have the edition option. Remove this once it
-        // is stabilized.
-        return;
-    }
     let p = project()
         .file(
             "Cargo.toml",
@@ -1198,9 +1190,6 @@ fn doc_edition() {
 
 #[test]
 fn doc_target_edition() {
-    if !is_nightly() {
-        return;
-    }
     let p = project()
         .file(
             "Cargo.toml",

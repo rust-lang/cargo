@@ -60,6 +60,7 @@ rust, like this:
 
 ```
 if !is_nightly() {
+    // Add a comment here explaining why this is necessary.
     return;
 }
 ```
@@ -753,7 +754,6 @@ impl Execs {
                 p.cwd(cwd.join(path.as_ref()));
             } else {
                 p.cwd(path);
-
             }
         }
         self
