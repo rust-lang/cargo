@@ -204,6 +204,7 @@ fn impl_and_derive() {
 #[test]
 fn plugin_and_proc_macro() {
     if !is_nightly() {
+        // plugins are unstable
         return;
     }
 

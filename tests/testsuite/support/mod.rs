@@ -60,6 +60,7 @@ rust, like this:
 
 ```
 if !is_nightly() {
+    // Add a comment here explaining why this is necessary.
     return;
 }
 ```

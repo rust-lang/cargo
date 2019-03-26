@@ -3,7 +3,6 @@ use std::fs::File;
 use git2;
 
 use crate::support::git;
-use crate::support::is_nightly;
 use crate::support::{basic_manifest, project};
 
 use std::io::Write;
@@ -267,15 +266,11 @@ fn do_not_fix_non_relevant_deps() {
 
 #[test]
 fn prepare_for_2018() {
-    if !is_nightly() {
-        return;
-    }
     let p = project()
         .file(
             "src/lib.rs",
             r#"
                 #![allow(unused)]
-                #![feature(rust_2018_preview)]
 
                 mod foo {
                     pub const FOO: &str = "fooo";
@@ -311,15 +306,10 @@ fn prepare_for_2018() {
 
 #[test]
 fn local_paths() {
-    if !is_nightly() {
-        return;
-    }
     let p = project()
         .file(
             "src/lib.rs",
             r#"
-                #![feature(rust_2018_preview)]
-
                 use test::foo;
 
                 mod test {
@@ -350,9 +340,6 @@ fn local_paths() {
 
 #[test]
 fn upgrade_extern_crate() {
-    if !is_nightly() {
-        return;
-    }
     let p = project()
         .file(
             "Cargo.toml",
@@ -403,15 +390,11 @@ fn upgrade_extern_crate() {
 
 #[test]
 fn specify_rustflags() {
-    if !is_nightly() {
-        return;
-    }
     let p = project()
         .file(
             "src/lib.rs",
             r#"
                 #![allow(unused)]
-                #![feature(rust_2018_preview)]
 
                 mod foo {
                     pub const FOO: &str = "fooo";
@@ -874,15 +857,10 @@ information about transitioning to the 2018 edition see:
 
 #[test]
 fn fix_overlapping() {
-    if !is_nightly() {
-        return;
-    }
     let p = project()
         .file(
             "src/lib.rs",
             r#"
-                #![feature(rust_2018_preview)]
-
                 pub fn foo<T>() {}
                 pub struct A;
 
@@ -912,9 +890,6 @@ fn fix_overlapping() {
 
 #[test]
 fn fix_idioms() {
-    if !is_nightly() {
-        return;
-    }
     let p = project()
         .file(
             "Cargo.toml",
@@ -1196,9 +1171,6 @@ fn only_warn_for_relevant_crates() {
 
 #[test]
 fn fix_to_broken_code() {
-    if !is_nightly() {
-        return;
-    }
     let p = project()
         .file(
             "foo/Cargo.toml",
