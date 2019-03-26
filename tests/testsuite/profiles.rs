@@ -1,6 +1,5 @@
 use std::env;
 
-use crate::support::is_nightly;
 use crate::support::project;
 
 #[test]
@@ -149,10 +148,6 @@ fn check_opt_level_override(profile_level: &str, rustc_level: &str) {
 
 #[test]
 fn opt_level_overrides() {
-    if !is_nightly() {
-        return;
-    }
-
     for &(profile_level, rustc_level) in &[
         ("1", "1"),
         ("2", "2"),

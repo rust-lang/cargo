@@ -1,11 +1,7 @@
-use crate::support::{basic_lib_manifest, is_nightly, project};
+use crate::support::{basic_lib_manifest, project};
 
 #[test]
 fn edition_works_for_build_script() {
-    if !is_nightly() {
-        return;
-    }
-
     let p = project()
         .file(
             "Cargo.toml",

@@ -6,7 +6,7 @@ use std::path::Path;
 use crate::support::cargo_process;
 use crate::support::registry::Package;
 use crate::support::{
-    basic_manifest, git, is_nightly, path2url, paths, project, publish::validate_crate_contents,
+    basic_manifest, git, path2url, paths, project, publish::validate_crate_contents,
     registry,
 };
 use git2;
@@ -972,11 +972,6 @@ fn test_edition() {
 
 #[test]
 fn edition_with_metadata() {
-    if !is_nightly() {
-        // --edition is nightly-only
-        return;
-    }
-
     let p = project()
         .file(
             "Cargo.toml",

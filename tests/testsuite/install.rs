@@ -770,11 +770,6 @@ fn installs_from_cwd_by_default() {
 
 #[test]
 fn installs_from_cwd_with_2018_warnings() {
-    if !support::is_nightly() {
-        // Stable rust won't have the edition option. Remove this once it
-        // is stabilized.
-        return;
-    }
     let p = project()
         .file(
             "Cargo.toml",
