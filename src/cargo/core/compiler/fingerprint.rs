@@ -1,3 +1,166 @@
+//! # Fingerprints
+//!
+//! This module implements change-tracking so that Cargo can know whether or
+//! not something needs to be recompiled. A Cargo `Unit` can be either "dirty"
+//! (needs to be recompiled) or "fresh" (it does not need to be recompiled).
+//! There are several mechanisms that influence a Unit's freshness:
+//!
+//! - The `Metadata` hash isolates each Unit on the filesystem by being
+//!   embedded in the filename. If something in the hash changes, then the
+//!   output files will be missing, and the Unit will be dirty (missing
+//!   outputs are considered "dirty").
+//! - The `Fingerprint` is another hash, saved to the filesystem in the
+//!   `.fingerprint` directory, that tracks information about the inputs to a
+//!   Unit. If any of the inputs changes from the last compilation, then the
+//!   Unit is considered dirty. A missing fingerprint (such as during the
+//!   first build) is also considered dirty.
+//! - Dirty propagation is done in the `JobQueue`. When a Unit is dirty, the
+//!   `JobQueue` automatically treats anything that depends on it as dirty.
+//!   Anything that relies on this is probably a bug. The fingerprint should
+//!   always be complete (but there are some known limitations). This is a
+//!   problem because not all Units are built all at once. If two separate
+//!   `cargo` commands are run that build different Units, this dirty
+//!   propagation will not work across commands.
+//!
+//! Note: Fingerprinting is not a perfect solution. Filesystem mtime tracking
+//! is notoriously imprecise and problematic. Only a small part of the
+//! environment is captured. This is a balance of performance, simplicity, and
+//! completeness. Sandboxing, hashing file contents, tracking every file
+//! access, environment variable, and network operation would ensure more
+//! reliable and reproducible builds at the cost of being complex, slow, and
+//! platform-dependent.
+//!
+//! ## Fingerprints and Metadata
+//!
+//! Fingerprints and Metadata are similar, and track some of the same things.
+//! The Metadata contains information that is required to keep Units separate.
+//! The Fingerprint includes additional information that should cause a
+//! recompile, but it is desired to reuse the same filenames. Generally the
+//! items in the Metadata do not need to be in the Fingerprint. A comparison
+//! of what is tracked:
+//!
+//! Value                                      | Fingerprint | Metadata
+//! -------------------------------------------|-------------|----------
+//! rustc                                      | ✓           | ✓
+//! Profile                                    | ✓           | ✓
+//! `cargo rustc` extra args                   | ✓           | ✓
+//! CompileMode                                | ✓           | ✓
+//! Target Name                                | ✓           | ✓
+//! Target Kind (bin/lib/etc.)                 | ✓           | ✓
+//! Enabled Features                           | ✓           | ✓
+//! Immediate dependency’s hashes              | ✓[^1]       | ✓
+//! Target or Host mode                        |             | ✓
+//! __CARGO_DEFAULT_LIB_METADATA[^4]           |             | ✓
+//! authors, description, homepage             |             | ✓[^2]
+//! package_id                                 |             | ✓
+//! Target src path                            | ✓           |
+//! Target path relative to ws                 | ✓           |
+//! Target flags (test/bench/for_host/edition) | ✓           |
+//! Edition                                    | ✓           |
+//! -C incremental=… flag                      | ✓           |
+//! mtime of sources                           | ✓[^3]       |
+//! RUSTFLAGS/RUSTDOCFLAGS                     | ✓           |
+//!
+//! [^1]: Build script and bin dependencies are not included.
+//!
+//! [^2]: This is a bug, see https://github.com/rust-lang/cargo/issues/6208
+//!
+//! [^3]: The mtime is only tracked for workspace members and path
+//!       dependencies. Git dependencies track the git revision.
+//!
+//! [^4]: `__CARGO_DEFAULT_LIB_METADATA` is set by rustbuild to embed the
+//!        release channel (bootstrap/stable/beta/nightly) in libstd.
+//!
+//! ## Fingerprint files
+//!
+//! Fingerprint information is stored in the
+//! `target/{debug,release}/.fingerprint/` directory. Each Unit is stored in a
+//! separate directory. Each Unit directory contains:
+//!
+//! - A file with a 16 hex-digit hash. This is the Fingerprint hash, used for
+//!   quick loading and comparison.
+//! - A `.json` file that contains details about the Fingerprint. This is only
+//!   used to log details about *why* a fingerprint is considered dirty.
+//!   `RUST_LOG=cargo::core::compiler::fingerprint=trace cargo build` can be
+//!   used to display this log information.
+//! - A "dep-info" file which contains a list of source filenames for the
+//!   target. This is produced by reading the output of `rustc
+//!   --emit=dep-info` and packing it into a condensed format. Cargo uses this
+//!   to check the mtime of every file to see if any of them have changed.
+//! - An `invoked.timestamp` file whose filesystem mtime is updated every time
+//!   the Unit is built. This is an experimental feature used for cleaning
+//!   unused artifacts.
+//!
+//! Note that some units are a little different. A Unit for *running* a build
+//! script or for `rustdoc` does not have a dep-info file (it's not
+//! applicable). Build script `invoked.timestamp` files are in the build
+//! output directory.
+//!
+//! ## Fingerprint calculation
+//!
+//! After the list of Units has been calculated, the Units are added to the
+//! `JobQueue`. As each one is added, the fingerprint is calculated, and the
+//! dirty/fresh status is recorded in the `JobQueue`. A closure is used to
+//! update the fingerprint on-disk when the Unit successfully finishes. The
+//! closure will recompute the Fingerprint based on the updated information.
+//! If the Unit fails to compile, the fingerprint is not updated.
+//!
+//! Fingerprints are cached in the `Context`. This makes computing
+//! Fingerprints faster, but also is necessary for properly updating
+//! dependency information. Since a Fingerprint includes the Fingerprints of
+//! all dependencies, when it is updated, by using `Arc` clones, it
+//! automatically picks up the updates to its dependencies.
+//!
+//! ## Build scripts
+//!
+//! The *running* of a build script (`CompileMode::RunCustomBuild`) is treated
+//! significantly different than all other Unit kinds. It has its own function
+//! for calculating the Fingerprint (`prepare_build_cmd`) and has some unique
+//! considerations. It does not track the same information as a normal Unit.
+//! The information tracked depends on the `rerun-if-changed` and
+//! `rerun-if-env-changed` statements produced by the build script. If the
+//! script does not emit either of these statements, the Fingerprint runs in
+//! "old style" mode where an mtime change of *any* file in the package will
+//! cause the build script to be re-run. Otherwise, the fingerprint *only*
+//! tracks the individual "rerun-if" items listed by the build script.
+//!
+//! The "rerun-if" statements from a *previous* build are stored in the build
+//! output directory in a file called `output`. Cargo parses this file when
+//! the Unit for that build script is prepared for the `JobQueue`. The
+//! Fingerprint code can then use that information to compute the Fingerprint
+//! and compare against the old fingerprint hash.
+//!
+//! Care must be taken with build script Fingerprints because the
+//! `Fingerprint::local` value may be changed after the build script runs
+//! (such as if the build script adds or removes "rerun-if" items).
+//!
+//! Another complication is if a build script is overridden. In that case, the
+//! fingerprint is the hash of the output of the override.
+//!
+//! ## Special considerations
+//!
+//! Registry dependencies do not track the mtime of files. This is because
+//! registry dependencies are not expected to change (if a new version is
+//! used, the Package ID will change, causing a rebuild). Cargo currently
+//! partially works with Docker caching. When a Docker image is built, it has
+//! normal mtime information. However, when a step is cached, the nanosecond
+//! portions of all files is zeroed out. Currently this works, but care must
+//! be taken for situations like these.
+//!
+//! HFS on macOS only supports 1 second timestamps. This causes a significant
+//! number of problems, particularly with Cargo's testsuite which does rapid
+//! builds in succession. Other filesystems have various degrees of
+//! resolution.
+//!
+//! Various weird filesystems (such as network filesystems) also can cause
+//! complications. Network filesystems may track the time on the server
+//! (except when the time is set manually such as with
+//! `filetime::set_file_times`). Not all filesystems support modifying the
+//! mtime.
+//!
+//! See the `A-rebuild-detection` flag on the issue tracker for more:
+//! <https://github.com/rust-lang/cargo/issues?q=is%3Aissue+is%3Aopen+label%3AA-rebuild-detection>
+
 use std::env;
 use std::fs;
 use std::hash::{self, Hasher};
@@ -5,6 +168,7 @@ use std::path::{Path, PathBuf};
 use std::sync::{Arc, Mutex};
 use std::time::SystemTime;
 
+use failure::bail;
 use filetime::FileTime;
 use log::{debug, info};
 use serde::de;
@@ -213,7 +377,7 @@ impl<'de> Deserialize<'de> for DepFingerprint {
     }
 }
 
-#[derive(Serialize, Deserialize, Hash)]
+#[derive(Debug, Serialize, Deserialize, Hash)]
 enum LocalFingerprint {
     Precalculated(String),
     MtimeBased(MtimeSlot, PathBuf),
@@ -229,6 +393,7 @@ impl LocalFingerprint {
     }
 }
 
+#[derive(Debug)]
 struct MtimeSlot(Mutex<Option<FileTime>>);
 
 impl Fingerprint {
@@ -274,32 +439,32 @@ impl Fingerprint {
 
     fn compare(&self, old: &Fingerprint) -> CargoResult<()> {
         if self.rustc != old.rustc {
-            failure::bail!("rust compiler has changed")
+            bail!("rust compiler has changed")
         }
         if self.features != old.features {
-            failure::bail!(
+            bail!(
                 "features have changed: {} != {}",
                 self.features,
                 old.features
             )
         }
         if self.target != old.target {
-            failure::bail!("target configuration has changed")
+            bail!("target configuration has changed")
         }
         if self.path != old.path {
-            failure::bail!("path to the compiler has changed")
+            bail!("path to the compiler has changed")
         }
         if self.profile != old.profile {
-            failure::bail!("profile configuration has changed")
+            bail!("profile configuration has changed")
         }
         if self.rustflags != old.rustflags {
-            failure::bail!("RUSTFLAGS has changed")
+            bail!("RUSTFLAGS has changed")
         }
         if self.local.len() != old.local.len() {
-            failure::bail!("local lens changed");
+            bail!("local lens changed");
         }
         if self.edition != old.edition {
-            failure::bail!("edition changed")
+            bail!("edition changed")
         }
         for (new, old) in self.local.iter().zip(&old.local) {
             match (new, old) {
@@ -308,7 +473,7 @@ impl Fingerprint {
                     &LocalFingerprint::Precalculated(ref b),
                 ) => {
                     if a != b {
-                        failure::bail!("precalculated components have changed: {} != {}", a, b)
+                        bail!("precalculated components have changed: {} != {}", a, b)
                     }
                 }
                 (
@@ -325,7 +490,7 @@ impl Fingerprint {
                     };
 
                     if should_rebuild {
-                        failure::bail!(
+                        bail!(
                             "mtime based components have changed: previously {:?} now {:?}, \
                              paths are {:?} and {:?}",
                             *previously_built_mtime,
@@ -340,10 +505,10 @@ impl Fingerprint {
                     &LocalFingerprint::EnvBased(ref bkey, ref bvalue),
                 ) => {
                     if *akey != *bkey {
-                        failure::bail!("env vars changed: {} != {}", akey, bkey);
+                        bail!("env vars changed: {} != {}", akey, bkey);
                     }
                     if *avalue != *bvalue {
-                        failure::bail!(
+                        bail!(
                             "env var `{}` changed: previously {:?} now {:?}",
                             akey,
                             bvalue,
@@ -351,18 +516,22 @@ impl Fingerprint {
                         )
                     }
                 }
-                _ => failure::bail!("local fingerprint type has changed"),
+                _ => bail!("local fingerprint type has changed"),
             }
         }
 
         if self.deps.len() != old.deps.len() {
-            failure::bail!("number of dependencies has changed")
+            bail!("number of dependencies has changed")
         }
         for (a, b) in self.deps.iter().zip(old.deps.iter()) {
             if a.name != b.name || a.fingerprint.hash() != b.fingerprint.hash() {
-                failure::bail!("new ({}) != old ({})", a.pkg_id, b.pkg_id)
+                bail!("new ({}) != old ({})", a.pkg_id, b.pkg_id)
             }
         }
+        // Two fingerprints may have different hash values, but still succeed
+        // in this compare function if the difference is due to a
+        // LocalFingerprint value that changes in a compatible way. For
+        // example, moving the mtime of a file backwards in time,
         Ok(())
     }
 }
@@ -441,9 +610,10 @@ impl<'de> de::Deserialize<'de> for MtimeSlot {
 /// * The compiler changes
 /// * The set of features a package is built with changes
 /// * The profile a target is compiled with changes (e.g., opt-level changes)
+/// * Any other compiler flags change that will affect the result
 ///
 /// Information like file modification time is only calculated for path
-/// dependencies and is calculated in `calculate_target_fresh`.
+/// dependencies.
 fn calculate<'a, 'cfg>(
     cx: &mut Context<'a, 'cfg>,
     unit: &Unit<'a>,
@@ -495,29 +665,7 @@ fn calculate<'a, 'cfg>(
         // and you run two separate commands (`build` then `test`), the second
         // command will erroneously think it is fresh.
         // See: https://github.com/rust-lang/cargo/issues/6733
-        local.extend(
-            cx.dep_targets(unit)
-                .iter()
-                .filter(|u| u.mode.is_run_custom_build())
-                .map(|dep| {
-                    // If the build script is overridden, use the override info as
-                    // the override. Otherwise, use the last invocation time of
-                    // the build script. If the build script re-runs during this
-                    // run, dirty propagation within the JobQueue will ensure that
-                    // this gets invalidated. This is only here to catch the
-                    // situation when cargo is run a second time for another
-                    // target that wasn't built previously (such as `cargo build`
-                    // then `cargo test`).
-                    build_script_override_fingerprint(cx, unit).unwrap_or_else(|| {
-                        let ts_path = cx
-                            .files()
-                            .build_script_run_dir(dep)
-                            .join("invoked.timestamp");
-                        let ts_path_mtime = paths::mtime(&ts_path).ok();
-                        LocalFingerprint::mtime(cx.files().target_root(), ts_path_mtime, &ts_path)
-                    })
-                }),
-        );
+        local.extend(local_fingerprint_run_custom_build_deps(cx, unit));
         local
     } else {
         let fingerprint = pkg_fingerprint(&cx.bcx, unit.pkg)?;
@@ -559,21 +707,17 @@ fn use_dep_info(unit: &Unit<'_>) -> bool {
 
 /// Prepare the necessary work for the fingerprint of a build command.
 ///
-/// Build commands are located on packages, not on targets. Additionally, we
-/// don't have --dep-info to drive calculation of the fingerprint of a build
-/// command. This brings up an interesting predicament which gives us a few
-/// options to figure out whether a build command is dirty or not:
+/// The fingerprint for the execution of a build script can be in one of two
+/// modes:
 ///
-/// 1. A build command is dirty if *any* file in a package changes. In theory
-///    all files are candidate for being used by the build command.
-/// 2. A build command is dirty if any file in a *specific directory* changes.
-///    This may lose information as it may require files outside of the specific
-///    directory.
-/// 3. A build command must itself provide a dep-info-like file stating how it
-///    should be considered dirty or not.
+/// - "old style": The fingerprint tracks the mtimes for all files in the
+///   package.
+/// - "new style": If the build script emits a "rerun-if" statement, then
+///   Cargo only tracks the files an environment variables explicitly listed
+///   by the script.
 ///
-/// The currently implemented solution is option (1), although it is planned to
-/// migrate to option (2) in the near future.
+/// Overridden build scripts are special; only the simulated output is
+/// tracked.
 pub fn prepare_build_cmd<'a, 'cfg>(
     cx: &mut Context<'a, 'cfg>,
     unit: &Unit<'a>,
@@ -585,9 +729,44 @@ pub fn prepare_build_cmd<'a, 'cfg>(
     debug!("fingerprint at: {}", loc.display());
 
     let (local, output_path) = build_script_local_fingerprints(cx, unit)?;
+
+    // Include the compilation of the build script itself in the fingerprint.
+    // If the build script is rebuilt, then it definitely needs to be run
+    // again. This should only find 1 dependency (for the build script) or 0
+    // (if it is overridden).
+    //
+    // FIXME: This filters out `RunCustomBuild` units. These are `links`
+    // build scripts. Unfortunately, for many reasons, those would be very
+    // difficult to include, so for now this is slightly wrong. Reasons:
+    // Fingerprint::locals has to be rebuilt in the closure, LocalFingerprint
+    // isn't cloneable, Context is required to recompute them, build script
+    // fingerprints aren't shared in Context::fingerprints, etc.
+    // Ideally this would call local_fingerprint_run_custom_build_deps.
+    // See https://github.com/rust-lang/cargo/issues/6780
+    let deps = if output_path.is_none() {
+        // Overridden build scripts don't need to track deps.
+        vec![]
+    } else {
+        cx.dep_targets(unit)
+            .iter()
+            .filter(|u| !u.mode.is_run_custom_build())
+            .map(|dep| {
+                calculate(cx, dep).and_then(|fingerprint| {
+                    let name = cx.bcx.extern_crate_name(unit, dep)?;
+                    Ok(DepFingerprint {
+                        pkg_id: dep.pkg.package_id().to_string(),
+                        name,
+                        fingerprint,
+                    })
+                })
+            })
+            .collect::<CargoResult<Vec<_>>>()?
+    };
+
     let mut fingerprint = Fingerprint {
         local,
         rustc: util::hash_u64(&cx.bcx.rustc.verbose_version),
+        deps,
         ..Fingerprint::new()
     };
     let mtime_on_use = cx.bcx.config.cli_unstable().mtime_on_use;
@@ -617,6 +796,10 @@ pub fn prepare_build_cmd<'a, 'cfg>(
                 fingerprint.local = local_fingerprints_deps(&deps, &target_root, &pkg_root);
                 fingerprint.update_local(&target_root)?;
             }
+            // FIXME: If a build script switches from new style to old style,
+            // this is bugged. It should recompute Fingerprint::local, but
+            // requires access to Context which we don't have here.
+            // See https://github.com/rust-lang/cargo/issues/6779
         }
         write_fingerprint(&loc, &fingerprint)
     });
@@ -628,6 +811,10 @@ pub fn prepare_build_cmd<'a, 'cfg>(
     ))
 }
 
+/// Compute the `LocalFingerprint` values for a `RunCustomBuild` unit.
+///
+/// The second element of the return value is the path to the build script
+/// `output` file. This is `None` for overridden build scripts.
 fn build_script_local_fingerprints<'a, 'cfg>(
     cx: &mut Context<'a, 'cfg>,
     unit: &Unit<'a>,
@@ -664,7 +851,7 @@ fn build_script_local_fingerprints<'a, 'cfg>(
     ))
 }
 
-/// Create a local fingerprint for an overridden build script.
+/// Create a `LocalFingerprint` for an overridden build script.
 /// Returns None if it is not overridden.
 fn build_script_override_fingerprint<'a, 'cfg>(
     cx: &mut Context<'a, 'cfg>,
@@ -682,6 +869,8 @@ fn build_script_override_fingerprint<'a, 'cfg>(
         })
 }
 
+/// Compute the `LocalFingerprint` values for a `RunCustomBuild` unit for
+/// non-overridden new-style build scripts only.
 fn local_fingerprints_deps(
     deps: &BuildDeps,
     target_root: &Path,
@@ -702,6 +891,41 @@ fn local_fingerprints_deps(
     }
 
     local
+}
+
+/// Compute `LocalFingerprint` values for the `RunCustomBuild` dependencies of
+/// the given unit.
+fn local_fingerprint_run_custom_build_deps<'a, 'cfg>(
+    cx: &mut Context<'a, 'cfg>,
+    unit: &Unit<'a>,
+) -> Vec<LocalFingerprint> {
+    cx.dep_targets(unit)
+        .iter()
+        .filter(|u| u.mode.is_run_custom_build())
+        .map(|dep| {
+            // If the build script is overridden, use the override info as
+            // the override. Otherwise, use the last invocation time of
+            // the build script. If the build script re-runs during this
+            // run, dirty propagation within the JobQueue will ensure that
+            // this gets invalidated. This is only here to catch the
+            // situation when cargo is run a second time for another
+            // target that wasn't built previously (such as `cargo build`
+            // then `cargo test`).
+            //
+            // I suspect there is some edge case where this is incorrect,
+            // because the invoked timestamp is updated even if the build
+            // script fails to finish. However, I can't find any examples
+            // where it doesn't work.
+            build_script_override_fingerprint(cx, unit).unwrap_or_else(|| {
+                let ts_path = cx
+                    .files()
+                    .build_script_run_dir(dep)
+                    .join("invoked.timestamp");
+                let ts_path_mtime = paths::mtime(&ts_path).ok();
+                LocalFingerprint::mtime(cx.files().target_root(), ts_path_mtime, &ts_path)
+            })
+        })
+        .collect()
 }
 
 fn write_fingerprint(loc: &Path, fingerprint: &Fingerprint) -> CargoResult<()> {
