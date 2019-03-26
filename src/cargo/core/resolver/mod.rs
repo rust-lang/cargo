@@ -297,6 +297,7 @@ fn activate_deps_loop(
                 // As we mentioned above with the `backtracked` variable if this
                 // local is set to `true` then our `conflicting_activations` may
                 // not be right, so we can't push into our global cache.
+                let mut generalize_conflicting_activations = None;
                 if !just_here_for_the_error_messages && !backtracked {
                     past_conflicting_activations.insert(&dep, &conflicting_activations);
                     if let Some(c) = generalize_conflicting(
@@ -307,7 +308,7 @@ fn activate_deps_loop(
                         &dep,
                         &conflicting_activations,
                     ) {
-                        conflicting_activations = c;
+                        generalize_conflicting_activations = Some(c);
                     }
                 }
 
@@ -316,7 +317,9 @@ fn activate_deps_loop(
                     &mut backtrack_stack,
                     &parent,
                     backtracked,
-                    &conflicting_activations,
+                    generalize_conflicting_activations
+                        .as_ref()
+                        .unwrap_or(&conflicting_activations),
                 ) {
                     Some((candidate, has_another, frame)) => {
                         // Reset all of our local variables used with the
@@ -885,7 +888,7 @@ fn generalize_conflicting(
         // and let `jumpback_critical_id` figure this out.
         return None;
     }
-    // What parents dose that critical activation have
+    // What parents does that critical activation have
     for (critical_parent, critical_parents_deps) in
         cx.parents.edges(&jumpback_critical_id).filter(|(p, _)| {
             // it will only help backjump further if it is older then the critical_age
