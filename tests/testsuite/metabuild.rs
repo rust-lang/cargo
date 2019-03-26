@@ -2,7 +2,6 @@ use crate::support::{
     basic_lib_manifest, basic_manifest, is_coarse_mtime, project, registry::Package, rustc_host,
     Project,
 };
-use glob::glob;
 use serde_json;
 use std::str;
 
@@ -537,17 +536,7 @@ fn metabuild_build_plan() {
         )
         .run();
 
-    assert_eq!(
-        glob(
-            &p.root()
-                .join("target/.metabuild/metabuild-foo-*.rs")
-                .to_str()
-                .unwrap()
-        )
-        .unwrap()
-        .count(),
-        1
-    );
+    assert_eq!(p.glob("target/.metabuild/metabuild-foo-*.rs").count(), 1);
 }
 
 #[test]
@@ -623,14 +612,7 @@ fn metabuild_two_versions() {
         .run();
 
     assert_eq!(
-        glob(
-            &p.root()
-                .join("target/.metabuild/metabuild-member?-*.rs")
-                .to_str()
-                .unwrap()
-        )
-        .unwrap()
-        .count(),
+        p.glob("target/.metabuild/metabuild-member?-*.rs").count(),
         2
     );
 }
@@ -681,17 +663,7 @@ fn metabuild_external_dependency() {
         .with_stdout_contains("[dep 1.0.0] Hello mb")
         .run();
 
-    assert_eq!(
-        glob(
-            &p.root()
-                .join("target/.metabuild/metabuild-dep-*.rs")
-                .to_str()
-                .unwrap()
-        )
-        .unwrap()
-        .count(),
-        1
-    );
+    assert_eq!(p.glob("target/.metabuild/metabuild-dep-*.rs").count(), 1);
 }
 
 #[test]

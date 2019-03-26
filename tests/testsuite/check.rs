@@ -4,7 +4,6 @@ use crate::support::install::exe;
 use crate::support::paths::CargoPathExt;
 use crate::support::registry::Package;
 use crate::support::{basic_manifest, project};
-use glob::glob;
 
 #[test]
 fn check_success() {
@@ -623,43 +622,34 @@ fn check_artifacts() {
         .file("benches/b1.rs", "")
         .build();
 
-    let assert_glob = |path: &str, count: usize| {
-        assert_eq!(
-            glob(&p.root().join(path).to_str().unwrap())
-                .unwrap()
-                .count(),
-            count
-        );
-    };
-
     p.cargo("check").run();
     assert!(!p.root().join("target/debug/libfoo.rmeta").is_file());
     assert!(!p.root().join("target/debug/libfoo.rlib").is_file());
     assert!(!p.root().join("target/debug").join(exe("foo")).is_file());
-    assert_glob("target/debug/deps/libfoo-*.rmeta", 2);
+    assert_eq!(p.glob("target/debug/deps/libfoo-*.rmeta").count(), 2);
 
     p.root().join("target").rm_rf();
     p.cargo("check --lib").run();
     assert!(!p.root().join("target/debug/libfoo.rmeta").is_file());
     assert!(!p.root().join("target/debug/libfoo.rlib").is_file());
     assert!(!p.root().join("target/debug").join(exe("foo")).is_file());
-    assert_glob("target/debug/deps/libfoo-*.rmeta", 1);
+    assert_eq!(p.glob("target/debug/deps/libfoo-*.rmeta").count(), 1);
 
     p.root().join("target").rm_rf();
     p.cargo("check --bin foo").run();
     assert!(!p.root().join("target/debug/libfoo.rmeta").is_file());
     assert!(!p.root().join("target/debug/libfoo.rlib").is_file());
     assert!(!p.root().join("target/debug").join(exe("foo")).is_file());
-    assert_glob("target/debug/deps/libfoo-*.rmeta", 2);
+    assert_eq!(p.glob("target/debug/deps/libfoo-*.rmeta").count(), 2);
 
     p.root().join("target").rm_rf();
     p.cargo("check --test t1").run();
     assert!(!p.root().join("target/debug/libfoo.rmeta").is_file());
     assert!(!p.root().join("target/debug/libfoo.rlib").is_file());
     assert!(!p.root().join("target/debug").join(exe("foo")).is_file());
-    assert_glob("target/debug/t1-*", 0);
-    assert_glob("target/debug/deps/libfoo-*.rmeta", 1);
-    assert_glob("target/debug/deps/libt1-*.rmeta", 1);
+    assert_eq!(p.glob("target/debug/t1-*").count(), 0);
+    assert_eq!(p.glob("target/debug/deps/libfoo-*.rmeta").count(), 1);
+    assert_eq!(p.glob("target/debug/deps/libt1-*.rmeta").count(), 1);
 
     p.root().join("target").rm_rf();
     p.cargo("check --example ex1").run();
@@ -670,17 +660,17 @@ fn check_artifacts() {
         .join("target/debug/examples")
         .join(exe("ex1"))
         .is_file());
-    assert_glob("target/debug/deps/libfoo-*.rmeta", 1);
-    assert_glob("target/debug/examples/libex1-*.rmeta", 1);
+    assert_eq!(p.glob("target/debug/deps/libfoo-*.rmeta").count(), 1);
+    assert_eq!(p.glob("target/debug/examples/libex1-*.rmeta").count(), 1);
 
     p.root().join("target").rm_rf();
     p.cargo("check --bench b1").run();
     assert!(!p.root().join("target/debug/libfoo.rmeta").is_file());
     assert!(!p.root().join("target/debug/libfoo.rlib").is_file());
     assert!(!p.root().join("target/debug").join(exe("foo")).is_file());
-    assert_glob("target/debug/b1-*", 0);
-    assert_glob("target/debug/deps/libfoo-*.rmeta", 1);
-    assert_glob("target/debug/deps/libb1-*.rmeta", 1);
+    assert_eq!(p.glob("target/debug/b1-*").count(), 0);
+    assert_eq!(p.glob("target/debug/deps/libfoo-*.rmeta").count(), 1);
+    assert_eq!(p.glob("target/debug/deps/libb1-*.rmeta").count(), 1);
 }
 
 #[test]

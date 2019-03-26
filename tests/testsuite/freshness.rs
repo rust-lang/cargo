@@ -1885,3 +1885,76 @@ fn simulated_docker_deps_stay_cached() {
             .run();
     }
 }
+
+#[test]
+fn metadata_change_invalidates() {
+    let p = project()
+        .file(
+            "Cargo.toml",
+            r#"
+            [package]
+            name = "foo"
+            version = "0.1.0"
+            "#,
+        )
+        .file("src/lib.rs", "")
+        .build();
+
+    p.cargo("build").run();
+
+    for attr in &[
+        "authors = [\"foo\"]",
+        "description = \"desc\"",
+        "homepage = \"https://example.com\"",
+        "repository =\"https://example.com\"",
+    ] {
+        let mut file = OpenOptions::new()
+            .write(true)
+            .append(true)
+            .open(p.root().join("Cargo.toml"))
+            .unwrap();
+        writeln!(file, "{}", attr).unwrap();
+        p.cargo("build")
+            .with_stderr_contains("[COMPILING] foo [..]")
+            .run();
+    }
+    p.cargo("build -v")
+        .with_stderr_contains("[FRESH] foo[..]")
+        .run();
+    assert_eq!(p.glob("target/debug/deps/libfoo-*.rlib").count(), 1);
+}
+
+#[test]
+fn edition_change_invalidates() {
+    const MANIFEST: &str = r#"
+        [package]
+        name = "foo"
+        version = "0.1.0"
+    "#;
+    let p = project()
+        .file("Cargo.toml", MANIFEST)
+        .file("src/lib.rs", "")
+        .build();
+    p.cargo("build").run();
+    p.change_file("Cargo.toml", &format!("{}edition = \"2018\"", MANIFEST));
+    p.cargo("build")
+        .with_stderr_contains("[COMPILING] foo [..]")
+        .run();
+    p.change_file(
+        "Cargo.toml",
+        &format!(
+            r#"{}edition = "2018"
+            [lib]
+            edition = "2015"
+            "#,
+            MANIFEST
+        ),
+    );
+    p.cargo("build")
+        .with_stderr_contains("[COMPILING] foo [..]")
+        .run();
+    p.cargo("build -v")
+        .with_stderr_contains("[FRESH] foo[..]")
+        .run();
+    assert_eq!(p.glob("target/debug/deps/libfoo-*.rlib").count(), 1);
+}

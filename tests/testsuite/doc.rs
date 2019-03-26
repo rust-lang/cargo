@@ -2,8 +2,6 @@ use std::fs::{self, File};
 use std::io::Read;
 use std::str;
 
-use glob::glob;
-
 use crate::support::paths::CargoPathExt;
 use crate::support::registry::Package;
 use crate::support::{basic_lib_manifest, basic_manifest, git, project};
@@ -113,23 +111,8 @@ fn doc_deps() {
     assert!(p.root().join("target/doc/bar/index.html").is_file());
 
     // Verify that it only emits rmeta for the dependency.
-    assert_eq!(
-        glob(&p.root().join("target/debug/**/*.rlib").to_str().unwrap())
-            .unwrap()
-            .count(),
-        0
-    );
-    assert_eq!(
-        glob(
-            &p.root()
-                .join("target/debug/deps/libbar-*.rmeta")
-                .to_str()
-                .unwrap()
-        )
-        .unwrap()
-        .count(),
-        1
-    );
+    assert_eq!(p.glob("target/debug/**/*.rlib").count(), 0);
+    assert_eq!(p.glob("target/debug/deps/libbar-*.rmeta").count(), 1);
 
     p.cargo("doc")
         .env("RUST_LOG", "cargo::ops::cargo_rustc::fingerprint")
