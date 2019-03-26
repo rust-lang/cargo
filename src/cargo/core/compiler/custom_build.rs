@@ -65,6 +65,7 @@ pub struct BuildScripts {
     pub plugins: BTreeSet<PackageId>,
 }
 
+#[derive(Debug)]
 pub struct BuildDeps {
     pub build_script_output: PathBuf,
     pub rerun_if_changed: Vec<PathBuf>,
