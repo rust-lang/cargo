@@ -469,13 +469,6 @@ fn compute_metadata<'a, 'cfg>(
         .stable_hash(bcx.ws.root())
         .hash(&mut hasher);
 
-    // Add package properties which map to environment variables
-    // exposed by Cargo.
-    let manifest_metadata = unit.pkg.manifest().metadata();
-    manifest_metadata.authors.hash(&mut hasher);
-    manifest_metadata.description.hash(&mut hasher);
-    manifest_metadata.homepage.hash(&mut hasher);
-
     // Also mix in enabled features to our metadata. This'll ensure that
     // when changing feature sets each lib is separately cached.
     bcx.resolve

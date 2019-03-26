@@ -370,6 +370,14 @@ impl Project {
         ))
     }
 
+    /// Returns an iterator of paths matching the glob pattern, which is
+    /// relative to the project root.
+    pub fn glob<P: AsRef<Path>>(&self, pattern: P) -> glob::Paths {
+        let pattern = self.root().join(pattern);
+        glob::glob(pattern.to_str().expect("failed to convert pattern to str"))
+            .expect("failed to glob")
+    }
+
     /// Changes the contents of an existing file.
     pub fn change_file(&self, path: &str, body: &str) {
         FileBuilder::new(self.root().join(path), body).mk()
@@ -753,7 +761,6 @@ impl Execs {
                 p.cwd(cwd.join(path.as_ref()));
             } else {
                 p.cwd(path);
-
             }
         }
         self
