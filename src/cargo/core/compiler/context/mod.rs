@@ -474,11 +474,11 @@ impl<'a, 'cfg> Context<'a, 'cfg> {
         for unit in keys {
             for output in self.outputs(unit)?.iter() {
                 if let Some(other_unit) = output_collisions.insert(output.path.clone(), unit) {
-                    report_collision(unit, &other_unit, &output.path)?;
+                    report_collision(unit, other_unit, &output.path)?;
                 }
                 if let Some(hardlink) = output.hardlink.as_ref() {
                     if let Some(other_unit) = output_collisions.insert(hardlink.clone(), unit) {
-                        report_collision(unit, &other_unit, hardlink)?;
+                        report_collision(unit, other_unit, hardlink)?;
                     }
                 }
                 if let Some(ref export_path) = output.export_path {
@@ -488,7 +488,7 @@ impl<'a, 'cfg> Context<'a, 'cfg> {
                              {}\
                              The exported filenames should be unique.\n\
                              {}",
-                            describe_collision(unit, &other_unit, &export_path),
+                            describe_collision(unit, other_unit, export_path),
                             suggestion
                         ))?;
                     }

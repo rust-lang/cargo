@@ -434,8 +434,7 @@ fn metabuild_metadata() {
         .as_array()
         .unwrap()
         .iter()
-        .filter(|p| p["name"].as_str().unwrap() == "foo")
-        .next()
+        .find(|p| p["name"].as_str().unwrap() == "foo")
         .unwrap()["metabuild"]
         .as_array()
         .unwrap()

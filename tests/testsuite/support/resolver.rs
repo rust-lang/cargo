@@ -21,7 +21,7 @@ use proptest::string::string_regex;
 use proptest::test_runner::TestRunner;
 
 pub fn resolve(
-    pkg: &PackageId,
+    pkg: PackageId,
     deps: Vec<Dependency>,
     registry: &[Summary],
 ) -> CargoResult<Vec<PackageId>> {
@@ -29,17 +29,17 @@ pub fn resolve(
 }
 
 pub fn resolve_and_validated(
-    pkg: &PackageId,
+    pkg: PackageId,
     deps: Vec<Dependency>,
     registry: &[Summary],
 ) -> CargoResult<Vec<PackageId>> {
     let resolve = resolve_with_config_raw(pkg, deps, registry, None)?;
-    let mut stack = vec![pkg.clone()];
+    let mut stack = vec![pkg];
     let mut used = HashSet::new();
     let mut links = HashSet::new();
     while let Some(p) = stack.pop() {
         assert!(resolve.contains(&p));
-        if used.insert(p.clone()) {
+        if used.insert(p) {
             // in the tests all `links` crates end in `-sys`
             if p.name().ends_with("-sys") {
                 assert!(links.insert(p.name()));
@@ -48,7 +48,7 @@ pub fn resolve_and_validated(
                 for d in deps {
                     assert!(d.matches_id(dp));
                 }
-                dp.clone()
+                dp
             }));
         }
     }
@@ -58,7 +58,7 @@ pub fn resolve_and_validated(
 }
 
 pub fn resolve_with_config(
-    pkg: &PackageId,
+    pkg: PackageId,
     deps: Vec<Dependency>,
     registry: &[Summary],
     config: Option<&Config>,
@@ -68,7 +68,7 @@ pub fn resolve_with_config(
 }
 
 pub fn resolve_with_config_raw(
-    pkg: &PackageId,
+    pkg: PackageId,
     deps: Vec<Dependency>,
     registry: &[Summary],
     config: Option<&Config>,
@@ -99,7 +99,7 @@ pub fn resolve_with_config_raw(
     }
     let mut registry = MyRegistry(registry);
     let summary = Summary::new(
-        pkg.clone(),
+        pkg,
         deps,
         &BTreeMap::<String, Vec<String>>::new(),
         None::<String>,
@@ -146,7 +146,7 @@ pub trait ToPkgId {
 
 impl ToPkgId for PackageId {
     fn to_pkgid(&self) -> PackageId {
-        self.clone()
+        *self
     }
 }
 
@@ -461,7 +461,7 @@ pub fn registry_strategy(
                     let (c, d) = order_index(c, d, s.len());
 
                     dependency_by_pkgid[b].push(dep_req_kind(
-                        &dep_name,
+                        dep_name,
                         &if c == 0 && d == s_last_index {
                             "*".to_string()
                         } else if c == 0 {
@@ -525,7 +525,7 @@ fn meta_test_deep_trees_from_strategy() {
         let reg = registry(input.clone());
         for this in input.iter().rev().take(10) {
             let res = resolve(
-                &pkg_id("root"),
+                pkg_id("root"),
                 vec![dep_req(&this.name(), &format!("={}", this.version()))],
                 &reg,
             );
@@ -564,7 +564,7 @@ fn meta_test_multiple_versions_strategy() {
         let reg = registry(input.clone());
         for this in input.iter().rev().take(10) {
             let res = resolve(
-                &pkg_id("root"),
+                pkg_id("root"),
                 vec![dep_req(&this.name(), &format!("={}", this.version()))],
                 &reg,
             );

@@ -162,7 +162,7 @@ fn build_work<'a, 'cfg>(cx: &mut Context<'a, 'cfg>, unit: &Unit<'a>) -> CargoRes
         .env(
             "TARGET",
             &match unit.kind {
-                Kind::Host => &bcx.host_triple(),
+                Kind::Host => bcx.host_triple(),
                 Kind::Target => bcx.target_triple(),
             },
         )

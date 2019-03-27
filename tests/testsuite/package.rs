@@ -910,7 +910,7 @@ authors = []
         f,
         "bar-0.1.0.crate",
         &["Cargo.toml", "Cargo.toml.orig", "src/lib.rs"],
-        &[("Cargo.toml", &rewritten_toml)],
+        &[("Cargo.toml", rewritten_toml)],
     );
 }
 
