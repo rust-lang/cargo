@@ -2,6 +2,7 @@
 #![allow(clippy::too_many_arguments)] // large project
 #![allow(clippy::redundant_closure)] // there's a false positive
 #![warn(clippy::needless_borrow)]
+#![warn(clippy::redundant_clone)]
 
 use std::collections::BTreeSet;
 use std::env;

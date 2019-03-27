@@ -3,6 +3,7 @@
 #![allow(clippy::blacklisted_name)]
 #![allow(clippy::explicit_iter_loop)]
 #![warn(clippy::needless_borrow)]
+#![warn(clippy::redundant_clone)]
 
 #[macro_use]
 mod support;

@@ -340,7 +340,7 @@ fn public_dependency_skiping() {
         pkg!(("b", "0.2.1") => [dep_req_kind("a", "0.2.0", Kind::Normal, true)]),
         pkg!("c" => [dep("a"),dep("b")]),
     ];
-    let reg = registry(input.clone());
+    let reg = registry(input);
 
     resolve(pkg_id("root"), vec![dep("c")], &reg).unwrap();
 }
@@ -360,7 +360,7 @@ fn public_dependency_skiping_in_backtracking() {
         pkg!("B" => [dep_req_kind("A", ">= 0.0.3", Kind::Normal, true)]),
         pkg!("C" => [dep_req("A", "<= 0.0.4"), dep("B")]),
     ];
-    let reg = registry(input.clone());
+    let reg = registry(input);
 
     resolve(pkg_id("root"), vec![dep("C")], &reg).unwrap();
 }
@@ -886,7 +886,7 @@ fn resolving_with_many_equivalent_backtracking() {
         ]),
     );
 
-    let reg = registry(reglist.clone());
+    let reg = registry(reglist);
 
     let res = resolve(
         pkg_id("root"),
@@ -929,7 +929,7 @@ fn resolving_with_deep_traps() {
         }
     }
 
-    let reg = registry(reglist.clone());
+    let reg = registry(reglist);
 
     let res = resolve(
         pkg_id("root"),
@@ -1011,7 +1011,7 @@ fn resolving_with_constrained_cousins_backtrack() {
         ]),
     );
 
-    let reg = registry(reglist.clone());
+    let reg = registry(reglist);
 
     let res = resolve(
         pkg_id("root"),
@@ -1404,6 +1404,6 @@ fn conflict_store_bug() {
         ]),
     ];
 
-    let reg = registry(input.clone());
+    let reg = registry(input);
     let _ = resolve_and_validated(pkg_id("root"), vec![dep("j")], &reg);
 }
