@@ -34,12 +34,12 @@ pub fn resolve_and_validated(
     registry: &[Summary],
 ) -> CargoResult<Vec<PackageId>> {
     let resolve = resolve_with_config_raw(pkg, deps, registry, None)?;
-    let mut stack = vec![pkg.clone()];
+    let mut stack = vec![pkg];
     let mut used = HashSet::new();
     let mut links = HashSet::new();
     while let Some(p) = stack.pop() {
         assert!(resolve.contains(&p));
-        if used.insert(p.clone()) {
+        if used.insert(p) {
             // in the tests all `links` crates end in `-sys`
             if p.name().ends_with("-sys") {
                 assert!(links.insert(p.name()));
@@ -48,7 +48,7 @@ pub fn resolve_and_validated(
                 for d in deps {
                     assert!(d.matches_id(dp));
                 }
-                dp.clone()
+                dp
             }));
         }
     }
@@ -99,7 +99,7 @@ pub fn resolve_with_config_raw(
     }
     let mut registry = MyRegistry(registry);
     let summary = Summary::new(
-        pkg.clone(),
+        pkg,
         deps,
         &BTreeMap::<String, Vec<String>>::new(),
         None::<String>,
@@ -146,7 +146,7 @@ pub trait ToPkgId {
 
 impl ToPkgId for PackageId {
     fn to_pkgid(&self) -> PackageId {
-        self.clone()
+        *self
     }
 }
 
