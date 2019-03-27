@@ -62,6 +62,7 @@ cargo:rustc-link-lib=static=foo
 cargo:rustc-link-search=native=/path/to/foo
 cargo:rustc-cfg=foo
 cargo:rustc-env=FOO=bar
+cargo:rustc-cdylib-link-arg=-Wl,-soname,libfoo.so.1.2.3
 # arbitrary user-defined metadata
 cargo:root=/path/to/foo
 cargo:libdir=/path/to/foo/lib
@@ -93,6 +94,9 @@ crate is built:
   This is useful for embedding additional metadata in crate's code,
   such as the hash of Git HEAD or the unique identifier of a continuous
   integration server.
+* `rustc-cdylib-link-arg=FLAG` is a flag passed to the compiler as
+  `-C link-arg=FLAG` when building a `cdylib`. Its usage is highly platform
+  specific. It is useful to set the shared library version or the runtime-path.
 * `rerun-if-changed=PATH` is a path to a file or directory which indicates that
   the build script should be re-run if it changes (detected by a more-recent
   last-modified timestamp on the file). Normally build scripts are re-run if
