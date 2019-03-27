@@ -14,6 +14,8 @@
 #![allow(clippy::too_many_arguments)] // large project
 #![allow(clippy::type_complexity)] // there's an exceptionally complex type
 #![allow(clippy::wrong_self_convention)] // perhaps `Rc` should be special-cased in Clippy?
+#![warn(clippy::needless_borrow)]
+#![warn(clippy::redundant_clone)]
 
 use std::fmt;
 

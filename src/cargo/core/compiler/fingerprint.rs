@@ -682,7 +682,7 @@ fn calculate<'a, 'cfg>(
         local.extend(local_fingerprint_run_custom_build_deps(cx, unit));
         local
     } else {
-        let fingerprint = pkg_fingerprint(&cx.bcx, unit.pkg)?;
+        let fingerprint = pkg_fingerprint(cx.bcx, unit.pkg)?;
         vec![LocalFingerprint::Precalculated(fingerprint)]
     };
 
@@ -701,7 +701,7 @@ fn calculate<'a, 'cfg>(
         profile: profile_hash,
         // Note that .0 is hashed here, not .1 which is the cwd. That doesn't
         // actually affect the output artifact so there's no need to hash it.
-        path: util::hash_u64(&super::path_args(&cx.bcx, unit).0),
+        path: util::hash_u64(&super::path_args(cx.bcx, unit).0),
         features: format!("{:?}", bcx.resolve.features_sorted(unit.pkg.package_id())),
         deps,
         local,
@@ -855,7 +855,7 @@ fn build_script_local_fingerprints<'a, 'cfg>(
     let output = deps.build_script_output.clone();
     if deps.rerun_if_changed.is_empty() && deps.rerun_if_env_changed.is_empty() {
         debug!("old local fingerprints deps");
-        let s = pkg_fingerprint(&cx.bcx, unit.pkg)?;
+        let s = pkg_fingerprint(cx.bcx, unit.pkg)?;
         return Ok((vec![LocalFingerprint::Precalculated(s)], Some(output)));
     }
 

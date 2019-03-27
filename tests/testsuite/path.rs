@@ -580,7 +580,7 @@ fn override_self() {
         .build();
 
     let p = project();
-    let root = p.root().clone();
+    let root = p.root();
     let p = p
         .file(".cargo/config", &format!("paths = ['{}']", root.display()))
         .file(

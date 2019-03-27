@@ -515,10 +515,10 @@ pub fn main_file(println: &str, deps: &[&str]) -> String {
     }
 
     buf.push_str("fn main() { println!(");
-    buf.push_str(&println);
+    buf.push_str(println);
     buf.push_str("); }\n");
 
-    buf.to_string()
+    buf
 }
 
 trait ErrMsg<T> {
@@ -926,7 +926,7 @@ impl Execs {
         }
         for &(ref expect, number) in self.expect_stdout_contains_n.iter() {
             self.match_std(
-                Some(&expect),
+                Some(expect),
                 &actual.stdout,
                 "stdout",
                 &actual.stderr,
@@ -1084,10 +1084,7 @@ impl Execs {
 
                 // On Windows, we need to use a wildcard for the drive,
                 // because we don't actually know what it will be.
-                let replaced =
-                    replaced.replace("[ROOT]", if cfg!(windows) { r#"[..]:\"# } else { "/" });
-
-                replaced
+                replaced.replace("[ROOT]", if cfg!(windows) { r#"[..]:\"# } else { "/" })
             }
             None => return Ok(()),
         };
@@ -1246,7 +1243,7 @@ impl Execs {
             .enumerate()
             .filter_map(|(i, (a, e))| match (a, e) {
                 (Some(a), Some(e)) => {
-                    if lines_match(&e, &a) {
+                    if lines_match(e, a) {
                         None
                     } else {
                         Some(format!("{:3} - |{}|\n    + |{}|\n", i, e, a))
@@ -1327,7 +1324,7 @@ fn lines_match_works() {
 /// arbitrary nested JSON (useful for parts of object emitted by other programs
 /// (e.g., rustc) rather than Cargo itself). Arrays are sorted before comparison.
 pub fn find_json_mismatch(expected: &Value, actual: &Value) -> Result<(), String> {
-    match find_json_mismatch_r(expected, &actual) {
+    match find_json_mismatch_r(expected, actual) {
         Some((expected_part, actual_part)) => Err(format!(
             "JSON mismatch\nExpected:\n{}\nWas:\n{}\nExpected part:\n{}\nActual part:\n{}\n",
             serde_json::to_string_pretty(expected).unwrap(),
@@ -1368,7 +1365,7 @@ fn find_json_mismatch_r<'a>(
 
             if !l.is_empty() {
                 assert!(!r.is_empty());
-                Some((&l[0], &r[0]))
+                Some((l[0], r[0]))
             } else {
                 assert_eq!(r.len(), 0);
                 None

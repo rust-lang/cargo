@@ -61,10 +61,11 @@ fn simple_bin() {
 fn simple_git_ignore_exists() {
     // write a .gitignore file with one entry
     fs::create_dir_all(paths::root().join("foo")).unwrap();
-    let mut ignore_file = File::create(paths::root().join("foo/.gitignore")).unwrap();
-    ignore_file
-        .write("/target\n**/some.file".as_bytes())
-        .unwrap();
+    fs::write(
+        paths::root().join("foo/.gitignore"),
+        "/target\n**/some.file",
+    )
+    .unwrap();
 
     cargo_process("init --lib foo --edition 2015")
         .env("USER", "foo")

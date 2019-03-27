@@ -158,7 +158,7 @@ fn cargo_compile_offline_with_cached_git_dep() {
         File::create(&prj.root().join("Cargo.toml"))
             .unwrap()
             .write_all(
-                &format!(
+                format!(
                     r#"
             [project]
             name = "cache_git_dep"
@@ -220,7 +220,7 @@ fn cargo_compile_offline_with_cached_git_dep() {
     File::create(&p.root().join("Cargo.toml"))
         .unwrap()
         .write_all(
-            &format!(
+            format!(
                 r#"
         [project]
         name = "foo"
@@ -2861,7 +2861,7 @@ fn templatedir_doesnt_cause_problems() {
     File::create(paths::home().join(".gitconfig"))
         .unwrap()
         .write_all(
-            &format!(
+            format!(
                 r#"
                 [init]
                 templatedir = {}

@@ -1343,7 +1343,7 @@ fn install_global_cargo_config() {
     pkg("bar", "0.0.1");
 
     let config = cargo_home().join("config");
-    let mut toml = fs::read_to_string(&config).unwrap_or(String::new());
+    let mut toml = fs::read_to_string(&config).unwrap_or_default();
 
     toml.push_str(
         r#"

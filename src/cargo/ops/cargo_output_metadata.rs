@@ -42,7 +42,7 @@ fn metadata_no_deps(ws: &Workspace<'_>, _opt: &OutputMetadataOptions) -> CargoRe
         packages: ws.members().cloned().collect(),
         workspace_members: ws.members().map(|pkg| pkg.package_id()).collect(),
         resolve: None,
-        target_directory: ws.target_dir().clone().into_path_unlocked(),
+        target_directory: ws.target_dir().into_path_unlocked(),
         version: VERSION,
         workspace_root: ws.root().to_path_buf(),
     })
@@ -70,7 +70,7 @@ fn metadata_full(ws: &Workspace<'_>, opt: &OutputMetadataOptions) -> CargoResult
             resolve: (packages, resolve),
             root: ws.current_opt().map(|pkg| pkg.package_id()),
         }),
-        target_directory: ws.target_dir().clone().into_path_unlocked(),
+        target_directory: ws.target_dir().into_path_unlocked(),
         version: VERSION,
         workspace_root: ws.root().to_path_buf(),
     })

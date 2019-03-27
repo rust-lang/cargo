@@ -835,7 +835,7 @@ impl TomlManifest {
         // Parse features first so they will be available when parsing other parts of the TOML.
         let empty = Vec::new();
         let cargo_features = me.cargo_features.as_ref().unwrap_or(&empty);
-        let features = Features::new(&cargo_features, &mut warnings)?;
+        let features = Features::new(cargo_features, &mut warnings)?;
 
         let project = me.project.as_ref().or_else(|| me.package.as_ref());
         let project = project.ok_or_else(|| failure::format_err!("no `package` section found"))?;
@@ -1010,7 +1010,7 @@ impl TomlManifest {
 
         let workspace_config = match (me.workspace.as_ref(), project.workspace.as_ref()) {
             (Some(config), None) => WorkspaceConfig::Root(WorkspaceRootConfig::new(
-                &package_root,
+                package_root,
                 &config.members,
                 &config.default_members,
                 &config.exclude,
@@ -1138,7 +1138,7 @@ impl TomlManifest {
         let mut deps = Vec::new();
         let empty = Vec::new();
         let cargo_features = me.cargo_features.as_ref().unwrap_or(&empty);
-        let features = Features::new(&cargo_features, &mut warnings)?;
+        let features = Features::new(cargo_features, &mut warnings)?;
 
         let (replace, patch) = {
             let mut cx = Context {
@@ -1157,7 +1157,7 @@ impl TomlManifest {
         let profiles = Profiles::new(me.profile.as_ref(), config, &features, &mut warnings)?;
         let workspace_config = match me.workspace {
             Some(ref config) => WorkspaceConfig::Root(WorkspaceRootConfig::new(
-                &root,
+                root,
                 &config.members,
                 &config.default_members,
                 &config.exclude,

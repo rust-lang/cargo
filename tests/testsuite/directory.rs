@@ -577,7 +577,7 @@ fn git_lock_file_doesnt_change() {
     let root = paths::root();
     t!(fs::create_dir(&root.join(".cargo")));
     t!(t!(File::create(root.join(".cargo/config"))).write_all(
-        &format!(
+        format!(
             r#"
         [source.my-git-repo]
         git = '{}'
