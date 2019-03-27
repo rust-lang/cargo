@@ -1084,10 +1084,7 @@ impl Execs {
 
                 // On Windows, we need to use a wildcard for the drive,
                 // because we don't actually know what it will be.
-                let replaced =
-                    replaced.replace("[ROOT]", if cfg!(windows) { r#"[..]:\"# } else { "/" });
-
-                replaced
+                replaced.replace("[ROOT]", if cfg!(windows) { r#"[..]:\"# } else { "/" })
             }
             None => return Ok(()),
         };
