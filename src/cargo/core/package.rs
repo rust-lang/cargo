@@ -105,7 +105,7 @@ impl ser::Serialize for Package {
 
         SerializedPackage {
             name: &*package_id.name(),
-            version: &package_id.version(),
+            version: package_id.version(),
             id: package_id,
             license,
             license_file,
@@ -740,7 +740,7 @@ impl<'a, 'cfg> Downloads<'a, 'cfg> {
             self.set.multi.messages(|msg| {
                 let token = msg.token().expect("failed to read token");
                 let handle = &pending[&token].1;
-                if let Some(result) = msg.result_for(&handle) {
+                if let Some(result) = msg.result_for(handle) {
                     results.push((token, result));
                 } else {
                     debug!("message without a result (?)");

@@ -113,7 +113,7 @@ impl BuildPlan {
         let id = self.plan.invocations.len();
         self.invocation_map.insert(unit.buildkey(), id);
         let deps = cx
-            .dep_targets(&unit)
+            .dep_targets(unit)
             .iter()
             .map(|dep| self.invocation_map[&dep.buildkey()])
             .collect();

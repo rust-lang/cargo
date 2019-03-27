@@ -47,7 +47,7 @@ Run with 'cargo -Z [FLAG] [SUBCOMMAND]'"
         return Ok(());
     }
 
-    if let Some(ref code) = args.value_of("explain") {
+    if let Some(code) = args.value_of("explain") {
         let mut procss = config.rustc(None)?.process();
         procss.arg("--explain").arg(code).exec()?;
         return Ok(());

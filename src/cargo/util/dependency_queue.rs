@@ -124,7 +124,7 @@ impl<K: Hash + Eq + Clone, V> DependencyQueue<K, V> {
             results.insert(key.clone(), IN_PROGRESS);
 
             let depth = 1 + map
-                .get(&key)
+                .get(key)
                 .into_iter()
                 .flat_map(|it| it)
                 .map(|dep| depth(dep, map, results))

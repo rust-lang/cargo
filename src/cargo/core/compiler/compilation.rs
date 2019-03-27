@@ -120,7 +120,7 @@ impl<'cfg> Compilation<'cfg> {
             rustc_process: rustc,
             host: bcx.host_triple().to_string(),
             target: bcx.target_triple().to_string(),
-            target_runner: target_runner(&bcx)?,
+            target_runner: target_runner(bcx)?,
         })
     }
 

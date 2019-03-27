@@ -21,7 +21,7 @@ use proptest::string::string_regex;
 use proptest::test_runner::TestRunner;
 
 pub fn resolve(
-    pkg: &PackageId,
+    pkg: PackageId,
     deps: Vec<Dependency>,
     registry: &[Summary],
 ) -> CargoResult<Vec<PackageId>> {
@@ -29,7 +29,7 @@ pub fn resolve(
 }
 
 pub fn resolve_and_validated(
-    pkg: &PackageId,
+    pkg: PackageId,
     deps: Vec<Dependency>,
     registry: &[Summary],
 ) -> CargoResult<Vec<PackageId>> {
@@ -58,7 +58,7 @@ pub fn resolve_and_validated(
 }
 
 pub fn resolve_with_config(
-    pkg: &PackageId,
+    pkg: PackageId,
     deps: Vec<Dependency>,
     registry: &[Summary],
     config: Option<&Config>,
@@ -68,7 +68,7 @@ pub fn resolve_with_config(
 }
 
 pub fn resolve_with_config_raw(
-    pkg: &PackageId,
+    pkg: PackageId,
     deps: Vec<Dependency>,
     registry: &[Summary],
     config: Option<&Config>,
@@ -461,7 +461,7 @@ pub fn registry_strategy(
                     let (c, d) = order_index(c, d, s.len());
 
                     dependency_by_pkgid[b].push(dep_req_kind(
-                        &dep_name,
+                        dep_name,
                         &if c == 0 && d == s_last_index {
                             "*".to_string()
                         } else if c == 0 {
@@ -525,7 +525,7 @@ fn meta_test_deep_trees_from_strategy() {
         let reg = registry(input.clone());
         for this in input.iter().rev().take(10) {
             let res = resolve(
-                &pkg_id("root"),
+                pkg_id("root"),
                 vec![dep_req(&this.name(), &format!("={}", this.version()))],
                 &reg,
             );
@@ -564,7 +564,7 @@ fn meta_test_multiple_versions_strategy() {
         let reg = registry(input.clone());
         for this in input.iter().rev().take(10) {
             let res = resolve(
-                &pkg_id("root"),
+                pkg_id("root"),
                 vec![dep_req(&this.name(), &format!("={}", this.version()))],
                 &reg,
             );

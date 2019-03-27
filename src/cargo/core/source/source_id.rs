@@ -368,7 +368,7 @@ impl PartialOrd for SourceId {
 
 impl Ord for SourceId {
     fn cmp(&self, other: &SourceId) -> Ordering {
-        self.inner.cmp(&other.inner)
+        self.inner.cmp(other.inner)
     }
 }
 

@@ -59,7 +59,7 @@ pub fn package(ws: &Workspace<'_>, opts: &PackageOpts<'_>) -> CargoResult<Option
     // dirty. This will `bail!` if dirty, unless allow_dirty. Produce json
     // info for any sha1 (HEAD revision) returned.
     let vcs_info = if !opts.allow_dirty {
-        check_repo_state(pkg, &src_files, &config, opts.allow_dirty)?
+        check_repo_state(pkg, &src_files, config, opts.allow_dirty)?
             .map(|h| json!({"git":{"sha1": h}}))
     } else {
         None
@@ -364,7 +364,7 @@ fn tar(
         }
     }
 
-    if let Some(ref json) = vcs_info {
+    if let Some(json) = vcs_info {
         let filename: PathBuf = Path::new(VCS_INFO_FILE).into();
         debug_assert!(check_filename(&filename).is_ok());
         let fnd = filename.display();

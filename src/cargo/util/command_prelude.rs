@@ -434,19 +434,19 @@ about this warning.";
         compile_opts: &CompileOptions<'_>,
     ) -> CargoResult<()> {
         if self.is_present_with_zero_values("example") {
-            print_available_examples(&workspace, &compile_opts)?;
+            print_available_examples(workspace, compile_opts)?;
         }
 
         if self.is_present_with_zero_values("bin") {
-            print_available_binaries(&workspace, &compile_opts)?;
+            print_available_binaries(workspace, compile_opts)?;
         }
 
         if self.is_present_with_zero_values("bench") {
-            print_available_benches(&workspace, &compile_opts)?;
+            print_available_benches(workspace, compile_opts)?;
         }
 
         if self.is_present_with_zero_values("test") {
-            print_available_tests(&workspace, &compile_opts)?;
+            print_available_tests(workspace, compile_opts)?;
         }
 
         Ok(())

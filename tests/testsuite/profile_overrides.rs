@@ -201,7 +201,7 @@ fn profile_override_bad_settings() {
         ),
         ("overrides = {}", "Profile overrides cannot be nested."),
     ];
-    for &(ref snippet, ref expected) in bad_values.iter() {
+    for &(snippet, expected) in bad_values.iter() {
         let p = project()
             .file(
                 "Cargo.toml",

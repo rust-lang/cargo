@@ -491,7 +491,7 @@ fn compute_metadata<'a, 'cfg>(
     // settings like debuginfo and whatnot.
     unit.profile.hash(&mut hasher);
     unit.mode.hash(&mut hasher);
-    if let Some(ref args) = bcx.extra_args_for(unit) {
+    if let Some(args) = bcx.extra_args_for(unit) {
         args.hash(&mut hasher);
     }
 
