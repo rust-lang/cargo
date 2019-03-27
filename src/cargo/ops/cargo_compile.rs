@@ -372,12 +372,12 @@ pub fn compile_ws<'a>(
             &resolve_with_overrides,
             &packages,
             config,
-            &build_config,
+            build_config,
             profiles,
             extra_compiler_args,
         )?;
         let cx = Context::new(config, &bcx)?;
-        cx.compile(&units, export_dir.clone(), &exec)?
+        cx.compile(&units, export_dir.clone(), exec)?
     };
 
     Ok(ret)

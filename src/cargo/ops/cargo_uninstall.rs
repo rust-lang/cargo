@@ -147,7 +147,7 @@ fn uninstall_pkgid(
             installed.remove();
         }
     }
-    write_crate_list(&crate_metadata, metadata)?;
+    write_crate_list(crate_metadata, metadata)?;
     for bin in to_remove {
         config.shell().status("Removing", bin.display())?;
         paths::remove_file(bin)?;
