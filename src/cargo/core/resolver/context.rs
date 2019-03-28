@@ -56,10 +56,12 @@ pub struct Context {
 /// When backtracking it can be useful to know how far back to go.
 /// The `ContextAge` of a `Context` is a monotonically increasing counter of the number
 /// of decisions made to get to this state.
-/// Several structures store the `ContextAge` when it was added, this lets use jump back.
+/// Several structures store the `ContextAge` when it was added, that gets use in jump back.
 pub type ContextAge = usize;
 
-/// find the activated version of a crate based on the name, source, and semver compatibility
+/// Find the activated version of a crate based on the name, source, and semver compatibility.
+/// By storing this in a hash map we ensure that there is only one
+/// semver compatible version of each crate.
 /// This all so stores the `ContextAge`.
 pub type Activations =
     im_rc::HashMap<(InternedString, SourceId, SemverCompatibility), (Summary, ContextAge)>;
@@ -208,7 +210,7 @@ impl Context {
 
     /// Checks whether all of `parent` and the keys of `conflicting activations`
     /// are still active.
-    /// If so returns the "age" (len of activations) when the newest one was added.
+    /// If so returns the `ContextAge` when the newest one was added.
     pub fn is_conflicting(
         &self,
         parent: Option<PackageId>,

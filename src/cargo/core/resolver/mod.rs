@@ -870,7 +870,7 @@ fn generalize_conflicting(
     if conflicting_activations.is_empty() {
         return None;
     }
-    // We need to determine the "age" that this `conflicting_activations` will jump to, and why.
+    // We need to determine the `ContextAge` that this `conflicting_activations` will jump to, and why.
     let (jumpback_critical_age, jumpback_critical_id) = conflicting_activations
         .keys()
         .map(|&c| (cx.is_active(c).expect("not currently active!?"), c))
