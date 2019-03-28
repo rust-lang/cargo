@@ -53,11 +53,16 @@ pub struct Context {
     pub warnings: RcList<String>,
 }
 
+/// When backtracking it can be useful to know how far back to go.
+/// The `ContextAge` of a `Context` is a monotonically increasing counter of the number
+/// of decisions made to get to this state.
+/// Several structures store the `ContextAge` when it was added, this lets use jump back.
+pub type ContextAge = usize;
+
 /// find the activated version of a crate based on the name, source, and semver compatibility
-/// This all so stores the size of `Activations` when that version was add as an "age".
-/// This is used to speed up backtracking.
+/// This all so stores the `ContextAge`.
 pub type Activations =
-    im_rc::HashMap<(InternedString, SourceId, SemverCompatibility), (Summary, usize)>;
+    im_rc::HashMap<(InternedString, SourceId, SemverCompatibility), (Summary, ContextAge)>;
 
 /// A type that represents when cargo treats two Versions as compatible.
 /// Versions `a` and `b` are compatible if their left-most nonzero digit is the
@@ -110,7 +115,7 @@ impl Context {
     /// Returns `true` if this summary with the given method is already activated.
     pub fn flag_activated(&mut self, summary: &Summary, method: &Method<'_>) -> CargoResult<bool> {
         let id = summary.package_id();
-        let activations_len = self.activations.len();
+        let age: ContextAge = self.age();
         match self.activations.entry(id.as_activations_key()) {
             im_rc::hashmap::Entry::Occupied(o) => {
                 debug_assert_eq!(
@@ -129,7 +134,7 @@ impl Context {
                         &*link
                     );
                 }
-                v.insert((summary.clone(), activations_len));
+                v.insert((summary.clone(), age));
                 return Ok(false);
             }
         }
@@ -187,8 +192,15 @@ impl Context {
         Ok(deps)
     }
 
-    /// If the package is active returns the "age" (len of activations) when it was added
-    pub fn is_active(&self, id: PackageId) -> Option<usize> {
+    /// Returns the `ContextAge` of this `Context`.
+    /// For now we use (len of activations) as the age.
+    /// See the `ContextAge` docs for more details.
+    pub fn age(&self) -> ContextAge {
+        self.activations.len()
+    }
+
+    /// If the package is active returns the `ContextAge` when it was added
+    pub fn is_active(&self, id: PackageId) -> Option<ContextAge> {
         self.activations
             .get(&id.as_activations_key())
             .and_then(|(s, l)| if s.package_id() == id { Some(*l) } else { None })

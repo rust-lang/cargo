@@ -976,7 +976,7 @@ fn find_candidate(
         // make any progress. As a result if we hit this condition we can
         // completely skip this backtrack frame and move on to the next.
         if let Some(age) = age {
-            if frame.context.activations.len() > age {
+            if frame.context.age() > age {
                 trace!(
                     "{} = \"{}\" skip as not solving {}: {:?}",
                     frame.dep.package_name(),
