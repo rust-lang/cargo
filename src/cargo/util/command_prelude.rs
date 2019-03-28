@@ -141,7 +141,10 @@ pub trait AppExt: Sized {
     }
 
     fn arg_build_plan(self) -> Self {
-        self._arg(opt("build-plan", "Output the build plan in JSON"))
+        self._arg(opt(
+            "build-plan",
+            "Output the build plan in JSON (unstable)",
+        ))
     }
 
     fn arg_new_opts(self) -> Self {
@@ -315,10 +318,10 @@ pub trait ArgMatchesExt {
         build_config.message_format = message_format;
         build_config.release = self._is_present("release");
         build_config.build_plan = self._is_present("build-plan");
-        if build_config.build_plan && !config.cli_unstable().unstable_options {
-            Err(failure::format_err!(
-                "`--build-plan` flag is unstable, pass `-Z unstable-options` to enable it"
-            ))?;
+        if build_config.build_plan {
+            config
+                .cli_unstable()
+                .fail_if_stable_opt("--build-plan", 5579)?;
         };
 
         let opts = CompileOptions {

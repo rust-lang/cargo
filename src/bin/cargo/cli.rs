@@ -2,6 +2,7 @@ use clap;
 
 use clap::{AppSettings, Arg, ArgMatches};
 
+use cargo::core::features;
 use cargo::{self, CliResult, Config};
 
 use super::commands;
@@ -36,6 +37,19 @@ Available unstable (nightly-only) flags:
     -Z config-profile   -- Read profiles from .cargo/config files
 
 Run with 'cargo -Z [FLAG] [SUBCOMMAND]'"
+        );
+        if !features::nightly_features_allowed() {
+            println!(
+                "\nUnstable flags are only available on the nightly channel \
+                 of Cargo, but this is the `{}` channel.\n\
+                 {}",
+                features::channel(),
+                features::SEE_CHANNELS
+            );
+        }
+        println!(
+            "\nSee https://doc.rust-lang.org/nightly/cargo/reference/unstable.html \
+             for more information about these flags."
         );
         return Ok(());
     }
@@ -236,4 +250,3 @@ See 'cargo help <command>' for more information on a specific command.\n",
         )
         .subcommands(commands::builtin())
 }
-
