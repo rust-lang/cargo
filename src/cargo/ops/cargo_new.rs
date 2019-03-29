@@ -506,32 +506,34 @@ fn write_ignore_file(
 }
 
 /// Initializes the correct VCS system based on the provided config.
-fn init_vcs(path: &Path, vcs: VersionControl, config: &Config) -> CargoResult<()> {
+fn init_vcs(root: &Path, path: & Path, vcs: VersionControl, config: &Config) -> CargoResult<()> {
     match vcs {
         VersionControl::Git => {
-            if !path.join(".git").exists() {
+            if !root.join(".git").exists() {
                 GitRepo::init(path, config.cwd())?;
             }
         }
         VersionControl::Hg => {
-            if !path.join(".hg").exists() {
+            if !root.join(".hg").exists() {
                 HgRepo::init(path, config.cwd())?;
             }
         }
         VersionControl::Pijul => {
-            if !path.join(".pijul").exists() {
+            if !root.join(".pijul").exists() {
                 PijulRepo::init(path, config.cwd())?;
             }
         }
         VersionControl::Fossil => {
-            if !path.join(".fossil").exists() {
+            if !root.join(".fossil").exists() {
                 FossilRepo::init(path, config.cwd())?;
             }
         }
-        VersionControl::NoVcs => {
-            fs::create_dir_all(path)?;
-        }
+        VersionControl::NoVcs => { }
     };
+
+    if !path.exists() {
+        fs::create_dir_all(path)?;
+    }
 
     Ok(())
 }
@@ -540,6 +542,7 @@ fn mk(config: &Config, opts: &MkOptions<'_>) -> CargoResult<()> {
     let path = opts.path;
     let name = opts.name;
     let cfg = global_config(config)?;
+    let mut project_root = opts.path.to_owned();
 
     // Using the push method with two arguments ensures that the entries for
     // both `ignore` and `hgignore` are in sync.
@@ -553,14 +556,17 @@ fn mk(config: &Config, opts: &MkOptions<'_>) -> CargoResult<()> {
     let vcs = opts.version_control.unwrap_or_else(|| {
         let in_existing_vcs = existing_vcs_repo(path.parent().unwrap_or(path), config.cwd());
         match (cfg.version_control, in_existing_vcs) {
-            (None, false) => VersionControl::Git,
-            (Some(opt), false) => opt,
-            (_, true) => VersionControl::NoVcs,
+            (None, None) => VersionControl::Git,
+            (Some(opt), None) => opt,
+            (_, Some((root, vcs))) => {
+                project_root = root;
+                vcs
+            },
         }
     });
 
-    init_vcs(path, vcs, config)?;
-    write_ignore_file(path, &ignore, vcs)?;
+    init_vcs(&project_root, path, vcs, config)?;
+    write_ignore_file(&project_root, &ignore, vcs)?;
 
     let (author_name, email) = discover_author()?;
     let author = match (cfg.name, cfg.email, author_name, email) {

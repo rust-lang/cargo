@@ -1,30 +1,32 @@
 use std::fs::create_dir;
-use std::path::Path;
+use std::path::{Path, PathBuf};
 
 use git2;
 
 use crate::util::{process, CargoResult};
+use crate::ops::VersionControl::{self, Hg, Git};
 
 // Check if we are in an existing repo. We define that to be true if either:
 //
 // 1. We are in a git repo and the path to the new package is not an ignored
 //    path in that repo.
 // 2. We are in an HG repo.
-pub fn existing_vcs_repo(path: &Path, cwd: &Path) -> bool {
-    fn in_git_repo(path: &Path, cwd: &Path) -> bool {
+pub fn existing_vcs_repo(path: &Path, cwd: &Path) -> Option<(PathBuf, VersionControl)> {
+    fn in_git_repo(path: &Path, cwd: &Path) -> Option<(PathBuf, VersionControl)> {
         if let Ok(repo) = GitRepo::discover(path, cwd) {
             // Don't check if the working directory itself is ignored.
-            if repo.workdir().map_or(false, |workdir| workdir == path) {
-                true
+            let workdir = repo.workdir()?;
+            if workdir == path || !repo.is_path_ignored(path).unwrap_or(false) {
+                Some((workdir.to_path_buf(), Git))
             } else {
-                !repo.is_path_ignored(path).unwrap_or(false)
+                None
             }
         } else {
-            false
+            None
         }
     }
 
-    in_git_repo(path, cwd) || HgRepo::discover(path, cwd).is_ok()
+    in_git_repo(path, cwd).or_else(|| HgRepo::discover(path, cwd).unwrap_or(None))
 }
 
 pub struct HgRepo;
@@ -47,14 +49,20 @@ impl HgRepo {
         process("hg").cwd(cwd).arg("init").arg(path).exec()?;
         Ok(HgRepo)
     }
-    pub fn discover(path: &Path, cwd: &Path) -> CargoResult<HgRepo> {
-        process("hg")
+    pub fn discover(path: &Path, cwd: &Path) -> CargoResult<Option<(PathBuf, VersionControl)>> {
+        let mut stdout = process("hg")
             .cwd(cwd)
             .arg("--cwd")
             .arg(path)
             .arg("root")
-            .exec_with_output()?;
-        Ok(HgRepo)
+            .exec_with_output()?
+            .stdout;
+
+        // We remove the last new-line character from stdout
+        stdout = stdout[ .. stdout.len() - 1].to_vec();
+
+        let root = String::from_utf8(stdout)?;
+        Ok(Some((PathBuf::from(root), Hg)))
     }
 }
 

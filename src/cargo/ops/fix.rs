@@ -116,7 +116,7 @@ fn check_version_control(opts: &FixOptions<'_>) -> CargoResult<()> {
         return Ok(());
     }
     let config = opts.compile_opts.config;
-    if !existing_vcs_repo(config.cwd(), config.cwd()) {
+    if existing_vcs_repo(config.cwd(), config.cwd()).is_none() {
         failure::bail!(
             "no VCS found for this package and `cargo fix` can potentially \
              perform destructive changes; if you'd like to suppress this \
