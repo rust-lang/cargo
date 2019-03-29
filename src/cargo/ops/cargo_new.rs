@@ -524,7 +524,7 @@ fn init_vcs(path: &Path, vcs: VersionControl, config: &Config) -> CargoResult<()
             }
         }
         VersionControl::Fossil => {
-            if path.join(".fossil").exists() {
+            if !path.join(".fossil").exists() {
                 FossilRepo::init(path, config.cwd())?;
             }
         }
