@@ -14,8 +14,8 @@ use crate::ops::VersionControl::{self, Hg, Git};
 pub fn existing_vcs_repo(path: &Path, cwd: &Path) -> Option<(PathBuf, VersionControl)> {
     fn in_git_repo(path: &Path, cwd: &Path) -> Option<(PathBuf, VersionControl)> {
         if let Ok(repo) = GitRepo::discover(path, cwd) {
-            // Don't check if the working directory itself is ignored.
             let workdir = repo.workdir()?;
+            // Don't check if the working directory itself is ignored.
             if workdir == path || !repo.is_path_ignored(path).unwrap_or(false) {
                 Some((workdir.to_path_buf(), Git))
             } else {

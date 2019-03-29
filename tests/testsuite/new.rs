@@ -522,3 +522,31 @@ fn new_with_blank_email() {
     let contents = fs::read_to_string(paths::root().join("foo/Cargo.toml")).unwrap();
     assert!(contents.contains(r#"authors = ["Sen"]"#), contents);
 }
+
+#[test]
+fn new_in_existing_git_repository() {
+    git_process("init foo").exec().unwrap();
+
+    assert!(paths::root().join("foo/.git").is_dir());
+    assert!(
+        !paths::root()
+            .join("foo/.gitignore")
+            .is_file()
+    );
+
+    cargo_process("new bar")
+        .env("USER", "foo")
+        .cwd("foo")
+        .run();
+
+    assert!(
+        paths::root()
+            .join("foo/.gitignore")
+            .is_file()
+    );
+    assert!(
+        paths::root()
+            .join("foo/bar")
+            .is_dir()
+    )
+}
