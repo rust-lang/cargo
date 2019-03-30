@@ -80,9 +80,6 @@ impl<'cfg> Compilation<'cfg> {
         if bcx.config.extra_verbose() {
             rustc.display_env_vars();
         }
-        for arg in bcx.build_config.extra_rustc_args.iter() {
-            rustc.arg(arg);
-        }
         let srv = bcx.build_config.rustfix_diagnostic_server.borrow();
         if let Some(server) = &*srv {
             server.configure(&mut rustc);

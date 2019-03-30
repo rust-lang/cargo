@@ -8,9 +8,8 @@ use log::debug;
 use crate::core::profiles::Profiles;
 use crate::core::{Dependency, Workspace};
 use crate::core::{PackageId, PackageSet, Resolve};
+use crate::util;
 use crate::util::errors::CargoResult;
-use crate::util::paths;
-use crate::util::rustc::RustcWrapper;
 use crate::util::{profile, Cfg, CfgExpr, Config, Rustc};
 
 use super::{BuildConfig, BuildOutput, Kind, Unit};
@@ -55,26 +54,16 @@ impl<'a, 'cfg> BuildContext<'a, 'cfg> {
         let mut rustc = config.load_global_rustc(Some(ws))?;
 
         if build_config.clippy_override {
-            let tool = config.get_tool("clippy-driver")?;
-            let tool = paths::resolve_executable(&tool).map_err(|e| {
-                let rustup_in_path = config
-                    .get_tool("rustup")
-                    .and_then(|tool| paths::resolve_executable(&tool))
-                    .is_ok();
-                let has_rustup_env = std::env::var("RUSTUP_TOOLCHAIN").is_ok();
-                if rustup_in_path || has_rustup_env {
-                    failure::format_err!("{}: please run `rustup component add clippy`", e)
-                } else {
-                    failure::format_err!("{}: please install clippy", e)
-                }
-            })?;
-            rustc.push_wrapper(RustcWrapper::new(tool));
+            rustc.set_wrapper(util::process("clippy-driver"));
         } else if build_config.cargo_as_rustc_wrapper {
-            let mut wrapper = RustcWrapper::new(env::current_exe()?);
+            let mut wrapper = util::process(env::current_exe()?);
             for (k, v) in build_config.extra_rustc_env.iter() {
                 wrapper.env(k, v);
             }
-            rustc.push_wrapper(wrapper);
+            for arg in build_config.extra_rustc_args.iter() {
+                wrapper.arg(arg);
+            }
+            rustc.set_wrapper(wrapper);
         }
 
         let host_config = TargetConfig::new(config, &rustc.host)?;

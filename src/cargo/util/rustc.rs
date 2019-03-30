@@ -2,7 +2,6 @@
 
 use std::collections::hash_map::{Entry, HashMap};
 use std::env;
-use std::ffi::{OsStr, OsString};
 use std::hash::{Hash, Hasher, SipHasher};
 use std::path::{Path, PathBuf};
 use std::process::Stdio;
@@ -21,62 +20,12 @@ pub struct Rustc {
     pub path: PathBuf,
     /// An optional program that will be passed the path of the rust exe as its first argument, and
     /// rustc args following this.
-    pub wrapper: Option<RustcWrapper>,
+    pub wrapper: Option<ProcessBuilder>,
     /// Verbose version information (the output of `rustc -vV`)
     pub verbose_version: String,
     /// The host triple (arch-platform-OS), this comes from verbose_version.
     pub host: String,
     cache: Mutex<Cache>,
-}
-
-/// Information on the `rustc` wrapper
-#[derive(Debug)]
-pub struct RustcWrapper {
-    path: PathBuf,
-    env: HashMap<String, Option<OsString>>,
-}
-
-impl RustcWrapper {
-    pub fn new<T: Into<PathBuf>>(path: T) -> RustcWrapper {
-        RustcWrapper {
-            path: path.into(),
-            env: HashMap::new(),
-        }
-    }
-
-    /// (chainable) Sets an environment variable for the process.
-    pub fn env<T: AsRef<OsStr>>(&mut self, key: &str, val: T) -> &mut RustcWrapper {
-        self.env
-            .insert(key.to_string(), Some(val.as_ref().to_os_string()));
-        self
-    }
-
-    /// (chainable) Unsets an environment variable for the process.
-    pub fn env_remove(&mut self, key: &str) -> &mut RustcWrapper {
-        self.env.insert(key.to_string(), None);
-        self
-    }
-
-    pub fn process(&self) -> ProcessBuilder {
-        let mut cmd = util::process(&self.path);
-
-        for (k, v) in &self.env {
-            match *v {
-                Some(ref v) => {
-                    cmd.env(k, v);
-                }
-                None => {
-                    cmd.env_remove(k);
-                }
-            }
-        }
-
-        cmd
-    }
-
-    pub fn is_empty(&self) -> bool {
-        self.path.as_os_str().is_empty()
-    }
 }
 
 impl Rustc {
@@ -110,7 +59,7 @@ impl Rustc {
 
         Ok(Rustc {
             path,
-            wrapper: wrapper.map(RustcWrapper::new),
+            wrapper: wrapper.map(util::process),
             verbose_version,
             host,
             cache: Mutex::new(cache),
@@ -120,8 +69,8 @@ impl Rustc {
     /// Gets a process builder set up to use the found rustc version, with a wrapper if `Some`.
     pub fn process(&self) -> ProcessBuilder {
         match self.wrapper {
-            Some(ref wrapper) if !wrapper.is_empty() => {
-                let mut cmd = wrapper.process();
+            Some(ref wrapper) if !wrapper.get_program().is_empty() => {
+                let mut cmd = wrapper.clone();
                 cmd.arg(&self.path);
                 cmd
             }
@@ -141,8 +90,8 @@ impl Rustc {
         self.cache.lock().unwrap().cached_success(cmd)
     }
 
-    pub fn push_wrapper<T: Into<Option<RustcWrapper>>>(&mut self, wrapper: T) {
-        self.wrapper = wrapper.into();
+    pub fn set_wrapper(&mut self, wrapper: ProcessBuilder) {
+        self.wrapper = Some(wrapper);
     }
 }
 
