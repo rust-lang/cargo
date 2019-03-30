@@ -855,7 +855,7 @@ impl RemainingCandidates {
     }
 }
 
-/// Attempts to find a new conflict that allows a bigger backjump then the input one.
+/// Attempts to find a new conflict that allows a `find_candidate` feather then the input one.
 /// It will add the new conflict to the cache if one is found.
 ///
 /// Panics if the input conflict is not all active in `cx`.
@@ -871,28 +871,28 @@ fn generalize_conflicting(
         return None;
     }
     // We need to determine the `ContextAge` that this `conflicting_activations` will jump to, and why.
-    let (jumpback_critical_age, jumpback_critical_id) = conflicting_activations
+    let (backtrack_critical_age, backtrack_critical_id) = conflicting_activations
         .keys()
         .map(|&c| (cx.is_active(c).expect("not currently active!?"), c))
         .max()
         .unwrap();
-    let jumpback_critical_reason: ConflictReason =
-        conflicting_activations[&jumpback_critical_id].clone();
+    let backtrack_critical_reason: ConflictReason =
+        conflicting_activations[&backtrack_critical_id].clone();
 
     if cx
         .parents
-        .is_path_from_to(&parent.package_id(), &jumpback_critical_id)
+        .is_path_from_to(&parent.package_id(), &backtrack_critical_id)
     {
         // We are a descendant of the trigger of the problem.
         // The best generalization of this is to let things bubble up
-        // and let `jumpback_critical_id` figure this out.
+        // and let `backtrack_critical_id` figure this out.
         return None;
     }
     // What parents does that critical activation have
     for (critical_parent, critical_parents_deps) in
-        cx.parents.edges(&jumpback_critical_id).filter(|(p, _)| {
+        cx.parents.edges(&backtrack_critical_id).filter(|(p, _)| {
             // it will only help backjump further if it is older then the critical_age
-            cx.is_active(*p).expect("parent not currently active!?") < jumpback_critical_age
+            cx.is_active(*p).expect("parent not currently active!?") < backtrack_critical_age
         })
     {
         for critical_parents_dep in critical_parents_deps.iter() {
@@ -906,14 +906,17 @@ fn generalize_conflicting(
                 .rev() // the last one to be tried is the least likely to be in the cache, so start with that.
                 .all(|other| {
                     let mut con = conflicting_activations.clone();
-                    con.remove(&jumpback_critical_id);
-                    con.insert(other.summary.package_id(), jumpback_critical_reason.clone());
+                    con.remove(&backtrack_critical_id);
+                    con.insert(
+                        other.summary.package_id(),
+                        backtrack_critical_reason.clone(),
+                    );
                     past_conflicting_activations.contains(&dep, &con)
                 })
             {
                 let mut con = conflicting_activations.clone();
-                con.remove(&jumpback_critical_id);
-                con.insert(*critical_parent, jumpback_critical_reason);
+                con.remove(&backtrack_critical_id);
+                con.insert(*critical_parent, backtrack_critical_reason);
                 past_conflicting_activations.insert(&dep, &con);
                 return Some(con);
             }
