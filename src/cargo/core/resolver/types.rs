@@ -403,9 +403,9 @@ pub enum ConflictReason {
     /// candidate we're activating didn't actually have the feature `foo`.
     MissingFeatures(String),
 
-    // TODO: needs more info for errors maneges
-    // TODO: needs more info for back jumping
-    /// pub dep errore
+    // TODO: needs more info for `activation_error`
+    // TODO: needs more info for `find_candidate`
+    /// pub dep error
     PublicDependency,
 }
 

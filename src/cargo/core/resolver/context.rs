@@ -56,7 +56,8 @@ pub struct Context {
 /// When backtracking it can be useful to know how far back to go.
 /// The `ContextAge` of a `Context` is a monotonically increasing counter of the number
 /// of decisions made to get to this state.
-/// Several structures store the `ContextAge` when it was added, that gets use in jump back.
+/// Several structures store the `ContextAge` when it was added,
+/// to be used in `find_candidate` for backtracking.
 pub type ContextAge = usize;
 
 /// Find the activated version of a crate based on the name, source, and semver compatibility.
