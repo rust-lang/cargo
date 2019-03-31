@@ -567,7 +567,13 @@ fn mk(config: &Config, opts: &MkOptions<'_>) -> CargoResult<()> {
         (Some(name), Some(email), _, _)
         | (Some(name), None, _, Some(email))
         | (None, Some(email), name, _)
-        | (None, None, name, Some(email)) => format!("{} <{}>", name, email),
+        | (None, None, name, Some(email)) => {
+            if email.is_empty() {
+                name
+            } else {
+                format!("{} <{}>", name, email)
+            }
+        }
         (Some(name), None, _, None) | (None, None, name, None) => name,
     };
 
