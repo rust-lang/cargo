@@ -45,10 +45,10 @@ the installation root&#8217;s <code>bin</code> folder.</p>
 </div>
 <div class="paragraph">
 <p>There are multiple sources from which a crate can be installed. The default
-location is crates.io but the <code>--git</code> and <code>--path</code> flags can change this
-source. If the source contains more than one package (such as crates.io or a
-git repository with multiple crates) the <em>CRATE</em> argument is required to
-indicate which crate should be installed.</p>
+location is crates.io but the <code>--git</code>, <code>--path</code>, and <code>registry</code> flags can
+change this source. If the source contains more than one package (such as
+crates.io or a git repository with multiple crates) the <em>CRATE</em> argument is
+required to indicate which crate should be installed.</p>
 </div>
 <div class="paragraph">
 <p>Crates from crates.io can optionally specify the version they wish to install
@@ -77,7 +77,7 @@ continuous integration systems.</p>
 <dt class="hdlist1"><strong>--vers</strong> <em>VERSION</em></dt>
 <dt class="hdlist1"><strong>--version</strong> <em>VERSION</em></dt>
 <dd>
-<p>Specify a version to install from crates.io.</p>
+<p>Specify a version to install.</p>
 </dd>
 <dt class="hdlist1"><strong>--git</strong> <em>URL</em></dt>
 <dd>
