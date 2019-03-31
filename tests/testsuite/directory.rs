@@ -141,12 +141,14 @@ fn simple_install() {
 
     cargo_process("install bar")
         .with_stderr(
-            "  Installing bar v0.1.0
-   Compiling foo v0.0.1
-   Compiling bar v0.1.0
-    Finished release [optimized] target(s) in [..]s
-  Installing [..]bar[..]
-warning: be sure to add `[..]` to your PATH to be able to run the installed binaries
+            "\
+[INSTALLING] bar v0.1.0
+[COMPILING] foo v0.0.1
+[COMPILING] bar v0.1.0
+[FINISHED] release [optimized] target(s) in [..]s
+[INSTALLING] [..]bar[..]
+[INSTALLED] package `bar v0.1.0` (executable `bar[EXE]`)
+[WARNING] be sure to add `[..]` to your PATH to be able to run the installed binaries
 ",
         )
         .run();
@@ -229,12 +231,14 @@ fn install_without_feature_dep() {
 
     cargo_process("install bar")
         .with_stderr(
-            "  Installing bar v0.1.0
-   Compiling foo v0.0.1
-   Compiling bar v0.1.0
-    Finished release [optimized] target(s) in [..]s
-  Installing [..]bar[..]
-warning: be sure to add `[..]` to your PATH to be able to run the installed binaries
+            "\
+[INSTALLING] bar v0.1.0
+[COMPILING] foo v0.0.1
+[COMPILING] bar v0.1.0
+[FINISHED] release [optimized] target(s) in [..]s
+[INSTALLING] [..]bar[..]
+[INSTALLED] package `bar v0.1.0` (executable `bar[EXE]`)
+[WARNING] be sure to add `[..]` to your PATH to be able to run the installed binaries
 ",
         )
         .run();
