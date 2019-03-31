@@ -3,18 +3,16 @@ use std::path::{Path, PathBuf};
 use std::sync::Arc;
 use std::{env, fs};
 
+use failure::{bail, format_err};
 use tempfile::Builder as TempFileBuilder;
 
 use crate::core::compiler::{DefaultExecutor, Executor};
-use crate::core::{Edition, Package, Source, SourceId};
-use crate::core::{PackageId, Workspace};
+use crate::core::{Edition, PackageId, Source, SourceId, Workspace};
+use crate::ops;
 use crate::ops::common_for_install_and_uninstall::*;
-use crate::ops::{self, CompileFilter};
 use crate::sources::{GitSource, SourceConfigMap};
 use crate::util::errors::{CargoResult, CargoResultExt};
-use crate::util::paths;
-use crate::util::Config;
-use crate::util::Filesystem;
+use crate::util::{paths, Config, Filesystem, Freshness};
 
 struct Transaction {
     bins: Vec<PathBuf>,
@@ -42,6 +40,7 @@ pub fn install(
     vers: Option<&str>,
     opts: &ops::CompileOptions<'_>,
     force: bool,
+    no_track: bool,
 ) -> CargoResult<()> {
     let root = resolve_root(root, opts.config)?;
     let map = SourceConfigMap::new(opts.config)?;
@@ -56,6 +55,7 @@ pub fn install(
             vers,
             opts,
             force,
+            no_track,
             true,
         )?;
         (true, false)
@@ -75,6 +75,7 @@ pub fn install(
                 vers,
                 opts,
                 force,
+                no_track,
                 first,
             ) {
                 Ok(()) => succeeded.push(krate),
@@ -106,7 +107,7 @@ pub fn install(
     if installed_anything {
         // Print a warning that if this directory isn't in PATH that they won't be
         // able to run these commands.
-        let dst = metadata(opts.config, &root)?.parent().join("bin");
+        let dst = root.join("bin").into_path_unlocked();
         let path = env::var_os("PATH").unwrap_or_default();
         for path in env::split_paths(&path) {
             if path == dst {
@@ -122,7 +123,7 @@ pub fn install(
     }
 
     if scheduled_error {
-        failure::bail!("some crates failed to install");
+        bail!("some crates failed to install");
     }
 
     Ok(())
@@ -137,6 +138,7 @@ fn install_one(
     vers: Option<&str>,
     opts: &ops::CompileOptions<'_>,
     force: bool,
+    no_track: bool,
     is_first_install: bool,
 ) -> CargoResult<()> {
     let config = opts.config;
@@ -153,7 +155,7 @@ fn install_one(
     } else if source_id.is_path() {
         let mut src = path_source(source_id, config)?;
         if !src.path().is_dir() {
-            failure::bail!(
+            bail!(
                 "`{}` is not a directory. \
                  --path must point to a directory containing a Cargo.toml file.",
                 src.path().display()
@@ -161,14 +163,14 @@ fn install_one(
         }
         if !src.path().join("Cargo.toml").exists() {
             if from_cwd {
-                failure::bail!(
+                bail!(
                     "`{}` is not a crate root; specify a crate to \
                      install from crates.io, or use --path or --git to \
                      specify an alternate source",
                     src.path().display()
                 );
             } else {
-                failure::bail!(
+                bail!(
                     "`{}` does not contain a Cargo.toml file. \
                      --path must point to a directory containing a Cargo.toml file.",
                     src.path().display()
@@ -187,7 +189,7 @@ fn install_one(
             config,
             is_first_install,
             &mut |_| {
-                failure::bail!(
+                bail!(
                     "must specify a crate to install from \
                      crates.io, or use --path or --git to \
                      specify alternate source"
@@ -230,7 +232,7 @@ fn install_one(
                  Use `cargo build` if you want to simply build the package.",
             )?
         } else {
-            failure::bail!(
+            bail!(
                 "Using `cargo install` to install the binaries for the \
                  package in current working directory is no longer supported, \
                  use `cargo install --path .` instead. \
@@ -239,17 +241,60 @@ fn install_one(
         }
     };
 
-    config.shell().status("Installing", pkg)?;
+    if !opts.filter.is_specific() && !pkg.targets().iter().any(|t| t.is_bin()) {
+        bail!("specified package `{}` has no binaries", pkg);
+    }
 
     // Preflight checks to check up front whether we'll overwrite something.
     // We have to check this again afterwards, but may as well avoid building
     // anything if we're gonna throw it away anyway.
-    {
-        let metadata = metadata(config, root)?;
-        let list = read_crate_list(&metadata)?;
-        let dst = metadata.parent().join("bin");
-        check_overwrites(&dst, pkg, &opts.filter, &list, force)?;
+    let dst = root.join("bin").into_path_unlocked();
+    let rustc = config.load_global_rustc(Some(&ws))?;
+    let target = opts
+        .build_config
+        .requested_target
+        .as_ref()
+        .unwrap_or(&rustc.host)
+        .clone();
+
+    // Helper for --no-track flag to make sure it doesn't overwrite anything.
+    let no_track_duplicates = || -> CargoResult<BTreeMap<String, Option<PackageId>>> {
+        let duplicates: BTreeMap<String, Option<PackageId>> = exe_names(pkg, &opts.filter)
+            .into_iter()
+            .filter(|name| dst.join(name).exists())
+            .map(|name| (name, None))
+            .collect();
+        if !force && !duplicates.is_empty() {
+            let mut msg: Vec<String> = duplicates
+                .iter()
+                .map(|(name, _)| format!("binary `{}` already exists in destination", name))
+                .collect();
+            msg.push("Add --force to overwrite".to_string());
+            bail!("{}", msg.join("\n"));
+        }
+        Ok(duplicates)
+    };
+
+    if no_track {
+        // Check for conflicts.
+        no_track_duplicates()?;
+    } else {
+        let tracker = InstallTracker::load(config, root)?;
+        let (freshness, _duplicates) =
+            tracker.check_upgrade(&dst, pkg, force, opts, &target, &rustc.verbose_version)?;
+        if freshness == Freshness::Fresh {
+            let msg = format!(
+                "package `{}` is already installed, use --force to override",
+                pkg
+            );
+            config.shell().status("Ignored", &msg)?;
+            return Ok(());
+        }
+        // Unlock while building.
+        drop(tracker);
     }
+
+    config.shell().status("Installing", pkg)?;
 
     let exec: Arc<dyn Executor> = Arc::new(DefaultExecutor);
     let compile = ops::compile_ws(&ws, Some(source), opts, &exec).chain_err(|| {
@@ -258,14 +303,14 @@ fn install_one(
             td.into_path();
         }
 
-        failure::format_err!(
+        format_err!(
             "failed to compile `{}`, intermediate artifacts can be \
              found at `{}`",
             pkg,
             ws.target_dir().display()
         )
     })?;
-    let binaries: Vec<(&str, &Path)> = compile
+    let mut binaries: Vec<(&str, &Path)> = compile
         .binaries
         .iter()
         .map(|bin| {
@@ -273,21 +318,24 @@ fn install_one(
             if let Some(s) = name.to_str() {
                 Ok((s, bin.as_ref()))
             } else {
-                failure::bail!("Binary `{:?}` name can't be serialized into string", name)
+                bail!("Binary `{:?}` name can't be serialized into string", name)
             }
         })
         .collect::<CargoResult<_>>()?;
     if binaries.is_empty() {
-        failure::bail!(
-            "no binaries are available for install using the selected \
-             features"
-        );
+        bail!("no binaries are available for install using the selected features");
     }
+    // This is primarily to make testing easier.
+    binaries.sort_unstable();
 
-    let metadata = metadata(config, root)?;
-    let mut list = read_crate_list(&metadata)?;
-    let dst = metadata.parent().join("bin");
-    let duplicates = check_overwrites(&dst, pkg, &opts.filter, &list, force)?;
+    let (tracker, duplicates) = if no_track {
+        (None, no_track_duplicates()?)
+    } else {
+        let tracker = InstallTracker::load(config, root)?;
+        let (_freshness, duplicates) =
+            tracker.check_upgrade(&dst, pkg, force, opts, &target, &rustc.verbose_version)?;
+        (Some(tracker), duplicates)
+    };
 
     fs::create_dir_all(&dst)?;
 
@@ -304,7 +352,7 @@ fn install_one(
             continue;
         }
         fs::copy(src, &dst).chain_err(|| {
-            failure::format_err!("failed to copy `{}` to `{}`", src.display(), dst.display())
+            format_err!("failed to copy `{}` to `{}`", src.display(), dst.display())
         })?;
     }
 
@@ -314,6 +362,7 @@ fn install_one(
         .partition(|&bin| duplicates.contains_key(bin));
 
     let mut installed = Transaction { bins: Vec::new() };
+    let mut successful_bins = BTreeSet::new();
 
     // Move the temporary copies into `dst` starting with new binaries.
     for bin in to_install.iter() {
@@ -321,76 +370,45 @@ fn install_one(
         let dst = dst.join(bin);
         config.shell().status("Installing", dst.display())?;
         fs::rename(&src, &dst).chain_err(|| {
-            failure::format_err!("failed to move `{}` to `{}`", src.display(), dst.display())
+            format_err!("failed to move `{}` to `{}`", src.display(), dst.display())
         })?;
         installed.bins.push(dst);
+        successful_bins.insert(bin.to_string());
     }
 
     // Repeat for binaries which replace existing ones but don't pop the error
     // up until after updating metadata.
-    let mut replaced_names = Vec::new();
-    let result = {
+    let replace_result = {
         let mut try_install = || -> CargoResult<()> {
             for &bin in to_replace.iter() {
                 let src = staging_dir.path().join(bin);
                 let dst = dst.join(bin);
                 config.shell().status("Replacing", dst.display())?;
                 fs::rename(&src, &dst).chain_err(|| {
-                    failure::format_err!(
-                        "failed to move `{}` to `{}`",
-                        src.display(),
-                        dst.display()
-                    )
+                    format_err!("failed to move `{}` to `{}`", src.display(), dst.display())
                 })?;
-                replaced_names.push(bin);
+                successful_bins.insert(bin.to_string());
             }
             Ok(())
         };
         try_install()
     };
 
-    // Update records of replaced binaries.
-    for &bin in replaced_names.iter() {
-        if let Some(&Some(ref p)) = duplicates.get(bin) {
-            if let Some(set) = list.v1_mut().get_mut(p) {
-                set.remove(bin);
-            }
+    if !no_track {
+        let mut tracker = tracker.unwrap();
+        tracker.mark_installed(
+            pkg,
+            &successful_bins,
+            vers.map(|s| s.to_string()),
+            opts,
+            target,
+            rustc.verbose_version,
+        );
+
+        match tracker.save() {
+            Err(err) => replace_result.chain_err(|| err)?,
+            Ok(_) => replace_result?,
         }
-        // Failsafe to force replacing metadata for git packages
-        // https://github.com/rust-lang/cargo/issues/4582
-        if let Some(set) = list.v1_mut().remove(&pkg.package_id()) {
-            list.v1_mut().insert(pkg.package_id(), set);
-        }
-        list.v1_mut()
-            .entry(pkg.package_id())
-            .or_insert_with(BTreeSet::new)
-            .insert(bin.to_string());
-    }
-
-    // Remove empty metadata lines.
-    let pkgs = list
-        .v1()
-        .iter()
-        .filter_map(|(&p, set)| if set.is_empty() { Some(p) } else { None })
-        .collect::<Vec<_>>();
-    for p in pkgs.iter() {
-        list.v1_mut().remove(p);
-    }
-
-    // If installation was successful record newly installed binaries.
-    if result.is_ok() {
-        list.v1_mut()
-            .entry(pkg.package_id())
-            .or_insert_with(BTreeSet::new)
-            .extend(to_install.iter().map(|s| s.to_string()));
-    }
-
-    let write_result = write_crate_list(&metadata, list);
-    match write_result {
-        // Replacement error (if any) isn't actually caused by write error
-        // but this seems to be the only way to show both.
-        Err(err) => result.chain_err(|| err)?,
-        Ok(_) => result?,
     }
 
     // Reaching here means all actions have succeeded. Clean up.
@@ -402,98 +420,63 @@ fn install_one(
         paths::remove_dir_all(&target_dir)?;
     }
 
-    Ok(())
-}
-
-fn check_overwrites(
-    dst: &Path,
-    pkg: &Package,
-    filter: &ops::CompileFilter,
-    prev: &CrateListingV1,
-    force: bool,
-) -> CargoResult<BTreeMap<String, Option<PackageId>>> {
-    // If explicit --bin or --example flags were passed then those'll
-    // get checked during cargo_compile, we only care about the "build
-    // everything" case here
-    if !filter.is_specific() && !pkg.targets().iter().any(|t| t.is_bin()) {
-        failure::bail!("specified package has no binaries")
-    }
-    let duplicates = find_duplicates(dst, pkg, filter, prev);
-    if force || duplicates.is_empty() {
-        return Ok(duplicates);
-    }
-    // Format the error message.
-    let mut msg = String::new();
-    for (bin, p) in duplicates.iter() {
-        msg.push_str(&format!("binary `{}` already exists in destination", bin));
-        if let Some(p) = p.as_ref() {
-            msg.push_str(&format!(" as part of `{}`\n", p));
+    // Helper for creating status messages.
+    fn executables<T: AsRef<str>>(mut names: impl Iterator<Item = T> + Clone) -> String {
+        if names.clone().count() == 1 {
+            format!("(executable `{}`)", names.next().unwrap().as_ref())
         } else {
-            msg.push_str("\n");
+            format!(
+                "(executables {})",
+                names
+                    .map(|b| format!("`{}`", b.as_ref()))
+                    .collect::<Vec<_>>()
+                    .join(", ")
+            )
         }
     }
-    msg.push_str("Add --force to overwrite");
-    Err(failure::format_err!("{}", msg))
-}
 
-fn find_duplicates(
-    dst: &Path,
-    pkg: &Package,
-    filter: &ops::CompileFilter,
-    prev: &CrateListingV1,
-) -> BTreeMap<String, Option<PackageId>> {
-    let check = |name: String| {
-        // Need to provide type, works around Rust Issue #93349
-        let name = format!("{}{}", name, env::consts::EXE_SUFFIX);
-        if fs::metadata(dst.join(&name)).is_err() {
-            None
-        } else if let Some((&p, _)) = prev.v1().iter().find(|&(_, v)| v.contains(&name)) {
-            Some((name, Some(p)))
-        } else {
-            Some((name, None))
+    if duplicates.is_empty() {
+        config.shell().status(
+            "Installed",
+            format!("package `{}` {}", pkg, executables(successful_bins.iter())),
+        )?;
+        Ok(())
+    } else {
+        if !to_install.is_empty() {
+            config.shell().status(
+                "Installed",
+                format!("package `{}` {}", pkg, executables(to_install.iter())),
+            )?;
         }
-    };
-    match *filter {
-        CompileFilter::Default { .. } => pkg
-            .targets()
-            .iter()
-            .filter(|t| t.is_bin())
-            .filter_map(|t| check(t.name().to_string()))
-            .collect(),
-        CompileFilter::Only {
-            ref bins,
-            ref examples,
-            ..
-        } => {
-            let all_bins: Vec<String> = bins.try_collect().unwrap_or_else(|| {
-                pkg.targets()
-                    .iter()
-                    .filter(|t| t.is_bin())
-                    .map(|t| t.name().to_string())
-                    .collect()
-            });
-            let all_examples: Vec<String> = examples.try_collect().unwrap_or_else(|| {
-                pkg.targets()
-                    .iter()
-                    .filter(|t| t.is_exe_example())
-                    .map(|t| t.name().to_string())
-                    .collect()
-            });
-
-            all_bins
-                .iter()
-                .chain(all_examples.iter())
-                .filter_map(|t| check(t.clone()))
-                .collect::<BTreeMap<String, Option<PackageId>>>()
+        // Invert the duplicate map.
+        let mut pkg_map = BTreeMap::new();
+        for (bin_name, opt_pkg_id) in &duplicates {
+            let key = opt_pkg_id.map_or_else(|| "unknown".to_string(), |pkg_id| pkg_id.to_string());
+            pkg_map
+                .entry(key)
+                .or_insert_with(|| Vec::new())
+                .push(bin_name);
         }
+        for (pkg_descr, bin_names) in &pkg_map {
+            config.shell().status(
+                "Replaced",
+                format!(
+                    "package `{}` with `{}` {}",
+                    pkg_descr,
+                    pkg,
+                    executables(bin_names.iter())
+                ),
+            )?;
+        }
+        Ok(())
     }
 }
 
+/// Display a list of installed binaries.
 pub fn install_list(dst: Option<&str>, config: &Config) -> CargoResult<()> {
-    let dst = resolve_root(dst, config)?;
-    let dst = metadata(config, &dst)?;
-    let list = read_crate_list(&dst)?;
-    for (k, v) in list.v1().iter() {
+    let root = resolve_root(dst, config)?;
+    let tracker = InstallTracker::load(config, &root)?;
+    for (k, v) in tracker.all_installed_bins() {
         println!("{}:", k);
         for bin in v {
             println!("    {}", bin);

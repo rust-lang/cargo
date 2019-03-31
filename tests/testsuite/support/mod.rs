@@ -1616,6 +1616,9 @@ fn substitute_macros(input: &str) -> String {
         ("[SUMMARY]", "     Summary"),
         ("[FIXING]", "      Fixing"),
         ("[EXE]", env::consts::EXE_SUFFIX),
+        ("[IGNORED]", "     Ignored"),
+        ("[INSTALLED]", "   Installed"),
+        ("[REPLACED]", "    Replaced"),
     ];
     let mut result = input.to_owned();
     for &(pat, subst) in &macros {

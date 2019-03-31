@@ -328,6 +328,7 @@ pub struct CliUnstable {
     pub config_profile: bool,
     pub dual_proc_macros: bool,
     pub mtime_on_use: bool,
+    pub install_upgrade: bool,
 }
 
 impl CliUnstable {
@@ -372,6 +373,7 @@ impl CliUnstable {
             "config-profile" => self.config_profile = true,
             "dual-proc-macros" => self.dual_proc_macros = true,
             "mtime-on-use" => self.mtime_on_use = true,
+            "install-upgrade" => self.install_upgrade = true,
             _ => failure::bail!("unknown `-Z` flag specified: {}", k),
         }
 
