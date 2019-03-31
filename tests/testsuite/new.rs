@@ -511,3 +511,14 @@ fn new_with_bad_edition() {
         .with_status(1)
         .run();
 }
+
+#[test]
+fn new_with_blank_email() {
+    cargo_process("new foo")
+        .env("CARGO_NAME", "Sen")
+        .env("CARGO_EMAIL", "")
+        .run();
+
+    let contents = fs::read_to_string(paths::root().join("foo/Cargo.toml")).unwrap();
+    assert!(contents.contains(r#"authors = ["Sen"]"#), contents);
+}
