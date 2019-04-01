@@ -285,9 +285,8 @@ impl Config {
         }
     }
 
-    pub fn reload_rooted_at_cargo_home(&mut self) -> CargoResult<()> {
-        let home = self.home_path.clone().into_path_unlocked();
-        let values = self.load_values_from(&home)?;
+    pub fn reload_rooted_at<P: AsRef<Path>>(&mut self, path: P) -> CargoResult<()> {
+        let values = self.load_values_from(path.as_ref())?;
         self.values.replace(values);
         Ok(())
     }
