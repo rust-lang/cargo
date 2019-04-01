@@ -21,7 +21,7 @@ pub fn fetch<'a>(
     let jobs = Some(1);
     let config = ws.config();
     let build_config = BuildConfig::new(config, jobs, &options.target, CompileMode::Build)?;
-    let rustc = config.rustc(Some(ws))?;
+    let rustc = config.load_global_rustc(Some(ws))?;
     let target_info =
         TargetInfo::new(config, &build_config.requested_target, &rustc, Kind::Target)?;
     {

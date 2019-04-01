@@ -56,7 +56,7 @@ use crate::core::Workspace;
 use crate::ops::{self, CompileOptions};
 use crate::util::diagnostic_server::{Message, RustfixDiagnosticServer};
 use crate::util::errors::CargoResult;
-use crate::util::paths;
+use crate::util::{self, paths};
 use crate::util::{existing_vcs_repo, LockServer, LockServerClient};
 
 const FIX_ENV: &str = "__CARGO_FIX_PLZ";
@@ -81,46 +81,31 @@ pub fn fix(ws: &Workspace<'_>, opts: &mut FixOptions<'_>) -> CargoResult<()> {
 
     // Spin up our lock server, which our subprocesses will use to synchronize fixes.
     let lock_server = LockServer::new()?;
-    opts.compile_opts
-        .build_config
-        .extra_rustc_env
-        .push((FIX_ENV.to_string(), lock_server.addr().to_string()));
+    let mut wrapper = util::process(env::current_exe()?);
+    wrapper.env(FIX_ENV, lock_server.addr().to_string());
     let _started = lock_server.start()?;
 
     opts.compile_opts.build_config.force_rebuild = true;
 
     if opts.broken_code {
-        let key = BROKEN_CODE_ENV.to_string();
-        opts.compile_opts
-            .build_config
-            .extra_rustc_env
-            .push((key, "1".to_string()));
+        wrapper.env(BROKEN_CODE_ENV, "1");
     }
 
     if opts.edition {
-        let key = EDITION_ENV.to_string();
-        opts.compile_opts
-            .build_config
-            .extra_rustc_env
-            .push((key, "1".to_string()));
+        wrapper.env(EDITION_ENV, "1");
     } else if let Some(edition) = opts.prepare_for {
-        opts.compile_opts
-            .build_config
-            .extra_rustc_env
-            .push((PREPARE_FOR_ENV.to_string(), edition.to_string()));
+        wrapper.env(PREPARE_FOR_ENV, edition);
     }
     if opts.idioms {
-        opts.compile_opts
-            .build_config
-            .extra_rustc_env
-            .push((IDIOMS_ENV.to_string(), "1".to_string()));
+        wrapper.env(IDIOMS_ENV, "1");
     }
-    opts.compile_opts.build_config.cargo_as_rustc_wrapper = true;
+
     *opts
         .compile_opts
         .build_config
         .rustfix_diagnostic_server
         .borrow_mut() = Some(RustfixDiagnosticServer::new()?);
+    opts.compile_opts.build_config.rustc_wrapper = Some(wrapper);
 
     ops::compile(ws, &opts.compile_opts)?;
     Ok(())
@@ -207,7 +192,7 @@ pub fn fix_maybe_exec_rustc() -> CargoResult<bool> {
 
     let args = FixArgs::get();
     trace!("cargo-fix as rustc got file {:?}", args.file);
-    let rustc = env::var_os("RUSTC").expect("failed to find RUSTC env var");
+    let rustc = args.rustc.as_ref().expect("fix wrapper rustc was not set");
 
     // Our goal is to fix only the crates that the end user is interested in.
     // That's very likely to only mean the crates in the workspace the user is
@@ -576,6 +561,7 @@ struct FixArgs {
     enabled_edition: Option<String>,
     other: Vec<OsString>,
     primary_package: bool,
+    rustc: Option<PathBuf>,
 }
 
 enum PrepareFor {
@@ -593,7 +579,8 @@ impl Default for PrepareFor {
 impl FixArgs {
     fn get() -> FixArgs {
         let mut ret = FixArgs::default();
-        for arg in env::args_os().skip(1) {
+        ret.rustc = env::args_os().nth(1).map(PathBuf::from);
+        for arg in env::args_os().skip(2) {
             let path = PathBuf::from(arg);
             if path.extension().and_then(|s| s.to_str()) == Some("rs") && path.exists() {
                 ret.file = Some(path);
