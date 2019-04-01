@@ -328,7 +328,7 @@ fn merge_toml(
     toml: &TomlProfile,
 ) {
     merge_profile(profile, toml);
-    if unit_for.is_custom_build() {
+    if unit_for.is_build() {
         if let Some(ref build_override) = toml.build_override {
             merge_profile(profile, build_override);
         }
@@ -590,9 +590,10 @@ impl fmt::Display for PanicStrategy {
 /// to ensure the target's dependencies have the correct settings.
 #[derive(Copy, Clone, Debug, Eq, PartialEq, Hash)]
 pub struct UnitFor {
-    /// A target for `build.rs` or any of its dependencies. This enables
-    /// `build-override` profiles for these targets.
-    custom_build: bool,
+    /// A target for `build.rs` or any of its dependencies, or a proc-macro or
+    /// any of its dependencies. This enables `build-override` profiles for
+    /// these targets.
+    build: bool,
     /// This is true if it is *allowed* to set the `panic=abort` flag. Currently
     /// this is false for test/bench targets and all their dependencies, and
     /// "for_host" units such as proc macro and custom build scripts and their
@@ -605,7 +606,7 @@ impl UnitFor {
     /// proc macro/plugin, or test/bench).
     pub fn new_normal() -> UnitFor {
         UnitFor {
-            custom_build: false,
+            build: false,
             panic_abort_ok: true,
         }
     }
@@ -613,7 +614,7 @@ impl UnitFor {
     /// A unit for a custom build script or its dependencies.
     pub fn new_build() -> UnitFor {
         UnitFor {
-            custom_build: true,
+            build: true,
             panic_abort_ok: false,
         }
     }
@@ -621,7 +622,7 @@ impl UnitFor {
     /// A unit for a proc macro or compiler plugin or their dependencies.
     pub fn new_compiler() -> UnitFor {
         UnitFor {
-            custom_build: false,
+            build: false,
             panic_abort_ok: false,
         }
     }
@@ -629,7 +630,7 @@ impl UnitFor {
     /// A unit for a test/bench target or their dependencies.
     pub fn new_test() -> UnitFor {
         UnitFor {
-            custom_build: false,
+            build: false,
             panic_abort_ok: false,
         }
     }
@@ -640,15 +641,15 @@ impl UnitFor {
     /// that all its dependencies also have `panic_abort_ok=false`.
     pub fn with_for_host(self, for_host: bool) -> UnitFor {
         UnitFor {
-            custom_build: self.custom_build,
+            build: self.build || for_host,
             panic_abort_ok: self.panic_abort_ok && !for_host,
         }
     }
 
     /// Returns `true` if this unit is for a custom build script or one of its
     /// dependencies.
-    pub fn is_custom_build(self) -> bool {
-        self.custom_build
+    pub fn is_build(self) -> bool {
+        self.build
     }
 
     /// Returns `true` if this unit is allowed to set the `panic` compiler flag.
@@ -660,15 +661,15 @@ impl UnitFor {
     pub fn all_values() -> &'static [UnitFor] {
         static ALL: [UnitFor; 3] = [
             UnitFor {
-                custom_build: false,
+                build: false,
                 panic_abort_ok: true,
             },
             UnitFor {
-                custom_build: true,
+                build: true,
                 panic_abort_ok: false,
             },
             UnitFor {
-                custom_build: false,
+                build: false,
                 panic_abort_ok: false,
             },
         ];
