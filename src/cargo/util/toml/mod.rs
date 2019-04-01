@@ -1318,6 +1318,17 @@ impl DetailedTomlDependency {
             cx.warnings.push(msg);
         }
 
+        if let Some(version) = &self.version {
+            if version.contains('+') {
+                cx.warnings.push(format!(
+                    "version requirement `{}` for dependency `{}` \
+                     includes semver metadata which will be ignored, removing the \
+                     metadata is recommended to avoid confusion",
+                    version, name_in_toml
+                ));
+            }
+        }
+
         if self.git.is_none() {
             let git_only_keys = [
                 (&self.branch, "branch"),
