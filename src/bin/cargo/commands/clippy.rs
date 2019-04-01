@@ -1,6 +1,7 @@
 use crate::command_prelude::*;
 
 use cargo::ops;
+use cargo::util;
 
 pub fn cli() -> App {
     subcommand("clippy-preview")
@@ -60,7 +61,6 @@ pub fn exec(config: &mut Config, args: &ArgMatches<'_>) -> CliResult {
 
     let mode = CompileMode::Check { test: false };
     let mut compile_opts = args.compile_options(config, mode, Some(&ws))?;
-    compile_opts.build_config.set_clippy_override(true);
 
     if !config.cli_unstable().unstable_options {
         return Err(failure::format_err!(
@@ -68,6 +68,9 @@ pub fn exec(config: &mut Config, args: &ArgMatches<'_>) -> CliResult {
         )
         .into());
     }
+
+    let wrapper = util::process("clippy-driver");
+    compile_opts.build_config.rustc_wrapper = Some(wrapper);
 
     ops::compile(&ws, &compile_opts)?;
     Ok(())

@@ -8,7 +8,6 @@ use log::debug;
 use crate::core::profiles::Profiles;
 use crate::core::{Dependency, Workspace};
 use crate::core::{PackageId, PackageSet, Resolve};
-use crate::util;
 use crate::util::errors::CargoResult;
 use crate::util::{profile, Cfg, CfgExpr, Config, Rustc};
 
@@ -52,18 +51,8 @@ impl<'a, 'cfg> BuildContext<'a, 'cfg> {
         extra_compiler_args: HashMap<Unit<'a>, Vec<String>>,
     ) -> CargoResult<BuildContext<'a, 'cfg>> {
         let mut rustc = config.load_global_rustc(Some(ws))?;
-
-        if build_config.clippy_override {
-            rustc.set_wrapper(util::process("clippy-driver"));
-        } else if build_config.cargo_as_rustc_wrapper {
-            let mut wrapper = util::process(env::current_exe()?);
-            for (k, v) in build_config.extra_rustc_env.iter() {
-                wrapper.env(k, v);
-            }
-            for arg in build_config.extra_rustc_args.iter() {
-                wrapper.arg(arg);
-            }
-            rustc.set_wrapper(wrapper);
+        if let Some(wrapper) = &build_config.rustc_wrapper {
+            rustc.set_wrapper(wrapper.clone());
         }
 
         let host_config = TargetConfig::new(config, &rustc.host)?;

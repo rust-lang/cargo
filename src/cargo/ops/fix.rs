@@ -56,7 +56,7 @@ use crate::core::Workspace;
 use crate::ops::{self, CompileOptions};
 use crate::util::diagnostic_server::{Message, RustfixDiagnosticServer};
 use crate::util::errors::CargoResult;
-use crate::util::paths;
+use crate::util::{self, paths};
 use crate::util::{existing_vcs_repo, LockServer, LockServerClient};
 
 const FIX_ENV: &str = "__CARGO_FIX_PLZ";
@@ -81,46 +81,31 @@ pub fn fix(ws: &Workspace<'_>, opts: &mut FixOptions<'_>) -> CargoResult<()> {
 
     // Spin up our lock server, which our subprocesses will use to synchronize fixes.
     let lock_server = LockServer::new()?;
-    opts.compile_opts
-        .build_config
-        .extra_rustc_env
-        .push((FIX_ENV.to_string(), lock_server.addr().to_string()));
+    let mut wrapper = util::process(env::current_exe()?);
+    wrapper.env(FIX_ENV, lock_server.addr().to_string());
     let _started = lock_server.start()?;
 
     opts.compile_opts.build_config.force_rebuild = true;
 
     if opts.broken_code {
-        let key = BROKEN_CODE_ENV.to_string();
-        opts.compile_opts
-            .build_config
-            .extra_rustc_env
-            .push((key, "1".to_string()));
+        wrapper.env(BROKEN_CODE_ENV, "1");
     }
 
     if opts.edition {
-        let key = EDITION_ENV.to_string();
-        opts.compile_opts
-            .build_config
-            .extra_rustc_env
-            .push((key, "1".to_string()));
+        wrapper.env(EDITION_ENV, "1");
     } else if let Some(edition) = opts.prepare_for {
-        opts.compile_opts
-            .build_config
-            .extra_rustc_env
-            .push((PREPARE_FOR_ENV.to_string(), edition.to_string()));
+        wrapper.env(PREPARE_FOR_ENV, edition);
     }
     if opts.idioms {
-        opts.compile_opts
-            .build_config
-            .extra_rustc_env
-            .push((IDIOMS_ENV.to_string(), "1".to_string()));
+        wrapper.env(IDIOMS_ENV, "1");
     }
-    opts.compile_opts.build_config.cargo_as_rustc_wrapper = true;
+
     *opts
         .compile_opts
         .build_config
         .rustfix_diagnostic_server
         .borrow_mut() = Some(RustfixDiagnosticServer::new()?);
+    opts.compile_opts.build_config.rustc_wrapper = Some(wrapper);
 
     ops::compile(ws, &opts.compile_opts)?;
     Ok(())
