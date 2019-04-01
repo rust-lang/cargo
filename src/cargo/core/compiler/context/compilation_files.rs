@@ -444,7 +444,7 @@ fn compute_metadata<'a, 'cfg>(
     if !(unit.mode.is_any_test() || unit.mode.is_check())
         && (unit.target.is_dylib()
             || unit.target.is_cdylib()
-            || (unit.target.is_bin() && bcx.target_triple().starts_with("wasm32-")))
+            || (unit.target.is_executable() && bcx.target_triple().starts_with("wasm32-")))
         && unit.pkg.package_id().source_id().is_path()
         && __cargo_default_lib_metadata.is_err()
     {
