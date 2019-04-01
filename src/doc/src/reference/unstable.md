@@ -118,8 +118,9 @@ opt-level = 3
 [profile.dev.overrides."*"]
 opt-level = 2
 
-# Build scripts and their dependencies will be compiled with -Copt-level=3
-# By default, build scripts use the same rules as the rest of the profile
+# Build scripts or proc-macros and their dependencies will be compiled with
+# `-Copt-level=3`. By default, they use the same rules as the rest of the
+# profile.
 [profile.dev.build-override]
 opt-level = 3
 ```
