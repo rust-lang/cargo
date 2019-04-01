@@ -1358,3 +1358,21 @@ fn install_global_cargo_config() {
         .with_stderr_contains("[..]--target nonexistent[..]")
         .run();
 }
+
+#[test]
+fn install_path_config() {
+    project()
+        .file(
+            ".cargo/config",
+            r#"
+            [build]
+            target = 'nonexistent'
+            "#,
+        )
+        .file("src/main.rs", "fn main() {}")
+        .build();
+    cargo_process("install --path foo")
+        .with_status(101)
+        .with_stderr_contains("[..]--target nonexistent[..]")
+        .run();
+}
