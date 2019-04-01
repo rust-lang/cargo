@@ -475,7 +475,7 @@ fn find_duplicates(
             let all_examples: Vec<String> = examples.try_collect().unwrap_or_else(|| {
                 pkg.targets()
                     .iter()
-                    .filter(|t| t.is_bin_example())
+                    .filter(|t| t.is_exe_example())
                     .map(|t| t.name().to_string())
                     .collect()
             });
