@@ -2,9 +2,6 @@ environment:
   matrix:
   - TARGET: x86_64-pc-windows-msvc
     OTHER_TARGET: i686-pc-windows-msvc
-  - TARGET: x86_64-pc-windows-msvc
-    MINIMAL_VERSIONS: true
-    CFG_DISABLE_CROSS_TESTS: 1
 
 install:
   - if NOT defined APPVEYOR_PULL_REQUEST_NUMBER if "%APPVEYOR_REPO_BRANCH%" == "master" appveyor exit

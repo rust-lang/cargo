@@ -307,7 +307,6 @@ pub fn process_error(
 
     #[cfg(unix)]
     fn status_to_string(status: ExitStatus) -> String {
-        use libc;
         use std::os::unix::process::*;
 
         if let Some(signal) = status.signal() {
