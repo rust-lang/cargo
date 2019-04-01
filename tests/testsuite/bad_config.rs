@@ -1280,3 +1280,25 @@ Caused by:
         )
         .run();
 }
+
+#[test]
+fn warn_semver_metadata() {
+    Package::new("bar", "1.0.0").publish();
+    let p = project()
+        .file(
+            "Cargo.toml",
+            r#"
+            [package]
+            name = "foo"
+            version = "1.0.0"
+
+            [dependencies]
+            bar = "1.0.0+1234"
+            "#,
+        )
+        .file("src/lib.rs", "")
+        .build();
+    p.cargo("check")
+        .with_stderr_contains("[WARNING] version requirement `1.0.0+1234` for dependency `bar`[..]")
+        .run();
+}
