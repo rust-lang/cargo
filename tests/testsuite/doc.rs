@@ -1012,6 +1012,7 @@ fn doc_all_member_dependency_same_name() {
 }
 
 #[test]
+#[cfg(not(any(target_os = "windows", target_os = "macos")))]
 fn doc_workspace_open_help_message() {
     let p = project()
         .file(
@@ -1029,19 +1030,10 @@ fn doc_workspace_open_help_message() {
 
     // The order in which bar is compiled or documented is not deterministic
     p.cargo("doc --all --open")
-        .with_status(101)
+        .env("BROWSER", "echo")
         .with_stderr_contains("[..] Documenting bar v0.1.0 ([..])")
         .with_stderr_contains("[..] Documenting foo v0.1.0 ([..])")
-        .with_stderr_contains(
-            "error: Passing multiple packages and `open` \
-             is not supported.",
-        )
-        .with_stderr_contains(
-            "Please re-run this command with `-p <spec>` \
-             where `<spec>` is one of the following:",
-        )
-        .with_stderr_contains("  foo")
-        .with_stderr_contains("  bar")
+        .with_stderr_contains("[..] Opening [..]/foo/index.html")
         .run();
 }
 
