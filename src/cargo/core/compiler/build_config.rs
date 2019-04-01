@@ -3,6 +3,7 @@ use std::path::Path;
 
 use serde::ser;
 
+use crate::util::ProcessBuilder;
 use crate::util::{CargoResult, CargoResultExt, Config, RustfixDiagnosticServer};
 
 /// Configuration information for a rustc build.
@@ -23,15 +24,9 @@ pub struct BuildConfig {
     pub force_rebuild: bool,
     /// Output a build plan to stdout instead of actually compiling.
     pub build_plan: bool,
-    /// Use Cargo itself as the wrapper around rustc, only used for `cargo fix`.
-    pub cargo_as_rustc_wrapper: bool,
-    /// Extra env vars to inject into rustc commands.
-    pub extra_rustc_env: Vec<(String, String)>,
-    /// Extra args to inject into rustc commands.
-    pub extra_rustc_args: Vec<String>,
+    /// An optional wrapper, if any, used to wrap rustc invocations
+    pub rustc_wrapper: Option<ProcessBuilder>,
     pub rustfix_diagnostic_server: RefCell<Option<RustfixDiagnosticServer>>,
-    /// Use `clippy-driver` instead of `rustc`
-    pub clippy_override: bool,
 }
 
 impl BuildConfig {
@@ -100,11 +95,8 @@ impl BuildConfig {
             message_format: MessageFormat::Human,
             force_rebuild: false,
             build_plan: false,
-            cargo_as_rustc_wrapper: false,
-            extra_rustc_env: Vec::new(),
-            extra_rustc_args: Vec::new(),
+            rustc_wrapper: None,
             rustfix_diagnostic_server: RefCell::new(None),
-            clippy_override: false,
         })
     }
 
@@ -114,11 +106,6 @@ impl BuildConfig {
 
     pub fn test(&self) -> bool {
         self.mode == CompileMode::Test || self.mode == CompileMode::Bench
-    }
-
-    /// Sets the clippy override. If this is true, clippy-driver is invoked instead of rustc.
-    pub fn set_clippy_override(&mut self, val: bool) {
-        self.clippy_override = val;
     }
 }
 
