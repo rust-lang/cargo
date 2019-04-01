@@ -660,7 +660,10 @@ impl<'cfg> Workspace<'cfg> {
             failure::bail!(
                 "current package believes it's in a workspace when it's not:\n\
                  current:   {}\n\
-                 workspace: {}\n\n{}",
+                 workspace: {}\n\n{}\n\
+                 Alternatively, to keep it out of the workspace, add the package \
+                 to the `workspace.exclude` array, or add an empty `[workspace]` \
+                 table to the package's manifest.",
                 self.current_manifest.display(),
                 root.display(),
                 extra

@@ -314,6 +314,7 @@ current: [..]Cargo.toml
 workspace: [..]Cargo.toml
 
 this may be fixable [..]
+[..]
 ",
         )
         .run();
@@ -779,6 +780,7 @@ workspace: [..]Cargo.toml
 
 this may be fixable by adding `bar` to the `workspace.members` array of the \
 manifest located at: [..]
+[..]
 ",
         )
         .run();
@@ -979,6 +981,7 @@ workspace: [..]
 
 this may be fixable by ensuring that this crate is depended on by the workspace \
 root: [..]
+[..]
 [CREATED] library `bar` package
 ",
         )
