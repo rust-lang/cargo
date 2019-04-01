@@ -17,7 +17,7 @@ pub use self::workspace::{Members, Workspace, WorkspaceConfig, WorkspaceRootConf
 
 pub mod compiler;
 pub mod dependency;
-mod features;
+pub mod features;
 mod interning;
 pub mod manifest;
 pub mod package;

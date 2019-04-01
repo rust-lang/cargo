@@ -2,12 +2,12 @@
 .\"     Title: cargo-build
 .\"    Author: [see the "AUTHOR(S)" section]
 .\" Generator: Asciidoctor 1.5.8
-.\"      Date: 2018-12-20
+.\"      Date: 2019-03-28
 .\"    Manual: \ \&
 .\"    Source: \ \&
 .\"  Language: English
 .\"
-.TH "CARGO\-BUILD" "1" "2018-12-20" "\ \&" "\ \&"
+.TH "CARGO\-BUILD" "1" "2019-03-28" "\ \&" "\ \&"
 .ie \n(.g .ds Aq \(aq
 .el       .ds Aq '
 .ss \n[.ss] 0
@@ -189,8 +189,13 @@ to \fBtarget\fP in the root of the workspace.
 .RS 4
 Copy final artifacts to this directory.
 .sp
-This option is unstable and available only on the nightly channel and requires
-the \fB\-Z unstable\-options\fP flag to enable.
+This option is unstable and available only on the
+\c
+.URL "https://doc.rust\-lang.org/book/appendix\-07\-nightly\-rust.html" "nightly channel"
+and requires the \fB\-Z unstable\-options\fP flag to enable.
+See \c
+.URL "https://github.com/rust\-lang/cargo/issues/6790" "" " "
+for more information.
 .RE
 .SS "Display Options"
 .sp
@@ -292,8 +297,13 @@ The output format for diagnostic messages. Valid values:
 Outputs a series of JSON messages to stdout that indicate the commands to
 run the build.
 .sp
-This option is unstable and available only on the nightly channel and requires
-the \fB\-Z unstable\-options\fP flag to enable.
+This option is unstable and available only on the
+\c
+.URL "https://doc.rust\-lang.org/book/appendix\-07\-nightly\-rust.html" "nightly channel"
+and requires the \fB\-Z unstable\-options\fP flag to enable.
+See \c
+.URL "https://github.com/rust\-lang/cargo/issues/5579" "" " "
+for more information.
 .RE
 .SS "Manifest Options"
 .sp

@@ -30,7 +30,13 @@ pub fn cli() -> App {
         .arg_features()
         .arg_target_triple("Build for the target triple")
         .arg_target_dir()
-        .arg(opt("out-dir", "Copy final artifacts to this directory").value_name("PATH"))
+        .arg(
+            opt(
+                "out-dir",
+                "Copy final artifacts to this directory (unstable)",
+            )
+            .value_name("PATH"),
+        )
         .arg_manifest_path()
         .arg_message_format()
         .arg_build_plan()
@@ -52,11 +58,11 @@ pub fn exec(config: &mut Config, args: &ArgMatches<'_>) -> CliResult {
     let mut compile_opts = args.compile_options(config, CompileMode::Build, Some(&ws))?;
 
     compile_opts.export_dir = args.value_of_path("out-dir", config);
-    if compile_opts.export_dir.is_some() && !config.cli_unstable().unstable_options {
-        Err(failure::format_err!(
-            "`--out-dir` flag is unstable, pass `-Z unstable-options` to enable it"
-        ))?;
-    };
+    if compile_opts.export_dir.is_some() {
+        config
+            .cli_unstable()
+            .fail_if_stable_opt("--out-dir", 6790)?;
+    }
     ops::compile(&ws, &compile_opts)?;
     Ok(())
 }
