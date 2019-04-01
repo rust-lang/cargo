@@ -77,6 +77,7 @@ minimum versions that you are actually using. That is, if Cargo.toml says
 
 ### out-dir
 * Original Issue: [#4875](https://github.com/rust-lang/cargo/issues/4875)
+* Tracking Issue: [#6790](https://github.com/rust-lang/cargo/issues/6790)
 
 This feature allows you to specify the directory where artifacts will be
 copied to after they are built. Typically artifacts are only written to the
@@ -148,7 +149,7 @@ cargo +nightly build -Z config-profile
 
 ### Namespaced features
 * Original issue: [#1286](https://github.com/rust-lang/cargo/issues/1286)
-* Tracking Issue: [rust-lang/cargo#5565](https://github.com/rust-lang/cargo/issues/5565)
+* Tracking Issue: [#5565](https://github.com/rust-lang/cargo/issues/5565)
 
 Currently, it is not possible to have a feature and a dependency with the same
 name in the manifest. If you set `namespaced-features` to `true`, the namespaces
@@ -175,7 +176,7 @@ include the dependency as a requirement, as `foo = ["crate:foo"]`.
 
 
 ### Build-plan
-* Tracking Issue: [rust-lang/cargo#5579](https://github.com/rust-lang/cargo/issues/5579)
+* Tracking Issue: [#5579](https://github.com/rust-lang/cargo/issues/5579)
 
 The `--build-plan` argument for the `build` command will output JSON with
 information about which commands would be run without actually executing
