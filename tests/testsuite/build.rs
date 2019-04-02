@@ -1141,6 +1141,77 @@ fn main(){
 }
 
 #[test]
+fn offline_unused_target_dep() {
+    // -Z offline with a target dependency that is not used and not downloaded.
+    Package::new("unused_dep", "1.0.0").publish();
+    Package::new("used_dep", "1.0.0").publish();
+    let p = project()
+        .file(
+            "Cargo.toml",
+            r#"
+            [project]
+            name = "foo"
+            version = "0.1.0"
+            [dependencies]
+            used_dep = "1.0"
+            [target.'cfg(unused)'.dependencies]
+            unused_dep = "1.0"
+            "#,
+        )
+        .file("src/lib.rs", "")
+        .build();
+    // Do a build that downloads only what is necessary.
+    p.cargo("build")
+        .with_stderr_contains("[DOWNLOADED] used_dep [..]")
+        .with_stderr_does_not_contain("[DOWNLOADED] unused_dep [..]")
+        .run();
+    p.cargo("clean").run();
+    // Build offline, make sure it works.
+    p.cargo("build -Z offline")
+        .masquerade_as_nightly_cargo()
+        .run();
+}
+
+#[test]
+fn offline_missing_optional() {
+    Package::new("opt_dep", "1.0.0").publish();
+    let p = project()
+        .file(
+            "Cargo.toml",
+            r#"
+            [project]
+            name = "foo"
+            version = "0.1.0"
+            [dependencies]
+            opt_dep = { version = "1.0", optional = true }
+            "#,
+        )
+        .file("src/lib.rs", "")
+        .build();
+    // Do a build that downloads only what is necessary.
+    p.cargo("build")
+        .with_stderr_does_not_contain("[DOWNLOADED] opt_dep [..]")
+        .run();
+    p.cargo("clean").run();
+    // Build offline, make sure it works.
+    p.cargo("build -Z offline")
+        .masquerade_as_nightly_cargo()
+        .run();
+    p.cargo("build -Z offline --features=opt_dep")
+        .masquerade_as_nightly_cargo()
+        .with_stderr(
+            "\
+[ERROR] failed to download `opt_dep v1.0.0`
+
+Caused by:
+  can't make HTTP request in the offline mode
+",
+        )
+        .with_status(101)
+        .run();
+}
+
+#[test]
 fn incompatible_dependencies() {
     Package::new("bad", "0.1.0").publish();
     Package::new("bad", "1.0.0").publish();
@@ -1282,14 +1353,11 @@ fn compile_offline_while_transitive_dep_not_cached() {
         .with_status(101)
         .with_stderr(
             "\
-error: no matching package named `baz` found
-location searched: registry `[..]`
-required by package `bar v0.1.0`
-    ... which is depended on by `foo v0.0.1 ([CWD])`
-As a reminder, you're using offline mode (-Z offline) \
-which can sometimes cause surprising resolution failures, \
-if this error is too confusing you may wish to retry \
-without the offline flag.",
+[ERROR] failed to download `baz v1.0.0`
+
+Caused by:
+  can't make HTTP request in the offline mode
+",
         )
         .run();
 }
