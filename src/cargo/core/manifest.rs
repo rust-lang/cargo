@@ -814,7 +814,14 @@ impl Target {
         }
     }
 
-    pub fn is_bin_example(&self) -> bool {
+    /// Returns `true` if it is a binary or executable example.
+    /// NOTE: Tests are `false`!
+    pub fn is_executable(&self) -> bool {
+        self.is_bin() || self.is_exe_example()
+    }
+
+    /// Returns `true` if it is an executable example.
+    pub fn is_exe_example(&self) -> bool {
         // Needed for --all-examples in contexts where only runnable examples make sense
         match self.kind {
             TargetKind::ExampleBin => true,
