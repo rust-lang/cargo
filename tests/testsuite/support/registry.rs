@@ -126,6 +126,7 @@ pub fn alt_api_url() -> Url {
 ///
 /// p.cargo("run").with_stdout("24").run();
 /// ```
+#[must_use]
 pub struct Package {
     name: String,
     vers: String,

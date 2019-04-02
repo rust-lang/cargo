@@ -200,7 +200,6 @@ impl<'cfg> RegistryIndex<'cfg> {
                 ret.reserve(contents.lines().count());
                 let lines = contents.lines().map(|s| s.trim()).filter(|l| !l.is_empty());
 
-                let online = !self.config.cli_unstable().offline;
                 // Attempt forwards-compatibility on the index by ignoring
                 // everything that we ourselves don't understand, that should
                 // allow future cargo implementations to break the
@@ -215,11 +214,7 @@ impl<'cfg> RegistryIndex<'cfg> {
                             return None;
                         }
                     };
-                    if online || load.is_crate_downloaded(summary.package_id()) {
-                        Some((summary, locked))
-                    } else {
-                        None
-                    }
+                    Some((summary, locked))
                 }));
 
                 Ok(())
@@ -274,17 +269,43 @@ impl<'cfg> RegistryIndex<'cfg> {
         yanked_whitelist: &HashSet<PackageId>,
         f: &mut dyn FnMut(Summary),
     ) -> CargoResult<()> {
+        if self.config.cli_unstable().offline {
+            if self.query_inner_with_online(dep, load, yanked_whitelist, f, false)? != 0 {
+                return Ok(());
+            }
+            // If offline, and there are no matches, try again with online.
+            // This is necessary for dependencies that are not used (such as
+            // target-cfg or optional), but are not downloaded. Normally the
+            // build should succeed if they are not downloaded and not used,
+            // but they still need to resolve. If they are actually needed
+            // then cargo will fail to download and an error message
+            // indicating that the required dependency is unavailable while
+            // offline will be displayed.
+        }
+        self.query_inner_with_online(dep, load, yanked_whitelist, f, true)?;
+        Ok(())
+    }
+
+    fn query_inner_with_online(
+        &mut self,
+        dep: &Dependency,
+        load: &mut dyn RegistryData,
+        yanked_whitelist: &HashSet<PackageId>,
+        f: &mut dyn FnMut(Summary),
+        online: bool,
+    ) -> CargoResult<usize> {
         let source_id = self.source_id;
         let name = dep.package_name().as_str();
         let summaries = self.summaries(name, load)?;
         let summaries = summaries
             .iter()
             .filter(|&(summary, yanked)| {
-                !yanked || {
-                    log::debug!("{:?}", yanked_whitelist);
-                    log::debug!("{:?}", summary.package_id());
-                    yanked_whitelist.contains(&summary.package_id())
-                }
+                (online || load.is_crate_downloaded(summary.package_id()))
+                    && (!yanked || {
+                        log::debug!("{:?}", yanked_whitelist);
+                        log::debug!("{:?}", summary.package_id());
+                        yanked_whitelist.contains(&summary.package_id())
+                    })
             })
             .map(|s| s.0.clone());
 
@@ -308,9 +329,11 @@ impl<'cfg> RegistryIndex<'cfg> {
             _ => true,
         });
 
+        let mut count = 0;
         for summary in summaries {
             f(summary);
+            count += 1;
         }
-        Ok(())
+        Ok(count)
     }
 }
