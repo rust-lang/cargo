@@ -403,9 +403,9 @@ pub enum ConflictReason {
     /// candidate we're activating didn't actually have the feature `foo`.
     MissingFeatures(String),
 
-    // TODO: needs more info for errors maneges
-    // TODO: needs more info for back jumping
-    /// pub dep errore
+    // TODO: needs more info for `activation_error`
+    // TODO: needs more info for `find_candidate`
+    /// pub dep error
     PublicDependency,
 }
 
@@ -425,6 +425,10 @@ impl ConflictReason {
     }
 }
 
+/// A list of packages that have gotten in the way of resolving a dependency.
+/// If resolving a dependency fails then this represents an incompatibility,
+/// that dependency will never be resolve while all of these packages are active.
+/// This is useless if the packages can't be simultaneously activated for other reasons.
 pub type ConflictMap = BTreeMap<PackageId, ConflictReason>;
 
 pub struct RcVecIter<T> {
