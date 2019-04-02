@@ -1,3 +1,4 @@
+use crate::support::registry::Package;
 use crate::support::{basic_lib_manifest, basic_manifest, project};
 
 #[test]
@@ -437,5 +438,72 @@ fn profile_override_spec() {
         .masquerade_as_nightly_cargo()
         .with_stderr_contains("[RUNNING] `rustc [..]dep1/src/lib.rs [..] -C codegen-units=1 [..]")
         .with_stderr_contains("[RUNNING] `rustc [..]dep2/src/lib.rs [..] -C codegen-units=2 [..]")
+        .run();
+}
+
+#[test]
+fn override_proc_macro() {
+    Package::new("shared", "1.0.0").publish();
+    let p = project()
+        .file(
+            "Cargo.toml",
+            r#"
+            cargo-features = ["profile-overrides"]
+            [package]
+            name = "foo"
+            version = "0.1.0"
+            edition = "2018"
+
+            [dependencies]
+            shared = "1.0"
+            pm = {path = "pm"}
+
+            [profile.dev.build-override]
+            codegen-units = 4
+            "#,
+        )
+        .file("src/lib.rs", r#"pm::eat!{}"#)
+        .file(
+            "pm/Cargo.toml",
+            r#"
+            [package]
+            name = "pm"
+            version = "0.1.0"
+
+            [lib]
+            proc-macro = true
+
+            [dependencies]
+            shared = "1.0"
+            "#,
+        )
+        .file(
+            "pm/src/lib.rs",
+            r#"
+            extern crate proc_macro;
+            use proc_macro::TokenStream;
+
+            #[proc_macro]
+            pub fn eat(_item: TokenStream) -> TokenStream {
+                "".parse().unwrap()
+            }
+            "#,
+        )
+        .build();
+
+    p.cargo("build -v")
+        .masquerade_as_nightly_cargo()
+        // Shared built for the proc-macro.
+        .with_stderr_contains("[RUNNING] `rustc [..]--crate-name shared [..]-C codegen-units=4[..]")
+        // Shared built for the library.
+        .with_stderr_line_without(
+            &["[RUNNING] `rustc --crate-name shared"],
+            &["-C codegen-units"],
+        )
+        .with_stderr_contains("[RUNNING] `rustc [..]--crate-name pm [..]-C codegen-units=4[..]")
+        .with_stderr_line_without(
+            &["[RUNNING] `rustc [..]--crate-name foo"],
+            &["-C codegen-units"],
+        )
         .run();
 }
