@@ -1,4 +1,5 @@
 use std::collections::{HashMap, HashSet};
+use std::num::NonZeroU64;
 use std::rc::Rc;
 
 // "ensure" seems to require "bail" be in scope (macro hygiene issue?).
@@ -52,8 +53,47 @@ pub struct Context {
     pub warnings: RcList<String>,
 }
 
-/// list all the activated versions of a particular crate name from a source
-pub type Activations = im_rc::HashMap<(InternedString, SourceId), Rc<Vec<Summary>>>;
+/// When backtracking it can be useful to know how far back to go.
+/// The `ContextAge` of a `Context` is a monotonically increasing counter of the number
+/// of decisions made to get to this state.
+/// Several structures store the `ContextAge` when it was added,
+/// to be used in `find_candidate` for backtracking.
+pub type ContextAge = usize;
+
+/// Find the activated version of a crate based on the name, source, and semver compatibility.
+/// By storing this in a hash map we ensure that there is only one
+/// semver compatible version of each crate.
+/// This all so stores the `ContextAge`.
+pub type Activations =
+    im_rc::HashMap<(InternedString, SourceId, SemverCompatibility), (Summary, ContextAge)>;
+
+/// A type that represents when cargo treats two Versions as compatible.
+/// Versions `a` and `b` are compatible if their left-most nonzero digit is the
+/// same.
+#[derive(Clone, Copy, Eq, PartialEq, Hash)]
+pub enum SemverCompatibility {
+    Major(NonZeroU64),
+    Minor(NonZeroU64),
+    Patch(u64),
+}
+
+impl From<&semver::Version> for SemverCompatibility {
+    fn from(ver: &semver::Version) -> Self {
+        if let Some(m) = NonZeroU64::new(ver.major) {
+            return SemverCompatibility::Major(m);
+        }
+        if let Some(m) = NonZeroU64::new(ver.minor) {
+            return SemverCompatibility::Minor(m);
+        }
+        SemverCompatibility::Patch(ver.patch)
+    }
+}
+
+impl PackageId {
+    pub fn as_activations_key(&self) -> (InternedString, SourceId, SemverCompatibility) {
+        (self.name(), self.source_id(), self.version().into())
+    }
+}
 
 impl Context {
     pub fn new(check_public_visible_dependencies: bool) -> Context {
@@ -78,22 +118,28 @@ impl Context {
     /// Returns `true` if this summary with the given method is already activated.
     pub fn flag_activated(&mut self, summary: &Summary, method: &Method<'_>) -> CargoResult<bool> {
         let id = summary.package_id();
-        let prev = self
-            .activations
-            .entry((id.name(), id.source_id()))
-            .or_insert_with(|| Rc::new(Vec::new()));
-        if !prev.iter().any(|c| c == summary) {
-            self.resolve_graph.push(GraphNode::Add(id));
-            if let Some(link) = summary.links() {
-                ensure!(
-                    self.links.insert(link, id).is_none(),
-                    "Attempting to resolve a dependency with more then one crate with the \
-                     links={}.\nThis will not build as is. Consider rebuilding the .lock file.",
-                    &*link
+        let age: ContextAge = self.age();
+        match self.activations.entry(id.as_activations_key()) {
+            im_rc::hashmap::Entry::Occupied(o) => {
+                debug_assert_eq!(
+                    &o.get().0,
+                    summary,
+                    "cargo does not allow two semver compatible versions"
                 );
             }
-            Rc::make_mut(prev).push(summary.clone());
-            return Ok(false);
+            im_rc::hashmap::Entry::Vacant(v) => {
+                self.resolve_graph.push(GraphNode::Add(id));
+                if let Some(link) = summary.links() {
+                    ensure!(
+                        self.links.insert(link, id).is_none(),
+                        "Attempting to resolve a dependency with more then one crate with the \
+                         links={}.\nThis will not build as is. Consider rebuilding the .lock file.",
+                        &*link
+                    );
+                }
+                v.insert((summary.clone(), age));
+                return Ok(false);
+            }
         }
         debug!("checking if {} is already activated", summary.package_id());
         let (features, use_default) = match *method {
@@ -149,31 +195,37 @@ impl Context {
         Ok(deps)
     }
 
-    pub fn prev_active(&self, dep: &Dependency) -> &[Summary] {
-        self.activations
-            .get(&(dep.package_name(), dep.source_id()))
-            .map(|v| &v[..])
-            .unwrap_or(&[])
+    /// Returns the `ContextAge` of this `Context`.
+    /// For now we use (len of activations) as the age.
+    /// See the `ContextAge` docs for more details.
+    pub fn age(&self) -> ContextAge {
+        self.activations.len()
     }
 
-    pub fn is_active(&self, id: PackageId) -> bool {
+    /// If the package is active returns the `ContextAge` when it was added
+    pub fn is_active(&self, id: PackageId) -> Option<ContextAge> {
         self.activations
-            .get(&(id.name(), id.source_id()))
-            .map(|v| v.iter().any(|s| s.package_id() == id))
-            .unwrap_or(false)
+            .get(&id.as_activations_key())
+            .and_then(|(s, l)| if s.package_id() == id { Some(*l) } else { None })
     }
 
     /// Checks whether all of `parent` and the keys of `conflicting activations`
     /// are still active.
+    /// If so returns the `ContextAge` when the newest one was added.
     pub fn is_conflicting(
         &self,
         parent: Option<PackageId>,
         conflicting_activations: &ConflictMap,
-    ) -> bool {
-        conflicting_activations
-            .keys()
-            .chain(parent.as_ref())
-            .all(|&id| self.is_active(id))
+    ) -> Option<usize> {
+        let mut max = 0;
+        for &id in conflicting_activations.keys().chain(parent.as_ref()) {
+            if let Some(age) = self.is_active(id) {
+                max = std::cmp::max(max, age);
+            } else {
+                return None;
+            }
+        }
+        Some(max)
     }
 
     /// Returns all dependencies and the features we want from them.
