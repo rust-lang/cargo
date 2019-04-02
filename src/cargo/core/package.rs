@@ -263,26 +263,49 @@ impl hash::Hash for Package {
     }
 }
 
+/// A set of packages, with the intent to download.
+///
+/// This is primarily used to convert a set of `PackageId`s to `Package`s. It
+/// will download as needed, or used the cached download if available.
 pub struct PackageSet<'cfg> {
     packages: HashMap<PackageId, LazyCell<Package>>,
     sources: RefCell<SourceMap<'cfg>>,
     config: &'cfg Config,
     multi: Multi,
+    /// Used to prevent reusing the PackageSet to download twice.
     downloading: Cell<bool>,
+    /// Whether or not to use curl HTTP/2 multiplexing.
     multiplexing: bool,
 }
 
+/// Helper for downloading crates.
 pub struct Downloads<'a, 'cfg: 'a> {
     set: &'a PackageSet<'cfg>,
+    /// When a download is started, it is added to this map. The key is a
+    /// "token" (see `Download::token`). It is removed once the download is
+    /// finished.
     pending: HashMap<usize, (Download<'cfg>, EasyHandle)>,
+    /// Set of packages currently being downloaded. This should stay in sync
+    /// with `pending`.
     pending_ids: HashSet<PackageId>,
+    /// The final result of each download. A pair `(token, result)`. This is a
+    /// temporary holding area, needed because curl can report multiple
+    /// downloads at once, but the main loop (`wait`) is written to only
+    /// handle one at a time.
     results: Vec<(usize, Result<(), curl::Error>)>,
+    /// The next ID to use for creating a token (see `Download::token`).
     next: usize,
+    /// Progress bar.
     progress: RefCell<Option<Progress<'cfg>>>,
+    /// Number of downloads that have successfully finished.
     downloads_finished: usize,
+    /// Total bytes for all successfully downloaded packages.
     downloaded_bytes: u64,
+    /// Size (in bytes) and package name of the largest downloaded package.
     largest: (u64, String),
+    /// Time when downloading started.
     start: Instant,
+    /// Indicates *all* downloads were successful.
     success: bool,
 
     /// Timeout management, both of timeout thresholds as well as whether or not
@@ -291,10 +314,21 @@ pub struct Downloads<'a, 'cfg: 'a> {
     /// Note that timeout management is done manually here instead of in libcurl
     /// because we want to apply timeouts to an entire batch of operations, not
     /// any one particular single operation.
-    timeout: ops::HttpTimeout,      // timeout configuration
-    updated_at: Cell<Instant>,       // last time we received bytes
-    next_speed_check: Cell<Instant>, // if threshold isn't 0 by this time, error
-    next_speed_check_bytes_threshold: Cell<u64>, // decremented when we receive bytes
+    timeout: ops::HttpTimeout,
+    /// Last time bytes were received.
+    updated_at: Cell<Instant>,
+    /// This is a slow-speed check. It is reset to `now + timeout_duration`
+    /// every time at least `threshold` bytes are received. If the current
+    /// time ever exceeds `next_speed_check`, then give up and report a
+    /// timeout error.
+    next_speed_check: Cell<Instant>,
+    /// This is the slow-speed threshold byte count. It starts at the
+    /// configured threshold value (default 10), and is decremented by the
+    /// number of bytes received in each chunk. If it is <= zero, the
+    /// threshold has been met and data is being received fast enough not to
+    /// trigger a timeout; reset `next_speed_check` and set this back to the
+    /// configured threshold.
+    next_speed_check_bytes_threshold: Cell<u64>,
 }
 
 struct Download<'cfg> {
@@ -711,6 +745,8 @@ impl<'a, 'cfg> Downloads<'a, 'cfg> {
         Ok(())
     }
 
+    /// Block, waiting for curl. Returns a token and a `Result` for that token
+    /// (`Ok` means the download successfully finished).
     fn wait_for_curl(&mut self) -> CargoResult<(usize, Result<(), curl::Error>)> {
         // This is the main workhorse loop. We use libcurl's portable `wait`
         // method to actually perform blocking. This isn't necessarily too
