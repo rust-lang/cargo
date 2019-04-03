@@ -2,30 +2,44 @@ extern crate failure;
 extern crate rustfix;
 
 use failure::Error;
-use std::{env, fs, process, collections::HashSet};
+use std::io::{stdin, BufReader, Read};
+use std::{collections::HashMap, collections::HashSet, env, fs};
 
 fn main() -> Result<(), Error> {
-    let args: Vec<String> = env::args().collect();
-    let (suggestions_file, source_file) = match args.as_slice() {
-        [_, suggestions_file, source_file] => (suggestions_file, source_file),
-        _ => {
-            println!("USAGE: fix-json <suggestions-file> <source-file>");
-            process::exit(1);
-        }
+    let suggestions_file = env::args().nth(1).expect("USAGE: fix-json <file or -->");
+    let suggestions = if suggestions_file == "--" {
+        let mut buffer = String::new();
+        BufReader::new(stdin()).read_to_string(&mut buffer)?;
+        buffer
+    } else {
+        fs::read_to_string(&suggestions_file)?
     };
-
-    let suggestions = fs::read_to_string(&suggestions_file)?;
     let suggestions = rustfix::get_suggestions_from_json(
         &suggestions,
         &HashSet::new(),
         rustfix::Filter::Everything,
     )?;
 
-    let source = fs::read_to_string(&source_file)?;
+    let mut files = HashMap::new();
+    for suggestion in suggestions {
+        let file = suggestion.solutions[0].replacements[0]
+            .snippet
+            .file_name
+            .clone();
+        files.entry(file).or_insert_with(Vec::new).push(suggestion);
+    }
 
-    let fixes = rustfix::apply_suggestions(&source, &suggestions)?;
-
-    println!("{}", fixes);
+    for (source_file, suggestions) in &files {
+        let source = fs::read_to_string(source_file)?;
+        let mut fix = rustfix::CodeFix::new(&source);
+        for suggestion in suggestions.iter().rev() {
+            if let Err(e) = fix.apply(suggestion) {
+                eprintln!("Failed to apply suggestion to {}: {}", source_file, e);
+            }
+        }
+        let fixes = fix.finish()?;
+        fs::write(source_file, fixes)?;
+    }
 
     Ok(())
 }
