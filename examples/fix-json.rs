@@ -2,19 +2,18 @@ extern crate failure;
 extern crate rustfix;
 
 use failure::Error;
-use std::{collections::HashMap, collections::HashSet, env, fs, process};
+use std::io::{stdin, BufReader, Read};
+use std::{collections::HashMap, collections::HashSet, env, fs};
 
 fn main() -> Result<(), Error> {
-    let args: Vec<String> = env::args().collect();
-    let suggestions_file = match args.as_slice() {
-        [_, suggestions_file] => suggestions_file,
-        _ => {
-            println!("USAGE: fix-json <suggestions-file>");
-            process::exit(1);
-        }
+    let suggestions_file = env::args().nth(1).expect("USAGE: fix-json <file or -->");
+    let suggestions = if suggestions_file == "--" {
+        let mut buffer = String::new();
+        BufReader::new(stdin()).read_to_string(&mut buffer)?;
+        buffer
+    } else {
+        fs::read_to_string(&suggestions_file)?
     };
-
-    let suggestions = fs::read_to_string(&suggestions_file)?;
     let suggestions = rustfix::get_suggestions_from_json(
         &suggestions,
         &HashSet::new(),
@@ -27,14 +26,13 @@ fn main() -> Result<(), Error> {
             .snippet
             .file_name
             .clone();
-        let entry = files.entry(file).or_insert(Vec::new());
-        entry.push(suggestion);
+        files.entry(file).or_insert_with(Vec::new).push(suggestion);
     }
 
     for (source_file, suggestions) in &files {
-        let source = fs::read_to_string(&source_file)?;
+        let source = fs::read_to_string(source_file)?;
         let fixes = rustfix::apply_suggestions(&source, suggestions)?;
-        fs::write(&source_file, fixes)?;
+        fs::write(source_file, fixes)?;
     }
 
     Ok(())
