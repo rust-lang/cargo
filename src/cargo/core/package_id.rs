@@ -224,7 +224,18 @@ mod tests {
         let pkg_id = PackageId::new("foo", "1.0.0", SourceId::for_registry(&loc).unwrap()).unwrap();
         assert_eq!(r#"PackageId { name: "foo", version: "1.0.0", source: "registry `https://github.com/rust-lang/crates.io-index`" }"#, format!("{:?}", pkg_id));
 
-        let pretty = r#"
+        let expected = r#"
+PackageId {
+    name: "foo",
+    version: "1.0.0",
+    source: "registry `https://github.com/rust-lang/crates.io-index`",
+}
+"#
+        .trim();
+
+        // Can be removed once trailing commas in Debug have reached the stable
+        // channel.
+        let expected_without_trailing_comma = r#"
 PackageId {
     name: "foo",
     version: "1.0.0",
@@ -232,7 +243,13 @@ PackageId {
 }
 "#
         .trim();
-        assert_eq!(pretty, format!("{:#?}", pkg_id));
+
+        let actual = format!("{:#?}", pkg_id);
+        if actual.ends_with(",\n}") {
+            assert_eq!(actual, expected);
+        } else {
+            assert_eq!(actual, expected_without_trailing_comma);
+        }
     }
 
     #[test]
