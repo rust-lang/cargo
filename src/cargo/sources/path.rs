@@ -219,9 +219,17 @@ impl<'cfg> PathSource<'cfg> {
         // the untracked files are often part of a build and may become relevant
         // as part of a future commit.
         let index_files = index.iter().map(|entry| {
-            use libgit2_sys::GIT_FILEMODE_COMMIT;
-            let is_dir = entry.mode == GIT_FILEMODE_COMMIT as u32;
-            (join(root, &entry.path), Some(is_dir))
+            use libgit2_sys::{GIT_FILEMODE_COMMIT, GIT_FILEMODE_LINK};
+            // ``is_dir`` is an optimization to avoid calling
+            // ``fs::metadata`` on every file.
+            let is_dir = if entry.mode == GIT_FILEMODE_LINK as u32 {
+                // Let the code below figure out if this symbolic link points
+                // to a directory or not.
+                None
+            } else {
+                Some(entry.mode == GIT_FILEMODE_COMMIT as u32)
+            };
+            (join(root, &entry.path), is_dir)
         });
         let mut opts = git2::StatusOptions::new();
         opts.include_untracked(true);
