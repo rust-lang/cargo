@@ -31,7 +31,13 @@ fn main() -> Result<(), Error> {
 
     for (source_file, suggestions) in &files {
         let source = fs::read_to_string(source_file)?;
-        let fixes = rustfix::apply_suggestions(&source, suggestions)?;
+        let mut fix = rustfix::CodeFix::new(&source);
+        for suggestion in suggestions.iter().rev() {
+            if let Err(e) = fix.apply(suggestion) {
+                eprintln!("Failed to apply suggestion to {}: {}", source_file, e);
+            }
+        }
+        let fixes = fix.finish()?;
         fs::write(source_file, fixes)?;
     }
 
