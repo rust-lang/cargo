@@ -506,10 +506,14 @@ fn package_git_submodule() {
 
 #[cargo_test]
 fn package_symlink_to_submodule() {
+    #[cfg(unix)]
+    use std::os::unix::fs::symlink as symlink;
+    #[cfg(windows)]
+    use std::os::unix::fs::symlink_dir as symlink;
+
     let project = git::new("foo", |project| {
         project
             .file("src/lib.rs", "pub fn foo() {}")
-            .symlink("submodule", "submodule-link")
         }).unwrap();
 
     let library = git::new("submodule", |library| {
@@ -519,6 +523,8 @@ fn package_symlink_to_submodule() {
     let repository = git2::Repository::open(&project.root()).unwrap();
     let url = path2url(library.root()).to_string();
     git::add_submodule(&repository, &url, Path::new("submodule"));
+    t!(symlink(&project.root().join("submodule"), &project.root().join("submodule-link")));
+    git::add(&repository);
     git::commit(&repository);
 
     let repository = git2::Repository::open(&project.root().join("submodule")).unwrap();
