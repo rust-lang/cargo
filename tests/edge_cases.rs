@@ -19,3 +19,12 @@ fn out_of_bounds_test() {
             .unwrap();
     assert!(expected_suggestions.is_empty());
 }
+
+#[test]
+fn utf8_identifiers_test() {
+    let json = fs::read_to_string("./tests/edge-cases/utf8_idents.recorded.json").unwrap();
+    let expected_suggestions =
+        rustfix::get_suggestions_from_json(&json, &HashSet::new(), rustfix::Filter::Everything)
+            .unwrap();
+    assert!(expected_suggestions.is_empty());
+}

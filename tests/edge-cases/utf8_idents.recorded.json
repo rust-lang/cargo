@@ -1,0 +1,59 @@
+{
+  "message": "expected one of `,`, `:`, `=`, or `>`, found `'β`",
+  "code": null,
+  "level": "error",
+  "spans": [
+    {
+      "file_name": "./tests/everything/utf8_idents.rs",
+      "byte_start": 14,
+      "byte_end": 14,
+      "line_start": 2,
+      "line_end": 2,
+      "column_start": 6,
+      "column_end": 6,
+      "is_primary": false,
+      "text": [
+        {
+          "text": "    γ  //~ ERROR non-ascii idents are not fully supported",
+          "highlight_start": 6,
+          "highlight_end": 6
+        }
+      ],
+      "label": "expected one of `,`, `:`, `=`, or `>` here",
+      "suggested_replacement": null,
+      "suggestion_applicability": null,
+      "expansion": null
+    },
+    {
+      "file_name": "./tests/everything/utf8_idents.rs",
+      "byte_start": 145,
+      "byte_end": 148,
+      "line_start": 4,
+      "line_end": 4,
+      "column_start": 5,
+      "column_end": 7,
+      "is_primary": true,
+      "text": [
+        {
+          "text": "    'β, //~ ERROR non-ascii idents are not fully supported",
+          "highlight_start": 5,
+          "highlight_end": 7
+        }
+      ],
+      "label": "unexpected token",
+      "suggested_replacement": null,
+      "suggestion_applicability": null,
+      "expansion": null
+    }
+  ],
+  "children": [],
+  "rendered": "error: expected one of `,`, `:`, `=`, or `>`, found `'β`\n --> ./tests/everything/utf8_idents.rs:4:5\n  |\n2 |     γ  //~ ERROR non-ascii idents are not fully supported\n  |      - expected one of `,`, `:`, `=`, or `>` here\n3 |        //~^ WARN type parameter `γ` should have an upper camel case name\n4 |     'β, //~ ERROR non-ascii idents are not fully supported\n  |     ^^ unexpected token\n\n"
+}
+{
+  "message": "aborting due to previous error",
+  "code": null,
+  "level": "error",
+  "spans": [],
+  "children": [],
+  "rendered": "error: aborting due to previous error\n\n"
+}

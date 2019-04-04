@@ -104,10 +104,15 @@ fn parse_snippet(span: &DiagnosticSpan) -> Option<Snippet> {
             std::cmp::min(indent, line.highlight_start)
         })
         .min()?;
+
+    let text_slice = span.text[0].text.chars().collect::<Vec<char>>();
+
+    // We subtract `1` because these highlights are 1-based
     let start = span.text[0].highlight_start - 1;
     let end = span.text[0].highlight_end - 1;
-    let lead = span.text[0].text[indent..start].to_string();
-    let mut body = span.text[0].text[start..end].to_string();
+    let lead = text_slice[indent..start].iter().collect();
+    let mut body: String = text_slice[start..end].iter().collect();
+
     for line in span.text.iter().take(span.text.len() - 1).skip(1) {
         body.push('\n');
         body.push_str(&line.text[indent..]);
@@ -118,12 +123,13 @@ fn parse_snippet(span: &DiagnosticSpan) -> Option<Snippet> {
     // If we get a DiagnosticSpanLine where highlight_end > text.len(), we prevent an 'out of
     // bounds' access by making sure the index is within the array bounds.
     let last_tail_index = last.highlight_end.min(last.text.len()) - 1;
+    let last_slice = last.text.chars().collect::<Vec<char>>();
 
     if span.text.len() > 1 {
         body.push('\n');
-        body.push_str(&last.text[indent..last_tail_index]);
+        body.push_str(&last_slice[indent..last_tail_index].iter().collect::<String>());
     }
-    tail.push_str(&last.text[last_tail_index..]);
+    tail.push_str(&last_slice[last_tail_index..].iter().collect::<String>());
     Some(Snippet {
         file_name: span.file_name.clone(),
         line_range: LineRange {
