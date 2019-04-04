@@ -1,3 +1,5 @@
+#![warn(rust_2018_idioms)]
+
 #[macro_use]
 extern crate log;
 #[macro_use]
@@ -7,7 +9,7 @@ extern crate failure;
 extern crate proptest;
 #[macro_use]
 extern crate serde_derive;
-extern crate serde_json;
+use serde_json;
 
 use std::collections::HashSet;
 use std::ops::Range;
@@ -15,7 +17,7 @@ use std::ops::Range;
 use failure::Error;
 
 pub mod diagnostics;
-use diagnostics::{Diagnostic, DiagnosticSpan};
+use crate::diagnostics::{Diagnostic, DiagnosticSpan};
 mod replace;
 
 #[derive(Debug, Clone, Copy)]
@@ -44,7 +46,7 @@ pub struct LinePosition {
 }
 
 impl std::fmt::Display for LinePosition {
-    fn fmt(&self, f: &mut std::fmt::Formatter) -> std::fmt::Result {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         write!(f, "{}:{}", self.line, self.column)
     }
 }
@@ -56,7 +58,7 @@ pub struct LineRange {
 }
 
 impl std::fmt::Display for LineRange {
-    fn fmt(&self, f: &mut std::fmt::Formatter) -> std::fmt::Result {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         write!(f, "{}-{}", self.start, self.end)
     }
 }
@@ -178,8 +180,8 @@ pub fn collect_suggestions<S: ::std::hash::BuildHasher>(
                 .spans
                 .iter()
                 .filter(|span| {
-                    use Filter::*;
-                    use diagnostics::Applicability::*;
+                    use crate::Filter::*;
+                    use crate::diagnostics::Applicability::*;
 
                     match (filter, &span.suggestion_applicability) {
                         (MachineApplicableOnly, Some(MachineApplicable)) => true,

@@ -1,5 +1,5 @@
-extern crate failure;
-extern crate rustfix;
+
+use rustfix;
 
 use failure::Error;
 use std::io::{stdin, BufReader, Read};
