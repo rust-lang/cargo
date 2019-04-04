@@ -25,6 +25,9 @@ use crate::util::{FileLock, Filesystem, Freshness};
 ///
 /// This maintains a filesystem lock, preventing other instances of Cargo from
 /// modifying at the same time. Drop the value to unlock.
+///
+/// If/when v2 is stabilized, it is intended that v1 is retained for a while
+/// during a longish transition period, and then v1 can be removed.
 pub struct InstallTracker {
     v1: CrateListingV1,
     v2: CrateListingV2,
@@ -33,6 +36,10 @@ pub struct InstallTracker {
     unstable_upgrade: bool,
 }
 
+/// Tracking information for the set of installed packages.
+///
+/// This v2 format is unstable and requires the `-Z unstable-upgrade` option
+/// to enable.
 #[derive(Default, Deserialize, Serialize)]
 struct CrateListingV2 {
     installs: BTreeMap<PackageId, InstallInfo>,
@@ -41,6 +48,14 @@ struct CrateListingV2 {
     other: BTreeMap<String, serde_json::Value>,
 }
 
+/// Tracking information for the installation of a single package.
+///
+/// This tracks the settings that were used when the package was installed.
+/// Future attempts to install the same package will check these settings to
+/// determine if it needs to be rebuilt/reinstalled. If nothing has changed,
+/// then Cargo will inform the user that it is "up to date".
+///
+/// This is only used for the (unstable) v2 format.
 #[derive(Debug, Deserialize, Serialize)]
 struct InstallInfo {
     /// Version requested via `--version`.
@@ -68,6 +83,7 @@ struct InstallInfo {
     other: BTreeMap<String, serde_json::Value>,
 }
 
+/// Tracking information for the set of installed packages.
 #[derive(Default, Deserialize, Serialize)]
 pub struct CrateListingV1 {
     v1: BTreeMap<PackageId, BTreeSet<String>>,
@@ -102,23 +118,20 @@ impl InstallTracker {
         })?;
 
         let v2 = (|| -> CargoResult<_> {
-            if unstable_upgrade {
-                let mut contents = String::new();
-                v2_lock
-                    .as_ref()
-                    .unwrap()
-                    .file()
-                    .read_to_string(&mut contents)?;
-                let mut v2 = if contents.is_empty() {
-                    CrateListingV2::default()
-                } else {
-                    serde_json::from_str(&contents)
-                        .chain_err(|| format_err!("invalid JSON found for metadata"))?
-                };
-                v2.sync_v1(&v1)?;
-                Ok(v2)
-            } else {
-                Ok(CrateListingV2::default())
+            match &v2_lock {
+                Some(lock) => {
+                    let mut contents = String::new();
+                    lock.file().read_to_string(&mut contents)?;
+                    let mut v2 = if contents.is_empty() {
+                        CrateListingV2::default()
+                    } else {
+                        serde_json::from_str(&contents)
+                            .chain_err(|| format_err!("invalid JSON found for metadata"))?
+                    };
+                    v2.sync_v1(&v1)?;
+                    Ok(v2)
+                }
+                None => Ok(CrateListingV2::default()),
             }
         })()
         .chain_err(|| {
@@ -142,8 +155,14 @@ impl InstallTracker {
     ///
     /// Returns a tuple `(freshness, map)`. `freshness` indicates if the
     /// package should be built (`Dirty`) or if it is already up-to-date
-    /// (`Fresh`). The map maps binary names to the PackageId that installed
-    /// it (which is None if not known).
+    /// (`Fresh`) and should be skipped. The map maps binary names to the
+    /// PackageId that installed it (which is None if not known).
+    ///
+    /// If there are no duplicates, then it will be considered `Dirty` (i.e.,
+    /// it is OK to build/install).
+    ///
+    /// `force=true` will always be considered `Dirty` (i.e., it will always
+    /// be rebuilt/reinstalled).
     ///
     /// Returns an error if there is a duplicate and `--force` is not used.
     pub fn check_upgrade(
@@ -156,12 +175,17 @@ impl InstallTracker {
         _rustc: &str,
     ) -> CargoResult<(Freshness, BTreeMap<String, Option<PackageId>>)> {
         let exes = exe_names(pkg, &opts.filter);
+        // Check if any tracked exe's are already installed.
         let duplicates = self.find_duplicates(dst, &exes);
         if force || duplicates.is_empty() {
             return Ok((Freshness::Dirty, duplicates));
         }
-        // If any duplicates are not tracked, then --force is required.
-        // If any duplicates are from a package with a different name, --force is required.
+        // Check if all duplicates come from packages of the same name. If
+        // there are duplicates from other packages, then --force will be
+        // required.
+        //
+        // There may be multiple matching duplicates if different versions of
+        // the same package installed different binaries.
         let matching_duplicates: Vec<PackageId> = duplicates
             .values()
             .filter_map(|v| match v {
@@ -170,9 +194,13 @@ impl InstallTracker {
             })
             .collect();
 
+        // If both sets are the same length, that means all duplicates come
+        // from packages with the same name.
         if self.unstable_upgrade && matching_duplicates.len() == duplicates.len() {
+            // Determine if it is dirty or fresh.
             let source_id = pkg.package_id().source_id();
             if source_id.is_path() {
+                // `cargo install --path ...` is always rebuilt.
                 return Ok((Freshness::Dirty, duplicates));
             }
             if matching_duplicates.iter().all(|dupe_pkg_id| {
@@ -182,6 +210,8 @@ impl InstallTracker {
                     .get(dupe_pkg_id)
                     .expect("dupes must be in sync");
                 let precise_equal = if source_id.is_git() {
+                    // Git sources must have the exact same hash to be
+                    // considered "fresh".
                     dupe_pkg_id.source_id().precise() == source_id.precise()
                 } else {
                     true
@@ -190,13 +220,7 @@ impl InstallTracker {
                 dupe_pkg_id.version() == pkg.version()
                     && dupe_pkg_id.source_id() == source_id
                     && precise_equal
-                    && info.features == feature_set(&opts.features)
-                    && info.all_features == opts.all_features
-                    && info.no_default_features == opts.no_default_features
-                    && info.profile == profile_name(opts.build_config.release)
-                    && (info.target.is_none()
-                        || info.target.as_ref().map(|t| t.as_ref()) == Some(target))
-                    && info.bins == exes
+                    && info.is_up_to_date(opts, target, &exes)
             }) {
                 Ok((Freshness::Fresh, duplicates))
             } else {
@@ -218,6 +242,11 @@ impl InstallTracker {
         }
     }
 
+    /// Check if any executables are already installed.
+    ///
+    /// Returns a map of duplicates, the key is the executable name and the
+    /// value is the PackageId that is already installed. The PackageId is
+    /// None if it is an untracked executable.
     fn find_duplicates(
         &self,
         dst: &Path,
@@ -312,7 +341,7 @@ impl CrateListingV1 {
                 other_bins.remove(bin);
             }
         }
-        // Remove empty metadata lines. If only BTreeMap had `retain`.
+        // Remove entries where `bins` is empty.
         let to_remove = self
             .v1
             .iter()
@@ -322,11 +351,10 @@ impl CrateListingV1 {
             self.v1.remove(p);
         }
         // Add these bins.
-        let mut bins = bins.clone();
         self.v1
             .entry(pkg.package_id())
-            .and_modify(|set| set.append(&mut bins))
-            .or_insert(bins);
+            .or_insert_with(BTreeSet::new)
+            .append(&mut bins.clone());
     }
 
     fn remove(&mut self, pkg_id: PackageId, bins: &BTreeSet<String>) {
@@ -354,6 +382,11 @@ impl CrateListingV1 {
 }
 
 impl CrateListingV2 {
+    /// Incorporate any changes from v1 into self.
+    /// This handles the initial upgrade to v2, *and* handles the case
+    /// where v2 is in use, and a v1 update is made, then v2 is used again.
+    /// i.e., `cargo +new install foo ; cargo +old install bar ; cargo +new install bar`
+    /// For now, v1 is the source of truth, so its values are trusted over v2.
     fn sync_v1(&mut self, v1: &CrateListingV1) -> CargoResult<()> {
         // Make the `bins` entries the same.
         for (pkg_id, bins) in &v1.v1 {
@@ -397,7 +430,7 @@ impl CrateListingV2 {
                 info.bins.remove(bin);
             }
         }
-        // Remove empty metadata lines. If only BTreeMap had `retain`.
+        // Remove entries where `bins` is empty.
         let to_remove = self
             .installs
             .iter()
@@ -408,9 +441,7 @@ impl CrateListingV2 {
         }
         // Add these bins.
         if let Some(info) = self.installs.get_mut(&pkg.package_id()) {
-            for bin in bins {
-                info.bins.remove(bin);
-            }
+            info.bins.append(&mut bins.clone());
             info.version_req = version_req;
             info.features = feature_set(&opts.features);
             info.all_features = opts.all_features;
@@ -454,7 +485,8 @@ impl CrateListingV2 {
         let mut file = lock.file();
         file.seek(SeekFrom::Start(0))?;
         file.set_len(0)?;
-        serde_json::to_writer(file, self)?;
+        let data = serde_json::to_string(self)?;
+        file.write_all(data.as_bytes())?;
         Ok(())
     }
 }
@@ -472,6 +504,23 @@ impl InstallInfo {
             rustc: None,
             other: BTreeMap::new(),
         }
+    }
+
+    /// Determine if this installation is "up to date", or if it needs to be reinstalled.
+    ///
+    /// This does not do Package/Source/Version checking.
+    fn is_up_to_date(
+        &self,
+        opts: &CompileOptions<'_>,
+        target: &str,
+        exes: &BTreeSet<String>,
+    ) -> bool {
+        self.features == feature_set(&opts.features)
+            && self.all_features == opts.all_features
+            && self.no_default_features == opts.no_default_features
+            && self.profile == profile_name(opts.build_config.release)
+            && (self.target.is_none() || self.target.as_ref().map(|t| t.as_ref()) == Some(target))
+            && &self.bins == exes
     }
 }
 

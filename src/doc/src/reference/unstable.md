@@ -258,6 +258,9 @@ If any of these values change, then Cargo will reinstall the package.
 Installation will still fail if a different package installs a binary of the
 same name. `--force` may be used to unconditionally reinstall the package.
 
+Installing with `--path` will always build and install, unless there are
+conflicting binaries from another package.
+
 Additionally, a new flag `--no-track` is available to prevent `cargo install`
 from writing tracking information in `$CARGO_HOME` about which packages are
 installed.

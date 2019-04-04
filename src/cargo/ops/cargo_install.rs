@@ -241,6 +241,9 @@ fn install_one(
         }
     };
 
+    // For bare `cargo install` (no `--bin` or `--example`), check if there is
+    // *something* to install. Explicit `--bin` or `--example` flags will be
+    // checked at the start of `compile_ws`.
     if !opts.filter.is_specific() && !pkg.targets().iter().any(|t| t.is_bin()) {
         bail!("specified package `{}` has no binaries", pkg);
     }
@@ -394,8 +397,7 @@ fn install_one(
         try_install()
     };
 
-    if !no_track {
-        let mut tracker = tracker.unwrap();
+    if let Some(mut tracker) = tracker {
         tracker.mark_installed(
             pkg,
             &successful_bins,
