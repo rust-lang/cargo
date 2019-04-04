@@ -179,7 +179,7 @@ manifest is located.
 [cargo-unstable]: https://doc.rust-lang.org/nightly/cargo/reference/unstable.html
 [config option]: reference/config.html
 [directory layout]: reference/manifest.html#the-project-layout
-[edition guide]: ../edition-guide/
+[edition guide]: ../edition-guide/index.html
 [edition-field]: reference/manifest.html#the-edition-field-optional
 [environment variable]: reference/environment-variables.html
 [feature]: reference/manifest.html#the-features-section
