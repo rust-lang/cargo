@@ -1,3 +1,6 @@
+use cargo::core::PackageId;
+use std::collections::BTreeSet;
+use std::env;
 use std::fs;
 use std::path::PathBuf;
 use std::sync::atomic::{AtomicUsize, Ordering};
@@ -25,6 +28,10 @@ fn v1_path() -> PathBuf {
 
 fn v2_path() -> PathBuf {
     cargo_home().join(".crates2.json")
+}
+
+fn load_crates1() -> toml::Value {
+    toml::from_str(&fs::read_to_string(v1_path()).unwrap()).unwrap()
 }
 
 fn load_crates2() -> serde_json::Value {
@@ -56,6 +63,49 @@ fn installed_process(name: &str) -> Execs {
     execs().with_process_builder(p)
 }
 
+/// Check that the given package name/version has the following bins listed in
+/// the trackers. Also verifies that both trackers are in sync and valid.
+fn validate_trackers(name: &str, version: &str, bins: &[&str]) {
+    let v1 = load_crates1();
+    let v1_table = v1.get("v1").unwrap().as_table().unwrap();
+    let v2 = load_crates2();
+    let v2_table = v2["installs"].as_object().unwrap();
+    assert_eq!(v1_table.len(), v2_table.len());
+    // Convert `bins` to a BTreeSet.
+    let bins: BTreeSet<String> = bins
+        .iter()
+        .map(|b| format!("{}{}", b, env::consts::EXE_SUFFIX))
+        .collect();
+    // Check every entry matches between v1 and v2.
+    for (pkg_id_str, v1_bins) in v1_table {
+        let pkg_id: PackageId = toml::Value::from(pkg_id_str.to_string())
+            .try_into()
+            .unwrap();
+        let v1_bins: BTreeSet<String> = v1_bins
+            .as_array()
+            .unwrap()
+            .iter()
+            .map(|b| b.as_str().unwrap().to_string())
+            .collect();
+        if pkg_id.name().as_str() == name && pkg_id.version().to_string() == version {
+            assert_eq!(bins, v1_bins);
+        }
+        let pkg_id_value = serde_json::to_value(&pkg_id).unwrap();
+        let pkg_id_str = pkg_id_value.as_str().unwrap();
+        let v2_info = v2_table
+            .get(pkg_id_str)
+            .expect("v2 missing v1 pkg")
+            .as_object()
+            .unwrap();
+        let v2_bins = v2_info["bins"].as_array().unwrap();
+        let v2_bins: BTreeSet<String> = v2_bins
+            .iter()
+            .map(|b| b.as_str().unwrap().to_string())
+            .collect();
+        assert_eq!(v1_bins, v2_bins);
+    }
+}
+
 #[test]
 fn registry_upgrade() {
     // Installing and upgrading from a registry.
@@ -77,6 +127,7 @@ fn registry_upgrade() {
         )
         .run();
     installed_process("foo").with_stdout("1.0.0").run();
+    validate_trackers("foo", "1.0.0", &["foo"]);
 
     cargo_process("install foo -Z install-upgrade")
         .masquerade_as_nightly_cargo()
@@ -109,18 +160,22 @@ fn registry_upgrade() {
         .run();
 
     installed_process("foo").with_stdout("1.0.1").run();
+    validate_trackers("foo", "1.0.1", &["foo"]);
 
     cargo_process("install foo --version=1.0.0 -Z install-upgrade")
         .masquerade_as_nightly_cargo()
         .with_stderr_contains("[COMPILING] foo v1.0.0")
         .run();
     installed_process("foo").with_stdout("1.0.0").run();
+    validate_trackers("foo", "1.0.0", &["foo"]);
 
     cargo_process("install foo --version=^1.0 -Z install-upgrade")
         .masquerade_as_nightly_cargo()
         .with_stderr_contains("[COMPILING] foo v1.0.1")
         .run();
     installed_process("foo").with_stdout("1.0.1").run();
+    validate_trackers("foo", "1.0.1", &["foo"]);
+
     cargo_process("install foo --version=^1.0 -Z install-upgrade")
         .masquerade_as_nightly_cargo()
         .with_stderr_contains("[IGNORED] package `foo v1.0.1` is already installed[..]")
@@ -139,9 +194,8 @@ fn uninstall() {
         .run();
     let data = load_crates2();
     assert_eq!(data["installs"].as_object().unwrap().len(), 0);
-    let v1 = cargo_home().join(".crates.toml");
-    let data: toml::Value = toml::from_str(&fs::read_to_string(&v1).unwrap()).unwrap();
-    assert_eq!(data.get("v1").unwrap().as_table().unwrap().len(), 0);
+    let v1_table = load_crates1();
+    assert_eq!(v1_table.get("v1").unwrap().as_table().unwrap().len(), 0);
 }
 
 #[test]
@@ -164,6 +218,7 @@ fn upgrade_force() {
 ",
         )
         .run();
+    validate_trackers("foo", "1.0.0", &["foo"]);
 }
 
 #[test]
@@ -244,20 +299,24 @@ fn supports_multiple_binary_names() {
     installed_process("foo").with_stdout("foo").run();
     assert!(!installed_exe("a").exists());
     assert!(!installed_exe("ex1").exists());
+    validate_trackers("foo", "1.0.0", &["foo"]);
     cargo_process("install foo -Z install-upgrade --bin a")
         .masquerade_as_nightly_cargo()
         .run();
     installed_process("a").with_stdout("a").run();
     assert!(!installed_exe("ex1").exists());
+    validate_trackers("foo", "1.0.0", &["a", "foo"]);
     cargo_process("install foo -Z install-upgrade --example ex1")
         .masquerade_as_nightly_cargo()
         .run();
     installed_process("ex1").with_stdout("ex1").run();
+    validate_trackers("foo", "1.0.0", &["a", "ex1", "foo"]);
     cargo_process("uninstall foo -Z install-upgrade --bin foo")
         .masquerade_as_nightly_cargo()
         .run();
     assert!(!installed_exe("foo").exists());
     assert!(installed_exe("ex1").exists());
+    validate_trackers("foo", "1.0.0", &["a", "ex1"]);
     cargo_process("uninstall foo -Z install-upgrade")
         .masquerade_as_nightly_cargo()
         .run();
@@ -287,6 +346,7 @@ fn v1_already_installed_dirty() {
         .with_stderr_contains("[REPLACING] [..]/foo[EXE]")
         .masquerade_as_nightly_cargo()
         .run();
+    validate_trackers("foo", "1.0.1", &["foo"]);
 }
 
 #[test]
@@ -385,6 +445,7 @@ fn change_bin_sets_rebuilds() {
     assert!(installed_exe("x").exists());
     assert!(!installed_exe("y").exists());
     assert!(!installed_exe("foo").exists());
+    validate_trackers("foo", "1.0.0", &["x"]);
     cargo_process("install foo -Z install-upgrade --bin y")
         .masquerade_as_nightly_cargo()
         .with_stderr_contains("[INSTALLED] package `foo v1.0.0` (executable `y[EXE]`)")
@@ -392,6 +453,7 @@ fn change_bin_sets_rebuilds() {
     assert!(installed_exe("x").exists());
     assert!(installed_exe("y").exists());
     assert!(!installed_exe("foo").exists());
+    validate_trackers("foo", "1.0.0", &["x", "y"]);
     cargo_process("install foo -Z install-upgrade")
         .masquerade_as_nightly_cargo()
         .with_stderr_contains("[INSTALLED] package `foo v1.0.0` (executable `foo[EXE]`)")
@@ -402,6 +464,7 @@ fn change_bin_sets_rebuilds() {
     assert!(installed_exe("x").exists());
     assert!(installed_exe("y").exists());
     assert!(installed_exe("foo").exists());
+    validate_trackers("foo", "1.0.0", &["foo", "x", "y"]);
 }
 
 #[test]
@@ -442,9 +505,11 @@ fn v2_syncs() {
     cargo_process("install one -Z install-upgrade")
         .masquerade_as_nightly_cargo()
         .run();
+    validate_trackers("one", "1.0.0", &["one"]);
     p.cargo("install -Z install-upgrade --path .")
         .masquerade_as_nightly_cargo()
         .run();
+    validate_trackers("foo", "1.0.0", &["x", "y"]);
     // v1 add/remove
     cargo_process("install two").run();
     cargo_process("uninstall one").run();
@@ -452,6 +517,7 @@ fn v2_syncs() {
     cargo_process("install three -Z install-upgrade")
         .masquerade_as_nightly_cargo()
         .run();
+    validate_trackers("three", "1.0.0", &["three"]);
     cargo_process("install --list")
         .with_stdout(
             "\
@@ -469,6 +535,7 @@ two v1.0.0:
         .masquerade_as_nightly_cargo()
         .run();
     installed_process("one").with_stdout("1.0.0").run();
+    validate_trackers("one", "1.0.0", &["one"]);
     cargo_process("install two -Z install-upgrade")
         .masquerade_as_nightly_cargo()
         .with_stderr_contains("[IGNORED] package `two v1.0.0` is already installed[..]")
@@ -481,6 +548,7 @@ two v1.0.0:
     cargo_process("install x -Z install-upgrade")
         .masquerade_as_nightly_cargo()
         .run();
+    validate_trackers("x", "1.0.0", &["x"]);
     // This should fail because `y` still exists in a different package.
     cargo_process("install y -Z install-upgrade")
         .masquerade_as_nightly_cargo()
