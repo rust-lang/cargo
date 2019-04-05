@@ -46,6 +46,10 @@ pub fn cli() -> App {
         ))
         .arg_jobs()
         .arg(opt("force", "Force overwriting existing crates or binaries").short("f"))
+        .arg(opt(
+            "no-track",
+            "Do not save tracking information (unstable)",
+        ))
         .arg_features()
         .arg(opt("debug", "Build in debug mode instead of release mode"))
         .arg_targets_bins_examples(
@@ -147,6 +151,12 @@ pub fn exec(config: &mut Config, args: &ArgMatches<'_>) -> CliResult {
     let version = args.value_of("version");
     let root = args.value_of("root");
 
+    if args.is_present("no-track") && !config.cli_unstable().install_upgrade {
+        Err(failure::format_err!(
+            "`--no-track` flag is unstable, pass `-Z install-upgrade` to enable it"
+        ))?;
+    };
+
     if args.is_present("list") {
         ops::install_list(root, config)?;
     } else {
@@ -158,6 +168,7 @@ pub fn exec(config: &mut Config, args: &ArgMatches<'_>) -> CliResult {
             version,
             &compile_opts,
             args.is_present("force"),
+            args.is_present("no-track"),
         )?;
     }
     Ok(())
