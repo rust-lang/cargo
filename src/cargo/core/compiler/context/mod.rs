@@ -430,9 +430,10 @@ impl<'a, 'cfg> Context<'a, 'cfg> {
                     path.display()
                 )
             };
-        let suggestion = "Consider changing their names to be unique or compiling them separately.\n\
-            This may become a hard error in the future; see \
-            <https://github.com/rust-lang/cargo/issues/6313>.";
+        let suggestion =
+            "Consider changing their names to be unique or compiling them separately.\n\
+             This may become a hard error in the future; see \
+             <https://github.com/rust-lang/cargo/issues/6313>.";
         let report_collision = |unit: &Unit<'_>,
                                 other_unit: &Unit<'_>,
                                 path: &PathBuf|

@@ -1110,7 +1110,10 @@ fn default_run_workspace() {
         .file("b/src/main.rs", r#"fn main() {println!("run-b");}"#)
         .build();
 
-    p.cargo("run").masquerade_as_nightly_cargo().with_stdout("run-a").run();
+    p.cargo("run")
+        .masquerade_as_nightly_cargo()
+        .with_stdout("run-a")
+        .run();
 }
 
 #[test]
