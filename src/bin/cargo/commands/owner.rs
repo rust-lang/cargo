@@ -7,7 +7,14 @@ pub fn cli() -> App {
         .about("Manage the owners of a crate on the registry")
         .arg(opt("quiet", "No output printed to stdout").short("q"))
         .arg(Arg::with_name("crate"))
-        .arg(multi_opt("add", "LOGIN", "Name of a user or team to invite as an owner").short("a"))
+        .arg(
+            multi_opt(
+                "add",
+                "LOGIN",
+                "Name of a user or team to invite as an owner",
+            )
+            .short("a"),
+        )
         .arg(
             multi_opt(
                 "remove",

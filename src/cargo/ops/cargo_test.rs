@@ -1,8 +1,8 @@
 use std::ffi::OsString;
 
 use crate::core::compiler::{Compilation, Doctest};
-use crate::core::Workspace;
 use crate::core::shell::Verbosity;
+use crate::core::Workspace;
 use crate::ops;
 use crate::util::errors::CargoResult;
 use crate::util::{CargoTestError, ProcessError, Test};

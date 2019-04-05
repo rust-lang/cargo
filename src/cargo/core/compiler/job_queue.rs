@@ -11,6 +11,9 @@ use crossbeam_utils::thread::Scope;
 use jobserver::{Acquired, HelperThread};
 use log::{debug, info, trace};
 
+use super::context::OutputFile;
+use super::job::Job;
+use super::{BuildContext, BuildPlan, CompileMode, Context, Kind, Unit};
 use crate::core::profiles::Profile;
 use crate::core::{PackageId, Target, TargetKind};
 use crate::handle_error;
@@ -19,9 +22,6 @@ use crate::util::diagnostic_server::{self, DiagnosticPrinter};
 use crate::util::{internal, profile, CargoResult, CargoResultExt, ProcessBuilder};
 use crate::util::{Config, DependencyQueue, Dirty, Fresh, Freshness};
 use crate::util::{Progress, ProgressStyle};
-use super::context::OutputFile;
-use super::job::Job;
-use super::{BuildContext, BuildPlan, CompileMode, Context, Kind, Unit};
 
 /// A management structure of the entire dependency graph to compile.
 ///

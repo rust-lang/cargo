@@ -505,10 +505,7 @@ fn hash_all(path: &Path) -> CargoResult<HashMap<PathBuf, u64>> {
     Ok(result)
 }
 
-fn report_hash_difference(
-    orig: &HashMap<PathBuf, u64>,
-    after: &HashMap<PathBuf, u64>,
-) -> String {
+fn report_hash_difference(orig: &HashMap<PathBuf, u64>, after: &HashMap<PathBuf, u64>) -> String {
     let mut changed = Vec::new();
     let mut removed = Vec::new();
     for (key, value) in orig {

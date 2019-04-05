@@ -164,18 +164,20 @@ fn cargo_test_quiet_with_harness() {
             fn main() {}
             #[test] fn test_hello() {}
         "#,
-        ).build();
+        )
+        .build();
 
-        p.cargo("test -q")
-            .with_stdout(
-                "
+    p.cargo("test -q")
+        .with_stdout(
+            "
 running 1 test
 .
 test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out
 
-"
-            ).with_stderr("")
-            .run();
+",
+        )
+        .with_stderr("")
+        .run();
 }
 
 #[test]
@@ -205,13 +207,10 @@ fn cargo_test_quiet_no_harness() {
             fn main() {}
             #[test] fn test_hello() {}
         "#,
-        ).build();
+        )
+        .build();
 
-        p.cargo("test -q")
-            .with_stdout(
-                ""
-            ).with_stderr("")
-            .run();
+    p.cargo("test -q").with_stdout("").with_stderr("").run();
 }
 
 #[test]
@@ -1553,7 +1552,8 @@ test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out
 
 ",
         )
-        .with_stderr("\
+        .with_stderr(
+            "\
 [COMPILING] foo v0.0.1 ([CWD])
 [RUNNING] `rustc --crate-name foo src/lib.rs [..] --test [..]`
 [FINISHED] dev [unoptimized + debuginfo] target(s) in [..]
