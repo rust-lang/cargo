@@ -8,12 +8,13 @@ use failure::{bail, format_err};
 use semver::VersionReq;
 use serde::{Deserialize, Serialize};
 
+use crate::core::compiler::Freshness;
 use crate::core::{Dependency, Package, PackageId, Source, SourceId};
 use crate::ops::{self, CompileFilter, CompileOptions};
 use crate::sources::PathSource;
 use crate::util::errors::{CargoResult, CargoResultExt};
 use crate::util::{Config, ToSemver};
-use crate::util::{FileLock, Filesystem, Freshness};
+use crate::util::{FileLock, Filesystem};
 
 /// On-disk tracking for which package installed which binary.
 ///
