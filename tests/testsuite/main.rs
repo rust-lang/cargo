@@ -68,6 +68,7 @@ mod profile_overrides;
 mod profile_targets;
 mod profiles;
 mod publish;
+mod publish_lockfile;
 mod read_manifest;
 mod registry;
 mod rename_deps;
