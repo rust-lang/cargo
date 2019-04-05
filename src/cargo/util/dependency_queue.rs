@@ -8,8 +8,6 @@ use std::collections::hash_map::Entry::{Occupied, Vacant};
 use std::collections::{HashMap, HashSet};
 use std::hash::Hash;
 
-pub use self::Freshness::{Dirty, Fresh};
-
 #[derive(Debug)]
 pub struct DependencyQueue<K: Eq + Hash, V> {
     /// A list of all known keys to build.
@@ -26,36 +24,12 @@ pub struct DependencyQueue<K: Eq + Hash, V> {
     /// lifecycle of the DependencyQueue.
     reverse_dep_map: HashMap<K, HashSet<K>>,
 
-    /// A set of dirty packages.
-    ///
-    /// Packages may become dirty over time if their dependencies are rebuilt.
-    dirty: HashSet<K>,
-
     /// The packages which are currently being built, waiting for a call to
     /// `finish`.
     pending: HashSet<K>,
 
     /// Topological depth of each key
     depth: HashMap<K, usize>,
-}
-
-/// Indication of the freshness of a package.
-///
-/// A fresh package does not necessarily need to be rebuilt (unless a dependency
-/// was also rebuilt), and a dirty package must always be rebuilt.
-#[derive(PartialEq, Eq, Debug, Clone, Copy)]
-pub enum Freshness {
-    Fresh,
-    Dirty,
-}
-
-impl Freshness {
-    pub fn combine(self, other: Freshness) -> Freshness {
-        match self {
-            Fresh => other,
-            Dirty => Dirty,
-        }
-    }
 }
 
 impl<K: Hash + Eq + Clone, V> Default for DependencyQueue<K, V> {
@@ -70,7 +44,6 @@ impl<K: Hash + Eq + Clone, V> DependencyQueue<K, V> {
         DependencyQueue {
             dep_map: HashMap::new(),
             reverse_dep_map: HashMap::new(),
-            dirty: HashSet::new(),
             pending: HashSet::new(),
             depth: HashMap::new(),
         }
@@ -80,15 +53,11 @@ impl<K: Hash + Eq + Clone, V> DependencyQueue<K, V> {
     ///
     /// It is assumed that any dependencies of this package will eventually also
     /// be added to the dependency queue.
-    pub fn queue(&mut self, fresh: Freshness, key: &K, value: V, dependencies: &[K]) -> &mut V {
+    pub fn queue(&mut self, key: &K, value: V, dependencies: &[K]) -> &mut V {
         let slot = match self.dep_map.entry(key.clone()) {
             Occupied(v) => return &mut v.into_mut().1,
             Vacant(v) => v,
         };
-
-        if fresh == Dirty {
-            self.dirty.insert(key.clone());
-        }
 
         let mut my_dependencies = HashSet::new();
         for dep in dependencies {
@@ -141,7 +110,7 @@ impl<K: Hash + Eq + Clone, V> DependencyQueue<K, V> {
     ///
     /// A package is ready to be built when it has 0 un-built dependencies. If
     /// `None` is returned then no packages are ready to be built.
-    pub fn dequeue(&mut self) -> Option<(Freshness, K, V)> {
+    pub fn dequeue(&mut self) -> Option<(K, V)> {
         // Look at all our crates and find everything that's ready to build (no
         // deps). After we've got that candidate set select the one which has
         // the maximum depth in the dependency graph. This way we should
@@ -163,13 +132,8 @@ impl<K: Hash + Eq + Clone, V> DependencyQueue<K, V> {
             None => return None,
         };
         let (_, data) = self.dep_map.remove(&key).unwrap();
-        let fresh = if self.dirty.contains(&key) {
-            Dirty
-        } else {
-            Fresh
-        };
         self.pending.insert(key.clone());
-        Some((fresh, key, data))
+        Some((key, data))
     }
 
     /// Returns `true` if there are remaining packages to be built.
@@ -186,16 +150,13 @@ impl<K: Hash + Eq + Clone, V> DependencyQueue<K, V> {
     ///
     /// This function will update the dependency queue with this information,
     /// possibly allowing the next invocation of `dequeue` to return a package.
-    pub fn finish(&mut self, key: &K, fresh: Freshness) {
+    pub fn finish(&mut self, key: &K) {
         assert!(self.pending.remove(key));
         let reverse_deps = match self.reverse_dep_map.get(key) {
             Some(deps) => deps,
             None => return,
         };
         for dep in reverse_deps.iter() {
-            if fresh == Dirty {
-                self.dirty.insert(dep.clone());
-            }
             assert!(self.dep_map.get_mut(dep).unwrap().0.remove(key));
         }
     }
@@ -203,31 +164,31 @@ impl<K: Hash + Eq + Clone, V> DependencyQueue<K, V> {
 
 #[cfg(test)]
 mod test {
-    use super::{DependencyQueue, Freshness};
+    use super::DependencyQueue;
 
     #[test]
     fn deep_first() {
         let mut q = DependencyQueue::new();
 
-        q.queue(Freshness::Fresh, &1, (), &[]);
-        q.queue(Freshness::Fresh, &2, (), &[1]);
-        q.queue(Freshness::Fresh, &3, (), &[]);
-        q.queue(Freshness::Fresh, &4, (), &[2, 3]);
-        q.queue(Freshness::Fresh, &5, (), &[4, 3]);
+        q.queue(&1, (), &[]);
+        q.queue(&2, (), &[1]);
+        q.queue(&3, (), &[]);
+        q.queue(&4, (), &[2, 3]);
+        q.queue(&5, (), &[4, 3]);
         q.queue_finished();
 
-        assert_eq!(q.dequeue(), Some((Freshness::Fresh, 1, ())));
-        assert_eq!(q.dequeue(), Some((Freshness::Fresh, 3, ())));
+        assert_eq!(q.dequeue(), Some((1, ())));
+        assert_eq!(q.dequeue(), Some((3, ())));
         assert_eq!(q.dequeue(), None);
-        q.finish(&3, Freshness::Fresh);
+        q.finish(&3);
         assert_eq!(q.dequeue(), None);
-        q.finish(&1, Freshness::Fresh);
-        assert_eq!(q.dequeue(), Some((Freshness::Fresh, 2, ())));
+        q.finish(&1);
+        assert_eq!(q.dequeue(), Some((2, ())));
         assert_eq!(q.dequeue(), None);
-        q.finish(&2, Freshness::Fresh);
-        assert_eq!(q.dequeue(), Some((Freshness::Fresh, 4, ())));
+        q.finish(&2);
+        assert_eq!(q.dequeue(), Some((4, ())));
         assert_eq!(q.dequeue(), None);
-        q.finish(&4, Freshness::Fresh);
-        assert_eq!(q.dequeue(), Some((Freshness::Fresh, 5, ())));
+        q.finish(&4);
+        assert_eq!(q.dequeue(), Some((5, ())));
     }
 }

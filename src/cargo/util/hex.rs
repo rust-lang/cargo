@@ -16,7 +16,7 @@ pub fn to_hex(num: u64) -> String {
     ])
 }
 
-pub fn hash_u64<H: Hash>(hashable: &H) -> u64 {
+pub fn hash_u64<H: Hash>(hashable: H) -> u64 {
     let mut hasher = SipHasher::new_with_keys(0, 0);
     hashable.hash(&mut hasher);
     hasher.finish()

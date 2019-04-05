@@ -29,6 +29,7 @@ pub use self::compilation::{Compilation, Doctest};
 pub use self::context::{Context, Unit};
 pub use self::custom_build::{BuildMap, BuildOutput, BuildScripts};
 use self::job::{Job, Work};
+pub use self::job::Freshness;
 use self::job_queue::JobQueue;
 pub use self::layout::is_bad_artifact_name;
 use self::output_depinfo::output_depinfo;
@@ -37,7 +38,7 @@ use crate::core::profiles::{Lto, PanicStrategy, Profile};
 use crate::core::{PackageId, Target};
 use crate::util::errors::{CargoResult, CargoResultExt, Internal, ProcessError};
 use crate::util::paths;
-use crate::util::{self, machine_message, process, Freshness, ProcessBuilder};
+use crate::util::{self, machine_message, process, ProcessBuilder};
 use crate::util::{internal, join_paths, profile};
 
 /// Indicates whether an object is for the host architcture or the target architecture.
@@ -141,35 +142,31 @@ fn compile<'a, 'cfg: 'a>(
     fingerprint::prepare_init(cx, unit)?;
     cx.links.validate(bcx.resolve, unit)?;
 
-    let (dirty, fresh, freshness) = if unit.mode.is_run_custom_build() {
+    let job = if unit.mode.is_run_custom_build() {
         custom_build::prepare(cx, unit)?
     } else if unit.mode == CompileMode::Doctest {
         // We run these targets later, so this is just a no-op for now.
-        (Work::noop(), Work::noop(), Freshness::Fresh)
+        Job::new(Work::noop(), Freshness::Fresh)
     } else if build_plan {
-        (
-            rustc(cx, unit, &exec.clone())?,
-            Work::noop(),
-            Freshness::Dirty,
-        )
+        Job::new(rustc(cx, unit, &exec.clone())?, Freshness::Dirty)
     } else {
-        let (mut freshness, dirty, fresh) = fingerprint::prepare_target(cx, unit)?;
-        let work = if unit.mode.is_doc() {
-            rustdoc(cx, unit)?
+        let force = exec.force_rebuild(unit) || force_rebuild;
+        let mut job = fingerprint::prepare_target(cx, unit, force)?;
+        job.before(if job.freshness() == Freshness::Dirty {
+            let work = if unit.mode.is_doc() {
+                rustdoc(cx, unit)?
+            } else {
+                rustc(cx, unit, exec)?
+            };
+            work.then(link_targets(cx, unit, false)?)
         } else {
-            rustc(cx, unit, exec)?
-        };
-        // Need to link targets on both the dirty and fresh.
-        let dirty = work.then(link_targets(cx, unit, false)?).then(dirty);
-        let fresh = link_targets(cx, unit, true)?.then(fresh);
+            // Need to link targets on both the dirty and fresh.
+            link_targets(cx, unit, true)?
+        });
 
-        if exec.force_rebuild(unit) || force_rebuild {
-            freshness = Freshness::Dirty;
-        }
-
-        (dirty, fresh, freshness)
+        job
     };
-    jobs.enqueue(cx, unit, Job::new(dirty, fresh), freshness)?;
+    jobs.enqueue(cx, unit, job)?;
     drop(p);
 
     // Be sure to compile all dependencies of this target as well.
