@@ -278,6 +278,8 @@ fn install_one(
         Ok(duplicates)
     };
 
+    // WARNING: no_track does not perform locking, so there is no protection
+    // of concurrent installs.
     if no_track {
         // Check for conflicts.
         no_track_duplicates()?;
