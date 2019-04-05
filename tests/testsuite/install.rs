@@ -35,7 +35,8 @@ fn simple() {
 [COMPILING] foo v0.0.1
 [FINISHED] release [optimized] target(s) in [..]
 [INSTALLING] [CWD]/home/.cargo/bin/foo[EXE]
-warning: be sure to add `[..]` to your PATH to be able to run the installed binaries
+[INSTALLED] package `foo v0.0.1` (executable `foo[EXE]`)
+[WARNING] be sure to add `[..]` to your PATH to be able to run the installed binaries
 ",
         )
         .run();
@@ -63,16 +64,18 @@ fn multiple_pkgs() {
 [COMPILING] foo v0.0.1
 [FINISHED] release [optimized] target(s) in [..]
 [INSTALLING] [CWD]/home/.cargo/bin/foo[EXE]
+[INSTALLED] package `foo v0.0.1` (executable `foo[EXE]`)
 [DOWNLOADING] crates ...
 [DOWNLOADED] bar v0.0.2 (registry `[CWD]/registry`)
 [INSTALLING] bar v0.0.2
 [COMPILING] bar v0.0.2
 [FINISHED] release [optimized] target(s) in [..]
 [INSTALLING] [CWD]/home/.cargo/bin/bar[EXE]
-error: could not find `baz` in registry `[..]`
+[INSTALLED] package `bar v0.0.2` (executable `bar[EXE]`)
+[ERROR] could not find `baz` in registry `[..]`
 [SUMMARY] Successfully installed foo, bar! Failed to install baz (see error(s) above).
-warning: be sure to add `[..]` to your PATH to be able to run the installed binaries
-error: some crates failed to install
+[WARNING] be sure to add `[..]` to your PATH to be able to run the installed binaries
+[ERROR] some crates failed to install
 ",
         )
         .run();
@@ -111,7 +114,8 @@ fn pick_max_version() {
 [COMPILING] foo v0.2.1
 [FINISHED] release [optimized] target(s) in [..]
 [INSTALLING] [CWD]/home/.cargo/bin/foo[EXE]
-warning: be sure to add `[..]` to your PATH to be able to run the installed binaries
+[INSTALLED] package `foo v0.2.1` (executable `foo[EXE]`)
+[WARNING] be sure to add `[..]` to your PATH to be able to run the installed binaries
 ",
         )
         .run();
@@ -251,7 +255,6 @@ fn install_path() {
         .with_status(101)
         .with_stderr(
             "\
-[INSTALLING] foo v0.0.1 [..]
 [ERROR] binary `foo[..]` already exists in destination as part of `foo v0.0.1 [..]`
 Add --force to overwrite
 ",
@@ -427,8 +430,7 @@ fn no_binaries() {
         .with_status(101)
         .with_stderr(
             "\
-[INSTALLING] foo [..]
-[ERROR] specified package has no binaries
+[ERROR] specified package `foo v0.0.1 ([..])` has no binaries
 ",
         )
         .run();
@@ -461,7 +463,6 @@ fn install_twice() {
         .with_status(101)
         .with_stderr(
             "\
-[INSTALLING] foo v0.0.1 [..]
 [ERROR] binary `foo-bin1[..]` already exists in destination as part of `foo v0.0.1 ([..])`
 binary `foo-bin2[..]` already exists in destination as part of `foo v0.0.1 ([..])`
 Add --force to overwrite
@@ -490,7 +491,8 @@ fn install_force() {
 [COMPILING] foo v0.2.0 ([..])
 [FINISHED] release [optimized] target(s) in [..]
 [REPLACING] [CWD]/home/.cargo/bin/foo[EXE]
-warning: be sure to add `[..]` to your PATH to be able to run the installed binaries
+[REPLACED] package `foo v0.0.1 ([..]/foo)` with `foo v0.2.0 ([..]/foo2)` (executable `foo[EXE]`)
+[WARNING] be sure to add `[..]` to your PATH to be able to run the installed binaries
 ",
         )
         .run();
@@ -530,7 +532,9 @@ fn install_force_partial_overlap() {
 [FINISHED] release [optimized] target(s) in [..]
 [INSTALLING] [CWD]/home/.cargo/bin/foo-bin3[EXE]
 [REPLACING] [CWD]/home/.cargo/bin/foo-bin2[EXE]
-warning: be sure to add `[..]` to your PATH to be able to run the installed binaries
+[INSTALLED] package `foo v0.2.0 ([..]/foo2)` (executable `foo-bin3[EXE]`)
+[REPLACED] package `foo v0.0.1 ([..]/foo)` with `foo v0.2.0 ([..]/foo2)` (executable `foo-bin2[EXE]`)
+[WARNING] be sure to add `[..]` to your PATH to be able to run the installed binaries
 ",
         )
         .run();
@@ -572,7 +576,8 @@ fn install_force_bin() {
 [COMPILING] foo v0.2.0 ([..])
 [FINISHED] release [optimized] target(s) in [..]
 [REPLACING] [CWD]/home/.cargo/bin/foo-bin2[EXE]
-warning: be sure to add `[..]` to your PATH to be able to run the installed binaries
+[REPLACED] package `foo v0.0.1 ([..]/foo)` with `foo v0.2.0 ([..]/foo2)` (executable `foo-bin2[EXE]`)
+[WARNING] be sure to add `[..]` to your PATH to be able to run the installed binaries
 ",
         )
         .run();
@@ -627,7 +632,8 @@ fn git_repo() {
 [COMPILING] foo v0.1.0 ([..])
 [FINISHED] release [optimized] target(s) in [..]
 [INSTALLING] [CWD]/home/.cargo/bin/foo[EXE]
-warning: be sure to add `[..]` to your PATH to be able to run the installed binaries
+[INSTALLED] package `foo v0.1.0 ([..]/foo#[..])` (executable `foo[EXE]`)
+[WARNING] be sure to add `[..]` to your PATH to be able to run the installed binaries
 ",
         )
         .run();
@@ -809,7 +815,8 @@ fn uninstall_cwd() {
 [COMPILING] foo v0.0.1 ([CWD])
 [FINISHED] release [optimized] target(s) in [..]
 [INSTALLING] {home}/bin/foo[EXE]
-warning: be sure to add `{home}/bin` to your PATH to be able to run the installed binaries",
+[INSTALLED] package `foo v0.0.1 ([..]/foo)` (executable `foo[EXE]`)
+[WARNING] be sure to add `{home}/bin` to your PATH to be able to run the installed binaries",
             home = cargo_home().display(),
         ))
         .run();
@@ -868,10 +875,12 @@ fn do_not_rebuilds_on_local_install() {
     cargo_process("install --path")
         .arg(p.root())
         .with_stderr(
-            "[INSTALLING] [..]
+            "\
+[INSTALLING] [..]
 [FINISHED] release [optimized] target(s) in [..]
 [INSTALLING] [..]
-warning: be sure to add `[..]` to your PATH to be able to run the installed binaries
+[INSTALLED] package `foo v0.0.1 ([..]/foo)` (executable `foo[EXE]`)
+[WARNING] be sure to add `[..]` to your PATH to be able to run the installed binaries
 ",
         )
         .run();
@@ -1313,7 +1322,8 @@ fn workspace_uses_workspace_target_dir() {
             "[INSTALLING] [..]
 [FINISHED] release [optimized] target(s) in [..]
 [INSTALLING] [..]
-warning: be sure to add `[..]` to your PATH to be able to run the installed binaries
+[INSTALLED] package `bar v0.1.0 ([..]/bar)` (executable `bar[EXE]`)
+[WARNING] be sure to add `[..]` to your PATH to be able to run the installed binaries
 ",
         )
         .run();
@@ -1374,5 +1384,27 @@ fn install_path_config() {
     cargo_process("install --path foo")
         .with_status(101)
         .with_stderr_contains("[..]--target nonexistent[..]")
+        .run();
+}
+
+#[test]
+fn install_version_req() {
+    // Try using a few versionreq styles.
+    pkg("foo", "0.0.3");
+    pkg("foo", "1.0.4");
+    pkg("foo", "1.0.5");
+    cargo_process("install foo --version=*")
+        .with_stderr_does_not_contain("[WARNING][..]is not a valid semver[..]")
+        .with_stderr_contains("[INSTALLING] foo v1.0.5")
+        .run();
+    cargo_process("uninstall foo").run();
+    cargo_process("install foo --version=^1.0")
+        .with_stderr_does_not_contain("[WARNING][..]is not a valid semver[..]")
+        .with_stderr_contains("[INSTALLING] foo v1.0.5")
+        .run();
+    cargo_process("uninstall foo").run();
+    cargo_process("install foo --version=0.0.*")
+        .with_stderr_does_not_contain("[WARNING][..]is not a valid semver[..]")
+        .with_stderr_contains("[INSTALLING] foo v0.0.3")
         .run();
 }

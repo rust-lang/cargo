@@ -44,6 +44,7 @@ mod generate_lockfile;
 mod git;
 mod init;
 mod install;
+mod install_upgrade;
 mod jobserver;
 mod list_targets;
 mod local_registry;
