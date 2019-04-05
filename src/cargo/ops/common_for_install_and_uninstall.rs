@@ -186,6 +186,13 @@ impl InstallTracker {
         //
         // There may be multiple matching duplicates if different versions of
         // the same package installed different binaries.
+        //
+        // This does not check the source_id in order to allow the user to
+        // switch between different sources. For example, installing from git,
+        // and then switching to the official crates.io release or vice-versa.
+        // If the source_id were included, then the user would get possibly
+        // confusing errors like "package `foo 1.0.0` is already installed"
+        // and the change of source may not be obvious why it fails.
         let matching_duplicates: Vec<PackageId> = duplicates
             .values()
             .filter_map(|v| match v {
