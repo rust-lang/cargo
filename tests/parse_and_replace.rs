@@ -1,15 +1,15 @@
 #![cfg(not(windows))] // TODO: should fix these tests on Windows
 
-extern crate duct;
-extern crate env_logger;
+use duct;
+use env_logger;
 #[macro_use]
 extern crate log;
-extern crate rustfix;
-extern crate serde_json;
-extern crate tempdir;
+use rustfix;
+
+
 #[macro_use]
 extern crate failure;
-extern crate difference;
+
 
 use std::collections::HashSet;
 use std::ffi::OsString;
