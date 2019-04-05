@@ -89,9 +89,8 @@ enables overwriting existing binaries. Thus you can reinstall a crate with
 `cargo install --force <crate>`.
 
 Omitting the <crate> specification entirely will install the crate in the
-current directory. That is, `install` is equivalent to the more explicit
-`install --path .`. This behaviour is deprecated, and no longer supported as
-of the Rust 2018 edition.
+current directory. This behaviour is deprecated, and it no longer works in the
+Rust 2018 edition. Use the more explicit `install --path .` instead.
 
 If the source is crates.io or `--git` then by default the crate will be built
 in a temporary target directory. To avoid this, the target directory can be
