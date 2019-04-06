@@ -110,6 +110,72 @@ fn simple_cross_config() {
 }
 
 #[test]
+fn cross_config_build_target() {
+    if cross_compile::disabled() {
+        return;
+    }
+
+    let p = project()
+        .file(
+            ".cargo/config",
+            &format!(
+                r#"
+                [build]
+                build-target = "{}"
+            "#,
+                cross_compile::alternate()
+            ),
+        )
+        .file(
+            "Cargo.toml",
+            r#"
+            [package]
+            name = "foo"
+            version = "0.0.0"
+            authors = []
+            build = "build.rs"
+        "#,
+        )
+        .file(
+            "build.rs",
+            r#"
+            fn main() {{
+                println!("cargo:rustc-env=TARGET={}", std::env::var("TARGET").unwrap());
+            }}
+        "#,
+        )
+        .file(
+            "src/main.rs",
+            &format!(
+                r#"
+            use std::env;
+            fn main() {{
+                assert_eq!(env::consts::ARCH, "{arch}");
+                assert_eq!(env!("TARGET"), "{target}");
+            }}
+
+            #[test]
+            fn test_host_target() {{
+                assert_eq!(env!("TARGET"), "{host}");
+            }}
+        "#,
+                target = cross_compile::alternate(),
+                arch = cross_compile::alternate_arch(),
+                host = cross_compile::host(),
+            ),
+        )
+        .build();
+
+    let target = cross_compile::alternate();
+
+    p.cargo("build -v").run();
+    assert!(p.target_bin(&target, "foo").is_file());
+    p.process(&p.target_bin(&target, "foo")).run();
+
+    p.cargo("test -v").run();
+}
+
+#[test]
 fn simple_deps() {
     if cross_compile::disabled() {
         return;
