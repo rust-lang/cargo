@@ -124,10 +124,13 @@ debug = false
 jobs = 1                  # number of parallel jobs, defaults to # of CPUs
 rustc = "rustc"           # the rust compiler tool
 rustdoc = "rustdoc"       # the doc generator tool
-target = "triple"         # build and test for the target triple
-                          # (ignored by `cargo install`)
-build-target = "triple"   # build for the target triple, overrides `build.target`
-                          # (ignored by `cargo install`)
+target = "triple"         # the default target triple when no `--target` is
+                          # passed (ignored by `cargo install`)
+build-target = "triple"   # the default target triple for build commands such
+                          # as `build`, `check`, or `run`, but not for test
+                          # commands such as test or bench. Ignored by
+                          # `cargo install`. Takes precendence over
+                          # `build.target`.
 target-dir = "target"     # path of where to place all generated artifacts
 rustflags = ["..", ".."]  # custom flags to pass to all compiler invocations
 rustdocflags = ["..", ".."]  # custom flags to pass to rustdoc
