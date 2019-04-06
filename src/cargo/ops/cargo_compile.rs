@@ -182,6 +182,17 @@ impl Packages {
         };
         Ok(packages)
     }
+
+    /// Returns whether or not the user needs to pass a `-p` flag to target a
+    /// specific package in the workspace.
+    pub fn needs_spec_flag(&self, ws: &Workspace<'_>) -> bool {
+        match self {
+            Packages::Default => ws.default_members().count() > 1,
+            Packages::All => ws.members().count() > 1,
+            Packages::Packages(_) => true,
+            Packages::OptOut(_) => true,
+        }
+    }
 }
 
 #[derive(Debug, PartialEq, Eq)]
