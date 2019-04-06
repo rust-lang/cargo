@@ -38,6 +38,7 @@ impl BuildConfig {
     ///
     /// * `build.jobs`
     /// * `build.target`
+    /// * `build.build-target`
     /// * `target.$target.ar`
     /// * `target.$target.linker`
     /// * `target.$target.libfoo.metadata`
@@ -65,16 +66,24 @@ impl BuildConfig {
                 failure::bail!("target was empty")
             }
         }
-        let cfg_target = match config.get_string("build.target")? {
-            Some(ref target) if target.val.ends_with(".json") => {
-                let path = target.definition.root(config).join(&target.val);
-                let path_string = path
-                    .into_os_string()
-                    .into_string()
-                    .map_err(|_| failure::format_err!("Target path is not valid unicode"));
-                Some(path_string?)
+        let cfg_target = {
+            let target = config.get_string("build.target")?;
+            let build_target = if !mode.is_any_test() {
+                config.get_string("build.build-target")?
+            } else {
+                None
+            };
+            match build_target.or(target) {
+                Some(ref target) if target.val.ends_with(".json") => {
+                    let path = target.definition.root(config).join(&target.val);
+                    let path_string = path
+                        .into_os_string()
+                        .into_string()
+                        .map_err(|_| failure::format_err!("Target path is not valid unicode"));
+                    Some(path_string?)
+                }
+                other => other.map(|t| t.val),
             }
-            other => other.map(|t| t.val),
         };
         let target = requested_target.or(cfg_target);
 
