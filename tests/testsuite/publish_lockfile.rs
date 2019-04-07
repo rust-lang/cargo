@@ -1,25 +1,37 @@
 use std;
 use std::fs::File;
 
-use crate::support::{git, paths, project, publish::validate_crate_contents};
+use crate::support::registry::Package;
+use crate::support::{
+    basic_manifest, cargo_process, git, paths, project, publish::validate_crate_contents,
+};
+
+fn pl_manifest(name: &str, version: &str, extra: &str) -> String {
+    format!(
+        r#"
+        cargo-features = ["publish-lockfile"]
+
+        [project]
+        name = "{}"
+        version = "{}"
+        authors = []
+        license = "MIT"
+        description = "foo"
+        documentation = "foo"
+        homepage = "foo"
+        repository = "foo"
+        publish-lockfile = true
+
+        {}
+        "#,
+        name, version, extra
+    )
+}
 
 #[test]
 fn package_lockfile() {
     let p = project()
-        .file(
-            "Cargo.toml",
-            r#"
-            cargo-features = ["publish-lockfile"]
-
-            [project]
-            name = "foo"
-            version = "0.0.1"
-            authors = []
-            license = "MIT"
-            description = "foo"
-            publish-lockfile = true
-        "#,
-        )
+        .file("Cargo.toml", &pl_manifest("foo", "0.0.1", ""))
         .file("src/main.rs", "fn main() {}")
         .build();
 
@@ -27,8 +39,6 @@ fn package_lockfile() {
         .masquerade_as_nightly_cargo()
         .with_stderr(
             "\
-[WARNING] manifest has no documentation[..]
-See [..]
 [PACKAGING] foo v0.0.1 ([CWD])
 [VERIFYING] foo v0.0.1 ([CWD])
 [COMPILING] foo v0.0.1 ([CWD][..])
@@ -63,29 +73,13 @@ src/main.rs
 
 #[test]
 fn package_lockfile_git_repo() {
-    let p = project().build();
-
     // Create a Git repository containing a minimal Rust project.
-    let _ = git::repo(&paths::root().join("foo"))
-        .file(
-            "Cargo.toml",
-            r#"
-            cargo-features = ["publish-lockfile"]
-
-            [project]
-            name = "foo"
-            version = "0.0.1"
-            license = "MIT"
-            description = "foo"
-            documentation = "foo"
-            homepage = "foo"
-            repository = "foo"
-            publish-lockfile = true
-        "#,
-        )
+    let g = git::repo(&paths::root().join("foo"))
+        .file("Cargo.toml", &pl_manifest("foo", "0.0.1", ""))
         .file("src/main.rs", "fn main() {}")
         .build();
-    p.cargo("package -l")
+    cargo_process("package -l")
+        .cwd(g.root())
         .masquerade_as_nightly_cargo()
         .with_stdout(
             "\
@@ -101,20 +95,7 @@ src/main.rs
 #[test]
 fn no_lock_file_with_library() {
     let p = project()
-        .file(
-            "Cargo.toml",
-            r#"
-            cargo-features = ["publish-lockfile"]
-
-            [project]
-            name = "foo"
-            version = "0.0.1"
-            authors = []
-            license = "MIT"
-            description = "foo"
-            publish-lockfile = true
-        "#,
-        )
+        .file("Cargo.toml", &pl_manifest("foo", "0.0.1", ""))
         .file("src/lib.rs", "")
         .build();
 
@@ -139,20 +120,7 @@ fn lock_file_and_workspace() {
             members = ["foo"]
         "#,
         )
-        .file(
-            "foo/Cargo.toml",
-            r#"
-            cargo-features = ["publish-lockfile"]
-
-            [package]
-            name = "foo"
-            version = "0.0.1"
-            authors = []
-            license = "MIT"
-            description = "foo"
-            publish-lockfile = true
-        "#,
-        )
+        .file("foo/Cargo.toml", &pl_manifest("foo", "0.0.1", ""))
         .file("foo/src/main.rs", "fn main() {}")
         .build();
 
@@ -168,4 +136,173 @@ fn lock_file_and_workspace() {
         &["Cargo.toml", "Cargo.toml.orig", "src/main.rs", "Cargo.lock"],
         &[],
     );
+}
+
+#[test]
+fn warn_resolve_changes() {
+    // `multi` has multiple sources (path and registry).
+    Package::new("mutli", "0.1.0").publish();
+    // `updated` is always from registry, but should not change.
+    Package::new("updated", "1.0.0").publish();
+    // `patched` is [patch]ed.
+    Package::new("patched", "1.0.0").publish();
+
+    let p = project()
+        .file(
+            "Cargo.toml",
+            &pl_manifest(
+                "foo",
+                "0.0.1",
+                r#"
+                [dependencies]
+                mutli = { path = "mutli", version = "0.1" }
+                updated = "1.0"
+                patched = "1.0"
+
+                [patch.crates-io]
+                patched = { path = "patched" }
+                "#,
+            ),
+        )
+        .file("src/main.rs", "fn main() {}")
+        .file("mutli/Cargo.toml", &basic_manifest("mutli", "0.1.0"))
+        .file("mutli/src/lib.rs", "")
+        .file("patched/Cargo.toml", &basic_manifest("patched", "1.0.0"))
+        .file("patched/src/lib.rs", "")
+        .build();
+
+    p.cargo("generate-lockfile")
+        .masquerade_as_nightly_cargo()
+        .run();
+
+    // Make sure this does not change or warn.
+    Package::new("updated", "1.0.1").publish();
+
+    p.cargo("package --no-verify")
+        .masquerade_as_nightly_cargo()
+        .with_stderr_unordered(
+            "\
+[PACKAGING] foo v0.0.1 ([..])
+[UPDATING] `[..]` index
+[WARNING] package `mutli v0.1.0` added to Cargo.lock, was originally sourced from `[..]/foo/mutli`
+[WARNING] package `patched v1.0.0` added to Cargo.lock, was originally sourced from `[..]/foo/patched`
+",
+        )
+        .run();
+}
+
+#[test]
+fn outdated_lock_version_change_does_not_warn() {
+    // If the version of the package being packaged changes, but Cargo.lock is
+    // not updated, don't bother warning about it.
+    let p = project()
+        .file("Cargo.toml", &pl_manifest("foo", "0.1.0", ""))
+        .file("src/main.rs", "fn main() {}")
+        .build();
+
+    p.cargo("generate-lockfile")
+        .masquerade_as_nightly_cargo()
+        .run();
+
+    p.change_file("Cargo.toml", &pl_manifest("foo", "0.2.0", ""));
+
+    p.cargo("package --no-verify")
+        .masquerade_as_nightly_cargo()
+        .with_stderr("[PACKAGING] foo v0.2.0 ([..])")
+        .run();
+}
+
+#[test]
+fn no_warn_workspace_extras() {
+    // Other entries in workspace lock file should be ignored.
+    Package::new("dep1", "1.0.0").publish();
+    Package::new("dep2", "1.0.0").publish();
+
+    let p = project()
+        .file(
+            "Cargo.toml",
+            r#"
+            [workspace]
+            members = ["a", "b"]
+            "#,
+        )
+        .file(
+            "a/Cargo.toml",
+            &pl_manifest(
+                "a",
+                "0.1.0",
+                r#"
+                [dependencies]
+                dep1 = "1.0"
+                "#,
+            ),
+        )
+        .file("a/src/main.rs", "fn main() {}")
+        .file(
+            "b/Cargo.toml",
+            &pl_manifest(
+                "b",
+                "0.1.0",
+                r#"
+                [dependencies]
+                dep2 = "1.0"
+                "#,
+            ),
+        )
+        .file("b/src/main.rs", "fn main() {}")
+        .build();
+    p.cargo("generate-lockfile")
+        .masquerade_as_nightly_cargo()
+        .run();
+    p.cargo("package --no-verify")
+        .cwd("a")
+        .masquerade_as_nightly_cargo()
+        .with_stderr("[PACKAGING] a v0.1.0 ([..])")
+        .run();
+}
+
+#[test]
+fn out_of_date_lock_warn() {
+    // Dependency is force-changed from an out-of-date Cargo.lock.
+    Package::new("dep", "1.0.0").publish();
+    Package::new("dep", "2.0.0").publish();
+
+    let p = project()
+        .file(
+            "Cargo.toml",
+            &pl_manifest(
+                "foo",
+                "0.0.1",
+                r#"
+                [dependencies]
+                dep = "1.0"
+                "#,
+            ),
+        )
+        .file("src/main.rs", "fn main() {}")
+        .build();
+    p.cargo("generate-lockfile")
+        .masquerade_as_nightly_cargo()
+        .run();
+    p.change_file(
+        "Cargo.toml",
+        &pl_manifest(
+            "foo",
+            "0.0.1",
+            r#"
+            [dependencies]
+            dep = "2.0"
+            "#,
+        ),
+    );
+    p.cargo("package --no-verify")
+        .masquerade_as_nightly_cargo()
+        .with_stderr(
+            "\
+[PACKAGING] foo v0.0.1 ([..])
+[UPDATING] `[..]` index
+[WARNING] package `dep v2.0.0` added to Cargo.lock, previous version was `1.0.0`
+",
+        )
+        .run();
 }
