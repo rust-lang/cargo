@@ -1,18 +1,18 @@
-use std::collections::HashMap;
+use std::collections::{BTreeSet, HashMap};
 use std::fs::{self, File};
 use std::io::prelude::*;
 use std::io::SeekFrom;
 use std::path::{self, Path, PathBuf};
 use std::sync::Arc;
 
-use flate2::read::GzDecoder;
 use flate2::{Compression, GzBuilder};
 use log::debug;
 use serde_json::{self, json};
-use tar::{Archive, Builder, EntryType, Header};
+use tar::{Builder, EntryType, Header};
 
 use crate::core::compiler::{BuildConfig, CompileMode, DefaultExecutor, Executor};
-use crate::core::{Package, Source, SourceId, Workspace};
+use crate::core::resolver::Method;
+use crate::core::{Package, PackageId, PackageIdSpec, Resolve, Source, SourceId, Workspace};
 use crate::ops;
 use crate::sources::PathSource;
 use crate::util::errors::{CargoResult, CargoResultExt};
@@ -35,7 +35,6 @@ pub struct PackageOpts<'cfg> {
 static VCS_INFO_FILE: &'static str = ".cargo_vcs_info.json";
 
 pub fn package(ws: &Workspace<'_>, opts: &PackageOpts<'_>) -> CargoResult<Option<FileLock>> {
-    ops::resolve_ws(ws)?;
     let pkg = ws.current()?;
     let config = ws.config();
 
@@ -100,7 +99,7 @@ pub fn package(ws: &Workspace<'_>, opts: &PackageOpts<'_>) -> CargoResult<Option
         .shell()
         .status("Packaging", pkg.package_id().to_string())?;
     dst.file().set_len(0)?;
-    tar(ws, &src_files, vcs_info.as_ref(), dst.file(), &filename)
+    tar(ws, &src_files, vcs_info.as_ref(), &dst, &filename)
         .chain_err(|| failure::format_err!("failed to prepare local package for uploading"))?;
     if opts.verify {
         dst.seek(SeekFrom::Start(0))?;
@@ -281,35 +280,43 @@ fn tar(
     ws: &Workspace<'_>,
     src_files: &[PathBuf],
     vcs_info: Option<&serde_json::Value>,
-    dst: &File,
+    dst: &FileLock,
     filename: &str,
 ) -> CargoResult<()> {
     // Prepare the encoder and its header.
     let filename = Path::new(filename);
     let encoder = GzBuilder::new()
         .filename(util::path2bytes(filename)?)
-        .write(dst, Compression::best());
+        .write(dst.file(), Compression::best());
 
     // Put all package files into a compressed archive.
     let mut ar = Builder::new(encoder);
     let pkg = ws.current()?;
     let config = ws.config();
     let root = pkg.root();
-    for file in src_files.iter() {
-        let relative = file.strip_prefix(root)?;
+    // While creating the tar file, also copy to the output directory.
+    let dest_copy_root = dst
+        .parent()
+        .join(format!("{}-{}", pkg.name(), pkg.version()));
+    if dest_copy_root.exists() {
+        paths::remove_dir_all(&dest_copy_root)?;
+    }
+    fs::create_dir_all(&dest_copy_root)?;
+    for src_file in src_files {
+        let relative = src_file.strip_prefix(root)?;
         check_filename(relative)?;
-        let relative = relative.to_str().ok_or_else(|| {
+        let relative_str = relative.to_str().ok_or_else(|| {
             failure::format_err!("non-utf8 path in source directory: {}", relative.display())
         })?;
         config
             .shell()
-            .verbose(|shell| shell.status("Archiving", &relative))?;
+            .verbose(|shell| shell.status("Archiving", &relative_str))?;
         let path = format!(
             "{}-{}{}{}",
             pkg.name(),
             pkg.version(),
             path::MAIN_SEPARATOR,
-            relative
+            relative_str
         );
 
         // The `tar::Builder` type by default will build GNU archives, but
@@ -333,20 +340,21 @@ fn tar(
         let mut header = Header::new_ustar();
         header
             .set_path(&path)
-            .chain_err(|| format!("failed to add to archive: `{}`", relative))?;
-        let mut file = File::open(file)
-            .chain_err(|| format!("failed to open for archiving: `{}`", file.display()))?;
+            .chain_err(|| format!("failed to add to archive: `{}`", relative_str))?;
+        let mut file = File::open(src_file)
+            .chain_err(|| format!("failed to open for archiving: `{}`", src_file.display()))?;
         let metadata = file
             .metadata()
-            .chain_err(|| format!("could not learn metadata for: `{}`", relative))?;
+            .chain_err(|| format!("could not learn metadata for: `{}`", relative_str))?;
         header.set_metadata(&metadata);
 
-        if relative == "Cargo.toml" {
+        if relative_str == "Cargo.toml" {
             let orig = Path::new(&path).with_file_name("Cargo.toml.orig");
             header.set_path(&orig)?;
             header.set_cksum();
-            ar.append(&header, &mut file)
-                .chain_err(|| internal(format!("could not archive source file `{}`", relative)))?;
+            ar.append(&header, &mut file).chain_err(|| {
+                internal(format!("could not archive source file `{}`", relative_str))
+            })?;
 
             let mut header = Header::new_ustar();
             let toml = pkg.to_registry_toml(ws.config())?;
@@ -355,12 +363,22 @@ fn tar(
             header.set_mode(0o644);
             header.set_size(toml.len() as u64);
             header.set_cksum();
-            ar.append(&header, toml.as_bytes())
-                .chain_err(|| internal(format!("could not archive source file `{}`", relative)))?;
+            ar.append(&header, toml.as_bytes()).chain_err(|| {
+                internal(format!("could not archive source file `{}`", relative_str))
+            })?;
+            fs::write(dest_copy_root.join(relative), toml)?;
+            fs::copy(src_file, dest_copy_root.join("Cargo.toml.orig"))?;
         } else {
             header.set_cksum();
-            ar.append(&header, &mut file)
-                .chain_err(|| internal(format!("could not archive source file `{}`", relative)))?;
+            ar.append(&header, &mut file).chain_err(|| {
+                internal(format!("could not archive source file `{}`", relative_str))
+            })?;
+            let dest = dest_copy_root.join(relative);
+            let parent = dest.parent().unwrap();
+            if !parent.exists() {
+                fs::create_dir_all(parent)?;
+            }
+            fs::copy(src_file, dest)?;
         }
     }
 
@@ -394,7 +412,27 @@ fn tar(
     }
 
     if include_lockfile(pkg) {
-        let toml = paths::read(&ws.root().join("Cargo.lock"))?;
+        let orig_lock_path = ws.root().join("Cargo.lock");
+        let new_lock_path = dest_copy_root.join("Cargo.lock");
+        if orig_lock_path.exists() {
+            fs::copy(&orig_lock_path, &new_lock_path)?;
+        }
+
+        // Regenerate Cargo.lock using the old one as a guide.
+        let orig_resolve = ops::load_pkg_lockfile(ws)?;
+        let id = SourceId::for_path(&dest_copy_root)?;
+        let mut src = PathSource::new(&dest_copy_root, id, ws.config());
+        let new_pkg = src.root_package()?;
+        let specs = vec![PackageIdSpec::from_package_id(new_pkg.package_id())];
+        let tmp_ws = Workspace::ephemeral(new_pkg, config, None, true)?;
+        let new_resolve = ops::resolve_ws_with_method(&tmp_ws, None, Method::Everything, &specs)?.1;
+        // resolve_ws_with_method won't save for ephemeral, do it manually.
+        ops::write_pkg_lockfile(&tmp_ws, &new_resolve)?;
+        if let Some(orig_resolve) = orig_resolve {
+            compare_resolve(config, tmp_ws.current()?, &orig_resolve, &new_resolve)?;
+        }
+
+        let toml = paths::read(&new_lock_path)?;
         let path = format!(
             "{}-{}{}Cargo.lock",
             pkg.name(),
@@ -416,24 +454,97 @@ fn tar(
     Ok(())
 }
 
+/// Generate warnings when packaging Cargo.lock, and the resolve have changed.
+fn compare_resolve(
+    config: &Config,
+    current_pkg: &Package,
+    orig_resolve: &Resolve,
+    new_resolve: &Resolve,
+) -> CargoResult<()> {
+    let new_set: BTreeSet<PackageId> = new_resolve.iter().collect();
+    let orig_set: BTreeSet<PackageId> = orig_resolve.iter().collect();
+    let added = new_set.difference(&orig_set);
+    // Removed entries are ignored, this is used to quickly find hints for why
+    // an entry changed.
+    let removed: Vec<&PackageId> = orig_set.difference(&new_set).collect();
+    for pkg_id in added {
+        if pkg_id.name() == current_pkg.name() && pkg_id.version() == current_pkg.version() {
+            // Skip the package that is being created, since its SourceId
+            // (directory) changes.
+            continue;
+        }
+        // Check for candidates where the source has changed (such as [patch]
+        // or a dependency with multiple sources like path/version).
+        let removed_candidates: Vec<&PackageId> = removed
+            .iter()
+            .filter(|orig_pkg_id| {
+                orig_pkg_id.name() == pkg_id.name() && orig_pkg_id.version() == pkg_id.version()
+            })
+            .cloned()
+            .collect();
+        let extra = match removed_candidates.len() {
+            0 => {
+                // This can happen if the original was out of date.
+                let previous_versions: Vec<&PackageId> = removed
+                    .iter()
+                    .filter(|orig_pkg_id| orig_pkg_id.name() == pkg_id.name())
+                    .cloned()
+                    .collect();
+                match previous_versions.len() {
+                    0 => String::new(),
+                    1 => format!(
+                        ", previous version was `{}`",
+                        previous_versions[0].version()
+                    ),
+                    _ => format!(
+                        ", previous versions were: {}",
+                        previous_versions
+                            .iter()
+                            .map(|pkg_id| format!("`{}`", pkg_id.version()))
+                            .collect::<Vec<_>>()
+                            .join(", ")
+                    ),
+                }
+            }
+            1 => {
+                // This can happen for multi-sourced dependencies like
+                // `{path="...", version="..."}` or `[patch]` replacement.
+                // `[replace]` is not captured in Cargo.lock.
+                format!(
+                    ", was originally sourced from `{}`",
+                    removed_candidates[0].source_id()
+                )
+            }
+            _ => {
+                // I don't know if there is a way to actually trigger this,
+                // but handle it just in case.
+                let comma_list = removed_candidates
+                    .iter()
+                    .map(|pkg_id| format!("`{}`", pkg_id.source_id()))
+                    .collect::<Vec<_>>()
+                    .join(", ");
+                format!(
+                    ", was originally sourced from one of these sources: {}",
+                    comma_list
+                )
+            }
+        };
+        config
+            .shell()
+            .warn(format!("package `{}` added to Cargo.lock{}", pkg_id, extra))?;
+    }
+    Ok(())
+}
+
 fn run_verify(ws: &Workspace<'_>, tar: &FileLock, opts: &PackageOpts<'_>) -> CargoResult<()> {
     let config = ws.config();
     let pkg = ws.current()?;
 
     config.shell().status("Verifying", pkg)?;
 
-    let f = GzDecoder::new(tar.file());
     let dst = tar
         .parent()
         .join(&format!("{}-{}", pkg.name(), pkg.version()));
-    if dst.exists() {
-        paths::remove_dir_all(&dst)?;
-    }
-    let mut archive = Archive::new(f);
-    // We don't need to set the Modified Time, as it's not relevant to verification
-    // and it errors on filesystems that don't support setting a modified timestamp
-    archive.set_preserve_mtime(false);
-    archive.unpack(dst.parent().unwrap())?;
 
     // Manufacture an ephemeral workspace to ensure that even if the top-level
     // package has a workspace we can still build our new crate.
