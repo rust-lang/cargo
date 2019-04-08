@@ -505,6 +505,37 @@ fn package_git_submodule() {
 }
 
 #[cargo_test]
+fn package_symlink_to_submodule() {
+    let project = git::new("foo", |project| {
+        project
+            .file("src/lib.rs", "pub fn foo() {}")
+            .symlink("submodule", "submodule-link")
+        }).unwrap();
+
+    let library = git::new("submodule", |library| {
+        library.no_manifest().file("Makefile", "all:")
+    }).unwrap();
+
+    let repository = git2::Repository::open(&project.root()).unwrap();
+    let url = path2url(library.root()).to_string();
+    git::add_submodule(&repository, &url, Path::new("submodule"));
+    git::commit(&repository);
+
+    let repository = git2::Repository::open(&project.root().join("submodule")).unwrap();
+    repository
+        .reset(
+            &repository.revparse_single("HEAD").unwrap(),
+            git2::ResetType::Hard,
+            None
+        ).unwrap();
+
+    project
+        .cargo("package --no-verify -v")
+        .with_stderr_contains("[ARCHIVING] submodule/Makefile")
+        .run();
+}
+
+#[cargo_test]
 fn no_duplicates_from_modified_tracked_files() {
     let root = paths::root().join("all");
     let p = git::repo(&root)
@@ -696,6 +727,18 @@ Caused by:
   [..]
 ",
         )
+        .run();
+}
+
+#[cargo_test]
+fn package_symlink_to_dir() {
+    project()
+        .file("src/main.rs", r#"fn main() { println!("hello"); }"#)
+        .file("bla/Makefile", "all:")
+        .symlink_dir("bla", "foo")
+        .build()
+        .cargo("package -v")
+        .with_stderr_contains("[ARCHIVING] foo/Makefile")
         .run();
 }
 
