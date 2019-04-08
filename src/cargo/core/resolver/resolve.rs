@@ -1,7 +1,6 @@
 use std::borrow::Borrow;
 use std::collections::{HashMap, BTreeMap};
 use std::fmt;
-use std::iter::FromIterator;
 
 use url::Url;
 
