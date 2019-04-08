@@ -1190,6 +1190,8 @@ fn custom_target_dir_for_git_source() {
 
 #[test]
 fn install_respects_lock_file() {
+    // `cargo install` now requires --locked to use a Cargo.lock for non
+    // --path installs.
     Package::new("bar", "0.1.0").publish();
     Package::new("bar", "0.1.1")
         .file("src/lib.rs", "not rust")
@@ -1219,7 +1221,52 @@ dependencies = [
         )
         .publish();
 
-    cargo_process("install foo").run();
+    cargo_process("install foo")
+        .with_stderr_contains("[..]not rust[..]")
+        .with_status(101)
+        .run();
+    cargo_process("install --locked foo").run();
+}
+
+#[test]
+fn install_path_respects_lock_file() {
+    // For --path installs, always use local Cargo.lock.
+    Package::new("bar", "0.1.0").publish();
+    Package::new("bar", "0.1.1")
+        .file("src/lib.rs", "not rust")
+        .publish();
+    let p = project()
+        .file(
+            "Cargo.toml",
+            r#"
+            [package]
+            name = "foo"
+            version = "0.1.0"
+
+            [dependencies]
+            bar = "0.1"
+            "#,
+        )
+        .file("src/main.rs", "extern crate bar; fn main() {}")
+        .file(
+            "Cargo.lock",
+            r#"
+[[package]]
+name = "bar"
+version = "0.1.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+
+[[package]]
+name = "foo"
+version = "0.1.0"
+dependencies = [
+ "bar 0.1.0 (registry+https://github.com/rust-lang/crates.io-index)",
+]
+"#,
+        )
+        .build();
+
+    p.cargo("install --path .").run();
 }
 
 #[test]

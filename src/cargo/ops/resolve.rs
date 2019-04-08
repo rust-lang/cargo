@@ -64,7 +64,9 @@ pub fn resolve_ws_with_method<'a>(
     }
     let mut add_patches = true;
 
-    let resolve = if ws.require_optional_deps() {
+    let resolve = if ws.ignore_lock() {
+        None
+    } else if ws.require_optional_deps() {
         // First, resolve the root_package's *listed* dependencies, as well as
         // downloading and updating all remotes and such.
         let resolve = resolve_with_registry(ws, &mut registry, false)?;
