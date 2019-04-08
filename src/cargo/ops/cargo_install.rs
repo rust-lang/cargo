@@ -215,7 +215,11 @@ fn install_one(
     };
 
     let ws = match overidden_target_dir {
-        Some(dir) => Workspace::ephemeral(pkg, config, Some(dir), false)?,
+        Some(dir) => {
+            let mut ws = Workspace::ephemeral(pkg, config, Some(dir), false)?;
+            ws.set_ignore_lock(config.lock_update_allowed());
+            ws
+        }
         None => {
             let mut ws = Workspace::new(pkg.manifest_path(), config)?;
             ws.set_require_optional_deps(false);

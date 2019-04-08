@@ -77,6 +77,10 @@ pub struct Workspace<'cfg> {
     // A cache of loaded packages for particular paths which is disjoint from
     // `packages` up above, used in the `load` method down below.
     loaded_packages: RefCell<HashMap<PathBuf, Package>>,
+
+    // If `true`, then the resolver will ignore any existing `Cargo.lock`
+    // file. This is set for `cargo install` without `--locked`.
+    ignore_lock: bool,
 }
 
 // Separate structure for tracking loaded packages (to avoid loading anything
@@ -148,6 +152,7 @@ impl<'cfg> Workspace<'cfg> {
             is_ephemeral: false,
             require_optional_deps: true,
             loaded_packages: RefCell::new(HashMap::new()),
+            ignore_lock: false,
         };
         ws.root_manifest = ws.find_root(manifest_path)?;
         ws.find_members()?;
@@ -184,6 +189,7 @@ impl<'cfg> Workspace<'cfg> {
             is_ephemeral: true,
             require_optional_deps,
             loaded_packages: RefCell::new(HashMap::new()),
+            ignore_lock: false,
         };
         {
             let key = ws.current_manifest.parent().unwrap();
@@ -320,11 +326,20 @@ impl<'cfg> Workspace<'cfg> {
         self.require_optional_deps
     }
 
-    pub fn set_require_optional_deps<'a>(
-        &'a mut self,
+    pub fn set_require_optional_deps(
+        &mut self,
         require_optional_deps: bool,
     ) -> &mut Workspace<'cfg> {
         self.require_optional_deps = require_optional_deps;
+        self
+    }
+
+    pub fn ignore_lock(&self) -> bool {
+        self.ignore_lock
+    }
+
+    pub fn set_ignore_lock(&mut self, ignore_lock: bool) -> &mut Workspace<'cfg> {
+        self.ignore_lock = ignore_lock;
         self
     }
 
