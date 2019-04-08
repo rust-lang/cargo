@@ -3270,7 +3270,7 @@ fn test_hint_not_masked_by_doctest() {
 }
 
 #[test]
-fn test_hint_workspace() {
+fn test_hint_workspace_virtual() {
     let p = project()
         .file(
             "Cargo.toml",
@@ -3287,6 +3287,40 @@ fn test_hint_workspace() {
 
     p.cargo("test")
         .with_stderr_contains("[ERROR] test failed, to rerun pass '-p b --lib'")
+        .with_status(101)
+        .run();
+    p.cargo("test")
+        .cwd("b")
+        .with_stderr_contains("[ERROR] test failed, to rerun pass '--lib'")
+        .with_status(101)
+        .run();
+}
+
+#[test]
+fn test_hint_workspace_nonvirtual() {
+    let p = project()
+        .file(
+            "Cargo.toml",
+            r#"
+            [package]
+            name = "foo"
+            version = "0.1.0"
+
+            [workspace]
+            members = ["a"]
+            "#,
+        )
+        .file("src/lib.rs", "")
+        .file("a/Cargo.toml", &basic_manifest("a", "0.1.0"))
+        .file("a/src/lib.rs", "#[test] fn t1() {assert!(false)}")
+        .build();
+
+    p.cargo("test --all")
+        .with_stderr_contains("[ERROR] test failed, to rerun pass '-p a --lib'")
+        .with_status(101)
+        .run();
+    p.cargo("test -p a")
+        .with_stderr_contains("[ERROR] test failed, to rerun pass '-p a --lib'")
         .with_status(101)
         .run();
 }
