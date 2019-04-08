@@ -2,6 +2,7 @@ use clap;
 
 use clap::{AppSettings, Arg, ArgMatches};
 
+use cargo::core::features;
 use cargo::{self, CliResult, Config};
 
 use super::commands;
@@ -34,8 +35,22 @@ Available unstable (nightly-only) flags:
     -Z offline          -- Offline mode that does not perform network requests
     -Z unstable-options -- Allow the usage of unstable options such as --registry
     -Z config-profile   -- Read profiles from .cargo/config files
+    -Z install-upgrade  -- `cargo install` will upgrade instead of failing
 
 Run with 'cargo -Z [FLAG] [SUBCOMMAND]'"
+        );
+        if !features::nightly_features_allowed() {
+            println!(
+                "\nUnstable flags are only available on the nightly channel \
+                 of Cargo, but this is the `{}` channel.\n\
+                 {}",
+                features::channel(),
+                features::SEE_CHANNELS
+            );
+        }
+        println!(
+            "\nSee https://doc.rust-lang.org/nightly/cargo/reference/unstable.html \
+             for more information about these flags."
         );
         return Ok(());
     }
@@ -47,8 +62,8 @@ Run with 'cargo -Z [FLAG] [SUBCOMMAND]'"
         return Ok(());
     }
 
-    if let Some(ref code) = args.value_of("explain") {
-        let mut procss = config.rustc(None)?.process();
+    if let Some(code) = args.value_of("explain") {
+        let mut procss = config.load_global_rustc(None)?.process();
         procss.arg("--explain").arg(code).exec()?;
         return Ok(());
     }
@@ -145,7 +160,7 @@ fn execute_subcommand(config: &mut Config, args: &ArgMatches<'_>) -> CliResult {
 
     config.configure(
         args.occurrences_of("verbose") as u32,
-        if args.is_present("quiet") {
+        if args.is_present("quiet") || subcommand_args.is_present("quiet") {
             Some(true)
         } else {
             None
@@ -217,11 +232,7 @@ See 'cargo help <command>' for more information on a specific command.\n",
             .multiple(true)
             .global(true),
         )
-        .arg(
-            opt("quiet", "No output printed to stdout")
-                .short("q")
-                .global(true),
-        )
+        .arg(opt("quiet", "No output printed to stdout").short("q"))
         .arg(
             opt("color", "Coloring: auto, always, never")
                 .value_name("WHEN")

@@ -7,6 +7,7 @@ use cargo::util::ToUrl;
 pub fn cli() -> App {
     subcommand("git-checkout")
         .about("Checkout a copy of a Git repository")
+        .arg(opt("quiet", "No output printed to stdout").short("q"))
         .arg(
             Arg::with_name("url")
                 .long("url")

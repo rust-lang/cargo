@@ -2,8 +2,6 @@ use std::fs::{self, File};
 use std::io::Read;
 use std::str;
 
-use glob::glob;
-
 use crate::support::paths::CargoPathExt;
 use crate::support::registry::Package;
 use crate::support::{basic_lib_manifest, basic_manifest, git, project};
@@ -113,23 +111,8 @@ fn doc_deps() {
     assert!(p.root().join("target/doc/bar/index.html").is_file());
 
     // Verify that it only emits rmeta for the dependency.
-    assert_eq!(
-        glob(&p.root().join("target/debug/**/*.rlib").to_str().unwrap())
-            .unwrap()
-            .count(),
-        0
-    );
-    assert_eq!(
-        glob(
-            &p.root()
-                .join("target/debug/deps/libbar-*.rmeta")
-                .to_str()
-                .unwrap()
-        )
-        .unwrap()
-        .count(),
-        1
-    );
+    assert_eq!(p.glob("target/debug/**/*.rlib").count(), 0);
+    assert_eq!(p.glob("target/debug/deps/libbar-*.rmeta").count(), 1);
 
     p.cargo("doc")
         .env("RUST_LOG", "cargo::ops::cargo_rustc::fingerprint")
@@ -903,9 +886,6 @@ fn document_only_lib() {
 
 #[test]
 fn plugins_no_use_target() {
-    if !is_nightly() {
-        return;
-    }
     let p = project()
         .file(
             "Cargo.toml",
@@ -1032,6 +1012,7 @@ fn doc_all_member_dependency_same_name() {
 }
 
 #[test]
+#[cfg(not(any(target_os = "windows", target_os = "macos")))]
 fn doc_workspace_open_help_message() {
     let p = project()
         .file(
@@ -1049,19 +1030,10 @@ fn doc_workspace_open_help_message() {
 
     // The order in which bar is compiled or documented is not deterministic
     p.cargo("doc --all --open")
-        .with_status(101)
+        .env("BROWSER", "echo")
         .with_stderr_contains("[..] Documenting bar v0.1.0 ([..])")
         .with_stderr_contains("[..] Documenting foo v0.1.0 ([..])")
-        .with_stderr_contains(
-            "error: Passing multiple packages and `open` \
-             is not supported.",
-        )
-        .with_stderr_contains(
-            "Please re-run this command with `-p <spec>` \
-             where `<spec>` is one of the following:",
-        )
-        .with_stderr_contains("  foo")
-        .with_stderr_contains("  bar")
+        .with_stderr_contains("[..] Opening [..]/foo/index.html")
         .run();
 }
 
@@ -1165,11 +1137,6 @@ fn doc_workspace_open_binary_and_library() {
 
 #[test]
 fn doc_edition() {
-    if !is_nightly() {
-        // Stable rustdoc won't have the edition option. Remove this once it
-        // is stabilized.
-        return;
-    }
     let p = project()
         .file(
             "Cargo.toml",
@@ -1198,9 +1165,6 @@ fn doc_edition() {
 
 #[test]
 fn doc_target_edition() {
-    if !is_nightly() {
-        return;
-    }
     let p = project()
         .file(
             "Cargo.toml",
@@ -1372,7 +1336,7 @@ fn doc_message_format() {
 
     p.cargo("doc --message-format=json")
         .with_status(101)
-        .with_json(
+        .with_json_contains_unordered(
             r#"
             {
                 "message": {
@@ -1402,10 +1366,7 @@ fn short_message_format() {
     p.cargo("doc --message-format=short")
         .with_status(101)
         .with_stderr_contains(
-            "\
-src/lib.rs:4:6: error: `[bad_link]` cannot be resolved, ignoring it...
-error: Could not document `foo`.
-",
+            "src/lib.rs:4:6: error: `[bad_link]` cannot be resolved, ignoring it...",
         )
         .run();
 }

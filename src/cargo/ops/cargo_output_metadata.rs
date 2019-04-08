@@ -42,7 +42,7 @@ fn metadata_no_deps(ws: &Workspace<'_>, _opt: &OutputMetadataOptions) -> CargoRe
         packages: ws.members().cloned().collect(),
         workspace_members: ws.members().map(|pkg| pkg.package_id()).collect(),
         resolve: None,
-        target_directory: ws.target_dir().clone().into_path_unlocked(),
+        target_directory: ws.target_dir().into_path_unlocked(),
         version: VERSION,
         workspace_root: ws.root().to_path_buf(),
     })
@@ -70,7 +70,7 @@ fn metadata_full(ws: &Workspace<'_>, opt: &OutputMetadataOptions) -> CargoResult
             resolve: (packages, resolve),
             root: ws.current_opt().map(|pkg| pkg.package_id()),
         }),
-        target_directory: ws.target_dir().clone().into_path_unlocked(),
+        target_directory: ws.target_dir().into_path_unlocked(),
         version: VERSION,
         workspace_root: ws.root().to_path_buf(),
     })
@@ -105,7 +105,7 @@ where
 {
     #[derive(Serialize)]
     struct Dep {
-        name: Option<String>,
+        name: String,
         pkg: PackageId,
     }
 
@@ -123,13 +123,12 @@ where
             dependencies: resolve.deps(id).map(|(pkg, _deps)| pkg).collect(),
             deps: resolve
                 .deps(id)
-                .map(|(pkg, _deps)| {
-                    let name = packages
+                .filter_map(|(pkg, _deps)| {
+                    packages
                         .get(&pkg)
                         .and_then(|pkg| pkg.targets().iter().find(|t| t.is_lib()))
-                        .and_then(|lib_target| resolve.extern_crate_name(id, pkg, lib_target).ok());
-
-                    Dep { name, pkg }
+                        .and_then(|lib_target| resolve.extern_crate_name(id, pkg, lib_target).ok())
+                        .map(|name| Dep { name, pkg })
                 })
                 .collect(),
             features: resolve.features_sorted(id).keys().cloned().collect(),

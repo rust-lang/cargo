@@ -44,8 +44,10 @@ include::options-target-dir.adoc[]
 *--out-dir* _DIRECTORY_::
     Copy final artifacts to this directory.
 +
-This option is unstable and available only on the nightly channel and requires
-the `-Z unstable-options` flag to enable.
+This option is unstable and available only on the
+link:https://doc.rust-lang.org/book/appendix-07-nightly-rust.html[nightly channel]
+and requires the `-Z unstable-options` flag to enable.
+See https://github.com/rust-lang/cargo/issues/6790 for more information.
 
 === Display Options
 
@@ -57,8 +59,10 @@ include::options-message-format.adoc[]
     Outputs a series of JSON messages to stdout that indicate the commands to
     run the build.
 +
-This option is unstable and available only on the nightly channel and requires
-the `-Z unstable-options` flag to enable.
+This option is unstable and available only on the
+link:https://doc.rust-lang.org/book/appendix-07-nightly-rust.html[nightly channel]
+and requires the `-Z unstable-options` flag to enable.
+See https://github.com/rust-lang/cargo/issues/5579 for more information.
 
 === Manifest Options
 

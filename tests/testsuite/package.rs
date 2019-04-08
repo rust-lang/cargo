@@ -3,12 +3,12 @@ use std::fs::File;
 use std::io::prelude::*;
 use std::path::Path;
 
+use crate::support::cargo_process;
 use crate::support::registry::Package;
 use crate::support::{
-    basic_manifest, git, is_nightly, path2url, paths, project, publish::validate_crate_contents,
+    basic_manifest, git, path2url, paths, project, publish::validate_crate_contents,
     registry,
 };
-use crate::support::{cargo_process, sleep_ms};
 use git2;
 
 #[test]
@@ -70,7 +70,7 @@ fn metadata_warning() {
             "\
 warning: manifest has no description, license, license-file, documentation, \
 homepage or repository.
-See <http://doc.crates.io/manifest.html#package-metadata> for more info.
+See https://doc.rust-lang.org/cargo/reference/manifest.html#package-metadata for more info.
 [PACKAGING] foo v0.0.1 ([CWD])
 [VERIFYING] foo v0.0.1 ([CWD])
 [COMPILING] foo v0.0.1 ([CWD][..])
@@ -96,7 +96,7 @@ See <http://doc.crates.io/manifest.html#package-metadata> for more info.
         .with_stderr(
             "\
 warning: manifest has no description, documentation, homepage or repository.
-See <http://doc.crates.io/manifest.html#package-metadata> for more info.
+See https://doc.rust-lang.org/cargo/reference/manifest.html#package-metadata for more info.
 [PACKAGING] foo v0.0.1 ([CWD])
 [VERIFYING] foo v0.0.1 ([CWD])
 [COMPILING] foo v0.0.1 ([CWD][..])
@@ -149,7 +149,7 @@ fn package_verbose() {
         .with_stderr(
             "\
 [WARNING] manifest has no description[..]
-See <http://doc.crates.io/manifest.html#package-metadata> for more info.
+See https://doc.rust-lang.org/cargo/reference/manifest.html#package-metadata for more info.
 [PACKAGING] foo v0.0.1 ([..])
 [ARCHIVING] [..]
 [ARCHIVING] [..]
@@ -186,7 +186,7 @@ See <http://doc.crates.io/manifest.html#package-metadata> for more info.
         .with_stderr(
             "\
 [WARNING] manifest has no description[..]
-See <http://doc.crates.io/manifest.html#package-metadata> for more info.
+See https://doc.rust-lang.org/cargo/reference/manifest.html#package-metadata for more info.
 [PACKAGING] a v0.0.1 ([..])
 [ARCHIVING] Cargo.toml
 [ARCHIVING] src/lib.rs
@@ -204,7 +204,7 @@ fn package_verification() {
         .with_stderr(
             "\
 [WARNING] manifest has no description[..]
-See <http://doc.crates.io/manifest.html#package-metadata> for more info.
+See https://doc.rust-lang.org/cargo/reference/manifest.html#package-metadata for more info.
 [PACKAGING] foo v0.0.1 ([CWD])
 [VERIFYING] foo v0.0.1 ([CWD])
 [COMPILING] foo v0.0.1 ([CWD][..])
@@ -280,7 +280,7 @@ fn path_dependency_no_version() {
         .with_stderr(
             "\
 [WARNING] manifest has no documentation, homepage or repository.
-See <http://doc.crates.io/manifest.html#package-metadata> for more info.
+See https://doc.rust-lang.org/cargo/reference/manifest.html#package-metadata for more info.
 [ERROR] all path dependencies must have a version specified when packaging.
 dependency `bar` does not specify a version.
 ",
@@ -363,7 +363,7 @@ fn exclude() {
         .with_stderr(
             "\
 [WARNING] manifest has no description[..]
-See <http://doc.crates.io/manifest.html#package-metadata> for more info.
+See https://doc.rust-lang.org/cargo/reference/manifest.html#package-metadata for more info.
 [WARNING] [..] file `dir_root_1/some_dir/file` WILL be excluded [..]
 See [..]
 [WARNING] [..] file `dir_root_2/some_dir/file` WILL be excluded [..]
@@ -456,7 +456,7 @@ fn include() {
         .with_stderr(
             "\
 [WARNING] manifest has no description[..]
-See <http://doc.crates.io/manifest.html#package-metadata> for more info.
+See https://doc.rust-lang.org/cargo/reference/manifest.html#package-metadata for more info.
 [PACKAGING] foo v0.0.1 ([..])
 [ARCHIVING] [..]
 [ARCHIVING] [..]
@@ -570,7 +570,7 @@ fn ignore_nested() {
         .with_stderr(
             "\
 [WARNING] manifest has no documentation[..]
-See <http://doc.crates.io/manifest.html#package-metadata> for more info.
+See https://doc.rust-lang.org/cargo/reference/manifest.html#package-metadata for more info.
 [PACKAGING] foo v0.0.1 ([CWD])
 [VERIFYING] foo v0.0.1 ([CWD])
 [COMPILING] foo v0.0.1 ([CWD][..])
@@ -885,7 +885,7 @@ fn ignore_workspace_specifier() {
         .build();
 
     p.cargo("package --no-verify")
-        .cwd(p.root().join("bar"))
+        .cwd("bar")
         .run();
 
     let f = File::open(&p.root().join("target/package/bar-0.1.0.crate")).unwrap();
@@ -910,7 +910,7 @@ authors = []
         f,
         "bar-0.1.0.crate",
         &["Cargo.toml", "Cargo.toml.orig", "src/lib.rs"],
-        &[("Cargo.toml", &rewritten_toml)],
+        &[("Cargo.toml", rewritten_toml)],
     );
 }
 
@@ -972,11 +972,6 @@ fn test_edition() {
 
 #[test]
 fn edition_with_metadata() {
-    if !is_nightly() {
-        // --edition is nightly-only
-        return;
-    }
-
     let p = project()
         .file(
             "Cargo.toml",
@@ -1184,7 +1179,7 @@ fn lock_file_and_workspace() {
         .build();
 
     p.cargo("package")
-        .cwd(p.root().join("foo"))
+        .cwd("foo")
         .masquerade_as_nightly_cargo()
         .run();
 
@@ -1201,26 +1196,23 @@ fn lock_file_and_workspace() {
 fn do_not_package_if_src_was_modified() {
     let p = project()
         .file("src/main.rs", r#"fn main() { println!("hello"); }"#)
+        .file("foo.txt", "")
+        .file("bar.txt", "")
         .file(
             "build.rs",
             r#"
-            use std::fs::File;
-            use std::io::Write;
+            use std::fs;
 
             fn main() {
-                let mut file = File::create("src/generated.txt").expect("failed to create file");
-                file.write_all(b"Hello, world of generated files.").expect("failed to write");
+                fs::write("src/generated.txt",
+                    "Hello, world of generated files."
+                ).expect("failed to create file");
+                fs::remove_file("foo.txt").expect("failed to remove");
+                fs::write("bar.txt", "updated content").expect("failed to update");
             }
         "#,
         )
         .build();
-
-    if cfg!(target_os = "macos") {
-        // MacOS has 1s resolution filesystem.
-        // If src/main.rs is created within 1s of src/generated.txt, then it
-        // won't trigger the modification check.
-        sleep_ms(1000);
-    }
 
     p.cargo("package")
         .with_status(101)
@@ -1230,7 +1222,10 @@ error: failed to verify package tarball
 
 Caused by:
   Source directory was modified by build.rs during cargo publish. \
-Build scripts should not modify anything outside of OUT_DIR. Modified file: [..]src/generated.txt
+Build scripts should not modify anything outside of OUT_DIR.
+Changed: [CWD]/target/package/foo-0.0.1/bar.txt
+Added: [CWD]/target/package/foo-0.0.1/src/generated.txt
+Removed: [CWD]/target/package/foo-0.0.1/foo.txt
 
 To proceed despite this, pass the `--no-verify` flag.",
         )

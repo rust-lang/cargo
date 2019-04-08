@@ -186,7 +186,8 @@ impl<'a, 'cfg: 'a> CompilationFiles<'a, 'cfg> {
         self.layout(unit.kind).fingerprint().join(dir)
     }
 
-    /// Returns the appropriate directory layout for either a plugin or not.
+    /// Returns the directory where a compiled build script is stored.
+    /// `/path/to/target/{debug,release}/build/PKG-HASH`
     pub fn build_script_dir(&self, unit: &Unit<'a>) -> PathBuf {
         assert!(unit.target.is_custom_build());
         assert!(!unit.mode.is_run_custom_build());
@@ -194,12 +195,20 @@ impl<'a, 'cfg: 'a> CompilationFiles<'a, 'cfg> {
         self.layout(Kind::Host).build().join(dir)
     }
 
-    /// Returns the appropriate directory layout for either a plugin or not.
-    pub fn build_script_out_dir(&self, unit: &Unit<'a>) -> PathBuf {
+    /// Returns the directory where information about running a build script
+    /// is stored.
+    /// `/path/to/target/{debug,release}/build/PKG-HASH`
+    pub fn build_script_run_dir(&self, unit: &Unit<'a>) -> PathBuf {
         assert!(unit.target.is_custom_build());
         assert!(unit.mode.is_run_custom_build());
         let dir = self.pkg_dir(unit);
-        self.layout(unit.kind).build().join(dir).join("out")
+        self.layout(unit.kind).build().join(dir)
+    }
+
+    /// Returns the "OUT_DIR" directory for running a build script.
+    /// `/path/to/target/{debug,release}/build/PKG-HASH/out`
+    pub fn build_script_out_dir(&self, unit: &Unit<'a>) -> PathBuf {
+        self.build_script_run_dir(unit).join("out")
     }
 
     /// Returns the file stem for a given target/profile combo (with metadata).
@@ -435,7 +444,7 @@ fn compute_metadata<'a, 'cfg>(
     if !(unit.mode.is_any_test() || unit.mode.is_check())
         && (unit.target.is_dylib()
             || unit.target.is_cdylib()
-            || (unit.target.is_bin() && bcx.target_triple().starts_with("wasm32-")))
+            || (unit.target.is_executable() && bcx.target_triple().starts_with("wasm32-")))
         && unit.pkg.package_id().source_id().is_path()
         && __cargo_default_lib_metadata.is_err()
     {
@@ -460,13 +469,6 @@ fn compute_metadata<'a, 'cfg>(
         .stable_hash(bcx.ws.root())
         .hash(&mut hasher);
 
-    // Add package properties which map to environment variables
-    // exposed by Cargo.
-    let manifest_metadata = unit.pkg.manifest().metadata();
-    manifest_metadata.authors.hash(&mut hasher);
-    manifest_metadata.description.hash(&mut hasher);
-    manifest_metadata.homepage.hash(&mut hasher);
-
     // Also mix in enabled features to our metadata. This'll ensure that
     // when changing feature sets each lib is separately cached.
     bcx.resolve
@@ -489,7 +491,7 @@ fn compute_metadata<'a, 'cfg>(
     // settings like debuginfo and whatnot.
     unit.profile.hash(&mut hasher);
     unit.mode.hash(&mut hasher);
-    if let Some(ref args) = bcx.extra_args_for(unit) {
+    if let Some(args) = bcx.extra_args_for(unit) {
         args.hash(&mut hasher);
     }
 

@@ -2,6 +2,7 @@ use crate::support;
 use std::env;
 use std::fs::{self, File};
 use std::io::prelude::*;
+use std::process::Command;
 
 use crate::support::{paths, Execs};
 
@@ -9,6 +10,18 @@ fn cargo_process(s: &str) -> Execs {
     let mut execs = support::cargo_process(s);
     execs.cwd(&paths::root()).env("HOME", &paths::home());
     execs
+}
+
+fn mercurial_available() -> bool {
+    let result = Command::new("hg")
+        .arg("--version")
+        .output()
+        .map(|o| o.status.success())
+        .unwrap_or(false);
+    if !result {
+        println!("`hg` not available, skipping test");
+    }
+    result
 }
 
 #[test]
@@ -48,10 +61,11 @@ fn simple_bin() {
 fn simple_git_ignore_exists() {
     // write a .gitignore file with one entry
     fs::create_dir_all(paths::root().join("foo")).unwrap();
-    let mut ignore_file = File::create(paths::root().join("foo/.gitignore")).unwrap();
-    ignore_file
-        .write("/target\n**/some.file".as_bytes())
-        .unwrap();
+    fs::write(
+        paths::root().join("foo/.gitignore"),
+        "/target\n**/some.file",
+    )
+    .unwrap();
 
     cargo_process("init --lib foo --edition 2015")
         .env("USER", "foo")
@@ -79,7 +93,7 @@ fn simple_git_ignore_exists() {
          \n\
          #/target\n\
          **/*.rs.bk\n\
-         Cargo.lock",
+         Cargo.lock\n",
     );
 
     cargo_process("build").cwd(&paths::root().join("foo")).run();
@@ -450,6 +464,63 @@ fn mercurial_no_newline_in_new() {
         .read_to_string(&mut contents)
         .unwrap();
     assert!(!contents.starts_with('\n'));
+}
+
+#[test]
+fn terminating_newline_in_new_git_ignore() {
+    cargo_process("init --vcs git --lib")
+        .env("USER", "foo")
+        .run();
+
+    let content = fs::read_to_string(&paths::root().join(".gitignore")).unwrap();
+
+    let mut last_chars = content.chars().rev();
+    assert_eq!(last_chars.next(), Some('\n'));
+    assert_ne!(last_chars.next(), Some('\n'));
+}
+
+#[test]
+fn terminating_newline_in_new_mercurial_ignore() {
+    if !mercurial_available() {
+        return;
+    }
+    cargo_process("init --vcs hg --lib")
+        .env("USER", "foo")
+        .run();
+
+    let content = fs::read_to_string(&paths::root().join(".hgignore")).unwrap();
+
+    let mut last_chars = content.chars().rev();
+    assert_eq!(last_chars.next(), Some('\n'));
+    assert_ne!(last_chars.next(), Some('\n'));
+}
+
+#[test]
+fn terminating_newline_in_existing_git_ignore() {
+    fs::create_dir(&paths::root().join(".git")).unwrap();
+    fs::write(&paths::root().join(".gitignore"), b"first").unwrap();
+
+    cargo_process("init --lib").env("USER", "foo").run();
+
+    let content = fs::read_to_string(&paths::root().join(".gitignore")).unwrap();
+
+    let mut last_chars = content.chars().rev();
+    assert_eq!(last_chars.next(), Some('\n'));
+    assert_ne!(last_chars.next(), Some('\n'));
+}
+
+#[test]
+fn terminating_newline_in_existing_mercurial_ignore() {
+    fs::create_dir(&paths::root().join(".hg")).unwrap();
+    fs::write(&paths::root().join(".hgignore"), b"first").unwrap();
+
+    cargo_process("init --lib").env("USER", "foo").run();
+
+    let content = fs::read_to_string(&paths::root().join(".hgignore")).unwrap();
+
+    let mut last_chars = content.chars().rev();
+    assert_eq!(last_chars.next(), Some('\n'));
+    assert_ne!(last_chars.next(), Some('\n'));
 }
 
 #[test]

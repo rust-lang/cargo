@@ -10,6 +10,7 @@ use failure::{Context, Error, Fail};
 use log::trace;
 
 use crate::core::{TargetKind, Workspace};
+use crate::ops::CompileOptions;
 
 pub type CargoResult<T> = failure::Fallible<T>; // Alex's body isn't quite ready to give up "Result"
 
@@ -188,14 +189,14 @@ impl CargoTestError {
         }
     }
 
-    pub fn hint(&self, ws: &Workspace<'_>) -> String {
+    pub fn hint(&self, ws: &Workspace<'_>, opts: &CompileOptions<'_>) -> String {
         match self.test {
             Test::UnitTest {
                 ref kind,
                 ref name,
                 ref pkg_name,
             } => {
-                let pkg_info = if ws.members().count() > 1 && ws.is_virtual() {
+                let pkg_info = if opts.spec.needs_spec_flag(ws) {
                     format!("-p {} ", pkg_name)
                 } else {
                     String::new()
@@ -307,7 +308,6 @@ pub fn process_error(
 
     #[cfg(unix)]
     fn status_to_string(status: ExitStatus) -> String {
-        use libc;
         use std::os::unix::process::*;
 
         if let Some(signal) = status.signal() {

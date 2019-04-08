@@ -47,7 +47,7 @@ pub mod process_builder;
 pub mod profile;
 mod progress;
 mod read2;
-mod rustc;
+pub mod rustc;
 mod sha256;
 pub mod to_semver;
 pub mod to_url;

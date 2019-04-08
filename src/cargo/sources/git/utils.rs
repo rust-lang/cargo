@@ -765,7 +765,7 @@ fn fetch_with_cli(
     let mut cmd = process("git");
     cmd.arg("fetch")
         .arg("--tags") // fetch all tags
-        .arg("--quiet")
+        .arg("--force") // handle force pushes
         .arg("--update-head-ok") // see discussion in #2078
         .arg(url.to_string())
         .arg(refspec)
@@ -773,7 +773,7 @@ fn fetch_with_cli(
     config
         .shell()
         .verbose(|s| s.status("Running", &cmd.to_string()))?;
-    cmd.exec()?;
+    cmd.exec_with_output()?;
     Ok(())
 }
 

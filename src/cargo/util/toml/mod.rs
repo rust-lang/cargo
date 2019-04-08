@@ -5,6 +5,7 @@ use std::path::{Path, PathBuf};
 use std::rc::Rc;
 use std::str;
 
+use failure::bail;
 use log::{debug, trace};
 use semver::{self, VersionReq};
 use serde::de;
@@ -52,8 +53,9 @@ fn do_read_manifest(
     let package_root = manifest_file.parent().unwrap();
 
     let toml = {
-        let pretty_filename =
-            manifest_file.strip_prefix(config.cwd()).unwrap_or(manifest_file);
+        let pretty_filename = manifest_file
+            .strip_prefix(config.cwd())
+            .unwrap_or(manifest_file);
         parse(contents, pretty_filename, config)?
     };
 
@@ -78,7 +80,7 @@ fn do_read_manifest(
             TomlManifest::to_real_manifest(&manifest, source_id, package_root, config)?;
         add_unused(manifest.warnings_mut());
         if !manifest.targets().iter().any(|t| !t.is_custom_build()) {
-            failure::bail!(
+            bail!(
                 "no targets specified in the manifest\n  \
                  either src/lib.rs, src/main.rs, a [lib] section, or \
                  [[bin]] section must be present"
@@ -136,6 +138,24 @@ The TOML spec requires newlines after table definitions (e.g., `[a] b = 1` is
 invalid), but this file has a table header which does not have a newline after
 it. A newline needs to be added and this warning will soon become a hard error
 in the future.",
+            file.display()
+        );
+        config.shell().warn(&msg)?;
+        return Ok(ret);
+    }
+
+    let mut third_parser = toml::de::Deserializer::new(toml);
+    third_parser.set_allow_duplicate_after_longer_table(true);
+    if let Ok(ret) = toml::Value::deserialize(&mut third_parser) {
+        let msg = format!(
+            "\
+TOML file found which contains invalid syntax and will soon not parse
+at `{}`.
+
+The TOML spec requires that each table header is defined at most once, but
+historical versions of Cargo have erroneously accepted this file. The table
+definitions will need to be merged together with one table header to proceed,
+and this will become a hard error in the future.",
             file.display()
         );
         config.shell().warn(&msg)?;
@@ -453,7 +473,7 @@ impl TomlProfile {
             "dev" | "release" => {}
             _ => {
                 if self.overrides.is_some() || self.build_override.is_some() {
-                    failure::bail!(
+                    bail!(
                         "Profile overrides may only be specified for \
                          `dev` or `release` profile, not `{}`.",
                         name
@@ -473,21 +493,31 @@ impl TomlProfile {
             }
             _ => {}
         }
+
+        if let Some(panic) = &self.panic {
+            if panic != "unwind" && panic != "abort" {
+                bail!(
+                    "`panic` setting of `{}` is not a valid setting,\
+                     must be `unwind` or `abort`",
+                    panic
+                );
+            }
+        }
         Ok(())
     }
 
     fn validate_override(&self) -> CargoResult<()> {
         if self.overrides.is_some() || self.build_override.is_some() {
-            failure::bail!("Profile overrides cannot be nested.");
+            bail!("Profile overrides cannot be nested.");
         }
         if self.panic.is_some() {
-            failure::bail!("`panic` may not be specified in a profile override.")
+            bail!("`panic` may not be specified in a profile override.")
         }
         if self.lto.is_some() {
-            failure::bail!("`lto` may not be specified in a profile override.")
+            bail!("`lto` may not be specified in a profile override.")
         }
         if self.rpath.is_some() {
-            failure::bail!("`rpath` may not be specified in a profile override.")
+            bail!("`rpath` may not be specified in a profile override.")
         }
         Ok(())
     }
@@ -806,14 +836,14 @@ impl TomlManifest {
         // Parse features first so they will be available when parsing other parts of the TOML.
         let empty = Vec::new();
         let cargo_features = me.cargo_features.as_ref().unwrap_or(&empty);
-        let features = Features::new(&cargo_features, &mut warnings)?;
+        let features = Features::new(cargo_features, &mut warnings)?;
 
         let project = me.project.as_ref().or_else(|| me.package.as_ref());
         let project = project.ok_or_else(|| failure::format_err!("no `package` section found"))?;
 
         let package_name = project.name.trim();
         if package_name.is_empty() {
-            failure::bail!("package name cannot be an empty string")
+            bail!("package name cannot be an empty string")
         }
 
         validate_package_name(package_name, "package name", "")?;
@@ -952,7 +982,7 @@ impl TomlManifest {
                 let name = dep.name_in_toml();
                 let prev = names_sources.insert(name.to_string(), dep.source_id());
                 if prev.is_some() && prev != Some(dep.source_id()) {
-                    failure::bail!(
+                    bail!(
                         "Dependency '{}' has different source paths depending on the build \
                          target. Each dependency must have a single canonical source path \
                          irrespective of build target.",
@@ -992,7 +1022,7 @@ impl TomlManifest {
 
         let workspace_config = match (me.workspace.as_ref(), project.workspace.as_ref()) {
             (Some(config), None) => WorkspaceConfig::Root(WorkspaceRootConfig::new(
-                &package_root,
+                package_root,
                 &config.members,
                 &config.default_members,
                 &config.exclude,
@@ -1000,7 +1030,7 @@ impl TomlManifest {
             (None, root) => WorkspaceConfig::Member {
                 root: root.cloned(),
             },
-            (Some(..), Some(..)) => failure::bail!(
+            (Some(..), Some(..)) => bail!(
                 "cannot configure both `package.workspace` and \
                  `[workspace]`, only one can be specified"
             ),
@@ -1076,43 +1106,43 @@ impl TomlManifest {
         config: &Config,
     ) -> CargoResult<(VirtualManifest, Vec<PathBuf>)> {
         if me.project.is_some() {
-            failure::bail!("virtual manifests do not define [project]");
+            bail!("virtual manifests do not define [project]");
         }
         if me.package.is_some() {
-            failure::bail!("virtual manifests do not define [package]");
+            bail!("virtual manifests do not define [package]");
         }
         if me.lib.is_some() {
-            failure::bail!("virtual manifests do not specify [lib]");
+            bail!("virtual manifests do not specify [lib]");
         }
         if me.bin.is_some() {
-            failure::bail!("virtual manifests do not specify [[bin]]");
+            bail!("virtual manifests do not specify [[bin]]");
         }
         if me.example.is_some() {
-            failure::bail!("virtual manifests do not specify [[example]]");
+            bail!("virtual manifests do not specify [[example]]");
         }
         if me.test.is_some() {
-            failure::bail!("virtual manifests do not specify [[test]]");
+            bail!("virtual manifests do not specify [[test]]");
         }
         if me.bench.is_some() {
-            failure::bail!("virtual manifests do not specify [[bench]]");
+            bail!("virtual manifests do not specify [[bench]]");
         }
         if me.dependencies.is_some() {
-            failure::bail!("virtual manifests do not specify [dependencies]");
+            bail!("virtual manifests do not specify [dependencies]");
         }
         if me.dev_dependencies.is_some() || me.dev_dependencies2.is_some() {
-            failure::bail!("virtual manifests do not specify [dev-dependencies]");
+            bail!("virtual manifests do not specify [dev-dependencies]");
         }
         if me.build_dependencies.is_some() || me.build_dependencies2.is_some() {
-            failure::bail!("virtual manifests do not specify [build-dependencies]");
+            bail!("virtual manifests do not specify [build-dependencies]");
         }
         if me.features.is_some() {
-            failure::bail!("virtual manifests do not specify [features]");
+            bail!("virtual manifests do not specify [features]");
         }
         if me.target.is_some() {
-            failure::bail!("virtual manifests do not specify [target]");
+            bail!("virtual manifests do not specify [target]");
         }
         if me.badges.is_some() {
-            failure::bail!("virtual manifests do not specify [badges]");
+            bail!("virtual manifests do not specify [badges]");
         }
 
         let mut nested_paths = Vec::new();
@@ -1120,7 +1150,7 @@ impl TomlManifest {
         let mut deps = Vec::new();
         let empty = Vec::new();
         let cargo_features = me.cargo_features.as_ref().unwrap_or(&empty);
-        let features = Features::new(&cargo_features, &mut warnings)?;
+        let features = Features::new(cargo_features, &mut warnings)?;
 
         let (replace, patch) = {
             let mut cx = Context {
@@ -1139,13 +1169,13 @@ impl TomlManifest {
         let profiles = Profiles::new(me.profile.as_ref(), config, &features, &mut warnings)?;
         let workspace_config = match me.workspace {
             Some(ref config) => WorkspaceConfig::Root(WorkspaceRootConfig::new(
-                &root,
+                root,
                 &config.members,
                 &config.default_members,
                 &config.exclude,
             )),
             None => {
-                failure::bail!("virtual manifests must be configured with [workspace]");
+                bail!("virtual manifests must be configured with [workspace]");
             }
         };
         Ok((
@@ -1156,7 +1186,7 @@ impl TomlManifest {
 
     fn replace(&self, cx: &mut Context<'_, '_>) -> CargoResult<Vec<(PackageIdSpec, Dependency)>> {
         if self.patch.is_some() && self.replace.is_some() {
-            failure::bail!("cannot specify both [replace] and [patch]");
+            bail!("cannot specify both [replace] and [patch]");
         }
         let mut replace = Vec::new();
         for (spec, replacement) in self.replace.iter().flat_map(|x| x) {
@@ -1176,7 +1206,7 @@ impl TomlManifest {
                 TomlDependency::Simple(..) => true,
             };
             if version_specified {
-                failure::bail!(
+                bail!(
                     "replacements cannot specify a version \
                      requirement, but found one for `{}`",
                     spec
@@ -1300,6 +1330,17 @@ impl DetailedTomlDependency {
             cx.warnings.push(msg);
         }
 
+        if let Some(version) = &self.version {
+            if version.contains('+') {
+                cx.warnings.push(format!(
+                    "version requirement `{}` for dependency `{}` \
+                     includes semver metadata which will be ignored, removing the \
+                     metadata is recommended to avoid confusion",
+                    version, name_in_toml
+                ));
+            }
+        }
+
         if self.git.is_none() {
             let git_only_keys = [
                 (&self.branch, "branch"),
@@ -1325,12 +1366,12 @@ impl DetailedTomlDependency {
             self.registry.as_ref(),
             self.registry_index.as_ref(),
         ) {
-            (Some(_), _, Some(_), _) | (Some(_), _, _, Some(_)) => failure::bail!(
+            (Some(_), _, Some(_), _) | (Some(_), _, _, Some(_)) => bail!(
                 "dependency ({}) specification is ambiguous. \
                  Only one of `git` or `registry` is allowed.",
                 name_in_toml
             ),
-            (_, _, Some(_), Some(_)) => failure::bail!(
+            (_, _, Some(_), Some(_)) => bail!(
                 "dependency ({}) specification is ambiguous. \
                  Only one of `registry` or `registry-index` is allowed.",
                 name_in_toml

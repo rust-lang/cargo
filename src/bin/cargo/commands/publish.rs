@@ -5,6 +5,7 @@ use cargo::ops::{self, PublishOpts};
 pub fn cli() -> App {
     subcommand("publish")
         .about("Upload a package to the registry")
+        .arg(opt("quiet", "No output printed to stdout").short("q"))
         .arg_index()
         .arg(opt("token", "Token to use when uploading").value_name("TOKEN"))
         .arg(opt(

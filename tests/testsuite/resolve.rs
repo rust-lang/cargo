@@ -7,12 +7,12 @@ use cargo::util::Config;
 use crate::support::project;
 use crate::support::registry::Package;
 use crate::support::resolver::{
-    assert_contains, assert_same, dep, dep_kind, dep_loc, dep_req, loc_names, names, pkg, pkg_dep,
-    pkg_id, pkg_loc, registry, registry_strategy, remove_dep, resolve, resolve_and_validated,
-    resolve_with_config, PrettyPrintRegistry, ToDep, ToPkgId,
+    assert_contains, assert_same, dep, dep_kind, dep_loc, dep_req, dep_req_kind, loc_names, names,
+    pkg, pkg_dep, pkg_id, pkg_loc, registry, registry_strategy, remove_dep, resolve,
+    resolve_and_validated, resolve_with_config, PrettyPrintRegistry, ToDep, ToPkgId,
 };
 
-use proptest::{prelude::*, *};
+use proptest::prelude::*;
 
 // NOTE: proptest is a form of fuzz testing. It generates random input and makes sure that
 // certain universal truths are upheld. Therefore, it can pass when there is a problem,
@@ -37,7 +37,7 @@ proptest! {
 
     /// NOTE: if you think this test has failed spuriously see the note at the top of this macro.
     #[test]
-    fn passes_validation(
+    fn prop_passes_validation(
         PrettyPrintRegistry(input) in registry_strategy(50, 20, 60)
     )  {
         let reg = registry(input.clone());
@@ -46,7 +46,7 @@ proptest! {
         // So we try some of the most complicated.
         for this in input.iter().rev().take(20) {
             let _ = resolve_and_validated(
-                &pkg_id("root"),
+                pkg_id("root"),
                 vec![dep_req(&this.name(), &format!("={}", this.version()))],
                 &reg,
             );
@@ -55,7 +55,7 @@ proptest! {
 
     /// NOTE: if you think this test has failed spuriously see the note at the top of this macro.
     #[test]
-    fn minimum_version_errors_the_same(
+    fn prop_minimum_version_errors_the_same(
             PrettyPrintRegistry(input) in registry_strategy(50, 20, 60)
     ) {
         enable_nightly_features();
@@ -81,13 +81,13 @@ proptest! {
             // minimal-versions change what order the candidates
             // are tried but not the existence of a solution
             let res = resolve(
-                &pkg_id("root"),
+                pkg_id("root"),
                 vec![dep_req(&this.name(), &format!("={}", this.version()))],
                 &reg,
             );
 
             let mres = resolve_with_config(
-                &pkg_id("root"),
+                pkg_id("root"),
                 vec![dep_req(&this.name(), &format!("={}", this.version()))],
                 &reg,
                 Some(&config),
@@ -105,17 +105,17 @@ proptest! {
 
     /// NOTE: if you think this test has failed spuriously see the note at the top of this macro.
     #[test]
-    fn removing_a_dep_cant_break(
+    fn prop_removing_a_dep_cant_break(
             PrettyPrintRegistry(input) in registry_strategy(50, 20, 60),
-            indexes_to_remove in collection::vec((any::<prop::sample::Index>(), any::<prop::sample::Index>()), ..10)
+            indexes_to_remove in prop::collection::vec((any::<prop::sample::Index>(), any::<prop::sample::Index>()), ..10)
     ) {
         let reg = registry(input.clone());
         let mut removed_input = input.clone();
         for (summery_idx, dep_idx) in indexes_to_remove {
-            if removed_input.len() > 0 {
+            if !removed_input.is_empty() {
                 let summery_idx = summery_idx.index(removed_input.len());
                 let deps = removed_input[summery_idx].dependencies();
-                if deps.len() > 0 {
+                if !deps.is_empty() {
                     let new = remove_dep(&removed_input[summery_idx], dep_idx.index(deps.len()));
                     removed_input[summery_idx] = new;
                 }
@@ -127,13 +127,13 @@ proptest! {
         // So we try some of the most complicated.
         for this in input.iter().rev().take(10) {
             if resolve(
-                &pkg_id("root"),
+                pkg_id("root"),
                 vec![dep_req(&this.name(), &format!("={}", this.version()))],
                 &reg,
             ).is_ok() {
                 prop_assert!(
                     resolve(
-                        &pkg_id("root"),
+                        pkg_id("root"),
                         vec![dep_req(&this.name(), &format!("={}", this.version()))],
                         &removed_reg,
                     ).is_ok(),
@@ -147,9 +147,9 @@ proptest! {
 
     /// NOTE: if you think this test has failed spuriously see the note at the top of this macro.
     #[test]
-    fn limited_independence_of_irrelevant_alternatives(
+    fn prop_limited_independence_of_irrelevant_alternatives(
         PrettyPrintRegistry(input) in registry_strategy(50, 20, 60),
-        indexes_to_unpublish in collection::vec(any::<prop::sample::Index>(), ..10)
+        indexes_to_unpublish in prop::collection::vec(any::<prop::sample::Index>(), ..10)
     )  {
         let reg = registry(input.clone());
         // there is only a small chance that any one
@@ -157,7 +157,7 @@ proptest! {
         // So we try some of the most complicated.
         for this in input.iter().rev().take(10) {
             let res = resolve(
-                &pkg_id("root"),
+                pkg_id("root"),
                 vec![dep_req(&this.name(), &format!("={}", this.version()))],
                 &reg,
             );
@@ -183,7 +183,7 @@ proptest! {
                         );
 
                         let res = resolve(
-                            &pkg_id("root"),
+                            pkg_id("root"),
                             vec![dep_req(&this.name(), &format!("={}", this.version()))],
                             &new_reg,
                         );
@@ -217,7 +217,7 @@ proptest! {
                     );
 
                     let res = resolve(
-                        &pkg_id("root"),
+                        pkg_id("root"),
                         vec![dep_req(&this.name(), &format!("={}", this.version()))],
                         &new_reg,
                     );
@@ -236,6 +236,136 @@ proptest! {
 }
 
 #[test]
+fn basic_public_dependency() {
+    let reg = registry(vec![
+        pkg!(("A", "0.1.0")),
+        pkg!(("A", "0.2.0")),
+        pkg!("B" => [dep_req_kind("A", "0.1", Kind::Normal, true)]),
+        pkg!("C" => [dep("A"), dep("B")]),
+    ]);
+
+    let res = resolve_and_validated(pkg_id("root"), vec![dep("C")], &reg).unwrap();
+    assert_same(
+        &res,
+        &names(&[
+            ("root", "1.0.0"),
+            ("C", "1.0.0"),
+            ("B", "1.0.0"),
+            ("A", "0.1.0"),
+        ]),
+    );
+}
+
+#[test]
+fn public_dependency_filling_in() {
+    // The resolver has an optimization where if a candidate to resolve a dependency
+    // has already bean activated then we skip looking at the candidates dependencies.
+    // However, we have to be careful as the new path may make pub dependencies invalid.
+
+    // Triggering this case requires dependencies to be resolved in a specific order.
+    // Fuzzing found this unintuitive case, that triggers this unfortunate order of operations:
+    // 1. `d`'s dep on `c` is resolved
+    // 2. `d`'s dep on `a` is resolved with `0.1.1`
+    // 3. `c`'s dep on `b` is resolved with `0.0.2`
+    // 4. `b`'s dep on `a` is resolved with `0.0.6` no pub dev conflict as `b` is private to `c`
+    // 5. `d`'s dep on `b` is resolved with `0.0.2` triggering the optimization.
+    // Do we notice that `d` has a pub dep conflict on `a`? Lets try it and see.
+    let reg = registry(vec![
+        pkg!(("a", "0.0.6")),
+        pkg!(("a", "0.1.1")),
+        pkg!(("b", "0.0.0") => [dep("bad")]),
+        pkg!(("b", "0.0.1") => [dep("bad")]),
+        pkg!(("b", "0.0.2") => [dep_req_kind("a", "=0.0.6", Kind::Normal, true)]),
+        pkg!("c" => [dep_req("b", ">=0.0.1")]),
+        pkg!("d" => [dep("c"), dep("a"), dep("b")]),
+    ]);
+
+    let res = resolve_and_validated(pkg_id("root"), vec![dep("d")], &reg).unwrap();
+    assert_same(
+        &res,
+        &names(&[
+            ("root", "1.0.0"),
+            ("d", "1.0.0"),
+            ("c", "1.0.0"),
+            ("b", "0.0.2"),
+            ("a", "0.0.6"),
+        ]),
+    );
+}
+
+#[test]
+fn public_dependency_filling_in_and_update() {
+    // The resolver has an optimization where if a candidate to resolve a dependency
+    // has already bean activated then we skip looking at the candidates dependencies.
+    // However, we have to be careful as the new path may make pub dependencies invalid.
+
+    // Triggering this case requires dependencies to be resolved in a specific order.
+    // Fuzzing found this unintuitive case, that triggers this unfortunate order of operations:
+    // 1. `D`'s dep on `B` is resolved
+    // 2. `D`'s dep on `C` is resolved
+    // 3. `B`'s dep on `A` is resolved with `0.0.0`
+    // 4. `C`'s dep on `B` triggering the optimization.
+    // So did we add `A 0.0.0` to the deps `C` can see?
+    // Or are we going to  resolve `C`'s dep on `A` with `0.0.2`?
+    // Lets try it and see.
+    let reg = registry(vec![
+        pkg!(("A", "0.0.0")),
+        pkg!(("A", "0.0.2")),
+        pkg!("B" => [dep_req_kind("A", "=0.0.0", Kind::Normal, true),]),
+        pkg!("C" => [dep("A"),dep("B")]),
+        pkg!("D" => [dep("B"),dep("C")]),
+    ]);
+    let res = resolve_and_validated(pkg_id("root"), vec![dep("D")], &reg).unwrap();
+    assert_same(
+        &res,
+        &names(&[
+            ("root", "1.0.0"),
+            ("D", "1.0.0"),
+            ("C", "1.0.0"),
+            ("B", "1.0.0"),
+            ("A", "0.0.0"),
+        ]),
+    );
+}
+
+#[test]
+fn public_dependency_skiping() {
+    // When backtracking due to a failed dependency, if Cargo is
+    // trying to be clever and skip irrelevant dependencies, care must
+    // the effects of pub dep must be accounted for.
+    let input = vec![
+        pkg!(("a", "0.2.0")),
+        pkg!(("a", "2.0.0")),
+        pkg!(("b", "0.0.0") => [dep("bad")]),
+        pkg!(("b", "0.2.1") => [dep_req_kind("a", "0.2.0", Kind::Normal, true)]),
+        pkg!("c" => [dep("a"),dep("b")]),
+    ];
+    let reg = registry(input);
+
+    resolve(pkg_id("root"), vec![dep("c")], &reg).unwrap();
+}
+
+#[test]
+fn public_dependency_skiping_in_backtracking() {
+    // When backtracking due to a failed dependency, if Cargo is
+    // trying to be clever and skip irrelevant dependencies, care must
+    // the effects of pub dep must be accounted for.
+    let input = vec![
+        pkg!(("A", "0.0.0") => [dep("bad")]),
+        pkg!(("A", "0.0.1") => [dep("bad")]),
+        pkg!(("A", "0.0.2") => [dep("bad")]),
+        pkg!(("A", "0.0.3") => [dep("bad")]),
+        pkg!(("A", "0.0.4")),
+        pkg!(("A", "0.0.5")),
+        pkg!("B" => [dep_req_kind("A", ">= 0.0.3", Kind::Normal, true)]),
+        pkg!("C" => [dep_req("A", "<= 0.0.4"), dep("B")]),
+    ];
+    let reg = registry(input);
+
+    resolve(pkg_id("root"), vec![dep("C")], &reg).unwrap();
+}
+
+#[test]
 #[should_panic(expected = "assertion failed: !name.is_empty()")]
 fn test_dependency_with_empty_name() {
     // Bug 5229, dependency-names must not be empty
@@ -244,7 +374,7 @@ fn test_dependency_with_empty_name() {
 
 #[test]
 fn test_resolving_empty_dependency_list() {
-    let res = resolve(&pkg_id("root"), Vec::new(), &registry(vec![])).unwrap();
+    let res = resolve(pkg_id("root"), Vec::new(), &registry(vec![])).unwrap();
 
     assert_eq!(res, names(&["root"]));
 }
@@ -252,28 +382,28 @@ fn test_resolving_empty_dependency_list() {
 #[test]
 fn test_resolving_only_package() {
     let reg = registry(vec![pkg!("foo")]);
-    let res = resolve(&pkg_id("root"), vec![dep("foo")], &reg).unwrap();
+    let res = resolve(pkg_id("root"), vec![dep("foo")], &reg).unwrap();
     assert_same(&res, &names(&["root", "foo"]));
 }
 
 #[test]
 fn test_resolving_one_dep() {
     let reg = registry(vec![pkg!("foo"), pkg!("bar")]);
-    let res = resolve(&pkg_id("root"), vec![dep("foo")], &reg).unwrap();
+    let res = resolve(pkg_id("root"), vec![dep("foo")], &reg).unwrap();
     assert_same(&res, &names(&["root", "foo"]));
 }
 
 #[test]
 fn test_resolving_multiple_deps() {
     let reg = registry(vec![pkg!("foo"), pkg!("bar"), pkg!("baz")]);
-    let res = resolve(&pkg_id("root"), vec![dep("foo"), dep("baz")], &reg).unwrap();
+    let res = resolve(pkg_id("root"), vec![dep("foo"), dep("baz")], &reg).unwrap();
     assert_same(&res, &names(&["root", "foo", "baz"]));
 }
 
 #[test]
 fn test_resolving_transitive_deps() {
     let reg = registry(vec![pkg!("foo"), pkg!("bar" => ["foo"])]);
-    let res = resolve(&pkg_id("root"), vec![dep("bar")], &reg).unwrap();
+    let res = resolve(pkg_id("root"), vec![dep("bar")], &reg).unwrap();
 
     assert_same(&res, &names(&["root", "foo", "bar"]));
 }
@@ -281,7 +411,7 @@ fn test_resolving_transitive_deps() {
 #[test]
 fn test_resolving_common_transitive_deps() {
     let reg = registry(vec![pkg!("foo" => ["bar"]), pkg!("bar")]);
-    let res = resolve(&pkg_id("root"), vec![dep("foo"), dep("bar")], &reg).unwrap();
+    let res = resolve(pkg_id("root"), vec![dep("foo"), dep("bar")], &reg).unwrap();
 
     assert_same(&res, &names(&["root", "foo", "bar"]));
 }
@@ -289,24 +419,24 @@ fn test_resolving_common_transitive_deps() {
 #[test]
 fn test_resolving_with_same_name() {
     let list = vec![
-        pkg_loc("foo", "http://first.example.com"),
-        pkg_loc("bar", "http://second.example.com"),
+        pkg_loc("foo", "https://first.example.com"),
+        pkg_loc("bar", "https://second.example.com"),
     ];
 
     let reg = registry(list);
     let res = resolve(
-        &pkg_id("root"),
+        pkg_id("root"),
         vec![
-            dep_loc("foo", "http://first.example.com"),
-            dep_loc("bar", "http://second.example.com"),
+            dep_loc("foo", "https://first.example.com"),
+            dep_loc("bar", "https://second.example.com"),
         ],
         &reg,
     )
     .unwrap();
 
     let mut names = loc_names(&[
-        ("foo", "http://first.example.com"),
-        ("bar", "http://second.example.com"),
+        ("foo", "https://first.example.com"),
+        ("bar", "https://second.example.com"),
     ]);
 
     names.push(pkg_id("root"));
@@ -323,7 +453,7 @@ fn test_resolving_with_dev_deps() {
     ]);
 
     let res = resolve(
-        &pkg_id("root"),
+        pkg_id("root"),
         vec![dep("foo"), dep_kind("baz", Kind::Development)],
         &reg,
     )
@@ -336,7 +466,7 @@ fn test_resolving_with_dev_deps() {
 fn resolving_with_many_versions() {
     let reg = registry(vec![pkg!(("foo", "1.0.1")), pkg!(("foo", "1.0.2"))]);
 
-    let res = resolve(&pkg_id("root"), vec![dep("foo")], &reg).unwrap();
+    let res = resolve(pkg_id("root"), vec![dep("foo")], &reg).unwrap();
 
     assert_same(&res, &names(&[("root", "1.0.0"), ("foo", "1.0.2")]));
 }
@@ -345,7 +475,7 @@ fn resolving_with_many_versions() {
 fn resolving_with_specific_version() {
     let reg = registry(vec![pkg!(("foo", "1.0.1")), pkg!(("foo", "1.0.2"))]);
 
-    let res = resolve(&pkg_id("root"), vec![dep_req("foo", "=1.0.1")], &reg).unwrap();
+    let res = resolve(pkg_id("root"), vec![dep_req("foo", "=1.0.1")], &reg).unwrap();
 
     assert_same(&res, &names(&[("root", "1.0.0"), ("foo", "1.0.1")]));
 }
@@ -361,7 +491,7 @@ fn test_resolving_maximum_version_with_transitive_deps() {
     ]);
 
     let res = resolve(
-        &pkg_id("root"),
+        pkg_id("root"),
         vec![dep_req("foo", "1.0.0"), dep_req("bar", "1.0.0")],
         &reg,
     )
@@ -409,7 +539,7 @@ fn test_resolving_minimum_version_with_transitive_deps() {
         .unwrap();
 
     let res = resolve_with_config(
-        &pkg_id("root"),
+        pkg_id("root"),
         vec![dep_req("foo", "1.0.0"), dep_req("bar", "1.0.0")],
         &reg,
         Some(&config),
@@ -470,7 +600,7 @@ fn resolving_incompat_versions() {
     ]);
 
     assert!(resolve(
-        &pkg_id("root"),
+        pkg_id("root"),
         vec![dep_req("foo", "=1.0.1"), dep("bar")],
         &reg
     )
@@ -485,7 +615,7 @@ fn resolving_wrong_case_from_registry() {
     // This test documents the current behavior.
     let reg = registry(vec![pkg!(("foo", "1.0.0")), pkg!("bar" => ["Foo"])]);
 
-    assert!(resolve(&pkg_id("root"), vec![dep("bar")], &reg).is_err());
+    assert!(resolve(pkg_id("root"), vec![dep("bar")], &reg).is_err());
 }
 
 #[test]
@@ -496,7 +626,7 @@ fn resolving_mis_hyphenated_from_registry() {
     // This test documents the current behavior.
     let reg = registry(vec![pkg!(("fo-o", "1.0.0")), pkg!("bar" => ["fo_o"])]);
 
-    assert!(resolve(&pkg_id("root"), vec![dep("bar")], &reg).is_err());
+    assert!(resolve(pkg_id("root"), vec![dep("bar")], &reg).is_err());
 }
 
 #[test]
@@ -508,7 +638,7 @@ fn resolving_backtrack() {
         pkg!("baz"),
     ]);
 
-    let res = resolve(&pkg_id("root"), vec![dep_req("foo", "^1")], &reg).unwrap();
+    let res = resolve(pkg_id("root"), vec![dep_req("foo", "^1")], &reg).unwrap();
 
     assert_contains(
         &res,
@@ -528,7 +658,7 @@ fn resolving_backtrack_features() {
         pkg!("bar"),
     ]);
 
-    let res = resolve(&pkg_id("root"), vec![dep_req("foo", "^1")], &reg).unwrap();
+    let res = resolve(pkg_id("root"), vec![dep_req("foo", "^1")], &reg).unwrap();
 
     assert_contains(
         &res,
@@ -550,7 +680,7 @@ fn resolving_allows_multiple_compatible_versions() {
         pkg!("d4" => [dep_req("foo", "0.2")]),
     ]);
 
-    let res = resolve(&pkg_id("root"), vec![dep("bar")], &reg).unwrap();
+    let res = resolve(pkg_id("root"), vec![dep("bar")], &reg).unwrap();
 
     assert_same(
         &res,
@@ -583,7 +713,7 @@ fn resolving_with_deep_backtracking() {
         pkg!(("dep_req", "2.0.0")),
     ]);
 
-    let res = resolve(&pkg_id("root"), vec![dep_req("foo", "1")], &reg).unwrap();
+    let res = resolve(pkg_id("root"), vec![dep_req("foo", "1")], &reg).unwrap();
 
     assert_same(
         &res,
@@ -611,7 +741,7 @@ fn resolving_with_sys_crates() {
     ]);
 
     let res = resolve(
-        &pkg_id("root"),
+        pkg_id("root"),
         vec![dep_req("d", "1"), dep_req("r", "1")],
         &reg,
     )
@@ -664,7 +794,7 @@ fn resolving_with_constrained_sibling_backtrack_parent() {
     }
     let reg = registry(reglist);
 
-    let res = resolve(&pkg_id("root"), vec![dep_req("foo", "1")], &reg).unwrap();
+    let res = resolve(pkg_id("root"), vec![dep_req("foo", "1")], &reg).unwrap();
 
     assert_contains(
         &res,
@@ -699,7 +829,7 @@ fn resolving_with_many_equivalent_backtracking() {
 
     let reg = registry(reglist.clone());
 
-    let res = resolve(&pkg_id("root"), vec![dep("level0")], &reg);
+    let res = resolve(pkg_id("root"), vec![dep("level0")], &reg);
 
     assert!(res.is_err());
 
@@ -709,7 +839,7 @@ fn resolving_with_many_equivalent_backtracking() {
 
     let reg = registry(reglist.clone());
 
-    let res = resolve(&pkg_id("root"), vec![dep("level0")], &reg).unwrap();
+    let res = resolve(pkg_id("root"), vec![dep("level0")], &reg).unwrap();
 
     assert_contains(&res, &names(&[("root", "1.0.0"), ("level0", "1.0.0")]));
 
@@ -723,7 +853,7 @@ fn resolving_with_many_equivalent_backtracking() {
     let reg = registry(reglist.clone());
 
     let res = resolve(
-        &pkg_id("root"),
+        pkg_id("root"),
         vec![dep("level0"), dep("constrained")],
         &reg,
     )
@@ -741,7 +871,7 @@ fn resolving_with_many_equivalent_backtracking() {
     let reg = registry(reglist.clone());
 
     let res = resolve(
-        &pkg_id("root"),
+        pkg_id("root"),
         vec![dep_req("level0", "1.0.1"), dep("constrained")],
         &reg,
     )
@@ -756,10 +886,10 @@ fn resolving_with_many_equivalent_backtracking() {
         ]),
     );
 
-    let reg = registry(reglist.clone());
+    let reg = registry(reglist);
 
     let res = resolve(
-        &pkg_id("root"),
+        pkg_id("root"),
         vec![dep_req("level0", "1.0.1"), dep_req("constrained", "1.1.0")],
         &reg,
     );
@@ -799,10 +929,10 @@ fn resolving_with_deep_traps() {
         }
     }
 
-    let reg = registry(reglist.clone());
+    let reg = registry(reglist);
 
     let res = resolve(
-        &pkg_id("root"),
+        pkg_id("root"),
         vec![dep("backtrack_trap0"), dep("cloaking")],
         &reg,
     );
@@ -854,7 +984,7 @@ fn resolving_with_constrained_cousins_backtrack() {
     // but `constrained= "2.0.1"` is already picked.
     // Only then to try and solve `constrained= "~1.0.0"` which is incompatible.
     let res = resolve(
-        &pkg_id("root"),
+        pkg_id("root"),
         vec![
             dep("backtrack_trap0"),
             dep_req("constrained", "2.0.1"),
@@ -881,10 +1011,10 @@ fn resolving_with_constrained_cousins_backtrack() {
         ]),
     );
 
-    let reg = registry(reglist.clone());
+    let reg = registry(reglist);
 
     let res = resolve(
-        &pkg_id("root"),
+        pkg_id("root"),
         vec![dep("level0"), dep_req("constrained", "2.0.1")],
         &reg,
     );
@@ -892,7 +1022,7 @@ fn resolving_with_constrained_cousins_backtrack() {
     assert!(res.is_err());
 
     let res = resolve(
-        &pkg_id("root"),
+        pkg_id("root"),
         vec![dep("level0"), dep_req("constrained", "2.0.0")],
         &reg,
     )
@@ -936,7 +1066,7 @@ fn resolving_with_constrained_sibling_backtrack_activation() {
     }
     let reg = registry(reglist);
 
-    let res = resolve(&pkg_id("root"), vec![dep_req("foo", "1")], &reg).unwrap();
+    let res = resolve(pkg_id("root"), vec![dep_req("foo", "1")], &reg).unwrap();
 
     assert_contains(
         &res,
@@ -982,7 +1112,7 @@ fn resolving_with_constrained_sibling_transitive_dep_effects() {
         pkg!(("D", "1.0.105")),
     ]);
 
-    let res = resolve(&pkg_id("root"), vec![dep_req("A", "1")], &reg).unwrap();
+    let res = resolve(pkg_id("root"), vec![dep_req("A", "1")], &reg).unwrap();
 
     assert_same(
         &res,
@@ -1028,7 +1158,7 @@ fn incomplete_information_skiping() {
     ];
     let reg = registry(input.clone());
 
-    let res = resolve(&pkg_id("root"), vec![dep("g")], &reg).unwrap();
+    let res = resolve(pkg_id("root"), vec![dep("g")], &reg).unwrap();
     let package_to_yank = "to_yank".to_pkgid();
     // this package is not used in the resolution.
     assert!(!res.contains(&package_to_yank));
@@ -1042,7 +1172,7 @@ fn incomplete_information_skiping() {
     );
     assert_eq!(input.len(), new_reg.len() + 1);
     // it should still build
-    assert!(resolve(&pkg_id("root"), vec![dep("g")], &new_reg).is_ok());
+    assert!(resolve(pkg_id("root"), vec![dep("g")], &new_reg).is_ok());
 }
 
 #[test]
@@ -1097,7 +1227,7 @@ fn incomplete_information_skiping_2() {
     ];
     let reg = registry(input.clone());
 
-    let res = resolve(&pkg_id("root"), vec![dep("i")], &reg).unwrap();
+    let res = resolve(pkg_id("root"), vec![dep("i")], &reg).unwrap();
     let package_to_yank = ("to_yank", "8.8.1").to_pkgid();
     // this package is not used in the resolution.
     assert!(!res.contains(&package_to_yank));
@@ -1111,7 +1241,7 @@ fn incomplete_information_skiping_2() {
     );
     assert_eq!(input.len(), new_reg.len() + 1);
     // it should still build
-    assert!(resolve(&pkg_id("root"), vec![dep("i")], &new_reg).is_ok());
+    assert!(resolve(pkg_id("root"), vec![dep("i")], &new_reg).is_ok());
 }
 
 #[test]
@@ -1147,7 +1277,7 @@ fn incomplete_information_skiping_3() {
     ];
     let reg = registry(input.clone());
 
-    let res = resolve(&pkg_id("root"), vec![dep("b")], &reg).unwrap();
+    let res = resolve(pkg_id("root"), vec![dep("b")], &reg).unwrap();
     let package_to_yank = ("to_yank", "3.0.3").to_pkgid();
     // this package is not used in the resolution.
     assert!(!res.contains(&package_to_yank));
@@ -1161,22 +1291,22 @@ fn incomplete_information_skiping_3() {
     );
     assert_eq!(input.len(), new_reg.len() + 1);
     // it should still build
-    assert!(resolve(&pkg_id("root"), vec![dep("b")], &new_reg).is_ok());
+    assert!(resolve(pkg_id("root"), vec![dep("b")], &new_reg).is_ok());
 }
 
 #[test]
 fn resolving_but_no_exists() {
     let reg = registry(vec![]);
 
-    let res = resolve(&pkg_id("root"), vec![dep_req("foo", "1")], &reg);
+    let res = resolve(pkg_id("root"), vec![dep_req("foo", "1")], &reg);
     assert!(res.is_err());
 
     assert_eq!(
         res.err().unwrap().to_string(),
         "\
          no matching package named `foo` found\n\
-         location searched: registry `http://example.com/`\n\
-         required by package `root v1.0.0 (registry `http://example.com/`)`\
+         location searched: registry `https://example.com/`\n\
+         required by package `root v1.0.0 (registry `https://example.com/`)`\
          "
     );
 }
@@ -1185,7 +1315,7 @@ fn resolving_but_no_exists() {
 fn resolving_cycle() {
     let reg = registry(vec![pkg!("foo" => ["foo"])]);
 
-    let _ = resolve(&pkg_id("root"), vec![dep_req("foo", "1")], &reg);
+    let _ = resolve(pkg_id("root"), vec![dep_req("foo", "1")], &reg);
 }
 
 #[test]
@@ -1197,7 +1327,7 @@ fn hard_equality() {
     ]);
 
     let res = resolve(
-        &pkg_id("root"),
+        pkg_id("root"),
         vec![dep_req("bar", "1"), dep_req("foo", "=1.0.0")],
         &reg,
     )
@@ -1215,7 +1345,7 @@ fn large_conflict_cache() {
         pkg!(("last", "0.0.0") => [dep("bad")]), // just to make sure last is less constrained
     ];
     let mut root_deps = vec![dep("last")];
-    const NUM_VERSIONS: u8 = 3;
+    const NUM_VERSIONS: u8 = 20;
     for name in 0..=NUM_VERSIONS {
         // a large number of conflicts can easily be generated by a sys crate.
         let sys_name = format!("{}-sys", (b'a' + name) as char);
@@ -1235,7 +1365,7 @@ fn large_conflict_cache() {
         }
     }
     let reg = registry(input);
-    let _ = resolve(&pkg_id("root"), root_deps, &reg);
+    let _ = resolve(pkg_id("root"), root_deps, &reg);
 }
 
 #[test]
@@ -1274,6 +1404,34 @@ fn conflict_store_bug() {
         ]),
     ];
 
-    let reg = registry(input.clone());
-    let _ = resolve_and_validated(&pkg_id("root"), vec![dep("j")], &reg);
+    let reg = registry(input);
+    let _ = resolve_and_validated(pkg_id("root"), vec![dep("j")], &reg);
+}
+
+#[test]
+fn conflict_store_more_then_one_match() {
+    let input = vec![
+        pkg!(("A", "0.0.0")),
+        pkg!(("A", "0.0.1")),
+        pkg!(("A-sys", "0.0.0")),
+        pkg!(("A-sys", "0.0.1")),
+        pkg!(("A-sys", "0.0.2")),
+        pkg!(("A-sys", "0.0.3")),
+        pkg!(("A-sys", "0.0.12")),
+        pkg!(("A-sys", "0.0.16")),
+        pkg!(("B-sys", "0.0.0")),
+        pkg!(("B-sys", "0.0.1")),
+        pkg!(("B-sys", "0.0.2") => [dep_req("A-sys", "= 0.0.12"),]),
+        pkg!(("BA-sys", "0.0.0") => [dep_req("A-sys","= 0.0.16"),]),
+        pkg!(("BA-sys", "0.0.1") => [dep("bad"),]),
+        pkg!(("BA-sys", "0.0.2") => [dep("bad"),]),
+        pkg!("nA" => [
+            dep("A"),
+            dep_req("A-sys", "<= 0.0.3"),
+            dep("B-sys"),
+            dep("BA-sys"),
+        ]),
+    ];
+    let reg = registry(input);
+    let _ = resolve_and_validated(pkg_id("root"), vec![dep("nA")], &reg);
 }

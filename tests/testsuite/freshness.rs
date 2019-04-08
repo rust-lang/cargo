@@ -1,11 +1,12 @@
+use filetime::FileTime;
 use std::fs::{self, File, OpenOptions};
 use std::io::prelude::*;
 use std::net::TcpListener;
-use std::path::PathBuf;
+use std::path::{Path, PathBuf};
 use std::thread;
 use std::time::SystemTime;
 
-use crate::support::paths::CargoPathExt;
+use crate::support::paths::{self, CargoPathExt};
 use crate::support::registry::Package;
 use crate::support::sleep_ms;
 use crate::support::{basic_manifest, is_coarse_mtime, project};
@@ -339,7 +340,7 @@ fn changing_bin_paths_common_target_features_caches_targets() {
 
     /* Build and rebuild a/. Ensure dep_crate only builds once */
     p.cargo("run")
-        .cwd(p.root().join("a"))
+        .cwd("a")
         .with_stdout("ftest off")
         .with_stderr(
             "\
@@ -350,9 +351,9 @@ fn changing_bin_paths_common_target_features_caches_targets() {
 ",
         )
         .run();
-    p.cargo("clean -p a").cwd(p.root().join("a")).run();
+    p.cargo("clean -p a").cwd("a").run();
     p.cargo("run")
-        .cwd(p.root().join("a"))
+        .cwd("a")
         .with_stdout("ftest off")
         .with_stderr(
             "\
@@ -365,7 +366,7 @@ fn changing_bin_paths_common_target_features_caches_targets() {
 
     /* Build and rebuild b/. Ensure dep_crate only builds once */
     p.cargo("run")
-        .cwd(p.root().join("b"))
+        .cwd("b")
         .with_stdout("ftest on")
         .with_stderr(
             "\
@@ -376,9 +377,9 @@ fn changing_bin_paths_common_target_features_caches_targets() {
 ",
         )
         .run();
-    p.cargo("clean -p b").cwd(p.root().join("b")).run();
+    p.cargo("clean -p b").cwd("b").run();
     p.cargo("run")
-        .cwd(p.root().join("b"))
+        .cwd("b")
         .with_stdout("ftest on")
         .with_stderr(
             "\
@@ -391,9 +392,9 @@ fn changing_bin_paths_common_target_features_caches_targets() {
 
     /* Build a/ package again. If we cache different feature dep builds correctly,
      * this should not cause a rebuild of dep_crate */
-    p.cargo("clean -p a").cwd(p.root().join("a")).run();
+    p.cargo("clean -p a").cwd("a").run();
     p.cargo("run")
-        .cwd(p.root().join("a"))
+        .cwd("a")
         .with_stdout("ftest off")
         .with_stderr(
             "\
@@ -406,9 +407,9 @@ fn changing_bin_paths_common_target_features_caches_targets() {
 
     /* Build b/ package again. If we cache different feature dep builds correctly,
      * this should not cause a rebuild */
-    p.cargo("clean -p b").cwd(p.root().join("b")).run();
+    p.cargo("clean -p b").cwd("b").run();
     p.cargo("run")
-        .cwd(p.root().join("b"))
+        .cwd("b")
         .with_stdout("ftest on")
         .with_stderr(
             "\
@@ -681,7 +682,7 @@ fn same_build_dir_cached_packages() {
         .build();
 
     p.cargo("build")
-        .cwd(p.root().join("a1"))
+        .cwd("a1")
         .with_stderr(&format!(
             "\
 [COMPILING] d v0.0.1 ({dir}/d)
@@ -694,7 +695,7 @@ fn same_build_dir_cached_packages() {
         ))
         .run();
     p.cargo("build")
-        .cwd(p.root().join("a2"))
+        .cwd("a2")
         .with_stderr(
             "\
 [COMPILING] a2 v0.0.1 ([CWD])
@@ -1526,7 +1527,7 @@ fn rebuild_on_mid_build_file_modification() {
         .file(
             "root/Cargo.toml",
             r#"
-            [project]
+            [package]
             name = "root"
             version = "0.1.0"
             authors = []
@@ -1548,7 +1549,7 @@ fn rebuild_on_mid_build_file_modification() {
         .file(
             "proc_macro_dep/Cargo.toml",
             r#"
-            [project]
+            [package]
             name = "proc_macro_dep"
             version = "0.1.0"
             authors = []
@@ -1615,4 +1616,345 @@ fn rebuild_on_mid_build_file_modification() {
         .run();
 
     t.join().ok().unwrap();
+}
+
+#[test]
+fn dirty_both_lib_and_test() {
+    // This tests that all artifacts that depend on the results of a build
+    // script will get rebuilt when the build script reruns, even for separate
+    // commands. It does the following:
+    //
+    // 1. Project "foo" has a build script which will compile a small
+    //    staticlib to link against. Normally this would use the `cc` crate,
+    //    but here we just use rustc to avoid the `cc` dependency.
+    // 2. Build the library.
+    // 3. Build the unit test. The staticlib intentionally has a bad value.
+    // 4. Rewrite the staticlib with the correct value.
+    // 5. Build the library again.
+    // 6. Build the unit test. This should recompile.
+
+    let slib = |n| {
+        format!(
+            r#"
+            #[no_mangle]
+            pub extern "C" fn doit() -> i32 {{
+                return {};
+            }}
+        "#,
+            n
+        )
+    };
+
+    let p = project()
+        .file(
+            "src/lib.rs",
+            r#"
+            extern "C" {
+                fn doit() -> i32;
+            }
+
+            #[test]
+            fn t1() {
+                assert_eq!(unsafe { doit() }, 1, "doit assert failure");
+            }
+        "#,
+        )
+        .file(
+            "build.rs",
+            r#"
+            use std::env;
+            use std::path::PathBuf;
+            use std::process::Command;
+
+            fn main() {
+                let rustc = env::var_os("RUSTC").unwrap();
+                let out_dir = PathBuf::from(env::var("OUT_DIR").unwrap());
+                assert!(
+                    Command::new(rustc)
+                        .args(&[
+                            "--crate-type=staticlib",
+                            "--out-dir",
+                            out_dir.to_str().unwrap(),
+                            "slib.rs"
+                        ])
+                        .status()
+                        .unwrap()
+                        .success(),
+                    "slib build failed"
+                );
+                println!("cargo:rustc-link-lib=slib");
+                println!("cargo:rustc-link-search={}", out_dir.display());
+            }
+        "#,
+        )
+        .file("slib.rs", &slib(2))
+        .build();
+
+    p.cargo("build").run();
+
+    // 2 != 1
+    p.cargo("test --lib")
+        .with_status(101)
+        .with_stdout_contains("[..]doit assert failure[..]")
+        .run();
+
+    if is_coarse_mtime() {
+        // #5918
+        sleep_ms(1000);
+    }
+    // Fix the mistake.
+    p.change_file("slib.rs", &slib(1));
+
+    p.cargo("build").run();
+    // This should recompile with the new static lib, and the test should pass.
+    p.cargo("test --lib").run();
+}
+
+#[test]
+fn script_fails_stay_dirty() {
+    // Check if a script is aborted (such as hitting Ctrl-C) that it will re-run.
+    // Steps:
+    // 1. Build to establish fingerprints.
+    // 2. Make a change that triggers the build script to re-run. Abort the
+    //    script while it is running.
+    // 3. Run the build again and make sure it re-runs the script.
+    let p = project()
+        .file(
+            "build.rs",
+            r#"
+                mod helper;
+                fn main() {
+                    println!("cargo:rerun-if-changed=build.rs");
+                    helper::doit();
+                }
+            "#,
+        )
+        .file("helper.rs", "pub fn doit() {}")
+        .file("src/lib.rs", "")
+        .build();
+
+    p.cargo("build").run();
+    if is_coarse_mtime() {
+        sleep_ms(1000);
+    }
+    p.change_file("helper.rs", r#"pub fn doit() {panic!("Crash!");}"#);
+    p.cargo("build")
+        .with_stderr_contains("[..]Crash![..]")
+        .with_status(101)
+        .run();
+    // There was a bug where this second call would be "fresh".
+    p.cargo("build")
+        .with_stderr_contains("[..]Crash![..]")
+        .with_status(101)
+        .run();
+}
+
+#[test]
+fn simulated_docker_deps_stay_cached() {
+    // Test what happens in docker where the nanoseconds are zeroed out.
+    Package::new("regdep", "1.0.0").publish();
+    Package::new("regdep_old_style", "1.0.0")
+        .file("build.rs", "fn main() {}")
+        .file("src/lib.rs", "")
+        .publish();
+    Package::new("regdep_env", "1.0.0")
+        .file(
+            "build.rs",
+            r#"
+            fn main() {
+                println!("cargo:rerun-if-env-changed=SOMEVAR");
+            }
+            "#,
+        )
+        .file("src/lib.rs", "")
+        .publish();
+    Package::new("regdep_rerun", "1.0.0")
+        .file(
+            "build.rs",
+            r#"
+            fn main() {
+                println!("cargo:rerun-if-changed=build.rs");
+            }
+            "#,
+        )
+        .file("src/lib.rs", "")
+        .publish();
+
+    let p = project()
+        .file(
+            "Cargo.toml",
+            r#"
+            [package]
+            name = "foo"
+            version = "0.1.0"
+
+            [dependencies]
+            pathdep = { path = "pathdep" }
+            regdep = "1.0"
+            regdep_old_style = "1.0"
+            regdep_env = "1.0"
+            regdep_rerun = "1.0"
+            "#,
+        )
+        .file(
+            "src/lib.rs",
+            "
+            extern crate pathdep;
+            extern crate regdep;
+            extern crate regdep_old_style;
+            extern crate regdep_env;
+            extern crate regdep_rerun;
+            ",
+        )
+        .file("build.rs", "fn main() {}")
+        .file("pathdep/Cargo.toml", &basic_manifest("pathdep", "1.0.0"))
+        .file("pathdep/src/lib.rs", "")
+        .build();
+
+    p.cargo("build").run();
+
+    let already_zero = {
+        // This happens on HFS with 1-second timestamp resolution,
+        // or other filesystems where it just so happens to write exactly on a
+        // 1-second boundary.
+        let metadata = fs::metadata(p.root().join("src/lib.rs")).unwrap();
+        let mtime = FileTime::from_last_modification_time(&metadata);
+        mtime.nanoseconds() == 0
+    };
+
+    // Recursively remove `nanoseconds` from every path.
+    fn zeropath(path: &Path) {
+        for entry in walkdir::WalkDir::new(path)
+            .into_iter()
+            .filter_map(|e| e.ok())
+        {
+            let metadata = fs::metadata(entry.path()).unwrap();
+            let mtime = metadata.modified().unwrap();
+            let mtime_duration = mtime.duration_since(SystemTime::UNIX_EPOCH).unwrap();
+            let trunc_mtime = FileTime::from_unix_time(mtime_duration.as_secs() as i64, 0);
+            let atime = metadata.accessed().unwrap();
+            let atime_duration = atime.duration_since(SystemTime::UNIX_EPOCH).unwrap();
+            let trunc_atime = FileTime::from_unix_time(atime_duration.as_secs() as i64, 0);
+            if let Err(e) = filetime::set_file_times(entry.path(), trunc_atime, trunc_mtime) {
+                // Windows doesn't allow changing filetimes on some things
+                // (directories, other random things I'm not sure why). Just
+                // ignore them.
+                if e.kind() == std::io::ErrorKind::PermissionDenied {
+                    println!("PermissionDenied filetime on {:?}", entry.path());
+                } else {
+                    panic!("FileTime error on {:?}: {:?}", entry.path(), e);
+                }
+            }
+        }
+    }
+    zeropath(&p.root());
+    zeropath(&paths::home());
+
+    if already_zero {
+        // If it was already truncated, then everything stays fresh.
+        p.cargo("build -v")
+            .with_stderr_unordered(
+                "\
+[FRESH] pathdep [..]
+[FRESH] regdep [..]
+[FRESH] regdep_env [..]
+[FRESH] regdep_old_style [..]
+[FRESH] regdep_rerun [..]
+[FRESH] foo [..]
+[FINISHED] [..]
+",
+            )
+            .run();
+    } else {
+        // It is not ideal that `foo` gets recompiled, but that is the current
+        // behavior. Currently mtimes are ignored for registry deps.
+        p.cargo("build -v")
+            .with_stderr_unordered(
+                "\
+[FRESH] pathdep [..]
+[FRESH] regdep [..]
+[FRESH] regdep_env [..]
+[FRESH] regdep_old_style [..]
+[FRESH] regdep_rerun [..]
+[COMPILING] foo [..]
+[RUNNING] [..]/foo-[..]/build-script-build[..]
+[RUNNING] `rustc --crate-name foo[..]
+[FINISHED] [..]
+",
+            )
+            .run();
+    }
+}
+
+#[test]
+fn metadata_change_invalidates() {
+    let p = project()
+        .file(
+            "Cargo.toml",
+            r#"
+            [package]
+            name = "foo"
+            version = "0.1.0"
+            "#,
+        )
+        .file("src/lib.rs", "")
+        .build();
+
+    p.cargo("build").run();
+
+    for attr in &[
+        "authors = [\"foo\"]",
+        "description = \"desc\"",
+        "homepage = \"https://example.com\"",
+        "repository =\"https://example.com\"",
+    ] {
+        let mut file = OpenOptions::new()
+            .write(true)
+            .append(true)
+            .open(p.root().join("Cargo.toml"))
+            .unwrap();
+        writeln!(file, "{}", attr).unwrap();
+        p.cargo("build")
+            .with_stderr_contains("[COMPILING] foo [..]")
+            .run();
+    }
+    p.cargo("build -v")
+        .with_stderr_contains("[FRESH] foo[..]")
+        .run();
+    assert_eq!(p.glob("target/debug/deps/libfoo-*.rlib").count(), 1);
+}
+
+#[test]
+fn edition_change_invalidates() {
+    const MANIFEST: &str = r#"
+        [package]
+        name = "foo"
+        version = "0.1.0"
+    "#;
+    let p = project()
+        .file("Cargo.toml", MANIFEST)
+        .file("src/lib.rs", "")
+        .build();
+    p.cargo("build").run();
+    p.change_file("Cargo.toml", &format!("{}edition = \"2018\"", MANIFEST));
+    p.cargo("build")
+        .with_stderr_contains("[COMPILING] foo [..]")
+        .run();
+    p.change_file(
+        "Cargo.toml",
+        &format!(
+            r#"{}edition = "2018"
+            [lib]
+            edition = "2015"
+            "#,
+            MANIFEST
+        ),
+    );
+    p.cargo("build")
+        .with_stderr_contains("[COMPILING] foo [..]")
+        .run();
+    p.cargo("build -v")
+        .with_stderr_contains("[FRESH] foo[..]")
+        .run();
+    assert_eq!(p.glob("target/debug/deps/libfoo-*.rlib").count(), 1);
 }

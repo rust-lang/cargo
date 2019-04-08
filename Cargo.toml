@@ -1,6 +1,6 @@
 [package]
 name = "cargo"
-version = "0.35.0"
+version = "0.36.0"
 edition = "2018"
 authors = ["Yehuda Katz <wycats@gmail.com>",
            "Carl Lerche <me@carllerche.com>",
@@ -21,7 +21,7 @@ path = "src/cargo/lib.rs"
 atty = "0.2"
 byteorder = "1.2"
 bytesize = "1.0"
-crates-io = { path = "src/crates-io", version = "0.23" }
+crates-io = { path = "src/crates-io", version = "0.24" }
 crossbeam-utils = "0.6"
 crypto-hash = "0.3.1"
 curl = { version = "0.4.19", features = ['http2'] }
@@ -34,12 +34,12 @@ flate2 = { version = "1.0.3", features = ['zlib'] }
 fs2 = "0.4"
 git2 = "0.8.0"
 git2-curl = "0.9.0"
-glob = "0.2.11"
+glob = "0.3.0"
 hex = "0.3"
 home = "0.3"
 ignore = "0.4"
 lazy_static = "1.2.0"
-jobserver = "0.1.11"
+jobserver = "0.1.13"
 lazycell = "1.2.0"
 libc = "0.2"
 log = "0.4.6"
@@ -56,9 +56,10 @@ shell-escape = "0.1.4"
 tar = { version = "0.4.18", default-features = false }
 tempfile = "3.0"
 termcolor = "1.0"
-toml = "0.4.2"
+toml = "0.5.0"
 url = "1.1"
 url_serde = "0.2.0"
+walkdir = "2.2"
 clap = "2.31.2"
 unicode-width = "0.1.5"
 openssl = { version = '0.10.11', optional = true }
@@ -99,7 +100,7 @@ features = [
 
 [dev-dependencies]
 bufstream = "0.1"
-proptest = "0.8.7"
+proptest = "0.9.1"
 
 [[bin]]
 name = "cargo"

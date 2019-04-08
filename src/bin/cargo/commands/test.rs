@@ -18,6 +18,10 @@ pub fn cli() -> App {
                 .multiple(true)
                 .last(true),
         )
+        .arg(
+            opt("quiet", "Display one character per test instead of one line")
+            .short("q")
+        )
         .arg_targets_all(
             "Test only this package's library unit tests",
             "Test only the specified binary",
@@ -97,13 +101,9 @@ pub fn exec(config: &mut Config, args: &ArgMatches<'_>) -> CliResult {
     // `TESTNAME` is actually an argument of the test binary, but it's
     // important, so we explicitly mention it and reconfigure.
     let test_name: Option<&str> = args.value_of("TESTNAME");
-    let mut test_args = vec![];
-    test_args.extend(test_name.into_iter().map(|s| s.to_string()));
-    test_args.extend(
-        args.values_of("args")
-            .unwrap_or_default()
-            .map(|s| s.to_string()),
-    );
+    let test_args = args.value_of("TESTNAME").into_iter();
+    let test_args = test_args.chain(args.values_of("args").unwrap_or_default());
+    let test_args = test_args.collect::<Vec<_>>();
 
     let no_run = args.is_present("no-run");
     let doc = args.is_present("doc");
@@ -150,7 +150,10 @@ pub fn exec(config: &mut Config, args: &ArgMatches<'_>) -> CliResult {
     match err {
         None => Ok(()),
         Some(err) => Err(match err.exit.as_ref().and_then(|e| e.code()) {
-            Some(i) => CliError::new(failure::format_err!("{}", err.hint(&ws)), i),
+            Some(i) => CliError::new(
+                failure::format_err!("{}", err.hint(&ws, &ops.compile_opts)),
+                i,
+            ),
             None => CliError::new(err.into(), 101),
         }),
     }

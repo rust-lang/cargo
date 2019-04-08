@@ -89,7 +89,7 @@ fn simple_git() {
         .unwrap()
         .read_to_string(&mut contents)
         .unwrap();
-    assert_eq!(contents, "/target\n**/*.rs.bk\nCargo.lock",);
+    assert_eq!(contents, "/target\n**/*.rs.bk\nCargo.lock\n",);
 
     cargo_process("build").cwd(&paths::root().join("foo")).run();
 }
@@ -510,4 +510,15 @@ fn new_with_bad_edition() {
         .with_stderr_contains("error: 'something_else' isn't a valid value[..]")
         .with_status(1)
         .run();
+}
+
+#[test]
+fn new_with_blank_email() {
+    cargo_process("new foo")
+        .env("CARGO_NAME", "Sen")
+        .env("CARGO_EMAIL", "")
+        .run();
+
+    let contents = fs::read_to_string(paths::root().join("foo/Cargo.toml")).unwrap();
+    assert!(contents.contains(r#"authors = ["Sen"]"#), contents);
 }

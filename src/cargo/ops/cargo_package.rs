@@ -1,3 +1,4 @@
+use std::collections::HashMap;
 use std::fs::{self, File};
 use std::io::prelude::*;
 use std::io::SeekFrom;
@@ -58,7 +59,7 @@ pub fn package(ws: &Workspace<'_>, opts: &PackageOpts<'_>) -> CargoResult<Option
     // dirty. This will `bail!` if dirty, unless allow_dirty. Produce json
     // info for any sha1 (HEAD revision) returned.
     let vcs_info = if !opts.allow_dirty {
-        check_repo_state(pkg, &src_files, &config, opts.allow_dirty)?
+        check_repo_state(pkg, &src_files, config, opts.allow_dirty)?
             .map(|h| json!({"git":{"sha1": h}}))
     } else {
         None
@@ -152,7 +153,7 @@ fn check_metadata(pkg: &Package, config: &Config) -> CargoResult<()> {
 
         config.shell().warn(&format!(
             "manifest has no {things}.\n\
-             See <http://doc.crates.io/manifest.html#package-metadata> for more info.",
+             See https://doc.rust-lang.org/cargo/reference/manifest.html#package-metadata for more info.",
             things = things
         ))?
     }
@@ -363,7 +364,7 @@ fn tar(
         }
     }
 
-    if let Some(ref json) = vcs_info {
+    if let Some(json) = vcs_info {
         let filename: PathBuf = Path::new(VCS_INFO_FILE).into();
         debug_assert!(check_filename(&filename).is_ok());
         let fnd = filename.display();
@@ -439,7 +440,7 @@ fn run_verify(ws: &Workspace<'_>, tar: &FileLock, opts: &PackageOpts<'_>) -> Car
     let id = SourceId::for_path(&dst)?;
     let mut src = PathSource::new(&dst, id, ws.config());
     let new_pkg = src.root_package()?;
-    let pkg_fingerprint = src.last_modified_file(&new_pkg)?;
+    let pkg_fingerprint = hash_all(&dst)?;
     let ws = Workspace::ephemeral(new_pkg, config, None, true)?;
 
     let exec: Arc<dyn Executor> = Arc::new(DefaultExecutor);
@@ -465,19 +466,81 @@ fn run_verify(ws: &Workspace<'_>, tar: &FileLock, opts: &PackageOpts<'_>) -> Car
     )?;
 
     // Check that `build.rs` didn't modify any files in the `src` directory.
-    let ws_fingerprint = src.last_modified_file(ws.current()?)?;
+    let ws_fingerprint = hash_all(&dst)?;
     if pkg_fingerprint != ws_fingerprint {
-        let (_, path) = ws_fingerprint;
+        let changes = report_hash_difference(&pkg_fingerprint, &ws_fingerprint);
         failure::bail!(
             "Source directory was modified by build.rs during cargo publish. \
-             Build scripts should not modify anything outside of OUT_DIR. \
-             Modified file: {}\n\n\
+             Build scripts should not modify anything outside of OUT_DIR.\n\
+             {}\n\n\
              To proceed despite this, pass the `--no-verify` flag.",
-            path.display()
+            changes
         )
     }
 
     Ok(())
+}
+
+fn hash_all(path: &Path) -> CargoResult<HashMap<PathBuf, u64>> {
+    fn wrap(path: &Path) -> CargoResult<HashMap<PathBuf, u64>> {
+        let mut result = HashMap::new();
+        let walker = walkdir::WalkDir::new(path).into_iter();
+        for entry in walker.filter_entry(|e| {
+            !(e.depth() == 1 && (e.file_name() == "target" || e.file_name() == "Cargo.lock"))
+        }) {
+            let entry = entry?;
+            let file_type = entry.file_type();
+            if file_type.is_file() {
+                let contents = fs::read(entry.path())?;
+                let hash = util::hex::hash_u64(&contents);
+                result.insert(entry.path().to_path_buf(), hash);
+            } else if file_type.is_symlink() {
+                let hash = util::hex::hash_u64(&fs::read_link(entry.path())?);
+                result.insert(entry.path().to_path_buf(), hash);
+            }
+        }
+        Ok(result)
+    }
+    let result = wrap(path).chain_err(|| format!("failed to verify output at {:?}", path))?;
+    Ok(result)
+}
+
+fn report_hash_difference(
+    orig: &HashMap<PathBuf, u64>,
+    after: &HashMap<PathBuf, u64>,
+) -> String {
+    let mut changed = Vec::new();
+    let mut removed = Vec::new();
+    for (key, value) in orig {
+        match after.get(key) {
+            Some(after_value) => {
+                if value != after_value {
+                    changed.push(key.to_string_lossy());
+                }
+            }
+            None => removed.push(key.to_string_lossy()),
+        }
+    }
+    let mut added: Vec<_> = after
+        .keys()
+        .filter(|key| !orig.contains_key(*key))
+        .map(|key| key.to_string_lossy())
+        .collect();
+    let mut result = Vec::new();
+    if !changed.is_empty() {
+        changed.sort_unstable();
+        result.push(format!("Changed: {}", changed.join("\n\t")));
+    }
+    if !added.is_empty() {
+        added.sort_unstable();
+        result.push(format!("Added: {}", added.join("\n\t")));
+    }
+    if !removed.is_empty() {
+        removed.sort_unstable();
+        result.push(format!("Removed: {}", removed.join("\n\t")));
+    }
+    assert!(!result.is_empty(), "unexpected empty change detection");
+    result.join("\n")
 }
 
 // It can often be the case that files of a particular name on one platform

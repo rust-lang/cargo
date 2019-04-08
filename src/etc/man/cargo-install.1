@@ -2,12 +2,12 @@
 .\"     Title: cargo-install
 .\"    Author: [see the "AUTHOR(S)" section]
 .\" Generator: Asciidoctor 1.5.8
-.\"      Date: 2019-01-23
+.\"      Date: 2019-03-31
 .\"    Manual: \ \&
 .\"    Source: \ \&
 .\"  Language: English
 .\"
-.TH "CARGO\-INSTALL" "1" "2019-01-23" "\ \&" "\ \&"
+.TH "CARGO\-INSTALL" "1" "2019-03-31" "\ \&" "\ \&"
 .ie \n(.g .ds Aq \(aq
 .el       .ds Aq '
 .ss \n[.ss] 0
@@ -103,10 +103,10 @@ The installation root is determined, in order of precedence:
 .RE
 .sp
 There are multiple sources from which a crate can be installed. The default
-location is crates.io but the \fB\-\-git\fP and \fB\-\-path\fP flags can change this
-source. If the source contains more than one package (such as crates.io or a
-git repository with multiple crates) the \fICRATE\fP argument is required to
-indicate which crate should be installed.
+location is crates.io but the \fB\-\-git\fP, \fB\-\-path\fP, and \fBregistry\fP flags can
+change this source. If the source contains more than one package (such as
+crates.io or a git repository with multiple crates) the \fICRATE\fP argument is
+required to indicate which crate should be installed.
 .sp
 Crates from crates.io can optionally specify the version they wish to install
 via the \fB\-\-version\fP flags, and similarly packages from git repositories can
@@ -125,7 +125,7 @@ continuous integration systems.
 .sp
 \fB\-\-vers\fP \fIVERSION\fP, \fB\-\-version\fP \fIVERSION\fP
 .RS 4
-Specify a version to install from crates.io.
+Specify a version to install.
 .RE
 .sp
 \fB\-\-git\fP \fIURL\fP

@@ -182,6 +182,17 @@ impl Packages {
         };
         Ok(packages)
     }
+
+    /// Returns whether or not the user needs to pass a `-p` flag to target a
+    /// specific package in the workspace.
+    pub fn needs_spec_flag(&self, ws: &Workspace<'_>) -> bool {
+        match self {
+            Packages::Default => ws.default_members().count() > 1,
+            Packages::All => ws.members().count() > 1,
+            Packages::Packages(_) => true,
+            Packages::OptOut(_) => true,
+        }
+    }
 }
 
 #[derive(Debug, PartialEq, Eq)]
@@ -254,6 +265,27 @@ pub fn compile_ws<'a>(
         ref local_rustdoc_args,
         ref export_dir,
     } = *options;
+
+    match build_config.mode {
+        CompileMode::Test
+        | CompileMode::Build
+        | CompileMode::Check { .. }
+        | CompileMode::Bench
+        | CompileMode::RunCustomBuild => {
+            if std::env::var("RUST_FLAGS").is_ok() {
+                config.shell().warn(
+                    "Cargo does not read `RUST_FLAGS` environment variable. Did you mean `RUSTFLAGS`?",
+                )?;
+            }
+        }
+        CompileMode::Doc { .. } | CompileMode::Doctest => {
+            if std::env::var("RUSTDOC_FLAGS").is_ok() {
+                config.shell().warn(
+                    "Cargo does not read `RUSTDOC_FLAGS` environment variable. Did you mean `RUSTDOCFLAGS`?"
+                )?;
+            }
+        }
+    }
 
     let default_arch_kind = if build_config.requested_target.is_some() {
         Kind::Target
@@ -351,12 +383,12 @@ pub fn compile_ws<'a>(
             &resolve_with_overrides,
             &packages,
             config,
-            &build_config,
+            build_config,
             profiles,
             extra_compiler_args,
         )?;
         let cx = Context::new(config, &bcx)?;
-        cx.compile(&units, export_dir.clone(), &exec)?
+        cx.compile(&units, export_dir.clone(), exec)?
     };
 
     Ok(ret)

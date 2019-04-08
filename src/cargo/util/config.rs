@@ -20,6 +20,7 @@ use serde::Deserialize;
 use serde::{de, de::IntoDeserializer};
 use url::Url;
 
+use self::ConfigValue as CV;
 use crate::core::profiles::ConfigProfiles;
 use crate::core::shell::Verbosity;
 use crate::core::{CliUnstable, Shell, SourceId, Workspace};
@@ -30,7 +31,6 @@ use crate::util::Filesystem;
 use crate::util::Rustc;
 use crate::util::ToUrl;
 use crate::util::{paths, validate_package_name};
-use self::ConfigValue as CV;
 
 /// Configuration information for cargo. This is not specific to a build, it is information
 /// relating to cargo itself.
@@ -191,15 +191,16 @@ impl Config {
     }
 
     /// Gets the path to the `rustc` executable.
-    pub fn rustc(&self, ws: Option<&Workspace<'_>>) -> CargoResult<Rustc> {
+    pub fn load_global_rustc(&self, ws: Option<&Workspace<'_>>) -> CargoResult<Rustc> {
         let cache_location = ws.map(|ws| {
             ws.target_dir()
                 .join(".rustc_info.json")
                 .into_path_unlocked()
         });
+        let wrapper = self.maybe_get_tool("rustc_wrapper")?;
         Rustc::new(
             self.get_tool("rustc")?,
-            self.maybe_get_tool("rustc_wrapper")?,
+            wrapper,
             &self
                 .home()
                 .join("bin")
@@ -285,9 +286,8 @@ impl Config {
         }
     }
 
-    pub fn reload_rooted_at_cargo_home(&mut self) -> CargoResult<()> {
-        let home = self.home_path.clone().into_path_unlocked();
-        let values = self.load_values_from(&home)?;
+    pub fn reload_rooted_at<P: AsRef<Path>>(&mut self, path: P) -> CargoResult<()> {
+        let values = self.load_values_from(path.as_ref())?;
         self.values.replace(values);
         Ok(())
     }
@@ -756,7 +756,7 @@ impl Config {
 
     /// Looks for a path for `tool` in an environment variable or config path, defaulting to `tool`
     /// as a path.
-    fn get_tool(&self, tool: &str) -> CargoResult<PathBuf> {
+    pub fn get_tool(&self, tool: &str) -> CargoResult<PathBuf> {
         self.maybe_get_tool(tool)
             .map(|t| t.unwrap_or_else(|| PathBuf::from(tool)))
     }
@@ -924,8 +924,7 @@ impl ConfigError {
     }
 }
 
-impl std::error::Error for ConfigError {
-}
+impl std::error::Error for ConfigError {}
 
 // Future note: currently, we cannot override `Fail::cause` (due to
 // specialization) so we have no way to return the underlying causes. In the

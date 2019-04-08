@@ -60,6 +60,7 @@ rust, like this:
 
 ```
 if !is_nightly() {
+    // Add a comment here explaining why this is necessary.
     return;
 }
 ```
@@ -370,6 +371,14 @@ impl Project {
         ))
     }
 
+    /// Returns an iterator of paths matching the glob pattern, which is
+    /// relative to the project root.
+    pub fn glob<P: AsRef<Path>>(&self, pattern: P) -> glob::Paths {
+        let pattern = self.root().join(pattern);
+        glob::glob(pattern.to_str().expect("failed to convert pattern to str"))
+            .expect("failed to glob")
+    }
+
     /// Changes the contents of an existing file.
     pub fn change_file(&self, path: &str, body: &str) {
         FileBuilder::new(self.root().join(path), body).mk()
@@ -506,10 +515,10 @@ pub fn main_file(println: &str, deps: &[&str]) -> String {
     }
 
     buf.push_str("fn main() { println!(");
-    buf.push_str(&println);
+    buf.push_str(println);
     buf.push_str("); }\n");
 
-    buf.to_string()
+    buf
 }
 
 trait ErrMsg<T> {
@@ -570,6 +579,7 @@ pub struct Execs {
     expect_stderr_not_contains: Vec<String>,
     expect_stderr_unordered: Vec<String>,
     expect_neither_contains: Vec<String>,
+    expect_stderr_with_without: Vec<(Vec<String>, Vec<String>)>,
     expect_json: Option<Vec<Value>>,
     expect_json_contains_unordered: Vec<Value>,
     stream_output: bool,
@@ -687,6 +697,37 @@ impl Execs {
         self
     }
 
+    /// Verify that a particular line appears in stderr with and without the
+    /// given substrings. Exactly one line must match.
+    ///
+    /// The substrings are matched as `contains`. Example:
+    ///
+    /// ```no_run
+    /// execs.with_stderr_line_without(
+    ///     &[
+    ///         "[RUNNING] `rustc --crate-name build_script_build",
+    ///         "-C opt-level=3",
+    ///     ],
+    ///     &["-C debuginfo", "-C incremental"],
+    /// )
+    /// ```
+    ///
+    /// This will check that a build line includes `-C opt-level=3` but does
+    /// not contain `-C debuginfo` or `-C incremental`.
+    ///
+    /// Be careful writing the `without` fragments, see note in
+    /// `with_stderr_does_not_contain`.
+    pub fn with_stderr_line_without<S: ToString>(
+        &mut self,
+        with: &[S],
+        without: &[S],
+    ) -> &mut Self {
+        let with = with.iter().map(|s| s.to_string()).collect();
+        let without = without.iter().map(|s| s.to_string()).collect();
+        self.expect_stderr_with_without.push((with, without));
+        self
+    }
+
     /// Verifies the JSON output matches the given JSON.
     /// Typically used when testing cargo commands that emit JSON.
     /// Each separate JSON object should be separated by a blank line.
@@ -749,7 +790,12 @@ impl Execs {
 
     pub fn cwd<T: AsRef<OsStr>>(&mut self, path: T) -> &mut Self {
         if let Some(ref mut p) = self.process_builder {
-            p.cwd(path);
+            if let Some(cwd) = p.get_cwd() {
+                let new_path = cwd.join(path.as_ref());
+                p.cwd(new_path);
+            } else {
+                p.cwd(path);
+            }
         }
         self
     }
@@ -817,6 +863,7 @@ impl Execs {
             && self.expect_stderr_not_contains.is_empty()
             && self.expect_stderr_unordered.is_empty()
             && self.expect_neither_contains.is_empty()
+            && self.expect_stderr_with_without.is_empty()
             && self.expect_json.is_none()
             && self.expect_json_contains_unordered.is_empty()
         {
@@ -913,7 +960,7 @@ impl Execs {
         }
         for &(ref expect, number) in self.expect_stdout_contains_n.iter() {
             self.match_std(
-                Some(&expect),
+                Some(expect),
                 &actual.stdout,
                 "stdout",
                 &actual.stderr,
@@ -991,6 +1038,10 @@ impl Execs {
             }
         }
 
+        for (with, without) in self.expect_stderr_with_without.iter() {
+            self.match_with_without(&actual.stderr, with, without)?;
+        }
+
         if let Some(ref objects) = self.expect_json {
             let stdout = str::from_utf8(&actual.stdout)
                 .map_err(|_| "stdout was not utf8 encoded".to_owned())?;
@@ -1050,6 +1101,32 @@ impl Execs {
         )
     }
 
+    fn normalize_actual(&self, description: &str, actual: &[u8]) -> Result<String, String> {
+        let actual = match str::from_utf8(actual) {
+            Err(..) => return Err(format!("{} was not utf8 encoded", description)),
+            Ok(actual) => actual,
+        };
+        // Let's not deal with \r\n vs \n on windows...
+        let actual = actual.replace("\r", "");
+        let actual = actual.replace("\t", "<tab>");
+        Ok(actual)
+    }
+
+    fn replace_expected(&self, expected: &str) -> String {
+        // Do the template replacements on the expected string.
+        let replaced = match self.process_builder {
+            None => expected.to_string(),
+            Some(ref p) => match p.get_cwd() {
+                None => expected.to_string(),
+                Some(cwd) => expected.replace("[CWD]", &cwd.display().to_string()),
+            },
+        };
+
+        // On Windows, we need to use a wildcard for the drive,
+        // because we don't actually know what it will be.
+        replaced.replace("[ROOT]", if cfg!(windows) { r#"[..]:\"# } else { "/" })
+    }
+
     fn match_std(
         &self,
         expected: Option<&String>,
@@ -1059,33 +1136,11 @@ impl Execs {
         kind: MatchKind,
     ) -> MatchResult {
         let out = match expected {
-            Some(out) => {
-                // Do the template replacements on the expected string.
-                let replaced = match self.process_builder {
-                    None => out.to_string(),
-                    Some(ref p) => match p.get_cwd() {
-                        None => out.to_string(),
-                        Some(cwd) => out.replace("[CWD]", &cwd.display().to_string()),
-                    },
-                };
-
-                // On Windows, we need to use a wildcard for the drive,
-                // because we don't actually know what it will be.
-                let replaced =
-                    replaced.replace("[ROOT]", if cfg!(windows) { r#"[..]:\"# } else { "/" });
-
-                replaced
-            }
+            Some(out) => self.replace_expected(out),
             None => return Ok(()),
         };
 
-        let actual = match str::from_utf8(actual) {
-            Err(..) => return Err(format!("{} was not utf8 encoded", description)),
-            Ok(actual) => actual,
-        };
-        // Let's not deal with `\r\n` vs `\n` on Windows.
-        let actual = actual.replace("\r", "");
-        let actual = actual.replace("\t", "<tab>");
+        let actual = self.normalize_actual(description, actual)?;
 
         match kind {
             MatchKind::Exact => {
@@ -1209,6 +1264,47 @@ impl Execs {
         }
     }
 
+    fn match_with_without(
+        &self,
+        actual: &[u8],
+        with: &[String],
+        without: &[String],
+    ) -> MatchResult {
+        let actual = self.normalize_actual("stderr", actual)?;
+        let contains = |s, line| {
+            let mut s = self.replace_expected(s);
+            s.insert_str(0, "[..]");
+            s.push_str("[..]");
+            lines_match(&s, line)
+        };
+        let matches: Vec<&str> = actual
+            .lines()
+            .filter(|line| with.iter().all(|with| contains(with, line)))
+            .filter(|line| !without.iter().any(|without| contains(without, line)))
+            .collect();
+        match matches.len() {
+            0 => Err(format!(
+                "Could not find expected line in output.\n\
+                 With contents: {:?}\n\
+                 Without contents: {:?}\n\
+                 Actual stderr:\n\
+                 {}\n",
+                with, without, actual
+            )),
+            1 => Ok(()),
+            _ => Err(format!(
+                "Found multiple matching lines, but only expected one.\n\
+                 With contents: {:?}\n\
+                 Without contents: {:?}\n\
+                 Matching lines:\n\
+                 {}\n",
+                with,
+                without,
+                matches.join("\n")
+            )),
+        }
+    }
+
     fn match_json(&self, expected: &Value, line: &str) -> MatchResult {
         let actual = match line.parse() {
             Err(e) => return Err(format!("invalid json, {}:\n`{}`", e, line)),
@@ -1233,7 +1329,7 @@ impl Execs {
             .enumerate()
             .filter_map(|(i, (a, e))| match (a, e) {
                 (Some(a), Some(e)) => {
-                    if lines_match(&e, &a) {
+                    if lines_match(e, a) {
                         None
                     } else {
                         Some(format!("{:3} - |{}|\n    + |{}|\n", i, e, a))
@@ -1314,7 +1410,7 @@ fn lines_match_works() {
 /// arbitrary nested JSON (useful for parts of object emitted by other programs
 /// (e.g., rustc) rather than Cargo itself). Arrays are sorted before comparison.
 pub fn find_json_mismatch(expected: &Value, actual: &Value) -> Result<(), String> {
-    match find_json_mismatch_r(expected, &actual) {
+    match find_json_mismatch_r(expected, actual) {
         Some((expected_part, actual_part)) => Err(format!(
             "JSON mismatch\nExpected:\n{}\nWas:\n{}\nExpected part:\n{}\nActual part:\n{}\n",
             serde_json::to_string_pretty(expected).unwrap(),
@@ -1355,7 +1451,7 @@ fn find_json_mismatch_r<'a>(
 
             if !l.is_empty() {
                 assert!(!r.is_empty());
-                Some((&l[0], &r[0]))
+                Some((l[0], r[0]))
             } else {
                 assert_eq!(r.len(), 0);
                 None
@@ -1426,6 +1522,7 @@ pub fn execs() -> Execs {
         expect_stderr_not_contains: Vec::new(),
         expect_stderr_unordered: Vec::new(),
         expect_neither_contains: Vec::new(),
+        expect_stderr_with_without: Vec::new(),
         expect_json: None,
         expect_json_contains_unordered: Vec::new(),
         stream_output: false,
@@ -1519,7 +1616,10 @@ fn substitute_macros(input: &str) -> String {
         ("[UNPACKING]", "   Unpacking"),
         ("[SUMMARY]", "     Summary"),
         ("[FIXING]", "      Fixing"),
-        ("[EXE]", if cfg!(windows) { ".exe" } else { "" }),
+        ("[EXE]", env::consts::EXE_SUFFIX),
+        ("[IGNORED]", "     Ignored"),
+        ("[INSTALLED]", "   Installed"),
+        ("[REPLACED]", "    Replaced"),
     ];
     let mut result = input.to_owned();
     for &(pat, subst) in &macros {

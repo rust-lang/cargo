@@ -9,6 +9,7 @@ pub fn cli() -> App {
         // .alias("r")
         .setting(AppSettings::TrailingVarArg)
         .about("Run a binary or example of the local package")
+        .arg(opt("quiet", "No output printed to stdout").short("q"))
         .arg(Arg::with_name("args").multiple(true))
         .arg_targets_bin_example(
             "Name of the bin target to run",

@@ -5,6 +5,7 @@ use cargo::ops::{self, UpdateOptions};
 pub fn cli() -> App {
     subcommand("update")
         .about("Update dependencies as recorded in the local lock file")
+        .arg(opt("quiet", "No output printed to stdout").short("q"))
         .arg_package_spec_simple("Package to update")
         .arg(opt(
             "aggressive",

@@ -6,6 +6,7 @@ pub fn cli() -> App {
     subcommand("bench")
         .setting(AppSettings::TrailingVarArg)
         .about("Execute all benchmarks of a local package")
+        .arg(opt("quiet", "No output printed to stdout").short("q"))
         .arg(
             Arg::with_name("BENCHNAME")
                 .help("If specified, only run benches containing this string in their names"),
@@ -82,17 +83,9 @@ pub fn exec(config: &mut Config, args: &ArgMatches<'_>) -> CliResult {
         compile_opts,
     };
 
-    let mut bench_args = vec![];
-    bench_args.extend(
-        args.value_of("BENCHNAME")
-            .into_iter()
-            .map(|s| s.to_string()),
-    );
-    bench_args.extend(
-        args.values_of("args")
-            .unwrap_or_default()
-            .map(|s| s.to_string()),
-    );
+    let bench_args = args.value_of("BENCHNAME").into_iter();
+    let bench_args = bench_args.chain(args.values_of("args").unwrap_or_default());
+    let bench_args = bench_args.collect::<Vec<_>>();
 
     let err = ops::run_benches(&ws, &ops, &bench_args)?;
     match err {

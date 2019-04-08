@@ -5,6 +5,7 @@ use cargo::ops;
 pub fn cli() -> App {
     subcommand("pkgid")
         .about("Print a fully qualified package specification")
+        .arg(opt("quiet", "No output printed to stdout").short("q"))
         .arg(Arg::with_name("spec"))
         .arg_package("Argument to get the package ID specifier for")
         .arg_manifest_path()
@@ -27,7 +28,7 @@ Example Package IDs
      crates.io/foo                | foo    | *         | *://crates.io/foo
      crates.io/foo#1.2.3          | foo    | 1.2.3     | *://crates.io/foo
      crates.io/bar#foo:1.2.3      | foo    | 1.2.3     | *://crates.io/bar
-     http://crates.io/foo#1.2.3   | foo    | 1.2.3     | http://crates.io/foo
+     https://crates.io/foo#1.2.3  | foo    | 1.2.3     | https://crates.io/foo
 ",
         )
 }

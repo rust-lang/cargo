@@ -5,6 +5,7 @@ use cargo::ops::{self, PackageOpts};
 pub fn cli() -> App {
     subcommand("package")
         .about("Assemble the local package into a distributable tarball")
+        .arg(opt("quiet", "No output printed to stdout").short("q"))
         .arg(
             opt(
                 "list",

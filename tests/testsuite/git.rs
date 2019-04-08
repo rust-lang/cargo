@@ -13,6 +13,13 @@ use crate::support::sleep_ms;
 use crate::support::Project;
 use crate::support::{basic_lib_manifest, basic_manifest, git, main_file, path2url, project};
 
+fn disable_git_cli() -> bool {
+    // mingw git on Windows does not support Windows-style file URIs.
+    // Appveyor in the rust repo has that git up front in the PATH instead
+    // of Git-for-Windows, which causes this to fail.
+    env::var("CARGO_TEST_DISABLE_GIT_CLI") == Ok("1".to_string())
+}
+
 #[test]
 fn cargo_compile_simple_git_dep() {
     let project = project();
@@ -158,7 +165,7 @@ fn cargo_compile_offline_with_cached_git_dep() {
         File::create(&prj.root().join("Cargo.toml"))
             .unwrap()
             .write_all(
-                &format!(
+                format!(
                     r#"
             [project]
             name = "cache_git_dep"
@@ -220,7 +227,7 @@ fn cargo_compile_offline_with_cached_git_dep() {
     File::create(&p.root().join("Cargo.toml"))
         .unwrap()
         .write_all(
-            &format!(
+            format!(
                 r#"
         [project]
         name = "foo"
@@ -2714,7 +2721,7 @@ fn failed_submodule_checkout() {
     });
 
     let repo = git2::Repository::open(&git_project2.root()).unwrap();
-    let url = format!("http://{}:{}/", addr.ip(), addr.port());
+    let url = format!("https://{}:{}/", addr.ip(), addr.port());
     {
         let mut s = repo.submodule(&url, Path::new("bar"), false).unwrap();
         let subrepo = s.open().unwrap();
@@ -2772,10 +2779,7 @@ fn failed_submodule_checkout() {
 
 #[test]
 fn use_the_cli() {
-    if env::var("CARGO_TEST_DISABLE_GIT_CLI") == Ok("1".to_string()) {
-        // mingw git on Windows does not support Windows-style file URIs.
-        // Appveyor in the rust repo has that git up front in the PATH instead
-        // of Git-for-Windows, which causes this to fail.
+    if disable_git_cli() {
         return;
     }
     let project = project();
@@ -2861,7 +2865,7 @@ fn templatedir_doesnt_cause_problems() {
     File::create(paths::home().join(".gitconfig"))
         .unwrap()
         .write_all(
-            &format!(
+            format!(
                 r#"
                 [init]
                 templatedir = {}
@@ -2879,4 +2883,65 @@ fn templatedir_doesnt_cause_problems() {
         .unwrap();
 
     p.cargo("build").run();
+}
+
+#[test]
+fn git_with_cli_force() {
+    if disable_git_cli() {
+        return;
+    }
+    // Supports a force-pushed repo.
+    let git_project = git::new("dep1", |project| {
+        project
+            .file("Cargo.toml", &basic_lib_manifest("dep1"))
+            .file("src/lib.rs", r#"pub fn f() { println!("one"); }"#)
+    })
+    .unwrap();
+    let p = project()
+        .file(
+            "Cargo.toml",
+            &format!(
+                r#"
+                [project]
+                name = "foo"
+                version = "0.0.1"
+                edition = "2018"
+
+                [dependencies]
+                dep1 = {{ git = "{}" }}
+                "#,
+                git_project.url()
+            ),
+        )
+        .file("src/main.rs", "fn main() { dep1::f(); }")
+        .file(
+            ".cargo/config",
+            "
+            [net]
+            git-fetch-with-cli = true
+            ",
+        )
+        .build();
+    p.cargo("build").run();
+    p.rename_run("foo", "foo1").with_stdout("one").run();
+
+    // commit --amend a change that will require a force fetch.
+    let repo = git2::Repository::open(&git_project.root()).unwrap();
+    git_project.change_file("src/lib.rs", r#"pub fn f() { println!("two"); }"#);
+    git::add(&repo);
+    let id = repo.refname_to_id("HEAD").unwrap();
+    let commit = repo.find_commit(id).unwrap();
+    let tree_id = t!(t!(repo.index()).write_tree());
+    t!(commit.amend(
+        Some("HEAD"),
+        None,
+        None,
+        None,
+        None,
+        Some(&t!(repo.find_tree(tree_id)))
+    ));
+    // Perform the fetch.
+    p.cargo("update").run();
+    p.cargo("build").run();
+    p.rename_run("foo", "foo2").with_stdout("two").run();
 }

@@ -21,15 +21,22 @@ manifest, and individual targets can specify which edition they use. See the
 
 ### Feature
 
-A [*feature*][feature] is a named flag which allows for conditional
-compilation. A feature can refer to an optional dependency, or an arbitrary
-name defined in a `Cargo.toml` manifest that can be checked within source
-code.
+The meaning of *feature* depends on the context:
 
-Cargo has [*unstable feature flags*][cargo-unstable] which can be used to
-enable experimental behavior of Cargo itself. The Rust compiler and Rustdoc
-also have their own unstable feature flags (see [The Unstable
-Book][unstable-book] and [The Rustdoc Book][rustdoc-unstable]).
+- A [*feature*][feature] is a named flag which allows for conditional
+  compilation. A feature can refer to an optional dependency, or an arbitrary
+  name defined in a `Cargo.toml` manifest that can be checked within source
+  code.
+
+- Cargo has [*unstable feature flags*][cargo-unstable] which can be used to
+  enable experimental behavior of Cargo itself.
+
+- The Rust compiler and Rustdoc have their own unstable feature flags (see
+  [The Unstable Book][unstable-book] and [The Rustdoc
+  Book][rustdoc-unstable]).
+
+- CPU targets have [*target features*][target-feature] which specify
+  capabilities of a CPU.
 
 ### Index
 
@@ -172,7 +179,7 @@ manifest is located.
 [cargo-unstable]: https://doc.rust-lang.org/nightly/cargo/reference/unstable.html
 [config option]: reference/config.html
 [directory layout]: reference/manifest.html#the-project-layout
-[edition guide]: https://rust-lang-nursery.github.io/edition-guide/
+[edition guide]: ../edition-guide/index.html
 [edition-field]: reference/manifest.html#the-edition-field-optional
 [environment variable]: reference/environment-variables.html
 [feature]: reference/manifest.html#the-features-section
@@ -184,6 +191,7 @@ manifest is located.
 [path overrides]: reference/specifying-dependencies.html#overriding-with-local-dependencies
 [pkgid-spec]: reference/pkgid-spec.html
 [rustdoc-unstable]: https://doc.rust-lang.org/nightly/rustdoc/unstable-features.html
+[target-feature]: ../reference/attributes/codegen.html#the-target_feature-attribute
 [targets]: reference/manifest.html#configuring-a-target
 [unstable-book]: https://doc.rust-lang.org/nightly/unstable-book/index.html
 [virtual]: reference/manifest.html#virtual-manifest

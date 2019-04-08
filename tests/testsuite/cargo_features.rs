@@ -146,6 +146,7 @@ error: failed to parse manifest at `[..]`
 Caused by:
   the cargo feature `test-dummy-unstable` requires a nightly version of Cargo, \
   but this is the `stable` channel
+See [..]
 ",
         )
         .run();
@@ -207,6 +208,7 @@ Caused by:
 Caused by:
   the cargo feature `test-dummy-unstable` requires a nightly version of Cargo, \
   but this is the `stable` channel
+See [..]
 ",
         )
         .run();
@@ -248,6 +250,7 @@ error: failed to parse manifest at `[..]`
 Caused by:
   the cargo feature `test-dummy-unstable` requires a nightly version of Cargo, \
   but this is the `stable` channel
+See [..]
 ",
         )
         .run();
@@ -272,7 +275,11 @@ fn z_flags_rejected() {
         .build();
     p.cargo("build -Zprint-im-a-teapot")
         .with_status(101)
-        .with_stderr("error: the `-Z` flag is only accepted on the nightly channel of Cargo")
+        .with_stderr(
+            "error: the `-Z` flag is only accepted on the nightly \
+             channel of Cargo, but this is the `stable` channel\n\
+             See [..]",
+        )
         .run();
 
     p.cargo("build -Zarg")

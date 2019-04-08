@@ -438,10 +438,12 @@ impl IgnoreList {
     /// Return the correctly formatted content of the ignore file for the given
     /// version control system as `String`.
     fn format_new(&self, vcs: VersionControl) -> String {
-        match vcs {
-            VersionControl::Hg => self.hg_ignore.join("\n"),
-            _ => self.ignore.join("\n"),
-        }
+        let ignore_items = match vcs {
+            VersionControl::Hg => &self.hg_ignore,
+            _ => &self.ignore,
+        };
+
+        ignore_items.join("\n") + "\n"
     }
 
     /// format_existing is used to format the IgnoreList when the ignore file
@@ -459,15 +461,15 @@ impl IgnoreList {
 
         let mut out = "\n\n#Added by cargo\n\
                        #\n\
-                       #already existing elements are commented out\n"
+                       #already existing elements are commented out\n\n"
             .to_string();
 
         for item in ignore_items {
-            out.push('\n');
             if existing_items.contains(item) {
                 out.push('#');
             }
-            out.push_str(item)
+            out.push_str(item);
+            out.push('\n');
         }
 
         out
@@ -522,7 +524,7 @@ fn init_vcs(path: &Path, vcs: VersionControl, config: &Config) -> CargoResult<()
             }
         }
         VersionControl::Fossil => {
-            if path.join(".fossil").exists() {
+            if !path.join(".fossil").exists() {
                 FossilRepo::init(path, config.cwd())?;
             }
         }
@@ -543,7 +545,7 @@ fn mk(config: &Config, opts: &MkOptions<'_>) -> CargoResult<()> {
     // both `ignore` and `hgignore` are in sync.
     let mut ignore = IgnoreList::new();
     ignore.push("/target", "^target/");
-    ignore.push("**/*.rs.bk", "glob:*.rs.bk\n");
+    ignore.push("**/*.rs.bk", "glob:*.rs.bk");
     if !opts.bin {
         ignore.push("Cargo.lock", "glob:Cargo.lock");
     }
@@ -565,7 +567,13 @@ fn mk(config: &Config, opts: &MkOptions<'_>) -> CargoResult<()> {
         (Some(name), Some(email), _, _)
         | (Some(name), None, _, Some(email))
         | (None, Some(email), name, _)
-        | (None, None, name, Some(email)) => format!("{} <{}>", name, email),
+        | (None, None, name, Some(email)) => {
+            if email.is_empty() {
+                name
+            } else {
+                format!("{} <{}>", name, email)
+            }
+        }
         (Some(name), None, _, None) | (None, None, name, None) => name,
     };
 

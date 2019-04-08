@@ -21,6 +21,8 @@ pub struct BuildOutput {
     pub library_paths: Vec<PathBuf>,
     /// Names and link kinds of libraries, suitable for the `-l` flag.
     pub library_links: Vec<String>,
+    /// Linker arguments suitable to be passed to `-C link-arg=<args>`
+    pub linker_args: Vec<String>,
     /// Various `--cfg` flags to pass to the compiler.
     pub cfgs: Vec<String>,
     /// Additional environment variables to run the compiler with.
@@ -65,6 +67,7 @@ pub struct BuildScripts {
     pub plugins: BTreeSet<PackageId>,
 }
 
+#[derive(Debug)]
 pub struct BuildDeps {
     pub build_script_output: PathBuf,
     pub rerun_if_changed: Vec<PathBuf>,
@@ -132,6 +135,7 @@ fn build_work<'a, 'cfg>(cx: &mut Context<'a, 'cfg>, unit: &Unit<'a>) -> CargoRes
         .expect("running a script not depending on an actual script");
     let script_dir = cx.files().build_script_dir(build_script_unit);
     let script_out_dir = cx.files().build_script_out_dir(unit);
+    let script_run_dir = cx.files().build_script_run_dir(unit);
     let build_plan = bcx.build_config.build_plan;
     let invocation_name = unit.buildkey();
 
@@ -158,7 +162,7 @@ fn build_work<'a, 'cfg>(cx: &mut Context<'a, 'cfg>, unit: &Unit<'a>) -> CargoRes
         .env(
             "TARGET",
             &match unit.kind {
-                Kind::Host => &bcx.host_triple(),
+                Kind::Host => bcx.host_triple(),
                 Kind::Target => bcx.target_triple(),
             },
         )
@@ -241,13 +245,9 @@ fn build_work<'a, 'cfg>(cx: &mut Context<'a, 'cfg>, unit: &Unit<'a>) -> CargoRes
     let pkg_name = unit.pkg.to_string();
     let build_state = Arc::clone(&cx.build_state);
     let id = unit.pkg.package_id();
-    let (output_file, err_file, root_output_file) = {
-        let build_output_parent = script_out_dir.parent().unwrap();
-        let output_file = build_output_parent.join("output");
-        let err_file = build_output_parent.join("stderr");
-        let root_output_file = build_output_parent.join("root-output");
-        (output_file, err_file, root_output_file)
-    };
+    let output_file = script_run_dir.join("output");
+    let err_file = script_run_dir.join("stderr");
+    let root_output_file = script_run_dir.join("root-output");
     let host_target_root = cx.files().target_root().to_path_buf();
     let all = (
         id,
@@ -332,7 +332,7 @@ fn build_work<'a, 'cfg>(cx: &mut Context<'a, 'cfg>, unit: &Unit<'a>) -> CargoRes
             state.build_plan(invocation_name, cmd.clone(), Arc::new(Vec::new()));
         } else {
             state.running(&cmd);
-            let timestamp = paths::get_current_filesystem_time(&output_file)?;
+            let timestamp = paths::set_invocation_time(&script_run_dir)?;
             let output = if extra_verbose {
                 let prefix = format!("[{} {}] ", id.name(), id.version());
                 state.capture_output(&cmd, Some(prefix), true)
@@ -440,6 +440,7 @@ impl BuildOutput {
     ) -> CargoResult<BuildOutput> {
         let mut library_paths = Vec::new();
         let mut library_links = Vec::new();
+        let mut linker_args = Vec::new();
         let mut cfgs = Vec::new();
         let mut env = Vec::new();
         let mut metadata = Vec::new();
@@ -487,6 +488,7 @@ impl BuildOutput {
                 }
                 "rustc-link-lib" => library_links.push(value.to_string()),
                 "rustc-link-search" => library_paths.push(PathBuf::from(value)),
+                "rustc-cdylib-link-arg" => linker_args.push(value.to_string()),
                 "rustc-cfg" => cfgs.push(value.to_string()),
                 "rustc-env" => env.push(BuildOutput::parse_rustc_env(&value, &whence)?),
                 "warning" => warnings.push(value.to_string()),
@@ -499,6 +501,7 @@ impl BuildOutput {
         Ok(BuildOutput {
             library_paths,
             library_links,
+            linker_args,
             cfgs,
             env,
             metadata,

@@ -1,5 +1,5 @@
 use std::cmp::Ordering;
-use std::collections::{HashMap, HashSet};
+use std::collections::{BTreeMap, HashMap, HashSet};
 use std::ops::Range;
 use std::rc::Rc;
 use std::time::{Duration, Instant};
@@ -402,6 +402,11 @@ pub enum ConflictReason {
     /// candidate. For example we tried to activate feature `foo` but the
     /// candidate we're activating didn't actually have the feature `foo`.
     MissingFeatures(String),
+
+    // TODO: needs more info for `activation_error`
+    // TODO: needs more info for `find_candidate`
+    /// pub dep error
+    PublicDependency,
 }
 
 impl ConflictReason {
@@ -419,6 +424,12 @@ impl ConflictReason {
         false
     }
 }
+
+/// A list of packages that have gotten in the way of resolving a dependency.
+/// If resolving a dependency fails then this represents an incompatibility,
+/// that dependency will never be resolve while all of these packages are active.
+/// This is useless if the packages can't be simultaneously activated for other reasons.
+pub type ConflictMap = BTreeMap<PackageId, ConflictReason>;
 
 pub struct RcVecIter<T> {
     vec: Rc<Vec<T>>,

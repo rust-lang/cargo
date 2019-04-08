@@ -21,7 +21,7 @@ use proptest::string::string_regex;
 use proptest::test_runner::TestRunner;
 
 pub fn resolve(
-    pkg: &PackageId,
+    pkg: PackageId,
     deps: Vec<Dependency>,
     registry: &[Summary],
 ) -> CargoResult<Vec<PackageId>> {
@@ -29,17 +29,17 @@ pub fn resolve(
 }
 
 pub fn resolve_and_validated(
-    pkg: &PackageId,
+    pkg: PackageId,
     deps: Vec<Dependency>,
     registry: &[Summary],
 ) -> CargoResult<Vec<PackageId>> {
     let resolve = resolve_with_config_raw(pkg, deps, registry, None)?;
-    let mut stack = vec![pkg.clone()];
+    let mut stack = vec![pkg];
     let mut used = HashSet::new();
     let mut links = HashSet::new();
     while let Some(p) = stack.pop() {
         assert!(resolve.contains(&p));
-        if used.insert(p.clone()) {
+        if used.insert(p) {
             // in the tests all `links` crates end in `-sys`
             if p.name().ends_with("-sys") {
                 assert!(links.insert(p.name()));
@@ -48,7 +48,7 @@ pub fn resolve_and_validated(
                 for d in deps {
                     assert!(d.matches_id(dp));
                 }
-                dp.clone()
+                dp
             }));
         }
     }
@@ -58,7 +58,7 @@ pub fn resolve_and_validated(
 }
 
 pub fn resolve_with_config(
-    pkg: &PackageId,
+    pkg: PackageId,
     deps: Vec<Dependency>,
     registry: &[Summary],
     config: Option<&Config>,
@@ -68,7 +68,7 @@ pub fn resolve_with_config(
 }
 
 pub fn resolve_with_config_raw(
-    pkg: &PackageId,
+    pkg: PackageId,
     deps: Vec<Dependency>,
     registry: &[Summary],
     config: Option<&Config>,
@@ -99,7 +99,7 @@ pub fn resolve_with_config_raw(
     }
     let mut registry = MyRegistry(registry);
     let summary = Summary::new(
-        pkg.clone(),
+        pkg,
         deps,
         &BTreeMap::<String, (Option<Platform>, Vec<String>)>::new(),
         None::<String>,
@@ -115,6 +115,7 @@ pub fn resolve_with_config_raw(
         &HashSet::new(),
         config,
         false,
+        true,
     );
 
     // The largest test in our suite takes less then 30 sec.
@@ -145,7 +146,7 @@ pub trait ToPkgId {
 
 impl ToPkgId for PackageId {
     fn to_pkgid(&self) -> PackageId {
-        self.clone()
+        *self
     }
 }
 
@@ -176,7 +177,7 @@ macro_rules! pkg {
 fn registry_loc() -> SourceId {
     lazy_static::lazy_static! {
         static ref EXAMPLE_DOT_COM: SourceId =
-            SourceId::for_registry(&"http://example.com".to_url().unwrap()).unwrap();
+            SourceId::for_registry(&"https://example.com".to_url().unwrap()).unwrap();
     }
     *EXAMPLE_DOT_COM
 }
@@ -250,9 +251,10 @@ pub fn dep(name: &str) -> Dependency {
 pub fn dep_req(name: &str, req: &str) -> Dependency {
     Dependency::parse_no_deprecated(name, Some(req), registry_loc()).unwrap()
 }
-pub fn dep_req_kind(name: &str, req: &str, kind: Kind) -> Dependency {
+pub fn dep_req_kind(name: &str, req: &str, kind: Kind, public: bool) -> Dependency {
     let mut dep = dep_req(name, req);
     dep.set_kind(kind);
+    dep.set_public(public);
     dep
 }
 
@@ -297,9 +299,12 @@ impl fmt::Debug for PrettyPrintRegistry {
             } else {
                 write!(f, "pkg!((\"{}\", \"{}\") => [", s.name(), s.version())?;
                 for d in s.dependencies() {
-                    if d.kind() == Kind::Normal && &d.version_req().to_string() == "*" {
+                    if d.kind() == Kind::Normal
+                        && &d.version_req().to_string() == "*"
+                        && !d.is_public()
+                    {
                         write!(f, "dep(\"{}\"),", d.name_in_toml())?;
-                    } else if d.kind() == Kind::Normal {
+                    } else if d.kind() == Kind::Normal && !d.is_public() {
                         write!(
                             f,
                             "dep_req(\"{}\", \"{}\"),",
@@ -309,14 +314,15 @@ impl fmt::Debug for PrettyPrintRegistry {
                     } else {
                         write!(
                             f,
-                            "dep_req_kind(\"{}\", \"{}\", {}),",
+                            "dep_req_kind(\"{}\", \"{}\", {}, {}),",
                             d.name_in_toml(),
                             d.version_req(),
                             match d.kind() {
                                 Kind::Development => "Kind::Development",
                                 Kind::Build => "Kind::Build",
                                 Kind::Normal => "Kind::Normal",
-                            }
+                            },
+                            d.is_public()
                         )?;
                     }
                 }
@@ -341,8 +347,10 @@ fn meta_test_deep_pretty_print_registry() {
                 pkg!(("bar", "2.0.0") => [dep_req("baz", "=1.0.1")]),
                 pkg!(("baz", "1.0.2") => [dep_req("other", "2")]),
                 pkg!(("baz", "1.0.1")),
-                pkg!(("cat", "1.0.2") => [dep_req_kind("other", "2", Kind::Build)]),
-                pkg!(("cat", "1.0.2") => [dep_req_kind("other", "2", Kind::Development)]),
+                pkg!(("cat", "1.0.2") => [dep_req_kind("other", "2", Kind::Build, false)]),
+                pkg!(("cat", "1.0.3") => [dep_req_kind("other", "2", Kind::Development, false)]),
+                pkg!(("cat", "1.0.4") => [dep_req_kind("other", "2", Kind::Build, true)]),
+                pkg!(("cat", "1.0.5") => [dep_req_kind("other", "2", Kind::Development, true)]),
                 pkg!(("dep_req", "1.0.0")),
                 pkg!(("dep_req", "2.0.0")),
             ])
@@ -354,8 +362,10 @@ fn meta_test_deep_pretty_print_registry() {
          pkg!((\"bar\", \"2.0.0\") => [dep_req(\"baz\", \"= 1.0.1\"),]),\
          pkg!((\"baz\", \"1.0.2\") => [dep_req(\"other\", \"^2\"),]),\
          pkg!((\"baz\", \"1.0.1\")),\
-         pkg!((\"cat\", \"1.0.2\") => [dep_req_kind(\"other\", \"^2\", Kind::Build),]),\
-         pkg!((\"cat\", \"1.0.2\") => [dep_req_kind(\"other\", \"^2\", Kind::Development),]),\
+         pkg!((\"cat\", \"1.0.2\") => [dep_req_kind(\"other\", \"^2\", Kind::Build, false),]),\
+         pkg!((\"cat\", \"1.0.3\") => [dep_req_kind(\"other\", \"^2\", Kind::Development, false),]),\
+         pkg!((\"cat\", \"1.0.4\") => [dep_req_kind(\"other\", \"^2\", Kind::Build, true),]),\
+         pkg!((\"cat\", \"1.0.5\") => [dep_req_kind(\"other\", \"^2\", Kind::Development, true),]),\
          pkg!((\"dep_req\", \"1.0.0\")),\
          pkg!((\"dep_req\", \"2.0.0\")),]"
     )
@@ -405,7 +415,14 @@ pub fn registry_strategy(
     let max_deps = max_versions * (max_crates * (max_crates - 1)) / shrinkage;
 
     let raw_version_range = (any::<Index>(), any::<Index>());
-    let raw_dependency = (any::<Index>(), any::<Index>(), raw_version_range, 0..=1);
+    let raw_dependency = (
+        any::<Index>(),
+        any::<Index>(),
+        raw_version_range,
+        0..=1,
+        Just(false),
+        // TODO: ^ this needs to be set back to `any::<bool>()` and work before public & private dependencies can stabilize
+    );
 
     fn order_index(a: Index, b: Index, size: usize) -> (usize, usize) {
         let (a, b) = (a.index(size), b.index(size));
@@ -432,7 +449,7 @@ pub fn registry_strategy(
                     .collect();
                 let len_all_pkgid = list_of_pkgid.len();
                 let mut dependency_by_pkgid = vec![vec![]; len_all_pkgid];
-                for (a, b, (c, d), k) in raw_dependencies {
+                for (a, b, (c, d), k, p) in raw_dependencies {
                     let (a, b) = order_index(a, b, len_all_pkgid);
                     let (a, b) = if reverse_alphabetical { (b, a) } else { (a, b) };
                     let ((dep_name, _), _) = list_of_pkgid[a];
@@ -444,7 +461,7 @@ pub fn registry_strategy(
                     let (c, d) = order_index(c, d, s.len());
 
                     dependency_by_pkgid[b].push(dep_req_kind(
-                        &dep_name,
+                        dep_name,
                         &if c == 0 && d == s_last_index {
                             "*".to_string()
                         } else if c == 0 {
@@ -459,9 +476,10 @@ pub fn registry_strategy(
                         match k {
                             0 => Kind::Normal,
                             1 => Kind::Build,
-                            // => Kind::Development, // Development has not impact so don't gen
+                            // => Kind::Development, // Development has no impact so don't gen
                             _ => panic!("bad index for Kind"),
                         },
+                        p,
                     ))
                 }
 
@@ -490,24 +508,24 @@ pub fn registry_strategy(
 
 /// This test is to test the generator to ensure
 /// that it makes registries with large dependency trees
-///
-/// This is a form of randomized testing, if you are unlucky it can fail.
-/// A failure on its own is not a big deal. If you did not change the
-/// `registry_strategy` then feel free to retry without concern.
 #[test]
 fn meta_test_deep_trees_from_strategy() {
     let mut dis = [0; 21];
 
     let strategy = registry_strategy(50, 20, 60);
+    let mut test_runner = TestRunner::deterministic();
     for _ in 0..128 {
         let PrettyPrintRegistry(input) = strategy
-            .new_tree(&mut TestRunner::default())
+            .new_tree(&mut TestRunner::new_with_rng(
+                Default::default(),
+                test_runner.new_rng(),
+            ))
             .unwrap()
             .current();
         let reg = registry(input.clone());
         for this in input.iter().rev().take(10) {
             let res = resolve(
-                &pkg_id("root"),
+                pkg_id("root"),
                 vec![dep_req(&this.name(), &format!("={}", this.version()))],
                 &reg,
             );
@@ -529,24 +547,24 @@ fn meta_test_deep_trees_from_strategy() {
 
 /// This test is to test the generator to ensure
 /// that it makes registries that include multiple versions of the same library
-///
-/// This is a form of randomized testing, if you are unlucky it can fail.
-/// A failure on its own is not a big deal. If you did not change the
-/// `registry_strategy` then feel free to retry without concern.
 #[test]
 fn meta_test_multiple_versions_strategy() {
     let mut dis = [0; 10];
 
     let strategy = registry_strategy(50, 20, 60);
+    let mut test_runner = TestRunner::deterministic();
     for _ in 0..128 {
         let PrettyPrintRegistry(input) = strategy
-            .new_tree(&mut TestRunner::default())
+            .new_tree(&mut TestRunner::new_with_rng(
+                Default::default(),
+                test_runner.new_rng(),
+            ))
             .unwrap()
             .current();
         let reg = registry(input.clone());
         for this in input.iter().rev().take(10) {
             let res = resolve(
-                &pkg_id("root"),
+                pkg_id("root"),
                 vec![dep_req(&this.name(), &format!("={}", this.version()))],
                 &reg,
             );

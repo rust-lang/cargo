@@ -149,6 +149,7 @@ fn plugin_deps() {
         return;
     }
     if !is_nightly() {
+        // plugins are unstable
         return;
     }
 
@@ -241,6 +242,7 @@ fn plugin_to_the_max() {
         return;
     }
     if !is_nightly() {
+        // plugins are unstable
         return;
     }
 
@@ -396,6 +398,7 @@ fn plugin_with_extra_dylib_dep() {
         return;
     }
     if !is_nightly() {
+        // plugins are unstable
         return;
     }
 

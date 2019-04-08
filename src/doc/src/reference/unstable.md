@@ -77,6 +77,7 @@ minimum versions that you are actually using. That is, if Cargo.toml says
 
 ### out-dir
 * Original Issue: [#4875](https://github.com/rust-lang/cargo/issues/4875)
+* Tracking Issue: [#6790](https://github.com/rust-lang/cargo/issues/6790)
 
 This feature allows you to specify the directory where artifacts will be
 copied to after they are built. Typically artifacts are only written to the
@@ -117,8 +118,9 @@ opt-level = 3
 [profile.dev.overrides."*"]
 opt-level = 2
 
-# Build scripts and their dependencies will be compiled with -Copt-level=3
-# By default, build scripts use the same rules as the rest of the profile
+# Build scripts or proc-macros and their dependencies will be compiled with
+# `-Copt-level=3`. By default, they use the same rules as the rest of the
+# profile.
 [profile.dev.build-override]
 opt-level = 3
 ```
@@ -148,7 +150,7 @@ cargo +nightly build -Z config-profile
 
 ### Namespaced features
 * Original issue: [#1286](https://github.com/rust-lang/cargo/issues/1286)
-* Tracking Issue: [rust-lang/cargo#5565](https://github.com/rust-lang/cargo/issues/5565)
+* Tracking Issue: [#5565](https://github.com/rust-lang/cargo/issues/5565)
 
 Currently, it is not possible to have a feature and a dependency with the same
 name in the manifest. If you set `namespaced-features` to `true`, the namespaces
@@ -175,7 +177,7 @@ include the dependency as a requirement, as `foo = ["crate:foo"]`.
 
 
 ### Build-plan
-* Tracking Issue: [rust-lang/cargo#5579](https://github.com/rust-lang/cargo/issues/5579)
+* Tracking Issue: [#5579](https://github.com/rust-lang/cargo/issues/5579)
 
 The `--build-plan` argument for the `build` command will output JSON with
 information about which commands would be run without actually executing
@@ -230,3 +232,35 @@ extra-info = "qwerty"
 
 Metabuild packages should have a public function called `metabuild` that
 performs the same actions as a regular `build.rs` script would perform.
+
+### install-upgrade
+* Tracking Issue: [#6797](https://github.com/rust-lang/cargo/issues/6797)
+
+The `install-upgrade` feature changes the behavior of `cargo install` so that
+it will reinstall a package if it is not "up-to-date". If it is "up-to-date",
+it will do nothing and exit with success instead of failing. Example:
+
+```
+cargo +nightly install foo -Z install-upgrade
+```
+
+Cargo tracks some information to determine if a package is "up-to-date",
+including:
+
+- The package version and source.
+- The set of binary names installed.
+- The chosen features.
+- The release mode (`--debug`).
+- The target (`--target`).
+
+If any of these values change, then Cargo will reinstall the package.
+
+Installation will still fail if a different package installs a binary of the
+same name. `--force` may be used to unconditionally reinstall the package.
+
+Installing with `--path` will always build and install, unless there are
+conflicting binaries from another package.
+
+Additionally, a new flag `--no-track` is available to prevent `cargo install`
+from writing tracking information in `$CARGO_HOME` about which packages are
+installed.

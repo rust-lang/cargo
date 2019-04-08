@@ -105,7 +105,7 @@ fn relative_tools() {
 
     let prefix = p.root().into_os_string().into_string().unwrap();
 
-    p.cargo("build --verbose").cwd(p.root().join("bar")).with_stderr(&format!(
+    p.cargo("build --verbose").cwd("bar").with_stderr(&format!(
             "\
 [COMPILING] bar v0.5.0 ([CWD])
 [RUNNING] `rustc [..] -C ar={prefix}/./nonexistent-ar -C linker={prefix}/./tools/nonexistent-linker [..]`
@@ -188,13 +188,11 @@ fn custom_runner_cfg() {
 
     p.cargo("run -- --param")
         .with_status(101)
-        .with_stderr_contains(&format!(
-            "\
+        .with_stderr_contains("\
 [COMPILING] foo v0.0.1 ([CWD])
 [FINISHED] dev [unoptimized + debuginfo] target(s) in [..]
 [RUNNING] `nonexistent-runner -r target/debug/foo[EXE] --param`
-",
-        ))
+")
         .run();
 }
 
@@ -222,13 +220,11 @@ fn custom_runner_cfg_precedence() {
 
     p.cargo("run -- --param")
         .with_status(101)
-        .with_stderr_contains(&format!(
-            "\
+        .with_stderr_contains("\
             [COMPILING] foo v0.0.1 ([CWD])
 [FINISHED] dev [unoptimized + debuginfo] target(s) in [..]
 [RUNNING] `nonexistent-runner -r target/debug/foo[EXE] --param`
-",
-        ))
+")
         .run();
 }
 
@@ -250,10 +246,8 @@ fn custom_runner_cfg_collision() {
 
     p.cargo("run -- --param")
         .with_status(101)
-        .with_stderr_contains(&format!(
-            "\
+        .with_stderr_contains("\
 [ERROR] several matching instances of `target.'cfg(..)'.runner` in `.cargo/config`
-",
-        ))
+")
         .run();
 }

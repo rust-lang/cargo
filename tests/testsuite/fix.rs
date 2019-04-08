@@ -3,7 +3,6 @@ use std::fs::File;
 use git2;
 
 use crate::support::git;
-use crate::support::is_nightly;
 use crate::support::{basic_manifest, project};
 
 use std::io::Write;
@@ -134,11 +133,11 @@ fn broken_fixes_backed_out() {
         .build();
 
     // Build our rustc shim
-    p.cargo("build").cwd(p.root().join("foo")).run();
+    p.cargo("build").cwd("foo").run();
 
     // Attempt to fix code, but our shim will always fail the second compile
     p.cargo("fix --allow-no-vcs --lib")
-        .cwd(p.root().join("bar"))
+        .cwd("bar")
         .env("__CARGO_FIX_YOLO", "1")
         .env("RUSTC", p.root().join("foo/target/debug/foo"))
         .with_stderr_contains(
@@ -259,7 +258,7 @@ fn do_not_fix_non_relevant_deps() {
 
     p.cargo("fix --allow-no-vcs")
         .env("__CARGO_FIX_YOLO", "1")
-        .cwd(p.root().join("foo"))
+        .cwd("foo")
         .run();
 
     assert!(p.read_file("bar/src/lib.rs").contains("mut"));
@@ -267,15 +266,11 @@ fn do_not_fix_non_relevant_deps() {
 
 #[test]
 fn prepare_for_2018() {
-    if !is_nightly() {
-        return;
-    }
     let p = project()
         .file(
             "src/lib.rs",
             r#"
                 #![allow(unused)]
-                #![feature(rust_2018_preview)]
 
                 mod foo {
                     pub const FOO: &str = "fooo";
@@ -311,15 +306,10 @@ fn prepare_for_2018() {
 
 #[test]
 fn local_paths() {
-    if !is_nightly() {
-        return;
-    }
     let p = project()
         .file(
             "src/lib.rs",
             r#"
-                #![feature(rust_2018_preview)]
-
                 use test::foo;
 
                 mod test {
@@ -350,9 +340,6 @@ fn local_paths() {
 
 #[test]
 fn upgrade_extern_crate() {
-    if !is_nightly() {
-        return;
-    }
     let p = project()
         .file(
             "Cargo.toml",
@@ -403,15 +390,11 @@ fn upgrade_extern_crate() {
 
 #[test]
 fn specify_rustflags() {
-    if !is_nightly() {
-        return;
-    }
     let p = project()
         .file(
             "src/lib.rs",
             r#"
                 #![allow(unused)]
-                #![feature(rust_2018_preview)]
 
                 mod foo {
                     pub const FOO: &str = "fooo";
@@ -874,15 +857,10 @@ information about transitioning to the 2018 edition see:
 
 #[test]
 fn fix_overlapping() {
-    if !is_nightly() {
-        return;
-    }
     let p = project()
         .file(
             "src/lib.rs",
             r#"
-                #![feature(rust_2018_preview)]
-
                 pub fn foo<T>() {}
                 pub struct A;
 
@@ -912,9 +890,6 @@ fn fix_overlapping() {
 
 #[test]
 fn fix_idioms() {
-    if !is_nightly() {
-        return;
-    }
     let p = project()
         .file(
             "Cargo.toml",
@@ -1196,9 +1171,6 @@ fn only_warn_for_relevant_crates() {
 
 #[test]
 fn fix_to_broken_code() {
-    if !is_nightly() {
-        return;
-    }
     let p = project()
         .file(
             "foo/Cargo.toml",
@@ -1254,11 +1226,11 @@ fn fix_to_broken_code() {
         .build();
 
     // Build our rustc shim
-    p.cargo("build").cwd(p.root().join("foo")).run();
+    p.cargo("build").cwd("foo").run();
 
     // Attempt to fix code, but our shim will always fail the second compile
     p.cargo("fix --allow-no-vcs --broken-code")
-        .cwd(p.root().join("bar"))
+        .cwd("bar")
         .env("RUSTC", p.root().join("foo/target/debug/foo"))
         .with_status(101)
         .with_stderr_contains("[WARNING] failed to automatically apply fixes [..]")
@@ -1288,4 +1260,27 @@ fn fix_with_common() {
     p.cargo("fix --edition --allow-no-vcs").run();
 
     assert_eq!(p.read_file("tests/common/mod.rs"), "pub fn r#try() {}");
+}
+
+#[test]
+fn fix_in_existing_repo_weird_ignore() {
+    // Check that ignore doesn't ignore the repo itself.
+    let p = git::new("foo", |project| {
+        project
+            .file("src/lib.rs", "")
+            .file(".gitignore", "foo\ninner\n")
+            .file("inner/file", "")
+    })
+    .unwrap();
+
+    p.cargo("fix").run();
+    // This is questionable about whether it is the right behavior. It should
+    // probably be checking if any source file for the current project is
+    // ignored.
+    p.cargo("fix")
+        .cwd("inner")
+        .with_stderr_contains("[ERROR] no VCS found[..]")
+        .with_status(101)
+        .run();
+    p.cargo("fix").cwd("src").run();
 }

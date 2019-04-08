@@ -283,7 +283,12 @@ impl SourceId {
                     Ok(p) => p,
                     Err(()) => panic!("path sources cannot be remote"),
                 };
-                Ok(Box::new(RegistrySource::local(self, &path, config)))
+                Ok(Box::new(RegistrySource::local(
+                    self,
+                    &path,
+                    yanked_whitelist,
+                    config,
+                )))
             }
             Kind::Directory => {
                 let path = match self.inner.url.to_file_path() {
@@ -363,7 +368,7 @@ impl PartialOrd for SourceId {
 
 impl Ord for SourceId {
     fn cmp(&self, other: &SourceId) -> Ordering {
-        self.inner.cmp(&other.inner)
+        self.inner.cmp(other.inner)
     }
 }
 

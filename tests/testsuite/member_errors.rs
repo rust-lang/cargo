@@ -1,9 +1,11 @@
 use cargo::core::resolver::ResolveError;
-use cargo::core::{compiler::CompileMode, Workspace};
+use cargo::core::{compiler::CompileMode, Shell, Workspace};
 use cargo::ops::{self, CompileOptions};
 use cargo::util::{config::Config, errors::ManifestError};
 
+use crate::support::install::cargo_home;
 use crate::support::project;
+use crate::support::registry;
 
 /// Tests inclusion of a `ManifestError` pointing to a member manifest
 /// when that manifest fails to deserialize.
@@ -139,7 +141,9 @@ fn member_manifest_version_error() {
         .file("bar/src/main.rs", "fn main() {}")
         .build();
 
-    let config = Config::default().unwrap();
+    // Prevent this test from accessing the network by setting up .cargo/config.
+    registry::init();
+    let config = Config::new(Shell::new(), cargo_home(), cargo_home());
     let ws = Workspace::new(&p.root().join("Cargo.toml"), &config).unwrap();
     let compile_options = CompileOptions::new(&config, CompileMode::Build).unwrap();
     let member_bar = ws.members().find(|m| &*m.name() == "bar").unwrap();

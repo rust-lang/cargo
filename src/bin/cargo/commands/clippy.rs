@@ -1,13 +1,11 @@
 use crate::command_prelude::*;
 
 use cargo::ops;
+use cargo::util;
 
 pub fn cli() -> App {
-    subcommand("check")
-        // subcommand aliases are handled in aliased_command()
-        // .alias("c")
-        .about("Check a local package and all of its dependencies for errors")
-        .arg(opt("quiet", "No output printed to stdout").short("q"))
+    subcommand("clippy-preview")
+        .about("Checks a package to catch common mistakes and improve your Rust code.")
         .arg_package_spec(
             "Package(s) to check",
             "Check all packages in the workspace",
@@ -27,7 +25,6 @@ pub fn cli() -> App {
             "Check all targets",
         )
         .arg_release("Check artifacts in release mode, with optimizations")
-        .arg(opt("profile", "Profile to build the selected target for").value_name("PROFILE"))
         .arg_features()
         .arg_target_triple("Check for the target triple")
         .arg_target_dir()
@@ -44,32 +41,36 @@ All packages in the workspace are checked if the `--all` flag is supplied. The
 `--all` flag is automatically assumed for a virtual manifest.
 Note that `--exclude` has to be specified in conjunction with the `--all` flag.
 
-Compilation can be configured via the use of profiles which are configured in
-the manifest. The default profile for this command is `dev`, but passing
-the `--release` flag will use the `release` profile instead.
+To allow or deny a lint from the command line you can use `cargo clippy --`
+with:
 
-The `--profile test` flag can be used to check unit tests with the
-`#[cfg(test)]` attribute.
+    -W --warn OPT       Set lint warnings
+    -A --allow OPT      Set lint allowed
+    -D --deny OPT       Set lint denied
+    -F --forbid OPT     Set lint forbidden
+
+You can use tool lints to allow or deny lints from your code, eg.:
+
+    #[allow(clippy::needless_lifetimes)]
 ",
         )
 }
 
 pub fn exec(config: &mut Config, args: &ArgMatches<'_>) -> CliResult {
     let ws = args.workspace(config)?;
-    let test = match args.value_of("profile") {
-        Some("test") => true,
-        None => false,
-        Some(profile) => {
-            let err = failure::format_err!(
-                "unknown profile: `{}`, only `test` is \
-                 currently supported",
-                profile
-            );
-            return Err(CliError::new(err, 101));
-        }
-    };
-    let mode = CompileMode::Check { test };
-    let compile_opts = args.compile_options(config, mode, Some(&ws))?;
+
+    let mode = CompileMode::Check { test: false };
+    let mut compile_opts = args.compile_options(config, mode, Some(&ws))?;
+
+    if !config.cli_unstable().unstable_options {
+        return Err(failure::format_err!(
+            "`clippy-preview` is unstable, pass `-Z unstable-options` to enable it"
+        )
+        .into());
+    }
+
+    let wrapper = util::process("clippy-driver");
+    compile_opts.build_config.rustc_wrapper = Some(wrapper);
 
     ops::compile(&ws, &compile_opts)?;
     Ok(())

@@ -38,6 +38,7 @@ struct Inner {
     explicit_name_in_toml: Option<InternedString>,
 
     optional: bool,
+    public: bool,
     default_features: bool,
     features: Vec<InternedString>,
 
@@ -209,6 +210,7 @@ impl Dependency {
                 kind: Kind::Normal,
                 only_match_name: true,
                 optional: false,
+                public: false,
                 features: Vec::new(),
                 default_features: true,
                 specified_req: false,
@@ -283,6 +285,16 @@ impl Dependency {
 
     pub fn kind(&self) -> Kind {
         self.inner.kind
+    }
+
+    pub fn is_public(&self) -> bool {
+        self.inner.public
+    }
+
+    /// Sets whether the dependency is public.
+    pub fn set_public(&mut self, public: bool) -> &mut Dependency {
+        Rc::make_mut(&mut self.inner).public = public;
+        self
     }
 
     pub fn specified_req(&self) -> bool {

@@ -1,4 +1,3 @@
-use crate::support;
 use crate::support::{basic_bin_manifest, basic_lib_manifest, project, Project};
 use cargo::util::paths::dylib_path_envvar;
 
@@ -435,10 +434,6 @@ fn autodiscover_examples_project(rust_edition: &str, autoexamples: Option<bool>)
 
 #[test]
 fn run_example_autodiscover_2015() {
-    if !support::is_nightly() {
-        return;
-    }
-
     let p = autodiscover_examples_project("2015", None);
     p.cargo("run --example a")
         .with_status(101)
@@ -467,10 +462,6 @@ error: no example target named `a`
 
 #[test]
 fn run_example_autodiscover_2015_with_autoexamples_enabled() {
-    if !support::is_nightly() {
-        return;
-    }
-
     let p = autodiscover_examples_project("2015", Some(true));
     p.cargo("run --example a")
         .with_stderr(
@@ -485,10 +476,6 @@ fn run_example_autodiscover_2015_with_autoexamples_enabled() {
 
 #[test]
 fn run_example_autodiscover_2015_with_autoexamples_disabled() {
-    if !support::is_nightly() {
-        return;
-    }
-
     let p = autodiscover_examples_project("2015", Some(false));
     p.cargo("run --example a")
         .with_status(101)
@@ -498,10 +485,6 @@ fn run_example_autodiscover_2015_with_autoexamples_disabled() {
 
 #[test]
 fn run_example_autodiscover_2018() {
-    if !support::is_nightly() {
-        return;
-    }
-
     let p = autodiscover_examples_project("2018", None);
     p.cargo("run --example a")
         .with_stderr(
@@ -1029,7 +1012,7 @@ fn run_multiple_packages() {
 
     let cargo = || {
         let mut process_builder = p.cargo("run");
-        process_builder.cwd(p.root().join("foo"));
+        process_builder.cwd("foo");
         process_builder
     };
 
