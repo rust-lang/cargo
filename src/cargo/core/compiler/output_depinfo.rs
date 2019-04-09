@@ -39,7 +39,7 @@ fn add_deps_for_unit<'a, 'b>(
     if !unit.mode.is_run_custom_build() {
         // Add dependencies from rustc dep-info output (stored in fingerprint directory)
         let dep_info_loc = fingerprint::dep_info_loc(context, unit);
-        if let Some(paths) = fingerprint::parse_dep_info(unit.pkg, &dep_info_loc)? {
+        if let Some(paths) = fingerprint::parse_dep_info(unit.pkg.root(), &dep_info_loc)? {
             for path in paths {
                 deps.insert(path);
             }

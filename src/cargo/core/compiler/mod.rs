@@ -231,7 +231,7 @@ fn rustc<'a, 'cfg>(
     exec.init(cx, unit);
     let exec = exec.clone();
 
-    let root_output = cx.files().target_root().to_path_buf();
+    let root_output = cx.files().host_root().to_path_buf();
     let pkg_root = unit.pkg.root().to_path_buf();
     let cwd = rustc
         .get_cwd()
