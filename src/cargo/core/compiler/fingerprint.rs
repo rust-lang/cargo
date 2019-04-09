@@ -478,9 +478,7 @@ enum LocalFingerprint {
     /// The `dep_info` file, when present, also lists a number of other files
     /// for us to look at. If any of those files are newer than this file then
     /// we need to recompile.
-    CheckDepInfo {
-        dep_info: PathBuf,
-    },
+    CheckDepInfo { dep_info: PathBuf },
 
     /// This represents a nonempty set of `rerun-if-changed` annotations printed
     /// out by a build script. The `output` file is a arelative file anchored at
@@ -500,10 +498,7 @@ enum LocalFingerprint {
     /// build script. The exact env var and value are hashed here. There's no
     /// filesystem dependence here, and if the values are changed the hash will
     /// change forcing a recompile.
-    RerunIfEnvChanged {
-        var: String,
-        val: Option<String>,
-    },
+    RerunIfEnvChanged { var: String, val: Option<String> },
 }
 
 enum StaleFile {
@@ -762,7 +757,7 @@ impl Fingerprint {
                     let t = FileTime::from_system_time(SystemTime::now());
                     drop(filetime::set_file_times(f, t, t));
                 }
-                return mtime;
+                mtime
             })
             .min();
 
@@ -1350,7 +1345,7 @@ fn compare_old_fingerprint(
     debug_assert_eq!(util::to_hex(old_fingerprint.hash()), old_fingerprint_short);
     let result = new_fingerprint.compare(&old_fingerprint);
     assert!(result.is_err());
-    return result;
+    result
 }
 
 fn log_compare(unit: &Unit<'_>, compare: &CargoResult<()>) {
@@ -1444,7 +1439,7 @@ where
         });
     }
 
-    return None;
+    None
 }
 
 fn filename<'a, 'cfg>(cx: &mut Context<'a, 'cfg>, unit: &Unit<'a>) -> String {

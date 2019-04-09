@@ -883,7 +883,7 @@ fn generalize_conflicting(
             // Thus, if all the things it can resolve to have already ben determined
             // to be conflicting, then we can just say that we conflict with the parent.
             if registry
-                .query(&critical_parents_dep)
+                .query(critical_parents_dep)
                 .expect("an already used dep now error!?")
                 .iter()
                 .rev() // the last one to be tried is the least likely to be in the cache, so start with that.
@@ -894,13 +894,13 @@ fn generalize_conflicting(
                         other.summary.package_id(),
                         backtrack_critical_reason.clone(),
                     );
-                    past_conflicting_activations.contains(&dep, &con)
+                    past_conflicting_activations.contains(dep, &con)
                 })
             {
                 let mut con = conflicting_activations.clone();
                 con.remove(&backtrack_critical_id);
                 con.insert(*critical_parent, backtrack_critical_reason);
-                past_conflicting_activations.insert(&dep, &con);
+                past_conflicting_activations.insert(dep, &con);
                 return Some(con);
             }
         }
