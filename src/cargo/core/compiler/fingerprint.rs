@@ -14,13 +14,14 @@
 //!   Unit. If any of the inputs changes from the last compilation, then the
 //!   Unit is considered dirty. A missing fingerprint (such as during the
 //!   first build) is also considered dirty.
-//! - Dirty propagation is done in the `JobQueue`. When a Unit is dirty, the
-//!   `JobQueue` automatically treats anything that depends on it as dirty.
-//!   Anything that relies on this is probably a bug. The fingerprint should
-//!   always be complete (but there are some known limitations). This is a
-//!   problem because not all Units are built all at once. If two separate
-//!   `cargo` commands are run that build different Units, this dirty
-//!   propagation will not work across commands.
+//! - Whether or not input files are actually present. For example a build
+//!   script which says it depends on a nonexistent file `foo` is always rerun.
+//! - Propagation throughout the dependency graph of file modification time
+//!   information, used to detect changes on the filesystem. Each `Fingerprint`
+//!   keeps track of what files it'll be processing, and when necessary it will
+//!   check the `mtime` of each file (last modification time) and compare it to
+//!   dependencies and output to see if files have been changed or if a change
+//!   needs to force recompiles of downstream dependencies.
 //!
 //! Note: Fingerprinting is not a perfect solution. Filesystem mtime tracking
 //! is notoriously imprecise and problematic. Only a small part of the
@@ -97,10 +98,10 @@
 //!
 //! After the list of Units has been calculated, the Units are added to the
 //! `JobQueue`. As each one is added, the fingerprint is calculated, and the
-//! dirty/fresh status is recorded in the `JobQueue`. A closure is used to
-//! update the fingerprint on-disk when the Unit successfully finishes. The
-//! closure will recompute the Fingerprint based on the updated information.
-//! If the Unit fails to compile, the fingerprint is not updated.
+//! dirty/fresh status is recorded. A closure is used to update the fingerprint
+//! on-disk when the Unit successfully finishes. The closure will recompute the
+//! Fingerprint based on the updated information. If the Unit fails to compile,
+//! the fingerprint is not updated.
 //!
 //! Fingerprints are cached in the `Context`. This makes computing
 //! Fingerprints faster, but also is necessary for properly updating
@@ -108,13 +109,41 @@
 //! all dependencies, when it is updated, by using `Arc` clones, it
 //! automatically picks up the updates to its dependencies.
 //!
+//! ## Considerations for inclusion in a fingerprint
+//!
+//! Over time we've realized a few items which historically were included in
+//! fingerprint hashings should not actually be included. Examples are:
+//!
+//! * Modification time values. We strive to never include a modification time
+//!   inside a `Fingerprint` to get hashed into an actual value. While
+//!   theoretically fine to do, in practice this causes issues with common
+//!   applications like Docker. Docker, after a layer is built, will zero out
+//!   the nanosecond part of all filesystem modification times. This means that
+//!   the actual modification time is different for all build artifacts, which
+//!   if we tracked the actual values of modification times would cause
+//!   unnecessary recompiles. To fix this we instead only track paths which are
+//!   relevant. These paths are checked dynamically to see if they're up to
+//!   date, and the modifiation time doesn't make its way into the fingerprint
+//!   hash.
+//!
+//! * Absolute path names. We strive to maintain a property where if you rename
+//!   a project directory Cargo will continue to preserve all build artifacts
+//!   and reuse the cache. This means that we can't ever hash an absolute path
+//!   name. Instead we always hash relative path names and the "root" is passed
+//!   in at runtime dynamically. Some of this is best effort, but the general
+//!   idea is that we assume all acceses within a crate stay within that
+//!   crate.
+//!
+//! These are pretty tricky to test for unfortunately, but we should have a good
+//! test suite nowadays and lord knows Cargo gets enough testing in the wild!
+//!
 //! ## Build scripts
 //!
 //! The *running* of a build script (`CompileMode::RunCustomBuild`) is treated
 //! significantly different than all other Unit kinds. It has its own function
-//! for calculating the Fingerprint (`prepare_build_cmd`) and has some unique
-//! considerations. It does not track the same information as a normal Unit.
-//! The information tracked depends on the `rerun-if-changed` and
+//! for calculating the Fingerprint (`calculate_run_custom_build`) and has some
+//! unique considerations. It does not track the same information as a normal
+//! Unit. The information tracked depends on the `rerun-if-changed` and
 //! `rerun-if-env-changed` statements produced by the build script. If the
 //! script does not emit either of these statements, the Fingerprint runs in
 //! "old style" mode where an mtime change of *any* file in the package will
@@ -357,11 +386,11 @@ pub struct Fingerprint {
     /// "description", which are exposed as environment variables during
     /// compilation.
     metadata: u64,
-    /// Whether any of the `local` inputs, on the filesystem, are considered out
-    /// of date by looking at mtimes.
+    /// Description of whether the filesystem status for this unit is up to date
+    /// or should be considered stale.
     #[serde(skip_serializing, skip_deserializing)]
     fs_status: FsStatus,
-    /// A file, relative to `target_root`, that is produced by the step that
+    /// Files, relative to `target_root`, that are produced by the step that
     /// this `Fingerprint` represents. This is used to detect when the whole
     /// fingerprint is out of date if this is missing, or if previous
     /// fingerprints output files are regenerated and look newer than this one.
@@ -369,8 +398,17 @@ pub struct Fingerprint {
     outputs: Vec<PathBuf>,
 }
 
+/// Indication of the status on the filesystem for a particular unit.
 enum FsStatus {
+    /// This unit is to be considered stale, even if hash information all
+    /// matches. The filesystem inputs have changed (or are missing) and the
+    /// unit needs to subsequently be recompiled.
     Stale,
+
+    /// This unit is up-to-date, it does not need to be recompiled. If there are
+    /// any outputs then the `FileTime` listed here is the minimum of all their
+    /// mtimes. This is then later used to see if a unit is newer than one of
+    /// its dependants, causing the dependant to be recompiled.
     UpToDate(Option<FileTime>),
 }
 
@@ -378,7 +416,7 @@ impl FsStatus {
     fn up_to_date(&self) -> bool {
         match self {
             FsStatus::UpToDate(_) => true,
-            _ => false,
+            FsStatus::Stale => false,
         }
     }
 }
@@ -443,19 +481,40 @@ enum StaleFile {
 }
 
 impl LocalFingerprint {
+    /// Checks dynamically at runtime if this `LocalFingerprint` has a stale
+    /// file.
+    ///
+    /// This will use the absolute root paths passed in if necessary to guide
+    /// file accesses.
     fn find_stale_file(
         &self,
         pkg_root: &Path,
         target_root: &Path,
     ) -> CargoResult<Option<StaleFile>> {
         match self {
+            // We need to parse `dep_info`, learn about all the files the crate
+            // depends on, and then see if any of them are newer than the
+            // dep_info file itself. If the `dep_info` file is missing then this
+            // unit has never been compiled!
             LocalFingerprint::CheckDepInfo { dep_info } => {
-                find_stale_file_from_dep_info(pkg_root, &target_root.join(dep_info))
+                let dep_info = target_root.join(dep_info);
+                if let Some(paths) = parse_dep_info(pkg_root, &dep_info)? {
+                    Ok(find_stale_file(&dep_info, paths.iter()))
+                } else {
+                    Ok(Some(StaleFile::Missing(dep_info)))
+                }
             }
+
+            // We need to verify that no paths listed in `paths` are newer than
+            // the `output` path itself, or the last time the build script ran.
             LocalFingerprint::RerunIfChanged { output, paths } => Ok(find_stale_file(
                 &target_root.join(output),
                 paths.iter().map(|p| pkg_root.join(p)),
             )),
+
+            // These have no dependencies on the filesystem, and their values
+            // are included natively in the `Fingerprint` hash so nothing
+            // tocheck for here.
             LocalFingerprint::RerunIfEnvChanged { .. } => Ok(None),
             LocalFingerprint::Precalculated(..) => Ok(None),
         }
@@ -518,6 +577,12 @@ impl Fingerprint {
         ret
     }
 
+    /// Compares this fingerprint with an old version which was previously
+    /// serialized to filesystem.
+    ///
+    /// The purpose of this is exclusively to produce a diagnostic message
+    /// indicating why we're recompiling something. This function always returns
+    /// an error, it will never return success.
     fn compare(&self, old: &Fingerprint) -> CargoResult<()> {
         if self.rustc != old.rustc {
             bail!("rust compiler has changed")
@@ -640,15 +705,33 @@ impl Fingerprint {
             bail!("current filesystem status shows we're outdated");
         }
 
+        // This typically means some filesystem modifications happened or
+        // something transitive was odd. In general we should strive to provide
+        // a better error message than this, so if you see this message a lot it
+        // likely means this method needs to be updated!
         bail!("two fingerprint comparison turned up nothing obvious");
     }
 
+    /// Dynamically inspect the local filesystem to update the `fs_status` field
+    /// of this `Fingerprint`.
+    ///
+    /// This function is used just after a `Fingerprint` is constructed to check
+    /// the local state of the filesystem and propagate any dirtiness from
+    /// dependencies up to this unit as well. This function assumes that the
+    /// unit starts out as `FsStatus::Stale` and then it will optionally switch
+    /// it to `UpToDate` if it can.
     fn check_filesystem(
         &mut self,
         pkg_root: &Path,
         target_root: &Path,
         mtime_on_use: bool,
     ) -> CargoResult<()> {
+        assert!(!self.fs_status.up_to_date());
+
+        // Get the `mtime` of all outputs. Optionally update their mtime
+        // afterwards based on the `mtime_on_use` flag. Afterwards we want the
+        // minimum mtime as it's the one we'll be comparing to inputs and
+        // dependencies.
         let status = self
             .outputs
             .iter()
@@ -661,32 +744,59 @@ impl Fingerprint {
                 return mtime;
             })
             .min();
+
         let mtime = match status {
-            Some(Some(mtime)) => mtime,
-            Some(None) => return Ok(()),
+            // We had no output files. This means we're an overridden build
+            // script and we're just always up to date because we aren't
+            // watching the filesystem.
             None => {
                 self.fs_status = FsStatus::UpToDate(None);
                 return Ok(());
             }
+
+            // At least one path failed to report its `mtime`. It probably
+            // doesn't exists, so leave ourselves as stale and bail out.
+            Some(None) => return Ok(()),
+
+            // All files successfully reported an `mtime`, and we've got the
+            // minimum one, so let's keep going with that.
+            Some(Some(mtime)) => mtime,
         };
 
         for dep in self.deps.iter() {
             let dep_mtime = match dep.fingerprint.fs_status {
-                FsStatus::UpToDate(Some(mtime)) => mtime,
-                FsStatus::UpToDate(None) => continue,
+                // If our dependency is stale, so are we, so bail out.
                 FsStatus::Stale => return Ok(()),
+
+                // If our dependencies is up to date and has no filesystem
+                // interactions, then we can move on to the next dependency.
+                FsStatus::UpToDate(None) => continue,
+
+                FsStatus::UpToDate(Some(mtime)) => mtime,
             };
+
+            // If the dependency is newer than our own output then it was
+            // recompiled previously. We transitively become stale ourselves in
+            // that case, so bail out.
             if dep_mtime > mtime {
                 return Ok(());
             }
         }
+
+        // If we reached this far then all dependencies are up to date. Check
+        // all our `LocalFingerprint` information to see if we have any stale
+        // files for this package itself. If we do find something log a helpful
+        // message and bail out so we stay stale.
         for local in self.local.iter() {
             if let Some(file) = local.find_stale_file(pkg_root, target_root)? {
                 file.log();
                 return Ok(());
             }
         }
+
+        // Everything was up to date! Record such.
         self.fs_status = FsStatus::UpToDate(Some(mtime));
+
         Ok(())
     }
 }
@@ -790,6 +900,11 @@ impl DepFingerprint {
 }
 
 impl StaleFile {
+    /// Use the `log` crate to log a hopefully helpful message in diagnosing
+    /// what file is considered stale and why. This is intended to be used in
+    /// conjunction with `RUST_LOG` to determine why Cargo is recompiling
+    /// something. Currently there's no user-facing usage of this other than
+    /// that.
     fn log(&self) {
         match self {
             StaleFile::Missing(path) => {
@@ -835,9 +950,13 @@ fn calculate<'a, 'cfg>(
     } else {
         calculate_normal(cx, unit)?
     };
+
+    // After we built the initial `Fingerprint` be sure to update the
+    // `fs_status` field of it.
     let target_root = target_root(cx, unit);
     let mtime_on_use = cx.bcx.config.cli_unstable().mtime_on_use;
     fingerprint.check_filesystem(unit.pkg.root(), &target_root, mtime_on_use)?;
+
     let fingerprint = Arc::new(fingerprint);
     cx.fingerprints.insert(*unit, Arc::clone(&fingerprint));
     Ok(fingerprint)
@@ -1047,6 +1166,16 @@ fn build_script_local_fingerprints<'a, 'cfg>(
         move |deps: &BuildDeps, pkg_fingerprint: Option<&dyn Fn() -> CargoResult<String>>| {
             if deps.rerun_if_changed.is_empty() && deps.rerun_if_env_changed.is_empty() {
                 match pkg_fingerprint {
+                    // FIXME: this is somewhat buggy with respect to docker and
+                    // weird filesystems. The `Precalculated` variant
+                    // constructed below will, for `path` dependencies, contain
+                    // a stringified version of the mtime for the local crate.
+                    // This violates one of the things we describe in this
+                    // module's doc comment, never hashing mtimes. We should
+                    // figure out a better scheme where a package fingerprint
+                    // may be a string (like for a registry) or a list of files
+                    // (like for a path dependency). Those list of files would
+                    // be stored here rather than the the mtime of them.
                     Some(f) => {
                         debug!("old local fingerprints deps");
                         let s = f()?;
@@ -1093,6 +1222,9 @@ fn local_fingerprints_deps(
     let mut local = Vec::new();
 
     if !deps.rerun_if_changed.is_empty() {
+        // Note that like the module comment above says we are careful to never
+        // store an absolute path in `LocalFingerprint`, so ensure that we strip
+        // absolute prefixes from them.
         let output = deps
             .build_script_output
             .strip_prefix(target_root)
@@ -1146,13 +1278,18 @@ pub fn prepare_init<'a, 'cfg>(cx: &mut Context<'a, 'cfg>, unit: &Unit<'a>) -> Ca
     Ok(())
 }
 
+/// Returns the location that the dep-info file will show up at for the `unit`
+/// specified.
 pub fn dep_info_loc<'a, 'cfg>(cx: &mut Context<'a, 'cfg>, unit: &Unit<'a>) -> PathBuf {
     cx.files()
         .fingerprint_dir(unit)
         .join(&format!("dep-{}", filename(cx, unit)))
 }
 
-pub fn target_root<'a, 'cfg>(cx: &mut Context<'a, 'cfg>, unit: &Unit<'a>) -> PathBuf {
+/// Returns an absolute path that the `unit`'s outputs should always be relative
+/// to. This `target_root` variable is used to store relative path names in
+/// `Fingerprint` instead of absolute pathnames (see module comment).
+fn target_root<'a, 'cfg>(cx: &mut Context<'a, 'cfg>, unit: &Unit<'a>) -> PathBuf {
     if unit.mode.is_run_custom_build() {
         cx.files().build_script_run_dir(unit)
     } else if unit.kind == Kind::Host {
@@ -1184,8 +1321,10 @@ fn compare_old_fingerprint(
     let old_fingerprint_json = paths::read(&loc.with_extension("json"))?;
     let old_fingerprint: Fingerprint = serde_json::from_str(&old_fingerprint_json)
         .chain_err(|| internal("failed to deserialize json"))?;
-    assert_eq!(util::to_hex(old_fingerprint.hash()), old_fingerprint_short);
-    new_fingerprint.compare(&old_fingerprint)
+    debug_assert_eq!(util::to_hex(old_fingerprint.hash()), old_fingerprint_short);
+    let result = new_fingerprint.compare(&old_fingerprint);
+    assert!(result.is_err());
+    return result;
 }
 
 fn log_compare(unit: &Unit<'_>, compare: &CargoResult<()>) {
@@ -1219,17 +1358,6 @@ pub fn parse_dep_info(pkg_root: &Path, dep_info: &Path) -> CargoResult<Option<Ve
         Ok(None)
     } else {
         Ok(Some(paths))
-    }
-}
-
-fn find_stale_file_from_dep_info(
-    pkg_root: &Path,
-    dep_info: &Path,
-) -> CargoResult<Option<StaleFile>> {
-    if let Some(paths) = parse_dep_info(pkg_root, dep_info)? {
-        Ok(find_stale_file(dep_info, paths.iter()))
-    } else {
-        Ok(Some(StaleFile::Missing(dep_info.to_path_buf())))
     }
 }
 
