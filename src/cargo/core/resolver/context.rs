@@ -77,7 +77,7 @@ impl From<&semver::Version> for SemverCompatibility {
 }
 
 impl PackageId {
-    pub fn as_activations_key(&self) -> (InternedString, SourceId, SemverCompatibility) {
+    pub fn as_activations_key(self) -> (InternedString, SourceId, SemverCompatibility) {
         (self.name(), self.source_id(), self.version().into())
     }
 }
@@ -304,17 +304,12 @@ impl Context {
 
         // Record what list of features is active for this package.
         if !reqs.used.is_empty() {
-            let pkgid = s.package_id();
-
-            let set = Rc::make_mut(
+            Rc::make_mut(
                 self.resolve_features
-                    .entry(pkgid)
-                    .or_insert_with(|| Rc::new(HashSet::new())),
-            );
-
-            for feature in reqs.used {
-                set.insert(feature);
-            }
+                    .entry(s.package_id())
+                    .or_insert_with(|| Rc::new(HashSet::with_capacity(reqs.used.len()))),
+            )
+            .extend(reqs.used);
         }
 
         Ok(ret)
@@ -411,7 +406,7 @@ struct Requirements<'a> {
     visited: HashSet<InternedString>,
 }
 
-impl<'r> Requirements<'r> {
+impl Requirements<'_> {
     fn new(summary: &Summary) -> Requirements<'_> {
         Requirements {
             summary,
@@ -468,7 +463,7 @@ impl<'r> Requirements<'r> {
         Ok(())
     }
 
-    fn require_value<'f>(&mut self, fv: &'f FeatureValue) -> CargoResult<()> {
+    fn require_value(&mut self, fv: &FeatureValue) -> CargoResult<()> {
         match fv {
             FeatureValue::Feature(feat) => self.require_feature(*feat)?,
             FeatureValue::Crate(dep) => self.require_dependency(*dep),
