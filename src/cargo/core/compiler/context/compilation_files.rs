@@ -166,8 +166,13 @@ impl<'a, 'cfg: 'a> CompilationFiles<'a, 'cfg> {
         }
     }
 
-    /// Returns the root of the build output tree.
+    /// Returns the root of the build output tree for the target
     pub fn target_root(&self) -> &Path {
+        self.target.as_ref().unwrap_or(&self.host).dest()
+    }
+
+    /// Returns the root of the build output tree for the host
+    pub fn host_root(&self) -> &Path {
         self.host.dest()
     }
 

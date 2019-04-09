@@ -1811,7 +1811,10 @@ fn simulated_docker_deps_stay_cached() {
         .file("pathdep/src/lib.rs", "")
         .build();
 
-    p.cargo("build").run();
+    p.cargo("build")
+        .env("RUST_LOG", "cargo::core::compiler::fingerprint")
+        .stream()
+        .run();
 
     let already_zero = {
         // This happens on HFS with 1-second timestamp resolution,
@@ -1854,7 +1857,6 @@ fn simulated_docker_deps_stay_cached() {
         println!("already zero");
         // If it was already truncated, then everything stays fresh.
         p.cargo("build -v")
-            .env("RUST_LOG", "cargo::core::compiler::fingerprint")
             .with_stderr_unordered(
                 "\
 [FRESH] pathdep [..]
@@ -1879,7 +1881,6 @@ fn simulated_docker_deps_stay_cached() {
         // in it. It differs between builds because one has nsec=0 and the other
         // likely has a nonzero nsec. Hence, the rebuild.
         p.cargo("build -v")
-            .env("RUST_LOG", "cargo::core::compiler::fingerprint")
             .with_stderr_unordered(
                 "\
 [FRESH] pathdep [..]
