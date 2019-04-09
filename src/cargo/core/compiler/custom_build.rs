@@ -247,20 +247,7 @@ fn build_work<'a, 'cfg>(cx: &mut Context<'a, 'cfg>, unit: &Unit<'a>) -> CargoRes
     let kind = unit.kind;
     let json_messages = bcx.build_config.json_messages();
     let extra_verbose = bcx.config.extra_verbose();
-
-    // TODO: no duplicate
-        let prev_script_out_dir = paths::read_bytes(&root_output_file)
-            .and_then(|bytes| util::bytes2path(&bytes))
-            .unwrap_or_else(|_| script_out_dir.clone());
-
-    // TODO: no duplicate
-        let prev_output = BuildOutput::parse_file(
-            &output_file,
-            &unit.pkg.to_string(),
-            &prev_script_out_dir,
-            &script_out_dir,
-        )
-        .ok();
+    let (prev_output, prev_script_out_dir) = prev_build_output(cx, unit);
 
     fs::create_dir_all(&script_dir)?;
     fs::create_dir_all(&script_out_dir)?;
@@ -692,28 +679,45 @@ pub fn build_map<'b, 'cfg>(cx: &mut Context<'b, 'cfg>, units: &[Unit<'b>]) -> Ca
         }
     }
 
-    fn parse_previous_explicit_deps<'a, 'cfg>(cx: &mut Context<'a, 'cfg>, unit: &Unit<'a>) -> CargoResult<()> {
-        let script_out_dir = cx.files().build_script_out_dir(unit);
+    fn parse_previous_explicit_deps<'a, 'cfg>(
+        cx: &mut Context<'a, 'cfg>,
+        unit: &Unit<'a>,
+    ) -> CargoResult<()> {
         let script_run_dir = cx.files().build_script_run_dir(unit);
-        let root_output_file = script_run_dir.join("root-output");
         let output_file = script_run_dir.join("output");
+        let (prev_output, _) = prev_build_output(cx, unit);
+        let deps = BuildDeps::new(&output_file, prev_output.as_ref());
+        cx.build_explicit_deps.insert(*unit, deps);
+        Ok(())
+    }
+}
 
-        // Check to see if the build script has already run, and if it has, keep
-        // track of whether it has told us about some explicit dependencies.
-        let prev_script_out_dir = paths::read_bytes(&root_output_file)
-            .and_then(|bytes| util::bytes2path(&bytes))
-            .unwrap_or_else(|_| script_out_dir.clone());
+/// Returns the previous parsed `BuildOutput`, if any, from a previous
+/// execution.
+///
+/// Also returns the directory containing the output, typically used later in
+/// processing.
+fn prev_build_output<'a, 'cfg>(
+    cx: &mut Context<'a, 'cfg>,
+    unit: &Unit<'a>,
+) -> (Option<BuildOutput>, PathBuf) {
+    let script_out_dir = cx.files().build_script_out_dir(unit);
+    let script_run_dir = cx.files().build_script_run_dir(unit);
+    let root_output_file = script_run_dir.join("root-output");
+    let output_file = script_run_dir.join("output");
 
-        let prev_output = BuildOutput::parse_file(
+    let prev_script_out_dir = paths::read_bytes(&root_output_file)
+        .and_then(|bytes| util::bytes2path(&bytes))
+        .unwrap_or_else(|_| script_out_dir.clone());
+
+    (
+        BuildOutput::parse_file(
             &output_file,
             &unit.pkg.to_string(),
             &prev_script_out_dir,
             &script_out_dir,
         )
-        .ok();
-
-        let deps = BuildDeps::new(&output_file, prev_output.as_ref());
-        cx.build_explicit_deps.insert(*unit, deps);
-        Ok(())
-    }
+        .ok(),
+        prev_script_out_dir,
+    )
 }
