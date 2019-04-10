@@ -414,3 +414,66 @@ dependencies = [
         )
         .run();
 }
+
+#[test]
+fn publish_lockfile_default() {
+    let p = project()
+        .file(
+            "Cargo.toml",
+            r#"
+            cargo-features = ["publish-lockfile"]
+            [package]
+            name = "foo"
+            version = "1.0.0"
+            authors = []
+            license = "MIT"
+            description = "foo"
+            documentation = "foo"
+            homepage = "foo"
+            repository = "foo"
+            "#,
+        )
+        .file("src/main.rs", "fn main() {}")
+        .build();
+
+    p.cargo("package -l")
+        .masquerade_as_nightly_cargo()
+        .with_stdout(
+            "\
+Cargo.lock
+Cargo.toml
+src/main.rs
+",
+        )
+        .run();
+
+    let p = project()
+        .file(
+            "Cargo.toml",
+            r#"
+            cargo-features = ["publish-lockfile"]
+            [package]
+            name = "foo"
+            version = "1.0.0"
+            authors = []
+            license = "MIT"
+            description = "foo"
+            documentation = "foo"
+            homepage = "foo"
+            repository = "foo"
+            publish-lockfile = false
+            "#,
+        )
+        .file("src/main.rs", "fn main() {}")
+        .build();
+
+    p.cargo("package -l")
+        .masquerade_as_nightly_cargo()
+        .with_stdout(
+            "\
+Cargo.toml
+src/main.rs
+",
+        )
+        .run();
+}
