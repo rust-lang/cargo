@@ -771,8 +771,6 @@ fn generated_manifest() {
         .file(
             "Cargo.toml",
             r#"
-            cargo-features = ["alternative-registries"]
-
             [project]
             name = "foo"
             version = "0.0.1"
@@ -815,8 +813,6 @@ fn generated_manifest() {
 # issue against the rust-lang/cargo repository. If you're
 # editing this file be aware that the upstream Cargo.toml
 # will likely look very different (and much more reasonable)
-
-cargo-features = ["alternative-registries"]
 
 [package]
 name = "foo"
