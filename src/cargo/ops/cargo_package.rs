@@ -12,7 +12,9 @@ use tar::{Builder, EntryType, Header};
 
 use crate::core::compiler::{BuildConfig, CompileMode, DefaultExecutor, Executor};
 use crate::core::resolver::Method;
-use crate::core::{Package, PackageId, PackageIdSpec, Resolve, Source, SourceId, Workspace};
+use crate::core::{
+    Package, PackageId, PackageIdSpec, PackageSet, Resolve, Source, SourceId, Workspace,
+};
 use crate::ops;
 use crate::sources::PathSource;
 use crate::util::errors::{CargoResult, CargoResultExt};
@@ -425,12 +427,14 @@ fn tar(
         let new_pkg = src.root_package()?;
         let specs = vec![PackageIdSpec::from_package_id(new_pkg.package_id())];
         let tmp_ws = Workspace::ephemeral(new_pkg, config, None, true)?;
-        let new_resolve = ops::resolve_ws_with_method(&tmp_ws, None, Method::Everything, &specs)?.1;
+        let (pkg_set, new_resolve) =
+            ops::resolve_ws_with_method(&tmp_ws, None, Method::Everything, &specs)?;
         // resolve_ws_with_method won't save for ephemeral, do it manually.
         ops::write_pkg_lockfile(&tmp_ws, &new_resolve)?;
         if let Some(orig_resolve) = orig_resolve {
             compare_resolve(config, tmp_ws.current()?, &orig_resolve, &new_resolve)?;
         }
+        check_yanked(config, &pkg_set, &new_resolve)?;
 
         let toml = paths::read(&new_lock_path)?;
         let path = format!(
@@ -532,6 +536,23 @@ fn compare_resolve(
         config
             .shell()
             .warn(format!("package `{}` added to Cargo.lock{}", pkg_id, extra))?;
+    }
+    Ok(())
+}
+
+fn check_yanked(config: &Config, pkg_set: &PackageSet<'_>, resolve: &Resolve) -> CargoResult<()> {
+    let mut sources = pkg_set.sources_mut();
+    for pkg_id in resolve.iter() {
+        if let Some(source) = sources.get_mut(pkg_id.source_id()) {
+            if source.is_yanked(pkg_id)? {
+                config.shell().warn(format!(
+                    "package `{}` in Cargo.lock is yanked in registry `{}`, \
+                     consider updating to a version that is not yanked",
+                    pkg_id,
+                    pkg_id.source_id().display_registry_name()
+                ))?;
+            }
+        }
     }
     Ok(())
 }

@@ -8,7 +8,8 @@ use tempfile::Builder as TempFileBuilder;
 
 use crate::core::compiler::Freshness;
 use crate::core::compiler::{DefaultExecutor, Executor};
-use crate::core::{Edition, PackageId, Source, SourceId, Workspace};
+use crate::core::resolver::Method;
+use crate::core::{Edition, PackageId, PackageIdSpec, Source, SourceId, Workspace};
 use crate::ops;
 use crate::ops::common_for_install_and_uninstall::*;
 use crate::sources::{GitSource, SourceConfigMap};
@@ -306,6 +307,8 @@ fn install_one(
 
     config.shell().status("Installing", pkg)?;
 
+    check_yanked_install(&ws)?;
+
     let exec: Arc<dyn Executor> = Arc::new(DefaultExecutor);
     let compile = ops::compile_ws(&ws, Some(source), opts, &exec).chain_err(|| {
         if let Some(td) = td_opt.take() {
@@ -479,6 +482,32 @@ fn install_one(
         }
         Ok(())
     }
+}
+
+fn check_yanked_install(ws: &Workspace<'_>) -> CargoResult<()> {
+    if ws.ignore_lock() || !ws.root().join("Cargo.lock").exists() {
+        return Ok(());
+    }
+    let specs = vec![PackageIdSpec::from_package_id(ws.current()?.package_id())];
+    // It would be best if `source` could be passed in here to avoid a
+    // duplicate "Updating", but since `source` is taken by value, then it
+    // wouldn't be available for `compile_ws`.
+    let (pkg_set, resolve) = ops::resolve_ws_with_method(ws, None, Method::Everything, &specs)?;
+    let mut sources = pkg_set.sources_mut();
+    for pkg_id in resolve.iter() {
+        if let Some(source) = sources.get_mut(pkg_id.source_id()) {
+            if source.is_yanked(pkg_id)? {
+                ws.config().shell().warn(format!(
+                    "package `{}` in Cargo.lock is yanked in registry `{}`, \
+                     consider running without --locked",
+                    pkg_id,
+                    pkg_id.source_id().display_registry_name()
+                ))?;
+            }
+        }
+    }
+
+    Ok(())
 }
 
 /// Display a list of installed binaries.

@@ -96,6 +96,10 @@ pub trait Source {
     /// queries, even if they are yanked. Currently only applies to registry
     /// sources.
     fn add_to_yanked_whitelist(&mut self, pkgs: &[PackageId]);
+
+    /// Query if a package is yanked. Only registry sources can mark packages
+    /// as yanked. This ignores the yanked whitelist.
+    fn is_yanked(&mut self, _pkg: PackageId) -> CargoResult<bool>;
 }
 
 pub enum MaybePackage {
@@ -169,6 +173,10 @@ impl<'a, T: Source + ?Sized + 'a> Source for Box<T> {
     fn add_to_yanked_whitelist(&mut self, pkgs: &[PackageId]) {
         (**self).add_to_yanked_whitelist(pkgs);
     }
+
+    fn is_yanked(&mut self, pkg: PackageId) -> CargoResult<bool> {
+        (**self).is_yanked(pkg)
+    }
 }
 
 impl<'a, T: Source + ?Sized + 'a> Source for &'a mut T {
@@ -226,6 +234,10 @@ impl<'a, T: Source + ?Sized + 'a> Source for &'a mut T {
 
     fn add_to_yanked_whitelist(&mut self, pkgs: &[PackageId]) {
         (**self).add_to_yanked_whitelist(pkgs);
+    }
+
+    fn is_yanked(&mut self, pkg: PackageId) -> CargoResult<bool> {
+        (**self).is_yanked(pkg)
     }
 }
 

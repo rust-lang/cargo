@@ -336,4 +336,13 @@ impl<'cfg> RegistryIndex<'cfg> {
         }
         Ok(count)
     }
+
+    pub fn is_yanked(&mut self, pkg: PackageId, load: &mut dyn RegistryData) -> CargoResult<bool> {
+        let summaries = self.summaries(pkg.name().as_str(), load)?;
+        let found = summaries
+            .iter()
+            .filter(|&(summary, _yanked)| summary.version() == pkg.version())
+            .any(|(_summary, yanked)| *yanked);
+        Ok(found)
+    }
 }

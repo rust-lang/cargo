@@ -525,6 +525,7 @@ impl<'cfg> RegistrySource<'cfg> {
         let path = self.ops.index_path();
         self.index =
             index::RegistryIndex::new(self.source_id, path, self.config, self.index_locked);
+        self.updated = true;
         Ok(())
     }
 
@@ -645,10 +646,17 @@ impl<'cfg> Source for RegistrySource<'cfg> {
     }
 
     fn describe(&self) -> String {
-        self.source_id.display_registry()
+        self.source_id.display_index()
     }
 
     fn add_to_yanked_whitelist(&mut self, pkgs: &[PackageId]) {
         self.yanked_whitelist.extend(pkgs);
+    }
+
+    fn is_yanked(&mut self, pkg: PackageId) -> CargoResult<bool> {
+        if !self.updated {
+            self.do_update()?;
+        }
+        self.index.is_yanked(pkg, &mut *self.ops)
     }
 }
