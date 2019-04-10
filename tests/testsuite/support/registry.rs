@@ -445,19 +445,14 @@ impl Package {
     }
 
     fn make_archive(&self) {
-        let features = if self.deps.iter().any(|dep| dep.registry.is_some()) {
-            "cargo-features = [\"alternative-registries\"]\n"
-        } else {
-            ""
-        };
         let mut manifest = format!(
             r#"
-            {}[package]
+            [package]
             name = "{}"
             version = "{}"
             authors = []
         "#,
-            features, self.name, self.vers
+            self.name, self.vers
         );
         for dep in self.deps.iter() {
             let target = match dep.target {
