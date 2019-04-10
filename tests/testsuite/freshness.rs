@@ -1811,10 +1811,7 @@ fn simulated_docker_deps_stay_cached() {
         .file("pathdep/src/lib.rs", "")
         .build();
 
-    p.cargo("build")
-        .env("RUST_LOG", "cargo::core::compiler::fingerprint")
-        .stream()
-        .run();
+    p.cargo("build").run();
 
     let already_zero = {
         // This happens on HFS with 1-second timestamp resolution,
