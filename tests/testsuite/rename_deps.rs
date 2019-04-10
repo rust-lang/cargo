@@ -85,7 +85,6 @@ fn lots_of_names() {
             "Cargo.toml",
             &format!(
                 r#"
-                cargo-features = ["alternative-registries"]
                 [package]
                 name = "test"
                 version = "0.1.0"
