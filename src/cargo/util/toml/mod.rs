@@ -1035,7 +1035,7 @@ impl TomlManifest {
                 features.require(Feature::publish_lockfile())?;
                 b
             }
-            None => false,
+            None => features.is_enabled(Feature::publish_lockfile()),
         };
 
         if summary.features().contains_key("default-features") {
