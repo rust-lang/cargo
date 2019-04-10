@@ -575,4 +575,8 @@ impl<'cfg> Source for PathSource<'cfg> {
     }
 
     fn add_to_yanked_whitelist(&mut self, _pkgs: &[PackageId]) {}
+
+    fn is_yanked(&mut self, _pkg: PackageId) -> CargoResult<bool> {
+        Ok(false)
+    }
 }

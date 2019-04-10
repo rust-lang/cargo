@@ -1,4 +1,4 @@
-use std::cell::{Cell, Ref, RefCell};
+use std::cell::{Cell, Ref, RefCell, RefMut};
 use std::cmp::Ordering;
 use std::collections::{HashMap, HashSet};
 use std::fmt;
@@ -453,6 +453,10 @@ impl<'cfg> PackageSet<'cfg> {
 
     pub fn sources(&self) -> Ref<'_, SourceMap<'cfg>> {
         self.sources.borrow()
+    }
+
+    pub fn sources_mut(&self) -> RefMut<'_, SourceMap<'cfg>> {
+        self.sources.borrow_mut()
     }
 }
 

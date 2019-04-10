@@ -228,11 +228,21 @@ impl SourceId {
         &self.inner.url
     }
 
-    pub fn display_registry(self) -> String {
+    pub fn display_index(self) -> String {
         if self.is_default_registry() {
             "crates.io index".to_string()
         } else {
             format!("`{}` index", url_display(self.url()))
+        }
+    }
+
+    pub fn display_registry_name(self) -> String {
+        if self.is_default_registry() {
+            "crates.io".to_string()
+        } else if let Some(name) = &self.inner.name {
+            name.clone()
+        } else {
+            url_display(self.url())
         }
     }
 
