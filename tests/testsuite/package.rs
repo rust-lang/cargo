@@ -509,7 +509,7 @@ fn package_symlink_to_submodule() {
     #[cfg(unix)]
     use std::os::unix::fs::symlink as symlink;
     #[cfg(windows)]
-    use std::os::unix::fs::symlink_dir as symlink;
+    use std::os::windows::fs::symlink_dir as symlink;
 
     let project = git::new("foo", |project| {
         project
@@ -697,9 +697,11 @@ See [..]
 }
 
 #[cargo_test]
-#[cfg(unix)]
 fn broken_symlink() {
-    use std::os::unix::fs;
+    #[cfg(unix)]
+    use std::os::unix::fs::symlink as symlink;
+    #[cfg(windows)]
+    use std::os::windows::fs::symlink_dir as symlink;
 
     let p = project()
         .file(
@@ -718,7 +720,7 @@ fn broken_symlink() {
         )
         .file("src/main.rs", r#"fn main() { println!("hello"); }"#)
         .build();
-    t!(fs::symlink("nowhere", &p.root().join("src/foo.rs")));
+    t!(symlink("nowhere", &p.root().join("src/foo.rs")));
 
     p.cargo("package -v")
         .with_status(101)
