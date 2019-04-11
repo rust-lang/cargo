@@ -25,7 +25,7 @@ use crate::core::profiles::ConfigProfiles;
 use crate::core::shell::Verbosity;
 use crate::core::{CliUnstable, Shell, SourceId, Workspace};
 use crate::ops;
-use crate::util::errors::{internal, CargoResult, CargoResultExt};
+use crate::util::errors::{self, internal, CargoResult, CargoResultExt};
 use crate::util::toml as cargo_toml;
 use crate::util::Filesystem;
 use crate::util::Rustc;
@@ -932,12 +932,7 @@ impl std::error::Error for ConfigError {}
 // `cause` and avoid doing the cause formatting here.
 impl fmt::Display for ConfigError {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        let message = self
-            .error
-            .iter_chain()
-            .map(|e| e.to_string())
-            .collect::<Vec<_>>()
-            .join("\nCaused by:\n  ");
+        let message = errors::display_causes(&self.error);
         if let Some(ref definition) = self.definition {
             write!(f, "error in {}: {}", definition, message)
         } else {
