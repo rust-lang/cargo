@@ -275,8 +275,6 @@ pub fn prepare_target<'a, 'cfg>(
         return Ok(Job::new(Work::noop(), Fresh));
     }
 
-    let pkg_root = unit.pkg.root().to_path_buf();
-    let target_root = target_root(cx, unit);
     let write_fingerprint = if unit.mode.is_run_custom_build() {
         // For build scripts the `local` field of the fingerprint may change
         // while we're executing it. For example it could be in the legacy
@@ -295,30 +293,20 @@ pub fn prepare_target<'a, 'cfg>(
             let outputs = state.outputs.lock().unwrap();
             let outputs = &outputs[&key];
             let deps = BuildDeps::new(&output_path, Some(outputs));
+
+            // FIXME: it's basically buggy that we pass `None` to `call_box`
+            // here. See documentation on `build_script_local_fingerprints`
+            // below for more information. Despite this just try to proceed and
+            // hobble along if it happens to return `Some`.
             if let Some(new_local) = gen_local.call_box(&deps, None)? {
-                // Note that the fingerprint status here is also somewhat
-                // tricky. We can't actually modify the `fingerprint`'s `local`
-                // field, so we create a new fingerprint with the appropriate
-                // `local`. To ensure the old version is used correctly we
-                // force its memoized hash to be equal to our
-                // `new_fingerprint`. This means usages of `fingerprint` in
-                // various dependencies should work correctly because the hash
-                // is still memoized to the correct value.
-                let mut new_fingerprint = fingerprint.with_local(new_local);
-                new_fingerprint.check_filesystem(&pkg_root, &target_root, false)?;
-                *fingerprint.memoized_hash.lock().unwrap() = Some(new_fingerprint.hash());
-                write_fingerprint(&loc, &new_fingerprint)
-            } else {
-                // FIXME: it's basically buggy that we pass `None` to
-                // `call_box` above. See documentation on
-                // `build_script_local_fingerprints` below for more
-                // information. Despite this just try to proceed and hobble
-                // along.
-                write_fingerprint(&loc, &fingerprint)
+                *fingerprint.local.lock().unwrap() = new_local;
+                *fingerprint.memoized_hash.lock().unwrap() = None;
             }
+
+            write_fingerprint(&loc, &fingerprint)
         })
     } else {
-        Work::new(move |_| write_fingerprint(&loc, &*fingerprint))
+        Work::new(move |_| write_fingerprint(&loc, &fingerprint))
     };
 
     Ok(Job::new(write_fingerprint, Dirty))
@@ -375,7 +363,7 @@ pub struct Fingerprint {
     deps: Vec<DepFingerprint>,
     /// Information about the inputs that affect this Unit (such as source
     /// file mtimes or build script environment variables).
-    local: Vec<LocalFingerprint>,
+    local: Mutex<Vec<LocalFingerprint>>,
     /// Cached hash of the `Fingerprint` struct. Used to improve performance
     /// for hashing.
     #[serde(skip)]
@@ -446,7 +434,6 @@ impl<'de> Deserialize<'de> for DepFingerprint {
             pkg_id,
             name,
             fingerprint: Arc::new(Fingerprint {
-                local: vec![LocalFingerprint::Precalculated(String::new())],
                 memoized_hash: Mutex::new(Some(hash)),
                 ..Fingerprint::new()
             }),
@@ -591,29 +578,12 @@ impl Fingerprint {
             path: 0,
             features: String::new(),
             deps: Vec::new(),
-            local: Vec::new(),
+            local: Mutex::new(Vec::new()),
             memoized_hash: Mutex::new(None),
             rustflags: Vec::new(),
             metadata: 0,
             fs_status: FsStatus::Stale,
             outputs: Vec::new(),
-        }
-    }
-
-    fn with_local(&self, local: Vec<LocalFingerprint>) -> Fingerprint {
-        Fingerprint {
-            fs_status: FsStatus::Stale,
-            rustc: self.rustc,
-            target: self.target,
-            profile: self.profile,
-            path: self.path,
-            features: self.features.clone(),
-            deps: self.deps.clone(),
-            local,
-            memoized_hash: Mutex::new(None),
-            rustflags: self.rustflags.clone(),
-            metadata: self.metadata,
-            outputs: self.outputs.clone(),
         }
     }
 
@@ -655,13 +625,15 @@ impl Fingerprint {
         if self.rustflags != old.rustflags {
             bail!("RUSTFLAGS has changed")
         }
-        if self.local.len() != old.local.len() {
-            bail!("local lens changed");
-        }
         if self.metadata != old.metadata {
             bail!("metadata changed")
         }
-        for (new, old) in self.local.iter().zip(&old.local) {
+        let my_local = self.local.lock().unwrap();
+        let old_local = old.local.lock().unwrap();
+        if my_local.len() != old_local.len() {
+            bail!("local lens changed");
+        }
+        for (new, old) in my_local.iter().zip(old_local.iter()) {
             match (new, old) {
                 (LocalFingerprint::Precalculated(a), LocalFingerprint::Precalculated(b)) => {
                     if a != b {
@@ -840,7 +812,7 @@ impl Fingerprint {
         // all our `LocalFingerprint` information to see if we have any stale
         // files for this package itself. If we do find something log a helpful
         // message and bail out so we stay stale.
-        for local in self.local.iter() {
+        for local in self.local.get_mut().unwrap().iter() {
             if let Some(file) = local.find_stale_file(pkg_root, target_root)? {
                 file.log();
                 return Ok(());
@@ -868,8 +840,9 @@ impl hash::Hash for Fingerprint {
             ref rustflags,
             ..
         } = *self;
+        let local = local.lock().unwrap();
         (
-            rustc, features, target, path, profile, local, metadata, rustflags,
+            rustc, features, target, path, profile, &*local, metadata, rustflags,
         )
             .hash(h);
 
@@ -1089,7 +1062,7 @@ fn calculate_normal<'a, 'cfg>(
             cx.bcx.resolve.features_sorted(unit.pkg.package_id())
         ),
         deps,
-        local,
+        local: Mutex::new(local),
         memoized_hash: Mutex::new(None),
         metadata,
         rustflags: extra_flags,
@@ -1141,7 +1114,7 @@ fn calculate_run_custom_build<'a, 'cfg>(
     };
 
     Ok(Fingerprint {
-        local,
+        local: Mutex::new(local),
         rustc: util::hash_u64(&cx.bcx.rustc.verbose_version),
         deps,
         outputs: if overridden { Vec::new() } else { vec![output] },
