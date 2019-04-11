@@ -9,7 +9,7 @@ use git2::Config as GitConfig;
 use git2::Repository as GitRepository;
 
 use crate::core::{compiler, Workspace};
-use crate::util::errors::{CargoResult, CargoResultExt};
+use crate::util::errors::{self, CargoResult, CargoResultExt};
 use crate::util::{existing_vcs_repo, internal, FossilRepo, GitRepo, HgRepo, PijulRepo};
 use crate::util::{paths, validate_package_name, Config};
 
@@ -677,7 +677,7 @@ mod tests {
         let msg = format!(
             "compiling this new crate may not work due to invalid \
              workspace configuration\n\n{}",
-            e
+            errors::display_causes(&e)
         );
         config.shell().warn(msg)?;
     }
